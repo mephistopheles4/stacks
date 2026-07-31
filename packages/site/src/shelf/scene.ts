@@ -67,6 +67,18 @@ const COLOURS = {
   fill: 0x5577aa,
 } as const;
 
+/**
+ * A book on the shelf, and where its front face sits in its own local space.
+ *
+ * The offset has to be carried rather than assumed: a book is built at its real
+ * size with no scale applied, so "the front of the book" is half its depth —
+ * the shelf depth for a shelved book, the cover width for a face-out one.
+ */
+interface PlacedBook {
+  readonly group: THREE.Group;
+  readonly frontZ: number;
+}
+
 export interface ShelfHandle {
   dispose(): void;
   /** Books currently on the shelf, in draw order. Used by the smoke gate. */
@@ -148,9 +160,15 @@ export function mountShelf(
 
   const textures = new TextureCache(renderer);
   const lookup: BookLookup = new Map();
-  const bookMeshes = placeBooks(scene, rows, textures, lookup);
+  const placed = placeBooks(scene, rows, textures, lookup);
 
-  const picker = new Picker(canvas, camera, bookMeshes, lookup, options.onSelect);
+  const picker = new Picker(
+    canvas,
+    camera,
+    placed.map((book) => book.group),
+    lookup,
+    options.onSelect,
+  );
 
   let frame = 0;
   const renderLoop = (): void => {
@@ -178,15 +196,15 @@ export function mountShelf(
   renderLoop();
 
   return {
-    bookCount: bookMeshes.length,
+    bookCount: placed.length,
 
     projectBook(index: number): { x: number; y: number } | undefined {
-      const mesh = bookMeshes[index];
-      if (mesh === undefined) return undefined;
+      const book = placed[index];
+      if (book === undefined) return undefined;
 
       // Aim at the front face of the spine, not the centre of the box — the
       // centre is buried inside the book and behind its neighbours.
-      const point = mesh.localToWorld(new THREE.Vector3(0, 0, 0.5));
+      const point = book.group.localToWorld(new THREE.Vector3(0, 0, book.frontZ));
       point.project(camera);
 
       const rect = canvas.getBoundingClientRect();
@@ -233,9 +251,8 @@ function placeBooks(
   rows: readonly ShelfRow[],
   textures: TextureCache,
   lookup: BookLookup,
-): THREE.Mesh[] {
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const meshes: THREE.Mesh[] = [];
+): PlacedBook[] {
+  const placed: PlacedBook[] = [];
 
   const rowCount = rowsForCase(rows.length);
 
@@ -248,7 +265,10 @@ function placeBooks(
     let index = 0;
 
     for (const entry of row.books) {
-      const mesh = buildBook(geometry, entry, textures);
+      // Depth carries the cover's real aspect on a face-out book, which is
+      // turned side-on, and the shelf depth on a shelved one.
+      const depth = entry.faceOut ? entry.coverWidth : SHELF.bookDepth;
+      const book = buildBook(entry, depth, textures);
       cursor += entry.gapBefore ?? 0;
 
       if (entry.faceOut) {
@@ -257,12 +277,9 @@ function placeBooks(
         // -90°, not +90°: the cover is the +X face, and rotating +90° about Y
         // maps +X to -Z — pointing away from the room. Face-out books were
         // showing the viewer their back boards.
-        // Depth becomes the visible width once turned, so it carries the
-        // cover's real aspect rather than a fixed shelf depth.
-        mesh.scale.set(entry.thickness, entry.height, entry.coverWidth);
-        mesh.rotation.y = -Math.PI / 2;
-        mesh.rotation.z = 0.06;
-        mesh.position.set(
+        book.rotation.y = -Math.PI / 2;
+        book.rotation.z = 0.06;
+        book.position.set(
           cursor + entry.coverWidth * 0.5,
           shelfY + entry.height / 2,
           (SHELF.depth - entry.coverWidth) / 2 - 0.02,
@@ -271,9 +288,8 @@ function placeBooks(
       } else {
         const lean = leanFor(rowIndex, index, entry.book.id);
 
-        mesh.scale.set(entry.thickness, entry.height, SHELF.bookDepth);
-        mesh.rotation.z = lean;
-        mesh.position.set(
+        book.rotation.z = lean;
+        book.position.set(
           cursor + entry.thickness / 2,
           // Rotating about the centre would sink the low corner into the plank.
           shelfY + entry.height / 2 + (entry.thickness / 2) * Math.sin(Math.abs(lean)),
@@ -283,13 +299,15 @@ function placeBooks(
       }
       index += 1;
 
-      scene.add(mesh);
-      meshes.push(mesh);
-      lookup.set(mesh, entry.book);
+      scene.add(book);
+      placed.push({ group: book, frontZ: depth / 2 });
+      // Every part of a book answers for the whole book, so a click on the
+      // pages or a board opens the same card as a click on the spine.
+      for (const part of book.children) lookup.set(part, entry.book);
     }
   });
 
-  return meshes;
+  return placed;
 }
 
 /** Most a book leans, in radians — about 3.5°. Beyond that it looks knocked over. */
@@ -326,17 +344,43 @@ function hashUnit(value: string): number {
   return (hash >>> 8) / 0x1000000;
 }
 
+/** Shared by every book: sizing is per-mesh scale, so one of each is enough. */
+const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
+const UNIT_PLANE = new THREE.PlaneGeometry(1, 1);
+
 /**
- * Box faces are ordered +X, -X, +Y, -Y, +Z, -Z.
+ * A hardback case, in the same world units as the shelf (1 unit ≈ 24cm).
  *
- * Spine is +Z (facing the viewer when shelved); the cover goes on +X, which is
- * what you see once a book is turned face-out.
+ * `BOARD` is the thickness of a cover board — about 2.5mm on a real book — and
+ * `SQUARE` is the *square*: the few millimetres by which the boards overhang the
+ * page block at head, tail and fore-edge. They are why the top of a real book is
+ * mostly paper with only a thin rim of cover showing, and why the cover stands
+ * proud of the pages instead of being flush with them.
  */
-function buildBook(
-  geometry: THREE.BoxGeometry,
-  entry: ShelfBook,
-  textures: TextureCache,
-): THREE.Mesh {
+const BOARD = 0.011;
+const SQUARE = 0.013;
+
+/** How far the printed faces float above the boards they are printed on. */
+const SKIN = 0.0012;
+
+/**
+ * One book, built at its true size.
+ *
+ * Not a single painted box: a box has to answer for the cover, the spine, the
+ * boards *and* the page edges with one set of faces, which is why the top and
+ * bottom of a book used to be spine-coloured. A real book is a case wrapped
+ * around a smaller block of paper, so that is what this builds — two boards and
+ * a spine strip in the cover colour, and a page block recessed inside them.
+ *
+ * The cover and the spine are separate planes floating a hair above their
+ * boards rather than faces of them. A `BoxGeometry` renders one draw call per
+ * face group, so six faces of one box and six single-material meshes cost the
+ * same; planes just let each printed face be exactly the size of its artwork.
+ *
+ * Local axes match the old box: spine at +Z (facing the room when shelved),
+ * cover at +X (what you see once a book is turned face-out).
+ */
+function buildBook(entry: ShelfBook, depth: number, textures: TextureCache): THREE.Group {
   // A spine wide enough to read gets its title printed on it; a very thin one
   // stays a plain board, because type squeezed onto it would just be noise.
   const spineTexture =
@@ -374,18 +418,57 @@ function buildBook(
     });
   }
 
-  const mesh = new THREE.Mesh(geometry, [
-    cover, // +X  cover
-    boards, // -X  back board
-    boards, // +Y  top
-    boards, // -Y  bottom
-    spine, // +Z  spine, facing the room
-    pages, // -Z  fore-edge
-  ]);
+  const group = new THREE.Group();
 
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  return mesh;
+  const thickness = entry.thickness;
+  const height = entry.height;
+  // Board thickness is fixed in the world, not a fraction of the book — a thin
+  // book and a fat one are bound in the same card. Capped only so a book thinner
+  // than two boards would still have paper in it.
+  const board = Math.min(BOARD, thickness * 0.3);
+
+  const solid = (material: THREE.Material): THREE.Mesh => {
+    const mesh = new THREE.Mesh(UNIT_BOX, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    return mesh;
+  };
+
+  // Front and back boards, running the full height and depth of the book.
+  for (const side of [1, -1]) {
+    const face = solid(boards);
+    face.scale.set(board, height, depth);
+    face.position.set((side * (thickness - board)) / 2, 0, 0);
+  }
+
+  // The spine covering, closing the gap between the boards at the bound edge.
+  const spineStrip = solid(boards);
+  spineStrip.scale.set(thickness - board * 2, height, board);
+  spineStrip.position.set(0, 0, (depth - board) / 2);
+
+  // The page block, recessed inside the case at head, tail and fore-edge.
+  const block = solid(pages);
+  block.scale.set(thickness - board * 2, height - SQUARE * 2, depth - board - SQUARE);
+  block.position.set(0, 0, (SQUARE - board) / 2);
+
+  const printed = (material: THREE.Material): THREE.Mesh => {
+    const mesh = new THREE.Mesh(UNIT_PLANE, material);
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    return mesh;
+  };
+
+  const coverFace = printed(cover);
+  coverFace.scale.set(depth, height, 1);
+  coverFace.rotation.y = Math.PI / 2;
+  coverFace.position.set(thickness / 2 + SKIN, 0, 0);
+
+  const spineFace = printed(spine);
+  spineFace.scale.set(thickness, height, 1);
+  spineFace.position.set(0, 0, depth / 2 + SKIN);
+
+  return group;
 }
 
 function buildShelf(rowCount: number): THREE.Group {
@@ -507,7 +590,7 @@ class Picker {
   readonly #pointer = new THREE.Vector2();
   readonly #canvas: HTMLCanvasElement;
   readonly #camera: THREE.Camera;
-  readonly #meshes: THREE.Object3D[];
+  readonly #books: THREE.Object3D[];
   readonly #lookup: BookLookup;
   readonly #onSelect: ((book: LibraryBook | undefined) => void) | undefined;
   #downAt: { x: number; y: number } | undefined;
@@ -515,13 +598,13 @@ class Picker {
   constructor(
     canvas: HTMLCanvasElement,
     camera: THREE.Camera,
-    meshes: readonly THREE.Mesh[],
+    books: readonly THREE.Object3D[],
     lookup: BookLookup,
     onSelect: ((book: LibraryBook | undefined) => void) | undefined,
   ) {
     this.#canvas = canvas;
     this.#camera = camera;
-    this.#meshes = [...meshes];
+    this.#books = [...books];
     this.#lookup = lookup;
     this.#onSelect = onSelect;
     canvas.addEventListener('pointerdown', this.#handleDown);
@@ -546,7 +629,8 @@ class Picker {
     );
     this.#raycaster.setFromCamera(this.#pointer, this.#camera);
 
-    const hit = this.#raycaster.intersectObjects(this.#meshes, false)[0];
+    // Recursive: a book is a group of parts, and any of them counts as a hit.
+    const hit = this.#raycaster.intersectObjects(this.#books, true)[0];
     this.#onSelect?.(hit === undefined ? undefined : this.#lookup.get(hit.object));
   };
 
