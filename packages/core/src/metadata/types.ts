@@ -7,6 +7,16 @@ export interface BookMetadata {
   readonly isbn?: string;
   readonly pages?: number;
   readonly coverUrl?: string;
+  /**
+   * True when `coverUrl` was *guessed* rather than reported.
+   *
+   * Open Library's by-ISBN cover endpoint answers for any ISBN, with a tiny
+   * placeholder when it holds nothing — so a URL built from an ISBN is a
+   * hypothesis, not a fact. Without this distinction such a URL makes a record
+   * look complete, gap-filling never runs, and the book ends up with no cover
+   * at all when the other provider had one.
+   */
+  readonly coverIsSpeculative?: boolean;
   readonly source: MetadataSource;
 }
 

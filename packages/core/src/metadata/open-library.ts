@@ -101,6 +101,8 @@ function toMetadata(doc: Record<string, unknown> | undefined): BookMetadata | un
     ...maybe('isbn', isbn),
     ...maybe('pages', asPositiveInt(doc['number_of_pages_median'])),
     ...maybe('coverUrl', coverUrl),
+    // A URL built from an ISBN is a guess; one built from a real cover id is not.
+    ...(coverId === undefined && coverUrl !== undefined ? { coverIsSpeculative: true } : {}),
   };
 }
 

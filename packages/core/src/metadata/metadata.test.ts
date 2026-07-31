@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CAPTURED_ISBN, fixtureHttpGet } from '../test-support.ts';
+import { CAPTURED_ISBN, fixtureHttpGet, readApiFixture } from '../test-support.ts';
+import type { HttpGet } from './http.ts';
 import { lookup, lookupByIsbn, searchByTitle } from './index.ts';
 
 /**
@@ -95,6 +96,112 @@ describe('API miss', () => {
     await searchByTitle('anything', spy, { googleBooksKey: 'abc 123' });
     const google = seen.find((url) => url.includes('googleapis.com'));
     expect(google).toContain('key=abc%20123');
+  });
+
+  it('borrows a cover from the fallback when the primary has none', async () => {
+    // Open Library often knows a book and has no art for it. Before this, the
+    // chain stopped at the first provider and the book got a blank spine even
+    // though Google had the cover.
+    const get: HttpGet = async (url) =>
+      url.includes('googleapis.com')
+        ? {
+            items: [
+              {
+                volumeInfo: {
+                  title: 'Thinking in systems',
+                  subtitle: 'a primer',
+                  authors: ['Donella H. Meadows'],
+                  pageCount: 240,
+                  imageLinks: { thumbnail: 'http://books.google.com/x?zoom=1&edge=curl' },
+                },
+              },
+            ],
+          }
+        : { docs: [{ title: 'Thinking in Systems', author_name: ['Donella H. Meadows'] }] };
+
+    const [result] = await lookup('thinking in systems', get);
+    expect(result?.source).toBe('open-library');
+    expect(result?.title).toBe('Thinking in Systems'); // primary's own fields kept
+    expect(result?.coverUrl).toBe('https://books.google.com/x?zoom=1'); // gap filled
+    expect(result?.pages).toBe(240);
+  });
+
+  it('replaces a guessed cover with a confirmed one', async () => {
+    // Open Library search returns no cover id for some books, so the URL is
+    // synthesised from the ISBN — and that endpoint answers with a placeholder
+    // as readily as with art. Treating it as a real cover made the record look
+    // complete, so the fallback was never asked and the book got nothing.
+    const get: HttpGet = async (url) =>
+      url.includes('googleapis.com')
+        ? {
+            items: [
+              {
+                volumeInfo: {
+                  title: 'AI Snake Oil',
+                  authors: ['Arvind Narayanan'],
+                  industryIdentifiers: [{ type: 'ISBN_13', identifier: '9780691249148' }],
+                  imageLinks: { thumbnail: 'http://books.google.com/real-cover' },
+                },
+              },
+            ],
+          }
+        : {
+            docs: [
+              {
+                title: 'AI Snake Oil',
+                author_name: ['Arvind Narayanan'],
+                isbn: ['9780691249148'],
+                number_of_pages_median: 384,
+              },
+            ],
+          };
+
+    const [result] = await lookup('ai snake oil', get);
+    expect(result?.coverUrl).toBe('https://books.google.com/real-cover');
+    expect(result?.coverIsSpeculative).toBe(false);
+  });
+
+  it('keeps the guessed cover when the fallback has nothing better', async () => {
+    const get: HttpGet = async (url) =>
+      url.includes('googleapis.com')
+        ? { items: [] }
+        : { docs: [{ title: 'Obscure Book', author_name: ['A N Other'], isbn: ['9781000000016'] }] };
+
+    const [result] = await lookup('obscure book', get);
+    expect(result?.coverUrl).toContain('covers.openlibrary.org/b/isbn/');
+    expect(result?.coverIsSpeculative).toBe(true);
+  });
+
+  it('refuses a cover from a book that is not the same book', async () => {
+    // A cover borrowed from the wrong edition is worse than no cover at all.
+    const get: HttpGet = async (url) =>
+      url.includes('googleapis.com')
+        ? {
+            items: [
+              {
+                volumeInfo: {
+                  title: 'An Entirely Different Book',
+                  authors: ['Someone Else'],
+                  imageLinks: { thumbnail: 'http://books.google.com/wrong' },
+                },
+              },
+            ],
+          }
+        : { docs: [{ title: 'Thinking in Systems', author_name: ['Donella H. Meadows'] }] };
+
+    const [result] = await lookup('thinking in systems', get);
+    expect(result?.coverUrl).toBeUndefined();
+  });
+
+  it('does not go looking when the primary result is already complete', async () => {
+    const seen: string[] = [];
+    const get: HttpGet = async (url) => {
+      seen.push(url);
+      return readApiFixture('open-library-isbn-hit.json');
+    };
+
+    await lookup(CAPTURED_ISBN, get);
+    expect(seen.some((url) => url.includes('googleapis.com'))).toBe(false);
   });
 
   it('survives a reader that fails outright', async () => {

@@ -34,6 +34,31 @@ export function isValidIsbn(value: string): boolean {
   return false;
 }
 
+/**
+ * Rewrites a label into something Obsidian accepts as a tag.
+ *
+ * Obsidian allows letters, digits, `_`, `-` and `/` and nothing else — no
+ * spaces, no ampersands — and shows anything else as invalid in the properties
+ * panel. Audible's categories arrive as "Business & Careers" and "Computer
+ * Science", so an import produces broken tags unless they are rewritten.
+ *
+ * Returns `undefined` for a label with nothing usable left, and for an
+ * all-numeric one, which Obsidian also rejects.
+ */
+export function toObsidianTag(raw: string): string | undefined {
+  const cleaned = raw
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9_/-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^[-/]+|[-/]+$/g, '');
+
+  if (cleaned.length === 0) return undefined;
+  // A tag of digits alone is not a valid Obsidian tag.
+  return /[a-z_]/.test(cleaned) ? cleaned : undefined;
+}
+
 const LEADING_ARTICLE = /\b(?:a|an|the)\b/g;
 
 /**

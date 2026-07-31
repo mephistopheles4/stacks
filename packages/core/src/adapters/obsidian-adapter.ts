@@ -2,7 +2,7 @@ import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { stringify as stringifyYaml } from 'yaml';
 import { parseNote } from '../frontmatter.ts';
-import { isProbablySameBook, normaliseTitleAuthor } from '../identity.ts';
+import { isProbablySameBook, normaliseTitleAuthor, toObsidianTag } from '../identity.ts';
 import type { BookInput, BookRecord } from '../types.ts';
 import type { VaultAdapter } from './vault-adapter.ts';
 
@@ -140,7 +140,10 @@ function renderNote(book: BookInput): string {
   if (book.spineColor !== undefined) frontmatter['spine_color'] = book.spineColor;
   if (book.pages !== undefined) frontmatter['pages'] = book.pages;
   if (book.faceOut !== undefined) frontmatter['face_out'] = book.faceOut;
-  if (book.tags !== undefined && book.tags.length > 0) frontmatter['tags'] = [...book.tags];
+  // Normalised at the single write path, so no import can produce a tag
+  // Obsidian will reject however carelessly it names its categories.
+  const tags = [...new Set((book.tags ?? []).map(toObsidianTag).filter(isTag))];
+  if (tags.length > 0) frontmatter['tags'] = tags;
 
   // Extras are written last and never overwrite a contract key, so an import
   // cannot smuggle in a different title or status through the side door.
@@ -180,6 +183,10 @@ async function isDirectory(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function isTag(value: string | undefined): value is string {
+  return value !== undefined;
 }
 
 function describe(error: unknown): string {
