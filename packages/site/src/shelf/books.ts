@@ -23,14 +23,21 @@ export interface ShelfBook {
    * How much shelf this book actually eats.
    *
    * Not the same as `thickness`: a face-out book is turned side-on, so it takes
-   * roughly its depth. Row packing has to count the footprint or face-out books
-   * overrun the end of the shelf.
+   * the width of its cover. Row packing has to count the footprint or face-out
+   * books overrun the end of the shelf.
    */
   readonly footprint: number;
+  /** Width of the cover face, in world units. Only meaningful when faceOut. */
+  readonly coverWidth: number;
 }
 
-/** Matches SHELF.bookDepth in scene.ts — a turned book takes its depth. */
-const FACE_OUT_FOOTPRINT = 0.55;
+/**
+ * Cover shape, when the build could not measure the real one.
+ *
+ * A typical print cover. Deliberately not square: guessing "book-shaped" is
+ * wrong less often than guessing anything else.
+ */
+const DEFAULT_COVER_ASPECT = 0.65;
 
 export interface ShelfRow {
   readonly label: string;
@@ -125,14 +132,21 @@ function toShelfBook(book: LibraryBook): ShelfBook {
   // book in progress stands cover-forward on its own, the way one you are
   // mid-way through ends up propped on the shelf rather than filed away.
   const faceOut = book.faceOut ?? book.status === 'reading';
+  const height = heightFor(book.id);
+
+  // The cover's own proportions, not one shape imposed on every book. Audiobook
+  // art is square and print covers are about 0.65; forcing both onto the same
+  // face squashes the square ones by a third.
+  const coverWidth = height * (book.coverAspect ?? DEFAULT_COVER_ASPECT);
 
   return {
     book,
     thickness,
-    height: heightFor(book.id),
+    height,
     colour: book.spineColor ?? fallbackColour(book.id),
     faceOut,
-    footprint: faceOut ? FACE_OUT_FOOTPRINT : thickness,
+    coverWidth,
+    footprint: faceOut ? coverWidth : thickness,
   };
 }
 

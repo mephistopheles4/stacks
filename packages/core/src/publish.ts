@@ -1,5 +1,6 @@
 import { copyFile, mkdir, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import sharp from 'sharp';
 import { buildLibrary, type Library } from './library.ts';
 import { renderOgImage } from './og-image.ts';
 import type { BookRecord } from './types.ts';
@@ -38,20 +39,50 @@ export async function publish(
 ): Promise<PublishResult> {
   await mkdir(assetsDir, { recursive: true });
 
-  const library = buildLibrary(books, {
+  const built = buildLibrary(books, {
     isPublic: options.isPublic,
     ...(options.now === undefined ? {} : { now: options.now }),
   });
 
+  const { copied, missing } = await copyCovers(books, vault, assetsDir);
+
+  // Measured after copying, from the files that actually shipped.
+  const library = await withCoverAspects(built, assetsDir);
+
   const libraryPath = join(assetsDir, 'library.json');
   await writeFile(libraryPath, `${JSON.stringify(library, null, 2)}\n`, 'utf8');
-
-  const { copied, missing } = await copyCovers(books, vault, assetsDir);
 
   const ogImagePath = join(assetsDir, 'og.png');
   await writeFile(ogImagePath, await renderOgImage(library.books, titleFor(options, library)));
 
   return { library, libraryPath, coversCopied: copied, coversMissing: missing, ogImagePath };
+}
+
+/**
+ * Stamps each book with the true proportions of the cover that shipped.
+ *
+ * Measured here rather than at parse time because it describes the *image*, not
+ * the note — a derived build fact, like the rest of library.json. A cover that
+ * cannot be read simply gets no aspect and the shelf falls back to a normal
+ * book shape.
+ */
+async function withCoverAspects(library: Library, assetsDir: string): Promise<Library> {
+  const books = await Promise.all(
+    library.books.map(async (book) => {
+      if (book.cover === undefined) return book;
+      try {
+        const { width, height } = await sharp(
+          join(assetsDir, 'covers', basename(book.cover)),
+        ).metadata();
+        if (width === undefined || height === undefined || height === 0) return book;
+        return { ...book, coverAspect: Number((width / height).toFixed(4)) };
+      } catch {
+        return book;
+      }
+    }),
+  );
+
+  return { ...library, books };
 }
 
 function titleFor(options: PublishOptions, library: Library): { title?: string; subtitle: string } {

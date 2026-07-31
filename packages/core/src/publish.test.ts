@@ -63,6 +63,24 @@ describe('publish', () => {
     expect(json).not.toContain('.md');
   });
 
+  it('measures each cover so the shelf knows the book is not one shape', async () => {
+    const books = await vault.listBooks();
+    const result = await publish(books, vault, out, { isPublic: true });
+
+    const withCover = result.library.books.filter((b) => b.cover !== undefined);
+    expect(withCover.length).toBeGreaterThan(0);
+    for (const book of withCover) {
+      expect(book.coverAspect).toBeGreaterThan(0);
+    }
+
+    // The fixtures are 200x300 and one is 1400x2100 — both 2:3.
+    expect(withCover[0]?.coverAspect).toBeCloseTo(200 / 300, 2);
+
+    // A book with no cover has no aspect to report.
+    const bare = result.library.books.find((b) => b.cover === undefined);
+    expect(bare?.coverAspect).toBeUndefined();
+  });
+
   it('reports a missing cover instead of failing the build', async () => {
     const books = await vault.listBooks();
     const withGhost = [...books, { ...books[0]!, cover: 'covers/not-here.png', title: 'Ghost' }];

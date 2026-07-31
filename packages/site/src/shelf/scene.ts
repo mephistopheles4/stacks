@@ -243,15 +243,17 @@ function placeBooks(
         // -90°, not +90°: the cover is the +X face, and rotating +90° about Y
         // maps +X to -Z — pointing away from the room. Face-out books were
         // showing the viewer their back boards.
-        mesh.scale.set(entry.thickness, entry.height, SHELF.bookDepth);
+        // Depth becomes the visible width once turned, so it carries the
+        // cover's real aspect rather than a fixed shelf depth.
+        mesh.scale.set(entry.thickness, entry.height, entry.coverWidth);
         mesh.rotation.y = -Math.PI / 2;
         mesh.rotation.z = 0.06;
         mesh.position.set(
-          cursor + SHELF.bookDepth * 0.5,
+          cursor + entry.coverWidth * 0.5,
           shelfY + entry.height / 2,
-          (SHELF.depth - SHELF.bookDepth) / 2 - 0.02,
+          (SHELF.depth - entry.coverWidth) / 2 - 0.02,
         );
-        cursor += SHELF.bookDepth + SHELF.bookGap * 2;
+        cursor += entry.coverWidth + SHELF.bookGap * 2;
       } else {
         mesh.scale.set(entry.thickness, entry.height, SHELF.bookDepth);
         mesh.position.set(

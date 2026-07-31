@@ -22,6 +22,14 @@ export interface LibraryBook {
   readonly spineColor?: string;
   readonly pages?: number;
   readonly faceOut?: boolean;
+  /**
+   * The cover's width ÷ height, measured at build time.
+   *
+   * Books are not one shape. Print covers run about 0.65; audiobook art is
+   * square. Without this the shelf forces every cover onto one face and squashes
+   * the square ones. Derived, so it lives here rather than in the frontmatter.
+   */
+  readonly coverAspect?: number;
   readonly tags: readonly string[];
   /** Present in local builds only — stripped when `isPublic` is set. */
   readonly sourcePath?: string;
