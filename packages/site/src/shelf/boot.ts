@@ -9,6 +9,18 @@ import { mountShelf, type ShelfHandle } from './scene.ts';
  */
 
 declare global {
+  /**
+   * Just the slice of Vite's `import.meta.env` this file uses.
+   *
+   * Declared rather than pulled from `vite/client`: vite is a transitive
+   * dependency of astro, so it is not resolvable from the root tsconfig under
+   * pnpm's strict layout, and adding it as a direct dependency to satisfy one
+   * boolean would be worse than four lines.
+   */
+  interface ImportMeta {
+    readonly env: { readonly DEV: boolean };
+  }
+
   interface Window {
     /** Read by `pnpm smoke:render` to assert the shelf really drew books. */
     __shelf?: {
@@ -39,7 +51,44 @@ export async function boot(canvas: HTMLCanvasElement, card: HTMLElement): Promis
     if (event.key === 'Escape') hideCard(card);
   });
 
+  watchForRebuilds();
   return handle;
+}
+
+/** How often the dev page checks whether the vault was rebuilt. */
+const REBUILD_POLL_MS = 1500;
+
+/**
+ * Reloads the page when `stacks build --watch` writes a new library.
+ *
+ * Astro's HMR watches `src/`, not `public/`, so a regenerated `library.json`
+ * would otherwise sit there unnoticed until a manual refresh.
+ *
+ * Development only. A published shelf polling itself forever would be pointless
+ * traffic — the file cannot change without a redeploy.
+ */
+function watchForRebuilds(): void {
+  if (!import.meta.env.DEV) return;
+
+  let current: string | undefined;
+
+  const check = async (): Promise<void> => {
+    try {
+      const response = await fetch('/library.json', { cache: 'no-store' });
+      if (!response.ok) return;
+      const { generatedAt } = (await response.json()) as Library;
+
+      if (current === undefined) {
+        current = generatedAt;
+      } else if (generatedAt !== current) {
+        location.reload();
+      }
+    } catch {
+      // The dev server restarting is not worth reporting.
+    }
+  };
+
+  setInterval(() => void check(), REBUILD_POLL_MS);
 }
 
 /**

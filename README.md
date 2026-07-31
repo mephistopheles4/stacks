@@ -17,7 +17,25 @@ fixtures/vault   a miniature vault used by every test and gate
 
 ```bash
 pnpm install
+cp .env.example .env    # then set STACKS_VAULT to your vault path
 ```
+
+With `STACKS_VAULT` set, every command finds your vault without `--vault`.
+
+### Live editing
+
+```bash
+pnpm dev:watch
+```
+
+Watches the vault and serves the shelf together. Edit a note in Obsidian and the
+shelf follows about a second later — the page reloads itself when the library is
+rebuilt. Rebuilds are debounced, because Obsidian autosaves while you type.
+
+There is no background daemon and deliberately so: the build is cheap and
+explicit, and a process watching your vault forever is a thing to babysit. For a
+*published* shelf the right automation is a scheduled build or a git hook, since
+the interesting event is "share this now", not "a file changed".
 
 | Command | What it does |
 | --- | --- |
@@ -25,6 +43,7 @@ pnpm install
 | `pnpm test` | all workspaces |
 | `pnpm build` | typecheck + static site build |
 | `pnpm dev` | site dev server |
+| `pnpm dev:watch` | vault watcher + dev server, live-reloading |
 | `pnpm smoke:render` | headless shelf screenshot gate |
 | `pnpm gate:public` | proves the public build leaks no note text |
 

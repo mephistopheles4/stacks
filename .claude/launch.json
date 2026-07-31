@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@stacks/site", "run", "dev", "--port", "4321"],
       "port": 4321
+    },
+    {
+      "name": "site (watch vault)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev:watch"],
+      "port": 4322
     }
   ]
 }

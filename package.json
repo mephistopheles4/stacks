@@ -12,6 +12,7 @@
     "build": "pnpm run typecheck && pnpm --filter @stacks/site run build",
     "test": "vitest run",
     "dev": "pnpm --filter @stacks/site run dev",
+    "dev:watch": "tsx scripts/dev-watch.ts",
     "stacks": "tsx packages/cli/src/index.ts",
     "fixtures:50": "tsx scripts/make-50-book-fixture.ts",
     "smoke:render": "tsx scripts/smoke-render.ts",

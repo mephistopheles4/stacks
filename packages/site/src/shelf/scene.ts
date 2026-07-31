@@ -232,6 +232,7 @@ function placeBooks(
 
     // Books stand against the left upright and run right, as a shelf fills.
     let cursor = -SHELF.width / 2 + SHELF.padding;
+    let index = 0;
 
     for (const entry of row.books) {
       const mesh = buildBook(geometry, entry, textures);
@@ -255,14 +256,19 @@ function placeBooks(
         );
         cursor += entry.coverWidth + SHELF.bookGap * 2;
       } else {
+        const lean = leanFor(rowIndex, index, entry.book.id);
+
         mesh.scale.set(entry.thickness, entry.height, SHELF.bookDepth);
+        mesh.rotation.z = lean;
         mesh.position.set(
           cursor + entry.thickness / 2,
-          shelfY + entry.height / 2,
+          // Rotating about the centre would sink the low corner into the plank.
+          shelfY + entry.height / 2 + (entry.thickness / 2) * Math.sin(Math.abs(lean)),
           (SHELF.depth - SHELF.bookDepth) / 2 - 0.02,
         );
         cursor += entry.thickness + SHELF.bookGap;
       }
+      index += 1;
 
       scene.add(mesh);
       meshes.push(mesh);
@@ -271,6 +277,40 @@ function placeBooks(
   });
 
   return meshes;
+}
+
+/** Most a book leans, in radians — about 3.5°. Beyond that it looks knocked over. */
+const MAX_LEAN = 0.062;
+
+/**
+ * How far a shelved book leans to the left.
+ *
+ * The obvious version — an independent random angle per book — looks wrong and
+ * renders worse: neighbours touch, so two books tilted opposite ways intersect.
+ * Real shelves do not do that either. Books lean in *groups*, sharing a slump
+ * until something upright interrupts it.
+ *
+ * So the angle is a slow wave along the row, which keeps adjacent books within
+ * a fraction of a degree of each other, plus a little per-book jitter to stop
+ * the wave reading as machinery. Both are derived from the row and the book id,
+ * so a shelf looks the same on every rebuild.
+ */
+function leanFor(rowIndex: number, position: number, id: string): number {
+  const wave = Math.sin(position * 0.62 + rowIndex * 2.3);
+  const jitter = hashUnit(id) - 0.5;
+  // Biased positive: +Z rotation tips the top of the book to the left.
+  const lean = 0.55 + wave * 0.38 + jitter * 0.14;
+  return Math.max(0, Math.min(1, lean)) * MAX_LEAN;
+}
+
+/** FNV-1a squashed to 0..1 — deterministic, no dependency, good enough. */
+function hashUnit(value: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return (hash >>> 8) / 0x1000000;
 }
 
 /**
