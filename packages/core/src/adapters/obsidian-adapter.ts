@@ -139,6 +139,7 @@ function renderNote(book: BookInput): string {
   if (book.cover !== undefined) frontmatter['cover'] = book.cover;
   if (book.spineColor !== undefined) frontmatter['spine_color'] = book.spineColor;
   if (book.pages !== undefined) frontmatter['pages'] = book.pages;
+  if (book.faceOut !== undefined) frontmatter['face_out'] = book.faceOut;
   if (book.tags !== undefined && book.tags.length > 0) frontmatter['tags'] = [...book.tags];
 
   const yaml = stringifyYaml(frontmatter, { lineWidth: 0 }).trimEnd();

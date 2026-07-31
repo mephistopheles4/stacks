@@ -78,6 +78,7 @@ export function parseNote(source: string, sourcePath: string): ParsedNote {
       ...optional('cover', asString(fields['cover'])),
       ...optional('spineColor', asHexColour(fields['spine_color'])),
       ...optional('pages', asPositiveInt(fields['pages'])),
+      ...optional('faceOut', asBoolean(fields['face_out'])),
     },
   };
 }
@@ -141,6 +142,20 @@ function asPositiveInt(value: unknown): number | undefined {
   if (!Number.isFinite(n)) return undefined;
   const rounded = Math.round(n);
   return rounded > 0 ? rounded : undefined;
+}
+
+/**
+ * A tri-state: true, false, or "not set, decide from status".
+ *
+ * Accepts the strings too, because YAML quoting is easy to get wrong by hand
+ * and `face_out: "true"` clearly means the same thing.
+ */
+function asBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value;
+  const text = asString(value)?.toLowerCase();
+  if (text === 'true' || text === 'yes') return true;
+  if (text === 'false' || text === 'no') return false;
+  return undefined;
 }
 
 function asHexColour(value: unknown): string | undefined {

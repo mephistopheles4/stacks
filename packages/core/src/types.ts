@@ -55,6 +55,16 @@ export interface BookRecord {
   /** Drives spine width on the shelf. Absent means: use the default width. */
   readonly pages?: number;
 
+  /**
+   * Force the book to stand cover-forward, or force it not to.
+   *
+   * Absent means "decide from status" — a book you are currently reading sits
+   * face-out on its own. Setting it explicitly overrides that in both
+   * directions, so `face_out: false` files a in-progress book away and
+   * `face_out: true` displays anything you want to show off.
+   */
+  readonly faceOut?: boolean;
+
   readonly tags: readonly string[];
 }
 
@@ -70,5 +80,6 @@ export interface BookInput {
   readonly cover?: string;
   readonly spineColor?: string;
   readonly pages?: number;
+  readonly faceOut?: boolean;
   readonly tags?: readonly string[];
 }

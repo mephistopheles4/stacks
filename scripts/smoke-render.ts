@@ -133,8 +133,23 @@ interface Stats {
  * so the test keeps hitting a book when the shelf layout changes. Tries several
  * books because any one of them may be occluded from the current angle.
  */
-async function clickABook(page: Page): Promise<string | undefined> {
-  for (let index = 0; index < 12; index += 1) {
+interface CardOpened {
+  readonly title: string;
+  readonly hasImage: boolean;
+  /** Pixels by which the card escapes the viewport, and the image its card. */
+  readonly overflow: { readonly card: number; readonly image: number };
+}
+
+async function clickABook(page: Page): Promise<CardOpened | undefined> {
+  // Keep looking until a card with a *cover* turns up. Some fixture books have
+  // none, and a card with no image cannot exercise the image-overflow check —
+  // which is the check that would have caught the cover spilling across the
+  // viewport in the first place.
+  let fallback: CardOpened | undefined;
+
+  // Covers are assigned to fixture books at random and only some are
+  // full-resolution, so this walks the whole shelf rather than the first few.
+  for (let index = 0; index < 60; index += 1) {
     const point = (await page.evaluate(
       `window.__shelf.projectBook(${index})`,
     )) as { x: number; y: number } | undefined;
@@ -143,22 +158,36 @@ async function clickABook(page: Page): Promise<string | undefined> {
     await page.mouse.click(Math.round(point.x), Math.round(point.y));
     await new Promise((resolve) => setTimeout(resolve, 120));
 
-    const title = (await page.evaluate(`(() => {
+    const opened = (await page.evaluate(`(() => {
       const card = document.getElementById('book-card');
       if (!card || card.hidden) return undefined;
-      return card.querySelector('h2')?.textContent ?? undefined;
-    })()`)) as string | undefined;
+      const box = card.getBoundingClientRect();
+      const img = card.querySelector('img');
+      const imgBox = img ? img.getBoundingClientRect() : null;
+      return {
+        title: card.querySelector('h2')?.textContent ?? '',
+        // A thumbnail-sized cover fits the card even completely unstyled, so
+        // only a full-resolution one actually exercises the overflow check.
+        hasImage: Boolean(img) && img.naturalWidth >= 800,
+        overflow: {
+          card: Math.round(Math.max(0, box.right - innerWidth, box.bottom - innerHeight, -box.left, -box.top)),
+          image: imgBox ? Math.round(Math.max(0, imgBox.right - box.right, imgBox.bottom - box.bottom)) : 0,
+        },
+      };
+    })()`)) as CardOpened | undefined;
 
-    if (title !== undefined && title.length > 0) return title;
+    if (opened === undefined || opened.title.length === 0) continue;
+    if (opened.hasImage) return opened;
+    fallback ??= opened;
   }
-  return undefined;
+  return fallback;
 }
 
 function report(result: {
   bookCount: number;
   stats: Stats;
   errors: string[];
-  cardOpened: string | undefined;
+  cardOpened: CardOpened | undefined;
 }): void {
   const { bookCount, stats, errors, cardOpened } = result;
   const failures: string[] = [];
@@ -167,11 +196,21 @@ function report(result: {
   console.log(`books rendered    ${bookCount}`);
   console.log(`distinct colours  ${stats.distinctColours}`);
   console.log(`non-background    ${stats.nonBackgroundPct.toFixed(1)}%`);
-  console.log(`click opens card  ${cardOpened ?? 'NO'}`);
+  console.log(`click opens card  ${cardOpened?.title ?? 'NO'}`);
   console.log(`screenshot        ${OUTPUT}`);
 
   if (cardOpened === undefined) {
     failures.push('clicking a book did not open the detail card');
+  } else {
+    // "The card opened" is not the same as "the card is usable". A cover
+    // rendering at its natural size opened a perfectly valid card that spilled
+    // across the whole viewport, and this gate happily passed it.
+    if (cardOpened.overflow.card > 2) {
+      failures.push(`the detail card escapes the viewport by ${cardOpened.overflow.card}px`);
+    }
+    if (cardOpened.overflow.image > 2) {
+      failures.push(`the cover image overflows its card by ${cardOpened.overflow.image}px`);
+    }
   }
 
   const expected = expectedBookCount();

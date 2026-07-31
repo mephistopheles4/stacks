@@ -121,9 +121,10 @@ function byReadingThenNewest(a: LibraryBook, b: LibraryBook): number {
 
 function toShelfBook(book: LibraryBook): ShelfBook {
   const thickness = thicknessFor(book.pages);
-  // Books in progress sit face-out, the way a book you are mid-way through ends
-  // up propped on the shelf rather than filed away.
-  const faceOut = book.status === 'reading';
+  // `face_out` in the note wins in both directions when it is set; otherwise a
+  // book in progress stands cover-forward on its own, the way one you are
+  // mid-way through ends up propped on the shelf rather than filed away.
+  const faceOut = book.faceOut ?? book.status === 'reading';
 
   return {
     book,

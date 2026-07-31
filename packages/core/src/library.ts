@@ -21,6 +21,7 @@ export interface LibraryBook {
   readonly cover?: string;
   readonly spineColor?: string;
   readonly pages?: number;
+  readonly faceOut?: boolean;
   readonly tags: readonly string[];
   /** Present in local builds only — stripped when `isPublic` is set. */
   readonly sourcePath?: string;
@@ -69,6 +70,7 @@ function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
     ...pick('cover', record.cover),
     ...pick('spineColor', record.spineColor),
     ...pick('pages', record.pages),
+    ...pick('faceOut', record.faceOut),
   };
 
   // A public build must expose no vault paths (brief, "share build").

@@ -89,6 +89,18 @@ describe('parseNote — hand-edited notes are first-class', () => {
     expect(pick(result).isbn).toBe('9781000000016');
   });
 
+  it('reads face_out as a tri-state, so it can override status either way', () => {
+    const base = '---\ntype: book\ntitle: X\n';
+    // Unset means "decide from status" — the shelf, not the parser, owns that.
+    expect(pick(parseNote(`${base}---\n`, 'x')).faceOut).toBeUndefined();
+    expect(pick(parseNote(`${base}face_out: true\n---\n`, 'x')).faceOut).toBe(true);
+    expect(pick(parseNote(`${base}face_out: false\n---\n`, 'x')).faceOut).toBe(false);
+    // Hand-typed quoting should not change the meaning.
+    expect(pick(parseNote(`${base}face_out: "true"\n---\n`, 'x')).faceOut).toBe(true);
+    expect(pick(parseNote(`${base}face_out: yes\n---\n`, 'x')).faceOut).toBe(true);
+    expect(pick(parseNote(`${base}face_out: maybe\n---\n`, 'x')).faceOut).toBeUndefined();
+  });
+
   it('discards a rating outside 1–5 instead of rejecting the book', () => {
     expect(pick(parseNote('---\ntype: book\ntitle: X\nrating: 9\n---\n', 'x')).rating).toBeUndefined();
     expect(pick(parseNote('---\ntype: book\ntitle: X\nrating: 4\n---\n', 'x')).rating).toBe(4);

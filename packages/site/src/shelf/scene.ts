@@ -239,9 +239,13 @@ function placeBooks(
 
       if (entry.faceOut) {
         // Turned to show its cover, leaning back against the books beside it.
+        //
+        // -90°, not +90°: the cover is the +X face, and rotating +90° about Y
+        // maps +X to -Z — pointing away from the room. Face-out books were
+        // showing the viewer their back boards.
         mesh.scale.set(entry.thickness, entry.height, SHELF.bookDepth);
-        mesh.rotation.y = Math.PI / 2;
-        mesh.rotation.z = -0.06;
+        mesh.rotation.y = -Math.PI / 2;
+        mesh.rotation.z = 0.06;
         mesh.position.set(
           cursor + SHELF.bookDepth * 0.5,
           shelfY + entry.height / 2,

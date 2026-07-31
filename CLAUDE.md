@@ -49,7 +49,9 @@ interface VaultAdapter {
 - Do NOT build a second adapter. Do NOT add adapter config plumbing beyond a single constructor arg (vault path). The interface exists so a Logseq/Anytype adapter is possible later, not to be a framework.
 
 ## Frontmatter contract (do not change without updating this file)
-Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `spine_color` (hex), `pages`, `tags`.
+Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `spine_color` (hex), `pages`, `face_out` (bool), `tags`.
+
+`face_out` forces the book cover-forward on the shelf, or forces it not to. Unset means decide from `status` — a book you're reading stands face-out on its own.
 
 ## Tech decisions (made — don't relitigate)
 - **Vanilla Three.js, not react-three-fiber.** Plain Astro island, no React on the page. Use InstancedMesh for book boxes, per-instance cover textures via a texture atlas or lazy per-book planes — measure first, don't optimize blind.

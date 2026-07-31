@@ -32,11 +32,23 @@
     touch-action: none;
   }
 
+  /*
+   * The card's contents are built at runtime by ../shelf/boot.ts, and Astro
+   * scopes component styles by stamping an attribute on elements *in the
+   * template*. Nothing created with createElement carries that attribute, so a
+   * plain `.card img` rule never matches and the cover renders at its natural
+   * size — which it did, overflowing the card and the viewport.
+   *
+   * `:global()` on the descendant keeps `.card` itself scoped while letting the
+   * rule reach children that Astro never saw.
+   */
   .card {
     position: absolute;
     right: clamp(1rem, 4vw, 2.5rem);
     bottom: clamp(1rem, 4vw, 2.5rem);
     width: min(20rem, calc(100vw - 2rem));
+    max-height: min(28rem, calc(100vh - 2rem));
+    overflow-y: auto;
     padding: 1.15rem 1.25rem;
     border: 1px solid rgba(242, 232, 220, 0.14);
     border-radius: 0.85rem;
@@ -50,36 +62,38 @@
     display: none;
   }
 
-  .card img {
+  .card :global(img) {
     display: block;
     width: 4.5rem;
+    max-width: 100%;
     height: auto;
     margin-bottom: 0.85rem;
     border-radius: 0.2rem;
     box-shadow: 0 0.4rem 1rem rgba(0, 0, 0, 0.5);
   }
 
-  .card h2 {
+  .card :global(h2) {
     margin: 0;
     font-size: 1.05rem;
     font-weight: 600;
     line-height: 1.3;
     letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
   }
 
-  .card .author {
+  .card :global(.author) {
     margin: 0.2rem 0 0;
     font-size: 0.9rem;
     color: #c9b8a4;
   }
 
-  .card .meta {
+  .card :global(.meta) {
     margin: 0.6rem 0 0;
     font-size: 0.8rem;
     color: #a89684;
   }
 
-  .card .tags {
+  .card :global(.tags) {
     margin: 0.35rem 0 0;
     font-size: 0.75rem;
     color: #857361;

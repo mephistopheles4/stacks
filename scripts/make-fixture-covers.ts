@@ -38,10 +38,23 @@ interface CoverSpec {
    * every other cover here is edge-to-edge colour.
    */
   readonly whiteBorder?: boolean;
+  /**
+   * Renders at the size of a real cover rather than a thumbnail.
+   *
+   * Real covers from Open Library and from EPUBs are ~1600px wide. Every
+   * fixture cover being 200px wide meant an unconstrained `<img>` still fitted
+   * inside the detail card, so the render gate passed a layout that overflowed
+   * the whole viewport on real data. At least one fixture has to be the size
+   * the real thing is.
+   */
+  readonly fullSize?: boolean;
 }
 
+const FULL_WIDTH = 1400;
+const FULL_HEIGHT = 2100;
+
 const COVERS: readonly CoverSpec[] = [
-  { file: 'the-tidal-engine.png', base: '#2f6d7a', accent: '#e0c8a0' },
+  { file: 'the-tidal-engine.png', base: '#2f6d7a', accent: '#e0c8a0', fullSize: true },
   { file: 'compilers-for-the-impatient.png', base: '#8a3b2e', accent: '#f0d8b8' },
   { file: 'signal-and-sediment.png', base: '#4a6b5a', accent: '#d8e0c8' },
   { file: 'nine-ways-of-seeing-a-warehouse.png', base: '#6a5a8c', accent: '#e8dcf0' },
@@ -134,8 +147,6 @@ const outDir = join(
 );
 mkdirSync(outDir, { recursive: true });
 
-const bandTop = Math.round(HEIGHT * BAND_TOP);
-const bandBottom = Math.round(HEIGHT * BAND_BOTTOM);
 
 const WHITE: Rgb = [255, 255, 255];
 const MARGIN_X = Math.round(WIDTH * 0.25);
@@ -145,18 +156,31 @@ for (const cover of COVERS) {
   const base = hexToRgb(cover.base);
   const accent = hexToRgb(cover.accent);
 
-  const png = encodePng(WIDTH, HEIGHT, (x, y) => {
+  const full = cover.fullSize === true;
+  const w = full ? FULL_WIDTH : WIDTH;
+  const h = full ? FULL_HEIGHT : HEIGHT;
+  const top = Math.round(h * BAND_TOP);
+  const bottom = Math.round(h * BAND_BOTTOM);
+  const marginX = full ? Math.round(w * 0.25) : MARGIN_X;
+  const marginY = full ? Math.round(h * 0.25) : MARGIN_Y;
+
+  const png = encodePng(w, h, (x, y) => {
     if (cover.whiteBorder === true) {
-      const inside =
-        x >= MARGIN_X && x < WIDTH - MARGIN_X && y >= MARGIN_Y && y < HEIGHT - MARGIN_Y;
+      const inside = x >= marginX && x < w - marginX && y >= marginY && y < h - marginY;
       if (!inside) return WHITE;
     }
-    return y >= bandTop && y < bandBottom ? accent : base;
+    return y >= top && y < bottom ? accent : base;
   });
 
   writeFileSync(join(outDir, cover.file), png);
-  const note = cover.whiteBorder === true ? '  + white border' : '';
-  console.log(`${cover.file}  base ${cover.base}  accent ${cover.accent}${note}`);
+  const notes = [
+    cover.whiteBorder === true ? 'white border' : undefined,
+    full ? `${w}x${h}` : undefined,
+  ].filter(Boolean);
+  console.log(
+    `${cover.file}  base ${cover.base}  accent ${cover.accent}` +
+      (notes.length > 0 ? `  (${notes.join(', ')})` : ''),
+  );
 }
 
 console.log(`\n${COVERS.length} covers written to ${outDir}`);
