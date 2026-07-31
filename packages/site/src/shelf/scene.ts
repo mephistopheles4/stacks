@@ -422,10 +422,13 @@ function buildBook(entry: ShelfBook, depth: number, textures: TextureCache): THR
 
   const thickness = entry.thickness;
   const height = entry.height;
-  // Board thickness is fixed in the world, not a fraction of the book — a thin
-  // book and a fat one are bound in the same card. Capped only so a book thinner
-  // than two boards would still have paper in it.
+  // Both are fixed in the world rather than fractions of the book — a thin book
+  // and a fat one are bound in the same card. Each is capped against the
+  // dimension it eats so that a small enough book still has paper in it: `depth`
+  // is the measured cover aspect on a face-out book, which is vault data, and a
+  // page block scaled negative turns inside out rather than failing.
   const board = Math.min(BOARD, thickness * 0.3);
+  const square = Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
 
   const solid = (material: THREE.Material): THREE.Mesh => {
     const mesh = new THREE.Mesh(UNIT_BOX, material);
@@ -449,8 +452,8 @@ function buildBook(entry: ShelfBook, depth: number, textures: TextureCache): THR
 
   // The page block, recessed inside the case at head, tail and fore-edge.
   const block = solid(pages);
-  block.scale.set(thickness - board * 2, height - SQUARE * 2, depth - board - SQUARE);
-  block.position.set(0, 0, (SQUARE - board) / 2);
+  block.scale.set(thickness - board * 2, height - square * 2, depth - board - square);
+  block.position.set(0, 0, (square - board) / 2);
 
   const printed = (material: THREE.Material): THREE.Mesh => {
     const mesh = new THREE.Mesh(UNIT_PLANE, material);
