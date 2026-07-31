@@ -79,17 +79,28 @@ function toMetadata(doc: Record<string, unknown> | undefined): BookMetadata | un
   if (title === undefined) return undefined;
 
   const coverId = asPositiveInt(doc['cover_i']);
+  const isbn = preferIsbn13(doc['isbn']);
+
+  /**
+   * Search results often omit `cover_i` for a book that does have cover art, so
+   * fall back to the by-ISBN endpoint. That endpoint answers 200 with a ~43-byte
+   * placeholder when it has nothing, which the download's minimum-size check
+   * already rejects — so a book with no cover still ends up with none.
+   */
+  const coverUrl =
+    coverId !== undefined
+      ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`
+      : isbn !== undefined
+        ? `https://covers.openlibrary.org/b/isbn/${normaliseIsbn(isbn)}-L.jpg`
+        : undefined;
 
   return {
     title,
     source: 'open-library',
     ...maybe('author', firstString(doc['author_name'])),
-    ...maybe('isbn', preferIsbn13(doc['isbn'])),
+    ...maybe('isbn', isbn),
     ...maybe('pages', asPositiveInt(doc['number_of_pages_median'])),
-    ...maybe(
-      'coverUrl',
-      coverId === undefined ? undefined : `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`,
-    ),
+    ...maybe('coverUrl', coverUrl),
   };
 }
 
