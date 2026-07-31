@@ -1,4 +1,4 @@
-import { normaliseIsbn } from '../identity.ts';
+import { looksDerivative, normaliseIsbn } from '../identity.ts';
 import type { HttpGet } from './http.ts';
 import { asPositiveInt, asRecord, firstString, type BookMetadata } from './types.ts';
 
@@ -50,10 +50,13 @@ export async function searchByTitle(
   const body = asRecord(await get(url));
   if (body === undefined || isQuotaError(body)) return [];
 
+  const wantsDerivative = looksDerivative(query);
   const items = Array.isArray(body['items']) ? body['items'] : [];
   return items
     .map((item) => toMetadata(asRecord(asRecord(item)?.['volumeInfo'])))
-    .filter((item): item is BookMetadata => item !== undefined);
+    .filter((item): item is BookMetadata => item !== undefined)
+    // Same trap as Open Library: summaries rank alongside the real book.
+    .filter((item) => wantsDerivative || !looksDerivative(item.title));
 }
 
 function firstVolume(body: unknown, fallbackIsbn: string): BookMetadata | undefined {
@@ -91,6 +94,10 @@ function toMetadata(info: Record<string, unknown> | undefined): BookMetadata | u
       'coverUrl',
       coverFrom(firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail'])),
     ),
+    ...maybe(
+      'coverUrlLarge',
+      largerCover(firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail'])),
+    ),
   };
 }
 
@@ -103,19 +110,28 @@ function toMetadata(info: Record<string, unknown> | undefined): BookMetadata | u
  * listing it is decoration; on a 3D book it is a curl drawn onto a cover that
  * is already a solid object, so it goes.
  *
- * The URLs come back as `http://`, which would make a deployed build
+ * The URLs also come back as `http://`, which would make a deployed build
  * mixed-content.
- *
- * And the temptation: these thumbnails are only ~128px wide, so a bigger `zoom`
- * looks like an easy win. It is not — measured across every level, only zoom 1
- * and 5 return a *cropped cover*; 2, 3, 4 and 6 return the entire dust jacket,
- * front and spine and back flap together with the printer's crop marks. Bigger
- * and wrong beats smaller and right nowhere. 128px is simply Google's ceiling
- * for a cropped cover, and a hand-dropped file in `Library/covers/` is the way
- * past it.
  */
 function coverFrom(url: string | undefined): string | undefined {
   return url?.replace(/^http:/, 'https:').replace(/&edge=curl/, '');
+}
+
+/**
+ * The same image at a higher zoom — a candidate, not a replacement.
+ *
+ * `thumbnail` is only ~128px wide, and a bigger zoom is often a genuine
+ * high-resolution cover: *We Are as Gods* comes back 800x1196. But for other
+ * titles the same request returns the publisher's jacket artwork — front,
+ * spine, back flap and printer's crop marks in one image, near-square. *
+ * Effective* does exactly that at 800x754.
+ *
+ * There is no field distinguishing the two, so the caller downloads this first
+ * and keeps it only if the shape says cover rather than spread.
+ */
+function largerCover(url: string | undefined): string | undefined {
+  const cleaned = coverFrom(url);
+  return cleaned === undefined ? undefined : cleaned.replace(/zoom=\d/, 'zoom=4');
 }
 
 function isbnFrom(value: unknown): string | undefined {

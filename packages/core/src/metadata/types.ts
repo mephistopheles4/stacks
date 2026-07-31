@@ -17,6 +17,14 @@ export interface BookMetadata {
    * at all when the other provider had one.
    */
   readonly coverIsSpeculative?: boolean;
+  /**
+   * A higher-resolution cover to try before `coverUrl`.
+   *
+   * Only a candidate: Google's larger sizes are sometimes a proper cover and
+   * sometimes the publisher's jacket artwork, and which you get varies by
+   * title. The downloader keeps whichever is cover-shaped.
+   */
+  readonly coverUrlLarge?: string;
   readonly source: MetadataSource;
 }
 

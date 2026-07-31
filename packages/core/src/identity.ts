@@ -97,11 +97,30 @@ export function isProbablySameBook(a: string, b: string): boolean {
   if (left.length === 0 || right.length === 0) return false;
   if (left === right) return true;
 
+  // "Summary of X" is not X. These words mark a derivative work, and a title
+  // carrying one is a different book from the title that does not.
+  if (DERIVATIVE.test(left) !== DERIVATIVE.test(right)) return false;
+
   const forward = titleMatchScore(left, right);
   const backward = titleMatchScore(right, left);
   if (Math.max(forward, backward) >= 0.9 && Math.min(forward, backward) >= 0.6) return true;
 
   return isContainedIn(left, right) || isContainedIn(right, left);
+}
+
+/** Study guides, summaries and workbooks that borrow a title wholesale. */
+const DERIVATIVE = /\b(?:summary|summaries|workbook|study|guide|companion|analysis|takeaways|abridged)\b/;
+
+/**
+ * Does this title look like a summary or study guide of another book?
+ *
+ * Search engines rank these level with the real thing, because they contain
+ * every word of it. Asking for "Staff Engineer Will Larson" on Open Library
+ * returns "Summary of Will Larson's Staff Engineer" first — and a search that
+ * takes its top hit on trust then writes a note for the wrong book entirely.
+ */
+export function looksDerivative(title: string): boolean {
+  return DERIVATIVE.test(normaliseTitleAuthor(title));
 }
 
 /**
@@ -122,12 +141,31 @@ const MIN_TOKENS = 3;
 
 function isContainedIn(shorter: string, longer: string): boolean {
   const small = shorter.split(' ').filter(Boolean);
-  const large = new Set(longer.split(' ').filter(Boolean));
+  const largeTokens = longer.split(' ').filter(Boolean);
+  const large = new Set(largeTokens);
   if (small.length < MIN_TOKENS || small.length > large.size) return false;
+
+  /**
+   * The extra words must be a *subtitle*, not a prefix.
+   *
+   * Containment alone cannot tell "Staff Engineer: Leadership Beyond the
+   * Management Track" from "Summary of Will Larson's Staff Engineer" — both
+   * contain every word of "Staff Engineer — Will Larson". But the first begins
+   * with the title and the second buries it, and only the first is the same
+   * book. Requiring the shorter title to start near the front of the longer one
+   * separates them, and it is what a reader does at a glance.
+   */
+  const firstToken = small[0];
+  if (firstToken === undefined) return false;
+  const startsAt = largeTokens.indexOf(firstToken);
+  if (startsAt < 0 || startsAt > MAX_PREFIX_DRIFT) return false;
 
   const shared = small.filter((token) => large.has(token)).length;
   return shared / small.length >= CONTAINMENT;
 }
+
+/** How far into the longer title the shorter one may begin. */
+const MAX_PREFIX_DRIFT = 2;
 
 /**
  * How well a candidate title matches what was searched for, from 0 to 1.

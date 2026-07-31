@@ -1,4 +1,4 @@
-import { normaliseIsbn, titleMatchScore } from '../identity.ts';
+import { looksDerivative, normaliseIsbn, titleMatchScore } from '../identity.ts';
 import type { HttpGet } from './http.ts';
 import { asPositiveInt, asRecord, firstString, type BookMetadata } from './types.ts';
 
@@ -64,9 +64,14 @@ export async function searchByTitle(
   const body = asRecord(await get(url));
   const docs = Array.isArray(body?.['docs']) ? body['docs'] : [];
 
+  // Unless a summary is what was asked for, drop them: they contain every word
+  // of the real title and so rank alongside it.
+  const wantsDerivative = looksDerivative(query);
+
   return docs
     .map((doc) => toMetadata(asRecord(doc)))
     .filter((item): item is BookMetadata => item !== undefined)
+    .filter((item) => wantsDerivative || !looksDerivative(item.title))
     .map((item) => ({ item, score: titleMatchScore(query, item.title) }))
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)

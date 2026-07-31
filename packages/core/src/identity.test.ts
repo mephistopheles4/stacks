@@ -93,6 +93,33 @@ describe('isProbablySameBook', () => {
     ).toBe(true);
   });
 
+  it('does NOT match a summary or study guide of the same book', () => {
+    // Real failure: Apple's top hit for "Staff Engineer Will Larson" is
+    // "Summary of Will Larson's Staff Engineer", and containment matched it —
+    // every word of the real title is in there. The knock-off's cover was
+    // downloaded and written onto the real book.
+    expect(
+      isProbablySameBook(
+        "Summary of Will Larson's Staff Engineer",
+        'Staff Engineer Will Larson',
+      ),
+    ).toBe(false);
+    expect(
+      isProbablySameBook('Workbook for Atomic Habits James Clear', 'Atomic Habits James Clear'),
+    ).toBe(false);
+  });
+
+  it('still matches when the extra words are a subtitle, not a prefix', () => {
+    // The distinction that separates the two: a subtitle follows the title, a
+    // qualifier precedes it.
+    expect(
+      isProbablySameBook(
+        'Staff Engineer: Leadership Beyond the Management Track Will Larson',
+        'Staff Engineer Will Larson',
+      ),
+    ).toBe(true);
+  });
+
   it('does not let a one-word title match everything it appears inside', () => {
     expect(isProbablySameBook('Nexus', 'Nexus: A Brief History of Information Networks')).toBe(false);
   });

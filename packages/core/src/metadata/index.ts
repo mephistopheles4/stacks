@@ -1,4 +1,5 @@
 import { isProbablySameBook, isValidIsbn } from '../identity.ts';
+import * as appleBooks from './apple-books.ts';
 import * as googleBooks from './google-books.ts';
 import * as openLibrary from './open-library.ts';
 import type { HttpGet } from './http.ts';
@@ -62,7 +63,7 @@ export async function lookup(
 ): Promise<BookMetadata[]> {
   if (isValidIsbn(term)) {
     const hit = await lookupByIsbn(term, get, options);
-    if (hit !== undefined) return [await fillGaps(hit, get, options)];
+    if (hit !== undefined) return [await preferAppleArtwork(await fillGaps(hit, get, options), get)];
   }
 
   const results = await searchByTitle(term, get, options);
@@ -72,7 +73,32 @@ export async function lookup(
   // Only the result that will actually be used is enriched. Filling every
   // candidate would cost one request per search hit to answer a question nobody
   // asked.
-  return [await fillGaps(best, get, options), ...results.slice(1)];
+  const filled = await preferAppleArtwork(await fillGaps(best, get, options), get);
+  return [filled, ...results.slice(1)];
+}
+
+/**
+ * Adds Apple's artwork as the preferred cover candidate.
+ *
+ * Run after the providers have agreed on *which book this is*, because Apple is
+ * consulted for pictures only. Its art is ~800x1200 and correctly cropped,
+ * against Google's ~128px and Open Library's patchy scans, so it goes to the
+ * front of the queue — but only ahead of a cover we have reason to doubt.
+ * A large scan already in hand is left alone.
+ */
+async function preferAppleArtwork(
+  book: BookMetadata,
+  get: HttpGet,
+): Promise<BookMetadata> {
+  const weakCover =
+    book.coverUrl === undefined ||
+    book.coverIsSpeculative === true ||
+    book.source === 'google-books' ||
+    book.coverUrlLarge !== undefined;
+  if (!weakCover) return book;
+
+  const artwork = await appleBooks.findCover(book.title, book.author, get);
+  return artwork === undefined ? book : { ...book, coverUrlLarge: artwork };
 }
 
 /**
@@ -123,7 +149,13 @@ async function fillGaps(
     ...primary,
     // A confirmed cover from the fallback beats a guessed one from the primary.
     ...(needsCover && candidate.coverUrl !== undefined
-      ? { coverUrl: candidate.coverUrl, coverIsSpeculative: false }
+      ? {
+          coverUrl: candidate.coverUrl,
+          coverIsSpeculative: false,
+          ...(candidate.coverUrlLarge === undefined
+            ? {}
+            : { coverUrlLarge: candidate.coverUrlLarge }),
+        }
       : {}),
     ...(primary.pages === undefined && candidate.pages !== undefined
       ? { pages: candidate.pages }

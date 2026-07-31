@@ -48,10 +48,14 @@ export async function addBook(
     }
   }
 
+  // Best candidate first; the downloader keeps whichever is cover-shaped.
+  const coverCandidates = [metadata.coverUrlLarge, metadata.coverUrl].filter(
+    (url): url is string => url !== undefined,
+  );
   const cover =
-    metadata.coverUrl === undefined
+    coverCandidates.length === 0
       ? undefined
-      : await cacheCover(metadata.coverUrl, metadata.title, vault);
+      : await cacheCover(coverCandidates, metadata.title, vault);
 
   const book: BookInput = {
     title: metadata.title,
