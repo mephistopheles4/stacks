@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { dominantColour } from './covers/dominant-colour.ts';
+import { spineColour } from './covers/dominant-colour.ts';
 import { normaliseIsbn } from './identity.ts';
 import { lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
 import type { BookInput, BookStatus } from './types.ts';
@@ -98,7 +98,7 @@ async function cacheCover(
 
   return {
     relativePath: `covers/${filename}`,
-    ...maybe('spineColor', await dominantColour(absolute)),
+    ...maybe('spineColor', await spineColour(absolute)),
   };
 }
 

@@ -27,7 +27,7 @@ export {
   type LibraryBook,
 } from './library.ts';
 
-export { dominantColour } from './covers/dominant-colour.ts';
+export { dominantColour, spineColour, type Region } from './covers/dominant-colour.ts';
 
 export {
   createCachedHttpGet,

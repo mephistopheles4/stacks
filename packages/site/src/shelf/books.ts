@@ -17,7 +17,20 @@ export interface ShelfBook {
   readonly colour: string;
   /** Face-out books show their cover instead of their spine. */
   readonly faceOut: boolean;
+  /** Extra space to the left of this book, opened where a year changes. */
+  readonly gapBefore?: number;
+  /**
+   * How much shelf this book actually eats.
+   *
+   * Not the same as `thickness`: a face-out book is turned side-on, so it takes
+   * roughly its depth. Row packing has to count the footprint or face-out books
+   * overrun the end of the shelf.
+   */
+  readonly footprint: number;
 }
+
+/** Matches SHELF.bookDepth in scene.ts — a turned book takes its depth. */
+const FACE_OUT_FOOTPRINT = 0.55;
 
 export interface ShelfRow {
   readonly label: string;
@@ -47,47 +60,78 @@ const FALLBACK_COLOURS = [
   '#3f6b5a',
 ];
 
-export function toRows(books: readonly LibraryBook[]): ShelfRow[] {
+/**
+ * Books flow left-to-right and top-to-bottom, filling each shelf before
+ * starting the next — the way a real bookcase fills up.
+ *
+ * The brief's original sketch was one shelf row per year. That reads well on
+ * paper and badly in three dimensions: with a dozen books a year, every shelf
+ * trails off into two-thirds empty wood. Chronological order is preserved
+ * (newest first) and a year change opens a small gap where a bookend would sit,
+ * so the grouping is still legible without leaving the case looking abandoned.
+ */
+export function toRows(books: readonly LibraryBook[], capacity: number): ShelfRow[] {
   const shelved = books.filter((book) => SHELVED.has(book.status));
 
-  const reading: ShelfBook[] = [];
-  const byYear = new Map<string, ShelfBook[]>();
+  // Books in progress come first — they are the ones you would reach for.
+  const ordered = [...shelved].sort(byReadingThenNewest);
 
-  for (const book of shelved) {
+  const rows: ShelfRow[] = [];
+  let current: ShelfBook[] = [];
+  let used = 0;
+  let previousYear: string | undefined;
+
+  for (const book of ordered) {
     const entry = toShelfBook(book);
-    if (book.status === 'reading') {
-      reading.push(entry);
-      continue;
+    const year = yearOf(book);
+    const isYearChange = previousYear !== undefined && year !== previousYear;
+    const width = entry.footprint + (isYearChange ? YEAR_GAP : 0);
+
+    if (used + width > capacity && current.length > 0) {
+      rows.push({ label: previousYear ?? '', books: current });
+      current = [];
+      used = 0;
     }
-    const year = book.finished?.slice(0, 4) ?? 'Undated';
-    const row = byYear.get(year);
-    if (row === undefined) byYear.set(year, [entry]);
-    else row.push(entry);
+
+    current.push(isYearChange && used > 0 ? { ...entry, gapBefore: YEAR_GAP } : entry);
+    used += width;
+    previousYear = year;
   }
 
-  const years = [...byYear.keys()].sort((a, b) => b.localeCompare(a));
-
-  const rows: ShelfRow[] = years.map((year) => ({
-    label: year,
-    books: byYear.get(year) ?? [],
-  }));
-
-  if (reading.length > 0) {
-    rows.unshift({ label: 'Reading now', books: reading });
-  }
-
+  if (current.length > 0) rows.push({ label: previousYear ?? '', books: current });
   return rows;
 }
 
+/** A visible break where a bookend would sit. */
+const YEAR_GAP = 0.09;
+
+function yearOf(book: LibraryBook): string {
+  if (book.status === 'reading') return 'reading';
+  return book.finished?.slice(0, 4) ?? 'undated';
+}
+
+function byReadingThenNewest(a: LibraryBook, b: LibraryBook): number {
+  if (a.status === 'reading' && b.status !== 'reading') return -1;
+  if (b.status === 'reading' && a.status !== 'reading') return 1;
+  const left = a.finished ?? a.started ?? '';
+  const right = b.finished ?? b.started ?? '';
+  if (left !== right) return right.localeCompare(left);
+  return a.title.localeCompare(b.title);
+}
+
 function toShelfBook(book: LibraryBook): ShelfBook {
+  const thickness = thicknessFor(book.pages);
+  // Books in progress sit face-out, the way a book you are mid-way through ends
+  // up propped on the shelf rather than filed away.
+  const faceOut = book.status === 'reading';
+
   return {
     book,
-    thickness: thicknessFor(book.pages),
+    thickness,
     height: heightFor(book.id),
     colour: book.spineColor ?? fallbackColour(book.id),
-    // Books in progress sit face-out, the way a book you are mid-way through
-    // ends up propped on the shelf rather than filed away.
-    faceOut: book.status === 'reading',
+    faceOut,
+    footprint: faceOut ? FACE_OUT_FOOTPRINT : thickness,
   };
 }
 
@@ -122,5 +166,5 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 export function estimateRowWidth(books: readonly ShelfBook[], gap: number): number {
-  return books.reduce((total, entry) => total + entry.thickness + gap, 0);
+  return books.reduce((total, entry) => total + entry.footprint + (entry.gapBefore ?? 0) + gap, 0);
 }

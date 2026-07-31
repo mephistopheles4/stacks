@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { LibraryBook } from '@stacks/core';
-import { estimateRowWidth, toRows, type ShelfBook, type ShelfRow } from './books.ts';
+import { toRows, type ShelfBook, type ShelfRow } from './books.ts';
 
 /**
  * The shelf.
@@ -14,17 +14,29 @@ import { estimateRowWidth, toRows, type ShelfBook, type ShelfRow } from './books
  * Vanilla Three.js, no react-three-fiber (decided in CLAUDE.md).
  */
 
+/**
+ * Proportions taken from a real bookcase rather than picked to look tidy.
+ *
+ * A hardback is roughly 3cm thick and 23cm tall, and a shelf about 90cm wide —
+ * so width is ~4× book height and a shelf holds ~30 books. Matching that ratio
+ * is what makes the thing read as furniture instead of as a chart.
+ */
 const SHELF = {
-  width: 7,
-  rowHeight: 1.25,
+  width: 3.4,
+  rowHeight: 1.12,
   depth: 0.72,
-  plankThickness: 0.08,
-  sideThickness: 0.1,
+  plankThickness: 0.07,
+  sideThickness: 0.09,
   /** Gap between neighbouring books. */
-  bookGap: 0.012,
+  bookGap: 0.008,
   /** Books sit slightly forward of the backboard, as they do in life. */
-  bookDepth: 0.5,
+  bookDepth: 0.52,
+  /** Breathing room at each end of a shelf. */
+  padding: 0.06,
 } as const;
+
+/** Never fewer rows than this, so a small library still looks like a bookcase. */
+const MIN_ROWS = 4;
 
 const COLOURS = {
   background: 0x1a1613,
@@ -38,6 +50,14 @@ export interface ShelfHandle {
   dispose(): void;
   /** Books currently on the shelf, in draw order. Used by the smoke gate. */
   readonly bookCount: number;
+  /**
+   * Where a given book currently sits on screen, in CSS pixels.
+   *
+   * Exists so the click-to-inspect test can aim at a real book instead of a
+   * hardcoded coordinate that silently stops pointing at anything the moment
+   * the layout changes.
+   */
+  projectBook(index: number): { x: number; y: number } | undefined;
 }
 
 export interface MountOptions {
@@ -59,20 +79,27 @@ export function mountShelf(
   scene.background = new THREE.Color(COLOURS.background);
   scene.fog = new THREE.Fog(COLOURS.background, 14, 30);
 
-  const rows = toRows(books);
-  const rowCount = Math.max(rows.length, 1);
+  const rows = toRows(books, SHELF.width - SHELF.padding * 2);
+  const rowCount = Math.max(rows.length, MIN_ROWS);
   const unitHeight = rowCount * SHELF.rowHeight;
 
-  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-  camera.position.set(0, unitHeight * 0.55, Math.max(8, unitHeight * 1.4));
+  const fov = 40;
+  const camera = new THREE.PerspectiveCamera(fov, 1, 0.1, 100);
+
+  // Framed to fit rather than guessed: back off far enough that the whole case
+  // plus a margin fits the vertical field of view. Guessing a distance means
+  // the top shelf falls out of frame the moment the shelf grows a row.
+  const distance = (unitHeight * 1.18) / (2 * Math.tan((fov / 2) * (Math.PI / 180)));
+
+  camera.position.set(0.55, unitHeight * 0.5, distance);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
-  controls.minDistance = 2.5;
-  controls.maxDistance = 24;
+  controls.minDistance = 1.5;
+  controls.maxDistance = distance * 2.2;
   controls.maxPolarAngle = Math.PI * 0.52;
-  controls.target.set(0, unitHeight / 2, 0);
+  controls.target.set(0, unitHeight * 0.48, 0);
 
   scene.add(buildShelf(rowCount));
   addLighting(scene, unitHeight);
@@ -105,6 +132,23 @@ export function mountShelf(
 
   return {
     bookCount: bookMeshes.length,
+
+    projectBook(index: number): { x: number; y: number } | undefined {
+      const mesh = bookMeshes[index];
+      if (mesh === undefined) return undefined;
+
+      // Aim at the front face of the spine, not the centre of the box — the
+      // centre is buried inside the book and behind its neighbours.
+      const point = mesh.localToWorld(new THREE.Vector3(0, 0, 0.5));
+      point.project(camera);
+
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: rect.left + ((point.x + 1) / 2) * rect.width,
+        y: rect.top + ((1 - point.y) / 2) * rect.height,
+      };
+    },
+
     dispose(): void {
       cancelAnimationFrame(frame);
       observer.disconnect();
@@ -135,36 +179,39 @@ function placeBooks(
   const geometry = new THREE.BoxGeometry(1, 1, 1);
   const meshes: THREE.Mesh[] = [];
 
-  rows.forEach((row, rowIndex) => {
-    // Rows are drawn top-down: the newest year sits on the top shelf.
-    const shelfY = (rows.length - 1 - rowIndex) * SHELF.rowHeight + SHELF.plankThickness / 2;
+  const rowCount = Math.max(rows.length, MIN_ROWS);
 
-    const totalWidth = estimateRowWidth(row.books, SHELF.bookGap);
-    // Books lean against the left upright and run right, as they fill up.
-    let cursor = -SHELF.width / 2 + 0.06;
-    const scale = totalWidth > SHELF.width ? SHELF.width / (totalWidth + 0.12) : 1;
+  rows.forEach((row, rowIndex) => {
+    // Drawn top-down: the newest books sit on the top shelf.
+    const shelfY = (rowCount - 1 - rowIndex) * SHELF.rowHeight + SHELF.plankThickness / 2;
+
+    // Books stand against the left upright and run right, as a shelf fills.
+    let cursor = -SHELF.width / 2 + SHELF.padding;
 
     for (const entry of row.books) {
       const mesh = buildBook(geometry, entry, textures);
-      const thickness = entry.thickness * scale;
+      cursor += entry.gapBefore ?? 0;
 
       if (entry.faceOut) {
-        // Turn the book to show its cover, and give it room to breathe.
-        cursor += SHELF.bookDepth * 0.5;
+        // Turned to show its cover, leaning back against the books beside it.
+        mesh.scale.set(entry.thickness, entry.height, SHELF.bookDepth);
         mesh.rotation.y = Math.PI / 2;
-        mesh.position.set(cursor, shelfY + entry.height / 2, 0.02);
-        cursor += SHELF.bookDepth * 0.5 + SHELF.bookGap * 3;
-      } else {
+        mesh.rotation.z = -0.06;
         mesh.position.set(
-          cursor + thickness / 2,
+          cursor + SHELF.bookDepth * 0.5,
           shelfY + entry.height / 2,
           (SHELF.depth - SHELF.bookDepth) / 2 - 0.02,
         );
-        cursor += thickness + SHELF.bookGap;
+        cursor += SHELF.bookDepth + SHELF.bookGap * 2;
+      } else {
+        mesh.scale.set(entry.thickness, entry.height, SHELF.bookDepth);
+        mesh.position.set(
+          cursor + entry.thickness / 2,
+          shelfY + entry.height / 2,
+          (SHELF.depth - SHELF.bookDepth) / 2 - 0.02,
+        );
+        cursor += entry.thickness + SHELF.bookGap;
       }
-
-      mesh.scale.set(thickness, entry.height, SHELF.bookDepth);
-      if (entry.faceOut) mesh.scale.set(entry.thickness, entry.height, SHELF.bookDepth);
 
       scene.add(mesh);
       meshes.push(mesh);
@@ -265,18 +312,24 @@ function buildShelf(rowCount: number): THREE.Group {
 }
 
 function addLighting(scene: THREE.Scene, unitHeight: number): void {
-  scene.add(new THREE.AmbientLight(0xffffff, 0.42));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
 
-  const key = new THREE.DirectionalLight(COLOURS.key, 2.0);
-  key.position.set(4, unitHeight + 4, 7);
+  const key = new THREE.DirectionalLight(COLOURS.key, 2.4);
+  key.position.set(3.5, unitHeight + 3, 6);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
   key.shadow.camera.far = 40;
   scene.add(key);
 
-  const fill = new THREE.DirectionalLight(COLOURS.fill, 0.5);
-  fill.position.set(-6, unitHeight * 0.6, 5);
+  const fill = new THREE.DirectionalLight(COLOURS.fill, 0.75);
+  fill.position.set(-5, unitHeight * 0.6, 4.5);
   scene.add(fill);
+
+  // A warm lamp close to the shelf, so spines nearest the viewer read clearly
+  // and the case has a centre of light rather than flat exposure.
+  const lamp = new THREE.PointLight(0xffd7a8, 14, 14, 2);
+  lamp.position.set(1.6, unitHeight * 0.72, 2.4);
+  scene.add(lamp);
 }
 
 /* -------------------------------------------------------------------------- */

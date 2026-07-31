@@ -1,4 +1,4 @@
-import sharp from 'sharp';
+import sharp, { type Sharp } from 'sharp';
 
 /**
  * The colour a book's spine should be, taken from its cover.
@@ -33,23 +33,48 @@ const SAMPLE_WIDTH = 200;
 const LIGHT_LIMIT = 0.94;
 const DARK_LIMIT = 0.06;
 
-export async function dominantColour(imagePath: string): Promise<string | undefined> {
-  let raw: { data: Buffer; info: { width: number; height: number; channels: number } };
+/** How much of the cover's left edge stands in for the spine. */
+const SPINE_STRIP = 0.12;
+
+export type Region = 'all' | 'edge';
+
+/**
+ * The colour to paint a book's spine.
+ *
+ * On a real book the printed sheet wraps continuously around the spine, so the
+ * strip of artwork nearest the binding *is* the spine. Sampling that strip gets
+ * far closer to the object on your shelf than averaging the whole jacket: a
+ * cover that is mostly white field with a coloured band down one side has a
+ * coloured spine, not a white one.
+ *
+ * Falls back to the whole cover when the edge has nothing in it but paper —
+ * which happens when a cover image is padded with margins rather than cropped
+ * to the artwork.
+ */
+export async function spineColour(imagePath: string): Promise<string | undefined> {
+  return (await dominantColour(imagePath, 'edge')) ?? (await dominantColour(imagePath, 'all'));
+}
+
+export async function dominantColour(
+  imagePath: string,
+  region: Region = 'all',
+): Promise<string | undefined> {
+  let raw: { data: Buffer; info: { channels: number } };
   try {
-    raw = await sharp(imagePath)
-      .resize({ width: SAMPLE_WIDTH, withoutEnlargement: true, kernel: 'nearest' })
-      .removeAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
+    const pipeline = await pipelineFor(imagePath, region);
+    if (pipeline === undefined) return undefined;
+    raw = await pipeline.removeAlpha().raw().toBuffer({ resolveWithObject: true });
   } catch {
     // An unreadable or corrupt cover means no spine colour, not a failed build.
     return undefined;
   }
 
   const { data, info } = raw;
-  const stride = info.channels;
 
-  const winner = tally(data, stride, true) ?? tally(data, stride, false);
+  const withoutExtremes = tally(data, info.channels, true);
+  // For the edge strip specifically, "nothing but paper" is the caller's cue to
+  // fall back to the whole cover rather than to report the paper as the spine.
+  const winner = region === 'edge' ? withoutExtremes : (withoutExtremes ?? tally(data, info.channels, false));
   if (winner === undefined) return undefined;
 
   return toHex(
@@ -57,6 +82,27 @@ export async function dominantColour(imagePath: string): Promise<string | undefi
     Math.round(winner.g / winner.n),
     Math.round(winner.b / winner.n),
   );
+}
+
+/** Crop first, then downsample — cropping a resized image loses the edge. */
+async function pipelineFor(imagePath: string, region: Region): Promise<Sharp | undefined> {
+  if (region === 'all') {
+    return sharp(imagePath).resize({
+      width: SAMPLE_WIDTH,
+      withoutEnlargement: true,
+      kernel: 'nearest',
+    });
+  }
+
+  const { width, height } = await sharp(imagePath).metadata();
+  if (width === undefined || height === undefined || width < 2 || height < 2) return undefined;
+
+  return sharp(imagePath).extract({
+    left: 0,
+    top: 0,
+    width: Math.max(1, Math.round(width * SPINE_STRIP)),
+    height,
+  });
 }
 
 interface Bucket {
@@ -70,8 +116,7 @@ interface Bucket {
  * The most populous colour bin, averaged over the real pixels inside it.
  *
  * With `skipExtremes`, near-white and near-black pixels are not counted at all;
- * returns `undefined` if that leaves nothing, which is the caller's signal to
- * try again counting everything.
+ * returns `undefined` if that leaves nothing.
  */
 function tally(data: Buffer, stride: number, skipExtremes: boolean): Bucket | undefined {
   const bins = new Map<number, Bucket>();
@@ -109,3 +154,5 @@ function tally(data: Buffer, stride: number, skipExtremes: boolean): Bucket | un
 function toHex(r: number, g: number, b: number): string {
   return `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
 }
+
+export { SPINE_STRIP };

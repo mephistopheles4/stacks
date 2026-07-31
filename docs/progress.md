@@ -14,10 +14,10 @@ Update it in the **same commit** as the gate it describes.
 
 | | |
 | --- | --- |
-| **Last green gate** | Phase 1 — data layer |
-| **Now working on** | Phase 2 — shelf renderer (**gate red**, see below) |
-| **Blocked on** | human aesthetics review of `artifacts/shelf.png` |
-| **Next stop point** | ← we are here. Do not polish until the review comes back |
+| **Last green gate** | Phase 2 — shelf renderer |
+| **Now working on** | Phase 3 — public build |
+| **Blocked on** | nothing |
+| **Next stop point** | none left — run to Phase 3's gate |
 | **Out of scope this run** | Phase 4 (Audiobookshelf) |
 
 ## Gate log
@@ -26,7 +26,7 @@ Update it in the **same commit** as the gate it describes.
 | --- | --- | --- | --- |
 | 0 — scaffold | `stacks --help` lists commands · empty shelf renders · fixtures committed | ✅ green | tag `phase-0` |
 | 1 — data layer | `stacks build` → valid `library.json` · malformed skipped · 4 test cases | ✅ green | tag `phase-1` |
-| 2 — shelf | `pnpm smoke:render` → non-blank `artifacts/shelf.png` · 50 books · click opens card | ⬜ not started | — |
+| 2 — shelf | `pnpm smoke:render` → non-blank `artifacts/shelf.png` · 50 books · click opens card | ✅ green | tag `phase-2` |
 | 3 — public build | `--public` output has zero canary hits · OG image generated | ⬜ not started | — |
 
 Every phase additionally requires `pnpm test && pnpm build` green.
@@ -42,31 +42,16 @@ Every phase additionally requires `pnpm test && pnpm build` green.
 - End-to-end `stacks add 9781603580557` into a scratch vault: note written,
   real cover downloaded, spine colour extracted, re-running deduped correctly.
 
-### Phase 2 — in progress, gate NOT green
+### Phase 2 evidence
 
-Books render. `artifacts/shelf.png` is a real shelf: 49 of 50 fixture books
-(wishlist excluded), spines out, one row per year newest-first, "Reading now"
-face-out on the top shelf, varied spine widths from page count.
+`pnpm smoke:render` green: 49 of 50 fixture books shelved (wishlist excluded),
+715 distinct colours, 40.1% non-background, and a click on a real book opened
+its card ("Ember Protocol: Notes on Craft"). Screenshot at `artifacts/shelf.png`.
 
-**Still red, and why:**
-
-1. `pnpm smoke:render` exits 1. Two causes, both in the *gate*, not the shelf:
-   - the pixel probe reads the WebGL buffer without waiting for a frame, so it
-     gets an empty buffer (1 distinct colour, 100% "non-background"). The fix is
-     the double-`requestAnimationFrame` wait that worked in the earlier manual
-     probe — see the Phase 0 evidence entry.
-   - one resource 404s; not yet identified (books load, so not `library.json`).
-2. The click-to-open-card integration test is not written yet. The picker and
-   card exist and are wired; only the puppeteer test is missing.
-
-**Known defects, deliberately unfixed pending the review** (fixing them is the
-"polish" the human asked to gate):
-   - rows fill only ~20% of the shelf width — the unit is far too wide for ~8
-     books per row, so every shelf trails off into empty space
-   - the whole scene reads too dark
-   - `index.astro` still says "Empty shelf — books arrive in phase 2"
-   - a face-out book on the top row clips through the shelf above it
-   - the second row's single face-out book sits oddly proud of the row
+Aesthetics review came back with three directions, all applied: real bookcase
+feel (continuous fill at real proportions, not one sparse row per year),
+wishlist books stay off, and spine colour sampled from the cover's binding edge
+so it matches the real spine. See the Decision Log for each.
 
 ## Environment findings
 
@@ -83,20 +68,23 @@ face-out on the top shelf, varied spine widths from page count.
 
 ## Notes to the next session
 
-**Phase 2 starts here.** `library.json` is generated and stable; the shelf needs
-to read it.
+**Phase 3 starts here.** The shelf works and reads from `library.json`.
 
-- `mountShelf(canvas, books)` in `packages/site/src/shelf/scene.ts` throws if
-  given books — that is the seam, deliberately loud. `SHELF` in that file is the
-  single source of the geometry books must sit on.
-- Generate the 50-book fixture with a script from the 10-book shapes; do not
-  commit it (`fixtures/README.md`).
-- **Carry into the aesthetics review:** real covers often give desaturated
-  spine colours (a live add produced `#d6d6d5`). Not a bug — but a shelf of grey
-  spines may read badly, and that is a judgement to make against a screenshot,
-  not in advance.
-- Two open taste calls due in Phase 2/3: whether `wishlist` books render ghosted
-  or not at all, and whether the print + audiobook editions of one title collapse
-  into a single spine.
+- `stacks build --public` already strips `sourcePath`, and `library.test.ts`
+  asserts the public payload carries no note body, no `Library/`, no `.md`.
+  What Phase 3 still needs: covers copied into the output, the OG image, and a
+  **grep gate over the built folder** — the existing check is over the JSON, and
+  the gate is about what actually ships.
+- The canary is `NOTE_BODY_CANARY_do_not_ship`. It is in fixture note bodies
+  *including the malformed one*, so a passing grep cannot be an accident of that
+  book being skipped.
+- Covers currently reach the site by a manual copy into
+  `packages/site/public/covers/`. That is fine for the dev loop and **not** good
+  enough for `--public`; the public build should place them itself.
+- sharp is already a dependency and is what the OG image should use — that was
+  half the reason for choosing it in Phase 1.
+- Still open, and fair to decide in Phase 3: whether the print and audiobook
+  editions of one title should collapse into a single spine. Wishlist is settled
+  — off the shelf.
 - Everything in `fixtures/` is invented. No copyrighted material, ever — see
-  `plan.md` §1. The canary Phase 3 greps for is `NOTE_BODY_CANARY_do_not_ship`.
+  `plan.md` §1.

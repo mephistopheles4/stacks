@@ -11,7 +11,11 @@ import { mountShelf, type ShelfHandle } from './scene.ts';
 declare global {
   interface Window {
     /** Read by `pnpm smoke:render` to assert the shelf really drew books. */
-    __shelf?: { bookCount: number; ready: boolean };
+    __shelf?: {
+      bookCount: number;
+      ready: boolean;
+      projectBook(index: number): { x: number; y: number } | undefined;
+    };
   }
 }
 
@@ -25,7 +29,11 @@ export async function boot(canvas: HTMLCanvasElement, card: HTMLElement): Promis
     },
   });
 
-  window.__shelf = { bookCount: handle.bookCount, ready: true };
+  window.__shelf = {
+    bookCount: handle.bookCount,
+    ready: true,
+    projectBook: (index) => handle.projectBook(index),
+  };
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') hideCard(card);

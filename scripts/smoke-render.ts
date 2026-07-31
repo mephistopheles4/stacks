@@ -16,7 +16,7 @@ import { createServer, type Server } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import puppeteer from 'puppeteer-core';
+import puppeteer, { type Page } from 'puppeteer-core';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARTIFACTS = join(ROOT, 'artifacts');
@@ -70,6 +70,11 @@ async function main(): Promise<void> {
       page.on('console', (message) => {
         if (message.type() === 'error') errors.push(message.text());
       });
+      // A bare "404" from the console says nothing useful; name the URL.
+      page.on('requestfailed', (request) => errors.push(`request failed: ${request.url()}`));
+      page.on('response', (response) => {
+        if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
+      });
 
       await page.goto(URL, { waitUntil: 'networkidle0', timeout: 30_000 });
       await page.waitForFunction('window.__shelf?.ready === true', { timeout: 20_000 });
@@ -81,7 +86,9 @@ async function main(): Promise<void> {
 
       writeFileSync(OUTPUT, await page.screenshot({ type: 'png' }));
 
-      report({ bookCount: Number(bookCount), stats, errors });
+      const cardOpened = await clickABook(page);
+
+      report({ bookCount: Number(bookCount), stats, errors, cardOpened });
     } finally {
       await browser.close();
     }
@@ -90,8 +97,15 @@ async function main(): Promise<void> {
   }
 }
 
-/** Reads the WebGL buffer directly — a screenshot can be blank for other reasons. */
-const readCanvasStats = `(() => {
+/**
+ * Reads the WebGL buffer directly — a screenshot can be blank for other reasons.
+ *
+ * The double `requestAnimationFrame` matters: the drawing buffer is cleared
+ * after each composite, so reading outside a frame returns an empty buffer and
+ * the gate reports a blank shelf that is actually rendering fine.
+ */
+const readCanvasStats = `(async () => {
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   const canvas = document.getElementById('shelf-canvas');
   const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
   const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
@@ -112,15 +126,53 @@ interface Stats {
   size: string;
 }
 
-function report(result: { bookCount: number; stats: Stats; errors: string[] }): void {
-  const { bookCount, stats, errors } = result;
+/**
+ * Clicks a real book and checks the detail card opens with its title.
+ *
+ * Aims via the page's own projection of a book rather than a fixed coordinate,
+ * so the test keeps hitting a book when the shelf layout changes. Tries several
+ * books because any one of them may be occluded from the current angle.
+ */
+async function clickABook(page: Page): Promise<string | undefined> {
+  for (let index = 0; index < 12; index += 1) {
+    const point = (await page.evaluate(
+      `window.__shelf.projectBook(${index})`,
+    )) as { x: number; y: number } | undefined;
+    if (point === undefined) continue;
+
+    await page.mouse.click(Math.round(point.x), Math.round(point.y));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    const title = (await page.evaluate(`(() => {
+      const card = document.getElementById('book-card');
+      if (!card || card.hidden) return undefined;
+      return card.querySelector('h2')?.textContent ?? undefined;
+    })()`)) as string | undefined;
+
+    if (title !== undefined && title.length > 0) return title;
+  }
+  return undefined;
+}
+
+function report(result: {
+  bookCount: number;
+  stats: Stats;
+  errors: string[];
+  cardOpened: string | undefined;
+}): void {
+  const { bookCount, stats, errors, cardOpened } = result;
   const failures: string[] = [];
 
   console.log(`canvas            ${stats.size}`);
   console.log(`books rendered    ${bookCount}`);
   console.log(`distinct colours  ${stats.distinctColours}`);
   console.log(`non-background    ${stats.nonBackgroundPct.toFixed(1)}%`);
+  console.log(`click opens card  ${cardOpened ?? 'NO'}`);
   console.log(`screenshot        ${OUTPUT}`);
+
+  if (cardOpened === undefined) {
+    failures.push('clicking a book did not open the detail card');
+  }
 
   const expected = expectedBookCount();
   if (bookCount !== expected) {
