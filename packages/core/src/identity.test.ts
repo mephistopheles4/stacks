@@ -74,6 +74,29 @@ describe('isProbablySameBook', () => {
     ).toBe(true);
   });
 
+  it('sees past a LONG subtitle, not just a short one', () => {
+    // Regression, found against a real Audible export. The scored rule only
+    // handled short subtitles: these share half their tokens, so the weaker
+    // direction scored 0.5 and the pair was missed — which would have imported
+    // a second copy of two books already on the shelf.
+    expect(
+      isProbablySameBook(
+        'Staff Engineer: Leadership Beyond the Management Track Will Larson',
+        'Staff Engineer Will Larson',
+      ),
+    ).toBe(true);
+    expect(
+      isProbablySameBook(
+        'The Charisma Myth: How Anyone Can Master the Art and Science of Personal Magnetism Olivia Fox Cabane',
+        'The charisma myth Olivia Fox Cabane',
+      ),
+    ).toBe(true);
+  });
+
+  it('does not let a one-word title match everything it appears inside', () => {
+    expect(isProbablySameBook('Nexus', 'Nexus: A Brief History of Information Networks')).toBe(false);
+  });
+
   it('does NOT collapse two different books by the same author', () => {
     // The author tokens match on both sides; only the title tokens keep these
     // apart, which is exactly the false positive a looser rule would produce.

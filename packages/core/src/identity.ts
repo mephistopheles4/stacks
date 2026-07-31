@@ -74,7 +74,34 @@ export function isProbablySameBook(a: string, b: string): boolean {
 
   const forward = titleMatchScore(left, right);
   const backward = titleMatchScore(right, left);
-  return Math.max(forward, backward) >= 0.9 && Math.min(forward, backward) >= 0.6;
+  if (Math.max(forward, backward) >= 0.9 && Math.min(forward, backward) >= 0.6) return true;
+
+  return isContainedIn(left, right) || isContainedIn(right, left);
+}
+
+/**
+ * Is the shorter string essentially spelled out inside the longer one?
+ *
+ * The scored rule above fails when a subtitle is *long*: an Audible export's
+ * "Staff Engineer: Leadership Beyond the Management Track — Will Larson" shares
+ * only half its tokens with the vault's "Staff Engineer — Will Larson", so the
+ * weaker direction scores 0.5 and the pair is missed. It is plainly one book.
+ *
+ * Containment catches that without opening the door to false positives: two
+ * different books by one author share the author tokens but not the title ones,
+ * so the shorter side never reaches near-total containment. The three-token
+ * floor stops a one-word title from matching everything it appears inside.
+ */
+const CONTAINMENT = 0.9;
+const MIN_TOKENS = 3;
+
+function isContainedIn(shorter: string, longer: string): boolean {
+  const small = shorter.split(' ').filter(Boolean);
+  const large = new Set(longer.split(' ').filter(Boolean));
+  if (small.length < MIN_TOKENS || small.length > large.size) return false;
+
+  const shared = small.filter((token) => large.has(token)).length;
+  return shared / small.length >= CONTAINMENT;
 }
 
 /**
