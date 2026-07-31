@@ -77,6 +77,15 @@ Each cover's **expected** dominant colour, which the Phase 1 extractor must land
 | `nine-ways-of-seeing-a-warehouse.png` | `#6a5a8c` |
 | `the-salt-road-ledger.png` | `#b08442` |
 | `the-salt-road-ledger-audio.png` | `#3a4a6b` |
+| `white-bordered.png` | `#7a3f5d` — **not** white, despite a 44% white margin |
+| `all-white.png` | `#ffffff` |
+
+The last two belong to no book; they exist only for the extractor's tests.
+`white-bordered.png` is a regression fixture: the first real `stacks add`
+returned `spine_color: "#fefffe"`, because real covers are printed on and
+photographed against white, so white was genuinely the commonest colour.
+`all-white.png` guards the other direction — setting the extremes aside must not
+turn a genuinely white cover into no colour at all.
 
 There is no title text on the covers. Rendering text would mean adding a font
 dependency for no test value — the covers exist to give colour extraction a known

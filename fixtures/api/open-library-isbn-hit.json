@@ -1,0 +1,183 @@
+{
+  "ISBN:9781603580557": {
+    "url": "http://openlibrary.org/books/OL26445570M/Thinking_in_systems_a_primer",
+    "key": "/books/OL26445570M",
+    "title": "Thinking in systems : a primer",
+    "authors": [
+      {
+        "url": "http://openlibrary.org/authors/OL655307A/Donella_H._Meadows",
+        "name": "Donella H. Meadows"
+      },
+      {
+        "url": "http://openlibrary.org/authors/OL2824346A/Diana_Wright",
+        "name": "Diana Wright"
+      }
+    ],
+    "number_of_pages": 240,
+    "identifiers": {
+      "wikidata": [
+        "Q113496690"
+      ],
+      "isbn_13": [
+        "9781603580557"
+      ],
+      "openlibrary": [
+        "OL26445570M"
+      ]
+    },
+    "classifications": {
+      "lc_classifications": [
+        "QA402"
+      ]
+    },
+    "publishers": [
+      {
+        "name": "Chelsea"
+      }
+    ],
+    "publish_date": "2008",
+    "subjects": [
+      {
+        "name": "critical thinking",
+        "url": "https://openlibrary.org/subjects/critical_thinking"
+      },
+      {
+        "name": "systems thinking",
+        "url": "https://openlibrary.org/subjects/systems_thinking"
+      },
+      {
+        "name": "systems dynamics",
+        "url": "https://openlibrary.org/subjects/systems_dynamics"
+      },
+      {
+        "name": "complex systems",
+        "url": "https://openlibrary.org/subjects/complex_systems"
+      },
+      {
+        "name": "policy",
+        "url": "https://openlibrary.org/subjects/policy"
+      },
+      {
+        "name": "Sustainable development",
+        "url": "https://openlibrary.org/subjects/sustainable_development"
+      },
+      {
+        "name": "Environmental education",
+        "url": "https://openlibrary.org/subjects/environmental_education"
+      },
+      {
+        "name": "Economic development",
+        "url": "https://openlibrary.org/subjects/economic_development"
+      },
+      {
+        "name": "System analysis",
+        "url": "https://openlibrary.org/subjects/system_analysis"
+      },
+      {
+        "name": "Simulation methods",
+        "url": "https://openlibrary.org/subjects/simulation_methods"
+      },
+      {
+        "name": "Population",
+        "url": "https://openlibrary.org/subjects/population"
+      },
+      {
+        "name": "Social sciences",
+        "url": "https://openlibrary.org/subjects/social_sciences"
+      },
+      {
+        "name": "Decision making",
+        "url": "https://openlibrary.org/subjects/decision_making"
+      },
+      {
+        "name": "Pollution",
+        "url": "https://openlibrary.org/subjects/pollution"
+      },
+      {
+        "name": "Systems Analysis",
+        "url": "https://openlibrary.org/subjects/systems_analysis"
+      },
+      {
+        "name": "Sustainable Growth",
+        "url": "https://openlibrary.org/subjects/sustainable_growth"
+      },
+      {
+        "name": "Environmental Pollution",
+        "url": "https://openlibrary.org/subjects/environmental_pollution"
+      },
+      {
+        "name": "Systeemtheorie",
+        "url": "https://openlibrary.org/subjects/systeemtheorie"
+      },
+      {
+        "name": "Probleemoplossing",
+        "url": "https://openlibrary.org/subjects/probleemoplossing"
+      },
+      {
+        "name": "systems",
+        "url": "https://openlibrary.org/subjects/systems"
+      },
+      {
+        "name": "Problem solving",
+        "url": "https://openlibrary.org/subjects/problem_solving"
+      },
+      {
+        "name": "System theory",
+        "url": "https://openlibrary.org/subjects/system_theory"
+      },
+      {
+        "name": "Social Policy",
+        "url": "https://openlibrary.org/subjects/social_policy"
+      },
+      {
+        "name": "Social problems",
+        "url": "https://openlibrary.org/subjects/social_problems"
+      },
+      {
+        "name": "POLITICAL SCIENCE",
+        "url": "https://openlibrary.org/subjects/political_science"
+      },
+      {
+        "name": "Public Policy",
+        "url": "https://openlibrary.org/subjects/public_policy"
+      },
+      {
+        "name": "Environmental aspects",
+        "url": "https://openlibrary.org/subjects/environmental_aspects"
+      },
+      {
+        "name": "Economic aspects",
+        "url": "https://openlibrary.org/subjects/economic_aspects"
+      },
+      {
+        "name": "Management",
+        "url": "https://openlibrary.org/subjects/management"
+      },
+      {
+        "name": "Organizational behavior",
+        "url": "https://openlibrary.org/subjects/organizational_behavior"
+      },
+      {
+        "name": "Business & economics -> management -> organizational behavior",
+        "url": "https://openlibrary.org/subjects/business_&_economics_->_management_->_organizational_behavior"
+      },
+      {
+        "name": "Physical & earth sciences -> physics -> general",
+        "url": "https://openlibrary.org/subjects/physical_&_earth_sciences_->_physics_->_general"
+      },
+      {
+        "name": "Business & economics -> management -> principles of management",
+        "url": "https://openlibrary.org/subjects/business_&_economics_->_management_->_principles_of_management"
+      },
+      {
+        "name": "Be",
+        "url": "https://openlibrary.org/subjects/be"
+      }
+    ],
+    "cover": {
+      "small": "https://covers.openlibrary.org/b/id/8166043-S.jpg",
+      "medium": "https://covers.openlibrary.org/b/id/8166043-M.jpg",
+      "large": "https://covers.openlibrary.org/b/id/8166043-L.jpg"
+    }
+  }
+}

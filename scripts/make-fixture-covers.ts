@@ -28,6 +28,16 @@ interface CoverSpec {
   /** Expected dominant colour — Phase 1's extractor must land on this. */
   readonly base: string;
   readonly accent: string;
+  /**
+   * Wraps the cover in a white margin covering ~44% of the image, so white is
+   * the single commonest colour by a wide margin.
+   *
+   * This reproduces a real defect: the first `stacks add` against a real cover
+   * returned `spine_color: "#fefffe"`, because real covers are printed on and
+   * photographed against white. Without this fixture the bug is invisible —
+   * every other cover here is edge-to-edge colour.
+   */
+  readonly whiteBorder?: boolean;
 }
 
 const COVERS: readonly CoverSpec[] = [
@@ -37,6 +47,10 @@ const COVERS: readonly CoverSpec[] = [
   { file: 'nine-ways-of-seeing-a-warehouse.png', base: '#6a5a8c', accent: '#e8dcf0' },
   { file: 'the-salt-road-ledger.png', base: '#b08442', accent: '#2a2018' },
   { file: 'the-salt-road-ledger-audio.png', base: '#3a4a6b', accent: '#c8d4e8' },
+  { file: 'white-bordered.png', base: '#7a3f5d', accent: '#f4e4d0', whiteBorder: true },
+  // A cover that really is all paper. Setting the extremes aside must not turn
+  // this one into "no colour at all".
+  { file: 'all-white.png', base: '#ffffff', accent: '#ffffff' },
 ];
 
 type Rgb = readonly [number, number, number];
@@ -123,13 +137,26 @@ mkdirSync(outDir, { recursive: true });
 const bandTop = Math.round(HEIGHT * BAND_TOP);
 const bandBottom = Math.round(HEIGHT * BAND_BOTTOM);
 
+const WHITE: Rgb = [255, 255, 255];
+const MARGIN_X = Math.round(WIDTH * 0.25);
+const MARGIN_Y = Math.round(HEIGHT * 0.25);
+
 for (const cover of COVERS) {
   const base = hexToRgb(cover.base);
   const accent = hexToRgb(cover.accent);
-  const png = encodePng(WIDTH, HEIGHT, (_x, y) => (y >= bandTop && y < bandBottom ? accent : base));
+
+  const png = encodePng(WIDTH, HEIGHT, (x, y) => {
+    if (cover.whiteBorder === true) {
+      const inside =
+        x >= MARGIN_X && x < WIDTH - MARGIN_X && y >= MARGIN_Y && y < HEIGHT - MARGIN_Y;
+      if (!inside) return WHITE;
+    }
+    return y >= bandTop && y < bandBottom ? accent : base;
+  });
+
   writeFileSync(join(outDir, cover.file), png);
-  const bandShare = ((bandBottom - bandTop) / HEIGHT) * 100;
-  console.log(`${cover.file}  base ${cover.base}  accent ${cover.accent} (${bandShare.toFixed(0)}%)`);
+  const note = cover.whiteBorder === true ? '  + white border' : '';
+  console.log(`${cover.file}  base ${cover.base}  accent ${cover.accent}${note}`);
 }
 
 console.log(`\n${COVERS.length} covers written to ${outDir}`);

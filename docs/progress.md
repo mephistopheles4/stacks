@@ -14,55 +14,63 @@ Update it in the **same commit** as the gate it describes.
 
 | | |
 | --- | --- |
-| **Last green gate** | Phase 0 — scaffold |
-| **Now working on** | Phase 1 — data layer |
+| **Last green gate** | Phase 1 — data layer |
+| **Now working on** | Phase 2 — shelf renderer |
 | **Blocked on** | nothing |
-| **Next stop point** | Phase 2's first screenshot in `artifacts/` — aesthetics review |
+| **Next stop point** | Phase 2's first screenshot in `artifacts/` — **stop and hand back** |
 | **Out of scope this run** | Phase 4 (Audiobookshelf) |
 
 ## Gate log
 
 | Phase | Gate | Status | Commit |
 | --- | --- | --- | --- |
-| 0 — scaffold | `stacks --help` lists commands · empty shelf renders · fixtures committed | ✅ green | `phase-0` |
-| 1 — data layer | `stacks build` on fixtures → valid `library.json` · malformed skipped · 4 test cases | ⬜ not started | — |
+| 0 — scaffold | `stacks --help` lists commands · empty shelf renders · fixtures committed | ✅ green | tag `phase-0` |
+| 1 — data layer | `stacks build` → valid `library.json` · malformed skipped · 4 test cases | ✅ green | tag `phase-1` |
 | 2 — shelf | `pnpm smoke:render` → non-blank `artifacts/shelf.png` · 50 books · click opens card | ⬜ not started | — |
 | 3 — public build | `--public` output has zero canary hits · OG image generated | ⬜ not started | — |
 
 Every phase additionally requires `pnpm test && pnpm build` green.
 
-### Phase 0 evidence
+### Phase 1 evidence
 
-- `pnpm test` → 1 file, 3 tests passed (Vitest 4.1.10)
-- `pnpm build` → `tsc --noEmit` clean, Astro built 1 page
-- `pnpm stacks --help` → prints `add`, `build`, `status`, `import`
-- empty shelf verified **live** on the dev server, not just built: 1280×720 WebGL
-  canvas, 15.8% non-background pixels, wood tones present, zero console errors
+- `pnpm test` → 7 files, **62 tests** passed · `pnpm build` clean
+- `pnpm stacks build --vault fixtures/vault` → **8 books**, 2 warnings naming
+  `The Undelivered Manuscript.md` and `Untitled Import.md`, silent on
+  `On Reading Slowly.md`, exit 0 — matching `fixtures/README.md` exactly
+- Gate's four cases covered against **real captured** responses: ISBN hit,
+  fuzzy title, API miss, malformed frontmatter. No test touches the network.
+- End-to-end `stacks add 9781603580557` into a scratch vault: note written,
+  real cover downloaded, spine colour extracted, re-running deduped correctly.
 
 ## Environment findings
-
-Recorded so no session re-discovers them the hard way.
 
 | Finding | Status |
 | --- | --- |
 | Node / pnpm / git | ✅ Node 24.14.1, pnpm 11.18.0, git 2.55.0 (Windows) |
-| `@stacks/core` resolves under tsx + vitest + astro/tsc | ✅ verified — all three |
-| Headless Chrome for Phase 2 | ✅ system Chrome present; use `channel: 'chrome'`, no download needed |
-| `pnpm stacks --help` passes `--help` through | ✅ pnpm does not intercept it |
-| pnpm 11 blocks esbuild's postinstall | ⚠️ fixed via `allowBuilds` in `pnpm-workspace.yaml` |
-| Resolved versions | TS 7.0.2 · Vitest 4 · Astro 7.1.6 · three 0.185.1 · commander 15 |
+| `@stacks/core` resolves under tsx + vitest + astro/tsc | ✅ verified |
+| Headless Chrome for Phase 2 | ✅ system Chrome present; use `channel: 'chrome'`, no download |
+| `.astro` files are NOT typechecked | ⚠️ `astro check` can't run under TS 7 — keep logic in `.ts` |
+| **`node -e` with ESM top-level await exits silently** | ⚠️ prints nothing, exit 0. Put scripts in a file and run with `pnpm tsx` |
+| **Bash tool sandbox blocks network** | ⚠️ outbound `fetch` needs `dangerouslyDisableSandbox` |
+| Google Books unauthenticated | ⚠️ 429s on a shared quota — a bonus, never a dependable fallback |
+| Resolved versions | TS 7.0.2 · Vitest 4 · Astro 7.1.6 · three 0.185.1 · sharp 0.35 |
 
 ## Notes to the next session
 
-- Fixtures must contain **no copyrighted material**. See `plan.md` §1 — hard owner
-  constraint, not a preference. Everything in `fixtures/` is invented.
-- The canary phrase Phase 3 greps for is `NOTE_BODY_CANARY_do_not_ship`.
-- `fixtures/README.md` documents what every fixture file is for, the **expected**
-  outcome of `stacks build` on it (8 books, 2 warnings, 1 silent skip, exit 0),
-  and the expected dominant colour of each generated cover. Phase 1's tests
-  should assert against that table rather than inventing new expectations.
-- `packages/core/src/adapters/vault-adapter.ts` is the interface only. Phase 1
-  writes `ObsidianAdapter` beside it. No code outside that directory may touch
-  vault files (invariant 4).
-- `mountShelf(canvas, books)` in `packages/site/src/shelf/scene.ts` currently
-  throws if given books — that is the Phase 2 seam, deliberately loud.
+**Phase 2 starts here.** `library.json` is generated and stable; the shelf needs
+to read it.
+
+- `mountShelf(canvas, books)` in `packages/site/src/shelf/scene.ts` throws if
+  given books — that is the seam, deliberately loud. `SHELF` in that file is the
+  single source of the geometry books must sit on.
+- Generate the 50-book fixture with a script from the 10-book shapes; do not
+  commit it (`fixtures/README.md`).
+- **Carry into the aesthetics review:** real covers often give desaturated
+  spine colours (a live add produced `#d6d6d5`). Not a bug — but a shelf of grey
+  spines may read badly, and that is a judgement to make against a screenshot,
+  not in advance.
+- Two open taste calls due in Phase 2/3: whether `wishlist` books render ghosted
+  or not at all, and whether the print + audiobook editions of one title collapse
+  into a single spine.
+- Everything in `fixtures/` is invented. No copyrighted material, ever — see
+  `plan.md` §1. The canary Phase 3 greps for is `NOTE_BODY_CANARY_do_not_ship`.

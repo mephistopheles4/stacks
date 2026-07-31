@@ -1,0 +1,69 @@
+{
+  "numFound": 537,
+  "start": 0,
+  "numFoundExact": true,
+  "num_found": 537,
+  "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+  "q": "thinking in systems",
+  "offset": null,
+  "docs": [
+    {
+      "author_name": [
+        "Donella H. Meadows",
+        "Diana Wright"
+      ],
+      "cover_i": 14420637,
+      "isbn": [
+        "9781849773386",
+        "902591019X",
+        "6555644524",
+        "1844077268",
+        "184407725X",
+        "1603580557",
+        "1136551395",
+        "1136551409",
+        "9781136551352",
+        "9781603581486",
+        "9786555644524",
+        "1136551352",
+        "9781603580557",
+        "1849773386",
+        "9781136551390",
+        "9781844077250",
+        "1603588477",
+        "1603581480",
+        "9781844077267",
+        "9781603588478",
+        "9789025910198",
+        "9781136551406"
+      ],
+      "number_of_pages_median": 240,
+      "title": "Thinking in systems"
+    },
+    {
+      "author_name": [
+        "Steven Schuster"
+      ],
+      "cover_i": 11326296,
+      "isbn": [
+        "1983847542",
+        "9781983847547"
+      ],
+      "number_of_pages_median": 180,
+      "title": "The Art Of Thinking In Systems"
+    },
+    {
+      "author_name": [
+        "Marcus P Dawson"
+      ],
+      "cover_i": 10653716,
+      "isbn": [
+        "9781914040030",
+        "9798675152810",
+        "1914040031"
+      ],
+      "number_of_pages_median": 284,
+      "title": "Thinking in Systems and Mental Models"
+    }
+  ]
+}
