@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./shelf-order": "./src/shelf-order.ts"
   },
   "dependencies": {
     "sharp": "^0.35.3",

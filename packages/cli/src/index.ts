@@ -7,6 +7,7 @@ import {
   ObsidianAdapter,
   addBook,
   buildLibrary,
+  compareShelfPosition,
   createCachedHttpGet,
   importBooks,
   isBookStatus,
@@ -14,6 +15,7 @@ import {
   publish,
   watchVault,
   BOOK_STATUSES,
+  SHELVED_STATUSES,
   type BookStatus,
 } from '@stacks/core';
 
@@ -163,6 +165,69 @@ program
     console.log(`  finished in ${year}: ${finishedThisYear}`);
     console.log(`  reading now:       ${reading}`);
     console.log(`  without a cover:   ${missingCovers}`);
+  });
+
+program
+  .command('order')
+  .description('Show the shelf order, or renumber it with gaps')
+  .option('--renumber', 'write shelf_order into every shelved note')
+  .option('--step <n>', 'gap between numbers (default: 10)', '10')
+  .option('--dry-run', 'show what --renumber would write, without writing')
+  .action(async (options: { renumber?: boolean; step: string; dryRun?: boolean }) => {
+    const { vault } = context();
+
+    const step = Number(options.step);
+    if (!Number.isFinite(step) || step <= 0) {
+      fail(`--step must be a positive number, got "${options.step}"`);
+    }
+
+    // Only books that actually appear on the shelf. Numbering a wishlist book
+    // would be numbering something nobody can see.
+    const shelved = (await vault.listBooks())
+      .filter((book) => SHELVED_STATUSES.has(book.status))
+      .sort(compareShelfPosition);
+
+    if (shelved.length === 0) {
+      console.log('no shelved books to order');
+      return;
+    }
+
+    if (options.renumber !== true) {
+      console.log(`${shelved.length} book(s), in shelf order:\n`);
+      for (const [index, book] of shelved.entries()) {
+        const current = book.shelfOrder === undefined ? '   ·' : String(book.shelfOrder).padStart(4);
+        console.log(`${current}  ${String(index + 1).padStart(3)}. ${book.title}`);
+      }
+      console.log('\nrun with --renumber to write these positions back as shelf_order');
+      return;
+    }
+
+    let written = 0;
+    for (const [index, book] of shelved.entries()) {
+      const shelfOrder = (index + 1) * step;
+      if (book.shelfOrder === shelfOrder) continue;
+
+      if (options.dryRun === true) {
+        console.log(`  ${String(shelfOrder).padStart(4)}  ${book.title}`);
+        written += 1;
+        continue;
+      }
+
+      try {
+        await vault.updateBook(book.sourcePath, { shelf_order: shelfOrder });
+        written += 1;
+      } catch (error) {
+        console.warn(
+          `  ! ${book.title} — ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    const verb = options.dryRun === true ? 'would renumber' : 'renumbered';
+    console.log(
+      `\n${verb} ${written} of ${shelved.length} book(s), in steps of ${String(step)}` +
+        `\nleaving gaps so a book can be slotted in with a number between two others`,
+    );
   });
 
 program

@@ -31,7 +31,7 @@ export type ParsedNote =
  * `BookRecord` — that is invariant 2 enforced by construction rather than by
  * remembering to strip it later.
  */
-const FRONTMATTER_BLOCK = /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
+export const FRONTMATTER_BLOCK = /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
 export function parseNote(source: string, sourcePath: string): ParsedNote {
   const match = FRONTMATTER_BLOCK.exec(source);

@@ -7,10 +7,16 @@ export {
   type BookStatus,
 } from './types.ts';
 
-export type { VaultAdapter } from './adapters/vault-adapter.ts';
+export type { FrontmatterChanges, VaultAdapter } from './adapters/vault-adapter.ts';
 export { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
 
 export { parseNote, type ParsedNote } from './frontmatter.ts';
+
+export {
+  compareShelfPosition,
+  SHELVED_STATUSES,
+  type Positionable,
+} from './shelf-order.ts';
 
 export {
   isProbablySameBook,

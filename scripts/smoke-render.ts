@@ -77,7 +77,22 @@ async function main(): Promise<void> {
       });
 
       await page.goto(URL, { waitUntil: 'networkidle0', timeout: 30_000 });
-      await page.waitForFunction('window.__shelf?.ready === true', { timeout: 20_000 });
+
+      try {
+        await page.waitForFunction('window.__shelf?.ready === true', { timeout: 20_000 });
+      } catch {
+        /**
+         * The shelf never booted, and a bare "waiting failed: 20000ms" says
+         * nothing about why. The page errors do — a value import of the core
+         * package root once dragged node:fs and sharp into the browser bundle,
+         * and this was the only visible symptom.
+         */
+        console.error('the shelf never signalled ready. Page errors:');
+        for (const message of errors.length > 0 ? errors : ['(none captured)']) {
+          console.error(`  ${message}`);
+        }
+        process.exit(1);
+      }
       // Let textures land and the damped camera settle before the shutter.
       await new Promise((resolve) => setTimeout(resolve, 1500));
 

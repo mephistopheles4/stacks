@@ -1,4 +1,9 @@
 import type { LibraryBook } from '@stacks/core';
+// Deliberately the subpath, not the package root. The root re-exports the
+// adapter, sharp and the metadata layer; a *value* import of it drags node:fs
+// and sharp into the browser bundle and the shelf never boots. Types are erased
+// at compile time and so are safe from the root; values are not.
+import { compareShelfPosition, SHELVED_STATUSES } from '@stacks/core/shelf-order';
 
 /**
  * Turning a library into shelf rows.
@@ -44,9 +49,6 @@ export interface ShelfRow {
   readonly books: readonly ShelfBook[];
 }
 
-/** Wishlist books are not on the shelf — you do not own them yet. */
-const SHELVED = new Set(['read', 'reading', 'abandoned']);
-
 const THINNEST = 0.055;
 const THICKEST = 0.16;
 const PAGES_AT_THINNEST = 120;
@@ -82,10 +84,10 @@ export function toRows(
   capacity: number,
   gap: number,
 ): ShelfRow[] {
-  const shelved = books.filter((book) => SHELVED.has(book.status));
+  const shelved = books.filter((book) => SHELVED_STATUSES.has(book.status));
 
   // Books in progress come first — they are the ones you would reach for.
-  const ordered = [...shelved].sort(byReadingThenNewest);
+  const ordered = [...shelved].sort(compareShelfPosition);
 
   const rows: ShelfRow[] = [];
   let current: ShelfBook[] = [];
@@ -122,31 +124,6 @@ const YEAR_GAP = 0.09;
 function yearOf(book: LibraryBook): string {
   if (book.status === 'reading') return 'reading';
   return book.finished?.slice(0, 4) ?? 'undated';
-}
-
-function byReadingThenNewest(a: LibraryBook, b: LibraryBook): number {
-  /**
-   * An explicit `shelf_order` wins over everything, including the rule that
-   * floats a book you are reading to the front — someone who numbered a shelf
-   * meant it.
-   *
-   * Ordered books come first, so pinning three favourites does not require
-   * numbering the other twenty-eight.
-   */
-  const left = a.shelfOrder;
-  const right = b.shelfOrder;
-  if (left !== undefined || right !== undefined) {
-    if (left === undefined) return 1;
-    if (right === undefined) return -1;
-    if (left !== right) return left - right;
-  }
-
-  if (a.status === 'reading' && b.status !== 'reading') return -1;
-  if (b.status === 'reading' && a.status !== 'reading') return 1;
-  const leftDate = a.finished ?? a.started ?? '';
-  const rightDate = b.finished ?? b.started ?? '';
-  if (leftDate !== rightDate) return rightDate.localeCompare(leftDate);
-  return a.title.localeCompare(b.title);
 }
 
 function toShelfBook(book: LibraryBook): ShelfBook {

@@ -41,10 +41,13 @@ docs/
 interface VaultAdapter {
   listBooks(): Promise<BookRecord[]>;          // parse all type:book notes
   writeBook(book: BookInput): Promise<string>; // create note, return path
+  updateBook(sourcePath: string, changes: FrontmatterChanges): Promise<void>;
   bookExists(isbn: string, titleAuthor: string): Promise<boolean>;
   coverDir(): string;                          // where covers are cached
 }
 ```
+- `writeBook` **creates**; it never overwrites. A colliding filename gains a numeric suffix.
+- `updateBook` sets frontmatter keys on an existing note by rewriting individual lines — key order, quoting, comments and the note body all survive byte for byte. Scalars only; a key whose value is a list is left alone. Re-serialising the YAML would reformat files the owner edits by hand.
 - v1 ships `ObsidianAdapter` only (YAML frontmatter, `[[wikilinks]]`, `Library/` folder).
 - Do NOT build a second adapter. Do NOT add adapter config plumbing beyond a single constructor arg (vault path). The interface exists so a Logseq/Anytype adapter is possible later, not to be a framework.
 
@@ -58,6 +61,11 @@ Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|r
 ## Tech decisions (made — don't relitigate)
 - **Vanilla Three.js, not react-three-fiber.** Plain Astro island, no React on the page. Use InstancedMesh for book boxes, per-instance cover textures via a texture atlas or lazy per-book planes — measure first, don't optimize blind.
 - Book detail card = plain DOM overlay positioned from raycaster hits, not in-canvas UI.
+- **The site may only `import type` from `@stacks/core`.** The package root
+  re-exports the adapter, sharp and the metadata layer, so a *value* import
+  drags `node:fs` and sharp into the browser bundle and the shelf silently never
+  boots. Runtime values shared with the site live in a pure subpath —
+  `@stacks/core/shelf-order` — that imports nothing.
 - **Site code layout: no logic in `.astro` files.** They hold markup, styles, and
   a `<script>` that imports and calls a `.ts` module — nothing more. `.astro`
   files are NOT typechecked (`astro check` cannot run under TypeScript 7 yet),
