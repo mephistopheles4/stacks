@@ -142,7 +142,18 @@ function renderNote(book: BookInput): string {
   if (book.tags !== undefined && book.tags.length > 0) frontmatter['tags'] = [...book.tags];
 
   const yaml = stringifyYaml(frontmatter, { lineWidth: 0 }).trimEnd();
-  return `---\n${yaml}\n---\n\n## Notes\n\n`;
+
+  // Embed the cover so Obsidian actually shows it. A `cover:` frontmatter value
+  // is data the builder reads; it renders nothing in the note itself. The
+  // wikilink embed resolves by filename anywhere in the vault, which is what
+  // makes it survive the file being moved.
+  //
+  // This lives in the body, and the body is never parsed back (invariant 2) —
+  // the embed is for the human reading the note, not for the build.
+  const embed =
+    book.cover === undefined ? '' : `![[${book.cover.split('/').pop() ?? book.cover}]]\n\n`;
+
+  return `---\n${yaml}\n---\n\n${embed}## Notes\n\n`;
 }
 
 /** Conservative: strips what Windows, macOS and Obsidian each dislike. */

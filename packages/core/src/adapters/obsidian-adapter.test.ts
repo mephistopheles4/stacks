@@ -127,6 +127,30 @@ describe('writeBook', () => {
     });
   });
 
+  it('embeds the cover so Obsidian shows it, without that reaching library.json', async () => {
+    const writable = new ObsidianAdapter(dir);
+    const path = await writable.writeBook({
+      title: 'Covered',
+      cover: 'covers/covered.jpg',
+    });
+
+    const source = await readFile(path, 'utf8');
+    // The wikilink resolves by filename, so it survives the file being moved.
+    expect(source).toContain('![[covered.jpg]]');
+    expect(source.indexOf('![[covered.jpg]]')).toBeGreaterThan(source.lastIndexOf('---'));
+
+    // It lives in the body, and the body is never parsed back (invariant 2).
+    const [book] = await writable.listBooks();
+    expect(book?.cover).toBe('covers/covered.jpg');
+    expect(JSON.stringify(book)).not.toContain('![[');
+  });
+
+  it('writes no embed for a book with no cover', async () => {
+    const writable = new ObsidianAdapter(dir);
+    const path = await writable.writeBook({ title: 'Bare' });
+    expect(await readFile(path, 'utf8')).not.toContain('![[');
+  });
+
   it('strips characters that Windows and Obsidian reject from the filename', async () => {
     const writable = new ObsidianAdapter(dir);
     const path = await writable.writeBook({ title: 'Who? What: Why*  <Yes>' });

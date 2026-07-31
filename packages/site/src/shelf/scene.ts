@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { LibraryBook } from '@stacks/core';
 import { toRows, type ShelfBook, type ShelfRow } from './books.ts';
+import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
 /**
  * The shelf.
@@ -35,8 +36,19 @@ const SHELF = {
   padding: 0.06,
 } as const;
 
-/** Never fewer rows than this, so a small library still looks like a bookcase. */
-const MIN_ROWS = 4;
+/**
+ * The case grows with the library, always keeping one empty shelf ahead.
+ *
+ * A fixed four-shelf unit means a small library sits in a mostly empty case and
+ * the camera has to back off far enough to frame all that empty wood, which
+ * leaves the spines too small to read. Sizing to content keeps the books large
+ * and the shelf honest — there is always somewhere for the next book to go.
+ */
+const MIN_ROWS = 2;
+
+function rowsForCase(usedRows: number): number {
+  return Math.max(usedRows + 1, MIN_ROWS);
+}
 
 const COLOURS = {
   background: 0x1a1613,
@@ -80,26 +92,43 @@ export function mountShelf(
   scene.fog = new THREE.Fog(COLOURS.background, 14, 30);
 
   const rows = toRows(books, SHELF.width - SHELF.padding * 2);
-  const rowCount = Math.max(rows.length, MIN_ROWS);
+  const rowCount = rowsForCase(rows.length);
   const unitHeight = rowCount * SHELF.rowHeight;
 
   const fov = 40;
   const camera = new THREE.PerspectiveCamera(fov, 1, 0.1, 100);
 
-  // Framed to fit rather than guessed: back off far enough that the whole case
-  // plus a margin fits the vertical field of view. Guessing a distance means
-  // the top shelf falls out of frame the moment the shelf grows a row.
-  const distance = (unitHeight * 1.18) / (2 * Math.tan((fov / 2) * (Math.PI / 180)));
-
-  camera.position.set(0.55, unitHeight * 0.5, distance);
-
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
   controls.minDistance = 1.5;
-  controls.maxDistance = distance * 2.2;
   controls.maxPolarAngle = Math.PI * 0.52;
   controls.target.set(0, unitHeight * 0.48, 0);
+
+  /**
+   * Backs the camera off far enough for the whole case to fit — checked against
+   * *both* axes and the real viewport aspect.
+   *
+   * A short wide case is width-constrained and a tall narrow one is
+   * height-constrained, so fitting only the height clips the sides of a small
+   * library. Runs once, on the first real layout, and then leaves the camera
+   * alone so it never fights the user's orbiting.
+   */
+  const caseWidth = SHELF.width + SHELF.sideThickness * 2;
+  let framed = false;
+
+  const frameCamera = (aspect: number): void => {
+    const half = Math.tan((fov / 2) * (Math.PI / 180));
+    const forHeight = unitHeight / (2 * half);
+    const forWidth = caseWidth / (2 * half * aspect);
+    const distance = Math.max(forHeight, forWidth) * 1.35 + SHELF.depth;
+
+    camera.position.set(caseWidth * 0.16, unitHeight * 0.52, distance);
+    controls.maxDistance = distance * 2.4;
+    controls.update();
+  };
+
+  frameCamera(16 / 9);
 
   scene.add(buildShelf(rowCount));
   addLighting(scene, unitHeight);
@@ -123,6 +152,11 @@ export function mountShelf(
     renderer.setSize(clientWidth, clientHeight, false);
     camera.aspect = clientWidth / clientHeight;
     camera.updateProjectionMatrix();
+
+    if (!framed) {
+      framed = true;
+      frameCamera(camera.aspect);
+    }
   };
 
   const observer = new ResizeObserver(resize);
@@ -155,6 +189,17 @@ export function mountShelf(
       picker.dispose();
       controls.dispose();
       textures.dispose();
+
+      // Spine textures are generated per book rather than cached, so they are
+      // freed by walking the scene rather than from the cover cache.
+      scene.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return;
+        for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+          if (material instanceof THREE.MeshStandardMaterial) material.map?.dispose();
+          material.dispose();
+        }
+      });
+
       renderer.dispose();
     },
   };
@@ -179,7 +224,7 @@ function placeBooks(
   const geometry = new THREE.BoxGeometry(1, 1, 1);
   const meshes: THREE.Mesh[] = [];
 
-  const rowCount = Math.max(rows.length, MIN_ROWS);
+  const rowCount = rowsForCase(rows.length);
 
   rows.forEach((row, rowIndex) => {
     // Drawn top-down: the newest books sit on the top shelf.
@@ -233,9 +278,21 @@ function buildBook(
   entry: ShelfBook,
   textures: TextureCache,
 ): THREE.Mesh {
+  // A spine wide enough to read gets its title printed on it; a very thin one
+  // stays a plain board, because type squeezed onto it would just be noise.
+  const spineTexture =
+    entry.thickness >= MIN_LEGIBLE_THICKNESS
+      ? makeSpineTexture({
+          title: entry.book.title,
+          colour: entry.colour,
+          ...(entry.book.author === undefined ? {} : { author: entry.book.author }),
+        })
+      : undefined;
+
   const spine = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(entry.colour),
+    color: spineTexture === undefined ? new THREE.Color(entry.colour) : new THREE.Color(0xffffff),
     roughness: 0.62,
+    ...(spineTexture === undefined ? {} : { map: spineTexture }),
   });
   // Pages: slightly lighter than the boards, never pure white.
   const pages = new THREE.MeshStandardMaterial({ color: 0xd9cdb8, roughness: 0.95 });
