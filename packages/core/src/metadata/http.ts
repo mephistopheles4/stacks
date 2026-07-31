@@ -15,6 +15,35 @@ export type HttpGet = (url: string) => Promise<unknown | undefined>;
 const USER_AGENT = 'stacks/0.0 (personal reading tracker)';
 
 /**
+ * Statuses worth trying again.
+ *
+ * Observed for real: Google Books answered 503 for two of three queries and
+ * then answered both on retry. Without this, a blip is indistinguishable from
+ * "no such book" — the tool reports nothing found and you conclude the book is
+ * not in the catalogue. A 404 or a 403 means what it says, so those are final.
+ */
+const TRANSIENT = new Set([429, 500, 502, 503, 504]);
+const ATTEMPTS = 3;
+const BACKOFF_MS = 1200;
+
+async function getWithRetry(url: string): Promise<unknown | undefined> {
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+
+      if (response.ok) return await response.json();
+      if (!TRANSIENT.has(response.status) || attempt === ATTEMPTS) return undefined;
+    } catch {
+      // A dropped connection is transient too; fall through to the wait.
+      if (attempt === ATTEMPTS) return undefined;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, BACKOFF_MS * attempt));
+  }
+  return undefined;
+}
+
+/**
  * A reader that caches every response on disk under `.cache/`.
  *
  * Rebuilds and repeated `stacks add` runs must not re-hit the APIs — Open
@@ -31,14 +60,8 @@ export function createCachedHttpGet(cacheDir: string): HttpGet {
       // Cache miss — fall through to the network.
     }
 
-    let body: unknown;
-    try {
-      const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
-      if (!response.ok) return undefined;
-      body = await response.json();
-    } catch {
-      return undefined;
-    }
+    const body = await getWithRetry(url);
+    if (body === undefined) return undefined;
 
     try {
       await mkdir(cacheDir, { recursive: true });

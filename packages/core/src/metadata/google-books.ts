@@ -89,12 +89,33 @@ function toMetadata(info: Record<string, unknown> | undefined): BookMetadata | u
     ...maybe('pages', asPositiveInt(info['pageCount'])),
     ...maybe(
       'coverUrl',
-      // Google serves http:// links; upgrade them so a static build stays
-      // mixed-content clean.
-      (firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail']))
-        ?.replace(/^http:/, 'https:'),
+      coverFrom(firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail'])),
     ),
   };
+}
+
+/**
+ * Google's cover thumbnail, cleaned up.
+ *
+ * Two fixes, one temptation resisted.
+ *
+ * `edge=curl` paints a fake page-curl onto the corner of the image. On a flat
+ * listing it is decoration; on a 3D book it is a curl drawn onto a cover that
+ * is already a solid object, so it goes.
+ *
+ * The URLs come back as `http://`, which would make a deployed build
+ * mixed-content.
+ *
+ * And the temptation: these thumbnails are only ~128px wide, so a bigger `zoom`
+ * looks like an easy win. It is not — measured across every level, only zoom 1
+ * and 5 return a *cropped cover*; 2, 3, 4 and 6 return the entire dust jacket,
+ * front and spine and back flap together with the printer's crop marks. Bigger
+ * and wrong beats smaller and right nowhere. 128px is simply Google's ceiling
+ * for a cropped cover, and a hand-dropped file in `Library/covers/` is the way
+ * past it.
+ */
+function coverFrom(url: string | undefined): string | undefined {
+  return url?.replace(/^http:/, 'https:').replace(/&edge=curl/, '');
 }
 
 function isbnFrom(value: unknown): string | undefined {
