@@ -94,15 +94,49 @@ async function pipelineFor(imagePath: string, region: Region): Promise<Sharp | u
     });
   }
 
-  const { width, height } = await sharp(imagePath).metadata();
+  // Trim the uniform border before looking at the edge. Cover images from Open
+  // Library are scans sitting on white, so the leftmost pixels are the paper the
+  // book was photographed against, not the book. Sampling those gave every real
+  // book a near-white spine (#e7e7e7, #ecedeb) even after edge sampling — the
+  // artwork's edge is only the artwork's edge once the padding is gone.
+  const source = await trimmed(imagePath);
+
+  const { width, height } = await sharp(source).metadata();
   if (width === undefined || height === undefined || width < 2 || height < 2) return undefined;
 
-  return sharp(imagePath).extract({
+  return sharp(source).extract({
     left: 0,
     top: 0,
     width: Math.max(1, Math.round(width * SPINE_STRIP)),
     height,
   });
+}
+
+/**
+ * How much of a cover must survive trimming for the trim to be believed.
+ *
+ * sharp trims whatever matches the top-left pixel, which on a scan is the paper
+ * and on an edge-to-edge design is the artwork itself. Trimming a flat cover
+ * therefore eats the design and leaves whatever stripe sits in the middle. If
+ * most of the image disappears, the border was not a border.
+ */
+const MIN_TRIM_SURVIVAL = 0.35;
+
+/** The cover with a genuine uniform margin removed, or the original. */
+async function trimmed(imagePath: string): Promise<Buffer | string> {
+  try {
+    const original = await sharp(imagePath).metadata();
+    if (original.width === undefined || original.height === undefined) return imagePath;
+
+    const buffer = await sharp(imagePath).trim({ threshold: 12 }).toBuffer();
+    const { width, height } = await sharp(buffer).metadata();
+    if (width === undefined || height === undefined || width < 8 || height < 8) return imagePath;
+
+    const survived = (width * height) / (original.width * original.height);
+    return survived >= MIN_TRIM_SURVIVAL ? buffer : imagePath;
+  } catch {
+    return imagePath;
+  }
 }
 
 interface Bucket {

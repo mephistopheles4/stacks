@@ -140,9 +140,28 @@ function context(): { vault: ObsidianAdapter; get: ReturnType<typeof createCache
   };
 }
 
+/**
+ * Ends the command with a message and a non-zero exit code.
+ *
+ * Throws rather than calling `process.exit`. Exiting from inside an async
+ * commander action tears the event loop down while fetch and sharp handles are
+ * still open, which on Windows aborts the process with a libuv assertion
+ * (`exit code 3221226505`) instead of a clean `1` — so "no such book" looked
+ * like a crash.
+ */
+class CliError extends Error {}
+
 function fail(message: string): never {
-  console.error(`stacks: ${message}`);
-  process.exit(1);
+  throw new CliError(message);
 }
 
-await program.parseAsync();
+try {
+  await program.parseAsync();
+} catch (error) {
+  if (error instanceof CliError) {
+    console.error(`stacks: ${error.message}`);
+    process.exitCode = 1;
+  } else {
+    throw error;
+  }
+}

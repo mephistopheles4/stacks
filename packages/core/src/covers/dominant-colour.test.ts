@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { dominantColour } from './dominant-colour.ts';
+import { dominantColour, spineColour } from './dominant-colour.ts';
 import { FIXTURE_VAULT } from '../test-support.ts';
 
 const cover = (file: string): string => join(FIXTURE_VAULT, 'Library', 'covers', file);
@@ -50,5 +50,30 @@ describe('dominantColour', () => {
     await expect(
       dominantColour(join(FIXTURE_VAULT, 'Library', 'The Tidal Engine.md')),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe('spineColour', () => {
+  it('trims the padding before reading the binding edge', async () => {
+    // Regression, found pointing the tool at a real vault. Open Library covers
+    // are scans sitting on white, so the leftmost pixels are the paper the book
+    // was photographed against. Edge sampling alone returned #e7e7e7 / #ecedeb
+    // for every real book; trimming first is what makes the edge mean anything.
+    expect(await spineColour(cover('white-bordered.png'))).toBe('#7a3f5d');
+  });
+
+  it('agrees with the whole-cover reading when a cover has no padding', async () => {
+    // These fixtures are edge-to-edge colour, so both routes must land together.
+    for (const file of ['the-tidal-engine.png', 'the-salt-road-ledger.png']) {
+      expect(await spineColour(cover(file))).toBe(await dominantColour(cover(file), 'all'));
+    }
+  });
+
+  it('still gives a white book a white spine', async () => {
+    expect(await spineColour(cover('all-white.png'))).toBe('#ffffff');
+  });
+
+  it('returns undefined rather than throwing on an unreadable file', async () => {
+    await expect(spineColour(cover('does-not-exist.png'))).resolves.toBeUndefined();
   });
 });
