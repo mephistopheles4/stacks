@@ -14,11 +14,11 @@ Update it in the **same commit** as the gate it describes.
 
 | | |
 | --- | --- |
-| **Last green gate** | Phase 3 — public build |
-| **Now working on** | nothing — this run is complete |
+| **Last green gate** | Phase 4 — library import |
+| **Now working on** | nothing |
 | **Blocked on** | nothing |
-| **Next stop point** | n/a. Phase 4 was explicitly out of scope for this run |
-| **Out of scope this run** | Phase 4 (Audiobookshelf) |
+| **Next stop point** | n/a |
+| **Running against** | the owner's real vault (25 books), not only fixtures |
 
 ## Gate log
 
@@ -28,6 +28,7 @@ Update it in the **same commit** as the gate it describes.
 | 1 — data layer | `stacks build` → valid `library.json` · malformed skipped · 4 test cases | ✅ green | tag `phase-1` |
 | 2 — shelf | `pnpm smoke:render` → non-blank `artifacts/shelf.png` · 50 books · click opens card | ✅ green | tag `phase-2` |
 | 3 — public build | `--public` output has zero canary hits · OG image generated | ✅ green | tag `phase-3` |
+| 4 — import | dedupe by ISBN then title+author · re-running is idempotent | ✅ green | tag `phase-4` |
 
 Every phase additionally requires `pnpm test && pnpm build` green.
 
@@ -63,6 +64,18 @@ vacuously. OG image 24.8 KB at 1200x630. 71 tests pass.
 Both gates were made to stage their own input: they previously fought over
 `packages/site/public/library.json`, so whichever ran last decided what the
 other tested. Verified passing back to back in either order.
+
+### Phase 4 evidence
+
+`stacks import audible <export>` against a real Libation export: 22 records, 17
+added, 5 correctly matched against books already shelved — two of them separated
+only by a *long* subtitle, which needed a dedupe fix first. Re-running added 0
+and skipped 22, so the import is idempotent. The vault now holds 25 books, every
+one with cover art.
+
+The source is Audible/Libation rather than the brief's Audiobookshelf; see the
+Decision Log for why. `importBooks` is source-agnostic — an ABS importer would
+need only a new mapper.
 
 ## Environment findings
 
