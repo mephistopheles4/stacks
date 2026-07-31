@@ -56,11 +56,25 @@ export class ObsidianAdapter implements VaultAdapter {
     return books;
   }
 
+  /**
+   * Creates a note and returns its path. Never overwrites one.
+   *
+   * The filename comes from the title, so adding a book that is already shelved
+   * used to land on the same path and replace it — taking the reading dates, the
+   * rating and the whole note body with it. `stacks add --force` did exactly
+   * that, silently. A colliding name now gains a numeric suffix, which is what
+   * "add it anyway" should mean, and leaves the original alone.
+   */
   async writeBook(book: BookInput): Promise<string> {
     const dir = join(this.#vaultPath, LIBRARY_DIR);
     await mkdir(dir, { recursive: true });
 
-    const path = join(dir, `${safeFilename(book.title)}.md`);
+    const base = safeFilename(book.title);
+    let path = join(dir, `${base}.md`);
+    for (let n = 2; await exists(path); n += 1) {
+      path = join(dir, `${base} (${String(n)}).md`);
+    }
+
     await writeFile(path, renderNote(book), 'utf8');
     return path;
   }
@@ -174,6 +188,15 @@ function safeFilename(title: string): string {
     .trim()
     .replace(/\.+$/, '');
   return cleaned.length > 0 ? cleaned.slice(0, 120) : 'Untitled';
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await readFile(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function isDirectory(path: string): Promise<boolean> {

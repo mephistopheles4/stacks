@@ -151,6 +151,28 @@ describe('writeBook', () => {
     expect(await readFile(path, 'utf8')).not.toContain('![[');
   });
 
+  it('never overwrites an existing note', async () => {
+    // The filename comes from the title, so a second book of the same name used
+    // to land on the same path and replace the first — losing its dates, its
+    // rating and everything written in the body. `stacks add --force` did this
+    // silently.
+    const writable = new ObsidianAdapter(dir);
+
+    const first = await writable.writeBook({
+      title: 'Thinking in Systems',
+      author: 'Donella H. Meadows',
+      rating: 5,
+    });
+    const second = await writable.writeBook({ title: 'Thinking in Systems' });
+
+    expect(second).not.toBe(first);
+    expect(basename(second)).toBe('Thinking in Systems (2).md');
+
+    // The original is untouched, rating and all.
+    expect(await readFile(first, 'utf8')).toContain('rating: 5');
+    expect(await writable.listBooks()).toHaveLength(2);
+  });
+
   it('strips characters that Windows and Obsidian reject from the filename', async () => {
     const writable = new ObsidianAdapter(dir);
     const path = await writable.writeBook({ title: 'Who? What: Why*  <Yes>' });

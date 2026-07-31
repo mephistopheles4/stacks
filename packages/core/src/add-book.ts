@@ -1,7 +1,7 @@
 import { cacheCover } from './covers/cache-cover.ts';
-import { normaliseIsbn } from './identity.ts';
+import { isProbablySameBook, normaliseIsbn } from './identity.ts';
 import { lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
-import type { BookInput, BookStatus } from './types.ts';
+import type { BookInput, BookRecord, BookStatus } from './types.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
 
 export interface AddBookOptions {
@@ -14,7 +14,15 @@ export interface AddBookOptions {
 
 export type AddBookResult =
   | { readonly kind: 'added'; readonly path: string; readonly metadata?: BookMetadata }
-  | { readonly kind: 'duplicate'; readonly title: string }
+  | {
+      readonly kind: 'duplicate';
+      /** What was searched for, or what the providers resolved it to. */
+      readonly title: string;
+      /** The book already on the shelf — the one the user actually wants named. */
+      readonly existing: string;
+      /** True when the vault answered before any provider was asked. */
+      readonly matchedBeforeLookup: boolean;
+    }
   | { readonly kind: 'not-found'; readonly term: string };
 
 /**
@@ -31,6 +39,26 @@ export async function addBook(
   get: HttpGet,
   options: AddBookOptions = {},
 ): Promise<AddBookResult> {
+  const shelved = options.force === true ? [] : await vault.listBooks();
+
+  /**
+   * Ask the shelf before asking the internet.
+   *
+   * Checking only *after* the lookup meant a book already in the vault that the
+   * providers cannot find reported "nothing found" — technically true of the
+   * APIs, and useless to someone who can see the book on their own shelf. It is
+   * also a pointless round trip.
+   */
+  const alreadyShelved = findShelved(shelved, term, undefined, term);
+  if (alreadyShelved !== undefined) {
+    return {
+      kind: 'duplicate',
+      title: term,
+      existing: alreadyShelved,
+      matchedBeforeLookup: true,
+    };
+  }
+
   const [metadata] = await lookup(term, get, {
     ...(options.googleBooksKey === undefined ? {} : { googleBooksKey: options.googleBooksKey }),
   });
@@ -38,14 +66,16 @@ export async function addBook(
     return { kind: 'not-found', term };
   }
 
-  if (options.force !== true) {
-    const duplicate = await vault.bookExists(
-      metadata.isbn ?? '',
-      `${metadata.title} ${metadata.author ?? ''}`,
-    );
-    if (duplicate) {
-      return { kind: 'duplicate', title: metadata.title };
-    }
+  // And again once the providers have said what the term actually resolves to,
+  // since a partial title can name a book the first check could not recognise.
+  const duplicate = findShelved(shelved, metadata.title, metadata.author, metadata.isbn ?? '');
+  if (duplicate !== undefined) {
+    return {
+      kind: 'duplicate',
+      title: metadata.title,
+      existing: duplicate,
+      matchedBeforeLookup: false,
+    };
   }
 
   // Best candidate first; the downloader keeps whichever is cover-shaped.
@@ -68,6 +98,38 @@ export async function addBook(
   };
 
   return { kind: 'added', path: await vault.writeBook(book), metadata };
+}
+
+/**
+ * The title of the shelved book this describes, if any.
+ *
+ * Returns the *shelved* title rather than a boolean, because the useful thing
+ * to tell someone is which of their books this already is. Reporting the search
+ * result's title instead once produced "already in the vault: Yuval Noah Harari
+ * Collection Set…" for a shelf holding plain Nexus — true of what the API
+ * returned, unrecognisable to the reader.
+ *
+ * Matches on ISBN first, then normalised title+author, exactly as the adapter
+ * and the importer do.
+ */
+function findShelved(
+  shelved: readonly BookRecord[],
+  title: string,
+  author: string | undefined,
+  isbn: string,
+): string | undefined {
+  const wanted = normaliseIsbn(isbn);
+  if (wanted.length > 0) {
+    const byIsbn = shelved.find(
+      (book) => book.isbn !== undefined && normaliseIsbn(book.isbn) === wanted,
+    );
+    if (byIsbn !== undefined) return byIsbn.title;
+  }
+
+  const titleAuthor = `${title} ${author ?? ''}`;
+  return shelved.find((book) =>
+    isProbablySameBook(titleAuthor, `${book.title} ${book.author ?? ''}`),
+  )?.title;
 }
 
 function maybe<K extends string, V>(key: K, value: V | undefined): Record<K, V> | Record<never, never> {

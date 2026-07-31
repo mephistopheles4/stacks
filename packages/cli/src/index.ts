@@ -68,7 +68,12 @@ program
         }
         break;
       case 'duplicate':
-        console.log(`already in the vault: ${result.title}`);
+        // Name the shelved book, not whatever a search happened to return.
+        console.log(`already in the vault: ${result.existing}`);
+        if (!result.matchedBeforeLookup && result.title !== result.existing) {
+          console.log(`  matched "${result.title}"`);
+        }
+        console.log('  use --force to add it anyway');
         break;
       case 'not-found':
         fail(`nothing found for "${result.term}"`);
