@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { Command } from 'commander';
 import {
@@ -7,7 +7,9 @@ import {
   addBook,
   buildLibrary,
   createCachedHttpGet,
+  importBooks,
   isBookStatus,
+  parseAudibleExport,
   publish,
   BOOK_STATUSES,
   type BookStatus,
@@ -119,11 +121,68 @@ program
 
 program
   .command('import')
-  .description('Import listening history from a self-hosted Audiobookshelf instance')
-  .argument('<source>', 'currently only "audiobookshelf"')
-  .action(() => {
-    fail('not implemented yet — lands in phase 4');
-  });
+  .description('Import a library export into the vault')
+  .argument('<source>', 'currently only "audible" (a Libation JSON export)')
+  .argument('<file>', 'path to the export file')
+  .option('--dry-run', 'report what would be imported without writing anything')
+  .option('--skip-covers', 'do not download cover art')
+  .option('--dates-from-added', 'use DateAdded as the finished date (the export has no real one)')
+  .action(
+    async (
+      source: string,
+      file: string,
+      options: { dryRun?: boolean; skipCovers?: boolean; datesFromAdded?: boolean },
+    ) => {
+      if (source !== 'audible') {
+        fail(`unknown import source "${source}" — currently only "audible"`);
+      }
+      const { vault } = context();
+
+      let data: unknown;
+      try {
+        data = JSON.parse(await readFile(resolve(file), 'utf8'));
+      } catch (error) {
+        fail(`could not read ${file}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+
+      const books = parseAudibleExport(data, {
+        dateAddedAsFinished: options.datesFromAdded === true,
+      });
+      if (books.length === 0) {
+        fail(`no books found in ${file} — is it a Libation library export?`);
+      }
+
+      console.log(`${books.length} book(s) in the export`);
+
+      const result = await importBooks(books, vault, {
+        ...(options.dryRun === true ? { dryRun: true } : {}),
+        ...(options.skipCovers === true ? { skipCovers: true } : {}),
+      });
+
+      for (const outcome of result.outcomes) {
+        switch (outcome.kind) {
+          case 'added':
+            console.log(`  + ${outcome.title}`);
+            break;
+          case 'would-add':
+            console.log(`  + ${outcome.title}  (dry run)`);
+            break;
+          case 'duplicate':
+            console.log(`  = ${outcome.title}  — already shelved as "${outcome.existing}"`);
+            break;
+          case 'failed':
+            console.warn(`  ! ${outcome.title}  — ${outcome.reason}`);
+            break;
+        }
+      }
+
+      const verb = options.dryRun === true ? 'would add' : 'added';
+      console.log(
+        `\n${verb} ${result.added}, skipped ${result.duplicates} already shelved` +
+          (result.failed > 0 ? `, ${result.failed} failed` : ''),
+      );
+    },
+  );
 
 /** Resolves the vault and cache once, the same way for every command. */
 function context(): { vault: ObsidianAdapter; get: ReturnType<typeof createCachedHttpGet> } {

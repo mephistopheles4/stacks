@@ -1,0 +1,57 @@
+[
+  {
+    "Account": "reader@example.invalid",
+    "DateAdded": "2026-07-17T10:21:47.012",
+    "AudibleProductId": "B0FIXAUD01",
+    "Title": "The Tidal Engine",
+    "Subtitle": "Notes From an Estuary",
+    "AuthorNames": "Marisol Vane",
+    "NarratorNames": "Priya Raman",
+    "LengthInMinutes": 278,
+    "Description": "<p>Publisher marketing copy that must never reach a note.</p>",
+    "Publisher": "Riverbend Audio",
+    "CategoriesNames": "Engineering; Nature Writing",
+    "MyRatingOverall": 4,
+    "PictureLarge": "81FIXTURELARGE",
+    "PictureId": "51fixturesmall",
+    "IsFinished": true,
+    "Language": "English"
+  },
+  {
+    "Account": "reader@example.invalid",
+    "DateAdded": "2026-07-17T10:21:48.000",
+    "AudibleProductId": "B0FIXAUD02",
+    "Title": "Lantern Work",
+    "Subtitle": "Notes on Craft",
+    "AuthorNames": "Tomás Iglesias",
+    "NarratorNames": "Tomás Iglesias",
+    "LengthInMinutes": 65,
+    "Publisher": "Small Press Audio",
+    "CategoriesNames": "Craft",
+    "MyRatingOverall": null,
+    "PictureLarge": "81FIXTURETWO",
+    "IsFinished": false,
+    "Language": "English"
+  },
+  {
+    "Account": "reader@example.invalid",
+    "DateAdded": "2026-07-17T10:21:49.000",
+    "AudibleProductId": "B0FIXAUD03",
+    "Title": "Staff Engineer",
+    "Subtitle": "Leadership Beyond the Management Track",
+    "AuthorNames": "Will Larson",
+    "NarratorNames": "Will Larson",
+    "LengthInMinutes": 400,
+    "CategoriesNames": "Careers",
+    "IsFinished": true,
+    "Language": "English"
+  },
+  {
+    "Account": "reader@example.invalid",
+    "DateAdded": "2026-07-17T10:21:50.000",
+    "AudibleProductId": "B0FIXAUD04",
+    "Title": "",
+    "AuthorNames": "Nobody At All",
+    "IsFinished": true
+  }
+]

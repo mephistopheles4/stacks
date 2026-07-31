@@ -41,5 +41,18 @@ export {
 
 export { addBook, type AddBookOptions, type AddBookResult } from './add-book.ts';
 
+export { cacheCover, type CachedCover } from './covers/cache-cover.ts';
+
+export {
+  importBooks,
+  parseAudibleExport,
+  type AudibleBook,
+  type AudibleImportOptions,
+  type ImportableBook,
+  type ImportOptions,
+  type ImportOutcome,
+  type ImportResult,
+} from './import/index.ts';
+
 export { renderOgImage, type OgImageOptions } from './og-image.ts';
 export { publish, type PublishOptions, type PublishResult } from './publish.ts';

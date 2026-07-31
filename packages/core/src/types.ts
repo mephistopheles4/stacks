@@ -82,4 +82,15 @@ export interface BookInput {
   readonly pages?: number;
   readonly faceOut?: boolean;
   readonly tags?: readonly string[];
+
+  /**
+   * Keys outside the frontmatter contract, written through verbatim.
+   *
+   * Imports know things the contract does not — an audiobook has a narrator, a
+   * runtime and an ASIN. The parser has always tolerated extra keys
+   * (invariant 5); without this the *writer* silently dropped them, so data an
+   * import found could not be kept. Contract keys always win, so this cannot be
+   * used to smuggle a different `title` in.
+   */
+  readonly extra?: Readonly<Record<string, string | number | boolean>>;
 }

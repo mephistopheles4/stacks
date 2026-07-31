@@ -1,6 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { spineColour } from './covers/dominant-colour.ts';
+import { cacheCover } from './covers/cache-cover.ts';
 import { normaliseIsbn } from './identity.ts';
 import { lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
 import type { BookInput, BookStatus } from './types.ts';
@@ -46,7 +44,10 @@ export async function addBook(
     }
   }
 
-  const cover = await cacheCover(metadata, vault);
+  const cover =
+    metadata.coverUrl === undefined
+      ? undefined
+      : await cacheCover(metadata.coverUrl, metadata.title, vault);
 
   const book: BookInput = {
     title: metadata.title,
@@ -59,58 +60,6 @@ export async function addBook(
   };
 
   return { kind: 'added', path: await vault.writeBook(book), metadata };
-}
-
-interface CachedCover {
-  readonly relativePath: string;
-  readonly spineColor?: string;
-}
-
-/**
- * Downloads the cover and reads its dominant colour.
- *
- * Every failure here returns `undefined` rather than throwing: a missing cover
- * downgrades the book's appearance, it does not stop it being logged.
- */
-async function cacheCover(
-  metadata: BookMetadata,
-  vault: VaultAdapter,
-): Promise<CachedCover | undefined> {
-  if (metadata.coverUrl === undefined) return undefined;
-
-  const extension = /\.(jpe?g|png|webp)(?:$|\?)/i.exec(metadata.coverUrl)?.[1] ?? 'jpg';
-  const filename = `${slug(metadata.title)}.${extension.toLowerCase()}`;
-  const dir = vault.coverDir();
-  const absolute = join(dir, filename);
-
-  try {
-    const response = await fetch(metadata.coverUrl);
-    if (!response.ok) return undefined;
-    const bytes = Buffer.from(await response.arrayBuffer());
-    // Open Library serves a 1x1 placeholder for "no cover on file".
-    if (bytes.length < 1024) return undefined;
-
-    await mkdir(dir, { recursive: true });
-    await writeFile(absolute, bytes);
-  } catch {
-    return undefined;
-  }
-
-  return {
-    relativePath: `covers/${filename}`,
-    ...maybe('spineColor', await spineColour(absolute)),
-  };
-}
-
-function slug(title: string): string {
-  return (
-    title
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 60) || 'cover'
-  );
 }
 
 function maybe<K extends string, V>(key: K, value: V | undefined): Record<K, V> | Record<never, never> {

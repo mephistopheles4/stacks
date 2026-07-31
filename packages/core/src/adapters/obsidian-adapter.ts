@@ -142,6 +142,12 @@ function renderNote(book: BookInput): string {
   if (book.faceOut !== undefined) frontmatter['face_out'] = book.faceOut;
   if (book.tags !== undefined && book.tags.length > 0) frontmatter['tags'] = [...book.tags];
 
+  // Extras are written last and never overwrite a contract key, so an import
+  // cannot smuggle in a different title or status through the side door.
+  for (const [key, value] of Object.entries(book.extra ?? {})) {
+    if (!(key in frontmatter)) frontmatter[key] = value;
+  }
+
   const yaml = stringifyYaml(frontmatter, { lineWidth: 0 }).trimEnd();
 
   // Embed the cover so Obsidian actually shows it. A `cover:` frontmatter value
