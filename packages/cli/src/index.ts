@@ -51,9 +51,13 @@ program
       fail(`--status must be one of: ${BOOK_STATUSES.join(', ')}`);
     }
 
+    const googleBooksKey = process.env['GOOGLE_BOOKS_API_KEY'];
     const result = await addBook(term, vault, get, {
       status: options.status as BookStatus,
       ...(options.force === true ? { force: true } : {}),
+      ...(googleBooksKey === undefined || googleBooksKey.length === 0
+        ? {}
+        : { googleBooksKey }),
     });
 
     switch (result.kind) {

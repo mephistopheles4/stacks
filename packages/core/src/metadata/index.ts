@@ -14,15 +14,37 @@ export type { BookMetadata, MetadataSource } from './types.ts';
  * failing is an ordinary outcome — the book still gets a note, just a thinner
  * one — and `stacks add` must not die because an API had a bad afternoon.
  */
-export async function lookupByIsbn(isbn: string, get: HttpGet): Promise<BookMetadata | undefined> {
-  return (await openLibrary.lookupByIsbn(isbn, get)) ?? (await googleBooks.lookupByIsbn(isbn, get));
+export interface MetadataOptions {
+  /**
+   * Google Books API key, from `GOOGLE_BOOKS_API_KEY`.
+   *
+   * Optional, and the whole difference between Google Books being a real
+   * fallback and being decorative — unauthenticated requests share one
+   * exhausted quota and 429 every time.
+   */
+  readonly googleBooksKey?: string;
+}
+
+export async function lookupByIsbn(
+  isbn: string,
+  get: HttpGet,
+  options: MetadataOptions = {},
+): Promise<BookMetadata | undefined> {
+  return (
+    (await openLibrary.lookupByIsbn(isbn, get)) ??
+    (await googleBooks.lookupByIsbn(isbn, get, options.googleBooksKey))
+  );
 }
 
 /** Fuzzy title search across both providers, best match first. */
-export async function searchByTitle(query: string, get: HttpGet): Promise<BookMetadata[]> {
+export async function searchByTitle(
+  query: string,
+  get: HttpGet,
+  options: MetadataOptions = {},
+): Promise<BookMetadata[]> {
   const primary = await openLibrary.searchByTitle(query, get);
   if (primary.length > 0) return primary;
-  return googleBooks.searchByTitle(query, get);
+  return googleBooks.searchByTitle(query, get, options.googleBooksKey);
 }
 
 /**
@@ -33,10 +55,14 @@ export async function searchByTitle(query: string, get: HttpGet): Promise<BookMe
  * wrong) is far more likely to be a typo worth searching for than a real
  * identifier worth failing on.
  */
-export async function lookup(term: string, get: HttpGet): Promise<BookMetadata[]> {
+export async function lookup(
+  term: string,
+  get: HttpGet,
+  options: MetadataOptions = {},
+): Promise<BookMetadata[]> {
   if (isValidIsbn(term)) {
-    const hit = await lookupByIsbn(term, get);
+    const hit = await lookupByIsbn(term, get, options);
     if (hit !== undefined) return [hit];
   }
-  return searchByTitle(term, get);
+  return searchByTitle(term, get, options);
 }

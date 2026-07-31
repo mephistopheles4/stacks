@@ -18,17 +18,36 @@ import { asPositiveInt, asRecord, firstString, type BookMetadata } from './types
 
 const VOLUMES = 'https://www.googleapis.com/books/v1/volumes';
 
+/**
+ * A personal API key moves you off the shared anonymous quota.
+ *
+ * Without one every request 429s against a pool other people have already
+ * spent, which meant this provider had never actually answered a question —
+ * every "nothing found" came from Open Library alone. Keys are free.
+ */
+function withKey(url: string, apiKey: string | undefined): string {
+  return apiKey === undefined || apiKey.length === 0
+    ? url
+    : `${url}&key=${encodeURIComponent(apiKey)}`;
+}
+
 export async function lookupByIsbn(
   isbn: string,
   get: HttpGet,
+  apiKey?: string,
 ): Promise<BookMetadata | undefined> {
   const normalised = normaliseIsbn(isbn);
   if (normalised.length === 0) return undefined;
-  return firstVolume(await get(`${VOLUMES}?q=isbn:${normalised}`), normalised);
+  return firstVolume(await get(withKey(`${VOLUMES}?q=isbn:${normalised}&maxResults=1`, apiKey)), normalised);
 }
 
-export async function searchByTitle(query: string, get: HttpGet): Promise<BookMetadata[]> {
-  const body = asRecord(await get(`${VOLUMES}?q=${encodeURIComponent(query)}&maxResults=5`));
+export async function searchByTitle(
+  query: string,
+  get: HttpGet,
+  apiKey?: string,
+): Promise<BookMetadata[]> {
+  const url = withKey(`${VOLUMES}?q=${encodeURIComponent(query)}&maxResults=5`, apiKey);
+  const body = asRecord(await get(url));
   if (body === undefined || isQuotaError(body)) return [];
 
   const items = Array.isArray(body['items']) ? body['items'] : [];

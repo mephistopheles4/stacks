@@ -36,6 +36,7 @@ export {
   searchByTitle,
   type BookMetadata,
   type HttpGet,
+  type MetadataOptions,
   type MetadataSource,
 } from './metadata/index.ts';
 

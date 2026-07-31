@@ -81,6 +81,22 @@ describe('API miss', () => {
     expect(await lookup('zzzqqqxx no such book anywhere', openLibraryMiss)).toEqual([]);
   });
 
+  it('appends the Google Books key only when there is one', async () => {
+    const seen: string[] = [];
+    const spy = async (url: string): Promise<undefined> => {
+      seen.push(url);
+      return undefined;
+    };
+
+    await searchByTitle('anything', spy);
+    expect(seen.some((url) => url.includes('key='))).toBe(false);
+
+    seen.length = 0;
+    await searchByTitle('anything', spy, { googleBooksKey: 'abc 123' });
+    const google = seen.find((url) => url.includes('googleapis.com'));
+    expect(google).toContain('key=abc%20123');
+  });
+
   it('survives a reader that fails outright', async () => {
     const broken = async (): Promise<undefined> => undefined;
     expect(await lookupByIsbn(CAPTURED_ISBN, broken)).toBeUndefined();

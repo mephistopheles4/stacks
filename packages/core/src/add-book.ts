@@ -8,6 +8,8 @@ export interface AddBookOptions {
   readonly status?: BookStatus;
   /** Skip the duplicate check. */
   readonly force?: boolean;
+  /** Passed to the metadata providers; see MetadataOptions. */
+  readonly googleBooksKey?: string;
 }
 
 export type AddBookResult =
@@ -29,7 +31,9 @@ export async function addBook(
   get: HttpGet,
   options: AddBookOptions = {},
 ): Promise<AddBookResult> {
-  const [metadata] = await lookup(term, get);
+  const [metadata] = await lookup(term, get, {
+    ...(options.googleBooksKey === undefined ? {} : { googleBooksKey: options.googleBooksKey }),
+  });
   if (metadata === undefined) {
     return { kind: 'not-found', term };
   }
