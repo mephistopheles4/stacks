@@ -14,11 +14,11 @@ Update it in the **same commit** as the gate it describes.
 
 | | |
 | --- | --- |
-| **Last green gate** | Phase 4 — library import |
+| **Last green gate** | Phase 4, plus 10 commits of post-phase work |
 | **Now working on** | nothing |
 | **Blocked on** | nothing |
-| **Next stop point** | n/a |
-| **Running against** | the owner's real vault (25 books), not only fixtures |
+| **Never done** | deployed. The brief's success metric is sending a friend a link |
+| **Running against** | the owner's real vault, 31 books, all with covers |
 
 ## Gate log
 
@@ -89,6 +89,22 @@ need only a new mapper.
 | **Bash tool sandbox blocks network** | ⚠️ outbound `fetch` needs `dangerouslyDisableSandbox` |
 | Google Books unauthenticated | ⚠️ 429s on a shared quota — a bonus, never a dependable fallback |
 | Resolved versions | TS 7.0.2 · Vitest 4 · Astro 7.1.6 · three 0.185.1 · sharp 0.35 |
+
+## Since the phase gates
+
+Ten commits of work driven by running against a real vault rather than fixtures.
+Most of it was defects that only real data exposes:
+
+- covers now carry their true aspect (audiobook art is square, print is ~0.65)
+  and books lean in groups; spine titles are printed on the spines
+- `face_out` joined the frontmatter contract
+- `stacks build --watch` plus `pnpm dev:watch` for live editing from Obsidian
+- Google Books works now a key is configured; Apple Books added purely for
+  cover art, which is ~800x1200 against Google's ~128px
+- matching learned to refuse summaries and study guides, which had put the
+  wrong book's cover — and once the wrong book's *note* — into the vault
+- covers that are Google's "image not available" card are refused
+- tags are normalised to what Obsidian accepts
 
 ## Notes to the next session
 

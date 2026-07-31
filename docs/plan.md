@@ -291,6 +291,27 @@ is a deliberate decision, not an oversight.
 
 Nothing blocking. Recorded so they aren't rediscovered:
 
-- Google Books quota acceptability as a fallback — resolve during Phase 1.
-- `wishlist` rendering — ghosted vs excluded; decide once the shelf exists (P2/P3).
-- Texture strategy (atlas vs lazy planes) — decide by measurement in Phase 2.
+**Settled:**
+
+- Google Books needs a personal API key; unauthenticated it 429s on a shared
+  quota. Configured via `GOOGLE_BOOKS_API_KEY`.
+- `wishlist` books are excluded from the shelf, not ghosted. Owner's call.
+- One mesh per book, not InstancedMesh — 49 books render fine. **Still unmeasured
+  at the brief's 200-book target.**
+
+**Actually open:**
+
+- **Never deployed.** The brief's lagging success metric is sending a friend a
+  link, and no build has left this machine. Everything else is unproven against
+  that.
+- **`stacks add` checks for duplicates after the metadata lookup**, so a book
+  already shelved that the APIs cannot find reports "nothing found" rather than
+  "already in the vault". The duplicate message also names the search result
+  rather than the shelved book it matched.
+- **No way to enrich an existing note.** Filling gaps in a book already in the
+  vault means deleting it and adding it again.
+- **`finished` dates for the Audible import are add-dates**, so all 31 books sit
+  in 2026 and year grouping has never been seen doing its job on real data.
+- **Both gates stage their own vault into `packages/site/public/`**, so running
+  them while `dev:watch` is up swaps the live site to fixtures until the next
+  vault edit.
