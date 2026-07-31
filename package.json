@@ -14,7 +14,8 @@
     "dev": "pnpm --filter @stacks/site run dev",
     "stacks": "tsx packages/cli/src/index.ts",
     "fixtures:50": "tsx scripts/make-50-book-fixture.ts",
-    "smoke:render": "tsx scripts/smoke-render.ts"
+    "smoke:render": "tsx scripts/smoke-render.ts",
+    "gate:public": "tsx scripts/check-public-build.ts"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",

@@ -25,7 +25,25 @@ pnpm install
 | `pnpm test` | all workspaces |
 | `pnpm build` | typecheck + static site build |
 | `pnpm dev` | site dev server |
-| `pnpm smoke:render` | headless shelf screenshot gate *(phase 2)* |
+| `pnpm smoke:render` | headless shelf screenshot gate |
+| `pnpm gate:public` | proves the public build leaks no note text |
+
+## Sharing your shelf
+
+```bash
+pnpm stacks build --public --vault /path/to/your/vault
+pnpm --filter @stacks/site build
+```
+
+The first command stages `library.json`, the covers it actually references, and
+an `og.png` link preview into `packages/site/public/`. The second folds those
+into `packages/site/dist/` — a plain static folder with no server behind it, so
+it deploys as-is to GitHub Pages, Cloudflare Pages, Netlify, or anything that
+serves files.
+
+The public build carries covers and frontmatter only: no note bodies, no vault
+paths. `pnpm gate:public` proves it by grepping the built output for a phrase
+planted in the fixture notes, rather than trusting that it is so.
 
 ## Where things are documented
 

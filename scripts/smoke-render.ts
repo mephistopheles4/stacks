@@ -203,18 +203,37 @@ function report(result: {
  * worse than one that can fail. Building first also means the gate screenshots
  * what actually ships.
  */
-async function buildSite(): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    const build = spawn('pnpm', ['--filter', '@stacks/site', 'run', 'build'], {
-      cwd: ROOT,
-      shell: true,
-      stdio: 'inherit',
-    });
-    build.on('error', reject);
-    build.on('exit', (code) =>
-      code === 0 ? resolve() : reject(new Error(`astro build exited ${String(code)}`)),
+function run(command: string, args: readonly string[]): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const child = spawn(command, [...args], { cwd: ROOT, shell: true, stdio: 'inherit' });
+    child.on('error', reject);
+    child.on('exit', (code) =>
+      code === 0 ? resolve() : reject(new Error(`${command} exited ${String(code)}`)),
     );
   });
+}
+
+/**
+ * Stages its own input before building.
+ *
+ * Both gates write `packages/site/public/library.json`, so a gate that assumed
+ * someone else had put the right library there would pass or fail depending on
+ * which gate ran last. Each one regenerates what it needs.
+ */
+async function buildSite(): Promise<void> {
+  await run('pnpm', ['fixtures:50']);
+  // --public stages library.json *and* the covers it references, so the render
+  // never depends on someone having copied cover files in by hand.
+  await run('pnpm', [
+    'stacks',
+    'build',
+    '--public',
+    '--vault',
+    'fixtures/vault-50',
+    '--assets',
+    'packages/site/public',
+  ]);
+  await run('pnpm', ['--filter', '@stacks/site', 'run', 'build']);
 }
 
 const CONTENT_TYPES: Record<string, string> = {

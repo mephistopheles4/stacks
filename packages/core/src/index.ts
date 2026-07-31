@@ -40,3 +40,6 @@ export {
 } from './metadata/index.ts';
 
 export { addBook, type AddBookOptions, type AddBookResult } from './add-book.ts';
+
+export { renderOgImage, type OgImageOptions } from './og-image.ts';
+export { publish, type PublishOptions, type PublishResult } from './publish.ts';

@@ -14,10 +14,10 @@ Update it in the **same commit** as the gate it describes.
 
 | | |
 | --- | --- |
-| **Last green gate** | Phase 2 — shelf renderer |
-| **Now working on** | Phase 3 — public build |
+| **Last green gate** | Phase 3 — public build |
+| **Now working on** | nothing — this run is complete |
 | **Blocked on** | nothing |
-| **Next stop point** | none left — run to Phase 3's gate |
+| **Next stop point** | n/a. Phase 4 was explicitly out of scope for this run |
 | **Out of scope this run** | Phase 4 (Audiobookshelf) |
 
 ## Gate log
@@ -27,7 +27,7 @@ Update it in the **same commit** as the gate it describes.
 | 0 — scaffold | `stacks --help` lists commands · empty shelf renders · fixtures committed | ✅ green | tag `phase-0` |
 | 1 — data layer | `stacks build` → valid `library.json` · malformed skipped · 4 test cases | ✅ green | tag `phase-1` |
 | 2 — shelf | `pnpm smoke:render` → non-blank `artifacts/shelf.png` · 50 books · click opens card | ✅ green | tag `phase-2` |
-| 3 — public build | `--public` output has zero canary hits · OG image generated | ⬜ not started | — |
+| 3 — public build | `--public` output has zero canary hits · OG image generated | ✅ green | tag `phase-3` |
 
 Every phase additionally requires `pnpm test && pnpm build` green.
 
@@ -53,6 +53,17 @@ feel (continuous fill at real proportions, not one sparse row per year),
 wishlist books stay off, and spine colour sampled from the cover's binding edge
 so it matches the real spine. See the Decision Log for each.
 
+### Phase 3 evidence
+
+`pnpm gate:public` green: builds for real, then greps every text file that
+shipped for the canary, for vault note paths, and for `sourcePath` — 0 hits. It
+also fails if the canary is missing from the fixture vault, so it cannot pass
+vacuously. OG image 24.8 KB at 1200x630. 71 tests pass.
+
+Both gates were made to stage their own input: they previously fought over
+`packages/site/public/library.json`, so whichever ran last decided what the
+other tested. Verified passing back to back in either order.
+
 ## Environment findings
 
 | Finding | Status |
@@ -68,23 +79,24 @@ so it matches the real spine. See the Decision Log for each.
 
 ## Notes to the next session
 
-**Phase 3 starts here.** The shelf works and reads from `library.json`.
+This run is done: phases 0–3 are green and tagged. Phase 4 (Audiobookshelf
+import) was explicitly out of scope and has **not** been started.
 
-- `stacks build --public` already strips `sourcePath`, and `library.test.ts`
-  asserts the public payload carries no note body, no `Library/`, no `.md`.
-  What Phase 3 still needs: covers copied into the output, the OG image, and a
-  **grep gate over the built folder** — the existing check is over the JSON, and
-  the gate is about what actually ships.
-- The canary is `NOTE_BODY_CANARY_do_not_ship`. It is in fixture note bodies
-  *including the malformed one*, so a passing grep cannot be an accident of that
-  book being skipped.
-- Covers currently reach the site by a manual copy into
-  `packages/site/public/covers/`. That is fine for the dev loop and **not** good
-  enough for `--public`; the public build should place them itself.
-- sharp is already a dependency and is what the OG image should use — that was
-  half the reason for choosing it in Phase 1.
-- Still open, and fair to decide in Phase 3: whether the print and audiobook
-  editions of one title should collapse into a single spine. Wishlist is settled
-  — off the shelf.
+If you pick this up:
+
+- Run `pnpm test && pnpm smoke:render && pnpm gate:public` first. Those three
+  are the contract; if they are green the project is where this file says.
+- Point it at a real vault: `pnpm stacks add <isbn> --vault <path>`, then
+  `pnpm stacks build --public --vault <path>`. Everything so far has only been
+  driven against fixtures and one live Open Library lookup.
+- **Known and deliberately unresolved:** real covers can yield desaturated
+  spine colours. Edge sampling improved this a lot (the spine now comes from the
+  cover's binding edge) but a genuinely pale book still gets a pale spine, which
+  is correct and may still look dull en masse. Judge it against a real library,
+  not fixtures.
+- Still open: whether the print and audiobook editions of one title should
+  collapse into a single spine. They currently render as two.
+- Google Books needs a personal API key to be worth anything — the anonymous
+  quota is shared and was already exhausted when tested.
 - Everything in `fixtures/` is invented. No copyrighted material, ever — see
   `plan.md` §1.

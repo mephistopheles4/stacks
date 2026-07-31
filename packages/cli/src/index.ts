@@ -8,12 +8,14 @@ import {
   buildLibrary,
   createCachedHttpGet,
   isBookStatus,
+  publish,
   BOOK_STATUSES,
   type BookStatus,
 } from '@stacks/core';
 
 const DEFAULT_CACHE = '.cache';
 const DEFAULT_OUT = 'library.json';
+const DEFAULT_ASSETS = 'packages/site/public';
 
 interface GlobalOptions {
   readonly vault?: string;
@@ -67,18 +69,34 @@ program
   .description('Parse the vault into library.json')
   .option('--public', 'emit a shareable build: covers and metadata only, no note bodies')
   .option('-o, --out <file>', `where to write library.json (default: ${DEFAULT_OUT})`)
-  .action(async (options: { public?: boolean; out?: string }) => {
+  .option(
+    '--assets <dir>',
+    `where --public stages library.json, covers and og.png (default: ${DEFAULT_ASSETS})`,
+  )
+  .action(async (options: { public?: boolean; out?: string; assets?: string }) => {
     const { vault } = context();
-
     const books = await vault.listBooks();
-    const library = buildLibrary(books, { isPublic: options.public === true });
 
+    // A public build stages a whole folder — metadata, the covers it actually
+    // references, and the link-preview image. A local build is just the index.
+    if (options.public === true) {
+      const assets = resolve(options.assets ?? DEFAULT_ASSETS);
+      const result = await publish(books, vault, assets, { isPublic: true });
+
+      console.log(`wrote ${result.libraryPath} — ${result.library.bookCount} book(s), public build`);
+      console.log(`  covers    ${result.coversCopied} copied into ${assets}`);
+      console.log(`  og image  ${result.ogImagePath}`);
+      if (result.coversMissing.length > 0) {
+        console.warn(`  missing   ${result.coversMissing.length} cover(s): ${result.coversMissing.join(', ')}`);
+      }
+      return;
+    }
+
+    const library = buildLibrary(books, { isPublic: false });
     const out = resolve(options.out ?? DEFAULT_OUT);
     await mkdir(dirname(out), { recursive: true });
     await writeFile(out, `${JSON.stringify(library, null, 2)}\n`, 'utf8');
-
-    const scope = options.public === true ? 'public' : 'local';
-    console.log(`wrote ${out} — ${library.bookCount} book(s), ${scope} build`);
+    console.log(`wrote ${out} — ${library.bookCount} book(s), local build`);
   });
 
 program
