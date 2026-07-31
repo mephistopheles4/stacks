@@ -1,0 +1,23 @@
+{
+  "name": "stacks",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "pnpm run typecheck && pnpm --filter @stacks/site run build",
+    "test": "vitest run",
+    "dev": "pnpm --filter @stacks/site run dev",
+    "stacks": "tsx packages/cli/src/index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,30 @@
+---
+// The 3D island. Vanilla Three.js in a plain <script> — no React on the page.
+---
+
+<div class="shelf">
+  <canvas id="shelf-canvas"></canvas>
+</div>
+
+<script>
+  import { mountShelf } from '../shelf/scene.ts';
+
+  const canvas = document.getElementById('shelf-canvas');
+  if (canvas instanceof HTMLCanvasElement) {
+    mountShelf(canvas);
+  }
+</script>
+
+<style>
+  .shelf {
+    position: absolute;
+    inset: 0;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+  }
+</style>

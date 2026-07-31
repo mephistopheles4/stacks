@@ -1,0 +1,7 @@
+packages:
+  - 'packages/*'
+
+# pnpm blocks postinstall scripts by default; these need theirs to work.
+# esbuild: required by vite/vitest/astro — without its postinstall the binary is missing.
+allowBuilds:
+  esbuild: true
