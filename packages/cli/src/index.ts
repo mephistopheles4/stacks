@@ -9,7 +9,9 @@ import {
   buildLibrary,
   compareShelfPosition,
   createCachedHttpGet,
+  enrichBook,
   importBooks,
+  missingFields,
   isBookStatus,
   parseAudibleExport,
   publish,
@@ -165,6 +167,68 @@ program
     console.log(`  finished in ${year}: ${finishedThisYear}`);
     console.log(`  reading now:       ${reading}`);
     console.log(`  without a cover:   ${missingCovers}`);
+  });
+
+program
+  .command('enrich')
+  .description('Fill missing metadata on notes that already exist, never overwriting')
+  .argument('[title]', 'only enrich books whose title contains this')
+  .option('--dry-run', 'report what would be filled, without writing')
+  .action(async (title: string | undefined, options: { dryRun?: boolean }) => {
+    const { vault, get } = context();
+    const googleBooksKey = process.env['GOOGLE_BOOKS_API_KEY'];
+
+    const needle = title?.toLowerCase();
+    const books = (await vault.listBooks()).filter(
+      (book) => needle === undefined || book.title.toLowerCase().includes(needle),
+    );
+
+    if (books.length === 0) {
+      fail(title === undefined ? 'no books in the vault' : `no book matching "${title}"`);
+    }
+
+    // Only the ones with something to fill are worth a lookup.
+    const candidates = books.filter((book) => missingFields(book).length > 0);
+    console.log(
+      `${books.length} book(s) considered, ${candidates.length} with gaps` +
+        (options.dryRun === true ? '  (dry run)' : ''),
+    );
+
+    let filled = 0;
+    let missed = 0;
+    for (const book of candidates) {
+      const gaps = missingFields(book).join(', ');
+      const outcome = await enrichBook(book, vault, get, {
+        ...(options.dryRun === true ? { dryRun: true } : {}),
+        ...(googleBooksKey === undefined || googleBooksKey.length === 0
+          ? {}
+          : { googleBooksKey }),
+      });
+
+      switch (outcome.kind) {
+        case 'filled':
+          filled += 1;
+          console.log(`  + ${outcome.title.slice(0, 52)}`);
+          console.log(`      ${outcome.fields.join(', ')}  (was missing: ${gaps})`);
+          break;
+        case 'not-found':
+          missed += 1;
+          console.log(`  ? ${outcome.title.slice(0, 52)} — no provider knows it`);
+          break;
+        case 'mismatch':
+          missed += 1;
+          // Refusing is the right answer: metadata for a book that merely
+          // resembles this one is worse than leaving the gap.
+          console.log(`  ! ${outcome.title.slice(0, 46)}`);
+          console.log(`      refused "${outcome.found.slice(0, 52)}" — not the same book`);
+          break;
+        case 'complete':
+          break;
+      }
+    }
+
+    const verb = options.dryRun === true ? 'would fill' : 'filled';
+    console.log(`\n${verb} ${filled} book(s)${missed > 0 ? `, ${missed} left alone` : ''}`);
   });
 
 program

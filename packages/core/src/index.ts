@@ -48,6 +48,13 @@ export {
 
 export { addBook, type AddBookOptions, type AddBookResult } from './add-book.ts';
 
+export {
+  enrichBook,
+  missingFields,
+  type EnrichOptions,
+  type EnrichOutcome,
+} from './enrich.ts';
+
 export { cacheCover, type CachedCover } from './covers/cache-cover.ts';
 
 export {

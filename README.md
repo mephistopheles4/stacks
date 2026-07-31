@@ -40,6 +40,8 @@ the interesting event is "share this now", not "a file changed".
 | Command | What it does |
 | --- | --- |
 | `pnpm stacks --help` | the CLI |
+| `pnpm stacks enrich --dry-run` | fill gaps in existing notes, never overwriting |
+| `pnpm stacks order --renumber` | renumber `shelf_order` in tens |
 | `pnpm test` | all workspaces |
 | `pnpm build` | typecheck + static site build |
 | `pnpm dev` | site dev server |
