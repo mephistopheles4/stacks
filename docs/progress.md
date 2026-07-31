@@ -108,24 +108,25 @@ Most of it was defects that only real data exposes:
 
 ## Notes to the next session
 
-This run is done: phases 0–3 are green and tagged. Phase 4 (Audiobookshelf
-import) was explicitly out of scope and has **not** been started.
+All five phases are green and tagged. The tool runs against the owner's real
+vault, not only fixtures.
 
 If you pick this up:
 
-- Run `pnpm test && pnpm smoke:render && pnpm gate:public` first. Those three
-  are the contract; if they are green the project is where this file says.
-- Point it at a real vault: `pnpm stacks add <isbn> --vault <path>`, then
-  `pnpm stacks build --public --vault <path>`. Everything so far has only been
-  driven against fixtures and one live Open Library lookup.
-- **Known and deliberately unresolved:** real covers can yield desaturated
-  spine colours. Edge sampling improved this a lot (the spine now comes from the
-  cover's binding edge) but a genuinely pale book still gets a pale spine, which
-  is correct and may still look dull en masse. Judge it against a real library,
-  not fixtures.
+- Run `pnpm test && pnpm build && pnpm smoke:render && pnpm gate:public` first.
+  Those four are the contract; if they are green the project is where this file
+  says it is.
+- **Both gates stage their own fixture vault into `packages/site/public/`.**
+  Running them while `pnpm dev:watch` is up swaps the live site to fixture data
+  until the next vault edit. Rebuild with
+  `pnpm stacks build --public --assets packages/site/public`.
+- **Verify covers by eye, not by counting.** Sixteen were swapped for print
+  editions once; eleven were right and five were wrong — three were a
+  placeholder graphic and two were a different book — and nothing in the counts
+  distinguished them. A contact sheet did.
+- Configuration lives in `.env` (gitignored): `STACKS_VAULT`, and
+  `GOOGLE_BOOKS_API_KEY` without which Google Books 429s on a shared quota.
 - Still open: whether the print and audiobook editions of one title should
   collapse into a single spine. They currently render as two.
-- Google Books needs a personal API key to be worth anything — the anonymous
-  quota is shared and was already exhausted when tested.
 - Everything in `fixtures/` is invented. No copyrighted material, ever — see
   `plan.md` §1.
