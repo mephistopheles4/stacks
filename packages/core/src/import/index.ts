@@ -1,4 +1,6 @@
 import { cacheCover } from '../covers/cache-cover.ts';
+import { lookup } from '../metadata/index.ts';
+import type { HttpGet } from '../metadata/http.ts';
 import { isProbablySameBook, normaliseIsbn } from '../identity.ts';
 import type { BookInput } from '../types.ts';
 import type { VaultAdapter } from '../adapters/vault-adapter.ts';
@@ -29,6 +31,17 @@ export interface ImportOptions {
   readonly dryRun?: boolean;
   /** Skip cover downloads — much faster, and offline. */
   readonly skipCovers?: boolean;
+  /**
+   * Look the book up and prefer a print cover over the export's own.
+   *
+   * Audible ships *square* artwork, because that is what an audiobook cover is.
+   * On a shelf drawn as a bookcase they read as odd tiles among the spines, so
+   * a print edition's cover is preferred when one can be found — falling back
+   * to the export's art, which is always there and always correct for the
+   * edition actually owned.
+   */
+  readonly get?: HttpGet;
+  readonly googleBooksKey?: string;
 }
 
 export type ImportOutcome =
@@ -77,10 +90,10 @@ export async function importBooks(
     }
 
     try {
+      const candidates =
+        options.skipCovers === true ? [] : await coverCandidates(input, coverUrl, options);
       const cover =
-        coverUrl === undefined || options.skipCovers === true
-          ? undefined
-          : await cacheCover(coverUrl, input.title, vault);
+        candidates.length === 0 ? undefined : await cacheCover(candidates, input.title, vault);
 
       const path = await vault.writeBook({
         ...input,
@@ -105,6 +118,34 @@ export async function importBooks(
     duplicates: outcomes.filter((o) => o.kind === 'duplicate').length,
     failed: outcomes.filter((o) => o.kind === 'failed').length,
   };
+}
+
+/**
+ * Cover URLs in preference order: a print edition first, the export's own last.
+ *
+ * The export's artwork is the safety net — it is always present and always the
+ * right book, just the wrong shape for a bookcase.
+ */
+async function coverCandidates(
+  input: BookInput,
+  exportCover: string | undefined,
+  options: ImportOptions,
+): Promise<string[]> {
+  const fallback = exportCover === undefined ? [] : [exportCover];
+  if (options.get === undefined) return fallback;
+
+  try {
+    const [match] = await lookup(`${input.title} ${input.author ?? ''}`.trim(), options.get, {
+      ...(options.googleBooksKey === undefined ? {} : { googleBooksKey: options.googleBooksKey }),
+    });
+    const preferred = [match?.coverUrlLarge, match?.coverUrl].filter(
+      (url): url is string => url !== undefined,
+    );
+    return [...preferred, ...fallback];
+  } catch {
+    // A lookup failing must not cost the book the cover it already had.
+    return fallback;
+  }
 }
 
 interface SeenBook {

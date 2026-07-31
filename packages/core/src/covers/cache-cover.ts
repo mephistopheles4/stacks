@@ -54,6 +54,8 @@ export async function cacheCover(
     const bytes = await download(url);
     if (bytes === undefined) continue;
 
+    if (await isBlank(bytes)) continue;
+
     const aspect = await aspectOf(bytes);
     if (aspect !== undefined && aspect <= MAX_COVER_ASPECT) {
       chosen = { bytes, url };
@@ -94,6 +96,36 @@ async function download(url: string): Promise<Buffer | undefined> {
     return bytes.length < 1024 ? undefined : bytes;
   } catch {
     return undefined;
+  }
+}
+
+/**
+ * Google's "image not available" card, and anything else that is effectively
+ * a blank page.
+ *
+ * It arrives with HTTP 200 and a plausible size, so nothing upstream can tell
+ * it apart from real art — it replaced three correct audiobook covers before
+ * this existed. A real cover carries a title and usually a picture, so it has
+ * contrast; the placeholder is white with faint grey lettering, and every copy
+ * measures the same.
+ *
+ * The threshold is deliberately tight. A pale cover — Staff Engineer's grey map
+ * is one — must survive, so only near-white *and* near-flat is refused.
+ */
+const BLANK_BRIGHTNESS = 245;
+const BLANK_VARIANCE = 25;
+
+export async function isBlank(bytes: Buffer): Promise<boolean> {
+  try {
+    const stats = await sharp(bytes).stats();
+    const channels = stats.channels.slice(0, 3);
+    if (channels.length === 0) return false;
+
+    const mean = channels.reduce((sum, c) => sum + c.mean, 0) / channels.length;
+    const deviation = channels.reduce((sum, c) => sum + c.stdev, 0) / channels.length;
+    return mean > BLANK_BRIGHTNESS && deviation < BLANK_VARIANCE;
+  } catch {
+    return false;
   }
 }
 

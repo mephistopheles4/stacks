@@ -177,7 +177,7 @@ program
       if (source !== 'audible') {
         fail(`unknown import source "${source}" — currently only "audible"`);
       }
-      const { vault } = context();
+      const { vault, get } = context();
 
       let data: unknown;
       try {
@@ -195,9 +195,11 @@ program
 
       console.log(`${books.length} book(s) in the export`);
 
+      const gbKey = process.env['GOOGLE_BOOKS_API_KEY'];
       const result = await importBooks(books, vault, {
         ...(options.dryRun === true ? { dryRun: true } : {}),
-        ...(options.skipCovers === true ? { skipCovers: true } : {}),
+        ...(options.skipCovers === true ? { skipCovers: true } : { get }),
+        ...(gbKey === undefined || gbKey.length === 0 ? {} : { googleBooksKey: gbKey }),
       });
 
       for (const outcome of result.outcomes) {
