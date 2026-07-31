@@ -54,6 +54,10 @@ Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|r
 ## Tech decisions (made — don't relitigate)
 - **Vanilla Three.js, not react-three-fiber.** Plain Astro island, no React on the page. Use InstancedMesh for book boxes, per-instance cover textures via a texture atlas or lazy per-book planes — measure first, don't optimize blind.
 - Book detail card = plain DOM overlay positioned from raycaster hits, not in-canvas UI.
+- **Site code layout: no logic in `.astro` files.** They hold markup, styles, and
+  a `<script>` that imports and calls a `.ts` module — nothing more. `.astro`
+  files are NOT typechecked (`astro check` cannot run under TypeScript 7 yet),
+  so anything with a type lives in a `.ts` file, where `pnpm build` checks it.
 - Metadata: Open Library first, Google Books fallback. Cache all API responses in `.cache/` so tests and rebuilds don't re-hit APIs.
 - TypeScript strict everywhere. Vitest. pnpm workspaces.
 
@@ -97,3 +101,8 @@ pnpm smoke:render        # headless shelf screenshot gate
 - 2026-07-31: **A non-`type: book` note is ignored silently, not warned about.** Only a `type: book` note that fails to parse earns a warning. Otherwise a vault full of ordinary notes would drown the real ones. Fixture: `On Reading Slowly.md`.
 - 2026-07-31: `artifacts/` is gitignored — screenshots are regenerable via `pnpm smoke:render`, so the repo stays free of binaries. The human reviews them locally.
 - 2026-07-31: Phase 2 puppeteer will use `channel: 'chrome'` against the system Chrome at `C:\Program Files\Google\Chrome\Application\chrome.exe` (probed and present), skipping the Chromium download entirely.
+
+### Phase 0 — gate hardening (post-gate follow-up)
+- 2026-07-31: **Verified the gate can actually fail** before trusting it: a deliberately broken assertion turns `pnpm test` red (exit 1) and the `&&` chain in `pnpm build` stops on failure. A gate never observed failing is not yet a gate.
+- 2026-07-31: **`astro check` rejected — `@astrojs/check` cannot run under TypeScript 7.** TS 7's native compiler does not expose the programmatic API the Astro language server needs (withastro/roadmap#1321). Pinning the whole repo back to TS 6 to satisfy one tool costs more than it returns, so `.astro` files stay untypechecked and the mitigation is the "no logic in `.astro`" rule above. Revisit when Astro supports TS 7.
+- 2026-07-31: `packages/site/tsconfig.json` mirrors the strictness of `tsconfig.base.json` rather than relying on `astro/tsconfigs/strict` alone. The site's `.ts` files are covered by both that config (editor) and the root config (build gate); if the two disagreed, the editor would show errors the gate misses, or worse, the reverse.

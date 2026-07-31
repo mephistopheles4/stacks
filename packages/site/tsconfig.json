@@ -1,5 +1,18 @@
 {
   "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    // Kept in step with ../../tsconfig.base.json on purpose. `astro check` owns
+    // everything under packages/site — including its .ts files, which the root
+    // config deliberately excludes — so these settings must match or the editor
+    // and the build gate will disagree about the same file.
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true
+  },
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist"]
 }
