@@ -117,7 +117,9 @@ function showCard(card: HTMLElement, book: LibraryBook): void {
       book.cover === undefined ? undefined : image(book.cover, book.title),
       text('h2', book.title),
       book.author === undefined ? undefined : text('p', book.author, 'author'),
-      text('p', describe(book), 'meta'),
+      // A book with no dates, rating or page count has nothing to say here, and
+      // an empty paragraph is just a gap in the card.
+      describeOrNothing(book),
       book.tags.length === 0 ? undefined : text('p', book.tags.join(' · '), 'tags'),
     ].filter((node): node is HTMLElement => node !== undefined),
   );
@@ -126,6 +128,11 @@ function showCard(card: HTMLElement, book: LibraryBook): void {
 
 function hideCard(card: HTMLElement): void {
   card.hidden = true;
+}
+
+function describeOrNothing(book: LibraryBook): HTMLElement | undefined {
+  const summary = describe(book);
+  return summary.length === 0 ? undefined : text('p', summary, 'meta');
 }
 
 function describe(book: LibraryBook): string {

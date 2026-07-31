@@ -46,6 +46,15 @@ const SHELF = {
  */
 const MIN_ROWS = 2;
 
+/**
+ * Slack kept at the end of every row.
+ *
+ * A leaning book is wider than an upright one: tilting a 0.95-tall board by
+ * 0.062rad pushes its lower corner about 0.03 further out. Without this the last
+ * book on a full shelf leans straight through the side of the case.
+ */
+const LEAN_ALLOWANCE = 0.05;
+
 function rowsForCase(usedRows: number): number {
   return Math.max(usedRows + 1, MIN_ROWS);
 }
@@ -91,7 +100,11 @@ export function mountShelf(
   scene.background = new THREE.Color(COLOURS.background);
   scene.fog = new THREE.Fog(COLOURS.background, 14, 30);
 
-  const rows = toRows(books, SHELF.width - SHELF.padding * 2);
+  const rows = toRows(
+    books,
+    SHELF.width - SHELF.padding * 2 - LEAN_ALLOWANCE,
+    SHELF.bookGap,
+  );
   const rowCount = rowsForCase(rows.length);
   const unitHeight = rowCount * SHELF.rowHeight;
 

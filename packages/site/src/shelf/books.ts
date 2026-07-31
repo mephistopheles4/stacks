@@ -77,7 +77,11 @@ const FALLBACK_COLOURS = [
  * (newest first) and a year change opens a small gap where a bookend would sit,
  * so the grouping is still legible without leaving the case looking abandoned.
  */
-export function toRows(books: readonly LibraryBook[], capacity: number): ShelfRow[] {
+export function toRows(
+  books: readonly LibraryBook[],
+  capacity: number,
+  gap: number,
+): ShelfRow[] {
   const shelved = books.filter((book) => SHELVED.has(book.status));
 
   // Books in progress come first — they are the ones you would reach for.
@@ -91,8 +95,11 @@ export function toRows(books: readonly LibraryBook[], capacity: number): ShelfRo
   for (const book of ordered) {
     const entry = toShelfBook(book);
     const year = yearOf(book);
+    // The gap must be counted here, not only when placing. Leaving it out let
+    // twenty books smuggle in 0.16 of unaccounted width and pushed the last one
+    // straight through the side of the case.
     const isYearChange = previousYear !== undefined && year !== previousYear;
-    const width = entry.footprint + (isYearChange ? YEAR_GAP : 0);
+    const width = entry.footprint + gap + (isYearChange ? YEAR_GAP : 0);
 
     if (used + width > capacity && current.length > 0) {
       rows.push({ label: previousYear ?? '', books: current });
