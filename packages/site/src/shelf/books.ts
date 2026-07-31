@@ -125,11 +125,27 @@ function yearOf(book: LibraryBook): string {
 }
 
 function byReadingThenNewest(a: LibraryBook, b: LibraryBook): number {
+  /**
+   * An explicit `shelf_order` wins over everything, including the rule that
+   * floats a book you are reading to the front — someone who numbered a shelf
+   * meant it.
+   *
+   * Ordered books come first, so pinning three favourites does not require
+   * numbering the other twenty-eight.
+   */
+  const left = a.shelfOrder;
+  const right = b.shelfOrder;
+  if (left !== undefined || right !== undefined) {
+    if (left === undefined) return 1;
+    if (right === undefined) return -1;
+    if (left !== right) return left - right;
+  }
+
   if (a.status === 'reading' && b.status !== 'reading') return -1;
   if (b.status === 'reading' && a.status !== 'reading') return 1;
-  const left = a.finished ?? a.started ?? '';
-  const right = b.finished ?? b.started ?? '';
-  if (left !== right) return right.localeCompare(left);
+  const leftDate = a.finished ?? a.started ?? '';
+  const rightDate = b.finished ?? b.started ?? '';
+  if (leftDate !== rightDate) return rightDate.localeCompare(leftDate);
   return a.title.localeCompare(b.title);
 }
 

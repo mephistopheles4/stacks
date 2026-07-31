@@ -53,6 +53,8 @@ Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|r
 
 `face_out` forces the book cover-forward on the shelf, or forces it not to. Unset means decide from `status` — a book you're reading stands face-out on its own.
 
+`shelf_order` places a book by hand, lowest first. Books carrying one come before every book without one, so a few favourites can be pinned without numbering the whole shelf. Unset means the default order: reading first, then newest finished.
+
 ## Tech decisions (made — don't relitigate)
 - **Vanilla Three.js, not react-three-fiber.** Plain Astro island, no React on the page. Use InstancedMesh for book boxes, per-instance cover textures via a texture atlas or lazy per-book planes — measure first, don't optimize blind.
 - Book detail card = plain DOM overlay positioned from raycaster hits, not in-canvas UI.

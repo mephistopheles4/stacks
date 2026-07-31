@@ -22,6 +22,7 @@ export interface LibraryBook {
   readonly spineColor?: string;
   readonly pages?: number;
   readonly faceOut?: boolean;
+  readonly shelfOrder?: number;
   /**
    * The cover's width ÷ height, measured at build time.
    *
@@ -79,6 +80,7 @@ function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
     ...pick('spineColor', record.spineColor),
     ...pick('pages', record.pages),
     ...pick('faceOut', record.faceOut),
+    ...pick('shelfOrder', record.shelfOrder),
   };
 
   // A public build must expose no vault paths (brief, "share build").

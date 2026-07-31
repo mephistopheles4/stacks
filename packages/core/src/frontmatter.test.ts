@@ -101,6 +101,16 @@ describe('parseNote — hand-edited notes are first-class', () => {
     expect(pick(parseNote(`${base}face_out: maybe\n---\n`, 'x')).faceOut).toBeUndefined();
   });
 
+  it('reads shelf_order, including negatives', () => {
+    const base = '---\ntype: book\ntitle: X\n';
+    expect(pick(parseNote(`${base}---\n`, 'x')).shelfOrder).toBeUndefined();
+    expect(pick(parseNote(`${base}shelf_order: 3\n---\n`, 'x')).shelfOrder).toBe(3);
+    // Negative is legitimate: it is how you push a book in front of everything.
+    expect(pick(parseNote(`${base}shelf_order: -1\n---\n`, 'x')).shelfOrder).toBe(-1);
+    expect(pick(parseNote(`${base}shelf_order: "2"\n---\n`, 'x')).shelfOrder).toBe(2);
+    expect(pick(parseNote(`${base}shelf_order: soon\n---\n`, 'x')).shelfOrder).toBeUndefined();
+  });
+
   it('discards a rating outside 1–5 instead of rejecting the book', () => {
     expect(pick(parseNote('---\ntype: book\ntitle: X\nrating: 9\n---\n', 'x')).rating).toBeUndefined();
     expect(pick(parseNote('---\ntype: book\ntitle: X\nrating: 4\n---\n', 'x')).rating).toBe(4);

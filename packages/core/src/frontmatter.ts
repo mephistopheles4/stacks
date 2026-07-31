@@ -79,6 +79,7 @@ export function parseNote(source: string, sourcePath: string): ParsedNote {
       ...optional('spineColor', asHexColour(fields['spine_color'])),
       ...optional('pages', asPositiveInt(fields['pages'])),
       ...optional('faceOut', asBoolean(fields['face_out'])),
+      ...optional('shelfOrder', asOrder(fields['shelf_order'])),
     },
   };
 }
@@ -156,6 +157,12 @@ function asBoolean(value: unknown): boolean | undefined {
   if (text === 'true' || text === 'yes') return true;
   if (text === 'false' || text === 'no') return false;
   return undefined;
+}
+
+/** Any finite number, negative included, so you can push a book to the front. */
+function asOrder(value: unknown): number | undefined {
+  const n = typeof value === 'number' ? value : Number(asString(value));
+  return Number.isFinite(n) ? n : undefined;
 }
 
 function asHexColour(value: unknown): string | undefined {

@@ -65,6 +65,15 @@ export interface BookRecord {
    */
   readonly faceOut?: boolean;
 
+  /**
+   * Where this book sits on the shelf, lowest first.
+   *
+   * Absent means "wherever the default order puts it" — newest read first. A
+   * book with an order is placed ahead of every book without one, so a handful
+   * of favourites can be pinned to the front without numbering the whole shelf.
+   */
+  readonly shelfOrder?: number;
+
   readonly tags: readonly string[];
 }
 
@@ -81,6 +90,7 @@ export interface BookInput {
   readonly spineColor?: string;
   readonly pages?: number;
   readonly faceOut?: boolean;
+  readonly shelfOrder?: number;
   readonly tags?: readonly string[];
 
   /**

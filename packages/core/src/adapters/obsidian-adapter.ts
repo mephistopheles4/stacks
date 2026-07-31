@@ -154,6 +154,7 @@ function renderNote(book: BookInput): string {
   if (book.spineColor !== undefined) frontmatter['spine_color'] = book.spineColor;
   if (book.pages !== undefined) frontmatter['pages'] = book.pages;
   if (book.faceOut !== undefined) frontmatter['face_out'] = book.faceOut;
+  if (book.shelfOrder !== undefined) frontmatter['shelf_order'] = book.shelfOrder;
   // Normalised at the single write path, so no import can produce a tag
   // Obsidian will reject however carelessly it names its categories.
   const tags = [...new Set((book.tags ?? []).map(toObsidianTag).filter(isTag))];
