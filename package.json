@@ -12,10 +12,13 @@
     "build": "pnpm run typecheck && pnpm --filter @stacks/site run build",
     "test": "vitest run",
     "dev": "pnpm --filter @stacks/site run dev",
-    "stacks": "tsx packages/cli/src/index.ts"
+    "stacks": "tsx packages/cli/src/index.ts",
+    "fixtures:50": "tsx scripts/make-50-book-fixture.ts",
+    "smoke:render": "tsx scripts/smoke-render.ts"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
+    "puppeteer-core": "^25.4.0",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"

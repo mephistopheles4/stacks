@@ -15,9 +15,9 @@ Update it in the **same commit** as the gate it describes.
 | | |
 | --- | --- |
 | **Last green gate** | Phase 1 — data layer |
-| **Now working on** | Phase 2 — shelf renderer |
-| **Blocked on** | nothing |
-| **Next stop point** | Phase 2's first screenshot in `artifacts/` — **stop and hand back** |
+| **Now working on** | Phase 2 — shelf renderer (**gate red**, see below) |
+| **Blocked on** | human aesthetics review of `artifacts/shelf.png` |
+| **Next stop point** | ← we are here. Do not polish until the review comes back |
 | **Out of scope this run** | Phase 4 (Audiobookshelf) |
 
 ## Gate log
@@ -41,6 +41,32 @@ Every phase additionally requires `pnpm test && pnpm build` green.
   fuzzy title, API miss, malformed frontmatter. No test touches the network.
 - End-to-end `stacks add 9781603580557` into a scratch vault: note written,
   real cover downloaded, spine colour extracted, re-running deduped correctly.
+
+### Phase 2 — in progress, gate NOT green
+
+Books render. `artifacts/shelf.png` is a real shelf: 49 of 50 fixture books
+(wishlist excluded), spines out, one row per year newest-first, "Reading now"
+face-out on the top shelf, varied spine widths from page count.
+
+**Still red, and why:**
+
+1. `pnpm smoke:render` exits 1. Two causes, both in the *gate*, not the shelf:
+   - the pixel probe reads the WebGL buffer without waiting for a frame, so it
+     gets an empty buffer (1 distinct colour, 100% "non-background"). The fix is
+     the double-`requestAnimationFrame` wait that worked in the earlier manual
+     probe — see the Phase 0 evidence entry.
+   - one resource 404s; not yet identified (books load, so not `library.json`).
+2. The click-to-open-card integration test is not written yet. The picker and
+   card exist and are wired; only the puppeteer test is missing.
+
+**Known defects, deliberately unfixed pending the review** (fixing them is the
+"polish" the human asked to gate):
+   - rows fill only ~20% of the shelf width — the unit is far too wide for ~8
+     books per row, so every shelf trails off into empty space
+   - the whole scene reads too dark
+   - `index.astro` still says "Empty shelf — books arrive in phase 2"
+   - a face-out book on the top row clips through the shelf above it
+   - the second row's single face-out book sits oddly proud of the row
 
 ## Environment findings
 

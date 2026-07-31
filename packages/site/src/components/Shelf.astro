@@ -1,17 +1,21 @@
 ---
 // The 3D island. Vanilla Three.js in a plain <script> — no React on the page.
+// Markup and styles only: all logic lives in ../shelf/*.ts, which is
+// typechecked. See "Site code layout" in CLAUDE.md.
 ---
 
 <div class="shelf">
   <canvas id="shelf-canvas"></canvas>
+  <aside id="book-card" class="card" hidden></aside>
 </div>
 
 <script>
-  import { mountShelf } from '../shelf/scene.ts';
+  import { boot } from '../shelf/boot.ts';
 
   const canvas = document.getElementById('shelf-canvas');
-  if (canvas instanceof HTMLCanvasElement) {
-    mountShelf(canvas);
+  const card = document.getElementById('book-card');
+  if (canvas instanceof HTMLCanvasElement && card instanceof HTMLElement) {
+    void boot(canvas, card);
   }
 </script>
 
@@ -26,5 +30,58 @@
     width: 100%;
     height: 100%;
     touch-action: none;
+  }
+
+  .card {
+    position: absolute;
+    right: clamp(1rem, 4vw, 2.5rem);
+    bottom: clamp(1rem, 4vw, 2.5rem);
+    width: min(20rem, calc(100vw - 2rem));
+    padding: 1.15rem 1.25rem;
+    border: 1px solid rgba(242, 232, 220, 0.14);
+    border-radius: 0.85rem;
+    background: rgba(26, 22, 19, 0.86);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.45);
+    color: #f2e8dc;
+  }
+
+  .card[hidden] {
+    display: none;
+  }
+
+  .card img {
+    display: block;
+    width: 4.5rem;
+    height: auto;
+    margin-bottom: 0.85rem;
+    border-radius: 0.2rem;
+    box-shadow: 0 0.4rem 1rem rgba(0, 0, 0, 0.5);
+  }
+
+  .card h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  .card .author {
+    margin: 0.2rem 0 0;
+    font-size: 0.9rem;
+    color: #c9b8a4;
+  }
+
+  .card .meta {
+    margin: 0.6rem 0 0;
+    font-size: 0.8rem;
+    color: #a89684;
+  }
+
+  .card .tags {
+    margin: 0.35rem 0 0;
+    font-size: 0.75rem;
+    color: #857361;
   }
 </style>
