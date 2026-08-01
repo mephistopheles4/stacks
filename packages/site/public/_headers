@@ -16,3 +16,26 @@
 /
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
+
+# Images must expire on the same schedule as the index that describes them.
+#
+# Cloudflare Pages serves HTML and JSON with `max-age=0, must-revalidate` and
+# images with `max-age=14400` — four hours. Every filename here is a slug of a
+# book title and is *rewritten in place* by each deploy, so those two defaults
+# put the site into a state where `library.json` is current and the covers it
+# points at are up to four hours old.
+#
+# That is not merely stale, it is incoherent: `coverAspect` in library.json is
+# measured from the file this build staged, and the shelf draws each cover at
+# that ratio. Serve new metadata against old bytes and books render at the wrong
+# shape. The same skew shipped the fix for the mobile crash to an origin nobody
+# could see — the deploy succeeded, the phones kept crashing, and nothing said
+# so.
+#
+# The honest fix is for the pieces of one build to expire together. ETag makes
+# that cheap: a cover that has not changed costs a 304, not a re-download.
+/covers/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/og.png
+  Cache-Control: public, max-age=0, must-revalidate
