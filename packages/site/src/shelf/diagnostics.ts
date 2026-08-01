@@ -62,6 +62,15 @@ interface Snapshot {
   gpu?: string;
   screen: string;
   errors: string[];
+  /**
+   * What the driver said about a program that would not link.
+   *
+   * Kept apart from `errors`, which are thrown exceptions. A link failure throws
+   * nothing and reaches no handler: three writes it to the console and carries
+   * on, so before this it was visible only to somebody with a cable attached at
+   * the right moment.
+   */
+  shaders?: string[];
 }
 
 export interface DiagnosticsOptions {
@@ -125,6 +134,9 @@ export function mountDiagnostics(
       ...(options.handle?.gpu === undefined ? {} : { gpu: options.handle.gpu }),
       screen: `${String(window.innerWidth)}x${String(window.innerHeight)} @${String(window.devicePixelRatio)}`,
       errors: [...errors],
+      ...(options.handle === undefined || options.handle.shaderErrors.length === 0
+        ? {}
+        : { shaders: [...options.handle.shaderErrors] }),
     };
   };
 
@@ -195,6 +207,10 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
     `uptime   ${String(current.seconds)}s`,
   ];
 
+  if (current.shaders !== undefined) {
+    lines.push('', 'SHADER WOULD NOT LINK — drawing stopped', ...current.shaders.map((line) => `  ${line}`));
+  }
+
   if (current.errors.length > 0) {
     lines.push('', 'errors', ...current.errors.map((error) => `  ${error}`));
   }
@@ -210,6 +226,7 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
       `  textures ${String(previous.textures)}  draws ${String(previous.calls)}`,
       `  buffer ${previous.buffer}  dpr ${previous.pixelRatio.toFixed(2)}`,
       previous.heapMb === undefined ? '  heap n/a' : `  heap ${String(previous.heapMb)} MB`,
+      ...(previous.shaders ?? []).map((line) => `  ! ${line}`),
       ...previous.errors.map((error) => `  ! ${error}`),
     );
   }

@@ -2,7 +2,15 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { LibraryBook } from '@stacks/core';
 import { toRows, type ShelfBook, type ShelfRow } from './books.ts';
-import { makeContactShadow, makeNeighbourShadow, type Footprint } from './contact-shadow.ts';
+import {
+  LIFT,
+  makeBackboardShade,
+  makeContactShadow,
+  makeNeighbourShadow,
+  makeRecessShade,
+  type CaseLight,
+  type Footprint,
+} from './contact-shadow.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
 /**
@@ -29,6 +37,7 @@ const SHELF = {
   depth: 0.72,
   plankThickness: 0.07,
   sideThickness: 0.09,
+  backThickness: 0.05,
   /** Gap between neighbouring books. */
   bookGap: 0.008,
   /** Books sit slightly forward of the backboard, as they do in life. */
@@ -60,10 +69,21 @@ function rowsForCase(usedRows: number): number {
   return Math.max(usedRows + 1, MIN_ROWS);
 }
 
+/**
+ * `soft` is gone, and was gone before the probes that thought they were testing
+ * it.
+ *
+ * three 0.185 deprecated `PCFSoftShadowMap` and substitutes `PCFShadowMap` for
+ * it, with a console warning — so `?shadowtype=soft` and `?shadowtype=pcf` have
+ * been the same renderer all along, and the profile string was reporting a
+ * filter that was not running. Mapped honestly rather than dropped, so an old
+ * URL still works and says what it actually got.
+ */
 const SHADOW_TYPES = {
   basic: THREE.BasicShadowMap,
   pcf: THREE.PCFShadowMap,
-  soft: THREE.PCFSoftShadowMap,
+  soft: THREE.PCFShadowMap,
+  vsm: THREE.VSMShadowMap,
 } as const;
 
 const COLOURS = {
@@ -125,6 +145,11 @@ export interface ShelfHandle {
    * driven through.
    */
   readonly caseOverflow: number;
+  /**
+   * What the driver said about any program that would not link. Empty is the
+   * normal case, and the shelf is halted whenever it is not.
+   */
+  readonly shaderErrors: readonly string[];
   /** Live renderer counters. See `./diagnostics.ts`. */
   stats(): ShelfStats;
   /**
@@ -173,8 +198,18 @@ export interface RendererOverrides {
   readonly shadows?: boolean;
   /** `?shadowmap=1024`. Edge of the depth target; the default is 2048 (16 MB). */
   readonly shadowMapSize?: number;
-  /** `?shadowtype=basic|pcf|soft`. `soft` is PCFSoft: the default, and the dearest. */
-  readonly shadowType?: 'basic' | 'pcf' | 'soft';
+  /**
+   * `?shadowtype=basic|pcf|soft|vsm`. See `SHADOW_TYPES`: `soft` is now `pcf`.
+   *
+   * `vsm` is the one that is not a variation on the others. The first three all
+   * declare `uniform sampler2DShadow` and read the map with a hardware depth
+   * comparison — which is the fetch `?shadowfetch=0` has now identified as what
+   * takes the context away, and which is why all three died alike at every size
+   * and filter. Variance shadow maps store depth and depth-squared in an
+   * ordinary texture and read it with a plain `sampler2D`, so they are the only
+   * configuration here that avoids the operation actually implicated.
+   */
+  readonly shadowType?: 'basic' | 'pcf' | 'soft' | 'vsm';
   /**
    * `?casters=0`. Nothing casts, but the shadow map is still allocated and the
    * pass still runs — over an empty scene.
@@ -197,6 +232,46 @@ export interface RendererOverrides {
    * probe measures a change rather than smuggling in a fix.
    */
   readonly guardResize?: boolean;
+  /**
+   * `?painted=0`. Leaves out the painted shading — no contact shadows, no
+   * backboard shade, no recess, no neighbour bands.
+   *
+   * Two jobs. It makes `?shadows=1` a *clean* reference again: the two systems
+   * are independent, so asking for real shadows has always drawn them on top of
+   * the painted ones and double-darkened everything they agree about.
+   *
+   * And it discriminates on the shader failure. The program that will not link
+   * is a `MeshBasicMaterial`, which in this scene is only ever a painted shadow.
+   * With them gone the scene has no basic material left, so if `?shadows=1` then
+   * links and runs, the fault is specific to those programs and there is
+   * something to change; if it still fails, it is the lit materials too and
+   * there is not.
+   */
+  readonly painted?: boolean;
+  /**
+   * `?shadowfetch=0`. Draws the shadow map once, then stops *reading* it.
+   *
+   * The isolator. Enabling shadows confounds three things, and the bisect has
+   * now eliminated one of them outright:
+   *
+   *  - the render target is allocated — a 2048² depth texture **and** a 2048²
+   *    RGBA8 colour texture that three creates and never samples, 16 MB each;
+   *  - the shadow pass runs — but `autoUpdate = false` means exactly once, at
+   *    first paint, so it cannot be what takes a context away twelve seconds
+   *    later, and `casters=0` dying agrees;
+   *  - every lit fragment samples the depth texture, every frame, forever.
+   *
+   * `receiveShadow` cannot separate the last two: three keys `USE_SHADOWMAP` on
+   * `shadowMap.enabled` and the light count alone, so turning it off on the
+   * books would change nothing at all. Turning the whole flag off after the
+   * first frame and recompiling does: the target stays allocated, the map stays
+   * drawn, and the sampling stops.
+   *
+   * Survives → the per-frame depth fetch is what kills the driver.
+   * Still dies → merely holding a sampled depth attachment does, and there is
+   * nothing left to fix.
+   */
+  readonly shadowFetch?: boolean;
 }
 
 export interface MountOptions {
@@ -215,6 +290,11 @@ export interface MountOptions {
   readonly onContextLost?: () => void;
   /** The GPU gave it back. Only ever fires if the loss was prevented-default. */
   readonly onContextRestored?: () => void;
+  /**
+   * A shader program would not link, and the shelf has stopped rather than
+   * spend the context arguing about it.
+   */
+  readonly onShaderFailure?: (report: readonly string[]) => void;
 }
 
 export function mountShelf(
@@ -226,14 +306,25 @@ export function mountShelf(
   const maxPixelRatio = options.renderer?.maxPixelRatio ?? 2;
   const shadows = options.renderer?.shadows ?? false;
   const shadowMapSize = options.renderer?.shadowMapSize ?? 2048;
-  const shadowType = options.renderer?.shadowType ?? 'soft';
+  const shadowType = options.renderer?.shadowType ?? 'pcf';
   const shadowCasters = options.renderer?.shadowCasters ?? true;
   const guardResize = options.renderer?.guardResize ?? false;
+  const painted = options.renderer?.painted ?? true;
+  const shadowFetch = options.renderer?.shadowFetch ?? true;
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
   renderer.shadowMap.enabled = shadows;
   renderer.shadowMap.type = SHADOW_TYPES[shadowType];
+
+  /**
+   * What the driver said when a program would not link.
+   *
+   * A live array rather than a return value: the failure happens inside the
+   * first `render`, which is inside this function, so there is nobody to hand it
+   * to yet. The diagnostics panel reads it on its next tick.
+   */
+  const shaderErrors: string[] = [];
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(COLOURS.background);
@@ -302,7 +393,7 @@ export function mountShelf(
 
   const textures = new TextureCache(renderer);
   const lookup: BookLookup = new Map();
-  const placed = placeBooks(scene, rows, textures, lookup, shadowCasters);
+  const placed = placeBooks(scene, rows, textures, lookup, shadowCasters, painted);
 
   const picker = new Picker(
     canvas,
@@ -312,11 +403,57 @@ export function mountShelf(
     options.onSelect,
   );
 
+  /**
+   * Stop, rather than spend the context arguing with a program that will not
+   * link.
+   *
+   * Three carries on regardless: it calls `useProgram` on the invalid program
+   * every frame, the driver answers `INVALID_OPERATION` every frame, and within
+   * a second or two the context is gone. That is why nothing has ever been
+   * readable afterwards — the instrument dies with the page it is measuring.
+   * One bad frame is enough to know; sixty a second only destroys the evidence.
+   */
+  let halted = false;
+
   let frame = 0;
+  let drawn = 0;
+
   const renderLoop = (): void => {
+    if (halted) return;
     frame = requestAnimationFrame(renderLoop);
     controls.update();
     renderer.render(scene, camera);
+    drawn += 1;
+
+    // After the map is drawn and before it is ever read again. See `shadowFetch`.
+    if (drawn === 1 && shadows && !shadowFetch) stopSamplingShadows(renderer, scene);
+  };
+
+  let shaderFailures = 0;
+
+  renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader): void => {
+    shaderFailures += 1;
+    const report = describeLinkFailure(gl, program, vertexShader, fragmentShader);
+
+    // Only the first report is kept. Halting stops the *next* frame; three
+    // returns from this callback and carries on walking the render list, so one
+    // frame can fail several programs — and the panel is serialised into
+    // `localStorage` once a second for as long as the page lives. An uncapped
+    // list is a growing write on a device that is already in trouble, which is
+    // the last thing a black box should do. The console still gets every one.
+    if (shaderFailures === 1) shaderErrors.push(...report);
+    else if (shaderFailures === 2) shaderErrors.push('(more programs failed after it — see the console)');
+
+    // Three's own message lives in the `else` branch of the test that calls this
+    // handler, so installing one *silences* it. Anyone reading a console — which
+    // is how this failure was found in the first place — would have watched the
+    // report get quieter as it got better. This says strictly more than the line
+    // it replaced.
+    console.error(`THREE program would not link:\n  ${report.join('\n  ')}`);
+
+    halted = true;
+    cancelAnimationFrame(frame);
+    options.onShaderFailure?.(shaderErrors);
   };
 
   let sizedTo = { width: 0, height: 0 };
@@ -372,12 +509,14 @@ export function mountShelf(
     bookCount: placed.length,
     gpu: describeGpu(renderer),
     caseOverflow: measureCaseOverflow(scene, placed),
+    shaderErrors,
     // Reported back so a screenshot of the panel says which settings were live.
     // A bisect whose result cannot be tied to a configuration is just an anecdote.
     profile:
       `aa=${antialias ? 'on' : 'off'} dpr<=${String(maxPixelRatio)} ` +
       `shadows=${shadows ? `${shadowType}@${String(shadowMapSize)}` : 'off'} ` +
-      `casters=${shadowCasters ? 'on' : 'off'} guard=${guardResize ? 'on' : 'off'}`,
+      `casters=${shadowCasters ? 'on' : 'off'} guard=${guardResize ? 'on' : 'off'} ` +
+      `painted=${painted ? 'on' : 'off'} fetch=${shadowFetch ? 'on' : 'off'}`,
 
     stats(): ShelfStats {
       const { memory, render, programs } = renderer.info;
@@ -418,12 +557,34 @@ export function mountShelf(
       controls.dispose();
       textures.dispose();
 
-      // Spine textures are generated per book rather than cached, so they are
-      // freed by walking the scene rather than from the cover cache.
+      // Spine textures are generated per book rather than cached, and every
+      // painted shadow carries a canvas of its own, so they are freed by walking
+      // the scene rather than from the cover cache.
+      //
+      // Both kinds are named. Checking only for `MeshStandardMaterial` freed the
+      // spines and left every shadow texture behind, because a shadow is an
+      // unlit `MeshBasicMaterial` — and the count of those has just grown by two
+      // per shelf. Covers are disposed twice, once here and once by the cache;
+      // `dispose()` is idempotent, so that costs nothing and is cheaper than
+      // working out which is which.
       scene.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return;
+
+        // Geometries too — but never the two shared unit shapes, which outlive
+        // any one mount. Every book is a scaled `UNIT_BOX` or `UNIT_PLANE`, so a
+        // blanket dispose here would free them for the whole module and leave a
+        // second shelf drawing nothing at all.
+        if (object.geometry !== UNIT_BOX && object.geometry !== UNIT_PLANE) {
+          object.geometry.dispose();
+        }
+
         for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-          if (material instanceof THREE.MeshStandardMaterial) material.map?.dispose();
+          if (
+            material instanceof THREE.MeshStandardMaterial ||
+            material instanceof THREE.MeshBasicMaterial
+          ) {
+            material.map?.dispose();
+          }
           material.dispose();
         }
       });
@@ -443,6 +604,95 @@ export function mountShelf(
  * asking for: "Adreno 750" versus "SwiftShader" is the difference between a
  * memory problem and a machine with no GPU acceleration at all.
  */
+/**
+ * Everything the driver will say about a program that would not link.
+ *
+ * Three prints `VALIDATE_STATUS false` in its own error — and never calls
+ * `gl.validateProgram`, so that `false` is the parameter's *initial value* and
+ * carries no information at all. It reads like a second symptom and is not one.
+ * Asking properly is the one question nobody had put to this driver, and the
+ * validate log is a different log from the link log: a driver that declines to
+ * explain the first sometimes explains the second.
+ *
+ * The limits come with it because they are the usual reason a program that
+ * compiles will not link — varyings, uniform vectors, texture units — and they
+ * are the difference between "this hardware cannot" and "this driver will not".
+ */
+function describeLinkFailure(
+  gl: WebGLRenderingContext,
+  program: WebGLProgram,
+  vertexShader: WebGLShader,
+  fragmentShader: WebGLShader,
+): string[] {
+  try {
+    gl.validateProgram(program);
+
+    const limit = (name: keyof WebGLRenderingContext): string => {
+      const value: unknown = gl.getParameter(gl[name] as number);
+      return typeof value === 'number' ? String(value) : '?';
+    };
+
+    return [
+      `material:  ${materialOf(gl.getShaderSource(vertexShader))}`,
+      `link log:  ${said(gl.getProgramInfoLog(program))}`,
+      `validate:  ${gl.getProgramParameter(program, gl.VALIDATE_STATUS) === true ? 'ok' : 'failed'}`,
+      `vertex:    ${said(gl.getShaderInfoLog(vertexShader))}`,
+      `fragment:  ${said(gl.getShaderInfoLog(fragmentShader))}`,
+      `gl error:  ${String(gl.getError())}`,
+      `varying:   ${limit('MAX_VARYING_VECTORS')}`,
+      `uniforms:  vtx ${limit('MAX_VERTEX_UNIFORM_VECTORS')} frag ${limit('MAX_FRAGMENT_UNIFORM_VECTORS')}`,
+      `samplers:  frag ${limit('MAX_TEXTURE_IMAGE_UNITS')} vtx ${limit('MAX_VERTEX_TEXTURE_IMAGE_UNITS')} all ${limit('MAX_COMBINED_TEXTURE_IMAGE_UNITS')}`,
+    ];
+  } catch (error) {
+    // An instrument that throws takes down the thing it is measuring.
+    return [`link failure, and reading it also failed: ${String(error)}`];
+  }
+}
+
+/**
+ * Keeps the shadow map that was drawn, and stops every material reading it.
+ *
+ * Turning `shadowMap.enabled` off does not free the render target — three has
+ * no path that does, even through `renderer.dispose()` — so what is left is a
+ * context still holding a 2048² depth attachment that nothing samples. That is
+ * exactly the state the probe needs, and it is not reachable any other way.
+ *
+ * The traverse is what makes it take effect: `USE_SHADOWMAP` is baked into each
+ * program at compile time, so without dirtying the materials the flag would
+ * change nothing until something else forced a recompile.
+ */
+function stopSamplingShadows(renderer: THREE.WebGLRenderer, scene: THREE.Scene): void {
+  renderer.shadowMap.enabled = false;
+
+  scene.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+      material.needsUpdate = true;
+    }
+  });
+}
+
+/** A GL info log, or a word for its silence — an empty one is itself a finding. */
+function said(log: string | null): string {
+  const text = log?.trim() ?? '';
+  return text.length === 0 ? '(silent)' : text;
+}
+
+/**
+ * Which material's program this was, read back out of the shader itself.
+ *
+ * three names the material in its own error — and `onShaderError` is not passed
+ * it, so installing a handler loses the single most useful line in the message.
+ * It survives in the source, though: every program three builds is prefixed with
+ * `#define SHADER_TYPE` and `#define SHADER_NAME`, which is exactly what that
+ * line was printing.
+ */
+function materialOf(source: string | null): string {
+  const type = /^#define SHADER_TYPE (.+)$/m.exec(source ?? '')?.[1]?.trim();
+  const name = /^#define SHADER_NAME (.+)$/m.exec(source ?? '')?.[1]?.trim();
+  return [type ?? 'unknown', name].filter((part) => part !== undefined && part.length > 0).join(' ');
+}
+
 function describeGpu(renderer: THREE.WebGLRenderer): string | undefined {
   try {
     const gl = renderer.getContext();
@@ -496,6 +746,7 @@ function placeBooks(
   textures: TextureCache,
   lookup: BookLookup,
   castShadows: boolean,
+  painted: boolean,
 ): PlacedBook[] {
   const placed: PlacedBook[] = [];
   /** Footprints per row of *books*, indexed as `rows` is — top shelf first. */
@@ -556,7 +807,11 @@ function placeBooks(
       // anyway put a hard band down the edge of a book standing on its own.
       const next = row.books[index + 1];
       const shadedFromRight =
-        entry.faceOut && next !== undefined && !next.faceOut && (next.gapBefore ?? 0) === 0;
+        painted &&
+        entry.faceOut &&
+        next !== undefined &&
+        !next.faceOut &&
+        (next.gapBefore ?? 0) === 0;
 
       const book = buildBook(entry, depth, textures, castShadows, shadedFromRight);
 
@@ -603,11 +858,17 @@ function placeBooks(
           shelfY + entry.height / 2,
           (SHELF.depth - entry.coverWidth) / 2 - 0.02,
         );
+        // A face-out book has been turned a quarter turn, so what it puts on the
+        // plank is `coverWidth` across and only its own `thickness` deep — the
+        // same slab as any other book, seen end-on. Taking the cover's width for
+        // *both* painted a shadow the size of the cover flat on the wood, which
+        // reached most of the way to the front edge of the shelf: a dark smudge
+        // standing in front of a book, thrown by a light that is in front of it.
         footprints.push({
           x: cursor + entry.coverWidth * 0.5,
           width: entry.coverWidth,
           z: (SHELF.depth - entry.coverWidth) / 2 - 0.02,
-          depth: entry.coverWidth,
+          depth: entry.thickness,
         });
         cursor += entry.coverWidth + SHELF.bookGap * 2;
         // A face-out book is broad and flat on the shelf, so it is a support in
@@ -647,19 +908,42 @@ function placeBooks(
     byRow[rowIndex] = footprints;
   });
 
-  // Every shelf, not only the ones holding books: the overlay also carries the
-  // ambient darkening in the corner against the backboard, and an empty shelf
-  // has that corner too. Skipping them would leave the bottom of a growing case
-  // looking like a different piece of furniture from the top.
+  // Every shelf, not only the ones holding books: the overlays also carry the
+  // shading the case throws on itself, and an empty shelf has a backboard and a
+  // corner just as a full one does. Skipping them would leave the bottom of a
+  // growing case looking like a different piece of furniture from the top.
+  if (!painted) return placed;
+
+  const light = caseLight(rowCount * SHELF.rowHeight);
+  const openHeight = SHELF.rowHeight - SHELF.plankThickness;
+
   for (let row = 0; row < rowCount; row += 1) {
     const shelfY = row * SHELF.rowHeight + SHELF.plankThickness / 2;
+
     const shadow = makeContactShadow(
       byRow[rowCount - 1 - row] ?? [],
       SHELF.width,
       SHELF.depth,
       shelfY,
+      light,
     );
     if (shadow !== undefined) scene.add(shadow);
+
+    const shade = makeBackboardShade(SHELF.width, openHeight, INTERIOR_DEPTH, light);
+    if (shade !== undefined) {
+      shade.position.set(
+        0,
+        shelfY + openHeight / 2,
+        -SHELF.depth / 2 + SHELF.backThickness / 2 + LIFT,
+      );
+      scene.add(shade);
+    }
+
+    const recess = makeRecessShade(SHELF.width, openHeight);
+    if (recess !== undefined) {
+      recess.position.set(0, shelfY + openHeight / 2, BOOK_FRONT_Z + RECESS_CLEARANCE);
+      scene.add(recess);
+    }
   }
 
   return placed;
@@ -933,7 +1217,10 @@ function buildShelf(rowCount: number, castShadows: boolean): THREE.Group {
   const unitHeight = rowCount * SHELF.rowHeight;
   const outerWidth = SHELF.width + SHELF.sideThickness * 2;
 
-  const back = new THREE.Mesh(new THREE.BoxGeometry(outerWidth, unitHeight, 0.05), backing);
+  const back = new THREE.Mesh(
+    new THREE.BoxGeometry(outerWidth, unitHeight, SHELF.backThickness),
+    backing,
+  );
   back.position.set(0, unitHeight / 2, -SHELF.depth / 2);
   back.receiveShadow = true;
   group.add(back);
@@ -963,6 +1250,66 @@ function buildShelf(rowCount: number, castShadows: boolean): THREE.Group {
   return group;
 }
 
+/**
+ * Where the key light stands, and where it aims.
+ *
+ * High and to the right — moved right of where it was, but not far. A
+ * directional light does not fall off with distance, only with angle, so
+ * swinging it out to the side takes light straight off the spines and covers,
+ * which all face the room. Pushed hard right the case lost most of its
+ * modelling. This is the compromise: enough of a sideways component for the
+ * shadows to read as thrown from the top right, with the intensity lifted to
+ * pay for the light the spines lose at that angle.
+ *
+ * A pair of functions rather than two lines inside `addLighting`, because the
+ * shadows painted into the wood are computed from this light — and a painted
+ * shadow whose light has quietly moved is worse than no shadow at all.
+ */
+function keyLightPosition(unitHeight: number): THREE.Vector3 {
+  return new THREE.Vector3(5, unitHeight + 3.4, 5.6);
+}
+
+function keyLightTarget(unitHeight: number): THREE.Vector3 {
+  return new THREE.Vector3(0, unitHeight / 2, 0);
+}
+
+/** The key light as the painters need it. See `CaseLight`. */
+function caseLight(unitHeight: number): CaseLight {
+  const toTarget = keyLightTarget(unitHeight).sub(keyLightPosition(unitHeight));
+  return {
+    xPerZ: Math.abs(toTarget.x / toTarget.z),
+    yPerZ: Math.abs(toTarget.y / toTarget.z),
+  };
+}
+
+/**
+ * How far the backboard stands behind the front of the case — the depth a ray
+ * leaving the back wall has to cross before it escapes into the room, and so
+ * the whole reason the back of a shelf is dark and the front of it is not.
+ */
+const INTERIOR_DEPTH = SHELF.depth - SHELF.backThickness / 2;
+
+/**
+ * Where a shelved book's fore-edge stands — the frontmost thing on any shelf.
+ *
+ * A face-out book is nowhere near it: turned a quarter turn it is only as deep
+ * as it is thick, and it sits about 0.3 further back, which is the width of
+ * bare plank you can see in front of one. So the recess shading is placed
+ * against *this* plane, in front of everything, and takes a little parallax on
+ * the face-out covers behind it. That is affordable precisely because the
+ * shading is a soft falloff with no edge to misregister.
+ */
+const BOOK_FRONT_Z = SHELF.depth / 2 - 0.02;
+
+/**
+ * How far the recess shading floats in front of the books.
+ *
+ * Enough to clear `SKIN` — the hair by which a printed face floats above its
+ * board — with room to spare, and far short of the planks, whose own front
+ * faces stand at the front of the case and must not be darkened.
+ */
+const RECESS_CLEARANCE = 0.008;
+
 function addLighting(
   scene: THREE.Scene,
   unitHeight: number,
@@ -971,16 +1318,8 @@ function addLighting(
 ): void {
   scene.add(new THREE.AmbientLight(0xffffff, 0.75));
 
-  // High and to the right — moved right of where it was, but not far.
-  //
-  // A directional light does not fall off with distance, only with angle, so
-  // swinging it out to the side takes light straight off the spines and covers,
-  // which all face the room. Pushed hard right the case lost most of its
-  // modelling. This is the compromise: enough of a sideways component for the
-  // shadows to read as thrown from the top right, with the intensity lifted to
-  // pay for the light the spines lose at that angle.
   const key = new THREE.DirectionalLight(COLOURS.key, 2.7);
-  key.position.set(5, unitHeight + 3.4, 5.6);
+  key.position.copy(keyLightPosition(unitHeight));
   // Left off entirely rather than relying on `shadowMap.enabled`, so the depth
   // target is never allocated at all — which is the thing being measured.
   key.castShadow = shadows;

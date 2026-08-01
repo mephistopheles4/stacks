@@ -15,23 +15,60 @@
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { networkInterfaces } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env['PORT'] ?? 4322);
 
-function vaultPath(): string {
-  if (process.env['STACKS_VAULT'] !== undefined) return process.env['STACKS_VAULT'];
+/**
+ * Whether the dev server listens on the network as well as on this machine.
+ *
+ * Opt-in, and off by default, because it is the one setting here with a
+ * consequence outside this computer: bound to the network, anything on the same
+ * Wi-Fi can open the shelf and read what you have been reading. That is a
+ * reasonable thing to want for a few minutes — it is the only way to see the
+ * shelf on a phone without deploying it, and this project has already had two
+ * bugs that only appeared on a phone — and an unreasonable default.
+ *
+ * The build is the same `--public` one the site ships, so `private:` and
+ * wishlist books stay off it either way.
+ */
+const ON_NETWORK = /^(1|true|yes)$/i.test(
+  process.env['STACKS_DEV_HOST'] ?? fromEnvFile('STACKS_DEV_HOST') ?? '',
+);
 
+/** Every address a phone on the same network could reach this machine at. */
+function lanAddresses(): string[] {
+  return Object.values(networkInterfaces())
+    .flatMap((addresses) => addresses ?? [])
+    .filter((address) => address.family === 'IPv4' && !address.internal)
+    .map((address) => address.address);
+}
+
+/**
+ * One uncommented `KEY=value` from `.env`, or undefined.
+ *
+ * Not a `.env` loader — the file is read for the two settings this script
+ * needs and nothing else. It matters that both are read the same way: a
+ * variable documented in `.env.example` that only works when exported from the
+ * shell is a setting that appears to exist and does not.
+ */
+function fromEnvFile(key: string): string | undefined {
   try {
     const env = readFileSync(join(ROOT, '.env'), 'utf8');
-    const match = /^STACKS_VAULT\s*=\s*(.+)$/m.exec(env);
+    const match = new RegExp(`^[ \\t]*${key}[ \\t]*=[ \\t]*(.+)$`, 'm').exec(env);
     const value = match?.[1]?.trim().replace(/^["']|["']$/g, '');
-    if (value !== undefined && value.length > 0) return value;
+    return value !== undefined && value.length > 0 ? value : undefined;
   } catch {
-    // fall through to the error below
+    return undefined;
   }
+}
+
+function vaultPath(): string {
+  const configured = process.env['STACKS_VAULT'] ?? fromEnvFile('STACKS_VAULT');
+  if (configured !== undefined) return configured;
 
   console.error(
     'No vault configured.\n\n' +
@@ -44,7 +81,11 @@ function vaultPath(): string {
 
 const vault = vaultPath();
 console.log(`vault  ${vault}`);
-console.log(`site   http://localhost:${PORT}\n`);
+console.log(`site   http://localhost:${PORT}`);
+if (ON_NETWORK) {
+  for (const address of lanAddresses()) console.log(`phone  http://${address}:${PORT}`);
+}
+console.log('');
 
 const children: ChildProcess[] = [];
 
@@ -91,4 +132,12 @@ start('vault', 'pnpm', [
   'packages/site/public',
 ]);
 
-start('site', 'pnpm', ['--filter', '@stacks/site', 'run', 'dev', '--port', String(PORT)]);
+start('site', 'pnpm', [
+  '--filter',
+  '@stacks/site',
+  'run',
+  'dev',
+  '--port',
+  String(PORT),
+  ...(ON_NETWORK ? ['--host'] : []),
+]);

@@ -391,12 +391,190 @@ It also does something the real-time version never did: **every shelf gets the
 corner darkening, including empty ones**, so the bottom of a growing case no
 longer reads as a different piece of furniture from the top.
 
-The honest limits: contact shadows only. Books do not shade each other, and
-nothing is cast onto the backboard. And `ctx.filter` is what makes them soft — it
-is feature-checked by writing and reading back, because where it is missing the
-same code would paint hard black rectangles under every book, which is worse than
-no cast shadow at all. There, the corner darkening remains and the books' own
-shadows are skipped.
+`ctx.filter` is what makes the contact shadows soft — it is feature-checked by
+writing and reading back, because where it is missing the same code would paint
+hard black rectangles under every book, which is worse than no cast shadow at
+all. There, the corner darkening remains and the books' own shadows are skipped.
+
+### The case shades itself, and the books were never the point
+
+The owner walked through a `?shadows=1` screenshot naming four things the painted
+version was missing, beginning with *"the shelf itself casts a shadow on top of
+all books"*. It does not, and neither does anything else: every book on the shelf
+stands its front within 2cm of the case's front plane, so a ray leaving a cover
+escapes into the room almost immediately and is blocked by nothing.
+
+**What is dark is the wall behind them.** The backboard is the full depth of the
+case back, so a ray leaving it has to cross all of that before it gets out, and
+mostly does not — on a five-row case the plank's shadow falls about three
+quarters of the way down the backboard, which is why only a strip along the
+bottom of each shelf stays lit. Read as a picture, that is a dark band across the
+top of every shelf, and it is what a viewer attributes to the books.
+
+Three painters, all one plane per *row* rather than per book:
+
+| | what it is |
+| --- | --- |
+| backboard shade | the plank above and the right-hand upright, cast on the back wall |
+| recess shade | the corner light does not reach: under each plank, and at both uprights |
+| upright wedge | the right upright's real shadow across the plank — widest at the back, nothing at the front edge |
+
+The two cast shadows are **derived from the key light's actual position** rather
+than tuned, so moving the light cannot leave them describing where it used to be.
+The recess is deliberately not: a cast shadow from an upright would fall on one
+side only and would barely touch a book, while the corner is dark on both sides
+whatever the light does.
+
+Strengths were set by **differencing against the real thing**, not by eye —
+`?shadows=1` still renders Three's shadow map, so the two can be photographed at
+the same camera and subtracted. The first pass came back measurably darker than
+the shadows it was imitating. Cost: +10 draws, +10 textures, +20 triangles at 31
+books, and `smoke:render` distinct colours **1165 → 1285** — more tonal detail,
+not less.
+
+Found on the way, by the owner: **a face-out book's footprint was the size of its
+cover.** Turned a quarter turn, such a book puts `coverWidth × thickness` on the
+plank, but both dimensions were taken from the cover — so a shadow the size of
+the whole cover lay flat on the wood, reaching most of the way to the front edge
+of the shelf. A dark smudge standing in front of a book, thrown by a light that
+is in front of it.
+
+The honest limits: books still do not shade each other beyond the band a shelved
+book throws down one side of a face-out cover, and that band is straight where
+the real one is *shaped* — the occluder is a taller neighbour, so its top corner
+throws a diagonal. Reproducing that needs each book to know how tall the one
+beside it is.
+
+### Why the real-time path cannot be rescued here: the shader will not link
+
+Remote debugging from the Pixel 10 Pro, with unminified dev sources, finally said
+what six configurations of the bisect could not:
+
+```
+THREE.WebGLProgram: Shader Error 0 - VALIDATE_STATUS false
+Material Type: MeshBasicMaterial
+Program Info Log:                          ← empty, and so are both shader logs
+WebGL: INVALID_OPERATION: useProgram: program not valid   ← then every frame
+[.WebGL-0x…] GL_CONTEXT_LOST_KHR
+```
+
+A program **fails to link**, and the driver will not say why. Three then calls
+`useProgram` on it sixty times a second until the context dies. That is the
+mechanism, and it explains what the sizes and filters could not: `soft@2048`,
+`basic@2048`, `basic@512` and `casters=0` all died alike because **none of them
+change whether a program links**. It was never a budget.
+
+Two details worth keeping:
+
+- The failing material is a `MeshBasicMaterial` — a painted shadow plane, which
+  is unlit and wants nothing to do with shadows. Turning `shadowMap.enabled` on
+  recompiles *every* material in the scene, and three's `meshbasic` shader
+  includes no shadow chunk in either stage, so the only difference in that
+  program is two inert `#define`s. It compiles clean and will not link.
+- **`VALIDATE_STATUS false` in that message means nothing.** Three prints
+  `getProgramParameter(program, VALIDATE_STATUS)` without ever having called
+  `gl.validateProgram`, and the initial value of that parameter is `false`. It
+  reads like a second finding and is not one.
+
+`?shadows=1` keeps the real-time path for hardware that can hold it. On this
+device the answer is definitive and negative.
+
+### Two instruments, so the next attempt is not another guess
+
+The reason nothing had ever been readable is that **the instrument died with the
+page it was measuring**. Three notices the failed link, logs it, and carries on
+calling `useProgram` on the invalid program every frame; the driver refuses every
+frame; the context is gone in a second or two. So:
+
+**The shelf stops.** `renderer.debug.onShaderError` halts the render loop on the
+first failure and shows a sentence. One bad frame is enough to know; sixty a
+second only destroys the evidence. Observed in both directions by forcing
+`LINK_STATUS` false in the browser — with the failure, `requestAnimationFrame` is
+scheduled once and stays at one; without it, 1119 → 1600 over two seconds.
+
+**And it asks the driver properly.** The handler calls `gl.validateProgram` —
+which three never does — then reads the validate log, both shader logs, `getError`,
+and the limits that usually explain a program that compiles but will not link:
+
+```
+SHADER WOULD NOT LINK — drawing stopped
+  link log:  (silent)
+  validate:  ok
+  vertex:    (silent)
+  fragment:  (silent)
+  varying:   30
+  uniforms:  vtx 4095 frag 1024
+  samplers:  frag 16 vtx 16 all 32
+```
+
+It lands in the black box beside everything else, so it survives the session and
+can be read off a phone with no cable.
+
+**`?painted=0` is the discriminating probe.** It leaves out every painted shadow,
+which is the only place a `MeshBasicMaterial` appears in this scene — the program
+count drops 3 → 2 and the material that will not link is simply not there. So
+`?painted=0&shadows=1` renders real shadows in a scene with no basic material at
+all:
+
+| | meaning |
+| --- | --- |
+| it runs | the fault is specific to those programs, and there is something to change |
+| it still fails | the lit materials fail too, and there is not |
+
+It also makes `?shadows=1` a *clean* reference for the first time. The two
+shadow systems are independent, so asking for real shadows has always drawn them
+on top of the painted ones and double-darkened everything the two agree about —
+which is a thing to know when reading any earlier screenshot taken that way.
+
+### Closed: nothing that reads a shadow map survives on this device
+
+The full bisect, with the last three rows added by the instruments above:
+
+| configuration | result |
+| --- | --- |
+| `shadows=0` | **118 s, clean exit** |
+| `shadows=soft@2048` / `basic@2048` / `basic@512` | dead |
+| `shadows=1&casters=0` | dead at 44 s |
+| `shadows=1&books=0&painted=0` | dead — an **empty case** |
+| `shadows=1&shadowfetch=0` | **survives** |
+| `shadows=1&shadowtype=vsm` | dead |
+
+Read together those last three settle it. An empty case dies, so nothing about
+the library, the covers or the painted shading is involved. `shadowfetch=0`
+survives with the whole 32 MB render target still allocated and the map still
+drawn, so neither the allocation nor the one-shot pass is the problem. And VSM
+dies, which was the last hope: it is the only path in three that reads the map
+with a plain `sampler2D` instead of the `sampler2DShadow` hardware comparison
+the other three share, so the fault is not the comparison sampler either.
+
+What every dying configuration has and the surviving one does not is simply
+**materials that read the shadow map at all**. Stated honestly, `shadowfetch=0`
+does not separate *sampling* from *binding* — turning `shadowMap.enabled` off
+also stops three uploading the shadow uniforms and binding those textures each
+frame — and nothing available here can separate them. It does not matter: the
+conclusion is the same either way.
+
+**So the painted shading is not a workaround. It is the only design that was
+ever going to work on this hardware**, and the case for it never depended on the
+crash — a scene where nothing moves should not have been shadow-mapping in the
+first place. `?shadows=1` stays for hardware that can hold it; on the Pixel 10
+Pro the answer is definitive and negative, and the investigation is closed.
+
+**Nobody has published this exact symptom** — searched, and there is no report of
+a Pixel 10, a Tensor G5 or a PowerVR D-Series losing a WebGL context on a shadow
+map. What *is* published is the reputation: the Pixel 10 shipped with Imagination
+driver **v24.3** while **v25.1** already existed, its GPU sat at its 396 MHz idle
+clock under load against a rated 1 GHz, games showed flickering textures and
+screen tearing, and Google acknowledged it and began shipping driver fixes in
+monthly patches without committing to v25.1. Depth-texture sampling bugs are also
+a recurring class rather than a freak event — Firefox carried one that reproduced
+on NVIDIA under macOS and on nothing else, and AMD has had `sampler2DShadow`
+shadow mapping broken in a shipped driver.
+
+The practical consequence: **this may simply come right with a system update**,
+and `?shadows=1` is kept partly so it can be re-tested after one. Nothing in this
+repo can detect it, so it needs a person and a phone — the same thing that found
+it.
 
 ### Superseded: which *part* of the shadow pass costs
 

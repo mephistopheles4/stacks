@@ -29,6 +29,7 @@ declare global {
       ready: boolean;
       /** Worst breach of the case's sides, in world units. See `smoke:render`. */
       caseOverflow: number;
+      shaderErrors: readonly string[];
       projectBook(index: number): { x: number; y: number } | undefined;
     };
   }
@@ -42,6 +43,8 @@ export async function boot(
   const books = limitBooks(await loadLibrary(), params);
 
   let handle: ShelfHandle | undefined;
+  let shaderFailed = false;
+
   try {
     handle = mountShelf(canvas, books, {
       renderer: rendererOverrides(params),
@@ -50,10 +53,17 @@ export async function boot(
         else showCard(card, book);
       },
       onContextLost: () => {
-        showNotice(canvas, LOST_MESSAGE);
+        // A shader failure takes the context with it a moment later on the
+        // hardware where this happens, and the generic message would land on
+        // top of the specific one and bury the only useful sentence.
+        if (!shaderFailed) showNotice(canvas, LOST_MESSAGE);
       },
       onContextRestored: () => {
         clearNotice(canvas);
+      },
+      onShaderFailure: () => {
+        shaderFailed = true;
+        showNotice(canvas, SHADER_MESSAGE);
       },
     });
   } catch {
@@ -82,6 +92,7 @@ export async function boot(
     bookCount: handle.bookCount,
     ready: true,
     caseOverflow: handle.caseOverflow,
+    shaderErrors: handle.shaderErrors,
     projectBook: (index) => handle.projectBook(index),
   };
 
@@ -139,10 +150,18 @@ function rendererOverrides(params: URLSearchParams): RendererOverrides {
     maxPixelRatio?: number;
     shadows?: boolean;
     shadowMapSize?: number;
-    shadowType?: 'basic' | 'pcf' | 'soft';
+    shadowType?: 'basic' | 'pcf' | 'soft' | 'vsm';
     shadowCasters?: boolean;
     guardResize?: boolean;
+    painted?: boolean;
+    shadowFetch?: boolean;
   } = {};
+
+  const fetchShadows = flag(params, 'shadowfetch');
+  if (fetchShadows !== undefined) overrides.shadowFetch = fetchShadows;
+
+  const usePainted = flag(params, 'painted');
+  if (usePainted !== undefined) overrides.painted = usePainted;
 
   const casters = flag(params, 'casters');
   if (casters !== undefined) overrides.shadowCasters = casters;
@@ -163,7 +182,9 @@ function rendererOverrides(params: URLSearchParams): RendererOverrides {
   if (Number.isInteger(mapSize) && mapSize > 0) overrides.shadowMapSize = mapSize;
 
   const type = params.get('shadowtype');
-  if (type === 'basic' || type === 'pcf' || type === 'soft') overrides.shadowType = type;
+  if (type === 'basic' || type === 'pcf' || type === 'soft' || type === 'vsm') {
+    overrides.shadowType = type;
+  }
 
   return overrides;
 }
@@ -189,6 +210,12 @@ const NOTICE_CLASS = 'shelf-notice';
 // then contradicted: the page survived the loss and exited cleanly, so nothing
 // was killed for running out of anything it could name.
 const LOST_MESSAGE = 'The browser reset the shelf’s 3D canvas. Reload to bring it back.';
+
+// Says what happened and where to look, because the whole point of stopping is
+// that somebody reads the panel. Without `?debug` there is no panel, so the
+// sentence has to be able to stand alone.
+const SHADER_MESSAGE =
+  'This device would not compile the shelf’s shaders, so drawing has stopped. Reload with ?debug to see what the driver said.';
 
 const UNAVAILABLE_MESSAGE =
   "This browser wouldn't give the page a 3D canvas, so the shelf can't be drawn. Reloading usually fixes it.";
