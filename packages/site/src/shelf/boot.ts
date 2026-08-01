@@ -123,14 +123,26 @@ function limitBooks(books: readonly LibraryBook[], params: URLSearchParams): Lib
  * See `RendererOverrides` for why these are separate switches and not a single
  * "mobile profile". Anything other than `0`, `false` or `off` reads as on, so
  * a bare `?aa` enables rather than silently disabling.
+ *
+ * The open question is which *cheaper* shadow survives. The pass is what loses
+ * the context, and shadows stay on by default anyway (owner's call — they are
+ * most of what makes the shelf read as furniture), so `?shadowmap`,
+ * `?shadowtype` and `?casters` exist to find a form of them that a phone can
+ * hold rather than to decide whether to have them.
  */
 function rendererOverrides(params: URLSearchParams): RendererOverrides {
   const overrides: {
     antialias?: boolean;
     maxPixelRatio?: number;
     shadows?: boolean;
+    shadowMapSize?: number;
+    shadowType?: 'basic' | 'pcf' | 'soft';
+    shadowCasters?: boolean;
     guardResize?: boolean;
   } = {};
+
+  const casters = flag(params, 'casters');
+  if (casters !== undefined) overrides.shadowCasters = casters;
 
   const antialias = flag(params, 'aa');
   if (antialias !== undefined) overrides.antialias = antialias;
@@ -143,6 +155,12 @@ function rendererOverrides(params: URLSearchParams): RendererOverrides {
 
   const dpr = Number(params.get('dpr'));
   if (Number.isFinite(dpr) && dpr > 0) overrides.maxPixelRatio = dpr;
+
+  const mapSize = Number(params.get('shadowmap'));
+  if (Number.isInteger(mapSize) && mapSize > 0) overrides.shadowMapSize = mapSize;
+
+  const type = params.get('shadowtype');
+  if (type === 'basic' || type === 'pcf' || type === 'soft') overrides.shadowType = type;
 
   return overrides;
 }

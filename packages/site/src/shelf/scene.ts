@@ -59,6 +59,12 @@ function rowsForCase(usedRows: number): number {
   return Math.max(usedRows + 1, MIN_ROWS);
 }
 
+const SHADOW_TYPES = {
+  basic: THREE.BasicShadowMap,
+  pcf: THREE.PCFShadowMap,
+  soft: THREE.PCFSoftShadowMap,
+} as const;
+
 const COLOURS = {
   background: 0x1a1613,
   wood: 0x6b4f3a,
@@ -141,8 +147,35 @@ export interface RendererOverrides {
   readonly antialias?: boolean;
   /** `?dpr=1.5`. Caps `devicePixelRatio`; the default cap is 2. */
   readonly maxPixelRatio?: number;
-  /** `?shadows=0`. Turns off the shadow map and the light that casts it. */
+  /**
+   * `?shadows=0`. Turns off the shadow map and the light that casts it.
+   *
+   * The shadow pass is what loses the context on a Pixel 10 Pro — the full
+   * 31-book shelf is stable without it and dies in 6–18 seconds with it, one
+   * variable, everything else untouched. It stays **on by default anyway**:
+   * shadows are most of what makes the shelf read as furniture rather than as
+   * coloured boxes, and the owner's call is that losing them is not the price.
+   * So the question is not whether to keep them but which cheaper form of them
+   * survives, which is what the three switches below are for.
+   */
   readonly shadows?: boolean;
+  /** `?shadowmap=1024`. Edge of the depth target; the default is 2048 (16 MB). */
+  readonly shadowMapSize?: number;
+  /** `?shadowtype=basic|pcf|soft`. `soft` is PCFSoft: the default, and the dearest. */
+  readonly shadowType?: 'basic' | 'pcf' | 'soft';
+  /**
+   * `?casters=0`. Nothing casts, but the shadow map is still allocated and the
+   * pass still runs — over an empty scene.
+   *
+   * The one switch that *discriminates* rather than just reducing. Everything
+   * else makes the shadow work smaller, so surviving any of them says only "less
+   * was cheaper". This separates the two candidate mechanisms outright: if the
+   * shelf lives with the target allocated and the pass empty, the cost is
+   * drawing ~190 shadow casters; if it still dies, the cost is the depth target
+   * or the shader that samples it, and no amount of thinning the geometry will
+   * help.
+   */
+  readonly shadowCasters?: boolean;
   /**
    * `?guard=1`. Skips `setSize` when the canvas has not actually changed size.
    *
@@ -180,12 +213,15 @@ export function mountShelf(
   const antialias = options.renderer?.antialias ?? true;
   const maxPixelRatio = options.renderer?.maxPixelRatio ?? 2;
   const shadows = options.renderer?.shadows ?? true;
+  const shadowMapSize = options.renderer?.shadowMapSize ?? 2048;
+  const shadowType = options.renderer?.shadowType ?? 'soft';
+  const shadowCasters = options.renderer?.shadowCasters ?? true;
   const guardResize = options.renderer?.guardResize ?? false;
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
   renderer.shadowMap.enabled = shadows;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = SHADOW_TYPES[shadowType];
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(COLOURS.background);
@@ -234,12 +270,27 @@ export function mountShelf(
 
   frameCamera(16 / 9);
 
-  scene.add(buildShelf(rowCount));
-  addLighting(scene, unitHeight, shadows);
+  scene.add(buildShelf(rowCount, shadowCasters));
+  addLighting(scene, unitHeight, shadows, shadowMapSize);
+
+  /**
+   * The shadow map is drawn **once**, not sixty times a second.
+   *
+   * Nothing in this scene moves. The books are placed at mount and stay there,
+   * the light never moves, and a directional light's shadow map is a function of
+   * the light and the geometry — not of the camera, which is the only thing that
+   * does move. So the default behaviour was to re-render an entire extra pass
+   * every frame to compute an image identical to the one before it.
+   *
+   * That is the shadow cost, and this removes essentially all of it: `autoUpdate
+   * = false` stops the per-frame pass, and `needsUpdate` asks for exactly one.
+   */
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
 
   const textures = new TextureCache(renderer);
   const lookup: BookLookup = new Map();
-  const placed = placeBooks(scene, rows, textures, lookup);
+  const placed = placeBooks(scene, rows, textures, lookup, shadowCasters);
 
   const picker = new Picker(
     canvas,
@@ -290,6 +341,10 @@ export function mountShelf(
 
   const handleContextRestored = (): void => {
     options.onContextRestored?.();
+    // The one-shot shadow map died with the old context, and `autoUpdate` is off,
+    // so without this the restored shelf renders with no shadows at all — and
+    // silently, since nothing else would report it.
+    renderer.shadowMap.needsUpdate = true;
     renderLoop();
   };
 
@@ -308,7 +363,8 @@ export function mountShelf(
     // A bisect whose result cannot be tied to a configuration is just an anecdote.
     profile:
       `aa=${antialias ? 'on' : 'off'} dpr<=${String(maxPixelRatio)} ` +
-      `shadows=${shadows ? 'on' : 'off'} guard=${guardResize ? 'on' : 'off'}`,
+      `shadows=${shadows ? `${shadowType}@${String(shadowMapSize)}` : 'off'} ` +
+      `casters=${shadowCasters ? 'on' : 'off'} guard=${guardResize ? 'on' : 'off'}`,
 
     stats(): ShelfStats {
       const { memory, render, programs } = renderer.info;
@@ -402,6 +458,7 @@ function placeBooks(
   rows: readonly ShelfRow[],
   textures: TextureCache,
   lookup: BookLookup,
+  castShadows: boolean,
 ): PlacedBook[] {
   const placed: PlacedBook[] = [];
 
@@ -419,7 +476,7 @@ function placeBooks(
       // Depth carries the cover's real aspect on a face-out book, which is
       // turned side-on, and the shelf depth on a shelved one.
       const depth = entry.faceOut ? entry.coverWidth : SHELF.bookDepth;
-      const book = buildBook(entry, depth, textures);
+      const book = buildBook(entry, depth, textures, castShadows);
       cursor += entry.gapBefore ?? 0;
 
       if (entry.faceOut) {
@@ -531,7 +588,12 @@ const SKIN = 0.0012;
  * Local axes match the old box: spine at +Z (facing the room when shelved),
  * cover at +X (what you see once a book is turned face-out).
  */
-function buildBook(entry: ShelfBook, depth: number, textures: TextureCache): THREE.Group {
+function buildBook(
+  entry: ShelfBook,
+  depth: number,
+  textures: TextureCache,
+  castShadows: boolean,
+): THREE.Group {
   // A spine wide enough to read gets its title printed on it; a very thin one
   // stays a plain board, because type squeezed onto it would just be noise.
   const spineTexture =
@@ -581,9 +643,20 @@ function buildBook(entry: ShelfBook, depth: number, textures: TextureCache): THR
   const board = Math.min(BOARD, thickness * 0.3);
   const square = Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
 
+  /**
+   * Parts receive shadow but do not cast it — the page block below casts for the
+   * whole book.
+   *
+   * Four casters per book meant ~124 shadow draws for 31 books, to describe 31
+   * silhouettes. A book is a solid object: its shadow is its outline, and the
+   * boards and spine strip contribute nothing to that outline the page block
+   * does not already give. The block is inset by the binder's square, so the
+   * silhouette is ~3mm small on a 230mm book — under half a texel at this map
+   * resolution, and invisible.
+   */
   const solid = (material: THREE.Material): THREE.Mesh => {
     const mesh = new THREE.Mesh(UNIT_BOX, material);
-    mesh.castShadow = true;
+    mesh.castShadow = false;
     mesh.receiveShadow = true;
     group.add(mesh);
     return mesh;
@@ -601,10 +674,12 @@ function buildBook(entry: ShelfBook, depth: number, textures: TextureCache): THR
   spineStrip.scale.set(thickness - board * 2, height, board);
   spineStrip.position.set(0, 0, (depth - board) / 2);
 
-  // The page block, recessed inside the case at head, tail and fore-edge.
+  // The page block, recessed inside the case at head, tail and fore-edge — and
+  // the one part of a book that casts, standing in for all of it.
   const block = solid(pages);
   block.scale.set(thickness - board * 2, height - square * 2, depth - board - square);
   block.position.set(0, 0, (square - board) / 2);
+  block.castShadow = castShadows;
 
   const printed = (material: THREE.Material): THREE.Mesh => {
     const mesh = new THREE.Mesh(UNIT_PLANE, material);
@@ -625,7 +700,7 @@ function buildBook(entry: ShelfBook, depth: number, textures: TextureCache): THR
   return group;
 }
 
-function buildShelf(rowCount: number): THREE.Group {
+function buildShelf(rowCount: number, castShadows: boolean): THREE.Group {
   const group = new THREE.Group();
 
   const wood = new THREE.MeshStandardMaterial({ color: COLOURS.wood, roughness: 0.82 });
@@ -645,7 +720,7 @@ function buildShelf(rowCount: number): THREE.Group {
       wood,
     );
     upright.position.set((side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0);
-    upright.castShadow = true;
+    upright.castShadow = castShadows;
     upright.receiveShadow = true;
     group.add(upright);
   }
@@ -656,7 +731,7 @@ function buildShelf(rowCount: number): THREE.Group {
       wood,
     );
     plank.position.set(0, row * SHELF.rowHeight, 0);
-    plank.castShadow = true;
+    plank.castShadow = castShadows;
     plank.receiveShadow = true;
     group.add(plank);
   }
@@ -664,16 +739,53 @@ function buildShelf(rowCount: number): THREE.Group {
   return group;
 }
 
-function addLighting(scene: THREE.Scene, unitHeight: number, shadows: boolean): void {
+function addLighting(
+  scene: THREE.Scene,
+  unitHeight: number,
+  shadows: boolean,
+  shadowMapSize: number,
+): void {
   scene.add(new THREE.AmbientLight(0xffffff, 0.75));
 
   const key = new THREE.DirectionalLight(COLOURS.key, 2.4);
   key.position.set(3.5, unitHeight + 3, 6);
-  // Left off entirely rather than relying on `shadowMap.enabled`, so the 2048²
-  // depth target is never allocated at all — which is the thing being measured.
+  // Left off entirely rather than relying on `shadowMap.enabled`, so the depth
+  // target is never allocated at all — which is the thing being measured.
   key.castShadow = shadows;
-  key.shadow.mapSize.set(2048, 2048);
-  key.shadow.camera.far = 40;
+  key.shadow.mapSize.set(shadowMapSize, shadowMapSize);
+
+  /**
+   * The shadow camera is fitted to the case, which it never was.
+   *
+   * A `DirectionalLight` aims at the origin through a fixed ±5 orthographic box.
+   * The case stands *on* the origin and grows upward, so it was half outside its
+   * own shadow frustum — a five-row unit is 5.6 tall against a 10-unit box
+   * centred at y=0, and the top of a tall shelf simply fell out of it. Aiming at
+   * the middle of the case and sizing the box to a sphere that bounds it fixes
+   * that, and pays for itself twice: the same 2048² map now covers ~7 units
+   * instead of 10, so every texel is doing about twice the work it was.
+   */
+  const target = new THREE.Object3D();
+  target.position.set(0, unitHeight / 2, 0);
+  scene.add(target);
+  key.target = target;
+
+  const radius =
+    0.5 *
+    Math.hypot(SHELF.width + SHELF.sideThickness * 2, unitHeight, SHELF.depth) *
+    // A little margin: a shadow clipped by its own frustum ends in a hard
+    // straight line across the wood, which reads as a rendering fault.
+    1.08;
+
+  const shadowCamera = key.shadow.camera;
+  shadowCamera.left = -radius;
+  shadowCamera.right = radius;
+  shadowCamera.top = radius;
+  shadowCamera.bottom = -radius;
+  shadowCamera.near = 0.5;
+  shadowCamera.far = key.position.distanceTo(target.position) + radius;
+  shadowCamera.updateProjectionMatrix();
+
   scene.add(key);
 
   const fill = new THREE.DirectionalLight(COLOURS.fill, 0.75);
