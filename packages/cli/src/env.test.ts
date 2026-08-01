@@ -24,67 +24,95 @@ import { envFilePath, loadEnv, mainCheckout } from './env.ts';
 /** Gitignored under `.env.*`, so a stray copy cannot be committed. */
 const PROBE = '.env.worktree-probe';
 
-const REPO = resolve(process.cwd());
 const HERE = process.cwd();
+
+/**
+ * The main checkout, asked a different way than the code under test asks it.
+ *
+ * `git worktree list` puts the main worktree first, always — a fact about
+ * git, not about `--git-common-dir`, which is the mechanism being tested. An
+ * oracle derived from the implementation would agree with it while it was
+ * wrong.
+ *
+ * It also has to be asked rather than assumed, because `process.cwd()` is only
+ * the main checkout when the suite runs there. Run `pnpm test` inside a
+ * worktree — the thing this whole feature exists to make possible — and cwd is
+ * the worktree, which is how the first draft of this file failed: five red
+ * tests in the one place they most needed to be green.
+ */
+const FIRST_WORKTREE = /^worktree (.+)$/m.exec(
+  execFileSync('git', ['worktree', 'list', '--porcelain'], { cwd: HERE, encoding: 'utf8' }),
+)?.[1];
+
+const MAIN = resolve(FIRST_WORKTREE ?? '');
 
 let worktree: string;
 
 beforeAll(() => {
+  // The match, not the resolved path: `resolve('')` is the cwd, which in the
+  // main checkout is the right answer for the wrong reason — so a guard on the
+  // resolved value passes exactly where a broken parse would do least harm and
+  // fails where it does most. (Observed, on the first run of this line.)
+  expect(FIRST_WORKTREE, 'could not parse a main checkout out of `git worktree list`').toBeDefined();
   // Detached, so the test creates no branch and cannot collide with one.
   worktree = join(mkdtempSync(join(tmpdir(), 'stacks-worktree-')), 'checkout');
-  execFileSync('git', ['worktree', 'add', '--detach', worktree], { cwd: REPO, stdio: 'ignore' });
+  execFileSync('git', ['worktree', 'add', '--detach', worktree], { cwd: MAIN, stdio: 'ignore' });
 });
 
 afterAll(() => {
   process.chdir(HERE);
   try {
-    execFileSync('git', ['worktree', 'remove', '--force', worktree], { cwd: REPO, stdio: 'ignore' });
+    execFileSync('git', ['worktree', 'remove', '--force', worktree], { cwd: MAIN, stdio: 'ignore' });
   } catch {
     // Windows will refuse while anything still holds the directory. Prune drops
     // the registration either way, so a failure here cannot leave the repo
     // believing in a worktree that is gone.
-    execFileSync('git', ['worktree', 'prune'], { cwd: REPO, stdio: 'ignore' });
+    execFileSync('git', ['worktree', 'prune'], { cwd: MAIN, stdio: 'ignore' });
   }
 });
 
 afterEach(() => {
   process.chdir(HERE);
-  rmSync(join(REPO, PROBE), { force: true });
+  rmSync(join(MAIN, PROBE), { force: true });
   delete process.env['STACKS_PROBE_VALUE'];
 });
 
 describe('mainCheckout', () => {
   it('resolves the repo root from the repo root', () => {
-    expect(mainCheckout()).toBe(REPO);
+    expect(mainCheckout()).toBe(MAIN);
   });
 
   it('resolves the repo root from a subdirectory', () => {
     // `--git-common-dir` answers `../../.git` here. Without the resolve() in
     // the implementation this returns `packages`, and the fallback would then
     // look for `.env` in a directory that has never held one.
-    process.chdir(join(REPO, 'packages', 'site'));
-    expect(mainCheckout()).toBe(REPO);
+    process.chdir(join(MAIN, 'packages', 'site'));
+    expect(mainCheckout()).toBe(MAIN);
   });
 
   it('resolves the main checkout from a linked worktree', () => {
     // The case the whole feature exists for: `--git-common-dir` is absolute
     // here and points into the main checkout, not into this directory.
     process.chdir(worktree);
-    expect(mainCheckout()).toBe(REPO);
+    expect(mainCheckout()).toBe(MAIN);
   });
 });
 
 describe('envFilePath', () => {
   it('prefers the file beside you', () => {
-    writeFileSync(join(REPO, PROBE), 'STACKS_PROBE_VALUE=beside\n');
-    expect(envFilePath(PROBE)).toBe(join(REPO, PROBE));
+    // Standing in MAIN explicitly, so "beside you" and "the fallback" name the
+    // same file for opposite reasons and the assertion cannot pass by accident
+    // when this suite is itself running inside a worktree.
+    process.chdir(MAIN);
+    writeFileSync(join(MAIN, PROBE), 'STACKS_PROBE_VALUE=beside\n');
+    expect(envFilePath(PROBE)).toBe(join(MAIN, PROBE));
   });
 
   it('falls back to the main checkout from a worktree', () => {
-    writeFileSync(join(REPO, PROBE), 'STACKS_PROBE_VALUE=shared\n');
+    writeFileSync(join(MAIN, PROBE), 'STACKS_PROBE_VALUE=shared\n');
     process.chdir(worktree);
 
-    expect(envFilePath(PROBE)).toBe(join(REPO, PROBE));
+    expect(envFilePath(PROBE)).toBe(join(MAIN, PROBE));
   });
 
   it('is undefined when no checkout has one', () => {
@@ -95,7 +123,7 @@ describe('envFilePath', () => {
 
 describe('loadEnv', () => {
   it('reads the main checkout file from a worktree', () => {
-    writeFileSync(join(REPO, PROBE), 'STACKS_PROBE_VALUE=shared\n');
+    writeFileSync(join(MAIN, PROBE), 'STACKS_PROBE_VALUE=shared\n');
     process.chdir(worktree);
 
     loadEnv(PROBE);
@@ -106,7 +134,7 @@ describe('loadEnv', () => {
     // The file is a default, not an override. This is what keeps
     // `STACKS_VAULT=... pnpm stacks build` doing what it says, in a worktree
     // exactly as in the main checkout.
-    writeFileSync(join(REPO, PROBE), 'STACKS_PROBE_VALUE=shared\n');
+    writeFileSync(join(MAIN, PROBE), 'STACKS_PROBE_VALUE=shared\n');
     process.env['STACKS_PROBE_VALUE'] = 'from the shell';
     process.chdir(worktree);
 
