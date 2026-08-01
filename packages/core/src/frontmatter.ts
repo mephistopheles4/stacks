@@ -58,6 +58,7 @@ export const FRONTMATTER_CONTRACT = {
   face_out: { field: 'faceOut', required: false, sample: 'true' },
   tags: { field: 'tags', required: false, sample: '[sample]' },
   shelf_order: { field: 'shelfOrder', required: false, sample: '20' },
+  private: { field: 'private', required: false, sample: 'true' },
 } as const satisfies Record<
   string,
   { readonly field: keyof BookRecord | null; readonly required: boolean; readonly sample: string }
@@ -125,6 +126,7 @@ export function parseNote(source: string, sourcePath: string): ParsedNote {
       ...optional('pages', asPositiveInt(fields['pages'])),
       ...optional('faceOut', asBoolean(fields['face_out'])),
       ...optional('shelfOrder', asOrder(fields['shelf_order'])),
+      ...optional('private', asPrivate(fields['private'])),
     },
   };
 }
@@ -146,6 +148,43 @@ function asString(value: unknown): string | undefined {
   // that constantly.
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   return undefined;
+}
+
+/**
+ * Whether a book is held back from public builds — and it fails *closed*.
+ *
+ * Every other optional key here fails open: an unreadable `rating` is dropped,
+ * an unrecognised `status` falls back to a default, because getting those wrong
+ * costs nothing anyone notices. This one is different, and the asymmetry is the
+ * whole point:
+ *
+ *   - wrongly private  — a book missing from the shelf. Visible, trivial, fixed
+ *                        by editing one line.
+ *   - wrongly public   — someone's reading of a book they did not want shared,
+ *                        on a URL that may already have been sent to a friend
+ *                        or crawled. Not undoable.
+ *
+ * So anything present that is not clearly a "no" means private. `private: yes`
+ * is a string under YAML 1.2, not a boolean; a strict boolean check would drop
+ * it and publish the book, which is exactly the mistake someone typing `yes`
+ * would never expect to make.
+ */
+function asPrivate(value: unknown): true | undefined {
+  // The complete set of ways to say no. Everything else — including a typo, a
+  // word nobody anticipated, and a value YAML parsed as a type nobody expected
+  // — means private. `0` is here as a number as well as a string because
+  // `private: 0` parses as a number, and it is plainly a no in every config
+  // format anyone has used.
+  if (value === undefined || value === null || value === false || value === 0) return undefined;
+
+  if (typeof value === 'string') {
+    const text = value.trim().toLowerCase();
+    if (text === '' || text === 'false' || text === 'no' || text === 'off' || text === '0') {
+      return undefined;
+    }
+  }
+
+  return true;
 }
 
 function asCoverSource(value: unknown): CoverSource | undefined {

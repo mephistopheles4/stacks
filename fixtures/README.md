@@ -28,6 +28,7 @@ vault, which is gitignored.
 | `Nine Ways of Seeing a Warehouse.md` | 9 authors; no `isbn`, identified by an extra `asin` key |
 | `The Quiet Protocol.md` | minimum viable note — only `type` + `title` + a couple of extras |
 | `Lantern Work.md` | **reordered keys**; no cover; `status: reading` (fallback spine, face-out) |
+| `A Book Kept Back.md` | `private: true` — must never reach a public build. No cover, so adding it moved the book count and nothing else |
 | `The Salt Road Ledger.md` | print edition; started 2025, finished 2026 (crosses a year boundary) |
 | `The Salt Road Ledger (Audiobook).md` | same title+author, different identifier; extra `narrator`/`duration` keys |
 | `The Undelivered Manuscript.md` | **unparseable YAML** → warn naming the file, skip, keep going |

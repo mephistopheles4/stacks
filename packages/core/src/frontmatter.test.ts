@@ -134,6 +134,37 @@ describe('parseNote — note bodies never escape (invariant 2)', () => {
   });
 });
 
+describe('private, which fails closed', () => {
+  const withPrivate = (value: string): ReturnType<typeof parseNote> =>
+    parseNote(`---\ntype: book\ntitle: A Book\nprivate: ${value}\n---\n\nbody\n`, 'p.md');
+
+  it('holds a book back for anything that is not clearly a no', () => {
+    // `yes` is a *string* under YAML 1.2, not a boolean. A strict boolean check
+    // would drop it and publish the book — which is the one mistake someone
+    // typing `yes` would never expect to be making.
+    for (const value of ['true', 'yes', 'Yes', 'on', '1', 'please']) {
+      expect(pick(withPrivate(value)).private, `private: ${value}`).toBe(true);
+    }
+  });
+
+  it('publishes only when the answer is clearly no, or the key is absent', () => {
+    for (const value of ['false', 'no', 'off', '0', '']) {
+      expect(pick(withPrivate(value)).private, `private: ${value}`).toBeUndefined();
+    }
+    expect(pick(parseNote('---\ntype: book\ntitle: A Book\n---\n\nbody\n', 'p.md')).private)
+      .toBeUndefined();
+  });
+
+  it('never lets a malformed value publish a book by accident', () => {
+    // The asymmetry stated as a property: wrongly private is a missing spine,
+    // wrongly public is not undoable. So no input may turn a stated `private`
+    // into a published book.
+    for (const value of ['tru', 'TRUE', 'y', '  true  ', '[]', '{}']) {
+      expect(pick(withPrivate(value)).private, `private: ${value}`).toBe(true);
+    }
+  });
+});
+
 function pick(result: ReturnType<typeof parseNote>) {
   if (result.kind !== 'book') throw new Error(`expected a book, got ${result.kind}`);
   return result.record;

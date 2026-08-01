@@ -135,8 +135,13 @@ in a permitted field passes by construction, and a filename is never read at all
    gate reports green. This assertion is also what makes cover filenames safe in
    general: a cover named after a book already in the index reveals nothing. It
    only leaked because it was an orphan.
-3. **Only books you own.** Wishlist books are filtered at render but serialised
-   into `library.json`. The page says you own them; the data disagrees.
+3. **Only books you own, and only books you meant to publish.** Wishlist books
+   were filtered at render but serialised into `library.json` — the page said
+   you owned them and the data disagreed. `private: true` books are held back
+   too, for a different reason: the shelf is published by a pipeline that never
+   asks again, so this is the per-book way to say no. The fixture vault carries
+   one of each and the gate asserts that it does, because an assertion about a
+   property no fixture exhibits passes however the code behaves.
 4. **Same-origin covers.** A `cover:` value may currently be protocol-relative
    or absolute `http`, so a hand-edited or imported note can make a visitor's
    browser hit a third-party host.

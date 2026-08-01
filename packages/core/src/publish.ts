@@ -41,13 +41,22 @@ export async function publish(
 ): Promise<PublishResult> {
   await mkdir(assetsDir, { recursive: true });
 
-  // Books you do not own do not leave the machine. Wishlist books were already
-  // filtered at render time and by the OG image, so nothing displayed them —
-  // but they shipped in library.json, where anyone could read the list of books
-  // the owner merely wants. Filtered here rather than in `buildLibrary` so a
-  // local index still shows you your own wishlist.
+  // Two kinds of book do not leave the machine.
+  //
+  // Wishlist ones because you do not own them: they were already filtered at
+  // render time and by the OG image, so nothing displayed them, but they
+  // shipped in library.json where anyone could read the list of books the owner
+  // merely wants.
+  //
+  // `private: true` ones because the owner said so. The shelf is published by a
+  // pipeline that never asks again — a book is public the moment `stacks add`
+  // finishes — and this is the per-book way to say no.
+  //
+  // Filtered here rather than in `buildLibrary`, so a local index still shows
+  // you everything on your own machine. Private means "not published", not
+  // "hidden from you".
   const shelved = options.isPublic
-    ? books.filter((book) => SHELVED_STATUSES.has(book.status))
+    ? books.filter((book) => SHELVED_STATUSES.has(book.status) && book.private !== true)
     : books;
 
   const built = buildLibrary(shelved, {

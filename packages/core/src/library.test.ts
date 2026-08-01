@@ -14,8 +14,10 @@ describe('buildLibrary', () => {
   it('contains exactly the well-formed books', async () => {
     const library = await fixtureLibrary(false);
     expect(library.version).toBe(1);
-    expect(library.bookCount).toBe(8);
-    expect(library.books).toHaveLength(8);
+    // Nine, including the `private: true` one — a local build shows you
+    // everything on your own machine; only `--public` holds it back.
+    expect(library.bookCount).toBe(9);
+    expect(library.books).toHaveLength(9);
     expect(library.generatedAt).toBe(NOW.toISOString());
   });
 
