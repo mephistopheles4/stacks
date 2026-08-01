@@ -96,18 +96,54 @@ jobs:
           # real one. The gate itself is what fails if the shelf will not draw.
           if-no-files-found: warn
 
+  # Known vulnerabilities in the dependency tree.
+  #
+  # Its own job rather than a step in the matrix: the answer does not depend on
+  # which Node version is running, and running it twice would report the same
+  # advisory twice.
+  #
+  # This is the one gate whose result can change without the code changing — an
+  # advisory published tomorrow turns yesterday's green commit red. That is the
+  # point (a vulnerability is news about code you already shipped), but it also
+  # means it can block work on a transitive dependency you cannot fix. The
+  # escape hatch is `auditConfig.ignoreGhsas` in pnpm-workspace.yaml, which
+  # takes a justification comment and shows up as a reviewable one-line diff —
+  # the same shape as the allowlists in gates/.
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `high` and above. Moderate advisories in a dev-only dependency of a
+      # local-first tool with no server are not worth blocking a merge on; a
+      # high or critical one is.
+      - name: pnpm audit
+        run: pnpm audit --audit-level=high
+
   # The required status check. Named `gates` and nothing else.
   gates:
     name: gates
-    needs: suite
+    needs: [suite, audit]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Require every matrix leg to have passed
-        # `needs.suite.result` is 'success' only when every matrix leg
-        # succeeded; a skipped or cancelled matrix must fail the gate, never
-        # pass it by omission.
+      - name: Require every dependency to have passed
+        # Each `result` is 'success' only when that job — and, for a matrix,
+        # every one of its legs — succeeded. Skipped and cancelled must fail
+        # the gate rather than pass it by omission, which is why this compares
+        # against 'success' explicitly instead of checking for 'failure'.
         run: |
-          echo "suite result: ${{ needs.suite.result }}"
+          echo "suite: ${{ needs.suite.result }}"
+          echo "audit: ${{ needs.audit.result }}"
           test "${{ needs.suite.result }}" = "success"
+          test "${{ needs.audit.result }}" = "success"

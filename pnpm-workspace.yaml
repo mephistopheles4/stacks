@@ -16,3 +16,17 @@ allowBuilds:
 # staleness diagnostic and stops it from blocking the command you asked for.
 # CI is unaffected either way: it installs from scratch against a frozen lockfile.
 verifyDepsBeforeRun: warn
+
+# CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
+#
+# When one lands in a transitive dependency with no fix published, it will block
+# every unrelated merge, and the honest response is to say so here rather than
+# to lower the threshold. An entry needs the GHSA id, the date, and why it does
+# not reach this project — a local-first CLI with no server and no untrusted
+# input beyond three metadata APIs rules out a lot of advisory classes. Remove
+# the entry the moment a fix ships; a permanent ignore is a decision nobody
+# revisits.
+#
+# auditConfig:
+#   ignoreGhsas:
+#     - GHSA-xxxx-xxxx-xxxx  # 2026-01-01, <why it cannot reach us>, fix pending
