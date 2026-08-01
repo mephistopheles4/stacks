@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { LibraryBook } from '@stacks/core';
 import { toRows, type ShelfBook, type ShelfRow } from './books.ts';
-import { makeContactShadow, type Footprint } from './contact-shadow.ts';
+import { makeContactShadow, makeNeighbourShadow, type Footprint } from './contact-shadow.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
 /**
@@ -114,6 +114,17 @@ export interface ShelfHandle {
   readonly gpu: string | undefined;
   /** The renderer settings this mount actually ran with. See `RendererOverrides`. */
   readonly profile: string;
+  /**
+   * How far the worst-placed book sticks out through the side of the case, in
+   * world units. Zero means every book is inside its shelf.
+   *
+   * Measured from real world bounds rather than from the layout arithmetic, so
+   * it catches a rotation the arithmetic forgot — which is exactly how it went
+   * wrong: a leaning book's corners swing out past the footprint the cursor
+   * advanced by, and both the case side and the book beside it were being
+   * driven through.
+   */
+  readonly caseOverflow: number;
   /** Live renderer counters. See `./diagnostics.ts`. */
   stats(): ShelfStats;
   /**
@@ -360,6 +371,7 @@ export function mountShelf(
   return {
     bookCount: placed.length,
     gpu: describeGpu(renderer),
+    caseOverflow: measureCaseOverflow(scene, placed),
     // Reported back so a screenshot of the panel says which settings were live.
     // A bisect whose result cannot be tied to a configuration is just an anecdote.
     profile:
@@ -447,6 +459,30 @@ function describeGpu(renderer: THREE.WebGLRenderer): string | undefined {
 }
 
 /**
+ * The worst amount by which any book breaches the inside of the case.
+ *
+ * `Box3.setFromObject` walks the real geometry through the real world matrices,
+ * so a lean, a rotation, or a part positioned by hand all count. That is the
+ * point: the layout cursor advances by a book's *thickness*, and a book rotated
+ * about its centre is wider than that — measuring the arithmetic again would
+ * only repeat its assumption.
+ */
+function measureCaseOverflow(scene: THREE.Scene, placed: readonly PlacedBook[]): number {
+  scene.updateMatrixWorld(true);
+
+  const inner = SHELF.width / 2;
+  const box = new THREE.Box3();
+  let worst = 0;
+
+  for (const { group } of placed) {
+    box.setFromObject(group);
+    worst = Math.max(worst, -inner - box.min.x, box.max.x - inner);
+  }
+
+  return Math.max(0, worst);
+}
+
+/**
  * Which book a mesh is.
  *
  * A side table rather than Three's `userData`, which is typed `Record<string,
@@ -471,9 +507,36 @@ function placeBooks(
     // Drawn top-down: the newest books sit on the top shelf.
     const shelfY = (rowCount - 1 - rowIndex) * SHELF.rowHeight + SHELF.plankThickness / 2;
 
-    // Books stand against the left upright and run right, as a shelf fills.
-    let cursor = -SHELF.width / 2 + SHELF.padding;
+    // Books stand *against* the left upright and run right, as a shelf fills.
+    //
+    // Flush, with no padding: a book that leans left and starts a finger's width
+    // clear of the side is leaning on nothing, which is the tell that made the
+    // whole row look wrong. The case itself is what the first book rests on.
+    let cursor = -SHELF.width / 2;
     let index = 0;
+
+    /**
+     * One slump angle per run of touching books.
+     *
+     * Books in a leaning row are not each at their own angle — they are a stack
+     * resting on each other, so they are parallel, and the run as a whole leans
+     * on whatever is at its left end. Giving every book its own angle is what
+     * produced the wedge-shaped gaps: neighbours a fraction of a degree apart,
+     * touching nowhere.
+     */
+    let runLean = Math.min(
+      leanFor(rowIndex, index, row.books[0]?.book.id ?? ''),
+      leanThatFits(row),
+    );
+    let startsRun = true;
+
+    /**
+     * The lean of whatever is immediately to the left, and how far it swings.
+     *
+     * The case's own side starts it off: vertical, and swinging not at all.
+     */
+    let leftLean = 0;
+    let leftSway = 0;
 
     // Where each book meets the plank, gathered as the row is laid out — the
     // painted shadow is drawn from exactly the positions the books were placed
@@ -484,8 +547,48 @@ function placeBooks(
       // Depth carries the cover's real aspect on a face-out book, which is
       // turned side-on, and the shelf depth on a shelved one.
       const depth = entry.faceOut ? entry.coverWidth : SHELF.bookDepth;
-      const book = buildBook(entry, depth, textures, castShadows);
-      cursor += entry.gapBefore ?? 0;
+
+      // A shelved book stands a quarter-unit proud of a face-out one, so it is
+      // between its neighbour's cover and the key light.
+      //
+      // Only when it is actually *next to* it: a book on the far side of a year
+      // gap is a hand's width away and occludes nothing, and shading the cover
+      // anyway put a hard band down the edge of a book standing on its own.
+      const next = row.books[index + 1];
+      const shadedFromRight =
+        entry.faceOut && next !== undefined && !next.faceOut && (next.gapBefore ?? 0) === 0;
+
+      const book = buildBook(entry, depth, textures, castShadows, shadedFromRight);
+
+      const gap = entry.gapBefore ?? 0;
+      cursor += gap;
+
+      // A run is broken by a year gap: the book after one has open shelf on its
+      // left and nothing to rest against, so it stands up straight and becomes
+      // the support for the books after it. A row's first book is not a break —
+      // the case's own side holds it.
+      if (gap > 0) {
+        startsRun = true;
+        runLean = Math.min(leanFor(rowIndex, index, entry.book.id), leanThatFits(row));
+      }
+
+      // A face-out book stands square; a shelved one leans unless it opens a run
+      // with nothing on its left.
+      const lean = entry.faceOut ? 0 : startsRun && index > 0 ? 0 : runLean;
+      const sway = swayOf(entry.height, lean);
+
+      // Clearance wherever the angle changes, and only there.
+      //
+      // Rotating a book about its centre swings its top-left and bottom-right
+      // corners out past its own footprint by `sway`. Two neighbours at the same
+      // angle stay parallel and never notice, which is why a run packs flush —
+      // but where the angle changes, that swing lands inside whatever is beside
+      // it. Both reported collisions are this: a leaning book's bottom corner
+      // driven into the face-out book on its right, and the first book of a row
+      // driven into the case's own side.
+      if (lean !== leftLean) cursor += Math.max(sway, leftSway);
+      leftLean = lean;
+      leftSway = sway;
 
       if (entry.faceOut) {
         // Turned to show its cover, leaning back against the books beside it.
@@ -507,8 +610,11 @@ function placeBooks(
           depth: entry.coverWidth,
         });
         cursor += entry.coverWidth + SHELF.bookGap * 2;
+        // A face-out book is broad and flat on the shelf, so it is a support in
+        // its own right — whatever follows it may lean on it.
+        startsRun = false;
       } else {
-        const lean = leanFor(rowIndex, index, entry.book.id);
+        startsRun = false;
 
         book.rotation.z = lean;
         book.position.set(
@@ -523,7 +629,11 @@ function placeBooks(
           z: (SHELF.depth - SHELF.bookDepth) / 2 - 0.02,
           depth: SHELF.bookDepth,
         });
-        cursor += entry.thickness + SHELF.bookGap;
+        // Touching, not spaced. Books in a run share an angle, so they stay
+        // parallel and their boards meet along the whole height — which is what
+        // "resting on each other" has to look like. The hair of clearance is
+        // only so two coincident faces do not fight over the same depth.
+        cursor += entry.thickness + TOUCHING;
       }
       index += 1;
 
@@ -557,6 +667,67 @@ function placeBooks(
 
 /** Most a book leans, in radians — about 3.5°. Beyond that it looks knocked over. */
 const MAX_LEAN = 0.062;
+
+/**
+ * Clearance between books that are meant to be touching.
+ *
+ * Not zero: two adjacent boards at exactly zero would be coplanar and z-fight
+ * along their top edge, where the shelf actually shows them. Small enough that
+ * no gap is visible at the scale a spine is drawn.
+ */
+const TOUCHING = 0.002;
+
+/**
+ * How far a leaning book's corners swing out past its own footprint.
+ *
+ * Rotating about the centre pushes the top-left corner left and the bottom-right
+ * corner right, each by half the height times the sine of the angle — about
+ * 0.03, which is a thin book's whole thickness. Neighbours at the same angle
+ * stay parallel and never collide; wherever the angle *changes*, this is what
+ * has to be reserved.
+ */
+function swayOf(height: number, lean: number): number {
+  return (height / 2) * Math.sin(Math.abs(lean));
+}
+
+/**
+ * The steepest lean whose clearances still fit inside the shelf.
+ *
+ * `toRows` packs a row without knowing anything about leaning, so every
+ * clearance added afterwards is width the packer never budgeted for. A row with
+ * several face-out books changes angle at each one, and at ~0.03 a time that is
+ * enough to push the last book through the right-hand upright — a worse defect
+ * than the one being fixed, and one that would only show on a full shelf.
+ *
+ * So the lean is capped to what the row's own slack can pay for. Rows with room
+ * are unaffected; a tightly packed row leans less, which is also what a tightly
+ * packed shelf does.
+ */
+function leanThatFits(row: ShelfRow): number {
+  let used = 0;
+  let changes = 0;
+  let tallest = 0;
+  // The case's side is vertical, so a leaning first book is already a change.
+  let leftLeans = false;
+
+  for (const entry of row.books) {
+    used += entry.gapBefore ?? 0;
+    used += entry.faceOut
+      ? entry.coverWidth + SHELF.bookGap * 2
+      : entry.thickness + TOUCHING;
+    tallest = Math.max(tallest, entry.height);
+
+    const leans = !entry.faceOut;
+    if (leans !== leftLeans) changes += 1;
+    leftLeans = leans;
+  }
+
+  if (changes === 0 || tallest === 0) return MAX_LEAN;
+
+  const slack = Math.max(0, SHELF.width - used);
+  // Inverting swayOf: the largest angle whose per-change swing the slack covers.
+  return Math.asin(Math.min(1, (2 * (slack / changes)) / tallest));
+}
 
 /**
  * How far a shelved book leans to the left.
@@ -630,6 +801,7 @@ function buildBook(
   depth: number,
   textures: TextureCache,
   castShadows: boolean,
+  shadedFromRight: boolean,
 ): THREE.Group {
   // A spine wide enough to read gets its title printed on it; a very thin one
   // stays a plain board, because type squeezed onto it would just be noise.
@@ -734,6 +906,21 @@ function buildBook(
   spineFace.scale.set(thickness, height, 1);
   spineFace.position.set(0, 0, depth / 2 + SKIN);
 
+  // A face-out book sits well back, so the shelved book on its right stands
+  // proud of it and between it and the key light. The cover is the only large
+  // flat surface on the shelf, and this is the one place that reads.
+  //
+  // Sized rather than scaled: the geometry is built at the cover's real size, so
+  // the gradient is not stretched by whatever the mesh scale happens to be.
+  if (shadedFromRight) {
+    const neighbour = makeNeighbourShadow(depth, height);
+    if (neighbour !== undefined) {
+      neighbour.rotation.y = Math.PI / 2;
+      neighbour.position.set(thickness / 2 + SKIN * 2, 0, 0);
+      group.add(neighbour);
+    }
+  }
+
   return group;
 }
 
@@ -784,8 +971,16 @@ function addLighting(
 ): void {
   scene.add(new THREE.AmbientLight(0xffffff, 0.75));
 
-  const key = new THREE.DirectionalLight(COLOURS.key, 2.4);
-  key.position.set(3.5, unitHeight + 3, 6);
+  // High and to the right — moved right of where it was, but not far.
+  //
+  // A directional light does not fall off with distance, only with angle, so
+  // swinging it out to the side takes light straight off the spines and covers,
+  // which all face the room. Pushed hard right the case lost most of its
+  // modelling. This is the compromise: enough of a sideways component for the
+  // shadows to read as thrown from the top right, with the intensity lifted to
+  // pay for the light the spines lose at that angle.
+  const key = new THREE.DirectionalLight(COLOURS.key, 2.7);
+  key.position.set(5, unitHeight + 3.4, 5.6);
   // Left off entirely rather than relying on `shadowMap.enabled`, so the depth
   // target is never allocated at all — which is the thing being measured.
   key.castShadow = shadows;

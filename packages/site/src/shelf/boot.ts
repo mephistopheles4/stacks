@@ -27,6 +27,8 @@ declare global {
     __shelf?: {
       bookCount: number;
       ready: boolean;
+      /** Worst breach of the case's sides, in world units. See `smoke:render`. */
+      caseOverflow: number;
       projectBook(index: number): { x: number; y: number } | undefined;
     };
   }
@@ -79,6 +81,7 @@ export async function boot(
   window.__shelf = {
     bookCount: handle.bookCount,
     ready: true,
+    caseOverflow: handle.caseOverflow,
     projectBook: (index) => handle.projectBook(index),
   };
 

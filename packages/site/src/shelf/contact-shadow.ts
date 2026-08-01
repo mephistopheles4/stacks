@@ -50,13 +50,18 @@ const CONTACT_ALPHA = 0.5;
 /**
  * Direction the shadow is thrown, as a fraction of the plank.
  *
- * Taken from the key light, which sits up, to the right and in front — so the
- * shadow falls left and back. It is not a projection of the book's real height:
- * a contact shadow reads as contact because it is *short*, and a long one drawn
- * on a plank the next shelf overhangs would only look like dirt.
+ * Taken from the key light, which sits high and to the right — so the shadow
+ * falls left, and only slightly back. Mostly sideways rather than mostly
+ * backwards: a shadow thrown straight back disappears under the books that cast
+ * it and the light reads as coming from directly in front, which is the flattest
+ * possible answer and not what the shelf looked like with real shadows.
+ *
+ * It is still not a projection of the book's real height. A contact shadow reads
+ * as contact because it is *short*, and a long one drawn on a plank the next
+ * shelf overhangs would only look like dirt.
  */
-const THROW_X = -0.035;
-const THROW_Z = -0.05;
+const THROW_X = -0.07;
+const THROW_Z = -0.03;
 
 export function makeContactShadowTexture(
   footprints: readonly Footprint[],
@@ -125,6 +130,46 @@ export function makeContactShadowTexture(
   ctx.globalAlpha = 1;
 
   return finish(canvas);
+}
+
+/**
+ * The shadow a shelved book throws across the cover of a face-out one.
+ *
+ * A face-out book is turned to show its cover, so it sits well back — its cover
+ * is around 0.08 from the shelf's centre line where a shelved book's fore-edge
+ * reaches 0.34. The neighbour to its right therefore stands a quarter of a unit
+ * proud of it, directly between it and a key light that is up and to the right,
+ * and the cover is the one large flat surface on the shelf where that reads.
+ *
+ * Dark at the right edge and gone by two thirds of the way across, because the
+ * occluder is beside the cover rather than above it: the shadow is a band down
+ * one side, not a shape.
+ */
+export function makeNeighbourShadow(width: number, height: number): THREE.Mesh | undefined {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 4;
+
+  const ctx = canvas.getContext('2d');
+  if (ctx === null) return undefined;
+
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Not shared between books: `dispose()` walks the scene and disposes every
+  // material's map, so one cached texture would be freed by the first book and
+  // gone for the rest. A 64×4 gradient is a kilobyte; the caching would cost
+  // more to get right than it saves.
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(width, height),
+    new THREE.MeshBasicMaterial({ map: finish(canvas), transparent: true, depthWrite: false }),
+  );
+  mesh.renderOrder = 1;
+  return mesh;
 }
 
 function finish(canvas: HTMLCanvasElement): THREE.CanvasTexture {
