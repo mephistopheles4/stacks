@@ -105,6 +105,8 @@ export interface ShelfHandle {
   readonly bookCount: number;
   /** The GPU, when the browser is willing to name it. */
   readonly gpu: string | undefined;
+  /** The renderer settings this mount actually ran with. See `RendererOverrides`. */
+  readonly profile: string;
   /** Live renderer counters. See `./diagnostics.ts`. */
   stats(): ShelfStats;
   /**
@@ -117,9 +119,46 @@ export interface ShelfHandle {
   projectBook(index: number): { x: number; y: number } | undefined;
 }
 
+/**
+ * Renderer settings that can be overridden per load, to bisect a context loss.
+ *
+ * The library-size bisect (`?books=N`) came back saying the shelf dies with five
+ * books, 632 triangles and eleven textures — so the cost that matters is fixed,
+ * paid before a single book is drawn, and it lives in these four settings. Each
+ * is separately overridable rather than bundled into a "mobile profile" for one
+ * reason: a bundle would very likely make the crash go away while leaving nobody
+ * able to say which knob did it, and would ship three permanent quality
+ * regressions to fix one bug.
+ *
+ * Ranked by what the numbers implicate, on the device that actually fails:
+ * a 1054×1926 buffer with 4× MSAA colour and depth is ~65 MB and by far the
+ * largest allocation here; the pixel ratio is what sets that size; the 2048²
+ * shadow map is 16 MB; and the resize guard is last but stays plausible because
+ * the failure is delayed rather than at first paint.
+ */
+export interface RendererOverrides {
+  /** `?aa=0`. MSAA resolve is the expensive path on a tile-based GPU. */
+  readonly antialias?: boolean;
+  /** `?dpr=1.5`. Caps `devicePixelRatio`; the default cap is 2. */
+  readonly maxPixelRatio?: number;
+  /** `?shadows=0`. Turns off the shadow map and the light that casts it. */
+  readonly shadows?: boolean;
+  /**
+   * `?guard=1`. Skips `setSize` when the canvas has not actually changed size.
+   *
+   * Assigning `canvas.width` reallocates the drawing buffer even when the value
+   * is identical, so an unguarded `ResizeObserver` churns the whole
+   * multisampled framebuffer on every layout event. Off by default so that the
+   * probe measures a change rather than smuggling in a fix.
+   */
+  readonly guardResize?: boolean;
+}
+
 export interface MountOptions {
   /** Called when a book is clicked, or with `undefined` when one is dismissed. */
   readonly onSelect?: (book: LibraryBook | undefined) => void;
+  /** Per-load renderer settings. See `RendererOverrides`. */
+  readonly renderer?: RendererOverrides;
   /**
    * The GPU dropped the scene — the page is alive, the canvas is not.
    *
@@ -138,9 +177,14 @@ export function mountShelf(
   books: readonly LibraryBook[] = [],
   options: MountOptions = {},
 ): ShelfHandle {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
+  const antialias = options.renderer?.antialias ?? true;
+  const maxPixelRatio = options.renderer?.maxPixelRatio ?? 2;
+  const shadows = options.renderer?.shadows ?? true;
+  const guardResize = options.renderer?.guardResize ?? false;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
+  renderer.shadowMap.enabled = shadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
@@ -191,7 +235,7 @@ export function mountShelf(
   frameCamera(16 / 9);
 
   scene.add(buildShelf(rowCount));
-  addLighting(scene, unitHeight);
+  addLighting(scene, unitHeight, shadows);
 
   const textures = new TextureCache(renderer);
   const lookup: BookLookup = new Map();
@@ -212,9 +256,14 @@ export function mountShelf(
     renderer.render(scene, camera);
   };
 
+  let sizedTo = { width: 0, height: 0 };
+
   const resize = (): void => {
     const { clientWidth, clientHeight } = canvas;
     if (clientWidth === 0 || clientHeight === 0) return;
+    if (guardResize && clientWidth === sizedTo.width && clientHeight === sizedTo.height) return;
+    sizedTo = { width: clientWidth, height: clientHeight };
+
     renderer.setSize(clientWidth, clientHeight, false);
     camera.aspect = clientWidth / clientHeight;
     camera.updateProjectionMatrix();
@@ -255,6 +304,11 @@ export function mountShelf(
   return {
     bookCount: placed.length,
     gpu: describeGpu(renderer),
+    // Reported back so a screenshot of the panel says which settings were live.
+    // A bisect whose result cannot be tied to a configuration is just an anecdote.
+    profile:
+      `aa=${antialias ? 'on' : 'off'} dpr<=${String(maxPixelRatio)} ` +
+      `shadows=${shadows ? 'on' : 'off'} guard=${guardResize ? 'on' : 'off'}`,
 
     stats(): ShelfStats {
       const { memory, render, programs } = renderer.info;
@@ -610,12 +664,14 @@ function buildShelf(rowCount: number): THREE.Group {
   return group;
 }
 
-function addLighting(scene: THREE.Scene, unitHeight: number): void {
+function addLighting(scene: THREE.Scene, unitHeight: number, shadows: boolean): void {
   scene.add(new THREE.AmbientLight(0xffffff, 0.75));
 
   const key = new THREE.DirectionalLight(COLOURS.key, 2.4);
   key.position.set(3.5, unitHeight + 3, 6);
-  key.castShadow = true;
+  // Left off entirely rather than relying on `shadowMap.enabled`, so the 2048²
+  // depth target is never allocated at all — which is the thing being measured.
+  key.castShadow = shadows;
   key.shadow.mapSize.set(2048, 2048);
   key.shadow.camera.far = 40;
   scene.add(key);

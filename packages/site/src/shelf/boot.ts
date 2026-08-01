@@ -1,6 +1,6 @@
 import type { Library, LibraryBook } from '@stacks/core';
 import { mountDiagnostics } from './diagnostics.ts';
-import { mountShelf, type ShelfHandle } from './scene.ts';
+import { mountShelf, type RendererOverrides, type ShelfHandle } from './scene.ts';
 
 /**
  * Wires the page up: load the library, mount the shelf, show a card on click.
@@ -42,6 +42,7 @@ export async function boot(
   let handle: ShelfHandle | undefined;
   try {
     handle = mountShelf(canvas, books, {
+      renderer: rendererOverrides(params),
       onSelect: (book) => {
         if (book === undefined) hideCard(card);
         else showCard(card, book);
@@ -101,13 +102,55 @@ export async function boot(
  * twenty-five do not, the cost is cumulative and that is the threshold. Either
  * answer halves the search in a single reload, with no cable.
  *
- * Ignored unless it parses to a positive whole number, so a typo shows the whole
- * shelf rather than an empty case that looks like a different bug.
+ * Ignored unless it parses to a whole number, so a typo shows the whole shelf
+ * rather than an empty case that looks like a different bug. `?books=0` is
+ * meaningful and allowed: an empty case still pays the entire fixed cost — the
+ * framebuffer, the shadow map, the pixel ratio — so if *that* loses the context,
+ * nothing about the books is involved at all.
  */
 function limitBooks(books: readonly LibraryBook[], params: URLSearchParams): LibraryBook[] {
-  const requested = Number(params.get('books'));
-  if (!Number.isInteger(requested) || requested <= 0) return [...books];
+  const raw = params.get('books');
+  if (raw === null) return [...books];
+
+  const requested = Number(raw);
+  if (!Number.isInteger(requested) || requested < 0) return [...books];
   return books.slice(0, requested);
+}
+
+/**
+ * `?aa=0`, `?dpr=1.5`, `?shadows=0`, `?guard=1` — one probe each.
+ *
+ * See `RendererOverrides` for why these are separate switches and not a single
+ * "mobile profile". Anything other than `0`, `false` or `off` reads as on, so
+ * a bare `?aa` enables rather than silently disabling.
+ */
+function rendererOverrides(params: URLSearchParams): RendererOverrides {
+  const overrides: {
+    antialias?: boolean;
+    maxPixelRatio?: number;
+    shadows?: boolean;
+    guardResize?: boolean;
+  } = {};
+
+  const antialias = flag(params, 'aa');
+  if (antialias !== undefined) overrides.antialias = antialias;
+
+  const shadows = flag(params, 'shadows');
+  if (shadows !== undefined) overrides.shadows = shadows;
+
+  const guard = flag(params, 'guard');
+  if (guard !== undefined) overrides.guardResize = guard;
+
+  const dpr = Number(params.get('dpr'));
+  if (Number.isFinite(dpr) && dpr > 0) overrides.maxPixelRatio = dpr;
+
+  return overrides;
+}
+
+function flag(params: URLSearchParams, name: string): boolean | undefined {
+  const raw = params.get(name);
+  if (raw === null) return undefined;
+  return raw !== '0' && raw !== 'false' && raw !== 'off';
 }
 
 /**
@@ -120,8 +163,11 @@ function limitBooks(books: readonly LibraryBook[], params: URLSearchParams): Lib
  */
 const NOTICE_CLASS = 'shelf-notice';
 
-const LOST_MESSAGE =
-  'The shelf ran out of graphics memory and the browser reset it. Reload to bring it back.';
+// Says what happened, not why. `webglcontextlost` carries no reason, and the
+// first wording asserted one — "ran out of graphics memory" — that the evidence
+// then contradicted: the page survived the loss and exited cleanly, so nothing
+// was killed for running out of anything it could name.
+const LOST_MESSAGE = 'The browser reset the shelf’s 3D canvas. Reload to bring it back.';
 
 const UNAVAILABLE_MESSAGE =
   "This browser wouldn't give the page a 3D canvas, so the shelf can't be drawn. Reloading usually fixes it.";

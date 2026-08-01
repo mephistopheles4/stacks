@@ -47,6 +47,8 @@ interface Snapshot {
   clean?: true;
   seconds: number;
   books: number;
+  /** Which renderer settings this run used — the bisect is meaningless without it. */
+  profile: string;
   textures: number;
   geometries: number;
   programs: number;
@@ -105,6 +107,7 @@ export function mountDiagnostics(
     return {
       seconds: Math.round((Date.now() - started) / 1000),
       books: options.books,
+      profile: options.handle?.profile ?? 'no shelf',
       textures: stats?.textures ?? 0,
       geometries: stats?.geometries ?? 0,
       programs: stats?.programs ?? 0,
@@ -179,6 +182,7 @@ export function mountDiagnostics(
 function render(current: Snapshot, previous: Snapshot | undefined): string {
   const lines = [
     `books    ${String(current.books)}`,
+    `profile  ${current.profile}`,
     `textures ${String(current.textures)}  geom ${String(current.geometries)}  prog ${String(current.programs)}`,
     `draws    ${String(current.calls)}  tris ${String(current.triangles)}`,
     `buffer   ${current.buffer}  dpr ${current.pixelRatio.toFixed(2)}`,
@@ -202,6 +206,7 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
         ? '— previous session ended cleanly —'
         : '— PREVIOUS SESSION DIED (no clean exit) —',
       `  after ${String(previous.seconds)}s with ${String(previous.books)} books`,
+      `  profile ${previous.profile ?? 'unknown'}`,
       `  textures ${String(previous.textures)}  draws ${String(previous.calls)}`,
       `  buffer ${previous.buffer}  dpr ${previous.pixelRatio.toFixed(2)}`,
       previous.heapMb === undefined ? '  heap n/a' : `  heap ${String(previous.heapMb)} MB`,
