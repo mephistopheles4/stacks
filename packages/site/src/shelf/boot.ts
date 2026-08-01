@@ -150,7 +150,7 @@ function rendererOverrides(params: URLSearchParams): RendererOverrides {
     maxPixelRatio?: number;
     shadows?: boolean;
     shadowMapSize?: number;
-    shadowType?: 'basic' | 'pcf' | 'soft';
+    shadowType?: 'basic' | 'pcf' | 'soft' | 'vsm';
     shadowCasters?: boolean;
     guardResize?: boolean;
     painted?: boolean;
@@ -182,7 +182,9 @@ function rendererOverrides(params: URLSearchParams): RendererOverrides {
   if (Number.isInteger(mapSize) && mapSize > 0) overrides.shadowMapSize = mapSize;
 
   const type = params.get('shadowtype');
-  if (type === 'basic' || type === 'pcf' || type === 'soft') overrides.shadowType = type;
+  if (type === 'basic' || type === 'pcf' || type === 'soft' || type === 'vsm') {
+    overrides.shadowType = type;
+  }
 
   return overrides;
 }

@@ -83,6 +83,7 @@ const SHADOW_TYPES = {
   basic: THREE.BasicShadowMap,
   pcf: THREE.PCFShadowMap,
   soft: THREE.PCFShadowMap,
+  vsm: THREE.VSMShadowMap,
 } as const;
 
 const COLOURS = {
@@ -197,8 +198,18 @@ export interface RendererOverrides {
   readonly shadows?: boolean;
   /** `?shadowmap=1024`. Edge of the depth target; the default is 2048 (16 MB). */
   readonly shadowMapSize?: number;
-  /** `?shadowtype=basic|pcf|soft`. See `SHADOW_TYPES`: `soft` is now `pcf`. */
-  readonly shadowType?: 'basic' | 'pcf' | 'soft';
+  /**
+   * `?shadowtype=basic|pcf|soft|vsm`. See `SHADOW_TYPES`: `soft` is now `pcf`.
+   *
+   * `vsm` is the one that is not a variation on the others. The first three all
+   * declare `uniform sampler2DShadow` and read the map with a hardware depth
+   * comparison — which is the fetch `?shadowfetch=0` has now identified as what
+   * takes the context away, and which is why all three died alike at every size
+   * and filter. Variance shadow maps store depth and depth-squared in an
+   * ordinary texture and read it with a plain `sampler2D`, so they are the only
+   * configuration here that avoids the operation actually implicated.
+   */
+  readonly shadowType?: 'basic' | 'pcf' | 'soft' | 'vsm';
   /**
    * `?casters=0`. Nothing casts, but the shadow map is still allocated and the
    * pass still runs — over an empty scene.
