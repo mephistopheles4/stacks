@@ -22,8 +22,6 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARTIFACTS = join(ROOT, 'artifacts');
 const OUTPUT = join(ARTIFACTS, 'shelf.png');
 
-const PORT = 4331;
-const URL = `http://localhost:${PORT}`;
 const VIEWPORT = { width: 1440, height: 900 };
 
 /**
@@ -77,7 +75,7 @@ async function main(): Promise<void> {
   mkdirSync(ARTIFACTS, { recursive: true });
 
   await buildSite();
-  const server = await serveDist();
+  const { server, origin } = await serveDist();
   try {
     const browser = await puppeteer.launch({
       executablePath: findChrome(),
@@ -102,7 +100,7 @@ async function main(): Promise<void> {
         if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
       });
 
-      await page.goto(URL, { waitUntil: 'networkidle0', timeout: 30_000 });
+      await page.goto(origin, { waitUntil: 'networkidle0', timeout: 30_000 });
 
       try {
         await page.waitForFunction('window.__shelf?.ready === true', { timeout: 20_000 });
@@ -352,7 +350,21 @@ const CONTENT_TYPES: Record<string, string> = {
   '.svg': 'image/svg+xml',
 };
 
-function serveDist(): Promise<Server> {
+/**
+ * Serves `dist/` on a port the operating system picks.
+ *
+ * It used to be 4331, which was fine while one checkout existed. Worktrees make
+ * two gates racing normal, and a fixed port turns that into one of two bad
+ * outcomes: `EADDRINUSE` and a gate that fails for a reason unconnected to the
+ * shelf, or — if the other server is still up and serving *its* `dist/` — a
+ * screenshot of the wrong branch, scored and reported as this one's. The second
+ * is the dangerous one, and it is not hypothetical: a stray server on a fixed
+ * port outlived its session in this project already.
+ *
+ * Nothing outside this file needs the number, so nothing outside this file has
+ * to agree on it.
+ */
+function serveDist(): Promise<{ server: Server; origin: string }> {
   const root = join(ROOT, 'packages', 'site', 'dist');
 
   const server = createServer((request, response) => {
@@ -370,7 +382,20 @@ function serveDist(): Promise<Server> {
     response.end(readFileSync(file));
   });
 
-  return new Promise((resolve) => server.listen(PORT, () => resolve(server)));
+  return new Promise((resolve, reject) => {
+    // Port 0 asks the OS for a free one; `address()` is only meaningful once
+    // listening has actually happened, which is why the origin is built here
+    // rather than at module scope.
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (address === null || typeof address === 'string') {
+        reject(new Error('the gate server is listening on a pipe, not a port'));
+        return;
+      }
+      resolve({ server, origin: `http://127.0.0.1:${String(address.port)}` });
+    });
+    server.on('error', reject);
+  });
 }
 
 function findChrome(): string {
