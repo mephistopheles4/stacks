@@ -114,6 +114,11 @@ having and remains unable to catch this. **The rule protected by nothing here is
 is the same blindness that let G15's defect ship. The current substitute is a
 person with a phone and four query parameters, which is honest rather than good.
 
+The probes found it: **the shadow pass**, with antialiasing and pixel ratio 2
+both left on. Shadows now default to off. That closes the bug and does not close
+the hole — nothing here can still tell whether the shelf survives on a phone, and
+the next renderer change could reopen it with every gate green.
+
 The gate asserts two different things, because two different things go wrong: no
 single cover exceeds `MAX_COVER_EDGE` (a property of the staging code), and the
 whole shelf fits `TEXTURE_BUDGET_BYTES` (a property of the *library*, which grows

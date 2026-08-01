@@ -123,12 +123,19 @@ function limitBooks(books: readonly LibraryBook[], params: URLSearchParams): Lib
  * See `RendererOverrides` for why these are separate switches and not a single
  * "mobile profile". Anything other than `0`, `false` or `off` reads as on, so
  * a bare `?aa` enables rather than silently disabling.
+ *
+ * `?shadows=1&shadowmap=1024&shadowtype=pcf` is the open question: shadows are
+ * off by default because the pass they add is what lost the context, but nobody
+ * has yet distinguished *which part* of it — the depth target's size, the
+ * expense of PCFSoft filtering, or simply having a second pass at all.
  */
 function rendererOverrides(params: URLSearchParams): RendererOverrides {
   const overrides: {
     antialias?: boolean;
     maxPixelRatio?: number;
     shadows?: boolean;
+    shadowMapSize?: number;
+    shadowType?: 'basic' | 'pcf' | 'soft';
     guardResize?: boolean;
   } = {};
 
@@ -143,6 +150,12 @@ function rendererOverrides(params: URLSearchParams): RendererOverrides {
 
   const dpr = Number(params.get('dpr'));
   if (Number.isFinite(dpr) && dpr > 0) overrides.maxPixelRatio = dpr;
+
+  const mapSize = Number(params.get('shadowmap'));
+  if (Number.isInteger(mapSize) && mapSize > 0) overrides.shadowMapSize = mapSize;
+
+  const type = params.get('shadowtype');
+  if (type === 'basic' || type === 'pcf' || type === 'soft') overrides.shadowType = type;
 
   return overrides;
 }

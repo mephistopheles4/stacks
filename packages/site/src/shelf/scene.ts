@@ -59,6 +59,12 @@ function rowsForCase(usedRows: number): number {
   return Math.max(usedRows + 1, MIN_ROWS);
 }
 
+const SHADOW_TYPES = {
+  basic: THREE.BasicShadowMap,
+  pcf: THREE.PCFShadowMap,
+  soft: THREE.PCFSoftShadowMap,
+} as const;
+
 const COLOURS = {
   background: 0x1a1613,
   wood: 0x6b4f3a,
@@ -141,8 +147,19 @@ export interface RendererOverrides {
   readonly antialias?: boolean;
   /** `?dpr=1.5`. Caps `devicePixelRatio`; the default cap is 2. */
   readonly maxPixelRatio?: number;
-  /** `?shadows=0`. Turns off the shadow map and the light that casts it. */
+  /**
+   * `?shadows=1`. Turns the shadow map and its casting light back on.
+   *
+   * **Off by default, because the shadow pass is what lost the context.** On a
+   * Pixel 10 Pro the full 31-book shelf runs stably with shadows off and
+   * everything else untouched — antialiasing on, pixel ratio 2 — and died in
+   * 6–18 seconds with them on. That is a single-variable result.
+   */
   readonly shadows?: boolean;
+  /** `?shadowmap=1024`. Edge of the depth target; the old default was 2048. */
+  readonly shadowMapSize?: number;
+  /** `?shadowtype=basic|pcf|soft`. `soft` is PCFSoft, the old default and the dearest. */
+  readonly shadowType?: 'basic' | 'pcf' | 'soft';
   /**
    * `?guard=1`. Skips `setSize` when the canvas has not actually changed size.
    *
@@ -179,13 +196,15 @@ export function mountShelf(
 ): ShelfHandle {
   const antialias = options.renderer?.antialias ?? true;
   const maxPixelRatio = options.renderer?.maxPixelRatio ?? 2;
-  const shadows = options.renderer?.shadows ?? true;
+  const shadows = options.renderer?.shadows ?? false;
+  const shadowMapSize = options.renderer?.shadowMapSize ?? 2048;
+  const shadowType = options.renderer?.shadowType ?? 'soft';
   const guardResize = options.renderer?.guardResize ?? false;
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
   renderer.shadowMap.enabled = shadows;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = SHADOW_TYPES[shadowType];
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(COLOURS.background);
@@ -235,7 +254,7 @@ export function mountShelf(
   frameCamera(16 / 9);
 
   scene.add(buildShelf(rowCount));
-  addLighting(scene, unitHeight, shadows);
+  addLighting(scene, unitHeight, shadows, shadowMapSize);
 
   const textures = new TextureCache(renderer);
   const lookup: BookLookup = new Map();
@@ -308,7 +327,8 @@ export function mountShelf(
     // A bisect whose result cannot be tied to a configuration is just an anecdote.
     profile:
       `aa=${antialias ? 'on' : 'off'} dpr<=${String(maxPixelRatio)} ` +
-      `shadows=${shadows ? 'on' : 'off'} guard=${guardResize ? 'on' : 'off'}`,
+      `shadows=${shadows ? `${shadowType}@${String(shadowMapSize)}` : 'off'} ` +
+      `guard=${guardResize ? 'on' : 'off'}`,
 
     stats(): ShelfStats {
       const { memory, render, programs } = renderer.info;
@@ -664,15 +684,20 @@ function buildShelf(rowCount: number): THREE.Group {
   return group;
 }
 
-function addLighting(scene: THREE.Scene, unitHeight: number, shadows: boolean): void {
+function addLighting(
+  scene: THREE.Scene,
+  unitHeight: number,
+  shadows: boolean,
+  shadowMapSize: number,
+): void {
   scene.add(new THREE.AmbientLight(0xffffff, 0.75));
 
   const key = new THREE.DirectionalLight(COLOURS.key, 2.4);
   key.position.set(3.5, unitHeight + 3, 6);
-  // Left off entirely rather than relying on `shadowMap.enabled`, so the 2048²
-  // depth target is never allocated at all — which is the thing being measured.
+  // Left off entirely rather than relying on `shadowMap.enabled`, so the depth
+  // target is never allocated at all — which is the thing being measured.
   key.castShadow = shadows;
-  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.mapSize.set(shadowMapSize, shadowMapSize);
   key.shadow.camera.far = 40;
   scene.add(key);
 

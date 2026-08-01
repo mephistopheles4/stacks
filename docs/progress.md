@@ -263,8 +263,63 @@ The panel now prints the active profile, so a screenshot of a crash says which
 settings produced it. A bisect whose result cannot be tied to a configuration is
 an anecdote.
 
-Next session: the owner runs the probes. Whichever one holds becomes the default,
-and only that one — do not ship the other three as a bundle.
+### It was the shadow pass
+
+`?debug&books=5&shadows=0` survived, so the owner went straight to the whole
+shelf. Thirty-one books, antialiasing **on**, pixel ratio **2**, shadows off:
+
+```
+books    31
+profile  aa=on dpr<=2 shadows=off guard=off
+textures 58  geom 11  prog 2
+draws    195  tris 1720
+buffer   1054x1898  dpr 2.00
+heap     11 / 3868 MB
+gpu      ANGLE (Imagination Technologies, PowerVR D-Series DXT-48-1536, OpenGL…)
+uptime   18s
+```
+
+Stable, with the previous run also recorded as a clean exit. One variable
+changed, and the failure went away.
+
+**The ranking was wrong, and it is worth recording that it was.** Antialiasing
+was ranked first on the arithmetic — 4× MSAA colour and depth at 1054×1926 is
+~65 MB, the single largest allocation in the scene. It is still the largest
+allocation, and it is not the problem: the shelf runs with it on. The
+2048² shadow map is 16 MB, ranked third, and it is the one that kills the
+context. Sizing an allocation predicted the wrong answer, which is the argument
+for probing over reasoning about it.
+
+**So shadows default to off**, and `?shadows=1` turns them back on.
+
+Off *everywhere*, not off on phones. A device check would be the obvious move and
+is the wrong one here: "mobile" is not detectable in any way that stays true, and
+the result would be a rule about visitors that nothing in this repo could
+possibly check — the same shape as the zone setting that no gate can see. If a
+cheaper shadow survives on the phone, it becomes the default for everyone.
+
+The aesthetic cost is real but small: the case reads slightly flatter, the books
+are less grounded on the plank. `pnpm smoke:render` shows the difference and
+still passes — 49 books, coverage identical at 25.5%, distinct colours 1305 →
+1202.
+
+### Still open: which *part* of the shadow pass
+
+Nobody has distinguished the depth target's *size*, the expense of PCFSoft
+*filtering*, or simply having a second *pass* at all — and the shelf has ~190
+shadow-casting parts at 31 books, so the pass roughly doubles the draw calls.
+Two more probes exist for it:
+
+```
+?shadows=1&shadowmap=1024&shadowtype=pcf     halve the target, cheapest filter
+?shadows=1&shadowmap=512&shadowtype=basic    smaller again, no filtering
+```
+
+If either holds for a few minutes on the phone, shadows come back at that
+setting. If neither does, the pass itself is the cost on this GPU and the honest
+substitute is baked contact shadows — the scene is static, so the shading under
+each book could be painted rather than computed. Do not build that until the
+probes have answered.
 
 ## Notes to the next session
 
