@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { LibraryBook } from '@stacks/core';
 import { toRows, type ShelfBook, type ShelfRow } from './books.ts';
+import { makeContactShadow, type Footprint } from './contact-shadow.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
 /**
@@ -212,7 +213,7 @@ export function mountShelf(
 ): ShelfHandle {
   const antialias = options.renderer?.antialias ?? true;
   const maxPixelRatio = options.renderer?.maxPixelRatio ?? 2;
-  const shadows = options.renderer?.shadows ?? true;
+  const shadows = options.renderer?.shadows ?? false;
   const shadowMapSize = options.renderer?.shadowMapSize ?? 2048;
   const shadowType = options.renderer?.shadowType ?? 'soft';
   const shadowCasters = options.renderer?.shadowCasters ?? true;
@@ -461,6 +462,8 @@ function placeBooks(
   castShadows: boolean,
 ): PlacedBook[] {
   const placed: PlacedBook[] = [];
+  /** Footprints per row of *books*, indexed as `rows` is — top shelf first. */
+  const byRow: Footprint[][] = [];
 
   const rowCount = rowsForCase(rows.length);
 
@@ -471,6 +474,11 @@ function placeBooks(
     // Books stand against the left upright and run right, as a shelf fills.
     let cursor = -SHELF.width / 2 + SHELF.padding;
     let index = 0;
+
+    // Where each book meets the plank, gathered as the row is laid out — the
+    // painted shadow is drawn from exactly the positions the books were placed
+    // at, so the two cannot drift apart.
+    const footprints: Footprint[] = [];
 
     for (const entry of row.books) {
       // Depth carries the cover's real aspect on a face-out book, which is
@@ -492,6 +500,12 @@ function placeBooks(
           shelfY + entry.height / 2,
           (SHELF.depth - entry.coverWidth) / 2 - 0.02,
         );
+        footprints.push({
+          x: cursor + entry.coverWidth * 0.5,
+          width: entry.coverWidth,
+          z: (SHELF.depth - entry.coverWidth) / 2 - 0.02,
+          depth: entry.coverWidth,
+        });
         cursor += entry.coverWidth + SHELF.bookGap * 2;
       } else {
         const lean = leanFor(rowIndex, index, entry.book.id);
@@ -503,6 +517,12 @@ function placeBooks(
           shelfY + entry.height / 2 + (entry.thickness / 2) * Math.sin(Math.abs(lean)),
           (SHELF.depth - SHELF.bookDepth) / 2 - 0.02,
         );
+        footprints.push({
+          x: cursor + entry.thickness / 2,
+          width: entry.thickness,
+          z: (SHELF.depth - SHELF.bookDepth) / 2 - 0.02,
+          depth: SHELF.bookDepth,
+        });
         cursor += entry.thickness + SHELF.bookGap;
       }
       index += 1;
@@ -513,7 +533,24 @@ function placeBooks(
       // pages or a board opens the same card as a click on the spine.
       for (const part of book.children) lookup.set(part, entry.book);
     }
+
+    byRow[rowIndex] = footprints;
   });
+
+  // Every shelf, not only the ones holding books: the overlay also carries the
+  // ambient darkening in the corner against the backboard, and an empty shelf
+  // has that corner too. Skipping them would leave the bottom of a growing case
+  // looking like a different piece of furniture from the top.
+  for (let row = 0; row < rowCount; row += 1) {
+    const shelfY = row * SHELF.rowHeight + SHELF.plankThickness / 2;
+    const shadow = makeContactShadow(
+      byRow[rowCount - 1 - row] ?? [],
+      SHELF.width,
+      SHELF.depth,
+      shelfY,
+    );
+    if (shadow !== undefined) scene.add(shadow);
+  }
 
   return placed;
 }

@@ -348,7 +348,57 @@ cost is gone; the depth target is still allocated and still sampled per fragment
 by PCFSoft. If the driver's problem was either of those, this will not have
 fixed it — so the probes stay, and `?casters=0` still discriminates.
 
-### If it still crashes: which *part* of the shadow pass costs
+### Every real-time configuration crashes; the shadows are painted instead
+
+The probes came back exhausted. On the Pixel 10 Pro, with 31 books:
+
+| configuration | result |
+| --- | --- |
+| `shadows=off` | **118 s, clean exit** |
+| `shadows=soft@2048` | dead |
+| `shadows=basic@2048` | dead |
+| `shadows=basic@512` | dead |
+| `shadows=soft@2048&casters=0` | dead at 44 s |
+
+Soft filtering and basic, 2048 and 512, and with the casters removed so nothing
+was drawn into the map at all. **Only the absence of a depth target survives.**
+
+Every one of those runs renders the identical frame: 195 draws, 1,720 triangles,
+7–10 MB of heap on a phone with 8 GB. That is not a load, and this was never a
+memory problem — the *first* bug was (314 MB of covers, real and worth fixing),
+and carrying that frame into a second unrelated failure cost most of a day. What
+this looks like is a driver fault: the GPU is Imagination's PowerVR D-Series,
+which the Tensor G5 took up in place of ARM Mali, so both the silicon and its
+driver are months old and almost no WebGL content has run on them.
+
+**Nothing here can fix that. Not depending on it can.**
+
+Three's shadows are *shadow mapping*: render the scene from the light into a
+depth texture, then have every fragment sample it. That is a technique for scenes
+that change — and nothing on this shelf does. Books are placed once, the light
+never moves, and a shadow does not depend on the camera, which is the only thing
+that does. The scene was paying a fully dynamic solution for a completely static
+problem, which would have been worth fixing on a machine that never crashed.
+
+So `packages/site/src/shelf/contact-shadow.ts` computes the shading once, from
+the same layout the books were placed with, and draws it into a canvas: a soft
+body and a tighter root under each book, plus the ambient darkening in the corner
+where a shelf meets its backboard. One textured plane per shelf, no shadow pass,
+no depth target, no per-fragment lookup. `?shadows=1` still enables the
+real-time path for comparison on hardware that can hold it.
+
+It also does something the real-time version never did: **every shelf gets the
+corner darkening, including empty ones**, so the bottom of a growing case no
+longer reads as a different piece of furniture from the top.
+
+The honest limits: contact shadows only. Books do not shade each other, and
+nothing is cast onto the backboard. And `ctx.filter` is what makes them soft — it
+is feature-checked by writing and reading back, because where it is missing the
+same code would paint hard black rectangles under every book, which is worse than
+no cast shadow at all. There, the corner darkening remains and the books' own
+shadows are skipped.
+
+### Superseded: which *part* of the shadow pass costs
 
 Three candidates, undistinguished: the depth target's **size**, PCFSoft's
 **filtering**, or simply having a second **pass** at all — the shelf has ~190
