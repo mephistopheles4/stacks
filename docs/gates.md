@@ -55,8 +55,13 @@ means the two have drifted.
 | --- | --- | --- | --- | --- |
 | **G6** | site → `@stacks/core` | a *value* import drags `node:fs` and sharp into the browser bundle and **the shelf silently never boots** | any value import outside `@stacks/core/shelf-order` fails | ⬜ |
 | **G7** | logic in `.astro` | `.astro` files are not typechecked (`astro check` cannot run under TS 7), so nothing else can catch this | `<script>` blocks are imports plus one call | ⬜ |
-| **G8** | frontmatter contract ↔ parser ↔ CLAUDE.md | a key the parser accepts but the contract never documents | key-list parity | ⬜ |
-| **G9** | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | key parity | ⬜ |
+| **G8** | frontmatter contract ↔ parser ↔ CLAUDE.md | a key the parser accepts but the contract never documents | `gates/frontmatter-contract.test.ts` | ✅ |
+| **G9** | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | `gates/env-contract.test.ts` | ✅ |
+
+**G8 observed red** on `shelf_order`, which the parser read and the prose
+described but the documented enumeration never listed. **G9 observed red** on
+`PORT`, read by `scripts/dev-watch.ts` and documented nowhere. Both fixed in the
+commit that added them.
 
 ## Defect gates
 
