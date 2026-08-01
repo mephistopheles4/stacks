@@ -388,7 +388,16 @@ export function mountShelf(
   };
 
   renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader): void => {
-    shaderErrors.push(...describeLinkFailure(gl, program, vertexShader, fragmentShader));
+    const report = describeLinkFailure(gl, program, vertexShader, fragmentShader);
+    shaderErrors.push(...report);
+
+    // Three's own message lives in the `else` branch of the test that calls this
+    // handler, so installing one *silences* it. Anyone reading a console — which
+    // is how this failure was found in the first place — would have watched the
+    // report get quieter as it got better. This says strictly more than the line
+    // it replaced.
+    console.error(`THREE program would not link:\n  ${report.join('\n  ')}`);
+
     halted = true;
     cancelAnimationFrame(frame);
     options.onShaderFailure?.(shaderErrors);
@@ -562,6 +571,7 @@ function describeLinkFailure(
     };
 
     return [
+      `material:  ${materialOf(gl.getShaderSource(vertexShader))}`,
       `link log:  ${said(gl.getProgramInfoLog(program))}`,
       `validate:  ${gl.getProgramParameter(program, gl.VALIDATE_STATUS) === true ? 'ok' : 'failed'}`,
       `vertex:    ${said(gl.getShaderInfoLog(vertexShader))}`,
@@ -581,6 +591,21 @@ function describeLinkFailure(
 function said(log: string | null): string {
   const text = log?.trim() ?? '';
   return text.length === 0 ? '(silent)' : text;
+}
+
+/**
+ * Which material's program this was, read back out of the shader itself.
+ *
+ * three names the material in its own error — and `onShaderError` is not passed
+ * it, so installing a handler loses the single most useful line in the message.
+ * It survives in the source, though: every program three builds is prefixed with
+ * `#define SHADER_TYPE` and `#define SHADER_NAME`, which is exactly what that
+ * line was printing.
+ */
+function materialOf(source: string | null): string {
+  const type = /^#define SHADER_TYPE (.+)$/m.exec(source ?? '')?.[1]?.trim();
+  const name = /^#define SHADER_NAME (.+)$/m.exec(source ?? '')?.[1]?.trim();
+  return [type ?? 'unknown', name].filter((part) => part !== undefined && part.length > 0).join(' ');
 }
 
 function describeGpu(renderer: THREE.WebGLRenderer): string | undefined {

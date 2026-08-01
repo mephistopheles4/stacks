@@ -43,6 +43,8 @@ export async function boot(
   const books = limitBooks(await loadLibrary(), params);
 
   let handle: ShelfHandle | undefined;
+  let shaderFailed = false;
+
   try {
     handle = mountShelf(canvas, books, {
       renderer: rendererOverrides(params),
@@ -51,12 +53,16 @@ export async function boot(
         else showCard(card, book);
       },
       onContextLost: () => {
-        showNotice(canvas, LOST_MESSAGE);
+        // A shader failure takes the context with it a moment later on the
+        // hardware where this happens, and the generic message would land on
+        // top of the specific one and bury the only useful sentence.
+        if (!shaderFailed) showNotice(canvas, LOST_MESSAGE);
       },
       onContextRestored: () => {
         clearNotice(canvas);
       },
       onShaderFailure: () => {
+        shaderFailed = true;
         showNotice(canvas, SHADER_MESSAGE);
       },
     });
