@@ -526,6 +526,40 @@ shadow systems are independent, so asking for real shadows has always drawn them
 on top of the painted ones and double-darkened everything the two agree about —
 which is a thing to know when reading any earlier screenshot taken that way.
 
+### Closed: nothing that reads a shadow map survives on this device
+
+The full bisect, with the last three rows added by the instruments above:
+
+| configuration | result |
+| --- | --- |
+| `shadows=0` | **118 s, clean exit** |
+| `shadows=soft@2048` / `basic@2048` / `basic@512` | dead |
+| `shadows=1&casters=0` | dead at 44 s |
+| `shadows=1&books=0&painted=0` | dead — an **empty case** |
+| `shadows=1&shadowfetch=0` | **survives** |
+| `shadows=1&shadowtype=vsm` | dead |
+
+Read together those last three settle it. An empty case dies, so nothing about
+the library, the covers or the painted shading is involved. `shadowfetch=0`
+survives with the whole 32 MB render target still allocated and the map still
+drawn, so neither the allocation nor the one-shot pass is the problem. And VSM
+dies, which was the last hope: it is the only path in three that reads the map
+with a plain `sampler2D` instead of the `sampler2DShadow` hardware comparison
+the other three share, so the fault is not the comparison sampler either.
+
+What every dying configuration has and the surviving one does not is simply
+**materials that read the shadow map at all**. Stated honestly, `shadowfetch=0`
+does not separate *sampling* from *binding* — turning `shadowMap.enabled` off
+also stops three uploading the shadow uniforms and binding those textures each
+frame — and nothing available here can separate them. It does not matter: the
+conclusion is the same either way.
+
+**So the painted shading is not a workaround. It is the only design that was
+ever going to work on this hardware**, and the case for it never depended on the
+crash — a scene where nothing moves should not have been shadow-mapping in the
+first place. `?shadows=1` stays for hardware that can hold it; on the Pixel 10
+Pro the answer is definitive and negative, and the investigation is closed.
+
 ### Superseded: which *part* of the shadow pass costs
 
 Three candidates, undistinguished: the depth target's **size**, PCFSoft's
