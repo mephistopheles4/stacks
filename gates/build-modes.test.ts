@@ -40,11 +40,14 @@ const INTENDED_DIFFERENCES = {
 } as const;
 
 /**
- * A public build also drops whole books: wishlist ones. Kept separate from the
- * key list above because it is a difference in the *set*, not in a field, and
- * the two are checked differently.
+ * A public build also drops whole books, for two unrelated reasons: wishlist
+ * ones because you do not own them, and `private: true` ones because the owner
+ * said no. Kept separate from the key list above because these are differences
+ * in the *set*, not in a field, and the two are checked differently.
  */
-const PUBLIC_DROPS_STATUS = 'wishlist';
+function shipsPublicly(book: Record<string, unknown>): boolean {
+  return book['status'] !== 'wishlist' && book['private'] !== true;
+}
 
 const FIXTURE_VAULT = join(REPO_ROOT, 'fixtures', 'vault');
 
@@ -69,29 +72,34 @@ async function bothModes(): Promise<{
 }
 
 describe('G11 — build modes', () => {
-  it('ships every shelved book, in the same order, dropping only wishlist ones', async () => {
+  it('ships every shipping book, in the same order, dropping the rest', async () => {
     const { local, publicBuild } = await bothModes();
 
-    const shelvedLocally = local.filter((book) => book['status'] !== PUBLIC_DROPS_STATUS);
-    expect(shelvedLocally.length).toBeGreaterThan(0);
-    expect(local.length, 'fixture vault should contain a wishlist book').toBeGreaterThan(
-      shelvedLocally.length,
-    );
+    const shipping = local.filter(shipsPublicly);
+    expect(shipping.length).toBeGreaterThan(0);
 
-    expect(publicBuild.map((book) => book['id'])).toEqual(shelvedLocally.map((book) => book['id']));
+    // The fixture vault must actually contain both kinds, or the assertions
+    // below hold over a set nothing was ever removed from.
+    expect(local.some((book) => book['status'] === 'wishlist'), 'need a wishlist fixture').toBe(
+      true,
+    );
+    expect(local.some((book) => book['private'] === true), 'need a private fixture').toBe(true);
+
+    expect(publicBuild.map((book) => book['id'])).toEqual(shipping.map((book) => book['id']));
   });
 
-  it('never ships a book you do not own', async () => {
+  it('never ships a book you do not own, or one marked private', async () => {
     const { publicBuild } = await bothModes();
-    expect(publicBuild.every((book) => book['status'] !== PUBLIC_DROPS_STATUS)).toBe(true);
+    expect(publicBuild.every((book) => book['status'] !== 'wishlist')).toBe(true);
+    expect(publicBuild.every((book) => book['private'] !== true)).toBe(true);
   });
 
   it('differs only on the keys the difference is documented for', async () => {
     const { local, publicBuild } = await bothModes();
     const allowed = new Set(Object.keys(INTENDED_DIFFERENCES));
-    const shelvedLocally = local.filter((book) => book['status'] !== PUBLIC_DROPS_STATUS);
+    const shipping = local.filter(shipsPublicly);
 
-    for (const [index, localBook] of shelvedLocally.entries()) {
+    for (const [index, localBook] of shipping.entries()) {
       const publicBook = publicBuild[index];
       expect(publicBook).toBeDefined();
       if (publicBook === undefined) continue;

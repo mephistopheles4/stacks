@@ -83,24 +83,37 @@ describe('publish', () => {
 
   it('reports a missing cover instead of failing the build', async () => {
     const books = await vault.listBooks();
-    const withGhost = [...books, { ...books[0]!, cover: 'covers/not-here.png', title: 'Ghost' }];
+    // Cloned from a book that actually ships: cloning the wishlist or the
+    // `private: true` fixture would make the ghost be filtered out, and the
+    // test would pass while asserting nothing.
+    const shippable = books.find(
+      (book) => book.status !== 'wishlist' && book.private !== true && book.cover !== undefined,
+    );
+    expect(shippable).toBeDefined();
+    const withGhost = [...books, { ...shippable!, cover: 'covers/not-here.png', title: 'Ghost' }];
 
     const result = await publish(withGhost, vault, out, { isPublic: true });
     expect(result.coversMissing).toEqual(['not-here.png']);
 
-    // Every shelved book still ships — a cover the vault lost costs the book
-    // its picture, not its place. Wishlist books are excluded from a public
-    // build (you do not own them), so count against the shelved input rather
-    // than against everything handed in.
-    const shelved = withGhost.filter((book) => book.status !== 'wishlist');
+    // Every shipping book still ships — a cover the vault lost costs the book
+    // its picture, not its place. Two kinds never ship: wishlist (you do not
+    // own them) and `private: true` (the owner said no), so count against
+    // those rather than against everything handed in.
+    const shelved = withGhost.filter(
+      (book) => book.status !== 'wishlist' && book.private !== true,
+    );
     expect(result.library.bookCount).toBe(shelved.length);
   });
 
   it('refuses to let a cover path climb out of the covers directory', async () => {
     const books = await vault.listBooks();
-    const escaping = [
-      { ...books[0]!, cover: '../../../../etc/passwd', title: 'Escaping' },
-    ];
+    // A book that actually ships, so the traversal is genuinely attempted —
+    // cloning the private fixture would filter it out before publish ever
+    // resolved the path, and the test would pass having tested nothing.
+    const shipping = books.find(
+      (book) => book.status !== 'wishlist' && book.private !== true,
+    );
+    const escaping = [{ ...shipping!, cover: '../../../../etc/passwd', title: 'Escaping' }];
 
     const result = await publish(escaping, vault, out, { isPublic: true });
     // Only the basename is ever used, so this looks for `passwd` inside the

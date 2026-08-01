@@ -26,6 +26,8 @@ export interface LibraryBook {
   readonly pages?: number;
   readonly faceOut?: boolean;
   readonly shelfOrder?: number;
+  /** Held back from public builds. Only ever present in a local one. */
+  readonly private?: boolean;
   /**
    * The cover's width ÷ height, measured at build time.
    *
@@ -85,6 +87,10 @@ function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
     ...pick('pages', record.pages),
     ...pick('faceOut', record.faceOut),
     ...pick('shelfOrder', record.shelfOrder),
+    // Carried so a local index can show you which books are held back. A public
+    // build never contains one, so this is only ever `true` in a build that
+    // stays on your machine.
+    ...pick('private', record.private),
   };
 
   // A public build must expose no vault paths (brief, "share build").

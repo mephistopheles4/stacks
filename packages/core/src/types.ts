@@ -69,6 +69,21 @@ export interface BookRecord {
   readonly pages?: number;
 
   /**
+   * Keep this book off any public build.
+   *
+   * The shelf is published by a pipeline that never asks again: a book is
+   * public the moment `stacks add` finishes. That is fine for almost
+   * everything and wrong for the occasional book that is nobody else's
+   * business — a diagnosis, a bereavement, a job hunt, a faith. This is the
+   * per-book escape hatch, so "yes, publish my shelf" stays a decision you can
+   * revisit one book at a time rather than wholesale.
+   *
+   * It still appears in a local build and on your own machine. It simply never
+   * leaves it.
+   */
+  readonly private?: boolean;
+
+  /**
    * Force the book to stand cover-forward, or force it not to.
    *
    * Absent means "decide from status" — a book you are currently reading sits
@@ -105,6 +120,7 @@ export interface BookInput {
   readonly pages?: number;
   readonly faceOut?: boolean;
   readonly shelfOrder?: number;
+  readonly private?: boolean;
   readonly tags?: readonly string[];
 
   /**

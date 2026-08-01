@@ -27,8 +27,11 @@ describe('listBooks against the fixture vault', () => {
 
     // The expected outcome is documented in fixtures/README.md; if this number
     // changes, that table is what should be updated first.
-    expect(books).toHaveLength(8);
+    expect(books).toHaveLength(9);
     expect(books.map((b) => b.title).sort()).toEqual([
+      // Held back from public builds, but the adapter reads your whole vault —
+      // `private` is about publishing, not about what you can see.
+      'A Book Kept Back',
       'Compilers for the Impatient: A Field Guide to Fast Iteration',
       'Lantern Work: Notes on Craft',
       'Nine Ways of Seeing a Warehouse',

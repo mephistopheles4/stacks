@@ -79,6 +79,26 @@ describe('G2 — note bodies stay private', () => {
     expect(shipped.books.some((book) => book.title.length > 0)).toBe(true);
   });
 
+  it('never ships a book marked private', async () => {
+    const { json } = await publishFixtures();
+    const shipped = JSON.parse(json) as { books: { title: string; private?: boolean }[] };
+
+    expect(shipped.books.every((book) => book.private !== true)).toBe(true);
+    expect(shipped.books.map((book) => book.title)).not.toContain('A Book Kept Back');
+  });
+
+  it('has a private book in the fixture vault to hold that against', async () => {
+    // Without this the assertion above passes over a vault that never had one,
+    // which is the same trap the canary check exists to close.
+    const vault = new ObsidianAdapter(FIXTURE_VAULT);
+    const books = await vault.listBooks();
+
+    expect(
+      books.some((book) => book.private === true),
+      'fixtures/vault needs a `private: true` note or the filter is untested',
+    ).toBe(true);
+  });
+
   it('exposes no vault path', async () => {
     const { json } = await publishFixtures();
     expect(json).not.toContain('sourcePath');
@@ -162,9 +182,17 @@ describe('G2 — cover provenance', () => {
     // because a public build makes provider-dependent decisions off it.
     const vault = new ObsidianAdapter(FIXTURE_VAULT);
     const books = await vault.listBooks();
-    const withSource = [{ ...books[0]!, coverSource: 'open-library' as const }];
+    // Explicitly a book that ships — indexing blindly picks up whichever note
+    // sorts first, which is now the `private: true` fixture, and a filtered
+    // book proves nothing about what reaches library.json.
+    const shipping = books.find(
+      (book) => book.status !== 'wishlist' && book.private !== true && book.cover !== undefined,
+    );
+    expect(shipping).toBeDefined();
 
-    const result = await publish(withSource, vault, assets, { isPublic: true });
+    const result = await publish([{ ...shipping!, coverSource: 'open-library' }], vault, assets, {
+      isPublic: true,
+    });
     expect(result.library.books[0]?.coverSource).toBe('open-library');
   });
 
