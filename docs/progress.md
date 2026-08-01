@@ -307,7 +307,48 @@ visitors that nothing in this repo could check — the same shape as the Cloudfl
 zone setting that no gate can see. Whatever survives should be the default for
 everyone.
 
-### Still open: which *part* of the shadow pass costs
+### The shadows were optimised instead, and the pass is now free
+
+Three changes, every one a strict improvement on every device:
+
+**1. The shadow map is drawn once, not sixty times a second.** Nothing in this
+scene moves. Books are placed at mount and stay there, the light never moves, and
+a directional light's shadow map is a function of the light and the geometry —
+*not* of the camera, which is the only thing that does move. So the renderer was
+running a full extra pass every frame to compute an image identical to the last
+one. `shadowMap.autoUpdate = false` with a single `needsUpdate` ends that.
+
+Measured on the 49-book fixture, in steady state:
+
+| | textures | draws |
+| --- | --- | --- |
+| shadows on | 50 | **302** |
+| shadows off | 48 | **302** |
+
+The frame costs the same either way. The two extra textures are the shadow target,
+allocated once, which is the point.
+
+**2. One caster per book instead of four.** 49 books were contributing ~196
+shadow draws to describe 49 silhouettes. A book is solid: its shadow is its
+outline, and the boards and spine strip add nothing to that outline the page
+block does not already give. The block is inset by the binder's square, so the
+silhouette is ~3mm small on a 230mm book — under half a texel here.
+
+**3. The shadow camera is fitted to the case, which it never was.** A
+`DirectionalLight` aims at the origin through a fixed ±5 orthographic box; the
+case stands *on* the origin and grows upward, so a five-row unit at 5.6 tall was
+half outside its own shadow frustum and the top of a tall shelf fell out of it
+entirely. Aiming at the middle of the case and sizing the box to a bounding
+sphere fixes that and pays twice: the same 2048² map now covers ~7 units instead
+of 10, so every texel does about twice the work. `smoke:render` reports distinct
+colours 1305 → **1318** — slightly *more* detail than before, not less.
+
+**Whether that is enough for the phone is still an empirical question.** The pass
+cost is gone; the depth target is still allocated and still sampled per fragment
+by PCFSoft. If the driver's problem was either of those, this will not have
+fixed it — so the probes stay, and `?casters=0` still discriminates.
+
+### If it still crashes: which *part* of the shadow pass costs
 
 Three candidates, undistinguished: the depth target's **size**, PCFSoft's
 **filtering**, or simply having a second **pass** at all — the shelf has ~190

@@ -273,6 +273,21 @@ export function mountShelf(
   scene.add(buildShelf(rowCount, shadowCasters));
   addLighting(scene, unitHeight, shadows, shadowMapSize);
 
+  /**
+   * The shadow map is drawn **once**, not sixty times a second.
+   *
+   * Nothing in this scene moves. The books are placed at mount and stay there,
+   * the light never moves, and a directional light's shadow map is a function of
+   * the light and the geometry — not of the camera, which is the only thing that
+   * does move. So the default behaviour was to re-render an entire extra pass
+   * every frame to compute an image identical to the one before it.
+   *
+   * That is the shadow cost, and this removes essentially all of it: `autoUpdate
+   * = false` stops the per-frame pass, and `needsUpdate` asks for exactly one.
+   */
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
+
   const textures = new TextureCache(renderer);
   const lookup: BookLookup = new Map();
   const placed = placeBooks(scene, rows, textures, lookup, shadowCasters);
@@ -326,6 +341,10 @@ export function mountShelf(
 
   const handleContextRestored = (): void => {
     options.onContextRestored?.();
+    // The one-shot shadow map died with the old context, and `autoUpdate` is off,
+    // so without this the restored shelf renders with no shadows at all — and
+    // silently, since nothing else would report it.
+    renderer.shadowMap.needsUpdate = true;
     renderLoop();
   };
 
@@ -624,9 +643,20 @@ function buildBook(
   const board = Math.min(BOARD, thickness * 0.3);
   const square = Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
 
+  /**
+   * Parts receive shadow but do not cast it — the page block below casts for the
+   * whole book.
+   *
+   * Four casters per book meant ~124 shadow draws for 31 books, to describe 31
+   * silhouettes. A book is a solid object: its shadow is its outline, and the
+   * boards and spine strip contribute nothing to that outline the page block
+   * does not already give. The block is inset by the binder's square, so the
+   * silhouette is ~3mm small on a 230mm book — under half a texel at this map
+   * resolution, and invisible.
+   */
   const solid = (material: THREE.Material): THREE.Mesh => {
     const mesh = new THREE.Mesh(UNIT_BOX, material);
-    mesh.castShadow = castShadows;
+    mesh.castShadow = false;
     mesh.receiveShadow = true;
     group.add(mesh);
     return mesh;
@@ -644,10 +674,12 @@ function buildBook(
   spineStrip.scale.set(thickness - board * 2, height, board);
   spineStrip.position.set(0, 0, (depth - board) / 2);
 
-  // The page block, recessed inside the case at head, tail and fore-edge.
+  // The page block, recessed inside the case at head, tail and fore-edge — and
+  // the one part of a book that casts, standing in for all of it.
   const block = solid(pages);
   block.scale.set(thickness - board * 2, height - square * 2, depth - board - square);
   block.position.set(0, 0, (square - board) / 2);
+  block.castShadow = castShadows;
 
   const printed = (material: THREE.Material): THREE.Mesh => {
     const mesh = new THREE.Mesh(UNIT_PLANE, material);
@@ -721,7 +753,39 @@ function addLighting(
   // target is never allocated at all — which is the thing being measured.
   key.castShadow = shadows;
   key.shadow.mapSize.set(shadowMapSize, shadowMapSize);
-  key.shadow.camera.far = 40;
+
+  /**
+   * The shadow camera is fitted to the case, which it never was.
+   *
+   * A `DirectionalLight` aims at the origin through a fixed ±5 orthographic box.
+   * The case stands *on* the origin and grows upward, so it was half outside its
+   * own shadow frustum — a five-row unit is 5.6 tall against a 10-unit box
+   * centred at y=0, and the top of a tall shelf simply fell out of it. Aiming at
+   * the middle of the case and sizing the box to a sphere that bounds it fixes
+   * that, and pays for itself twice: the same 2048² map now covers ~7 units
+   * instead of 10, so every texel is doing about twice the work it was.
+   */
+  const target = new THREE.Object3D();
+  target.position.set(0, unitHeight / 2, 0);
+  scene.add(target);
+  key.target = target;
+
+  const radius =
+    0.5 *
+    Math.hypot(SHELF.width + SHELF.sideThickness * 2, unitHeight, SHELF.depth) *
+    // A little margin: a shadow clipped by its own frustum ends in a hard
+    // straight line across the wood, which reads as a rendering fault.
+    1.08;
+
+  const shadowCamera = key.shadow.camera;
+  shadowCamera.left = -radius;
+  shadowCamera.right = radius;
+  shadowCamera.top = radius;
+  shadowCamera.bottom = -radius;
+  shadowCamera.near = 0.5;
+  shadowCamera.far = key.position.distanceTo(target.position) + radius;
+  shadowCamera.updateProjectionMatrix();
+
   scene.add(key);
 
   const fill = new THREE.DirectionalLight(COLOURS.fill, 0.75);
