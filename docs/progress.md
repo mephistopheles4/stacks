@@ -560,6 +560,22 @@ crash — a scene where nothing moves should not have been shadow-mapping in the
 first place. `?shadows=1` stays for hardware that can hold it; on the Pixel 10
 Pro the answer is definitive and negative, and the investigation is closed.
 
+**Nobody has published this exact symptom** — searched, and there is no report of
+a Pixel 10, a Tensor G5 or a PowerVR D-Series losing a WebGL context on a shadow
+map. What *is* published is the reputation: the Pixel 10 shipped with Imagination
+driver **v24.3** while **v25.1** already existed, its GPU sat at its 396 MHz idle
+clock under load against a rated 1 GHz, games showed flickering textures and
+screen tearing, and Google acknowledged it and began shipping driver fixes in
+monthly patches without committing to v25.1. Depth-texture sampling bugs are also
+a recurring class rather than a freak event — Firefox carried one that reproduced
+on NVIDIA under macOS and on nothing else, and AMD has had `sampler2DShadow`
+shadow mapping broken in a shipped driver.
+
+The practical consequence: **this may simply come right with a system update**,
+and `?shadows=1` is kept partly so it can be re-tested after one. Nothing in this
+repo can detect it, so it needs a person and a phone — the same thing that found
+it.
+
 ### Superseded: which *part* of the shadow pass costs
 
 Three candidates, undistinguished: the depth target's **size**, PCFSoft's
