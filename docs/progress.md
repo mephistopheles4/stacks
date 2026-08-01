@@ -391,12 +391,93 @@ It also does something the real-time version never did: **every shelf gets the
 corner darkening, including empty ones**, so the bottom of a growing case no
 longer reads as a different piece of furniture from the top.
 
-The honest limits: contact shadows only. Books do not shade each other, and
-nothing is cast onto the backboard. And `ctx.filter` is what makes them soft — it
-is feature-checked by writing and reading back, because where it is missing the
-same code would paint hard black rectangles under every book, which is worse than
-no cast shadow at all. There, the corner darkening remains and the books' own
-shadows are skipped.
+`ctx.filter` is what makes the contact shadows soft — it is feature-checked by
+writing and reading back, because where it is missing the same code would paint
+hard black rectangles under every book, which is worse than no cast shadow at
+all. There, the corner darkening remains and the books' own shadows are skipped.
+
+### The case shades itself, and the books were never the point
+
+The owner walked through a `?shadows=1` screenshot naming four things the painted
+version was missing, beginning with *"the shelf itself casts a shadow on top of
+all books"*. It does not, and neither does anything else: every book on the shelf
+stands its front within 2cm of the case's front plane, so a ray leaving a cover
+escapes into the room almost immediately and is blocked by nothing.
+
+**What is dark is the wall behind them.** The backboard is the full depth of the
+case back, so a ray leaving it has to cross all of that before it gets out, and
+mostly does not — on a five-row case the plank's shadow falls about three
+quarters of the way down the backboard, which is why only a strip along the
+bottom of each shelf stays lit. Read as a picture, that is a dark band across the
+top of every shelf, and it is what a viewer attributes to the books.
+
+Three painters, all one plane per *row* rather than per book:
+
+| | what it is |
+| --- | --- |
+| backboard shade | the plank above and the right-hand upright, cast on the back wall |
+| recess shade | the corner light does not reach: under each plank, and at both uprights |
+| upright wedge | the right upright's real shadow across the plank — widest at the back, nothing at the front edge |
+
+The two cast shadows are **derived from the key light's actual position** rather
+than tuned, so moving the light cannot leave them describing where it used to be.
+The recess is deliberately not: a cast shadow from an upright would fall on one
+side only and would barely touch a book, while the corner is dark on both sides
+whatever the light does.
+
+Strengths were set by **differencing against the real thing**, not by eye —
+`?shadows=1` still renders Three's shadow map, so the two can be photographed at
+the same camera and subtracted. The first pass came back measurably darker than
+the shadows it was imitating. Cost: +10 draws, +10 textures, +20 triangles at 31
+books, and `smoke:render` distinct colours **1165 → 1285** — more tonal detail,
+not less.
+
+Found on the way, by the owner: **a face-out book's footprint was the size of its
+cover.** Turned a quarter turn, such a book puts `coverWidth × thickness` on the
+plank, but both dimensions were taken from the cover — so a shadow the size of
+the whole cover lay flat on the wood, reaching most of the way to the front edge
+of the shelf. A dark smudge standing in front of a book, thrown by a light that
+is in front of it.
+
+The honest limits: books still do not shade each other beyond the band a shelved
+book throws down one side of a face-out cover, and that band is straight where
+the real one is *shaped* — the occluder is a taller neighbour, so its top corner
+throws a diagonal. Reproducing that needs each book to know how tall the one
+beside it is.
+
+### Why the real-time path cannot be rescued here: the shader will not link
+
+Remote debugging from the Pixel 10 Pro, with unminified dev sources, finally said
+what six configurations of the bisect could not:
+
+```
+THREE.WebGLProgram: Shader Error 0 - VALIDATE_STATUS false
+Material Type: MeshBasicMaterial
+Program Info Log:                          ← empty, and so are both shader logs
+WebGL: INVALID_OPERATION: useProgram: program not valid   ← then every frame
+[.WebGL-0x…] GL_CONTEXT_LOST_KHR
+```
+
+A program **fails to link**, and the driver will not say why. Three then calls
+`useProgram` on it sixty times a second until the context dies. That is the
+mechanism, and it explains what the sizes and filters could not: `soft@2048`,
+`basic@2048`, `basic@512` and `casters=0` all died alike because **none of them
+change whether a program links**. It was never a budget.
+
+Two details worth keeping:
+
+- The failing material is a `MeshBasicMaterial` — a painted shadow plane, which
+  is unlit and wants nothing to do with shadows. Turning `shadowMap.enabled` on
+  recompiles *every* material in the scene, and three's `meshbasic` shader
+  includes no shadow chunk in either stage, so the only difference in that
+  program is two inert `#define`s. It compiles clean and will not link.
+- **`VALIDATE_STATUS false` in that message means nothing.** Three prints
+  `getProgramParameter(program, VALIDATE_STATUS)` without ever having called
+  `gl.validateProgram`, and the initial value of that parameter is `false`. It
+  reads like a second finding and is not one.
+
+`?shadows=1` keeps the real-time path for hardware that can hold it. On this
+device the answer is definitive and negative.
 
 ### Superseded: which *part* of the shadow pass costs
 

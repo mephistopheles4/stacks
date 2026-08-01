@@ -2,7 +2,15 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { LibraryBook } from '@stacks/core';
 import { toRows, type ShelfBook, type ShelfRow } from './books.ts';
-import { makeContactShadow, makeNeighbourShadow, type Footprint } from './contact-shadow.ts';
+import {
+  LIFT,
+  makeBackboardShade,
+  makeContactShadow,
+  makeNeighbourShadow,
+  makeRecessShade,
+  type CaseLight,
+  type Footprint,
+} from './contact-shadow.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
 /**
@@ -29,6 +37,7 @@ const SHELF = {
   depth: 0.72,
   plankThickness: 0.07,
   sideThickness: 0.09,
+  backThickness: 0.05,
   /** Gap between neighbouring books. */
   bookGap: 0.008,
   /** Books sit slightly forward of the backboard, as they do in life. */
@@ -60,10 +69,20 @@ function rowsForCase(usedRows: number): number {
   return Math.max(usedRows + 1, MIN_ROWS);
 }
 
+/**
+ * `soft` is gone, and was gone before the probes that thought they were testing
+ * it.
+ *
+ * three 0.185 deprecated `PCFSoftShadowMap` and substitutes `PCFShadowMap` for
+ * it, with a console warning — so `?shadowtype=soft` and `?shadowtype=pcf` have
+ * been the same renderer all along, and the profile string was reporting a
+ * filter that was not running. Mapped honestly rather than dropped, so an old
+ * URL still works and says what it actually got.
+ */
 const SHADOW_TYPES = {
   basic: THREE.BasicShadowMap,
   pcf: THREE.PCFShadowMap,
-  soft: THREE.PCFSoftShadowMap,
+  soft: THREE.PCFShadowMap,
 } as const;
 
 const COLOURS = {
@@ -173,7 +192,7 @@ export interface RendererOverrides {
   readonly shadows?: boolean;
   /** `?shadowmap=1024`. Edge of the depth target; the default is 2048 (16 MB). */
   readonly shadowMapSize?: number;
-  /** `?shadowtype=basic|pcf|soft`. `soft` is PCFSoft: the default, and the dearest. */
+  /** `?shadowtype=basic|pcf|soft`. See `SHADOW_TYPES`: `soft` is now `pcf`. */
   readonly shadowType?: 'basic' | 'pcf' | 'soft';
   /**
    * `?casters=0`. Nothing casts, but the shadow map is still allocated and the
@@ -226,7 +245,7 @@ export function mountShelf(
   const maxPixelRatio = options.renderer?.maxPixelRatio ?? 2;
   const shadows = options.renderer?.shadows ?? false;
   const shadowMapSize = options.renderer?.shadowMapSize ?? 2048;
-  const shadowType = options.renderer?.shadowType ?? 'soft';
+  const shadowType = options.renderer?.shadowType ?? 'pcf';
   const shadowCasters = options.renderer?.shadowCasters ?? true;
   const guardResize = options.renderer?.guardResize ?? false;
 
@@ -418,12 +437,25 @@ export function mountShelf(
       controls.dispose();
       textures.dispose();
 
-      // Spine textures are generated per book rather than cached, so they are
-      // freed by walking the scene rather than from the cover cache.
+      // Spine textures are generated per book rather than cached, and every
+      // painted shadow carries a canvas of its own, so they are freed by walking
+      // the scene rather than from the cover cache.
+      //
+      // Both kinds are named. Checking only for `MeshStandardMaterial` freed the
+      // spines and left every shadow texture behind, because a shadow is an
+      // unlit `MeshBasicMaterial` — and the count of those has just grown by two
+      // per shelf. Covers are disposed twice, once here and once by the cache;
+      // `dispose()` is idempotent, so that costs nothing and is cheaper than
+      // working out which is which.
       scene.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return;
         for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-          if (material instanceof THREE.MeshStandardMaterial) material.map?.dispose();
+          if (
+            material instanceof THREE.MeshStandardMaterial ||
+            material instanceof THREE.MeshBasicMaterial
+          ) {
+            material.map?.dispose();
+          }
           material.dispose();
         }
       });
@@ -603,11 +635,17 @@ function placeBooks(
           shelfY + entry.height / 2,
           (SHELF.depth - entry.coverWidth) / 2 - 0.02,
         );
+        // A face-out book has been turned a quarter turn, so what it puts on the
+        // plank is `coverWidth` across and only its own `thickness` deep — the
+        // same slab as any other book, seen end-on. Taking the cover's width for
+        // *both* painted a shadow the size of the cover flat on the wood, which
+        // reached most of the way to the front edge of the shelf: a dark smudge
+        // standing in front of a book, thrown by a light that is in front of it.
         footprints.push({
           x: cursor + entry.coverWidth * 0.5,
           width: entry.coverWidth,
           z: (SHELF.depth - entry.coverWidth) / 2 - 0.02,
-          depth: entry.coverWidth,
+          depth: entry.thickness,
         });
         cursor += entry.coverWidth + SHELF.bookGap * 2;
         // A face-out book is broad and flat on the shelf, so it is a support in
@@ -647,19 +685,40 @@ function placeBooks(
     byRow[rowIndex] = footprints;
   });
 
-  // Every shelf, not only the ones holding books: the overlay also carries the
-  // ambient darkening in the corner against the backboard, and an empty shelf
-  // has that corner too. Skipping them would leave the bottom of a growing case
-  // looking like a different piece of furniture from the top.
+  // Every shelf, not only the ones holding books: the overlays also carry the
+  // shading the case throws on itself, and an empty shelf has a backboard and a
+  // corner just as a full one does. Skipping them would leave the bottom of a
+  // growing case looking like a different piece of furniture from the top.
+  const light = caseLight(rowCount * SHELF.rowHeight);
+  const openHeight = SHELF.rowHeight - SHELF.plankThickness;
+
   for (let row = 0; row < rowCount; row += 1) {
     const shelfY = row * SHELF.rowHeight + SHELF.plankThickness / 2;
+
     const shadow = makeContactShadow(
       byRow[rowCount - 1 - row] ?? [],
       SHELF.width,
       SHELF.depth,
       shelfY,
+      light,
     );
     if (shadow !== undefined) scene.add(shadow);
+
+    const shade = makeBackboardShade(SHELF.width, openHeight, INTERIOR_DEPTH, light);
+    if (shade !== undefined) {
+      shade.position.set(
+        0,
+        shelfY + openHeight / 2,
+        -SHELF.depth / 2 + SHELF.backThickness / 2 + LIFT,
+      );
+      scene.add(shade);
+    }
+
+    const recess = makeRecessShade(SHELF.width, openHeight);
+    if (recess !== undefined) {
+      recess.position.set(0, shelfY + openHeight / 2, BOOK_FRONT_Z + RECESS_CLEARANCE);
+      scene.add(recess);
+    }
   }
 
   return placed;
@@ -933,7 +992,10 @@ function buildShelf(rowCount: number, castShadows: boolean): THREE.Group {
   const unitHeight = rowCount * SHELF.rowHeight;
   const outerWidth = SHELF.width + SHELF.sideThickness * 2;
 
-  const back = new THREE.Mesh(new THREE.BoxGeometry(outerWidth, unitHeight, 0.05), backing);
+  const back = new THREE.Mesh(
+    new THREE.BoxGeometry(outerWidth, unitHeight, SHELF.backThickness),
+    backing,
+  );
   back.position.set(0, unitHeight / 2, -SHELF.depth / 2);
   back.receiveShadow = true;
   group.add(back);
@@ -963,6 +1025,66 @@ function buildShelf(rowCount: number, castShadows: boolean): THREE.Group {
   return group;
 }
 
+/**
+ * Where the key light stands, and where it aims.
+ *
+ * High and to the right — moved right of where it was, but not far. A
+ * directional light does not fall off with distance, only with angle, so
+ * swinging it out to the side takes light straight off the spines and covers,
+ * which all face the room. Pushed hard right the case lost most of its
+ * modelling. This is the compromise: enough of a sideways component for the
+ * shadows to read as thrown from the top right, with the intensity lifted to
+ * pay for the light the spines lose at that angle.
+ *
+ * A pair of functions rather than two lines inside `addLighting`, because the
+ * shadows painted into the wood are computed from this light — and a painted
+ * shadow whose light has quietly moved is worse than no shadow at all.
+ */
+function keyLightPosition(unitHeight: number): THREE.Vector3 {
+  return new THREE.Vector3(5, unitHeight + 3.4, 5.6);
+}
+
+function keyLightTarget(unitHeight: number): THREE.Vector3 {
+  return new THREE.Vector3(0, unitHeight / 2, 0);
+}
+
+/** The key light as the painters need it. See `CaseLight`. */
+function caseLight(unitHeight: number): CaseLight {
+  const toTarget = keyLightTarget(unitHeight).sub(keyLightPosition(unitHeight));
+  return {
+    xPerZ: Math.abs(toTarget.x / toTarget.z),
+    yPerZ: Math.abs(toTarget.y / toTarget.z),
+  };
+}
+
+/**
+ * How far the backboard stands behind the front of the case — the depth a ray
+ * leaving the back wall has to cross before it escapes into the room, and so
+ * the whole reason the back of a shelf is dark and the front of it is not.
+ */
+const INTERIOR_DEPTH = SHELF.depth - SHELF.backThickness / 2;
+
+/**
+ * Where a shelved book's fore-edge stands — the frontmost thing on any shelf.
+ *
+ * A face-out book is nowhere near it: turned a quarter turn it is only as deep
+ * as it is thick, and it sits about 0.3 further back, which is the width of
+ * bare plank you can see in front of one. So the recess shading is placed
+ * against *this* plane, in front of everything, and takes a little parallax on
+ * the face-out covers behind it. That is affordable precisely because the
+ * shading is a soft falloff with no edge to misregister.
+ */
+const BOOK_FRONT_Z = SHELF.depth / 2 - 0.02;
+
+/**
+ * How far the recess shading floats in front of the books.
+ *
+ * Enough to clear `SKIN` — the hair by which a printed face floats above its
+ * board — with room to spare, and far short of the planks, whose own front
+ * faces stand at the front of the case and must not be darkened.
+ */
+const RECESS_CLEARANCE = 0.008;
+
 function addLighting(
   scene: THREE.Scene,
   unitHeight: number,
@@ -971,16 +1093,8 @@ function addLighting(
 ): void {
   scene.add(new THREE.AmbientLight(0xffffff, 0.75));
 
-  // High and to the right — moved right of where it was, but not far.
-  //
-  // A directional light does not fall off with distance, only with angle, so
-  // swinging it out to the side takes light straight off the spines and covers,
-  // which all face the room. Pushed hard right the case lost most of its
-  // modelling. This is the compromise: enough of a sideways component for the
-  // shadows to read as thrown from the top right, with the intensity lifted to
-  // pay for the light the spines lose at that angle.
   const key = new THREE.DirectionalLight(COLOURS.key, 2.7);
-  key.position.set(5, unitHeight + 3.4, 5.6);
+  key.position.copy(keyLightPosition(unitHeight));
   // Left off entirely rather than relying on `shadowMap.enabled`, so the depth
   // target is never allocated at all — which is the thing being measured.
   key.castShadow = shadows;
