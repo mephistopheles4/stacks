@@ -81,6 +81,10 @@ const ALLOWED = [
   // note; the two that need books shell out to the CLI.
   'scripts/capture-api-fixtures.ts',
   'scripts/check-public-build.ts',
+  // Reads the built `dist/` back to pre-flight it before uploading. It never
+  // opens the vault — it shells out to the CLI for that, which goes through
+  // the adapter like everything else.
+  'scripts/deploy.ts',
   'scripts/dev-watch.ts',
   'scripts/make-50-book-fixture.ts',
   'scripts/make-fixture-covers.ts',

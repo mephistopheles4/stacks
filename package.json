@@ -16,7 +16,8 @@
     "stacks": "tsx packages/cli/src/index.ts",
     "fixtures:50": "tsx scripts/make-50-book-fixture.ts",
     "smoke:render": "tsx scripts/smoke-render.ts",
-    "gate:public": "tsx scripts/check-public-build.ts"
+    "gate:public": "tsx scripts/check-public-build.ts",
+    "deploy:site": "tsx scripts/deploy.ts"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
