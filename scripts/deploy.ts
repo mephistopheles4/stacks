@@ -24,7 +24,8 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from '../packages/cli/src/env.ts';
@@ -181,7 +182,52 @@ if (!existsSync(join(DIST, '_headers'))) {
 
 if (problems.length > 0) fail(`pre-flight found ${String(problems.length)} problem(s):\n- ${problems.join('\n- ')}`);
 
-console.log(`\npre-flight OK — ${String(library.books.length)} book(s), og:image absolute, no orphans`);
+/**
+ * A name for this build, written into the page so the live site can be asked
+ * which build it is serving.
+ *
+ * The check below used to compare cover *bytes*, which cannot answer that
+ * question: covers are named after book titles and keep those names between
+ * builds, so a deploy that changes only code leaves every cover byte-identical
+ * and the check reports a clean site whichever build is live. That is not
+ * hypothetical — it passed against the previous deployment minutes after an
+ * upload, while `index.html` still pointed at the old bundle.
+ *
+ * Derived from the build's own contents rather than from the clock or the
+ * commit — not for reproducibility, which this build does not have and never
+ * did (`library.json` carries the moment it was generated, so two builds of one
+ * tree already differ), but so the stamp cannot claim more than it knows. It
+ * names *this artifact*: hashing `index.html` covers the code, because the
+ * bundle's filename is content-hashed and appears in it, and hashing
+ * `library.json` covers the shelf. A stamp that matches means the origin is
+ * serving the bytes that were just uploaded, and nothing weaker.
+ */
+const stamp = createHash('sha256')
+  .update(readFileSync(join(DIST, 'index.html')))
+  .update(readFileSync(libraryPath))
+  .digest('hex')
+  .slice(0, 12);
+
+const stamped = html.replace('<head>', `<head><meta name="stacks:build" content="${stamp}">`);
+
+// A stamp that failed to land would make the check below fail forever, on every
+// deploy, for a reason nobody would guess — so the injection is asserted rather
+// than assumed. Astro emits a bare `<head>`; if that ever changes, this says so
+// here instead of at the far end.
+if (!stampOf(stamped)) {
+  fail('could not stamp index.html — no `<head>` to inject into, so the live check would be blind');
+}
+writeFileSync(join(DIST, 'index.html'), stamped);
+
+/** The build a page says it is, or undefined if it does not say. */
+function stampOf(page: string): string | undefined {
+  return /<meta name="stacks:build" content="([0-9a-f]+)">/.exec(page)?.[1];
+}
+
+console.log(
+  `\npre-flight OK — ${String(library.books.length)} book(s), og:image absolute, no orphans` +
+    `\nbuild ${stamp}`,
+);
 
 // ── 4. Upload ───────────────────────────────────────────────────────────────
 if (dryRun) {
@@ -217,7 +263,69 @@ console.log(`\ndeployed → ${siteUrl}`);
 // the remedy is a cache purge nobody can perform from here.
 await verifyLive(siteUrl.replace(/\/$/, ''));
 
+/**
+ * How long to give the edge before calling a stale page a problem.
+ *
+ * A deploy is not live the instant wrangler returns — Pages has to point the
+ * custom domain at the new deployment, and that took about a minute the once it
+ * was measured. Checking immediately and reporting failure would cry wolf on
+ * every single deploy, which is the fastest way to make a check ignored.
+ */
+const PROPAGATION_ATTEMPTS = 7;
+const PROPAGATION_WAIT_MS = 15_000;
+
+/**
+ * Which build the origin is actually serving.
+ *
+ * Asks the page, rather than inferring from bytes. Cover sizes cannot answer it
+ * — see the stamp's own note — and comparing whole HTML would break the first
+ * time the zone enabled any edge transform, since those rewrite markup and would
+ * fail forever for a reason unconnected to deploying. A meta tag's content
+ * survives all of them.
+ */
+async function verifyBuildLive(origin: string): Promise<void> {
+  for (let attempt = 1; attempt <= PROPAGATION_ATTEMPTS; attempt += 1) {
+    let live: string | undefined;
+    try {
+      // `no-store` so this measures the origin and not whatever this machine
+      // fetched a minute ago. It says nothing about a visitor's cache, and
+      // cannot: that is what the `_headers` revalidation is for.
+      const response = await fetch(`${origin}/`, { cache: 'no-store' });
+      live = stampOf(await response.text());
+    } catch {
+      console.warn(`\n! could not reach ${origin} to ask which build it is serving`);
+      return;
+    }
+
+    if (live === stamp) {
+      console.log(`serving build ${stamp}`);
+      return;
+    }
+
+    if (attempt === PROPAGATION_ATTEMPTS) {
+      console.warn(
+        `\n! ${origin} is serving ${live === undefined ? 'a build with no stamp' : `build ${live}`}, not ${stamp}\n` +
+          '  The upload was fine. Either the edge has not caught up, or a cache is\n' +
+          '  holding the previous index.html — which points at the previous bundle, so\n' +
+          '  visitors get the old shelf however new the assets beside it are.\n' +
+          '    - Wait a minute and re-run `pnpm deploy:site --skip-gates`.\n' +
+          '    - If it persists: dash.cloudflare.com → your zone → Caching → Configuration →\n' +
+          '      Purge Everything, and set Browser Cache TTL to "Respect Existing Headers".',
+      );
+      return;
+    }
+
+    console.log(
+      `  waiting for the edge (${String(attempt)}/${String(PROPAGATION_ATTEMPTS - 1)}) — serving ` +
+        `${live === undefined ? 'an unstamped build' : live}, want ${stamp}`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, PROPAGATION_WAIT_MS));
+  }
+}
+
 async function verifyLive(origin: string): Promise<void> {
+  await verifyBuildLive(origin);
+
   // Every cover, not a sample. Most covers are byte-identical between builds —
   // only the ones that changed can reveal a stale cache — so a sample of five is
   // very likely to land entirely on files that would match either way and
