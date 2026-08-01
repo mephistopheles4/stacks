@@ -39,6 +39,32 @@ function expectedBookCount(): number {
   return library.books.filter((book) => book.status !== 'wishlist').length;
 }
 
+/**
+ * How Chrome is asked to get a WebGL context, which is not the same question on
+ * a workstation and on a CI runner.
+ *
+ * `--use-gl=angle` was chosen against Windows Chrome with a real GPU, and it is
+ * still the right answer there: the screenshot is reviewed by eye, so the gate
+ * should render the way the shelf actually renders. A GitHub runner has no GPU
+ * at all, and the same flags fail outright —
+ *
+ *   THREE.WebGLRenderer: A WebGL context could not be created.
+ *   GL_VENDOR = Disabled, GL_RENDERER = Disabled, Sandboxed = yes
+ *
+ * — so the shelf never signals ready and the gate times out. SwiftShader is
+ * Chrome's software rasteriser: slower, no GPU needed, and it produces a real
+ * WebGL context, which is what this gate is actually asserting exists.
+ *
+ * Keyed off a GPU being absent rather than off `process.platform`, because a
+ * Linux workstation with a GPU should still render the way its owner sees it.
+ */
+function glArgs(): string[] {
+  const headlessRunner = process.env['CI'] === 'true';
+  return headlessRunner
+    ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']
+    : ['--enable-gpu', '--use-gl=angle'];
+}
+
 /** System Chrome — probed at Phase 0, so no Chromium download is needed. */
 const CHROME_CANDIDATES = [
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -56,7 +82,7 @@ async function main(): Promise<void> {
     const browser = await puppeteer.launch({
       executablePath: findChrome(),
       headless: true,
-      args: ['--headless=new', '--hide-scrollbars', '--enable-gpu', '--use-gl=angle'],
+      args: ['--headless=new', '--hide-scrollbars', ...glArgs()],
     });
 
     try {

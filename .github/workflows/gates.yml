@@ -86,7 +86,11 @@ jobs:
         with:
           name: shelf-node-${{ matrix.node }}
           path: artifacts/shelf.png
-          if-no-files-found: error
+          # `warn`, not `error`: this step runs with `if: always()`, so when the
+          # render gate fails there is no screenshot by definition, and erroring
+          # here would report a second failure for the same cause and bury the
+          # real one. The gate itself is what fails if the shelf will not draw.
+          if-no-files-found: warn
 
   # The required status check. Named `gates` and nothing else.
   gates:
