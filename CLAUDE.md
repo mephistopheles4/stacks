@@ -81,7 +81,8 @@ key there and not here is exactly the drift that gate exists to catch.
   a `<script>` that imports and calls a `.ts` module — nothing more. `.astro`
   files are NOT typechecked (`astro check` cannot run under TypeScript 7 yet),
   so anything with a type lives in a `.ts` file, where `pnpm build` checks it.
-- Metadata: Open Library first, Google Books fallback. Cache all API responses in `.cache/` so tests and rebuilds don't re-hit APIs.
+- Metadata: **three providers, in this order** — Open Library first, Google Books as the fallback (needs `GOOGLE_BOOKS_API_KEY`; unauthenticated requests share one exhausted quota and 429 every time), and Apple Books consulted *only* for cover art, because its artwork is ~800x1200 against Google's ~128px. Cache all API responses in `.cache/` so tests and rebuilds don't re-hit APIs.
+- **Which provider answered and which provider's bytes you kept are different questions.** The metadata layer completes one provider's record from another's, so a book's `source` need not be where its cover came from. `cover_source` is derived from the URL actually downloaded — it decides what a public build may re-host, and the three providers' terms differ.
 - TypeScript strict everywhere. Vitest. pnpm workspaces.
 
 ## Phase gates — a phase is DONE only when its gate passes
@@ -100,12 +101,33 @@ Every phase: `pnpm test && pnpm build` green, plus:
 - Do not add dependencies without noting why in the Decision Log. Prefer zero-dep solutions for small utilities.
 
 ## Commands
+
+Held to reality by `gates/commands.test.ts` — both lists below, in both
+directions. Adding a script or a CLI command without documenting it here is a
+red build.
+
 ```
 pnpm install
-pnpm test                # all workspaces
-pnpm stacks <cmd>        # run CLI from repo
+pnpm typecheck           # tsc --noEmit across every .ts in the repo
+pnpm test                # vitest: packages/**/src and gates/
+pnpm build               # typecheck, then astro build
 pnpm dev                 # site dev server
-pnpm smoke:render        # headless shelf screenshot gate
+pnpm dev:watch           # site + rebuild on every vault change
+pnpm stacks <cmd>        # run the CLI from source
+pnpm fixtures:50         # regenerate the 50-book fixture vault
+pnpm smoke:render        # phase 2 gate: headless shelf screenshot
+pnpm gate:public         # phase 3 gate: the public build leaks nothing
+```
+
+CLI commands — `pnpm stacks <cmd>`:
+
+```
+add       fetch metadata and a cover, then write a note into the vault
+build     parse the vault into library.json   (--public, --watch)
+status    quick stats: books this year, in progress, covers still missing
+enrich    fill missing metadata on notes that already exist, never overwriting
+order     show the shelf order, or renumber it with gaps   (--renumber)
+import    import a library export into the vault   (audible)
 ```
 
 ## Decision Log
