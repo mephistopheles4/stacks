@@ -290,36 +290,47 @@ allocation, and it is not the problem: the shelf runs with it on. The
 context. Sizing an allocation predicted the wrong answer, which is the argument
 for probing over reasoning about it.
 
-**So shadows default to off**, and `?shadows=1` turns them back on.
+### Shadows stay on by default — owner's call
 
-Off *everywhere*, not off on phones. A device check would be the obvious move and
-is the wrong one here: "mobile" is not detectable in any way that stays true, and
-the result would be a rule about visitors that nothing in this repo could
-possibly check — the same shape as the zone setting that no gate can see. If a
-cheaper shadow survives on the phone, it becomes the default for everyone.
+The obvious move from that result is to default them off. **Rejected**, and it is
+an aesthetics decision, which in this project belongs to the owner: shadows are
+most of what makes the case read as furniture rather than as coloured boxes, and
+a shelf without them is not the shelf. `smoke:render` shows the difference —
+distinct colours 1305 → 1202 at identical 25.5% coverage — and it is visible.
 
-The aesthetic cost is real but small: the case reads slightly flatter, the books
-are less grounded on the plank. `pnpm smoke:render` shows the difference and
-still passes — 49 books, coverage identical at 25.5%, distinct colours 1305 →
-1202.
+So the question is not *whether* to have shadows but *which cheaper form of them*
+a phone can hold, and nothing about that is answered yet.
 
-### Still open: which *part* of the shadow pass
+Note also what a device check would cost: "mobile" is not detectable in any way
+that stays true, and shipping shadows-off-for-phones would create a rule about
+visitors that nothing in this repo could check — the same shape as the Cloudflare
+zone setting that no gate can see. Whatever survives should be the default for
+everyone.
 
-Nobody has distinguished the depth target's *size*, the expense of PCFSoft
-*filtering*, or simply having a second *pass* at all — and the shelf has ~190
+### Still open: which *part* of the shadow pass costs
+
+Three candidates, undistinguished: the depth target's **size**, PCFSoft's
+**filtering**, or simply having a second **pass** at all — the shelf has ~190
 shadow-casting parts at 31 books, so the pass roughly doubles the draw calls.
-Two more probes exist for it:
 
 ```
-?shadows=1&shadowmap=1024&shadowtype=pcf     halve the target, cheapest filter
-?shadows=1&shadowmap=512&shadowtype=basic    smaller again, no filtering
+?shadows=1&casters=0                         ← run this one first
+?shadows=1&shadowmap=1024&shadowtype=pcf
+?shadows=1&shadowmap=512&shadowtype=basic
 ```
 
-If either holds for a few minutes on the phone, shadows come back at that
-setting. If neither does, the pass itself is the cost on this GPU and the honest
-substitute is baked contact shadows — the scene is static, so the shading under
-each book could be painted rather than computed. Do not build that until the
-probes have answered.
+**`casters=0` is the only one that discriminates.** The other two make the shadow
+work smaller, so surviving either says just "less was cheaper" and leaves you
+guessing at which axis. `casters=0` keeps the depth target allocated and the pass
+running, over an empty scene: if the shelf lives, the cost is *drawing the
+casters*, and thinning them — the page block is sealed inside the case and cannot
+cast anything visible — fixes it with the shadows intact. If it still dies, the
+cost is the target or the shader sampling it, no amount of thinning will help,
+and the answer is baked contact shadows: the scene is static, so that shading can
+be painted into the wood rather than computed every frame. That keeps the look on
+every device and costs nothing at runtime.
+
+Do not build either fix until the probes have answered.
 
 ## Notes to the next session
 

@@ -124,10 +124,11 @@ function limitBooks(books: readonly LibraryBook[], params: URLSearchParams): Lib
  * "mobile profile". Anything other than `0`, `false` or `off` reads as on, so
  * a bare `?aa` enables rather than silently disabling.
  *
- * `?shadows=1&shadowmap=1024&shadowtype=pcf` is the open question: shadows are
- * off by default because the pass they add is what lost the context, but nobody
- * has yet distinguished *which part* of it — the depth target's size, the
- * expense of PCFSoft filtering, or simply having a second pass at all.
+ * The open question is which *cheaper* shadow survives. The pass is what loses
+ * the context, and shadows stay on by default anyway (owner's call — they are
+ * most of what makes the shelf read as furniture), so `?shadowmap`,
+ * `?shadowtype` and `?casters` exist to find a form of them that a phone can
+ * hold rather than to decide whether to have them.
  */
 function rendererOverrides(params: URLSearchParams): RendererOverrides {
   const overrides: {
@@ -136,8 +137,12 @@ function rendererOverrides(params: URLSearchParams): RendererOverrides {
     shadows?: boolean;
     shadowMapSize?: number;
     shadowType?: 'basic' | 'pcf' | 'soft';
+    shadowCasters?: boolean;
     guardResize?: boolean;
   } = {};
+
+  const casters = flag(params, 'casters');
+  if (casters !== undefined) overrides.shadowCasters = casters;
 
   const antialias = flag(params, 'aa');
   if (antialias !== undefined) overrides.antialias = antialias;

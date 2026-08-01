@@ -148,18 +148,34 @@ export interface RendererOverrides {
   /** `?dpr=1.5`. Caps `devicePixelRatio`; the default cap is 2. */
   readonly maxPixelRatio?: number;
   /**
-   * `?shadows=1`. Turns the shadow map and its casting light back on.
+   * `?shadows=0`. Turns off the shadow map and the light that casts it.
    *
-   * **Off by default, because the shadow pass is what lost the context.** On a
-   * Pixel 10 Pro the full 31-book shelf runs stably with shadows off and
-   * everything else untouched — antialiasing on, pixel ratio 2 — and died in
-   * 6–18 seconds with them on. That is a single-variable result.
+   * The shadow pass is what loses the context on a Pixel 10 Pro — the full
+   * 31-book shelf is stable without it and dies in 6–18 seconds with it, one
+   * variable, everything else untouched. It stays **on by default anyway**:
+   * shadows are most of what makes the shelf read as furniture rather than as
+   * coloured boxes, and the owner's call is that losing them is not the price.
+   * So the question is not whether to keep them but which cheaper form of them
+   * survives, which is what the three switches below are for.
    */
   readonly shadows?: boolean;
-  /** `?shadowmap=1024`. Edge of the depth target; the old default was 2048. */
+  /** `?shadowmap=1024`. Edge of the depth target; the default is 2048 (16 MB). */
   readonly shadowMapSize?: number;
-  /** `?shadowtype=basic|pcf|soft`. `soft` is PCFSoft, the old default and the dearest. */
+  /** `?shadowtype=basic|pcf|soft`. `soft` is PCFSoft: the default, and the dearest. */
   readonly shadowType?: 'basic' | 'pcf' | 'soft';
+  /**
+   * `?casters=0`. Nothing casts, but the shadow map is still allocated and the
+   * pass still runs — over an empty scene.
+   *
+   * The one switch that *discriminates* rather than just reducing. Everything
+   * else makes the shadow work smaller, so surviving any of them says only "less
+   * was cheaper". This separates the two candidate mechanisms outright: if the
+   * shelf lives with the target allocated and the pass empty, the cost is
+   * drawing ~190 shadow casters; if it still dies, the cost is the depth target
+   * or the shader that samples it, and no amount of thinning the geometry will
+   * help.
+   */
+  readonly shadowCasters?: boolean;
   /**
    * `?guard=1`. Skips `setSize` when the canvas has not actually changed size.
    *
@@ -196,9 +212,10 @@ export function mountShelf(
 ): ShelfHandle {
   const antialias = options.renderer?.antialias ?? true;
   const maxPixelRatio = options.renderer?.maxPixelRatio ?? 2;
-  const shadows = options.renderer?.shadows ?? false;
+  const shadows = options.renderer?.shadows ?? true;
   const shadowMapSize = options.renderer?.shadowMapSize ?? 2048;
   const shadowType = options.renderer?.shadowType ?? 'soft';
+  const shadowCasters = options.renderer?.shadowCasters ?? true;
   const guardResize = options.renderer?.guardResize ?? false;
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias });
@@ -253,12 +270,12 @@ export function mountShelf(
 
   frameCamera(16 / 9);
 
-  scene.add(buildShelf(rowCount));
+  scene.add(buildShelf(rowCount, shadowCasters));
   addLighting(scene, unitHeight, shadows, shadowMapSize);
 
   const textures = new TextureCache(renderer);
   const lookup: BookLookup = new Map();
-  const placed = placeBooks(scene, rows, textures, lookup);
+  const placed = placeBooks(scene, rows, textures, lookup, shadowCasters);
 
   const picker = new Picker(
     canvas,
@@ -328,7 +345,7 @@ export function mountShelf(
     profile:
       `aa=${antialias ? 'on' : 'off'} dpr<=${String(maxPixelRatio)} ` +
       `shadows=${shadows ? `${shadowType}@${String(shadowMapSize)}` : 'off'} ` +
-      `guard=${guardResize ? 'on' : 'off'}`,
+      `casters=${shadowCasters ? 'on' : 'off'} guard=${guardResize ? 'on' : 'off'}`,
 
     stats(): ShelfStats {
       const { memory, render, programs } = renderer.info;
@@ -422,6 +439,7 @@ function placeBooks(
   rows: readonly ShelfRow[],
   textures: TextureCache,
   lookup: BookLookup,
+  castShadows: boolean,
 ): PlacedBook[] {
   const placed: PlacedBook[] = [];
 
@@ -439,7 +457,7 @@ function placeBooks(
       // Depth carries the cover's real aspect on a face-out book, which is
       // turned side-on, and the shelf depth on a shelved one.
       const depth = entry.faceOut ? entry.coverWidth : SHELF.bookDepth;
-      const book = buildBook(entry, depth, textures);
+      const book = buildBook(entry, depth, textures, castShadows);
       cursor += entry.gapBefore ?? 0;
 
       if (entry.faceOut) {
@@ -551,7 +569,12 @@ const SKIN = 0.0012;
  * Local axes match the old box: spine at +Z (facing the room when shelved),
  * cover at +X (what you see once a book is turned face-out).
  */
-function buildBook(entry: ShelfBook, depth: number, textures: TextureCache): THREE.Group {
+function buildBook(
+  entry: ShelfBook,
+  depth: number,
+  textures: TextureCache,
+  castShadows: boolean,
+): THREE.Group {
   // A spine wide enough to read gets its title printed on it; a very thin one
   // stays a plain board, because type squeezed onto it would just be noise.
   const spineTexture =
@@ -603,7 +626,7 @@ function buildBook(entry: ShelfBook, depth: number, textures: TextureCache): THR
 
   const solid = (material: THREE.Material): THREE.Mesh => {
     const mesh = new THREE.Mesh(UNIT_BOX, material);
-    mesh.castShadow = true;
+    mesh.castShadow = castShadows;
     mesh.receiveShadow = true;
     group.add(mesh);
     return mesh;
@@ -645,7 +668,7 @@ function buildBook(entry: ShelfBook, depth: number, textures: TextureCache): THR
   return group;
 }
 
-function buildShelf(rowCount: number): THREE.Group {
+function buildShelf(rowCount: number, castShadows: boolean): THREE.Group {
   const group = new THREE.Group();
 
   const wood = new THREE.MeshStandardMaterial({ color: COLOURS.wood, roughness: 0.82 });
@@ -665,7 +688,7 @@ function buildShelf(rowCount: number): THREE.Group {
       wood,
     );
     upright.position.set((side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0);
-    upright.castShadow = true;
+    upright.castShadow = castShadows;
     upright.receiveShadow = true;
     group.add(upright);
   }
@@ -676,7 +699,7 @@ function buildShelf(rowCount: number): THREE.Group {
       wood,
     );
     plank.position.set(0, row * SHELF.rowHeight, 0);
-    plank.castShadow = true;
+    plank.castShadow = castShadows;
     plank.receiveShadow = true;
     group.add(plank);
   }
