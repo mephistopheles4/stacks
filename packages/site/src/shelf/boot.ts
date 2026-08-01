@@ -154,7 +154,11 @@ function rendererOverrides(params: URLSearchParams): RendererOverrides {
     shadowCasters?: boolean;
     guardResize?: boolean;
     painted?: boolean;
+    shadowFetch?: boolean;
   } = {};
+
+  const fetchShadows = flag(params, 'shadowfetch');
+  if (fetchShadows !== undefined) overrides.shadowFetch = fetchShadows;
 
   const usePainted = flag(params, 'painted');
   if (usePainted !== undefined) overrides.painted = usePainted;

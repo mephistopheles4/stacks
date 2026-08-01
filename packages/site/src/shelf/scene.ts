@@ -237,6 +237,30 @@ export interface RendererOverrides {
    * there is not.
    */
   readonly painted?: boolean;
+  /**
+   * `?shadowfetch=0`. Draws the shadow map once, then stops *reading* it.
+   *
+   * The isolator. Enabling shadows confounds three things, and the bisect has
+   * now eliminated one of them outright:
+   *
+   *  - the render target is allocated — a 2048² depth texture **and** a 2048²
+   *    RGBA8 colour texture that three creates and never samples, 16 MB each;
+   *  - the shadow pass runs — but `autoUpdate = false` means exactly once, at
+   *    first paint, so it cannot be what takes a context away twelve seconds
+   *    later, and `casters=0` dying agrees;
+   *  - every lit fragment samples the depth texture, every frame, forever.
+   *
+   * `receiveShadow` cannot separate the last two: three keys `USE_SHADOWMAP` on
+   * `shadowMap.enabled` and the light count alone, so turning it off on the
+   * books would change nothing at all. Turning the whole flag off after the
+   * first frame and recompiling does: the target stays allocated, the map stays
+   * drawn, and the sampling stops.
+   *
+   * Survives → the per-frame depth fetch is what kills the driver.
+   * Still dies → merely holding a sampled depth attachment does, and there is
+   * nothing left to fix.
+   */
+  readonly shadowFetch?: boolean;
 }
 
 export interface MountOptions {
@@ -275,6 +299,7 @@ export function mountShelf(
   const shadowCasters = options.renderer?.shadowCasters ?? true;
   const guardResize = options.renderer?.guardResize ?? false;
   const painted = options.renderer?.painted ?? true;
+  const shadowFetch = options.renderer?.shadowFetch ?? true;
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
@@ -380,11 +405,17 @@ export function mountShelf(
   let halted = false;
 
   let frame = 0;
+  let drawn = 0;
+
   const renderLoop = (): void => {
     if (halted) return;
     frame = requestAnimationFrame(renderLoop);
     controls.update();
     renderer.render(scene, camera);
+    drawn += 1;
+
+    // After the map is drawn and before it is ever read again. See `shadowFetch`.
+    if (drawn === 1 && shadows && !shadowFetch) stopSamplingShadows(renderer, scene);
   };
 
   let shaderFailures = 0;
@@ -474,7 +505,7 @@ export function mountShelf(
       `aa=${antialias ? 'on' : 'off'} dpr<=${String(maxPixelRatio)} ` +
       `shadows=${shadows ? `${shadowType}@${String(shadowMapSize)}` : 'off'} ` +
       `casters=${shadowCasters ? 'on' : 'off'} guard=${guardResize ? 'on' : 'off'} ` +
-      `painted=${painted ? 'on' : 'off'}`,
+      `painted=${painted ? 'on' : 'off'} fetch=${shadowFetch ? 'on' : 'off'}`,
 
     stats(): ShelfStats {
       const { memory, render, programs } = renderer.info;
@@ -605,6 +636,29 @@ function describeLinkFailure(
     // An instrument that throws takes down the thing it is measuring.
     return [`link failure, and reading it also failed: ${String(error)}`];
   }
+}
+
+/**
+ * Keeps the shadow map that was drawn, and stops every material reading it.
+ *
+ * Turning `shadowMap.enabled` off does not free the render target — three has
+ * no path that does, even through `renderer.dispose()` — so what is left is a
+ * context still holding a 2048² depth attachment that nothing samples. That is
+ * exactly the state the probe needs, and it is not reachable any other way.
+ *
+ * The traverse is what makes it take effect: `USE_SHADOWMAP` is baked into each
+ * program at compile time, so without dirtying the materials the flag would
+ * change nothing until something else forced a recompile.
+ */
+function stopSamplingShadows(renderer: THREE.WebGLRenderer, scene: THREE.Scene): void {
+  renderer.shadowMap.enabled = false;
+
+  scene.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+      material.needsUpdate = true;
+    }
+  });
 }
 
 /** A GL info log, or a word for its silence — an empty one is itself a finding. */
