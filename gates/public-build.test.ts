@@ -19,7 +19,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
@@ -117,6 +117,26 @@ describe('G2 — the staged folder is exactly this build', () => {
 
     const { covers } = await publishFixtures();
     expect(covers).not.toContain('a-real-book-you-actually-read.jpg');
+  });
+
+  it('refuses to prune a folder it has never staged into', async () => {
+    // Pruning is the only thing in the build that removes data, and `--assets`
+    // is a user-supplied flag: `--assets ~/Pictures` must not empty
+    // `~/Pictures/covers`. The signal that a folder is one stacks stages into
+    // is a library.json left by a previous run, and that is written *after*
+    // covers are copied — so a first run into someone else's folder is safe.
+    const foreign = await mkdtemp(join(tmpdir(), 'stacks-not-ours-'));
+    try {
+      await mkdir(join(foreign, 'covers'), { recursive: true });
+      await writeFile(join(foreign, 'covers', 'holiday-photo.jpg'), 'someone else’s file');
+
+      const vault = new ObsidianAdapter(FIXTURE_VAULT);
+      await publish(await vault.listBooks(), vault, foreign, { isPublic: true });
+
+      expect(await readdir(join(foreign, 'covers'))).toContain('holiday-photo.jpg');
+    } finally {
+      await rm(foreign, { recursive: true, force: true });
+    }
   });
 
   it('references every staged cover from a book, and every book cover is staged', async () => {

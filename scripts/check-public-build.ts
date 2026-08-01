@@ -33,10 +33,18 @@ const FORBIDDEN: readonly { readonly what: string; readonly pattern: RegExp }[] 
 /** Binary assets are covers and the OG image; no text to leak. */
 const TEXTUAL = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt', '.map', '.xml']);
 
+/**
+ * `shell: true` because `pnpm` is a `.cmd` shim on Windows and will not spawn
+ * without one. Node deprecates passing an args *array* alongside it (DEP0190),
+ * since the two are concatenated rather than escaped — so the command is built
+ * as one string here. Every argument is a literal in this file; none comes from
+ * a vault, an argv or an environment variable.
+ */
 function run(command: string, args: readonly string[]): void {
-  const result = spawnSync(command, [...args], { cwd: ROOT, shell: true, stdio: 'inherit' });
+  const line = [command, ...args].join(' ');
+  const result = spawnSync(line, { cwd: ROOT, shell: true, stdio: 'inherit' });
   if (result.status !== 0) {
-    throw new Error(`${command} ${args.join(' ')} exited ${String(result.status)}`);
+    throw new Error(`${line} exited ${String(result.status)}`);
   }
 }
 
@@ -89,6 +97,42 @@ for (const file of walk(DIST)) {
       failures.push(`${relative(ROOT, file)} contains ${what}: ${JSON.stringify(hit[0].slice(0, 80))}`);
     }
   }
+}
+
+// 4. Every cover that shipped is one a shipped book points at.
+//
+// The grep above reads the *contents* of *text* files, so it opens no JPEG and
+// inspects no filename. That is precisely the hole the staging folder fell
+// through: build from a real vault, then run this gate — which stages the
+// fixture vault into the same folder — and the real covers used to survive,
+// each filename a slug of a real book title, while this reported the build
+// clean. `publish()` now prunes, and gates/public-build.test.ts asserts that.
+//
+// This asserts it again on `dist/`, because that is the folder that gets
+// deployed and it is assembled by `astro build`, not by `publish()`. A gate
+// that only checks the code path would stay green if a stale `dist/` survived
+// or Astro ever copied something extra — which is the same "test the artifact,
+// not the code" argument that put this gate on the built folder to begin with.
+const distCovers = join(DIST, 'covers');
+if (existsSync(distCovers)) {
+  const shipped = JSON.parse(readFileSync(join(DIST, 'library.json'), 'utf8')) as {
+    books: { cover?: string }[];
+  };
+  const referenced = new Set(
+    shipped.books
+      .map((book) => book.cover)
+      .filter((cover): cover is string => cover !== undefined)
+      .map((cover) => cover.replace(/^covers\//, '')),
+  );
+
+  const orphans = readdirSync(distCovers).filter((name) => !referenced.has(name));
+  if (orphans.length > 0) {
+    failures.push(
+      `${orphans.length} cover(s) in dist/covers that no book in library.json points at — ` +
+        `each filename is a book title: ${orphans.slice(0, 5).join(', ')}`,
+    );
+  }
+  console.log(`covers in dist: ${String(readdirSync(distCovers).length)}, all referenced`);
 }
 
 const ogImage = join(ASSETS, 'og.png');

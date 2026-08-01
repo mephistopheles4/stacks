@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { coverFileName, resolveCoverPath } from './covers/cover-path.ts';
@@ -106,11 +106,23 @@ async function withCoverAspects(library: Library, assetsDir: string): Promise<Li
 /**
  * Deletes staged covers this build does not reference.
  *
- * Files only, never directories, and only inside the covers folder the build
- * owns — `wanted` holds bare filenames from `coverFileName`, so nothing here
- * can be steered outside it by a note.
+ * This is the only thing in the build that removes data, so it is deliberate
+ * about *where* as well as *what*. `wanted` holds bare filenames from
+ * `coverFileName`, so no note can steer a deletion out of the folder — but the
+ * folder itself comes from `--assets`, which is a user-supplied flag, and
+ * `stacks build --public --assets ~/Pictures` must not empty `~/Pictures/covers`.
+ *
+ * The signal that a directory is a staging area this tool owns is that a
+ * previous run left its `library.json` in the parent. A folder without one is
+ * either brand new — in which case its covers folder was just created and holds
+ * nothing to prune — or it is somebody else's, and is left alone with a warning.
+ * Files only, never directories.
  */
-async function pruneCovers(outDir: string, wanted: ReadonlySet<string>): Promise<void> {
+async function pruneCovers(
+  assetsDir: string,
+  outDir: string,
+  wanted: ReadonlySet<string>,
+): Promise<void> {
   let entries;
   try {
     entries = await readdir(outDir, { withFileTypes: true });
@@ -118,9 +130,31 @@ async function pruneCovers(outDir: string, wanted: ReadonlySet<string>): Promise
     return; // Nothing staged yet.
   }
 
-  for (const entry of entries) {
-    if (!entry.isFile() || wanted.has(entry.name)) continue;
+  const files = entries.filter((entry) => entry.isFile());
+  if (files.length === 0) return;
+
+  const ours = await exists(join(assetsDir, 'library.json'));
+  if (!ours) {
+    console.warn(
+      `warning: ${outDir} holds ${String(files.length)} file(s) but ${assetsDir} has no ` +
+        'library.json from a previous build, so it does not look like a folder stacks stages ' +
+        'into. Leaving it alone — covers from this build were still written.',
+    );
+    return;
+  }
+
+  for (const entry of files) {
+    if (wanted.has(entry.name)) continue;
     await rm(join(outDir, entry.name), { force: true });
+  }
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -191,7 +225,7 @@ async function copyCovers(
 
   const outDir = join(assetsDir, 'covers');
   await mkdir(outDir, { recursive: true });
-  await pruneCovers(outDir, wanted);
+  await pruneCovers(assetsDir, outDir, wanted);
 
   if (wanted.size === 0) return { copied: 0, missing: [] };
 
