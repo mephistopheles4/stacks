@@ -42,8 +42,35 @@ const DIST = join(ROOT, 'packages', 'site', 'dist');
 /** Pinned: a deploy tool that silently changes under you is not a deploy tool. */
 const WRANGLER = 'wrangler@4';
 
+/**
+ * How long to give the edge before calling a stale page a problem.
+ *
+ * A deploy is not live the instant wrangler returns — Pages has to point the
+ * custom domain at the new deployment, and that took about a minute the once it
+ * was measured. Checking immediately and reporting failure would cry wolf on
+ * every single deploy, which is the fastest way to make a check ignored.
+ *
+ * Declared here rather than beside the function that uses it: `const` does not
+ * hoist, and `--check-only` calls that function from the middle of the file.
+ */
+const PROPAGATION_ATTEMPTS = 7;
+const PROPAGATION_WAIT_MS = 15_000;
+
+
 const dryRun = process.argv.includes('--dry-run');
 const skipGates = process.argv.includes('--skip-gates');
+
+/**
+ * `--check-only`: ask the live site which build it is serving, and stop.
+ *
+ * Builds nothing, uploads nothing, reads the stamp out of the `dist/` that was
+ * last published. It exists because the alternative advice — re-run the whole
+ * deploy — answers a question by doing the thing the question is about, which
+ * is both slow and a poor way to investigate a stale edge. It also makes this
+ * check runnable against a local server, which is the only way to watch it
+ * fail on purpose.
+ */
+const checkOnly = process.argv.includes('--check-only');
 
 function fail(message: string): never {
   console.error(`\nFAILED: ${message}`);
@@ -99,7 +126,9 @@ console.log(`deploying ${vault}`);
 console.log(`        → ${siteUrl}  (Cloudflare Pages project "${project}")`);
 
 // ── 1. The gates. These stage FIXTURE data — which is why they go first ─────
-if (skipGates) {
+if (checkOnly) {
+  console.log('--check-only: not building, not uploading');
+} else if (skipGates) {
   console.warn('\n! --skip-gates: publishing without running the contract');
 } else {
   run('pnpm', ['test']);
@@ -109,16 +138,18 @@ if (skipGates) {
 }
 
 // ── 2. The real build. Last, so it overwrites whatever the gates staged ─────
-run('pnpm', [
-  'stacks',
-  'build',
-  '--public',
-  '--vault',
-  `"${vault}"`,
-  '--assets',
-  'packages/site/public',
-]);
-run('pnpm', ['--filter', '@stacks/site', 'run', 'build'], { SITE_URL: siteUrl });
+if (!checkOnly) {
+  run('pnpm', [
+    'stacks',
+    'build',
+    '--public',
+    '--vault',
+    `"${vault}"`,
+    '--assets',
+    'packages/site/public',
+  ]);
+  run('pnpm', ['--filter', '@stacks/site', 'run', 'build'], { SITE_URL: siteUrl });
+}
 
 // ── 3. Pre-flight on the artifact that is actually about to be published ────
 interface ShippedBook {
@@ -180,7 +211,13 @@ if (!existsSync(join(DIST, '_headers'))) {
   problems.push('_headers missing — covers and og.png would be indexable on their own');
 }
 
-if (problems.length > 0) fail(`pre-flight found ${String(problems.length)} problem(s):\n- ${problems.join('\n- ')}`);
+// `--check-only` publishes nothing, so the publication checks do not apply to
+// it — and one of them cannot even hold, since it asserts the built og:image
+// matches the current SITE_URL, which is precisely what you change to point the
+// live check at a local server and watch it fail on purpose.
+if (problems.length > 0 && !checkOnly) {
+  fail(`pre-flight found ${String(problems.length)} problem(s):\n- ${problems.join('\n- ')}`);
+}
 
 /**
  * A name for this build, written into the page so the live site can be asked
@@ -202,22 +239,47 @@ if (problems.length > 0) fail(`pre-flight found ${String(problems.length)} probl
  * `library.json` covers the shelf. A stamp that matches means the origin is
  * serving the bytes that were just uploaded, and nothing weaker.
  */
-const stamp = createHash('sha256')
-  .update(readFileSync(join(DIST, 'index.html')))
-  .update(readFileSync(libraryPath))
-  .digest('hex')
-  .slice(0, 12);
+const stamp = checkOnly ? stampOfLastDeploy() : stampAndWrite();
 
-const stamped = html.replace('<head>', `<head><meta name="stacks:build" content="${stamp}">`);
-
-// A stamp that failed to land would make the check below fail forever, on every
-// deploy, for a reason nobody would guess — so the injection is asserted rather
-// than assumed. Astro emits a bare `<head>`; if that ever changes, this says so
-// here instead of at the far end.
-if (!stampOf(stamped)) {
-  fail('could not stamp index.html — no `<head>` to inject into, so the live check would be blind');
+/**
+ * Reads back the stamp the last deploy wrote, rather than computing a new one.
+ *
+ * `--check-only` asks "is the origin serving what I last published", so it must
+ * use *that* build's name. Re-hashing would produce a different one — the file
+ * on disk now includes the stamp the hash was taken before — and the check would
+ * report a mismatch against a site that is perfectly up to date.
+ */
+function stampOfLastDeploy(): string {
+  const found = stampOf(html);
+  if (found === undefined) {
+    fail(
+      'dist/index.html carries no build stamp, so there is nothing to compare.\n' +
+        '  It was built before stamping existed, or by something other than a deploy.\n' +
+        '  Run `pnpm deploy:site` and the check will have an answer.',
+    );
+  }
+  return found;
 }
-writeFileSync(join(DIST, 'index.html'), stamped);
+
+function stampAndWrite(): string {
+  const name = createHash('sha256')
+    .update(readFileSync(join(DIST, 'index.html')))
+    .update(readFileSync(libraryPath))
+    .digest('hex')
+    .slice(0, 12);
+
+  const marked = html.replace('<head>', `<head><meta name="stacks:build" content="${name}">`);
+
+  // A stamp that failed to land would make the check below fail forever, on
+  // every deploy, for a reason nobody would guess — so the injection is asserted
+  // rather than assumed. Astro emits a bare `<head>`; if that ever changes, this
+  // says so here instead of at the far end.
+  if (stampOf(marked) !== name) {
+    fail('could not stamp index.html — no `<head>` to inject into, so the live check would be blind');
+  }
+  writeFileSync(join(DIST, 'index.html'), marked);
+  return name;
+}
 
 /** The build a page says it is, or undefined if it does not say. */
 function stampOf(page: string): string | undefined {
@@ -225,11 +287,18 @@ function stampOf(page: string): string | undefined {
 }
 
 console.log(
-  `\npre-flight OK — ${String(library.books.length)} book(s), og:image absolute, no orphans` +
-    `\nbuild ${stamp}`,
+  checkOnly
+    ? `\nlast deployed build ${stamp}`
+    : `\npre-flight OK — ${String(library.books.length)} book(s), og:image absolute, no orphans` +
+      `\nbuild ${stamp}`,
 );
 
 // ── 4. Upload ───────────────────────────────────────────────────────────────
+if (checkOnly) {
+  await verifyLive(siteUrl.replace(/\/$/, ''));
+  process.exit(0);
+}
+
 if (dryRun) {
   console.log(`\n--dry-run: not uploading. ${DIST} is ready.`);
   console.log(`to publish: pnpm dlx ${WRANGLER} pages deploy packages/site/dist --project-name ${project}`);
@@ -262,17 +331,6 @@ console.log(`\ndeployed → ${siteUrl}`);
 // A warning rather than a failure, because the deploy genuinely did succeed and
 // the remedy is a cache purge nobody can perform from here.
 await verifyLive(siteUrl.replace(/\/$/, ''));
-
-/**
- * How long to give the edge before calling a stale page a problem.
- *
- * A deploy is not live the instant wrangler returns — Pages has to point the
- * custom domain at the new deployment, and that took about a minute the once it
- * was measured. Checking immediately and reporting failure would cry wolf on
- * every single deploy, which is the fastest way to make a check ignored.
- */
-const PROPAGATION_ATTEMPTS = 7;
-const PROPAGATION_WAIT_MS = 15_000;
 
 /**
  * Which build the origin is actually serving.
@@ -308,7 +366,8 @@ async function verifyBuildLive(origin: string): Promise<void> {
           '  The upload was fine. Either the edge has not caught up, or a cache is\n' +
           '  holding the previous index.html — which points at the previous bundle, so\n' +
           '  visitors get the old shelf however new the assets beside it are.\n' +
-          '    - Wait a minute and re-run `pnpm deploy:site --skip-gates`.\n' +
+          '    - Wait a minute and re-run `pnpm deploy:site --check-only`, which asks\n' +
+          '      again without rebuilding or re-uploading anything.\n' +
           '    - If it persists: dash.cloudflare.com → your zone → Caching → Configuration →\n' +
           '      Purge Everything, and set Browser Cache TTL to "Respect Existing Headers".',
       );
