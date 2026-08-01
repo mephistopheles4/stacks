@@ -115,10 +115,16 @@ is the same blindness that let G15's defect ship. The current substitute is a
 person with a phone and four query parameters, which is honest rather than good.
 
 The probes found it: **the shadow pass**, with antialiasing and pixel ratio 2
-both left on. Shadows stay on by default regardless — they are most of what makes
-the shelf read as furniture — so the bug is *diagnosed and still open*, pending a
-cheaper form of them that a phone can hold. Nothing here can tell whether any
-candidate survives; that still takes a person with a phone.
+both left on — and then found that *every* real-time configuration fails, down to
+one where nothing is drawn into the map. The shelf now paints its shadows instead
+of rasterising them, which removes the dependency rather than tuning it.
+
+Note what none of that was: a gate. Five rounds of diagnosis happened on a phone,
+by hand, because `smoke:render` screenshots a desktop GL context with gigabytes of
+headroom and cannot fail the way a phone does. **"The shelf survives on real
+hardware" is still protected by nothing**, and the substitute is still a person
+with a device — now with `?debug`, `?books=N` and the renderer switches to make
+that person's time cheap, which is the most this repo can honestly offer.
 
 The gate asserts two different things, because two different things go wrong: no
 single cover exceeds `MAX_COVER_EDGE` (a property of the staging code), and the
