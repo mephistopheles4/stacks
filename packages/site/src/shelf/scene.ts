@@ -387,9 +387,20 @@ export function mountShelf(
     renderer.render(scene, camera);
   };
 
+  let shaderFailures = 0;
+
   renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader): void => {
+    shaderFailures += 1;
     const report = describeLinkFailure(gl, program, vertexShader, fragmentShader);
-    shaderErrors.push(...report);
+
+    // Only the first report is kept. Halting stops the *next* frame; three
+    // returns from this callback and carries on walking the render list, so one
+    // frame can fail several programs — and the panel is serialised into
+    // `localStorage` once a second for as long as the page lives. An uncapped
+    // list is a growing write on a device that is already in trouble, which is
+    // the last thing a black box should do. The console still gets every one.
+    if (shaderFailures === 1) shaderErrors.push(...report);
+    else if (shaderFailures === 2) shaderErrors.push('(more programs failed after it — see the console)');
 
     // Three's own message lives in the `else` branch of the test that calls this
     // handler, so installing one *silences* it. Anyone reading a console — which
@@ -516,6 +527,15 @@ export function mountShelf(
       // working out which is which.
       scene.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return;
+
+        // Geometries too — but never the two shared unit shapes, which outlive
+        // any one mount. Every book is a scaled `UNIT_BOX` or `UNIT_PLANE`, so a
+        // blanket dispose here would free them for the whole module and leave a
+        // second shelf drawing nothing at all.
+        if (object.geometry !== UNIT_BOX && object.geometry !== UNIT_PLANE) {
+          object.geometry.dispose();
+        }
+
         for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
           if (
             material instanceof THREE.MeshStandardMaterial ||
