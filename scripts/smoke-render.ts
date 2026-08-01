@@ -123,13 +123,14 @@ async function main(): Promise<void> {
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       const bookCount = await page.evaluate('window.__shelf.bookCount');
+      const caseOverflow = await page.evaluate('window.__shelf.caseOverflow');
       const stats = (await page.evaluate(readCanvasStats)) as Stats;
 
       writeFileSync(OUTPUT, await page.screenshot({ type: 'png' }));
 
       const cardOpened = await clickABook(page);
 
-      report({ bookCount: Number(bookCount), stats, errors, cardOpened });
+      report({ bookCount: Number(bookCount), caseOverflow: Number(caseOverflow), stats, errors, cardOpened });
     } finally {
       await browser.close();
     }
@@ -226,15 +227,17 @@ async function clickABook(page: Page): Promise<CardOpened | undefined> {
 
 function report(result: {
   bookCount: number;
+  caseOverflow: number;
   stats: Stats;
   errors: string[];
   cardOpened: CardOpened | undefined;
 }): void {
-  const { bookCount, stats, errors, cardOpened } = result;
+  const { bookCount, caseOverflow, stats, errors, cardOpened } = result;
   const failures: string[] = [];
 
   console.log(`canvas            ${stats.size}`);
   console.log(`books rendered    ${bookCount}`);
+  console.log(`case overflow     ${caseOverflow.toFixed(4)}`);
   console.log(`distinct colours  ${stats.distinctColours}`);
   console.log(`non-background    ${stats.nonBackgroundPct.toFixed(1)}%`);
   console.log(`click opens card  ${cardOpened?.title ?? 'NO'}`);
@@ -252,6 +255,27 @@ function report(result: {
     if (cardOpened.overflow.image > 2) {
       failures.push(`the cover image overflows its card by ${cardOpened.overflow.image}px`);
     }
+  }
+
+  // Books inside their own case.
+  //
+  // The owner found this twice by eye on a phone: a leaning book's bottom corner
+  // driven into the face-out book beside it, and a row's first book driven into
+  // the case's own side. The layout cursor advances by a book's *thickness*, and
+  // a book rotated about its centre is wider than that, so nothing in the
+  // arithmetic could notice. This measures the real world bounds instead.
+  //
+  // Tolerance, and where it comes from. A book's printed cover and spine float
+  // `SKIN` (0.0012) above their boards, so every book's true bounds exceed the
+  // thickness the layout advances by, by exactly that — 0.03cm at shelf scale,
+  // and not a collision. The bar sits above that and far below a real breach:
+  // removing the lean clearance was measured at 0.0203, and the theoretical
+  // worst is 0.03, a whole thin book.
+  if (caseOverflow > 0.005) {
+    failures.push(
+      `a book breaks out through the side of the case by ${caseOverflow.toFixed(4)} ` +
+        '(about ' + (caseOverflow * 24).toFixed(1) + 'cm at shelf scale)',
+    );
   }
 
   const expected = expectedBookCount();

@@ -76,6 +76,24 @@ fail first.
 | **G11** | the two build modes differ only where documented | `gates/build-modes.test.ts` | ✅ |
 | **G12** | `shelf_order` semantics | `gates/shelf-order.test.ts` | ✅ characterized |
 | **G15** | what ships fits in a phone's graphics memory | `gates/cover-budget.test.ts` | ✅ |
+| **G16** | every book stays inside its own case | `pnpm smoke:render` | ✅ |
+
+**G16 observed red at 0.0203** — about 0.5cm at shelf scale — by deleting the
+clearance and re-running. It exists because the owner found the same defect twice
+by eye, on a phone: a leaning book's bottom corner driven into the face-out book
+beside it, and a row's first book driven into the case's own side.
+
+Nothing in the layout could have caught it. The cursor advances by a book's
+*thickness*, and a book rotated about its centre is wider than that — so
+re-checking the arithmetic would only have repeated its assumption. G16 measures
+`Box3.setFromObject` against the case's real inner faces instead, which is the
+same argument that put `gate:public` on the built folder rather than on
+`library.json`: measure the artifact, not the code that produced it.
+
+Its tolerance is 0.005 and the residual is 0.0012, which is not slop — it is
+exactly `SKIN`, the hair by which a book's printed cover and spine float above
+their boards. Named in the gate, so the next person does not read it as a
+coincidence.
 
 **G10 observed red** on `enrich.ts`, which shadowed `node:path`'s `basename`
 with a `/`-only split, so `..\..\x.png` traversed on Windows — the platform this

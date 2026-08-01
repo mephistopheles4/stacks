@@ -114,6 +114,17 @@ export interface ShelfHandle {
   readonly gpu: string | undefined;
   /** The renderer settings this mount actually ran with. See `RendererOverrides`. */
   readonly profile: string;
+  /**
+   * How far the worst-placed book sticks out through the side of the case, in
+   * world units. Zero means every book is inside its shelf.
+   *
+   * Measured from real world bounds rather than from the layout arithmetic, so
+   * it catches a rotation the arithmetic forgot — which is exactly how it went
+   * wrong: a leaning book's corners swing out past the footprint the cursor
+   * advanced by, and both the case side and the book beside it were being
+   * driven through.
+   */
+  readonly caseOverflow: number;
   /** Live renderer counters. See `./diagnostics.ts`. */
   stats(): ShelfStats;
   /**
@@ -360,6 +371,7 @@ export function mountShelf(
   return {
     bookCount: placed.length,
     gpu: describeGpu(renderer),
+    caseOverflow: measureCaseOverflow(scene, placed),
     // Reported back so a screenshot of the panel says which settings were live.
     // A bisect whose result cannot be tied to a configuration is just an anecdote.
     profile:
@@ -447,6 +459,30 @@ function describeGpu(renderer: THREE.WebGLRenderer): string | undefined {
 }
 
 /**
+ * The worst amount by which any book breaches the inside of the case.
+ *
+ * `Box3.setFromObject` walks the real geometry through the real world matrices,
+ * so a lean, a rotation, or a part positioned by hand all count. That is the
+ * point: the layout cursor advances by a book's *thickness*, and a book rotated
+ * about its centre is wider than that — measuring the arithmetic again would
+ * only repeat its assumption.
+ */
+function measureCaseOverflow(scene: THREE.Scene, placed: readonly PlacedBook[]): number {
+  scene.updateMatrixWorld(true);
+
+  const inner = SHELF.width / 2;
+  const box = new THREE.Box3();
+  let worst = 0;
+
+  for (const { group } of placed) {
+    box.setFromObject(group);
+    worst = Math.max(worst, -inner - box.min.x, box.max.x - inner);
+  }
+
+  return Math.max(0, worst);
+}
+
+/**
  * Which book a mesh is.
  *
  * A side table rather than Three's `userData`, which is typed `Record<string,
@@ -488,8 +524,19 @@ function placeBooks(
      * produced the wedge-shaped gaps: neighbours a fraction of a degree apart,
      * touching nowhere.
      */
-    let runLean = leanFor(rowIndex, index, row.books[0]?.book.id ?? '');
+    let runLean = Math.min(
+      leanFor(rowIndex, index, row.books[0]?.book.id ?? ''),
+      leanThatFits(row),
+    );
     let startsRun = true;
+
+    /**
+     * The lean of whatever is immediately to the left, and how far it swings.
+     *
+     * The case's own side starts it off: vertical, and swinging not at all.
+     */
+    let leftLean = 0;
+    let leftSway = 0;
 
     // Where each book meets the plank, gathered as the row is laid out — the
     // painted shadow is drawn from exactly the positions the books were placed
@@ -522,8 +569,26 @@ function placeBooks(
       // the case's own side holds it.
       if (gap > 0) {
         startsRun = true;
-        runLean = leanFor(rowIndex, index, entry.book.id);
+        runLean = Math.min(leanFor(rowIndex, index, entry.book.id), leanThatFits(row));
       }
+
+      // A face-out book stands square; a shelved one leans unless it opens a run
+      // with nothing on its left.
+      const lean = entry.faceOut ? 0 : startsRun && index > 0 ? 0 : runLean;
+      const sway = swayOf(entry.height, lean);
+
+      // Clearance wherever the angle changes, and only there.
+      //
+      // Rotating a book about its centre swings its top-left and bottom-right
+      // corners out past its own footprint by `sway`. Two neighbours at the same
+      // angle stay parallel and never notice, which is why a run packs flush —
+      // but where the angle changes, that swing lands inside whatever is beside
+      // it. Both reported collisions are this: a leaning book's bottom corner
+      // driven into the face-out book on its right, and the first book of a row
+      // driven into the case's own side.
+      if (lean !== leftLean) cursor += Math.max(sway, leftSway);
+      leftLean = lean;
+      leftSway = sway;
 
       if (entry.faceOut) {
         // Turned to show its cover, leaning back against the books beside it.
@@ -549,10 +614,6 @@ function placeBooks(
         // its own right — whatever follows it may lean on it.
         startsRun = false;
       } else {
-        // The first book of a run after a gap has nothing on its left, so it
-        // stands upright and holds up the ones that follow. Everything else in
-        // the run shares the run's angle, which is what lets them touch.
-        const lean = startsRun && index > 0 ? 0 : runLean;
         startsRun = false;
 
         book.rotation.z = lean;
@@ -615,6 +676,58 @@ const MAX_LEAN = 0.062;
  * no gap is visible at the scale a spine is drawn.
  */
 const TOUCHING = 0.002;
+
+/**
+ * How far a leaning book's corners swing out past its own footprint.
+ *
+ * Rotating about the centre pushes the top-left corner left and the bottom-right
+ * corner right, each by half the height times the sine of the angle — about
+ * 0.03, which is a thin book's whole thickness. Neighbours at the same angle
+ * stay parallel and never collide; wherever the angle *changes*, this is what
+ * has to be reserved.
+ */
+function swayOf(height: number, lean: number): number {
+  return (height / 2) * Math.sin(Math.abs(lean));
+}
+
+/**
+ * The steepest lean whose clearances still fit inside the shelf.
+ *
+ * `toRows` packs a row without knowing anything about leaning, so every
+ * clearance added afterwards is width the packer never budgeted for. A row with
+ * several face-out books changes angle at each one, and at ~0.03 a time that is
+ * enough to push the last book through the right-hand upright — a worse defect
+ * than the one being fixed, and one that would only show on a full shelf.
+ *
+ * So the lean is capped to what the row's own slack can pay for. Rows with room
+ * are unaffected; a tightly packed row leans less, which is also what a tightly
+ * packed shelf does.
+ */
+function leanThatFits(row: ShelfRow): number {
+  let used = 0;
+  let changes = 0;
+  let tallest = 0;
+  // The case's side is vertical, so a leaning first book is already a change.
+  let leftLeans = false;
+
+  for (const entry of row.books) {
+    used += entry.gapBefore ?? 0;
+    used += entry.faceOut
+      ? entry.coverWidth + SHELF.bookGap * 2
+      : entry.thickness + TOUCHING;
+    tallest = Math.max(tallest, entry.height);
+
+    const leans = !entry.faceOut;
+    if (leans !== leftLeans) changes += 1;
+    leftLeans = leans;
+  }
+
+  if (changes === 0 || tallest === 0) return MAX_LEAN;
+
+  const slack = Math.max(0, SHELF.width - used);
+  // Inverting swayOf: the largest angle whose per-change swing the slack covers.
+  return Math.asin(Math.min(1, (2 * (slack / changes)) / tallest));
+}
 
 /**
  * How far a shelved book leans to the left.
