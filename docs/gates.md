@@ -67,7 +67,7 @@ commit that added them.
 
 ## Defect gates
 
-Three rows that exist because a specific defect got through. Each was written to
+Four rows that exist because a specific defect got through. Each was written to
 fail first.
 
 | Row | Rule | Gate | Status |
@@ -75,11 +75,32 @@ fail first.
 | **G10** | one cover-path rule, one implementation | `gates/cover-path.test.ts` + `covers/cover-path.test.ts` | ✅ |
 | **G11** | the two build modes differ only where documented | `gates/build-modes.test.ts` | ✅ |
 | **G12** | `shelf_order` semantics | `gates/shelf-order.test.ts` | ✅ characterized |
+| **G15** | what ships fits in a phone's graphics memory | `gates/cover-budget.test.ts` | ✅ |
 
 **G10 observed red** on `enrich.ts`, which shadowed `node:path`'s `basename`
 with a `/`-only split, so `..\..\x.png` traversed on Windows — the platform this
 project runs on — under a comment saying it could not. The structural half then
 found a *third* copy of the rule in `obsidian-adapter.ts`'s wikilink embed.
+
+**G15 is the first defect found by a user rather than by a gate**, and it is the
+one that took the site down. The shelf loaded on a phone, drew, and then the tab
+died; reloading gave a blank page. Thirty-one covers shipped at whatever size the
+provider supplied — 8.4 MB on the wire, which looks entirely reasonable, and
+**314 MB once decoded into GPU textures**, which is not. Every one is uploaded
+before the first frame.
+
+Nothing in the suite could have seen it. `gate:public` reads the *contents* of
+*text* files, so it opens no JPEG; `smoke:render` screenshots a desktop GL
+context with gigabytes of headroom, which is exactly why the bug was invisible
+here and fatal on a phone. The size of what shipped was measured by nothing.
+
+The gate asserts two different things, because two different things go wrong: no
+single cover exceeds `MAX_COVER_EDGE` (a property of the staging code), and the
+whole shelf fits `TEXTURE_BUDGET_BYTES` (a property of the *library*, which grows
+as books are added). The second is expected to go red one day on a build that
+changed nothing — on a machine, rather than on someone's phone. **When it does,
+the answer is to stop uploading every cover at once, not to raise the number.** A
+budget that gets raised whenever it fails is a comment.
 
 **G11 was reframed after checking its premise.** A review read the missing
 `coverAspect` on a local build as a rendering bug; tracing `dev-watch.ts` shows

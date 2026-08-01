@@ -31,15 +31,36 @@ declare global {
   }
 }
 
-export async function boot(canvas: HTMLCanvasElement, card: HTMLElement): Promise<ShelfHandle> {
+export async function boot(
+  canvas: HTMLCanvasElement,
+  card: HTMLElement,
+): Promise<ShelfHandle | undefined> {
   const books = await loadLibrary();
 
-  const handle = mountShelf(canvas, books, {
-    onSelect: (book) => {
-      if (book === undefined) hideCard(card);
-      else showCard(card, book);
-    },
-  });
+  let handle: ShelfHandle;
+  try {
+    handle = mountShelf(canvas, books, {
+      onSelect: (book) => {
+        if (book === undefined) hideCard(card);
+        else showCard(card, book);
+      },
+      onContextLost: () => {
+        showNotice(canvas, LOST_MESSAGE);
+      },
+      onContextRestored: () => {
+        clearNotice(canvas);
+      },
+    });
+  } catch {
+    // `new WebGLRenderer` throws when the browser will not hand out a context —
+    // no WebGL at all, or, more often here, a browser that has just killed this
+    // page's renderer and is refusing to try again. The caller does nothing with
+    // the rejection (the .astro script may not, by the "no logic in .astro"
+    // rule), so an unhandled throw here is a blank page with no explanation.
+    // That is the exact thing the user saw on reload.
+    showNotice(canvas, UNAVAILABLE_MESSAGE);
+    return undefined;
+  }
 
   window.__shelf = {
     bookCount: handle.bookCount,
@@ -53,6 +74,43 @@ export async function boot(canvas: HTMLCanvasElement, card: HTMLElement): Promis
 
   watchForRebuilds();
   return handle;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Saying so, rather than showing an empty room.
+ *
+ * A 3D page that fails renders as nothing at all: no error, no broken image, no
+ * clue that anything was ever meant to be there. Both of these replace that with
+ * a sentence, because a visitor who knows the shelf is missing can reload, and a
+ * visitor looking at a black rectangle cannot tell it apart from the design.
+ */
+const NOTICE_CLASS = 'shelf-notice';
+
+const LOST_MESSAGE =
+  'The shelf ran out of graphics memory and the browser reset it. Reload to bring it back.';
+
+const UNAVAILABLE_MESSAGE =
+  "This browser wouldn't give the page a 3D canvas, so the shelf can't be drawn. Reloading usually fixes it.";
+
+function showNotice(canvas: HTMLCanvasElement, message: string): void {
+  const host = canvas.parentElement;
+  if (host === null) return;
+
+  clearNotice(canvas);
+
+  const notice = document.createElement('p');
+  notice.className = NOTICE_CLASS;
+  // textContent, not innerHTML — same rule as the card, and these strings are
+  // fixed anyway.
+  notice.textContent = message;
+  notice.setAttribute('role', 'status');
+  host.append(notice);
+}
+
+function clearNotice(canvas: HTMLCanvasElement): void {
+  canvas.parentElement?.querySelector(`.${NOTICE_CLASS}`)?.remove();
 }
 
 /** How often the dev page checks whether the vault was rebuilt. */
