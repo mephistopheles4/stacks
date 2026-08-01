@@ -106,6 +106,10 @@ export async function enrichBook(
             : await cacheCover(candidates, book.title, vault);
         if (cover !== undefined) {
           changes['cover'] = cover.relativePath;
+          // Written alongside the cover, never on its own: the two describe the
+          // same bytes, and a `cover_source` next to a cover it did not come
+          // from would be worse than none at all.
+          changes['cover_source'] = cover.source;
           filled.push('cover');
           if (book.spineColor === undefined && cover.spineColor !== undefined) {
             changes['spine_color'] = cover.spineColor;

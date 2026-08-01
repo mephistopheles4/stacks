@@ -1,3 +1,4 @@
+import type { CoverSource } from './covers/cover-source.ts';
 import type { BookRecord } from './types.ts';
 
 /**
@@ -19,6 +20,8 @@ export interface LibraryBook {
   readonly finished?: string;
   readonly rating?: number;
   readonly cover?: string;
+  /** Which provider the cover came from; see `covers/cover-source.ts`. */
+  readonly coverSource?: CoverSource;
   readonly spineColor?: string;
   readonly pages?: number;
   readonly faceOut?: boolean;
@@ -77,6 +80,7 @@ function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
     ...pick('finished', record.finished),
     ...pick('rating', record.rating),
     ...pick('cover', record.cover),
+    ...pick('coverSource', record.coverSource),
     ...pick('spineColor', record.spineColor),
     ...pick('pages', record.pages),
     ...pick('faceOut', record.faceOut),

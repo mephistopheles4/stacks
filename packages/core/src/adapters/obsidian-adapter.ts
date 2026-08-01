@@ -182,6 +182,7 @@ function renderNote(book: BookInput): string {
   if (book.finished !== undefined) frontmatter['finished'] = book.finished;
   if (book.rating !== undefined) frontmatter['rating'] = book.rating;
   if (book.cover !== undefined) frontmatter['cover'] = book.cover;
+  if (book.coverSource !== undefined) frontmatter['cover_source'] = book.coverSource;
   if (book.spineColor !== undefined) frontmatter['spine_color'] = book.spineColor;
   if (book.pages !== undefined) frontmatter['pages'] = book.pages;
   if (book.faceOut !== undefined) frontmatter['face_out'] = book.faceOut;

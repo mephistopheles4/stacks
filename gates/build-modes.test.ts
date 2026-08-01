@@ -36,7 +36,15 @@ import { REPO_ROOT } from './repo.ts';
 const INTENDED_DIFFERENCES = {
   sourcePath: 'a vault path; stripped from public builds (invariant 2)',
   coverAspect: 'measured off the staged covers, which only a public build has',
+  cover: 'rewritten to covers/<filename> so a public build is always same-origin',
 } as const;
+
+/**
+ * A public build also drops whole books: wishlist ones. Kept separate from the
+ * key list above because it is a difference in the *set*, not in a field, and
+ * the two are checked differently.
+ */
+const PUBLIC_DROPS_STATUS = 'wishlist';
 
 const FIXTURE_VAULT = join(REPO_ROOT, 'fixtures', 'vault');
 
@@ -61,19 +69,29 @@ async function bothModes(): Promise<{
 }
 
 describe('G11 — build modes', () => {
-  it('produces the same books in the same order either way', async () => {
+  it('ships every shelved book, in the same order, dropping only wishlist ones', async () => {
     const { local, publicBuild } = await bothModes();
 
-    expect(local.length).toBeGreaterThan(0);
-    expect(publicBuild.length).toBe(local.length);
-    expect(publicBuild.map((book) => book['id'])).toEqual(local.map((book) => book['id']));
+    const shelvedLocally = local.filter((book) => book['status'] !== PUBLIC_DROPS_STATUS);
+    expect(shelvedLocally.length).toBeGreaterThan(0);
+    expect(local.length, 'fixture vault should contain a wishlist book').toBeGreaterThan(
+      shelvedLocally.length,
+    );
+
+    expect(publicBuild.map((book) => book['id'])).toEqual(shelvedLocally.map((book) => book['id']));
+  });
+
+  it('never ships a book you do not own', async () => {
+    const { publicBuild } = await bothModes();
+    expect(publicBuild.every((book) => book['status'] !== PUBLIC_DROPS_STATUS)).toBe(true);
   });
 
   it('differs only on the keys the difference is documented for', async () => {
     const { local, publicBuild } = await bothModes();
     const allowed = new Set(Object.keys(INTENDED_DIFFERENCES));
+    const shelvedLocally = local.filter((book) => book['status'] !== PUBLIC_DROPS_STATUS);
 
-    for (const [index, localBook] of local.entries()) {
+    for (const [index, localBook] of shelvedLocally.entries()) {
       const publicBook = publicBuild[index];
       expect(publicBook).toBeDefined();
       if (publicBook === undefined) continue;
@@ -87,6 +105,18 @@ describe('G11 — build modes', () => {
             `documented difference (${[...allowed].join(', ')})`,
         ).toEqual(localBook[key]);
       }
+    }
+  });
+
+  it('points every public cover at the copy staged beside library.json', async () => {
+    const { publicBuild } = await bothModes();
+    const withCover = publicBuild.filter((book) => book['cover'] !== undefined);
+
+    expect(withCover.length).toBeGreaterThan(0);
+    for (const book of withCover) {
+      // Not protocol-relative, not absolute, not a walk — an <img> src built
+      // from this can only ever hit the site's own origin.
+      expect(String(book['cover'])).toMatch(/^covers\/[^/\\]+$/);
     }
   });
 

@@ -87,7 +87,13 @@ describe('publish', () => {
 
     const result = await publish(withGhost, vault, out, { isPublic: true });
     expect(result.coversMissing).toEqual(['not-here.png']);
-    expect(result.library.bookCount).toBe(withGhost.length);
+
+    // Every shelved book still ships — a cover the vault lost costs the book
+    // its picture, not its place. Wishlist books are excluded from a public
+    // build (you do not own them), so count against the shelved input rather
+    // than against everything handed in.
+    const shelved = withGhost.filter((book) => book.status !== 'wishlist');
+    expect(result.library.bookCount).toBe(shelved.length);
   });
 
   it('refuses to let a cover path climb out of the covers directory', async () => {

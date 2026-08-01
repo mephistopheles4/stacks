@@ -41,10 +41,11 @@ yet a gate."*
 | Row | Rule | Source | Gate | Status |
 | --- | --- | --- | --- | --- |
 | **G1** | All vault access goes through the adapter | invariant 4 | `gates/adapter-boundary.test.ts` — 13-entry allowlist, each justified, each reverse-asserted | ✅ |
-| **G2** | Note bodies are private; a public build is coherent | invariant 2 | four assertions — see below | ⬜ |
+| **G2** | Note bodies are private; a public build is coherent | invariant 2 | `gates/public-build.test.ts` — four assertions, see below | ✅ |
 | **G3** | Never crash on a bad note | invariant 3 | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind | ✅ |
 | **G4** | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
-| **G5** | The vault is the source of truth | invariant 1 | `library.json` untracked and gitignored | ⬜ |
+| **G5** | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored | ✅ |
+| **G13** | No third-party material is committed, ever | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside the generated fixture covers | ✅ |
 
 ## Contract seams → gates
 
@@ -102,6 +103,16 @@ an array, so a two-author note parses as *authorless*, which is exactly what
 sends `stacks enrich` to look an author up and overwrite the list — silent data
 loss in a hand-edited note, which is the thing invariant 5 exists to prevent.
 
+**G2 was red on the orphan-cover assertion**, which is the one that mattered:
+the staging folder was additive, so a real-vault build followed by either gate —
+both stage the *fixture* vault into the same folder — left every real cover in
+place under a filename slugged from a real book title, while `gate:public`
+reported the build clean. It reads text-file contents; these are JPEGs. Proven
+by disabling the prune and watching the gate fail. Two further leaks closed with
+it: wishlist books shipped in `library.json` though nothing displayed them, and
+a `cover:` could be protocol-relative or absolute `http`, so a hand-edited note
+could have a visitor's browser fetch from a third party.
+
 **G1, G3, G6 and G7 were green on arrival** and were each proven red-capable by
 perturbation: an `fs` import added to `scene.ts`, a stale entry added to the
 allowlist, the missing-title branch downgraded to `not-a-book`, an inline
@@ -146,9 +157,17 @@ page — and book covers are not among the content types its terms enumerate at
 all. So Google and Apple stay as metadata and lookup fallbacks; their art is
 hotlinked or omitted from a public build rather than re-hosted.
 
-This needs cover **provenance** to be recorded at fetch time, which it is not
-today — `cache-cover.ts` writes `<slug>.<ext>` and forgets where the bytes came
-from. That is a prerequisite of G2, not an extra.
+**Provenance is now recorded** — `cover_source` in the frontmatter contract,
+derived from the URL that was actually downloaded rather than from whichever
+provider answered the metadata lookup, because those routinely differ and it is
+the bytes whose terms apply.
+
+**The policy is not yet enforced, and that is deliberate.** Every cover cached
+before `cover_source` existed has no provenance, and the owner's real vault is
+all of them. Dropping unattributed covers from a public build would empty the
+shelf. So: record going forward, decide the backfill, then enforce. Until then a
+public build ships every cover it has — see the open item in
+[`progress.md`](./progress.md).
 
 ## Not gated, deliberately
 

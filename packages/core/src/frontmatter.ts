@@ -1,4 +1,5 @@
 import { parse as parseYaml } from 'yaml';
+import { isCoverSource, type CoverSource } from './covers/cover-source.ts';
 import {
   DEFAULT_BOOK_STATUS,
   isBookStatus,
@@ -51,6 +52,7 @@ export const FRONTMATTER_CONTRACT = {
   finished: { field: 'finished', required: false, sample: '2026-03-04' },
   rating: { field: 'rating', required: false, sample: '4' },
   cover: { field: 'cover', required: false, sample: 'covers/sample.png' },
+  cover_source: { field: 'coverSource', required: false, sample: 'open-library' },
   spine_color: { field: 'spineColor', required: false, sample: '"#2f6d7a"' },
   pages: { field: 'pages', required: false, sample: '321' },
   face_out: { field: 'faceOut', required: false, sample: 'true' },
@@ -114,6 +116,11 @@ export function parseNote(source: string, sourcePath: string): ParsedNote {
       ...optional('finished', asDate(fields['finished'])),
       ...optional('rating', asRating(fields['rating'])),
       ...optional('cover', asString(fields['cover'])),
+      // An unrecognised value is dropped rather than kept: a public build makes
+      // provider-dependent decisions off this key, and a typo must not read as
+      // a permission. Absent then means "nobody recorded it", which is the same
+      // thing every cover cached before this key existed says.
+      ...optional('coverSource', asCoverSource(fields['cover_source'])),
       ...optional('spineColor', asHexColour(fields['spine_color'])),
       ...optional('pages', asPositiveInt(fields['pages'])),
       ...optional('faceOut', asBoolean(fields['face_out'])),
@@ -139,6 +146,11 @@ function asString(value: unknown): string | undefined {
   // that constantly.
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   return undefined;
+}
+
+function asCoverSource(value: unknown): CoverSource | undefined {
+  const raw = asString(value)?.toLowerCase();
+  return isCoverSource(raw) ? raw : undefined;
 }
 
 /** An unrecognised status is not worth discarding a book over — fall back. */

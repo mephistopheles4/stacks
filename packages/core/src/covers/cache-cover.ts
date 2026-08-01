@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { coverSourceFor, type CoverSource } from './cover-source.ts';
 import { spineColour } from './dominant-colour.ts';
 import type { VaultAdapter } from '../adapters/vault-adapter.ts';
 
@@ -8,6 +9,14 @@ export interface CachedCover {
   /** Vault-relative, as it goes into the note's `cover:` key. */
   readonly relativePath: string;
   readonly spineColor?: string;
+  /**
+   * Which provider these bytes came from, taken from the URL that actually won.
+   *
+   * Not from whichever provider answered the metadata lookup: the metadata layer
+   * completes one provider's record from another's and consults Apple purely for
+   * artwork, so the two routinely differ — and it is the bytes whose terms apply.
+   */
+  readonly source: CoverSource;
 }
 
 /**
@@ -83,6 +92,7 @@ export async function cacheCover(
   return {
     relativePath: `covers/${filename}`,
     ...(colour === undefined ? {} : { spineColor: colour }),
+    source: coverSourceFor(winner.url),
   };
 }
 
