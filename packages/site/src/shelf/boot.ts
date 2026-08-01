@@ -1,4 +1,5 @@
 import type { Library, LibraryBook } from '@stacks/core';
+import { mountDiagnostics } from './diagnostics.ts';
 import { mountShelf, type ShelfHandle } from './scene.ts';
 
 /**
@@ -35,9 +36,10 @@ export async function boot(
   canvas: HTMLCanvasElement,
   card: HTMLElement,
 ): Promise<ShelfHandle | undefined> {
-  const books = await loadLibrary();
+  const params = new URLSearchParams(window.location.search);
+  const books = limitBooks(await loadLibrary(), params);
 
-  let handle: ShelfHandle;
+  let handle: ShelfHandle | undefined;
   try {
     handle = mountShelf(canvas, books, {
       onSelect: (book) => {
@@ -59,8 +61,19 @@ export async function boot(
     // rule), so an unhandled throw here is a blank page with no explanation.
     // That is the exact thing the user saw on reload.
     showNotice(canvas, UNAVAILABLE_MESSAGE);
-    return undefined;
   }
+
+  // Mounted whether or not the shelf came up: a browser that refused a context
+  // is exactly the state worth having a record of, and the record is the only
+  // thing that survives the tab being killed.
+  if (params.has('debug') && canvas.parentElement !== null) {
+    mountDiagnostics(canvas.parentElement, {
+      books: books.length,
+      ...(handle === undefined ? {} : { handle }),
+    });
+  }
+
+  if (handle === undefined) return undefined;
 
   window.__shelf = {
     bookCount: handle.bookCount,
@@ -77,6 +90,25 @@ export async function boot(
 }
 
 /* -------------------------------------------------------------------------- */
+
+/**
+ * `?books=N` — render only the first N, so a crash can be bisected on the device
+ * that crashes.
+ *
+ * The one measurement nobody can take from a desktop. If five books kill a phone
+ * then the covers were never the story and the fixed cost is: the multisampled
+ * framebuffer, the 2048² shadow map, the pixel ratio. If five survive and
+ * twenty-five do not, the cost is cumulative and that is the threshold. Either
+ * answer halves the search in a single reload, with no cable.
+ *
+ * Ignored unless it parses to a positive whole number, so a typo shows the whole
+ * shelf rather than an empty case that looks like a different bug.
+ */
+function limitBooks(books: readonly LibraryBook[], params: URLSearchParams): LibraryBook[] {
+  const requested = Number(params.get('books'));
+  if (!Number.isInteger(requested) || requested <= 0) return [...books];
+  return books.slice(0, requested);
+}
 
 /**
  * Saying so, rather than showing an empty room.

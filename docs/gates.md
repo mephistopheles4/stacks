@@ -94,6 +94,15 @@ Nothing in the suite could have seen it. `gate:public` reads the *contents* of
 context with gigabytes of headroom, which is exactly why the bug was invisible
 here and fatal on a phone. The size of what shipped was measured by nothing.
 
+**G15 is green and the crash is not fixed.** The owner has since reproduced it on
+multiple phones in private tabs, with the compressed covers confirmed arriving.
+That does not make the gate wrong — shipping 314 MB of texture was a real defect
+and this holds it fixed — but it does mean the row protects *a* property of the
+build rather than *the* cause of the crash, and reading a green G15 as "phones
+are fine" is exactly the mistake this scoreboard exists to prevent. The cause is
+still unmeasured; see `docs/progress.md`. G15 also counts only cover files, so
+the ~22 MB of per-book spine `CanvasTexture`s is outside every budget here.
+
 The gate asserts two different things, because two different things go wrong: no
 single cover exceeds `MAX_COVER_EDGE` (a property of the staging code), and the
 whole shelf fits `TEXTURE_BUDGET_BYTES` (a property of the *library*, which grows

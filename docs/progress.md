@@ -15,7 +15,7 @@ Update it in the **same commit** as the gate it describes.
 | | |
 | --- | --- |
 | **Last green gate** | G15 — cover budget, after the live site crashed phones |
-| **Now working on** | nothing; the shelf is deployed and the mobile crash is fixed |
+| **Now working on** | the mobile crash, which is **not** fixed — see below |
 | **Blocked on** | nothing |
 | **Deployed** | https://stacks.aymandiab.com — Cloudflare Pages, `pnpm deploy:site` |
 | **Running against** | the owner's real vault, 31 books, all with covers |
@@ -177,6 +177,39 @@ would never have been seen failing.
 Everything else about the deploy is unchanged and was re-verified live: 31/31
 covers 200, no private or wishlist books, `noindex` served as both a meta tag and
 an `X-Robots-Tag` header, `og:image` absolute.
+
+### It still crashes — the covers were not the cause
+
+**Necessary, not sufficient.** The owner has since reproduced the crash on
+multiple phones, in private tabs, having confirmed in desktop devtools that the
+covers now arrive compressed and under 2 MB. The 314 MB was real and shipping it
+was wrong; it was not what kills the tab.
+
+So the cause is unmeasured, and the temptation is to keep tuning the things that
+were deferred — pixel ratio, antialiasing, the 2048² shadow map — without
+knowing whether any of them matters. Two instruments were built instead, both
+behind a query parameter and both inert for an ordinary visitor:
+
+- **`?debug`** mounts a black box (`packages/site/src/shelf/diagnostics.ts`). A
+  renderer OOM kill destroys the process, so there is no exception, nothing
+  reaches `onerror`, and a USB debugging session disconnects at exactly the
+  moment the data matters — a console can show a clean log and then nothing. The
+  black box writes a snapshot to `localStorage` every second and shows it back on
+  the next load. `pagehide` fires on an ordinary navigation and does *not* fire
+  when the process is killed, so **a stored record with no `clean` flag is a
+  record of a crash**, and its counters are the last thing the page knew.
+- **`?books=N`** renders only the first N. If five books kill a phone, the fixed
+  cost is the problem and the library size is irrelevant; if five survive and
+  twenty-five do not, the cost is cumulative and N is the threshold. One reload
+  on the device that actually crashes, no cable, and either answer halves the
+  search.
+
+Both paths were observed working, in both directions: a normal navigation
+records `ended cleanly`, and a record without the flag renders as
+`PREVIOUS SESSION DIED`.
+
+Next session: get the numbers first. Do not tune anything until the bisect says
+which half of the problem it is in.
 
 ## Notes to the next session
 
