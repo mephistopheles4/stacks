@@ -8,3 +8,11 @@ packages:
 allowBuilds:
   esbuild: true
   sharp: true
+
+# pnpm 11 defaults this to `install`, which makes `pnpm test` try to reinstall
+# node_modules first — and that aborts outright with
+# ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY wherever there is no TTY to confirm
+# the purge, which is every agent shell and every CI runner. `warn` keeps the
+# staleness diagnostic and stops it from blocking the command you asked for.
+# CI is unaffected either way: it installs from scratch against a frozen lockfile.
+verifyDepsBeforeRun: warn

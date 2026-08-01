@@ -18,12 +18,28 @@ export interface Positionable {
 
 export function compareShelfPosition(a: Positionable, b: Positionable): number {
   /**
-   * An explicit `shelf_order` wins over everything, including the rule that
-   * floats a book you are reading to the front — someone who numbered a shelf
-   * meant it.
+   * A book you are reading comes first, ahead of everything including a
+   * numbered one.
    *
-   * Ordered books come first, so pinning three favourites does not require
-   * numbering the other twenty-eight.
+   * `shelf_order` used to win over this, on the reasoning that someone who
+   * numbered a shelf meant it. The trouble is `stacks order --renumber`, which
+   * numbers *every* shelved book: after one run there were no unnumbered books
+   * left, so "unset means reading first, then newest finished" described a
+   * state the vault could no longer be in, and the next book you picked up
+   * sorted behind all thirty-one. Pinning a favourite should not cost you the
+   * ability to see what you are reading.
+   *
+   * The shelf is generated, not curated (brief, goal 3); `shelf_order` arranges
+   * the generated part rather than overriding the one rule that reflects what
+   * you are doing right now.
+   */
+  if (a.status === 'reading' && b.status !== 'reading') return -1;
+  if (b.status === 'reading' && a.status !== 'reading') return 1;
+
+  /**
+   * Then an explicit `shelf_order`, lowest first. Numbered books come before
+   * unnumbered ones, so pinning three favourites does not require numbering the
+   * other twenty-eight.
    */
   const left = a.shelfOrder;
   const right = b.shelfOrder;
@@ -32,9 +48,6 @@ export function compareShelfPosition(a: Positionable, b: Positionable): number {
     if (right === undefined) return -1;
     if (left !== right) return left - right;
   }
-
-  if (a.status === 'reading' && b.status !== 'reading') return -1;
-  if (b.status === 'reading' && a.status !== 'reading') return 1;
 
   const leftDate = a.finished ?? a.started ?? '';
   const rightDate = b.finished ?? b.started ?? '';

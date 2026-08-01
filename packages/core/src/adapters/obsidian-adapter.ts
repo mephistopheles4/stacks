@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { stringify as stringifyYaml } from 'yaml';
+import { coverFileName } from '../covers/cover-path.ts';
 import { FRONTMATTER_BLOCK, parseNote } from '../frontmatter.ts';
 import { isProbablySameBook, normaliseTitleAuthor, toObsidianTag } from '../identity.ts';
 import type { BookInput, BookRecord } from '../types.ts';
@@ -181,6 +182,7 @@ function renderNote(book: BookInput): string {
   if (book.finished !== undefined) frontmatter['finished'] = book.finished;
   if (book.rating !== undefined) frontmatter['rating'] = book.rating;
   if (book.cover !== undefined) frontmatter['cover'] = book.cover;
+  if (book.coverSource !== undefined) frontmatter['cover_source'] = book.coverSource;
   if (book.spineColor !== undefined) frontmatter['spine_color'] = book.spineColor;
   if (book.pages !== undefined) frontmatter['pages'] = book.pages;
   if (book.faceOut !== undefined) frontmatter['face_out'] = book.faceOut;
@@ -205,8 +207,10 @@ function renderNote(book: BookInput): string {
   //
   // This lives in the body, and the body is never parsed back (invariant 2) —
   // the embed is for the human reading the note, not for the build.
-  const embed =
-    book.cover === undefined ? '' : `![[${book.cover.split('/').pop() ?? book.cover}]]\n\n`;
+  // Same filename rule as the builder uses, from the same place: a `cover:`
+  // written with backslashes would otherwise embed as `![[covers\a.png]]` and
+  // resolve to nothing.
+  const embed = book.cover === undefined ? '' : `![[${coverFileName(book.cover)}]]\n\n`;
 
   return `---\n${yaml}\n---\n\n${embed}## Notes\n\n`;
 }
@@ -242,8 +246,18 @@ async function isDirectory(path: string): Promise<boolean> {
 /**
  * Replaces, inserts or removes one scalar key inside a frontmatter block.
  *
- * A key whose current value is a block — `tags:` followed by a `- ` list — is
- * left exactly as it is. Rewriting its first line would orphan the rest.
+ * A key whose current value is not a scalar is left exactly as it is — that is
+ * the documented "scalars only" rule, and it has two shapes:
+ *
+ *   - a block, `tags:` followed by a `- ` list. Rewriting the first line would
+ *     orphan the rest and leave the file unparseable.
+ *   - a flow collection, `tags: [a, b]` or `author: [X, Y]`, which fits on one
+ *     line and so used to be replaced wholesale. Found by
+ *     gates/hand-edited-notes.test.ts, and reachable rather than theoretical:
+ *     `asString` returns undefined for an array, so a note carrying two authors
+ *     inline parses as *authorless*, which is precisely what sends
+ *     `stacks enrich` off to look an author up and write it over the list.
+ *     A list is a list whichever way YAML writes it.
  */
 function applyChange(
   block: string,
@@ -255,10 +269,10 @@ function applyChange(
   const index = lines.findIndex((line) => line.startsWith(`${key}:`));
 
   if (index >= 0) {
-    const isBlockValue =
-      lines[index]?.slice(key.length + 1).trim() === '' &&
-      /^[ \t]*-\s/.test(lines[index + 1] ?? '');
-    if (isBlockValue) return block;
+    const current = lines[index]?.slice(key.length + 1).trim() ?? '';
+    const isBlockValue = current === '' && /^[ \t]*-\s/.test(lines[index + 1] ?? '');
+    const isFlowValue = current.startsWith('[') || current.startsWith('{');
+    if (isBlockValue || isFlowValue) return block;
 
     if (value === undefined) lines.splice(index, 1);
     else lines[index] = `${key}: ${serialise(value)}`;

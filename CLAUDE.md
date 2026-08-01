@@ -7,9 +7,12 @@ A local-first reading tracker where the notes vault IS the database. A CLI (`sta
 1. `docs/progress.md` — where the project actually is. Read this first, always.
 2. `docs/plan.md` — the approved execution plan, rules of engagement, fixture spec.
 3. `docs/library-brief.md` — full product spec. Read before starting any phase.
-4. `docs/blockers.md` — only if it exists; records gates that defeated 3 approaches.
+4. `docs/gates.md` — the invariant scoreboard: which rule each gate protects, and
+   which rules are still protected by nothing.
+5. `docs/blockers.md` — only if it exists; records gates that defeated 3 approaches.
 
-Update `docs/progress.md` in the same commit as the gate it describes.
+Update `docs/progress.md` in the same commit as the gate it describes, and
+`docs/gates.md` in the same commit as the gate it scores.
 
 **When compacting this conversation, always preserve:** the current phase and
 which gates are green, the exact gate commands and their last output, the two
@@ -52,11 +55,19 @@ interface VaultAdapter {
 - Do NOT build a second adapter. Do NOT add adapter config plumbing beyond a single constructor arg (vault path). The interface exists so a Logseq/Anytype adapter is possible later, not to be a framework.
 
 ## Frontmatter contract (do not change without updating this file)
-Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `spine_color` (hex), `pages`, `face_out` (bool), `tags`.
+Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `cover_source` (open-library|google-books|apple-books|unknown), `spine_color` (hex), `pages`, `face_out` (bool), `tags`, `shelf_order` (number).
+
+This list is the contract, and `gates/frontmatter-contract.test.ts` holds it to
+the parser in both directions. The paragraphs below are commentary — adding a
+key there and not here is exactly the drift that gate exists to catch.
 
 `face_out` forces the book cover-forward on the shelf, or forces it not to. Unset means decide from `status` — a book you're reading stands face-out on its own.
 
-`shelf_order` places a book by hand, lowest first. Books carrying one come before every book without one, so a few favourites can be pinned without numbering the whole shelf. Unset means the default order: reading first, then newest finished.
+`shelf_order` places a book by hand, lowest first. Books carrying one come before every book without one, so a few favourites can be pinned without numbering the whole shelf. Unset means the default order: newest finished first.
+
+`cover_source` records which provider a cover's bytes came from, taken from the URL that was actually downloaded. The three providers permit different things, so a public build cannot treat them alike — see `packages/core/src/covers/cover-source.ts`. **Absent and `unknown` are different**: absent means nobody looked (every cover cached before this key existed), `unknown` means somebody looked and did not recognise the host. An unrecognised value is dropped at parse time rather than kept, because a typo must not read as a permission.
+
+**A book you are reading comes ahead of all of that**, numbered or not. `stacks order --renumber` numbers every shelved book, so any rule that only applied to unnumbered books stopped applying at all after one run — and the next book you picked up sorted behind every pin. Pinned by `gates/shelf-order.test.ts`.
 
 ## Tech decisions (made — don't relitigate)
 - **Vanilla Three.js, not react-three-fiber.** Plain Astro island, no React on the page. Use InstancedMesh for book boxes, per-instance cover textures via a texture atlas or lazy per-book planes — measure first, don't optimize blind.
@@ -70,7 +81,8 @@ Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|r
   a `<script>` that imports and calls a `.ts` module — nothing more. `.astro`
   files are NOT typechecked (`astro check` cannot run under TypeScript 7 yet),
   so anything with a type lives in a `.ts` file, where `pnpm build` checks it.
-- Metadata: Open Library first, Google Books fallback. Cache all API responses in `.cache/` so tests and rebuilds don't re-hit APIs.
+- Metadata: **three providers, in this order** — Open Library first, Google Books as the fallback (needs `GOOGLE_BOOKS_API_KEY`; unauthenticated requests share one exhausted quota and 429 every time), and Apple Books consulted *only* for cover art, because its artwork is ~800x1200 against Google's ~128px. Cache all API responses in `.cache/` so tests and rebuilds don't re-hit APIs.
+- **Which provider answered and which provider's bytes you kept are different questions.** The metadata layer completes one provider's record from another's, so a book's `source` need not be where its cover came from. `cover_source` is derived from the URL actually downloaded — it decides what a public build may re-host, and the three providers' terms differ.
 - TypeScript strict everywhere. Vitest. pnpm workspaces.
 
 ## Phase gates — a phase is DONE only when its gate passes
@@ -89,12 +101,33 @@ Every phase: `pnpm test && pnpm build` green, plus:
 - Do not add dependencies without noting why in the Decision Log. Prefer zero-dep solutions for small utilities.
 
 ## Commands
+
+Held to reality by `gates/commands.test.ts` — both lists below, in both
+directions. Adding a script or a CLI command without documenting it here is a
+red build.
+
 ```
 pnpm install
-pnpm test                # all workspaces
-pnpm stacks <cmd>        # run CLI from repo
+pnpm typecheck           # tsc --noEmit across every .ts in the repo
+pnpm test                # vitest: packages/**/src and gates/
+pnpm build               # typecheck, then astro build
 pnpm dev                 # site dev server
-pnpm smoke:render        # headless shelf screenshot gate
+pnpm dev:watch           # site + rebuild on every vault change
+pnpm stacks <cmd>        # run the CLI from source
+pnpm fixtures:50         # regenerate the 50-book fixture vault
+pnpm smoke:render        # phase 2 gate: headless shelf screenshot
+pnpm gate:public         # phase 3 gate: the public build leaks nothing
+```
+
+CLI commands — `pnpm stacks <cmd>`:
+
+```
+add       fetch metadata and a cover, then write a note into the vault
+build     parse the vault into library.json   (--public, --watch)
+status    quick stats: books this year, in progress, covers still missing
+enrich    fill missing metadata on notes that already exist, never overwriting
+order     show the shelf order, or renumber it with gaps   (--renumber)
+import    import a library export into the vault   (audible)
 ```
 
 ## Decision Log
@@ -159,3 +192,21 @@ pnpm smoke:render        # headless shelf screenshot gate
 - 2026-07-31: The Audible test fixture is **invented**, mirroring Libation's shape. The real export contains the owner's email address and cannot be committed.
 
 - 2026-07-31: **Deferred to the Phase 2 aesthetics review:** real covers often yield desaturated spine colours (a live `stacks add` gave `#d6d6d5` for a genuinely pale cover). The extractor is not wrong, but a shelf of grey spines may read badly. Do not tune this blind — decide it against a screenshot.
+
+### Phase A — CI and the invariant scoreboard
+- 2026-07-31: **The invariants get gates, and the gates get a scoreboard** — [`docs/gates.md`](docs/gates.md). A pre-publication review found six documented rules had quietly stopped being true with nothing going red, including a Decision Log entry below that is false in one of its two call paths. The rule this project already had — *"a gate never observed failing is not yet a gate"* — now applies to the invariants themselves, not just to phase gates.
+- 2026-07-31: **One required check, named `gates`, aggregating a `suite` matrix.** Requiring `suite (22)` and `suite (24)` by name would mean editing the branch ruleset every time the matrix changes, and a required check that never reports blocks the pull request forever. The aggregator keeps one stable name. For the same reason the workflow is **never path-filtered**: a skipped required workflow reports nothing, which is indistinguishable from a check that has not run yet.
+- 2026-07-31: **CI runs Node 22 and 24.** `engines` claims `>=22` while development happens on 24, so testing only 24 would have left that claim as one more thing nothing checks — the exact failure this phase exists to stop.
+- 2026-07-31: **`verifyDepsBeforeRun: warn`, not `false`.** pnpm 11 defaults it to `install`, which makes `pnpm test` try to reinstall first and then abort with `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY` in any shell without a TTY — every agent shell, every CI runner. `false` would have silenced the staleness diagnostic too; `warn` keeps it. It reported a genuine out-of-sync tree the moment it was switched on.
+- 2026-07-31: **`pull_request`, never `pull_request_target`.** Fork pull requests must not see repository secrets. Nothing in the gate needs one: tests inject a fixture-backed `HttpGet` that throws on an unmapped URL, so no live API call is reachable from CI.
+- 2026-07-31: **A book you are reading outranks `shelf_order`.** Owner's call, resolving a collision between two documented rules. `shelf_order` used to win over everything, on the reasoning that someone who numbered a shelf meant it — but `order --renumber` numbers *every* shelved book, so after one run no unnumbered book existed, "unset means reading first" described an unreachable state, and the next book picked up sorted behind all thirty-one. Pinning a favourite should not cost you sight of what you are reading. The shelf is generated, not curated (brief, goal 3): `shelf_order` arranges the generated part rather than overriding the one rule that tracks what you are doing now.
+- 2026-07-31: **`updateBook` leaves a flow collection alone, not just a block list.** The "scalars only" rule checked for `tags:` followed by an indented `- ` list, so `author: [Marisol Vane, Tomas Ek]` on one line was replaced wholesale. Reachable rather than theoretical: `asString` returns undefined for an array, so a two-author note parses as *authorless*, which is exactly what sends `stacks enrich` to look an author up and write it over the list. Found by `gates/hand-edited-notes.test.ts`, which was red on arrival. A list is a list whichever way YAML writes it.
+- 2026-07-31: **`gates/` holds rules about the shape of the tree**, separate from each package's own tests, because they belong to no package — they read CLAUDE.md, `.env.example` and the source tree itself. In the typecheck include, so gate code is checked like everything else.
+- 2026-07-31: **Every gate asserts its own extraction found something.** A gate built on a regex reports an empty set when the format it parses changes, and every "each of these is documented" check passes trivially over an empty set. `expectFound` in `gates/repo.ts` is the guard, and it is why a reworded CLAUDE.md section fails loudly instead of going quietly green.
+- 2026-07-31: **Structural allowlists must fail when they go stale.** `gates/adapter-boundary.test.ts` and `gates/cover-path.test.ts` both reverse-assert: every allowlisted file must still exist *and* still need its exemption. Without that a list only ever grows, and the easiest way to fix a red sweep becomes adding a line to it.
+- 2026-07-31: **`.astro` `<script>` blocks may only find elements, guard their types, and hand off.** Imports, `getElementById` lookups, an `if` guard, a call — capped at 6 non-import statements, with `function`, `class`, `=>`, `for`, `while`, `switch` and `try` banned. `instanceof` is allowed, because narrowing `HTMLElement | null` is the one thing an untypechecked file has to do for itself.
+- 2026-07-31: **The site's `import type` bar is statement-level.** Inline `import { type X }` fails the gate on purpose: under bundler resolution the import statement survives type erasure, so it still drags the module into the browser bundle — which is the whole failure being prevented.
+- 2026-07-31: **A public build ships exactly its own covers, and only books you own.** `copyCovers` was additive, which was a leak rather than untidiness: build from the real vault, then run either gate — both stage the *fixture* vault into the same folder — and `library.json` was replaced while thirty-three real covers stayed behind, each filename a slug of a real title, with the gate reporting the build clean because it greps text files and those are JPEGs. The staged folder is now exactly what the build references. That also settles the filename question generally: a cover named after a book in the index beside it reveals nothing the index does not. Wishlist books are filtered too — they were serialised into `library.json` although nothing displayed them — and every `cover:` is rewritten to `covers/<filename>`, so a hand-edited `//elsewhere.example/x.png` cannot make a visitor's browser fetch from a third party.
+- 2026-07-31: **`cover_source` is derived from the URL downloaded, not from the provider that answered the lookup.** The metadata layer completes one provider's record from another's and consults Apple purely for artwork, so the two routinely differ — and it is the bytes whose terms apply. Parsed through an allowlist: an unrecognised value is dropped rather than kept, because a typo must not read as a permission.
+- 2026-07-31: **Provenance is recorded now; the provider policy is not enforced yet.** Every cover cached before `cover_source` existed has none, and the owner's real vault is all of them, so dropping unattributed covers would empty the shelf. Record going forward, decide the backfill, then enforce.
+- 2026-07-31: **Cover art: never in the repo, Open Library only in a public build.** The binding constraint is the providers' terms, not copyright in the abstract. Open Library's docs contemplate download and public display, ask that you not crawl, and appreciate a link back. Google's API terms bar permanent copies and public display of API content and require "powered by Google" plus a prominent per-result link. Apple conditions promotional content on placement beside a store badge linking to a purchase page — and book covers are not among the content types its terms enumerate at all. So Google and Apple stay metadata and lookup fallbacks; their art is hotlinked or omitted from `--public`. This needs cover **provenance** recorded at fetch time, which `cache-cover.ts` does not do today.

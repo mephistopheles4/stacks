@@ -1,0 +1,113 @@
+# The merge gate.
+#
+# `gates` is the single required status check on main. Two rules keep it honest:
+#
+#   1. It is never path-filtered. A required workflow that gets skipped reports
+#      nothing at all, and a required check that never reports blocks the pull
+#      request forever. Every push runs the whole thing.
+#   2. `gates` is an aggregator over the `suite` matrix, so the required check
+#      keeps one stable name however many Node versions the matrix grows to.
+#      Requiring `suite (22)` and `suite (24)` by name would mean editing the
+#      branch ruleset every time that list changes.
+#
+# `pull_request`, never `pull_request_target`: fork pull requests must not see
+# repository secrets. Nothing here needs one — the tests inject a fixture-backed
+# HttpGet that throws on an unmapped URL, so no live API call is possible.
+
+name: gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gates-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  suite:
+    # package.json declares `engines: node >=22`. Running only the version the
+    # owner happens to have installed would leave that floor as another
+    # documented claim nothing checks.
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+
+    name: suite (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # Actions are pinned to commit SHAs, not tags. A tag is mutable: whoever
+      # controls the action repository can repoint v7 at anything, and it would
+      # run here with the workflow's token. The comment carries the version so
+      # the pin stays readable; Dependabot bumps both together.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Must precede setup-node: its `cache: pnpm` needs pnpm already on PATH.
+      # No `version` input — the root package.json `packageManager` field pins
+      # it, and passing both is the documented way to get a mismatch error.
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      # CI=true is set by Actions, which makes --frozen-lockfile the default;
+      # passing it explicitly means the gate fails on an out-of-sync lockfile
+      # rather than quietly resolving a different tree.
+      - run: pnpm install --frozen-lockfile
+
+      - name: typecheck
+        run: pnpm run typecheck
+
+      - name: test
+        run: pnpm test
+
+      - name: build
+        run: pnpm build
+
+      # Phase 3 gate: the public build carries no note bodies. Stages its own
+      # fixture vault, so it does not depend on step order.
+      - name: gate:public
+        run: pnpm gate:public
+
+      # Phase 2 gate: the shelf actually renders. puppeteer-core drives the
+      # Chrome stable that ubuntu-latest ships at /usr/bin/google-chrome, which
+      # is already in the script's candidate list — no Chromium download.
+      # Also stages its own 50-book fixture vault.
+      - name: smoke:render
+        run: pnpm smoke:render
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: shelf-node-${{ matrix.node }}
+          path: artifacts/shelf.png
+          # `warn`, not `error`: this step runs with `if: always()`, so when the
+          # render gate fails there is no screenshot by definition, and erroring
+          # here would report a second failure for the same cause and bury the
+          # real one. The gate itself is what fails if the shelf will not draw.
+          if-no-files-found: warn
+
+  # The required status check. Named `gates` and nothing else.
+  gates:
+    name: gates
+    needs: suite
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every matrix leg to have passed
+        # `needs.suite.result` is 'success' only when every matrix leg
+        # succeeded; a skipped or cancelled matrix must fail the gate, never
+        # pass it by omission.
+        run: |
+          echo "suite result: ${{ needs.suite.result }}"
+          test "${{ needs.suite.result }}" = "success"

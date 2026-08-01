@@ -8,6 +8,8 @@
  * because hand-edited notes are first-class (invariant 5).
  */
 
+import type { CoverSource } from './covers/cover-source.ts';
+
 export const BOOK_STATUSES = ['reading', 'read', 'abandoned', 'wishlist'] as const;
 
 export type BookStatus = (typeof BOOK_STATUSES)[number];
@@ -49,6 +51,17 @@ export interface BookRecord {
   /** Vault-relative path to the cover image. Absent means: draw a fallback spine. */
   readonly cover?: string;
 
+  /**
+   * Which provider the cover's bytes came from.
+   *
+   * Recorded because the three providers permit different things — see
+   * `covers/cover-source.ts`. Absent on any cover cached before this key
+   * existed, which is why `unknown` and absent have to stay distinguishable:
+   * absent means nobody looked, `unknown` means somebody looked and did not
+   * recognise the host.
+   */
+  readonly coverSource?: CoverSource;
+
   /** Hex colour, auto-extracted from the cover at add time, overridable by hand. */
   readonly spineColor?: string;
 
@@ -87,6 +100,7 @@ export interface BookInput {
   readonly finished?: string;
   readonly rating?: number;
   readonly cover?: string;
+  readonly coverSource?: CoverSource;
   readonly spineColor?: string;
   readonly pages?: number;
   readonly faceOut?: boolean;

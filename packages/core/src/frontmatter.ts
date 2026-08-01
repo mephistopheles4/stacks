@@ -1,4 +1,5 @@
 import { parse as parseYaml } from 'yaml';
+import { isCoverSource, type CoverSource } from './covers/cover-source.ts';
 import {
   DEFAULT_BOOK_STATUS,
   isBookStatus,
@@ -22,6 +23,45 @@ export type ParsedNote =
   | { readonly kind: 'book'; readonly record: BookRecord }
   | { readonly kind: 'not-a-book' }
   | { readonly kind: 'invalid'; readonly reason: string };
+
+/**
+ * The frontmatter contract, as data.
+ *
+ * `parseNote` below reads each key by hand, which is the clearest way to write
+ * it but leaves the contract implicit — there was no list anywhere to check
+ * CLAUDE.md against, and `shelf_order` was duly added to the parser and to the
+ * prose without ever reaching the documented key enumeration.
+ *
+ * This is that list. It is deliberately *not* what the parser iterates: a
+ * constant the parser ignores would just be a third place to drift. Instead
+ * gates/frontmatter-contract.test.ts asserts three things at once — that this
+ * matches CLAUDE.md, that every key here is genuinely read into the field named
+ * here, and that nothing else is.
+ *
+ * `field: null` means the key is consumed during parsing without becoming a
+ * field of its own: `type` is the discriminator that decides whether a note is
+ * a book at all.
+ */
+export const FRONTMATTER_CONTRACT = {
+  type: { field: null, required: true, sample: 'book' },
+  title: { field: 'title', required: true, sample: 'A Sample Title' },
+  author: { field: 'author', required: false, sample: 'A Sample Author' },
+  isbn: { field: 'isbn', required: false, sample: '9781000000016' },
+  status: { field: 'status', required: false, sample: 'reading' },
+  started: { field: 'started', required: false, sample: '2026-01-02' },
+  finished: { field: 'finished', required: false, sample: '2026-03-04' },
+  rating: { field: 'rating', required: false, sample: '4' },
+  cover: { field: 'cover', required: false, sample: 'covers/sample.png' },
+  cover_source: { field: 'coverSource', required: false, sample: 'open-library' },
+  spine_color: { field: 'spineColor', required: false, sample: '"#2f6d7a"' },
+  pages: { field: 'pages', required: false, sample: '321' },
+  face_out: { field: 'faceOut', required: false, sample: 'true' },
+  tags: { field: 'tags', required: false, sample: '[sample]' },
+  shelf_order: { field: 'shelfOrder', required: false, sample: '20' },
+} as const satisfies Record<
+  string,
+  { readonly field: keyof BookRecord | null; readonly required: boolean; readonly sample: string }
+>;
 
 /**
  * Matches the leading `---` block and **nothing else**.
@@ -76,6 +116,11 @@ export function parseNote(source: string, sourcePath: string): ParsedNote {
       ...optional('finished', asDate(fields['finished'])),
       ...optional('rating', asRating(fields['rating'])),
       ...optional('cover', asString(fields['cover'])),
+      // An unrecognised value is dropped rather than kept: a public build makes
+      // provider-dependent decisions off this key, and a typo must not read as
+      // a permission. Absent then means "nobody recorded it", which is the same
+      // thing every cover cached before this key existed says.
+      ...optional('coverSource', asCoverSource(fields['cover_source'])),
       ...optional('spineColor', asHexColour(fields['spine_color'])),
       ...optional('pages', asPositiveInt(fields['pages'])),
       ...optional('faceOut', asBoolean(fields['face_out'])),
@@ -101,6 +146,11 @@ function asString(value: unknown): string | undefined {
   // that constantly.
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   return undefined;
+}
+
+function asCoverSource(value: unknown): CoverSource | undefined {
+  const raw = asString(value)?.toLowerCase();
+  return isCoverSource(raw) ? raw : undefined;
 }
 
 /** An unrecognised status is not worth discarding a book over — fall back. */

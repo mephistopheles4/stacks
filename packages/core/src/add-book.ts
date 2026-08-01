@@ -94,6 +94,7 @@ export async function addBook(
     ...maybe('isbn', metadata.isbn === undefined ? undefined : normaliseIsbn(metadata.isbn)),
     ...maybe('pages', metadata.pages),
     ...maybe('cover', cover?.relativePath),
+    ...maybe('coverSource', cover?.source),
     ...maybe('spineColor', cover?.spineColor),
   };
 

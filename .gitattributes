@@ -1,0 +1,9 @@
+# Line endings are normalised in the repo and checked out native.
+# CI is Linux, development is Windows, and every commit was warning about it.
+* text=auto eol=lf
+
+# Generated fixture covers: binary, never diffed or merged.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary

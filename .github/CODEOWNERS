@@ -1,0 +1,21 @@
+# Ownership, for review routing rather than permission.
+#
+# Everything is owned by the maintainer; the entries below exist so that a
+# change to a load-bearing file is visible as such in the pull request, not
+# because anyone else can approve it.
+
+* @mephistopheles4
+
+# The gate definitions and the invariants they enforce. A diff here changes what
+# the project is allowed to do, not just what it does — including the allowlists
+# inside gates/, where every added line is a permission granted.
+/gates/                     @mephistopheles4
+/docs/gates.md              @mephistopheles4
+/CLAUDE.md                  @mephistopheles4
+
+# The merge gate itself, and anything that runs with the workflow token.
+/.github/workflows/         @mephistopheles4
+/.github/dependabot.yml     @mephistopheles4
+
+# The rule that keeps somebody else's copyrighted material out of the repo.
+/fixtures/README.md         @mephistopheles4

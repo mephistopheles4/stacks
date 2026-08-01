@@ -97,7 +97,7 @@ export async function importBooks(
 
       const path = await vault.writeBook({
         ...input,
-        ...(cover === undefined ? {} : { cover: cover.relativePath }),
+        ...(cover === undefined ? {} : { cover: cover.relativePath, coverSource: cover.source }),
         ...(cover?.spineColor === undefined ? {} : { spineColor: cover.spineColor }),
       });
 

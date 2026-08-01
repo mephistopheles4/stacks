@@ -1,0 +1,41 @@
+version: 2
+
+updates:
+  # Actions are pinned to commit SHAs in the workflow, which is what stops a
+  # mutable tag being repointed under us — but a pin is only as good as the
+  # thing that moves it. Dependabot rewrites the SHA and the version comment
+  # together, and the PR goes through the same `gates` check as anything else.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'ci'
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # One PR per week at most. This is a personal project with one maintainer
+    # and a review budget to match; a flood of dependency PRs is how a merge
+    # gate becomes something you click through without reading.
+    open-pull-requests-limit: 3
+    groups:
+      # Patch and minor bumps for the toolchain travel together — they either
+      # all pass the gates or the group is worth looking at as a whole.
+      dev-tooling:
+        patterns:
+          - 'typescript'
+          - 'vitest'
+          - 'tsx'
+          - '@types/*'
+          - 'puppeteer-core'
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # three.js ships breaking changes in minor releases and the shelf reaches
+      # deep into its API. Worth doing deliberately, against a screenshot, which
+      # is not what a dependency PR is for.
+      - dependency-name: 'three'
+        update-types: ['version-update:semver-minor']
