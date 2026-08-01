@@ -79,10 +79,34 @@ interface PlacedBook {
   readonly frontZ: number;
 }
 
+/**
+ * What the renderer is actually holding, read live.
+ *
+ * Counts rather than bytes, because that is what `renderer.info` knows — and a
+ * count is the more useful number anyway: the expected texture count is
+ * predictable from the library, so a total that climbs past it is a leak, which
+ * no byte estimate would tell you apart from a big shelf.
+ */
+export interface ShelfStats {
+  readonly textures: number;
+  readonly geometries: number;
+  readonly programs: number;
+  readonly calls: number;
+  readonly triangles: number;
+  /** The drawing buffer, in device pixels — CSS size times the pixel ratio. */
+  readonly bufferWidth: number;
+  readonly bufferHeight: number;
+  readonly pixelRatio: number;
+}
+
 export interface ShelfHandle {
   dispose(): void;
   /** Books currently on the shelf, in draw order. Used by the smoke gate. */
   readonly bookCount: number;
+  /** The GPU, when the browser is willing to name it. */
+  readonly gpu: string | undefined;
+  /** Live renderer counters. See `./diagnostics.ts`. */
+  stats(): ShelfStats;
   /**
    * Where a given book currently sits on screen, in CSS pixels.
    *
@@ -230,6 +254,21 @@ export function mountShelf(
 
   return {
     bookCount: placed.length,
+    gpu: describeGpu(renderer),
+
+    stats(): ShelfStats {
+      const { memory, render, programs } = renderer.info;
+      return {
+        textures: memory.textures,
+        geometries: memory.geometries,
+        programs: programs?.length ?? 0,
+        calls: render.calls,
+        triangles: render.triangles,
+        bufferWidth: renderer.domElement.width,
+        bufferHeight: renderer.domElement.height,
+        pixelRatio: renderer.getPixelRatio(),
+      };
+    },
 
     projectBook(index: number): { x: number; y: number } | undefined {
       const book = placed[index];
@@ -272,6 +311,29 @@ export function mountShelf(
 }
 
 /* -------------------------------------------------------------------------- */
+
+/**
+ * The GPU's own name for itself, when the browser will say.
+ *
+ * `WEBGL_debug_renderer_info` is absent or redacted in some browsers on privacy
+ * grounds — it is a strong fingerprinting signal — so this is best-effort. Worth
+ * asking for: "Adreno 750" versus "SwiftShader" is the difference between a
+ * memory problem and a machine with no GPU acceleration at all.
+ */
+function describeGpu(renderer: THREE.WebGLRenderer): string | undefined {
+  try {
+    const gl = renderer.getContext();
+    const extension = gl.getExtension('WEBGL_debug_renderer_info') as {
+      readonly UNMASKED_RENDERER_WEBGL: number;
+    } | null;
+    if (extension === null) return undefined;
+
+    const name: unknown = gl.getParameter(extension.UNMASKED_RENDERER_WEBGL);
+    return typeof name === 'string' ? name : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Which book a mesh is.
