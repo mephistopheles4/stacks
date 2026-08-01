@@ -170,6 +170,28 @@ shelf. So: record going forward, decide the backfill, then enforce. Until then a
 public build ships every cover it has — see the open item in
 [`progress.md`](./progress.md).
 
+## CI-only gates
+
+Not every gate can be a spec. These run in the workflow and have no local
+equivalent, so they are listed here rather than in the tables above.
+
+| Gate | What it protects | Where |
+| --- | --- | --- |
+| `pnpm audit --audit-level=high` | a dependency with a known high or critical advisory reaching `main` | `audit` job in `gates.yml` |
+
+The audit is the one gate whose result changes without the code changing: an
+advisory published tomorrow turns yesterday's green commit red. That is correct
+— a vulnerability is news about code already shipped — but it also means a
+transitive dependency nobody can fix will block unrelated work. The escape hatch
+is `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml`, which takes the GHSA id,
+a date and a reason, and appears as a one-line reviewable diff. Same shape as
+the allowlists in `gates/`, and the same rule applies: an entry that outlives
+its reason is a permission nobody revisits.
+
+Separately, and not a gate: **Dependabot alerts** and **security updates** are
+enabled on the repository, so a vulnerable dependency also arrives as a pull
+request — which then has to pass everything above like any other change.
+
 ## Not gated, deliberately
 
 | | Why |
