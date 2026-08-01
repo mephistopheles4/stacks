@@ -40,10 +40,10 @@ yet a gate."*
 
 | Row | Rule | Source | Gate | Status |
 | --- | --- | --- | --- | --- |
-| **G1** | All vault access goes through the adapter | invariant 4 | glob every `.ts` outside `adapters/`, assert no `node:fs`; reverse-assert each allowlist entry still resolves | ⬜ |
+| **G1** | All vault access goes through the adapter | invariant 4 | `gates/adapter-boundary.test.ts` — 13-entry allowlist, each justified, each reverse-asserted | ✅ |
 | **G2** | Note bodies are private; a public build is coherent | invariant 2 | four assertions — see below | ⬜ |
-| **G3** | Never crash on a bad note | invariant 3 | garbage corpus: empty, binary, no frontmatter, unterminated YAML, duplicate keys | ⬜ |
-| **G4** | Hand-edited notes are first-class | invariant 5 | byte-for-byte round-trip through `updateBook`: comments, key order, body | ⬜ |
+| **G3** | Never crash on a bad note | invariant 3 | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind | ✅ |
+| **G4** | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
 | **G5** | The vault is the source of truth | invariant 1 | `library.json` untracked and gitignored | ⬜ |
 
 ## Contract seams → gates
@@ -53,8 +53,8 @@ means the two have drifted.
 
 | Row | Seam | Failure mode | Gate | Status |
 | --- | --- | --- | --- | --- |
-| **G6** | site → `@stacks/core` | a *value* import drags `node:fs` and sharp into the browser bundle and **the shelf silently never boots** | any value import outside `@stacks/core/shelf-order` fails | ⬜ |
-| **G7** | logic in `.astro` | `.astro` files are not typechecked (`astro check` cannot run under TS 7), so nothing else can catch this | `<script>` blocks are imports plus one call | ⬜ |
+| **G6** | site → `@stacks/core` | a *value* import drags `node:fs` and sharp into the browser bundle and **the shelf silently never boots** | `gates/site-core-imports.test.ts` | ✅ |
+| **G7** | logic in `.astro` | `.astro` files are not typechecked (`astro check` cannot run under TS 7), so nothing else can catch this | `gates/astro-no-logic.test.ts` | ✅ |
 | **G8** | frontmatter contract ↔ parser ↔ CLAUDE.md | a key the parser accepts but the contract never documents | `gates/frontmatter-contract.test.ts` | ✅ |
 | **G9** | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | `gates/env-contract.test.ts` | ✅ |
 
@@ -86,13 +86,26 @@ broken. What was missing is that the difference between the two modes was never
 written down or checked. The gate now pins exactly which keys may differ, and was
 observed red by removing one entry from that list.
 
-**G12 is characterization, and a design question is still open.** Two documented
-rules collide: a numbered book beats an unnumbered one before status is
-considered, and `--renumber` numbers *every* shelved book. So after one run the
-documented "unset means reading first, then newest finished" describes a state
-the vault can no longer be in, and the next book you start reading sorts last.
-The gate pins today's answer so that changing it is a visible decision. See the
-open question in `docs/progress.md`.
+**G12's design question was resolved by the owner: a book you are reading wins.**
+Two documented rules collided — a numbered book beat an unnumbered one before
+status was considered, and `--renumber` numbers *every* shelved book, so after
+one run "unset means reading first" described a state the vault could no longer
+be in and the next book picked up sorted behind all thirty-one. Status now sorts
+ahead of `shelf_order`. `--renumber` keeps its purpose: the pins still order
+themselves among the finished books.
+
+**G4 was red on arrival**, on a defect nothing had reported. `updateBook`'s
+"scalars only" rule recognised a block list (`tags:` then indented `- ` lines)
+but not a flow collection on one line, so `author: [Marisol Vane, Tomas Ek]` was
+replaced wholesale. Reachable, not theoretical: `asString` returns undefined for
+an array, so a two-author note parses as *authorless*, which is exactly what
+sends `stacks enrich` to look an author up and overwrite the list — silent data
+loss in a hand-edited note, which is the thing invariant 5 exists to prevent.
+
+**G1, G3, G6 and G7 were green on arrival** and were each proven red-capable by
+perturbation: an `fs` import added to `scene.ts`, a stale entry added to the
+allowlist, the missing-title branch downgraded to `not-a-book`, an inline
+`import { type X }`, and an arrow function in an `.astro` script.
 
 ## G2 in full — the public build gate
 

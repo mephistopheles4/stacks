@@ -245,8 +245,18 @@ async function isDirectory(path: string): Promise<boolean> {
 /**
  * Replaces, inserts or removes one scalar key inside a frontmatter block.
  *
- * A key whose current value is a block — `tags:` followed by a `- ` list — is
- * left exactly as it is. Rewriting its first line would orphan the rest.
+ * A key whose current value is not a scalar is left exactly as it is — that is
+ * the documented "scalars only" rule, and it has two shapes:
+ *
+ *   - a block, `tags:` followed by a `- ` list. Rewriting the first line would
+ *     orphan the rest and leave the file unparseable.
+ *   - a flow collection, `tags: [a, b]` or `author: [X, Y]`, which fits on one
+ *     line and so used to be replaced wholesale. Found by
+ *     gates/hand-edited-notes.test.ts, and reachable rather than theoretical:
+ *     `asString` returns undefined for an array, so a note carrying two authors
+ *     inline parses as *authorless*, which is precisely what sends
+ *     `stacks enrich` off to look an author up and write it over the list.
+ *     A list is a list whichever way YAML writes it.
  */
 function applyChange(
   block: string,
@@ -258,10 +268,10 @@ function applyChange(
   const index = lines.findIndex((line) => line.startsWith(`${key}:`));
 
   if (index >= 0) {
-    const isBlockValue =
-      lines[index]?.slice(key.length + 1).trim() === '' &&
-      /^[ \t]*-\s/.test(lines[index + 1] ?? '');
-    if (isBlockValue) return block;
+    const current = lines[index]?.slice(key.length + 1).trim() ?? '';
+    const isBlockValue = current === '' && /^[ \t]*-\s/.test(lines[index + 1] ?? '');
+    const isFlowValue = current.startsWith('[') || current.startsWith('{');
+    if (isBlockValue || isFlowValue) return block;
 
     if (value === undefined) lines.splice(index, 1);
     else lines[index] = `${key}: ${serialise(value)}`;

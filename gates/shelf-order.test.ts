@@ -46,15 +46,16 @@ describe('G12 — shelf_order, documented rules', () => {
     ).toEqual(['currently reading', 'finished recently', 'finished long ago']);
   });
 
-  it('lets a few pinned favourites lead an otherwise unnumbered shelf', () => {
-    // The documented purpose of the key: pin three, leave twenty-eight alone.
+  it('lets a few pinned favourites lead the books that are merely finished', () => {
+    // The documented purpose of the key: pin three, leave twenty-eight alone —
+    // but a book in progress still comes ahead of a pin.
     expect(
       ordered([
         book({ title: 'ordinary', finished: '2026-07-01' }),
         book({ title: 'favourite', shelfOrder: 10 }),
         book({ title: 'also ordinary', status: 'reading' }),
       ]),
-    ).toEqual(['favourite', 'also ordinary', 'ordinary']);
+    ).toEqual(['also ordinary', 'favourite', 'ordinary']);
   });
 
   it('orders numbered books by their number, lowest first', () => {
@@ -68,7 +69,7 @@ describe('G12 — shelf_order, documented rules', () => {
   });
 });
 
-describe('G12 — the --renumber collision (characterization)', () => {
+describe('G12 — the --renumber collision, resolved', () => {
   /**
    * What `stacks order --renumber` leaves behind: every shelved book numbered,
    * at `(index + 1) * step`. Reproduced here rather than driving the CLI,
@@ -78,21 +79,35 @@ describe('G12 — the --renumber collision (characterization)', () => {
     return titles.map((title, index) => book({ title, shelfOrder: (index + 1) * step }));
   }
 
-  it('a newly added book sorts behind every renumbered one, even while reading', () => {
-    // The surprising consequence, pinned. Someone who runs --renumber once and
-    // then starts a new book finds it at the back of the shelf, and the
-    // documented "reading first" rule cannot reach it — a numbered book beats
-    // an unnumbered one before status is ever considered.
+  it('a newly started book leads even a fully renumbered shelf', () => {
+    // The regression this row exists for. Before status was moved ahead of
+    // shelf_order, a numbered book beat an unnumbered one before status was
+    // ever considered — so running --renumber once put the next book you
+    // picked up at the very back, with no way to reach the front short of
+    // numbering it too.
     const shelf = [
       ...afterRenumber(['old one', 'old two', 'old three']),
       book({ title: 'just started', status: 'reading' }),
     ];
 
-    expect(ordered(shelf)).toEqual(['old one', 'old two', 'old three', 'just started']);
-    expect(ordered(shelf).at(-1)).toBe('just started');
+    expect(ordered(shelf)).toEqual(['just started', 'old one', 'old two', 'old three']);
   });
 
-  it('leaves no unnumbered book, so the documented default order is unreachable', () => {
+  it('still orders the renumbered books among themselves', () => {
+    // Resolving the collision must not cost --renumber its actual purpose.
+    const shelf = [
+      ...afterRenumber(['old one', 'old two', 'old three']),
+      book({ title: 'just started', status: 'reading' }),
+    ];
+
+    expect(ordered(shelf).slice(1)).toEqual(['old one', 'old two', 'old three']);
+  });
+
+  it('numbers every shelved book, which is why status has to win', () => {
+    // The property that made the collision unavoidable: --renumber leaves no
+    // unnumbered book behind, so "unset means reading first" could never apply
+    // again on a renumbered shelf. Pinned so that changing --renumber's scope
+    // is a visible decision too.
     const shelf = afterRenumber(['a', 'b', 'c']);
     expect(shelf.every((entry) => entry.shelfOrder !== undefined)).toBe(true);
   });

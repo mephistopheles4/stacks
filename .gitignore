@@ -26,3 +26,7 @@ fixtures/vault-50/
 
 # Subagent worktrees — real git checkouts, never part of this repo.
 .claude/worktrees/
+
+# IDE workspace config
+.idea/
+.vscode/
