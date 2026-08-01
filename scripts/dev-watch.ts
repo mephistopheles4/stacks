@@ -14,12 +14,20 @@
  * The vault comes from STACKS_VAULT, in the environment or in `.env`.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadEnv } from '../packages/cli/src/env.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Before anything below reads a setting. This script used to carry its own
+// one-key `.env` reader, which meant `PORT` — documented in `.env.example` —
+// only ever worked when exported from the shell, the exact "setting that
+// appears to exist and does not" that file warns about. One loader, read the
+// same way everywhere, and it finds the main checkout's `.env` from a worktree.
+loadEnv();
+
 const PORT = Number(process.env['PORT'] ?? 4322);
 
 /**
@@ -35,9 +43,7 @@ const PORT = Number(process.env['PORT'] ?? 4322);
  * The build is the same `--public` one the site ships, so `private:` and
  * wishlist books stay off it either way.
  */
-const ON_NETWORK = /^(1|true|yes)$/i.test(
-  process.env['STACKS_DEV_HOST'] ?? fromEnvFile('STACKS_DEV_HOST') ?? '',
-);
+const ON_NETWORK = /^(1|true|yes)$/i.test(process.env['STACKS_DEV_HOST'] ?? '');
 
 /** Every address a phone on the same network could reach this machine at. */
 function lanAddresses(): string[] {
@@ -47,27 +53,8 @@ function lanAddresses(): string[] {
     .map((address) => address.address);
 }
 
-/**
- * One uncommented `KEY=value` from `.env`, or undefined.
- *
- * Not a `.env` loader — the file is read for the two settings this script
- * needs and nothing else. It matters that both are read the same way: a
- * variable documented in `.env.example` that only works when exported from the
- * shell is a setting that appears to exist and does not.
- */
-function fromEnvFile(key: string): string | undefined {
-  try {
-    const env = readFileSync(join(ROOT, '.env'), 'utf8');
-    const match = new RegExp(`^[ \\t]*${key}[ \\t]*=[ \\t]*(.+)$`, 'm').exec(env);
-    const value = match?.[1]?.trim().replace(/^["']|["']$/g, '');
-    return value !== undefined && value.length > 0 ? value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function vaultPath(): string {
-  const configured = process.env['STACKS_VAULT'] ?? fromEnvFile('STACKS_VAULT');
+  const configured = process.env['STACKS_VAULT'];
   if (configured !== undefined) return configured;
 
   console.error(
