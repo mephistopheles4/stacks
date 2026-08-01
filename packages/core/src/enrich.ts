@@ -1,5 +1,5 @@
-import { join } from 'node:path';
 import { cacheCover } from './covers/cache-cover.ts';
+import { resolveCoverPath } from './covers/cover-path.ts';
 import { spineColour } from './covers/dominant-colour.ts';
 import { isProbablySameBook, normaliseIsbn } from './identity.ts';
 import { lookup, type HttpGet } from './metadata/index.ts';
@@ -56,7 +56,8 @@ export async function enrichBook(
   // A spine colour can be read from the cover already on disk, so it is worth
   // doing before deciding whether the network is needed at all.
   if (missing.includes('spine_color') && book.cover !== undefined) {
-    const colour = await spineColour(join(vault.coverDir(), basename(book.cover)));
+    const coverPath = resolveCoverPath(vault.coverDir(), book.cover);
+    const colour = coverPath === undefined ? undefined : await spineColour(coverPath);
     if (colour !== undefined) {
       changes['spine_color'] = colour;
       filled.push('spine_color');
@@ -125,7 +126,3 @@ export async function enrichBook(
   return { kind: 'filled', title: book.title, fields: filled };
 }
 
-/** Only the filename is ever used, so a `cover:` value cannot walk the disk. */
-function basename(cover: string): string {
-  return cover.split('/').pop() ?? cover;
-}

@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { stringify as stringifyYaml } from 'yaml';
+import { coverFileName } from '../covers/cover-path.ts';
 import { FRONTMATTER_BLOCK, parseNote } from '../frontmatter.ts';
 import { isProbablySameBook, normaliseTitleAuthor, toObsidianTag } from '../identity.ts';
 import type { BookInput, BookRecord } from '../types.ts';
@@ -205,8 +206,10 @@ function renderNote(book: BookInput): string {
   //
   // This lives in the body, and the body is never parsed back (invariant 2) —
   // the embed is for the human reading the note, not for the build.
-  const embed =
-    book.cover === undefined ? '' : `![[${book.cover.split('/').pop() ?? book.cover}]]\n\n`;
+  // Same filename rule as the builder uses, from the same place: a `cover:`
+  // written with backslashes would otherwise embed as `![[covers\a.png]]` and
+  // resolve to nothing.
+  const embed = book.cover === undefined ? '' : `![[${coverFileName(book.cover)}]]\n\n`;
 
   return `---\n${yaml}\n---\n\n${embed}## Notes\n\n`;
 }

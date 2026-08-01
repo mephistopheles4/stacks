@@ -1,6 +1,7 @@
 import { copyFile, mkdir, writeFile } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import sharp from 'sharp';
+import { coverFileName, resolveCoverPath } from './covers/cover-path.ts';
 import { buildLibrary, type Library } from './library.ts';
 import { renderOgImage } from './og-image.ts';
 import type { BookRecord } from './types.ts';
@@ -70,10 +71,10 @@ async function withCoverAspects(library: Library, assetsDir: string): Promise<Li
   const books = await Promise.all(
     library.books.map(async (book) => {
       if (book.cover === undefined) return book;
+      const coverPath = resolveCoverPath(join(assetsDir, 'covers'), book.cover);
+      if (coverPath === undefined) return book;
       try {
-        const { width, height } = await sharp(
-          join(assetsDir, 'covers', basename(book.cover)),
-        ).metadata();
+        const { width, height } = await sharp(coverPath).metadata();
         if (width === undefined || height === undefined || height === 0) return book;
         return { ...book, coverAspect: Number((width / height).toFixed(4)) };
       } catch {
@@ -109,8 +110,11 @@ async function copyCovers(
       .map((book) => book.cover)
       .filter((cover): cover is string => cover !== undefined)
       // Only the filename is used, so a `cover:` value cannot walk out of the
-      // covers directory and stage something else into a public build.
-      .map((cover) => basename(cover)),
+      // covers directory and stage something else into a public build. Shared
+      // with `enrich.ts` — see covers/cover-path.ts for why it is not
+      // `node:path`'s `basename`.
+      .map((cover) => coverFileName(cover))
+      .filter((filename) => filename !== ''),
   );
 
   if (wanted.size === 0) return { copied: 0, missing: [] };
