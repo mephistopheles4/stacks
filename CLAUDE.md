@@ -7,9 +7,12 @@ A local-first reading tracker where the notes vault IS the database. A CLI (`sta
 1. `docs/progress.md` — where the project actually is. Read this first, always.
 2. `docs/plan.md` — the approved execution plan, rules of engagement, fixture spec.
 3. `docs/library-brief.md` — full product spec. Read before starting any phase.
-4. `docs/blockers.md` — only if it exists; records gates that defeated 3 approaches.
+4. `docs/gates.md` — the invariant scoreboard: which rule each gate protects, and
+   which rules are still protected by nothing.
+5. `docs/blockers.md` — only if it exists; records gates that defeated 3 approaches.
 
-Update `docs/progress.md` in the same commit as the gate it describes.
+Update `docs/progress.md` in the same commit as the gate it describes, and
+`docs/gates.md` in the same commit as the gate it scores.
 
 **When compacting this conversation, always preserve:** the current phase and
 which gates are green, the exact gate commands and their last output, the two
@@ -159,3 +162,11 @@ pnpm smoke:render        # headless shelf screenshot gate
 - 2026-07-31: The Audible test fixture is **invented**, mirroring Libation's shape. The real export contains the owner's email address and cannot be committed.
 
 - 2026-07-31: **Deferred to the Phase 2 aesthetics review:** real covers often yield desaturated spine colours (a live `stacks add` gave `#d6d6d5` for a genuinely pale cover). The extractor is not wrong, but a shelf of grey spines may read badly. Do not tune this blind — decide it against a screenshot.
+
+### Phase A — CI and the invariant scoreboard
+- 2026-07-31: **The invariants get gates, and the gates get a scoreboard** — [`docs/gates.md`](docs/gates.md). A pre-publication review found six documented rules had quietly stopped being true with nothing going red, including a Decision Log entry below that is false in one of its two call paths. The rule this project already had — *"a gate never observed failing is not yet a gate"* — now applies to the invariants themselves, not just to phase gates.
+- 2026-07-31: **One required check, named `gates`, aggregating a `suite` matrix.** Requiring `suite (22)` and `suite (24)` by name would mean editing the branch ruleset every time the matrix changes, and a required check that never reports blocks the pull request forever. The aggregator keeps one stable name. For the same reason the workflow is **never path-filtered**: a skipped required workflow reports nothing, which is indistinguishable from a check that has not run yet.
+- 2026-07-31: **CI runs Node 22 and 24.** `engines` claims `>=22` while development happens on 24, so testing only 24 would have left that claim as one more thing nothing checks — the exact failure this phase exists to stop.
+- 2026-07-31: **`verifyDepsBeforeRun: warn`, not `false`.** pnpm 11 defaults it to `install`, which makes `pnpm test` try to reinstall first and then abort with `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY` in any shell without a TTY — every agent shell, every CI runner. `false` would have silenced the staleness diagnostic too; `warn` keeps it. It reported a genuine out-of-sync tree the moment it was switched on.
+- 2026-07-31: **`pull_request`, never `pull_request_target`.** Fork pull requests must not see repository secrets. Nothing in the gate needs one: tests inject a fixture-backed `HttpGet` that throws on an unmapped URL, so no live API call is reachable from CI.
+- 2026-07-31: **Cover art: never in the repo, Open Library only in a public build.** The binding constraint is the providers' terms, not copyright in the abstract. Open Library's docs contemplate download and public display, ask that you not crawl, and appreciate a link back. Google's API terms bar permanent copies and public display of API content and require "powered by Google" plus a prominent per-result link. Apple conditions promotional content on placement beside a store badge linking to a purchase page — and book covers are not among the content types its terms enumerate at all. So Google and Apple stay metadata and lookup fallbacks; their art is hotlinked or omitted from `--public`. This needs cover **provenance** recorded at fetch time, which `cache-cover.ts` does not do today.
