@@ -29,6 +29,7 @@ declare global {
       ready: boolean;
       /** Worst breach of the case's sides, in world units. See `smoke:render`. */
       caseOverflow: number;
+      shaderErrors: readonly string[];
       projectBook(index: number): { x: number; y: number } | undefined;
     };
   }
@@ -54,6 +55,9 @@ export async function boot(
       },
       onContextRestored: () => {
         clearNotice(canvas);
+      },
+      onShaderFailure: () => {
+        showNotice(canvas, SHADER_MESSAGE);
       },
     });
   } catch {
@@ -82,6 +86,7 @@ export async function boot(
     bookCount: handle.bookCount,
     ready: true,
     caseOverflow: handle.caseOverflow,
+    shaderErrors: handle.shaderErrors,
     projectBook: (index) => handle.projectBook(index),
   };
 
@@ -142,7 +147,11 @@ function rendererOverrides(params: URLSearchParams): RendererOverrides {
     shadowType?: 'basic' | 'pcf' | 'soft';
     shadowCasters?: boolean;
     guardResize?: boolean;
+    painted?: boolean;
   } = {};
+
+  const usePainted = flag(params, 'painted');
+  if (usePainted !== undefined) overrides.painted = usePainted;
 
   const casters = flag(params, 'casters');
   if (casters !== undefined) overrides.shadowCasters = casters;
@@ -189,6 +198,12 @@ const NOTICE_CLASS = 'shelf-notice';
 // then contradicted: the page survived the loss and exited cleanly, so nothing
 // was killed for running out of anything it could name.
 const LOST_MESSAGE = 'The browser reset the shelf’s 3D canvas. Reload to bring it back.';
+
+// Says what happened and where to look, because the whole point of stopping is
+// that somebody reads the panel. Without `?debug` there is no panel, so the
+// sentence has to be able to stand alone.
+const SHADER_MESSAGE =
+  'This device would not compile the shelf’s shaders, so drawing has stopped. Reload with ?debug to see what the driver said.';
 
 const UNAVAILABLE_MESSAGE =
   "This browser wouldn't give the page a 3D canvas, so the shelf can't be drawn. Reloading usually fixes it.";

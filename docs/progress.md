@@ -479,6 +479,53 @@ Two details worth keeping:
 `?shadows=1` keeps the real-time path for hardware that can hold it. On this
 device the answer is definitive and negative.
 
+### Two instruments, so the next attempt is not another guess
+
+The reason nothing had ever been readable is that **the instrument died with the
+page it was measuring**. Three notices the failed link, logs it, and carries on
+calling `useProgram` on the invalid program every frame; the driver refuses every
+frame; the context is gone in a second or two. So:
+
+**The shelf stops.** `renderer.debug.onShaderError` halts the render loop on the
+first failure and shows a sentence. One bad frame is enough to know; sixty a
+second only destroys the evidence. Observed in both directions by forcing
+`LINK_STATUS` false in the browser — with the failure, `requestAnimationFrame` is
+scheduled once and stays at one; without it, 1119 → 1600 over two seconds.
+
+**And it asks the driver properly.** The handler calls `gl.validateProgram` —
+which three never does — then reads the validate log, both shader logs, `getError`,
+and the limits that usually explain a program that compiles but will not link:
+
+```
+SHADER WOULD NOT LINK — drawing stopped
+  link log:  (silent)
+  validate:  ok
+  vertex:    (silent)
+  fragment:  (silent)
+  varying:   30
+  uniforms:  vtx 4095 frag 1024
+  samplers:  frag 16 vtx 16 all 32
+```
+
+It lands in the black box beside everything else, so it survives the session and
+can be read off a phone with no cable.
+
+**`?painted=0` is the discriminating probe.** It leaves out every painted shadow,
+which is the only place a `MeshBasicMaterial` appears in this scene — the program
+count drops 3 → 2 and the material that will not link is simply not there. So
+`?painted=0&shadows=1` renders real shadows in a scene with no basic material at
+all:
+
+| | meaning |
+| --- | --- |
+| it runs | the fault is specific to those programs, and there is something to change |
+| it still fails | the lit materials fail too, and there is not |
+
+It also makes `?shadows=1` a *clean* reference for the first time. The two
+shadow systems are independent, so asking for real shadows has always drawn them
+on top of the painted ones and double-darkened everything the two agree about —
+which is a thing to know when reading any earlier screenshot taken that way.
+
 ### Superseded: which *part* of the shadow pass costs
 
 Three candidates, undistinguished: the depth target's **size**, PCFSoft's

@@ -144,6 +144,11 @@ export interface ShelfHandle {
    * driven through.
    */
   readonly caseOverflow: number;
+  /**
+   * What the driver said about any program that would not link. Empty is the
+   * normal case, and the shelf is halted whenever it is not.
+   */
+  readonly shaderErrors: readonly string[];
   /** Live renderer counters. See `./diagnostics.ts`. */
   stats(): ShelfStats;
   /**
@@ -216,6 +221,22 @@ export interface RendererOverrides {
    * probe measures a change rather than smuggling in a fix.
    */
   readonly guardResize?: boolean;
+  /**
+   * `?painted=0`. Leaves out the painted shading — no contact shadows, no
+   * backboard shade, no recess, no neighbour bands.
+   *
+   * Two jobs. It makes `?shadows=1` a *clean* reference again: the two systems
+   * are independent, so asking for real shadows has always drawn them on top of
+   * the painted ones and double-darkened everything they agree about.
+   *
+   * And it discriminates on the shader failure. The program that will not link
+   * is a `MeshBasicMaterial`, which in this scene is only ever a painted shadow.
+   * With them gone the scene has no basic material left, so if `?shadows=1` then
+   * links and runs, the fault is specific to those programs and there is
+   * something to change; if it still fails, it is the lit materials too and
+   * there is not.
+   */
+  readonly painted?: boolean;
 }
 
 export interface MountOptions {
@@ -234,6 +255,11 @@ export interface MountOptions {
   readonly onContextLost?: () => void;
   /** The GPU gave it back. Only ever fires if the loss was prevented-default. */
   readonly onContextRestored?: () => void;
+  /**
+   * A shader program would not link, and the shelf has stopped rather than
+   * spend the context arguing about it.
+   */
+  readonly onShaderFailure?: (report: readonly string[]) => void;
 }
 
 export function mountShelf(
@@ -248,11 +274,21 @@ export function mountShelf(
   const shadowType = options.renderer?.shadowType ?? 'pcf';
   const shadowCasters = options.renderer?.shadowCasters ?? true;
   const guardResize = options.renderer?.guardResize ?? false;
+  const painted = options.renderer?.painted ?? true;
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
   renderer.shadowMap.enabled = shadows;
   renderer.shadowMap.type = SHADOW_TYPES[shadowType];
+
+  /**
+   * What the driver said when a program would not link.
+   *
+   * A live array rather than a return value: the failure happens inside the
+   * first `render`, which is inside this function, so there is nobody to hand it
+   * to yet. The diagnostics panel reads it on its next tick.
+   */
+  const shaderErrors: string[] = [];
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(COLOURS.background);
@@ -321,7 +357,7 @@ export function mountShelf(
 
   const textures = new TextureCache(renderer);
   const lookup: BookLookup = new Map();
-  const placed = placeBooks(scene, rows, textures, lookup, shadowCasters);
+  const placed = placeBooks(scene, rows, textures, lookup, shadowCasters, painted);
 
   const picker = new Picker(
     canvas,
@@ -331,11 +367,31 @@ export function mountShelf(
     options.onSelect,
   );
 
+  /**
+   * Stop, rather than spend the context arguing with a program that will not
+   * link.
+   *
+   * Three carries on regardless: it calls `useProgram` on the invalid program
+   * every frame, the driver answers `INVALID_OPERATION` every frame, and within
+   * a second or two the context is gone. That is why nothing has ever been
+   * readable afterwards — the instrument dies with the page it is measuring.
+   * One bad frame is enough to know; sixty a second only destroys the evidence.
+   */
+  let halted = false;
+
   let frame = 0;
   const renderLoop = (): void => {
+    if (halted) return;
     frame = requestAnimationFrame(renderLoop);
     controls.update();
     renderer.render(scene, camera);
+  };
+
+  renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader): void => {
+    shaderErrors.push(...describeLinkFailure(gl, program, vertexShader, fragmentShader));
+    halted = true;
+    cancelAnimationFrame(frame);
+    options.onShaderFailure?.(shaderErrors);
   };
 
   let sizedTo = { width: 0, height: 0 };
@@ -391,12 +447,14 @@ export function mountShelf(
     bookCount: placed.length,
     gpu: describeGpu(renderer),
     caseOverflow: measureCaseOverflow(scene, placed),
+    shaderErrors,
     // Reported back so a screenshot of the panel says which settings were live.
     // A bisect whose result cannot be tied to a configuration is just an anecdote.
     profile:
       `aa=${antialias ? 'on' : 'off'} dpr<=${String(maxPixelRatio)} ` +
       `shadows=${shadows ? `${shadowType}@${String(shadowMapSize)}` : 'off'} ` +
-      `casters=${shadowCasters ? 'on' : 'off'} guard=${guardResize ? 'on' : 'off'}`,
+      `casters=${shadowCasters ? 'on' : 'off'} guard=${guardResize ? 'on' : 'off'} ` +
+      `painted=${painted ? 'on' : 'off'}`,
 
     stats(): ShelfStats {
       const { memory, render, programs } = renderer.info;
@@ -475,6 +533,56 @@ export function mountShelf(
  * asking for: "Adreno 750" versus "SwiftShader" is the difference between a
  * memory problem and a machine with no GPU acceleration at all.
  */
+/**
+ * Everything the driver will say about a program that would not link.
+ *
+ * Three prints `VALIDATE_STATUS false` in its own error — and never calls
+ * `gl.validateProgram`, so that `false` is the parameter's *initial value* and
+ * carries no information at all. It reads like a second symptom and is not one.
+ * Asking properly is the one question nobody had put to this driver, and the
+ * validate log is a different log from the link log: a driver that declines to
+ * explain the first sometimes explains the second.
+ *
+ * The limits come with it because they are the usual reason a program that
+ * compiles will not link — varyings, uniform vectors, texture units — and they
+ * are the difference between "this hardware cannot" and "this driver will not".
+ */
+function describeLinkFailure(
+  gl: WebGLRenderingContext,
+  program: WebGLProgram,
+  vertexShader: WebGLShader,
+  fragmentShader: WebGLShader,
+): string[] {
+  try {
+    gl.validateProgram(program);
+
+    const limit = (name: keyof WebGLRenderingContext): string => {
+      const value: unknown = gl.getParameter(gl[name] as number);
+      return typeof value === 'number' ? String(value) : '?';
+    };
+
+    return [
+      `link log:  ${said(gl.getProgramInfoLog(program))}`,
+      `validate:  ${gl.getProgramParameter(program, gl.VALIDATE_STATUS) === true ? 'ok' : 'failed'}`,
+      `vertex:    ${said(gl.getShaderInfoLog(vertexShader))}`,
+      `fragment:  ${said(gl.getShaderInfoLog(fragmentShader))}`,
+      `gl error:  ${String(gl.getError())}`,
+      `varying:   ${limit('MAX_VARYING_VECTORS')}`,
+      `uniforms:  vtx ${limit('MAX_VERTEX_UNIFORM_VECTORS')} frag ${limit('MAX_FRAGMENT_UNIFORM_VECTORS')}`,
+      `samplers:  frag ${limit('MAX_TEXTURE_IMAGE_UNITS')} vtx ${limit('MAX_VERTEX_TEXTURE_IMAGE_UNITS')} all ${limit('MAX_COMBINED_TEXTURE_IMAGE_UNITS')}`,
+    ];
+  } catch (error) {
+    // An instrument that throws takes down the thing it is measuring.
+    return [`link failure, and reading it also failed: ${String(error)}`];
+  }
+}
+
+/** A GL info log, or a word for its silence — an empty one is itself a finding. */
+function said(log: string | null): string {
+  const text = log?.trim() ?? '';
+  return text.length === 0 ? '(silent)' : text;
+}
+
 function describeGpu(renderer: THREE.WebGLRenderer): string | undefined {
   try {
     const gl = renderer.getContext();
@@ -528,6 +636,7 @@ function placeBooks(
   textures: TextureCache,
   lookup: BookLookup,
   castShadows: boolean,
+  painted: boolean,
 ): PlacedBook[] {
   const placed: PlacedBook[] = [];
   /** Footprints per row of *books*, indexed as `rows` is — top shelf first. */
@@ -588,7 +697,11 @@ function placeBooks(
       // anyway put a hard band down the edge of a book standing on its own.
       const next = row.books[index + 1];
       const shadedFromRight =
-        entry.faceOut && next !== undefined && !next.faceOut && (next.gapBefore ?? 0) === 0;
+        painted &&
+        entry.faceOut &&
+        next !== undefined &&
+        !next.faceOut &&
+        (next.gapBefore ?? 0) === 0;
 
       const book = buildBook(entry, depth, textures, castShadows, shadedFromRight);
 
@@ -689,6 +802,8 @@ function placeBooks(
   // shading the case throws on itself, and an empty shelf has a backboard and a
   // corner just as a full one does. Skipping them would leave the bottom of a
   // growing case looking like a different piece of furniture from the top.
+  if (!painted) return placed;
+
   const light = caseLight(rowCount * SHELF.rowHeight);
   const openHeight = SHELF.rowHeight - SHELF.plankThickness;
 
