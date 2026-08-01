@@ -163,12 +163,21 @@ derived from the URL that was actually downloaded rather than from whichever
 provider answered the metadata lookup, because those routinely differ and it is
 the bytes whose terms apply.
 
-**The policy is not yet enforced, and that is deliberate.** Every cover cached
-before `cover_source` existed has no provenance, and the owner's real vault is
-all of them. Dropping unattributed covers from a public build would empty the
-shelf. So: record going forward, decide the backfill, then enforce. Until then a
-public build ships every cover it has — see the open item in
-[`progress.md`](./progress.md).
+**The backfill is done and the policy is decided.** `stacks covers --backfill`
+recorded provenance on all 31 books in the owner's vault, inferred from image
+dimensions rather than re-fetched — Open Library's `-L.jpg` caps at 500px, which
+is an unmistakable signature, and the Apple rewrite produces 778–2400px.
+
+The measurement decided the policy: **25 Apple, 6 Open Library, 0 Google.**
+Re-hosting Open Library art only would have meant six covers and twenty-five
+generated spines — trading away precisely the cover quality Apple was added for.
+So a public build ships every cover it has, knowingly, and honours takedown
+requests. That is a decision rather than an oversight, and it is written down in
+CLAUDE.md's Decision Log with the reasoning and with the alternative that would
+satisfy Apple's terms if it ever matters.
+
+What the gate still enforces regardless: no orphans, no wishlist books, and
+same-origin covers only.
 
 ## CI-only gates
 

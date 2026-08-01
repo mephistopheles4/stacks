@@ -77,3 +77,13 @@ export {
 
 export { renderOgImage, type OgImageOptions } from './og-image.ts';
 export { publish, type PublishOptions, type PublishResult } from './publish.ts';
+
+export {
+  backfillCoverSources,
+  type BackfillOptions,
+  type BackfillOutcome,
+  type BackfillResult,
+  type MeasureCover,
+} from './backfill-covers.ts';
+export { measureCover } from './covers/measure.ts';
+export { COVER_SOURCES, isCoverSource, type CoverSource } from './covers/cover-source.ts';

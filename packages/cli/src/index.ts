@@ -6,7 +6,9 @@ import { loadEnv } from './env.ts';
 import {
   ObsidianAdapter,
   addBook,
+  backfillCoverSources,
   buildLibrary,
+  measureCover,
   compareShelfPosition,
   createCachedHttpGet,
   enrichBook,
@@ -229,6 +231,52 @@ program
 
     const verb = options.dryRun === true ? 'would fill' : 'filled';
     console.log(`\n${verb} ${filled} book(s)${missed > 0 ? `, ${missed} left alone` : ''}`);
+  });
+
+program
+  .command('covers')
+  .description('Report where each cover came from, or record it where nothing does')
+  .option('--backfill', 'write cover_source where it is absent, inferred from the image')
+  .option('--dry-run', 'show what --backfill would write, without writing')
+  .action(async (options: { backfill?: boolean; dryRun?: boolean }) => {
+    const { vault } = context();
+
+    // Reported either way: with --backfill this is what was written, without it
+    // this is what *would* be, which is the same walk over the same notes.
+    const result = await backfillCoverSources(vault, {
+      measure: measureCover,
+      dryRun: options.backfill !== true || options.dryRun === true,
+    });
+
+    for (const outcome of result.outcomes) {
+      if (outcome.kind === 'recorded') {
+        console.log(`  ${outcome.source.padEnd(14)} ${outcome.title}`);
+      } else if (outcome.kind === 'already-known') {
+        console.log(`  ${outcome.source.padEnd(14)} ${outcome.title}   (already recorded)`);
+      } else if (outcome.kind === 'unreadable') {
+        console.warn(`  ${'?'.padEnd(14)} ${outcome.title}   (cover missing or unreadable)`);
+      }
+    }
+
+    const counts = [...result.bySource].sort((a, b) => b[1] - a[1]);
+    if (counts.length > 0) {
+      console.log('');
+      for (const [source, n] of counts) console.log(`  ${String(n).padStart(4)}  ${source}`);
+    }
+
+    if (options.backfill !== true) {
+      console.log(`\n${String(result.recorded)} book(s) have no cover_source.`);
+      console.log('run with --backfill to record it, inferred from each cover image');
+      return;
+    }
+
+    const verb = options.dryRun === true ? 'would record' : 'recorded';
+    console.log(`\n${verb} cover_source on ${String(result.recorded)} book(s)`);
+    if (options.dryRun !== true && result.recorded > 0) {
+      // Said out loud, because it is a guess written into files the owner
+      // edits by hand, and it will outlive anyone's memory of this run.
+      console.log('inferred from image dimensions, not observed at download time');
+    }
   });
 
 program

@@ -60,8 +60,15 @@ describe('G14 — documented commands', () => {
   });
 
   it('documents every CLI subcommand', () => {
+    // Anchored to the start of a line, which is where the CLI block puts a
+    // command name. A bare `\bname\b` search over the whole section was the
+    // first attempt and it had a false negative immediately: adding a `covers`
+    // command passed undocumented, because `status`'s description happens to
+    // read "covers still missing". A gate that matches prose matches anything.
     const documented = claudeMdCommandsSection();
-    const missing = cliCommands().filter((name) => !new RegExp(`\\b${name}\\b`).test(documented));
+    const missing = cliCommands().filter(
+      (name) => !new RegExp(`^${name}\\s{2,}\\S`, 'm').test(documented),
+    );
 
     expect(
       missing,
