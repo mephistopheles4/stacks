@@ -140,6 +140,12 @@ in a permitted field passes by construction, and a filename is never read at all
 4. **Same-origin covers.** A `cover:` value may currently be protocol-relative
    or absolute `http`, so a hand-edited or imported note can make a visitor's
    browser hit a third-party host.
+5. **The link preview works.** `og:image` and `twitter:image` must be absolute
+   against `SITE_URL`. They were relative for the project's whole life, which
+   means the OG image — generated, size-checked by this same gate, rendered at
+   1200×630 — would have shown nothing to anyone the shelf was sent to. That is
+   the brief's success metric, so the gate now builds with an origin and checks
+   what a scraper would fetch. Observed red by restoring the relative URL.
 
 ## Where cover art may go
 
