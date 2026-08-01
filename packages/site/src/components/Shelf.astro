@@ -62,6 +62,25 @@
     display: none;
   }
 
+  /*
+   * Shown when there is no shelf to show — see showNotice in ../shelf/boot.ts.
+   * `:global` because boot.ts creates it, and Astro only stamps its scoping
+   * attribute on elements that were in this template.
+   */
+  .shelf :global(.shelf-notice) {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: min(24rem, calc(100vw - 3rem));
+    margin: 0;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    text-wrap: balance;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #a89684;
+  }
+
   .card :global(img) {
     display: block;
     width: 4.5rem;

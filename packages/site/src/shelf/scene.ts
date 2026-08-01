@@ -96,6 +96,17 @@ export interface ShelfHandle {
 export interface MountOptions {
   /** Called when a book is clicked, or with `undefined` when one is dismissed. */
   readonly onSelect?: (book: LibraryBook | undefined) => void;
+  /**
+   * The GPU dropped the scene — the page is alive, the canvas is not.
+   *
+   * Happens when a phone kills the renderer, when the tab is backgrounded long
+   * enough, or when the driver resets. Without a handler the canvas simply stops
+   * updating and the shelf becomes a frozen or blank rectangle with nothing
+   * saying why, which is precisely how this failed in the wild.
+   */
+  readonly onContextLost?: () => void;
+  /** The GPU gave it back. Only ever fires if the loss was prevented-default. */
+  readonly onContextRestored?: () => void;
 }
 
 export function mountShelf(
@@ -190,6 +201,28 @@ export function mountShelf(
     }
   };
 
+  /**
+   * A lost context is recoverable, but only if you say so.
+   *
+   * The browser's default for `webglcontextlost` is that the context is gone for
+   * good and `webglcontextrestored` never fires. Calling `preventDefault` is the
+   * whole of what makes a restore possible — without it there is nothing to hand
+   * back, whatever the driver does next.
+   */
+  const handleContextLost = (event: Event): void => {
+    event.preventDefault();
+    cancelAnimationFrame(frame);
+    options.onContextLost?.();
+  };
+
+  const handleContextRestored = (): void => {
+    options.onContextRestored?.();
+    renderLoop();
+  };
+
+  canvas.addEventListener('webglcontextlost', handleContextLost);
+  canvas.addEventListener('webglcontextrestored', handleContextRestored);
+
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
   resize();
@@ -216,6 +249,8 @@ export function mountShelf(
 
     dispose(): void {
       cancelAnimationFrame(frame);
+      canvas.removeEventListener('webglcontextlost', handleContextLost);
+      canvas.removeEventListener('webglcontextrestored', handleContextRestored);
       observer.disconnect();
       picker.dispose();
       controls.dispose();

@@ -1,6 +1,7 @@
 import { copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { MAX_COVER_EDGE, measureCover } from './covers/cover-budget.ts';
 import { coverFileName, resolveCoverPath } from './covers/cover-path.ts';
 import { buildLibrary, type Library } from './library.ts';
 import { renderOgImage } from './og-image.ts';
@@ -99,13 +100,10 @@ async function withCoverAspects(library: Library, assetsDir: string): Promise<Li
       if (book.cover === undefined) return book;
       const coverPath = resolveCoverPath(join(assetsDir, 'covers'), book.cover);
       if (coverPath === undefined) return book;
-      try {
-        const { width, height } = await sharp(coverPath).metadata();
-        if (width === undefined || height === undefined || height === 0) return book;
-        return { ...book, coverAspect: Number((width / height).toFixed(4)) };
-      } catch {
-        return book;
-      }
+
+      const size = await measureCover(coverPath);
+      if (size === undefined || size.height === 0) return book;
+      return { ...book, coverAspect: Number((size.width / size.height).toFixed(4)) };
     }),
   );
 
@@ -243,7 +241,7 @@ async function copyCovers(
 
   for (const filename of wanted) {
     try {
-      await copyFile(join(vault.coverDir(), filename), join(outDir, filename));
+      await stageCover(join(vault.coverDir(), filename), join(outDir, filename));
       copied += 1;
     } catch {
       missing.push(filename);
@@ -251,4 +249,38 @@ async function copyCovers(
   }
 
   return { copied, missing };
+}
+
+/**
+ * Copies one cover, shrinking it to something a phone can hold.
+ *
+ * The vault keeps whatever the provider gave — Apple's artwork runs to 2400px —
+ * and that is right for the vault: it is your copy of the cover. It is wrong for
+ * the shelf, where every cover becomes an uncompressed GPU texture and the
+ * browser uploads all of them before the first frame. See cover-budget.ts for
+ * the numbers; the short version is that the untouched vault covers came to
+ * 314 MB decoded and phones were killing the tab.
+ *
+ * `withoutEnlargement` so a small cover is never blown up into a blurry big one,
+ * and `fit: 'inside'` so the proportions survive — `withCoverAspects` measures
+ * the file this writes, and a stretched cover would be measured as stretched and
+ * then drawn that way on the shelf.
+ *
+ * A cover already inside the cap is copied byte for byte rather than
+ * re-encoded, so this never quietly degrades an image it did not need to touch.
+ */
+async function stageCover(from: string, to: string): Promise<void> {
+  const size = await measureCover(from);
+
+  // An unreadable file, or one already inside the cap, is copied untouched: a
+  // cover the shelf cannot decode is a missing cover rather than a failed build,
+  // and re-encoding an image that did not need it is a quiet quality loss.
+  if (size === undefined || Math.max(size.width, size.height) <= MAX_COVER_EDGE) {
+    await copyFile(from, to);
+    return;
+  }
+
+  await sharp(from)
+    .resize({ width: MAX_COVER_EDGE, height: MAX_COVER_EDGE, fit: 'inside', withoutEnlargement: true })
+    .toFile(to);
 }

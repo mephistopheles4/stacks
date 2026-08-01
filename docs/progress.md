@@ -14,10 +14,10 @@ Update it in the **same commit** as the gate it describes.
 
 | | |
 | --- | --- |
-| **Last green gate** | Phase A — invariant scoreboard, 13 of 13 rows green |
-| **Now working on** | Phase B: contribution rules, then publishing |
+| **Last green gate** | G15 — cover budget, after the live site crashed phones |
+| **Now working on** | nothing; the shelf is deployed and the mobile crash is fixed |
 | **Blocked on** | nothing |
-| **Never done** | deployed. The brief's success metric is sending a friend a link |
+| **Deployed** | https://stacks.aymandiab.com — Cloudflare Pages, `pnpm deploy:site` |
 | **Running against** | the owner's real vault, 31 books, all with covers |
 
 ## Gate log
@@ -140,6 +140,43 @@ Plus `shelf_order` missing from the documented key list (G8) and `PORT` from
   indented lines). Unreachable from any current call site; flagged, not fixed.
 - **No `.gitattributes`.** Every commit warns about CRLF→LF. Harmless today,
   but CI is Linux and the repo is about to take contributions.
+
+## The mobile crash — G15
+
+The first defect a **user** found rather than a gate, and the only one so far
+that took the live site down.
+
+Reported as: the shelf loads on a phone, draws, then the page goes blank with a
+sad face; reloading shows nothing at all. Two symptoms, two different causes.
+
+**The crash.** Covers shipped at whatever size the provider supplied. On disk
+that is 8.4 MB, which looks fine. But the shelf is WebGL, so each cover is
+decoded into an *uncompressed* GPU texture and every one is uploaded before the
+first frame — **314 MB**, with a single 2400×2400 audiobook cover accounting for
+30 MB by itself. A desktop GPU has room not to notice. A phone kills the
+renderer.
+
+**The blank reload.** Not the same bug. After a renderer crash the browser
+refuses a new context, `new WebGLRenderer` throws, `boot()` rejects, and nothing
+catches it — the `.astro` script may not, under the "no logic in `.astro`" rule.
+So the page rendered as nothing, with no indication anything was meant to be
+there.
+
+| | before | after |
+| --- | --- | --- |
+| covers on disk | 8.4 MB | 1.1 MB |
+| decoded GPU texture | 314 MB | 30.2 MB |
+| largest single cover | 2400×2400 | 512×512 |
+
+Both halves are gated: `gates/cover-budget.test.ts` was observed red on the
+per-cover cap before the fix, and its total-budget assertion was observed red
+separately by temporarily lowering the budget — the fixture vault is too small to
+breach 96 MB on its own, so without that second check one of the two assertions
+would never have been seen failing.
+
+Everything else about the deploy is unchanged and was re-verified live: 31/31
+covers 200, no private or wishlist books, `noindex` served as both a meta tag and
+an `X-Robots-Tag` header, `og:image` absolute.
 
 ## Notes to the next session
 
