@@ -172,6 +172,12 @@ const html = existsSync(join(DIST, 'index.html'))
 if (!html.includes(`content="${siteUrl.replace(/\/$/, '')}/og.png"`)) {
   problems.push(`og:image is not absolute against ${siteUrl} — link previews will show nothing`);
 }
+if (!/<meta\s+name="robots"\s+content="[^"]*noindex/.test(html)) {
+  problems.push('no `noindex` robots meta — the shelf would be searchable, not just shareable');
+}
+if (!existsSync(join(DIST, '_headers'))) {
+  problems.push('_headers missing — covers and og.png would be indexable on their own');
+}
 
 if (problems.length > 0) fail(`pre-flight found ${String(problems.length)} problem(s):\n- ${problems.join('\n- ')}`);
 

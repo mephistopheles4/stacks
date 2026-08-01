@@ -15,6 +15,17 @@ const pageUrl = absoluteUrl('/', Astro.site);
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Stacks</title>
     <meta name="description" content="A reading library, rendered as a shelf." />
+    <!--
+      Shareable, not searchable. A reading list is a fine thing to send someone
+      and a strange thing to have turn up beside your name in a search result.
+
+      This is the *authoritative* signal, and robots.txt is deliberately not
+      used to do it: `Disallow` stops a crawler fetching the page, which means
+      it never reads this tag, and a URL that is linked anywhere can still be
+      indexed on the strength of the link alone. Blocking the crawl is the
+      intuitive move and the one that fails. Let them read the page; tell them
+      not to index it.
+    --><meta name="robots" content="noindex, nofollow" />
     <meta property="og:title" content="Stacks" />
     <meta property="og:description" content="A reading library, rendered as a shelf." />
     <meta property="og:image" content={ogImage} />

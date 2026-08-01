@@ -48,6 +48,11 @@ function run(command: string, args: readonly string[]): void {
   }
 }
 
+/** Empty string for a file that is not there, so callers can just pattern-match. */
+function readFileIfPresent(path: string): string {
+  return existsSync(path) ? readFileSync(path, 'utf8') : '';
+}
+
 function walk(dir: string): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(dir)) {
@@ -179,6 +184,23 @@ if (existsSync(indexHtml)) {
   // Counted, not assumed. Saying "absolute" beside a failure that says
   // otherwise is how a log stops being read.
   console.log(`share tags: ${String(absolute)}/${String(imageTags.length)} image URL(s) absolute`);
+
+  // Shareable, not searchable — the owner's decision, and one that is only
+  // cheap before a crawler has seen the page. Asserted on the built HTML
+  // because a meta tag that survives the source and not the build protects
+  // nothing.
+  if (!/<meta\s+name="robots"\s+content="[^"]*noindex/.test(html)) {
+    failures.push('no `noindex` robots meta in the built page — the shelf would be searchable');
+  }
+  if (/^\s*Disallow:\s*\/\s*$/m.test(readFileIfPresent(join(DIST, 'robots.txt')))) {
+    // Blocking the crawl stops it reading the noindex, and a linked URL can
+    // still be indexed on the strength of the link. The intuitive move, and the
+    // one that fails.
+    failures.push('robots.txt disallows crawling, which prevents the noindex being read');
+  }
+  if (!existsSync(join(DIST, '_headers'))) {
+    failures.push('_headers did not reach the build — covers and og.png would be indexable');
+  }
 }
 
 const ogImage = join(ASSETS, 'og.png');

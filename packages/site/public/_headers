@@ -1,0 +1,18 @@
+# Cloudflare Pages reads this file and applies the headers to matching paths.
+#
+# The `noindex` meta tag in index.astro is the primary signal; this covers what
+# a meta tag cannot. `og.png` and every cover are images, with no HTML to carry
+# a tag, and an image indexed on its own is a book cover captioned with a title.
+#
+# `X-Robots-Tag` does not affect link-preview scrapers — Slack, iMessage and the
+# rest are not search engines and do not consult it — so the preview still works.
+
+/*
+  X-Robots-Tag: noindex, nofollow
+
+# The shelf is a static folder with no server behind it and no scripts from
+# anywhere else. Saying so costs nothing and removes a class of injection that
+# would otherwise be available to anything that got into library.json.
+/
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
