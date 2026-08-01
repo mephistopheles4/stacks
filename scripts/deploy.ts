@@ -96,6 +96,60 @@ function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv = 
 
 // ── 0. Everything the deploy needs, checked before anything runs ────────────
 //
+// The branch comes first, before SITE_URL and before the vault, because it is
+// the check most likely to be the reason you should not be here at all — and
+// because a refusal that arrives after two minutes of gates is a refusal people
+// learn to pre-empt with the override.
+//
+// Until worktrees, "am I on the right branch" answered itself: there was one
+// checkout and you were standing in it. Now there can be four, each on a
+// different branch, each with a shell open, and every one of them reads the
+// same `.env` — so every one of them has SITE_URL and CF_PAGES_PROJECT and can
+// publish to the live domain with one command that looks identical in all four.
+//
+// The Decision Log already accepts that the live site may drift from `main`;
+// that was about *when* you deploy, with one checkout to deploy from. This is
+// about publishing a branch nobody has reviewed to the address people have.
+// Refusing wrongly costs one flag. Publishing wrongly is live.
+if (!checkOnly && !dryRun) assertPublishableBranch();
+
+/**
+ * Refuses to publish anything but `main`.
+ *
+ * `--any-branch` is the deliberate override, named so it cannot be typed by
+ * accident and reads in shell history as what it is. `--dry-run` and
+ * `--check-only` skip this entirely: neither uploads, and a dry run from a
+ * feature branch is exactly how you would check this path before merging.
+ *
+ * A detached HEAD is refused too. It has no branch name, which means nobody can
+ * say afterwards what was published.
+ */
+function assertPublishableBranch(): void {
+  if (process.argv.includes('--any-branch')) {
+    console.log('--any-branch: publishing a branch other than main, deliberately');
+    return;
+  }
+
+  const result = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  // Not a checkout at all — a tarball, say. Nothing to assert against, and
+  // refusing here would block a legitimate deploy for no reason.
+  if (result.status !== 0) return;
+
+  const branch = result.stdout.trim();
+  if (branch === 'main') return;
+
+  fail(
+    `on branch "${branch === 'HEAD' ? 'a detached HEAD' : branch}", not main.\n` +
+      `  This publishes to ${process.env['SITE_URL'] ?? 'the live site'}, and every worktree\n` +
+      '  shares one .env — so this command looks the same from every checkout you have open.\n\n' +
+      '  Merge first, or say so on purpose:\n' +
+      '      pnpm deploy:site --any-branch',
+  );
+}
+
 // SITE_URL is required rather than optional. Without it the build emits a
 // relative og:image, every link-preview scraper renders nothing, and the shelf
 // arrives at its one moment — being sent to someone — as a bare URL. A deploy
