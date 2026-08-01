@@ -103,6 +103,17 @@ are fine" is exactly the mistake this scoreboard exists to prevent. The cause is
 still unmeasured; see `docs/progress.md`. G15 also counts only cover files, so
 the ~22 MB of per-book spine `CanvasTexture`s is outside every budget here.
 
+**And the bisect has since put it further out of reach.** The shelf loses its
+context on the owner's phone with *five* books — 632 triangles, 11 textures — so
+the cost that matters is fixed and paid before a book is drawn. No budget over
+what ships can see that, because it is a property of the renderer's own setup:
+the multisampled framebuffer, the shadow map, the pixel ratio. G15 remains worth
+having and remains unable to catch this. **The rule protected by nothing here is
+"the shelf survives on a real phone"**, and nothing in this repo can assert it —
+`smoke:render` screenshots a desktop GL context with gigabytes of headroom, which
+is the same blindness that let G15's defect ship. The current substitute is a
+person with a phone and four query parameters, which is honest rather than good.
+
 The gate asserts two different things, because two different things go wrong: no
 single cover exceeds `MAX_COVER_EDGE` (a property of the staging code), and the
 whole shelf fits `TEXTURE_BUDGET_BYTES` (a property of the *library*, which grows

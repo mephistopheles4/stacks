@@ -208,8 +208,63 @@ Both paths were observed working, in both directions: a normal navigation
 records `ended cleanly`, and a record without the flag renders as
 `PREVIOUS SESSION DIED`.
 
-Next session: get the numbers first. Do not tune anything until the bisect says
-which half of the problem it is in.
+### The bisect answered on the first try: five books
+
+Run on the owner's Pixel 10 Pro against the live site, `?debug&books=5`:
+
+```
+books    5
+textures 11  geom 8  prog 3
+draws    61  tris 632
+buffer   1054x1926  dpr 2.00
+screen   527x962 @2.549999952316284
+heap     10 / 2222 MB
+ram      8 GB
+gpu      PowerVR D-Series DXT-48-1536
+uptime   12s
+```
+
+…and the canvas was gone, replaced by the context-lost notice.
+
+**Five books. 632 triangles. Eleven textures. Sixty-one draw calls.** Whatever
+kills the shelf is paid *before a book is drawn*, so library size is not the
+variable, and every plan that starts "upload fewer covers" is a fix for a cause
+that is not this one. The lazy loader is not the answer to this bug.
+
+**And it is not the tab being killed.** The reload reported
+`— previous session ended cleanly —`, which can only happen if `pagehide` fired,
+which can only happen if the page survived. So the *context* went away while the
+document lived. The original report — a blank page and a sad face — was a tab
+death, and that is a different failure from this one; the 314 MB fix plausibly
+did resolve it, and this was underneath all along.
+
+That leaves the fixed cost, which is four settings — and rather than bundle them
+into a "mobile profile" that would very likely make the crash vanish while
+leaving nobody able to say which knob did it, each is now its own probe:
+
+| probe | what it changes | why it is ranked here |
+| --- | --- | --- |
+| `?aa=0` | `antialias: false` | 4× MSAA colour+depth at 1054×1926 is ~65 MB — by far the largest allocation, on a brand-new tile-based PowerVR driver where the resolve is the expensive path |
+| `?dpr=1` | caps `devicePixelRatio` | sets the size everything else is a multiple of |
+| `?shadows=0` | no shadow map, no casting light | the 2048² depth target is 16 MB |
+| `?guard=1` | skip `setSize` when unchanged | assigning `canvas.width` reallocates even when identical, so an unguarded `ResizeObserver` churns the whole framebuffer on every layout event — still plausible because the failure is delayed (12s, 19s), not at first paint |
+
+`?books=0` renders an empty case that still pays the entire fixed cost, which
+isolates renderer setup with no ambiguity from book content at all.
+
+Each probe was verified to have a *real* effect before shipping, not merely a
+label: `aa=0` flips `gl.getContextAttributes().antialias`, `dpr=1` takes the
+drawing buffer from 1000×1800 to 500×900, `shadows=0` drops the renderer from 13
+textures and 3 programs to 11 and 2. A probe that silently did nothing would be
+worse than no probe — the owner would run it, see no change, and rule out the
+actual cause.
+
+The panel now prints the active profile, so a screenshot of a crash says which
+settings produced it. A bisect whose result cannot be tied to a configuration is
+an anecdote.
+
+Next session: the owner runs the probes. Whichever one holds becomes the default,
+and only that one — do not ship the other three as a bundle.
 
 ## Notes to the next session
 
