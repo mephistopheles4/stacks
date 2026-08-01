@@ -68,11 +68,31 @@ commit that added them.
 Three rows that exist because a specific defect got through. Each was written to
 fail first.
 
-| Row | Rule | Defect it pins | Status |
+| Row | Rule | Gate | Status |
 | --- | --- | --- | --- |
-| **G10** | one cover-path rule, one implementation | `enrich.ts` shadowed `node:path`'s `basename` with a `/`-only split, so `..\..\x.png` traversed on Windows — the platform this project runs on | ⬜ |
-| **G11** | `coverAspect` on both build paths | stamped only by `publish()`, so `pnpm dev` fell back to 0.65 and squashed square audiobook art. Both existing gates run `--public`, so neither covered the path the owner actually looks at | ⬜ |
-| **G12** | `shelf_order` semantics survive `--renumber` | `--renumber` numbered *every* shelved book, making the documented default order unreachable and sorting the next book you read last | ⬜ |
+| **G10** | one cover-path rule, one implementation | `gates/cover-path.test.ts` + `covers/cover-path.test.ts` | ✅ |
+| **G11** | the two build modes differ only where documented | `gates/build-modes.test.ts` | ✅ |
+| **G12** | `shelf_order` semantics | `gates/shelf-order.test.ts` | ✅ characterized |
+
+**G10 observed red** on `enrich.ts`, which shadowed `node:path`'s `basename`
+with a `/`-only split, so `..\..\x.png` traversed on Windows — the platform this
+project runs on — under a comment saying it could not. The structural half then
+found a *third* copy of the rule in `obsidian-adapter.ts`'s wikilink embed.
+
+**G11 was reframed after checking its premise.** A review read the missing
+`coverAspect` on a local build as a rendering bug; tracing `dev-watch.ts` shows
+the dev flow runs `--public`, so nothing renders a local build and nothing was
+broken. What was missing is that the difference between the two modes was never
+written down or checked. The gate now pins exactly which keys may differ, and was
+observed red by removing one entry from that list.
+
+**G12 is characterization, and a design question is still open.** Two documented
+rules collide: a numbered book beats an unnumbered one before status is
+considered, and `--renumber` numbers *every* shelved book. So after one run the
+documented "unset means reading first, then newest finished" describes a state
+the vault can no longer be in, and the next book you start reading sorts last.
+The gate pins today's answer so that changing it is a visible decision. See the
+open question in `docs/progress.md`.
 
 ## G2 in full — the public build gate
 
