@@ -24,7 +24,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from '../packages/cli/src/env.ts';
@@ -203,3 +203,74 @@ run('pnpm', [
 ]);
 
 console.log(`\ndeployed → ${siteUrl}`);
+
+// ── 5. What a visitor actually gets ─────────────────────────────────────────
+//
+// The upload succeeding is not the same as the site changing, and the gap
+// between the two is not hypothetical: the fix for the mobile crash uploaded
+// cleanly, passed every check above, and left the custom domain serving the
+// previous build's covers for four hours. Cover filenames are slugs of book
+// titles and are rewritten in place, so a cached copy has the right name and the
+// wrong bytes, and nothing anywhere reported a problem.
+//
+// A warning rather than a failure, because the deploy genuinely did succeed and
+// the remedy is a cache purge nobody can perform from here.
+await verifyLive(siteUrl.replace(/\/$/, ''));
+
+async function verifyLive(origin: string): Promise<void> {
+  // Every cover, not a sample. Most covers are byte-identical between builds —
+  // only the ones that changed can reveal a stale cache — so a sample of five is
+  // very likely to land entirely on files that would match either way and
+  // report a clean site that is not. That is not hypothetical: the first version
+  // of this check sampled five and passed while the site was serving a previous
+  // build. A few dozen HEAD requests cost a second.
+  const covers = library.books
+    .map((book) => book.cover)
+    .filter((cover): cover is string => cover !== undefined);
+
+  if (covers.length === 0) return;
+
+  let unreachable = false;
+  const checks = await Promise.all(
+    covers.map(async (cover) => {
+      const local = statSync(join(DIST, cover)).size;
+      try {
+        const response = await fetch(`${origin}/${cover}`, { method: 'HEAD' });
+        const served = Number(response.headers.get('content-length') ?? '0');
+        return served === local
+          ? undefined
+          : `${cover}: serving ${String(served)}B, built ${String(local)}B`;
+      } catch {
+        unreachable = true;
+        return undefined;
+      }
+    }),
+  );
+
+  if (unreachable) {
+    console.warn(`\n! could not reach ${origin} to check what is being served`);
+    return;
+  }
+
+  const stale = checks.filter((line): line is string => line !== undefined);
+  if (stale.length === 0) {
+    console.log(`checked ${String(covers.length)} cover(s) live — the site is serving this build`);
+    return;
+  }
+
+  console.warn(
+    `\n! ${origin} is serving ${String(stale.length)} cover(s) from a previous build:\n` +
+      stale
+        .slice(0, 5)
+        .map((line) => `    ${line}`)
+        .join('\n') +
+      '\n  The upload was fine — this is caching, and cover filenames do not change\n' +
+      '  between builds, so a cached copy has the right name and the wrong bytes.\n' +
+      '    - Pages usually purges its edge within a minute or two of a deploy. Re-run\n' +
+      '      this check before doing anything else.\n' +
+      '    - If it persists: dash.cloudflare.com → your zone → Caching → Configuration →\n' +
+      '      Purge Everything, and set Browser Cache TTL to "Respect Existing Headers".\n' +
+      '      A zone overrides the Cache-Control this build sends, and its default is 4\n' +
+      '      hours, which is why `_headers` alone does not settle it on a custom domain.',
+  );
+}
