@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { LibraryBook } from '@stacks/core';
 import { toRows, type ShelfBook, type ShelfRow } from './books.ts';
-import { makeContactShadow, type Footprint } from './contact-shadow.ts';
+import { makeContactShadow, makeNeighbourShadow, type Footprint } from './contact-shadow.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
 /**
@@ -471,9 +471,25 @@ function placeBooks(
     // Drawn top-down: the newest books sit on the top shelf.
     const shelfY = (rowCount - 1 - rowIndex) * SHELF.rowHeight + SHELF.plankThickness / 2;
 
-    // Books stand against the left upright and run right, as a shelf fills.
-    let cursor = -SHELF.width / 2 + SHELF.padding;
+    // Books stand *against* the left upright and run right, as a shelf fills.
+    //
+    // Flush, with no padding: a book that leans left and starts a finger's width
+    // clear of the side is leaning on nothing, which is the tell that made the
+    // whole row look wrong. The case itself is what the first book rests on.
+    let cursor = -SHELF.width / 2;
     let index = 0;
+
+    /**
+     * One slump angle per run of touching books.
+     *
+     * Books in a leaning row are not each at their own angle — they are a stack
+     * resting on each other, so they are parallel, and the run as a whole leans
+     * on whatever is at its left end. Giving every book its own angle is what
+     * produced the wedge-shaped gaps: neighbours a fraction of a degree apart,
+     * touching nowhere.
+     */
+    let runLean = leanFor(rowIndex, index, row.books[0]?.book.id ?? '');
+    let startsRun = true;
 
     // Where each book meets the plank, gathered as the row is laid out — the
     // painted shadow is drawn from exactly the positions the books were placed
@@ -484,8 +500,30 @@ function placeBooks(
       // Depth carries the cover's real aspect on a face-out book, which is
       // turned side-on, and the shelf depth on a shelved one.
       const depth = entry.faceOut ? entry.coverWidth : SHELF.bookDepth;
-      const book = buildBook(entry, depth, textures, castShadows);
-      cursor += entry.gapBefore ?? 0;
+
+      // A shelved book stands a quarter-unit proud of a face-out one, so it is
+      // between its neighbour's cover and the key light.
+      //
+      // Only when it is actually *next to* it: a book on the far side of a year
+      // gap is a hand's width away and occludes nothing, and shading the cover
+      // anyway put a hard band down the edge of a book standing on its own.
+      const next = row.books[index + 1];
+      const shadedFromRight =
+        entry.faceOut && next !== undefined && !next.faceOut && (next.gapBefore ?? 0) === 0;
+
+      const book = buildBook(entry, depth, textures, castShadows, shadedFromRight);
+
+      const gap = entry.gapBefore ?? 0;
+      cursor += gap;
+
+      // A run is broken by a year gap: the book after one has open shelf on its
+      // left and nothing to rest against, so it stands up straight and becomes
+      // the support for the books after it. A row's first book is not a break —
+      // the case's own side holds it.
+      if (gap > 0) {
+        startsRun = true;
+        runLean = leanFor(rowIndex, index, entry.book.id);
+      }
 
       if (entry.faceOut) {
         // Turned to show its cover, leaning back against the books beside it.
@@ -507,8 +545,15 @@ function placeBooks(
           depth: entry.coverWidth,
         });
         cursor += entry.coverWidth + SHELF.bookGap * 2;
+        // A face-out book is broad and flat on the shelf, so it is a support in
+        // its own right — whatever follows it may lean on it.
+        startsRun = false;
       } else {
-        const lean = leanFor(rowIndex, index, entry.book.id);
+        // The first book of a run after a gap has nothing on its left, so it
+        // stands upright and holds up the ones that follow. Everything else in
+        // the run shares the run's angle, which is what lets them touch.
+        const lean = startsRun && index > 0 ? 0 : runLean;
+        startsRun = false;
 
         book.rotation.z = lean;
         book.position.set(
@@ -523,7 +568,11 @@ function placeBooks(
           z: (SHELF.depth - SHELF.bookDepth) / 2 - 0.02,
           depth: SHELF.bookDepth,
         });
-        cursor += entry.thickness + SHELF.bookGap;
+        // Touching, not spaced. Books in a run share an angle, so they stay
+        // parallel and their boards meet along the whole height — which is what
+        // "resting on each other" has to look like. The hair of clearance is
+        // only so two coincident faces do not fight over the same depth.
+        cursor += entry.thickness + TOUCHING;
       }
       index += 1;
 
@@ -557,6 +606,15 @@ function placeBooks(
 
 /** Most a book leans, in radians — about 3.5°. Beyond that it looks knocked over. */
 const MAX_LEAN = 0.062;
+
+/**
+ * Clearance between books that are meant to be touching.
+ *
+ * Not zero: two adjacent boards at exactly zero would be coplanar and z-fight
+ * along their top edge, where the shelf actually shows them. Small enough that
+ * no gap is visible at the scale a spine is drawn.
+ */
+const TOUCHING = 0.002;
 
 /**
  * How far a shelved book leans to the left.
@@ -630,6 +688,7 @@ function buildBook(
   depth: number,
   textures: TextureCache,
   castShadows: boolean,
+  shadedFromRight: boolean,
 ): THREE.Group {
   // A spine wide enough to read gets its title printed on it; a very thin one
   // stays a plain board, because type squeezed onto it would just be noise.
@@ -734,6 +793,21 @@ function buildBook(
   spineFace.scale.set(thickness, height, 1);
   spineFace.position.set(0, 0, depth / 2 + SKIN);
 
+  // A face-out book sits well back, so the shelved book on its right stands
+  // proud of it and between it and the key light. The cover is the only large
+  // flat surface on the shelf, and this is the one place that reads.
+  //
+  // Sized rather than scaled: the geometry is built at the cover's real size, so
+  // the gradient is not stretched by whatever the mesh scale happens to be.
+  if (shadedFromRight) {
+    const neighbour = makeNeighbourShadow(depth, height);
+    if (neighbour !== undefined) {
+      neighbour.rotation.y = Math.PI / 2;
+      neighbour.position.set(thickness / 2 + SKIN * 2, 0, 0);
+      group.add(neighbour);
+    }
+  }
+
   return group;
 }
 
@@ -784,8 +858,16 @@ function addLighting(
 ): void {
   scene.add(new THREE.AmbientLight(0xffffff, 0.75));
 
-  const key = new THREE.DirectionalLight(COLOURS.key, 2.4);
-  key.position.set(3.5, unitHeight + 3, 6);
+  // High and to the right — moved right of where it was, but not far.
+  //
+  // A directional light does not fall off with distance, only with angle, so
+  // swinging it out to the side takes light straight off the spines and covers,
+  // which all face the room. Pushed hard right the case lost most of its
+  // modelling. This is the compromise: enough of a sideways component for the
+  // shadows to read as thrown from the top right, with the intensity lifted to
+  // pay for the light the spines lose at that angle.
+  const key = new THREE.DirectionalLight(COLOURS.key, 2.7);
+  key.position.set(5, unitHeight + 3.4, 5.6);
   // Left off entirely rather than relying on `shadowMap.enabled`, so the depth
   // target is never allocated at all — which is the thing being measured.
   key.castShadow = shadows;
