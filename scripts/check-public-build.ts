@@ -198,8 +198,18 @@ if (existsSync(indexHtml)) {
     // one that fails.
     failures.push('robots.txt disallows crawling, which prevents the noindex being read');
   }
-  if (!existsSync(join(DIST, '_headers'))) {
+  const headers = readFileIfPresent(join(DIST, '_headers'));
+  if (headers === '') {
     failures.push('_headers did not reach the build — covers and og.png would be indexable');
+  } else if (!/\/covers\/\*[\s\S]*?Cache-Control:[^\n]*max-age=0/.test(headers)) {
+    // Pages defaults images to max-age=14400 and HTML/JSON to max-age=0, and
+    // every cover filename is rewritten in place by each deploy. Without this
+    // the index goes live against covers up to four hours old — which is how
+    // the fix for the mobile crash reached an origin nobody could see.
+    failures.push(
+      '_headers does not make /covers/* revalidate — library.json and the covers it ' +
+        'describes would expire on different schedules',
+    );
   }
 }
 
