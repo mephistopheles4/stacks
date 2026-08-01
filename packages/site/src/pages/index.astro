@@ -1,5 +1,10 @@
 ---
 import Shelf from '../components/Shelf.astro';
+import { absoluteUrl } from '../site-meta.ts';
+
+// Link-preview scrapers require absolute URLs; see site-meta.ts.
+const ogImage = absoluteUrl('/og.png', Astro.site);
+const pageUrl = absoluteUrl('/', Astro.site);
 ---
 
 <!doctype html>
@@ -12,9 +17,11 @@ import Shelf from '../components/Shelf.astro';
     <meta name="description" content="A reading library, rendered as a shelf." />
     <meta property="og:title" content="Stacks" />
     <meta property="og:description" content="A reading library, rendered as a shelf." />
-    <meta property="og:image" content="/og.png" />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:url" content={pageUrl} />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={ogImage} />
   </head>
   <body>
     <Shelf />

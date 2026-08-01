@@ -73,7 +73,15 @@ if (!vaultText.includes(CANARY)) {
 }
 console.log(`canary present in fixture vault: ${CANARY}`);
 
-// 2. Build for real.
+// 2. Build for real, as a deploy would — with an origin.
+//
+// Set here rather than left unset because the link preview is only correct when
+// the build knows where it will be served from, and a gate that builds without
+// an origin cannot tell a working preview from a broken one. Inherited by the
+// child process.
+const CANONICAL_ORIGIN = 'https://stacks.gate.example';
+process.env['SITE_URL'] = CANONICAL_ORIGIN;
+
 run('pnpm', ['stacks', 'build', '--public', '--vault', 'fixtures/vault', '--assets', ASSETS]);
 run('pnpm', ['--filter', '@stacks/site', 'run', 'build']);
 
@@ -133,6 +141,44 @@ if (existsSync(distCovers)) {
     );
   }
   console.log(`covers in dist: ${String(readdirSync(distCovers).length)}, all referenced`);
+}
+
+// 5. The link preview actually works when the shelf is shared.
+//
+// `og:image` was `/og.png` — relative — for the whole of the project's life.
+// Every preview scraper (Slack, iMessage, WhatsApp, Discord, Twitter) requires
+// an absolute URL and silently renders nothing for a relative one. So the image
+// was generated, size-checked by this very gate, and would have been invisible
+// at the one moment it exists for: the brief's success metric is "you send the
+// link to at least one friend unprompted".
+//
+// Asserted on the built HTML rather than on the source, because what matters is
+// what a scraper fetches.
+const indexHtml = join(DIST, 'index.html');
+if (existsSync(indexHtml)) {
+  const html = readFileSync(indexHtml, 'utf8');
+
+  const shareTags = [...html.matchAll(/<meta\s+(?:property|name)="((?:og|twitter):[a-z]+)"\s+content="([^"]*)"/g)];
+  const imageTags = shareTags.filter(([, key]) => key === 'og:image' || key === 'twitter:image');
+
+  if (imageTags.length === 0) {
+    failures.push('no og:image or twitter:image in the built page — link previews show nothing');
+  }
+
+  let absolute = 0;
+  for (const [, key, value] of imageTags) {
+    if (value === undefined || !value.startsWith(`${CANONICAL_ORIGIN}/`)) {
+      failures.push(
+        `${String(key)} is "${String(value)}" — must be absolute against SITE_URL, or preview ` +
+          'scrapers render nothing',
+      );
+    } else {
+      absolute += 1;
+    }
+  }
+  // Counted, not assumed. Saying "absolute" beside a failure that says
+  // otherwise is how a log stops being read.
+  console.log(`share tags: ${String(absolute)}/${String(imageTags.length)} image URL(s) absolute`);
 }
 
 const ogImage = join(ASSETS, 'og.png');
