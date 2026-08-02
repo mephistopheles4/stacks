@@ -16,31 +16,45 @@ In this repo, in this order:
 - **[`CLAUDE.md`](../../CLAUDE.md)** — the invariants, the contracts, and the
   rules that must not be broken. This is the authority. Read it first.
 - **[`docs/progress.md`](../progress.md)** — where the project actually is.
-- **[`docs/gates.md`](../gates.md)** — which rule each gate protects, and which
-  rules are protected by nothing.
-- **[`docs/decisions.md`](../decisions.md)** — the Decision Log: every choice
-  made, dated, with the reasoning. Read before proposing anything that
-  contradicts an existing decision.
-- **`CONTEXT.md`** at the repo root, and **`docs/adr/`** — the skills' own
-  glossary and ADR conventions. Neither exists yet.
+- **[`docs/adr/`](../adr/)** — every decision already made, one file each, with
+  the original reasoning. Read the records touching the area you are about to
+  work in, and read [the index](../adr/README.md) first.
+- **[`docs/gates.md`](../gates.md)** — which rule each gate protects, which are
+  protected by nothing, and what went wrong while writing them.
+- **`CONTEXT.md`** at the repo root — the skills' glossary. It does not exist
+  yet.
 
 If any of these don't exist, **proceed silently**. Don't flag their absence and
 don't suggest creating them upfront. `/domain-modeling` creates them lazily when
 terms or decisions actually get resolved.
 
-## This repo already has a decision record, and it is not ADRs
+## Where a new note belongs
 
-[`docs/decisions.md`](../decisions.md) holds 130-odd dated entries, written as a
-running narrative rather than one-decision-per-file. That is deliberate: several
-of them are only legible in sequence — the shadow-map investigation is a chain
-of six entries ending in *"the ranking that predicted otherwise was wrong"*, and
-splitting it into six ADRs would destroy the reasoning it records.
+Three files, three genres. Putting something in the wrong one is how this
+project's documentation drifted before.
 
-So: **append to `docs/decisions.md` for anything that continues an existing
-thread.** Reach for `docs/adr/` only for a genuinely new, standalone
-architectural choice — one a reader could evaluate without the log above it. If
-you write an ADR, add a one-line pointer to it from the Decision Log so there is
-still one place that lists every decision in order.
+| It is… | It goes to |
+| --- | --- |
+| a decision — hard to reverse, surprising without context, a real trade-off | a new record in [`docs/adr/`](../adr/) |
+| a lesson about a gate — what it caught, how it went red, why it was vacuous | [`docs/gates.md`](../gates.md) |
+| where the project is, or a fact about the environment it runs in | [`docs/progress.md`](../progress.md) |
+| none of those | a commit message |
+
+**The ADRs here were extracted retroactively.** They came from a 138-entry
+chronological Decision Log, which is why record 0001 predates this convention by
+months and why several carry a long **How this was decided** section. That is
+deliberate — the reasoning is the valuable half — and it is not the shape a
+*new* record has to take. A new one can be three sentences.
+
+## Records are append-only
+
+A decision that turned out wrong earns a **new** record saying so, not an edit
+to the old one. Several existing records contain their own correction, and in
+every case the correction is the more useful half — sizing an allocation
+predicted the wrong answer, a ranking put antialiasing first when it was the
+shadow map, a gate was strongest exactly where it never ran.
+
+Number a new record one past the highest in the directory.
 
 ## Use the project's vocabulary
 
@@ -55,12 +69,8 @@ inventing language the project doesn't use (reconsider) or there's a real gap
 
 ## Flag decision conflicts
 
-If your output contradicts an existing decision, surface it explicitly rather
-than silently overriding:
+If your output contradicts an existing record, surface it explicitly rather than
+silently overriding:
 
-> _Contradicts the 2026-08-01 entry on re-hosting cover art — but worth
-> reopening because…_
-
-The Decision Log's own header rule applies: entries are **append-only**. A
-decision that turned out wrong gets a new entry saying so, not an edit to the
-old one.
+> _Contradicts [ADR-0013](../adr/0013-cover-provenance-and-rehosting.md) on
+> re-hosting cover art — but worth reopening because…_

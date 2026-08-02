@@ -7,7 +7,7 @@
  * so every one of them has SITE_URL and CF_PAGES_PROJECT and can publish to the
  * live domain with a command that looks identical from all four.
  *
- * The Decision Log already accepts that the live site may drift from `main`.
+ * ADR-0019 already accepts that the live site may drift from `main`.
  * That was about *when* you deploy, with one place to deploy from. This is
  * about publishing a branch nobody has reviewed to the address people have,
  * which is the asymmetry this project keeps meeting: refusing wrongly costs one

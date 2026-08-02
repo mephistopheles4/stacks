@@ -107,7 +107,7 @@ function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv = 
 // same `.env` — so every one of them has SITE_URL and CF_PAGES_PROJECT and can
 // publish to the live domain with one command that looks identical in all four.
 //
-// The Decision Log already accepts that the live site may drift from `main`;
+// ADR-0019 already accepts that the live site may drift from `main`;
 // that was about *when* you deploy, with one checkout to deploy from. This is
 // about publishing a branch nobody has reviewed to the address people have.
 // Refusing wrongly costs one flag. Publishing wrongly is live.

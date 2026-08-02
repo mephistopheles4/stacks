@@ -343,7 +343,7 @@ Re-hosting Open Library art only would have meant six covers and twenty-five
 generated spines — trading away precisely the cover quality Apple was added for.
 So a public build ships every cover it has, knowingly, and honours takedown
 requests. That is a decision rather than an oversight, and it is written down in
-[`docs/decisions.md`](./decisions.md) with the reasoning and with the alternative
+[`docs/adr/`](./adr/) with the reasoning and with the alternative
 that would satisfy Apple's terms if it ever matters.
 
 What the gate still enforces regardless: no orphans, no wishlist books, and
@@ -379,3 +379,27 @@ request — which then has to pass everything above like any other change.
 | Changed-lines floor (diff-cover) | One contributor; it would be noise. |
 | Mutation testing (Stryker) | Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green. |
 | Article XI-style residency rules | No infrastructure; nothing to pin. |
+
+## What building these gates taught
+
+Carried over from the Decision Log when the decisions themselves moved to
+[`docs/adr/`](./adr/). These are not decisions — they are what went wrong while
+writing the things above, which is the part most likely to go wrong again.
+
+- **2026-07-31** — **The render gate builds and serves `dist/` itself** rather than driving the dev server. Waiting on a subprocess to announce itself on stdout is a race that hangs instead of failing, and a gate that can hang is worse than one that can fail. It also means the gate screenshots what actually ships.
+
+- **2026-07-31** — The gate's pixel probe waits two `requestAnimationFrame`s before `readPixels`. Without it the drawing buffer has already been cleared, and the gate reports a blank shelf that is in fact rendering correctly — it did exactly that once.
+
+- **2026-08-01** — **G14 had a false negative, found by the next command added.** It searched CLAUDE.md's Commands section for `\bname\b`, so a new `covers` command passed as documented because `status`'s description reads "covers still missing". Now anchored to the start of a line, where the block actually puts a command name. A gate that matches prose matches anything — and this one was written *in* the phase about documented claims quietly ceasing to be true.
+
+- **2026-08-01** — **G1 caught both halves of this change without being asked**, which is what the reverse-assert is for: `scripts/worktree.ts` arrived importing `fs` with no allowlist entry, and `scripts/dev-watch.ts` stopped importing it, making its standing exception spent. One line added, one removed. A list that only grew would have kept the second.
+
+- **2026-08-01** — **G17's first version was strongest where it never ran and inert where it mattered.** It read whichever branch the suite happened to be on and returned early when that was `main` — so CI, which runs on `pull_request` and is therefore never on `main`, exercised only the refusal, while the owner, who mostly is on `main`, ran a gate that quietly asserted nothing. A silent `return` that reads as coverage is the vacuous-green trap `expectFound` exists for, written into a gate in the phase about exactly that. Fixed with `GIT_DIR`, which points the child's git at a scratch repository on a known branch: the script is real, the guard is real, git really resolves the branch, and the only thing controlled is *which checkout is being asked about*. One test omits the redirection on purpose, so something still proves the guard is wired to the real repository. Two mutations rather than one, because a positive check cannot detect a missing guard: deleting the guard fails four of seven, inverting it fails six — including "lets main through", which is what makes that direction non-vacuous.
+
+- **2026-08-01** — **The `.env` probe file is named per process, because the test writes into the *main* checkout.** That is the point of the fallback and it makes the file a shared resource the moment two worktrees run `pnpm test` at once: one suite's `afterEach` deletes the file the other is mid-way through reading, and it presents as a flaky assertion rather than as a collision. Exactly the render gate's fixed-port defect one layer down, and worth stating twice because the first instance was found by reasoning and this one by being asked the same question again.
+
+- **2026-08-01** — **README's status line was wrong for months and nothing could go red.** It said "Phase 0 (scaffold). The shelf renders, and it is empty" while all five phases were tagged, the tool ran against a real vault and the site was deployed — the same defect class G14 gates one file over, and the first thing a visitor would have read. `docs/progress.md`'s "Current state" table was stale the same way, saying the last green gate was G15 and that the mobile crash was unfixed, fifty lines above a narrative recording it closed; that one is worse, because CLAUDE.md sends every reader there first. **G14 covers CLAUDE.md's command lists, not README's**, and README's table had drifted to missing four scripts and five CLI commands. Filled in and pointed at the gated list rather than gated itself — a second gated copy of the same lists is a thing to keep in sync, and the owner should decide whether that trade is worth it.
+
+- **2026-08-01** — **The README fix introduced the defect the README fix was about, and it was caught in review.** The new status section claimed "269 tests across 34 files" — a hardcoded count, in the one file with no gate, inside the commit whose other half is about documented claims quietly ceasing to be true. The next test anyone adds makes it false and nothing goes red. Identical in shape to the "It said 'four' for a while after there were five" note already sitting in `gates.md`. Removed rather than gated: pointing at the scoreboard says the same thing and cannot rot. Worth logging because the mistake was made *while writing about the mistake*, which is the strongest argument in this repo for why review is not optional and why numbers belong in gate output rather than in prose.
+
+- **2026-08-02** — **G1 caught the new script before any of this was committed**, which is the second time the reverse-assert has earned its keep on a change nobody thought was about the adapter: `scripts/make-readme-image.ts` arrived importing `node:fs/promises` with no allowlist entry, exactly as `scripts/worktree.ts` did. One line added, with the justification that matters — its only input is `artifacts/shelf.png` and it never learns what a book is.

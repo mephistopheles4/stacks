@@ -142,7 +142,7 @@ load-it / don't-load-it boolean:
 - **shelf tier** — 512px, what `MAX_COVER_EDGE` caps today;
 - **held tier** — the vault-quality original, one book at a time.
 
-That cuts against the 512px decision as currently written in the Decision Log.
+That cuts against the 512px decision as currently written in [`docs/adr/`](./adr/0015-cover-texture-budget.md).
 The cap is not wrong; it is right for a spine on a shelf and wrong for a cover
 filling a phone screen. It is the shelf tier of two tiers, not a permanent
 policy — and a public build will eventually need to stage a full-size copy
