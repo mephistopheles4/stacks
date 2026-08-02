@@ -16,8 +16,12 @@ So the realistic risks are narrow, and worth naming precisely:
   hand-edited note and gets joined to a path. That rule has been wrong before;
   it is now one implementation with a containment check (row G10).
 - **Hostile bytes from a metadata provider.** Cover images are downloaded and
-  handed to `sharp`, a native decoder. Currently without a size cap or a
-  content-type check — a known gap, recorded rather than hidden.
+  handed to `sharp`, a native decoder, from a URL that came out of a third-party
+  API response. The download is bounded — a 15s timeout, a 20 MB cap counted as
+  the body arrives rather than trusted from `Content-Length`, and an allowlist
+  of three magic-byte signatures so an SVG or an HTML error page never reaches
+  the decoder (row G18). It was none of those things until August 2026, and
+  this list said so.
 - **Data loss in a vault.** The tool writes to files somebody edits by hand.
   `updateBook` has overwritten a value it should have left alone (row G4), and
   the public build deletes files it does not recognise inside its own staging

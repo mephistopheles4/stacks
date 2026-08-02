@@ -14,9 +14,10 @@ Update it in the **same commit** as the gate it describes.
 
 | | |
 | --- | --- |
-| **Last green gate** | G15 — cover budget, after the live site crashed phones |
-| **Now working on** | the mobile crash, which is **not** fixed — see below |
+| **Last green gate** | G18 — a provider's cover bytes are bounded, and are an image |
+| **Now working on** | preparing the repository to be made public |
 | **Blocked on** | nothing |
+| **Mobile crash** | closed. Two separate bugs: 314 MB of texture (G15), then a driver that cannot sample a shadow map. The shelf paints its shadows now |
 | **Deployed** | https://stacks.aymandiab.com — Cloudflare Pages, `pnpm deploy:site` |
 | **Running against** | the owner's real vault, 31 books, all with covers |
 

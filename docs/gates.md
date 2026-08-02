@@ -82,6 +82,7 @@ this file is otherwise about. Counted in prose, so nothing could go red.)
 | **G15** | what ships fits in a phone's graphics memory | `gates/cover-budget.test.ts` | ✅ |
 | **G16** | every book stays inside its own case | `pnpm smoke:render` | ✅ |
 | **G17** | a deploy publishes `main`, or says why not | `gates/deploy-branch.test.ts` | ✅ |
+| **G18** | a provider's bytes are bounded and are an image | `packages/core/src/covers/download.test.ts` | ✅ |
 
 **G17 is the one row here written for a defect that has not happened**, because
 the change that would cause it is the change that shipped with it. Until
@@ -107,6 +108,47 @@ own. Deleting the guard fails four of seven. Inverting the comparison — refuse
 is what proves that one is not vacuous. Among the casualties either way is the
 check that `--any`, `--branch`, `--anybranch` and `--any_branch` do *not* work
 as the override: an escape hatch you can stumble into is not one.
+
+**G18 is the second row written for a defect that has not happened**, and the
+first written because somebody outside the project looked. A pre-publication
+review — an external assistant asked whether the repo was ready to go public —
+named the cover download as the clearest remaining technical gap. It was right,
+and it was reading [`SECURITY.md`](../SECURITY.md), which had disclosed the same
+thing by name for weeks. Disclosing a gap is not the same as gating it, and a
+threat model that lists a hole indefinitely is a comment, exactly like an
+ungated rule.
+
+`download` fetched a URL that came out of a third-party API response and handed
+the bytes to `sharp`, a native decoder, with no timeout, no size limit, and no
+check that they were an image at all — `arrayBuffer()` buffers whatever arrives,
+however much of it arrives. Now: a 15s abort, a 20 MB cap counted **as the body
+streams** rather than believed from `Content-Length`, and a magic-byte allowlist
+of JPEG, PNG and WebP. The allowlist matters more than the cap. `sharp` also
+decodes SVG, which is not an image but a document with its own parser and its
+own rules about external references, and nothing here has any reason to hand a
+provider's response to that.
+
+**Observed red at six of fourteen** by restoring the old four-line `download`
+and re-running. The streaming case is the one to note: it did not merely fail,
+it ran for **31 seconds** first, consuming a response that advertised 4 KB and
+never ended. That is the defect demonstrating itself — the cap is a limit only
+because something counts, and `Content-Length` is a claim like any other.
+
+One test failed on arrival for the opposite reason, and it was the instrument
+rather than the code: a default `ReadableStream` pulls once the moment it is
+constructed, so "the body was never read" was measuring the test's own
+scaffolding. At `highWaterMark: 0` nothing is pulled until something reads.
+
+**Every case here stubs `fetch`, so the checks were also run once against the
+live providers** — which is the failure mode a gate made of stubs cannot see. A
+tightened `Content-Type` check refuses covers *silently*, because `cacheCover`
+treats every failure as "no cover" by design, so a provider answering
+`application/octet-stream` would have meant books quietly logged bare with
+nothing going red. All three answer properly: Open Library `image/jpeg`
+(40 KB, `ffd8ffe0`), Google Books `image/png` (`89504e47` — note the endpoint
+serves PNG whatever the URL suggests), Apple `image/jpeg` (171 KB, `ffd8ffe0`).
+Largest is 0.8% of the cap. This is a measurement with a shelf life: it says
+what the three providers did on 1 August 2026, not what they must do.
 
 **G16 observed red at 0.0203** — about 0.5cm at shelf scale — by deleting the
 clearance and re-running. It exists because the owner found the same defect twice
