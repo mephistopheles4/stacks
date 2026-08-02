@@ -21,8 +21,17 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { envFilePath, loadEnv, mainCheckout } from './env.ts';
 
-/** Gitignored under `.env.*`, so a stray copy cannot be committed. */
-const PROBE = '.env.worktree-probe';
+/**
+ * Gitignored under `.env.*`, so a stray copy cannot be committed.
+ *
+ * Named per process because it is written into the *main* checkout — that is
+ * the whole point of the fallback — and two worktrees running `pnpm test` at
+ * once is now an ordinary thing to do. Sharing one filename, each suite's
+ * `afterEach` would delete the file the other was mid-way through reading, and
+ * it would present as a flaky assertion rather than as the shared-resource
+ * collision it is. Same defect as the render gate's fixed port, one layer down.
+ */
+const PROBE = `.env.worktree-probe-${String(process.pid)}`;
 
 const HERE = process.cwd();
 

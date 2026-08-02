@@ -90,14 +90,23 @@ by standing somewhere. Now there can be four, on four branches, and all of them
 read the same `.env` — so all of them hold SITE_URL and can publish to the live
 domain with a command that looks identical from every one.
 
-Observed red by disabling the guard: three of its five checks fail, including
-the one asserting that `--any`, `--branch` and `--anybranch` do *not* work as
-the override. An escape hatch you can stumble into is not one.
+**Both directions are asserted unconditionally**, which took a second attempt.
+The first version read the branch the suite happened to be on and returned
+early when it was `main` — so CI, which runs on `pull_request` and is therefore
+never on `main`, would only ever exercise the refusal, while the owner, who
+mostly is, would run a gate that quietly asserted nothing. Strongest where it
+never runs, inert where it matters. Now `GIT_DIR` points the child's git at a
+scratch repository sitting on a known branch: the script is real, the guard is
+real, git really resolves the branch, and only *which checkout is being asked
+about* is controlled. One test deliberately omits that redirection, so
+something still proves the guard is wired to the actual repository.
 
-Both directions were observed against the real script rather than an extracted
-copy of its rule — refusal from this branch, and a pass from a worktree actually
-checked out on `main`. A guard that is unit-tested in isolation and never wired
-in is exactly what this file's reverse-asserts exist to catch.
+Two mutations, because a positive check cannot detect a missing guard on its
+own. Deleting the guard fails four of seven. Inverting the comparison — refuse
+`main`, allow everything else — fails six, including "lets main through", which
+is what proves that one is not vacuous. Among the casualties either way is the
+check that `--any`, `--branch`, `--anybranch` and `--any_branch` do *not* work
+as the override: an escape hatch you can stumble into is not one.
 
 **G16 observed red at 0.0203** — about 0.5cm at shelf scale — by deleting the
 clearance and re-running. It exists because the owner found the same defect twice
