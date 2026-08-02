@@ -59,6 +59,7 @@ means the two have drifted.
 | **G7** | logic in `.astro` | `.astro` files are not typechecked (`astro check` cannot run under TS 7), so nothing else can catch this | `gates/astro-no-logic.test.ts` | ✅ |
 | **G8** | frontmatter contract ↔ parser ↔ CLAUDE.md | a key the parser accepts but the contract never documents | `gates/frontmatter-contract.test.ts` | ✅ |
 | **G9** | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | `gates/env-contract.test.ts` | ✅ |
+| **G19** | the constitution ↔ this scoreboard | an invariant nothing scores, a row naming a moved file, a gate nobody recorded | `gates/constitution-scoreboard.test.ts` | ✅ |
 
 **G13 grew a second allowlisted directory when the README got a screenshot**,
 and that is the most dangerous kind of entry in this file: a *directory* is a
@@ -81,6 +82,34 @@ described but the documented enumeration never listed. **G9 observed red** on
 `PORT`, read by `scripts/dev-watch.ts` and documented nowhere. Both fixed in the
 commit that added them.
 
+**G19 gates this file, which until it existed was the only unenforced thing in
+the repo.** Every gate here *mentioned* `docs/gates.md` — in a comment. Nothing
+read it. So the document whose entire job is to record which rules are
+mechanically enforced was itself a documented claim resting on somebody
+remembering, which is the exact failure the table at the top of this file lists
+six instances of.
+
+It asserts in both directions and in three dimensions: every numbered invariant
+in `CLAUDE.md` is cited by some row (⬜ is an acceptable and honest answer);
+no row cites an invariant that no longer exists; every spec path named here
+resolves to a real file; every `gates/*.test.ts` appears somewhere here, so a
+gate cannot be written and left unrecorded; every row carries a status drawn
+from this file's **own key** rather than a list hardcoded in the test; row
+numbers are unique and gapless, so retiring a rule means marking it rather than
+deleting the evidence it was ever considered.
+
+**It caught itself on its first run** — `constitution-scoreboard.test.ts`
+existed and no row scored it — which is the shortest possible demonstration of
+the gap it closes. **Observed red eight ways**: a sixth invariant added with no
+row; a row citing `invariant 9`; a renamed spec path; an unscored gate file; a
+status symbol outside the key; a duplicated row number; a deleted row leaving a
+gap; and the heading `## Invariants` renamed, which throws rather than passing
+over an empty set.
+
+Every check passed the day it was written, and that is the point. The cost is
+nearly zero now and all of it is paid the first time somebody adds an invariant,
+moves a spec, or writes a gate and forgets to come back here.
+
 ## Defect gates
 
 Rows that exist because a specific defect got through — except the last, which
@@ -92,7 +121,7 @@ this file is otherwise about. Counted in prose, so nothing could go red.)
 
 | Row | Rule | Gate | Status |
 | --- | --- | --- | --- |
-| **G10** | one cover-path rule, one implementation | `gates/cover-path.test.ts` + `covers/cover-path.test.ts` | ✅ |
+| **G10** | one cover-path rule, one implementation | `gates/cover-path.test.ts` + `packages/core/src/covers/cover-path.test.ts` | ✅ |
 | **G11** | the two build modes differ only where documented | `gates/build-modes.test.ts` | ✅ |
 | **G12** | `shelf_order` semantics | `gates/shelf-order.test.ts` | ✅ characterized |
 | **G15** | what ships fits in a phone's graphics memory | `gates/cover-budget.test.ts` | ✅ |

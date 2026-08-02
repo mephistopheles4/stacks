@@ -24,6 +24,13 @@ no-copyrighted-material constraint on fixtures, and any unlogged decisions still
 owed to `docs/adr/`.
 
 ## Invariants — never violate these
+
+**This list is the project's constitution**, and each numbered rule is an
+article. [`docs/gates.md`](docs/gates.md) scores every one of them as either
+gated in CI or visibly not, and `gates/constitution-scoreboard.test.ts` (G19)
+holds these two documents to each other — so adding an article here without
+scoring it there is a red build, in both directions.
+
 1. **The vault is the source of truth.** No parallel database. `library.json` is a build artifact, always regenerable, never hand-edited, gitignored.
 2. **Note bodies are private.** `library.json` never carries body text, in any build — that part is absolute. A public build may ship body text from *one explicitly allowlisted section* of a note, extracted in the adapter and sanitised, as its own per-book file; see `docs/notes-on-the-shelf.md`. **Nothing implements that yet**, and the gate lands before the publishing code does, so today the rule is what it has always been: nothing below the frontmatter block is parsed or shipped at all. An allowlist and never a denylist, for the same reason `private:` fails closed.
 3. **Never crash on a bad note.** Malformed frontmatter → skip with a console warning listing the file. One bad file must not break `stacks build`.
