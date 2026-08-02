@@ -96,16 +96,119 @@ export async function cacheCover(
   };
 }
 
-async function download(url: string): Promise<Buffer | undefined> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return undefined;
+/**
+ * Hard limits on a cover download.
+ *
+ * The bytes here are the least trusted input this tool handles. The URL comes
+ * from a third-party API response rather than from this code, and the bytes go
+ * straight into `sharp`, a native decoder — so a provider having a bad day, or
+ * a DNS answer that is not the provider at all, reaches a C library through
+ * this function. A decoder is the wrong place to discover that a response was
+ * 400 MB of something else.
+ *
+ * 20 MB is far above any real cover — Apple's largest artwork in the owner's
+ * vault is ~2400px and about 1 MB — and far below anything that threatens the
+ * heap. The timeout is long enough for a slow CDN and short enough that a
+ * socket which opens and then says nothing does not hang `stacks add` forever;
+ * without it there is no upper bound at all, because `fetch` has no default.
+ */
+const MAX_COVER_BYTES = 20 * 1024 * 1024;
+const DOWNLOAD_TIMEOUT_MS = 15_000;
 
-    const bytes = Buffer.from(await response.arrayBuffer());
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/**
+ * What the bytes actually are, whatever the URL and the response header claimed.
+ *
+ * This is the authoritative check and the reason the others can stay lenient: a
+ * `Content-Type` is a claim by the server, and the extension in a URL is not
+ * even that. These twelve bytes are the thing `sharp` is about to parse.
+ *
+ * The allowlist is exactly the three formats a cover arrives as, and it is an
+ * allowlist for the same reason `private:` is — a format nobody considered must
+ * not be admitted by default. `sharp` will also decode SVG, TIFF and AVIF;
+ * SVG especially is not an image but a document, with its own parser and its
+ * own rules about external references, and nothing here has any reason to hand
+ * a provider's response to that.
+ */
+export function looksLikeImage(bytes: Buffer): boolean {
+  if (bytes.length < 12) return false;
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return true; // JPEG
+  if (bytes.subarray(0, 8).equals(PNG_SIGNATURE)) return true;
+  // WebP is a RIFF container: "RIFF" <4-byte length> "WEBP".
+  return (
+    bytes.subarray(0, 4).toString('latin1') === 'RIFF' &&
+    bytes.subarray(8, 12).toString('latin1') === 'WEBP'
+  );
+}
+
+/**
+ * The body, or `undefined` if it runs past the cap.
+ *
+ * `Content-Length` is a claim like any other: it is absent under chunked
+ * encoding and it can simply be wrong. Counting what actually arrives is what
+ * makes the cap a limit rather than a request, and stopping mid-stream is what
+ * makes an endless response cost 20 MB instead of the heap — `arrayBuffer()`
+ * would have to buffer all of it before anything could measure it.
+ */
+async function readCapped(body: ReadableStream<Uint8Array>): Promise<Buffer | undefined> {
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      total += value.length;
+      if (total > MAX_COVER_BYTES) return undefined;
+      chunks.push(value);
+    }
+  } finally {
+    // Releases the socket whether we finished or bailed out over the cap.
+    await reader.cancel().catch(() => undefined);
+  }
+
+  return Buffer.concat(chunks);
+}
+
+export async function download(url: string): Promise<Buffer | undefined> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok || response.body === null) return undefined;
+
+    // An error page served with HTTP 200 is a documented provider behaviour
+    // here — Open Library answers an ISBN miss that way — so a response that
+    // announces itself as anything but an image is refused before its body is
+    // read. Absent is tolerated: some CDNs omit it, and the magic-byte check
+    // below is the one that actually decides.
+    const declaredType = response.headers.get('content-type');
+    if (declaredType !== null && !declaredType.toLowerCase().trimStart().startsWith('image/')) {
+      return undefined;
+    }
+
+    // Refusing on the declared length is the only check that costs nothing to
+    // fail — no body is transferred at all.
+    const declaredLength = Number(response.headers.get('content-length'));
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_COVER_BYTES) return undefined;
+
+    const bytes = await readCapped(response.body);
+    if (bytes === undefined) return undefined;
+
     // Open Library serves a tiny placeholder for "no cover on file".
-    return bytes.length < 1024 ? undefined : bytes;
+    if (bytes.length < 1024) return undefined;
+
+    return looksLikeImage(bytes) ? bytes : undefined;
   } catch {
+    // Includes the abort: a timeout is a failed download, not an exception for
+    // a caller that already treats every failure as "no cover".
     return undefined;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

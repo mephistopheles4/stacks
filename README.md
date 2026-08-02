@@ -37,17 +37,36 @@ explicit, and a process watching your vault forever is a thing to babysit. For a
 *published* shelf the right automation is a scheduled build or a git hook, since
 the interesting event is "share this now", not "a file changed".
 
+### The CLI
+
+| `pnpm stacks …` | What it does |
+| --- | --- |
+| `add` | fetch metadata and a cover, then write a note into the vault |
+| `build` | parse the vault into `library.json` (`--public`, `--watch`) |
+| `status` | books this year, in progress, covers still missing |
+| `covers` | report where each cover came from, or record it (`--backfill`) |
+| `enrich` | fill missing metadata on existing notes, never overwriting |
+| `order` | show the shelf order, or renumber it (`--renumber`) |
+| `import` | import a library export into the vault (`audible`) |
+
+### Scripts
+
 | Command | What it does |
 | --- | --- |
-| `pnpm stacks --help` | the CLI |
-| `pnpm stacks enrich --dry-run` | fill gaps in existing notes, never overwriting |
-| `pnpm stacks order --renumber` | renumber `shelf_order` in tens |
-| `pnpm test` | all workspaces |
+| `pnpm typecheck` | `tsc --noEmit` across every `.ts` in the repo |
+| `pnpm test` | vitest, all workspaces and the gates |
 | `pnpm build` | typecheck + static site build |
 | `pnpm dev` | site dev server |
 | `pnpm dev:watch` | vault watcher + dev server, live-reloading |
+| `pnpm worktree <branch>` | a second checkout, installed and pointed at your `.env` |
+| `pnpm fixtures:50` | regenerate the 50-book fixture vault |
 | `pnpm smoke:render` | headless shelf screenshot gate |
 | `pnpm gate:public` | proves the public build leaks no note text |
+| `pnpm deploy:site` | gates, then build from the real vault, then publish |
+
+Both lists are documented in full in [CLAUDE.md](CLAUDE.md), which
+`gates/commands.test.ts` holds to reality in both directions — adding a command
+without documenting it there is a red build.
 
 ## Sharing your shelf
 
@@ -78,4 +97,15 @@ never hand-edited, and gitignored.
 
 ## Status
 
-Phase 0 (scaffold). The shelf renders, and it is empty. Books arrive in phase 2.
+All five phases are green and tagged (`phase-0` … `phase-4`), and the tool runs
+against a real vault rather than only fixtures. Every invariant has a named gate
+that can go red, scored in [docs/gates.md](docs/gates.md).
+
+This is **developer-friendly personal software**, not a packaged application.
+There is no npm release and no installer: the CLI runs from TypeScript source
+through `tsx`, so using it means cloning the repo and having Node 22+, pnpm and
+git. It is offered in the hope it is useful, not as a product.
+
+[docs/progress.md](docs/progress.md) is the file that says where things actually
+are. This line said "Phase 0 (scaffold)" for months after that stopped being
+true, which is the exact drift [docs/gates.md](docs/gates.md) exists to score.
