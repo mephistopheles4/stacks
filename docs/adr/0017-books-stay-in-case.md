@@ -1,0 +1,13 @@
+# Every book stays inside its own case
+
+Books lean in groups, and the layout reserves clearance wherever the lean angle *changes* — capped by what the row can actually pay for.
+
+Rotating a book about its centre swings its corners out by `(height/2)·sin θ`, which is a thin book's entire thickness, while the cursor advances by thickness alone. Two neighbours at the same angle stay parallel and never notice; wherever the angle changes, that swing lands inside whatever is beside it.
+
+## How this was decided
+
+_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+
+- **2026-08-01** — **A leaning book is wider than its thickness, and the layout never reserved the difference.** Rotating a book about its centre swings its top-left and bottom-right corners out by `(height/2)·sin θ` ≈ 0.03 — a thin book's entire thickness — while the cursor advances by thickness alone. Two neighbours at the *same* angle stay parallel and never notice, which is why a run packs flush; wherever the angle **changes**, that swing lands inside whatever is beside it. Both collisions the owner found are this one bug: a leaning book driven into the face-out book on its right, and a row's first book driven into the case's own side, the latter newly visible because the row now starts flush instead of a finger's width clear. Clearance is therefore added at angle changes and only there. It is also **capped by what the row can pay for** — `toRows` packs without knowing anything about leaning, so a row with several face-out books changes angle at each one and could push the last book through the right-hand upright, which is a worse defect than the one being fixed and would only appear on a full shelf.
+
+- **2026-08-01** — **G16: every book stays inside its own case, measured from real bounds rather than from the layout arithmetic.** Re-checking the arithmetic would only repeat its assumption — the cursor's whole error was believing a rotated book is as wide as its thickness. `Box3.setFromObject` walks the real geometry through the real world matrices, so a lean, a rotation or a hand-positioned part all count. Same argument that put `gate:public` on the built folder rather than on `library.json`. **Observed red at 0.0203** by deleting the clearance and re-running. Its tolerance is 0.005 against a residual of 0.0012, and that residual is not slop: it is exactly `SKIN`, the hair by which a printed cover and spine float above their boards, so it is named in the gate rather than left to read as a coincidence. This one is a gate for a defect *the owner found twice by eye* — the same class as G15, and the reason the shelf's geometry now gets measured instead of admired.

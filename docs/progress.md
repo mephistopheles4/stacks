@@ -16,6 +16,7 @@ Update it in the **same commit** as the gate it describes.
 | --- | --- |
 | **Last green gate** | G18 — a provider's cover bytes are bounded, and are an image |
 | **Now working on** | the docs, before the repository is made public |
+| **Decisions** | [`docs/adr/`](./adr/) — 25 records, extracted from the old Decision Log |
 | **Repository** | still private. `main` protected: PR + `gates`, no bypass |
 | **Blocked on** | nothing |
 | **Mobile crash** | closed. Two separate bugs: 314 MB of texture (G15), then a driver that cannot sample a shadow map. The shelf paints its shadows now |
@@ -54,7 +55,7 @@ its card ("Ember Protocol: Notes on Craft"). Screenshot at `artifacts/shelf.png`
 Aesthetics review came back with three directions, all applied: real bookcase
 feel (continuous fill at real proportions, not one sparse row per year),
 wishlist books stay off, and spine colour sampled from the cover's binding edge
-so it matches the real spine. See the Decision Log for each.
+so it matches the real spine. See [`docs/adr/`](./adr/) for each.
 
 ### Phase 3 evidence
 
@@ -75,8 +76,8 @@ only by a *long* subtitle, which needed a dedupe fix first. Re-running added 0
 and skipped 22, so the import is idempotent. The vault now holds 25 books, every
 one with cover art.
 
-The source is Audible/Libation rather than the brief's Audiobookshelf; see the
-Decision Log for why. `importBooks` is source-agnostic — an ABS importer would
+The source is Audible/Libation rather than the brief's Audiobookshelf; see
+[ADR-0021](./adr/0021-audible-via-libation.md) for why. `importBooks` is source-agnostic — an ABS importer would
 need only a new mapper.
 
 ## Environment findings
@@ -140,8 +141,8 @@ Plus `shelf_order` missing from the documented key list (G8) and `PORT` from
   competing reading in a comment.
 - **`applyChange` mis-handles a YAML block scalar** (`description: |` plus
   indented lines). Unreachable from any current call site; flagged, not fixed.
-- **No `.gitattributes`.** Every commit warns about CRLF→LF. Harmless today,
-  but CI is Linux and the repo is about to take contributions.
+- ~~**No `.gitattributes`.**~~ Added — `* text=auto eol=lf`, with the fixture
+  binaries marked so they are never diffed.
 
 ## The mobile crash — G15
 

@@ -21,7 +21,7 @@ Update `docs/progress.md` in the same commit as the gate it describes, and
 which gates are green, the exact gate commands and their last output, the two
 human stop points (Phase 0 plan approval; Phase 2 first screenshot), the
 no-copyrighted-material constraint on fixtures, and any unlogged decisions still
-owed to the Decision Log.
+owed to `docs/adr/`.
 
 ## Invariants — never violate these
 1. **The vault is the source of truth.** No parallel database. `library.json` is a build artifact, always regenerable, never hand-edited, gitignored.
@@ -102,10 +102,10 @@ Every phase: `pnpm test && pnpm build` green, plus:
 
 ## Working rules for agents
 - Commit at every green gate with a one-paragraph summary. Never batch multiple phases into one commit.
-- When you make a decision the brief left open (library choice, API quirk, workaround), append it to the Decision Log in [`docs/decisions.md`](docs/decisions.md) in the same commit.
+- When you make a decision the brief left open (library choice, API quirk, workaround), record it in [`docs/adr/`](docs/adr/) in the same commit — if it is hard to reverse, surprising without context, and a real trade-off. A gate lesson goes to [`docs/gates.md`](docs/gates.md) instead.
 - In Phase 2, save a screenshot to `artifacts/` on every meaningful visual change — the human reviews aesthetics from these.
 - If a gate can't pass after 3 distinct approaches, stop, write up what you tried in `docs/blockers.md`, and end the session rather than thrashing.
-- Do not add dependencies without noting why in the Decision Log. Prefer zero-dep solutions for small utilities.
+- Do not add dependencies without noting why in the relevant record under [`docs/adr/`](docs/adr/). Prefer zero-dep solutions for small utilities.
 
 ## Agent skills
 
@@ -124,7 +124,7 @@ The five canonical roles, each label string equal to its name. Not yet created o
 
 ### Domain docs
 
-Single-context — three packages, one vocabulary. The decision record is [`docs/decisions.md`](docs/decisions.md), a running narrative rather than one-file-per-ADR, and there is a reason for that. See [`docs/agents/domain.md`](docs/agents/domain.md).
+Single-context — three packages, one vocabulary. Decisions live in [`docs/adr/`](docs/adr/), one file each, carrying the original reasoning verbatim. See [`docs/agents/domain.md`](docs/agents/domain.md).
 
 ## Commands
 
@@ -204,11 +204,13 @@ order     show the shelf order, or renumber it with gaps   (--renumber)
 import    import a library export into the vault   (audible)
 ```
 
-## Decision Log
+## Decisions
 
-Moved to **[`docs/decisions.md`](docs/decisions.md)** — 130-odd dated entries,
-append-only, newest last. It was 85% of this file by weight and buried the
-rules above it.
+Every choice this project has already made, one file each, lives in
+**[`docs/adr/`](docs/adr/)** — with the original reasoning carried verbatim.
+Read it before proposing anything that contradicts one.
 
-Append there in the same commit as the work, and read it before proposing
-anything that contradicts a choice already made.
+They were a dated log at the bottom of this file until that log was 85% of it
+by weight and buried the rules above. A lesson about a *gate* rather than a
+decision goes to [`docs/gates.md`](docs/gates.md); an environment finding goes
+to [`docs/progress.md`](docs/progress.md).

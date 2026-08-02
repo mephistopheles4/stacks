@@ -29,15 +29,17 @@ If you added or changed a gate: how did you observe it failing? A gate never
 observed failing is not yet a gate.
 -->
 
-## Decision Log
+## Decisions
 
 <!--
 Did you decide anything the brief left open — a library, an API quirk, a
-workaround, a trade-off? It belongs in docs/decisions.md, in this PR, with the
-reasoning. Tick or explain.
+workaround, a trade-off? If it is hard to reverse, surprising without context,
+and a real trade-off, it earns a record in docs/adr/ — in this PR, with the
+reasoning. If it is about a gate, docs/gates.md is the right home. Tick or
+explain.
 -->
 
-- [ ] No decisions to log, or they are in `docs/decisions.md` in this PR
+- [ ] No decisions to record, or they are in `docs/adr/` in this PR
 
 ## Checks
 

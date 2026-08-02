@@ -21,7 +21,7 @@ and 24 as a single required check called `gates`; `main` takes no direct pushes.
 | | |
 | --- | --- |
 | [`CLAUDE.md`](CLAUDE.md) | the invariants and the contracts — the rules that must not break |
-| [`docs/decisions.md`](docs/decisions.md) | every choice already made, dated, with the reasoning |
+| [`docs/adr/`](docs/adr/) | every choice already made, and why — read before contradicting one |
 | [`docs/gates.md`](docs/gates.md) | which rule each gate protects, and which rules are protected by nothing yet |
 | [`docs/progress.md`](docs/progress.md) | where the project actually is |
 
@@ -44,10 +44,10 @@ row in the scoreboard was held to this and several failed the first time.
 
 **Log decisions in the same commit.** When you decide something the brief left
 open — a library, an API quirk, a workaround — it goes in
-[`docs/decisions.md`](docs/decisions.md) in the commit that makes the decision,
-with the *why*. Not the next commit. It is append-only: a decision that turned
-out wrong earns a new entry saying so, and the correction is usually the more
-useful half.
+[`docs/adr/`](docs/adr/) in the commit that makes the decision, with the *why*.
+Not the next commit. Records are append-only: a decision that turned out wrong
+earns a new record saying so, and the correction is usually the more useful
+half. A lesson about a gate goes to [`docs/gates.md`](docs/gates.md) instead.
 
 **Do not batch.** One green gate, one commit, one paragraph explaining what
 changed and why. Commit messages here carry reasoning, not summaries — read the

@@ -87,7 +87,7 @@ boolean check would have published it. Wrongly private is a missing spine you
 fix in a second; wrongly public may already have been crawled.
 
 Covers are re-hosted from the provider that supplied them. That's a deliberate
-choice with its reasoning written down — see the Decision Log — and takedown
+choice with its reasoning written down — see [ADR-0013](docs/adr/0013-cover-provenance-and-rehosting.md) — and takedown
 requests are honoured.
 
 ## Commands
@@ -148,7 +148,7 @@ workflow requires them, and every gate passes without a single one installed.
 | --- | --- |
 | [docs/progress.md](docs/progress.md) | where the project actually is — start here |
 | [CLAUDE.md](CLAUDE.md) | the invariants and contracts that must not break |
-| [docs/decisions.md](docs/decisions.md) | every choice made, dated, with the reasoning |
+| [docs/adr/](docs/adr/) | every choice made, and why |
 | [docs/gates.md](docs/gates.md) | which rule each gate protects — and which are protected by nothing |
 | [SECURITY.md](SECURITY.md) | the threat model, stated plainly |
 | [docs/library-brief.md](docs/library-brief.md) | the original product spec (historical) |

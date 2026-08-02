@@ -26,7 +26,7 @@ inferable from the code.
    **plus** the phase-specific check in CLAUDE.md. Commit at every green gate.
    Never batch two phases into one commit.
 4. Any decision the brief leaves open: **make the call**, log it in the CLAUDE.md
-   Decision Log, move on. Do not ask about library choices.
+   decision records, move on. Do not ask about library choices.
 5. If a gate will not pass after **3 distinct approaches**: write up what was
    tried in `docs/blockers.md`, commit, and stop. Do not thrash.
 
@@ -54,14 +54,14 @@ Read this if you are a session picking this project up cold.
 | What am I building? | this file, the phase below the last green gate |
 | Why? | `docs/library-brief.md` |
 | What must I never break? | Invariants in `CLAUDE.md` |
-| What has already been decided? | Decision Log in `docs/decisions.md` |
+| What has already been decided? | `docs/adr/` |
 | What went wrong before? | `docs/blockers.md` (may not exist — that's fine) |
 
 **Session protocol**
 
 - **One phase per session** where practical. Phases are sized to fit one context.
 - At every green gate, in the same commit: update `progress.md`, append any new
-  Decision Log entries to `docs/decisions.md`, commit with a one-paragraph summary.
+  decision records to `docs/adr/`, commit with a one-paragraph summary.
 - `progress.md` is an **index, not a narrative**. Gists and links; never restate
   the plan. A status file that duplicates the plan will drift and then lie.
 - Prefer the gate command as the source of truth over your own belief that
@@ -109,7 +109,7 @@ fixtures/vault/              10 notes + covers/ + README.md   (see §7)
 
 ### Dependencies
 
-Each also gets a Decision Log entry.
+Each also gets a record in `docs/adr/`.
 
 | Dep | Scope | Why |
 | --- | --- | --- |
