@@ -67,8 +67,12 @@ commit that added them.
 
 ## Defect gates
 
-Four rows that exist because a specific defect got through. Each was written to
-fail first.
+Rows that exist because a specific defect got through — except the last, which
+exists because the change it shipped with made a new one reachable. Each was
+written to fail first.
+
+(It said "four" for a while after there were five, which is the kind of thing
+this file is otherwise about. Counted in prose, so nothing could go red.)
 
 | Row | Rule | Gate | Status |
 | --- | --- | --- | --- |
@@ -77,6 +81,32 @@ fail first.
 | **G12** | `shelf_order` semantics | `gates/shelf-order.test.ts` | ✅ characterized |
 | **G15** | what ships fits in a phone's graphics memory | `gates/cover-budget.test.ts` | ✅ |
 | **G16** | every book stays inside its own case | `pnpm smoke:render` | ✅ |
+| **G17** | a deploy publishes `main`, or says why not | `gates/deploy-branch.test.ts` | ✅ |
+
+**G17 is the one row here written for a defect that has not happened**, because
+the change that would cause it is the change that shipped with it. Until
+worktrees there was one checkout, so "am I on the right branch" answered itself
+by standing somewhere. Now there can be four, on four branches, and all of them
+read the same `.env` — so all of them hold SITE_URL and can publish to the live
+domain with a command that looks identical from every one.
+
+**Both directions are asserted unconditionally**, which took a second attempt.
+The first version read the branch the suite happened to be on and returned
+early when it was `main` — so CI, which runs on `pull_request` and is therefore
+never on `main`, would only ever exercise the refusal, while the owner, who
+mostly is, would run a gate that quietly asserted nothing. Strongest where it
+never runs, inert where it matters. Now `GIT_DIR` points the child's git at a
+scratch repository sitting on a known branch: the script is real, the guard is
+real, git really resolves the branch, and only *which checkout is being asked
+about* is controlled. One test deliberately omits that redirection, so
+something still proves the guard is wired to the actual repository.
+
+Two mutations, because a positive check cannot detect a missing guard on its
+own. Deleting the guard fails four of seven. Inverting the comparison — refuse
+`main`, allow everything else — fails six, including "lets main through", which
+is what proves that one is not vacuous. Among the casualties either way is the
+check that `--any`, `--branch`, `--anybranch` and `--any_branch` do *not* work
+as the override: an escape hatch you can stumble into is not one.
 
 **G16 observed red at 0.0203** — about 0.5cm at shelf scale — by deleting the
 clearance and re-running. It exists because the owner found the same defect twice

@@ -85,10 +85,13 @@ const ALLOWED = [
   // opens the vault — it shells out to the CLI for that, which goes through
   // the adapter like everything else.
   'scripts/deploy.ts',
-  'scripts/dev-watch.ts',
   'scripts/make-50-book-fixture.ts',
   'scripts/make-fixture-covers.ts',
   'scripts/smoke-render.ts',
+  // Checks whether a worktree's directory and the shared `.env` are there
+  // before creating one. Never opens the vault — it does not know what a book
+  // is; `git` and `pnpm` do all of its real work.
+  'scripts/worktree.ts',
 ] as const;
 
 /**

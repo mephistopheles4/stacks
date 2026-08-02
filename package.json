@@ -14,6 +14,7 @@
     "dev": "pnpm --filter @stacks/site run dev",
     "dev:watch": "tsx scripts/dev-watch.ts",
     "stacks": "tsx packages/cli/src/index.ts",
+    "worktree": "tsx scripts/worktree.ts",
     "fixtures:50": "tsx scripts/make-50-book-fixture.ts",
     "smoke:render": "tsx scripts/smoke-render.ts",
     "gate:public": "tsx scripts/check-public-build.ts",
