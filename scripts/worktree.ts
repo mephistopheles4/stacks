@@ -8,8 +8,8 @@
  * at another, or a build running on `main` while you edit a feature. `git
  * worktree add` gets you the checkout; this gets you a checkout that works.
  *
- * Two things are missing from a bare `git worktree add` here, and both fail
- * late rather than loudly:
+ * Three things are missing from a bare `git worktree add` here, and all three
+ * fail late rather than loudly:
  *
  *   - `node_modules` is gitignored, so every command dies on a missing import
  *     until someone runs `pnpm install`. Done here.
@@ -18,6 +18,14 @@
  *     `packages/cli/src/env.ts`, which reads the main checkout's `.env` from
  *     wherever you are standing. This script *reports* where it resolved,
  *     because a fallback nobody watched work is a fallback nobody can trust.
+ *   - The local `main` is usually **behind**. Work lands through pull requests,
+ *     so `main` here only moves when somebody pulls, and nothing about making a
+ *     worktree makes that happen — a new branch cut from it starts life on an
+ *     old commit. This is the worst of the three, because the other two stop
+ *     you on the first command and this one does not stop you at all: the
+ *     checkout installs, the tests pass, and the work is built on the wrong
+ *     base. So a new branch is cut from `origin/main` after a best-effort
+ *     fetch, and the commit it was cut from is printed.
  *
  * Worktrees are placed beside the main checkout rather than inside it. Nested
  * would in fact be safe — `filesUnder` in `gates/repo.ts` skips dot-prefixed
@@ -70,6 +78,55 @@ function branchExists(name: string, cwd: string): boolean {
   );
 }
 
+/** git, captured and non-fatal — `undefined` when it fails for any reason. */
+function gitOutput(args: readonly string[], cwd: string): string | undefined {
+  const result = spawnSync('git', [...args], { cwd, encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : undefined;
+}
+
+/**
+ * What a new branch should be cut from, after trying to make that current.
+ *
+ * The fetch is **best effort and says so**. Failing hard would mean no worktree
+ * on a plane, and the base is still perfectly usable when offline — it is just
+ * as old as your last fetch. Refusing to work for a reason that does not stop
+ * the work is how a helper earns being worked around. What is not optional is
+ * *saying* which commit the branch was cut from: this script's whole argument
+ * is that a checkout should fail loudly rather than late, and an unannounced
+ * base is the one thing here that could be silently wrong.
+ *
+ * Falls back to the local `main` when there is no remote at all — a clone with
+ * no origin is a legitimate way to work on this.
+ */
+function resolveBase(cwd: string): { ref: string; describe: string } {
+  const hasOrigin = gitOutput(['remote'], cwd)?.split('\n').includes('origin') === true;
+
+  if (hasOrigin) {
+    const fetched = spawnSync('git', ['fetch', 'origin', 'main', '--quiet'], {
+      cwd,
+      stdio: 'inherit',
+    });
+    if (fetched.status !== 0) {
+      console.warn('\n! could not reach origin — basing on the last fetch, which may be old\n');
+    }
+  }
+
+  const ref = hasOrigin && gitOutput(['rev-parse', '--verify', '--quiet', 'origin/main'], cwd)
+    ? 'origin/main'
+    : 'main';
+
+  const describe = gitOutput(['log', '-1', '--format=%h %s', ref], cwd) ?? '(unknown)';
+  const behind = gitOutput(['rev-list', '--count', `main..${ref}`], cwd);
+
+  return {
+    ref,
+    describe:
+      behind !== undefined && behind !== '0'
+        ? `${ref}  ${describe}\n          (your local main is ${behind} behind this)`
+        : `${ref}  ${describe}`,
+  };
+}
+
 const branch = process.argv[2];
 if (branch === undefined || branch.startsWith('-')) {
   console.error('usage: pnpm worktree <branch>\n');
@@ -94,12 +151,31 @@ if (existsSync(target)) fail(`${target} already exists.`);
 
 const existing = branchExists(branch, main);
 console.log(`worktree  ${target}`);
-console.log(`branch    ${branch}${existing ? ' (existing)' : ' (new, off main)'}\n`);
+
+// A new branch is based on what the *remote* has, not on whatever the local
+// `main` happens to be sitting at. Those differ constantly here: work lands
+// through pull requests, so the local `main` only moves when somebody pulls,
+// and nothing about creating a worktree makes that happen. Branching off a
+// stale `main` produces a checkout that installs cleanly, runs green, and is
+// built on the wrong commit — the one failure mode of this script that would
+// not announce itself, which is precisely what the other two fixes here are
+// for.
+const base = existing ? undefined : resolveBase(main);
+
+console.log(`branch    ${branch}${existing ? ' (existing)' : ` (new, off ${base?.ref ?? 'main'})`}`);
+if (base !== undefined) console.log(`base      ${base.describe}`);
+console.log('');
 
 git(
   existing
     ? ['worktree', 'add', target, branch]
-    : ['worktree', 'add', target, '-b', branch, 'main'],
+    : // `--no-track` because branching from a remote-tracking ref otherwise
+      // makes git set the new branch's upstream to `origin/main` — so a later
+      // `git push` on a feature branch aims at `main`. It is refused rather
+      // than obeyed under the default push policy, but a confusing refusal is
+      // a poor substitute for not pointing it there. First push sets its own:
+      // `git push -u origin <branch>`.
+      ['worktree', 'add', '--no-track', target, '-b', branch, base?.ref ?? 'main'],
   main,
 );
 

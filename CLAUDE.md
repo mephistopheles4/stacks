@@ -147,7 +147,7 @@ pnpm build               # typecheck, then astro build
 pnpm dev                 # site dev server
 pnpm dev:watch           # site + rebuild on every vault change
 pnpm stacks <cmd>        # run the CLI from source
-pnpm worktree <branch>   # a second checkout, installed and pointed at your .env
+pnpm worktree <branch>   # a second checkout, cut from origin/main and installed
 pnpm fixtures:50         # regenerate the 50-book fixture vault
 pnpm smoke:render        # phase 2 gate: headless shelf screenshot
 pnpm gate:public         # phase 3 gate: the public build leaks nothing
@@ -192,6 +192,14 @@ runs `pnpm install` in it, and tells you which `.env` it will read. Both of
 those are needed because `node_modules` and `.env` are gitignored, so a bare
 `git worktree add` produces a checkout where every command fails for a reason
 that has nothing to do with the branch.
+
+**A new branch is cut from `origin/main`, after a best-effort fetch, and the
+commit it was cut from is printed.** The local `main` only moves when somebody
+pulls, and making a worktree is not that — so cutting from it starts the branch
+on whatever was last pulled. That is the one failure here that says nothing:
+the checkout installs, the tests pass, and the work sits on an old base. The
+fetch does not fail the command when it cannot reach the network, because being
+offline does not stop the rest from working; it says so and carries on.
 
 **There is one `.env`, in the main checkout, and every worktree reads it.** It
 is not copied: a copy drifts, and `STACKS_DEV_HOST=1` left behind in a stale one

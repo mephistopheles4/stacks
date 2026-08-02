@@ -109,7 +109,7 @@ requests are honoured.
 | `pnpm test` | vitest, all workspaces and the gates |
 | `pnpm typecheck` | `tsc --noEmit` across every `.ts` in the repo |
 | `pnpm build` | typecheck + static site build |
-| `pnpm worktree <branch>` | a second checkout, installed and pointed at your `.env` |
+| `pnpm worktree <branch>` | a second checkout, cut from `origin/main` and installed |
 | `pnpm fixtures:50` | regenerate the 50-book fixture vault |
 | `pnpm smoke:render` | headless shelf screenshot gate |
 | `pnpm gate:public` | proves the public build leaks no note text |
