@@ -54,14 +54,14 @@ Read this if you are a session picking this project up cold.
 | What am I building? | this file, the phase below the last green gate |
 | Why? | `docs/library-brief.md` |
 | What must I never break? | Invariants in `CLAUDE.md` |
-| What has already been decided? | Decision Log at the bottom of `CLAUDE.md` |
+| What has already been decided? | Decision Log in `docs/decisions.md` |
 | What went wrong before? | `docs/blockers.md` (may not exist — that's fine) |
 
 **Session protocol**
 
 - **One phase per session** where practical. Phases are sized to fit one context.
 - At every green gate, in the same commit: update `progress.md`, append any new
-  Decision Log entries to `CLAUDE.md`, commit with a one-paragraph summary.
+  Decision Log entries to `docs/decisions.md`, commit with a one-paragraph summary.
 - `progress.md` is an **index, not a narrative**. Gists and links; never restate
   the plan. A status file that duplicates the plan will drift and then lie.
 - Prefer the gate command as the source of truth over your own belief that

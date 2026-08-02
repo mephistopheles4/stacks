@@ -41,7 +41,7 @@ In the **same commit** as the work:
 - `docs/progress.md` — flip the gate row to ✅ with its commit ref, update the
   "Current state" table, add any new environment findings. Keep it an index;
   do not restate the plan there.
-- `CLAUDE.md` Decision Log — append one line per decision made this phase that
+- `docs/decisions.md` — append one line per decision made this phase that
   the brief left open: library choices, API quirks, workarounds, and **every new
   dependency with its reason**. Append-only, dated.
 

@@ -1,43 +1,96 @@
 # Stacks
 
-A local-first reading tracker where **the Obsidian vault is the database**.
+**A reading tracker where your Obsidian vault is the database — and your library
+is a bookcase you can walk up to.**
 
-A CLI writes book notes with structured frontmatter into your vault; a static
-site renders that vault as a 3D bookshelf. Public builds ship covers and
-metadata only — never note bodies.
+`stacks add` writes a book note with structured frontmatter into your vault,
+fetching the metadata and the cover for you. `stacks build` reads the vault back
+and renders it as a 3D bookshelf you can publish as a plain static site.
 
-```
-packages/core    vault adapter, metadata fetchers, library.json builder
-packages/cli     the `stacks` command
-packages/site    Astro site + vanilla Three.js shelf
-fixtures/vault   a miniature vault used by every test and gate
-```
+There is no account, no server, no sync, and no second database. The notes are
+the data. Delete this tool and you still have your library.
 
-## Getting started
+![The shelf, rendered from the fixture vault](docs/images/shelf.png)
+
+**[See a real one →](https://stacks.aymandiab.com)**
+
+## Why it works this way
+
+- **Your notes stay yours.** A published shelf carries covers and frontmatter —
+  never note bodies. That rule is enforced by a gate that greps the built output
+  for a phrase planted in a fixture note, rather than trusted.
+- **Hand-editing is first-class.** Open any note in Obsidian and change it. The
+  parser tolerates extra keys, reordered keys and missing ones; `stacks` rewrites
+  individual frontmatter lines rather than re-serialising your YAML, so your
+  comments and formatting survive byte for byte.
+- **One bad note never breaks a build.** Malformed frontmatter is skipped with a
+  warning naming the file.
+
+## Quick start
+
+You'll need **Node 22+**, **pnpm**, and an Obsidian vault (or any folder of
+Markdown — nothing here requires Obsidian itself).
 
 ```bash
+git clone https://github.com/mephistopheles4/stacks.git
+cd stacks
 pnpm install
-cp .env.example .env    # then set STACKS_VAULT to your vault path
+cp .env.example .env
 ```
 
-With `STACKS_VAULT` set, every command finds your vault without `--vault`.
+Set `STACKS_VAULT` in `.env` to your vault's path, then add a book:
 
-### Live editing
+```bash
+pnpm stacks add "the left hand of darkness"
+```
+
+That looks the book up, downloads a cover into your vault, samples a spine
+colour from the cover's binding edge, and writes `Library/The Left Hand of
+Darkness.md`. Now look at your shelf:
 
 ```bash
 pnpm dev:watch
 ```
 
-Watches the vault and serves the shelf together. Edit a note in Obsidian and the
-shelf follows about a second later — the page reloads itself when the library is
-rebuilt. Rebuilds are debounced, because Obsidian autosaves while you type.
+Edit a note in Obsidian and the shelf follows about a second later.
 
-There is no background daemon and deliberately so: the build is cheap and
-explicit, and a process watching your vault forever is a thing to babysit. For a
-*published* shelf the right automation is a scheduled build or a git hook, since
-the interesting event is "share this now", not "a file changed".
+> **A Google Books key is close to essential.** Open Library is the primary
+> source and is thin on anything published in the last year or two. Without a key
+> the fallback shares one global quota that is permanently exhausted, so it
+> answers `429` every time. `.env.example` explains where to get one; it's free.
 
-### The CLI
+## Publishing your shelf
+
+```bash
+pnpm stacks build --public --vault /path/to/your/vault
+pnpm --filter @stacks/site build
+```
+
+The result is `packages/site/dist/` — a static folder with no server behind it,
+so it deploys as-is to Cloudflare Pages, GitHub Pages, Netlify, or anything that
+serves files.
+
+### What a public build actually exposes
+
+Worth deciding on purpose, because this is the part that leaves your machine:
+
+| Published | Never published |
+| --- | --- |
+| Title, author, ISBN | Note bodies — anything you wrote |
+| Reading status, start and finish dates | Vault paths and filenames |
+| Rating, tags, page count | Books marked `private: true` |
+| Cover images, re-hosted at 512px | Wishlist books — you don't own them |
+
+`private: true` **fails closed**: anything that isn't clearly a "no" keeps the
+book unpublished, because `private: yes` is a *string* in YAML and a strict
+boolean check would have published it. Wrongly private is a missing spine you
+fix in a second; wrongly public may already have been crawled.
+
+Covers are re-hosted from the provider that supplied them. That's a deliberate
+choice with its reasoning written down — see the Decision Log — and takedown
+requests are honoured.
+
+## Commands
 
 | `pnpm stacks …` | What it does |
 | --- | --- |
@@ -49,63 +102,62 @@ the interesting event is "share this now", not "a file changed".
 | `order` | show the shelf order, or renumber it (`--renumber`) |
 | `import` | import a library export into the vault (`audible`) |
 
-### Scripts
-
-| Command | What it does |
+| Script | What it does |
 | --- | --- |
-| `pnpm typecheck` | `tsc --noEmit` across every `.ts` in the repo |
-| `pnpm test` | vitest, all workspaces and the gates |
-| `pnpm build` | typecheck + static site build |
 | `pnpm dev` | site dev server |
 | `pnpm dev:watch` | vault watcher + dev server, live-reloading |
+| `pnpm test` | vitest, all workspaces and the gates |
+| `pnpm typecheck` | `tsc --noEmit` across every `.ts` in the repo |
+| `pnpm build` | typecheck + static site build |
 | `pnpm worktree <branch>` | a second checkout, installed and pointed at your `.env` |
 | `pnpm fixtures:50` | regenerate the 50-book fixture vault |
 | `pnpm smoke:render` | headless shelf screenshot gate |
 | `pnpm gate:public` | proves the public build leaks no note text |
 | `pnpm deploy:site` | gates, then build from the real vault, then publish |
 
-Both lists are documented in full in [CLAUDE.md](CLAUDE.md), which
-`gates/commands.test.ts` holds to reality in both directions — adding a command
-without documenting it there is a red build.
+Both lists are documented in full in [CLAUDE.md](CLAUDE.md), and
+`gates/commands.test.ts` holds that file to reality in both directions — adding
+a command without documenting it there is a red build.
 
-## Sharing your shelf
+## Who this is for
 
-```bash
-pnpm stacks build --public --vault /path/to/your/vault
-pnpm --filter @stacks/site build
-```
+**Developer-friendly personal software, not a packaged application.** There is
+no npm release and no installer: the CLI runs from TypeScript source through
+`tsx`, so using it means cloning this repo. If you're comfortable with a
+terminal and Node, you'll be fine. If you're looking for an Obsidian plugin to
+install, this isn't that yet.
 
-The first command stages `library.json`, the covers it actually references, and
-an `og.png` link preview into `packages/site/public/`. The second folds those
-into `packages/site/dist/` — a plain static folder with no server behind it, so
-it deploys as-is to GitHub Pages, Cloudflare Pages, Netlify, or anything that
-serves files.
+All five phases are green and tagged (`phase-0` … `phase-4`) and it runs against
+a real library daily. Every invariant has a named gate that can go red, scored
+in [docs/gates.md](docs/gates.md).
 
-The public build carries covers and frontmatter only: no note bodies, no vault
-paths. `pnpm gate:public` proves it by grepping the built output for a phrase
-planted in the fixture notes, rather than trusting that it is so.
+## Contributing
 
-## Where things are documented
+Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The short
+version: `pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render` is
+the contract, and a defect worth fixing is usually worth a gate that goes red.
 
-- **[docs/progress.md](docs/progress.md)** — where the project actually is. Start here.
-- **[docs/plan.md](docs/plan.md)** — the execution plan and its rules.
-- **[docs/library-brief.md](docs/library-brief.md)** — the full product spec.
-- **[CLAUDE.md](CLAUDE.md)** — invariants, contracts, and the decision log.
+The repo also carries optional configuration for a set of
+[engineering skills](https://github.com/mattpocock/skills) under
+[`docs/agents/`](docs/agents/). **They are entirely optional** — nothing in the
+workflow requires them, and every gate passes without a single one installed.
 
-`library.json` is a build artifact. It is always regenerable from the vault,
-never hand-edited, and gitignored.
+## Documentation
 
-## Status
+| | |
+| --- | --- |
+| [docs/progress.md](docs/progress.md) | where the project actually is — start here |
+| [CLAUDE.md](CLAUDE.md) | the invariants and contracts that must not break |
+| [docs/decisions.md](docs/decisions.md) | every choice made, dated, with the reasoning |
+| [docs/gates.md](docs/gates.md) | which rule each gate protects — and which are protected by nothing |
+| [SECURITY.md](SECURITY.md) | the threat model, stated plainly |
+| [docs/library-brief.md](docs/library-brief.md) | the original product spec (historical) |
 
-All five phases are green and tagged (`phase-0` … `phase-4`), and the tool runs
-against a real vault rather than only fixtures. Every invariant has a named gate
-that can go red, scored in [docs/gates.md](docs/gates.md).
+`library.json` is a build artifact: always regenerable from the vault, never
+hand-edited, gitignored.
 
-This is **developer-friendly personal software**, not a packaged application.
-There is no npm release and no installer: the CLI runs from TypeScript source
-through `tsx`, so using it means cloning the repo and having Node 22+, pnpm and
-git. It is offered in the hope it is useful, not as a product.
+## License
 
-[docs/progress.md](docs/progress.md) is the file that says where things actually
-are. This line said "Phase 0 (scaffold)" for months after that stopped being
-true, which is the exact drift [docs/gates.md](docs/gates.md) exists to score.
+[MIT](LICENSE). The cover images a build downloads are not covered by it — they
+belong to their publishers, and what you may do with them depends on which
+provider supplied them.

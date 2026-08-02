@@ -33,11 +33,11 @@ observed failing is not yet a gate.
 
 <!--
 Did you decide anything the brief left open — a library, an API quirk, a
-workaround, a trade-off? It belongs in CLAUDE.md's Decision Log, in this PR,
-with the reasoning. Tick or explain.
+workaround, a trade-off? It belongs in docs/decisions.md, in this PR, with the
+reasoning. Tick or explain.
 -->
 
-- [ ] No decisions to log, or they are in CLAUDE.md in this PR
+- [ ] No decisions to log, or they are in `docs/decisions.md` in this PR
 
 ## Checks
 

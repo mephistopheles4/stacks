@@ -87,6 +87,10 @@ const ALLOWED = [
   'scripts/deploy.ts',
   'scripts/make-50-book-fixture.ts',
   'scripts/make-fixture-covers.ts',
+  // Crops the render gate's screenshot into the README's image. Its only input
+  // is `artifacts/shelf.png`, which the gate renders from the *fixture* vault —
+  // it checks that file exists and never looks at a vault at all.
+  'scripts/make-readme-image.ts',
   'scripts/smoke-render.ts',
   // Checks whether a worktree's directory and the shared `.env` are there
   // before creating one. Never opens the vault — it does not know what a book
