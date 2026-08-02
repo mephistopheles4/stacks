@@ -20,7 +20,8 @@ and 24 as a single required check called `gates`; `main` takes no direct pushes.
 
 | | |
 | --- | --- |
-| [`CLAUDE.md`](CLAUDE.md) | the invariants, the contracts, and the Decision Log |
+| [`CLAUDE.md`](CLAUDE.md) | the invariants and the contracts — the rules that must not break |
+| [`docs/decisions.md`](docs/decisions.md) | every choice already made, dated, with the reasoning |
 | [`docs/gates.md`](docs/gates.md) | which rule each gate protects, and which rules are protected by nothing yet |
 | [`docs/progress.md`](docs/progress.md) | where the project actually is |
 
@@ -42,8 +43,11 @@ moment you wrote it, break something on purpose and show that it noticed. Every
 row in the scoreboard was held to this and several failed the first time.
 
 **Log decisions in the same commit.** When you decide something the brief left
-open — a library, an API quirk, a workaround — it goes in CLAUDE.md's Decision
-Log in the commit that makes the decision, with the *why*. Not the next commit.
+open — a library, an API quirk, a workaround — it goes in
+[`docs/decisions.md`](docs/decisions.md) in the commit that makes the decision,
+with the *why*. Not the next commit. It is append-only: a decision that turned
+out wrong earns a new entry saying so, and the correction is usually the more
+useful half.
 
 **Do not batch.** One green gate, one commit, one paragraph explaining what
 changed and why. Commit messages here carry reasoning, not summaries — read the
@@ -81,6 +85,25 @@ it current, and let CI report before asking for a merge.
 There is no approval requirement — a sole maintainer cannot approve their own
 work, so the check is the gate. That is a deliberate trade, and it is why the
 gates have to be worth trusting.
+
+## Optional: the engineering skills
+
+The owner works on this repo with Claude Code and a set of
+[engineering skills](https://github.com/mattpocock/skills) installed. The
+per-repo configuration they read lives in [`docs/agents/`](docs/agents/):
+where issues are tracked, the triage label vocabulary, and how to consume the
+domain docs.
+
+**None of it is required, and none of it is a condition of contributing.** The
+four commands at the top of this file are the contract. A contributor with no
+skills installed — or no agent at all — must be able to pass every gate, and if
+that ever stops being true it is a bug in this repo, not in your setup. Nothing
+under `docs/agents/` is read by any gate, any script, or CI.
+
+They are written down because a workflow that lives only in one person's head
+is the same failure this project keeps gating against: a documented claim that
+nobody else can check. If you don't use them, the files cost you one directory
+you can ignore.
 
 ## Reporting something you cannot fix
 

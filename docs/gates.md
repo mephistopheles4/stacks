@@ -45,7 +45,7 @@ yet a gate."*
 | **G3** | Never crash on a bad note | invariant 3 | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind | ✅ |
 | **G4** | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
 | **G5** | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored | ✅ |
-| **G13** | No third-party material is committed, ever | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside the generated fixture covers | ✅ |
+| **G13** | No third-party material is committed, ever | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside two generated directories | ✅ |
 | **G14** | The documented commands are the commands that exist | CLAUDE.md "Commands" | `gates/commands.test.ts` — CLI subcommands and pnpm scripts, both directions | ✅ |
 
 ## Contract seams → gates
@@ -59,6 +59,22 @@ means the two have drifted.
 | **G7** | logic in `.astro` | `.astro` files are not typechecked (`astro check` cannot run under TS 7), so nothing else can catch this | `gates/astro-no-logic.test.ts` | ✅ |
 | **G8** | frontmatter contract ↔ parser ↔ CLAUDE.md | a key the parser accepts but the contract never documents | `gates/frontmatter-contract.test.ts` | ✅ |
 | **G9** | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | `gates/env-contract.test.ts` | ✅ |
+
+**G13 grew a second allowlisted directory when the README got a screenshot**,
+and that is the most dangerous kind of entry in this file: a *directory* is a
+standing permission, where every other line here names a file. Nothing in a test
+can look at a PNG and tell an invented shelf from a real one — and a picture of
+a real shelf publishes real titles and real cover art, which is the whole thing
+G13 exists to stop.
+
+So the filename is pinned instead: `docs/images/` must track exactly
+`shelf.png`. Dropping another picture in beside it goes red, while *replacing*
+that one stays possible and shows up in review as a changed binary rather than
+as a new file nobody opens. It is a weaker guarantee than the covers row, stated
+as such rather than dressed up: the image is safe because
+`scripts/make-readme-image.ts` crops what `pnpm smoke:render` renders, and that
+gate renders the fixture vault. **Observed red** by copying the screenshot to a
+second name.
 
 **G8 observed red** on `shelf_order`, which the parser read and the prose
 described but the documented enumeration never listed. **G9 observed red** on
@@ -327,8 +343,8 @@ Re-hosting Open Library art only would have meant six covers and twenty-five
 generated spines — trading away precisely the cover quality Apple was added for.
 So a public build ships every cover it has, knowingly, and honours takedown
 requests. That is a decision rather than an oversight, and it is written down in
-CLAUDE.md's Decision Log with the reasoning and with the alternative that would
-satisfy Apple's terms if it ever matters.
+[`docs/decisions.md`](./decisions.md) with the reasoning and with the alternative
+that would satisfy Apple's terms if it ever matters.
 
 What the gate still enforces regardless: no orphans, no wishlist books, and
 same-origin covers only.

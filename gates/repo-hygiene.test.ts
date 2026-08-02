@@ -47,8 +47,17 @@ const BINARY = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip
  * `scripts/make-fixture-covers.ts` — a ~40-line zero-dep encoder over
  * node:zlib. They depict nothing; they exist so the dominant-colour extractor
  * has something non-uniform to find.
+ *
+ * `docs/images/` holds the README's screenshot, cropped by
+ * `scripts/make-readme-image.ts` from what `pnpm smoke:render` renders — and
+ * that gate renders the **50-book fixture vault**, so every title on those
+ * spines is invented too. That is the whole reason this directory can be
+ * allowlisted: the same render pointed at a real vault would publish somebody's
+ * reading list and somebody else's cover art, which is exactly what this row
+ * exists to stop. An entry here is a claim about *provenance*, never about file
+ * type.
  */
-const GENERATED_BINARY_DIRS = ['fixtures/vault/Library/covers/'];
+const GENERATED_BINARY_DIRS = ['fixtures/vault/Library/covers/', 'docs/images/'];
 
 describe('G5 — library.json is a build artifact', () => {
   it('is not tracked by git', () => {
@@ -104,5 +113,23 @@ describe('G13 — no third-party material is committed', () => {
       const inside = trackedFiles().filter((path) => path.startsWith(dir));
       expect(inside.length, `${dir} is allowlisted but tracks nothing — drop it`).toBeGreaterThan(0);
     }
+  });
+
+  it('keeps docs/images to exactly the generated screenshot', () => {
+    // A directory-level permission is broader than the rest of this allowlist,
+    // and nothing here can inspect an image to tell an invented shelf from a
+    // real one. So the *filename* is pinned instead: dropping any other picture
+    // in beside it goes red, and replacing this one is a deliberate act that
+    // shows up in review as a changed binary rather than as a new file nobody
+    // looks at. Regenerate with:
+    //   pnpm smoke:render && pnpm tsx scripts/make-readme-image.ts
+    const images = trackedFiles().filter((path) => path.startsWith('docs/images/'));
+
+    expect(
+      images,
+      'docs/images/ holds the README screenshot rendered from the fixture vault, and ' +
+        'nothing else. A picture of a real shelf publishes real titles and real cover ' +
+        `art — see fixtures/README.md: ${images.join(', ')}`,
+    ).toEqual(['docs/images/shelf.png']);
   });
 });
