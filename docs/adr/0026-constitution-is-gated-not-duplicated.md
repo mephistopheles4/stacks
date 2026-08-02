@@ -3,58 +3,31 @@
 There is no `CONSTITUTION.md` and there should not be one. `CLAUDE.md`'s
 "Invariants — never violate these" **is** the constitution and each numbered
 rule is an article; [`docs/gates.md`](../gates.md) is the scoreboard that says
-whether each article is enforced. A third document would be the same rules
-written down a third time.
+whether each article is enforced.
 
-What was missing was not a document but a gate. `gates/constitution-scoreboard.test.ts`
-(G19) holds the two files to each other in both directions, so "every article is
-either gated in CI or visibly not" is checked rather than asserted.
+What was missing was not a document but a gate. G19
+(`gates/constitution-scoreboard.test.ts`) holds the two files to each other, so
+"every article is either gated in CI or visibly not" is checked rather than
+asserted. **What it asserts, and what it cost to get right, are recorded in
+[`docs/gates.md`](../gates.md)** — that is where a lesson about a gate belongs.
 
 ## Why not a third file
 
 `docs/gates.md` opens by naming this exact failure — *"A rule written down twice
 is a rule that will be true in one place and false in the other — this project
-has the scars to prove it"* — and then lists six documented claims that had
-quietly stopped being true. Adding a `CONSTITUTION.md` restating five invariants
-that already exist in `CLAUDE.md`, and are already scored in `gates.md`, creates
-a third copy and a second thing to keep in sync, in a repo whose own history is
-the argument against that.
+has the scars to prove it"* — and then lists documented claims that had quietly
+stopped being true. A `CONSTITUTION.md` restating five invariants that already
+exist in `CLAUDE.md`, and are already scored in `gates.md`, creates a third copy
+and a second thing to keep in sync, in a repo whose own history is the argument
+against that.
 
 Two gates already parse `CLAUDE.md` by heading and **throw** when it changes
-shape, so the invariants are also load-bearing where they are.
+shape, so the invariants are load-bearing where they are. Moving them would cost
+that and buy nothing.
 
-## What the gate asserts
-
-Both directions, three dimensions:
-
-- Every numbered invariant is cited by some scoreboard row. ⬜ *"no gate yet"* is
-  an acceptable and honest answer; silence is not.
-- No row cites an invariant the constitution no longer defines.
-- Every spec path named in a row resolves to a real file.
-- Every `gates/*.test.ts` is recorded somewhere, so a gate cannot be written and
-  left unscored.
-- Every row's status is drawn from the scoreboard's **own key**, read at runtime
-  rather than hardcoded in the test.
-- Row numbers are unique and gapless — retiring a rule means marking it, not
-  deleting the evidence it was considered.
-
-## The interesting part is what it cost to get right
-
-**It caught itself on the first run**: the spec existed and no row scored it.
-
-**Then it failed on its own commentary.** The first version scanned the whole
-document, and the narrative for G19 mentions `invariant 9` and a
-`gates/*.test.ts` glob as examples of what makes it go red — so the gate read
-its own prose as claims. The fix is the distinction that makes this gate
-coherent: **a row is a claim the file makes; prose is commentary about the
-claims.** Only rows are checked, and commentary stays free to discuss a path
-that does not exist. The lenient exception is the "is this gate recorded
-anywhere" check, where a mention in prose is still a mention.
-
-Every check passed the day it was written, which is the point rather than a
-weakness. The cost is nearly zero now and all of it is paid the first time
-somebody adds an invariant, moves a spec, or writes a gate and forgets to come
-back to the scoreboard.
+The naming gap the case study exposed was real but small: it says *constitution*
+and *articles* where the repo says *invariants*. That is answered by a sentence
+in `CLAUDE.md` and one in `README.md`, not by a file.
 
 ## How this was decided
 
@@ -69,9 +42,10 @@ back to the scoreboard.
   comment. The document whose whole job is to record which rules are enforced
   was the last unenforced thing in the repo.
 
-- **2026-08-02** — **Observed red eight ways**, since a gate never observed
-  failing is not yet a gate: a sixth invariant added with no row; a row citing
-  `invariant 9`; a renamed spec path; an unscored gate file; a status symbol
-  outside the key; a duplicated row number; a deleted row leaving a gap; and the
-  `## Invariants` heading renamed, which **throws** rather than passing over an
-  empty set. Green again after each restore.
+- **2026-08-02** — **A third document was the obvious answer and the wrong one.**
+  The request was for a constitution. The repo already had one under a different
+  name, plus a scoreboard, plus five invariants that two gates parse by heading.
+  Writing the document would have satisfied the request and made the repo worse,
+  because the thing actually missing was enforcement and a new file adds none.
+  Recorded because "you already have this, under another name" is a conclusion
+  that has to survive being unsatisfying.

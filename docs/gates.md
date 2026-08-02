@@ -36,6 +36,17 @@ yet a gate."*
 | 🔴 | gate written, currently failing on a real defect |
 | ⬜ | no gate yet |
 
+### Retiring a row
+
+**Mark it, do not delete it.** A rule that stops applying keeps its number and
+its row; a deleted row takes with it the fact that the rule was ever considered,
+which is the one thing a reader of this file cannot reconstruct. Row numbers are
+therefore unique and gapless, and G19 asserts both.
+
+The same goes for a rule that was never gated: ⬜ is an honest answer and an
+absent row is not. This file is only useful if it is as easy to find what is
+*not* protected as what is.
+
 ## Invariants → gates
 
 | Row | Rule | Source | Gate | Status |
@@ -109,6 +120,32 @@ over an empty set.
 Every check passed the day it was written, and that is the point. The cost is
 nearly zero now and all of it is paid the first time somebody adds an invariant,
 moves a spec, or writes a gate and forgets to come back here.
+
+**And it shipped with three holes of its own, all found by review before merge.**
+This is the entry worth reading, because the gate written to stop documented
+claims from quietly becoming false was itself making three:
+
+- **A spec path was only checked if it began with `gates/`, `packages/` or
+  `scripts/`.** Every other root was invisible — including G10's
+  `covers/cover-path.test.ts`, the repo's *one real instance* of a row naming a
+  file that does not exist. That row was corrected by hand in the same commit,
+  so the gate's first act was to not catch the only thing it was there for. An
+  allowlist of directory names was the wrong shape for "does this resolve"; the
+  filesystem already answers that, and the check now asks it about any path.
+- **A gate counted as scored if its filename appeared anywhere in this file**,
+  paragraphs included. Deleting G19's own row and leaving its filename in a
+  sentence kept the suite green.
+- **A citation counted if the words "invariant N" appeared in any cell of any
+  row**, so an incidental mention in an unrelated gate's Failure-mode cell
+  satisfied "invariant 6 is protected". This one is verbatim the defect logged
+  above for G14 — *a gate that matches prose matches anything* — repeated inside
+  a file whose comments congratulate themselves on avoiding it.
+
+All three were **verified by mutation, not by reading**: each was reproduced
+green before the fix and red after. The shared lesson is one line — *anchor an
+assertion to the cell that carries the claim, not to the row and never to the
+document* — and the constitution's article numbers are now held to the same
+uniqueness-and-no-gaps rule as these row numbers, which they were not before.
 
 ## Defect gates
 

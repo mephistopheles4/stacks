@@ -128,8 +128,10 @@ terminal and Node, you'll be fine. If you're looking for an Obsidian plugin to
 install, this isn't that yet.
 
 All five phases are green and tagged (`phase-0` … `phase-4`) and it runs against
-a real library daily. Every invariant has a named gate that can go red, scored
-in [docs/gates.md](docs/gates.md).
+a real library daily. The invariants in [CLAUDE.md](CLAUDE.md) are the project's
+**constitution**, and every article of it has a named gate that can go red —
+scored in [docs/gates.md](docs/gates.md), which a gate holds to the constitution
+in both directions so that coverage is a checked fact rather than a claim.
 
 ## Contributing
 

@@ -46,6 +46,43 @@ export function readRepoFile(path: string): string {
 }
 
 /**
+ * The body of a `## Heading` section, up to the next `## ` at the same level.
+ *
+ * **Throws when the heading is gone**, which is the whole point: three gates now
+ * key off a Markdown heading, and a renamed one must fail loudly rather than
+ * hand back nothing and let every assertion above it pass over an empty set.
+ * That is `expectFound`'s argument applied to the extraction step before it.
+ */
+export function markdownSection(source: string, heading: string, where: string): string {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const body = new RegExp(`^## ${escaped}[^\\n]*\\n([\\s\\S]*?)(?=\\n## )`, 'm').exec(source)?.[1];
+
+  if (body === undefined) {
+    throw new Error(
+      `no "## ${heading}" section in ${where}. A gate reads it, so a renamed heading ` +
+        'must fail here rather than reduce that gate to assertions over nothing.',
+    );
+  }
+  return body;
+}
+
+/**
+ * The cells of one Markdown table row.
+ *
+ * Splits on `|` and drops the empty edges a leading and trailing pipe produce —
+ * *only* when they are actually empty. Blindly slicing both ends loses the last
+ * real cell of a row written without a trailing pipe, which is legal Markdown
+ * and renders identically, so a status column would be read from the wrong
+ * place with nothing to show for it.
+ */
+export function tableCells(line: string): string[] {
+  const parts = line.split('|').map((cell) => cell.trim());
+  if (parts[0] === '') parts.shift();
+  if (parts.at(-1) === '') parts.pop();
+  return parts;
+}
+
+/**
  * Every match of a single-capture-group pattern, deduplicated and sorted.
  *
  * Gates built on extraction have a specific failure mode: a regex that stops

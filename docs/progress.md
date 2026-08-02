@@ -15,9 +15,9 @@ Update it in the **same commit** as the gate it describes.
 | | |
 | --- | --- |
 | **Last green gate** | G19 — the constitution and the scoreboard are held to each other |
-| **Now working on** | nothing — the repo is public |
+| **Now working on** | G19 — the scoreboard gates itself |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
-| **Repository** | [public](https://github.com/mephistopheles4/stacks). `main` protected: PR + `gates`, no bypass. Secret scanning, push protection and private vulnerability reporting on |
+| **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates`, no bypass |
 | **Blocked on** | nothing |
 | **Mobile crash** | closed. Two separate bugs: 314 MB of texture (G15), then a driver that cannot sample a shadow map. The shelf paints its shadows now |
 | **Deployed** | https://stacks.aymandiab.com — Cloudflare Pages, `pnpm deploy:site` |
