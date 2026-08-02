@@ -49,3 +49,4 @@ Two other files hold what these deliberately do not:
 | [0023](./0023-ci-shape.md) | CI: one required check named `gates`, on `pull_request` |
 | [0024](./0024-decision-record-is-adrs.md) | The decision record is ADRs, extracted from a chronological log |
 | [0025](./0025-history-not-rewritten.md) | The git history was checked by inspection, and not rewritten |
+| [0026](./0026-constitution-is-gated-not-duplicated.md) | The constitution is CLAUDE.md's invariants, gated rather than duplicated |
