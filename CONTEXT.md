@@ -52,6 +52,37 @@ question from which provider answered for the book's metadata. The two differ
 often enough that conflating them is a licensing mistake, not a pedantic one.
 _Avoid_: source (ambiguous — a record's `source` is the metadata provider).
 
+**Candidate**:
+A URL that might turn out to be a cover. A book has a list of them rather than
+one, because whether a URL is a usable cover is only knowable by fetching it and
+looking. Which candidate wins is G21's; the word just means "not yet decided".
+_Avoid_: cover URL (that is the one that won), option, fallback.
+
+**Spread**:
+Publisher artwork carrying front, spine and back together. It arrives from the
+same field a cover does and is not a cover — on a shelf it renders as a smear of
+three faces — so the downloader judges by shape rather than by which field
+supplied it.
+_Avoid_: wide cover, jacket (a jacket *includes* the front), bad image.
+
+**Domain name / contract name**:
+The same frontmatter key has two spellings, and which one is correct depends
+entirely on which side of the adapter you are on. `spineColor` is the **domain
+name**, used in `BookInput` and everywhere in `packages/core`; `spine_color` is
+the **contract name**, the one in the note on disk and the one G8 pins. Creating
+a note speaks domain names and the adapter translates; *updating* one speaks
+contract names directly.
+_Avoid_: treating them as a style difference. Three commands assembled the same
+three cover keys three different ways, and this split — not anything about
+covers — is why.
+
+**Removal**:
+Setting a key to `undefined` when updating an existing note, which deletes it
+from the file. Everywhere else in this codebase an absent value means "say
+nothing"; here it means "take it out". The one place where the ordinary
+`undefined`-is-absence reflex writes to somebody's vault.
+_Avoid_: unset, clear, blank, null.
+
 ### Building and publishing
 
 **Public build**:
