@@ -52,7 +52,7 @@ absent row is not. This file is only useful if it is as easy to find what is
 | Row | Rule | Source | Gate | Status |
 | --- | --- | --- | --- | --- |
 | **G1** | All vault access goes through the adapter | invariant 4 | `gates/adapter-boundary.test.ts` — an allowlist, each entry justified, each reverse-asserted | ✅ |
-| **G2** | Note bodies are private; a public build is coherent | invariant 2 | `gates/public-build.test.ts` — four assertions, see below | ✅ |
+| **G2** | Note bodies are private; a public build is coherent | invariant 2 | `gates/public-build.test.ts` — asserted against `publish()`'s output, see below | ✅ |
 | **G3** | Never crash on a bad note | invariant 3 | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind | ✅ |
 | **G4** | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
 | **G5** | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored | ✅ |
