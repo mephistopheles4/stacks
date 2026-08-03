@@ -13,6 +13,7 @@ import {
   createCachedHttpGet,
   enrichBook,
   importBooks,
+  keyIfPresent,
   missingFields,
   isBookStatus,
   parseAudibleExport,
@@ -61,9 +62,7 @@ program
     const result = await addBook(term, vault, get, {
       status: options.status as BookStatus,
       ...(options.force === true ? { force: true } : {}),
-      ...(googleBooksKey === undefined || googleBooksKey.length === 0
-        ? {}
-        : { googleBooksKey }),
+      ...keyIfPresent('googleBooksKey', googleBooksKey),
     });
 
     switch (result.kind) {
@@ -202,9 +201,7 @@ program
       const gaps = missingFields(book).join(', ');
       const outcome = await enrichBook(book, vault, get, {
         ...(options.dryRun === true ? { dryRun: true } : {}),
-        ...(googleBooksKey === undefined || googleBooksKey.length === 0
-          ? {}
-          : { googleBooksKey }),
+        ...keyIfPresent('googleBooksKey', googleBooksKey),
       });
 
       switch (outcome.kind) {
@@ -381,7 +378,7 @@ program
       const result = await importBooks(books, vault, {
         ...(options.dryRun === true ? { dryRun: true } : {}),
         ...(options.skipCovers === true ? { skipCovers: true } : { get }),
-        ...(gbKey === undefined || gbKey.length === 0 ? {} : { googleBooksKey: gbKey }),
+        ...keyIfPresent('googleBooksKey', gbKey),
       });
 
       for (const outcome of result.outcomes) {

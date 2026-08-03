@@ -79,8 +79,9 @@ covers — is why.
 **Removal**:
 Setting a key to `undefined` when updating an existing note, which deletes it
 from the file. Everywhere else in this codebase an absent value means "say
-nothing"; here it means "take it out". The one place where the ordinary
-`undefined`-is-absence reflex writes to somebody's vault.
+nothing" — that side is `keyIfPresent`, and G23 holds it — but here it means
+"take it out". The one place where the ordinary `undefined`-is-absence reflex
+writes to somebody's vault.
 _Avoid_: unset, clear, blank, null.
 
 ### Building and publishing
