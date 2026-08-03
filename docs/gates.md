@@ -149,12 +149,16 @@ uniqueness-and-no-gaps rule as these row numbers, which they were not before.
 
 ## Defect gates
 
-Rows that exist because a specific defect got through — except the last, which
-exists because the change it shipped with made a new one reachable. Each was
-written to fail first.
+Rows that exist because a specific defect got through, except **G17, G18 and
+G20**, which were written for defects that had not happened — G17 because the
+change it shipped with made one reachable, G18 because somebody outside the
+project looked, G20 because a rule was copied a third time. Each was written to
+fail first.
 
-(It said "four" for a while after there were five, which is the kind of thing
-this file is otherwise about. Counted in prose, so nothing could go red.)
+(It said "four" for a while after there were five, and said "the last" for two
+rows after the exception stopped being the last. Both are the kind of thing this
+file is otherwise about: counted — and then pointed at — in prose, so nothing
+could go red. Naming the rows at least breaks loudly when one is renumbered.)
 
 | Row | Rule | Gate | Status |
 | --- | --- | --- | --- |
@@ -165,7 +169,7 @@ this file is otherwise about. Counted in prose, so nothing could go red.)
 | **G16** | every book stays inside its own case | `pnpm smoke:render` | ✅ |
 | **G17** | a deploy publishes `main`, or says why not | `gates/deploy-branch.test.ts` | ✅ |
 | **G18** | a provider's bytes are bounded and are an image | `packages/core/src/covers/download.test.ts` | ✅ |
-| **G20** | one cover-preference rule, one implementation | `gates/cover-candidates.test.ts` + `packages/core/src/covers/acquire.test.ts` | ✅ |
+| **G20** | one cover-preference rule, one implementation, right way round | `gates/cover-candidates.test.ts` + `packages/core/src/covers/cache-cover.test.ts` | ✅ |
 
 **G17 is the one row here written for a defect that has not happened**, because
 the change that would cause it is the change that shipped with it. Until
@@ -233,35 +237,73 @@ serves PNG whatever the URL suggests), Apple `image/jpeg` (171 KB, `ffd8ffe0`).
 Largest is 0.8% of the cap. This is a measurement with a shelf life: it says
 what the three providers did on 1 August 2026, not what they must do.
 
-**G20 is the third row written for a defect that has not happened**, and the
-first written for one that *could not go red on its own*. Which cover URL to try
-first — `coverUrlLarge` before `coverUrl` — was written out three times, in
-`add-book.ts`, `enrich.ts` and the importer. All three agreed, which is exactly
-where G10 started: one rule, two implementations, agreeing until one didn't.
+**G20 is the third row written for a defect that has not happened**, and the one
+whose first draft was wrong in a way worth recording, because the mistake is the
+one this file exists to catch.
 
-The difference is what failure looks like. G10's second copy crashed a path on
-Windows; this one is **silent by construction**. Reverse the pair and a cover
-still downloads, `cover_source` is still correct for the bytes kept, every
-existing test still passes — you have simply kept Google's ~128px thumbnail
-instead of the large image, and the shelf is quietly worse. There is no
-behavioural assertion that catches that, because nothing about it is wrong except
-the choice. Hence a structural row: `coverUrlLarge` may be named only inside
-`packages/core/src/metadata/`, where the field is produced and where `coverUrls()`
-ranks it, and every module calling `cacheCover` must get its list from there.
+Which cover URL to try first — `coverUrlLarge` before `coverUrl` — was written
+out three times, in `add-book.ts`, `enrich.ts` and the importer. All three
+agreed, which is exactly where G10 started: one rule, two implementations,
+agreeing until one didn't. The difference is what failure looks like. G10's
+second copy crashed a path on Windows; this one is **silent**. Reverse the pair
+and a cover still downloads, `cover_source` is still correct for the bytes kept,
+and the shelf is quietly worse.
 
-**Observed red** by adding a fourth module naming the pair, and again in reverse
-by the `routes every cover download` assertion, which is what stops the first
-half being satisfied by a caller that simply stops downloading covers. Both
-directions matter here for the reason G17 records: a positive check cannot detect
+So the row was written structural: `coverUrlLarge` may be named only inside
+`packages/core/src/metadata/`, where the field is produced and where
+`coverUrls()` ranks it, and every module calling `cacheCover` must get its list
+from there. **Observed red** by adding a fourth module naming the pair, and again
+in reverse by the `routes every cover download` assertion, which is what stops
+the first half being satisfied by a caller that simply stops downloading covers.
+Both directions matter for the reason G17 records: a positive check cannot detect
 a missing one.
 
-The behavioural half, `covers/acquire.test.ts`, closes a related hole rather than
-the same one. `blank.test.ts` and `download.test.ts` each proved one step of
-`cacheCover` in isolation; nothing proved the *order* they run in — which
+**And that gated the wrong half.** The row claimed "one cover-preference rule,
+one implementation" while asserting only the second clause. Reversing
+`coverUrls` — the exact defect described two paragraphs up — left all 290 tests
+green, because no structural check can see which way round two elements of a
+tuple are. The prose had even argued the point away: *nothing about it is wrong
+except the choice, so nothing but a structural check can catch it.* That was true
+of three scattered copies and false the moment they became one function.
+Consolidating the rule is what made it cheaply assertable, and the draft carried
+over a justification from before the consolidation it was shipping with.
+
+Caught by review, then confirmed by mutation rather than by reading. The
+preference is now pinned in `covers/cache-cover.test.ts`, asserted **through the
+downloader** — that the large URL is the one actually fetched first — rather than
+on the tuple, because what is worth protecting is which bytes reach the shelf.
+Reversing `coverUrls` now fails one test, by name.
+
+The lesson generalises past this row: **a structural gate proves there is one
+implementation and says nothing about whether it is right.** Any row here
+promising "one rule, one implementation" needs the first clause asserted
+somewhere too. G10's does — `covers/cover-path.test.ts` is exactly that half,
+which is why that row names two files. G20's row named two files while one of
+them tested something adjacent.
+
+That adjacent thing was worth having anyway, and is the rest of
+`cache-cover.test.ts`. `blank.test.ts` and `download.test.ts` each proved one
+step of `cacheCover` in isolation; nothing proved the *order* they run in — which
 candidate wins, what happens when none is cover-shaped, and which URL the
 recorded `source` is taken from. That was exercised only incidentally, through
 `add-book.test.ts` and `enrich.test.ts`, where a change in preference would still
 leave a cover on disk and every assertion green.
+
+Three further weaknesses in the first draft, from the same review, each an
+instance of a failure mode already logged in this file:
+
+- the exemption list for the caller check had **no stale-entry assertion**, which
+  ADR-0022 requires and G10 has. A file on it was exempt permanently, so
+  `index.ts` growing a real `cacheCover` call would never have been noticed;
+- the `coverUrlLarge` sweep had **nothing anchoring the symbol**. `expectFound`
+  guarded the file walk, not the string — so renaming the field would have left
+  the assertion sweeping for something that no longer existed and passing over an
+  empty set;
+- both halves matched **raw file text, comments included**. A caller that
+  hand-ordered its candidates needed only to mention `coverUrls()` in a comment
+  to look compliant. Verbatim the G14 and G19 defect — *a gate that matches prose
+  matches anything* — for the third time, in a file whose commentary on the first
+  two is directly above.
 
 **What this row does not gate**: that `cover`, `cover_source` and `spine_color`
 are written together. That rule — *a note's `cover_source` describes the bytes of

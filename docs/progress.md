@@ -727,6 +727,9 @@ G20 is structural because the failure it guards is silent — see
   `FrontmatterChanges` *removes* the key, so near `updateBook` the distinction
   is load-bearing in the opposite direction.
 
+  **Not filed as an issue yet** — recorded here so it is written down somewhere
+  that a cold session reads.
+
 ## Notes to the next session
 
 All five phases are green and tagged. The tool runs against the owner's real

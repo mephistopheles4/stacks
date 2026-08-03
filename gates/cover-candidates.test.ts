@@ -11,12 +11,16 @@
  * rule agreed until one of them didn't. **The difference here is that this rule
  * fails silently.** Reverse the pair and you keep Google's ~128px thumbnail
  * instead of the large image: a cover still lands on disk, `cover_source` is
- * still correct, every existing test still passes, and the shelf is quietly
- * worse. Nothing goes red, so nothing but a structural check can catch it.
+ * still correct, and the shelf is quietly worse.
  *
- * The assertion is structural rather than behavioural for the same reason G10's
- * is: it holds for code nobody has written yet. The next command that needs a
- * cover has to find the helper instead of writing the pair out again.
+ * **This file gates only half of that**, and the row is written to say so. What
+ * is asserted here is *one implementation* — structural, so it holds for code
+ * nobody has written yet, and the next command needing a cover has to find the
+ * helper instead of writing the pair out again. That the one implementation
+ * ranks the pair the *right way round* is not checkable from the file tree, and
+ * for a while nothing checked it anywhere: reversing `coverUrls` left the whole
+ * suite green. It is now pinned behaviourally, through the downloader, in
+ * `packages/core/src/covers/cache-cover.test.ts`. Neither half is sufficient.
  *
  * See docs/gates.md, row G20.
  */
@@ -54,6 +58,22 @@ function sourceFiles(): string[] {
   return filesUnder('packages', ['.ts']).filter((path) => !path.endsWith('.test.ts'));
 }
 
+/**
+ * A file with its comments blanked out, so the assertions below read code.
+ *
+ * `docs/gates.md` logs this defect twice, under G14 and G19 — *a gate that
+ * matches prose matches anything* — and the caller check below is vulnerable to
+ * it in the permissive direction: a new caller that hand-orders its candidates
+ * would need only to mention `coverUrls()` in a comment to look compliant.
+ * Comments are replaced with spaces rather than removed so every offset
+ * survives, and a failure still points at the right place.
+ */
+function codeOf(path: string): string {
+  return readRepoFile(path).replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (match) =>
+    match.replace(/[^\n]/g, ' '),
+  );
+}
+
 describe('G20 — one cover-preference implementation', () => {
   it('scans a plausible number of source files', () => {
     expectFound(sourceFiles(), 'source files to scan', 20);
@@ -69,9 +89,19 @@ describe('G20 — one cover-preference implementation', () => {
   });
 
   it('is the only place that ranks the two cover URLs', () => {
+    // Anchors the search positively before asserting the negative. `expectFound`
+    // above guards the file *walk*, not the *symbol*: renaming `coverUrlLarge`
+    // would otherwise leave this sweeping for a string that no longer exists and
+    // passing over an empty set — the vacuity failure docs/gates.md records
+    // three instances of.
+    const inOwner = sourceFiles().filter(
+      (path) => path.startsWith(OWNER_DIR) && /\bcoverUrlLarge\b/.test(codeOf(path)),
+    );
+    expectFound(inOwner, 'files in the metadata layer naming coverUrlLarge', 2);
+
     const offenders = sourceFiles().filter((path) => {
       if (path.startsWith(OWNER_DIR)) return false;
-      return /\bcoverUrlLarge\b/.test(readRepoFile(path));
+      return /\bcoverUrlLarge\b/.test(codeOf(path));
     });
 
     expect(
@@ -88,15 +118,36 @@ describe('G20 — one cover-preference implementation', () => {
     // — the importer deliberately prepends the export's own artwork — but all
     // three rank a metadata record through the same helper.
     const callers = sourceFiles().filter(
-      (path) => !NOT_A_CALLER.has(path) && /\bcacheCover\(/.test(readRepoFile(path)),
+      (path) => !NOT_A_CALLER.has(path) && /\bcacheCover\(/.test(codeOf(path)),
     );
     expectFound(callers, 'modules that call cacheCover', 3);
 
-    const unranked = callers.filter((path) => !/\bcoverUrls\(/.test(readRepoFile(path)));
+    const unranked = callers.filter((path) => !/\bcoverUrls\(/.test(codeOf(path)));
 
     expect(
       unranked,
       `these download a cover without ranking the candidates through coverUrls(): ${unranked.join(', ')}`,
     ).toEqual([]);
+  });
+
+  it('has no stale exemptions', () => {
+    // The allowlist bites permissively: a file on it is exempt forever. If
+    // `index.ts` ever grew a real hand-built cacheCover call, nothing would
+    // notice. ADR-0022 requires every allowlisted entry to still exist *and*
+    // still need its exemption; G10 asserts exactly this about its own.
+    for (const path of NOT_A_CALLER) {
+      expect(existsSync(join(REPO_ROOT, path)), `exempt file no longer exists: ${path}`).toBe(true);
+
+      const code = codeOf(path);
+      const defines = /(?:export )?(?:async )?function cacheCover\b/.test(code);
+      const reexports = /export\s*\{[^}]*\bcacheCover\b[^}]*\}/.test(code);
+
+      expect(
+        defines || reexports,
+        `${path} is exempt from the caller check because it only defines or re-exports ` +
+          'cacheCover. It no longer does either — so if it now calls it, drop it from ' +
+          'NOT_A_CALLER and rank its candidates through coverUrls().',
+      ).toBe(true);
+    }
   });
 });
