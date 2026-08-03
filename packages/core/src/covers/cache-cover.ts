@@ -46,15 +46,24 @@ const MAX_COVER_ASPECT = 1.05;
  * nothing is cover-shaped the first that downloaded is used rather than
  * leaving the book bare.
  *
+ * **Gaps in the list are the caller's normal case, not an error.** Candidates
+ * come from optional metadata fields, so every caller held the same filter and
+ * the same "is there anything left" guard before calling — three copies of one
+ * decision that belongs here, next to the empty-string check that was already
+ * here. An exhausted list and a list that was never populated both mean the
+ * same thing to a caller: no cover.
+ *
  * Every failure returns `undefined` rather than throwing: a missing cover
  * downgrades how a book looks, it does not stop the book being logged.
  */
 export async function cacheCover(
-  urls: string | readonly string[],
+  urls: string | readonly (string | undefined)[],
   title: string,
   vault: VaultAdapter,
 ): Promise<CachedCover | undefined> {
-  const candidates = (typeof urls === 'string' ? [urls] : urls).filter((u) => u.length > 0);
+  const candidates = (typeof urls === 'string' ? [urls] : urls).filter(
+    (u): u is string => u !== undefined && u.length > 0,
+  );
 
   let fallback: { bytes: Buffer; url: string } | undefined;
   let chosen: { bytes: Buffer; url: string } | undefined;

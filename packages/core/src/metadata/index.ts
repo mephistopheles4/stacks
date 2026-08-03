@@ -6,6 +6,7 @@ import type { HttpGet } from './http.ts';
 import type { BookMetadata } from './types.ts';
 
 export { createCachedHttpGet, type HttpGet } from './http.ts';
+export { coverUrls } from './types.ts';
 export type { BookMetadata, MetadataSource } from './types.ts';
 
 /**

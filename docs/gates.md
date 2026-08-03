@@ -149,17 +149,27 @@ uniqueness-and-no-gaps rule as these row numbers, which they were not before.
 
 ## Defect gates
 
-Rows that exist because a specific defect got through — except G17 and G18,
-written for defects that had not happened, and G20, which exists because two
-implementations of one rule had drifted. Each was written to fail first.
+Rows that exist because a specific defect got through — except **G17, G18 and
+G22**, written for defects that had not happened (G17 because the change it
+shipped with made one reachable, G18 because somebody outside the project
+looked, G22 because a rule was copied a third time), and G20, which exists
+because two implementations of one rule had drifted. Each was written to fail
+first.
 
 (That sentence read "except the last" until G21 was appended, which would have
 made it name the wrong row. It had already been wrong once: "the last" meant G17
 when it was written, and G18 and G20 arrived after it. A positional reference to
 a table that grows is the same species as the count in the next paragraph.)
 
-(It said "four" for a while after there were five, which is the kind of thing
-this file is otherwise about. Counted in prose, so nothing could go red.)
+(It said "four" for a while after there were five: the kind of thing this file is
+otherwise about, counted in prose so nothing could go red. Naming the rows at
+least breaks loudly when one is renumbered — which has now happened twice, to the
+same row. The cover-preference row was written as G20, became G21 when the
+public-build inspector took that number first, and became G22 when the
+no-live-network guard took *that* one. Three branches, three sessions, and each
+time the next free number was free right up until somebody else merged: what
+number a row will carry is not knowable until it lands. Loud is the most a
+paragraph can be; nothing here goes red on it.)
 
 | Row | Rule | Gate | Status |
 | --- | --- | --- | --- |
@@ -172,6 +182,7 @@ this file is otherwise about. Counted in prose, so nothing could go red.)
 | **G18** | a provider's bytes are bounded and are an image | `packages/core/src/covers/download.test.ts` | ✅ |
 | **G20** | one inspection of the folder about to be published | `gates/public-build-artifact.test.ts` | ✅ |
 | **G21** | no test makes a live network call | `gates/no-live-network.ts` + `gates/no-live-network.setup.ts`, specced by `gates/no-live-network.test.ts` | ✅ |
+| **G22** | one cover-preference rule, one implementation, right way round | `gates/cover-candidates.test.ts` + `packages/core/src/covers/cache-cover.test.ts` | ✅ |
 
 **G21 is the first row here written for a rule that two files already claimed
 was true.** `CLAUDE.md`'s Phase 1 gate says "use cached API fixtures, no live
@@ -234,7 +245,7 @@ reaches the network by some other API. The escape hatch for a test that
 genuinely needs a response is `vi.stubGlobal`, named in the failure message
 rather than only here, since the message is where somebody will meet this rule.
 
-**G17 is the one row here written for a defect that has not happened**, because
+**G17 is the first row here written for a defect that has not happened**, because
 the change that would cause it is the change that shipped with it. Until
 worktrees there was one checkout, so "am I on the right branch" answered itself
 by standing somewhere. Now there can be four, on four branches, and all of them
@@ -299,6 +310,96 @@ nothing going red. All three answer properly: Open Library `image/jpeg`
 serves PNG whatever the URL suggests), Apple `image/jpeg` (171 KB, `ffd8ffe0`).
 Largest is 0.8% of the cap. This is a measurement with a shelf life: it says
 what the three providers did on 1 August 2026, not what they must do.
+
+**G22 is the third row written for a defect that has not happened**, and the one
+whose first draft was wrong in a way worth recording, because the mistake is the
+one this file exists to catch.
+
+Which cover URL to try first — `coverUrlLarge` before `coverUrl` — was written
+out three times, in `add-book.ts`, `enrich.ts` and the importer. All three
+agreed, which is exactly where G10 started: one rule, two implementations,
+agreeing until one didn't. The difference is what failure looks like. G10's
+second copy crashed a path on Windows; this one is **silent**. Reverse the pair
+and a cover still downloads, `cover_source` is still correct for the bytes kept,
+and the shelf is quietly worse.
+
+So the row was written structural: `coverUrlLarge` may be named only inside
+`packages/core/src/metadata/`, where the field is produced and where
+`coverUrls()` ranks it, and every module calling `cacheCover` must get its list
+from there. **Observed red** by adding a fourth module naming the pair, and again
+in reverse by the `routes every cover download` assertion, which is what stops
+the first half being satisfied by a caller that simply stops downloading covers.
+Both directions matter for the reason G17 records: a positive check cannot detect
+a missing one.
+
+**And that gated the wrong half.** The row claimed "one cover-preference rule,
+one implementation" while asserting only the second clause. Reversing
+`coverUrls` — the exact defect described two paragraphs up — left all 290 tests
+green, because no structural check can see which way round two elements of a
+tuple are. The prose had even argued the point away: *nothing about it is wrong
+except the choice, so nothing but a structural check can catch it.* That was true
+of three scattered copies and false the moment they became one function.
+Consolidating the rule is what made it cheaply assertable, and the draft carried
+over a justification from before the consolidation it was shipping with.
+
+Caught by review, then confirmed by mutation rather than by reading. The
+preference is now pinned in `covers/cache-cover.test.ts`, asserted **through the
+downloader** — that the large URL is the one actually fetched first — rather than
+on the tuple, because what is worth protecting is which bytes reach the shelf.
+Reversing `coverUrls` now fails one test, by name.
+
+The lesson generalises past this row: **a structural gate proves there is one
+implementation and says nothing about whether it is right.** Any row here
+promising "one rule, one implementation" needs the first clause asserted
+somewhere too. G10's does — `covers/cover-path.test.ts` is exactly that half,
+which is why that row names two files. G22's row named two files while one of
+them tested something adjacent.
+
+That adjacent thing was worth having anyway, and is the rest of
+`cache-cover.test.ts`. `blank.test.ts` and `download.test.ts` each proved one
+step of `cacheCover` in isolation; nothing proved the *order* they run in — which
+candidate wins, what happens when none is cover-shaped, and which URL the
+recorded `source` is taken from. That was exercised only incidentally, through
+`add-book.test.ts` and `enrich.test.ts`, where a change in preference would still
+leave a cover on disk and every assertion green.
+
+Three further weaknesses in the first draft, from the same review, each an
+instance of a failure mode already logged in this file:
+
+- the exemption list for the caller check had **no stale-entry assertion**, which
+  ADR-0022 requires and G10 has. A file on it was exempt permanently, so
+  `index.ts` growing a real `cacheCover` call would never have been noticed. The
+  first fix for this did not work either, and the reason is worth keeping: it
+  asked whether each exempt file still *defines or re-exports* `cacheCover`,
+  which `index.ts` does forever — so a file could re-export it **and** call it
+  and still sail through both checks, which is precisely the case the exemption
+  exists to make impossible. The mutation that found it is the one the first
+  round did not run: not "a file that stopped needing its exemption" but "a file
+  that still qualifies for it and calls anyway". The check now strips the one
+  `cacheCover(` that is a definition and asserts no call site remains;
+- the `coverUrlLarge` sweep had **nothing anchoring the symbol**. `expectFound`
+  guarded the file walk, not the string — so renaming the field would have left
+  the assertion sweeping for something that no longer existed and passing over an
+  empty set;
+- both halves matched **raw file text, comments included**. A caller that
+  hand-ordered its candidates needed only to mention `coverUrls()` in a comment
+  to look compliant. Verbatim the G14 and G19 defect — *a gate that matches prose
+  matches anything* — for the third time, in a file whose commentary on the first
+  two is directly above. Blanking comments then reintroduced the same shape one
+  level down: `//` inside `https://covers.openlibrary.org/…` is not a comment,
+  and treating it as one would have hidden real code from the sweep. The
+  stripper skips `//` preceded by a colon and says in its own docstring that it
+  is not a parser and does not know a `//` inside a string literal from one
+  starting a comment.
+
+**What this row does not gate**: that `cover`, `cover_source` and `spine_color`
+are written together. That rule — *a note's `cover_source` describes the bytes of
+that note's `cover`* — has four writers, and one of them, `stacks covers
+--backfill`, never downloads anything at all: it infers provenance from the shape
+of a cover already on disk and upholds the rule by a different route. So no
+structural check can demand the three appear together, and `covers/cover-keys.ts`
+makes the pairing unconstructible on the *creation* path only. Stated here
+because that is a narrower guarantee than the section heading suggests.
 
 **G16 observed red at 0.0203** — about 0.5cm at shelf scale — by deleting the
 clearance and re-running. It exists because the owner found the same defect twice

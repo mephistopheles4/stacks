@@ -28,6 +28,23 @@ export interface BookMetadata {
   readonly source: MetadataSource;
 }
 
+/**
+ * A record's cover URLs, best first, for handing to the downloader.
+ *
+ * The preference — large before small — is a rule about these two fields, so it
+ * is stated here rather than at each call site. It was written out three times,
+ * and getting it backwards is silent: you keep Google's ~128px thumbnail
+ * instead of the large image, every test still passes, and the shelf is quietly
+ * worse. Gaps are left in rather than filtered out; `cacheCover` skips them.
+ *
+ * Takes an optional record because the caller with a real reason to differ —
+ * the importer, which prepends a print edition's cover to the export's own
+ * artwork — may not have found one.
+ */
+export function coverUrls(metadata: BookMetadata | undefined): readonly (string | undefined)[] {
+  return [metadata?.coverUrlLarge, metadata?.coverUrl];
+}
+
 /** Narrows an unknown JSON body to an indexable object. */
 export function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
