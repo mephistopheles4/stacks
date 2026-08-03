@@ -1,5 +1,6 @@
 import { parse as parseYaml } from 'yaml';
 import { isCoverSource, type CoverSource } from './covers/cover-source.ts';
+import { keyIfPresent } from './key-if-present.ts';
 import {
   DEFAULT_BOOK_STATUS,
   isBookStatus,
@@ -111,33 +112,26 @@ export function parseNote(source: string, sourcePath: string): ParsedNote {
       title,
       status: readStatus(fields['status']),
       tags: readTags(fields['tags']),
-      ...optional('author', asString(fields['author'])),
-      ...optional('isbn', asString(fields['isbn'])),
-      ...optional('started', asDate(fields['started'])),
-      ...optional('finished', asDate(fields['finished'])),
-      ...optional('rating', asRating(fields['rating'])),
-      ...optional('cover', asString(fields['cover'])),
+      ...keyIfPresent('author', asString(fields['author'])),
+      ...keyIfPresent('isbn', asString(fields['isbn'])),
+      ...keyIfPresent('started', asDate(fields['started'])),
+      ...keyIfPresent('finished', asDate(fields['finished'])),
+      ...keyIfPresent('rating', asRating(fields['rating'])),
+      ...keyIfPresent('cover', asString(fields['cover'])),
       // An unrecognised value is dropped rather than kept: a public build makes
       // provider-dependent decisions off this key, and a typo must not read as
       // a permission. Absent then means "nobody recorded it", which is the same
       // thing every cover cached before this key existed says.
-      ...optional('coverSource', asCoverSource(fields['cover_source'])),
-      ...optional('spineColor', asHexColour(fields['spine_color'])),
-      ...optional('pages', asPositiveInt(fields['pages'])),
-      ...optional('faceOut', asBoolean(fields['face_out'])),
-      ...optional('shelfOrder', asOrder(fields['shelf_order'])),
-      ...optional('private', asPrivate(fields['private'])),
+      ...keyIfPresent('coverSource', asCoverSource(fields['cover_source'])),
+      ...keyIfPresent('spineColor', asHexColour(fields['spine_color'])),
+      ...keyIfPresent('pages', asPositiveInt(fields['pages'])),
+      ...keyIfPresent('faceOut', asBoolean(fields['face_out'])),
+      ...keyIfPresent('shelfOrder', asOrder(fields['shelf_order'])),
+      ...keyIfPresent('private', asPrivate(fields['private'])),
     },
   };
 }
 
-/**
- * Omits the key entirely when the value is absent, rather than setting it to
- * `undefined`. Keeps `library.json` free of `"author": null` noise.
- */
-function optional<K extends string, V>(key: K, value: V | undefined): Record<K, V> | Record<never, never> {
-  return value === undefined ? {} : ({ [key]: value } as Record<K, V>);
-}
 
 function asString(value: unknown): string | undefined {
   if (typeof value === 'string') {

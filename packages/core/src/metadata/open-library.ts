@@ -1,6 +1,7 @@
 import { looksDerivative, normaliseIsbn, titleMatchScore } from '../identity.ts';
 import type { HttpGet } from './http.ts';
 import { asPositiveInt, asRecord, firstString, type BookMetadata } from './types.ts';
+import { keyIfPresent } from '../key-if-present.ts';
 
 /**
  * Open Library — the primary provider.
@@ -36,13 +37,13 @@ export async function lookupByIsbn(
   return {
     title,
     source: 'open-library',
-    ...maybe('author', authorsOf(entry['authors'])),
-    ...maybe(
+    ...keyIfPresent('author', authorsOf(entry['authors'])),
+    ...keyIfPresent(
       'isbn',
       firstString(identifiers?.['isbn_13']) ?? firstString(identifiers?.['isbn_10']) ?? normalised,
     ),
-    ...maybe('pages', asPositiveInt(entry['number_of_pages'])),
-    ...maybe('coverUrl', coverOf(entry['cover'])),
+    ...keyIfPresent('pages', asPositiveInt(entry['number_of_pages'])),
+    ...keyIfPresent('coverUrl', coverOf(entry['cover'])),
   };
 }
 
@@ -102,10 +103,10 @@ function toMetadata(doc: Record<string, unknown> | undefined): BookMetadata | un
   return {
     title,
     source: 'open-library',
-    ...maybe('author', firstString(doc['author_name'])),
-    ...maybe('isbn', isbn),
-    ...maybe('pages', asPositiveInt(doc['number_of_pages_median'])),
-    ...maybe('coverUrl', coverUrl),
+    ...keyIfPresent('author', firstString(doc['author_name'])),
+    ...keyIfPresent('isbn', isbn),
+    ...keyIfPresent('pages', asPositiveInt(doc['number_of_pages_median'])),
+    ...keyIfPresent('coverUrl', coverUrl),
     // A URL built from an ISBN is a guess; one built from a real cover id is not.
     ...(coverId === undefined && coverUrl !== undefined ? { coverIsSpeculative: true } : {}),
   };
@@ -132,6 +133,3 @@ function coverOf(value: unknown): string | undefined {
   return firstString(cover['large']) ?? firstString(cover['medium']) ?? firstString(cover['small']);
 }
 
-function maybe<K extends string, V>(key: K, value: V | undefined): Record<K, V> | Record<never, never> {
-  return value === undefined ? {} : ({ [key]: value } as Record<K, V>);
-}

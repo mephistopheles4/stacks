@@ -1,5 +1,6 @@
 import type { CoverSource } from './covers/cover-source.ts';
 import type { BookRecord } from './types.ts';
+import { keyIfPresent } from './key-if-present.ts';
 
 /**
  * `library.json` — the build artifact the shelf reads.
@@ -76,21 +77,21 @@ function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
     title: record.title,
     status: record.status,
     tags: record.tags,
-    ...pick('author', record.author),
-    ...pick('isbn', record.isbn),
-    ...pick('started', record.started),
-    ...pick('finished', record.finished),
-    ...pick('rating', record.rating),
-    ...pick('cover', record.cover),
-    ...pick('coverSource', record.coverSource),
-    ...pick('spineColor', record.spineColor),
-    ...pick('pages', record.pages),
-    ...pick('faceOut', record.faceOut),
-    ...pick('shelfOrder', record.shelfOrder),
+    ...keyIfPresent('author', record.author),
+    ...keyIfPresent('isbn', record.isbn),
+    ...keyIfPresent('started', record.started),
+    ...keyIfPresent('finished', record.finished),
+    ...keyIfPresent('rating', record.rating),
+    ...keyIfPresent('cover', record.cover),
+    ...keyIfPresent('coverSource', record.coverSource),
+    ...keyIfPresent('spineColor', record.spineColor),
+    ...keyIfPresent('pages', record.pages),
+    ...keyIfPresent('faceOut', record.faceOut),
+    ...keyIfPresent('shelfOrder', record.shelfOrder),
     // Carried so a local index can show you which books are held back. A public
     // build never contains one, so this is only ever `true` in a build that
     // stays on your machine.
-    ...pick('private', record.private),
+    ...keyIfPresent('private', record.private),
   };
 
   // A public build must expose no vault paths (brief, "share build").
@@ -132,6 +133,3 @@ function byFinishedThenTitle(a: LibraryBook, b: LibraryBook): number {
   return a.title.localeCompare(b.title);
 }
 
-function pick<K extends string, V>(key: K, value: V | undefined): Record<K, V> | Record<never, never> {
-  return value === undefined ? {} : ({ [key]: value } as Record<K, V>);
-}
