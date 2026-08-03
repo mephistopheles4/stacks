@@ -1,7 +1,8 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import sharp from 'sharp';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
 import { enrichBook, missingFields } from './enrich.ts';
 import type { HttpGet } from './metadata/http.ts';
@@ -23,6 +24,46 @@ const knowsTheBook: HttpGet = async (url) =>
 
 const knowsNothing: HttpGet = async () => undefined;
 
+/**
+ * The cover the stubbed `fetch` serves.
+ *
+ * `enrichBook` takes an injected `HttpGet`, so no *metadata* lookup here goes
+ * near the network — but the injection seam stops short of the bytes:
+ * `cacheCover`'s `download` reaches for the global `fetch`. The search response
+ * above carries an ISBN and no `cover_i`, so the Open Library adapter guesses
+ * `covers.openlibrary.org/b/isbn/<isbn>-L.jpg`, and that URL was being fetched
+ * for real — ~1.3s of live network inside one unit test, a quarter of vitest's
+ * 5s cap, which a loaded CI runner turned into an intermittent timeout.
+ *
+ * Stubbed the way `covers/download.test.ts` stubs it. It serves a real JPEG
+ * rather than a failure because a failure would keep every assertion below
+ * green while quietly dropping the cover and spine-colour path this file
+ * already exercises.
+ */
+async function coverBytes(): Promise<Buffer> {
+  return await sharp({
+    create: { width: 400, height: 600, channels: 3, background: '#2f6d7a' },
+  })
+    .jpeg()
+    .toBuffer();
+}
+
+/**
+ * The bytes as a body stream, which is how `fetch` hands them over and what
+ * `download` reads. A fresh one per call: a stream is consumed once.
+ */
+function respondWithCover(bytes: Uint8Array): Response {
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    }),
+    { headers: { 'content-type': 'image/jpeg' } },
+  );
+}
+
 describe('missingFields', () => {
   it('counts a cover with no spine colour as a gap', () => {
     const base = { sourcePath: 'Library/A.md', title: 'A', status: 'read' as const, tags: [] };
@@ -40,9 +81,13 @@ describe('enrichBook', () => {
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), 'stacks-enrich-'));
     vault = new ObsidianAdapter(dir);
+
+    const bytes = await coverBytes();
+    vi.stubGlobal('fetch', vi.fn(async () => respondWithCover(bytes)));
   });
 
   afterEach(async () => {
+    vi.unstubAllGlobals();
     await rm(dir, { recursive: true, force: true });
   });
 
