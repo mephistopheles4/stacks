@@ -3,35 +3,32 @@
  *
  *     pnpm gate:public
  *
- * Greps the **built folder**, not `library.json`. The JSON is already asserted
- * in unit tests; what matters here is what actually ships, including anything
- * Astro inlined into HTML or a bundle along the way.
+ * Inspects the **built folder**, not `library.json`. The JSON is already
+ * asserted in unit tests; what matters here is what actually ships, including
+ * anything Astro inlined into HTML or a bundle along the way.
+ *
+ * The rules themselves live in `scripts/lib/public-build.ts`, because
+ * `deploy:site` has to apply exactly the same ones to the real build and the
+ * two had already drifted apart while nobody could see it. This script owns the
+ * two things that are *its own*: planting the canary in a fixture vault and
+ * building from it. G20 owns watching each rule go red; this owns proving a
+ * real Astro build survives all of them.
  *
  * The canary is planted in several fixture note bodies *including the malformed
  * one that gets skipped*, so a pass cannot be an accident of that book being
  * dropped from the library.
  */
 import { spawnSync } from 'node:child_process';
-import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { dirname, extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { inspectPublicBuild, NOTE_BODY_CANARY } from './lib/public-build.ts';
+import { walk } from './lib/walk.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const VAULT = join(ROOT, 'fixtures', 'vault');
 const ASSETS = join(ROOT, 'packages', 'site', 'public');
 const DIST = join(ROOT, 'packages', 'site', 'dist');
-
-const CANARY = 'NOTE_BODY_CANARY_do_not_ship';
-
-/** Things that would give away the shape of the vault. */
-const FORBIDDEN: readonly { readonly what: string; readonly pattern: RegExp }[] = [
-  { what: 'note body text', pattern: new RegExp(CANARY) },
-  { what: 'a vault note path', pattern: /Library\/[^"'\s]*\.md/ },
-  { what: 'the sourcePath field', pattern: /"sourcePath"/ },
-];
-
-/** Binary assets are covers and the OG image; no text to leak. */
-const TEXTUAL = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt', '.map', '.xml']);
 
 /**
  * `shell: true` because `pnpm` is a `.cmd` shim on Windows and will not spawn
@@ -48,35 +45,23 @@ function run(command: string, args: readonly string[]): void {
   }
 }
 
-/** Empty string for a file that is not there, so callers can just pattern-match. */
-function readFileIfPresent(path: string): string {
-  return existsSync(path) ? readFileSync(path, 'utf8') : '';
-}
-
-function walk(dir: string): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) found.push(...walk(full));
-    else found.push(full);
-  }
-  return found;
-}
-
-// 1. The canary has to actually be in the source vault, or this gate proves nothing.
+// 1. The canary has to actually be in the source vault, or this gate proves
+// nothing. This is the half `inspectPublicBuild` cannot check: it is handed a
+// built folder and has no idea which vault produced it, or whether that vault
+// ever contained the thing the search is for.
 const vaultText = walk(VAULT)
   .filter((file) => extname(file) === '.md')
   .map((file) => readFileSync(file, 'utf8'))
   .join('\n');
 
-if (!vaultText.includes(CANARY)) {
+if (!vaultText.includes(NOTE_BODY_CANARY)) {
   console.error(
-    `FAILED: the canary "${CANARY}" is not in any fixture note body.\n` +
+    `FAILED: the canary "${NOTE_BODY_CANARY}" is not in any fixture note body.\n` +
       'Without it this gate would pass no matter what the build contained.',
   );
   process.exit(1);
 }
-console.log(`canary present in fixture vault: ${CANARY}`);
+console.log(`canary present in fixture vault: ${NOTE_BODY_CANARY}`);
 
 // 2. Build for real, as a deploy would — with an origin.
 //
@@ -95,137 +80,16 @@ if (!existsSync(DIST)) {
   process.exit(1);
 }
 
-// 3. Grep everything that shipped.
-const failures: string[] = [];
-let scanned = 0;
+// 3. Every rule, against the folder that Astro actually assembled.
+const report = inspectPublicBuild(DIST, { origin: CANONICAL_ORIGIN });
 
-for (const file of walk(DIST)) {
-  if (!TEXTUAL.has(extname(file))) continue;
-  scanned += 1;
+for (const observation of report.observations) console.log(observation);
+console.log(`inspected ${relative(ROOT, DIST).split('\\').join('/')}`);
 
-  const contents = readFileSync(file, 'utf8');
-  for (const { what, pattern } of FORBIDDEN) {
-    const hit = pattern.exec(contents);
-    if (hit !== null) {
-      failures.push(`${relative(ROOT, file)} contains ${what}: ${JSON.stringify(hit[0].slice(0, 80))}`);
-    }
-  }
-}
-
-// 4. Every cover that shipped is one a shipped book points at.
-//
-// The grep above reads the *contents* of *text* files, so it opens no JPEG and
-// inspects no filename. That is precisely the hole the staging folder fell
-// through: build from a real vault, then run this gate — which stages the
-// fixture vault into the same folder — and the real covers used to survive,
-// each filename a slug of a real book title, while this reported the build
-// clean. `publish()` now prunes, and gates/public-build.test.ts asserts that.
-//
-// This asserts it again on `dist/`, because that is the folder that gets
-// deployed and it is assembled by `astro build`, not by `publish()`. A gate
-// that only checks the code path would stay green if a stale `dist/` survived
-// or Astro ever copied something extra — which is the same "test the artifact,
-// not the code" argument that put this gate on the built folder to begin with.
-const distCovers = join(DIST, 'covers');
-if (existsSync(distCovers)) {
-  const shipped = JSON.parse(readFileSync(join(DIST, 'library.json'), 'utf8')) as {
-    books: { cover?: string }[];
-  };
-  const referenced = new Set(
-    shipped.books
-      .map((book) => book.cover)
-      .filter((cover): cover is string => cover !== undefined)
-      .map((cover) => cover.replace(/^covers\//, '')),
+if (report.problems.length > 0) {
+  console.error(
+    `\nFAILED\n- ${report.problems.map((problem) => `[${problem.rule}] ${problem.message}`).join('\n- ')}`,
   );
-
-  const orphans = readdirSync(distCovers).filter((name) => !referenced.has(name));
-  if (orphans.length > 0) {
-    failures.push(
-      `${orphans.length} cover(s) in dist/covers that no book in library.json points at — ` +
-        `each filename is a book title: ${orphans.slice(0, 5).join(', ')}`,
-    );
-  }
-  console.log(`covers in dist: ${String(readdirSync(distCovers).length)}, all referenced`);
-}
-
-// 5. The link preview actually works when the shelf is shared.
-//
-// `og:image` was `/og.png` — relative — for the whole of the project's life.
-// Every preview scraper (Slack, iMessage, WhatsApp, Discord, Twitter) requires
-// an absolute URL and silently renders nothing for a relative one. So the image
-// was generated, size-checked by this very gate, and would have been invisible
-// at the one moment it exists for: the brief's success metric is "you send the
-// link to at least one friend unprompted".
-//
-// Asserted on the built HTML rather than on the source, because what matters is
-// what a scraper fetches.
-const indexHtml = join(DIST, 'index.html');
-if (existsSync(indexHtml)) {
-  const html = readFileSync(indexHtml, 'utf8');
-
-  const shareTags = [...html.matchAll(/<meta\s+(?:property|name)="((?:og|twitter):[a-z]+)"\s+content="([^"]*)"/g)];
-  const imageTags = shareTags.filter(([, key]) => key === 'og:image' || key === 'twitter:image');
-
-  if (imageTags.length === 0) {
-    failures.push('no og:image or twitter:image in the built page — link previews show nothing');
-  }
-
-  let absolute = 0;
-  for (const [, key, value] of imageTags) {
-    if (value === undefined || !value.startsWith(`${CANONICAL_ORIGIN}/`)) {
-      failures.push(
-        `${String(key)} is "${String(value)}" — must be absolute against SITE_URL, or preview ` +
-          'scrapers render nothing',
-      );
-    } else {
-      absolute += 1;
-    }
-  }
-  // Counted, not assumed. Saying "absolute" beside a failure that says
-  // otherwise is how a log stops being read.
-  console.log(`share tags: ${String(absolute)}/${String(imageTags.length)} image URL(s) absolute`);
-
-  // Shareable, not searchable — the owner's decision, and one that is only
-  // cheap before a crawler has seen the page. Asserted on the built HTML
-  // because a meta tag that survives the source and not the build protects
-  // nothing.
-  if (!/<meta\s+name="robots"\s+content="[^"]*noindex/.test(html)) {
-    failures.push('no `noindex` robots meta in the built page — the shelf would be searchable');
-  }
-  if (/^\s*Disallow:\s*\/\s*$/m.test(readFileIfPresent(join(DIST, 'robots.txt')))) {
-    // Blocking the crawl stops it reading the noindex, and a linked URL can
-    // still be indexed on the strength of the link. The intuitive move, and the
-    // one that fails.
-    failures.push('robots.txt disallows crawling, which prevents the noindex being read');
-  }
-  const headers = readFileIfPresent(join(DIST, '_headers'));
-  if (headers === '') {
-    failures.push('_headers did not reach the build — covers and og.png would be indexable');
-  } else if (!/\/covers\/\*[\s\S]*?Cache-Control:[^\n]*max-age=0/.test(headers)) {
-    // Pages defaults images to max-age=14400 and HTML/JSON to max-age=0, and
-    // every cover filename is rewritten in place by each deploy. Without this
-    // the index goes live against covers up to four hours old — which is how
-    // the fix for the mobile crash reached an origin nobody could see.
-    failures.push(
-      '_headers does not make /covers/* revalidate — library.json and the covers it ' +
-        'describes would expire on different schedules',
-    );
-  }
-}
-
-const ogImage = join(ASSETS, 'og.png');
-if (!existsSync(ogImage) || statSync(ogImage).size < 2048) {
-  failures.push('og.png is missing or implausibly small');
-}
-if (!existsSync(join(DIST, 'og.png'))) {
-  failures.push('og.png did not make it into the build output');
-}
-
-console.log(`scanned ${scanned} text file(s) in ${relative(ROOT, DIST)}`);
-console.log(`og image ${statSync(ogImage).size} bytes`);
-
-if (failures.length > 0) {
-  console.error(`\nFAILED\n- ${failures.join('\n- ')}`);
   process.exit(1);
 }
 
