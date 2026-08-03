@@ -612,7 +612,7 @@ which is what makes this helper itself.
 Two things that fell out of choosing the return statement as the anchor, both
 better than the alternatives they replaced:
 
-- **The ~27 inline `...(x === undefined ? {} : { k: x })` spreads need no
+- **The seventeen inline `...(x === undefined ? {} : { k: x })` spreads need no
   exemption.** They contain the same text and are not copies of anything — each
   is one decision at one call site. A spread has no `return`, so the anchor
   separates them by construction. That means no allowlist, and therefore no

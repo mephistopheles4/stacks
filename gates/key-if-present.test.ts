@@ -15,8 +15,8 @@
  * seventh copy escapes only by no longer returning `{}` for an absent value, at
  * which point it is a different function.
  *
- * The ~27 inline `...(x === undefined ? {} : { k: x })` spreads are deliberately
- * outside this. They contain the same *text* and are not copies of anything —
+ * The seventeen inline `...(x === undefined ? {} : { k: x })` spreads are
+ * deliberately outside this. They contain the same *text* and are not copies of anything —
  * each is one decision at one call site. The `return` in the anchor is what
  * separates them, and it needs no exempt list to do it: a spread has no return
  * statement. That is why this gate has no allowlist and therefore no allowlist
@@ -57,7 +57,11 @@ const RETURNS_NOTHING_WHEN_ABSENT = /return\s+[A-Za-z_$][\w$]*\s*===\s*undefined
 
 /** Every `.ts` in the repo's three code roots, tests included — a copy is a copy. */
 function scanned(): string[] {
-  return [...filesUnder('packages', ['.ts']), ...filesUnder('gates', ['.ts']), ...filesUnder('scripts', ['.ts'])];
+  return [
+    ...filesUnder('packages', ['.ts']),
+    ...filesUnder('gates', ['.ts']),
+    ...filesUnder('scripts', ['.ts']),
+  ];
 }
 
 describe('G23 — one absent-key helper', () => {
