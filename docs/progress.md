@@ -713,13 +713,19 @@ G20 is structural because the failure it guards is silent — see
 
 **Still open**
 
-- The `maybe()` helper is copy-pasted into six files (`add-book`, `frontmatter`,
-  `import/audible`, `library`, `metadata/google-books`, `metadata/open-library`)
-  with identical bodies, and ~20 sites spread a conditional object for a compiler
-  flag (`exactOptionalPropertyTypes`) that is **not enabled**. A bigger and more
-  G10-shaped duplication than the one above. Filed separately rather than
-  bundled, and it carries a real exception: `undefined` in a `FrontmatterChanges`
-  *removes* the key, so near `updateBook` the pattern is load-bearing.
+- **One helper, six copies, three names.** `add-book`, `import/audible`,
+  `metadata/google-books` and `metadata/open-library` call it `maybe`;
+  `frontmatter` calls it `optional`; `library` calls it `pick`. Identical
+  bodies. A bigger and more G10-shaped duplication than the one above — and
+  grepping for `maybe` finds four of the six, which is how it stayed six.
+
+  It is **not** dead weight written for `exactOptionalPropertyTypes`, which is
+  not enabled: omitting a key and setting it to `undefined` differ for
+  `Object.keys`, `in`, and spreading, and `frontmatter.ts` documents that as the
+  reason. So this is a consolidation, not a deletion, and it carries an
+  exception that has to be stated rather than discovered: `undefined` in a
+  `FrontmatterChanges` *removes* the key, so near `updateBook` the distinction
+  is load-bearing in the opposite direction.
 
 ## Notes to the next session
 
