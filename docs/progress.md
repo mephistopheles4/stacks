@@ -22,7 +22,7 @@ phone was rendering when it died — are measurements and stay exactly as they a
 | --- | --- |
 | **Last green gate** | G22 — one cover-preference rule, one implementation, right way round |
 | **Now working on** | G22 — consolidating cover acquisition ([#26](https://github.com/mephistopheles4/stacks/issues/26)) |
-| **Queued** | [#27](https://github.com/mephistopheles4/stacks/issues/27) a `scripts/` harness — from the same architecture review as G20 · [#29](https://github.com/mephistopheles4/stacks/issues/29) one `maybe()` helper, not six · the shelf's three disagreeing widths, from [#25](https://github.com/mephistopheles4/stacks/issues/25) |
+| **Queued** | [#27](https://github.com/mephistopheles4/stacks/issues/27) a `scripts/` harness — from the same architecture review as G20 · [#29](https://github.com/mephistopheles4/stacks/issues/29) one `maybe()` helper, not six · [#36](https://github.com/mephistopheles4/stacks/issues/36) the shelf's three disagreeing widths |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates`, no bypass |
 | **Blocked on** | nothing |
@@ -828,8 +828,9 @@ All seventeen were then observed red by mutating the line each covers.
 cursor runs flush from `-SHELF.width / 2` with no padding at all, and
 `leanThatFits` measures slack against the full width. They disagree and nothing
 compares them. Left alone deliberately — reconciling them is a behaviour change
-and this was not one — and it is a far better issue now that `Placement[][]` can
-be asserted without a GPU.
+and this was not one — and filed as
+[#36](https://github.com/mephistopheles4/stacks/issues/36), which is a far better
+issue now that `Placement[][]` can be asserted without a GPU.
 
 ## Notes to the next session
 
