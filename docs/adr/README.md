@@ -50,4 +50,4 @@ Two other files hold what these deliberately do not:
 | [0024](./0024-decision-record-is-adrs.md) | The decision record is ADRs, extracted from a chronological log |
 | [0025](./0025-history-not-rewritten.md) | The git history was checked by inspection, and not rewritten |
 | [0026](./0026-constitution-is-gated-not-duplicated.md) | The constitution is CLAUDE.md's invariants, gated rather than duplicated |
-| [0027](./0027-deploy-check-reports-refusal.md) | The deploy's live check reports a refusal as a refusal, and is not worked around |
+| [0027](./0027-deploy-check-reports-refusal.md) | The deploy's live check reports what it cannot verify, and is never routed around |

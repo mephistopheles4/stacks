@@ -487,9 +487,9 @@ async function verifyBuildLive(origin: string): Promise<void> {
  * available, and a fix that appeared to work that way would be one heuristic
  * update from silently reverting.
  *
- * The remedy is at the zone, and it worked: allowing "definitely automated"
- * traffic restored this check. So the message names where to look rather than
- * asserting a cause — all this function knows is a status code.
+ * The remedy is at the zone, wherever this is deployed, and it is the operator's
+ * to choose. So the message names where to look rather than asserting a cause —
+ * all this function knows is a status code.
  */
 function reportUnreadable(origin: string, status: number): void {
   console.warn(
@@ -498,18 +498,16 @@ function reportUnreadable(origin: string, status: number): void {
       '  The upload was fine. This is not a cache: the origin refused to serve\n' +
       '  this check at all, so it never saw a page to read a build stamp out of.\n' +
       `  So nothing has confirmed what ${origin} is serving to visitors.\n` +
-      '  Bot protection is the likely cause and has been the cause here before —\n' +
-      '  but this only knows the status code, so confirm it rather than assume:\n' +
+      '  Bot protection is the usual cause, but this only knows a status code —\n' +
+      '  so name it rather than assume it:\n' +
       `    - Check by hand: open ${origin}, view source, and look for\n` +
       `      <meta name="stacks:build" content="${stamp}">. If that is right,\n` +
       '      the deploy is fine and only this check is blind.\n' +
       '    - Name the cause: dash.cloudflare.com → your zone → Security → Events.\n' +
       '      Each row says which service mitigated the request, which beats\n' +
-      '      guessing from out here.\n' +
-      '    - It was Super Bot Fight Mode last time (Security → Bots): setting\n' +
-      '      "definitely automated" to Allow let this check through. A WAF skip\n' +
-      '      rule also works — scope it to something only you can send, since a\n' +
-      '      header anyone could guess hands every bot the same exemption.',
+      '      guessing from out here. Fix it there, at the zone.\n' +
+      '  Sending a browser user agent does NOT fix this and has been tried: the\n' +
+      '  refusal is decided on the client fingerprint. See ADR-0027.',
   );
 }
 

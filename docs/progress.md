@@ -97,7 +97,40 @@ need only a new mapper.
 | **`node -e` with ESM top-level await exits silently** | ⚠️ prints nothing, exit 0. Put scripts in a file and run with `pnpm tsx` |
 | **Bash tool sandbox blocks network** | ⚠️ outbound `fetch` needs `dangerouslyDisableSandbox` |
 | Google Books unauthenticated | ⚠️ 429s on a shared quota — a bonus, never a dependable fallback |
+| **Zone bot protection can refuse the deploy check** | ⚠️ see below — the deploy still works, the *verification* does not |
 | Resolved versions | TS 7.0.2 · Vitest 4 · Astro 7.1.6 · three 0.185.1 · sharp 0.35 |
+
+### The deploy check could not read the site
+
+**2026-08-03.** `deploy:site` uploaded correctly and then could not confirm what
+the site was serving, because the zone answered every automated request with a
+Cloudflare challenge — `403`, `Cf-Mitigated: challenge`. Cleared by allowing
+"definitely automated" traffic; the check reads the site again. The code that
+came out of it is [ADR-0027](./adr/0027-deploy-check-reports-refusal.md), and it
+is deliberately not specific to any of this.
+
+Four things worth keeping, none of which are guessable from the symptom:
+
+- **Images were exempt, so the loud part of the output stayed green.** A run
+  makes one HTML request and thirty-odd cover requests; only the HTML one was
+  challenged. `.json` was challenged too, `.png` and `.jpg` were not.
+- **It failed in the vocabulary of its own false positive.** The refusal
+  surfaced as "serving a build with no stamp", which reads exactly like the edge
+  propagation delay the check is built to wait out — so it looked like something
+  to ignore. That is why it went unnoticed, and why the fix was to make the
+  check distinguish the two rather than to change any setting.
+- **A DNS change the day before was the obvious suspect and was not the cause.**
+  `stacks.aymandiab.com` resolves to the same edge addresses as the root domain
+  rather than the Pages range, so it is proxied through the zone — which is what
+  makes zone rules apply at all, and is the necessary condition. But that was
+  already true: `deploy.ts` records that the zone overrides this build's
+  `Cache-Control`, which only happens through a proxy, and this file records
+  `X-Robots-Tag` being read off a live response, which a challenge would have
+  prevented. A setting changed, not the routing.
+- **Only the zone can date it.** Security → Events names the service that
+  mitigated a given request, and the account Audit Log says who changed what and
+  when. Nothing in this repository can see either — the same blind spot as the
+  zone's cache TTL.
 
 ## Since the phase gates
 
