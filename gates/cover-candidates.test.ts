@@ -67,9 +67,17 @@ function sourceFiles(): string[] {
  * would need only to mention `coverUrls()` in a comment to look compliant.
  * Comments are replaced with spaces rather than removed so every offset
  * survives, and a failure still points at the right place.
+ *
+ * **`//` is not treated as a comment when a colon precedes it**, because
+ * `https://covers.openlibrary.org/…` is a string this codebase is full of, and
+ * blanking the rest of that line would hide real code from the sweep — which is
+ * the same family of defect one level down: a regex deciding about text it does
+ * not parse. This is still not a parser. It does not know a `//` inside a string
+ * literal from one starting a comment, and the honest limit is that it handles
+ * the two shapes that actually occur here: URLs, and comments.
  */
 function codeOf(path: string): string {
-  return readRepoFile(path).replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (match) =>
+  return readRepoFile(path).replace(/\/\*[\s\S]*?\*\/|(?<!:)\/\/[^\n]*/g, (match) =>
     match.replace(/[^\n]/g, ' '),
   );
 }
@@ -130,24 +138,35 @@ describe('G20 — one cover-preference implementation', () => {
     ).toEqual([]);
   });
 
-  it('has no stale exemptions', () => {
-    // The allowlist bites permissively: a file on it is exempt forever. If
-    // `index.ts` ever grew a real hand-built cacheCover call, nothing would
-    // notice. ADR-0022 requires every allowlisted entry to still exist *and*
-    // still need its exemption; G10 asserts exactly this about its own.
+  it('exempts no file that actually calls cacheCover', () => {
+    // The allowlist bites permissively: a file on it is skipped by the caller
+    // check above, permanently. ADR-0022 requires every allowlisted entry to
+    // still exist *and* still need its exemption; G10 asserts the same of its
+    // own.
+    //
+    // "Still needs it" is the subtle half, and the first version of this got it
+    // wrong: it asked whether the file still defines or re-exports cacheCover,
+    // which `index.ts` does forever — so a file could re-export it *and* call
+    // it, and both this check and the caller check would wave it through. That
+    // is the exact scenario the exemption is supposed to make impossible.
+    //
+    // So the question is not "does it still look like a non-caller" but "is
+    // there a call site here". A re-export names cacheCover with no `(`; the
+    // definition is the one `cacheCover(` that is not a call, so it is removed
+    // before looking.
     for (const path of NOT_A_CALLER) {
       expect(existsSync(join(REPO_ROOT, path)), `exempt file no longer exists: ${path}`).toBe(true);
 
-      const code = codeOf(path);
-      const defines = /(?:export )?(?:async )?function cacheCover\b/.test(code);
-      const reexports = /export\s*\{[^}]*\bcacheCover\b[^}]*\}/.test(code);
+      const withoutDefinition = codeOf(path).replace(
+        /(?:export\s+)?(?:async\s+)?function\s+cacheCover\s*\(/g,
+        '',
+      );
 
       expect(
-        defines || reexports,
-        `${path} is exempt from the caller check because it only defines or re-exports ` +
-          'cacheCover. It no longer does either — so if it now calls it, drop it from ' +
+        /\bcacheCover\(/.test(withoutDefinition),
+        `${path} is exempt from the caller check, but it calls cacheCover. Drop it from ` +
           'NOT_A_CALLER and rank its candidates through coverUrls().',
-      ).toBe(true);
+      ).toBe(false);
     }
   });
 });

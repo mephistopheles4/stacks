@@ -294,7 +294,15 @@ instance of a failure mode already logged in this file:
 
 - the exemption list for the caller check had **no stale-entry assertion**, which
   ADR-0022 requires and G10 has. A file on it was exempt permanently, so
-  `index.ts` growing a real `cacheCover` call would never have been noticed;
+  `index.ts` growing a real `cacheCover` call would never have been noticed. The
+  first fix for this did not work either, and the reason is worth keeping: it
+  asked whether each exempt file still *defines or re-exports* `cacheCover`,
+  which `index.ts` does forever — so a file could re-export it **and** call it
+  and still sail through both checks, which is precisely the case the exemption
+  exists to make impossible. The mutation that found it is the one the first
+  round did not run: not "a file that stopped needing its exemption" but "a file
+  that still qualifies for it and calls anyway". The check now strips the one
+  `cacheCover(` that is a definition and asserts no call site remains;
 - the `coverUrlLarge` sweep had **nothing anchoring the symbol**. `expectFound`
   guarded the file walk, not the string — so renaming the field would have left
   the assertion sweeping for something that no longer existed and passing over an
@@ -303,7 +311,12 @@ instance of a failure mode already logged in this file:
   hand-ordered its candidates needed only to mention `coverUrls()` in a comment
   to look compliant. Verbatim the G14 and G19 defect — *a gate that matches prose
   matches anything* — for the third time, in a file whose commentary on the first
-  two is directly above.
+  two is directly above. Blanking comments then reintroduced the same shape one
+  level down: `//` inside `https://covers.openlibrary.org/…` is not a comment,
+  and treating it as one would have hidden real code from the sweep. The
+  stripper skips `//` preceded by a colon and says in its own docstring that it
+  is not a parser and does not know a `//` inside a string literal from one
+  starting a comment.
 
 **What this row does not gate**: that `cover`, `cover_source` and `spine_color`
 are written together. That rule — *a note's `cover_source` describes the bytes of
