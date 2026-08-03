@@ -4,6 +4,7 @@ import { isProbablySameBook, normaliseIsbn } from './identity.ts';
 import { coverUrls, lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
 import type { BookInput, BookRecord, BookStatus } from './types.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
+import { keyIfPresent } from './key-if-present.ts';
 
 export interface AddBookOptions {
   readonly status?: BookStatus;
@@ -82,9 +83,9 @@ export async function addBook(
   const book: BookInput = {
     title: metadata.title,
     status: options.status ?? 'read',
-    ...maybe('author', metadata.author),
-    ...maybe('isbn', metadata.isbn === undefined ? undefined : normaliseIsbn(metadata.isbn)),
-    ...maybe('pages', metadata.pages),
+    ...keyIfPresent('author', metadata.author),
+    ...keyIfPresent('isbn', metadata.isbn === undefined ? undefined : normaliseIsbn(metadata.isbn)),
+    ...keyIfPresent('pages', metadata.pages),
     ...coverKeys(cover),
   };
 
@@ -121,8 +122,4 @@ function findShelved(
   return shelved.find((book) =>
     isProbablySameBook(titleAuthor, `${book.title} ${book.author ?? ''}`),
   )?.title;
-}
-
-function maybe<K extends string, V>(key: K, value: V | undefined): Record<K, V> | Record<never, never> {
-  return value === undefined ? {} : ({ [key]: value } as Record<K, V>);
 }

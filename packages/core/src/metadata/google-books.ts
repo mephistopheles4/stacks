@@ -1,6 +1,7 @@
 import { looksDerivative, normaliseIsbn } from '../identity.ts';
 import type { HttpGet } from './http.ts';
 import { asPositiveInt, asRecord, firstString, type BookMetadata } from './types.ts';
+import { keyIfPresent } from '../key-if-present.ts';
 
 /**
  * Google Books — the fallback, and a shaky one.
@@ -87,14 +88,14 @@ function toMetadata(info: Record<string, unknown> | undefined): BookMetadata | u
   return {
     title: subtitle === undefined ? title : `${title}: ${subtitle}`,
     source: 'google-books',
-    ...maybe('author', joinAuthors(info['authors'])),
-    ...maybe('isbn', isbnFrom(info['industryIdentifiers'])),
-    ...maybe('pages', asPositiveInt(info['pageCount'])),
-    ...maybe(
+    ...keyIfPresent('author', joinAuthors(info['authors'])),
+    ...keyIfPresent('isbn', isbnFrom(info['industryIdentifiers'])),
+    ...keyIfPresent('pages', asPositiveInt(info['pageCount'])),
+    ...keyIfPresent(
       'coverUrl',
       coverFrom(firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail'])),
     ),
-    ...maybe(
+    ...keyIfPresent(
       'coverUrlLarge',
       largerCover(firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail'])),
     ),
@@ -146,8 +147,4 @@ function joinAuthors(value: unknown): string | undefined {
   if (!Array.isArray(value)) return firstString(value);
   const names = value.filter((name): name is string => typeof name === 'string');
   return names.length > 0 ? names.join(', ') : undefined;
-}
-
-function maybe<K extends string, V>(key: K, value: V | undefined): Record<K, V> | Record<never, never> {
-  return value === undefined ? {} : ({ [key]: value } as Record<K, V>);
 }

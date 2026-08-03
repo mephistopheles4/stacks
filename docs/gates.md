@@ -152,8 +152,8 @@ uniqueness-and-no-gaps rule as these row numbers, which they were not before.
 Rows that exist because a specific defect got through — except **G17, G18 and
 G22**, written for defects that had not happened (G17 because the change it
 shipped with made one reachable, G18 because somebody outside the project
-looked, G22 because a rule was copied a third time), and G20, which exists
-because two implementations of one rule had drifted. Each was written to fail
+looked, G22 because a rule was copied a third time), and G20 and G23, which
+exist because one rule had several implementations. Each was written to fail
 first.
 
 (That sentence read "except the last" until G21 was appended, which would have
@@ -183,6 +183,7 @@ paragraph can be; nothing here goes red on it.)
 | **G20** | one inspection of the folder about to be published | `gates/public-build-artifact.test.ts` | ✅ |
 | **G21** | no test makes a live network call | `gates/no-live-network.ts` + `gates/no-live-network.setup.ts`, specced by `gates/no-live-network.test.ts` | ✅ |
 | **G22** | one cover-preference rule, one implementation, right way round | `gates/cover-candidates.test.ts` + `packages/core/src/covers/cache-cover.test.ts` | ✅ |
+| **G23** | one absent-key helper, one implementation, under any name | `gates/key-if-present.test.ts` + `packages/core/src/key-if-present.test.ts` | ✅ |
 
 **G21 is the first row here written for a rule that two files already claimed
 was true.** `CLAUDE.md`'s Phase 1 gate says "use cached API fixtures, no live
@@ -584,6 +585,108 @@ rather than passing over nothing.
 perturbation: an `fs` import added to `scene.ts`, a stale entry added to the
 allowlist, the missing-title branch downgraded to `not-a-book`, an inline
 `import { type X }`, and an arrow function in an `.astro` script.
+
+**G23 is the first row here that was red against the defect itself**, with no
+mutation involved. Every other row was written after its defect had been fixed,
+or for one that had not happened, so each had to be perturbed to be believed.
+This one named all six offending files on its first run — a stronger form of
+"written to fail first" than the phrase usually gets to mean, and available only
+because the gate was written before the consolidation rather than beside it.
+
+The defect: `keyIfPresent` existed **six times under three names** — `maybe` in
+four files, `optional` in `frontmatter.ts`, `pick` in `library.ts` — with
+byte-identical bodies. This is G10's shape again, with one aggravation that is
+the actual lesson. **The copies were not discoverable from each other.** Each
+author checked for an existing helper, searched the name they had in mind, found
+nothing, and wrote it. Grepping `maybe` returns four of six and reads like a
+small local habit rather than a repo-wide rule with two aliases; the
+architecture review that catalogued this codebase's duplication and produced six
+candidates did not list this one, for exactly that reason.
+
+**So the gate matches what the body returns and never what the function is
+called.** An identifier check is the obvious construction and would have been
+satisfied by all six on the day it was written — three times over, once per
+name. The anchor is `return <ident> === undefined ? {}`: absent in, nothing out,
+which is what makes this helper itself.
+
+**Its limit is the shape rather than the behaviour, and that is a choice with a
+name on it.** Two rewrites return `{}` for an absent value and escape — an early
+return, and an expression-bodied arrow — both checked rather than assumed.
+Widening to catch the early return would flag `covers/cover-keys.ts:31`, which is
+that line exactly and is not a copy of anything. So the options were a narrow
+anchor with a stated gap or a broad one carrying a standing exemption for a file
+that has done nothing wrong, and ADR-0022's maintenance cost falls on the second.
+The gap is stated here instead: the anchor catches the shape all six copies took,
+which is the shape copy-paste produces.
+
+Two things that fell out of choosing the return statement as the anchor, both
+better than the alternatives they replaced:
+
+- **The seventeen inline `...(x === undefined ? {} : { k: x })` spreads need no
+  exemption.** They contain the same text and are not copies of anything — each
+  is one decision at one call site. A spread has no `return`, so the anchor
+  separates them by construction. That means no allowlist, and therefore no
+  allowlist entry that can go stale, which is the maintenance ADR-0022 requires
+  of every structural gate that does have one.
+- **`packages/site/` is not exempt either**, though the site cannot value-import
+  `@stacks/core` (G6). A copy appearing there goes red, and the fix is to
+  promote the owner to a pure subpath beside `@stacks/core/shelf-order`. An
+  actionable red beats a blind spot, and this is the first structural gate here
+  to have no exempt list at all.
+
+**The vacuity anchor is the assertion this row needs most**, for a reason worth
+stating generally: *every clause of this gate is phrased as an absence*, and an
+absence is satisfied for free the moment the pattern stops matching anything. So
+the gate asserts the owner still matches before asserting nothing else does.
+**Observed red** by changing the owner to return `Object.create(null)` instead
+of `{}` — the body stops being the thing described, and the clause says so by
+name rather than quietly greening the other three.
+
+The reformatting case turned out not to be the threat it looked like. `\s`
+matches newlines, so a ternary split across three lines is still matched, and
+**a copy that arrives reformatted is still caught** — verified by mutation, not
+by reading the regex. That is a happier result than the one first written here,
+and the correction is worth keeping: the anchor is robust to layout and brittle
+only to the behaviour changing, which is the right way round.
+
+The permissive half is asserted too, for G17's reason: *a positive check cannot
+detect a missing one*. "No file defines its own" is satisfied perfectly by a
+repo where every caller has gone back to writing the key unconditionally, so the
+gate also requires the helper to have seven callers. That is the same clause G22
+needed and for the same reason, arrived at independently both times, which
+suggests it belongs in any row promising "one rule, one implementation".
+
+**And that clause first passed the mutation it was written to fail**, which is
+the entry here worth reading. The floor was set to six — the number of files
+that had carried a copy — and reverting one caller left six still calling it, so
+the gate stayed green through exactly the regression it describes. The cause was
+an overcount rather than a wrong constant: the sweep counted
+`key-if-present.test.ts`, which names the helper on every line and *uses* it for
+nothing. A spec is not a caller. **An inflated floor is slack, and slack in a
+floor is indistinguishable from the defect it is meant to stop** — the general
+form of a rule this file already has for allowlists, applied to a number.
+
+**Observed red**, the rest by mutation: a seventh copy under a seventh name
+(`perhaps`); the same copy with its ternary split across lines, confirming the
+anchor is layout-proof; a copy in `packages/site/`, confirming the no-exemption
+choice produces the actionable red it was chosen for; a caller reverting to a
+bare `{ key: value }`; and that same revert with `keyIfPresent(` left behind in
+a comment, which does not rescue it, because the shared `codeOf` blanks comments
+before anything is counted. That last one is the defect this file has now logged
+under G14, G19 and G22 — and is why `codeOf` moved into `gates/repo.ts` rather
+than being written a second time inside a change about not writing things a
+second time.
+
+**What this row does not gate.** `FrontmatterChanges` inverts the rule this
+helper embodies: near `updateBook`, `undefined` *removes* a key from a note in
+the owner's vault, so the ordinary absent-is-harmless reflex writes to somebody's
+files. That is real and stated in `CONTEXT.md` under **Removal** — but it has no
+gate here, because it has no live instance either: all three `updateBook`
+callers build their changes from literals or guarded assignment, and none of the
+27 spreads is anywhere near one. `enrich.ts` additionally cannot express a
+removal at all, since its accumulator is typed `Record<string, string | number>`
+and needs a cast to widen. Gating a hazard nothing can currently reach would be
+a rule nothing can fail on, which is what this file is against.
 
 ## G2 in full — the public build gate
 

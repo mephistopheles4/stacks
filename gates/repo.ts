@@ -100,6 +100,33 @@ export function extractAll(source: string, pattern: RegExp): string[] {
 }
 
 /**
+ * A file with its comments blanked out, so a gate's assertions read code.
+ *
+ * `docs/gates.md` logs this defect three times, under G14, G19 and G22 — *a gate
+ * that matches prose matches anything*. Any structural check phrased
+ * permissively ("this file must mention X") is satisfied by a comment mentioning
+ * X, which is the cheapest possible way to look compliant. Comments are replaced
+ * with spaces rather than removed so every offset survives and a failure still
+ * points at the right place.
+ *
+ * **`//` is not treated as a comment when a colon precedes it**, because
+ * `https://covers.openlibrary.org/…` is a string this codebase is full of, and
+ * blanking the rest of that line would hide real code from the sweep — the same
+ * family of defect one level down: a regex deciding about text it does not
+ * parse. This is still not a parser. It does not know a `//` inside a string
+ * literal from one starting a comment, and the honest limit is that it handles
+ * the two shapes that actually occur here: URLs, and comments.
+ *
+ * It lived in `gates/cover-candidates.test.ts` until a second gate needed it.
+ * Two gates sharing one copy is the point of the issue that produced G23.
+ */
+export function codeOf(path: string): string {
+  return readRepoFile(path).replace(/\/\*[\s\S]*?\*\/|(?<!:)\/\/[^\n]*/g, (match) =>
+    match.replace(/[^\n]/g, ' '),
+  );
+}
+
+/**
  * Guards the green-washing case above: a gate that extracts nothing must fail
  * loudly, not pass vacuously.
  */
