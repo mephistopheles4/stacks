@@ -441,7 +441,12 @@ console.log(`\ndeployed → ${siteUrl}`);
 // wrong bytes, and nothing anywhere reported a problem.
 //
 // A warning rather than a failure, because the deploy genuinely did succeed and
-// the remedy is a cache purge nobody can perform from here.
+// no remedy for any of these can be performed from here.
+//
+// It can also fail to run at all: a zone that refuses non-browser clients gives
+// this check nothing to read, and it says so rather than guessing. A check that
+// cannot tell "stale" from "refused" is worse than no check, because it spends
+// the owner's trust on a diagnosis it did not make.
 await verifyLive(siteUrl.replace(/\/$/, ''));
 
 /**
@@ -461,6 +466,37 @@ async function verifyBuildLive(origin: string): Promise<void> {
       // fetched a minute ago. It says nothing about a visitor's cache, and
       // cannot: that is what the `_headers` revalidation is for.
       const response = await fetch(`${origin}/`, { cache: 'no-store' });
+
+      // A refusal is not an answer, and for a long time this code treated it as
+      // one. Cloudflare's bot protection serves a challenge *page* with a 403,
+      // so `stampOf` found no stamp in it and the check reported "serving a
+      // build with no stamp" — indistinguishable, in the output, from the real
+      // failure it exists to catch, and it recommended purging the whole zone
+      // cache to fix a security setting that had nothing to do with caching.
+      // Read the status before reading the body.
+      if (!response.ok) {
+        // Every non-200 retries, a 403 included. The first version of this bailed
+        // at once on any 4xx, on the reasoning that a rule will say the same
+        // thing five more times. Watched through the owner allowing "definitely
+        // automated" traffic, identical requests disagreed — 403 about one time
+        // in six for a few minutes, then never again. Whether that was the
+        // setting propagating or mitigation being decided per request was not
+        // established, and it does not need to be: a single refusal is not
+        // evidence of a standing one, so bailing on the first would raise a
+        // false alarm on a zone that does let the check through — exactly the
+        // failure this code exists to stop making.
+        if (attempt === PROPAGATION_ATTEMPTS) {
+          reportUnreadable(origin, response.status);
+          return;
+        }
+        console.log(
+          `  retrying (${String(attempt)}/${String(PROPAGATION_ATTEMPTS - 1)}) — ` +
+            `origin answered HTTP ${String(response.status)}`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, PROPAGATION_WAIT_MS));
+        continue;
+      }
+
       live = stampOf(await response.text());
     } catch {
       console.warn(`\n! could not reach ${origin} to ask which build it is serving`);
@@ -494,6 +530,45 @@ async function verifyBuildLive(origin: string): Promise<void> {
   }
 }
 
+/**
+ * The origin refused to be read — so this deploy went out unverified.
+ *
+ * Deliberately *not* the cache-purge advice the stamp-mismatch path gives. The
+ * two failures look identical from here and have nothing in common: one is a
+ * stale copy of a real page, the other is no page at all.
+ *
+ * The remedy is not a request header, which is the one thing worth knowing here.
+ * Measured while this zone was challenging: Node's `fetch` was refused whatever
+ * user agent it sent, and so was a real headless Chrome, while curl passed with
+ * any user agent but its own default — so the decision was made on the client's
+ * fingerprint, not on anything a caller controls. Looking browsery enough is not
+ * available, and a fix that appeared to work that way would be one heuristic
+ * update from silently reverting.
+ *
+ * The remedy is at the zone, wherever this is deployed, and it is the operator's
+ * to choose. So the message names where to look rather than asserting a cause —
+ * all this function knows is a status code.
+ */
+function reportUnreadable(origin: string, status: number): void {
+  console.warn(
+    `\n! could not read ${origin} — HTTP ${String(status)}, ` +
+      `${String(PROPAGATION_ATTEMPTS)} attempts\n` +
+      '  The upload was fine. This is not a cache: the origin refused to serve\n' +
+      '  this check at all, so it never saw a page to read a build stamp out of.\n' +
+      `  So nothing has confirmed what ${origin} is serving to visitors.\n` +
+      '  Bot protection is the usual cause, but this only knows a status code —\n' +
+      '  so name it rather than assume it:\n' +
+      `    - Check by hand: open ${origin}, view source, and look for\n` +
+      `      <meta name="stacks:build" content="${stamp}">. If that is right,\n` +
+      '      the deploy is fine and only this check is blind.\n' +
+      '    - Name the cause: dash.cloudflare.com → your zone → Security → Events.\n' +
+      '      Each row says which service mitigated the request, which beats\n' +
+      '      guessing from out here. Fix it there, at the zone.\n' +
+      '  Sending a browser user agent does NOT fix this and has been tried: the\n' +
+      '  refusal is decided on the client fingerprint. See ADR-0027.',
+  );
+}
+
 async function verifyLive(origin: string): Promise<void> {
   await verifyBuildLive(origin);
 
@@ -510,11 +585,20 @@ async function verifyLive(origin: string): Promise<void> {
   if (covers.length === 0) return;
 
   let unreachable = false;
+  let refused: number | undefined;
   const checks = await Promise.all(
     covers.map(async (cover) => {
       const local = statSync(join(DIST, cover)).size;
       try {
         const response = await fetch(`${origin}/${cover}`, { method: 'HEAD' });
+        // Same trap as the build check above: a challenge page has a
+        // content-length like anything else, and comparing it against the
+        // cover's size reports a byte mismatch — which reads as a stale cache
+        // and sends you to purge a zone that was never the problem.
+        if (!response.ok) {
+          refused = response.status;
+          return undefined;
+        }
         const served = Number(response.headers.get('content-length') ?? '0');
         return served === local
           ? undefined
@@ -528,6 +612,14 @@ async function verifyLive(origin: string): Promise<void> {
 
   if (unreachable) {
     console.warn(`\n! could not reach ${origin} to check what is being served`);
+    return;
+  }
+
+  if (refused !== undefined) {
+    console.warn(
+      `\n! ${origin} refused the cover check — HTTP ${String(refused)}\n` +
+        '  Not a cache. See the note above: nothing here can read this origin.',
+    );
     return;
   }
 
