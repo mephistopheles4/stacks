@@ -52,3 +52,4 @@ Two other files hold what these deliberately do not:
 | [0026](./0026-constitution-is-gated-not-duplicated.md) | The constitution is CLAUDE.md's invariants, gated rather than duplicated |
 | [0027](./0027-deploy-check-reports-refusal.md) | The deploy's live check reports what it cannot verify, and is never routed around |
 | [0028](./0028-one-inspector-for-the-public-build.md) | One inspector for the folder about to be published; `gate:public` and `deploy:site` are callers |
+| [0029](./0029-placement-imports-the-case.md) | The shelf's placement arithmetic imports the case rather than being handed one |
