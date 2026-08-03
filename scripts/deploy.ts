@@ -414,15 +414,18 @@ async function verifyBuildLive(origin: string): Promise<void> {
       // so `stampOf` found no stamp in it and the check reported "serving a
       // build with no stamp" — indistinguishable, in the output, from the real
       // failure it exists to catch, and it recommended purging the whole zone
-      // cache to fix a WAF rule. Read the status before reading the body.
+      // cache to fix a security setting that had nothing to do with caching.
+      // Read the status before reading the body.
       if (!response.ok) {
         // Every non-200 retries, a 403 included. The first version of this bailed
         // at once on any 4xx, on the reasoning that a rule will say the same
-        // thing five more times. Bot protection is not a rule — it is a *score*,
-        // recomputed per request. Measured against this zone with "definitely
-        // automated" set to allow, the identical request came back 403 roughly
-        // one time in six, so bailing on the first would raise a false alarm
-        // that often on a zone which does let the check through: exactly the
+        // thing five more times. Watched through the owner allowing "definitely
+        // automated" traffic, identical requests disagreed — 403 about one time
+        // in six for a few minutes, then never again. Whether that was the
+        // setting propagating or mitigation being decided per request was not
+        // established, and it does not need to be: a single refusal is not
+        // evidence of a standing one, so bailing on the first would raise a
+        // false alarm on a zone that does let the check through — exactly the
         // failure this code exists to stop making.
         if (attempt === PROPAGATION_ATTEMPTS) {
           reportUnreadable(origin, response.status);
@@ -476,11 +479,17 @@ async function verifyBuildLive(origin: string): Promise<void> {
  * two failures look identical from here and have nothing in common: one is a
  * stale copy of a real page, the other is no page at all.
  *
- * The remedy is not a request header. Measured against this zone: Node's
- * `fetch` is refused whatever user agent it sends, and so is a real headless
- * Chrome, while curl passes with any user agent but its own default — so the
- * block is on the client's fingerprint, not on anything a caller controls.
- * There is no version of this check that reads through it.
+ * The remedy is not a request header, which is the one thing worth knowing here.
+ * Measured while this zone was challenging: Node's `fetch` was refused whatever
+ * user agent it sent, and so was a real headless Chrome, while curl passed with
+ * any user agent but its own default — so the decision was made on the client's
+ * fingerprint, not on anything a caller controls. Looking browsery enough is not
+ * available, and a fix that appeared to work that way would be one heuristic
+ * update from silently reverting.
+ *
+ * The remedy is at the zone, and it worked: allowing "definitely automated"
+ * traffic restored this check. So the message names where to look rather than
+ * asserting a cause — all this function knows is a status code.
  */
 function reportUnreadable(origin: string, status: number): void {
   console.warn(
@@ -488,15 +497,19 @@ function reportUnreadable(origin: string, status: number): void {
       `${String(PROPAGATION_ATTEMPTS)} attempts\n` +
       '  The upload was fine. This is not a cache: the origin refused to serve\n' +
       '  this check at all, so it never saw a page to read a build stamp out of.\n' +
-      '  Bot protection on the zone refuses every automatable client — Node fetch\n' +
-      '  and headless Chrome alike — and no request header changes that.\n' +
       `  So nothing has confirmed what ${origin} is serving to visitors.\n` +
+      '  Bot protection is the likely cause and has been the cause here before —\n' +
+      '  but this only knows the status code, so confirm it rather than assume:\n' +
       `    - Check by hand: open ${origin}, view source, and look for\n` +
-      `      <meta name="stacks:build" content="${stamp}">.\n` +
-      '    - To make this check work again, the zone needs a rule that lets it\n' +
-      '      through — dash.cloudflare.com → your zone → Security → WAF. Scope it\n' +
-      '      to something only you can send; a header anyone could guess would\n' +
-      '      hand every bot the same exemption.',
+      `      <meta name="stacks:build" content="${stamp}">. If that is right,\n` +
+      '      the deploy is fine and only this check is blind.\n' +
+      '    - Name the cause: dash.cloudflare.com → your zone → Security → Events.\n' +
+      '      Each row says which service mitigated the request, which beats\n' +
+      '      guessing from out here.\n' +
+      '    - It was Super Bot Fight Mode last time (Security → Bots): setting\n' +
+      '      "definitely automated" to Allow let this check through. A WAF skip\n' +
+      '      rule also works — scope it to something only you can send, since a\n' +
+      '      header anyone could guess hands every bot the same exemption.',
   );
 }
 

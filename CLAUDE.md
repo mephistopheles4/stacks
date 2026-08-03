@@ -192,9 +192,12 @@ than guessing.** Bot protection answers a non-browser client with a *challenge
 page*, which is HTML carrying no build stamp and a content-length of its own —
 so read as content, a refusal is indistinguishable from the stale build these
 checks exist to catch, and recommends purging a cache that was never involved.
-On this zone that is not hypothetical: nothing automatable can read the site,
-so `deploy:site` publishes and then reports honestly that it could not confirm
-what visitors get. See [ADR-0027](docs/adr/0027-deploy-check-reports-refusal.md).
+That is not hypothetical: it happened here, went unnoticed because the message
+read like an edge-propagation delay, and was fixed at the zone by allowing
+"definitely automated" traffic. A refusal now retries like anything else and is
+only reported after every attempt, because bot mitigation is decided per
+request rather than once.
+See [ADR-0027](docs/adr/0027-deploy-check-reports-refusal.md).
 
 `pnpm worktree <branch>` adds a second checkout beside this one — `../stacks-<branch>` —
 runs `pnpm install` in it, and tells you which `.env` it will read. Both of
