@@ -777,7 +777,7 @@ existing one changed.
 `packages/core/src/key-if-present.ts`, 45 call sites, plus the three
 `googleBooksKey` guards in the CLI — redundant twice over, since nothing tests
 that key's presence and `withKey` already normalises both `undefined` and the
-empty string. `pnpm test` went 323 → 338 — the 15 tests in the two new spec files. No existing spec changed.
+empty string. `pnpm test` went 323 → 339 — the 16 tests in the two new spec files. No existing spec changed.
 
 **The three names are the finding, not the six copies.** Each author checked for
 an existing helper, searched the one name they had in mind, found nothing, and

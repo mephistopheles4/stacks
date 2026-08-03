@@ -132,7 +132,6 @@ export function parseNote(source: string, sourcePath: string): ParsedNote {
   };
 }
 
-
 function asString(value: unknown): string | undefined {
   if (typeof value === 'string') {
     const trimmed = value.trim();

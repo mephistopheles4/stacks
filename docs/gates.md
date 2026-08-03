@@ -609,6 +609,16 @@ satisfied by all six on the day it was written — three times over, once per
 name. The anchor is `return <ident> === undefined ? {}`: absent in, nothing out,
 which is what makes this helper itself.
 
+**Its limit is the shape rather than the behaviour, and that is a choice with a
+name on it.** Two rewrites return `{}` for an absent value and escape — an early
+return, and an expression-bodied arrow — both checked rather than assumed.
+Widening to catch the early return would flag `covers/cover-keys.ts:31`, which is
+that line exactly and is not a copy of anything. So the options were a narrow
+anchor with a stated gap or a broad one carrying a standing exemption for a file
+that has done nothing wrong, and ADR-0022's maintenance cost falls on the second.
+The gap is stated here instead: the anchor catches the shape all six copies took,
+which is the shape copy-paste produces.
+
 Two things that fell out of choosing the return statement as the anchor, both
 better than the alternatives they replaced:
 
