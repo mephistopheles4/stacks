@@ -416,19 +416,20 @@ async function verifyBuildLive(origin: string): Promise<void> {
       // failure it exists to catch, and it recommended purging the whole zone
       // cache to fix a WAF rule. Read the status before reading the body.
       if (!response.ok) {
-        // 4xx is a rule and will say the same thing five more times; 5xx can be
-        // a Pages deployment still settling, which is exactly what the retry
-        // loop is for.
-        if (response.status < 500) {
-          reportUnreadable(origin, response.status);
-          return;
-        }
+        // Every non-200 retries, a 403 included. The first version of this bailed
+        // at once on any 4xx, on the reasoning that a rule will say the same
+        // thing five more times. Bot protection is not a rule — it is a *score*,
+        // recomputed per request. Measured against this zone with "definitely
+        // automated" set to allow, the identical request came back 403 roughly
+        // one time in six, so bailing on the first would raise a false alarm
+        // that often on a zone which does let the check through: exactly the
+        // failure this code exists to stop making.
         if (attempt === PROPAGATION_ATTEMPTS) {
           reportUnreadable(origin, response.status);
           return;
         }
         console.log(
-          `  waiting for the edge (${String(attempt)}/${String(PROPAGATION_ATTEMPTS - 1)}) — ` +
+          `  retrying (${String(attempt)}/${String(PROPAGATION_ATTEMPTS - 1)}) — ` +
             `origin answered HTTP ${String(response.status)}`,
         );
         await new Promise((resolve) => setTimeout(resolve, PROPAGATION_WAIT_MS));
@@ -483,10 +484,11 @@ async function verifyBuildLive(origin: string): Promise<void> {
  */
 function reportUnreadable(origin: string, status: number): void {
   console.warn(
-    `\n! could not read ${origin} — HTTP ${String(status)}\n` +
+    `\n! could not read ${origin} — HTTP ${String(status)}, ` +
+      `${String(PROPAGATION_ATTEMPTS)} attempts\n` +
       '  The upload was fine. This is not a cache: the origin refused to serve\n' +
       '  this check at all, so it never saw a page to read a build stamp out of.\n' +
-      '  Bot protection on the zone blocks every automatable client — Node fetch\n' +
+      '  Bot protection on the zone refuses every automatable client — Node fetch\n' +
       '  and headless Chrome alike — and no request header changes that.\n' +
       `  So nothing has confirmed what ${origin} is serving to visitors.\n` +
       `    - Check by hand: open ${origin}, view source, and look for\n` +

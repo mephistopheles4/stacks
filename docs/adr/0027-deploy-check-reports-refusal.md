@@ -25,13 +25,23 @@ that was not there, on a diagnosis it had not made.
   to the behaviour being fixed here.
 
 - **2026-08-03** — **So the check is made honest instead of made to pass.**
-  `verifyBuildLive` reads `response.status` before it reads the body. A 4xx bails
-  immediately, because a rule will say the same thing five more times; a 5xx
-  keeps the retry loop, because that is a Pages deployment still settling, which
-  is what the loop was built for. The refusal message deliberately does **not**
-  carry the cache-purge advice: the two failures are indistinguishable from here
-  and have nothing in common — one is a stale copy of a real page, the other is
-  no page at all.
+  `verifyBuildLive` reads `response.status` before it reads the body. The refusal
+  message deliberately does **not** carry the cache-purge advice: the two
+  failures are indistinguishable from here and have nothing in common — one is a
+  stale copy of a real page, the other is no page at all.
+
+- **2026-08-03** — **Corrected the same day: a 4xx retries like everything else.**
+  The first version bailed immediately on any 4xx, reasoning that a rule will say
+  the same thing five more times. That premise is wrong, and the owner's zone
+  disproved it within the hour: with Super Bot Fight Mode's "definitely automated"
+  category set to *allow*, the identical request still came back 403 about **one
+  time in six**. Bot protection is not a rule, it is a **score** recomputed per
+  request, so there is no such thing as a deterministic answer to retry past.
+  Bailing on the first would have raised a false alarm on roughly one deploy in
+  six *on a zone that lets the check through* — the same class of false alarm this
+  whole record exists to end, reintroduced by the fix for it. A hard refusal now
+  costs seven attempts before it is reported; that is the price of not crying
+  wolf, and it is worth paying.
 
 - **2026-08-03** — **The cover check had the identical blindness and was fixed
   with it.** It compared `content-length` against the built file without reading
