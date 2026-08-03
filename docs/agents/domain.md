@@ -21,8 +21,11 @@ In this repo, in this order:
   work in, and read [the index](../adr/README.md) first.
 - **[`docs/gates.md`](../gates.md)** — which rule each gate protects, which are
   protected by nothing, and what went wrong while writing them.
-- **`CONTEXT.md`** at the repo root — the skills' glossary. It does not exist
-  yet.
+- **[`CONTEXT.md`](../../CONTEXT.md)** at the repo root — the glossary. Terms
+  this project uses in a narrower sense than English does *and that no gate
+  pins down*; a term a gate already holds is linked from there rather than
+  restated, for [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md)'s
+  reason. It states no rules, so it cannot rot into a second constitution.
 
 If any of these don't exist, **proceed silently**. Don't flag their absence and
 don't suggest creating them upfront. `/domain-modeling` creates them lazily when
@@ -59,9 +62,10 @@ Number a new record one past the highest in the directory.
 ## Use the project's vocabulary
 
 When your output names a domain concept — an issue title, a test name, a
-proposal — use the term the project already uses. `CLAUDE.md`'s Frontmatter
-contract is the closest thing to a glossary this repo has, and it is enforced in
-both directions by `gates/frontmatter-contract.test.ts`.
+proposal — use the term the project already uses. Two places hold them, and the
+split is deliberate: `CLAUDE.md`'s Frontmatter contract carries every term a
+gate enforces (in both directions, by `gates/frontmatter-contract.test.ts`), and
+[`CONTEXT.md`](../../CONTEXT.md) carries the ones nothing enforces.
 
 If the concept you need isn't there yet, that's a signal — either you're
 inventing language the project doesn't use (reconsider) or there's a real gap

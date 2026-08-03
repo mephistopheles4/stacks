@@ -81,10 +81,22 @@ const ALLOWED = [
   // note; the two that need books shell out to the CLI.
   'scripts/capture-api-fixtures.ts',
   'scripts/check-public-build.ts',
-  // Reads the built `dist/` back to pre-flight it before uploading. It never
-  // opens the vault — it shells out to the CLI for that, which goes through
-  // the adapter like everything else.
+  // Reads the built `dist/` back to pre-flight it before uploading. Its `fs`
+  // use is entirely on that folder: the real vault it shells out to the CLI
+  // for, and the fixture vault it reads through `ObsidianAdapter` — which is
+  // this invariant working rather than an exception to it. Nothing here parses
+  // a note.
   'scripts/deploy.ts',
+  // Reads a *built* folder — `dist/`, assembled by `astro build` — to answer
+  // whether it is safe to publish. The two scripts above are its callers. It
+  // has never seen a vault and could not find one: it is handed a directory and
+  // does not know which vault produced it, which is the property that lets G20
+  // point it at a synthetic folder in a temp directory.
+  'scripts/lib/public-build.ts',
+  // Walks a directory and returns the files in it. Shared by the two above; it
+  // knows nothing about vaults, notes or builds, and the callers own what they
+  // point it at.
+  'scripts/lib/walk.ts',
   'scripts/make-50-book-fixture.ts',
   'scripts/make-fixture-covers.ts',
   // Crops the render gate's screenshot into the README's image. Its only input

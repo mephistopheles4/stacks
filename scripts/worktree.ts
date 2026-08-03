@@ -18,14 +18,27 @@
  *     `packages/cli/src/env.ts`, which reads the main checkout's `.env` from
  *     wherever you are standing. This script *reports* where it resolved,
  *     because a fallback nobody watched work is a fallback nobody can trust.
- *   - The local `main` is usually **behind**. Work lands through pull requests,
- *     so `main` here only moves when somebody pulls, and nothing about making a
- *     worktree makes that happen — a new branch cut from it starts life on an
- *     old commit. This is the worst of the three, because the other two stop
- *     you on the first command and this one does not stop you at all: the
- *     checkout installs, the tests pass, and the work is built on the wrong
- *     base. So a new branch is cut from `origin/main` after a best-effort
- *     fetch, and the commit it was cut from is printed.
+ *   - **The base is usually stale, whichever branch you name.** Work lands
+ *     through pull requests, so nothing here moves until somebody fetches, and
+ *     making a worktree is not that. This is the worst of the three, because
+ *     the other two stop you on the first command and this one does not stop
+ *     you at all: the checkout installs, the tests pass, and the work is built
+ *     on the wrong commit. So origin is fetched first, before anything is
+ *     decided, and what you were given is always printed.
+ *
+ * That last one has three shapes, and for a while only the first was handled:
+ *
+ *   - **A new branch** is cut from `origin/main`, not from the local `main`.
+ *   - **A branch origin already has** is checked out from `origin/<branch>`,
+ *     tracking it. It used to be created *empty off `origin/main`*, because the
+ *     only question asked was whether a local branch existed — so a branch a
+ *     colleague or another machine had already pushed came back as a new one of
+ *     the same name, and the first push either bounced or, forced, took the
+ *     work with it.
+ *   - **A branch already here** is fast-forwarded when it is strictly behind
+ *     origin, and otherwise reported and left alone. Never merged or rebased:
+ *     this makes you a checkout, and resolving a divergence on the way to that
+ *     is a much larger thing than it was asked to do.
  *
  * Worktrees are placed beside the main checkout rather than inside it. Nested
  * would in fact be safe — `filesUnder` in `gates/repo.ts` skips dot-prefixed
@@ -85,32 +98,77 @@ function gitOutput(args: readonly string[], cwd: string): string | undefined {
 }
 
 /**
- * What a new branch should be cut from, after trying to make that current.
+ * Brings every remote-tracking ref up to date, before anything is decided.
  *
  * The fetch is **best effort and says so**. Failing hard would mean no worktree
- * on a plane, and the base is still perfectly usable when offline — it is just
- * as old as your last fetch. Refusing to work for a reason that does not stop
- * the work is how a helper earns being worked around. What is not optional is
- * *saying* which commit the branch was cut from: this script's whole argument
- * is that a checkout should fail loudly rather than late, and an unannounced
- * base is the one thing here that could be silently wrong.
+ * on a plane, and the refs are still perfectly usable when offline — they are
+ * just as old as your last fetch. Refusing to work for a reason that does not
+ * stop the work is how a helper earns being worked around. What is not optional
+ * is *saying* what you got: this script's whole argument is that a checkout
+ * should fail loudly rather than late, and an unannounced base is the one thing
+ * here that could be silently wrong.
+ *
+ * All refs rather than `origin main`, which is what this fetched when the only
+ * question was where to cut a *new* branch. Both remaining questions — does
+ * origin already have this branch, and has it moved since you last looked — are
+ * about `origin/<branch>`, and neither can be answered from a ref that was
+ * never fetched.
+ */
+function fetchOrigin(cwd: string): boolean {
+  const hasOrigin = gitOutput(['remote'], cwd)?.split('\n').includes('origin') === true;
+  if (!hasOrigin) return false;
+
+  const fetched = spawnSync('git', ['fetch', 'origin', '--quiet'], { cwd, stdio: 'inherit' });
+  if (fetched.status !== 0) {
+    console.warn('\n! could not reach origin — working from the last fetch, which may be old\n');
+  }
+  return true;
+}
+
+/** Whether `origin` has a branch of this name, as of the last fetch. */
+function onOrigin(name: string, cwd: string): boolean {
+  return gitOutput(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${name}`], cwd) !== undefined;
+}
+
+/** How a local branch stands against its counterpart on origin. */
+function divergence(name: string, cwd: string): { behind: number; ahead: number } | undefined {
+  const counts = gitOutput(['rev-list', '--left-right', '--count', `origin/${name}...${name}`], cwd);
+  const [behind, ahead] = (counts ?? '').split(/\s+/).map(Number);
+  if (behind === undefined || ahead === undefined || Number.isNaN(behind) || Number.isNaN(ahead)) {
+    return undefined;
+  }
+  return { behind, ahead };
+}
+
+/**
+ * Moves a local branch up to origin, and only when that cannot lose anything.
+ *
+ * `git fetch origin <branch>:<branch>` rather than a checkout and pull, for two
+ * reasons: the branch is not checked out anywhere yet, and this form is
+ * fast-forward-only by default — so the operation git would refuse is the
+ * operation this must not do. It also refuses when the branch *is* checked out
+ * in another worktree, which is the case a naive `update-ref` would quietly
+ * corrupt.
+ *
+ * Only called when the local branch is strictly behind. A branch that is ahead
+ * or has diverged is reported and left exactly as it is: this command's job is
+ * to make you a checkout, and a merge nobody asked for is a large thing for it
+ * to do on the way.
+ */
+function fastForward(name: string, cwd: string): boolean {
+  return (
+    spawnSync('git', ['fetch', 'origin', `${name}:${name}`, '--quiet'], { cwd, stdio: 'inherit' })
+      .status === 0
+  );
+}
+
+/**
+ * What a new branch should be cut from.
  *
  * Falls back to the local `main` when there is no remote at all — a clone with
  * no origin is a legitimate way to work on this.
  */
-function resolveBase(cwd: string): { ref: string; describe: string } {
-  const hasOrigin = gitOutput(['remote'], cwd)?.split('\n').includes('origin') === true;
-
-  if (hasOrigin) {
-    const fetched = spawnSync('git', ['fetch', 'origin', 'main', '--quiet'], {
-      cwd,
-      stdio: 'inherit',
-    });
-    if (fetched.status !== 0) {
-      console.warn('\n! could not reach origin — basing on the last fetch, which may be old\n');
-    }
-  }
-
+function resolveBase(cwd: string, hasOrigin: boolean): { ref: string; describe: string } {
   const ref = hasOrigin && gitOutput(['rev-parse', '--verify', '--quiet', 'origin/main'], cwd)
     ? 'origin/main'
     : 'main';
@@ -149,35 +207,99 @@ if (main === undefined) fail('Not a git checkout — nothing to add a worktree t
 const target = join(dirname(main), `stacks-${branch.replace(/\//g, '-')}`);
 if (existsSync(target)) fail(`${target} already exists.`);
 
-const existing = branchExists(branch, main);
 console.log(`worktree  ${target}`);
 
-// A new branch is based on what the *remote* has, not on whatever the local
-// `main` happens to be sitting at. Those differ constantly here: work lands
-// through pull requests, so the local `main` only moves when somebody pulls,
-// and nothing about creating a worktree makes that happen. Branching off a
-// stale `main` produces a checkout that installs cleanly, runs green, and is
-// built on the wrong commit — the one failure mode of this script that would
-// not announce itself, which is precisely what the other two fixes here are
-// for.
-const base = existing ? undefined : resolveBase(main);
+// Fetched before anything else is decided, because *which* of the three cases
+// below this is depends on what origin has, and a ref nobody fetched cannot
+// answer that. Everything after this reads remote-tracking refs only.
+const hasOrigin = fetchOrigin(main);
 
-console.log(`branch    ${branch}${existing ? ' (existing)' : ` (new, off ${base?.ref ?? 'main'})`}`);
-if (base !== undefined) console.log(`base      ${base.describe}`);
+const existing = branchExists(branch, main);
+const alreadyPushed = hasOrigin && onOrigin(branch, main);
+
+let addArgs: readonly string[];
+
+if (existing) {
+  // ── The branch is already here ───────────────────────────────────────────
+  //
+  // Which says nothing about whether it is current. This is the same failure
+  // as branching off a stale `main` — the checkout installs, the tests pass,
+  // and the work is built on an old commit — one branch over.
+  //
+  // Fast-forwarded only when that cannot lose anything, and reported either
+  // way. A branch that is ahead or has diverged is left exactly as it is: this
+  // command exists to make you a checkout, and a merge nobody asked for is a
+  // large thing for it to do on the way to that.
+  console.log(`branch    ${branch} (existing)`);
+
+  const moved = alreadyPushed ? divergence(branch, main) : undefined;
+  if (!alreadyPushed) {
+    console.log(`base      not on origin yet — nothing to compare against`);
+  } else if (moved === undefined) {
+    console.log(`base      could not compare with origin/${branch}`);
+  } else if (moved.behind === 0 && moved.ahead === 0) {
+    console.log(`base      up to date with origin/${branch}`);
+  } else if (moved.ahead === 0) {
+    console.log(`base      ${String(moved.behind)} behind origin/${branch} — fast-forwarding`);
+    if (!fastForward(branch, main)) {
+      console.warn(
+        `          could not fast-forward — it is probably checked out in another worktree.\n` +
+          `          The new checkout will be ${String(moved.behind)} behind origin.`,
+      );
+    }
+  } else if (moved.behind === 0) {
+    console.log(`base      ${String(moved.ahead)} ahead of origin/${branch} — left alone`);
+  } else {
+    console.log(
+      `base      diverged from origin/${branch}: ${String(moved.ahead)} ahead, ` +
+        `${String(moved.behind)} behind — left alone, merge it yourself`,
+    );
+  }
+
+  // Printed after any fast-forward, so it names the commit you will actually
+  // be standing on rather than the one you would have been.
+  console.log(`          ${gitOutput(['log', '-1', '--format=%h %s', branch], main) ?? '(unknown)'}`);
+  addArgs = ['worktree', 'add', target, branch];
+} else if (alreadyPushed) {
+  // ── Origin has this branch and we do not ─────────────────────────────────
+  //
+  // The worst case this script can hit, and until now it was not handled at
+  // all: `branchExists` asks only about `refs/heads/`, so a branch someone
+  // else — or an agent on another machine — has already pushed looked *new*,
+  // and got created empty off `origin/main`. It installs, it runs green, and
+  // the first `git push` is either rejected or, if anyone reaches for
+  // `--force`, destroys the work it was supposed to continue.
+  //
+  // Tracking, unlike the new-branch case below: the upstream this wants is
+  // its own remote branch, which is exactly what `--track` sets.
+  console.log(`branch    ${branch} (new here, tracking origin/${branch})`);
+  console.log(
+    `base      origin/${branch}  ` +
+      `${gitOutput(['log', '-1', '--format=%h %s', `origin/${branch}`], main) ?? '(unknown)'}`,
+  );
+  addArgs = ['worktree', 'add', '--track', target, '-b', branch, `origin/${branch}`];
+} else {
+  // ── Genuinely new ────────────────────────────────────────────────────────
+  //
+  // Based on what the *remote* has, not on whatever the local `main` happens
+  // to be sitting at. Those differ constantly here: work lands through pull
+  // requests, so the local `main` only moves when somebody pulls, and nothing
+  // about creating a worktree makes that happen.
+  const base = resolveBase(main, hasOrigin);
+  console.log(`branch    ${branch} (new, off ${base.ref})`);
+  console.log(`base      ${base.describe}`);
+
+  // `--no-track` because branching from a remote-tracking ref otherwise makes
+  // git set the new branch's upstream to `origin/main` — so a later `git push`
+  // on a feature branch aims at `main`. It is refused rather than obeyed under
+  // the default push policy, but a confusing refusal is a poor substitute for
+  // not pointing it there. First push sets its own:
+  // `git push -u origin <branch>`.
+  addArgs = ['worktree', 'add', '--no-track', target, '-b', branch, base.ref];
+}
+
 console.log('');
-
-git(
-  existing
-    ? ['worktree', 'add', target, branch]
-    : // `--no-track` because branching from a remote-tracking ref otherwise
-      // makes git set the new branch's upstream to `origin/main` — so a later
-      // `git push` on a feature branch aims at `main`. It is refused rather
-      // than obeyed under the default push policy, but a confusing refusal is
-      // a poor substitute for not pointing it there. First push sets its own:
-      // `git push -u origin <branch>`.
-      ['worktree', 'add', '--no-track', target, '-b', branch, base?.ref ?? 'main'],
-  main,
-);
+git(addArgs, main);
 
 console.log('\nInstalling dependencies…\n');
 // One constant string rather than an args array, because pnpm is a `.cmd` shim

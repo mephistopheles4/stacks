@@ -51,8 +51,8 @@ absent row is not. This file is only useful if it is as easy to find what is
 
 | Row | Rule | Source | Gate | Status |
 | --- | --- | --- | --- | --- |
-| **G1** | All vault access goes through the adapter | invariant 4 | `gates/adapter-boundary.test.ts` — 13-entry allowlist, each justified, each reverse-asserted | ✅ |
-| **G2** | Note bodies are private; a public build is coherent | invariant 2 | `gates/public-build.test.ts` — four assertions, see below | ✅ |
+| **G1** | All vault access goes through the adapter | invariant 4 | `gates/adapter-boundary.test.ts` — an allowlist, each entry justified, each reverse-asserted | ✅ |
+| **G2** | Note bodies are private; a public build is coherent | invariant 2 | `gates/public-build.test.ts` — asserted against `publish()`'s output, see below | ✅ |
 | **G3** | Never crash on a bad note | invariant 3 | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind | ✅ |
 | **G4** | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
 | **G5** | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored | ✅ |
@@ -165,6 +165,7 @@ this file is otherwise about. Counted in prose, so nothing could go red.)
 | **G16** | every book stays inside its own case | `pnpm smoke:render` | ✅ |
 | **G17** | a deploy publishes `main`, or says why not | `gates/deploy-branch.test.ts` | ✅ |
 | **G18** | a provider's bytes are bounded and are an image | `packages/core/src/covers/download.test.ts` | ✅ |
+| **G20** | one inspection of the folder about to be published | `gates/public-build-artifact.test.ts` | ✅ |
 
 **G17 is the one row here written for a defect that has not happened**, because
 the change that would cause it is the change that shipped with it. Until
@@ -339,12 +340,93 @@ it: wishlist books shipped in `library.json` though nothing displayed them, and
 a `cover:` could be protocol-relative or absolute `http`, so a hand-edited note
 could have a visitor's browser fetch from a third party.
 
+**G20 exists because two implementations of one rule drifted, and the drift ran
+the wrong way.** "Is this folder safe to publish?" had been answered twice
+against the same `dist/` — once by `gate:public` and once by `deploy:site`'s
+pre-flight — and neither was a superset of the other. The gate checked that
+`_headers` makes `/covers/*` revalidate; the deploy checked only that the file
+existed, which is the precise gap that let the fix for the mobile crash reach an
+origin nobody could see. The gate checked that every `og:image` *and*
+`twitter:image` is absolute; the deploy checked for one substring, so a page
+having lost its `og:image` entirely would have passed. **The weaker half was on
+the only one of the two that publishes anything.** Neither script knew the other
+existed, which is why nothing went red for however long that was true.
+
+`scripts/lib/public-build.ts` is now the one implementation and both are
+callers, which changes nothing about the deliberate separation: the gates still
+stage fixtures and still run first, the real build still runs last, and
+`gate:public` still says nothing about the folder about to go on the internet.
+Two calls, not two implementations.
+
+**It is the first gate here cheap enough to observe every rule go red.** The
+module builds nothing — it is handed a directory — so the gate assembles a
+synthetic `dist/` in a temp folder, plants one defect, and asserts that defect
+fires that rule *and no other*. No build, no network, milliseconds. A final
+assertion holds the rule list to the defects: a twelfth rule with nothing that
+produces it fails the build, so this gate cannot quietly come to cover ten of
+all but one. That is the thing the seven text-matching gates here cannot do.
+
+Mutations, each observed. Restoring the deploy's weak `_headers` check fails
+exactly one test — the one that names that divergence. Adding a rule with no
+planted defect fails the completeness assertion by name. Making the reporter a
+no-op fails all but the two clean-baseline tests, which is what proves the
+baseline is not itself doing the work.
+
+**And then review found the gate was watching the wrong shape, which is the
+entry worth reading here.** The `_headers` rule had been carried over verbatim
+as *find `/covers/*`, then look ahead for a `Cache-Control` with `max-age=0`* —
+a lazy scan that does not stop at the end of a block. The real `_headers` has an
+`/og.png` block directly after `/covers/*` carrying exactly that directive, so
+deleting the covers block's own `Cache-Control` line left the rule green.
+G20 had observed it red, but against a `_headers` containing nothing *but* the
+covers block: a shape this repo has never had, and the one shape in which the
+bug is invisible. **A defect the gate plants must be a defect the file could
+actually have.** The file is now parsed into blocks and the covers block is read
+by name; planting the realistic shape against the old scan reports *no problems
+at all*, which is how it was confirmed.
+
+Two more the same review found, both the same species — one rule that two
+implementations had each kept half of, and neither half noticed:
+
+- **The share image.** `gate:public` required the URL absolute against the
+  origin; `deploy:site` required the literal `<origin>/og.png`. The merged rule
+  had kept only the first, so `<origin>/hero.png` passed — a file no build ever
+  wrote. It is now the whole URL, and it is *two* rules rather than one, because
+  `--check-only` has to excuse a SITE_URL mismatch without also excusing a page
+  that lost its share tag altogether.
+- **The canary.** Owned by the module now, where it was an independent literal
+  in the gate script and in G2 — a canary that drifts between where it is
+  planted and where it is looked for leaves both halves passing.
+
+**One check deliberately stayed in `deploy.ts`**: that no fixture book is in the
+build. `gate:public` requires those titles *present* in the folder it inspects
+and the deploy requires them *absent* — the same strings with opposite verdicts
+— so a module that cannot know which vault produced a folder is the wrong owner.
+It also asserts build *ordering* rather than publishability.
+
+That check was two hardcoded titles, and **one of the two had never matched
+anything**: `Compilers for the Impatient` carries a subtitle in its frontmatter,
+so only `The Tidal Engine` was ever really compared. It now reads the fixture
+vault through `ObsidianAdapter` — the same parser the build uses, which is both
+invariant 4 and the only way to get it right, since a note's filename is not its
+title for five of the twelve fixtures. An empty list refuses the deploy outright
+rather than passing over nothing.
+
 **G1, G3, G6 and G7 were green on arrival** and were each proven red-capable by
 perturbation: an `fs` import added to `scene.ts`, a stale entry added to the
 allowlist, the missing-title branch downgraded to `not-a-book`, an inline
 `import { type X }`, and an arrow function in an `.astro` script.
 
 ## G2 in full — the public build gate
+
+The five below are what G2 added to `gate:public`. Since G20 they are no longer
+*in* `gate:public`: rules 2–5 apply to any built folder, so they live in
+`scripts/lib/public-build.ts` and `deploy:site` applies the same ones to the
+real build. What stays in the script is the half that is about the *source* —
+planting the canary in a fixture vault and refusing to run without it — plus
+building from it. G2 itself is unchanged and still asserts against `publish()`'s
+output, which is a different claim: G2 proves the filter *works*, the artifact
+rules prove it *ran*.
 
 The existing `gate:public` is a good gate that cannot see three things. It greps
 the *contents* of *text* files for three known-bad patterns. So a private value
