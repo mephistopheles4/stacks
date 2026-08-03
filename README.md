@@ -28,13 +28,38 @@ the data. Delete this tool and you still have your library.
 
 ## Quick start
 
-You'll need **Node 22+**, **pnpm**, and an Obsidian vault (or any folder of
-Markdown — nothing here requires Obsidian itself).
+You'll need **Node 22+** and **pnpm**. For your own library you'll also need an
+Obsidian vault (or any folder of Markdown — nothing here requires Obsidian
+itself); to just look at a shelf, you won't.
 
 ```bash
 git clone https://github.com/mephistopheles4/stacks.git
 cd stacks
 pnpm install
+```
+
+### Just want to see the shelf?
+
+This repo ships a small vault of invented books, so you can walk up to a
+bookcase before you own one. Stage it:
+
+```bash
+pnpm stacks build --public --vault fixtures/vault
+```
+
+Then serve it:
+
+```bash
+pnpm dev
+```
+
+The shelf is at `http://localhost:4321`. Nothing above needs a vault, a `.env`
+or an API key — the books are made up, the covers are generated, and none of it
+is yours. For that, carry on below.
+
+### Your own vault
+
+```bash
 cp .env.example .env
 ```
 
