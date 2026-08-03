@@ -11,8 +11,16 @@
 #      branch ruleset every time that list changes.
 #
 # `pull_request`, never `pull_request_target`: fork pull requests must not see
-# repository secrets. Nothing here needs one — the tests inject a fixture-backed
-# HttpGet that throws on an unmapped URL, so no live API call is possible.
+# repository secrets. Nothing here needs one — and as of G21 nothing here can
+# reach the network at all: `gates/no-live-network.ts` replaces `fetch` for the
+# whole suite, records any request, and fails the test that made it.
+#
+# That sentence used to read "the tests inject a fixture-backed HttpGet that
+# throws on an unmapped URL, so no live API call is possible", which was false
+# for months — the injection covers metadata lookups and stops short of the
+# cover bytes, and `enrich.test.ts` really was downloading from
+# `covers.openlibrary.org` on every run of this workflow. The trigger choice was
+# right for its own reasons; only the reassurance attached to it was wrong.
 
 name: gates
 

@@ -20,8 +20,8 @@ phone was rendering when it died — are measurements and stay exactly as they a
 
 | | |
 | --- | --- |
-| **Last green gate** | G21 — one cover-preference rule, one implementation, right way round |
-| **Now working on** | G21 — consolidating cover acquisition ([#26](https://github.com/mephistopheles4/stacks/issues/26)) |
+| **Last green gate** | G22 — one cover-preference rule, one implementation, right way round |
+| **Now working on** | G22 — consolidating cover acquisition ([#26](https://github.com/mephistopheles4/stacks/issues/26)) |
 | **Queued** | [#25](https://github.com/mephistopheles4/stacks/issues/25) shelf placement · [#27](https://github.com/mephistopheles4/stacks/issues/27) a `scripts/` harness — from the same architecture review as G20 · [#29](https://github.com/mephistopheles4/stacks/issues/29) one `maybe()` helper, not six |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates`, no bypass |
@@ -684,7 +684,38 @@ checkout refetches, and no test path touches it, since tests inject a
 fixture-backed `HttpGet` that throws on an unmapped URL) and `artifacts/`
 (regenerable, and you want each branch's screenshot separate).
 
-## Cover acquisition — G21
+## A test had been calling the internet for months — G21
+
+`packages/core/src/enrich.test.ts` downloaded a real cover from
+`covers.openlibrary.org` on every run. It surfaced as an intermittent CI timeout
+on `suite (node 22)` — 1290ms locally against 5ms for its six siblings, at a
+quarter of vitest's 5s cap, and a loaded 2-core runner needs only a ~4x
+slowdown to blow that. The leading theory was sharp's native binding load; it
+was wrong, and cheaply so — that import costs ~290ms and vitest charges it to
+`import`, not to whichever test runs first.
+
+The seam: the metadata layer takes an injected `HttpGet` so lookups stay off the
+network, but `covers/cache-cover.ts`'s `download` reaches for the global
+`fetch`, so the injection stops short of the bytes. The fixture response carries
+an ISBN and no `cover_i`, so the adapter guesses a `covers.openlibrary.org` URL
+and that URL was really being fetched. Fixed by stubbing `fetch` in that file:
+1448ms → 62ms, with the cover path still exercised rather than quietly dropped.
+
+**The belief that this could not happen was written down in three places**, and
+this file was one of them — the note under worktrees explains that `.cache/` is
+safe to keep per-checkout *because* tests inject a fixture-backed `HttpGet`. The
+claim is true; the reasoning is the incomplete model that let this through, and
+it is left standing above as the record of what everyone thought. The other two
+are `CLAUDE.md`'s Phase 1 gate and `covers/download.test.ts`'s opening comment.
+
+G21 makes it mechanical. Two findings worth carrying, both in
+[`gates.md`](./gates.md) in full: a guard that only *throws* is swallowed by
+`download`'s deliberate `catch { return undefined }` and reports **7 passed**,
+so the gate records attempts and asserts in an `afterEach` instead; and the
+gate's own spec was vacuous until the installation was split into its own file,
+because the spec installed the guard merely by importing it.
+
+## Cover acquisition — G22
 
 Three commands each rebuilt the same four steps around `cacheCover`
 ([#26](https://github.com/mephistopheles4/stacks/issues/26)). The issue proposed
@@ -713,8 +744,9 @@ one that only serves creation. Two of three is the honest outcome.
 the difference between reporting a cover it *would* have fetched and one it never
 could, and it is the command's reporting concern, not the downloader's.
 
-G21 is structural because the failure it guards is silent — see
-[`gates.md`](./gates.md). `pnpm test` went 278 → 290.
+G22 is structural because the failure it guards is silent — see
+[`gates.md`](./gates.md). `pnpm test` went 308 → 323: two new spec files, no
+existing one changed.
 
 **Still open**
 

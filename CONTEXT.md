@@ -55,7 +55,7 @@ _Avoid_: source (ambiguous — a record's `source` is the metadata provider).
 **Candidate**:
 A URL that might turn out to be a cover. A book has a list of them rather than
 one, because whether a URL is a usable cover is only knowable by fetching it and
-looking. Which candidate wins is G21's; the word just means "not yet decided".
+looking. Which candidate wins is G22's; the word just means "not yet decided".
 _Avoid_: cover URL (that is the one that won), option, fallback.
 
 **Spread**:
