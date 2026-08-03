@@ -132,4 +132,3 @@ function byFinishedThenTitle(a: LibraryBook, b: LibraryBook): number {
   if (b.finished !== undefined) return 1;
   return a.title.localeCompare(b.title);
 }
-

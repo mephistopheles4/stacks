@@ -123,4 +123,3 @@ function findShelved(
     isProbablySameBook(titleAuthor, `${book.title} ${book.author ?? ''}`),
   )?.title;
 }
-

@@ -141,4 +141,3 @@ function positiveInt(value: unknown): number | undefined {
   const n = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(n) && n > 0 ? Math.round(n) : undefined;
 }
-

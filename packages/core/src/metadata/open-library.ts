@@ -132,4 +132,3 @@ function coverOf(value: unknown): string | undefined {
   if (cover === undefined) return undefined;
   return firstString(cover['large']) ?? firstString(cover['medium']) ?? firstString(cover['small']);
 }
-

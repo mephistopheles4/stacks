@@ -148,4 +148,3 @@ function joinAuthors(value: unknown): string | undefined {
   const names = value.filter((name): name is string => typeof name === 'string');
   return names.length > 0 ? names.join(', ') : undefined;
 }
-
