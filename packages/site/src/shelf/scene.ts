@@ -11,6 +11,7 @@ import {
   type CaseLight,
   type Footprint,
 } from './contact-shadow.ts';
+import { hashUnit } from './hash.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
 /**
@@ -1032,16 +1033,6 @@ function leanFor(rowIndex: number, position: number, id: string): number {
   // Biased positive: +Z rotation tips the top of the book to the left.
   const lean = 0.55 + wave * 0.38 + jitter * 0.14;
   return Math.max(0, Math.min(1, lean)) * MAX_LEAN;
-}
-
-/** FNV-1a squashed to 0..1 — deterministic, no dependency, good enough. */
-function hashUnit(value: string): number {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return (hash >>> 8) / 0x1000000;
 }
 
 /** Shared by every book: sizing is per-mesh scale, so one of each is enough. */
