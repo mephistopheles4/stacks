@@ -2,7 +2,7 @@ import { cacheCover } from './covers/cache-cover.ts';
 import { resolveCoverPath } from './covers/cover-path.ts';
 import { spineColour } from './covers/dominant-colour.ts';
 import { isProbablySameBook, normaliseIsbn } from './identity.ts';
-import { lookup, type HttpGet } from './metadata/index.ts';
+import { coverUrls, lookup, type HttpGet } from './metadata/index.ts';
 import type { FrontmatterChanges, VaultAdapter } from './adapters/vault-adapter.ts';
 import type { BookRecord } from './types.ts';
 
@@ -67,9 +67,7 @@ export async function enrichBook(
   const needsLookup = missing.some((field) => field !== 'spine_color');
   if (needsLookup) {
     const term = book.isbn ?? `${book.title} ${book.author ?? ''}`.trim();
-    const [found] = await lookup(term, get, {
-      ...(options.googleBooksKey === undefined ? {} : { googleBooksKey: options.googleBooksKey }),
-    });
+    const [found] = await lookup(term, get, options);
 
     if (found === undefined) {
       if (filled.length === 0) return { kind: 'not-found', title: book.title };
@@ -97,13 +95,13 @@ export async function enrichBook(
       }
 
       if (book.cover === undefined) {
-        const candidates = [found.coverUrlLarge, found.coverUrl].filter(
-          (url): url is string => url !== undefined,
-        );
+        const candidates = coverUrls(found);
+        // Whether a URL was *on offer* is this command's own question, not the
+        // downloader's: it is the difference between `--dry-run` reporting a
+        // cover it would have fetched and reporting one it never could.
+        const offered = candidates.some((url) => url !== undefined);
         const cover =
-          candidates.length === 0 || options.dryRun === true
-            ? undefined
-            : await cacheCover(candidates, book.title, vault);
+          options.dryRun === true ? undefined : await cacheCover(candidates, book.title, vault);
         if (cover !== undefined) {
           changes['cover'] = cover.relativePath;
           // Written alongside the cover, never on its own: the two describe the
@@ -115,7 +113,7 @@ export async function enrichBook(
             changes['spine_color'] = cover.spineColor;
             if (!filled.includes('spine_color')) filled.push('spine_color');
           }
-        } else if (candidates.length > 0 && options.dryRun === true) {
+        } else if (offered && options.dryRun === true) {
           filled.push('cover');
         }
       }

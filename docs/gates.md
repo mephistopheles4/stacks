@@ -165,6 +165,7 @@ this file is otherwise about. Counted in prose, so nothing could go red.)
 | **G16** | every book stays inside its own case | `pnpm smoke:render` | ✅ |
 | **G17** | a deploy publishes `main`, or says why not | `gates/deploy-branch.test.ts` | ✅ |
 | **G18** | a provider's bytes are bounded and are an image | `packages/core/src/covers/download.test.ts` | ✅ |
+| **G20** | one cover-preference rule, one implementation | `gates/cover-candidates.test.ts` + `packages/core/src/covers/acquire.test.ts` | ✅ |
 
 **G17 is the one row here written for a defect that has not happened**, because
 the change that would cause it is the change that shipped with it. Until
@@ -231,6 +232,45 @@ nothing going red. All three answer properly: Open Library `image/jpeg`
 serves PNG whatever the URL suggests), Apple `image/jpeg` (171 KB, `ffd8ffe0`).
 Largest is 0.8% of the cap. This is a measurement with a shelf life: it says
 what the three providers did on 1 August 2026, not what they must do.
+
+**G20 is the third row written for a defect that has not happened**, and the
+first written for one that *could not go red on its own*. Which cover URL to try
+first — `coverUrlLarge` before `coverUrl` — was written out three times, in
+`add-book.ts`, `enrich.ts` and the importer. All three agreed, which is exactly
+where G10 started: one rule, two implementations, agreeing until one didn't.
+
+The difference is what failure looks like. G10's second copy crashed a path on
+Windows; this one is **silent by construction**. Reverse the pair and a cover
+still downloads, `cover_source` is still correct for the bytes kept, every
+existing test still passes — you have simply kept Google's ~128px thumbnail
+instead of the large image, and the shelf is quietly worse. There is no
+behavioural assertion that catches that, because nothing about it is wrong except
+the choice. Hence a structural row: `coverUrlLarge` may be named only inside
+`packages/core/src/metadata/`, where the field is produced and where `coverUrls()`
+ranks it, and every module calling `cacheCover` must get its list from there.
+
+**Observed red** by adding a fourth module naming the pair, and again in reverse
+by the `routes every cover download` assertion, which is what stops the first
+half being satisfied by a caller that simply stops downloading covers. Both
+directions matter here for the reason G17 records: a positive check cannot detect
+a missing one.
+
+The behavioural half, `covers/acquire.test.ts`, closes a related hole rather than
+the same one. `blank.test.ts` and `download.test.ts` each proved one step of
+`cacheCover` in isolation; nothing proved the *order* they run in — which
+candidate wins, what happens when none is cover-shaped, and which URL the
+recorded `source` is taken from. That was exercised only incidentally, through
+`add-book.test.ts` and `enrich.test.ts`, where a change in preference would still
+leave a cover on disk and every assertion green.
+
+**What this row does not gate**: that `cover`, `cover_source` and `spine_color`
+are written together. That rule — *a note's `cover_source` describes the bytes of
+that note's `cover`* — has four writers, and one of them, `stacks covers
+--backfill`, never downloads anything at all: it infers provenance from the shape
+of a cover already on disk and upholds the rule by a different route. So no
+structural check can demand the three appear together, and `covers/cover-keys.ts`
+makes the pairing unconstructible on the *creation* path only. Stated here
+because that is a narrower guarantee than the section heading suggests.
 
 **G16 observed red at 0.0203** — about 0.5cm at shelf scale — by deleting the
 clearance and re-running. It exists because the owner found the same defect twice

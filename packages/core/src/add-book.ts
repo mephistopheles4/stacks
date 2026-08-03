@@ -1,6 +1,7 @@
 import { cacheCover } from './covers/cache-cover.ts';
+import { coverKeys } from './covers/cover-keys.ts';
 import { isProbablySameBook, normaliseIsbn } from './identity.ts';
-import { lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
+import { coverUrls, lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
 import type { BookInput, BookRecord, BookStatus } from './types.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
 
@@ -59,9 +60,7 @@ export async function addBook(
     };
   }
 
-  const [metadata] = await lookup(term, get, {
-    ...(options.googleBooksKey === undefined ? {} : { googleBooksKey: options.googleBooksKey }),
-  });
+  const [metadata] = await lookup(term, get, options);
   if (metadata === undefined) {
     return { kind: 'not-found', term };
   }
@@ -78,14 +77,7 @@ export async function addBook(
     };
   }
 
-  // Best candidate first; the downloader keeps whichever is cover-shaped.
-  const coverCandidates = [metadata.coverUrlLarge, metadata.coverUrl].filter(
-    (url): url is string => url !== undefined,
-  );
-  const cover =
-    coverCandidates.length === 0
-      ? undefined
-      : await cacheCover(coverCandidates, metadata.title, vault);
+  const cover = await cacheCover(coverUrls(metadata), metadata.title, vault);
 
   const book: BookInput = {
     title: metadata.title,
@@ -93,9 +85,7 @@ export async function addBook(
     ...maybe('author', metadata.author),
     ...maybe('isbn', metadata.isbn === undefined ? undefined : normaliseIsbn(metadata.isbn)),
     ...maybe('pages', metadata.pages),
-    ...maybe('cover', cover?.relativePath),
-    ...maybe('coverSource', cover?.source),
-    ...maybe('spineColor', cover?.spineColor),
+    ...coverKeys(cover),
   };
 
   return { kind: 'added', path: await vault.writeBook(book), metadata };

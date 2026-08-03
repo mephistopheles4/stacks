@@ -1,5 +1,6 @@
 import { cacheCover } from '../covers/cache-cover.ts';
-import { lookup } from '../metadata/index.ts';
+import { coverKeys } from '../covers/cover-keys.ts';
+import { coverUrls, lookup } from '../metadata/index.ts';
 import type { HttpGet } from '../metadata/http.ts';
 import { isProbablySameBook, normaliseIsbn } from '../identity.ts';
 import type { BookInput } from '../types.ts';
@@ -92,14 +93,9 @@ export async function importBooks(
     try {
       const candidates =
         options.skipCovers === true ? [] : await coverCandidates(input, coverUrl, options);
-      const cover =
-        candidates.length === 0 ? undefined : await cacheCover(candidates, input.title, vault);
+      const cover = await cacheCover(candidates, input.title, vault);
 
-      const path = await vault.writeBook({
-        ...input,
-        ...(cover === undefined ? {} : { cover: cover.relativePath, coverSource: cover.source }),
-        ...(cover?.spineColor === undefined ? {} : { spineColor: cover.spineColor }),
-      });
+      const path = await vault.writeBook({ ...input, ...coverKeys(cover) });
 
       outcomes.push({ kind: 'added', title: input.title, path });
       seen.push({ isbn: input.isbn ?? '', titleAuthor, title: input.title });
@@ -130,18 +126,16 @@ async function coverCandidates(
   input: BookInput,
   exportCover: string | undefined,
   options: ImportOptions,
-): Promise<string[]> {
-  const fallback = exportCover === undefined ? [] : [exportCover];
+): Promise<readonly (string | undefined)[]> {
+  const fallback = [exportCover];
   if (options.get === undefined) return fallback;
 
   try {
-    const [match] = await lookup(`${input.title} ${input.author ?? ''}`.trim(), options.get, {
-      ...(options.googleBooksKey === undefined ? {} : { googleBooksKey: options.googleBooksKey }),
-    });
-    const preferred = [match?.coverUrlLarge, match?.coverUrl].filter(
-      (url): url is string => url !== undefined,
-    );
-    return [...preferred, ...fallback];
+    const [match] = await lookup(`${input.title} ${input.author ?? ''}`.trim(), options.get, options);
+    // The importer's own preference, and the reason the ordering rule is not
+    // hidden inside the downloader: a print edition first, then whatever
+    // `coverUrls` ranks, then the export's square artwork as the safety net.
+    return [...coverUrls(match), ...fallback];
   } catch {
     // A lookup failing must not cost the book the cover it already had.
     return fallback;

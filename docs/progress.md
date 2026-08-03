@@ -20,8 +20,8 @@ phone was rendering when it died — are measurements and stay exactly as they a
 
 | | |
 | --- | --- |
-| **Last green gate** | G19 — the constitution and the scoreboard are held to each other |
-| **Now working on** | G19 — the scoreboard gates itself |
+| **Last green gate** | G20 — one cover-preference rule, one implementation |
+| **Now working on** | G20 — consolidating cover acquisition |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates`, no bypass |
 | **Blocked on** | nothing |
@@ -678,6 +678,48 @@ Not shared between worktrees, deliberately: `.cache/` (API responses — each
 checkout refetches, and no test path touches it, since tests inject a
 fixture-backed `HttpGet` that throws on an unmapped URL) and `artifacts/`
 (regenerable, and you want each branch's screenshot separate).
+
+## Cover acquisition — G20
+
+Three commands each rebuilt the same four steps around `cacheCover`
+([#26](https://github.com/mephistopheles4/stacks/issues/26)). The issue proposed
+a new `acquireCover` module; what shipped is smaller, because reading the three
+copies did not support the premise.
+
+**They had not drifted.** `add-book.ts` and `enrich.ts` held byte-identical
+candidate expressions, and the importer's differs because it does something
+different — it runs a `lookup` to find a print cover and prepends it. Two
+orderings, not three, and the third is not a copy. What *had* diverged was the
+write path, and the cause is not cover logic: `writeBook` takes a `BookInput` in
+the domain vocabulary (`coverSource`), `updateBook` takes `FrontmatterChanges` in
+the file vocabulary (`cover_source`), and `enrich` is the only caller that has to
+cross that boundary. That is what produced the third assembly.
+
+So: `cacheCover` now takes `readonly (string | undefined)[]` and does its own
+filtering, which deletes the duplicated guard at all three sites; `coverUrls()`
+in `metadata/types.ts` states *large before small* once; and
+`covers/cover-keys.ts` shapes a `CachedCover` into its three keys for the two
+callers that build a `BookInput`. **`enrich` stays hand-written**, deliberately —
+its "never overwrite a hand-set spine colour" guard and its `filled` reporting
+are its own, and a shaper flexible enough to serve them would assert less than
+one that only serves creation. Two of three is the honest outcome.
+
+`--dry-run` keeps its own "was a URL on offer" check for the same reason: that is
+the difference between reporting a cover it *would* have fetched and one it never
+could, and it is the command's reporting concern, not the downloader's.
+
+G20 is structural because the failure it guards is silent — see
+[`gates.md`](./gates.md). `pnpm test` went 278 → 290.
+
+**Still open**
+
+- The `maybe()` helper is copy-pasted into six files (`add-book`, `frontmatter`,
+  `import/audible`, `library`, `metadata/google-books`, `metadata/open-library`)
+  with identical bodies, and ~20 sites spread a conditional object for a compiler
+  flag (`exactOptionalPropertyTypes`) that is **not enabled**. A bigger and more
+  G10-shaped duplication than the one above. Filed separately rather than
+  bundled, and it carries a real exception: `undefined` in a `FrontmatterChanges`
+  *removes* the key, so near `updateBook` the pattern is load-bearing.
 
 ## Notes to the next session
 
