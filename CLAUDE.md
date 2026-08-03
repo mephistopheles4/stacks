@@ -206,13 +206,27 @@ those are needed because `node_modules` and `.env` are gitignored, so a bare
 `git worktree add` produces a checkout where every command fails for a reason
 that has nothing to do with the branch.
 
-**A new branch is cut from `origin/main`, after a best-effort fetch, and the
-commit it was cut from is printed.** The local `main` only moves when somebody
-pulls, and making a worktree is not that — so cutting from it starts the branch
-on whatever was last pulled. That is the one failure here that says nothing:
-the checkout installs, the tests pass, and the work sits on an old base. The
-fetch does not fail the command when it cannot reach the network, because being
-offline does not stop the rest from working; it says so and carries on.
+**Origin is fetched first, before anything is decided, and what you were given
+is always printed.** Nothing here moves until somebody fetches, and making a
+worktree is not that — so any base you did not check is whatever was last
+pulled. That is the one failure here that says nothing: the checkout installs,
+the tests pass, and the work sits on an old commit. The fetch does not fail the
+command when it cannot reach the network, because being offline does not stop
+the rest from working; it says so and carries on.
+
+Three cases, and for a while only the first was handled:
+
+- **A new branch** is cut from `origin/main`, not from the local `main`.
+- **A branch `origin` already has** is checked out from `origin/<branch>`,
+  tracking it. It used to be created *empty off `origin/main`*, because the only
+  question asked was whether a **local** branch existed — so a branch a
+  colleague or another machine had already pushed came back as a new one of the
+  same name, and the first push either bounced or, forced, took the work with
+  it.
+- **A branch already here** is fast-forwarded when it is strictly behind, and
+  otherwise reported and left alone. Never merged or rebased: a branch that is
+  ahead or has diverged is yours to resolve, and this command exists to make you
+  a checkout.
 
 **There is one `.env`, in the main checkout, and every worktree reads it.** It
 is not copied: a copy drifts, and `STACKS_DEV_HOST=1` left behind in a stale one
