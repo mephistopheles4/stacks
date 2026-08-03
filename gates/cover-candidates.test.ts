@@ -28,7 +28,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { expectFound, filesUnder, readRepoFile, REPO_ROOT } from './repo.ts';
+import { codeOf, expectFound, filesUnder, readRepoFile, REPO_ROOT } from './repo.ts';
 
 /**
  * The one place that ranks cover URLs — and the providers that populate the
@@ -56,30 +56,6 @@ const NOT_A_CALLER: ReadonlySet<string> = new Set([
 
 function sourceFiles(): string[] {
   return filesUnder('packages', ['.ts']).filter((path) => !path.endsWith('.test.ts'));
-}
-
-/**
- * A file with its comments blanked out, so the assertions below read code.
- *
- * `docs/gates.md` logs this defect twice, under G14 and G19 — *a gate that
- * matches prose matches anything* — and the caller check below is vulnerable to
- * it in the permissive direction: a new caller that hand-orders its candidates
- * would need only to mention `coverUrls()` in a comment to look compliant.
- * Comments are replaced with spaces rather than removed so every offset
- * survives, and a failure still points at the right place.
- *
- * **`//` is not treated as a comment when a colon precedes it**, because
- * `https://covers.openlibrary.org/…` is a string this codebase is full of, and
- * blanking the rest of that line would hide real code from the sweep — which is
- * the same family of defect one level down: a regex deciding about text it does
- * not parse. This is still not a parser. It does not know a `//` inside a string
- * literal from one starting a comment, and the honest limit is that it handles
- * the two shapes that actually occur here: URLs, and comments.
- */
-function codeOf(path: string): string {
-  return readRepoFile(path).replace(/\/\*[\s\S]*?\*\/|(?<!:)\/\/[^\n]*/g, (match) =>
-    match.replace(/[^\n]/g, ' '),
-  );
 }
 
 describe('G22 — one cover-preference implementation', () => {

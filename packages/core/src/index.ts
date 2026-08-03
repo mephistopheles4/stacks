@@ -12,6 +12,8 @@ export { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
 
 export { parseNote, type ParsedNote } from './frontmatter.ts';
 
+export { keyIfPresent } from './key-if-present.ts';
+
 export {
   compareShelfPosition,
   SHELVED_STATUSES,

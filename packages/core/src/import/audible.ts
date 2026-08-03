@@ -1,4 +1,5 @@
 import type { BookInput } from '../types.ts';
+import { keyIfPresent } from '../key-if-present.ts';
 
 /**
  * Maps a Libation Audible-library export into book notes.
@@ -77,18 +78,18 @@ function toAudibleBook(record: unknown, options: AudibleImportOptions): AudibleB
     status: finished ? 'read' : 'reading',
     tags: tagsFrom(fields['CategoriesNames']),
     extra,
-    ...maybe('author', text(fields['AuthorNames'])),
-    ...maybe('rating', rating(fields['MyRatingOverall'])),
-    ...maybe(
+    ...keyIfPresent('author', text(fields['AuthorNames'])),
+    ...keyIfPresent('rating', rating(fields['MyRatingOverall'])),
+    ...keyIfPresent(
       'finished',
       finished && options.dateAddedAsFinished === true ? added : undefined,
     ),
-    ...maybe('started', finished ? undefined : added),
+    ...keyIfPresent('started', finished ? undefined : added),
   };
 
   return {
     input,
-    ...maybe('coverUrl', imageUrl(fields['PictureLarge']) ?? imageUrl(fields['PictureId'])),
+    ...keyIfPresent('coverUrl', imageUrl(fields['PictureLarge']) ?? imageUrl(fields['PictureId'])),
   };
 }
 
@@ -139,8 +140,4 @@ function text(value: unknown): string | undefined {
 function positiveInt(value: unknown): number | undefined {
   const n = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(n) && n > 0 ? Math.round(n) : undefined;
-}
-
-function maybe<K extends string, V>(key: K, value: V | undefined): Record<K, V> | Record<never, never> {
-  return value === undefined ? {} : ({ [key]: value } as Record<K, V>);
 }
