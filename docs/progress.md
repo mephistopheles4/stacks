@@ -727,8 +727,10 @@ G20 is structural because the failure it guards is silent — see
   `FrontmatterChanges` *removes* the key, so near `updateBook` the distinction
   is load-bearing in the opposite direction.
 
-  **Not filed as an issue yet** — recorded here so it is written down somewhere
-  that a cold session reads.
+  Filed as [#29](https://github.com/mephistopheles4/stacks/issues/29). Not among
+  the six candidates of the architecture review that produced #26 — and the
+  three names are why: any search anchored on one of them finds a subset and
+  reads as too small to be worth a candidate. Which is also how it reached six.
 
 ## Notes to the next session
 
