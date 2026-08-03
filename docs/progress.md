@@ -8,6 +8,12 @@ a phase does here, it belongs in [`plan.md`](./plan.md) instead.
 
 Update it in the **same commit** as the gate it describes.
 
+**No live counts in Current state.** A book count is wrong again the next time
+anyone runs `stacks add`, and a stale number in the one file that claims to say
+where the project is costs more than it tells you. Name the command that answers
+instead. Counts *inside* a dated record — what an import added, how many books a
+phone was rendering when it died — are measurements and stay exactly as they are.
+
 ---
 
 ## Current state
@@ -21,7 +27,7 @@ Update it in the **same commit** as the gate it describes.
 | **Blocked on** | nothing |
 | **Mobile crash** | closed. Two separate bugs: 314 MB of texture (G15), then a driver that cannot sample a shadow map. The shelf paints its shadows now |
 | **Deployed** | https://stacks.aymandiab.com — Cloudflare Pages, `pnpm deploy:site` |
-| **Running against** | the owner's real vault, 31 books, all with covers |
+| **Running against** | the owner's real vault, not fixtures — `pnpm stacks status` for the count |
 
 ## Gate log
 

@@ -187,6 +187,15 @@ the mobile crash appeared to deploy while phones kept crashing. The build check
 waits out edge propagation before complaining, since a deploy is not live the
 instant wrangler returns.
 
+**Both checks read the HTTP status before the body, and say "refused" rather
+than guessing.** Bot protection answers a non-browser client with a *challenge
+page*, which is HTML carrying no build stamp and a content-length of its own —
+so read as content, a refusal is indistinguishable from the stale build these
+checks exist to catch, and recommends purging a cache that was never involved.
+On this zone that is not hypothetical: nothing automatable can read the site,
+so `deploy:site` publishes and then reports honestly that it could not confirm
+what visitors get. See [ADR-0027](docs/adr/0027-deploy-check-reports-refusal.md).
+
 `pnpm worktree <branch>` adds a second checkout beside this one — `../stacks-<branch>` —
 runs `pnpm install` in it, and tells you which `.env` it will read. Both of
 those are needed because `node_modules` and `.env` are gitignored, so a bare
