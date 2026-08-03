@@ -149,9 +149,14 @@ uniqueness-and-no-gaps rule as these row numbers, which they were not before.
 
 ## Defect gates
 
-Rows that exist because a specific defect got through — except the last, which
-exists because the change it shipped with made a new one reachable. Each was
-written to fail first.
+Rows that exist because a specific defect got through — except G17 and G18,
+written for defects that had not happened, and G20, which exists because two
+implementations of one rule had drifted. Each was written to fail first.
+
+(That sentence read "except the last" until G21 was appended, which would have
+made it name the wrong row. It had already been wrong once: "the last" meant G17
+when it was written, and G18 and G20 arrived after it. A positional reference to
+a table that grows is the same species as the count in the next paragraph.)
 
 (It said "four" for a while after there were five, which is the kind of thing
 this file is otherwise about. Counted in prose, so nothing could go red.)
@@ -166,6 +171,68 @@ this file is otherwise about. Counted in prose, so nothing could go red.)
 | **G17** | a deploy publishes `main`, or says why not | `gates/deploy-branch.test.ts` | ✅ |
 | **G18** | a provider's bytes are bounded and are an image | `packages/core/src/covers/download.test.ts` | ✅ |
 | **G20** | one inspection of the folder about to be published | `gates/public-build-artifact.test.ts` | ✅ |
+| **G21** | no test makes a live network call | `gates/no-live-network.ts` + `gates/no-live-network.setup.ts`, specced by `gates/no-live-network.test.ts` | ✅ |
+
+**G21 is the first row here written for a rule that two files already claimed
+was true.** `CLAUDE.md`'s Phase 1 gate says "use cached API fixtures, no live
+calls in tests"; `packages/core/src/covers/download.test.ts` opens by stating
+"No test makes a live call". Both were prose, and for months both were false —
+`packages/core/src/enrich.test.ts` downloaded a real cover from
+`covers.openlibrary.org` on every run. That is the table at the top of this file
+acquiring a seventh entry, found the way the other six were: by somebody
+looking, not by anything going red.
+
+**Nothing could have gone red, because the test passed.** Its assertions never
+look at the cover, so offline it filled `isbn` and `pages` and passed, and
+online it filled the cover too and passed. The only symptom was ~1.3s against
+5ms for its siblings, which reads as an outlier rather than as a network call —
+until a loaded CI runner turned it into an intermittent timeout at a quarter of
+vitest's 5s cap, which is how it was finally noticed.
+
+The seam is worth naming, because the gate does not close it. The metadata layer
+takes an injected `HttpGet` precisely so tests stay off the network, but the
+injection stops short of the bytes: `covers/cache-cover.ts`'s `download` reaches
+for the global `fetch`. A caller passing a fake `get` still makes a real
+request, and `enrich.ts`, `add-book.ts` and `import/index.ts` all reach it.
+
+**Recording the attempt is the whole design, and the throwing is not.** The
+obvious guard — replace `fetch` with one that throws — does not work here, and
+it does not fail loudly enough to tell you so. `download` wraps its fetch in
+`catch { return undefined }`, deliberately, because a missing cover must not
+stop a book being logged; so the refusal is swallowed, the cover is dropped, and
+every assertion still passes. Measured against the pre-fix `enrich.test.ts`: a
+throw-only guard reported **7 passed** in 51ms. It would have removed the
+symptom, left the test still calling the network, and made the defect
+permanently invisible. So the guard records each attempt and asserts in an
+`afterEach`, where no `try/catch` in the code under test can reach it. The throw
+stays — it keeps the call off the wire and lands the error near its cause — but
+it is not what makes this gate red.
+
+**Observed red** by restoring the pre-fix `enrich.test.ts`: one test fails,
+naming the URL and the stub that fixes it, and only that test, because the
+record is cleared per test rather than accumulating into every test after it.
+
+**And its own spec was vacuous first, found by mutation rather than by reading.**
+The guard and its installation were one file, so the spec — which must import
+the module to compare against `guardedFetch` — installed the guard by importing
+it. Deleting `setupFiles` from `vitest.config.ts` left all seven checks green:
+the assertion that the gate was wired up was satisfied by the act of asking.
+Splitting installation into `no-live-network.setup.ts` makes
+`globalThis.fetch === guardedFetch` true only if the setup file ran; the same
+mutation now fails four of seven, and one of the four spends 1.2s fetching a
+real cover from `archive.org`, which is the absence demonstrating itself. This
+is the same lesson as G19's three holes — *anchor the assertion to the thing
+that carries the claim* — arrived at from the opposite direction, and it is the
+reason a gate is not finished when it passes.
+
+**What it covers is `fetch`, in this process** — every request this repo makes,
+since nothing here uses `node:http` directly. Two things sit outside it, stated
+rather than implied: a test that shells out to a script making its own requests
+(`gates/deploy-branch.test.ts` really does spawn one, driven onto paths that
+upload nothing, but that is the script's own guard), and any future code that
+reaches the network by some other API. The escape hatch for a test that
+genuinely needs a response is `vi.stubGlobal`, named in the failure message
+rather than only here, since the message is where somebody will meet this rule.
 
 **G17 is the one row here written for a defect that has not happened**, because
 the change that would cause it is the change that shipped with it. Until
