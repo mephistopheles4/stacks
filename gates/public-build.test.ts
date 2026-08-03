@@ -25,9 +25,13 @@ import { join } from 'node:path';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
 import { parseNote } from '../packages/core/src/frontmatter.ts';
 import { publish } from '../packages/core/src/publish.ts';
+import { NOTE_BODY_CANARY } from '../scripts/lib/public-build.ts';
 import { REPO_ROOT } from './repo.ts';
 
-const CANARY = 'NOTE_BODY_CANARY_do_not_ship';
+// Imported rather than declared. It was an independent literal here and in
+// `check-public-build.ts`, and a canary that drifts between where it is planted
+// and where it is searched for is worse than none: both halves keep passing.
+const CANARY = NOTE_BODY_CANARY;
 const FIXTURE_VAULT = join(REPO_ROOT, 'fixtures', 'vault');
 
 let assets: string;

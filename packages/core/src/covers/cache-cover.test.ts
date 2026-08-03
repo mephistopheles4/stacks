@@ -152,7 +152,7 @@ describe('cacheCover', () => {
   /**
    * The preference rule end to end — the half a structural gate cannot reach.
    *
-   * G20 proves the ranking is written in exactly one place. It cannot prove
+   * G21 proves the ranking is written in exactly one place. It cannot prove
    * that place ranks it the right way round, and for a while nothing did:
    * reversing `coverUrls` left all 290 tests green, because a reversed
    * preference is not an error anywhere. A cover still downloads, it is still

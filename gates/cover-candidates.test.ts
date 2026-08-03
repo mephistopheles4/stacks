@@ -1,5 +1,5 @@
 /**
- * G20 — one cover-preference rule, one implementation.
+ * G21 — one cover-preference rule, one implementation.
  *
  * Which cover URL to try first is a rule about two fields of `BookMetadata`:
  * `coverUrlLarge` before `coverUrl`, because Google's larger image is sometimes
@@ -22,7 +22,7 @@
  * suite green. It is now pinned behaviourally, through the downloader, in
  * `packages/core/src/covers/cache-cover.test.ts`. Neither half is sufficient.
  *
- * See docs/gates.md, row G20.
+ * See docs/gates.md, row G21.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -82,7 +82,7 @@ function codeOf(path: string): string {
   );
 }
 
-describe('G20 — one cover-preference implementation', () => {
+describe('G21 — one cover-preference implementation', () => {
   it('scans a plausible number of source files', () => {
     expectFound(sourceFiles(), 'source files to scan', 20);
   });

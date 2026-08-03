@@ -25,10 +25,12 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from '../packages/cli/src/env.ts';
+import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
 
 // The same loader the CLI uses, rather than a third hand-rolled `.env` parser:
 // a real environment variable still wins, so `SITE_URL=... pnpm deploy` does
@@ -38,6 +40,9 @@ loadEnv();
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'packages', 'site', 'dist');
+
+/** How `dist/` is named in messages, so they read the same on every platform. */
+const DIST_LABEL = 'packages/site/dist';
 
 /** Pinned: a deploy tool that silently changes under you is not a deploy tool. */
 const WRANGLER = 'wrangler@4';
@@ -206,71 +211,124 @@ if (!checkOnly) {
 }
 
 // ── 3. Pre-flight on the artifact that is actually about to be published ────
+//
+// The rules live in `scripts/lib/public-build.ts`, and `gate:public`
+// applies exactly the same ones to a fixture build. They used to be two
+// implementations, and this one — the only one that actually publishes
+// anything — held the weaker half of both places they differed: it checked that
+// `_headers` existed where the gate checked that `/covers/*` revalidates, and
+// it accepted a page with no `og:image` at all so long as a `twitter:image` was
+// there. Neither was a superset of the other, and neither knew the other
+// existed. See docs/adr/0028-one-inspector-for-the-public-build.md.
 interface ShippedBook {
   readonly title: string;
   readonly cover?: string;
-  readonly status?: string;
-  readonly private?: boolean;
-  readonly sourcePath?: string;
 }
 
 const libraryPath = join(DIST, 'library.json');
 if (!existsSync(libraryPath)) fail(`no library.json in ${DIST}`);
 
 const library = JSON.parse(readFileSync(libraryPath, 'utf8')) as { books: ShippedBook[] };
-const problems: string[] = [];
-
-if (library.books.length === 0) problems.push('library.json contains no books at all');
-
-// The fixture vault has eight; publishing that from a deploy means the ordering
-// above broke and the gates' staged data survived.
-const fixtureTitles = ['The Tidal Engine', 'Compilers for the Impatient'];
-if (library.books.some((book) => fixtureTitles.includes(book.title))) {
-  problems.push('fixture books are in the build — the real vault build did not run last');
-}
-
-for (const book of library.books) {
-  if (book.private === true) problems.push(`private book would be published: ${book.title}`);
-  if (book.status === 'wishlist') problems.push(`wishlist book would be published: ${book.title}`);
-  if (book.sourcePath !== undefined) problems.push(`vault path would be published: ${book.title}`);
-  if (book.cover !== undefined && !/^covers\/[^/\\]+$/.test(book.cover)) {
-    problems.push(`cover is not same-origin: ${book.title} → ${book.cover}`);
-  }
-}
-
-const coversDir = join(DIST, 'covers');
-if (existsSync(coversDir)) {
-  const referenced = new Set(
-    library.books
-      .map((book) => book.cover)
-      .filter((cover): cover is string => cover !== undefined)
-      .map((cover) => cover.replace(/^covers\//, '')),
-  );
-  const orphans = readdirSync(coversDir).filter((name) => !referenced.has(name));
-  if (orphans.length > 0) {
-    problems.push(`${String(orphans.length)} orphan cover(s), named after books: ${orphans.slice(0, 3).join(', ')}`);
-  }
-}
-
 const html = existsSync(join(DIST, 'index.html'))
   ? readFileSync(join(DIST, 'index.html'), 'utf8')
   : '';
-if (!html.includes(`content="${siteUrl.replace(/\/$/, '')}/og.png"`)) {
-  problems.push(`og:image is not absolute against ${siteUrl} — link previews will show nothing`);
-}
-if (!/<meta\s+name="robots"\s+content="[^"]*noindex/.test(html)) {
-  problems.push('no `noindex` robots meta — the shelf would be searchable, not just shareable');
-}
-if (!existsSync(join(DIST, '_headers'))) {
-  problems.push('_headers missing — covers and og.png would be indexable on their own');
+
+const report = inspectPublicBuild(DIST, { origin: siteUrl });
+for (const observation of report.observations) console.log(`  ${observation}`);
+
+const problems: { rule: PublicBuildRule | 'stale-fixtures'; message: string }[] = [...report.problems];
+
+// The one check that stays here, because it is not about publishability at all.
+//
+// `gate:public` *requires* these titles to be present in the folder it inspects
+// and this requires them absent — the same strings with opposite verdicts — so
+// a module handed a directory, which cannot know which vault produced it, is
+// the wrong owner. What this asserts is that step 2 ran after step 1.
+//
+// Read from the fixture vault rather than hardcoded. It was two titles out of
+// twelve, and one of those two — `Compilers for the Impatient` — has carried a
+// subtitle in its frontmatter the whole time, so it never matched a shipped
+// book and only one title was ever really checked.
+//
+// Through the adapter, because that is invariant 4 and because it is also the
+// only way to get this right: a note's filename is not its title. Five of the
+// twelve fixtures differ, and reading `title:` out of the file by hand would be
+// a second parser of the format `enrich` and `updateBook` already have scars
+// from.
+if (!checkOnly) {
+  // Said first, because the fixture vault contains two deliberately broken
+  // notes and the adapter warns about them by name. Unannounced, in the middle
+  // of a deploy, those read as something wrong with the vault being published.
+  console.log('\n  reading fixture titles — any skip warnings below are the fixtures’ own, by design');
+  const titles = await fixtureTitles();
+  // An empty list would satisfy the filter below however the build went, which
+  // is the same vacuous pass this check was just rewritten to close. Louder
+  // than a problem, because it means the check itself is broken rather than the
+  // build.
+  if (titles.length === 0) {
+    fail(
+      'no fixture notes found to check the build against. This check exists to catch the ' +
+        'gates’ staged data surviving into a deploy, and with nothing to compare it would ' +
+        'pass over any build at all.',
+    );
+  }
+
+  const shipped = new Set(library.books.map((book) => book.title));
+  const staged = titles.filter((title) => shipped.has(title));
+  if (staged.length > 0) {
+    problems.push({
+      rule: 'stale-fixtures',
+      message:
+        `fixture books are in the build — the real vault build did not run last: ${staged.slice(0, 3).join(', ')}`,
+    });
+  }
 }
 
-// `--check-only` publishes nothing, so the publication checks do not apply to
-// it — and one of them cannot even hold, since it asserts the built og:image
-// matches the current SITE_URL, which is precisely what you change to point the
-// live check at a local server and watch it fail on purpose.
-if (problems.length > 0 && !checkOnly) {
-  fail(`pre-flight found ${String(problems.length)} problem(s):\n- ${problems.join('\n- ')}`);
+/**
+ * Every book title in the fixture vault, as `library.json` would spell it.
+ *
+ * The same adapter the build uses, so the two cannot disagree about what a note
+ * is called. A malformed fixture is skipped with a warning here exactly as it
+ * is everywhere else — invariant 3 — and one fewer title to compare is a
+ * weaker check, not a broken deploy.
+ */
+async function fixtureTitles(): Promise<string[]> {
+  const vaultPath = join(ROOT, 'fixtures', 'vault');
+  if (!existsSync(vaultPath)) return [];
+  const books = await new ObsidianAdapter(vaultPath).listBooks();
+  return books.map((book) => book.title);
+}
+
+/**
+ * `--check-only` publishes nothing, so a problem is information rather than a
+ * refusal — it exists to investigate a stale edge, and a pre-flight that
+ * refuses to run would answer the question by declining to ask it.
+ *
+ * Exactly one rule is dropped rather than warned about. `share-image-origin`
+ * asserts the built page against the *current* SITE_URL, and repointing
+ * SITE_URL at a local server is precisely how you watch the live check fail on
+ * purpose — a warning everybody expects is noise. `share-image-missing` is not
+ * dropped with it: a page that lost its share tag altogether is worth saying out
+ * loud whatever mode you are in, and separating those two is the whole reason
+ * problems carry a rule.
+ */
+const applicable = checkOnly
+  ? problems.filter((problem) => problem.rule !== 'share-image-origin')
+  : problems;
+
+if (applicable.length > 0) {
+  const listed = applicable.map((problem) => `[${problem.rule}] ${problem.message}`).join('\n- ');
+  if (checkOnly) {
+    // Careful about what this claims. `--check-only` builds nothing, so this is
+    // the `dist/` sitting on *this* machine — which may be whatever `gate:public`
+    // last staged, and is not necessarily what the origin is serving.
+    console.warn(
+      `\n! the local ${DIST_LABEL} has ${String(applicable.length)} problem(s) — this is the folder ` +
+        `on disk, not what the origin is serving:\n- ${listed}`,
+    );
+  } else {
+    fail(`pre-flight found ${String(applicable.length)} problem(s):\n- ${listed}`);
+  }
 }
 
 /**

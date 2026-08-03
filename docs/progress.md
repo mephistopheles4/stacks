@@ -20,8 +20,9 @@ phone was rendering when it died — are measurements and stay exactly as they a
 
 | | |
 | --- | --- |
-| **Last green gate** | G20 — one cover-preference rule, one implementation |
-| **Now working on** | G20 — consolidating cover acquisition |
+| **Last green gate** | G21 — one cover-preference rule, one implementation, right way round |
+| **Now working on** | G21 — consolidating cover acquisition ([#26](https://github.com/mephistopheles4/stacks/issues/26)) |
+| **Queued** | [#25](https://github.com/mephistopheles4/stacks/issues/25) shelf placement · [#27](https://github.com/mephistopheles4/stacks/issues/27) a `scripts/` harness — from the same architecture review as G20 · [#29](https://github.com/mephistopheles4/stacks/issues/29) one `maybe()` helper, not six |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates`, no bypass |
 | **Blocked on** | nothing |
@@ -73,6 +74,10 @@ vacuously. OG image 24.8 KB at 1200x630. 71 tests pass.
 Both gates were made to stage their own input: they previously fought over
 `packages/site/public/library.json`, so whichever ran last decided what the
 other tested. Verified passing back to back in either order.
+
+Since G20 the rules live in `scripts/lib/public-build.ts`, and
+`deploy:site` applies the same ones to the real build rather than its own weaker
+copy. The script still owns planting the canary and building from the fixtures.
 
 ### Phase 4 evidence
 
@@ -679,7 +684,7 @@ checkout refetches, and no test path touches it, since tests inject a
 fixture-backed `HttpGet` that throws on an unmapped URL) and `artifacts/`
 (regenerable, and you want each branch's screenshot separate).
 
-## Cover acquisition — G20
+## Cover acquisition — G21
 
 Three commands each rebuilt the same four steps around `cacheCover`
 ([#26](https://github.com/mephistopheles4/stacks/issues/26)). The issue proposed
@@ -708,7 +713,7 @@ one that only serves creation. Two of three is the honest outcome.
 the difference between reporting a cover it *would* have fetched and one it never
 could, and it is the command's reporting concern, not the downloader's.
 
-G20 is structural because the failure it guards is silent — see
+G21 is structural because the failure it guards is silent — see
 [`gates.md`](./gates.md). `pnpm test` went 278 → 290.
 
 **Still open**
