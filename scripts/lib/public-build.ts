@@ -29,7 +29,7 @@
  * them absent — the same titles with opposite verdicts — and a module that is
  * handed a directory cannot know which. That check belongs to the caller that
  * knows, and it asserts build ordering rather than publishability. See
- * docs/adr/0027-one-inspector-for-the-public-build.md.
+ * docs/adr/0028-one-inspector-for-the-public-build.md.
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';

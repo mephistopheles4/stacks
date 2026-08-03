@@ -219,7 +219,7 @@ if (!checkOnly) {
 // `_headers` existed where the gate checked that `/covers/*` revalidates, and
 // it accepted a page with no `og:image` at all so long as a `twitter:image` was
 // there. Neither was a superset of the other, and neither knew the other
-// existed. See docs/adr/0027-one-inspector-for-the-public-build.md.
+// existed. See docs/adr/0028-one-inspector-for-the-public-build.md.
 interface ShippedBook {
   readonly title: string;
   readonly cover?: string;
