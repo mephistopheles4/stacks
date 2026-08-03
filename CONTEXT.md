@@ -46,6 +46,27 @@ _Avoid_: hidden, secret, draft.
 Placing a book on the shelf by hand rather than by date. Semantics are G12's.
 _Avoid_: sort key, manual order, priority.
 
+**Footprint**:
+How much shelf a book eats along the row — a single number. A face-out book has
+been turned side-on, so its footprint is the width of its cover rather than its
+own thickness, which is why row packing counts this and not thickness.
+_Avoid_: width (of what?), extent, the shape it stands on (that is **contact**).
+
+**Contact**:
+Where a book meets the plank, as a rectangle. Not the same as its **footprint**:
+a face-out book's contact is its cover's width by its own *thickness*, because
+what it puts on the wood is the same slab as any other book, seen end-on. The
+painted shadow is drawn from these.
+_Avoid_: footprint (the scalar), shadow (that is what is drawn from it), base.
+
+**Run**:
+A group of touching books sharing one slump angle, because they are resting on
+each other rather than each leaning independently. Broken by a year gap or by a
+face-out book, either of which gives whatever follows something upright to lean
+against. Giving every book its own angle is what produced wedge-shaped gaps —
+neighbours a fraction of a degree apart, touching nowhere.
+_Avoid_: group, cluster, stack (a stack is horizontal), streak.
+
 **Provenance**:
 Which of the three providers a cover's *bytes* were downloaded from — a separate
 question from which provider answered for the book's metadata. The two differ

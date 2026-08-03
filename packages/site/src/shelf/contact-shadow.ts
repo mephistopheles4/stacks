@@ -43,9 +43,17 @@ export interface CaseLight {
 }
 
 /**
- * One book's footprint on the plank it stands on, in world units.
+ * Where one book meets the plank it stands on, in world units.
+ *
+ * Not the same thing as a book's **footprint**, which is the scalar width it
+ * eats along the row — a face-out book's footprint is its cover's width, but its
+ * contact is that width by its own *thickness*, because it has been turned a
+ * quarter turn and puts the same slab on the wood as any other book, seen
+ * end-on. Taking the cover's width for both painted a shadow the size of the
+ * cover flat on the shelf. The two senses have separate names for that reason;
+ * see `CONTEXT.md`.
  */
-export interface Footprint {
+export interface Contact {
   /** Centre of the book along the shelf. */
   readonly x: number;
   /** How much of the shelf's width it occupies. */
@@ -129,7 +137,7 @@ const SIDE_SHADE_REACH = 0.28;
 const PENUMBRA = 0.05;
 
 export function makeContactShadowTexture(
-  footprints: readonly Footprint[],
+  contacts: readonly Contact[],
   shelfWidth: number,
   shelfDepth: number,
   light: CaseLight,
@@ -213,7 +221,7 @@ export function makeContactShadowTexture(
     ctx.filter = `blur(${String(blur)}px)`;
     ctx.globalAlpha = alpha;
 
-    for (const print of footprints) {
+    for (const print of contacts) {
       const x = toX(print.x + THROW_X * offset) - (print.width * scaleX) / 2;
       const y = toY(print.z + THROW_Z * offset) - (print.depth * scaleY) / 2;
       ctx.fillRect(x, y, print.width * scaleX, print.depth * scaleY);
@@ -434,13 +442,13 @@ export const LIFT = 0.0015;
  * are never occluded by it.
  */
 export function makeContactShadow(
-  footprints: readonly Footprint[],
+  contacts: readonly Contact[],
   shelfWidth: number,
   shelfDepth: number,
   y: number,
   light: CaseLight,
 ): THREE.Mesh | undefined {
-  const texture = makeContactShadowTexture(footprints, shelfWidth, shelfDepth, light);
+  const texture = makeContactShadowTexture(contacts, shelfWidth, shelfDepth, light);
   if (texture === undefined) return undefined;
 
   const mesh = new THREE.Mesh(

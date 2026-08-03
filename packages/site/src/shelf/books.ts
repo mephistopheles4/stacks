@@ -4,6 +4,7 @@ import type { LibraryBook } from '@stacks/core';
 // and sharp into the browser bundle and the shelf never boots. Types are erased
 // at compile time and so are safe from the root; values are not.
 import { compareShelfPosition, SHELVED_STATUSES } from '@stacks/core/shelf-order';
+import { hashUnit } from './hash.ts';
 
 /**
  * Turning a library into shelf rows.
@@ -166,20 +167,6 @@ function fallbackColour(id: string): string {
   return FALLBACK_COLOURS[index] ?? '#6b4f6b';
 }
 
-/** FNV-1a squashed to 0..1 — deterministic, no dependency, good enough. */
-function hashUnit(value: string): number {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return (hash >>> 8) / 0x1000000;
-}
-
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
-}
-
-export function estimateRowWidth(books: readonly ShelfBook[], gap: number): number {
-  return books.reduce((total, entry) => total + entry.footprint + (entry.gapBefore ?? 0) + gap, 0);
 }
