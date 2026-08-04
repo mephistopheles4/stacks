@@ -351,16 +351,42 @@ function readPrevious(): Snapshot | undefined {
  * that should be removable in one file. Note the `:global` gymnastics the notice
  * element needs for the opposite choice — that is the cost being avoided.
  */
+/**
+ * Bottom left, because the top left is the shelf's name.
+ *
+ * `index.astro` puts `<header>` — the title and the "drag to look around" hint —
+ * at `top: clamp(1rem, 4vw, 2.5rem); left: …`, and this used to mount on top of
+ * it. An instrument that hides the page's own name is a poor trade for a
+ * parameter you are meant to be able to leave on.
+ *
+ * Anchored to the bottom it grows *upward*, which is the right direction: the
+ * live counters stay put on the line above the fold while a long tail — a change
+ * log, a shader report, a previous session — extends away from them. The cap and
+ * the scroll matter because that tail is unbounded in practice.
+ */
 function applyPanelStyle(panel: HTMLElement): void {
   Object.assign(panel.style, {
     position: 'absolute',
-    top: '0.5rem',
+    bottom: '0.5rem',
     left: '0.5rem',
     zIndex: '10',
     margin: '0',
     padding: '0.5rem 0.6rem',
-    maxWidth: 'calc(100vw - 1rem)',
-    overflowX: 'auto',
+    // Narrower than the viewport on purpose. The GPU string is long enough to
+    // reach the book card at the other corner, and a record you cannot read
+    // beside a card you cannot read is worse than either alone.
+    maxWidth: 'min(30rem, calc(100vw - 1rem))',
+    /**
+     * Stops short of the header rather than merely short of the viewport.
+     *
+     * A full record — a dead session, a change log, a shader report and a couple
+     * of errors — is around 830px, which on a phone is taller than the room
+     * between the bottom of the screen and the title. Capping at the viewport
+     * would keep it on-screen and still cover the name, which is the thing this
+     * move was for. The reserve clears `header` at its largest clamp plus a gap.
+     */
+    maxHeight: 'calc(100vh - 6.5rem)',
+    overflow: 'auto',
     borderRadius: '0.4rem',
     background: 'rgba(10, 8, 7, 0.82)',
     color: '#9ff0b4',
