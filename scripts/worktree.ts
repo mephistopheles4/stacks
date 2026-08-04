@@ -51,6 +51,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { mainCheckout } from '../packages/cli/src/env.ts';
+import { runExe, runShell } from './lib/run.ts';
 
 /**
  * What may appear in a branch name here.
@@ -70,15 +71,20 @@ function fail(message: string): never {
 /**
  * git, with its arguments passed as arguments.
  *
- * Deliberately not `shell: true`: a branch name reaches this, and under a shell
- * an args array is concatenated rather than escaped — Node warns about exactly
- * that (DEP0190). `BRANCH` above already rejects the characters that would
- * matter, but a validation regex and a shell are two chances to be wrong where
- * no shell is one. git is a real executable on every platform, so it needs none.
+ * `runExe` and never `runShell`, because a branch name reaches this one — see
+ * ADR-0030 for why the two exist. `BRANCH` above already rejects the characters
+ * that would matter, but a validation regex and a shell are two chances to be
+ * wrong where no shell is one.
+ *
+ * The catch is only presentation: this script reports its own failures rather
+ * than throwing a stack trace at someone who asked for a checkout.
  */
 function git(args: readonly string[], cwd: string): void {
-  const result = spawnSync('git', [...args], { cwd, stdio: 'inherit' });
-  if (result.status !== 0) fail(`\ngit ${args.join(' ')} exited ${String(result.status)}`);
+  try {
+    runExe('git', args, cwd);
+  } catch (error) {
+    fail(`\n${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 /** Whether a local branch of this name already exists. */
@@ -301,12 +307,16 @@ if (existing) {
 console.log('');
 git(addArgs, main);
 
-console.log('\nInstalling dependencies…\n');
-// One constant string rather than an args array, because pnpm is a `.cmd` shim
-// on Windows and cannot be spawned without a shell. Nothing variable goes on
-// this command line; the path it runs in travels as `cwd`.
-const install = spawnSync('pnpm install', { cwd: target, shell: true, stdio: 'inherit' });
-if (install.status !== 0) fail(`\npnpm install exited ${String(install.status)}`);
+console.log('\nInstalling dependencies…');
+// `runShell` because pnpm is a `.cmd` shim and needs one. Nothing variable goes
+// on this command line; the path it runs in travels as `cwd`, not as an
+// argument — which is the whole reason this may take a shell where `git` above
+// may not.
+try {
+  runShell('pnpm', ['install'], { cwd: target });
+} catch (error) {
+  fail(`\n${error instanceof Error ? error.message : String(error)}`);
+}
 
 // A new worktree never has its own `.env` — it is gitignored and was created a
 // second ago — so the one it will read is always the main checkout's. Said out

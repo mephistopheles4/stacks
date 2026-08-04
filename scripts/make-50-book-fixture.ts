@@ -10,12 +10,11 @@
  * Output: fixtures/vault-50/ (gitignored)
  */
 import { mkdirSync, rmSync, writeFileSync, copyFileSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { REPO_ROOT } from './lib/repo-root.ts';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const SOURCE_COVERS = join(ROOT, 'fixtures', 'vault', 'Library', 'covers');
-const OUT = join(ROOT, 'fixtures', 'vault-50');
+const SOURCE_COVERS = join(REPO_ROOT, 'fixtures', 'vault', 'Library', 'covers');
+const OUT = join(REPO_ROOT, 'fixtures', 'vault-50');
 const OUT_LIBRARY = join(OUT, 'Library');
 const OUT_COVERS = join(OUT_LIBRARY, 'covers');
 

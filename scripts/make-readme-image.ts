@@ -25,8 +25,8 @@
 import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { REPO_ROOT } from './lib/repo-root.ts';
 
-const REPO_ROOT = join(import.meta.dirname, '..');
 const SOURCE = join(REPO_ROOT, 'artifacts', 'shelf.png');
 const TARGET = join(REPO_ROOT, 'docs', 'images', 'shelf.png');
 

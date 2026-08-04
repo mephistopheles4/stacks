@@ -184,6 +184,7 @@ paragraph can be; nothing here goes red on it.)
 | **G21** | no test makes a live network call | `gates/no-live-network.ts` + `gates/no-live-network.setup.ts`, specced by `gates/no-live-network.test.ts` | ✅ |
 | **G22** | one cover-preference rule, one implementation, right way round | `gates/cover-candidates.test.ts` + `packages/core/src/covers/cache-cover.test.ts` | ✅ |
 | **G23** | one absent-key helper, one implementation, under any name | `gates/key-if-present.test.ts` + `packages/core/src/key-if-present.test.ts` | ✅ |
+| **G24** | one repo root, one derivation | `gates/repo-root.test.ts` | ✅ |
 
 **G21 is the first row here written for a rule that two files already claimed
 was true.** `CLAUDE.md`'s Phase 1 gate says "use cached API fixtures, no live
@@ -687,6 +688,54 @@ callers build their changes from literals or guarded assignment, and none of the
 removal at all, since its accumulator is typed `Record<string, string | number>`
 and needs a cast to widen. Gating a hazard nothing can currently reach would be
 a rule nothing can fail on, which is what this file is against.
+
+**G24 is the fourth "one rule, one implementation" row**, after G10, G22 and
+G23, and the first whose *stated benefit turned out to be false*. That is the
+part worth keeping.
+
+The issue that produced it argued two things. The first was real: eight scripts
+each worked out where the repo starts, in four spellings, and the `.cmd`-shim /
+DEP0190 comment had been written three times. The second was that a shared
+harness would shrink the surface G1's allowlist has to cover — offered as "the
+second-order benefit and probably the more durable one".
+
+**It is not a benefit at all, and this file had already recorded the
+experiment.** G1 allowlists files that import `fs`. Of the three things proposed
+for the harness, only `walk` touched `fs` — and `walk` had already been
+extracted, which *grew* the allowlist by one: `scripts/lib/walk.ts` earned an
+entry while `check-public-build.ts` kept its own, still needing `readFileSync`.
+`REPO_ROOT` is `node:path` and `run` is `node:child_process`; neither can ever
+appear on that list. The consolidation shipped here changes G1's allowlist by
+exactly nothing.
+
+The general form: **a duplication argument that reaches for a second, indirect
+benefit is usually reaching because the first one felt too small.** The first
+one was enough. What the sweep did find is better than the claim it replaced —
+`dev-watch.ts` and `smoke-render.ts` were both passing an args array alongside
+`shell: true`, the exact shape the two scripts with the comment wrote a
+paragraph each about avoiding. So the platform knowledge was not duplicated and
+agreeing; it was written in three places and *absent from the two that also
+needed it*, which is the strongest available argument for one home and is not
+the argument the issue made.
+
+**The gate can anchor on a name where G23 could not**, and the reason is
+structural rather than lucky: a module cannot reach its own location without
+`import.meta`, so `import.meta.(url|dirname|filename)` catches every spelling
+including the `new URL('..', import.meta.url)` form nobody here has written yet.
+G23 had to match a returned *shape* because its helper had three names; this one
+has no name to hide behind.
+
+**One owner rather than a directory**, on G1's own argument against
+directory-level permissions: `scripts/lib/` holds three other shared files and
+none of them has any business deriving a root either. A permission granted to a
+folder collects whatever later lands in it.
+
+**Observed red** on the sweep by restoring `join(dirname(fileURLToPath(
+import.meta.url)), '..')` in `smoke-render.ts`, and on the control by pointing
+`OWNER` at a file that derives nothing. **And G19 caught the missing scoreboard
+row before any of it was committed** — the new gate file existed, no row named
+it, and the build went red on the row above this one. That is the third time a
+gate has caught the paperwork for a change that was not about it.
 
 ## G2 in full — the public build gate
 

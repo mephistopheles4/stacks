@@ -14,12 +14,12 @@
 import { spawn } from 'node:child_process';
 import { createServer, type Server } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import puppeteer, { type Page } from 'puppeteer-core';
+import { REPO_ROOT } from './lib/repo-root.ts';
+import { shellCommand } from './lib/run.ts';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const ARTIFACTS = join(ROOT, 'artifacts');
+const ARTIFACTS = join(REPO_ROOT, 'artifacts');
 const OUTPUT = join(ARTIFACTS, 'shelf.png');
 
 const VIEWPORT = { width: 1440, height: 900 };
@@ -30,7 +30,7 @@ const VIEWPORT = { width: 1440, height: 900 };
  * shelved — you do not own them yet.
  */
 function expectedBookCount(): number {
-  const path = join(ROOT, 'packages', 'site', 'public', 'library.json');
+  const path = join(REPO_ROOT, 'packages', 'site', 'public', 'library.json');
   const library = JSON.parse(readFileSync(path, 'utf8')) as {
     books: { status: string }[];
   };
@@ -307,7 +307,13 @@ function report(result: {
  */
 function run(command: string, args: readonly string[]): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    const child = spawn(command, [...args], { cwd: ROOT, shell: true, stdio: 'inherit' });
+    // `shellCommand`, not an args array: this spawns `pnpm`, which needs a shell
+    // on Windows, and an array alongside one is DEP0190.
+    const child = spawn(shellCommand(command, args), {
+      cwd: REPO_ROOT,
+      shell: true,
+      stdio: 'inherit',
+    });
     child.on('error', reject);
     child.on('exit', (code) =>
       code === 0 ? resolve() : reject(new Error(`${command} exited ${String(code)}`)),
@@ -365,7 +371,7 @@ const CONTENT_TYPES: Record<string, string> = {
  * to agree on it.
  */
 function serveDist(): Promise<{ server: Server; origin: string }> {
-  const root = join(ROOT, 'packages', 'site', 'dist');
+  const root = join(REPO_ROOT, 'packages', 'site', 'dist');
 
   const server = createServer((request, response) => {
     const path = decodeURIComponent((request.url ?? '/').split('?')[0] ?? '/');

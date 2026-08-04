@@ -15,8 +15,8 @@
  */
 import { deflateSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { REPO_ROOT } from './lib/repo-root.ts';
 
 const WIDTH = 200;
 const HEIGHT = 300;
@@ -137,14 +137,7 @@ function encodePng(width: number, height: number, pixel: (x: number, y: number) 
 
 // Mirrors the real vault layout: notes in Library/, covers cached in Library/covers/,
 // so a note's `cover:` value stays relative to the note itself.
-const outDir = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  'fixtures',
-  'vault',
-  'Library',
-  'covers',
-);
+const outDir = join(REPO_ROOT, 'fixtures', 'vault', 'Library', 'covers');
 mkdirSync(outDir, { recursive: true });
 
 
