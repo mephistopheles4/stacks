@@ -236,7 +236,7 @@ export function leansInPlace(entry: ShelfBook): boolean {
  * How much shelf a book costs, placed after `previous`.
  *
  * **The packer charges this and the cursor spends it**, which is the whole of
- * G25. They were different sums for as long as both existed: `toRows` charged
+ * G24. They were different sums for as long as both existed: `toRows` charged
  * one `bookGap` a book against the cursor's `TOUCHING` or `bookGap * 2`, which
  * came to 0.162 across a twenty-seven book row, and budgeted nothing at all for
  * the clearance a change of angle costs.
@@ -248,7 +248,7 @@ export function leansInPlace(entry: ShelfBook): boolean {
  * `MAX_LEAN` because the real lean comes from `leanFor`, which needs the row
  * index, which is not known until the wrap this figure decides has happened. So
  * the packer is conservative by at most one maximal swing per angle change —
- * named and pinned by G25 rather than left to be discovered.
+ * named and pinned by G24 rather than left to be discovered.
  */
 export function shelfCost(entry: ShelfBook, previous: ShelfBook | undefined): number {
   // `footprint` is already "how wide is this book, placed"; only the gap after it
@@ -269,6 +269,19 @@ export function shelfCost(entry: ShelfBook, previous: ShelfBook | undefined): nu
         );
 
   return (entry.gapBefore ?? 0) + occupies + clearance;
+}
+
+/**
+ * What a whole row costs the shelf.
+ *
+ * `toRows` cannot call this — it is deciding the row a book at a time and needs
+ * the running total to know whether the next one fits — but everything asking
+ * *afterwards* what a finished row cost should ask here rather than write the
+ * fold again. Two copies of it appeared within one commit of the fold being
+ * consolidated, which is the same species of drift as the three widths.
+ */
+export function rowCost(books: readonly ShelfBook[]): number {
+  return books.reduce((total, entry, index) => total + shelfCost(entry, books[index - 1]), 0);
 }
 
 /**

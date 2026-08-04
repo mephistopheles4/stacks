@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
-import { MAX_HEIGHT, toRows, type ShelfRow } from './books.ts';
+import { MAX_HEIGHT, toRows, YEAR_GAP, yearOf, type ShelfRow } from './books.ts';
 import { SHELF, USABLE_WIDTH } from './case.ts';
 import {
   leansInPlace,
   MAX_LEAN,
   placeShelf,
+  rowCost,
   shelfCost,
   swayOf,
   TOUCHING,
@@ -87,7 +88,7 @@ const LIBRARIES: Record<string, LibraryBook[]> = {
 
 /** What the packer charged for a row. The placer is not consulted. */
 function charged(row: ShelfRow): number {
-  return row.books.reduce((total, entry, index) => total + shelfCost(entry, row.books[index - 1]), 0);
+  return rowCost(row.books);
 }
 
 /**
@@ -192,16 +193,42 @@ describe('the packer honours its own capacity', () => {
   it.each(CASES)('packs every row tight — one more book would not have fitted — %s', (_name, library) => {
     const rows = toRows(library);
 
+    if (rows.length === 1) {
+      // Said rather than skipped. A single-row library has no wrap to check, and
+      // a loop that silently never runs reports the same green as one that did.
+      expect(library.length).toBe(1);
+      return;
+    }
+
+    let checked = 0;
     for (let index = 0; index < rows.length - 1; index += 1) {
       const row = rows[index];
       const next = rows[index + 1]?.books[0];
       if (row === undefined || next === undefined) continue;
-      // The next row's first book carries no gap; appended here it might gain
-      // one, which only makes it wider. So if the ungapped version already does
-      // not fit, neither does the real one.
-      const wouldBe = charged(row) + shelfCost(next, row.books[row.books.length - 1]);
-      expect(wouldBe).toBeGreaterThan(USABLE_WIDTH);
+
+      const last = row.books[row.books.length - 1];
+      if (last === undefined) continue;
+
+      // Priced as the packer priced it, and compared against the capacity rather
+      // than against the packer.
+      //
+      // Both halves of that were got wrong once. Costing the candidate *without*
+      // its year gap asserts something stronger than the packer promises — the
+      // book `toRows` turned away was carrying YEAR_GAP and the clearance an
+      // upright book pays, and the same book at the head of the next row carries
+      // neither. It passed here by 0.02 where the guarantee allows 0.09, so a
+      // slightly thinner book turns a correct packer red.
+      //
+      // And re-running `toRows` on the row plus one more book fixes the pricing
+      // by making the assertion vacuous: the same function that made the decision
+      // cannot be the judge of it. That version passed with the packer mutated to
+      // wrap at nine tenths of the shelf.
+      const isYearChange = yearOf(next.book) !== yearOf(last.book);
+      const rejected = isYearChange ? { ...next, gapBefore: YEAR_GAP } : next;
+      expect(charged(row) + shelfCost(rejected, last)).toBeGreaterThan(USABLE_WIDTH);
+      checked += 1;
     }
+    expect(checked).toBe(rows.length - 1);
   });
 });
 

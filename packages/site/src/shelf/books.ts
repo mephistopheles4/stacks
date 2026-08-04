@@ -133,10 +133,22 @@ export function toRows(books: readonly LibraryBook[]): ShelfRow[] {
   return rows;
 }
 
-/** A visible break where a bookend would sit. */
-const YEAR_GAP = 0.09;
+/**
+ * A visible break where a bookend would sit.
+ *
+ * Exported for G24, which has to price the book the packer turned away exactly
+ * as the packer priced it. A test that charges the gap differently asserts
+ * something the packer never promised.
+ */
+export const YEAR_GAP = 0.09;
 
-function yearOf(book: LibraryBook): string {
+/**
+ * Which row-group a book belongs to.
+ *
+ * A book you are reading gets its own year rather than the year it will be
+ * finished, so the in-progress shelf is always its own group.
+ */
+export function yearOf(book: LibraryBook): string {
   if (book.status === 'reading') return 'reading';
   return book.finished?.slice(0, 4) ?? 'undated';
 }

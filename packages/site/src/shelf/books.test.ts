@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
 import { toRows } from './books.ts';
 import { USABLE_WIDTH } from './case.ts';
-import { shelfCost } from './placement.ts';
+import { rowCost } from './placement.ts';
 
 /**
  * Packing a library into rows. Pure since it was written, untested until the
@@ -52,13 +52,9 @@ describe('toRows', () => {
 
     expect(rows.length).toBeGreaterThan(1);
     for (const row of rows) {
-      const used = row.books.reduce(
-        (total, entry, index) => total + shelfCost(entry, row.books[index - 1]),
-        0,
-      );
       // One book always fits, however wide: a row is only wrapped when it
       // already holds something.
-      if (row.books.length > 1) expect(used).toBeLessThanOrEqual(USABLE_WIDTH);
+      if (row.books.length > 1) expect(rowCost(row.books)).toBeLessThanOrEqual(USABLE_WIDTH);
     }
   });
 

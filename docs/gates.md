@@ -776,6 +776,42 @@ every book, so the excess is bounded too — at most one maximal swing per angle
 change. Naming the slop is what stops the row from recording the disagreement
 instead of closing it.
 
+**The row names two files, and the second one nearly re-introduced the defect.**
+`books.test.ts` asserts the capacity rule from the packer's side and wrote the
+fold over `shelfCost` out by hand to do it — a second copy of the sum, inside
+the commit whose entire subject is that this sum had five copies. It is
+`rowCost` now, stated once in `placement.ts` and called from both. Naming both
+files here is the other half: an assertion this row depends on, sitting in a
+file the scoreboard did not point at, is one that can be weakened without
+anything noticing — which is the failure mode at the top of this file, not a
+tidiness complaint.
+
+**One assertion here was wrong twice, in opposite directions, and the second
+version passed everything.** "One more book would not have fitted" first priced
+the candidate *without* its year gap — but `toRows` turned that book away
+carrying `YEAR_GAP` and the clearance an upright book pays, so the assertion was
+stronger than anything the packer promises. It passed by 0.02 where the
+guarantee allows 0.09: green today, red on a correct packer the day a book gets
+thinner.
+
+The fix for that was worse. Handing the row's books back to `toRows` with one
+more appended, and requiring two rows, prices the candidate perfectly — because
+it asks the same function that made the decision. **It passed with the packer
+mutated to wrap at nine tenths of the shelf.** A deterministic function always
+agrees with itself, so the assertion could not fail for any packing rule
+whatever, and nothing about it looked vacuous: it named a real invariant, ran on
+every fixture, and reported green.
+
+What works is pricing the candidate from the packer's own exported rules —
+`yearOf`, `YEAR_GAP`, `shelfCost` — and comparing against `USABLE_WIDTH`, which
+the packer does not get a vote on. That catches a wrap 0.15 early, where the
+first version would have been caught by nothing and the second by less.
+
+The lesson is the one this file keeps relearning from a new angle: **a gate must
+compare against something the code under test cannot move.** G21's version was a
+guard whose throw got swallowed by a `catch`; this one was an assertion whose
+judge was the defendant.
+
 **Observed red, eight ways**, each a mutation of the line it covers: dropping
 the clearance charge, inflating it forty-fold, adding a hair to every book's
 cost, packing past `USABLE_WIDTH`, wrapping early, starting the cursor clear of
