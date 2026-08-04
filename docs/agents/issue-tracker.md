@@ -18,6 +18,35 @@ installed. They are not a requirement for contributing** — see
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
 
+## Wayfinding operations
+
+How the `/wayfinder` map shape maps onto GitHub. Both relationships below are
+**native** — they render in GitHub's own UI, so the frontier is visible without
+opening the map.
+
+- **The map** is an issue labelled `wayfinder:map`. Tickets are its **sub-issues**,
+  each additionally labelled `wayfinder:research` / `prototype` / `grilling` / `task`.
+- **Create a ticket under a map**: `gh issue create --parent <map> --label "wayfinder:<type>" --title "..." --body-file <file>`.
+  Use `--body-file`, not `--body` — prose bodies contain apostrophes and
+  backticks that break shell quoting.
+- **Claim a ticket**: `gh issue edit <n> --add-assignee <login>` **before** any
+  work. An open, unassigned ticket is unclaimed; that assignment is the lock
+  against a concurrent session picking it up.
+- **Blocking** uses GitHub's issue-dependencies API, which `gh` has no flag for:
+
+  ```
+  gh api --method POST repos/{owner}/{repo}/issues/<blocked>/dependencies/blocked_by -F issue_id=<id>
+  ```
+
+  `issue_id` is the blocker's **REST id**, not its number — get it with
+  `gh api repos/{owner}/{repo}/issues/<n> --jq .id`.
+- **Read what blocks a ticket**: `gh api repos/{owner}/{repo}/issues/<n>/dependencies/blocked_by --jq '[.[].number]'`.
+- **The frontier** — open, unblocked, unclaimed children of a map: list the
+  map's sub-issues, drop any with a non-empty `blocked_by`, drop any with an
+  assignee.
+- **Resolve** a ticket: post the answer as a comment, `gh issue close`, then add
+  a one-line pointer to the map's *Decisions so far*.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external

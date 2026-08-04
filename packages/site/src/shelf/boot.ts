@@ -1,6 +1,7 @@
 import type { Library, LibraryBook } from '@stacks/core';
 import { mountDiagnostics } from './diagnostics.ts';
-import { mountShelf, type RendererOverrides, type ShelfHandle } from './scene.ts';
+import { mountShelf, toSettingsPatch, type RendererOverrides, type ShelfHandle } from './scene.ts';
+import { resolveSettings } from './shelf-settings.ts';
 
 /**
  * Wires the page up: load the library, mount the shelf, show a card on click.
@@ -47,7 +48,9 @@ export async function boot(
 
   try {
     handle = mountShelf(canvas, books, {
-      renderer: rendererOverrides(params),
+      // URL vocabulary → settings vocabulary → the total object the shelf runs.
+      // The two spellings are kept apart deliberately; see `toSettingsPatch`.
+      settings: resolveSettings(toSettingsPatch(rendererOverrides(params))),
       onSelect: (book) => {
         if (book === undefined) hideCard(card);
         else showCard(card, book);
