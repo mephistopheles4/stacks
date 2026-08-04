@@ -81,10 +81,7 @@ export function placeShelf(rows: readonly ShelfRow[]): Placement[][] {
      * produced the wedge-shaped gaps: neighbours a fraction of a degree apart,
      * touching nowhere.
      */
-    let runLean = Math.min(
-      leanFor(rowIndex, index, row.books[0]?.book.id ?? ''),
-      leanThatFits(row),
-    );
+    let runLean = leanFor(rowIndex, index, row.books[0]?.book.id ?? '');
     let startsRun = true;
 
     /**
@@ -111,7 +108,7 @@ export function placeShelf(rows: readonly ShelfRow[]): Placement[][] {
       // the case's own side holds it.
       if (gap > 0) {
         startsRun = true;
-        runLean = Math.min(leanFor(rowIndex, index, entry.book.id), leanThatFits(row));
+        runLean = leanFor(rowIndex, index, entry.book.id);
       }
 
       // A face-out book stands square; a shelved one leans unless it opens a run
@@ -220,42 +217,58 @@ export function swayOf(height: number, lean: number): number {
 }
 
 /**
- * The steepest lean whose clearances still fit inside the shelf.
+ * Whether a book leans where it sits.
  *
- * `toRows` packs a row without knowing anything about leaning, so every
- * clearance added afterwards is width the packer never budgeted for. A row with
- * several face-out books changes angle at each one, and at ~0.03 a time that is
- * enough to push the last book through the right-hand upright — a worse defect
- * than the one being fixed, and one that would only show on a full shelf.
+ * The cursor's own rule, exported so the packer can read it rather than keep a
+ * copy: a face-out book stands square, and so does the book carrying a year gap,
+ * which has open shelf on its left and nothing to rest against. Everything else
+ * leans with its run.
  *
- * So the lean is capped to what the row's own slack can pay for. Rows with room
- * are unaffected; a tightly packed row leans less, which is also what a tightly
- * packed shelf does.
+ * A row's first book is not a gap case — `toRows` only sets `gapBefore` on a
+ * book that something precedes, so the first book of a row never carries one and
+ * leans against the case's own side.
  */
-export function leanThatFits(row: ShelfRow): number {
-  let used = 0;
-  let changes = 0;
-  let tallest = 0;
-  // The case's side is vertical, so a leaning first book is already a change.
-  let leftLeans = false;
+export function leansInPlace(entry: ShelfBook): boolean {
+  return !entry.faceOut && (entry.gapBefore ?? 0) === 0;
+}
 
-  for (const entry of row.books) {
-    used += entry.gapBefore ?? 0;
-    used += entry.faceOut
-      ? entry.coverWidth + SHELF.bookGap * 2
-      : entry.thickness + TOUCHING;
-    tallest = Math.max(tallest, entry.height);
+/**
+ * How much shelf a book costs, placed after `previous`.
+ *
+ * **The packer charges this and the cursor spends it**, which is the whole of
+ * G25. They were different sums for as long as both existed: `toRows` charged
+ * one `bookGap` a book against the cursor's `TOUCHING` or `bookGap * 2`, which
+ * came to 0.162 across a twenty-seven book row, and budgeted nothing at all for
+ * the clearance a change of angle costs.
+ *
+ * `previous` is `undefined` for the first book of a row, where the case's own
+ * side stands in — vertical, and swinging not at all.
+ *
+ * **It is an upper bound, not the exact spend.** The swing is charged at
+ * `MAX_LEAN` because the real lean comes from `leanFor`, which needs the row
+ * index, which is not known until the wrap this figure decides has happened. So
+ * the packer is conservative by at most one maximal swing per angle change —
+ * named and pinned by G25 rather than left to be discovered.
+ */
+export function shelfCost(entry: ShelfBook, previous: ShelfBook | undefined): number {
+  // `footprint` is already "how wide is this book, placed"; only the gap after it
+  // differs, and it differs because a face-out book is a broad flat thing that
+  // needs air either side while a run of spines is meant to touch.
+  const occupies = entry.footprint + (entry.faceOut ? SHELF.bookGap * 2 : TOUCHING);
 
-    const leans = !entry.faceOut;
-    if (leans !== leftLeans) changes += 1;
-    leftLeans = leans;
-  }
+  // Clearance wherever the angle changes, and only there — the cursor's rule,
+  // with the actual lean replaced by the steepest one allowed.
+  const leans = leansInPlace(entry);
+  const leftLeans = previous !== undefined && leansInPlace(previous);
+  const clearance =
+    leans === leftLeans
+      ? 0
+      : Math.max(
+          leans ? swayOf(entry.height, MAX_LEAN) : 0,
+          previous !== undefined && leftLeans ? swayOf(previous.height, MAX_LEAN) : 0,
+        );
 
-  if (changes === 0 || tallest === 0) return MAX_LEAN;
-
-  const slack = Math.max(0, SHELF.width - used);
-  // Inverting swayOf: the largest angle whose per-change swing the slack covers.
-  return Math.asin(Math.min(1, (2 * (slack / changes)) / tallest));
+  return (entry.gapBefore ?? 0) + occupies + clearance;
 }
 
 /**

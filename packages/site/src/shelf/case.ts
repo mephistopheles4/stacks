@@ -27,9 +27,37 @@ export const SHELF = {
   bookGap: 0.008,
   /** Books sit slightly forward of the backboard, as they do in life. */
   bookDepth: 0.52,
-  /** Breathing room at each end of a shelf. */
-  padding: 0.06,
+  /**
+   * How far short of the right-hand upright a row stops.
+   *
+   * At one end, not both, and that asymmetry is the point: books stand *against*
+   * the left upright and run right, as a shelf fills, so the left end has no
+   * breathing room by design — a book that leans left and starts a finger's
+   * width clear of the side is leaning on nothing.
+   *
+   * It was `padding: 0.06`, doubled and subtracted along with a separate
+   * `LEAN_ALLOWANCE` to make a capacity that only `scene.ts` knew. The comment
+   * said "at each end" and the placement cursor had been contradicting it for as
+   * long as both existed. See ADR-0031.
+   *
+   * **It also pays for the last book's own lean.** Clearance is charged to the
+   * left of the book that leans, where the angle changes; the last book of a row
+   * has nothing on its right to charge, so this is what its swing swings into.
+   * That was `LEAN_ALLOWANCE`'s job and it is now this one's — pinned by G25,
+   * which holds it at or above `swayOf(MAX_HEIGHT, MAX_LEAN)`.
+   */
+  endReserve: 0.06,
 } as const;
+
+/**
+ * How much of a shelf books may actually occupy.
+ *
+ * **The one answer to "how wide is a shelf".** `toRows` packs into this; the
+ * placement cursor runs from `-SHELF.width / 2`, which is the left inner face
+ * and where this band begins. Three different answers to that question were live
+ * at once until ADR-0031, and nothing compared them.
+ */
+export const USABLE_WIDTH = SHELF.width - SHELF.endReserve;
 
 /**
  * The case grows with the library, always keeping one empty shelf ahead.
@@ -40,15 +68,6 @@ export const SHELF = {
  * and the shelf honest — there is always somewhere for the next book to go.
  */
 const MIN_ROWS = 2;
-
-/**
- * Slack kept at the end of every row.
- *
- * A leaning book is wider than an upright one: tilting a 0.95-tall board by
- * 0.062rad pushes its lower corner about 0.03 further out. Without this the last
- * book on a full shelf leans straight through the side of the case.
- */
-export const LEAN_ALLOWANCE = 0.05;
 
 export function rowsForCase(usedRows: number): number {
   return Math.max(usedRows + 1, MIN_ROWS);

@@ -20,9 +20,9 @@ phone was rendering when it died — are measurements and stay exactly as they a
 
 | | |
 | --- | --- |
-| **Last green gate** | G24 — one repo root, one derivation |
-| **Now working on** | G24 — a shared harness for `scripts/` ([#27](https://github.com/mephistopheles4/stacks/issues/27)) |
-| **Queued** | [#36](https://github.com/mephistopheles4/stacks/issues/36) the shelf's three disagreeing widths |
+| **Last green gate** | G25 — the packer's capacity and the placer's consumption are one number |
+| **Now working on** | G25 — three live answers to "how wide is a shelf", and it was five ([#36](https://github.com/mephistopheles4/stacks/issues/36)) |
+| **Queued** | nothing filed |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates`, no bypass |
 | **Blocked on** | nothing |
@@ -859,14 +859,32 @@ and each was a fixture that never reached the case it named:
 
 All seventeen were then observed red by mutating the line each covers.
 
-**Still open, filed separately: three live answers to "how wide is a shelf".**
-`toRows` is given `SHELF.width - padding * 2 - LEAN_ALLOWANCE`, the placement
-cursor runs flush from `-SHELF.width / 2` with no padding at all, and
-`leanThatFits` measures slack against the full width. They disagree and nothing
-compares them. Left alone deliberately — reconciling them is a behaviour change
-and this was not one — and filed as
-[#36](https://github.com/mephistopheles4/stacks/issues/36), which is a far better
-issue now that `Placement[][]` can be asserted without a GPU.
+**Settled since, as [#36](https://github.com/mephistopheles4/stacks/issues/36):
+three live answers to "how wide is a shelf", and it turned out to be five.**
+`case.ts` states `USABLE_WIDTH` and `toRows` packs into it; the cursor still runs
+flush from `-SHELF.width / 2`, which is where that band begins; `leanThatFits` is
+deleted. See [ADR-0031](adr/0031-one-usable-width.md) and G25.
+
+The two answers nobody had filed were the larger ones. The packer charged
+`footprint + 0.008` a book where the cursor spends `+ 0.002` shelved or `+ 0.016`
+face-out — **0.162 across a twenty-seven book row**, as much as the entire
+`padding * 2 + LEAN_ALLOWANCE` the issue was about. And `leanThatFits` counted
+angle changes by `faceOut` transitions alone, blind to the upright book after a
+year gap that the cursor pays clearance for — latent, because measured across a
+120-book library it returned 0.72, 1.26, 1.12 and 1.00 radians against a
+`MAX_LEAN` of 0.062. It had never once bound.
+
+**The measurement is the part worth keeping.** A full row was leaving 0.374 of
+bare wood at its right end, which decomposes as 0.17 of declared reserve, 0.162
+of that charging error, ~0.10 of wrap granularity, less ~0.06 of clearance —
+only the first of the four on purpose. Rows now hold 27–30 books against the ~30
+`CLAUDE.md` says the case was built to, and G16 reports `case overflow 0.0012`
+before and after, which is `SKIN` and not slop.
+
+**Deleting `leanThatFits` moved its bug rather than removing it.** The packer is
+now the only thing budgeting clearances, so its change count has to include
+year-gap uprights or containment stops holding. That is `leansInPlace`, exported
+from `placement.ts` and read by the packer instead of copied.
 
 ## Notes to the next session
 

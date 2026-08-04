@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
 import { toRows, type ShelfRow } from './books.ts';
-import { LEAN_ALLOWANCE, SHELF } from './case.ts';
+import { SHELF } from './case.ts';
 import { placeShelf, swayOf, TOUCHING } from './placement.ts';
 
 /**
@@ -26,11 +26,17 @@ function book(id: string, over: Partial<LibraryBook> = {}): LibraryBook {
   };
 }
 
-/** The capacity `scene.ts` passes, so rows wrap where they really wrap. */
-const CAPACITY = SHELF.width - SHELF.padding * 2 - LEAN_ALLOWANCE;
-
+/**
+ * Rows the way the site makes them.
+ *
+ * This used to rebuild `scene.ts`'s capacity by hand, above a comment claiming
+ * that made rows "wrap where they really wrap" — a promise it could not keep,
+ * being a fourth copy of a formula that already had three disagreeing versions,
+ * sitting in the one place that is supposed to be watching. `toRows` imports the
+ * case now, for ADR-0029's reason and by ADR-0031.
+ */
 function rowsOf(books: readonly LibraryBook[]): ShelfRow[] {
-  return toRows(books, CAPACITY, SHELF.bookGap);
+  return toRows(books);
 }
 
 interface Placed {

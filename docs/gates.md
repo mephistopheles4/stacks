@@ -152,9 +152,9 @@ uniqueness-and-no-gaps rule as these row numbers, which they were not before.
 Rows that exist because a specific defect got through — except **G17, G18 and
 G22**, written for defects that had not happened (G17 because the change it
 shipped with made one reachable, G18 because somebody outside the project
-looked, G22 because a rule was copied a third time), and G20 and G23, which
-exist because one rule had several implementations. Each was written to fail
-first.
+looked, G22 because a rule was copied a third time), and G20, G23, G24 and G25,
+which exist because one rule had several implementations. Each was written to
+fail first.
 
 (That sentence read "except the last" until G21 was appended, which would have
 made it name the wrong row. It had already been wrong once: "the last" meant G17
@@ -185,6 +185,7 @@ paragraph can be; nothing here goes red on it.)
 | **G22** | one cover-preference rule, one implementation, right way round | `gates/cover-candidates.test.ts` + `packages/core/src/covers/cache-cover.test.ts` | ✅ |
 | **G23** | one absent-key helper, one implementation, under any name | `gates/key-if-present.test.ts` + `packages/core/src/key-if-present.test.ts` | ✅ |
 | **G24** | one repo root, one derivation | `gates/repo-root.test.ts` | ✅ |
+| **G25** | the packer's capacity and the placer's consumption are one number | `packages/site/src/shelf/shelf-width.test.ts` + `packages/site/src/shelf/books.test.ts` | ✅ |
 
 **G21 is the first row here written for a rule that two files already claimed
 was true.** `CLAUDE.md`'s Phase 1 gate says "use cached API fixtures, no live
@@ -736,6 +737,68 @@ import.meta.url)), '..')` in `smoke-render.ts`, and on the control by pointing
 row before any of it was committed** — the new gate file existed, no row named
 it, and the build went red on the row above this one. That is the third time a
 gate has caught the paperwork for a change that was not about it.
+
+## G25 — one usable width
+
+**The most-copied rule in this file's history had five copies, not three.** The
+issue that produced this row named three answers to "how wide is a shelf":
+`toRows` packed into `SHELF.width - padding * 2 - LEAN_ALLOWANCE`, the placement
+cursor ran flush from `-SHELF.width / 2`, and `leanThatFits` measured slack
+against the full width. Settling it found two more, and both were bigger than
+the argument:
+
+- **the packer charged `footprint + 0.008` a book** where the cursor spends
+  `+ 0.002` shelved or `+ 0.016` face-out. Across a twenty-seven book row that
+  is **0.162** — as much as the whole `padding * 2 + LEAN_ALLOWANCE` reserve the
+  issue was about, and nobody had noticed it at all.
+- **`leanThatFits` counted angle changes by `faceOut` alone**, blind to the
+  upright book after a year gap that the cursor pays clearance for. Latent,
+  because it never bound: measured across a 120-book library it returned 0.72,
+  1.26, 1.12 and 1.00 radians against a `MAX_LEAN` of 0.062. It had never done
+  anything in its life, which is exactly why nothing noticed it was wrong.
+
+A full row was leaving 0.374 of bare wood at its right end. That decomposes as
+0.17 of declared reserve, 0.162 of the charging error, ~0.10 of wrap
+granularity, less ~0.06 of clearance — one of the four on purpose. See
+[ADR-0031](adr/0031-one-usable-width.md).
+
+**The row asserts an inequality, not an equality, and that is the interesting
+part.** The packer must charge `swayOf(height, MAX_LEAN)` because the real lean
+comes from `leanFor`, which needs the row index, which is not known until the
+wrap this figure decides has happened. So it is conservative by construction:
+
+```
+right edge = -W/2 + spent  ≤  -W/2 + charged  ≤  -W/2 + USABLE_WIDTH
+```
+
+Asserting only the left half passes on a packer that charges the whole shelf for
+every book, so the excess is bounded too — at most one maximal swing per angle
+change. Naming the slop is what stops the row from recording the disagreement
+instead of closing it.
+
+**Observed red, eight ways**, each a mutation of the line it covers: dropping
+the clearance charge, inflating it forty-fold, adding a hair to every book's
+cost, packing past `USABLE_WIDTH`, wrapping early, starting the cursor clear of
+the upright, folding the reserve into the usable width, and tuning the reserve
+below the swing it has to absorb. The third one matters more than it looks —
+it is the only mutation caught by the row that asserts exactness on a row which
+changes angle nowhere, and without that case a constant over-charge hides inside
+the bound.
+
+**It does not replace G16, and the two failed differently here.** Everything in
+this row asserts what the placements *claim*; G16 measures `Box3.setFromObject`
+against the case's real inner faces on a rendered scene. It reported
+`case overflow 0.0012` before this change and after it — which is `SKIN`, the
+hair by which a printed cover floats above its board, not slop — so the density
+moved by three books a row while the containment residual did not move at all.
+That is the shape of evidence a unit test cannot produce.
+
+**The one thing this row now carries alone.** Clearance is charged to the *left*
+of the book that leans, where the angle changes, so the last book of a row has
+nothing on its right to charge and its swing is paid for by `SHELF.endReserve`
+and by nothing else. That was `LEAN_ALLOWANCE`'s job before it was folded in.
+The assertion `endReserve ≥ swayOf(MAX_HEIGHT, MAX_LEAN)` is the one to read
+before tuning that number, and it is why the reserve is not merely aesthetic.
 
 ## G2 in full — the public build gate
 
