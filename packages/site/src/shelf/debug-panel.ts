@@ -66,6 +66,9 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   const body = document.createElement('div');
   body.style.display = 'grid';
   body.style.gap = '0.15rem';
+  // Grid items also default to `min-width: auto`, so without this the widest row
+  // sets the track width and the whole panel overflows again one level up.
+  body.style.minWidth = '0';
 
   /**
    * Collapsed by default on a narrow screen.
@@ -110,11 +113,41 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    */
   const resync: (() => void)[] = [];
 
+  /** Every lamp, relit after each apply. See `Lamp`. */
+  const lamps: (() => void)[] = [];
+
+  /**
+   * Wires one control's lamp.
+   *
+   * `pending` is a standing comparison against what the scene was *built* with,
+   * not against the previous value — the same reasoning as `ApplyReport`'s
+   * standing diff. A rebuild-class control you moved five changes ago is still
+   * waiting, and its lamp has to keep saying so.
+   *
+   * `active` is what separates off from inert. It defaults to "yes, this is
+   * doing something", and the controls that can be superseded pass their own.
+   */
+  const lampFor = <T>(
+    klass: Klass,
+    get: (s: ShelfSettings) => T,
+    active: (s: ShelfSettings) => boolean,
+  ): { slot: HTMLElement } => {
+    const lamp = makeLamp();
+    const relight = (): void => {
+      const pending = klass !== 'live' && get(settings) !== get(handle.mountedWith);
+      lamp.set(pending ? 'pending' : active(settings) ? 'on' : 'off', klass);
+    };
+    lamps.push(relight);
+    relight();
+    return { slot: lamp.slot };
+  };
+
   const apply = (next: ShelfSettings): void => {
     const report = handle.applySettings(next);
     settings = next;
     writeSettings(next);
     for (const hook of afterApply) hook();
+    for (const relight of lamps) relight();
     showReport(status, report, options.onRebuild !== undefined);
     // Only for things a rebuild actually fixes. `refused` deliberately does not
     // raise it: offering a button that cannot help is its own small lie.
@@ -155,6 +188,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     klass: Klass,
     get: (s: ShelfSettings) => boolean,
     set: (s: ShelfSettings, value: boolean) => ShelfSettings,
+    active?: (s: ShelfSettings) => boolean,
   ): { input: HTMLInputElement; row: HTMLElement } => {
     const input = document.createElement('input');
     input.type = 'checkbox';
@@ -164,6 +198,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     });
     resync.push(() => (input.checked = get(settings)));
     const line = row(label, klass, input);
+    line.prepend(lampFor(klass, get, active ?? get).slot);
     body.append(line);
     return { input, row: line };
   };
@@ -176,6 +211,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     step: number,
     get: (s: ShelfSettings) => number,
     set: (s: ShelfSettings, value: number) => ShelfSettings,
+    active?: (s: ShelfSettings) => boolean,
   ): { input: HTMLInputElement; row: HTMLElement } => {
     const input = document.createElement('input');
     input.type = 'range';
@@ -183,12 +219,15 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     input.max = String(max);
     input.step = String(step);
     input.value = String(get(settings));
-    input.style.width = '7rem';
+    // Fixed, and the label gives way around it. A slider narrower than this is
+    // hard to land a value on, especially with a thumb.
+    input.style.width = '6.5rem';
 
     const value = document.createElement('span');
     value.textContent = format(get(settings));
-    value.style.minWidth = '2.6rem';
+    value.style.minWidth = '2.4rem';
     value.style.textAlign = 'right';
+    value.style.opacity = '0.75';
 
     input.addEventListener('input', () => {
       const parsed = Number(input.value);
@@ -202,6 +241,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     });
 
     const line = row(label, klass, input, value);
+    line.prepend(lampFor(klass, get, active ?? (() => true)).slot);
     body.append(line);
     return { input, row: line };
   };
@@ -222,7 +262,9 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
       apply(set(settings, Number.parseInt(input.value.slice(1), 16)));
     });
     resync.push(() => (input.value = `#${get(settings).toString(16).padStart(6, '0')}`));
-    body.append(row(label, klass, input));
+    const line = row(label, klass, input);
+    line.prepend(lampFor(klass, get, () => true).slot);
+    body.append(line);
   };
 
   const choice = <T extends string>(
@@ -231,6 +273,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     options_: readonly T[],
     get: (s: ShelfSettings) => T,
     set: (s: ShelfSettings, value: T) => ShelfSettings,
+    active?: (s: ShelfSettings) => boolean,
   ): void => {
     const select = document.createElement('select');
     applyInputStyle(select);
@@ -245,7 +288,9 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
       apply(set(settings, select.value as T));
     });
     resync.push(() => (select.value = get(settings)));
-    body.append(row(label, klass, select));
+    const line = row(label, klass, select);
+    line.prepend(lampFor(klass, get, active ?? (() => true)).slot);
+    body.append(line);
   };
 
   /* --- light -------------------------------------------------------------- */
@@ -313,13 +358,20 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    * between a control that is off and a control that is broken, and this project
    * has already decided which of those is worse.
    */
-  const exposure = slider('exposure', 'live', 0.1, 3, 0.01, (s) => s.renderer.exposure, (s, v) =>
-    resolveSettings({ renderer: { exposure: v } }, s),
+  const exposure = slider(
+    'exposure',
+    'live',
+    0.1,
+    3,
+    0.01,
+    (s) => s.renderer.exposure,
+    (s, v) => resolveSettings({ renderer: { exposure: v } }, s),
+    (s) => s.renderer.toneMapping !== 'none',
   );
   const syncExposure = (): void => {
     const off = settings.renderer.toneMapping === 'none';
     exposure.input.disabled = off;
-    exposure.row.style.opacity = off ? '0.4' : '1';
+    exposure.row.style.opacity = off ? '0.55' : '1';
     exposure.row.title = off ? 'pick a tone mapping first — exposure has no effect under "none"' : '';
   };
   afterApply.push(syncExposure);
@@ -335,14 +387,35 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   toggleRow('enabled', 'rebuild', (s) => s.effects.bloom.enabled, (s, v) =>
     resolveSettings({ effects: { bloom: { enabled: v } } }, s),
   );
-  slider('strength', 'live', 0, 2, 0.01, (s) => s.effects.bloom.strength, (s, v) =>
-    resolveSettings({ effects: { bloom: { strength: v } } }, s),
+  slider(
+    'strength',
+    'live',
+    0,
+    2,
+    0.01,
+    (s) => s.effects.bloom.strength,
+    (s, v) => resolveSettings({ effects: { bloom: { strength: v } } }, s),
+    (s) => s.effects.bloom.enabled,
   );
-  slider('radius', 'live', 0, 1.5, 0.01, (s) => s.effects.bloom.radius, (s, v) =>
-    resolveSettings({ effects: { bloom: { radius: v } } }, s),
+  slider(
+    'radius',
+    'live',
+    0,
+    1.5,
+    0.01,
+    (s) => s.effects.bloom.radius,
+    (s, v) => resolveSettings({ effects: { bloom: { radius: v } } }, s),
+    (s) => s.effects.bloom.enabled,
   );
-  slider('threshold', 'live', 0, 1.5, 0.01, (s) => s.effects.bloom.threshold, (s, v) =>
-    resolveSettings({ effects: { bloom: { threshold: v } } }, s),
+  slider(
+    'threshold',
+    'live',
+    0,
+    1.5,
+    0.01,
+    (s) => s.effects.bloom.threshold,
+    (s, v) => resolveSettings({ effects: { bloom: { threshold: v } } }, s),
+    (s) => s.effects.bloom.enabled,
   );
 
   /* --- shadows ------------------------------------------------------------ */
@@ -354,21 +427,40 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   toggleRow('real-time', 'live', (s) => s.shadows.enabled, (s, v) =>
     resolveSettings({ shadows: { enabled: v } }, s),
   );
-  choice('filter', 'live', SHADOW_TYPE_NAMES, (s) => s.shadows.type, (s, v) =>
-    resolveSettings({ shadows: { type: v } }, s),
+  choice(
+    'filter',
+    'live',
+    SHADOW_TYPE_NAMES,
+    (s) => s.shadows.type,
+    (s, v) => resolveSettings({ shadows: { type: v } }, s),
+    (s) => s.shadows.enabled,
   );
-  choice('map size', 'rebuild', ['512', '1024', '2048', '4096'] as const, (s) =>
-    String(s.shadows.mapSize) as '512' | '1024' | '2048' | '4096',
+  choice(
+    'map size',
+    'rebuild',
+    ['512', '1024', '2048', '4096'] as const,
+    (s) => String(s.shadows.mapSize) as '512' | '1024' | '2048' | '4096',
     (s, v) => resolveSettings({ shadows: { mapSize: Number(v) } }, s),
+    // No depth target is allocated while real-time shadows are off, so its size
+    // is inert — the same as the filter and the casters beside it.
+    (s) => s.shadows.enabled,
   );
-  toggleRow('casters', 'rebuild', (s) => s.shadows.casters, (s, v) =>
-    resolveSettings({ shadows: { casters: v } }, s),
+  toggleRow(
+    'casters',
+    'rebuild',
+    (s) => s.shadows.casters,
+    (s, v) => resolveSettings({ shadows: { casters: v } }, s),
+    (s) => s.shadows.casters && s.shadows.enabled,
   );
   // The isolator from the crash investigation: draw the map once, then stop
   // *reading* it. It was in the URL vocabulary and had no control, which made
   // the panel silently narrower than the URL it writes.
-  toggleRow('sample the map', 'rebuild', (s) => s.shadows.fetch, (s, v) =>
-    resolveSettings({ shadows: { fetch: v } }, s),
+  toggleRow(
+    'sample the map',
+    'rebuild',
+    (s) => s.shadows.fetch,
+    (s, v) => resolveSettings({ shadows: { fetch: v } }, s),
+    (s) => s.shadows.fetch && s.shadows.enabled,
   );
 
   /* --- scene -------------------------------------------------------------- */
@@ -412,13 +504,18 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    * false, which is the eighth instance of the exact fault this panel exists to
    * prevent, and the only one that was in code written for it.
    */
-  const aa = toggleRow('antialias', 'reload', (s) => s.renderer.antialias, (s, v) =>
-    resolveSettings({ renderer: { antialias: v } }, s),
+  const aa = toggleRow(
+    'antialias',
+    'reload',
+    (s) => s.renderer.antialias,
+    (s, v) => resolveSettings({ renderer: { antialias: v } }, s),
+    // Red while bloom is on: the MSAA this asks for is not what is running.
+    (s) => s.renderer.antialias && !s.effects.bloom.enabled,
   );
   const syncAntialias = (): void => {
     const superseded = settings.effects.bloom.enabled;
     aa.input.disabled = superseded;
-    aa.row.style.opacity = superseded ? '0.4' : '1';
+    aa.row.style.opacity = superseded ? '0.55' : '1';
     aa.row.title = superseded ? 'bloom is on, so antialiasing is an SMAA pass rather than MSAA' : '';
   };
   afterApply.push(syncAntialias);
@@ -491,41 +588,120 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
  */
 type Klass = 'live' | 'rebuild' | 'reload';
 
-const KLASS_COLOUR: Record<Klass, string> = {
-  live: 'rgba(159, 240, 180, 0.85)',
-  rebuild: 'rgba(255, 205, 120, 0.9)',
-  reload: 'rgba(255, 145, 145, 0.9)',
+/**
+ * What a lamp says, and it is about **state**, not about category.
+ *
+ * The dot used to be coloured by class — which of live / rebuild / reload a
+ * control belonged to — and that is a property of the control, so it never
+ * changed. A row of decorations. What you actually want to know at a glance,
+ * standing in front of a shelf, is *which of these is doing something right
+ * now*:
+ *
+ * - **green** — on, and taking effect.
+ * - **red** — off, or inert: the setting exists and is currently doing nothing.
+ *   Exposure under `NoToneMapping` is red. So is antialias while bloom is on,
+ *   because the multisampling it asks for is not what is running.
+ * - **amber** — you have changed it and the shelf has not caught up. Only a
+ *   rebuild- or reload-class control can show this.
+ *
+ * Red is the interesting one. It is the panel's honesty contract made visible
+ * without a tooltip: a control that cannot affect anything says so in the same
+ * place, in the same language, as one that is simply switched off.
+ */
+type Lamp = 'on' | 'off' | 'pending';
+
+const LAMP: Record<Lamp, { readonly colour: string; readonly glow: string; readonly help: string }> = {
+  on: {
+    colour: '#5ee08a',
+    glow: 'rgba(94, 224, 138, 0.75)',
+    help: 'on — taking effect now',
+  },
+  off: {
+    colour: '#e05a5a',
+    glow: 'rgba(224, 90, 90, 0.6)',
+    help: 'off — this setting is doing nothing at the moment',
+  },
+  pending: {
+    colour: '#e8b64c',
+    glow: 'rgba(232, 182, 76, 0.8)',
+    help: 'changed, and the shelf has not caught up — rebuild or reload to apply',
+  },
 };
-
-function row(label: string, klass: Klass, ...controls: HTMLElement[]): HTMLElement {
-  const line = document.createElement('label');
-  Object.assign(line.style, {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.4rem',
-    padding: '0.05rem 0',
-  } satisfies Partial<CSSStyleDeclaration>);
-
-  const dot = document.createElement('span');
-  dot.textContent = '●';
-  dot.title = `${klass}: ${KLASS_HELP[klass]}`;
-  dot.style.color = KLASS_COLOUR[klass];
-  dot.style.fontSize = '8px';
-
-  const text = document.createElement('span');
-  text.textContent = label;
-  text.style.flex = '1';
-  text.style.whiteSpace = 'nowrap';
-
-  line.append(dot, text, ...controls);
-  return line;
-}
 
 const KLASS_HELP: Record<Klass, string> = {
   live: 'changes the shelf immediately',
   rebuild: 'needs the shelf rebuilt — press the rebuild button',
   reload: 'needs a new WebGL context — reload the page',
 };
+
+/** Diameter of the lit part. The slot around it is `LAMP_SLOT`. */
+const LAMP_SIZE = 10;
+const LAMP_SLOT = 18;
+
+function makeLamp(): { slot: HTMLElement; set: (state: Lamp, klass: Klass) => void } {
+  const slot = document.createElement('span');
+  Object.assign(slot.style, {
+    flex: `0 0 ${String(LAMP_SLOT)}px`,
+    height: `${String(LAMP_SLOT)}px`,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } satisfies Partial<CSSStyleDeclaration>);
+
+  const led = document.createElement('span');
+  Object.assign(led.style, {
+    width: `${String(LAMP_SIZE)}px`,
+    height: `${String(LAMP_SIZE)}px`,
+    borderRadius: '50%',
+    // A little inner highlight, so it reads as a lit lens rather than a flat
+    // circle — the difference between an indicator and a bullet point.
+    backgroundImage: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.55), transparent 60%)',
+    transition: 'background-color 120ms linear, box-shadow 120ms linear',
+  } satisfies Partial<CSSStyleDeclaration>);
+  slot.append(led);
+
+  return {
+    slot,
+    set(state, klass): void {
+      const { colour, glow, help } = LAMP[state];
+      led.style.backgroundColor = colour;
+      led.style.boxShadow = `0 0 6px 1px ${glow}, inset 0 0 3px rgba(0,0,0,0.35)`;
+      slot.title = `${help}
+(${klass}: ${KLASS_HELP[klass]})`;
+    },
+  };
+}
+
+function row(label: string, _klass: Klass, ...controls: HTMLElement[]): HTMLElement {
+  const line = document.createElement('label');
+  Object.assign(line.style, {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.4rem',
+    padding: '0.05rem 0',
+    // Without this a flex item refuses to shrink below its content width, which
+    // is what pushed every checkbox off the right-hand edge behind a horizontal
+    // scrollbar.
+    minWidth: '0',
+  } satisfies Partial<CSSStyleDeclaration>);
+
+  const text = document.createElement('span');
+  text.textContent = label;
+  Object.assign(text.style, {
+    flex: '1 1 auto',
+    minWidth: '0',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  } satisfies Partial<CSSStyleDeclaration>);
+
+  // Controls keep their size; the label is what gives way. A slider that shrank
+  // would be unusable long before a truncated word is unreadable.
+  for (const control of controls) control.style.flex = '0 0 auto';
+
+  line.append(text, ...controls);
+  return line;
+}
 
 /**
  * Says what happened, including what did not.
@@ -568,9 +744,18 @@ function applyRootStyle(root: HTMLElement): void {
     top: '0.5rem',
     right: '0.5rem',
     zIndex: '11',
-    width: 'min(17rem, calc(100vw - 1rem))',
+    width: 'min(19rem, calc(100vw - 1rem))',
     maxHeight: 'calc(100vh - 1rem)',
     overflowY: 'auto',
+    /**
+     * Never sideways.
+     *
+     * `overflow-y: auto` alone makes `overflow-x` compute to `auto` as well, so
+     * the panel grew a horizontal scrollbar and parked every checkbox behind it
+     * — the controls were off-screen on the axis nobody thinks to scroll. The
+     * rows shrink their labels instead; see `row`.
+     */
+    overflowX: 'hidden',
     padding: '0.5rem 0.6rem',
     borderRadius: '0.4rem',
     background: 'rgba(10, 8, 7, 0.86)',

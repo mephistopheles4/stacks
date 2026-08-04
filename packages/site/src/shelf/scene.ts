@@ -158,6 +158,15 @@ export interface ShelfHandle {
   /** The full current settings, for the panel to edit and export. */
   readonly settings: ShelfSettings;
   /**
+   * What the scene was actually **built** with, as opposed to what has been
+   * asked for since.
+   *
+   * The panel needs both to tell a control that is doing something from one that
+   * is merely set: a rebuild-class control whose value has moved away from this
+   * is waiting, and saying so is the difference between a lamp and a decoration.
+   */
+  readonly mountedWith: ShelfSettings;
+  /**
    * Every setting change this session, oldest first — so a crash record reads as
    * a sequence rather than as a final state.
    */
@@ -589,6 +598,8 @@ export function mountShelf(
     get settings(): ShelfSettings {
       return settings;
     },
+
+    mountedWith,
 
     get changeLog(): readonly string[] {
       return changes;
