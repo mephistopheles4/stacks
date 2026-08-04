@@ -20,8 +20,8 @@
  * Scaling the density instead renders at the target size natively.
  */
 
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { access, mkdir, writeFile } from 'node:fs/promises';
+import { join, relative } from 'node:path';
 import sharp from 'sharp';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
@@ -62,7 +62,18 @@ const ICONS: readonly Icon[] = [
   },
 ];
 
-async function render(icon: Icon): Promise<void> {
+/**
+ * Renders one icon, and refuses to write anything it cannot vouch for.
+ *
+ * The checks are the point rather than ceremony. This script's whole failure
+ * mode — see the header — is output that is the right size on disk and wrong in
+ * the only way that matters, so "it produced a file" proves nothing and the
+ * dimensions have to be read back off the bytes actually written.
+ *
+ * `flattenTo` additionally has to *remove* the alpha channel, not merely paint
+ * behind it, because iOS renders a transparent touch icon's background black.
+ */
+async function render(icon: Icon): Promise<string | undefined> {
   const density = (BASE_DPI * icon.size) / VIEWBOX;
 
   let pipeline = sharp(icon.source, { density }).resize(icon.size, icon.size, {
@@ -73,18 +84,54 @@ async function render(icon: Icon): Promise<void> {
   if (icon.flattenTo !== undefined) pipeline = pipeline.flatten({ background: icon.flattenTo });
 
   const png = await pipeline.png({ compressionLevel: 9 }).toBuffer();
-  await writeFile(join(PUBLIC_DIR, icon.out), png);
+  const { width, height, channels, hasAlpha } = await sharp(png).metadata();
 
-  const { width, height, channels } = await sharp(png).metadata();
+  if (width !== icon.size || height !== icon.size) {
+    return `${icon.out}: rendered ${String(width)}x${String(height)}, expected ${String(icon.size)} square`;
+  }
+
+  if (icon.flattenTo !== undefined && hasAlpha === true) {
+    return `${icon.out}: still carries an alpha channel — iOS would render it black`;
+  }
+
+  await writeFile(join(PUBLIC_DIR, icon.out), png);
   console.log(
     `packages/site/public/${icon.out}  ${String(width)}x${String(height)}  ` +
       `${String(channels)}ch  ${String(png.length)} bytes`,
   );
+  return undefined;
 }
 
 async function main(): Promise<void> {
+  // Named literally in ICONS, so a missing one means the artwork moved or was
+  // deleted — not something to rasterise around. sharp's own error for this is
+  // about an input buffer and does not name the file.
+  for (const icon of new Set(ICONS.map((entry) => entry.source))) {
+    try {
+      await access(icon);
+    } catch {
+      console.error(
+        `no ${relative(REPO_ROOT, icon).split('\\').join('/')}\n\n` +
+          'The committed SVGs are the source for every icon here; one of them has moved ' +
+          'or been deleted.',
+      );
+      process.exitCode = 1;
+      return;
+    }
+  }
+
   await mkdir(PUBLIC_DIR, { recursive: true });
-  for (const icon of ICONS) await render(icon);
+
+  const problems: string[] = [];
+  for (const icon of ICONS) {
+    const problem = await render(icon);
+    if (problem !== undefined) problems.push(problem);
+  }
+
+  if (problems.length > 0) {
+    console.error(`\nFAILED\n- ${problems.join('\n- ')}`);
+    process.exitCode = 1;
+  }
 }
 
 await main();

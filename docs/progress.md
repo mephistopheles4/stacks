@@ -1006,6 +1006,32 @@ letters, on a page whose first paint is a WebGL scene, is a poor trade. The
 `theme-color` is the page's own `#1a1613` rather than the palette's paper, which
 above a near-black room reads as a rendering fault.
 
+**The header lockup is arithmetic, and was not until a review said so.** The
+sheet asks for the mark at the wordmark's cap height with one bar height of
+clear space; the first version had `--mark-size: 1.55em` chosen by eye against a
+screenshot, which is **39% oversized** — 0.97em of ink against ~0.70em of caps.
+Both numbers now derive from two custom properties, and both have to subtract
+the artwork's own padding: the bars fill 40 of the box's 64 units and start 7 in
+from each side, so the box is not the mark and the SVG's own margin already
+counts as clear space. Adding a full bar beside it set the wordmark 18 units
+away rather than 11.
+
+Measured in the browser rather than trusted: **25.2px of ink against 25.00px of
+cap height** at a 36px wordmark, and one bar (6.93px) to both the wordmark and
+the caption below. The multiplier is fixed at 1.12, so a machine without IBM
+Plex Mono drifts by whatever its fallback's cap height differs by — CSS cannot
+read font metrics, and that is the accepted limit of doing this without a
+webfont.
+
+**The same rationale written in five places went stale in one of them within
+the hour.** `packages/site/src/assets/README.md` carried its own copy of the G13
+provenance argument, a link to the deleted ADR, and a paragraph describing
+`og-image.ts` — all three written before the two reversals above and none
+updated by them. It now points at the assertion instead of restating it, which
+is [ADR-0026](./adr/0026-constitution-is-gated-not-duplicated.md)'s rule applied
+to a README. `docs/gates.md`'s G13 row said "three named icons" against a
+four-entry list for the same reason.
+
 **No ADR.** One was written for the icons and deleted with them: once branding
 is simply committed there is no trade-off left to record, and what remains
 non-obvious — why filenames and not a directory, why `publish()` stops writing
