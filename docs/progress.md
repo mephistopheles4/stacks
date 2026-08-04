@@ -20,9 +20,9 @@ phone was rendering when it died — are measurements and stay exactly as they a
 
 | | |
 | --- | --- |
-| **Last green gate** | G23 — one absent-key helper, one implementation, under any name |
-| **Now working on** | G23 — one `keyIfPresent`, not six copies under three names ([#29](https://github.com/mephistopheles4/stacks/issues/29)) |
-| **Queued** | [#27](https://github.com/mephistopheles4/stacks/issues/27) a `scripts/` harness — from the same architecture review as G20 · [#36](https://github.com/mephistopheles4/stacks/issues/36) the shelf's three disagreeing widths |
+| **Last green gate** | G24 — one repo root, one derivation |
+| **Now working on** | G24 — a shared harness for `scripts/` ([#27](https://github.com/mephistopheles4/stacks/issues/27)) |
+| **Queued** | [#36](https://github.com/mephistopheles4/stacks/issues/36) the shelf's three disagreeing widths |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates`, no bypass |
 | **Blocked on** | nothing |
@@ -103,6 +103,7 @@ need only a new mapper.
 | **Bash tool sandbox blocks network** | ⚠️ outbound `fetch` needs `dangerouslyDisableSandbox` |
 | Google Books unauthenticated | ⚠️ 429s on a shared quota — a bonus, never a dependable fallback |
 | **Zone bot protection can refuse the deploy check** | ⚠️ see below — the deploy still works, the *verification* does not |
+| **The scripts echo the commands they run** | ℹ️ since G24 — `gate:public` gained two `$ pnpm …` lines, `pnpm worktree` one. Nothing asserts on that stdout; checked |
 | Resolved versions | TS 7.0.2 · Vitest 4 · Astro 7.1.6 · three 0.185.1 · sharp 0.35 |
 
 ### The deploy check could not read the site

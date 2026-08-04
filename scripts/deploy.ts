@@ -23,12 +23,12 @@
  * the thing worth checking.
  */
 
-import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import { gitOutput } from './lib/git.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
@@ -131,15 +131,10 @@ function assertPublishableBranch(): void {
     return;
   }
 
-  const result = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
   // Not a checkout at all — a tarball, say. Nothing to assert against, and
   // refusing here would block a legitimate deploy for no reason.
-  if (result.status !== 0) return;
-
-  const branch = result.stdout.trim();
+  const branch = gitOutput(['rev-parse', '--abbrev-ref', 'HEAD'], REPO_ROOT);
+  if (branch === undefined) return;
   if (branch === 'main') return;
 
   fail(

@@ -47,10 +47,10 @@
  * does — but that safety is three separate coincidences, and the Astro dev
  * server's file watcher and your editor's indexer share none of them.
  */
-import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { mainCheckout } from '../packages/cli/src/env.ts';
+import { gitOutput, gitStatus } from './lib/git.ts';
 import { runExe, runShell } from './lib/run.ts';
 
 /**
@@ -87,20 +87,16 @@ function git(args: readonly string[], cwd: string): void {
   }
 }
 
-/** Whether a local branch of this name already exists. */
+/**
+ * Whether a local branch of this name already exists.
+ *
+ * Spelled the same way as `onOrigin` below, which asks the identical question
+ * about a remote-tracking ref. The two used to differ — this one had its own
+ * `spawnSync` with `stdio: 'ignore'` — so one question had two implementations
+ * eight lines apart.
+ */
 function branchExists(name: string, cwd: string): boolean {
-  return (
-    spawnSync('git', ['rev-parse', '--verify', '--quiet', `refs/heads/${name}`], {
-      cwd,
-      stdio: 'ignore',
-    }).status === 0
-  );
-}
-
-/** git, captured and non-fatal — `undefined` when it fails for any reason. */
-function gitOutput(args: readonly string[], cwd: string): string | undefined {
-  const result = spawnSync('git', [...args], { cwd, encoding: 'utf8' });
-  return result.status === 0 ? result.stdout.trim() : undefined;
+  return gitOutput(['rev-parse', '--verify', '--quiet', `refs/heads/${name}`], cwd) !== undefined;
 }
 
 /**
@@ -124,8 +120,7 @@ function fetchOrigin(cwd: string): boolean {
   const hasOrigin = gitOutput(['remote'], cwd)?.split('\n').includes('origin') === true;
   if (!hasOrigin) return false;
 
-  const fetched = spawnSync('git', ['fetch', 'origin', '--quiet'], { cwd, stdio: 'inherit' });
-  if (fetched.status !== 0) {
+  if (gitStatus(['fetch', 'origin', '--quiet'], cwd) !== 0) {
     console.warn('\n! could not reach origin — working from the last fetch, which may be old\n');
   }
   return true;
@@ -162,10 +157,7 @@ function divergence(name: string, cwd: string): { behind: number; ahead: number 
  * to do on the way.
  */
 function fastForward(name: string, cwd: string): boolean {
-  return (
-    spawnSync('git', ['fetch', 'origin', `${name}:${name}`, '--quiet'], { cwd, stdio: 'inherit' })
-      .status === 0
-  );
+  return gitStatus(['fetch', 'origin', `${name}:${name}`, '--quiet'], cwd) === 0;
 }
 
 /**
@@ -195,7 +187,7 @@ const branch = process.argv[2];
 if (branch === undefined || branch.startsWith('-')) {
   console.error('usage: pnpm worktree <branch>\n');
   console.error('Existing worktrees:');
-  spawnSync('git', ['worktree', 'list'], { stdio: 'inherit' });
+  gitStatus(['worktree', 'list'], process.cwd());
   console.error('\nRemove one with: git worktree remove <path>');
   process.exit(1);
 }

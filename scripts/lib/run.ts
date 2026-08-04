@@ -19,10 +19,19 @@
  * person to make them "consistent" would have to pick one and be wrong about
  * half the callers. See ADR-0030.
  *
- * **Joining is safe only because nothing variable goes on these command lines.**
+ * **Joining is safe only because nothing hostile goes on these command lines.**
  * Every argument at every `shellCommand` call site is a literal, a path this
- * repo computed, or a value out of the owner's own environment — never a vault,
- * an argv or a branch name. Anything from outside belongs in `runExe`.
+ * repo computed, or a path out of the owner's own `.env` — never an argv, a
+ * vault note or a branch name. Anything from outside belongs in `runExe`.
+ *
+ * **Safe from injection is not the same as correct, and quoting is the
+ * caller's.** `shellCommand` joins with spaces and quotes nothing, so any
+ * argument that may itself contain a space has to arrive already quoted — which
+ * absolute paths may, since they start at a home directory somebody named. Both
+ * callers that pass one do quote it; that they disagreed about it for a while,
+ * with `deploy.ts` quoting its vault and `check-public-build.ts` passing an
+ * absolute assets path bare, is the reason this paragraph exists rather than
+ * being left to be re-derived a third time.
  *
  * What is deliberately *not* here: process lifecycle. `dev-watch` keeps a pair
  * of long-lived children and takes the other down when one dies; `smoke-render`

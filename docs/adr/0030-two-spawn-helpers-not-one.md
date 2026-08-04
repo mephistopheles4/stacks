@@ -70,9 +70,22 @@ cannot be created should say so the way the rest of those scripts do, not as a
 stack trace. The message is identical either way; only the framing differs, and
 framing is the caller's.
 
-**Capturing output.** `worktree.ts` keeps `gitOutput` and `branchExists`, which
-read stdout and swallow failures. Different contract, git-specific, and moving
-them here would put git's vocabulary in a file that has none.
+**Capturing output, and running for an exit code that may be non-zero on
+purpose.** These are a different contract — `runExe` throws, and these must not
+— *and* they are git-specific, since "a ref that is absent exits 1" is git's
+vocabulary and `run.ts` has none. They live in
+[`scripts/lib/git.ts`](../../scripts/lib/git.ts) as `gitOutput` and `gitStatus`.
+
+**This file first said they simply stayed in `worktree.ts`, and that was
+wrong** — the correction is the more useful half of the record. A code review of
+the commit found six bare `spawnSync` calls still standing, of which this ADR
+accounted for two. The one that mattered was `deploy.ts`'s branch check, which
+had re-derived `gitOutput`'s exact contract inline in a second file: capture
+stdout, treat any failure as "no answer", carry on. **A commit arguing that one
+piece of knowledge should have one home shipped with a fresh second copy of a
+different one**, which is worth more as a logged miss than as a quietly amended
+list. `branchExists` was a third: it asked precisely the question `onOrigin`
+asked eight lines below it, with its own `spawnSync` and a different `stdio`.
 
 ## How this was decided
 
@@ -94,6 +107,23 @@ them here would put git's vocabulary in a file that has none.
   originating outside — a branch name, an argv, a vault — belongs in `runExe`,
   which is why `runExe` offers no way to opt into a shell even for a command that
   would tolerate one.
+
+- **2026-08-04** — **`gitOutput` and `gitStatus` went to `scripts/lib/git.ts`,
+  not into `run.ts`.** Four call sites and one whole file's worth of reasoning
+  argued for keeping git's vocabulary out of the general helper, and that
+  argument survives the correction above: what changed is *where they live
+  together*, not whether `run.ts` should know about refs. A third export on
+  `run.ts` returning a status instead of throwing would also have been the flag
+  in a different costume — same function, two meanings, picked by return type
+  instead of a boolean.
+
+- **2026-08-04** — **`shellCommand` quotes nothing, and that is stated rather
+  than fixed.** The obvious repair is to quote every argument inside the joiner.
+  It was rejected: `deploy.ts` already passes `"${vault}"` pre-quoted, so the
+  joiner would double-quote it, and finding every existing pre-quoted argument
+  to unpick is a wider change than the one defect warrants. The rule is now in
+  `run.ts`'s doc comment, and the one bare absolute path — `check-public-build`'s
+  `--assets` — is quoted. Ungated, and said out loud for that reason.
 
 - **2026-08-03** — **No gate covers the shell/no-shell split**, deliberately.
   G24 gates the repo root, which is a clean textual property. Detecting "an args

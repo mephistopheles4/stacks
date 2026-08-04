@@ -56,7 +56,19 @@ console.log(`canary present in fixture vault: ${NOTE_BODY_CANARY}`);
 const CANONICAL_ORIGIN = 'https://stacks.gate.example';
 process.env['SITE_URL'] = CANONICAL_ORIGIN;
 
-runShell('pnpm', ['stacks', 'build', '--public', '--vault', 'fixtures/vault', '--assets', ASSETS]);
+// `ASSETS` is quoted because it is absolute, and an absolute path here starts
+// at a home directory that may well have a space in it — `runShell` joins its
+// arguments verbatim and quotes nothing. `fixtures/vault` needs none: it is a
+// repo-relative literal and `cwd` is the repo root.
+runShell('pnpm', [
+  'stacks',
+  'build',
+  '--public',
+  '--vault',
+  'fixtures/vault',
+  '--assets',
+  `"${ASSETS}"`,
+]);
 runShell('pnpm', ['--filter', '@stacks/site', 'run', 'build']);
 
 if (!existsSync(DIST)) {
