@@ -54,3 +54,4 @@ Two other files hold what these deliberately do not:
 | [0028](./0028-one-inspector-for-the-public-build.md) | One inspector for the folder about to be published; `gate:public` and `deploy:site` are callers |
 | [0029](./0029-placement-imports-the-case.md) | The shelf's placement arithmetic imports the case rather than being handed one |
 | [0030](./0030-two-spawn-helpers-not-one.md) | Two spawn helpers, one of which refuses a shell — never one with a `shell` flag |
+| [0031](./0031-one-usable-width.md) | One usable width, and the packer charges what the placer spends |

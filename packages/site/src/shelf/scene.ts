@@ -11,7 +11,7 @@ import {
   type CaseLight,
   type Contact,
 } from './contact-shadow.ts';
-import { LEAN_ALLOWANCE, rowsForCase, SHELF } from './case.ts';
+import { rowsForCase, SHELF } from './case.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
@@ -287,11 +287,7 @@ export function mountShelf(
   scene.background = new THREE.Color(COLOURS.background);
   scene.fog = new THREE.Fog(COLOURS.background, 14, 30);
 
-  const rows = toRows(
-    books,
-    SHELF.width - SHELF.padding * 2 - LEAN_ALLOWANCE,
-    SHELF.bookGap,
-  );
+  const rows = toRows(books);
   const rowCount = rowsForCase(rows.length);
   const unitHeight = rowCount * SHELF.rowHeight;
 

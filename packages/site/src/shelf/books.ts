@@ -4,7 +4,13 @@ import type { LibraryBook } from '@stacks/core';
 // and sharp into the browser bundle and the shelf never boots. Types are erased
 // at compile time and so are safe from the root; values are not.
 import { compareShelfPosition, SHELVED_STATUSES } from '@stacks/core/shelf-order';
+import { USABLE_WIDTH } from './case.ts';
 import { hashUnit } from './hash.ts';
+// The packer depends on the placer, which reads oddly until you see why: a row's
+// capacity is only meaningful if what it charges a book is what the cursor will
+// spend on it. So it reads the cursor's own arithmetic rather than a copy that
+// can drift — which is exactly what happened, twice. See ADR-0031.
+import { shelfCost } from './placement.ts';
 
 /**
  * Turning a library into shelf rows.
@@ -57,7 +63,11 @@ const PAGES_AT_THICKEST = 800;
 
 /** A shelf of identical-height books looks printed, not lived in. */
 const MIN_HEIGHT = 0.78;
-const MAX_HEIGHT = 0.95;
+/**
+ * Exported because it bounds the worst swing a lean can produce, which is what
+ * `SHELF.endReserve` has to cover — see G25.
+ */
+export const MAX_HEIGHT = 0.95;
 
 /** For books with no cover to extract a colour from. */
 const FALLBACK_COLOURS = [
@@ -80,11 +90,7 @@ const FALLBACK_COLOURS = [
  * (newest first) and a year change opens a small gap where a bookend would sit,
  * so the grouping is still legible without leaving the case looking abandoned.
  */
-export function toRows(
-  books: readonly LibraryBook[],
-  capacity: number,
-  gap: number,
-): ShelfRow[] {
+export function toRows(books: readonly LibraryBook[]): ShelfRow[] {
   const shelved = books.filter((book) => SHELVED_STATUSES.has(book.status));
 
   // Books in progress come first — they are the ones you would reach for.
@@ -98,19 +104,27 @@ export function toRows(
   for (const book of ordered) {
     const entry = toShelfBook(book);
     const year = yearOf(book);
-    // The gap must be counted here, not only when placing. Leaving it out let
-    // twenty books smuggle in 0.16 of unaccounted width and pushed the last one
-    // straight through the side of the case.
     const isYearChange = previousYear !== undefined && year !== previousYear;
-    const width = entry.footprint + gap + (isYearChange ? YEAR_GAP : 0);
 
-    if (used + width > capacity && current.length > 0) {
+    // Costed against the row it is being offered to, because what a book costs
+    // depends on where it lands. A year change mid-row opens a gap and stands the
+    // book upright; the same book at the head of a row opens nothing and leans
+    // against the case. So the two cases are priced separately rather than one
+    // being assumed — the earlier version charged the gap either way, and charged
+    // it to a book that never got one.
+    let candidate =
+      isYearChange && current.length > 0 ? { ...entry, gapBefore: YEAR_GAP } : entry;
+    let width = shelfCost(candidate, current[current.length - 1]);
+
+    if (used + width > USABLE_WIDTH && current.length > 0) {
       rows.push({ label: previousYear ?? '', books: current });
       current = [];
       used = 0;
+      candidate = entry;
+      width = shelfCost(entry, undefined);
     }
 
-    current.push(isYearChange && used > 0 ? { ...entry, gapBefore: YEAR_GAP } : entry);
+    current.push(candidate);
     used += width;
     previousYear = year;
   }
@@ -119,10 +133,22 @@ export function toRows(
   return rows;
 }
 
-/** A visible break where a bookend would sit. */
-const YEAR_GAP = 0.09;
+/**
+ * A visible break where a bookend would sit.
+ *
+ * Exported for G24, which has to price the book the packer turned away exactly
+ * as the packer priced it. A test that charges the gap differently asserts
+ * something the packer never promised.
+ */
+export const YEAR_GAP = 0.09;
 
-function yearOf(book: LibraryBook): string {
+/**
+ * Which row-group a book belongs to.
+ *
+ * A book you are reading gets its own year rather than the year it will be
+ * finished, so the in-progress shelf is always its own group.
+ */
+export function yearOf(book: LibraryBook): string {
   if (book.status === 'reading') return 'reading';
   return book.finished?.slice(0, 4) ?? 'undated';
 }
