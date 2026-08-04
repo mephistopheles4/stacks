@@ -17,7 +17,6 @@ import {
   DEFAULT_SETTINGS,
   heightOf,
   type LightPosition,
-  type SettingsPatch,
   type ShadowTypeName,
   type ShelfSettings,
   type ToneMappingName,
@@ -132,6 +131,16 @@ export interface ApplyReport {
   readonly needsRebuild: readonly string[];
   /** Needs a whole new WebGL context, which means a page reload. */
   readonly needsReload: readonly string[];
+  /**
+   * Changed in the settings and cannot take effect *as configured* — no rebuild
+   * or reload would help, because something else has to change first.
+   *
+   * Kept apart from `needsRebuild` because offering a rebuild button for
+   * something a rebuild cannot fix is its own small lie. The live case is
+   * exposure under `NoToneMapping`: the uniform does not exist, and the fix is
+   * to pick an operator, not to rebuild anything.
+   */
+  readonly refused: readonly string[];
 }
 
 export interface ShelfHandle {
@@ -185,160 +194,6 @@ export interface ShelfHandle {
   projectBook(index: number): { x: number; y: number } | undefined;
 }
 
-/**
- * Renderer settings that can be overridden per load, to bisect a context loss.
- *
- * The library-size bisect (`?books=N`) came back saying the shelf dies with five
- * books, 632 triangles and eleven textures — so the cost that matters is fixed,
- * paid before a single book is drawn, and it lives in these four settings. Each
- * is separately overridable rather than bundled into a "mobile profile" for one
- * reason: a bundle would very likely make the crash go away while leaving nobody
- * able to say which knob did it, and would ship three permanent quality
- * regressions to fix one bug.
- *
- * Ranked by what the numbers implicate, on the device that actually fails:
- * a 1054×1926 buffer with 4× MSAA colour and depth is ~65 MB and by far the
- * largest allocation here; the pixel ratio is what sets that size; the 2048²
- * shadow map is 16 MB; and the resize guard is last but stays plausible because
- * the failure is delayed rather than at first paint.
- */
-export interface RendererOverrides {
-  /** `?aa=0`. MSAA resolve is the expensive path on a tile-based GPU. */
-  readonly antialias?: boolean;
-  /** `?dpr=1.5`. Caps `devicePixelRatio`; the default cap is 2. */
-  readonly maxPixelRatio?: number;
-  /**
-   * `?shadows=0`. Turns off the shadow map and the light that casts it.
-   *
-   * The shadow pass is what loses the context on a Pixel 10 Pro — the full
-   * 31-book shelf is stable without it and dies in 6–18 seconds with it, one
-   * variable, everything else untouched. It stays **on by default anyway**:
-   * shadows are most of what makes the shelf read as furniture rather than as
-   * coloured boxes, and the owner's call is that losing them is not the price.
-   * So the question is not whether to keep them but which cheaper form of them
-   * survives, which is what the three switches below are for.
-   */
-  readonly shadows?: boolean;
-  /** `?shadowmap=1024`. Edge of the depth target; the default is 2048 (16 MB). */
-  readonly shadowMapSize?: number;
-  /**
-   * `?shadowtype=basic|pcf|soft|vsm`. See `SHADOW_TYPES`: `soft` is now `pcf`.
-   *
-   * `vsm` is the one that is not a variation on the others. The first three all
-   * declare `uniform sampler2DShadow` and read the map with a hardware depth
-   * comparison — which is the fetch `?shadowfetch=0` has now identified as what
-   * takes the context away, and which is why all three died alike at every size
-   * and filter. Variance shadow maps store depth and depth-squared in an
-   * ordinary texture and read it with a plain `sampler2D`, so they are the only
-   * configuration here that avoids the operation actually implicated.
-   */
-  readonly shadowType?: 'basic' | 'pcf' | 'soft' | 'vsm';
-  /**
-   * `?casters=0`. Nothing casts, but the shadow map is still allocated and the
-   * pass still runs — over an empty scene.
-   *
-   * The one switch that *discriminates* rather than just reducing. Everything
-   * else makes the shadow work smaller, so surviving any of them says only "less
-   * was cheaper". This separates the two candidate mechanisms outright: if the
-   * shelf lives with the target allocated and the pass empty, the cost is
-   * drawing ~190 shadow casters; if it still dies, the cost is the depth target
-   * or the shader that samples it, and no amount of thinning the geometry will
-   * help.
-   */
-  readonly shadowCasters?: boolean;
-  /**
-   * `?guard=1`. Skips `setSize` when the canvas has not actually changed size.
-   *
-   * Assigning `canvas.width` reallocates the drawing buffer even when the value
-   * is identical, so an unguarded `ResizeObserver` churns the whole
-   * multisampled framebuffer on every layout event. Off by default so that the
-   * probe measures a change rather than smuggling in a fix.
-   */
-  readonly guardResize?: boolean;
-  /**
-   * `?painted=0`. Leaves out the painted shading — no contact shadows, no
-   * backboard shade, no recess, no neighbour bands.
-   *
-   * Two jobs. It makes `?shadows=1` a *clean* reference again: the two systems
-   * are independent, so asking for real shadows has always drawn them on top of
-   * the painted ones and double-darkened everything they agree about.
-   *
-   * And it discriminates on the shader failure. The program that will not link
-   * is a `MeshBasicMaterial`, which in this scene is only ever a painted shadow.
-   * With them gone the scene has no basic material left, so if `?shadows=1` then
-   * links and runs, the fault is specific to those programs and there is
-   * something to change; if it still fails, it is the lit materials too and
-   * there is not.
-   */
-  readonly painted?: boolean;
-  /**
-   * `?shadowfetch=0`. Draws the shadow map once, then stops *reading* it.
-   *
-   * The isolator. Enabling shadows confounds three things, and the bisect has
-   * now eliminated one of them outright:
-   *
-   *  - the render target is allocated — a 2048² depth texture **and** a 2048²
-   *    RGBA8 colour texture that three creates and never samples, 16 MB each;
-   *  - the shadow pass runs — but `autoUpdate = false` means exactly once, at
-   *    first paint, so it cannot be what takes a context away twelve seconds
-   *    later, and `casters=0` dying agrees;
-   *  - every lit fragment samples the depth texture, every frame, forever.
-   *
-   * `receiveShadow` cannot separate the last two: three keys `USE_SHADOWMAP` on
-   * `shadowMap.enabled` and the light count alone, so turning it off on the
-   * books would change nothing at all. Turning the whole flag off after the
-   * first frame and recompiling does: the target stays allocated, the map stays
-   * drawn, and the sampling stops.
-   *
-   * Survives → the per-frame depth fetch is what kills the driver.
-   * Still dies → merely holding a sampled depth attachment does, and there is
-   * nothing left to fix.
-   */
-  readonly shadowFetch?: boolean;
-}
-
-/**
- * Translates the URL's vocabulary into the settings vocabulary.
- *
- * Two shapes for what looks like one thing, deliberately. `RendererOverrides` is
- * flat, historic and named after query parameters (`?aa`, `?shadowfetch`);
- * `SettingsPatch` is nested and named after what the shelf is made of. Neither
- * can be renamed into the other without cost — the URLs are recorded in
- * `docs/progress.md` and have to keep working, and the settings blob has to read
- * like the shelf rather than like a bisect.
- *
- * So they are translated rather than merged. `docs/progress.md` records the same
- * shape under "Cover acquisition — G22": `writeBook` takes a `BookInput` in the
- * domain vocabulary (`coverSource`) and `updateBook` takes `FrontmatterChanges`
- * in the file vocabulary (`cover_source`), and crossing that boundary is what
- * produced a third assembly nobody wanted. The lesson taken there was to let the
- * boundary show in one named place rather than to collapse the vocabularies.
- */
-export function toSettingsPatch(overrides: RendererOverrides): SettingsPatch {
-  // Conditional spreads rather than assignment, so an absent override stays
-  // absent rather than becoming an explicit `undefined`. The difference is not
-  // cosmetic: `resolveSettings` folds with object spread, and a key present with
-  // value `undefined` overwrites the default with nothing. `key-if-present.ts`
-  // in core exists for this exact hazard, but the site may only `import type`
-  // from `@stacks/core` — a value import drags `node:fs` and sharp into the
-  // browser bundle and the shelf silently never boots.
-  return {
-    renderer: {
-      ...(overrides.antialias === undefined ? {} : { antialias: overrides.antialias }),
-      ...(overrides.maxPixelRatio === undefined ? {} : { maxPixelRatio: overrides.maxPixelRatio }),
-      ...(overrides.guardResize === undefined ? {} : { guardResize: overrides.guardResize }),
-    },
-    shadows: {
-      ...(overrides.shadows === undefined ? {} : { enabled: overrides.shadows }),
-      ...(overrides.shadowMapSize === undefined ? {} : { mapSize: overrides.shadowMapSize }),
-      ...(overrides.shadowType === undefined ? {} : { type: overrides.shadowType }),
-      ...(overrides.shadowCasters === undefined ? {} : { casters: overrides.shadowCasters }),
-      ...(overrides.shadowFetch === undefined ? {} : { fetch: overrides.shadowFetch }),
-      ...(overrides.painted === undefined ? {} : { painted: overrides.painted }),
-    },
-  };
-}
-
 export interface MountOptions {
   /** Called when a book is clicked, or with `undefined` when one is dismissed. */
   readonly onSelect?: (book: LibraryBook | undefined) => void;
@@ -381,6 +236,16 @@ export function mountShelf(
    * only for as long as nothing could change it. See `applySettings`.
    */
   let settings = options.settings ?? DEFAULT_SETTINGS;
+
+  /**
+   * What the scene was actually built with. Never reassigned.
+   *
+   * `settings` is what has been *asked* for; this is what the geometry, the
+   * textures and the context were made from. Anything that can only change by
+   * building again is reported by diffing against this, so a refusal stands
+   * until it is honoured rather than being announced once and forgotten.
+   */
+  const mountedWith = options.settings ?? DEFAULT_SETTINGS;
 
   /**
    * Latched, and the only setting that genuinely cannot be anything else.
@@ -478,7 +343,8 @@ export function mountShelf(
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
 
-  const textures = new TextureCache(renderer);
+  COVERS.useRenderer(renderer);
+  const textures = COVERS;
   const lookup: BookLookup = new Map();
   // The seam: all of the arithmetic happens first, in a module with no Three.js
   // in it, and the scene graph is built from what it returned.
@@ -682,6 +548,7 @@ export function mountShelf(
         painters,
         next,
         settings,
+        mountedWith,
         unitHeight,
       );
       settings = next;
@@ -732,8 +599,9 @@ export function mountShelf(
       observer.disconnect();
       picker.dispose();
       controls.dispose();
-      textures.dispose();
       painters?.dispose();
+      // `textures` is the page-lifetime cover cache and is deliberately NOT
+      // disposed here — see `COVERS`. The traverse below skips what it owns.
 
       // Spine textures are generated per book rather than cached, and every
       // painted shadow carries a canvas of its own, so they are freed by walking
@@ -761,7 +629,11 @@ export function mountShelf(
             material instanceof THREE.MeshStandardMaterial ||
             material instanceof THREE.MeshBasicMaterial
           ) {
-            material.map?.dispose();
+            // Spine textures are generated per book and must be freed; covers
+            // belong to the shared cache and must not be. Asking the cache which
+            // is which beats guessing from the material type, which is how this
+            // traverse got it wrong once before.
+            if (!textures.owns(material.map)) material.map?.dispose();
           }
           material.dispose();
         }
@@ -1528,20 +1400,42 @@ function applyLive(
   painters: Painters | undefined,
   next: ShelfSettings,
   current: ShelfSettings,
+  mountedWith: ShelfSettings,
   unitHeight: number,
 ): ApplyReport {
   const applied: string[] = [];
   const needsRebuild: string[] = [];
   const needsReload: string[] = [];
+  const refused: string[] = [];
 
+  /**
+   * A *transition*: what changed since the last apply. Used for the live work,
+   * which is by definition a thing you do once when a value moves.
+   */
   const note = (list: string[], label: string, was: unknown, now: unknown): void => {
     if (was !== now) list.push(`${label}: ${String(was)} → ${String(now)}`);
+  };
+
+  /**
+   * A *standing difference*: what the shelf would have to be rebuilt to honour,
+   * measured against the settings the scene was actually **built** with — not
+   * against the last apply.
+   *
+   * This is the difference between a warning and a lie. Comparing transitions
+   * meant a refusal was announced once and then forgotten: toggle antialias, get
+   * "reload to apply", then nudge any live slider and the notice cleared itself
+   * — while the URL still asserted a configuration the shelf was not in. A
+   * standing diff cannot forget, and it clears by itself the moment a rebuild
+   * makes it true.
+   */
+  const standing = (list: string[], label: string, built: unknown, now: unknown): void => {
+    if (built !== now) list.push(`${label}: ${String(built)} → ${String(now)}`);
   };
 
   /* --- the renderer ------------------------------------------------------- */
 
   // A context-creation attribute. There is no live path, only a reload.
-  note(needsReload, 'antialias', current.renderer.antialias, next.renderer.antialias);
+  standing(needsReload, 'antialias', mountedWith.renderer.antialias, next.renderer.antialias);
 
   note(applied, 'dpr', current.renderer.maxPixelRatio, next.renderer.maxPixelRatio);
   note(applied, 'tone mapping', current.renderer.toneMapping, next.renderer.toneMapping);
@@ -1556,9 +1450,12 @@ function applyLive(
    * failure this whole report type exists to prevent. The panel disables the
    * control for the same reason; this is the backstop.
    */
+  if (next.renderer.exposure !== DEFAULT_SETTINGS.renderer.exposure && next.renderer.toneMapping === 'none') {
+    refused.push('exposure does nothing until a tone mapping is chosen');
+  }
   if (current.renderer.exposure !== next.renderer.exposure) {
     if (next.renderer.toneMapping === 'none') {
-      needsRebuild.push('exposure does nothing until a tone mapping is chosen');
+      /* already stated as refused, above — standing, so it does not vanish */
     } else {
       applied.push(`exposure: ${current.renderer.exposure.toFixed(2)} → ${next.renderer.exposure.toFixed(2)}`);
     }
@@ -1596,14 +1493,12 @@ function applyLive(
     renderer.shadowMap.needsUpdate = true;
   }
 
-  // The depth target is allocated at the size the light was made with; changing
-  // it means a new render target, which is the remount path.
-  note(needsRebuild, 'shadow map size', current.shadows.mapSize, next.shadows.mapSize);
-  // Which meshes have `castShadow` set is decided while the scene is built.
-  note(needsRebuild, 'shadow casters', current.shadows.casters, next.shadows.casters);
-  note(needsRebuild, 'shadow fetch', current.shadows.fetch, next.shadows.fetch);
-  // Painted shading is baked into canvas textures at mount.
-  note(needsRebuild, 'painted shading', current.shadows.painted, next.shadows.painted);
+  // All four are decided while the scene is built, so they are measured against
+  // what it was built with and stay outstanding until it is built again.
+  standing(needsRebuild, 'shadow map size', mountedWith.shadows.mapSize, next.shadows.mapSize);
+  standing(needsRebuild, 'shadow casters', mountedWith.shadows.casters, next.shadows.casters);
+  standing(needsRebuild, 'shadow fetch', mountedWith.shadows.fetch, next.shadows.fetch);
+  standing(needsRebuild, 'painted shading', mountedWith.shadows.painted, next.shadows.painted);
 
   /* --- the scene ---------------------------------------------------------- */
 
@@ -1647,8 +1542,8 @@ function applyLive(
 
   // The books' own materials are made per book inside `buildBook`, so there is no
   // handle to reach them through. Honest rather than silent.
-  note(needsRebuild, 'cover roughness', current.materials.coverRoughness, next.materials.coverRoughness);
-  note(needsRebuild, 'cover metalness', current.materials.coverMetalness, next.materials.coverMetalness);
+  standing(needsRebuild, 'cover roughness', mountedWith.materials.coverRoughness, next.materials.coverRoughness);
+  standing(needsRebuild, 'cover metalness', mountedWith.materials.coverMetalness, next.materials.coverMetalness);
 
   /* --- lighting ----------------------------------------------------------- */
 
@@ -1697,7 +1592,7 @@ function applyLive(
     applied.push('painted shadows repainted for the new light');
   }
 
-  return { applied, needsRebuild, needsReload };
+  return { applied, needsRebuild, needsReload, refused };
 }
 
 /**
@@ -1769,10 +1664,23 @@ function hex(value: number): string {
 class TextureCache {
   readonly #loader = new THREE.TextureLoader();
   readonly #cache = new Map<string, Promise<THREE.Texture | undefined>>();
-  readonly #anisotropy: number;
+  readonly #owned = new Set<THREE.Texture>();
+  #anisotropy = 1;
 
-  constructor(renderer: THREE.WebGLRenderer) {
+  /**
+   * Told about a renderer rather than made from one, because it outlives them.
+   *
+   * Anisotropy is a device capability, not a property of a particular context,
+   * so re-reading it on each mount costs nothing and keeps the cache from
+   * needing a renderer to exist.
+   */
+  useRenderer(renderer: THREE.WebGLRenderer): void {
     this.#anisotropy = renderer.capabilities.getMaxAnisotropy();
+  }
+
+  /** Whether this cache made a texture — and is therefore the one to free it. */
+  owns(texture: THREE.Texture | null | undefined): boolean {
+    return texture !== null && texture !== undefined && this.#owned.has(texture);
   }
 
   load(path: string): Promise<THREE.Texture | undefined> {
@@ -1786,6 +1694,7 @@ class TextureCache {
         (texture) => {
           texture.colorSpace = THREE.SRGBColorSpace;
           texture.anisotropy = this.#anisotropy;
+          this.#owned.add(texture);
           resolve(texture);
         },
         undefined,
@@ -1802,8 +1711,29 @@ class TextureCache {
       void promise.then((texture) => texture?.dispose());
     }
     this.#cache.clear();
+    this.#owned.clear();
   }
 }
+
+/**
+ * The covers, cached for the life of the page rather than the life of a mount.
+ *
+ * It used to be made inside `mountShelf` and freed by `dispose()`, which was
+ * right while a mount happened once. The debug panel's rebuild button makes it
+ * happen whenever somebody changes the shadow map size — and #41 measured what
+ * that costs on the owner's real vault: **~24 MB of cover re-upload**, refetched
+ * and re-decoded, to change a setting that has nothing to do with the books.
+ * That is the shape of the 314 MB problem G15 already fixed once.
+ *
+ * The GPU upload still happens again — `dispose()` on the old renderer takes its
+ * context with it — but the fetch and the decode do not, which is the expensive
+ * half on a phone.
+ *
+ * Never disposed. It is bounded by the size of the library, which is the same
+ * bound `gates/cover-budget.test.ts` already enforces, and the alternative is a
+ * cache that empties itself exactly when it would start being useful.
+ */
+const COVERS = new TextureCache();
 
 /**
  * Click-to-inspect.

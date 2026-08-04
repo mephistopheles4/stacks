@@ -6,6 +6,7 @@ import {
   TONE_MAPPING_NAMES,
   type ShelfSettings,
 } from './shelf-settings.ts';
+import { writeSettings } from './shelf-url.ts';
 
 /**
  * The tuning panel: every setting the shelf has, live, behind `?debug`.
@@ -35,19 +36,6 @@ import {
  *   anything it refused is shown, not swallowed;
  * - the panel never redraws a control as "done" on its own say-so.
  */
-
-/** Which URL parameter each setting round-trips through, so the URL stays the state. */
-const PARAM: Record<string, string> = {
-  antialias: 'aa',
-  maxPixelRatio: 'dpr',
-  guardResize: 'guard',
-  shadowsEnabled: 'shadows',
-  shadowMapSize: 'shadowmap',
-  shadowType: 'shadowtype',
-  shadowCasters: 'casters',
-  shadowFetch: 'shadowfetch',
-  painted: 'painted',
-};
 
 export interface PanelOptions {
   readonly handle: ShelfHandle;
@@ -112,12 +100,24 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    */
   const afterApply: (() => void)[] = [];
 
+  /**
+   * Every control's "put my value back from the settings" hook.
+   *
+   * Needed because not every change comes from the control itself — pressing
+   * *reset* moves all of them at once. Walking them individually at that point
+   * is exactly how one gets left showing the old number, which the panel is not
+   * allowed to do.
+   */
+  const resync: (() => void)[] = [];
+
   const apply = (next: ShelfSettings): void => {
     const report = handle.applySettings(next);
     settings = next;
-    writeUrl(next);
-    for (const resync of afterApply) resync();
+    writeSettings(next);
+    for (const hook of afterApply) hook();
     showReport(status, report, options.onRebuild !== undefined);
+    // Only for things a rebuild actually fixes. `refused` deliberately does not
+    // raise it: offering a button that cannot help is its own small lie.
     rebuildButton.hidden = report.needsRebuild.length === 0 || options.onRebuild === undefined;
     pendingRebuild = report.needsRebuild.length > 0 ? next : undefined;
   };
@@ -162,6 +162,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     input.addEventListener('change', () => {
       apply(set(settings, input.checked));
     });
+    resync.push(() => (input.checked = get(settings)));
     body.append(row(label, klass, input));
   };
 
@@ -193,6 +194,11 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
       apply(set(settings, parsed));
     });
 
+    resync.push(() => {
+      input.value = String(get(settings));
+      value.textContent = format(get(settings));
+    });
+
     const line = row(label, klass, input, value);
     body.append(line);
     return { input, row: line };
@@ -213,6 +219,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     input.addEventListener('input', () => {
       apply(set(settings, Number.parseInt(input.value.slice(1), 16)));
     });
+    resync.push(() => (input.value = `#${get(settings).toString(16).padStart(6, '0')}`));
     body.append(row(label, klass, input));
   };
 
@@ -235,6 +242,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     select.addEventListener('change', () => {
       apply(set(settings, select.value as T));
     });
+    resync.push(() => (select.value = get(settings)));
     body.append(row(label, klass, select));
   };
 
@@ -340,6 +348,12 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   toggleRow('casters', 'rebuild', (s) => s.shadows.casters, (s, v) =>
     resolveSettings({ shadows: { casters: v } }, s),
   );
+  // The isolator from the crash investigation: draw the map once, then stop
+  // *reading* it. It was in the URL vocabulary and had no control, which made
+  // the panel silently narrower than the URL it writes.
+  toggleRow('sample the map', 'rebuild', (s) => s.shadows.fetch, (s, v) =>
+    resolveSettings({ shadows: { fetch: v } }, s),
+  );
 
   /* --- scene -------------------------------------------------------------- */
 
@@ -398,9 +412,11 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   resetButton.style.width = '100%';
   resetButton.addEventListener('click', () => {
     apply(DEFAULT_SETTINGS);
-    // Rebuilt rather than patched: every control's value changed at once, and
-    // walking them individually is how one gets left showing the old number.
-    remount();
+    // Every control moved at once, so every control re-reads itself. This has to
+    // happen whether or not a rebuild is available — `onRebuild` is documented
+    // as optional, and without this the sliders would sit at their old positions
+    // describing settings the shelf is no longer running.
+    for (const hook of resync) hook();
   });
 
   body.append(exportButton, resetButton);
@@ -422,12 +438,6 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
 
   tick();
   const timer = window.setInterval(tick, 250);
-
-  const remount = (): void => {
-    // Nothing to rebind: `mountPanel` is called again by the caller after a
-    // remount, because the handle it closes over is dead.
-    options.onRebuild?.(settings);
-  };
 
   return () => {
     window.clearInterval(timer);
@@ -494,6 +504,9 @@ const KLASS_HELP: Record<Klass, string> = {
 function showReport(status: HTMLElement, report: ApplyReport, canRebuild: boolean): void {
   const lines: string[] = [];
 
+  // First, because it is the one no button can fix.
+  if (report.refused.length > 0) lines.push(`✗ ${report.refused.join(', ')}`);
+
   if (report.needsReload.length > 0) {
     lines.push(`⟳ reload to apply: ${report.needsReload.join(', ')}`);
   }
@@ -507,51 +520,6 @@ function showReport(status: HTMLElement, report: ApplyReport, canRebuild: boolea
   if (report.applied.length > 0) lines.push(`✓ ${report.applied.join(', ')}`);
 
   status.textContent = lines.join('\n');
-}
-
-/**
- * The URL is the state, so every change goes back into it.
- *
- * `replaceState`, not `pushState`: dragging a slider would otherwise write a
- * hundred history entries and make the back button useless. Only the parameters
- * that differ from the shipped defaults are written, so a URL stays readable and
- * a shelf running defaults has a clean address — and every bisect URL recorded
- * in `docs/progress.md` still means what it meant.
- */
-function writeUrl(settings: ShelfSettings): void {
-  const params = new URLSearchParams(window.location.search);
-
-  const set = (key: string, value: string | undefined): void => {
-    const name = PARAM[key];
-    if (name === undefined) return;
-    if (value === undefined) params.delete(name);
-    else params.set(name, value);
-  };
-
-  const d = DEFAULT_SETTINGS;
-  set('antialias', settings.renderer.antialias === d.renderer.antialias ? undefined : '0');
-  set(
-    'maxPixelRatio',
-    settings.renderer.maxPixelRatio === d.renderer.maxPixelRatio
-      ? undefined
-      : String(settings.renderer.maxPixelRatio),
-  );
-  set('guardResize', settings.renderer.guardResize === d.renderer.guardResize ? undefined : '1');
-  set(
-    'shadowsEnabled',
-    settings.shadows.enabled === d.shadows.enabled ? undefined : settings.shadows.enabled ? '1' : '0',
-  );
-  set('shadowType', settings.shadows.type === d.shadows.type ? undefined : settings.shadows.type);
-  set(
-    'shadowMapSize',
-    settings.shadows.mapSize === d.shadows.mapSize ? undefined : String(settings.shadows.mapSize),
-  );
-  set('shadowCasters', settings.shadows.casters === d.shadows.casters ? undefined : '0');
-  set('shadowFetch', settings.shadows.fetch === d.shadows.fetch ? undefined : '0');
-  set('painted', settings.shadows.painted === d.shadows.painted ? undefined : '0');
-
-  const query = params.toString();
-  window.history.replaceState(null, '', query === '' ? window.location.pathname : `?${query}`);
 }
 
 function format(value: number): string {

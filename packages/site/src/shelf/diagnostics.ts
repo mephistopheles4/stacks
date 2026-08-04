@@ -102,8 +102,21 @@ interface Snapshot {
 export interface DiagnosticsOptions {
   /** How many books were actually mounted — which `?books=N` may have cut down. */
   readonly books: number;
-  /** Absent when the shelf failed to mount at all; the record is still worth writing. */
-  readonly handle?: ShelfHandle;
+  /**
+   * The shelf, asked for on every sample rather than handed over once.
+   *
+   * A function, not a value, because the debug panel can rebuild the shelf: the
+   * old handle is disposed and a new one takes its place. Holding the first one
+   * would mean this file reads a dead renderer for the rest of the session —
+   * `profile` naming the settings of a shelf that no longer exists, and a change
+   * log frozen at the moment of the rebuild. That is precisely the lie the
+   * getter on `profile` was introduced to prevent, one level up.
+   *
+   * Returns `undefined` when the shelf failed to mount at all; the record is
+   * still worth writing, and a browser that refused a context is exactly the
+   * state worth having a record of.
+   */
+  readonly handle?: () => ShelfHandle | undefined;
 }
 
 /**
@@ -136,13 +149,14 @@ export function mountDiagnostics(
   host.append(panel);
 
   const sample = (): Snapshot => {
-    const stats = options.handle?.stats();
+    const shelf = options.handle?.();
+    const stats = shelf?.stats();
     const heap = performance.memory;
 
     return {
       seconds: Math.round((Date.now() - started) / 1000),
       books: options.books,
-      profile: options.handle?.profile ?? 'no shelf',
+      profile: shelf?.profile ?? 'no shelf',
       textures: stats?.textures ?? 0,
       geometries: stats?.geometries ?? 0,
       programs: stats?.programs ?? 0,
@@ -157,15 +171,15 @@ export function mountDiagnostics(
             heapLimitMb: Math.round(heap.jsHeapSizeLimit / 1024 / 1024),
           }),
       ...(navigator.deviceMemory === undefined ? {} : { deviceMemoryGb: navigator.deviceMemory }),
-      ...(options.handle?.gpu === undefined ? {} : { gpu: options.handle.gpu }),
+      ...(shelf?.gpu === undefined ? {} : { gpu: shelf.gpu }),
       screen: `${String(window.innerWidth)}x${String(window.innerHeight)} @${String(window.devicePixelRatio)}`,
       errors: [...errors],
-      ...(options.handle === undefined || options.handle.shaderErrors.length === 0
+      ...(shelf === undefined || shelf.shaderErrors.length === 0
         ? {}
-        : { shaders: [...options.handle.shaderErrors] }),
-      ...(options.handle === undefined || options.handle.changeLog.length === 0
+        : { shaders: [...shelf.shaderErrors] }),
+      ...(shelf === undefined || shelf.changeLog.length === 0
         ? {}
-        : { changes: [...options.handle.changeLog] }),
+        : { changes: [...shelf.changeLog] }),
       ...(window.location.search === '' ? {} : { query: window.location.search }),
     };
   };
