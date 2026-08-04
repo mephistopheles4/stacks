@@ -248,6 +248,35 @@ order     show the shelf order, or renumber it with gaps   (--renumber)
 import    import a library export into the vault   (audible)
 ```
 
+## The debug panel — `?debug`
+
+Loads a **black box** and a **tuning panel** onto the ordinary page. Neither
+exists for a visitor who does not ask.
+
+- **The black box** (`diagnostics.ts`) records a crash that leaves no error
+  behind, and is a **static** import: it has to be running before the thing it
+  measures fails. See "The mobile crash" in [`docs/progress.md`](docs/progress.md).
+- **The panel** (`debug-panel.ts`) is every setting the shelf has, live, and is
+  **lazy**: its 8.8 KB is paid only by a page that asked for it.
+
+Everything the shelf looks like is one object — `ShelfSettings` in
+`shelf-settings.ts` — and the panel exports it as JSON you paste back into
+`DEFAULT_SETTINGS`. `shelf-url.ts` owns the query string in both directions: the
+ten historic probes keep their flat spellings because `docs/progress.md`
+documents them with measured results, and everything else rides in `?tune=`.
+
+**A control must not lie, and that is the whole design.** `applySettings`
+returns an `ApplyReport` — `applied`, `needsRebuild`, `needsReload`, `refused` —
+and the panel renders what the shelf reported rather than what it was asked for.
+This is [`docs/progress.md`](docs/progress.md)'s oldest rule about instruments,
+*"a probe that silently did nothing would be worse than no probe"*, applied to a
+slider. It caught seven real faults; they are listed there.
+
+Decisions: [ADR-0032](docs/adr/0032-shelf-settings-are-one-object.md),
+[ADR-0033](docs/adr/0033-painters-follow-the-light.md),
+[ADR-0034](docs/adr/0034-bloom-behind-a-composer.md). Research behind them is in
+[`docs/research/`](docs/research/).
+
 ## Decisions
 
 Every choice this project has already made, one file each, lives in
