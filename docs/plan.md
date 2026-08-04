@@ -280,9 +280,18 @@ This repo **deliberately does not opt into its issue-tracker pipeline.**
   not an addition to it. The phases in §3–§6 already are the tickets, and their
   gates are executable commands rather than issue states. Running both means every
   session must first work out which system it is obeying.
-- **Not installed, not needed:** `wayfinder`. It is an on-ramp for pre-spec work
-  that is too foggy to plan. This project has a brief, four phases and executable
-  gates — the fog it clears is already cleared.
+- ~~**Not installed, not needed:** `wayfinder`.~~ **Reversed.** The original
+  reasoning was that this project has a brief, four phases and executable gates,
+  so the fog it clears is already cleared. That was true of the four phases and
+  stopped being true after them: the debug-panel work arrived as a loose idea
+  with five open decisions and no spec to gate against, which is the exact shape
+  the skill is for. The map is
+  [#39](https://github.com/mephistopheles4/stacks/issues/39), and the GitHub
+  mechanics are in
+  [`docs/agents/issue-tracker.md`](agents/issue-tracker.md#wayfinding-operations).
+  Note this does **not** reverse the entry above it: `to-prd`, `to-issues` and
+  `implement` stay off, because a wayfinder map ends in decisions and a spec,
+  and does not replace the phase gates with issue states.
 
 Reversing this is a legitimate call if the project grows past one person, but it
 is a deliberate decision, not an oversight.

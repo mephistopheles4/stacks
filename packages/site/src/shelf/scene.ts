@@ -12,7 +12,16 @@ import {
   type Contact,
 } from './contact-shadow.ts';
 import { rowsForCase, SHELF } from './case.ts';
+import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
+import {
+  DEFAULT_SETTINGS,
+  heightOf,
+  type LightPosition,
+  type ShadowTypeName,
+  type ShelfSettings,
+  type ToneMappingName,
+} from './shelf-settings.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
 /**
@@ -36,20 +45,29 @@ import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
  * filter that was not running. Mapped honestly rather than dropped, so an old
  * URL still works and says what it actually got.
  */
-const SHADOW_TYPES = {
+const SHADOW_TYPES: Record<ShadowTypeName, THREE.ShadowMapType> = {
   basic: THREE.BasicShadowMap,
   pcf: THREE.PCFShadowMap,
   soft: THREE.PCFShadowMap,
   vsm: THREE.VSMShadowMap,
-} as const;
+};
 
-const COLOURS = {
-  background: 0x1a1613,
-  wood: 0x6b4f3a,
-  woodDark: 0x4a3527,
-  key: 0xffe9cc,
-  fill: 0x5577aa,
-} as const;
+/**
+ * Tone mapping by name, for the same reason `SHADOW_TYPES` exists.
+ *
+ * A settings blob carrying `toneMapping: 4` says nothing to anyone reading the
+ * file, and three's numeric constants are not stable across major versions —
+ * `soft` is already a documented case of a name outliving what it mapped to.
+ */
+const TONE_MAPPINGS: Record<ToneMappingName, THREE.ToneMapping> = {
+  none: THREE.NoToneMapping,
+  linear: THREE.LinearToneMapping,
+  reinhard: THREE.ReinhardToneMapping,
+  cineon: THREE.CineonToneMapping,
+  aces: THREE.ACESFilmicToneMapping,
+  agx: THREE.AgXToneMapping,
+  neutral: THREE.NeutralToneMapping,
+};
 
 /**
  * A book on the shelf, and where its front face sits in its own local space.
@@ -81,6 +99,49 @@ export interface ShelfStats {
   readonly bufferWidth: number;
   readonly bufferHeight: number;
   readonly pixelRatio: number;
+  /**
+   * Frames a second, averaged over the last window — 0 until the first one closes.
+   *
+   * Measured rather than assumed, because the number that matters is the one the
+   * device actually achieves: this shelf renders continuously (OrbitControls
+   * damps, so a frame is always scheduled), and the whole point of a tuning panel
+   * is to see what a setting costs. A count of draws cannot say that — the shelf
+   * drew the same 302 calls with shadows on and off, and one of those
+   * configurations killed a phone.
+   */
+  readonly fps: number;
+}
+
+/**
+ * What a settings change actually did — and, more importantly, what it did not.
+ *
+ * The rule this exists to keep is `docs/progress.md`'s: *"a probe that silently
+ * did nothing would be worse than no probe"*. Every one of the original ten was
+ * verified to have a real measured effect before it shipped, because a probe
+ * that appears to work and does not sends the owner off to rule out the actual
+ * cause. A panel control is the same hazard wearing a nicer UI, so the shelf
+ * reports back rather than letting the panel assume.
+ */
+export interface ApplyReport {
+  /** Changed on the live scene, described in the settings' own vocabulary. */
+  readonly applied: readonly string[];
+  /**
+   * Changed in the settings and NOT on the scene: these need the shelf rebuilt.
+   * The panel must say so rather than show a moved slider over an unmoved shelf.
+   */
+  readonly needsRebuild: readonly string[];
+  /** Needs a whole new WebGL context, which means a page reload. */
+  readonly needsReload: readonly string[];
+  /**
+   * Changed in the settings and cannot take effect *as configured* — no rebuild
+   * or reload would help, because something else has to change first.
+   *
+   * Kept apart from `needsRebuild` because offering a rebuild button for
+   * something a rebuild cannot fix is its own small lie. The live case is
+   * exposure under `NoToneMapping`: the uniform does not exist, and the fix is
+   * to pick an operator, not to rebuild anything.
+   */
+  readonly refused: readonly string[];
 }
 
 export interface ShelfHandle {
@@ -89,8 +150,32 @@ export interface ShelfHandle {
   readonly bookCount: number;
   /** The GPU, when the browser is willing to name it. */
   readonly gpu: string | undefined;
-  /** The renderer settings this mount actually ran with. See `RendererOverrides`. */
+  /**
+   * The renderer settings the shelf is running **now**, not the ones it started
+   * with. See the getter in `mountShelf` for why that distinction is load-bearing.
+   */
   readonly profile: string;
+  /** The full current settings, for the panel to edit and export. */
+  readonly settings: ShelfSettings;
+  /**
+   * What the scene was actually **built** with, as opposed to what has been
+   * asked for since.
+   *
+   * The panel needs both to tell a control that is doing something from one that
+   * is merely set: a rebuild-class control whose value has moved away from this
+   * is waiting, and saying so is the difference between a lamp and a decoration.
+   */
+  readonly mountedWith: ShelfSettings;
+  /**
+   * Every setting change this session, oldest first — so a crash record reads as
+   * a sequence rather than as a final state.
+   */
+  readonly changeLog: readonly string[];
+  /**
+   * Moves the shelf to a new configuration, applying everything that can be
+   * applied live and reporting everything that cannot.
+   */
+  applySettings(next: ShelfSettings): ApplyReport;
   /**
    * How far the worst-placed book sticks out through the side of the case, in
    * world units. Zero means every book is inside its shelf.
@@ -119,123 +204,16 @@ export interface ShelfHandle {
   projectBook(index: number): { x: number; y: number } | undefined;
 }
 
-/**
- * Renderer settings that can be overridden per load, to bisect a context loss.
- *
- * The library-size bisect (`?books=N`) came back saying the shelf dies with five
- * books, 632 triangles and eleven textures — so the cost that matters is fixed,
- * paid before a single book is drawn, and it lives in these four settings. Each
- * is separately overridable rather than bundled into a "mobile profile" for one
- * reason: a bundle would very likely make the crash go away while leaving nobody
- * able to say which knob did it, and would ship three permanent quality
- * regressions to fix one bug.
- *
- * Ranked by what the numbers implicate, on the device that actually fails:
- * a 1054×1926 buffer with 4× MSAA colour and depth is ~65 MB and by far the
- * largest allocation here; the pixel ratio is what sets that size; the 2048²
- * shadow map is 16 MB; and the resize guard is last but stays plausible because
- * the failure is delayed rather than at first paint.
- */
-export interface RendererOverrides {
-  /** `?aa=0`. MSAA resolve is the expensive path on a tile-based GPU. */
-  readonly antialias?: boolean;
-  /** `?dpr=1.5`. Caps `devicePixelRatio`; the default cap is 2. */
-  readonly maxPixelRatio?: number;
-  /**
-   * `?shadows=0`. Turns off the shadow map and the light that casts it.
-   *
-   * The shadow pass is what loses the context on a Pixel 10 Pro — the full
-   * 31-book shelf is stable without it and dies in 6–18 seconds with it, one
-   * variable, everything else untouched. It stays **on by default anyway**:
-   * shadows are most of what makes the shelf read as furniture rather than as
-   * coloured boxes, and the owner's call is that losing them is not the price.
-   * So the question is not whether to keep them but which cheaper form of them
-   * survives, which is what the three switches below are for.
-   */
-  readonly shadows?: boolean;
-  /** `?shadowmap=1024`. Edge of the depth target; the default is 2048 (16 MB). */
-  readonly shadowMapSize?: number;
-  /**
-   * `?shadowtype=basic|pcf|soft|vsm`. See `SHADOW_TYPES`: `soft` is now `pcf`.
-   *
-   * `vsm` is the one that is not a variation on the others. The first three all
-   * declare `uniform sampler2DShadow` and read the map with a hardware depth
-   * comparison — which is the fetch `?shadowfetch=0` has now identified as what
-   * takes the context away, and which is why all three died alike at every size
-   * and filter. Variance shadow maps store depth and depth-squared in an
-   * ordinary texture and read it with a plain `sampler2D`, so they are the only
-   * configuration here that avoids the operation actually implicated.
-   */
-  readonly shadowType?: 'basic' | 'pcf' | 'soft' | 'vsm';
-  /**
-   * `?casters=0`. Nothing casts, but the shadow map is still allocated and the
-   * pass still runs — over an empty scene.
-   *
-   * The one switch that *discriminates* rather than just reducing. Everything
-   * else makes the shadow work smaller, so surviving any of them says only "less
-   * was cheaper". This separates the two candidate mechanisms outright: if the
-   * shelf lives with the target allocated and the pass empty, the cost is
-   * drawing ~190 shadow casters; if it still dies, the cost is the depth target
-   * or the shader that samples it, and no amount of thinning the geometry will
-   * help.
-   */
-  readonly shadowCasters?: boolean;
-  /**
-   * `?guard=1`. Skips `setSize` when the canvas has not actually changed size.
-   *
-   * Assigning `canvas.width` reallocates the drawing buffer even when the value
-   * is identical, so an unguarded `ResizeObserver` churns the whole
-   * multisampled framebuffer on every layout event. Off by default so that the
-   * probe measures a change rather than smuggling in a fix.
-   */
-  readonly guardResize?: boolean;
-  /**
-   * `?painted=0`. Leaves out the painted shading — no contact shadows, no
-   * backboard shade, no recess, no neighbour bands.
-   *
-   * Two jobs. It makes `?shadows=1` a *clean* reference again: the two systems
-   * are independent, so asking for real shadows has always drawn them on top of
-   * the painted ones and double-darkened everything they agree about.
-   *
-   * And it discriminates on the shader failure. The program that will not link
-   * is a `MeshBasicMaterial`, which in this scene is only ever a painted shadow.
-   * With them gone the scene has no basic material left, so if `?shadows=1` then
-   * links and runs, the fault is specific to those programs and there is
-   * something to change; if it still fails, it is the lit materials too and
-   * there is not.
-   */
-  readonly painted?: boolean;
-  /**
-   * `?shadowfetch=0`. Draws the shadow map once, then stops *reading* it.
-   *
-   * The isolator. Enabling shadows confounds three things, and the bisect has
-   * now eliminated one of them outright:
-   *
-   *  - the render target is allocated — a 2048² depth texture **and** a 2048²
-   *    RGBA8 colour texture that three creates and never samples, 16 MB each;
-   *  - the shadow pass runs — but `autoUpdate = false` means exactly once, at
-   *    first paint, so it cannot be what takes a context away twelve seconds
-   *    later, and `casters=0` dying agrees;
-   *  - every lit fragment samples the depth texture, every frame, forever.
-   *
-   * `receiveShadow` cannot separate the last two: three keys `USE_SHADOWMAP` on
-   * `shadowMap.enabled` and the light count alone, so turning it off on the
-   * books would change nothing at all. Turning the whole flag off after the
-   * first frame and recompiling does: the target stays allocated, the map stays
-   * drawn, and the sampling stops.
-   *
-   * Survives → the per-frame depth fetch is what kills the driver.
-   * Still dies → merely holding a sampled depth attachment does, and there is
-   * nothing left to fix.
-   */
-  readonly shadowFetch?: boolean;
-}
-
 export interface MountOptions {
   /** Called when a book is clicked, or with `undefined` when one is dismissed. */
   readonly onSelect?: (book: LibraryBook | undefined) => void;
-  /** Per-load renderer settings. See `RendererOverrides`. */
-  readonly renderer?: RendererOverrides;
+  /**
+   * What the shelf runs with. Total — see `ShelfSettings`.
+   *
+   * Callers holding the URL's partial vocabulary get here through
+   * `resolveSettings(toSettingsPatch(overrides))`.
+   */
+  readonly settings?: ShelfSettings;
   /**
    * The GPU dropped the scene — the page is alive, the canvas is not.
    *
@@ -259,20 +237,63 @@ export function mountShelf(
   books: readonly LibraryBook[] = [],
   options: MountOptions = {},
 ): ShelfHandle {
-  const antialias = options.renderer?.antialias ?? true;
-  const maxPixelRatio = options.renderer?.maxPixelRatio ?? 2;
-  const shadows = options.renderer?.shadows ?? false;
-  const shadowMapSize = options.renderer?.shadowMapSize ?? 2048;
-  const shadowType = options.renderer?.shadowType ?? 'pcf';
-  const shadowCasters = options.renderer?.shadowCasters ?? true;
-  const guardResize = options.renderer?.guardResize ?? false;
-  const painted = options.renderer?.painted ?? true;
-  const shadowFetch = options.renderer?.shadowFetch ?? true;
+  /**
+   * What this mount is running — and it can change.
+   *
+   * `let`, not `const`, because the debug panel edits it live. Everything that
+   * reports on the shelf reads through this rather than through a value copied
+   * at mount: `profile` used to be a string built once here, which was correct
+   * only for as long as nothing could change it. See `applySettings`.
+   */
+  let settings = options.settings ?? DEFAULT_SETTINGS;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
-  renderer.shadowMap.enabled = shadows;
-  renderer.shadowMap.type = SHADOW_TYPES[shadowType];
+  /**
+   * What the scene was actually built with. Never reassigned.
+   *
+   * `settings` is what has been *asked* for; this is what the geometry, the
+   * textures and the context were made from. Anything that can only change by
+   * building again is reported by diffing against this, so a refusal stands
+   * until it is honoured rather than being announced once and forgotten.
+   */
+  const mountedWith = options.settings ?? DEFAULT_SETTINGS;
+
+  /**
+   * Latched, and the only setting that genuinely cannot be anything else.
+   *
+   * `antialias` is a **context-creation attribute**. It is read by `getContext`
+   * when the drawing buffer is made, and the context will not be made twice for
+   * one canvas — so there is no amount of bookkeeping that turns this into a live
+   * toggle. It is read once here so that a later edit to `settings` cannot make
+   * the profile claim a buffer the driver is not holding.
+   */
+  const antialias = settings.renderer.antialias;
+
+  /**
+   * Bloom needs a composer, and a composer takes the multisampling away.
+   *
+   * `EffectComposer` renders into its own offscreen targets and never sets
+   * `samples` on them, so the MSAA the context was created with simply stops
+   * applying. Asking for it anyway would allocate a multisampled drawing buffer
+   * that nothing draws into — the cost of antialiasing with none of it — and it
+   * would leave `?aa` flipping an attribute no pixel reads, which is the probe
+   * that silently does nothing.
+   *
+   * So when effects are on, the context is made without MSAA and antialiasing
+   * moves to an SMAA pass inside the chain. `profile` says `aa=smaa`, because
+   * the setting still means something and it is not the same something.
+   */
+  const composed = settings.effects.bloom.enabled;
+  const contextAntialias = composed ? false : antialias;
+
+  // Read at build time. Each decides what geometry and which textures get made,
+  // so changing one means building a different scene rather than adjusting this
+  // one — the panel remounts for these rather than pretending. The rest are read
+  // through `settings` at the point of use, so the panel can move them live.
+  const shadows = settings.shadows.enabled;
+  const shadowFetch = settings.shadows.fetch;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: contextAntialias });
+  applyRendererSettings(renderer, settings);
 
   /**
    * What the driver said when a program would not link.
@@ -284,8 +305,12 @@ export function mountShelf(
   const shaderErrors: string[] = [];
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(COLOURS.background);
-  scene.fog = new THREE.Fog(COLOURS.background, 14, 30);
+  const background = new THREE.Color(settings.scene.background);
+  scene.background = background;
+  // Kept as a field rather than read off `scene.fog` later: turning fog off sets
+  // `scene.fog` to null, and turning it back on needs the object it used to be.
+  const fog = new THREE.Fog(settings.scene.background, settings.scene.fog.near, settings.scene.fog.far);
+  scene.fog = settings.scene.fog.enabled ? fog : null;
 
   const rows = toRows(books);
   const rowCount = rowsForCase(rows.length);
@@ -326,8 +351,9 @@ export function mountShelf(
 
   frameCamera(16 / 9);
 
-  scene.add(buildShelf(rowCount, shadowCasters));
-  addLighting(scene, unitHeight, shadows, shadowMapSize);
+  const woodwork = buildShelf(rowCount, settings);
+  scene.add(woodwork.group);
+  const lights = addLighting(scene, unitHeight, settings);
 
   /**
    * The shadow map is drawn **once**, not sixty times a second.
@@ -344,12 +370,13 @@ export function mountShelf(
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
 
-  const textures = new TextureCache(renderer);
+  COVERS.useRenderer(renderer);
+  const textures = COVERS;
   const lookup: BookLookup = new Map();
   // The seam: all of the arithmetic happens first, in a module with no Three.js
   // in it, and the scene graph is built from what it returned.
   const placements = placeShelf(rows);
-  const placed = buildBooks(scene, placements, textures, lookup, shadowCasters, painted);
+  const { placed, painters } = buildBooks(scene, placements, textures, lookup, settings);
 
   const picker = new Picker(
     canvas,
@@ -374,12 +401,59 @@ export function mountShelf(
   let frame = 0;
   let drawn = 0;
 
+  /**
+   * Frames a second, over a moving window rather than instantaneously.
+   *
+   * Half a second is long enough that the number stops flickering and short
+   * enough that letting go of a slider shows the new cost almost at once. A
+   * per-frame reciprocal would be unreadable, and a per-second one is too slow
+   * to dial against.
+   */
+  const FPS_WINDOW_MS = 500;
+  let fps = 0;
+  let framesInWindow = 0;
+  let windowStarted = performance.now();
+
+  /**
+   * How a frame is produced. Swapped once, if a composer arrives.
+   *
+   * `post.ts` is imported dynamically so the ~4.7 KB gzipped that bloom costs is
+   * paid only by a page that asked for it. That import resolves after the first
+   * frames have already been drawn, so the shelf renders straight to the canvas
+   * until it lands rather than showing nothing while it waits.
+   */
+  let renderFrame = (): void => renderer.render(scene, camera);
+  let post: Post | undefined;
+
+  /**
+   * The frame counters are reset by hand, once, at the top of the frame.
+   *
+   * `renderer.info.render` resets itself inside every `render()` call. That is
+   * right for one call a frame and wrong the moment a composer is in the chain:
+   * it renders the scene, then several fullscreen quads, so the surviving
+   * numbers describe the *last quad* — the panel read `draws 1  tris 1` on a
+   * shelf drawing 314 of them. A readout that under-reports by two orders of
+   * magnitude on exactly the configuration you turned on to measure is worse
+   * than no readout, which is this project's oldest rule about instruments.
+   */
+  renderer.info.autoReset = false;
+
   const renderLoop = (): void => {
     if (halted) return;
     frame = requestAnimationFrame(renderLoop);
     controls.update();
-    renderer.render(scene, camera);
+    renderer.info.reset();
+    renderFrame();
     drawn += 1;
+
+    framesInWindow += 1;
+    const now = performance.now();
+    const elapsed = now - windowStarted;
+    if (elapsed >= FPS_WINDOW_MS) {
+      fps = (framesInWindow * 1000) / elapsed;
+      framesInWindow = 0;
+      windowStarted = now;
+    }
 
     // After the map is drawn and before it is ever read again. See `shadowFetch`.
     if (drawn === 1 && shadows && !shadowFetch) stopSamplingShadows(renderer, scene);
@@ -417,10 +491,15 @@ export function mountShelf(
   const resize = (): void => {
     const { clientWidth, clientHeight } = canvas;
     if (clientWidth === 0 || clientHeight === 0) return;
-    if (guardResize && clientWidth === sizedTo.width && clientHeight === sizedTo.height) return;
+    // Read through `settings` rather than off a local captured at mount, so
+    // toggling the guard in the panel takes effect on the very next resize.
+    if (settings.renderer.guardResize && clientWidth === sizedTo.width && clientHeight === sizedTo.height) {
+      return;
+    }
     sizedTo = { width: clientWidth, height: clientHeight };
 
     renderer.setSize(clientWidth, clientHeight, false);
+    post?.setSize(clientWidth, clientHeight);
     camera.aspect = clientWidth / clientHeight;
     camera.updateProjectionMatrix();
 
@@ -456,23 +535,100 @@ export function mountShelf(
   canvas.addEventListener('webglcontextlost', handleContextLost);
   canvas.addEventListener('webglcontextrestored', handleContextRestored);
 
+  if (composed) {
+    void import('./post.ts').then(({ makePost }) => {
+      // The mount may have been disposed while the chunk was in flight.
+      if (halted || disposed) return;
+      post = makePost(renderer, scene, camera, settings);
+      post.setSize(canvas.clientWidth, canvas.clientHeight);
+      renderFrame = () => post?.render();
+    });
+  }
+
+  let disposed = false;
+
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
   resize();
   renderLoop();
+
+  /**
+   * Every setting change this session has made, oldest first.
+   *
+   * A crash after eight toggles is far more legible as a sequence than as a
+   * final state — "it died when I turned shadows on" is the finding, and a
+   * snapshot of where the dials ended up cannot say it. Bounded, because the
+   * black box serialises into `localStorage` once a second for as long as the
+   * page lives and an uncapped list is a growing write on a device that may
+   * already be in trouble.
+   */
+  const changes: string[] = [];
+  const MAX_CHANGES = 24;
 
   return {
     bookCount: placed.length,
     gpu: describeGpu(renderer),
     caseOverflow: measureCaseOverflow(scene, placed),
     shaderErrors,
-    // Reported back so a screenshot of the panel says which settings were live.
-    // A bisect whose result cannot be tied to a configuration is just an anecdote.
-    profile:
-      `aa=${antialias ? 'on' : 'off'} dpr<=${String(maxPixelRatio)} ` +
-      `shadows=${shadows ? `${shadowType}@${String(shadowMapSize)}` : 'off'} ` +
-      `casters=${shadowCasters ? 'on' : 'off'} guard=${guardResize ? 'on' : 'off'} ` +
-      `painted=${painted ? 'on' : 'off'} fetch=${shadowFetch ? 'on' : 'off'}`,
+
+    /**
+     * Read live, not captured at mount.
+     *
+     * This was a string built once in this function, and it was correct for
+     * exactly as long as nothing could change a setting after mount. The debug
+     * panel ends that, and a `profile` that reports the settings the page
+     * *started* with would name a configuration the page was not running — on
+     * the one instrument that survives a tab death, and off which every finding
+     * in the crash investigation was read. `scene.ts` has already had one
+     * profile string report a filter that was not running (see `SHADOW_TYPES`);
+     * a second, worse, version of that is not worth risking to save a getter.
+     */
+    get profile(): string {
+      const { renderer: r, shadows: s } = settings;
+      return (
+        `aa=${composed ? 'smaa' : antialias ? 'on' : 'off'} dpr<=${String(r.maxPixelRatio)} ` +
+        `bloom=${settings.effects.bloom.enabled ? settings.effects.bloom.strength.toFixed(2) : 'off'} ` +
+        `shadows=${s.enabled ? `${s.type}@${String(s.mapSize)}` : 'off'} ` +
+        `casters=${s.casters ? 'on' : 'off'} guard=${r.guardResize ? 'on' : 'off'} ` +
+        `painted=${s.painted ? 'on' : 'off'} fetch=${s.fetch ? 'on' : 'off'} ` +
+        `tone=${r.toneMapping}@${r.exposure.toFixed(2)}`
+      );
+    },
+
+    get settings(): ShelfSettings {
+      return settings;
+    },
+
+    mountedWith,
+
+    get changeLog(): readonly string[] {
+      return changes;
+    },
+
+    applySettings(next: ShelfSettings): ApplyReport {
+      const report = applyLive(
+        renderer,
+        scene,
+        background,
+        fog,
+        lights,
+        woodwork,
+        painters,
+        post,
+        next,
+        settings,
+        mountedWith,
+        unitHeight,
+      );
+      settings = next;
+
+      for (const entry of report.applied) {
+        if (changes.length < MAX_CHANGES) changes.push(entry);
+        else if (changes.length === MAX_CHANGES) changes.push('(more changes followed)');
+      }
+
+      return report;
+    },
 
     stats(): ShelfStats {
       const { memory, render, programs } = renderer.info;
@@ -485,6 +641,7 @@ export function mountShelf(
         bufferWidth: renderer.domElement.width,
         bufferHeight: renderer.domElement.height,
         pixelRatio: renderer.getPixelRatio(),
+        fps,
       };
     },
 
@@ -505,13 +662,17 @@ export function mountShelf(
     },
 
     dispose(): void {
+      disposed = true;
+      post?.dispose();
       cancelAnimationFrame(frame);
       canvas.removeEventListener('webglcontextlost', handleContextLost);
       canvas.removeEventListener('webglcontextrestored', handleContextRestored);
       observer.disconnect();
       picker.dispose();
       controls.dispose();
-      textures.dispose();
+      painters?.dispose();
+      // `textures` is the page-lifetime cover cache and is deliberately NOT
+      // disposed here — see `COVERS`. The traverse below skips what it owns.
 
       // Spine textures are generated per book rather than cached, and every
       // painted shadow carries a canvas of its own, so they are freed by walking
@@ -539,7 +700,11 @@ export function mountShelf(
             material instanceof THREE.MeshStandardMaterial ||
             material instanceof THREE.MeshBasicMaterial
           ) {
-            material.map?.dispose();
+            // Spine textures are generated per book and must be freed; covers
+            // belong to the shared cache and must not be. Asking the cache which
+            // is which beats guessing from the material type, which is how this
+            // traverse got it wrong once before.
+            if (!textures.owns(material.map)) material.map?.dispose();
           }
           material.dispose();
         }
@@ -708,9 +873,13 @@ function buildBooks(
   placements: readonly (readonly Placement[])[],
   textures: TextureCache,
   lookup: BookLookup,
-  castShadows: boolean,
-  painted: boolean,
-): PlacedBook[] {
+  settings: ShelfSettings,
+): { placed: PlacedBook[]; painters: Painters | undefined } {
+  // Was a separate parameter until the settings object existed, which let a
+  // caller pass a `painted` that disagreed with the one the painters would later
+  // read. One source, no way to disagree.
+  const painted = settings.shadows.painted;
+
   const placed: PlacedBook[] = [];
   /** Contacts per row of *books*, indexed as `placements` is — top shelf first. */
   const byRow: Contact[][] = [];
@@ -737,7 +906,7 @@ function buildBooks(
 
       // `frontZ` is half the book's depth by definition, so twice it is the
       // depth to build at — exactly, since halving and doubling a double is.
-      const book = buildBook(entry, placement.frontZ * 2, textures, castShadows, shadedFromRight);
+      const book = buildBook(entry, placement.frontZ * 2, textures, shadedFromRight, settings);
 
       book.rotation.y = placement.rotationY;
       book.rotation.z = placement.rotationZ;
@@ -759,41 +928,115 @@ function buildBooks(
   // shading the case throws on itself, and an empty shelf has a backboard and a
   // corner just as a full one does. Skipping them would leave the bottom of a
   // growing case looking like a different piece of furniture from the top.
-  if (!painted) return placed;
+  if (!painted) return { placed, painters: undefined };
 
-  const light = caseLight(rowCount * SHELF.rowHeight);
+  const painters = new Painters(scene, byRow, rowCount);
+  painters.paint(settings);
+
+  // The corner a shelf makes with its backboard is dark on both sides whatever
+  // the light does, so it is not derived from the light and never repainted —
+  // painted once, here, and left alone. See `makeRecessShade`.
   const openHeight = SHELF.rowHeight - SHELF.plankThickness;
-
   for (let row = 0; row < rowCount; row += 1) {
-    const shelfY = row * SHELF.rowHeight + SHELF.plankThickness / 2;
-
-    const shadow = makeContactShadow(
-      byRow[rowCount - 1 - row] ?? [],
-      SHELF.width,
-      SHELF.depth,
-      shelfY,
-      light,
-    );
-    if (shadow !== undefined) scene.add(shadow);
-
-    const shade = makeBackboardShade(SHELF.width, openHeight, INTERIOR_DEPTH, light);
-    if (shade !== undefined) {
-      shade.position.set(
-        0,
-        shelfY + openHeight / 2,
-        -SHELF.depth / 2 + SHELF.backThickness / 2 + LIFT,
-      );
-      scene.add(shade);
-    }
-
     const recess = makeRecessShade(SHELF.width, openHeight);
     if (recess !== undefined) {
+      const shelfY = row * SHELF.rowHeight + SHELF.plankThickness / 2;
       recess.position.set(0, shelfY + openHeight / 2, BOOK_FRONT_Z + RECESS_CLEARANCE);
       scene.add(recess);
     }
   }
 
-  return placed;
+  return { placed, painters };
+}
+
+/**
+ * The two painted shadows that are cast, and can therefore go stale.
+ *
+ * `contact-shadow.ts` and `keyLightPosition` both carry the same warning in
+ * prose: the painters derive their direction from the key light *so that* moving
+ * it cannot leave them describing a light that is no longer there. A panel with
+ * a light control is exactly the thing that breaks that promise, so this exists
+ * to keep it — the painters are redrawn from the light's new position instead of
+ * being allowed to drift.
+ *
+ * **Repainting rather than remounting, deliberately.** The alternative was to
+ * rebuild the whole shelf, which is correct by construction and much more
+ * expensive for the wrong reason: `TextureCache` is per-mount, so a remount
+ * re-pays ~24 MB of cover upload on the real vault (measured, #41) to redraw a
+ * shadow that is a handful of 2D canvas fills. Nothing about a book changes when
+ * the light moves.
+ *
+ * The contacts are held rather than recomputed because they are a function of
+ * the *layout*, not of the light — the books have not moved, and re-deriving
+ * them would be a second chance to disagree with where they were actually put.
+ */
+class Painters {
+  readonly #scene: THREE.Scene;
+  readonly #byRow: readonly (readonly Contact[])[];
+  readonly #rowCount: number;
+  #meshes: THREE.Mesh[] = [];
+
+  constructor(scene: THREE.Scene, byRow: readonly (readonly Contact[])[], rowCount: number) {
+    this.#scene = scene;
+    this.#byRow = byRow;
+    this.#rowCount = rowCount;
+  }
+
+  paint(settings: ShelfSettings): void {
+    this.dispose();
+
+    const light = caseLight(this.#rowCount * SHELF.rowHeight, settings);
+    const openHeight = SHELF.rowHeight - SHELF.plankThickness;
+
+    for (let row = 0; row < this.#rowCount; row += 1) {
+      const shelfY = row * SHELF.rowHeight + SHELF.plankThickness / 2;
+
+      const shadow = makeContactShadow(
+        this.#byRow[this.#rowCount - 1 - row] ?? [],
+        SHELF.width,
+        SHELF.depth,
+        shelfY,
+        light,
+      );
+      if (shadow !== undefined) this.#add(shadow);
+
+      const shade = makeBackboardShade(SHELF.width, openHeight, INTERIOR_DEPTH, light);
+      if (shade !== undefined) {
+        shade.position.set(
+          0,
+          shelfY + openHeight / 2,
+          -SHELF.depth / 2 + SHELF.backThickness / 2 + LIFT,
+        );
+        this.#add(shade);
+      }
+    }
+  }
+
+  /**
+   * Frees the canvases as well as the meshes.
+   *
+   * Every painted plane carries a `CanvasTexture` of its own — they are not
+   * shared and not cached — so dropping the mesh without disposing the map leaks
+   * one texture per shelf per repaint. Dragging a light slider would then climb
+   * the texture count until the tab died, on a panel built to diagnose exactly
+   * that. `dispose()` in `mountShelf` already names this hazard for the mount
+   * path; a repaint is the same hazard on a loop.
+   */
+  dispose(): void {
+    for (const mesh of this.#meshes) {
+      this.#scene.remove(mesh);
+      const material = mesh.material;
+      if (material instanceof THREE.MeshBasicMaterial) material.map?.dispose();
+      if (!Array.isArray(material)) material.dispose();
+      mesh.geometry.dispose();
+    }
+    this.#meshes = [];
+  }
+
+  #add(mesh: THREE.Mesh): void {
+    this.#scene.add(mesh);
+    this.#meshes.push(mesh);
+  }
 }
 
 /** Shared by every book: sizing is per-mesh scale, so one of each is enough. */
@@ -836,9 +1079,10 @@ function buildBook(
   entry: ShelfBook,
   depth: number,
   textures: TextureCache,
-  castShadows: boolean,
   shadedFromRight: boolean,
+  settings: ShelfSettings,
 ): THREE.Group {
+  const castShadows = settings.shadows.casters;
   // A spine wide enough to read gets its title printed on it; a very thin one
   // stays a plain board, because type squeezed onto it would just be noise.
   const spineTexture =
@@ -864,7 +1108,8 @@ function buildBook(
 
   const cover = new THREE.MeshStandardMaterial({
     color: new THREE.Color(entry.colour),
-    roughness: 0.55,
+    roughness: settings.materials.coverRoughness,
+    metalness: settings.materials.coverMetalness,
   });
   if (entry.book.cover !== undefined) {
     textures.load(entry.book.cover).then((texture) => {
@@ -960,11 +1205,33 @@ function buildBook(
   return group;
 }
 
-function buildShelf(rowCount: number, castShadows: boolean): THREE.Group {
-  const group = new THREE.Group();
+/**
+ * The case, plus handles on the two materials it is made of.
+ *
+ * The materials are returned rather than left buried in the group because the
+ * panel dials them. Finding them again by walking the scene would mean matching
+ * on type, and `dispose()` already records what that costs: checking only for
+ * `MeshStandardMaterial` there freed the spines and left every shadow texture
+ * behind. Holding the reference is cheaper and cannot mis-identify.
+ */
+interface Woodwork {
+  readonly group: THREE.Group;
+  readonly wood: THREE.MeshStandardMaterial;
+  readonly backing: THREE.MeshStandardMaterial;
+}
 
-  const wood = new THREE.MeshStandardMaterial({ color: COLOURS.wood, roughness: 0.82 });
-  const backing = new THREE.MeshStandardMaterial({ color: COLOURS.woodDark, roughness: 0.95 });
+function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
+  const group = new THREE.Group();
+  const castShadows = settings.shadows.casters;
+
+  const wood = new THREE.MeshStandardMaterial({
+    color: settings.materials.wood,
+    roughness: settings.materials.woodRoughness,
+  });
+  const backing = new THREE.MeshStandardMaterial({
+    color: settings.materials.woodDark,
+    roughness: settings.materials.backingRoughness,
+  });
 
   const unitHeight = rowCount * SHELF.rowHeight;
   const outerWidth = SHELF.width + SHELF.sideThickness * 2;
@@ -999,7 +1266,7 @@ function buildShelf(rowCount: number, castShadows: boolean): THREE.Group {
     group.add(plank);
   }
 
-  return group;
+  return { group, wood, backing };
 }
 
 /**
@@ -1017,17 +1284,22 @@ function buildShelf(rowCount: number, castShadows: boolean): THREE.Group {
  * shadows painted into the wood are computed from this light — and a painted
  * shadow whose light has quietly moved is worse than no shadow at all.
  */
-function keyLightPosition(unitHeight: number): THREE.Vector3 {
-  return new THREE.Vector3(5, unitHeight + 3.4, 5.6);
+function keyLightPosition(unitHeight: number, settings: ShelfSettings): THREE.Vector3 {
+  return positionOf(settings.lighting.key.position, unitHeight);
 }
 
-function keyLightTarget(unitHeight: number): THREE.Vector3 {
-  return new THREE.Vector3(0, unitHeight / 2, 0);
+function keyLightTarget(unitHeight: number, settings: ShelfSettings): THREE.Vector3 {
+  return new THREE.Vector3(0, unitHeight * settings.lighting.key.aimHeight, 0);
+}
+
+/** Resolves a settings position against a case of a given height. */
+function positionOf(position: LightPosition, unitHeight: number): THREE.Vector3 {
+  return new THREE.Vector3(position.x, heightOf(position.y, unitHeight), position.z);
 }
 
 /** The key light as the painters need it. See `CaseLight`. */
-function caseLight(unitHeight: number): CaseLight {
-  const toTarget = keyLightTarget(unitHeight).sub(keyLightPosition(unitHeight));
+function caseLight(unitHeight: number, settings: ShelfSettings): CaseLight {
+  const toTarget = keyLightTarget(unitHeight, settings).sub(keyLightPosition(unitHeight, settings));
   return {
     xPerZ: Math.abs(toTarget.x / toTarget.z),
     yPerZ: Math.abs(toTarget.y / toTarget.z),
@@ -1062,20 +1334,35 @@ const BOOK_FRONT_Z = SHELF.depth / 2 - 0.02;
  */
 const RECESS_CLEARANCE = 0.008;
 
+/** Handles on every light, so the panel can dial them without walking the scene. */
+interface Lights {
+  readonly ambient: THREE.AmbientLight;
+  readonly key: THREE.DirectionalLight;
+  readonly fill: THREE.DirectionalLight;
+  readonly lamp: THREE.PointLight;
+  readonly keyTarget: THREE.Object3D;
+}
+
 function addLighting(
   scene: THREE.Scene,
   unitHeight: number,
-  shadows: boolean,
-  shadowMapSize: number,
-): void {
-  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  settings: ShelfSettings,
+): Lights {
+  const ambient = new THREE.AmbientLight(
+    settings.lighting.ambient.colour,
+    settings.lighting.ambient.intensity,
+  );
+  scene.add(ambient);
 
-  const key = new THREE.DirectionalLight(COLOURS.key, 2.7);
-  key.position.copy(keyLightPosition(unitHeight));
+  const key = new THREE.DirectionalLight(settings.lighting.key.colour, settings.lighting.key.intensity);
+  key.position.copy(keyLightPosition(unitHeight, settings));
   // Left off entirely rather than relying on `shadowMap.enabled`, so the depth
   // target is never allocated at all — which is the thing being measured.
-  key.castShadow = shadows;
-  key.shadow.mapSize.set(shadowMapSize, shadowMapSize);
+  // Derived here rather than passed in. Taking both the fact and the object it
+  // comes from let a caller hand over a `shadows` that disagreed with
+  // `settings.shadows.enabled`; one source cannot disagree with itself.
+  key.castShadow = settings.shadows.enabled;
+  key.shadow.mapSize.set(settings.shadows.mapSize, settings.shadows.mapSize);
 
   /**
    * The shadow camera is fitted to the case, which it never was.
@@ -1089,10 +1376,48 @@ function addLighting(
    * instead of 10, so every texel is doing about twice the work it was.
    */
   const target = new THREE.Object3D();
-  target.position.set(0, unitHeight / 2, 0);
+  target.position.copy(keyLightTarget(unitHeight, settings));
   scene.add(target);
   key.target = target;
 
+  fitShadowCamera(key, target, unitHeight);
+
+  scene.add(key);
+
+  const fill = new THREE.DirectionalLight(settings.lighting.fill.colour, settings.lighting.fill.intensity);
+  fill.position.copy(positionOf(settings.lighting.fill.position, unitHeight));
+  scene.add(fill);
+
+  // A warm lamp close to the shelf, so spines nearest the viewer read clearly
+  // and the case has a centre of light rather than flat exposure.
+  const lamp = new THREE.PointLight(
+    settings.lighting.lamp.colour,
+    settings.lighting.lamp.intensity,
+    settings.lighting.lamp.distance,
+    settings.lighting.lamp.decay,
+  );
+  lamp.position.copy(positionOf(settings.lighting.lamp.position, unitHeight));
+  scene.add(lamp);
+
+  return { ambient, key, fill, lamp, keyTarget: target };
+}
+
+/**
+ * Sizes the shadow frustum to the case, and to where the light actually is.
+ *
+ * Extracted so it can run again. `far` is measured from the light to its target,
+ * so it is only correct for the position the light held when it was computed —
+ * and once the panel can move the light, a frustum fitted at mount describes
+ * where the light used to be. That is the same class of fault the painted
+ * shadows carry a warning about, and the symptom is worse: a shadow clipped by
+ * its own frustum ends in a hard straight line across the wood, which reads as a
+ * rendering fault rather than as a stale setting.
+ */
+function fitShadowCamera(
+  key: THREE.DirectionalLight,
+  target: THREE.Object3D,
+  unitHeight: number,
+): void {
   const radius =
     0.5 *
     Math.hypot(SHELF.width + SHELF.sideThickness * 2, unitHeight, SHELF.depth) *
@@ -1108,18 +1433,315 @@ function addLighting(
   shadowCamera.near = 0.5;
   shadowCamera.far = key.position.distanceTo(target.position) + radius;
   shadowCamera.updateProjectionMatrix();
+}
 
-  scene.add(key);
+/**
+ * The renderer properties that are read every frame, and so are simply assigned.
+ *
+ * All four are live: `setPixelRatio` and `setSize` reallocate the drawing buffer,
+ * `toneMapping` and `toneMappingExposure` are uniforms the frame reads. Tone
+ * mapping is the one with a catch — changing the *mode* changes a `#define`, so
+ * three recompiles every material, which is the operation `docs/progress.md`
+ * records failing to link on a Pixel 10. Exposure alone is a plain uniform and
+ * recompiles nothing.
+ */
+function applyRendererSettings(renderer: THREE.WebGLRenderer, settings: ShelfSettings): void {
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.renderer.maxPixelRatio));
+  renderer.shadowMap.enabled = settings.shadows.enabled;
+  renderer.shadowMap.type = SHADOW_TYPES[settings.shadows.type];
+  renderer.toneMapping = TONE_MAPPINGS[settings.renderer.toneMapping];
+  renderer.toneMappingExposure = settings.renderer.exposure;
+}
 
-  const fill = new THREE.DirectionalLight(COLOURS.fill, 0.75);
-  fill.position.set(-5, unitHeight * 0.6, 4.5);
-  scene.add(fill);
+/**
+ * Moves the live scene as far as it can go, and names what it could not move.
+ *
+ * The honesty rule is the whole point — see `ApplyReport`. Every branch here
+ * either changes something on the scene and says so, or refuses and says so.
+ * Nothing is silently dropped, because a control that appears to work and does
+ * not is worse than one that is visibly disabled.
+ */
+function applyLive(
+  renderer: THREE.WebGLRenderer,
+  scene: THREE.Scene,
+  background: THREE.Color,
+  fog: THREE.Fog,
+  lights: Lights,
+  woodwork: Woodwork,
+  painters: Painters | undefined,
+  post: Post | undefined,
+  next: ShelfSettings,
+  current: ShelfSettings,
+  mountedWith: ShelfSettings,
+  unitHeight: number,
+): ApplyReport {
+  const applied: string[] = [];
+  const needsRebuild: string[] = [];
+  const needsReload: string[] = [];
+  const refused: string[] = [];
 
-  // A warm lamp close to the shelf, so spines nearest the viewer read clearly
-  // and the case has a centre of light rather than flat exposure.
-  const lamp = new THREE.PointLight(0xffd7a8, 14, 14, 2);
-  lamp.position.set(1.6, unitHeight * 0.72, 2.4);
-  scene.add(lamp);
+  /**
+   * A *transition*: what changed since the last apply. Used for the live work,
+   * which is by definition a thing you do once when a value moves.
+   */
+  const note = (list: string[], label: string, was: unknown, now: unknown): void => {
+    if (was !== now) list.push(`${label}: ${String(was)} → ${String(now)}`);
+  };
+
+  /**
+   * A *standing difference*: what the shelf would have to be rebuilt to honour,
+   * measured against the settings the scene was actually **built** with — not
+   * against the last apply.
+   *
+   * This is the difference between a warning and a lie. Comparing transitions
+   * meant a refusal was announced once and then forgotten: toggle antialias, get
+   * "reload to apply", then nudge any live slider and the notice cleared itself
+   * — while the URL still asserted a configuration the shelf was not in. A
+   * standing diff cannot forget, and it clears by itself the moment a rebuild
+   * makes it true.
+   */
+  const standing = (list: string[], label: string, built: unknown, now: unknown): void => {
+    if (built !== now) list.push(`${label}: ${String(built)} → ${String(now)}`);
+  };
+
+  /* --- the renderer ------------------------------------------------------- */
+
+  // A context-creation attribute. There is no live path, only a reload.
+  standing(needsReload, 'antialias', mountedWith.renderer.antialias, next.renderer.antialias);
+
+  note(applied, 'dpr', current.renderer.maxPixelRatio, next.renderer.maxPixelRatio);
+  note(applied, 'tone mapping', current.renderer.toneMapping, next.renderer.toneMapping);
+
+  /**
+   * Exposure does nothing at all under `NoToneMapping`, which is the default.
+   *
+   * `toneMappingExposure` is a uniform that only exists inside three's
+   * `#ifdef TONE_MAPPING` block, so with no operator selected there is nothing
+   * to scale and the assignment is silently inert. Reported as refused rather
+   * than as applied — a slider that moves while the shelf does not is the exact
+   * failure this whole report type exists to prevent. The panel disables the
+   * control for the same reason; this is the backstop.
+   */
+  if (next.renderer.exposure !== DEFAULT_SETTINGS.renderer.exposure && next.renderer.toneMapping === 'none') {
+    refused.push('exposure does nothing until a tone mapping is chosen');
+  }
+  if (current.renderer.exposure !== next.renderer.exposure) {
+    if (next.renderer.toneMapping === 'none') {
+      /* already stated as refused, above — standing, so it does not vanish */
+    } else {
+      applied.push(`exposure: ${current.renderer.exposure.toFixed(2)} → ${next.renderer.exposure.toFixed(2)}`);
+    }
+  }
+  applyRendererSettings(renderer, next);
+
+  // `guardResize` is read on the next resize, so it is live in the only sense
+  // that matters — there is nothing to assign.
+  note(applied, 'resize guard', current.renderer.guardResize, next.renderer.guardResize);
+
+  /* --- shadows ------------------------------------------------------------ */
+
+  /**
+   * Both halves, or the toggle lies.
+   *
+   * `applyRendererSettings` sets `shadowMap.enabled`, and on its own that is not
+   * enough: the key light's `castShadow` is what allocates the depth target and
+   * what makes anything get drawn into it, and it was set once at mount. Turning
+   * shadows on without it enables the shadow map over a light that casts
+   * nothing, so the shelf looks identical — and this function would have
+   * reported it as `applied`, which is exactly the failure `ApplyReport` exists
+   * to prevent. Caught in review, not by a test; there is a spec for it now.
+   */
+  if (current.shadows.enabled !== next.shadows.enabled) {
+    lights.key.castShadow = next.shadows.enabled;
+    dirtyEveryMaterial(scene);
+    applied.push(`shadows: ${current.shadows.enabled ? 'on' : 'off'} → ${next.shadows.enabled ? 'on' : 'off'}`);
+  }
+  note(applied, 'shadow type', current.shadows.type, next.shadows.type);
+  if (current.shadows.enabled !== next.shadows.enabled || current.shadows.type !== next.shadows.type) {
+    // `autoUpdate` is off — the map is drawn once, deliberately — so nothing
+    // would redraw it, and a freshly enabled shadow map would stay empty.
+    // `WebGLShadowMap.render()` also returns early when this is unset, before
+    // the type-change traverse, so the type would not take either.
+    renderer.shadowMap.needsUpdate = true;
+  }
+
+  // All four are decided while the scene is built, so they are measured against
+  // what it was built with and stay outstanding until it is built again.
+  standing(needsRebuild, 'shadow map size', mountedWith.shadows.mapSize, next.shadows.mapSize);
+  standing(needsRebuild, 'shadow casters', mountedWith.shadows.casters, next.shadows.casters);
+  standing(needsRebuild, 'shadow fetch', mountedWith.shadows.fetch, next.shadows.fetch);
+  standing(needsRebuild, 'painted shading', mountedWith.shadows.painted, next.shadows.painted);
+
+  /* --- effects ------------------------------------------------------------ */
+
+  // Turning bloom on or off remakes the context (see `contextAntialias`), so it
+  // is a standing rebuild. Its three numbers are plain uniforms once the chain
+  // exists — and are silently inert while it does not, which is why they are
+  // only reported as applied when it does.
+  standing(needsRebuild, 'bloom', mountedWith.effects.bloom.enabled, next.effects.bloom.enabled);
+  if (next.effects.bloom.enabled && mountedWith.effects.bloom.enabled) {
+    note(applied, 'bloom strength', current.effects.bloom.strength, next.effects.bloom.strength);
+    note(applied, 'bloom radius', current.effects.bloom.radius, next.effects.bloom.radius);
+    note(applied, 'bloom threshold', current.effects.bloom.threshold, next.effects.bloom.threshold);
+    post?.update(next);
+  } else if (
+    next.effects.bloom.strength !== current.effects.bloom.strength ||
+    next.effects.bloom.radius !== current.effects.bloom.radius ||
+    next.effects.bloom.threshold !== current.effects.bloom.threshold
+  ) {
+    refused.push('bloom is off, so its numbers do nothing');
+  }
+
+  /* --- the scene ---------------------------------------------------------- */
+
+  if (current.scene.background !== next.scene.background) {
+    background.setHex(next.scene.background);
+    // The fog is the background colour by design — it is the case receding into
+    // the room, not a coloured haze — so changing one and not the other leaves a
+    // visible ring around the shelf.
+    fog.color.setHex(next.scene.background);
+    applied.push(`background: ${hex(current.scene.background)} → ${hex(next.scene.background)}`);
+  }
+
+  note(applied, 'fog near', current.scene.fog.near, next.scene.fog.near);
+  note(applied, 'fog far', current.scene.fog.far, next.scene.fog.far);
+  // Mutated in place. `near`, `far` and `color` are plain uniforms and cost
+  // nothing to change — but *assigning* `scene.fog` rebuilds every program in
+  // the scene, even to an identical value, because presence of fog is in the
+  // program cache key. Doing it unconditionally would have made every tick of
+  // every slider in the panel a full recompile.
+  fog.near = next.scene.fog.near;
+  fog.far = next.scene.fog.far;
+  if (current.scene.fog.enabled !== next.scene.fog.enabled) {
+    scene.fog = next.scene.fog.enabled ? fog : null;
+    applied.push(`fog: ${current.scene.fog.enabled ? 'on' : 'off'} → ${next.scene.fog.enabled ? 'on' : 'off'}`);
+  }
+
+  /* --- materials ---------------------------------------------------------- */
+
+  if (current.materials.wood !== next.materials.wood) {
+    woodwork.wood.color.setHex(next.materials.wood);
+    applied.push(`wood: ${hex(current.materials.wood)} → ${hex(next.materials.wood)}`);
+  }
+  if (current.materials.woodDark !== next.materials.woodDark) {
+    woodwork.backing.color.setHex(next.materials.woodDark);
+    applied.push(`backing: ${hex(current.materials.woodDark)} → ${hex(next.materials.woodDark)}`);
+  }
+  note(applied, 'wood roughness', current.materials.woodRoughness, next.materials.woodRoughness);
+  note(applied, 'backing roughness', current.materials.backingRoughness, next.materials.backingRoughness);
+  woodwork.wood.roughness = next.materials.woodRoughness;
+  woodwork.backing.roughness = next.materials.backingRoughness;
+
+  // The books' own materials are made per book inside `buildBook`, so there is no
+  // handle to reach them through. Honest rather than silent.
+  standing(needsRebuild, 'cover roughness', mountedWith.materials.coverRoughness, next.materials.coverRoughness);
+  standing(needsRebuild, 'cover metalness', mountedWith.materials.coverMetalness, next.materials.coverMetalness);
+
+  /* --- lighting ----------------------------------------------------------- */
+
+  applyLight(lights.ambient, current.lighting.ambient, next.lighting.ambient, 'ambient', applied);
+
+  lights.key.position.copy(positionOf(next.lighting.key.position, unitHeight));
+  lights.keyTarget.position.copy(keyLightTarget(unitHeight, next));
+  // `far` is measured from the light to its target, so moving either leaves the
+  // frustum sized for where the light used to be — and a shadow clipped by its
+  // own frustum ends in a hard straight line across the wood.
+  fitShadowCamera(lights.key, lights.keyTarget, unitHeight);
+  if (next.shadows.enabled) renderer.shadowMap.needsUpdate = true;
+  applyLight(lights.key, current.lighting.key, next.lighting.key, 'key', applied);
+  notePosition(applied, 'key', current.lighting.key.position, next.lighting.key.position);
+  note(applied, 'key aim', current.lighting.key.aimHeight, next.lighting.key.aimHeight);
+
+  lights.fill.position.copy(positionOf(next.lighting.fill.position, unitHeight));
+  applyLight(lights.fill, current.lighting.fill, next.lighting.fill, 'fill', applied);
+  notePosition(applied, 'fill', current.lighting.fill.position, next.lighting.fill.position);
+
+  lights.lamp.position.copy(positionOf(next.lighting.lamp.position, unitHeight));
+  lights.lamp.distance = next.lighting.lamp.distance;
+  lights.lamp.decay = next.lighting.lamp.decay;
+  applyLight(lights.lamp, current.lighting.lamp, next.lighting.lamp, 'lamp', applied);
+  notePosition(applied, 'lamp', current.lighting.lamp.position, next.lighting.lamp.position);
+  note(applied, 'lamp distance', current.lighting.lamp.distance, next.lighting.lamp.distance);
+  note(applied, 'lamp decay', current.lighting.lamp.decay, next.lighting.lamp.decay);
+
+  /**
+   * The painted shadows follow the light, rather than being left describing
+   * where it used to be.
+   *
+   * This is the failure `contact-shadow.ts` and `keyLightPosition` both warn
+   * about in prose — *"a painted shadow whose light has quietly moved is worse
+   * than no shadow at all"* — and a live light control is exactly the thing that
+   * would have caused it. Repainting is cheap: they are 2D canvas fills, and the
+   * books have not moved, so nothing else in the scene needs touching. See
+   * `Painters` for why this is not a remount.
+   */
+  if (
+    painters !== undefined &&
+    (!samePosition(current.lighting.key.position, next.lighting.key.position) ||
+      current.lighting.key.aimHeight !== next.lighting.key.aimHeight)
+  ) {
+    painters.paint(next);
+    applied.push('painted shadows repainted for the new light');
+  }
+
+  return { applied, needsRebuild, needsReload, refused };
+}
+
+/**
+ * Forces every material to recompile — including the ones three would skip.
+ *
+ * Without this a live shadow toggle produces a **different program set than the
+ * equivalent reload**, which would make the panel disagree with the URL it
+ * writes. Three decides what to recompile through `materialNeedsLights()`, and
+ * that returns false for `MeshBasicMaterial` — so flipping `shadowMap.enabled`
+ * relinks the lit materials and leaves the painted shadow planes alone.
+ *
+ * Those planes are the entire point. `docs/progress.md` records that the program
+ * which will not link on the Pixel 10 is a `MeshBasicMaterial` — a painted
+ * shadow plane, which is unlit and wants nothing to do with shadows. So a naive
+ * live toggle would *appear to work* on the device that cannot hold the shipped
+ * default, and would have sent the next investigation somewhere wrong.
+ *
+ * Found by the research on #41, not by a test. It is the whole reason that
+ * ticket existed before this control did.
+ */
+function dirtyEveryMaterial(scene: THREE.Scene): void {
+  scene.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+      material.needsUpdate = true;
+    }
+  });
+}
+
+function applyLight(
+  light: THREE.Light,
+  was: { readonly colour: number; readonly intensity: number },
+  now: { readonly colour: number; readonly intensity: number },
+  label: string,
+  applied: string[],
+): void {
+  if (was.colour !== now.colour) {
+    light.color.setHex(now.colour);
+    applied.push(`${label} colour: ${hex(was.colour)} → ${hex(now.colour)}`);
+  }
+  if (was.intensity !== now.intensity) {
+    light.intensity = now.intensity;
+    applied.push(`${label} intensity: ${String(was.intensity)} → ${String(now.intensity)}`);
+  }
+}
+
+function notePosition(applied: string[], label: string, was: LightPosition, now: LightPosition): void {
+  if (!samePosition(was, now)) applied.push(`${label} position moved`);
+}
+
+function samePosition(a: LightPosition, b: LightPosition): boolean {
+  return a.x === b.x && a.z === b.z && a.y.ofHeight === b.y.ofHeight && a.y.plus === b.y.plus;
+}
+
+/** Colours read as `#rrggbb` in a change log; a decimal `7031610` reads as nothing. */
+function hex(value: number): string {
+  return `#${value.toString(16).padStart(6, '0')}`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1134,10 +1756,23 @@ function addLighting(
 class TextureCache {
   readonly #loader = new THREE.TextureLoader();
   readonly #cache = new Map<string, Promise<THREE.Texture | undefined>>();
-  readonly #anisotropy: number;
+  readonly #owned = new Set<THREE.Texture>();
+  #anisotropy = 1;
 
-  constructor(renderer: THREE.WebGLRenderer) {
+  /**
+   * Told about a renderer rather than made from one, because it outlives them.
+   *
+   * Anisotropy is a device capability, not a property of a particular context,
+   * so re-reading it on each mount costs nothing and keeps the cache from
+   * needing a renderer to exist.
+   */
+  useRenderer(renderer: THREE.WebGLRenderer): void {
     this.#anisotropy = renderer.capabilities.getMaxAnisotropy();
+  }
+
+  /** Whether this cache made a texture — and is therefore the one to free it. */
+  owns(texture: THREE.Texture | null | undefined): boolean {
+    return texture !== null && texture !== undefined && this.#owned.has(texture);
   }
 
   load(path: string): Promise<THREE.Texture | undefined> {
@@ -1151,6 +1786,7 @@ class TextureCache {
         (texture) => {
           texture.colorSpace = THREE.SRGBColorSpace;
           texture.anisotropy = this.#anisotropy;
+          this.#owned.add(texture);
           resolve(texture);
         },
         undefined,
@@ -1167,8 +1803,29 @@ class TextureCache {
       void promise.then((texture) => texture?.dispose());
     }
     this.#cache.clear();
+    this.#owned.clear();
   }
 }
+
+/**
+ * The covers, cached for the life of the page rather than the life of a mount.
+ *
+ * It used to be made inside `mountShelf` and freed by `dispose()`, which was
+ * right while a mount happened once. The debug panel's rebuild button makes it
+ * happen whenever somebody changes the shadow map size — and #41 measured what
+ * that costs on the owner's real vault: **~24 MB of cover re-upload**, refetched
+ * and re-decoded, to change a setting that has nothing to do with the books.
+ * That is the shape of the 314 MB problem G15 already fixed once.
+ *
+ * The GPU upload still happens again — `dispose()` on the old renderer takes its
+ * context with it — but the fetch and the decode do not, which is the expensive
+ * half on a phone.
+ *
+ * Never disposed. It is bounded by the size of the library, which is the same
+ * bound `gates/cover-budget.test.ts` already enforces, and the alternative is a
+ * cache that empties itself exactly when it would start being useful.
+ */
+const COVERS = new TextureCache();
 
 /**
  * Click-to-inspect.

@@ -46,6 +46,16 @@
     position: absolute;
     right: clamp(1rem, 4vw, 2.5rem);
     bottom: clamp(1rem, 4vw, 2.5rem);
+    /*
+     * Above both debug surfaces, which sit at 10 and 11.
+     *
+     * The card is the app; they are instruments. On a phone the card is nearly
+     * full width and the black box now sits bottom-left, so the two share that
+     * corner — and with the card at `auto` the debug overlay won it. A tool
+     * hiding the thing you clicked is the wrong way round, and this is the only
+     * ordering that stays right however either of them is resized.
+     */
+    z-index: 20;
     width: min(20rem, calc(100vw - 2rem));
     max-height: min(28rem, calc(100vh - 2rem));
     overflow-y: auto;

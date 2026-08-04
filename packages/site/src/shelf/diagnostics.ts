@@ -34,8 +34,18 @@ declare global {
   }
 }
 
-/** Versioned, so an old record from a different shape is ignored rather than mis-read. */
-const STORAGE_KEY = 'stacks.blackbox.v1';
+/**
+ * Versioned, so an old record from a different shape is ignored rather than
+ * mis-read.
+ *
+ * **v2** since the debug panel: a snapshot now carries the settings changes made
+ * during the session, and `profile` is read live rather than captured at mount.
+ * A v1 record has neither, and rendering one as if it did would show an empty
+ * change list for a session that had in fact been dialled — which reads as "the
+ * shelf died on the defaults" and is the single most misleading thing this file
+ * could say.
+ */
+const STORAGE_KEY = 'stacks.blackbox.v2';
 
 const SAMPLE_MS = 1000;
 
@@ -71,13 +81,42 @@ interface Snapshot {
    * the right moment.
    */
   shaders?: string[];
+  /**
+   * Every setting the panel changed this session, oldest first.
+   *
+   * A crash after eight toggles is far more legible as a sequence than as a
+   * final state — "it died when I turned shadows on" is the finding, and a
+   * snapshot of where the dials ended up cannot say it.
+   */
+  changes?: string[];
+  /**
+   * The query string the session was loaded with.
+   *
+   * Recorded because the panel writes what you dial back into the URL, so a
+   * reload of a dead session reproduces the settings that killed it. Knowing
+   * *which* URL died is the difference between a record and a trap.
+   */
+  query?: string;
 }
 
 export interface DiagnosticsOptions {
   /** How many books were actually mounted — which `?books=N` may have cut down. */
   readonly books: number;
-  /** Absent when the shelf failed to mount at all; the record is still worth writing. */
-  readonly handle?: ShelfHandle;
+  /**
+   * The shelf, asked for on every sample rather than handed over once.
+   *
+   * A function, not a value, because the debug panel can rebuild the shelf: the
+   * old handle is disposed and a new one takes its place. Holding the first one
+   * would mean this file reads a dead renderer for the rest of the session —
+   * `profile` naming the settings of a shelf that no longer exists, and a change
+   * log frozen at the moment of the rebuild. That is precisely the lie the
+   * getter on `profile` was introduced to prevent, one level up.
+   *
+   * Returns `undefined` when the shelf failed to mount at all; the record is
+   * still worth writing, and a browser that refused a context is exactly the
+   * state worth having a record of.
+   */
+  readonly handle?: () => ShelfHandle | undefined;
 }
 
 /**
@@ -110,13 +149,14 @@ export function mountDiagnostics(
   host.append(panel);
 
   const sample = (): Snapshot => {
-    const stats = options.handle?.stats();
+    const shelf = options.handle?.();
+    const stats = shelf?.stats();
     const heap = performance.memory;
 
     return {
       seconds: Math.round((Date.now() - started) / 1000),
       books: options.books,
-      profile: options.handle?.profile ?? 'no shelf',
+      profile: shelf?.profile ?? 'no shelf',
       textures: stats?.textures ?? 0,
       geometries: stats?.geometries ?? 0,
       programs: stats?.programs ?? 0,
@@ -131,12 +171,16 @@ export function mountDiagnostics(
             heapLimitMb: Math.round(heap.jsHeapSizeLimit / 1024 / 1024),
           }),
       ...(navigator.deviceMemory === undefined ? {} : { deviceMemoryGb: navigator.deviceMemory }),
-      ...(options.handle?.gpu === undefined ? {} : { gpu: options.handle.gpu }),
+      ...(shelf?.gpu === undefined ? {} : { gpu: shelf.gpu }),
       screen: `${String(window.innerWidth)}x${String(window.innerHeight)} @${String(window.devicePixelRatio)}`,
       errors: [...errors],
-      ...(options.handle === undefined || options.handle.shaderErrors.length === 0
+      ...(shelf === undefined || shelf.shaderErrors.length === 0
         ? {}
-        : { shaders: [...options.handle.shaderErrors] }),
+        : { shaders: [...shelf.shaderErrors] }),
+      ...(shelf === undefined || shelf.changeLog.length === 0
+        ? {}
+        : { changes: [...shelf.changeLog] }),
+      ...(window.location.search === '' ? {} : { query: window.location.search }),
     };
   };
 
@@ -211,6 +255,10 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
     lines.push('', 'SHADER WOULD NOT LINK — drawing stopped', ...current.shaders.map((line) => `  ${line}`));
   }
 
+  if (current.changes !== undefined) {
+    lines.push('', 'changed this session', ...current.changes.map((change) => `  ${change}`));
+  }
+
   if (current.errors.length > 0) {
     lines.push('', 'errors', ...current.errors.map((error) => `  ${error}`));
   }
@@ -226,12 +274,44 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
       `  textures ${String(previous.textures)}  draws ${String(previous.calls)}`,
       `  buffer ${previous.buffer}  dpr ${previous.pixelRatio.toFixed(2)}`,
       previous.heapMb === undefined ? '  heap n/a' : `  heap ${String(previous.heapMb)} MB`,
+      ...(previous.changes ?? []).map((change) => `  · ${change}`),
       ...(previous.shaders ?? []).map((line) => `  ! ${line}`),
       ...previous.errors.map((error) => `  ! ${error}`),
     );
+
+    /**
+     * The URL that died is the URL you are on, and it will do it again.
+     *
+     * The panel writes what you dial back into the query string so a
+     * configuration stays shareable. The cost of that is a loop: reload after a
+     * crash and the settings that caused it are applied again, on a device that
+     * has just proved it cannot hold them. Nothing here can know *which* setting
+     * did it — that is what the change list above is for — so it says the thing
+     * it does know and names the way out.
+     */
+    if (previous.clean !== true && carriesSettings(previous.query ?? window.location.search)) {
+      lines.push(
+        '',
+        '  ⚠ that URL still carries those settings — reloading repeats it.',
+        '    load the page with no query but ?debug to get back to the defaults.',
+      );
+    }
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Whether a query string asks for anything beyond turning the instruments on.
+ *
+ * `?debug` alone is the safe address: it mounts the black box and the panel and
+ * changes no renderer setting. Anything else is a configuration, and a
+ * configuration is what a crash record implicates.
+ */
+function carriesSettings(query: string): boolean {
+  const params = new URLSearchParams(query);
+  params.delete('debug');
+  return [...params.keys()].length > 0;
 }
 
 /**
@@ -271,16 +351,42 @@ function readPrevious(): Snapshot | undefined {
  * that should be removable in one file. Note the `:global` gymnastics the notice
  * element needs for the opposite choice — that is the cost being avoided.
  */
+/**
+ * Bottom left, because the top left is the shelf's name.
+ *
+ * `index.astro` puts `<header>` — the title and the "drag to look around" hint —
+ * at `top: clamp(1rem, 4vw, 2.5rem); left: …`, and this used to mount on top of
+ * it. An instrument that hides the page's own name is a poor trade for a
+ * parameter you are meant to be able to leave on.
+ *
+ * Anchored to the bottom it grows *upward*, which is the right direction: the
+ * live counters stay put on the line above the fold while a long tail — a change
+ * log, a shader report, a previous session — extends away from them. The cap and
+ * the scroll matter because that tail is unbounded in practice.
+ */
 function applyPanelStyle(panel: HTMLElement): void {
   Object.assign(panel.style, {
     position: 'absolute',
-    top: '0.5rem',
+    bottom: '0.5rem',
     left: '0.5rem',
     zIndex: '10',
     margin: '0',
     padding: '0.5rem 0.6rem',
-    maxWidth: 'calc(100vw - 1rem)',
-    overflowX: 'auto',
+    // Narrower than the viewport on purpose. The GPU string is long enough to
+    // reach the book card at the other corner, and a record you cannot read
+    // beside a card you cannot read is worse than either alone.
+    maxWidth: 'min(30rem, calc(100vw - 1rem))',
+    /**
+     * Stops short of the header rather than merely short of the viewport.
+     *
+     * A full record — a dead session, a change log, a shader report and a couple
+     * of errors — is around 830px, which on a phone is taller than the room
+     * between the bottom of the screen and the title. Capping at the viewport
+     * would keep it on-screen and still cover the name, which is the thing this
+     * move was for. The reserve clears `header` at its largest clamp plus a gap.
+     */
+    maxHeight: 'calc(100vh - 6.5rem)',
+    overflow: 'auto',
     borderRadius: '0.4rem',
     background: 'rgba(10, 8, 7, 0.82)',
     color: '#9ff0b4',
