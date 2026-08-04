@@ -166,8 +166,33 @@ export interface MaterialSettings {
   readonly coverMetalness: number;
 }
 
+/**
+ * Bloom — the one effect that needs a postprocessing chain.
+ *
+ * Off by default, and it is a **rebuild** setting rather than a live one:
+ * turning it on builds an `EffectComposer`, which means the context has to be
+ * remade without MSAA and antialiasing has to move to an SMAA pass. See
+ * `post.ts` for why that trade is stated out loud rather than hidden.
+ *
+ * Ambient occlusion is deliberately absent — see the map's Out of scope.
+ */
+export interface BloomSettings {
+  readonly enabled: boolean;
+  /** How much light spills. Above ~1.5 the shelf reads as fogged rather than lit. */
+  readonly strength: number;
+  /** How far it spills. */
+  readonly radius: number;
+  /** Luminance a pixel must reach before it glows at all. */
+  readonly threshold: number;
+}
+
+export interface EffectSettings {
+  readonly bloom: BloomSettings;
+}
+
 export interface ShelfSettings {
   readonly renderer: RendererSettings;
+  readonly effects: EffectSettings;
   readonly shadows: ShadowSettings;
   readonly lighting: LightingSettings;
   readonly scene: SceneSettings;
@@ -190,6 +215,11 @@ export interface ShelfSettings {
  * one fetched at runtime.
  */
 export const DEFAULT_SETTINGS: ShelfSettings = {
+  effects: {
+    // Thresholded well above the wood so only genuinely bright things bloom —
+    // a cover's highlight and the lamp's pool, not the whole case.
+    bloom: { enabled: false, strength: 0.45, radius: 0.5, threshold: 0.85 },
+  },
   renderer: {
     antialias: true,
     maxPixelRatio: 2,
@@ -279,6 +309,7 @@ export interface PositionPatch {
 
 export interface SettingsPatch {
   readonly renderer?: Partial<RendererSettings>;
+  readonly effects?: { readonly bloom?: Partial<BloomSettings> };
   readonly shadows?: Partial<ShadowSettings>;
   readonly scene?: {
     readonly background?: number;
@@ -307,6 +338,7 @@ export interface SettingsPatch {
 export function resolveSettings(patch: SettingsPatch = {}, base: ShelfSettings = DEFAULT_SETTINGS): ShelfSettings {
   return {
     renderer: { ...base.renderer, ...patch.renderer },
+    effects: { bloom: { ...base.effects.bloom, ...patch.effects?.bloom } },
     shadows: { ...base.shadows, ...patch.shadows },
     scene: {
       ...base.scene,

@@ -329,6 +329,20 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     resolveSettings({ materials: { coverMetalness: v } }, s),
   );
 
+  group('bloom');
+  toggleRow('enabled', 'rebuild', (s) => s.effects.bloom.enabled, (s, v) =>
+    resolveSettings({ effects: { bloom: { enabled: v } } }, s),
+  );
+  slider('strength', 'live', 0, 2, 0.01, (s) => s.effects.bloom.strength, (s, v) =>
+    resolveSettings({ effects: { bloom: { strength: v } } }, s),
+  );
+  slider('radius', 'live', 0, 1.5, 0.01, (s) => s.effects.bloom.radius, (s, v) =>
+    resolveSettings({ effects: { bloom: { radius: v } } }, s),
+  );
+  slider('threshold', 'live', 0, 1.5, 0.01, (s) => s.effects.bloom.threshold, (s, v) =>
+    resolveSettings({ effects: { bloom: { threshold: v } } }, s),
+  );
+
   /* --- shadows ------------------------------------------------------------ */
 
   group('shadows');

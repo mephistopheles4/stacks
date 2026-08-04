@@ -12,6 +12,7 @@ import {
   type Contact,
 } from './contact-shadow.ts';
 import { rowsForCase, SHELF } from './case.ts';
+import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import {
   DEFAULT_SETTINGS,
@@ -258,6 +259,23 @@ export function mountShelf(
    */
   const antialias = settings.renderer.antialias;
 
+  /**
+   * Bloom needs a composer, and a composer takes the multisampling away.
+   *
+   * `EffectComposer` renders into its own offscreen targets and never sets
+   * `samples` on them, so the MSAA the context was created with simply stops
+   * applying. Asking for it anyway would allocate a multisampled drawing buffer
+   * that nothing draws into — the cost of antialiasing with none of it — and it
+   * would leave `?aa` flipping an attribute no pixel reads, which is the probe
+   * that silently does nothing.
+   *
+   * So when effects are on, the context is made without MSAA and antialiasing
+   * moves to an SMAA pass inside the chain. `profile` says `aa=smaa`, because
+   * the setting still means something and it is not the same something.
+   */
+  const composed = settings.effects.bloom.enabled;
+  const contextAntialias = composed ? false : antialias;
+
   // Read at build time. Each decides what geometry and which textures get made,
   // so changing one means building a different scene rather than adjusting this
   // one — the panel remounts for these rather than pretending. The rest are read
@@ -265,7 +283,7 @@ export function mountShelf(
   const shadows = settings.shadows.enabled;
   const shadowFetch = settings.shadows.fetch;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: contextAntialias });
   applyRendererSettings(renderer, settings);
 
   /**
@@ -387,11 +405,36 @@ export function mountShelf(
   let framesInWindow = 0;
   let windowStarted = performance.now();
 
+  /**
+   * How a frame is produced. Swapped once, if a composer arrives.
+   *
+   * `post.ts` is imported dynamically so the ~4.7 KB gzipped that bloom costs is
+   * paid only by a page that asked for it. That import resolves after the first
+   * frames have already been drawn, so the shelf renders straight to the canvas
+   * until it lands rather than showing nothing while it waits.
+   */
+  let renderFrame = (): void => renderer.render(scene, camera);
+  let post: Post | undefined;
+
+  /**
+   * The frame counters are reset by hand, once, at the top of the frame.
+   *
+   * `renderer.info.render` resets itself inside every `render()` call. That is
+   * right for one call a frame and wrong the moment a composer is in the chain:
+   * it renders the scene, then several fullscreen quads, so the surviving
+   * numbers describe the *last quad* — the panel read `draws 1  tris 1` on a
+   * shelf drawing 314 of them. A readout that under-reports by two orders of
+   * magnitude on exactly the configuration you turned on to measure is worse
+   * than no readout, which is this project's oldest rule about instruments.
+   */
+  renderer.info.autoReset = false;
+
   const renderLoop = (): void => {
     if (halted) return;
     frame = requestAnimationFrame(renderLoop);
     controls.update();
-    renderer.render(scene, camera);
+    renderer.info.reset();
+    renderFrame();
     drawn += 1;
 
     framesInWindow += 1;
@@ -447,6 +490,7 @@ export function mountShelf(
     sizedTo = { width: clientWidth, height: clientHeight };
 
     renderer.setSize(clientWidth, clientHeight, false);
+    post?.setSize(clientWidth, clientHeight);
     camera.aspect = clientWidth / clientHeight;
     camera.updateProjectionMatrix();
 
@@ -481,6 +525,18 @@ export function mountShelf(
 
   canvas.addEventListener('webglcontextlost', handleContextLost);
   canvas.addEventListener('webglcontextrestored', handleContextRestored);
+
+  if (composed) {
+    void import('./post.ts').then(({ makePost }) => {
+      // The mount may have been disposed while the chunk was in flight.
+      if (halted || disposed) return;
+      post = makePost(renderer, scene, camera, settings);
+      post.setSize(canvas.clientWidth, canvas.clientHeight);
+      renderFrame = () => post?.render();
+    });
+  }
+
+  let disposed = false;
 
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
@@ -521,7 +577,8 @@ export function mountShelf(
     get profile(): string {
       const { renderer: r, shadows: s } = settings;
       return (
-        `aa=${antialias ? 'on' : 'off'} dpr<=${String(r.maxPixelRatio)} ` +
+        `aa=${composed ? 'smaa' : antialias ? 'on' : 'off'} dpr<=${String(r.maxPixelRatio)} ` +
+        `bloom=${settings.effects.bloom.enabled ? settings.effects.bloom.strength.toFixed(2) : 'off'} ` +
         `shadows=${s.enabled ? `${s.type}@${String(s.mapSize)}` : 'off'} ` +
         `casters=${s.casters ? 'on' : 'off'} guard=${r.guardResize ? 'on' : 'off'} ` +
         `painted=${s.painted ? 'on' : 'off'} fetch=${s.fetch ? 'on' : 'off'} ` +
@@ -546,6 +603,7 @@ export function mountShelf(
         lights,
         woodwork,
         painters,
+        post,
         next,
         settings,
         mountedWith,
@@ -593,6 +651,8 @@ export function mountShelf(
     },
 
     dispose(): void {
+      disposed = true;
+      post?.dispose();
       cancelAnimationFrame(frame);
       canvas.removeEventListener('webglcontextlost', handleContextLost);
       canvas.removeEventListener('webglcontextrestored', handleContextRestored);
@@ -1398,6 +1458,7 @@ function applyLive(
   lights: Lights,
   woodwork: Woodwork,
   painters: Painters | undefined,
+  post: Post | undefined,
   next: ShelfSettings,
   current: ShelfSettings,
   mountedWith: ShelfSettings,
@@ -1499,6 +1560,26 @@ function applyLive(
   standing(needsRebuild, 'shadow casters', mountedWith.shadows.casters, next.shadows.casters);
   standing(needsRebuild, 'shadow fetch', mountedWith.shadows.fetch, next.shadows.fetch);
   standing(needsRebuild, 'painted shading', mountedWith.shadows.painted, next.shadows.painted);
+
+  /* --- effects ------------------------------------------------------------ */
+
+  // Turning bloom on or off remakes the context (see `contextAntialias`), so it
+  // is a standing rebuild. Its three numbers are plain uniforms once the chain
+  // exists — and are silently inert while it does not, which is why they are
+  // only reported as applied when it does.
+  standing(needsRebuild, 'bloom', mountedWith.effects.bloom.enabled, next.effects.bloom.enabled);
+  if (next.effects.bloom.enabled && mountedWith.effects.bloom.enabled) {
+    note(applied, 'bloom strength', current.effects.bloom.strength, next.effects.bloom.strength);
+    note(applied, 'bloom radius', current.effects.bloom.radius, next.effects.bloom.radius);
+    note(applied, 'bloom threshold', current.effects.bloom.threshold, next.effects.bloom.threshold);
+    post?.update(next);
+  } else if (
+    next.effects.bloom.strength !== current.effects.bloom.strength ||
+    next.effects.bloom.radius !== current.effects.bloom.radius ||
+    next.effects.bloom.threshold !== current.effects.bloom.threshold
+  ) {
+    refused.push('bloom is off, so its numbers do nothing');
+  }
 
   /* --- the scene ---------------------------------------------------------- */
 

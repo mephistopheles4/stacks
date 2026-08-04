@@ -196,6 +196,7 @@ export function writeSettings(settings: ShelfSettings): void {
 
 /** The half of the settings with no historic spelling, as a diff from defaults. */
 interface Tune {
+  effects?: unknown;
   lighting?: unknown;
   scene?: unknown;
   materials?: unknown;
@@ -209,6 +210,7 @@ function tuneDiff(settings: ShelfSettings): string | undefined {
     ...(same(settings.lighting, d.lighting) ? {} : { lighting: settings.lighting }),
     ...(same(settings.scene, d.scene) ? {} : { scene: settings.scene }),
     ...(same(settings.materials, d.materials) ? {} : { materials: settings.materials }),
+    ...(same(settings.effects, d.effects) ? {} : { effects: settings.effects }),
     ...(settings.renderer.toneMapping === d.renderer.toneMapping
       ? {}
       : { toneMapping: settings.renderer.toneMapping }),
@@ -254,6 +256,7 @@ function readTune(params: URLSearchParams): SettingsPatch {
     ...(isRecord(tune.lighting) ? { lighting: tune.lighting as SettingsPatch['lighting'] } : {}),
     ...(isRecord(tune.scene) ? { scene: tune.scene as SettingsPatch['scene'] } : {}),
     ...(isRecord(tune.materials) ? { materials: tune.materials as SettingsPatch['materials'] } : {}),
+    ...(isRecord(tune.effects) ? { effects: tune.effects as SettingsPatch['effects'] } : {}),
   };
 }
 
