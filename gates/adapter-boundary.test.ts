@@ -99,6 +99,10 @@ const ALLOWED = [
   'scripts/lib/walk.ts',
   'scripts/make-50-book-fixture.ts',
   'scripts/make-fixture-covers.ts',
+  // Rasterises the committed brand SVGs into the icon PNGs. Its inputs are two
+  // files it names literally and its output is `packages/site/public/` — it
+  // takes no path from anywhere and has no way to reach a vault.
+  'scripts/make-icons.ts',
   // Crops the render gate's screenshot into the README's image. Its only input
   // is `artifacts/shelf.png`, which the gate renders from the *fixture* vault —
   // it checks that file exists and never looks at a vault at all.

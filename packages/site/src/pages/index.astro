@@ -2,6 +2,13 @@
 import Shelf from '../components/Shelf.astro';
 import { absoluteUrl } from '../site-meta.ts';
 
+// The mark itself, inlined rather than fetched: it is four rects, and an <img>
+// would be a second request for 442 bytes that arrives after the header has
+// already been painted. `?raw` so there is one copy of the artwork — the file
+// in src/assets/ — instead of a duplicate pasted into this template that would
+// drift the first time the logo is touched.
+import markSvg from '../assets/stacks-mark-inverse.svg?raw';
+
 // Link-preview scrapers require absolute URLs; see site-meta.ts.
 const ogImage = absoluteUrl('/og.png', Astro.site);
 const pageUrl = absoluteUrl('/', Astro.site);
@@ -12,7 +19,24 @@ const pageUrl = absoluteUrl('/', Astro.site);
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!--
+      SVG first, because it is the source and scales to whatever size the
+      browser asks for; the two PNGs are the fallback for browsers that ignore
+      it, and the touch icon is a PNG because iOS accepts nothing else. The
+      three PNGs are rasterised from the SVGs by `scripts/make-icons.ts` and
+      committed alongside them.
+    --><link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!--
+      The brand's paper is #FBF6EC and this is deliberately not that. The value
+      colours the browser's own chrome, which sits directly above the page — and
+      the page is a near-black room with a lit bookcase in it. Cream above that
+      reads as a rendering fault rather than as branding. The palette's paper
+      belongs on the icons and the share card, which are seen on somebody else's
+      background, never against this one.
+    --><meta name="theme-color" content="#1a1613" />
     <title>Stacks</title>
     <meta name="description" content="A reading library, rendered as a shelf." />
     <!--
@@ -37,7 +61,15 @@ const pageUrl = absoluteUrl('/', Astro.site);
   <body>
     <Shelf />
     <header>
-      <h1>Stacks</h1>
+      <!--
+        aria-hidden because the mark carries its own role="img" and aria-label,
+        and the <h1> beside it already says the name. Without this a screen
+        reader announces "Stacks" twice in a row for one logo.
+      -->
+      <div class="brand">
+        <span class="mark" aria-hidden="true" set:html={markSvg}></span>
+        <h1>stacks</h1>
+      </div>
       <p>Drag to look around · click a book</p>
     </header>
   </body>
@@ -71,10 +103,55 @@ const pageUrl = absoluteUrl('/', Astro.site);
     pointer-events: none;
   }
 
+  /*
+    The wordmark's size lives here rather than on the h1, so the mark can be
+    sized in `em` against the same value and the two stay locked together
+    through the clamp(). The artwork's bars occupy 40 of its 64 units
+    vertically, so a 1.55em box puts about 0.97em of ink beside a lowercase
+    word whose ascenders run roughly that far.
+  */
+  .brand {
+    --mark-size: 1.55em;
+    display: flex;
+    align-items: center;
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+    /* The mark's clear space is one bar height — 11 of its 64 units. */
+    gap: calc(var(--mark-size) * 11 / 64);
+  }
+
+  /*
+    Pulled left by the artwork's own inset — its bars start 7 units into a
+    64-unit box — so the ink lines up with the caption underneath instead of
+    the invisible edge of the box.
+  */
+  .mark {
+    display: block;
+    flex: none;
+    width: var(--mark-size);
+    height: var(--mark-size);
+    margin-left: calc(var(--mark-size) * -7 / 64);
+  }
+
+  /* Overrides the width/height attributes the artwork carries. */
+  .mark svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
   h1 {
     margin: 0;
-    font-size: clamp(1.5rem, 4vw, 2.25rem);
-    font-weight: 600;
+    /*
+      Lowercase mono, per the brand sheet: IBM Plex Mono 500. No webfont is
+      loaded — one more request and ~30 KB for six letters, on a page whose
+      first paint is a WebGL scene — so this asks for it and takes whatever
+      monospace the machine has otherwise. The letterforms differ; the shape of
+      the wordmark does not.
+    */
+    font-family:
+      'IBM Plex Mono', ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', monospace;
+    font-size: 1em;
+    font-weight: 500;
     letter-spacing: -0.02em;
   }
 

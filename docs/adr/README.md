@@ -55,3 +55,6 @@ Two other files hold what these deliberately do not:
 | [0029](./0029-placement-imports-the-case.md) | The shelf's placement arithmetic imports the case rather than being handed one |
 | [0030](./0030-two-spawn-helpers-not-one.md) | Two spawn helpers, one of which refuses a shell — never one with a `shell` flag |
 | [0031](./0031-one-usable-width.md) | One usable width, and the packer charges what the placer spends |
+| [0032](./0032-shelf-settings-are-one-object.md) | Everything the shelf looks like is one settings object |
+| [0033](./0033-painters-follow-the-light.md) | The painters follow the light |
+| [0034](./0034-bloom-behind-a-composer.md) | Bloom, behind a composer that costs the multisampling |

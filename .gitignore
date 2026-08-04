@@ -4,10 +4,11 @@ dist/
 .cache/
 
 # Build artifacts — always regenerable from the vault, never hand-edited (CLAUDE.md invariant 1).
-# `stacks build --public` stages all three into packages/site/public/; only
-# favicon.svg in that folder is actually source.
+# `stacks build --public` stages both of these into packages/site/public/.
+# Everything else in that folder is committed brand art — favicon.svg, the two
+# favicon PNGs, the touch icon, and og.png — and a build must never write over
+# it.
 library.json
-packages/site/public/og.png
 packages/site/public/covers/
 
 # Screenshots are regenerable via `pnpm smoke:render`; keep binaries out of the repo

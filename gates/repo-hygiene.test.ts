@@ -38,6 +38,24 @@ function isIgnored(path: string): boolean {
   }
 }
 
+/**
+ * Whether any `.gitignore` **rule** names this path, tracked or not.
+ *
+ * `git check-ignore` consults the index and never reports a tracked file as
+ * ignored — correct, since tracking wins — but it makes "this file must not be
+ * ignored" unfalsifiable for a file that is currently tracked. Adding the rule
+ * back changes nothing it can see, which is precisely the change worth
+ * catching. `--no-index` reads the rules instead of the outcome.
+ */
+function matchesIgnoreRule(path: string): boolean {
+  try {
+    execFileSync('git', ['check-ignore', '-q', '--no-index', '--', path], { cwd: REPO_ROOT });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const BINARY = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip)$/i;
 
 /**
@@ -59,6 +77,28 @@ const BINARY = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip
  */
 const GENERATED_BINARY_DIRS = ['fixtures/vault/Library/covers/', 'docs/images/'];
 
+/**
+ * The brand art, allowed one filename at a time.
+ *
+ * Same claim as the two directories above and a cleaner one: these were drawn
+ * for this app. The icons are rasterised from the committed SVGs beside them by
+ * `scripts/make-icons.ts`; `og.png` is the designed share card. There is no
+ * third party anywhere near any of them.
+ *
+ * Filenames rather than a directory, because the directory is
+ * `packages/site/public/` — the folder `stacks build --public` stages a real
+ * vault's covers into. A prefix entry there would allow committing exactly the
+ * thing this rule exists to stop, and it would do it in the one place a real
+ * cover is already sitting on disk. So each file is named, and anything else
+ * that appears beside them goes red.
+ */
+const BRAND_BINARY_FILES = [
+  'packages/site/public/favicon-16.png',
+  'packages/site/public/favicon-32.png',
+  'packages/site/public/apple-touch-icon.png',
+  'packages/site/public/og.png',
+];
+
 describe('G5 — library.json is a build artifact', () => {
   it('is not tracked by git', () => {
     const tracked = trackedFiles();
@@ -79,23 +119,33 @@ describe('G5 — library.json is a build artifact', () => {
 
   it('keeps the rest of the build output out too', () => {
     expect(isIgnored('packages/site/public/covers/anything.jpg')).toBe(true);
-    expect(isIgnored('packages/site/public/og.png')).toBe(true);
     expect(isIgnored('artifacts/shelf.png')).toBe(true);
+
+    // `og.png` sits in that same folder and is deliberately *not* ignored: it
+    // is the designed share card, committed, and `publish()` no longer writes
+    // one. If a build ever starts rendering it again, this is the line that
+    // says the two decisions have to move together — and it reads the rule
+    // rather than the outcome, because the outcome cannot change while the file
+    // is tracked.
+    expect(matchesIgnoreRule('packages/site/public/og.png')).toBe(false);
   });
 });
 
 describe('G13 — no third-party material is committed', () => {
-  it('tracks no binary outside the generated fixture covers', () => {
+  it('tracks no binary outside the generated fixture covers and the brand art', () => {
+    const allowedFiles = new Set(BRAND_BINARY_FILES);
     const offenders = trackedFiles().filter(
       (path) =>
-        BINARY.test(path) && !GENERATED_BINARY_DIRS.some((dir) => path.startsWith(dir)),
+        BINARY.test(path) &&
+        !GENERATED_BINARY_DIRS.some((dir) => path.startsWith(dir)) &&
+        !allowedFiles.has(path),
     );
 
     expect(
       offenders,
-      'committed binaries outside the generated fixture covers. Real cover art is ' +
-        "somebody else's copyrighted image and is never committed — see fixtures/README.md: " +
-        offenders.join(', '),
+      'committed binaries outside the generated fixture covers and the brand art. Real ' +
+        "cover art is somebody else's copyrighted image and is never committed — see " +
+        `fixtures/README.md: ${offenders.join(', ')}`,
     ).toEqual([]);
   });
 
@@ -113,6 +163,23 @@ describe('G13 — no third-party material is committed', () => {
       const inside = trackedFiles().filter((path) => path.startsWith(dir));
       expect(inside.length, `${dir} is allowlisted but tracks nothing — drop it`).toBeGreaterThan(0);
     }
+  });
+
+  it('tracks every allowlisted brand file', () => {
+    // Both halves of a named entry. A file that stopped being committed leaves
+    // a permission behind for something nobody ships, and — because the page
+    // links all four — a 404 on every visit that no other gate would notice.
+    // `og.png` is the one that matters most: it was written by `publish()`
+    // until it became committed art, so the failure mode is a build quietly
+    // going back to overwriting it and someone deleting the "stale" original.
+    const tracked = new Set(trackedFiles());
+    const missing = BRAND_BINARY_FILES.filter((path) => !tracked.has(path));
+
+    expect(
+      missing,
+      'allowlisted as brand art but not tracked — the page links every one of these, ' +
+        `so a missing file is a 404 on every visit: ${missing.join(', ')}`,
+    ).toEqual([]);
   });
 
   it('keeps docs/images to exactly the generated screenshot', () => {
