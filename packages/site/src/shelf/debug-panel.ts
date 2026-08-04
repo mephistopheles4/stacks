@@ -155,7 +155,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     klass: Klass,
     get: (s: ShelfSettings) => boolean,
     set: (s: ShelfSettings, value: boolean) => ShelfSettings,
-  ): void => {
+  ): { input: HTMLInputElement; row: HTMLElement } => {
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.checked = get(settings);
@@ -163,7 +163,9 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
       apply(set(settings, input.checked));
     });
     resync.push(() => (input.checked = get(settings)));
-    body.append(row(label, klass, input));
+    const line = row(label, klass, input);
+    body.append(line);
+    return { input, row: line };
   };
 
   const slider = (
@@ -400,9 +402,27 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   slider('pixel ratio cap', 'live', 0.5, 3, 0.1, (s) => s.renderer.maxPixelRatio, (s, v) =>
     resolveSettings({ renderer: { maxPixelRatio: v } }, s),
   );
-  toggleRow('antialias', 'reload', (s) => s.renderer.antialias, (s, v) =>
+  /**
+   * Superseded while bloom is on, because MSAA is not what is running.
+   *
+   * A composer renders into its own targets and never sets `samples`, so with
+   * bloom enabled the context is created without multisampling and
+   * antialiasing moves to an SMAA pass — see `post.ts`. The checkbox would
+   * otherwise sit there ticked while `getContextAttributes().antialias` is
+   * false, which is the eighth instance of the exact fault this panel exists to
+   * prevent, and the only one that was in code written for it.
+   */
+  const aa = toggleRow('antialias', 'reload', (s) => s.renderer.antialias, (s, v) =>
     resolveSettings({ renderer: { antialias: v } }, s),
   );
+  const syncAntialias = (): void => {
+    const superseded = settings.effects.bloom.enabled;
+    aa.input.disabled = superseded;
+    aa.row.style.opacity = superseded ? '0.4' : '1';
+    aa.row.title = superseded ? 'bloom is on, so antialiasing is an SMAA pass rather than MSAA' : '';
+  };
+  afterApply.push(syncAntialias);
+  syncAntialias();
   toggleRow('resize guard', 'live', (s) => s.renderer.guardResize, (s, v) =>
     resolveSettings({ renderer: { guardResize: v } }, s),
   );
