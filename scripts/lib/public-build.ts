@@ -122,13 +122,13 @@ const SHARE_TAG = /<meta\s+(?:property|name)="((?:og|twitter):[a-z]+)"\s+content
 /** A cover this build serves itself: one path segment, under `covers/`. */
 const SAME_ORIGIN_COVER = /^covers\/[^/\\]+$/;
 
-/** The share image `publish()` renders, and the only one a page may point at. */
+/** The committed share card, and the only image a page may point at. */
 const SHARE_IMAGE_FILE = 'og.png';
 
 /** The `_headers` block that governs covers. Matched exactly, not searched for. */
 const COVERS_PATTERN = '/covers/*';
 
-/** Below this, `og.png` is a failed render rather than an image. */
+/** Below this, `og.png` is a truncated copy rather than an image. */
 const MIN_OG_IMAGE_BYTES = 2048;
 
 interface ShippedBook {
@@ -315,8 +315,9 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
 
   // ── The share image itself ────────────────────────────────────────────────
   //
-  // Measured in the folder being inspected, not in the staging folder it was
-  // rendered into. The staged copy being fine says nothing about what shipped.
+  // Measured in the folder being inspected, not in `packages/site/public/`
+  // where the committed original lives. The source being fine says nothing
+  // about what Astro actually copied into the build.
   const ogImage = join(dir, SHARE_IMAGE_FILE);
   const ogBytes = existsSync(ogImage) ? statSync(ogImage).size : undefined;
   if (ogBytes === undefined) {
@@ -324,7 +325,7 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   } else if (ogBytes < MIN_OG_IMAGE_BYTES) {
     fail(
       'og-image',
-      `${SHARE_IMAGE_FILE} is ${String(ogBytes)} bytes — implausibly small for a rendered image`,
+      `${SHARE_IMAGE_FILE} is ${String(ogBytes)} bytes — implausibly small for the share card`,
     );
   } else {
     observations.push(`og.png ${String(ogBytes)} bytes`);

@@ -56,7 +56,7 @@ absent row is not. This file is only useful if it is as easy to find what is
 | **G3** | Never crash on a bad note | invariant 3 | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind | ✅ |
 | **G4** | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
 | **G5** | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored | ✅ |
-| **G13** | No third-party material is committed, ever | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside two generated directories | ✅ |
+| **G13** | No third-party material is committed, ever | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside two generated directories and four named brand files | ✅ |
 | **G14** | The documented commands are the commands that exist | CLAUDE.md "Commands" | `gates/commands.test.ts` — CLI subcommands and pnpm scripts, both directions | ✅ |
 
 ## Contract seams → gates
@@ -87,6 +87,34 @@ as such rather than dressed up: the image is safe because
 `scripts/make-readme-image.ts` crops what `pnpm smoke:render` renders, and that
 gate renders the fixture vault. **Observed red** by copying the screenshot to a
 second name.
+
+**The brand art went in as four filenames, not a directory**, and the reason is
+the same rule read the other way round. Its provenance is the cleanest this list
+holds — the mark and the share card were drawn for this app, so there is no
+third party anywhere near them, and that is exactly the claim an entry here is
+*for*. But they live in `packages/site/public/`, which is where
+`stacks build --public` stages a real vault's covers. A prefix entry there would
+have permitted the thing G13 exists to stop, in the one directory where a real
+cover is already on disk.
+
+The row checks the other direction too: an allowlisted file that stops being
+tracked goes red, because the page links all four and nothing else here would
+notice a 404 on every visit. `og.png` is why that half is worth having.
+`publish()` wrote one on every build until the designed card replaced it, so the
+way this breaks is a build quietly rendering over the committed art, or somebody
+deleting it as stale output — and a 1200×630 PNG at the expected path passes the
+size check either way. G5 pins the same seam from the other side, asserting that
+no ignore rule names `og.png` while everything else `publish()` stages is
+ignored.
+
+**Observed red three ways**: an unlisted PNG copied in beside the icons;
+`git rm --cached` on `og.png`; and the old `packages/site/public/og.png` line
+restored to `.gitignore`. The third is why that assertion reads the ignore
+*rule* rather than asking whether the file is ignored. `git check-ignore`
+consults the index and never reports a tracked file as ignored — correct, since
+tracking wins — so the obvious spelling passed green with the rule sitting right
+there in `.gitignore`, which is the exact state it exists to catch. `--no-index`
+reads the rules instead of the outcome.
 
 **G8 observed red** on `shelf_order`, which the parser read and the prose
 described but the documented enumeration never listed. **G9 observed red** on
@@ -873,8 +901,8 @@ in a permitted field passes by construction, and a filename is never read at all
    browser hit a third-party host.
 5. **The link preview works.** `og:image` and `twitter:image` must be absolute
    against `SITE_URL`. They were relative for the project's whole life, which
-   means the OG image — generated, size-checked by this same gate, rendered at
-   1200×630 — would have shown nothing to anyone the shelf was sent to. That is
+   means the share card — size-checked by this same gate, 1200×630 — would have
+   shown nothing to anyone the shelf was sent to. That is
    the brief's success metric, so the gate now builds with an origin and checks
    what a scraper would fetch. Observed red by restoring the relative URL.
 

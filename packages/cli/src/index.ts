@@ -102,9 +102,10 @@ program
       const rebuild = async (): Promise<void> => {
         const books = await vault.listBooks();
 
-        // A public build stages a whole folder — metadata, the covers it
-        // actually references, and the link-preview image. A local build is
-        // just the index.
+        // A public build stages a whole folder — metadata and the covers it
+        // actually references. The link-preview image is committed brand art in
+        // `packages/site/public/` and is deliberately not written here. A local
+        // build is just the index.
         if (options.public === true) {
           const assets = resolve(options.assets ?? DEFAULT_ASSETS);
           const result = await publish(books, vault, assets, { isPublic: true });
@@ -113,7 +114,6 @@ program
             `wrote ${result.libraryPath} — ${result.library.bookCount} book(s), public build`,
           );
           console.log(`  covers    ${result.coversCopied} copied into ${assets}`);
-          console.log(`  og image  ${result.ogImagePath}`);
           if (result.coversMissing.length > 0) {
             console.warn(
               `  missing   ${result.coversMissing.length} cover(s): ${result.coversMissing.join(', ')}`,

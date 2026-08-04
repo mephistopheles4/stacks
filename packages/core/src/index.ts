@@ -77,7 +77,6 @@ export {
   type WatchOptions,
 } from './watch.ts';
 
-export { renderOgImage, type OgImageOptions } from './og-image.ts';
 export { publish, type PublishOptions, type PublishResult } from './publish.ts';
 
 export {

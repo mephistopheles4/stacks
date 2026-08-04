@@ -4,7 +4,6 @@ import sharp from 'sharp';
 import { MAX_COVER_EDGE, measureCover } from './covers/cover-budget.ts';
 import { coverFileName, resolveCoverPath } from './covers/cover-path.ts';
 import { buildLibrary, type Library } from './library.ts';
-import { renderOgImage } from './og-image.ts';
 import { SHELVED_STATUSES } from './shelf-order.ts';
 import type { BookRecord } from './types.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
@@ -22,7 +21,6 @@ import type { VaultAdapter } from './adapters/vault-adapter.ts';
 
 export interface PublishOptions {
   readonly isPublic: boolean;
-  readonly title?: string;
   readonly now?: Date;
 }
 
@@ -31,7 +29,6 @@ export interface PublishResult {
   readonly libraryPath: string;
   readonly coversCopied: number;
   readonly coversMissing: readonly string[];
-  readonly ogImagePath: string;
 }
 
 export async function publish(
@@ -80,10 +77,13 @@ export async function publish(
   const libraryPath = join(assetsDir, 'library.json');
   await writeFile(libraryPath, `${JSON.stringify(library, null, 2)}\n`, 'utf8');
 
-  const ogImagePath = join(assetsDir, 'og.png');
-  await writeFile(ogImagePath, await renderOgImage(library.books, titleFor(options, library)));
+  // The share image is *not* written here, and used to be. `og.png` is now
+  // committed brand art sitting in the same folder this stages into, so a build
+  // that rendered one would overwrite the designed card with a generated one
+  // every time — silently, since both are a 1200x630 PNG at that path.
+  // `gate:public` still checks it reaches `dist/` and is not a truncated file.
 
-  return { library, libraryPath, coversCopied: copied, coversMissing: missing, ogImagePath };
+  return { library, libraryPath, coversCopied: copied, coversMissing: missing };
 }
 
 /**
@@ -184,13 +184,6 @@ function withLocalCovers(library: Library): Library {
       }
       return { ...book, cover: `covers/${filename}` };
     }),
-  };
-}
-
-function titleFor(options: PublishOptions, library: Library): { title?: string; subtitle: string } {
-  return {
-    ...(options.title === undefined ? {} : { title: options.title }),
-    subtitle: `${library.bookCount} book${library.bookCount === 1 ? '' : 's'}`,
   };
 }
 

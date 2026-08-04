@@ -1,12 +1,9 @@
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
-import { renderOgImage } from './og-image.ts';
 import { publish } from './publish.ts';
-import { buildLibrary } from './library.ts';
 import { FIXTURE_VAULT } from './test-support.ts';
 
 const CANARY = 'NOTE_BODY_CANARY_do_not_ship';
@@ -26,14 +23,18 @@ describe('publish', () => {
     await rm(out, { recursive: true, force: true });
   });
 
-  it('stages library.json, the covers it references, and an og image', async () => {
+  it('stages library.json and the covers it references', async () => {
     const books = await vault.listBooks();
     const result = await publish(books, vault, out, { isPublic: true });
 
     const staged = await readdir(out);
     expect(staged).toContain('library.json');
     expect(staged).toContain('covers');
-    expect(staged).toContain('og.png');
+
+    // And nothing else. `og.png` is committed brand art living in the folder
+    // this stages into, so a build that wrote one would overwrite the designed
+    // card with a generated one at the same path, at the same size, silently.
+    expect(staged).not.toContain('og.png');
 
     // Six of the eight fixture books carry a cover; two deliberately do not.
     expect(result.coversCopied).toBe(6);
@@ -121,52 +122,5 @@ describe('publish', () => {
     expect(result.coversMissing).toEqual(['passwd']);
     const copied = await readdir(join(out, 'covers'));
     expect(copied).toEqual([]);
-  });
-});
-
-describe('renderOgImage', () => {
-  it('produces a 1200x630 PNG', async () => {
-    const books = await vault.listBooks();
-    const library = buildLibrary(books, { isPublic: true });
-
-    const png = await renderOgImage(library.books);
-    const meta = await sharp(png).metadata();
-
-    expect(meta.format).toBe('png');
-    expect(meta.width).toBe(1200);
-    expect(meta.height).toBe(630);
-  });
-
-  it('actually draws the books rather than an empty case', async () => {
-    const books = await vault.listBooks();
-    const library = buildLibrary(books, { isPublic: true });
-
-    const withBooks = await sharp(await renderOgImage(library.books)).stats();
-    const empty = await sharp(await renderOgImage([])).stats();
-
-    // Spines add colour variance the bare case does not have.
-    const spread = (s: typeof withBooks): number =>
-      s.channels.reduce((total, channel) => total + channel.stdev, 0);
-    expect(spread(withBooks)).toBeGreaterThan(spread(empty));
-  });
-
-  it('survives a library with no books at all', async () => {
-    const png = await renderOgImage([]);
-    expect((await sharp(png).metadata()).width).toBe(1200);
-  });
-
-  it('ignores a spine colour that is not a hex colour', async () => {
-    // `spine_color` comes from a hand-edited note and lands in an SVG attribute.
-    const nasty = [
-      {
-        id: 'x',
-        title: 'X',
-        status: 'read',
-        tags: [],
-        spineColor: '"><script>alert(1)</script>',
-      },
-    ];
-    const png = await renderOgImage(nasty as never);
-    expect((await sharp(png).metadata()).format).toBe('png');
   });
 });
