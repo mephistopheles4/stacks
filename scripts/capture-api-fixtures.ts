@@ -14,10 +14,10 @@
  * counts. No cover binaries, no book text.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { REPO_ROOT } from './lib/repo-root.ts';
 
-const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'api');
+const OUT_DIR = join(REPO_ROOT, 'fixtures', 'api');
 
 const CAPTURES: readonly { readonly name: string; readonly url: string }[] = [
   {

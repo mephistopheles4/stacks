@@ -23,14 +23,15 @@
  * the thing worth checking.
  */
 
-import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import { gitOutput } from './lib/git.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
+import { REPO_ROOT } from './lib/repo-root.ts';
+import { runShell } from './lib/run.ts';
 
 // The same loader the CLI uses, rather than a third hand-rolled `.env` parser:
 // a real environment variable still wins, so `SITE_URL=... pnpm deploy` does
@@ -38,8 +39,7 @@ import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts'
 // because only the CLI was ever reading the file.
 loadEnv();
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const DIST = join(ROOT, 'packages', 'site', 'dist');
+const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
 
 /** How `dist/` is named in messages, so they read the same on every platform. */
 const DIST_LABEL = 'packages/site/dist';
@@ -83,20 +83,16 @@ function fail(message: string): never {
 }
 
 /**
- * `shell: true` because pnpm is a .cmd shim on Windows. One string rather than
- * an args array, per DEP0190 — every argument here is a literal or comes from
- * the owner's own environment.
+ * `runShell` — the shell and the joined command line are its business, not this
+ * script's. All this adds is the failure style: a deploy that stops should say
+ * so in the same shape as every other refusal here, not as a stack trace.
  */
 function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv = {}): void {
-  const line = [command, ...args].join(' ');
-  console.log(`\n$ ${line}`);
-  const result = spawnSync(line, {
-    cwd: ROOT,
-    shell: true,
-    stdio: 'inherit',
-    env: { ...process.env, ...env },
-  });
-  if (result.status !== 0) fail(`${line} exited ${String(result.status)}`);
+  try {
+    runShell(command, args, { env });
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
 }
 
 // ── 0. Everything the deploy needs, checked before anything runs ────────────
@@ -135,15 +131,10 @@ function assertPublishableBranch(): void {
     return;
   }
 
-  const result = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  });
   // Not a checkout at all — a tarball, say. Nothing to assert against, and
   // refusing here would block a legitimate deploy for no reason.
-  if (result.status !== 0) return;
-
-  const branch = result.stdout.trim();
+  const branch = gitOutput(['rev-parse', '--abbrev-ref', 'HEAD'], REPO_ROOT);
+  if (branch === undefined) return;
   if (branch === 'main') return;
 
   fail(
@@ -293,7 +284,7 @@ if (!checkOnly) {
  * weaker check, not a broken deploy.
  */
 async function fixtureTitles(): Promise<string[]> {
-  const vaultPath = join(ROOT, 'fixtures', 'vault');
+  const vaultPath = join(REPO_ROOT, 'fixtures', 'vault');
   if (!existsSync(vaultPath)) return [];
   const books = await new ObsidianAdapter(vaultPath).listBooks();
   return books.map((book) => book.title);

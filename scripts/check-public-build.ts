@@ -18,32 +18,16 @@
  * one that gets skipped*, so a pass cannot be an accident of that book being
  * dropped from the library.
  */
-import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
-import { dirname, extname, join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { extname, join, relative } from 'node:path';
 import { inspectPublicBuild, NOTE_BODY_CANARY } from './lib/public-build.ts';
+import { REPO_ROOT } from './lib/repo-root.ts';
+import { runShell } from './lib/run.ts';
 import { walk } from './lib/walk.ts';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const VAULT = join(ROOT, 'fixtures', 'vault');
-const ASSETS = join(ROOT, 'packages', 'site', 'public');
-const DIST = join(ROOT, 'packages', 'site', 'dist');
-
-/**
- * `shell: true` because `pnpm` is a `.cmd` shim on Windows and will not spawn
- * without one. Node deprecates passing an args *array* alongside it (DEP0190),
- * since the two are concatenated rather than escaped — so the command is built
- * as one string here. Every argument is a literal in this file; none comes from
- * a vault, an argv or an environment variable.
- */
-function run(command: string, args: readonly string[]): void {
-  const line = [command, ...args].join(' ');
-  const result = spawnSync(line, { cwd: ROOT, shell: true, stdio: 'inherit' });
-  if (result.status !== 0) {
-    throw new Error(`${line} exited ${String(result.status)}`);
-  }
-}
+const VAULT = join(REPO_ROOT, 'fixtures', 'vault');
+const ASSETS = join(REPO_ROOT, 'packages', 'site', 'public');
+const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
 
 // 1. The canary has to actually be in the source vault, or this gate proves
 // nothing. This is the half `inspectPublicBuild` cannot check: it is handed a
@@ -72,8 +56,20 @@ console.log(`canary present in fixture vault: ${NOTE_BODY_CANARY}`);
 const CANONICAL_ORIGIN = 'https://stacks.gate.example';
 process.env['SITE_URL'] = CANONICAL_ORIGIN;
 
-run('pnpm', ['stacks', 'build', '--public', '--vault', 'fixtures/vault', '--assets', ASSETS]);
-run('pnpm', ['--filter', '@stacks/site', 'run', 'build']);
+// `ASSETS` is quoted because it is absolute, and an absolute path here starts
+// at a home directory that may well have a space in it — `runShell` joins its
+// arguments verbatim and quotes nothing. `fixtures/vault` needs none: it is a
+// repo-relative literal and `cwd` is the repo root.
+runShell('pnpm', [
+  'stacks',
+  'build',
+  '--public',
+  '--vault',
+  'fixtures/vault',
+  '--assets',
+  `"${ASSETS}"`,
+]);
+runShell('pnpm', ['--filter', '@stacks/site', 'run', 'build']);
 
 if (!existsSync(DIST)) {
   console.error(`FAILED: no build output at ${DIST}`);
@@ -84,7 +80,7 @@ if (!existsSync(DIST)) {
 const report = inspectPublicBuild(DIST, { origin: CANONICAL_ORIGIN });
 
 for (const observation of report.observations) console.log(observation);
-console.log(`inspected ${relative(ROOT, DIST).split('\\').join('/')}`);
+console.log(`inspected ${relative(REPO_ROOT, DIST).split('\\').join('/')}`);
 
 if (report.problems.length > 0) {
   console.error(

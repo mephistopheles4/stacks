@@ -47,10 +47,11 @@
  * does — but that safety is three separate coincidences, and the Astro dev
  * server's file watcher and your editor's indexer share none of them.
  */
-import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { mainCheckout } from '../packages/cli/src/env.ts';
+import { gitOutput, gitStatus } from './lib/git.ts';
+import { runExe, runShell } from './lib/run.ts';
 
 /**
  * What may appear in a branch name here.
@@ -70,31 +71,32 @@ function fail(message: string): never {
 /**
  * git, with its arguments passed as arguments.
  *
- * Deliberately not `shell: true`: a branch name reaches this, and under a shell
- * an args array is concatenated rather than escaped — Node warns about exactly
- * that (DEP0190). `BRANCH` above already rejects the characters that would
- * matter, but a validation regex and a shell are two chances to be wrong where
- * no shell is one. git is a real executable on every platform, so it needs none.
+ * `runExe` and never `runShell`, because a branch name reaches this one — see
+ * ADR-0030 for why the two exist. `BRANCH` above already rejects the characters
+ * that would matter, but a validation regex and a shell are two chances to be
+ * wrong where no shell is one.
+ *
+ * The catch is only presentation: this script reports its own failures rather
+ * than throwing a stack trace at someone who asked for a checkout.
  */
 function git(args: readonly string[], cwd: string): void {
-  const result = spawnSync('git', [...args], { cwd, stdio: 'inherit' });
-  if (result.status !== 0) fail(`\ngit ${args.join(' ')} exited ${String(result.status)}`);
+  try {
+    runExe('git', args, cwd);
+  } catch (error) {
+    fail(`\n${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
-/** Whether a local branch of this name already exists. */
+/**
+ * Whether a local branch of this name already exists.
+ *
+ * Spelled the same way as `onOrigin` below, which asks the identical question
+ * about a remote-tracking ref. The two used to differ — this one had its own
+ * `spawnSync` with `stdio: 'ignore'` — so one question had two implementations
+ * eight lines apart.
+ */
 function branchExists(name: string, cwd: string): boolean {
-  return (
-    spawnSync('git', ['rev-parse', '--verify', '--quiet', `refs/heads/${name}`], {
-      cwd,
-      stdio: 'ignore',
-    }).status === 0
-  );
-}
-
-/** git, captured and non-fatal — `undefined` when it fails for any reason. */
-function gitOutput(args: readonly string[], cwd: string): string | undefined {
-  const result = spawnSync('git', [...args], { cwd, encoding: 'utf8' });
-  return result.status === 0 ? result.stdout.trim() : undefined;
+  return gitOutput(['rev-parse', '--verify', '--quiet', `refs/heads/${name}`], cwd) !== undefined;
 }
 
 /**
@@ -118,8 +120,7 @@ function fetchOrigin(cwd: string): boolean {
   const hasOrigin = gitOutput(['remote'], cwd)?.split('\n').includes('origin') === true;
   if (!hasOrigin) return false;
 
-  const fetched = spawnSync('git', ['fetch', 'origin', '--quiet'], { cwd, stdio: 'inherit' });
-  if (fetched.status !== 0) {
+  if (gitStatus(['fetch', 'origin', '--quiet'], cwd) !== 0) {
     console.warn('\n! could not reach origin — working from the last fetch, which may be old\n');
   }
   return true;
@@ -156,10 +157,7 @@ function divergence(name: string, cwd: string): { behind: number; ahead: number 
  * to do on the way.
  */
 function fastForward(name: string, cwd: string): boolean {
-  return (
-    spawnSync('git', ['fetch', 'origin', `${name}:${name}`, '--quiet'], { cwd, stdio: 'inherit' })
-      .status === 0
-  );
+  return gitStatus(['fetch', 'origin', `${name}:${name}`, '--quiet'], cwd) === 0;
 }
 
 /**
@@ -189,7 +187,7 @@ const branch = process.argv[2];
 if (branch === undefined || branch.startsWith('-')) {
   console.error('usage: pnpm worktree <branch>\n');
   console.error('Existing worktrees:');
-  spawnSync('git', ['worktree', 'list'], { stdio: 'inherit' });
+  gitStatus(['worktree', 'list'], process.cwd());
   console.error('\nRemove one with: git worktree remove <path>');
   process.exit(1);
 }
@@ -301,12 +299,16 @@ if (existing) {
 console.log('');
 git(addArgs, main);
 
-console.log('\nInstalling dependencies…\n');
-// One constant string rather than an args array, because pnpm is a `.cmd` shim
-// on Windows and cannot be spawned without a shell. Nothing variable goes on
-// this command line; the path it runs in travels as `cwd`.
-const install = spawnSync('pnpm install', { cwd: target, shell: true, stdio: 'inherit' });
-if (install.status !== 0) fail(`\npnpm install exited ${String(install.status)}`);
+console.log('\nInstalling dependencies…');
+// `runShell` because pnpm is a `.cmd` shim and needs one. Nothing variable goes
+// on this command line; the path it runs in travels as `cwd`, not as an
+// argument — which is the whole reason this may take a shell where `git` above
+// may not.
+try {
+  runShell('pnpm', ['install'], { cwd: target });
+} catch (error) {
+  fail(`\n${error instanceof Error ? error.message : String(error)}`);
+}
 
 // A new worktree never has its own `.env` — it is gitignored and was created a
 // second ago — so the one it will read is always the main checkout's. Said out

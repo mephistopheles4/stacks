@@ -15,11 +15,9 @@
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { networkInterfaces } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { loadEnv } from '../packages/cli/src/env.ts';
-
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+import { REPO_ROOT } from './lib/repo-root.ts';
+import { shellCommand } from './lib/run.ts';
 
 // Before anything below reads a setting. This script used to carry its own
 // one-key `.env` reader, which meant `PORT` — documented in `.env.example` —
@@ -77,7 +75,9 @@ console.log('');
 const children: ChildProcess[] = [];
 
 function start(label: string, command: string, args: readonly string[]): void {
-  const child = spawn(command, [...args], { cwd: ROOT, shell: true, stdio: 'pipe' });
+  // `shellCommand`, not an args array: both children are `pnpm`, which needs a
+  // shell on Windows, and an array alongside one is DEP0190.
+  const child = spawn(shellCommand(command, args), { cwd: REPO_ROOT, shell: true, stdio: 'pipe' });
 
   const relay = (chunk: Buffer): void => {
     for (const line of chunk.toString().split(/\r?\n/)) {
