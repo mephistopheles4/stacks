@@ -1,7 +1,7 @@
 import type { Library, LibraryBook } from '@stacks/core';
 import { mountDiagnostics } from './diagnostics.ts';
 import { mountShelf, toSettingsPatch, type RendererOverrides, type ShelfHandle } from './scene.ts';
-import { resolveSettings } from './shelf-settings.ts';
+import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
 
 /**
  * Wires the page up: load the library, mount the shelf, show a card on click.
@@ -42,47 +42,61 @@ export async function boot(
 ): Promise<ShelfHandle | undefined> {
   const params = new URLSearchParams(window.location.search);
   const books = limitBooks(await loadLibrary(), params);
+  const debug = params.has('debug');
 
   let handle: ShelfHandle | undefined;
   let shaderFailed = false;
+  /** Torn down and remade when the panel rebuilds the shelf. */
+  let unmountPanel: (() => void) | undefined;
 
-  try {
-    handle = mountShelf(canvas, books, {
-      // URL vocabulary → settings vocabulary → the total object the shelf runs.
-      // The two spellings are kept apart deliberately; see `toSettingsPatch`.
-      settings: resolveSettings(toSettingsPatch(rendererOverrides(params))),
-      onSelect: (book) => {
-        if (book === undefined) hideCard(card);
-        else showCard(card, book);
-      },
-      onContextLost: () => {
-        // A shader failure takes the context with it a moment later on the
-        // hardware where this happens, and the generic message would land on
-        // top of the specific one and bury the only useful sentence.
-        if (!shaderFailed) showNotice(canvas, LOST_MESSAGE);
-      },
-      onContextRestored: () => {
-        clearNotice(canvas);
-      },
-      onShaderFailure: () => {
-        shaderFailed = true;
-        showNotice(canvas, SHADER_MESSAGE);
-      },
-    });
-  } catch {
-    // `new WebGLRenderer` throws when the browser will not hand out a context —
-    // no WebGL at all, or, more often here, a browser that has just killed this
-    // page's renderer and is refusing to try again. The caller does nothing with
-    // the rejection (the .astro script may not, by the "no logic in .astro"
-    // rule), so an unhandled throw here is a blank page with no explanation.
-    // That is the exact thing the user saw on reload.
-    showNotice(canvas, UNAVAILABLE_MESSAGE);
-  }
+  const mount = (settings: ShelfSettings): ShelfHandle | undefined => {
+    try {
+      return mountShelf(canvas, books, {
+        settings,
+        onSelect: (book) => {
+          if (book === undefined) hideCard(card);
+          else showCard(card, book);
+        },
+        onContextLost: () => {
+          // A shader failure takes the context with it a moment later on the
+          // hardware where this happens, and the generic message would land on
+          // top of the specific one and bury the only useful sentence.
+          if (!shaderFailed) showNotice(canvas, LOST_MESSAGE);
+        },
+        onContextRestored: () => {
+          clearNotice(canvas);
+        },
+        onShaderFailure: () => {
+          shaderFailed = true;
+          showNotice(canvas, SHADER_MESSAGE);
+        },
+      });
+    } catch {
+      // `new WebGLRenderer` throws when the browser will not hand out a context —
+      // no WebGL at all, or, more often here, a browser that has just killed this
+      // page's renderer and is refusing to try again. The caller does nothing with
+      // the rejection (the .astro script may not, by the "no logic in .astro"
+      // rule), so an unhandled throw here is a blank page with no explanation.
+      // That is the exact thing the user saw on reload.
+      showNotice(canvas, UNAVAILABLE_MESSAGE);
+      return undefined;
+    }
+  };
+
+  // URL vocabulary → settings vocabulary → the total object the shelf runs.
+  // The two spellings are kept apart deliberately; see `toSettingsPatch`.
+  handle = mount(resolveSettings(toSettingsPatch(rendererOverrides(params))));
 
   // Mounted whether or not the shelf came up: a browser that refused a context
   // is exactly the state worth having a record of, and the record is the only
   // thing that survives the tab being killed.
-  if (params.has('debug') && canvas.parentElement !== null) {
+  //
+  // A **static** import, unlike the panel below. The black box has to be running
+  // before the thing it measures fails, and a dynamic import adds a round trip
+  // on exactly the device and connection where the first seconds of a crash
+  // record are the ones worth having. The panel can afford that latency; this
+  // cannot.
+  if (debug && canvas.parentElement !== null) {
     mountDiagnostics(canvas.parentElement, {
       books: books.length,
       ...(handle === undefined ? {} : { handle }),
@@ -91,13 +105,39 @@ export async function boot(
 
   if (handle === undefined) return undefined;
 
-  window.__shelf = {
-    bookCount: handle.bookCount,
-    ready: true,
-    caseOverflow: handle.caseOverflow,
-    shaderErrors: handle.shaderErrors,
-    projectBook: (index) => handle.projectBook(index),
-  };
+  publish(handle);
+
+  /**
+   * The panel, loaded only if asked for.
+   *
+   * A dynamic import so Vite splits it into its own chunk: an ordinary visitor
+   * downloads neither the panel nor anything it drags in. That matters more the
+   * moment postprocessing joins the graph — see #42, which measured a bloom
+   * chain at +4.7 KB gzip and adding ambient occlusion at +12.5 KB.
+   */
+  if (debug && canvas.parentElement !== null) {
+    const host = canvas.parentElement;
+    const { mountPanel } = await import('./debug-panel.ts');
+
+    const showPanel = (current: ShelfHandle): void => {
+      unmountPanel?.();
+      unmountPanel = mountPanel(host, {
+        handle: current,
+        onRebuild: (settings) => {
+          // Dispose before mounting: two live renderers on one canvas is two
+          // contexts, and the browser hands out a limited number of those.
+          current.dispose();
+          const next = mount(settings);
+          if (next === undefined) return;
+          handle = next;
+          publish(next);
+          showPanel(next);
+        },
+      });
+    };
+
+    showPanel(handle);
+  }
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') hideCard(card);
@@ -105,6 +145,23 @@ export async function boot(
 
   watchForRebuilds();
   return handle;
+}
+
+/**
+ * Republished after every remount.
+ *
+ * `window.__shelf` is what `pnpm smoke:render` reads, and it closes over one
+ * handle. A rebuild makes a new one, so without this the gate would be asking a
+ * disposed shelf how many books it has.
+ */
+function publish(handle: ShelfHandle): void {
+  window.__shelf = {
+    bookCount: handle.bookCount,
+    ready: true,
+    caseOverflow: handle.caseOverflow,
+    shaderErrors: handle.shaderErrors,
+    projectBook: (index) => handle.projectBook(index),
+  };
 }
 
 /* -------------------------------------------------------------------------- */

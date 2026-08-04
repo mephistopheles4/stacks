@@ -34,8 +34,18 @@ declare global {
   }
 }
 
-/** Versioned, so an old record from a different shape is ignored rather than mis-read. */
-const STORAGE_KEY = 'stacks.blackbox.v1';
+/**
+ * Versioned, so an old record from a different shape is ignored rather than
+ * mis-read.
+ *
+ * **v2** since the debug panel: a snapshot now carries the settings changes made
+ * during the session, and `profile` is read live rather than captured at mount.
+ * A v1 record has neither, and rendering one as if it did would show an empty
+ * change list for a session that had in fact been dialled — which reads as "the
+ * shelf died on the defaults" and is the single most misleading thing this file
+ * could say.
+ */
+const STORAGE_KEY = 'stacks.blackbox.v2';
 
 const SAMPLE_MS = 1000;
 
@@ -71,6 +81,22 @@ interface Snapshot {
    * the right moment.
    */
   shaders?: string[];
+  /**
+   * Every setting the panel changed this session, oldest first.
+   *
+   * A crash after eight toggles is far more legible as a sequence than as a
+   * final state — "it died when I turned shadows on" is the finding, and a
+   * snapshot of where the dials ended up cannot say it.
+   */
+  changes?: string[];
+  /**
+   * The query string the session was loaded with.
+   *
+   * Recorded because the panel writes what you dial back into the URL, so a
+   * reload of a dead session reproduces the settings that killed it. Knowing
+   * *which* URL died is the difference between a record and a trap.
+   */
+  query?: string;
 }
 
 export interface DiagnosticsOptions {
@@ -137,6 +163,10 @@ export function mountDiagnostics(
       ...(options.handle === undefined || options.handle.shaderErrors.length === 0
         ? {}
         : { shaders: [...options.handle.shaderErrors] }),
+      ...(options.handle === undefined || options.handle.changeLog.length === 0
+        ? {}
+        : { changes: [...options.handle.changeLog] }),
+      ...(window.location.search === '' ? {} : { query: window.location.search }),
     };
   };
 
@@ -211,6 +241,10 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
     lines.push('', 'SHADER WOULD NOT LINK — drawing stopped', ...current.shaders.map((line) => `  ${line}`));
   }
 
+  if (current.changes !== undefined) {
+    lines.push('', 'changed this session', ...current.changes.map((change) => `  ${change}`));
+  }
+
   if (current.errors.length > 0) {
     lines.push('', 'errors', ...current.errors.map((error) => `  ${error}`));
   }
@@ -226,12 +260,44 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
       `  textures ${String(previous.textures)}  draws ${String(previous.calls)}`,
       `  buffer ${previous.buffer}  dpr ${previous.pixelRatio.toFixed(2)}`,
       previous.heapMb === undefined ? '  heap n/a' : `  heap ${String(previous.heapMb)} MB`,
+      ...(previous.changes ?? []).map((change) => `  · ${change}`),
       ...(previous.shaders ?? []).map((line) => `  ! ${line}`),
       ...previous.errors.map((error) => `  ! ${error}`),
     );
+
+    /**
+     * The URL that died is the URL you are on, and it will do it again.
+     *
+     * The panel writes what you dial back into the query string so a
+     * configuration stays shareable. The cost of that is a loop: reload after a
+     * crash and the settings that caused it are applied again, on a device that
+     * has just proved it cannot hold them. Nothing here can know *which* setting
+     * did it — that is what the change list above is for — so it says the thing
+     * it does know and names the way out.
+     */
+    if (previous.clean !== true && carriesSettings(previous.query ?? window.location.search)) {
+      lines.push(
+        '',
+        '  ⚠ that URL still carries those settings — reloading repeats it.',
+        '    load the page with no query but ?debug to get back to the defaults.',
+      );
+    }
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Whether a query string asks for anything beyond turning the instruments on.
+ *
+ * `?debug` alone is the safe address: it mounts the black box and the panel and
+ * changes no renderer setting. Anything else is a configuration, and a
+ * configuration is what a crash record implicates.
+ */
+function carriesSettings(query: string): boolean {
+  const params = new URLSearchParams(query);
+  params.delete('debug');
+  return [...params.keys()].length > 0;
 }
 
 /**
