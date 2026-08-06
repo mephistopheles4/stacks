@@ -116,10 +116,99 @@ function buildHeadCap(roll: number): THREE.BufferGeometry {
     }
   }
 
+  closeTheFillet(roll, positions, normals, uvs, indices);
+
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   return geometry;
+}
+
+/**
+ * How far the closing faces bury themselves in the case behind and below.
+ *
+ * The arc's foot and back edge land exactly on the front piece's top and the
+ * boards' front face, and *exactly* is the one place a hairline shows: the cap
+ * mesh is parked `SKIN` proud of the spine so its back edge sits `SKIN` in front
+ * of the case, and a slot that thin is still a slot. Overlapping into the case is
+ * invisible and cannot be got wrong by a rounding error.
+ */
+const BURY = 0.06;
+
+/**
+ * The three faces that make the arc a **solid fillet** rather than an awning.
+ *
+ * Without them the cap is a one-sided strip with a wedge of nothing under it —
+ * the arc above, the front piece's flat top below, the page block behind — and
+ * that wedge is open along its back edge, over the block's width. Looking down
+ * at the head from in front you see straight through it into the case: reported
+ * as *"seems we created a hole here"*, and it was there from the moment the cap
+ * shipped.
+ *
+ * The three are the back, at `z = -roll` where the boards' front face is; and the
+ * two ends at `x = ±0.5`, which nothing else covers — the printed cover stops
+ * where its board does, so the cap's own ends are the silhouette there.
+ *
+ * There is no *bottom* face: it would be coplanar with the front piece's top and
+ * would z-fight with it, and it is buried anyway.
+ *
+ * Flat-shaded, so each face carries its own normals and its own vertices rather
+ * than sharing the arc's. Cost is 6 triangles against the arc's 20, and #66's
+ * finding stands — the cap's ~11% is not its triangles.
+ */
+function closeTheFillet(
+  roll: number,
+  positions: number[],
+  normals: number[],
+  uvs: number[],
+  indices: number[],
+): void {
+  const quad = (
+    corners: readonly [number, number, number][],
+    normal: readonly [number, number, number],
+  ): void => {
+    const base = positions.length / 3;
+    for (const [x, y, z] of corners) {
+      positions.push(x, y, z);
+      normals.push(...normal);
+      // Across the width, matching the arc — so the spine's normal map, which
+      // varies only in `u`, shades these consistently with it.
+      uvs.push(x + 0.5, 0);
+    }
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  };
+
+  const low = -roll - BURY;
+
+  // The back, buried into the boards it meets.
+  quad(
+    [
+      [-0.5, 0, -roll],
+      [-0.5, low, -roll],
+      [0.5, low, -roll],
+      [0.5, 0, -roll],
+    ],
+    [0, 0, -1],
+  );
+
+  // The two ends. Squared off rather than followed round the arc: the missing
+  // sliver is outside the arc and behind the cover's own edge, and a fan here
+  // would be four times the triangles to fill what the silhouette already hides.
+  for (const side of [1, -1] as const) {
+    const x = side * 0.5;
+    quad(
+      [
+        [x, 0, -roll],
+        [x, low, -roll],
+        [x, low, 0],
+        [x, 0, 0],
+      ],
+      // Wound the same way for both ends, so one of the two faces inward; the
+      // material is `FrontSide`, and the inward one is inside the case where
+      // nothing looks at it.
+      [side, 0, 0],
+    );
+  }
 }

@@ -41,12 +41,15 @@ function positions(): [number, number, number][] {
 }
 
 describe('the head cap', () => {
-  it('is 20 triangles, which is #66 and not #56', () => {
-    // #56 built it at 32 x 10 = 640 and never varied either number. #66 found the
-    // width subdivision provably free — nothing varies along `x`, so it
+  it('is 20 triangles of arc and 6 of closure', () => {
+    // #56 built the arc at 32 x 10 = 640 and never varied either number. #66
+    // found the width subdivision provably free — nothing varies along `x`, so it
     // subdivides a straight line — and the cost identical at 4 triangles and at
     // 640, so a coarser cap cannot recover the 11% it costs.
-    expect(geometry.getIndex()?.count).toBe(20 * 3);
+    //
+    // The 6 are the back and the two ends. They are not decoration: without them
+    // this is an awning over a wedge of nothing, and you can see through it.
+    expect(geometry.getIndex()?.count).toBe((20 + 6) * 3);
   });
 
   it('puts its top at y = 0 and its face at z = 0', () => {
@@ -58,8 +61,31 @@ describe('the head cap', () => {
 
     expect(Math.max(...ys)).toBeCloseTo(0, 12);
     expect(Math.max(...zs)).toBeCloseTo(0, 12);
-    expect(Math.min(...ys)).toBeCloseTo(-ROLL, PLACES);
     expect(Math.min(...zs)).toBeCloseTo(-ROLL, PLACES);
+  });
+
+  it('⚠️ is a closed fillet, not an open arc', () => {
+    // The hole. An arc alone leaves a wedge between itself and the flat top of
+    // the piece below, open along its back edge over the page block's width — and
+    // looking down at the head from in front you see straight into the case.
+    //
+    // Closed means: a face at the back where the boards are, a face at each end
+    // where nothing else reaches, and every one of them running *past* the
+    // surfaces it meets rather than landing exactly on them. Exactly is where a
+    // hairline lives.
+    const ys = positions().map(([, y]) => y);
+    expect(Math.min(...ys)).toBeLessThan(-ROLL);
+
+    const normals = attribute('normal');
+    const faces = new Set<string>();
+    for (let i = 0; i < normals.length; i += 3) {
+      faces.add([normals[i], normals[i + 1], normals[i + 2]].map((n) => (n ?? 0).toFixed(3)).join());
+    }
+
+    // Backward, and both ways along the width.
+    expect(faces).toContain('0.000,0.000,-1.000');
+    expect(faces).toContain('1.000,0.000,0.000');
+    expect(faces).toContain('-1.000,0.000,0.000');
   });
 
   it('⚠️ carries the roll itself, so the caller scales by thickness and not by it', () => {
@@ -118,16 +144,20 @@ describe('the head cap', () => {
   });
 
   it('turns through a full quarter, from facing you to facing up', () => {
+    // Asserted over the whole normal set rather than the first and last vertex,
+    // which stopped being the arc's ends when the closing faces were appended.
     const normals = attribute('normal');
-    const first = [normals[0], normals[1], normals[2]];
-    const last = normals.slice(-3);
+    let facingOut = false;
+    let facingUp = false;
+    for (let i = 0; i < normals.length; i += 3) {
+      const [y, z] = [normals[i + 1] ?? 0, normals[i + 2] ?? 0];
+      if (Math.abs(y) < 1e-9 && Math.abs(z - 1) < 1e-9) facingOut = true;
+      if (Math.abs(y - 1) < 1e-9 && Math.abs(z) < 1e-9) facingUp = true;
+    }
 
-    // v = 0: flush with the spine face, normal straight out of it.
-    expect(first[1]).toBeCloseTo(0, 12);
-    expect(first[2]).toBeCloseTo(1, 12);
-    // v = 1: the top of the cap, normal straight up.
-    expect(last[1]).toBeCloseTo(1, 12);
-    expect(last[2]).toBeCloseTo(0, 12);
+    // Flush with the spine face at one end, over the page block at the other.
+    expect(facingOut).toBe(true);
+    expect(facingUp).toBe(true);
   });
 
   it('is one geometry for the whole shelf, and says so to the disposer', () => {

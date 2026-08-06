@@ -1267,6 +1267,14 @@ where the neighbours hide the head.
   straight through the hair between the printed spine and the cover into the page
   block's side — a cream seam the full height of the joint. Rendered both ways to
   be sure it was the trim that opened it.
+- **The cap was an awning, not a fillet** — a one-sided arc with a wedge of
+  nothing under it, open along its back edge over the page block's width. Look
+  down at the head from in front and you saw into the case. This one had been
+  there since the cap shipped and had nothing to do with the boards; it took a
+  third look with `?solo` to see it. Closed with a back face and two ends, each
+  running *past* the surface it meets rather than landing exactly on it, because
+  exactly is where a hairline lives. +6 triangles on 20, so +120 over 49 books;
+  draws unchanged.
 
 The case is two pieces now. The front `cap` of it is full width and `cap`
 shorter; the boards, the page block and the printed cover all stop where the roll
