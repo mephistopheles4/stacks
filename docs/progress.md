@@ -20,9 +20,9 @@ phone was rendering when it died — are measurements and stay exactly as they a
 
 | | |
 | --- | --- |
-| **Last green gate** | G26 — a lookup finds books the providers demonstrably have, and still refuses the ones they do not |
-| **Now working on** | books that read as books — map [#50](https://github.com/mephistopheles4/stacks/issues/50), eight of twelve tickets closed |
-| **Queued** | [#59](https://github.com/mephistopheles4/stacks/issues/59) — needs the owner to photograph three spines; nothing else is takeable |
+| **Last green gate** | G27 — a command's report accounts for every book it counted |
+| **Now working on** | books that read as books — map [#50](https://github.com/mephistopheles4/stacks/issues/50). **Ask the map how far along it is**; a fraction written here is stale by the next session, and one written on 2026-08-06 was wrong before the commit landed |
+| **Queued** | the map's open sub-issues, which is the only current answer. [#65](https://github.com/mephistopheles4/stacks/issues/65), [#66](https://github.com/mephistopheles4/stacks/issues/66) and [#68](https://github.com/mephistopheles4/stacks/issues/68) as this was written. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run against the real vault |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates`, no bypass |
 | **Blocked on** | nothing |
@@ -1109,3 +1109,41 @@ real.
 two are genuinely absent from both providers and are still refused, which is the
 right answer and is now pinned by two of G26's five corpus entries. Nothing was
 written to the vault; `enrich` was only ever run with `--dry-run`.
+
+## 2026-08-06 — the same command was also reporting on fewer books than it counted
+
+[#67](https://github.com/mephistopheles4/stacks/issues/67), found while
+re-resolving [#62](https://github.com/mephistopheles4/stacks/issues/62) on the
+fixed lookup. G27 is the gate.
+
+`stacks enrich --dry-run` printed `33 book(s) considered, 6 with gaps`, then five
+lines, then `would fill 3 book(s), 2 left alone`. **Five books accounted for out
+of six.** The sixth — `The Infinity Machine`, an `isbn` gap with nothing anywhere
+to fill it — produced no line and entered no total.
+
+**The cause is one overloaded outcome.** `enrichBook` returned `complete` both
+when a book had *no gaps* and when it had gaps it could not fill. The first is
+genuinely nothing to say; the second is not. `case 'complete': break;` could only
+treat them alike, and a `break` that reported neither looked exactly like one
+that reported both.
+
+Split into `complete` and `unfilled`, and the report lifted out of the command's
+action callback into `packages/cli/src/enrich-report.ts`, where something can
+call it. **The arithmetic is now held by shape rather than by care**:
+`reportEntry` returns a book's printed line *and* the total it belongs to
+together, so there is no way to write one without the other, and the compiler
+refuses a kind that is missed. Two paths reach `unfilled` — a lookup that offered
+nothing, and a `spine_color` gap whose cover is not on disk — and they share a
+kind deliberately, because the printed line must not claim a provider was asked
+when none was.
+
+**Why this one is worth a gate.** It had already changed an answer: #62's first
+resolution read *"7 with gaps, would fill 1, 5 left alone"* off this output and
+concluded a seventh book had fallen through the lookup. Nothing had. G26 and G27
+came out of the same investigation and are opposite failures — a tool that
+returned the wrong answer, and a tool that returned a *true* answer about a
+smaller set than it claimed. The second is harder to notice, because every line
+it prints is correct.
+
+**Observed red** by folding `unfilled` back into `complete`: two of the gate's
+five fixture books turn "nothing was missing", and the assertion names why.
