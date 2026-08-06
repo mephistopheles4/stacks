@@ -402,6 +402,44 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     resolveSettings({ books: { paperbackRatio: v } }, s),
   );
 
+  /**
+   * The spine's cross-section, per binding.
+   *
+   * Four numbers rather than one control, because they are two independent
+   * shapes: a backed hardback and a perfect-bound paperback are different
+   * objects, and #56's lesson is that one knob moving two things at once hides
+   * whichever effect is smaller.
+   *
+   * The lamps go red on a profile of `{ 0, 0 }` — and truthfully, because that
+   * short-circuits to no normal map at all rather than to a map scaled by zero.
+   * A control that has switched its own effect off says so.
+   */
+  for (const binding of ['hardback', 'paperback'] as const) {
+    const lit = (s: ShelfSettings): boolean =>
+      s.materials.spineProfile[binding].rise !== 0 && s.materials.spineProfile[binding].roll !== 0;
+
+    slider(
+      `${binding} rise`,
+      'rebuild',
+      0,
+      0.25,
+      0.005,
+      (s) => s.materials.spineProfile[binding].rise,
+      (s, v) => resolveSettings({ materials: { spineProfile: { [binding]: { rise: v } } } }, s),
+      lit,
+    );
+    slider(
+      `${binding} roll`,
+      'rebuild',
+      0,
+      1,
+      0.01,
+      (s) => s.materials.spineProfile[binding].roll,
+      (s, v) => resolveSettings({ materials: { spineProfile: { [binding]: { roll: v } } } }, s),
+      lit,
+    );
+  }
+
   group('bloom');
   toggleRow('enabled', 'rebuild', (s) => s.effects.bloom.enabled, (s, v) =>
     resolveSettings({ effects: { bloom: { enabled: v } } }, s),

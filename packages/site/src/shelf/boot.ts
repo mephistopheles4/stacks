@@ -1,6 +1,6 @@
 import type { Library, LibraryBook } from '@stacks/core';
 import { mountDiagnostics } from './diagnostics.ts';
-import { mountShelf, type ShelfHandle } from './scene.ts';
+import { mountShelf, type ShelfHandle, type ShelfStats } from './scene.ts';
 import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
 import { bookLimit, readSettings } from './shelf-url.ts';
 
@@ -33,6 +33,15 @@ declare global {
       caseOverflow: number;
       shaderErrors: readonly string[];
       projectBook(index: number): { x: number; y: number } | undefined;
+      /**
+       * What the renderer is holding, so the gate can report what a change cost.
+       *
+       * Every effect on map #50 states a per-book texture and draw-call cost, and
+       * the one gate that renders 49 books could not see any of them — so a slice
+       * that quietly cost more than its ticket claimed came back green. A live
+       * getter, not a snapshot: the counters are reset at the top of every frame.
+       */
+      stats(): ShelfStats;
     };
   }
 }
@@ -168,6 +177,7 @@ function publish(handle: ShelfHandle): void {
     caseOverflow: handle.caseOverflow,
     shaderErrors: handle.shaderErrors,
     projectBook: (index) => handle.projectBook(index),
+    stats: () => handle.stats(),
   };
 }
 

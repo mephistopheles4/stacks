@@ -37,6 +37,11 @@
  * testable without a GPU, and safe for the panel to load before the scene.
  */
 
+// `import type`, never a value import: the package root re-exports the adapter,
+// sharp and the metadata layer, and a value import of it drags `node:fs` into
+// the browser bundle. Types are erased at compile time and so are safe.
+import type { Binding } from '@stacks/core';
+
 /**
  * A light's height, which depends on how tall the case grew.
  *
@@ -149,6 +154,35 @@ export interface SceneSettings {
   readonly fog: { readonly enabled: boolean; readonly near: number; readonly far: number };
 }
 
+/**
+ * A spine's cross-section, in *width units*, as one value rather than two.
+ *
+ * `rise` is how far the centre stands proud of the chord. `roll` is the fraction
+ * of each half-width spent turning: `1` spends all of it and gives the full arc
+ * of a backed hardback; a small value gives the flat face and hard-creased edges
+ * of a perfect-bound paperback.
+ *
+ * **Width units are what make one shape serve every book.** The profile is
+ * proportional to the chord, so the same texture on a thin spine and a fat one is
+ * the right cross-section for both.
+ *
+ * Three names retired into this: `materials.spineCurve` (#55) is *superseded* and
+ * its rise carries over unchanged, `roundedBack` (#57) is *struck* because both
+ * bindings carry a profile and there is no boolean for binding to hand anyone,
+ * and `materials.softHinge` (#56) is *subsumed* into `roll`, having been a toggle
+ * between two points on the continuum `roll` parameterises. See #65.
+ *
+ * **A paperback is not flat**, against what #55, #57 and the map all said in
+ * writing. Perfect binding is a flat *face* whose card turns through 90° at each
+ * edge over a small radius, which is not the same as having no cross-section:
+ * `{ 0, 0 }` would leave the hard, unmodulated colour step #56 diagnosed on the
+ * 60% of the shelf that is not hardback.
+ */
+export interface SpineProfile {
+  readonly rise: number;
+  readonly roll: number;
+}
+
 export interface MaterialSettings {
   readonly wood: number;
   readonly woodDark: number;
@@ -164,6 +198,18 @@ export interface MaterialSettings {
    */
   readonly coverRoughness: number;
   readonly coverMetalness: number;
+  /**
+   * How each binding's spine takes light, keyed by binding.
+   *
+   * **Binding picks, it does not bias.** A total function to a profile, so there
+   * are exactly two on the shelf and exactly two maps uploaded, and the per-book
+   * hash gains no third responsibility on top of binding and height.
+   *
+   * It lives in `materials` rather than in `books` because it only *shades* —
+   * nothing moves and no silhouette changes. The head cap beside it is
+   * dimensioned geometry and belongs in `books`; see ADR-0035 for the line.
+   */
+  readonly spineProfile: Record<Binding, SpineProfile>;
 }
 
 /**
@@ -305,6 +351,12 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     backingRoughness: 0.95,
     coverRoughness: 0.55,
     coverMetalness: 0,
+    spineProfile: {
+      // Backed and rounded — the full arc, creasing hard into the joint.
+      hardback: { rise: 0.125, roll: 1 },
+      // Perfect-bound — a flat face whose card turns through 90° at each edge.
+      paperback: { rise: 0.03, roll: 0.22 },
+    },
   },
   books: {
     paperbackRatio: 0.6,
@@ -353,7 +405,17 @@ export interface SettingsPatch {
     readonly background?: number;
     readonly fog?: Partial<SceneSettings['fog']>;
   };
-  readonly materials?: Partial<MaterialSettings>;
+  /**
+   * `spineProfile` is spelled out one level deeper than `Partial` reaches.
+   *
+   * `Partial<MaterialSettings>` makes the key optional and still demands a whole
+   * `Record<Binding, SpineProfile>` when it is present — so nudging a paperback's
+   * roll would mean restating both profiles, and getting one wrong silently
+   * reshapes half the shelf. This is `PositionPatch`'s defect, in a second place.
+   */
+  readonly materials?: Partial<Omit<MaterialSettings, 'spineProfile'>> & {
+    readonly spineProfile?: Partial<Record<Binding, Partial<SpineProfile>>>;
+  };
   readonly books?: Partial<BooksSettings>;
   readonly lighting?: {
     readonly ambient?: Partial<LightingSettings['ambient']>;
@@ -384,7 +446,11 @@ export function resolveSettings(patch: SettingsPatch = {}, base: ShelfSettings =
       ...patch.scene,
       fog: { ...base.scene.fog, ...patch.scene?.fog },
     },
-    materials: { ...base.materials, ...patch.materials },
+    materials: {
+      ...base.materials,
+      ...patch.materials,
+      spineProfile: mergeProfiles(base.materials.spineProfile, patch.materials?.spineProfile),
+    },
     books: { ...base.books, ...patch.books },
     lighting: {
       ambient: { ...base.lighting.ambient, ...patch.lighting?.ambient },
@@ -409,4 +475,15 @@ export function resolveSettings(patch: SettingsPatch = {}, base: ShelfSettings =
 
 function mergePosition(base: LightPosition, patch: PositionPatch | undefined): LightPosition {
   return { ...base, ...patch, y: { ...base.y, ...patch?.y } };
+}
+
+/** Each binding's profile folded separately, so one number can be patched alone. */
+function mergeProfiles(
+  base: Record<Binding, SpineProfile>,
+  patch: Partial<Record<Binding, Partial<SpineProfile>>> | undefined,
+): Record<Binding, SpineProfile> {
+  return {
+    hardback: { ...base.hardback, ...patch?.hardback },
+    paperback: { ...base.paperback, ...patch?.paperback },
+  };
 }

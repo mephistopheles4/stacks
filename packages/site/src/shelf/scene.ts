@@ -22,6 +22,7 @@ import {
   type ShelfSettings,
   type ToneMappingName,
 } from './shelf-settings.ts';
+import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
 /**
@@ -1105,10 +1106,20 @@ function buildBook(
         })
       : undefined;
 
+  /**
+   * The cross-section, shaded onto the flat plane that was already there.
+   *
+   * Shared per binding rather than made here, so a shelf of any size uploads two
+   * of these — see `spine-profile.ts`. `undefined` for a flat profile, which is
+   * the only way *off* costs nothing.
+   */
+  const profile = spineNormalMap(settings.materials.spineProfile, entry.binding);
+
   const spine = new THREE.MeshStandardMaterial({
     color: spineTexture === undefined ? new THREE.Color(entry.colour) : new THREE.Color(0xffffff),
     roughness: 0.62,
     ...(spineTexture === undefined ? {} : { map: spineTexture }),
+    ...(profile === undefined ? {} : { normalMap: profile }),
   });
   // Pages: slightly lighter than the boards, never pure white.
   const pages = new THREE.MeshStandardMaterial({ color: 0xd9cdb8, roughness: 0.95 });
@@ -1655,6 +1666,15 @@ function applyLive(
   // handle to reach them through. Honest rather than silent.
   standing(needsRebuild, 'cover roughness', mountedWith.materials.coverRoughness, next.materials.coverRoughness);
   standing(needsRebuild, 'cover metalness', mountedWith.materials.coverMetalness, next.materials.coverMetalness);
+  // Same bucket and the same sentence: the books' own materials are made per book
+  // inside `buildBook`, so there is no handle to reach them through. The map
+  // itself is re-baked on the rebuild, which is where the profile's shape is read.
+  standing(
+    needsRebuild,
+    'spine profile',
+    describeProfiles(mountedWith.materials.spineProfile),
+    describeProfiles(next.materials.spineProfile),
+  );
 
   /* --- the books ---------------------------------------------------------- */
 
@@ -1769,6 +1789,19 @@ function samePosition(a: LightPosition, b: LightPosition): boolean {
 /** Colours read as `#rrggbb` in a change log; a decimal `7031610` reads as nothing. */
 function hex(value: number): string {
   return `#${value.toString(16).padStart(6, '0')}`;
+}
+
+/**
+ * Both profiles as one comparable string.
+ *
+ * `standing` compares with `!==`, which is identity on an object and would call
+ * every apply a change — a permanently amber lamp on a control nobody had
+ * touched, which is the panel lying in the quieter direction.
+ */
+function describeProfiles(profiles: ShelfSettings['materials']['spineProfile']): string {
+  return (['hardback', 'paperback'] as const)
+    .map((binding) => `${binding} ${profiles[binding].rise.toFixed(3)}/${profiles[binding].roll.toFixed(2)}`)
+    .join(' ');
 }
 
 /* -------------------------------------------------------------------------- */

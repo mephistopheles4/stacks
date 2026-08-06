@@ -63,6 +63,22 @@ describe('resolveSettings', () => {
     );
   });
 
+  it('patches one binding profile without restating the other, or its sibling number', () => {
+    // `Partial<MaterialSettings>` would demand a whole `Record<Binding,
+    // SpineProfile>` to touch one number — `PositionPatch`'s defect in a second
+    // place, and here getting it wrong silently reshapes half the shelf.
+    const settings = resolveSettings({ materials: { spineProfile: { paperback: { roll: 0.5 } } } });
+
+    expect(settings.materials.spineProfile.paperback).toEqual({
+      ...DEFAULT_SETTINGS.materials.spineProfile.paperback,
+      roll: 0.5,
+    });
+    expect(settings.materials.spineProfile.hardback).toEqual(
+      DEFAULT_SETTINGS.materials.spineProfile.hardback,
+    );
+    expect(settings.materials.coverRoughness).toBe(DEFAULT_SETTINGS.materials.coverRoughness);
+  });
+
   it('merges fog without dropping the sibling keys', () => {
     const settings = resolveSettings({ scene: { fog: { far: 40 } } });
 
