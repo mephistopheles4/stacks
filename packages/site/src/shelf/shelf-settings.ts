@@ -174,6 +174,17 @@ export interface MaterialSettings {
   readonly spineCurve: number;
   /** PROTOTYPE (#55) — which candidate draws the curve. Not part of the proposal. */
   readonly spineCurveMode: SpineCurveMode;
+  /**
+   * PROTOTYPE (#56) — the softened hinge and the head cap, together.
+   *
+   * One knob rather than two because they are one decision: the hinge is a
+   * *profile* in the normal map #55 already ships, and the cap is that profile
+   * rolled over the head. Splitting them would let a shelf run a creased joint
+   * under a square-cut head, which is not a book anyone has held.
+   *
+   * Supersedes `spineCurve` while it is on — a profile carries the rise.
+   */
+  readonly softCorners: boolean;
 }
 
 /** PROTOTYPE (#55). `off` is today's shelf; the other two are the candidates. */
@@ -287,6 +298,7 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     coverMetalness: 0,
     spineCurve: 0.125,
     spineCurveMode: 'off',
+    softCorners: false,
   },
 };
 

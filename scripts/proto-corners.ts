@@ -27,8 +27,23 @@ const ARTIFACTS = join(REPO_ROOT, 'artifacts');
 /** `smoke:render`'s viewport, so these read like the shelf people actually see. */
 const VIEWPORT = { width: 1440, height: 900 };
 
-/** The world #55 landed on. Today's shelf otherwise — nothing here is a candidate. */
-const TUNE = { materials: { spineCurveMode: 'normal', spineCurve: 0.125 } };
+/**
+ * Both sides of the comparison, in the order they appear across each sheet.
+ *
+ * The baseline is not today's *default* shelf but the world #55 landed on —
+ * judging a softened hinge against a flat spine would be judging a world nobody
+ * chose, and would flatter this ticket by handing it #55's win as well.
+ */
+const MODES = [
+  {
+    label: 'today — #55 as decided',
+    tune: { materials: { spineCurveMode: 'normal', spineCurve: 0.125, softCorners: false } },
+  },
+  {
+    label: 'softened hinge + head cap',
+    tune: { materials: { spineCurveMode: 'normal', spineCurve: 0.125, softCorners: true } },
+  },
+] as const;
 
 /** Which book the close framings sit in front of. Edit while looking. */
 const BOOK = 12;
@@ -51,7 +66,7 @@ interface Shot {
 const SHOTS: readonly Shot[] = [
   {
     name: 'context',
-    caption: `normal shelf distance, full frame — every corner below is somewhere in this picture`,
+    caption: `normal shelf distance, full frame — a spine is ~18px wide here`,
     distance: SHELF_DISTANCE,
     elevation: 0.14,
   },
@@ -71,16 +86,25 @@ const SHOTS: readonly Shot[] = [
   },
   {
     name: 'head-far',
-    caption: `the head of the spine at normal shelf distance, 3x — a rolled cap would be here`,
+    caption: `the head of the spine at normal shelf distance, 3x — where a rolled cap goes`,
     distance: SHELF_DISTANCE,
     elevation: 0.42,
     crop: { w: 300, h: 400, scale: 3 },
   },
   {
     name: 'head-near',
-    caption: `the head of the spine at the closest orbit, 2x`,
-    distance: CLOSEST,
-    elevation: 0.5,
+    caption: `the head of the spine, looking down from close in, 2x`,
+    distance: 2.4,
+    elevation: 0.62,
+    crop: { w: 460, h: 560, scale: 2 },
+  },
+  {
+    // Not a candidate shot. The cap's cost halves if there is no tail cap, and
+    // that claim is only worth making if the tail is genuinely never on screen.
+    name: 'tail-check',
+    caption: `looking UP from below the row — is a book's tail ever visible?`,
+    distance: 2.4,
+    elevation: -0.55,
     crop: { w: 460, h: 560, scale: 2 },
   },
 ];
@@ -106,14 +130,37 @@ async function main(): Promise<void> {
     });
 
     try {
-      const shots = await shoot(browser, origin);
+      // shot name -> one take per mode, in MODES order.
+      const sheets = new Map<string, Taken[]>();
+      for (const shot of SHOTS) sheets.set(shot.name, []);
+
+      const costs: { label: string; cost: Cost }[] = [];
+      for (const mode of MODES) {
+        const { shots, cost } = await shoot(browser, origin, mode.tune);
+        costs.push({ label: mode.label, cost });
+        for (const shot of SHOTS) {
+          const taken = shots[shot.name];
+          if (taken !== undefined) sheets.get(shot.name)?.push(taken);
+        }
+      }
+
       for (const shot of SHOTS) {
-        const raw = shots[shot.name];
-        if (raw === undefined) continue;
-        const png = await compose(browser, raw.image, shot, raw.at);
+        const takes = sheets.get(shot.name) ?? [];
+        if (takes.length === 0) continue;
+        const png = await compose(browser, takes, shot);
         const path = join(ARTIFACTS, `proto-corners-${shot.name}.png`);
         writeFileSync(path, Buffer.from(png, 'base64'));
         console.log(`wrote ${path}`);
+      }
+
+      // The whole shelf, not one book: divide by the book count for the per-book
+      // figures the map's budget is written in.
+      console.log('\nmode                        textures  geometries  draw calls  triangles');
+      for (const { label, cost } of costs) {
+        console.log(
+          `${label.padEnd(27)} ${String(cost.textures).padStart(8)} ${String(cost.geometries).padStart(11)} ` +
+            `${String(cost.calls).padStart(11)} ${String(cost.triangles).padStart(10)}`,
+        );
       }
     } finally {
       await browser.close();
@@ -129,7 +176,18 @@ interface Taken {
   readonly at: { x: number; y: number } | undefined;
 }
 
-async function shoot(browser: Browser, origin: string): Promise<Record<string, Taken>> {
+interface Cost {
+  readonly textures: number;
+  readonly geometries: number;
+  readonly calls: number;
+  readonly triangles: number;
+}
+
+async function shoot(
+  browser: Browser,
+  origin: string,
+  tune: unknown,
+): Promise<{ shots: Record<string, Taken>; cost: Cost }> {
   const page = await browser.newPage();
   try {
     await page.setViewport(VIEWPORT);
@@ -142,17 +200,26 @@ async function shoot(browser: Browser, origin: string): Promise<Record<string, T
       if (message.type() === 'error') errors.push(message.text());
     });
 
-    const tune = encodeURIComponent(JSON.stringify(TUNE));
-    await page.goto(`${origin}/?tune=${tune}`, { waitUntil: 'networkidle0', timeout: 30_000 });
+    const query = encodeURIComponent(JSON.stringify(tune));
+    await page.goto(`${origin}/?tune=${query}`, { waitUntil: 'networkidle0', timeout: 30_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 20_000 });
     await settle(1500);
+
+    // Read while the whole case is on screen, so nothing is frustum-culled and
+    // the counts describe the shelf rather than the crop.
+    const cost = (await page.evaluate('window.__shelf.protoStats()')) as Cost;
 
     const taken: Record<string, Taken> = {};
     for (const shot of SHOTS) {
       await page.evaluate(
         `window.__shelf.protoOrbit(${String(BOOK)}, ${String(shot.distance)}, ${String(shot.elevation)})`,
       );
-      await settle(400);
+      // Long, and not arbitrarily: `controls.enableDamping` is on at 0.06, so
+      // `protoOrbit` sets a camera the controls then *ease* toward over dozens
+      // of frames. At 400ms the two sides came back framed differently — the
+      // heavier candidate renders fewer frames in the same wall-clock, so it
+      // converged less, and the difference read as a change to the books.
+      await settle(1600);
       const at = (await page.evaluate(`window.__shelf.projectBook(${String(BOOK)})`)) as
         | { x: number; y: number }
         | undefined;
@@ -163,7 +230,7 @@ async function shoot(browser: Browser, origin: string): Promise<Record<string, T
     }
 
     if (errors.length > 0) console.error(`page errors:\n  ${errors.join('\n  ')}`);
-    return taken;
+    return { shots: taken, cost };
   } finally {
     await page.close();
   }
@@ -176,45 +243,55 @@ async function shoot(browser: Browser, origin: string): Promise<Record<string, T
  * and this is throwaway — `CLAUDE.md`'s rule about dependencies applies hardest
  * to code that gets deleted.
  */
-async function compose(
-  browser: Browser,
-  image: string,
-  shot: Shot,
-  at: { x: number; y: number } | undefined,
-): Promise<string> {
+async function compose(browser: Browser, takes: readonly Taken[], shot: Shot): Promise<string> {
   const page = await browser.newPage();
   try {
     return (await page.evaluate(
       `(async () => {
         const caption = ${JSON.stringify(shot.caption)};
         const crop = ${JSON.stringify(shot.crop ?? null)};
-        const at = ${JSON.stringify(at ?? null)};
-        const image = await new Promise((resolve) => {
+        const labels = ${JSON.stringify(MODES.map((mode) => mode.label))};
+        const takes = ${JSON.stringify(takes.map((take) => ({ image: take.image, at: take.at ?? null })))};
+
+        const images = await Promise.all(takes.map((take) => new Promise((resolve) => {
           const img = new Image();
           img.onload = () => { resolve(img); };
-          img.src = 'data:image/png;base64,' + ${JSON.stringify(image)};
-        });
+          img.src = 'data:image/png;base64,' + take.image;
+        })));
 
-        const head = 40;
-        const sx = crop ? Math.max(0, Math.min(image.width - crop.w, (at ? at.x : image.width / 2) - crop.w / 2)) : 0;
-        const sy = crop ? Math.max(0, Math.min(image.height - crop.h, (at ? at.y : image.height / 2) - crop.h / 2)) : 0;
-        const w = crop ? crop.w * crop.scale : image.width;
-        const h = crop ? crop.h * crop.scale : image.height;
+        const head = 64, gap = 8;
+        const w = crop ? crop.w * crop.scale : images[0].width;
+        const h = crop ? crop.h * crop.scale : images[0].height;
 
         const canvas = document.createElement('canvas');
-        canvas.width = w;
+        canvas.width = w * images.length + gap * (images.length - 1);
         canvas.height = h + head;
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#111';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.imageSmoothingEnabled = false;
-        ctx.fillStyle = '#ffd7a8';
-        ctx.font = '600 22px system-ui, sans-serif';
+        ctx.fillStyle = '#f5efe6';
+        ctx.font = '600 24px system-ui, sans-serif';
         ctx.textBaseline = 'middle';
-        ctx.fillText(caption, 8, head / 2);
+        ctx.fillText(caption, 8, 20);
 
-        if (crop) ctx.drawImage(image, sx, sy, crop.w, crop.h, 0, head, w, h);
-        else ctx.drawImage(image, 0, head);
+        images.forEach((image, index) => {
+          // Every side is cropped around the FIRST take's book position, so the
+          // two frames are pixel-aligned and a difference in the picture is a
+          // difference in the books rather than in where the crop landed.
+          const at = takes[0].at;
+          const x = index * (w + gap);
+          ctx.font = '600 22px system-ui, sans-serif';
+          ctx.fillStyle = '#ffd7a8';
+          ctx.fillText(labels[index], x + 8, head - 16);
+          if (crop) {
+            const sx = Math.max(0, Math.min(image.width - crop.w, (at ? at.x : image.width / 2) - crop.w / 2));
+            const sy = Math.max(0, Math.min(image.height - crop.h, (at ? at.y : image.height / 2) - crop.h / 2));
+            ctx.drawImage(image, sx, sy, crop.w, crop.h, x, head, w, h);
+          } else {
+            ctx.drawImage(image, x, head);
+          }
+        });
 
         return canvas.toDataURL('image/png').split(',')[1];
       })()`,

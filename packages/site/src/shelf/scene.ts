@@ -24,6 +24,15 @@ import {
 } from './shelf-settings.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 import { curvedSpinePlane, curvedSpineShell, RISE, spineNormalMap } from './spine-curve.ts';
+import {
+  bindingOf,
+  CAP,
+  HARDBACK,
+  headCapGeometry,
+  hingeNormalMap,
+  PAPERBACK,
+} from './soft-corners.ts';
+import { hashUnit } from './hash.ts';
 
 /**
  * The shelf.
@@ -1079,6 +1088,26 @@ let curvedPlane: THREE.PlaneGeometry | undefined;
 let curvedShell: THREE.ExtrudeGeometry | undefined;
 let spineNormals: THREE.CanvasTexture | undefined;
 
+/**
+ * PROTOTYPE (#56). Three more shared things, and the count is the point: the
+ * whole shelf pays for one cap geometry and two normal maps — one per binding —
+ * however many books stand on it.
+ */
+let headCap: THREE.BufferGeometry | undefined;
+const hingeNormals = new Map<string, THREE.CanvasTexture | undefined>();
+
+function sharedHeadCap(): THREE.BufferGeometry {
+  headCap ??= headCapGeometry();
+  return headCap;
+}
+
+function sharedHingeNormals(binding: 'hardback' | 'paperback'): THREE.CanvasTexture | undefined {
+  if (!hingeNormals.has(binding)) {
+    hingeNormals.set(binding, hingeNormalMap(binding === 'hardback' ? HARDBACK : PAPERBACK));
+  }
+  return hingeNormals.get(binding);
+}
+
 function sharedCurvedPlane(): THREE.PlaneGeometry {
   curvedPlane ??= curvedSpinePlane();
   return curvedPlane;
@@ -1096,7 +1125,13 @@ function sharedSpineNormals(): THREE.CanvasTexture | undefined {
 
 /** Every geometry and texture that outlives a mount, so `dispose()` skips them. */
 function isShared(geometry: THREE.BufferGeometry): boolean {
-  return geometry === UNIT_BOX || geometry === UNIT_PLANE || geometry === curvedPlane || geometry === curvedShell;
+  return (
+    geometry === UNIT_BOX ||
+    geometry === UNIT_PLANE ||
+    geometry === curvedPlane ||
+    geometry === curvedShell ||
+    geometry === headCap
+  );
 }
 
 /**
@@ -1157,12 +1192,27 @@ function buildBook(
   const curve = settings.materials.spineCurve;
   const mode = curve > 0 ? settings.materials.spineCurveMode : 'off';
 
+  // PROTOTYPE (#56). Binding is #57's decision and nothing implements it, so the
+  // hash stands in — see `bindingOf`. It picks the spine profile and whether
+  // there is a cap at all, which is the same trait twice and deliberately so.
+  const soft = settings.materials.softCorners;
+  const binding = bindingOf(hashUnit(`${entry.book.id}:binding`));
+  const capped = soft && binding === 'hardback';
+
   const spine = new THREE.MeshStandardMaterial({
     color: spineTexture === undefined ? new THREE.Color(entry.colour) : new THREE.Color(0xffffff),
     roughness: 0.62,
     ...(spineTexture === undefined ? {} : { map: spineTexture }),
   });
-  if (mode === 'normal') {
+  if (soft) {
+    // PROTOTYPE (#56). The hinge is not an extra map on top of #55's — it is
+    // #55's map with a profile that finishes its turn at the joint. One of two
+    // for the whole shelf, picked by binding, at full strength: the profile
+    // already carries the rise, so scaling it here would be the second
+    // vocabulary the profile exists to avoid.
+    const normals = sharedHingeNormals(binding);
+    if (normals !== undefined) spine.normalMap = normals;
+  } else if (mode === 'normal') {
     const normals = sharedSpineNormals();
     if (normals !== undefined) {
       spine.normalMap = normals;
@@ -1235,6 +1285,11 @@ function buildBook(
   // thickness, which is what lets one shared arc serve a thin book and a fat one.
   const arcScale = (curve / RISE) * thickness;
 
+  // PROTOTYPE (#56). How much height the head cap takes off the covering below
+  // it — proportional to thickness, never to height, which is the whole reason
+  // one shared cap is the right shape on every book.
+  const cap = capped ? CAP * thickness : 0;
+
   // The spine covering, closing the gap between the boards at the bound edge.
   if (mode === 'geometry') {
     // Bowed with the printed face above it. A flat strip under a bowed plane
@@ -1249,8 +1304,8 @@ function buildBook(
     group.add(shell);
   } else {
     const spineStrip = solid(boards);
-    spineStrip.scale.set(thickness - board * 2, height, board);
-    spineStrip.position.set(0, 0, (depth - board) / 2);
+    spineStrip.scale.set(thickness - board * 2, height - cap, board);
+    spineStrip.position.set(0, -cap / 2, (depth - board) / 2);
   }
 
   // The page block, recessed inside the case at head, tail and fore-edge — and
@@ -1278,8 +1333,32 @@ function buildBook(
     spineFace.receiveShadow = true;
     group.add(spineFace);
   }
-  spineFace.scale.set(thickness, height, mode === 'geometry' ? arcScale : 1);
-  spineFace.position.set(0, 0, depth / 2 + SKIN);
+  spineFace.scale.set(thickness, height - cap, mode === 'geometry' ? arcScale : 1);
+  spineFace.position.set(0, -cap / 2, depth / 2 + SKIN);
+
+  // PROTOTYPE (#56). The covering rolling over the head, on the ~40% of the
+  // shelf #57's hash calls a hardback. Scaled uniformly, so the roll is always
+  // the same fraction of the spine it rolls over — and shaded by the same hinge
+  // normal map as the face below it, so it costs no texture of its own.
+  //
+  // Its own material rather than `boards`: the covering does not darken where it
+  // turns, and reusing the board colour would put a step at the very edge this
+  // is here to soften.
+  if (capped) {
+    const covering = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(entry.colour),
+      roughness: 0.62,
+      ...(sharedHingeNormals(binding) === undefined
+        ? {}
+        : { normalMap: sharedHingeNormals(binding) }),
+    });
+    const head = new THREE.Mesh(sharedHeadCap(), covering);
+    head.castShadow = false;
+    head.receiveShadow = true;
+    head.scale.setScalar(thickness);
+    head.position.set(0, height / 2, depth / 2 + SKIN);
+    group.add(head);
+  }
 
   // A face-out book sits well back, so the shelved book on its right stands
   // proud of it and between it and the key light. The cover is the only large
