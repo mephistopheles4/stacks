@@ -104,19 +104,73 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
   const padding = length * 0.08;
   const available = length - padding * 2;
 
-  const titleSize = TEXTURE_WIDTH * 0.36;
-  ctx.font = `600 ${titleSize}px ${FONT}`;
+  const { main, hasSubtitle } = splitTitle(options.title);
+  const band = bandFor(main);
+
+  const titleSize = TEXTURE_WIDTH * band.size;
+  const tracking = titleSize * band.tracking;
+  ctx.font = `${String(band.weight)} ${titleSize}px ${FONT}`;
   ctx.fillStyle = ink;
-  const title = truncate(ctx, options.title, available * 0.72);
-  ctx.fillText(title, -length / 2 + padding, options.author === undefined ? 0 : -titleSize * 0.42);
+
+  const text = band.caps ? main.toUpperCase() : main;
+  const budget = available * 0.72;
+  const lines = band.lines === 2 ? wrap(ctx, text, budget, tracking) : [fit(ctx, text, budget, tracking)];
+
+  const left = -length / 2 + padding;
+  // Two lines run *across* the spine, so the block is centred on the width and
+  // each line is offset from there — the same axis the author already sits on.
+  const leading = titleSize * 1.02;
+  const top = -((lines.length - 1) * leading) / 2;
+  lines.forEach((line, index) => {
+    draw(ctx, line, left, top + index * leading, tracking);
+  });
+
+  /**
+   * Where the title block ends, so the author and the rule know where to go.
+   *
+   * The *widest* line, not the last: a wrapped title is a block, and hanging a
+   * rule off a short second line would leave it floating under the first.
+   */
+  const titleEnd = left + Math.max(...lines.map((line) => width(ctx, line, tracking)));
 
   if (options.author !== undefined) {
     const authorSize = TEXTURE_WIDTH * 0.24;
     ctx.font = `400 ${authorSize}px ${FONT}`;
     ctx.fillStyle = fade(ink, 0.72);
-    const author = truncate(ctx, lastName(options.author), available * 0.34);
-    // Author sits at the foot of the spine, as it does in print.
-    ctx.fillText(author, length / 2 - padding - ctx.measureText(author).width, titleSize * 0.55);
+    const author = fit(ctx, lastName(options.author), available * 0.34, 0);
+    const authorWidth = width(ctx, author, 0);
+
+    /**
+     * The subtitle is the layout lever, and it is free — same canvas, different
+     * drawing.
+     *
+     * A book with a subtitle (23 of the owner's 33) sets its author at the foot
+     * of the spine with a hairline rule between, which is what a spine carrying
+     * two levels of title does to keep them apart. A book without one sets its
+     * author **directly beneath the title**, because there is nothing to separate
+     * and pushing it to the foot would open a gap describing nothing.
+     */
+    if (hasSubtitle) {
+      const at = length / 2 - padding - authorWidth;
+      ctx.fillText(author, at, titleSize * 0.55);
+
+      // Midway between the two, and only where there is room for it to read as a
+      // rule rather than as a smudge.
+      const gap = at - titleEnd;
+      if (gap > titleSize) {
+        const middle = titleEnd + gap / 2;
+        ctx.strokeStyle = fade(ink, 0.45);
+        ctx.lineWidth = Math.max(1, TEXTURE_WIDTH * 0.02);
+        ctx.beginPath();
+        ctx.moveTo(middle, -TEXTURE_WIDTH * 0.22);
+        ctx.lineTo(middle, TEXTURE_WIDTH * 0.22);
+        ctx.stroke();
+      }
+    } else {
+      // Just after the title, but never past the foot.
+      const at = Math.min(titleEnd + titleSize * 0.9, length / 2 - padding - authorWidth);
+      ctx.fillText(author, at, titleSize * 0.55);
+    }
   }
 
   ctx.restore();
@@ -164,21 +218,123 @@ function fade(colour: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/** Titles are long and spines are short; cut at a word where possible. */
-function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
-  if (ctx.measureText(text).width <= maxWidth) return text;
+/**
+ * The main title, and whether there is a subtitle under it.
+ *
+ * The main title is the text before the first colon, which the old `truncate`
+ * already isolated as its first fallback — it is promoted here from a
+ * last-resort trim to the thing every decision is made from. Both halves are
+ * levers: the subtitle cuts the owner's shelf 23/10 and the length bands below
+ * cut it roughly 5/15/13, so together they are real variety rather than one rule
+ * firing twice.
+ */
+export function splitTitle(title: string): { main: string; hasSubtitle: boolean } {
+  const colon = title.indexOf(':');
+  if (colon === -1) return { main: title.trim(), hasSubtitle: false };
 
-  // Drop a subtitle first — "Staff Engineer" beats "Staff Engineer: Leaders…".
-  const beforeColon = text.split(':')[0]?.trim();
-  if (beforeColon !== undefined && beforeColon !== text && ctx.measureText(beforeColon).width <= maxWidth) {
-    return beforeColon;
+  const main = title.slice(0, colon).trim();
+  const rest = title.slice(colon + 1).trim();
+  // A colon with nothing after it is punctuation, not a subtitle.
+  if (main.length === 0 || rest.length === 0) return { main: title.trim(), hasSubtitle: false };
+  return { main, hasSubtitle: true };
+}
+
+/**
+ * How a title is set, chosen from how long it is.
+ *
+ * **Spines differ, and the title text is what makes them differ** — not the cover
+ * artwork. Same typeface, same single ink colour; weight, case and layout move
+ * per book. #60 rejected lifting the cover's palette, classifying its typeface,
+ * OCR, image statistics, and a per-book hash. Deriving from the title is the only
+ * option whose variety tracks something real about the book, which is what
+ * separates a house style with range from a bad pastiche of variety.
+ *
+ * ⚠️ **Case is chosen, never detected.** #60 proposed "words that arrive already
+ * capitalised stay capitalised" and then measured all 33 titles: **zero arrive
+ * all-caps**, 23 of 33 are title case. So there is nothing to detect, and length
+ * is the only honest thing to choose from.
+ */
+interface TitleBand {
+  /** Type size as a fraction of the canvas width. */
+  readonly size: number;
+  readonly weight: number;
+  readonly caps: boolean;
+  /** Letterspacing as a fraction of the type size. */
+  readonly tracking: number;
+  readonly lines: 1 | 2;
+}
+
+export function bandFor(main: string): TitleBand {
+  // Short: the one title that can afford the room, and caps is what a real spine
+  // does with it.
+  if (main.length <= 12) return { size: 0.42, weight: 700, caps: true, tracking: 0.14, lines: 1 };
+  // Medium: roughly what every book used to get.
+  if (main.length <= 28) return { size: 0.36, weight: 600, caps: false, tracking: 0, lines: 1 };
+  // Long: smaller and lighter, and **wrapped rather than cut**. A real spine sets
+  // a 56-character title in two lines; this used to end it in an ellipsis.
+  return { size: 0.26, weight: 400, caps: false, tracking: 0, lines: 2 };
+}
+
+/**
+ * Letterspacing done by hand, because `ctx.letterSpacing` is not everywhere.
+ *
+ * It is Chrome-and-recent-Safari only, and a spine that silently lost its
+ * tracking on one browser would be a different house style there with nothing
+ * saying so. Three functions rather than one so measuring and drawing cannot
+ * disagree about what a tracked string is.
+ */
+function width(ctx: CanvasRenderingContext2D, text: string, tracking: number): number {
+  if (tracking === 0) return ctx.measureText(text).width;
+  // Trailing tracking is space after the last glyph and is not part of the ink.
+  return ctx.measureText(text).width + tracking * Math.max(0, text.length - 1);
+}
+
+function draw(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, tracking: number): void {
+  if (tracking === 0) {
+    ctx.fillText(text, x, y);
+    return;
   }
+  let at = x;
+  for (const character of text) {
+    ctx.fillText(character, at, y);
+    at += ctx.measureText(character).width + tracking;
+  }
+}
+
+/** Titles are long and spines are short; cut at a character with an ellipsis. */
+function fit(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, tracking: number): string {
+  if (width(ctx, text, tracking) <= maxWidth) return text;
 
   let cut = text;
-  while (cut.length > 1 && ctx.measureText(`${cut}…`).width > maxWidth) {
+  while (cut.length > 1 && width(ctx, `${cut}…`, tracking) > maxWidth) {
     cut = cut.slice(0, -1);
   }
   return `${cut.trimEnd()}…`;
+}
+
+/**
+ * A long title over two lines, broken at a word.
+ *
+ * Greedy, and the second line is the one that takes an ellipsis if even two are
+ * not enough — a title long enough to need three lines would be a paragraph on a
+ * spine.
+ */
+function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, tracking: number): string[] {
+  if (width(ctx, text, tracking) <= maxWidth) return [text];
+
+  const words = text.split(/\s+/);
+  let first = '';
+  let index = 0;
+  while (index < words.length) {
+    const candidate = first === '' ? (words[index] ?? '') : `${first} ${words[index] ?? ''}`;
+    if (first !== '' && width(ctx, candidate, tracking) > maxWidth) break;
+    first = candidate;
+    index += 1;
+  }
+
+  const rest = words.slice(index).join(' ');
+  if (rest.length === 0) return [fit(ctx, first, maxWidth, tracking)];
+  return [first, fit(ctx, rest, maxWidth, tracking)];
 }
 
 /** One name on a spine. "Yegge, Steve, Gene Kim" is not a name. */

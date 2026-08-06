@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { spineCanvasWidth } from './spine-texture.ts';
+import { bandFor, spineCanvasWidth, splitTitle } from './spine-texture.ts';
 
 /**
  * The spine canvas's shape.
@@ -82,5 +82,71 @@ describe('the spine canvas', () => {
     // went *up*: eight books gaining type outweighs the rest narrowing.
     expect(spineCanvasWidth(0.055, 0.95)).toBeLessThan(128);
     expect(spineCanvasWidth(0.09, 0.86)).toBeLessThan(128);
+  });
+});
+
+describe('the title, which is what makes spines differ', () => {
+  it('takes the main title as the text before the first colon', () => {
+    expect(splitTitle('Staff Engineer: Leadership Beyond the Management Track')).toEqual({
+      main: 'Staff Engineer',
+      hasSubtitle: true,
+    });
+    expect(splitTitle('Nexus')).toEqual({ main: 'Nexus', hasSubtitle: false });
+  });
+
+  it('does not read a colon with nothing after it as a subtitle', () => {
+    // A layout lever that fired on punctuation would put a hairline rule on a
+    // spine with nothing to separate.
+    expect(splitTitle('Why:').hasSubtitle).toBe(false);
+    expect(splitTitle(': Something').hasSubtitle).toBe(false);
+  });
+
+  it('sets a short title large, heavy and in caps', () => {
+    // The one title that can afford the room, and caps is what a real spine does
+    // with it. #60's examples: NieR, Nexus, Effective, Vibe Coding, AI Snake Oil.
+    for (const title of ['NieR', 'Nexus', 'Effective', 'Vibe Coding', 'AI Snake Oil']) {
+      const band = bandFor(title);
+      expect(band.caps, title).toBe(true);
+      expect(band.weight, title).toBe(700);
+      expect(band.tracking, title).toBeGreaterThan(0);
+      expect(band.lines, title).toBe(1);
+    }
+  });
+
+  it('wraps a long title to two lines rather than cutting it', () => {
+    // What this replaces: the old canvas ended a 56-character title in an
+    // ellipsis. A real spine sets it in two lines and smaller type.
+    const band = bandFor('The Creative Brain in the Age of Artificial Intelligence');
+
+    expect(band.lines).toBe(2);
+    expect(band.caps).toBe(false);
+    expect(band.weight).toBeLessThan(bandFor('Nexus').weight);
+    expect(band.size).toBeLessThan(bandFor('Nexus').size);
+  });
+
+  it('moves monotonically from large and heavy to small and light', () => {
+    // The bands are a range, not three unrelated treatments — which is the
+    // difference between one publisher's imprint and noise.
+    const [short, medium, long] = [bandFor('Nexus'), bandFor('The Tidal Engine'), bandFor('a'.repeat(40))];
+
+    expect(short.size).toBeGreaterThan(medium.size);
+    expect(medium.size).toBeGreaterThan(long.size);
+    expect(short.weight).toBeGreaterThan(medium.weight);
+    expect(medium.weight).toBeGreaterThan(long.weight);
+  });
+
+  it('splits at 12 and 28 characters, on the main title and not the whole string', () => {
+    // Measured off the owner's shelf: main titles run 4-56 characters, and these
+    // two cuts divide it roughly 5/15/13. A band chosen from the whole string
+    // would put almost everything in `long`, since 23 of 33 carry a subtitle.
+    expect(bandFor('a'.repeat(12)).lines).toBe(1);
+    expect(bandFor('a'.repeat(12)).caps).toBe(true);
+    expect(bandFor('a'.repeat(13)).caps).toBe(false);
+    expect(bandFor('a'.repeat(28)).lines).toBe(1);
+    expect(bandFor('a'.repeat(29)).lines).toBe(2);
+
+    const long = 'Effective: Leadership Beyond the Management Track and Then Some';
+    expect(long.length).toBeGreaterThan(28);
+    expect(bandFor(splitTitle(long).main).caps).toBe(true);
   });
 });
