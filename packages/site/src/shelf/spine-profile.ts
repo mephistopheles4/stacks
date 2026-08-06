@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Binding } from '@stacks/core';
 import type { SpineProfile } from './shelf-settings.ts';
+import { sharedCache } from './shared-cache.ts';
 
 /**
  * A spine's cross-section, shaded rather than built.
@@ -134,15 +135,15 @@ function bakeNormalMap(profile: SpineProfile): THREE.CanvasTexture | undefined {
  * The maps in play, one per distinct profile, for the life of the page.
  *
  * Module-level and keyed by the profile itself, following `COVERS` in `scene.ts`
- * — bounded by the number of bindings rather than by the size of the library, and
- * so never worth emptying. A per-mount cache would re-bake on every rebuild, and
- * the point of the cache is that a shelf of any size uploads two textures.
+ * — a shelf of any size uploads two of these, and a per-mount cache would re-bake
+ * on every rebuild. **Bounded**, because the panel can dial a profile and each
+ * value mints a key; see `shared-cache.ts`.
  *
  * Deliberately **not** disposed by `mountShelf`'s traverse, which frees a
  * material's `map` and never its `normalMap`. These outlive any one mount the way
  * `UNIT_BOX` does; freeing them there would leave a second shelf shading flat.
  */
-const MAPS = new Map<string, THREE.CanvasTexture | undefined>();
+const MAPS = sharedCache<THREE.CanvasTexture>((texture) => texture.dispose());
 
 /**
  * The normal map for a binding, made once and shared.
@@ -158,11 +159,6 @@ export function spineNormalMap(
   const profile = profiles[binding];
   if (isFlat(profile)) return undefined;
 
-  const key = `${String(profile.rise)}:${String(profile.roll)}`;
-  const existing = MAPS.get(key);
-  if (existing !== undefined || MAPS.has(key)) return existing;
-
-  const map = bakeNormalMap(profile);
-  MAPS.set(key, map);
-  return map;
+  const key = `${profile.rise.toFixed(4)}:${profile.roll.toFixed(4)}`;
+  return MAPS.get(key, () => bakeNormalMap(profile));
 }

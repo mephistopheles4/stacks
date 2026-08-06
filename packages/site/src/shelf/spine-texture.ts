@@ -77,29 +77,29 @@ export interface SpineTextOptions {
 }
 
 export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture | undefined {
-  const TEXTURE_WIDTH = spineCanvasWidth(options.thickness, options.height);
+  const across = spineCanvasWidth(options.thickness, options.height);
   const canvas = document.createElement('canvas');
-  canvas.width = TEXTURE_WIDTH;
+  canvas.width = across;
   canvas.height = TEXTURE_HEIGHT;
 
   const ctx = canvas.getContext('2d');
   if (ctx === null) return undefined;
 
   ctx.fillStyle = options.colour;
-  ctx.fillRect(0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+  ctx.fillRect(0, 0, across, TEXTURE_HEIGHT);
 
-  addCloth(ctx, options.colour, TEXTURE_WIDTH);
+  addCloth(ctx, options.colour, across);
 
   const ink = contrastingInk(options.colour);
 
   // Rotate so type runs along the spine's length, reading bottom-to-top.
   ctx.save();
-  ctx.translate(TEXTURE_WIDTH / 2, TEXTURE_HEIGHT / 2);
+  ctx.translate(across / 2, TEXTURE_HEIGHT / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
 
-  // The rotated canvas is TEXTURE_HEIGHT long and TEXTURE_WIDTH tall.
+  // The rotated canvas is TEXTURE_HEIGHT long and `across` tall.
   const length = TEXTURE_HEIGHT;
   const padding = length * 0.08;
   const available = length - padding * 2;
@@ -107,7 +107,7 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
   const { main, hasSubtitle } = splitTitle(options.title);
   const band = bandFor(main);
 
-  const titleSize = TEXTURE_WIDTH * band.size;
+  const titleSize = across * band.size;
   const tracking = titleSize * band.tracking;
   ctx.font = `${String(band.weight)} ${titleSize}px ${FONT}`;
   ctx.fillStyle = ink;
@@ -134,7 +134,7 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
   const titleEnd = left + Math.max(...lines.map((line) => width(ctx, line, tracking)));
 
   if (options.author !== undefined) {
-    const authorSize = TEXTURE_WIDTH * 0.24;
+    const authorSize = across * 0.24;
     ctx.font = `400 ${authorSize}px ${FONT}`;
     ctx.fillStyle = fade(ink, 0.72);
     const author = fit(ctx, lastName(options.author), available * 0.34, 0);
@@ -160,10 +160,10 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
       if (gap > titleSize) {
         const middle = titleEnd + gap / 2;
         ctx.strokeStyle = fade(ink, 0.45);
-        ctx.lineWidth = Math.max(1, TEXTURE_WIDTH * 0.02);
+        ctx.lineWidth = Math.max(1, across * 0.02);
         ctx.beginPath();
-        ctx.moveTo(middle, -TEXTURE_WIDTH * 0.22);
-        ctx.lineTo(middle, TEXTURE_WIDTH * 0.22);
+        ctx.moveTo(middle, -across * 0.22);
+        ctx.lineTo(middle, across * 0.22);
         ctx.stroke();
       }
     } else {
@@ -187,14 +187,14 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
  * Cheap, and it stops a spine reading as a flat rectangle of colour when the
  * title is short.
  */
-function addCloth(ctx: CanvasRenderingContext2D, colour: string, TEXTURE_WIDTH: number): void {
+function addCloth(ctx: CanvasRenderingContext2D, colour: string, across: number): void {
   const ink = contrastingInk(colour);
   ctx.strokeStyle = fade(ink, 0.28);
-  ctx.lineWidth = Math.max(1, TEXTURE_WIDTH * 0.018);
+  ctx.lineWidth = Math.max(1, across * 0.018);
   for (const y of [TEXTURE_HEIGHT * 0.045, TEXTURE_HEIGHT * 0.955]) {
     ctx.beginPath();
-    ctx.moveTo(TEXTURE_WIDTH * 0.18, y);
-    ctx.lineTo(TEXTURE_WIDTH * 0.82, y);
+    ctx.moveTo(across * 0.18, y);
+    ctx.lineTo(across * 0.82, y);
     ctx.stroke();
   }
 }

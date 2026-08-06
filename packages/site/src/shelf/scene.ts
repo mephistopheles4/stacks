@@ -15,6 +15,7 @@ import { rowsForCase, SHELF } from './case.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import {
+  BINDINGS,
   DEFAULT_SETTINGS,
   heightOf,
   type LightPosition,
@@ -1316,13 +1317,24 @@ function buildBook(
       ...(profile === undefined ? {} : { normalMap: profile }),
     });
 
-    const head = new THREE.Mesh(headCapGeometry(), covering);
-    head.castShadow = false;
-    head.receiveShadow = true;
-    // Uniformly, so the roll stays the same fraction of the spine it rolls over.
-    head.scale.setScalar(cap);
-    head.position.set(0, height / 2, depth / 2 + SKIN);
-    group.add(head);
+    const arc = headCapGeometry(settings.books.headCap);
+    if (arc !== undefined) {
+      const head = new THREE.Mesh(arc, covering);
+      head.castShadow = false;
+      head.receiveShadow = true;
+      /**
+       * Uniformly, and by **thickness** — not by the roll.
+       *
+       * The arc already carries the roll; it spans one *width* unit along `x` and
+       * rolls by `headCap` width units. Scaling by the roll instead made the cap
+       * a narrow tab centred on the head, ~6× too narrow, with every counter
+       * identical — same draw, same twenty triangles, same texture. Only a
+       * picture could catch it, and only a near one.
+       */
+      head.scale.setScalar(thickness);
+      head.position.set(0, height / 2, depth / 2 + SKIN);
+      group.add(head);
+    }
   }
 
   // A face-out book sits well back, so the shelved book on its right stands
@@ -1778,7 +1790,7 @@ function applyLive(
   // inside `buildBook`, so there is no handle to reach them through. The map
   // itself is re-baked on the rebuild, which is where the profile's shape is read.
   standing(needsRebuild, 'page edges', mountedWith.materials.pageStriation, next.materials.pageStriation);
-  for (const binding of ['hardback', 'paperback'] as const) {
+  for (const binding of BINDINGS) {
     standing(
       needsRebuild,
       `${binding} spine roughness`,
@@ -1919,7 +1931,7 @@ function hex(value: number): string {
  * touched, which is the panel lying in the quieter direction.
  */
 function describeProfiles(profiles: ShelfSettings['materials']['spineProfile']): string {
-  return (['hardback', 'paperback'] as const)
+  return BINDINGS
     .map((binding) => `${binding} ${profiles[binding].rise.toFixed(3)}/${profiles[binding].roll.toFixed(2)}`)
     .join(' ');
 }

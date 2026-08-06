@@ -183,6 +183,17 @@ export interface SpineProfile {
   readonly roll: number;
 }
 
+/**
+ * Both bindings, in one place, for everything that has to walk them.
+ *
+ * `@stacks/core` has this list too, as the source of the `Binding` type — but the
+ * site may only `import type` from the package root, and a value import of it
+ * drags `node:fs` and sharp into the browser bundle. So the list is either here
+ * once or spelled out at each of the four sites that iterate it, which is the
+ * shape G23 caught six copies of.
+ */
+export const BINDINGS: readonly Binding[] = ['hardback', 'paperback'];
+
 export interface MaterialSettings {
   readonly wood: number;
   readonly woodDark: number;
@@ -224,6 +235,13 @@ export interface MaterialSettings {
    * The knob governs the whole treatment — the relief *and* the jitter — because
    * they are one effect, and a control that turned off half of what its label
    * says would be the panel lying quietly.
+   *
+   * ⚠️ **#54's text says "0–1" and #54's own prototype rendered 1.4.** The value
+   * here is the one that was rendered and accepted, because a number in a
+   * screenshot beats a number in a sentence; the panel's slider runs to 3 so the
+   * disagreement stays explorable rather than being settled by whoever typed
+   * faster. Above ~1 this exaggerates the encoded normal rather than reproducing
+   * it, which is a look decision and not an error.
    */
   readonly pageStriation: number;
 

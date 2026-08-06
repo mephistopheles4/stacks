@@ -68,12 +68,10 @@ neighbours a fraction of a degree apart, touching nowhere.
 _Avoid_: group, cluster, stack (a stack is horizontal), streak.
 
 **Binding**:
-Hardback or paperback, and the one thing about a book's shape **no provider
-knows** — so it is declared in the note or it is hashed, never looked up and
-never inferred from cover aspect or page count. Absent means *nobody has said*,
-which is not a third value: it routes to the hash, so no missing key can flatten
-a shelf into one format. It reaches four things — the board, the binder's
-**square**, the height band, and the spine's **profile** and roughness.
+Hardback or paperback. The key belongs to G8 and its rules to
+[`CLAUDE.md`](CLAUDE.md); what the word means *here* is that it names a book's
+construction and nothing else — not its format, not how you read it. Absent means
+**nobody has said**, which is a state and not a third value.
 _Avoid_: format (that is print against audiobook, which nothing reads), cover
 type, hardcover (no provider has ever called a book on this shelf one).
 

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { sharedCache } from './shared-cache.ts';
 
 /**
  * The covering rolling over the head of a spine.
@@ -41,35 +42,51 @@ const SEGMENTS = 1;
 const CAP_STEPS = 10;
 
 /**
- * The shared cap, made once for the page.
+ * The shared caps, one per roll on the shelf — which is one.
  *
- * Module-level, like `UNIT_BOX` — one geometry for the whole shelf, however many
+ * Module-level, like `UNIT_BOX`: one geometry for the whole shelf however many
  * books stand on it. It must therefore survive `mountShelf`'s disposing traverse,
- * which is why that traverse asks `isSharedGeometry` rather than freeing
+ * which is why that traverse asks `isHeadCapGeometry` rather than freeing
  * everything it walks.
  */
-let shared: THREE.BufferGeometry | undefined;
+const CAPS = sharedCache<THREE.BufferGeometry>((geometry) => geometry.dispose());
+const built = new Set<THREE.BufferGeometry>();
 
-export function headCapGeometry(): THREE.BufferGeometry {
-  shared ??= buildHeadCap();
-  return shared;
+/**
+ * The cap for a given roll, made once and shared.
+ *
+ * **The roll is baked in rather than left to the caller's scale, and getting that
+ * wrong is exactly the bug this shape invites.** The arc spans one *width* unit
+ * along `x` and rolls by `roll` width units in `y` and `z` — two different
+ * numbers in one geometry. A caller who scales uniformly by the *roll* gets a
+ * narrow tab centred on the head rather than a covering, and every counter stays
+ * green because the draw calls and the triangles are identical either way. The
+ * uniform scale is by **thickness**, and it is uniform precisely because the roll
+ * is already in here.
+ */
+export function headCapGeometry(roll: number): THREE.BufferGeometry | undefined {
+  const geometry = CAPS.get(roll.toFixed(4), () => {
+    const made = buildHeadCap(roll);
+    built.add(made);
+    return made;
+  });
+  return geometry;
 }
 
 export function isHeadCapGeometry(geometry: THREE.BufferGeometry): boolean {
-  return geometry === shared;
+  return built.has(geometry);
 }
 
 /**
  * Built in **thickness units**, with its top at `y = 0` and its face at `z = 0`.
  *
  * So a mesh scaled by the book's thickness and parked at the top of the spine
- * face lands exactly where the covering's flat part stopped. The roll is a unit
- * radius here; the caller scales it.
+ * face lands exactly where the covering's flat part stopped.
  *
  * `u` runs across the width, matching the spine plane — so the spine's own normal
  * map shades this too, and the cap costs no texture of its own.
  */
-function buildHeadCap(): THREE.BufferGeometry {
+function buildHeadCap(roll: number): THREE.BufferGeometry {
   const positions: number[] = [];
   const normals: number[] = [];
   const uvs: number[] = [];
@@ -81,10 +98,10 @@ function buildHeadCap(): THREE.BufferGeometry {
     for (let j = 0; j <= CAP_STEPS; j += 1) {
       const v = j / CAP_STEPS;
       const angle = v * (Math.PI / 2);
-      // Centre of the roll at (y = -1, z = -1) in roll units: angle 0 is the
-      // bottom of the cap, flush with the spine face; 90° is its top, rolled back
-      // over the page block.
-      positions.push(x, -1 + Math.sin(angle), -1 + Math.cos(angle));
+      // Centre of the roll at (y = -roll, z = -roll): angle 0 is the bottom of
+      // the cap, flush with the spine face; 90° is its top, rolled back over the
+      // page block.
+      positions.push(x, -roll + roll * Math.sin(angle), -roll + roll * Math.cos(angle));
       normals.push(0, Math.sin(angle), Math.cos(angle));
       uvs.push(u, v);
     }

@@ -1218,6 +1218,61 @@ draw off independent hashes — are unit tests over pure functions, both observe
 red. A scoreboard row implies a rule that can go red for a reason a reader can
 act on, and "textures went up by three" is not that.
 
+### The review caught a bug no counter could
+
+**The head cap was ~6× too narrow, and every number said it was fine.**
+`headCapGeometry` spanned one *width* unit along `x` while rolling at radius 1 —
+two unit systems in one geometry — and the call site scaled uniformly by
+`headCap × thickness`. So the cap came out `0.16 × thickness` wide on a spine
+`thickness` wide: a narrow tab centred on the head rather than a covering.
+
+**Nothing it cost changed.** Same draw call, same twenty triangles, same shared
+geometry, same texture — so `smoke:render`'s new cost line, the +20 draws that
+matched #56 exactly, and the unit tests all passed over it. The tests passed
+because they pinned the geometry under the *correct* assumption and nothing
+tested the call site; the spine strip's height loss was right by coincidence,
+since radius and width scaled by the same wrong factor and only the height wanted
+`0.16 × thickness`.
+
+The roll is baked into the arc now and the scale is `thickness`. The test that
+would have caught it asserts the two spans are **different** — they were equal
+when both were 1, which is exactly what made scaling by either look plausible.
+
+Two smaller things the review found, both real:
+
+- **A panel lamp that could lie.** The head-cap control read red when
+  `paperbackRatio` was 1, on the reasoning that there would be no hardbacks to
+  cap. False: a note declaring `binding: hardback` ignores the ratio, because a
+  declaration is not a vote — so that book is still capped and the lamp would
+  have denied it. The lamp answers the question it can see instead.
+- **Two unbounded caches.** The shared normal maps and cap geometries were
+  documented as "bounded by the number of bindings", which is true of the shipped
+  shelf and false of the panel: every drag of a rebuild-class slider mints
+  another key, and nothing freed them. `shared-cache.ts` keeps the most recent
+  few. A leak on a debug surface built to diagnose leaks is the one failure this
+  project has already measured itself avoiding.
+
+### The bloom question is answered, and the page block does not cross
+
+#54 left this open — *"a brighter or striated page block may cross the bloom
+threshold"* — and it was the half of the map's fog #68 could not close.
+
+Measured at the **near** framing, because the block is 0.06% of a book's pixels
+at the full one and a reading there is a measurement of the wood:
+
+| | bright pixels | striation moves |
+| --- | --- | --- |
+| bloom off | 1.925% either way | 13,606 px over JND (1.050%) |
+| bloom on | 2.856% either way | 14,655 px over JND (1.131%) |
+
+**The striation is plainly visible and moves the bright-pixel share not at all** —
+identical to three decimals with the effect on and off, under bloom and without
+it. The control says the framing resolves change: bloom itself moves 85.6% of
+frame. So this is a null with an instrument, not a null from a bad framing.
+
+Same shape as #68's answer for the spine, and the fog patch closes with it. What
+remains open there is only the contact shadow.
+
 **Aesthetics are the owner's, and there are three images to look at.**
 `artifacts/shelf.png` is the full shelf, which is #60's acceptance framing — the
 question it asks is whether the range reads as one publisher's imprint or as
@@ -1226,3 +1281,19 @@ renders, because the cap, the profile and the striation are all approach effects
 and #54 established that share-of-screen cannot judge them. All three are
 fixture, and per the map's caveat that is the right test here: none of these is a
 question about the real books' *colours*.
+
+**#66's thing to look at, looked at.** It flagged that the cap occludes the front
+of the page block's top face, that #54's striation map lands *on* that face, and
+that it had taken the roll from 0.1 to 0.16 — so the cap would eat more striated
+head than any screenshot on either ticket had shown. On one shelf with both
+landed: it reads as a covering with a sliver of block behind it, which is what a
+hardback's head looks like. Nothing to do.
+
+**#66's other lead is deferred, deliberately.** *"Whoever implements the cap
+should try [one shared material] before accepting the 11%"* — and the only
+version that could ship is not that one: the covering takes the book's own
+colour, so twenty caps in one colour is the wrong picture, and #66 says so
+itself. The candidate that would actually work is an `InstancedMesh` with
+per-instance colour, sharing the material *and* collapsing 20 draws to 1. Neither
+#56 nor #66 rendered it and #66 deliberately did not ticket it. Recorded beside
+the mesh in `scene.ts`.

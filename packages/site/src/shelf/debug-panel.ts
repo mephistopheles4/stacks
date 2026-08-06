@@ -1,5 +1,6 @@
 import type { ApplyReport, ShelfHandle } from './scene.ts';
 import {
+  BINDINGS,
   DEFAULT_SETTINGS,
   resolveSettings,
   SHADOW_TYPE_NAMES,
@@ -415,10 +416,16 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   );
   /**
    * Red at zero, and truthfully: no cap is built at all, so the ~20 draw calls
-   * it costs are simply not spent. Red also when the whole shelf is paperback,
-   * because there is then nothing for it to be built *on* — a slider doing
-   * nothing because another slider is where it is, which is the case the lamp's
-   * third state exists for.
+   * it costs are simply not spent.
+   *
+   * ⚠️ **It says nothing about the mixture, and a version of it that tried was
+   * wrong.** `… && s.books.paperbackRatio < 1` looked like the honest extra
+   * clause — no hardbacks, nothing for a cap to be built on — and it is false: a
+   * note declaring `binding: hardback` ignores the ratio entirely, because a
+   * declaration is not a vote. At a ratio of 1 that book is still capped and the
+   * lamp would have read red over a cap that is there. Nothing the panel can see
+   * answers "how many hardbacks are on this shelf", so the lamp answers the
+   * question it can: is this control doing anything.
    */
   slider(
     'head cap',
@@ -428,7 +435,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     0.01,
     (s) => s.books.headCap,
     (s, v) => resolveSettings({ books: { headCap: v } }, s),
-    (s) => s.books.headCap > 0 && s.books.paperbackRatio < 1,
+    (s) => s.books.headCap > 0,
   );
 
   /**
@@ -443,7 +450,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    * short-circuits to no normal map at all rather than to a map scaled by zero.
    * A control that has switched its own effect off says so.
    */
-  for (const binding of ['hardback', 'paperback'] as const) {
+  for (const binding of BINDINGS) {
     const lit = (s: ShelfSettings): boolean =>
       s.materials.spineProfile[binding].rise !== 0 && s.materials.spineProfile[binding].roll !== 0;
 

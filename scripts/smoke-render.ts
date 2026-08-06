@@ -12,6 +12,9 @@
  * the image contains a decent spread of distinct colours.
  */
 import { spawn } from 'node:child_process';
+// `import type`, so nothing of three's reaches this node script — the whole
+// point is that the shape cannot drift from the handle it is read off.
+import type { ShelfStats } from '../packages/site/src/shelf/scene.ts';
 import { createServer, type Server } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -188,13 +191,7 @@ interface Stats {
  * counts move legitimately with the fixture, and a gate that goes red on a number
  * nobody can interpret trains people to raise the number.
  */
-interface ShelfCost {
-  textures: number;
-  geometries: number;
-  programs: number;
-  calls: number;
-  triangles: number;
-}
+type ShelfCost = Pick<ShelfStats, 'textures' | 'geometries' | 'programs' | 'calls' | 'triangles'>;
 
 /**
  * Clicks a real book and checks the detail card opens with its title.
