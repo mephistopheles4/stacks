@@ -112,6 +112,15 @@ const ALLOWED = [
   // is `artifacts/shelf.png`, which the gate renders from the *fixture* vault —
   // it checks that file exists and never looks at a vault at all.
   'scripts/make-readme-image.ts',
+  // PROTOTYPE ONLY — wayfinder ticket #68. Reads the PNGs the render below
+  // wrote into `artifacts/spine-grain/` and differences them. Its only inputs
+  // are images it named itself; it has never heard of a vault.
+  'scripts/prototype-grain-diff.ts',
+  // PROTOTYPE ONLY — wayfinder ticket #68. Serves the built `dist/` to a
+  // headless Chrome and writes screenshots, exactly as `smoke-render.ts` does
+  // and for the same reason. The vault it renders is the *fixture* one, reached
+  // through `pnpm stacks build` rather than opened here.
+  'scripts/prototype-spine-grain.ts',
   'scripts/smoke-render.ts',
   // Checks whether a worktree's directory and the shared `.env` are there
   // before creating one. Never opens the vault — it does not know what a book

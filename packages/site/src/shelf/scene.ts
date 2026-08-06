@@ -22,7 +22,22 @@ import {
   type ShelfSettings,
   type ToneMappingName,
 } from './shelf-settings.ts';
-import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
+import {
+  makeSpineTexture,
+  MIN_LEGIBLE_THICKNESS,
+  spineCanvasWidth,
+  SPINE_CANVAS_HEIGHT,
+  SPINE_CANVAS_WIDTH_TODAY,
+} from './spine-texture.ts';
+// PROTOTYPE ONLY — ticket #68. Inert unless the page sets `window.__grain`.
+import {
+  applyGrain,
+  bindingFor,
+  grainArm,
+  noteSpineCanvas,
+  setShelfMedian,
+} from './spine-grain.ts';
+import { hashUnit } from './hash.ts';
 
 /**
  * The shelf.
@@ -886,6 +901,11 @@ function buildBooks(
 
   const rowCount = rowsForCase(placements.length);
 
+  // PROTOTYPE ONLY — ticket #68. The shared-`repeat` arm is made square at the
+  // median book of the shelf actually being drawn, so it is set up as well as a
+  // single shared texture can be rather than at an arbitrary (1,1).
+  setShelfMedian(placements.flat().map(({ entry }) => entry));
+
   placements.forEach((row, rowIndex) => {
     row.forEach((placement, index) => {
       const { entry } = placement;
@@ -1083,22 +1103,48 @@ function buildBook(
   settings: ShelfSettings,
 ): THREE.Group {
   const castShadows = settings.shadows.casters;
+
+  /**
+   * PROTOTYPE ONLY — ticket #68. `undefined` is today's shelf, untouched.
+   *
+   * Every arm but that one carries #58's aspect-correct canvas, because judging
+   * grain against letterforms that are about to change is not a comparison. The
+   * canvas fix does *not* help the grain — `map` and `roughnessMap` sample the
+   * same 0..1 `uv` whatever the canvas's pixel width — so `canvas` is rendered
+   * on its own as the control that keeps the two apart.
+   */
+  const arm = grainArm();
+
   // A spine wide enough to read gets its title printed on it; a very thin one
   // stays a plain board, because type squeezed onto it would just be noise.
-  const spineTexture =
-    entry.thickness >= MIN_LEGIBLE_THICKNESS
-      ? makeSpineTexture({
-          title: entry.book.title,
-          colour: entry.colour,
-          ...(entry.book.author === undefined ? {} : { author: entry.book.author }),
-        })
-      : undefined;
+  // The cutoff retires under any arm: #58 found it was never about size.
+  const canvasWidth =
+    arm === undefined ? SPINE_CANVAS_WIDTH_TODAY : spineCanvasWidth(entry.thickness, entry.height);
+  const typed = arm !== undefined || entry.thickness >= MIN_LEGIBLE_THICKNESS;
+  const spineTexture = typed
+    ? makeSpineTexture({
+        title: entry.book.title,
+        colour: entry.colour,
+        ...(entry.book.author === undefined ? {} : { author: entry.book.author }),
+        ...(arm === undefined ? {} : { width: canvasWidth }),
+      })
+    : undefined;
+  if (typed) noteSpineCanvas(canvasWidth, SPINE_CANVAS_HEIGHT);
 
   const spine = new THREE.MeshStandardMaterial({
     color: spineTexture === undefined ? new THREE.Color(entry.colour) : new THREE.Color(0xffffff),
     roughness: 0.62,
     ...(spineTexture === undefined ? {} : { map: spineTexture }),
   });
+
+  if (arm !== undefined) {
+    applyGrain(spine, {
+      arm,
+      binding: bindingFor(hashUnit(entry.book.id)),
+      thickness: entry.thickness,
+      height: entry.height,
+    });
+  }
   // Pages: slightly lighter than the boards, never pure white.
   const pages = new THREE.MeshStandardMaterial({ color: 0xd9cdb8, roughness: 0.95 });
   const boards = new THREE.MeshStandardMaterial({

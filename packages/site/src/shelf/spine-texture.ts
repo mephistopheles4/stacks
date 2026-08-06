@@ -12,11 +12,30 @@ import * as THREE from 'three';
  */
 
 /** Texture pixels across the spine's width. */
-const TEXTURE_WIDTH = 128;
+const SPINE_TEXTURE_WIDTH = 128;
 const TEXTURE_HEIGHT = 1024;
 
 /** Below this thickness a spine is too narrow for type to be legible. */
 export const MIN_LEGIBLE_THICKNESS = 0.075;
+
+/**
+ * PROTOTYPE ONLY — ticket #68, carrying #58's bundled arithmetic.
+ *
+ * The canvas above is 128×1024 for *every* book whatever its thickness, and is
+ * stretched onto a plane scaled `(thickness, height)` — so letterforms are
+ * distorted 0.87×–1.97× across the shelf. #58 found that this, and not size, is
+ * what `MIN_LEGIBLE_THICKNESS` was really guarding against. Sizing the canvas to
+ * the book's own aspect retires the cutoff and gives the six thinnest books type.
+ *
+ * The clamp is #58's: 32 keeps a floor of pixels to set type in, 128 is today's
+ * width and nothing needs more.
+ */
+export const SPINE_CANVAS_HEIGHT = TEXTURE_HEIGHT;
+export const SPINE_CANVAS_WIDTH_TODAY = SPINE_TEXTURE_WIDTH;
+
+export function spineCanvasWidth(thickness: number, height: number): number {
+  return Math.min(128, Math.max(32, Math.round((TEXTURE_HEIGHT * thickness) / height)));
+}
 
 const FONT = '"Georgia", "Times New Roman", serif';
 
@@ -24,9 +43,12 @@ export interface SpineTextOptions {
   readonly title: string;
   readonly author?: string;
   readonly colour: string;
+  /** Prototype: canvas pixels across. Absent is today's fixed 128. */
+  readonly width?: number;
 }
 
 export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture | undefined {
+  const TEXTURE_WIDTH = options.width ?? SPINE_TEXTURE_WIDTH;
   const canvas = document.createElement('canvas');
   canvas.width = TEXTURE_WIDTH;
   canvas.height = TEXTURE_HEIGHT;
@@ -37,7 +59,7 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
   ctx.fillStyle = options.colour;
   ctx.fillRect(0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT);
 
-  addCloth(ctx, options.colour);
+  addCloth(ctx, options.colour, TEXTURE_WIDTH);
 
   const ink = contrastingInk(options.colour);
 
@@ -82,7 +104,7 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
  * Cheap, and it stops a spine reading as a flat rectangle of colour when the
  * title is short.
  */
-function addCloth(ctx: CanvasRenderingContext2D, colour: string): void {
+function addCloth(ctx: CanvasRenderingContext2D, colour: string, TEXTURE_WIDTH: number): void {
   const ink = contrastingInk(colour);
   ctx.strokeStyle = fade(ink, 0.28);
   ctx.lineWidth = Math.max(1, TEXTURE_WIDTH * 0.018);
