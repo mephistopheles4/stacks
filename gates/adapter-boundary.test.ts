@@ -80,6 +80,11 @@ const ALLOWED = [
   // API responses, screenshots, the public-build check. None of them parse a
   // note; the two that need books shell out to the CLI.
   'scripts/capture-api-fixtures.ts',
+  // Sibling of the above, and the same permission for the same reason: it
+  // writes one file into `fixtures/api/`. It calls `lookup()`, which is the
+  // metadata layer and has never known what a vault is — the books it asks
+  // about are a hardcoded list in `gates/recall-corpus.ts`, not notes it read.
+  'scripts/capture-lookup-recall.ts',
   'scripts/check-public-build.ts',
   // Reads the built `dist/` back to pre-flight it before uploading. Its `fs`
   // use is entirely on that folder: the real vault it shells out to the CLI
