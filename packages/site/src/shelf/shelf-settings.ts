@@ -191,6 +191,32 @@ export interface MaterialSettings {
    * makes about a control that cannot be trusted.
    */
   readonly headCap: boolean;
+  /**
+   * PROTOTYPE (#66) — the cap's tessellation, across the width and around the
+   * turn. `2 × capSegments × capSteps` triangles each; #56 built and measured
+   * `32 × 10` = 640 and said in its own resolution that a coarser one was never
+   * tried, so the number should not be read as the cost.
+   *
+   * A setting rather than a constant only so the stress harness can hold draw
+   * calls at exactly 334 while moving triangles by two orders of magnitude —
+   * which is the one thing #56 never did.
+   */
+  readonly capSegments: number;
+  readonly capSteps: number;
+  /** PROTOTYPE (#66) — `CAP`, the roll's radius in thickness units. Never tuned. */
+  readonly capRoll: number;
+  /**
+   * PROTOTYPE (#66) — **a perf arm, and it renders the wrong picture on purpose.**
+   *
+   * Turning the cap on adds 20 draw calls *and* 20 `MeshStandardMaterial`s, one
+   * per capped book, because the covering takes the book's own colour. The
+   * tessellation ladder holds triangles apart from everything else but leaves
+   * those two fused — so "the cost is the draw calls" would be a claim about a
+   * pair. This shares one material across every cap, which keeps the 334 draws
+   * and drops 20 materials to 1, at the price of every cap being the same
+   * colour. Never for a screenshot.
+   */
+  readonly capShareMaterial: boolean;
 }
 
 /** PROTOTYPE (#55). `off` is today's shelf; the other two are the candidates. */
@@ -306,6 +332,10 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     spineCurveMode: 'off',
     softHinge: false,
     headCap: false,
+    capSegments: 32,
+    capSteps: 10,
+    capRoll: 0.1,
+    capShareMaterial: false,
   },
 };
 

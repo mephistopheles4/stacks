@@ -77,6 +77,23 @@ function slopeAt(x: number, profile: SpineProfile): number {
 const SEGMENTS = 32;
 
 /**
+ * PROTOTYPE (#66) — the cap's tessellation, as the two numbers #56 fixed and
+ * never varied.
+ *
+ * `segments` runs **across** the spine's width, `steps` **around** the quarter
+ * turn; the cap is `2 × segments × steps` triangles, so #56's `32 × 10` is the
+ * 640 it reported. They are separated because they are not the same kind of
+ * number — see `headCapGeometry`, where one of them turns out to buy nothing at
+ * all.
+ */
+export interface CapShape {
+  readonly segments: number;
+  readonly steps: number;
+  /** Radius of the roll in thickness units — #56's `CAP`, now variable. */
+  readonly roll: number;
+}
+
+/**
  * The shared normal map for one profile: the surface's normals, across `u`.
  *
  * Two pixels tall, because the profile does not vary along the spine's length.
@@ -136,6 +153,9 @@ export const CAP = 0.1;
 /** Steps around the quarter turn. The silhouette is the point, so not few. */
 const CAP_STEPS = 10;
 
+/** PROTOTYPE (#66). #56's cap, as a shape rather than three module constants. */
+export const CAP_AS_BUILT: CapShape = { segments: SEGMENTS, steps: CAP_STEPS, roll: CAP };
+
 /**
  * The covering rolling over the head of the spine, as a quarter-round.
  *
@@ -148,31 +168,42 @@ const CAP_STEPS = 10;
  *
  * There is no tail cap. A book stands on a plank and its tail is against the
  * wood: verified by render, not assumed.
+ *
+ * PROTOTYPE (#66) — the shape is now an argument, and writing it out that way
+ * exposes something #56 could not see with the numbers baked in: **nothing on
+ * the `x` axis varies.** `y` and `z` are functions of `angle` alone, the normal
+ * is the same vector at every `x`, and `u` is linear in `x`. So `segments` is
+ * subdividing a *ruled, developable* strip along which every interpolated
+ * quantity is already exact — and a linear interpolation of a linear function is
+ * the same function. Raising it cannot move a pixel; only `steps`, which
+ * subdivides the turn the silhouette is made of, can. The render is what settles
+ * that, not this comment.
  */
-export function headCapGeometry(): THREE.BufferGeometry {
+export function headCapGeometry(shape: CapShape = CAP_AS_BUILT): THREE.BufferGeometry {
   const positions: number[] = [];
   const normals: number[] = [];
   const uvs: number[] = [];
   const indices: number[] = [];
+  const { segments, steps, roll } = shape;
 
-  for (let i = 0; i <= SEGMENTS; i += 1) {
-    const u = i / SEGMENTS;
+  for (let i = 0; i <= segments; i += 1) {
+    const u = i / segments;
     const x = u - 0.5;
-    for (let j = 0; j <= CAP_STEPS; j += 1) {
-      const v = j / CAP_STEPS;
+    for (let j = 0; j <= steps; j += 1) {
+      const v = j / steps;
       const angle = v * (Math.PI / 2);
-      // Centre of the roll at (y = -CAP, z = -CAP): angle 0 is the bottom of the
-      // cap, flush with the spine face; angle 90° is its top, rolled back over
-      // the page block.
-      positions.push(x, -CAP + CAP * Math.sin(angle), -CAP + CAP * Math.cos(angle));
+      // Centre of the roll at (y = -roll, z = -roll): angle 0 is the bottom of
+      // the cap, flush with the spine face; angle 90° is its top, rolled back
+      // over the page block.
+      positions.push(x, -roll + roll * Math.sin(angle), -roll + roll * Math.cos(angle));
       normals.push(0, Math.sin(angle), Math.cos(angle));
       uvs.push(u, v);
     }
   }
 
-  const stride = CAP_STEPS + 1;
-  for (let i = 0; i < SEGMENTS; i += 1) {
-    for (let j = 0; j < CAP_STEPS; j += 1) {
+  const stride = steps + 1;
+  for (let i = 0; i < segments; i += 1) {
+    for (let j = 0; j < steps; j += 1) {
       const a = i * stride + j;
       const b = a + stride;
       indices.push(a, b, a + 1, b, b + 1, a + 1);

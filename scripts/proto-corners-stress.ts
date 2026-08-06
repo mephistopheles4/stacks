@@ -33,46 +33,86 @@ import { shellCommand } from './lib/run.ts';
 
 const VIEWPORT = { width: 1440, height: 900 };
 
-/** The three candidates, matching `proto-corners.ts`. */
+/**
+ * REWRITTEN for #66 — the original three arms are on `proto/soft-corners`.
+ *
+ * #56 turned the cap on and changed **two** things at once: +20 draw calls and
+ * +12,800 triangles. It attributed the ~11% to draw calls because CPU throttling
+ * is what it varied, but it never held one of the two constant, so the number
+ * was an inference.
+ *
+ * This is a ladder instead. Every arm below carries the softened hinge, and
+ * every *capped* arm draws exactly the same 334 calls — same meshes, same
+ * materials, same state changes — while triangles move **640-fold**, from 4 per
+ * cap to 2,560. So:
+ *
+ * - `no cap` → `1x10` is the draw-call step with geometry held near zero.
+ * - `1x10` → `64x20` is the geometry step with draw calls held exactly equal.
+ *
+ * `1x10 again` is the negative control, and it is the one row to read first: two
+ * arms identical in every renderer counter, so their gap is what this rig cannot
+ * resolve. #56's harness already caught itself reporting 29% of pure drift.
+ */
+const HINGE = { spineCurveMode: 'normal', spineCurve: 0.125, softHinge: true } as const;
+
 const MODES = [
+  { label: 'no cap', tune: { ...HINGE, headCap: false } },
+  { label: 'cap 1x2 (4 tri)', tune: { ...HINGE, headCap: true, capSegments: 1, capSteps: 2 } },
+  { label: 'cap 1x10 (20 tri)', tune: { ...HINGE, headCap: true, capSegments: 1, capSteps: 10 } },
+  { label: 'cap 1x10 again', tune: { ...HINGE, headCap: true, capSegments: 1, capSteps: 10 } },
+  { label: 'cap 32x10 (640 tri)', tune: { ...HINGE, headCap: true, capSegments: 32, capSteps: 10 } },
+  { label: 'cap 64x20 (2560 tri)', tune: { ...HINGE, headCap: true, capSegments: 64, capSteps: 20 } },
   {
-    label: 'today — #55 as decided',
-    tune: { spineCurveMode: 'normal', spineCurve: 0.125, softHinge: false, headCap: false },
-  },
-  {
-    label: 'softened hinge only',
-    tune: { spineCurveMode: 'normal', spineCurve: 0.125, softHinge: true, headCap: false },
-  },
-  {
-    label: 'hinge + head cap',
-    tune: { spineCurveMode: 'normal', spineCurve: 0.125, softHinge: true, headCap: true },
+    // Not a candidate — it renders every cap the same colour. Turning the cap on
+    // adds 20 draw calls AND 20 materials, and the ladder above leaves those two
+    // fused, so without this arm "the cost is the draw calls" would be a claim
+    // about a pair rather than a measurement.
+    label: 'cap 1x10, 1 material',
+    tune: { ...HINGE, headCap: true, capSegments: 1, capSteps: 10, capShareMaterial: true },
   },
 ] as const;
 
 /**
- * 4 and 6 only. At 1x the shelf ran at ~1290 fps — a 0.78ms frame, which
- * measures the rAF loop rather than the books, and where 20 draw calls could
- * not show even if they mattered.
+ * 6 only, where #56 ran 4 and 6.
+ *
+ * At 1x the shelf ran at ~1290 fps — a 0.78ms frame, which measures the rAF loop
+ * rather than the books. 6x is the harsher of #56's two and the one it quoted as
+ * "a phone-like main thread", and dropping 4x buys the passes below, which this
+ * rig turned out to need far more than it needed a second throttle.
  */
-const THROTTLES = [4, 6] as const;
+const THROTTLES = [6] as const;
 
-/** Book counts to build a vault for. 50 is the shelf the gates already use. */
-const LIBRARIES = [50, 200] as const;
+/**
+ * 50 only, where #56 ran 50 and 200.
+ *
+ * The 191-book shelf is an amplifier and #50's fog explicitly reserves "what the
+ * shelf costs at four times its size" as somebody else's question. Spending its
+ * minutes on passes instead is what makes the 49-book answer trustworthy.
+ */
+const LIBRARIES = [50] as const;
 
 /** How many 500ms fps windows to take, after discarding the warm-up. */
 const SAMPLES = 6;
 
 /**
- * Two passes, the second with the modes reversed.
+ * Seven passes, alternating direction, where #56 ran two — and **every reading
+ * is kept**, where #56 kept the best.
  *
- * The first version of this ran the three arms back to back in one browser and
- * reported them in order — and the *hinge only* arm, which has provably
- * identical draws, geometries and triangles to the baseline, came back 29%
- * slower. That is drift, not effect: whatever runs later runs worse. Reversing
- * the order and keeping the best of the two cancels a monotonic drift, and a
- * fresh browser per arm stops one arm inheriting another's state.
+ * #56 already knew this rig drifts: its first version reported the *hinge only*
+ * arm, provably identical to the baseline in every renderer counter, as 29%
+ * slower. Reversing the order and taking the best of two was the fix, and #66's
+ * own first attempt showed it is not enough — `cap 1x10` and `cap 1x10 again`,
+ * the same configuration twice, came back **132.4 and 184.5 fps in one pass**.
+ * Best-of-two over noise that large reports whichever arm happened to get a
+ * quiet moment.
+ *
+ * So: more passes, and a distribution rather than a number. The spread across
+ * identical arms is printed beside every result, because a delta smaller than it
+ * has not been measured — and stating the estimator is the point, since swapping
+ * it silently and then comparing to #56's 11% would be an apples-and-oranges
+ * result that reads like a finding.
  */
-const PASSES = 2;
+const PASSES = 7;
 
 const CHROME_CANDIDATES = [
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -86,6 +126,8 @@ interface Reading {
   readonly throttle: number;
   readonly label: string;
   readonly calls: number;
+  /** #66: the axis #56 never held constant. Reported beside the draws, always. */
+  readonly triangles: number;
   readonly fps: number;
 }
 
@@ -97,9 +139,6 @@ async function main(): Promise<void> {
     const { server, origin } = await serveDist();
 
     try {
-      // best fps seen for one (throttle, mode), across passes.
-      const best = new Map<string, Reading>();
-
       for (let pass = 0; pass < PASSES; pass += 1) {
         const order = pass % 2 === 0 ? MODES : [...MODES].reverse();
         for (const throttle of THROTTLES) {
@@ -123,21 +162,25 @@ async function main(): Promise<void> {
             });
 
             try {
-              const { calls, fps, actualBooks } = await measure(
+              const { calls, triangles, fps, actualBooks } = await measure(
                 browser,
                 origin,
                 mode.tune,
                 throttle,
               );
-              const key = `${String(throttle)}|${mode.label}`;
-              const previous = best.get(key);
-              if (previous === undefined || fps > previous.fps) {
-                best.set(key, { books: actualBooks, throttle, label: mode.label, calls, fps });
-              }
+              readings.push({
+                books: actualBooks,
+                throttle,
+                label: mode.label,
+                calls,
+                triangles,
+                fps,
+              });
               console.log(
                 `pass ${String(pass + 1)}  ${String(actualBooks).padStart(3)} books  ` +
-                  `${String(throttle)}x cpu  ${mode.label.padEnd(24)} ` +
-                  `${String(calls).padStart(4)} draws  ${fps.toFixed(1)} fps`,
+                  `${String(throttle)}x cpu  ${mode.label.padEnd(21)} ` +
+                  `${String(calls).padStart(4)} draws  ${String(triangles).padStart(6)} tri  ` +
+                  `${fps.toFixed(1)} fps`,
               );
             } finally {
               await browser.close();
@@ -146,7 +189,6 @@ async function main(): Promise<void> {
         }
       }
 
-      readings.push(...best.values());
     } finally {
       server.close();
     }
@@ -167,7 +209,7 @@ async function measure(
   origin: string,
   tune: unknown,
   throttle: number,
-): Promise<{ calls: number; fps: number; actualBooks: number }> {
+): Promise<{ calls: number; triangles: number; fps: number; actualBooks: number }> {
   const page = await browser.newPage();
   try {
     await page.setViewport(VIEWPORT);
@@ -197,10 +239,14 @@ async function measure(
     }
     samples.sort((a, b) => a - b);
 
-    const stats = (await page.evaluate('window.__shelf.protoStats()')) as { calls: number };
+    const stats = (await page.evaluate('window.__shelf.protoStats()')) as {
+      calls: number;
+      triangles: number;
+    };
     const books = (await page.evaluate('window.__shelf.bookCount')) as number;
     return {
       calls: stats.calls,
+      triangles: stats.triangles,
       fps: samples[Math.floor(samples.length / 2)] ?? 0,
       actualBooks: books,
     };
@@ -218,42 +264,113 @@ async function measure(
  * gap is not a cost; it is this rig's noise floor, and a cap delta smaller than
  * it has not been measured at all.
  */
+interface Summary {
+  readonly label: string;
+  readonly books: number;
+  readonly calls: number;
+  readonly triangles: number;
+  /** #56's estimator, kept so its 11% stays comparable. */
+  readonly best: number;
+  readonly median: number;
+  readonly worst: number;
+  readonly passes: number;
+}
+
+function summarise(readings: readonly Reading[]): Summary | undefined {
+  if (readings.length === 0) return undefined;
+  const first = readings[0];
+  if (first === undefined) return undefined;
+  const fps = readings.map((r) => r.fps).sort((a, b) => a - b);
+  return {
+    label: first.label,
+    books: first.books,
+    calls: first.calls,
+    triangles: first.triangles,
+    best: fps[fps.length - 1] ?? 0,
+    median: fps[Math.floor(fps.length / 2)] ?? 0,
+    worst: fps[0] ?? 0,
+    passes: fps.length,
+  };
+}
+
 function report(readings: readonly Reading[]): void {
-  console.log('\n== what the head cap costs, against what this rig can resolve ==\n');
-  console.log('books  cpu   baseline      hinge only    hinge + cap    cap cost   noise floor');
+  const signed = (value: number): string => `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+
+  // Nearest-library match, not `>=`. A vault of 200 notes yields 191 shelved
+  // books (wishlist and private are dropped), so an exact test never hits — and
+  // a `>=` one matched the 49-book rows for BOTH libraries and printed the small
+  // shelf twice while silently dropping the large one.
+  const at = (books: number, throttle: number, label: string): Summary | undefined =>
+    summarise(
+      readings.filter(
+        (r) =>
+          r.throttle === throttle &&
+          r.label === label &&
+          Math.abs(r.books - books) <= books * 0.15,
+      ),
+    );
+
   for (const books of LIBRARIES) {
     for (const throttle of THROTTLES) {
-      // Nearest-library match, not `>=`. A vault of 200 notes yields 191 shelved
-      // books (wishlist and private are dropped), so an exact test never hits —
-      // and a `>=` one matched the 49-book rows for BOTH libraries and printed
-      // the small shelf twice while silently dropping the large one.
-      const at = (label: string): Reading | undefined =>
-        readings.find(
-          (r) =>
-            r.throttle === throttle &&
-            r.label.includes(label) &&
-            Math.abs(r.books - books) <= books * 0.15,
-        );
-      const base = at('#55 as decided');
-      const hinge = at('hinge only');
-      const cap = at('head cap');
-      if (base === undefined || hinge === undefined || cap === undefined) continue;
-
-      const cost = ((cap.fps - hinge.fps) / hinge.fps) * 100;
-      const noise = ((hinge.fps - base.fps) / base.fps) * 100;
-      const signed = (value: number): string => `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+      console.log(`\n== every arm at ${String(throttle)}x cpu, across ${String(PASSES)} passes ==\n`);
       console.log(
-        `${String(hinge.books).padStart(5)}  ${String(throttle)}x   ` +
-          `${base.fps.toFixed(1).padStart(7)} fps ${hinge.fps.toFixed(1).padStart(8)} fps ` +
-          `${cap.fps.toFixed(1).padStart(9)} fps ${signed(cost).padStart(10)} ` +
-          `${signed(noise).padStart(10)}`,
+        'arm                     draws  triangles     worst    median      best   spread   ' +
+          'best vs no cap',
       );
+      const off = at(books, throttle, 'no cap');
+      for (const mode of MODES) {
+        const row = at(books, throttle, mode.label);
+        if (row === undefined) continue;
+        const spread = ((row.best - row.worst) / row.worst) * 100;
+        const delta = off === undefined ? 0 : ((row.best - off.best) / off.best) * 100;
+        console.log(
+          `${mode.label.padEnd(22)} ${String(row.calls).padStart(5)} ` +
+            `${String(row.triangles).padStart(10)} ${row.worst.toFixed(1).padStart(9)} ` +
+            `${row.median.toFixed(1).padStart(9)} ${row.best.toFixed(1).padStart(9)} ` +
+            `${signed(spread).padStart(8)} ${signed(delta).padStart(16)}`,
+        );
+      }
+
+      const lean = at(books, throttle, 'cap 1x10 (20 tri)');
+      const twin = at(books, throttle, 'cap 1x10 again');
+      const built = at(books, throttle, 'cap 32x10 (640 tri)');
+      const loud = at(books, throttle, 'cap 64x20 (2560 tri)');
+      const one = at(books, throttle, 'cap 1x10, 1 material');
+      if (
+        off === undefined ||
+        lean === undefined ||
+        twin === undefined ||
+        built === undefined ||
+        loud === undefined ||
+        one === undefined
+      )
+        continue;
+
+      const gap = (a: Summary, b: Summary): string => signed(((b.best - a.best) / a.best) * 100);
+      console.log(`\n-- ${String(lean.books)} books, ${String(throttle)}x cpu --\n`);
+      console.log(`floor, twin arms 1x10 v 1x10 again ....... ${gap(lean, twin)}`);
+      console.log(`worst spread within one arm ............. ${signed(
+        Math.max(...MODES.map((m) => {
+          const row = at(books, throttle, m.label);
+          return row === undefined ? 0 : ((row.best - row.worst) / row.worst) * 100;
+        })),
+      )}`);
+      console.log(`geometry, 1x10 -> 64x20 (128x triangles)  ${gap(lean, loud)}`);
+      console.log(`materials, 20 of them -> 1 .............. ${gap(lean, one)}`);
+      console.log(`the cap's presence, no cap -> 1x10 ...... ${gap(off, lean)}`);
+      console.log(`#56 as built, no cap -> 32x10 ........... ${gap(off, built)}`);
     }
   }
+
   console.log(
-    '\nRead the last two columns together. The noise floor is two arms that are\n' +
-      'identical in every renderer counter, so it is what this rig cannot tell\n' +
-      'apart. A cap cost inside it is a cost that has not been measured.',
+    '\nRead the two floor lines before any other. The twin arms are identical in\n' +
+      'every renderer counter, so their gap is what this rig cannot tell apart —\n' +
+      'and the worst within-arm spread is the honest bound, since the twins can\n' +
+      'agree by luck. Any line inside them has not been measured.\n\n' +
+      'The `geometry` line moves triangles 128-fold with the draw count pinned at\n' +
+      'exactly 334; the `materials` line moves 20 materials to 1 with the draw\n' +
+      'count pinned too. #56 changed draws, triangles and materials in one step\n' +
+      'and read the sum as the first of the three.',
   );
 }
 

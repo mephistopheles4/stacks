@@ -26,7 +26,7 @@ import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 import { curvedSpinePlane, curvedSpineShell, RISE, spineNormalMap } from './spine-curve.ts';
 import {
   bindingOf,
-  CAP,
+  type CapShape,
   HARDBACK,
   headCapGeometry,
   hingeNormalMap,
@@ -89,6 +89,14 @@ const TONE_MAPPINGS: Record<ToneMappingName, THREE.ToneMapping> = {
 interface PlacedBook {
   readonly group: THREE.Group;
   readonly frontZ: number;
+  /**
+   * PROTOTYPE (#66) — half the book's height, so the *head* can be aimed at.
+   *
+   * Taken from the entry rather than from a bounding box on purpose: a box would
+   * include the head cap, so the camera would sit somewhere slightly different
+   * for every arm and the diff would be measuring the framing.
+   */
+  readonly halfHeight: number;
 }
 
 /**
@@ -219,7 +227,7 @@ export interface ShelfHandle {
    * the camera allows" to be repeatable across candidates, and driving
    * `OrbitControls` through synthetic wheel events is not.
    */
-  protoOrbit(index: number, distance: number, elevation: number): void;
+  protoOrbit(index: number, distance: number, elevation: number, lift?: number): void;
 }
 
 export interface MountOptions {
@@ -679,12 +687,17 @@ export function mountShelf(
       };
     },
 
-    protoOrbit(index: number, distance: number, elevation: number): void {
+    protoOrbit(index: number, distance: number, elevation: number, lift = 0): void {
       const book = placed[index];
+      // PROTOTYPE (#66). `lift` runs 0 at the spine's centre to 1 at its head.
+      // #56's shots framed the centre and cropped upward for the head; at the
+      // closest orbit that crop stops containing the head at all, and a diff of
+      // it silently measures the spine instead. Aiming is the fix — a crop can
+      // only find what the camera pointed at.
       const point =
         book === undefined
           ? new THREE.Vector3(0, unitHeight * 0.48, 0)
-          : book.group.localToWorld(new THREE.Vector3(0, 0, book.frontZ));
+          : book.group.localToWorld(new THREE.Vector3(0, lift * book.halfHeight, book.frontZ));
       controls.target.copy(point);
       camera.position.set(
         point.x,
@@ -739,7 +752,12 @@ export function mountShelf(
             // traverse got it wrong once before.
             if (!textures.owns(material.map)) material.map?.dispose();
           }
-          material.dispose();
+          // PROTOTYPE (#66). The shared covering outlives a mount for the same
+          // reason `isShared` exists a few lines up: freeing it here would leave
+          // a second shelf drawing caps with a disposed material.
+          if (![...coverings.values()].includes(material as THREE.MeshStandardMaterial)) {
+            material.dispose();
+          }
         }
       });
 
@@ -946,7 +964,7 @@ function buildBooks(
       book.position.set(placement.position.x, placement.position.y, placement.position.z);
 
       scene.add(book);
-      placed.push({ group: book, frontZ: placement.frontZ });
+      placed.push({ group: book, frontZ: placement.frontZ, halfHeight: entry.height / 2 });
       // Every part of a book answers for the whole book, so a click on the
       // pages or a board opens the same card as a click on the spine.
       for (const part of book.children) lookup.set(part, entry.book);
@@ -1093,12 +1111,44 @@ let spineNormals: THREE.CanvasTexture | undefined;
  * whole shelf pays for one cap geometry and two normal maps — one per binding —
  * however many books stand on it.
  */
-let headCap: THREE.BufferGeometry | undefined;
+const headCaps = new Map<string, THREE.BufferGeometry>();
 const hingeNormals = new Map<string, THREE.CanvasTexture | undefined>();
 
-function sharedHeadCap(): THREE.BufferGeometry {
-  headCap ??= headCapGeometry();
-  return headCap;
+/**
+ * PROTOTYPE (#66). Keyed by the shape, because the harness renders several
+ * tessellations in one run — but still **one geometry per shape for the whole
+ * shelf**, which is #56's claim and the thing this ticket must not accidentally
+ * break while measuring it. A shipped cap has exactly one key.
+ */
+function sharedHeadCap(shape: CapShape): THREE.BufferGeometry {
+  const key = `${String(shape.segments)}x${String(shape.steps)}@${String(shape.roll)}`;
+  const existing = headCaps.get(key);
+  if (existing !== undefined) return existing;
+  const built = headCapGeometry(shape);
+  headCaps.set(key, built);
+  return built;
+}
+
+/**
+ * PROTOTYPE (#66). One covering material for every capped book — the perf arm
+ * behind `capShareMaterial`, and deliberately the wrong picture: the colour is
+ * the same on all 20 caps instead of each book's own.
+ *
+ * Not disposed with a mount, like the other shared things above it.
+ */
+const coverings = new Map<string, THREE.MeshStandardMaterial>();
+
+function sharedCovering(binding: 'hardback' | 'paperback'): THREE.MeshStandardMaterial {
+  const existing = coverings.get(binding);
+  if (existing !== undefined) return existing;
+  const normals = sharedHingeNormals(binding);
+  const built = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(0x8a6f52),
+    roughness: 0.62,
+    ...(normals === undefined ? {} : { normalMap: normals }),
+  });
+  coverings.set(binding, built);
+  return built;
 }
 
 function sharedHingeNormals(binding: 'hardback' | 'paperback'): THREE.CanvasTexture | undefined {
@@ -1130,7 +1180,7 @@ function isShared(geometry: THREE.BufferGeometry): boolean {
     geometry === UNIT_PLANE ||
     geometry === curvedPlane ||
     geometry === curvedShell ||
-    geometry === headCap
+    [...headCaps.values()].includes(geometry)
   );
 }
 
@@ -1198,6 +1248,13 @@ function buildBook(
   const soft = settings.materials.softHinge;
   const binding = bindingOf(hashUnit(`${entry.book.id}:binding`));
   const capped = settings.materials.headCap && binding === 'hardback';
+  // PROTOTYPE (#66). #56's `CAP`, `SEGMENTS` and `CAP_STEPS` as one value, so
+  // the harness can move the tessellation without moving anything else.
+  const capShape: CapShape = {
+    segments: settings.materials.capSegments,
+    steps: settings.materials.capSteps,
+    roll: settings.materials.capRoll,
+  };
 
   const spine = new THREE.MeshStandardMaterial({
     color: spineTexture === undefined ? new THREE.Color(entry.colour) : new THREE.Color(0xffffff),
@@ -1288,7 +1345,7 @@ function buildBook(
   // PROTOTYPE (#56). How much height the head cap takes off the covering below
   // it — proportional to thickness, never to height, which is the whole reason
   // one shared cap is the right shape on every book.
-  const cap = capped ? CAP * thickness : 0;
+  const cap = capped ? capShape.roll * thickness : 0;
 
   // The spine covering, closing the gap between the boards at the bound edge.
   if (mode === 'geometry') {
@@ -1345,14 +1402,16 @@ function buildBook(
   // turns, and reusing the board colour would put a step at the very edge this
   // is here to soften.
   if (capped) {
-    const covering = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(entry.colour),
-      roughness: 0.62,
-      ...(sharedHingeNormals(binding) === undefined
-        ? {}
-        : { normalMap: sharedHingeNormals(binding) }),
-    });
-    const head = new THREE.Mesh(sharedHeadCap(), covering);
+    const covering = settings.materials.capShareMaterial
+      ? sharedCovering(binding)
+      : new THREE.MeshStandardMaterial({
+          color: new THREE.Color(entry.colour),
+          roughness: 0.62,
+          ...(sharedHingeNormals(binding) === undefined
+            ? {}
+            : { normalMap: sharedHingeNormals(binding) }),
+        });
+    const head = new THREE.Mesh(sharedHeadCap(capShape), covering);
     head.castShadow = false;
     head.receiveShadow = true;
     head.scale.setScalar(thickness);
