@@ -1055,6 +1055,17 @@ const UNIT_PLANE = new THREE.PlaneGeometry(1, 1);
 const BOARD = 0.011;
 const SQUARE = 0.013;
 
+/**
+ * A paperback's cover, in the same units — one sheet of card at about 0.3mm,
+ * against the hardback's 2.6mm board.
+ *
+ * It is not zero. A paperback still has a cover with a visible edge where it
+ * meets the page block, and collapsing it to nothing makes the book one solid
+ * slab of paper with a printed face. Thin enough to read as card, thick enough
+ * to still be there.
+ */
+const PAPER_COVER = 0.0013;
+
 /** How far the printed faces float above the boards they are printed on. */
 const SKIN = 0.0012;
 
@@ -1130,8 +1141,16 @@ function buildBook(
   // dimension it eats so that a small enough book still has paper in it: `depth`
   // is the measured cover aspect on a face-out book, which is vault data, and a
   // page block scaled negative turns inside out rather than failing.
-  const board = Math.min(BOARD, thickness * 0.3);
-  const square = Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
+  //
+  // Binding chooses between the two cases, and it chooses *both* numbers at
+  // once. A paperback is not a hardback with the overhang taken off: the square
+  // going without the board leaves a case still 2.6mm thick that has mysteriously
+  // lost its rim, which reads as a modelling error rather than a second format.
+  // The cover of a paperback is glued flush to the block, so there is no square
+  // at all, and the card it is cut from is a fifth the thickness of a board.
+  const paperback = entry.binding === 'paperback';
+  const board = Math.min(paperback ? PAPER_COVER : BOARD, thickness * 0.3);
+  const square = paperback ? 0 : Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
 
   /**
    * Parts receive shadow but do not cast it — the page block below casts for the

@@ -21,11 +21,23 @@ import { shelfCost } from './placement.ts';
  * actually reach for.
  */
 
+/**
+ * How a book is bound, which is the one thing about its shape no provider knows.
+ *
+ * Two values and not three. The tell that separates bindings at shelf distance
+ * is the binder's *square* — whether the cover stands proud of the pages — and
+ * that is a yes or a no. Trade against mass-market is a difference of *size*,
+ * and size already varies per book through `heightFor`'s hash, so a third value
+ * would be one more thing to choose between for variance the shelf already has.
+ */
+export type Binding = 'hardback' | 'paperback';
+
 export interface ShelfBook {
   readonly book: LibraryBook;
   /** Spine thickness in world units, from page count. */
   readonly thickness: number;
   readonly height: number;
+  readonly binding: Binding;
   readonly colour: string;
   /** Face-out books show their cover instead of their spine. */
   readonly faceOut: boolean;
@@ -60,6 +72,18 @@ const THINNEST = 0.055;
 const THICKEST = 0.16;
 const PAGES_AT_THINNEST = 120;
 const PAGES_AT_THICKEST = 800;
+
+/**
+ * How much of the shelf is bound in paper.
+ *
+ * Taste, not fact — the one number here the screenshot settles rather than the
+ * argument. Leaned toward paperback because this is a library of modern
+ * technical and business non-fiction, where paperback dominates, and because the
+ * shelf it replaces was 100% hardback. In the built version this is the single
+ * binding value the debug panel dials (`books.paperbackRatio`, `needsRebuild`);
+ * the rest are measurements of real bookbinding and stay constants.
+ */
+const PAPERBACK_RATIO = 0.6;
 
 /** A shelf of identical-height books looks printed, not lived in. */
 const MIN_HEIGHT = 0.78;
@@ -155,11 +179,12 @@ export function yearOf(book: LibraryBook): string {
 
 function toShelfBook(book: LibraryBook): ShelfBook {
   const thickness = thicknessFor(book.pages);
+  const binding = bindingFor(book.id);
   // `face_out` in the note wins in both directions when it is set; otherwise a
   // book in progress stands cover-forward on its own, the way one you are
   // mid-way through ends up propped on the shelf rather than filed away.
   const faceOut = book.faceOut ?? book.status === 'reading';
-  const height = heightFor(book.id);
+  const height = heightFor(book.id, binding);
 
   // The cover's own proportions, not one shape imposed on every book. Audiobook
   // art is square and print covers are about 0.65; forcing both onto the same
@@ -170,6 +195,7 @@ function toShelfBook(book: LibraryBook): ShelfBook {
     book,
     thickness,
     height,
+    binding,
     colour: book.spineColor ?? fallbackColour(book.id),
     faceOut,
     coverWidth,
@@ -183,9 +209,40 @@ function thicknessFor(pages: number | undefined): number {
   return THINNEST + clamp(t, 0, 1) * (THICKEST - THINNEST);
 }
 
-/** Stable per book, so a rebuild doesn't reshuffle the shelf's silhouette. */
-function heightFor(id: string): number {
-  return MIN_HEIGHT + hashUnit(id) * (MAX_HEIGHT - MIN_HEIGHT);
+/**
+ * Which binding a book gets when nothing has said.
+ *
+ * **Absent routes to the hash, never to a value**, and that is the whole safety
+ * property. A default binding would mean one missing key flattens the shelf into
+ * a single format — the failure `private:` and `cover_source` are both shaped to
+ * avoid. There is no default to fall into here: unknown is not an error state
+ * the shelf renders around, it is the normal state of every book nobody has
+ * annotated, which on day one is all of them.
+ *
+ * Salted rather than bare `id`, so binding and height are independent draws off
+ * the same book. Sharing one would tie every paperback to the same end of the
+ * height range and undo the point of biasing it.
+ */
+function bindingFor(id: string): Binding {
+  return hashUnit(`${id}-binding`) < PAPERBACK_RATIO ? 'paperback' : 'hardback';
+}
+
+/**
+ * Stable per book, so a rebuild doesn't reshuffle the shelf's silhouette.
+ *
+ * Binding *biases* the band rather than replacing it: paperbacks draw from the
+ * lower part of the range and hardbacks the upper, and the two bands overlap so
+ * the result reads as a tendency rather than two discrete clusters of height.
+ *
+ * Both bands stay inside `MIN_HEIGHT`..`MAX_HEIGHT`. That is not tidiness —
+ * `MAX_HEIGHT` is exported because it bounds the worst swing a lean can produce,
+ * which is what `SHELF.endReserve` has to cover (G25). Widening the range here
+ * would make the packer's reserve wrong and walk books out through the case.
+ */
+function heightFor(id: string, binding: Binding): number {
+  const [low, high] = binding === 'paperback' ? [0, 0.6] : [0.4, 1];
+  const within = low + hashUnit(id) * (high - low);
+  return MIN_HEIGHT + within * (MAX_HEIGHT - MIN_HEIGHT);
 }
 
 function fallbackColour(id: string): string {
