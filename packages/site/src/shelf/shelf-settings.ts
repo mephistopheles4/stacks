@@ -175,16 +175,22 @@ export interface MaterialSettings {
   /** PROTOTYPE (#55) — which candidate draws the curve. Not part of the proposal. */
   readonly spineCurveMode: SpineCurveMode;
   /**
-   * PROTOTYPE (#56) — the softened hinge and the head cap, together.
-   *
-   * One knob rather than two because they are one decision: the hinge is a
-   * *profile* in the normal map #55 already ships, and the cap is that profile
-   * rolled over the head. Splitting them would let a shelf run a creased joint
-   * under a square-cut head, which is not a book anyone has held.
-   *
-   * Supersedes `spineCurve` while it is on — a profile carries the rise.
+   * PROTOTYPE (#56) — the softened hinge: a profile in #55's normal map that
+   * finishes its turn at the joint. Supersedes `spineCurve` while it is on,
+   * because a profile carries the rise.
    */
-  readonly softCorners: boolean;
+  readonly softHinge: boolean;
+  /**
+   * PROTOTYPE (#56) — the covering rolled over the head, on hardbacks only.
+   *
+   * **Separate from `softHinge` for one reason: so a screenshot can price it.**
+   * They were one knob, and a frame with both on differs from the baseline in
+   * the shading of all 49 books *and* the silhouette of 20 — which makes it
+   * impossible to see what the +20 draw calls actually bought. A knob that
+   * cannot be isolated cannot be judged, which is the same complaint ADR-0032
+   * makes about a control that cannot be trusted.
+   */
+  readonly headCap: boolean;
 }
 
 /** PROTOTYPE (#55). `off` is today's shelf; the other two are the candidates. */
@@ -298,7 +304,8 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     coverMetalness: 0,
     spineCurve: 0.125,
     spineCurveMode: 'off',
-    softCorners: false,
+    softHinge: false,
+    headCap: false,
   },
 };
 

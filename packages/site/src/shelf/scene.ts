@@ -1195,9 +1195,9 @@ function buildBook(
   // PROTOTYPE (#56). Binding is #57's decision and nothing implements it, so the
   // hash stands in — see `bindingOf`. It picks the spine profile and whether
   // there is a cap at all, which is the same trait twice and deliberately so.
-  const soft = settings.materials.softCorners;
+  const soft = settings.materials.softHinge;
   const binding = bindingOf(hashUnit(`${entry.book.id}:binding`));
-  const capped = soft && binding === 'hardback';
+  const capped = settings.materials.headCap && binding === 'hardback';
 
   const spine = new THREE.MeshStandardMaterial({
     color: spineTexture === undefined ? new THREE.Color(entry.colour) : new THREE.Color(0xffffff),

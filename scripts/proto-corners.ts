@@ -37,11 +37,24 @@ const VIEWPORT = { width: 1440, height: 900 };
 const MODES = [
   {
     label: 'today — #55 as decided',
-    tune: { materials: { spineCurveMode: 'normal', spineCurve: 0.125, softCorners: false } },
+    tune: {
+      materials: { spineCurveMode: 'normal', spineCurve: 0.125, softHinge: false, headCap: false },
+    },
   },
   {
-    label: 'softened hinge + head cap',
-    tune: { materials: { spineCurveMode: 'normal', spineCurve: 0.125, softCorners: true } },
+    label: 'softened hinge only (free)',
+    tune: {
+      materials: { spineCurveMode: 'normal', spineCurve: 0.125, softHinge: true, headCap: false },
+    },
+  },
+  {
+    // The middle column exists so this one can be priced. Against the baseline
+    // alone, a frame with both on differs in the shading of all 49 books and
+    // the silhouette of 20, and the +20 draw calls cannot be seen at all.
+    label: 'hinge + head cap (+20 draws)',
+    tune: {
+      materials: { spineCurveMode: 'normal', spineCurve: 0.125, softHinge: true, headCap: true },
+    },
   },
 ] as const;
 
@@ -101,8 +114,14 @@ const SHOTS: readonly Shot[] = [
   {
     // Not a candidate shot. The cap's cost halves if there is no tail cap, and
     // that claim is only worth making if the tail is genuinely never on screen.
+    //
+    // This asks for 31.5° below the horizontal and will NOT get it:
+    // `OrbitControls.update()` re-derives the spherical angle from wherever the
+    // camera was put and clamps it (`OrbitControls.js:744`), so `maxPolarAngle`
+    // of `PI * 0.52` caps it at 3.6°. That makes this the lowest angle the
+    // shelf permits at all, rather than one sample of many.
     name: 'tail-check',
-    caption: `looking UP from below the row — is a book's tail ever visible?`,
+    caption: `the lowest angle the shelf permits — is a book's tail ever visible?`,
     distance: 2.4,
     elevation: -0.55,
     crop: { w: 460, h: 560, scale: 2 },
