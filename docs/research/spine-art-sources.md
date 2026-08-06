@@ -39,7 +39,7 @@ a single term of use is read.
 | carry a `979-8` ISBN | 5 | the KDP/Amazon-assigned block; thin or absent in Bowker- and Nielsen-derived records |
 | covers that came from **Apple Books** | 25 | the provider whose terms do not enumerate book covers at all is carrying three quarters of this shelf |
 | covers that came from **Open Library** | 8 | |
-| square (1.000) audiobook covers | 6 | no physical object exists to photograph, ever |
+| square (1.000) audiobook covers | 6 | an audiobook has no spine; whether the owner *also* holds it in print is their question, not this file's |
 
 The six with no ISBN are *From Zero to Profit with AI*, *The Subtle Art of Not
 Giving a F\*ck*, *The New Emotional Intelligence*, *Beyond Vibe Coding*, *The
@@ -160,6 +160,7 @@ publisher's own endpoint serves **450 px tall** — smaller than `MAX_COVER_EDGE
 | Bookshop.org | no developer API found | — | — | affiliate materials may not be edited or altered | no |
 | ISBNdb | **No.** "Cover image" is one field | paid, front only | ISBN | $14.99–$299.99/month | pays money for the same front cover |
 | Edelweiss (trade) | **No.** ingest spec is 2:3 front | trade account required | ISBN | B2B, not a public source | no |
+| Publisher press kits / cover flats | the flat is a **physical** sales piece; digital assets are front-only | ~1–3 of 33, across 8+ imprints | none — a page, not an endpoint | grant is press use, not re-hosting | no |
 | Internet Archive scans | front and back *leaves*; **no spine file** | 1 of 33 titles has a scan | ISBN | in-copyright, lending-only | no |
 | Second-hand marketplace listings | sometimes, as seller photographs | thin for 2024–2026 titles | — | seller-owned images, no licence to you | no |
 | **Owner photographs** | **Yes — it is the only yes** | N print copies on hand, ≤27 | none | **owner's own bytes; no re-hosting question exists** | §4 |
@@ -351,6 +352,39 @@ archives, OCR derivatives, PDF/EPUB and metadata; **no file in it matches
 `cover`, `spine`, `edge` or `jacket`.** IA's scanning captures leaves — front
 board, pages, back board — flat on a platen. A spine is never a leaf.
 
+### Publisher press kits, and the cover flat
+
+The one place in everything retrieved here that points toward a possible yes,
+and it has to be ruled out explicitly rather than skipped, because anyone
+repeating this search will find it. Trade publicity practice does produce a
+**cover flat** — the print book's wrap cover, front, spine and back together,
+with selling points printed on the reverse. That is precisely the asset.
+
+It is not reachable, for three separate reasons and any one is enough.
+
+- **It is a physical sales piece.** A flat is printed and handed to booksellers
+  and reps. Where a publisher publishes digital press assets at all, what they
+  publish is the front cover at high resolution — the guidance authors and
+  publicists actually give is "jacket art at high resolution (3000px on the long
+  edge)" plus a square thumbnail, which is a front cover twice.
+- **There is no key.** A press page is a page, not an endpoint. Nothing here
+  resolves by ISBN, nothing is stable, and every publisher's is shaped
+  differently — which matters because this shelf is *fragmented across imprints*:
+  O'Reilly ×2, Princeton University Press, Wiley, Kogan Page, Portfolio, Viking,
+  Simon & Schuster, and roughly eight self-published titles with no publicity
+  department at all. Even a perfect result at every trade publisher's press page
+  would reach a low single-digit number of the thirty-three.
+- **The grant is press use.** A press kit exists so a reviewer may illustrate a
+  review. That is not a licence to re-host the asset as texture on a public
+  static site, and no publisher's press page examined in this research grants
+  one.
+
+**And the aggregators inherit this by construction.** Nielsen BookData, Ingram
+and Syndetics resell what publishers deposit through exactly the ingest spec in
+§2 — one 2:3 image per ISBN. A reseller cannot serve an asset its suppliers were
+never asked to upload, so there is no point walking down that list; it is the
+same front cover with a subscription in front of it.
+
 ### Second-hand marketplace listings
 
 The honest near-miss. Sellers on AbeBooks and similar photograph the actual copy
@@ -422,8 +456,12 @@ has none, so **whether a given title is a hardback on a shelf, a Kindle file or
 an Audible download is not derivable from anything committed here.** Only the
 owner can answer it. What is derivable is the bound:
 
-- **6 are audiobooks** (aspect exactly 1.000). No physical object exists. These
-  are excluded permanently, not pending.
+- **6 are audiobooks** (aspect exactly 1.000). The *edition on the shelf* has no
+  spine, so they are excluded by default. Not by construction, though: *The
+  Business of Expertise* is one of the six and carries ISBN 9781605440606 and
+  `pages: 233`, and Open Library returns `physical_format: hardcover` for it. A
+  print object exists in the world. Whether the owner also holds it is the same
+  question as every other row here.
 - **27 remain**, of which **N are print copies on hand** — the owner's number.
 - Coverage is therefore **N / 33**, upper bound 82%, and realistically lower:
   several of these are O'Reilly and Kindle-first titles that a reader of recent
@@ -463,8 +501,8 @@ alternative to them.
 ## 6. Recommendation
 
 **Close the "find real spine art" question. It has an answer and the answer is
-no.** Not for one book of the thirty-three, from any of the thirteen sources
-above. Nothing here is a matter of rate limits or an API key or a better search:
+no.** Not for one book of the thirty-three, from any of the fourteen provider
+sources above. Nothing here is a matter of rate limits or an API key or a better search:
 the trade does not ship the asset, its ingest specs do not ask for it, and the
 three providers already in use serve one front cover per title, which is the
 bytes this project already has.
@@ -478,11 +516,13 @@ Two follow-ons, in this order, and neither is "keep looking":
    and one screenshot settles that, before any bulk work. If it reads well, the
    deliverable is a `spine:` counterpart to `cover:` in the frontmatter contract
    and a staging path beside `cacheCover`; coverage is whatever N turns out to
-   be, and the generated spine remains the fallback for the rest forever,
-   because six audiobooks can never have one.
+   be, and the generated spine remains the fallback for every book the owner
+   does not hold in print — which includes six audiobook editions that have no
+   spine at all.
 2. **Treat the generated spine as the primary deliverable, not the fallback.**
-   Even at the optimistic bound, more than a sixth of this shelf can never carry
-   a real spine, and realistically it will be closer to half. #50's open question
+   Even at the optimistic bound a sixth of this shelf is audiobook editions with
+   no spine to photograph, and realistically the shortfall will be closer to
+   half. #50's open question
    about lifting the cover's own type and palette onto the spine is therefore
    not a consolation branch — it is the branch that determines what most of this
    shelf looks like, and §5 says it also determines whether the photographs are
