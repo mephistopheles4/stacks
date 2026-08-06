@@ -61,6 +61,27 @@ export function bookLimit(params: URLSearchParams): number | undefined {
 }
 
 /**
+ * `?solo=N` — one book, alone, with no case and an unclamped orbit.
+ *
+ * A flat spelling, joining the ten historic probes rather than riding in
+ * `?tune=`, for their reason: it is typed by hand while you are looking at
+ * something, and it is a *mode* rather than a setting. `?solo` on its own is the
+ * first book. See `book-inspector.ts`.
+ *
+ * Refused unless it parses to a whole index, so a typo shows the shelf rather
+ * than an empty canvas that looks like a different bug — `bookLimit`'s rule.
+ */
+export function soloBook(params: URLSearchParams): number | undefined {
+  const raw = params.get('solo');
+  if (raw === null) return undefined;
+  if (raw === '') return 0;
+
+  const requested = Number(raw);
+  if (!Number.isInteger(requested) || requested < 0) return undefined;
+  return requested;
+}
+
+/**
  * Everything the URL asks for, as a partial.
  *
  * Partial, not total: absent means "no opinion", which is not the same as "asked

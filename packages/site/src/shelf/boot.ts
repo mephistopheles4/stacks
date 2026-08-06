@@ -2,7 +2,7 @@ import type { Library, LibraryBook } from '@stacks/core';
 import { mountDiagnostics } from './diagnostics.ts';
 import { mountShelf, type ShelfHandle, type ShelfStats } from './scene.ts';
 import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
-import { bookLimit, readSettings } from './shelf-url.ts';
+import { bookLimit, readSettings, soloBook } from './shelf-url.ts';
 
 /**
  * Wires the page up: load the library, mount the shelf, show a card on click.
@@ -55,6 +55,21 @@ export async function boot(
   const all = await loadLibrary();
   const books = limit === undefined ? all : all.slice(0, limit);
   const debug = params.has('debug');
+
+  /**
+   * `?solo=N` — one book on a turntable instead of the shelf.
+   *
+   * Returns before anything else is built: there is no card to open, no panel to
+   * dial and no `window.__shelf` to publish, because this is an inspection mode
+   * and not a shelf. Everything the shelf would have done is skipped rather than
+   * suppressed, which is why it cannot half-apply.
+   */
+  const solo = soloBook(params);
+  if (solo !== undefined) {
+    const { mountBookInspector } = await import('./book-inspector.ts');
+    mountBookInspector(canvas, all, solo, resolveSettings(readSettings(params)));
+    return undefined;
+  }
 
   let handle: ShelfHandle | undefined;
   let shaderFailed = false;

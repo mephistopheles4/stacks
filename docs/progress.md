@@ -1252,6 +1252,38 @@ Two smaller things the review found, both real:
   few. A leak on a debug surface built to diagnose leaks is the one failure this
   project has already measured itself avoiding.
 
+### The head of a hardback was wrong twice, and `?solo` is what found it
+
+Reported from a screenshot, after the reviews above and with the whole suite
+green. **Both faults moved not one renderer counter** — same draws, same
+triangles, same textures, same geometries — and neither is visible on a shelf,
+where the neighbours hide the head.
+
+- **Boards at full depth and full height** put their front-top corners `cap`
+  proud of the surface rolling over them: two small square towers at the head of
+  every hardback, `board` wide and `cap` deep, one either side of the spine.
+- **Pulling the boards back without widening the piece in front of them** traded
+  that for a worse one: a void at the board's own x, and a diagonal view looked
+  straight through the hair between the printed spine and the cover into the page
+  block's side — a cream seam the full height of the joint. Rendered both ways to
+  be sure it was the trim that opened it.
+
+The case is two pieces now. The front `cap` of it is full width and `cap`
+shorter; the boards, the page block and the printed cover all stop where the roll
+begins. A paperback rolls nothing, so every number is what it was.
+
+**Rounding the boards' own corners is the tempting fix and #56 already struck
+it**: a radius on a box scaled `(board, height, depth)` smears, those axes
+differing by two orders of magnitude, and doing it honestly costs a geometry per
+book.
+
+**The instrument is `?solo=N`** — one book, no case, no neighbours, no polar
+clamp — built through the shelf's own `toRows` / `placeShelf` / `buildBook` /
+`addLighting`, so what it shows is what ships. See `CLAUDE.md`. It is the third
+instrument this project has built rather than guessed with, after the black box
+and the panel, and it was earned the same way: something was wrong, everything
+said it was fine.
+
 ### The bloom question is answered, and the page block does not cross
 
 #54 left this open — *"a brighter or striated page block may cross the bloom

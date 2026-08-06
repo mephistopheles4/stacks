@@ -1095,7 +1095,7 @@ const SKIN = 0.0012;
  * Local axes match the old box: spine at +Z (facing the room when shelved),
  * cover at +X (what you see once a book is turned face-out).
  */
-function buildBook(
+export function buildBook(
   entry: ShelfBook,
   depth: number,
   textures: TextureCache,
@@ -1239,13 +1239,6 @@ function buildBook(
     return mesh;
   };
 
-  // Front and back boards, running the full height and depth of the book.
-  for (const side of [1, -1]) {
-    const face = solid(boards);
-    face.scale.set(board, height, depth);
-    face.position.set((side * (thickness - board)) / 2, 0, 0);
-  }
-
   /**
    * How much height the head cap takes off the covering below it.
    *
@@ -1256,17 +1249,63 @@ function buildBook(
    */
   const cap = entry.binding === 'hardback' ? settings.books.headCap * thickness : 0;
 
-  // The spine covering, closing the gap between the boards at the bound edge —
-  // and stopping short of the head, where the cap continues it round.
+  /**
+   * The case, in two pieces, and the split is **where the covering starts to
+   * roll**.
+   *
+   * A hardback's head is one continuous turn of cloth across the whole thickness
+   * — boards included — so the cap spans the full thickness and everything under
+   * it has to stop `cap` short of the top. Boxes cannot taper, so the front `cap`
+   * of the case is its own piece, full width and `cap` shorter than the rest:
+   *
+   * ```
+   *        ╭───  cap, rolling                     head
+   *   ┌────┴──┐  front piece  (thickness × height-cap × cap)
+   *   │       │
+   *   │ board │  boards       (board × height × depth-cap), and the page block
+   * ```
+   *
+   * **Two earlier shapes were wrong and each was wrong invisibly.** Boards at
+   * full depth and full height put their front-top corners `cap` proud of the
+   * surface rolling over them — two small square towers at the head of every
+   * hardback. Pulling the boards back without widening the piece in front of them
+   * left a void at the board's own x, and a diagonal view looked straight through
+   * the hair between the printed spine and the cover into the page block's side:
+   * a cream seam the full height of the joint. Neither moved a single counter —
+   * same draws, same triangles, same textures — and neither is visible on a
+   * shelf, where the neighbours hide the head. `?solo` is what found them both.
+   *
+   * ⚠️ **Rounding the boards' own corners instead is the tempting fix and is the
+   * one #56 struck**: a corner radius on a box scaled `(board, height, depth)`
+   * smears, those axes differing by two orders of magnitude, and doing it
+   * honestly means a geometry per book — against the +0 per book every ticket on
+   * this map costed itself against.
+   *
+   * A paperback rolls nothing, so `cap` is 0, the front piece is the spine strip
+   * it has always been, and every number below is what it was.
+   */
+  const frontDepth = cap > 0 ? cap : board;
+  const frontWidth = cap > 0 ? thickness : thickness - board * 2;
+  const caseDepth = depth - cap;
+
+  // Front and back boards, running the full height and stopping at the roll.
+  for (const side of [1, -1]) {
+    const face = solid(boards);
+    face.scale.set(board, height, caseDepth);
+    face.position.set((side * (thickness - board)) / 2, 0, -cap / 2);
+  }
+
+  // The covering at the bound edge, closing the case and stopping short of the
+  // head, where the cap continues it round.
   const spineStrip = solid(boards);
-  spineStrip.scale.set(thickness - board * 2, height - cap, board);
-  spineStrip.position.set(0, -cap / 2, (depth - board) / 2);
+  spineStrip.scale.set(frontWidth, height - cap, frontDepth);
+  spineStrip.position.set(0, -cap / 2, (depth - frontDepth) / 2);
 
   // The page block, recessed inside the case at head, tail and fore-edge — and
   // the one part of a book that casts, standing in for all of it.
   const block = solid(pages);
-  block.scale.set(thickness - board * 2, height - square * 2, depth - board - square);
-  block.position.set(0, 0, (square - board) / 2);
+  block.scale.set(thickness - board * 2, height - square * 2, depth - frontDepth - square);
+  block.position.set(0, 0, (square - frontDepth) / 2);
   block.castShadow = castShadows;
 
   const printed = (material: THREE.Material): THREE.Mesh => {
@@ -1276,10 +1315,12 @@ function buildBook(
     return mesh;
   };
 
+  // The printed cover stops where its board does, so no sliver of artwork stands
+  // above the covering that has rolled away in front of it.
   const coverFace = printed(cover);
-  coverFace.scale.set(depth, height, 1);
+  coverFace.scale.set(caseDepth, height, 1);
   coverFace.rotation.y = Math.PI / 2;
-  coverFace.position.set(thickness / 2 + SKIN, 0, 0);
+  coverFace.position.set(thickness / 2 + SKIN, 0, -cap / 2);
 
   const spineFace = printed(spine);
   spineFace.scale.set(thickness, height - cap, 1);
@@ -1493,7 +1534,7 @@ interface Lights {
   readonly keyTarget: THREE.Object3D;
 }
 
-function addLighting(
+export function addLighting(
   scene: THREE.Scene,
   unitHeight: number,
   settings: ShelfSettings,
@@ -2017,7 +2058,7 @@ class TextureCache {
  * bound `gates/cover-budget.test.ts` already enforces, and the alternative is a
  * cache that empties itself exactly when it would start being useful.
  */
-const COVERS = new TextureCache();
+export const COVERS = new TextureCache();
 
 /**
  * Click-to-inspect.

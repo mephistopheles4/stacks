@@ -261,6 +261,26 @@ order     show the shelf order, or renumber it with gaps   (--renumber)
 import    import a library export into the vault   (audible)
 ```
 
+## One book, alone — `?solo`
+
+`?solo=N` mounts a single book on a turntable: no case, no neighbours, and an
+orbit with **no polar clamp**, so you can go over the head and under the tail.
+`?solo` on its own is the first book. It builds through `toRows`, `placeShelf`,
+`buildBook` and `addLighting` — the shelf's own functions — because an inspector
+with its own copy of the geometry would agree with the shelf right up until the
+moment it mattered.
+
+**It exists because the shelf is the worst place to look at a book.** Books
+occlude each other, the case occludes the row, and the camera cannot get above or
+below. Two defects at the head of every hardback survived two code reviews, a
+479-test suite and a gate that reports every renderer counter — because they
+moved none of them. `?solo` found both in one screenshot.
+
+⚠️ **What you can see from below here, nobody can see at all.** The shipped
+`maxPolarAngle` is `PI * 0.52`, so a visitor never gets more than 3.6° under the
+horizon — which is why [#56](https://github.com/mephistopheles4/stacks/issues/56)
+decided there is no tail cap and never will be. Look, but do not fix it.
+
 ## The debug panel — `?debug`
 
 Loads a **black box** and a **tuning panel** onto the ordinary page. Neither
