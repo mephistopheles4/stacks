@@ -1,0 +1,111 @@
+
+--- building a 50-book vault ---
+$ tsx scripts/make-50-book-fixture.ts
+50 books written to C:\Users\mephi\WebstormProjects\stacks\.claude\worktrees\mattpocock-skills-wayfinder-a033fb\fixtures\vault-50
+6 covers copied
+$ tsx packages/cli/src/index.ts "build" "--public" "--vault" "fixtures/vault-50" "--assets" "packages/site/public"
+wrote C:\Users\mephi\WebstormProjects\stacks\.claude\worktrees\mattpocock-skills-wayfinder-a033fb\packages\site\public\library.json — 49 book(s), public build
+  covers    6 copied into C:\Users\mephi\WebstormProjects\stacks\.claude\worktrees\mattpocock-skills-wayfinder-a033fb\packages\site\public
+$ astro build
+15:23:58 [types] Generated 59ms
+15:23:58 [build] output: "static"
+15:23:58 [build] mode: "static"
+15:23:58 [build] directory: C:\Users\mephi\WebstormProjects\stacks\.claude\worktrees\mattpocock-skills-wayfinder-a033fb\packages\site\dist\
+15:23:58 [build] Collecting build info...
+15:23:58 [build] ✓ Completed in 82ms.
+15:23:58 [build] Building static entrypoints...
+15:23:58 [vite] ✓ built in 137ms
+15:23:58 [WARN] [vite] [plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+15:23:58 [vite] ✓ built in 200ms
+15:23:58 [build] Rearranging server assets...
+
+ generating static routes 
+15:23:58   ├─ /index.html (+9ms) 
+15:23:58 ✓ Completed in 20ms.
+
+15:23:58 [build] ✓ Completed in 399ms.
+15:23:58 [build] 1 page(s) built in 487ms
+15:23:58 [build] Complete!
+pass 1   49 books  6x cpu  no cap                 314 draws    2668 tri  70.6 fps
+pass 1   49 books  6x cpu  cap 1x2 (4 tri)        334 draws    2748 tri  57.9 fps
+pass 1   49 books  6x cpu  cap 1x10 (20 tri)      334 draws    3068 tri  62.7 fps
+pass 1   49 books  6x cpu  cap 1x10 again         334 draws    3068 tri  65.5 fps
+pass 1   49 books  6x cpu  cap 32x10 (640 tri)    334 draws   15468 tri  65.8 fps
+pass 1   49 books  6x cpu  cap 64x20 (2560 tri)   334 draws   53868 tri  46.6 fps
+pass 1   49 books  6x cpu  cap 1x10, 1 material   334 draws    3068 tri  62.6 fps
+pass 2   49 books  6x cpu  cap 1x10, 1 material   334 draws    3068 tri  60.5 fps
+pass 2   49 books  6x cpu  cap 64x20 (2560 tri)   334 draws   53868 tri  65.9 fps
+pass 2   49 books  6x cpu  cap 32x10 (640 tri)    334 draws   15468 tri  65.5 fps
+pass 2   49 books  6x cpu  cap 1x10 again         334 draws    3068 tri  65.4 fps
+pass 2   49 books  6x cpu  cap 1x10 (20 tri)      334 draws    3068 tri  63.0 fps
+pass 2   49 books  6x cpu  cap 1x2 (4 tri)        334 draws    2748 tri  54.3 fps
+pass 2   49 books  6x cpu  no cap                 314 draws    2668 tri  64.4 fps
+pass 3   49 books  6x cpu  no cap                 314 draws    2668 tri  72.6 fps
+pass 3   49 books  6x cpu  cap 1x2 (4 tri)        334 draws    2748 tri  64.0 fps
+pass 3   49 books  6x cpu  cap 1x10 (20 tri)      334 draws    3068 tri  61.4 fps
+pass 3   49 books  6x cpu  cap 1x10 again         334 draws    3068 tri  66.8 fps
+pass 3   49 books  6x cpu  cap 32x10 (640 tri)    334 draws   15468 tri  60.5 fps
+pass 3   49 books  6x cpu  cap 64x20 (2560 tri)   334 draws   53868 tri  70.4 fps
+pass 3   49 books  6x cpu  cap 1x10, 1 material   334 draws    3068 tri  92.6 fps
+pass 4   49 books  6x cpu  cap 1x10, 1 material   334 draws    3068 tri  99.0 fps
+pass 4   49 books  6x cpu  cap 64x20 (2560 tri)   334 draws   53868 tri  77.1 fps
+pass 4   49 books  6x cpu  cap 32x10 (640 tri)    334 draws   15468 tri  72.2 fps
+pass 4   49 books  6x cpu  cap 1x10 again         334 draws    3068 tri  74.5 fps
+pass 4   49 books  6x cpu  cap 1x10 (20 tri)      334 draws    3068 tri  74.6 fps
+pass 4   49 books  6x cpu  cap 1x2 (4 tri)        334 draws    2748 tri  75.5 fps
+pass 4   49 books  6x cpu  no cap                 314 draws    2668 tri  86.1 fps
+pass 5   49 books  6x cpu  no cap                 314 draws    2668 tri  84.9 fps
+pass 5   49 books  6x cpu  cap 1x2 (4 tri)        334 draws    2748 tri  77.3 fps
+pass 5   49 books  6x cpu  cap 1x10 (20 tri)      334 draws    3068 tri  77.6 fps
+pass 5   49 books  6x cpu  cap 1x10 again         334 draws    3068 tri  74.4 fps
+pass 5   49 books  6x cpu  cap 32x10 (640 tri)    334 draws   15468 tri  75.2 fps
+pass 5   49 books  6x cpu  cap 64x20 (2560 tri)   334 draws   53868 tri  77.2 fps
+pass 5   49 books  6x cpu  cap 1x10, 1 material   334 draws    3068 tri  87.1 fps
+pass 6   49 books  6x cpu  cap 1x10, 1 material   334 draws    3068 tri  80.6 fps
+pass 6   49 books  6x cpu  cap 64x20 (2560 tri)   334 draws   53868 tri  60.7 fps
+pass 6   49 books  6x cpu  cap 32x10 (640 tri)    334 draws   15468 tri  72.3 fps
+pass 6   49 books  6x cpu  cap 1x10 again         334 draws    3068 tri  52.9 fps
+pass 6   49 books  6x cpu  cap 1x10 (20 tri)      334 draws    3068 tri  47.0 fps
+pass 6   49 books  6x cpu  cap 1x2 (4 tri)        334 draws    2748 tri  53.3 fps
+pass 6   49 books  6x cpu  no cap                 314 draws    2668 tri  57.3 fps
+pass 7   49 books  6x cpu  no cap                 314 draws    2668 tri  54.9 fps
+pass 7   49 books  6x cpu  cap 1x2 (4 tri)        334 draws    2748 tri  53.0 fps
+pass 7   49 books  6x cpu  cap 1x10 (20 tri)      334 draws    3068 tri  52.7 fps
+pass 7   49 books  6x cpu  cap 1x10 again         334 draws    3068 tri  48.4 fps
+pass 7   49 books  6x cpu  cap 32x10 (640 tri)    334 draws   15468 tri  54.9 fps
+pass 7   49 books  6x cpu  cap 64x20 (2560 tri)   334 draws   53868 tri  49.2 fps
+pass 7   49 books  6x cpu  cap 1x10, 1 material   334 draws    3068 tri  53.4 fps
+
+== every arm at 6x cpu, across 7 passes ==
+
+arm                     draws  triangles     worst    median      best   spread   best vs no cap
+no cap                   314       2668      54.9      70.6      86.1   +56.8%            +0.0%
+cap 1x2 (4 tri)          334       2748      53.0      57.9      77.3   +45.8%           -10.2%
+cap 1x10 (20 tri)        334       3068      47.0      62.7      77.6   +65.3%            -9.8%
+cap 1x10 again           334       3068      48.4      65.5      74.5   +54.0%           -13.4%
+cap 32x10 (640 tri)      334      15468      54.9      65.8      75.2   +37.1%           -12.6%
+cap 64x20 (2560 tri)     334      53868      46.6      65.9      77.2   +65.7%           -10.3%
+cap 1x10, 1 material     334       3068      53.4      80.6      99.0   +85.2%           +15.0%
+
+-- 49 books, 6x cpu --
+
+floor, twin arms 1x10 v 1x10 again ....... -4.0%
+worst spread within one arm ............. +85.2%
+geometry, 1x10 -> 64x20 (128x triangles)  -0.5%
+materials, 20 of them -> 1 .............. +27.5%
+the cap's presence, no cap -> 1x10 ...... -9.8%
+#56 as built, no cap -> 32x10 ........... -12.6%
+
+Read the two floor lines before any other. The twin arms are identical in
+every renderer counter, so their gap is what this rig cannot tell apart —
+and the worst within-arm spread is the honest bound, since the twins can
+agree by luck. Any line inside them has not been measured.
+
+The `geometry` line moves triangles 128-fold with the draw count pinned at
+exactly 334; the `materials` line moves 20 materials to 1 with the draw
+count pinned too. #56 changed draws, triangles and materials in one step
+and read the sum as the first of the three.
