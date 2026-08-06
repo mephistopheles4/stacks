@@ -23,6 +23,7 @@ import {
   type ToneMappingName,
 } from './shelf-settings.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
+import { curvedSpinePlane, curvedSpineShell, RISE, spineNormalMap } from './spine-curve.ts';
 
 /**
  * The shelf.
@@ -202,6 +203,14 @@ export interface ShelfHandle {
    * the layout changes.
    */
   projectBook(index: number): { x: number; y: number } | undefined;
+  /**
+   * PROTOTYPE (#55): frame one book head-on, at a chosen distance and elevation.
+   *
+   * The screenshot script needs "normal shelf distance" and "the closest orbit
+   * the camera allows" to be repeatable across candidates, and driving
+   * `OrbitControls` through synthetic wheel events is not.
+   */
+  protoOrbit(index: number, distance: number, elevation: number): void;
 }
 
 export interface MountOptions {
@@ -661,6 +670,21 @@ export function mountShelf(
       };
     },
 
+    protoOrbit(index: number, distance: number, elevation: number): void {
+      const book = placed[index];
+      const point =
+        book === undefined
+          ? new THREE.Vector3(0, unitHeight * 0.48, 0)
+          : book.group.localToWorld(new THREE.Vector3(0, 0, book.frontZ));
+      controls.target.copy(point);
+      camera.position.set(
+        point.x,
+        point.y + distance * Math.sin(elevation),
+        point.z + distance * Math.cos(elevation),
+      );
+      controls.update();
+    },
+
     dispose(): void {
       disposed = true;
       post?.dispose();
@@ -691,7 +715,7 @@ export function mountShelf(
         // any one mount. Every book is a scaled `UNIT_BOX` or `UNIT_PLANE`, so a
         // blanket dispose here would free them for the whole module and leave a
         // second shelf drawing nothing at all.
-        if (object.geometry !== UNIT_BOX && object.geometry !== UNIT_PLANE) {
+        if (!isShared(object.geometry)) {
           object.geometry.dispose();
         }
 
@@ -1044,6 +1068,38 @@ const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 const UNIT_PLANE = new THREE.PlaneGeometry(1, 1);
 
 /**
+ * PROTOTYPE (#55). Shared exactly like the two unit shapes above, and for the
+ * same reason: the curve is expressed in *width units*, so one arc scaled by
+ * `(thickness, height, thickness)` is the right shape for every book.
+ *
+ * Built on first use rather than at module scope — the normal map needs a
+ * `<canvas>`, and this module is imported by tests that have no DOM.
+ */
+let curvedPlane: THREE.PlaneGeometry | undefined;
+let curvedShell: THREE.ExtrudeGeometry | undefined;
+let spineNormals: THREE.CanvasTexture | undefined;
+
+function sharedCurvedPlane(): THREE.PlaneGeometry {
+  curvedPlane ??= curvedSpinePlane();
+  return curvedPlane;
+}
+
+function sharedCurvedShell(): THREE.ExtrudeGeometry {
+  curvedShell ??= curvedSpineShell();
+  return curvedShell;
+}
+
+function sharedSpineNormals(): THREE.CanvasTexture | undefined {
+  spineNormals ??= spineNormalMap();
+  return spineNormals;
+}
+
+/** Every geometry and texture that outlives a mount, so `dispose()` skips them. */
+function isShared(geometry: THREE.BufferGeometry): boolean {
+  return geometry === UNIT_BOX || geometry === UNIT_PLANE || geometry === curvedPlane || geometry === curvedShell;
+}
+
+/**
  * A hardback case, in the same world units as the shelf (1 unit ≈ 24cm).
  *
  * `BOARD` is the thickness of a cover board — about 2.5mm on a real book — and
@@ -1094,11 +1150,27 @@ function buildBook(
         })
       : undefined;
 
+  // PROTOTYPE (#55). `curve` is a rise as a fraction of the spine's width, so a
+  // zero is flat and needs no candidate at all — which also avoids the geometry
+  // candidate's one sharp edge, a zero z-scale and a normal matrix that cannot
+  // be inverted.
+  const curve = settings.materials.spineCurve;
+  const mode = curve > 0 ? settings.materials.spineCurveMode : 'off';
+
   const spine = new THREE.MeshStandardMaterial({
     color: spineTexture === undefined ? new THREE.Color(entry.colour) : new THREE.Color(0xffffff),
     roughness: 0.62,
     ...(spineTexture === undefined ? {} : { map: spineTexture }),
   });
+  if (mode === 'normal') {
+    const normals = sharedSpineNormals();
+    if (normals !== undefined) {
+      spine.normalMap = normals;
+      // One shared profile, per-book strength. The materials are already per
+      // book, so varying the round costs nothing beyond this vector.
+      spine.normalScale = new THREE.Vector2(curve / RISE, curve / RISE);
+    }
+  }
   // Pages: slightly lighter than the boards, never pure white.
   const pages = new THREE.MeshStandardMaterial({ color: 0xd9cdb8, roughness: 0.95 });
   const boards = new THREE.MeshStandardMaterial({
@@ -1159,10 +1231,27 @@ function buildBook(
     face.position.set((side * (thickness - board)) / 2, 0, 0);
   }
 
+  // How far the arc stands proud of the chord, in world units. Proportional to
+  // thickness, which is what lets one shared arc serve a thin book and a fat one.
+  const arcScale = (curve / RISE) * thickness;
+
   // The spine covering, closing the gap between the boards at the bound edge.
-  const spineStrip = solid(boards);
-  spineStrip.scale.set(thickness - board * 2, height, board);
-  spineStrip.position.set(0, 0, (depth - board) / 2);
+  if (mode === 'geometry') {
+    // Bowed with the printed face above it. A flat strip under a bowed plane
+    // opens a crescent gap at head and tail, which is why this candidate is two
+    // shapes rather than one. Nudged a half-`SKIN` forward so its ends are not
+    // coplanar with the boards' front faces.
+    const shell = new THREE.Mesh(sharedCurvedShell(), boards);
+    shell.castShadow = false;
+    shell.receiveShadow = true;
+    shell.scale.set(thickness, height, arcScale);
+    shell.position.set(0, 0, depth / 2 + SKIN * 0.5);
+    group.add(shell);
+  } else {
+    const spineStrip = solid(boards);
+    spineStrip.scale.set(thickness - board * 2, height, board);
+    spineStrip.position.set(0, 0, (depth - board) / 2);
+  }
 
   // The page block, recessed inside the case at head, tail and fore-edge — and
   // the one part of a book that casts, standing in for all of it.
@@ -1183,8 +1272,13 @@ function buildBook(
   coverFace.rotation.y = Math.PI / 2;
   coverFace.position.set(thickness / 2 + SKIN, 0, 0);
 
-  const spineFace = printed(spine);
-  spineFace.scale.set(thickness, height, 1);
+  const spineFace =
+    mode === 'geometry' ? new THREE.Mesh(sharedCurvedPlane(), spine) : printed(spine);
+  if (mode === 'geometry') {
+    spineFace.receiveShadow = true;
+    group.add(spineFace);
+  }
+  spineFace.scale.set(thickness, height, mode === 'geometry' ? arcScale : 1);
   spineFace.position.set(0, 0, depth / 2 + SKIN);
 
   // A face-out book sits well back, so the shelved book on its right stands
@@ -1636,6 +1730,11 @@ function applyLive(
   // handle to reach them through. Honest rather than silent.
   standing(needsRebuild, 'cover roughness', mountedWith.materials.coverRoughness, next.materials.coverRoughness);
   standing(needsRebuild, 'cover metalness', mountedWith.materials.coverMetalness, next.materials.coverMetalness);
+  // PROTOTYPE (#55). Same bucket and the same reason: the spine's material and
+  // its geometry are both chosen inside `buildBook`, where nothing holds a
+  // handle to them. Reported rather than silently ignored.
+  standing(needsRebuild, 'spine curve', mountedWith.materials.spineCurve, next.materials.spineCurve);
+  standing(needsRebuild, 'spine curve mode', mountedWith.materials.spineCurveMode, next.materials.spineCurveMode);
 
   /* --- lighting ----------------------------------------------------------- */
 

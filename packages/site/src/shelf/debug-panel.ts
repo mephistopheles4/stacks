@@ -382,6 +382,11 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   slider('cover metal', 'rebuild', 0, 1, 0.01, (s) => s.materials.coverMetalness, (s, v) =>
     resolveSettings({ materials: { coverMetalness: v } }, s),
   );
+  // PROTOTYPE (#55). A rise as a fraction of the spine's width — 0.125 is a
+  // hardback's round, 0 is flat.
+  slider('spine curve', 'rebuild', 0, 0.25, 0.005, (s) => s.materials.spineCurve, (s, v) =>
+    resolveSettings({ materials: { spineCurve: v } }, s),
+  );
 
   group('bloom');
   toggleRow('enabled', 'rebuild', (s) => s.effects.bloom.enabled, (s, v) =>

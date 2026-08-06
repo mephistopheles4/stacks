@@ -164,7 +164,22 @@ export interface MaterialSettings {
    */
   readonly coverRoughness: number;
   readonly coverMetalness: number;
+  /**
+   * PROTOTYPE (#55) — the round of a hardback spine, as a fraction of its width.
+   *
+   * Physical rather than a bare strength, so `0` means "flat" and the key can
+   * carry a paperback later without a second vocabulary. Which books get `0` is
+   * #57's question, not this one's.
+   */
+  readonly spineCurve: number;
+  /** PROTOTYPE (#55) — which candidate draws the curve. Not part of the proposal. */
+  readonly spineCurveMode: SpineCurveMode;
 }
+
+/** PROTOTYPE (#55). `off` is today's shelf; the other two are the candidates. */
+export type SpineCurveMode = 'off' | 'normal' | 'geometry';
+
+export const SPINE_CURVE_MODES: readonly SpineCurveMode[] = ['off', 'normal', 'geometry'];
 
 /**
  * Bloom — the one effect that needs a postprocessing chain.
@@ -270,6 +285,8 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     backingRoughness: 0.95,
     coverRoughness: 0.55,
     coverMetalness: 0,
+    spineCurve: 0.125,
+    spineCurveMode: 'off',
   },
 };
 

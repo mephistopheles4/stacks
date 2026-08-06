@@ -33,6 +33,10 @@ declare global {
       caseOverflow: number;
       shaderErrors: readonly string[];
       projectBook(index: number): { x: number; y: number } | undefined;
+      /** PROTOTYPE (#55) — read by `scripts/proto-spine-curve.ts`. */
+      protoOrbit(index: number, distance: number, elevation: number): void;
+      /** PROTOTYPE (#55) — what each candidate actually costs the renderer. */
+      protoStats(): { textures: number; geometries: number; calls: number; triangles: number };
     };
   }
 }
@@ -168,6 +172,16 @@ function publish(handle: ShelfHandle): void {
     caseOverflow: handle.caseOverflow,
     shaderErrors: handle.shaderErrors,
     projectBook: (index) => handle.projectBook(index),
+    protoOrbit: (index, distance, elevation) => { handle.protoOrbit(index, distance, elevation); },
+    protoStats: () => {
+      const stats = handle.stats();
+      return {
+        textures: stats.textures,
+        geometries: stats.geometries,
+        calls: stats.calls,
+        triangles: stats.triangles,
+      };
+    },
   };
 }
 
