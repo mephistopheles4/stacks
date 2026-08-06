@@ -21,8 +21,8 @@ phone was rendering when it died — are measurements and stay exactly as they a
 | | |
 | --- | --- |
 | **Last green gate** | G27 — a command's report accounts for every book it counted |
-| **Now working on** | books that read as books — map [#50](https://github.com/mephistopheles4/stacks/issues/50), eleven of fourteen tickets closed |
-| **Queued** | [#65](https://github.com/mephistopheles4/stacks/issues/65) and [#66](https://github.com/mephistopheles4/stacks/issues/66) are the frontier; [#58](https://github.com/mephistopheles4/stacks/issues/58) is claimed. [#62](https://github.com/mephistopheles4/stacks/issues/62) left the owner three `stacks enrich` commands to run against the real vault |
+| **Now working on** | books that read as books — map [#50](https://github.com/mephistopheles4/stacks/issues/50). **Ask the map how far along it is**; a fraction written here is stale by the next session, and one written on 2026-08-06 was wrong before the commit landed |
+| **Queued** | the map's open sub-issues, which is the only current answer. [#65](https://github.com/mephistopheles4/stacks/issues/65), [#66](https://github.com/mephistopheles4/stacks/issues/66) and [#68](https://github.com/mephistopheles4/stacks/issues/68) as this was written. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run against the real vault |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates`, no bypass |
 | **Blocked on** | nothing |
