@@ -467,6 +467,17 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
       (s, v) => resolveSettings({ materials: { spineProfile: { [binding]: { roll: v } } } }, s),
       lit,
     );
+    // Cloth against card, as one number each — and the thing #68 measured as
+    // carrying everything a grain map in this slot was doing.
+    slider(
+      `${binding} cloth`,
+      'rebuild',
+      0,
+      1,
+      0.01,
+      (s) => s.materials.spineRoughness[binding],
+      (s, v) => resolveSettings({ materials: { spineRoughness: { [binding]: v } } }, s),
+    );
   }
 
   group('bloom');

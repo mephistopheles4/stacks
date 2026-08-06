@@ -26,7 +26,7 @@ import { hashUnit } from './hash.ts';
 import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
 import { pageStriationMap } from './page-edges.ts';
 import { spineNormalMap } from './spine-profile.ts';
-import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
+import { makeSpineTexture } from './spine-texture.ts';
 
 /**
  * The shelf.
@@ -1102,16 +1102,24 @@ function buildBook(
   settings: ShelfSettings,
 ): THREE.Group {
   const castShadows = settings.shadows.casters;
-  // A spine wide enough to read gets its title printed on it; a very thin one
-  // stays a plain board, because type squeezed onto it would just be noise.
-  const spineTexture =
-    entry.thickness >= MIN_LEGIBLE_THICKNESS
-      ? makeSpineTexture({
-          title: entry.book.title,
-          colour: entry.colour,
-          ...(entry.book.author === undefined ? {} : { author: entry.book.author }),
-        })
-      : undefined;
+
+  /**
+   * Every spine gets its title, and the canvas is cut to the book's own shape.
+   *
+   * There used to be a `MIN_LEGIBLE_THICKNESS` cutoff here, dropping type on the
+   * thinnest six. It has retired, because it was never about size: the canvas was
+   * 128x1024 for every book whatever its thickness and was stretched onto a plane
+   * scaled `(thickness, height)`, so letterforms were distorted 0.87x-1.97x
+   * across the shelf. A distortion rule wearing a legibility rule's words. See
+   * `spineCanvasWidth`.
+   */
+  const spineTexture = makeSpineTexture({
+    title: entry.book.title,
+    colour: entry.colour,
+    thickness: entry.thickness,
+    height: entry.height,
+    ...(entry.book.author === undefined ? {} : { author: entry.book.author }),
+  });
 
   /**
    * The cross-section, shaded onto the flat plane that was already there.
@@ -1122,9 +1130,24 @@ function buildBook(
    */
   const profile = spineNormalMap(settings.materials.spineProfile, entry.binding);
 
+  /**
+   * Binding's third effect, and the cheapest thing on this whole map.
+   *
+   * #58 designed a shared binding-keyed *grain* in `roughnessMap` here; #68
+   * rendered it and measured **0 pixels above JND** at `minDistance` against the
+   * same bindings' roughness as a plain number. The spine sets no `metalness`, so
+   * it is a dielectric at ~4% specular reflectance under soft light, and
+   * roughness modulates a lobe that is barely there — a pattern in it cannot
+   * read, while its *average* plainly does. Two constants move 17.8% of frame
+   * over JND where #58's full design moved 13.2%, for +0 textures and +0 bytes
+   * against its +2 shared and +0.667 MiB.
+   *
+   * So this is more visible than the layer it replaces, not a compromise version
+   * of it. What was a flat `0.62` on every spine is now cloth against card.
+   */
   const spine = new THREE.MeshStandardMaterial({
     color: spineTexture === undefined ? new THREE.Color(entry.colour) : new THREE.Color(0xffffff),
-    roughness: 0.62,
+    roughness: settings.materials.spineRoughness[entry.binding],
     ...(spineTexture === undefined ? {} : { map: spineTexture }),
     ...(profile === undefined ? {} : { normalMap: profile }),
   });
@@ -1287,8 +1310,9 @@ function buildBook(
    */
   if (cap > 0) {
     const covering = new THREE.MeshStandardMaterial({
+      // The same cloth as the spine below it, which is the point of a cap.
       color: new THREE.Color(entry.colour),
-      roughness: 0.62,
+      roughness: settings.materials.spineRoughness[entry.binding],
       ...(profile === undefined ? {} : { normalMap: profile }),
     });
 
@@ -1754,6 +1778,14 @@ function applyLive(
   // inside `buildBook`, so there is no handle to reach them through. The map
   // itself is re-baked on the rebuild, which is where the profile's shape is read.
   standing(needsRebuild, 'page edges', mountedWith.materials.pageStriation, next.materials.pageStriation);
+  for (const binding of ['hardback', 'paperback'] as const) {
+    standing(
+      needsRebuild,
+      `${binding} spine roughness`,
+      mountedWith.materials.spineRoughness[binding],
+      next.materials.spineRoughness[binding],
+    );
+  }
   standing(
     needsRebuild,
     'spine profile',

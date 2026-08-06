@@ -226,6 +226,27 @@ export interface MaterialSettings {
    * says would be the panel lying quietly.
    */
   readonly pageStriation: number;
+
+  /**
+   * How rough each binding's covering is — cloth against card, as one number
+   * each.
+   *
+   * This replaced a flat `0.62` on every spine, and it replaced something else
+   * too: #58 designed a shared binding-keyed *grain* in `roughnessMap` for this
+   * job, and #68 rendered it and measured **0 pixels above JND** at
+   * `minDistance` against exactly these constants. The spine sets no
+   * `metalness`, so it is a dielectric at ~4% specular reflectance under soft
+   * light, and roughness modulates a lobe that is barely there — a *pattern* in
+   * it cannot read, while its *average* plainly does.
+   *
+   * ⚠️ **The lesson is not "reach for relief instead."** #68 never rendered
+   * relief on a spine, and swapping one unmeasured recommendation for another is
+   * how the advice it corrected went wrong the first time. What is measured is a
+   * band: driven across roughness's whole 0..1 range the same weave moves 16.9%
+   * of frame, so the channel reaches the shader and it is the *plausible* band
+   * that is too narrow to survive.
+   */
+  readonly spineRoughness: Record<Binding, number>;
 }
 
 /**
@@ -397,6 +418,8 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
       paperback: { rise: 0.03, roll: 0.22 },
     },
     pageStriation: 1.4,
+    // The midpoints of the bands #58's two grain maps would have covered.
+    spineRoughness: { hardback: 0.67, paperback: 0.43 },
   },
   books: {
     paperbackRatio: 0.6,
@@ -454,8 +477,10 @@ export interface SettingsPatch {
    * roll would mean restating both profiles, and getting one wrong silently
    * reshapes half the shelf. This is `PositionPatch`'s defect, in a second place.
    */
-  readonly materials?: Partial<Omit<MaterialSettings, 'spineProfile'>> & {
+  readonly materials?: Partial<Omit<MaterialSettings, 'spineProfile' | 'spineRoughness'>> & {
     readonly spineProfile?: Partial<Record<Binding, Partial<SpineProfile>>>;
+    // Scalars, so `Partial<Record<…>>` reaches all the way down on its own.
+    readonly spineRoughness?: Partial<Record<Binding, number>>;
   };
   readonly books?: Partial<BooksSettings>;
   readonly lighting?: {
@@ -491,6 +516,7 @@ export function resolveSettings(patch: SettingsPatch = {}, base: ShelfSettings =
       ...base.materials,
       ...patch.materials,
       spineProfile: mergeProfiles(base.materials.spineProfile, patch.materials?.spineProfile),
+      spineRoughness: { ...base.materials.spineRoughness, ...patch.materials?.spineRoughness },
     },
     books: { ...base.books, ...patch.books },
     lighting: {

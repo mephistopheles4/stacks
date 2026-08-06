@@ -11,12 +11,59 @@ import * as THREE from 'three';
  * convention and reads correctly when the book is on a shelf.
  */
 
-/** Texture pixels across the spine's width. */
-const TEXTURE_WIDTH = 128;
+/** Texture pixels along the spine's length. The width is the book's own. */
 const TEXTURE_HEIGHT = 1024;
 
-/** Below this thickness a spine is too narrow for type to be legible. */
-export const MIN_LEGIBLE_THICKNESS = 0.075;
+/**
+ * Canvas pixels across the spine, from the book's own proportions.
+ *
+ * **This is what retires `MIN_LEGIBLE_THICKNESS`, and the cutoff was never about
+ * size.** The canvas was 128×1024 for *every* book whatever its thickness, and it
+ * is stretched onto a plane scaled `(thickness, height)` — so letterforms were
+ * distorted **0.87×–1.97×** across the shelf. Nothing about that canvas knew the
+ * book. A rule reading "below 0.075 a spine is too narrow for type to be legible"
+ * was really a distortion rule wearing a legibility rule's words: at
+ * `minDistance` even the thinnest spine is 45 px wide (~16 px cap height), and at
+ * the full-shelf framing *no* spine's type is readable, thin or thick (#58,
+ * confirmed on a render in #68).
+ *
+ * So the six thinnest books get type, 41 typed books become 49, and no letterform
+ * is stretched.
+ *
+ * ## ⚠️ The clamp is #58's, and the ceiling does not reach the outcome it was
+ * sold on
+ *
+ * 32 keeps a floor of pixels to set type in — below it there is not enough canvas
+ * to put a letterform on. That end is sound.
+ *
+ * `SPINE_CANVAS_MAX` is #58's *"128 is today's width and nothing needs more"*,
+ * which is a claim about how many pixels type needs and not about aspect — and
+ * aspect is what this function is for. A book wants `1024 × thickness / height`
+ * texels, and on the owner's library that is **111 to 252**: every book past 128
+ * saturates and keeps exactly the distortion it had.
+ *
+ * Measured both ways, and the honest summary is that this fixes the squeeze and
+ * not the stretch:
+ *
+ * | | fixed 128 | clamped 32..128 |
+ * | --- | --- | --- |
+ * | the owner's 27 typed books | 0.87×–1.97× | **1.00×–1.97×** |
+ * | the 50-book fixture | 0.46×–1.64× | **1.00×–1.64×** |
+ *
+ * Every book that was squeezed is now exact, and the worst-stretched book is
+ * untouched. Raising the ceiling to 256 would cover the real library's 0.246 top
+ * aspect and make the whole range exact, at up to double the canvas on the
+ * thickest books — which are also the ones with the most spine on screen. That is
+ * an owner's call about bytes against letterforms, so it is one named constant
+ * and this note, rather than a number changed on the way past.
+ */
+const SPINE_CANVAS_MIN = 32;
+const SPINE_CANVAS_MAX = 128;
+
+export function spineCanvasWidth(thickness: number, height: number): number {
+  const wanted = Math.round((TEXTURE_HEIGHT * thickness) / height);
+  return Math.min(SPINE_CANVAS_MAX, Math.max(SPINE_CANVAS_MIN, wanted));
+}
 
 const FONT = '"Georgia", "Times New Roman", serif';
 
@@ -24,9 +71,13 @@ export interface SpineTextOptions {
   readonly title: string;
   readonly author?: string;
   readonly colour: string;
+  /** The book's own, so the canvas can carry its aspect. World units, both. */
+  readonly thickness: number;
+  readonly height: number;
 }
 
 export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture | undefined {
+  const TEXTURE_WIDTH = spineCanvasWidth(options.thickness, options.height);
   const canvas = document.createElement('canvas');
   canvas.width = TEXTURE_WIDTH;
   canvas.height = TEXTURE_HEIGHT;
@@ -37,7 +88,7 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
   ctx.fillStyle = options.colour;
   ctx.fillRect(0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT);
 
-  addCloth(ctx, options.colour);
+  addCloth(ctx, options.colour, TEXTURE_WIDTH);
 
   const ink = contrastingInk(options.colour);
 
@@ -82,7 +133,7 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
  * Cheap, and it stops a spine reading as a flat rectangle of colour when the
  * title is short.
  */
-function addCloth(ctx: CanvasRenderingContext2D, colour: string): void {
+function addCloth(ctx: CanvasRenderingContext2D, colour: string, TEXTURE_WIDTH: number): void {
   const ink = contrastingInk(colour);
   ctx.strokeStyle = fade(ink, 0.28);
   ctx.lineWidth = Math.max(1, TEXTURE_WIDTH * 0.018);
