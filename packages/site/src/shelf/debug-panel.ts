@@ -383,6 +383,25 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     resolveSettings({ materials: { coverMetalness: v } }, s),
   );
 
+  /* --- the books ---------------------------------------------------------- */
+
+  /**
+   * The first group here about a book rather than about the room.
+   *
+   * Rebuild-class and it cannot be anything else: the mixture decides board,
+   * square and height band, which are geometry, and height decides a face-out
+   * book's footprint — so honouring a move means packing the rows again. A live
+   * slider over an unmoved shelf is the exact thing this panel exists to refuse.
+   *
+   * Books whose note declares a `binding:` do not move with it, in either
+   * direction. That is not a lie the lamp has to report: the control is doing
+   * what it says, which is dialling the *hash*, and a declaration is not a vote.
+   */
+  group('books');
+  slider('paperback mix', 'rebuild', 0, 1, 0.05, (s) => s.books.paperbackRatio, (s, v) =>
+    resolveSettings({ books: { paperbackRatio: v } }, s),
+  );
+
   group('bloom');
   toggleRow('enabled', 'rebuild', (s) => s.effects.bloom.enabled, (s, v) =>
     resolveSettings({ effects: { bloom: { enabled: v } } }, s),

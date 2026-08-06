@@ -12,6 +12,18 @@ import {
   TOUCHING,
   type Placement,
 } from './placement.ts';
+import { DEFAULT_SETTINGS } from './shelf-settings.ts';
+
+/**
+ * Packed at the shipped binding mixture, which is the shelf a visitor gets.
+ *
+ * The mixture reaches this file rather than only `books.test.ts` because it moves
+ * each book's height band, and a face-out book's footprint is its cover width —
+ * so binding is upstream of every width this file is about.
+ */
+function rowsOf(books: readonly LibraryBook[]): ShelfRow[] {
+  return toRows(books, DEFAULT_SETTINGS.books);
+}
 
 /**
  * G25 — the packer's capacity and the placer's consumption are the same number.
@@ -142,7 +154,7 @@ const CASES = Object.entries(LIBRARIES);
 
 describe('the packer charges what the placer spends', () => {
   it.each(CASES)('never spends more than it charged — %s', (_name, library) => {
-    const rows = toRows(library);
+    const rows = rowsOf(library);
     const placed = placeShelf(rows);
     expect(rows.length).toBeGreaterThan(0);
 
@@ -157,7 +169,7 @@ describe('the packer charges what the placer spends', () => {
     // Without a ceiling the first assertion passes on a packer that charges the
     // whole shelf for every book. The excess has to be *named*, not merely
     // non-negative.
-    const rows = toRows(library);
+    const rows = rowsOf(library);
     const placed = placeShelf(rows);
 
     rows.forEach((row, index) => {
@@ -169,7 +181,7 @@ describe('the packer charges what the placer spends', () => {
   it('is exact on a row that changes angle nowhere', () => {
     // One face-out book alone: it stands square, the case side is vertical, so
     // no angle changes anywhere and the two numbers must agree to the bit.
-    const rows = toRows([book('solo', { faceOut: true })]);
+    const rows = rowsOf([book('solo', { faceOut: true })]);
     const [row] = rows;
     const [placements] = placeShelf(rows);
     if (row === undefined || placements === undefined) throw new Error('no row');
@@ -181,7 +193,7 @@ describe('the packer charges what the placer spends', () => {
 
 describe('the packer honours its own capacity', () => {
   it.each(CASES)('packs no row past USABLE_WIDTH — %s', (_name, library) => {
-    const rows = toRows(library);
+    const rows = rowsOf(library);
 
     for (const row of rows) {
       // One book always fits, however wide: a row is only wrapped when it
@@ -191,7 +203,7 @@ describe('the packer honours its own capacity', () => {
   });
 
   it.each(CASES)('packs every row tight — one more book would not have fitted — %s', (_name, library) => {
-    const rows = toRows(library);
+    const rows = rowsOf(library);
 
     if (rows.length === 1) {
       // Said rather than skipped. A single-row library has no wrap to check, and
@@ -234,7 +246,7 @@ describe('the packer honours its own capacity', () => {
 
 describe('where a row starts and where it stops', () => {
   it.each(CASES)('starts flush against the left upright — %s', (_name, library) => {
-    const placed = placeShelf(toRows(library));
+    const placed = placeShelf(rowsOf(library));
 
     for (const placements of placed) {
       const first = placements[0];
@@ -254,7 +266,7 @@ describe('where a row starts and where it stops', () => {
   });
 
   it.each(CASES)('never reaches past the reserve at the open end — %s', (_name, library) => {
-    const placed = placeShelf(toRows(library));
+    const placed = placeShelf(rowsOf(library));
 
     for (const placements of placed) {
       const last = placements[placements.length - 1];

@@ -1,7 +1,10 @@
 export {
+  BINDINGS,
   BOOK_STATUSES,
   DEFAULT_BOOK_STATUS,
+  isBinding,
   isBookStatus,
+  type Binding,
   type BookInput,
   type BookRecord,
   type BookStatus,

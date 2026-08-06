@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
 import { toRows, type ShelfRow } from './books.ts';
+import { DEFAULT_SETTINGS } from './shelf-settings.ts';
 import { SHELF } from './case.ts';
 import { placeShelf, swayOf, TOUCHING } from './placement.ts';
 
@@ -36,7 +37,7 @@ function book(id: string, over: Partial<LibraryBook> = {}): LibraryBook {
  * case now, for ADR-0029's reason and by ADR-0031.
  */
 function rowsOf(books: readonly LibraryBook[]): ShelfRow[] {
-  return toRows(books);
+  return toRows(books, DEFAULT_SETTINGS.books);
 }
 
 interface Placed {
@@ -206,12 +207,26 @@ describe('placeShelf', () => {
     expect(rows.flat().length).toBe(50);
     expect(rows.length).toBeGreaterThan(1);
 
+    /**
+     * A double's worth of slack, matching `shelf-width.test.ts`.
+     *
+     * The first book of a row is placed at `-width / 2 + swing` and its extent is
+     * that same swing taken off again, so the left edge is a number that has been
+     * through two floating-point operations to land back on an exact bound. It
+     * lands on `-1.7000000000000002` for some heights and on `-1.7` for others,
+     * which is a fact about doubles rather than about the case — 2e-16 of a unit
+     * is 5e-14 mm on a shelf 41cm wide. G16 measures the real containment off the
+     * rendered scene; this asserts the arithmetic, and has to admit that the
+     * arithmetic is inexact.
+     */
+    const EPSILON = 1e-12;
+
     const inner = SHELF.width / 2;
     for (const row of rows) {
       for (const placement of row) {
         const { left, right } = extentOf(placement);
-        expect(left).toBeGreaterThanOrEqual(-inner);
-        expect(right).toBeLessThanOrEqual(inner);
+        expect(left).toBeGreaterThanOrEqual(-inner - EPSILON);
+        expect(right).toBeLessThanOrEqual(inner + EPSILON);
       }
     }
   });

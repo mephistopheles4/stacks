@@ -3,7 +3,9 @@ import { isCoverSource, type CoverSource } from './covers/cover-source.ts';
 import { keyIfPresent } from './key-if-present.ts';
 import {
   DEFAULT_BOOK_STATUS,
+  isBinding,
   isBookStatus,
+  type Binding,
   type BookRecord,
   type BookStatus,
 } from './types.ts';
@@ -56,6 +58,7 @@ export const FRONTMATTER_CONTRACT = {
   cover_source: { field: 'coverSource', required: false, sample: 'open-library' },
   spine_color: { field: 'spineColor', required: false, sample: '"#2f6d7a"' },
   pages: { field: 'pages', required: false, sample: '321' },
+  binding: { field: 'binding', required: false, sample: 'paperback' },
   face_out: { field: 'faceOut', required: false, sample: 'true' },
   tags: { field: 'tags', required: false, sample: '[sample]' },
   shelf_order: { field: 'shelfOrder', required: false, sample: '20' },
@@ -125,6 +128,10 @@ export function parseNote(source: string, sourcePath: string): ParsedNote {
       ...keyIfPresent('coverSource', asCoverSource(fields['cover_source'])),
       ...keyIfPresent('spineColor', asHexColour(fields['spine_color'])),
       ...keyIfPresent('pages', asPositiveInt(fields['pages'])),
+      // Dropped rather than kept when unrecognised, for `cover_source`'s reason.
+      // Absent is not an error state here: it is the normal state of every book
+      // nobody has annotated, and the shelf hashes one rather than defaulting.
+      ...keyIfPresent('binding', asBinding(fields['binding'])),
       ...keyIfPresent('faceOut', asBoolean(fields['face_out'])),
       ...keyIfPresent('shelfOrder', asOrder(fields['shelf_order'])),
       ...keyIfPresent('private', asPrivate(fields['private'])),
@@ -183,6 +190,11 @@ function asPrivate(value: unknown): true | undefined {
 function asCoverSource(value: unknown): CoverSource | undefined {
   const raw = asString(value)?.toLowerCase();
   return isCoverSource(raw) ? raw : undefined;
+}
+
+function asBinding(value: unknown): Binding | undefined {
+  const raw = asString(value)?.toLowerCase();
+  return isBinding(raw) ? raw : undefined;
 }
 
 /** An unrecognised status is not worth discarding a book over — fall back. */

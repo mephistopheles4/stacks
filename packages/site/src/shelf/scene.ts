@@ -312,7 +312,7 @@ export function mountShelf(
   const fog = new THREE.Fog(settings.scene.background, settings.scene.fog.near, settings.scene.fog.far);
   scene.fog = settings.scene.fog.enabled ? fog : null;
 
-  const rows = toRows(books);
+  const rows = toRows(books, settings.books);
   const rowCount = rowsForCase(rows.length);
   const unitHeight = rowCount * SHELF.rowHeight;
 
@@ -1055,6 +1055,17 @@ const UNIT_PLANE = new THREE.PlaneGeometry(1, 1);
 const BOARD = 0.011;
 const SQUARE = 0.013;
 
+/**
+ * A paperback's cover, in the same units — one sheet of card at about 0.3mm,
+ * against the hardback's 2.6mm board.
+ *
+ * It is not zero. A paperback still has a cover with a visible edge where it
+ * meets the page block, and collapsing it to nothing makes the book one solid
+ * slab of paper with a printed face. Thin enough to read as card, thick enough to
+ * still be there.
+ */
+const PAPER_COVER = 0.0013;
+
 /** How far the printed faces float above the boards they are printed on. */
 const SKIN = 0.0012;
 
@@ -1130,8 +1141,16 @@ function buildBook(
   // dimension it eats so that a small enough book still has paper in it: `depth`
   // is the measured cover aspect on a face-out book, which is vault data, and a
   // page block scaled negative turns inside out rather than failing.
-  const board = Math.min(BOARD, thickness * 0.3);
-  const square = Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
+  //
+  // Binding chooses between the two cases, and it chooses *both* numbers at
+  // once. A paperback is not a hardback with the overhang taken off: the square
+  // going without the board leaves a case still 2.6mm thick that has mysteriously
+  // lost its rim, which reads as a modelling error rather than as a second
+  // format. A paperback's cover is glued flush to the block, so there is no
+  // square at all, and the card it is cut from is a fifth of a board.
+  const paperback = entry.binding === 'paperback';
+  const board = Math.min(paperback ? PAPER_COVER : BOARD, thickness * 0.3);
+  const square = paperback ? 0 : Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
 
   /**
    * Parts receive shadow but do not cast it — the page block below casts for the
@@ -1636,6 +1655,14 @@ function applyLive(
   // handle to reach them through. Honest rather than silent.
   standing(needsRebuild, 'cover roughness', mountedWith.materials.coverRoughness, next.materials.coverRoughness);
   standing(needsRebuild, 'cover metalness', mountedWith.materials.coverMetalness, next.materials.coverMetalness);
+
+  /* --- the books ---------------------------------------------------------- */
+
+  // The mixture decides each book's board, square and height *band*, all of which
+  // are geometry built once in `buildBook` — and the height reaches further than
+  // that, since a face-out book's footprint is its cover width, so the row
+  // packing itself would have to run again. Nothing about that is live.
+  standing(needsRebuild, 'paperback mix', mountedWith.books.paperbackRatio, next.books.paperbackRatio);
 
   /* --- lighting ----------------------------------------------------------- */
 

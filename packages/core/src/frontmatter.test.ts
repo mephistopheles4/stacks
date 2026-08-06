@@ -117,6 +117,44 @@ describe('parseNote — hand-edited notes are first-class', () => {
   });
 });
 
+describe('binding, which is declared or it is nothing', () => {
+  const withBinding = (line: string): ReturnType<typeof parseNote> =>
+    parseNote(`---\ntype: book\ntitle: A Book\n${line}\n---\n\nA body.\n`, 'binding.md');
+
+  const bindingOf = (line: string): unknown => {
+    const parsed = withBinding(line);
+    return parsed.kind === 'book' ? parsed.record.binding : 'not a book';
+  };
+
+  it('reads both values, and is not case-sensitive about them', () => {
+    expect(bindingOf('binding: paperback')).toBe('paperback');
+    expect(bindingOf('binding: hardback')).toBe('hardback');
+    expect(bindingOf('binding: Paperback')).toBe('paperback');
+  });
+
+  it('drops an unrecognised value rather than keeping it', () => {
+    // `cover_source`'s rule: a typo must not read as a permission, and here it
+    // must not read as a *declaration* either. Dropping routes the book back to
+    // the shelf's hash, which is the honest answer — nobody has said.
+    expect(bindingOf('binding: hardcover')).toBeUndefined();
+    expect(bindingOf('binding: true')).toBeUndefined();
+    expect(bindingOf('binding: ""')).toBeUndefined();
+  });
+
+  it('leaves the key absent rather than defaulting to a binding', () => {
+    // The fail-closed property, and it is structural: there is no default value
+    // for a missing key to fall into, so no absent key can flatten a shelf into
+    // one format. A `?? 'hardback'` anywhere on this path would turn this green
+    // test red, which is the point of asserting the *absence*.
+    expect(bindingOf('author: Someone')).toBeUndefined();
+  });
+
+  it('does not reject the book over a bad binding', () => {
+    // Invariant 3: one unreadable optional key is not worth losing a book for.
+    expect(withBinding('binding: leatherbound').kind).toBe('book');
+  });
+});
+
 describe('parseNote — note bodies never escape (invariant 2)', () => {
   it('has no field carrying body text, whatever the body contains', () => {
     const source = note('The Tidal Engine.md');

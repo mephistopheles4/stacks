@@ -58,3 +58,4 @@ Two other files hold what these deliberately do not:
 | [0032](./0032-shelf-settings-are-one-object.md) | Everything the shelf looks like is one settings object |
 | [0033](./0033-painters-follow-the-light.md) | The painters follow the light |
 | [0034](./0034-bloom-behind-a-composer.md) | Bloom, behind a composer that costs the multisampling |
+| [0035](./0035-books-is-a-settings-category.md) | `books` is a settings category, and the line is shape against shading |

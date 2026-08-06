@@ -65,7 +65,7 @@ interface VaultAdapter {
 - Do NOT build a second adapter. Do NOT add adapter config plumbing beyond a single constructor arg (vault path). The interface exists so a Logseq/Anytype adapter is possible later, not to be a framework.
 
 ## Frontmatter contract (do not change without updating this file)
-Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `cover_source` (open-library|google-books|apple-books|unknown), `spine_color` (hex), `pages`, `face_out` (bool), `tags`, `shelf_order` (number), `private` (bool).
+Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `cover_source` (open-library|google-books|apple-books|unknown), `spine_color` (hex), `pages`, `binding` (hardback|paperback), `face_out` (bool), `tags`, `shelf_order` (number), `private` (bool).
 
 This list is the contract, and `gates/frontmatter-contract.test.ts` holds it to
 the parser in both directions. The paragraphs below are commentary — adding a
@@ -78,6 +78,19 @@ key there and not here is exactly the drift that gate exists to catch.
 `private: true` keeps a book out of every public build. It still appears in a local build and on your own machine — private means "not published", not "hidden from you". Wishlist books are excluded too, for a different reason: you don't own them.
 
 **It fails closed, unlike every other key.** Anything present that is not clearly a "no" means private, because `private: yes` is a *string* under YAML 1.2 and a strict boolean check would drop it and publish the book. Wrongly private is a missing spine you notice in a second; wrongly public is someone's reading on a URL that may already have been shared or crawled. Only one of those is undoable.
+
+`binding` is the one thing about a book's shape **no provider knows** — the word
+`physical_format` appears zero times across every cached response this project
+holds, and Google and Apple have no field for it at all. So it is declared or it
+is invented, never looked up, and inference from cover aspect or page count is
+struck permanently rather than deferred ([#52](https://github.com/mephistopheles4/stacks/issues/52)).
+
+**Absent does not mean hardback.** It routes to a stable per-book hash, so no
+missing key can flatten the shelf into one format — the fail-closed property met
+by structure rather than by care, since there is no default value to fall into.
+Binding moves the board and the binder's square *together* (a paperback is not a
+hardback with the overhang removed) and biases the height band, which is the tell
+that actually reads at shelf distance. `books.paperbackRatio` dials the mixture.
 
 `cover_source` records which provider a cover's bytes came from, taken from the URL that was actually downloaded. The three providers permit different things, so a public build cannot treat them alike — see `packages/core/src/covers/cover-source.ts`. **Absent and `unknown` are different**: absent means nobody looked (every cover cached before this key existed), `unknown` means somebody looked and did not recognise the host. An unrecognised value is dropped at parse time rather than kept, because a typo must not read as a permission.
 

@@ -190,6 +190,40 @@ export interface EffectSettings {
   readonly bloom: BloomSettings;
 }
 
+/**
+ * The books themselves — their **shape**, as against their surface.
+ *
+ * The first category here about a book rather than about the room, and it exists
+ * because there was nowhere for it to go. Every other dimension of a book is a
+ * module constant outside this object (`BOARD` and `SQUARE` in `scene.ts`, the
+ * height and thickness bounds in `books.ts`), and `materials.coverRoughness`
+ * calls itself "the one material knob that shows on the books rather than on the
+ * furniture" — which is true and is about a *surface*.
+ *
+ * The line is shading against silhouette: anything that only changes how a book
+ * is lit belongs in `materials`, and anything that changes what shape it is
+ * belongs here.
+ *
+ * The constants stay constants deliberately. 2.6mm of board and 3mm of square are
+ * measurements of real bookbinding — facts, not taste. What is here is the
+ * opposite: pure look, unknowable without seeing it, which is what the panel is
+ * for.
+ */
+export interface BooksSettings {
+  /**
+   * How much of the shelf is bound in paper, 0..1.
+   *
+   * Taste, and the one number in this whole area settled by the picture rather
+   * than the argument. Leaned toward paperback because this is a library of
+   * modern technical and business non-fiction, where paperback dominates, and
+   * because the shelf it replaces was 100% hardback.
+   *
+   * It moves the *hash threshold*, so a book whose note declares a `binding:` is
+   * unaffected by it in either direction — the declaration is not a vote.
+   */
+  readonly paperbackRatio: number;
+}
+
 export interface ShelfSettings {
   readonly renderer: RendererSettings;
   readonly effects: EffectSettings;
@@ -197,6 +231,7 @@ export interface ShelfSettings {
   readonly lighting: LightingSettings;
   readonly scene: SceneSettings;
   readonly materials: MaterialSettings;
+  readonly books: BooksSettings;
 }
 
 /**
@@ -271,6 +306,9 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     coverRoughness: 0.55,
     coverMetalness: 0,
   },
+  books: {
+    paperbackRatio: 0.6,
+  },
 };
 
 /**
@@ -316,6 +354,7 @@ export interface SettingsPatch {
     readonly fog?: Partial<SceneSettings['fog']>;
   };
   readonly materials?: Partial<MaterialSettings>;
+  readonly books?: Partial<BooksSettings>;
   readonly lighting?: {
     readonly ambient?: Partial<LightingSettings['ambient']>;
     readonly key?: Partial<Omit<KeyLightSettings, 'position'>> & { readonly position?: PositionPatch };
@@ -346,6 +385,7 @@ export function resolveSettings(patch: SettingsPatch = {}, base: ShelfSettings =
       fog: { ...base.scene.fog, ...patch.scene?.fog },
     },
     materials: { ...base.materials, ...patch.materials },
+    books: { ...base.books, ...patch.books },
     lighting: {
       ambient: { ...base.lighting.ambient, ...patch.lighting?.ambient },
       key: {
