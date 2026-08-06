@@ -379,6 +379,18 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   slider('cover gloss', 'rebuild', 0, 1, 0.01, (s) => s.materials.coverRoughness, (s, v) =>
     resolveSettings({ materials: { coverRoughness: v } }, s),
   );
+  // Red at zero, and truthfully: no map is uploaded and no jitter applied, so the
+  // page block is the flat cream slab it used to be.
+  slider(
+    'page edges',
+    'rebuild',
+    0,
+    3,
+    0.05,
+    (s) => s.materials.pageStriation,
+    (s, v) => resolveSettings({ materials: { pageStriation: v } }, s),
+    (s) => s.materials.pageStriation > 0,
+  );
   slider('cover metal', 'rebuild', 0, 1, 0.01, (s) => s.materials.coverMetalness, (s, v) =>
     resolveSettings({ materials: { coverMetalness: v } }, s),
   );

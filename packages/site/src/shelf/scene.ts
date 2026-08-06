@@ -22,7 +22,9 @@ import {
   type ShelfSettings,
   type ToneMappingName,
 } from './shelf-settings.ts';
+import { hashUnit } from './hash.ts';
 import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
+import { pageStriationMap } from './page-edges.ts';
 import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
@@ -1128,6 +1130,32 @@ function buildBook(
   });
   // Pages: slightly lighter than the boards, never pure white.
   const pages = new THREE.MeshStandardMaterial({ color: 0xd9cdb8, roughness: 0.95 });
+
+  /**
+   * The cut text block, given leaves.
+   *
+   * One shared map for the whole shelf and per-book jitter that is free because
+   * this material is already made per book — so **+0 draw calls and +0 per-book
+   * textures**, on a surface that is 9,678 pixels of flat cream slab at
+   * `minDistance`. See `page-edges.ts`.
+   *
+   * `0` short-circuits to no map at all, the same rule the spine profile follows:
+   * off must cost nothing, not a texture unit and a `#define` per book to say
+   * nothing.
+   */
+  const striation = settings.materials.pageStriation;
+  if (striation > 0) {
+    const map = pageStriationMap();
+    if (map !== undefined) {
+      pages.normalMap = map;
+      pages.normalScale = new THREE.Vector2(striation, striation);
+    }
+    // A shelf of blocks cut from one ream is a printed shelf. Small: this is
+    // paper, and the range between two books' paper is narrow in life too.
+    const drift = hashUnit(`${entry.book.id}-pages`);
+    pages.color.offsetHSL((drift - 0.5) * 0.02, 0, (drift - 0.5) * 0.08);
+    pages.roughness = 0.9 + drift * 0.08;
+  }
   const boards = new THREE.MeshStandardMaterial({
     color: new THREE.Color(entry.colour).multiplyScalar(0.82),
     roughness: 0.7,
@@ -1725,6 +1753,7 @@ function applyLive(
   // Same bucket and the same sentence: the books' own materials are made per book
   // inside `buildBook`, so there is no handle to reach them through. The map
   // itself is re-baked on the rebuild, which is where the profile's shape is read.
+  standing(needsRebuild, 'page edges', mountedWith.materials.pageStriation, next.materials.pageStriation);
   standing(
     needsRebuild,
     'spine profile',

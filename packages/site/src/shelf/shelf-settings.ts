@@ -210,6 +210,22 @@ export interface MaterialSettings {
    * dimensioned geometry and belongs in `books`; see ADR-0035 for the line.
    */
   readonly spineProfile: Record<Binding, SpineProfile>;
+
+  /**
+   * How strongly the page block reads as paper, as a normal-map scale. `0` is a
+   * flat cream slab, which is what it was.
+   *
+   * `materials` and not `books`, because this is a *surface*: one shared 1D
+   * striation map on the existing `UNIT_BOX`, plus per-book colour and roughness
+   * jitter. No geometry changes, so the block stays the one shadow caster per
+   * book. See ADR-0035 for the line, and `page-edges.ts` for why one map is
+   * correct on all four faces that can show.
+   *
+   * The knob governs the whole treatment — the relief *and* the jitter — because
+   * they are one effect, and a control that turned off half of what its label
+   * says would be the panel lying quietly.
+   */
+  readonly pageStriation: number;
 }
 
 /**
@@ -380,6 +396,7 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
       // Perfect-bound — a flat face whose card turns through 90° at each edge.
       paperback: { rise: 0.03, roll: 0.22 },
     },
+    pageStriation: 1.4,
   },
   books: {
     paperbackRatio: 0.6,
