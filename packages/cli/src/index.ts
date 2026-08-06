@@ -4,6 +4,12 @@ import { dirname, resolve } from 'node:path';
 import { Command } from 'commander';
 import { loadEnv } from './env.ts';
 import {
+  enrichReport,
+  enrichSummary,
+  reportEntry,
+  type EnrichEntry,
+} from './enrich-report.ts';
+import {
   ObsidianAdapter,
   addBook,
   backfillCoverSources,
@@ -195,39 +201,23 @@ program
         (options.dryRun === true ? '  (dry run)' : ''),
     );
 
-    let filled = 0;
-    let missed = 0;
+    // Collected rather than printed as they arrive, because the closing line
+    // has to account for the same set the header counted, and a switch that
+    // prints is a switch nothing can check. See enrich-report.ts.
+    const entries: EnrichEntry[] = [];
     for (const book of candidates) {
       const gaps = missingFields(book).join(', ');
       const outcome = await enrichBook(book, vault, get, {
         ...(options.dryRun === true ? { dryRun: true } : {}),
         ...keyIfPresent('googleBooksKey', googleBooksKey),
       });
-
-      switch (outcome.kind) {
-        case 'filled':
-          filled += 1;
-          console.log(`  + ${outcome.title.slice(0, 52)}`);
-          console.log(`      ${outcome.fields.join(', ')}  (was missing: ${gaps})`);
-          break;
-        case 'not-found':
-          missed += 1;
-          console.log(`  ? ${outcome.title.slice(0, 52)} — no provider knows it`);
-          break;
-        case 'mismatch':
-          missed += 1;
-          // Refusing is the right answer: metadata for a book that merely
-          // resembles this one is worse than leaving the gap.
-          console.log(`  ! ${outcome.title.slice(0, 46)}`);
-          console.log(`      refused "${outcome.found.slice(0, 52)}" — not the same book`);
-          break;
-        case 'complete':
-          break;
-      }
+      const entry = { outcome, gaps };
+      entries.push(entry);
+      console.log(reportEntry(entry).line);
     }
 
-    const verb = options.dryRun === true ? 'would fill' : 'filled';
-    console.log(`\n${verb} ${filled} book(s)${missed > 0 ? `, ${missed} left alone` : ''}`);
+    const report = enrichReport(entries);
+    console.log(`\n${enrichSummary(report, options.dryRun === true)}`);
   });
 
 program

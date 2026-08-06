@@ -25,6 +25,16 @@ const knowsTheBook: HttpGet = async (url) =>
 const knowsNothing: HttpGet = async () => undefined;
 
 /**
+ * The ISBN resolves, and the record carries a title and nothing else.
+ *
+ * The difference between *nobody answered* and *somebody answered with nothing
+ * you needed* — two outcomes that used to be one, and the reason a book could be
+ * counted in `enrich`'s header and reported in none of its lines.
+ */
+const knowsTheTitleOnly: HttpGet = async (url) =>
+  url.includes('/api/books') ? { 'ISBN:9781603580557': { title: 'Thinking in Systems' } } : undefined;
+
+/**
  * The cover the stubbed `fetch` serves.
  *
  * `enrichBook` takes an injected `HttpGet`, so no *metadata* lookup here goes
@@ -137,6 +147,25 @@ describe('enrichBook', () => {
 
     expect((await enrichBook(book!, vault, knowsNothing)).kind).toBe('complete');
     expect(await readFile(join(dir, book!.sourcePath), 'utf8')).toBe(before);
+  });
+
+  it('says unfilled, not complete, when there was a gap and nothing to put in it', async () => {
+    // The distinction the CLI's report is built on: this book has a gap, the
+    // provider answers, and the answer carries nothing the note lacks. Calling
+    // that "complete" is what let a book vanish from the report entirely — see
+    // gates/enrich-report.test.ts.
+    await vault.writeBook({
+      title: 'Thinking in Systems',
+      isbn: '9781603580557',
+      pages: 240,
+      cover: 'covers/x.jpg',
+      spineColor: '#2f6d7a',
+    });
+    const [book] = await vault.listBooks();
+    expect(missingFields(book!), 'only the author is missing').toEqual(['author']);
+
+    // Not `not-found`: a provider did answer. It simply had no author either.
+    expect((await enrichBook(book!, vault, knowsTheTitleOnly)).kind).toBe('unfilled');
   });
 
   it('refuses metadata from a book that merely shares words with this one', async () => {

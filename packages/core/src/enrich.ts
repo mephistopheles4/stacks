@@ -28,9 +28,29 @@ export interface EnrichOptions {
   readonly googleBooksKey?: string;
 }
 
+/**
+ * What happened to one book.
+ *
+ * **`complete` and `unfilled` were one kind, and a report built on them did not
+ * add up.** `complete` meant both *nothing was missing* and *something was
+ * missing and none of it could be filled* — and the CLI, having no way to tell
+ * them apart, said nothing about either. A book could be counted in "6 with
+ * gaps" and appear in no line and no total. See docs/gates.md, row G27.
+ *
+ * So `complete` now means only the first, and `unfilled` means the second.
+ *
+ * **Two paths reach `unfilled`, and they share a kind deliberately.** A lookup
+ * that ran and offered nothing this note lacked, and a `spine_color` gap where
+ * the cover on disk could not be read and no provider was ever asked. Neither
+ * has anything to write, and neither should be reported in words that claim a
+ * lookup happened. Split them if the unreadable-cover case ever needs its own
+ * diagnosis — that one is a broken path rather than a missing fact, and it is
+ * the only one here that says something is wrong.
+ */
 export type EnrichOutcome =
   | { readonly kind: 'filled'; readonly title: string; readonly fields: readonly string[] }
   | { readonly kind: 'complete'; readonly title: string }
+  | { readonly kind: 'unfilled'; readonly title: string }
   | { readonly kind: 'not-found'; readonly title: string }
   | { readonly kind: 'mismatch'; readonly title: string; readonly found: string };
 
@@ -120,7 +140,10 @@ export async function enrichBook(
     }
   }
 
-  if (filled.length === 0) return { kind: 'complete', title: book.title };
+  // Something was missing — that is why this function ran past its first line —
+  // and none of it could be filled. Distinct from `complete` above, which is
+  // reached only when there was nothing to do in the first place.
+  if (filled.length === 0) return { kind: 'unfilled', title: book.title };
 
   if (options.dryRun !== true) {
     await vault.updateBook(book.sourcePath, changes as FrontmatterChanges);
