@@ -100,6 +100,12 @@ export interface BookRecord {
    * structure rather than by care: there is no default value for a missing key to
    * fall into. An unrecognised value is dropped at parse time, following
    * `coverSource`, where a typo must not read as a permission.
+   *
+   * **Deliberately absent from `BookInput`.** No provider knows a book's
+   * binding, so `stacks add` has nothing to write and never will; the only way
+   * this key arrives is somebody looking at the book and saying so, which is
+   * invariant 5 working as intended. The asymmetry with the field list below is
+   * the point, not an omission.
    */
   readonly binding?: Binding;
 
