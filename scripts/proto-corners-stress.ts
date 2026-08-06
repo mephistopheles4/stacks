@@ -223,9 +223,16 @@ function report(readings: readonly Reading[]): void {
   console.log('books  cpu   baseline      hinge only    hinge + cap    cap cost   noise floor');
   for (const books of LIBRARIES) {
     for (const throttle of THROTTLES) {
+      // Nearest-library match, not `>=`. A vault of 200 notes yields 191 shelved
+      // books (wishlist and private are dropped), so an exact test never hits —
+      // and a `>=` one matched the 49-book rows for BOTH libraries and printed
+      // the small shelf twice while silently dropping the large one.
       const at = (label: string): Reading | undefined =>
         readings.find(
-          (r) => r.throttle === throttle && r.label.includes(label) && r.books >= books - 2,
+          (r) =>
+            r.throttle === throttle &&
+            r.label.includes(label) &&
+            Math.abs(r.books - books) <= books * 0.15,
         );
       const base = at('#55 as decided');
       const hinge = at('hinge only');
