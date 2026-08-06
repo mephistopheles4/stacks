@@ -133,6 +133,48 @@ describe('toRows', () => {
   });
 });
 
+describe('a book with no page count', () => {
+  const unpaged = Array.from({ length: 20 }, (_, index) =>
+    book(`no-pages-${String(index)}`, { pages: undefined }),
+  );
+
+  const thicknesses = (): number[] =>
+    rowsOf(unpaged)
+      .flatMap((row) => row.books)
+      .map((entry) => entry.thickness);
+
+  it('gets its own width rather than everyone getting the same one', () => {
+    // It used to get a constant 0.1075 — the midpoint, and the one answer
+    // guaranteed to look wrong, because a row of unmatched books came out
+    // identically thick and read as a printing error rather than as a shelf.
+    expect(new Set(thicknesses()).size).toBe(unpaged.length);
+  });
+
+  it('stays unremarkable, never claiming to be a doorstop or a pamphlet', () => {
+    // An invented thickness must not assert something about the book. The band is
+    // deliberately narrower than the range a real page count can reach.
+    const middle = (0.055 + 0.16) / 2;
+    for (const thickness of thicknesses()) {
+      expect(Math.abs(thickness - middle)).toBeLessThanOrEqual((0.16 - 0.055) * 0.15 + 1e-12);
+    }
+  });
+
+  it('keeps the same width on every rebuild', () => {
+    expect(thicknesses()).toEqual(thicknesses());
+  });
+
+  it('leaves a book that has a page count alone', () => {
+    // The hash is the *absent* branch only. A book with pages must still be
+    // measured by them, or the shelf stops meaning anything.
+    const measured = rowsOf([book('thin', { pages: 120 }), book('fat', { pages: 800 })]).flatMap(
+      (row) => row.books,
+    );
+
+    expect(measured.find((entry) => entry.book.id === 'thin')?.thickness).toBeCloseTo(0.055, 12);
+    expect(measured.find((entry) => entry.book.id === 'fat')?.thickness).toBeCloseTo(0.16, 12);
+  });
+});
+
 describe('binding', () => {
   const LIBRARY = Array.from({ length: 200 }, (_, index) => book(`book-${String(index)}`));
 

@@ -167,7 +167,7 @@ export function yearOf(book: LibraryBook): string {
 }
 
 function toShelfBook(book: LibraryBook, settings: BooksSettings): ShelfBook {
-  const thickness = thicknessFor(book.pages);
+  const thickness = thicknessFor(book.pages, book.id);
   const binding = bindingFor(book, settings.paperbackRatio);
   // `face_out` in the note wins in both directions when it is set; otherwise a
   // book in progress stands cover-forward on its own, the way one you are
@@ -192,8 +192,29 @@ function toShelfBook(book: LibraryBook, settings: BooksSettings): ShelfBook {
   };
 }
 
-function thicknessFor(pages: number | undefined): number {
-  if (pages === undefined) return (THINNEST + THICKEST) / 2;
+/**
+ * Spine thickness, from the page count — or from the hash when there is none.
+ *
+ * **A book with no page count used to get a *constant* 0.1075**, the midpoint of
+ * the range, which is the one answer guaranteed to look wrong: every unmatched
+ * book came out identically thick, and a row of them read as a printing error
+ * rather than as a shelf. The hash gives each its own width, the way `heightFor`
+ * already gives each its own height, and neither claims to know anything.
+ *
+ * Kept narrower than the full range on purpose. An invented thickness should not
+ * be able to claim a book is an 800-page doorstop or a 120-page pamphlet — it
+ * should be unremarkable, which is what an absent page count actually tells you.
+ *
+ * ⚠️ **This covers five books today and two once the owner runs #62's fill**, and
+ * it was argued for as covering six. It is kept because it is free and because
+ * every future unmatched import lands here, not for the count.
+ */
+function thicknessFor(pages: number | undefined, id: string): number {
+  if (pages === undefined) {
+    const middle = (THINNEST + THICKEST) / 2;
+    const spread = (THICKEST - THINNEST) * 0.3;
+    return middle + (hashUnit(`${id}-thickness`) - 0.5) * spread;
+  }
   const t = (pages - PAGES_AT_THINNEST) / (PAGES_AT_THICKEST - PAGES_AT_THINNEST);
   return THINNEST + clamp(t, 0, 1) * (THICKEST - THINNEST);
 }
