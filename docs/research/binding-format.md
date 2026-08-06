@@ -24,17 +24,18 @@ will get different counts. The *shape* of the answer is what should survive.
 
 **Binding is not knowable. It must be declared or inferred.**
 
-Open Library answers for **3 of the 15 physical books**. Google Books and Apple
-Books have **no binding field at all** — not sparsely populated, absent from the
-schema. A fourth of the library is knowable only in the negative sense that it
-is not a codex.
+Open Library answers for **3 of the 15 books the vault does not record as
+audiobooks** — and one of those 15 is itself an ebook, so the real denominator
+of physical objects is 14. Google Books and Apple Books have **no binding field
+at all** — not sparsely populated, absent from the schema. The other 18 books
+are knowable only in the negative sense that they are not codices.
 
 And the sharpest number in this whole document:
 
 > **No provider has ever once said "hardcover" about a book that actually stands
-> on this shelf as a physical object.** All three Open Library answers for the
-> 15 print books are `paperback`. Every one of the four `hardcover` claims lands
-> on a book the vault says is an audiobook.
+> on this shelf as a physical object.** All three Open Library answers for those
+> 15 books are `paperback`. Every one of the four `hardcover` claims lands on a
+> book the vault says is an audiobook.
 
 `buildBook` renders all 33 as hardbacks. Issue #50 asserts that is unrealistic;
 this is the measurement behind the assertion, and it points the other way from
@@ -87,9 +88,10 @@ Two different reasons, and they want different fixes:
   [`openlibrary/plugins/books/dynlinks.py`](https://github.com/internetarchive/openlibrary/blob/master/openlibrary/plugins/books/dynlinks.py),
   and empirically — `jscmd=details` and `/isbn/<isbn>.json` returned **identical
   values for all 27 ISBNs**, and the two `jscmd=data` responses sitting in
-  `.cache/` carry field sets with no `physical_format` in them. Open Library's
-  own docs say `details` is retained for backward compatibility and `data` is
-  the more stable format, so switching the primary call is not free of cost.
+  `.cache/` carry field sets with no `physical_format` in them. Switching the
+  primary call is not free of cost, though: `details` hands back the raw edition
+  document, so its shape is whatever the database happens to hold, where the
+  curated `data` dict is a deliberate contract.
 - **`open-library.ts:63` sends an explicit `fields=` allowlist to
   `search.json`** — `title,author_name,isbn,number_of_pages_median,cover_i`. The
   solr doc *does* carry `format`; a doc requested with `fields=*` has 74 keys and
@@ -150,9 +152,12 @@ of the six editions checked for `source_records`, one with a `marc` record has n
 has one (*Staff Engineer*). It is whatever a volunteer or an importer happened to
 write.
 
-## The 15 physical books, one by one
+## The 15 books the vault does not call audiobooks, one by one
 
-The other 18 are audiobooks; see the next section for why that is certain.
+The other 18 are audiobooks; see the next section for why that is certain. One
+row here is not a physical object either — *Learning Systems Thinking* has no
+page count and Open Library calls it `ebook` — so 14 is the honest count of
+codices, and 3 of 14 is if anything a slightly better rate than the headline.
 
 | Book | pages | `physical_format` | search `format` |
 | --- | --- | --- | --- |
@@ -282,9 +287,9 @@ The `1.000` cluster is Audible artwork, six for six, and is covered above.
 
 Stated as constraints on whatever ticket #50 spawns, not as a design:
 
-- **A provider round-trip cannot fill this in.** Three of fifteen, with two
-  known-wrong single values in the same dataset, is not a data source; it is a
-  coin flip with extra steps. Any design that assumes the shelf can *look up* a
+- **A provider round-trip cannot fill this in.** Three of fourteen codices, with
+  two known-wrong single values in the same dataset, is not a data source; it is
+  a coin flip with extra steps. Any design that assumes the shelf can *look up* a
   binding should be abandoned rather than scoped.
 - **Declaring it is cheap and matches the constitution.** Invariant 5 makes
   hand-edited notes first-class and the parser tolerant of extra keys, so a
