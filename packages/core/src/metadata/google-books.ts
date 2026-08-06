@@ -54,10 +54,41 @@ export async function searchByTitle(
   const wantsDerivative = looksDerivative(query);
   const items = Array.isArray(body['items']) ? body['items'] : [];
   return items
-    .map((item) => toMetadata(asRecord(asRecord(item)?.['volumeInfo'])))
+    .map((item) =>
+      toMetadata(asRecord(asRecord(item)?.['volumeInfo']), firstString(asRecord(item)?.['id'])),
+    )
     .filter((item): item is BookMetadata => item !== undefined)
     // Same trap as Open Library: summaries rank alongside the real book.
     .filter((item) => wantsDerivative || !looksDerivative(item.title));
+}
+
+/**
+ * One volume, asked for by id.
+ *
+ * Exists because Google's two endpoints disagree: a volume that reports
+ * `pageCount: 0` in a search response reports its real page count here. The
+ * caller re-asks only for the volume it has already decided on, so this costs
+ * one request per lookup that needs it rather than one per candidate.
+ *
+ * `printedPageCount` also appears in detail responses and is deliberately not
+ * read. It disagrees with `pageCount` in *both* directions — 272 against 254 for
+ * one book on this shelf, 197 against 304 for another — so it is not reliably
+ * the more truthful number, and picking per book would be guessing. `pageCount`
+ * is the documented field.
+ */
+export async function fetchVolume(
+  id: string,
+  get: HttpGet,
+  apiKey?: string,
+): Promise<BookMetadata | undefined> {
+  if (id.length === 0) return undefined;
+  const base = `${VOLUMES}/${encodeURIComponent(id)}`;
+  const url =
+    apiKey === undefined || apiKey.length === 0 ? base : `${base}?key=${encodeURIComponent(apiKey)}`;
+
+  const body = asRecord(await get(url));
+  if (body === undefined || isQuotaError(body)) return undefined;
+  return toMetadata(asRecord(body['volumeInfo']), id);
 }
 
 function firstVolume(body: unknown, fallbackIsbn: string): BookMetadata | undefined {
@@ -66,7 +97,7 @@ function firstVolume(body: unknown, fallbackIsbn: string): BookMetadata | undefi
 
   const items = Array.isArray(root['items']) ? root['items'] : [];
   const info = asRecord(asRecord(items[0])?.['volumeInfo']);
-  const metadata = toMetadata(info);
+  const metadata = toMetadata(info, firstString(asRecord(items[0])?.['id']));
   if (metadata === undefined) return undefined;
 
   return metadata.isbn === undefined ? { ...metadata, isbn: fallbackIsbn } : metadata;
@@ -77,7 +108,10 @@ function isQuotaError(body: Record<string, unknown>): boolean {
   return asRecord(body['error']) !== undefined;
 }
 
-function toMetadata(info: Record<string, unknown> | undefined): BookMetadata | undefined {
+function toMetadata(
+  info: Record<string, unknown> | undefined,
+  volumeId: string | undefined,
+): BookMetadata | undefined {
   if (info === undefined) return undefined;
   const title = firstString(info['title']);
   if (title === undefined) return undefined;
@@ -91,6 +125,7 @@ function toMetadata(info: Record<string, unknown> | undefined): BookMetadata | u
     ...keyIfPresent('author', joinAuthors(info['authors'])),
     ...keyIfPresent('isbn', isbnFrom(info['industryIdentifiers'])),
     ...keyIfPresent('pages', asPositiveInt(info['pageCount'])),
+    ...keyIfPresent('volumeId', volumeId),
     ...keyIfPresent(
       'coverUrl',
       coverFrom(firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail'])),

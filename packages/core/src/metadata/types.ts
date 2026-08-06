@@ -25,6 +25,18 @@ export interface BookMetadata {
    * title. The downloader keeps whichever is cover-shaped.
    */
   readonly coverUrlLarge?: string;
+  /**
+   * Google's volume id, when this record came from Google.
+   *
+   * Provider-specific on purpose, and it earns its place: **a Google search
+   * response and the detail endpoint disagree about the same volume.**
+   * `An8Q0QEACAAJ` reports `pageCount: 0` inside `/volumes?q=` and `368` from
+   * `/volumes/An8Q0QEACAAJ` — same volume, same key, same minute. So a page
+   * count taken from a search result is not trustworthy, and re-asking needs
+   * the id. The ISBN will not do instead: the volumes this happens to are
+   * exactly the thin records that carry no ISBN either.
+   */
+  readonly volumeId?: string;
   readonly source: MetadataSource;
 }
 

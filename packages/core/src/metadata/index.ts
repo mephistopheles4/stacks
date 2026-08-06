@@ -1,4 +1,4 @@
-import { isProbablySameBook, isValidIsbn } from '../identity.ts';
+import { isProbablySameBook, isValidIsbn, titleMatchScore } from '../identity.ts';
 import * as appleBooks from './apple-books.ts';
 import * as googleBooks from './google-books.ts';
 import * as openLibrary from './open-library.ts';
@@ -38,15 +38,61 @@ export async function lookupByIsbn(
   );
 }
 
-/** Fuzzy title search across both providers, best match first. */
+/**
+ * Fuzzy title search across both providers, best match first.
+ *
+ * **"Fallback" means *when the primary has no good answer*, not *when it is
+ * silent*.** It used to mean the second: any Open Library result at all, however
+ * wrong, ended the search and Google was never asked. Those two readings differ
+ * exactly when the primary is merely mistaken, which is the common case for
+ * recent and self-published titles — and it is a silent difference, because a
+ * confident wrong answer looks the same as a right one from the outside.
+ *
+ * Google is still not asked when Open Library has actually found the book, so
+ * this costs no extra requests on the path that was already working. That
+ * matters: the Google quota is shared and exhaustible.
+ */
 export async function searchByTitle(
   query: string,
   get: HttpGet,
   options: MetadataOptions = {},
 ): Promise<BookMetadata[]> {
   const primary = await openLibrary.searchByTitle(query, get);
-  if (primary.length > 0) return primary;
-  return googleBooks.searchByTitle(query, get, options.googleBooksKey);
+  if (primary.some((book) => matchesQuery(query, book))) return primary;
+
+  const fallback = await googleBooks.searchByTitle(query, get, options.googleBooksKey);
+  // Primary results are kept rather than replaced. They did not match the query
+  // well, but neither may Google's, and dropping them would leave a caller that
+  // wants *any* candidate with fewer than it had before.
+  return [...primary, ...fallback];
+}
+
+function matchesQuery(query: string, book: BookMetadata): boolean {
+  return isProbablySameBook(query, `${book.title} ${book.author ?? ''}`);
+}
+
+/**
+ * Candidates reordered so the one a caller should use is first.
+ *
+ * Providers rank for a search box, not for identity: Google answers *"The New
+ * Emotional Intelligence Travis Bradberry"* with *Emotional Intelligence 2.0*
+ * first and the actual book second, and *The Subtle Art of Not Giving a F\*ck*
+ * with a box set first and the plain edition fifth. Callers took `[0]` and
+ * either wrote the wrong book or refused the right one without ever seeing it.
+ *
+ * Matching the query at all dominates, so no near-miss outranks a real match.
+ * Within the matches `titleMatchScore` separates editions of one book, which is
+ * the case that decides a page count: four candidates pass the matcher for *The
+ * Subtle Art* — a censored-title edition at 206 pages, a revised edition, a 16pt
+ * large-print at 320, and the true one at 262. Taking the first *matching*
+ * candidate rather than the best one silently picks 206.
+ */
+function rankAgainst(term: string, results: readonly BookMetadata[]): BookMetadata[] {
+  const score = (book: BookMetadata): number =>
+    (matchesQuery(term, book) ? 1 : 0) +
+    titleMatchScore(term, `${book.title} ${book.author ?? ''}`);
+  // Sort is stable, so equal scores keep the provider's own order.
+  return [...results].sort((a, b) => score(b) - score(a));
 }
 
 /**
@@ -67,15 +113,38 @@ export async function lookup(
     if (hit !== undefined) return [await preferAppleArtwork(await fillGaps(hit, get, options), get)];
   }
 
-  const results = await searchByTitle(term, get, options);
+  const results = rankAgainst(term, await searchByTitle(term, get, options));
   const best = results[0];
   if (best === undefined) return results;
 
   // Only the result that will actually be used is enriched. Filling every
   // candidate would cost one request per search hit to answer a question nobody
   // asked.
-  const filled = await preferAppleArtwork(await fillGaps(best, get, options), get);
+  const filled = await preferAppleArtwork(
+    await fillGaps(await completePages(best, get, options), get, options),
+    get,
+  );
   return [filled, ...results.slice(1)];
+}
+
+/**
+ * Re-asks Google about the volume it has already been chosen, for a page count.
+ *
+ * A search response reports `pageCount: 0` for volumes whose detail endpoint
+ * reports the real number, and `asPositiveInt` correctly drops the zero — so a
+ * correctly matched candidate can still arrive with no pages, and did, for every
+ * book this fixed. Runs after the match is settled, so it costs one request for
+ * the chosen volume rather than one per candidate.
+ */
+async function completePages(
+  book: BookMetadata,
+  get: HttpGet,
+  options: MetadataOptions,
+): Promise<BookMetadata> {
+  if (book.pages !== undefined || book.volumeId === undefined) return book;
+
+  const detail = await googleBooks.fetchVolume(book.volumeId, get, options.googleBooksKey);
+  return detail?.pages === undefined ? book : { ...book, pages: detail.pages };
 }
 
 /**
