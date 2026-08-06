@@ -22,6 +22,7 @@ import {
   type ShelfSettings,
   type ToneMappingName,
 } from './shelf-settings.ts';
+import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
 import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
 
@@ -688,11 +689,15 @@ export function mountShelf(
       scene.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return;
 
-        // Geometries too — but never the two shared unit shapes, which outlive
-        // any one mount. Every book is a scaled `UNIT_BOX` or `UNIT_PLANE`, so a
+        // Geometries too — but never the shared shapes, which outlive any one
+        // mount. Every book is a scaled `UNIT_BOX`, `UNIT_PLANE` or head cap, so a
         // blanket dispose here would free them for the whole module and leave a
         // second shelf drawing nothing at all.
-        if (object.geometry !== UNIT_BOX && object.geometry !== UNIT_PLANE) {
+        if (
+          object.geometry !== UNIT_BOX &&
+          object.geometry !== UNIT_PLANE &&
+          !isHeadCapGeometry(object.geometry)
+        ) {
           object.geometry.dispose();
         }
 
@@ -1189,10 +1194,21 @@ function buildBook(
     face.position.set((side * (thickness - board)) / 2, 0, 0);
   }
 
-  // The spine covering, closing the gap between the boards at the bound edge.
+  /**
+   * How much height the head cap takes off the covering below it.
+   *
+   * Proportional to **thickness**, never to height — which is the whole reason
+   * one shared cap is the right shape on every book. Hardbacks only: a
+   * perfect-bound paperback has no covering to roll, its card being cut flush
+   * with the block at head and tail.
+   */
+  const cap = entry.binding === 'hardback' ? settings.books.headCap * thickness : 0;
+
+  // The spine covering, closing the gap between the boards at the bound edge —
+  // and stopping short of the head, where the cap continues it round.
   const spineStrip = solid(boards);
-  spineStrip.scale.set(thickness - board * 2, height, board);
-  spineStrip.position.set(0, 0, (depth - board) / 2);
+  spineStrip.scale.set(thickness - board * 2, height - cap, board);
+  spineStrip.position.set(0, -cap / 2, (depth - board) / 2);
 
   // The page block, recessed inside the case at head, tail and fore-edge — and
   // the one part of a book that casts, standing in for all of it.
@@ -1214,8 +1230,48 @@ function buildBook(
   coverFace.position.set(thickness / 2 + SKIN, 0, 0);
 
   const spineFace = printed(spine);
-  spineFace.scale.set(thickness, height, 1);
-  spineFace.position.set(0, 0, depth / 2 + SKIN);
+  spineFace.scale.set(thickness, height - cap, 1);
+  spineFace.position.set(0, -cap / 2, depth / 2 + SKIN);
+
+  /**
+   * The covering rolling over the head, on the hardbacks.
+   *
+   * **+1 draw call and +1 material on a capped book, +0 geometry and +0 texture
+   * on any book** — the arc is shared for the whole shelf and the shading is the
+   * spine's own normal map, whose `u` also runs across the width. At the
+   * shipped 60% paperback that is ~+20 draws over 49 books, which is #56's
+   * number and the reason this has a knob of its own.
+   *
+   * **The material is per book, and the alternative is a live lead rather than an
+   * oversight.** #66 measured this cap slower in 7 of 7 paired passes and found
+   * the triangles innocent — 128× them is indistinguishable from the rig's floor
+   * — while *one shared material* came back indistinguishable from having no cap
+   * at all. Sharing is not available here: the covering takes the book's own
+   * colour, and 20 caps in one colour is the wrong picture. An `InstancedMesh`
+   * with per-instance colour would share the material *and* collapse 20 draws to
+   * 1, and neither #56 nor #66 rendered it. That is where to go if this ever
+   * costs enough to matter.
+   *
+   * Its own material rather than `boards`: the covering does not darken where it
+   * turns, and reusing the darkened board colour would put a step at the very
+   * edge this exists to soften. And not `spine` either — that carries the printed
+   * title, which would smear a slice of type across the cap.
+   */
+  if (cap > 0) {
+    const covering = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(entry.colour),
+      roughness: 0.62,
+      ...(profile === undefined ? {} : { normalMap: profile }),
+    });
+
+    const head = new THREE.Mesh(headCapGeometry(), covering);
+    head.castShadow = false;
+    head.receiveShadow = true;
+    // Uniformly, so the roll stays the same fraction of the spine it rolls over.
+    head.scale.setScalar(cap);
+    head.position.set(0, height / 2, depth / 2 + SKIN);
+    group.add(head);
+  }
 
   // A face-out book sits well back, so the shelved book on its right stands
   // proud of it and between it and the key light. The cover is the only large
@@ -1683,6 +1739,9 @@ function applyLive(
   // that, since a face-out book's footprint is its cover width, so the row
   // packing itself would have to run again. Nothing about that is live.
   standing(needsRebuild, 'paperback mix', mountedWith.books.paperbackRatio, next.books.paperbackRatio);
+  // A mesh per hardback, and the covering below it shortened to make room. Both
+  // are decided while the book is built.
+  standing(needsRebuild, 'head cap', mountedWith.books.headCap, next.books.headCap);
 
   /* --- lighting ----------------------------------------------------------- */
 

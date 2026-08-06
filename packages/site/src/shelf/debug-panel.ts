@@ -401,6 +401,23 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   slider('paperback mix', 'rebuild', 0, 1, 0.05, (s) => s.books.paperbackRatio, (s, v) =>
     resolveSettings({ books: { paperbackRatio: v } }, s),
   );
+  /**
+   * Red at zero, and truthfully: no cap is built at all, so the ~20 draw calls
+   * it costs are simply not spent. Red also when the whole shelf is paperback,
+   * because there is then nothing for it to be built *on* — a slider doing
+   * nothing because another slider is where it is, which is the case the lamp's
+   * third state exists for.
+   */
+  slider(
+    'head cap',
+    'rebuild',
+    0,
+    0.3,
+    0.01,
+    (s) => s.books.headCap,
+    (s, v) => resolveSettings({ books: { headCap: v } }, s),
+    (s) => s.books.headCap > 0 && s.books.paperbackRatio < 1,
+  );
 
   /**
    * The spine's cross-section, per binding.

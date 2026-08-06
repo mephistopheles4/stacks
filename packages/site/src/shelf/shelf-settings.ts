@@ -268,6 +268,29 @@ export interface BooksSettings {
    * unaffected by it in either direction — the declaration is not a vote.
    */
   readonly paperbackRatio: number;
+
+  /**
+   * The radius of the covering's roll over the head of a spine, in **thickness
+   * units**. `0` is no cap at all.
+   *
+   * Thickness units and not world units, and that is the whole reason this
+   * candidate works: a cap scaled `(thickness, thickness, thickness)` is uniform,
+   * so one shared geometry is the right shape on every book — which is exactly
+   * what a bevel on `UNIT_BOX` could not be.
+   *
+   * Hardbacks only. A perfect-bound paperback has no covering to roll; its card
+   * is cut flush with the block at head and tail.
+   *
+   * **Its own knob, separate from `materials.spineProfile`, and that separation
+   * is a finding rather than tidiness.** #56 shipped the two as one control,
+   * which changed the shading of all 49 books *and* the silhouette of 20 — so the
+   * cap's +20 draw calls could not be seen against a shading change moving at the
+   * same time. Splitting them is what made the cost legible, and it stays split so
+   * that it stays legible. See ADR-0035.
+   *
+   * `0.16` rather than #56's untuned `0.1`, accepted on #66's render.
+   */
+  readonly headCap: number;
 }
 
 export interface ShelfSettings {
@@ -360,6 +383,7 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
   },
   books: {
     paperbackRatio: 0.6,
+    headCap: 0.16,
   },
 };
 
