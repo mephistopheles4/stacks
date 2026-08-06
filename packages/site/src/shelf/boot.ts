@@ -36,7 +36,13 @@ declare global {
       /** PROTOTYPE (#55) — read by `scripts/proto-spine-curve.ts`. */
       protoOrbit(index: number, distance: number, elevation: number): void;
       /** PROTOTYPE (#55) — what each candidate actually costs the renderer. */
-      protoStats(): { textures: number; geometries: number; calls: number; triangles: number };
+      protoStats(): {
+        textures: number;
+        geometries: number;
+        calls: number;
+        triangles: number;
+        fps: number;
+      };
     };
   }
 }
@@ -180,6 +186,10 @@ function publish(handle: ShelfHandle): void {
         geometries: stats.geometries,
         calls: stats.calls,
         triangles: stats.triangles,
+        // PROTOTYPE (#56). The one number that answers "what do 20 more draw
+        // calls actually cost" — `ShelfStats.fps` exists because a count of
+        // draws cannot say, and this shelf has the scar to prove it.
+        fps: stats.fps,
       };
     },
   };

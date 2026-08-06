@@ -18,7 +18,15 @@ const OUT = join(REPO_ROOT, 'fixtures', 'vault-50');
 const OUT_LIBRARY = join(OUT, 'Library');
 const OUT_COVERS = join(OUT_LIBRARY, 'covers');
 
-const BOOK_COUNT = 50;
+/**
+ * 50, unless a prototype asks for a bigger shelf.
+ *
+ * PROTOTYPE (#56) added the override so a per-book cost could be tested at a
+ * library size nobody has yet. **The default is untouched on purpose** — the
+ * Phase 2 gate asserts a 49-book shelf, and a fixture generator whose size
+ * drifted would move a gate without anyone editing it.
+ */
+const BOOK_COUNT = Number(process.env['STACKS_FIXTURE_BOOKS'] ?? 50);
 
 /** Deterministic — the render gate must produce the same shelf every run. */
 function makeRandom(seed: number): () => number {
