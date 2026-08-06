@@ -23,6 +23,9 @@ import {
   type ToneMappingName,
 } from './shelf-settings.ts';
 import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
+// PROTOTYPE ONLY — wayfinder ticket #54.
+import { makePageStriationMap } from './page-edges.ts';
+import { hashUnit } from './hash.ts';
 
 /**
  * The shelf.
@@ -1044,6 +1047,49 @@ const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 const UNIT_PLANE = new THREE.PlaneGeometry(1, 1);
 
 /**
+ * PROTOTYPE ONLY — the measurement pass for wayfinder ticket #54.
+ *
+ * Paints the page block one flat colour and every other part of the case
+ * another, so a screenshot can be counted rather than argued about: what share
+ * of a book's pixels is actually page edge at the default framing?
+ *
+ * Unlit, unfogged and untone-mapped on purpose. Anything that shades these
+ * would smear the two classes into each other and turn an exact count into a
+ * guess.
+ */
+const CLOWN_PAGES = new THREE.MeshBasicMaterial({ color: 0xff00ff, fog: false, toneMapped: false });
+const CLOWN_CASE = new THREE.MeshBasicMaterial({ color: 0x00ff00, fog: false, toneMapped: false });
+
+function clowning(): boolean {
+  return (globalThis as { __clown?: boolean }).__clown === true;
+}
+
+/**
+ * PROTOTYPE ONLY — the effect the clown pass is deciding about.
+ *
+ * The shared striation normal map plus per-book jitter, behind a flag so the
+ * same build renders with and without it and the two images can be put side by
+ * side at the angle that flatters the effect most.
+ */
+let striationMap: THREE.Texture | undefined | null = null;
+
+function striating(): boolean {
+  return (globalThis as { __striation?: boolean }).__striation === true;
+}
+
+function sharedStriationMap(): THREE.Texture | undefined {
+  // One map for the whole shelf, built on first use: per-book would multiply a
+  // texture by library size for a surface measured at 0.06% of book pixels.
+  if (striationMap === null) striationMap = makePageStriationMap() ?? undefined;
+  return striationMap;
+}
+
+function paint(material: THREE.Material, role: 'pages' | 'case'): THREE.Material {
+  if (!clowning()) return material;
+  return role === 'pages' ? CLOWN_PAGES : CLOWN_CASE;
+}
+
+/**
  * A hardback case, in the same world units as the shelf (1 unit ≈ 24cm).
  *
  * `BOARD` is the thickness of a cover board — about 2.5mm on a real book — and
@@ -1101,6 +1147,19 @@ function buildBook(
   });
   // Pages: slightly lighter than the boards, never pure white.
   const pages = new THREE.MeshStandardMaterial({ color: 0xd9cdb8, roughness: 0.95 });
+  if (striating()) {
+    // PROTOTYPE ONLY — ticket #54. Per-book colour and roughness jitter costs
+    // nothing here because this material is already built per book; the normal
+    // map is one shared texture for the whole shelf.
+    const map = sharedStriationMap();
+    if (map !== undefined) {
+      pages.normalMap = map;
+      pages.normalScale = new THREE.Vector2(1.4, 1.4);
+    }
+    const drift = hashUnit(`${entry.book.id}-pages`);
+    pages.color.offsetHSL((drift - 0.5) * 0.02, 0, (drift - 0.5) * 0.08);
+    pages.roughness = 0.9 + drift * 0.08;
+  }
   const boards = new THREE.MeshStandardMaterial({
     color: new THREE.Color(entry.colour).multiplyScalar(0.82),
     roughness: 0.7,
@@ -1154,19 +1213,19 @@ function buildBook(
 
   // Front and back boards, running the full height and depth of the book.
   for (const side of [1, -1]) {
-    const face = solid(boards);
+    const face = solid(paint(boards, 'case'));
     face.scale.set(board, height, depth);
     face.position.set((side * (thickness - board)) / 2, 0, 0);
   }
 
   // The spine covering, closing the gap between the boards at the bound edge.
-  const spineStrip = solid(boards);
+  const spineStrip = solid(paint(boards, 'case'));
   spineStrip.scale.set(thickness - board * 2, height, board);
   spineStrip.position.set(0, 0, (depth - board) / 2);
 
   // The page block, recessed inside the case at head, tail and fore-edge — and
   // the one part of a book that casts, standing in for all of it.
-  const block = solid(pages);
+  const block = solid(paint(pages, 'pages'));
   block.scale.set(thickness - board * 2, height - square * 2, depth - board - square);
   block.position.set(0, 0, (square - board) / 2);
   block.castShadow = castShadows;
@@ -1178,12 +1237,12 @@ function buildBook(
     return mesh;
   };
 
-  const coverFace = printed(cover);
+  const coverFace = printed(paint(cover, 'case'));
   coverFace.scale.set(depth, height, 1);
   coverFace.rotation.y = Math.PI / 2;
   coverFace.position.set(thickness / 2 + SKIN, 0, 0);
 
-  const spineFace = printed(spine);
+  const spineFace = printed(paint(spine, 'case'));
   spineFace.scale.set(thickness, height, 1);
   spineFace.position.set(0, 0, depth / 2 + SKIN);
 
@@ -1193,7 +1252,7 @@ function buildBook(
   //
   // Sized rather than scaled: the geometry is built at the cover's real size, so
   // the gradient is not stretched by whatever the mesh scale happens to be.
-  if (shadedFromRight) {
+  if (shadedFromRight && !clowning()) {
     const neighbour = makeNeighbourShadow(depth, height);
     if (neighbour !== undefined) {
       neighbour.rotation.y = Math.PI / 2;
