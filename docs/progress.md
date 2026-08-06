@@ -21,8 +21,8 @@ phone was rendering when it died — are measurements and stay exactly as they a
 | | |
 | --- | --- |
 | **Last green gate** | G27 — a command's report accounts for every book it counted |
-| **Now working on** | books that read as books — map [#50](https://github.com/mephistopheles4/stacks/issues/50). **Ask the map how far along it is**; a fraction written here is stale by the next session, and one written on 2026-08-06 was wrong before the commit landed |
-| **Queued** | the map's open sub-issues, which is the only current answer. [#65](https://github.com/mephistopheles4/stacks/issues/65), [#66](https://github.com/mephistopheles4/stacks/issues/66) and [#68](https://github.com/mephistopheles4/stacks/issues/68) as this was written. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run against the real vault |
+| **Now working on** | books that read as books — map [#50](https://github.com/mephistopheles4/stacks/issues/50), whose fifteen tickets are all closed and **all built**. See below |
+| **Queued** | the map's fog, which is the only current answer — ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s *Not yet specified*. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run against the real vault |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates`, no bypass |
 | **Blocked on** | nothing |
@@ -1147,3 +1147,82 @@ it prints is correct.
 
 **Observed red** by folding `unfilled` back into `complete`: two of the gate's
 five fixture books turn "nothing was missing", and the assertion names why.
+
+## Books that read as books — map [#50](https://github.com/mephistopheles4/stacks/issues/50) built
+
+Fifteen closed tickets, implemented as seven commits. The map is plan-only by its
+own rule; this is the ordinary phase work that followed it. Every ticket stated a
+per-book texture and draw-call cost, so **`smoke:render` now reports what the
+renderer is holding** — the one gate that draws 49 books could not see any of
+those numbers, so a slice costing more than its ticket claimed came back green.
+Reported and not asserted: #53's budget is an estimate, the counts move with the
+fixture, and a gate that reddens on a number nobody can interpret trains people
+to raise the number.
+
+| | what shipped | measured | its ticket said |
+| --- | --- | --- | --- |
+| [#57](https://github.com/mephistopheles4/stacks/issues/57) | binding: hashed, `binding:` overrides; board + square + height band | +0 draws, +0 bytes | +0, +0 |
+| [#65](https://github.com/mephistopheles4/stacks/issues/65) | `materials.spineProfile` `{ rise, roll }` per binding | **+2** textures shelf-wide, +0 draws, +0 tris | +2 shared, +0, +0 |
+| [#56](https://github.com/mephistopheles4/stacks/issues/56)/[#66](https://github.com/mephistopheles4/stacks/issues/66) | head cap, `1 × 10`, `CAP` 0.16, hardbacks only | **+20** draws over 49 books (+0.41 each) | +20, +0.41 |
+| [#54](https://github.com/mephistopheles4/stacks/issues/54) | one 2048×8 striation map + per-book jitter | **+1** texture shelf-wide, +0 draws | one shared, +0 |
+| [#58](https://github.com/mephistopheles4/stacks/issues/58)/[#68](https://github.com/mephistopheles4/stacks/issues/68) | binding roughness *constants*; aspect-correct canvas | **+8** textures (the newly typed books) | 41 → 49 typed |
+| [#60](https://github.com/mephistopheles4/stacks/issues/60) | three length bands, subtitle-driven layout | every counter unchanged | costs nothing |
+| [#62](https://github.com/mephistopheles4/stacks/issues/62) | hashed thickness for a book with no page count | unchanged on fixtures | free |
+
+`pnpm test` **421 → 475**. `smoke:render`: 49 books, case overflow **0.0012**
+before and after — unchanged through all seven — distinct colours 1285 → **1493**
+at 25.3% non-background. All four gates green.
+
+**Two predictions were wrong and both are recorded where they were made.**
+`USE_NORMALMAP` splits the spine materials into their own program variants —
+programs 3 → 5, a cost no ticket named, and the number the Pixel 10 investigation
+turned on. I then predicted retiring `MIN_LEGIBLE_THICKNESS` would fold one back
+and it did not.
+
+**Two latent defects came out of implementing decided work.**
+
+- **#54's striation profile did not tile.** Gathering 14 drew different noise
+  from gathering 0, so the height field stepped by 0.025 at `u = 1` and the
+  wrapping central difference reported a ~25 slope across a smooth surface. That
+  reaches past one texel, because the encoding scale normalises the whole map
+  against its steepest slope — a spike at the seam quietly compresses every real
+  leaf. It had not, because the leaves reach ~155; it would have sprung the moment
+  anyone lowered `LEAVES_PER_GATHERING`, which its own comment invites.
+- **The binding hash had to be salted.** Sharing `hashUnit(id)` with `heightFor`
+  would make every paperback exactly the shorter 60% of the shelf — and since
+  binding then *biases* the height band, the two compound into a monotonic
+  silhouette that every other test passes. Observed red without the salt.
+
+⚠️ **One decided number does not reach the outcome it was sold on, and it is left
+as decided rather than changed on the way past.** #58's spine canvas clamp is
+`32..128`, and `128` is a claim about how many pixels type *needs* while aspect is
+what the function is for. A book wants `1024 × thickness / height` texels — **111
+to 252** on the owner's library — so everything past 128 saturates:
+
+| | fixed 128 | clamped 32..128 |
+| --- | --- | --- |
+| the owner's 27 typed books | 0.87×–1.97× | **1.00×–1.97×** |
+| the 50-book fixture | 0.46×–1.64× | **1.00×–1.64×** |
+
+The squeeze is gone completely and the worst stretch is untouched. Raising
+`SPINE_CANVAS_MAX` to 256 covers the real top aspect of 0.246 and makes the whole
+range exact, at up to double the canvas on the thickest books — which are also
+the ones with the most spine on screen. Bytes against letterforms, so it is the
+owner's call: one named constant, and a test that goes red when it moves.
+
+**No new gate row**, on the `placeShelf` precedent. Every cost claim these
+tickets make is now *reported by `smoke:render`* rather than asserted, which is
+the honest shape for a number that legitimately moves; and the two rules worth
+pinning — that the striation profile is periodic, and that binding and height
+draw off independent hashes — are unit tests over pure functions, both observed
+red. A scoreboard row implies a rule that can go red for a reason a reader can
+act on, and "textures went up by three" is not that.
+
+**Aesthetics are the owner's, and there are three images to look at.**
+`artifacts/shelf.png` is the full shelf, which is #60's acceptance framing — the
+question it asks is whether the range reads as one publisher's imprint or as
+noise. `artifacts/shelf-close.png` and `artifacts/shelf-head.png` are near
+renders, because the cap, the profile and the striation are all approach effects
+and #54 established that share-of-screen cannot judge them. All three are
+fixture, and per the map's caveat that is the right test here: none of these is a
+question about the real books' *colours*.
