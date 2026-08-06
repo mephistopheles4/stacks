@@ -1,123 +1,120 @@
-## Answer: nothing. The page block gets no page-edge treatment.
+# Page edges on the page block — ticket #54
 
-Measured rather than argued. At the default framing the page block is **0.06% of
-book pixels** — 76 of 130,998. Orbited to the angle that flatters it most it
-peaks at **1.74%**, then falls again as the shelf's own planks occlude it.
+**Answer: build it.** A single shared 1D striation normal map on the existing
+`UNIT_BOX`, plus per-book colour and roughness jitter. Nought extra draw calls,
+nought per-book textures, no geometry change.
 
-There is no surface here to spend anything on, so all four approaches this
-ticket listed are rejected — including the two that are nearly free.
+This document records a wrong turn as well as the answer, because the wrong turn
+is the more useful half.
 
-### The measurement
+## The wrong turn, and the correction
 
-A *clown pass*: `window.__clown` makes `buildBook` paint the page block flat
-magenta and every other part of the case flat green, all of it unlit, unfogged
-and untone-mapped so the two classes can be counted straight out of the
-framebuffer with no lighting to blur the boundary. `scripts/prototype-page-edges.ts`,
-built on the `smoke:render` harness — 50-book fixture, 1440×900, real GPU.
+The first pass measured the page block's share of book pixels at the **default
+framing** and swept the camera's *angle*: 0.06% level, peaking at 1.74% orbited
+to ~20°. On that evidence the recommendation was to reject every approach.
 
-Camera angles are a synthetic drag on the canvas, so this measures the same
-`OrbitControls` a visitor has rather than a camera the prototype moved itself.
+That was wrong, and the owner overruled it on the strength of something the
+measurement could not see: *people zoom in and explore, and multiple people said
+so unprompted.*
 
-| camera | page-edge px | book px | page share of book |
+The measurement had swept **angle** and never **distance**. `OrbitControls` here
+allows roughly a 6× approach — `minDistance` is 1.5 against a framed distance
+near 9 — so the shelf has a whole viewing regime the numbers never visited.
+
+Worse, the chosen metric could not have found it. *Share of book pixels* is
+scale-invariant: zooming in magnifies page edges and everything else together,
+so the share stays near 1% while the **absolute** page-edge area grows 127×,
+from 76 pixels to 9,678. A ratio was the wrong instrument for a question about
+detail.
+
+| camera | page-edge px | book px | share |
 |---|---|---|---|
-| default (level) | 76 | 130,998 | **0.06%** |
-| orbited up ~10° | 1,143 | 136,778 | 0.84% |
-| orbited up ~20° | 2,375 | 136,240 | **1.74%** ← peak |
-| orbited up ~30° | 2,201 | 128,099 | 1.72% |
-| orbited up ~40° | 1,824 | 113,373 | 1.61% |
+| default (level) | 76 | 130,998 | 0.06% |
+| orbited up ~20° | 2,375 | 136,240 | 1.74% |
+| zoomed 10 notches | 5,979 | 904,663 | 0.66% |
+| **zoomed to `minDistance`** | **9,678** | 865,983 | 1.12% |
 
-### Why the premise was wrong
+## What the effect is worth, by distance
 
-The ticket calls the page block *"the largest pale surface on any book"*. That
-is true of **mesh** area and false of **visible** area, and `buildBook`'s own
-arithmetic says why:
+The same build rendered with the striation and without it, compared per channel:
 
-- the block's `+Z` face lands at `depth/2 − board`, and the spine strip spans
-  `z ∈ [depth/2 − board, depth/2]` — so the block's front is exactly flush
-  behind the spine strip, touching but never showing;
-- its `±X` faces sit against the boards;
-- its fore-edge (`−Z`) faces the backboard;
-- which leaves the **head** (and the tail, from below) as the only page surface
-  that can ever show — recessed `SQUARE` ≈ 3 mm inside a cover-coloured rim, and
-  at shelf level projecting to nothing.
+| camera | mean Δ | channels moved >8 |
+|---|---|---|
+| default framing | 0.000 | 0.000% |
+| orbited up ~20° | 0.016 | 0.000% |
+| zoomed 10 | 0.048 | 0.007% |
+| zoomed 25 | 0.169 | 0.245% |
+| **zoomed to `minDistance`** | **0.276** | **0.495%** |
 
-Every row is roofed by a plank too, so orbiting up buys head visibility and
-spends it on occlusion. That is the plateau in the table. Past ~40° the case's
-own top fills the frame: measured at ~104°, the count returns **zero** books.
+Monotonic in zoom, and at the near end it changes essentially every page-edge
+pixel. Judged by eye at that distance the difference is not subtle: without the
+map a book's head is a flat cream slab — the *"solid of putty-coloured plastic"*
+the ticket complained about — and with it the head reads as ribbed paper.
 
-### The proposal was built and rendered, not argued about
+**The ticket's complaint was accurate all along.** It was only ever false at a
+distance where the surface is not visible anyway.
 
-Rather than reason about whether the striation would read, it was implemented —
-one shared 1D normal map plus per-book colour and roughness jitter — and the
-same build was rendered with it and without it at both angles. Differences
-between each pair, per channel:
+## The design
 
-| camera | mean Δ | channels moved >8 | worst Δ |
-|---|---|---|---|
-| **default framing** | **0.000** | **0.000%** | 9 |
-| orbited up ~20° | 0.041 | 0.155% | 45 |
+**One 1D map is correct on every face that can show.** Page striation is a
+one-dimensional pattern: leaves stack along the thickness, so it varies along
+local x and is constant along the direction the cut edges run. `BoxGeometry`
+maps u to local x on four of six faces — `py`/`ny` via `buildPlane('x','z','y')`
+and `pz`/`nz` via `buildPlane('x','y','z')`, per three@0.185.1. The two where u
+maps to z are `px`/`nx`, the faces the boards permanently occlude.
 
-**At the default framing the two images are identical.** Not "similar" — one
-channel in 3.9 million moved at all, which is noise. The effect delivers
-precisely nothing in the view the shelf actually presents.
+So the ticket's framing — *six faces wanting three treatments* — describes a
+problem that does not exist. It is real for a general 2D texture and absent for
+a 1D one. Neither a material array (+5 draw calls per book) nor custom UVs baked
+into the shared geometry is needed.
 
-At ~20° it *is* visible: on the head slivers the banding reads as paper, and
-that is a real difference, worth saying plainly. It is also 0.155% of the
-channels in the frame, confined to the ~2,000 pixels the clown pass already
-counted.
+**Mipmapping is the level-of-detail scheme, and it is free.** The map carries two
+scales: `GATHERINGS` (14) is the coarse grouping of signatures, and
+`LEAVES_PER_GATHERING` (11) is the per-leaf detail that only exists for someone
+who has zoomed in. As a book recedes the GPU samples smaller mip levels, which
+average the fine lines away and leave the coarse profile; up close it samples
+level 0 and every leaf is there. That is what a hand-written LOD switch would
+do, minus the switch, the second asset and the popping.
 
-### What is rejected
+Anisotropic filtering matters here specifically: a book's head seen from a shelf
+is about as grazing as a surface gets, which is the case trilinear filtering
+blurs to mush.
 
-All four approaches, on evidence rather than on cost:
+The encoding scale is **derived, not tuned** — normalised against the profile's
+actual steepest slope — so changing either constant cannot silently saturate the
+map into hard black-and-white edges.
 
-- **A material array on the box** — +5 draw calls per book.
-- **Custom UV-rotated geometry** — and it would have to thread the geometry
-  identity check in `dispose()`, which skips the two shared unit shapes.
-- **A shared striation normal map** — 0 extra draw calls, ~16 KB for the whole
-  shelf, and the mean Δ 0.000 above.
-- **Per-book colour and roughness jitter** — free at runtime, since the `pages`
-  material is already built per book.
+## Cost
 
-The last two cost nothing measurable *at runtime*, and are still rejected —
-because runtime is not the only ledger. Either one still buys a `ShelfSettings`
-knob, its `applySettings` branch and honest `ApplyReport` bucket, its `?tune=`
-spelling, panel wiring and a module to maintain, and it buys them for a surface
-that is pixel-identical in the view the destination names: *"convincingly
-bookish objects at **normal viewing distance**"*. Cheap is not the bar. Visible
-at shelf distance is, and 0.06% is not visible.
+| | |
+|---|---|
+| Draw calls | **+0** per book |
+| Per-book textures | **+0** |
+| Shared textures | one, 2048×8 RGB ≈ **64 KB decoded, once**, at any library size |
+| Geometry | unchanged — so the page block stays the single shadow caster per book, the resource the one recorded crash actually exhausted |
 
-### One finding worth keeping
+Per-book colour and roughness jitter is free at runtime: the `pages` material is
+already built per book.
 
-**The "six faces want three treatments" problem does not exist.** Page striation
-is a *one-dimensional* pattern — leaves stack along the thickness, so it varies
-along local x and is constant along the direction the cut edges run. That is
-exactly what a texture varying only in u gives, and `BoxGeometry` maps u to
-local x on four of six faces: `py`/`ny` (head, tail) via `buildPlane('x','z','y')`
-and `pz`/`nz` (spine side, fore-edge) via `buildPlane('x','y','z')`, per
-three@0.185.1. The two faces where u maps to z instead are `px`/`nx` — the ones
-the boards permanently occlude.
+## Still to specify before implementation
 
-So a single shared 1D map on the stock `UNIT_BOX` would have been correct on
-every face that can ever show, at **0 extra draw calls, 0 per-book bytes and no
-geometry change** — leaving the page block as the single shadow caster per book,
-which is the resource the one recorded crash actually exhausted.
+- **The knob.** `materials.pageStriation`, 0–1, driving `normalScale`; 0 is
+  today's flat block. It is baked into per-book materials at `buildBook`, so it
+  belongs in the **`needsRebuild`** bucket of `ApplyReport` — the `coverRoughness`
+  precedent — and rides in `?tune=` rather than taking a flat spelling.
+- **Bloom.** The striation is relief, not brightness, so it should not cross
+  ADR-0034's threshold; worth confirming on a render with bloom enabled rather
+  than asserting.
+- **The values.** `GATHERINGS`, `LEAVES_PER_GATHERING`, `LEAF_DEPTH` and the
+  jitter amounts are prototype numbers, accepted on the close-up screenshots.
 
-Worth recording because it makes the *next* page-edge question cheap instead of
-expensive. It is written up, with the working, in `packages/site/src/shelf/page-edges.ts`
-on the `prototype/page-edges` branch — dead code kept as a note, not a proposal.
+## The lesson for the rest of the map
 
-### Where the page edges actually are
+The map's Notes say *"Effects earn their place at shelf distance."* That rule is
+what produced the wrong recommendation, and it is incomplete: this shelf has
+**two viewing regimes**, the full-shelf frame and close inspection, and detail
+work is judged in the second. A proposal should be measured at both, at a
+distance *and* an absolute scale, before anything is concluded from a percentage.
 
-Not on a shelved book. The measurement points at two places instead, and both
-are already on the map rather than being smuggled in here:
-
-- **The face-out book**, already in *Not yet specified*. It is the one book whose
-  page edges are chunky rather than a few pixels of dash — visible in
-  `clown-50.png` along the tops of the top row.
-- **Picking a book up**, which is out of scope — `docs/notes-on-the-shelf.md`'s
-  separate design.
-
-If page edges are ever wanted on a *shelved* book, the honest lever is not a
-texture at all: it is `SQUARE`, the binder's square, which decides how much
-paper the boards leave showing. That is a change to what a book *is* on this
-shelf, and it would need its own ticket.
+`scripts/prototype-page-edges.ts` and `scripts/prototype-page-diff.ts` do that
+measurement and are reusable for any later proposal on this map.

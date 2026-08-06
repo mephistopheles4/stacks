@@ -159,6 +159,15 @@ interface Shot {
    * prototype measures the same controls a visitor has.
    */
   readonly dragY?: number;
+  /**
+   * Wheel notches to dolly in before shooting.
+   *
+   * The axis the first sweep missed. `OrbitControls` allows roughly a 6×
+   * approach here — `minDistance` is 1.5 against a framed distance near 9 — and
+   * the shelf is meant to be explored close up, which is the case that decides
+   * whether page-edge detail is worth having.
+   */
+  readonly wheelSteps?: number;
   /** Turn the striation map and per-book jitter on for this shot. */
   readonly striation?: boolean;
 }
@@ -176,6 +185,14 @@ async function shoot(browser: Browser, origin: string, shot: Shot): Promise<Coun
   await page.waitForFunction('window.__shelf?.ready === true', { timeout: 20_000 });
   // Let textures land and the damped camera settle, as the render gate does.
   await new Promise((resolve) => setTimeout(resolve, 1500));
+
+  if (shot.wheelSteps !== undefined) {
+    await page.mouse.move(VIEWPORT.width / 2, VIEWPORT.height / 2);
+    for (let step = 0; step < shot.wheelSteps; step++) {
+      await page.mouse.wheel({ deltaY: -120 });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 900));
+  }
 
   if (shot.dragY !== undefined) {
     const x = VIEWPORT.width / 2;
@@ -259,6 +276,40 @@ async function main(): Promise<void> {
        */
       await shoot(browser, origin, { file: 'after-default.png', striation: true });
       await shoot(browser, origin, { file: 'after-50.png', dragY: 50, striation: true });
+
+      /**
+       * Zoomed in and exploring — the axis the sweep above missed entirely.
+       *
+       * The shelf is built to be approached and looked at closely, so a surface
+       * that is nothing at full-shelf framing can still be the surface someone
+       * is actually looking at. Each level is measured *and* rendered both
+       * ways, because up close the question stops being "can you see it" and
+       * becomes "does it hold up".
+       */
+      // The last of these runs the camera into `minDistance`, which is as close
+      // as the controls let anyone get — a single book, near enough.
+      const ZOOMS = [10, 25, 60];
+      console.log('');
+      for (const wheelSteps of ZOOMS) {
+        const tag = `zoom${String(wheelSteps)}`;
+        const counts = await shoot(browser, origin, {
+          file: `clown-${tag}.png`,
+          clown: true,
+          wheelSteps,
+          dragY: 50,
+        });
+        if (counts === undefined) throw new Error('the clown pass returned no counts');
+        results.push({ drag: wheelSteps, counts });
+        report(`zoomed ${String(wheelSteps)} notches`, counts);
+
+        await shoot(browser, origin, { file: `before-${tag}.png`, wheelSteps, dragY: 50 });
+        await shoot(browser, origin, {
+          file: `after-${tag}.png`,
+          wheelSteps,
+          dragY: 50,
+          striation: true,
+        });
+      }
 
       console.log(`\ncanvas ${results[0]?.counts.size ?? '?'}\n`);
       for (const { drag, counts } of results) {

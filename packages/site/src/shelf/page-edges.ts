@@ -31,20 +31,34 @@ import * as THREE from 'three';
  * exhausted.
  */
 
-/** Wide enough to resolve the stripes, one pixel tall in spirit. */
-const TEXTURE_WIDTH = 512;
+/**
+ * Wide enough to resolve individual leaves up close.
+ *
+ * Generous on purpose: this is **one texture for the entire shelf**, so its
+ * size does not scale with the library. 2048×8 RGB is ~64 KB decoded, once,
+ * whether there are 33 books or 3,000.
+ */
+const TEXTURE_WIDTH = 2048;
 const TEXTURE_HEIGHT = 8;
 
 /**
- * Gatherings across the block, not individual leaves.
+ * Two scales, because the shelf is looked at from two distances.
  *
- * A real text block has hundreds of leaves; drawing them would put several
- * stripes inside one screen pixel on a book whose head strip is a dozen pixels
- * tall, and mipmapping would average the lot back to flat — or worse, moiré on
- * the way. What actually reads at this distance is the coarser grouping of
- * signatures, so that is what this draws.
+ * `GATHERINGS` is the coarse grouping of signatures — the thing that still
+ * reads when a book is an inch tall on screen. `LEAVES_PER_GATHERING` is the
+ * per-leaf line detail that only exists for someone who has zoomed in.
+ *
+ * **Mipmapping is the level-of-detail scheme, and it is free.** As a book
+ * recedes the GPU samples smaller mip levels, which average the fine lines away
+ * and leave the coarse profile; up close it samples level 0 and every leaf is
+ * there. That is exactly the behaviour a hand-written LOD switch would
+ * implement, minus the switch, the second asset and the popping.
  */
 const GATHERINGS = 14;
+const LEAVES_PER_GATHERING = 11;
+
+/** How much of the relief belongs to the fine leaves rather than the grouping. */
+const LEAF_DEPTH = 0.32;
 
 /**
  * A deterministic value noise, so the shelf looks the same on every reload.
@@ -58,8 +72,8 @@ function noise(index: number): number {
 }
 
 /**
- * A height profile across the thickness, as gatherings of varying width and
- * depth with a soft valley between each.
+ * A height profile across the thickness: gatherings of varying width and depth,
+ * with individual leaves cut into each one.
  */
 function heightAt(u: number): number {
   const scaled = u * GATHERINGS;
@@ -72,8 +86,21 @@ function heightAt(u: number): number {
   const skew = (noise(index + 0.5) - 0.5) * 0.35;
 
   // A raised cosine per gathering: smooth, seamless at the joins, and cheap.
-  const shaped = 0.5 - 0.5 * Math.cos((within + skew) * Math.PI * 2);
-  return shaped * depth;
+  const coarse = (0.5 - 0.5 * Math.cos((within + skew) * Math.PI * 2)) * depth;
+
+  /**
+   * The leaves themselves.
+   *
+   * Uneven on purpose — a real fore-edge is not a ruled grating, and a perfectly
+   * periodic one would beat against the pixel grid and shimmer. Each leaf is
+   * nudged by the same deterministic noise, which breaks the period up.
+   */
+  const leafScaled = u * GATHERINGS * LEAVES_PER_GATHERING;
+  const leafIndex = Math.floor(leafScaled);
+  const jitter = (noise(leafIndex * 1.7) - 0.5) * 0.55;
+  const leaf = 0.5 - 0.5 * Math.cos((leafScaled - leafIndex + jitter) * Math.PI * 2);
+
+  return coarse * (1 - LEAF_DEPTH) + leaf * LEAF_DEPTH;
 }
 
 /**
@@ -93,17 +120,33 @@ export function makePageStriationMap(): THREE.CanvasTexture | undefined {
   const image = ctx.createImageData(TEXTURE_WIDTH, TEXTURE_HEIGHT);
   const step = 1 / TEXTURE_WIDTH;
 
+  /**
+   * Slopes first, then encode — the scale is derived, not a magic number.
+   *
+   * The profile's steepness depends on how many leaves are in it, so a constant
+   * tuned for one `LEAVES_PER_GATHERING` saturates at another and the relief
+   * turns into hard black-and-white edges. Normalising against the actual
+   * maximum keeps the map well-formed whatever the two constants are set to.
+   */
+  const slopes = new Float32Array(TEXTURE_WIDTH);
+  let steepest = 0;
   for (let x = 0; x < TEXTURE_WIDTH; x++) {
     const u = x / TEXTURE_WIDTH;
     // Central difference, wrapping, so the map tiles without a seam.
     const before = heightAt((u - step + 1) % 1);
     const after = heightAt((u + step) % 1);
     const slope = (after - before) / (2 * step);
+    slopes[x] = slope;
+    if (Math.abs(slope) > steepest) steepest = Math.abs(slope);
+  }
 
-    // The normal of a height field h(u) is normalize(-dh/du, 0, 1); the scale
-    // keeps the encoded slope inside the byte range for the slopes this
-    // profile actually produces.
-    const nx = Math.max(-1, Math.min(1, -slope * 0.04));
+  // Short of 1.0 so the steepest leaf still has somewhere to go, rather than
+  // clipping flat at the extremes.
+  const scale = steepest === 0 ? 0 : 0.92 / steepest;
+
+  for (let x = 0; x < TEXTURE_WIDTH; x++) {
+    // The normal of a height field h(u) is normalize(-dh/du, 0, 1).
+    const nx = -(slopes[x] ?? 0) * scale;
     const r = Math.round((nx * 0.5 + 0.5) * 255);
 
     for (let y = 0; y < TEXTURE_HEIGHT; y++) {
@@ -122,5 +165,16 @@ export function makePageStriationMap(): THREE.CanvasTexture | undefined {
   texture.colorSpace = THREE.NoColorSpace;
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
+  /**
+   * Both matter for a page block specifically.
+   *
+   * Mipmaps are the level-of-detail scheme (see `GATHERINGS`), and a head seen
+   * from a shelf is about as grazing as a surface gets — which is precisely the
+   * case trilinear filtering blurs to mush and anisotropic filtering keeps
+   * sharp. Three clamps the request to what the GPU actually offers.
+   */
+  texture.generateMipmaps = true;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.anisotropy = 16;
   return texture;
 }

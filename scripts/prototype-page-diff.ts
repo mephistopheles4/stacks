@@ -50,3 +50,7 @@ async function compare(label: string, a: string, b: string): Promise<void> {
 
 await compare('default framing', 'before-default.png', 'after-default.png');
 await compare('orbited up ~20°', 'before-50.png', 'after-50.png');
+// The distance axis, which the first pass missed entirely.
+await compare('zoomed 10', 'before-zoom10.png', 'after-zoom10.png');
+await compare('zoomed 25', 'before-zoom25.png', 'after-zoom25.png');
+await compare('zoomed 60 (max)', 'before-zoom60.png', 'after-zoom60.png');
