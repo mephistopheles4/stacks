@@ -63,6 +63,9 @@ export async function boot(
    * dial and no `window.__shelf` to publish, because this is an inspection mode
    * and not a shelf. Everything the shelf would have done is skipped rather than
    * suppressed, which is why it cannot half-apply.
+   *
+   * It publishes `window.__solo` instead — the turntable, drivable by number, so
+   * that a before-and-after is the same picture twice. See `book-inspector.ts`.
    */
   const solo = soloBook(params);
   if (solo !== undefined) {

@@ -276,6 +276,14 @@ below. Two defects at the head of every hardback survived two code reviews, a
 479-test suite and a gate that reports every renderer counter — because they
 moved none of them. `?solo` found both in one screenshot.
 
+**Stand somewhere by number, not by dragging: `window.__solo.look()`.** It takes
+`{ azimuth, elevation, distance, target }` — degrees, and distances in the book's
+own heights — and it is the sibling of the `window.__shelf` that `smoke:render`
+reads. The head corner was re-cut seven times before this existed, and every one
+of those rounds was judged from a hand-dragged orbit, so no two before-and-afters
+were the same picture and *"it looks better"* was never checkable. `distance` is
+clamped by the inspector's own `minDistance`: it magnifies, it does not invent.
+
 ⚠️ **What you can see here, nobody can see at all — and that cuts two ways.**
 
 - **Angle.** The shipped `maxPolarAngle` is `PI * 0.52`, so a visitor never gets

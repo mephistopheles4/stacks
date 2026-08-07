@@ -45,6 +45,42 @@ export interface InspectorHandle {
   readonly title: string;
 }
 
+/** Where to stand. Degrees, and distances in the book's own heights. */
+export interface Viewpoint {
+  /** Around the book: 0 looks straight at the spine, 90 at the cover. */
+  readonly azimuth: number;
+  /** Above the horizon: 0 is level with the middle, 90 is straight down. */
+  readonly elevation: number;
+  /** In book heights, clamped by the inspector's own `minDistance`. */
+  readonly distance: number;
+  /** What to look at, in book heights from the centre. Defaults to the centre. */
+  readonly target?: readonly [number, number, number];
+}
+
+declare global {
+  interface Window {
+    /**
+     * The turntable, drivable — so a defect can be re-photographed exactly.
+     *
+     * Sibling of `window.__shelf`, and it exists for the same reason: the seven
+     * re-cuts of the head cap were each judged from a hand-dragged orbit, so no
+     * two before-and-afters were the same picture and "it looks better" was never
+     * checkable. `look()` takes a viewpoint by number.
+     *
+     * ⚠️ **`distance` cannot get closer than the inspector allows** — it is
+     * clamped by `OrbitControls.minDistance`, which `?solo` already sets four
+     * times nearer than the shelf. This magnifies; it does not invent.
+     */
+    __solo?: {
+      readonly title: string;
+      /** The book's real size in world units, for reading a defect's scale off. */
+      readonly size: { thickness: number; height: number; depth: number };
+      readonly binding: string;
+      look(view: Viewpoint): void;
+    };
+  }
+}
+
 export function mountBookInspector(
   canvas: HTMLCanvasElement,
   books: readonly LibraryBook[],
@@ -100,6 +136,38 @@ export function mountBookInspector(
   controls.target.set(0, 0, 0);
   controls.update();
 
+  /**
+   * Stand somewhere by number rather than by dragging.
+   *
+   * Spherical about the target: azimuth 0 faces the spine down `+Z`, and turning
+   * towards `+X` brings the cover round. `controls.update()` after setting the
+   * position is what re-derives the internal spherical state, and it is also what
+   * applies `minDistance` — so a caller cannot ask to be nearer than `?solo`
+   * itself permits.
+   */
+  const look = (view: Viewpoint): void => {
+    const scale = entry.height;
+    const [tx, ty, tz] = view.target ?? [0, 0, 0];
+    controls.target.set(tx * scale, ty * scale, tz * scale);
+
+    const azimuth = (view.azimuth * Math.PI) / 180;
+    const elevation = (view.elevation * Math.PI) / 180;
+    const radius = view.distance * scale;
+    camera.position.set(
+      controls.target.x + radius * Math.cos(elevation) * Math.sin(azimuth),
+      controls.target.y + radius * Math.sin(elevation),
+      controls.target.z + radius * Math.cos(elevation) * Math.cos(azimuth),
+    );
+    controls.update();
+  };
+
+  window.__solo = {
+    title: chosen.title,
+    size: { thickness: entry.thickness, height: entry.height, depth: placement.frontZ * 2 },
+    binding: entry.binding,
+    look,
+  };
+
   let frame = 0;
   const renderLoop = (): void => {
     frame = requestAnimationFrame(renderLoop);
@@ -126,6 +194,7 @@ export function mountBookInspector(
       cancelAnimationFrame(frame);
       observer.disconnect();
       controls.dispose();
+      delete window.__solo;
       // The shared shapes and the cover cache outlive any one mount, exactly as
       // they do for the shelf — see `mountShelf`'s own disposing traverse.
       renderer.dispose();
