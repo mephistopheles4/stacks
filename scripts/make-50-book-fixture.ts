@@ -11,6 +11,9 @@
  */
 import { mkdirSync, rmSync, writeFileSync, copyFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+// By path, as every other script here reaches into core: `scripts/` is outside
+// the workspace's package graph and does not resolve the package name.
+import { spineColour } from '../packages/core/src/covers/dominant-colour.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 const SOURCE_COVERS = join(REPO_ROOT, 'fixtures', 'vault', 'Library', 'covers');
@@ -49,6 +52,30 @@ for (const cover of covers) {
   copyFileSync(join(SOURCE_COVERS, cover), join(OUT_COVERS, cover));
 }
 
+/**
+ * Every cover's spine colour, sampled the way a real vault's would be.
+ *
+ * `stacks add` extracts this from the strip of artwork nearest the binding and
+ * writes it into the note; this generator writes notes directly, so without it
+ * every fixture book fell through to `fallbackColour(id)` — a palette keyed off
+ * the book's id with **no relationship to the cover beside it**. The fixture
+ * therefore showed blue covers on maroon spines, which a real shelf never does,
+ * and it is the instrument everyone inspects.
+ *
+ * Sampled through core's own `spineColour`, not a copy of its rule: a fixture
+ * that models the extraction slightly differently is a fixture that agrees with
+ * the shelf right up until the moment it matters.
+ *
+ * Books with **no** cover still get no `spine_color`, which is not an oversight —
+ * ~15% of these are deliberately coverless, and the fallback palette is exactly
+ * what should happen when there is nothing to sample.
+ */
+const spineColours = new Map<string, string>();
+for (const cover of covers) {
+  const colour = await spineColour(join(OUT_COVERS, cover));
+  if (colour !== undefined) spineColours.set(cover, colour);
+}
+
 const used = new Set<string>();
 let written = 0;
 
@@ -77,7 +104,11 @@ for (let i = 0; written < BOOK_COUNT; i += 1) {
   if (status === 'read' || status === 'abandoned') lines.push(`started: ${year}-${month}-${day}`);
   if (status === 'read') lines.push(`finished: ${year}-${month}-${day}`);
   if (status === 'read' && random() < 0.7) lines.push(`rating: ${1 + Math.floor(random() * 5)}`);
-  if (cover !== undefined) lines.push(`cover: covers/${cover}`);
+  if (cover !== undefined) {
+    lines.push(`cover: covers/${cover}`);
+    const colour = spineColours.get(cover);
+    if (colour !== undefined) lines.push(`spine_color: "${colour}"`);
+  }
   lines.push(`pages: ${120 + Math.floor(random() * 640)}`);
   lines.push(`tags: [${pick(TAGS)}]`);
   lines.push('---', '', '## Notes', '', 'NOTE_BODY_CANARY_do_not_ship', '');
