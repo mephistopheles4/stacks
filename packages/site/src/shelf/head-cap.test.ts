@@ -41,18 +41,49 @@ function positions(): [number, number, number][] {
 }
 
 describe('the head cap', () => {
-  it('is 20 triangles of arc and 6 of closure', () => {
+  it('⚠️ never reaches outside the roll it is closing', () => {
+    // The defect this replaces, and the sharpest way to state it: **every vertex
+    // is on or inside the arc**. The ends were squared off at first, and a
+    // square's outer corner sits `roll × √2` from the arc's centre against the
+    // arc's `roll` — so each end of the covering grew a block sticking out past
+    // the roll it was there to close. Circled from three angles before anyone
+    // recognised what it was.
+    //
+    // A fan from the centre cannot do that, whatever the sweep, and this is the
+    // assertion that says so rather than trusting it.
+    for (const [, y, z] of positions()) {
+      const fromCentre = Math.hypot(y - -ROLL, z - -ROLL);
+      expect(fromCentre).toBeLessThanOrEqual(ROLL + 1e-6);
+    }
+  });
+
+  it('tucks in past the quarter rather than stopping dead on the boards', () => {
+    // A turn that ends at 90° leaves its back edge exactly where the boards'
+    // front face is — and the cap is parked `SKIN` proud of the spine, so
+    // *exactly* is a slot running the width of the head, which reads as a square
+    // step with the curve hidden behind it.
+    //
+    // Past 90° the arc descends, so every degree of the tuck is at or below the
+    // crest and behind the boards: buried, not silhouette.
+    const zs = positions().map(([, , z]) => z);
+    expect(Math.min(...zs)).toBeLessThan(-ROLL);
+
+    const deepest = positions().reduce((a, b) => (b[2] < a[2] ? b : a));
+    expect(deepest[1]).toBeLessThan(0);
+  });
+
+  it('is 26 triangles of arc and 26 of ends', () => {
     // #56 built the arc at 32 x 10 = 640 and never varied either number. #66
     // found the width subdivision provably free — nothing varies along `x`, so it
     // subdivides a straight line — and the cost identical at 4 triangles and at
     // 640, so a coarser cap cannot recover the 11% it costs.
     //
-    // The 6 are the back and the two ends. They are not decoration: without them
-    // this is an awning over a wedge of nothing, and you can see through it.
-    expect(geometry.getIndex()?.count).toBe((20 + 6) * 3);
+    // Half of them are the ends. They are not decoration: without them this is an
+    // awning over a wedge of nothing, and you can see through it into the case.
+    expect(geometry.getIndex()?.count).toBe((26 + 26) * 3);
   });
 
-  it('puts its top at y = 0 and its face at z = 0', () => {
+  it('puts its crest at y = 0 and its foot at z = 0', () => {
     // The caller's contract: a mesh parked at the top of the spine face lands
     // where the covering's flat part stopped. Get either wrong and the cap floats
     // above the book or sinks into it.
@@ -61,29 +92,17 @@ describe('the head cap', () => {
 
     expect(Math.max(...ys)).toBeCloseTo(0, 12);
     expect(Math.max(...zs)).toBeCloseTo(0, 12);
-    expect(Math.min(...zs)).toBeCloseTo(-ROLL, PLACES);
+    // The foot, on the printed spine.
+    expect(Math.min(...ys)).toBeCloseTo(-ROLL, PLACES);
   });
 
-  it('⚠️ is a closed fillet, not an open arc', () => {
-    // The hole. An arc alone leaves a wedge between itself and the flat top of
-    // the piece below, open along its back edge over the page block's width — and
-    // looking down at the head from in front you see straight into the case.
-    //
-    // Closed means: a face at the back where the boards are, a face at each end
-    // where nothing else reaches, and every one of them running *past* the
-    // surfaces it meets rather than landing exactly on them. Exactly is where a
-    // hairline lives.
-    const ys = positions().map(([, y]) => y);
-    expect(Math.min(...ys)).toBeLessThan(-ROLL);
-
+  it('is closed at both ends', () => {
     const normals = attribute('normal');
     const faces = new Set<string>();
     for (let i = 0; i < normals.length; i += 3) {
       faces.add([normals[i], normals[i + 1], normals[i + 2]].map((n) => (n ?? 0).toFixed(3)).join());
     }
 
-    // Backward, and both ways along the width.
-    expect(faces).toContain('0.000,0.000,-1.000');
     expect(faces).toContain('1.000,0.000,0.000');
     expect(faces).toContain('-1.000,0.000,0.000');
   });
@@ -98,12 +117,15 @@ describe('the head cap', () => {
     // Stated as the two spans being *different*: they were equal when both were
     // 1, which is precisely what made scaling by either look plausible.
     const xs = positions().map(([x]) => x);
+    const ys = positions().map(([, y]) => y);
     const width = Math.max(...xs) - Math.min(...xs);
-    const depth = Math.max(...positions().map(([, , z]) => z)) - Math.min(...positions().map(([, , z]) => z));
+    // Foot to crest, which is the roll itself — the depth now runs past it,
+    // because the tuck carries the surface behind the boards.
+    const rise = Math.max(...ys) - Math.min(...ys);
 
     expect(width).toBeCloseTo(1, 12);
-    expect(depth).toBeCloseTo(ROLL, PLACES);
-    expect(width).not.toBeCloseTo(depth, 3);
+    expect(rise).toBeCloseTo(ROLL, PLACES);
+    expect(width).not.toBeCloseTo(rise, 3);
   });
 
   it('spans exactly the spine it rolls over', () => {
@@ -120,14 +142,14 @@ describe('the head cap', () => {
     // has to actually be re-baked rather than a cached one handed back.
     const deeper = must(headCapGeometry(ROLL * 2));
 
-    const depthOf = (g: THREE.BufferGeometry): number => {
+    const riseOf = (g: THREE.BufferGeometry): number => {
       const flat = g.getAttribute('position').array as Float32Array;
-      const zs: number[] = [];
-      for (let i = 2; i < flat.length; i += 3) zs.push(flat[i] ?? 0);
-      return Math.max(...zs) - Math.min(...zs);
+      const ys: number[] = [];
+      for (let i = 1; i < flat.length; i += 3) ys.push(flat[i] ?? 0);
+      return Math.max(...ys) - Math.min(...ys);
     };
 
-    expect(depthOf(deeper)).toBeCloseTo(ROLL * 2, PLACES);
+    expect(riseOf(deeper)).toBeCloseTo(ROLL * 2, PLACES);
     expect(deeper).not.toBe(geometry);
   });
 

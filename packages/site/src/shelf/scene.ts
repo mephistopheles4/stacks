@@ -1247,7 +1247,20 @@ export function buildBook(
    * perfect-bound paperback has no covering to roll, its card being cut flush
    * with the block at head and tail.
    */
-  const cap = entry.binding === 'hardback' ? settings.books.headCap * thickness : 0;
+  /**
+   * The covering wraps the **printed** faces, not the boards under them.
+   *
+   * Every printed face on this book floats `SKIN` above its board, so the book's
+   * real outer surface is `thickness + 2 * SKIN` wide and stands at
+   * `depth / 2 + SKIN`. A cap scaled to the *board* thickness stops a hair short
+   * of that on both sides, and from the cover side you look past its end into the
+   * gap — a notch at the top corner, which is how it was reported.
+   *
+   * The height it takes off the spine is measured with the same scale, so the
+   * cap's foot still lands exactly on the top of the printed spine.
+   */
+  const capScale = thickness + SKIN * 2;
+  const cap = entry.binding === 'hardback' ? settings.books.headCap * capScale : 0;
 
   /**
    * The case, in two pieces, and the split is **where the covering starts to
@@ -1372,7 +1385,7 @@ export function buildBook(
        * identical — same draw, same twenty triangles, same texture. Only a
        * picture could catch it, and only a near one.
        */
-      head.scale.setScalar(thickness);
+      head.scale.setScalar(capScale);
       head.position.set(0, height / 2, depth / 2 + SKIN);
       group.add(head);
     }

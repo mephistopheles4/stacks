@@ -42,6 +42,23 @@ const SEGMENTS = 1;
 const CAP_STEPS = 10;
 
 /**
+ * How far past the quarter the covering keeps turning, so it **tucks in**.
+ *
+ * A turn that stops dead at 90° leaves its back edge standing exactly where the
+ * boards' front face is — and the cap is parked `SKIN` proud of the spine, so
+ * *exactly* is a `SKIN`-wide slot running the width of the head. Looked at along
+ * the head from the fore-edge it reads as a square step with the curve hidden
+ * behind it, which is how it was reported.
+ *
+ * Past 90° the arc descends again, so every degree of this is at or below the
+ * board tops: it buries itself in the case rather than adding silhouette. That is
+ * also what a real turn-in does — the cloth carries on over the head and is
+ * tucked down inside the boards.
+ */
+const TUCK = Math.PI / 6;
+const TUCK_STEPS = 3;
+
+/**
  * The shared caps, one per roll on the shelf — which is one.
  *
  * Module-level, like `UNIT_BOX`: one geometry for the whole shelf however many
@@ -92,31 +109,46 @@ function buildHeadCap(roll: number): THREE.BufferGeometry {
   const uvs: number[] = [];
   const indices: number[] = [];
 
+  const steps = CAP_STEPS + TUCK_STEPS;
+
+  /**
+   * Piecewise, so a step lands **exactly** on the quarter.
+   *
+   * Spreading `CAP_STEPS + TUCK_STEPS` evenly over `90° + TUCK` puts no vertex at
+   * 90° unless the two divide, and 13 steps over 120° wants step 9.75. The crest
+   * then falls a hair *below* the board tops it is supposed to meet — a gap of
+   * exactly the kind this whole sequence of fixes has been closing. The visible
+   * quarter also keeps #66's tessellation exactly, which is the other reason.
+   */
+  const angleAt = (j: number): number =>
+    j <= CAP_STEPS
+      ? (j / CAP_STEPS) * (Math.PI / 2)
+      : Math.PI / 2 + ((j - CAP_STEPS) / TUCK_STEPS) * TUCK;
+
   for (let i = 0; i <= SEGMENTS; i += 1) {
     const u = i / SEGMENTS;
     const x = u - 0.5;
-    for (let j = 0; j <= CAP_STEPS; j += 1) {
-      const v = j / CAP_STEPS;
-      const angle = v * (Math.PI / 2);
+    for (let j = 0; j <= steps; j += 1) {
+      const angle = angleAt(j);
       // Centre of the roll at (y = -roll, z = -roll): angle 0 is the bottom of
-      // the cap, flush with the spine face; 90° is its top, rolled back over the
-      // page block.
+      // the cap, flush with the spine face; 90° is its top, over the page block;
+      // past that it descends into the boards. See `TUCK`.
       positions.push(x, -roll + roll * Math.sin(angle), -roll + roll * Math.cos(angle));
       normals.push(0, Math.sin(angle), Math.cos(angle));
-      uvs.push(u, v);
+      uvs.push(u, j / steps);
     }
   }
 
-  const stride = CAP_STEPS + 1;
+  const stride = steps + 1;
   for (let i = 0; i < SEGMENTS; i += 1) {
-    for (let j = 0; j < CAP_STEPS; j += 1) {
+    for (let j = 0; j < steps; j += 1) {
       const a = i * stride + j;
       const b = a + stride;
       indices.push(a, b, a + 1, b, b + 1, a + 1);
     }
   }
 
-  closeTheFillet(roll, positions, normals, uvs, indices);
+  closeTheEnds(roll, steps, angleAt, positions, normals, uvs, indices);
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -127,88 +159,61 @@ function buildHeadCap(roll: number): THREE.BufferGeometry {
 }
 
 /**
- * How far the closing faces bury themselves in the case behind and below.
+ * The two ends, which are what make the arc a **solid fillet** rather than an
+ * awning — and they are quarter *discs*, not squares.
  *
- * The arc's foot and back edge land exactly on the front piece's top and the
- * boards' front face, and *exactly* is the one place a hairline shows: the cap
- * mesh is parked `SKIN` proud of the spine so its back edge sits `SKIN` in front
- * of the case, and a slot that thin is still a slot. Overlapping into the case is
- * invisible and cannot be got wrong by a rounding error.
+ * Without them the cap is a one-sided strip with a wedge of nothing under it,
+ * open at both ends and along its back; looking down at the head you see
+ * straight into the case. Squaring them off instead is worse than leaving them
+ * open, and it is what shipped first: the square's outer corner sits at
+ * `(y = 0, z = 0)`, which is `roll × √2` from the arc's centre against the arc's
+ * `roll` — so **each end of the covering grew a square block sticking out past
+ * the roll it was supposed to close.** Circled in a screenshot from three angles
+ * before it was recognised for what it was.
+ *
+ * A fan from the arc's centre fills exactly the disc and cannot overhang it,
+ * whatever the sweep.
+ *
+ * There is no bottom face and no back face: the tuck carries the surface below
+ * the board tops and behind their front, so both are inside the case, and a face
+ * there would be coplanar with the very pieces it is hiding between.
+ *
+ * Flat-shaded, so each end carries its own vertices and its own normal rather
+ * than sharing the arc's. Cost is 26 triangles against the arc's 26 — still
+ * nothing, and #66's finding stands that the cap's ~11% is not its triangles.
  */
-const BURY = 0.06;
-
-/**
- * The three faces that make the arc a **solid fillet** rather than an awning.
- *
- * Without them the cap is a one-sided strip with a wedge of nothing under it —
- * the arc above, the front piece's flat top below, the page block behind — and
- * that wedge is open along its back edge, over the block's width. Looking down
- * at the head from in front you see straight through it into the case: reported
- * as *"seems we created a hole here"*, and it was there from the moment the cap
- * shipped.
- *
- * The three are the back, at `z = -roll` where the boards' front face is; and the
- * two ends at `x = ±0.5`, which nothing else covers — the printed cover stops
- * where its board does, so the cap's own ends are the silhouette there.
- *
- * There is no *bottom* face: it would be coplanar with the front piece's top and
- * would z-fight with it, and it is buried anyway.
- *
- * Flat-shaded, so each face carries its own normals and its own vertices rather
- * than sharing the arc's. Cost is 6 triangles against the arc's 20, and #66's
- * finding stands — the cap's ~11% is not its triangles.
- */
-function closeTheFillet(
+function closeTheEnds(
   roll: number,
+  steps: number,
+  angleAt: (step: number) => number,
   positions: number[],
   normals: number[],
   uvs: number[],
   indices: number[],
 ): void {
-  const quad = (
-    corners: readonly [number, number, number][],
-    normal: readonly [number, number, number],
-  ): void => {
-    const base = positions.length / 3;
-    for (const [x, y, z] of corners) {
-      positions.push(x, y, z);
-      normals.push(...normal);
-      // Across the width, matching the arc — so the spine's normal map, which
-      // varies only in `u`, shades these consistently with it.
-      uvs.push(x + 0.5, 0);
-    }
-    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
-  };
-
-  const low = -roll - BURY;
-
-  // The back, buried into the boards it meets.
-  quad(
-    [
-      [-0.5, 0, -roll],
-      [-0.5, low, -roll],
-      [0.5, low, -roll],
-      [0.5, 0, -roll],
-    ],
-    [0, 0, -1],
-  );
-
-  // The two ends. Squared off rather than followed round the arc: the missing
-  // sliver is outside the arc and behind the cover's own edge, and a fan here
-  // would be four times the triangles to fill what the silhouette already hides.
   for (const side of [1, -1] as const) {
     const x = side * 0.5;
-    quad(
-      [
-        [x, 0, -roll],
-        [x, low, -roll],
-        [x, low, 0],
-        [x, 0, 0],
-      ],
-      // Wound the same way for both ends, so one of the two faces inward; the
-      // material is `FrontSide`, and the inward one is inside the case where
-      // nothing looks at it.
-      [side, 0, 0],
-    );
+    const base = positions.length / 3;
+
+    // The centre of the roll, then every point on the arc.
+    positions.push(x, -roll, -roll);
+    normals.push(side, 0, 0);
+    uvs.push(x + 0.5, 0);
+
+    for (let j = 0; j <= steps; j += 1) {
+      const angle = angleAt(j);
+      positions.push(x, -roll + roll * Math.sin(angle), -roll + roll * Math.cos(angle));
+      // Across the width, matching the arc — so the spine's normal map, which
+      // varies only in `u`, shades these consistently with it.
+      normals.push(side, 0, 0);
+      uvs.push(x + 0.5, j / steps);
+    }
+
+    for (let j = 0; j < steps; j += 1) {
+      // Wound opposite ways, so each end faces outward rather than one of them
+      // facing into the book — the material is `FrontSide`.
+      if (side === 1) indices.push(base, base + 1 + j, base + 2 + j);
+      else indices.push(base, base + 2 + j, base + 1 + j);
+    }
   }
 }

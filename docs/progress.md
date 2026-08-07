@@ -1271,10 +1271,28 @@ where the neighbours hide the head.
   nothing under it, open along its back edge over the page block's width. Look
   down at the head from in front and you saw into the case. This one had been
   there since the cap shipped and had nothing to do with the boards; it took a
-  third look with `?solo` to see it. Closed with a back face and two ends, each
-  running *past* the surface it meets rather than landing exactly on it, because
-  exactly is where a hairline lives. +6 triangles on 20, so +120 over 49 books;
-  draws unchanged.
+  third look with `?solo` to see it.
+- **Closing it with *squares* was the next fault, and it was worse.** A square end
+  puts its outer corner `roll × √2` from the arc's centre against the arc's
+  `roll`, so each end of the covering grew a block sticking out past the roll it
+  was there to close. Reported from three angles — as an empty corner from the
+  cover side, as a dark notch at the joint, and as a square step from behind —
+  before it was recognised as one thing. The ends are quarter-disc **fans** now,
+  which cannot overhang whatever the sweep, and there is a test that says so:
+  every vertex on or inside the arc.
+- **Two hairlines with the same cause.** The cap was scaled to the *board*
+  thickness and parked `SKIN` proud of the spine, so it stopped a hair short of
+  the printed faces on both sides (a notch at the top corner from the cover side)
+  and its back edge stood a hair in front of the boards (a slot across the head,
+  reading as a square step with the curve hidden behind it). It is scaled to the
+  printed faces now, and the turn keeps going **past 90°** so it tucks down into
+  the boards rather than stopping dead on them — which is also what a real turn-in
+  does. The quarter is still stepped exactly as #66 tessellated it; the tuck is
+  its own three steps, so a vertex still lands precisely on the crest.
+
+Cost of all of it: 20 triangles a cap became 52, so **3068 → 3708 over 49 books**,
+and **draws are unchanged at 334**. #66's finding is untouched — the cap's ~11% was
+never its triangles.
 
 The case is two pieces now. The front `cap` of it is full width and `cap`
 shorter; the boards, the page block and the printed cover all stop where the roll
