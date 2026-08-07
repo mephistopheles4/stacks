@@ -283,14 +283,16 @@ moved none of them. `?solo` found both in one screenshot.
   [#56](https://github.com/mephistopheles4/stacks/issues/56) decided there is no
   tail cap and never will be.
 - **Distance.** `?solo` sets `minDistance` to 0.4 of a book's height, about
-  **four times closer than the shelf's 1.5**. At that range the case's assembly
-  seams are legible — the hair between a printed face and its board, the join
-  where the covering's roll meets the cover — and at the shelf's own `minDistance`
-  they are not. Checked by render, not assumed.
+  **four times closer than the shelf's 1.5**. So it magnifies; it does not
+  invent.
 
-So a fault found here is not automatically a fault. Ask what it looks like at
-`minDistance` on the shelf before changing geometry for it; the corner has
-already been re-cut four times, and each cut fixed one seam by opening another.
+⚠️ **It is still the right instrument, and "a visitor could never see that" is
+not a disposal.** That sentence was written here once, about the case's assembly
+seams, and the owner produced a shelf screenshot at the shelf's own `minDistance`
+with the seam plainly in it. What had actually happened is that the claim was
+made from a render the writer had already decided was clean. **Anything you want
+to dismiss on visibility grounds gets a shelf render at `minDistance` first, and
+somebody other than the person who wants it dismissed should look at it.**
 
 ## The debug panel — `?debug`
 
