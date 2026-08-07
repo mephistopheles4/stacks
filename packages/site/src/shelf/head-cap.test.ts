@@ -72,15 +72,19 @@ describe('the head cap', () => {
     expect(deepest[1]).toBeLessThan(0);
   });
 
-  it('is 26 triangles of arc and 26 of ends', () => {
+  it('is 26 triangles of arc and 20 of ends — the tuck is not fanned', () => {
     // #56 built the arc at 32 x 10 = 640 and never varied either number. #66
     // found the width subdivision provably free — nothing varies along `x`, so it
     // subdivides a straight line — and the cost identical at 4 triangles and at
     // 640, so a coarser cap cannot recover the 11% it costs.
     //
-    // Half of them are the ends. They are not decoration: without them this is an
-    // awning over a wedge of nothing, and you can see through it into the case.
-    expect(geometry.getIndex()?.count).toBe((26 + 26) * 3);
+    // The ends are not decoration: without them this is an awning over a wedge of
+    // nothing, and you can see through it into the case. But they close the
+    // *quarter* only. Fanning the tuck as well — 26 and 26, which shipped — puts
+    // a disc in the boards' own plane, and the cap then has to be inset out of
+    // that overlap, which leaves a lit sliver of board standing past the roll.
+    // 20 rather than 26 is what lets `capScale` be `thickness` exactly.
+    expect(geometry.getIndex()?.count).toBe((26 + 20) * 3);
   });
 
   it('puts its crest at y = 0 and its foot at z = 0', () => {
@@ -96,15 +100,30 @@ describe('the head cap', () => {
     expect(Math.min(...ys)).toBeCloseTo(-ROLL, PLACES);
   });
 
-  it('is closed at both ends', () => {
+  it('⚠️ is closed at both ends, and no end normal faces straight out', () => {
+    // Both halves matter and they pull against each other.
+    //
+    // **Closed**: without ends this is an awning over a wedge of nothing and you
+    // see through it into the case.
+    //
+    // **Never `(±1, 0, 0)`**: a true sideways normal is what made the closed end
+    // read as a *thumbprint stuck on the corner* — it catches the light as a
+    // surface of its own, discontinuous with the roll it closes, and the eye
+    // reads that discontinuity as a separate object. The end is a flat disc and
+    // has to be; nothing beside a book is there for the covering to turn down
+    // onto. What was wrong was its shading, and 45° into the roll is the whole
+    // fix. Restoring the honest normal is a one-token change that looks like
+    // tidying and undoes it.
+    let ends = 0;
     const normals = attribute('normal');
-    const faces = new Set<string>();
     for (let i = 0; i < normals.length; i += 3) {
-      faces.add([normals[i], normals[i + 1], normals[i + 2]].map((n) => (n ?? 0).toFixed(3)).join());
+      const x = normals[i] ?? 0;
+      expect(Math.abs(x)).toBeLessThan(0.9);
+      if (Math.abs(x) > 0.1) ends += 1;
     }
 
-    expect(faces).toContain('1.000,0.000,0.000');
-    expect(faces).toContain('-1.000,0.000,0.000');
+    // The hub and its rim, at each of the two ends.
+    expect(ends).toBe((1 + (10 + 1)) * 2);
   });
 
   it('⚠️ carries the roll itself, so the caller scales by thickness and not by it', () => {

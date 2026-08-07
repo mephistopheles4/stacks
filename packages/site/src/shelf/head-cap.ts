@@ -178,10 +178,39 @@ function buildHeadCap(roll: number): THREE.BufferGeometry {
  * the board tops and behind their front, so both are inside the case, and a face
  * there would be coplanar with the very pieces it is hiding between.
  *
- * Flat-shaded, so each end carries its own vertices and its own normal rather
- * than sharing the arc's. Cost is 26 triangles against the arc's 26 — still
- * nothing, and #66's finding stands that the cap's ~11% is not its triangles.
+ * Each end carries its own vertices rather than sharing the arc's. Cost is 26
+ * triangles against the arc's 26 — still nothing, and #66's finding stands that
+ * the cap's ~11% is not its triangles.
  */
+/**
+ * A normal halfway between facing sideways and facing the way the roll faces —
+ * **the whole of the fix for the thing the owner kept circling.**
+ *
+ * The end of a roll has to be a flat disc: the only thing beside a book is air,
+ * so there is nothing for the covering to turn down onto, and no tessellation
+ * changes that. What made it read as a *thumbprint stuck on the corner* was
+ * never the silhouette — the disc sits `SKIN` inside the board's own face, so
+ * there is barely a silhouette to see. It was the shading: a true `(±1, 0, 0)`
+ * catches the light as a surface of its own, discontinuous with the roll it
+ * closes, and the eye reads a discontinuity in shading as a separate object.
+ *
+ * Leaning the normal 45° into the roll makes the disc shade as the covering
+ * coming round the corner. The geometry does not move by a micron; the picture
+ * changes completely. It is the oldest trick in low-poly asset work, and it is
+ * the reason this is a four-line fix rather than the quarter-torus corner patch
+ * that was the alternative.
+ *
+ * ⚠️ **A lie the renderer tells for us, and the one direction it can go wrong:**
+ * a bevelled normal that leans *too* far reads as a bulge that is not there.
+ * 45° is the average of the rim it interpolates towards, so the disc meets the
+ * arc with no step at all — which is what makes it read as one surface rather
+ * than two.
+ */
+function bevel(normals: number[], x: number, y: number, z: number): void {
+  const length = Math.hypot(x, y, z);
+  normals.push(x / length, y / length, z / length);
+}
+
 function closeTheEnds(
   roll: number,
   steps: number,
@@ -197,15 +226,30 @@ function closeTheEnds(
 
     // The centre of the roll, then every point on the arc.
     positions.push(x, -roll, -roll);
-    normals.push(side, 0, 0);
+    // 45° into the roll, which is the average of the rim normals below — so the
+    // fan interpolates evenly out of its hub instead of pinching there.
+    bevel(normals, side, Math.SQRT1_2, Math.SQRT1_2);
     uvs.push(x + 0.5, 0);
 
-    for (let j = 0; j <= steps; j += 1) {
+    /**
+     * The visible quarter only — the tuck is left open, deliberately.
+     *
+     * Past 90° the arc descends behind the boards' front face, so a fan out to
+     * the full sweep puts a disc in the boards' **own plane**, overlapping them.
+     * Two surfaces at one depth is the z-fighting every `SKIN` on this book
+     * exists to avoid, and dodging it by insetting the whole cap is what left a
+     * lit sliver of board standing past the roll. Stopping at the quarter is what
+     * lets the cap span the case exactly.
+     *
+     * Nothing shows through the opening: it lies in the boards' plane, behind
+     * their front face, so the board is what a ray from outside meets.
+     */
+    for (let j = 0; j <= CAP_STEPS; j += 1) {
       const angle = angleAt(j);
       positions.push(x, -roll + roll * Math.sin(angle), -roll + roll * Math.cos(angle));
+      bevel(normals, side, Math.sin(angle), Math.cos(angle));
       // Across the width, matching the arc — so the spine's normal map, which
       // varies only in `u`, shades these consistently with it.
-      normals.push(side, 0, 0);
       uvs.push(x + 0.5, j / steps);
     }
 
@@ -223,7 +267,7 @@ function closeTheEnds(
      * is `+Y` and screen-right is `-Z`, and `(centre, arc[j], arc[j+1])` comes out
      * clockwise — back-facing. So `+X` takes the reversed order.
      */
-    for (let j = 0; j < steps; j += 1) {
+    for (let j = 0; j < CAP_STEPS; j += 1) {
       if (side === 1) indices.push(base, base + 2 + j, base + 1 + j);
       else indices.push(base, base + 1 + j, base + 2 + j);
     }

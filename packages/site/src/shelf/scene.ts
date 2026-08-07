@@ -1248,75 +1248,92 @@ export function buildBook(
    * with the block at head and tail.
    */
   /**
-   * The covering wraps the **printed** faces, not the boards under them.
+   * The covering spans the case **exactly**, and every earlier number here was a
+   * guess at how to dodge a coplanar surface.
    *
-   * Every printed face on this book floats `SKIN` above its board, so the book's
-   * real outer surface is `thickness + 2 * SKIN` wide and stands at
-   * `depth / 2 + SKIN`. A cap scaled to the *board* thickness stops a hair short
-   * of that on both sides, and from the cover side you look past its end into the
-   * gap — a notch at the top corner, which is how it was reported.
+   * It has been `thickness + SKIN * 4` and `thickness - SKIN * 2`, and each was
+   * visibly wrong in its own direction. Proud of the case, the roll's flat ends
+   * are lit as surfaces of their own — a bright thumbprint on the corner with a
+   * highlight along the step, circled from four angles across two sessions.
+   * Inside it, they hide, but the boards then stand `SKIN` past the roll: a
+   * four-pixel lit sliver of board at the head of every hardback, which is the
+   * notch that started this.
    *
-   * The height it takes off the spine is measured with the same scale, so the
-   * cap's foot still lands exactly on the top of the printed spine.
+   * There is no third offset, because the covering is not floating above the case
+   * — it *is* the outside of the case, and the case is `thickness` wide. What
+   * made an offset seem necessary was the tuck's end fans lying in the boards'
+   * own plane; the tuck is no longer fanned, so nothing here is coplanar with
+   * anything. See `closeTheEnds`.
    */
-  // `SKIN * 4`, so the covering stands a hair **outside** the printed faces
-  // rather than flush with them. Flush is `SKIN * 2`, and flush means the cap's
-  // end disc is coplanar with the cover plane — two surfaces at the same depth,
-  // which is the z-fighting this number exists to avoid everywhere else on the
-  // book. Proud is also what a covering does: it wraps the board's edge.
-  const capScale = thickness + SKIN * 4;
+  const capScale = thickness;
   const cap = entry.binding === 'hardback' ? settings.books.headCap * capScale : 0;
 
   /**
-   * The case, in two pieces, and the split is **where the covering starts to
-   * roll**.
+   * The case, and the one thing to understand about it: **the covering rolls over
+   * a corner, so only the corner is cleared for it.**
    *
-   * A hardback's head is one continuous turn of cloth across the whole thickness
-   * — boards included — so the cap spans the full thickness and everything under
-   * it has to stop `cap` short of the top. Boxes cannot taper, so the front `cap`
-   * of the case is its own piece, full width and `cap` shorter than the rest:
+   * A hardback's head is one continuous turn of cloth across the whole thickness,
+   * boards included, so the cap spans the full thickness and whatever is under
+   * that corner has to stop `cap` short. Boxes cannot taper, so each board is two
+   * of them — full depth below the roll, pulled back by `cap` inside it:
    *
    * ```
-   *        ╭───  cap, rolling                     head
-   *   ┌────┴──┐  front piece  (thickness × height-cap × cap)
-   *   │       │
-   *   │ board │  boards       (board × height × depth-cap), and the page block
+   *   ┌──────┐ ╮ board top   (board × cap × depth-cap)      head
+   *   │      ├─╯ ← the roll turns through here
+   *   │      │
+   *   │ main │   board main  (board × height-cap × depth)    joint at +Z
    * ```
    *
-   * **Two earlier shapes were wrong and each was wrong invisibly.** Boards at
+   * **Three earlier shapes were wrong and each was wrong invisibly.** Boards at
    * full depth and full height put their front-top corners `cap` proud of the
    * surface rolling over them — two small square towers at the head of every
    * hardback. Pulling the boards back without widening the piece in front of them
    * left a void at the board's own x, and a diagonal view looked straight through
-   * the hair between the printed spine and the cover into the page block's side:
-   * a cream seam the full height of the joint. Neither moved a single counter —
-   * same draws, same triangles, same textures — and neither is visible on a
-   * shelf, where the neighbours hide the head. `?solo` is what found them both.
+   * the hair between the printed spine and the cover into the page block's side.
+   * Widening that piece to the full thickness closed the void and opened the
+   * third: a `cap`-wide strip of *board* colour down the whole joint, the front
+   * `cap` of a case that is only `cap` tall having been taken off all `height` of
+   * it. That one over-cleared by `height / cap` — about sixty times — and it is
+   * the one the owner circled on the shelf itself.
+   *
+   * None of the three moved a single counter: same draws, same triangles, same
+   * textures. `?solo` found the first two and the owner found the third.
    *
    * ⚠️ **Rounding the boards' own corners instead is the tempting fix and is the
    * one #56 struck**: a corner radius on a box scaled `(board, height, depth)`
    * smears, those axes differing by two orders of magnitude, and doing it
    * honestly means a geometry per book — against the +0 per book every ticket on
-   * this map costed itself against.
+   * this map costed itself against. Two boxes where there was one costs +2 draws
+   * on a hardback and nothing on a paperback, which is what it is worth.
    *
-   * A paperback rolls nothing, so `cap` is 0, the front piece is the spine strip
-   * it has always been, and every number below is what it was.
+   * A paperback rolls nothing, so `cap` is 0, there is no board top at all, and
+   * every number here is what it always was.
    */
   const frontDepth = cap > 0 ? cap : board;
-  const frontWidth = cap > 0 ? thickness : thickness - board * 2;
-  const caseDepth = depth - cap;
 
-  // Front and back boards, running the full height and stopping at the roll.
   for (const side of [1, -1]) {
-    const face = solid(boards);
-    face.scale.set(board, height, caseDepth);
-    face.position.set((side * (thickness - board)) / 2, 0, -cap / 2);
+    const x = (side * (thickness - board)) / 2;
+
+    const main = solid(boards);
+    main.scale.set(board, height - cap, depth);
+    main.position.set(x, -cap / 2, 0);
+
+    if (cap > 0) {
+      const top = solid(boards);
+      top.scale.set(board, cap, depth - cap);
+      top.position.set(x, (height - cap) / 2, -cap / 2);
+    }
   }
 
-  // The covering at the bound edge, closing the case and stopping short of the
-  // head, where the cap continues it round.
+  /**
+   * The covering at the bound edge, between the boards and behind the roll.
+   *
+   * Between them, not across them: the boards now reach the joint on their own,
+   * so a full-thickness strip here would put its own dark sides where their
+   * printed faces belong — which is the third fault above, exactly.
+   */
   const spineStrip = solid(boards);
-  spineStrip.scale.set(frontWidth, height - cap, frontDepth);
+  spineStrip.scale.set(thickness - board * 2, height - cap, frontDepth);
   spineStrip.position.set(0, -cap / 2, (depth - frontDepth) / 2);
 
   // The page block, recessed inside the case at head, tail and fore-edge — and
@@ -1326,23 +1343,61 @@ export function buildBook(
   block.position.set(0, 0, (square - frontDepth) / 2);
   block.castShadow = castShadows;
 
-  const printed = (material: THREE.Material): THREE.Mesh => {
+  /**
+   * The printed faces, laid **exactly on** their boards and biased in depth.
+   *
+   * They used to float `SKIN` in front, which is the obvious way to keep two
+   * surfaces from fighting over the same pixel — and it costs a step. A step you
+   * cannot see face-on and cannot miss edge-on: from any oblique angle the
+   * board's own front face shows in the `SKIN` between the printed spine and the
+   * printed cover, a dark hairline the full height of every joint. Measured at
+   * `?solo`'s minimum distance it is four pixels wide. The owner circled it on
+   * the *shelf*, which is what settled that it reads at all.
+   *
+   * `polygonOffset` says the same thing to the depth test without saying it to
+   * the geometry: the artwork is coplanar with the board, and wins ties. One
+   * hairline is not why this is the right shape — there is a `SKIN` gap at every
+   * corner of every book for the same reason, and this closes all of them.
+   *
+   * ⚠️ **Nothing here reaches the shadow pass.** three's `getDepthMaterial`
+   * copies `side`, `alphaTest`, `map` and displacement, and not `polygonOffset` —
+   * so decal and board write the same depth into the shadow map, which is
+   * harmless because it is the *same* depth. If a depth or normal prepass is ever
+   * added for SSAO, it will render these through an override material that
+   * ignores the offset, and every decal will speckle along its edges. That is the
+   * one change that breaks this.
+   */
+  const printed = (material: THREE.MeshStandardMaterial): THREE.Mesh => {
+    material.polygonOffset = true;
+    // Factor scales with the depth slope, so the bias grows at exactly the
+    // grazing angles where the hairline showed. Units is the spec's minimum
+    // resolvable step; two of them, for the phones this project has history with.
+    material.polygonOffsetFactor = -1;
+    material.polygonOffsetUnits = -2;
     const mesh = new THREE.Mesh(UNIT_PLANE, material);
     mesh.receiveShadow = true;
     group.add(mesh);
     return mesh;
   };
 
-  // The printed cover stops where its board does, so no sliver of artwork stands
-  // above the covering that has rolled away in front of it.
+  /**
+   * The printed cover runs the whole depth, to the joint — and stops `cap` short
+   * of the head, where the covering has rolled away in front of it.
+   *
+   * One plane and not two, which is the trade this makes: the top `cap` of the
+   * board shows covering rather than artwork, a band 2% of the cover's height,
+   * seen only on a face-out book and reading as the turn-in over the head. The
+   * alternative is an L of two planes carrying two slices of one texture, for a
+   * strip narrower than the board is thick.
+   */
   const coverFace = printed(cover);
-  coverFace.scale.set(caseDepth, height, 1);
+  coverFace.scale.set(depth, height - cap, 1);
   coverFace.rotation.y = Math.PI / 2;
-  coverFace.position.set(thickness / 2 + SKIN, 0, -cap / 2);
+  coverFace.position.set(thickness / 2, -cap / 2, 0);
 
   const spineFace = printed(spine);
   spineFace.scale.set(thickness, height - cap, 1);
-  spineFace.position.set(0, -cap / 2, depth / 2 + SKIN);
+  spineFace.position.set(0, -cap / 2, depth / 2);
 
   /**
    * The covering rolling over the head, on the hardbacks.
@@ -1391,7 +1446,10 @@ export function buildBook(
        * picture could catch it, and only a near one.
        */
       head.scale.setScalar(capScale);
-      head.position.set(0, height / 2, depth / 2 + SKIN);
+      // On the case, like the printed faces it continues — the covering's foot
+      // lands exactly on the printed spine's top edge rather than a hair in
+      // front of it, which would be a lip across the whole head.
+      head.position.set(0, height / 2, depth / 2);
       group.add(head);
     }
   }
