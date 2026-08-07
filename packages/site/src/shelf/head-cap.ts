@@ -209,11 +209,23 @@ function closeTheEnds(
       uvs.push(x + 0.5, j / steps);
     }
 
+    /**
+     * Wound opposite ways, and **this way round** — which is not the way it
+     * reads.
+     *
+     * The material is `FrontSide`, so a fan wound the wrong way is *culled*, and
+     * a culled end is not a missing sliver: you see straight through it into the
+     * unlit inside of the arc, which renders as a dark rounded lobe sitting in
+     * the corner. That is a hole wearing the shape of the thing that was supposed
+     * to close it, and it looked exactly like the fault before it.
+     *
+     * Derived rather than guessed: looking down `-X` at the `+X` end, screen-up
+     * is `+Y` and screen-right is `-Z`, and `(centre, arc[j], arc[j+1])` comes out
+     * clockwise — back-facing. So `+X` takes the reversed order.
+     */
     for (let j = 0; j < steps; j += 1) {
-      // Wound opposite ways, so each end faces outward rather than one of them
-      // facing into the book — the material is `FrontSide`.
-      if (side === 1) indices.push(base, base + 1 + j, base + 2 + j);
-      else indices.push(base, base + 2 + j, base + 1 + j);
+      if (side === 1) indices.push(base, base + 2 + j, base + 1 + j);
+      else indices.push(base, base + 1 + j, base + 2 + j);
     }
   }
 }

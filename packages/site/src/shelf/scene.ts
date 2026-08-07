@@ -1259,7 +1259,12 @@ export function buildBook(
    * The height it takes off the spine is measured with the same scale, so the
    * cap's foot still lands exactly on the top of the printed spine.
    */
-  const capScale = thickness + SKIN * 2;
+  // `SKIN * 4`, so the covering stands a hair **outside** the printed faces
+  // rather than flush with them. Flush is `SKIN * 2`, and flush means the cap's
+  // end disc is coplanar with the cover plane — two surfaces at the same depth,
+  // which is the z-fighting this number exists to avoid everywhere else on the
+  // book. Proud is also what a covering does: it wraps the board's edge.
+  const capScale = thickness + SKIN * 4;
   const cap = entry.binding === 'hardback' ? settings.books.headCap * capScale : 0;
 
   /**
