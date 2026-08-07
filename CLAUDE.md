@@ -276,10 +276,21 @@ below. Two defects at the head of every hardback survived two code reviews, a
 479-test suite and a gate that reports every renderer counter — because they
 moved none of them. `?solo` found both in one screenshot.
 
-⚠️ **What you can see from below here, nobody can see at all.** The shipped
-`maxPolarAngle` is `PI * 0.52`, so a visitor never gets more than 3.6° under the
-horizon — which is why [#56](https://github.com/mephistopheles4/stacks/issues/56)
-decided there is no tail cap and never will be. Look, but do not fix it.
+⚠️ **What you can see here, nobody can see at all — and that cuts two ways.**
+
+- **Angle.** The shipped `maxPolarAngle` is `PI * 0.52`, so a visitor never gets
+  more than 3.6° under the horizon — which is why
+  [#56](https://github.com/mephistopheles4/stacks/issues/56) decided there is no
+  tail cap and never will be.
+- **Distance.** `?solo` sets `minDistance` to 0.4 of a book's height, about
+  **four times closer than the shelf's 1.5**. At that range the case's assembly
+  seams are legible — the hair between a printed face and its board, the join
+  where the covering's roll meets the cover — and at the shelf's own `minDistance`
+  they are not. Checked by render, not assumed.
+
+So a fault found here is not automatically a fault. Ask what it looks like at
+`minDistance` on the shelf before changing geometry for it; the corner has
+already been re-cut four times, and each cut fixed one seam by opening another.
 
 ## The debug panel — `?debug`
 
