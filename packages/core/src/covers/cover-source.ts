@@ -1,7 +1,7 @@
 /**
  * Which provider a cached cover's bytes came from.
  *
- * Recorded because the three providers do not permit the same things. Open
+ * Recorded because the providers do not permit the same things. Open
  * Library's own documentation contemplates downloading a cover and displaying
  * it on a public-facing page, asks that you not crawl, and appreciates a link
  * back. Google's API terms bar keeping permanent copies of API content and

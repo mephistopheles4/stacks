@@ -7,6 +7,14 @@
  * correct, and asking the providers cannot prove anything about bytes already
  * on disk.
  *
+ * **Three providers, not four, and deliberately.** O'Reilly arrived after
+ * `cover_source` did, so no O'Reilly cover can ever be in this function's
+ * input — every one of them was recorded at fetch time. Worth saying because
+ * the omission looks like an oversight and is not: an O'Reilly cover at
+ * 1200x1575 sits inside Apple's measured 778–2400px range, so a signature for
+ * it could not separate them anyway. If one ever does reach here with no
+ * source, it will be guessed as Apple.
+ *
  * What can be read off the files is their size, and the three providers serve
  * visibly different things:
  *

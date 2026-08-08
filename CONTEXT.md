@@ -110,9 +110,11 @@ _Avoid_: texture (says nothing), pages (that is the block), grain (that word is
 taken by the *struck* roughness weave — see #68).
 
 **Provenance**:
-Which of the three providers a cover's *bytes* were downloaded from — a separate
+Which of the four providers a cover's *bytes* were downloaded from — a separate
 question from which provider answered for the book's metadata. The two differ
-often enough that conflating them is a licensing mistake, not a pedantic one.
+often enough that conflating them loses real information: a book Open Library
+answered for can carry an O'Reilly cover. It is provenance and not permission —
+nothing reads it, and every cover is published whatever its source.
 _Avoid_: source (ambiguous — a record's `source` is the metadata provider).
 
 **Candidate**:

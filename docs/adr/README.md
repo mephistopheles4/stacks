@@ -28,7 +28,7 @@ Two other files hold what these deliberately do not:
 | [0002](./0002-no-build-step.md) | No build step for `core` and `cli` |
 | [0003](./0003-site-import-type-only.md) | The site may only `import type` from `@stacks/core` |
 | [0004](./0004-fixtures-invented.md) | Fixtures are entirely invented, and no third-party material is ever committed |
-| [0005](./0005-three-metadata-providers.md) | Three metadata providers, in a fixed order |
+| [0005](./0005-three-metadata-providers.md) | Three metadata providers, in a fixed order (four since 0038) |
 | [0006](./0006-spine-colour-binding-edge.md) | Spine colour is sampled from the cover's binding edge |
 | [0007](./0007-fuzzy-book-matching.md) | Matching a book is fuzzy, not exact |
 | [0008](./0008-book-geometry.md) | A book is a case wrapped round a page block, not one painted box |
@@ -61,4 +61,4 @@ Two other files hold what these deliberately do not:
 | [0035](./0035-books-is-a-settings-category.md) | `books` is a settings category, and the line is shape against shading |
 | [0036](./0036-printed-faces-are-decals.md) | The printed faces are decals, not floats |
 | [0037](./0037-ranking-does-not-reward-a-sparse-record.md) | Ranking scores brevity over the title alone, and breaks ties on completeness |
-| [0038](./0038-oreilly-is-a-fourth-provider-metadata-only.md) | O'Reilly is a fourth provider, consulted last, covers included |
+| [0038](./0038-oreilly-is-a-fourth-provider.md) | O'Reilly is a fourth provider, consulted last, covers included |
