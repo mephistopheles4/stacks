@@ -153,6 +153,33 @@ describe('titleMatchScore', () => {
   });
 });
 
+describe('a prefix is not a subtitle', () => {
+  it('refuses a sequel that contains a bare title', () => {
+    // "Beyond Order:" is two tokens, which the old drift allowance let through,
+    // so the sequel was refused as a duplicate of the original.
+    expect(
+      isProbablySameBook('12 Rules for Life', 'Beyond Order: 12 More Rules for Life Jordan B. Peterson'),
+    ).toBe(false);
+  });
+
+  it('still matches a title to its own long subtitle', () => {
+    // The case containment exists for: the weaker direction scores 0.5, so the
+    // scored rule misses it and only containment can say these are one book.
+    expect(
+      isProbablySameBook(
+        'Staff Engineer Will Larson',
+        'Staff Engineer: Leadership Beyond the Management Track Will Larson',
+      ),
+    ).toBe(true);
+  });
+
+  it('still refuses a title the knock-off buries', () => {
+    expect(
+      isProbablySameBook('Staff Engineer Will Larson', "Summary of Will Larson's Staff Engineer"),
+    ).toBe(false);
+  });
+});
+
 describe('companion volumes', () => {
   it('refuses a journal sold beside the book', () => {
     // Both real, both Eckhart Tolle, and not the same book. This one is in the

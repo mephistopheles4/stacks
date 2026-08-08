@@ -161,26 +161,34 @@ function isContainedIn(shorter: string, longer: string): boolean {
   if (small.length < MIN_TOKENS || small.length > large.size) return false;
 
   /**
-   * The extra words must be a *subtitle*, not a prefix.
+   * The extra words must be a *subtitle*, not a prefix — so the shorter title
+   * has to **begin** the longer one, at its very first token.
    *
    * Containment alone cannot tell "Staff Engineer: Leadership Beyond the
    * Management Track" from "Summary of Will Larson's Staff Engineer" — both
    * contain every word of "Staff Engineer — Will Larson". But the first begins
    * with the title and the second buries it, and only the first is the same
-   * book. Requiring the shorter title to start near the front of the longer one
-   * separates them, and it is what a reader does at a glance.
+   * book. A subtitle extends a title at the end; words in front of it announce
+   * a different book, which is what a reader sees at a glance.
+   *
+   * **This allowed a drift of two tokens and that was exactly two too many.**
+   * "Beyond Order:" is two tokens, so *Beyond Order: 12 More Rules for Life*
+   * contained a bare "12 Rules for Life" and the sequel was refused as a
+   * duplicate of the original. Any vault note stored without its subtitle is
+   * open to that, and several are.
+   *
+   * Tightening it changed **no verdict** across 2304 real pairs — every vault
+   * label, every recall-corpus label, and eight adjacent real works — because
+   * the live false positives run through the scored rule instead. So this is
+   * hardening against a shape that has bitten once, not a fix for anything
+   * currently observable. See ADR-0007.
    */
   const firstToken = small[0];
-  if (firstToken === undefined) return false;
-  const startsAt = largeTokens.indexOf(firstToken);
-  if (startsAt < 0 || startsAt > MAX_PREFIX_DRIFT) return false;
+  if (firstToken === undefined || largeTokens[0] !== firstToken) return false;
 
   const shared = small.filter((token) => large.has(token)).length;
   return shared / small.length >= CONTAINMENT;
 }
-
-/** How far into the longer title the shorter one may begin. */
-const MAX_PREFIX_DRIFT = 2;
 
 /**
  * How well a candidate title matches what was searched for, from 0 to 1.
