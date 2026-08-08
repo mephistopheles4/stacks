@@ -1,4 +1,4 @@
-import { isProbablySameBook, isValidIsbn, titleMatchScore } from '../identity.ts';
+import { isProbablySameBook, isValidIsbn, rankingScore } from '../identity.ts';
 import * as appleBooks from './apple-books.ts';
 import * as googleBooks from './google-books.ts';
 import * as openLibrary from './open-library.ts';
@@ -89,10 +89,37 @@ function matchesQuery(query: string, book: BookMetadata): boolean {
  */
 function rankAgainst(term: string, results: readonly BookMetadata[]): BookMetadata[] {
   const score = (book: BookMetadata): number =>
-    (matchesQuery(term, book) ? 1 : 0) +
-    titleMatchScore(term, `${book.title} ${book.author ?? ''}`);
-  // Sort is stable, so equal scores keep the provider's own order.
-  return [...results].sort((a, b) => score(b) - score(a));
+    (matchesQuery(term, book) ? 1 : 0) + rankingScore(term, book.title, book.author);
+
+  return [...results].sort((a, b) => {
+    const difference = score(b) - score(a);
+    if (Math.abs(difference) > SCORE_EPSILON) return difference;
+    // Two records of one book, scoring identically: take the one that actually
+    // says something. Open Library returns the authored and the empty "12 Rules
+    // for Life" as an exact tie, and a stable sort would settle it on the
+    // provider's response order — right today, and silently wrong the day that
+    // order changes.
+    return completeness(b) - completeness(a);
+  });
+}
+
+/** Floating-point slack: these scores are products of divisions, not integers. */
+const SCORE_EPSILON = 1e-9;
+
+/**
+ * How much a candidate actually tells us — the tiebreak, never the ranking.
+ *
+ * Deliberately not part of `score`: a fuller record is not a better *match*, and
+ * letting completeness outweigh relevance is how a well-documented box set beats
+ * the book someone asked for.
+ */
+function completeness(book: BookMetadata): number {
+  return (
+    (book.author === undefined ? 0 : 1) +
+    (book.pages === undefined ? 0 : 1) +
+    (book.isbn === undefined ? 0 : 1) +
+    (book.coverUrl === undefined ? 0 : 1)
+  );
 }
 
 /**

@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   isProbablySameBook,
   isValidIsbn,
+  looksDerivative,
   normaliseIsbn,
   normaliseTitleAuthor,
+  rankingScore,
   titleMatchScore,
 } from './identity.ts';
 
@@ -148,5 +150,104 @@ describe('titleMatchScore', () => {
 
   it('scores an unrelated title at zero', () => {
     expect(titleMatchScore('salt road ledger', 'Compilers for the Impatient')).toBe(0);
+  });
+});
+
+describe('a prefix is not a subtitle', () => {
+  it('refuses a sequel that contains a bare title', () => {
+    // "Beyond Order:" is two tokens, which the old drift allowance let through,
+    // so the sequel was refused as a duplicate of the original.
+    expect(
+      isProbablySameBook('12 Rules for Life', 'Beyond Order: 12 More Rules for Life Jordan B. Peterson'),
+    ).toBe(false);
+  });
+
+  it('still matches a title to its own long subtitle', () => {
+    // The case containment exists for: the weaker direction scores 0.5, so the
+    // scored rule misses it and only containment can say these are one book.
+    expect(
+      isProbablySameBook(
+        'Staff Engineer Will Larson',
+        'Staff Engineer: Leadership Beyond the Management Track Will Larson',
+      ),
+    ).toBe(true);
+  });
+
+  it('still refuses a title the knock-off buries', () => {
+    expect(
+      isProbablySameBook('Staff Engineer Will Larson', "Summary of Will Larson's Staff Engineer"),
+    ).toBe(false);
+  });
+});
+
+describe('companion volumes', () => {
+  it('refuses a journal sold beside the book', () => {
+    // Both real, both Eckhart Tolle, and not the same book. This one is in the
+    // vault, so `stacks add "The Power of Now Journal"` was refused as a
+    // duplicate of the book it sits next to on a shelf.
+    expect(
+      isProbablySameBook('The Power of Now Eckhart Tolle', 'The Power of Now Journal Eckhart Tolle'),
+    ).toBe(false);
+  });
+
+  it('still matches a book to its own subtitle', () => {
+    // The case a threshold cannot be tuned to spare: 0.971/0.857 here against
+    // 0.967/0.833 above. Four thousandths, opposite answers.
+    expect(
+      isProbablySameBook(
+        'Thinking in Systems Donella H. Meadows',
+        'Thinking in Systems: A Primer Donella H. Meadows',
+      ),
+    ).toBe(true);
+  });
+
+  it('still finds a journal when a journal is what was asked for', () => {
+    // The marker is symmetric — it refuses a *mismatch*, not the word itself.
+    // Both providers filter derivatives out of search results unless the query
+    // carries one too, so searching for the journal must still reach it.
+    expect(
+      isProbablySameBook(
+        'The Power of Now Journal Eckhart Tolle',
+        'The Power of Now Journal Eckhart Tolle',
+      ),
+    ).toBe(true);
+    expect(looksDerivative('The Power of Now Journal')).toBe(true);
+    expect(looksDerivative('Thinking in Systems: A Primer')).toBe(false);
+  });
+});
+
+describe('rankingScore', () => {
+  it('does not reward a record for having no author', () => {
+    // The bug this function exists for: measuring brevity over title+author made
+    // an empty record beat its own richer twin, because the author's tokens read
+    // as padding against a title-only query.
+    const authored = rankingScore('12 Rules for Life', '12 Rules for Life', 'Jordan B. Peterson');
+    const empty = rankingScore('12 Rules for Life', '12 Rules for Life');
+    expect(authored).toBeGreaterThanOrEqual(empty);
+
+    // The old scoring, kept here as the thing that must not come back.
+    const authoredOld = titleMatchScore('12 Rules for Life', '12 Rules for Life Jordan B. Peterson');
+    const emptyOld = titleMatchScore('12 Rules for Life', '12 Rules for Life ');
+    expect(emptyOld).toBeGreaterThan(authoredOld);
+  });
+
+  it('still favours the named author when the query names one', () => {
+    const right = rankingScore('Staff Engineer Will Larson', 'Staff Engineer', 'Will Larson');
+    const wrong = rankingScore('Staff Engineer Will Larson', 'Staff Engineer', 'Someone Else');
+    expect(right).toBeGreaterThan(wrong);
+  });
+
+  it('still penalises a title padded with unrelated words', () => {
+    const exact = rankingScore('salt road ledger', 'The Salt Road Ledger', 'A N Other');
+    const padded = rankingScore(
+      'salt road ledger',
+      'The Salt Road Ledger and Other Long Stories',
+      'A N Other',
+    );
+    expect(exact).toBeGreaterThan(padded);
+  });
+
+  it('scores an unrelated title at zero', () => {
+    expect(rankingScore('salt road ledger', 'Compilers for the Impatient')).toBe(0);
   });
 });

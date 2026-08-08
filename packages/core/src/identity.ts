@@ -108,8 +108,23 @@ export function isProbablySameBook(a: string, b: string): boolean {
   return isContainedIn(left, right) || isContainedIn(right, left);
 }
 
-/** Study guides, summaries and workbooks that borrow a title wholesale. */
-const DERIVATIVE = /\b(?:summary|summaries|workbook|study|guide|companion|analysis|takeaways|abridged)\b/;
+/**
+ * Study guides, summaries, workbooks and journals that borrow a title wholesale.
+ *
+ * **`journal` is here because no threshold can separate it from a subtitle.**
+ * *The Power of Now* against *The Power of Now Journal* scores 0.967 forward and
+ * 0.833 back; *Thinking in Systems* against *Thinking in Systems: A Primer* —
+ * one book, which must match — scores 0.971 and 0.857. The same shape, four
+ * thousandths apart, and only one of them is the same book. Token overlap cannot
+ * tell "subtitle added" from "companion volume sold beside it", so the word is
+ * named rather than the score retuned.
+ *
+ * A denylist, and it grows only on evidence: every word added here silently
+ * refuses some real book whose title happens to carry it. `journal` earned its
+ * place from a book in the vault; the neighbours it suggests — notebook,
+ * planner, diary — have not, and are deliberately absent.
+ */
+const DERIVATIVE = /\b(?:summary|summaries|workbook|study|guide|companion|analysis|takeaways|abridged|journal)\b/;
 
 /**
  * Does this title look like a summary or study guide of another book?
@@ -146,26 +161,34 @@ function isContainedIn(shorter: string, longer: string): boolean {
   if (small.length < MIN_TOKENS || small.length > large.size) return false;
 
   /**
-   * The extra words must be a *subtitle*, not a prefix.
+   * The extra words must be a *subtitle*, not a prefix — so the shorter title
+   * has to **begin** the longer one, at its very first token.
    *
    * Containment alone cannot tell "Staff Engineer: Leadership Beyond the
    * Management Track" from "Summary of Will Larson's Staff Engineer" — both
    * contain every word of "Staff Engineer — Will Larson". But the first begins
    * with the title and the second buries it, and only the first is the same
-   * book. Requiring the shorter title to start near the front of the longer one
-   * separates them, and it is what a reader does at a glance.
+   * book. A subtitle extends a title at the end; words in front of it announce
+   * a different book, which is what a reader sees at a glance.
+   *
+   * **This allowed a drift of two tokens and that was exactly two too many.**
+   * "Beyond Order:" is two tokens, so *Beyond Order: 12 More Rules for Life*
+   * contained a bare "12 Rules for Life" and the sequel was refused as a
+   * duplicate of the original. Any vault note stored without its subtitle is
+   * open to that, and several are.
+   *
+   * Tightening it changed **no verdict** across 2304 real pairs — every vault
+   * label, every recall-corpus label, and eight adjacent real works — because
+   * the live false positives run through the scored rule instead. So this is
+   * hardening against a shape that has bitten once, not a fix for anything
+   * currently observable. See ADR-0007.
    */
   const firstToken = small[0];
-  if (firstToken === undefined) return false;
-  const startsAt = largeTokens.indexOf(firstToken);
-  if (startsAt < 0 || startsAt > MAX_PREFIX_DRIFT) return false;
+  if (firstToken === undefined || largeTokens[0] !== firstToken) return false;
 
   const shared = small.filter((token) => large.has(token)).length;
   return shared / small.length >= CONTAINMENT;
 }
-
-/** How far into the longer title the shorter one may begin. */
-const MAX_PREFIX_DRIFT = 2;
 
 /**
  * How well a candidate title matches what was searched for, from 0 to 1.
@@ -185,5 +208,43 @@ export function titleMatchScore(query: string, candidate: string): number {
   // Penalise candidates padded with unrelated words, so an exact short title
   // beats a long one that merely contains the query.
   const brevity = wanted.length / Math.max(found.size, wanted.length);
+  return coverage * (0.8 + 0.2 * brevity);
+}
+
+/**
+ * How well a candidate matches a search term, for **ranking** rather than identity.
+ *
+ * One difference from `titleMatchScore`, and it decides which record reaches the
+ * vault: the brevity penalty is measured over the candidate's **title alone**,
+ * never over title and author run together.
+ *
+ * Scoring the concatenation made a record score *higher for lacking an author*,
+ * because against a title-only query the author's tokens read as padding. Open
+ * Library returns exactly that pair for "12 Rules for Life" — one record with
+ * Jordan B. Peterson and 480 pages, one with neither — and the empty one won,
+ * 2.0 against 1.914. The note went into the vault with no author while the
+ * answer sat in the same response, and `enrich` could never recover it: it
+ * re-queries by the ISBN that record carries, which is the sparse edition.
+ *
+ * Systematic, not a near-miss. Any authorless record beats its own richer
+ * sibling on a bare title, which is precisely the record that produces the
+ * thinnest note. `open-library.ts` already scored its own candidates on title
+ * alone; this makes the second pass agree with the first instead of undoing it.
+ *
+ * The author still counts towards **coverage**, so naming one in the query still
+ * favours that author's book. It simply no longer costs a record anything to
+ * have one.
+ */
+export function rankingScore(query: string, title: string, author?: string): number {
+  const wanted = normaliseTitleAuthor(query).split(' ').filter(Boolean);
+  const found = new Set(
+    normaliseTitleAuthor(`${title} ${author ?? ''}`).split(' ').filter(Boolean),
+  );
+  const titleTokens = new Set(normaliseTitleAuthor(title).split(' ').filter(Boolean));
+  if (wanted.length === 0 || found.size === 0) return 0;
+
+  const hits = wanted.filter((token) => found.has(token)).length;
+  const coverage = hits / wanted.length;
+  const brevity = wanted.length / Math.max(titleTokens.size, wanted.length);
   return coverage * (0.8 + 0.2 * brevity);
 }
