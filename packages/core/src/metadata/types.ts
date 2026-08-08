@@ -1,4 +1,11 @@
-export type MetadataSource = 'open-library' | 'google-books';
+/**
+ * Which provider answered. Not the same question as `CoverSource`, which
+ * records where a cover's *bytes* came from — the metadata layer completes one
+ * provider's record from another's, and Apple is consulted for artwork alone.
+ *
+ * `oreilly` supplies metadata only, so it never appears as a `CoverSource`.
+ */
+export type MetadataSource = 'open-library' | 'google-books' | 'oreilly';
 
 /** What a lookup yields, normalised across providers. */
 export interface BookMetadata {

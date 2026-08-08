@@ -1,0 +1,46 @@
+{
+  "results": [],
+  "facets": {
+    "facet_queries": {
+      "{!ex=format}(format:video AND title_unstemmed:\"Learning Path: .*\")": 0
+    },
+    "facet_fields": {
+      "format": [],
+      "subjects": [],
+      "topic_uuids": [],
+      "publishers_exact": [],
+      "language": [],
+      "sharing_status": [],
+      "expert_playlist": [],
+      "video_classification": [],
+      "certification_name_exact": [],
+      "certification_vendor_name_exact": [],
+      "topics": []
+    },
+    "facet_ranges": {},
+    "facet_intervals": {
+      "average_rating": {
+        "no_stars": 0,
+        "zero_stars": 0,
+        "one_star": 0,
+        "two_stars": 0,
+        "three_stars": 0,
+        "four_stars": 0,
+        "five_stars": 0
+      },
+      "issued": {
+        "last_two_years": 0,
+        "last_year": 0,
+        "last_six_months": 0
+      }
+    },
+    "facet_heatmaps": {}
+  },
+  "total": 0,
+  "meta": {
+    "query_identifier": "7781f15a-0082-49f8-bf09-d12b28d359b3"
+  },
+  "page": 0,
+  "previous": null,
+  "next": null
+}

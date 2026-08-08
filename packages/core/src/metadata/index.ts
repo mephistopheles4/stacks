@@ -2,6 +2,7 @@ import { isProbablySameBook, isValidIsbn, rankingScore } from '../identity.ts';
 import * as appleBooks from './apple-books.ts';
 import * as googleBooks from './google-books.ts';
 import * as openLibrary from './open-library.ts';
+import * as oreilly from './oreilly.ts';
 import type { HttpGet } from './http.ts';
 import type { BookMetadata } from './types.ts';
 
@@ -64,7 +65,22 @@ export async function searchByTitle(
   // Primary results are kept rather than replaced. They did not match the query
   // well, but neither may Google's, and dropping them would leave a caller that
   // wants *any* candidate with fewer than it had before.
-  return [...primary, ...fallback];
+  const both = [...primary, ...fallback];
+  if (both.some((book) => matchesQuery(query, book))) return both;
+
+  /**
+   * O'Reilly last, on the same terms Google is second.
+   *
+   * Only asked when neither of the first two has actually found the book, so it
+   * costs a request on the path that is currently failing and nothing on the
+   * path that works. That is the whole reason it can be added without relaxing
+   * the short-circuit above — a change measured to be orthogonal to this and
+   * still unshipped.
+   *
+   * It answers for a narrow class: O'Reilly's own titles, and early releases in
+   * particular, which the other three have never heard of.
+   */
+  return [...both, ...(await oreilly.searchByTitle(query, get))];
 }
 
 function matchesQuery(query: string, book: BookMetadata): boolean {

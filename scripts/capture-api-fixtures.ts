@@ -47,6 +47,20 @@ const CAPTURES: readonly { readonly name: string; readonly url: string }[] = [
     name: 'open-library-search-sparse-sibling.json',
     url: 'https://openlibrary.org/search.json?q=12%20Rules%20for%20Life&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i',
   },
+  {
+    // A book none of the other three providers holds — an O'Reilly early
+    // release. Note the response's `isbn` differs from the identifier in the
+    // library URL: the latter is O'Reilly's internal archive id.
+    name: 'oreilly-search-hit.json',
+    url: 'https://learning.oreilly.com/api/v2/search/?query=Learning%20AI-Native%20Software%20Engineering&field=title&formats=book&limit=5',
+  },
+  {
+    // The miss, captured rather than stubbed: O'Reilly is consulted on every
+    // path where the first two providers found nothing, so the shape of its
+    // empty answer is exercised by more tests than its hit is.
+    name: 'oreilly-search-miss.json',
+    url: 'https://learning.oreilly.com/api/v2/search/?query=zzzqqqxx%20no%20such%20book%20anywhere&field=title&formats=book&limit=5',
+  },
 ];
 
 mkdirSync(OUT_DIR, { recursive: true });

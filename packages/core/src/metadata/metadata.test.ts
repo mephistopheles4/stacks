@@ -19,6 +19,9 @@ const openLibraryMiss = fixtureHttpGet({
   '/api/books': 'open-library-isbn-miss.json',
   '/search.json': 'open-library-search-miss.json',
   'googleapis.com': 'google-books-quota-exceeded.json',
+  // Reached on every miss path now: O'Reilly is asked whenever neither of the
+  // first two found the book, which is exactly what these fixtures describe.
+  'learning.oreilly.com': 'oreilly-search-miss.json',
 });
 
 describe('ISBN hit', () => {
@@ -60,6 +63,59 @@ describe('fuzzy title search', () => {
     const searchOnly = fixtureHttpGet({ '/search.json': 'open-library-search-hit.json' });
     const results = await lookup('thinking in systems', searchOnly);
     expect(results.length).toBeGreaterThan(0);
+  });
+});
+
+describe("O'Reilly, for the books the other three do not have", () => {
+  /** Both of the first two providers come up empty; O'Reilly has the book. */
+  const onlyOReillyHasIt = fixtureHttpGet({
+    '/search.json': 'open-library-search-miss.json',
+    'googleapis.com': 'google-books-quota-exceeded.json',
+    'learning.oreilly.com': 'oreilly-search-hit.json',
+    'itunes.apple.com': '',
+  });
+
+  it('finds a book Open Library and Google have never heard of', async () => {
+    const [best] = await lookup('Learning AI-Native Software Engineering', onlyOReillyHasIt);
+
+    expect(best?.title).toBe('Learning AI-Native Software Engineering');
+    expect(best?.author).toBe('Alfonso Graziano');
+    expect(best?.source).toBe('oreilly');
+  });
+
+  it('takes the ISBN from the response, not the identifier in the library URL', async () => {
+    // `0642572352530` is O'Reilly's internal archive id. It passes an ISBN-13
+    // check digit while beginning `064`, which no Bookland range assigns — so
+    // reading it out of the URL would write a plausible non-ISBN into a note.
+    const [best] = await lookup('Learning AI-Native Software Engineering', onlyOReillyHasIt);
+
+    expect(best?.isbn).toBe('9798341674738');
+    expect(best?.isbn).not.toBe('0642572352530');
+  });
+
+  it('asks for books, not videos or courses', async () => {
+    const seen: string[] = [];
+    const spy: HttpGet = async (url) => {
+      seen.push(url);
+      return undefined;
+    };
+
+    await searchByTitle('anything at all', spy);
+    const oreilly = seen.find((url) => url.includes('learning.oreilly.com'));
+    expect(oreilly).toContain('formats=book');
+  });
+
+  it('is not consulted when Open Library already found the book', async () => {
+    // The quota argument, applied to a fourth provider: it costs a request only
+    // on the path that is currently failing.
+    const seen: string[] = [];
+    const watched: HttpGet = async (url) => {
+      seen.push(url);
+      return url.includes('/search.json') ? readApiFixture('open-library-search-hit.json') : undefined;
+    };
+
+    await searchByTitle('thinking in systems', watched);
+    expect(seen.some((url) => url.includes('learning.oreilly.com'))).toBe(false);
   });
 });
 
