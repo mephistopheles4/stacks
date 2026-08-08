@@ -4,6 +4,20 @@
 
 Found by running the tool for real: exact matching cannot tell "Thinking in Systems" from "Thinking in systems : a primer", and created a second note for a book already shelved.
 
+Two guards keep that looseness from over-matching, and both were added after the
+sentence above was written. A title carrying a **derivative marker** — summary,
+workbook, study, guide, companion, analysis, takeaways, abridged, journal — is
+never the same book as one that does not, in either direction. And **containment
+requires the shorter title to begin the longer one** at its first token, because
+a subtitle extends a title at the end while words in front of it announce a
+different book.
+
+_This paragraph exists because it was missing._ The two guards arrived in
+`ac369b5` and that commit did not touch this file, so for eight days the record
+described a rule the code had already outgrown. The entries below are the
+history and are only ever appended to; **this head is the current decision and
+has to be brought with it.**
+
 ## How this was decided
 
 _Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
