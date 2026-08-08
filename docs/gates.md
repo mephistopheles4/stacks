@@ -964,6 +964,18 @@ a date and a reason, and appears as a one-line reviewable diff. Same shape as
 the allowlists in `gates/`, and the same rule applies: an entry that outlives
 its reason is a permission nobody revisits.
 
+**Reach for that hatch second, and only after checking whether a fix exists.**
+The gate failed on 2026-08-08 for two advisories that both *had* patches, and
+one of them still would not install: pnpm 11 quarantines newly published
+versions for seven days (`minimumReleaseAge`), so `pnpm update nanoid` reported
+success and left the tree on the vulnerable version. A silent decline is the
+dangerous shape here — the command that looks like it remediated the advisory is
+the one that did nothing. An explicit `overrides` entry is honoured where
+auto-resolution is not, so the fix was to name the version, not to ignore the
+GHSA. An `ignoreGhsas` entry there would have suppressed a solvable problem for
+seven days and outlived its reason, which is exactly what the rule above warns
+about.
+
 Separately, and not a gate: **Dependabot alerts** and **security updates** are
 enabled on the repository, so a vulnerable dependency also arrives as a pull
 request — which then has to pass everything above like any other change.
