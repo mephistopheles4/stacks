@@ -29,14 +29,15 @@ import { asPositiveInt, asRecord, firstString, type BookMetadata } from './types
  * the URL would write a plausible non-ISBN into the vault, so `isbn` is taken
  * from the response and the archive id is used for nothing here.
  *
- * **No cover, deliberately.** The art is good — `/covers/<archive-id>/1600w/`
- * serves 1600x2100, better than Apple's ~800x1200 — but `cover_source` is a
- * closed enum whose whole purpose is recording which terms apply to the bytes,
- * and `covers/cover-source.ts` summarises each provider's licence in prose.
- * Adding a fourth host there means reading O'Reilly's terms and writing that
- * paragraph, which is a separate decision and not one to infer. Until then this
- * returns metadata only, and a cover for an O'Reilly-sourced book still arrives
- * from Apple or Google if either holds one.
+ * **The cover is the best of the four.** `/covers/<ourn>/<n>w/` scales on
+ * demand, and it is the only source for these books at all: Open Library
+ * answers their ISBNs with a 43-byte placeholder and Apple has never heard of
+ * them, so without this they are blank spines.
+ *
+ * Built from the `ourn` field verbatim rather than re-derived from
+ * `archive_id`, which is the same string wrapped in `urn:orm:book:` — one place
+ * to be wrong instead of two. The bare id works identically; the URN is simply
+ * what the response already hands over.
  */
 
 const SEARCH = 'https://learning.oreilly.com/api/v2/search/';
@@ -102,6 +103,29 @@ function toMetadata(result: Record<string, unknown> | undefined): BookMetadata |
      * G26 pins exactly, and it should not be compared against them.
      */
     ...keyIfPresent('pages', asPositiveInt(result['virtual_pages'])),
+    ...keyIfPresent('coverUrl', coverFor(result)),
     source: 'oreilly',
   };
+}
+
+/**
+ * The cover, asked for at `COVER_WIDTH`.
+ *
+ * **Not the largest on offer, deliberately.** The endpoint serves up to 2000px
+ * — 2000x2625, about a megabyte — and `MAX_COVER_EDGE` resizes every published
+ * cover to 512 on its long edge, because oversized textures are what crashed
+ * mobile. So pixels above the cap reach no shelf and cost only vault bytes: a
+ * megabyte a book against 8.9 MB for the whole library today. This matches what
+ * Apple is already asked for, which leaves headroom over 512 without paying
+ * ten times over for it.
+ *
+ * `cover_url` on the response is the 140x184 thumbnail, so it is not used; the
+ * sized path is built instead. Widths above ~2000 answer 400.
+ */
+const COVER_WIDTH = 1200;
+
+function coverFor(result: Record<string, unknown>): string | undefined {
+  const ourn = firstString(result['ourn']);
+  if (ourn === undefined) return undefined;
+  return `https://learning.oreilly.com/covers/${ourn}/${String(COVER_WIDTH)}w/`;
 }

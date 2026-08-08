@@ -65,7 +65,7 @@ interface VaultAdapter {
 - Do NOT build a second adapter. Do NOT add adapter config plumbing beyond a single constructor arg (vault path). The interface exists so a Logseq/Anytype adapter is possible later, not to be a framework.
 
 ## Frontmatter contract (do not change without updating this file)
-Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `cover_source` (open-library|google-books|apple-books|unknown), `spine_color` (hex), `pages`, `binding` (hardback|paperback), `face_out` (bool), `tags`, `shelf_order` (number), `private` (bool).
+Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `cover_source` (open-library|google-books|apple-books|oreilly|unknown), `spine_color` (hex), `pages`, `binding` (hardback|paperback), `face_out` (bool), `tags`, `shelf_order` (number), `private` (bool).
 
 This list is the contract, and `gates/frontmatter-contract.test.ts` holds it to
 the parser in both directions. The paragraphs below are commentary — adding a
@@ -109,8 +109,17 @@ that actually reads at shelf distance. `books.paperbackRatio` dials the mixture.
   files are NOT typechecked (`astro check` cannot run under TypeScript 7 yet),
   so anything with a type lives in a `.ts` file, where `pnpm build` checks it.
 - Metadata: **four providers, in this order** — Open Library first, Google Books as the fallback (needs `GOOGLE_BOOKS_API_KEY`; unauthenticated requests share one exhausted quota and 429 every time), O'Reilly last and only when neither of those actually found the book, and Apple Books consulted *only* for cover art, because its artwork is ~800x1200 against Google's ~128px. Cache all API responses in `.cache/` so tests and rebuilds don't re-hit APIs.
-- **O'Reilly supplies metadata and never a cover** — unauthenticated, one search endpoint serving both title and ISBN lookups (`query=<isbn>&field=isbn`), and the sole source for O'Reilly's own early releases. Its art is the best of the four and is deliberately not taken: `cover_source` records *whose terms apply to the bytes*, so a fourth host there means reading O'Reilly's licence, which is a decision and not an inference. Note its library URLs end in an internal archive id that passes an ISBN-13 check digit and is not an ISBN. See [ADR-0038](docs/adr/0038-oreilly-is-a-fourth-provider-metadata-only.md).
-- **Which provider answered and which provider's bytes you kept are different questions.** The metadata layer completes one provider's record from another's, so a book's `source` need not be where its cover came from. `cover_source` is derived from the URL actually downloaded — it decides what a public build may re-host, and the providers' terms differ.
+- **O'Reilly** — unauthenticated, one search endpoint serving both title and ISBN lookups (`query=<isbn>&field=isbn`), and the sole source for its own early releases, covers included: Open Library answers their ISBNs with a 43-byte placeholder and Apple has never heard of them. Cover URLs are built from the response's `ourn`, at 1200w to match Apple — the endpoint serves up to 2000, but `MAX_COVER_EDGE` resizes every published cover to 512, so anything larger costs vault bytes and reaches no shelf. **Its library URLs end in an internal `archive_id`, never the ISBN** — for one book that id is `0642572352530`, which passes an ISBN-13 check digit while starting `064`; for another it is a well-formed 979 ISBN that is still *seven off* the book's real one, so a check-digit test does not catch it. Take the ISBN from the response body. See [ADR-0038](docs/adr/0038-oreilly-is-a-fourth-provider-metadata-only.md).
+- **Which provider answered and which provider's bytes you kept are different questions.** The metadata layer completes one provider's record from another's, so a book's `source` need not be where its cover came from. `cover_source` is derived from the URL actually downloaded.
+
+  **It records provenance and gates nothing.** This line used to say it decided
+  what a public build may re-host; `publish.ts` has never read it, and every
+  cover is published whatever its source — 26 of Apple's among them, whose terms
+  the code's own comment says do not enumerate book covers at all. The claim
+  read as a policy and was a plan, and it talked one session out of a decision
+  the shelf had already made 35 times. What the key actually buys: if a provider
+  ever asks for its art to come down, the answer can be *those nine* rather than
+  *all of them*.
 - TypeScript strict everywhere. Vitest. pnpm workspaces.
 
 ## Phase gates — a phase is DONE only when its gate passes

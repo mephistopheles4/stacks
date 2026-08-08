@@ -16,10 +16,23 @@
  * answered the metadata lookup. Those can differ — the metadata layer completes
  * one provider's record from another's, and Apple is consulted purely for
  * artwork — and it is the bytes whose terms apply.
+ *
+ * **This records provenance; it has never been a permission gate.** Nothing in
+ * `publish.ts` reads it, and every cover is published whatever its source — 26
+ * of Apple's among them, whose terms are the least clear of the four. So it is
+ * worth being exact about what this key buys, because it is easy to mistake for
+ * something it is not: if any provider ever asks for its art to come down, this
+ * is what makes the answer *"those nine"* rather than *"all of them"*. An index
+ * for acting precisely, not a licence check.
  */
 
 /** `unknown` covers both an unrecognised host and a cover cached before this existed. */
-export type CoverSource = 'open-library' | 'google-books' | 'apple-books' | 'unknown';
+export type CoverSource =
+  | 'open-library'
+  | 'google-books'
+  | 'apple-books'
+  | 'oreilly'
+  | 'unknown';
 
 /** Host suffixes, longest-lived part of each provider's URL shape. */
 const HOSTS: readonly (readonly [suffix: string, source: CoverSource])[] = [
@@ -30,6 +43,7 @@ const HOSTS: readonly (readonly [suffix: string, source: CoverSource])[] = [
   ['googleapis.com', 'google-books'],
   ['mzstatic.com', 'apple-books'],
   ['itunes.apple.com', 'apple-books'],
+  ['learning.oreilly.com', 'oreilly'],
 ];
 
 /**
@@ -57,6 +71,7 @@ export const COVER_SOURCES: readonly CoverSource[] = [
   'open-library',
   'google-books',
   'apple-books',
+  'oreilly',
   'unknown',
 ];
 

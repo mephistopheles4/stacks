@@ -240,7 +240,7 @@ async function fillGaps(
   // ISBN, and the endpoint answers with a placeholder as readily as with art.
   const needsCover = primary.coverUrl === undefined || primary.coverIsSpeculative === true;
   if ((!needsCover && primary.pages !== undefined) || primary.source === 'google-books') {
-    return primary;
+    return needsCover ? await borrowOReillyCover(primary, get) : primary;
   }
 
   const candidate =
@@ -252,7 +252,7 @@ async function fillGaps(
         ))[0]
       : await googleBooks.lookupByIsbn(primary.isbn, get, options.googleBooksKey);
 
-  if (candidate === undefined) return primary;
+  if (candidate === undefined) return needsCover ? await borrowOReillyCover(primary, get) : primary;
 
   // An ISBN lookup is already proof of identity; a title search is not.
   const sameBook =
@@ -261,9 +261,9 @@ async function fillGaps(
       `${primary.title} ${primary.author ?? ''}`,
       `${candidate.title} ${candidate.author ?? ''}`,
     );
-  if (!sameBook) return primary;
+  if (!sameBook) return needsCover ? await borrowOReillyCover(primary, get) : primary;
 
-  return {
+  const filled: BookMetadata = {
     ...primary,
     // A confirmed cover from the fallback beats a guessed one from the primary.
     ...(needsCover && candidate.coverUrl !== undefined
@@ -282,4 +282,33 @@ async function fillGaps(
       ? { author: candidate.author }
       : {}),
   };
+
+  return filled.coverUrl === undefined || filled.coverIsSpeculative === true
+    ? await borrowOReillyCover(filled, get)
+    : filled;
+}
+
+/**
+ * A cover from O'Reilly for a book the first two providers know and cannot
+ * picture.
+ *
+ * The gap the fallback above cannot close. *Evals for AI Engineers* is in Open
+ * Library, so the ISBN lookup stops there and never reaches a fourth provider —
+ * but Open Library's cover for it is a **43-byte placeholder**, Google has no
+ * art either, and Apple has never heard of the book. O'Reilly has it at 1200px.
+ * Without this the book sits on the shelf as a blank spine while the picture is
+ * one request away.
+ *
+ * Runs only when a cover is still missing or still a guess after everything
+ * else, so it costs a request on exactly the books that would otherwise have
+ * nothing. Needs an ISBN: this is a by-identifier lookup and a title search here
+ * would be borrowing art on a resemblance.
+ */
+async function borrowOReillyCover(book: BookMetadata, get: HttpGet): Promise<BookMetadata> {
+  if (book.isbn === undefined || book.source === 'oreilly') return book;
+
+  const candidate = await oreilly.lookupByIsbn(book.isbn, get);
+  if (candidate?.coverUrl === undefined) return book;
+
+  return { ...book, coverUrl: candidate.coverUrl, coverIsSpeculative: false };
 }

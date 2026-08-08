@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { COVER_SOURCES, coverSourceFor } from '../covers/cover-source.ts';
 import { CAPTURED_ISBN, fixtureHttpGet, readApiFixture } from '../test-support.ts';
 import type { HttpGet } from './http.ts';
 import { lookup, lookupByIsbn, searchByTitle } from './index.ts';
@@ -121,6 +122,26 @@ describe("O'Reilly, for the books the other three do not have", () => {
     const oreilly = seen.find((url) => url.includes('learning.oreilly.com'));
     expect(oreilly).toContain('query=9798341674738');
     expect(oreilly).toContain('field=isbn');
+  });
+
+  it('offers a cover, sized to match Apple rather than to the endpoint maximum', async () => {
+    // The only source for these books: Open Library answers their ISBNs with a
+    // 43-byte placeholder and Apple has never heard of them.
+    const [best] = await lookup('Learning AI-Native Software Engineering', onlyOReillyHasIt);
+
+    expect(best?.coverUrl).toBe(
+      'https://learning.oreilly.com/covers/urn:orm:book:0642572352530/1200w/',
+    );
+    // 2000w exists and is a megabyte; MAX_COVER_EDGE resizes to 512 anyway.
+    expect(best?.coverUrl).not.toContain('2000w');
+  });
+
+  it('records those bytes as oreilly, so a takedown can name them', async () => {
+    expect(coverSourceFor('https://learning.oreilly.com/covers/urn:orm:book:123/1200w/')).toBe(
+      'oreilly',
+    );
+    // Nothing filters on this — it is an index for acting precisely, not a gate.
+    expect(COVER_SOURCES).toContain('oreilly');
   });
 
   it('asks for books, not videos or courses', async () => {
