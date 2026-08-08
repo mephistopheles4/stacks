@@ -15,6 +15,7 @@ import { rowsForCase, SHELF } from './case.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import {
+  BINDINGS,
   DEFAULT_SETTINGS,
   heightOf,
   type LightPosition,
@@ -22,7 +23,11 @@ import {
   type ShelfSettings,
   type ToneMappingName,
 } from './shelf-settings.ts';
-import { makeSpineTexture, MIN_LEGIBLE_THICKNESS } from './spine-texture.ts';
+import { hashUnit } from './hash.ts';
+import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
+import { pageStriationMap } from './page-edges.ts';
+import { spineNormalMap } from './spine-profile.ts';
+import { makeSpineTexture } from './spine-texture.ts';
 
 /**
  * The shelf.
@@ -312,7 +317,7 @@ export function mountShelf(
   const fog = new THREE.Fog(settings.scene.background, settings.scene.fog.near, settings.scene.fog.far);
   scene.fog = settings.scene.fog.enabled ? fog : null;
 
-  const rows = toRows(books);
+  const rows = toRows(books, settings.books);
   const rowCount = rowsForCase(rows.length);
   const unitHeight = rowCount * SHELF.rowHeight;
 
@@ -687,11 +692,15 @@ export function mountShelf(
       scene.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return;
 
-        // Geometries too — but never the two shared unit shapes, which outlive
-        // any one mount. Every book is a scaled `UNIT_BOX` or `UNIT_PLANE`, so a
+        // Geometries too — but never the shared shapes, which outlive any one
+        // mount. Every book is a scaled `UNIT_BOX`, `UNIT_PLANE` or head cap, so a
         // blanket dispose here would free them for the whole module and leave a
         // second shelf drawing nothing at all.
-        if (object.geometry !== UNIT_BOX && object.geometry !== UNIT_PLANE) {
+        if (
+          object.geometry !== UNIT_BOX &&
+          object.geometry !== UNIT_PLANE &&
+          !isHeadCapGeometry(object.geometry)
+        ) {
           object.geometry.dispose();
         }
 
@@ -1055,6 +1064,17 @@ const UNIT_PLANE = new THREE.PlaneGeometry(1, 1);
 const BOARD = 0.011;
 const SQUARE = 0.013;
 
+/**
+ * A paperback's cover, in the same units — one sheet of card at about 0.3mm,
+ * against the hardback's 2.6mm board.
+ *
+ * It is not zero. A paperback still has a cover with a visible edge where it
+ * meets the page block, and collapsing it to nothing makes the book one solid
+ * slab of paper with a printed face. Thin enough to read as card, thick enough to
+ * still be there.
+ */
+const PAPER_COVER = 0.0013;
+
 /** How far the printed faces float above the boards they are printed on. */
 const SKIN = 0.0012;
 
@@ -1075,7 +1095,7 @@ const SKIN = 0.0012;
  * Local axes match the old box: spine at +Z (facing the room when shelved),
  * cover at +X (what you see once a book is turned face-out).
  */
-function buildBook(
+export function buildBook(
   entry: ShelfBook,
   depth: number,
   textures: TextureCache,
@@ -1083,24 +1103,83 @@ function buildBook(
   settings: ShelfSettings,
 ): THREE.Group {
   const castShadows = settings.shadows.casters;
-  // A spine wide enough to read gets its title printed on it; a very thin one
-  // stays a plain board, because type squeezed onto it would just be noise.
-  const spineTexture =
-    entry.thickness >= MIN_LEGIBLE_THICKNESS
-      ? makeSpineTexture({
-          title: entry.book.title,
-          colour: entry.colour,
-          ...(entry.book.author === undefined ? {} : { author: entry.book.author }),
-        })
-      : undefined;
 
+  /**
+   * Every spine gets its title, and the canvas is cut to the book's own shape.
+   *
+   * There used to be a `MIN_LEGIBLE_THICKNESS` cutoff here, dropping type on the
+   * thinnest six. It has retired, because it was never about size: the canvas was
+   * 128x1024 for every book whatever its thickness and was stretched onto a plane
+   * scaled `(thickness, height)`, so letterforms were distorted 0.87x-1.97x
+   * across the shelf. A distortion rule wearing a legibility rule's words. See
+   * `spineCanvasWidth`.
+   */
+  const spineTexture = makeSpineTexture({
+    title: entry.book.title,
+    colour: entry.colour,
+    thickness: entry.thickness,
+    height: entry.height,
+    ...(entry.book.author === undefined ? {} : { author: entry.book.author }),
+  });
+
+  /**
+   * The cross-section, shaded onto the flat plane that was already there.
+   *
+   * Shared per binding rather than made here, so a shelf of any size uploads two
+   * of these — see `spine-profile.ts`. `undefined` for a flat profile, which is
+   * the only way *off* costs nothing.
+   */
+  const profile = spineNormalMap(settings.materials.spineProfile, entry.binding);
+
+  /**
+   * Binding's third effect, and the cheapest thing on this whole map.
+   *
+   * #58 designed a shared binding-keyed *grain* in `roughnessMap` here; #68
+   * rendered it and measured **0 pixels above JND** at `minDistance` against the
+   * same bindings' roughness as a plain number. The spine sets no `metalness`, so
+   * it is a dielectric at ~4% specular reflectance under soft light, and
+   * roughness modulates a lobe that is barely there — a pattern in it cannot
+   * read, while its *average* plainly does. Two constants move 17.8% of frame
+   * over JND where #58's full design moved 13.2%, for +0 textures and +0 bytes
+   * against its +2 shared and +0.667 MiB.
+   *
+   * So this is more visible than the layer it replaces, not a compromise version
+   * of it. What was a flat `0.62` on every spine is now cloth against card.
+   */
   const spine = new THREE.MeshStandardMaterial({
     color: spineTexture === undefined ? new THREE.Color(entry.colour) : new THREE.Color(0xffffff),
-    roughness: 0.62,
+    roughness: settings.materials.spineRoughness[entry.binding],
     ...(spineTexture === undefined ? {} : { map: spineTexture }),
+    ...(profile === undefined ? {} : { normalMap: profile }),
   });
   // Pages: slightly lighter than the boards, never pure white.
   const pages = new THREE.MeshStandardMaterial({ color: 0xd9cdb8, roughness: 0.95 });
+
+  /**
+   * The cut text block, given leaves.
+   *
+   * One shared map for the whole shelf and per-book jitter that is free because
+   * this material is already made per book — so **+0 draw calls and +0 per-book
+   * textures**, on a surface that is 9,678 pixels of flat cream slab at
+   * `minDistance`. See `page-edges.ts`.
+   *
+   * `0` short-circuits to no map at all, the same rule the spine profile follows:
+   * off must cost nothing, not a texture unit and a `#define` per book to say
+   * nothing.
+   */
+  const striation = settings.materials.pageStriation;
+  if (striation > 0) {
+    const map = pageStriationMap();
+    if (map !== undefined) {
+      pages.normalMap = map;
+      pages.normalScale = new THREE.Vector2(striation, striation);
+    }
+    // A shelf of blocks cut from one ream is a printed shelf. Small: this is
+    // paper, and the range between two books' paper is narrow in life too.
+    const drift = hashUnit(`${entry.book.id}-pages`);
+    pages.color.offsetHSL((drift - 0.5) * 0.02, 0, (drift - 0.5) * 0.08);
+    pages.roughness = 0.9 + drift * 0.08;
+  }
   const boards = new THREE.MeshStandardMaterial({
     color: new THREE.Color(entry.colour).multiplyScalar(0.82),
     roughness: 0.7,
@@ -1130,8 +1209,16 @@ function buildBook(
   // dimension it eats so that a small enough book still has paper in it: `depth`
   // is the measured cover aspect on a face-out book, which is vault data, and a
   // page block scaled negative turns inside out rather than failing.
-  const board = Math.min(BOARD, thickness * 0.3);
-  const square = Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
+  //
+  // Binding chooses between the two cases, and it chooses *both* numbers at
+  // once. A paperback is not a hardback with the overhang taken off: the square
+  // going without the board leaves a case still 2.6mm thick that has mysteriously
+  // lost its rim, which reads as a modelling error rather than as a second
+  // format. A paperback's cover is glued flush to the block, so there is no
+  // square at all, and the card it is cut from is a fifth of a board.
+  const paperback = entry.binding === 'paperback';
+  const board = Math.min(paperback ? PAPER_COVER : BOARD, thickness * 0.3);
+  const square = paperback ? 0 : Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
 
   /**
    * Parts receive shadow but do not cast it — the page block below casts for the
@@ -1152,40 +1239,220 @@ function buildBook(
     return mesh;
   };
 
-  // Front and back boards, running the full height and depth of the book.
+  /**
+   * How much height the head cap takes off the covering below it.
+   *
+   * Proportional to **thickness**, never to height — which is the whole reason
+   * one shared cap is the right shape on every book. Hardbacks only: a
+   * perfect-bound paperback has no covering to roll, its card being cut flush
+   * with the block at head and tail.
+   */
+  /**
+   * The covering spans the case **exactly**, and every earlier number here was a
+   * guess at how to dodge a coplanar surface.
+   *
+   * It has been `thickness + SKIN * 4` and `thickness - SKIN * 2`, and each was
+   * visibly wrong in its own direction. Proud of the case, the roll's flat ends
+   * are lit as surfaces of their own — a bright thumbprint on the corner with a
+   * highlight along the step, circled from four angles across two sessions.
+   * Inside it, they hide, but the boards then stand `SKIN` past the roll: a
+   * four-pixel lit sliver of board at the head of every hardback, which is the
+   * notch that started this.
+   *
+   * There is no third offset, because the covering is not floating above the case
+   * — it *is* the outside of the case, and the case is `thickness` wide. What
+   * made an offset seem necessary was the tuck's end fans lying in the boards'
+   * own plane; the tuck is no longer fanned, so nothing here is coplanar with
+   * anything. See `closeTheEnds`.
+   */
+  const capScale = thickness;
+  const cap = entry.binding === 'hardback' ? settings.books.headCap * capScale : 0;
+
+  /**
+   * The case, and the one thing to understand about it: **the covering rolls over
+   * a corner, so only the corner is cleared for it.**
+   *
+   * A hardback's head is one continuous turn of cloth across the whole thickness,
+   * boards included, so the cap spans the full thickness and whatever is under
+   * that corner has to stop `cap` short. Boxes cannot taper, so each board is two
+   * of them — full depth below the roll, pulled back by `cap` inside it:
+   *
+   * ```
+   *   ┌──────┐ ╮ board top   (board × cap × depth-cap)      head
+   *   │      ├─╯ ← the roll turns through here
+   *   │      │
+   *   │ main │   board main  (board × height-cap × depth)    joint at +Z
+   * ```
+   *
+   * **Three earlier shapes were wrong and each was wrong invisibly.** Boards at
+   * full depth and full height put their front-top corners `cap` proud of the
+   * surface rolling over them — two small square towers at the head of every
+   * hardback. Pulling the boards back without widening the piece in front of them
+   * left a void at the board's own x, and a diagonal view looked straight through
+   * the hair between the printed spine and the cover into the page block's side.
+   * Widening that piece to the full thickness closed the void and opened the
+   * third: a `cap`-wide strip of *board* colour down the whole joint, the front
+   * `cap` of a case that is only `cap` tall having been taken off all `height` of
+   * it. That one over-cleared by `height / cap` — about sixty times — and it is
+   * the one the owner circled on the shelf itself.
+   *
+   * None of the three moved a single counter: same draws, same triangles, same
+   * textures. `?solo` found the first two and the owner found the third.
+   *
+   * ⚠️ **Rounding the boards' own corners instead is the tempting fix and is the
+   * one #56 struck**: a corner radius on a box scaled `(board, height, depth)`
+   * smears, those axes differing by two orders of magnitude, and doing it
+   * honestly means a geometry per book — against the +0 per book every ticket on
+   * this map costed itself against. Two boxes where there was one costs +2 draws
+   * on a hardback and nothing on a paperback, which is what it is worth.
+   *
+   * A paperback rolls nothing, so `cap` is 0, there is no board top at all, and
+   * every number here is what it always was.
+   */
+  const frontDepth = cap > 0 ? cap : board;
+
   for (const side of [1, -1]) {
-    const face = solid(boards);
-    face.scale.set(board, height, depth);
-    face.position.set((side * (thickness - board)) / 2, 0, 0);
+    const x = (side * (thickness - board)) / 2;
+
+    const main = solid(boards);
+    main.scale.set(board, height - cap, depth);
+    main.position.set(x, -cap / 2, 0);
+
+    if (cap > 0) {
+      const top = solid(boards);
+      top.scale.set(board, cap, depth - cap);
+      top.position.set(x, (height - cap) / 2, -cap / 2);
+    }
   }
 
-  // The spine covering, closing the gap between the boards at the bound edge.
+  /**
+   * The covering at the bound edge, between the boards and behind the roll.
+   *
+   * Between them, not across them: the boards now reach the joint on their own,
+   * so a full-thickness strip here would put its own dark sides where their
+   * printed faces belong — which is the third fault above, exactly.
+   */
   const spineStrip = solid(boards);
-  spineStrip.scale.set(thickness - board * 2, height, board);
-  spineStrip.position.set(0, 0, (depth - board) / 2);
+  spineStrip.scale.set(thickness - board * 2, height - cap, frontDepth);
+  spineStrip.position.set(0, -cap / 2, (depth - frontDepth) / 2);
 
   // The page block, recessed inside the case at head, tail and fore-edge — and
   // the one part of a book that casts, standing in for all of it.
   const block = solid(pages);
-  block.scale.set(thickness - board * 2, height - square * 2, depth - board - square);
-  block.position.set(0, 0, (square - board) / 2);
+  block.scale.set(thickness - board * 2, height - square * 2, depth - frontDepth - square);
+  block.position.set(0, 0, (square - frontDepth) / 2);
   block.castShadow = castShadows;
 
-  const printed = (material: THREE.Material): THREE.Mesh => {
+  /**
+   * The printed faces, laid **exactly on** their boards and biased in depth.
+   *
+   * They used to float `SKIN` in front, which is the obvious way to keep two
+   * surfaces from fighting over the same pixel — and it costs a step. A step you
+   * cannot see face-on and cannot miss edge-on: from any oblique angle the
+   * board's own front face shows in the `SKIN` between the printed spine and the
+   * printed cover, a dark hairline the full height of every joint. Measured at
+   * `?solo`'s minimum distance it is four pixels wide. The owner circled it on
+   * the *shelf*, which is what settled that it reads at all.
+   *
+   * `polygonOffset` says the same thing to the depth test without saying it to
+   * the geometry: the artwork is coplanar with the board, and wins ties. One
+   * hairline is not why this is the right shape — there is a `SKIN` gap at every
+   * corner of every book for the same reason, and this closes all of them.
+   *
+   * ⚠️ **Nothing here reaches the shadow pass.** three's `getDepthMaterial`
+   * copies `side`, `alphaTest`, `map` and displacement, and not `polygonOffset` —
+   * so decal and board write the same depth into the shadow map, which is
+   * harmless because it is the *same* depth. If a depth or normal prepass is ever
+   * added for SSAO, it will render these through an override material that
+   * ignores the offset, and every decal will speckle along its edges. That is the
+   * one change that breaks this.
+   */
+  const printed = (material: THREE.MeshStandardMaterial): THREE.Mesh => {
+    material.polygonOffset = true;
+    // Factor scales with the depth slope, so the bias grows at exactly the
+    // grazing angles where the hairline showed. Units is the spec's minimum
+    // resolvable step; two of them, for the phones this project has history with.
+    material.polygonOffsetFactor = -1;
+    material.polygonOffsetUnits = -2;
     const mesh = new THREE.Mesh(UNIT_PLANE, material);
     mesh.receiveShadow = true;
     group.add(mesh);
     return mesh;
   };
 
+  /**
+   * The printed cover runs the whole depth, to the joint — and stops `cap` short
+   * of the head, where the covering has rolled away in front of it.
+   *
+   * One plane and not two, which is the trade this makes: the top `cap` of the
+   * board shows covering rather than artwork, a band 2% of the cover's height,
+   * seen only on a face-out book and reading as the turn-in over the head. The
+   * alternative is an L of two planes carrying two slices of one texture, for a
+   * strip narrower than the board is thick.
+   */
   const coverFace = printed(cover);
-  coverFace.scale.set(depth, height, 1);
+  coverFace.scale.set(depth, height - cap, 1);
   coverFace.rotation.y = Math.PI / 2;
-  coverFace.position.set(thickness / 2 + SKIN, 0, 0);
+  coverFace.position.set(thickness / 2, -cap / 2, 0);
 
   const spineFace = printed(spine);
-  spineFace.scale.set(thickness, height, 1);
-  spineFace.position.set(0, 0, depth / 2 + SKIN);
+  spineFace.scale.set(thickness, height - cap, 1);
+  spineFace.position.set(0, -cap / 2, depth / 2);
+
+  /**
+   * The covering rolling over the head, on the hardbacks.
+   *
+   * **+1 draw call and +1 material on a capped book, +0 geometry and +0 texture
+   * on any book** — the arc is shared for the whole shelf and the shading is the
+   * spine's own normal map, whose `u` also runs across the width. At the
+   * shipped 60% paperback that is ~+20 draws over 49 books, which is #56's
+   * number and the reason this has a knob of its own.
+   *
+   * **The material is per book, and the alternative is a live lead rather than an
+   * oversight.** #66 measured this cap slower in 7 of 7 paired passes and found
+   * the triangles innocent — 128× them is indistinguishable from the rig's floor
+   * — while *one shared material* came back indistinguishable from having no cap
+   * at all. Sharing is not available here: the covering takes the book's own
+   * colour, and 20 caps in one colour is the wrong picture. An `InstancedMesh`
+   * with per-instance colour would share the material *and* collapse 20 draws to
+   * 1, and neither #56 nor #66 rendered it. That is where to go if this ever
+   * costs enough to matter.
+   *
+   * Its own material rather than `boards`: the covering does not darken where it
+   * turns, and reusing the darkened board colour would put a step at the very
+   * edge this exists to soften. And not `spine` either — that carries the printed
+   * title, which would smear a slice of type across the cap.
+   */
+  if (cap > 0) {
+    const covering = new THREE.MeshStandardMaterial({
+      // The same cloth as the spine below it, which is the point of a cap.
+      color: new THREE.Color(entry.colour),
+      roughness: settings.materials.spineRoughness[entry.binding],
+      ...(profile === undefined ? {} : { normalMap: profile }),
+    });
+
+    const arc = headCapGeometry(settings.books.headCap);
+    if (arc !== undefined) {
+      const head = new THREE.Mesh(arc, covering);
+      head.castShadow = false;
+      head.receiveShadow = true;
+      /**
+       * Uniformly, and by **thickness** — not by the roll.
+       *
+       * The arc already carries the roll; it spans one *width* unit along `x` and
+       * rolls by `headCap` width units. Scaling by the roll instead made the cap
+       * a narrow tab centred on the head, ~6× too narrow, with every counter
+       * identical — same draw, same twenty triangles, same texture. Only a
+       * picture could catch it, and only a near one.
+       */
+      head.scale.setScalar(capScale);
+      // On the case, like the printed faces it continues — the covering's foot
+      // lands exactly on the printed spine's top edge rather than a hair in
+      // front of it, which would be a lip across the whole head.
+      head.position.set(0, height / 2, depth / 2);
+      group.add(head);
+    }
+  }
 
   // A face-out book sits well back, so the shelved book on its right stands
   // proud of it and between it and the key light. The cover is the only large
@@ -1343,7 +1610,7 @@ interface Lights {
   readonly keyTarget: THREE.Object3D;
 }
 
-function addLighting(
+export function addLighting(
   scene: THREE.Scene,
   unitHeight: number,
   settings: ShelfSettings,
@@ -1636,6 +1903,35 @@ function applyLive(
   // handle to reach them through. Honest rather than silent.
   standing(needsRebuild, 'cover roughness', mountedWith.materials.coverRoughness, next.materials.coverRoughness);
   standing(needsRebuild, 'cover metalness', mountedWith.materials.coverMetalness, next.materials.coverMetalness);
+  // Same bucket and the same sentence: the books' own materials are made per book
+  // inside `buildBook`, so there is no handle to reach them through. The map
+  // itself is re-baked on the rebuild, which is where the profile's shape is read.
+  standing(needsRebuild, 'page edges', mountedWith.materials.pageStriation, next.materials.pageStriation);
+  for (const binding of BINDINGS) {
+    standing(
+      needsRebuild,
+      `${binding} spine roughness`,
+      mountedWith.materials.spineRoughness[binding],
+      next.materials.spineRoughness[binding],
+    );
+  }
+  standing(
+    needsRebuild,
+    'spine profile',
+    describeProfiles(mountedWith.materials.spineProfile),
+    describeProfiles(next.materials.spineProfile),
+  );
+
+  /* --- the books ---------------------------------------------------------- */
+
+  // The mixture decides each book's board, square and height *band*, all of which
+  // are geometry built once in `buildBook` — and the height reaches further than
+  // that, since a face-out book's footprint is its cover width, so the row
+  // packing itself would have to run again. Nothing about that is live.
+  standing(needsRebuild, 'paperback mix', mountedWith.books.paperbackRatio, next.books.paperbackRatio);
+  // A mesh per hardback, and the covering below it shortened to make room. Both
+  // are decided while the book is built.
+  standing(needsRebuild, 'head cap', mountedWith.books.headCap, next.books.headCap);
 
   /* --- lighting ----------------------------------------------------------- */
 
@@ -1744,6 +2040,19 @@ function hex(value: number): string {
   return `#${value.toString(16).padStart(6, '0')}`;
 }
 
+/**
+ * Both profiles as one comparable string.
+ *
+ * `standing` compares with `!==`, which is identity on an object and would call
+ * every apply a change — a permanently amber lamp on a control nobody had
+ * touched, which is the panel lying in the quieter direction.
+ */
+function describeProfiles(profiles: ShelfSettings['materials']['spineProfile']): string {
+  return BINDINGS
+    .map((binding) => `${binding} ${profiles[binding].rise.toFixed(3)}/${profiles[binding].roll.toFixed(2)}`)
+    .join(' ');
+}
+
 /* -------------------------------------------------------------------------- */
 
 /**
@@ -1825,7 +2134,7 @@ class TextureCache {
  * bound `gates/cover-budget.test.ts` already enforces, and the alternative is a
  * cache that empties itself exactly when it would start being useful.
  */
-const COVERS = new TextureCache();
+export const COVERS = new TextureCache();
 
 /**
  * Click-to-inspect.

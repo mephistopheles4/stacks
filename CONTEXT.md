@@ -67,6 +67,48 @@ against. Giving every book its own angle is what produced wedge-shaped gaps —
 neighbours a fraction of a degree apart, touching nowhere.
 _Avoid_: group, cluster, stack (a stack is horizontal), streak.
 
+**Binding**:
+Hardback or paperback. The key belongs to G8 and its rules to
+[`CLAUDE.md`](CLAUDE.md); what the word means *here* is that it names a book's
+construction and nothing else — not its format, not how you read it. Absent means
+**nobody has said**, which is a state and not a third value.
+_Avoid_: format (that is print against audiobook, which nothing reads), cover
+type, hardcover (no provider has ever called a book on this shelf one).
+
+**Square**:
+The few millimetres by which a hardback's boards overhang the page block at head,
+tail and fore-edge — why the top of a real book is mostly paper with a thin rim
+of cover round it. A paperback has none; its cover is glued flush. The square and
+the board thickness move **together**, because a case still 2.6mm thick that has
+lost its rim reads as a modelling error rather than as a second format.
+_Avoid_: overhang, margin, lip, bleed.
+
+**Profile**:
+A spine's cross-section, as `{ rise, roll }` in width units — how far the centre
+stands proud of the chord, and how much of each half-width is spent turning into
+the joint. **Shaded, never built**: it is one shared normal map per binding on
+the flat plane that was already there, and real curved geometry was measured
+against it as the same picture at 6.7× the triangles. A paperback's is not
+`{ 0, 0 }` — perfect binding is a flat *face* with a hard turn at each edge.
+_Avoid_: curve (that was `spineCurve`, superseded), round, `roundedBack` (struck),
+`softHinge` (subsumed into `roll`).
+
+**Head**:
+The top edge of a book as it stands on a shelf, where the covering rolls over.
+The one edge that **cannot be faked** — a shelf is looked at from above, so the
+head is a silhouette, and no normal map moves a silhouette. There is no *tail*
+treatment and never will be: the lowest angle the camera permits is 3.6° above
+the horizon, so no tail is ever in frame.
+_Avoid_: top, cap (the cap is the *geometry*; the head is the edge), spine top.
+
+**Striation**:
+The grain of a cut text block — leaves stacked along the thickness. A
+**one-dimensional** pattern, which is the whole reason it costs nothing: one map
+varying only in `u` is correct on all four faces of the page block that can show,
+so it needs neither a material array nor per-face UVs.
+_Avoid_: texture (says nothing), pages (that is the block), grain (that word is
+taken by the *struck* roughness weave — see #68).
+
 **Provenance**:
 Which of the three providers a cover's *bytes* were downloaded from — a separate
 question from which provider answered for the book's metadata. The two differ

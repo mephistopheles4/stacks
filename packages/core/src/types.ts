@@ -22,6 +22,29 @@ export function isBookStatus(value: unknown): value is BookStatus {
 }
 
 /**
+ * How a book is bound — the one thing about its shape no provider knows.
+ *
+ * `physical_format` appears zero times across every cached response this project
+ * holds, and Google and Apple have no binding field in their schemas at all. So
+ * this is declared or it is invented; it is never looked up. Inference from cover
+ * aspect or page count is struck permanently rather than deferred: hardcover and
+ * paperback aspects interleave at 0.666, so inferring would be the one option
+ * that *claims* accuracy while having none.
+ *
+ * Two values and not three. Trade against mass-market is a difference of *size*,
+ * and size already varies per book through the shelf's own height hash, so a
+ * third value would be one more thing to choose between for variance the shelf
+ * already has.
+ */
+export const BINDINGS = ['hardback', 'paperback'] as const;
+
+export type Binding = (typeof BINDINGS)[number];
+
+export function isBinding(value: unknown): value is Binding {
+  return typeof value === 'string' && (BINDINGS as readonly string[]).includes(value);
+}
+
+/**
  * One book, as parsed from a vault note.
  *
  * Frontmatter only. Nothing below the frontmatter block ever reaches this type
@@ -67,6 +90,24 @@ export interface BookRecord {
 
   /** Drives spine width on the shelf. Absent means: use the default width. */
   readonly pages?: number;
+
+  /**
+   * Hardback or paperback, when you have looked at the book and know.
+   *
+   * **Absent does not mean "hardback".** It means nobody has said, and the shelf
+   * answers with a stable per-book hash — so no missing key can flatten a shelf
+   * into a single format. That is the fail-closed property, and it is met by
+   * structure rather than by care: there is no default value for a missing key to
+   * fall into. An unrecognised value is dropped at parse time, following
+   * `coverSource`, where a typo must not read as a permission.
+   *
+   * **Deliberately absent from `BookInput`.** No provider knows a book's
+   * binding, so `stacks add` has nothing to write and never will; the only way
+   * this key arrives is somebody looking at the book and saying so, which is
+   * invariant 5 working as intended. The asymmetry with the field list below is
+   * the point, not an omission.
+   */
+  readonly binding?: Binding;
 
   /**
    * Keep this book off any public build.

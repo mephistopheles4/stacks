@@ -12,6 +12,9 @@
  * the image contains a decent spread of distinct colours.
  */
 import { spawn } from 'node:child_process';
+// `import type`, so nothing of three's reaches this node script — the whole
+// point is that the shape cannot drift from the handle it is read off.
+import type { ShelfStats } from '../packages/site/src/shelf/scene.ts';
 import { createServer, type Server } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -123,12 +126,20 @@ async function main(): Promise<void> {
       const bookCount = await page.evaluate('window.__shelf.bookCount');
       const caseOverflow = await page.evaluate('window.__shelf.caseOverflow');
       const stats = (await page.evaluate(readCanvasStats)) as Stats;
+      const cost = (await page.evaluate('window.__shelf.stats()')) as ShelfCost;
 
       writeFileSync(OUTPUT, await page.screenshot({ type: 'png' }));
 
       const cardOpened = await clickABook(page);
 
-      report({ bookCount: Number(bookCount), caseOverflow: Number(caseOverflow), stats, errors, cardOpened });
+      report({
+        bookCount: Number(bookCount),
+        caseOverflow: Number(caseOverflow),
+        stats,
+        cost,
+        errors,
+        cardOpened,
+      });
     } finally {
       await browser.close();
     }
@@ -165,6 +176,22 @@ interface Stats {
   nonBackgroundPct: number;
   size: string;
 }
+
+/**
+ * What the renderer is holding, read off the live handle.
+ *
+ * Reported and not asserted on, deliberately. Every effect on map #50 states a
+ * per-book texture and draw-call cost — "+1 texture for the whole shelf",
+ * "+20 draws over 49 books", "+0 per book" — and until now the gate that renders
+ * 49 books could not see any of them, so a slice that quietly cost more than its
+ * ticket claimed would come back green. These four numbers are what makes a
+ * prediction checkable against the shelf it was a prediction about.
+ *
+ * A threshold is not the right shape for it. #53's budget is an estimate, the
+ * counts move legitimately with the fixture, and a gate that goes red on a number
+ * nobody can interpret trains people to raise the number.
+ */
+type ShelfCost = Pick<ShelfStats, 'textures' | 'geometries' | 'programs' | 'calls' | 'triangles'>;
 
 /**
  * Clicks a real book and checks the detail card opens with its title.
@@ -227,17 +254,22 @@ function report(result: {
   bookCount: number;
   caseOverflow: number;
   stats: Stats;
+  cost: ShelfCost;
   errors: string[];
   cardOpened: CardOpened | undefined;
 }): void {
-  const { bookCount, caseOverflow, stats, errors, cardOpened } = result;
+  const { bookCount, caseOverflow, stats, cost, errors, cardOpened } = result;
   const failures: string[] = [];
+
+  const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
 
   console.log(`canvas            ${stats.size}`);
   console.log(`books rendered    ${bookCount}`);
   console.log(`case overflow     ${caseOverflow.toFixed(4)}`);
   console.log(`distinct colours  ${stats.distinctColours}`);
   console.log(`non-background    ${stats.nonBackgroundPct.toFixed(1)}%`);
+  console.log(`textures          ${cost.textures}   geometries ${cost.geometries}   programs ${cost.programs}`);
+  console.log(`draws             ${cost.calls} (${per(cost.calls)}/book)   tris ${cost.triangles}`);
   console.log(`click opens card  ${cardOpened?.title ?? 'NO'}`);
   console.log(`screenshot        ${OUTPUT}`);
 

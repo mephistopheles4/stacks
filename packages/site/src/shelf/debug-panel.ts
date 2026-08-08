@@ -1,5 +1,6 @@
 import type { ApplyReport, ShelfHandle } from './scene.ts';
 import {
+  BINDINGS,
   DEFAULT_SETTINGS,
   resolveSettings,
   SHADOW_TYPE_NAMES,
@@ -379,9 +380,112 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   slider('cover gloss', 'rebuild', 0, 1, 0.01, (s) => s.materials.coverRoughness, (s, v) =>
     resolveSettings({ materials: { coverRoughness: v } }, s),
   );
+  // Red at zero, and truthfully: no map is uploaded and no jitter applied, so the
+  // page block is the flat cream slab it used to be.
+  slider(
+    'page edges',
+    'rebuild',
+    0,
+    3,
+    0.05,
+    (s) => s.materials.pageStriation,
+    (s, v) => resolveSettings({ materials: { pageStriation: v } }, s),
+    (s) => s.materials.pageStriation > 0,
+  );
   slider('cover metal', 'rebuild', 0, 1, 0.01, (s) => s.materials.coverMetalness, (s, v) =>
     resolveSettings({ materials: { coverMetalness: v } }, s),
   );
+
+  /* --- the books ---------------------------------------------------------- */
+
+  /**
+   * The first group here about a book rather than about the room.
+   *
+   * Rebuild-class and it cannot be anything else: the mixture decides board,
+   * square and height band, which are geometry, and height decides a face-out
+   * book's footprint — so honouring a move means packing the rows again. A live
+   * slider over an unmoved shelf is the exact thing this panel exists to refuse.
+   *
+   * Books whose note declares a `binding:` do not move with it, in either
+   * direction. That is not a lie the lamp has to report: the control is doing
+   * what it says, which is dialling the *hash*, and a declaration is not a vote.
+   */
+  group('books');
+  slider('paperback mix', 'rebuild', 0, 1, 0.05, (s) => s.books.paperbackRatio, (s, v) =>
+    resolveSettings({ books: { paperbackRatio: v } }, s),
+  );
+  /**
+   * Red at zero, and truthfully: no cap is built at all, so the ~20 draw calls
+   * it costs are simply not spent.
+   *
+   * ⚠️ **It says nothing about the mixture, and a version of it that tried was
+   * wrong.** `… && s.books.paperbackRatio < 1` looked like the honest extra
+   * clause — no hardbacks, nothing for a cap to be built on — and it is false: a
+   * note declaring `binding: hardback` ignores the ratio entirely, because a
+   * declaration is not a vote. At a ratio of 1 that book is still capped and the
+   * lamp would have read red over a cap that is there. Nothing the panel can see
+   * answers "how many hardbacks are on this shelf", so the lamp answers the
+   * question it can: is this control doing anything.
+   */
+  slider(
+    'head cap',
+    'rebuild',
+    0,
+    0.3,
+    0.01,
+    (s) => s.books.headCap,
+    (s, v) => resolveSettings({ books: { headCap: v } }, s),
+    (s) => s.books.headCap > 0,
+  );
+
+  /**
+   * The spine's cross-section, per binding.
+   *
+   * Four numbers rather than one control, because they are two independent
+   * shapes: a backed hardback and a perfect-bound paperback are different
+   * objects, and #56's lesson is that one knob moving two things at once hides
+   * whichever effect is smaller.
+   *
+   * The lamps go red on a profile of `{ 0, 0 }` — and truthfully, because that
+   * short-circuits to no normal map at all rather than to a map scaled by zero.
+   * A control that has switched its own effect off says so.
+   */
+  for (const binding of BINDINGS) {
+    const lit = (s: ShelfSettings): boolean =>
+      s.materials.spineProfile[binding].rise !== 0 && s.materials.spineProfile[binding].roll !== 0;
+
+    slider(
+      `${binding} rise`,
+      'rebuild',
+      0,
+      0.25,
+      0.005,
+      (s) => s.materials.spineProfile[binding].rise,
+      (s, v) => resolveSettings({ materials: { spineProfile: { [binding]: { rise: v } } } }, s),
+      lit,
+    );
+    slider(
+      `${binding} roll`,
+      'rebuild',
+      0,
+      1,
+      0.01,
+      (s) => s.materials.spineProfile[binding].roll,
+      (s, v) => resolveSettings({ materials: { spineProfile: { [binding]: { roll: v } } } }, s),
+      lit,
+    );
+    // Cloth against card, as one number each — and the thing #68 measured as
+    // carrying everything a grain map in this slot was doing.
+    slider(
+      `${binding} cloth`,
+      'rebuild',
+      0,
+      1,
+      0.01,
+      (s) => s.materials.spineRoughness[binding],
+      (s, v) => resolveSettings({ materials: { spineRoughness: { [binding]: v } } }, s),
+    );
+  }
 
   group('bloom');
   toggleRow('enabled', 'rebuild', (s) => s.effects.bloom.enabled, (s, v) =>

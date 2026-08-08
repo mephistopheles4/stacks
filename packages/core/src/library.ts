@@ -1,5 +1,5 @@
 import type { CoverSource } from './covers/cover-source.ts';
-import type { BookRecord } from './types.ts';
+import type { Binding, BookRecord } from './types.ts';
 import { keyIfPresent } from './key-if-present.ts';
 
 /**
@@ -25,6 +25,11 @@ export interface LibraryBook {
   readonly coverSource?: CoverSource;
   readonly spineColor?: string;
   readonly pages?: number;
+  /**
+   * Declared binding, when the note declares one. Absent means nobody has said,
+   * and the shelf hashes an answer — never that the book is a hardback.
+   */
+  readonly binding?: Binding;
   readonly faceOut?: boolean;
   readonly shelfOrder?: number;
   /** Held back from public builds. Only ever present in a local one. */
@@ -86,6 +91,7 @@ function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
     ...keyIfPresent('coverSource', record.coverSource),
     ...keyIfPresent('spineColor', record.spineColor),
     ...keyIfPresent('pages', record.pages),
+    ...keyIfPresent('binding', record.binding),
     ...keyIfPresent('faceOut', record.faceOut),
     ...keyIfPresent('shelfOrder', record.shelfOrder),
     // Carried so a local index can show you which books are held back. A public

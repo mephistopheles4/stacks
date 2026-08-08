@@ -113,6 +113,35 @@ describe('?tune', () => {
     expect(read(query).renderer.exposure).toBe(DEFAULT_SETTINGS.renderer.exposure);
   });
 
+  it('carries the books category, which is the first new top-level key since this was written', () => {
+    // `books` is not one of the ten historic probe spellings, so a URL is the
+    // only way to hand a phone a dialled mixture — and `readTune` has to have
+    // been taught the key or a pasted URL silently renders the shipped shelf
+    // with nothing saying so, which is the failure this file's header describes.
+    const query = `tune=${encodeURIComponent(JSON.stringify({ books: { paperbackRatio: 0.2, headCap: 0 } }))}`;
+
+    expect(read(query).books).toEqual({ paperbackRatio: 0.2, headCap: 0 });
+  });
+
+  it('carries a nested profile without flattening it or losing its sibling', () => {
+    // `spineProfile` is the first *nested object* inside `materials`; every other
+    // key there is a flat scalar, so the cast in `readTune` had never been asked
+    // to carry one.
+    const query = `tune=${encodeURIComponent(
+      JSON.stringify({ materials: { spineProfile: { paperback: { roll: 0.5 } } } }),
+    )}`;
+    const settings = read(query);
+
+    expect(settings.materials.spineProfile.paperback.roll).toBe(0.5);
+    expect(settings.materials.spineProfile.paperback.rise).toBe(
+      DEFAULT_SETTINGS.materials.spineProfile.paperback.rise,
+    );
+    expect(settings.materials.spineProfile.hardback).toEqual(
+      DEFAULT_SETTINGS.materials.spineProfile.hardback,
+    );
+    expect(settings.materials.pageStriation).toBe(DEFAULT_SETTINGS.materials.pageStriation);
+  });
+
   it('does not let a tune blob override a probe typed by hand', () => {
     // The two vocabularies never overlap, so a legacy probe is always the last
     // word on the nine settings it owns. Someone appending `&shadows=1` to a

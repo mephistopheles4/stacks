@@ -61,6 +61,27 @@ export function bookLimit(params: URLSearchParams): number | undefined {
 }
 
 /**
+ * `?solo=N` — one book, alone, with no case and an unclamped orbit.
+ *
+ * A flat spelling, joining the ten historic probes rather than riding in
+ * `?tune=`, for their reason: it is typed by hand while you are looking at
+ * something, and it is a *mode* rather than a setting. `?solo` on its own is the
+ * first book. See `book-inspector.ts`.
+ *
+ * Refused unless it parses to a whole index, so a typo shows the shelf rather
+ * than an empty canvas that looks like a different bug — `bookLimit`'s rule.
+ */
+export function soloBook(params: URLSearchParams): number | undefined {
+  const raw = params.get('solo');
+  if (raw === null) return undefined;
+  if (raw === '') return 0;
+
+  const requested = Number(raw);
+  if (!Number.isInteger(requested) || requested < 0) return undefined;
+  return requested;
+}
+
+/**
  * Everything the URL asks for, as a partial.
  *
  * Partial, not total: absent means "no opinion", which is not the same as "asked
@@ -200,6 +221,7 @@ interface Tune {
   lighting?: unknown;
   scene?: unknown;
   materials?: unknown;
+  books?: unknown;
   toneMapping?: ToneMappingName;
   exposure?: number;
 }
@@ -210,6 +232,7 @@ function tuneDiff(settings: ShelfSettings): string | undefined {
     ...(same(settings.lighting, d.lighting) ? {} : { lighting: settings.lighting }),
     ...(same(settings.scene, d.scene) ? {} : { scene: settings.scene }),
     ...(same(settings.materials, d.materials) ? {} : { materials: settings.materials }),
+    ...(same(settings.books, d.books) ? {} : { books: settings.books }),
     ...(same(settings.effects, d.effects) ? {} : { effects: settings.effects }),
     ...(settings.renderer.toneMapping === d.renderer.toneMapping
       ? {}
@@ -256,6 +279,7 @@ function readTune(params: URLSearchParams): SettingsPatch {
     ...(isRecord(tune.lighting) ? { lighting: tune.lighting as SettingsPatch['lighting'] } : {}),
     ...(isRecord(tune.scene) ? { scene: tune.scene as SettingsPatch['scene'] } : {}),
     ...(isRecord(tune.materials) ? { materials: tune.materials as SettingsPatch['materials'] } : {}),
+    ...(isRecord(tune.books) ? { books: tune.books as SettingsPatch['books'] } : {}),
     ...(isRecord(tune.effects) ? { effects: tune.effects as SettingsPatch['effects'] } : {}),
   };
 }
