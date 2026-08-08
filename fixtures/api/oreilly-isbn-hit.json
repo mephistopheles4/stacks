@@ -1,0 +1,110 @@
+{
+  "results": [
+    {
+      "id": "https://www.safaribooksonline.com/api/v1/book/0642572352530/",
+      "archive_id": "0642572352530",
+      "ourn": "urn:orm:book:0642572352530",
+      "isbn": "9798341674738",
+      "last_modified_time": "2026-06-23T20:05:33.746Z",
+      "issued": "2027-02-25T00:00:00Z",
+      "format": "book",
+      "content_format": "book",
+      "authors": [
+        "Alfonso Graziano"
+      ],
+      "publishers": [
+        "O'Reilly Media, Inc."
+      ],
+      "academic_excluded": false,
+      "language": "en",
+      "title": "Learning AI-Native Software Engineering",
+      "description": "<span><div><p>Most engineers still use AI tools ad hoc, individually, without shared standards. The result is inconsistent output, quality gaps in production, and a growing sense that the role itself is shifting faster than the profession has answers for. If you're ready to move beyond just using AI to write code, <em>Learning AI-Native Software Engineering</em> by Alfonso Graziano provides the framework to work with AI systematically, across a full development lifecycle and a whole team.</p><p>Through spec-driven development, context engineering, and structured agent workflows, you'll integrate AI from design through production in ways that are repeatable and governable, with security, governance, and economic considerations built in from the start. This is not a book about becoming an AI engineer. It's about remaining an effective one when AI is everywhere.</p><ul><li>Master context engineering to give AI the right information at every stage</li><li>Write precise specifications that keep humans and AI aligned in production</li><li>Integrate coding agents across the full SDLC, from design through testing</li><li>Configure MCP tools for consistent, repeatable results</li><li>Build team playbooks that address governance, security, and adoption at scale</li></ul></div></span>",
+      "url": "https://learning.oreilly.com/api/v1/book/0642572352530/",
+      "web_url": "/library/view/learning-ai-native-software/0642572352530/",
+      "source": "application/epub+zip",
+      "content_type": "book",
+      "virtual_pages": 338,
+      "duration_seconds": -1,
+      "has_assessment": false,
+      "timestamp": "2026-06-23T20:08:22.064Z",
+      "average_rating": 0,
+      "number_of_followers": 0,
+      "number_of_items": 0,
+      "number_of_reviews": 0,
+      "popularity": 0,
+      "report_score": 0,
+      "cover_url": "https://learning.oreilly.com/library/cover/0642572352530/",
+      "date_added": "2026-06-23T20:05:23.561Z",
+      "topics": [
+        "7fbbd3e8-2b7a-49df-af55-69d228697e9f"
+      ],
+      "topics_payload": [
+        {
+          "uuid": "7fbbd3e8-2b7a-49df-af55-69d228697e9f",
+          "slug": "engineering",
+          "name": "Engineering",
+          "score": null
+        }
+      ],
+      "minutes_required": 388.7
+    }
+  ],
+  "facets": {
+    "facet_queries": {
+      "{!ex=format}(format:video AND title_unstemmed:\"Learning Path: .*\")": 0
+    },
+    "facet_fields": {
+      "format": [
+        "book",
+        1
+      ],
+      "subjects": [],
+      "topic_uuids": [
+        "7fbbd3e8-2b7a-49df-af55-69d228697e9f",
+        1
+      ],
+      "publishers_exact": [
+        "O'Reilly Media, Inc.",
+        1
+      ],
+      "language": [
+        "en",
+        1
+      ],
+      "sharing_status": [],
+      "expert_playlist": [],
+      "video_classification": [],
+      "certification_name_exact": [],
+      "certification_vendor_name_exact": [],
+      "topics": [
+        "Engineering",
+        1
+      ]
+    },
+    "facet_ranges": {},
+    "facet_intervals": {
+      "average_rating": {
+        "no_stars": 1,
+        "zero_stars": 0,
+        "one_star": 0,
+        "two_stars": 0,
+        "three_stars": 0,
+        "four_stars": 0,
+        "five_stars": 0
+      },
+      "issued": {
+        "last_two_years": 0,
+        "last_year": 0,
+        "last_six_months": 0
+      }
+    },
+    "facet_heatmaps": {}
+  },
+  "total": 1,
+  "meta": {
+    "query_identifier": "45f2cc6c-cb36-4e97-9432-52d297cc7153"
+  },
+  "page": 0,
+  "previous": null,
+  "next": "https://learning.oreilly.com/api/v2/search/?query=9798341674738&field=isbn&formats=book&limit=1&page=1"
+}

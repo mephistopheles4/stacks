@@ -16,7 +16,7 @@
    {
     "kind": "books#volume",
     "id": "oX9T0QEACAAJ",
-    "etag": "Pl6GPpqD4TM",
+    "etag": "dZ50ucvSwyw",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/oX9T0QEACAAJ",
     "volumeInfo": {
      "title": "Vibe Coding: the Future of Programming",
@@ -61,7 +61,7 @@
    {
     "kind": "books#volume",
     "id": "AKV-EQAAQBAJ",
-    "etag": "vFXeAdlKryQ",
+    "etag": "SzRTfqoB+ws",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/AKV-EQAAQBAJ",
     "volumeInfo": {
      "title": "Beyond Vibe Coding",
@@ -106,7 +106,7 @@
    {
     "kind": "books#volume",
     "id": "fqDL0QEACAAJ",
-    "etag": "Lb1aBFIH2YQ",
+    "etag": "L2IqBZWYbls",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/fqDL0QEACAAJ",
     "volumeInfo": {
      "title": "Vibe Coding with AI",
@@ -150,8 +150,46 @@
    },
    {
     "kind": "books#volume",
+    "id": "YaDPEQAAQBAJ",
+    "etag": "Zow5BLlQPT4",
+    "selfLink": "https://www.googleapis.com/books/v1/volumes/YaDPEQAAQBAJ",
+    "volumeInfo": {
+     "title": "VIBE CODING BUILDING , PRODUCTION-GRADE SOFTWARE WITH GENAI AND BEYOND",
+     "subtitle": "A PRACTICAL GUIDE TO CREATING SCALABLE, INTELLIGENT SOFTWARE THROUGH AI-DRIVEN DEVELOPMENT",
+     "authors": [
+      "TECH MORIS "
+     ],
+     "publisher": "reedshawgooglebooks",
+     "readingModes": {
+      "text": false,
+      "image": true
+     },
+     "pageCount": 77,
+     "printType": "BOOK",
+     "categories": [
+      "Computers"
+     ],
+     "maturityRating": "NOT_MATURE",
+     "allowAnonLogging": false,
+     "contentVersion": "0.0.1.0.preview.1",
+     "panelizationSummary": {
+      "containsEpubBubbles": false,
+      "containsImageBubbles": false
+     },
+     "imageLinks": {
+      "smallThumbnail": "http://books.google.com/books/content?id=YaDPEQAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+      "thumbnail": "http://books.google.com/books/content?id=YaDPEQAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+     },
+     "language": "en",
+     "previewLink": "http://books.google.ca/books?id=YaDPEQAAQBAJ&printsec=frontcover&dq=Beyond+Vibe+Coding:+From+Coder+to+AI-Era+Developer+Addy+Osmani&hl=&cd=4&source=gbs_api",
+     "infoLink": "https://play.google.com/store/books/details?id=YaDPEQAAQBAJ&source=gbs_api",
+     "canonicalVolumeLink": "https://play.google.com/store/books/details?id=YaDPEQAAQBAJ"
+    }
+   },
+   {
+    "kind": "books#volume",
     "id": "R2pd0QEACAAJ",
-    "etag": "l1e0c7b+ISQ",
+    "etag": "MXji5O/LMLg",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/R2pd0QEACAAJ",
     "volumeInfo": {
      "title": "Introduction to Vibe Coding",
@@ -188,47 +226,9 @@
       "thumbnail": "http://books.google.com/books/content?id=R2pd0QEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
      },
      "language": "en",
-     "previewLink": "http://books.google.ca/books?id=R2pd0QEACAAJ&dq=Beyond+Vibe+Coding:+From+Coder+to+AI-Era+Developer+Addy+Osmani&hl=&cd=4&source=gbs_api",
+     "previewLink": "http://books.google.ca/books?id=R2pd0QEACAAJ&dq=Beyond+Vibe+Coding:+From+Coder+to+AI-Era+Developer+Addy+Osmani&hl=&cd=5&source=gbs_api",
      "infoLink": "http://books.google.ca/books?id=R2pd0QEACAAJ&dq=Beyond+Vibe+Coding:+From+Coder+to+AI-Era+Developer+Addy+Osmani&hl=&source=gbs_api",
      "canonicalVolumeLink": "https://books.google.com/books/about/Introduction_to_Vibe_Coding.html?hl=&id=R2pd0QEACAAJ"
-    }
-   },
-   {
-    "kind": "books#volume",
-    "id": "kUXUEQAAQBAJ",
-    "etag": "zRjYZHaE6oY",
-    "selfLink": "https://www.googleapis.com/books/v1/volumes/kUXUEQAAQBAJ",
-    "volumeInfo": {
-     "title": "Vibe Coding",
-     "subtitle": "\"The Developer's Guide to Vibe Coding: AI-Assisted Programming, Flow State Productivity, and Intuitive Software Development\"",
-     "authors": [
-      "Fatima Ahmad"
-     ],
-     "publisher": "fatima ahmad",
-     "readingModes": {
-      "text": false,
-      "image": true
-     },
-     "pageCount": 312,
-     "printType": "BOOK",
-     "categories": [
-      "Computers"
-     ],
-     "maturityRating": "NOT_MATURE",
-     "allowAnonLogging": false,
-     "contentVersion": "0.0.1.0.preview.1",
-     "panelizationSummary": {
-      "containsEpubBubbles": false,
-      "containsImageBubbles": false
-     },
-     "imageLinks": {
-      "smallThumbnail": "http://books.google.com/books/content?id=kUXUEQAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
-      "thumbnail": "http://books.google.com/books/content?id=kUXUEQAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
-     },
-     "language": "en",
-     "previewLink": "http://books.google.ca/books?id=kUXUEQAAQBAJ&printsec=frontcover&dq=Beyond+Vibe+Coding:+From+Coder+to+AI-Era+Developer+Addy+Osmani&hl=&cd=5&source=gbs_api",
-     "infoLink": "https://play.google.com/store/books/details?id=kUXUEQAAQBAJ&source=gbs_api",
-     "canonicalVolumeLink": "https://play.google.com/store/books/details?id=kUXUEQAAQBAJ"
     }
    }
   ]
@@ -245,18 +245,18 @@
     "artistIds": [
      552163006
     ],
-    "artistId": 552163006,
-    "artistName": "Addy Osmani",
     "genres": [
      "Programming",
      "Books",
      "Computers & Internet",
      "Software"
     ],
+    "artistId": 552163006,
+    "artistName": "Addy Osmani",
     "price": 59.99,
     "releaseDate": "2025-08-18T07:00:00Z",
-    "trackName": "Beyond Vibe Coding",
     "trackId": 6751212206,
+    "trackName": "Beyond Vibe Coding",
     "genreIds": [
      "10023",
      "38",
@@ -276,8 +276,6 @@
     "artistIds": [
      552163006
     ],
-    "artistId": 552163006,
-    "artistName": "Addy Osmani",
     "genres": [
      "Software",
      "Books",
@@ -285,10 +283,12 @@
      "Programming",
      "Computers"
     ],
+    "artistId": 552163006,
+    "artistName": "Addy Osmani",
     "price": 33.99,
     "releaseDate": "2026-02-11T08:00:00Z",
-    "trackName": "The Effective Software Engineer",
     "trackId": 6759071354,
+    "trackName": "The Effective Software Engineer",
     "genreIds": [
      "10024",
      "38",
@@ -309,18 +309,18 @@
     "artistIds": [
      1572384962
     ],
-    "artistId": 1572384962,
-    "artistName": "Dean Hume",
     "genres": [
      "Software",
      "Books",
      "Computers & Internet",
      "Programming"
     ],
+    "artistId": 1572384962,
+    "artistName": "Dean Hume",
     "price": 49.99,
     "releaseDate": "2017-12-03T08:00:00Z",
-    "trackName": "Progressive Web Apps",
     "trackId": 1572386584,
+    "trackName": "Progressive Web Apps",
     "genreIds": [
      "10024",
      "38",
@@ -350,7 +350,7 @@
    {
     "kind": "books#volume",
     "id": "JAP8B7R67K0C",
-    "etag": "LEKdNGzJJ8s",
+    "etag": "CgpWEWSNTnQ",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/JAP8B7R67K0C",
     "volumeInfo": {
      "title": "Emotional Intelligence 2.0",
@@ -401,7 +401,7 @@
    {
     "kind": "books#volume",
     "id": "An8Q0QEACAAJ",
-    "etag": "YAZ+F88dHrs",
+    "etag": "Osfq3nw2/H8",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/An8Q0QEACAAJ",
     "volumeInfo": {
      "title": "The New Emotional Intelligence",
@@ -445,7 +445,7 @@
    {
     "kind": "books#volume",
     "id": "4EPJEAAAQBAJ",
-    "etag": "ekR0w4iXUVI",
+    "etag": "EbsD1chJAfA",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/4EPJEAAAQBAJ",
     "volumeInfo": {
      "title": "Emotional Intelligence Habits",
@@ -493,7 +493,7 @@
    {
     "kind": "books#volume",
     "id": "bDBO_CKqmBsC",
-    "etag": "ogVchjvJdxc",
+    "etag": "Inl8Ac5VtRU",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/bDBO_CKqmBsC",
     "volumeInfo": {
      "title": "The Emotional Intelligence Quick Book",
@@ -542,24 +542,23 @@
    },
    {
     "kind": "books#volume",
-    "id": "CtgvyQEACAAJ",
-    "etag": "JdO+e3MfYTg",
-    "selfLink": "https://www.googleapis.com/books/v1/volumes/CtgvyQEACAAJ",
+    "id": "XNwlxgEACAAJ",
+    "etag": "JXa4oUUemz4",
+    "selfLink": "https://www.googleapis.com/books/v1/volumes/XNwlxgEACAAJ",
     "volumeInfo": {
      "title": "Summary of Emotional Intelligence 2.0 by Travis Bradberry & Jean Greaves",
      "authors": [
       "Readtrepreneur Publishing"
      ],
-     "publisher": "Readtrepreneur Publishing",
      "publishedDate": "2019-05-24",
      "industryIdentifiers": [
       {
        "type": "ISBN_10",
-       "identifier": "1690404655"
+       "identifier": "1646151216"
       },
       {
        "type": "ISBN_13",
-       "identifier": "9781690404651"
+       "identifier": "9781646151219"
       }
      ],
      "readingModes": {
@@ -568,6 +567,9 @@
      },
      "pageCount": 106,
      "printType": "BOOK",
+     "categories": [
+      "Study Aids"
+     ],
      "maturityRating": "NOT_MATURE",
      "allowAnonLogging": false,
      "contentVersion": "preview-1.0.0",
@@ -576,13 +578,13 @@
       "containsImageBubbles": false
      },
      "imageLinks": {
-      "smallThumbnail": "http://books.google.com/books/content?id=CtgvyQEACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api",
-      "thumbnail": "http://books.google.com/books/content?id=CtgvyQEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
+      "smallThumbnail": "http://books.google.com/books/content?id=XNwlxgEACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api",
+      "thumbnail": "http://books.google.com/books/content?id=XNwlxgEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
      },
      "language": "en",
-     "previewLink": "http://books.google.ca/books?id=CtgvyQEACAAJ&dq=The+New+Emotional+Intelligence+Travis+Bradberry&hl=&cd=5&source=gbs_api",
-     "infoLink": "http://books.google.ca/books?id=CtgvyQEACAAJ&dq=The+New+Emotional+Intelligence+Travis+Bradberry&hl=&source=gbs_api",
-     "canonicalVolumeLink": "https://books.google.com/books/about/Summary_of_Emotional_Intelligence_2_0_by.html?hl=&id=CtgvyQEACAAJ"
+     "previewLink": "http://books.google.ca/books?id=XNwlxgEACAAJ&dq=The+New+Emotional+Intelligence+Travis+Bradberry&hl=&cd=5&source=gbs_api",
+     "infoLink": "http://books.google.ca/books?id=XNwlxgEACAAJ&dq=The+New+Emotional+Intelligence+Travis+Bradberry&hl=&source=gbs_api",
+     "canonicalVolumeLink": "https://books.google.com/books/about/Summary_of_Emotional_Intelligence_2_0_by.html?hl=&id=XNwlxgEACAAJ"
     }
    }
   ]
@@ -590,7 +592,7 @@
  "https://www.googleapis.com/books/v1/volumes/An8Q0QEACAAJ": {
   "kind": "books#volume",
   "id": "An8Q0QEACAAJ",
-  "etag": "3hX8/6pMNR0",
+  "etag": "j/lYpwYgQdM",
   "selfLink": "https://www.googleapis.com/books/v1/volumes/An8Q0QEACAAJ",
   "volumeInfo": {
    "title": "The New Emotional Intelligence",
@@ -630,8 +632,8 @@
     "containsImageBubbles": false
    },
    "imageLinks": {
-    "smallThumbnail": "http://books.google.com/books/content?id=An8Q0QEACAAJ&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE71ZWXT0_3mZt2d4XN2YlP9b0BcK9Di1ZpgbxfhXpI3maCyH3zC9BDp9b99YK1AJEKngrxj7Br6S9RK96vB-uOrwM7Gh9mi4gkz-TtkqjQv7-k6FjgM-jrxDbSdyXjJk1u6taEH2&source=gbs_api",
-    "thumbnail": "http://books.google.com/books/content?id=An8Q0QEACAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE72RpL_1_8ESiq1OpUoDUdhNAt08t3UH6JD9FYN0_u_eLcbpY7oPlSGapuY5SNMy2ghX9Yvma_BL9xMC47BdzXbXGpoDdcZfcbrFCvubvDncdB_hGxeAkHh4rBZFONgc1Yx25paU&source=gbs_api"
+    "smallThumbnail": "http://books.google.com/books/content?id=An8Q0QEACAAJ&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE73y0KYUMWz6A8dHXLZlGdP1Ofbj2qu3Z-28ImxY6nA5edO2VubshDWj0TF8n7xj93fB3UEINJem4uVReoXNR5g9T4R0aF_oQav04jVoW9yyR2dBPlp7mueCE5wMhXIBmjnBk4Lo&source=gbs_api",
+    "thumbnail": "http://books.google.com/books/content?id=An8Q0QEACAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE70GxRY283aCpGpHHZU4_43z7DmGG_C-OaXQ2W1e51B-DJPokuPYxwrQ88NZhpAYvPXZtXbGZFac3wiWYJbBgQi7l7D3_CgZ6un_FSUxPPgdRvoHJxFM2vlFbM63f1OrXszZnNum&source=gbs_api"
    },
    "language": "en",
    "previewLink": "http://books.google.ca/books?id=An8Q0QEACAAJ&hl=&source=gbs_api",
@@ -643,11 +645,6 @@
   "resultCount": 6,
   "results": [
    {
-    "artistViewUrl": "https://books.apple.com/us/artist/travis-bradberry/253539403?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/the-emotional-intelligence-quick-book/id381970644?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/60/00/2f/60002f9a-94f9-4ffc-1b2a-e295ea64e380/9781416548737.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/60/00/2f/60002f9a-94f9-4ffc-1b2a-e295ea64e380/9781416548737.jpg/100x100bb.jpg",
-    "trackCensoredName": "The Emotional Intelligence Quick Book",
     "artistIds": [
      253539403
     ],
@@ -661,26 +658,26 @@
     ],
     "price": 14.99,
     "releaseDate": "2006-12-01T08:00:00Z",
-    "trackName": "The Emotional Intelligence Quick Book",
-    "trackId": 381970644,
     "genreIds": [
      "9009",
      "38",
      "9025",
      "10119"
     ],
+    "trackId": 381970644,
+    "trackName": "The Emotional Intelligence Quick Book",
     "kind": "ebook",
     "currency": "USD",
+    "trackCensoredName": "The Emotional Intelligence Quick Book",
+    "artistViewUrl": "https://books.apple.com/us/artist/travis-bradberry/253539403?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/the-emotional-intelligence-quick-book/id381970644?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/60/00/2f/60002f9a-94f9-4ffc-1b2a-e295ea64e380/9781416548737.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/60/00/2f/60002f9a-94f9-4ffc-1b2a-e295ea64e380/9781416548737.jpg/100x100bb.jpg",
     "formattedPrice": "$14.99",
     "averageUserRating": 3.5,
     "userRatingCount": 50
    },
    {
-    "artistViewUrl": "https://books.apple.com/us/artist/turbo-learning/1623289283?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence-2-0-by-travis-bradberry/id6445849980?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/51/e6/23/51e62312-9892-fe2e-be17-47fe1219435c/cover.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/51/e6/23/51e62312-9892-fe2e-be17-47fe1219435c/cover.jpg/100x100bb.jpg",
-    "trackCensoredName": "Emotional Intelligence 2.0 by Travis Bradberry",
     "artistIds": [
      1623289283
     ],
@@ -701,8 +698,6 @@
     ],
     "price": 2.99,
     "releaseDate": "2023-02-23T08:00:00Z",
-    "trackName": "Emotional Intelligence 2.0 by Travis Bradberry",
-    "trackId": 6445849980,
     "genreIds": [
      "10119",
      "38",
@@ -716,16 +711,18 @@
      "10094",
      "10008"
     ],
+    "trackId": 6445849980,
+    "trackName": "Emotional Intelligence 2.0 by Travis Bradberry",
     "kind": "ebook",
     "currency": "USD",
+    "trackCensoredName": "Emotional Intelligence 2.0 by Travis Bradberry",
+    "artistViewUrl": "https://books.apple.com/us/artist/turbo-learning/1623289283?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence-2-0-by-travis-bradberry/id6445849980?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/51/e6/23/51e62312-9892-fe2e-be17-47fe1219435c/cover.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/51/e6/23/51e62312-9892-fe2e-be17-47fe1219435c/cover.jpg/100x100bb.jpg",
     "formattedPrice": "$2.99"
    },
    {
-    "artistViewUrl": "https://books.apple.com/us/artist/eureka/1259541987?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence-2-0-by-travis-bradberry-and/id1037911598?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/1f/9c/f5/1f9cf5bd-50a3-f5ce-4f70-f9a3b6350564/EMOTIONAL-INTELLIGENCE-2.0.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/1f/9c/f5/1f9cf5bd-50a3-f5ce-4f70-f9a3b6350564/EMOTIONAL-INTELLIGENCE-2.0.jpg/100x100bb.jpg",
-    "trackCensoredName": "Emotional Intelligence 2.0: by Travis Bradberry and Jean Greaves  Key Takeaways, Analysis & Review",
     "artistIds": [
      1259541987
     ],
@@ -742,8 +739,6 @@
     ],
     "price": 4.99,
     "releaseDate": "2015-09-07T07:00:00Z",
-    "trackName": "Emotional Intelligence 2.0: by Travis Bradberry and Jean Greaves  Key Takeaways, Analysis & Review",
-    "trackId": 1037911598,
     "genreIds": [
      "10136",
      "38",
@@ -753,18 +748,20 @@
      "9009",
      "10011"
     ],
+    "trackId": 1037911598,
+    "trackName": "Emotional Intelligence 2.0: by Travis Bradberry and Jean Greaves  Key Takeaways, Analysis & Review",
     "kind": "ebook",
     "currency": "USD",
+    "trackCensoredName": "Emotional Intelligence 2.0: by Travis Bradberry and Jean Greaves  Key Takeaways, Analysis & Review",
+    "artistViewUrl": "https://books.apple.com/us/artist/eureka/1259541987?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence-2-0-by-travis-bradberry-and/id1037911598?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/1f/9c/f5/1f9cf5bd-50a3-f5ce-4f70-f9a3b6350564/EMOTIONAL-INTELLIGENCE-2.0.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/1f/9c/f5/1f9cf5bd-50a3-f5ce-4f70-f9a3b6350564/EMOTIONAL-INTELLIGENCE-2.0.jpg/100x100bb.jpg",
     "formattedPrice": "$4.99",
     "averageUserRating": 4,
     "userRatingCount": 81
    },
    {
-    "artistViewUrl": "https://books.apple.com/us/artist/goldmine-reads/1236421877?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence-2-0-summarized-for-busy-people/id1433680990?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/5e/96/ce/5e96ceee-a3a5-f5e9-65e5-50889922ae2b/9780359040438.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/5e/96/ce/5e96ceee-a3a5-f5e9-65e5-50889922ae2b/9780359040438.jpg/100x100bb.jpg",
-    "trackCensoredName": "Emotional Intelligence 2.0 - Summarized for Busy People: Based On the Book By Travis Bradberry",
     "artistIds": [
      1236421877
     ],
@@ -777,23 +774,23 @@
     ],
     "price": 4.99,
     "releaseDate": "2018-08-22T07:00:00Z",
-    "trackName": "Emotional Intelligence 2.0 - Summarized for Busy People: Based On the Book By Travis Bradberry",
-    "trackId": 1433680990,
     "genreIds": [
      "10119",
      "38",
      "9025"
     ],
+    "trackId": 1433680990,
+    "trackName": "Emotional Intelligence 2.0 - Summarized for Busy People: Based On the Book By Travis Bradberry",
     "kind": "ebook",
     "currency": "USD",
+    "trackCensoredName": "Emotional Intelligence 2.0 - Summarized for Busy People: Based On the Book By Travis Bradberry",
+    "artistViewUrl": "https://books.apple.com/us/artist/goldmine-reads/1236421877?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence-2-0-summarized-for-busy-people/id1433680990?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/5e/96/ce/5e96ceee-a3a5-f5e9-65e5-50889922ae2b/9780359040438.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/5e/96/ce/5e96ceee-a3a5-f5e9-65e5-50889922ae2b/9780359040438.jpg/100x100bb.jpg",
     "formattedPrice": "$4.99"
    },
    {
-    "artistViewUrl": "https://books.apple.com/us/artist/christine-wilding/413646567?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence/id1229572426?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/c9/b7/f8/c9b7f861-3c73-7c69-7ad1-dc45d3d61646/9781473654389.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/c9/b7/f8/c9b7f861-3c73-7c69-7ad1-dc45d3d61646/9781473654389.jpg/100x100bb.jpg",
-    "trackCensoredName": "Emotional Intelligence",
     "artistIds": [
      413646567
     ],
@@ -807,24 +804,24 @@
     ],
     "price": 2.99,
     "releaseDate": "2017-09-07T07:00:00Z",
-    "trackName": "Emotional Intelligence",
-    "trackId": 1229572426,
     "genreIds": [
      "10119",
      "38",
      "9025",
      "10094"
     ],
+    "trackId": 1229572426,
+    "trackName": "Emotional Intelligence",
     "kind": "ebook",
     "currency": "USD",
+    "trackCensoredName": "Emotional Intelligence",
+    "artistViewUrl": "https://books.apple.com/us/artist/christine-wilding/413646567?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence/id1229572426?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/c9/b7/f8/c9b7f861-3c73-7c69-7ad1-dc45d3d61646/9781473654389.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/c9/b7/f8/c9b7f861-3c73-7c69-7ad1-dc45d3d61646/9781473654389.jpg/100x100bb.jpg",
     "formattedPrice": "$2.99"
    },
    {
-    "artistViewUrl": "https://books.apple.com/us/artist/slingshot-books/1569215319?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/summary-of-travis-bradberrys-emotional-intelligence/id6480054814?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/ea/64/5d/ea645d1c-f5f9-fcad-edc8-2b8d8fc2ba72/9798330019076.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/ea/64/5d/ea645d1c-f5f9-fcad-edc8-2b8d8fc2ba72/9798330019076.jpg/100x100bb.jpg",
-    "trackCensoredName": "Summary of Travis Bradberry's Emotional Intelligence Habits",
     "artistIds": [
      1569215319
     ],
@@ -836,14 +833,19 @@
     ],
     "price": 3.99,
     "releaseDate": "2024-01-25T08:00:00Z",
-    "trackName": "Summary of Travis Bradberry's Emotional Intelligence Habits",
-    "trackId": 6480054814,
     "genreIds": [
      "9009",
      "38"
     ],
+    "trackId": 6480054814,
+    "trackName": "Summary of Travis Bradberry's Emotional Intelligence Habits",
     "kind": "ebook",
     "currency": "USD",
+    "trackCensoredName": "Summary of Travis Bradberry's Emotional Intelligence Habits",
+    "artistViewUrl": "https://books.apple.com/us/artist/slingshot-books/1569215319?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/summary-of-travis-bradberrys-emotional-intelligence/id6480054814?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/ea/64/5d/ea645d1c-f5f9-fcad-edc8-2b8d8fc2ba72/9798330019076.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/ea/64/5d/ea645d1c-f5f9-fcad-edc8-2b8d8fc2ba72/9798330019076.jpg/100x100bb.jpg",
     "formattedPrice": "$3.99"
    }
   ]
@@ -865,7 +867,7 @@
    {
     "kind": "books#volume",
     "id": "ARyu0AEACAAJ",
-    "etag": "kToQmz08dKc",
+    "etag": "Lev75iR8yuY",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/ARyu0AEACAAJ",
     "volumeInfo": {
      "title": "The Subtle Art of Not Giving a F*ck / Everything Is F*cked Box Set",
@@ -913,7 +915,7 @@
    {
     "kind": "books#volume",
     "id": "mR_5vQEACAAJ",
-    "etag": "QBCRIYUsSlI",
+    "etag": "Ay0CIQTMBu4",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/mR_5vQEACAAJ",
     "volumeInfo": {
      "title": "The Subtle Art of Not Giving a #@%",
@@ -962,7 +964,7 @@
    {
     "kind": "books#volume",
     "id": "GimeEQAAQBAJ",
-    "etag": "8YwqBETN0qQ",
+    "etag": "+Yd9Pj0PhFc",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/GimeEQAAQBAJ",
     "volumeInfo": {
      "title": "The Subtle Art of Not Giving a F*ck, Revised and Updated Edition",
@@ -1007,7 +1009,7 @@
    {
     "kind": "books#volume",
     "id": "43o6ygEACAAJ",
-    "etag": "TcyDT/beIT4",
+    "etag": "GD/GgRdnIOQ",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/43o6ygEACAAJ",
     "volumeInfo": {
      "title": "The Subtle Art of Not Giving a F*CK",
@@ -1052,7 +1054,7 @@
    {
     "kind": "books#volume",
     "id": "aFy9AQAACAAJ",
-    "etag": "4QNoWgDjaYU",
+    "etag": "TispPJUFbFs",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/aFy9AQAACAAJ",
     "volumeInfo": {
      "title": "The Subtle Art of Not Giving a F*ck",
@@ -1101,19 +1103,23 @@
   "results": [
    {
     "formattedPrice": "$3.99",
+    "trackViewUrl": "https://books.apple.com/us/book/summary-the-subtle-art-of-not-giving-a/id6744942268?uo=4",
+    "trackCensoredName": "Summary: The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life: Mark Manson",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/94/de/4a/94de4ad9-c120-d843-68e9-fc5130ab39f6/0b888214-d92c-4d16-8d98-c79beee41e9e_cover_image.png/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/94/de/4a/94de4ad9-c120-d843-68e9-fc5130ab39f6/0b888214-d92c-4d16-8d98-c79beee41e9e_cover_image.png/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/quick-savant/1625936862?uo=4",
     "artistIds": [
      1625936862
     ],
+    "trackId": 6744942268,
+    "trackName": "Summary: The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life: Mark Manson",
     "genres": [
      "Self-Improvement",
      "Books",
      "Health, Mind & Body"
     ],
-    "artistId": 1625936862,
-    "artistName": "Quick Savant",
     "price": 3.99,
-    "trackId": 6744942268,
-    "trackName": "Summary: The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life: Mark Manson",
+    "releaseDate": "2025-04-22T07:00:00Z",
     "genreIds": [
      "10119",
      "38",
@@ -1121,28 +1127,28 @@
     ],
     "kind": "ebook",
     "currency": "USD",
-    "trackCensoredName": "Summary: The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life: Mark Manson",
-    "artistViewUrl": "https://books.apple.com/us/artist/quick-savant/1625936862?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/summary-the-subtle-art-of-not-giving-a/id6744942268?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/94/de/4a/94de4ad9-c120-d843-68e9-fc5130ab39f6/0b888214-d92c-4d16-8d98-c79beee41e9e_cover_image.png/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/94/de/4a/94de4ad9-c120-d843-68e9-fc5130ab39f6/0b888214-d92c-4d16-8d98-c79beee41e9e_cover_image.png/100x100bb.jpg",
-    "releaseDate": "2025-04-22T07:00:00Z"
+    "artistId": 1625936862,
+    "artistName": "Quick Savant"
    },
    {
     "formattedPrice": "$3.99",
+    "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f/id1239983123?uo=4",
+    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson  Conversation Starters",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/7d/12/27/7d12271a-3541-1ef1-6b0c-0404770bd001/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/7d/12/27/7d12271a-3541-1ef1-6b0c-0404770bd001/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/daily-books/1086270207?uo=4",
     "artistIds": [
      1086270207
     ],
+    "trackId": 1239983123,
+    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson  Conversation Starters",
     "genres": [
      "Study Aids",
      "Books",
      "Reference"
     ],
-    "artistId": 1086270207,
-    "artistName": "Daily Books",
     "price": 3.99,
-    "trackId": 1239983123,
-    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson  Conversation Starters",
+    "releaseDate": "2017-02-02T08:00:00Z",
     "genreIds": [
      "10136",
      "38",
@@ -1150,28 +1156,28 @@
     ],
     "kind": "ebook",
     "currency": "USD",
-    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson  Conversation Starters",
-    "artistViewUrl": "https://books.apple.com/us/artist/daily-books/1086270207?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f/id1239983123?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/7d/12/27/7d12271a-3541-1ef1-6b0c-0404770bd001/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/7d/12/27/7d12271a-3541-1ef1-6b0c-0404770bd001/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/100x100bb.jpg",
-    "releaseDate": "2017-02-02T08:00:00Z"
+    "artistId": 1086270207,
+    "artistName": "Daily Books"
    },
    {
     "formattedPrice": "$3.99",
+    "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f/id1435152568?uo=4",
+    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbook",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication118/v4/8b/a0/69/8ba069ce-0f90-ea7d-66b1-446b0925292f/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication118/v4/8b/a0/69/8ba069ce-0f90-ea7d-66b1-446b0925292f/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/max-help/1434709962?uo=4",
     "artistIds": [
      1434709962
     ],
+    "trackId": 1435152568,
+    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbook",
     "genres": [
      "Study Aids",
      "Books",
      "Reference"
     ],
-    "artistId": 1434709962,
-    "artistName": "Max Help",
     "price": 3.99,
-    "trackId": 1435152568,
-    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbook",
+    "releaseDate": "2018-09-04T07:00:00Z",
     "genreIds": [
      "10136",
      "38",
@@ -1179,18 +1185,21 @@
     ],
     "kind": "ebook",
     "currency": "USD",
-    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbook",
-    "artistViewUrl": "https://books.apple.com/us/artist/max-help/1434709962?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f/id1435152568?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication118/v4/8b/a0/69/8ba069ce-0f90-ea7d-66b1-446b0925292f/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication118/v4/8b/a0/69/8ba069ce-0f90-ea7d-66b1-446b0925292f/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/100x100bb.jpg",
-    "releaseDate": "2018-09-04T07:00:00Z"
+    "artistId": 1434709962,
+    "artistName": "Max Help"
    },
    {
     "formattedPrice": "$13.99",
+    "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f-ck/id1071409887?uo=4",
+    "trackCensoredName": "The Subtle Art of Not Giving a F*ck",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/32/d5/2a/32d52aff-9c35-c7dc-d2f0-2c64930e0edd/9780062457738.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/32/d5/2a/32d52aff-9c35-c7dc-d2f0-2c64930e0edd/9780062457738.jpg/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/mark-manson/543049691?uo=4",
     "artistIds": [
      543049691
     ],
+    "trackId": 1071409887,
+    "trackName": "The Subtle Art of Not Giving a F*ck",
     "genres": [
      "Self-Improvement",
      "Books",
@@ -1207,11 +1216,8 @@
      "Careers",
      "Psychology"
     ],
-    "artistId": 543049691,
-    "artistName": "Mark Manson",
     "price": 13.99,
-    "trackId": 1071409887,
-    "trackName": "The Subtle Art of Not Giving a F*ck",
+    "releaseDate": "2016-09-13T07:00:00Z",
     "genreIds": [
      "10119",
      "38",
@@ -1230,30 +1236,30 @@
     ],
     "kind": "ebook",
     "currency": "USD",
-    "trackCensoredName": "The Subtle Art of Not Giving a F*ck",
-    "artistViewUrl": "https://books.apple.com/us/artist/mark-manson/543049691?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f-ck/id1071409887?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/32/d5/2a/32d52aff-9c35-c7dc-d2f0-2c64930e0edd/9780062457738.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/32/d5/2a/32d52aff-9c35-c7dc-d2f0-2c64930e0edd/9780062457738.jpg/100x100bb.jpg",
-    "releaseDate": "2016-09-13T07:00:00Z",
+    "artistId": 543049691,
+    "artistName": "Mark Manson",
     "averageUserRating": 4.5,
-    "userRatingCount": 13120
+    "userRatingCount": 13126
    },
    {
     "formattedPrice": "$3.99",
+    "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f/id1450217921?uo=4",
+    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbooks",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/7d/cd/a4/7dcda409-8171-31dc-bbb8-fbbca27ca801/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/7d/cd/a4/7dcda409-8171-31dc-bbb8-fbbca27ca801/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/max-help-workbooks/1439559489?uo=4",
     "artistIds": [
      1439559489
     ],
+    "trackId": 1450217921,
+    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbooks",
     "genres": [
      "Study Aids",
      "Books",
      "Reference"
     ],
-    "artistId": 1439559489,
-    "artistName": "Max Help Workbooks",
     "price": 3.99,
-    "trackId": 1450217921,
-    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbooks",
+    "releaseDate": "2020-12-06T08:00:00Z",
     "genreIds": [
      "10136",
      "38",
@@ -1261,28 +1267,28 @@
     ],
     "kind": "ebook",
     "currency": "USD",
-    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbooks",
-    "artistViewUrl": "https://books.apple.com/us/artist/max-help-workbooks/1439559489?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f/id1450217921?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/7d/cd/a4/7dcda409-8171-31dc-bbb8-fbbca27ca801/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/7d/cd/a4/7dcda409-8171-31dc-bbb8-fbbca27ca801/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/100x100bb.jpg",
-    "releaseDate": "2020-12-06T08:00:00Z"
+    "artistId": 1439559489,
+    "artistName": "Max Help Workbooks"
    },
    {
     "formattedPrice": "$3.99",
+    "trackViewUrl": "https://books.apple.com/us/book/workbook-for-the-subtle-art-of-not-giving-a/id1446351499?uo=4",
+    "trackCensoredName": "Workbook for The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life (Max-Help Books)",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/23/b8/34/23b834ed-989c-1ffa-3eae-19b8437d8e0d/6610000135110.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/23/b8/34/23b834ed-989c-1ffa-3eae-19b8437d8e0d/6610000135110.jpg/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/dan-young/1446244659?uo=4",
     "artistIds": [
      1446244659
     ],
+    "trackId": 1446351499,
+    "trackName": "Workbook for The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life (Max-Help Books)",
     "genres": [
      "Study Aids",
      "Books",
      "Reference"
     ],
-    "artistId": 1446244659,
-    "artistName": "Dan Young",
     "price": 3.99,
-    "trackId": 1446351499,
-    "trackName": "Workbook for The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life (Max-Help Books)",
+    "releaseDate": "2018-12-04T08:00:00Z",
     "genreIds": [
      "10136",
      "38",
@@ -1290,12 +1296,8 @@
     ],
     "kind": "ebook",
     "currency": "USD",
-    "trackCensoredName": "Workbook for The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life (Max-Help Books)",
-    "artistViewUrl": "https://books.apple.com/us/artist/dan-young/1446244659?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/workbook-for-the-subtle-art-of-not-giving-a/id1446351499?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/23/b8/34/23b834ed-989c-1ffa-3eae-19b8437d8e0d/6610000135110.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/23/b8/34/23b834ed-989c-1ffa-3eae-19b8437d8e0d/6610000135110.jpg/100x100bb.jpg",
-    "releaseDate": "2018-12-04T08:00:00Z"
+    "artistId": 1446244659,
+    "artistName": "Dan Young"
    }
   ]
  },
@@ -1315,63 +1317,21 @@
   "items": [
    {
     "kind": "books#volume",
-    "id": "UcwZ0AEACAAJ",
-    "etag": "QmTn4fwa4tI",
-    "selfLink": "https://www.googleapis.com/books/v1/volumes/UcwZ0AEACAAJ",
+    "id": "JGQU0gEACAAJ",
+    "etag": "lgchyCxBbFE",
+    "selfLink": "https://www.googleapis.com/books/v1/volumes/JGQU0gEACAAJ",
     "volumeInfo": {
-     "title": "The AI Boost",
-     "subtitle": "An EASY Step By Step Guide To Make Money Online Using AI Tools",
+     "title": "From Zero to Profit with AI",
+     "subtitle": "The Contemporary Guide to Online Income Generation and Accelerated Growth",
      "authors": [
-      "Lionel David"
+      "Helen B Keating"
      ],
      "publisher": "Independently Published",
-     "publishedDate": "2023-08-22",
+     "publishedDate": "2026-05-24",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
-       "identifier": "9798854812665"
-      }
-     ],
-     "readingModes": {
-      "text": false,
-      "image": false
-     },
-     "pageCount": 0,
-     "printType": "BOOK",
-     "maturityRating": "NOT_MATURE",
-     "allowAnonLogging": false,
-     "contentVersion": "preview-1.0.0",
-     "panelizationSummary": {
-      "containsEpubBubbles": false,
-      "containsImageBubbles": false
-     },
-     "imageLinks": {
-      "smallThumbnail": "http://books.google.com/books/content?id=UcwZ0AEACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api",
-      "thumbnail": "http://books.google.com/books/content?id=UcwZ0AEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
-     },
-     "language": "en",
-     "previewLink": "http://books.google.ca/books?id=UcwZ0AEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=1&source=gbs_api",
-     "infoLink": "http://books.google.ca/books?id=UcwZ0AEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&source=gbs_api",
-     "canonicalVolumeLink": "https://books.google.com/books/about/The_AI_Boost.html?hl=&id=UcwZ0AEACAAJ"
-    }
-   },
-   {
-    "kind": "books#volume",
-    "id": "bRsP0QEACAAJ",
-    "etag": "ysmUOpRacEE",
-    "selfLink": "https://www.googleapis.com/books/v1/volumes/bRsP0QEACAAJ",
-    "volumeInfo": {
-     "title": "AI Profits",
-     "subtitle": "A Beginner's Guide to Making Money Online Unlock The Power Of Artificial Intelligence: Automate Tasks, Boost Productivity, and Create Profitable Online Ventures (Online Business Books)",
-     "authors": [
-      "Alicia Becker"
-     ],
-     "publisher": "Independently Published",
-     "publishedDate": "2025-01-09",
-     "industryIdentifiers": [
-      {
-       "type": "ISBN_13",
-       "identifier": "9798306462547"
+       "identifier": "9798198476684"
       }
      ],
      "readingModes": {
@@ -1381,7 +1341,7 @@
      "pageCount": 0,
      "printType": "BOOK",
      "categories": [
-      "Business & Economics"
+      "Computers"
      ],
      "maturityRating": "NOT_MATURE",
      "allowAnonLogging": false,
@@ -1391,19 +1351,93 @@
       "containsImageBubbles": false
      },
      "imageLinks": {
-      "smallThumbnail": "http://books.google.com/books/content?id=bRsP0QEACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api",
-      "thumbnail": "http://books.google.com/books/content?id=bRsP0QEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
+      "smallThumbnail": "http://books.google.com/books/content?id=JGQU0gEACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api",
+      "thumbnail": "http://books.google.com/books/content?id=JGQU0gEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
      },
      "language": "en",
-     "previewLink": "http://books.google.ca/books?id=bRsP0QEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=2&source=gbs_api",
-     "infoLink": "http://books.google.ca/books?id=bRsP0QEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&source=gbs_api",
-     "canonicalVolumeLink": "https://books.google.com/books/about/AI_Profits.html?hl=&id=bRsP0QEACAAJ"
+     "previewLink": "http://books.google.ca/books?id=JGQU0gEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=1&source=gbs_api",
+     "infoLink": "http://books.google.ca/books?id=JGQU0gEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&source=gbs_api",
+     "canonicalVolumeLink": "https://books.google.com/books/about/From_Zero_to_Profit_with_AI.html?hl=&id=JGQU0gEACAAJ"
+    }
+   },
+   {
+    "kind": "books#volume",
+    "id": "Z-fEEQAAQBAJ",
+    "etag": "DJDl34z0vf8",
+    "selfLink": "https://www.googleapis.com/books/v1/volumes/Z-fEEQAAQBAJ",
+    "volumeInfo": {
+     "title": "Make Money Online with AI",
+     "subtitle": "The Ultimate Guide to Leveraging ChatGPT, LLMs, and Automation for Consistent Passive Income",
+     "authors": [
+      "Karna Raju"
+     ],
+     "publisher": "Karna Raju",
+     "readingModes": {
+      "text": true,
+      "image": true
+     },
+     "pageCount": 72,
+     "printType": "BOOK",
+     "categories": [
+      "Business & Economics"
+     ],
+     "maturityRating": "NOT_MATURE",
+     "allowAnonLogging": true,
+     "contentVersion": "1.1.1.0.preview.3",
+     "panelizationSummary": {
+      "containsEpubBubbles": false,
+      "containsImageBubbles": false
+     },
+     "imageLinks": {
+      "smallThumbnail": "http://books.google.com/books/content?id=Z-fEEQAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+      "thumbnail": "http://books.google.com/books/content?id=Z-fEEQAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+     },
+     "language": "en",
+     "previewLink": "http://books.google.ca/books?id=Z-fEEQAAQBAJ&printsec=frontcover&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=2&source=gbs_api",
+     "infoLink": "https://play.google.com/store/books/details?id=Z-fEEQAAQBAJ&source=gbs_api",
+     "canonicalVolumeLink": "https://play.google.com/store/books/details?id=Z-fEEQAAQBAJ"
+    }
+   },
+   {
+    "kind": "books#volume",
+    "id": "VdXKEQAAQBAJ",
+    "etag": "ojS5hF5sZf8",
+    "selfLink": "https://www.googleapis.com/books/v1/volumes/VdXKEQAAQBAJ",
+    "volumeInfo": {
+     "title": "Making Money with Artificial Intelligence",
+     "subtitle": "A Core Guide to Generating Income from Scratch, Building a Business, and Shaping Your Future with AI",
+     "publisher": "Hüseyin Büyükbaş",
+     "publishedDate": "2026-03-22",
+     "readingModes": {
+      "text": false,
+      "image": true
+     },
+     "pageCount": 126,
+     "printType": "BOOK",
+     "categories": [
+      "Business & Economics"
+     ],
+     "maturityRating": "NOT_MATURE",
+     "allowAnonLogging": true,
+     "contentVersion": "preview-1.0.0",
+     "panelizationSummary": {
+      "containsEpubBubbles": false,
+      "containsImageBubbles": false
+     },
+     "imageLinks": {
+      "smallThumbnail": "http://books.google.com/books/content?id=VdXKEQAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+      "thumbnail": "http://books.google.com/books/content?id=VdXKEQAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+     },
+     "language": "en",
+     "previewLink": "http://books.google.ca/books?id=VdXKEQAAQBAJ&printsec=frontcover&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=3&source=gbs_api",
+     "infoLink": "https://play.google.com/store/books/details?id=VdXKEQAAQBAJ&source=gbs_api",
+     "canonicalVolumeLink": "https://play.google.com/store/books/details?id=VdXKEQAAQBAJ"
     }
    },
    {
     "kind": "books#volume",
     "id": "jl0v0QEACAAJ",
-    "etag": "B43NeB2kqX0",
+    "etag": "GaKQwWMaFdA",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/jl0v0QEACAAJ",
     "volumeInfo": {
      "title": "AI for Profit",
@@ -1440,90 +1474,133 @@
       "thumbnail": "http://books.google.com/books/content?id=jl0v0QEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
      },
      "language": "en",
-     "previewLink": "http://books.google.ca/books?id=jl0v0QEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=3&source=gbs_api",
+     "previewLink": "http://books.google.ca/books?id=jl0v0QEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=4&source=gbs_api",
      "infoLink": "http://books.google.ca/books?id=jl0v0QEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&source=gbs_api",
      "canonicalVolumeLink": "https://books.google.com/books/about/AI_for_Profit.html?hl=&id=jl0v0QEACAAJ"
     }
    },
    {
     "kind": "books#volume",
-    "id": "Z-fEEQAAQBAJ",
-    "etag": "VKCvHmJpEV8",
-    "selfLink": "https://www.googleapis.com/books/v1/volumes/Z-fEEQAAQBAJ",
+    "id": "IhPFEQAAQBAJ",
+    "etag": "ceEDjXLylhM",
+    "selfLink": "https://www.googleapis.com/books/v1/volumes/IhPFEQAAQBAJ",
     "volumeInfo": {
-     "title": "Make Money Online with AI",
-     "subtitle": "The Ultimate Guide to Leveraging ChatGPT, LLMs, and Automation for Consistent Passive Income",
+     "title": "The AI Cash Flow Guide",
+     "subtitle": "Using Artificial Intelligence and ChatGPT to Automate Your Side Hustle, Scale Freelance Services, and Make Money Online Fast",
      "authors": [
       "Karna Raju"
      ],
      "publisher": "Karna Raju",
      "readingModes": {
-      "text": true,
+      "text": false,
       "image": true
      },
-     "pageCount": 72,
+     "pageCount": 40,
      "printType": "BOOK",
      "categories": [
       "Business & Economics"
      ],
      "maturityRating": "NOT_MATURE",
      "allowAnonLogging": true,
-     "contentVersion": "1.1.1.0.preview.3",
-     "panelizationSummary": {
-      "containsEpubBubbles": false,
-      "containsImageBubbles": false
-     },
-     "imageLinks": {
-      "smallThumbnail": "http://books.google.com/books/content?id=Z-fEEQAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
-      "thumbnail": "http://books.google.com/books/content?id=Z-fEEQAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
-     },
-     "language": "en",
-     "previewLink": "http://books.google.ca/books?id=Z-fEEQAAQBAJ&printsec=frontcover&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=4&source=gbs_api",
-     "infoLink": "https://play.google.com/store/books/details?id=Z-fEEQAAQBAJ&source=gbs_api",
-     "canonicalVolumeLink": "https://play.google.com/store/books/details?id=Z-fEEQAAQBAJ"
-    }
-   },
-   {
-    "kind": "books#volume",
-    "id": "kJHUEQAAQBAJ",
-    "etag": "yGevtq6WcuA",
-    "selfLink": "https://www.googleapis.com/books/v1/volumes/kJHUEQAAQBAJ",
-    "volumeInfo": {
-     "title": "Making Money with AI 101",
-     "subtitle": "The AI Income Guide for Absolute Beginners",
-     "publisher": "Hüseyin Büyükbaş",
-     "publishedDate": "2026-04-29",
-     "readingModes": {
-      "text": false,
-      "image": true
-     },
-     "pageCount": 36,
-     "printType": "BOOK",
-     "categories": [
-      "Business & Economics"
-     ],
-     "maturityRating": "NOT_MATURE",
-     "allowAnonLogging": false,
      "contentVersion": "preview-1.0.0",
      "panelizationSummary": {
       "containsEpubBubbles": false,
       "containsImageBubbles": false
      },
      "imageLinks": {
-      "smallThumbnail": "http://books.google.com/books/content?id=kJHUEQAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
-      "thumbnail": "http://books.google.com/books/content?id=kJHUEQAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+      "smallThumbnail": "http://books.google.com/books/content?id=IhPFEQAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+      "thumbnail": "http://books.google.com/books/content?id=IhPFEQAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
      },
      "language": "en",
-     "previewLink": "http://books.google.ca/books?id=kJHUEQAAQBAJ&printsec=frontcover&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=5&source=gbs_api",
-     "infoLink": "https://play.google.com/store/books/details?id=kJHUEQAAQBAJ&source=gbs_api",
-     "canonicalVolumeLink": "https://play.google.com/store/books/details?id=kJHUEQAAQBAJ"
+     "previewLink": "http://books.google.ca/books?id=IhPFEQAAQBAJ&printsec=frontcover&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=5&source=gbs_api",
+     "infoLink": "https://play.google.com/store/books/details?id=IhPFEQAAQBAJ&source=gbs_api",
+     "canonicalVolumeLink": "https://play.google.com/store/books/details?id=IhPFEQAAQBAJ"
     }
    }
   ]
  },
- "https://itunes.apple.com/search?term=Make%20Money%20Online%20with%20AI%3A%20The%20Ultimate%20Guide%20to%20Leveraging%20ChatGPT%2C%20LLMs%2C%20and%20Automation%20for%20Consistent%20Passive%20Income%20Karna%20Raju&entity=ebook&limit=5": {
-  "resultCount": 0,
-  "results": []
+ "https://www.googleapis.com/books/v1/volumes/JGQU0gEACAAJ": {
+  "kind": "books#volume",
+  "id": "JGQU0gEACAAJ",
+  "etag": "e36evdg2HuE",
+  "selfLink": "https://www.googleapis.com/books/v1/volumes/JGQU0gEACAAJ",
+  "volumeInfo": {
+   "title": "From Zero to Profit with AI",
+   "subtitle": "The Contemporary Guide to Online Income Generation and Accelerated Growth",
+   "authors": [
+    "Helen B Keating"
+   ],
+   "publisher": "Amazon Digital Services LLC - Kdp",
+   "publishedDate": "2026-05-24",
+   "industryIdentifiers": [
+    {
+     "type": "ISBN_13",
+     "identifier": "9798198476684"
+    }
+   ],
+   "readingModes": {
+    "text": false,
+    "image": false
+   },
+   "pageCount": 172,
+   "printedPageCount": 172,
+   "dimensions": {
+    "height": "27.90 cm",
+    "width": "21.60 cm",
+    "thickness": "0.90 cm"
+   },
+   "printType": "BOOK",
+   "categories": [
+    "Computers / Internet / Social Media"
+   ],
+   "maturityRating": "NOT_MATURE",
+   "allowAnonLogging": false,
+   "contentVersion": "preview-1.0.0",
+   "panelizationSummary": {
+    "containsEpubBubbles": false,
+    "containsImageBubbles": false
+   },
+   "imageLinks": {
+    "smallThumbnail": "http://books.google.com/books/content?id=JGQU0gEACAAJ&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE73Hto0goX1avy6wO--Rx5GdC-HnD9llxJye2r10F1OPSbIZD32o6FKtMkzve8a2qucV-uY7lmLSgJFizGUUHRKQKH4N0sFDVLnnipkmD2MJJA-C_jkv21T7zabn_qdO44CvqSLp&source=gbs_api",
+    "thumbnail": "http://books.google.com/books/content?id=JGQU0gEACAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE72gEWRAGeldJLmrb5w4squhvojHxbUaIowgvK5_yHLroCYwM-b99xxSaQB_Ob8tqP0XicIjljLB6b46XtiGYkooynOmrhhFM9tddLkcO7tZRVAm-LvVboz2kOGqHn17FTse-9eC&source=gbs_api"
+   },
+   "language": "en",
+   "previewLink": "http://books.google.ca/books?id=JGQU0gEACAAJ&hl=&source=gbs_api",
+   "infoLink": "https://play.google.com/store/books/details?id=JGQU0gEACAAJ&source=gbs_api",
+   "canonicalVolumeLink": "https://play.google.com/store/books/details?id=JGQU0gEACAAJ"
+  }
+ },
+ "https://itunes.apple.com/search?term=From%20Zero%20to%20Profit%20with%20AI%3A%20The%20Contemporary%20Guide%20to%20Online%20Income%20Generation%20and%20Accelerated%20Growth%20Helen%20B%20Keating&entity=ebook&limit=5": {
+  "resultCount": 1,
+  "results": [
+   {
+    "artistIds": [
+     1117498490
+    ],
+    "artistId": 1117498490,
+    "artistName": "Ross White",
+    "genres": [
+     "Poetry",
+     "Books",
+     "Fiction & Literature"
+    ],
+    "releaseDate": "2027-02-23T08:00:00Z",
+    "trackId": 6761327879,
+    "trackName": "Guilt Ledger",
+    "genreIds": [
+     "10093",
+     "38",
+     "9031"
+    ],
+    "kind": "ebook",
+    "currency": "USD",
+    "trackCensoredName": "Guilt Ledger",
+    "artistViewUrl": "https://books.apple.com/us/artist/ross-white/1117498490?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/guilt-ledger/id6761327879?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/d3/11/9c/d3119c51-6f1c-22ba-5c34-2b6a5a8c2006/coverArt.64ba97.png/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/d3/11/9c/d3119c51-6f1c-22ba-5c34-2b6a5a8c2006/coverArt.64ba97.png/100x100bb.jpg"
+   }
+  ]
  },
  "https://openlibrary.org/search.json?q=The%20Creative%20Brain%20in%20the%20Age%20of%20Artificial%20Intelligence%3A%20How%20to%20Use%20AI%20Without%20Losing%20Yourself%20Maria%20Ian&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i": {
   "numFound": 0,
@@ -1542,7 +1619,7 @@
    {
     "kind": "books#volume",
     "id": "pTSSEQAAQBAJ",
-    "etag": "ZRcC4v+E7Rw",
+    "etag": "kPUxLTuSzmU",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/pTSSEQAAQBAJ",
     "volumeInfo": {
      "title": "Creativity in the Age of AI",
@@ -1593,7 +1670,7 @@
    {
     "kind": "books#volume",
     "id": "SAY9I1wyyscC",
-    "etag": "cUb7bPkImcI",
+    "etag": "ByBMCGD0aPQ",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/SAY9I1wyyscC",
     "volumeInfo": {
      "title": "Books In Print 2004-2005",
@@ -1641,53 +1718,56 @@
    },
    {
     "kind": "books#volume",
-    "id": "JQ_e0QEACAAJ",
-    "etag": "pVHmodnigRc",
-    "selfLink": "https://www.googleapis.com/books/v1/volumes/JQ_e0QEACAAJ",
+    "id": "84w7EAAAQBAJ",
+    "etag": "XYsKrDfJiZg",
+    "selfLink": "https://www.googleapis.com/books/v1/volumes/84w7EAAAQBAJ",
     "volumeInfo": {
-     "title": "AI as a Second Mind",
-     "subtitle": "How to Think with Artificial Intelligence Without Losing Yourself",
+     "title": "AI for Creativity",
      "authors": [
-      "Satoshi Nakamoto"
+      "Niklas Hageback"
      ],
-     "publisher": "Independently Published",
-     "publishedDate": "2026-02-07",
+     "publisher": "CRC Press",
+     "publishedDate": "2021-09-24",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
-       "identifier": "9798247302636"
+       "identifier": "9781000456912"
+      },
+      {
+       "type": "ISBN_10",
+       "identifier": "1000456919"
       }
      ],
      "readingModes": {
-      "text": false,
-      "image": false
+      "text": true,
+      "image": true
      },
-     "pageCount": 0,
+     "pageCount": 81,
      "printType": "BOOK",
      "categories": [
       "Computers"
      ],
      "maturityRating": "NOT_MATURE",
      "allowAnonLogging": false,
-     "contentVersion": "preview-1.0.0",
+     "contentVersion": "0.1.1.0.preview.3",
      "panelizationSummary": {
       "containsEpubBubbles": false,
       "containsImageBubbles": false
      },
      "imageLinks": {
-      "smallThumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api",
-      "thumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
+      "smallThumbnail": "http://books.google.com/books/content?id=84w7EAAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+      "thumbnail": "http://books.google.com/books/content?id=84w7EAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
      },
      "language": "en",
-     "previewLink": "http://books.google.ca/books?id=JQ_e0QEACAAJ&dq=The+Creative+Brain+in+the+Age+of+Artificial+Intelligence:+How+to+Use+AI+Without+Losing+Yourself+Maria+Ian&hl=&cd=3&source=gbs_api",
-     "infoLink": "http://books.google.ca/books?id=JQ_e0QEACAAJ&dq=The+Creative+Brain+in+the+Age+of+Artificial+Intelligence:+How+to+Use+AI+Without+Losing+Yourself+Maria+Ian&hl=&source=gbs_api",
-     "canonicalVolumeLink": "https://books.google.com/books/about/AI_as_a_Second_Mind.html?hl=&id=JQ_e0QEACAAJ"
+     "previewLink": "http://books.google.ca/books?id=84w7EAAAQBAJ&printsec=frontcover&dq=The+Creative+Brain+in+the+Age+of+Artificial+Intelligence:+How+to+Use+AI+Without+Losing+Yourself+Maria+Ian&hl=&cd=3&source=gbs_api",
+     "infoLink": "http://books.google.ca/books?id=84w7EAAAQBAJ&dq=The+Creative+Brain+in+the+Age+of+Artificial+Intelligence:+How+to+Use+AI+Without+Losing+Yourself+Maria+Ian&hl=&source=gbs_api",
+     "canonicalVolumeLink": "https://books.google.com/books/about/AI_for_Creativity.html?hl=&id=84w7EAAAQBAJ"
     }
    },
    {
     "kind": "books#volume",
     "id": "dDve0QEACAAJ",
-    "etag": "q57kprKeQKM",
+    "etag": "3Ua4vM9mn+U",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/dDve0QEACAAJ",
     "volumeInfo": {
      "title": "The Creative's Guide to Working with AI",
@@ -1731,58 +1811,101 @@
    },
    {
     "kind": "books#volume",
-    "id": "84w7EAAAQBAJ",
-    "etag": "5gOo0ypXz0M",
-    "selfLink": "https://www.googleapis.com/books/v1/volumes/84w7EAAAQBAJ",
+    "id": "JQ_e0QEACAAJ",
+    "etag": "2h3ayyVTh3o",
+    "selfLink": "https://www.googleapis.com/books/v1/volumes/JQ_e0QEACAAJ",
     "volumeInfo": {
-     "title": "AI for Creativity",
+     "title": "AI as a Second Mind",
+     "subtitle": "How to Think with Artificial Intelligence Without Losing Yourself",
      "authors": [
-      "Niklas Hageback"
+      "Satoshi Nakamoto"
      ],
-     "publisher": "CRC Press",
-     "publishedDate": "2021-09-24",
+     "publisher": "Independently Published",
+     "publishedDate": "2026-02-07",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
-       "identifier": "9781000456912"
-      },
-      {
-       "type": "ISBN_10",
-       "identifier": "1000456919"
+       "identifier": "9798247302636"
       }
      ],
      "readingModes": {
-      "text": true,
-      "image": true
+      "text": false,
+      "image": false
      },
-     "pageCount": 81,
+     "pageCount": 0,
      "printType": "BOOK",
      "categories": [
       "Computers"
      ],
      "maturityRating": "NOT_MATURE",
      "allowAnonLogging": false,
-     "contentVersion": "0.1.1.0.preview.3",
+     "contentVersion": "preview-1.0.0",
      "panelizationSummary": {
       "containsEpubBubbles": false,
       "containsImageBubbles": false
      },
      "imageLinks": {
-      "smallThumbnail": "http://books.google.com/books/content?id=84w7EAAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
-      "thumbnail": "http://books.google.com/books/content?id=84w7EAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+      "smallThumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api",
+      "thumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
      },
      "language": "en",
-     "previewLink": "http://books.google.ca/books?id=84w7EAAAQBAJ&printsec=frontcover&dq=The+Creative+Brain+in+the+Age+of+Artificial+Intelligence:+How+to+Use+AI+Without+Losing+Yourself+Maria+Ian&hl=&cd=5&source=gbs_api",
-     "infoLink": "http://books.google.ca/books?id=84w7EAAAQBAJ&dq=The+Creative+Brain+in+the+Age+of+Artificial+Intelligence:+How+to+Use+AI+Without+Losing+Yourself+Maria+Ian&hl=&source=gbs_api",
-     "canonicalVolumeLink": "https://books.google.com/books/about/AI_for_Creativity.html?hl=&id=84w7EAAAQBAJ"
+     "previewLink": "http://books.google.ca/books?id=JQ_e0QEACAAJ&dq=The+Creative+Brain+in+the+Age+of+Artificial+Intelligence:+How+to+Use+AI+Without+Losing+Yourself+Maria+Ian&hl=&cd=5&source=gbs_api",
+     "infoLink": "http://books.google.ca/books?id=JQ_e0QEACAAJ&dq=The+Creative+Brain+in+the+Age+of+Artificial+Intelligence:+How+to+Use+AI+Without+Losing+Yourself+Maria+Ian&hl=&source=gbs_api",
+     "canonicalVolumeLink": "https://books.google.com/books/about/AI_as_a_Second_Mind.html?hl=&id=JQ_e0QEACAAJ"
     }
    }
   ]
  },
+ "https://learning.oreilly.com/api/v2/search/?query=The%20Creative%20Brain%20in%20the%20Age%20of%20Artificial%20Intelligence%3A%20How%20to%20Use%20AI%20Without%20Losing%20Yourself%20Maria%20Ian&field=title&formats=book&limit=5": {
+  "results": [],
+  "facets": {
+   "facet_queries": {
+    "{!ex=format}(format:video AND title_unstemmed:\"Learning Path: .*\")": 0
+   },
+   "facet_fields": {
+    "format": [],
+    "subjects": [],
+    "topic_uuids": [],
+    "publishers_exact": [],
+    "language": [],
+    "sharing_status": [],
+    "expert_playlist": [],
+    "video_classification": [],
+    "certification_name_exact": [],
+    "certification_vendor_name_exact": [],
+    "topics": []
+   },
+   "facet_ranges": {},
+   "facet_intervals": {
+    "average_rating": {
+     "no_stars": 0,
+     "zero_stars": 0,
+     "one_star": 0,
+     "two_stars": 0,
+     "three_stars": 0,
+     "four_stars": 0,
+     "five_stars": 0
+    },
+    "issued": {
+     "last_two_years": 0,
+     "last_year": 0,
+     "last_six_months": 0
+    }
+   },
+   "facet_heatmaps": {}
+  },
+  "total": 0,
+  "meta": {
+   "query_identifier": "bfcc3e6d-6966-402a-bf00-18dbcbbd1ec1"
+  },
+  "page": 0,
+  "previous": null,
+  "next": null
+ },
  "https://www.googleapis.com/books/v1/volumes/JQ_e0QEACAAJ": {
   "kind": "books#volume",
   "id": "JQ_e0QEACAAJ",
-  "etag": "hulPCn6nXfQ",
+  "etag": "/6sXg5D6rDw",
   "selfLink": "https://www.googleapis.com/books/v1/volumes/JQ_e0QEACAAJ",
   "volumeInfo": {
    "title": "AI as a Second Mind",
@@ -1821,8 +1944,8 @@
     "containsImageBubbles": false
    },
    "imageLinks": {
-    "smallThumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE72awIX-OYDuTtgzrzVy9NzBEih8jzLy81NRNrMoVg0_DGO2Es2XeGwbKtLWbTRoFjmPZAepjEbWh6h5FfsHavsSpr0oIcTwiXggIprnpv4pxLhK24DssO5JfKrGj4_FBBq_cwmt&source=gbs_api",
-    "thumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE71ZbRsJS5ISq31vBHV9gLmQi1aH_Dup8HmK-dfj1kdqL1R4Obu0LbZnv3GAXO8Il00GN5oHOeAx_N-BJuEchamyHV8yX3jWWxLe3kQBXWAflagQcmUIj6lHXRG22tM3k95vkplQ&source=gbs_api"
+    "smallThumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE73iOfExyKfLFiZPXk1EzpTWD-wDBPeL-tk_yRAWYfR9Hxui17XH95eoKriCGRVW05HDeNyb1MfXuFotBknBCIKM-8Vj9M0cFbhcSHClCcphQuqL96ZzCnsSpqxj9fSsqrweKXjo&source=gbs_api",
+    "thumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE73KAqI9eVL3Yqn4f4zugmiW3khctslEoc95m_gt29unJ9Sz755SFLXVC2zFu6qiBsYxFZd8gsBYdbWrWUAPFOhD9ESxSqTWUcai8TQTBgsy0Xj81YqA1tw0x5_pFBjBgnDa5LQQ&source=gbs_api"
    },
    "language": "en",
    "previewLink": "http://books.google.ca/books?id=JQ_e0QEACAAJ&hl=&source=gbs_api",
@@ -1834,16 +1957,6 @@
   "resultCount": 6,
   "results": [
    {
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/71/d7/16/71d71628-7193-e3e8-a748-05b2ee4fb4c0/COVER.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/71/d7/16/71d71628-7193-e3e8-a748-05b2ee4fb4c0/COVER.jpg/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
-    "trackCensoredName": "HOW TO BECOME A CRYPTOCURRENCY MILLIONAIRE",
-    "formattedPrice": "$9.99",
-    "trackViewUrl": "https://books.apple.com/us/book/how-to-become-a-cryptocurrency-millionaire/id1276690872?uo=4",
-    "artistIds": [
-     948957276
-    ],
-    "artistId": 948957276,
     "artistName": "Satoshi Nakamoto",
     "genres": [
      "Investing",
@@ -1851,30 +1964,30 @@
      "Business & Personal Finance"
     ],
     "price": 9.99,
-    "releaseDate": "2017-08-29T07:00:00Z",
     "genreIds": [
      "10012",
      "38",
      "9009"
     ],
+    "artistIds": [
+     948957276
+    ],
     "trackId": 1276690872,
     "trackName": "HOW TO BECOME A CRYPTOCURRENCY MILLIONAIRE",
+    "releaseDate": "2017-08-29T07:00:00Z",
     "kind": "ebook",
     "currency": "USD",
+    "formattedPrice": "$9.99",
+    "trackViewUrl": "https://books.apple.com/us/book/how-to-become-a-cryptocurrency-millionaire/id1276690872?uo=4",
+    "trackCensoredName": "HOW TO BECOME A CRYPTOCURRENCY MILLIONAIRE",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/71/d7/16/71d71628-7193-e3e8-a748-05b2ee4fb4c0/COVER.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/71/d7/16/71d71628-7193-e3e8-a748-05b2ee4fb4c0/COVER.jpg/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
+    "artistId": 948957276,
     "averageUserRating": 2,
     "userRatingCount": 8
    },
    {
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/35/a1/8e/35a18e81-1571-bcac-c42b-67b36f9465b5/0000248304.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/35/a1/8e/35a18e81-1571-bcac-c42b-67b36f9465b5/0000248304.jpg/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/adidas-wilson/1210259770?uo=4",
-    "trackCensoredName": "Mastering Bitcoin - A Beginner's Guide To Start Making Money With Bitcoin",
-    "formattedPrice": "$3.99",
-    "trackViewUrl": "https://books.apple.com/us/book/mastering-bitcoin-a-beginners-guide-to-start-making/id1251153325?uo=4",
-    "artistIds": [
-     1210259770
-    ],
-    "artistId": 1210259770,
     "artistName": "Adidas Wilson",
     "genres": [
      "Industries & Professions",
@@ -1884,7 +1997,6 @@
      "Economics"
     ],
     "price": 3.99,
-    "releaseDate": "2017-06-21T07:00:00Z",
     "genreIds": [
      "10005",
      "38",
@@ -1892,22 +2004,23 @@
      "10013",
      "10011"
     ],
+    "artistIds": [
+     1210259770
+    ],
     "trackId": 1251153325,
     "trackName": "Mastering Bitcoin - A Beginner's Guide To Start Making Money With Bitcoin",
+    "releaseDate": "2017-06-21T07:00:00Z",
     "kind": "ebook",
-    "currency": "USD"
+    "currency": "USD",
+    "formattedPrice": "$3.99",
+    "trackViewUrl": "https://books.apple.com/us/book/mastering-bitcoin-a-beginners-guide-to-start-making/id1251153325?uo=4",
+    "trackCensoredName": "Mastering Bitcoin - A Beginner's Guide To Start Making Money With Bitcoin",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/35/a1/8e/35a18e81-1571-bcac-c42b-67b36f9465b5/0000248304.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/35/a1/8e/35a18e81-1571-bcac-c42b-67b36f9465b5/0000248304.jpg/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/adidas-wilson/1210259770?uo=4",
+    "artistId": 1210259770
    },
    {
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/48/3a/58/483a5874-bb4b-a69a-a314-7c413ca646f6/bitcoin_cover_large.png/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/48/3a/58/483a5874-bb4b-a69a-a314-7c413ca646f6/bitcoin_cover_large.png/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
-    "trackCensoredName": "Bitcoin: A Peer-to-Peer Electronic Cash System",
-    "formattedPrice": "Free",
-    "trackViewUrl": "https://books.apple.com/us/book/bitcoin-a-peer-to-peer-electronic-cash-system/id6442866767?uo=4",
-    "artistIds": [
-     948957276
-    ],
-    "artistId": 948957276,
     "artistName": "Satoshi Nakamoto",
     "genres": [
      "Computers",
@@ -1915,30 +2028,30 @@
      "Computers & Internet"
     ],
     "price": 0,
-    "releaseDate": "2008-10-31T07:00:00Z",
     "genreIds": [
      "10017",
      "38",
      "9027"
     ],
+    "artistIds": [
+     948957276
+    ],
     "trackId": 6442866767,
     "trackName": "Bitcoin: A Peer-to-Peer Electronic Cash System",
+    "releaseDate": "2008-10-31T07:00:00Z",
     "kind": "ebook",
     "currency": "USD",
+    "formattedPrice": "Free",
+    "trackViewUrl": "https://books.apple.com/us/book/bitcoin-a-peer-to-peer-electronic-cash-system/id6442866767?uo=4",
+    "trackCensoredName": "Bitcoin: A Peer-to-Peer Electronic Cash System",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/48/3a/58/483a5874-bb4b-a69a-a314-7c413ca646f6/bitcoin_cover_large.png/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/48/3a/58/483a5874-bb4b-a69a-a314-7c413ca646f6/bitcoin_cover_large.png/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
+    "artistId": 948957276,
     "averageUserRating": 4.5,
     "userRatingCount": 64
    },
    {
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication1/v4/4d/6a/89/4d6a89e3-06d5-df4a-0bd6-f84087001d71/9788898924370.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication1/v4/4d/6a/89/4d6a89e3-06d5-df4a-0bd6-f84087001d71/9788898924370.jpg/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
-    "trackCensoredName": "Bitcoin Manifesto: ONE CPU ONE VOTE",
-    "formattedPrice": "$3.99",
-    "trackViewUrl": "https://books.apple.com/us/book/bitcoin-manifesto-one-cpu-one-vote/id950512274?uo=4",
-    "artistIds": [
-     948957276
-    ],
-    "artistId": 948957276,
     "artistName": "Satoshi Nakamoto",
     "genres": [
      "Philosophy",
@@ -1950,7 +2063,6 @@
      "Industries & Professions"
     ],
     "price": 3.99,
-    "releaseDate": "2014-12-10T08:00:00Z",
     "genreIds": [
      "10091",
      "38",
@@ -1960,22 +2072,23 @@
      "9009",
      "10005"
     ],
+    "artistIds": [
+     948957276
+    ],
     "trackId": 950512274,
     "trackName": "Bitcoin Manifesto: ONE CPU ONE VOTE",
+    "releaseDate": "2014-12-10T08:00:00Z",
     "kind": "ebook",
-    "currency": "USD"
+    "currency": "USD",
+    "formattedPrice": "$3.99",
+    "trackViewUrl": "https://books.apple.com/us/book/bitcoin-manifesto-one-cpu-one-vote/id950512274?uo=4",
+    "trackCensoredName": "Bitcoin Manifesto: ONE CPU ONE VOTE",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication1/v4/4d/6a/89/4d6a89e3-06d5-df4a-0bd6-f84087001d71/9788898924370.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication1/v4/4d/6a/89/4d6a89e3-06d5-df4a-0bd6-f84087001d71/9788898924370.jpg/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
+    "artistId": 948957276
    },
    {
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/7f/9b/04/7f9b049a-e775-f9cd-84bd-b28266572798/9781777692315.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/7f/9b/04/7f9b049a-e775-f9cd-84bd-b28266572798/9781777692315.jpg/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/david-ricardo/489200005?uo=4",
-    "trackCensoredName": "Introduction to Bitcoin: Understanding Peer-to-Peer Networks, Digital Signatures, the Blockchain, Proof-of-Work, Mining, Network Attacks, Bitcoin Core Software, and Wallet Safety (With Color Images & Diagrams)",
-    "formattedPrice": "$2.99",
-    "trackViewUrl": "https://books.apple.com/us/book/introduction-to-bitcoin-understanding-peer-to-peer/id1571766160?uo=4",
-    "artistIds": [
-     489200005
-    ],
-    "artistId": 489200005,
     "artistName": "David Ricardo",
     "genres": [
      "Finance",
@@ -1990,7 +2103,6 @@
      "Management & Leadership"
     ],
     "price": 2.99,
-    "releaseDate": "2021-06-01T07:00:00Z",
     "genreIds": [
      "10013",
      "38",
@@ -2003,22 +2115,23 @@
      "10011",
      "10014"
     ],
+    "artistIds": [
+     489200005
+    ],
     "trackId": 1571766160,
     "trackName": "Introduction to Bitcoin: Understanding Peer-to-Peer Networks, Digital Signatures, the Blockchain, Proof-of-Work, Mining, Network Attacks, Bitcoin Core Software, and Wallet Safety (With Color Images & Diagrams)",
+    "releaseDate": "2021-06-01T07:00:00Z",
     "kind": "ebook",
-    "currency": "USD"
+    "currency": "USD",
+    "formattedPrice": "$2.99",
+    "trackViewUrl": "https://books.apple.com/us/book/introduction-to-bitcoin-understanding-peer-to-peer/id1571766160?uo=4",
+    "trackCensoredName": "Introduction to Bitcoin: Understanding Peer-to-Peer Networks, Digital Signatures, the Blockchain, Proof-of-Work, Mining, Network Attacks, Bitcoin Core Software, and Wallet Safety (With Color Images & Diagrams)",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/7f/9b/04/7f9b049a-e775-f9cd-84bd-b28266572798/9781777692315.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/7f/9b/04/7f9b049a-e775-f9cd-84bd-b28266572798/9781777692315.jpg/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/david-ricardo/489200005?uo=4",
+    "artistId": 489200005
    },
    {
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8b/30/43/8b30432f-7fc5-b2fa-f52d-33eb95f86fdd/SatoshiOnBitcoin_cover3.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8b/30/43/8b30432f-7fc5-b2fa-f52d-33eb95f86fdd/SatoshiOnBitcoin_cover3.jpg/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
-    "trackCensoredName": "Satoshi on Bitcoin",
-    "formattedPrice": "Free",
-    "trackViewUrl": "https://books.apple.com/us/book/satoshi-on-bitcoin/id6443853592?uo=4",
-    "artistIds": [
-     948957276
-    ],
-    "artistId": 948957276,
     "artistName": "Satoshi Nakamoto",
     "genres": [
      "Network",
@@ -2026,16 +2139,26 @@
      "Computers & Internet"
     ],
     "price": 0,
-    "releaseDate": "2022-10-14T07:00:00Z",
     "genreIds": [
      "10021",
      "38",
      "9027"
     ],
+    "artistIds": [
+     948957276
+    ],
     "trackId": 6443853592,
     "trackName": "Satoshi on Bitcoin",
+    "releaseDate": "2022-10-14T07:00:00Z",
     "kind": "ebook",
     "currency": "USD",
+    "formattedPrice": "Free",
+    "trackViewUrl": "https://books.apple.com/us/book/satoshi-on-bitcoin/id6443853592?uo=4",
+    "trackCensoredName": "Satoshi on Bitcoin",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8b/30/43/8b30432f-7fc5-b2fa-f52d-33eb95f86fdd/SatoshiOnBitcoin_cover3.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8b/30/43/8b30432f-7fc5-b2fa-f52d-33eb95f86fdd/SatoshiOnBitcoin_cover3.jpg/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
+    "artistId": 948957276,
     "averageUserRating": 5,
     "userRatingCount": 8
    }

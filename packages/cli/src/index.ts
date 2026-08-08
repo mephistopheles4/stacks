@@ -86,6 +86,13 @@ program
         }
         console.log('  use --force to add it anyway');
         break;
+      case 'mismatch':
+        // Named, not just refused: the near miss is usually recognisable, and
+        // seeing it is how you tell "not on any provider" from "I typoed it".
+        console.log(`nothing matching "${result.term}"`);
+        console.log(`  closest was "${result.found}"`);
+        console.log('  use --force to add it anyway');
+        break;
       case 'not-found':
         fail(`nothing found for "${result.term}"`);
     }

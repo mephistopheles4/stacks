@@ -1,4 +1,13 @@
-export type MetadataSource = 'open-library' | 'google-books';
+/**
+ * Which provider answered. Not the same question as `CoverSource`, which
+ * records where a cover's *bytes* came from — the metadata layer completes one
+ * provider's record from another's, and Apple is consulted for artwork alone.
+ *
+ * `oreilly` is both, and the two still do not have to agree: a book Open
+ * Library answered for can carry an O'Reilly cover, which is what `fillGaps`
+ * produces when nothing else has art for it.
+ */
+export type MetadataSource = 'open-library' | 'google-books' | 'oreilly';
 
 /** What a lookup yields, normalised across providers. */
 export interface BookMetadata {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { COVER_SOURCES, coverSourceFor } from '../covers/cover-source.ts';
 import { CAPTURED_ISBN, fixtureHttpGet, readApiFixture } from '../test-support.ts';
 import type { HttpGet } from './http.ts';
 import { lookup, lookupByIsbn, searchByTitle } from './index.ts';
@@ -19,6 +20,9 @@ const openLibraryMiss = fixtureHttpGet({
   '/api/books': 'open-library-isbn-miss.json',
   '/search.json': 'open-library-search-miss.json',
   'googleapis.com': 'google-books-quota-exceeded.json',
+  // Reached on every miss path now: O'Reilly is asked whenever neither of the
+  // first two found the book, which is exactly what these fixtures describe.
+  'learning.oreilly.com': 'oreilly-search-miss.json',
 });
 
 describe('ISBN hit', () => {
@@ -60,6 +64,109 @@ describe('fuzzy title search', () => {
     const searchOnly = fixtureHttpGet({ '/search.json': 'open-library-search-hit.json' });
     const results = await lookup('thinking in systems', searchOnly);
     expect(results.length).toBeGreaterThan(0);
+  });
+});
+
+describe("O'Reilly, for the books the other three do not have", () => {
+  /** Both of the first two providers come up empty; O'Reilly has the book. */
+  const onlyOReillyHasIt = fixtureHttpGet({
+    '/search.json': 'open-library-search-miss.json',
+    'googleapis.com': 'google-books-quota-exceeded.json',
+    'learning.oreilly.com': 'oreilly-search-hit.json',
+    'itunes.apple.com': '',
+  });
+
+  it('finds a book Open Library and Google have never heard of', async () => {
+    const [best] = await lookup('Learning AI-Native Software Engineering', onlyOReillyHasIt);
+
+    expect(best?.title).toBe('Learning AI-Native Software Engineering');
+    expect(best?.author).toBe('Alfonso Graziano');
+    expect(best?.source).toBe('oreilly');
+  });
+
+  it('takes the ISBN from the response, not the identifier in the library URL', async () => {
+    // `0642572352530` is O'Reilly's internal archive id. It passes an ISBN-13
+    // check digit while beginning `064`, which no Bookland range assigns — so
+    // reading it out of the URL would write a plausible non-ISBN into a note.
+    const [best] = await lookup('Learning AI-Native Software Engineering', onlyOReillyHasIt);
+
+    expect(best?.isbn).toBe('9798341674738');
+    expect(best?.isbn).not.toBe('0642572352530');
+  });
+
+  it('resolves an ISBN the first two providers do not hold', async () => {
+    // `enrich` searches by a note's ISBN whenever it has one, so without this
+    // path a book O'Reilly had just supplied could never be enriched by it.
+    const byIsbn = fixtureHttpGet({
+      '/api/books': 'open-library-isbn-miss.json',
+      'googleapis.com': 'google-books-quota-exceeded.json',
+      'learning.oreilly.com': 'oreilly-isbn-hit.json',
+      'itunes.apple.com': '',
+    });
+
+    const result = await lookupByIsbn('9798341674738', byIsbn);
+    expect(result?.title).toBe('Learning AI-Native Software Engineering');
+    expect(result?.source).toBe('oreilly');
+  });
+
+  it('asks the ISBN as a search field, not as its own parameter', async () => {
+    // `isbn=<n>` is ignored by the endpoint and returns the catalogue ranked by
+    // relevance to nothing — 54,423 results, the wrong book first.
+    const seen: string[] = [];
+    const spy: HttpGet = async (url) => {
+      seen.push(url);
+      return undefined;
+    };
+
+    await lookupByIsbn('9798341674738', spy);
+    const oreilly = seen.find((url) => url.includes('learning.oreilly.com'));
+    expect(oreilly).toContain('query=9798341674738');
+    expect(oreilly).toContain('field=isbn');
+  });
+
+  it('offers a cover, sized to match Apple rather than to the endpoint maximum', async () => {
+    // The only source for these books: Open Library answers their ISBNs with a
+    // 43-byte placeholder and Apple has never heard of them.
+    const [best] = await lookup('Learning AI-Native Software Engineering', onlyOReillyHasIt);
+
+    expect(best?.coverUrl).toBe(
+      'https://learning.oreilly.com/covers/urn:orm:book:0642572352530/1200w/',
+    );
+    // 2000w exists and is a megabyte; MAX_COVER_EDGE resizes to 512 anyway.
+    expect(best?.coverUrl).not.toContain('2000w');
+  });
+
+  it('records those bytes as oreilly, so a takedown can name them', async () => {
+    expect(coverSourceFor('https://learning.oreilly.com/covers/urn:orm:book:123/1200w/')).toBe(
+      'oreilly',
+    );
+    // Nothing filters on this — it is an index for acting precisely, not a gate.
+    expect(COVER_SOURCES).toContain('oreilly');
+  });
+
+  it('asks for books, not videos or courses', async () => {
+    const seen: string[] = [];
+    const spy: HttpGet = async (url) => {
+      seen.push(url);
+      return undefined;
+    };
+
+    await searchByTitle('anything at all', spy);
+    const oreilly = seen.find((url) => url.includes('learning.oreilly.com'));
+    expect(oreilly).toContain('formats=book');
+  });
+
+  it('is not consulted when Open Library already found the book', async () => {
+    // The quota argument, applied to a fourth provider: it costs a request only
+    // on the path that is currently failing.
+    const seen: string[] = [];
+    const watched: HttpGet = async (url) => {
+      seen.push(url);
+      return url.includes('/search.json') ? readApiFixture('open-library-search-hit.json') : undefined;
+    };
+
+    await searchByTitle('thinking in systems', watched);
+    expect(seen.some((url) => url.includes('learning.oreilly.com'))).toBe(false);
   });
 });
 

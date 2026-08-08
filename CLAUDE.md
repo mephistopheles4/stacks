@@ -65,7 +65,7 @@ interface VaultAdapter {
 - Do NOT build a second adapter. Do NOT add adapter config plumbing beyond a single constructor arg (vault path). The interface exists so a Logseq/Anytype adapter is possible later, not to be a framework.
 
 ## Frontmatter contract (do not change without updating this file)
-Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `cover_source` (open-library|google-books|apple-books|unknown), `spine_color` (hex), `pages`, `binding` (hardback|paperback), `face_out` (bool), `tags`, `shelf_order` (number), `private` (bool).
+Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `cover_source` (open-library|google-books|apple-books|oreilly|unknown), `spine_color` (hex), `pages`, `binding` (hardback|paperback), `face_out` (bool), `tags`, `shelf_order` (number), `private` (bool).
 
 This list is the contract, and `gates/frontmatter-contract.test.ts` holds it to
 the parser in both directions. The paragraphs below are commentary — adding a
@@ -92,7 +92,7 @@ Binding moves the board and the binder's square *together* (a paperback is not a
 hardback with the overhang removed) and biases the height band, which is the tell
 that actually reads at shelf distance. `books.paperbackRatio` dials the mixture.
 
-`cover_source` records which provider a cover's bytes came from, taken from the URL that was actually downloaded. The three providers permit different things, so a public build cannot treat them alike — see `packages/core/src/covers/cover-source.ts`. **Absent and `unknown` are different**: absent means nobody looked (every cover cached before this key existed), `unknown` means somebody looked and did not recognise the host. An unrecognised value is dropped at parse time rather than kept, because a typo must not read as a permission.
+`cover_source` records which provider a cover's bytes came from, taken from the URL that was actually downloaded. **It is provenance, not permission** — the four providers permit different things, but nothing reads this key: `publish.ts` has never looked at it and every cover ships whatever its source. What it buys is precision if a provider ever asks for its art down — *those two*, not *all of them*. This line used to say a public build "cannot treat them alike", which read as policy and described nothing; see `packages/core/src/covers/cover-source.ts` and [ADR-0038](docs/adr/0038-oreilly-is-a-fourth-provider.md). **Absent and `unknown` are different**: absent means nobody looked (every cover cached before this key existed), `unknown` means somebody looked and did not recognise the host. An unrecognised value is dropped at parse time rather than kept, because a typo must not read as a permission.
 
 **A book you are reading comes ahead of all of that**, numbered or not. `stacks order --renumber` numbers every shelved book, so any rule that only applied to unnumbered books stopped applying at all after one run — and the next book you picked up sorted behind every pin. Pinned by `gates/shelf-order.test.ts`.
 
@@ -108,8 +108,18 @@ that actually reads at shelf distance. `books.paperbackRatio` dials the mixture.
   a `<script>` that imports and calls a `.ts` module — nothing more. `.astro`
   files are NOT typechecked (`astro check` cannot run under TypeScript 7 yet),
   so anything with a type lives in a `.ts` file, where `pnpm build` checks it.
-- Metadata: **three providers, in this order** — Open Library first, Google Books as the fallback (needs `GOOGLE_BOOKS_API_KEY`; unauthenticated requests share one exhausted quota and 429 every time), and Apple Books consulted *only* for cover art, because its artwork is ~800x1200 against Google's ~128px. Cache all API responses in `.cache/` so tests and rebuilds don't re-hit APIs.
-- **Which provider answered and which provider's bytes you kept are different questions.** The metadata layer completes one provider's record from another's, so a book's `source` need not be where its cover came from. `cover_source` is derived from the URL actually downloaded — it decides what a public build may re-host, and the three providers' terms differ.
+- Metadata: **four providers, in this order** — Open Library first, Google Books as the fallback (needs `GOOGLE_BOOKS_API_KEY`; unauthenticated requests share one exhausted quota and 429 every time), O'Reilly last and only when neither of those actually found the book, and Apple Books consulted *only* for cover art, because its artwork is ~800x1200 against Google's ~128px. Cache all API responses in `.cache/` so tests and rebuilds don't re-hit APIs.
+- **O'Reilly** — unauthenticated, one search endpoint serving both title and ISBN lookups (`query=<isbn>&field=isbn`), and the sole source for its own early releases, covers included: Open Library answers their ISBNs with a 43-byte placeholder and Apple has never heard of them. Cover URLs are built from the response's `ourn`, at 1200w to match Apple — the endpoint serves up to 2000, but `MAX_COVER_EDGE` resizes every published cover to 512, so anything larger costs vault bytes and reaches no shelf. **Its library URLs end in an internal `archive_id`, never the ISBN** — for one book that id is `0642572352530`, which passes an ISBN-13 check digit while starting `064`; for another it is a well-formed 979 ISBN that is still *seven off* the book's real one, so a check-digit test does not catch it. Take the ISBN from the response body. See [ADR-0038](docs/adr/0038-oreilly-is-a-fourth-provider.md).
+- **Which provider answered and which provider's bytes you kept are different questions.** The metadata layer completes one provider's record from another's, so a book's `source` need not be where its cover came from. `cover_source` is derived from the URL actually downloaded.
+
+  **It records provenance and gates nothing.** This line used to say it decided
+  what a public build may re-host; `publish.ts` has never read it, and every
+  cover is published whatever its source — 26 of Apple's among them, whose terms
+  the code's own comment says do not enumerate book covers at all. The claim
+  read as a policy and was a plan, and it talked one session out of a decision
+  the shelf had already made 35 times. What the key actually buys: if a provider
+  ever asks for its art to come down, the answer can be *those nine* rather than
+  *all of them*.
 - TypeScript strict everywhere. Vitest. pnpm workspaces.
 
 ## Phase gates — a phase is DONE only when its gate passes

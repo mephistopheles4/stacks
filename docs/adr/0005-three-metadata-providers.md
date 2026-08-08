@@ -1,5 +1,11 @@
 # Three metadata providers, in a fixed order
 
+**Status:** accepted, and **extended by
+[ADR-0038](0038-oreilly-is-a-fourth-provider.md) — there are four now.** The
+title records what was decided on 2026-07-31 and is left standing; O'Reilly was
+added last, after Open Library and Google and only when neither has actually
+found the book, so the order below is unchanged and only lengthened.
+
 Open Library first, Google Books as the fallback, and Apple Books consulted *only* for cover art because its artwork is ~800x1200 against Google's ~128px. Every response is cached under `.cache/`.
 
 Both fallbacks are bonuses rather than dependencies: Google Books without a personal key shares one permanently exhausted anonymous quota. Tests inject an `HttpGet` backed by captured fixtures that throws on an unmapped URL, so no test can quietly reach the network.

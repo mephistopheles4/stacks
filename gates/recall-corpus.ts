@@ -69,8 +69,12 @@ export const RECALL_CORPUS: readonly RecallCase[] = [
       'From Zero to Profit with AI: The Contemporary Guide to Online Income Generation and Accelerated Growth Helen B. Keating',
     label:
       'From Zero to Profit with AI: The Contemporary Guide to Online Income Generation and Accelerated Growth Helen B. Keating',
-    expect: { kind: 'no-match' },
-    because: 'Genuinely absent from both providers. Refusing it is correct behaviour.',
+    expect: { kind: 'found', pages: 172, title: 'From Zero to Profit with AI' },
+    because:
+      'Was recorded as absent from both providers, and that was never true — ' +
+      'the corpus had been captured without a Google API key, so Google 429ed ' +
+      'and a refusal to answer was written down as an answer. Google holds it: ' +
+      'Helen B Keating, 9798198476684, 172 pages.',
   },
   {
     term:
