@@ -19,6 +19,7 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { loadEnv } from '../packages/cli/src/env.ts';
 import { createCachedHttpGet, lookup, type HttpGet } from '../packages/core/src/index.ts';
 // The corpus lives with the gate that owns it: this script exists to feed that
 // gate, so the list of books belongs there and is imported here, not copied.
@@ -27,6 +28,12 @@ import { REPO_ROOT } from './lib/repo-root.ts';
 
 const cacheFlag = process.argv.indexOf('--cache');
 const cacheDir = resolve(cacheFlag < 0 ? join(REPO_ROOT, '.cache') : (process.argv[cacheFlag + 1] ?? ''));
+
+// The same loader the CLI and the deploy use. Without it this script read only
+// a real environment variable, so the invocation in its own header — with the
+// key sitting in `.env` where every other command finds it — printed the
+// warning below and recorded a corpus of quota errors.
+loadEnv();
 
 const key = process.env['GOOGLE_BOOKS_API_KEY'];
 if (key === undefined || key.length === 0) {
