@@ -102,6 +102,7 @@ need only a new mapper.
 | **`node -e` with ESM top-level await exits silently** | ⚠️ prints nothing, exit 0. Put scripts in a file and run with `pnpm tsx` |
 | **Bash tool sandbox blocks network** | ⚠️ outbound `fetch` needs `dangerouslyDisableSandbox` |
 | Google Books unauthenticated | ⚠️ 429s on a shared quota — a bonus, never a dependable fallback |
+| **Fixture-capture scripts need the key in the *environment*** | ⚠️ `capture-lookup-recall.ts` read `process.env` without `loadEnv()`, so with the key only in `.env` it recorded a corpus of 429s and G26 went green against it. Fixed; the class is not — check any capture script's env before trusting what it wrote. See [`gates.md`](gates.md) |
 | **Zone bot protection can refuse the deploy check** | ⚠️ see below — the deploy still works, the *verification* does not |
 | **The scripts echo the commands they run** | ℹ️ since G24 — `gate:public` gained two `$ pnpm …` lines, `pnpm worktree` one. Nothing asserts on that stdout; checked |
 | Resolved versions | TS 7.0.2 · Vitest 4 · Astro 7.1.6 · three 0.185.1 · sharp 0.35 |
