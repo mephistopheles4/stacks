@@ -35,7 +35,12 @@ export async function lookupByIsbn(
 ): Promise<BookMetadata | undefined> {
   return (
     (await openLibrary.lookupByIsbn(isbn, get)) ??
-    (await googleBooks.lookupByIsbn(isbn, get, options.googleBooksKey))
+    (await googleBooks.lookupByIsbn(isbn, get, options.googleBooksKey)) ??
+    // Last here for the same reason it is last in the search: only asked when
+    // the first two have nothing. `enrich` reaches this path for every note that
+    // carries an ISBN, so without it a book O'Reilly had just supplied could
+    // never be enriched again.
+    (await oreilly.lookupByIsbn(isbn, get))
   );
 }
 

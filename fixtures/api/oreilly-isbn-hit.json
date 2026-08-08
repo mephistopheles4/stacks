@@ -102,9 +102,9 @@
   },
   "total": 1,
   "meta": {
-    "query_identifier": "4b6beb68-d61e-46d0-9f25-0c1e90e3723e"
+    "query_identifier": "45f2cc6c-cb36-4e97-9432-52d297cc7153"
   },
   "page": 0,
   "previous": null,
-  "next": null
+  "next": "https://learning.oreilly.com/api/v2/search/?query=9798341674738&field=isbn&formats=book&limit=1&page=1"
 }

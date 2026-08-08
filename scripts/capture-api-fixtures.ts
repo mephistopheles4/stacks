@@ -61,6 +61,12 @@ const CAPTURES: readonly { readonly name: string; readonly url: string }[] = [
     name: 'oreilly-search-miss.json',
     url: 'https://learning.oreilly.com/api/v2/search/?query=zzzqqqxx%20no%20such%20book%20anywhere&field=title&formats=book&limit=5',
   },
+  {
+    // The ISBN path, which also goes through search. `field=isbn` is what makes
+    // it exact; an `isbn=` parameter is ignored and returns the catalogue.
+    name: 'oreilly-isbn-hit.json',
+    url: 'https://learning.oreilly.com/api/v2/search/?query=9798341674738&field=isbn&formats=book&limit=1',
+  },
 ];
 
 mkdirSync(OUT_DIR, { recursive: true });

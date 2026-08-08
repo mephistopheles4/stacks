@@ -1,4 +1,4 @@
-import { looksDerivative } from '../identity.ts';
+import { looksDerivative, normaliseIsbn } from '../identity.ts';
 import { keyIfPresent } from '../key-if-present.ts';
 import type { HttpGet } from './http.ts';
 import { asPositiveInt, asRecord, firstString, type BookMetadata } from './types.ts';
@@ -13,10 +13,14 @@ import { asPositiveInt, asRecord, firstString, type BookMetadata } from './types
  * Engineering*, a different book by four different authors. This provider is the
  * only source that has it.
  *
- * **Search only, and unauthenticated.** `/api/v2/search/` answers without a
- * session; the `/api/v2/book/<id>/` detail endpoints return 404 without one. So
- * this cannot serve as an ISBN resolver the way Open Library does, and it is
- * wired in as a title-search provider alone.
+ * **One endpoint, unauthenticated.** `/api/v2/search/` answers without a
+ * session; `/api/v2/book/<id>/` returns 404 without one. Both lookups therefore
+ * go through search — an ISBN is asked for as `query=<isbn>&field=isbn`, which
+ * is exact. That matters more than it looks: `enrich` searches by a note's ISBN
+ * when it has one, so without the ISBN path a book this provider had just
+ * supplied could never be enriched again by it. (`isbn=` as its own parameter is
+ * *not* the same thing — it is ignored, and the search returns the whole
+ * catalogue ranked by relevance to nothing.)
  *
  * **Two identifiers, and the URL carries the wrong one.** A library URL ends in
  * O'Reilly's internal `archive_id` — `0642572352530` — which passes an ISBN-13
@@ -44,6 +48,16 @@ const SEARCH = 'https://learning.oreilly.com/api/v2/search/';
  * together, and a video is not something this shelf can hold.
  */
 const BOOKS_ONLY = 'formats=book';
+
+export async function lookupByIsbn(isbn: string, get: HttpGet): Promise<BookMetadata | undefined> {
+  const normalised = normaliseIsbn(isbn);
+  if (normalised.length === 0) return undefined;
+
+  const url = `${SEARCH}?query=${normalised}&field=isbn&${BOOKS_ONLY}&limit=1`;
+  const body = asRecord(await get(url));
+  const results = Array.isArray(body?.['results']) ? body['results'] : [];
+  return toMetadata(asRecord(results[0]));
+}
 
 export async function searchByTitle(
   query: string,

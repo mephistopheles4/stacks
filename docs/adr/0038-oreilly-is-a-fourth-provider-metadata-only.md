@@ -6,10 +6,11 @@ have never heard of
 
 ## What was decided
 
-`learning.oreilly.com/api/v2/search/` joins the lookup as a **title-search
-provider only**, asked last — after Open Library and Google, and only when
-neither of them has actually found the book. It returns title, author, ISBN and
-a page count. **It never returns a cover.**
+`learning.oreilly.com/api/v2/search/` joins the lookup asked **last** — after
+Open Library and Google, and only when neither of them has actually found the
+book. It answers both lookups: a title search, and an ISBN as
+`query=<isbn>&field=isbn`. It returns title, author, ISBN and a page count.
+**It never returns a cover.**
 
 ## Why this needed a decision at all
 
@@ -76,8 +77,14 @@ it.
   page number that exists. It is mapped to `pages` because the shelf needs a
   height and this is the publisher's own figure for the edition being read, but
   it is a different kind of fact from the counts G26 pins exactly.
-- **Search only.** `/api/v2/book/<id>/` returns 404 without a session, so this
-  cannot serve as an ISBN resolver the way Open Library does.
+- **One endpoint serves both lookups.** `/api/v2/book/<id>/` returns 404 without
+  a session, so the ISBN path goes through search too, as
+  `query=<isbn>&field=isbn` — exact, one result. That is load-bearing rather
+  than tidy: `enrich` searches by a note's ISBN whenever it has one, so a
+  title-search-only provider could supply a book and then never be able to
+  enrich it again. `isbn=<n>` as its own parameter is silently ignored and
+  returns 54,423 results with the wrong book first, which is the failure mode
+  this arrangement avoids.
 - **The corpus grew a provider it must now record.** G26 replays every URL the
   lookup asks for, so `oreilly-search-miss.json` is captured as well as the hit:
   O'Reilly is consulted on every path where the first two found nothing, which

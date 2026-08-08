@@ -93,6 +93,36 @@ describe("O'Reilly, for the books the other three do not have", () => {
     expect(best?.isbn).not.toBe('0642572352530');
   });
 
+  it('resolves an ISBN the first two providers do not hold', async () => {
+    // `enrich` searches by a note's ISBN whenever it has one, so without this
+    // path a book O'Reilly had just supplied could never be enriched by it.
+    const byIsbn = fixtureHttpGet({
+      '/api/books': 'open-library-isbn-miss.json',
+      'googleapis.com': 'google-books-quota-exceeded.json',
+      'learning.oreilly.com': 'oreilly-isbn-hit.json',
+      'itunes.apple.com': '',
+    });
+
+    const result = await lookupByIsbn('9798341674738', byIsbn);
+    expect(result?.title).toBe('Learning AI-Native Software Engineering');
+    expect(result?.source).toBe('oreilly');
+  });
+
+  it('asks the ISBN as a search field, not as its own parameter', async () => {
+    // `isbn=<n>` is ignored by the endpoint and returns the catalogue ranked by
+    // relevance to nothing — 54,423 results, the wrong book first.
+    const seen: string[] = [];
+    const spy: HttpGet = async (url) => {
+      seen.push(url);
+      return undefined;
+    };
+
+    await lookupByIsbn('9798341674738', spy);
+    const oreilly = seen.find((url) => url.includes('learning.oreilly.com'));
+    expect(oreilly).toContain('query=9798341674738');
+    expect(oreilly).toContain('field=isbn');
+  });
+
   it('asks for books, not videos or courses', async () => {
     const seen: string[] = [];
     const spy: HttpGet = async (url) => {
