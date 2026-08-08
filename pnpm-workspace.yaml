@@ -17,6 +17,27 @@ allowBuilds:
 # CI is unaffected either way: it installs from scratch against a frozen lockfile.
 verifyDepsBeforeRun: warn
 
+# GHSA-2v37-7h3g-55p8, high: nanoid <3.3.17 loops indefinitely on a custom
+# generator. It arrives four ways, all of them vite>postcss, and postcss@8.5.25
+# already asks for `^3.3.17` in its own latest release — so this override looks
+# redundant and is not.
+#
+# pnpm 11 quarantines newly published versions for seven days by default
+# (`minimumReleaseAge`), which is a supply-chain policy worth having: it is the
+# window in which a compromised release gets caught. The cost is that resolution
+# silently declines a *security* patch inside that window. nanoid 3.3.17 shipped
+# 2026-08-03 and 3.3.18 on 2026-08-07, so on 2026-08-08 `pnpm update nanoid`
+# reported success and left the tree on the vulnerable 3.3.16. An explicit
+# override is honoured where auto-resolution is not — the policy governs which
+# version pnpm will *pick*, not one it is told to use.
+#
+# So this is deliberately not an `auditConfig.ignoreGhsas` entry. That hatch is
+# for an advisory with no fix published; here the fix existed and only needed
+# naming. Remove this the moment the tree carries 3.3.17 without help, which
+# happens as soon as a postcss release requiring `^3.3.17` reaches the lockfile.
+overrides:
+  nanoid: '^3.3.17'
+
 # CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
 #
 # When one lands in a transitive dependency with no fix published, it will block
