@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isProbablySameBook,
   isValidIsbn,
+  looksDerivative,
   normaliseIsbn,
   normaliseTitleAuthor,
   rankingScore,
@@ -149,6 +150,42 @@ describe('titleMatchScore', () => {
 
   it('scores an unrelated title at zero', () => {
     expect(titleMatchScore('salt road ledger', 'Compilers for the Impatient')).toBe(0);
+  });
+});
+
+describe('companion volumes', () => {
+  it('refuses a journal sold beside the book', () => {
+    // Both real, both Eckhart Tolle, and not the same book. This one is in the
+    // vault, so `stacks add "The Power of Now Journal"` was refused as a
+    // duplicate of the book it sits next to on a shelf.
+    expect(
+      isProbablySameBook('The Power of Now Eckhart Tolle', 'The Power of Now Journal Eckhart Tolle'),
+    ).toBe(false);
+  });
+
+  it('still matches a book to its own subtitle', () => {
+    // The case a threshold cannot be tuned to spare: 0.971/0.857 here against
+    // 0.967/0.833 above. Four thousandths, opposite answers.
+    expect(
+      isProbablySameBook(
+        'Thinking in Systems Donella H. Meadows',
+        'Thinking in Systems: A Primer Donella H. Meadows',
+      ),
+    ).toBe(true);
+  });
+
+  it('still finds a journal when a journal is what was asked for', () => {
+    // The marker is symmetric — it refuses a *mismatch*, not the word itself.
+    // Both providers filter derivatives out of search results unless the query
+    // carries one too, so searching for the journal must still reach it.
+    expect(
+      isProbablySameBook(
+        'The Power of Now Journal Eckhart Tolle',
+        'The Power of Now Journal Eckhart Tolle',
+      ),
+    ).toBe(true);
+    expect(looksDerivative('The Power of Now Journal')).toBe(true);
+    expect(looksDerivative('Thinking in Systems: A Primer')).toBe(false);
   });
 });
 

@@ -108,8 +108,23 @@ export function isProbablySameBook(a: string, b: string): boolean {
   return isContainedIn(left, right) || isContainedIn(right, left);
 }
 
-/** Study guides, summaries and workbooks that borrow a title wholesale. */
-const DERIVATIVE = /\b(?:summary|summaries|workbook|study|guide|companion|analysis|takeaways|abridged)\b/;
+/**
+ * Study guides, summaries, workbooks and journals that borrow a title wholesale.
+ *
+ * **`journal` is here because no threshold can separate it from a subtitle.**
+ * *The Power of Now* against *The Power of Now Journal* scores 0.967 forward and
+ * 0.833 back; *Thinking in Systems* against *Thinking in Systems: A Primer* —
+ * one book, which must match — scores 0.971 and 0.857. The same shape, four
+ * thousandths apart, and only one of them is the same book. Token overlap cannot
+ * tell "subtitle added" from "companion volume sold beside it", so the word is
+ * named rather than the score retuned.
+ *
+ * A denylist, and it grows only on evidence: every word added here silently
+ * refuses some real book whose title happens to carry it. `journal` earned its
+ * place from a book in the vault; the neighbours it suggests — notebook,
+ * planner, diary — have not, and are deliberately absent.
+ */
+const DERIVATIVE = /\b(?:summary|summaries|workbook|study|guide|companion|analysis|takeaways|abridged|journal)\b/;
 
 /**
  * Does this title look like a summary or study guide of another book?
