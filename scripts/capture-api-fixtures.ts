@@ -40,6 +40,13 @@ const CAPTURES: readonly { readonly name: string; readonly url: string }[] = [
     name: 'google-books-isbn-hit.json',
     url: 'https://www.googleapis.com/books/v1/volumes?q=isbn:9781603580557',
   },
+  {
+    // Two records of one book in one response: the first carries Jordan B.
+    // Peterson and 480 pages, the second carries neither. Ranking used to prefer
+    // the empty one *because* it was empty. See `rankingScore` in identity.ts.
+    name: 'open-library-search-sparse-sibling.json',
+    url: 'https://openlibrary.org/search.json?q=12%20Rules%20for%20Life&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i',
+  },
 ];
 
 mkdirSync(OUT_DIR, { recursive: true });

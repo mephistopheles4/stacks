@@ -187,3 +187,41 @@ export function titleMatchScore(query: string, candidate: string): number {
   const brevity = wanted.length / Math.max(found.size, wanted.length);
   return coverage * (0.8 + 0.2 * brevity);
 }
+
+/**
+ * How well a candidate matches a search term, for **ranking** rather than identity.
+ *
+ * One difference from `titleMatchScore`, and it decides which record reaches the
+ * vault: the brevity penalty is measured over the candidate's **title alone**,
+ * never over title and author run together.
+ *
+ * Scoring the concatenation made a record score *higher for lacking an author*,
+ * because against a title-only query the author's tokens read as padding. Open
+ * Library returns exactly that pair for "12 Rules for Life" — one record with
+ * Jordan B. Peterson and 480 pages, one with neither — and the empty one won,
+ * 2.0 against 1.914. The note went into the vault with no author while the
+ * answer sat in the same response, and `enrich` could never recover it: it
+ * re-queries by the ISBN that record carries, which is the sparse edition.
+ *
+ * Systematic, not a near-miss. Any authorless record beats its own richer
+ * sibling on a bare title, which is precisely the record that produces the
+ * thinnest note. `open-library.ts` already scored its own candidates on title
+ * alone; this makes the second pass agree with the first instead of undoing it.
+ *
+ * The author still counts towards **coverage**, so naming one in the query still
+ * favours that author's book. It simply no longer costs a record anything to
+ * have one.
+ */
+export function rankingScore(query: string, title: string, author?: string): number {
+  const wanted = normaliseTitleAuthor(query).split(' ').filter(Boolean);
+  const found = new Set(
+    normaliseTitleAuthor(`${title} ${author ?? ''}`).split(' ').filter(Boolean),
+  );
+  const titleTokens = new Set(normaliseTitleAuthor(title).split(' ').filter(Boolean));
+  if (wanted.length === 0 || found.size === 0) return 0;
+
+  const hits = wanted.filter((token) => found.has(token)).length;
+  const coverage = hits / wanted.length;
+  const brevity = wanted.length / Math.max(titleTokens.size, wanted.length);
+  return coverage * (0.8 + 0.2 * brevity);
+}

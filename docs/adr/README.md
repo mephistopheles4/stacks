@@ -60,3 +60,4 @@ Two other files hold what these deliberately do not:
 | [0034](./0034-bloom-behind-a-composer.md) | Bloom, behind a composer that costs the multisampling |
 | [0035](./0035-books-is-a-settings-category.md) | `books` is a settings category, and the line is shape against shading |
 | [0036](./0036-printed-faces-are-decals.md) | The printed faces are decals, not floats |
+| [0037](./0037-ranking-does-not-reward-a-sparse-record.md) | Ranking scores brevity over the title alone, and breaks ties on completeness |

@@ -4,6 +4,7 @@ import {
   isValidIsbn,
   normaliseIsbn,
   normaliseTitleAuthor,
+  rankingScore,
   titleMatchScore,
 } from './identity.ts';
 
@@ -148,5 +149,41 @@ describe('titleMatchScore', () => {
 
   it('scores an unrelated title at zero', () => {
     expect(titleMatchScore('salt road ledger', 'Compilers for the Impatient')).toBe(0);
+  });
+});
+
+describe('rankingScore', () => {
+  it('does not reward a record for having no author', () => {
+    // The bug this function exists for: measuring brevity over title+author made
+    // an empty record beat its own richer twin, because the author's tokens read
+    // as padding against a title-only query.
+    const authored = rankingScore('12 Rules for Life', '12 Rules for Life', 'Jordan B. Peterson');
+    const empty = rankingScore('12 Rules for Life', '12 Rules for Life');
+    expect(authored).toBeGreaterThanOrEqual(empty);
+
+    // The old scoring, kept here as the thing that must not come back.
+    const authoredOld = titleMatchScore('12 Rules for Life', '12 Rules for Life Jordan B. Peterson');
+    const emptyOld = titleMatchScore('12 Rules for Life', '12 Rules for Life ');
+    expect(emptyOld).toBeGreaterThan(authoredOld);
+  });
+
+  it('still favours the named author when the query names one', () => {
+    const right = rankingScore('Staff Engineer Will Larson', 'Staff Engineer', 'Will Larson');
+    const wrong = rankingScore('Staff Engineer Will Larson', 'Staff Engineer', 'Someone Else');
+    expect(right).toBeGreaterThan(wrong);
+  });
+
+  it('still penalises a title padded with unrelated words', () => {
+    const exact = rankingScore('salt road ledger', 'The Salt Road Ledger', 'A N Other');
+    const padded = rankingScore(
+      'salt road ledger',
+      'The Salt Road Ledger and Other Long Stories',
+      'A N Other',
+    );
+    expect(exact).toBeGreaterThan(padded);
+  });
+
+  it('scores an unrelated title at zero', () => {
+    expect(rankingScore('salt road ledger', 'Compilers for the Impatient')).toBe(0);
   });
 });

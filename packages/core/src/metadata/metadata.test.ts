@@ -63,6 +63,38 @@ describe('fuzzy title search', () => {
   });
 });
 
+describe('two records of one book in one response', () => {
+  /**
+   * Open Library answers "12 Rules for Life" with the authored record *and* an
+   * empty twin carrying only a title and a Penguin ISBN. Ranking preferred the
+   * empty one — 2.0 against 1.914 — because scoring title and author as one
+   * string made the author's tokens read as padding against a title-only query.
+   *
+   * Google and Apple are mapped so a regression fails on the assertion below
+   * rather than on an unmapped URL: the losing path gap-fills, and a thrown
+   * "no fixture mapped" would hide *which* record won.
+   */
+  const sparseSibling = fixtureHttpGet({
+    '/search.json': 'open-library-search-sparse-sibling.json',
+    'googleapis.com': 'google-books-quota-exceeded.json',
+    'itunes.apple.com': '',
+  });
+
+  it('does not prefer a record for lacking an author', async () => {
+    const [best] = await lookup('12 Rules for Life', sparseSibling);
+
+    expect(best?.author).toBe('Jordan B. Peterson');
+    expect(best?.pages).toBe(480);
+  });
+
+  it('still keeps the summaries out', async () => {
+    // Three of the five captured docs are study guides. Preferring completeness
+    // must not become preferring whichever derivative is best documented.
+    const results = await lookup('12 Rules for Life', sparseSibling);
+    expect(results.every((book) => !/summary/i.test(book.title))).toBe(true);
+  });
+});
+
 describe('API miss', () => {
   it('treats Open Library’s empty-object miss as not-found, not as a hit', async () => {
     // The captured miss is `{}` with HTTP 200 — anything keying off status
