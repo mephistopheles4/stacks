@@ -15,6 +15,89 @@ const findsThinkingInSystems: HttpGet = async (url) =>
     ? { docs: [{ title: 'Thinking in Systems', author_name: ['Donella H. Meadows'] }] }
     : undefined;
 
+/**
+ * The real near-miss: no provider holds *Learning AI-Native Software
+ * Engineering*, and Open Library answers with a different book entirely.
+ */
+const answersWithADifferentBook: HttpGet = async (url) =>
+  url.includes('/search.json')
+    ? {
+        docs: [
+          {
+            // No `isbn`: one here would make Open Library synthesise a
+            // speculative cover URL, which `cacheCover` fetches for real — and
+            // G21 forbids a live call from the suite.
+            title: 'AI-Powered Software Engineering',
+            author_name: ['Dr. Monika Anand'],
+            number_of_pages_median: 189,
+          },
+        ],
+      }
+    : undefined;
+
+describe('addBook — is this the book that was asked for', () => {
+  let dir: string;
+  let vault: ObsidianAdapter;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'stacks-add-'));
+    vault = new ObsidianAdapter(dir);
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('refuses a near miss instead of writing it', async () => {
+    // This wrote a note for four authors nobody asked about, silently.
+    const result = await addBook(
+      'Learning AI-Native Software Engineering',
+      vault,
+      answersWithADifferentBook,
+    );
+
+    expect(result.kind).toBe('mismatch');
+    if (result.kind !== 'mismatch') return;
+    expect(result.found).toContain('AI-Powered Software Engineering');
+    expect(await vault.listBooks()).toHaveLength(0);
+  });
+
+  it('names the near miss, so a typo is distinguishable from an absent book', async () => {
+    const result = await addBook('Learning AI-Native Software', vault, answersWithADifferentBook);
+    expect(result.kind).toBe('mismatch');
+  });
+
+  it('--force writes it anyway', async () => {
+    const result = await addBook(
+      'Learning AI-Native Software Engineering',
+      vault,
+      answersWithADifferentBook,
+      { force: true },
+    );
+    expect(result.kind).toBe('added');
+    expect(await vault.listBooks()).toHaveLength(1);
+  });
+
+  it('still accepts a two-word title the provider returns with an author', async () => {
+    // The regression this guard nearly shipped: "staff engineer", "the charisma
+    // myth" and "Team Topologies" are two tokens once articles are stripped, so
+    // `isProbablySameBook` refuses all three — every one a correct result.
+    const findsTeamTopologies: HttpGet = async (url) =>
+      url.includes('/search.json')
+        ? { docs: [{ title: 'Team Topologies', author_name: ['Matthew Skelton'] }] }
+        : undefined;
+
+    const result = await addBook('Team Topologies', vault, findsTeamTopologies);
+    expect(result.kind).toBe('added');
+  });
+
+  it('still accepts a partial title', async () => {
+    // A search term is a fragment of a title, not a rival name for it.
+    const result = await addBook('thinking in systems', vault, findsThinkingInSystems);
+    expect(result.kind).toBe('added');
+  });
+});
+
 describe('addBook — duplicate reporting', () => {
   let dir: string;
   let vault: ObsidianAdapter;

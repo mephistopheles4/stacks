@@ -1,6 +1,11 @@
 import { cacheCover } from './covers/cache-cover.ts';
 import { coverKeys } from './covers/cover-keys.ts';
-import { isProbablySameBook, normaliseIsbn } from './identity.ts';
+import {
+  isProbablySameBook,
+  isValidIsbn,
+  normaliseIsbn,
+  normaliseTitleAuthor,
+} from './identity.ts';
 import { coverUrls, lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
 import type { BookInput, BookRecord, BookStatus } from './types.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
@@ -25,7 +30,14 @@ export type AddBookResult =
       /** True when the vault answered before any provider was asked. */
       readonly matchedBeforeLookup: boolean;
     }
-  | { readonly kind: 'not-found'; readonly term: string };
+  | { readonly kind: 'not-found'; readonly term: string }
+  | {
+      /** The providers answered, but with a different book. */
+      readonly kind: 'mismatch';
+      readonly term: string;
+      /** What came back, so the reader can see the near-miss and judge it. */
+      readonly found: string;
+    };
 
 /**
  * `stacks add` — the 30-second path from "I read this" to a note in the vault.
@@ -78,6 +90,42 @@ export async function addBook(
     };
   }
 
+  /**
+   * Is this the book that was asked for?
+   *
+   * `lookup` ranks; it does not refuse. Nothing here ever checked its answer
+   * against the question, so `stacks add "Learning AI-Native Software
+   * Engineering"` — a title no provider holds — wrote a note for *AI-Powered
+   * Software Engineering* by four different authors, silently. `enrich` has had
+   * this check since it was written; only `add` went without, which is the path
+   * that creates notes.
+   *
+   * **Last, after the duplicate checks.** A book already on the shelf is a
+   * duplicate whatever the term looked like, and that is the more useful answer:
+   * `"thinking in systems primer"` resolving to a shelved *Thinking in Systems*
+   * must say which book it already is, not refuse the term.
+   *
+   * An ISBN is proof of identity and skips the check, exactly as in `enrich`.
+   *
+   * **`isProbablySameBook` alone cannot do this job**, and measuring said so
+   * before this shipped: it refused *"staff engineer"*, *"the charisma myth"*
+   * and *"Team Topologies"* — three of twelve realistic searches, all correct
+   * results. Those titles are two tokens once articles are stripped, below
+   * `MIN_TOKENS`, so containment never runs and the scored rule fails on the
+   * weak direction. A guard that blocks a two-word title is worse than none.
+   *
+   * So identity is the first question and coverage is the second: **is what you
+   * typed present in what came back?** That is the right question for a search
+   * term, which is a fragment of a title rather than a rival name for it, and it
+   * is asymmetric where identity is not.
+   */
+  if (options.force !== true && !isValidIsbn(term)) {
+    const found = `${metadata.title} ${metadata.author ?? ''}`.trim();
+    if (!isProbablySameBook(term, found) && termCoverage(term, found) < TERM_COVERAGE) {
+      return { kind: 'mismatch', term, found };
+    }
+  }
+
   const cover = await cacheCover(coverUrls(metadata), metadata.title, vault);
 
   const book: BookInput = {
@@ -90,6 +138,33 @@ export async function addBook(
   };
 
   return { kind: 'added', path: await vault.writeBook(book), metadata };
+}
+
+/**
+ * How much of what was typed appears in what came back, from 0 to 1.
+ *
+ * Deliberately one-directional, and that is the whole point: a search term is a
+ * *fragment* of a title, so the candidate is expected to carry words the term
+ * does not. "nexus" against *Nexus: A Brief History of Information Networks*
+ * scores 1.0. The reverse question — is the candidate covered by the term —
+ * would refuse every partial search anyone actually types.
+ *
+ * **The boundary is measured, not derived, and it is narrow.** A term carrying
+ * a subtitle word the provider's record drops — `"thinking in systems primer"`
+ * against *Thinking in Systems* by Donella H. Meadows — scores **0.75** and is
+ * a correct result. The near miss that prompted all this, *Learning AI-Native
+ * Software Engineering* answered with *AI-Powered Software Engineering*, scores
+ * **0.6**; adding the author to the term scores **0.571**. So the line sits
+ * between 0.6 and 0.75, and anything stricter refuses real searches — 0.9 was
+ * tried first and an existing test caught it.
+ */
+const TERM_COVERAGE = 0.7;
+
+function termCoverage(term: string, candidate: string): number {
+  const wanted = normaliseTitleAuthor(term).split(' ').filter(Boolean);
+  const found = new Set(normaliseTitleAuthor(candidate).split(' ').filter(Boolean));
+  if (wanted.length === 0) return 0;
+  return wanted.filter((token) => found.has(token)).length / wanted.length;
 }
 
 /**
