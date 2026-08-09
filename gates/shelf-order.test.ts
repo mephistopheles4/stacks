@@ -18,7 +18,7 @@
  * that still needs a call from the owner. It asserts the current answer; if the
  * design changes, this file is the thing that should go red first.
  *
- * See docs/gates.md, row G12.
+ * See docs/gates.md, row G12 (shelf-order).
  */
 
 import { describe, expect, it } from 'vitest';

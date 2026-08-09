@@ -36,6 +36,37 @@ yet a gate."*
 | 🔴 | gate written, currently failing on a real defect |
 | ⬜ | no gate yet |
 
+### Every row has a number and a name
+
+`G19` is a stable identifier and tells you nothing. The **Name** column carries a
+kebab-case slug — `constitution-scoreboard`, `no-live-network` — and citations
+elsewhere spell both: *"See docs/gates.md, row G19 (constitution-scoreboard)."*
+Same convention as [`docs/adr/`](adr/), where a record is a number *and* a name
+for the same reason.
+
+**The number stays because it is the retirement mechanism.** A rule that stops
+applying keeps its number and its row, and the numbering is gapless so the hole
+is visible — see below. A name cannot encode absence: a deleted name leaves
+nothing behind, which is the one thing a reader of this file cannot reconstruct.
+
+**The slug is anchored, not a third name to maintain.** Where a row names
+exactly one `gates/*.test.ts` and no other row names that same spec, the slug
+**must equal** the file's stem, so moving a spec forces the name to move with
+it. That clause covers 23 of the 29 rows and self-exempts the rest without an
+allowlist: G5 (`vault-is-truth`) and G13 (`no-third-party-material`) share
+`repo-hygiene.test.ts`, so neither uniquely claims it, and G16, G18, G25 and G28
+name no `gates/` spec at all. Those six declare their slug.
+
+G19 asserts all of it — every row has a well-formed slug, no two rows share one,
+a derivable slug matches its stem, and every citation in the repo names a row by
+its **current** slug. That last one is the point: a name written down in twenty
+files and gated in none is exactly the second copy
+[ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md) is about.
+
+Bare `G8` mentions in ordinary prose stay bare. This file is full of them and
+forcing a slug onto each would make it worse to read while protecting nothing —
+the citation idiom is what a reader actually follows.
+
 ### Retiring a row
 
 **Mark it, do not delete it.** A rule that stops applying keeps its number and
@@ -49,28 +80,29 @@ absent row is not. This file is only useful if it is as easy to find what is
 
 ## Invariants → gates
 
-| Row | Rule | Source | Gate | Status |
-| --- | --- | --- | --- | --- |
-| **G1** | All vault access goes through the adapter | invariant 4 | `gates/adapter-boundary.test.ts` — an allowlist, each entry justified, each reverse-asserted | ✅ |
-| **G2** | Note bodies are private; a public build is coherent | invariant 2 | `gates/public-build.test.ts` — asserted against `publish()`'s output, see below | ✅ |
-| **G3** | Never crash on a bad note | invariant 3 | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind | ✅ |
-| **G4** | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
-| **G5** | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored | ✅ |
-| **G13** | No third-party material is committed, ever | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside two generated directories and four named brand files | ✅ |
-| **G14** | The documented commands are the commands that exist | CLAUDE.md "Commands" | `gates/commands.test.ts` — CLI subcommands and pnpm scripts, both directions | ✅ |
+| Row | Name | Rule | Source | Gate | Status |
+| --- | --- | --- | --- | --- | --- |
+| **G1** | `adapter-boundary` | All vault access goes through the adapter | invariant 4 | `gates/adapter-boundary.test.ts` — an allowlist, each entry justified, each reverse-asserted | ✅ |
+| **G2** | `public-build` | Note bodies are private; a public build is coherent | invariant 2 | `gates/public-build.test.ts` — asserted against `publish()`'s output, see below | ✅ |
+| **G3** | `bad-note` | Never crash on a bad note | invariant 3 | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind | ✅ |
+| **G4** | `hand-edited-notes` | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
+| **G5** | `vault-is-truth` | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored | ✅ |
+| **G13** | `no-third-party-material` | No third-party material is committed, ever | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside two generated directories and four named brand files | ✅ |
+| **G14** | `commands` | The documented commands are the commands that exist | CLAUDE.md "Commands" | `gates/commands.test.ts` — CLI subcommands and pnpm scripts, both directions | ✅ |
 
 ## Contract seams → gates
 
 A seam is a correspondence between two artifacts that nothing verifies. Red
 means the two have drifted.
 
-| Row | Seam | Failure mode | Gate | Status |
-| --- | --- | --- | --- | --- |
-| **G6** | site → `@stacks/core` | a *value* import drags `node:fs` and sharp into the browser bundle and **the shelf silently never boots** | `gates/site-core-imports.test.ts` | ✅ |
-| **G7** | logic in `.astro` | `.astro` files are not typechecked (`astro check` cannot run under TS 7), so nothing else can catch this | `gates/astro-no-logic.test.ts` | ✅ |
-| **G8** | frontmatter contract ↔ parser ↔ CLAUDE.md | a key the parser accepts but the contract never documents | `gates/frontmatter-contract.test.ts` | ✅ |
-| **G9** | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | `gates/env-contract.test.ts` | ✅ |
-| **G19** | the constitution ↔ this scoreboard | an invariant nothing scores, a row naming a moved file, a gate nobody recorded | `gates/constitution-scoreboard.test.ts` | ✅ |
+| Row | Name | Seam | Failure mode | Gate | Status |
+| --- | --- | --- | --- | --- | --- |
+| **G6** | `site-core-imports` | site → `@stacks/core` | a *value* import drags `node:fs` and sharp into the browser bundle and **the shelf silently never boots** | `gates/site-core-imports.test.ts` | ✅ |
+| **G7** | `astro-no-logic` | logic in `.astro` | `.astro` files are not typechecked (`astro check` cannot run under TS 7), so nothing else can catch this | `gates/astro-no-logic.test.ts` | ✅ |
+| **G8** | `frontmatter-contract` | frontmatter contract ↔ parser ↔ CLAUDE.md | a key the parser accepts but the contract never documents | `gates/frontmatter-contract.test.ts` | ✅ |
+| **G9** | `env-contract` | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | `gates/env-contract.test.ts` | ✅ |
+| **G19** | `constitution-scoreboard` | the constitution ↔ this scoreboard | an invariant nothing scores, a row naming a moved file, a gate nobody recorded | `gates/constitution-scoreboard.test.ts` | ✅ |
+| **G29** | `doc-links` | a document's links ↔ the file tree | a moved or renamed file leaves every route to it a dead end, and nothing says so | `gates/doc-links.test.ts` | ✅ |
 
 **G13 grew a second allowlisted directory when the README got a screenshot**,
 and that is the most dangerous kind of entry in this file: a *directory* is a
@@ -120,6 +152,17 @@ reads the rules instead of the outcome.
 described but the documented enumeration never listed. **G9 observed red** on
 `PORT`, read by `scripts/dev-watch.ts` and documented nowhere. Both fixed in the
 commit that added them.
+
+**The Name column arrived after the positional read had already been wrong
+once.** `invariantSourceCells` reached for `tableCells(line)[2]` — fine while
+the Invariants table had Source third, and quietly wrong the moment a column was
+inserted before it, because `[2]` on a shifted table returns a real string from
+the *Gate* cell rather than nothing. The citation check would then have asked
+the wrong column whether it mentions an invariant and kept passing. Columns are
+now found by reading the header row, and a missing header **throws naming the
+column** rather than returning `-1` and reporting "no invariant is cited" — the
+`markdownSection` argument one level further in. **Observed red both ways**, and
+the message names `Source` and `Name` respectively rather than the symptom.
 
 **G19 gates this file, which until it existed was the only unenforced thing in
 the repo.** Every gate here *mentioned* `docs/gates.md` — in a comment. Nothing
@@ -175,6 +218,64 @@ assertion to the cell that carries the claim, not to the row and never to the
 document* — and the constitution's article numbers are now held to the same
 uniqueness-and-no-gaps rule as these row numbers, which they were not before.
 
+**G29 exists because the documentation is a graph and nothing checked its
+edges.** `CLAUDE.md` routes a cold session to five files by link, every ADR
+links back here, and this file links out to the specs it scores — 174 local
+links across 73 tracked Markdown files. Until G29, the *only* link-shaped claim
+in the repo that could go red was G19's check that spec paths named in
+scoreboard rows resolve. Everything else was a route that worked because nobody
+had moved anything yet.
+
+It was written for the split of `docs/progress.md` into `docs/log/`, which is
+precisely the change that breaks routes: 17 files' worth of narrative leaving
+one document. Writing the gate **first**, running it green against the un-split
+tree, and only then splitting is what makes the split reviewable — anything red
+afterwards is something the split broke, rather than something that may have
+been broken for months.
+
+**No network, by construction.** `http(s):` and `mailto:` targets are skipped
+rather than fetched. Fetching would violate G21 and be flaky, and the failure
+this gate is for — a moved file — is entirely local. An external link checker is
+a different tool with a different failure mode and does not belong in `pnpm test`.
+
+**Observed red both ways, and one of them found a real design fault.** The
+file-existence half went red on its own accord: `docs/research/splitting-the-long-docs.md`
+describes the extraction this gate performs as `` `](./x.md)` ``, in inline
+code, and the first version read that as a route to a file that does not exist.
+Correct by the gate's own rules and wrong in substance — prose *quoting* a path
+is not a link to it, and a gate that cannot tell the difference makes
+documenting the gate an error. Fenced blocks were already blanked; inline spans
+now are too. The fragment half went red on a one-character typo planted in
+`docs/plan.md`'s link to `agents/issue-tracker.md#wayfinding-operations`, then
+reverted.
+
+**What the blanking costs was measured, not assumed.** Blanking inline code can
+in principle hide a *real* link — a line with mismatched backticks pairs the
+wrong two and swallows whatever sits between them, which would be a false green
+of exactly the kind this row exists to prevent. Measured across the tracked
+corpus by extracting with and without the pass and diffing: **the only links it
+hides are the `x.md` syntax examples in this file and in
+[`docs/research/splitting-the-long-docs.md`](research/splitting-the-long-docs.md)** —
+prose about the gate, in inline code, which is what the pass is for. No real
+link is hidden.
+
+Deliberately stated without totals. The first draft of this paragraph carried
+three exact counts and **two of them were false one edit later**, because the
+commentary above added another `x.md` example and moved the numbers it was
+describing. That is the defect this file already logs against itself — *"It said
+'four' for a while after there were five"* — reproduced inside the paragraph
+congratulating the gate on measuring rather than assuming. The count belongs in
+the gate's own vacuity floor, where it can go red, and that floor is set just
+under the real number rather than at a round order-of-magnitude guess: at 100
+half the corpus could stop being checked in silence.
+
+**That fragment link is the only one in the repo**, which is worth stating
+plainly: the fragment half of this gate guards one real edge and a future the
+split makes likely. The slug rule approximates GitHub's, and it approximates it
+in the safe direction — this repo's headings carry backticks, arrows and inline
+links, so a heading it slugifies differently produces a *false red*, never a
+false green.
+
 ## Defect gates
 
 Rows that exist because a specific defect got through — except **G17, G18 and
@@ -199,24 +300,24 @@ time the next free number was free right up until somebody else merged: what
 number a row will carry is not knowable until it lands. Loud is the most a
 paragraph can be; nothing here goes red on it.)
 
-| Row | Rule | Gate | Status |
-| --- | --- | --- | --- |
-| **G10** | one cover-path rule, one implementation | `gates/cover-path.test.ts` + `packages/core/src/covers/cover-path.test.ts` | ✅ |
-| **G11** | the two build modes differ only where documented | `gates/build-modes.test.ts` | ✅ |
-| **G12** | `shelf_order` semantics | `gates/shelf-order.test.ts` | ✅ characterized |
-| **G15** | what ships fits in a phone's graphics memory | `gates/cover-budget.test.ts` | ✅ |
-| **G16** | every book stays inside its own case | `pnpm smoke:render` | ✅ |
-| **G17** | a deploy publishes `main`, or says why not | `gates/deploy-branch.test.ts` | ✅ |
-| **G18** | a provider's bytes are bounded and are an image | `packages/core/src/covers/download.test.ts` | ✅ |
-| **G20** | one inspection of the folder about to be published | `gates/public-build-artifact.test.ts` | ✅ |
-| **G21** | no test makes a live network call | `gates/no-live-network.ts` + `gates/no-live-network.setup.ts`, specced by `gates/no-live-network.test.ts` | ✅ |
-| **G22** | one cover-preference rule, one implementation, right way round | `gates/cover-candidates.test.ts` + `packages/core/src/covers/cache-cover.test.ts` | ✅ |
-| **G23** | one absent-key helper, one implementation, under any name | `gates/key-if-present.test.ts` + `packages/core/src/key-if-present.test.ts` | ✅ |
-| **G24** | one repo root, one derivation | `gates/repo-root.test.ts` | ✅ |
-| **G25** | the packer's capacity and the placer's consumption are one number | `packages/site/src/shelf/shelf-width.test.ts` + `packages/site/src/shelf/books.test.ts` | ✅ |
-| **G26** | a lookup finds books the providers demonstrably have — and still refuses the ones they do not | `gates/lookup-recall.test.ts` + `gates/recall-corpus.ts`, replayed from `fixtures/api/lookup-recall.json` | ✅ |
-| **G27** | a command's report accounts for every book it counted | `gates/enrich-report.test.ts`, over `packages/cli/src/enrich-report.ts` | ✅ |
-| **G28** | no book's board passes through its neighbour's | `packages/site/src/shelf/placement.test.ts` | ✅ |
+| Row | Name | Rule | Gate | Status |
+| --- | --- | --- | --- | --- |
+| **G10** | `cover-path` | one cover-path rule, one implementation | `gates/cover-path.test.ts` + `packages/core/src/covers/cover-path.test.ts` | ✅ |
+| **G11** | `build-modes` | the two build modes differ only where documented | `gates/build-modes.test.ts` | ✅ |
+| **G12** | `shelf-order` | `shelf_order` semantics | `gates/shelf-order.test.ts` | ✅ characterized |
+| **G15** | `cover-budget` | what ships fits in a phone's graphics memory | `gates/cover-budget.test.ts` | ✅ |
+| **G16** | `books-in-case` | every book stays inside its own case | `pnpm smoke:render` | ✅ |
+| **G17** | `deploy-branch` | a deploy publishes `main`, or says why not | `gates/deploy-branch.test.ts` | ✅ |
+| **G18** | `bounded-cover-bytes` | a provider's bytes are bounded and are an image | `packages/core/src/covers/download.test.ts` | ✅ |
+| **G20** | `public-build-artifact` | one inspection of the folder about to be published | `gates/public-build-artifact.test.ts` | ✅ |
+| **G21** | `no-live-network` | no test makes a live network call | `gates/no-live-network.ts` + `gates/no-live-network.setup.ts`, specced by `gates/no-live-network.test.ts` | ✅ |
+| **G22** | `cover-candidates` | one cover-preference rule, one implementation, right way round | `gates/cover-candidates.test.ts` + `packages/core/src/covers/cache-cover.test.ts` | ✅ |
+| **G23** | `key-if-present` | one absent-key helper, one implementation, under any name | `gates/key-if-present.test.ts` + `packages/core/src/key-if-present.test.ts` | ✅ |
+| **G24** | `repo-root` | one repo root, one derivation | `gates/repo-root.test.ts` | ✅ |
+| **G25** | `one-usable-width` | the packer's capacity and the placer's consumption are one number | `packages/site/src/shelf/shelf-width.test.ts` + `packages/site/src/shelf/books.test.ts` | ✅ |
+| **G26** | `lookup-recall` | a lookup finds books the providers demonstrably have — and still refuses the ones they do not | `gates/lookup-recall.test.ts` + `gates/recall-corpus.ts`, replayed from `fixtures/api/lookup-recall.json` | ✅ |
+| **G27** | `enrich-report` | a command's report accounts for every book it counted | `gates/enrich-report.test.ts`, over `packages/cli/src/enrich-report.ts` | ✅ |
+| **G28** | `no-board-collisions` | no book's board passes through its neighbour's | `packages/site/src/shelf/placement.test.ts` | ✅ |
 
 **G21 is the first row here written for a rule that two files already claimed
 was true.** `CLAUDE.md`'s Phase 1 gate says "use cached API fixtures, no live
@@ -1074,6 +1175,7 @@ request — which then has to pass everything above like any other change.
 | Changed-lines floor (diff-cover) | One contributor; it would be noise. |
 | Mutation testing (Stryker) | Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green. |
 | Article XI-style residency rules | No infrastructure; nothing to pin. |
+| GitHub repository settings | Dependabot alerts, malware alerts, grouped security updates, branch protection. They live outside the tree, so nothing in a clone can read them — and a gate that asked GitHub would need the network, which **G21 (`no-live-network`) forbids for the whole suite**. Listed in `SECURITY.md` as relied upon and unverifiable, which is the most this repo can honestly say about them. |
 
 ## What building these gates taught
 

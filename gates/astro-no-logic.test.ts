@@ -39,7 +39,7 @@
  * exact count because the honest boundary is "a bootstrap, not a program", and
  * a bootstrap that grows a third element is still a bootstrap.
  *
- * See docs/gates.md, row G7.
+ * See docs/gates.md, row G7 (astro-no-logic).
  */
 
 import { describe, expect, it } from 'vitest';

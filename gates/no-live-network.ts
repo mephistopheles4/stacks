@@ -59,7 +59,7 @@ export function urlOf(input: unknown): string {
 export function refusalMessage(url: string): string {
   return (
     `Live network call to ${url}\n` +
-    'Tests must not touch the network — see docs/gates.md, row G21. Stub it:\n' +
+    'Tests must not touch the network — see docs/gates.md, row G21 (no-live-network). Stub it:\n' +
     "  vi.stubGlobal('fetch', vi.fn(async () => new Response(…)))\n" +
     'packages/core/src/covers/download.test.ts is the worked example.'
   );

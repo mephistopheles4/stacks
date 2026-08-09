@@ -18,7 +18,7 @@
  * project keeps finding. The final test then asserts the corpus reaches all
  * three kinds, so the property survives someone pruning a case later.
  *
- * See docs/gates.md, row G3.
+ * See docs/gates.md, row G3 (bad-note).
  */
 
 import { describe, expect, it } from 'vitest';

@@ -41,7 +41,7 @@ data that cannot change without a redeploy.
   pasted back and reproduce what you saw.
 
 `toSettingsPatch` is the one place they meet. This is the same shape
-`docs/progress.md` records under "Cover acquisition — G22": `writeBook` speaks
+[Cover acquisition — G22](../log/2026-08-03-cover-acquisition-g22.md) records: `writeBook` speaks
 the domain (`coverSource`), `updateBook` speaks the file (`cover_source`), and
 letting the boundary show in one named place beat collapsing the vocabularies.
 

@@ -7,7 +7,7 @@
  * the other way, and it sends whoever reads the file hunting for a setting that
  * does nothing.
  *
- * See docs/gates.md, row G9.
+ * See docs/gates.md, row G9 (env-contract).
  */
 
 import { describe, expect, it } from 'vitest';

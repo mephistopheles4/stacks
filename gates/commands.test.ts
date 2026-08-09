@@ -11,7 +11,7 @@
  * command is invisible, and a documented one that no longer exists sends
  * whoever trusted the file chasing something that was deleted.
  *
- * See docs/gates.md, row G14.
+ * See docs/gates.md, row G14 (commands).
  */
 
 import { describe, expect, it } from 'vitest';

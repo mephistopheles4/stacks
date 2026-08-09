@@ -41,6 +41,11 @@ In the **same commit** as the work:
 - `docs/progress.md` — flip the gate row to ✅ with its commit ref, update the
   "Current state" table, add any new environment findings. Keep it an index;
   do not restate the plan there.
+- `docs/log/<date>-<slug>.md` — **one file per investigation**, if this phase
+  produced a narrative worth keeping: what broke, what was measured, what it
+  cost. Add one line to the "The log" index in `docs/progress.md` and leave the
+  narrative here. Appending it to `progress.md` instead is what took that file
+  to 1551 lines; `gates/doc-links.test.ts` keeps the links honest.
 - `docs/adr/` — a record for any decision made this phase that
   the brief left open: library choices, API quirks, workarounds, and **every new
   dependency with its reason**. Append-only, dated.

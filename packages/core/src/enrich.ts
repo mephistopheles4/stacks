@@ -35,7 +35,7 @@ export interface EnrichOptions {
  * add up.** `complete` meant both *nothing was missing* and *something was
  * missing and none of it could be filled* — and the CLI, having no way to tell
  * them apart, said nothing about either. A book could be counted in "6 with
- * gaps" and appear in no line and no total. See docs/gates.md, row G27.
+ * gaps" and appear in no line and no total. See docs/gates.md, row G27 (enrich-report).
  *
  * So `complete` now means only the first, and `unfilled` means the second.
  *

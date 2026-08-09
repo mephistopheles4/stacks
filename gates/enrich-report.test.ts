@@ -24,7 +24,7 @@
  * reverting `enrich.ts`'s `unfilled` return to `complete` turns two of the five
  * books below into "nothing was missing" and fails the second test.
  *
- * See docs/gates.md, row G27.
+ * See docs/gates.md, row G27 (enrich-report).
  */
 
 import { mkdtemp, rm } from 'node:fs/promises';

@@ -16,18 +16,12 @@
  * easiest possible way to create a legal problem, and nothing but this would
  * notice.
  *
- * See docs/gates.md, rows G5 and G13.
+ * See docs/gates.md, rows G5 (vault-is-truth) and G13 (no-third-party-material).
  */
 
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { expectFound, REPO_ROOT } from './repo.ts';
-
-/** Everything git is actually tracking, as repo-relative POSIX paths. */
-function trackedFiles(): string[] {
-  const out = execFileSync('git', ['ls-files'], { cwd: REPO_ROOT, encoding: 'utf8' });
-  return out.split('\n').filter((line) => line.length > 0);
-}
+import { expectFound, REPO_ROOT, trackedFiles } from './repo.ts';
 
 function isIgnored(path: string): boolean {
   try {

@@ -13,7 +13,7 @@
  *   3. a key outside the contract still parses and is still ignored, which is
  *      invariant 5 and must not be broken by tightening the other two.
  *
- * See docs/gates.md, row G8.
+ * See docs/gates.md, row G8 (frontmatter-contract).
  */
 
 import { describe, expect, it } from 'vitest';

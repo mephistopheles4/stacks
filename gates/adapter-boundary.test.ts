@@ -28,7 +28,7 @@
  * purpose — G4 could not test the adapter without one. Widening the scan to
  * `gates/` would detonate on the gates themselves.
  *
- * See docs/gates.md, row G1.
+ * See docs/gates.md, row G1 (adapter-boundary).
  */
 
 import { existsSync } from 'node:fs';

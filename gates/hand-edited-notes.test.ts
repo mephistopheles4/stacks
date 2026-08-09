@@ -24,7 +24,7 @@
  * `packages/` and `scripts/`. G1 deliberately does not scan `gates/`: testing a
  * thing that writes to disk requires a disk.
  *
- * See docs/gates.md, row G4.
+ * See docs/gates.md, row G4 (hand-edited-notes).
  */
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';

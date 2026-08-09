@@ -107,5 +107,16 @@ you can ignore.
 
 ## Reporting something you cannot fix
 
-Open an issue with what you saw and what you expected. If it is a security
-issue, see [`SECURITY.md`](SECURITY.md) instead — don't open a public issue.
+Open an issue with what you saw and what you expected. There are two forms —
+a defect and an idea — and every field on both is optional except the first.
+A blank issue is still available and still a perfectly good issue.
+
+If it is a security issue, see [`SECURITY.md`](SECURITY.md) instead — don't open
+a public issue.
+
+## Conduct
+
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) — Contributor Covenant 2.1,
+unmodified apart from the contact address and a note about what a single
+maintainer can and cannot escalate. Reports go to the address in that file, not
+to the issue tracker.
