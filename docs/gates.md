@@ -1167,6 +1167,53 @@ Separately, and not a gate: **Dependabot alerts** and **security updates** are
 enabled on the repository, so a vulnerable dependency also arrives as a pull
 request — which then has to pass everything above like any other change.
 
+## Triaging a CodeQL finding
+
+CodeQL reports alongside the gates rather than blocking a merge, so its output
+is evidence and this file decides what to do with it. The first batch was 12
+alerts, all rated **high**, of which one was a real bug — a ratio worth
+expecting rather than being surprised by.
+
+**Read what the rule is for before reading its severity.** Most of CodeQL's
+JavaScript rules assume a server handling untrusted input. This is a local CLI
+and a static site: the severity is calibrated for someone else's threat model,
+and `SECURITY.md` states this one.
+
+Three questions, in order:
+
+1. **Is the flagged code a security boundary here?** `js/insufficient-password-hash`
+   fired on the SHA-256 that names a cache file after a URL. There is no
+   account, no database and no authentication anywhere in this project, so
+   there is no credential for a password-hashing rule to apply to. Dismissed as
+   a false positive.
+2. **If it is in a gate, is the real question vacuity?** A rule complaining that
+   an extractor's regex is approximate is asking "what if it matches nothing" —
+   which this repo already answers with `expectFound`. `js/bad-tag-filter` fired
+   on `SCRIPT_BLOCK` in `gates/astro-no-logic.test.ts`; the miss it warns about
+   throws at line 135, whose comment named that exact scenario years before
+   CodeQL saw it. Fixing it properly means an HTML parser dependency, in the
+   gates layer, for a file format that is not HTML, to protect against a
+   first-party commit. Dismissed as used-in-tests. **The tempting half-fix —
+   tweaking the regex until the alert clears while it stays just as
+   approximate — is the worst outcome available**, because it buys the
+   appearance of a fix.
+3. **Is it worth fixing anyway, for a reason that is not security?** Usually
+   yes, and this is where the value has actually been. `js/polynomial-redos` on
+   `safeFilename` was real: bounding the input fixed the backtracking *and* a
+   truncation bug nobody had noticed, where the 120-character cap ran after the
+   trailing-dot strip and could put a dot back on the end of a Windows filename.
+   The nine `js/incomplete-url-substring-sanitization` hits were test-only and
+   still worth fixing, because `url.includes('googleapis.com')` does not assert
+   what the test claims to assert.
+
+**A dismissal carries its reasoning in the dismissal comment**, not only here —
+the next person meets the alert, not this file. And a fix earns a test that goes
+red against the old code like any other: both `safeFilename` tests were observed
+red, and the ReDoS one was **green on its first draft** at 60k dots, because the
+cost is quadratic and that size lands under its own threshold. It was measured
+and raised to 200k. A test written against a defect it cannot reproduce is the
+oldest failure in this file.
+
 ## Not gated, deliberately
 
 | | Why |

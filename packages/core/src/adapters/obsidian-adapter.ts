@@ -216,14 +216,35 @@ function renderNote(book: BookInput): string {
   return `---\n${yaml}\n---\n\n${embed}## Notes\n\n`;
 }
 
-/** Conservative: strips what Windows, macOS and Obsidian each dislike. */
+/**
+ * Conservative: strips what Windows, macOS and Obsidian each dislike.
+ *
+ * **The length cap comes before the trailing-character strip**, and the order
+ * is load-bearing twice over.
+ *
+ * It was the other way round, which left a real hole: stripping trailing dots
+ * from the *whole* title and only then cutting to 120 can put the cut in the
+ * middle, so a long title with a dot at position 120 produced a name ending in
+ * `.` — exactly what the strip exists to prevent, and a name Windows will not
+ * store faithfully. The same is true of a space landing on the boundary, which
+ * is why both are stripped together now rather than relying on the earlier
+ * `trim()` that runs before the cut.
+ *
+ * It also bounds the input to `/[.\s]+$/`. That anchored `+` backtracks
+ * polynomially on a string of many dots, and a title arrives from a
+ * hand-edited note or a provider response — CodeQL's `js/polynomial-redos`
+ * found it. Nothing here is a security boundary, since it is a local CLI
+ * spending its own CPU, but 120 characters is a cheap ceiling and the
+ * reordering was worth doing for the truncation bug regardless.
+ */
 function safeFilename(title: string): string {
   const cleaned = title
     .replace(/[\\/:*?"<>|#^[\]]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
-    .replace(/\.+$/, '');
-  return cleaned.length > 0 ? cleaned.slice(0, 120) : 'Untitled';
+    .slice(0, 120)
+    .replace(/[.\s]+$/, '');
+  return cleaned.length > 0 ? cleaned : 'Untitled';
 }
 
 async function exists(path: string): Promise<boolean> {
