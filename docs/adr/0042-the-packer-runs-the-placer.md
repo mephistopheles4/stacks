@@ -134,6 +134,25 @@ It is a ceiling now — `separator(last) + gap + footprint + WORST_CLEARANCE`,
 every term at its worst, derived from the geometry rather than read off the
 cursor.
 
+⚠️ **That ceiling was then wrong too, in the way this project has now got wrong
+four times.** `WORST_CLEARANCE` charged the angle-change branch at `MAX_LEAN`.
+That branch spends `Math.max(sway, left.sway)`, and `left.lean` is a *run* lean —
+a run beginning on a book propped across a year gap carries the prop angle to
+every spine behind it. The reachable swing is `swayOf(MAX_HEIGHT,
+MAX_PROP_LEAN)` = 0.1175, against 0.0263. Under half.
+
+Green on all five fixtures, and on the owner's own shelf **by 0.0023**. A third
+independent verifier swept 5,940 configurations of cover aspect, page count and
+face-out position at the shipped `paperbackRatio` and found 375 that fail; one is
+a fixture now. `min(ceiling − trueNeed)` went from **−0.0388** to **+0.0493**,
+and the owner's shelf from +0.0023 to +0.0904.
+
+The lesson is not "check the constant". `case.ts`, `placement.ts` and
+`gates.md` each already record `MAX_LEAN`-where-`MAX_PROP_LEAN`-belongs, in
+those words. It was written a fourth time by someone who had just read all three.
+What actually caught it was a sweep over the parameter space rather than another
+reading — and what keeps it caught is the fixture, not the paragraph.
+
 **Making it sound cost the sharpness, and that is the honest trade.** The floor
 version detected a δ = 0.0003 cursor over-spend; the ceiling version needs one
 big enough to move a book between rows, so G25's floor is now the cost model's

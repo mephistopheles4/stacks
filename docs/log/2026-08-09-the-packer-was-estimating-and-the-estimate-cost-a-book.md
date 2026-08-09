@@ -44,6 +44,19 @@ row G25 (`one-usable-width`), already records twice, committed a third time in
 the same file, one commit later. It was green on all six fixtures, as its two
 predecessors had been.
 
+**And the fix for that was wrong in turn.** The ceiling it replaced the floor
+with charged the angle-change branch at `MAX_LEAN`, where a run that begins on a
+propped book carries `MAX_PROP_LEAN` to every spine behind it — under half the
+real worst case. Green on all five fixtures and on the owner's own shelf **by
+0.0023**. A third verifier swept 5,940 configurations and found 375 that fail;
+`min(ceiling − trueNeed)` was **−0.0388**. It is +0.0493 now, and one of those
+configurations is a fixture so the constant cannot go back.
+
+That is the same `MAX_LEAN`-for-`MAX_PROP_LEAN` mistake `case.ts`,
+`placement.ts` and `gates.md` each already record in those words — written a
+fourth time by someone who had just read all three. Reading did not catch it; a
+sweep over the parameter space did.
+
 **Three numbers, three corrections, none from running the suite.** The claimed
 detection floor went 0.0003 → withdrawn → 0.0055, the last one bisected after the
 assertion became sound; making it sound cost the sharpness, and the honest floor

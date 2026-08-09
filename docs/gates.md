@@ -1044,6 +1044,37 @@ taken from the book the cursor is *leaving* rather than the one it is arriving
 at — reading it off `next` understated the cost by 0.014 for every face-out book
 followed by a spine.
 
+⚠️⚠️ **And then `WORST_CLEARANCE` itself was `MAX_LEAN` where it had to be
+`MAX_PROP_LEAN` — this row's own oldest mistake, made a fourth time, three
+paragraphs after writing it down.** The angle-change branch spends
+`Math.max(sway, left.sway)`, and `left.lean` is a *run* lean: a run that begins
+on a book propped across a year gap hands that angle to every spine behind it. So
+the swing reachable there is `swayOf(MAX_HEIGHT, MAX_PROP_LEAN)` = 0.1175 against
+the 0.0263 `MAX_LEAN` allows, and the ceiling was under half the real worst case.
+
+**It was green on all five fixtures, and on the owner's own shelf by 0.0023.**
+An independent verifier swept cover aspect, page count and face-out position
+against the shipped `paperbackRatio` — 5,940 configurations — and found 375 that
+fail. The margin, `min(ceiling − trueNeed)` over every boundary:
+
+| library | `MAX_LEAN` | `MAX_PROP_LEAN` |
+| --- | --- | --- |
+| `mixed` | +0.0518 | +0.1399 |
+| `alternating` | +0.0347 | +0.1227 |
+| the owner's real vault | **+0.0023** | +0.0904 |
+| `squareCoverAfterProp` | **−0.0388** | +0.0493 |
+
+`squareCoverAfterProp` is a fixture now — every book its own year so every run
+inherits a prop angle, and one face-out book with an audiobook's square cover
+landing against it at 11.9°. **The packer is correct on it**: it turned the next
+book away by 0.00023, both decision assertions pass, and only the outcome one
+went red. That is what makes this an unsoundness rather than a caught defect.
+Observed red with `MAX_LEAN` restored and green with `MAX_PROP_LEAN`, so the
+constant cannot quietly go back.
+
+The detection floor is unchanged at 0.005 green / 0.0055 red — it belongs to the
+cost model, which does not read `WORST_CLEARANCE`.
+
 **Observed red, and the detection floors are measured, not assumed.** Bisected on
 `cursor += entry.thickness + TOUCHING + δ`, the shelved branch:
 

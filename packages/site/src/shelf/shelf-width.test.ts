@@ -127,6 +127,31 @@ const LIBRARIES: Record<string, LibraryBook[]> = {
   ),
   /** A single book, and a single row. */
   one: [book('only')],
+  /**
+   * A square cover arriving on a run that inherited a propped lean.
+   *
+   * **The case that caught `WORST_CLEARANCE` charging `MAX_LEAN`.** Every book
+   * its own year, so every run begins on a book propped across a gap and carries
+   * that angle — 11.9° at the boundary that matters — and then one face-out book
+   * with an audiobook's square cover lands against it. The angle-change branch
+   * spends `swayOf(left.height, 0.208)` there, which is more than twice what a
+   * ceiling built on `MAX_LEAN` allowed.
+   *
+   * The packer is *correct* on this library — it turned the next book away by
+   * 0.00023 — which is what made it an unsoundness rather than a caught bug: the
+   * two decision assertions pass and only the outcome one went red.
+   *
+   * Every number here is load-bearing and was found by sweep, not chosen: 627
+   * pages, aspect 1.0, face-out at index 16, against the shipped
+   * `paperbackRatio`. Change any of them and this stops being the case it is for.
+   */
+  squareCoverAfterProp: Array.from({ length: 60 }, (_, index) =>
+    book(`year-${String(index)}`, {
+      finished: `${String(2025 - index)}-06-01`,
+      pages: 627,
+      ...(index === 16 ? { faceOut: true, coverAspect: 1.0 } : {}),
+    }),
+  ),
 };
 
 /**
@@ -236,7 +261,7 @@ function charged(row: ShelfRow): number {
  * `leaves a row no slack a book could have used`, which is the one assertion
  * here with a cursor-free number on one side. Beyond all of them is G16: only
  * `pnpm smoke:render` measures a rendered scene against the case's real inner
- * faces, which is why ADR-0040 names it as the backstop rather than this file.
+ * faces, which is why ADR-0042 names it as the backstop rather than this file.
  */
 const ROW_END = -SHELF.width / 2 + USABLE_WIDTH;
 
@@ -528,7 +553,8 @@ describe('the packer honours its own capacity', () => {
  * Both branches the cursor can take, at their worst and taken together rather
  * than as a `max`, because this only has to be no smaller than the real one:
  *
- * - **the angle changes** — one maximal swing, `swayOf(MAX_HEIGHT, MAX_LEAN)`;
+ * - **the angle changes** — one maximal swing,
+ *   `swayOf(MAX_HEIGHT, MAX_PROP_LEAN)`;
  * - **it does not** — one maximal parallel push.
  *
  * A propped book across a year gap is the third branch and needs nothing here:
@@ -538,8 +564,21 @@ describe('the packer honours its own capacity', () => {
  * Derived from the geometry rather than read off the cursor, for the reason
  * `THICKEST_SPINE` is a restated literal — a ceiling computed by the thing it
  * is bounding cannot fail.
+ *
+ * ⚠️ **`MAX_PROP_LEAN`, not `MAX_LEAN`, and it shipped as `MAX_LEAN` — which is
+ * the mistake the bottom of this file already records, one constant later.**
+ * The angle-change branch spends `Math.max(sway, left.sway)`, and `left.lean` is
+ * a *run* lean: a run that began on a book propped across a year gap carries the
+ * prop angle to every spine behind it. So the swing reachable there is
+ * `swayOf(MAX_HEIGHT, MAX_PROP_LEAN)` = 0.1175, against the 0.0263 `MAX_LEAN`
+ * allows — the ceiling was under half the real worst case.
+ *
+ * It was green on all five fixtures and on the owner's own shelf, which cleared
+ * it by **0.0023**. `squareCoverAfterProp` below is the case that does not, found
+ * by sweeping cover aspect, page count and face-out position against the shipped
+ * `paperbackRatio`; it is a fixture now so this constant cannot quietly go back.
  */
-const WORST_CLEARANCE = swayOf(MAX_HEIGHT, MAX_LEAN) + WORST_PARALLEL_PUSH;
+const WORST_CLEARANCE = swayOf(MAX_HEIGHT, MAX_PROP_LEAN) + WORST_PARALLEL_PUSH;
 
 describe('where a row starts and where it stops', () => {
   it.each(CASES)('starts flush against the left upright — %s', (_name, library) => {
