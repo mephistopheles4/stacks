@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
 import { MAX_HEIGHT, MIN_HEIGHT, toRows, type ShelfRow } from './books.ts';
-import { USABLE_WIDTH } from './case.ts';
-import { rowCost } from './placement.ts';
+import { SHELF, USABLE_WIDTH } from './case.ts';
+import { rowExtent } from './placement.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
 
 /**
@@ -64,11 +64,19 @@ describe('toRows', () => {
     );
 
     expect(rows.length).toBeGreaterThan(1);
-    for (const row of rows) {
-      // One book always fits, however wide: a row is only wrapped when it
-      // already holds something.
-      if (row.books.length > 1) expect(rowCost(row.books)).toBeLessThanOrEqual(USABLE_WIDTH);
-    }
+    rows.forEach((row, index) => {
+      // Where the row's last book actually ends, not what a model of it costs.
+      //
+      // ⚠️ **This is the packer's own smoke check, and it is weaker than the line
+      // it replaced.** That line read `rowCost(row.books) <= USABLE_WIDTH` — an
+      // independent model, bounding the row from outside the placer. `rowExtent`
+      // is what `fitsRow` wraps, so a cursor that over-spends moves the wrap and
+      // this measurement together and nothing here notices. G25 states that
+      // rationale in full and carries the assertions that do notice; this one
+      // exists so a packer that stops wrapping *at all* fails in the packer's own
+      // file, next to the tests for what it is packing.
+      expect(rowExtent(row.books, index)).toBeLessThanOrEqual(-SHELF.width / 2 + USABLE_WIDTH + 1e-12);
+    });
   });
 
   it('opens a gap where the year changes, and counts it against the capacity', () => {

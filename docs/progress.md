@@ -166,6 +166,7 @@ episodes were written up out of sequence; they are listed by date here, so
 - 2026-08-08 — [The update that reported success and changed nothing](./log/2026-08-08-the-update-that-reported-success-and-changed-nothing.md)
 - 2026-08-08 — [The gaps the owner had always noticed](./log/2026-08-08-the-gaps-the-owner-had-always-noticed.md)
 - 2026-08-08 — [The collisions, and the gate that can finally see them](./log/2026-08-08-the-collisions-and-the-gate-that-can-finally-see-them.md)
+- 2026-08-09 — [The packer was estimating, and the estimate cost a book a row](./log/2026-08-09-the-packer-was-estimating-and-the-estimate-cost-a-book.md) — map [#78](https://github.com/mephistopheles4/stacks/issues/78)
 
 ## Notes to the next session
 
