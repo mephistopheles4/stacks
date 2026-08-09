@@ -11,6 +11,26 @@ import { lookup, lookupByIsbn, searchByTitle } from './index.ts';
  * rather than quietly passing down the not-found path.
  */
 
+/**
+ * Exact host match, rather than a substring test on the whole URL.
+ *
+ * A substring test answers "does this string contain those characters", which
+ * is not the question any assertion here is asking — `evil.com/?x=googleapis.com`
+ * satisfies it, and so does a URL pointing at `googleapis.com.example.net`.
+ * Flagged nine times by CodeQL's `js/incomplete-url-substring-sanitization`.
+ *
+ * Nothing malicious is going to turn up in a fixture map, so this is not a
+ * security fix; it is an assertion that says what it means. A test claiming
+ * "Google was consulted" should fail if the request went somewhere else whose
+ * URL merely mentions Google, because that is the bug it exists to catch.
+ */
+function isHost(url: string, host: string): boolean {
+  return new URL(url).hostname === host;
+}
+
+const GOOGLE_BOOKS = 'www.googleapis.com';
+const OREILLY = 'learning.oreilly.com';
+
 const openLibraryHit = fixtureHttpGet({
   '/api/books': 'open-library-isbn-hit.json',
   '/search.json': 'open-library-search-hit.json',
@@ -119,7 +139,7 @@ describe("O'Reilly, for the books the other three do not have", () => {
     };
 
     await lookupByIsbn('9798341674738', spy);
-    const oreilly = seen.find((url) => url.includes('learning.oreilly.com'));
+    const oreilly = seen.find((url) => isHost(url, OREILLY));
     expect(oreilly).toContain('query=9798341674738');
     expect(oreilly).toContain('field=isbn');
   });
@@ -152,7 +172,7 @@ describe("O'Reilly, for the books the other three do not have", () => {
     };
 
     await searchByTitle('anything at all', spy);
-    const oreilly = seen.find((url) => url.includes('learning.oreilly.com'));
+    const oreilly = seen.find((url) => isHost(url, OREILLY));
     expect(oreilly).toContain('formats=book');
   });
 
@@ -166,7 +186,7 @@ describe("O'Reilly, for the books the other three do not have", () => {
     };
 
     await searchByTitle('thinking in systems', watched);
-    expect(seen.some((url) => url.includes('learning.oreilly.com'))).toBe(false);
+    expect(seen.some((url) => isHost(url, OREILLY))).toBe(false);
   });
 });
 
@@ -233,7 +253,7 @@ describe('API miss', () => {
 
     seen.length = 0;
     await searchByTitle('anything', spy, { googleBooksKey: 'abc 123' });
-    const google = seen.find((url) => url.includes('googleapis.com'));
+    const google = seen.find((url) => isHost(url, GOOGLE_BOOKS));
     expect(google).toContain('key=abc%20123');
   });
 
@@ -242,7 +262,7 @@ describe('API miss', () => {
     // chain stopped at the first provider and the book got a blank spine even
     // though Google had the cover.
     const get: HttpGet = async (url) =>
-      url.includes('googleapis.com')
+      isHost(url, GOOGLE_BOOKS)
         ? {
             items: [
               {
@@ -271,7 +291,7 @@ describe('API miss', () => {
     // as readily as with art. Treating it as a real cover made the record look
     // complete, so the fallback was never asked and the book got nothing.
     const get: HttpGet = async (url) =>
-      url.includes('googleapis.com')
+      isHost(url, GOOGLE_BOOKS)
         ? {
             items: [
               {
@@ -302,7 +322,7 @@ describe('API miss', () => {
 
   it('keeps the guessed cover when the fallback has nothing better', async () => {
     const get: HttpGet = async (url) =>
-      url.includes('googleapis.com')
+      isHost(url, GOOGLE_BOOKS)
         ? { items: [] }
         : { docs: [{ title: 'Obscure Book', author_name: ['A N Other'], isbn: ['9781000000016'] }] };
 
@@ -314,7 +334,7 @@ describe('API miss', () => {
   it('refuses a cover from a book that is not the same book', async () => {
     // A cover borrowed from the wrong edition is worse than no cover at all.
     const get: HttpGet = async (url) =>
-      url.includes('googleapis.com')
+      isHost(url, GOOGLE_BOOKS)
         ? {
             items: [
               {
@@ -340,7 +360,7 @@ describe('API miss', () => {
     };
 
     await lookup(CAPTURED_ISBN, get);
-    expect(seen.some((url) => url.includes('googleapis.com'))).toBe(false);
+    expect(seen.some((url) => isHost(url, GOOGLE_BOOKS))).toBe(false);
   });
 
   it('survives a reader that fails outright', async () => {

@@ -183,6 +183,57 @@ describe('writeBook', () => {
     expect(basename(path)).toBe('Who What Why Yes.md');
     expect(await readFile(path, 'utf8')).toContain('Who? What: Why*  <Yes>');
   });
+
+  it('ends a truncated filename on a real character, not a dot or a space', async () => {
+    // The 120-character cap used to run *after* trailing dots were stripped, so
+    // the cut could land on one and put it back. Windows will not store a name
+    // ending in `.` or ` ` faithfully — it silently drops them — which is the
+    // whole reason the strip exists, defeated by doing it in the wrong order.
+    //
+    // Found by CodeQL's js/polynomial-redos on the same line: capping the input
+    // before the anchored `+` fixes the backtracking, and fixes this.
+    const writable = new ObsidianAdapter(dir);
+
+    // A distinct leading letter per case: `writeBook` never overwrites, so two
+    // titles truncating to the same name would collide and the second would
+    // come back with a numeric suffix — passing or failing for the wrong reason.
+    for (const [lead, boundary] of [
+      ['a', '.'],
+      ['b', ' '],
+    ] as const) {
+      const title = `${lead}${'x'.repeat(118)}${boundary}and more text past the cut`;
+      const name = basename(await writable.writeBook({ title }), '.md');
+
+      expect(name.length).toBeLessThanOrEqual(120);
+      expect(name.endsWith('.'), `a "${boundary}" at the cut left a trailing dot`).toBe(false);
+      expect(name.endsWith(' '), `a "${boundary}" at the cut left a trailing space`).toBe(false);
+      expect(name).toBe(`${lead}${'x'.repeat(118)}`);
+    }
+  });
+
+  it('does not hang on a title that is mostly dots', async () => {
+    // js/polynomial-redos, reproduced. The old `/\.+$/` is anchored, so on a
+    // string of dots that does *not* end in one, `$` never matches and the
+    // engine backtracks from every starting position — quadratic. Measured on
+    // this machine, before the cap:
+    //
+    //    10k dots → 28ms · 50k → 715ms · 100k → 3.1s · 200k → 11.7s · 400k → 47s
+    //
+    // The size matters, and this test had it wrong first time round: at 60k it
+    // costs about a second, passed under its own threshold, and was therefore
+    // green against the very code it was written to catch. 200k is the smallest
+    // round number that fails unmistakably. After the cap it is 0.2ms.
+    //
+    // Not a security boundary — a local CLI spending its own CPU — but a title
+    // arrives from a hand-edited note or a provider response, and the ceiling
+    // is free.
+    const writable = new ObsidianAdapter(dir);
+    const started = Date.now();
+    const path = await writable.writeBook({ title: `${'.'.repeat(200_000)}x` });
+
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(basename(path, '.md')).toBe('Untitled');
+  });
 });
 
 describe('coverDir', () => {
