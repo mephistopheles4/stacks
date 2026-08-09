@@ -1,10 +1,10 @@
 name: Defect
 description: Something behaves differently from what is documented or expected.
 title: '<what broke, in one line>'
-# No `labels:` here on purpose. docs/agents/triage-labels.md records the label
-# vocabulary and says plainly that the labels do not exist on the repo yet — a
-# form claiming to apply one would silently apply nothing, which is the kind of
-# documented-claim-that-is-false this repo gates against everywhere else.
+# No `labels:` here on purpose. The five labels in docs/agents/triage-labels.md
+# now exist, so this is no longer about a form silently applying nothing — it is
+# that `needs-triage` on every new issue carries no information, because it
+# would be true of all of them. Triage is a person deciding, not a default.
 body:
   - type: markdown
     attributes:
