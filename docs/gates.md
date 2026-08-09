@@ -938,8 +938,13 @@ later. It is `WORST_PARALLEL_PUSH` now: re-derived from the geometry against
 `books.test.ts` asserts the capacity rule from the packer's side and wrote the
 fold over `shelfCost` out by hand to do it — a second copy of the sum, inside
 the commit whose entire subject is that this sum had five copies. It became
-`rowCost`, stated once and called from both; it asks `rowExtent` now, for the
-reason under the heading below. Naming both
+`rowCost`, stated once and called from both.
+
+⚠️ **`books.test.ts` no longer makes that claim, and the paragraph above stopped
+describing it before this line was added.** Its assertion asks `rowExtent`, which
+is the packer's own predicate — so it catches a packer that stops wrapping and
+nothing finer, and it says so in place. `rowCost` came here with `shelfCost` and
+is called from one file now, not two. Naming both
 files here is the other half: an assertion this row depends on, sitting in a
 file the scoreboard did not point at, is one that can be weakened without
 anything noticing — which is the failure mode at the top of this file, not a
@@ -1017,34 +1022,52 @@ third time. So the model changed standing: it decides nothing and bounds
 everything, and being loose costs nothing now that no row wraps on it.
 
 **A third group asks what the first two cannot.** "Packs no row past the band"
-and "packs every row tight" are both about the *decision*. `leaves a row no
-slack a book could have used` is about the outcome — the wood left at a row's
-end against the real footprint of the book that would have gone there. It is the
-assertion that would have been red before ADR-0042, and it is the sharpest
-mutation detector in the file.
+and "packs every row tight" are both about the *decision*, and both read
+`rowExtent` on the left — which is what `fitsRow` wraps, so a cursor that
+over-spends moves the wrap and the measurement together and neither notices.
+`leaves a row no slack a book could have used` is about the outcome: the wood
+left at a row's end, against a cursor-free number.
+
+⚠️ **That number was a floor, and it had to become a ceiling.** It began as the
+next book's footprint plus its gap plus a separator — "an absolute minimum",
+written on the reasoning that leaving out every clearance made the claim safer.
+It does the opposite. The assertion is `room < need`, so a need stated too small
+turns a *correct* packer red: a book rejected **because of** the clearance it
+would have paid leaves room above such a floor. That is the same error this row
+already records twice, committed a third time, in the same file, one commit
+later — and it was green on all six fixtures, which is exactly how the other two
+looked. Two independent read-only reviews found it from opposite sides: one that
+the floor was too small to be sound, one that charging `YEAR_GAP` in full made it
+too large by up to 0.088 at a propped boundary. It is `separator + gap +
+footprint + WORST_CLEARANCE` now, every term at its worst, and the separator is
+taken from the book the cursor is *leaving* rather than the one it is arriving
+at — reading it off `next` understated the cost by 0.014 for every face-out book
+followed by a spine.
 
 **Observed red, and the detection floors are measured, not assumed.** Bisected on
 `cursor += entry.thickness + TOUCHING + δ`, the shelved branch:
 
 | δ | verdict | caught by |
 | --- | --- | --- |
-| 0.0002 | green | — |
-| **0.0003** | **red** | `leaves a row no slack a book could have used` (`alternating`) |
-| 0.01 | red | *and* `never spends more than the model allows` |
+| 0.005 | green | — |
+| **0.0055** | **red** | `never spends more than the model allows` (`mixed`) |
 
-The face-out branch catches **any** over-spend — δ = 0.0001 is red on the
+The face-out branch catches **any** over-spend — δ = 0.00001 is red on the
 exactness case, which is exact to the bit. Also red: the angle-change clearance
-inflated forty-fold, and the packer wrapping at nine tenths of the band (which
-turns `packs every row tight` red, the mutation the vacuous version survived).
+doubled (×2 is enough), and the packer wrapping at nine tenths of the band, which
+turns `packs every row tight` red — the mutation the vacuous version survived.
 Control green throughout.
 
-⚠️ **The cost model's own floor is 0.01, not a hair, and this file said otherwise
-first.** The plan for ADR-0042 claimed the moved model catches a hair-sized
-cursor over-spend, on a misreading of "adding a hair to every book's cost" above
-— which is a hair added to the *charge*, not to the *spend*. Read-only review
-caught the overclaim; bisection settled it. **A detection floor that is written
-down is a gate; one that is assumed is what this row exists to prevent.** Do not
-restate these numbers in either direction without re-running the bisection.
+⚠️ **This row said 0.0003 first, and buying that number was the defect above.**
+The sharp floor belonged to the outcome assertion while it was unsound; making it
+sound cost the sharpness, and the honest floor is now the cost model's 0.0055.
+Before that, the row claimed the moved model caught a hair-sized cursor
+over-spend — a misreading of "adding a hair to every book's cost" further up,
+which is a hair added to the *charge*, not to the *spend*. Three numbers, three
+corrections, none of them from running the suite: the suite was green for all
+three. **A detection floor that is written down is a gate; one that is assumed is
+what this row exists to prevent.** Do not restate these in either direction
+without re-running the bisection.
 
 **The one thing this row now carries alone.** Clearance is charged to the *left*
 of the book that leans, where the angle changes, so the last book of a row has

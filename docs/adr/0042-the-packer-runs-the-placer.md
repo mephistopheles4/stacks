@@ -5,9 +5,12 @@
 
 
 `toRows` decides whether a book fits by **placing the row with the book on the
-end and reading where it ends**. It does not estimate. `shelfCost` and `rowCost`
-no longer exist in `packages/site/src`; the cost model they were moved into
-`shelf-width.test.ts`, where it bounds the cursor instead of steering it.
+end and reading where it ends**. It does not estimate. Nothing outside the tests
+*calls* `shelfCost` or `rowCost` any more; both moved into
+`shelf-width.test.ts` — which is itself under `packages/site/src`, so "they no
+longer exist there", as an earlier draft of this line had it, was wrong in a way
+worth keeping visible: the distinction is between deciding and bounding, not
+between directories.
 
 This supersedes the "it is an upper bound, not the exact spend" half of
 [ADR-0031](0031-one-usable-width.md). Everything else in ADR-0031 stands, and is
@@ -100,9 +103,41 @@ while it steered the packer, is free now that no row wraps on it.
 
 **Its detection floor is measured and written into G25**, because the first draft
 of this decision claimed it caught a hair-sized cursor over-spend and that was
-false. Bisected: the cost-model bound first goes red at δ = 0.01 a book on the
-shelved branch; the new outcome assertion goes red at δ = 0.0003; the face-out
-exactness case catches any δ at all.
+false. Bisected on `cursor += entry.thickness + TOUCHING + δ`: green at 0.005,
+red at 0.0055. The face-out branch catches any δ at all.
+
+## The gate this added, and the defect in it
+
+Beyond what the plan asked for, this adds a third assertion to G25 —
+`leaves a row no slack a book could have used`. The plan asked only for a
+*comment* saying the tight assertion is not vacuous. The extra assertion earns
+its place: it is the only one in the file with a cursor-free number on one side,
+so it is the only one that can see a cursor which over-spends. Recording the
+deviation rather than letting the diff imply it was asked for.
+
+⚠️ **It shipped wrong, and two independent reviews caught it from opposite
+sides.** Its comparand started as a *floor* on what the next book would cost —
+footprint plus gap plus separator, with every clearance deliberately left out on
+the reasoning that a smaller number was a safer claim. It is the reverse. The
+assertion is `room < need`; a need stated too small turns a **correct** packer
+red, because a book rejected precisely *because of* the clearance it would have
+paid leaves room above such a floor. That is the error G25 already records twice,
+committed a third time in the same file one commit later, and green on all six
+fixtures — which is how the other two looked too. The second review found the
+opposite skew in the same expression: charging `YEAR_GAP` in full overstated the
+need by up to 0.088 at a propped boundary, where the cursor hands `propShiftOf`
+back. And the separator was keyed on the *next* book rather than the one the
+cursor is leaving, understating by 0.014 at every face-out-then-spine boundary.
+
+It is a ceiling now — `separator(last) + gap + footprint + WORST_CLEARANCE`,
+every term at its worst, derived from the geometry rather than read off the
+cursor.
+
+**Making it sound cost the sharpness, and that is the honest trade.** The floor
+version detected a δ = 0.0003 cursor over-spend; the ceiling version needs one
+big enough to move a book between rows, so G25's floor is now the cost model's
+0.0055. Sharpness bought with unsoundness is a gate that goes red on a day
+nobody changed anything.
 
 ## What this deliberately does not change
 
@@ -122,8 +157,25 @@ exactness case catches any δ at all.
 
 ## Result
 
-Row 3 holds its eleventh book and ends 0.1815 from the upright instead of 0.2900.
-Rows 0–2 are byte-identical, as predicted before the change was written — which
-is the useful part of having measured first.
+Row 3 holds its eleventh book and its last footprint ends **0.1815** from the
+upright instead of **0.3060** — both measured the same way, as
+`SHELF.width / 2 - rowExtent(row.books, 3)`.
+
+⚠️ **That pair read 0.1815 against 0.2900 first, and the two halves were measured
+under different conventions**: the new figure from the last book's footprint edge
+and the old one from where the cursor stopped, one trailing separator further
+right. Each reproduced exactly on its own, which is why nothing caught it — the
+pair understated the improvement by 0.016. A before-and-after is one measurement
+taken twice or it is not a comparison.
+
+Rows 0–2 are byte-identical — verified as deep equality of both the rows and
+their `placeShelf` placements, not inferred from the screenshots. The flattened
+book order is unchanged across the real vault and all five G25 fixtures: no book
+lost, gained, duplicated or reordered. The extraction of `placeRow` was checked
+to be arithmetic-neutral over 3410 placement fields, worst delta 0. Before and
+after renders are in `artifacts/shelf-packing-{before,after}.png`.
+
+Rows 0–2 being untouched was predicted before the change was written, which is
+the useful part of having measured first.
 
 Charted as [issue #78](https://github.com/mephistopheles4/stacks/issues/78).

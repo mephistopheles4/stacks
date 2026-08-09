@@ -66,9 +66,15 @@ describe('toRows', () => {
     expect(rows.length).toBeGreaterThan(1);
     rows.forEach((row, index) => {
       // Where the row's last book actually ends, not what a model of it costs.
-      // The cost model still exists — it is the bound in `shelf-width.test.ts`,
-      // which is where it lives now — but the packer runs the cursor, so this is
-      // the claim worth making here.
+      //
+      // ⚠️ **This is the packer's own smoke check, and it is weaker than the line
+      // it replaced.** That line read `rowCost(row.books) <= USABLE_WIDTH` — an
+      // independent model, bounding the row from outside the placer. `rowExtent`
+      // is what `fitsRow` wraps, so a cursor that over-spends moves the wrap and
+      // this measurement together and nothing here notices. G25 states that
+      // rationale in full and carries the assertions that do notice; this one
+      // exists so a packer that stops wrapping *at all* fails in the packer's own
+      // file, next to the tests for what it is packing.
       expect(rowExtent(row.books, index)).toBeLessThanOrEqual(-SHELF.width / 2 + USABLE_WIDTH + 1e-12);
     });
   });

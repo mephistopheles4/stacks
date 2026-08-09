@@ -317,7 +317,10 @@ export function rowExtent(books: readonly ShelfBook[], rowIndex: number): number
   const placements = placeRow(books, rowIndex, 0);
   const last = placements[placements.length - 1];
   if (last === undefined) return -SHELF.width / 2;
-  return last.position.x + (last.entry.faceOut ? last.entry.coverWidth : last.entry.thickness) / 2;
+  // `footprint` is that same `faceOut ? coverWidth : thickness`, decided once in
+  // `toShelfBook`. Spelling it out again here is how a fourth answer to "how wide
+  // is a book" would start.
+  return last.position.x + last.entry.footprint / 2;
 }
 
 /**

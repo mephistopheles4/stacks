@@ -202,9 +202,20 @@ function shelfCost(entry: ShelfBook, previous: ShelfBook | undefined): number {
   return (entry.gapBefore ?? 0) + occupies + clearance + Math.max(parallel, 0);
 }
 
-/** What the model allows a whole row. The placer is not consulted. */
+/**
+ * What the model allows a whole row.
+ *
+ * The fold stated once, because it was written out by hand in two files inside
+ * the very commit whose subject was that this sum had five copies. It came over
+ * from `placement.ts` with `shelfCost`.
+ */
+function rowCost(books: readonly ShelfBook[]): number {
+  return books.reduce((total, entry, index) => total + shelfCost(entry, books[index - 1]), 0);
+}
+
+/** What the model allows this row. The placer is not consulted. */
 function charged(row: ShelfRow): number {
-  return row.books.reduce((total, entry, index) => total + shelfCost(entry, row.books[index - 1]), 0);
+  return rowCost(row.books);
 }
 
 /**
@@ -215,6 +226,17 @@ function charged(row: ShelfRow): number {
  * is the predicate under test. `toRows` spells the same thing; a gate that
  * imported the packer's spelling of it could not fail on a packer that changed
  * it.
+ *
+ * ⚠️ **That defends the right-hand side, and only the right-hand side.** The two
+ * containment assertions below read `rowExtent` on the left, and `rowExtent` is
+ * what `fitsRow` wraps — so a cursor that over-spends moves both the wrap and
+ * the measurement, and they stay green. They catch the *band* drifting; they do
+ * not catch the cursor. What catches the cursor is the group above, which bounds
+ * spend against a model the cursor cannot move, and
+ * `leaves a row no slack a book could have used`, which is the one assertion
+ * here with a cursor-free number on one side. Beyond all of them is G16: only
+ * `pnpm smoke:render` measures a rendered scene against the case's real inner
+ * faces, which is why ADR-0040 names it as the backstop rather than this file.
  */
 const ROW_END = -SHELF.width / 2 + USABLE_WIDTH;
 
@@ -255,19 +277,22 @@ function spent(placements: readonly Placement[]): number {
  *
  * ⚠️ **It is also this group's detection floor, and that cuts the other way.**
  * The slack it allows is slack a *cursor* over-spend hides in: `charged >=
- * spent` cannot fail until the over-spend exceeds it. Measured, by bisection on
- * `cursor += entry.thickness + TOUCHING + δ`, this group first goes red at
- * **δ = 0.01** — on the shelved branch. The face-out branch is the exception and
- * catches **any** over-spend, because the exactness case below is exact to the
- * bit: δ = 0.0001 there is red.
+ * spent` cannot fail until the over-spend exceeds it. Bisected on
+ * `cursor += entry.thickness + TOUCHING + δ`: green at **δ = 0.005**, red at
+ * **δ = 0.0055**, on `mixed`. The face-out branch is the exception and catches
+ * **any** over-spend, because the exactness case below is exact to the bit —
+ * δ = 0.00001 there is red.
  *
- * That is a real hole in *this* group, and it is not the shelf's floor, because
- * `leaves a row no slack a book could have used` is thirty times sharper —
- * green at δ = 0.0002, red at **δ = 0.0003**. The two guard different things and
- * the sharper one is not a replacement: it reads `rowExtent` both sides, so it
- * cannot see an over-spend that moves no book between rows. Numbers and method
- * in G25's entry in `docs/gates.md`; do not restate them as "a hair" in either
- * direction without re-running the bisection.
+ * **0.0055 is this file's floor, and it used to read 0.0003.** That number came
+ * from `leaves a row no slack a book could have used` while its comparand was a
+ * *floor* on the next book's cost rather than a ceiling — which is to say, while
+ * that assertion could turn a correct packer red. Making it sound cost the
+ * sharpness: it now needs an over-spend big enough to move a book between rows.
+ * Sharpness bought with unsoundness is a gate that will fail on a day nobody
+ * changed anything, and this file has that failure recorded twice already.
+ *
+ * Numbers and method in G25's entry in `docs/gates.md`; do not restate them in
+ * either direction without re-running the bisection.
  */
 function clearanceBound(row: ShelfRow): number {
   let changes = 0;
@@ -445,10 +470,34 @@ describe('the packer honours its own capacity', () => {
     //
     // The two assertions above are about the *decision*: given what the packer
     // chose, is each row full. This one is about the *outcome* — the wood left at
-    // the end of a row, against the real footprint of the book that would have
-    // gone there. It is the assertion that would have been red before ADR-0042,
-    // where the shelf left 0.170 of room and turned away a book needing 0.163.
+    // the end of a row, against what the book that would have gone there could
+    // possibly have needed. It is the assertion that would have been red before
+    // ADR-0042, where the shelf left 0.170 of room and turned away a book that
+    // wanted 0.163, and it is the only one here that does not read `rowExtent` on
+    // both sides — which is why it catches a cursor that over-spends and they do
+    // not.
+    //
+    // ⚠️ **A ceiling on the need, not a floor, and the difference is the whole
+    // soundness of it.** The first version of this took the next book's footprint
+    // plus its gap plus a separator and called that "an absolute minimum", on the
+    // reasoning that leaving out every clearance made the claim safer. It makes it
+    // *stronger*: the assertion is `room < need`, so a need stated too small is a
+    // correct packer turned red — a book rejected **because of** the clearance it
+    // would have paid leaves room above such a floor. That is verbatim the error
+    // recorded twenty lines above, in this file, one commit later. What a correct
+    // packer actually guarantees is that the room it left is less than what the
+    // book would have cost, so the number compared against has to be no *smaller*
+    // than that cost, and every term below is taken at its worst.
     const rows = rowsOf(library);
+
+    if (rows.length === 1) {
+      // Said rather than skipped, exactly as the sibling above does it. `checked`
+      // ends at zero here and `rows.length - 1` is zero too, so the assertion at
+      // the foot is `expect(0).toBe(0)` — green from a loop that never ran, which
+      // is the one shape this file's own comments call out.
+      expect(library.length).toBe(1);
+      return;
+    }
 
     let checked = 0;
     for (let index = 0; index < rows.length - 1; index += 1) {
@@ -459,18 +508,38 @@ describe('the packer honours its own capacity', () => {
 
       const room = ROW_END - rowExtent(row.books, index);
       const gap = yearOf(next.book) !== yearOf(last.book) ? YEAR_GAP : 0;
-      // What the next book needs at an absolute minimum: its own footprint, the
-      // gap the row would have opened for it, and the hair a run's boards leave
-      // between them. Every clearance it might additionally pay is left out, so
-      // this is a floor — a book needing less than the room left is unambiguously
-      // one the row could have taken.
-      const floor = gap + next.footprint + (next.faceOut ? SHELF.bookGap * 2 : TOUCHING);
-      expect(room).toBeLessThan(floor);
+      // **The separator belongs to `last`, not to `next`.** `rowExtent` stops at
+      // the last book's footprint edge, and what the cursor spends leaving that
+      // edge is the trailing gap of the book it is leaving — `bookGap * 2` off a
+      // face-out board, `TOUCHING` off a spine. Reading it off `next` understates
+      // the cost by 0.014 for every face-out book followed by a spine.
+      const separator = last.faceOut ? SHELF.bookGap * 2 : TOUCHING;
+      const ceiling = separator + gap + next.footprint + WORST_CLEARANCE;
+      expect(room).toBeLessThan(ceiling);
       checked += 1;
     }
     expect(checked).toBe(rows.length - 1);
   });
 });
+
+/**
+ * The most one book can pay on arriving next to another, whatever the two are.
+ *
+ * Both branches the cursor can take, at their worst and taken together rather
+ * than as a `max`, because this only has to be no smaller than the real one:
+ *
+ * - **the angle changes** — one maximal swing, `swayOf(MAX_HEIGHT, MAX_LEAN)`;
+ * - **it does not** — one maximal parallel push.
+ *
+ * A propped book across a year gap is the third branch and needs nothing here:
+ * it hands `propShiftOf` *back*, so its true cost is below a gap charged in
+ * full, and a ceiling that ignores the refund stays a ceiling.
+ *
+ * Derived from the geometry rather than read off the cursor, for the reason
+ * `THICKEST_SPINE` is a restated literal — a ceiling computed by the thing it
+ * is bounding cannot fail.
+ */
+const WORST_CLEARANCE = swayOf(MAX_HEIGHT, MAX_LEAN) + WORST_PARALLEL_PUSH;
 
 describe('where a row starts and where it stops', () => {
   it.each(CASES)('starts flush against the left upright — %s', (_name, library) => {
