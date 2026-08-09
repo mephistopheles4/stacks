@@ -20,9 +20,9 @@ phone was rendering when it died — are measurements and stay exactly as they a
 
 | | |
 | --- | --- |
-| **Last green gate** | G27 — a command's report accounts for every book it counted |
-| **Now working on** | books that read as books — map [#50](https://github.com/mephistopheles4/stacks/issues/50), whose fifteen tickets are all closed and **all built**. See below |
-| **Queued** | the map's fog, which is the only current answer — ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s *Not yet specified*. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run against the real vault |
+| **Last green gate** | G29 — a document's links ↔ the file tree |
+| **Now working on** | nothing in flight. The last map, [#78](https://github.com/mephistopheles4/stacks/issues/78) — the shelf leaving usable space empty at the end of a row — is closed and built in `b5cbddc`; [#50](https://github.com/mephistopheles4/stacks/issues/50) before it likewise, all fifteen tickets. `gh issue list` is the only current answer to what is open |
+| **Queued** | whatever the closed maps left in fog — ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s *Not yet specified*; [#78](https://github.com/mephistopheles4/stacks/issues/78)'s is empty by construction. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run against the real vault |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates` + CodeQL, no bypass |
 | **Blocked on** | nothing |
@@ -101,6 +101,7 @@ need only a new mapper.
 | `.astro` files are NOT typechecked | ⚠️ `astro check` can't run under TS 7 — keep logic in `.ts` |
 | **`node -e` with ESM top-level await exits silently** | ⚠️ prints nothing, exit 0. Put scripts in a file and run with `pnpm tsx` |
 | **Bash tool sandbox blocks network** | ⚠️ outbound `fetch` needs `dangerouslyDisableSandbox` |
+| **A worktree cut by anything but `pnpm worktree` has no `node_modules`** | ⚠️ an agent harness makes its own under `.claude/worktrees/` with a bare `git worktree add`, so every command fails with `'tsx' is not recognized`, which reads as a broken toolchain rather than a missing install. `pnpm install` in it first — that step, and printing which `.env` it reads, is the whole reason `pnpm worktree` exists |
 | Google Books unauthenticated | ⚠️ 429s on a shared quota — a bonus, never a dependable fallback |
 | **Fixture-capture scripts need the key in the *environment*** | ⚠️ `capture-lookup-recall.ts` read `process.env` without `loadEnv()`, so with the key only in `.env` it recorded a corpus of 429s and G26 went green against it. Fixed; the class is not — check any capture script's env before trusting what it wrote. See [`gates.md`](gates.md) |
 | **Zone bot protection can refuse the deploy check** | ⚠️ see below — the deploy still works, the *verification* does not |
@@ -166,7 +167,8 @@ episodes were written up out of sequence; they are listed by date here, so
 - 2026-08-08 — [The update that reported success and changed nothing](./log/2026-08-08-the-update-that-reported-success-and-changed-nothing.md)
 - 2026-08-08 — [The gaps the owner had always noticed](./log/2026-08-08-the-gaps-the-owner-had-always-noticed.md)
 - 2026-08-08 — [The collisions, and the gate that can finally see them](./log/2026-08-08-the-collisions-and-the-gate-that-can-finally-see-them.md)
-- 2026-08-09 — [The packer was estimating, and the estimate cost a book a row](./log/2026-08-09-the-packer-was-estimating-and-the-estimate-cost-a-book.md) — map [#78](https://github.com/mephistopheles4/stacks/issues/78)
+- 2026-08-09 — [The packer was estimating, and the estimate cost a book a row](./log/2026-08-09-the-packer-was-estimating-and-the-estimate-cost-a-book.md) — map [#78](https://github.com/mephistopheles4/stacks/issues/78), now closed
+- 2026-08-09 — [CodeQL became a second required gate, and one of its twelve was real](./log/2026-08-09-codeql-became-a-second-required-gate.md)
 
 ## Notes to the next session
 
