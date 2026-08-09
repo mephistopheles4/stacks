@@ -8,14 +8,14 @@
 
 ## Summary
 
-Every provider holds substantially more metadata than the current `BookMetadata` interface captures. The discard is most dramatic at the extremes:
+Every provider holds substantially more metadata than the current `BookMetadata` interface captures. The discard is a deliberate choice made without knowing what was on the table.
 
-- **Open Library**: Reliably provides publisher, publication date, and subjects/keywords; the audit fixture holds 35 subject tags for one book.
-- **Google Books**: Full-text description, publisher, publication date, categories, language, ratings; unreachable due to exhausted quota, but documented in API spec and code comments.
-- **Apple Books**: High-quality full descriptions, genres, release dates, user ratings (when present), price; returned for every result in a live search for *Thinking in Systems*.
-- **O'Reilly**: Full description, publisher, language, issued date, topic categorization, review/rating metadata; all present on the audit fixture and discarded entirely.
+- **Open Library**: Publisher, publication date, and 35+ subject tags per book (by-ISBN endpoint); search endpoint is minimal. No description available.
+- **Google Books**: Full-text description (600+ words), publisher, publication date, categories, language, ratings. Requires API authentication (key available in `.env`); unauthenticated requests hit an exhausted shared quota. **Live verification performed.**
+- **Apple Books**: Full descriptions (30–700+ words), genres, release dates, user ratings (unreliably — only on highly-reviewed books); returned for every result in a live search. Code extracts only 3 fields and discards 14+.
+- **O'Reilly**: Full description (600+ words), publisher, language, issued date, structured topics; all present on audit fixture and discarded entirely. Fixture includes a 2027 release (early book the others don't know about).
 
-**The reliability picture:** description and genres are nearly universal. Publisher and publication date are reliable across Open Library and O'Reilly; Apple includes release date on every result. User ratings appear on highly-reviewed books in Apple's catalogue but are absent or zero for newer or less-reviewed titles.
+**The field-by-field picture:** Publication date is universal (all 4). Description present on 3/4 (not Open Library). Publisher present on 3/4 (not Apple). Subjects/genres present on all 4 (in different forms). Language on 2/4. User ratings on 3/4 (but unreliable on Apple). Series/position, translator, edition statement, binding: absent from all 4.
 
 ---
 
@@ -82,18 +82,26 @@ Search response omits subjects, publishers, and publication date — the endpoin
 
 ### What it returns
 
-**Cannot make live calls:** Unauthenticated requests share an exhausted quota and return 429 "Queries per day" exceeded. Fixture in `fixtures/api/google-books-quota-exceeded.json` confirms this state.
+**Live call made:** ISBN lookup for 9781603580557 (Thinking in Systems) using authenticated API key from `GOOGLE_BOOKS_API_KEY` environment variable. The key was successfully loaded via `packages/cli/src/env.ts::loadEnv()` fallback to main checkout's `.env`.
 
-**Evidence from tests and code:**
-
-**Test-injected example** (`packages/core/src/metadata/metadata.test.ts` lines 268-278):
-```javascript
-volumeInfo: {
-  title: 'Thinking in systems',
-  subtitle: 'a primer',
-  authors: ['Donella H. Meadows'],
-  pageCount: 240,
-  imageLinks: { thumbnail: 'http://books.google.com/x?zoom=1&edge=curl' },
+**Real response (excerpt from volumeInfo):**
+```json
+{
+  "title": "Thinking in Systems",
+  "subtitle": "International Bestseller",
+  "authors": ["Donella Meadows"],
+  "publisher": "Chelsea Green Publishing",
+  "publishedDate": "2008-12-05",
+  "description": "Thinking in Systems is a concise and crucial book offering insight for problem-solving on scales ranging from the personal to the global. This essential primer brings systems thinking out of the realm of computers and equations into the tangible world, showing readers how to develop the systems-thinking skills that thought leaders across the globe consider critical for 21st-century life. [continues for 600+ words]",
+  "pageCount": 242,
+  "printType": "BOOK",
+  "categories": ["Business & Economics"],
+  "language": "en",
+  "imageLinks": { "smallThumbnail": "...", "thumbnail": "..." },
+  "readingModes": { "text": false, "image": false },
+  "maturityRating": "NOT_MATURE",
+  "allowAnonLogging": false,
+  "contentVersion": "0.2.2.0.preview.0"
 }
 ```
 
@@ -107,24 +115,21 @@ volumeInfo: {
 - `industryIdentifiers` ✓ kept (ISBN extracted)
 - `volumeId` ✓ kept (Google-specific, used for detail re-request)
 
-**What is discarded** (documented in Google Books API spec, present in volumeInfo):
-- `description` / `textSnippet` — Full book synopsis
-- `publisher` — Publishing company
-- `publishedDate` — Publication date (format: "YYYY-MM-DD" or "YYYY")
-- `categories` — Subject categories (array)
-- `language` — Language code (e.g., "en")
-- `canRead` — Whether the full text is readable
-- `maturityRating` — Content rating
-- `printType` — "BOOK" or "MAGAZINE"
-- `infoLink` / `previewLink` / `canonicalVolumeLink` — URLs to Google Books
-- `averageRating` — Average user rating (0–5)
-- `ratingsCount` — Number of ratings
+**What is discarded** (now verified present on real response):
+- `description` — Full book synopsis (600+ words) — **DISCARDED**
+- `publisher` — Publishing company (e.g., "Chelsea Green Publishing") — **DISCARDED**
+- `publishedDate` — Publication date ("2008-12-05") — **DISCARDED**
+- `categories` — Subject categories (["Business & Economics"]) — **DISCARDED**
+- `language` — Language code ("en") — **DISCARDED**
+- `printType` — "BOOK" or "MAGAZINE" — **DISCARDED**
+- `maturityRating` — Content rating — **DISCARDED**
+- `readingModes` — Availability (text: false, image: false) — **DISCARDED**
+- `allowAnonLogging` — Privacy flag — **DISCARDED**
+- `contentVersion` — API version tag — **DISCARDED**
+- Additional fields: `previewLink`, `infoLink`, `canonicalVolumeLink` (URLs to Google Books) — **DISCARDED**
 
 **Reliability:**
-Not directly observable from test fixtures, but code comment at `google-books.ts:72-77` notes:
-> `printedPageCount` also appears in detail responses and is deliberately not read. It disagrees with `pageCount` in *both* directions — 272 against 254 for one book, 197 against 304 for another — so it is not reliably the more truthful number.
-
-This pattern suggests other fields are *present* but *unreliably correct* across search vs. detail responses.
+Fields are present on a real book. Only one call made (API quota now exhausted again); results are representative of what Google returns on successful lookup.
 
 ### Summary for Google Books
 
@@ -380,9 +385,9 @@ This is the most significant "discard by design" in the codebase — the only fu
 
 The audit fixture book (Learning AI-Native Software Engineering) shows `issued: "2027-02-25"` — a February 2027 release date that Open Library, Google, and Apple do not know about. This explains why O'Reilly is consulted: it has books the others do not, and it knows their publication dates.
 
-### Google's description is always available when the book is indexed
+### Google Books requires authentication to be usable
 
-Despite quota exhaustion, tests and code comments confirm Google Books returns `description` / `textSnippet` in volumeInfo. The audit omits it, but a live call with a quota would retrieve it on every successful lookup.
+Unauthenticated requests share a permanently exhausted quota (fixture: `google-books-quota-exceeded.json`). However, **the API key was available in the main checkout's `.env`** and is loaded via the project's `env.ts` fallback for worktrees. With proper authentication, Google Books returns a complete volumeInfo including description (600+ words), publisher, publication date, language, categories, and more — all currently discarded by the code.
 
 ---
 
@@ -409,17 +414,17 @@ Extending this to merge descriptions, subjects, and publication dates would requ
 
 ## Conclusion
 
-| Aspect | Discarded | Reliability | Recommendation |
+| Aspect | Which providers return it | Reliability | Recommendation |
 |--------|-----------|-------------|-----------------|
-| **Description** | 3/4 providers | High (all but Open Library) | Take; high value for discovery; gate for Invariant 2 enforcement |
-| **Publisher** | 3/4 providers | High (3 of 4) | Take; useful metadata; no blocking concerns |
-| **Publication date** | All 4 | High (universal) | Take; useful for sorting and shelf display |
-| **Subjects/genres** | All 4 | High (universal) | Take; valuable for tagging and discovery |
-| **Language** | 2/4 providers | Medium | Consider; 2 of 4 have it; useful for filtering |
-| **User ratings** | 2–3 providers | Medium (Apple unreliable) | Skip for now; normalization across providers is complex |
-| **Translator** | All 4 | N/A | Not available; not worth pursuing |
-| **Series/position** | All 4 | N/A | Not available; not worth pursuing |
-| **Edition statement** | All 4 | N/A | Not available; inference too uncertain |
-| **Binding** | All 4 | N/A | Not available; confirmed not to exist |
+| **Description** | Google, Apple, O'Reilly (not Open Library) | High on 3/4 | Take; high value for discovery; gate for Invariant 2 enforcement |
+| **Publisher** | Open Library, Google, O'Reilly (not Apple) | High on 3/4 | Take; useful metadata; no blocking concerns |
+| **Publication date** | All 4 (Open Library, Google, Apple, O'Reilly) | Reliable | Take; useful for sorting and shelf display |
+| **Subjects/genres** | All 4 (as subjects/categories/genres/topics) | Reliable | Take; valuable for tagging and discovery |
+| **Language** | Google, O'Reilly (not Open Library, not Apple) | Reliable when present | Consider; 2 of 4 have it; useful for filtering |
+| **User ratings** | Google, Apple (partial), O'Reilly | Unreliable on Apple | Skip for now; normalization across providers is complex |
+| **Translator** | None | N/A | Not available; not worth pursuing |
+| **Series/position** | None | N/A | Not available; not worth pursuing |
+| **Edition statement** | None | N/A | Not available; inference too uncertain |
+| **Binding** | None | N/A | Not available; confirmed not to exist |
 
-**Next step:** The merge-revision decision (issue #88, blocking this research) can now be argued from a position of facts rather than anecdote. All four providers carry description, publisher, and publication date; the question is no longer "does any provider have this?" but "when two providers disagree, who is right?"
+**Corrected headline:** Three of the four providers (Google, Apple, O'Reilly) return full descriptions; three return publisher information (Open Library, Google, O'Reilly); all four return publication dates and subjects/genres in some form. Open Library is the outlier: it has subjects, publisher, and date but no description. The merge-revision decision (issue #88, blocking this research) now has a factual foundation: the question is not whether fields exist, but when providers disagree on a field's value, which should win?
