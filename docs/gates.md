@@ -207,6 +207,26 @@ now are too. The fragment half went red on a one-character typo planted in
 `docs/plan.md`'s link to `agents/issue-tracker.md#wayfinding-operations`, then
 reverted.
 
+**What the blanking costs was measured, not assumed.** Blanking inline code can
+in principle hide a *real* link — a line with mismatched backticks pairs the
+wrong two and swallows whatever sits between them, which would be a false green
+of exactly the kind this row exists to prevent. Measured across the tracked
+corpus by extracting with and without the pass and diffing: **the only links it
+hides are the `x.md` syntax examples in this file and in
+[`docs/research/splitting-the-long-docs.md`](research/splitting-the-long-docs.md)** —
+prose about the gate, in inline code, which is what the pass is for. No real
+link is hidden.
+
+Deliberately stated without totals. The first draft of this paragraph carried
+three exact counts and **two of them were false one edit later**, because the
+commentary above added another `x.md` example and moved the numbers it was
+describing. That is the defect this file already logs against itself — *"It said
+'four' for a while after there were five"* — reproduced inside the paragraph
+congratulating the gate on measuring rather than assuming. The count belongs in
+the gate's own vacuity floor, where it can go red, and that floor is set just
+under the real number rather than at a round order-of-magnitude guess: at 100
+half the corpus could stop being checked in silence.
+
 **That fragment link is the only one in the repo**, which is worth stating
 plainly: the fragment half of this gate guards one real edge and a future the
 split makes likely. The slug rule approximates GitHub's, and it approximates it

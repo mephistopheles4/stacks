@@ -113,7 +113,9 @@ That names three structures: the `Gate log` rows, the `Current state` table, and
 `Environment findings`. It is not a parser — a renamed heading degrades an agent
 instruction rather than reddening a build — but it is a reader, and all three
 must stay in the spine and keep their names, or the skill is updated in the same
-commit. Note that `Environment findings` (48 lines) is therefore spine, not
+commit. **Four, after this work**: the skill now also routes a new investigation
+to `docs/log/` and asks for an index line under `## The log`, so that heading is
+load-bearing in the same soft way. Note that `Environment findings` (48 lines) is therefore spine, not
 tail, which is not obvious from its genre.
 
 The sweep that missed it filtered paths containing `worktrees`, and this

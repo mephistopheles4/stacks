@@ -129,7 +129,14 @@ describe('G29 — every documented link resolves', () => {
     // The vacuity guard. A regex that stops matching returns an empty set, and
     // an empty set trivially satisfies "every link resolves" — the defect
     // docs/gates.md logs under G14, G19 and G22.
-    expectFound(docLinks(), 'local links in tracked Markdown', 100);
+    //
+    // The floor sits just under the real count rather than at a round number an
+    // order of magnitude below it: at 100, half the corpus could stop being
+    // checked without anything going red, which is the same vacuity this
+    // assertion exists to prevent, one level up. It is a floor and not an exact
+    // count on purpose — docs/gates.md records what happened to the prose that
+    // tried to carry the exact numbers.
+    expectFound(docLinks(), 'local links in tracked Markdown', 180);
   });
 
   it('points every link at a file that exists', () => {

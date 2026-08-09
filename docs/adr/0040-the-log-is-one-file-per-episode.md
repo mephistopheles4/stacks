@@ -72,6 +72,12 @@ narrative back into the spine and this decision is undone in a month.
 `CLAUDE.md` carries the same rule, since a contributor with none of the optional
 skills installed must still get it right.
 
+That makes **`## The log` a fourth heading the skill depends on by name**,
+alongside `Current state`, `Gate log` and `Environment findings`. None of the
+four is parsed — a rename degrades an agent instruction rather than reddening a
+build — but they are the reason the spine's headings are not free to move, and
+they are recorded here so the next person renaming one knows what reads it.
+
 ## What was not done
 
 **`gates.md` was not split**, though it is 1112 lines of which only 65 are
