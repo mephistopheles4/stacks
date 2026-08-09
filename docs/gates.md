@@ -937,8 +937,14 @@ later. It is `WORST_PARALLEL_PUSH` now: re-derived from the geometry against
 **The row names two files, and the second one nearly re-introduced the defect.**
 `books.test.ts` asserts the capacity rule from the packer's side and wrote the
 fold over `shelfCost` out by hand to do it — a second copy of the sum, inside
-the commit whose entire subject is that this sum had five copies. It is
-`rowCost` now, stated once in `placement.ts` and called from both. Naming both
+the commit whose entire subject is that this sum had five copies. It became
+`rowCost`, stated once and called from both.
+
+⚠️ **`books.test.ts` no longer makes that claim, and the paragraph above stopped
+describing it before this line was added.** Its assertion asks `rowExtent`, which
+is the packer's own predicate — so it catches a packer that stops wrapping and
+nothing finer, and it says so in place. `rowCost` came here with `shelfCost` and
+is called from one file now, not two. Naming both
 files here is the other half: an assertion this row depends on, sitting in a
 file the scoreboard did not point at, is one that can be weakened without
 anything noticing — which is the failure mode at the top of this file, not a
@@ -986,6 +992,113 @@ against the case's real inner faces on a rendered scene. It reported
 hair by which a printed cover floats above its board, not slop — so the density
 moved by three books a row while the containment residual did not move at all.
 That is the shape of evidence a unit test cannot produce.
+
+### The estimate is gone; the model stayed and changed sides
+
+⚠️ **Everything above this heading describes a packer that no longer exists.**
+`toRows` used to charge `shelfCost` and wrap on the estimate. It runs the cursor
+and wraps on the answer — [ADR-0042](adr/0042-the-packer-runs-the-placer.md).
+The conservatism the inequality above *bounds* was, all along, shelf left empty:
+**0.09 to 0.13 a row on the live shelf**, and on one row it turned away a book
+that needed 0.163 from 0.170 of real room.
+
+**The bound was documented as unavoidable and was not.** The reason given —
+"the real lean comes from `leanFor`, which needs the row index, which is not
+known until the wrap this figure decides has happened" — is true of the book's
+*other* possible home, the head of the next row, and false of the row being
+offered it. `leanFor(rowIndex, position, id)` is determined by its arguments,
+and both indices are fixed at pack time: rows finalise in order, so the row being
+filled is `rows.length` and the candidate's place in it is `current.length`. The
+circularity was in the sentence, not in the code, and it survived two rewrites of
+this row because the row asserted the bound was *sound* and never asked whether
+it was *needed*.
+
+**`shelfCost` and `rowCost` moved into `shelf-width.test.ts` rather than dying
+with the estimate**, and the direction of the inequality is why. Deleting them
+would have left nothing bounding what the *cursor* spends against numbers the
+cursor cannot move, and the obvious replacement — restating capacity as
+`rowExtent` — is the defendant-as-judge defect three paragraphs up, committed a
+third time. So the model changed standing: it decides nothing and bounds
+everything, and being loose costs nothing now that no row wraps on it.
+
+**A third group asks what the first two cannot.** "Packs no row past the band"
+and "packs every row tight" are both about the *decision*, and both read
+`rowExtent` on the left — which is what `fitsRow` wraps, so a cursor that
+over-spends moves the wrap and the measurement together and neither notices.
+`leaves a row no slack a book could have used` is about the outcome: the wood
+left at a row's end, against a cursor-free number.
+
+⚠️ **That number was a floor, and it had to become a ceiling.** It began as the
+next book's footprint plus its gap plus a separator — "an absolute minimum",
+written on the reasoning that leaving out every clearance made the claim safer.
+It does the opposite. The assertion is `room < need`, so a need stated too small
+turns a *correct* packer red: a book rejected **because of** the clearance it
+would have paid leaves room above such a floor. That is the same error this row
+already records twice, committed a third time, in the same file, one commit
+later — and it was green on all six fixtures, which is exactly how the other two
+looked. Two independent read-only reviews found it from opposite sides: one that
+the floor was too small to be sound, one that charging `YEAR_GAP` in full made it
+too large by up to 0.088 at a propped boundary. It is `separator + gap +
+footprint + WORST_CLEARANCE` now, every term at its worst, and the separator is
+taken from the book the cursor is *leaving* rather than the one it is arriving
+at — reading it off `next` understated the cost by 0.014 for every face-out book
+followed by a spine.
+
+⚠️⚠️ **And then `WORST_CLEARANCE` itself was `MAX_LEAN` where it had to be
+`MAX_PROP_LEAN` — this row's own oldest mistake, made a fourth time, three
+paragraphs after writing it down.** The angle-change branch spends
+`Math.max(sway, left.sway)`, and `left.lean` is a *run* lean: a run that begins
+on a book propped across a year gap hands that angle to every spine behind it. So
+the swing reachable there is `swayOf(MAX_HEIGHT, MAX_PROP_LEAN)` = 0.1175 against
+the 0.0263 `MAX_LEAN` allows, and the ceiling was under half the real worst case.
+
+**It was green on all five fixtures, and on the owner's own shelf by 0.0023.**
+An independent verifier swept cover aspect, page count and face-out position
+against the shipped `paperbackRatio` — 5,940 configurations — and found 375 that
+fail. The margin, `min(ceiling − trueNeed)` over every boundary:
+
+| library | `MAX_LEAN` | `MAX_PROP_LEAN` |
+| --- | --- | --- |
+| `mixed` | +0.0518 | +0.1399 |
+| `alternating` | +0.0347 | +0.1227 |
+| the owner's real vault | **+0.0023** | +0.0904 |
+| `squareCoverAfterProp` | **−0.0388** | +0.0493 |
+
+`squareCoverAfterProp` is a fixture now — every book its own year so every run
+inherits a prop angle, and one face-out book with an audiobook's square cover
+landing against it at 11.9°. **The packer is correct on it**: it turned the next
+book away by 0.00023, both decision assertions pass, and only the outcome one
+went red. That is what makes this an unsoundness rather than a caught defect.
+Observed red with `MAX_LEAN` restored and green with `MAX_PROP_LEAN`, so the
+constant cannot quietly go back.
+
+The detection floor is unchanged at 0.005 green / 0.0055 red — it belongs to the
+cost model, which does not read `WORST_CLEARANCE`.
+
+**Observed red, and the detection floors are measured, not assumed.** Bisected on
+`cursor += entry.thickness + TOUCHING + δ`, the shelved branch:
+
+| δ | verdict | caught by |
+| --- | --- | --- |
+| 0.005 | green | — |
+| **0.0055** | **red** | `never spends more than the model allows` (`mixed`) |
+
+The face-out branch catches **any** over-spend — δ = 0.00001 is red on the
+exactness case, which is exact to the bit. Also red: the angle-change clearance
+doubled (×2 is enough), and the packer wrapping at nine tenths of the band, which
+turns `packs every row tight` red — the mutation the vacuous version survived.
+Control green throughout.
+
+⚠️ **This row said 0.0003 first, and buying that number was the defect above.**
+The sharp floor belonged to the outcome assertion while it was unsound; making it
+sound cost the sharpness, and the honest floor is now the cost model's 0.0055.
+Before that, the row claimed the moved model caught a hair-sized cursor
+over-spend — a misreading of "adding a hair to every book's cost" further up,
+which is a hair added to the *charge*, not to the *spend*. Three numbers, three
+corrections, none of them from running the suite: the suite was green for all
+three. **A detection floor that is written down is a gate; one that is assumed is
+what this row exists to prevent.** Do not restate these in either direction
+without re-running the bisection.
 
 **The one thing this row now carries alone.** Clearance is charged to the *left*
 of the book that leans, where the angle changes, so the last book of a row has

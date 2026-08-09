@@ -64,219 +64,263 @@ export interface Placement {
 export function placeShelf(rows: readonly ShelfRow[]): Placement[][] {
   const rowCount = rowsForCase(rows.length);
 
-  return rows.map((row, rowIndex) => {
+  return rows.map((row, rowIndex) =>
     // Drawn top-down: the newest books sit on the top shelf.
-    const shelfY = (rowCount - 1 - rowIndex) * SHELF.rowHeight + SHELF.plankThickness / 2;
+    placeRow(row.books, rowIndex, (rowCount - 1 - rowIndex) * SHELF.rowHeight + SHELF.plankThickness / 2),
+  );
+}
 
-    // Books stand *against* the left upright and run right, as a shelf fills.
+/**
+ * One row's books, placed — the cursor, and nothing that depends on the rows
+ * around it.
+ *
+ * Split out of `placeShelf` because **`toRows` calls it too**. The packer used
+ * to price a book with `shelfCost` and wrap on the estimate; it runs this and
+ * wraps on the answer, which is the whole of ADR-0042.
+ *
+ * Everything here is determined by `(books, rowIndex)` alone. No later row is
+ * consulted, and `shelfY` feeds `position.y` and nothing else — so a caller that
+ * only wants the X arithmetic, which is what the packer wants, may pass 0.
+ */
+export function placeRow(
+  books: readonly ShelfBook[],
+  rowIndex: number,
+  shelfY: number,
+): Placement[] {
+  // Books stand *against* the left upright and run right, as a shelf fills.
+  //
+  // Flush, with no padding: a book that leans left and starts a finger's width
+  // clear of the side is leaning on nothing, which is the tell that made the
+  // whole row look wrong. The case itself is what the first book rests on.
+  let cursor = -SHELF.width / 2;
+  let index = 0;
+
+  /**
+   * One slump angle per run of touching books.
+   *
+   * Books in a leaning row are not each at their own angle — they are a stack
+   * resting on each other, so they are parallel, and the run as a whole leans
+   * on whatever is at its left end. Giving every book its own angle is what
+   * produced the wedge-shaped gaps: neighbours a fraction of a degree apart,
+   * touching nowhere.
+   */
+  let runLean = leanFor(rowIndex, index, books[0]?.book.id ?? '');
+
+  /**
+   * Whatever is immediately to the left, as one record.
+   *
+   * Six separate `left*` locals reassigned in a block is six chances to update
+   * five of them, and every one of them is read by the same two decisions.
+   *
+   * The case's own side starts it off: vertical, swinging not at all, taller
+   * than any book, and standing exactly where the cursor does.
+   */
+  let left: Neighbour = {
+    lean: 0,
+    sway: 0,
+    height: Number.POSITIVE_INFINITY,
+    thickness: 0,
+    right: cursor,
+    faceOut: false,
+  };
+
+  const placements: Placement[] = [];
+
+  for (const entry of books) {
+    // Depth carries the cover's real aspect on a face-out book, which is
+    // turned side-on, and the shelf depth on a shelved one.
+    const depth = entry.faceOut ? entry.coverWidth : SHELF.bookDepth;
+
+    const gap = entry.gapBefore ?? 0;
+    cursor += gap;
+
+    // A year gap opens a run, and the book that opens it **falls into the gap**
+    // rather than standing to attention beside it.
     //
-    // Flush, with no padding: a book that leans left and starts a finger's width
-    // clear of the side is leaning on nothing, which is the tell that made the
-    // whole row look wrong. The case itself is what the first book rests on.
-    let cursor = -SHELF.width / 2;
-    let index = 0;
-
-    /**
-     * One slump angle per run of touching books.
-     *
-     * Books in a leaning row are not each at their own angle — they are a stack
-     * resting on each other, so they are parallel, and the run as a whole leans
-     * on whatever is at its left end. Giving every book its own angle is what
-     * produced the wedge-shaped gaps: neighbours a fraction of a degree apart,
-     * touching nowhere.
-     */
-    let runLean = leanFor(rowIndex, index, row.books[0]?.book.id ?? '');
-
-    /**
-     * Whatever is immediately to the left, as one record.
-     *
-     * Six separate `left*` locals reassigned in a block is six chances to update
-     * five of them, and every one of them is read by the same two decisions.
-     *
-     * The case's own side starts it off: vertical, swinging not at all, taller
-     * than any book, and standing exactly where the cursor does.
-     */
-    let left: Neighbour = {
-      lean: 0,
-      sway: 0,
-      height: Number.POSITIVE_INFINITY,
-      thickness: 0,
-      right: cursor,
-      faceOut: false,
-    };
-
-    const placements: Placement[] = [];
-
-    for (const entry of row.books) {
-      // Depth carries the cover's real aspect on a face-out book, which is
-      // turned side-on, and the shelf depth on a shelved one.
-      const depth = entry.faceOut ? entry.coverWidth : SHELF.bookDepth;
-
-      const gap = entry.gapBefore ?? 0;
-      cursor += gap;
-
-      // A year gap opens a run, and the book that opens it **falls into the gap**
-      // rather than standing to attention beside it.
-      //
-      // It used to stand bolt upright, on the reasoning that it has open shelf on
-      // its left and nothing to rest against. The second half of that is what was
-      // wrong: there is something to rest against, it is just a gap away, and a
-      // book with 9cm of air on one side does not stand square on a real shelf —
-      // it topples until it meets its neighbour. So the angle is whatever it
-      // takes to reach, and the run behind it inherits that angle the way a run
-      // always inherits the lean of whatever holds its left end up.
-      //
-      // A face-out book is broad and flat and stands square whatever is beside
-      // it, so it opens a run at the ordinary slump instead.
-      //
-      // **A face-out book ends the run behind it, too**, which it did not used to:
-      // the slump carried straight through one, so every shelved book between two
-      // year gaps shared an angle however many broad flat supports stood between
-      // them. That was harmless while every angle came from the same 3.5° wave and
-      // is not now — one propped book would hand its 9° to the whole rest of the
-      // row, and a shelf where everything past the first gap has fallen over is
-      // not what propping one book was meant to buy.
-      const props = propsAcrossGap(entry);
-      if (props || (left.faceOut && !entry.faceOut)) {
-        runLean = props
-          ? propLeanFor(cursor - left.right, entry.height, left)
-          : leanFor(rowIndex, index, entry.book.id);
-      }
-
-      // A face-out book stands square; a shelved one leans with its run.
-      const lean = entry.faceOut ? 0 : runLean;
-      const sway = swayOf(entry.height, lean);
-
-      if (props) {
-        // Propped books pivot on their bottom-left corner, not their centre.
-        //
-        // Everything else here is placed by its footprint and tilted about its
-        // middle, which swings the top-left corner out by `sway` and the
-        // bottom-right corner in by the same — symmetric, so closing a gap `g` at
-        // the top would need `sin θ = 2g/h` and would open `2g` at the bottom.
-        // The gap would not close; it would double and move down.
-        //
-        // Pinning the base instead is what "leaning on it" means: the top swings
-        // the whole gap, the bottom stays where it was, and what is left is a
-        // wedge of air at the plank rather than a slab of it at eye level. The
-        // render still rotates about the centre, so this is the centre that puts
-        // that corner where it belongs.
-        cursor -= propShiftOf(entry.thickness, entry.height, lean);
-      } else if (lean !== left.lean) {
-        // Clearance wherever the angle changes, and only there.
-        //
-        // Rotating a book about its centre swings its top-left and bottom-right
-        // corners out past its own footprint by `sway`. Two neighbours at the
-        // same angle stay parallel and never notice, which is why a run packs
-        // flush — but where the angle changes, that swing lands inside whatever
-        // is beside it. Both reported collisions are this: a leaning book's
-        // bottom corner driven into the face-out book on its right, and the first
-        // book of a row driven into the case's own side.
-        //
-        // A propped book pays no clearance because it has already been *given*
-        // one, a whole `YEAR_GAP` wide, and the shift above spends exactly the
-        // part of it the swing needs.
-        cursor += Math.max(sway, left.sway);
-      } else {
-        // **Parallel is not the same as flush**, which is what "a run packs
-        // flush, and neighbours at the same angle never notice" quietly assumed
-        // for as long as there were runs.
-        //
-        // A book tilted about its middle has its base swung right by its own
-        // `sway`, and `sway` is half its *height* times the angle — so a tall
-        // book's base sits further right than a short one's, at the same angle,
-        // from the same footprint. A tall book followed by a short one therefore
-        // has its low corner inside its neighbour: 2.3mm on the live shelf, at an
-        // ordinary 3.2° slump, and four times that at a propped angle.
-        //
-        // **Signed, and applied in both directions.** The mirror case is a short
-        // book followed by a taller one, which opens 7mm of daylight instead of
-        // closing 7mm too much — the same error, and the one that clamping at
-        // zero left in place while calling the collision fixed. There is a right
-        // answer here and it is not "no worse than before" in one direction.
-        cursor += parallelPushOf(entry, left);
-      }
-      left = {
-        lean,
-        sway,
-        height: entry.height,
-        // A face-out book does not tilt along the row, so its thickness never
-        // foreshortens and the term it feeds is zero either way.
-        thickness: entry.faceOut ? 0 : entry.thickness,
-        faceOut: entry.faceOut,
-        // Filled in by whichever branch places it — the two disagree about what
-        // a book's own width is.
-        right: cursor,
-      };
-
-      if (entry.faceOut) {
-        const x = cursor + entry.coverWidth * 0.5;
-        const z = (SHELF.depth - entry.coverWidth) / 2 - 0.02;
-
-        placements.push({
-          entry,
-          // Turned to show its cover, leaning back against the books beside it.
-          //
-          // -90°, not +90°: the cover is the +X face, and rotating +90° about Y
-          // maps +X to -Z — pointing away from the room. Face-out books were
-          // showing the viewer their back boards.
-          rotationY: -Math.PI / 2,
-          rotationZ: 0.06,
-          position: { x, y: shelfY + entry.height / 2, z },
-          // A face-out book has been turned a quarter turn, so what it puts on
-          // the plank is `coverWidth` across and only its own `thickness` deep —
-          // the same slab as any other book, seen end-on. Taking the cover's
-          // width for *both* painted a shadow the size of the cover flat on the
-          // wood, which reached most of the way to the front edge of the shelf:
-          // a dark smudge standing in front of a book, thrown by a light that is
-          // in front of it.
-          contact: { x, width: entry.coverWidth, z, depth: entry.thickness },
-          frontZ: depth / 2,
-        });
-
-        left = { ...left, right: cursor + entry.coverWidth };
-        cursor += entry.coverWidth + SHELF.bookGap * 2;
-      } else {
-        const x = cursor + entry.thickness / 2;
-        const z = (SHELF.depth - SHELF.bookDepth) / 2 - 0.02;
-
-        placements.push({
-          entry,
-          rotationY: 0,
-          rotationZ: lean,
-          position: {
-            x,
-            // Rotating about the centre would sink the low corner into the plank,
-            // so the book is lifted until that corner lands on the wood.
-            //
-            // The cosine used to be dropped, on the grounds that it is 0.998 at
-            // the steepest ordinary slump — 0.0008 of a unit, which no render
-            // shows. A propped book leans twice that far, where the same omission
-            // is 0.004 and reads as a hairline of daylight under the book. The
-            // exact form costs one cosine.
-            y: shelfY + (entry.height / 2) * Math.cos(lean) + (entry.thickness / 2) * Math.sin(Math.abs(lean)),
-            z,
-          },
-          // Under the book's foot, which is not under its middle once it leans:
-          // the bottom edge swings out by `sway`, and the painted shadow follows
-          // it. Worth 2cm on an ordinary slump and 5cm on a propped book, which
-          // is half a spine of daylight between a book and its own shadow.
-          contact: { x: x + sway, width: entry.thickness, z, depth: SHELF.bookDepth },
-          frontZ: depth / 2,
-        });
-
-        // Touching, not spaced. Books in a run share an angle, so they stay
-        // parallel and their boards meet along the whole height — which is what
-        // "resting on each other" has to look like. The hair of clearance is
-        // only so two coincident faces do not fight over the same depth.
-        left = { ...left, right: cursor + entry.thickness };
-        cursor += entry.thickness + TOUCHING;
-      }
-      index += 1;
+    // It used to stand bolt upright, on the reasoning that it has open shelf on
+    // its left and nothing to rest against. The second half of that is what was
+    // wrong: there is something to rest against, it is just a gap away, and a
+    // book with 9cm of air on one side does not stand square on a real shelf —
+    // it topples until it meets its neighbour. So the angle is whatever it
+    // takes to reach, and the run behind it inherits that angle the way a run
+    // always inherits the lean of whatever holds its left end up.
+    //
+    // A face-out book is broad and flat and stands square whatever is beside
+    // it, so it opens a run at the ordinary slump instead.
+    //
+    // **A face-out book ends the run behind it, too**, which it did not used to:
+    // the slump carried straight through one, so every shelved book between two
+    // year gaps shared an angle however many broad flat supports stood between
+    // them. That was harmless while every angle came from the same 3.5° wave and
+    // is not now — one propped book would hand its 9° to the whole rest of the
+    // row, and a shelf where everything past the first gap has fallen over is
+    // not what propping one book was meant to buy.
+    const props = propsAcrossGap(entry);
+    if (props || (left.faceOut && !entry.faceOut)) {
+      runLean = props
+        ? propLeanFor(cursor - left.right, entry.height, left)
+        : leanFor(rowIndex, index, entry.book.id);
     }
 
-    return placements;
-  });
+    // A face-out book stands square; a shelved one leans with its run.
+    const lean = entry.faceOut ? 0 : runLean;
+    const sway = swayOf(entry.height, lean);
+
+    if (props) {
+      // Propped books pivot on their bottom-left corner, not their centre.
+      //
+      // Everything else here is placed by its footprint and tilted about its
+      // middle, which swings the top-left corner out by `sway` and the
+      // bottom-right corner in by the same — symmetric, so closing a gap `g` at
+      // the top would need `sin θ = 2g/h` and would open `2g` at the bottom.
+      // The gap would not close; it would double and move down.
+      //
+      // Pinning the base instead is what "leaning on it" means: the top swings
+      // the whole gap, the bottom stays where it was, and what is left is a
+      // wedge of air at the plank rather than a slab of it at eye level. The
+      // render still rotates about the centre, so this is the centre that puts
+      // that corner where it belongs.
+      cursor -= propShiftOf(entry.thickness, entry.height, lean);
+    } else if (lean !== left.lean) {
+      // Clearance wherever the angle changes, and only there.
+      //
+      // Rotating a book about its centre swings its top-left and bottom-right
+      // corners out past its own footprint by `sway`. Two neighbours at the
+      // same angle stay parallel and never notice, which is why a run packs
+      // flush — but where the angle changes, that swing lands inside whatever
+      // is beside it. Both reported collisions are this: a leaning book's
+      // bottom corner driven into the face-out book on its right, and the first
+      // book of a row driven into the case's own side.
+      //
+      // A propped book pays no clearance because it has already been *given*
+      // one, a whole `YEAR_GAP` wide, and the shift above spends exactly the
+      // part of it the swing needs.
+      cursor += Math.max(sway, left.sway);
+    } else {
+      // **Parallel is not the same as flush**, which is what "a run packs
+      // flush, and neighbours at the same angle never notice" quietly assumed
+      // for as long as there were runs.
+      //
+      // A book tilted about its middle has its base swung right by its own
+      // `sway`, and `sway` is half its *height* times the angle — so a tall
+      // book's base sits further right than a short one's, at the same angle,
+      // from the same footprint. A tall book followed by a short one therefore
+      // has its low corner inside its neighbour: 2.3mm on the live shelf, at an
+      // ordinary 3.2° slump, and four times that at a propped angle.
+      //
+      // **Signed, and applied in both directions.** The mirror case is a short
+      // book followed by a taller one, which opens 7mm of daylight instead of
+      // closing 7mm too much — the same error, and the one that clamping at
+      // zero left in place while calling the collision fixed. There is a right
+      // answer here and it is not "no worse than before" in one direction.
+      cursor += parallelPushOf(entry, left);
+    }
+    left = {
+      lean,
+      sway,
+      height: entry.height,
+      // A face-out book does not tilt along the row, so its thickness never
+      // foreshortens and the term it feeds is zero either way.
+      thickness: entry.faceOut ? 0 : entry.thickness,
+      faceOut: entry.faceOut,
+      // Filled in by whichever branch places it — the two disagree about what
+      // a book's own width is.
+      right: cursor,
+    };
+
+    if (entry.faceOut) {
+      const x = cursor + entry.coverWidth * 0.5;
+      const z = (SHELF.depth - entry.coverWidth) / 2 - 0.02;
+
+      placements.push({
+        entry,
+        // Turned to show its cover, leaning back against the books beside it.
+        //
+        // -90°, not +90°: the cover is the +X face, and rotating +90° about Y
+        // maps +X to -Z — pointing away from the room. Face-out books were
+        // showing the viewer their back boards.
+        rotationY: -Math.PI / 2,
+        rotationZ: 0.06,
+        position: { x, y: shelfY + entry.height / 2, z },
+        // A face-out book has been turned a quarter turn, so what it puts on
+        // the plank is `coverWidth` across and only its own `thickness` deep —
+        // the same slab as any other book, seen end-on. Taking the cover's
+        // width for *both* painted a shadow the size of the cover flat on the
+        // wood, which reached most of the way to the front edge of the shelf:
+        // a dark smudge standing in front of a book, thrown by a light that is
+        // in front of it.
+        contact: { x, width: entry.coverWidth, z, depth: entry.thickness },
+        frontZ: depth / 2,
+      });
+
+      left = { ...left, right: cursor + entry.coverWidth };
+      cursor += entry.coverWidth + SHELF.bookGap * 2;
+    } else {
+      const x = cursor + entry.thickness / 2;
+      const z = (SHELF.depth - SHELF.bookDepth) / 2 - 0.02;
+
+      placements.push({
+        entry,
+        rotationY: 0,
+        rotationZ: lean,
+        position: {
+          x,
+          // Rotating about the centre would sink the low corner into the plank,
+          // so the book is lifted until that corner lands on the wood.
+          //
+          // The cosine used to be dropped, on the grounds that it is 0.998 at
+          // the steepest ordinary slump — 0.0008 of a unit, which no render
+          // shows. A propped book leans twice that far, where the same omission
+          // is 0.004 and reads as a hairline of daylight under the book. The
+          // exact form costs one cosine.
+          y: shelfY + (entry.height / 2) * Math.cos(lean) + (entry.thickness / 2) * Math.sin(Math.abs(lean)),
+          z,
+        },
+        // Under the book's foot, which is not under its middle once it leans:
+        // the bottom edge swings out by `sway`, and the painted shadow follows
+        // it. Worth 2cm on an ordinary slump and 5cm on a propped book, which
+        // is half a spine of daylight between a book and its own shadow.
+        contact: { x: x + sway, width: entry.thickness, z, depth: SHELF.bookDepth },
+        frontZ: depth / 2,
+      });
+
+      // Touching, not spaced. Books in a run share an angle, so they stay
+      // parallel and their boards meet along the whole height — which is what
+      // "resting on each other" has to look like. The hair of clearance is
+      // only so two coincident faces do not fight over the same depth.
+      left = { ...left, right: cursor + entry.thickness };
+      cursor += entry.thickness + TOUCHING;
+    }
+    index += 1;
+  }
+
+  return placements;
+}
+
+/**
+ * Where a row's last book's footprint ends, placed at `rowIndex`.
+ *
+ * **The one question the packer asks**, and it asks it of the placer rather than
+ * of a model of the placer. `toRows` offers a book to a row by placing the row
+ * with the book on the end and reading this: past the band and the row wraps.
+ *
+ * The *footprint*, not the corners. A leaning book's low corner bulges `sway`
+ * right of its footprint, and what that swing swings into is `SHELF.endReserve`
+ * — charged once at the open end rather than to each book, because clearance is
+ * charged to the left of the book that leans and the last book of a row has
+ * nothing on its right to charge. So the band this is compared against already
+ * has the reserve taken out of it, and comparing footprints is the whole of it.
+ *
+ * An empty row ends where the cursor starts.
+ */
+export function rowExtent(books: readonly ShelfBook[], rowIndex: number): number {
+  const placements = placeRow(books, rowIndex, 0);
+  const last = placements[placements.length - 1];
+  if (last === undefined) return -SHELF.width / 2;
+  // `footprint` is that same `faceOut ? coverWidth : thickness`, decided once in
+  // `toShelfBook`. Spelling it out again here is how a fourth answer to "how wide
+  // is a book" would start.
+  return last.position.x + last.entry.footprint / 2;
 }
 
 /**
@@ -334,9 +378,10 @@ export interface Neighbour {
 /**
  * Whether a book falls into the gap in front of it instead of standing beside it.
  *
- * **One rule, read by both halves.** The cursor branches on it and `shelfCost`
- * prices it, and those two disagreeing is the entire subject of ADR-0031 — a
- * packer that charges for a clearance the placer does not spend, or the reverse.
+ * **One rule, read by everything that needs it.** The cursor branches on it, and
+ * G25's cost model prices it; those two disagreeing is the entire subject of
+ * ADR-0031 — a charge for a clearance the placer does not spend, or the reverse.
+ * The packer no longer reads it at all, because it no longer prices anything.
  * A face-out book is broad and flat and stands square whatever is beside it.
  */
 export function propsAcrossGap(entry: ShelfBook): boolean {
@@ -349,7 +394,7 @@ export function propsAcrossGap(entry: ShelfBook): boolean {
  *
  * Two shelved books with nothing between them are always at the same angle: only
  * a gap or a face-out book opens a new run. So this is the cursor's `else`,
- * stated once rather than reproduced in the packer.
+ * stated once rather than reproduced in G25's cost model.
  */
 export function runsParallel(entry: ShelfBook, previous: ShelfBook | undefined): boolean {
   return (
@@ -451,8 +496,8 @@ export function swayOf(height: number, lean: number): number {
  *
  * The difference between the two centres, exactly: half the thickness
  * foreshortens by `1 - cos θ`, and the whole swing of the top corner is `sway`.
- * It is shelf the book gives *back*, which is why the packer can charge a year
- * gap in full and still be an upper bound.
+ * It is shelf the book gives *back*, which is why G25's cost model can charge a
+ * year gap in full and still be an upper bound.
  */
 export function propShiftOf(thickness: number, height: number, lean: number): number {
   return (thickness / 2) * (1 - Math.cos(lean)) + swayOf(height, lean);
@@ -509,96 +554,18 @@ function swingsNothing(entry: ShelfBook, left: Neighbour): boolean {
 /**
  * Whether a book leans where it sits.
  *
- * The cursor's own rule, exported so the packer can read it rather than keep a
- * copy: a face-out book stands square and everything else leans with its run.
+ * The cursor's own rule, exported so G25's cost model can read it rather than
+ * keep a copy: a face-out book stands square and everything else leans with its
+ * run.
  *
  * **The book carrying a year gap used to be the second exception**, on the
  * reasoning that it had nothing to rest against. It props against its neighbour
  * across the gap now, so it leans like anything else — and it has to be counted
- * that way here, or the packer charges clearance for an angle change that no
- * longer happens at a gap and the excess stops being one the bound can name.
+ * that way here, or G25's cost model charges clearance for an angle change that
+ * no longer happens at a gap and the excess stops being one the bound can name.
  */
 export function leansInPlace(entry: ShelfBook): boolean {
   return !entry.faceOut;
-}
-
-/**
- * How much shelf a book costs, placed after `previous`.
- *
- * **The packer charges this and the cursor spends it**, which is the whole of
- * G25. They were different sums for as long as both existed: `toRows` charged
- * one `bookGap` a book against the cursor's `TOUCHING` or `bookGap * 2`, which
- * came to 0.162 across a twenty-seven book row, and budgeted nothing at all for
- * the clearance a change of angle costs.
- *
- * `previous` is `undefined` for the first book of a row, where the case's own
- * side stands in — vertical, and swinging not at all.
- *
- * **It is an upper bound, not the exact spend**, and now for two reasons.
- *
- * The swing is charged at `MAX_LEAN` because the real lean comes from `leanFor`,
- * which needs the row index, which is not known until the wrap this figure
- * decides has happened. And a year gap is charged in full even though a propped
- * book gives `propShiftOf` of it straight back — an angle this cannot know
- * either, since it depends on the neighbour the wrap has not yet chosen.
- *
- * So the packer is conservative by at most one maximal swing per angle change,
- * one maximal prop per gap, and one maximal parallel push a book — named and
- * pinned by G25 rather than left to be discovered.
- */
-export function shelfCost(entry: ShelfBook, previous: ShelfBook | undefined): number {
-  // `footprint` is already "how wide is this book, placed"; only the gap after it
-  // differs, and it differs because a face-out book is a broad flat thing that
-  // needs air either side while a run of spines is meant to touch.
-  const occupies = entry.footprint + (entry.faceOut ? SHELF.bookGap * 2 : TOUCHING);
-
-  // Clearance wherever the angle changes, and only there — the cursor's rule,
-  // with the actual lean replaced by the steepest one allowed.
-  const leans = leansInPlace(entry);
-  const leftLeans = previous !== undefined && leansInPlace(previous);
-  const clearance =
-    leans === leftLeans
-      ? 0
-      : Math.max(
-          leans ? swayOf(entry.height, MAX_LEAN) : 0,
-          previous !== undefined && leftLeans ? swayOf(previous.height, MAX_LEAN) : 0,
-        );
-
-  // And where it does *not* change, the parallel push — which the cursor also
-  // spends and which nothing charged for as long as "a run packs flush" was
-  // believed. Priced at `MAX_PROP_LEAN` and with each term taken at its worst
-  // sign, because the real angle is not known here and this only has to be no
-  // smaller than the real one.
-  //
-  // Not across a gap: the cursor pays a *prop shift* there and no push at all, so
-  // charging both would be charging the same transition twice. `runsParallel` is
-  // the cursor's own branch condition rather than a restatement of it.
-  const parallel =
-    runsParallel(entry, previous) && previous !== undefined
-      ? parallelPushOf(entry, {
-          height: previous.height,
-          thickness: previous.thickness,
-          lean: MAX_PROP_LEAN,
-          sway: 0,
-          right: 0,
-          faceOut: false,
-        }) + (entry.thickness / 2) * (1 - Math.cos(MAX_PROP_LEAN))
-      : 0;
-
-  return (entry.gapBefore ?? 0) + occupies + clearance + Math.max(parallel, 0);
-}
-
-/**
- * What a whole row costs the shelf.
- *
- * `toRows` cannot call this — it is deciding the row a book at a time and needs
- * the running total to know whether the next one fits — but everything asking
- * *afterwards* what a finished row cost should ask here rather than write the
- * fold again. Two copies of it appeared within one commit of the fold being
- * consolidated, which is the same species of drift as the three widths.
- */
-export function rowCost(books: readonly ShelfBook[]): number {
-  return books.reduce((total, entry, index) => total + shelfCost(entry, books[index - 1]), 0);
 }
 
 /**
