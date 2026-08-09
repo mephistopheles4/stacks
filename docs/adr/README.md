@@ -66,3 +66,4 @@ Two other files hold what these deliberately do not:
 | [0040](./0040-the-log-is-one-file-per-episode.md) | `progress.md` is a spine; the log is one file per episode, and a gate keeps the links honest |
 | [0041](./0041-a-gate-has-a-number-and-a-name.md) | A gate has a number *and* a name, and the name is anchored to its spec |
 | [0042](./0042-the-packer-runs-the-placer.md) | The packer runs the placer instead of estimating it |
+| [0043](./0043-codeql-is-a-second-required-gate.md) | CodeQL is a second required gate, as a ruleset rule rather than a check name |

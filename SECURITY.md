@@ -63,7 +63,7 @@ in this repository, and that distinction matters more than it looks:
 | Grouped security updates | those PRs arriving as one, not one per package |
 | Dependabot malware alerts | a dependency found to be malicious, not merely vulnerable |
 | CodeQL (default setup) | static analysis of the TypeScript, on push and on pull requests |
-| Branch protection on `main` | pull request required, `gates` must pass, no bypass |
+| Branch protection on `main` | pull request required, `gates` must pass, CodeQL must find no new high alert, no bypass |
 
 **Nothing in this repository can check that any of them is switched on.** They
 live in repository settings, outside the tree, so a clone cannot read them —
@@ -76,10 +76,22 @@ So this section is a statement of what the project **relies on**, not a claim
 about what is currently true. If you are auditing this repo and that distinction
 matters to you, check the settings themselves; the file cannot tell you.
 
-**CodeQL is not a required check**, and that is deliberate for now. `gates` is
-what blocks a merge; CodeQL reports alongside it. Making it required is a
-one-line change to the branch ruleset and worth doing once its findings here
-have been triaged rather than before.
+**CodeQL is now a required check**, once its first batch of findings had been
+triaged to zero — which was the condition this paragraph set when it said the
+opposite. It blocks a pull request that introduces a **new** security alert at
+high or above; pre-existing alerts are not the question, since merge protection
+compares against the base branch.
+
+It is a ruleset `code_scanning` rule rather than a required status context,
+because that is the mechanism built for it and it states its thresholds where
+you can read them instead of hiding them behind a check name.
+
+**The alert threshold is `errors`, not warnings, and that is a judgement call
+with evidence behind it.** CodeQL rated all twelve of its first findings here
+*high*; one was a real bug. A check that blocks on that ratio is one you learn
+to route around rather than read, which would be worse than not having it. See
+[`docs/gates.md`](docs/gates.md) — *"Triaging a CodeQL finding"* — for how that
+call was reached and what the other eleven turned out to be.
 
 Two things this list is *not* covering twice. `pnpm audit --audit-level=high` is
 a required CI check and lives in [`.github/workflows/gates.yml`](.github/workflows/gates.yml)

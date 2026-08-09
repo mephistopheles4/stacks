@@ -66,8 +66,9 @@ Run `gh issue view <number> --comments`.
 ## What this repo expects of a change, whatever opened it
 
 `main` is protected by a ruleset with no bypass actors: a pull request is
-required, and the `gates` check must pass. That check is the contract, not any
-convention above it. Before proposing a change, run:
+required, the `gates` check must pass, and CodeQL must find no new security
+alert at high or above. Those two are the contract, not any convention above
+them. Before proposing a change, run:
 
 ```bash
 pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render

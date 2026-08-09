@@ -24,7 +24,7 @@ phone was rendering when it died — are measurements and stay exactly as they a
 | **Now working on** | books that read as books — map [#50](https://github.com/mephistopheles4/stacks/issues/50), whose fifteen tickets are all closed and **all built**. See below |
 | **Queued** | the map's fog, which is the only current answer — ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s *Not yet specified*. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run against the real vault |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
-| **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates`, no bypass |
+| **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates` + CodeQL, no bypass |
 | **Blocked on** | nothing |
 | **Mobile crash** | closed. Two separate bugs: 314 MB of texture (G15), then a driver that cannot sample a shadow map. The shelf paints its shadows now |
 | **Deployed** | https://stacks.aymandiab.com — Cloudflare Pages, `pnpm deploy:site` |

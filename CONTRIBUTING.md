@@ -78,8 +78,9 @@ exactly that reason — a stale entry fails.
 
 ## Pull requests
 
-`main` is protected: pull request required, `gates` must pass, no force-push, no
-deletion, and no bypass for anyone including the owner. Branch from `main`, keep
+`main` is protected: pull request required, `gates` must pass, CodeQL must find
+no new high-or-above security alert, no force-push, no deletion, and no bypass
+for anyone including the owner. Branch from `main`, keep
 it current, and let CI report before asking for a merge.
 
 There is no approval requirement — a sole maintainer cannot approve their own
