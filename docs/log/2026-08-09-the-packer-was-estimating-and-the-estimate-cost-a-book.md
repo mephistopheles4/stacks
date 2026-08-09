@@ -39,9 +39,10 @@ estimate would leave nothing bounding what the *cursor* spends; and the
 replacement claim then *overclaimed* — it does not catch a hair. Two after: the
 new outcome assertion compared room against a **floor** on the next book's cost
 where soundness needs a **ceiling**, so a book rejected because of clearance
-would have turned a correct packer red — the error G25 already records twice,
-committed a third time in the same file, one commit later. It was green on all
-six fixtures, as its two predecessors had been.
+would have turned a correct packer red — the error [`gates.md`](../gates.md),
+row G25 (`one-usable-width`), already records twice, committed a third time in
+the same file, one commit later. It was green on all six fixtures, as its two
+predecessors had been.
 
 **Three numbers, three corrections, none from running the suite.** The claimed
 detection floor went 0.0003 → withdrawn → 0.0055, the last one bisected after the

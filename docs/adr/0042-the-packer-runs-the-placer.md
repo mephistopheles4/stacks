@@ -86,8 +86,9 @@ on this paragraph.
 ## Where the cost model went, and why it did not die
 
 Nothing in `packages/site/src` calls `shelfCost` now. The tempting move is to
-delete it and the G25 group that exercises it, on the grounds that a cost model
-only its own gate reads is `docs/gates.md`'s "defendant sitting as judge".
+delete it and the group that exercises it — [`gates.md`](../gates.md), row G25
+(`one-usable-width`) — on the grounds that a cost model only its own gate reads
+is that file's "defendant sitting as judge".
 
 That is backwards. The group defends two things, and only one of them became
 trivial. `spent === charged` is indeed vacuous now. But `spent ≤ charged` is the
