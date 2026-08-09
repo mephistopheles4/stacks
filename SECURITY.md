@@ -62,6 +62,7 @@ in this repository, and that distinction matters more than it looks:
 | Dependabot security updates | a pull request per alert with an available patch |
 | Grouped security updates | those PRs arriving as one, not one per package |
 | Dependabot malware alerts | a dependency found to be malicious, not merely vulnerable |
+| CodeQL (default setup) | static analysis of the TypeScript, on push and on pull requests |
 | Branch protection on `main` | pull request required, `gates` must pass, no bypass |
 
 **Nothing in this repository can check that any of them is switched on.** They
@@ -74,6 +75,11 @@ than left as an assumption.
 So this section is a statement of what the project **relies on**, not a claim
 about what is currently true. If you are auditing this repo and that distinction
 matters to you, check the settings themselves; the file cannot tell you.
+
+**CodeQL is not a required check**, and that is deliberate for now. `gates` is
+what blocks a merge; CodeQL reports alongside it. Making it required is a
+one-line change to the branch ruleset and worth doing once its findings here
+have been triaged rather than before.
 
 Two things this list is *not* covering twice. `pnpm audit --audit-level=high` is
 a required CI check and lives in [`.github/workflows/gates.yml`](.github/workflows/gates.yml)
