@@ -63,3 +63,4 @@ Two other files hold what these deliberately do not:
 | [0037](./0037-ranking-does-not-reward-a-sparse-record.md) | Ranking scores brevity over the title alone, and breaks ties on completeness |
 | [0038](./0038-oreilly-is-a-fourth-provider.md) | O'Reilly is a fourth provider, consulted last, covers included |
 | [0039](./0039-a-book-after-a-year-gap-props-against-its-neighbour.md) | A book after a year gap leans across it, pivoting on its base |
+| [0040](./0040-the-log-is-one-file-per-episode.md) | `progress.md` is a spine; the log is one file per episode, and a gate keeps the links honest |

@@ -5,6 +5,10 @@ A local-first reading tracker where the notes vault IS the database. A CLI (`sta
 
 ## Start here — orientation for a cold session
 1. `docs/progress.md` — where the project actually is. Read this first, always.
+   It is a **spine**: current state, the gate log, environment findings, and an
+   index of every investigation. The narratives themselves live one per file in
+   `docs/log/` — follow a link from the index when you need one, rather than
+   reading 1500 lines to find the four that matter.
 2. `docs/plan.md` — the approved execution plan, rules of engagement, fixture spec.
 3. `docs/library-brief.md` — full product spec. Read before starting any phase.
 4. `docs/gates.md` — the invariant scoreboard: which rule each gate protects, and
@@ -15,7 +19,10 @@ A local-first reading tracker where the notes vault IS the database. A CLI (`sta
 6. `docs/blockers.md` — only if it exists; records gates that defeated 3 approaches.
 
 Update `docs/progress.md` in the same commit as the gate it describes, and
-`docs/gates.md` in the same commit as the gate it scores.
+`docs/gates.md` in the same commit as the gate it scores. A new investigation
+goes to `docs/log/<date>-<slug>.md` with one index line in the spine — **not**
+appended to `docs/progress.md`, which is how that file reached 1551 lines while
+its own second paragraph called it an index.
 
 **When compacting this conversation, always preserve:** the current phase and
 which gates are green, the exact gate commands and their last output, the two
@@ -319,7 +326,7 @@ exists for a visitor who does not ask.
 
 - **The black box** (`diagnostics.ts`) records a crash that leaves no error
   behind, and is a **static** import: it has to be running before the thing it
-  measures fails. See "The mobile crash" in [`docs/progress.md`](docs/progress.md).
+  measures fails. See [The mobile crash](docs/log/2026-08-01-the-mobile-crash-g15.md).
 - **The panel** (`debug-panel.ts`) is every setting the shelf has, live, and is
   **lazy**: its 8.8 KB is paid only by a page that asked for it.
 

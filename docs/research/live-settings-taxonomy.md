@@ -7,7 +7,7 @@ UI is built from, and the list of controls that must say **reload to apply**.
 Every claim below is either read out of three.js **0.185.1** source
 (`packages/site/node_modules/three/src/…`, cited by file and line) or **measured** on a live
 scene. Where it is neither, it says so. Given that this repo has a documented case of sizing an
-allocation predicting exactly the wrong answer (`docs/progress.md`, "The ranking was wrong"),
+allocation predicting exactly the wrong answer ([the mobile crash](../log/2026-08-01-the-mobile-crash-g15.md), "The ranking was wrong"),
 every row carries its provenance.
 
 ## How the settings were counted
@@ -151,7 +151,7 @@ scene walk does not restore it.
 page block alone (`scene.ts:904`, `:927`); the printed cover and spine planes never cast.
 `buildShelf` casts on the uprights and the planks but **not** the backboard (`:986`, `:997`).
 That is one caster per book, two uprights and `rowCount + 1` planks — the whole point of the
-optimisation `docs/progress.md` records ("One caster per book instead of four", ~196 shadow draws
+optimisation [the mobile crash](../log/2026-08-01-the-mobile-crash-g15.md) records ("One caster per book instead of four", ~196 shadow draws
 for 49 silhouettes removed).
 
 So `traverse(o => { if (o.isMesh) o.castShadow = true })` would turn on roughly seven casters per

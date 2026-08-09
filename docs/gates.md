@@ -71,6 +71,7 @@ means the two have drifted.
 | **G8** | frontmatter contract ↔ parser ↔ CLAUDE.md | a key the parser accepts but the contract never documents | `gates/frontmatter-contract.test.ts` | ✅ |
 | **G9** | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | `gates/env-contract.test.ts` | ✅ |
 | **G19** | the constitution ↔ this scoreboard | an invariant nothing scores, a row naming a moved file, a gate nobody recorded | `gates/constitution-scoreboard.test.ts` | ✅ |
+| **G29** | a document's links ↔ the file tree | a moved or renamed file leaves every route to it a dead end, and nothing says so | `gates/doc-links.test.ts` | ✅ |
 
 **G13 grew a second allowlisted directory when the README got a screenshot**,
 and that is the most dangerous kind of entry in this file: a *directory* is a
@@ -174,6 +175,44 @@ green before the fix and red after. The shared lesson is one line — *anchor an
 assertion to the cell that carries the claim, not to the row and never to the
 document* — and the constitution's article numbers are now held to the same
 uniqueness-and-no-gaps rule as these row numbers, which they were not before.
+
+**G29 exists because the documentation is a graph and nothing checked its
+edges.** `CLAUDE.md` routes a cold session to five files by link, every ADR
+links back here, and this file links out to the specs it scores — 174 local
+links across 73 tracked Markdown files. Until G29, the *only* link-shaped claim
+in the repo that could go red was G19's check that spec paths named in
+scoreboard rows resolve. Everything else was a route that worked because nobody
+had moved anything yet.
+
+It was written for the split of `docs/progress.md` into `docs/log/`, which is
+precisely the change that breaks routes: 17 files' worth of narrative leaving
+one document. Writing the gate **first**, running it green against the un-split
+tree, and only then splitting is what makes the split reviewable — anything red
+afterwards is something the split broke, rather than something that may have
+been broken for months.
+
+**No network, by construction.** `http(s):` and `mailto:` targets are skipped
+rather than fetched. Fetching would violate G21 and be flaky, and the failure
+this gate is for — a moved file — is entirely local. An external link checker is
+a different tool with a different failure mode and does not belong in `pnpm test`.
+
+**Observed red both ways, and one of them found a real design fault.** The
+file-existence half went red on its own accord: `docs/research/splitting-the-long-docs.md`
+describes the extraction this gate performs as `` `](./x.md)` ``, in inline
+code, and the first version read that as a route to a file that does not exist.
+Correct by the gate's own rules and wrong in substance — prose *quoting* a path
+is not a link to it, and a gate that cannot tell the difference makes
+documenting the gate an error. Fenced blocks were already blanked; inline spans
+now are too. The fragment half went red on a one-character typo planted in
+`docs/plan.md`'s link to `agents/issue-tracker.md#wayfinding-operations`, then
+reverted.
+
+**That fragment link is the only one in the repo**, which is worth stating
+plainly: the fragment half of this gate guards one real edge and a future the
+split makes likely. The slug rule approximates GitHub's, and it approximates it
+in the safe direction — this repo's headings carry backticks, arrows and inline
+links, so a heading it slugifies differently produces a *false red*, never a
+false green.
 
 ## Defect gates
 

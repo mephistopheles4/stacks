@@ -5,6 +5,7 @@
  * walk it. Nothing here knows anything about books.
  */
 
+import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 
@@ -38,6 +39,22 @@ export function filesUnder(dir: string, extensions: readonly string[]): string[]
 
   walk(root);
   return found.sort();
+}
+
+/**
+ * Everything git is actually tracking, as repo-relative POSIX paths.
+ *
+ * Preferred over `filesUnder` when the question is "what is in this repo"
+ * rather than "what is on this disk": it sees `.claude/skills/`, which
+ * `filesUnder` skips along with every other dot-directory, and it cannot pick
+ * up a stray untracked file and fail a gate on it.
+ *
+ * It lived in `gates/repo-hygiene.test.ts` until a second gate needed it — the
+ * same move `codeOf` made below, and for the reason that produced G23.
+ */
+export function trackedFiles(): string[] {
+  const out = execFileSync('git', ['ls-files'], { cwd: REPO_ROOT, encoding: 'utf8' });
+  return out.split('\n').filter((line) => line.length > 0);
 }
 
 /** Reads a repo-relative file. */
