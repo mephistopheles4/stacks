@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
-import { toRows, type ShelfRow } from './books.ts';
+import { toRows, YEAR_GAP, type ShelfRow } from './books.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
 import { SHELF } from './case.ts';
-import { placeShelf, swayOf, TOUCHING } from './placement.ts';
+import {
+  MAX_LEAN,
+  MAX_PROP_LEAN,
+  placeShelf,
+  runsParallel,
+  swayOf,
+  TOUCHING,
+} from './placement.ts';
 
 /**
  * What `placeShelf` claims, asserted without a GPU.
@@ -84,6 +91,85 @@ function extentOf(placement: Placed): { left: number; right: number } {
   return { left: placement.position.x - swept, right: placement.position.x + swept };
 }
 
+/**
+ * A book's four corners in the plane of the row, as `{ x, y }` with `y` measured
+ * up from the plank.
+ *
+ * Rebuilt from `position` and `rotationZ` rather than read off anything the
+ * placer exports, so a placement cannot pass by agreeing with itself. A face-out
+ * book is a vertical slab `coverWidth` across: its 0.06 tilt is about Z *after*
+ * the quarter turn about Y, so it swings in Y and Z and never along the row.
+ */
+function cornersOf(placement: Placed & { readonly position: { readonly y: number } }): {
+  left: readonly [{ x: number; y: number }, { x: number; y: number }];
+  right: readonly [{ x: number; y: number }, { x: number; y: number }];
+} {
+  const { faceOut, thickness, coverWidth, height } = placement.entry;
+  const cx = placement.position.x;
+
+  if (faceOut) {
+    const half = coverWidth / 2;
+    return {
+      left: [{ x: cx - half, y: 0 }, { x: cx - half, y: height }],
+      right: [{ x: cx + half, y: 0 }, { x: cx + half, y: height }],
+    };
+  }
+
+  const lean = placement.rotationZ;
+  const cos = Math.cos(lean);
+  const sin = Math.sin(lean);
+  /**
+   * Heights are measured from the plank, and the centre is **not** `height / 2`
+   * above it once the book tilts — it is `(h/2)cos θ + (t/2)sin θ`, which is what
+   * puts the low corner on the wood.
+   *
+   * Writing `height / 2` here is wrong by a per-book amount, and the error is
+   * invisible in exactly the way that matters: for two parallel books the gap is
+   * the same at every height, so a wrong height still reads a plausible-looking
+   * gap — off by `(δ_left - δ_right) · tan θ`, which is 0.26mm and which this file
+   * spent a while attributing to the placer. The placer was exact to 1e-17.
+   */
+  const centre = (height / 2) * cos + (thickness / 2) * sin;
+  const corner = (dx: number, dy: number) => ({
+    x: cx + dx * cos - dy * sin,
+    y: dx * sin + dy * cos + centre,
+  });
+  const half = thickness / 2;
+  return {
+    left: [corner(-half, -height / 2), corner(-half, height / 2)],
+    right: [corner(half, -height / 2), corner(half, height / 2)],
+  };
+}
+
+/**
+ * The narrowest horizontal air between two neighbours, over the heights they
+ * share. Negative means one board is inside the other.
+ *
+ * Both edges are straight lines, so the minimum sits at an end of the shared
+ * range — no sampling, and no step size to be wrong about.
+ */
+function boardGap(
+  left: Parameters<typeof cornersOf>[0],
+  right: Parameters<typeof cornersOf>[0],
+): number {
+  const a = cornersOf(left).right;
+  const b = cornersOf(right).left;
+
+  const at = (edge: readonly [{ x: number; y: number }, { x: number; y: number }], y: number) => {
+    const [low, high] = edge;
+    const span = high.y - low.y;
+    return span === 0 ? low.x : low.x + ((y - low.y) / span) * (high.x - low.x);
+  };
+
+  const from = Math.max(a[0].y, b[0].y);
+  const to = Math.min(a[1].y, b[1].y);
+  // No shared height at all — one book ends below where the other begins, which
+  // no shelf produces, and there is nothing to collide.
+  if (to < from) return Number.POSITIVE_INFINITY;
+
+  return Math.min(at(b, from) - at(a, from), at(b, to) - at(a, to));
+}
+
 describe('placeShelf', () => {
   it('gives every book in a run the same angle, so they stay parallel', () => {
     // Independent angles per book is what produced the wedge-shaped gaps:
@@ -96,21 +182,31 @@ describe('placeShelf', () => {
     expect(leans[0]).toBeGreaterThan(0);
   });
 
-  it('packs a run flush — no clearance between neighbours at the same angle', () => {
+  it('packs a run flush — one hair of air between neighbours at the same angle', () => {
     const [row] = placeShelf(rowsOf([book('a'), book('b'), book('c')]));
     const [first, second] = row ?? [];
     if (first === undefined || second === undefined) throw new Error('row too short');
 
-    // Footprints, not swept extents: neighbours at the same angle stay parallel,
-    // so their boards meet along the whole height even though their bounding
-    // boxes overlap. That is what "resting on each other" has to look like.
-    const gap = footprintOf(second).left - footprintOf(first).right;
-    expect(gap).toBeCloseTo(TOUCHING, 10);
+    /**
+     * **Boards, not footprints**, and this test asserted the footprint gap for as
+     * long as the placer got it wrong the same way.
+     *
+     * Two parallel books do not have the gap their footprints say they have: each
+     * one's base is swung `sway` off its own footprint, and `sway` is half its
+     * *height* times the angle, so two neighbours of different heights are not
+     * where the cursor's arithmetic puts them. Asserting the footprint gap passed
+     * against a placer that had a book 2.3mm inside its neighbour, and it passed
+     * because the fixture here is three books of the *same* height, where the
+     * error is identically zero.
+     */
+    expect(first.entry.height).not.toBe(second.entry.height);
+    expect(boardGap(first, second)).toBeCloseTo(TOUCHING, 10);
   });
 
-  it('stands the book after a year gap up straight, and leans the ones behind it', () => {
-    // The book after a gap has open shelf on its left and nothing to rest
-    // against, so it becomes the support for the run that follows.
+  it('props the book after a year gap against its neighbour, and the run behind it follows', () => {
+    // The book after a gap has open shelf on its left — and something to rest
+    // against a gap away, which is what it does. It used to stand bolt upright
+    // here, which is the one thing a book with 9cm of air beside it does not do.
     const [row] = placeShelf(
       rowsOf([
         book('a', { finished: '2025-06-01' }),
@@ -120,13 +216,55 @@ describe('placeShelf', () => {
       ]),
     );
 
-    const leans = (row ?? []).map((placement) => placement.rotationZ);
+    const placed = row ?? [];
+    const leans = placed.map((placement) => placement.rotationZ);
     expect(leans.length).toBe(4);
     // The row's first book is *not* a break — the case's own side holds it.
     expect(leans[0]).toBeGreaterThan(0);
     expect(leans[1]).toBe(leans[0]);
-    expect(leans[2]).toBe(0);
-    expect(leans[3]).toBeGreaterThan(0);
+    // Steeper than the ordinary slump, because it has a gap to cross, and never
+    // past the ceiling that stops two gaps in a row compounding into a collapse.
+    expect(leans[2]).toBeGreaterThan(MAX_LEAN);
+    expect(leans[2]).toBeLessThanOrEqual(MAX_PROP_LEAN);
+    // The run behind it inherits that angle rather than springing back to the
+    // slump — parallel, or the gap it closed reopens one book to the right.
+    expect(leans[3]).toBe(leans[2]);
+  });
+
+  it('leans the propped book onto its neighbour, top corner touching, wedge at the plank', () => {
+    // The whole point, stated as geometry: the gap does not shrink, it *tilts*.
+    // Closing it at the top by moving the book left would only have moved it, and
+    // rotating about the centre would have doubled it at the bottom.
+    const gapped = [
+      book('a', { finished: '2025-06-01' }),
+      book('b', { finished: '2024-06-01' }),
+    ];
+    const [row] = placeShelf(rowsOf(gapped));
+    const [left, propped] = row ?? [];
+    if (left === undefined || propped === undefined) throw new Error('row too short');
+
+    expect(propped.entry.gapBefore).toBe(YEAR_GAP);
+
+    const lean = propped.rotationZ;
+    const half = propped.entry.thickness / 2;
+    // The two corners of the propped book's left board, in world x.
+    const base = propped.position.x - half * Math.cos(lean) + swayOf(propped.entry.height, lean);
+    const top = propped.position.x - half * Math.cos(lean) - swayOf(propped.entry.height, lean);
+
+    const opening = YEAR_GAP + TOUCHING;
+
+    // Its foot has not moved: the gap it was given is still there, on the wood.
+    // This is the assertion that separates a prop from a shove — closing the gap
+    // by sliding the book left would satisfy every other line here.
+    expect(base - footprintOf(left).right).toBeCloseTo(opening, 10);
+
+    // Its head has crossed the whole of it, and then some: the neighbour leans
+    // too, so its board has sloped away and the reach has to include that.
+    expect(base - top).toBeGreaterThanOrEqual(opening);
+    expect(top).toBeLessThanOrEqual(footprintOf(left).right);
+    // Not a runaway, though — the extra is the neighbour's own slope over the
+    // height of the contact, not a second gap's worth.
+    expect(base - top).toBeLessThan(opening * 2);
   });
 
   it('reserves clearance where the angle changes, and only there', () => {
@@ -229,6 +367,93 @@ describe('placeShelf', () => {
         expect(right).toBeLessThanOrEqual(inner + EPSILON);
       }
     }
+  });
+
+  it('never drives one board through another, anywhere up the height', () => {
+    /**
+     * The one thing `extentOf` cannot see.
+     *
+     * Every other width assertion here works in *footprints* — the untilted slab
+     * a book would occupy — because that is what the cursor budgets in. Two
+     * neighbours can have disjoint footprints and still intersect, and two
+     * neighbours can have overlapping footprints and not, which is the whole
+     * reason a run packs flush. So the only honest test of "do these two books
+     * collide" is the one that walks the actual boards.
+     *
+     * It caught what the arithmetic and the render gate both missed: the propped
+     * lean measured its reach to the neighbour's *footprint* rather than to the
+     * neighbour's corners, and over-leaned by 8–18mm. G16 says nothing about it —
+     * it measures the case's inner faces, and two books can intersect each other
+     * happily inside those.
+     */
+    const many = Array.from({ length: 90 }, (_, index) =>
+      book(`book-${String(index)}`, {
+        pages: 120 + ((index * 53) % 680),
+        // Dense year changes, so propped books land beside every kind of
+        // neighbour: leaning, face-out, taller, shorter, and propped themselves.
+        finished: `20${String(10 + (index % 17))}-0${String((index % 9) + 1)}-01`,
+        ...(index % 6 === 0 ? { faceOut: true } : {}),
+      }),
+    );
+
+    const rows = placeShelf(rowsOf(many));
+    expect(rows.flat().length).toBe(90);
+
+    let checked = 0;
+    let parallelPairs = 0;
+    for (const row of rows) {
+      for (let i = 1; i < row.length; i += 1) {
+        const left = row[i - 1];
+        const right = row[i];
+        if (left === undefined || right === undefined) continue;
+
+        const gap = boardGap(left, right);
+        const where = `${String(i - 1)} → ${String(i)} of a row`;
+        // Zero, near enough — the same double's-worth of slack the case-bounds
+        // check above admits, and for the same reason. Not a tolerance for being
+        // approximately right: a propped book is *meant* to land on its
+        // neighbour and stops `TOUCHING` short of doing so, and every other pair
+        // clears by at least that.
+        expect(gap, where).toBeGreaterThanOrEqual(-1e-12);
+
+        /**
+         * And **an upper bound**, which the first version of this check did not
+         * have — so it pinned the direction that reads as one book inside another
+         * and left the mirror direction, which reads as a slot of missing book,
+         * entirely free.
+         *
+         * They are one error with two signs: a tall book followed by a short one
+         * closes too much, a short one followed by a tall one opens too much, and
+         * `parallelPushOf` is the same correction either way. Clamping it at zero
+         * fixed half of an error and called the collision closed. Two spines of
+         * one run owe each other `TOUCHING` and nothing else.
+         */
+        if (runsParallel(right.entry, left.entry)) {
+          expect(gap, where).toBeCloseTo(TOUCHING, 10);
+          parallelPairs += 1;
+        }
+        checked += 1;
+      }
+    }
+    // A loop that silently never ran reports the same green as one that did.
+    expect(checked).toBeGreaterThan(60);
+    expect(parallelPairs).toBeGreaterThan(10);
+  });
+
+  it('paints a leaning book its shadow under its foot, which is not under its middle', () => {
+    // `contact` was asserted for width and depth and never for *where*, so the
+    // shadow tracked `position.x` — the book's middle — while the foot it is
+    // supposed to be under swings `sway` off it. Worth 2cm at an ordinary slump
+    // and 5cm on a propped book, which is half a spine of daylight between a book
+    // and its own shadow.
+    const [row] = placeShelf(rowsOf([book('a'), book('b'), book('c')]));
+    const [placement] = row ?? [];
+    if (placement === undefined) throw new Error('no placement');
+
+    expect(placement.rotationZ).toBeGreaterThan(0);
+    const foot = swayOf(placement.entry.height, placement.rotationZ);
+    expect(foot).toBeGreaterThan(0.01);
+    expect(placement.contact.x).toBeCloseTo(placement.position.x + foot, 12);
   });
 
   it('places the same library the same way every time', () => {

@@ -216,6 +216,7 @@ paragraph can be; nothing here goes red on it.)
 | **G25** | the packer's capacity and the placer's consumption are one number | `packages/site/src/shelf/shelf-width.test.ts` + `packages/site/src/shelf/books.test.ts` | ✅ |
 | **G26** | a lookup finds books the providers demonstrably have — and still refuses the ones they do not | `gates/lookup-recall.test.ts` + `gates/recall-corpus.ts`, replayed from `fixtures/api/lookup-recall.json` | ✅ |
 | **G27** | a command's report accounts for every book it counted | `gates/enrich-report.test.ts`, over `packages/cli/src/enrich-report.ts` | ✅ |
+| **G28** | no book's board passes through its neighbour's | `packages/site/src/shelf/placement.test.ts` | ✅ |
 
 **G21 is the first row here written for a rule that two files already claimed
 was true.** `CLAUDE.md`'s Phase 1 gate says "use cached API fixtures, no live
@@ -802,9 +803,35 @@ right edge = -W/2 + spent  ≤  -W/2 + charged  ≤  -W/2 + USABLE_WIDTH
 ```
 
 Asserting only the left half passes on a packer that charges the whole shelf for
-every book, so the excess is bounded too — at most one maximal swing per angle
-change. Naming the slop is what stops the row from recording the disagreement
-instead of closing it.
+every book, so the excess is bounded too. Naming the slop is what stops the row
+from recording the disagreement instead of closing it.
+
+**The bound has three terms now, and the third one is charged where the earlier
+two said nothing was owed.** It was one maximal swing per angle change; propping
+a book across a year gap added a maximal prop per gap, and then the parallel
+push added one per *book*:
+
+| term | charged where | because |
+| --- | --- | --- |
+| one maximal swing | the angle changes | the real lean needs the row index, which the wrap has not decided |
+| one maximal prop | a book props across a gap | the prop angle needs the neighbour, which the wrap has not chosen |
+| one maximal parallel push | every pair of spines in a run | two parallel books of different heights do not stand where their footprints say |
+
+The third is the one that had no precedent, and it is a correction to a belief
+this row was built on: *"neighbours at the same angle stay parallel and never
+collide"*. True of the boards, false of the books — a book tilted about its middle
+stands on a base swung `sway` off its footprint, and `sway` scales with height, so
+a tall book followed by a short one had its low corner 2.3mm inside its
+neighbour's board on the live shelf. Every clearance before it was charged where
+the angle *changed*, on the belief that nothing was owed where it did not.
+
+⚠️ **The bound for it was written wrong first, in the way this row exists to
+catch.** The first version *called* `parallelPushOf` — the function it was
+bounding — with the same arguments and the same trailing term, so that part of the
+excess assertion could not fail for any value of the charge. Same defect as the
+`toRows`-asks-`toRows` version below, in the same file, three years of lessons
+later. It is `WORST_PARALLEL_PUSH` now: re-derived from the geometry against
+`THICKEST_SPINE` and the height band, constants the charge cannot move.
 
 **The row names two files, and the second one nearly re-introduced the defect.**
 `books.test.ts` asserts the capacity rule from the packer's side and wrote the
@@ -863,8 +890,67 @@ That is the shape of evidence a unit test cannot produce.
 of the book that leans, where the angle changes, so the last book of a row has
 nothing on its right to charge and its swing is paid for by `SHELF.endReserve`
 and by nothing else. That was `LEAN_ALLOWANCE`'s job before it was folded in.
-The assertion `endReserve ≥ swayOf(MAX_HEIGHT, MAX_LEAN)` is the one to read
+The assertion `endReserve ≥ swayOf(MAX_HEIGHT, MAX_PROP_LEAN)` is the one to read
 before tuning that number, and it is why the reserve is not merely aesthetic.
+
+⚠️ **It said `MAX_LEAN` there, and stayed green for a whole change after that
+stopped bounding anything.** `MAX_LEAN` is the steepest a book slumps *of its own
+accord* — 3.5°. A book propped across a year gap leans four times further, and a
+run inherits the prop angle, so the last book of a row can carry it. The reserve
+was sized for a swing of 0.03 against an actual worst of 0.117, and the gate that
+exists to notice compared it against the constant that had stopped applying. **A
+scoreboard row does not protect an invariant; the assertion does, and only while
+it still names the right number.** The row is `endReserve = 0.12` now, bounded
+above as well as below so the reserve cannot quietly grow to paper over a defect
+instead.
+
+## G28 — no book's board passes through its neighbour's
+
+**Three gates were watching this file and none of them could see a book inside
+another book.** G16 measures `Box3.setFromObject` against the case's real inner
+faces — two books can intersect each other happily well inside those. G25 works
+in *footprints*, the untilted slab a book would occupy, which is the right
+coordinate for the cursor's budget and precisely the wrong one for this question:
+two neighbours can have disjoint footprints and still intersect, and overlapping
+footprints and not, which is why a run packs flush. And `placement.test.ts`'s own
+flushness assertion used three books of *identical height*, where the defect is
+identically zero.
+
+So 509 tests, four of them about this file's spacing, a render gate, and the
+thing that found it was the owner looking at a close-up. Three collisions, all
+real: 8mm and 18mm where a propped book measured its reach to its neighbour's
+*footprint* rather than to its corners, and 2.3mm between any tall book and a
+shorter one in the same run, which predates propping by as long as there have
+been runs.
+
+The row walks the actual boards — the minimum horizontal air between every
+neighbouring pair over the heights they share, across a ninety-book fixture with
+dense year changes and mixed face-out books. Both edges are straight lines, so
+the minimum sits at an end of the shared range and there is no step size to be
+wrong about.
+
+**Bounded above as well as below, and the first version was not.** Asserting only
+`gap ≥ 0` pins the direction that reads as one book inside another and leaves the
+mirror direction — a slot of missing book — entirely free. They are one error with
+two signs: a tall book followed by a short one closes too much, a short one
+followed by a tall one opens too much, and the same correction fixes both. Clamped
+at zero, it fixed half an error and called the collision closed. Two spines of one
+run owe each other `TOUCHING` and nothing else, so that is what the row asserts.
+
+⚠️ **It was wrong first, in the way that flatters the code it tests.** Its corner
+heights used `height / 2` for the centre, which is true only of a book that is not
+leaning — the real centre is `(h/2)cos θ + (t/2)sin θ`. For two parallel books the
+gap is the same at every height, so the wrong height still reads a plausible gap:
+off by `(δ_left − δ_right)·tan θ`, or 0.26mm, which looks exactly like a placer
+that is nearly right. The placer was exact to 1e-17. An independent re-derivation
+of the same quantity is what settled it, and the moral is this file's own, from
+the other side: **a check that disagrees with the code is not automatically the
+one that is right.** G25's version of the lesson is a judge who was the defendant;
+this is a judge who was simply wrong, and reached for the same gavel.
+
+**Observed red, four ways**: measuring the prop's reach to the footprint rather
+than the corners, adding the neighbour's lean in the corner case as well as the
+board case, clamping the parallel push at zero, and dropping it altogether.
 
 ## G2 in full — the public build gate
 

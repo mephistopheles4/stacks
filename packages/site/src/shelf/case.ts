@@ -44,9 +44,17 @@ export const SHELF = {
    * left of the book that leans, where the angle changes; the last book of a row
    * has nothing on its right to charge, so this is what its swing swings into.
    * That was `LEAN_ALLOWANCE`'s job and it is now this one's — pinned by G25,
-   * which holds it at or above `swayOf(MAX_HEIGHT, MAX_LEAN)`.
+   * which holds it at or above `swayOf(MAX_HEIGHT, MAX_PROP_LEAN)`.
+   *
+   * **0.12 and not 0.06, because the steepest lean stopped being `MAX_LEAN`.** A
+   * book propped across a year gap leans four times further than one slumping of
+   * its own accord, and a run inherits that angle — so the last spine on a row
+   * can now swing 0.117 where this used to be sized for 0.03. G25 went on
+   * comparing against `MAX_LEAN` for a while after that stopped being true, which
+   * is the failure mode a scoreboard exists to prevent and did not: the gate was
+   * green and the constant it named was the wrong one.
    */
-  endReserve: 0.06,
+  endReserve: 0.12,
 } as const;
 
 /**

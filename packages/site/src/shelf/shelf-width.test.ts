@@ -1,11 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
-import { MAX_HEIGHT, toRows, YEAR_GAP, yearOf, type ShelfRow } from './books.ts';
+import {
+  MAX_HEIGHT,
+  MIN_HEIGHT,
+  toRows,
+  YEAR_GAP,
+  yearOf,
+  type ShelfBook,
+  type ShelfRow,
+} from './books.ts';
 import { SHELF, USABLE_WIDTH } from './case.ts';
 import {
   leansInPlace,
   MAX_LEAN,
+  MAX_PROP_LEAN,
   placeShelf,
+  propsAcrossGap,
+  propShiftOf,
+  runsParallel,
   rowCost,
   shelfCost,
   swayOf,
@@ -121,22 +133,80 @@ function spent(placements: readonly Placement[]): number {
 /**
  * The most the packer can be over, by its own model.
  *
- * It charges `swayOf(height, MAX_LEAN)` where the cursor spends `swayOf(height,
- * lean)`, because the actual lean depends on the row index and the row index is
- * not known until the wrap it feeds has happened. So the packer is conservative
- * by construction, and this is by how much.
+ * Two terms, and both exist because the packer prices a book before it knows the
+ * angle that book will end up at:
+ *
+ * - It charges `swayOf(height, MAX_LEAN)` at an angle change where the cursor
+ *   spends `swayOf(height, lean)`, because the actual lean depends on the row
+ *   index and the row index is not known until the wrap it feeds has happened.
+ * - It charges a year gap in full where the cursor hands `propShiftOf` of it back,
+ *   because a propped book's angle depends on the neighbour it lands beside — and
+ *   which neighbour that is, is the very thing the wrap decides.
+ * - It charges the parallel push at `MAX_PROP_LEAN` where the cursor spends it at
+ *   the real angle, for the same reason. This one is charged per *book* rather
+ *   than per angle change, because two neighbours at the same angle need it too —
+ *   which is what "a run packs flush" got wrong.
+ *
+ * All three are charged at the steepest permitted angle, so the packer is
+ * conservative by construction and this is by how much.
  */
 function clearanceBound(row: ShelfRow): number {
   let changes = 0;
+  let gaps = 0;
+  let pairs = 0;
   // The case's own side is vertical, so a leaning first book is already a change.
   let leftLeans = false;
+  let previous: ShelfBook | undefined;
   for (const entry of row.books) {
     const leans = leansInPlace(entry);
     if (leans !== leftLeans) changes += 1;
+    if (propsAcrossGap(entry)) gaps += 1;
+    if (runsParallel(entry, previous)) pairs += 1;
     leftLeans = leans;
+    previous = entry;
   }
-  return changes * swayOf(MAX_HEIGHT, MAX_LEAN);
+  return (
+    changes * swayOf(MAX_HEIGHT, MAX_LEAN) +
+    gaps * propShiftOf(THICKEST_SPINE, MAX_HEIGHT, MAX_PROP_LEAN) +
+    pairs * WORST_PARALLEL_PUSH
+  );
 }
+
+/**
+ * The thickest spine `books.ts` will build, from its 800-page ceiling.
+ *
+ * Not exported from there, and restated here rather than plumbed out: this is a
+ * *bound*, so it only has to be no smaller than the real one, and a test that
+ * imports the number it is bounding proves less than one that does not.
+ */
+const THICKEST_SPINE = 0.16;
+
+/**
+ * The most one parallel pair can be over-charged, re-derived here rather than
+ * read off `parallelPushOf`.
+ *
+ * That distinction is the whole point and it was got wrong once: the first
+ * version of this line *called* the function it was bounding, with the same
+ * arguments and the same trailing term, so that part of the assertion could not
+ * fail for any value of the charge — the defendant sitting as judge, which is
+ * `docs/gates.md`'s own oldest lesson about gates and the reason `THICKEST_SPINE`
+ * above is a restated literal.
+ *
+ * Derived instead from what the geometry can *possibly* cost, at the steepest
+ * angle any book is allowed and against the thickest and tallest the shelf
+ * builds. The current book's thickness does not appear because it cancels — the
+ * push takes half of it off and the charge's trailing term puts the same half
+ * back — and a bound that does not know that is still a bound.
+ *
+ * - `t · (sec θ − 1)` — a board `t` thick square to itself is wider along the row.
+ * - `(t / 2) · (1 − cos θ)` — half of it foreshortening.
+ * - `(MAX_HEIGHT − MIN_HEIGHT) / 2 · sin θ` — the height term, and the big one:
+ *   two bases swung apart by the difference in how tall their books are.
+ */
+const WORST_PARALLEL_PUSH =
+  THICKEST_SPINE * (1 / Math.cos(MAX_PROP_LEAN) - 1) +
+  (THICKEST_SPINE / 2) * (1 - Math.cos(MAX_PROP_LEAN)) +
+  ((MAX_HEIGHT - MIN_HEIGHT) / 2) * Math.sin(MAX_PROP_LEAN);
 
 /** The left face of a book, ignoring its lean. */
 function footprintLeft(placement: Placement): number {
@@ -281,6 +351,15 @@ describe('where a row starts and where it stops', () => {
     // charge, so its own swing is paid for by the reserve and by nothing else.
     // Drop `endReserve` below this and the last spine on a full row leans through
     // the upright — the defect LEAN_ALLOWANCE existed to prevent, now folded in.
-    expect(SHELF.endReserve).toBeGreaterThanOrEqual(swayOf(MAX_HEIGHT, MAX_LEAN));
+    //
+    // ⚠️ **`MAX_PROP_LEAN`, not `MAX_LEAN`.** This line named the wrong constant
+    // for as long as there have been propped books, and stayed green the whole
+    // time: `MAX_LEAN` is the steepest a book slumps *of its own accord*, and a
+    // book propped across a year gap leans four times further than that. A run
+    // inherits the prop angle, so the last book of a row can carry it. The gate
+    // was checking a reserve against a limit that no longer bounded anything.
+    expect(SHELF.endReserve).toBeGreaterThanOrEqual(swayOf(MAX_HEIGHT, MAX_PROP_LEAN));
+    // And named, so the reserve cannot quietly grow to cover a defect instead.
+    expect(SHELF.endReserve).toBeLessThan(swayOf(MAX_HEIGHT, MAX_PROP_LEAN) * 1.5);
   });
 });

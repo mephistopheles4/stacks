@@ -62,3 +62,4 @@ Two other files hold what these deliberately do not:
 | [0036](./0036-printed-faces-are-decals.md) | The printed faces are decals, not floats |
 | [0037](./0037-ranking-does-not-reward-a-sparse-record.md) | Ranking scores brevity over the title alone, and breaks ties on completeness |
 | [0038](./0038-oreilly-is-a-fourth-provider.md) | O'Reilly is a fourth provider, consulted last, covers included |
+| [0039](./0039-a-book-after-a-year-gap-props-against-its-neighbour.md) | A book after a year gap leans across it, pivoting on its base |
