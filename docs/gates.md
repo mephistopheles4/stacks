@@ -1175,6 +1175,7 @@ request — which then has to pass everything above like any other change.
 | Changed-lines floor (diff-cover) | One contributor; it would be noise. |
 | Mutation testing (Stryker) | Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green. |
 | Article XI-style residency rules | No infrastructure; nothing to pin. |
+| GitHub repository settings | Dependabot alerts, malware alerts, grouped security updates, branch protection. They live outside the tree, so nothing in a clone can read them — and a gate that asked GitHub would need the network, which **G21 (`no-live-network`) forbids for the whole suite**. Listed in `SECURITY.md` as relied upon and unverifiable, which is the most this repo can honestly say about them. |
 
 ## What building these gates taught
 

@@ -51,6 +51,37 @@ the build scripts, the CI workflow.
 Apple), your Obsidian vault's own security, and wherever you choose to host a
 generated site.
 
+## What the platform is relied on for
+
+Some of this project's dependency defence is a GitHub setting rather than a file
+in this repository, and that distinction matters more than it looks:
+
+| | |
+| --- | --- |
+| Dependabot alerts | vulnerabilities in the dependency tree |
+| Dependabot security updates | a pull request per alert with an available patch |
+| Grouped security updates | those PRs arriving as one, not one per package |
+| Dependabot malware alerts | a dependency found to be malicious, not merely vulnerable |
+| Branch protection on `main` | pull request required, `gates` must pass, no bypass |
+
+**Nothing in this repository can check that any of them is switched on.** They
+live in repository settings, outside the tree, so a clone cannot read them —
+and a test that asked GitHub would need the network, which
+[G21 (`no-live-network`)](docs/gates.md) forbids for the whole suite. Recorded
+in [`docs/gates.md`](docs/gates.md) under *"Not gated, deliberately"* rather
+than left as an assumption.
+
+So this section is a statement of what the project **relies on**, not a claim
+about what is currently true. If you are auditing this repo and that distinction
+matters to you, check the settings themselves; the file cannot tell you.
+
+Two things this list is *not* covering twice. `pnpm audit --audit-level=high` is
+a required CI check and lives in [`.github/workflows/gates.yml`](.github/workflows/gates.yml)
+— that one is in the tree and does go red. And the `groups:` block in
+[`.github/dependabot.yml`](.github/dependabot.yml) groups **version** updates;
+grouping **security** updates is the separate setting above, which is why both
+exist.
+
 ## What is deliberately not defended against
 
 Stated plainly, because a threat model that claims everything is defended is not
