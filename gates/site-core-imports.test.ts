@@ -21,7 +21,7 @@
  * pulled in for its side effects. Statement-level `import type` is the bar
  * because it is the form that cannot survive.
  *
- * See docs/gates.md, row G6.
+ * See docs/gates.md, row G6 (site-core-imports).
  */
 
 import { describe, expect, it } from 'vitest';

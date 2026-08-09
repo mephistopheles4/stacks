@@ -21,7 +21,7 @@
  *    is expected to go red one day on a build that changed nothing. That is the
  *    point: it goes red on a machine instead of on someone's phone.
  *
- * See docs/gates.md, row G15.
+ * See docs/gates.md, row G15 (cover-budget).
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';

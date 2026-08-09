@@ -13,7 +13,7 @@
  * That hook runs after this file's own hooks and after every test body, so
  * clearing inside the test is enough.
  *
- * See docs/gates.md, row G21.
+ * See docs/gates.md, row G21 (no-live-network).
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';

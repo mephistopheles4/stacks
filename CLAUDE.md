@@ -132,7 +132,7 @@ that actually reads at shelf distance. `books.paperbackRatio` dials the mixture.
 ## Phase gates — a phase is DONE only when its gate passes
 Every phase: `pnpm test && pnpm build` green, plus:
 - **Phase 0 (scaffold):** `pnpm stacks --help` prints commands; site dev server renders empty shelf; fixtures vault committed.
-- **Phase 1 (data layer):** `pnpm stacks build` on fixtures produces valid library.json with exactly the well-formed books; malformed fixture logged + skipped; tests cover ISBN hit / fuzzy title / API miss / malformed frontmatter (use cached API fixtures, no live calls in tests — gated by G21, which records
+- **Phase 1 (data layer):** `pnpm stacks build` on fixtures produces valid library.json with exactly the well-formed books; malformed fixture logged + skipped; tests cover ISBN hit / fuzzy title / API miss / malformed frontmatter (use cached API fixtures, no live calls in tests — gated by G21 (`no-live-network`), which records
   any request the suite makes and fails the test that made it; `vi.stubGlobal`
   is the escape hatch).
 - **Phase 2 (shelf):** `pnpm smoke:render` (headless puppeteer screenshot of the shelf) produces a non-blank PNG at `artifacts/shelf.png`; 50-book fixture renders; clicking a book (integration test via puppeteer) opens the card.

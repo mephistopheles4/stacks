@@ -22,7 +22,7 @@
  * suite green. It is now pinned behaviourally, through the downloader, in
  * `packages/core/src/covers/cache-cover.test.ts`. Neither half is sufficient.
  *
- * See docs/gates.md, row G22.
+ * See docs/gates.md, row G22 (cover-candidates).
  */
 
 import { describe, expect, it } from 'vitest';

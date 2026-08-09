@@ -15,7 +15,7 @@
  * every real cover behind under a filename slugged from a real book title,
  * while the gate reported the build clean.
  *
- * See docs/gates.md, row G2.
+ * See docs/gates.md, row G2 (public-build).
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';

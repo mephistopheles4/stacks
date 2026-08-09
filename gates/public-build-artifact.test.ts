@@ -21,7 +21,7 @@
  * of them. That stays with `pnpm gate:public`, which calls this same module over
  * a real `dist/`. Two layers: each rule fires here, a real build survives there.
  *
- * See docs/gates.md, row G20.
+ * See docs/gates.md, row G20 (public-build-artifact).
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';

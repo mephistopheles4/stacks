@@ -14,7 +14,7 @@
  * Nobody should have to trace that again, and if a *third* difference appears
  * by accident, this is what says so.
  *
- * See docs/gates.md, row G11.
+ * See docs/gates.md, row G11 (build-modes).
  */
 
 import { describe, expect, it } from 'vitest';

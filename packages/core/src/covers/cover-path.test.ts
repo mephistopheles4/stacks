@@ -7,7 +7,7 @@
  * the platform the owner uses. A test using the host's own separator would have
  * agreed with the bug.
  *
- * See docs/gates.md, row G10.
+ * See docs/gates.md, row G10 (cover-path).
  */
 
 import { describe, expect, it } from 'vitest';

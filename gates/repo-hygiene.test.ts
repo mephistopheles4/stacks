@@ -16,7 +16,7 @@
  * easiest possible way to create a legal problem, and nothing but this would
  * notice.
  *
- * See docs/gates.md, rows G5 and G13.
+ * See docs/gates.md, rows G5 (vault-is-truth) and G13 (no-third-party-material).
  */
 
 import { describe, expect, it } from 'vitest';

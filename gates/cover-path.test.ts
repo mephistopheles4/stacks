@@ -11,7 +11,7 @@
  * value, the gate makes them find the helper instead of reaching for the
  * obvious thing and getting the platform-dependent answer.
  *
- * See docs/gates.md, row G10.
+ * See docs/gates.md, row G10 (cover-path).
  */
 
 import { describe, expect, it } from 'vitest';

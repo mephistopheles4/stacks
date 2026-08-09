@@ -17,7 +17,7 @@
  * guard that is unit-tested in isolation and not actually wired in is precisely
  * the failure this repo's reverse-asserts exist to catch.
  *
- * See docs/gates.md, row G17.
+ * See docs/gates.md, row G17 (deploy-branch).
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';

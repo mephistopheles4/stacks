@@ -40,7 +40,7 @@
  * this should collapse: they answer the question by different means because
  * they are launched by different means.
  *
- * See docs/gates.md, row G24.
+ * See docs/gates.md, row G24 (repo-root).
  */
 
 import { existsSync } from 'node:fs';

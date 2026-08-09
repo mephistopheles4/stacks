@@ -20,7 +20,7 @@
  * names, and a gate counted as scored because its filename appeared in a
  * paragraph. A gate that matches loosely matches anything.
  *
- * See docs/gates.md, row G19.
+ * See docs/gates.md, row G19 (constitution-scoreboard).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -33,10 +33,89 @@ import {
   readRepoFile,
   REPO_ROOT,
   tableCells,
+  trackedFiles,
 } from './repo.ts';
 
 const CONSTITUTION = 'CLAUDE.md';
 const SCOREBOARD = 'docs/gates.md';
+
+/** The three tables that carry rows. Each has its own columns. */
+const TABLES = ['Invariants → gates', 'Contract seams → gates', 'Defect gates'] as const;
+
+/**
+ * The index of a named column in a table, by reading its header row.
+ *
+ * Every column read here used to be positional — `cells[2]` for **Source** —
+ * which was already fragile across three tables of differing widths and became
+ * wrong the moment a **Name** column was inserted. Positional reads fail in the
+ * worst way available: `cells[2]` on a shifted table returns a real string from
+ * the wrong column, so the citation check silently starts asking the Gate cell
+ * whether it mentions an invariant.
+ *
+ * **Throws when the header is gone**, rather than returning `-1` and letting
+ * `cells[-1]` be `undefined` — that would report "no invariant is cited"
+ * when the truth is "the Source column was renamed". Same argument as
+ * `markdownSection`, one level further in.
+ */
+function columnIndex(table: string, column: string): number {
+  const section = markdownSection(readRepoFile(SCOREBOARD), table, SCOREBOARD);
+  const header = section.split('\n').find((line) => /^\|\s*Row\s*\|/.test(line));
+  const index = header === undefined ? -1 : tableCells(header).indexOf(column);
+
+  if (index < 0) {
+    throw new Error(
+      `no "${column}" column in the "${table}" table of ${SCOREBOARD}. A gate reads it ` +
+        'by name, so a renamed column must fail here rather than silently read another one.',
+    );
+  }
+  return index;
+}
+
+/** The rows of one table, as `{ id, cells }`. */
+function rowsOf(table: string): { id: string; cells: string[] }[] {
+  const section = markdownSection(readRepoFile(SCOREBOARD), table, SCOREBOARD);
+  const rows = section
+    .split('\n')
+    .filter((line) => /^\|\s*\*\*G\d+\*\*\s*\|/.test(line))
+    .map((line) => ({
+      id: /\*\*(G\d+)\*\*/.exec(line)?.[1] ?? '',
+      cells: tableCells(line),
+    }));
+
+  expectFound(rows, `rows in the "${table}" table`, 5);
+  return rows;
+}
+
+/** Every row's declared slug, from the **Name** column of whichever table holds it. */
+function slugByRow(): Map<string, string> {
+  const slugs = new Map<string, string>();
+
+  for (const table of TABLES) {
+    const nameAt = columnIndex(table, 'Name');
+    for (const row of rowsOf(table)) {
+      slugs.set(row.id, (row.cells[nameAt] ?? '').replace(/`/g, '').trim());
+    }
+  }
+
+  expectFound([...slugs.keys()], 'rows carrying a Name cell', 20);
+  return slugs;
+}
+
+/**
+ * The `gates/<stem>.test.ts` stems a row names, per row.
+ *
+ * Used by the derivation rule below, which is what stops a slug being a third
+ * hand-maintained name for the same gate.
+ */
+function stemsByRow(): Map<string, string[]> {
+  const stems = new Map<string, string[]>();
+
+  for (const row of scoreboardRows()) {
+    const line = row.cells.join(' | ');
+    stems.set(row.id, [...line.matchAll(/`gates\/([^`\s/]+)\.test\.ts`/g)].map((m) => m[1] ?? ''));
+  }
+  return stems;
+}
 
 /** `1.`, `2.`, … — the article numbers, in the order the constitution lists them. */
 function articleNumbers(): number[] {
@@ -72,11 +151,8 @@ function scoreboardRows(): { id: string; cells: string[] }[] {
  * gate that matches prose matches anything.
  */
 function invariantSourceCells(): string[] {
-  const table = markdownSection(readRepoFile(SCOREBOARD), 'Invariants → gates', SCOREBOARD);
-  const sources = table
-    .split('\n')
-    .filter((line) => /^\|\s*\*\*G\d+\*\*\s*\|/.test(line))
-    .map((line) => tableCells(line)[2] ?? '');
+  const sourceAt = columnIndex('Invariants → gates', 'Source');
+  const sources = rowsOf('Invariants → gates').map((row) => row.cells[sourceAt] ?? '');
 
   expectFound(sources, 'Source cells in the Invariants → gates table', 5);
   return sources;
@@ -194,6 +270,127 @@ describe('G19 — the scoreboard describes files that exist', () => {
     expect(
       unscored,
       `gates that no row in docs/gates.md names: ${unscored.join(', ')}`,
+    ).toEqual([]);
+  });
+});
+
+describe('G19 — every row has a name, and the name means something', () => {
+  it('gives every row a kebab-case slug', () => {
+    const wrong = [...slugByRow()]
+      .filter(([, slug]) => !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug))
+      .map(([id, slug]) => `${id} ("${slug}")`);
+
+    expect(
+      wrong,
+      'rows whose Name is missing or is not a kebab-case slug. The slug is what ' +
+        `citations elsewhere in the repo spell, so it has to be spellable: ${wrong.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  it('gives no two rows the same slug', () => {
+    const slugs = [...slugByRow().values()];
+    const duplicated = [...new Set(slugs.filter((slug, i) => slugs.indexOf(slug) !== i))];
+
+    expect(
+      duplicated,
+      `slugs used by more than one row — a name that names two things names neither: ${duplicated.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  it('matches the spec stem wherever a row uniquely claims one', () => {
+    // The rule that keeps a slug anchored instead of being a third
+    // hand-maintained name for the same gate — ADR-0026's objection.
+    //
+    // It applies only where a row names exactly one `gates/*.test.ts` AND no
+    // other row names that same stem, which self-exempts the six rows where
+    // derivation is impossible rather than needing an allowlist: G5 and G13
+    // share `repo-hygiene`, and G16, G18, G25 and G28 name no `gates/` spec at
+    // all. Those six declare their slug; the other 23 are forced to move with
+    // their file.
+    const stems = stemsByRow();
+    const claims = new Map<string, number>();
+    for (const list of stems.values()) {
+      for (const stem of list) claims.set(stem, (claims.get(stem) ?? 0) + 1);
+    }
+
+    const derived = [...slugByRow()].filter(([id]) => {
+      const list = stems.get(id) ?? [];
+      return list.length === 1 && claims.get(list[0] ?? '') === 1;
+    });
+    expectFound(derived, 'rows whose slug is derivable from a spec stem', 15);
+
+    const wrong = derived
+      .filter(([id, slug]) => slug !== (stems.get(id) ?? [])[0])
+      .map(([id, slug]) => `${id} names gates/${(stems.get(id) ?? [])[0]}.test.ts but is called "${slug}"`);
+
+    expect(
+      wrong,
+      `rows whose slug contradicts the one spec they name: ${wrong.join('; ')}`,
+    ).toEqual([]);
+  });
+});
+
+describe('G19 — citations elsewhere spell the current name', () => {
+  /**
+   * Every row cited by the repo's cross-reference idiom — a line saying
+   * `docs/gates.md, row G7 (astro-no-logic)`.
+   *
+   * Scoped to the *line* rather than to `row G7` directly, because
+   * `gates/repo-hygiene.test.ts` cites **two** rows in one sentence — "rows G5
+   * and G13" — and a pattern anchored to the word `row` sees only the first.
+   * The second would then be neither right nor wrong but unchecked, which is
+   * the silent-skip this file's own comments call *matching loosely*.
+   *
+   * Bare `G8` mentions in ordinary prose are deliberately out of scope:
+   * `docs/gates.md` is full of them and forcing a slug onto every one would
+   * make the document worse to read for no protection — the citation idiom is
+   * what a reader follows.
+   */
+  function citations(): { file: string; id: string; slug: string | undefined }[] {
+    const found: { file: string; id: string; slug: string | undefined }[] = [];
+
+    for (const path of trackedFiles()) {
+      if (!/\.(ts|md)$/.test(path)) continue;
+      for (const line of readRepoFile(path).split('\n')) {
+        if (!/gates\.md, rows? /.test(line)) continue;
+        for (const match of line.matchAll(/\b(G\d+)\b(?: \(([^)]*)\))?/g)) {
+          found.push({ file: path, id: match[1] ?? '', slug: match[2] });
+        }
+      }
+    }
+    return found;
+  }
+
+  it('finds enough citations to be checking anything', () => {
+    expectFound(citations(), 'row citations across the repo', 20);
+  });
+
+  it('carries a well-formed slug on every citation', () => {
+    // Asserted as the complement of the check below, because a citation the
+    // slug pattern cannot parse — `row G21 (no live network)` — is not wrong,
+    // it is *unchecked*, and a silent skip is how a gate that matches loosely
+    // matches anything.
+    const malformed = citations()
+      .filter((c) => c.slug === undefined || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(c.slug))
+      .map((c) => `${c.file}: "row ${c.id}${c.slug === undefined ? '' : ` (${c.slug})`}"`);
+
+    expect(
+      malformed,
+      'citations of a row that do not carry a parseable slug. Spell it ' +
+        `"row G7 (astro-no-logic)" so this gate can check it: ${malformed.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  it('names each row by its current slug', () => {
+    const slugs = slugByRow();
+    const stale = citations()
+      .filter((c) => c.slug !== undefined && slugs.has(c.id) && slugs.get(c.id) !== c.slug)
+      .map((c) => `${c.file}: row ${c.id} is "${slugs.get(c.id)}", cited as "${c.slug}"`);
+
+    expect(
+      stale,
+      'citations naming a row by a slug it no longer has. This is the second copy ' +
+        `that ADR-0026 is about, which is why it is gated: ${stale.join('; ')}`,
     ).toEqual([]);
   });
 });

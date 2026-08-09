@@ -43,7 +43,7 @@
  * draft of this comment claimed the gate had none, which was true of the
  * sweep and false of the file.
  *
- * See docs/gates.md, row G23.
+ * See docs/gates.md, row G23 (key-if-present).
  */
 
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';

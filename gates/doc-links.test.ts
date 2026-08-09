@@ -18,7 +18,7 @@
  * checker that reached out would be both a G21 violation and flaky, and the
  * failure this gate exists for is a *moved file*, which is entirely local.
  *
- * See docs/gates.md, row G29.
+ * See docs/gates.md, row G29 (doc-links).
  */
 
 import { describe, expect, it } from 'vitest';
