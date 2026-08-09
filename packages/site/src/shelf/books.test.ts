@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
 import { MAX_HEIGHT, MIN_HEIGHT, toRows, type ShelfRow } from './books.ts';
-import { USABLE_WIDTH } from './case.ts';
-import { rowCost } from './placement.ts';
+import { SHELF, USABLE_WIDTH } from './case.ts';
+import { rowExtent } from './placement.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
 
 /**
@@ -64,11 +64,13 @@ describe('toRows', () => {
     );
 
     expect(rows.length).toBeGreaterThan(1);
-    for (const row of rows) {
-      // One book always fits, however wide: a row is only wrapped when it
-      // already holds something.
-      if (row.books.length > 1) expect(rowCost(row.books)).toBeLessThanOrEqual(USABLE_WIDTH);
-    }
+    rows.forEach((row, index) => {
+      // Where the row's last book actually ends, not what a model of it costs.
+      // The cost model still exists — it is the bound in `shelf-width.test.ts`,
+      // which is where it lives now — but the packer runs the cursor, so this is
+      // the claim worth making here.
+      expect(rowExtent(row.books, index)).toBeLessThanOrEqual(-SHELF.width / 2 + USABLE_WIDTH + 1e-12);
+    });
   });
 
   it('opens a gap where the year changes, and counts it against the capacity', () => {

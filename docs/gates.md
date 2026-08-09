@@ -937,8 +937,9 @@ later. It is `WORST_PARALLEL_PUSH` now: re-derived from the geometry against
 **The row names two files, and the second one nearly re-introduced the defect.**
 `books.test.ts` asserts the capacity rule from the packer's side and wrote the
 fold over `shelfCost` out by hand to do it — a second copy of the sum, inside
-the commit whose entire subject is that this sum had five copies. It is
-`rowCost` now, stated once in `placement.ts` and called from both. Naming both
+the commit whose entire subject is that this sum had five copies. It became
+`rowCost`, stated once and called from both; it asks `rowExtent` now, for the
+reason under the heading below. Naming both
 files here is the other half: an assertion this row depends on, sitting in a
 file the scoreboard did not point at, is one that can be weakened without
 anything noticing — which is the failure mode at the top of this file, not a
@@ -986,6 +987,64 @@ against the case's real inner faces on a rendered scene. It reported
 hair by which a printed cover floats above its board, not slop — so the density
 moved by three books a row while the containment residual did not move at all.
 That is the shape of evidence a unit test cannot produce.
+
+### The estimate is gone; the model stayed and changed sides
+
+⚠️ **Everything above this heading describes a packer that no longer exists.**
+`toRows` used to charge `shelfCost` and wrap on the estimate. It runs the cursor
+and wraps on the answer — [ADR-0042](adr/0042-the-packer-runs-the-placer.md).
+The conservatism the inequality above *bounds* was, all along, shelf left empty:
+**0.09 to 0.13 a row on the live shelf**, and on one row it turned away a book
+that needed 0.163 from 0.170 of real room.
+
+**The bound was documented as unavoidable and was not.** The reason given —
+"the real lean comes from `leanFor`, which needs the row index, which is not
+known until the wrap this figure decides has happened" — is true of the book's
+*other* possible home, the head of the next row, and false of the row being
+offered it. `leanFor(rowIndex, position, id)` is determined by its arguments,
+and both indices are fixed at pack time: rows finalise in order, so the row being
+filled is `rows.length` and the candidate's place in it is `current.length`. The
+circularity was in the sentence, not in the code, and it survived two rewrites of
+this row because the row asserted the bound was *sound* and never asked whether
+it was *needed*.
+
+**`shelfCost` and `rowCost` moved into `shelf-width.test.ts` rather than dying
+with the estimate**, and the direction of the inequality is why. Deleting them
+would have left nothing bounding what the *cursor* spends against numbers the
+cursor cannot move, and the obvious replacement — restating capacity as
+`rowExtent` — is the defendant-as-judge defect three paragraphs up, committed a
+third time. So the model changed standing: it decides nothing and bounds
+everything, and being loose costs nothing now that no row wraps on it.
+
+**A third group asks what the first two cannot.** "Packs no row past the band"
+and "packs every row tight" are both about the *decision*. `leaves a row no
+slack a book could have used` is about the outcome — the wood left at a row's
+end against the real footprint of the book that would have gone there. It is the
+assertion that would have been red before ADR-0042, and it is the sharpest
+mutation detector in the file.
+
+**Observed red, and the detection floors are measured, not assumed.** Bisected on
+`cursor += entry.thickness + TOUCHING + δ`, the shelved branch:
+
+| δ | verdict | caught by |
+| --- | --- | --- |
+| 0.0002 | green | — |
+| **0.0003** | **red** | `leaves a row no slack a book could have used` (`alternating`) |
+| 0.01 | red | *and* `never spends more than the model allows` |
+
+The face-out branch catches **any** over-spend — δ = 0.0001 is red on the
+exactness case, which is exact to the bit. Also red: the angle-change clearance
+inflated forty-fold, and the packer wrapping at nine tenths of the band (which
+turns `packs every row tight` red, the mutation the vacuous version survived).
+Control green throughout.
+
+⚠️ **The cost model's own floor is 0.01, not a hair, and this file said otherwise
+first.** The plan for ADR-0042 claimed the moved model catches a hair-sized
+cursor over-spend, on a misreading of "adding a hair to every book's cost" above
+— which is a hair added to the *charge*, not to the *spend*. Read-only review
+caught the overclaim; bisection settled it. **A detection floor that is written
+down is a gate; one that is assumed is what this row exists to prevent.** Do not
+restate these numbers in either direction without re-running the bisection.
 
 **The one thing this row now carries alone.** Clearance is charged to the *left*
 of the book that leans, where the angle changes, so the last book of a row has

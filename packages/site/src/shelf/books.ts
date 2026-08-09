@@ -4,14 +4,16 @@ import type { Binding, LibraryBook } from '@stacks/core';
 // and sharp into the browser bundle and the shelf never boots. Types are erased
 // at compile time and so are safe from the root; values are not.
 import { compareShelfPosition, SHELVED_STATUSES } from '@stacks/core/shelf-order';
-import { USABLE_WIDTH } from './case.ts';
+import { SHELF, USABLE_WIDTH } from './case.ts';
 import { hashUnit } from './hash.ts';
 import type { BooksSettings } from './shelf-settings.ts';
 // The packer depends on the placer, which reads oddly until you see why: a row's
 // capacity is only meaningful if what it charges a book is what the cursor will
-// spend on it. So it reads the cursor's own arithmetic rather than a copy that
-// can drift — which is exactly what happened, twice. See ADR-0031.
-import { shelfCost } from './placement.ts';
+// spend on it. It used to read the cursor's own *arithmetic* through `shelfCost`
+// so the two could not drift — which is exactly what had happened, twice, and is
+// ADR-0031. It now runs the cursor itself, which is ADR-0042: there is no charge
+// left to drift from the spend.
+import { rowExtent } from './placement.ts';
 
 /**
  * Turning a library into shelf rows.
@@ -111,7 +113,6 @@ export function toRows(books: readonly LibraryBook[], settings: BooksSettings): 
 
   const rows: ShelfRow[] = [];
   let current: ShelfBook[] = [];
-  let used = 0;
   let previousYear: string | undefined;
 
   for (const book of ordered) {
@@ -119,31 +120,58 @@ export function toRows(books: readonly LibraryBook[], settings: BooksSettings): 
     const year = yearOf(book);
     const isYearChange = previousYear !== undefined && year !== previousYear;
 
-    // Costed against the row it is being offered to, because what a book costs
-    // depends on where it lands. A year change mid-row opens a gap and stands the
-    // book upright; the same book at the head of a row opens nothing and leans
-    // against the case. So the two cases are priced separately rather than one
-    // being assumed — the earlier version charged the gap either way, and charged
-    // it to a book that never got one.
+    // Offered to the row it would join, because what a book costs depends on
+    // where it lands. A year change mid-row opens a gap and props the book
+    // against its neighbour across it; the same book at the head of a row opens
+    // nothing and leans against the case. So the two cases are placed separately
+    // rather than one being assumed — an earlier version charged the gap either
+    // way, and charged it to a book that never got one.
     let candidate =
       isYearChange && current.length > 0 ? { ...entry, gapBefore: YEAR_GAP } : entry;
-    let width = shelfCost(candidate, current[current.length - 1]);
 
-    if (used + width > USABLE_WIDTH && current.length > 0) {
+    if (current.length > 0 && !fitsRow([...current, candidate], rows.length)) {
       rows.push({ label: previousYear ?? '', books: current });
       current = [];
-      used = 0;
       candidate = entry;
-      width = shelfCost(entry, undefined);
     }
 
     current.push(candidate);
-    used += width;
     previousYear = year;
   }
 
   if (current.length > 0) rows.push({ label: previousYear ?? '', books: current });
   return rows;
+}
+
+/**
+ * Whether these books, placed as this row, stay inside the shelf.
+ *
+ * **The packer stopped estimating.** It used to price each book with
+ * `shelfCost` and keep a running total, and that price was an upper bound by
+ * construction: the real lean comes from `leanFor`, so the swing was charged at
+ * the steepest angle any book may reach. On the live shelf that over-charged a
+ * row by 0.09–0.13 — and turned a book away from a row with 0.007 of room to
+ * spare, which is the whole of ADR-0042.
+ *
+ * The bound was not necessary. `leanFor(rowIndex, position, id)` is determined
+ * by its arguments, and both indices are known *here*: rows are finalised in
+ * order and never revisited, so the row being filled is `rows.length`, and the
+ * candidate's position in it is `current.length`. The circularity the old
+ * comment described — "the row index is not known until the wrap this figure
+ * decides has happened" — is real only for the book's *other* possible home, the
+ * head of the next row. That is not the question this asks.
+ *
+ * So it places the row and reads where it ends. `-SHELF.width / 2` is the left
+ * inner face, where the cursor starts, and `USABLE_WIDTH` is how much of the
+ * shelf books may occupy — one answer, ADR-0031's, rather than a second spelling
+ * of it.
+ *
+ * Appending is monotonic, which is what makes greedy packing sound here: a
+ * book's position in the row and its run's lean seed are fixed by what comes
+ * *before* it, so nothing already placed moves when one more is offered.
+ */
+function fitsRow(books: readonly ShelfBook[], rowIndex: number): boolean {
+  return rowExtent(books, rowIndex) <= -SHELF.width / 2 + USABLE_WIDTH;
 }
 
 /**
