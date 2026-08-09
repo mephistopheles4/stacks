@@ -1,0 +1,48 @@
+name: Idea or change
+description: Something the tool should do, or should do differently.
+title: '<what it should do, in one line>'
+# No `labels:` — see the note in defect.yml.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a personal reading tracker before it is anything else, so the
+        honest filter is whether a change makes the shelf better for someone who
+        keeps their notes in a vault. "No, and here is why" is a normal outcome
+        and gets its reasoning written down in
+        [`docs/adr/`](https://github.com/mephistopheles4/stacks/tree/main/docs/adr).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is the problem?
+      description: What you were trying to do, rather than the solution you have in mind. The solution is easier to judge once the problem is on the page.
+      placeholder: The print and audiobook editions of one title render as two spines, so my shelf shows books I own once, twice.
+    validations:
+      required: true
+
+  - type: textarea
+    id: change
+    attributes:
+      label: What would you change?
+      placeholder: Collapse editions that share a title and author into one spine, with the audiobook's aspect losing to the print one.
+    validations:
+      required: false
+
+  - type: textarea
+    id: contract
+    attributes:
+      label: Does it touch a documented contract?
+      description: |
+        Optional. The things a change most often collides with are the numbered
+        invariants, the frontmatter contract and the vault adapter contract, all
+        in [`CLAUDE.md`](https://github.com/mephistopheles4/stacks/blob/main/CLAUDE.md);
+        decisions already made are one file each in
+        [`docs/adr/`](https://github.com/mephistopheles4/stacks/tree/main/docs/adr).
+
+        **"I don't know" is fine** — say so and it gets worked out on the issue.
+        If it contradicts a decision already recorded, that is not a refusal;
+        several records here exist because an earlier one was reversed.
+      placeholder: Adds a frontmatter key, so it would touch the frontmatter contract and G8.
+    validations:
+      required: false

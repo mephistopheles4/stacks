@@ -1,0 +1,70 @@
+name: Defect
+description: Something behaves differently from what is documented or expected.
+title: '<what broke, in one line>'
+# No `labels:` here on purpose. docs/agents/triage-labels.md records the label
+# vocabulary and says plainly that the labels do not exist on the repo yet — a
+# form claiming to apply one would silently apply nothing, which is the kind of
+# documented-claim-that-is-false this repo gates against everywhere else.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Everything here is optional. A short report that says what you saw beats
+        no report, and a maintainer would rather ask than have you not file it.
+
+        **Not here:** security issues — see [SECURITY.md](https://github.com/mephistopheles4/stacks/blob/main/SECURITY.md).
+        Anything that could let a crafted note, a crafted API response or a
+        crafted import file reach outside the vault goes through private
+        reporting instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what you expected instead
+      placeholder: |
+        `stacks enrich` reported "12 updated" and changed nothing on disk.
+        I expected either 12 changed files or a report saying 0.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce it
+      description: The command you ran and, if it matters, the shape of the note or vault involved. Please redact anything private — a made-up title reproducing the same bug is more useful than a real one.
+      placeholder: |
+        1. A note with `type: book`, a title, and no ISBN
+        2. `pnpm stacks enrich --vault ./somewhere`
+        3. Exit 0, report says 12 updated, `git status` in the vault is clean
+    validations:
+      required: false
+
+  - type: textarea
+    id: gate
+    attributes:
+      label: Which gate should have caught this?
+      description: |
+        Optional, and genuinely useful — answer it however roughly you like, or skip it.
+
+        [`docs/gates.md`](https://github.com/mephistopheles4/stacks/blob/main/docs/gates.md)
+        is the scoreboard: one row per rule that must never break, each with a
+        name like `G21 (no-live-network)`. **"Nothing would" is the most useful
+        answer this box gets** — it means the fix needs a new row, and that is
+        how most rows here got written.
+      placeholder: Nothing would — G27 checks the report accounts for every book counted, but not that a claimed write actually happened.
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Only if it might be relevant — an OS-specific path bug has happened here before.
+      placeholder: |
+        node -v      : v22.x
+        pnpm -v      : 9.x
+        OS           : Windows 11 / macOS 15 / Ubuntu 24.04
+        stacks commit: abc1234
+      render: text
+    validations:
+      required: false

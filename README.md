@@ -163,6 +163,7 @@ in both directions so that coverage is a checked fact rather than a claim.
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The short
 version: `pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render` is
 the contract, and a defect worth fixing is usually worth a gate that goes red.
+Participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 The repo also carries optional configuration for a set of
 [engineering skills](https://github.com/mattpocock/skills) under
@@ -178,6 +179,7 @@ workflow requires them, and every gate passes without a single one installed.
 | [docs/adr/](docs/adr/) | every choice made, and why |
 | [docs/gates.md](docs/gates.md) | which rule each gate protects — and which are protected by nothing |
 | [SECURITY.md](SECURITY.md) | the threat model, stated plainly |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1, and what one maintainer can escalate |
 | [docs/library-brief.md](docs/library-brief.md) | the original product spec (historical) |
 
 `library.json` is a build artifact: always regenerable from the vault, never

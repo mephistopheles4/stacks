@@ -1,0 +1,17 @@
+# A blank issue stays available on purpose. docs/agents/issue-tracker.md is
+# explicit that "an issue with no labels at all is a perfectly good issue", and
+# a form is a convenience, never a toll gate.
+blank_issues_enabled: true
+
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/mephistopheles4/stacks/security/advisories/new
+    about: Report privately instead. Never open a public issue for anything that could let a crafted note, API response or import file reach outside the vault — see SECURITY.md.
+
+  - name: Code of conduct concern
+    url: https://github.com/mephistopheles4/stacks/blob/main/CODE_OF_CONDUCT.md
+    about: Conduct reports go to the maintainer by email, not through the issue tracker.
+
+  - name: How this repo expects a change to arrive
+    url: https://github.com/mephistopheles4/stacks/blob/main/CONTRIBUTING.md
+    about: The four commands that are the contract, and why a change arrives with a gate or a reason it needs none.
