@@ -43,6 +43,26 @@
     all.
   -->
   <p id="book-card-status" class="visually-hidden" role="status"></p>
+
+  <!--
+    The cover, larger. A real `<dialog>` opened with `showModal`, which is what
+    makes it different from the card beside it: focus moves in, the page goes
+    inert, Escape closes it, and focus returns to the cover button. The card
+    claims none of that and is deliberately not a dialog.
+
+    In the template rather than built at runtime, so Astro's scoping reaches it
+    and the styles below need no `:global()` — and so the element outlives every
+    card swap.
+  -->
+  <dialog id="cover-viewer" class="cover-viewer" aria-label="Book cover"><!--
+    Replaced with the book's own name when it opens; this is what it says if
+    something goes wrong before that.
+  -->
+    <img id="cover-viewer-image" alt="" />
+    <button id="cover-viewer-close" class="cover-viewer-close" type="button">
+      <span class="visually-hidden">Close the cover</span>
+    </button>
+  </dialog>
 </div>
 
 <script>
@@ -135,11 +155,44 @@
 
   .card :global(h2) {
     margin: 0;
+    /*
+      Room for the `×`, which is absolutely positioned and therefore invisible
+      to the flow the title wraps in. The control spans 0.5rem–2.5rem from the
+      border edge against a 1.25rem card padding, so it reaches 1.25rem into the
+      content box and a three-line title ran straight under it. Reserved on the
+      `h2` alone: the author line sits below the control's 2rem box and the
+      cover is to the left of it, so widening either would be dead space.
+
+      Reset below the breakpoint, where the `×` becomes a full-width grabber
+      pill above the content and nothing overlaps anything.
+    */
+    padding-right: 1.5rem;
     font-size: 1.05rem;
     font-weight: 600;
     line-height: 1.3;
     letter-spacing: -0.01em;
     overflow-wrap: anywhere;
+  }
+
+  /*
+    The cover is a button now — it opens the enlarged view — so this is the
+    button undone back to being a picture. `:global` for the usual reason: it is
+    built by card.ts and carries none of Astro's scoping attributes.
+  */
+  .card :global(.card-cover) {
+    display: block;
+    flex: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    /* Says what the click does before it is clicked. */
+    cursor: zoom-in;
+  }
+
+  .card :global(.card-cover:focus-visible) {
+    outline: 2px solid #f2e8dc;
+    outline-offset: 3px;
+    border-radius: 0.2rem;
   }
 
   .card :global(.author) {
@@ -267,6 +320,75 @@
   }
 
   /*
+    The enlarged cover. The dialog is a frame around one image and nothing else,
+    so it carries no chrome of its own — the UA's border, padding and background
+    all go, and what is left is the picture on a scrim.
+
+    `max-width`/`max-height` only, with no width: an `<img>` left to its natural
+    size renders at exactly that and shrinks only when it would not fit. Which
+    is the honest ceiling here — the staged file is capped at MAX_COVER_EDGE,
+    and scaling it past native would make the "see it closer" answer blurrier
+    than the thumbnail it came from.
+  */
+  /*
+    Position, `inset: 0`, `margin: auto` and `width: fit-content` are the UA's
+    own rules for `dialog:modal`, and they already centre a shrink-wrapped box.
+    They are deliberately not restated: overriding `position` or `margin` here
+    is what breaks that centring, because `inset: 0` with an author `width` no
+    longer resolves to fit-content. Only the chrome is removed.
+  */
+  .cover-viewer {
+    max-width: 100%;
+    max-height: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    /* The close control hangs off the corner; the UA's `auto` would clip it. */
+    overflow: visible;
+    cursor: zoom-out;
+  }
+
+  .cover-viewer::backdrop {
+    background: rgba(10, 8, 7, 0.82);
+    backdrop-filter: blur(6px);
+  }
+
+  .cover-viewer img {
+    display: block;
+    max-width: 92vw;
+    max-height: 88vh;
+    border-radius: 0.35rem;
+    box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.7);
+  }
+
+  /*
+    Redundant with "click anywhere", and deliberately so: a surface you can only
+    leave by knowing a convention is a surface some people are stuck on. It sits
+    outside the image's top-right corner rather than over the artwork.
+  */
+  .cover-viewer-close {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(26, 22, 19, 0.75);
+    color: #f2e8dc;
+    cursor: pointer;
+  }
+
+  .cover-viewer-close::before {
+    content: '\00d7';
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  /*
     Below the breakpoint the card is a bottom sheet.
 
     ⚠️ **This query is a fact two languages hold.** Its one expression is
@@ -325,6 +447,12 @@
     /* Following the finger is not an animation; it must not be eased. */
     .card.dragging {
       transition: none;
+    }
+
+    /* The control is a full-width pill above the content here, so there is
+       nothing beside the title to reserve room for. */
+    .card :global(h2) {
+      padding-right: 0;
     }
 
     .card-dismiss {

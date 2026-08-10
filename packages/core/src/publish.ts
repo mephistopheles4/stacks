@@ -1,6 +1,6 @@
 import { copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import sharp from 'sharp';
+import sharp, { type Sharp } from 'sharp';
 import { MAX_COVER_EDGE, measureCover } from './covers/cover-budget.ts';
 import { coverFileName, resolveCoverPath } from './covers/cover-path.ts';
 import { buildLibrary, type Library } from './library.ts';
@@ -261,6 +261,7 @@ async function copyCovers(
  *
  * A cover already inside the cap is copied byte for byte rather than
  * re-encoded, so this never quietly degrades an image it did not need to touch.
+ * What it does to the ones it *must* touch is `encoded` below.
  */
 async function stageCover(from: string, to: string): Promise<void> {
   const size = await measureCover(from);
@@ -273,7 +274,50 @@ async function stageCover(from: string, to: string): Promise<void> {
     return;
   }
 
-  await sharp(from)
-    .resize({ width: MAX_COVER_EDGE, height: MAX_COVER_EDGE, fit: 'inside', withoutEnlargement: true })
-    .toFile(to);
+  const resized = sharp(from).resize({
+    width: MAX_COVER_EDGE,
+    height: MAX_COVER_EDGE,
+    fit: 'inside',
+    withoutEnlargement: true,
+  });
+
+  await encoded(resized, (await sharp(from).metadata()).format).toFile(to);
+}
+
+/**
+ * The encoder settings a shrunk cover is written under.
+ *
+ * These used to be sharp's defaults, which nobody chose: **quality 80 with
+ * 4:2:0 chroma subsampling**. 4:2:0 keeps colour at half resolution on both
+ * axes. That is imperceptible on a photograph, which is what the default is
+ * tuned for, and plainly visible on what a book cover actually is — hard-edged
+ * type over a large flat saturated field. White serif type on red fringed pink,
+ * and the fringe was introduced *here*, between a clean provider file and the
+ * shelf.
+ *
+ * Quality 90 rather than 80 because this is a **second** lossy generation: the
+ * vault already holds the provider's JPEG, and re-encoding a JPEG compounds its
+ * artifacts rather than merely adding to a clean source.
+ *
+ * ⚠️ **Applied per format, never unconditionally**, because `.jpeg()` sets
+ * sharp's *output* format — it does not merely configure it. Calling it on a
+ * PNG cover writes JPEG bytes to a `.png` filename, which every browser sniffs
+ * and renders, so nothing downstream would ever report it. PNG needs nothing
+ * from this: it is lossless and has no chroma channel to subsample.
+ *
+ * The cost is bytes on the wire and only that — about 44 KB per re-encoded
+ * cover, 1.2 MB to 1.9 MB across the owner's 43. `TEXTURE_BUDGET_BYTES` is
+ * measured in *decoded* pixels and cannot move: the dimensions are unchanged.
+ */
+function encoded(image: Sharp, format: string | undefined): Sharp {
+  switch (format) {
+    case 'jpeg':
+      return image.jpeg({ quality: 90, chromaSubsampling: '4:4:4', mozjpeg: true });
+    case 'webp':
+      // The other lossy format `looksLikeImage` admits. `smartSubsample` is
+      // WebP's spelling of the same fix; its default is likewise 4:2:0.
+      return image.webp({ quality: 90, smartSubsample: true });
+    default:
+      return image;
+  }
 }

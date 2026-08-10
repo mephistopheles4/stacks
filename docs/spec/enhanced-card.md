@@ -496,6 +496,14 @@ Assertion 7 is the one that catches the structural defect
 [#101](https://github.com/mephistopheles4/stacks/issues/101) flagged, and it is
 the one nothing else would notice.
 
+⚠️ **G35 has since grown a ninth check this list does not contain**, and the list
+is left as it was rather than backfilled: it is what map #88 accepted, and a spec
+that quietly acquires requirements after the fact stops being a record of
+anything. The enlarged cover — `checkCoverViewer` in `scripts/smoke-render.ts`,
+[ADR-0052](../adr/0052-the-enlarged-cover-is-a-real-dialog.md) — came from a
+later request. [`docs/gates.md`](../gates.md)'s G35 row is the live description
+of what that gate checks; this section is the historical one.
+
 **Existing gates that move:** none of the card work touches G8, G19 or
 `build-modes` directly — but the three new `LibraryBook` fields do, and that is
 [`provider-provenance.md`](provider-provenance.md) §6's gate. See

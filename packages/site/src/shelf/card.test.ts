@@ -136,6 +136,34 @@ describe('subjects', () => {
   });
 });
 
+/**
+ * The tags strip is the owner's own vocabulary, and `audiobook` is not in it.
+ *
+ * `import/audible.ts` writes `['audiobook', ...categories]` onto every book it
+ * imports, and says why in its own comment: "so the shelf can tell them apart
+ * later". It is a machine's marker sitting in the one place on the card that is
+ * supposed to be what *you* said about the book — and on this vault it leads 24
+ * of the tag lines.
+ *
+ * ⚠️ Hidden, not deleted. The tag stays in the note, `library.json` still
+ * carries it, and `identity.ts` still uses it to keep an audiobook from shelving
+ * on top of its print edition.
+ */
+describe('the audiobook marker', () => {
+  it('does not show on the card', () => {
+    expect(cardModel(book({ tags: ['audiobook', 'consulting'] })).tags).toBe('consulting');
+  });
+
+  it('collapses the line when it was the only tag, rather than leaving it empty', () => {
+    expect(cardModel(book({ tags: ['audiobook'] })).tags).toBeUndefined();
+  });
+
+  it('leaves a tag that merely contains the word alone', () => {
+    // `audiobook-club` is the owner's, whatever it starts with.
+    expect(cardModel(book({ tags: ['audiobook-club'] })).tags).toBe('audiobook-club');
+  });
+});
+
 describe('the announcement', () => {
   it('carries title and author, and nothing else', () => {
     // Short rather than complete, deliberately: the primary consumer is a touch

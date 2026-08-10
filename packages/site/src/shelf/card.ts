@@ -5,6 +5,7 @@ import type { LibraryBook } from '@stacks/core';
 // piece of code: a second copy of `;` in this file is how a genre with a comma
 // in it quietly becomes two.
 import { parseSubjects } from '@stacks/core/subjects';
+import { COVER_BUTTON_CLASS } from './cover-viewer.ts';
 import { providerLinks, type ProviderLink } from './provider-links.ts';
 import { markFor } from './provider-marks.ts';
 
@@ -102,7 +103,7 @@ export function cardModel(book: LibraryBook): CardModel {
     // **Always.** 19 of 41 real books are `read` with no dates and no rating, so
     // a line that renders only when it has dates is empty on 46% of the library.
     reading: readingLine(book),
-    tags: book.tags.length === 0 ? undefined : book.tags.join(' · '),
+    tags: tagsLine(book.tags),
     object: objectLine(book),
     subjects: subjectsLine(book),
     links: providerLinks(book),
@@ -130,6 +131,30 @@ function blocks(book: LibraryBook): HTMLElement[] {
   ];
 
   return nodes.filter((node): node is HTMLElement => node !== undefined);
+}
+
+/**
+ * Tags the *importer* wrote, which the owner never did.
+ *
+ * `import/audible.ts` puts `audiobook` at the front of every book it brings in —
+ * "so the shelf can tell them apart later", by its own comment — and that is a
+ * marker for other code, not a word the reader chose. The tags strip is the
+ * card's one line of the owner's own vocabulary, so a machine's bookkeeping
+ * leading 24 of 41 of them is the wrong thing in the wrong place.
+ *
+ * **Hidden here and nowhere else.** The tag stays in the note, `library.json`
+ * still carries it, and `identity.ts` still reads it to keep an audiobook from
+ * shelving on top of its print edition. ⚠️ The consequence is that nothing on
+ * the card now says a book is an audiobook: `narrator`, `duration` and `asin`
+ * are import-only keys and were never `BookRecord` fields.
+ *
+ * An exact match, not a prefix: `audiobook-club` would be the owner's.
+ */
+const IMPORTER_TAGS: readonly string[] = ['audiobook'];
+
+function tagsLine(tags: readonly string[]): string | undefined {
+  const owned = tags.filter((tag) => !IMPORTER_TAGS.includes(tag));
+  return owned.length === 0 ? undefined : owned.join(' · ');
 }
 
 /**
@@ -249,10 +274,31 @@ function element(tag: string, className: string): HTMLElement {
   return node;
 }
 
+/**
+ * The cover, as a control rather than a picture.
+ *
+ * It opens the enlarged view (`cover-viewer.ts`), and a bare `<img>` with a
+ * click handler is a control only a mouse can find: no keyboard, no accessible
+ * role, no announcement that anything would happen. The `<button>` carries all
+ * three, and its accessible name comes from the image's `alt` exactly as it did
+ * before — so the thumbnail is still described, and now it says what it does.
+ *
+ * No listener is bound here. `showCard` replaces this whole subtree on every
+ * tap-to-swap, so the click is delegated from the card body one level up.
+ */
 function cover(src: string, title: string): HTMLElement {
-  const node = document.createElement('img');
-  node.src = src.startsWith('/') ? src : `/${src}`;
-  node.alt = `Cover of ${title}`;
-  node.loading = 'lazy';
-  return node;
+  const image = document.createElement('img');
+  image.src = src.startsWith('/') ? src : `/${src}`;
+  image.alt = `Cover of ${title}`;
+  image.loading = 'lazy';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = COVER_BUTTON_CLASS;
+  // The tooltip only; the accessible name is the alt text, and adding a second
+  // naming mechanism is what double-announces — the rule `ProviderLink.name`
+  // already states for the marks row.
+  button.title = 'See the cover larger';
+  button.append(image);
+  return button;
 }

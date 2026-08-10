@@ -74,3 +74,5 @@ Two other files hold what these deliberately do not:
 | [0048](./0048-google-attribution-is-a-vendored-page-element.md) | Google's attribution binds this site, and is discharged by a vendored page element |
 | [0049](./0049-the-card-is-a-non-modal-bottom-sheet.md) | The card is a non-modal bottom sheet below one breakpoint, and focus never moves |
 | [0050](./0050-provider-marks-are-redrawn-monotone.md) | The provider marks are redrawn monotone glyphs, not the providers' artwork |
+| [0051](./0051-the-staging-resize-chooses-its-encoder.md) | The staging resize chooses its encoder, and it is chosen per format |
+| [0052](./0052-the-enlarged-cover-is-a-real-dialog.md) | The enlarged cover is a real `<dialog>`, and the card is still not one |

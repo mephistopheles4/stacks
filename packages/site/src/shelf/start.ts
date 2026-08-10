@@ -21,13 +21,17 @@ export function start(): void {
   const body = document.getElementById('book-card-body');
   const status = document.getElementById('book-card-status');
   const dismiss = document.getElementById('book-card-dismiss');
+  const viewer = document.getElementById('cover-viewer');
+  const viewerImage = document.getElementById('cover-viewer-image');
 
   if (
     !(canvas instanceof HTMLCanvasElement) ||
     !(card instanceof HTMLElement) ||
     !(body instanceof HTMLElement) ||
     !(status instanceof HTMLElement) ||
-    !(dismiss instanceof HTMLElement)
+    !(dismiss instanceof HTMLElement) ||
+    !(viewer instanceof HTMLDialogElement) ||
+    !(viewerImage instanceof HTMLImageElement)
   ) {
     // Nothing to boot into. Silent rather than thrown: a missing element here
     // means the template changed, which is a build-time mistake, and throwing on
@@ -36,5 +40,11 @@ export function start(): void {
     return;
   }
 
-  void boot(canvas, { card, body, status, dismiss });
+  void boot(canvas, {
+    card,
+    body,
+    status,
+    dismiss,
+    coverViewer: { dialog: viewer, image: viewerImage },
+  });
 }

@@ -131,6 +131,7 @@ async function main(): Promise<void> {
       writeFileSync(OUTPUT, await page.screenshot({ type: 'png' }));
 
       const cardOpened = await clickABook(page);
+      const viewer = await checkCoverViewer(page);
       const sheet = await checkSheet(page);
 
       report({
@@ -140,6 +141,7 @@ async function main(): Promise<void> {
         cost,
         errors,
         cardOpened,
+        viewer,
         sheet,
       });
     } finally {
@@ -267,6 +269,73 @@ interface SheetChecked {
   readonly grabberVisible: boolean;
   /** A drag shorter than the dismiss threshold must snap back, not dismiss. */
   readonly survivedShortDrag: boolean;
+}
+
+/**
+ * The enlarged cover — that it opens, that it is actually bigger, and that
+ * leaving it leaves *only* it.
+ *
+ * The last one is the reason this is a browser check rather than a unit test.
+ * The viewer is a modal `<dialog>`, so Escape is the platform's, and the page's
+ * own Escape handler — which dismisses the card — is still listening on the
+ * document. One keystroke closing both surfaces is invisible to every other
+ * kind of test and immediately obvious here.
+ */
+interface CoverViewerChecked {
+  readonly opened: boolean;
+  /** Enlarged width ÷ thumbnail width. Under 2 is not "seeing it closer". */
+  readonly enlargedBy: number;
+  readonly escapeClosedViewer: boolean;
+  /** ⚠️ The card must survive that same Escape. */
+  readonly cardSurvivedEscape: boolean;
+}
+
+async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefined> {
+  // Walks the shelf for a book with a cover, since only some fixture books have
+  // one and the card left open by the swap above may not be one of them.
+  for (let index = 0; index < 60; index += 1) {
+    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
+      | { x: number; y: number }
+      | undefined;
+    if (point === undefined) continue;
+
+    await page.mouse.click(Math.round(point.x), Math.round(point.y));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    const thumbnail = (await page.evaluate(`(() => {
+      const button = document.querySelector('#book-card-body .card-cover');
+      if (!button) return undefined;
+      const box = button.getBoundingClientRect();
+      return { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2), width: box.width };
+    })()`)) as { x: number; y: number; width: number } | undefined;
+    if (thumbnail === undefined) continue;
+
+    await page.mouse.click(thumbnail.x, thumbnail.y);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const open = (await page.evaluate(`(() => {
+      const dialog = document.getElementById('cover-viewer');
+      const image = document.getElementById('cover-viewer-image');
+      return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0 };
+    })()`)) as { open: boolean; width: number };
+
+    await page.keyboard.press('Escape');
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const after = (await page.evaluate(`(() => {
+      const dialog = document.getElementById('cover-viewer');
+      const card = document.getElementById('book-card');
+      return { viewerOpen: Boolean(dialog?.open), cardOpen: Boolean(card) && !card.hidden };
+    })()`)) as { viewerOpen: boolean; cardOpen: boolean };
+
+    return {
+      opened: open.open,
+      enlargedBy: thumbnail.width === 0 ? 0 : open.width / thumbnail.width,
+      escapeClosedViewer: !after.viewerOpen,
+      cardSurvivedEscape: after.cardOpen,
+    };
+  }
+  return undefined;
 }
 
 async function clickABook(page: Page): Promise<CardOpened | undefined> {
@@ -513,9 +582,10 @@ function report(result: {
   cost: ShelfCost;
   errors: string[];
   cardOpened: CardOpened | undefined;
+  viewer: CoverViewerChecked | undefined;
   sheet: SheetChecked | undefined;
 }): void {
-  const { bookCount, caseOverflow, stats, cost, errors, cardOpened, sheet } = result;
+  const { bookCount, caseOverflow, stats, cost, errors, cardOpened, viewer, sheet } = result;
   const failures: string[] = [];
 
   const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
@@ -540,6 +610,17 @@ function report(result: {
     console.log(`card after swap   ${c.announcedAfterSwap || 'NOTHING'}`);
   }
   console.log(
+    `cover viewer      ${
+      viewer === undefined
+        ? 'NOT CHECKED'
+        : `${viewer.opened ? 'opens' : 'DOES NOT OPEN'}   ${viewer.enlargedBy.toFixed(
+            1,
+          )}x thumbnail   escape ${viewer.escapeClosedViewer ? 'closes it' : 'DOES NOT CLOSE IT'}${
+            viewer.cardSurvivedEscape ? '' : '   AND TOOK THE CARD'
+          }`
+    }`,
+  );
+  console.log(
     `sheet at 375x812  ${
       sheet === undefined
         ? 'NOT CHECKED'
@@ -551,6 +632,32 @@ function report(result: {
     }`,
   );
   console.log(`screenshot        ${OUTPUT}`);
+
+  if (viewer === undefined) {
+    failures.push('no card with a cover could be opened, so the enlarged view was never checked');
+  } else {
+    if (!viewer.opened) {
+      failures.push('clicking the card cover did not open the enlarged view');
+    }
+    // The card renders the cover at 4.5rem. Anything under 2x is not the
+    // "see it closer" this exists for — and it is what a viewer that opened
+    // but failed to load or size its image would measure.
+    if (viewer.enlargedBy < 2) {
+      failures.push(
+        `the enlarged cover is only ${viewer.enlargedBy.toFixed(1)}x the thumbnail — it must ` +
+          'actually be bigger than the picture it was opened from',
+      );
+    }
+    if (!viewer.escapeClosedViewer) {
+      failures.push('Escape did not close the enlarged cover');
+    }
+    if (!viewer.cardSurvivedEscape) {
+      failures.push(
+        'Escape closed the enlarged cover *and* the card underneath it. Both listen on the ' +
+          'document, so leaving one surface must not return the user two levels',
+      );
+    }
+  }
 
   if (sheet === undefined) {
     failures.push('no book could be opened at 375x812, so the sheet was never checked');

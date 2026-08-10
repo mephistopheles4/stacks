@@ -1,6 +1,7 @@
 import type { Library, LibraryBook } from '@stacks/core';
 import { hideCard, showCard, type CardElements } from './card.ts';
 import { mountSheet } from './card-sheet.ts';
+import { mountCoverViewer, type CoverViewerElements } from './cover-viewer.ts';
 import { mountDiagnostics } from './diagnostics.ts';
 import { mountShelf, type ShelfHandle, type ShelfStats } from './scene.ts';
 import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
@@ -52,6 +53,8 @@ declare global {
 export interface CardHandles extends CardElements {
   /** The one dismiss control: a grabber pill below the breakpoint, an `×` above. */
   readonly dismiss: HTMLElement;
+  /** The enlarged-cover dialog. See `cover-viewer.ts`. */
+  readonly coverViewer: CoverViewerElements;
 }
 
 export async function boot(
@@ -201,8 +204,16 @@ export async function boot(
 
   mountSheet({ card: card.card, control: card.dismiss, onDismiss: dismiss });
 
+  const coverViewer = mountCoverViewer(card.coverViewer, card.body);
+
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') dismiss();
+    if (event.key !== 'Escape') return;
+    // The enlarged cover is a modal `<dialog>`, so the platform closes it on
+    // Escape and the keydown still reaches here. Without this guard one press
+    // would take the viewer *and* the card underneath it — the user having
+    // asked to leave one surface and been returned two levels.
+    if (coverViewer.isOpen()) return;
+    dismiss();
   });
 
   watchForRebuilds();

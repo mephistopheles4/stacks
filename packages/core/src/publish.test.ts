@@ -1,8 +1,10 @@
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import sharp, { type Sharp } from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
+import { MAX_COVER_EDGE } from './covers/cover-budget.ts';
 import { publish } from './publish.ts';
 import { FIXTURE_VAULT } from './test-support.ts';
 
@@ -122,5 +124,101 @@ describe('publish', () => {
     expect(result.coversMissing).toEqual(['passwd']);
     const copied = await readdir(join(out, 'covers'));
     expect(copied).toEqual([]);
+  });
+});
+
+/**
+ * What a re-encode is allowed to cost.
+ *
+ * The resize is not optional — see cover-budget.ts — but the *encoder settings*
+ * it runs under were never chosen, and sharp's defaults are quality 80 with
+ * 4:2:0 chroma subsampling. 4:2:0 stores colour at half resolution on both
+ * axes, which is invisible on a photograph and very visible on the thing a book
+ * cover actually is: hard-edged type over a saturated flat field. The owner
+ * reported "artifacts" on a white-serif-on-red cover and was right — the
+ * fringing was ours, introduced between the vault and the shelf, on a file the
+ * provider had served clean.
+ *
+ * Only covers *over* the cap are re-encoded; everything else is copied byte for
+ * byte, so this is the whole population that could be damaged.
+ */
+describe('publish — the re-encode it imposes', () => {
+  let vaultPath: string;
+
+  /** A vault holding one book whose cover is `bytes` under `filename`. */
+  async function vaultWithCover(filename: string, bytes: Buffer): Promise<ObsidianAdapter> {
+    await mkdir(join(vaultPath, 'Library', 'covers'), { recursive: true });
+    await writeFile(
+      join(vaultPath, 'Library', 'Big.md'),
+      `---\ntype: book\ntitle: Big\ncover: covers/${filename}\n---\n\nA body.\n`,
+    );
+    await writeFile(join(vaultPath, 'Library', 'covers', filename), bytes);
+    return new ObsidianAdapter(vaultPath);
+  }
+
+  /**
+   * White type on a saturated red field, well over the cap — the exact shape
+   * 4:2:0 handles worst, and the shape every book cover has.
+   */
+  function typeOnRed(): Sharp {
+    const width = MAX_COVER_EDGE * 2;
+    const height = Math.round(width * 1.5);
+    return sharp({ create: { width, height, channels: 3, background: '#c8102e' } }).composite([
+      {
+        input: {
+          create: { width: Math.round(width * 0.6), height: 24, channels: 3, background: '#ffffff' },
+        },
+        left: Math.round(width * 0.2),
+        top: Math.round(height * 0.2),
+      },
+    ]);
+  }
+
+  beforeEach(async () => {
+    vaultPath = await mkdtemp(join(tmpdir(), 'stacks-encode-'));
+  });
+
+  afterEach(async () => {
+    await rm(vaultPath, { recursive: true, force: true });
+  });
+
+  it('does not subsample chroma on a jpeg it has to shrink', async () => {
+    const vault = await vaultWithCover('big.jpg', await typeOnRed().jpeg().toBuffer());
+    const out = await mkdtemp(join(tmpdir(), 'stacks-encode-out-'));
+
+    try {
+      await publish(await vault.listBooks(), vault, out, { isPublic: true });
+      const staged = await sharp(join(out, 'covers', 'big.jpg')).metadata();
+
+      expect(staged.width).toBeLessThanOrEqual(MAX_COVER_EDGE);
+      expect(
+        staged.chromaSubsampling,
+        'the staged cover stores colour at half resolution — white type on a flat ' +
+          'field comes out fringed, and the fringe is ours, not the provider’s',
+      ).toBe('4:4:4');
+    } finally {
+      await rm(out, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * The trap in the fix, and the reason it cannot be an unconditional
+   * `.jpeg(...)`: sharp takes the output format from that call, not from the
+   * filename. A PNG cover would be written as JPEG bytes under a `.png` name —
+   * which browsers sniff and render anyway, so nothing downstream would notice.
+   */
+  it('leaves a png a png', async () => {
+    const vault = await vaultWithCover('big.png', await typeOnRed().png().toBuffer());
+    const out = await mkdtemp(join(tmpdir(), 'stacks-encode-out-'));
+
+    try {
+      await publish(await vault.listBooks(), vault, out, { isPublic: true });
+      const staged = await sharp(join(out, 'covers', 'big.png')).metadata();
+
+      expect(staged.width).toBeLessThanOrEqual(MAX_COVER_EDGE);
+      expect(staged.format, 'a .png cover was rewritten as some other format').toBe('png');
+    } finally {
+      await rm(out, { recursive: true, force: true });
+    }
   });
 });
