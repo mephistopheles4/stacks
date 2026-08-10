@@ -74,6 +74,21 @@ export async function boot(
     return undefined;
   }
 
+  /*
+   * PROTOTYPE — THROWAWAY, branch `prototype/enhanced-card` only. `?cardproto`
+   * takes the card over so #92's variants are judged against the live shelf
+   * rather than in a vacuum. Lazy, so nothing but the query string pays for it.
+   */
+  let renderCard: (book: LibraryBook) => void = (book) => showCard(card, book);
+  let clearCard: () => void = () => hideCard(card);
+  const cardproto = params.get('cardproto');
+  if (cardproto !== null) {
+    const { mountCardPrototype } = await import('./card-prototype.ts');
+    const proto = mountCardPrototype(card, cardproto);
+    renderCard = proto.show;
+    clearCard = proto.hide;
+  }
+
   let handle: ShelfHandle | undefined;
   let shaderFailed = false;
   /** Torn down and remade when the panel rebuilds the shelf. */
@@ -84,8 +99,8 @@ export async function boot(
       return mountShelf(canvas, books, {
         settings,
         onSelect: (book) => {
-          if (book === undefined) hideCard(card);
-          else showCard(card, book);
+          if (book === undefined) clearCard();
+          else renderCard(book);
         },
         onContextLost: () => {
           // A shader failure takes the context with it a moment later on the
@@ -174,7 +189,7 @@ export async function boot(
   }
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') hideCard(card);
+    if (event.key === 'Escape') clearCard();
   });
 
   watchForRebuilds();
