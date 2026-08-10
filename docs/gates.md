@@ -110,6 +110,18 @@ means the two have drifted.
 | **G34** | `enrich-convergence` | a book a provider failed on is filled by the next run | the pacing answer for iTunes' ~20/min is "run it twice", and it rests entirely on an `http.ts` property nothing checked: a success is cached forever, a failure is never cached at all | `gates/enrich-convergence.test.ts` | ✅ |
 | **G35** | `enhanced-card` | the card a browser builds, at both viewports | *"the card opened"* was the whole assertion, and it stays true through a card with no reading line, links with no accessible name, an announcer that never changes, and a sheet that dismisses on every short drag | `scripts/smoke-render.ts` — `cardFailures` and `checkSheet`, against `docs/spec/enhanced-card.md` §11 | ✅ |
 
+**G13 now allows one file this project did not make**: Google's *powered by
+Google* graphic, which the API terms require displayed and forbid altering — so
+unlike the card's three provider marks, which are redrawn
+([ADR-0050](adr/0050-provider-marks-are-redrawn-monotone.md)), it cannot be
+redrawn or replaced with text. It is named as a **file**, for the reason the
+paragraph below gives about directories.
+
+⚠️ It also caught something worth recording about how this row is *run*: a local
+`pnpm test` before `git add` passes over an untracked binary, because G13 reads
+what git tracks. The commit that added the PNG claimed a green suite truthfully
+and CI went red on the same code seconds later. Stage, then run.
+
 **G13 grew a second allowlisted directory when the README got a screenshot**,
 and that is the most dangerous kind of entry in this file: a *directory* is a
 standing permission, where every other line here names a file. Nothing in a test

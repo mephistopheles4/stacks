@@ -91,6 +91,27 @@ const BRAND_BINARY_FILES = [
   'packages/site/public/favicon-32.png',
   'packages/site/public/apple-touch-icon.png',
   'packages/site/public/og.png',
+  /**
+   * ⚠️ **The one committed binary this project did not make**, and the only
+   * entry here that is somebody else's file rather than its own brand art.
+   *
+   * Google's *powered by Google* graphic, byte-for-byte as
+   * `books.google.com/googlebooks/images/poweredby.png` serves it. The Google
+   * APIs ToS §6 requires it displayed, and the Books branding page says *"Do not
+   * change any of the Google marks in any way"* — so unlike every provider logo
+   * on the card, which is redrawn (ADR-0050), this one cannot be redrawn or
+   * substituted with text and still satisfy the clause.
+   *
+   * Hotlinking would have avoided committing it and was rejected: this page
+   * makes zero third-party requests, and fetching it from Google would disclose
+   * every visitor's IP and referer to satisfy an obligation that has nothing to
+   * do with privacy. See ADR-0048.
+   *
+   * **Named as a file rather than by allowing its directory**, which is the
+   * distinction `docs/gates.md` draws about this row: a directory is a standing
+   * permission, and the next third-party binary dropped beside it should go red.
+   */
+  'packages/site/public/poweredby-google.png',
 ];
 
 describe('G5 — library.json is a build artifact', () => {
