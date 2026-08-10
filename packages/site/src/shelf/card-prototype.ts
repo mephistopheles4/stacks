@@ -98,6 +98,8 @@ export function mountCardPrototype(
   let variant: Variant = isVariant(initial) ? initial : 'C';
   let dataCase: Case = 'today';
   let linkStyle: LinkStyle = 'bare';
+  // LOCKED IN #92: 220ms in, 180ms out — exit faster than entry, because
+  // arriving wants to be seen and leaving wants to be out of the way.
   let duration = 220;
   const toggles: Toggles = { subjects: true, statusAlways: true, isbn: true };
   let current: LibraryBook | undefined;
@@ -164,11 +166,27 @@ export function mountCardPrototype(
   }
 
   function hide(): void {
-    card.hidden = true;
-    card.style.removeProperty('--pcard-drag');
-    current = undefined;
-    live.textContent = '';
-    bar.measure(undefined);
+    const sheet = window.matchMedia('(max-width: 700px), (max-height: 500px)').matches;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // #91: the sheet slides down on dismiss; the desktop card gains no motion.
+    // The exit runs at 0.82 of the entry, so the bar still tunes both together.
+    const exit = sheet && !reduced ? Math.round(duration * 0.82) : 0;
+    const finish = (): void => {
+      card.hidden = true;
+      card.classList.remove('is-leaving');
+      card.style.removeProperty('--pcard-drag');
+      card.style.removeProperty('--pcard-exit');
+      current = undefined;
+      live.textContent = '';
+      bar.measure(undefined);
+    };
+    if (exit === 0 || card.hidden) {
+      finish();
+      return;
+    }
+    card.style.setProperty('--pcard-exit', `${String(exit)}ms`);
+    card.classList.add('is-leaving');
+    window.setTimeout(finish, exit);
   }
 
   mountDrag(card, closer, () => hide());
@@ -520,9 +538,15 @@ function linksRow(book: Enriched, style: LinkStyle): HTMLElement {
      * Library is a text link, so the gap is that one control.
      */
     node.removeAttribute('aria-label');
-    node.title = link.name;
-    // Google's mark is the button, and the button has words in it either way.
+    /*
+     * Google's mark is a licensed *button* whose artwork reads "Google Preview"
+     * (#103), so the name matches the artwork rather than the destination —
+     * WCAG 2.5.3 asks the accessible name to contain the visible label, and the
+     * button is an image of those words. It is the one departure from #96/#101's
+     * bare-destination rule, which was written before #103 found the button.
+     */
     const word = link.mark === 'google' ? 'Google Preview' : link.name;
+    node.title = word;
     const labelled =
       style === 'labelled' ||
       link.mark === 'google' ||
@@ -648,6 +672,8 @@ function mountDrag(card: HTMLElement, pill: HTMLElement, onDismiss: () => void):
     from = undefined;
     card.classList.remove('is-dragging');
     card.style.removeProperty('--pcard-drag');
+    // LOCKED IN #92: 30% of the sheet's height, capped at 80px. Proportional, so
+    // a short sheet needs a short drag — 48px on `bare`, 45px in landscape.
     if (moved > Math.min(80, card.getBoundingClientRect().height * 0.3)) onDismiss();
   };
   pill.addEventListener('pointerup', end);
@@ -790,6 +816,10 @@ const CSS = `
     transition: transform var(--pcard-duration) ease;
   }
   .pcard.is-entering { transform: translateY(100%); }
+  .pcard.is-leaving {
+    transform: translateY(100%);
+    transition-duration: var(--pcard-exit, 180ms);
+  }
   .pcard.is-dragging { transition: none; }
   .pclose {
     top: 0; right: 0; left: 0;
