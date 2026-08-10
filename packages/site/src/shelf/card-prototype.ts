@@ -38,6 +38,24 @@ import type { LibraryBook } from '@stacks/core';
 type Variant = 'A' | 'B' | 'C';
 type Case = 'today' | 'filled' | 'no-isbn' | 'bare';
 
+/**
+ * The links row, on its own axis — because it is not the layout question.
+ *
+ * #89 decision 7 chose "logo SVGs with tooltips"; #101 then struck `title` for
+ * that row and closed, and #103 found no uniform logo row is available anyway.
+ * What is left is the marks with something else doing the tooltip's job, and
+ * the four candidates cost different amounts of height. Measured, not argued.
+ */
+type LinkStyle = 'labelled' | 'apple-labelled' | 'bare' | 'text';
+
+const LINK_STYLES: LinkStyle[] = ['labelled', 'apple-labelled', 'bare', 'text'];
+const LINK_NAMES: Record<LinkStyle, string> = {
+  labelled: 'marks + text on all three',
+  'apple-labelled': 'marks, text on Apple only',
+  bare: 'marks bare (Apple unlabelled)',
+  text: 'plain text, no marks',
+};
+
 /** The fields #97/#102 add, which no note carries until #99 runs. */
 interface Enriched extends LibraryBook {
   publisher?: string;
@@ -78,6 +96,8 @@ export function mountCardPrototype(
 ): { show: (book: LibraryBook) => void; hide: () => void } {
   let variant: Variant = isVariant(initial) ? initial : 'A';
   let dataCase: Case = 'today';
+  // Defaults to what #89 decision 7 asked for, minus the tooltip #101 struck.
+  let linkStyle: LinkStyle = 'bare';
   let duration = 220;
   const toggles: Toggles = { subjects: true, statusAlways: true, isbn: true };
   let current: LibraryBook | undefined;
@@ -124,7 +144,7 @@ export function mountCardPrototype(
       return;
     }
     const book = applyCase(current, dataCase);
-    body.replaceChildren(...blocks(book, variant, toggles));
+    body.replaceChildren(...blocks(book, variant, toggles, linkStyle));
     // Measured after layout, so the bar reports what the sheet actually is.
     requestAnimationFrame(() => bar.measure(card));
   }
@@ -160,9 +180,15 @@ export function mountCardPrototype(
    * question is a pixel height — `scripts/proto-card-shots.ts` reads this.
    */
   (window as unknown as { __cardproto?: unknown }).__cardproto = {
-    set(next: { variant?: Variant; case?: Case; toggles?: Partial<Toggles> }): void {
+    set(next: {
+      variant?: Variant;
+      case?: Case;
+      links?: LinkStyle;
+      toggles?: Partial<Toggles>;
+    }): void {
       if (next.variant !== undefined) variant = next.variant;
       if (next.case !== undefined) dataCase = next.case;
+      if (next.links !== undefined) linkStyle = next.links;
       Object.assign(toggles, next.toggles ?? {});
       bar.sync();
       render();
@@ -207,6 +233,12 @@ export function mountCardPrototype(
       render();
     });
     caseButton.classList.add('pbar-wide');
+    const linksButton = barButton('', () => {
+      linkStyle = LINK_STYLES[(LINK_STYLES.indexOf(linkStyle) + 1) % LINK_STYLES.length] ?? 'bare';
+      sync();
+      render();
+    });
+    linksButton.classList.add('pbar-wide');
 
     const toggleRow = document.createElement('span');
     toggleRow.className = 'pbar-toggles';
@@ -244,6 +276,7 @@ export function mountCardPrototype(
     function sync(): void {
       label.textContent = `${variant} — ${VARIANT_NAMES[variant]}`;
       caseButton.textContent = CASE_NAMES[dataCase];
+      linksButton.textContent = `links: ${LINK_NAMES[linkStyle]}`;
       for (const [key, button] of toggleButtons) button.dataset['on'] = String(toggles[key]);
     }
 
@@ -277,7 +310,7 @@ export function mountCardPrototype(
       readout.dataset['over'] = String(over > 0);
     }
 
-    root.append(prev, label, next, caseButton, toggleRow, ms, readout);
+    root.append(prev, label, next, caseButton, linksButton, toggleRow, ms, readout);
     sync();
     return { root, sync, measure };
   }
@@ -291,7 +324,12 @@ export function mountCardPrototype(
  * The eight blocks, in #89's order as #102 revised it:
  * cover / title / author / reading / tags / object / subjects / links.
  */
-function blocks(book: Enriched, variant: Variant, toggles: Toggles): HTMLElement[] {
+function blocks(
+  book: Enriched,
+  variant: Variant,
+  toggles: Toggles,
+  style: LinkStyle,
+): HTMLElement[] {
   const head = variant === 'A' ? coverBlockA(book) : undefined;
   const cover = book.cover === undefined ? undefined : coverImage(book);
 
@@ -304,7 +342,7 @@ function blocks(book: Enriched, variant: Variant, toggles: Toggles): HTMLElement
     !toggles.subjects || book.subjects === undefined
       ? undefined
       : line('p', 'psubjects', book.subjects),
-    linksRow(book, variant),
+    linksRow(book, style),
   ].filter(present);
 
   if (variant === 'A') return [head, ...text].filter(present);
@@ -402,7 +440,7 @@ function year(published: string): string {
  * *sighted touch* user sees. A: every mark carries visible text. B: marks bare,
  * so Apple's is wordless (the problem drawn honestly). C: no marks at all.
  */
-function linksRow(book: Enriched, variant: Variant): HTMLElement {
+function linksRow(book: Enriched, style: LinkStyle): HTMLElement {
   const row = document.createElement('div');
   row.className = 'plinks';
 
@@ -445,8 +483,13 @@ function linksRow(book: Enriched, variant: Variant): HTMLElement {
   }
 
   for (const link of links) {
-    const wordless = link.mark === 'apple';
-    const asText = variant === 'C' || link.mark === 'ol';
+    /*
+     * Open Library has no mark to render whatever the style: #103 found no
+     * published guideline at all, so it is a text name in every row that has
+     * marks in it. Google's licensed artwork is a *button carrying its own
+     * words*, so it is never the wordless one. Apple's icon is.
+     */
+    const asText = style === 'text' || link.mark === 'ol';
     const node = anchor(link.href, `${link.name} (opens in a new tab)`);
     node.className = asText ? 'plink plink--text' : 'plink';
     if (asText) {
@@ -454,12 +497,17 @@ function linksRow(book: Enriched, variant: Variant): HTMLElement {
       // risks a WCAG 2.5.3 (Label in Name) mismatch, so the aria-label goes.
       node.removeAttribute('aria-label');
       node.textContent = link.name;
-    } else {
-      node.append(mark(link.mark));
-      if (variant === 'A' || (variant === 'B' && !wordless))
-        node.append(span('plink-word', link.mark === 'google' ? 'Google Preview' : link.name));
-      else if (link.mark === 'google') node.append(span('plink-word', 'Google Preview'));
+      row.append(node);
+      continue;
     }
+    node.append(mark(link.mark));
+    // Google's mark is the button, and the button has words in it either way.
+    const word = link.mark === 'google' ? 'Google Preview' : link.name;
+    const labelled =
+      style === 'labelled' ||
+      link.mark === 'google' ||
+      (style === 'apple-labelled' && link.mark === 'apple');
+    if (labelled) node.append(span('plink-word', word));
     row.append(node);
   }
   return row;

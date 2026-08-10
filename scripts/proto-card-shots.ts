@@ -22,6 +22,9 @@ const OUT = join(REPO_ROOT, 'artifacts', 'card-prototype');
 
 const VARIANTS = ['A', 'B', 'C'] as const;
 const CASES = ['today', 'filled', 'no-isbn', 'bare'] as const;
+const LINK_STYLES = ['labelled', 'apple-labelled', 'bare', 'text'] as const;
+/** The direction locked in #92; the links axis is only interesting on it. */
+const LINKS_VARIANT = 'C';
 
 const VIEWPORTS = {
   /** iPhone 12-ish. #91's table calls this 375x812 → 325px of sheet. */
@@ -54,16 +57,40 @@ async function main(): Promise<void> {
   });
 
   const rows: string[] = [];
+  const linkRows: string[] = [];
   try {
+    if (process.env['PROTO_LINKS_ONLY'] !== '1') {
+      for (const [viewName, viewport] of Object.entries(VIEWPORTS)) {
+        for (const variant of VARIANTS) {
+          for (const dataCase of CASES) {
+            const shoot =
+              viewName === 'portrait' || (dataCase === 'filled' && viewName !== 'portrait');
+            const measure = await shot(browser, viewport, variant, dataCase, {
+              shootAs: shoot ? viewName : undefined,
+            });
+            rows.push(row(viewName, variant, dataCase, measure));
+          }
+        }
+      }
+    }
+
+    /*
+     * The links axis, on the chosen direction only.
+     *
+     * #89 decision 7 asked for logos with tooltips; #101 struck the tooltip and
+     * #103 found no uniform logo row exists. What replaces the tooltip's job is
+     * a height question against #91's cap, so it gets the same instrument.
+     */
     for (const [viewName, viewport] of Object.entries(VIEWPORTS)) {
-      for (const variant of VARIANTS) {
-        for (const dataCase of CASES) {
-          const shoot =
-            viewName === 'portrait' || (dataCase === 'filled' && viewName !== 'portrait');
-          const measure = await shot(browser, viewport, variant, dataCase, shoot ? viewName : undefined);
-          rows.push(
-            `| ${viewName} | ${variant} | ${dataCase} | ${String(measure.wanted)} | ${String(measure.cap)} | ${measure.sheet ? (measure.over > 0 ? `**+${String(measure.over)}**` : 'fits') : 'n/a'} |`,
-          );
+      for (const links of LINK_STYLES) {
+        for (const dataCase of ['filled', 'today'] as const) {
+          // Named per style, or all four overwrite one file — which they did.
+          const shoot = viewName !== 'landscape' && dataCase === 'filled';
+          const measure = await shot(browser, viewport, LINKS_VARIANT, dataCase, {
+            links,
+            shootAs: shoot ? `links-${viewName}-${links}` : undefined,
+          });
+          linkRows.push(row(viewName, `${LINKS_VARIANT} / ${links}`, dataCase, measure));
         }
       }
     }
@@ -71,10 +98,25 @@ async function main(): Promise<void> {
     await browser.close();
   }
 
-  console.log('\n| viewport | variant | case | wanted | cap (40vh) | below the fold |');
+  const header = '\n| viewport | variant | case | wanted | cap (40vh) | below the fold |';
+  if (rows.length > 0) {
+    console.log(header);
+    console.log('|---|---|---|---|---|---|');
+    for (const line of rows) console.log(line);
+  }
+  console.log(header.replace('variant', 'links style'));
   console.log('|---|---|---|---|---|---|');
-  for (const row of rows) console.log(row);
+  for (const line of linkRows) console.log(line);
   console.log(`\nshots in ${OUT}`);
+}
+
+function row(view: string, variant: string, dataCase: string, measure: Measure): string {
+  const verdict = !measure.sheet
+    ? 'n/a'
+    : measure.over > 0
+      ? `**+${String(measure.over)}**`
+      : 'fits';
+  return `| ${view} | ${variant} | ${dataCase} | ${String(measure.wanted)} | ${String(measure.cap)} | ${verdict} |`;
 }
 
 async function shot(
@@ -82,8 +124,9 @@ async function shot(
   viewport: { width: number; height: number },
   variant: string,
   dataCase: string,
-  shootAs?: string,
+  options: { links?: string; shootAs?: string } = {},
 ): Promise<Measure> {
+  const { links, shootAs } = options;
   const page = await browser.newPage();
   try {
     await page.setViewport(viewport);
@@ -96,7 +139,9 @@ async function shot(
 
     await openACard(page);
     await page.evaluate(
-      `window.__cardproto.set({ variant: ${JSON.stringify(variant)}, case: ${JSON.stringify(dataCase)} })`,
+      `window.__cardproto.set({ variant: ${JSON.stringify(variant)}, case: ${JSON.stringify(dataCase)}${
+        links === undefined ? '' : `, links: ${JSON.stringify(links)}`
+      } })`,
     );
     await new Promise((resolve) => setTimeout(resolve, 350));
 
