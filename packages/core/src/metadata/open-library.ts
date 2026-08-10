@@ -17,6 +17,24 @@ import { keyIfPresent } from '../key-if-present.ts';
 const API_BOOKS = 'https://openlibrary.org/api/books';
 const SEARCH = 'https://openlibrary.org/search.json';
 
+/**
+ * What the search asks for. **Exported because it is part of a URL, and the URL
+ * is the cache key.**
+ *
+ * Widening this list invalidates every cached Open Library search response and
+ * every captured search fixture — the HTTP cache is keyed by URL, and G21
+ * forbids a test making a live call to re-fill it. So the string lives in one
+ * place and `scripts/capture-api-fixtures.ts` builds its URLs from *this*
+ * constant rather than repeating it, which is what stops a re-capture from
+ * silently recording a different question than the one the code asks.
+ *
+ * `edition_key` is the OLID, and it is why this list moved at all: the ISBN path
+ * already receives an OLID unread, but a book found by title has no other route
+ * to one. See docs/spec/provider-provenance.md §8.
+ */
+export const SEARCH_FIELDS =
+  'title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject';
+
 export async function lookupByIsbn(
   isbn: string,
   get: HttpGet,
@@ -44,7 +62,40 @@ export async function lookupByIsbn(
     ),
     ...keyIfPresent('pages', asPositiveInt(entry['number_of_pages'])),
     ...keyIfPresent('coverUrl', coverOf(entry['cover'])),
+    ...keyIfPresent('publisher', namesOf(entry['publishers'])[0]),
+    // Stored exactly as given: this endpoint answers `"2008"` where the other
+    // three give a full date, which is precisely why Open Library is last in the
+    // `published` order and why nothing normalises on the way in.
+    ...keyIfPresent('published', firstString(entry['publish_date'])),
+    ...keyIfPresent('subjects', listIfAny(namesOf(entry['subjects']))),
+    ...keyIfPresent('openLibraryOlid', olidFrom(entry['key'])),
   };
+}
+
+/**
+ * The OLID out of `"key": "/books/OL26445570M"`.
+ *
+ * Already in the response the ISBN path fetches, and unread until now — the
+ * cheapest of the four contributor ids by a distance.
+ */
+function olidFrom(value: unknown): string | undefined {
+  const key = firstString(value);
+  return key === undefined ? undefined : (/(OL\d+M)$/.exec(key)?.[1] ?? undefined);
+}
+
+/** `[{name}]` — the shape Open Library uses for publishers, subjects and authors. */
+function namesOf(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    const single = firstString(value);
+    return single === undefined ? [] : [single];
+  }
+  return value
+    .map((item) => firstString(asRecord(item)?.['name']) ?? firstString(item))
+    .filter((name): name is string => name !== undefined);
+}
+
+function listIfAny(values: readonly string[]): readonly string[] | undefined {
+  return values.length === 0 ? undefined : values;
 }
 
 /**
@@ -58,9 +109,7 @@ export async function searchByTitle(
   get: HttpGet,
   limit = 5,
 ): Promise<BookMetadata[]> {
-  const url =
-    `${SEARCH}?q=${encodeURIComponent(query)}&limit=${limit}` +
-    '&fields=title,author_name,isbn,number_of_pages_median,cover_i';
+  const url = `${SEARCH}?q=${encodeURIComponent(query)}&limit=${limit}&fields=${SEARCH_FIELDS}`;
 
   const body = asRecord(await get(url));
   const docs = Array.isArray(body?.['docs']) ? body['docs'] : [];
@@ -107,6 +156,13 @@ function toMetadata(doc: Record<string, unknown> | undefined): BookMetadata | un
     ...keyIfPresent('isbn', isbn),
     ...keyIfPresent('pages', asPositiveInt(doc['number_of_pages_median'])),
     ...keyIfPresent('coverUrl', coverUrl),
+    ...keyIfPresent('publisher', namesOf(doc['publisher'])[0]),
+    ...keyIfPresent('published', namesOf(doc['publish_date'])[0]),
+    ...keyIfPresent('subjects', listIfAny(namesOf(doc['subject']))),
+    // The search path's only route to an OLID. Editions are listed oldest-ish
+    // first and any of them identifies the work well enough for the link this
+    // builds, so the first is taken rather than an edition matched by hand.
+    ...keyIfPresent('openLibraryOlid', namesOf(doc['edition_key'])[0]),
     // A URL built from an ISBN is a guess; one built from a real cover id is not.
     ...(coverId === undefined && coverUrl !== undefined ? { coverIsSpeculative: true } : {}),
   };

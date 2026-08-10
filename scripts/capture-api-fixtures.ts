@@ -15,9 +15,38 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { loadEnv } from '../packages/cli/src/env.ts';
+import { SEARCH_FIELDS } from '../packages/core/src/metadata/open-library.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 const OUT_DIR = join(REPO_ROOT, 'fixtures', 'api');
+
+/**
+ * The same loader the CLI uses, for the same reason `capture-lookup-recall.ts`
+ * calls it: without a key Google answers **429 quota exceeded** and a refusal
+ * gets written down as an answer. That happened here for two days once.
+ */
+loadEnv();
+
+const GOOGLE_KEY = process.env['GOOGLE_BOOKS_API_KEY'] ?? '';
+if (GOOGLE_KEY === '') {
+  console.warn('warning: no GOOGLE_BOOKS_API_KEY — the Google fixture will record a quota error');
+}
+
+/**
+ * Built from the constant the code asks with, never retyped.
+ *
+ * The HTTP cache and the fixture map are both keyed by URL, so a capture that
+ * asks a slightly different question than `open-library.ts` does records a
+ * response no test will ever match — and the failure is a thrown "no fixture
+ * mapped", which reads like a missing capture rather than a drifted one.
+ */
+function openLibrarySearch(query: string, limit: number): string {
+  return (
+    `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}` +
+    `&limit=${String(limit)}&fields=${SEARCH_FIELDS}`
+  );
+}
 
 const CAPTURES: readonly { readonly name: string; readonly url: string }[] = [
   {
@@ -30,22 +59,49 @@ const CAPTURES: readonly { readonly name: string; readonly url: string }[] = [
   },
   {
     name: 'open-library-search-hit.json',
-    url: 'https://openlibrary.org/search.json?q=thinking+in+systems&limit=3&fields=title,author_name,isbn,number_of_pages_median,cover_i',
+    url: openLibrarySearch('thinking in systems', 3),
   },
   {
     name: 'open-library-search-miss.json',
-    url: 'https://openlibrary.org/search.json?q=zzzqqqxx+no+such+book+anywhere&limit=3&fields=title,author_name,isbn,number_of_pages_median,cover_i',
+    url: openLibrarySearch('zzzqqqxx no such book anywhere', 3),
   },
   {
     name: 'google-books-isbn-hit.json',
-    url: 'https://www.googleapis.com/books/v1/volumes?q=isbn:9781603580557',
+    url: `https://www.googleapis.com/books/v1/volumes?q=isbn:9781603580557&maxResults=1&key=${encodeURIComponent(GOOGLE_KEY)}`,
+  },
+  {
+    // Apple, matched. The record carries a `trackId`, a `releaseDate`, `genres`
+    // and a description — all of which this project threw away for the whole of
+    // its life in favour of one artwork URL.
+    name: 'apple-search-hit.json',
+    url: 'https://itunes.apple.com/search?term=Atomic%20Habits%20James%20Clear&entity=ebook&limit=5',
+  },
+  {
+    /**
+     * Six results and not one of them is the book — the case the module's own
+     * doc comment describes, captured rather than imagined.
+     *
+     * Apple has no English *Thinking in Systems*. What it offers is two
+     * summaries, a study guide, a different Meadows title, and Portuguese and
+     * Italian translations. A provider that answers confidently with the wrong
+     * book is why `isProbablySameBook` guards every take, and why this fixture
+     * is worth as much as the hit: it is the shape of the refusal.
+     */
+    name: 'apple-search-near-miss.json',
+    url: 'https://itunes.apple.com/search?term=Thinking%20in%20Systems%20Donella%20H.%20Meadows&entity=ebook&limit=5',
+  },
+  {
+    // The miss, captured rather than stubbed: Apple is now asked about *every*
+    // book, so its empty answer is on more paths than its hit is.
+    name: 'apple-search-miss.json',
+    url: 'https://itunes.apple.com/search?term=zzzqqqxx%20no%20such%20book%20anywhere&entity=ebook&limit=5',
   },
   {
     // Two records of one book in one response: the first carries Jordan B.
     // Peterson and 480 pages, the second carries neither. Ranking used to prefer
     // the empty one *because* it was empty. See `rankingScore` in identity.ts.
     name: 'open-library-search-sparse-sibling.json',
-    url: 'https://openlibrary.org/search.json?q=12%20Rules%20for%20Life&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i',
+    url: openLibrarySearch('12 Rules for Life', 5),
   },
   {
     // A book none of the other three providers holds — an O'Reilly early

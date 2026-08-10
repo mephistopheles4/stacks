@@ -1,21 +1,33 @@
 import { isProbablySameBook } from '../identity.ts';
+import { keyIfPresent } from '../key-if-present.ts';
 import type { HttpGet } from './http.ts';
-import { asRecord, firstString } from './types.ts';
+import { asPositiveInt, asRecord, firstString, toPlainText, type BookMetadata } from './types.ts';
 
 /**
- * Apple Books, used for one thing: cover art.
+ * Apple Books — best-in-class artwork, and a metadata contributor.
  *
- * Not a metadata provider here. It earns its place because its artwork is the
- * best of the three by a distance — roughly 800x1200, correctly cropped to the
- * front cover, free and keyless. Open Library's community scans are patchy, and
- * Google's `thumbnail` is ~128px with no larger *cropped* version for many
- * titles.
+ * It earns its place first on pictures: roughly 800x1200, correctly cropped to
+ * the front cover, free and keyless, against Open Library's patchy community
+ * scans and Google's ~128px `thumbnail`.
+ *
+ * **It used to return one URL and throw the rest away**, which is the whole of
+ * what changed here. `isProbablySameBook` had already established that the
+ * matched record *is* this book — the expensive part — and then everything but
+ * `artworkUrl100` was discarded, including a description on every result, a
+ * release date, genres, and the `trackId` that identifies the book. So Apple was
+ * always a contributor in the sense that matters (docs/spec/provider-provenance.md
+ * §1); only the return type was in the way.
  *
  * The catalogue is a store, so it is full of near-misses: searching "Staff
  * Engineer Will Larson" returns "Summary of Will Larson's Staff Engineer" as
  * the top hit. Every result is therefore checked against the book we already
- * have, and a cover is only taken when the titles and authors agree. Wrong art
- * is worse than none.
+ * have, and nothing is taken when the titles and authors disagree. Wrong art is
+ * worse than none, and a wrong id is worse still — art is visible and gets
+ * noticed, an id is invisible until a visitor clicks it.
+ *
+ * ⚠️ **There is no ISBN endpoint.** This is a term search for every book, so
+ * `appleTrackId` is title-matched on the whole vault rather than only on the
+ * books without an ISBN. Accepted knowingly; see docs/spec/metadata-merge.md §6.
  */
 
 const SEARCH = 'https://itunes.apple.com/search';
@@ -26,11 +38,19 @@ const SEARCH = 'https://itunes.apple.com/search';
  */
 const ARTWORK_SIZE = /\/\d+x\d+bb?\.(jpg|png)$/;
 
-export async function findCover(
+/**
+ * Apple's catch-all genre, dropped rather than recorded.
+ *
+ * Every ebook carries it, so it says nothing about the book and would spend one
+ * of the five capped subject slots on every note that has any.
+ */
+const GENERIC_GENRE = 'Books';
+
+export async function findRecord(
   title: string,
   author: string | undefined,
   get: HttpGet,
-): Promise<string | undefined> {
+): Promise<BookMetadata | undefined> {
   const term = `${title} ${author ?? ''}`.trim();
   if (term.length === 0) return undefined;
 
@@ -50,10 +70,37 @@ export async function findCover(
     if (!isProbablySameBook(`${title} ${author ?? ''}`, `${found} ${foundAuthor}`)) continue;
 
     const artwork = firstString(item['artworkUrl100']);
-    if (artwork === undefined) continue;
 
-    return artwork.replace(ARTWORK_SIZE, '/1200x1200bb.$1');
+    return {
+      title: found,
+      source: 'apple-books',
+      ...keyIfPresent('author', firstString(item['artistName'])),
+      // Only ever a *candidate* cover, which is why it lands on `coverUrlLarge`
+      // and never on `coverUrl`: the downloader keeps whichever of the queue is
+      // cover-shaped, and this is the one worth trying first.
+      ...keyIfPresent('coverUrlLarge', artwork?.replace(ARTWORK_SIZE, '/1200x1200bb.$1')),
+      // A number in the response and a string in the note — the frontmatter
+      // holds scalars and every other id is a string, so the shape check has one
+      // rule to state rather than two.
+      ...keyIfPresent('appleTrackId', trackIdOf(item['trackId'])),
+      ...keyIfPresent('published', firstString(item['releaseDate'])),
+      ...keyIfPresent('subjects', genresOf(item['genres'])),
+      ...keyIfPresent('description', toPlainText(item['description'])),
+    };
   }
 
   return undefined;
+}
+
+function trackIdOf(value: unknown): string | undefined {
+  const id = asPositiveInt(value);
+  return id === undefined ? undefined : String(id);
+}
+
+function genresOf(value: unknown): readonly string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const names = value
+    .filter((genre): genre is string => typeof genre === 'string')
+    .filter((genre) => genre !== GENERIC_GENRE);
+  return names.length === 0 ? undefined : names;
 }

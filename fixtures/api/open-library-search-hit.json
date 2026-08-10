@@ -1,8 +1,8 @@
 {
-  "numFound": 537,
+  "numFound": 542,
   "start": 0,
   "numFoundExact": true,
-  "num_found": 537,
+  "num_found": 542,
   "documentation_url": "https://openlibrary.org/dev/docs/api/search",
   "q": "thinking in systems",
   "offset": null,
@@ -13,6 +13,19 @@
         "Diana Wright"
       ],
       "cover_i": 14420637,
+      "edition_key": [
+        "OL62197415M",
+        "OL59272937M",
+        "OL54065384M",
+        "OL54031915M",
+        "OL54031889M",
+        "OL50778155M",
+        "OL38825565M",
+        "OL26534071M",
+        "OL27091993M",
+        "OL26445570M",
+        "OL17052666M"
+      ],
       "isbn": [
         "9781849773386",
         "902591019X",
@@ -38,18 +51,82 @@
         "9781136551406"
       ],
       "number_of_pages_median": 240,
-      "title": "Thinking in systems"
+      "publish_date": [
+        "2022",
+        "2012",
+        "13 setembro 2022",
+        "2009",
+        "2008",
+        "July 19, 2018"
+      ],
+      "publisher": [
+        "Chelsea Green Pub.",
+        "A Primer",
+        "Taylor & Francis Group",
+        "Editora Sextante",
+        "Earthscan",
+        "Chelsea",
+        "Ten Have",
+        "Chelsea Green Publishing"
+      ],
+      "title": "Thinking in systems",
+      "subject": [
+        "critical thinking",
+        "systems thinking",
+        "systems dynamics",
+        "complex systems",
+        "policy",
+        "Sustainable development",
+        "Environmental education",
+        "Economic development",
+        "System analysis",
+        "Simulation methods",
+        "Population",
+        "Social sciences",
+        "Decision making",
+        "Pollution",
+        "Systems Analysis",
+        "Sustainable Growth",
+        "Environmental Pollution",
+        "Systeemtheorie",
+        "Probleemoplossing",
+        "systems",
+        "Problem solving",
+        "System theory",
+        "Social Policy",
+        "Social problems",
+        "POLITICAL SCIENCE",
+        "Public Policy",
+        "Environmental aspects",
+        "Economic aspects",
+        "Management",
+        "Organizational behavior",
+        "Business & economics -> management -> organizational behavior",
+        "Physical & earth sciences -> physics -> general",
+        "Business & economics -> management -> principles of management",
+        "Be"
+      ]
     },
     {
       "author_name": [
         "Steven Schuster"
       ],
       "cover_i": 11326296,
+      "edition_key": [
+        "OL32701484M"
+      ],
       "isbn": [
         "1983847542",
         "9781983847547"
       ],
       "number_of_pages_median": 180,
+      "publish_date": [
+        "Jan 14, 2018"
+      ],
+      "publisher": [
+        "CreateSpace Independent Publishing Platform",
+        "Createspace Independent Publishing Platform"
+      ],
       "title": "The Art Of Thinking In Systems"
     },
     {
@@ -57,12 +134,24 @@
         "Marcus P Dawson"
       ],
       "cover_i": 10653716,
+      "edition_key": [
+        "OL42177368M",
+        "OL31977524M"
+      ],
       "isbn": [
         "9781914040030",
         "9798675152810",
         "1914040031"
       ],
       "number_of_pages_median": 284,
+      "publish_date": [
+        "2020",
+        "Oct 25, 2020"
+      ],
+      "publisher": [
+        "Independently Published",
+        "Marcus P. Dawson"
+      ],
       "title": "Thinking in Systems and Mental Models"
     }
   ]

@@ -1,7 +1,7 @@
 import { looksDerivative, normaliseIsbn } from '../identity.ts';
 import { keyIfPresent } from '../key-if-present.ts';
 import type { HttpGet } from './http.ts';
-import { asPositiveInt, asRecord, firstString, type BookMetadata } from './types.ts';
+import { asPositiveInt, asRecord, firstString, toPlainText, type BookMetadata } from './types.ts';
 
 /**
  * O'Reilly, consulted last, for the books the other three have never heard of.
@@ -104,8 +104,32 @@ function toMetadata(result: Record<string, unknown> | undefined): BookMetadata |
      */
     ...keyIfPresent('pages', asPositiveInt(result['virtual_pages'])),
     ...keyIfPresent('coverUrl', coverFor(result)),
+    ...keyIfPresent('publisher', firstString(result['publishers'])),
+    // Verbatim, `T00:00:00Z` and all. This is the exact value #102 had in mind:
+    // the vault keeps what the provider said, the card renders `2027`.
+    ...keyIfPresent('published', firstString(result['issued'])),
+    ...keyIfPresent('subjects', topicsOf(result['topics_payload'])),
+    // `<span><div><p>…` on every result, so the markup comes off here rather
+    // than in whatever writes it into a Markdown body.
+    ...keyIfPresent('description', toPlainText(result['description'])),
+    ...keyIfPresent('oreillyOurn', firstString(result['ourn'])),
     source: 'oreilly',
   };
+}
+
+/**
+ * Topic *names*, which are not in `topics`.
+ *
+ * `topics` is a list of bare UUIDs — recording those would put an opaque key in
+ * a note where a word belongs. `topics_payload` carries the same entries with
+ * `name` on them.
+ */
+function topicsOf(value: unknown): readonly string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const names = value
+    .map((topic) => firstString(asRecord(topic)?.['name']))
+    .filter((name): name is string => name !== undefined);
+  return names.length === 0 ? undefined : names;
 }
 
 /**
