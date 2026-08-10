@@ -27,7 +27,10 @@
     `noindex` site, to satisfy an obligation that has nothing to do with privacy.
 
     ⚠️ **62x30, measured** — the spec assumed 144x26, which was a guess nobody
-    had checked.
+    had checked. The `width`/`height` attributes below stay at those numbers
+    because they describe the *file*; the CSS draws it at half that. See
+    [ADR-0048](../../../../docs/adr/0048-google-attribution-is-a-vendored-page-element.md)
+    for what half costs on a 1x display.
 
     ⚠️ **It is dark on transparent** — 554 of its 613 opaque pixels — so on a
     page whose background is #1a1613 it is invisible, and Google publishes no
@@ -78,12 +81,38 @@
   */
   .pattr-mark {
     display: block;
-    width: 62px;
-    height: 30px;
-    padding: 0.15rem 0.3rem;
+    /*
+      Half the file's 62x30, and every other number here halved with it so the
+      plate stays the same shape rather than becoming a border.
+
+      ⚠️ **Scaled, never cropped or recoloured** — the whole graphic is drawn,
+      in proportion, which is what "full and clearly visible" asks and is a
+      different act from altering a mark. It also lands on a happy accident: at
+      31x15 CSS pixels a 2x display draws it at 62x30 device pixels, which is
+      the file's own resolution.
+    */
+    width: 31px;
+    height: 15px;
+    padding: 0.075rem 0.15rem;
     box-sizing: content-box;
-    border-radius: 0.25rem;
+    border-radius: 0.15rem;
     background: rgba(242, 232, 220, 0.72);
+    /*
+      ⚠️ **The first thing here that touches the mark's rendered appearance
+      rather than only the surface under it**, and it is the owner's call,
+      recorded in ADR-0048.
+
+      What it buys: the badge is a lit chip in a near-black room and Google's
+      four saturated letters were the loudest colour on a page whose subject is
+      book covers. 0.8 takes the edge off the plate and the logo together — one
+      value on one element, so the mark is never faded *relative to* its own
+      background, which would read as a doctored logo rather than a quiet one.
+
+      What it costs: "clearly visible" is the clause this is closest to, and it
+      is the one about the obligation actually being met, so this is as far as
+      it goes. Judged from a render at 1x and 2x, not from the number.
+    */
+    opacity: 0.8;
   }
 
   .pattr-link {

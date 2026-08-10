@@ -66,6 +66,38 @@ transparent**, so it is invisible on this page and sits on a quiet plate. See
 [ADR-0050](0050-provider-marks-are-redrawn-monotone.md), which also records the
 card's three marks going a different way — redrawn monotone rather than vendored.
 
+## Half size and 0.8, and where the legibility floor actually is
+
+The owner asked for it *"half its current size"* with *"a little bit of subtle
+transparency so the colors arent too sharp"* — the badge was a lit chip in a
+near-black room and Google's four saturated letters were the loudest colour on a
+page whose subject is book covers. It renders at **31×15 with `opacity: 0.8`**,
+the padding and radius halved with it so the plate stays a plate.
+
+**The file is untouched.** It is still `poweredby.png` byte for byte, still
+served from this origin, and it is drawn *whole and in proportion* — scaling is
+a different act from cropping or recolouring, and G13's allowance is about the
+committed binary, which has not moved.
+
+⚠️ **`opacity` is nonetheless the first thing here that changes the mark's
+rendered appearance rather than only the surface under it**, and that is the
+owner's call rather than a finding. One value on one element, so the mark is
+never faded *relative to* its own plate — a logo at a different opacity from its
+background would read as doctored rather than quiet.
+
+⚠️ **On a 1× display, half size costs the words "POWERED BY".** Measured, at 62 /
+46 / 40 / 31 px: at 62 they are letters, at 46 they are readable, at 40 they are
+mostly mush and at 31 they are a smudge. No better resampler recovers them —
+their cap height in the file is about 5px and half of that is 2.5px, so the
+information is not there to recover. On a 2× display the opposite is true and
+31 CSS px is drawn at the file's own 62 device pixels, losing nothing at all.
+
+This is the floor [`docs/spec/attribution-surface.md`](../spec/attribution-surface.md)
+predicted when it noted Google publishes **no minimum size** for this graphic —
+"so the floor is legibility" — and it is the first time anyone measured where
+that floor is. **46px is the largest reduction that keeps the words on every
+display**, and it is one number away if the owner would rather have them.
+
 ⚠️ **A deploy-time check that the graphic is still served was offered and
 declined.** Recorded as declined rather than overlooked, because in a gate-heavy
 repo a missing gate otherwise reads as an oversight: the obligation is met by a
