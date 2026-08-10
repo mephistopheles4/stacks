@@ -94,9 +94,9 @@ export function mountCardPrototype(
   card: HTMLElement,
   initial: string,
 ): { show: (book: LibraryBook) => void; hide: () => void } {
-  let variant: Variant = isVariant(initial) ? initial : 'A';
+  // Defaults are the direction #92 locked: C, marks bare, `title` for the name.
+  let variant: Variant = isVariant(initial) ? initial : 'C';
   let dataCase: Case = 'today';
-  // Defaults to what #89 decision 7 asked for, minus the tooltip #101 struck.
   let linkStyle: LinkStyle = 'bare';
   let duration = 220;
   const toggles: Toggles = { subjects: true, statusAlways: true, isbn: true };
@@ -501,6 +501,20 @@ function linksRow(book: Enriched, style: LinkStyle): HTMLElement {
       continue;
     }
     node.append(mark(link.mark));
+    /*
+     * LOCKED IN #92, and it reverses part of #101: `title` is the tooltip *and*
+     * the accessible name, with no `aria-label` beside it.
+     *
+     * Dropping `aria-label` is what makes it legal — #101 struck `title`
+     * because the two together double-announce, and the accessible-name
+     * computation falls back to `title` when nothing else names the element.
+     * Accepted with it: `title` never fires on touch, so Apple's icon — the one
+     * mark carrying no words of its own — has no label for a sighted touch
+     * user. Google's licensed button carries its words in the artwork and Open
+     * Library is a text link, so the gap is that one control.
+     */
+    node.removeAttribute('aria-label');
+    node.title = link.name;
     // Google's mark is the button, and the button has words in it either way.
     const word = link.mark === 'google' ? 'Google Preview' : link.name;
     const labelled =
