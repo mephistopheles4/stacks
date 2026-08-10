@@ -5,18 +5,50 @@
 ---
 
 <div class="shelf">
-  <canvas id="shelf-canvas"></canvas>
-  <aside id="book-card" class="card" hidden></aside>
+  <!--
+    `tabindex="-1"` makes the canvas *programmatically* focusable without ever
+    becoming a tab stop, so nobody who never opens a card gains one. It is where
+    focus lands on dismissal, and only when focus was inside the card.
+  -->
+  <canvas id="shelf-canvas" tabindex="-1"></canvas>
+
+  <!--
+    A named `<aside>`, so it maps to a `complementary` landmark — the only
+    deliberate way to reach the card while the shelf has no keyboard path. The
+    name is static because the book's identity rides in the status line below,
+    not in a landmark name that changes under you.
+
+    Deliberately **not** `role="dialog"`: several screen readers announce a
+    dialog only when focus enters it, and focus never moves here, so the role
+    would claim a modality this surface does not have and then say nothing.
+  -->
+  <aside id="book-card" class="card" aria-label="Book details" hidden>
+    <!--
+      Outside the replaced subtree, and that is structural rather than tidiness:
+      `showCard` replaces `#book-card-body`, so a control inside it would be
+      destroyed and recreated on every tap-to-swap — dropping focus to <body>
+      mid-browse on the primary mobile gesture.
+    -->
+    <button id="book-card-dismiss" class="card-dismiss" type="button">
+      <span class="card-grabber" aria-hidden="true"></span>
+      <span class="visually-hidden">Close book details</span>
+    </button>
+    <div id="book-card-body"></div>
+  </aside>
+
+  <!--
+    The announcer: permanently present, visually hidden, and a **sibling** of the
+    card rather than a child. A `hidden` element is out of the accessibility
+    tree, so a live region inside the card could not announce the card opening at
+    all.
+  -->
+  <p id="book-card-status" class="visually-hidden" role="status"></p>
 </div>
 
 <script>
-  import { boot } from '../shelf/boot.ts';
+  import { start } from '../shelf/start.ts';
 
-  const canvas = document.getElementById('shelf-canvas');
-  const card = document.getElementById('book-card');
-  if (canvas instanceof HTMLCanvasElement && card instanceof HTMLElement) {
-    void boot(canvas, card);
-  }
+  start();
 </script>
 
 <style>
@@ -116,15 +148,221 @@
     color: #c9b8a4;
   }
 
-  .card :global(.meta) {
-    margin: 0.6rem 0 0;
+  /*
+    Variant C, the editorial card: the cover leads *horizontally* in a header
+    row, and everything else is full width below it. Chosen by measurement —
+    filled, it is 270px against a 325px portrait cap, where a large cover leading
+    vertically wanted 509px and overflowed by 146px even in today's sparse state.
+  */
+  .card :global(.card-header) {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+  }
+
+  .card :global(.card-titles) {
+    min-width: 0;
+  }
+
+  .card :global(.reading) {
+    margin: 0.5rem 0 0;
     font-size: 0.8rem;
     color: #a89684;
   }
 
   .card :global(.tags) {
     margin: 0.35rem 0 0;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: #857361;
+  }
+
+  .card :global(.object) {
+    margin: 0.6rem 0 0;
+    font-size: 0.72rem;
+    color: #857361;
+  }
+
+  .card :global(.subjects) {
+    margin: 0.25rem 0 0;
+    font-size: 0.72rem;
+    color: #6f6051;
+  }
+
+  .card :global(.card-links) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.85rem;
+    margin-top: 0.7rem;
+    font-size: 0.75rem;
+  }
+
+  .card :global(.card-link) {
+    display: inline-flex;
+    align-items: center;
+    /* WCAG 2.5.5: the row is the card's only tappable content. */
+    min-height: 2.75rem;
+    color: #c9b8a4;
+    text-decoration: none;
+  }
+
+  .card :global(.card-link:hover),
+  .card :global(.card-link:focus-visible) {
+    color: #f2e8dc;
+  }
+
+  .card :global(.card-mark) {
+    width: 1.35rem;
+    height: 1.35rem;
+    fill: currentColor;
+  }
+
+  /*
+    The one control, in its desktop skin: an `×` in a 2rem hit area at top right.
+    The grabber pill deliberately does not cross over — a grabber means "drag me
+    toward the edge I am anchored to", and a floating corner card has no such
+    edge.
+  */
+  .card-dismiss {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: #a89684;
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  .card-dismiss::before {
+    content: '\00d7';
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  .card-dismiss:hover,
+  .card-dismiss:focus-visible {
+    color: #f2e8dc;
+  }
+
+  .card-grabber {
+    display: none;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /*
+    Below the breakpoint the card is a bottom sheet.
+
+    ⚠️ **This query is a fact two languages hold.** Its one expression is
+    `SHEET_QUERY` in ../shelf/card-sheet.ts, which the drag reads so it can be
+    inert above the breakpoint, and `card-sheet.test.ts` asserts that these two
+    spellings match. Change one and change the other. Do not add a third holder.
+  */
+  @media (max-width: 700px), (max-height: 500px) {
+    .card {
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: auto;
+      /*
+        Content-driven, capped, and scrolling past it — not a fixed 40vh, so a
+        book with no rating and no tags does not produce a sheet of empty space.
+        There is deliberately no second state to overflow into: a peek state is a
+        way to avoid deciding what the card should carry.
+      */
+      max-height: 40vh;
+      padding: 1.4rem 1.1rem 1rem;
+      border: 0;
+      border-top: 1px solid rgba(242, 232, 220, 0.14);
+      border-radius: 0.9rem 0.9rem 0 0;
+      /*
+        Stated explicitly, and it is not decoration: with no `transform` on this
+        side, removing `[hidden]` returns the property to `none` — and a
+        transition from a matrix to `none` does not interpolate. The sheet stayed
+        translated 100% down while `hidden` was false, which measured as a card
+        that opened off the bottom of the screen and looked like it never opened
+        at all.
+      */
+      transform: translateY(0);
+      visibility: visible;
+      transition: transform 220ms ease;
+    }
+
+    .card[hidden] {
+      /*
+        `display: block` is what makes the slide *out* possible — a `display:
+        none` element cannot animate — and it is also what would put a closed
+        card back into the accessibility tree, since `[hidden]` hides by
+        `display` alone. `visibility: hidden` is the half that keeps it out of
+        the tree and out of the tab order, delayed until the slide finishes so
+        the animation is not cut off at frame one.
+      */
+      display: block;
+      transform: translateY(100%);
+      visibility: hidden;
+      transition:
+        transform 180ms ease,
+        visibility 0s 180ms;
+      pointer-events: none;
+    }
+
+    /* Following the finger is not an animation; it must not be eased. */
+    .card.dragging {
+      transition: none;
+    }
+
+    .card-dismiss {
+      position: static;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 1.6rem;
+      margin: -0.6rem 0 0.2rem;
+      border-radius: 0;
+    }
+
+    .card-dismiss::before {
+      content: none;
+    }
+
+    .card-grabber {
+      display: block;
+      width: 2.25rem;
+      height: 0.25rem;
+      border-radius: 0.125rem;
+      background: rgba(242, 232, 220, 0.32);
+    }
+  }
+
+  /*
+    The sheet moves only under the finger.
+
+    Slide-in, slide-out and snap-back are all transitions on `transform`, so one
+    scoped `transition: none` removes exactly the three unattended motions — and
+    it *cannot* touch follow-the-finger, because that is JS writing `transform`
+    directly and was never a transition. Scoped to the sheet rather than global:
+    a blanket rule would be a repo-wide motion policy nobody has decided.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .card,
+    .card[hidden] {
+      transition: none;
+    }
   }
 </style>
