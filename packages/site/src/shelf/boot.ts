@@ -89,6 +89,18 @@ export async function boot(
     clearCard = proto.hide;
   }
 
+  /*
+   * PROTOTYPE — THROWAWAY, branch `prototype/enhanced-card` only. `?attribproto`
+   * mounts #106's page-level attribution surface. Independent of `?cardproto`:
+   * the state its obligation is live in is the one with *no* card open, which
+   * every shot this map holds so far has skipped.
+   */
+  const attribproto = params.get('attribproto');
+  if (attribproto !== null) {
+    const { mountAttribPrototype } = await import('./attrib-prototype.ts');
+    mountAttribPrototype(attribproto);
+  }
+
   let handle: ShelfHandle | undefined;
   let shaderFailed = false;
   /** Torn down and remade when the panel rebuilds the shelf. */
