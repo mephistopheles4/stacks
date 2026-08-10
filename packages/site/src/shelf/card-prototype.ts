@@ -471,13 +471,19 @@ function linksRow(book: Enriched, style: LinkStyle): HTMLElement {
     });
 
   if (links.length === 0) {
-    // The fallback #98 chose, against a recommendation of Open Library.
+    /*
+     * #98 chose Google against a recommendation of Open Library; #105 reverted
+     * it on two grounds — `books.google.com/books?q=` 302s to general Google
+     * Search, and a book Google does not hold returns ten confident wrong books
+     * with no notice, where Open Library says it matched nothing.
+     */
+    const query = encodeURIComponent(`${book.title} ${book.author ?? ''}`.trim());
     const search = anchor(
-      `https://www.google.com/search?tbm=bks&q=${encodeURIComponent(`${book.title} ${book.author ?? ''}`.trim())}`,
-      'Search Google Books for this book (opens in a new tab)',
+      `https://openlibrary.org/search?q=${query}`,
+      'Search Open Library for this book (opens in a new tab)',
     );
     search.className = 'plink plink--text plink--search';
-    search.textContent = 'Search Google Books';
+    search.textContent = 'Search Open Library';
     row.append(search);
     return row;
   }
