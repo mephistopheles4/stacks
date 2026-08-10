@@ -229,6 +229,16 @@ interface CardContents {
   readonly linkCount: number;
   /** Every `<a>` in the row, as `target|rel|name`. */
   readonly links: readonly string[];
+  /**
+   * How many of those links drew an actual mark.
+   *
+   * ⚠️ Until the fixture books were given contributor ids, this was **always
+   * zero** and nothing noticed: every fixture book fell back to the one text
+   * search link, so the row's normal state — three provider marks — had never
+   * been rendered by a browser in this project's life. The artwork can now
+   * regress to nothing and be caught.
+   */
+  readonly markCount: number;
   /** `«Title» by «Author»`, from the live region outside the card. */
   readonly announced: string;
   /**
@@ -300,6 +310,7 @@ async function clickABook(page: Page): Promise<CardOpened | undefined> {
           hasObjectLine: Boolean(card.querySelector('.object')),
           linkCount: links.length,
           links: links.map((a) => [a.target, a.rel, a.title || a.textContent || ''].join('|')),
+          markCount: links.filter((a) => a.querySelector('svg path')).length,
           announced: status ? status.textContent : '',
           // Filled in by the swap below; the shape has to exist here so one
           // evaluate can build the whole record.
@@ -464,6 +475,15 @@ function cardFailures(card: CardContents): string[] {
     }
   }
 
+  // The row's normal state. A book with identifiers renders marks, and a mark
+  // that fails to draw leaves an icon-only link with nothing in it.
+  if (card.linkCount > 1 && card.markCount === 0) {
+    failures.push(
+      `${String(card.linkCount)} provider links and not one drew a mark — the artwork is ` +
+        'missing or failed to parse, which leaves an icon-only link with no icon',
+    );
+  }
+
   // §11.6. The announcer is the *only* way a touch screen-reader user learns
   // which book they hit, since the canvas has no accessible children.
   if (card.announced.length === 0) {
@@ -511,7 +531,11 @@ function report(result: {
   if (cardOpened !== undefined) {
     const c = cardOpened.card;
     console.log(`card reading line ${c.reading || 'NONE'}`);
-    console.log(`card links        ${String(c.linkCount)}   object line ${c.hasObjectLine ? 'yes' : 'no'}`);
+    console.log(
+      `card links        ${String(c.linkCount)} (${String(c.markCount)} marks)   object line ${
+        c.hasObjectLine ? 'yes' : 'no'
+      }`,
+    );
     console.log(`card announced    ${c.announced || 'NOTHING'}`);
     console.log(`card after swap   ${c.announcedAfterSwap || 'NOTHING'}`);
   }

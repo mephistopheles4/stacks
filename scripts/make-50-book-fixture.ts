@@ -111,6 +111,35 @@ for (let i = 0; written < BOOK_COUNT; i += 1) {
   }
   lines.push(`pages: ${120 + Math.floor(random() * 640)}`);
   lines.push(`tags: [${pick(TAGS)}]`);
+
+  /**
+   * Contributor ids on most books, and none at all on some.
+   *
+   * ⚠️ **Without these the fixture shelf could not render a provider mark**, so
+   * G35 — which is the only thing that looks at a real card in a real browser —
+   * only ever saw the one text search link that a book with no identifier falls
+   * back to. The marks are the row's normal state and were the part nothing
+   * exercised.
+   *
+   * The values are invented and must still pass the parser's shape checks, which
+   * is a second thing this covers: a fixture that quietly failed those would
+   * produce a linkless card and look like a rendering bug.
+   *
+   * ~20% are left bare so the fallback keeps its coverage too. Both states are
+   * real — 6 of the owner's 41 books have no ISBN.
+   */
+  const identified = random() < 0.8;
+  if (identified) {
+    const n = 1 + Math.floor(random() * 8999);
+    lines.push(`isbn: "978${String(1000000000 + n * 7).slice(0, 10)}"`);
+    lines.push(`google_volume_id: ${'ABCDEFGHJKLMNPQRSTUVWXYZ'[n % 24]}${String(n).padStart(6, '0')}QBAJ`);
+    lines.push(`apple_track_id: ${String(1000000000 + n)}`);
+    lines.push(`openlibrary_olid: OL${String(20000000 + n)}M`);
+    lines.push(`publisher: "${pick(['Meridian House', 'Coldwater Press', 'Underhill & Sons'])}"`);
+    lines.push(`published: ${year}-${month}-${day}`);
+    lines.push(`subjects: "${pick(TAGS)}; ${pick(TAGS)}"`);
+  }
+
   lines.push('---', '', '## Notes', '', 'NOTE_BODY_CANARY_do_not_ship', '');
 
   const filename = title.replace(/[\\/:*?"<>|]/g, '') + '.md';

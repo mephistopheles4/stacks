@@ -6,6 +6,7 @@ import type { LibraryBook } from '@stacks/core';
 // in it quietly becomes two.
 import { parseSubjects } from '@stacks/core/subjects';
 import { providerLinks, type ProviderLink } from './provider-links.ts';
+import { markFor } from './provider-marks.ts';
 
 /**
  * The book detail card: what it shows, in what order, and what it drops.
@@ -225,43 +226,15 @@ function anchor(link: ProviderLink): HTMLAnchorElement {
 
   // `title` is the tooltip *and* the accessible name — see `ProviderLink.name`.
   node.title = link.name;
-  node.append(mark(link.kind));
+
+  const mark = markFor(link.kind);
+  // A mark that failed to parse leaves the name as the link's only content,
+  // which is a degraded row rather than an empty one: `title` still names it and
+  // the anchor is still the right size. An icon-only link with no icon *and* no
+  // text would be an invisible control.
+  node.append(mark ?? link.name);
   return node;
 }
-
-/**
- * ⚠️ **Placeholder artwork, at the real footprint.**
- *
- * The licensed marks are not vendored: every grant found is permission to *use*
- * a provider's artwork and silent about *redistributing* it, which is an open
- * question rather than a settled one. These occupy the footprint the layout was
- * measured against so nothing moves when the real files land, and each is
- * `aria-hidden` because the anchor carries the name.
- */
-function mark(kind: ProviderLink['kind']): SVGSVGElement {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.setAttribute('focusable', 'false');
-  svg.setAttribute('class', 'card-mark');
-
-  const glyph = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  glyph.setAttribute('x', '12');
-  glyph.setAttribute('y', '17');
-  glyph.setAttribute('text-anchor', 'middle');
-  glyph.setAttribute('font-size', '15');
-  glyph.textContent = PLACEHOLDER[kind];
-  svg.append(glyph);
-
-  return svg;
-}
-
-const PLACEHOLDER: Readonly<Record<ProviderLink['kind'], string>> = {
-  'open-library': 'OL',
-  google: 'G',
-  apple: 'A',
-  search: '?',
-};
 
 function text(tag: string, content: string, className?: string): HTMLElement {
   const node = document.createElement(tag);

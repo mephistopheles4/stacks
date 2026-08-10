@@ -14,9 +14,20 @@ that is what would have to be true for the decision to reopen.
 > [`claude/mattpocock-skills-wayfinder-ce3871`](https://github.com/mephistopheles4/stacks/tree/claude/mattpocock-skills-wayfinder-ce3871).
 > It is kept as written — the decisions, their counter-arguments and the
 > residuals are the artifact — with the build order below now reading as what
-> happened rather than what to do. **Step 4 is the exception and is still owed:**
-> `pnpm stacks enrich`, twice, against the real vault. Nothing downstream can be
-> judged against real data until it runs.
+> happened rather than what to do. **Step 4 has run**: `pnpm stacks enrich`,
+> twice, against the real vault — 40 books filled on the first pass and 1 more on
+> the second, which is the convergence property G34 asserts, doing it for real.
+>
+> ⚠️ **The real data found a bug the fixtures could not.** `mergeFields` skipped
+> any field the primary already carried — and Open Library is the primary for
+> almost every book *and* always has `publish_date` and `subjects`, so the named
+> per-field exceptions never ran once. The vault filled with bare years where the
+> table says Google wins and with raw headings like
+> `nyt:paperback_advice=2012-01-14` where it says Apple's genres win. Fixed, the
+> vault restored from a pre-pass backup and re-enriched: full dates went from a
+> handful to **30 of 41**, and the Open Library noise is gone from all of them.
+> Absent-only is a rule about *the note*, not about which provider wins, and
+> enforcing it one layer too low made the whole table decorative.
 >
 > The ADR list below proposed five;
 > [0044](../adr/0044-precedence-is-a-table-not-a-judgement.md)–[0049](../adr/0049-the-card-is-a-non-modal-bottom-sheet.md)
@@ -25,12 +36,13 @@ that is what would have to be true for the decision to reopen.
 > folded into the precedence record, and it is a separate decision with a
 > separate cost — a book already wrong stays wrong.
 >
-> ⚠️ **The provider marks and Google's graphic are placeholders at the real
-> footprint**, not the vendored artwork §5 decided on. Fetching third-party
-> trademarked files into the repo was left to the owner, so the redistribution
-> residual is open exactly as recorded — and
-> [ADR-0048](../adr/0048-google-attribution-is-a-vendored-page-element.md)
-> records the *decision* to vendor rather than a file that is there.
+> **The marks have landed, and not the way §5 assumed.** The card's three are
+> **redrawn monotone glyphs** on the owner's instruction, which trades this
+> spec's redistribution residual for a modification one — see
+> [ADR-0050](../adr/0050-provider-marks-are-redrawn-monotone.md). Google's
+> powered-by graphic *is* vendored unaltered, and turned out to be 62×30 rather
+> than the 144×26 this document guessed, and dark on transparent, so it sits on a
+> plate. Apple's own icon was 404 at every URL tried.
 
 **This spec does not implement.** It states the edits; the implementation session
 makes them. In particular, **do not edit CLAUDE.md's contract blocks ahead of the

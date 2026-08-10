@@ -59,11 +59,12 @@ and argued down:
 - **The redistribution residual is weaker here**: Google *requires* this image's
   display and serves it unconditionally.
 
-⚠️ **The artwork is not in the repo yet.** What ships today is a placeholder at
-the assumed 144×26 footprint, so this record states a decision rather than
-describing a file: fetching third-party trademarked artwork is the owner's call.
-Until it lands, the *graphic* limb is discharged in shape and not in substance —
-and the clause says **graphic**, so a text stand-in does not satisfy it.
+**The artwork has since landed**, at `packages/site/public/poweredby-google.png`,
+byte-for-byte as Google serves it. Two of this record's figures were guesses and
+are now measurements: it is **62×30**, not 144×26, and it is **dark on
+transparent**, so it is invisible on this page and sits on a quiet plate. See
+[ADR-0050](0050-provider-marks-are-redrawn-monotone.md), which also records the
+card's three marks going a different way — redrawn monotone rather than vendored.
 
 ⚠️ **A deploy-time check that the graphic is still served was offered and
 declined.** Recorded as declined rather than overlooked, because in a gate-heavy

@@ -21,15 +21,29 @@
 -->
 <div class="pattr">
   <!--
-    ⚠️ Placeholder for `books.google.com/googlebooks/images/poweredby.png`, at
-    the assumed 144x26 footprint every width in the spec inherits. The real image
-    is vendored rather than hotlinked — this page makes **zero** third-party
-    requests today, and a hotlinked PNG would disclose every visitor's IP and
-    referer to Google on a `noindex` site, to satisfy an obligation that has
-    nothing to do with privacy. The file is not in the repo yet; fetching
-    third-party artwork is the owner's call.
+    Google's own `poweredby.png`, vendored **unaltered** and served from this
+    origin. Not hotlinked: this page makes zero third-party requests, and a
+    hotlinked PNG would disclose every visitor's IP and referer to Google on a
+    `noindex` site, to satisfy an obligation that has nothing to do with privacy.
+
+    ⚠️ **62x30, measured** — the spec assumed 144x26, which was a guess nobody
+    had checked.
+
+    ⚠️ **It is dark on transparent** — 554 of its 613 opaque pixels — so on a
+    page whose background is #1a1613 it is invisible, and Google publishes no
+    light variant (`poweredby_lt.png` and its siblings all 404). Hence the plate
+    underneath: the *image* is displayed exactly as Google serves it, which is
+    what "do not change any of the Google marks" asks, and the surface it sits on
+    is ours to choose.
   -->
-  <span class="pattr-mark" role="img" aria-label="powered by Google">powered by Google</span>
+  <!--
+    ⚠️ **Not `loading="lazy"`**, which it was for about ten minutes. A lazy image
+    loads when the browser decides it is needed, and this one's entire premise is
+    that it is *always displayed* — deferring it is a smaller version of the
+    hotlinking failure #104 rejected, where the obligation is met by something
+    outside our control. It is 3.4 KB.
+  -->
+  <img class="pattr-mark" src="/poweredby-google.png" alt="powered by Google" width="62" height="30" />
   <!--
     The first page chrome on this site that is not inert. The surface sets itself
     `pointer-events: none` so drag-to-look-around passes straight through it; the
@@ -54,17 +68,22 @@
     color: #6f6051;
   }
 
+  /*
+    The plate, and the reason it exists is in the markup above: the image is dark
+    on transparent and this page is near-black. Deliberately the *quietest* light
+    that keeps it legible rather than a white chip — Google's own constraint is
+    that the graphic must not be the most prominent element on the page, and on a
+    dark room with one lit bookcase a bright rectangle in the corner would be
+    exactly that.
+  */
   .pattr-mark {
-    display: inline-block;
-    /* The assumed footprint of Google's powered-by image. */
-    width: 144px;
-    height: 26px;
-    padding: 0.25rem 0.4rem;
-    border: 1px dashed rgba(242, 232, 220, 0.18);
+    display: block;
+    width: 62px;
+    height: 30px;
+    padding: 0.15rem 0.3rem;
+    box-sizing: content-box;
     border-radius: 0.25rem;
-    font-size: 0.7rem;
-    line-height: 1;
-    white-space: nowrap;
+    background: rgba(242, 232, 220, 0.72);
   }
 
   .pattr-link {

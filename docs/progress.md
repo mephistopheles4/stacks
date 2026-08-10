@@ -22,13 +22,14 @@ phone was rendering when it died — are measurements and stay exactly as they a
 | --- | --- |
 | **Last green gate** | G35 — the card a browser builds, not the model behind it |
 | **Now working on** | [#88](https://github.com/mephistopheles4/stacks/issues/88) — the enhanced card and the provider provenance behind it — is closed and **built**, on `claude/mattpocock-skills-wayfinder-ce3871`, awaiting review. Its spec is [`docs/spec/`](./spec/), kept as written. [#78](https://github.com/mephistopheles4/stacks/issues/78) and [#50](https://github.com/mephistopheles4/stacks/issues/50) before it are closed and built. `gh issue list` is the only current answer to what is open |
-| **Queued** | ⚠️ **`pnpm stacks enrich`, twice, against the real vault** — step 4 of [`docs/spec/README.md`](./spec/README.md)'s build order and the one step the branch does not carry, because it writes to the owner's notes. All seven new frontmatter keys are absent on every note that exists, so nothing downstream can be judged against real data until it runs, and run one undercounts by design. Then whatever the closed maps left in fog — ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s and [#88](https://github.com/mephistopheles4/stacks/issues/88)'s *Not yet specified*; [#78](https://github.com/mephistopheles4/stacks/issues/78)'s is empty by construction. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run |
+| **Queued** | whatever the closed maps left in fog — ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s and [#88](https://github.com/mephistopheles4/stacks/issues/88)'s *Not yet specified*; [#78](https://github.com/mephistopheles4/stacks/issues/78)'s is empty by construction. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates` + CodeQL, no bypass |
 | **Blocked on** | nothing |
 | **Mobile crash** | closed. Two separate bugs: 314 MB of texture (G15), then a driver that cannot sample a shadow map. The shelf paints its shadows now |
 | **Deployed** | https://stacks.aymandiab.com — Cloudflare Pages, `pnpm deploy:site` |
 | **Running against** | the owner's real vault, not fixtures — `pnpm stacks status` for the count |
+| **Enriched** | `stacks enrich` has run twice over the real vault (2026-08-10). 41 books: 40 filled, 1 refused as a mismatch, 1 no provider knows. Ids landed on 37 Google / 26 Open Library / 24 Apple / 2 O'Reilly, and 37 notes gained an `## About`. ⚠️ **The first pass wrote the wrong values and the vault was restored from a backup and re-run** — see [`docs/spec/README.md`](./spec/README.md); `mergeFields` was enforcing absent-only one layer too low, which disabled every per-field exception. A pre-pass copy is at `../Obsidian/stacks-backup-pre-enrich` |
 
 ## Gate log
 

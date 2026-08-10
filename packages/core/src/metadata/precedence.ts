@@ -100,14 +100,37 @@ export function mergeFields(primary: BookMetadata, contributors: Contributors): 
    */
   let filled: BookMetadata = { ...primary };
 
+  /**
+   * ⚠️ **The primary's own value competes by its provider, not by being the
+   * primary** — and getting that backwards made the whole table decorative.
+   *
+   * The first version skipped a field the primary already carried. Open Library
+   * is the primary for almost every book *and* always has `publish_date` and
+   * `subjects`, so the named exceptions for those fields never ran: the vault
+   * filled up with Open Library's bare `"2004"` where the table says Google
+   * wins, and with raw headings like `nyt:paperback_advice=2012-01-14` where it
+   * says Apple's curated genres win. Both are in the real vault right now,
+   * which is how this was found — a fixture with one provider per field cannot
+   * see it, because there is nothing to lose to.
+   *
+   * Absent-only is not what was being expressed here. That rule is about **the
+   * note** and lives in `enrich`, which never writes a key a note already has.
+   * This function is choosing among providers, where "already set" means
+   * nothing.
+   */
   for (const field of MERGED_FIELDS) {
-    if (filled[field] !== undefined) continue;
+    filled = { ...filled, ...blank(field) };
     for (const source of FIELD_ORDER[field] ?? DEFAULT_ORDER) {
       const next = takeMerged(filled, field, contributors.get(source));
       if (next !== filled) {
         filled = next;
         break;
       }
+    }
+    // Nobody in the order held it — including the primary, whose own value is
+    // reinstated here rather than lost.
+    if (filled[field] === undefined && primary[field] !== undefined) {
+      filled = { ...filled, [field]: primary[field] } as BookMetadata;
     }
   }
 
@@ -122,7 +145,26 @@ export function mergeFields(primary: BookMetadata, contributors: Contributors): 
   return filled;
 }
 
-/** One merged field from one contributor, when the primary has no value. */
+/**
+ * Clears one merged field so the ordering below decides it from scratch.
+ *
+ * Spelled as a lookup rather than a computed key so the compiler still checks
+ * that only the four merged fields can be cleared.
+ */
+function blank(field: MergedField): Partial<BookMetadata> {
+  switch (field) {
+    case 'publisher':
+      return { publisher: undefined };
+    case 'published':
+      return { published: undefined };
+    case 'subjects':
+      return { subjects: undefined };
+    default:
+      return { description: undefined };
+  }
+}
+
+/** One merged field from one contributor. */
 function takeMerged(
   into: BookMetadata,
   field: MergedField,
