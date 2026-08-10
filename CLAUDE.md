@@ -16,7 +16,10 @@ A local-first reading tracker where the notes vault IS the database. A CLI (`sta
 5. `docs/notes-on-the-shelf.md` — the design for public/private notes and for
    picking a book up. Nothing there is built; read it before changing invariant 2,
    the publisher, or the cover cap.
-6. `docs/blockers.md` — only if it exists; records gates that defeated 3 approaches.
+6. `docs/spec/` — locked specs waiting for an implementation session. Everything
+   in there is decided: read it *instead of* re-deciding, and read
+   `docs/spec/README.md` first for the build order and the gate roster.
+7. `docs/blockers.md` — only if it exists; records gates that defeated 3 approaches.
 
 Update `docs/progress.md` in the same commit as the gate it describes, and
 `docs/gates.md` in the same commit as the gate it scores. A new investigation
