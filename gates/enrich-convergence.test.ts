@@ -1,10 +1,10 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
 import { enrichBook } from '../packages/core/src/enrich.ts';
-import type { HttpGet } from '../packages/core/src/metadata/index.ts';
+import { createCachedHttpGet, type HttpGet } from '../packages/core/src/metadata/index.ts';
 
 /**
  * G34 — a book a provider failed on is filled by the next run.
@@ -111,5 +111,65 @@ describe('G34 — a rate-limited book self-heals on the next run', () => {
         'pacing answer for iTunes\' ~20/min, and it only works while a failure is never ' +
         'cached — see http.ts:64',
     ).toBe('1384286945');
+  });
+});
+
+/**
+ * The property the pass above is standing on, asserted where it lives.
+ *
+ * The pass converging is necessary and not sufficient: it shows `enrichBook`
+ * records no sentinel and leaves the gap open. What makes a **second run** ask
+ * again rather than replay a recorded failure is one line in
+ * `createCachedHttpGet`, and nothing checked it. A well-meant change that cached
+ * misses would leave every test above green and quietly freeze a rate-limited
+ * book out of its id forever.
+ *
+ * `vi.stubGlobal` is G21's named escape hatch: no request leaves the machine.
+ */
+describe('G34 — a failure is never cached, a success is cached forever', () => {
+  let cache: string;
+
+  beforeEach(async () => {
+    cache = await mkdtemp(join(tmpdir(), 'stacks-cache-'));
+  });
+
+  afterEach(async () => {
+    vi.unstubAllGlobals();
+    await rm(cache, { recursive: true, force: true });
+  });
+
+  it('writes nothing to the cache when the request fails', async () => {
+    // A 404 rather than a 429, deliberately: both reach the same
+    // `body === undefined` line, and the transient path would spend 3.6s in
+    // backoff proving the same thing.
+    vi.stubGlobal('fetch', async () => new Response('', { status: 404 }));
+
+    const get = createCachedHttpGet(cache);
+    expect(await get('https://example.invalid/a')).toBeUndefined();
+
+    expect(
+      await readdir(cache),
+      'a failed request left a cache entry. The next run would replay the failure instead ' +
+        'of re-asking, and "run it twice" would stop being true',
+    ).toEqual([]);
+  });
+
+  it('caches a success and never asks again', async () => {
+    let asked = 0;
+    vi.stubGlobal('fetch', async () => {
+      asked += 1;
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+
+    const get = createCachedHttpGet(cache);
+    expect(await get('https://example.invalid/b')).toEqual({ ok: true });
+    expect(await get('https://example.invalid/b')).toEqual({ ok: true });
+
+    // No TTL, on purpose: a provider id is a stable bibliographic pointer, not
+    // a fact that decays.
+    expect(asked, 'the second call went back to the network').toBe(1);
   });
 });

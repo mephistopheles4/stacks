@@ -79,7 +79,18 @@ const disagreesAboutEverything: HttpGet = async (url) => {
   return undefined;
 };
 
-/** Every fillable key, already answered — so there is nothing legitimate to do. */
+/**
+ * Every fillable key **except one**, and the exception is load-bearing.
+ *
+ * ⚠️ The first version of this gate filled in all eleven, and it passed
+ * vacuously: with no gap at all `enrichBook` returns `complete` before it
+ * touches the network, so the fill loop never runs and removing the absent-only
+ * guard changed nothing. It went green against the exact defect it exists for.
+ *
+ * So the note is left one key short — `oreilly_ourn`, which the provider below
+ * cannot supply — which is enough to send the pass through the lookup and into
+ * every fill it must not perform, while leaving nothing it legitimately can.
+ */
 const COMPLETE = {
   title: 'Thinking in Systems',
   author: 'Donella H. Meadows',
@@ -93,7 +104,6 @@ const COMPLETE = {
   googleVolumeId: 'CpbLAgAAQBAJ',
   appleTrackId: '1384286945',
   openLibraryOlid: 'OL26445570M',
-  oreillyOurn: 'urn:orm:book:0642572352530',
 } as const;
 
 describe('G32 — absent-only, over the whole of FILLABLE', () => {
@@ -113,6 +123,11 @@ describe('G32 — absent-only, over the whole of FILLABLE', () => {
     await vault.writeBook(COMPLETE);
     const [book] = await vault.listBooks();
     const path = join(dir, book!.sourcePath);
+    // The body section counts as answered too, and it is not a `FILLABLE` key —
+    // so without this the pass legitimately adds one and the byte-identical
+    // assertion below fails for a reason that has nothing to do with
+    // absent-only. G33 owns that write; this row owns the frontmatter.
+    await vault.insertBodySection(book!.sourcePath, '## About', 'The blurb it already had.');
     const before = await readFile(path, 'utf8');
 
     await enrichBook(book!, vault, disagreesAboutEverything);
@@ -124,10 +139,16 @@ describe('G32 — absent-only, over the whole of FILLABLE', () => {
     ).toBe(before);
   });
 
-  it('is looking at every fillable key, not a subset of them', () => {
-    // The vacuity guard. If `FILLABLE` grows and this fixture does not, the
-    // assertion above passes on a note with a genuine gap — for the wrong
-    // reason, since `enrichBook` would then be filling something legitimately.
+  it('reaches the fill loop at all, with exactly one key legitimately open', () => {
+    /**
+     * The vacuity guard, and it earned its keep — see the note on `COMPLETE`.
+     *
+     * Two ways this gate can go quietly useless. With **no** gap, `enrichBook`
+     * short-circuits before the network and nothing can be overwritten, so it
+     * passes however the guards are written. With **more than one** gap, the
+     * pass legitimately writes and the byte-identical assertion above stops
+     * being the right question. Exactly one, and one nothing can fill.
+     */
     const record = {
       sourcePath: 'x.md',
       status: 'read' as const,
@@ -137,8 +158,8 @@ describe('G32 — absent-only, over the whole of FILLABLE', () => {
 
     expect(
       missingFields(record),
-      'this fixture no longer covers every fillable key, so the assertion above is ' +
-        'testing a book with a real gap',
-    ).toEqual([]);
+      'this fixture no longer leaves exactly one unfillable gap, so the assertion above ' +
+        'is either short-circuiting before the network or testing a legitimate write',
+    ).toEqual(['oreillyOurn']);
   });
 });
