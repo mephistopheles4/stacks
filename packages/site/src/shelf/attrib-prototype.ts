@@ -36,9 +36,9 @@ type Content = 'google' | 'apple' | 'all' | 'row';
 const PLACES: Place[] = ['header', 'bl', 'tr', 'auto'];
 const PLACE_NAMES: Record<Place, string> = {
   header: 'under the header — one lockup, no new corner',
-  bl: 'bottom-left — the colophon corner (the owner’s choice)',
+  bl: 'bottom-left — LOCKED IN #106, sheet occlusion accepted',
   tr: 'top-right — the free corner on desktop',
-  auto: 'bottom-left above #91’s breakpoint, under the header below it',
+  auto: 'bottom-left, into the header below #91’s breakpoint — measured, rejected',
 };
 
 const CONTENTS: Content[] = ['google', 'apple', 'all', 'row'];
@@ -93,8 +93,9 @@ interface Measure {
 
 /** Mounted by boot.ts when `?attribproto` is present. */
 export function mountAttribPrototype(initial: string): void {
+  // Defaults are the direction #106 locked: bottom-left, graphic then link.
   let place: Place = isPlace(initial) ? initial : 'bl';
-  let content: Content = 'apple';
+  let content: Content = 'row';
   let graphicHeight = GRAPHIC.height;
 
   document.head.append(styleTag());
