@@ -53,7 +53,7 @@ line inserted before the links row.
 | 4 | Reading line | status word, then `finished «date»` **or** `started «date»`, then `★`×`rating`, `·`-joined | **always** |
 | 5 | Tags | `book.tags`, `·`-joined | when non-empty |
 | 6 | Object line | `publisher · published · pages · binding · isbn` | drops **whole** when all five are absent |
-| 7 | Subjects | `book.subjects` verbatim (already comma-joined and capped at 5 by the merge) | when present |
+| 7 | Subjects | `book.subjects`, **`; `-joined and capped at 5 by the merge** — split on `;` and trim, then render | when present |
 | 8 | Links row | see [§8](#8-the-provider-links-row) | **always** |
 
 Blocks 1–2 are a **header row**; 3–8 are full-width below it. See [§4](#4-layout).
@@ -85,6 +85,11 @@ on local builds (wishlist books never reach a public build).
   hand-editor who wrote `forthcoming` sees `forthcoming`. The note keeps the
   provider's string exactly as given; tidiness is a display need
   ([#102](https://github.com/mephistopheles4/stacks/issues/102) §4).
+- **`subjects` is `; `-separated, never comma-separated**, because provider
+  category values contain commas natively — Apple's `"Health, Mind & Body"` is in
+  this repo's own G26 corpus. **The site splits on `;` and trims**, which makes
+  the separator a fact two packages hold; see
+  [`metadata-merge.md`](metadata-merge.md) §4.
 - **`binding`** is shown only when declared. It is never inferred from the
   shelf's per-book hash — the card must not present a guess as a fact.
 - **The ISBN renders as a visible string** at footnote rank, independent of any
@@ -543,3 +548,4 @@ implement the earlier answer.
 | [#98](https://github.com/mephistopheles4/stacks/issues/98): fallback is "Search Google Books" | [#105](https://github.com/mephistopheles4/stacks/issues/105): **Open Library**. `books.google.com/books?q=` 302s to general Google Search, and a book Google does not hold returns ten confident wrong results with no notice. |
 | [#89](https://github.com/mephistopheles4/stacks/issues/89): object line is `pages · binding · isbn` | [#102](https://github.com/mephistopheles4/stacks/issues/102): **catalogue order**, `publisher · published · pages · binding · isbn` — the ISBN moves back to the end. |
 | [#101](https://github.com/mephistopheles4/stacks/issues/101)'s post-#103 amendment: the row is "mixed", O'Reilly and Open Library as text | [#98](https://github.com/mephistopheles4/stacks/issues/98): **three marks.** O'Reilly is never rendered at all; Open Library is a mark. |
+| [#97](https://github.com/mephistopheles4/stacks/issues/97): `published` is `YYYY` or `YYYY-MM-DD`, **never a timestamp** | [#102](https://github.com/mephistopheles4/stacks/issues/102): **stored verbatim**, rendered as its first four-digit run. Normalising at write time was rejected as the one irreversible option. **Do not write a normaliser.** |

@@ -122,9 +122,9 @@ publisher, published, subjects,
 google_volume_id, apple_track_id, openlibrary_olid, oreilly_ourn
 ```
 
-with `published`'s two permitted widths (`YYYY` or `YYYY-MM-DD`), `subjects`'
-`; ` separator and cap of 5, and each id key's shape check and drop-on-mismatch
-behaviour. G8 moves with it.
+with `published` **stored verbatim** (whatever the provider said, timestamp
+included — the card does the tidying), `subjects`' `; ` separator and cap of 5,
+and each id key's shape check and drop-on-mismatch behaviour. G8 moves with it.
 
 **`CLAUDE.md` — vault adapter contract.** The block lists five methods and gains
 a **sixth**: a body-section insert, scalar-free, written only when the heading is

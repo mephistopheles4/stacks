@@ -104,14 +104,24 @@ reaches a public build by accident — publishing is structurally opt-in.
 | Field | Container |
 |---|---|
 | `publisher` | frontmatter scalar |
-| `published` | frontmatter scalar, `YYYY` **or** `YYYY-MM-DD`, never a timestamp |
+| `published` | frontmatter scalar, **stored verbatim** — whatever the winning provider said, timestamp included |
 | `subjects` | frontmatter scalar, **`; `-joined**, capped at 5 in the winning provider's own order; Apple's generic `"Books"` genre dropped |
 | `description` | **note body**, its own `## About` section above `## Notes` |
 
-`published` must tolerate both widths because Open Library can still win the
-field outright when it is the only provider holding a record. Normalising the
-*winner's* value is not the same as choosing the winner, so it does not violate
-the fixed-order rule.
+⚠️ **`published` is stored verbatim, and this supersedes [#97](https://github.com/mephistopheles4/stacks/issues/97)'s
+own "`YYYY` or `YYYY-MM-DD`, never a timestamp".** [#102](https://github.com/mephistopheles4/stacks/issues/102)
+§4 ruled later and explicitly **rejected** normalising at write time as *"the one
+irreversible option on the table"* — undoing it means re-asking the providers,
+which is a whole network pass. The note keeps `2019-03-05T07:00:00Z` if that is
+what Apple said; **tidiness is a display need** and lives in the card, which
+renders the first four-digit run and falls back to the string verbatim
+([`enhanced-card.md`](enhanced-card.md) §2). This also keeps the repo's standing
+date precedent intact: `started` and `finished` are opaque strings (`types.ts:68`),
+unvalidated, stored as given.
+
+The widths still vary — Open Library gives a bare `"2008"` and can win the field
+outright when it is the only provider holding a record — but nothing normalises
+them on the way in. **Do not write a normaliser.**
 
 ### The `subjects` separator is `; `, and a comma would have been a silent bug
 
@@ -200,14 +210,23 @@ gate **M2** asserts the claim rather than a branch.
 
 ### `FILLABLE` after this work
 
+⚠️ **Two namespaces are live here and must not be mixed.** `FILLABLE` entries
+index `book[field]` on a `BookRecord` (`enrich.ts:24,58`), so they are **camelCase
+field names**; the `changes` object handed to `updateBook` is a
+`FrontmatterChanges`, keyed *"by their contract names (`shelf_order`, not
+`shelfOrder`)"* (`vault-adapter.ts:7`). The list below is the first; the
+frontmatter spellings are in
+[`provider-provenance.md`](provider-provenance.md) §2 and
+[§4](#4-containers) above.
+
 ```
 author, isbn, pages, cover,                       (today)
 publisher, published, subjects,                   (this spec)
-google_volume_id, apple_track_id,                 (provider-provenance.md)
-openlibrary_olid, oreilly_ourn
+googleVolumeId, appleTrackId,                     (provider-provenance.md)
+openLibraryOlid, oreillyOurn
 ```
 
-Eleven keys, plus the existing derived `spine_color` gap. `BookInput` grows the
+Eleven fields, plus the existing derived `spine_color` gap. `BookInput` grows the
 same way for `stacks add`.
 
 ⚠️ **`description` is not a `FILLABLE` key** — it is a body section, so no
