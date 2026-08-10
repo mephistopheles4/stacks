@@ -1,0 +1,138 @@
+---
+import { absoluteUrl } from '../site-meta.ts';
+
+// The site's second page, and its first legal-notice surface.
+//
+// Deliberately **no canvas**: this is a page of legal text, and a WebGL scene
+// behind it would be the most prominent element on a page whose entire purpose
+// is a notice Google says must not be outshone.
+const ogImage = absoluteUrl('/og.png', Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#1a1613" />
+    <title>Attribution — Stacks</title>
+    <meta name="description" content="Where this shelf's book data comes from." />
+    <!--
+      The same posture as the shelf, carried over deliberately rather than
+      inherited: this is the second page this site has ever had, and `noindex`
+      is a per-page tag. `gate:public`'s robots rule reads every built page for
+      exactly this reason.
+    --><meta name="robots" content="noindex, nofollow" />
+    <meta property="og:title" content="Attribution — Stacks" />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:type" content="website" />
+  </head>
+  <body class="notice">
+    <main>
+      <h1>Attribution</h1>
+
+      <p>
+        Book data on this shelf comes from four catalogues. Nothing here is
+        affiliated with any of them.
+      </p>
+
+      <h2>Google</h2>
+      <p>
+        Book data from Google Books. The <em>powered by Google</em> graphic is
+        displayed on the shelf itself, and every book Google contributed to
+        carries a link back to its Google Books page.
+      </p>
+
+      <h2>Apple</h2>
+      <!--
+        §7.1's governing sentence is "List only the trademarks actually used in
+        your materials." Its three published variants are all scoped to the
+        *badge*; the card uses the **icon**, for which Apple publishes no variant
+        — so the badge variant's Apple-logo sentence is dropped, because the
+        Apple logo is not used. ⚠️ If the vendored icon artwork turns out to
+        carry that logo, the sentence returns.
+      -->
+      <p>Apple Books is a service mark of Apple Inc.</p>
+
+      <h2>Credits</h2>
+      <!--
+        Manners rather than compliance: neither Open Library nor O'Reilly
+        requires attribution that any source read has found. O'Reilly is named
+        although its mark is never rendered — it is a contributor the vault
+        records, and a credits line is prose rather than a link, so the 403 its
+        URL returns does not reach it.
+      -->
+      <p>
+        Book metadata and cover art from Open Library, Google Books, Apple Books
+        and O&rsquo;Reilly.
+      </p>
+
+      <!--
+        The site has no navigation, no header link and nothing that has ever gone
+        anywhere, so a browser back button is not a way back for someone who
+        arrived here directly.
+      -->
+      <p class="back"><a href="/">Back to the shelf</a></p>
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  /*
+    Not the shelf's `overflow: hidden; height: 100%` — this page is text, and
+    text scrolls.
+  */
+  html,
+  body.notice {
+    margin: 0;
+    background: #1a1613;
+    color: #f2e8dc;
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    line-height: 1.6;
+  }
+
+  body.notice main {
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: clamp(2rem, 8vw, 5rem) clamp(1rem, 4vw, 2.5rem);
+  }
+
+  body.notice h1 {
+    font-family:
+      'IBM Plex Mono', ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', monospace;
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  body.notice h2 {
+    margin-top: 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #c9b8a4;
+  }
+
+  body.notice p {
+    color: #a89684;
+  }
+
+  body.notice a {
+    color: #c9b8a4;
+  }
+
+  body.notice .back {
+    margin-top: 3rem;
+  }
+</style>

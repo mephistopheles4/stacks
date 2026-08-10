@@ -273,10 +273,35 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   // is how a log stops being read.
   observations.push(`${String(pointing)}/${String(imageTags.length)} share image URL(s) → ${wanted}`);
 
-  // Shareable, not searchable — the owner's decision, and one that is only
-  // cheap before a crawler has seen the page.
-  if (!/<meta\s+name="robots"\s+content="[^"]*noindex/.test(html)) {
-    fail('robots', 'no `noindex` robots meta in the built page — the shelf would be searchable');
+  /**
+   * Shareable, not searchable — on **every** page, not just the index.
+   *
+   * This read `dist/index.html` alone for the whole of its life, which was
+   * exactly right while the site had one page. `/attribution` is the second, and
+   * `noindex` is a per-page tag: a new page shipping without one would have
+   * passed this gate silently and turned up in a search result beside the
+   * owner's name, which is the one thing the posture exists to prevent.
+   *
+   * The share-image rules deliberately stay index-only below: a legal-notice
+   * page needs no share card, and requiring one would be a rule invented by this
+   * change rather than carried by it.
+   */
+  const pages = walk(dir).filter((file) => extname(file) === '.html');
+  const unmarked = pages.filter(
+    (file) => !/<meta\s+name="robots"\s+content="[^"]*noindex/.test(readFileSync(file, 'utf8')),
+  );
+
+  if (pages.length === 0) {
+    fail('robots', 'the build contains no HTML at all — there is no page to publish');
+  }
+  for (const file of unmarked) {
+    fail(
+      'robots',
+      `no \`noindex\` robots meta in ${posix(relative(dir, file))} — that page would be searchable`,
+    );
+  }
+  if (unmarked.length === 0 && pages.length > 0) {
+    observations.push(`${String(pages.length)} page(s), all noindex`);
   }
   if (/^\s*Disallow:\s*\/\s*$/m.test(readIfPresent(join(dir, 'robots.txt')))) {
     // The intuitive move, and the one that fails: blocking the crawl stops the

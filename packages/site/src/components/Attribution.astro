@@ -1,0 +1,89 @@
+---
+// The page-level attribution surface. Markup and styles only; it has no logic
+// to put anywhere else. See docs/spec/attribution-surface.md.
+---
+
+<!--
+  Bottom-left, and it stays there at every viewport.
+
+  The page has four corners and three are spoken for: the header owns top-left,
+  the desktop card owns bottom-right, and on a phone the full-bleed sheet owns
+  the whole bottom edge whenever a card is open. Measured rather than argued —
+  top-right lands 3211px² on the header caption at 375px, and bottom-left is
+  100% behind the sheet on both phone viewports with a card open.
+
+  ⚠️ The sheet occlusion is **accepted, not fixed**: occluded by a dismissible,
+  non-modal overlay is not the same as conditionally rendered — the element is in
+  the DOM and displayed on load, and the sheet is one gesture from dismissal. The
+  alternative (re-homing into the header lockup below the breakpoint) is clear
+  everywhere and costs a DOM re-home rather than a media query, which would give
+  `(max-width: 700px), (max-height: 500px)` a **third** holder.
+-->
+<div class="pattr">
+  <!--
+    ⚠️ Placeholder for `books.google.com/googlebooks/images/poweredby.png`, at
+    the assumed 144x26 footprint every width in the spec inherits. The real image
+    is vendored rather than hotlinked — this page makes **zero** third-party
+    requests today, and a hotlinked PNG would disclose every visitor's IP and
+    referer to Google on a `noindex` site, to satisfy an obligation that has
+    nothing to do with privacy. The file is not in the repo yet; fetching
+    third-party artwork is the owner's call.
+  -->
+  <span class="pattr-mark" role="img" aria-label="powered by Google">powered by Google</span>
+  <!--
+    The first page chrome on this site that is not inert. The surface sets itself
+    `pointer-events: none` so drag-to-look-around passes straight through it; the
+    anchor has to opt back out.
+  -->
+  <a class="pattr-link" href="/attribution">Attribution</a>
+</div>
+
+<style>
+  .pattr {
+    position: absolute;
+    bottom: clamp(1rem, 4vw, 2.5rem);
+    left: clamp(1rem, 4vw, 2.5rem);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    /* Above the shelf, below the card and the debug surfaces. */
+    z-index: 5;
+    /* Inert by default — the shelf is dragged through this corner. */
+    pointer-events: none;
+    font-size: 0.75rem;
+    color: #6f6051;
+  }
+
+  .pattr-mark {
+    display: inline-block;
+    /* The assumed footprint of Google's powered-by image. */
+    width: 144px;
+    height: 26px;
+    padding: 0.25rem 0.4rem;
+    border: 1px dashed rgba(242, 232, 220, 0.18);
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .pattr-link {
+    /*
+      44px, and it is the height of the whole row: WCAG 2.5.5's touch target,
+      not the graphic, is what sets it — so shrinking the graphic buys width and
+      nothing else.
+    */
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.25rem;
+    color: #857361;
+    /* The one thing here that is not inert. */
+    pointer-events: auto;
+  }
+
+  .pattr-link:hover,
+  .pattr-link:focus-visible {
+    color: #c9b8a4;
+  }
+</style>
