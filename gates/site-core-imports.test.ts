@@ -44,8 +44,40 @@ const CORE_STATEMENT = /(?:^|\n)[ \t]*(import|export)\b([^;'"]*?)from\s*['"](@st
 /** Every mention of the specifier, however it is reached — the vacuity guard. */
 const CORE_SPECIFIER = /['"](@stacks\/core[^'"]*)['"]/g;
 
-/** The one subpath that imports nothing and may therefore be imported for value. */
-const PURE_SUBPATH = '@stacks/core/shelf-order';
+/**
+ * A subpath may be imported for value **only if it is actually pure**.
+ *
+ * This used to be one hardcoded name, `@stacks/core/shelf-order`. That was right
+ * while there was one, and it was the wrong *shape*: a second pure subpath meant
+ * editing an allowlist, and an allowlist entry says nothing about whether the
+ * module it names still imports nothing. The name was the check.
+ *
+ * So purity is measured instead. A subpath passes when `packages/core/package.json`
+ * exports it and the file it points at has **no imports at all** — which is the
+ * property that matters, and the one that can stop being true without anybody
+ * renaming a file.
+ */
+function pureSubpaths(): string[] {
+  const manifest = JSON.parse(readRepoFile('packages/core/package.json')) as {
+    exports?: Record<string, string>;
+  };
+
+  return Object.entries(manifest.exports ?? {})
+    .filter(([entry]) => entry !== '.')
+    .filter(([, target]) => importsNothing(target.replace(/^\.\//, 'packages/core/')))
+    .map(([entry]) => `@stacks/core${entry.slice(1)}`);
+}
+
+/**
+ * Whether a module pulls anything in at all.
+ *
+ * Type-only imports count as imports here, deliberately: this is a cheap,
+ * conservative test, and a pure module has no reason to have any. Getting it
+ * wrong in this direction costs a false red, which is the correct way round.
+ */
+function importsNothing(file: string): boolean {
+  return !/(?:^|\n)\s*(?:import|export)\b[^;\n]*\bfrom\s*['"]/.test(readRepoFile(file));
+}
 
 interface CoreImport {
   readonly file: string;
@@ -112,25 +144,35 @@ describe('G6 — site → @stacks/core', () => {
     ).toBe(specifierMentions());
   });
 
-  it('keeps every import either type-only or on the pure subpath', () => {
+  it('keeps every import either type-only or on a subpath that imports nothing', () => {
+    const pure = pureSubpaths();
     const offenders = coreImports()
-      .filter((entry) => !entry.typeOnly && entry.specifier !== PURE_SUBPATH)
+      .filter((entry) => !entry.typeOnly && !pure.includes(entry.specifier))
       .map((entry) => `${entry.file}: ${entry.statement}`);
 
     expect(
       offenders,
       `value imports of @stacks/core in the site: ${offenders.join(' | ')}. Use ` +
-        `\`import type\` at statement level, or move the runtime value into ${PURE_SUBPATH}. ` +
-        'A value import drags node:fs and sharp into the browser bundle and the shelf ' +
-        'silently never boots.',
+        '`import type` at statement level, or move the runtime value into a subpath that ' +
+        `imports nothing (today: ${pure.join(', ') || 'none'}). A value import drags ` +
+        'node:fs and sharp into the browser bundle and the shelf silently never boots.',
     ).toEqual([]);
   });
 
-  it('still imports something for value from the pure subpath', () => {
+  it('finds at least one genuinely pure subpath to allow', () => {
+    // The vacuity guard on the purity test itself: if `importsNothing` broke and
+    // returned false for everything, the assertion above would still pass on a
+    // site that imports nothing — and the escape hatch would have vanished
+    // without a word.
+    expect(pureSubpaths().length).toBeGreaterThan(0);
+  });
+
+  it('still imports something for value from a pure subpath', () => {
     // The control. Every assertion above is satisfied by a site that imports
     // nothing at all from core, which would also mean the subpath escape hatch
     // had quietly stopped being exercised.
-    const fromSubpath = coreImports().filter((entry) => entry.specifier === PURE_SUBPATH);
+    const pure = pureSubpaths();
+    const fromSubpath = coreImports().filter((entry) => pure.includes(entry.specifier));
     expect(fromSubpath.length).toBeGreaterThan(0);
     expect(fromSubpath.every((entry) => !entry.typeOnly)).toBe(true);
   });

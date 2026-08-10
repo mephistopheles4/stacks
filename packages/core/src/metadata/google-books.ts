@@ -1,6 +1,6 @@
 import { looksDerivative, normaliseIsbn } from '../identity.ts';
 import type { HttpGet } from './http.ts';
-import { asPositiveInt, asRecord, firstString, type BookMetadata } from './types.ts';
+import { asPositiveInt, asRecord, firstString, toPlainText, type BookMetadata } from './types.ts';
 import { keyIfPresent } from '../key-if-present.ts';
 
 /**
@@ -134,7 +134,23 @@ function toMetadata(
       'coverUrlLarge',
       largerCover(firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail'])),
     ),
+    ...keyIfPresent('publisher', firstString(info['publisher'])),
+    ...keyIfPresent('published', firstString(info['publishedDate'])),
+    // `categories` is short and curated — "Computers", "Business & Economics" —
+    // which is why Google leads the subjects order against Open Library's 34 raw
+    // headings for the same book.
+    ...keyIfPresent('subjects', categoriesOf(info['categories'])),
+    ...keyIfPresent('description', toPlainText(info['description'])),
   };
+}
+
+function categoriesOf(value: unknown): readonly string[] | undefined {
+  if (!Array.isArray(value)) {
+    const single = firstString(value);
+    return single === undefined ? undefined : [single];
+  }
+  const names = value.filter((name): name is string => typeof name === 'string');
+  return names.length === 0 ? undefined : names;
 }
 
 /**

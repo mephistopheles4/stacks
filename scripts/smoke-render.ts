@@ -131,6 +131,8 @@ async function main(): Promise<void> {
       writeFileSync(OUTPUT, await page.screenshot({ type: 'png' }));
 
       const cardOpened = await clickABook(page);
+      const viewer = await checkCoverViewer(page);
+      const sheet = await checkSheet(page);
 
       report({
         bookCount: Number(bookCount),
@@ -139,6 +141,8 @@ async function main(): Promise<void> {
         cost,
         errors,
         cardOpened,
+        viewer,
+        sheet,
       });
     } finally {
       await browser.close();
@@ -205,6 +209,133 @@ interface CardOpened {
   readonly hasImage: boolean;
   /** Pixels by which the card escapes the viewport, and the image its card. */
   readonly overflow: { readonly card: number; readonly image: number };
+  /**
+   * G35 — what the enhanced card actually put on the page.
+   *
+   * *"The card opened"* was the whole assertion for the life of this gate, and
+   * it stayed true through a card that renders no reading line, links with no
+   * accessible name and an announcer that never changes. Every field below is
+   * one of the eight acceptance assertions in
+   * `docs/spec/enhanced-card.md` §11, checked against the DOM a browser
+   * actually built rather than against a model in a unit test.
+   */
+  readonly card: CardContents;
+}
+
+interface CardContents {
+  /** Renders on every card, and leads with the status word — even for `read`. */
+  readonly reading: string;
+  /** Absent on the 5-of-41 books with none of the five object facts. */
+  readonly hasObjectLine: boolean;
+  /** Never absent: every book has a title, so every book has a search link. */
+  readonly linkCount: number;
+  /** Every `<a>` in the row, as `target|rel|name`. */
+  readonly links: readonly string[];
+  /**
+   * How many of those links drew an actual mark.
+   *
+   * ⚠️ Until the fixture books were given contributor ids, this was **always
+   * zero** and nothing noticed: every fixture book fell back to the one text
+   * search link, so the row's normal state — three provider marks — had never
+   * been rendered by a browser in this project's life. The artwork can now
+   * regress to nothing and be caught.
+   */
+  readonly markCount: number;
+  /** `«Title» by «Author»`, from the live region outside the card. */
+  readonly announced: string;
+  /**
+   * Whether the close control survived a tap-to-swap.
+   *
+   * The one assertion the spec calls *"the one nothing else would notice"*: a
+   * control inside the replaced subtree is destroyed and recreated on every
+   * swap, dropping focus to `<body>` mid-browse.
+   */
+  readonly closeSurvivedSwap: boolean;
+  /** The announcement after swapping to a second book — must have changed. */
+  readonly announcedAfterSwap: string;
+}
+
+/**
+ * §11's *"Two viewports, not one"*.
+ *
+ * The sheet and the corner card are one element with two presentations, and the
+ * breakpoint is a fact two languages hold — so a gate that only ever runs at
+ * 1440×900 proves nothing about the half of the spec that exists below 700px,
+ * on the device the interaction model was designed for.
+ */
+interface SheetChecked {
+  readonly fullBleed: boolean;
+  readonly withinCap: boolean;
+  readonly grabberVisible: boolean;
+  /** A drag shorter than the dismiss threshold must snap back, not dismiss. */
+  readonly survivedShortDrag: boolean;
+}
+
+/**
+ * The enlarged cover — that it opens, that it is actually bigger, and that
+ * leaving it leaves *only* it.
+ *
+ * The last one is the reason this is a browser check rather than a unit test.
+ * The viewer is a modal `<dialog>`, so Escape is the platform's, and the page's
+ * own Escape handler — which dismisses the card — is still listening on the
+ * document. One keystroke closing both surfaces is invisible to every other
+ * kind of test and immediately obvious here.
+ */
+interface CoverViewerChecked {
+  readonly opened: boolean;
+  /** Enlarged width ÷ thumbnail width. Under 2 is not "seeing it closer". */
+  readonly enlargedBy: number;
+  readonly escapeClosedViewer: boolean;
+  /** ⚠️ The card must survive that same Escape. */
+  readonly cardSurvivedEscape: boolean;
+}
+
+async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefined> {
+  // Walks the shelf for a book with a cover, since only some fixture books have
+  // one and the card left open by the swap above may not be one of them.
+  for (let index = 0; index < 60; index += 1) {
+    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
+      | { x: number; y: number }
+      | undefined;
+    if (point === undefined) continue;
+
+    await page.mouse.click(Math.round(point.x), Math.round(point.y));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    const thumbnail = (await page.evaluate(`(() => {
+      const button = document.querySelector('#book-card-body .card-cover');
+      if (!button) return undefined;
+      const box = button.getBoundingClientRect();
+      return { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2), width: box.width };
+    })()`)) as { x: number; y: number; width: number } | undefined;
+    if (thumbnail === undefined) continue;
+
+    await page.mouse.click(thumbnail.x, thumbnail.y);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const open = (await page.evaluate(`(() => {
+      const dialog = document.getElementById('cover-viewer');
+      const image = document.getElementById('cover-viewer-image');
+      return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0 };
+    })()`)) as { open: boolean; width: number };
+
+    await page.keyboard.press('Escape');
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const after = (await page.evaluate(`(() => {
+      const dialog = document.getElementById('cover-viewer');
+      const card = document.getElementById('book-card');
+      return { viewerOpen: Boolean(dialog?.open), cardOpen: Boolean(card) && !card.hidden };
+    })()`)) as { viewerOpen: boolean; cardOpen: boolean };
+
+    return {
+      opened: open.open,
+      enlargedBy: thumbnail.width === 0 ? 0 : open.width / thumbnail.width,
+      escapeClosedViewer: !after.viewerOpen,
+      cardSurvivedEscape: after.cardOpen,
+    };
+  }
+  return undefined;
 }
 
 async function clickABook(page: Page): Promise<CardOpened | undefined> {
@@ -231,6 +362,9 @@ async function clickABook(page: Page): Promise<CardOpened | undefined> {
       const box = card.getBoundingClientRect();
       const img = card.querySelector('img');
       const imgBox = img ? img.getBoundingClientRect() : null;
+      const status = document.getElementById('book-card-status');
+      const dismiss = document.getElementById('book-card-dismiss');
+      const links = [...card.querySelectorAll('.card-links a')];
       return {
         title: card.querySelector('h2')?.textContent ?? '',
         // A thumbnail-sized cover fits the card even completely unstyled, so
@@ -240,14 +374,205 @@ async function clickABook(page: Page): Promise<CardOpened | undefined> {
           card: Math.round(Math.max(0, box.right - innerWidth, box.bottom - innerHeight, -box.left, -box.top)),
           image: imgBox ? Math.round(Math.max(0, imgBox.right - box.right, imgBox.bottom - box.bottom)) : 0,
         },
+        card: {
+          reading: card.querySelector('.reading')?.textContent ?? '',
+          hasObjectLine: Boolean(card.querySelector('.object')),
+          linkCount: links.length,
+          links: links.map((a) => [a.target, a.rel, a.title || a.textContent || ''].join('|')),
+          markCount: links.filter((a) => a.querySelector('svg path')).length,
+          announced: status ? status.textContent : '',
+          // Filled in by the swap below; the shape has to exist here so one
+          // evaluate can build the whole record.
+          closeSurvivedSwap: Boolean(dismiss) && !document.getElementById('book-card-body').contains(dismiss),
+          announcedAfterSwap: '',
+        },
       };
     })()`)) as CardOpened | undefined;
 
     if (opened === undefined || opened.title.length === 0) continue;
-    if (opened.hasImage) return opened;
-    fallback ??= opened;
+    const withSwap = { ...opened, card: { ...opened.card, ...(await swapToAnother(page, index)) } };
+    if (withSwap.hasImage) return withSwap;
+    fallback ??= withSwap;
   }
   return fallback;
+}
+
+/**
+ * Taps a *different* book and reports what survived.
+ *
+ * Two of §11's assertions only exist across a swap, which is the primary mobile
+ * browse gesture and the one nothing else exercises: the announcement must
+ * change, and the close control must still be the same element — it lives
+ * outside the subtree `showCard` replaces precisely so that focus is not dropped
+ * to `<body>` mid-browse.
+ */
+async function swapToAnother(
+  page: Page,
+  openedIndex: number,
+): Promise<Pick<CardContents, 'closeSurvivedSwap' | 'announcedAfterSwap'>> {
+  await page.evaluate(`window.__smokeCloseControl = document.getElementById('book-card-dismiss')`);
+
+  for (let index = 0; index < 60; index += 1) {
+    if (index === openedIndex) continue;
+    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
+      | { x: number; y: number }
+      | undefined;
+    if (point === undefined) continue;
+
+    await page.mouse.click(Math.round(point.x), Math.round(point.y));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    const result = (await page.evaluate(`(() => {
+      const card = document.getElementById('book-card');
+      if (!card || card.hidden) return undefined;
+      const dismiss = document.getElementById('book-card-dismiss');
+      return {
+        closeSurvivedSwap: dismiss !== null && dismiss === window.__smokeCloseControl,
+        announcedAfterSwap: document.getElementById('book-card-status')?.textContent ?? '',
+      };
+    })()`)) as Pick<CardContents, 'closeSurvivedSwap' | 'announcedAfterSwap'> | undefined;
+
+    if (result !== undefined) return result;
+  }
+
+  // No second book was reachable from this angle. Reported as unswapped rather
+  // than as a pass: the assertions above have not run.
+  return { closeSurvivedSwap: false, announcedAfterSwap: '' };
+}
+
+/**
+ * The same card at 375×812, which is the presentation the interaction model was
+ * designed for.
+ *
+ * Runs after the desktop pass so the screenshot and every renderer counter above
+ * still describe the shelf at its documented size. The card is opened by calling
+ * the page's own handler rather than by aiming at a book: the shelf re-lays out
+ * at this width and a raycast that misses would report a missing sheet as a
+ * failure of the sheet.
+ */
+async function checkSheet(page: Page): Promise<SheetChecked | undefined> {
+  await page.setViewport({ width: 375, height: 812 });
+  await new Promise((resolve) => setTimeout(resolve, 400));
+
+  const opened = await clickAnyBook(page);
+  if (!opened) return undefined;
+
+  return (await page.evaluate(`(() => {
+    const card = document.getElementById('book-card');
+    const grab = document.querySelector('.card-grabber');
+    const box = card.getBoundingClientRect();
+    const threshold = Math.min(box.height * 0.3, 80);
+
+    /**
+     * A drag shorter than the threshold must snap back.
+     *
+     * This is the assertion that would have caught the sheet dismissing on every
+     * short drag: \`pointerup\` correctly declined, then reset the distance, and
+     * the synthesised \`click\` read that as a tap and dismissed anyway. A tap
+     * was unaffected, so nothing else noticed.
+     */
+    const control = document.getElementById('book-card-dismiss');
+    const at = (type, y) => control.dispatchEvent(new PointerEvent(type, {
+      clientY: y, bubbles: true, pointerId: 7, isPrimary: true, button: 0,
+    }));
+    const short = Math.max(2, Math.round(threshold / 3));
+    at('pointerdown', 100);
+    at('pointermove', 100 + short);
+    at('pointerup', 100 + short);
+    control.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    return {
+      fullBleed: Math.round(box.left) === 0 && Math.round(box.width) === innerWidth,
+      withinCap: box.height <= innerHeight * 0.4 + 1,
+      grabberVisible: Boolean(grab) && getComputedStyle(grab).display !== 'none',
+      survivedShortDrag: !card.hidden,
+    };
+  })()`)) as SheetChecked;
+}
+
+/** Opens whichever book this viewport can actually hit. */
+async function clickAnyBook(page: Page): Promise<boolean> {
+  for (let index = 0; index < 60; index += 1) {
+    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
+      | { x: number; y: number }
+      | undefined;
+    if (point === undefined) continue;
+
+    await page.mouse.click(Math.round(point.x), Math.round(point.y));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    const open = await page.evaluate(`!document.getElementById('book-card').hidden`);
+    if (open === true) return true;
+  }
+  return false;
+}
+
+/**
+ * G35 — the enhanced card, against `docs/spec/enhanced-card.md` §11.
+ *
+ * Six of the eight acceptance assertions live here because they need a real
+ * browser: the other two (`published` rendering, the collapse rules) are pure
+ * functions and are asserted in `packages/site/src/shelf/card.test.ts`, where
+ * they cost nothing.
+ *
+ * See docs/gates.md, row G35 (enhanced-card).
+ */
+function cardFailures(card: CardContents): string[] {
+  const failures: string[] = [];
+
+  // §11.1 and §11.2. Every book renders this line, and `read` is no longer
+  // suppressed as the default — 19 of 41 real books are read with no dates and
+  // no rating, and would otherwise render an empty group.
+  if (card.reading.length === 0) {
+    failures.push('the card renders no reading line — it must render on every book');
+  }
+
+  // §11.3 and the fallback in §11.4: the row never vanishes, because every book
+  // has a title and therefore at least a search link.
+  if (card.linkCount === 0) {
+    failures.push('the card renders no provider links at all — the row always renders');
+  }
+
+  // §11.5. Named, and safe to open.
+  for (const link of card.links) {
+    const [target, rel, name] = link.split('|');
+    if (target !== '_blank' || rel !== 'noopener noreferrer') {
+      failures.push(`a card link opens unsafely: target="${target ?? ''}" rel="${rel ?? ''}"`);
+    }
+    if ((name ?? '').length === 0) {
+      failures.push('a card link has no accessible name — an icon-only link with none is unusable');
+    }
+  }
+
+  // The row's normal state. A book with identifiers renders marks, and a mark
+  // that fails to draw leaves an icon-only link with nothing in it.
+  if (card.linkCount > 1 && card.markCount === 0) {
+    failures.push(
+      `${String(card.linkCount)} provider links and not one drew a mark — the artwork is ` +
+        'missing or failed to parse, which leaves an icon-only link with no icon',
+    );
+  }
+
+  // §11.6. The announcer is the *only* way a touch screen-reader user learns
+  // which book they hit, since the canvas has no accessible children.
+  if (card.announced.length === 0) {
+    failures.push('the live region announced nothing when the card opened');
+  }
+  if (card.announcedAfterSwap.length === 0) {
+    failures.push('tapping another book announced nothing — a swap must re-announce');
+  } else if (card.announcedAfterSwap === card.announced) {
+    failures.push(`the announcement did not change on swap (still "${card.announced}")`);
+  }
+
+  // §11.7 — "the one nothing else would notice".
+  if (!card.closeSurvivedSwap) {
+    failures.push(
+      'the close control did not survive a tap-to-swap. It must sit outside the subtree ' +
+        '`showCard` replaces, or focus drops to <body> mid-browse on the primary mobile gesture',
+    );
+  }
+
+  return failures;
 }
 
 function report(result: {
@@ -257,8 +582,10 @@ function report(result: {
   cost: ShelfCost;
   errors: string[];
   cardOpened: CardOpened | undefined;
+  viewer: CoverViewerChecked | undefined;
+  sheet: SheetChecked | undefined;
 }): void {
-  const { bookCount, caseOverflow, stats, cost, errors, cardOpened } = result;
+  const { bookCount, caseOverflow, stats, cost, errors, cardOpened, viewer, sheet } = result;
   const failures: string[] = [];
 
   const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
@@ -271,11 +598,85 @@ function report(result: {
   console.log(`textures          ${cost.textures}   geometries ${cost.geometries}   programs ${cost.programs}`);
   console.log(`draws             ${cost.calls} (${per(cost.calls)}/book)   tris ${cost.triangles}`);
   console.log(`click opens card  ${cardOpened?.title ?? 'NO'}`);
+  if (cardOpened !== undefined) {
+    const c = cardOpened.card;
+    console.log(`card reading line ${c.reading || 'NONE'}`);
+    console.log(
+      `card links        ${String(c.linkCount)} (${String(c.markCount)} marks)   object line ${
+        c.hasObjectLine ? 'yes' : 'no'
+      }`,
+    );
+    console.log(`card announced    ${c.announced || 'NOTHING'}`);
+    console.log(`card after swap   ${c.announcedAfterSwap || 'NOTHING'}`);
+  }
+  console.log(
+    `cover viewer      ${
+      viewer === undefined
+        ? 'NOT CHECKED'
+        : `${viewer.opened ? 'opens' : 'DOES NOT OPEN'}   ${viewer.enlargedBy.toFixed(
+            1,
+          )}x thumbnail   escape ${viewer.escapeClosedViewer ? 'closes it' : 'DOES NOT CLOSE IT'}${
+            viewer.cardSurvivedEscape ? '' : '   AND TOOK THE CARD'
+          }`
+    }`,
+  );
+  console.log(
+    `sheet at 375x812  ${
+      sheet === undefined
+        ? 'NOT CHECKED'
+        : `full-bleed ${sheet.fullBleed ? 'yes' : 'NO'}   within cap ${
+            sheet.withinCap ? 'yes' : 'NO'
+          }   grabber ${sheet.grabberVisible ? 'yes' : 'NO'}   short drag ${
+            sheet.survivedShortDrag ? 'snaps back' : 'DISMISSES'
+          }`
+    }`,
+  );
   console.log(`screenshot        ${OUTPUT}`);
+
+  if (viewer === undefined) {
+    failures.push('no card with a cover could be opened, so the enlarged view was never checked');
+  } else {
+    if (!viewer.opened) {
+      failures.push('clicking the card cover did not open the enlarged view');
+    }
+    // The card renders the cover at 4.5rem. Anything under 2x is not the
+    // "see it closer" this exists for — and it is what a viewer that opened
+    // but failed to load or size its image would measure.
+    if (viewer.enlargedBy < 2) {
+      failures.push(
+        `the enlarged cover is only ${viewer.enlargedBy.toFixed(1)}x the thumbnail — it must ` +
+          'actually be bigger than the picture it was opened from',
+      );
+    }
+    if (!viewer.escapeClosedViewer) {
+      failures.push('Escape did not close the enlarged cover');
+    }
+    if (!viewer.cardSurvivedEscape) {
+      failures.push(
+        'Escape closed the enlarged cover *and* the card underneath it. Both listen on the ' +
+          'document, so leaving one surface must not return the user two levels',
+      );
+    }
+  }
+
+  if (sheet === undefined) {
+    failures.push('no book could be opened at 375x812, so the sheet was never checked');
+  } else {
+    if (!sheet.fullBleed) failures.push('the sheet is not full-bleed at 375x812');
+    if (!sheet.withinCap) failures.push('the sheet exceeds its 40vh cap at 375x812');
+    if (!sheet.grabberVisible) failures.push('the grabber pill is not shown below the breakpoint');
+    if (!sheet.survivedShortDrag) {
+      failures.push(
+        'a drag shorter than the dismiss threshold closed the sheet. Below the threshold it ' +
+          'must snap back — otherwise every hesitant touch of the pill dismisses the card',
+      );
+    }
+  }
 
   if (cardOpened === undefined) {
     failures.push('clicking a book did not open the detail card');
   } else {
+    failures.push(...cardFailures(cardOpened.card));
     // "The card opened" is not the same as "the card is usable". A cover
     // rendering at its natural size opened a perfectly valid card that spilled
     // across the whole viewport, and this gate happily passed it.

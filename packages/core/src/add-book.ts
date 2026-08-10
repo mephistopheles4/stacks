@@ -6,7 +6,9 @@ import {
   normaliseIsbn,
   normaliseTitleAuthor,
 } from './identity.ts';
+import { ABOUT_HEADING } from './enrich.ts';
 import { coverUrls, lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
+import { formatSubjects } from './subjects.ts';
 import type { BookInput, BookRecord, BookStatus } from './types.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
 import { keyIfPresent } from './key-if-present.ts';
@@ -135,9 +137,35 @@ export async function addBook(
     ...keyIfPresent('isbn', metadata.isbn === undefined ? undefined : normaliseIsbn(metadata.isbn)),
     ...keyIfPresent('pages', metadata.pages),
     ...coverKeys(cover),
+    // The merge revision's fields, written at creation. `BookInput` and
+    // `FILLABLE` grow together or the merge is inert: both are closed lists, so
+    // a field the merge starts carrying and neither of these knows about is
+    // written into no note at all.
+    ...keyIfPresent('publisher', metadata.publisher),
+    ...keyIfPresent('published', metadata.published),
+    ...keyIfPresent(
+      'subjects',
+      metadata.subjects === undefined ? undefined : formatSubjects(metadata.subjects),
+    ),
+    ...keyIfPresent('googleVolumeId', metadata.volumeId),
+    ...keyIfPresent('appleTrackId', metadata.appleTrackId),
+    ...keyIfPresent('openLibraryOlid', metadata.openLibraryOlid),
+    ...keyIfPresent('oreillyOurn', metadata.oreillyOurn),
   };
 
-  return { kind: 'added', path: await vault.writeBook(book), metadata };
+  const path = await vault.writeBook(book);
+
+  // The description goes into the body, never into a property — so it cannot
+  // reach `library.json` by any path, which is what makes "never published"
+  // structural rather than a discipline. Written after the note exists, by the
+  // same heading-absent rule `enrich` uses, so the two paths cannot disagree.
+  // `writeBook` hands back an absolute path; `insertBodySection` takes either
+  // that or the vault-relative one `BookRecord.sourcePath` carries.
+  if (metadata.description !== undefined) {
+    await vault.insertBodySection(path, ABOUT_HEADING, metadata.description);
+  }
+
+  return { kind: 'added', path, metadata };
 }
 
 /**

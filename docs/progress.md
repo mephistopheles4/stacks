@@ -20,15 +20,16 @@ phone was rendering when it died — are measurements and stay exactly as they a
 
 | | |
 | --- | --- |
-| **Last green gate** | G29 — a document's links ↔ the file tree |
-| **Now working on** | nothing in flight. The last map, [#78](https://github.com/mephistopheles4/stacks/issues/78) — the shelf leaving usable space empty at the end of a row — is closed and built in `b5cbddc`; [#50](https://github.com/mephistopheles4/stacks/issues/50) before it likewise, all fifteen tickets. `gh issue list` is the only current answer to what is open |
-| **Queued** | whatever the closed maps left in fog — ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s *Not yet specified*; [#78](https://github.com/mephistopheles4/stacks/issues/78)'s is empty by construction. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run against the real vault |
+| **Last green gate** | G35 — the card a browser builds, not the model behind it |
+| **Now working on** | [#88](https://github.com/mephistopheles4/stacks/issues/88) — the enhanced card and the provider provenance behind it — is closed and **built**, on `claude/mattpocock-skills-wayfinder-ce3871`, awaiting review. Its spec is [`docs/spec/`](./spec/), kept as written. [#78](https://github.com/mephistopheles4/stacks/issues/78) and [#50](https://github.com/mephistopheles4/stacks/issues/50) before it are closed and built. `gh issue list` is the only current answer to what is open |
+| **Queued** | whatever the closed maps left in fog — ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s and [#88](https://github.com/mephistopheles4/stacks/issues/88)'s *Not yet specified*; [#78](https://github.com/mephistopheles4/stacks/issues/78)'s is empty by construction. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates` + CodeQL, no bypass |
 | **Blocked on** | nothing |
 | **Mobile crash** | closed. Two separate bugs: 314 MB of texture (G15), then a driver that cannot sample a shadow map. The shelf paints its shadows now |
 | **Deployed** | https://stacks.aymandiab.com — Cloudflare Pages, `pnpm deploy:site` |
 | **Running against** | the owner's real vault, not fixtures — `pnpm stacks status` for the count |
+| **Enriched** | `stacks enrich` has run twice over the real vault (2026-08-10). 41 books: 40 filled, 1 refused as a mismatch, 1 no provider knows. Ids landed on 37 Google / 26 Open Library / 24 Apple / 2 O'Reilly, and 37 notes gained an `## About`. ⚠️ **The first pass wrote the wrong values and the vault was restored from a backup and re-run** — see [`docs/spec/README.md`](./spec/README.md); `mergeFields` was enforcing absent-only one layer too low, which disabled every per-field exception. A pre-pass copy is at `../Obsidian/stacks-backup-pre-enrich` |
 
 ## Gate log
 
@@ -169,6 +170,7 @@ episodes were written up out of sequence; they are listed by date here, so
 - 2026-08-08 — [The collisions, and the gate that can finally see them](./log/2026-08-08-the-collisions-and-the-gate-that-can-finally-see-them.md)
 - 2026-08-09 — [The packer was estimating, and the estimate cost a book a row](./log/2026-08-09-the-packer-was-estimating-and-the-estimate-cost-a-book.md) — map [#78](https://github.com/mephistopheles4/stacks/issues/78), now closed
 - 2026-08-09 — [CodeQL became a second required gate, and one of its twelve was real](./log/2026-08-09-codeql-became-a-second-required-gate.md)
+- 2026-08-10 — [The artifacts were ours, and the cover finally has somewhere to be looked at](./log/2026-08-10-the-artifacts-were-ours.md) — the staging re-encode was subsampling chroma on 33 of 43 covers; plus the enlarged-cover dialog, and why O'Reilly still has no link
 
 ## Notes to the next session
 

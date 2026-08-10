@@ -133,15 +133,35 @@ describe('enrichBook', () => {
     expect((await enrichBook(book!, vault, knowsTheBook)).kind).toBe('mismatch');
   });
 
+  /**
+   * Every fillable key, so there is genuinely nothing to do.
+   *
+   * ⚠️ **This got much longer, and that is the point of it.** `FILLABLE` grew
+   * from four keys to eleven, so "a book with no gaps" now means a book that
+   * already carries a publisher, a publication date, subjects and all four
+   * contributor ids. In the real vault no such note exists, which is why
+   * `enrich` is now permanently a whole-vault network pass and `complete` went
+   * from rare to nearly unreachable. It is kept anyway: dropping an unreachable
+   * case is how the defect G27 exists for was written in the first place.
+   */
+  const NO_GAPS = {
+    title: 'Thinking in Systems',
+    author: 'Donella H. Meadows',
+    isbn: '9781603580557',
+    pages: 240,
+    cover: 'covers/x.jpg',
+    spineColor: '#2f6d7a',
+    publisher: 'Chelsea Green',
+    published: '2008',
+    subjects: 'systems thinking',
+    googleVolumeId: 'CpbLAgAAQBAJ',
+    appleTrackId: '1384286945',
+    openLibraryOlid: 'OL26445570M',
+    oreillyOurn: 'urn:orm:book:0642572352530',
+  } as const;
+
   it('reports complete and writes nothing when there are no gaps', async () => {
-    await vault.writeBook({
-      title: 'Thinking in Systems',
-      author: 'Donella H. Meadows',
-      isbn: '9781603580557',
-      pages: 240,
-      cover: 'covers/x.jpg',
-      spineColor: '#2f6d7a',
-    });
+    await vault.writeBook(NO_GAPS);
     const [book] = await vault.listBooks();
     const before = await readFile(join(dir, book!.sourcePath), 'utf8');
 
@@ -154,13 +174,8 @@ describe('enrichBook', () => {
     // provider answers, and the answer carries nothing the note lacks. Calling
     // that "complete" is what let a book vanish from the report entirely — see
     // gates/enrich-report.test.ts.
-    await vault.writeBook({
-      title: 'Thinking in Systems',
-      isbn: '9781603580557',
-      pages: 240,
-      cover: 'covers/x.jpg',
-      spineColor: '#2f6d7a',
-    });
+    const { author: _dropped, ...withoutAuthor } = NO_GAPS;
+    await vault.writeBook(withoutAuthor);
     const [book] = await vault.listBooks();
     expect(missingFields(book!), 'only the author is missing').toEqual(['author']);
 

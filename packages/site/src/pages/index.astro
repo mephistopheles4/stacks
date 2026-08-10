@@ -1,4 +1,5 @@
 ---
+import Attribution from '../components/Attribution.astro';
 import Shelf from '../components/Shelf.astro';
 import { absoluteUrl } from '../site-meta.ts';
 
@@ -72,6 +73,14 @@ const pageUrl = absoluteUrl('/', Astro.site);
       </div>
       <p>Drag to look around · click a book</p>
     </header>
+    <!--
+      Persistent rather than card-conditional, and the repo decided that rather
+      than taste: `pages` drives spine thickness, so the shelf renders
+      Google-derived geometry continuously with no card open. A graphic that
+      appeared only when the card opened would be absent for the whole time the
+      obligation is live.
+    -->
+    <Attribution />
   </body>
 </html>
 

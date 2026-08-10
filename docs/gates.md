@@ -103,6 +103,24 @@ means the two have drifted.
 | **G9** | `env-contract` | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | `gates/env-contract.test.ts` | ✅ |
 | **G19** | `constitution-scoreboard` | the constitution ↔ this scoreboard | an invariant nothing scores, a row naming a moved file, a gate nobody recorded | `gates/constitution-scoreboard.test.ts` | ✅ |
 | **G29** | `doc-links` | a document's links ↔ the file tree | a moved or renamed file leaves every route to it a dead end, and nothing says so | `gates/doc-links.test.ts` | ✅ |
+| **G30** | `library-seam` | `BookRecord` ↔ `library.json`, both ways | a field the vault holds and no `keyIfPresent` line ships: the note has it, the shelf never sees it, every other test passes | `gates/library-seam.test.ts` | ✅ |
+| **G31** | `merge-precedence` | the precedence table ↔ the merge | a provider order the code implements and no document names, or the reverse — and the `; ` subjects separator, which two packages hold | `gates/merge-precedence.test.ts` | ✅ |
+| **G32** | `absent-only` | a key a note already carries is never rewritten | a merge change quietly replacing values on books that were correct — the characteristic failure of this effort, and structurally prevented rather than detected | `gates/absent-only.test.ts` | ✅ |
+| **G33** | `enrich-idempotence` | running `enrich` twice changes nothing the second time | the only gate that reaches the `## About` body insert, since a body section is not a `FILLABLE` key and the absent-only gate cannot see it | `gates/enrich-idempotence.test.ts` | ✅ |
+| **G34** | `enrich-convergence` | a book a provider failed on is filled by the next run | the pacing answer for iTunes' ~20/min is "run it twice", and it rests entirely on an `http.ts` property nothing checked: a success is cached forever, a failure is never cached at all | `gates/enrich-convergence.test.ts` | ✅ |
+| **G35** | `enhanced-card` | the card a browser builds, at both viewports | *"the card opened"* was the whole assertion, and it stays true through a card with no reading line, links with no accessible name, an announcer that never changes, a sheet that dismisses on every short drag, and one Escape that closes the enlarged cover **and** the card under it | `scripts/smoke-render.ts` — `cardFailures`, `checkCoverViewer` and `checkSheet`, against `docs/spec/enhanced-card.md` §11 | ✅ |
+
+**G13 now allows one file this project did not make**: Google's *powered by
+Google* graphic, which the API terms require displayed and forbid altering — so
+unlike the card's three provider marks, which are redrawn
+([ADR-0050](adr/0050-provider-marks-are-redrawn-monotone.md)), it cannot be
+redrawn or replaced with text. It is named as a **file**, for the reason the
+paragraph below gives about directories.
+
+⚠️ It also caught something worth recording about how this row is *run*: a local
+`pnpm test` before `git add` passes over an untracked binary, because G13 reads
+what git tracks. The commit that added the PNG claimed a green suite truthfully
+and CI went red on the same code seconds later. Stage, then run.
 
 **G13 grew a second allowlisted directory when the README got a screenshot**,
 and that is the most dangerous kind of entry in this file: a *directory* is a

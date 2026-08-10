@@ -5,18 +5,70 @@
 ---
 
 <div class="shelf">
-  <canvas id="shelf-canvas"></canvas>
-  <aside id="book-card" class="card" hidden></aside>
+  <!--
+    `tabindex="-1"` makes the canvas *programmatically* focusable without ever
+    becoming a tab stop, so nobody who never opens a card gains one. It is where
+    focus lands on dismissal, and only when focus was inside the card.
+  -->
+  <canvas id="shelf-canvas" tabindex="-1"></canvas>
+
+  <!--
+    A named `<aside>`, so it maps to a `complementary` landmark — the only
+    deliberate way to reach the card while the shelf has no keyboard path. The
+    name is static because the book's identity rides in the status line below,
+    not in a landmark name that changes under you.
+
+    Deliberately **not** `role="dialog"`: several screen readers announce a
+    dialog only when focus enters it, and focus never moves here, so the role
+    would claim a modality this surface does not have and then say nothing.
+  -->
+  <aside id="book-card" class="card" aria-label="Book details" hidden>
+    <!--
+      Outside the replaced subtree, and that is structural rather than tidiness:
+      `showCard` replaces `#book-card-body`, so a control inside it would be
+      destroyed and recreated on every tap-to-swap — dropping focus to <body>
+      mid-browse on the primary mobile gesture.
+    -->
+    <button id="book-card-dismiss" class="card-dismiss" type="button">
+      <span class="card-grabber" aria-hidden="true"></span>
+      <span class="visually-hidden">Close book details</span>
+    </button>
+    <div id="book-card-body"></div>
+  </aside>
+
+  <!--
+    The announcer: permanently present, visually hidden, and a **sibling** of the
+    card rather than a child. A `hidden` element is out of the accessibility
+    tree, so a live region inside the card could not announce the card opening at
+    all.
+  -->
+  <p id="book-card-status" class="visually-hidden" role="status"></p>
+
+  <!--
+    The cover, larger. A real `<dialog>` opened with `showModal`, which is what
+    makes it different from the card beside it: focus moves in, the page goes
+    inert, Escape closes it, and focus returns to the cover button. The card
+    claims none of that and is deliberately not a dialog.
+
+    In the template rather than built at runtime, so Astro's scoping reaches it
+    and the styles below need no `:global()` — and so the element outlives every
+    card swap.
+  -->
+  <dialog id="cover-viewer" class="cover-viewer" aria-label="Book cover"><!--
+    Replaced with the book's own name when it opens; this is what it says if
+    something goes wrong before that.
+  -->
+    <img id="cover-viewer-image" alt="" />
+    <button id="cover-viewer-close" class="cover-viewer-close" type="button">
+      <span class="visually-hidden">Close the cover</span>
+    </button>
+  </dialog>
 </div>
 
 <script>
-  import { boot } from '../shelf/boot.ts';
+  import { start } from '../shelf/start.ts';
 
-  const canvas = document.getElementById('shelf-canvas');
-  const card = document.getElementById('book-card');
-  if (canvas instanceof HTMLCanvasElement && card instanceof HTMLElement) {
-    void boot(canvas, card);
-  }
+  start();
 </script>
 
 <style>
@@ -103,11 +155,44 @@
 
   .card :global(h2) {
     margin: 0;
+    /*
+      Room for the `×`, which is absolutely positioned and therefore invisible
+      to the flow the title wraps in. The control spans 0.5rem–2.5rem from the
+      border edge against a 1.25rem card padding, so it reaches 1.25rem into the
+      content box and a three-line title ran straight under it. Reserved on the
+      `h2` alone: the author line sits below the control's 2rem box and the
+      cover is to the left of it, so widening either would be dead space.
+
+      Reset below the breakpoint, where the `×` becomes a full-width grabber
+      pill above the content and nothing overlaps anything.
+    */
+    padding-right: 1.5rem;
     font-size: 1.05rem;
     font-weight: 600;
     line-height: 1.3;
     letter-spacing: -0.01em;
     overflow-wrap: anywhere;
+  }
+
+  /*
+    The cover is a button now — it opens the enlarged view — so this is the
+    button undone back to being a picture. `:global` for the usual reason: it is
+    built by card.ts and carries none of Astro's scoping attributes.
+  */
+  .card :global(.card-cover) {
+    display: block;
+    flex: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    /* Says what the click does before it is clicked. */
+    cursor: zoom-in;
+  }
+
+  .card :global(.card-cover:focus-visible) {
+    outline: 2px solid #f2e8dc;
+    outline-offset: 3px;
+    border-radius: 0.2rem;
   }
 
   .card :global(.author) {
@@ -116,15 +201,308 @@
     color: #c9b8a4;
   }
 
-  .card :global(.meta) {
-    margin: 0.6rem 0 0;
+  /*
+    Variant C, the editorial card: the cover leads *horizontally* in a header
+    row, and everything else is full width below it. Chosen by measurement —
+    filled, it is 270px against a 325px portrait cap, where a large cover leading
+    vertically wanted 509px and overflowed by 146px even in today's sparse state.
+  */
+  .card :global(.card-header) {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+  }
+
+  .card :global(.card-titles) {
+    min-width: 0;
+  }
+
+  .card :global(.reading) {
+    margin: 0.5rem 0 0;
     font-size: 0.8rem;
     color: #a89684;
   }
 
   .card :global(.tags) {
     margin: 0.35rem 0 0;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: #857361;
+  }
+
+  .card :global(.object) {
+    margin: 0.6rem 0 0;
+    font-size: 0.72rem;
+    color: #857361;
+  }
+
+  .card :global(.subjects) {
+    margin: 0.25rem 0 0;
+    font-size: 0.72rem;
+    color: #6f6051;
+  }
+
+  .card :global(.card-links) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.85rem;
+    margin-top: 0.7rem;
+    font-size: 0.75rem;
+  }
+
+  .card :global(.card-link) {
+    display: inline-flex;
+    align-items: center;
+    /* WCAG 2.5.5: the row is the card's only tappable content. */
+    min-height: 2.75rem;
+    color: #c9b8a4;
+    text-decoration: none;
+  }
+
+  .card :global(.card-link:hover),
+  .card :global(.card-link:focus-visible) {
+    color: #f2e8dc;
+  }
+
+  .card :global(.card-mark) {
+    width: 1.35rem;
+    height: 1.35rem;
+    fill: currentColor;
+  }
+
+  /*
+    The one control, in its desktop skin: an `×` in a 2rem hit area at top right.
+    The grabber pill deliberately does not cross over — a grabber means "drag me
+    toward the edge I am anchored to", and a floating corner card has no such
+    edge.
+  */
+  .card-dismiss {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: #a89684;
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  .card-dismiss::before {
+    content: '\00d7';
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  .card-dismiss:hover,
+  .card-dismiss:focus-visible {
+    color: #f2e8dc;
+  }
+
+  .card-grabber {
+    display: none;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /*
+    The enlarged cover. The dialog is a frame around one image and nothing else,
+    so it carries no chrome of its own — the UA's border, padding and background
+    all go, and what is left is the picture on a scrim.
+
+    `max-width`/`max-height` only, with no width: an `<img>` left to its natural
+    size renders at exactly that and shrinks only when it would not fit. Which
+    is the honest ceiling here — the staged file is capped at MAX_COVER_EDGE,
+    and scaling it past native would make the "see it closer" answer blurrier
+    than the thumbnail it came from.
+  */
+  /*
+    Position, `inset: 0`, `margin: auto` and `width: fit-content` are the UA's
+    own rules for `dialog:modal`, and they already centre a shrink-wrapped box.
+    They are deliberately not restated: overriding `position` or `margin` here
+    is what breaks that centring, because `inset: 0` with an author `width` no
+    longer resolves to fit-content. Only the chrome is removed.
+  */
+  .cover-viewer {
+    max-width: 100%;
+    max-height: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    /* The close control hangs off the corner; the UA's `auto` would clip it. */
+    overflow: visible;
+    cursor: zoom-out;
+  }
+
+  .cover-viewer::backdrop {
+    background: rgba(10, 8, 7, 0.82);
+    backdrop-filter: blur(6px);
+  }
+
+  .cover-viewer img {
+    display: block;
+    max-width: 92vw;
+    max-height: 88vh;
+    border-radius: 0.35rem;
+    box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.7);
+  }
+
+  /*
+    Redundant with "click anywhere", and deliberately so: a surface you can only
+    leave by knowing a convention is a surface some people are stuck on.
+
+    **Top-right of the viewport, not of the image**, and that is what `fixed`
+    rather than `absolute` buys. The dialog shrink-wraps its image, so anchoring
+    to it put the control on the artwork's corner the moment the image filled the
+    screen — which is every phone, where the cover is 339px of a 375px viewport.
+    A fixed descendant of a top-layer dialog resolves against the viewport, and
+    can here because nothing above it carries a transform or a filter; the
+    `backdrop-filter` lives on `::backdrop`, which is a sibling pseudo-element
+    and not an ancestor.
+
+    The plate stays, quieter. It is over the scrim in the common case and does
+    not need to work hard — but on a short landscape viewport a 92vw image can
+    still reach the corner, and a light glyph alone on a pale cover would vanish.
+  */
+  .cover-viewer-close {
+    position: fixed;
+    top: clamp(0.75rem, 3vw, 1.5rem);
+    right: clamp(0.75rem, 3vw, 1.5rem);
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(26, 22, 19, 0.6);
+    color: #f2e8dc;
+    cursor: pointer;
+  }
+
+  .cover-viewer-close::before {
+    content: '\00d7';
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  /*
+    Below the breakpoint the card is a bottom sheet.
+
+    ⚠️ **This query is a fact two languages hold.** Its one expression is
+    `SHEET_QUERY` in ../shelf/card-sheet.ts, which the drag reads so it can be
+    inert above the breakpoint, and `card-sheet.test.ts` asserts that these two
+    spellings match. Change one and change the other. Do not add a third holder.
+  */
+  @media (max-width: 700px), (max-height: 500px) {
+    .card {
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: auto;
+      /*
+        Content-driven, capped, and scrolling past it — not a fixed 40vh, so a
+        book with no rating and no tags does not produce a sheet of empty space.
+        There is deliberately no second state to overflow into: a peek state is a
+        way to avoid deciding what the card should carry.
+      */
+      max-height: 40vh;
+      padding: 1.4rem 1.1rem 1rem;
+      border: 0;
+      border-top: 1px solid rgba(242, 232, 220, 0.14);
+      border-radius: 0.9rem 0.9rem 0 0;
+      /*
+        Stated explicitly, and it is not decoration: with no `transform` on this
+        side, removing `[hidden]` returns the property to `none` — and a
+        transition from a matrix to `none` does not interpolate. The sheet stayed
+        translated 100% down while `hidden` was false, which measured as a card
+        that opened off the bottom of the screen and looked like it never opened
+        at all.
+      */
+      transform: translateY(0);
+      visibility: visible;
+      transition: transform 220ms ease;
+    }
+
+    .card[hidden] {
+      /*
+        `display: block` is what makes the slide *out* possible — a `display:
+        none` element cannot animate — and it is also what would put a closed
+        card back into the accessibility tree, since `[hidden]` hides by
+        `display` alone. `visibility: hidden` is the half that keeps it out of
+        the tree and out of the tab order, delayed until the slide finishes so
+        the animation is not cut off at frame one.
+      */
+      display: block;
+      transform: translateY(100%);
+      visibility: hidden;
+      transition:
+        transform 180ms ease,
+        visibility 0s 180ms;
+      pointer-events: none;
+    }
+
+    /* Following the finger is not an animation; it must not be eased. */
+    .card.dragging {
+      transition: none;
+    }
+
+    /* The control is a full-width pill above the content here, so there is
+       nothing beside the title to reserve room for. */
+    .card :global(h2) {
+      padding-right: 0;
+    }
+
+    .card-dismiss {
+      position: static;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 1.6rem;
+      margin: -0.6rem 0 0.2rem;
+      border-radius: 0;
+    }
+
+    .card-dismiss::before {
+      content: none;
+    }
+
+    .card-grabber {
+      display: block;
+      width: 2.25rem;
+      height: 0.25rem;
+      border-radius: 0.125rem;
+      background: rgba(242, 232, 220, 0.32);
+    }
+  }
+
+  /*
+    The sheet moves only under the finger.
+
+    Slide-in, slide-out and snap-back are all transitions on `transform`, so one
+    scoped `transition: none` removes exactly the three unattended motions — and
+    it *cannot* touch follow-the-finger, because that is JS writing `transform`
+    directly and was never a transition. Scoped to the sheet rather than global:
+    a blanket rule would be a repo-wide motion policy nobody has decided.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .card,
+    .card[hidden] {
+      transition: none;
+    }
   }
 </style>

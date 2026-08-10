@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { COVER_SOURCES, coverSourceFor } from '../covers/cover-source.ts';
-import { CAPTURED_ISBN, fixtureHttpGet, readApiFixture } from '../test-support.ts';
+// `isHost` was written out here first and is now shared: six files had grown
+// their own copy, which is the shape a helper is supposed to prevent.
+import { CAPTURED_ISBN, fixtureHttpGet, isHost, readApiFixture } from '../test-support.ts';
 import type { HttpGet } from './http.ts';
 import { lookup, lookupByIsbn, searchByTitle } from './index.ts';
 
@@ -11,25 +13,9 @@ import { lookup, lookupByIsbn, searchByTitle } from './index.ts';
  * rather than quietly passing down the not-found path.
  */
 
-/**
- * Exact host match, rather than a substring test on the whole URL.
- *
- * A substring test answers "does this string contain those characters", which
- * is not the question any assertion here is asking — `evil.com/?x=googleapis.com`
- * satisfies it, and so does a URL pointing at `googleapis.com.example.net`.
- * Flagged nine times by CodeQL's `js/incomplete-url-substring-sanitization`.
- *
- * Nothing malicious is going to turn up in a fixture map, so this is not a
- * security fix; it is an assertion that says what it means. A test claiming
- * "Google was consulted" should fail if the request went somewhere else whose
- * URL merely mentions Google, because that is the bug it exists to catch.
- */
-function isHost(url: string, host: string): boolean {
-  return new URL(url).hostname === host;
-}
-
 const GOOGLE_BOOKS = 'www.googleapis.com';
 const OREILLY = 'learning.oreilly.com';
+const APPLE = 'itunes.apple.com';
 
 const openLibraryHit = fixtureHttpGet({
   '/api/books': 'open-library-isbn-hit.json',
@@ -80,8 +66,14 @@ describe('fuzzy title search', () => {
 
   it('routes a non-ISBN term to search rather than ISBN lookup', async () => {
     // If `lookup` tried the ISBN endpoint here it would throw: no fixture is
-    // mapped for /api/books in this reader.
-    const searchOnly = fixtureHttpGet({ '/search.json': 'open-library-search-hit.json' });
+    // mapped for /api/books in this reader. Google and Apple *are* mapped —
+    // both are asked about every book now — so an unmapped `/api/books` still
+    // isolates the one route this test is about.
+    const searchOnly = fixtureHttpGet({
+      '/search.json': 'open-library-search-hit.json',
+      'googleapis.com': 'google-books-quota-exceeded.json',
+      'itunes.apple.com': 'apple-search-near-miss.json',
+    });
     const results = await lookup('thinking in systems', searchOnly);
     expect(results.length).toBeGreaterThan(0);
   });
@@ -352,15 +344,39 @@ describe('API miss', () => {
     expect(result?.coverUrl).toBeUndefined();
   });
 
-  it('does not go looking when the primary result is already complete', async () => {
+  /**
+   * **This assertion is the reverse of what it used to be, deliberately.**
+   *
+   * It read *"does not go looking when the primary result is already complete"*
+   * and asserted Google was never asked. That was a real saving and it bought a
+   * defect: which providers a book records as contributors would depend on
+   * whether *another* provider's answer happened to be thin. Two books with
+   * identical inputs would carry different provenance, invisibly, and a book
+   * whose Open Library record was complete could never acquire a
+   * `google_volume_id` — which is also the id that discharges Google's
+   * per-result attribution obligation.
+   *
+   * So both are asked for every book. The cache makes the repeat free after the
+   * first run, and a failure is never cached, so a provider that was down is
+   * re-asked next time. See docs/spec/metadata-merge.md §2.
+   */
+  it('asks Google and Apple even when the primary record has no gaps', async () => {
     const seen: string[] = [];
     const get: HttpGet = async (url) => {
       seen.push(url);
-      return readApiFixture('open-library-isbn-hit.json');
+      return isHost(url, APPLE)
+        ? readApiFixture('apple-search-near-miss.json')
+        : readApiFixture('open-library-isbn-hit.json');
     };
 
     await lookup(CAPTURED_ISBN, get);
-    expect(seen.some((url) => isHost(url, GOOGLE_BOOKS))).toBe(false);
+
+    expect(seen.some((url) => isHost(url, GOOGLE_BOOKS))).toBe(true);
+    expect(seen.some((url) => isHost(url, APPLE))).toBe(true);
+    // The *ask*-order is unchanged: O'Reilly is still only consulted when the
+    // book still has no usable cover, which is a quota decision with a far
+    // larger blast radius than the merge table.
+    expect(seen.some((url) => isHost(url, OREILLY))).toBe(false);
   });
 
   it('survives a reader that fails outright', async () => {

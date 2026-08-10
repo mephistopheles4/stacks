@@ -1,0 +1,80 @@
+{
+  "kind": "books#volumes",
+  "totalItems": 300,
+  "items": [
+    {
+      "kind": "books#volume",
+      "id": "CpbLAgAAQBAJ",
+      "etag": "Zy3x163tR44",
+      "selfLink": "https://www.googleapis.com/books/v1/volumes/CpbLAgAAQBAJ",
+      "volumeInfo": {
+        "title": "Thinking in Systems",
+        "subtitle": "International Bestseller",
+        "authors": [
+          "Donella Meadows"
+        ],
+        "publisher": "Chelsea Green Publishing",
+        "publishedDate": "2008-12-05",
+        "description": "Thinking in Systems is a concise and crucial book offering insight for problem-solving on scales ranging from the personal to the global. This essential primer brings systems thinking out of the realm of computers and equations and into the tangible world, showing readers how to develop the systems-thinking skills that thought leaders across the globe consider critical for 21st-century life. While readers will learn the conceptual tools and methods of systems thinking, the heart of the book is grander than methodology. Donella Meadows was known as much for nurturing positive outcomes as she was.",
+        "industryIdentifiers": [
+          {
+            "type": "ISBN_13",
+            "identifier": "9781603580557"
+          },
+          {
+            "type": "ISBN_10",
+            "identifier": "1603580557"
+          }
+        ],
+        "readingModes": {
+          "text": false,
+          "image": false
+        },
+        "pageCount": 242,
+        "printType": "BOOK",
+        "categories": [
+          "Business & Economics"
+        ],
+        "maturityRating": "NOT_MATURE",
+        "allowAnonLogging": false,
+        "contentVersion": "0.2.2.0.preview.0",
+        "panelizationSummary": {
+          "containsEpubBubbles": false,
+          "containsImageBubbles": false
+        },
+        "imageLinks": {
+          "smallThumbnail": "http://books.google.com/books/content?id=CpbLAgAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+          "thumbnail": "http://books.google.com/books/content?id=CpbLAgAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+        },
+        "language": "en",
+        "previewLink": "http://books.google.ca/books?id=CpbLAgAAQBAJ&printsec=frontcover&dq=isbn:9781603580557&hl=&cd=1&source=gbs_api",
+        "infoLink": "http://books.google.ca/books?id=CpbLAgAAQBAJ&dq=isbn:9781603580557&hl=&source=gbs_api",
+        "canonicalVolumeLink": "https://books.google.com/books/about/Thinking_in_Systems.html?hl=&id=CpbLAgAAQBAJ"
+      },
+      "saleInfo": {
+        "country": "CA",
+        "saleability": "NOT_FOR_SALE",
+        "isEbook": false
+      },
+      "accessInfo": {
+        "country": "CA",
+        "viewability": "PARTIAL",
+        "embeddable": true,
+        "publicDomain": false,
+        "textToSpeechPermission": "ALLOWED",
+        "epub": {
+          "isAvailable": false
+        },
+        "pdf": {
+          "isAvailable": false
+        },
+        "webReaderLink": "http://play.google.com/books/reader?id=CpbLAgAAQBAJ&hl=&source=gbs_api",
+        "accessViewStatus": "SAMPLE",
+        "quoteSharingAllowed": false
+      },
+      "searchInfo": {
+        "textSnippet": "Long anticipated, Thinking in Systems is a concise and crucial book offering insight for problem solving on scales ranging from the personal to the global."
+      }
+    }
+  ]
+}

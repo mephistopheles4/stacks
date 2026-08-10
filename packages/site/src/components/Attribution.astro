@@ -1,0 +1,137 @@
+---
+// The page-level attribution surface. Markup and styles only; it has no logic
+// to put anywhere else. See docs/spec/attribution-surface.md.
+---
+
+<!--
+  Bottom-left, and it stays there at every viewport.
+
+  The page has four corners and three are spoken for: the header owns top-left,
+  the desktop card owns bottom-right, and on a phone the full-bleed sheet owns
+  the whole bottom edge whenever a card is open. Measured rather than argued —
+  top-right lands 3211px² on the header caption at 375px, and bottom-left is
+  100% behind the sheet on both phone viewports with a card open.
+
+  ⚠️ The sheet occlusion is **accepted, not fixed**: occluded by a dismissible,
+  non-modal overlay is not the same as conditionally rendered — the element is in
+  the DOM and displayed on load, and the sheet is one gesture from dismissal. The
+  alternative (re-homing into the header lockup below the breakpoint) is clear
+  everywhere and costs a DOM re-home rather than a media query, which would give
+  `(max-width: 700px), (max-height: 500px)` a **third** holder.
+-->
+<div class="pattr">
+  <!--
+    Google's own `poweredby.png`, vendored **unaltered** and served from this
+    origin. Not hotlinked: this page makes zero third-party requests, and a
+    hotlinked PNG would disclose every visitor's IP and referer to Google on a
+    `noindex` site, to satisfy an obligation that has nothing to do with privacy.
+
+    ⚠️ **62x30, measured** — the spec assumed 144x26, which was a guess nobody
+    had checked. The `width`/`height` attributes below stay at those numbers
+    because they describe the *file*; the CSS draws it at half that. See
+    [ADR-0048](../../../../docs/adr/0048-google-attribution-is-a-vendored-page-element.md)
+    for what half costs on a 1x display.
+
+    ⚠️ **It is dark on transparent** — 554 of its 613 opaque pixels — so on a
+    page whose background is #1a1613 it is invisible, and Google publishes no
+    light variant (`poweredby_lt.png` and its siblings all 404). Hence the plate
+    underneath: the *image* is displayed exactly as Google serves it, which is
+    what "do not change any of the Google marks" asks, and the surface it sits on
+    is ours to choose.
+  -->
+  <!--
+    ⚠️ **Not `loading="lazy"`**, which it was for about ten minutes. A lazy image
+    loads when the browser decides it is needed, and this one's entire premise is
+    that it is *always displayed* — deferring it is a smaller version of the
+    hotlinking failure #104 rejected, where the obligation is met by something
+    outside our control. It is 3.4 KB.
+  -->
+  <img class="pattr-mark" src="/poweredby-google.png" alt="powered by Google" width="62" height="30" />
+  <!--
+    The first page chrome on this site that is not inert. The surface sets itself
+    `pointer-events: none` so drag-to-look-around passes straight through it; the
+    anchor has to opt back out.
+  -->
+  <a class="pattr-link" href="/attribution">Attribution</a>
+</div>
+
+<style>
+  .pattr {
+    position: absolute;
+    bottom: clamp(1rem, 4vw, 2.5rem);
+    left: clamp(1rem, 4vw, 2.5rem);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    /* Above the shelf, below the card and the debug surfaces. */
+    z-index: 5;
+    /* Inert by default — the shelf is dragged through this corner. */
+    pointer-events: none;
+    font-size: 0.75rem;
+    color: #6f6051;
+  }
+
+  /*
+    The plate, and the reason it exists is in the markup above: the image is dark
+    on transparent and this page is near-black. Deliberately the *quietest* light
+    that keeps it legible rather than a white chip — Google's own constraint is
+    that the graphic must not be the most prominent element on the page, and on a
+    dark room with one lit bookcase a bright rectangle in the corner would be
+    exactly that.
+  */
+  .pattr-mark {
+    display: block;
+    /*
+      Half the file's 62x30, and every other number here halved with it so the
+      plate stays the same shape rather than becoming a border.
+
+      ⚠️ **Scaled, never cropped or recoloured** — the whole graphic is drawn,
+      in proportion, which is what "full and clearly visible" asks and is a
+      different act from altering a mark. It also lands on a happy accident: at
+      31x15 CSS pixels a 2x display draws it at 62x30 device pixels, which is
+      the file's own resolution.
+    */
+    width: 31px;
+    height: 15px;
+    padding: 0.075rem 0.15rem;
+    box-sizing: content-box;
+    border-radius: 0.15rem;
+    background: rgba(242, 232, 220, 0.72);
+    /*
+      ⚠️ **The first thing here that touches the mark's rendered appearance
+      rather than only the surface under it**, and it is the owner's call,
+      recorded in ADR-0048.
+
+      What it buys: the badge is a lit chip in a near-black room and Google's
+      four saturated letters were the loudest colour on a page whose subject is
+      book covers. 0.8 takes the edge off the plate and the logo together — one
+      value on one element, so the mark is never faded *relative to* its own
+      background, which would read as a doctored logo rather than a quiet one.
+
+      What it costs: "clearly visible" is the clause this is closest to, and it
+      is the one about the obligation actually being met, so this is as far as
+      it goes. Judged from a render at 1x and 2x, not from the number.
+    */
+    opacity: 0.8;
+  }
+
+  .pattr-link {
+    /*
+      44px, and it is the height of the whole row: WCAG 2.5.5's touch target,
+      not the graphic, is what sets it — so shrinking the graphic buys width and
+      nothing else.
+    */
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.25rem;
+    color: #857361;
+    /* The one thing here that is not inert. */
+    pointer-events: auto;
+  }
+
+  .pattr-link:hover,
+  .pattr-link:focus-visible {
+    color: #c9b8a4;
+  }
+</style>

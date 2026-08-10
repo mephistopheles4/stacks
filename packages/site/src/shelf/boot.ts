@@ -1,4 +1,7 @@
 import type { Library, LibraryBook } from '@stacks/core';
+import { hideCard, showCard, type CardElements } from './card.ts';
+import { mountSheet } from './card-sheet.ts';
+import { mountCoverViewer, type CoverViewerElements } from './cover-viewer.ts';
 import { mountDiagnostics } from './diagnostics.ts';
 import { mountShelf, type ShelfHandle, type ShelfStats } from './scene.ts';
 import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
@@ -46,9 +49,17 @@ declare global {
   }
 }
 
+/** The card's elements, handed over by the template that owns the markup. */
+export interface CardHandles extends CardElements {
+  /** The one dismiss control: a grabber pill below the breakpoint, an `×` above. */
+  readonly dismiss: HTMLElement;
+  /** The enlarged-cover dialog. See `cover-viewer.ts`. */
+  readonly coverViewer: CoverViewerElements;
+}
+
 export async function boot(
   canvas: HTMLCanvasElement,
-  card: HTMLElement,
+  card: CardHandles,
 ): Promise<ShelfHandle | undefined> {
   const params = new URLSearchParams(window.location.search);
   const limit = bookLimit(params);
@@ -173,8 +184,36 @@ export async function boot(
     showPanel(handle);
   }
 
+  /**
+   * On any dismissal, move focus to the canvas — **only if focus is inside the
+   * card**. Otherwise leave it alone.
+   *
+   * One conditional rule covering all four dismissals. Activating the close
+   * control removes the focused element from the tree, so focus would fall to
+   * `<body>` and the next Tab would restart at the top of the document; catching
+   * it on the canvas keeps the user's place, on the element that conceptually
+   * owns the shelf. And moving focus *unconditionally* on Escape would yank it
+   * from wherever the user actually was — the debug panel, say — which is the
+   * same "do not steal focus" principle applied at the other end.
+   */
+  const dismiss = (): void => {
+    const focusWasInside = card.card.contains(document.activeElement);
+    hideCard(card);
+    if (focusWasInside) canvas.focus();
+  };
+
+  mountSheet({ card: card.card, control: card.dismiss, onDismiss: dismiss });
+
+  const coverViewer = mountCoverViewer(card.coverViewer, card.body);
+
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') hideCard(card);
+    if (event.key !== 'Escape') return;
+    // The enlarged cover is a modal `<dialog>`, so the platform closes it on
+    // Escape and the keydown still reaches here. Without this guard one press
+    // would take the viewer *and* the card underneath it — the user having
+    // asked to leave one surface and been returned two levels.
+    if (coverViewer.isOpen()) return;
+    dismiss();
   });
 
   watchForRebuilds();
@@ -298,54 +337,3 @@ async function loadLibrary(): Promise<LibraryBook[]> {
   }
 }
 
-function showCard(card: HTMLElement, book: LibraryBook): void {
-  // replaceChildren, never innerHTML: every value below comes from the vault,
-  // and card content is built with textContent so a title containing markup is
-  // shown as text rather than parsed as HTML.
-  card.replaceChildren(
-    ...[
-      book.cover === undefined ? undefined : image(book.cover, book.title),
-      text('h2', book.title),
-      book.author === undefined ? undefined : text('p', book.author, 'author'),
-      // A book with no dates, rating or page count has nothing to say here, and
-      // an empty paragraph is just a gap in the card.
-      describeOrNothing(book),
-      book.tags.length === 0 ? undefined : text('p', book.tags.join(' · '), 'tags'),
-    ].filter((node): node is HTMLElement => node !== undefined),
-  );
-  card.hidden = false;
-}
-
-function hideCard(card: HTMLElement): void {
-  card.hidden = true;
-}
-
-function describeOrNothing(book: LibraryBook): HTMLElement | undefined {
-  const summary = describe(book);
-  return summary.length === 0 ? undefined : text('p', summary, 'meta');
-}
-
-function describe(book: LibraryBook): string {
-  const parts: string[] = [];
-  if (book.status !== 'read') parts.push(book.status);
-  if (book.finished !== undefined) parts.push(`finished ${book.finished}`);
-  else if (book.started !== undefined) parts.push(`started ${book.started}`);
-  if (book.rating !== undefined) parts.push('★'.repeat(book.rating));
-  if (book.pages !== undefined) parts.push(`${book.pages} pages`);
-  return parts.join(' · ');
-}
-
-function text(tag: string, content: string, className?: string): HTMLElement {
-  const node = document.createElement(tag);
-  node.textContent = content;
-  if (className !== undefined) node.className = className;
-  return node;
-}
-
-function image(src: string, alt: string): HTMLElement {
-  const node = document.createElement('img');
-  node.src = src.startsWith('/') ? src : `/${src}`;
-  node.alt = `Cover of ${alt}`;
-  node.loading = 'lazy';
-  return node;
-}

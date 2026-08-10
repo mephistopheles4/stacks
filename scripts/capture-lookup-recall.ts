@@ -54,14 +54,19 @@ for (const entry of RECALL_CORPUS) {
 }
 
 /**
- * Drops the bulky branches nothing parses — blurbs, sale terms, snippets.
+ * Drops the bulky branches nothing parses — sale terms, snippets, access flags.
  *
  * Pruned by *removal* rather than by allowlist, so everything left is exactly as
  * the provider sent it and a field the parser starts reading tomorrow is still
- * there. Only these five names are ever removed, and they take the file from
- * 175 KB to under 80 — against 1–5 KB for every other fixture in the folder.
+ * there — against 1–5 KB for every other fixture in the folder.
+ *
+ * **`description` used to be on this list and has come off it.** That was the
+ * one entry the comment above was wrong about: the merge now takes descriptions
+ * (docs/spec/metadata-merge.md §3), so pruning them would leave the corpus
+ * unable to say anything about a field the parser reads — the exact failure the
+ * removal-not-allowlist rule was written to avoid. It costs roughly 40 KB.
  */
-const BULK = new Set(['description', 'searchInfo', 'accessInfo', 'saleInfo', 'layerInfo']);
+const BULK = new Set(['searchInfo', 'accessInfo', 'saleInfo', 'layerInfo']);
 
 function prune(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(prune);

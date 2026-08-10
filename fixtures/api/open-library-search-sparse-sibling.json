@@ -1,8 +1,8 @@
 {
-  "numFound": 232,
+  "numFound": 233,
   "start": 0,
   "numFoundExact": true,
-  "num_found": 232,
+  "num_found": 233,
   "documentation_url": "https://openlibrary.org/dev/docs/api/search",
   "q": "12 Rules for Life",
   "offset": null,
@@ -12,6 +12,34 @@
         "Jordan B. Peterson"
       ],
       "cover_i": 8131760,
+      "edition_key": [
+        "OL60507092M",
+        "OL45642207M",
+        "OL47196589M",
+        "OL40209233M",
+        "OL39483570M",
+        "OL39224181M",
+        "OL36634579M",
+        "OL35700525M",
+        "OL33336572M",
+        "OL28238749M",
+        "OL32733657M",
+        "OL35618649M",
+        "OL47102199M",
+        "OL47377647M",
+        "OL47377648M",
+        "OL45086528M",
+        "OL38811019M",
+        "OL26993586M",
+        "OL27241047M",
+        "OL27371038M",
+        "OL26961317M",
+        "OL26431662M",
+        "OL26424098M",
+        "OL32231060M",
+        "OL32548940M",
+        "OL34401021M"
+      ],
       "isbn": [
         "9780345816023",
         "9781984833976",
@@ -61,12 +89,82 @@
         "8408193309"
       ],
       "number_of_pages_median": 480,
-      "title": "12 Rules for Life"
+      "publish_date": [
+        "Jan 01, 2019",
+        "Nov 07, 2018",
+        "2019",
+        "2018-01-23",
+        "26.04.2021",
+        "Jan 16, 2018",
+        "Mar 12, 2018",
+        "Oct 29, 2018",
+        "30/04/2018",
+        "May 06, 2021",
+        "Aug 19, 2019",
+        "Oct 18, 2018",
+        "2018",
+        "Nov 02, 2015",
+        "Sep 01, 2020",
+        "Mar 12, 2019",
+        "Mar 15, 2015",
+        "Nov 15, 2018",
+        "Oct 30, 2018",
+        "Jun 01, 2022"
+      ],
+      "publisher": [
+        "Planeta",
+        "Penguin Books",
+        "Editorial Planeta",
+        "PLANETA",
+        "My Life",
+        "Pegasus Yayınları",
+        "Goldmann Verlag",
+        "Random House of Canada",
+        "Booket",
+        "Alta Books",
+        "MICHEL LAFON",
+        "Allen Lane",
+        "Random House Canada",
+        "Random House LCC US",
+        "Planeta Publishing",
+        "Columna CAT",
+        "Penguin Books, Limited",
+        "WOW PUBLISHING PVT.LTD.",
+        "Wow Publishing Pvt.Ltd."
+      ],
+      "title": "12 Rules for Life",
+      "subject": [
+        "Conduct of life",
+        "Philosophy",
+        "PHILOSOPHY / Social",
+        "PSYCHOLOGY / Applied Psychology",
+        "SELF-HELP / Personal Growth",
+        "psychology",
+        "psychiatry",
+        "mythology",
+        "self-help",
+        "Ethics",
+        "Social",
+        "Applied Psychology",
+        "Personal Growth",
+        "Positive Psychologie",
+        "Psychologie",
+        "Lebensführung",
+        "Regel",
+        "Philosophische Psychologie",
+        "Self-help techniques"
+      ]
     },
     {
+      "edition_key": [
+        "OL40338655M"
+      ],
       "isbn": [
         "9780141989426",
         "0141989424"
+      ],
+      "publisher": [
+        "Penguin Books Ltd"
       ],
       "title": "12 Rules for Life"
     },
@@ -74,18 +172,36 @@
       "author_name": [
         "Speed Read Publishing"
       ],
+      "edition_key": [
+        "OL34336540M"
+      ],
       "isbn": [
         "9798730704695"
       ],
       "number_of_pages_median": 43,
+      "publish_date": [
+        "2021"
+      ],
+      "publisher": [
+        "Independently Published"
+      ],
       "title": "Summary of 12 RULES for LIFE by Jordan Peterson"
     },
     {
       "author_name": [
         "Dominion Ike"
       ],
+      "edition_key": [
+        "OL39662848M"
+      ],
       "isbn": [
         "9798842693306"
+      ],
+      "publish_date": [
+        "2022"
+      ],
+      "publisher": [
+        "Independently Published"
       ],
       "title": "SUMMARY of 12 Rules for Life"
     },
@@ -94,9 +210,18 @@
         "Richdad Summaries"
       ],
       "cover_i": 14338969,
+      "edition_key": [
+        "OL43348298M"
+      ],
       "isbn": [
         "9781717948816",
         "1717948812"
+      ],
+      "publish_date": [
+        "2018"
+      ],
+      "publisher": [
+        "[publisher not identified]"
       ],
       "title": "Summary of 12 Rules for Life"
     }

@@ -1,5 +1,5 @@
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
-import { join, relative, resolve, sep } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { stringify as stringifyYaml } from 'yaml';
 import { coverFileName } from '../covers/cover-path.ts';
 import { FRONTMATTER_BLOCK, parseNote } from '../frontmatter.ts';
@@ -110,6 +110,48 @@ export class ObsidianAdapter implements VaultAdapter {
     await writeFile(path, updated, 'utf8');
   }
 
+  /**
+   * Adds a body section, once, and changes nothing else in the file.
+   *
+   * Placed **above `## Notes`** when there is one, so a provider's prose never
+   * lands underneath what the owner wrote — and appended at the end when there
+   * is not, which is what a hand-made note with no headings looks like.
+   *
+   * The heading test is `^##+ heading` at the start of a line, so a mention of
+   * `## About` inside a sentence does not read as the section already existing.
+   */
+  async insertBodySection(sourcePath: string, heading: string, text: string): Promise<boolean> {
+    const body = text.trim();
+    if (body.length === 0) return false;
+
+    // Either the vault-relative path a `BookRecord` carries, or the absolute one
+    // `writeBook` hands back — `stacks add` has the second and nothing else, and
+    // making it re-derive the first would mean teaching it the vault's layout.
+    const path = isAbsolute(sourcePath)
+      ? sourcePath
+      : join(this.#vaultPath, ...sourcePath.split('/'));
+    const source = await readFile(path, 'utf8');
+
+    const match = FRONTMATTER_BLOCK.exec(source);
+    if (match === null) {
+      throw new Error(`${sourcePath} has no frontmatter block, so it is not a note to add to`);
+    }
+
+    if (hasHeading(source, heading)) return false;
+
+    const eol = source.includes('\r\n') ? '\r\n' : '\n';
+    const section = `${heading}${eol}${eol}${body.split(/\r?\n/).join(eol)}${eol}`;
+
+    const notes = new RegExp(`^##+ +Notes[ \\t]*$`, 'm').exec(source);
+    const updated =
+      notes === null
+        ? `${source.replace(/\s*$/, '')}${eol}${eol}${section}`
+        : source.slice(0, notes.index) + section + eol + source.slice(notes.index);
+
+    await writeFile(path, updated, 'utf8');
+    return true;
+  }
+
   /** ISBN first, then normalised title+author — the two dedupe paths. */
   async bookExists(isbn: string, titleAuthor: string): Promise<boolean> {
     const books = await this.listBooks();
@@ -188,6 +230,15 @@ function renderNote(book: BookInput): string {
   if (book.faceOut !== undefined) frontmatter['face_out'] = book.faceOut;
   if (book.shelfOrder !== undefined) frontmatter['shelf_order'] = book.shelfOrder;
   if (book.private === true) frontmatter['private'] = true;
+  if (book.publisher !== undefined) frontmatter['publisher'] = book.publisher;
+  if (book.published !== undefined) frontmatter['published'] = book.published;
+  if (book.subjects !== undefined) frontmatter['subjects'] = book.subjects;
+  // The contributor ids, under the frontmatter contract's names. Written at
+  // creation as well as filled later, so a book added today needs no backfill.
+  if (book.googleVolumeId !== undefined) frontmatter['google_volume_id'] = book.googleVolumeId;
+  if (book.appleTrackId !== undefined) frontmatter['apple_track_id'] = book.appleTrackId;
+  if (book.openLibraryOlid !== undefined) frontmatter['openlibrary_olid'] = book.openLibraryOlid;
+  if (book.oreillyOurn !== undefined) frontmatter['oreilly_ourn'] = book.oreillyOurn;
   // Normalised at the single write path, so no import can produce a tag
   // Obsidian will reject however carelessly it names its categories.
   const tags = [...new Set((book.tags ?? []).map(toObsidianTag).filter(isTag))];
@@ -303,6 +354,18 @@ function applyChange(
 
   if (value === undefined) return block;
   return [...lines, `${key}: ${serialise(value)}`].join(eol);
+}
+
+/**
+ * Whether the note already carries this heading, as a heading.
+ *
+ * Anchored to the start of a line, so a sentence *mentioning* `## About` does
+ * not read as the section existing — which would silently skip the write
+ * forever on exactly the note that talks about the feature.
+ */
+function hasHeading(source: string, heading: string): boolean {
+  const words = heading.replace(/^#+\s*/, '');
+  return new RegExp(`^##+ +${words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[ \\t]*$`, 'm').test(source);
 }
 
 /** Quotes only what YAML would otherwise misread. */

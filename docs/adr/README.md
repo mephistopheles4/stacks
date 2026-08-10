@@ -67,3 +67,12 @@ Two other files hold what these deliberately do not:
 | [0041](./0041-a-gate-has-a-number-and-a-name.md) | A gate has a number *and* a name, and the name is anchored to its spec |
 | [0042](./0042-the-packer-runs-the-placer.md) | The packer runs the placer instead of estimating it |
 | [0043](./0043-codeql-is-a-second-required-gate.md) | CodeQL is a second required gate, as a ruleset rule rather than a check name |
+| [0044](./0044-precedence-is-a-table-not-a-judgement.md) | Precedence is a table of fixed provider orders, never a rule about the value |
+| [0045](./0045-a-description-lives-in-the-note-body.md) | A provider's description lives in the note body, not in frontmatter |
+| [0046](./0046-absent-only-holds-unconditionally.md) | Absent-only holds unconditionally, so a merge change cannot rewrite a correct book |
+| [0047](./0047-the-contributor-set-is-the-id-keys.md) | The contributor set *is* the set of id keys, and they are ids rather than URLs |
+| [0048](./0048-google-attribution-is-a-vendored-page-element.md) | Google's attribution binds this site, and is discharged by a vendored page element |
+| [0049](./0049-the-card-is-a-non-modal-bottom-sheet.md) | The card is a non-modal bottom sheet below one breakpoint, and focus never moves |
+| [0050](./0050-provider-marks-are-redrawn-monotone.md) | The provider marks are redrawn monotone glyphs, not the providers' artwork |
+| [0051](./0051-the-staging-resize-chooses-its-encoder.md) | The staging resize chooses its encoder, and it is chosen per format |
+| [0052](./0052-the-enlarged-cover-is-a-real-dialog.md) | The enlarged cover is a real `<dialog>`, and the card is still not one |

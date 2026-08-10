@@ -271,6 +271,27 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
+  it('robots: a *second* page that would be searchable', async () => {
+    /**
+     * The rule read `dist/index.html` alone for the whole of its life, which was
+     * exactly right while the site had one page. `/attribution` is the second,
+     * `noindex` is a per-page tag, and a page shipping without one would have
+     * passed — turning up in a search result beside the owner's name, which is
+     * the single thing the posture exists to prevent.
+     *
+     * Planted here rather than trusted, because a widened rule nobody has
+     * watched go red on the new case is a widened rule in name only.
+     */
+    await expectOnly('robots', async () => {
+      await mkdir(join(dist, 'attribution'), { recursive: true });
+      await writeFile(
+        join(dist, 'attribution', 'index.html'),
+        '<!doctype html><html><head><title>Attribution</title></head><body></body></html>',
+        'utf8',
+      );
+    });
+  });
+
   it('robots: a Disallow that prevents the noindex being read', async () => {
     await expectOnly('robots', async () => {
       // The intuitive move, and the one that fails: blocking the crawl stops

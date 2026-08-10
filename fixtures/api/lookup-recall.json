@@ -1,5 +1,5 @@
 {
- "https://openlibrary.org/search.json?q=Beyond%20Vibe%20Coding%3A%20From%20Coder%20to%20AI-Era%20Developer%20Addy%20Osmani&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i": {
+ "https://openlibrary.org/search.json?q=Beyond%20Vibe%20Coding%3A%20From%20Coder%20to%20AI-Era%20Developer%20Addy%20Osmani&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject": {
   "numFound": 0,
   "start": 0,
   "numFoundExact": true,
@@ -16,7 +16,7 @@
    {
     "kind": "books#volume",
     "id": "oX9T0QEACAAJ",
-    "etag": "dZ50ucvSwyw",
+    "etag": "3CSYnK0fcCo",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/oX9T0QEACAAJ",
     "volumeInfo": {
      "title": "Vibe Coding: the Future of Programming",
@@ -26,6 +26,7 @@
      ],
      "publisher": "O'Reilly Media",
      "publishedDate": "2025-09-30",
+     "description": "AI is transforming software development, shifting programmers from writing code to collaborating with AI in an intent-driven workflow--this is vibe coding. Vibe Coding: The Future of Programming explores how AI-powered coding assistants like GitHub Copilot and OpenAI Codex are reshaping the way we build software, from automating routine coding tasks to influencing architecture and design decisions. Written by Addy Osmani, this guide provides developers, tech leads, and organizations with practical strategies to integrate AI into their workflows effectively. Learn how to refine AI-generated code, master prompt engineering, and explore advanced techniques like model fine-tuning and multi-agent coding systems. Whether you're adopting AI tools today or preparing for the future of software engineering, this book offers insights and hands-on examples to keep your skills sharp in this evolving landscape. Understand how AI-assisted development is reshaping programming Master techniques for refining, validating, and debugging AI-generated code Explore multi-agent coding systems and AI-driven software workflows Future-proof your career by adapting to AI's growing role in development",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -61,7 +62,7 @@
    {
     "kind": "books#volume",
     "id": "AKV-EQAAQBAJ",
-    "etag": "SzRTfqoB+ws",
+    "etag": "HZsFtghJ16k",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/AKV-EQAAQBAJ",
     "volumeInfo": {
      "title": "Beyond Vibe Coding",
@@ -71,6 +72,7 @@
      ],
      "publisher": "\"O'Reilly Media, Inc.\"",
      "publishedDate": "2025-08-18",
+     "description": "AI is transforming software development, shifting programmers from writing code to collaborating with AI in an intent-driven workflow—this is vibe coding. Beyond Vibe Coding explores how AI-powered coding assistants like GitHub Copilot and OpenAI Codex are reshaping the way we build software, from automating routine coding tasks to influencing architecture and design decisions. Written by Addy Osmani, this guide provides developers, tech leads, and organizations with practical strategies to integrate AI into their workflows effectively. Learn how to refine AI-generated code, master prompt engineering, and explore advanced techniques like model fine-tuning and multiagent coding systems. Whether you're adopting AI tools today or preparing for the future of software engineering, this book offers insights and hands-on examples to keep your skills sharp in this evolving landscape. Understand how AI-assisted development is reshaping programming Master techniques for refining, validating, and debugging AI-generated code Explore multiagent coding systems and AI-driven software workflows Future-proof your career by adapting to AI's growing role in development",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -106,7 +108,7 @@
    {
     "kind": "books#volume",
     "id": "fqDL0QEACAAJ",
-    "etag": "L2IqBZWYbls",
+    "etag": "rEhG6YOhm/k",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/fqDL0QEACAAJ",
     "volumeInfo": {
      "title": "Vibe Coding with AI",
@@ -116,6 +118,7 @@
      ],
      "publisher": "Independently Published",
      "publishedDate": "2025-12-29",
+     "description": "Software development is entering a new era-one where speed, clarity, and intelligence define who wins. Vibe Coding with AI introduces a modern approach to building software by combining human intent with intelligent coding assistants. Instead of grinding through repetitive boilerplate and endless debugging cycles, developers learn how to translate ideas directly into working systems using natural language, structured prompts, and AI-driven workflows. This book goes beyond surface-level AI tips. It teaches you how to collaborate with AI as a strategic partner, not a shortcut. You'll discover how to design prompts that produce reliable code, use AI for pair programming, generate tests automatically, and debug complex issues with clarity and speed. Every concept is grounded in real-world practice, showing you how modern software is actually built, reviewed, and shipped today. Inside, you'll find end-to-end project examples that walk through complete applications-from CRUD platforms and resume builders to AI-powered content systems. You'll learn how to scaffold frontends, architect backends, design databases, and deploy confidently using AI-assisted workflows. Along the way, you'll gain access to reusable prompt templates, starter kits, and tool comparison tables that help you choose the right technologies without guesswork. Vibe Coding with AI also addresses the realities of responsible development in an AI-first world. You'll explore best practices for security, explainability, review processes, and ethical usage, ensuring that speed never comes at the cost of quality or trust. Advanced chapters introduce multi-agent systems and orchestration patterns that allow you to scale workflows beyond a single assistant. Whether you're a solo developer, product builder, or technical professional looking to stay relevant in a rapidly changing industry, this book equips you with the mindset and systems to lead. If you're ready to stop writing code the hard way and start building software with intention, confidence, and intelligence, Vibe Coding with AI will show you how.",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -151,7 +154,7 @@
    {
     "kind": "books#volume",
     "id": "YaDPEQAAQBAJ",
-    "etag": "Zow5BLlQPT4",
+    "etag": "Z6w3IKrRS4Y",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/YaDPEQAAQBAJ",
     "volumeInfo": {
      "title": "VIBE CODING BUILDING , PRODUCTION-GRADE SOFTWARE WITH GENAI AND BEYOND",
@@ -160,6 +163,7 @@
       "TECH MORIS "
      ],
      "publisher": "reedshawgooglebooks",
+     "description": "In an era where artificial intelligence is reshaping every industry, software development stands on the brink of its greatest transformation since the internet itself. Vibe Coding: Building Production-Grade Software With GenAI, Chat, Agents, and Beyond reveals how the new paradigm of intent-driven development is replacing painstaking syntax with fluid conversation, turning developers from code typists into visionary orchestrators.Written by Gene Kim, Steve Yegge, and other leading voices in software engineering, this practical guide shows you how to harness Generative AI, chat-based interfaces, and intelligent agents to build scalable, reliable, and intelligent systems at unprecedented speed — without sacrificing quality.You will discover how to:Move from writing every line of code to describing desired outcomes in natural languagePartner effectively with GenAI as a creative collaborator rather than a simple autocomplete toolEnter and sustain deep flow states while rapidly prototyping and iteratingBuild and orchestrate autonomous AI agents that handle complex, multi-step workflowsMaster multiple languages and frameworks with confidence, even when you are not an expertScale from solo projects to enterprise-grade applications while maintaining architectural integrityNavigate the ethical, security, and governance challenges of AI-assisted developmentBlending deep technical insight with real-world practices observed in 2026, this book equips both beginners and seasoned professionals with the mindset, tools, and disciplined approaches needed to thrive in the age of vibe coding. Whether you are building your first application or leading large-scale systems, you will learn how to combine human creativity, strategic judgment, and machine intelligence to create software that is faster, smarter, and more impactful than ever before.The future of software development has arrived. It no longer belongs to those who write the most code — it belongs to those who master the art of guiding intelligent systems toward meaningful outcomes.Welcome to Vibe Coding.",
      "readingModes": {
       "text": false,
       "image": true
@@ -189,7 +193,7 @@
    {
     "kind": "books#volume",
     "id": "R2pd0QEACAAJ",
-    "etag": "MXji5O/LMLg",
+    "etag": "71tJg1RS6xE",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/R2pd0QEACAAJ",
     "volumeInfo": {
      "title": "Introduction to Vibe Coding",
@@ -199,6 +203,7 @@
      ],
      "publisher": "Independently Published",
      "publishedDate": "2025-05-02",
+     "description": "Vibe Coding: Ditch the Boilerplate, Embrace the Flow by Thomas DeGan is a forward-thinking guide to software development in the age of AI. Aimed at developers, creators, and curious beginners alike, the book introduces \"vibe coding\"-a collaborative, AI-assisted approach to building software using natural language instead of traditional syntax. It positions AI tools as creative partners, empowering users to go from idea to deployment faster than ever before. Structured in five parts, Vibe Coding covers everything from mindset shifts and tool selection to practical prompt crafting, real-world use cases, debugging, and scaling projects. It demystifies leading AI coding tools like GitHub Copilot, ChatGPT, Cursor, Replit Ghostwriter, and more-highlighting how to use them individually and in tandem for maximum creative flow. Through hands-on examples and \"prompt walkthroughs,\" readers learn how to rapidly build CRUD apps, frontends, mobile apps, tests, docs, and even full-stack deployments with minimal setup. Beyond the code, the book explores deeper themes like the democratization of software creation, evolving roles of developers, and the ethical considerations of AI-generated output. It champions a future where coding is as accessible as speaking-and where developers become designers, strategists, and artists in a new creative era. Whether you're a veteran developer, aspiring founder, or a non-coder with big ideas, Vibe Coding invites you to stop typing and start conducting. Because in this new era, the best developers aren't just writing code-they're orchestrating it.",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -237,45 +242,49 @@
   "resultCount": 3,
   "results": [
    {
+    "formattedPrice": "$59.99",
     "trackCensoredName": "Beyond Vibe Coding",
     "artistViewUrl": "https://books.apple.com/us/artist/addy-osmani/552163006?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/beyond-vibe-coding/id6751212206?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/aa/f2/c2/aaf2c2ba-a4d2-0611-fe5d-279e7bf9046d/9798341634725.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/aa/f2/c2/aaf2c2ba-a4d2-0611-fe5d-279e7bf9046d/9798341634725.jpg/100x100bb.jpg",
     "artistIds": [
      552163006
     ],
+    "trackViewUrl": "https://books.apple.com/us/book/beyond-vibe-coding/id6751212206?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/aa/f2/c2/aaf2c2ba-a4d2-0611-fe5d-279e7bf9046d/9798341634725.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/aa/f2/c2/aaf2c2ba-a4d2-0611-fe5d-279e7bf9046d/9798341634725.jpg/100x100bb.jpg",
+    "artistId": 552163006,
+    "artistName": "Addy Osmani",
     "genres": [
      "Programming",
      "Books",
      "Computers & Internet",
      "Software"
     ],
-    "artistId": 552163006,
-    "artistName": "Addy Osmani",
     "price": 59.99,
-    "releaseDate": "2025-08-18T07:00:00Z",
-    "trackId": 6751212206,
-    "trackName": "Beyond Vibe Coding",
     "genreIds": [
      "10023",
      "38",
      "9027",
      "10024"
     ],
+    "releaseDate": "2025-08-18T07:00:00Z",
+    "trackId": 6751212206,
+    "trackName": "Beyond Vibe Coding",
     "kind": "ebook",
     "currency": "USD",
-    "formattedPrice": "$59.99"
+    "description": "AI is transforming software development, shifting programmers from writing code to collaborating with AI in an intent-driven workflow. Vibe coding—a prompt-first, exploratory approach where you describe what you want in natural language and let a large language model fill in the blanks—represents a radical shift in the developer's role from writing code todirecting it. However, vibe coding comes with a serious caveat: Like a high-speed exploratory vehicle, it can take you off the beaten path quickly. Beyond Vibe Coding: From Coder to AI-Era Developer explores how AI-powered coding assistants like GitHub Copilot and OpenAI Codex are reshaping the way we build software, from automating routine coding tasks to influencing architecture and design decisions.<br /><br />Written by Addy Osmani, this guide provides developers, tech leads, and organizations with practical strategies to integrate AI into their workflows effectively. Learn how to formulate clear goals and constraints for the AI, review AI-generated code critically, and integrate those pieces into a coherent whole. Whether you're adopting AI tools today or preparing for the future of software engineering, this book offers insights and hands-on examples to keep your skills sharp in this evolving landscape.\n\nUnderstand how AI-assisted development is reshaping programming\nMaster techniques for refining, validating, and debugging AI-generated code, and understand how and why LLM generations can go wrong\nExplore multiagent coding systems and AI-driven software workflows\nFuture-proof your career by adapting to AI's growing role in development"
    },
    {
+    "formattedPrice": "$33.99",
     "trackCensoredName": "The Effective Software Engineer",
     "artistViewUrl": "https://books.apple.com/us/artist/addy-osmani/552163006?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/the-effective-software-engineer/id6759071354?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/c8/89/6f/c8896f21-8301-b11c-014f-6d9a56f84e22/9798341638143.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/c8/89/6f/c8896f21-8301-b11c-014f-6d9a56f84e22/9798341638143.jpg/100x100bb.jpg",
     "artistIds": [
      552163006
     ],
+    "trackViewUrl": "https://books.apple.com/us/book/the-effective-software-engineer/id6759071354?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/c8/89/6f/c8896f21-8301-b11c-014f-6d9a56f84e22/9798341638143.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/c8/89/6f/c8896f21-8301-b11c-014f-6d9a56f84e22/9798341638143.jpg/100x100bb.jpg",
+    "artistId": 552163006,
+    "artistName": "Addy Osmani",
     "genres": [
      "Software",
      "Books",
@@ -283,12 +292,7 @@
      "Programming",
      "Computers"
     ],
-    "artistId": 552163006,
-    "artistName": "Addy Osmani",
     "price": 33.99,
-    "releaseDate": "2026-02-11T08:00:00Z",
-    "trackId": 6759071354,
-    "trackName": "The Effective Software Engineer",
     "genreIds": [
      "10024",
      "38",
@@ -296,44 +300,48 @@
      "10023",
      "10017"
     ],
+    "releaseDate": "2026-02-11T08:00:00Z",
+    "trackId": 6759071354,
+    "trackName": "The Effective Software Engineer",
     "kind": "ebook",
     "currency": "USD",
-    "formattedPrice": "$33.99"
+    "description": "The software engineering landscape is constantly evolving, and the demands on engineers intensify with each technological and methodological shift. In such an environment, being a good coder isn't enough—true effectiveness goes beyond technical skills.<br /><br />This book is designed as a guide for individual contributors who want to level up to meet the challenges of a changing industry. Author Addy Osmani offers a trove of actionable insights, real-world examples, practical frameworks, and pragmatic advice drawn from years of experience (and plenty of mistakes) in the software industry. You'll learn the fundamental skills every effective engineer needs, as well as the strategic thinking and leadership that distinguishes senior and staff engineers. The Effective Software Engineer is a perennial resource for those who are committed to the ongoing process of learning, adapting, and striving to make a meaningful difference. \n\nConnect your work to the overall goals of your team and organization\nIdentify the most important tasks and avoid distractions\nWork effectively with your team, stakeholders, and users\nNavigate the evolving technology landscape, including AI tools, while focusing on uniquely human contributions\nTackle complex challenges and make sound technical choices\nStay relevant and adapt to change through continuous learning and growth \nBalance code quality with delivery speed while managing technical debt strategically"
    },
    {
+    "formattedPrice": "$49.99",
     "trackCensoredName": "Progressive Web Apps",
     "artistViewUrl": "https://books.apple.com/us/artist/dean-hume/1572384962?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/progressive-web-apps/id1572386584?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/ed/fd/fe/edfdfe96-d332-209f-4a85-531302c45ea5/9781638351412.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/ed/fd/fe/edfdfe96-d332-209f-4a85-531302c45ea5/9781638351412.jpg/100x100bb.jpg",
     "artistIds": [
      1572384962
     ],
+    "trackViewUrl": "https://books.apple.com/us/book/progressive-web-apps/id1572386584?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/ed/fd/fe/edfdfe96-d332-209f-4a85-531302c45ea5/9781638351412.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/ed/fd/fe/edfdfe96-d332-209f-4a85-531302c45ea5/9781638351412.jpg/100x100bb.jpg",
+    "artistId": 1572384962,
+    "artistName": "Dean Hume",
     "genres": [
      "Software",
      "Books",
      "Computers & Internet",
      "Programming"
     ],
-    "artistId": 1572384962,
-    "artistName": "Dean Hume",
     "price": 49.99,
-    "releaseDate": "2017-12-03T08:00:00Z",
-    "trackId": 1572386584,
-    "trackName": "Progressive Web Apps",
     "genreIds": [
      "10024",
      "38",
      "9027",
      "10023"
     ],
+    "releaseDate": "2017-12-03T08:00:00Z",
+    "trackId": 1572386584,
+    "trackName": "Progressive Web Apps",
     "kind": "ebook",
     "currency": "USD",
-    "formattedPrice": "$49.99"
+    "description": "<b>Summary</b><br /><br /><i>Progressive Web Apps</i> teaches you PWA design and the skills you need to build fast, reliable websites by taking you step-by-step through real world examples in this practical tutorial. Foreword by Addy Osmani, Google.<br /><br />Purchase of the print book includes a free eBook in PDF, Kindle, and ePub formats from Manning Publications.<br /><br /><b>About the Technology</b><br /><br />Offline websites that work. Near-instant load times. Smooth transitions between high/low/no bandwidth. Fantasy, right? Not with progressive web applications. PWAs use modern browser features like push notifications, smart caching, and Service Workers to manage data, minimize server usage, and allow for unstable connections, giving you better control and happier customers. Better still, all you need to build PWAs are JavaScript, HTML, and the easy-to-master techniques you'll find in this book.<br /><br /><b>About the Book</b><br /><br /><i>Progressive Web Apps</i> teaches you PWA design and the skills you need to build fast, reliable websites. There are lots of ways you can use PWA techniques, and this practical tutorial presents interesting, standalone examples so you can jump to the parts that interest you most. You'll discover how Web Service Workers vastly improve site loading, how to effectively use push notifications, and how to create sites with a no-compromise offline mode. <br /><br /><b>What's Inside</b><br /><br />• Improved caching with Service Workers<br />• Using manifest files and HTML markup<br />• Push notifications<br />• Offline-first web designs<br />• Techniques for data synchronization<br /><br /><b>About the Reader</b><br /><br />Written for readers with experience developing websites using HTML, CSS, and JavaScript.<br /><br /><b>About the Author</b><br /><br /><b>Dean Alan Hume</b> is a coder, author, and Google Developer Expert. He's passionate about web performance and user experience.<br /><br /><b>Table of Contents</b><br /><br />PART 1 - DEFINING PROGRESSIVE WEB APPS <br />• Understanding Progressive Web Apps <br />• First steps to building a Progressive Web App <br /><br />PART 2 - FASTER WEB APPS <br />• Caching <br />• Intercepting network requests <br /><br />PART 3 - ENGAGING WEB APPS <br />• Look and feel <br />• Push notifications <br /><br />PART 4 - RESILIENT WEB APPLICATIONS <br />• Offline browsing <br />• Building more resilient applications <br />• Keeping your data synchronized <br /><br />PART 5 - THE FUTURE OF PROGRESSIVE WEB APPS<br />• Streaming data <br />• Progressive Web App troubleshooting <br />• The future is looking good"
    }
   ]
  },
- "https://openlibrary.org/search.json?q=The%20New%20Emotional%20Intelligence%20Travis%20Bradberry&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i": {
+ "https://openlibrary.org/search.json?q=The%20New%20Emotional%20Intelligence%20Travis%20Bradberry&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject": {
   "numFound": 0,
   "start": 0,
   "numFoundExact": true,
@@ -350,7 +358,7 @@
    {
     "kind": "books#volume",
     "id": "JAP8B7R67K0C",
-    "etag": "CgpWEWSNTnQ",
+    "etag": "z5y/xJHivlI",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/JAP8B7R67K0C",
     "volumeInfo": {
      "title": "Emotional Intelligence 2.0",
@@ -360,6 +368,7 @@
      ],
      "publisher": "TalentSmart",
      "publishedDate": "2009",
+     "description": "\"Includes a new & enhanced online edition of the world's most popular emotional intelligence test.\"",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -401,7 +410,7 @@
    {
     "kind": "books#volume",
     "id": "An8Q0QEACAAJ",
-    "etag": "Osfq3nw2/H8",
+    "etag": "ywSo1L0iQN8",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/An8Q0QEACAAJ",
     "volumeInfo": {
      "title": "The New Emotional Intelligence",
@@ -410,6 +419,7 @@
      ],
      "publisher": "Bruyere Publishing",
      "publishedDate": "2025-05-13",
+     "description": "The world is changing rapidly, and emotional intelligence (EQ) is more important now than ever. As times change, so should your approach to increasing your EQ. The New Emotional Intelligence is a groundbreaking new book by Dr. Travis Bradberry, coauthor of the massive best seller Emotional Intelligence 2.0, that answers the call with a powerful new way to increase your EQ. The New Emotional Intelligence uses the latest in psychology and neuroscience to deliver a powerful new step-by-step program that will take your EQ to new heights. The book provides 60 new super strategies to improve your EQ via the four core skills of self-awareness, self-management, social awareness, and relationship management. The book's breakthrough process shows you how to make big changes in small steps as you transform yourself, surpass your goals, and unlock your highest potential. Each copy contains a unique passcode to take The Emotional Intelligence Test™ an enlightening new assessment (the author's first in 20 years) that will show you where your EQ stands today and how you can improve it. Complete with video-based elearning and an online coaching plan, your test results will: • Reveal which of the book's 60 super strategies will increase your EQ the most. • Help you see what's holding you back and what you should be doing more of. • Allow you to test yourself a second time to measure your progress. As the world's foremost expert on increasing emotional intelligence, Dr. Bradberry is known for his ability to turn complex topics into simple behaviors that you can easily apply to your life and work. This easy-to-follow guide offers an abundance of practical strategies to help you harness the power of EQ and build your skills into strengths.",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -445,7 +455,7 @@
    {
     "kind": "books#volume",
     "id": "4EPJEAAAQBAJ",
-    "etag": "EbsD1chJAfA",
+    "etag": "TOcDGHIS73U",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/4EPJEAAAQBAJ",
     "volumeInfo": {
      "title": "Emotional Intelligence Habits",
@@ -454,6 +464,7 @@
      ],
      "publisher": "TalentSmart",
      "publishedDate": "2023-08-29",
+     "description": "Change your habits, change your life. A powerful new way to increase your emotional intelligence. Emotional Intelligence Habits is a groundbreaking new book from Dr. Travis Bradberry, author of the bestselling Emotional Intelligence 2.0 that has sold millions of copies worldwide. In Emotional Intelligence Habits, Dr. Bradberry, the world’s foremost expert on EQ, offers an abundance of practical strategies that will teach you how to form good habits, break bad ones, and master the micro behaviors that will take your EQ to new heights. The book includes a passcode to the updated online edition of the world's #1 EQ assessment, the Emotional Intelligence Appraisal®, which will show you where your EQ stands today and which new habits from the book will help increase your EQ. By now, emotional intelligence (EQ) needs little introduction—it’s no secret that EQ is critical to your success—personally and professionally. But knowing what EQ is and how to use it to improve your life are two very different things. Emotional Intelligence Habits offers a proven framework for increasing your EQ via tiny habits that can yield big results. Step-by-step, you’ll learn the key habits that will increase your core EQ skills: Self-Awareness Self-Management Social Awareness Relationship Management Dr. Bradberry is known for his ability to turn complicated topics into simple behaviors that you can easily apply to your life and work. He draws on decades of experience and the latest research in psychology and neuroscience to create an easy-to-follow guide for increasing your EQ. He will teach you how to: overcome a lack of motivation and willpower to form powerful new habits increase your confidence, likeability, happiness, self-control and mental strength form strong relationships by mastering conflict, communication, and neutralizing toxic people beat stress, increase your productivity, and become a great leader Emotional Intelligence Habits will radically alter how you see yourself and the world around you. Better yet, it will give you the tools you need to rewrite your daily habits and transform yourself as you work to achieve your goals.",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -493,7 +504,7 @@
    {
     "kind": "books#volume",
     "id": "bDBO_CKqmBsC",
-    "etag": "Inl8Ac5VtRU",
+    "etag": "k8GFjCVENlg",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/bDBO_CKqmBsC",
     "volumeInfo": {
      "title": "The Emotional Intelligence Quick Book",
@@ -504,6 +515,7 @@
      ],
      "publisher": "Simon and Schuster",
      "publishedDate": "2006-12-01",
+     "description": "An accessible, how-to guide that brings focus to the unique skills that comprise emotional intelligence and incorporate these tools into your life. EMOTIONAL INTELLIGENCE: THE #1 PREDICTOR OF PROFESSIONAL SUCCESS AND PERSONAL EXCELLENCE In today's fast-paced world of competitive workplaces and chaotic personal lives, each of us is searching for effective tools that can make our schedules, behaviors, and relationships more manageable. The Emotional Intelligence Quickbook shows us how understanding and utilizing emotional intelligence can be the key to exceeding our goals and achieving our fullest potential. Authors Bradberry and Greaves use their years of experience as emotional intelligence researchers, consultants, and speakers to revitalize our current understanding of emotional intelligence. They have combined their latest research on emotional intelligence with a quick, easy-to-use format and cut-to-the-chase information to demonstrate how this other kind of \"smart\" helps us to decrease our stress, increase our productivity, understand our emotions as they happen, and interact positively with those around us. The Emotional Intelligence Quickbook brings this concept to light in a way that has not been done before -- making EQ practical and easy to apply in every aspect of our daily lives. The Quickbook will help you to: -Engage the four unique areas of EQ: self-awareness, self-management, social awareness, and relationship management -Increase your EQ through the use of these skill-building techniques -Apply your EQ at work to develop leadership skills and improve teamwork, making you a better manager and a more desirable employee -Practice your EQ outside the office environment to benefit your relationships with loved ones, making you a better partner and parent -Access the link between your EQ and your physical well-being to improve your overall health -Measure your current EQ through access to the authors' bestselling online Emotional Intelligence Appraisal",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -543,7 +555,7 @@
    {
     "kind": "books#volume",
     "id": "XNwlxgEACAAJ",
-    "etag": "JXa4oUUemz4",
+    "etag": "WDtgotiRcJo",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/XNwlxgEACAAJ",
     "volumeInfo": {
      "title": "Summary of Emotional Intelligence 2.0 by Travis Bradberry & Jean Greaves",
@@ -551,6 +563,7 @@
       "Readtrepreneur Publishing"
      ],
      "publishedDate": "2019-05-24",
+     "description": "Emotional Intelligence 2.0 by Travis Bradberry - Book Summary - Readtrepreneur (Disclaimer: This is NOT the original book, but an unofficial summary.) You may know what emotional intelligence is but do you know how to use it to improve your life? With Emotional Intelligence 2.0 you'll get a step-by-step program that will aid you on improving your emotional intelligence using the main EQ skills. When these are mastered, you have the potential to reach levels you thought weren't possible. If you want to seize your full potential, it's time to start working! (Note: This summary is wholly written and published by Readtrepreneur. It is not affiliated with the original author in any way) \"Trust is a peculiar resource; it is built rather than depleted by use.\" - Travis Bradberry Dr Bradberry gives you the opportunity to determine your EQ kills and see where are your current strengths and weakness so you are aware where there is larger room to improve! With a numerous amount of strategies, you will be able to raise your EQ levels to a point that you will be capable of using it to your advantage and improve your professional and social life. Travis Bradberry stresses that EQ is a characteristic that needs to be recognized and improved by every individual so they can achieve success in a timely manner. P.S. Emotional Intelligence 2.0 is an extremely helpful book that will make you realize your own potential and develop skills that you possibly didn't know you had in the first place! The Time for Thinking is Over! Time for Action! Scroll Up Now and Click on the \"Buy now with 1-Click\" Button to Download your Copy Right Away! Why Choose Us, Readtrepreneur? ● Highest Quality Summaries ● Delivers Amazing Knowledge ● Awesome Refresher ● Clear And Concise Disclaimer Once Again: This book is meant for a great companionship of the original book or to simply get the gist of the original book.",
      "industryIdentifiers": [
       {
        "type": "ISBN_10",
@@ -592,7 +605,7 @@
  "https://www.googleapis.com/books/v1/volumes/An8Q0QEACAAJ": {
   "kind": "books#volume",
   "id": "An8Q0QEACAAJ",
-  "etag": "j/lYpwYgQdM",
+  "etag": "hUxfGbYY/uY",
   "selfLink": "https://www.googleapis.com/books/v1/volumes/An8Q0QEACAAJ",
   "volumeInfo": {
    "title": "The New Emotional Intelligence",
@@ -601,6 +614,7 @@
    ],
    "publisher": "Bruyere Publishing",
    "publishedDate": "2025-05-13",
+   "description": "<b><b>The world is changing rapidly, and emotional intelligence (EQ) is more important now than ever. As times change, so should your approach to increasing your EQ. <i>The New Emotional Intelligence</i> is a groundbreaking new book by Dr. Travis Bradberry, coauthor of the massive best seller <i>Emotional Intelligence 2.0, </i>that answers the call with a powerful new way to increase your EQ.</b></b><br><br><i>The New Emotional Intelligence</i> uses the latest in psychology and neuroscience to deliver a powerful new step-by-step program that will take your EQ to new heights.<br><br> The book provides 60 new super strategies to improve your EQ via the four core skills of self-awareness, self-management, social awareness, and relationship management. The book's breakthrough process shows you how to make big changes in small steps as you transform yourself, surpass your goals, and unlock your highest potential.<br> <br> Each copy contains a unique passcode to take <i>The Emotional Intelligence Test™</i> an enlightening new assessment (the author's first in 20 years) that will show you where your EQ stands today and how you can improve it. Complete with video-based elearning and an online coaching plan, your test results will:<br> <br> • Reveal which of the book's 60 super strategies will increase your EQ the most.<br> • Help you see what's holding you back and what you should be doing more of.<br> • Allow you to test yourself a second time to measure your progress.<br> <br> As the world's foremost expert on increasing emotional intelligence, Dr. Bradberry is known for his ability to turn complex topics into simple behaviors that you can easily apply to your life and work. This easy-to-follow guide offers an abundance of practical strategies to help you harness the power of EQ and build your skills into strengths.",
    "industryIdentifiers": [
     {
      "type": "ISBN_13",
@@ -632,8 +646,8 @@
     "containsImageBubbles": false
    },
    "imageLinks": {
-    "smallThumbnail": "http://books.google.com/books/content?id=An8Q0QEACAAJ&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE73y0KYUMWz6A8dHXLZlGdP1Ofbj2qu3Z-28ImxY6nA5edO2VubshDWj0TF8n7xj93fB3UEINJem4uVReoXNR5g9T4R0aF_oQav04jVoW9yyR2dBPlp7mueCE5wMhXIBmjnBk4Lo&source=gbs_api",
-    "thumbnail": "http://books.google.com/books/content?id=An8Q0QEACAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE70GxRY283aCpGpHHZU4_43z7DmGG_C-OaXQ2W1e51B-DJPokuPYxwrQ88NZhpAYvPXZtXbGZFac3wiWYJbBgQi7l7D3_CgZ6un_FSUxPPgdRvoHJxFM2vlFbM63f1OrXszZnNum&source=gbs_api"
+    "smallThumbnail": "http://books.google.com/books/content?id=An8Q0QEACAAJ&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE72Z0sxR7Sl3dXJUn_oJQ1j41ACyO6dO7d2pAA7Q-HDIzO7ByXbSk3mEnsPw5j0QiqwZribu7fnXTXSoT6X5wM1rHGypio9Y3Pj5ITJ8wzFwHr-JDOTAWfSn8POCMg2aqrtd6w_T&source=gbs_api",
+    "thumbnail": "http://books.google.com/books/content?id=An8Q0QEACAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE73bQdacDaXsS3qKX37LpNzZ91X7WP6vMwBbizYGVgGF5L1_z8BHKkcI2NB3GgoInOjqlT9Cv1DcLHetDs-CacPZIYu6YcTABuIgA5RtGS5hCvM6anATgF3p7apszWBgw2tmpF-f&source=gbs_api"
    },
    "language": "en",
    "previewLink": "http://books.google.ca/books?id=An8Q0QEACAAJ&hl=&source=gbs_api",
@@ -656,24 +670,25 @@
      "Health, Mind & Body",
      "Self-Improvement"
     ],
-    "price": 14.99,
-    "releaseDate": "2006-12-01T08:00:00Z",
     "genreIds": [
      "9009",
      "38",
      "9025",
      "10119"
     ],
+    "price": 14.99,
     "trackId": 381970644,
     "trackName": "The Emotional Intelligence Quick Book",
     "kind": "ebook",
     "currency": "USD",
+    "description": "<b>An accessible, how-to guide that brings focus to the unique skills that comprise emotional intelligence and incorporate these tools into your life.</b><br /><br />EMOTIONAL INTELLIGENCE: THE #1 PREDICTOR OF PROFESSIONAL SUCCESS AND PERSONAL EXCELLENCE<br /><br />In today's fast-paced world of competitive workplaces and chaotic personal lives, each of us is searching for effective tools that can make our schedules, behaviors, and relationships more manageable. <i>The Emotional Intelligence Quickbook</i> shows us how understanding and utilizing emotional intelligence can be the key to exceeding our goals and achieving our fullest potential.<br /><br />Authors Bradberry and Greaves use their years of experience as emotional intelligence researchers, consultants, and speakers to revitalize our current understanding of emotional intelligence. They have combined their latest research on emotional intelligence with a quick, easy-to-use format and cut-to-the-chase information to demonstrate how this other kind of \"smart\" helps us to decrease our stress, increase our productivity, understand our emotions as they happen, and interact positively with those around us.<br /><br /><i>The Emotional Intelligence Quickbook</i> brings this concept to light in a way that has not been done before -- making EQ practical and easy to apply in every aspect of our daily lives. The Quickbook will help you to:<br /><br />-Engage the four unique areas of EQ: self-awareness, self-management, social awareness, and relationship management<br /> -Increase your EQ through the use of these skill-building techniques<br /> -Apply your EQ at work to develop leadership skills and improve teamwork, making you a better manager and a more desirable employee<br /> -Practice your EQ outside the office environment to benefit your relationships with loved ones, making you a better partner and parent<br /> -Access the link between your EQ and your physical well-being to improve your overall health<br /> -Measure your current EQ through access to the authors' bestselling online Emotional Intelligence Appraisal",
+    "formattedPrice": "$14.99",
     "trackCensoredName": "The Emotional Intelligence Quick Book",
     "artistViewUrl": "https://books.apple.com/us/artist/travis-bradberry/253539403?uo=4",
     "trackViewUrl": "https://books.apple.com/us/book/the-emotional-intelligence-quick-book/id381970644?uo=4",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/60/00/2f/60002f9a-94f9-4ffc-1b2a-e295ea64e380/9781416548737.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/60/00/2f/60002f9a-94f9-4ffc-1b2a-e295ea64e380/9781416548737.jpg/100x100bb.jpg",
-    "formattedPrice": "$14.99",
+    "releaseDate": "2006-12-01T08:00:00Z",
     "averageUserRating": 3.5,
     "userRatingCount": 50
    },
@@ -696,8 +711,6 @@
      "Psychology",
      "Personal Finance"
     ],
-    "price": 2.99,
-    "releaseDate": "2023-02-23T08:00:00Z",
     "genreIds": [
      "10119",
      "38",
@@ -711,16 +724,49 @@
      "10094",
      "10008"
     ],
+    "price": 2.99,
     "trackId": 6445849980,
     "trackName": "Emotional Intelligence 2.0 by Travis Bradberry",
     "kind": "ebook",
     "currency": "USD",
+    "description": "A Comprehensive Book Guide of Emotional Intelligence 2.0\r\n\r\nAre you in charge of your emotions or are they in charge of you? Most people are slaves—or at least servants—to their emotions, and that doesn’t necessarily mean the emotions are always big and overpowering. People who show no emotion are still not in charge of the part of themselves; they are prisoners. Being able to identify and control emotions, and understanding the emotions of others, are all signs of an emotionally intelligent person. \r\nIQ when it comes to predicting success in a career and in relationships. Someone with high EQ (the abbreviation we will use for emotional intelligence technically stands for “emotional-intelligence quotient) is more likely to be healthy and happy than someone who is puzzled by their own emotions and those of others. This book will go over why this is, and if improving your EQ is even possible. Using specific tips, you can learn how to increase your emotional intelligence in the workplace and in your relationships. There’s a dark side to EQ, as well, and that will be explored in detail in these chapters.\r\nEmotions are like horses. When they are wild, they are dangerous and can lead you right off a cliff, but when they are tamed, they can carry you to great things and satisfaction in life. Social work situations will be easier to navigate, your relationships will be closer and less confusing, and your state of mind will be more peaceful. The goal of this book is to give you insight into how the emotional brain works and how to grip the reins. When you are the leader and not the follower of your emotions, you’ll be amazed at the changes in your life.\r\nEmotional intelligence has become tremendously popular as people are beginning to understand the power of emotion and the effects it has on your life—both in relationships and on work performance. \r\nThis book explores what emotional intelligence is and the effects it has on your mind and body, as well as your performance at home and work. It dives into how emotional intelligence can allow you to connect and understand others at a deeper level. The available tests for measuring your emotional intelligence have also been briefly explained.\r\nIt then gives tips and strategies on improving your emotional intelligence so that you can understand others, be more productive, and help others to understand you.\r\n\r\n\r\nHere is a Preview of What You Will Get:\r\n\r\n\r\n⁃\tA Detailed Introduction \r\n⁃\tA Comprehensive Chapter by Chapter Book Guide\r\n⁃\tEtc\r\n\r\nGet a copy of this book guide and learn about the book.",
+    "formattedPrice": "$2.99",
     "trackCensoredName": "Emotional Intelligence 2.0 by Travis Bradberry",
     "artistViewUrl": "https://books.apple.com/us/artist/turbo-learning/1623289283?uo=4",
     "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence-2-0-by-travis-bradberry/id6445849980?uo=4",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/51/e6/23/51e62312-9892-fe2e-be17-47fe1219435c/cover.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/51/e6/23/51e62312-9892-fe2e-be17-47fe1219435c/cover.jpg/100x100bb.jpg",
-    "formattedPrice": "$2.99"
+    "releaseDate": "2023-02-23T08:00:00Z"
+   },
+   {
+    "artistIds": [
+     1236421877
+    ],
+    "artistId": 1236421877,
+    "artistName": "Goldmine Reads",
+    "genres": [
+     "Self-Improvement",
+     "Books",
+     "Health, Mind & Body"
+    ],
+    "genreIds": [
+     "10119",
+     "38",
+     "9025"
+    ],
+    "price": 4.99,
+    "trackId": 1433680990,
+    "trackName": "Emotional Intelligence 2.0 - Summarized for Busy People: Based On the Book By Travis Bradberry",
+    "kind": "ebook",
+    "currency": "USD",
+    "description": "Today’s individualistic workplaces have created a competitive and individualistic nature that had us searching for something better in managing and adapting to the changing times. Emotional intelligence (EQ) does not need for any introduction in saying that you need it for achieving success.\t\n\t\nBut understanding EQ and how it can be used to improve your life are two different things.\t\n\t\nEmotional Intelligence 2.0 shares a program with strategies in increasing your EQ through four core EQ skills to help you attain your fullest potential:\t\n1) Self-Awareness\t\n2) Self-Management\t\n3) Social Awareness\t\n4) Relationship Management",
+    "formattedPrice": "$4.99",
+    "trackCensoredName": "Emotional Intelligence 2.0 - Summarized for Busy People: Based On the Book By Travis Bradberry",
+    "artistViewUrl": "https://books.apple.com/us/artist/goldmine-reads/1236421877?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence-2-0-summarized-for-busy-people/id1433680990?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/5e/96/ce/5e96ceee-a3a5-f5e9-65e5-50889922ae2b/9780359040438.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/5e/96/ce/5e96ceee-a3a5-f5e9-65e5-50889922ae2b/9780359040438.jpg/100x100bb.jpg",
+    "releaseDate": "2018-08-22T07:00:00Z"
    },
    {
     "artistIds": [
@@ -737,8 +783,6 @@
      "Business & Personal Finance",
      "Economics"
     ],
-    "price": 4.99,
-    "releaseDate": "2015-09-07T07:00:00Z",
     "genreIds": [
      "10136",
      "38",
@@ -748,47 +792,21 @@
      "9009",
      "10011"
     ],
+    "price": 4.99,
     "trackId": 1037911598,
     "trackName": "Emotional Intelligence 2.0: by Travis Bradberry and Jean Greaves  Key Takeaways, Analysis & Review",
     "kind": "ebook",
     "currency": "USD",
+    "description": "<b>PLEASE NOTE: THIS IS A COMPANION TO </b><b>THE BOOK AND NOT THE ORIGINAL BOOK.</b><br />\n&#xa0;<br />\nEmotional Intelligence 2.0: by Travis Bradberry and Jean Greaves | Key Takeaways, Analysis &amp; Review<br />\n&#xa0;<br />\n<i>Emotional Intelligence 2.0</i> is a self-help style book about identifying the reader's strengths and weaknesses in various areas of emotional intelligence and providing tools for improving emotional intelligence skills. It is an expansion on the 2004 book <i>The Emotional Intelligence Quick Book</i> and is based on the authors' online <i>Emotional Intelligence Appraisal…</i><br />\n&#xa0;<br />\nThis companion to Emotional Intelligence 2.0 includes:<br /><br />\n• Overview of the book<br />\n• Important People<br />\n• Key Takeaways<br />\n• Analysis of Key Takeaways<br />\n• and much more!",
+    "formattedPrice": "$4.99",
     "trackCensoredName": "Emotional Intelligence 2.0: by Travis Bradberry and Jean Greaves  Key Takeaways, Analysis & Review",
     "artistViewUrl": "https://books.apple.com/us/artist/eureka/1259541987?uo=4",
     "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence-2-0-by-travis-bradberry-and/id1037911598?uo=4",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/1f/9c/f5/1f9cf5bd-50a3-f5ce-4f70-f9a3b6350564/EMOTIONAL-INTELLIGENCE-2.0.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/1f/9c/f5/1f9cf5bd-50a3-f5ce-4f70-f9a3b6350564/EMOTIONAL-INTELLIGENCE-2.0.jpg/100x100bb.jpg",
-    "formattedPrice": "$4.99",
+    "releaseDate": "2015-09-07T07:00:00Z",
     "averageUserRating": 4,
     "userRatingCount": 81
-   },
-   {
-    "artistIds": [
-     1236421877
-    ],
-    "artistId": 1236421877,
-    "artistName": "Goldmine Reads",
-    "genres": [
-     "Self-Improvement",
-     "Books",
-     "Health, Mind & Body"
-    ],
-    "price": 4.99,
-    "releaseDate": "2018-08-22T07:00:00Z",
-    "genreIds": [
-     "10119",
-     "38",
-     "9025"
-    ],
-    "trackId": 1433680990,
-    "trackName": "Emotional Intelligence 2.0 - Summarized for Busy People: Based On the Book By Travis Bradberry",
-    "kind": "ebook",
-    "currency": "USD",
-    "trackCensoredName": "Emotional Intelligence 2.0 - Summarized for Busy People: Based On the Book By Travis Bradberry",
-    "artistViewUrl": "https://books.apple.com/us/artist/goldmine-reads/1236421877?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence-2-0-summarized-for-busy-people/id1433680990?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/5e/96/ce/5e96ceee-a3a5-f5e9-65e5-50889922ae2b/9780359040438.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/5e/96/ce/5e96ceee-a3a5-f5e9-65e5-50889922ae2b/9780359040438.jpg/100x100bb.jpg",
-    "formattedPrice": "$4.99"
    },
    {
     "artistIds": [
@@ -802,24 +820,25 @@
      "Health, Mind & Body",
      "Psychology"
     ],
-    "price": 2.99,
-    "releaseDate": "2017-09-07T07:00:00Z",
     "genreIds": [
      "10119",
      "38",
      "9025",
      "10094"
     ],
+    "price": 2.99,
     "trackId": 1229572426,
     "trackName": "Emotional Intelligence",
     "kind": "ebook",
     "currency": "USD",
+    "description": "<b>A TOOLKIT FOR IMPROVING YOUR LIFE</b><br /><br />Emotional Intelligence is a way of developing a well-balanced thoughtfulness in our lives. <br /><br />The ability to use our thoughts and feelings to change our behaviour and create a positive influence on our surroundings, on our friends and our colleagues, is one which can produce fundamental improvements in our professional and personal lives. It will help us to lift our performance at work, enjoy better relationships and communicate better with those around us.<br /><br />This book combines detailed, practical application of Emotional Intelligence principles along with insights from the fields of mindfulness and positive psychology to create a a powerful tool for change which you can use right away. It presents practical strategies to help you set and achieve new goals either at work or at home, and to engage effectively and positively with everyone around you. <br /><br /><b>ABOUT THE SERIES</b><br />People have been learning with <i>Teach Yourself</i> since 1938. With a vast range of practical, how-to guides covering language learning, lifestyle, hobbies, business, psychology and self-help, there's a <i>Teach Yourself</i> book for whatever you want to do. Join more than 60 million people who have reached their goals with <i>Teach Yourself</i>, and never stop learning.",
+    "formattedPrice": "$2.99",
     "trackCensoredName": "Emotional Intelligence",
     "artistViewUrl": "https://books.apple.com/us/artist/christine-wilding/413646567?uo=4",
     "trackViewUrl": "https://books.apple.com/us/book/emotional-intelligence/id1229572426?uo=4",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/c9/b7/f8/c9b7f861-3c73-7c69-7ad1-dc45d3d61646/9781473654389.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/c9/b7/f8/c9b7f861-3c73-7c69-7ad1-dc45d3d61646/9781473654389.jpg/100x100bb.jpg",
-    "formattedPrice": "$2.99"
+    "releaseDate": "2017-09-07T07:00:00Z"
    },
    {
     "artistIds": [
@@ -831,26 +850,27 @@
      "Business & Personal Finance",
      "Books"
     ],
-    "price": 3.99,
-    "releaseDate": "2024-01-25T08:00:00Z",
     "genreIds": [
      "9009",
      "38"
     ],
+    "price": 3.99,
     "trackId": 6480054814,
     "trackName": "Summary of Travis Bradberry's Emotional Intelligence Habits",
     "kind": "ebook",
     "currency": "USD",
+    "description": "Get the Summary of Travis Bradberry's Emotional Intelligence Habits in 20 minutes. Please note: This is a summary &amp; not the original book. \"Emotional Intelligence Habits\" by Travis Bradberry explores the concept of emotional intelligence (EQ) and its impact on personal and professional success. The book begins with the story of Phineas Gage, whose personality changed drastically after a brain injury, illustrating the importance of the prefrontal cortex in EQ. Emotional intelligence involves self-awareness, self-management, social awareness, and relationship management, and unlike IQ, it can be developed at any stage of life...",
+    "formattedPrice": "$3.99",
     "trackCensoredName": "Summary of Travis Bradberry's Emotional Intelligence Habits",
     "artistViewUrl": "https://books.apple.com/us/artist/slingshot-books/1569215319?uo=4",
     "trackViewUrl": "https://books.apple.com/us/book/summary-of-travis-bradberrys-emotional-intelligence/id6480054814?uo=4",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/ea/64/5d/ea645d1c-f5f9-fcad-edc8-2b8d8fc2ba72/9798330019076.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/ea/64/5d/ea645d1c-f5f9-fcad-edc8-2b8d8fc2ba72/9798330019076.jpg/100x100bb.jpg",
-    "formattedPrice": "$3.99"
+    "releaseDate": "2024-01-25T08:00:00Z"
    }
   ]
  },
- "https://openlibrary.org/search.json?q=The%20Subtle%20Art%20of%20Not%20Giving%20a%20F*ck%3A%20A%20Counterintuitive%20Approach%20to%20Living%20a%20Good%20Life%20Mark%20Manson&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i": {
+ "https://openlibrary.org/search.json?q=The%20Subtle%20Art%20of%20Not%20Giving%20a%20F*ck%3A%20A%20Counterintuitive%20Approach%20to%20Living%20a%20Good%20Life%20Mark%20Manson&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject": {
   "numFound": 0,
   "start": 0,
   "numFoundExact": true,
@@ -867,7 +887,7 @@
    {
     "kind": "books#volume",
     "id": "ARyu0AEACAAJ",
-    "etag": "Lev75iR8yuY",
+    "etag": "Xs9nSW4HvOA",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/ARyu0AEACAAJ",
     "volumeInfo": {
      "title": "The Subtle Art of Not Giving a F*ck / Everything Is F*cked Box Set",
@@ -876,6 +896,7 @@
      ],
      "publisher": "Harper",
      "publishedDate": "2024-09-03",
+     "description": "Mark Manson's smash New York Times bestsellers The Subtle Art of Not Giving a F*ck and Everything is F*cked, now available together in one specially packaged box set. In his two groundbreaking books, celebrated anti-self-help authority Mark Manson shows us how to truly pursue a better life and gives us a better understanding of our world. The generation-defining self-help guide The Subtle Art of Not Giving a F*ck, cuts through the crap to show us how to stop trying to be \"positive\" and truly become better, happier people. Taking a much-needed, grab-you-by-the-shoulders-and-look-you-in-the-eye approach, Mark Manson's guide offers a dose of real-talk, filled with entertaining stories and profane, ruthless humor. Wise and genuine, it serves as a refreshing generational reset to help us all lead contented, grounded lives. In Everything Is F*cked, Manson shifts focus from overcoming individual flaws to the endless calamities occurring in the world around us. Drawing from the deep pool of psychological research on these topics, as well as the timeless wisdom of philosophers, including Plato, Nietzsche, and Tom Waits, he dissects religion and politics and the uncomfortable ways they have come to resemble one another. He explores our relationships with money, entertainment, and the internet, and how too much of a good thing can psychologically eat us alive. He openly defies our definitions of faith, happiness, freedom--and even of hope itself, teaching us to see the world and ourselves differently.",
      "industryIdentifiers": [
       {
        "type": "ISBN_10",
@@ -915,7 +936,7 @@
    {
     "kind": "books#volume",
     "id": "mR_5vQEACAAJ",
-    "etag": "Ay0CIQTMBu4",
+    "etag": "cXxxtRfptfo",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/mR_5vQEACAAJ",
     "volumeInfo": {
      "title": "The Subtle Art of Not Giving a #@%",
@@ -964,7 +985,7 @@
    {
     "kind": "books#volume",
     "id": "GimeEQAAQBAJ",
-    "etag": "+Yd9Pj0PhFc",
+    "etag": "S/wRJZGLIZs",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/GimeEQAAQBAJ",
     "volumeInfo": {
      "title": "The Subtle Art of Not Giving a F*ck, Revised and Updated Edition",
@@ -1009,7 +1030,7 @@
    {
     "kind": "books#volume",
     "id": "43o6ygEACAAJ",
-    "etag": "GD/GgRdnIOQ",
+    "etag": "tngsGOUiTOQ",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/43o6ygEACAAJ",
     "volumeInfo": {
      "title": "The Subtle Art of Not Giving a F*CK",
@@ -1018,6 +1039,7 @@
       "Mark Manson"
      ],
      "publishedDate": "2017-01-17",
+     "description": "EVERYTHING WE'VE BEEN TOLD ABOUT HOW TO IMPROVE OUR LIVES IS WRONG. NOW SUPERSTAR BLOGGER MARK MANSON TELLS US WHAT WE NEED TO DO TO GET IT RIGHT. For decades, we've been told that positive thinking is the key to a happy, rich life. Drawing on academic research and the life experience that comes from breaking the rules, Mark Manson is ready to explode that myth. The key to a good life, according to Manson, is the understanding that 'sometimes shit is fâ [cked up and we have to live with it.' Manson says that instead of trying to turn lemons into lemonade, we should learn to stomach lemons better, and stop distracting ourselves from life's inevitable disappointments chasing 'shit' like money, success and possessions. It's time to re-calibrate our values and what it means to be happy: there are only so many things we can give a fâ [ck about, he says, so we need to figure out which ones really matter. From the writer whose blog draws two million readers a month and filled with entertaining stories and profane, ruthless humour, The Subtle Art of Not Giving a Fâ [ck is a welcome antidote to the 'let's-all-feel-good' mindset that has infected modern society.",
      "industryIdentifiers": [
       {
        "type": "ISBN_10",
@@ -1054,7 +1076,7 @@
    {
     "kind": "books#volume",
     "id": "aFy9AQAACAAJ",
-    "etag": "TispPJUFbFs",
+    "etag": "FIJsiWo3OW4",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/aFy9AQAACAAJ",
     "volumeInfo": {
      "title": "The Subtle Art of Not Giving a F*ck",
@@ -1063,6 +1085,7 @@
       "Mark Manson"
      ],
      "publishedDate": "2017-01-16",
+     "description": "EVERYTHING WE'VE BEEN TOLD ABOUT HOW TO IMPROVE OUR LIVES IS WRONG. NOW SUPERSTAR BLOGGER MARK MANSON TELLS US WHAT WE NEED TO DO TO GET IT RIGHT. For decades, we've been told that positive thinking is the key to a happy, rich life. Drawing on academic research and the life experience that comes from breaking the rules, Mark Manson is ready to explode that myth. The key to a good life, according to Manson, is the understanding that 'sometimes shit is f*cked up and we have to live with it.' Manson says that instead of trying to turn lemons into lemonade, we should learn to stomach lemons better, and stop distracting ourselves from life's inevitable disappointments chasing 'shit' like money, success and possessions. It's time to re-calibrate our values and what it means to be happy: there are only so many things we can give a f*ck about, he says, so we need to figure out which ones really matter. From the writer whose blog draws two million readers a month and filled with entertaining stories and profane, ruthless humour, The Subtle Art of Not Giving a F*ck is a welcome antidote to the 'let's-all-feel-good' mindset that has infected modern society.",
      "industryIdentifiers": [
       {
        "type": "ISBN_10",
@@ -1102,104 +1125,107 @@
   "resultCount": 6,
   "results": [
    {
+    "trackCensoredName": "Summary: The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life: Mark Manson",
     "formattedPrice": "$3.99",
     "trackViewUrl": "https://books.apple.com/us/book/summary-the-subtle-art-of-not-giving-a/id6744942268?uo=4",
-    "trackCensoredName": "Summary: The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life: Mark Manson",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/94/de/4a/94de4ad9-c120-d843-68e9-fc5130ab39f6/0b888214-d92c-4d16-8d98-c79beee41e9e_cover_image.png/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/94/de/4a/94de4ad9-c120-d843-68e9-fc5130ab39f6/0b888214-d92c-4d16-8d98-c79beee41e9e_cover_image.png/100x100bb.jpg",
     "artistViewUrl": "https://books.apple.com/us/artist/quick-savant/1625936862?uo=4",
     "artistIds": [
      1625936862
     ],
-    "trackId": 6744942268,
-    "trackName": "Summary: The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life: Mark Manson",
+    "artistId": 1625936862,
+    "artistName": "Quick Savant",
     "genres": [
      "Self-Improvement",
      "Books",
      "Health, Mind & Body"
     ],
     "price": 3.99,
-    "releaseDate": "2025-04-22T07:00:00Z",
     "genreIds": [
      "10119",
      "38",
      "9025"
     ],
+    "releaseDate": "2025-04-22T07:00:00Z",
+    "trackName": "Summary: The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life: Mark Manson",
+    "trackId": 6744942268,
     "kind": "ebook",
     "currency": "USD",
-    "artistId": 1625936862,
-    "artistName": "Quick Savant"
+    "description": "In this generation-defining self-help guide, a superstar blogger cuts through the crap to show us how to stop trying to be \"positive\" all the time so that we can truly become better, happier people. For decades, we’ve been told that positive thinking is the key to a happy, rich life. \"F**k positivity,\" Mark Manson says. \"Let’s be honest, shit is f**ked and we have to live with it.\" In his wildly popular Internet blog, Manson doesn’t sugarcoat or equivocate. He tells it like it is—a dose of raw, refreshing, honest truth that is sorely lacking today. The Subtle Art of Not Giving a F**k is his antidote to the coddling, let’s-all-feel-good mindset that has infected modern society and spoiled a generation, rewarding them with gold medals just for showing up. Manson makes the argument, backed both by academic research and well-timed poop jokes, that improving our lives hinges not on our ability to turn lemons into lemonade, but on learning to stomach lemons better. Human beings are flawed and limited—\"not everybody can be extraordinary, there are winners and losers in society, and some of it is not fair or your fault.\" Manson advises us to get to know our limitations and accept them. Once we embrace our fears, faults, and uncertainties, once we stop running and avoiding and start confronting painful truths, we can begin to find the courage, perseverance, honesty, responsibility, curiosity, and forgiveness we seek. There are only so many things we can give a f**k about so we need to figure out which ones really matter, Manson makes clear. While money is nice, caring about what you do with your life is better, because true wealth is about experience. A much-needed grab-you-by-the-shoulders-and-look-you-in-the-eye moment of real-talk, filled with entertaining stories and profane, ruthless humor, The Subtle Art of Not Giving a F*ck is a refreshing slap for a generation to help them lead contented, grounded lives."
    },
    {
+    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson  Conversation Starters",
     "formattedPrice": "$3.99",
     "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f/id1239983123?uo=4",
-    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson  Conversation Starters",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/7d/12/27/7d12271a-3541-1ef1-6b0c-0404770bd001/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication127/v4/7d/12/27/7d12271a-3541-1ef1-6b0c-0404770bd001/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/100x100bb.jpg",
     "artistViewUrl": "https://books.apple.com/us/artist/daily-books/1086270207?uo=4",
     "artistIds": [
      1086270207
     ],
-    "trackId": 1239983123,
-    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson  Conversation Starters",
+    "artistId": 1086270207,
+    "artistName": "Daily Books",
     "genres": [
      "Study Aids",
      "Books",
      "Reference"
     ],
     "price": 3.99,
-    "releaseDate": "2017-02-02T08:00:00Z",
     "genreIds": [
      "10136",
      "38",
      "9033"
     ],
+    "releaseDate": "2017-02-02T08:00:00Z",
+    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson  Conversation Starters",
+    "trackId": 1239983123,
     "kind": "ebook",
     "currency": "USD",
-    "artistId": 1086270207,
-    "artistName": "Daily Books"
+    "description": "<b>The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson | Conversation Starters</b><br /><br />\nLife is hard. Mark Manson knows this. Lucky for you, he also has an idea of how to get through some of lifeís toughest problems. In this one of a kind self-help book, Manson provides a unique perspective on dealing with lifeís bullsh*t. He claims that the key to living a good life is not all the feel-good positive advice we have been fed over the years; itís actually in not giving a f*ck about anything at all. In this book, he dishes out all his secrets in getting over bad experiences, in learning to accept failure, and in ultimately understanding ourselves in the pursuit of self-improvement.&#xa0;<br /><br />\nMansonís article of the same title was an instant hit after he posted it on his blog. The book, which is the second one he has ever published was released in 2006, and has since become a national best-seller.<br /><br />\n&#xa0;A Brief Look Inside:<b>&#xa0;</b><br /><br />\nEVERY GOOD BOOK CONTAINS A WORLD FAR DEEPER<br />\nthan the surface of its pages. The characters and their world come alive,&#xa0;<br />\nand the characters and its world still live on.&#xa0;<br />\n<i>Conversation Starters </i>is peppered with questions designed to<br />\nbring us beneath the surface of the page<br />\nand invite us into the world that lives on.&#xa0;<br /><br />\nThese questions can be used to..<br /><br />\nCreate Hours of Conversation:<br />\n•<b>Foster</b> a deeper understanding of the book<br />\n•<b>Promote</b> an atmosphere of discussion for groups<br />\n•<b>Assist</b> in the study of the book, either individually or corporately<br />\n•<b>Explore</b> unseen realms of the book as never seen before<br /><br />\n<b>Disclaimer</b>: This book you are about to enjoy is an independent resource to supplement the original book, enhancing your experience<i>.</i> If you have not yet purchased a copy of the original book, please do before purchasing this unofficial <i>Conversation Starters</i>.<br /><br />\n<b>Download your copy today for a Limited Time&#xa0;</b><br />\n<b>Read it on your PC, Mac, iOS or Android smartphone, tablet devices.</b>"
    },
    {
+    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbook",
     "formattedPrice": "$3.99",
     "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f/id1435152568?uo=4",
-    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbook",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication118/v4/8b/a0/69/8ba069ce-0f90-ea7d-66b1-446b0925292f/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication118/v4/8b/a0/69/8ba069ce-0f90-ea7d-66b1-446b0925292f/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/100x100bb.jpg",
     "artistViewUrl": "https://books.apple.com/us/artist/max-help/1434709962?uo=4",
     "artistIds": [
      1434709962
     ],
-    "trackId": 1435152568,
-    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbook",
+    "artistId": 1434709962,
+    "artistName": "Max Help",
     "genres": [
      "Study Aids",
      "Books",
      "Reference"
     ],
     "price": 3.99,
-    "releaseDate": "2018-09-04T07:00:00Z",
     "genreIds": [
      "10136",
      "38",
      "9033"
     ],
+    "releaseDate": "2018-09-04T07:00:00Z",
+    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbook",
+    "trackId": 1435152568,
     "kind": "ebook",
     "currency": "USD",
-    "artistId": 1434709962,
-    "artistName": "Max Help"
+    "description": "<b>Complete beginners can begin using this workbook for The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson to find immediate help in applying its major lessons.</b><br /><br />\nThe Subtle Art of Not Giving a F*ck is a self-help book from blogger Mark Manson. It is not your typical self-help book as it helps readers understand why they do not need to be positive all the time and how caring about less can actually lead to a happier life. This goes against what people have been told for many years -- that positive thinking is the best way to achieve a life filled with happiness and riches. Mark Manson's approach is that life is messed up, but we have to find a way to live with it anyway. Manson takes a no-nonsense, no sugarcoating approach to helping people become happier.&#xa0;<br /><br />\nThe Subtle Art of Not Giving a F*ck became a bestseller for The New York Times in 2016. It was also the second most read book on Amazon.&#xa0; The book was called \"masterful\" by author of The Obstacle is the Way and Ego is the Enemy author, Ryan Holiday.<br /><br />\n<b>Who wouldn’t want to continue applying the best thought topics found in some of today’s most important books? The goal of this workbook is to help even the newest readers apply what may be the most critical lessons found in The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson. Results have shown that learning is retained best through repeated hands-on applications. With </b><i>Max Help </i><b>Workbooks, readers will be able to find distilled information categorized into major lessons with applicable exercise worksheets to maximize learning.</b><br /><br />\n<b>With each chapter, there are questions devoted both for self or group study usage with actionable steps to stimulate engagement:</b><br /><br />\n<b>Don’t Miss the Following Features:</b><br /><br />\n<b>• &#xa0;&#xa0;Succinct breakdown of the book categorized into major lessons</b><br />\n<b>• &#xa0;&#xa0;Easy-to-understand analysis of each lessons distilled for even the newest of readers</b><br />\n<b>• &#xa0;&#xa0;Simple and practical worksheets to further reader’s application</b><br />\n<b>• &#xa0;&#xa0;Quiz questions as a resource to be used for yourself or others</b><br />\n<b>• &#xa0;&#xa0;Extra: Bonus downloads available in every purchase!</b><br /><br />\n<b>So, what are you waiting for? Get your copy now and take out a pencil, pen, or whatever digital technology to jot down, implement, and make solid changes happen.&#xa0;</b><br /><br />\n<b>And don’t forget to have fun - that’ll also keep you </b><i>learning</i><b>.&#xa0;</b><br /><br />\nDisclaimer: This unofficial workbook is for readers for further application as a companion guide of the original work and is not intended to replace or substitute the original work in any way. We encourage readers to purchase the original work prior to purchasing this copy to obtain the Max Help possible."
    },
    {
+    "trackCensoredName": "The Subtle Art of Not Giving a F*ck",
     "formattedPrice": "$13.99",
     "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f-ck/id1071409887?uo=4",
-    "trackCensoredName": "The Subtle Art of Not Giving a F*ck",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/32/d5/2a/32d52aff-9c35-c7dc-d2f0-2c64930e0edd/9780062457738.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/32/d5/2a/32d52aff-9c35-c7dc-d2f0-2c64930e0edd/9780062457738.jpg/100x100bb.jpg",
     "artistViewUrl": "https://books.apple.com/us/artist/mark-manson/543049691?uo=4",
     "artistIds": [
      543049691
     ],
-    "trackId": 1071409887,
-    "trackName": "The Subtle Art of Not Giving a F*ck",
+    "artistId": 543049691,
+    "artistName": "Mark Manson",
     "genres": [
      "Self-Improvement",
      "Books",
@@ -1217,7 +1243,6 @@
      "Psychology"
     ],
     "price": 13.99,
-    "releaseDate": "2016-09-13T07:00:00Z",
     "genreIds": [
      "10119",
      "38",
@@ -1234,74 +1259,78 @@
      "10010",
      "10094"
     ],
+    "releaseDate": "2016-09-13T07:00:00Z",
+    "trackName": "The Subtle Art of Not Giving a F*ck",
+    "trackId": 1071409887,
     "kind": "ebook",
     "currency": "USD",
-    "artistId": 543049691,
-    "artistName": "Mark Manson",
+    "description": "#1 New York Times Bestseller • More than&#xa0;10 million Copies Sold<br /><br />In this generation-defining self-help guide, a superstar blogger cuts through the crap to show us how to stop trying to be \"positive\" all the time so that we can truly become better, happier people.<br /><br />For decades, we’ve been told that positive thinking is the key to a happy, rich life. \"F**k positivity,\" Mark Manson says. \"Let’s be honest, shit is f**ked and we have to live with it.\" In his wildly popular Internet blog, Manson doesn’t sugarcoat or equivocate. He tells it like it is—a dose of raw, refreshing, honest truth that is sorely lacking today. The Subtle Art of Not Giving a F**k is his antidote to the coddling, let’s-all-feel-good mindset that has infected&#xa0;modern society and spoiled a generation, rewarding them with gold medals just for showing up.<br /><br />Manson makes the argument, backed both by academic research and well-timed poop jokes, that improving our lives hinges not on our ability to turn lemons into lemonade, but on learning to stomach lemons better. Human beings are flawed and limited—\"not everybody can be extraordinary, there are winners and losers in society, and some of it is not fair or your fault.\" Manson advises us to get to know our limitations and accept them. Once we embrace our fears, faults, and uncertainties, once we stop running and avoiding and start confronting painful truths, we can begin to find the courage, perseverance, honesty, responsibility, curiosity, and forgiveness we seek.<br /><br />There are only so many things we can give a f**k about so we need to figure out which ones really matter, Manson makes clear. While money is nice, caring about what you do with your life is better, because true wealth is about experience. A much-needed grab-you-by-the-shoulders-and-look-you-in-the-eye moment of real-talk, filled with entertaining stories and profane, ruthless humor, The Subtle Art of Not Giving a F*ck is a refreshing slap for a generation to help them lead contented, grounded lives.",
     "averageUserRating": 4.5,
     "userRatingCount": 13126
    },
    {
+    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbooks",
     "formattedPrice": "$3.99",
     "trackViewUrl": "https://books.apple.com/us/book/the-subtle-art-of-not-giving-a-f/id1450217921?uo=4",
-    "trackCensoredName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbooks",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/7d/cd/a4/7dcda409-8171-31dc-bbb8-fbbca27ca801/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/7d/cd/a4/7dcda409-8171-31dc-bbb8-fbbca27ca801/The_Subtle_Art_of_Not_Giving_a_Fck.jpg/100x100bb.jpg",
     "artistViewUrl": "https://books.apple.com/us/artist/max-help-workbooks/1439559489?uo=4",
     "artistIds": [
      1439559489
     ],
-    "trackId": 1450217921,
-    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbooks",
+    "artistId": 1439559489,
+    "artistName": "Max Help Workbooks",
     "genres": [
      "Study Aids",
      "Books",
      "Reference"
     ],
     "price": 3.99,
-    "releaseDate": "2020-12-06T08:00:00Z",
     "genreIds": [
      "10136",
      "38",
      "9033"
     ],
+    "releaseDate": "2020-12-06T08:00:00Z",
+    "trackName": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson: Max Help Workbooks",
+    "trackId": 1450217921,
     "kind": "ebook",
     "currency": "USD",
-    "artistId": 1439559489,
-    "artistName": "Max Help Workbooks"
+    "description": "Any reader can use this workbook for The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson and find immediate help in applying its major lessons.<br/>\n<br/>\nThe Subtle Art of Not Giving a F*ck is a self-help book from blogger Mark Manson. It is not your typical self-help book as it helps readers understand why they do not need to be positive all the time and how caring about less can actually lead to a happier life. This goes against what people have been told for many years -- that positive thinking is the best way to achieve a life filled with happiness and riches. Mark Manson&#39;s approach is that life is messed up, but we have to find a way to live with it anyway. Manson takes a no-nonsense, no sugarcoating approach to helping people become happier. <br/>\nThe Subtle Art of Not Giving a F*ck became a bestseller for The New York Times in 2016. It was also the second most read book on Amazon.  The book was called &#34;masterful&#34; by author of The Obstacle is the Way and Ego is the Enemy author, Ryan Holiday.<br/>\n<br/>\nDo you want to apply the major lessons to your daily life? The goal of this workbook is to help even the any reader apply what may be the most critical lessons found in The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life by Mark Manson.<br/>\nResults have shown that learning is retained best through repeated hands-on applications. With Max Help Workbooks, readers will be able to find distilled information with applicable engaging exercise worksheets to maximize learning.<br/>\n<br/>\nDon’t Miss the Following Content:<br/>\n<br/>\n•   Succinct breakdown of the book categorized into major lessons<br/>\n•   Read and use the exercises yourself or as a group<br/>\n•   Easy-to-understand analysis of each lessons distilled for even the newest of readers<br/>\n•   Simple and practical worksheets to further reader’s application<br/>\n•   Quiz questions as a resource to be used for yourself or others<br/>\n<br/>\nBook is on sale now. Get your copy now and take out a pencil, pen, or whatever digital technology to annotate, implement and make changes manifest. And don’t forget to have fun - that’ll also keep you learning. <br/>\n<br/>\nDisclaimer: This workbook is meant to further application as an unofficial companion guide of the original work and is not affiliated with, or intended to replace the original work in any way. We encourage readers to purchase the original work prior to purchasing this copy."
    },
    {
+    "trackCensoredName": "Workbook for The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life (Max-Help Books)",
     "formattedPrice": "$3.99",
     "trackViewUrl": "https://books.apple.com/us/book/workbook-for-the-subtle-art-of-not-giving-a/id1446351499?uo=4",
-    "trackCensoredName": "Workbook for The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life (Max-Help Books)",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/23/b8/34/23b834ed-989c-1ffa-3eae-19b8437d8e0d/6610000135110.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/23/b8/34/23b834ed-989c-1ffa-3eae-19b8437d8e0d/6610000135110.jpg/100x100bb.jpg",
     "artistViewUrl": "https://books.apple.com/us/artist/dan-young/1446244659?uo=4",
     "artistIds": [
      1446244659
     ],
-    "trackId": 1446351499,
-    "trackName": "Workbook for The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life (Max-Help Books)",
+    "artistId": 1446244659,
+    "artistName": "Dan Young",
     "genres": [
      "Study Aids",
      "Books",
      "Reference"
     ],
     "price": 3.99,
-    "releaseDate": "2018-12-04T08:00:00Z",
     "genreIds": [
      "10136",
      "38",
      "9033"
     ],
+    "releaseDate": "2018-12-04T08:00:00Z",
+    "trackName": "Workbook for The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life (Max-Help Books)",
+    "trackId": 1446351499,
     "kind": "ebook",
     "currency": "USD",
-    "artistId": 1446244659,
-    "artistName": "Dan Young"
+    "description": "<b>Complete beginners can use this workbook for The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life</b><b>&#xa0;by Mark Manson</b><b> and find immediate help in applying its major lessons.</b><br /><br /><b>The Subtle Art of Not Giving a F*ck is a self-help book from blogger Mark Manson. It is not your typical self-help book as it helps readers understand why they do not need to be positive all the time and how caring about less can actually lead to a happier life. This goes against what people have been told for many years -- that positive thinking is the best way to achieve a life filled with happiness and riches. Mark Manson's approach is that life is messed up, but we have to find a way to live with it anyway. Manson takes a no-nonsense, no sugarcoating approach to helping people become happier. <br />The Subtle Art of Not Giving a F*ck became a bestseller for The New York Times in 2016. It was also the second most read book on Amazon. The book was called \"masterful\" by author of The Obstacle is the Way and Ego is the Enemy author, Ryan Holiday.</b><br /><br /><b>Do you want to apply the major lessons to your daily life? The goal of this workbook is to help even the newest readers apply what may be the most critical lessons found in The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life&#xa0;by Mark Manson</b><b>. Results have shown that learning is retained best through repeated hands-on applications. With </b><b><i>Max Help </i></b><b>Workbooks, readers will be able to find distilled information categorized into major lessons with applicable exercise worksheets to maximize learning.</b><br /><br /><b>Don’t Miss the Following Content:</b><br /><br /><b> &#xa0;&#xa0;Succinct breakdown of the book categorized into major lessons</b><br /><br /><b> &#xa0;&#xa0;Read and use the exercises yourself or as a group</b><br /><br /><b> &#xa0;&#xa0;Easy-to-understand analysis of each lessons distilled for even the newest of readers</b><br /><br /><b> &#xa0;&#xa0;Simple and practical worksheets to further reader’s application</b><br /><br /><b> &#xa0;&#xa0;Quiz questions as a resource to be used for yourself or others</b><br /><br /><b>So, what are you waiting for? Get your copy now and take out a pencil, pen, or whatever digital technology to jot down, implement, and make solid changes happen. </b><br /><br /><b>And don’t forget to have fun - that’ll also keep you </b><b><i>learning</i></b><b>. </b><br /><br />Disclaimer: This workbook is meant to further application as an unofficial companion guide of the original work and is not affiliated with, or intended to replace the original work in any way. We encourage readers to purchase the original work prior to purchasing this copy."
    }
   ]
  },
- "https://openlibrary.org/search.json?q=From%20Zero%20to%20Profit%20with%20AI%3A%20The%20Contemporary%20Guide%20to%20Online%20Income%20Generation%20and%20Accelerated%20Growth%20Helen%20B.%20Keating&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i": {
+ "https://openlibrary.org/search.json?q=From%20Zero%20to%20Profit%20with%20AI%3A%20The%20Contemporary%20Guide%20to%20Online%20Income%20Generation%20and%20Accelerated%20Growth%20Helen%20B.%20Keating&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject": {
   "numFound": 0,
   "start": 0,
   "numFoundExact": true,
@@ -1318,7 +1347,7 @@
    {
     "kind": "books#volume",
     "id": "JGQU0gEACAAJ",
-    "etag": "lgchyCxBbFE",
+    "etag": "VdU9L6ET7Os",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/JGQU0gEACAAJ",
     "volumeInfo": {
      "title": "From Zero to Profit with AI",
@@ -1328,6 +1357,7 @@
      ],
      "publisher": "Independently Published",
      "publishedDate": "2026-05-24",
+     "description": "Artificial intelligence is changing the way people work, create, publish, and earn online-but most advice surrounding AI is either overly technical or filled with unrealistic promises. From Zero to Profit with AI offers a grounded, practical approach to building modern online income in a rapidly changing digital economy. Written in a calm and realistic style, this book explores how ordinary people can use AI tools to improve productivity, develop valuable skills, create digital products, build audiences, freelance online, publish ebooks, and design sustainable income systems without becoming trapped in hype-driven internet culture. Rather than promoting shortcuts or overnight success stories, this guide focuses on long-term thinking, practical execution, and emotionally sustainable growth. Readers will learn how AI is reshaping online business, which human skills are becoming more valuable, and how to combine technology with clarity, trust, and usefulness in order to build meaningful digital opportunities. Inside the book, readers will discover: How the modern AI economy actually works The most realistic online income paths for beginners How to create digital products people genuinely want AI-assisted freelancing and publishing strategies Audience-building without becoming an online performer Sustainable business systems for long-term growth How to avoid burnout in the always-online economy Practical ways to use AI without losing human creativity and judgment Whether you are starting from zero, exploring remote income opportunities, or adapting to the future of digital work, this book provides a thoughtful roadmap for navigating the AI era with clarity and confidence.",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -1363,7 +1393,7 @@
    {
     "kind": "books#volume",
     "id": "Z-fEEQAAQBAJ",
-    "etag": "DJDl34z0vf8",
+    "etag": "YO7D+wilpDg",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/Z-fEEQAAQBAJ",
     "volumeInfo": {
      "title": "Make Money Online with AI",
@@ -1372,6 +1402,7 @@
       "Karna Raju"
      ],
      "publisher": "Karna Raju",
+     "description": "Make Money Online with AI for Beginners is the ultimate 2026 guide for anyone who wants to turn the power of artificial intelligence into a consistent, scalable stream of passive income. Written by Karna Raju and packed with actionable strategies, this comprehensive resource covers everything from understanding large language models like ChatGPT and Claude, to launching a freelance career, selling digital products, running affiliate marketing blogs, and even building your own AI-powered software tools — all without needing a technical background. Whether you're a complete newcomer or someone with limited online experience, Make Money Online with AI for Beginners breaks down 15 in-depth chapters of step-by-step guidance, real-world examples, proven prompt templates, and a practical 30-day action plan designed to get you earning real income fast. From YouTube automation and AI art sales to e-commerce, consulting, and digital course creation, every major AI income stream is covered with clarity and depth. The book is ideal for side-hustlers, entrepreneurs, freelancers, and anyone curious about the financial possibilities of the AI revolution. With three resource-packed appendices, an income tracking template, and a curated tool reference guide, this eBook is not just an inspiring read — it's a complete business blueprint for the AI economy of 2026 and beyond.",
      "readingModes": {
       "text": true,
       "image": true
@@ -1401,13 +1432,14 @@
    {
     "kind": "books#volume",
     "id": "VdXKEQAAQBAJ",
-    "etag": "ojS5hF5sZf8",
+    "etag": "J4ZvP5wl2x4",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/VdXKEQAAQBAJ",
     "volumeInfo": {
      "title": "Making Money with Artificial Intelligence",
      "subtitle": "A Core Guide to Generating Income from Scratch, Building a Business, and Shaping Your Future with AI",
      "publisher": "Hüseyin Büyükbaş",
      "publishedDate": "2026-03-22",
+     "description": "Throughout tech history, no single innovation has been as disruptive, explosive, and lucrative as Artificial Intelligence (AI). What was once science fiction locked in multi-billion-dollar corporate labs is now right at your fingertips. The question is: Will you just watch the revolution happen, or will you command it? \"Making Money with Artificial Intelligence\" is not a boring textbook packed with confusing computer jargon or impossible get-rich-quick dreams. Designed specifically for absolute beginners, this comprehensive 14-chapter guide hands you the exact blueprints to transform free AI tools into your own 24/7 digital employees. make money with AI chatgpt prompt engineering passive income ideas start a side hustle 2024 no code app development online business for beginners digital entrepreneurship",
      "readingModes": {
       "text": false,
       "image": true
@@ -1436,53 +1468,8 @@
    },
    {
     "kind": "books#volume",
-    "id": "jl0v0QEACAAJ",
-    "etag": "GaKQwWMaFdA",
-    "selfLink": "https://www.googleapis.com/books/v1/volumes/jl0v0QEACAAJ",
-    "volumeInfo": {
-     "title": "AI for Profit",
-     "subtitle": "Unlocking Income Opportunities with AI: A Comprehensive Guide to Leveraging AI for Financial Success",
-     "authors": [
-      "Sujai G Pillai"
-     ],
-     "publisher": "Independently Published",
-     "publishedDate": "2025-01-30",
-     "industryIdentifiers": [
-      {
-       "type": "ISBN_13",
-       "identifier": "9798308890263"
-      }
-     ],
-     "readingModes": {
-      "text": false,
-      "image": false
-     },
-     "pageCount": 0,
-     "printType": "BOOK",
-     "categories": [
-      "Business & Economics"
-     ],
-     "maturityRating": "NOT_MATURE",
-     "allowAnonLogging": false,
-     "contentVersion": "preview-1.0.0",
-     "panelizationSummary": {
-      "containsEpubBubbles": false,
-      "containsImageBubbles": false
-     },
-     "imageLinks": {
-      "smallThumbnail": "http://books.google.com/books/content?id=jl0v0QEACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api",
-      "thumbnail": "http://books.google.com/books/content?id=jl0v0QEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
-     },
-     "language": "en",
-     "previewLink": "http://books.google.ca/books?id=jl0v0QEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=4&source=gbs_api",
-     "infoLink": "http://books.google.ca/books?id=jl0v0QEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&source=gbs_api",
-     "canonicalVolumeLink": "https://books.google.com/books/about/AI_for_Profit.html?hl=&id=jl0v0QEACAAJ"
-    }
-   },
-   {
-    "kind": "books#volume",
     "id": "IhPFEQAAQBAJ",
-    "etag": "ceEDjXLylhM",
+    "etag": "h7+X8qcUIl4",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/IhPFEQAAQBAJ",
     "volumeInfo": {
      "title": "The AI Cash Flow Guide",
@@ -1491,6 +1478,7 @@
       "Karna Raju"
      ],
      "publisher": "Karna Raju",
+     "description": "The AI Cash Flow Guide is the definitive roadmap for anyone who wants to leverage artificial intelligence and ChatGPT to build real, sustainable income online. Written by digital entrepreneur and AI strategist Karna Raju, this comprehensive guide strips away the theory and delivers pure, actionable strategy — from landing your first freelance client to building automated passive income systems that generate revenue around the clock. Inside this book, you will discover the most profitable AI-powered services you can sell today, exactly how to master ChatGPT with professional prompt engineering techniques, and step-by-step blueprints for automating your side hustle, scaling your freelance income, and building a recurring revenue business that grows without consuming all of your time. The AI Cash Flow Guide is packed with real pricing strategies, content marketing frameworks, social media monetization models, affiliate marketing systems, and advanced agency-building tactics that experienced entrepreneurs use to generate five- and six-figure incomes using tools available to everyone. Whether you are a complete beginner or an experienced freelancer ready to level up, this book meets you where you are and shows you exactly what to do next.",
      "readingModes": {
       "text": false,
       "image": true
@@ -1512,9 +1500,55 @@
       "thumbnail": "http://books.google.com/books/content?id=IhPFEQAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
      },
      "language": "en",
-     "previewLink": "http://books.google.ca/books?id=IhPFEQAAQBAJ&printsec=frontcover&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=5&source=gbs_api",
+     "previewLink": "http://books.google.ca/books?id=IhPFEQAAQBAJ&printsec=frontcover&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=4&source=gbs_api",
      "infoLink": "https://play.google.com/store/books/details?id=IhPFEQAAQBAJ&source=gbs_api",
      "canonicalVolumeLink": "https://play.google.com/store/books/details?id=IhPFEQAAQBAJ"
+    }
+   },
+   {
+    "kind": "books#volume",
+    "id": "l5P10QEACAAJ",
+    "etag": "o96G8sP3XQQ",
+    "selfLink": "https://www.googleapis.com/books/v1/volumes/l5P10QEACAAJ",
+    "volumeInfo": {
+     "title": "Build Income with AI - A Modern Guide to Building Income with AI",
+     "subtitle": "100+ Plug-and-Play Prompts for Income, Digital Products & Side Hustles",
+     "authors": [
+      "B Carrington"
+     ],
+     "publisher": "Independently Published",
+     "publishedDate": "2026-04",
+     "description": "Most people are using AI to save time. A smaller group is using it to make money. This book shows you how to become the second group. Build Income With AI is not a theory book. It's a practical system designed to help you turn AI into real-world income-quickly and strategically. Inside, you'll learn how to: Generate income using simple AI-powered services Build digital products that sell repeatedly Turn content into consistent cash flow Create systems that scale over time No technical background required. No complex tools. No unnecessary noise. Just clear frameworks, practical prompts, and strategies that work. If you're ready to move beyond experimenting with AI-and start using it to build income-this is your starting point.",
+     "industryIdentifiers": [
+      {
+       "type": "ISBN_13",
+       "identifier": "9798254191001"
+      }
+     ],
+     "readingModes": {
+      "text": false,
+      "image": false
+     },
+     "pageCount": 0,
+     "printType": "BOOK",
+     "categories": [
+      "Business & Economics"
+     ],
+     "maturityRating": "NOT_MATURE",
+     "allowAnonLogging": false,
+     "contentVersion": "preview-1.0.0",
+     "panelizationSummary": {
+      "containsEpubBubbles": false,
+      "containsImageBubbles": false
+     },
+     "imageLinks": {
+      "smallThumbnail": "http://books.google.com/books/content?id=l5P10QEACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api",
+      "thumbnail": "http://books.google.com/books/content?id=l5P10QEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
+     },
+     "language": "en",
+     "previewLink": "http://books.google.ca/books?id=l5P10QEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&cd=5&source=gbs_api",
+     "infoLink": "http://books.google.ca/books?id=l5P10QEACAAJ&dq=From+Zero+to+Profit+with+AI:+The+Contemporary+Guide+to+Online+Income+Generation+and+Accelerated+Growth+Helen+B.+Keating&hl=&source=gbs_api",
+     "canonicalVolumeLink": "https://books.google.com/books/about/Build_Income_with_AI_A_Modern_Guide_to_B.html?hl=&id=l5P10QEACAAJ"
     }
    }
   ]
@@ -1522,7 +1556,7 @@
  "https://www.googleapis.com/books/v1/volumes/JGQU0gEACAAJ": {
   "kind": "books#volume",
   "id": "JGQU0gEACAAJ",
-  "etag": "e36evdg2HuE",
+  "etag": "cPcEuZo7HX0",
   "selfLink": "https://www.googleapis.com/books/v1/volumes/JGQU0gEACAAJ",
   "volumeInfo": {
    "title": "From Zero to Profit with AI",
@@ -1532,6 +1566,7 @@
    ],
    "publisher": "Amazon Digital Services LLC - Kdp",
    "publishedDate": "2026-05-24",
+   "description": "<p>Artificial intelligence is changing the way people work, create, publish, and earn online-but most advice surrounding AI is either overly technical or filled with unrealistic promises.</p><p><i>From Zero to Profit with AI</i> offers a grounded, practical approach to building modern online income in a rapidly changing digital economy. Written in a calm and realistic style, this book explores how ordinary people can use AI tools to improve productivity, develop valuable skills, create digital products, build audiences, freelance online, publish ebooks, and design sustainable income systems without becoming trapped in hype-driven internet culture.</p><p>Rather than promoting shortcuts or overnight success stories, this guide focuses on long-term thinking, practical execution, and emotionally sustainable growth. Readers will learn how AI is reshaping online business, which human skills are becoming more valuable, and how to combine technology with clarity, trust, and usefulness in order to build meaningful digital opportunities.</p><p>Inside the book, readers will discover: </p><ul><li>How the modern AI economy actually works</li><li>The most realistic online income paths for beginners</li><li>How to create digital products people genuinely want</li><li>AI-assisted freelancing and publishing strategies</li><li>Audience-building without becoming an online performer</li><li>Sustainable business systems for long-term growth</li><li>How to avoid burnout in the always-online economy</li><li>Practical ways to use AI without losing human creativity and judgment</li></ul><p>Whether you are starting from zero, exploring remote income opportunities, or adapting to the future of digital work, this book provides a thoughtful roadmap for navigating the AI era with clarity and confidence.</p>",
    "industryIdentifiers": [
     {
      "type": "ISBN_13",
@@ -1561,8 +1596,8 @@
     "containsImageBubbles": false
    },
    "imageLinks": {
-    "smallThumbnail": "http://books.google.com/books/content?id=JGQU0gEACAAJ&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE73Hto0goX1avy6wO--Rx5GdC-HnD9llxJye2r10F1OPSbIZD32o6FKtMkzve8a2qucV-uY7lmLSgJFizGUUHRKQKH4N0sFDVLnnipkmD2MJJA-C_jkv21T7zabn_qdO44CvqSLp&source=gbs_api",
-    "thumbnail": "http://books.google.com/books/content?id=JGQU0gEACAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE72gEWRAGeldJLmrb5w4squhvojHxbUaIowgvK5_yHLroCYwM-b99xxSaQB_Ob8tqP0XicIjljLB6b46XtiGYkooynOmrhhFM9tddLkcO7tZRVAm-LvVboz2kOGqHn17FTse-9eC&source=gbs_api"
+    "smallThumbnail": "http://books.google.com/books/content?id=JGQU0gEACAAJ&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE73nE3SBQfOKyzXKhb1PoyNYTH3dxL3o6b-jcTrm0jGed0e-ciOfGojmUTrLZTtoZ6XCE8qn3bbeZ1clcgmvcCTVk3RK06tPdqlJXU-ONVAWcmpfy1SJaQmdIbGScK739aK8kycQ&source=gbs_api",
+    "thumbnail": "http://books.google.com/books/content?id=JGQU0gEACAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE703BHnQcVVF72Fn7GY6Bb-lkJZ9NdUTOBA8irN-cknGnGHDtQfGXktW7jWgZagTv79bZqJ7DJqhrbUFAPnWpZb_CXkaGXRuAIaKv13rSTW5TKpbuZev-ZsglaXVsxawTb62snYc&source=gbs_api"
    },
    "language": "en",
    "previewLink": "http://books.google.ca/books?id=JGQU0gEACAAJ&hl=&source=gbs_api",
@@ -1574,6 +1609,11 @@
   "resultCount": 1,
   "results": [
    {
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/d3/11/9c/d3119c51-6f1c-22ba-5c34-2b6a5a8c2006/coverArt.64ba97.png/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/d3/11/9c/d3119c51-6f1c-22ba-5c34-2b6a5a8c2006/coverArt.64ba97.png/100x100bb.jpg",
+    "artistViewUrl": "https://books.apple.com/us/artist/ross-white/1117498490?uo=4",
+    "trackCensoredName": "Guilt Ledger",
+    "trackViewUrl": "https://books.apple.com/us/book/guilt-ledger/id6761327879?uo=4",
     "artistIds": [
      1117498490
     ],
@@ -1585,8 +1625,6 @@
      "Fiction & Literature"
     ],
     "releaseDate": "2027-02-23T08:00:00Z",
-    "trackId": 6761327879,
-    "trackName": "Guilt Ledger",
     "genreIds": [
      "10093",
      "38",
@@ -1594,15 +1632,13 @@
     ],
     "kind": "ebook",
     "currency": "USD",
-    "trackCensoredName": "Guilt Ledger",
-    "artistViewUrl": "https://books.apple.com/us/artist/ross-white/1117498490?uo=4",
-    "trackViewUrl": "https://books.apple.com/us/book/guilt-ledger/id6761327879?uo=4",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/d3/11/9c/d3119c51-6f1c-22ba-5c34-2b6a5a8c2006/coverArt.64ba97.png/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/d3/11/9c/d3119c51-6f1c-22ba-5c34-2b6a5a8c2006/coverArt.64ba97.png/100x100bb.jpg"
+    "description": "<b>Winner of the Wren Poetry Prize selected by Sandra Beasley, <i>Guilt Ledger</i> is Ross White’s sophomore poetry collection.</b><br /><br />In <i>Guilt Ledger</i>, money is a weight, a wound, and a reckoning. Opening amid the fallout of the savings and loan scandal of the late 1980s, this collection maps the complex and corrosive impact of the financial sector on a family. It charts a childhood in the banking centers of the South and the speaker’s acceptance of late-stage capitalism’s unpayable cost: the emotional loss tied to monetary gain. These poems interrogate the tangled legacy between fathers and sons, the hidden debts and moral consequences of the American economic system, and the persistent echoes of a culture that commodifies everything it touches.<br /><br />The precipitating event of <i>Guilt Ledger</i> is the collapse of the National Bank of Washington, which was taken over by federal regulators in 1989 at the height of the savings and loan scandals of the late 1980s. These poems attempt to trace how the disintegration of the American financial system, which accelerated in the 2008 recession and threatens to do so again under protectionist economic policies, presses against personal and familial relationships—and how the children of that disintegration might reject greed in favor of something more substantial than wealth. Amid continued financial scandal, political corruption, and corporate malfeasance, <i>Guilt Ledger</i>’s examination of the savings &amp; loan crisis (including appearances by the Keating Five and former Speaker of the House Jim Wright) reminds us that money never sleeps and it dreams a destructive dream.",
+    "trackId": 6761327879,
+    "trackName": "Guilt Ledger"
    }
   ]
  },
- "https://openlibrary.org/search.json?q=The%20Creative%20Brain%20in%20the%20Age%20of%20Artificial%20Intelligence%3A%20How%20to%20Use%20AI%20Without%20Losing%20Yourself%20Maria%20Ian&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i": {
+ "https://openlibrary.org/search.json?q=The%20Creative%20Brain%20in%20the%20Age%20of%20Artificial%20Intelligence%3A%20How%20to%20Use%20AI%20Without%20Losing%20Yourself%20Maria%20Ian&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject": {
   "numFound": 0,
   "start": 0,
   "numFoundExact": true,
@@ -1619,7 +1655,7 @@
    {
     "kind": "books#volume",
     "id": "pTSSEQAAQBAJ",
-    "etag": "kPUxLTuSzmU",
+    "etag": "sKpy7zQIiSQ",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/pTSSEQAAQBAJ",
     "volumeInfo": {
      "title": "Creativity in the Age of AI",
@@ -1631,6 +1667,7 @@
      ],
      "publisher": "Walter de Gruyter GmbH & Co KG",
      "publishedDate": "2025-10-20",
+     "description": "Discover the scientifically proven path to unlocking your creative potential, no matter your age, profession or background. From personal breakthroughs to organizational transformation, Creativity in the Age of AI shows you how to leverage cutting-edge AI tools to amplify your natural abilities. This concise, practical guide will help you: Gain confidence in your ability to become more creative through understanding the neuroscience behind creative thinking Master 12 powerful approaches to enhance creativity, from challenging mental models to interdisciplinary thinking Learn to amplify these approaches using cutting-edge AI tools Experiment with these methods to address personal, professional, and organizational challenges Build a customized, dynamic portfolio of creativity tools tailored to your unique needs Overcome common obstacles to implementing creative solutions Draw inspiration from remarkable innovators including Nobel Prize winners, artists, musicians, architects and entrepreneurs This accessible book distills decades of research and practice, including principles from the lead author's popular Wharton MBA creativity course taught for over a decade. Build a personalized toolkit for unstoppable innovation in today’s challenging times and transform your creative potential into practical solutions enhanced by the power of AI!",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -1670,7 +1707,7 @@
    {
     "kind": "books#volume",
     "id": "SAY9I1wyyscC",
-    "etag": "ByBMCGD0aPQ",
+    "etag": "njsOlCm3JZI",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/SAY9I1wyyscC",
     "volumeInfo": {
      "title": "Books In Print 2004-2005",
@@ -1719,7 +1756,7 @@
    {
     "kind": "books#volume",
     "id": "84w7EAAAQBAJ",
-    "etag": "XYsKrDfJiZg",
+    "etag": "nswsx2ugR5U",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/84w7EAAAQBAJ",
     "volumeInfo": {
      "title": "AI for Creativity",
@@ -1728,6 +1765,7 @@
      ],
      "publisher": "CRC Press",
      "publishedDate": "2021-09-24",
+     "description": "What is computational creativity? Can AI learn to be creative? One of the human mind’s most valuable features is the capacity to formulate creative thoughts, an ability that through quantum leap innovations has propelled us to the current digital age. However, creative breakthroughs are easier said than done. Appearing less frequently and more sporadically than desired, it seems that we have not yet fully cracked the creative code. But with the rapid advances in artificial intelligence which have come to provide an ever-closer proximity with the cognitive faculties of mankind, can this emerging technology improve our creative capabilities? What will that look like and will it be the missing link in the man–machine enigma? AI for Creativity provides a fascinating look at what is currently emerging in the very cutting-edge area of artificial intelligence and the tools being developed to enable computational creativity that holds the propensity to dramatically change our lives.",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -1767,7 +1805,7 @@
    {
     "kind": "books#volume",
     "id": "dDve0QEACAAJ",
-    "etag": "3Ua4vM9mn+U",
+    "etag": "jP7DsAqzNTM",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/dDve0QEACAAJ",
     "volumeInfo": {
      "title": "The Creative's Guide to Working with AI",
@@ -1777,6 +1815,7 @@
      ],
      "publisher": "Independently Published",
      "publishedDate": "2026-02-14",
+     "description": "The Creative's Guide to Working with AI How to Use Artificial Intelligence Without Losing Your Voice By Peter N. Dan AI is not replacing creatives, but it is replacing creatives who refuse to adapt. If you are a writer, designer, marketer, content creator, or creative entrepreneur who feels uncertain about artificial intelligence, this book was written for you. Maybe you have felt the tension, you want to stay relevant, but you do not want to sound generic. You are curious about AI, but you are not interested in becoming \"technical\", you do not need to. This is not a book about coding. This is not a book about hype. This is not a book about turning yourself into a machine. This is a practical guide to using AI as a creative tool without losing your originality, your voice, or your peace of mind. Inside this book, you will learn: Why AI feels threatening to creatives and what is actually happening What AI really is explained in simple, clear language How to use AI for drafting, brainstorming, structuring, and clarity How to maintain your voice while using AI as support A practical workflow you can repeat weekly without burnout The most common mistakes creatives make with AI and how to avoid them Ethical clarity so you can use AI without guilt You will also get a Creative Prompt Starter Pack to help you begin immediately. This book is written conversationally, without technical jargon, and without overwhelming frameworks. It is designed to calm fear, restore confidence, and give you practical momentum. You do not need to become more technical, you need to become more free. If you are ready to work with AI without surrendering your creativity, this book will show you how.",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -1812,7 +1851,7 @@
    {
     "kind": "books#volume",
     "id": "JQ_e0QEACAAJ",
-    "etag": "2h3ayyVTh3o",
+    "etag": "6GPdzgI4QEE",
     "selfLink": "https://www.googleapis.com/books/v1/volumes/JQ_e0QEACAAJ",
     "volumeInfo": {
      "title": "AI as a Second Mind",
@@ -1822,6 +1861,7 @@
      ],
      "publisher": "Independently Published",
      "publishedDate": "2026-02-07",
+     "description": "Thinking with AI: Mastering Your Mind in the Age of Intelligent Tools In an era of information overload and AI-driven tools, Thinking with AI provides a practical, research-backed guide to using artificial intelligence as a true cognitive partner without surrendering your own judgment. This book is not about prompts, shortcuts, or surface-level tricks; it is about developing cognitive literacy, preserving intellectual freedom, and mastering decision-making in a world where AI is everywhere. Through four parts and twelve chapters, readers will explore: Why most people use AI wrong, understanding cognitive overload, decision fatigue, and the illusion of knowing. AI as a second mind, applying extended mind theory, cognitive delegation, and collaborative thinking. Practical mental frameworks, learning without rote memorization, mapping confusion, iterative reasoning, and using AI to stress-test ideas. Ethics, freedom, and the future, maintaining cognitive autonomy, respecting human and artificial intelligence, and preparing for a shared thinking future. With real research, psychological studies, and practical examples, this book teaches you how to think more clearly, learn faster, and make better decisions while partnering with AI tools. Whether you are a student, professional, or lifelong learner, Thinking with AI equips you to navigate the AI era responsibly, creatively, and effectively. Key Takeaways: Master the difference between information abundance and true understanding. Use AI to amplify your cognition, not replace it. Maintain ethical and intellectual autonomy in a world of intelligent tools. Develop practical frameworks to learn, decide, and innovate effectively. Take control of your mind in the AI age, and learn how to collaborate with intelligence, both human and artificial, without losing yourself.",
      "industryIdentifiers": [
       {
        "type": "ISBN_13",
@@ -1896,7 +1936,7 @@
   },
   "total": 0,
   "meta": {
-   "query_identifier": "bfcc3e6d-6966-402a-bf00-18dbcbbd1ec1"
+   "query_identifier": "7750f991-99d1-4048-ba0a-4338db9f4ce3"
   },
   "page": 0,
   "previous": null,
@@ -1905,7 +1945,7 @@
  "https://www.googleapis.com/books/v1/volumes/JQ_e0QEACAAJ": {
   "kind": "books#volume",
   "id": "JQ_e0QEACAAJ",
-  "etag": "/6sXg5D6rDw",
+  "etag": "xgDb8w3AtVQ",
   "selfLink": "https://www.googleapis.com/books/v1/volumes/JQ_e0QEACAAJ",
   "volumeInfo": {
    "title": "AI as a Second Mind",
@@ -1915,6 +1955,7 @@
    ],
    "publisher": "Amazon Digital Services LLC - Kdp",
    "publishedDate": "2026-02-07",
+   "description": "<b><i>Thinking with AI: Mastering Your Mind in the Age of Intelligent Tools</i></b><p>In an era of information overload and AI-driven tools, <i>Thinking with AI</i> provides a <b>practical, research-backed guide</b> to using artificial intelligence as a true cognitive partner without surrendering your own judgment. This book is not about prompts, shortcuts, or surface-level tricks; it is about <b>developing cognitive literacy, preserving intellectual freedom, and mastering decision-making</b> in a world where AI is everywhere.</p><p>Through four parts and twelve chapters, readers will explore: </p><ul><li><p><b>Why most people use AI wrong, </b>understanding cognitive overload, decision fatigue, and the illusion of knowing.</p></li><li><p><b>AI as a second mind, </b>applying extended mind theory, cognitive delegation, and collaborative thinking.</p></li><li><p><b>Practical mental frameworks, </b>learning without rote memorization, mapping confusion, iterative reasoning, and using AI to stress-test ideas.</p></li><li><p><b>Ethics, freedom, and the future, </b>maintaining cognitive autonomy, respecting human and artificial intelligence, and preparing for a shared thinking future.</p></li></ul><p>With <b>real research, psychological studies, and practical examples</b>, this book teaches you how to <b>think more clearly, learn faster, and make better decisions</b> while partnering with AI tools. Whether you are a student, professional, or lifelong learner, <i>Thinking with AI</i> equips you to <b>navigate the AI era responsibly, creatively, and effectively</b>.</p><p><b>Key Takeaways: </b></p><ul><li><p>Master the difference between information abundance and true understanding.</p></li><li><p>Use AI to <b>amplify your cognition</b>, not replace it.</p></li><li><p>Maintain ethical and intellectual autonomy in a world of intelligent tools.</p></li><li><p>Develop practical frameworks to learn, decide, and innovate effectively.</p></li></ul><p>Take control of your mind in the AI age, and learn <b>how to collaborate with intelligence, both human and artificial, without losing yourself</b>.</p>",
    "industryIdentifiers": [
     {
      "type": "ISBN_13",
@@ -1944,8 +1985,8 @@
     "containsImageBubbles": false
    },
    "imageLinks": {
-    "smallThumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE73iOfExyKfLFiZPXk1EzpTWD-wDBPeL-tk_yRAWYfR9Hxui17XH95eoKriCGRVW05HDeNyb1MfXuFotBknBCIKM-8Vj9M0cFbhcSHClCcphQuqL96ZzCnsSpqxj9fSsqrweKXjo&source=gbs_api",
-    "thumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE73KAqI9eVL3Yqn4f4zugmiW3khctslEoc95m_gt29unJ9Sz755SFLXVC2zFu6qiBsYxFZd8gsBYdbWrWUAPFOhD9ESxSqTWUcai8TQTBgsy0Xj81YqA1tw0x5_pFBjBgnDa5LQQ&source=gbs_api"
+    "smallThumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE73y__K1434Ekdab_j0MVzTSFiVoB4U6LXm9C9QvHLiObcpqLr3qEDt6W-BWq8h8GnCiH-J0bgId_qzXCu0Y_HRi2Q7OL46Dni6zAF2Dp12qf6ZVEIUdNer4mFdyc3WSZegOHQ_k&source=gbs_api",
+    "thumbnail": "http://books.google.com/books/content?id=JQ_e0QEACAAJ&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE71MiJZpwE625R3pvP0uIPEg0trO6HARAo5Avb-BeK-CaKHpKPUNidf1g8rrV-RqHpzSIfFAMiLK4x1gJ2Emr-hx-L4LdGLpHAfi8gnql_I_9-pj8WryvWXL-Mlmrva5d0wue25S&source=gbs_api"
    },
    "language": "en",
    "previewLink": "http://books.google.ca/books?id=JQ_e0QEACAAJ&hl=&source=gbs_api",
@@ -1957,38 +1998,42 @@
   "resultCount": 6,
   "results": [
    {
-    "artistName": "Satoshi Nakamoto",
+    "formattedPrice": "$9.99",
+    "artistIds": [
+     948957276
+    ],
     "genres": [
      "Investing",
      "Books",
      "Business & Personal Finance"
     ],
     "price": 9.99,
+    "releaseDate": "2017-08-29T07:00:00Z",
     "genreIds": [
      "10012",
      "38",
      "9009"
     ],
-    "artistIds": [
-     948957276
-    ],
-    "trackId": 1276690872,
     "trackName": "HOW TO BECOME A CRYPTOCURRENCY MILLIONAIRE",
-    "releaseDate": "2017-08-29T07:00:00Z",
+    "trackId": 1276690872,
     "kind": "ebook",
     "currency": "USD",
-    "formattedPrice": "$9.99",
-    "trackViewUrl": "https://books.apple.com/us/book/how-to-become-a-cryptocurrency-millionaire/id1276690872?uo=4",
+    "description": "Decentralized cryptocurrencies such as Bitcoin now provide an outlet for personal wealth that is beyond restriction. <b>HOW TO BECOME A CRYPTOCURRENCY MILLIONAIRE </b>will teach you everything you need to know about understanding Bitcoin, Bitcoin Mining, Blockchain Technology, Initial Coin Offerings <i>(ICO)</i>, and more.",
     "trackCensoredName": "HOW TO BECOME A CRYPTOCURRENCY MILLIONAIRE",
+    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/how-to-become-a-cryptocurrency-millionaire/id1276690872?uo=4",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/71/d7/16/71d71628-7193-e3e8-a748-05b2ee4fb4c0/COVER.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/71/d7/16/71d71628-7193-e3e8-a748-05b2ee4fb4c0/COVER.jpg/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
     "artistId": 948957276,
+    "artistName": "Satoshi Nakamoto",
     "averageUserRating": 2,
     "userRatingCount": 8
    },
    {
-    "artistName": "Adidas Wilson",
+    "formattedPrice": "$3.99",
+    "artistIds": [
+     1210259770
+    ],
     "genres": [
      "Industries & Professions",
      "Books",
@@ -1997,6 +2042,7 @@
      "Economics"
     ],
     "price": 3.99,
+    "releaseDate": "2017-06-21T07:00:00Z",
     "genreIds": [
      "10005",
      "38",
@@ -2004,55 +2050,88 @@
      "10013",
      "10011"
     ],
-    "artistIds": [
-     1210259770
-    ],
-    "trackId": 1251153325,
     "trackName": "Mastering Bitcoin - A Beginner's Guide To Start Making Money With Bitcoin",
-    "releaseDate": "2017-06-21T07:00:00Z",
+    "trackId": 1251153325,
     "kind": "ebook",
     "currency": "USD",
-    "formattedPrice": "$3.99",
-    "trackViewUrl": "https://books.apple.com/us/book/mastering-bitcoin-a-beginners-guide-to-start-making/id1251153325?uo=4",
+    "description": "Bitcoin is a cryptocurrency and a digital payment system invented by an unknown programmer, or a group of programmers, under the name Satoshi Nakamoto. It was released as open-source software in 2009. The system is peer-to-peer, and transactions take place between users directly, without an intermediary. These transactions are verified by network nodes and recorded in a public distributed ledger called a blockchain. Since the system works without a central repository or single administrator, bitcoin is called the first decentralized digital currency. Besides being created as a reward for mining, bitcoin can be exchanged for other currencies, products, and services in legal or black markets. As of February 2015, over 100,000 merchants and vendors accepted bitcoin as payment. According to research produced by Cambridge University in 2017, there are 2.9 to 5.8 million unique users using a cryptocurrency wallet, most of them using bitcoin.",
     "trackCensoredName": "Mastering Bitcoin - A Beginner's Guide To Start Making Money With Bitcoin",
+    "artistViewUrl": "https://books.apple.com/us/artist/adidas-wilson/1210259770?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/mastering-bitcoin-a-beginners-guide-to-start-making/id1251153325?uo=4",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/35/a1/8e/35a18e81-1571-bcac-c42b-67b36f9465b5/0000248304.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/35/a1/8e/35a18e81-1571-bcac-c42b-67b36f9465b5/0000248304.jpg/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/adidas-wilson/1210259770?uo=4",
-    "artistId": 1210259770
+    "artistId": 1210259770,
+    "artistName": "Adidas Wilson"
    },
    {
-    "artistName": "Satoshi Nakamoto",
+    "formattedPrice": "Free",
+    "artistIds": [
+     948957276
+    ],
     "genres": [
      "Computers",
      "Books",
      "Computers & Internet"
     ],
     "price": 0,
+    "releaseDate": "2008-10-31T07:00:00Z",
     "genreIds": [
      "10017",
      "38",
      "9027"
     ],
-    "artistIds": [
-     948957276
-    ],
-    "trackId": 6442866767,
     "trackName": "Bitcoin: A Peer-to-Peer Electronic Cash System",
-    "releaseDate": "2008-10-31T07:00:00Z",
+    "trackId": 6442866767,
     "kind": "ebook",
     "currency": "USD",
-    "formattedPrice": "Free",
-    "trackViewUrl": "https://books.apple.com/us/book/bitcoin-a-peer-to-peer-electronic-cash-system/id6442866767?uo=4",
+    "description": "This ebook contains original Bitcoin Whitepaper written by Satoshi Nakamoto and published on 31st October 2008. All the content including formatting and cover of this ebook is in Public Domain so you are free to copy and share it without any permissions.<br /><br />\nBitcoin Whitepaper is like a Bible for every crypto enthusiast.",
     "trackCensoredName": "Bitcoin: A Peer-to-Peer Electronic Cash System",
+    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/bitcoin-a-peer-to-peer-electronic-cash-system/id6442866767?uo=4",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/48/3a/58/483a5874-bb4b-a69a-a314-7c413ca646f6/bitcoin_cover_large.png/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/48/3a/58/483a5874-bb4b-a69a-a314-7c413ca646f6/bitcoin_cover_large.png/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
     "artistId": 948957276,
+    "artistName": "Satoshi Nakamoto",
     "averageUserRating": 4.5,
     "userRatingCount": 64
    },
    {
+    "formattedPrice": "Free",
+    "artistIds": [
+     948957276
+    ],
+    "genres": [
+     "Network",
+     "Books",
+     "Computers & Internet"
+    ],
+    "price": 0,
+    "releaseDate": "2022-10-14T07:00:00Z",
+    "genreIds": [
+     "10021",
+     "38",
+     "9027"
+    ],
+    "trackName": "Satoshi on Bitcoin",
+    "trackId": 6443853592,
+    "kind": "ebook",
+    "currency": "USD",
+    "description": "A collection of Satoshi Nakamoto’s writings on Bitcoin. \n\nThis collection contains Satoshi’s words, compiled and neatly formatted without commentary. Each chapter contains Satoshi’s writings from a specific medium (emails, forum posts, website, and source code), with detailed date/time timestamps for each entry. These writings tell a compelling story of the excitement and challenges surrounding Bitcoin’s creation in 2009-2010. \n\nThe detailed collection includes:\n- Satoshi’s initial emails in the Cryptography Mailing List\n- The launch of Bitcoin as documented in the Bitcoin Mailing List\n- The founder’s thoughts and discussions in the BitcoinTalk forum\n- Messages in the P2P Foundation\n- Early bitcoin.org web archives, linking to Wei Dai and Nick Szabo\n- Debates on privacy, anonymity, freedom, and government control\n- Initial bitcoin icons and logos\n- Original bitcoin source code\n- Thoughtful responses to Hal Finney and other early members\n- The Bitcoin white paper\n- Insights on Bitcoin’s scalability, escrow, and future development\n- URL links to the original content\n\nThis book is published into the public domain, and links to the original source content are provided for each entry.",
+    "trackCensoredName": "Satoshi on Bitcoin",
+    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/satoshi-on-bitcoin/id6443853592?uo=4",
+    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8b/30/43/8b30432f-7fc5-b2fa-f52d-33eb95f86fdd/SatoshiOnBitcoin_cover3.jpg/60x60bb.jpg",
+    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8b/30/43/8b30432f-7fc5-b2fa-f52d-33eb95f86fdd/SatoshiOnBitcoin_cover3.jpg/100x100bb.jpg",
+    "artistId": 948957276,
     "artistName": "Satoshi Nakamoto",
+    "averageUserRating": 5,
+    "userRatingCount": 8
+   },
+   {
+    "formattedPrice": "$3.99",
+    "artistIds": [
+     948957276
+    ],
     "genres": [
      "Philosophy",
      "Books",
@@ -2063,6 +2142,7 @@
      "Industries & Professions"
     ],
     "price": 3.99,
+    "releaseDate": "2014-12-10T08:00:00Z",
     "genreIds": [
      "10091",
      "38",
@@ -2072,24 +2152,24 @@
      "9009",
      "10005"
     ],
-    "artistIds": [
-     948957276
-    ],
-    "trackId": 950512274,
     "trackName": "Bitcoin Manifesto: ONE CPU ONE VOTE",
-    "releaseDate": "2014-12-10T08:00:00Z",
+    "trackId": 950512274,
     "kind": "ebook",
     "currency": "USD",
-    "formattedPrice": "$3.99",
-    "trackViewUrl": "https://books.apple.com/us/book/bitcoin-manifesto-one-cpu-one-vote/id950512274?uo=4",
+    "description": "Original annotated and commented edition of the masterpiece of the mysterious Satoshi Nakamoto, inventor of Bitcoin, the digital currency on everyone’s lips.However, few noticed that the innovative power of Bitcoin is not strictly financial, but it fundamentally impacts the creation of political consensus, by transforming it into a technological mechanism.Exactly for this reason, the present edition is enriched by a critical apparatus that should make possible, even for the less tech-savvy reader, to comprehend and reflect on such a key phenomenon of our times.",
     "trackCensoredName": "Bitcoin Manifesto: ONE CPU ONE VOTE",
+    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/bitcoin-manifesto-one-cpu-one-vote/id950512274?uo=4",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication1/v4/4d/6a/89/4d6a89e3-06d5-df4a-0bd6-f84087001d71/9788898924370.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication1/v4/4d/6a/89/4d6a89e3-06d5-df4a-0bd6-f84087001d71/9788898924370.jpg/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
-    "artistId": 948957276
+    "artistId": 948957276,
+    "artistName": "Satoshi Nakamoto"
    },
    {
-    "artistName": "David Ricardo",
+    "formattedPrice": "$2.99",
+    "artistIds": [
+     489200005
+    ],
     "genres": [
      "Finance",
      "Books",
@@ -2103,6 +2183,7 @@
      "Management & Leadership"
     ],
     "price": 2.99,
+    "releaseDate": "2021-06-01T07:00:00Z",
     "genreIds": [
      "10013",
      "38",
@@ -2115,52 +2196,18 @@
      "10011",
      "10014"
     ],
-    "artistIds": [
-     489200005
-    ],
-    "trackId": 1571766160,
     "trackName": "Introduction to Bitcoin: Understanding Peer-to-Peer Networks, Digital Signatures, the Blockchain, Proof-of-Work, Mining, Network Attacks, Bitcoin Core Software, and Wallet Safety (With Color Images & Diagrams)",
-    "releaseDate": "2021-06-01T07:00:00Z",
+    "trackId": 1571766160,
     "kind": "ebook",
     "currency": "USD",
-    "formattedPrice": "$2.99",
-    "trackViewUrl": "https://books.apple.com/us/book/introduction-to-bitcoin-understanding-peer-to-peer/id1571766160?uo=4",
+    "description": "Introduction to Bitcoin is the people's guide to Bitcoin. This book is written for those who want to understand how Bitcoin works without relying on equations and complex coding languages. With the help of cypherpunks, David Ricardo brings the history of early digital currencies to life from early encryption software to digital currency experiments. In straightforward language, he explains Bitcoin's peer-to-peer network, digital signatures, the blockchain, proof-of-work, mining, network attacks, and Bitcoin's underlying software. \nAll readers will quickly gain a clear understanding of Bitcoin and the future implications of the Bitcoin network, including energy expenditure and the Lightning Networ. Included is an overview on how to safely store bitcoin, as well as a review of the people who have been suspected by the media of being Satoshi Nakamoto, the creator of Bitcoin. With simple diagrams, full-color images, and clear explanations, this is the introductory guide for anyone who wishes to understand Bitcoin.\nIncluded is Satoshi Nakamoto's whitepaper Bitcoin: A Peer-to-Peer Electronic Cash System.",
     "trackCensoredName": "Introduction to Bitcoin: Understanding Peer-to-Peer Networks, Digital Signatures, the Blockchain, Proof-of-Work, Mining, Network Attacks, Bitcoin Core Software, and Wallet Safety (With Color Images & Diagrams)",
+    "artistViewUrl": "https://books.apple.com/us/artist/david-ricardo/489200005?uo=4",
+    "trackViewUrl": "https://books.apple.com/us/book/introduction-to-bitcoin-understanding-peer-to-peer/id1571766160?uo=4",
     "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/7f/9b/04/7f9b049a-e775-f9cd-84bd-b28266572798/9781777692315.jpg/60x60bb.jpg",
     "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/7f/9b/04/7f9b049a-e775-f9cd-84bd-b28266572798/9781777692315.jpg/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/david-ricardo/489200005?uo=4",
-    "artistId": 489200005
-   },
-   {
-    "artistName": "Satoshi Nakamoto",
-    "genres": [
-     "Network",
-     "Books",
-     "Computers & Internet"
-    ],
-    "price": 0,
-    "genreIds": [
-     "10021",
-     "38",
-     "9027"
-    ],
-    "artistIds": [
-     948957276
-    ],
-    "trackId": 6443853592,
-    "trackName": "Satoshi on Bitcoin",
-    "releaseDate": "2022-10-14T07:00:00Z",
-    "kind": "ebook",
-    "currency": "USD",
-    "formattedPrice": "Free",
-    "trackViewUrl": "https://books.apple.com/us/book/satoshi-on-bitcoin/id6443853592?uo=4",
-    "trackCensoredName": "Satoshi on Bitcoin",
-    "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8b/30/43/8b30432f-7fc5-b2fa-f52d-33eb95f86fdd/SatoshiOnBitcoin_cover3.jpg/60x60bb.jpg",
-    "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8b/30/43/8b30432f-7fc5-b2fa-f52d-33eb95f86fdd/SatoshiOnBitcoin_cover3.jpg/100x100bb.jpg",
-    "artistViewUrl": "https://books.apple.com/us/artist/satoshi-nakamoto/948957276?uo=4",
-    "artistId": 948957276,
-    "averageUserRating": 5,
-    "userRatingCount": 8
+    "artistId": 489200005,
+    "artistName": "David Ricardo"
    }
   ]
  }
