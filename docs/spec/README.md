@@ -16,8 +16,21 @@ that is what would have to be true for the decision to reopen.
 > residuals are the artifact — with the build order below now reading as what
 > happened rather than what to do. **Step 4 is the exception and is still owed:**
 > `pnpm stacks enrich`, twice, against the real vault. Nothing downstream can be
-> judged against real data until it runs. The five ADRs proposed below are
-> written: [0044](../adr/0044-precedence-is-a-table-not-a-judgement.md)–[0049](../adr/0049-the-card-is-a-non-modal-bottom-sheet.md).
+> judged against real data until it runs.
+>
+> The ADR list below proposed five;
+> [0044](../adr/0044-precedence-is-a-table-not-a-judgement.md)–[0049](../adr/0049-the-card-is-a-non-modal-bottom-sheet.md)
+> are **six**. Absent-only earned one of its own
+> ([0046](../adr/0046-absent-only-holds-unconditionally.md)): the list had it
+> folded into the precedence record, and it is a separate decision with a
+> separate cost — a book already wrong stays wrong.
+>
+> ⚠️ **The provider marks and Google's graphic are placeholders at the real
+> footprint**, not the vendored artwork §5 decided on. Fetching third-party
+> trademarked files into the repo was left to the owner, so the redistribution
+> residual is open exactly as recorded — and
+> [ADR-0048](../adr/0048-google-attribution-is-a-vendored-page-element.md)
+> records the *decision* to vendor rather than a file that is there.
 
 **This spec does not implement.** It states the edits; the implementation session
 makes them. In particular, **do not edit CLAUDE.md's contract blocks ahead of the
@@ -109,6 +122,11 @@ before they had numbers.
 | **P2** | Whole-pass idempotence — `enrich` twice over a fixture vault against a stubbed `HttpGet`, every note byte-identical after run two | The **only** gate that reaches the `## About` body insert, since a body section is not a `FILLABLE` key |
 | **P3** | Convergence after a provider failure — stub a provider to fail on run one and answer on run two; assert the id lands | Otherwise the whole rate-limit answer rests on an undocumented property of `http.ts:64` that nothing checks |
 | **C1** | The card, in the Phase-2 puppeteer idiom — eight assertions, listed in [`enhanced-card.md`](enhanced-card.md#11-acceptance) | The existing click test asserts only that a card opens |
+
+Landed as **G35** (`enhanced-card`), inside `scripts/smoke-render.ts` rather than
+as a new script: six of the eight assertions need a real browser, and the other
+two — `published` rendering and the collapse rules — are pure functions asserted
+in `card.test.ts`, where they cost nothing.
 
 **Existing gates that move or must be honoured:** G8 (frontmatter contract) gains
 seven keys; G19 needs a row per new gate; G4 already pins `updateBook`'s

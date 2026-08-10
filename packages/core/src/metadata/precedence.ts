@@ -88,14 +88,24 @@ export type Contributors = Map<MetadataSource, BookMetadata>;
  * *gap*, not who overrules a fact already established.
  */
 export function mergeFields(primary: BookMetadata, contributors: Contributors): BookMetadata {
-  const filled: Record<string, unknown> = { ...primary };
+  /**
+   * Built as a `BookMetadata` throughout, rather than as a bag of unknowns cast
+   * back at the end.
+   *
+   * The first version accumulated into `Record<string, unknown>` and returned
+   * `filled as unknown as BookMetadata` — a double cast at the exact point this
+   * work adds seven fields, which is where strict typing was most worth having.
+   * The two helpers below keep it honest: each closes over one field name and
+   * the compiler checks that the value it writes belongs there.
+   */
+  let filled: BookMetadata = { ...primary };
 
   for (const field of MERGED_FIELDS) {
     if (filled[field] !== undefined) continue;
     for (const source of FIELD_ORDER[field] ?? DEFAULT_ORDER) {
-      const value = contributors.get(source)?.[field];
-      if (value !== undefined) {
-        filled[field] = value;
+      const next = takeMerged(filled, field, contributors.get(source));
+      if (next !== filled) {
+        filled = next;
         break;
       }
     }
@@ -106,14 +116,38 @@ export function mergeFields(primary: BookMetadata, contributors: Contributors): 
   // provider can supply one — which is why an unfillable gap stays a gap and is
   // re-asked forever rather than being closed with a sentinel.
   for (const [field, source] of ID_FIELDS) {
-    if (filled[field] === undefined) {
-      const value = contributors.get(source)?.[field];
-      if (value !== undefined) filled[field] = value;
-    }
+    filled = takeId(filled, field, contributors.get(source));
   }
 
-  return filled as unknown as BookMetadata;
+  return filled;
 }
+
+/** One merged field from one contributor, when the primary has no value. */
+function takeMerged(
+  into: BookMetadata,
+  field: MergedField,
+  from: BookMetadata | undefined,
+): BookMetadata {
+  const value = from?.[field];
+  if (value === undefined) return into;
+
+  switch (field) {
+    case 'subjects':
+      return Array.isArray(value) ? { ...into, subjects: value } : into;
+    default:
+      return typeof value === 'string' ? { ...into, [field]: value } : into;
+  }
+}
+
+/** One contributor id from the one provider that can supply it. */
+function takeId(into: BookMetadata, field: IdField, from: BookMetadata | undefined): BookMetadata {
+  const value = from?.[field];
+  return into[field] === undefined && typeof value === 'string'
+    ? { ...into, [field]: value }
+    : into;
+}
+
+type IdField = 'volumeId' | 'appleTrackId' | 'openLibraryOlid' | 'oreillyOurn';
 
 /**
  * Each contributor id and the one provider that can supply it.
@@ -123,7 +157,7 @@ export function mergeFields(primary: BookMetadata, contributors: Contributors): 
  * for O'Reilly is the guard that stops `archive_id` being pasted where `ourn`
  * belongs.
  */
-const ID_FIELDS: readonly (readonly [keyof BookMetadata, MetadataSource])[] = [
+const ID_FIELDS: readonly (readonly [IdField, MetadataSource])[] = [
   ['volumeId', 'google-books'],
   ['appleTrackId', 'apple-books'],
   ['openLibraryOlid', 'open-library'],

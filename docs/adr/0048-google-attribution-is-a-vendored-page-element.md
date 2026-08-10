@@ -59,6 +59,12 @@ and argued down:
 - **The redistribution residual is weaker here**: Google *requires* this image's
   display and serves it unconditionally.
 
+⚠️ **The artwork is not in the repo yet.** What ships today is a placeholder at
+the assumed 144×26 footprint, so this record states a decision rather than
+describing a file: fetching third-party trademarked artwork is the owner's call.
+Until it lands, the *graphic* limb is discharged in shape and not in substance —
+and the clause says **graphic**, so a text stand-in does not satisfy it.
+
 ⚠️ **A deploy-time check that the graphic is still served was offered and
 declined.** Recorded as declined rather than overlooked, because in a gate-heavy
 repo a missing gate otherwise reads as an oversight: the obligation is met by a

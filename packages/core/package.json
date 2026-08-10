@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./shelf-order": "./src/shelf-order.ts"
+    "./shelf-order": "./src/shelf-order.ts",
+    "./subjects": "./src/subjects.ts"
   },
   "dependencies": {
     "sharp": "^0.35.3",

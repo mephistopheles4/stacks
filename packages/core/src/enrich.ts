@@ -250,10 +250,24 @@ export async function enrichBook(
    * `## About`. In practice every note in the vault has a gap until the first
    * pass completes, so this affects a note that was already complete by hand.
    */
-  if (about !== undefined && options.dryRun !== true) {
-    await vault.insertBodySection(book.sourcePath, ABOUT_HEADING, about);
+  if (about !== undefined) {
+    /**
+     * ⚠️ **Reported only when it actually wrote.**
+     *
+     * This used to push `## About` onto `filled` whenever the provider had a
+     * description — but `insertBodySection` no-ops when the heading is already
+     * there, so every re-run claimed to have written a section it did not touch,
+     * and a book whose only remaining gaps were unfillable ids would report
+     * `filled` forever instead of `unfilled`. That is G27's defect one field
+     * over: a report that counts a book it did nothing to. `--dry-run` reports
+     * nothing here for the same reason — it cannot know whether the heading is
+     * absent without reading the note, and claiming a write it never attempted
+     * is the same lie.
+     */
+    const wrote = options.dryRun !== true &&
+      (await vault.insertBodySection(book.sourcePath, ABOUT_HEADING, about));
+    if (wrote) filled.push(ABOUT_HEADING);
   }
-  if (about !== undefined) filled.push(ABOUT_HEADING);
 
   // Something was missing — that is why this function ran past its first line —
   // and none of it could be filled. Distinct from `complete` above, which is

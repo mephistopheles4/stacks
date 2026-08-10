@@ -1,4 +1,10 @@
 import type { LibraryBook } from '@stacks/core';
+// A *value* import, and legal only because it comes from a pure subpath — the
+// package root would drag `node:fs` and sharp into the browser bundle (G6). It
+// is here rather than reimplemented so the split rule and the join rule are one
+// piece of code: a second copy of `;` in this file is how a genre with a comma
+// in it quietly becomes two.
+import { parseSubjects } from '@stacks/core/subjects';
 import { providerLinks, type ProviderLink } from './provider-links.ts';
 
 /**
@@ -16,9 +22,6 @@ import { providerLinks, type ProviderLink } from './provider-links.ts';
  * a control inside the replaced subtree is destroyed and recreated on every tap,
  * dropping focus to `<body>` mid-browse on the primary mobile gesture.
  */
-
-/** The separator core joins `subjects` with. Split, then trim. */
-const SUBJECT_SEPARATOR = ';';
 
 export interface CardElements {
   /** The `<aside>`. A named `complementary` landmark, never a `dialog`. */
@@ -195,10 +198,7 @@ export function publicationYear(published: string | undefined): string | undefin
  */
 function subjectsLine(book: LibraryBook): string | undefined {
   if (book.subjects === undefined) return undefined;
-  const parts = book.subjects
-    .split(SUBJECT_SEPARATOR)
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
+  const parts = parseSubjects(book.subjects);
   return parts.length === 0 ? undefined : parts.join(' · ');
 }
 

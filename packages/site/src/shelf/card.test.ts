@@ -8,7 +8,7 @@ import { announcement, cardModel, publicationYear } from './card.ts';
  * `cardModel` is a pure function of one `LibraryBook`, and the DOM builder adds
  * nothing to it — so every collapse rule is assertable with no browser and no
  * DOM shim, which this repo has neither of and prefers not to acquire. What the
- * *nodes* look like is the puppeteer gate's question (G35).
+ * *nodes* look like is **G35**'s question, in `scripts/smoke-render.ts`.
  *
  * Every rule below is a population in the real vault rather than a
  * hypothetical: 19 of 41 books are `read` with nothing else to say, 5 of 41 have

@@ -1,6 +1,16 @@
 /**
  * Provider categories, as one frontmatter scalar.
  *
+ * **A pure subpath — `@stacks/core/subjects` — and that is load-bearing.** The
+ * card renders this field, so the site needs `parseSubjects` as a *runtime*
+ * value, and the site may only `import type` from the package root (G6). The
+ * precedent is `@stacks/core/shelf-order`: a module that imports nothing, so a
+ * value import cannot drag `node:fs` and sharp into the browser bundle.
+ *
+ * Without it the site would keep its own copy of the separator, which is exactly
+ * the drift the paragraph below exists to prevent — and the first version of
+ * this change did precisely that while this comment claimed otherwise.
+ *
  * **The separator is `; ` and not a comma, and that is not a style choice.**
  * Provider category values contain commas natively — Apple's
  * `"Health, Mind & Body"` sits in this repo's own G26 corpus, and Apple is

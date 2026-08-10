@@ -60,8 +60,13 @@ export interface VaultAdapter {
    *
    * ⚠️ Invariant 2's future allowlisted-section publishing **must never name
    * `## About`**: the whole point of storing it here was that it stays local.
+   *
+   * **Returns whether it wrote.** A caller that reports what it filled has to be
+   * able to tell "added the section" from "the section was already there", or
+   * every re-run claims to have written something and the report becomes a
+   * control that lies — G27's defect, one field over.
    */
-  insertBodySection(sourcePath: string, heading: string, text: string): Promise<void>;
+  insertBodySection(sourcePath: string, heading: string, text: string): Promise<boolean>;
 
   /** Dedupe check: ISBN first, then a normalised title+author. */
   bookExists(isbn: string, titleAuthor: string): Promise<boolean>;

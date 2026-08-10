@@ -59,6 +59,22 @@ export async function findRecord(
   );
   const results = Array.isArray(body?.['results']) ? body['results'] : [];
 
+  /**
+   * The first match wins — **but a match with no artwork does not end the
+   * scan.**
+   *
+   * The old code `continue`d when `artworkUrl100` was missing, because artwork
+   * was the only thing it wanted. Returning the first match outright would have
+   * quietly lost a cover this function used to find: Apple's catalogue carries
+   * editions of one book, and the first to pass `isProbablySameBook` is not
+   * always the one with a picture.
+   *
+   * So identity settles the *record* on the first match, and the scan carries on
+   * only to fill an artwork gap — which is the same absent-only shape as
+   * everything else here.
+   */
+  let matched: BookMetadata | undefined;
+
   for (const entry of results) {
     const item = asRecord(entry);
     if (item === undefined) continue;
@@ -69,16 +85,21 @@ export async function findRecord(
     const foundAuthor = firstString(item['artistName']) ?? '';
     if (!isProbablySameBook(`${title} ${author ?? ''}`, `${found} ${foundAuthor}`)) continue;
 
-    const artwork = firstString(item['artworkUrl100']);
+    const artwork = firstString(item['artworkUrl100'])?.replace(ARTWORK_SIZE, '/1200x1200bb.$1');
 
-    return {
+    if (matched !== undefined) {
+      if (artwork === undefined) continue;
+      return { ...matched, coverUrlLarge: artwork };
+    }
+
+    matched = {
       title: found,
       source: 'apple-books',
       ...keyIfPresent('author', firstString(item['artistName'])),
       // Only ever a *candidate* cover, which is why it lands on `coverUrlLarge`
       // and never on `coverUrl`: the downloader keeps whichever of the queue is
       // cover-shaped, and this is the one worth trying first.
-      ...keyIfPresent('coverUrlLarge', artwork?.replace(ARTWORK_SIZE, '/1200x1200bb.$1')),
+      ...keyIfPresent('coverUrlLarge', artwork),
       // A number in the response and a string in the note — the frontmatter
       // holds scalars and every other id is a string, so the shape check has one
       // rule to state rather than two.
@@ -87,9 +108,11 @@ export async function findRecord(
       ...keyIfPresent('subjects', genresOf(item['genres'])),
       ...keyIfPresent('description', toPlainText(item['description'])),
     };
+
+    if (artwork !== undefined) return matched;
   }
 
-  return undefined;
+  return matched;
 }
 
 function trackIdOf(value: unknown): string | undefined {

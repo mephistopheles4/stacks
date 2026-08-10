@@ -120,9 +120,9 @@ export class ObsidianAdapter implements VaultAdapter {
    * The heading test is `^##+ heading` at the start of a line, so a mention of
    * `## About` inside a sentence does not read as the section already existing.
    */
-  async insertBodySection(sourcePath: string, heading: string, text: string): Promise<void> {
+  async insertBodySection(sourcePath: string, heading: string, text: string): Promise<boolean> {
     const body = text.trim();
-    if (body.length === 0) return;
+    if (body.length === 0) return false;
 
     // Either the vault-relative path a `BookRecord` carries, or the absolute one
     // `writeBook` hands back — `stacks add` has the second and nothing else, and
@@ -137,7 +137,7 @@ export class ObsidianAdapter implements VaultAdapter {
       throw new Error(`${sourcePath} has no frontmatter block, so it is not a note to add to`);
     }
 
-    if (hasHeading(source, heading)) return;
+    if (hasHeading(source, heading)) return false;
 
     const eol = source.includes('\r\n') ? '\r\n' : '\n';
     const section = `${heading}${eol}${eol}${body.split(/\r?\n/).join(eol)}${eol}`;
@@ -149,6 +149,7 @@ export class ObsidianAdapter implements VaultAdapter {
         : source.slice(0, notes.index) + section + eol + source.slice(notes.index);
 
     await writeFile(path, updated, 'utf8');
+    return true;
   }
 
   /** ISBN first, then normalised title+author — the two dedupe paths. */
