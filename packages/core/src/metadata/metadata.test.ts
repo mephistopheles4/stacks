@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { COVER_SOURCES, coverSourceFor } from '../covers/cover-source.ts';
-import { CAPTURED_ISBN, fixtureHttpGet, readApiFixture } from '../test-support.ts';
+// `isHost` was written out here first and is now shared: six files had grown
+// their own copy, which is the shape a helper is supposed to prevent.
+import { CAPTURED_ISBN, fixtureHttpGet, isHost, readApiFixture } from '../test-support.ts';
 import type { HttpGet } from './http.ts';
 import { lookup, lookupByIsbn, searchByTitle } from './index.ts';
 
@@ -10,23 +12,6 @@ import { lookup, lookupByIsbn, searchByTitle } from './index.ts';
  * reader throws on an unmapped URL, so a stray network reach fails loudly
  * rather than quietly passing down the not-found path.
  */
-
-/**
- * Exact host match, rather than a substring test on the whole URL.
- *
- * A substring test answers "does this string contain those characters", which
- * is not the question any assertion here is asking — `evil.com/?x=googleapis.com`
- * satisfies it, and so does a URL pointing at `googleapis.com.example.net`.
- * Flagged nine times by CodeQL's `js/incomplete-url-substring-sanitization`.
- *
- * Nothing malicious is going to turn up in a fixture map, so this is not a
- * security fix; it is an assertion that says what it means. A test claiming
- * "Google was consulted" should fail if the request went somewhere else whose
- * URL merely mentions Google, because that is the bug it exists to catch.
- */
-function isHost(url: string, host: string): boolean {
-  return new URL(url).hostname === host;
-}
 
 const GOOGLE_BOOKS = 'www.googleapis.com';
 const OREILLY = 'learning.oreilly.com';

@@ -32,3 +32,28 @@ export function fixtureHttpGet(routes: Readonly<Record<string, string>>): HttpGe
 
 /** The real ISBN whose Open Library response is captured in fixtures/api. */
 export const CAPTURED_ISBN = '9781603580557';
+
+/**
+ * Whether a URL is *at* a host, rather than merely mentioning one.
+ *
+ * A substring test answers "does this string contain those characters", which is
+ * not the question any stub or assertion here is asking —
+ * `evil.com/?x=googleapis.com` satisfies it, and so does
+ * `googleapis.com.example.net`. CodeQL flags it as
+ * `js/incomplete-url-substring-sanitization`, eleven times and counting.
+ *
+ * **Not a security fix**: nothing malicious turns up in a fixture map. It is a
+ * routing rule that says what it means — a stub claiming "this is the Google
+ * request" should not answer one that went somewhere else whose URL happens to
+ * mention Google.
+ *
+ * Lives here rather than in one test file because six of them had written it
+ * out, which is the shape a helper is supposed to prevent.
+ */
+export function isHost(url: string, host: string): boolean {
+  try {
+    return new URL(url).hostname === host;
+  } catch {
+    return false;
+  }
+}

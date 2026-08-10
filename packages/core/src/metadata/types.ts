@@ -99,15 +99,39 @@ export function toPlainText(value: unknown): string | undefined {
   const raw = firstString(value);
   if (raw === undefined) return undefined;
 
-  const text = raw
-    .replace(/<br\s*\/?>|<\/p>|<\/div>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
+  const text = stripTags(raw.replace(/<br\s*\/?>|<\/p>|<\/div>/gi, '\n'))
     .replace(/&(amp|lt|gt|quot|#39|apos);/g, (_, name: string) => ENTITIES[name] ?? '')
     .replace(/[ \t]+/g, ' ')
     .replace(/\s*\n\s*/g, '\n')
     .trim();
 
   return text.length === 0 ? undefined : text;
+}
+
+/**
+ * Removes tags until there are none left, then removes the angle brackets.
+ *
+ * ⚠️ **A single pass is not enough, and CodeQL was right to say so**
+ * (`js/incomplete-multi-character-sanitization`). One `replace(/<[^>]*>/g, '')`
+ * over `<scr<x>ipt>` leaves `<script>` behind — the removal *creates* the tag it
+ * was meant to remove. The loop closes that, and dropping any surviving `<` or
+ * `>` closes the rest: after it, no angle bracket can reach the note at all.
+ *
+ * This is not a hypothetical XSS in this project — the text goes into a Markdown
+ * body, and `BookRecord` has no field for a body, so no build can carry it. It
+ * is fixed because the function's name is a claim, and a claim that holds only
+ * for well-formed input is the kind of thing this repo has a gate about.
+ */
+function stripTags(value: string): string {
+  let text = value;
+  for (let previous = ''; previous !== text; ) {
+    previous = text;
+    // A tag opens with a letter or a slash. `a < b and c > d` is prose, and a
+    // looser `<[^<>]*>` eats the four words between the operators — which is a
+    // sanitiser quietly deleting content, the other way to get this wrong.
+    text = text.replace(/<\/?[a-zA-Z][^<>]*>/g, '');
+  }
+  return text.replace(/[<>]/g, '');
 }
 
 const ENTITIES: Readonly<Record<string, string>> = {

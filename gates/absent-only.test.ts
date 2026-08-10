@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import { isHost } from '../packages/core/src/test-support.ts';
 import { enrichBook, missingFields } from '../packages/core/src/enrich.ts';
 import type { HttpGet } from '../packages/core/src/metadata/index.ts';
 
@@ -30,7 +31,7 @@ import type { HttpGet } from '../packages/core/src/metadata/index.ts';
 
 /** A provider that has an answer for everything, and a different one. */
 const disagreesAboutEverything: HttpGet = async (url) => {
-  if (url.includes('/api/books')) {
+  if (isHost(url, 'openlibrary.org')) {
     return {
       'ISBN:9781603580557': {
         title: 'A DIFFERENT TITLE',
@@ -44,7 +45,7 @@ const disagreesAboutEverything: HttpGet = async (url) => {
       },
     };
   }
-  if (url.includes('googleapis.com')) {
+  if (isHost(url, 'www.googleapis.com')) {
     return {
       items: [
         {
@@ -61,7 +62,7 @@ const disagreesAboutEverything: HttpGet = async (url) => {
       ],
     };
   }
-  if (url.includes('itunes.apple.com')) {
+  if (isHost(url, 'itunes.apple.com')) {
     return {
       results: [
         {

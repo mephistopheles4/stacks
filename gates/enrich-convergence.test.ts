@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import { isHost } from '../packages/core/src/test-support.ts';
 import { enrichBook } from '../packages/core/src/enrich.ts';
 import { createCachedHttpGet, type HttpGet } from '../packages/core/src/metadata/index.ts';
 
@@ -62,8 +63,8 @@ const APPLE_HIT = {
 function flakyApple(): HttpGet {
   let appleAsked = 0;
   return async (url) => {
-    if (url.includes('/api/books')) return OPEN_LIBRARY;
-    if (url.includes('itunes.apple.com')) {
+    if (isHost(url, 'openlibrary.org')) return OPEN_LIBRARY;
+    if (isHost(url, 'itunes.apple.com')) {
       appleAsked += 1;
       return appleAsked === 1 ? undefined : APPLE_HIT;
     }

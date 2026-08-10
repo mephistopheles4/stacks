@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import { isHost } from '../packages/core/src/test-support.ts';
 import { enrichBook } from '../packages/core/src/enrich.ts';
 import type { HttpGet } from '../packages/core/src/metadata/index.ts';
 
@@ -26,7 +27,7 @@ import type { HttpGet } from '../packages/core/src/metadata/index.ts';
  */
 
 const provider: HttpGet = async (url) => {
-  if (url.includes('/api/books')) {
+  if (isHost(url, 'openlibrary.org')) {
     return {
       'ISBN:9781603580557': {
         title: 'Thinking in Systems',
@@ -39,7 +40,7 @@ const provider: HttpGet = async (url) => {
       },
     };
   }
-  if (url.includes('googleapis.com')) {
+  if (isHost(url, 'www.googleapis.com')) {
     return {
       items: [
         {
@@ -57,7 +58,7 @@ const provider: HttpGet = async (url) => {
       ],
     };
   }
-  if (url.includes('itunes.apple.com')) {
+  if (isHost(url, 'itunes.apple.com')) {
     return {
       results: [
         {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CAPTURED_ISBN, fixtureHttpGet } from '../test-support.ts';
 import * as appleBooks from './apple-books.ts';
+import type { HttpGet } from './http.ts';
 import * as openLibrary from './open-library.ts';
 import * as oreilly from './oreilly.ts';
 
@@ -66,6 +67,26 @@ describe("O'Reilly keeps what it always sent", () => {
     const result = await oreilly.lookupByIsbn('9798341674738', oreillyIsbnHit);
 
     expect(result?.description).not.toMatch(/<[a-z/]/i);
+  });
+});
+
+describe('stripping tags takes more than one pass', () => {
+  const withDescription = (description: string): HttpGet =>
+    async () => ({ results: [{ title: 'A Book', description }] });
+
+  it.each([
+    ['<p>plain</p>', 'plain'],
+    // The case CodeQL named (`js/incomplete-multi-character-sanitization`): a
+    // single pass removes `<x>` and *creates* the tag it was meant to remove.
+    ['<scr<x>ipt>alert(1)</scr<x>ipt>', 'alert(1)'],
+    ['<<b>b>bold<</b>/b>', 'bold'],
+    // Nothing that could open a tag survives at all, which is a stronger claim
+    // than "no tags survive" and a much easier one to be sure of.
+    ['a < b and c > d', 'a b and c d'],
+  ])('reduces %j to text', async (input, expected) => {
+    const result = await oreilly.lookupByIsbn('9798341674738', withDescription(input));
+
+    expect(result?.description).toBe(expected);
   });
 });
 
