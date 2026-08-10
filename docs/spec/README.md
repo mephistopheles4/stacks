@@ -10,6 +10,15 @@ disagree, these files carry the later one and footnote the supersession. Where a
 decision went against a recommendation, the counter-argument is recorded, because
 that is what would have to be true for the decision to reopen.
 
+> **Built.** This spec has been implemented on
+> [`claude/mattpocock-skills-wayfinder-ce3871`](https://github.com/mephistopheles4/stacks/tree/claude/mattpocock-skills-wayfinder-ce3871).
+> It is kept as written — the decisions, their counter-arguments and the
+> residuals are the artifact — with the build order below now reading as what
+> happened rather than what to do. **Step 4 is the exception and is still owed:**
+> `pnpm stacks enrich`, twice, against the real vault. Nothing downstream can be
+> judged against real data until it runs. The five ADRs proposed below are
+> written: [0044](../adr/0044-precedence-is-a-table-not-a-judgement.md)–[0049](../adr/0049-the-card-is-a-non-modal-bottom-sheet.md).
+
 **This spec does not implement.** It states the edits; the implementation session
 makes them. In particular, **do not edit CLAUDE.md's contract blocks ahead of the
 code** — `gates/frontmatter-contract.test.ts` (G8) holds the contract to the
@@ -87,6 +96,9 @@ row's number is not knowable until it lands, and the highest live row is G29.
 Each new gate costs a row in [`docs/gates.md`](../gates.md), which **G19**
 (`constitution-scoreboard`) enforces in both directions, so landing a gate
 without scoring it is a red build.
+
+Landed as **G30**–**G34**; the labels below are how the spec referred to them
+before they had numbers.
 
 | Label | Gate | Why nothing today catches it |
 |---|---|---|
