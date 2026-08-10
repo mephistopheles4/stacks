@@ -131,6 +131,7 @@ async function main(): Promise<void> {
       writeFileSync(OUTPUT, await page.screenshot({ type: 'png' }));
 
       const cardOpened = await clickABook(page);
+      const sheet = await checkSheet(page);
 
       report({
         bookCount: Number(bookCount),
@@ -139,6 +140,7 @@ async function main(): Promise<void> {
         cost,
         errors,
         cardOpened,
+        sheet,
       });
     } finally {
       await browser.close();
@@ -239,6 +241,22 @@ interface CardContents {
   readonly closeSurvivedSwap: boolean;
   /** The announcement after swapping to a second book — must have changed. */
   readonly announcedAfterSwap: string;
+}
+
+/**
+ * §11's *"Two viewports, not one"*.
+ *
+ * The sheet and the corner card are one element with two presentations, and the
+ * breakpoint is a fact two languages hold — so a gate that only ever runs at
+ * 1440×900 proves nothing about the half of the spec that exists below 700px,
+ * on the device the interaction model was designed for.
+ */
+interface SheetChecked {
+  readonly fullBleed: boolean;
+  readonly withinCap: boolean;
+  readonly grabberVisible: boolean;
+  /** A drag shorter than the dismiss threshold must snap back, not dismiss. */
+  readonly survivedShortDrag: boolean;
 }
 
 async function clickABook(page: Page): Promise<CardOpened | undefined> {
@@ -343,6 +361,73 @@ async function swapToAnother(
 }
 
 /**
+ * The same card at 375×812, which is the presentation the interaction model was
+ * designed for.
+ *
+ * Runs after the desktop pass so the screenshot and every renderer counter above
+ * still describe the shelf at its documented size. The card is opened by calling
+ * the page's own handler rather than by aiming at a book: the shelf re-lays out
+ * at this width and a raycast that misses would report a missing sheet as a
+ * failure of the sheet.
+ */
+async function checkSheet(page: Page): Promise<SheetChecked | undefined> {
+  await page.setViewport({ width: 375, height: 812 });
+  await new Promise((resolve) => setTimeout(resolve, 400));
+
+  const opened = await clickAnyBook(page);
+  if (!opened) return undefined;
+
+  return (await page.evaluate(`(() => {
+    const card = document.getElementById('book-card');
+    const grab = document.querySelector('.card-grabber');
+    const box = card.getBoundingClientRect();
+    const threshold = Math.min(box.height * 0.3, 80);
+
+    /**
+     * A drag shorter than the threshold must snap back.
+     *
+     * This is the assertion that would have caught the sheet dismissing on every
+     * short drag: \`pointerup\` correctly declined, then reset the distance, and
+     * the synthesised \`click\` read that as a tap and dismissed anyway. A tap
+     * was unaffected, so nothing else noticed.
+     */
+    const control = document.getElementById('book-card-dismiss');
+    const at = (type, y) => control.dispatchEvent(new PointerEvent(type, {
+      clientY: y, bubbles: true, pointerId: 7, isPrimary: true, button: 0,
+    }));
+    const short = Math.max(2, Math.round(threshold / 3));
+    at('pointerdown', 100);
+    at('pointermove', 100 + short);
+    at('pointerup', 100 + short);
+    control.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    return {
+      fullBleed: Math.round(box.left) === 0 && Math.round(box.width) === innerWidth,
+      withinCap: box.height <= innerHeight * 0.4 + 1,
+      grabberVisible: Boolean(grab) && getComputedStyle(grab).display !== 'none',
+      survivedShortDrag: !card.hidden,
+    };
+  })()`)) as SheetChecked;
+}
+
+/** Opens whichever book this viewport can actually hit. */
+async function clickAnyBook(page: Page): Promise<boolean> {
+  for (let index = 0; index < 60; index += 1) {
+    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
+      | { x: number; y: number }
+      | undefined;
+    if (point === undefined) continue;
+
+    await page.mouse.click(Math.round(point.x), Math.round(point.y));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    const open = await page.evaluate(`!document.getElementById('book-card').hidden`);
+    if (open === true) return true;
+  }
+  return false;
+}
+
+/**
  * G35 — the enhanced card, against `docs/spec/enhanced-card.md` §11.
  *
  * Six of the eight acceptance assertions live here because they need a real
@@ -408,8 +493,9 @@ function report(result: {
   cost: ShelfCost;
   errors: string[];
   cardOpened: CardOpened | undefined;
+  sheet: SheetChecked | undefined;
 }): void {
-  const { bookCount, caseOverflow, stats, cost, errors, cardOpened } = result;
+  const { bookCount, caseOverflow, stats, cost, errors, cardOpened, sheet } = result;
   const failures: string[] = [];
 
   const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
@@ -429,7 +515,32 @@ function report(result: {
     console.log(`card announced    ${c.announced || 'NOTHING'}`);
     console.log(`card after swap   ${c.announcedAfterSwap || 'NOTHING'}`);
   }
+  console.log(
+    `sheet at 375x812  ${
+      sheet === undefined
+        ? 'NOT CHECKED'
+        : `full-bleed ${sheet.fullBleed ? 'yes' : 'NO'}   within cap ${
+            sheet.withinCap ? 'yes' : 'NO'
+          }   grabber ${sheet.grabberVisible ? 'yes' : 'NO'}   short drag ${
+            sheet.survivedShortDrag ? 'snaps back' : 'DISMISSES'
+          }`
+    }`,
+  );
   console.log(`screenshot        ${OUTPUT}`);
+
+  if (sheet === undefined) {
+    failures.push('no book could be opened at 375x812, so the sheet was never checked');
+  } else {
+    if (!sheet.fullBleed) failures.push('the sheet is not full-bleed at 375x812');
+    if (!sheet.withinCap) failures.push('the sheet exceeds its 40vh cap at 375x812');
+    if (!sheet.grabberVisible) failures.push('the grabber pill is not shown below the breakpoint');
+    if (!sheet.survivedShortDrag) {
+      failures.push(
+        'a drag shorter than the dismiss threshold closed the sheet. Below the threshold it ' +
+          'must snap back — otherwise every hesitant touch of the pill dismisses the card',
+      );
+    }
+  }
 
   if (cardOpened === undefined) {
     failures.push('clicking a book did not open the detail card');

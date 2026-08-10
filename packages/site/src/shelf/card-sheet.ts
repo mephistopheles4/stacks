@@ -70,12 +70,55 @@ export interface SheetOptions {
  * Cost, accepted: swiping the sheet's *body* out of habit does nothing, with the
  * working control an inch above the thumb and clickable.
  */
+/**
+ * Pointer capture, which is an enhancement and not a requirement.
+ *
+ * `setPointerCapture` **throws** when the id names no active pointer — a pointer
+ * that ended between the event and the handler, a synthetic one, an input the
+ * browser has already released. Uncaught, that takes the whole `pointerdown`
+ * handler down and the sheet becomes undraggable for the rest of the session,
+ * on a control whose entire job is being dragged.
+ *
+ * What capture buys is a drag that keeps tracking when the finger leaves the
+ * pill. Losing it costs a drag that stops early; losing the handler costs the
+ * gesture. So it is attempted and never depended on.
+ */
+function capture(control: HTMLElement, pointerId: number): void {
+  try {
+    control.setPointerCapture(pointerId);
+  } catch {
+    // No active pointer. The drag still works, it simply stops at the edge.
+  }
+}
+
+function release(control: HTMLElement, pointerId: number): void {
+  try {
+    if (control.hasPointerCapture(pointerId)) control.releasePointerCapture(pointerId);
+  } catch {
+    // Already released, which is the state this wanted anyway.
+  }
+}
+
 export function mountSheet(options: SheetOptions): () => void {
   const { card, control, onDismiss } = options;
   const isSheet = options.isSheet ?? (() => matchMedia(SHEET_QUERY).matches);
 
   let startY: number | undefined;
   let dragged = 0;
+  /**
+   * Set when a drag moved at all, and cleared by the `click` that follows it.
+   *
+   * ⚠️ **Without this, every short drag dismissed the sheet.** The event order
+   * is `pointerdown → pointermove* → pointerup → click`, and the first version
+   * reset `dragged` to 0 at the end of `pointerup` — so the `click` that
+   * browsers synthesise afterwards saw 0, read it as a tap, and dismissed a
+   * sheet that had just correctly decided to snap back. A drag *past* the
+   * threshold dismissed twice.
+   *
+   * A tap was unaffected, which is why nothing caught it: `dragged` is 0 for the
+   * whole of a tap either way.
+   */
+  let dragging = false;
 
   const setOffset = (px: number): void => {
     card.style.transform = px === 0 ? '' : `translateY(${String(px)}px)`;
@@ -85,7 +128,7 @@ export function mountSheet(options: SheetOptions): () => void {
     if (!isSheet()) return;
     startY = event.clientY;
     dragged = 0;
-    control.setPointerCapture(event.pointerId);
+    capture(control, event.pointerId);
     // Follow-the-finger is JS writing `transform` directly, so it is not a
     // transition and `prefers-reduced-motion` cannot remove it — which is the
     // whole reason the reduced-motion rule is one scoped `transition: none`.
@@ -97,6 +140,7 @@ export function mountSheet(options: SheetOptions): () => void {
     // Downward only: dragging a sheet up toward an edge it is not anchored to
     // depicts a gesture that does not exist.
     dragged = Math.max(0, event.clientY - startY);
+    if (dragged > 0) dragging = true;
     setOffset(dragged);
   };
 
@@ -104,7 +148,7 @@ export function mountSheet(options: SheetOptions): () => void {
     if (startY === undefined) return;
     startY = undefined;
     card.classList.remove('dragging');
-    if (control.hasPointerCapture(event.pointerId)) control.releasePointerCapture(event.pointerId);
+    release(control, event.pointerId);
 
     if (dragged >= dismissThreshold(card.offsetHeight)) {
       onDismiss();
@@ -118,9 +162,13 @@ export function mountSheet(options: SheetOptions): () => void {
   // A real `<button>` with an accessible name, not a decorative `<div>`: a
   // grabber only a gesture can reach is invisible to a keyboard and a screen
   // reader. It drags *and* clicks, so one control serves the finger and the
-  // pointer.
+  // pointer — and the drag has already had its say by the time this runs.
   const onClick = (): void => {
-    if (dragged === 0) onDismiss();
+    if (dragging) {
+      dragging = false;
+      return;
+    }
+    onDismiss();
   };
 
   control.addEventListener('pointerdown', onPointerDown);
