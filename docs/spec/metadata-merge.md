@@ -29,6 +29,14 @@ for the record, plus exceptions where the chain gives a worse answer.
 | `subjects` | Google → Apple → O'Reilly → Open Library | Google's `categories` and Apple's `genres` are short and curated; Open Library's 35 raw subjects are noise in a capped scalar |
 | `description` | O'Reilly → Google → Apple | Open Library has none; O'Reilly only *has* a record when it is an O'Reilly book, where its own copy is authoritative; Apple's carries HTML markup |
 
+**`pages` and `cover` are exceptions implemented as mechanisms, not as
+orderings**, and they are deliberately absent from `FIELD_ORDER` in the code:
+`completePages` re-asks Google for the volume it already chose, and the cover
+queue is assembled by the downloader from `coverUrlLarge` before `coverUrl`.
+Neither is expressible as a ranking over gathered records. **G31** asserts their
+absence rather than letting it pass unremarked, so "deliberately not there" and
+"forgotten" cannot look the same.
+
 **Every exception is a fixed provider order, and never a rule about the value.**
 Rules like *"prefer the most precise date"* were rejected deliberately: they only
 approximate an ordering anyway ("prefer a full date" *is* "put Open Library last

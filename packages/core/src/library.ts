@@ -43,6 +43,30 @@ export interface LibraryBook {
    */
   readonly coverAspect?: number;
   readonly tags: readonly string[];
+
+  readonly publisher?: string;
+  /** Verbatim, as the note holds it. The card renders the first four-digit run. */
+  readonly published?: string;
+  /** `; `-separated and capped at five; the card splits on `;`. */
+  readonly subjects?: string;
+
+  /**
+   * The contributor ids, in **both** builds.
+   *
+   * The card builds its provider links from these, so the linkable three have to
+   * ship. `oreillyOurn` ships too although nothing renders it, so that the
+   * contributor set means the same thing publicly as locally — otherwise the
+   * decision holds only on the owner's own machine, and a public card on an
+   * O'Reilly early release would show no contributor at all.
+   *
+   * Marginal exposure is near zero: these are public bibliographic pointers to
+   * books the build already lists by title, author and ISBN.
+   */
+  readonly googleVolumeId?: string;
+  readonly appleTrackId?: string;
+  readonly openLibraryOlid?: string;
+  readonly oreillyOurn?: string;
+
   /** Present in local builds only — stripped when `isPublic` is set. */
   readonly sourcePath?: string;
 }
@@ -98,6 +122,13 @@ function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
     // build never contains one, so this is only ever `true` in a build that
     // stays on your machine.
     ...keyIfPresent('private', record.private),
+    ...keyIfPresent('publisher', record.publisher),
+    ...keyIfPresent('published', record.published),
+    ...keyIfPresent('subjects', record.subjects),
+    ...keyIfPresent('googleVolumeId', record.googleVolumeId),
+    ...keyIfPresent('appleTrackId', record.appleTrackId),
+    ...keyIfPresent('openLibraryOlid', record.openLibraryOlid),
+    ...keyIfPresent('oreillyOurn', record.oreillyOurn),
   };
 
   // A public build must expose no vault paths (brief, "share build").
