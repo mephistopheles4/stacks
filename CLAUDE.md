@@ -43,6 +43,8 @@ scoring it there is a red build, in both directions.
 
 1. **The vault is the source of truth.** No parallel database. `library.json` is a build artifact, always regenerable, never hand-edited, gitignored.
 2. **Note bodies are private.** `library.json` never carries body text, in any build — that part is absolute. A public build may ship body text from *one explicitly allowlisted section* of a note, extracted in the adapter and sanitised, as its own per-book file; see `docs/notes-on-the-shelf.md`. **Nothing implements that yet**, and the gate lands before the publishing code does, so today the rule is what it has always been: nothing below the frontmatter block is parsed or shipped at all. An allowlist and never a denylist, for the same reason `private:` fails closed.
+
+   ⚠️ **That allowlist must never name `## About`.** The merge *writes* a note body now — a provider's description, through `insertBodySection` — while still never reading one. Writing and publishing are different halves, and the body was chosen over a frontmatter property precisely so that "never published" is structural: a body section is not a `BookRecord` field, so no build can carry it. An allowlist that later picked this section up would publish third-party marketing prose under the owner's name.
 3. **Never crash on a bad note.** Malformed frontmatter → skip with a console warning listing the file. One bad file must not break `stacks build`.
 4. **All vault access goes through the adapter.** No code outside `packages/core/src/adapters/` may read or write vault files directly. See "Vault adapter" below.
 5. **Hand-edited notes are first-class.** The parser must tolerate extra frontmatter keys, reordered keys, and missing optional keys. Only `type: book` + `title` are required.
@@ -65,17 +67,19 @@ interface VaultAdapter {
   listBooks(): Promise<BookRecord[]>;          // parse all type:book notes
   writeBook(book: BookInput): Promise<string>; // create note, return path
   updateBook(sourcePath: string, changes: FrontmatterChanges): Promise<void>;
+  insertBodySection(sourcePath: string, heading: string, text: string): Promise<void>;
   bookExists(isbn: string, titleAuthor: string): Promise<boolean>;
   coverDir(): string;                          // where covers are cached
 }
 ```
 - `writeBook` **creates**; it never overwrites. A colliding filename gains a numeric suffix.
 - `updateBook` sets frontmatter keys on an existing note by rewriting individual lines — key order, quoting, comments and the note body all survive byte for byte. Scalars only; a key whose value is a list is left alone. Re-serialising the YAML would reformat files the owner edits by hand.
+- `insertBodySection` is **the only method that writes below the frontmatter**, and it exists for one thing: the provider description the merge stores under `## About`. It writes **only when the heading is absent** — absent-only applied to a section, which is also what makes a whole `enrich` pass idempotent — placing it above `## Notes` so a provider's prose never lands under the owner's own. Everything else in the file survives byte for byte, `updateBook`'s promise extended to the half it never touched. It takes the vault-relative path a `BookRecord` carries or the absolute one `writeBook` returns.
 - v1 ships `ObsidianAdapter` only (YAML frontmatter, `[[wikilinks]]`, `Library/` folder).
 - Do NOT build a second adapter. Do NOT add adapter config plumbing beyond a single constructor arg (vault path). The interface exists so a Logseq/Anytype adapter is possible later, not to be a framework.
 
 ## Frontmatter contract (do not change without updating this file)
-Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `cover_source` (open-library|google-books|apple-books|oreilly|unknown), `spine_color` (hex), `pages`, `binding` (hardback|paperback), `face_out` (bool), `tags`, `shelf_order` (number), `private` (bool).
+Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `cover_source` (open-library|google-books|apple-books|oreilly|unknown), `spine_color` (hex), `pages`, `binding` (hardback|paperback), `face_out` (bool), `tags`, `shelf_order` (number), `private` (bool), `publisher`, `published` (verbatim), `subjects` (semicolon-separated, max 5), `google_volume_id`, `apple_track_id`, `openlibrary_olid`, `oreilly_ourn`.
 
 This list is the contract, and `gates/frontmatter-contract.test.ts` holds it to
 the parser in both directions. The paragraphs below are commentary — adding a
@@ -103,6 +107,37 @@ hardback with the overhang removed) and biases the height band, which is the tel
 that actually reads at shelf distance. `books.paperbackRatio` dials the mixture.
 
 `cover_source` records which provider a cover's bytes came from, taken from the URL that was actually downloaded. **It is provenance, not permission** — the four providers permit different things, but nothing reads this key: `publish.ts` has never looked at it and every cover ships whatever its source. What it buys is precision if a provider ever asks for its art down — *those two*, not *all of them*. This line used to say a public build "cannot treat them alike", which read as policy and described nothing; see `packages/core/src/covers/cover-source.ts` and [ADR-0038](docs/adr/0038-oreilly-is-a-fourth-provider.md). **Absent and `unknown` are different**: absent means nobody looked (every cover cached before this key existed), `unknown` means somebody looked and did not recognise the host. An unrecognised value is dropped at parse time rather than kept, because a typo must not read as a permission.
+
+`publisher`, `published` and `subjects` come from the merge revision, and each
+carries a rule worth knowing. **`published` is stored verbatim** — `2008` from
+Open Library and `2027-02-25T00:00:00Z` from O'Reilly are both valid values,
+because normalising at write time was the one irreversible option and undoing it
+means re-asking every provider; the card renders the first four-digit run.
+**`subjects` is semicolon-separated, never comma-separated**, capped at five:
+provider categories contain commas natively — Apple's `Health, Mind & Body` is in
+this repo's own G26 corpus — so a comma split would invent a genre nobody said,
+and a value containing the separator is dropped rather than escaped.
+⚠️ **`publisher` was already hand-written on 17 of the 41 real notes** before it
+was ever a contract key, and absent-only leaves every one of them alone, so the
+field is **mixed-provenance from day one**: nothing downstream may assume a
+provider supplied it.
+
+`google_volume_id`, `apple_track_id`, `openlibrary_olid` and `oreilly_ourn` are
+the **contributor ids**, and the set of them present *is* the record of which
+providers matched this book — there is no `contributors:` list and no winner key,
+because a list would be derivable from these. **Ids, never URLs**: a provider URL
+lands in an `href`, where the card's `textContent` rule protects nothing, and
+with an opaque id the worst a corrupted value can do is 404. Each is
+shape-checked at parse and **dropped on mismatch**, `cover_source`'s rule for an
+opaque value — ⚠️ **a typo guard and explicitly not a correctness guarantee**,
+since a well-formed wrong id passes and always will. Each key names its
+provider's own field, and for O'Reilly that is the guard rather than a
+convention: `ourn` is not `archive_id`, and a key called `oreilly_id` would
+invite pasting the identifier this file already documents as a trap.
+**`oreilly_ourn` is recorded although it can never be linked** — its URL 403s
+whether the book exists or not — because an O'Reilly early release is the one
+book no other provider matches, and recording only linkable providers would leave
+it with no provenance at all.
 
 **A book you are reading comes ahead of all of that**, numbered or not. `stacks order --renumber` numbers every shelved book, so any rule that only applied to unnumbered books stopped applying at all after one run — and the next book you picked up sorted behind every pin. Pinned by `gates/shelf-order.test.ts`.
 
@@ -277,6 +312,7 @@ build     parse the vault into library.json   (--public, --watch)
 status    quick stats: books this year, in progress, covers still missing
 covers    report where each cover came from, or record it   (--backfill)
 enrich    fill missing metadata on notes that already exist, never overwriting
+          (a whole-vault network pass — run it twice; see below)
 order     show the shelf order, or renumber it with gaps   (--renumber)
 import    import a library export into the vault   (audible)
 ```

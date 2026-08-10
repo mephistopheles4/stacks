@@ -2,7 +2,8 @@ import { cacheCover } from './covers/cache-cover.ts';
 import { resolveCoverPath } from './covers/cover-path.ts';
 import { spineColour } from './covers/dominant-colour.ts';
 import { isProbablySameBook, normaliseIsbn } from './identity.ts';
-import { coverUrls, lookup, type HttpGet } from './metadata/index.ts';
+import { formatSubjects } from './subjects.ts';
+import { coverUrls, lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
 import type { FrontmatterChanges, VaultAdapter } from './adapters/vault-adapter.ts';
 import type { BookRecord } from './types.ts';
 
@@ -20,8 +21,78 @@ import type { BookRecord } from './types.ts';
  * cheerfully return a near-miss.
  */
 
-/** Only these are ever filled. Notably absent: title, status, dates, rating, tags. */
-const FILLABLE = ['author', 'isbn', 'pages', 'cover'] as const;
+/**
+ * Only these are ever filled. Notably absent: title, status, dates, rating, tags.
+ *
+ * **Field names, not frontmatter names.** These index `book[field]` on a
+ * `BookRecord`, so they are camelCase; the `changes` object handed to
+ * `updateBook` is keyed by *contract* names (`google_volume_id`, not
+ * `googleVolumeId`) — see `FrontmatterChanges`. Both namespaces are live in this
+ * file, which is why it is worth saying out loud.
+ *
+ * **This list and `BookInput` move together.** Both are closed lists, so a merge
+ * that starts carrying `publisher` while these stay put would put it in no note
+ * at all: taking a field in the merge and not here is an inert decision.
+ *
+ * ⚠️ **Growing it changed what `enrich` *is*.** `published` and `subjects` are
+ * absent on every note in the real vault, so every book now has a gap and the
+ * command is permanently a whole-vault network pass — it never short-circuits
+ * before the network again. Fast while the cache is warm, a full pass when it is
+ * not. See docs/spec/metadata-merge.md §6.
+ */
+const FILLABLE = [
+  'author',
+  'isbn',
+  'pages',
+  'cover',
+  'publisher',
+  'published',
+  'subjects',
+  'googleVolumeId',
+  'appleTrackId',
+  'openLibraryOlid',
+  'oreillyOurn',
+] as const;
+
+/** Which frontmatter key each fillable record field is written under. */
+const CONTRACT_NAME: Readonly<Record<(typeof FILLABLE)[number], string>> = {
+  author: 'author',
+  isbn: 'isbn',
+  pages: 'pages',
+  cover: 'cover',
+  publisher: 'publisher',
+  published: 'published',
+  subjects: 'subjects',
+  googleVolumeId: 'google_volume_id',
+  appleTrackId: 'apple_track_id',
+  openLibraryOlid: 'openlibrary_olid',
+  oreillyOurn: 'oreilly_ourn',
+};
+
+/**
+ * The merge's new scalars, filled from one record by one rule.
+ *
+ * A table rather than six near-identical `if` statements, for the reason the
+ * precedence table exists: a gate can read a table.
+ *
+ * **Two names per row, because the metadata layer and the vault disagree about
+ * one field and only one.** `BookMetadata.volumeId` predates this work and is
+ * named for what Google itself calls it; the frontmatter key is
+ * `google_volume_id`, which names the provider so that a reader of a note knows
+ * whose id it is. Mapping them here is cheaper than renaming a field whose doc
+ * comment is the reason anyone knows Google's two endpoints disagree.
+ */
+const SIMPLE_FILLS = [
+  ['publisher', 'publisher'],
+  ['published', 'published'],
+  ['googleVolumeId', 'volumeId'],
+  ['appleTrackId', 'appleTrackId'],
+  ['openLibraryOlid', 'openLibraryOlid'],
+  ['oreillyOurn', 'oreillyOurn'],
+] as const satisfies readonly (readonly [(typeof FILLABLE)[number], keyof BookMetadata])[];
+
+/** The heading a provider's description is written under, and never published. */
+export const ABOUT_HEADING = '## About';
 
 export interface EnrichOptions {
   readonly dryRun?: boolean;
@@ -72,6 +143,8 @@ export async function enrichBook(
 
   const changes: Record<string, string | number> = {};
   const filled: string[] = [];
+  /** Held until the frontmatter writes are settled; see the insert below. */
+  let about: string | undefined;
 
   // A spine colour can be read from the cover already on disk, so it is worth
   // doing before deciding whether the network is needed at all.
@@ -114,6 +187,30 @@ export async function enrichBook(
         filled.push('pages');
       }
 
+      // Every write here is `if (book.X === undefined)`, without exception. That
+      // is what makes a merge change safe to run over a whole vault: it decides
+      // what fills a *gap* and what a new `stacks add` records, never what
+      // replaces a value already in a note. The accepted cost is the mirror
+      // image — a book already carrying a wrong value keeps it, and correcting
+      // it stays a hand edit.
+      for (const [field, from] of SIMPLE_FILLS) {
+        const value = found[from];
+        if (book[field] === undefined && typeof value === 'string') {
+          changes[CONTRACT_NAME[field]] = value;
+          filled.push(CONTRACT_NAME[field]);
+        }
+      }
+
+      if (book.subjects === undefined && found.subjects !== undefined) {
+        const subjects = formatSubjects(found.subjects);
+        if (subjects !== undefined) {
+          changes['subjects'] = subjects;
+          filled.push('subjects');
+        }
+      }
+
+      about = found.description;
+
       if (book.cover === undefined) {
         const candidates = coverUrls(found);
         // Whether a URL was *on offer* is this command's own question, not the
@@ -139,6 +236,24 @@ export async function enrichBook(
       }
     }
   }
+
+  /**
+   * The description, into the note body rather than into a property.
+   *
+   * Not a `FILLABLE` key and it cannot be one: `missingFields` reads a
+   * `BookRecord`, and a `BookRecord` has no body — invariant 2 by construction.
+   * So the absent-only gate cannot see this write, which is why whole-pass
+   * idempotence gets a gate of its own.
+   *
+   * The consequence, stated rather than discovered: a book whose frontmatter has
+   * no gaps at all short-circuits before the network and never acquires an
+   * `## About`. In practice every note in the vault has a gap until the first
+   * pass completes, so this affects a note that was already complete by hand.
+   */
+  if (about !== undefined && options.dryRun !== true) {
+    await vault.insertBodySection(book.sourcePath, ABOUT_HEADING, about);
+  }
+  if (about !== undefined) filled.push(ABOUT_HEADING);
 
   // Something was missing — that is why this function ran past its first line —
   // and none of it could be filled. Distinct from `complete` above, which is

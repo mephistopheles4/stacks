@@ -98,14 +98,30 @@ const BOOKS = [
     cover: 'covers/known.jpg',
     spineColor: '#123456',
   },
-  // Unfilled, having asked nobody: only `spine_color` is missing, and it is read
-  // from a cover that is not on disk. No provider is involved in this one.
+  /**
+   * Unfilled, having asked nobody: only `spine_color` is missing, and it is read
+   * from a cover that is not on disk. No provider is involved in this one.
+   *
+   * ⚠️ **It takes eleven keys to stay in this state now.** `FILLABLE` grew from
+   * four to eleven, so a note carrying only the original four has a *network*
+   * gap and this path stops being reachable — the book turns into `not-found`
+   * and the "asked nobody" case quietly leaves the gate. Spelled out in full
+   * rather than trimmed, because the alternative was deleting the only coverage
+   * of an outcome that still exists.
+   */
   {
     title: 'A Cover That Is Not There',
     author: 'Someone',
     isbn: '9780262046305',
     pages: 100,
     cover: 'covers/nope.jpg',
+    publisher: 'Some Press',
+    published: '2020',
+    subjects: 'a subject',
+    googleVolumeId: 'CpbLAgAAQBAJ',
+    appleTrackId: '1384286945',
+    openLibraryOlid: 'OL26445570M',
+    oreillyOurn: 'urn:orm:book:0642572352530',
   },
 ] as const;
 

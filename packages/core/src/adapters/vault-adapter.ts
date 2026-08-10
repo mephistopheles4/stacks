@@ -40,6 +40,29 @@ export interface VaultAdapter {
    */
   updateBook(sourcePath: string, changes: FrontmatterChanges): Promise<void>;
 
+  /**
+   * Add a section to a note's **body**, and only when it is not already there.
+   *
+   * The sixth method, and the only one that writes below the frontmatter. It
+   * exists for one thing: a provider's description, which the merge stores in
+   * the note rather than in a property because 600–700 words above every note
+   * would fight `updateBook`'s line rewriter and tax invariant 5 forever — and
+   * because a body section **is not a `BookRecord` field**, so "never published"
+   * becomes structural rather than a discipline. No build can carry it.
+   *
+   * Two rules, both inherited rather than new:
+   *
+   * - **Written only when `heading` is absent.** That is the absent-only rule
+   *   applied to a section, and it is what makes a re-run idempotent — no second
+   *   `## About` appended, ever.
+   * - **Everything else survives byte for byte**, `updateBook`'s promise
+   *   extended to the half of the file it never touched.
+   *
+   * ⚠️ Invariant 2's future allowlisted-section publishing **must never name
+   * `## About`**: the whole point of storing it here was that it stays local.
+   */
+  insertBodySection(sourcePath: string, heading: string, text: string): Promise<void>;
+
   /** Dedupe check: ISBN first, then a normalised title+author. */
   bookExists(isbn: string, titleAuthor: string): Promise<boolean>;
 

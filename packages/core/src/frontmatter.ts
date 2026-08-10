@@ -1,6 +1,7 @@
 import { parse as parseYaml } from 'yaml';
 import { isCoverSource, type CoverSource } from './covers/cover-source.ts';
 import { keyIfPresent } from './key-if-present.ts';
+import { CONTRIBUTOR_ID_KEYS, CONTRIBUTOR_IDS, isWellFormedId } from './provider-ids.ts';
 import {
   DEFAULT_BOOK_STATUS,
   isBinding,
@@ -63,6 +64,17 @@ export const FRONTMATTER_CONTRACT = {
   tags: { field: 'tags', required: false, sample: '[sample]' },
   shelf_order: { field: 'shelfOrder', required: false, sample: '20' },
   private: { field: 'private', required: false, sample: 'true' },
+  publisher: { field: 'publisher', required: false, sample: 'A Sample Press' },
+  published: { field: 'published', required: false, sample: '2019' },
+  subjects: { field: 'subjects', required: false, sample: 'systems thinking; science' },
+  google_volume_id: { field: 'googleVolumeId', required: false, sample: 'CpbLAgAAQBAJ' },
+  apple_track_id: { field: 'appleTrackId', required: false, sample: '1384286945' },
+  openlibrary_olid: { field: 'openLibraryOlid', required: false, sample: 'OL26445570M' },
+  oreilly_ourn: {
+    field: 'oreillyOurn',
+    required: false,
+    sample: 'urn:orm:book:0642572352530',
+  },
 } as const satisfies Record<
   string,
   { readonly field: keyof BookRecord | null; readonly required: boolean; readonly sample: string }
@@ -135,8 +147,40 @@ export function parseNote(source: string, sourcePath: string): ParsedNote {
       ...keyIfPresent('faceOut', asBoolean(fields['face_out'])),
       ...keyIfPresent('shelfOrder', asOrder(fields['shelf_order'])),
       ...keyIfPresent('private', asPrivate(fields['private'])),
+      ...keyIfPresent('publisher', asString(fields['publisher'])),
+      // Stored as given — `2008` and `2027-02-25T00:00:00Z` are both valid, and
+      // `asDate` is deliberately *not* used: it would drop the bare year Open
+      // Library returns and truncate the timestamp O'Reilly returns, which is
+      // normalisation at the parse edge by another name.
+      ...keyIfPresent('published', asString(fields['published'])),
+      ...keyIfPresent('subjects', asString(fields['subjects'])),
+      ...readContributorIds(fields),
     },
   };
+}
+
+/**
+ * The four contributor ids, each dropped rather than kept when malformed.
+ *
+ * `cover_source`'s rule at the same edge, for a value that is opaque rather than
+ * enumerable: shape is checkable where meaning is not, and the failure mode this
+ * buys is a **missing** link instead of a dead one. See `provider-ids.ts` for
+ * why that is worth the little it buys, and for why it guarantees nothing about
+ * whether the id is *right*.
+ */
+function readContributorIds(fields: Record<string, unknown>): Record<string, string> {
+  const ids: Record<string, string> = {};
+
+  for (const key of CONTRIBUTOR_ID_KEYS) {
+    // `asString` rather than a string check: `apple_track_id: 1384286945` is a
+    // number in YAML, and hand-edited notes do that constantly.
+    const value = asString(fields[key]);
+    if (value !== undefined && isWellFormedId(key, value)) {
+      ids[CONTRIBUTOR_IDS[key].field] = value;
+    }
+  }
+
+  return ids;
 }
 
 function asString(value: unknown): string | undefined {

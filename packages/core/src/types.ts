@@ -144,6 +144,44 @@ export interface BookRecord {
   readonly shelfOrder?: number;
 
   readonly tags: readonly string[];
+
+  /** Who published it. ⚠️ Hand-added on 17 of the 41 real notes before this key
+   * was ever part of the contract, and absent-only leaves every one of those
+   * alone — so the field is **mixed-provenance from day one** and nothing
+   * downstream may assume a provider supplied it. */
+  readonly publisher?: string;
+
+  /**
+   * The publication date, **exactly as the provider gave it**.
+   *
+   * `2008` and `2027-02-25T00:00:00Z` are both valid values. Normalising at
+   * write time was the one irreversible option on the table — undoing it means
+   * re-asking every provider — so the note stores what it was told and the card
+   * renders the first four-digit run. Same precedent as `started`/`finished`,
+   * which are opaque strings, unvalidated, stored as given.
+   */
+  readonly published?: string;
+
+  /** Provider categories, `; `-separated and capped at five. See `subjects.ts`. */
+  readonly subjects?: string;
+
+  /**
+   * The four contributor ids — see `provider-ids.ts`.
+   *
+   * **The set of these that is present *is* the contributor set.** A contributor
+   * is a provider whose record was confirmed to be this book, which is an
+   * identity claim rather than a data-flow one: it means the same thing before
+   * and after Apple started supplying fields as well as pictures.
+   *
+   * Ids, never URLs. A provider URL lands in an `href`, and the card's
+   * `textContent` rule protects text and does nothing for an `href`; with an
+   * opaque id the worst a corrupted value can do is 404.
+   */
+  readonly googleVolumeId?: string;
+  readonly appleTrackId?: string;
+  readonly openLibraryOlid?: string;
+  /** Recorded although it can never be linked: its URL 403s either way. */
+  readonly oreillyOurn?: string;
 }
 
 /** What `stacks add` hands to the adapter in order to create a note. */
@@ -163,6 +201,23 @@ export interface BookInput {
   readonly shelfOrder?: number;
   readonly private?: boolean;
   readonly tags?: readonly string[];
+
+  /**
+   * Everything the merge revision added, written at creation as well as filled
+   * later.
+   *
+   * `BookInput` and `FILLABLE` have to move **together**: both are closed lists,
+   * so a merge that starts carrying `publisher` while these stay put would put
+   * it in no note at all. Taking a field in the merge and not here is an inert
+   * decision.
+   */
+  readonly publisher?: string;
+  readonly published?: string;
+  readonly subjects?: string;
+  readonly googleVolumeId?: string;
+  readonly appleTrackId?: string;
+  readonly openLibraryOlid?: string;
+  readonly oreillyOurn?: string;
 
   /**
    * Keys outside the frontmatter contract, written through verbatim.
