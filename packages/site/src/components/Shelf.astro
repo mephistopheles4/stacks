@@ -363,13 +363,25 @@
 
   /*
     Redundant with "click anywhere", and deliberately so: a surface you can only
-    leave by knowing a convention is a surface some people are stuck on. It sits
-    outside the image's top-right corner rather than over the artwork.
+    leave by knowing a convention is a surface some people are stuck on.
+
+    **Top-right of the viewport, not of the image**, and that is what `fixed`
+    rather than `absolute` buys. The dialog shrink-wraps its image, so anchoring
+    to it put the control on the artwork's corner the moment the image filled the
+    screen — which is every phone, where the cover is 339px of a 375px viewport.
+    A fixed descendant of a top-layer dialog resolves against the viewport, and
+    can here because nothing above it carries a transform or a filter; the
+    `backdrop-filter` lives on `::backdrop`, which is a sibling pseudo-element
+    and not an ancestor.
+
+    The plate stays, quieter. It is over the scrim in the common case and does
+    not need to work hard — but on a short landscape viewport a 92vw image can
+    still reach the corner, and a light glyph alone on a pale cover would vanish.
   */
   .cover-viewer-close {
-    position: absolute;
-    top: -0.25rem;
-    right: -0.25rem;
+    position: fixed;
+    top: clamp(0.75rem, 3vw, 1.5rem);
+    right: clamp(0.75rem, 3vw, 1.5rem);
     display: grid;
     place-items: center;
     width: 2.75rem;
@@ -377,7 +389,7 @@
     padding: 0;
     border: 0;
     border-radius: 50%;
-    background: rgba(26, 22, 19, 0.75);
+    background: rgba(26, 22, 19, 0.6);
     color: #f2e8dc;
     cursor: pointer;
   }
