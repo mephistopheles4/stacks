@@ -22,7 +22,7 @@ paraphrasing from a secondary source.
 
 | Provider | Bare logo as the affordance | The asset that *is* granted | Written permission needed? |
 | --- | --- | --- | --- |
-| **Apple Books** | forbidden (as the Apple logo); the wordmark alone is never granted | **permitted-with-conditions** — Apple Books *badge*, *lockup*, or *icon* | No, for a website |
+| **Apple Books** | **requires-written-permission** (the *Apple corporate logo* alone: **forbidden**) | **permitted-with-conditions** — Apple Books *badge*, *lockup*, or *icon* | No, for the granted assets |
 | **Google Books** | **requires-written-permission** | **permitted-with-conditions** — the clickable *"Google Preview" button* | No, for the granted assets; yes for anything else |
 | **O'Reilly** | **requires-written-permission** | none — no third-party grant exists | **Yes. "There are no exceptions."** |
 | **Open Library / Internet Archive** | **no published guideline located** → treat as requires-written-permission | none located | Unknown; nobody has published either a grant or a refusal |
@@ -63,25 +63,35 @@ answers something else; that is the single easiest way to get this wrong.
 `https://www.apple.com/itunes/marketing-with-apple-books/identity-guidelines.html`).
 **Secondary primary source:** [Guidelines for Using Apple Trademarks and Copyrights](https://www.apple.com/legal/intellectual-property/guidelinesfor3rdparties.html).
 
-### The bare mark is refused, twice, in the same list — **(3)**
+### The bare mark: two different answers, and they must not be merged — **(3)**
 
-Under *1.6 Avoid Mistakes* and again under the lockup's mistakes list:
+**The Apple corporate logo alone is expressly forbidden.** Under *1.6 Avoid
+Mistakes*, and again under the lockup's mistakes list:
 
 > Do not use the Apple logo alone.
 
 > Do not use icons, logos, or graphics from the Apple website or from Apple apps.
 
-And Apple's general trademark guidelines, under *Unauthorized Use of Apple
-Trademarks*, close it:
+**An "Apple Books logo" separate from the badge, lockup and icon is a different
+matter: it is nowhere granted, rather than forbidden.** No sentence in the
+Identity Guidelines addresses such an asset at all, and Apple does not publish
+one. What closes it is the general policy, under *Unauthorized Use of Apple
+Trademarks*:
 
 > You may not use the Apple Logo or any other Apple-owned graphic symbol, logo,
 > or icon on or in connection with web sites, products, packaging, manuals,
 > promotional/advertising materials ... except pursuant to an express written
 > trademark license from Apple.
 
-So "the Apple Books logo" as a bare mark is not available. What is available is
-three *provided* assets, and the Identity Guidelines are themselves the express
-grant for them.
+So the verdict for a bare Apple Books mark is **requires-written-permission**, on
+the same evidentiary footing as Google's — not "forbidden", which is a stronger
+word than any Apple sentence about it supports. The distinction costs nothing
+practically (both roads lead to using a provided asset instead) and it keeps this
+document from doing to Apple what it explicitly refuses to do to O'Reilly and
+Open Library: read silence as a prohibition.
+
+What *is* available is three **provided** assets, and the Identity Guidelines are
+themselves the express grant for them.
 
 ### What is granted — **(3)**
 
@@ -518,9 +528,17 @@ No provider logo asset exists in this repo today — the only marks tracked unde
 four would be new files, and three of the four would be new files subject to
 someone else's rules about how they may be drawn.
 
-| Provider | Where the asset comes from | Redistributable in this repo? |
+| Provider | How the asset would be acquired | Conditions attached to *displaying* it |
 | --- | --- | --- |
-| Apple Books | [Apple Books Toolbox](https://toolbox.marketingtools.apple.com/en-us/apple-books/us), SVG for web | Yes, unaltered, at ≥30 px (badge) or ≥25 px (lockup) |
-| Google Books | `google.com/intl/en/googlebooks/images/gbs_preview_button1.png`, `books.google.com/googlebooks/images/poweredby.png` | Yes, unaltered; served directly by Google, no download page |
-| O'Reilly | `cdn.oreillystatic.com/images/oreilly/OReillyLogos.zip`, but §2(f) routes acquisition through projects@oreilly.com | **No** — not without prior written approval |
+| Apple Books | [Apple Books Toolbox](https://toolbox.marketingtools.apple.com/en-us/apple-books/us), SVG for web | Unaltered, ≥30 px (badge) or ≥25 px (lockup), clear space, not dominant, badge first in a row, credit line once per site |
+| Google Books | `google.com/intl/en/googlebooks/images/gbs_preview_button1.png`, `books.google.com/googlebooks/images/poweredby.png` — served directly by Google, no download page or registration | Unaltered, not the most prominent element on the page, not beside a competing search service's logo |
+| O'Reilly | `cdn.oreillystatic.com/images/oreilly/OReillyLogos.zip`, but §2(f) routes acquisition through projects@oreilly.com | **Prior written approval required before any of it** |
 | Open Library | No first-party asset page located | **Unknown** — no licence found either way |
+
+**Whether any of these bytes may be committed into this repository is a question
+no source read here answers.** Every grant above is phrased as permission to
+*use* artwork in a communication; none of them says anything about vendoring a
+copy into a public git repository, and the absence of a sentence is not a
+permission — the same standard this document applied to O'Reilly's public zip.
+Serving Google's two images from Google's own hosts sidesteps the question
+entirely for that one provider; Apple's does not, since the Toolbox is a download.
