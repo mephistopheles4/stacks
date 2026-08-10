@@ -20,8 +20,24 @@ import { REPO_ROOT } from './lib/repo-root.ts';
 const ORIGIN = process.env['PROTO_ORIGIN'] ?? 'http://localhost:4321';
 const OUT = join(REPO_ROOT, 'artifacts', 'attrib-prototype');
 
-const PLACES = ['header', 'bl', 'tr', 'auto'] as const;
-const CONTENTS = ['google', 'apple', 'all'] as const;
+/*
+ * Narrowed to the live question. The full 4x4 matrix is 192 shelf boots and got
+ * killed at ~15 minutes; the placement table it produced is in the resolution on
+ * #106 and does not need re-running. What is undecided is the owner's row at the
+ * bottom-left corner and its phone fallback. `PROTO_ATTRIB_FULL=1` restores the
+ * sweep.
+ */
+const FULL = process.env['PROTO_ATTRIB_FULL'] === '1';
+const PLACES = (FULL ? ['header', 'bl', 'tr', 'auto'] : ['bl', 'auto']) as readonly string[];
+const CONTENTS = (FULL ? ['google', 'apple', 'all', 'row'] : ['row']) as readonly string[];
+
+/**
+ * The assumed footprint, and a deliberately smaller one — "it can be pretty
+ * small too, i dont want it to be distracting". Google's branding page states no
+ * minimum size for the powered-by image (Apple states one for its badge; Google
+ * does not), so the floor here is legibility rather than a published number.
+ */
+const GRAPHIC_HEIGHTS = [26, 18] as const;
 
 const VIEWPORTS = {
   /** iPhone 12-ish — #91's sheet is 325px here. */
@@ -59,23 +75,24 @@ async function main(): Promise<void> {
     for (const [viewName, viewport] of Object.entries(VIEWPORTS)) {
       for (const place of PLACES) {
         for (const content of CONTENTS) {
-          for (const withCard of [false, true]) {
-            /*
-             * Placement gets a shot on every viewport and both card states —
-             * that is the axis a picture answers. The content axis is three
-             * lines of text, so it only gets shot on the two placements the
-             * collision table leaves standing, where the question is whether a
-             * credit nobody requires is worth the third line.
-             */
-            const shoot =
-              content === 'apple' ||
-              (viewName !== 'landscape' && (place === 'header' || place === 'auto'));
-            const measure = await shot(browser, viewport, place, content, withCard, {
-              shootAs: shoot
-                ? `${viewName}-${place}-${content}-${withCard ? 'card' : 'shut'}`
-                : undefined,
-            });
-            rows.push(row(viewName, place, content, withCard, measure));
+          for (const height of GRAPHIC_HEIGHTS) {
+            for (const withCard of [false, true]) {
+              /*
+               * The chosen direction — the owner's row, bottom-left and its
+               * phone fallback — gets a picture at both footprints in every
+               * state. Everything else is the losing side of a table that is
+               * already decided, and only needs its number.
+               */
+              const shoot =
+                (content === 'row' && (place === 'bl' || place === 'auto')) ||
+                (content === 'apple' && height === 26);
+              const measure = await shot(browser, viewport, place, content, height, withCard, {
+                shootAs: shoot
+                  ? `${viewName}-${place}-${content}-${String(height)}-${withCard ? 'card' : 'shut'}`
+                  : undefined,
+              });
+              rows.push(row(viewName, place, content, height, withCard, measure));
+            }
           }
         }
       }
@@ -84,8 +101,10 @@ async function main(): Promise<void> {
     await browser.close();
   }
 
-  console.log('\n| viewport | place | shows | card | surface | behind the card | on the lockup | clipped |');
-  console.log('|---|---|---|---|---|---|---|---|');
+  console.log(
+    '\n| viewport | place | shows | graphic | card | surface | behind the card | on the lockup | clipped |',
+  );
+  console.log('|---|---|---|---|---|---|---|---|---|');
   for (const line of rows) console.log(line);
   console.log(`\nshots in ${OUT}`);
 }
@@ -94,12 +113,13 @@ function row(
   view: string,
   place: string,
   content: string,
+  height: number,
   withCard: boolean,
   m: Measure,
 ): string {
   const covered = m.overlap > 0 ? `**${String(m.overlap)}px²**` : 'clear';
   const lockup = m.onHeader > 0 ? `**${String(m.onHeader)}px²**` : 'clear';
-  return `| ${view} | ${place} | ${content} | ${withCard ? 'open' : 'shut'} | ${String(m.rect.width)}×${String(m.rect.height)} | ${covered} | ${lockup} | ${m.clipped ? '**yes**' : 'no'} |`;
+  return `| ${view} | ${place} | ${content} | ${String(height)}px | ${withCard ? 'open' : 'shut'} | ${String(m.rect.width)}×${String(m.rect.height)} | ${covered} | ${lockup} | ${m.clipped ? '**yes**' : 'no'} |`;
 }
 
 async function shot(
@@ -107,6 +127,7 @@ async function shot(
   viewport: { width: number; height: number },
   place: string,
   content: string,
+  height: number,
   withCard: boolean,
   options: { shootAs?: string } = {},
 ): Promise<Measure> {
@@ -121,7 +142,7 @@ async function shot(
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     await page.evaluate(
-      `window.__attribproto.set({ place: ${JSON.stringify(place)}, content: ${JSON.stringify(content)} })`,
+      `window.__attribproto.set({ place: ${JSON.stringify(place)}, content: ${JSON.stringify(content)}, graphicHeight: ${String(height)} })`,
     );
     if (withCard) {
       await openACard(page);

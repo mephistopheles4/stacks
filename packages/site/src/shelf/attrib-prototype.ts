@@ -31,21 +31,22 @@
  */
 
 type Place = 'header' | 'bl' | 'tr' | 'auto';
-type Content = 'google' | 'apple' | 'all';
+type Content = 'google' | 'apple' | 'all' | 'row';
 
 const PLACES: Place[] = ['header', 'bl', 'tr', 'auto'];
 const PLACE_NAMES: Record<Place, string> = {
   header: 'under the header — one lockup, no new corner',
-  bl: 'bottom-left — the colophon corner',
+  bl: 'bottom-left — the colophon corner (the owner’s choice)',
   tr: 'top-right — the free corner on desktop',
-  auto: 'top-right above #91’s breakpoint, under the header below it',
+  auto: 'bottom-left above #91’s breakpoint, under the header below it',
 };
 
-const CONTENTS: Content[] = ['google', 'apple', 'all'];
+const CONTENTS: Content[] = ['google', 'apple', 'all', 'row'];
 const CONTENT_NAMES: Record<Content, string> = {
   google: "Google's graphic alone (all that is owed if Apple's line is not)",
   apple: "+ Apple's credit line (#104 assumed this rides here)",
   all: '+ a four-provider credits line (manners, not compliance)',
+  row: 'the graphic, then an “Attribution” link beside it (the owner’s shape)',
 };
 
 /**
@@ -115,6 +116,17 @@ export function mountAttribPrototype(initial: string): void {
   creditsLine.className = 'pattr-line pattr-credits';
   creditsLine.textContent = CREDITS;
 
+  /*
+   * The owner's shape: the graphic stays *displayed* — Google's clause is not
+   * satisfiable behind a click, which is what #104 settled — and a link beside
+   * it carries everything longer. Interactive, so unlike the text-only variants
+   * a collision with the sheet is a **stolen tap** rather than hidden text.
+   */
+  const link = document.createElement('a');
+  link.className = 'pattr-link';
+  link.href = '/attribution';
+  link.textContent = 'Attribution';
+
   const bar = buildBar();
   document.body.append(bar.root);
 
@@ -123,9 +135,11 @@ export function mountAttribPrototype(initial: string): void {
     surface.style.setProperty('--pattr-w', `${String(Math.round(graphicHeight * (GRAPHIC.width / GRAPHIC.height)))}px`);
     surface.style.setProperty('--pattr-h', `${String(graphicHeight)}px`);
 
+    surface.dataset['content'] = content;
     const parts: HTMLElement[] = [graphic];
-    if (content !== 'google') parts.push(appleLine);
+    if (content === 'apple' || content === 'all') parts.push(appleLine);
     if (content === 'all') parts.push(creditsLine);
+    if (content === 'row') parts.push(link);
     surface.replaceChildren(...parts);
 
     /*
@@ -349,8 +363,33 @@ body > .pattr[data-place='bl'] {
   bottom: clamp(1rem, 4vw, 2.5rem);
   left: clamp(1rem, 4vw, 2.5rem);
 }
-body > .pattr[data-place='tr'],
 body > .pattr[data-place='auto'] {
+  bottom: clamp(1rem, 4vw, 2.5rem);
+  left: clamp(1rem, 4vw, 2.5rem);
+}
+
+/* The owner's shape reads left to right: graphic, then the link beside it. */
+.pattr[data-content='row'] {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* A link has to be clickable, so it opts back out of the surface's inertness. */
+.pattr-link {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #a89684;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  /* WCAG 2.5.5: a 44px target, on the device #91 made primary. */
+  min-height: 2.75rem;
+}
+.pattr-link:hover { color: #f2e8dc; }
+.pattr[data-content='linked-graphic'] { gap: 0; }
+body > .pattr[data-place='tr'] {
   top: clamp(1rem, 4vw, 2.5rem);
   right: clamp(1rem, 4vw, 2.5rem);
   align-items: flex-end;
