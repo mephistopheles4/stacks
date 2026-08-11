@@ -37,15 +37,29 @@ The worked example for category 4 — Vitest 4's `coverage.all` removal scoring 
 untested module 100% — is cited, not restated; it lives in `docs/gates.md`'s
 amended changed-lines row and is not one of the 35 rows triaged here.
 
-## Rank
+## Rank is not the same thing as flagged
 
 For the deep pass, in the priority order #113 fixed: **1** rows flagged under
 *vacuous green*, **2** rows whose gate matches *text rather than structure*,
 **3** rows whose gate carries an *allowlist*, **4** rows asserted *outside
-`gates/`*. A row takes the highest (lowest-numbered) tier it qualifies for. A
-row flagged only under *weakening* (non-allowlist), *routing around*, or *decay*
-outside those four shapes carries no rank — flagged, not ordered, because the
-ranking rule does not reach it.
+`gates/`*. A row takes the highest (lowest-numbered) tier it qualifies for.
+
+Tiers 1–3 are category verdicts, so a row in one of them necessarily carries a
+non-clean verdict — ranked implies flagged. **Tier 4 is different: it is a
+structural fact about *where the check runs*, not a verdict on any of the five
+categories.** A row can be asserted outside `gates/` and still be clean on all
+five — that row is ranked (for the deep pass's location-based ordering) but
+not flagged (no exposure was found). G16 is exactly this case: outside
+`gates/` per pnpm smoke:render, clean on all five categories. G18 is the
+contrast — also outside `gates/`, but carries a genuine Decay exposure, so it
+is both ranked and flagged.
+
+A row flagged only under *weakening* (non-allowlist), *routing around*, or
+*decay* outside these four shapes carries no rank — flagged, not ordered,
+because the ranking rule does not reach it.
+
+**The deep pass's membership is the flagged set, not the ranked set.** Rank
+orders it; it does not define it.
 
 ---
 
@@ -53,18 +67,27 @@ ranking rule does not reach it.
 
 **35 rows triaged, 0 not reached.**
 
-**22 rows carry a rank** (a flag matching one of the four priority shapes):
+**22 rows carry a rank:**
 
 | Rank 1 — vacuous green | Rank 2 — text over structure | Rank 3 — allowlist | Rank 4 — outside `gates/` |
 | --- | --- | --- | --- |
 | G17, G20, G21, G22, G23, G25, G26 | G2, G7, G14, G15, G19, G28, G29, G31, G35 | G1, G10, G13, G30 | G16, G18 |
 
+Of those 22, **21 are also flagged** — every rank-1/2/3 row is flagged by
+construction, and G18 (rank 4) carries a genuine Decay exposure. **G16 (rank
+4) is not flagged**: all five of its categories are clean, and it is ranked
+only because tier 4 is a structural property (location), not a category
+verdict. See "Rank is not the same thing as flagged," above.
+
 **4 more rows carry a flag with no rank** — exposed under weakening, routing
 around, or decay outside the four ranked shapes: **G6, G12, G24, G34**.
 
-**9 rows found nothing**: G3, G4, G5, G8, G9, G11, G27, G32, G33.
+**10 rows found nothing on all five categories**: G3, G4, G5, G8, G9, G11,
+G16, G27, G32, G33.
 
-**Total flagged: 26 of 35.**
+Flagged (21 ranked + 4 unranked) and clean (10) partition all 35 rows.
+
+**Total flagged: 25 of 35.**
 
 ---
 
@@ -131,10 +154,12 @@ the G1/G3/G6/G7 paragraph).
 **Gate:** [`gates/bad-note.test.ts`](../gates/bad-note.test.ts)
 **Date:** 2026-08-11
 
-All five categories: clean. Demonstrated red-capable by perturbing the
-missing-title branch to `not-a-book`, per the G1/G3/G6/G7 paragraph. No
-allowlist, no text-matching concern, no stated routing-around gap, no
-load-bearing number.
+- **Weakening** — clean; no allowlist.
+- **Satisfying the letter** — clean; demonstrated red-capable by perturbing
+  the missing-title branch to `not-a-book`, per the G1/G3/G6/G7 paragraph.
+- **Routing around** — clean; no stated gap.
+- **Vacuous green** — clean; same red-capable demonstration.
+- **Decay** — clean; no load-bearing number.
 
 `docs/gates.md` already answers the demonstration only. Nothing found beyond
 it.
@@ -148,11 +173,18 @@ it.
 **Gate:** [`gates/hand-edited-notes.test.ts`](../gates/hand-edited-notes.test.ts)
 **Date:** 2026-08-11
 
-All five categories: clean. "G4 was red on arrival" is evidence *for* the
-gate, not against it — it caught `updateBook`'s scalar-vs-flow-collection gap
-(`author: [A, B]` silently replaced) the moment it was written, with no
-mutation required. That is a defect in the code the gate protects, already
-fixed, and a strong non-vacuity signal for the gate itself.
+- **Weakening** — clean; no allowlist.
+- **Satisfying the letter** — clean. "G4 was red on arrival" is evidence *for*
+  the gate, not against it — it caught `updateBook`'s scalar-vs-flow-collection
+  gap (`author: [A, B]` silently replaced) the moment it was written, with no
+  mutation required.
+- **Routing around** — clean; no stated gap.
+- **Vacuous green** — clean; the same on-arrival catch is a strong
+  non-vacuity signal for the gate itself.
+- **Decay** — clean; no load-bearing number.
+
+That is a defect in the code the gate protects, already fixed — not a flaw in
+the gate's own mechanism.
 
 `docs/gates.md` already answers this — the "G4 was red on arrival" paragraph.
 
@@ -166,10 +198,15 @@ Ek]` replaced wholesale, discovered without a planted mutation.
 **Gate:** [`gates/repo-hygiene.test.ts`](../gates/repo-hygiene.test.ts) (shared with G13)
 **Date:** 2026-08-11
 
-All five categories: clean. `docs/gates.md` mentions G5 only in passing under
-G13's section — "G5 pins the same seam from the other side, asserting that no
-ignore rule names `og.png` while everything else `publish()` stages is
-ignored" — which is a real, working assertion, not an exposure.
+- **Weakening** — clean; no allowlist.
+- **Satisfying the letter** — clean. `docs/gates.md` mentions G5 only in
+  passing under G13's section — "G5 pins the same seam from the other side,
+  asserting that no ignore rule names `og.png` while everything else
+  `publish()` stages is ignored" — which is a real, working assertion, not an
+  exposure.
+- **Routing around** — clean; no stated gap.
+- **Vacuous green** — clean; no basis found.
+- **Decay** — clean; no load-bearing number.
 
 `docs/gates.md` already answers this in the sentence above; nothing further
 found.
@@ -287,9 +324,13 @@ regex-approximation exposure, not fully closed.
 **Gate:** [`gates/frontmatter-contract.test.ts`](../gates/frontmatter-contract.test.ts)
 **Date:** 2026-08-11
 
-All five categories: clean. "G8 observed red on `shelf_order`" is the gate
-correctly catching a documented-but-unenumerated key, not a flaw in its own
-mechanism.
+- **Weakening** — clean; no allowlist.
+- **Satisfying the letter** — clean. "G8 observed red on `shelf_order`" is the
+  gate correctly catching a documented-but-unenumerated key, not a flaw in its
+  own mechanism.
+- **Routing around** — clean; no stated gap.
+- **Vacuous green** — clean; the same catch is a non-vacuity signal.
+- **Decay** — clean; no load-bearing number.
 
 `docs/gates.md` already answers this — the 2026-08-01 note pairing G8 and G9.
 
@@ -303,8 +344,12 @@ described but the documented enumeration never listed."
 **Gate:** [`gates/env-contract.test.ts`](../gates/env-contract.test.ts)
 **Date:** 2026-08-11
 
-All five categories: clean, for the same reason as G8 — the gate caught the
-gap it exists to catch.
+- **Weakening** — clean; no allowlist.
+- **Satisfying the letter** — clean, for the same reason as G8 — the gate
+  caught the gap it exists to catch.
+- **Routing around** — clean; no stated gap.
+- **Vacuous green** — clean; the same catch is a non-vacuity signal.
+- **Decay** — clean; no load-bearing number.
 
 `docs/gates.md` already answers this — the same 2026-08-01 note.
 
@@ -443,13 +488,19 @@ this tier.
 **Gate:** [`gates/absent-only.test.ts`](../gates/absent-only.test.ts)
 **Date:** 2026-08-11
 
-All five categories: clean, on the evidence available. The spec's own doc
-comment states it "asserts the claim rather than the branch" — byte-identical
-output against a provider that disagrees about everything — specifically to
-avoid the G27-shaped failure of a test that checks a condition rather than an
-outcome. Its one stated residual is an accepted design tradeoff, not a gaming
-exposure: a book that already carries a *wrong* value keeps it, correcting it
-by hand.
+- **Weakening** — clean; no allowlist.
+- **Satisfying the letter** — clean, on the evidence available. The spec's own
+  doc comment states it "asserts the claim rather than the branch" —
+  byte-identical output against a provider that disagrees about everything —
+  specifically to avoid the G27-shaped failure of a test that checks a
+  condition rather than an outcome.
+- **Routing around** — clean; no stated gap.
+- **Vacuous green** — clean; the whole-file byte-identity check leaves nothing
+  unexercised.
+- **Decay** — clean; no load-bearing number.
+
+Its one stated residual is an accepted design tradeoff, not a gaming exposure:
+a book that already carries a *wrong* value keeps it, correcting it by hand.
 
 `docs/gates.md` carries no elaboration beyond the table row.
 
@@ -462,10 +513,16 @@ by hand.
 **Gate:** [`gates/enrich-idempotence.test.ts`](../gates/enrich-idempotence.test.ts)
 **Date:** 2026-08-11
 
-All five categories: clean, on the evidence available. The spec is explicit
-about why it exists — G32 cannot see the `## About` body insert at all, since
-a body is not a `BookRecord` field — and asserts the whole-pass claim ("run it
-twice" is safe) rather than a single branch, for the same reason as G32.
+- **Weakening** — clean; no allowlist.
+- **Satisfying the letter** — clean, on the evidence available. The spec is
+  explicit about why it exists — G32 cannot see the `## About` body insert at
+  all, since a body is not a `BookRecord` field — and asserts the whole-pass
+  claim ("run it twice" is safe) rather than a single branch, for the same
+  reason as G32.
+- **Routing around** — clean; no stated gap.
+- **Vacuous green** — clean; the whole-pass assertion leaves nothing
+  unexercised.
+- **Decay** — clean; no load-bearing number.
 
 `docs/gates.md` carries no elaboration beyond the table row.
 
@@ -562,10 +619,15 @@ found in `obsidian-adapter.ts`'s wikilink embed.
 **Gate:** [`gates/build-modes.test.ts`](../gates/build-modes.test.ts)
 **Date:** 2026-08-11
 
-All five categories: clean. "G11 was reframed after checking its premise" is a
-scope correction (a review misdiagnosed missing `coverAspect` as a rendering
-bug when `dev-watch.ts` actually runs `--public`), not one of the five gaming
-shapes.
+- **Weakening** — clean; no allowlist.
+- **Satisfying the letter** — clean. "G11 was reframed after checking its
+  premise" is a scope correction (a review misdiagnosed missing `coverAspect`
+  as a rendering bug when `dev-watch.ts` actually runs `--public`), not one of
+  the five gaming shapes.
+- **Routing around** — clean; no stated gap.
+- **Vacuous green** — clean; observed red by removing a permitted-difference
+  entry.
+- **Decay** — clean; no load-bearing number.
 
 `docs/gates.md` already answers this — the reframing paragraph.
 
@@ -630,17 +692,23 @@ most explicitly unresolved instance of this shape in the whole file.
 **Gate:** [`pnpm smoke:render`](../scripts/smoke-render.ts)
 **Date:** 2026-08-11
 
-All five categories: clean. The row measures `Box3.setFromObject` against the
-case's real inner faces rather than trusting the layout arithmetic, and is
-observed red-capable by deleting the clearance.
+- **Weakening** — clean; no allowlist.
+- **Satisfying the letter** — clean. The row measures `Box3.setFromObject`
+  against the case's real inner faces rather than trusting the layout
+  arithmetic.
+- **Routing around** — clean; no stated gap.
+- **Vacuous green** — clean; observed red-capable by deleting the clearance.
+- **Decay** — clean; no load-bearing number.
 
 `docs/gates.md` already answers this — the G16 paragraph.
 
 **Observed-red line:** "by deleting the clearance and re-running" → residual
 0.0203.
 
-**Rank:** 4 (outside `gates/`, per the ticket's own tier-4 list) — no tier 1–3
-exposure found.
+**Rank:** 4 (outside `gates/`, per the ticket's own tier-4 list — a structural
+property of *where the check runs*, not a category verdict). **Not flagged**:
+every one of the five verdicts above is clean, so this row is ranked without
+being flagged. Rank and flag are different things here; see the Summary.
 
 ### G17 — `deploy-branch`
 
@@ -696,7 +764,8 @@ failing.
 
 **Rank:** 4 (outside `gates/`, per the ticket's own tier-4 list) — the decay
 exposure is real but decay is not one of the four ranked shapes, and no tier
-1–3 mechanism flaw is documented.
+1–3 mechanism flaw is documented. **Flagged**: the Decay verdict above is
+non-clean, so unlike G16 this row is both ranked and flagged.
 
 ### G20 — `public-build-artifact`
 
@@ -904,12 +973,17 @@ occurred instance, not a hypothetical.
 **Gate:** [`gates/enrich-report.test.ts`](../gates/enrich-report.test.ts), over [`packages/cli/src/enrich-report.ts`](../packages/cli/src/enrich-report.ts)
 **Date:** 2026-08-11
 
-All five categories: clean. "G27 is a tool that returned a *true* answer about
-a smaller set than it claimed" describes the pre-gate CLI defect the row was
-written to catch (one `break` folding two distinct outcomes into `complete`),
-not a flaw in the gate's own mechanism — the fix is structural
-(`reportEntry` returns a line and its total together, compiler-enforced), and
-the row is demonstrated red against exactly that regression.
+- **Weakening** — clean; no allowlist.
+- **Satisfying the letter** — clean. "G27 is a tool that returned a *true*
+  answer about a smaller set than it claimed" describes the pre-gate CLI
+  defect the row was written to catch (one `break` folding two distinct
+  outcomes into `complete`), not a flaw in the gate's own mechanism — the fix
+  is structural (`reportEntry` returns a line and its total together,
+  compiler-enforced).
+- **Routing around** — clean; no stated gap.
+- **Vacuous green** — clean; the row is demonstrated red against exactly that
+  regression.
+- **Decay** — clean; no load-bearing number.
 
 `docs/gates.md` already answers this — the two 2026-08-06 notes on G27.
 
