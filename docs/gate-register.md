@@ -6,9 +6,13 @@
 same five questions to every numbered row in [`docs/gates.md`](./gates.md) and
 records a one-line verdict each — `clean`, or the shape of the exposure.
 **Suspicion, not proof.** A verdict here is a nomination for the deep pass, not
-a finding, and nothing here has been demonstrated by planting a defect. No
-dispositions (`gated` / `repaired` / `accepted` / `declined`) are filled in —
-those belong to the deep pass.
+a finding. **This pass planted no defect and ran no mutation** — every
+observed-red line below is extracted from a demonstration `docs/gates.md`
+already records, planted when that gate was written, not reproduced here.
+Where a verdict cites a perturbation or a mutation (G1, G3, G17, G32 among
+others), that citation names history the scoreboard carries, not evidence this
+session produced. No dispositions (`gated` / `repaired` / `accepted` /
+`declined`) are filled in — those belong to the deep pass.
 
 **Scope: the 35 numbered rows `docs/gates.md` holds today** — G1–G35 across its
 Invariants, Contract seams and Defect gates tables. The **CI-only gates** table
@@ -71,7 +75,7 @@ orders it; it does not define it.
 
 | Rank 1 — vacuous green | Rank 2 — text over structure | Rank 3 — allowlist | Rank 4 — outside `gates/` |
 | --- | --- | --- | --- |
-| G17, G20, G21, G22, G23, G25, G26 | G2, G7, G14, G15, G19, G28, G29, G31, G35 | G1, G10, G13, G30 | G16, G18 |
+| G17, G20, G21, G22, G23, G25, G26, G31 | G2, G7, G14, G15, G19, G28, G29, G35 | G1, G10, G13, G30 | G16, G18 |
 
 Of those 22, **21 are also flagged** — every rank-1/2/3 row is flagged by
 construction, and G18 (rank 4) carries a genuine Decay exposure. **G16 (rank
@@ -84,6 +88,22 @@ around, or decay outside the four ranked shapes: **G6, G12, G24, G34**.
 
 **10 rows found nothing on all five categories**: G3, G4, G5, G8, G9, G11,
 G16, G27, G32, G33.
+
+**A correction from the previous revision of this file.** 23 category lines
+across 14 rows originally read `not discussed` or `not separately
+discussed/flagged` — a third verdict state the contract does not admit. Each
+was resolved by re-reading the row's evidence (`docs/gates.md`'s prose where
+it exists, the gate's own spec file directly where it does not) rather than
+defaulted to `clean` to protect this Summary's count: 19 resolved to `clean`
+with a stated reason, 4 resolved to genuine, low-confidence `nominated,
+unconfirmed` exposures (G31's routing-around and vacuous-green nominations,
+G14's routing-around nomination, G35's decay nomination). None resolved to
+*not reached* — every one was assessable from evidence already in the repo.
+The only headline change from that resolution is **G31 moving from rank 2 to
+rank 1** (its vacuous-green nomination outranks its text-matching one); the
+flagged, clean and not-reached totals below are unchanged, because every
+resolved line sat inside a row that was already counted correctly on the
+other side of the flagged/clean line.
 
 Flagged (21 ranked + 4 unranked) and clean (10) partition all 35 rows.
 
@@ -253,12 +273,23 @@ restored to `.gitignore`" (three ways).
   the Commands section, so a new `covers` command passed as documented purely
   because `status`'s description reads "covers still missing." Found by the
   next command added, not by the gate itself. Now anchored to line start.
-- **Routing around** — not discussed further.
-- **Vacuous green** — related to the above; not separately discussed.
+- **Routing around** — nominated, unconfirmed. Read directly in
+  `gates/commands.test.ts`: `cliCommands()` extracts subcommands with a single
+  regex (`.command('name')`) against `packages/cli/src/index.ts`, and
+  `packageScripts()` reads only the root `package.json`. A command registered
+  outside that literal call shape, or a script living in a workspace
+  package's own `package.json` rather than the root, would not be swept.
+  Not corroborated by `docs/gates.md`; this triage's own reading of the spec.
+- **Vacuous green** — clean. The spec's first test (`expectFound` on both
+  extracted lists, plus a length floor on the Commands section) exists
+  specifically to catch a regex that stops matching and would otherwise let
+  every comparison below pass against nothing.
 - **Decay** — clean.
 
-`docs/gates.md` already answers this — the 2026-08-01 note "G14 had a false
-negative, found by the next command added."
+`docs/gates.md` already answers the satisfying-the-letter finding — the
+2026-08-01 note "G14 had a false negative, found by the next command added."
+Routing around and vacuous green come from reading `gates/commands.test.ts`
+directly; `docs/gates.md` carries no prose on either.
 
 **Observed-red line:** the `covers` command passing falsely against the
 `\bname\b` regex (real defect, not a planted mutation).
@@ -446,13 +477,20 @@ where the table row alone gave no basis.
 - **Satisfying the letter** — clean; the spec builds a fully-populated fixture
   record specifically so a missing key cannot hide behind an unexercised
   branch.
-- **Routing around** — not discussed; no basis found.
+- **Routing around** — clean. Read in `gates/library-seam.test.ts`: a third
+  test ("traces every shipped key back to a record field or a named derived
+  one") checks every key `toLibraryBook` actually produces against `FULL`'s
+  fields plus the named `DERIVED` set, both directions — so a key reaching
+  `library.json` by some route other than the enumerated `BookRecord` fields
+  would be caught, not merely a field that fails to reach it.
 - **Vacuous green** — clean; the fixture is deliberately unrealistic ("a
   record with a gap in it proves nothing about the key that was missing").
-- **Decay** — not discussed.
+- **Decay** — clean. "Seven new fields crossed this seam in one effort" is a
+  historical count nothing else rests on, not a load-bearing claim.
 
-`docs/gates.md` carries no elaboration beyond the table row; the allowlist
-finding comes from reading the spec directly.
+`docs/gates.md` carries no elaboration beyond the table row; the weakening,
+routing-around and decay findings all come from reading `gates/library-seam.test.ts`
+directly.
 
 **Observed-red line:** not recorded.
 
@@ -463,25 +501,42 @@ finding comes from reading the spec directly.
 **Gate:** [`gates/merge-precedence.test.ts`](../gates/merge-precedence.test.ts)
 **Date:** 2026-08-11
 
-- **Weakening** — not discussed; no basis found.
+- **Weakening** — clean; read in `gates/merge-precedence.test.ts` — a direct
+  table-vs-table comparison, no exemption list.
 - **Satisfying the letter** — nominated, unconfirmed. The spec parses a
   Markdown table out of `docs/spec/metadata-merge.md` to compare against
   `precedence.ts`. G19 shipped with a bug of exactly this shape — reading the
   wrong table cell because a column shifted — in a different file. Nothing in
   `docs/gates.md` or the spec's own comments states this parsing has been
   probed for the same failure; recorded as suspicion only, not evidence.
-- **Routing around** — not discussed.
-- **Vacuous green** — not discussed.
-- **Decay** — not discussed.
+- **Routing around** — nominated, unconfirmed. Every assertion compares the
+  exported `MERGED_FIELDS` / `FIELD_ORDER` / `DEFAULT_ORDER` constants against
+  the spec — none of the four tests reads the merge function itself. If the
+  code that actually merges providers ever stopped consulting those exports
+  (a hardcoded order inlined instead, or a second copy), this row would keep
+  passing on the constants alone while the real behavior diverged — the same
+  shape G22's "gated the wrong half" defect took before it was found. Not
+  corroborated by `docs/gates.md`.
+- **Vacuous green** — nominated, unconfirmed. No `expectFound`-style floor
+  guards `MERGED_FIELDS` or `FIELD_ORDER`. If either were emptied by a
+  refactor, "documents every field the merge actually merges" would iterate
+  zero fields and pass, and "implements the order each exception row
+  documents" would loop zero times and pass — the file's own `for (const
+  [field, order] of Object.entries(FIELD_ORDER))` has no companion assertion
+  that the set it iterates is non-empty.
+- **Decay** — clean. The one hardcoded real-world string (`"Health, Mind &
+  Body"`, Apple's category text) would fail loudly if the provider's wording
+  changed, not decay silently — the opposite of this category's shape.
 
-`docs/gates.md` carries no elaboration beyond the table row; the suspicion
-above is this triage's own, grounded in G19's precedent rather than in a
-citation.
+`docs/gates.md` carries no elaboration beyond the table row; every finding
+above comes from reading `gates/merge-precedence.test.ts` directly, and the
+two nominations are this triage's own, not corroborated by a citation.
 
 **Observed-red line:** not recorded.
 
-**Rank:** 2 (text over structure) — nominated only, lowest-confidence entry in
-this tier.
+**Rank:** 1 (vacuous green) — the empty-set nomination now takes priority over
+the text-matching one; both are nominated, unconfirmed, and this is the
+lowest-confidence entry in tier 1.
 
 ### G32 — `absent-only`
 
@@ -559,7 +614,8 @@ nomination comes from the spec's own doc comment.
 **Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts)
 **Date:** 2026-08-11
 
-- **Weakening** — not discussed.
+- **Weakening** — clean; no `EXEMPT`/allowlist construct found in
+  `scripts/smoke-render.ts`'s card checks.
 - **Satisfying the letter** — exposed, and the row's own Failure-mode cell in
   `docs/gates.md` says so directly: "*'the card opened'* was the whole
   assertion, and it stays true through a card with no reading line, links with
@@ -573,12 +629,17 @@ nomination comes from the spec's own doc comment.
   own tier-4 list; nothing else discussed.
 - **Vacuous green** — related to the satisfying-the-letter finding above; the
   original single-assertion shape is exactly this category.
-- **Decay** — not discussed; the gate reads `docs/spec/enhanced-card.md` §11
-  by section number, and nothing pins that reference to the spec staying at
-  that numbering.
+- **Decay** — nominated, unconfirmed, and concrete: `scripts/smoke-render.ts`
+  cites specific spec subsections in its own comments — "§11.1 and §11.2",
+  "§11.3 and the fallback in §11.4", "§11.5", "§11.6", "§11.7" — as the map
+  from what the code checks to what `docs/spec/enhanced-card.md` §11
+  requires. Nothing enforces that those numbers still name what the comment
+  claims; a renumbering of the spec would not be caught by G29, which checks
+  Markdown link fragments, not bare `§N` prose references.
 
 `docs/gates.md` already answers the core exposure — its own Failure-mode cell
-for this row.
+for this row. The decay nomination comes from reading `scripts/smoke-render.ts`
+directly; `docs/gates.md` carries nothing on it.
 
 **Observed-red line:** not recorded as a named mutation.
 
@@ -676,7 +737,13 @@ G12 paragraph.
 - **Vacuous green** — related, restated once more in the file's own words:
   "`smoke:render` screenshots a desktop GL context with gigabytes of headroom,
   which is exactly why the bug was invisible here and fatal on a phone."
-- **Decay** — not separately discussed.
+- **Decay** — clean, distinct from the routing-around finding above. The two
+  budget constants (`MAX_COVER_EDGE`, `TEXTURE_BUDGET_BYTES`) are designed to
+  go *red* as the library grows, not to quietly stop meaning anything —
+  `docs/gates.md` says the correct response when that happens "is to stop
+  uploading every cover at once, not to raise the number," which is the
+  opposite of a silently-decaying claim. Raising the number instead is the
+  Weakening exposure already recorded above, not a Decay one.
 
 `docs/gates.md` already answers all of this at length (lines 579–629), and
 says outright that this remains true today, not merely historically.
@@ -725,7 +792,9 @@ being flagged. Rank and flag are different things here; see the Summary.
   asserted nothing.
 - **Routing around** — clean; both directions are asserted unconditionally
   because "a positive check cannot detect a missing guard on its own."
-- **Decay** — not discussed.
+- **Decay** — clean; no measured-once number or claim underlies this row —
+  the guard is behavioral (which branch a real git checkout resolves to), not
+  a constant that could go stale.
 
 `docs/gates.md` already answers this extensively — the G17 section and its
 own changelog entry.
@@ -744,8 +813,15 @@ live instance of this category.
 
 - **Weakening** — clean; the magic-byte allowlist (JPEG/PNG/WebP) is a content
   allowlist, not a gate-exemption list.
-- **Satisfying the letter / routing around** — not separately flagged beyond
-  the stub limit below.
+- **Satisfying the letter** — clean; demonstrated red-capable at six of
+  fourteen by restoring the old unbounded `download`, against the real
+  15s-abort / 20MB-streamed-cap / magic-byte behavior rather than a weaker
+  proxy for it.
+- **Routing around** — clean. G22's own text states `enrich.ts`, `add-book.ts`
+  and `import/index.ts` all reach `covers/cache-cover.ts`'s `download` for
+  their bytes, and G22's "routes every cover download" assertion polices that
+  every caller of `cacheCover` gets there through one path — so a second,
+  unbounded fetch of cover bytes would be a G22 finding as much as a G18 one.
 - **Vacuous green** — clean; "observed red at six of fourteen" by restoring
   the old four-line `download`, and the streaming case ran 31 seconds before
   failing, which is the defect demonstrating itself rather than the gate
@@ -772,7 +848,8 @@ non-clean, so unlike G16 this row is both ranked and flagged.
 **Gate:** [`gates/public-build-artifact.test.ts`](../gates/public-build-artifact.test.ts)
 **Date:** 2026-08-11
 
-- **Weakening** — not discussed.
+- **Weakening** — clean; no `EXEMPT`/allowlist construct found in
+  `gates/public-build-artifact.test.ts`.
 - **Satisfying the letter / vacuous green** — exposed, historical, fixed, and
   this is the entry `docs/gates.md` itself flags as "the entry worth reading
   here": the `_headers` rule was observed red only against "a `_headers`
@@ -784,7 +861,8 @@ non-clean, so unlike G16 this row is both ranked and flagged.
 - **Routing around** — clean; a final completeness assertion holds the rule
   list to the planted defects, so the gate "cannot quietly come to cover ten
   of eleven."
-- **Decay** — not discussed.
+- **Decay** — clean; no measured-once number underlies the row — it inspects
+  a synthetic `dist/` it assembles itself, not a captured or dated fixture.
 
 `docs/gates.md` already answers this extensively (lines 664–734).
 
@@ -814,7 +892,8 @@ file.
   out to a script making its own requests... and any future code that reaches
   the network by some other API" both sit outside it, stated rather than
   gated.
-- **Decay** — not discussed.
+- **Decay** — clean; no measured-once number underlies this row — the guard
+  is a runtime record of calls made, not a constant that could go stale.
 
 `docs/gates.md` already answers all three (lines 340–399).
 
@@ -839,7 +918,8 @@ cover from `archive.org`."
   defendant, agreeing with itself no matter which way round the tuple ran.
 - **Routing around** — exposed, historical, closed by design: "`packages/site/`
   is not exempt either," the first structural gate here with no exempt list.
-- **Decay** — not discussed.
+- **Decay** — clean; "290 tests green" is a historical fact about a past
+  failed state, not a number the row currently rests on.
 
 `docs/gates.md` already answers all of this extensively (lines 467–546), and
 it is the third row `docs/gates.md` logs "a gate that matches prose matches
@@ -870,7 +950,11 @@ the clearest single instance of this category in the file.
   semantically equivalent rewrite outside that shape (other than the two
   explicitly checked) would not be caught, and the file names the specific
   line it deliberately does not widen to catch (`covers/cover-keys.ts:31`).
-- **Decay** — not discussed.
+- **Decay** — clean, distinct from the vacuous-green finding above. The
+  caller-count floor is a lower bound: callers growing past it stays green
+  correctly, and callers dropping below it goes red correctly. It is not
+  prone to staying green while silently becoming false the way the
+  now-fixed inflated floor was.
 
 `docs/gates.md` already answers all of this extensively (lines 741–830).
 
@@ -909,7 +993,8 @@ a file that derives nothing" (control).
 **Gate:** [`packages/site/src/shelf/shelf-width.test.ts`](../packages/site/src/shelf/shelf-width.test.ts) + [`packages/site/src/shelf/books.test.ts`](../packages/site/src/shelf/books.test.ts)
 **Date:** 2026-08-11
 
-- **Weakening** — not discussed.
+- **Weakening** — clean; no allowlist in a row built entirely from geometric
+  bounds and constants.
 - **Satisfying the letter / vacuous green** — exposed, and the richest single
   instance of the "judge was the defendant" pattern in the file, recurring
   across the row's own history: an early assertion "passed with the packer
@@ -945,14 +1030,20 @@ strongest volume of evidence for this category anywhere in the file.
 **Gate:** [`gates/lookup-recall.test.ts`](../gates/lookup-recall.test.ts) + [`gates/recall-corpus.ts`](../gates/recall-corpus.ts)
 **Date:** 2026-08-11
 
-- **Weakening** — not discussed; the corpus is not an allowlist in the
-  category-1 sense.
+- **Weakening** — clean; the corpus is data replayed through a shared
+  function, not an exemption list, and it is not a category-1 allowlist.
 - **Satisfying the letter** — designed against, explicitly: "A recall gate
   that only asserted positives would be passed by a matcher that says yes to
   everything... Two of the five corpus entries exist to make that route red."
   Deliberate mitigation, not a closure — five corpus entries is a narrow
   guard against a matcher tuned to exactly those cases.
-- **Routing around** — not discussed beyond the above.
+- **Routing around** — clean. Read in `gates/lookup-recall.test.ts`: the
+  corpus is replayed directly through `lookup` and `isProbablySameBook`,
+  imported from `packages/core/src/index.ts` — the same shared functions a
+  CLI command would call, not a second matcher this row exercises in
+  isolation. `docs/gates.md` records no duplicate-implementation defect for
+  matching (unlike G10, G22 or G23, each of which found one for a different
+  rule), which is consistent with there being one path here to route around.
 - **Vacuous green / decay** — exposed, real, and already realized once: "G26
   was replaying refusals as answers, because its corpus had been captured
   without a Google API key... The gate then went green against it for two
@@ -997,7 +1088,8 @@ books turn 'complete' and the assertion names why."
 **Gate:** [`packages/site/src/shelf/placement.test.ts`](../packages/site/src/shelf/placement.test.ts)
 **Date:** 2026-08-11
 
-- **Weakening** — not discussed.
+- **Weakening** — clean; no allowlist — the row walks boards geometrically
+  across the whole fixture.
 - **Satisfying the letter** — exposed, historical, fixed, and self-documented
   with an explicit moral: the row's own first draft used `height / 2` for a
   leaning book's centre, which is only correct for an upright book. For two
@@ -1010,7 +1102,9 @@ books turn 'complete' and the assertion names why."
   only `gap ≥ 0`, leaving the mirror direction (a slot of missing book)
   entirely unchecked.
 - **Vacuous green** — related to the satisfying-the-letter finding above.
-- **Decay** — not discussed.
+- **Decay** — clean; the 0.26mm error the first draft produced was found by
+  an independent re-derivation, not left to rest on a single measurement —
+  and no constant in the current row is stated as measured once.
 
 `docs/gates.md` already answers this — the whole G28 section (lines
 1139–1185).
