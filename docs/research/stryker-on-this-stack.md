@@ -144,7 +144,7 @@ Checked against the 9.6.1 tarballs:
 | `@stryker-mutator/core` | 0 | no |
 | `@stryker-mutator/instrumenter` | 0 | no — parses TS via `@babel/preset-typescript` |
 | `@stryker-mutator/vitest-runner` | 0 | no |
-| `@stryker-mutator/typescript-checker` | **7 files** | `peerDependencies: { "typescript": ">=3.6" }` |
+| `@stryker-mutator/typescript-checker` | **5 modules** | `peerDependencies: { "typescript": ">=3.6" }` |
 
 The instrumenter mutates TypeScript with **Babel**, not with the TypeScript
 compiler. So the whole mutate → sandbox → run pipeline is indifferent to which
