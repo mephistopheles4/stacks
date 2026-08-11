@@ -1273,8 +1273,9 @@ equivalent, so they are listed here rather than in the tables above.
 | --- | --- | --- |
 | `pnpm audit --audit-level=high` | a dependency with a known high or critical advisory reaching `main` | `audit` job in `gates.yml` |
 
-The audit is the one gate whose result changes without the code changing: an
-advisory published tomorrow turns yesterday's green commit red. That is correct
+The audit is one of two gates whose result changes without the code changing —
+CodeQL, below, is the other: an advisory published tomorrow turns yesterday's
+green commit red. That is correct
 — a vulnerability is news about code already shipped — but it also means a
 transitive dependency nobody can fix will block unrelated work. The escape hatch
 is `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml`, which takes the GHSA id,
@@ -1300,10 +1301,26 @@ request — which then has to pass everything above like any other change.
 
 ## Triaging a CodeQL finding
 
-CodeQL reports alongside the gates rather than blocking a merge, so its output
-is evidence and this file decides what to do with it. The first batch was 12
-alerts, all rated **high**, of which one was a real bug — a ratio worth
-expecting rather than being surprised by.
+**CodeQL blocks a merge.** `main`'s ruleset carries a `code_scanning` rule
+alongside the required `gates` check: no new security alert at **high or above**,
+and no new alert at error level. Its output is still evidence rather than a
+verdict — this section is what decides what to do with an alert, and a reasoned
+dismissal is a first-class outcome — but the decision has to be made before the
+pull request can land, not after. The first batch was 12 alerts, all rated
+**high**, of which one was a real bug — a ratio worth expecting rather than
+being surprised by.
+
+⚠️ **This paragraph said the opposite for two days, and nothing could go red.**
+It read *"CodeQL reports alongside the gates rather than blocking a merge"* —
+made false by `6cbb380`, the commit titled *"CodeQL becomes a second required
+gate, and the five claims that made false"*. That commit went looking for
+exactly this, corrected five claims elsewhere, and never touched the one file
+whose job is recording what is enforced. **Nothing in a clone can check it**:
+the ruleset lives outside the tree, and a gate that asked GitHub would need the
+network, which G21 (`no-live-network`) forbids for the whole suite. So this
+claim belongs to the last row of *"Not gated, deliberately"* — relied upon and
+unverifiable — and the only available mitigation is that it now says so instead
+of stating it flatly.
 
 **Read what the rule is for before reading its severity.** Most of CodeQL's
 JavaScript rules assume a server handling untrusted input. This is a local CLI
