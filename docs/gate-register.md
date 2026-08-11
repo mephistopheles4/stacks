@@ -6,13 +6,20 @@
 same five questions to every numbered row in [`docs/gates.md`](./gates.md) and
 records a one-line verdict each — `clean`, or the shape of the exposure.
 **Suspicion, not proof.** A verdict here is a nomination for the deep pass, not
-a finding. **This pass planted no defect and ran no mutation** — every
-observed-red line below is extracted from a demonstration `docs/gates.md`
-already records, planted when that gate was written, not reproduced here.
-Where a verdict cites a perturbation or a mutation (G1, G3, G17, G32 among
-others), that citation names history the scoreboard carries, not evidence this
-session produced. No dispositions (`gated` / `repaired` / `accepted` /
-`declined`) are filled in — those belong to the deep pass.
+a finding. **This pass planted no defect and ran no mutation.** Where an
+Observed-red line is present, it is one of two things, both already in
+`docs/gates.md`, neither produced by this session: a **planted demonstration**
+— a perturbation or mutation run when that gate was written (G1, G6, G7, G10,
+G13, G17, G19–G23, G25, G26, G28, G29 among others) — or a **real defect that
+surfaced without planting anything**, found on arrival or by ordinary use
+rather than by an adversarial test (G4 "was red on arrival"; G14's `covers`
+false-negative "found by the next command added"; G26's corpus defect found by
+noticing a real book's recorded refusal contradicted what the provider held).
+**Nine rows carry no Observed-red line at all** — G5, G12, G15, G30, G31, G32,
+G33, G34, G35 — because `docs/gates.md` records no elaboration for them beyond
+their table row, or, for G15, no mutation was run against the row itself. No
+dispositions (`gated` / `repaired` / `accepted` / `declined`) are filled in —
+those belong to the deep pass.
 
 **Scope: the 35 numbered rows `docs/gates.md` holds today** — G1–G35 across its
 Invariants, Contract seams and Defect gates tables. The **CI-only gates** table
@@ -108,6 +115,37 @@ other side of the flagged/clean line.
 Flagged (21 ranked + 4 unranked) and clean (10) partition all 35 rows.
 
 **Total flagged: 25 of 35.**
+
+**A second correction, this revision.** The previous round left category
+bullets stating a *reason* with no *verdict* word in front of it — `related to
+the above`, `designed against, explicitly`, `asserted outside gates/
+entirely`, and similar — the same defect one level down from the 23-line
+round before it. A property check (below) rather than an enumerated list
+found **10** such bullets in this file as it stood. Each was given the
+verdict its existing reasoning already implied, without rewriting the
+analysis: **7 resolved to `exposed`** — G7's Routing around and G19's Routing
+around (both historical, fixed), G25's Routing around (historical, fixed),
+G28's Vacuous green (historical, fixed), G35's Vacuous green (historical,
+fixed), and G15's Weakening and Vacuous green (both current, unresolved);
+**1 resolved to `nominated, unconfirmed`** — G26's Satisfying the letter; and
+**2 resolved to `clean`** — G19's Weakening (the allowlist it described no
+longer stands) and G35's Routing around (distinguishing the property question
+from G35's separate Rank 4 / outside-`gates/` classification, which is a
+location fact rather than a routing-around finding). **Every total above was
+recounted mechanically from the 35 sections as they stand now, not carried
+forward from the previous revision** — the flagged and clean sets are
+unchanged at 25 and 10, because every corrected line sat inside a row already
+on the correct side of that split.
+
+**The verdict-admission check**, run against this revision:
+
+```
+unadmitted: 0
+```
+
+Every category bullet (or, for a row that merges several categories into one
+bullet because one exposure answers all of them, every merged bullet) states
+`clean`, `exposed`, or `nominated, unconfirmed` before any reasoning.
 
 ---
 
@@ -336,7 +374,7 @@ of the four ranked shapes).
   miss it warns about already throws (line 135) and dismisses the finding as
   "used-in-tests" rather than closing the underlying approximation — a live,
   named residual, not a historical one.
-- **Routing around** — the same limit, from the other side: "Fixing it
+- **Routing around** — exposed; the same limit, from the other side: "Fixing it
   properly means an HTML parser dependency... to protect against a first-party
   commit," explicitly declined.
 - **Vacuous green** — clean; the miss throws rather than passing silently.
@@ -394,7 +432,9 @@ nowhere."
 **Gate:** [`gates/constitution-scoreboard.test.ts`](../gates/constitution-scoreboard.test.ts)
 **Date:** 2026-08-11
 
-- **Weakening** — related to hole 1 below; not a standing allowlist today.
+- **Weakening** — clean today; related to hole 1 below, but the directory
+  scoping it used has been replaced with a filesystem check, so no allowlist
+  stands here now.
 - **Satisfying the letter** — exposed, historical, fixed, and this is the
   row's own headline: it "shipped with three holes of its own, all found by
   review before merge" — a spec-path allowlist scoped to three directory
@@ -402,9 +442,9 @@ nowhere."
   filename appeared *anywhere* in the file, paragraphs included; and a
   citation counted if the words "invariant N" appeared in *any* cell of *any*
   row. The third is explicitly "verbatim the defect logged above for G14."
-- **Routing around** — the directory-prefix hole above is exactly this shape:
-  a real path (G10's `covers/cover-path.test.ts`) sat outside the allowlisted
-  roots and was invisible to the checker.
+- **Routing around** — exposed, historical, fixed; the directory-prefix hole
+  above is exactly this shape: a real path (G10's `covers/cover-path.test.ts`)
+  sat outside the allowlisted roots and was invisible to the checker.
 - **Vacuous green** — clean; "observed red eight ways," and all three holes
   were "verified by mutation, not by reading."
 - **Decay** — clean; this row is the mechanism other rows lean on to avoid
@@ -625,10 +665,14 @@ nomination comes from the spec's own doc comment.
   `checkSheet`, but the row's own history is the clearest self-documented
   instance of a check passing on a much weaker property than the one it
   reads as protecting.
-- **Routing around** — asserted outside `gates/` entirely, per the ticket's
-  own tier-4 list; nothing else discussed.
-- **Vacuous green** — related to the satisfying-the-letter finding above; the
-  original single-assertion shape is exactly this category.
+- **Routing around** — clean; no basis found for the property being violated
+  somewhere the check does not look. Being asserted outside `gates/` is a
+  location fact captured by Rank 4 below, not a routing-around finding in
+  its own right.
+- **Vacuous green** — exposed, historical, fixed; related to the
+  satisfying-the-letter finding above — the original single-assertion shape
+  ("the card opened") is exactly this category, returning its best possible
+  answer against the worst inputs the row now checks for.
 - **Decay** — nominated, unconfirmed, and concrete: `scripts/smoke-render.ts`
   cites specific spec subsections in its own comments — "§11.1 and §11.2",
   "§11.3 and the fallback in §11.4", "§11.5", "§11.6", "§11.7" — as the map
@@ -722,9 +766,10 @@ G12 paragraph.
 **Gate:** [`gates/cover-budget.test.ts`](../gates/cover-budget.test.ts)
 **Date:** 2026-08-11
 
-- **Weakening** — the row states its own warning directly: "A budget that gets
-  raised whenever it fails is a comment," naming the exact move that would
-  weaken it.
+- **Weakening** — exposed and current; nothing stops the two budget constants
+  being raised to make the row pass again, and the row states its own warning
+  against exactly that: "A budget that gets raised whenever it fails is a
+  comment."
 - **Satisfying the letter** — exposed, current, and unresolved — the clearest
   self-documented instance in the file: "G15 is green and the crash is not
   fixed... it protects *a* property of the build rather than *the* cause of
@@ -734,9 +779,10 @@ G12 paragraph.
 - **Routing around** — exposed and current: "the ~22 MB of per-book spine
   `CanvasTexture`s is outside every budget here." A real, named memory cost
   the sweep never counts.
-- **Vacuous green** — related, restated once more in the file's own words:
-  "`smoke:render` screenshots a desktop GL context with gigabytes of headroom,
-  which is exactly why the bug was invisible here and fatal on a phone."
+- **Vacuous green** — exposed, current and unresolved; restated once more in
+  the file's own words: "`smoke:render` screenshots a desktop GL context with
+  gigabytes of headroom, which is exactly why the bug was invisible here and
+  fatal on a phone."
 - **Decay** — clean, distinct from the routing-around finding above. The two
   budget constants (`MAX_COVER_EDGE`, `TEXTURE_BUDGET_BYTES`) are designed to
   go *red* as the library grows, not to quietly stop meaning anything —
@@ -1006,7 +1052,9 @@ a file that derives nothing" (control).
   made a fourth time, three paragraphs after writing it down"; and the
   `endReserve` bound was left citing `MAX_LEAN` after that constant "stopped
   bounding anything," staying green for a whole change.
-- **Routing around** — related to the floor-as-ceiling defect above.
+- **Routing around** — exposed, historical, fixed; related to the
+  floor-as-ceiling defect above — a need stated too small let a book get
+  rejected for a reason the check could not see was its own clearance charge.
 - **Decay** — exposed: "This row said 0.0003 first... Three numbers, three
   corrections, none of them from running the suite: the suite was green for
   all three."
@@ -1032,11 +1080,13 @@ strongest volume of evidence for this category anywhere in the file.
 
 - **Weakening** — clean; the corpus is data replayed through a shared
   function, not an exemption list, and it is not a category-1 allowlist.
-- **Satisfying the letter** — designed against, explicitly: "A recall gate
-  that only asserted positives would be passed by a matcher that says yes to
-  everything... Two of the five corpus entries exist to make that route red."
-  Deliberate mitigation, not a closure — five corpus entries is a narrow
-  guard against a matcher tuned to exactly those cases.
+- **Satisfying the letter** — nominated, unconfirmed. Designed against,
+  explicitly: "A recall gate that only asserted positives would be passed by
+  a matcher that says yes to everything... Two of the five corpus entries
+  exist to make that route red." A deliberate mitigation, not a closure —
+  five corpus entries is a narrow guard against a matcher tuned to exactly
+  those cases, and nothing in `docs/gates.md` demonstrates the mitigation
+  holds against a matcher shaped to pass precisely this corpus.
 - **Routing around** — clean. Read in `gates/lookup-recall.test.ts`: the
   corpus is replayed directly through `lookup` and `isProbablySameBook`,
   imported from `packages/core/src/index.ts` — the same shared functions a
@@ -1101,7 +1151,9 @@ books turn 'complete' and the assertion names why."
 - **Routing around** — exposed, historical, fixed: the first version asserted
   only `gap ≥ 0`, leaving the mirror direction (a slot of missing book)
   entirely unchecked.
-- **Vacuous green** — related to the satisfying-the-letter finding above.
+- **Vacuous green** — exposed, historical, fixed; related to the
+  satisfying-the-letter finding above — a wrong-but-plausible-looking number
+  is exactly this category, passing on the shape that mattered.
 - **Decay** — clean; the 0.26mm error the first draft produced was found by
   an independent re-derivation, not left to rest on a single measurement —
   and no constant in the current row is stated as measured once.
