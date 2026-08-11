@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "pnpm",
+  "testRunner": "vitest",
+  "checkers": [],
+  "reporters": ["progress", "clear-text", "html", "json"],
+
+  "mutate_comment": "Specifying `mutate` REPLACES Stryker's default array, and the default is what excludes *.test.ts. Run 1 of issue #114 forgot the negation and mutated 2665 mutants' worth of the test suite itself.",
+  "mutate": ["packages/core/src/**/*.ts", "!**/*.test.ts"],
+
+  "tsconfigFile_comment": "Issue #114: @stryker-mutator/core's TSConfigPreprocessor dynamic-imports typescript and calls ts.parseConfigFileTextToJson, which does not exist under typescript@7.0.2. Pointing tsconfigFile at a file that is not in the project makes project.files.get() miss and the rewrite a no-op. Safe here: tsconfig.json extends a path INSIDE the project and declares no references, so nothing needed rewriting.",
+  "tsconfigFile": "tsconfig.stryker-absent.json",
+
+  "plugins_comment": "Issue #114: the default glob ['@stryker-mutator/*'] loads no plugins at all under pnpm's symlinked node_modules - the child test-runner process reports 'no TestRunner plugins were loaded'. Naming the plugin explicitly resolves it.",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+
+  "timeoutMS": 15000,
+  "htmlReporter": { "fileName": "artifacts/stryker/current/mutation.html" },
+  "jsonReporter": { "fileName": "artifacts/stryker/current/mutation.json" },
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true
+}

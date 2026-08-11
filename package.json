@@ -21,6 +21,8 @@
     "deploy:site": "tsx scripts/deploy.ts"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/vitest-runner": "9.6.1",
     "@types/node": "^26.1.2",
     "puppeteer-core": "^25.5.0",
     "sharp": "^0.35.3",

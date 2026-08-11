@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "pnpm",
+  "testRunner": "vitest",
+  "checkers": [],
+  "reporters": ["progress", "clear-text", "html", "json"],
+  "mutate": ["packages/core/src/**/*.ts", "!**/*.test.ts"],
+  "tsconfigFile": "tsconfig.stryker-absent.json",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "ignorePatterns": ["artifacts", ".stryker-tmp"],
+  "timeoutMS_comment": "Issue #114: all 12 run-to-run verdict flips were STATIC mutants in covers/cover-source.ts, which force a full 233-test rerun each and straddle the 15s default. This run asks whether a 120s budget closes the band.",
+  "timeoutMS": 120000,
+  "htmlReporter": { "fileName": "artifacts/stryker/current/mutation.html" },
+  "jsonReporter": { "fileName": "artifacts/stryker/current/mutation.json" },
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true
+}

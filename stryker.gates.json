@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "pnpm",
+  "testRunner": "vitest",
+  "checkers": [],
+  "reporters": ["progress", "clear-text", "html", "json"],
+  "mutate_comment": "Issue #114 step 3: everything, including gates/ and scripts/. The compat research calls a gates/ mutation score a category error; this run is the attempt that either confirms that or produces a number.",
+  "mutate": ["packages/*/src/**/*.ts", "gates/**/*.ts", "scripts/**/*.ts", "!**/*.test.ts"],
+  "tsconfigFile": "tsconfig.stryker-absent.json",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest_comment": "Issue #114: five specs cannot run inside Stryker's sandbox at all - one for pool:'threads', four because the sandbox is not a git repository. See vitest.stryker-gates.config.ts.",
+  "vitest": { "configFile": "vitest.stryker-gates.config.ts" },
+  "ignorePatterns": ["artifacts", ".stryker-tmp"],
+  "timeoutMS": 15000,
+  "htmlReporter": { "fileName": "artifacts/stryker/current/mutation.html" },
+  "jsonReporter": { "fileName": "artifacts/stryker/current/mutation.json" },
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true
+}

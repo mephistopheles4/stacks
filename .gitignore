@@ -31,3 +31,6 @@ fixtures/vault-50/
 # IDE workspace config
 .idea/
 .vscode/
+
+# Throwaway: mutation-run scratch (experiment/stryker-cost, issue #114)
+.stryker-tmp/

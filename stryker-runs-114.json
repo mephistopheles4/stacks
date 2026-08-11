@@ -1,0 +1,1757 @@
+{
+  "core-1": {
+    "totals": {
+      "NoCoverage": 152,
+      "Killed": 3439,
+      "Timeout": 13,
+      "Survived": 2362,
+      "static": 645
+    },
+    "files": {
+      "packages/core/src/adapters/obsidian-adapter.ts": {
+        "NoCoverage": 14,
+        "Killed": 243,
+        "Timeout": 2,
+        "Survived": 107,
+        "static": 3
+      },
+      "packages/core/src/add-book.ts": {
+        "NoCoverage": 3,
+        "Killed": 76,
+        "Survived": 32
+      },
+      "packages/core/src/backfill-covers.test.ts": {
+        "NoCoverage": 1,
+        "Killed": 72,
+        "Survived": 32,
+        "static": 8
+      },
+      "packages/core/src/backfill-covers.ts": {
+        "NoCoverage": 3,
+        "Killed": 38,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cache-cover.ts": {
+        "NoCoverage": 6,
+        "Killed": 135,
+        "Survived": 53,
+        "Timeout": 3,
+        "static": 3
+      },
+      "packages/core/src/covers/cover-keys.ts": {
+        "NoCoverage": 5,
+        "Killed": 2,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cover-source.ts": {
+        "NoCoverage": 3,
+        "Killed": 27,
+        "Survived": 22,
+        "static": 31
+      },
+      "packages/core/src/covers/download.test.ts": {
+        "NoCoverage": 2,
+        "Killed": 37,
+        "Survived": 72,
+        "static": 19
+      },
+      "packages/core/src/covers/measure.ts": {
+        "NoCoverage": 11
+      },
+      "packages/core/src/enrich.ts": {
+        "NoCoverage": 6,
+        "Killed": 121,
+        "Survived": 82,
+        "static": 13
+      },
+      "packages/core/src/frontmatter.test.ts": {
+        "NoCoverage": 2,
+        "Killed": 96,
+        "Survived": 124,
+        "static": 33
+      },
+      "packages/core/src/frontmatter.ts": {
+        "NoCoverage": 7,
+        "Killed": 218,
+        "Survived": 64,
+        "static": 14
+      },
+      "packages/core/src/import/audible.ts": {
+        "NoCoverage": 2,
+        "Killed": 113,
+        "Survived": 44,
+        "static": 1
+      },
+      "packages/core/src/import/index.ts": {
+        "NoCoverage": 25,
+        "Survived": 16,
+        "Killed": 56
+      },
+      "packages/core/src/library.ts": {
+        "NoCoverage": 1,
+        "Killed": 54,
+        "Survived": 19,
+        "Timeout": 1
+      },
+      "packages/core/src/metadata/apple-books.ts": {
+        "NoCoverage": 7,
+        "Killed": 61,
+        "Survived": 20,
+        "static": 8
+      },
+      "packages/core/src/metadata/google-books.ts": {
+        "NoCoverage": 8,
+        "Survived": 77,
+        "Killed": 108,
+        "static": 1
+      },
+      "packages/core/src/metadata/http.ts": {
+        "NoCoverage": 9,
+        "Survived": 12,
+        "Killed": 18,
+        "static": 2
+      },
+      "packages/core/src/metadata/index.ts": {
+        "NoCoverage": 14,
+        "Killed": 99,
+        "Survived": 84
+      },
+      "packages/core/src/metadata/open-library.ts": {
+        "NoCoverage": 4,
+        "Killed": 133,
+        "Survived": 50,
+        "static": 3
+      },
+      "packages/core/src/metadata/precedence.ts": {
+        "NoCoverage": 1,
+        "Killed": 64,
+        "Survived": 24,
+        "static": 33
+      },
+      "packages/core/src/metadata/types.ts": {
+        "NoCoverage": 2,
+        "Killed": 50,
+        "Timeout": 1,
+        "Survived": 35,
+        "static": 7
+      },
+      "packages/core/src/provider-ids.test.ts": {
+        "NoCoverage": 2,
+        "Killed": 66,
+        "Survived": 50,
+        "static": 36
+      },
+      "packages/core/src/publish.ts": {
+        "NoCoverage": 8,
+        "Killed": 97,
+        "Survived": 28
+      },
+      "packages/core/src/shelf-order.ts": {
+        "NoCoverage": 2,
+        "Killed": 38,
+        "Survived": 12,
+        "static": 4
+      },
+      "packages/core/src/test-support.ts": {
+        "NoCoverage": 3,
+        "Killed": 24,
+        "static": 10
+      },
+      "packages/core/src/watch.test.ts": {
+        "NoCoverage": 1,
+        "Survived": 35,
+        "Killed": 37,
+        "Timeout": 1,
+        "static": 11
+      },
+      "packages/core/src/adapters/insert-body-section.test.ts": {
+        "Killed": 55,
+        "Survived": 40,
+        "static": 23
+      },
+      "packages/core/src/adapters/obsidian-adapter.test.ts": {
+        "Killed": 78,
+        "Survived": 81,
+        "static": 24
+      },
+      "packages/core/src/adapters/update-book.test.ts": {
+        "Killed": 54,
+        "Survived": 49,
+        "static": 10
+      },
+      "packages/core/src/add-book.test.ts": {
+        "Killed": 60,
+        "Survived": 62,
+        "static": 16
+      },
+      "packages/core/src/covers/blank.test.ts": {
+        "Killed": 20,
+        "Survived": 14,
+        "static": 7
+      },
+      "packages/core/src/covers/cache-cover.test.ts": {
+        "Killed": 48,
+        "Survived": 60,
+        "static": 23
+      },
+      "packages/core/src/covers/cover-budget.ts": {
+        "Survived": 9,
+        "Killed": 9,
+        "static": 2
+      },
+      "packages/core/src/covers/cover-path.test.ts": {
+        "Survived": 46,
+        "Killed": 20,
+        "static": 15
+      },
+      "packages/core/src/covers/cover-path.ts": {
+        "Killed": 25,
+        "Survived": 4
+      },
+      "packages/core/src/covers/dominant-colour.test.ts": {
+        "Killed": 29,
+        "Survived": 34,
+        "static": 33
+      },
+      "packages/core/src/covers/dominant-colour.ts": {
+        "Killed": 80,
+        "Survived": 66,
+        "Timeout": 2,
+        "static": 1
+      },
+      "packages/core/src/covers/infer-source.test.ts": {
+        "Survived": 25,
+        "Killed": 17,
+        "static": 8
+      },
+      "packages/core/src/covers/infer-source.ts": {
+        "Killed": 24,
+        "Survived": 5
+      },
+      "packages/core/src/enrich.test.ts": {
+        "Killed": 53,
+        "Survived": 50,
+        "static": 14
+      },
+      "packages/core/src/identity.test.ts": {
+        "Killed": 76,
+        "Survived": 110,
+        "static": 39
+      },
+      "packages/core/src/identity.ts": {
+        "Killed": 128,
+        "Timeout": 2,
+        "Survived": 60
+      },
+      "packages/core/src/import/audible.test.ts": {
+        "Survived": 60,
+        "Killed": 50,
+        "static": 17
+      },
+      "packages/core/src/key-if-present.test.ts": {
+        "Survived": 35,
+        "Killed": 22,
+        "static": 24
+      },
+      "packages/core/src/library.test.ts": {
+        "Killed": 31,
+        "Survived": 33,
+        "static": 12
+      },
+      "packages/core/src/key-if-present.ts": {
+        "Killed": 4
+      },
+      "packages/core/src/metadata/metadata.test.ts": {
+        "Survived": 164,
+        "Killed": 118,
+        "static": 55
+      },
+      "packages/core/src/metadata/oreilly.ts": {
+        "Killed": 63,
+        "Survived": 15,
+        "static": 2
+      },
+      "packages/core/src/metadata/precedence.test.ts": {
+        "Killed": 59,
+        "Survived": 87,
+        "static": 17
+      },
+      "packages/core/src/metadata/provider-fields.test.ts": {
+        "Survived": 54,
+        "Killed": 45,
+        "static": 37
+      },
+      "packages/core/src/publish.test.ts": {
+        "Killed": 96,
+        "Survived": 75,
+        "static": 13
+      },
+      "packages/core/src/provider-ids.ts": {
+        "Killed": 1
+      },
+      "packages/core/src/subjects.ts": {
+        "Killed": 25,
+        "Survived": 3,
+        "static": 1
+      },
+      "packages/core/src/types.test.ts": {
+        "Killed": 14,
+        "Survived": 11,
+        "static": 5
+      },
+      "packages/core/src/types.ts": {
+        "Killed": 13,
+        "Survived": 2,
+        "static": 1
+      },
+      "packages/core/src/watch.ts": {
+        "Survived": 10,
+        "Killed": 39,
+        "Timeout": 1,
+        "static": 6
+      }
+    }
+  },
+  "core-r1": {
+    "totals": {
+      "NoCoverage": 144,
+      "Killed": 2186,
+      "Timeout": 12,
+      "Survived": 959,
+      "static": 146
+    },
+    "files": {
+      "packages/core/src/adapters/obsidian-adapter.ts": {
+        "NoCoverage": 14,
+        "Killed": 243,
+        "Timeout": 2,
+        "Survived": 107,
+        "static": 3
+      },
+      "packages/core/src/add-book.ts": {
+        "NoCoverage": 3,
+        "Killed": 76,
+        "Survived": 32
+      },
+      "packages/core/src/backfill-covers.ts": {
+        "NoCoverage": 3,
+        "Killed": 38,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cache-cover.ts": {
+        "NoCoverage": 6,
+        "Killed": 135,
+        "Survived": 53,
+        "Timeout": 3,
+        "static": 3
+      },
+      "packages/core/src/covers/cover-keys.ts": {
+        "NoCoverage": 5,
+        "Killed": 2,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cover-source.ts": {
+        "NoCoverage": 3,
+        "Killed": 27,
+        "Survived": 22,
+        "static": 31
+      },
+      "packages/core/src/covers/measure.ts": {
+        "NoCoverage": 11
+      },
+      "packages/core/src/enrich.ts": {
+        "NoCoverage": 6,
+        "Killed": 121,
+        "Survived": 82,
+        "static": 13
+      },
+      "packages/core/src/frontmatter.ts": {
+        "NoCoverage": 7,
+        "Killed": 218,
+        "Survived": 64,
+        "static": 14
+      },
+      "packages/core/src/import/audible.ts": {
+        "NoCoverage": 2,
+        "Killed": 113,
+        "Survived": 44,
+        "static": 1
+      },
+      "packages/core/src/import/index.ts": {
+        "NoCoverage": 25,
+        "Killed": 56,
+        "Survived": 16
+      },
+      "packages/core/src/library.ts": {
+        "NoCoverage": 1,
+        "Killed": 54,
+        "Survived": 19,
+        "Timeout": 1
+      },
+      "packages/core/src/metadata/apple-books.ts": {
+        "NoCoverage": 7,
+        "Survived": 20,
+        "Killed": 61,
+        "static": 8
+      },
+      "packages/core/src/metadata/google-books.ts": {
+        "NoCoverage": 8,
+        "Survived": 77,
+        "Killed": 108,
+        "static": 1
+      },
+      "packages/core/src/metadata/http.ts": {
+        "NoCoverage": 9,
+        "Killed": 18,
+        "Survived": 12,
+        "static": 2
+      },
+      "packages/core/src/metadata/index.ts": {
+        "NoCoverage": 14,
+        "Killed": 99,
+        "Survived": 84
+      },
+      "packages/core/src/metadata/open-library.ts": {
+        "NoCoverage": 4,
+        "Killed": 133,
+        "Survived": 50,
+        "static": 3
+      },
+      "packages/core/src/metadata/precedence.ts": {
+        "NoCoverage": 1,
+        "Killed": 64,
+        "Survived": 24,
+        "static": 33
+      },
+      "packages/core/src/metadata/types.ts": {
+        "NoCoverage": 2,
+        "Killed": 50,
+        "Timeout": 1,
+        "Survived": 35,
+        "static": 7
+      },
+      "packages/core/src/publish.ts": {
+        "NoCoverage": 8,
+        "Killed": 97,
+        "Survived": 28
+      },
+      "packages/core/src/shelf-order.ts": {
+        "NoCoverage": 2,
+        "Killed": 38,
+        "Survived": 12,
+        "static": 4
+      },
+      "packages/core/src/test-support.ts": {
+        "NoCoverage": 3,
+        "Killed": 24,
+        "static": 10
+      },
+      "packages/core/src/covers/cover-budget.ts": {
+        "Killed": 9,
+        "Survived": 9,
+        "static": 2
+      },
+      "packages/core/src/covers/cover-path.ts": {
+        "Killed": 25,
+        "Survived": 4
+      },
+      "packages/core/src/covers/dominant-colour.ts": {
+        "Killed": 80,
+        "Survived": 66,
+        "Timeout": 2,
+        "static": 1
+      },
+      "packages/core/src/covers/infer-source.ts": {
+        "Killed": 24,
+        "Survived": 5
+      },
+      "packages/core/src/identity.ts": {
+        "Killed": 128,
+        "Timeout": 2,
+        "Survived": 60
+      },
+      "packages/core/src/key-if-present.ts": {
+        "Killed": 4
+      },
+      "packages/core/src/metadata/oreilly.ts": {
+        "Killed": 63,
+        "Survived": 15,
+        "static": 2
+      },
+      "packages/core/src/provider-ids.ts": {
+        "Killed": 1
+      },
+      "packages/core/src/subjects.ts": {
+        "Killed": 25,
+        "Survived": 3,
+        "static": 1
+      },
+      "packages/core/src/watch.ts": {
+        "Killed": 39,
+        "Survived": 10,
+        "Timeout": 1,
+        "static": 6
+      },
+      "packages/core/src/types.ts": {
+        "Killed": 13,
+        "Survived": 2,
+        "static": 1
+      }
+    }
+  },
+  "core-r2": {
+    "totals": {
+      "NoCoverage": 144,
+      "Killed": 2186,
+      "Timeout": 24,
+      "Survived": 947,
+      "static": 146
+    },
+    "files": {
+      "packages/core/src/adapters/obsidian-adapter.ts": {
+        "NoCoverage": 14,
+        "Killed": 243,
+        "Timeout": 2,
+        "Survived": 107,
+        "static": 3
+      },
+      "packages/core/src/add-book.ts": {
+        "NoCoverage": 3,
+        "Killed": 76,
+        "Survived": 32
+      },
+      "packages/core/src/backfill-covers.ts": {
+        "NoCoverage": 3,
+        "Killed": 38,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cache-cover.ts": {
+        "NoCoverage": 6,
+        "Killed": 135,
+        "Survived": 53,
+        "Timeout": 3,
+        "static": 3
+      },
+      "packages/core/src/covers/cover-keys.ts": {
+        "NoCoverage": 5,
+        "Killed": 2,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cover-source.ts": {
+        "NoCoverage": 3,
+        "Killed": 27,
+        "Survived": 10,
+        "static": 31,
+        "Timeout": 12
+      },
+      "packages/core/src/covers/measure.ts": {
+        "NoCoverage": 11
+      },
+      "packages/core/src/enrich.ts": {
+        "NoCoverage": 6,
+        "Killed": 121,
+        "Survived": 82,
+        "static": 13
+      },
+      "packages/core/src/frontmatter.ts": {
+        "NoCoverage": 7,
+        "Killed": 218,
+        "Survived": 64,
+        "static": 14
+      },
+      "packages/core/src/import/audible.ts": {
+        "NoCoverage": 2,
+        "Killed": 113,
+        "Survived": 44,
+        "static": 1
+      },
+      "packages/core/src/import/index.ts": {
+        "NoCoverage": 25,
+        "Survived": 16,
+        "Killed": 56
+      },
+      "packages/core/src/library.ts": {
+        "NoCoverage": 1,
+        "Killed": 54,
+        "Timeout": 1,
+        "Survived": 19
+      },
+      "packages/core/src/metadata/apple-books.ts": {
+        "NoCoverage": 7,
+        "Killed": 61,
+        "Survived": 20,
+        "static": 8
+      },
+      "packages/core/src/metadata/google-books.ts": {
+        "NoCoverage": 8,
+        "Survived": 77,
+        "Killed": 108,
+        "static": 1
+      },
+      "packages/core/src/metadata/http.ts": {
+        "NoCoverage": 9,
+        "Killed": 18,
+        "Survived": 12,
+        "static": 2
+      },
+      "packages/core/src/metadata/index.ts": {
+        "NoCoverage": 14,
+        "Killed": 99,
+        "Survived": 84
+      },
+      "packages/core/src/metadata/open-library.ts": {
+        "NoCoverage": 4,
+        "Killed": 133,
+        "Survived": 50,
+        "static": 3
+      },
+      "packages/core/src/metadata/precedence.ts": {
+        "NoCoverage": 1,
+        "Killed": 64,
+        "Survived": 24,
+        "static": 33
+      },
+      "packages/core/src/metadata/types.ts": {
+        "NoCoverage": 2,
+        "Killed": 50,
+        "Timeout": 1,
+        "Survived": 35,
+        "static": 7
+      },
+      "packages/core/src/publish.ts": {
+        "NoCoverage": 8,
+        "Killed": 97,
+        "Survived": 28
+      },
+      "packages/core/src/shelf-order.ts": {
+        "NoCoverage": 2,
+        "Killed": 38,
+        "Survived": 12,
+        "static": 4
+      },
+      "packages/core/src/test-support.ts": {
+        "NoCoverage": 3,
+        "Killed": 24,
+        "static": 10
+      },
+      "packages/core/src/covers/cover-budget.ts": {
+        "Killed": 9,
+        "Survived": 9,
+        "static": 2
+      },
+      "packages/core/src/covers/cover-path.ts": {
+        "Killed": 25,
+        "Survived": 4
+      },
+      "packages/core/src/covers/dominant-colour.ts": {
+        "Killed": 80,
+        "Survived": 66,
+        "Timeout": 2,
+        "static": 1
+      },
+      "packages/core/src/covers/infer-source.ts": {
+        "Killed": 24,
+        "Survived": 5
+      },
+      "packages/core/src/identity.ts": {
+        "Killed": 128,
+        "Timeout": 2,
+        "Survived": 60
+      },
+      "packages/core/src/key-if-present.ts": {
+        "Killed": 4
+      },
+      "packages/core/src/metadata/oreilly.ts": {
+        "Killed": 63,
+        "Survived": 15,
+        "static": 2
+      },
+      "packages/core/src/provider-ids.ts": {
+        "Killed": 1
+      },
+      "packages/core/src/subjects.ts": {
+        "Killed": 25,
+        "Survived": 3,
+        "static": 1
+      },
+      "packages/core/src/watch.ts": {
+        "Killed": 39,
+        "Survived": 10,
+        "Timeout": 1,
+        "static": 6
+      },
+      "packages/core/src/types.ts": {
+        "Killed": 13,
+        "Survived": 2,
+        "static": 1
+      }
+    }
+  },
+  "core-r3": {
+    "totals": {
+      "NoCoverage": 144,
+      "Killed": 2185,
+      "Timeout": 19,
+      "Survived": 952,
+      "static": 146,
+      "RuntimeError": 1
+    },
+    "files": {
+      "packages/core/src/adapters/obsidian-adapter.ts": {
+        "NoCoverage": 14,
+        "Killed": 243,
+        "Timeout": 2,
+        "Survived": 107,
+        "static": 3
+      },
+      "packages/core/src/add-book.ts": {
+        "NoCoverage": 3,
+        "Killed": 76,
+        "Survived": 32
+      },
+      "packages/core/src/backfill-covers.ts": {
+        "NoCoverage": 3,
+        "Killed": 38,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cache-cover.ts": {
+        "NoCoverage": 6,
+        "Killed": 135,
+        "Survived": 53,
+        "Timeout": 3,
+        "static": 3
+      },
+      "packages/core/src/covers/cover-keys.ts": {
+        "NoCoverage": 5,
+        "Killed": 2,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cover-source.ts": {
+        "NoCoverage": 3,
+        "Killed": 27,
+        "Survived": 15,
+        "static": 31,
+        "Timeout": 7
+      },
+      "packages/core/src/covers/measure.ts": {
+        "NoCoverage": 11
+      },
+      "packages/core/src/enrich.ts": {
+        "NoCoverage": 6,
+        "Killed": 121,
+        "Survived": 82,
+        "static": 13
+      },
+      "packages/core/src/frontmatter.ts": {
+        "NoCoverage": 7,
+        "Killed": 218,
+        "Survived": 64,
+        "static": 14
+      },
+      "packages/core/src/import/audible.ts": {
+        "NoCoverage": 2,
+        "Killed": 113,
+        "Survived": 44,
+        "static": 1
+      },
+      "packages/core/src/import/index.ts": {
+        "NoCoverage": 25,
+        "Killed": 56,
+        "Survived": 16
+      },
+      "packages/core/src/library.ts": {
+        "NoCoverage": 1,
+        "Killed": 54,
+        "Survived": 19,
+        "Timeout": 1
+      },
+      "packages/core/src/metadata/apple-books.ts": {
+        "NoCoverage": 7,
+        "Killed": 61,
+        "Survived": 20,
+        "static": 8
+      },
+      "packages/core/src/metadata/google-books.ts": {
+        "NoCoverage": 8,
+        "Survived": 77,
+        "Killed": 108,
+        "static": 1
+      },
+      "packages/core/src/metadata/http.ts": {
+        "NoCoverage": 9,
+        "Killed": 18,
+        "Survived": 12,
+        "static": 2
+      },
+      "packages/core/src/metadata/index.ts": {
+        "NoCoverage": 14,
+        "Killed": 99,
+        "Survived": 84
+      },
+      "packages/core/src/metadata/open-library.ts": {
+        "NoCoverage": 4,
+        "Killed": 133,
+        "Survived": 50,
+        "static": 3
+      },
+      "packages/core/src/metadata/precedence.ts": {
+        "NoCoverage": 1,
+        "Killed": 64,
+        "Survived": 24,
+        "static": 33
+      },
+      "packages/core/src/metadata/types.ts": {
+        "NoCoverage": 2,
+        "Killed": 50,
+        "Timeout": 1,
+        "Survived": 35,
+        "static": 7
+      },
+      "packages/core/src/publish.ts": {
+        "NoCoverage": 8,
+        "Killed": 96,
+        "Survived": 28,
+        "RuntimeError": 1
+      },
+      "packages/core/src/shelf-order.ts": {
+        "NoCoverage": 2,
+        "Killed": 38,
+        "Survived": 12,
+        "static": 4
+      },
+      "packages/core/src/test-support.ts": {
+        "NoCoverage": 3,
+        "Killed": 24,
+        "static": 10
+      },
+      "packages/core/src/covers/cover-budget.ts": {
+        "Survived": 9,
+        "Killed": 9,
+        "static": 2
+      },
+      "packages/core/src/covers/cover-path.ts": {
+        "Killed": 25,
+        "Survived": 4
+      },
+      "packages/core/src/covers/dominant-colour.ts": {
+        "Killed": 80,
+        "Survived": 66,
+        "Timeout": 2,
+        "static": 1
+      },
+      "packages/core/src/covers/infer-source.ts": {
+        "Killed": 24,
+        "Survived": 5
+      },
+      "packages/core/src/identity.ts": {
+        "Killed": 128,
+        "Timeout": 2,
+        "Survived": 60
+      },
+      "packages/core/src/key-if-present.ts": {
+        "Killed": 4
+      },
+      "packages/core/src/metadata/oreilly.ts": {
+        "Killed": 63,
+        "Survived": 15,
+        "static": 2
+      },
+      "packages/core/src/provider-ids.ts": {
+        "Killed": 1
+      },
+      "packages/core/src/subjects.ts": {
+        "Killed": 25,
+        "Survived": 3,
+        "static": 1
+      },
+      "packages/core/src/watch.ts": {
+        "Killed": 39,
+        "Survived": 10,
+        "Timeout": 1,
+        "static": 6
+      },
+      "packages/core/src/types.ts": {
+        "Killed": 13,
+        "Survived": 2,
+        "static": 1
+      }
+    }
+  },
+  "core-r4-longtimeout": {
+    "totals": {
+      "NoCoverage": 144,
+      "Killed": 2186,
+      "Timeout": 12,
+      "Survived": 959,
+      "static": 146
+    },
+    "files": {
+      "packages/core/src/adapters/obsidian-adapter.ts": {
+        "NoCoverage": 14,
+        "Killed": 243,
+        "Timeout": 2,
+        "Survived": 107,
+        "static": 3
+      },
+      "packages/core/src/add-book.ts": {
+        "NoCoverage": 3,
+        "Killed": 76,
+        "Survived": 32
+      },
+      "packages/core/src/backfill-covers.ts": {
+        "NoCoverage": 3,
+        "Killed": 38,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cache-cover.ts": {
+        "NoCoverage": 6,
+        "Killed": 135,
+        "Survived": 53,
+        "Timeout": 3,
+        "static": 3
+      },
+      "packages/core/src/covers/cover-keys.ts": {
+        "NoCoverage": 5,
+        "Killed": 2,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cover-source.ts": {
+        "NoCoverage": 3,
+        "Killed": 27,
+        "Survived": 22,
+        "static": 31
+      },
+      "packages/core/src/covers/measure.ts": {
+        "NoCoverage": 11
+      },
+      "packages/core/src/enrich.ts": {
+        "NoCoverage": 6,
+        "Killed": 121,
+        "Survived": 82,
+        "static": 13
+      },
+      "packages/core/src/frontmatter.ts": {
+        "NoCoverage": 7,
+        "Killed": 218,
+        "Survived": 64,
+        "static": 14
+      },
+      "packages/core/src/import/audible.ts": {
+        "NoCoverage": 2,
+        "Killed": 113,
+        "Survived": 44,
+        "static": 1
+      },
+      "packages/core/src/import/index.ts": {
+        "NoCoverage": 25,
+        "Killed": 56,
+        "Survived": 16
+      },
+      "packages/core/src/library.ts": {
+        "NoCoverage": 1,
+        "Killed": 54,
+        "Survived": 19,
+        "Timeout": 1
+      },
+      "packages/core/src/metadata/apple-books.ts": {
+        "NoCoverage": 7,
+        "Killed": 61,
+        "Survived": 20,
+        "static": 8
+      },
+      "packages/core/src/metadata/google-books.ts": {
+        "NoCoverage": 8,
+        "Killed": 108,
+        "Survived": 77,
+        "static": 1
+      },
+      "packages/core/src/metadata/http.ts": {
+        "NoCoverage": 9,
+        "Killed": 18,
+        "Survived": 12,
+        "static": 2
+      },
+      "packages/core/src/metadata/index.ts": {
+        "NoCoverage": 14,
+        "Killed": 99,
+        "Survived": 84
+      },
+      "packages/core/src/metadata/open-library.ts": {
+        "NoCoverage": 4,
+        "Killed": 133,
+        "Survived": 50,
+        "static": 3
+      },
+      "packages/core/src/metadata/precedence.ts": {
+        "NoCoverage": 1,
+        "Killed": 64,
+        "Survived": 24,
+        "static": 33
+      },
+      "packages/core/src/metadata/types.ts": {
+        "NoCoverage": 2,
+        "Killed": 50,
+        "Survived": 35,
+        "Timeout": 1,
+        "static": 7
+      },
+      "packages/core/src/publish.ts": {
+        "NoCoverage": 8,
+        "Killed": 97,
+        "Survived": 28
+      },
+      "packages/core/src/shelf-order.ts": {
+        "NoCoverage": 2,
+        "Killed": 38,
+        "Survived": 12,
+        "static": 4
+      },
+      "packages/core/src/test-support.ts": {
+        "NoCoverage": 3,
+        "Killed": 24,
+        "static": 10
+      },
+      "packages/core/src/covers/cover-budget.ts": {
+        "Survived": 9,
+        "Killed": 9,
+        "static": 2
+      },
+      "packages/core/src/covers/cover-path.ts": {
+        "Killed": 25,
+        "Survived": 4
+      },
+      "packages/core/src/covers/dominant-colour.ts": {
+        "Killed": 80,
+        "Survived": 66,
+        "Timeout": 2,
+        "static": 1
+      },
+      "packages/core/src/covers/infer-source.ts": {
+        "Killed": 24,
+        "Survived": 5
+      },
+      "packages/core/src/identity.ts": {
+        "Killed": 128,
+        "Timeout": 2,
+        "Survived": 60
+      },
+      "packages/core/src/key-if-present.ts": {
+        "Killed": 4
+      },
+      "packages/core/src/metadata/oreilly.ts": {
+        "Killed": 63,
+        "Survived": 15,
+        "static": 2
+      },
+      "packages/core/src/provider-ids.ts": {
+        "Killed": 1
+      },
+      "packages/core/src/subjects.ts": {
+        "Killed": 25,
+        "Survived": 3,
+        "static": 1
+      },
+      "packages/core/src/watch.ts": {
+        "Killed": 39,
+        "Survived": 10,
+        "Timeout": 1,
+        "static": 6
+      },
+      "packages/core/src/types.ts": {
+        "Killed": 13,
+        "Survived": 2,
+        "static": 1
+      }
+    }
+  },
+  "core-r5-longtimeout": {
+    "totals": {
+      "NoCoverage": 144,
+      "Killed": 2185,
+      "Timeout": 12,
+      "Survived": 959,
+      "static": 146,
+      "RuntimeError": 1
+    },
+    "files": {
+      "packages/core/src/adapters/obsidian-adapter.ts": {
+        "NoCoverage": 14,
+        "Killed": 243,
+        "Timeout": 2,
+        "Survived": 107,
+        "static": 3
+      },
+      "packages/core/src/add-book.ts": {
+        "NoCoverage": 3,
+        "Killed": 76,
+        "Survived": 32
+      },
+      "packages/core/src/backfill-covers.ts": {
+        "NoCoverage": 3,
+        "Killed": 38,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cache-cover.ts": {
+        "NoCoverage": 6,
+        "Killed": 135,
+        "Survived": 53,
+        "Timeout": 3,
+        "static": 3
+      },
+      "packages/core/src/covers/cover-keys.ts": {
+        "NoCoverage": 5,
+        "Killed": 2,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cover-source.ts": {
+        "NoCoverage": 3,
+        "Killed": 27,
+        "Survived": 22,
+        "static": 31
+      },
+      "packages/core/src/covers/measure.ts": {
+        "NoCoverage": 11
+      },
+      "packages/core/src/enrich.ts": {
+        "NoCoverage": 6,
+        "Killed": 121,
+        "Survived": 82,
+        "static": 13
+      },
+      "packages/core/src/frontmatter.ts": {
+        "NoCoverage": 7,
+        "Killed": 218,
+        "Survived": 64,
+        "static": 14
+      },
+      "packages/core/src/import/audible.ts": {
+        "NoCoverage": 2,
+        "Killed": 113,
+        "Survived": 44,
+        "static": 1
+      },
+      "packages/core/src/import/index.ts": {
+        "NoCoverage": 25,
+        "Killed": 56,
+        "Survived": 16
+      },
+      "packages/core/src/library.ts": {
+        "NoCoverage": 1,
+        "Killed": 54,
+        "Survived": 19,
+        "Timeout": 1
+      },
+      "packages/core/src/metadata/apple-books.ts": {
+        "NoCoverage": 7,
+        "Killed": 61,
+        "Survived": 20,
+        "static": 8
+      },
+      "packages/core/src/metadata/google-books.ts": {
+        "NoCoverage": 8,
+        "Survived": 77,
+        "Killed": 108,
+        "static": 1
+      },
+      "packages/core/src/metadata/http.ts": {
+        "NoCoverage": 9,
+        "Killed": 18,
+        "Survived": 12,
+        "static": 2
+      },
+      "packages/core/src/metadata/index.ts": {
+        "NoCoverage": 14,
+        "Killed": 99,
+        "Survived": 84
+      },
+      "packages/core/src/metadata/open-library.ts": {
+        "NoCoverage": 4,
+        "Killed": 133,
+        "Survived": 50,
+        "static": 3
+      },
+      "packages/core/src/metadata/precedence.ts": {
+        "NoCoverage": 1,
+        "Killed": 64,
+        "Survived": 24,
+        "static": 33
+      },
+      "packages/core/src/metadata/types.ts": {
+        "NoCoverage": 2,
+        "Killed": 50,
+        "Timeout": 1,
+        "Survived": 35,
+        "static": 7
+      },
+      "packages/core/src/publish.ts": {
+        "NoCoverage": 8,
+        "Killed": 96,
+        "Survived": 28,
+        "RuntimeError": 1
+      },
+      "packages/core/src/shelf-order.ts": {
+        "NoCoverage": 2,
+        "Killed": 38,
+        "Survived": 12,
+        "static": 4
+      },
+      "packages/core/src/test-support.ts": {
+        "NoCoverage": 3,
+        "Killed": 24,
+        "static": 10
+      },
+      "packages/core/src/covers/cover-budget.ts": {
+        "Killed": 9,
+        "Survived": 9,
+        "static": 2
+      },
+      "packages/core/src/covers/cover-path.ts": {
+        "Killed": 25,
+        "Survived": 4
+      },
+      "packages/core/src/covers/dominant-colour.ts": {
+        "Killed": 80,
+        "Survived": 66,
+        "Timeout": 2,
+        "static": 1
+      },
+      "packages/core/src/covers/infer-source.ts": {
+        "Killed": 24,
+        "Survived": 5
+      },
+      "packages/core/src/identity.ts": {
+        "Killed": 128,
+        "Timeout": 2,
+        "Survived": 60
+      },
+      "packages/core/src/key-if-present.ts": {
+        "Killed": 4
+      },
+      "packages/core/src/metadata/oreilly.ts": {
+        "Killed": 63,
+        "Survived": 15,
+        "static": 2
+      },
+      "packages/core/src/provider-ids.ts": {
+        "Killed": 1
+      },
+      "packages/core/src/subjects.ts": {
+        "Killed": 25,
+        "Survived": 3,
+        "static": 1
+      },
+      "packages/core/src/watch.ts": {
+        "Survived": 10,
+        "Killed": 39,
+        "Timeout": 1,
+        "static": 6
+      },
+      "packages/core/src/types.ts": {
+        "Killed": 13,
+        "Survived": 2,
+        "static": 1
+      }
+    }
+  },
+  "core-r6-longtimeout": {
+    "totals": {
+      "NoCoverage": 144,
+      "Killed": 2186,
+      "Timeout": 12,
+      "Survived": 959,
+      "static": 146
+    },
+    "files": {
+      "packages/core/src/adapters/obsidian-adapter.ts": {
+        "NoCoverage": 14,
+        "Killed": 243,
+        "Timeout": 2,
+        "Survived": 107,
+        "static": 3
+      },
+      "packages/core/src/add-book.ts": {
+        "NoCoverage": 3,
+        "Killed": 76,
+        "Survived": 32
+      },
+      "packages/core/src/backfill-covers.ts": {
+        "NoCoverage": 3,
+        "Killed": 38,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cache-cover.ts": {
+        "NoCoverage": 6,
+        "Killed": 135,
+        "Survived": 53,
+        "Timeout": 3,
+        "static": 3
+      },
+      "packages/core/src/covers/cover-keys.ts": {
+        "NoCoverage": 5,
+        "Killed": 2,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cover-source.ts": {
+        "NoCoverage": 3,
+        "Killed": 27,
+        "Survived": 22,
+        "static": 31
+      },
+      "packages/core/src/covers/measure.ts": {
+        "NoCoverage": 11
+      },
+      "packages/core/src/enrich.ts": {
+        "NoCoverage": 6,
+        "Killed": 121,
+        "Survived": 82,
+        "static": 13
+      },
+      "packages/core/src/frontmatter.ts": {
+        "NoCoverage": 7,
+        "Killed": 218,
+        "Survived": 64,
+        "static": 14
+      },
+      "packages/core/src/import/audible.ts": {
+        "NoCoverage": 2,
+        "Killed": 113,
+        "Survived": 44,
+        "static": 1
+      },
+      "packages/core/src/import/index.ts": {
+        "NoCoverage": 25,
+        "Killed": 56,
+        "Survived": 16
+      },
+      "packages/core/src/library.ts": {
+        "NoCoverage": 1,
+        "Killed": 54,
+        "Survived": 19,
+        "Timeout": 1
+      },
+      "packages/core/src/metadata/apple-books.ts": {
+        "NoCoverage": 7,
+        "Killed": 61,
+        "Survived": 20,
+        "static": 8
+      },
+      "packages/core/src/metadata/google-books.ts": {
+        "NoCoverage": 8,
+        "Survived": 77,
+        "Killed": 108,
+        "static": 1
+      },
+      "packages/core/src/metadata/http.ts": {
+        "NoCoverage": 9,
+        "Killed": 18,
+        "Survived": 12,
+        "static": 2
+      },
+      "packages/core/src/metadata/index.ts": {
+        "NoCoverage": 14,
+        "Killed": 99,
+        "Survived": 84
+      },
+      "packages/core/src/metadata/open-library.ts": {
+        "NoCoverage": 4,
+        "Killed": 133,
+        "Survived": 50,
+        "static": 3
+      },
+      "packages/core/src/metadata/precedence.ts": {
+        "NoCoverage": 1,
+        "Killed": 64,
+        "Survived": 24,
+        "static": 33
+      },
+      "packages/core/src/metadata/types.ts": {
+        "NoCoverage": 2,
+        "Killed": 50,
+        "Survived": 35,
+        "Timeout": 1,
+        "static": 7
+      },
+      "packages/core/src/publish.ts": {
+        "NoCoverage": 8,
+        "Killed": 97,
+        "Survived": 28
+      },
+      "packages/core/src/shelf-order.ts": {
+        "NoCoverage": 2,
+        "Killed": 38,
+        "Survived": 12,
+        "static": 4
+      },
+      "packages/core/src/test-support.ts": {
+        "NoCoverage": 3,
+        "Killed": 24,
+        "static": 10
+      },
+      "packages/core/src/covers/cover-budget.ts": {
+        "Survived": 9,
+        "Killed": 9,
+        "static": 2
+      },
+      "packages/core/src/covers/cover-path.ts": {
+        "Killed": 25,
+        "Survived": 4
+      },
+      "packages/core/src/covers/dominant-colour.ts": {
+        "Killed": 80,
+        "Survived": 66,
+        "Timeout": 2,
+        "static": 1
+      },
+      "packages/core/src/covers/infer-source.ts": {
+        "Killed": 24,
+        "Survived": 5
+      },
+      "packages/core/src/identity.ts": {
+        "Killed": 128,
+        "Timeout": 2,
+        "Survived": 60
+      },
+      "packages/core/src/key-if-present.ts": {
+        "Killed": 4
+      },
+      "packages/core/src/metadata/oreilly.ts": {
+        "Killed": 63,
+        "Survived": 15,
+        "static": 2
+      },
+      "packages/core/src/provider-ids.ts": {
+        "Killed": 1
+      },
+      "packages/core/src/subjects.ts": {
+        "Killed": 25,
+        "Survived": 3,
+        "static": 1
+      },
+      "packages/core/src/watch.ts": {
+        "Survived": 10,
+        "Killed": 39,
+        "Timeout": 1,
+        "static": 6
+      },
+      "packages/core/src/types.ts": {
+        "Killed": 13,
+        "Survived": 2,
+        "static": 1
+      }
+    }
+  },
+  "full-r1": {
+    "totals": {
+      "NoCoverage": 3324,
+      "Killed": 2919,
+      "Survived": 1225,
+      "Timeout": 18,
+      "static": 330
+    },
+    "files": {
+      "packages/cli/src/enrich-report.ts": {
+        "NoCoverage": 5,
+        "Killed": 31,
+        "Survived": 32
+      },
+      "packages/cli/src/env.ts": {
+        "NoCoverage": 70
+      },
+      "packages/cli/src/index.ts": {
+        "NoCoverage": 435
+      },
+      "packages/core/src/adapters/obsidian-adapter.ts": {
+        "NoCoverage": 14,
+        "Killed": 243,
+        "Timeout": 2,
+        "Survived": 107,
+        "static": 3
+      },
+      "packages/core/src/add-book.ts": {
+        "NoCoverage": 3,
+        "Killed": 76,
+        "Survived": 32
+      },
+      "packages/core/src/backfill-covers.ts": {
+        "NoCoverage": 3,
+        "Killed": 38,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cache-cover.ts": {
+        "NoCoverage": 6,
+        "Killed": 135,
+        "Survived": 53,
+        "Timeout": 3,
+        "static": 3
+      },
+      "packages/core/src/covers/cover-keys.ts": {
+        "NoCoverage": 5,
+        "Killed": 2,
+        "Survived": 2
+      },
+      "packages/core/src/covers/cover-source.ts": {
+        "NoCoverage": 3,
+        "Killed": 27,
+        "Survived": 22,
+        "static": 31
+      },
+      "packages/core/src/covers/measure.ts": {
+        "NoCoverage": 11
+      },
+      "packages/core/src/enrich.ts": {
+        "NoCoverage": 6,
+        "Killed": 121,
+        "Survived": 82,
+        "static": 13
+      },
+      "packages/core/src/frontmatter.ts": {
+        "NoCoverage": 7,
+        "Killed": 218,
+        "Survived": 64,
+        "static": 14
+      },
+      "packages/core/src/import/audible.ts": {
+        "NoCoverage": 2,
+        "Killed": 113,
+        "Survived": 44,
+        "static": 1
+      },
+      "packages/core/src/import/index.ts": {
+        "NoCoverage": 25,
+        "Killed": 56,
+        "Survived": 16
+      },
+      "packages/core/src/library.ts": {
+        "NoCoverage": 1,
+        "Killed": 54,
+        "Survived": 19,
+        "Timeout": 1
+      },
+      "packages/core/src/metadata/apple-books.ts": {
+        "NoCoverage": 7,
+        "Survived": 20,
+        "Killed": 61,
+        "static": 8
+      },
+      "packages/core/src/metadata/google-books.ts": {
+        "NoCoverage": 8,
+        "Survived": 77,
+        "Killed": 108,
+        "static": 1
+      },
+      "packages/core/src/metadata/http.ts": {
+        "NoCoverage": 9,
+        "Killed": 18,
+        "Survived": 12,
+        "static": 2
+      },
+      "packages/core/src/metadata/index.ts": {
+        "NoCoverage": 14,
+        "Killed": 99,
+        "Survived": 84
+      },
+      "packages/core/src/metadata/open-library.ts": {
+        "NoCoverage": 4,
+        "Killed": 133,
+        "Survived": 50,
+        "static": 3
+      },
+      "packages/core/src/metadata/precedence.ts": {
+        "NoCoverage": 1,
+        "Killed": 64,
+        "Survived": 24,
+        "static": 33
+      },
+      "packages/core/src/metadata/types.ts": {
+        "NoCoverage": 2,
+        "Killed": 50,
+        "Timeout": 1,
+        "Survived": 35,
+        "static": 7
+      },
+      "packages/core/src/publish.ts": {
+        "NoCoverage": 8,
+        "Killed": 97,
+        "Survived": 28
+      },
+      "packages/core/src/shelf-order.ts": {
+        "NoCoverage": 2,
+        "Killed": 38,
+        "Survived": 12,
+        "static": 4
+      },
+      "packages/core/src/test-support.ts": {
+        "NoCoverage": 3,
+        "Killed": 24,
+        "static": 10
+      },
+      "packages/site/src/shelf/book-inspector.ts": {
+        "NoCoverage": 60
+      },
+      "packages/site/src/shelf/books.ts": {
+        "NoCoverage": 4,
+        "Killed": 89,
+        "Survived": 31,
+        "static": 11
+      },
+      "packages/site/src/shelf/boot.ts": {
+        "NoCoverage": 114
+      },
+      "packages/site/src/shelf/card-sheet.ts": {
+        "NoCoverage": 58,
+        "Killed": 3,
+        "Survived": 1,
+        "static": 1
+      },
+      "packages/site/src/shelf/card.ts": {
+        "NoCoverage": 70,
+        "Killed": 67,
+        "Survived": 3,
+        "static": 2
+      },
+      "packages/site/src/shelf/contact-shadow.ts": {
+        "NoCoverage": 177
+      },
+      "packages/site/src/shelf/cover-viewer.ts": {
+        "NoCoverage": 20,
+        "Survived": 1,
+        "static": 1
+      },
+      "packages/site/src/shelf/debug-panel.ts": {
+        "NoCoverage": 627
+      },
+      "packages/site/src/shelf/diagnostics.ts": {
+        "NoCoverage": 246
+      },
+      "packages/site/src/shelf/page-edges.ts": {
+        "NoCoverage": 35,
+        "Killed": 24,
+        "Survived": 38,
+        "Timeout": 1,
+        "static": 1
+      },
+      "packages/site/src/shelf/placement.ts": {
+        "NoCoverage": 3,
+        "Killed": 128,
+        "Survived": 64,
+        "static": 3
+      },
+      "packages/site/src/shelf/post.ts": {
+        "NoCoverage": 6
+      },
+      "packages/site/src/shelf/provider-marks.ts": {
+        "NoCoverage": 18,
+        "Survived": 1,
+        "static": 1
+      },
+      "packages/site/src/shelf/scene.ts": {
+        "NoCoverage": 840
+      },
+      "packages/site/src/shelf/shared-cache.ts": {
+        "NoCoverage": 8,
+        "Survived": 6,
+        "static": 8,
+        "Killed": 2
+      },
+      "packages/site/src/shelf/shelf-url.ts": {
+        "NoCoverage": 106,
+        "Killed": 131,
+        "Survived": 13
+      },
+      "packages/site/src/shelf/spine-profile.ts": {
+        "NoCoverage": 39,
+        "Killed": 28,
+        "Survived": 8,
+        "static": 1
+      },
+      "packages/site/src/shelf/spine-texture.ts": {
+        "NoCoverage": 200,
+        "Killed": 42,
+        "Survived": 5,
+        "static": 1
+      },
+      "packages/site/src/shelf/start.ts": {
+        "NoCoverage": 31
+      },
+      "packages/site/src/site-meta.ts": {
+        "NoCoverage": 8
+      },
+      "packages/core/src/covers/cover-budget.ts": {
+        "Survived": 9,
+        "Killed": 9,
+        "static": 2
+      },
+      "packages/core/src/covers/cover-path.ts": {
+        "Killed": 25,
+        "Survived": 4
+      },
+      "packages/core/src/covers/dominant-colour.ts": {
+        "Killed": 80,
+        "Survived": 66,
+        "Timeout": 2,
+        "static": 1
+      },
+      "packages/core/src/covers/infer-source.ts": {
+        "Killed": 24,
+        "Survived": 5
+      },
+      "packages/core/src/identity.ts": {
+        "Killed": 128,
+        "Timeout": 2,
+        "Survived": 60
+      },
+      "packages/core/src/key-if-present.ts": {
+        "Killed": 4
+      },
+      "packages/core/src/metadata/oreilly.ts": {
+        "Killed": 63,
+        "Survived": 15,
+        "static": 2
+      },
+      "packages/core/src/provider-ids.ts": {
+        "Killed": 1
+      },
+      "packages/core/src/subjects.ts": {
+        "Killed": 25,
+        "Survived": 3,
+        "static": 1
+      },
+      "packages/core/src/types.ts": {
+        "Killed": 13,
+        "Survived": 2,
+        "static": 1
+      },
+      "packages/core/src/watch.ts": {
+        "Survived": 10,
+        "Killed": 39,
+        "Timeout": 1,
+        "static": 6
+      },
+      "packages/site/src/shelf/case.ts": {
+        "Killed": 2,
+        "Survived": 2,
+        "static": 1
+      },
+      "packages/site/src/shelf/hash.ts": {
+        "Killed": 5,
+        "Survived": 1,
+        "Timeout": 1
+      },
+      "packages/site/src/shelf/head-cap.ts": {
+        "Killed": 63,
+        "Survived": 36,
+        "static": 102,
+        "Timeout": 4
+      },
+      "packages/site/src/shelf/provider-links.ts": {
+        "Killed": 44,
+        "Survived": 4
+      },
+      "packages/site/src/shelf/shelf-settings.ts": {
+        "Killed": 74,
+        "Survived": 20,
+        "static": 51
+      }
+    }
+  }
+}

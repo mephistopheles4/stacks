@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "pnpm",
+  "testRunner": "vitest",
+  "checkers": [],
+  "reporters": ["progress", "clear-text", "html", "json"],
+  "mutate": ["packages/*/src/**/*.ts", "!**/*.test.ts"],
+  "tsconfigFile": "tsconfig.stryker-absent.json",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest_comment": "Issue #114: the repo's own vitest.config.ts fails Stryker's dry run at this scope - packages/cli/src/env.test.ts calls process.chdir(), which does not exist under the pool:'threads' the vitest-runner hardcodes. See vitest.stryker.config.ts.",
+  "vitest": { "configFile": "vitest.stryker.config.ts" },
+  "ignorePatterns": ["artifacts", ".stryker-tmp"],
+  "timeoutMS": 15000,
+  "htmlReporter": { "fileName": "artifacts/stryker/current/mutation.html" },
+  "jsonReporter": { "fileName": "artifacts/stryker/current/mutation.json" },
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true
+}
