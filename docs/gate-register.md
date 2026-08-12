@@ -41,9 +41,17 @@ G15 and one for G35**, and **band three one for G30** — its first ever — so
 a Deep pass block, not in the triage line above it, which is the distinction this
 whole paragraph is about.
 
-**Dispositions (`gated` / `repaired` / `accepted` / `declined`) are filled in for
-the twenty ranked rows and for nothing else** — the remaining 15 await their
-band, **5 of them flagged**: G6, G12, G18, G24, G34.
+**The twenty ranked rows have all been deep-passed, and nothing else has** — the
+remaining 15 await their band, **5 of them flagged**: G6, G12, G18, G24, G34.
+
+⚠️ **Deep-passed is not the same as dispositioned, and 18 of the 20 carry a
+disposition rather than all of them.** `gated` / `repaired` / `accepted` /
+`declined` presuppose a finding, so a row whose nomination did not survive has its
+**verdict corrected** and is dispositioned by nothing: that is **G21** in band one
+and **G7** in band two. This paragraph claimed all twenty until CodeRabbit caught
+it on [#137](https://github.com/mephistopheles4/stacks/pull/137) — the rule was
+written down in band one, restated in band two, and then contradicted by the
+sentence counting the rows it applies to.
 
 **Scope: the 35 numbered rows `docs/gates.md` holds today** — G1–G35 across its
 Invariants, Contract seams and Defect gates tables. The **CI-only gates** table
@@ -138,10 +146,21 @@ require an exception; band two produced the first one of a different kind.
 membership at all; **G18** was ranked 4 and flagged for decay, so it keeps the
 flag and loses the rank. ⚠️ **G7 keeps rank 2 and is now clean on all five** —
 it earned its band, was deep-passed, and both its non-clean verdicts were
-corrected by four plants that could not reach a green suite. That is a state the
-file has not held before, and it is not G16's: G16 was never demonstrated
-against. **A rank is a record of what was suspected, not of what was found**, so
-it stays.
+corrected by three planted attempts that could not reach a green suite. That is a
+state the file has not held before, and it is not G16's: G16 was never
+demonstrated against. **A rank is a record of what was suspected, not of what was
+found**, so it stays.
+
+**"Flagged" throughout this file means the row's verdicts *as they stand*, not
+whether it was ever nominated.** Both readings are defensible and they now
+disagree, because a deep pass corrects verdicts in both directions: band two moved
+**G7** off the flagged side entirely, and band three moved two verdicts from
+`clean` to `exposed` inside **G10** and **G30**, rows that were already flagged, so
+those changed the row's contents and not its side. One row has crossed. The file
+counts the current reading and says so rather than leaving it to be inferred.
+Under the historical reading G7 is flagged and the total is 25; under the current
+one, which is what every count here uses, G7 is clean and the total is 24. Rank is
+the historical record; the verdict lines are the current one.
 
 **5 rows carry a flag with no rank** — exposed under weakening, routing around,
 or decay outside the ranked shapes: **G6, G12, G18, G24, G34**.
@@ -320,7 +339,7 @@ was run rather than what `docs/gates.md` already claimed.
 | Row | Disposition | In one line |
 | --- | --- | --- |
 | G2 `public-build` | `accepted` | Real body prose ships into `library.json` while the canary check reports clean. |
-| G7 `astro-no-logic` | *verdict corrected* | Four plants, four reds. The approximation is real; a silent pass is not reachable. |
+| G7 `astro-no-logic` | *verdict corrected* | Three plants, three reds. The approximation is real; a silent pass is not reachable. |
 | G14 `commands` | `repaired` | The anchored regex holds — and the extractor still cannot see `.alias()` or a workspace script. |
 | G15 `cover-budget` | `accepted` | 23.0 MB of spine textures, measured, outside every budget the gate counts. |
 | G19 `constitution-scoreboard` | `repaired`; second finding `gated` | Three holes re-plant red. The status cell is read **positionally**. |
@@ -330,7 +349,7 @@ was run rather than what `docs/gates.md` already claimed.
 
 **Four rows contradict the triage above** — twice as many as band one, which is
 what a band of *"the gate matches prose"* rows should be expected to produce.
-**G7's exposure did not survive** four attempts to reach a green suite;
+**G7's exposure did not survive** three planted attempts to reach a green suite;
 **G14's routing-around nomination did**, twice over, and is now demonstrated
 rather than suspected; **G19 was recorded as historical and fixed** and carries a
 live defect nobody had found; and **G29's self-audit was credited as *measured,
@@ -351,6 +370,24 @@ describe something that already happened. The alternative reading — *"already
 caught by some other gate"* — was rejected: a finding caught by an existing gate
 is not a finding, and would have its verdict corrected instead.
 
+⚠️ **That leaves `accepted` and `gated` describing the same facts, and band two
+used both — so the rule separating them is written here rather than left to three
+worked examples.** A finding is real, unclosed, and carries a named remedy in
+either case; **what decides is whether the repo had already conceded the gap in
+writing before the plant.** If it had, the deep pass demonstrated something the
+file already admitted and the disposition is **`accepted`** — the remedy is
+recorded as available, not adopted. If it had not, nobody has accepted anything,
+and the disposition is **`gated`**. It reads as a rule about paperwork and is not:
+`accepted` asserts a decision somebody made, and inventing one on a finding
+nobody has seen is how a register comes to record consent that was never given.
+
+By that rule: **G2** and **G15** are `accepted` — `docs/gates.md` says the canary
+rule is *"still a text match by construction"* and spends fifty lines on G15's
+scope mismatch, naming a non-gate substitute instead of claiming closure. **G29**
+is `gated` — the stray-backtick hole is new, its entry credited the opposite, and
+a cheap remedy is named. Band three's **G30** lands the same way for the same
+reason: *"no history at all"*.
+
 ⚠️ **This section read *"because this band is the first to need one"* until band
 three merged first, and that sentence was false when it was written rather than
 made false afterwards.** Band three minted `gated` in parallel, for G30, and
@@ -365,10 +402,12 @@ again — two bands allocating one shared thing from a map that serialises nothi
 — with the difference that a word, unlike a row number, can be allocated twice
 without either allocation being wrong.
 
-⚠️ **Under this reading band one's G20 residual is a `gated` and is recorded with
-no disposition at all** — the commented-out `process.exit(1)` that leaves
+⚠️ **Under this reading band one's G20 residual would be a `gated`, and it carries
+no disposition today** — the commented-out `process.exit(1)` that leaves
 `pnpm gate:public` a printer that cannot fail, remedy named, nothing decided.
-Left alone here rather than edited, because it is another band's row; noted so
+Those are one statement, not two: the disposition it *would* take is `gated`, and
+the disposition it *has* is none, because the vocabulary did not exist when band
+one wrote it. Left alone rather than edited, being another band's row; noted so
 the gap is visible from this side.
 
 ### Cost — the model from band one held, and the totals did not
@@ -985,7 +1024,7 @@ of the four ranked shapes).
 
 - **Weakening** — clean.
 - **Satisfying the letter** — **clean**, ⚠️ *corrected from `exposed` by band
-  two, which could not reach a green suite in four attempts.* The nomination
+  two, which could not reach a green suite in three planted attempts.* The nomination
   read: exposed, current and self-acknowledged by the repo's own CodeQL triage
   — `js/bad-tag-filter` fired on `SCRIPT_BLOCK` in this spec, flagging the
   regex as approximate; `docs/gates.md` records that the miss it warns about
@@ -997,7 +1036,7 @@ of the four ranked shapes).
 - **Routing around** — **clean**, ⚠️ *corrected with the above, being the same
   limit from the other side*: "Fixing it properly means an HTML parser
   dependency... to protect against a first-party commit," explicitly declined.
-  The same four plants answer both.
+  The same three plants answer both.
 - **Vacuous green** — clean; the miss throws rather than passing silently.
 - **Decay** — clean.
 
@@ -1013,13 +1052,26 @@ regex-approximation exposure, not fully closed.
 
 Four attempts to get banned or unscanned logic past `SCRIPT_BLOCK` into a green
 suite, in `packages/site/src/components/Shelf.astro`, the repo's only `.astro`
-file with a script block. **All four went red.** An HTML comment containing a
+file with a script block. **Three were planted and run, and all three went red;
+the fourth was reasoning and was never run.** An HTML comment containing a
 literal `<script>…</script>` — which `stripComments` never touches, since it
 handles `//` and `/* */` only — was matched *inside the comment* and failed
 `finds at least one import in each script block`. A `</script>` sequence smuggled
 inside a string literal, placed before a banned `function` declaration, truncated
 the capture exactly as CodeQL warns. A malformed opening tag, `<script
-data-note="a>b">`, stopped `[^>]*` early. Nothing produced a pass.
+data-note="a>b">`, stopped `[^>]*` early. **No executed plant produced a pass.**
+
+⚠️ **This paragraph read *"all four went red"* until CodeRabbit caught it on
+[#137](https://github.com/mephistopheles4/stacks/pull/137), and the arithmetic
+matters more here than anywhere else in the band.** The fourth item is the
+structural argument in the next paragraph — that a truncation always leaves debris
+no end-anchored pattern accepts — which was *derived*, not observed, and counting
+it as a red run inflated the evidence behind **the one verdict in band two that
+was corrected to `clean`**. Three failed plants are still no demonstrated
+exposure, so the correction stands; **the claim that carried it does not, and a
+register of gates whose stated scope exceeds their real scope is the last document
+that gets to round three up to four.** Left recorded rather than quietly fixed, on
+the same rule as G2's overstatement above.
 
 ⚠️ **The second plant is why this row leaves with a correction and not with a
 clean bill of health.** It **did** defeat the check it was aimed at: the `function`
@@ -1041,8 +1093,9 @@ to hand a suspicion to the next band.
 real HTML tokenizer, declined as disproportionate for a first-party `.astro`
 file) survives independent adversarial testing, which is more than it had before.
 
-**Observed-red (this pass):** four plants → 4 of 5, 4 of 5, [reasoning only, no
-run], 3 of 5. None produced a green suite with banned or unscanned logic present.
+**Observed-red (this pass):** **three executed plants** → 4 of 5, 4 of 5, 3 of 5.
+None produced a green suite with banned or unscanned logic present. The fourth
+attempt is an unexecuted structural argument and **is not observed-red evidence**.
 
 **Other categories:** Weakening, Vacuous green, Decay — `clean` in triage,
 **open**, not re-verified.
@@ -1053,7 +1106,8 @@ file, and a two-block shape is structurally different from everything above. Nor
 was an unquoted raw `>` inside an attribute value, which real tokenizers and this
 regex treat differently. Neither is ruled out.
 
-**Cost:** ~20 min, 4 vitest invocations plus one reasoning-only step.
+**Cost:** ~20 min, 4 vitest invocations — three planted runs and one confirming
+green after revert — plus one reasoning-only step that ran nothing.
 
 ### G8 — `frontmatter-contract`
 
