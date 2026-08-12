@@ -56,6 +56,13 @@ four, each planted for the first time — so **four remain**: G5, G31, G32, G33.
 five of those new lines sit in a Deep pass block, not in the triage line above it,
 which is the distinction this whole paragraph is about.
 
+⚠️ **Band four's own correction to this tally said *six*, and it was right about
+the file it could see.** `8b8abab` was written against a register holding bands
+one and three but not band two, which had not yet landed — so G15 and G35 still
+looked unsupplied. **Recounted mechanically over the 35 sections** once all four
+bands were in one file: four. The number is not a compromise between the two
+prose claims; neither was carried forward.
+
 **Every flagged row has now been deep-passed.** The twenty ranked rows went in
 bands one, two and three; band four took the five flagged-but-unranked ones — G6,
 G12, G18, G24, G34 — so the remaining 10 rows carry triage verdicts only because
@@ -1178,6 +1185,15 @@ Page errors: (0 , Op.createRequire) is not a function"* — and it runs in CI in
 the same required `gates` check, after `pnpm build`. So the invariant is
 defended; it is not defended by this gate. The docblock's own failure claim
 (*"no build error… the shelf silently never boots"*) reproduced exactly, twice.
+
+⚠️ **The backstop is narrower than that reads, and the qualification is the
+row's, not the suite's** — G25's residue, in the same shape. Both plants landed
+in files the client bundle actually pulls in (`boot.ts`, `Shelf.astro`), which is
+why `smoke:render` saw them. **A relative value import in a site `.ts` that the
+bundle never reaches** — a module only a spec imports — would leave the bundle
+clean and `smoke:render` green, and G6 is blind to it either way. Not planted, so
+recorded as untested rather than claimed: *"CI catches this"* holds for the two
+routes demonstrated and is not established in general.
 
 ⚠️ **What that red does not say is the reason this is still `repaired` and not
 `accepted`.** `smoke:render` reports a symptom and a minified page error after a
