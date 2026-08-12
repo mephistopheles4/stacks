@@ -405,6 +405,14 @@ same 636-test baseline on both commits. The prose above is written against
 `e372e2d`; the numbers below were measured one commit earlier and carry over
 unchanged.
 
+⚠️ **Four rows gain an observed-red line here and `docs/gates.md` does not know
+it** — G30's is the first that row has ever had. That is deliberate and it is
+band one's precedent: PR [#131](https://github.com/mephistopheles4/stacks/pull/131)
+changed this file and nothing else. A band writes the register; **carrying the
+evidence back into the scoreboard is [#120](https://github.com/mephistopheles4/stacks/issues/120)'s**,
+in the commit that lands the remedies, so the file that scores this repo's rules
+is edited once rather than four times by four sessions writing it concurrently.
+
 **13 flagged rows remain**: rank 2 (8) and the unranked band (5).
 
 ---
@@ -1238,9 +1246,10 @@ Match the tail accessors together — `.pop()`, `[…]`, `.at(…)`, `.slice(…
 since the pattern is already an enumeration and is simply missing members. Drop
 the `node:` prefix requirement and catch the namespace form, which is G1's
 `FS_IMPORT` idiom applied to the file that needed it more. Extend the sweep to
-`scripts/`, which is a one-line change to `sourceFiles()` and would have to be
-run to see what it turns up. ⚠️ The stale-entry loop should not be counted as
-protection until the list is non-empty.
+`scripts/`, a one-line change to `sourceFiles()` whose **cost is unknown until it
+is run** — that directory has never been under this rule, so the size of the diff
+it demands is the open quantity, not whether to make it. ⚠️ The stale-entry loop
+should not be counted as protection until the list is non-empty.
 
 **Observed-red (this pass):** `.split('/').pop()` in `enrich.ts` fails the
 only-one-implementation check naming that file; a `MAY_IMPORT_BASENAME` entry
