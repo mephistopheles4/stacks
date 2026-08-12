@@ -1,12 +1,22 @@
 # Gate register
 
-**Triage pass, not the deep pass.** This is the population commissioned by
-[#126](https://github.com/mephistopheles4/stacks/issues/126), running the shape
-[#113](https://github.com/mephistopheles4/stacks/issues/113) fixed. It puts the
-same five questions to every numbered row in [`docs/gates.md`](./gates.md) and
-records a one-line verdict each — `clean`, or the shape of the exposure.
-**Suspicion, not proof.** A verdict here is a nomination for the deep pass, not
-a finding. **This pass planted no defect and ran no mutation.** Where an
+**Triage for 27 rows; the deep pass has run on the other 8.** The population was
+commissioned by [#126](https://github.com/mephistopheles4/stacks/issues/126),
+running the shape [#113](https://github.com/mephistopheles4/stacks/issues/113)
+fixed. It puts the same five questions to every numbered row in
+[`docs/gates.md`](./gates.md) and records a one-line verdict each — `clean`, or
+the shape of the exposure.
+
+⚠️ **Read the two layers separately, because they carry different weight.** The
+**category bullets and Rank line** in every entry are the triage pass:
+**suspicion, not proof**, a nomination for the deep pass rather than a finding.
+The **Deep pass** block, present on the eight rank-1 rows only, is
+[#128](https://github.com/mephistopheles4/stacks/issues/128)'s band one: defects
+actually planted, gates actually run, dispositions filled in. Where the two
+disagree, the Deep pass block is the evidence and the triage line is the guess it
+replaced — and on two rows they do disagree. See **Band one**, below.
+
+**The triage pass planted no defect and ran no mutation.** Where an
 Observed-red line is present, it is one of two things, both already in
 `docs/gates.md`, neither produced by this session: a **planted demonstration**
 — a perturbation or mutation run when that gate was written (G1, G6, G7, G10,
@@ -17,9 +27,14 @@ false-negative "found by the next command added"; G26's corpus defect found by
 noticing a real book's recorded refusal contradicted what the provider held).
 **Nine rows carry no Observed-red line at all** — G5, G12, G15, G30, G31, G32,
 G33, G34, G35 — because `docs/gates.md` records no elaboration for them beyond
-their table row, or, for G15, no mutation was run against the row itself. No
-dispositions (`gated` / `repaired` / `accepted` / `declined`) are filled in —
-those belong to the deep pass.
+their table row, or, for G15, no mutation was run against the row itself. ⚠️ **One
+of those nine, G31, was in band one and still has no Observed-red line** — not
+for want of trying: four plants were run and **none of them turned the gate
+red**, which is the finding rather than a gap in it.
+
+**Dispositions (`gated` / `repaired` / `accepted` / `declined`) are filled in for
+the eight rank-1 rows and for nothing else** — the remaining 27 await their
+band.
 
 **Scope: the 35 numbered rows `docs/gates.md` holds today** — G1–G35 across its
 Invariants, Contract seams and Defect gates tables. The **CI-only gates** table
@@ -50,24 +65,48 @@ amended changed-lines row and is not one of the 35 rows triaged here.
 
 ## Rank is not the same thing as flagged
 
+**Settled by [#128](https://github.com/mephistopheles4/stacks/issues/128)**, which
+owned the two rules this file had adopted as working answers, and the ordering
+question it had left open.
+
 For the deep pass, in the priority order #113 fixed: **1** rows flagged under
 *vacuous green*, **2** rows whose gate matches *text rather than structure*,
-**3** rows whose gate carries an *allowlist*, **4** rows asserted *outside
-`gates/`*. A row takes the highest (lowest-numbered) tier it qualifies for.
+**3** rows whose gate carries an *allowlist*. A row takes the highest
+(lowest-numbered) tier it qualifies for.
 
-Tiers 1–3 are category verdicts, so a row in one of them necessarily carries a
-non-clean verdict — ranked implies flagged. **Tier 4 is different: it is a
-structural fact about *where the check runs*, not a verdict on any of the five
-categories.** A row can be asserted outside `gates/` and still be clean on all
-five — that row is ranked (for the deep pass's location-based ordering) but
-not flagged (no exposure was found). G16 is exactly this case: outside
-`gates/` per pnpm smoke:render, clean on all five categories. G18 is the
-contrast — also outside `gates/`, but carries a genuine Decay exposure, so it
-is both ranked and flagged.
+**Rule 1 — highest tier wins: confirmed, with the unit named.** Rank is a
+*scheduling* device. It decides when a row is first visited, and it never
+narrows what gets demonstrated once it is: a row leaves its band with **that
+band's category** dispositioned and its other non-clean verdicts still open,
+recorded as open rather than closed by the row having been visited. Without
+that clause, *deep-passed* would come to mean *one of four exposures
+demonstrated* — category 4 arriving in the process instead of in a gate.
 
-A row flagged only under *weakening* (non-allowlist), *routing around*, or
-*decay* outside these four shapes carries no rank — flagged, not ordered,
-because the ranking rule does not reach it.
+**Rule 2 — tier 4 is replaced, not confirmed.** #113's tiers are not a ranking
+of the five categories: tier 1 *is* a category, but tiers 2 and 3 are
+**mechanisms** (text-matching, an allowlist). So the ranking ranks **how
+well-specified the demonstration is** — which is right for scheduling and wrong
+for triage, and that single fact explains both gaps triage found. *Asserted
+outside `gates/`* is neither a category nor a mechanism but a fact about
+**location**, so it leaves the ranking and becomes a **separate per-row axis**,
+recorded beside the five verdicts and used as a tiebreak within a band.
+
+Two consequences, both improvements. **G16** — clean on all five, ranked only
+for location — leaves the deep pass entirely, because it has nothing to
+demonstrate. **G18** loses rank 4 and joins the decay group, which is where its
+actual work always was: its rank had been pointing at the wrong job. The
+ranking's invariant is now unqualified — **ranked implies flagged**, with no
+exception clause to carry.
+
+**Rule 3 — the unranked flagged rows are the last band, ordered by what they
+need.** A *decay* flag is discharged by **re-measuring a claim, not by planting
+a defect**, so decay rows are cheap, mechanical and independent of one another:
+they go first, by row number — **G12, G18, G24, G34** — and three of those four
+already carry their answer in `docs/gates.md`'s own prose, which makes their
+deep pass a confirmation rather than an experiment. **G6** goes last. Its
+routing-around nomination names no mechanism and no measurable claim, so its
+demonstration has to be designed from scratch: it costs the most and buys the
+least, which is the honest reason to schedule it last rather than first.
 
 **The deep pass's membership is the flagged set, not the ranked set.** Rank
 orders it; it does not define it.
@@ -78,20 +117,19 @@ orders it; it does not define it.
 
 **35 rows triaged, 0 not reached.**
 
-**22 rows carry a rank:**
+**20 rows carry a rank:**
 
-| Rank 1 — vacuous green | Rank 2 — text over structure | Rank 3 — allowlist | Rank 4 — outside `gates/` |
-| --- | --- | --- | --- |
-| G17, G20, G21, G22, G23, G25, G26, G31 | G2, G7, G14, G15, G19, G28, G29, G35 | G1, G10, G13, G30 | G16, G18 |
+| Rank 1 — vacuous green | Rank 2 — text over structure | Rank 3 — allowlist |
+| --- | --- | --- |
+| G17, G20, G21, G22, G23, G25, G26, G31 | G2, G7, G14, G15, G19, G28, G29, G35 | G1, G10, G13, G30 |
 
-Of those 22, **21 are also flagged** — every rank-1/2/3 row is flagged by
-construction, and G18 (rank 4) carries a genuine Decay exposure. **G16 (rank
-4) is not flagged**: all five of its categories are clean, and it is ranked
-only because tier 4 is a structural property (location), not a category
-verdict. See "Rank is not the same thing as flagged," above.
+All 20 are flagged, with no exception to state — Rule 2 removed the tier-4
+column that used to require one. **G16** was ranked 4 and clean on all five
+categories, so it is not deep-pass membership at all; **G18** was ranked 4 and
+flagged for decay, so it keeps the flag and loses the rank.
 
-**4 more rows carry a flag with no rank** — exposed under weakening, routing
-around, or decay outside the four ranked shapes: **G6, G12, G24, G34**.
+**5 rows carry a flag with no rank** — exposed under weakening, routing around,
+or decay outside the ranked shapes: **G6, G12, G18, G24, G34**.
 
 **10 rows found nothing on all five categories**: G3, G4, G5, G8, G9, G11,
 G16, G27, G32, G33.
@@ -112,7 +150,7 @@ flagged, clean and not-reached totals below are unchanged, because every
 resolved line sat inside a row that was already counted correctly on the
 other side of the flagged/clean line.
 
-Flagged (21 ranked + 4 unranked) and clean (10) partition all 35 rows.
+Flagged (20 ranked + 5 unranked) and clean (10) partition all 35 rows.
 
 **Total flagged: 25 of 35.**
 
@@ -146,6 +184,102 @@ unadmitted: 0
 Every category bullet (or, for a row that merges several categories into one
 bullet because one exposure answers all of them, every merged bullet) states
 `clean`, `exposed`, or `nominated, unconfirmed` before any reasoning.
+
+---
+
+## Band one — the deep pass has run on rank 1
+
+**Commissioned by [#128](https://github.com/mephistopheles4/stacks/issues/128).
+Triage nominated; this band demonstrated.** Every rank-1 row was probed by
+planting a defect and watching what the gate did. Each carries a **Deep pass**
+block under its entry with the plants, the actual runs, a disposition, and an
+observed-red line filled **from what was run here** rather than from what
+`docs/gates.md` already recorded.
+
+**Eight rows, not the seven #128 names.** G31 moved into rank 1 while that
+ticket was open, in the revision above. The band is defined by rank, so it
+took the eighth member rather than orphaning it — band two is rank 2, which
+G31 had just left.
+
+| Row | Disposition | In one line |
+| --- | --- | --- |
+| G17 `deploy-branch` | `repaired` | The gate spawns the script, so `--any-branch` baked into `deploy:site` is invisible to it. |
+| G20 `public-build-artifact` | `repaired` | The module's verdict is gated; the command's response to it is not. |
+| G21 `no-live-network` | *verdict corrected* | Nomination did not survive: both halves re-planted red. Nothing to dispose of. |
+| G22 `cover-candidates` | `repaired` | Callers are forced *through* `coverUrls()`; what they do with the result is unwatched. |
+| G23 `key-if-present` | cat. 4 *corrected*; cat. 3 `accepted` | Vacuity anchor holds; a second implementation in early-return form still passes. |
+| G25 `one-usable-width` | `accepted` | The floor is real at 0.004 and not closable without making a correct packer red. |
+| G26 `lookup-recall` | `repaired` | A corpus and its recordings, wrong together, are invisible — which is how it actually happened. |
+| G31 `merge-precedence` | `repaired` | The gate never imports the merge. Four defects, 5 of 5 green each time. |
+
+**Two results contradict the triage above**, which is the whole point of a pass
+that demonstrates rather than reads: **G31 did not clear** — the entry called it
+the lowest-confidence in tier 1 and it produced the band's strongest
+demonstration — and **G21 and G23's category-4 nominations did clear**.
+
+### A nomination that does not survive is not dispositioned
+
+⚠️ **The four dispositions presuppose a finding.** G21 exposed the gap: both
+re-plants went red, there is no exposure and no remedy to name, and calling that
+`repaired` would read as work outstanding. The answer is not a fifth disposition
+— #113 refused one, and rightly. It is that **a cleared nomination has its
+verdict corrected**, and the demonstration is recorded; dispositions attach to
+findings only.
+
+### Cost, which is this band's second output
+
+The two halves of the band were run separately and returned figures that look
+contradictory until they are put together, at which point they give the model.
+One half saw **near-uniform** cost across four rows, 4–5 minutes each; the other
+was **dominated by G31** at roughly twice any of its siblings. The difference is
+the state of the evidence: the four uniform rows all carried exposures
+`docs/gates.md` already documented, so their plants only had to **confirm**,
+while G31 was uncharacterised and needed four plants to establish both that the
+vacuity is real *and* that the property survives elsewhere.
+
+> **~2 minutes of orientation per row, plus ~2 minutes per plant. A documented
+> exposure needs about two plants; an unconfirmed nomination needs about four.**
+
+⚠️ **Compute is not a cost centre, and the assumption that it would be was
+wrong.** The full 636-test suite runs in ~6.5s and file-scoped runs in 0.3–5s, so
+plant–run–revert is effectively free and later bands can afford **more** plants
+per row than this one used. **Size later bands on reading time and on how many
+nominations are unconfirmed — not on suite time, and not on the length of the
+`docs/gates.md` section.**
+
+⚠️ **#128's own cost warning pointed at the wrong rows.** It flagged G25 as
+expensive because it is asserted in `packages/site/src/shelf/` and "rows riding
+`pnpm smoke:render` drive puppeteer". G25's two specs are in-process unit tests
+— `smoke:render` appears in `packages/site/src/shelf/shelf-width.test.ts` only in
+comments — and G25 came in at the cheap end. The rows that actually drive
+puppeteer are G16 and G35, both in later bands.
+
+**Totals:** eight rows, ~63 minutes, 35 vitest invocations. ⚠️ **Both figures are
+agent-reported, not instrumented** — self-accounted wall-clock summed across the
+band's two halves, in the same spirit as G20's unobserved exit code above. The
+*shape* of the model (orientation is fixed, plants are cheap, unconfirmed
+nominations cost roughly double) is what later bands should carry; the minutes
+are an order of magnitude, not a measurement.
+
+**17 flagged rows remain**: rank 2 (8), rank 3 (4), and the unranked band (5).
+
+**Recounted mechanically from the sections as they stand**, not carried forward
+from the prose above — the discipline `aaf7347` established after the summary
+went wrong four times in a row:
+
+```
+Rank: 1     8
+Rank: 2     8
+Rank: 3     4
+Rank: 4     0
+Rank: none 15
+            --
+            35
+```
+
+Twenty ranked, fifteen unranked, thirty-five rows. **`Rank: 4` is zero by
+construction now** — G16 and G18 were its only members and both moved when Rule 2
+retired the tier.
 
 ---
 
@@ -578,6 +712,58 @@ two nominations are this triage's own, not corroborated by a citation.
 the text-matching one; both are nominated, unconfirmed, and this is the
 lowest-confidence entry in tier 1.
 
+**Deep pass (2026-08-11, band one) — disposition: `repaired`.**
+
+⚠️ **It did not clear. Both nominations are confirmed, and the result is sharper
+than the entry above phrases it: the gate row is vacuous, and the property is
+held instead by `packages/core/src/metadata/precedence.test.ts` — a unit spec
+with no scoreboard row.** G31 returned 5 of 5 green against three separate
+defects that each break the merge:
+
+- Dropping `description` from `MERGED_FIELDS` — G31 green; four failures
+  elsewhere.
+- Emptying `FIELD_ORDER` — G31 green; five failures, **every one** in
+  `precedence.test.ts`.
+- Bypassing `FIELD_ORDER` in the merge loop (`for (const source of DEFAULT_ORDER)`),
+  which is verbatim the class of bug the file's own docblock records having
+  shipped — G31 green; the same five.
+- Dropping `publisher` from `MERGED_FIELDS` — **one failure in the entire
+  repository**, in `precedence.test.ts`. The merge silently stops merging a
+  contract field and exactly one test notices; none of them a gate.
+
+The mechanics were confirmed by inspection as well as by planting. The gate
+imports `DEFAULT_ORDER`, `FIELD_ORDER` and `MERGED_FIELDS` and never imports the
+merge, so no assertion in it can observe what the merge does: the first test
+*filters* `MERGED_FIELDS`, so a shorter list stays `[]`; the second iterates
+`Object.entries(FIELD_ORDER)`, so empty means zero iterations; the third asserts
+`not.toContain`, which an empty object satisfies more easily still. Only the
+fourth carries a floor, and it guards the document's side rather than the code's.
+
+⚠️ **The gate's own docblock over-claims, in the direction that matters.** It
+opens *"the merge decides which provider wins each field"* and promises red
+*"when the document names an order the code does not implement"* — but it
+compares two tables. It is red when the constants disagree with the document and
+green when the merge stops reading the constants. A gate whose stated scope
+exceeds its real scope is this map's own subject matter, found inside a gate the
+map is auditing.
+
+**Remedy (named, not built):** two additions to `gates/merge-precedence.test.ts`,
+because the plants split cleanly across them. **(1)** An `expectFound`-style
+non-emptiness floor on `MERGED_FIELDS` and `Object.keys(FIELD_ORDER)`, asserting
+the sets both loops iterate are non-empty and of their expected size — this alone
+kills the empty-`FIELD_ORDER` plant. **(2)** A behavioural assertion that calls
+the merge itself: build a contributors map holding a distinguishable value for
+each of the four providers and, for every field documented in
+`docs/spec/metadata-merge.md`, assert the merged result carries the value
+belonging to the provider **the document** ranks first. That kills the other
+three, none of which a constants-only comparison can see, and it moves the row
+from *the two tables agree* to *the merge implements the table*. Existing gate,
+no new row.
+
+**Observed-red (this pass):** nothing turned G31 red. Emptying `FIELD_ORDER`,
+bypassing it in the merge, and dropping either `description` or `publisher` from
+`MERGED_FIELDS` all left `gates/merge-precedence.test.ts` at 5 passed of 5.
+
 ### G32 — `absent-only`
 
 **Gate:** [`gates/absent-only.test.ts`](../gates/absent-only.test.ts)
@@ -818,10 +1004,15 @@ most explicitly unresolved instance of this shape in the whole file.
 **Observed-red line:** "by deleting the clearance and re-running" → residual
 0.0203.
 
-**Rank:** 4 (outside `gates/`, per the ticket's own tier-4 list — a structural
-property of *where the check runs*, not a category verdict). **Not flagged**:
-every one of the five verdicts above is clean, so this row is ranked without
-being flagged. Rank and flag are different things here; see the Summary.
+**Rank:** none. **Not flagged**: every one of the five verdicts above is clean.
+
+⚠️ **This row is why tier 4 was replaced** ([#128](https://github.com/mephistopheles4/stacks/issues/128), Rule 2). It used to read *rank 4*, which made it
+the one ranked-but-not-flagged row and forced the ranking to carry an exception
+clause. *Asserted outside `gates/`* is a fact about **location**, not a category
+verdict, so it is now a per-row axis rather than a tier — and a row clean on all
+five has nothing to demonstrate and is **not deep-pass membership at all**.
+
+**Outside `gates/`:** yes — asserted by `pnpm smoke:render`.
 
 ### G17 — `deploy-branch`
 
@@ -851,6 +1042,33 @@ comparison — refuse `main`, allow everything else — fails six, including
 
 **Rank:** 1 (vacuous green) — named by the commissioning ticket itself as a
 live instance of this category.
+
+**Deep pass (2026-08-11, band one) — disposition: `repaired`.**
+
+The historical defect is genuinely fixed, and the fix was watched holding:
+comparing against `master` instead of `main` in `scripts/deploy.ts` fails two of
+seven, `lets main through` among them, **from a checkout that is not on `main`**
+— which is exactly the condition under which the pre-fix ambient-reading gate
+saw nothing.
+
+A live exposure remains in the same category, and it is what sets the
+disposition. The gate spawns `scripts/deploy.ts` directly, so it never sees the
+argv the *shipped command* supplies: adding `--any-branch` to `package.json`'s
+`deploy:site` script leaves all 636 tests green while every deploy overrides the
+guard. `scripts/deploy.ts` states that the override is "named so it cannot be
+typed by accident and reads in shell history as what it is" — baked into the npm
+script it appears in nobody's shell history and produces no refusal, so **the
+code's own written property is false while the gate is green**.
+
+**Remedy (named, not built):** assert in `gates/deploy-branch.test.ts` that
+`deploy:site` is exactly `tsx scripts/deploy.ts` with no trailing argument — or,
+stronger, drive one case through `pnpm deploy:site` so the argv the shipped
+command actually supplies falls inside the gate's reach. Existing gate, no new
+row.
+
+**Observed-red (this pass):** comparing against `master` fails two of seven from
+a non-`main` checkout; baking `--any-branch` into `deploy:site` leaves 636 of 636
+green.
 
 ### G18 — `bounded-cover-bytes`
 
@@ -884,10 +1102,22 @@ live instance of this category.
 re-running" → six of fourteen fail; the streaming case ran 31 seconds before
 failing.
 
-**Rank:** 4 (outside `gates/`, per the ticket's own tier-4 list) — the decay
-exposure is real but decay is not one of the four ranked shapes, and no tier
-1–3 mechanism flaw is documented. **Flagged**: the Decay verdict above is
-non-clean, so unlike G16 this row is both ranked and flagged.
+**Rank:** none. **Flagged** under Decay; no tier 1–3 mechanism flaw is
+documented, and decay is not one of the ranked shapes.
+
+⚠️ **This row used to read *rank 4*, and the rank was pointing at the wrong
+job** ([#128](https://github.com/mephistopheles4/stacks/issues/128), Rule 2).
+Its real work is a **re-measurement**, not a plant, so it belongs with the decay
+group in the unranked band — where it is scheduled second, by row number. That
+its location tier said something different from its actual work is the clearest
+argument for making location an axis rather than a tier.
+
+⚠️ **Its claim may not be re-measurable at all**: *"what the three providers did
+on 1 August 2026"* cannot be re-checked without the network, which **G21**
+forbids. That tension is the row's real question, and `accepted` is a legitimate
+answer to it — see [band four](https://github.com/mephistopheles4/stacks/issues/134).
+
+**Outside `gates/`:** yes — asserted in `packages/core/src/covers/download.test.ts`.
 
 ### G20 — `public-build-artifact`
 
@@ -921,6 +1151,37 @@ the two clean-baseline tests."
 the purest instance of "passing on the shape that actually matters" in the
 file.
 
+**Deep pass (2026-08-11, band one) — disposition: `repaired`.**
+
+The headline is fixed, and this pass demonstrated **that fixture realism itself
+is what makes it catch the defect** — the same production defect, run twice
+against two fixtures. Restoring the naive whole-text `_headers` search in
+`scripts/lib/public-build.ts` fails exactly one of twenty-four against today's
+realistic fixture, and passes all twenty-four when the spec's fixture is shrunk
+back to the covers-only shape it originally shipped. The repair is the fixture,
+not the rule.
+
+A live exposure remains one level up, at the caller boundary. `inspectPublicBuild`
+reports faithfully, but nothing asserts that a caller *acts* on the report:
+commenting out `process.exit(1)` in `scripts/check-public-build.ts` — leaving the
+`FAILED` print in place — leaves all 636 tests green and `pnpm typecheck` clean,
+so **`pnpm gate:public` becomes a printer that cannot fail**. Confirmed by
+inspection: that line is the sole failure exit on the rules path, and no spec in
+the suite spawns the script.
+
+**Remedy (named, not built):** spawn `scripts/check-public-build.ts` against a
+synthetic `dist/` carrying one planted defect and assert a **non-zero exit** —
+the reverse-assert G17 already applies to `scripts/deploy.ts`. The module's
+verdict is gated; the command's response to it is not.
+
+**Observed-red (this pass):** the naive `_headers` search fails one of
+twenty-four against the realistic fixture and zero of twenty-four against the
+historical one — while commenting out the exit leaves 636 of 636 green.
+
+⚠️ **Not observed:** no real `dist/` was built and `pnpm gate:public` was never
+run, so the caller finding rests on suite-green plus a clean typecheck, not on an
+exit code anyone watched.
+
 ### G21 — `no-live-network`
 
 **Gate:** [`gates/no-live-network.ts`](../gates/no-live-network.ts) + [`gates/no-live-network.setup.ts`](../gates/no-live-network.setup.ts), specced by [`gates/no-live-network.test.ts`](../gates/no-live-network.test.ts)
@@ -950,6 +1211,40 @@ cover from `archive.org`."
 
 **Rank:** 1 (vacuous green).
 
+**Deep pass (2026-08-11, band one) — verdict corrected, no disposition.**
+
+⚠️ **The category-4 nomination did not survive demonstration, so this row has
+nothing to dispose of.** A disposition presupposes a finding; a nomination that
+fails to survive is not dispositioned, its **verdict is corrected** — which is
+how this register records a cleared suspicion without minting the fifth
+disposition #113 refused. The category-4 line above should now read *clean,
+demonstrated* rather than *exposed, historical, fixed*.
+
+Both halves re-planted red against the current tree. Deleting `setupFiles` from
+`vitest.config.ts` — the exact mutation that once left all seven checks green —
+fails four of seven, and four of 636 across the suite in a single file: the spec
+is the only thing standing between an uninstalled guard and a green build, and it
+holds. Restoring the pre-fix `packages/core/src/enrich.test.ts` fails one of
+eight **by naming the openlibrary.org URL**, while its seven siblings pass —
+which is the point, and the sharpest thing this pass found here: every assertion
+in that file is indifferent to the cover, so **a throw-only guard would have left
+it green**. The `afterEach` recording, not the throw, is the load-bearing half.
+
+**Still open, and not this band's:** the *weakening* verdict (`vi.stubGlobal` as
+a documented hatch) and the *routing around* verdict (a test that shells out to
+a script making its own requests — `gates/deploy-branch.test.ts` really does
+spawn one — and any future non-`fetch` network API). Per Rule 1, those stay open
+rather than closing because the row was visited.
+
+**Observed-red (this pass):** deleting `setupFiles` fails four of seven; the
+pre-fix `enrich.test.ts` fails one of eight naming the URL, with its seven
+siblings green.
+
+⚠️ **Noted without evidence:** `forgetAttempts` is exported, so a test could in
+principle clear the record before `afterEach` reads it. Not planted, not
+demonstrated — carried as a nomination for whoever takes the routing-around
+verdict.
+
 ### G22 — `cover-candidates`
 
 **Gate:** [`gates/cover-candidates.test.ts`](../gates/cover-candidates.test.ts) + [`packages/core/src/covers/cache-cover.test.ts`](../packages/core/src/covers/cache-cover.test.ts)
@@ -977,6 +1272,36 @@ preference half).
 
 **Rank:** 1 (vacuous green) — "left all 290 tests green" on the real defect is
 the clearest single instance of this category in the file.
+
+**Deep pass (2026-08-11, band one) — disposition: `repaired`.**
+
+The headline is fixed and was watched holding, and the split the row predicts is
+exactly what happened: reversing `coverUrls` in
+`packages/core/src/metadata/types.ts` now fails **one of 636 by name**, in
+`packages/core/src/covers/cache-cover.test.ts`, while
+`gates/cover-candidates.test.ts` stays green — the structural half is blind to
+order by design, and the behavioural half caught it alone.
+
+A live exposure remains at the one caller that composes its own candidate order.
+`packages/core/src/import/index.ts` calls `coverUrls()` and then decides where
+the result goes, so **a caller can call the helper and discard its ranking**:
+swapping `[...coverUrls(match), ...fallback]` for `[...fallback, ...coverUrls(match)]`
+inverts the file's own stated rule three lines above it — putting Audible's
+square artwork ahead of the print cover — and leaves all 636 tests green. Both
+structural checks still pass (it names no `coverUrlLarge`; it does call
+`coverUrls(`), because **G22's caller check forces callers *through* the helper
+and says nothing about what they do with its result**. That sentence is the
+general lesson, and it is the shape #128 found again in G31.
+
+**Remedy (named, not built):** extend the row's existing behavioural half —
+alongside `cache-cover.test.ts`'s "the preference rule reaches the network"
+block, drive `importBooks` with a stubbed `fetch` and assert the **first** URL
+fetched is the looked-up print cover and the export's artwork is last. Existing
+gate, no new row.
+
+**Observed-red (this pass):** reversing `coverUrls` fails one of 636 by name in
+`cache-cover.test.ts` while the structural gate stays green; reversing the
+importer's own composition leaves 636 of 636 green.
 
 ### G23 — `key-if-present`
 
@@ -1009,6 +1334,34 @@ same copy reformatted; a copy in `packages/site/`; a caller reverting to a
 bare object; that revert with `keyIfPresent(` left in a comment."
 
 **Rank:** 1 (vacuous green).
+
+**Deep pass (2026-08-11, band one) — category 4 verdict corrected; category 3
+disposition: `accepted`.**
+
+⚠️ **The category-4 nomination cleared.** Both re-plants of the historical
+inflated-floor defect went red today: rewriting all 20 `keyIfPresent` spreads in
+`packages/core/src/library.ts` back to unconditional keys fails the caller check
+**naming that exact file**, and a behaviour-identical rewrite of the owner's
+ternary in `packages/core/src/key-if-present.ts` fails the anchor check. The
+floor repair holds and the vacuity anchor works, so the category-4 line should
+now read *clean, demonstrated*.
+
+What the plants demonstrated instead is the **category-3** gap the gate's own
+docblock names, and this pass turned it from a stated bound into an observed one:
+a genuine seventh implementation, written as the early-return form
+`if (value === undefined) return {};` rather than the anchored ternary shape,
+sits in the tree with **all 636 tests green**. The docblock argues the anchor
+cannot be widened without flagging `packages/core/src/covers/cover-keys.ts`, an
+innocent file — so the wider gate is argued *unavailable*, not merely unbuilt,
+which is `accepted` rather than `declined`.
+
+**Band one over-delivered here**, and that is worth saying plainly: category 3
+belongs to band three. The evidence exists, so the verdict is dispositioned
+rather than artificially deferred, and G23's band-three membership is discharged.
+
+**Observed-red (this pass):** unconditional keys in `library.ts` go red naming
+that file; the inverted ternary goes red on the anchor — but a second
+implementation in early-return form stays green suite-wide.
 
 ### G24 — `repo-root`
 
@@ -1073,6 +1426,32 @@ green with `MAX_PROP_LEAN`" for the later correction.
 recurring four times in one row despite being named each time, is the
 strongest volume of evidence for this category anywhere in the file.
 
+**Deep pass (2026-08-11, band one) — disposition: `accepted`.**
+
+The row's detection floor is live and behaves exactly as its own comment states.
+An over-spend of **0.004 per shelved book** in `packages/site/src/shelf/placement.ts`
+leaves all 44 of this row's assertions green; **0.0055 goes red** on `mixed`,
+reproducing the documented floor to the digit. Both historical corrections
+re-planted red as well: restoring `WORST_CLEARANCE` to `MAX_LEAN` fails on
+`squareCoverAfterProp`, and a hair of 0.00001 on the face-out branch goes red.
+
+This is not closable without giving up soundness, which is why it is `accepted`
+rather than `repaired`: the row records two separate occasions where a sharper
+bound turned a **correct** packer red, and it names `pnpm smoke:render` as the
+backstop for exactly this residue. Knowingly lived with, with the trade-off
+argued in the file.
+
+⚠️ **One qualification the numbers do not carry.** At δ = 0.004 the full suite
+*did* go red — four failures in `packages/site/src/shelf/placement.test.ts` —
+but that injection site happens to break flush-run geometry. **Whether every
+sub-floor over-spend is caught somewhere was not tested**, so "the suite catches
+what this row misses" is not established, and the accepted residue is the row's,
+not the suite's.
+
+**Observed-red (this pass):** green at δ = 0.004 and red at δ = 0.0055 on
+`mixed`; red on `squareCoverAfterProp` with `WORST_CLEARANCE` restored to
+`MAX_LEAN`; red on the face-out branch at δ = 0.00001.
+
 ### G26 — `lookup-recall`
 
 **Gate:** [`gates/lookup-recall.test.ts`](../gates/lookup-recall.test.ts) + [`gates/recall-corpus.ts`](../gates/recall-corpus.ts)
@@ -1108,6 +1487,36 @@ book's recorded refusal contradicted what Google actually held.
 
 **Rank:** 1 (vacuous green) — the corpus-capture incident is a real, already-
 occurred instance, not a hypothetical.
+
+**Deep pass (2026-08-11, band one) — disposition: `repaired`.**
+
+⚠️ **The already-occurred incident reproduces today, exactly.** Setting one
+corpus entry's Google response to `null` in `fixtures/api/lookup-recall.json` —
+which is precisely what `scripts/capture-lookup-recall.ts` writes on a 429, via
+`recorded[stripKey(url)] = body ?? null` — and flipping that entry's expectation
+in `gates/recall-corpus.ts` from `found` to `no-match` leaves **all 636 tests
+green**, with a book Google demonstrably holds recorded as unfindable. The key
+count guard is untroubled: 19 keys becomes 20, still above `RECALL_CORPUS.length * 2`.
+
+The counter-plant is what makes this a finding rather than an observation about
+an inert gate. Flip the corpus expectation **alone**, leaving the recordings
+intact, and the gate goes red by name. So the gate detects a corpus that lies on
+its own, and is blind only when **the corpus and its recordings are wrong
+together** — which is the only way this failure has ever actually arrived.
+
+**Remedy (named, not built):** record **capture provenance** in the fixture and
+gate on it. Have `scripts/capture-lookup-recall.ts` write, beside each response,
+whether `GOOGLE_BOOKS_API_KEY` was present at capture time and the HTTP status of
+each request; have `gates/lookup-recall.test.ts` fail any `no-match` entry whose
+evidence rests on a keyless or non-200 capture. ⚠️ **Preferred over the obvious
+body-shape heuristic** ("every entry has at least one non-null provider body"):
+a genuine no-match can legitimately have all-null Google responses, so the
+heuristic would go red on the corpus's own honest negatives. Existing gate, no
+new row.
+
+**Observed-red (this pass):** nothing went red on the exposure — the gate is red
+when the corpus lies alone, and green when the corpus and its recordings are
+wrong together.
 
 ### G27 — `enrich-report`
 
