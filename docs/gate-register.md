@@ -254,8 +254,32 @@ expensive because it is asserted in `packages/site/src/shelf/` and "rows riding
 comments — and G25 came in at the cheap end. The rows that actually drive
 puppeteer are G16 and G35, both in later bands.
 
-**Totals:** eight rows, ~63 minutes of agent wall-clock, 35 vitest invocations.
+**Totals:** eight rows, ~63 minutes, 35 vitest invocations. ⚠️ **Both figures are
+agent-reported, not instrumented** — self-accounted wall-clock summed across the
+band's two halves, in the same spirit as G20's unobserved exit code above. The
+*shape* of the model (orientation is fixed, plants are cheap, unconfirmed
+nominations cost roughly double) is what later bands should carry; the minutes
+are an order of magnitude, not a measurement.
+
 **17 flagged rows remain**: rank 2 (8), rank 3 (4), and the unranked band (5).
+
+**Recounted mechanically from the sections as they stand**, not carried forward
+from the prose above — the discipline `aaf7347` established after the summary
+went wrong four times in a row:
+
+```
+Rank: 1     8
+Rank: 2     8
+Rank: 3     4
+Rank: 4     0
+Rank: none 15
+            --
+            35
+```
+
+Twenty ranked, fifteen unranked, thirty-five rows. **`Rank: 4` is zero by
+construction now** — G16 and G18 were its only members and both moved when Rule 2
+retired the tier.
 
 ---
 
@@ -980,10 +1004,15 @@ most explicitly unresolved instance of this shape in the whole file.
 **Observed-red line:** "by deleting the clearance and re-running" → residual
 0.0203.
 
-**Rank:** 4 (outside `gates/`, per the ticket's own tier-4 list — a structural
-property of *where the check runs*, not a category verdict). **Not flagged**:
-every one of the five verdicts above is clean, so this row is ranked without
-being flagged. Rank and flag are different things here; see the Summary.
+**Rank:** none. **Not flagged**: every one of the five verdicts above is clean.
+
+⚠️ **This row is why tier 4 was replaced** ([#128](https://github.com/mephistopheles4/stacks/issues/128), Rule 2). It used to read *rank 4*, which made it
+the one ranked-but-not-flagged row and forced the ranking to carry an exception
+clause. *Asserted outside `gates/`* is a fact about **location**, not a category
+verdict, so it is now a per-row axis rather than a tier — and a row clean on all
+five has nothing to demonstrate and is **not deep-pass membership at all**.
+
+**Outside `gates/`:** yes — asserted by `pnpm smoke:render`.
 
 ### G17 — `deploy-branch`
 
@@ -1073,10 +1102,22 @@ green.
 re-running" → six of fourteen fail; the streaming case ran 31 seconds before
 failing.
 
-**Rank:** 4 (outside `gates/`, per the ticket's own tier-4 list) — the decay
-exposure is real but decay is not one of the four ranked shapes, and no tier
-1–3 mechanism flaw is documented. **Flagged**: the Decay verdict above is
-non-clean, so unlike G16 this row is both ranked and flagged.
+**Rank:** none. **Flagged** under Decay; no tier 1–3 mechanism flaw is
+documented, and decay is not one of the ranked shapes.
+
+⚠️ **This row used to read *rank 4*, and the rank was pointing at the wrong
+job** ([#128](https://github.com/mephistopheles4/stacks/issues/128), Rule 2).
+Its real work is a **re-measurement**, not a plant, so it belongs with the decay
+group in the unranked band — where it is scheduled second, by row number. That
+its location tier said something different from its actual work is the clearest
+argument for making location an axis rather than a tier.
+
+⚠️ **Its claim may not be re-measurable at all**: *"what the three providers did
+on 1 August 2026"* cannot be re-checked without the network, which **G21**
+forbids. That tension is the row's real question, and `accepted` is a legitimate
+answer to it — see [band four](https://github.com/mephistopheles4/stacks/issues/134).
+
+**Outside `gates/`:** yes — asserted in `packages/core/src/covers/download.test.ts`.
 
 ### G20 — `public-build-artifact`
 
