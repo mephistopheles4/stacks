@@ -283,6 +283,132 @@ retired the tier.
 
 ---
 
+## Band three — the deep pass has run on rank 3
+
+**Commissioned by [#133](https://github.com/mephistopheles4/stacks/issues/133).**
+Four rows, all flagged for carrying an *allowlist*, all probed the way band one
+probed rank 1: plant the defect, run the suite, read what the gate did. Each
+carries a **Deep pass** block under its entry.
+
+| Row | Disposition | In one line |
+| --- | --- | --- |
+| G1 `adapter-boundary` | cat. 1 `accepted`; cat. 3 `repaired` | The rot-checks hold; a vault note read through `node:child_process` is not a vault read to this gate. |
+| G10 `cover-path` | cat. 1 `accepted`; cat. 3 *corrected*, `repaired` | Three of four re-implementations of the original defect pass suite-wide, including the same Windows bug spelled `.at(-1)`. |
+| G13 `no-third-party-material` | cat. 1 `accepted`; cat. 3 `repaired` | `docs/images/` is pinned and holds; `fixtures/vault/Library/covers/` is still a directory, and `.svg` is not a binary here. |
+| G30 `library-seam` | cat. 1 and cat. 2 *corrected*, `gated` | A new field wired end-to-end through the frontmatter contract never reaches `library.json`, 636 of 636 green. |
+
+**#133 asked two questions and they came back with opposite answers.** *Does each
+entry still name something real, and would the gate notice if it stopped?* —
+**yes, every time.** *Can the gate be satisfied by editing its exemption list
+rather than by fixing the code?* — **yes, every time, and that is not where the
+damage is.** Three of these four allowlists are exactly the artifact
+`CONTRIBUTING.md` asks for, and the exposures this band found are all one step to
+the side: not the entries, but what the list is a list **of**.
+
+### Rule: tier 3 names a mechanism, not category 3
+
+#133 says twice that a row leaves this band with its **category-3** verdict
+dispositioned. All four register entries put the allowlist finding under
+**Weakening** — category 1 — and they are right to: widening an exemption is
+*editing the gate*, which is category 1's own text.
+
+Band one already settled the general form of this when it retired tier 4:
+*"#113's tiers are not a ranking of the five categories — tier 1 is a category,
+tiers 2 and 3 are mechanisms."* Tier 3 says the gate is *written with an
+allowlist*; it does not say which of the five an exposure lands in. **So this
+band dispositions every non-clean verdict its plants reached and privileges no
+category** — which is how three of these rows come away with a category-1
+disposition and a category-3 one, and G30 with a category-1 and a category-2.
+
+### Rule: a correction runs in both directions
+
+Band one established that a nomination which does not survive has its **verdict
+corrected** rather than dispositioned. Every one of its corrections ran the same
+way: `nominated, unconfirmed` → `clean`.
+
+⚠️ **This band made two corrections in the other direction** — G10's *Routing
+around* and G30's *Satisfying the letter*, both recorded `clean` in triage, both
+`exposed` under a plant. That direction is the one only a demonstration can
+reach: a triage verdict of `clean` is a claim nobody goes back to, and G30's was
+`clean` on the reasoning that its fixture is "fully-populated" — true on the day
+it was written and held by nothing since.
+
+### Rule: `gated`, used for the first time, reads forward
+
+All four of band one's dispositioned rows had a repaired history, so `repaired`
+covered them and the other three dispositions went unexercised. **G30 has no
+history at all** — no historical defect, no observed-red line ever recorded in
+`docs/gates.md` — and its exposure is live, current, and closable in about three
+lines of spec.
+
+`repaired` would be false, `accepted` claims a remedy is unavailable when one is
+sitting there, and `declined` is a decision this band has no authority to make.
+That leaves `gated`, read **forward**: *the remedy is a gate change, it is named
+here, and it is owed to the spec* — the same tense band one's `repaired` rows
+already used when they named remedies nobody had built. Recorded as a reading
+rather than assumed, and handed to
+[band four](https://github.com/mephistopheles4/stacks/issues/134) and
+[#120](https://github.com/mephistopheles4/stacks/issues/120) to confirm or
+overturn.
+
+### The confirming half, which came back clean
+
+Every reverse-assert in the band was made to fire, and every historical defect
+these rows name was re-planted and still goes red:
+
+- **G1** — deleting `packages/core/src/watch.ts` from `ALLOWED` fails *"lets no
+  unlisted file reach the filesystem directly"*; adding
+  `packages/core/src/library.ts`, which does not import `fs`, fails *"keeps every
+  allowlist entry on a file that still imports fs"*; the historical
+  `import { readFileSync } from 'node:fs'` in
+  `packages/site/src/shelf/scene.ts` goes red.
+- **G10** — `cover.split('/').pop()` restored to `packages/core/src/enrich.ts`,
+  which is the original defect verbatim, goes red naming that file; the
+  stale-entry loop goes red the moment `MAY_IMPORT_BASENAME` has anything to
+  iterate.
+- **G13** — a second image in `docs/images/` goes red; `git rm --cached` on
+  `packages/site/public/og.png` goes red.
+- **G30** — a bogus entry in `NOT_PUBLIC` goes red; a key emitted by
+  `toLibraryBook` that is neither a record field nor derived goes red.
+
+⚠️ **So the rot half of every allowlist here works, and none of them checks the
+one thing that matters: whether a permission was warranted.** Demonstrated on the
+two lists where granting is cheapest. G1: a `readFileSync` vault read added to
+`packages/core/src/library.ts` plus an `ALLOWED` line reading *"Reads the built
+index back for a fast rebuild path. Not note data"* — **636 of 636 green**, both
+reverse-asserts satisfied, because the file does exist and does import `fs`. G10:
+a `basename` import plus one entry in `MAY_IMPORT_BASENAME` — **636 of 636
+green**. Both are `accepted`. `CONTRIBUTING.md` asks for *"a written
+justification and a reviewable one-line diff"* and that is precisely what these
+produce; no mechanical check reads a justification, and the remedy is review.
+
+### Cost
+
+**Four rows, ~26 vitest invocations, ~35 minutes.** Band one's model held without
+adjustment: the three rows carrying documented exposures confirmed in two or
+three plants each, and **G30 — the only row whose exposure was unconfirmed —
+needed four**, which is the ratio band one predicted.
+
+#133 asked this band to spend its slack on more plants rather than on finishing
+early, and it did: **22 plants over four rows, at 6.5 vitest invocations per row
+against band one's 4.4**. Three of the four rows' sharpest findings came from
+the *extra* plants —
+G10's `.at(-1)`, G13's `.svg`, G30's end-to-end field — none of which the first
+two plants on those rows would have reached. Compute remains a non-issue: the
+full suite is ~6.3s and file-scoped runs are under 1s.
+
+⚠️ **Band one merged while this band's plants were running.** Every plant here was
+run against `43445f0`; band one's PR
+[#131](https://github.com/mephistopheles4/stacks/pull/131) landed as `e372e2d`,
+which changes **this file and nothing else** — no gate spec, no source, and the
+same 636-test baseline on both commits. The prose above is written against
+`e372e2d`; the numbers below were measured one commit earlier and carry over
+unchanged.
+
+**13 flagged rows remain**: rank 2 (8) and the unranked band (5).
+
+---
+
 ## Invariants → gates
 
 ### G1 — `adapter-boundary`
@@ -313,6 +439,58 @@ not addressed there.
 the G1/G3/G6/G7 paragraph).
 
 **Rank:** 3 (allowlist).
+
+**Deep pass (2026-08-11, band three) — category 1 disposition: `accepted`;
+category 3 verdict confirmed, disposition: `repaired`.**
+
+The historical defect re-plants red — `import { readFileSync } from 'node:fs'`
+at the top of `packages/site/src/shelf/scene.ts` fails *"lets no unlisted file
+reach the filesystem directly"* — and both rot-checks fire on demand: deleting
+`packages/core/src/watch.ts` from `ALLOWED` fails the same assertion, and adding
+`packages/core/src/library.ts`, which imports no `fs`, fails *"keeps every
+allowlist entry on a file that still imports fs"*. The docblock's *"without (2)
+the allowlist only ever grows"* is true and watched.
+
+**Category 1 is real and is the shape the repo asked for.** A `readFileSync`
+vault read added to `packages/core/src/library.ts`, plus one `ALLOWED` line
+reading *"Reads the built index back for a fast rebuild path. Not note data"*,
+leaves **636 of 636 green**. Both reverse-asserts pass because they are true —
+the file exists, and it does import `fs`. They check an entry's **facts**; the
+**warrant** is prose, and no gate reads prose. `accepted`: `CONTRIBUTING.md`
+specifies exactly this artifact, and the control is review.
+
+⚠️ **Category 3 was `nominated, unconfirmed` and it survives, by two separate
+mechanisms.** Triage asked whether a dynamic `import()`, a `child_process`
+shell-out or a non-`fs` I/O API would still be caught. Both plants stay green
+suite-wide:
+
+- **A vault note read through `node:child_process`.** An exported
+  `readNote(notePath)` in `packages/core/src/library.ts` calling
+  `execFileSync('cat', [notePath], { encoding: 'utf8' })` — outside
+  `packages/core/src/adapters/`, not on the allowlist — leaves **636 of 636
+  green** and `tsc --noEmit` clean. Invariant 4 is violated and the gate that
+  exists for invariant 4 has no verdict, because `FS_IMPORT` is a list of
+  specifiers and `node:child_process` is not on it. The regex is careful about
+  *how* `fs` is reached and silent about *what else reaches a file*.
+- **A tracked `.mjs` under `packages/`.** `filesUnder('packages', ['.ts'])`
+  matches on extension, so `packages/site/astro.config.mjs` — a real, tracked
+  file — may import `node:fs` freely: **636 of 636 green**. `.mjs`, `.cjs`,
+  `.mts` and `.cts` are all outside the sweep, and one of those extensions is
+  already in the tree.
+
+**Remedy (named, not built):** two, and they are independent. Widen
+`filesUnder`'s extension list to the four ESM/CJS spellings, which costs one
+argument. Then extend the detector past `fs` — `node:child_process` is the
+demonstrated hole, and the honest framing is that the gate currently checks *"no
+unlisted file imports `fs`"* while the docblock claims *"nothing outside the
+adapters may read or write vault files directly"*, which is the wider property.
+Either narrow the docblock to what is checked, or widen the check; a gate whose
+stated scope exceeds its real scope is band one's G31 finding arriving here.
+
+**Observed-red (this pass):** `fs` in `scene.ts` fails *"lets no unlisted file
+reach the filesystem directly"*; `watch.ts` removed from `ALLOWED` fails the
+same; `library.ts` added to `ALLOWED` fails the stale-entry check. The
+`child_process` read and the `.mjs` import both leave 636 of 636 green.
 
 ### G2 — `public-build`
 
@@ -433,6 +611,52 @@ section).
 restored to `.gitignore`" (three ways).
 
 **Rank:** 3 (allowlist).
+
+**Deep pass (2026-08-11, band three) — category 1 disposition: `accepted`;
+category 3 confirmed and widened, disposition: `repaired`.**
+
+Both of this row's documented repairs hold. A second image staged into
+`docs/images/` fails *"keeps docs/images to exactly the generated screenshot"*,
+so the filename pin that replaced the directory permission does what the row
+says it does. `git rm --cached packages/site/public/og.png` fails *"tracks every
+allowlisted brand file"* — the half that catches a permission outliving the file
+it was granted for.
+
+⚠️ **The other directory was never pinned, and it is the one that matters.**
+`GENERATED_BINARY_DIRS` still holds `fixtures/vault/Library/covers/`, and a PNG
+staged into it is **636 of 636 green** — no assertion looks at the filename, the
+byte count, or where the bytes came from. `docs/gates.md` uses this exact row to
+explain the category (*"a directory is a standing permission, where every other
+line here names a file"*), then fixed one of its two directories. The unfixed one
+is where a downloaded cover already sits on disk in the shape a contributor would
+copy. `accepted` for category 1: pinning it by filename would fight
+`scripts/make-fixture-covers.ts`, whose whole job is emitting new ones, so the
+one-line-diff control is doing the work here as designed.
+
+⚠️ **Category 3 was already `exposed` for the untracked-binary gap; a second and
+sharper mechanism sits beside it.** `BINARY` enumerates fifteen raster and
+container extensions and **names no vector and no font format**. A hand-written
+`packages/site/src/assets/provider-marks/oreilly.svg` and a
+`packages/site/public/fonts/inter.woff2`, both staged, leave **636 of 636
+green**. This is not hypothetical shape: the repo already tracks six `.svg`
+files, so a seventh raises nothing anywhere, and a licensed icon set or a
+webfont is third-party material by exactly the argument
+`fixtures/README.md` makes about cover art. The row's own text is *"an entry
+here is a claim about provenance, never about file type"* — and the sweep that
+decides what needs a claim is a claim about file type.
+
+**Remedy (named, not built):** add `svg`, `woff`, `woff2`, `ttf`, `otf`, `eot`
+to `BINARY`, which turns the six committed SVGs into six named brand entries and
+makes the next one a decision — the `poweredby-google.png` treatment applied to
+the format that currently has none. For the fixture-covers directory, the
+provenance claim can be made mechanical rather than pinned: assert every file
+under it is byte-reproducible by `scripts/make-fixture-covers.ts`, which is what
+the directory entry already asserts in prose.
+
+**Observed-red (this pass):** a second image in `docs/images/` fails the
+exactly-`shelf.png` assertion; `og.png` untracked fails the brand-file check. A
+PNG copied into `fixtures/vault/Library/covers/`, and a staged `.svg` and
+`.woff2`, each leave 636 of 636 green.
 
 ### G14 — `commands`
 
@@ -670,6 +894,67 @@ directly.
 
 **Rank:** 3 (allowlist).
 
+**Deep pass (2026-08-11, band three) — categories 1 and 2 verdicts corrected,
+disposition: `gated`.** ⚠️ **The band's strongest finding, and it is this row's
+own stated purpose failing.**
+
+**Category 2 read `clean` and is `exposed`.** The verdict rested on *"the spec
+builds a fully-populated fixture record specifically so a missing key cannot hide
+behind an unexercised branch"* — which describes `FULL` on the day it was
+written and is held by nothing since. **Every field of `BookRecord` except
+`sourcePath`, `title`, `status` and `tags` is optional**, so `const FULL:
+BookRecord` type-checks with any number of fields absent, and *"carries every
+record field into a local build"* computes its `missing` set from
+`Object.keys(FULL)` — the fixture, never the type.
+
+Planted end to end, as the merge would actually do it: `translator` added to
+`BookRecord`, to `FRONTMATTER_CONTRACT`, to `parseNote` as a `keyIfPresent`
+line, and to `CLAUDE.md`'s key enumeration — and **not** to `toLibraryBook` and
+**not** to `FULL`. Result: **636 of 636 green**, `tsc --noEmit` clean, and **G8
+(`frontmatter-contract`) passes it in all three directions**, which is correct —
+G8's job stops at the parser. The field reaches the vault and reaches no build.
+
+⚠️ That is verbatim what this gate's own docblock says nothing else held: *"the
+merge takes the field into the vault, the shelf never sees it, and every test
+still passes."* It is true today with the gate in place. The vacuity anchor does
+not help — `Object.keys(FULL).length >= 24` against a `FULL` of exactly 24 keys
+is satisfied at its own boundary and cannot notice a twenty-fifth field.
+
+**Category 1 read `exposed, mild` for `NOT_PUBLIC` and the mild list is the
+wrong one.** `NOT_PUBLIC` is genuinely reverse-asserted — adding `rating` to it
+fails *"strips exactly the named exclusions from a public build"*. **`DERIVED` is
+not asserted in either direction.** A name in it that the build never emits is
+absorbed silently (`'shelfSlot'` added to `DERIVED` alone: 636 of 636 green), and
+it converts the third assertion into a one-line dismissal: emitting an
+unexplained `shelfSlot` key from `toLibraryBook` fails *"traces every shipped key
+back to a record field or a named derived one"*, and adding `'shelfSlot'` to
+`DERIVED` returns the suite to **636 of 636 green** with `library.json` still
+carrying an invented key. The gate names two lists, guards one, and the entry
+called the guarded one mild.
+
+**Routing around is confirmed `clean`, and narrowly.** Both writers —
+`packages/core/src/publish.ts:78` and `packages/cli/src/index.ts:141` — go
+straight from `buildLibrary` to `JSON.stringify` with no post-hoc key injection,
+so a key cannot enter the artifact behind the gate's back. The hole is on the
+**record** side, not the artifact side, which is why the third assertion looked
+sufficient.
+
+**Remedy (named, not built):** assert `FULL` against the type rather than
+trusting it — the mechanical form is a
+`Record<keyof BookRecord, true>` companion, which makes a new optional field a
+compile error in this file instead of a silent pass, and retires the `>= 24`
+anchor along with it. Then give `DERIVED` `NOT_PUBLIC`'s treatment: assert every
+name in it is a key the build actually emits, which is the same reverse-assert
+G1 and G10 already carry and the reason their stale entries cannot accumulate.
+Both are existing-gate changes; no new row.
+
+**Observed-red (this pass) — the first this row has ever had:** `rating` added to
+`NOT_PUBLIC` fails the strips-exactly assertion; a `shelfSlot` key emitted from
+`toLibraryBook` fails the key-trace assertion. A `translator` field carried
+through the type, the contract, the parser and `CLAUDE.md` but not into
+`toLibraryBook` leaves 636 of 636 green; so does a `DERIVED` entry naming a key
+nothing emits, and so does the `shelfSlot` key once `DERIVED` names it.
+
 ### G31 — `merge-precedence`
 
 **Gate:** [`gates/merge-precedence.test.ts`](../gates/merge-precedence.test.ts)
@@ -904,6 +1189,64 @@ with a `/`-only split, so `..\..\x.png` traversed on Windows"; a third copy
 found in `obsidian-adapter.ts`'s wikilink embed.
 
 **Rank:** 3 (allowlist).
+
+**Deep pass (2026-08-11, band three) — category 1 disposition: `accepted`;
+category 3 verdict corrected from `clean` to `exposed`, disposition:
+`repaired`.**
+
+The structural half is genuinely red-capable and the original defect re-plants:
+`cover.split('/').pop()` restored to `packages/core/src/enrich.ts` fails *"is the
+only module that derives a filename from a cover value"*, naming that file.
+`MAY_IMPORT_BASENAME` is empty, so its stale-entry loop iterates over nothing
+today — but it is not vacuous by construction: given one entry that does not
+import `basename`, it fails *"has no stale allowlist entries"*. Category 4 stays
+`clean`, now demonstrated rather than assumed.
+
+Category 1 behaves as G1's does: adding `packages/core/src/enrich.ts` to
+`MAY_IMPORT_BASENAME` **and** a `basename` import to that file leaves **636 of
+636 green**, one line of list plus one line of code. `accepted`, for G1's reason.
+
+⚠️ **Category 3 read `clean now` and it is not.** The entry's reasoning was that
+the historical triple-implementation is the defect this row closed. It closed
+**one spelling of it**. Four re-implementations of the same rule were planted in
+`packages/core/src/enrich.ts`, one at a time; **three pass suite-wide**:
+
+| Plant | Result |
+| --- | --- |
+| `cover.split('/').pop() ?? cover` | **red** — the original, still caught |
+| `cover.split('/').at(-1) ?? cover` | **636 of 636 green** |
+| `import { basename } from 'path'` (unprefixed) | **636 of 636 green** |
+| `import path from 'node:path'; path.basename(cover)` | **636 of 636 green** |
+
+⚠️ **`.at(-1)` is not a stylistic variant — it is the same bug.**
+`'..\\..\\x.png'.split('/')` yields a single element whichever tail accessor
+reads it, so the traversal that made the row exist survives verbatim, one
+method name away from the pattern that catches it. The other two are the
+`node:path` specifier: `FS_IMPORT` in G1 goes out of its way to match both `fs`
+and `node:fs` and to reach `require` and dynamic `import`, and this gate's twin
+regex matches `node:path` only, so the un-prefixed specifier and the namespace
+import both pass.
+
+**A fourth mechanism is the sweep, not the pattern.** `sourceFiles()` is
+`filesUnder('packages', …)`, so `scripts/` is not scanned: the original
+`.split('/').pop()` planted in `scripts/deploy.ts` leaves **636 of 636 green**.
+That is the directory holding the most irreversible code in the repo, and it
+handles cover filenames.
+
+**Remedy (named, not built):** three, in increasing order of what they buy.
+Match the tail accessors together — `.pop()`, `[…]`, `.at(…)`, `.slice(…)` —
+since the pattern is already an enumeration and is simply missing members. Drop
+the `node:` prefix requirement and catch the namespace form, which is G1's
+`FS_IMPORT` idiom applied to the file that needed it more. Extend the sweep to
+`scripts/`, which is a one-line change to `sourceFiles()` and would have to be
+run to see what it turns up. ⚠️ The stale-entry loop should not be counted as
+protection until the list is non-empty.
+
+**Observed-red (this pass):** `.split('/').pop()` in `enrich.ts` fails the
+only-one-implementation check naming that file; a `MAY_IMPORT_BASENAME` entry
+that does not import `basename` fails the stale-entry check. `.at(-1)`, the
+un-prefixed `path` import, the `node:path` namespace form, and the original
+defect one directory over in `scripts/deploy.ts` each leave 636 of 636 green.
 
 ### G11 — `build-modes`
 
