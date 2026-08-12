@@ -36,7 +36,7 @@ of those nine, G31, was in band one and still has no Observed-red line** — not
 for want of trying: four plants were run and **none of them turned the gate
 red**, which is the finding rather than a gap in it. **Three more gained one from
 a later band** — G30 in band three, G12 and G34 in band four, each planted for
-the first time — leaving five: G5, G15, G32, G33 and G31.
+the first time — leaving **six**: G5, G15, G31, G32, G33 and G35.
 
 **Dispositions (`gated` / `repaired` / `accepted` / `declined`) are filled in for
 the eight rank-1 rows, the four rank-3 rows and the five unranked rows** — the
@@ -878,6 +878,15 @@ Page errors: (0 , Op.createRequire) is not a function"* — and it runs in CI in
 the same required `gates` check, after `pnpm build`. So the invariant is
 defended; it is not defended by this gate. The docblock's own failure claim
 (*"no build error… the shelf silently never boots"*) reproduced exactly, twice.
+
+⚠️ **The backstop is narrower than that reads, and the qualification is the
+row's, not the suite's** — G25's residue, in the same shape. Both plants landed
+in files the client bundle actually pulls in (`boot.ts`, `Shelf.astro`), which is
+why `smoke:render` saw them. **A relative value import in a site `.ts` that the
+bundle never reaches** — a module only a spec imports — would leave the bundle
+clean and `smoke:render` green, and G6 is blind to it either way. Not planted, so
+recorded as untested rather than claimed: *"CI catches this"* holds for the two
+routes demonstrated and is not established in general.
 
 ⚠️ **What that red does not say is the reason this is still `repaired` and not
 `accepted`.** `smoke:render` reports a symptom and a minified page error after a
