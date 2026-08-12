@@ -1,6 +1,6 @@
 # Gate register
 
-**Triage for 27 rows; the deep pass has run on the other 8.** The population was
+**Triage for 15 rows; the deep pass has run on the other 20.** The population was
 commissioned by [#126](https://github.com/mephistopheles4/stacks/issues/126),
 running the shape [#113](https://github.com/mephistopheles4/stacks/issues/113)
 fixed. It puts the same five questions to every numbered row in
@@ -10,11 +10,16 @@ the shape of the exposure.
 ⚠️ **Read the two layers separately, because they carry different weight.** The
 **category bullets and Rank line** in every entry are the triage pass:
 **suspicion, not proof**, a nomination for the deep pass rather than a finding.
-The **Deep pass** block, present on the eight rank-1 rows only, is
-[#128](https://github.com/mephistopheles4/stacks/issues/128)'s band one: defects
+The **Deep pass** block, present on all twenty ranked rows, is
+[#128](https://github.com/mephistopheles4/stacks/issues/128)'s band one,
+[#132](https://github.com/mephistopheles4/stacks/issues/132)'s band two and
+[#133](https://github.com/mephistopheles4/stacks/issues/133)'s band three: defects
 actually planted, gates actually run, dispositions filled in. Where the two
 disagree, the Deep pass block is the evidence and the triage line is the guess it
-replaced — and on two rows they do disagree. See **Band one**, below.
+replaced — and **they disagree in every band**: three rows in band one, four in
+band two, two in band three. ⚠️ Band one's own section counts *results* rather
+than rows and says "two"; both are right about different things. See **Band
+one**, **Band two** and **Band three**, below.
 
 **The triage pass planted no defect and ran no mutation.** Where an
 Observed-red line is present, it is one of two things, both already in
@@ -25,16 +30,20 @@ surfaced without planting anything**, found on arrival or by ordinary use
 rather than by an adversarial test (G4 "was red on arrival"; G14's `covers`
 false-negative "found by the next command added"; G26's corpus defect found by
 noticing a real book's recorded refusal contradicted what the provider held).
-**Nine rows carry no Observed-red line at all** — G5, G12, G15, G30, G31, G32,
+**Nine rows carried no Observed-red line at all** — G5, G12, G15, G30, G31, G32,
 G33, G34, G35 — because `docs/gates.md` records no elaboration for them beyond
 their table row, or, for G15, no mutation was run against the row itself. ⚠️ **One
 of those nine, G31, was in band one and still has no Observed-red line** — not
 for want of trying: four plants were run and **none of them turned the gate
-red**, which is the finding rather than a gap in it.
+red**, which is the finding rather than a gap in it. **Band two supplied one for
+G15 and one for G35**, and **band three one for G30** — its first ever — so
+**six remain**: G5, G12, G31, G32, G33, G34. All three of those new lines sit in
+a Deep pass block, not in the triage line above it, which is the distinction this
+whole paragraph is about.
 
 **Dispositions (`gated` / `repaired` / `accepted` / `declined`) are filled in for
-the eight rank-1 rows and for nothing else** — the remaining 27 await their
-band.
+the twenty ranked rows and for nothing else** — the remaining 15 await their
+band, **5 of them flagged**: G6, G12, G18, G24, G34.
 
 **Scope: the 35 numbered rows `docs/gates.md` holds today** — G1–G35 across its
 Invariants, Contract seams and Defect gates tables. The **CI-only gates** table
@@ -123,16 +132,22 @@ orders it; it does not define it.
 | --- | --- | --- |
 | G17, G20, G21, G22, G23, G25, G26, G31 | G2, G7, G14, G15, G19, G28, G29, G35 | G1, G10, G13, G30 |
 
-All 20 are flagged, with no exception to state — Rule 2 removed the tier-4
-column that used to require one. **G16** was ranked 4 and clean on all five
-categories, so it is not deep-pass membership at all; **G18** was ranked 4 and
-flagged for decay, so it keeps the flag and loses the rank.
+**19 of the 20 are flagged.** Rule 2 removed the tier-4 column that used to
+require an exception; band two produced the first one of a different kind.
+**G16** was ranked 4 and clean on all five categories, so it is not deep-pass
+membership at all; **G18** was ranked 4 and flagged for decay, so it keeps the
+flag and loses the rank. ⚠️ **G7 keeps rank 2 and is now clean on all five** —
+it earned its band, was deep-passed, and both its non-clean verdicts were
+corrected by four plants that could not reach a green suite. That is a state the
+file has not held before, and it is not G16's: G16 was never demonstrated
+against. **A rank is a record of what was suspected, not of what was found**, so
+it stays.
 
 **5 rows carry a flag with no rank** — exposed under weakening, routing around,
 or decay outside the ranked shapes: **G6, G12, G18, G24, G34**.
 
-**10 rows found nothing on all five categories**: G3, G4, G5, G8, G9, G11,
-G16, G27, G32, G33.
+**11 rows found nothing on all five categories**: G3, G4, G5, **G7**, G8, G9,
+G11, G16, G27, G32, G33.
 
 **A correction from the previous revision of this file.** 23 category lines
 across 14 rows originally read `not discussed` or `not separately
@@ -150,11 +165,20 @@ flagged, clean and not-reached totals below are unchanged, because every
 resolved line sat inside a row that was already counted correctly on the
 other side of the flagged/clean line.
 
-Flagged (20 ranked + 5 unranked) and clean (10) partition all 35 rows.
+Flagged (19 ranked + 5 unranked) and clean (11) partition all 35 rows.
 
-**Total flagged: 25 of 35.**
+**Total flagged: 24 of 35.**
 
-**A second correction, this revision.** The previous round left category
+⚠️ **This was 25 until band two, and the row that moved is the point of having a
+deep pass at all.** G7's two exposures were both corrected to `clean` after four
+plants failed to reach a green suite — triage read `docs/gates.md`'s live CodeQL
+residual and nominated it, which was the right call on the evidence triage had,
+and the demonstration disagreed. **Recounted mechanically over the 35 sections,
+not adjusted by one**: 11 rows now carry five clean verdicts.
+
+**A second correction, made in the round that populated this file** — before
+either band ran; *"this revision"* is what it said until band two made that read
+as band two's. The previous round left category
 bullets stating a *reason* with no *verdict* word in front of it — `related to
 the above`, `designed against, explicitly`, `asserted outside gates/
 entirely`, and similar — the same defect one level down from the 23-line
@@ -261,7 +285,9 @@ band's two halves, in the same spirit as G20's unobserved exit code above. The
 nominations cost roughly double) is what later bands should carry; the minutes
 are an order of magnitude, not a measurement.
 
-**17 flagged rows remain**: rank 2 (8), rank 3 (4), and the unranked band (5).
+**17 flagged rows remained** when this band closed: rank 2 (8), rank 3 (4), and
+the unranked band (5). Bands two and three have since taken twelve of them;
+**5 remain**, all unranked.
 
 **Recounted mechanically from the sections as they stand**, not carried forward
 from the prose above — the discipline `aaf7347` established after the summary
@@ -280,6 +306,94 @@ Rank: none 15
 Twenty ranked, fifteen unranked, thirty-five rows. **`Rank: 4` is zero by
 construction now** — G16 and G18 were its only members and both moved when Rule 2
 retired the tier.
+
+---
+
+## Band two — the deep pass has run on rank 2
+
+**Commissioned by [#132](https://github.com/mephistopheles4/stacks/issues/132).**
+The eight rows triage flagged under *text over structure* — a gate matching prose
+where it should match structure. Same shape as band one, one tier down: plant a
+defect the file could actually have, watch what the gate does, and record what
+was run rather than what `docs/gates.md` already claimed.
+
+| Row | Disposition | In one line |
+| --- | --- | --- |
+| G2 `public-build` | `accepted` | Real body prose ships into `library.json` while the canary check reports clean. |
+| G7 `astro-no-logic` | *verdict corrected* | Four plants, four reds. The approximation is real; a silent pass is not reachable. |
+| G14 `commands` | `repaired` | The anchored regex holds — and the extractor still cannot see `.alias()` or a workspace script. |
+| G15 `cover-budget` | `accepted` | 23.0 MB of spine textures, measured, outside every budget the gate counts. |
+| G19 `constitution-scoreboard` | `repaired`; second finding `gated` | Three holes re-plant red. The status cell is read **positionally**. |
+| G28 `no-board-collisions` | `repaired` | Four plants, both directions, each fails the same two of twelve. |
+| G29 `doc-links` | `gated` | One stray backtick switches the gate off for the rest of the line. |
+| G35 `enhanced-card` | `repaired` | The widened checks catch what the single assertion could not. |
+
+**Four rows contradict the triage above** — twice as many as band one, which is
+what a band of *"the gate matches prose"* rows should be expected to produce.
+**G7's exposure did not survive** four attempts to reach a green suite;
+**G14's routing-around nomination did**, twice over, and is now demonstrated
+rather than suspected; **G19 was recorded as historical and fixed** and carries a
+live defect nobody had found; and **G29's self-audit was credited as *measured,
+not assumed*** while measuring the corpus rather than the mechanism.
+
+### `gated` gets a meaning — and two bands reached the same one, separately
+
+⚠️ **Band one used three of the four dispositions and never `gated`.** Band two
+reached two findings that fit none of the other three: real, unclosed, nobody has
+accepted them, nothing was repaired, and the remedy is a check somebody has to
+write. Both of its runners reached for `gated` independently and neither could
+say what it meant.
+
+**The reading adopted here: `gated` means the finding is real and unclosed, and
+its remedy is a named check for the implementation session to build.** It is the
+disposition a map that *decides* can reach, where `repaired` and `accepted` both
+describe something that already happened. The alternative reading — *"already
+caught by some other gate"* — was rejected: a finding caught by an existing gate
+is not a finding, and would have its verdict corrected instead.
+
+⚠️ **This section read *"because this band is the first to need one"* until band
+three merged first, and that sentence was false when it was written rather than
+made false afterwards.** Band three minted `gated` in parallel, for G30, and
+arrived at the same reading by a different route — *"the remedy is a gate change,
+it is named here, and it is owed to the spec"*, chosen by eliminating the other
+three exactly as band two eliminated them. **Two sessions with no contact
+defining one disputed word the same way is better evidence for the reading than
+either band's argument for it**, and it is worth more than the tidier claim it
+replaced. It is also the [#124](https://github.com/mephistopheles4/stacks/issues/124)
+→ [#118](https://github.com/mephistopheles4/stacks/issues/118) G36 collision
+again — two bands allocating one shared thing from a map that serialises nothing
+— with the difference that a word, unlike a row number, can be allocated twice
+without either allocation being wrong.
+
+⚠️ **Under this reading band one's G20 residual is a `gated` and is recorded with
+no disposition at all** — the commented-out `process.exit(1)` that leaves
+`pnpm gate:public` a printer that cannot fail, remedy named, nothing decided.
+Left alone here rather than edited, because it is another band's row; noted so
+the gap is visible from this side.
+
+### Cost — the model from band one held, and the totals did not
+
+**Eight rows, ~170 minutes, ~36 vitest invocations plus 3 `pnpm smoke:render`
+runs.** Band one was ~63 minutes over the same number of rows. ⚠️ **The
+difference is not that band two was slower per plant; it is that band two
+planted more, on instruction, and hit live findings that then had to be
+isolated.** Band one's own model predicted this exactly — *"a documented exposure
+needs about two plants; an unconfirmed nomination needs about four"* — and band
+two's expensive rows are the ones where the plant came back green and the finding
+had to be built up from there: G2 needed a throwaway single-book vault before the
+exposure separated from the fixture's own coincidence, and G15 needed the real
+`toRows` → `spineCanvasWidth` → `decodedTextureBytes` path run outside the suite
+to get a number at all.
+
+⚠️ **#132 was right that G35 is the expensive row and wrong about the size.**
+`pnpm smoke:render` costs **20.3–20.6s wall per run**, three runs, ~61s of
+puppeteer in total — against a 6.5s suite that is itself not a cost centre. The
+row cost ~35 minutes and almost none of it was puppeteer. **Cost in this deep
+pass is reading and isolation time; it has now been mispredicted twice, in both
+directions, by reasoning about what a spec *runs* instead of what a finding
+*takes*.**
+
+**Both figures are agent-reported, not instrumented**, on band one's own caveat.
 
 ---
 
@@ -415,6 +529,14 @@ is edited once rather than four times by four sessions writing it concurrently.
 
 **13 flagged rows remain**: rank 2 (8) and the unranked band (5).
 
+⚠️ **Marked, not corrected: 5 remain.** That line was true when this band closed
+and false by the time the band ran above it was assembled into the same file —
+band two and band three were open at once, each writing this file, and band three
+merged first. **Nothing in wayfinding could have caught it**, which is the G36
+lesson a third time; what catches it is the Summary, recounted mechanically over
+the 35 sections after both landed. The count band three's own reader needs is
+there, not here.
+
 ---
 
 ## Invariants → gates
@@ -526,6 +648,86 @@ same; `library.ts` added to `ALLOWED` fails the stale-entry check. The
 (orphan covers); the relative `og:image` restored to reproduce rule 5's defect.
 
 **Rank:** 2 (text over structure).
+
+**Deep pass (2026-08-12, band two) — disposition: `accepted`.**
+
+`docs/gates.md` already says the canary rule is *"still a text match by
+construction"*. This pass turned that sentence into a demonstration, and it took
+three plants, because the first two were defeated by things nobody was claiming
+credit for.
+
+An `excerpt` field added to `BookRecord` and populated from the note body — a
+plausible *"preview snippet"* feature — **left the gate 12 of 12 green**, because
+`toLibraryBook` in `packages/core/src/library.ts` enumerates its fields and
+silently dropped it. That is a real structural guard, and it is not this gate.
+Extending the plant through `toLibraryBook` so the field actually reaches
+`library.json` failed 1 of 12 — but only because **8 of the 12 fixture notes carry
+the literal canary as their first body line**, so the check fired on a coincidence
+of the corpus rather than on the property. Isolating it settles the question: a
+one-book vault whose body is real reading prose, taken verbatim from an existing
+fixture note that has no canary in it, published with the same plant in place,
+**ships that prose into `library.json` while `json.includes(NOTE_BODY_CANARY)` is
+`false`**. G2 reports clean over a build carrying a note body.
+
+⚠️ **The interaction with G30 is worth carrying forward, and it is not what the
+first reading of it suggests.** `gates/library-seam.test.ts` runs its three checks
+over `Object.keys(FULL)` — **a hand-written record literal, not the `BookRecord`
+type** — and `FULL: BookRecord` type-checks while missing any *optional* field,
+which is nearly every field the contract has. So a body-derived `excerpt?: string`
+added to the type and to `toLibraryBook` and **not** added to `FULL` is invisible
+to G30 in both directions at once: no build G30 inspects contains it, so neither
+the carries-every-field check nor the key-trace has anything to say about it. And
+if somebody *does* add it to `FULL`, as that const's own docblock urges, G30 then
+**requires it to reach `library.json`** unless it is named in `NOT_PUBLIC` with a
+sentence.
+
+Either way, what stands between a body-derived field and the published artifact is
+a hand-maintained literal and whoever is reviewing — not a gate. Flagged for
+[band three](https://github.com/mephistopheles4/stacks/issues/133), which owns
+G30; not edited there, and **not a defect in G30**, whose direction is the right
+one for the seam it guards.
+
+⚠️ **This paragraph said something stronger and wrong until G30's source was
+read** — *"G30 requires it to ship"*, asserted from the gate's docblock rather
+than from `Object.keys(FULL)`. Left recorded rather than quietly fixed: a claim
+about a gate, written from the gate's prose, inside the register of gates whose
+prose exceeds their reach.
+
+⚠️ **Band three reached the same mechanism from the opposite side, in parallel,
+and its verdict is the one to read.** Its G30 entry demonstrates that **a new
+field wired end-to-end through the frontmatter contract never reaches
+`library.json` at all, 636 of 636 green** — the *under*-shipping failure, where
+this row worried about over-shipping. Both are `Object.keys(FULL)` being a hand
+list: it cannot notice a field that was never added to it, in either direction.
+**Two bands, two opposite fears, one blind spot** — which is a better argument
+for reading the gate's source than either finding alone. G30's disposition is
+band three's `gated`; nothing here overrides it.
+
+**`accepted` rather than `gated`** because the limit is already recorded, four of
+the five gaps it names are closed, and reaching the exposure needs a deliberate
+multi-file feature that reads note bodies — invariant 2's *"nothing below the
+frontmatter block is parsed"* has to fall first. The remedy below is available,
+not adopted.
+
+**Named remedy (not built):** a differential check — build one note twice with
+different randomised, non-canary bodies and assert `library.json` is byte-identical
+— which tests the property (no field is sensitive to body content) instead of a
+string.
+
+**Observed-red (this pass):** the isolated one-book vault is the demonstration and
+⚠️ **it is not a vitest run** — a standalone probe driving `publish()` directly.
+The in-suite runs were 12 of 12 green with the field dropped, and 11 of 12 with it
+shipping, that single failure caused by fixture coincidence rather than by the
+plant.
+
+**Other categories:** Weakening, Routing around, Vacuous green, Decay — all
+`clean` in triage, **open**, not re-verified.
+
+⚠️ **Not observed:** whether `insertBodySection`'s `## About` write path could
+become a read path — the risk `CLAUDE.md` names by name. This pass added no
+evidence either way.
+
+**Cost:** ~18 min, 2 file-scoped vitest runs and 2 standalone probes.
 
 ### G3 — `bad-note`
 
@@ -677,13 +879,15 @@ PNG copied into `fixtures/vault/Library/covers/`, and a staged `.svg` and
   the Commands section, so a new `covers` command passed as documented purely
   because `status`'s description reads "covers still missing." Found by the
   next command added, not by the gate itself. Now anchored to line start.
-- **Routing around** — nominated, unconfirmed. Read directly in
+- **Routing around** — **exposed**, ⚠️ *upgraded from `nominated, unconfirmed`
+  by band two, which demonstrated both halves.* Read directly in
   `gates/commands.test.ts`: `cliCommands()` extracts subcommands with a single
   regex (`.command('name')`) against `packages/cli/src/index.ts`, and
   `packageScripts()` reads only the root `package.json`. A command registered
   outside that literal call shape, or a script living in a workspace
   package's own `package.json` rather than the root, would not be swept.
-  Not corroborated by `docs/gates.md`; this triage's own reading of the spec.
+  Not corroborated by `docs/gates.md`; this triage's own reading of the spec —
+  and both are live, see the Deep pass block.
 - **Vacuous green** — clean. The spec's first test (`expectFound` on both
   extracted lists, plus a length floor on the Commands section) exists
   specifically to catch a regex that stops matching and would otherwise let
@@ -700,6 +904,52 @@ directly; `docs/gates.md` carries no prose on either.
 
 **Rank:** 2 (text over structure) — this row and G19, G22 are the three places
 `docs/gates.md` logs "a gate that matches prose matches anything."
+
+**Deep pass (2026-08-12, band two) — disposition: `repaired`, and the row's
+*other* nomination is the live one.**
+
+The historical defect re-plants cleanly. Removing the `covers` line from
+`CLAUDE.md`'s Commands block, leaving `status`'s description with the word
+*"covers"* in it, fails `documents every CLI subcommand` by name under today's
+anchored regex — 4 of 5. Reverting **the gate** to the historical bare `\bname\b`
+form with `CLAUDE.md` still broken passes **5 of 5**. That is the original false
+negative reproduced on the current tree, and it converts the claimed repair into
+an observed one: the anchor is what holds, and it holds.
+
+⚠️ **The routing-around nomination was confirmed twice, and one half needed no
+plant at all.** Adding `.alias('stats')` to the `status` command — a real,
+commander-registered subcommand that would run — leaves the gate **5 of 5 green**,
+because `cliCommands()` matches only `.command('name')`. And
+`packages/site/package.json` **already defines a `preview` script that `CLAUDE.md`
+does not document**, invisible today because `packageScripts()` reads the root
+manifest only. The Commands section's own claim — *"both lists below, in both
+directions"* — is true of the lists it builds and not of the repo.
+
+⚠️ **A third shape turned up by accident, and it is a false *positive*.** A plant
+whose code comment contained the literal text `.command('name')` was extracted as
+a phantom command called `name` and failed the gate loudly. `cliCommands()` does
+not blank comments before matching. Harmless in the direction it fires — it
+cannot hide a command — but it is the same text-over-structure mechanism running
+the other way.
+
+**Named remedy (not built):** read commander's own registered-command list rather
+than regexing the source, or at minimum sweep `.alias(` alongside `.command(`;
+and sweep every workspace `package.json`, or write down why only the root counts.
+
+**Observed-red (this pass):** `covers` reported missing, 4 of 5, under the current
+anchored regex; the same broken `CLAUDE.md` passes 5 of 5 under the historical
+regex. The alias plant passes 5 of 5 with a real undocumented command present.
+
+**Other categories:** Weakening, Vacuous green, Decay — `clean` in triage,
+**open**, not re-verified. Routing around — **demonstrated**, not dispositioned:
+it is not this row's rank-2 category, and per Rule 1 a row leaves its band with
+the other verdicts open rather than closed by the visit.
+
+⚠️ **Not observed:** whether commander exposes a runtime `program.commands` list
+`cliCommands()` could read — the natural shape of the remedy above, not
+prototyped.
+
+**Cost:** ~25 min, 6 vitest invocations including one failed sub-attempt.
 
 ---
 
@@ -734,15 +984,20 @@ of the four ranked shapes).
 **Date:** 2026-08-11
 
 - **Weakening** — clean.
-- **Satisfying the letter** — exposed, current and self-acknowledged by the
-  repo's own CodeQL triage: `js/bad-tag-filter` fired on `SCRIPT_BLOCK` in this
-  spec, flagging the regex as approximate. `docs/gates.md` records that the
-  miss it warns about already throws (line 135) and dismisses the finding as
-  "used-in-tests" rather than closing the underlying approximation — a live,
-  named residual, not a historical one.
-- **Routing around** — exposed; the same limit, from the other side: "Fixing it
-  properly means an HTML parser dependency... to protect against a first-party
-  commit," explicitly declined.
+- **Satisfying the letter** — **clean**, ⚠️ *corrected from `exposed` by band
+  two, which could not reach a green suite in four attempts.* The nomination
+  read: exposed, current and self-acknowledged by the repo's own CodeQL triage
+  — `js/bad-tag-filter` fired on `SCRIPT_BLOCK` in this spec, flagging the
+  regex as approximate; `docs/gates.md` records that the miss it warns about
+  already throws (line 135) and dismisses the finding as "used-in-tests"
+  rather than closing the underlying approximation. **The approximation is
+  real and the exposure is not**: every truncation it admits leaves debris no
+  bootstrap-shape pattern accepts. See the Deep pass block, including the
+  reason that defence is thinner than a `clean` verdict makes it sound.
+- **Routing around** — **clean**, ⚠️ *corrected with the above, being the same
+  limit from the other side*: "Fixing it properly means an HTML parser
+  dependency... to protect against a first-party commit," explicitly declined.
+  The same four plants answer both.
 - **Vacuous green** — clean; the miss throws rather than passing silently.
 - **Decay** — clean.
 
@@ -753,6 +1008,52 @@ the G1/G3/G6/G7 red-capable paragraph.
 
 **Rank:** 2 (text over structure) — the CodeQL finding is squarely a
 regex-approximation exposure, not fully closed.
+
+**Deep pass (2026-08-12, band two) — *verdict corrected*, no disposition.**
+
+Four attempts to get banned or unscanned logic past `SCRIPT_BLOCK` into a green
+suite, in `packages/site/src/components/Shelf.astro`, the repo's only `.astro`
+file with a script block. **All four went red.** An HTML comment containing a
+literal `<script>…</script>` — which `stripComments` never touches, since it
+handles `//` and `/* */` only — was matched *inside the comment* and failed
+`finds at least one import in each script block`. A `</script>` sequence smuggled
+inside a string literal, placed before a banned `function` declaration, truncated
+the capture exactly as CodeQL warns. A malformed opening tag, `<script
+data-note="a>b">`, stopped `[^>]*` early. Nothing produced a pass.
+
+⚠️ **The second plant is why this row leaves with a correction and not with a
+clean bill of health.** It **did** defeat the check it was aimed at: the `function`
+declaration fell outside the truncated capture and **the banned-token scan never
+saw it**. What went red was `allows only bootstrap statements`, firing on the
+leftover fragment `HREF?.setAttribute('data-x', '`. The gate caught a real defect
+**with the wrong assertion**, as a side effect of the truncation rather than by
+inspecting the smuggled code. That holds for a structural reason worth writing
+down — the capture ends *at* the literal `</script>`, which by construction sits
+inside an unclosed string or call, so the tail can never satisfy the end-anchored
+`LOOKUP`/`GUARD`/`CALL`/`BRACE` patterns — but it is a property of where the
+debris lands, not of anything the gate set out to check. **A future edit that
+relaxes the bootstrap-shape check to accept a partial line would remove a defence
+nobody knows is load-bearing.** Recorded as an observation, not a nomination:
+nothing here demonstrated a pass, and a band that could not find one does not get
+to hand a suspicion to the next band.
+
+**Named remedy:** none — no live exposure. `docs/gates.md`'s standing answer (a
+real HTML tokenizer, declined as disproportionate for a first-party `.astro`
+file) survives independent adversarial testing, which is more than it had before.
+
+**Observed-red (this pass):** four plants → 4 of 5, 4 of 5, [reasoning only, no
+run], 3 of 5. None produced a green suite with banned or unscanned logic present.
+
+**Other categories:** Weakening, Vacuous green, Decay — `clean` in triage,
+**open**, not re-verified.
+
+⚠️ **Not observed:** a **multi-`<script>`-block** file was never tried — the repo
+has one block in one component today, so testing it means inventing a second
+file, and a two-block shape is structurally different from everything above. Nor
+was an unquoted raw `>` inside an attribute value, which real tokenizers and this
+regex treat differently. Neither is ruled out.
+
+**Cost:** ~20 min, 4 vitest invocations plus one reasoning-only step.
 
 ### G8 — `frontmatter-contract`
 
@@ -827,6 +1128,59 @@ and the `## Invariants` heading renamed.
 **Rank:** 2 (text over structure) — this is the second of the three rows
 `docs/gates.md` logs "a gate that matches prose matches anything" against.
 
+**Deep pass (2026-08-12, band two) — disposition: `repaired` for the three
+documented holes; a fourth, live, undocumented one is `gated`.**
+
+All three historical holes re-plant red against the current tree, each failing
+exactly 1 of 14 and moving nothing else. Citation scoping: `invariant 4` moved
+out of G1's **Source** cell into its **Gate** cell — the words still in the row,
+just not where they count — fails `cites every numbered invariant in a Source
+cell`, reporting 4 uncited. Scored-in-prose: `gates/adapter-boundary.test.ts`
+dropped from G1's row and added to a paragraph fails `scores every gate in gates/
+in a row, not merely in prose`, naming it. Directory prefix:
+`covers/cover-path.test.ts` — the real historical path, outside `gates/`,
+`packages/` and `scripts/` — fails `names no spec that has been moved or deleted`,
+so the filesystem check that replaced the allowlist does see beyond the three
+original roots.
+
+⚠️ **The fourth plant is the finding, it is live, and it is in the gate that
+scores the scoreboard.** `gives every row a status from its own key` reads the
+status as **`row.cells.at(-1)`** — positionally — while every other check in the
+file resolves its column by name through `columnIndex()`, the helper whose own
+docblock exists because *"the Source column was renamed"* is a different failure
+from *"the citation is missing"*. Append a trailing **Notes** column to
+`Invariants → gates`, set G1's real **Status** to `❌` — a symbol outside the key
+— and put `✅` in the new column: the test still fails on the other rows, **but
+G1 drops out of the failure list**. The one row genuinely carrying an invalid
+status is silently exonerated, because `.at(-1)` now reads the Notes cell.
+
+**It is a coincidence, not a property, that this works today.** All three tables
+end in `Status`; they already carry **6, 6 and 5 columns**, so their shapes differ
+and *"a column was added"* is plainly something this file could have. The gate
+holding this repo's constitution to its scoreboard finds the status by counting
+from the end.
+
+**Named remedy (not built):** read the status through `columnIndex(table,
+'Status')`, as the rest of the file already does. One line, and the last place a
+positional read belongs.
+
+**Observed-red (this pass):** each of the three re-planted holes fails exactly
+1 of 14 in `gates/constitution-scoreboard.test.ts`; the trailing-column plant
+fails the status check while **removing from its `wrong` array the one row whose
+status is actually invalid** — confirmed by G1's disappearance between the plant
+without the bad status and the plant with it.
+
+**Other categories:** Weakening, Vacuous green, Decay — `clean` in triage,
+**open**, not re-verified. Routing around — historical, fixed; demonstrated by
+the directory-prefix re-plant, which is the same hole from the other side.
+
+⚠️ **Not observed:** the pre-fix gate code was never run beside the plants — it
+is not in the tree. *"The old code would have passed"* is read off the current
+logic, not watched. What was watched is that today's code catches the shape each
+hole describes, which is what re-planting asks for.
+
+**Cost:** ~18 min, 6 file-scoped invocations plus one full suite.
+
 ### G29 — `doc-links`
 
 **Gate:** [`gates/doc-links.test.ts`](../gates/doc-links.test.ts)
@@ -861,6 +1215,50 @@ inline-code false positive, pre-fix.
 **Rank:** 2 (text over structure) — the unaddressed link-form gap is a live
 routing-around risk, but the strongest documented, mechanism-level shape is the
 regex's text-matching limit.
+
+**Deep pass (2026-08-12, band two) — disposition: `gated`. The self-audit
+measured the corpus, not the mechanism.**
+
+The triage entry credits the code-blanking pass as *measured, not assumed* — *"the
+only links it hides are the `x.md` syntax examples"*. That is true of the files as
+they stand and says nothing about what the pass **can** hide. Planted in
+`docs/gates.md`: one line carrying a stray opening backtick before
+`--legacy-mode`, a genuinely broken link to `docs/nonexistent-file-xyz.md` after
+it, and an unrelated closing backtick later on the same line. **3 of 3 green — the
+broken link is invisible**, because the inline-code regex ``` (`+)[^\n]*?\1 ```
+pairs the two backticks and blanks everything between them. The identical line
+with the backticks removed fails `points every link at a file that exists`, naming
+`docs/gates.md:174 → docs/nonexistent-file-xyz.md`. Same link, same file; only the
+accidental code span differs.
+
+⚠️ **This is not the routing-around gap the entry already records.** That one is
+about link *forms nobody writes here* — reference-style definitions, `<a href>`.
+This is an ordinary typo, an unclosed backtick, switching the gate off for the
+rest of the line, in a repo whose documents are dense with backticks and links,
+and where G29 is the gate holding every other document's links to the tree. It
+also lands inside this map's own working conditions: [#132](https://github.com/mephistopheles4/stacks/issues/132)
+and [#128](https://github.com/mephistopheles4/stacks/issues/128) both warn that a
+path written from memory is a red build — and a path written from memory beside a
+stray backtick is a green one.
+
+**Named remedy (not built):** either refuse to blank on an odd backtick count per
+line, or narrow the inline-code blank to spans that look like code rather than to
+any two backtick runs sharing a line. Both are cheap; the second is closer to what
+the pass was for.
+
+**Observed-red (this pass):** the same broken link, wrapped in an accidental
+inline-code span versus not — 3 of 3 green (hidden) against 1 of 3 red (caught, by
+file and line).
+
+**Other categories:** Weakening and Vacuous green — `clean` in triage, **open**.
+Routing around — exposed and current per the entry; read in the code and confirmed
+by reading only, **open**. Decay — exposed and self-corrected per the entry,
+**open**.
+
+⚠️ **Not observed:** the fenced-block half of the blanking pass was never planted
+against; only the inline-span half was.
+
+**Cost:** ~10 min, 4 invocations.
 
 ---
 
@@ -1169,6 +1567,58 @@ directly; `docs/gates.md` carries nothing on it.
 **Rank:** 2 (text over structure) — beats the tier-4 (outside-`gates/`)
 classification it would otherwise carry.
 
+**Deep pass (2026-08-12, band two) — disposition: `repaired`; the decay
+nomination survives, unconfirmed.**
+
+The widened checks catch what the single assertion could not. Restoring the
+Escape-closes-both defect verbatim — dropping `if (coverViewer.isOpen()) return;`
+from `boot.ts` — and removing `node.title` from icon-only links in `card.ts`, both
+live at once, fails `pnpm smoke:render` with **four named lines**: the Escape-scope
+failure once, and *"a card link has no accessible name"* three times, once per
+icon-only link on the clicked book. A third plant, suppressing the status word for
+`read` books, fails **3 of 21** in `card.test.ts`.
+
+**The decay nomination is neither cleared nor dispositioned.**
+`scripts/smoke-render.ts` cites `§11.1` through `§11.7` as the map from what it
+checks to what `docs/spec/enhanced-card.md` §11 requires. All five citations were
+walked item by item against that spec's eight-item list and **all resolve
+correctly today**. Nothing enforces they still will — G29 checks Markdown link
+fragments, not bare `§N` prose — so the verdict stays *nominated, unconfirmed*:
+there is drift to be had and none yet, which is exactly what that verdict is for.
+
+⚠️ **The row's own demonstration is fixture-blind, and it is band one's G20
+argument arriving here as a gap rather than as a repair.** The browser-side check
+`card.reading.length === 0` never fired, because `scripts/make-50-book-fixture.ts`
+gives **every** `status: read` book a date — so no book in the fixture
+`smoke:render` builds against can produce an empty reading line. The defect was
+watched failing at the unit level instead. The real-vault shape this row's history
+cites, books with no dates, does not exist in the corpus the gate runs on. *A
+defect the gate plants must be a defect the file could actually have* has a
+sibling: **a fixture must be able to exhibit the defect the check is for.**
+
+**Named remedy (not built, for the decay nomination):** parse the `§\d+\.\d+`
+references out of `scripts/smoke-render.ts`'s comments and the numbered items out
+of `docs/spec/enhanced-card.md`'s acceptance list, and diff them. No puppeteer
+needed; it sits naturally beside G29.
+
+**Observed-red (this pass):** `pnpm smoke:render` exits non-zero with four named
+failures under two simultaneous plants and exits `OK` after both reverts; the
+third plant fails 3 of 21 in `card.test.ts`.
+
+**Other categories:** Weakening and Routing around — `clean` in triage, **open**.
+Vacuous green — historical, fixed; demonstrated together with satisfying-the-letter
+by the same two plants.
+
+⚠️ **Not observed:** the browser-side reading-line check, for the fixture reason
+above — no contrived fixture was built to make it fire.
+
+**Cost, and this is the band's expensive row as #132 predicted:** ~35 min, of
+which **three `pnpm smoke:render` runs at 20.3–20.6s wall each, ~61s of puppeteer
+in total.** ⚠️ **The prediction was right about the row and wrong about the
+size** — 20s a plant is twenty times the 6.5s suite and still nowhere near a cost
+centre. What the row actually cost was reading time, the same as every other row
+in the band.
+
 ---
 
 ## Defect gates
@@ -1337,6 +1787,62 @@ crash was found by a user on a phone, not by the gate.
 
 **Rank:** 2 (text over structure) — the scope-mismatch is the strongest,
 most explicitly unresolved instance of this shape in the whole file.
+
+**Deep pass (2026-08-12, band two) — disposition: `accepted`, and the number the
+row is missing now exists.**
+
+The scope mismatch is real and was measured rather than restated. A standalone
+probe drove the **real** code path — `ObsidianAdapter` → `buildLibrary` →
+`toRows` → `spineCanvasWidth` → `decodedTextureBytes`, the same functions the
+shelf itself uses — over both fixture vaults. Per-book spine `CanvasTexture`s
+come to **4.6 MB across the 10-book vault (8 shelved)** and **23.0 MB across the
+50-book fixture (41 shelved)**, against a `TEXTURE_BUDGET_BYTES` of 96.0 MB that
+counts **none of it**. ⚠️ **That independently corroborates `docs/gates.md`'s
+"~22 MB" by a different route** — computed from the placement code rather than
+copied from the file — which is worth more than agreement usually is, because
+this row's whole problem is a number that reads as covering more than it covers.
+Confirmed by inspection: `gates/cover-budget.test.ts` imports `MAX_COVER_EDGE`,
+`TEXTURE_BUDGET_BYTES`, `decodedTextureBytes` and `measureCover`, and **nothing
+in `gates/` imports `spine-texture.ts` at all**. The spine cost is structurally
+invisible to this gate, not merely uncounted.
+
+⚠️ **The weakening exposure is one line and nothing else notices.** Setting
+`TEXTURE_BUDGET_BYTES` to `0` fails 4 of 5 with a real message (*"6 covers decode
+to 2.4 MB of GPU texture, over the 0.0 MB budget"*), so the assertion is genuinely
+exercised and not vacuous. Setting it to 10 GB passes **5 of 5**, with no other
+change — and both constants are referenced **only** inside
+`gates/cover-budget.test.ts`, so the whole 636-test suite has nothing to say about
+raising them. The row's own warning — *"a budget that gets raised whenever it
+fails is a comment"* — is defended by nothing but the reviewer.
+
+**`accepted` rather than `gated`**: the gap is documented at length, and the file
+names an explicit non-gate substitute (`?debug`, `?solo`, manual review on a real
+phone) instead of claiming closure. That is a finding closed by writing a rule
+down, which is `accepted` wearing a closure's clothes rather than a fifth
+disposition.
+
+**Named remedy (not built):** count spine bytes in the same budget as cover bytes
+— `decodedTextureBytes` already exists, and `toRows` + `spineCanvasWidth` supply
+the inputs — so the number covers what a phone actually holds rather than the
+cover half of it. The measurement above is the prototype.
+
+**Observed-red (this pass):** `TEXTURE_BUDGET_BYTES` → `0` fails 4 of 5 naming the
+real total; → 10 GB passes 5 of 5.
+
+**Other categories:** Satisfying the letter — the same scope mismatch as this
+row's rank-2 category, not separately dispositioned. Routing around —
+**demonstrated** by the 23.0 MB measurement, left open as not this row's category.
+Vacuous green — exposed and current in triage, **open**. Decay — `clean` in
+triage, **open**.
+
+⚠️ **Not observed:** `pnpm smoke:render` was never run for this row, so the
+vacuous-green verdict — that a desktop GL context screens what kills a phone —
+gained no evidence here and no cost figure. And 23.0 MB is the **41-book synthetic
+fixture**, not the owner's real library; ~0.56 MB/book should extrapolate, but
+that is an extrapolation.
+
+**Cost:** ~30 min, one `pnpm fixtures:50`, one standalone probe covering both
+vaults, 3 file-scoped vitest runs.
 
 ### G16 — `books-in-case`
 
@@ -1930,3 +2436,40 @@ altogether.
 **Rank:** 2 (text over structure) — the row's own check computing a subtly
 wrong number that still looked plausible is a mechanism-level exposure, ranked
 above the tier-4 (outside-`gates/`) classification it would otherwise carry.
+
+**Deep pass (2026-08-12, band two) — disposition: `repaired`, four ways, in both
+directions.**
+
+Four plants, each independently failing **exactly 2 of 12** in
+`packages/site/src/shelf/placement.test.ts` — `packs a run flush` and `never
+drives one board through another` — and nothing else in the file. One check-side:
+the original defect restored, `centre = height / 2` for a leaning book. Three
+placer-side, in `placement.ts`'s `parallelPushOf`: clamping the push at zero,
+dropping it altogether, and doubling it. The last matters most — it produces an
+**oversized** gap, which is the mirror direction the first version's `gap ≥ 0`
+left entirely unchecked, and the current row catches it with the same assertion
+that catches an undersized one.
+
+⚠️ **The re-plant corrects the row's own moral.** `docs/gates.md` reads the repair
+as *"a check that disagrees with the code is not automatically the one that is
+right"* — true, and not what closes the hole. The restored defect produced a
+discrepancy of **9.1e-7 here, four orders of magnitude below the 0.26mm** the
+row's history describes, and it still went red: the assertion is
+`toBeCloseTo(TOUCHING, 10)`. **What closes this hole is the precision.** At ten
+decimal places a wrong-but-plausible number has nowhere to sit, which is the
+mechanical version of a lesson the file currently records as a judgment call.
+
+**Named remedy:** none. No live exposure.
+
+**Observed-red (this pass):** four plants, one check-side and three placer-side,
+covering both the closing and the opening direction of the historical error; each
+fails the same 2 of 12, and each reverts to 12 of 12.
+
+**Other categories:** Weakening and Decay — `clean` in triage, **open**. Routing
+around and Vacuous green — historical, fixed; both demonstrated above, the
+mirror-direction one by the doubling plant specifically.
+
+⚠️ **Not observed:** `boardGap`'s zero-shared-height branch was not exercised, and
+no non-arithmetic regression (a book skipped from the row entirely) was tried.
+
+**Cost:** ~14 min, 5 file-scoped invocations, all under a second.
