@@ -307,8 +307,8 @@ the side: not the entries, but what the list is a list **of**.
 
 ### Rule: tier 3 names a mechanism, not category 3
 
-#133 says twice that a row leaves this band with its **category-3** verdict
-dispositioned. All four register entries put the allowlist finding under
+[#133](https://github.com/mephistopheles4/stacks/issues/133) says twice that a
+row leaves this band with its **category-3** verdict dispositioned. All four register entries put the allowlist finding under
 **Weakening** — category 1 — and they are right to: widening an exemption is
 *editing the gate*, which is category 1's own text.
 
@@ -389,8 +389,8 @@ adjustment: the three rows carrying documented exposures confirmed in two or
 three plants each, and **G30 — the only row whose exposure was unconfirmed —
 needed four**, which is the ratio band one predicted.
 
-#133 asked this band to spend its slack on more plants rather than on finishing
-early, and it did: **22 plants over four rows, at 6.5 vitest invocations per row
+[#133](https://github.com/mephistopheles4/stacks/issues/133) asked this band to
+spend its slack on more plants rather than on finishing early, and it did: **22 plants over four rows, at 6.5 vitest invocations per row
 against band one's 4.4**. Three of the four rows' sharpest findings came from
 the *extra* plants —
 G10's `.at(-1)`, G13's `.svg`, G30's end-to-end field — none of which the first
