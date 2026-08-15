@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@stacks/core": "workspace:*",
-    "astro": "^7.1.6",
+    "astro": "^7.2.1",
     "three": "^0.185.1"
   },
   "devDependencies": {
