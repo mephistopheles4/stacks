@@ -1,6 +1,6 @@
 # Gate register
 
-**Triage for 15 rows; the deep pass has run on the other 20.** The population was
+**Triage for 10 rows; the deep pass has run on the other 25.** The population was
 commissioned by [#126](https://github.com/mephistopheles4/stacks/issues/126),
 running the shape [#113](https://github.com/mephistopheles4/stacks/issues/113)
 fixed. It puts the same five questions to every numbered row in
@@ -10,16 +10,31 @@ the shape of the exposure.
 ⚠️ **Read the two layers separately, because they carry different weight.** The
 **category bullets and Rank line** in every entry are the triage pass:
 **suspicion, not proof**, a nomination for the deep pass rather than a finding.
-The **Deep pass** block, present on all twenty ranked rows, is
+The **Deep pass** block, present on all twenty ranked rows and on the five
+unranked flagged ones, is
 [#128](https://github.com/mephistopheles4/stacks/issues/128)'s band one,
-[#132](https://github.com/mephistopheles4/stacks/issues/132)'s band two and
-[#133](https://github.com/mephistopheles4/stacks/issues/133)'s band three: defects
+[#132](https://github.com/mephistopheles4/stacks/issues/132)'s band two,
+[#133](https://github.com/mephistopheles4/stacks/issues/133)'s band three and
+[#134](https://github.com/mephistopheles4/stacks/issues/134)'s band four: defects
 actually planted, gates actually run, dispositions filled in. Where the two
 disagree, the Deep pass block is the evidence and the triage line is the guess it
-replaced — and **they disagree in every band**: three rows in band one, four in
-band two, two in band three. ⚠️ Band one's own section counts *results* rather
-than rows and says "two"; both are right about different things. See **Band
-one**, **Band two** and **Band three**, below.
+replaced — and **they disagree in every band, in both directions**: three rows in
+band one, four in band two, two in band three, two in band four. ⚠️ Band one's
+own section counts *results* rather than rows and says "two"; both are right about
+different things. See **Band one**, **Band two**, **Band three** and **Band
+four**, below.
+
+⚠️ **Band four's section landed last and by a different route from the other
+three.** Its pull request ([#136](https://github.com/mephistopheles4/stacks/pull/136))
+was **auto-closed by GitHub** on `2026-08-12T10:47:29Z`, one second after band
+three's [#135](https://github.com/mephistopheles4/stacks/pull/135) merged: #136
+had been retargeted to stack on band three's branch, the repo carries
+`delete_branch_on_merge=true`, and deleting the **base** branch of an open pull
+request closes it. Nobody closed it and nothing announced it, so band four's
+ticket closed recording dispositions its artifact had never delivered — found
+three days later from [#138](https://github.com/mephistopheles4/stacks/issues/138)
+by asking whether the cited commit was an ancestor of `main`. **The work was
+intact the whole time**; only the pull request was gone.
 
 **The triage pass planted no defect and ran no mutation.** Where an
 Observed-red line is present, it is one of two things, both already in
@@ -35,20 +50,29 @@ G33, G34, G35 — because `docs/gates.md` records no elaboration for them beyond
 their table row, or, for G15, no mutation was run against the row itself. ⚠️ **One
 of those nine, G31, was in band one and still has no Observed-red line** — not
 for want of trying: four plants were run and **none of them turned the gate
-red**, which is the finding rather than a gap in it. **Band two supplied one for
-G15 and one for G35**, and **band three one for G30** — its first ever — so
-**six remain**: G5, G12, G31, G32, G33, G34. All three of those new lines sit in
-a Deep pass block, not in the triage line above it, which is the distinction this
-whole paragraph is about.
+red**, which is the finding rather than a gap in it. **Five more gained one from a
+later band** — G15 and G35 in band two, G30 in band three, G12 and G34 in band
+four, each planted for the first time — so **four remain**: G5, G31, G32, G33. All
+five of those new lines sit in a Deep pass block, not in the triage line above it,
+which is the distinction this whole paragraph is about.
 
-**The twenty ranked rows have all been deep-passed, and nothing else has** — the
-remaining 15 await their band, **5 of them flagged**: G6, G12, G18, G24, G34.
+⚠️ **Band four's own correction to this tally said *six*, and it was right about
+the file it could see.** `8b8abab` was written against a register holding bands
+one and three but not band two, which had not yet landed — so G15 and G35 still
+looked unsupplied. **Recounted mechanically over the 35 sections** once all four
+bands were in one file: four. The number is not a compromise between the two
+prose claims; neither was carried forward.
 
-⚠️ **Deep-passed is not the same as dispositioned, and 18 of the 20 carry a
+**Every flagged row has now been deep-passed.** The twenty ranked rows went in
+bands one, two and three; band four took the five flagged-but-unranked ones — G6,
+G12, G18, G24, G34 — so the remaining 10 rows carry triage verdicts only because
+**triage found nothing to flag in them**, not because a band still owes them.
+
+⚠️ **Deep-passed is not the same as dispositioned, and 22 of the 25 carry a
 disposition rather than all of them.** `gated` / `repaired` / `accepted` /
 `declined` presuppose a finding, so a row whose nomination did not survive has its
-**verdict corrected** and is dispositioned by nothing: that is **G21** in band one
-and **G7** in band two. This paragraph claimed all twenty until CodeRabbit caught
+**verdict corrected** and is dispositioned by nothing: that is **G21** in band one,
+**G7** in band two and **G34** in band four. This paragraph claimed all twenty until CodeRabbit caught
 it on [#137](https://github.com/mephistopheles4/stacks/pull/137) — the rule was
 written down in band one, restated in band two, and then contradicted by the
 sentence counting the rows it applies to.
@@ -566,7 +590,119 @@ evidence back into the scoreboard is [#120](https://github.com/mephistopheles4/s
 in the commit that lands the remedies, so the file that scores this repo's rules
 is edited once rather than four times by four sessions writing it concurrently.
 
-**13 flagged rows remain**: rank 2 (8) and the unranked band (5).
+**13 flagged rows remain**: rank 2 (8) and the unranked band (5). ⚠️ **Band four
+landed on top of this section rather than after it** — see below; the count in
+this sentence is the one that was true when this band wrote it, kept because the
+recount belongs to the band that came second.
+
+---
+
+## Band four — the deep pass has run on the five unranked rows
+
+**Commissioned by [#134](https://github.com/mephistopheles4/stacks/issues/134),
+on band one's Rule 3 ordering: the four decay rows first by row number, G6
+last.** Four of the five were discharged by **re-measuring a claim** rather than
+by planting against a gate, which is what a decay flag asks for; G6 needed a
+demonstration designed from scratch, and produced the band's result.
+
+| Row | Disposition | In one line |
+| --- | --- | --- |
+| G12 `shelf-order` | `repaired` | The code repair holds; the gate still quotes the sentence the repair replaced. |
+| G18 `bounded-cover-bytes` | `accepted` (time) + `gated` (membership) | The measurement says *three providers*; there have been four since 2026-08-08. |
+| G24 `repo-root` | `accepted` | The load-bearing claim re-measures true. A second count in the same paragraph was wrong on arrival. |
+| G34 `enrich-convergence` | *verdict corrected* | The property is asserted, not merely commented — and `docs/gates.md`'s own row states it. |
+| G6 `site-core-imports` | `repaired` | **Two routes past the gate, and the suite, and the build. `smoke:render` is the only thing that catches them.** |
+
+⚠️ **G6 in full, because it is what this band exists to produce.** The
+nomination named a re-export chain and a dynamic `import()`. The **dynamic
+import is closed** — planted, red, and closed deliberately by a test whose
+comment names it. The two routes that *do* work were not on the list: a
+**relative path** into `packages/core/` (no `@stacks/core` literal, so the file
+is read and nothing in it is seen) and the **`.astro` `<script>` block**, which
+uses the forbidden statement verbatim in a file type `siteFiles()` does not
+open. Both leave G6 green, the suite at **636 of 636**, `pnpm typecheck` clean
+and `pnpm build` **succeeding** while vite externalizes `sharp` and `node:fs`
+into the browser bundle.
+
+**And the backstop is real, which is the other half of the honesty.** `pnpm
+smoke:render` goes red on both, in the same required check — *"the shelf never
+signalled ready"*. The invariant is defended in CI; it is not defended by the
+gate written for it, and the red a visitor to that failure gets names no rule,
+no file and no line.
+
+### Two results contradict the triage
+
+**G34 cleared** — the strongest-worded decay nomination in the unranked set
+fails on both its legs, and one of them (*"not in `docs/gates.md`'s own row
+text"*) is contradicted by line 110 of that file. **G12 half-cleared**: the
+triage line's *"already repaired"* is true of the behaviour and false of the
+record.
+
+### What re-measurement costs, against band one's model
+
+Band one's model — *~2 min orientation per row, ~2 min per plant; a documented
+exposure needs ~2 plants, an unconfirmed nomination ~4* — was measured on rows
+that get **planted against**. ⚠️ **It does not transfer to a decay row, and the
+direction is the surprise: re-measurement is cheaper than orientation.**
+
+Reading a claim, finding its source and checking it against the tree is `git
+grep` and `git log -S` — seconds each. Three of the four decay rows were settled
+without running a test at all; the tests that were run afterwards existed to fill
+an **observed-red line the row lacked**, which is a separate errand from the
+decay question and the reason G12 and G24 have one now.
+
+> **A decay row costs its reading and almost nothing else. An unconfirmed
+> nomination with no named mechanism costs the whole band.**
+
+G6 alone took roughly as long as the four decay rows together: three plants, two
+`pnpm build` runs, two `pnpm smoke:render` runs and a full-suite run each for
+plants B and C. **Totals: five rows, ~50 minutes, 10 vitest invocations, 1
+typecheck, 3 builds, 2 render gates.** ⚠️ **Agent-reported, not instrumented**,
+on the discipline `aaf7347` established.
+
+⚠️ **Two disclosures about how this band was run**, both bearing on how much its
+verdicts are worth.
+
+- **The independence condition in #134's Notes was not met.** It asks for a
+  fresh-context agent given the register entry and not this map's
+  *Decisions-so-far*. This band was run by the session that read the map, which
+  is the weaker arrangement: for the three decay rows whose answer is a document
+  comparison the risk is small, and for **G6**, where the demonstration had to be
+  designed, it is not — a reader who wants that result independent should note
+  that the person who designed the plants had already read the ticket's framing
+  of them. The plants themselves are reproducible from the entry.
+- **`docs/gates.md` and `CLAUDE.md` were not corrected**, per #134's instruction:
+  every finding above names a remedy and builds none of it.
+
+**8 flagged rows remain**: rank 2, and nothing else. ⚠️ **The deep pass is
+still not complete, and this band does not get to say it is** — band two was
+claimed and unlanded when this was written, so the completeness claim #134
+anticipates belongs to it, not here.
+
+⚠️ **Band three published while this band was measuring, and the collision is
+worth the paragraph** — it is the hazard #134 warned about, arriving. Both bands
+branched from `e372e2d` and both wrote this file, so the sections above and below
+were composed rather than merged: band three's runs first, band four rebased onto
+it, and **the arithmetic was recounted across all three bands rather than
+patched**. The recount was needed rather than tidy — band three left this file's
+opening lines reading *"Triage for 27 rows; the deep pass has run on the other
+8"* and *"the eight rank-1 rows only"*, which described the file before its own
+section was in it. Nothing in wayfinding catches two sessions editing one file;
+reading the tip again before publishing does, which is the same lesson band one
+recorded and the second time this file has recorded it.
+
+**Recounted mechanically from the sections as they stand**, not carried forward
+from any band's own sentence:
+
+```
+Deep pass: band one    8
+Deep pass: band three  4
+Deep pass: band four   5
+Awaiting a band        8
+Clean, no band        10
+                      --
+                      35
+```
 
 ⚠️ **Marked, not corrected: 5 remain.** That line was true when this band closed
 and false by the time the band ran above it was assembled into the same file —
@@ -1016,6 +1152,67 @@ is not addressed there.
 
 **Rank:** none (flagged, unranked — the routing-around nomination is not one
 of the four ranked shapes).
+
+**Deep pass (2026-08-11, band four) — disposition: `repaired`.**
+
+⚠️ **The nomination is confirmed, by two routes it did not name, while the one
+route it did name turned out to be closed.** Three plants.
+
+**Plant A — `await import('@stacks/core')` in `packages/site/src/shelf/boot.ts`:
+red**, 1 of 5, on *"accounts for every mention of the specifier"*. Deliberately
+so — that test's own comment names the dynamic import and the bare side-effect
+import as the gap it exists to close. The nomination's first leg does not
+survive.
+
+**Plant B — `import { ObsidianAdapter } from '../../../core/src/index.ts'` in
+the same file: green.** G6 passes 5 of 5, the full suite passes **636 of 636**,
+`pnpm typecheck` is clean, and `pnpm build` **succeeds**. The bundle really does
+pull it in: vite reports `sharp`, `node:fs/promises`, `node:crypto`,
+`child_process` and five more *"externalized for browser compatibility"*. Both
+regexes match on the literal `@stacks/core`, and a relative path into the
+package contains no such literal, so the file is read and nothing in it is seen.
+
+**Plant C — `import { ObsidianAdapter } from '@stacks/core'` inside
+`Shelf.astro`'s `<script>`: green.** G6 and G7 both pass; the full suite passes
+636 of 636. This is not an exotic spelling — it is the exact statement the row
+forbids, in a file the row does not open: `siteFiles()` is
+`filesUnder('packages/site/src', ['.ts'])`, and the site has four `.astro` files
+whose `<script>` blocks are client bundles like any other.
+
+**The backstop exists, and was measured rather than assumed.** `pnpm
+smoke:render` goes **red on both B and C** — *"the shelf never signalled ready.
+Page errors: (0 , Op.createRequire) is not a function"* — and it runs in CI in
+the same required `gates` check, after `pnpm build`. So the invariant is
+defended; it is not defended by this gate. The docblock's own failure claim
+(*"no build error… the shelf silently never boots"*) reproduced exactly, twice.
+
+⚠️ **The backstop is narrower than that reads, and the qualification is the
+row's, not the suite's** — G25's residue, in the same shape. Both plants landed
+in files the client bundle actually pulls in (`boot.ts`, `Shelf.astro`), which is
+why `smoke:render` saw them. **A relative value import in a site `.ts` that the
+bundle never reaches** — a module only a spec imports — would leave the bundle
+clean and `smoke:render` green, and G6 is blind to it either way. Not planted, so
+recorded as untested rather than claimed: *"CI catches this"* holds for the two
+routes demonstrated and is not established in general.
+
+⚠️ **What that red does not say is the reason this is still `repaired` and not
+`accepted`.** `smoke:render` reports a symptom and a minified page error after a
+puppeteer run against a built site: no rule, no file, no line. G6's red names
+the offending statement and tells you to use statement-level `import type` or a
+pure subpath. The whole argument for a structural gate over a smoke test is that
+its red is actionable, and these two are not interchangeable.
+
+**Remedy, named and not built** — two additions to the existing gate, neither
+needing an allowlist: extend `siteFiles()` to `.astro`, matching the `<script>`
+block G7 already extracts; and sweep for relative specifiers that *resolve* into
+`packages/core/`, which is a path computation rather than a second spelling to
+match. The re-export leg of the nomination is not reproduced as stated — an
+`export … from '@stacks/core'` in site code is matched by `CORE_STATEMENT` and
+goes red — the real chain is the relative path.
+
+**Observed-red (this pass):** plant A red on *"accounts for every mention of the
+specifier"*; plants B and C green on G6 (636 of 636 suite-wide, build clean) and
+red on `pnpm smoke:render`.
 
 ### G7 — `astro-no-logic`
 
@@ -1580,6 +1777,42 @@ nomination comes from the spec's own doc comment.
 
 **Rank:** none (decay is not one of the four ranked shapes).
 
+**Deep pass (2026-08-11, band four) — verdict corrected, no disposition.**
+
+⚠️ **The nomination does not survive, and it fails on both of its legs.** It was
+read off the test file's doc comment; neither the row nor the code was checked
+against it.
+
+**Leg one — *"recorded only in this test file's doc comment, not in `CLAUDE.md`
+or `docs/gates.md`'s own row text"* — false.** `docs/gates.md` line 110 is G34's
+own Failure-mode cell, and it states the property verbatim: *"a success is
+cached forever, a failure is never cached at all"*. It is also in
+`docs/spec/README.md` (P3) and `docs/spec/metadata-merge.md` §"Cache, rate
+limits, convergence".
+
+**Leg two — *"if the comment is ever trimmed… has no other home"* — false, and
+this is the substantive half: the property is *asserted*, not merely
+documented.** Negative caching planted at
+[`packages/core/src/metadata/http.ts`](../packages/core/src/metadata/http.ts):64
+— writing a cache entry on the `body === undefined` path — turns
+`describe('G34 — a failure is never cached, a success is cached forever')` red.
+A doc comment cannot go red; this does.
+
+**The anchor's scope, measured.** With that plant in place **exactly 1 test of
+636 in the repository fails**, and it is that one. Singular, but real. ⚠️ **The
+row's *headline* convergence test stays green under it** — it passes
+`flakyApple()` as the `HttpGet` directly and so never touches
+`createCachedHttpGet` at all. Which is precisely why the second `describe` block
+was added, and it is doing exactly the work its own comment claims.
+
+Also re-measured: the line citation `http.ts:64` in that spec's failure message
+still lands on `if (body === undefined) return undefined;`. Accurate today, and
+held there by nothing.
+
+**Observed-red (this pass):** negative caching at `http.ts:64` → red on *"writes
+nothing to the cache when the request fails"*, 1 of 3 in the file and 1 of 636
+repo-wide. The row had no observed-red line before this pass; it has one now.
+
 ### G35 — `enhanced-card`
 
 **Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts)
@@ -1802,6 +2035,45 @@ G12 paragraph.
 **Observed-red line:** not recorded as a mutation; found by design review.
 
 **Rank:** none (decay is not one of the four ranked shapes).
+
+**Deep pass (2026-08-11, band four) — disposition: `repaired`.**
+
+**The code repair holds, and is red-capable.** `compareShelfPosition` puts
+`status === 'reading'` ahead of `shelfOrder`
+([`packages/core/src/shelf-order.ts`](../packages/core/src/shelf-order.ts):36–37),
+the gate is 6 of 6 green, and deleting those two lines — the pre-repair order —
+fails **4 of 6**, including *"a newly started book leads even a fully renumbered
+shelf"*, which is the regression the row exists for. `CLAUDE.md`'s current
+sentence, *"Unset means the default order: newest finished first"*, reads true.
+
+⚠️ **The decay is repaired in the code and still live in the row's own
+justification.** [`gates/shelf-order.test.ts`](../gates/shelf-order.test.ts):8
+presents, in the present tense and as something *"CLAUDE.md documents"*:
+
+> "Unset means the default order: reading first, then newest finished."
+
+That sentence is not in `CLAUDE.md`. It **was**, verbatim, until `b0c5d85`
+(2026-07-31) — *the commit that made the repair* — which rewrote it in
+`CLAUDE.md` and left the quotation standing in the test file **it edited in the
+same commit**. `packages/core/src/shelf-order.ts`:27 carries the same superseded
+text inside its own reasoning. `git grep` returns exactly two hits for the
+phrase, both citations, and zero in the document being cited.
+
+So the row's *"already repaired"* triage line is right about the behaviour and
+wrong about the record: a reader who follows the gate to its stated source finds
+a different rule than the one quoted. A lesser instance in the same family:
+`CLAUDE.md`:90 still states *"Books carrying one come before every book without
+one"* unqualified, and it is line 142 — fifty-two lines later — that says a book
+you are reading beats a pin.
+
+**Remedy, named and not built:** correct both quotations, and cite the sentence
+rather than reproducing it. ⚠️ **A gate is declined rather than merely
+unbuilt** — *"every quotation matches its source"* is a text-matching check
+over prose, [#113](https://github.com/mephistopheles4/stacks/issues/113)'s
+category 2 by construction, and it would be the widest-scoped gate in the repo.
+
+**Observed-red (this pass):** the pre-repair order (deleting the two status
+lines) fails 4 of 6. The row had no observed-red line before this pass.
 
 ### G15 — `cover-budget`
 
@@ -2030,6 +2302,50 @@ forbids. That tension is the row's real question, and `accepted` is a legitimate
 answer to it — see [band four](https://github.com/mephistopheles4/stacks/issues/134).
 
 **Outside `gates/`:** yes — asserted in `packages/core/src/covers/download.test.ts`.
+
+**Deep pass (2026-08-11, band four) — the claim splits in two: `accepted` on
+time, `gated` on membership.**
+
+The spec is 14 of 14 green, so the *"six of fourteen"* denominator still reads
+fourteen.
+
+**Half one — what a provider serves today: `accepted`, and honestly.** The
+measurement was a manual run against live endpoints; **G21** forbids the suite
+to repeat it, nothing schedules it outside the suite, and no configuration
+changes either fact. This is what `accepted` is for. What it should say when
+written down is what the row does not say now: not merely a **date**, but the
+**population** the date applies to.
+
+⚠️ **Half two — and this is why the row is not simply `accepted`. The population
+moved, and that half needs no network at all.** The claim is *"what the **three**
+providers did on 1 August 2026"*. **O'Reilly became a fourth provider at
+`ff93f0a`, 2026-08-08 — seven days later** — and its covers are the sole source
+for its own early releases, served from
+`learning.oreilly.com/covers/urn:orm:book:<ourn>/1200w/` and downloaded through
+the same `download` in
+[`packages/core/src/covers/cache-cover.ts`](../packages/core/src/covers/cache-cover.ts).
+`COVER_SOURCES` names four providers today; the measurement covered three.
+
+The gap lands on the worst candidate available. That URL ends in `/1200w/` and
+carries **no file extension**, so `Content-Type` is the only pre-body signal
+there is — and the risk the row names in its own words is that a provider
+answering something other than `image/` is refused **silently**, because
+`cacheCover` treats every failure as *"no cover"*. A book quietly logged bare, on
+the one provider no other provider can answer for.
+
+**Remedy, named and not built:** assert that the set of providers the G18
+measurement names equals `COVER_SOURCES` minus `unknown`. That is a repo fact,
+checkable offline, and it converts an open-ended shelf-life claim into a bounded
+one — a fifth provider goes red until somebody either re-measures or writes down
+that they did not. It does not make the measurement fresh; it makes the
+staleness **countable**, which is the part that was silent.
+
+⚠️ Nothing here was checked against the live providers, deliberately: G21 is a
+gate, not an inconvenience, and the finding did not need it.
+
+**Observed-red (this pass):** none planted. The row's existing line — restoring
+the old four-line `download`, six of fourteen — stands, and its denominator was
+re-counted rather than trusted.
 
 ### G20 — `public-build-artifact`
 
@@ -2298,6 +2614,52 @@ import.meta.url)), '..')` in `smoke-render.ts`" (sweep); "pointing `OWNER` at
 a file that derives nothing" (control).
 
 **Rank:** none (decay is not one of the four ranked shapes).
+
+**Deep pass (2026-08-11, band four) — disposition: `accepted`.**
+
+**The load-bearing claim re-measures true, which is the whole of the decay
+question here.** Of the five files in `scripts/lib/`, only `public-build.ts` and
+`walk.ts` import `fs`, and both were already allowlisted at `1168650`
+(2026-08-03), a day before G24 landed at `15fd6f1` (2026-08-04); `repo-root.ts`
+is `node:path`, `run.ts` and `git.ts` are `node:child_process`. So *"the
+consolidation shipped here changes G1's allowlist by exactly nothing"* still
+holds, the row's own correction of its issue's second-order argument stands, and
+there is nothing outstanding to build — `accepted`, in the sense of *checked and
+found still correct*, not *lived with*.
+
+The sweep is red-capable today: adding `new URL('..', import.meta.url)` to
+`scripts/make-icons.ts` fails *"lets no other script derive the repo root for
+itself"*. ⚠️ Worth noting which spelling that is — the docblock calls
+`new URL('..', import.meta.url)` the form *"nobody has written here yet"* and
+says the `import.meta` anchor was chosen to cover it. It does.
+
+⚠️ **A second claim in the same paragraph is wrong, and it is not decay.**
+*"`scripts/lib/` holds three other shared files"* appears in
+[`gates/repo-root.test.ts`](../gates/repo-root.test.ts):24 and in
+`docs/gates.md` line 880. At `15fd6f1` — **the commit that wrote both
+sentences** — `scripts/lib/` held five files: `repo-root.ts` plus `git.ts`,
+`public-build.ts`, `run.ts` and `walk.ts`. Four others, not three, and `git.ts`
+was added by that same commit.
+
+**It was wrong on arrival and has never had a true state**, so *decay* — which
+asks whether a claim *was* measured and has since drifted — does not name it.
+⚠️ **Flagged for [#120](https://github.com/mephistopheles4/stacks/issues/120)
+rather than settled here**: whether the five categories should admit
+*asserted-but-never-measured* as a widening of category 5, or whether it sits
+outside them, is a decision about the taxonomy and not a verdict on a row. And
+the honest counter-argument is on the record too — under #113's own bound the
+count is **not load-bearing**: it decorates the one-owner-not-a-directory
+argument rather than carrying it, so the bound may be excluding it correctly.
+
+The direction of the error is the part worth keeping. The sentence argues that a
+directory permission collects whatever later lands in the directory — and it
+undercounts because something already had.
+
+**Remedy, named and not built:** correct both counts, or better, drop the number
+and state the property. A gate is declined for G12's reason.
+
+**Observed-red (this pass):** `new URL('..', import.meta.url)` in
+`scripts/make-icons.ts` → red on the sweep, 1 of 4.
 
 ### G25 — `one-usable-width`
 
