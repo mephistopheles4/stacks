@@ -24,6 +24,15 @@ own section counts *results* rather than rows and says "two"; both are right abo
 different things. See **Band one**, **Band two**, **Band three** and **Band
 four**, below.
 
+⚠️ **There is a third layer, and it is not a band.** A **Decay re-read** block
+sits on three rows — G6, G7 and G35 — from
+[#144](https://github.com/mephistopheles4/stacks/issues/144), which re-read
+category 5 alone against a bound
+[#138](https://github.com/mephistopheles4/stacks/issues/138) restated *after* all
+four bands had closed. It plants nothing and deep-passes nothing; it corrects
+decay verdicts reached under a rule that no longer applies. See **The decay
+re-read**, below.
+
 ⚠️ **Band four's section landed last and by a different route from the other
 three.** Its pull request ([#136](https://github.com/mephistopheles4/stacks/pull/136))
 was **auto-closed by GitHub** on `2026-08-12T10:47:29Z`, one second after band
@@ -68,14 +77,17 @@ bands one, two and three; band four took the five flagged-but-unranked ones — 
 G12, G18, G24, G34 — so the remaining 10 rows carry triage verdicts only because
 **triage found nothing to flag in them**, not because a band still owes them.
 
-⚠️ **Deep-passed is not the same as dispositioned, and 22 of the 25 carry a
+⚠️ **Deep-passed is not the same as dispositioned, and 23 of the 25 carry a
 disposition rather than all of them.** `gated` / `repaired` / `accepted` /
 `declined` presuppose a finding, so a row whose nomination did not survive has its
-**verdict corrected** and is dispositioned by nothing: that is **G21** in band one,
-**G7** in band two and **G34** in band four. This paragraph claimed all twenty until CodeRabbit caught
+**verdict corrected** and is dispositioned by nothing: that is **G21** in band one
+and **G34** in band four. This paragraph claimed all twenty until CodeRabbit caught
 it on [#137](https://github.com/mephistopheles4/stacks/pull/137) — the rule was
 written down in band one, restated in band two, and then contradicted by the
-sentence counting the rows it applies to.
+sentence counting the rows it applies to. ⚠️ **It was 22 and three until the decay
+re-read gave G7 a `gated` decay disposition**, so the row band two left corrected
+and undispositioned now carries one for a different category — which is the rule
+working, not an exception to it.
 
 **Scope: the 35 numbered rows `docs/gates.md` holds today** — G1–G35 across its
 Invariants, Contract seams and Defect gates tables. The **CI-only gates** table
@@ -164,16 +176,17 @@ orders it; it does not define it.
 | --- | --- | --- |
 | G17, G20, G21, G22, G23, G25, G26, G31 | G2, G7, G14, G15, G19, G28, G29, G35 | G1, G10, G13, G30 |
 
-**19 of the 20 are flagged.** Rule 2 removed the tier-4 column that used to
-require an exception; band two produced the first one of a different kind.
-**G16** was ranked 4 and clean on all five categories, so it is not deep-pass
-membership at all; **G18** was ranked 4 and flagged for decay, so it keeps the
-flag and loses the rank. ⚠️ **G7 keeps rank 2 and is now clean on all five** —
-it earned its band, was deep-passed, and both its non-clean verdicts were
-corrected by three planted attempts that could not reach a green suite. That is a
-state the file has not held before, and it is not G16's: G16 was never
-demonstrated against. **A rank is a record of what was suspected, not of what was
-found**, so it stays.
+**All 20 are flagged**, as of the decay re-read. Rule 2 removed the tier-4 column
+that used to require an exception; band two produced the first one of a different
+kind and the decay re-read took it back. **G16** was ranked 4 and clean on all
+five categories, so it is not deep-pass membership at all; **G18** was ranked 4
+and flagged for decay, so it keeps the flag and loses the rank. ⚠️ **G7 kept rank
+2 and was clean on all five for three days** — band two corrected both its
+non-clean verdicts against three planted attempts that could not reach a green
+suite, and then the decay re-read exposed its fifth category, a category band two
+never demonstrated against and could not have judged under the bound that existed
+then. **A rank is a record of what was suspected, not of what was found**, so it
+stays either way; what moved is the verdict line.
 
 **"Flagged" throughout this file means the row's verdicts *as they stand*, not
 whether it was ever nominated.** Both readings are defensible and they now
@@ -186,11 +199,13 @@ Under the historical reading G7 is flagged and the total is 25; under the curren
 one, which is what every count here uses, G7 is clean and the total is 24. Rank is
 the historical record; the verdict lines are the current one.
 
-**5 rows carry a flag with no rank** — exposed under weakening, routing around,
-or decay outside the ranked shapes: **G6, G12, G18, G24, G34**.
+**4 rows carry a flag with no rank** — exposed under weakening, routing around,
+or decay outside the ranked shapes: **G6, G12, G18, G24**. ⚠️ **This was five
+until the decay re-read**, which landed band four's own G34 correction into the
+verdict line band four left standing.
 
-**11 rows found nothing on all five categories**: G3, G4, G5, **G7**, G8, G9,
-G11, G16, G27, G32, G33.
+**11 rows found nothing on all five categories**: G3, G4, G5, G8, G9,
+G11, G16, G27, G32, G33, **G34**.
 
 **A correction from the previous revision of this file.** 23 category lines
 across 14 rows originally read `not discussed` or `not separately
@@ -208,7 +223,7 @@ flagged, clean and not-reached totals below are unchanged, because every
 resolved line sat inside a row that was already counted correctly on the
 other side of the flagged/clean line.
 
-Flagged (19 ranked + 5 unranked) and clean (11) partition all 35 rows.
+Flagged (20 ranked + 4 unranked) and clean (11) partition all 35 rows.
 
 **Total flagged: 24 of 35.**
 
@@ -218,6 +233,18 @@ plants failed to reach a green suite — triage read `docs/gates.md`'s live Code
 residual and nominated it, which was the right call on the evidence triage had,
 and the demonstration disagreed. **Recounted mechanically over the 35 sections,
 not adjusted by one**: 11 rows now carry five clean verdicts.
+
+⚠️ **The total is unchanged by the decay re-read and the membership is not, which
+is the more useful fact.** Two rows crossed in opposite directions on the same
+day: **G7** back to flagged on a decay exposure band two never demonstrated
+against, and **G34** to clean, band four's refutation finally reaching the verdict
+line it refuted. A carried-forward *"still 24"* would have been true and would
+have hidden both. **Recounted mechanically over the 35 sections** — and the
+counting script was wrong twice before it was right, most instructively on a
+**wrapped bullet**: G34 states its first verdict on the line *after* the category
+name, so a per-line test read it as non-clean and kept the row flagged for the
+wrong reason. Every total here is from the version that joins a bullet to its
+continuation lines.
 
 **A second correction, made in the round that populated this file** — before
 either band ran; *"this revision"* is what it said until band two made that read
@@ -714,6 +741,157 @@ there, not here.
 
 ---
 
+## The decay re-read — category 5 against a bound restated after every band ran
+
+[#144](https://github.com/mephistopheles4/stacks/issues/144), 2026-08-15, against
+`ae674de`. Not a band: no row is deep-passed here and no plant is run. Every
+other verdict in this file is untouched.
+
+[#138](https://github.com/mephistopheles4/stacks/issues/138) restated category 5
+— from *"a load-bearing claim that drifted"* to ***"a load-bearing claim whose
+truth was never established, or never re-established, against a check that was
+available"*** — and admitted **gate-spec docblocks** as a subject, on the measured
+ground that a docblock is keyed to its row by G19 forcing slug to equal file stem
+where `docs/gates.md`'s prose is not. Both changes landed *after* all four bands
+closed, so **every decay verdict in this file was reached under a rule that no
+longer applies.**
+
+### The population, and a correction to the ticket that commissioned this
+
+⚠️ **#144's stated population does not survive a mechanical recount, and the
+correction is the first result of the pass.** Counted over the 35 sections at
+both `f3505ee` (the commit #144 cites) and `ae674de` — identical, so this is not
+drift:
+
+| | #144's body | counted |
+| --- | --- | --- |
+| `clean` | 23 | **27** |
+| `exposed` | 11 | **6** |
+| resolves to neither token | 1 (G34) | **2 (G34, G35)** |
+
+Five rows filed as *exposed* read `- **Decay** — clean.` verbatim — **G10**,
+**G13**, **G15**, **G21**, **G30** — and **G35**, filed as *clean*, is a second
+row resolving to neither token. The mechanism is **not established**: *"any
+`exposed` anywhere in the section"* would explain the five, but **G1**'s weakening
+bullet reads `exposed` and #144 files G1 as clean, so that route is ruled out and
+the real one is unknown. Recorded as unknown rather than guessed at.
+
+⚠️ **Counting note, because the naive sweep is wrong by one row.** **34** bullets
+match `^- **Decay** — `, not 35: **G26** carries its verdict on a merged
+`- **Vacuous green / decay**` bullet. A recount that misses it silently drops the
+row whose decay finding is among the file's strongest.
+
+**Scope: 28 rows** — the 29 not-exposed, less **G34**, whose decay nomination
+band four discharged by demonstration three days ago. ⚠️ #144's own arithmetic
+(*"24 − 5 = 19"*) subtracts G12, G18 and G24 twice: they were already out as
+exposed. **G6 stays in** — band four ran it for *routing around* and never touched
+its decay line — and that decision earned a finding.
+
+The 6 exposed rows are **out**, on #144's one-directional argument: a widened
+bound cannot clear an exposure.
+
+### Two rules this pass had to settle first
+
+Neither was decidable from #138 alone, and both are handed to
+[#120](https://github.com/mephistopheles4/stacks/issues/120) to confirm.
+
+**Rule 1 — the discharge test: re-measure the nomination's claim, not the fact.**
+Band four's *"a decay flag is discharged by re-measuring, not by planting"* leaves
+open *what* gets re-measured. Read forward from its own two outcomes, the answer
+is the nomination's claim — typically *"this load-bearing claim is held by
+nothing."* **G34** failed because that claim was false (the property is asserted
+and a plant turns it red). **G35** survives because it is true (nothing reaches
+bare `§N`). Without this rule the two rows are indistinguishable, since the
+underlying fact is currently fine in both.
+
+**Rule 2 — the docblock surface does not double-count categories 2 and 3.** A
+docblock overstating **the gate's own reach** is *satisfying the letter* or
+*routing around*, and stays there — band one's **G31**, band three's **G1**
+remedy. A docblock asserting a fact whose **truth-maker lives outside the gate
+spec** — another document's text, another file's contents, a third-party tool's
+behaviour — is the decay surface. The test is mechanical: *where does the thing
+that makes this sentence true or false live?* Without it this pass either
+re-litigates dispositioned findings or drops rows silently.
+
+### Method, and the two ways the instrument was wrong before it was right
+
+**Pass 1, mechanical, all 35 rows.** Every quotation of 25+ characters in every
+gate docblock, matched against the 63 normative documents — `CLAUDE.md`,
+`CONTRIBUTING.md`, `SECURITY.md`, `CONTEXT.md`, `docs/gates.md`, `docs/spec/`,
+`docs/adr/`. **Result: one stale quotation, and it is the already-known G12.**
+That is a negative result and it is worth having: the docblock surface #138
+opened yields **no new stale quotation anywhere in the file.**
+
+⚠️ **The sweep gave a clean answer twice before it gave a true one, both times in
+the flattering direction** — #126's counting-script bug, twice more:
+
+- **PowerShell's `-like` treats a backtick as an escape character**, so every
+  quotation containing a code span silently failed to match. G3 and G4 reported
+  stale; both are verbatim correct.
+- **Widening the corpus to all 114 tracked `.md` files made the one true positive
+  disappear** — G12's superseded sentence is preserved, correctly, in
+  `docs/log/`. A quotation must be checked against *the document it claims to
+  quote*, not against the repository.
+
+**Pass 2, by hand, the unquoted external-fact claims.** Eleven rows measured
+individually: **G3** (CLAUDE.md invariant 3, verbatim ✓), **G4**
+(`update-book.test.ts` asserts with `toContain` — 11 occurrences ✓), **G6**,
+**G7**, **G8** (CLAUDE.md's *"do not change without updating this file"* heading
+✓), **G10** (`covers/cover-path.test.ts` exists ✓), **G11** (`dev-watch.ts:114`
+does pass `--public` ✓), **G17** (ADR-0019 does accept the drift, at its `:11` ✓),
+**G32** (`enrich.ts` guards every write on `=== undefined` ✓), **G33**
+(`types.ts:51`: *"there is deliberately no `body` field"* ✓), **G35**.
+
+### Results
+
+**Three verdicts corrected, all `clean`-ward → `exposed`, all `gated`.** Detail
+in each row's Decay re-read block; one line each here.
+
+| Row | Was | Now | The claim |
+| --- | --- | --- | --- |
+| **G6** | `clean` | `exposed` | The docblock says *"Two things pass"*; three do, and the third is value-imported by the site today. |
+| **G7** | `clean` | `exposed` | *"`@astrojs/check` cannot run under TypeScript 7"* — a third-party tool at a version, never established here, unassertable. |
+| **G35** | `nominated, unconfirmed` | `exposed` | The `§11.x` map from gate to spec is held by nothing; the nomination's own claim re-measures true. |
+
+⚠️ **G7 returns to the flagged side, and the total returns to 25 by a different
+route than it left.** Band two moved G7 off it by correcting two verdicts on three
+failed plants — work this pass does not touch. Decay is the fifth category and was
+never demonstrated against. **Total flagged: 25 of 35**, and the coincidence of
+number is worth naming so nobody reads it as a reversal.
+
+**One nomination raised and refused**, recorded because refusing it is the useful
+half: **G6**'s pure-subpath purity looked unheld from the docblock and is in fact
+*measured* by `pureSubpaths()`. Band two's rule — *a claim about a gate is read
+from the gate, not from the gate's prose* — catching a nomination **mid-pass**
+rather than after publication, which is the first time on this map it has been
+cheap.
+
+### ⚠️ What was not reached, stated rather than left to be inferred
+
+**Seventeen of the 28 in-scope rows got the mechanical sweep and a read of their
+docblock, but no individual external-fact measurement**: G2, G5, G9, G14, G16,
+G19, G20, G21, G22, G23, G27, G28, G30, G31, G32*, G33*, and the remaining clean
+rows. (\* G32 and G33 *were* measured; they are listed above.) The honest boundary
+is that pass 1 covered all 35 for **quotations** and pass 2 covered eleven rows
+for **unquoted claims**. A row not individually measured carries a `clean` decay
+verdict that has now survived a quotation sweep and nothing more.
+
+⚠️ **Fourteen of the 28 were cleared with a *number* test** — *"clean; no
+load-bearing number"* (G3, G4, G5, G8, G9, G11, G16, G27, G32, G33) or *"no
+measured-once number"* (G17, G20, G21) or G22's *"not a number the row currently
+rests on"*. **The restated bound asks about load-bearing *claims*, and a claim
+need not be numeric** — #138's own headline specimen, *"it published first"*, is
+not a number. Those ten clearances are the likeliest place a further pass finds
+something, and the wording is left in place rather than rewritten, so the next
+reader can see which test each verdict was reached under.
+
+**Cost:** ~55 min; 1 vitest invocation (baseline, 636 of 636), ~14 read-only
+sweeps, 0 plants. Band four's finding holds and strengthens: **re-measurement is
+cheaper than orientation**, and a mechanical sweep over 35 rows cost less than any
+single row of band one.
+
+---
+
 ## Invariants → gates
 
 ### G1 — `adapter-boundary`
@@ -1143,7 +1321,11 @@ prototyped.
   re-export chain or a dynamic `import()` string would still be caught by
   whatever static sweep this gate runs.
 - **Vacuous green** — clean, same demonstration.
-- **Decay** — clean.
+- **Decay** — **exposed**, ⚠️ *corrected 2026-08-15 by the decay re-read
+  ([#144](https://github.com/mephistopheles4/stacks/issues/144)), from `clean`.*
+  The docblock opens *"Two things pass"* and enumerates two; **three pass, and
+  the third is value-imported by the site today**. See the Decay re-read block,
+  which also records the nomination this pass raised first and then refused.
 
 `docs/gates.md` already answers the demonstration; the routing-around question
 is not addressed there.
@@ -1214,6 +1396,60 @@ goes red — the real chain is the relative path.
 specifier"*; plants B and C green on G6 (636 of 636 suite-wide, build clean) and
 red on `pnpm smoke:render`.
 
+**Decay re-read (2026-08-15, [#144](https://github.com/mephistopheles4/stacks/issues/144)) — verdict corrected `clean` → `exposed`; disposition: `gated`.**
+
+⚠️ **This entry records a nomination this pass raised and then refused, because
+refusing it is the more useful half.** The docblock says of the pure subpath *"It
+imports nothing"* — a load-bearing claim about **a different file**, which is what
+makes the subpath exempt from the rule the row exists to enforce. The obvious
+reading is that nothing holds it: let `shelf-order.ts` acquire one import and the
+site's value import of it becomes a `node:fs` edge into the browser bundle, which
+is G6's own failure verbatim.
+
+**The reading is wrong, and reading the gate instead of its prose is what
+settled it.** `pureSubpaths()` does not name the subpath — it **measures** it:
+a subpath passes only when `packages/core/package.json` exports it *and*
+`importsNothing()` finds no imports in the file it points at. A single import
+added to `shelf-order.ts` drops it out of the exempt set and turns
+`packages/site/src/shelf/books.ts:6` into an offender. The property is asserted,
+by a mechanism whose own comment says why the earlier hardcoded name was the
+wrong shape: *"an allowlist entry says nothing about whether the module it names
+still imports nothing. The name was the check."* This is band four's G34 outcome
+arriving from the other direction, and band two's rule — *a claim about a gate is
+read from the gate, not from the gate's prose* — catching a nomination mid-pass
+rather than after publication.
+
+⚠️ **The exposure is the sentence directly above that mechanism.** The docblock's
+`:10` list opens **"Two things pass"** and names `import type` and
+`@stacks/core/shelf-order`. **Three pass.** `packages/core/package.json` exports
+`./shelf-order` *and* `./subjects`; `subjects.ts` has **0 imports**, so
+`pureSubpaths()` admits it; and `packages/site/src/shelf/card.ts:7` value-imports
+`@stacks/core/subjects` today, at **636 of 636 green**. `CLAUDE.md:150` carries
+the same singular: *"a pure subpath — `@stacks/core/shelf-order` — that imports
+nothing."*
+
+**The shape is precise, and it is the mirror of band one's G31.** G31 was a
+docblock claiming **more** reach than the gate has. This is a docblock claiming
+**less**, and it decayed *because* the gate was generalised: the same commit that
+replaced the hardcoded name with a measurement left the enumeration eleven lines
+above it naming one. Nothing operational rests on the prose — the gate derives
+its own list — so the cost is not a false green. It is that both documents a
+contributor would consult tell them a legitimate import is forbidden, and
+`card.ts:84` already carries a comment reasoning about what is *"not importable
+here (G6)"*.
+
+**Named remedy (not built):** the population exists as a value in the tree —
+`pureSubpaths()` already computes it — so
+[#138](https://github.com/mephistopheles4/stacks/issues/138)'s adopted rule
+applies and the check is nearly free: assert that the subpaths named in the
+docblock and in `CLAUDE.md:150` equal `pureSubpaths()`. ⚠️ **It is a prose
+assertion, which #113 declined in general on *"prose has no key"*** — admissible
+here for #138's stated reason: this prose *does* have a key, the exports map.
+
+**Observed-red (this pass):** none planted; discharged by re-measurement, per
+band four's rule. `shelf-order.ts` 0 imports, `subjects.ts` 0 imports, `exports`
+holds exactly `.`, `./shelf-order`, `./subjects`, suite 636 of 636.
+
 ### G7 — `astro-no-logic`
 
 **Gate:** [`gates/astro-no-logic.test.ts`](../gates/astro-no-logic.test.ts)
@@ -1235,7 +1471,14 @@ red on `pnpm smoke:render`.
   dependency... to protect against a first-party commit," explicitly declined.
   The same three plants answer both.
 - **Vacuous green** — clean; the miss throws rather than passing silently.
-- **Decay** — clean.
+- **Decay** — **exposed**, ⚠️ *corrected 2026-08-15 by the decay re-read
+  ([#144](https://github.com/mephistopheles4/stacks/issues/144)), from `clean`.*
+  The docblock's opening claim is about a **third-party tool at a version**:
+  *"`@astrojs/check` cannot run under TypeScript 7 — TS 7's native compiler does
+  not expose the programmatic API the Astro language server needs."* It is the
+  whole warrant for this row existing — a rule instead of a compiler — and it is
+  restated in `CLAUDE.md` with the word ***yet***, which concedes it expires. See
+  the Decay re-read block.
 
 `docs/gates.md` already answers this — the CodeQL triage §2 worked example and
 the G1/G3/G6/G7 red-capable paragraph.
@@ -1305,6 +1548,63 @@ regex treat differently. Neither is ruled out.
 
 **Cost:** ~20 min, 4 vitest invocations — three planted runs and one confirming
 green after revert — plus one reasoning-only step that ran nothing.
+
+**Decay re-read (2026-08-15, [#144](https://github.com/mephistopheles4/stacks/issues/144)) — verdict corrected `clean` → `exposed`; disposition: `gated`.**
+
+⚠️ **G7 returns to the flagged side, and not by contradicting band two.** Band
+two corrected this row's *routing-around* and *satisfying-the-letter* verdicts on
+three failed plants, and that work stands untouched. Decay is the fifth category,
+it was never demonstrated against, and it is re-read here under a bound
+[#138](https://github.com/mephistopheles4/stacks/issues/138) restated after band
+two closed.
+
+**The claim.** `gates/astro-no-logic.test.ts:4-5`, present tense:
+*"`@astrojs/check` cannot run under TypeScript 7 — TS 7's native compiler does
+not expose the programmatic API the Astro language server needs."* It is repeated
+where a user meets it, in the gate's own failure message at `:165` — *"(astro
+check cannot run under TS 7)"* — and in `CLAUDE.md`: *"`.astro` files are NOT
+typechecked (`astro check` cannot run under TypeScript 7 **yet**)."*
+
+**Why it is load-bearing rather than colour.** It is the entire warrant for the
+row. G7 exists *because* no compiler can read these files; if the claim stopped
+being true, the honest response is not a better regex but deleting the rule and
+running the checker. No other row on this file turns so completely on one
+sentence about software this repo does not own.
+
+**Measured, 2026-08-15.** `typescript: ^7.0.2` and `astro: ^7.2.1` in
+`package.json`; **`@astrojs/check` is not a dependency of this repo at all**, at
+any version. So there is no run that can contradict the sentence, and there never
+has been — its truth **was never established here** and cannot be re-established
+without adding a dependency. ⚠️ **And the version it is a claim about moved three
+commits ago**: `ae674de`, the tip this pass ran on, is *"ci: bump astro from
+7.1.6 to 7.2.1"*.
+
+⚠️ **This is the first specimen on the map whose truth-maker is outside the
+repository.** Every earlier one — the `133 tests in ~2s` estimate, the slug
+count, CodeQL *"reports alongside the gates"*, `scripts/lib/`'s file count,
+#118's *"it published first"* — was checkable against this tree with one command.
+This one is checkable only against somebody else's release. `SECURITY.md`'s
+*"relied upon and unverifiable"*, which
+[#124](https://github.com/mephistopheles4/stacks/issues/124) extended as a clause
+rather than minting as a category and noted *would have exactly one member
+today*, now has a second — reached from decay rather than from supply chain, and
+worth [#120](https://github.com/mephistopheles4/stacks/issues/120) re-reading that
+declination against.
+
+**Named remedy (not built):** the claim's population *does* exist as values in
+this tree — `astro` and `typescript` in `package.json` — so
+[#138](https://github.com/mephistopheles4/stacks/issues/138)'s adopted rule
+applies: date the claim with the versions it was established against and assert
+those, so a **major** bump goes red and forces a re-measurement. Staleness becomes
+**countable, not caught** — G18's shape, and the same honest limit
+[#116](https://github.com/mephistopheles4/stacks/issues/116)'s excluded-file
+counts were given. ⚠️ **Cost stated rather than implied:** pinned to minors this
+goes red on ordinary Dependabot traffic, which is how a gate gets weakened to make
+it pass; majors only.
+
+**Observed-red (this pass):** none, and that *is* the finding — no configuration
+of this repository can make the sentence go red, because the tool it is about is
+not installed.
 
 ### G8 — `frontmatter-contract`
 
@@ -1761,7 +2061,16 @@ a book that already carries a *wrong* value keeps it, correcting it by hand.
 - **Weakening / satisfying the letter / routing around / vacuous green** —
   clean, on the evidence available; the spec exercises `enrichBook` end to
   end rather than mocking the property it depends on.
-- **Decay** — nominated, low confidence. The row's whole guarantee rests on an
+- **Decay** — **clean** — *verdict landed 2026-08-15 by the decay re-read
+  ([#144](https://github.com/mephistopheles4/stacks/issues/144)); the correction
+  is band four's, made in the Deep pass block below on 2026-08-11 and never
+  written into this line.* ⚠️ **This is the only place in the file where a
+  band's correction did not reach the verdict it corrected** — the Summary
+  counted G34 flagged on a nomination the block underneath it had already
+  refuted on both legs, and #144 flagged the line as *"resolving to neither
+  token and owing a verdict regardless"*. Nothing is re-decided here. Originally,
+  and refuted below: *nominated, low confidence.* The row's whole guarantee rests
+  on an
   undocumented property of `http.ts` — a cache write only on success, never on
   failure — that the spec's own comment calls out as load-bearing: "Without
   this row, 'run it twice' rests on an undocumented property that a
@@ -1837,7 +2146,10 @@ repo-wide. The row had no observed-red line before this pass; it has one now.
   satisfying-the-letter finding above — the original single-assertion shape
   ("the card opened") is exactly this category, returning its best possible
   answer against the worst inputs the row now checks for.
-- **Decay** — nominated, unconfirmed, and concrete: `scripts/smoke-render.ts`
+- **Decay** — **exposed**, ⚠️ *corrected 2026-08-15 by the decay re-read
+  ([#144](https://github.com/mephistopheles4/stacks/issues/144)), from `nominated,
+  unconfirmed`; the nomination survives re-measurement.* Originally, and still
+  accurate as a description: `scripts/smoke-render.ts`
   cites specific spec subsections in its own comments — "§11.1 and §11.2",
   "§11.3 and the fallback in §11.4", "§11.5", "§11.6", "§11.7" — as the map
   from what the code checks to what `docs/spec/enhanced-card.md` §11
@@ -1898,6 +2210,49 @@ by the same two plants.
 
 ⚠️ **Not observed:** the browser-side reading-line check, for the fixture reason
 above — no contrived fixture was built to make it fire.
+
+**Decay re-read (2026-08-15, [#144](https://github.com/mephistopheles4/stacks/issues/144)) — verdict corrected `nominated, unconfirmed` → `exposed`; disposition: `gated`.**
+
+⚠️ **This row is why the discharge test had to be written down.** Band two walked
+all five citations item by item, found they *"all resolve correctly today"*, and
+left the verdict at `nominated, unconfirmed` — *"there is drift to be had and none
+yet."* Under the old bound (*a claim measured once and never re-measured*) that
+was the honest answer. Under
+[#138](https://github.com/mephistopheles4/stacks/issues/138)'s restated bound it
+is not, and the reason is the rule this pass settled: **what gets re-measured is
+the nomination's own claim**, not the underlying fact.
+
+**The underlying fact re-measures true.** Re-walked here: `§11.1`–`§11.7` in
+`scripts/smoke-render.ts` (`:523`, `:530`, `:536`, `:556`, `:567`) still land on
+`docs/spec/enhanced-card.md` §11's items 1–7. Unchanged since band two. ⚠️ Note
+the spec's acceptance list has **eight** items and the comments cite seven —
+`§11.8`, `published` rendering, is checked by unit tests rather than in the
+browser, which is correct and is not a citation fault.
+
+**The nomination's claim also re-measures true, and that is what decides it.**
+*"Nothing enforces that those numbers still name what the comment claims"* — G29
+holds Markdown link targets and skips bare `§N` prose by construction, and no
+other spec reaches it. So the map from what this gate checks to what the spec
+requires is established by a human walking it, twice, and by nothing in between
+or after. That is *"never re-established against a check that was available"* as a
+**standing condition** rather than a historical accident, which is what the
+restated bound admits and the old one did not.
+
+**Contrast with band four's G34, deliberately**, because the two look alike and
+came out opposite. G34's nomination claimed the load-bearing property was
+*"recorded only in this test file's doc comment"*; band four checked and it was
+false — the property is asserted, and a plant turns it red. G35's nomination
+claims nothing enforces the citations; this pass checked and it is **true**. Same
+test, opposite results: **a nomination fails when its own claim is false, not
+when the fact it worries about is currently fine.**
+
+**Named remedy:** band two's, unchanged and now dispositioned rather than left
+dangling — parse the `§\d+\.\d+` references out of `scripts/smoke-render.ts`'s
+comments and the numbered items out of `docs/spec/enhanced-card.md`'s acceptance
+list, and diff them. No puppeteer, no network; it sits beside G29.
+
+**Observed-red (this pass):** none planted; discharged by re-measurement per band
+four's rule. The band-two `smoke:render` observed-red lines above are untouched.
 
 **Cost, and this is the band's expensive row as #132 predicted:** ~35 min, of
 which **three `pnpm smoke:render` runs at 20.3–20.6s wall each, ~61s of puppeteer
