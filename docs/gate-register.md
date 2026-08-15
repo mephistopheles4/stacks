@@ -777,7 +777,7 @@ bullet reads `exposed` and #144 files G1 as clean, so that route is ruled out an
 the real one is unknown. Recorded as unknown rather than guessed at.
 
 ⚠️ **Counting note, because the naive sweep is wrong by one row.** **34** bullets
-match `^- **Decay** — `, not 35: **G26** carries its verdict on a merged
+match `^- **Decay** —` followed by a space, not 35: **G26** carries its verdict on a merged
 `- **Vacuous green / decay**` bullet. A recount that misses it silently drops the
 row whose decay finding is among the file's strongest.
 
@@ -844,8 +844,9 @@ does pass `--public` ✓), **G17** (ADR-0019 does accept the drift, at its `:11`
 
 ### Results
 
-**Three verdicts corrected, all `clean`-ward → `exposed`, all `gated`.** Detail
-in each row's Decay re-read block; one line each here.
+**Three verdicts corrected to `exposed`, all `gated`** — G6 and G7 from `clean`,
+**G35 from `nominated, unconfirmed`**. Detail in each row's Decay re-read block;
+one line each here.
 
 | Row | Was | Now | The claim |
 | --- | --- | --- | --- |
@@ -853,11 +854,24 @@ in each row's Decay re-read block; one line each here.
 | **G7** | `clean` | `exposed` | *"`@astrojs/check` cannot run under TypeScript 7"* — a third-party tool at a version, never established here, unassertable. |
 | **G35** | `nominated, unconfirmed` | `exposed` | The `§11.x` map from gate to spec is held by nothing; the nomination's own claim re-measures true. |
 
-⚠️ **G7 returns to the flagged side, and the total returns to 25 by a different
-route than it left.** Band two moved G7 off it by correcting two verdicts on three
-failed plants — work this pass does not touch. Decay is the fifth category and was
-never demonstrated against. **Total flagged: 25 of 35**, and the coincidence of
-number is worth naming so nobody reads it as a reversal.
+⚠️ **G7 returns to the flagged side and G34 leaves it, so the total is unchanged
+at 24 of 35 while the membership is not.** Band two moved G7 off the flagged side
+by correcting two verdicts on three failed plants — work this pass does not touch;
+decay is the fifth category and was never demonstrated against. G34 moves the
+other way, band four's refutation reaching the verdict line it refuted. **Two
+rows crossing in opposite directions is exactly what a carried-forward total
+hides**, which is why the Summary's count is recounted over the 35 sections
+rather than adjusted.
+
+⚠️ **This paragraph read *"the total returns to 25"* until CodeRabbit caught it on
+[#149](https://github.com/mephistopheles4/stacks/pull/149), and it is the sharpest
+thing in this section.** It was written before this pass decided to land G34's
+correction, and never revisited once that decision made the number 24 — so the
+file carried **two contradicting aggregate claims, 24 in the Summary and 25 here,
+inside the register whose subject is claims that quietly stop being true**. The
+Summary was recounted mechanically and this sentence was carried forward in
+prose; that is the whole difference, and it is band three's closing-count failure
+committed by the pass that cites band three's closing-count failure.
 
 **One nomination raised and refused**, recorded because refusing it is the useful
 half: **G6**'s pure-subpath purity looked unheld from the docblock and is in fact
@@ -869,12 +883,22 @@ cheap.
 ### ⚠️ What was not reached, stated rather than left to be inferred
 
 **Seventeen of the 28 in-scope rows got the mechanical sweep and a read of their
-docblock, but no individual external-fact measurement**: G2, G5, G9, G14, G16,
-G19, G20, G21, G22, G23, G27, G28, G30, G31, G32*, G33*, and the remaining clean
-rows. (\* G32 and G33 *were* measured; they are listed above.) The honest boundary
+docblock, but no individual external-fact measurement**: **G1, G2, G5, G9, G13,
+G14, G15, G16, G19, G20, G21, G22, G23, G27, G28, G30, G31**. The honest boundary
 is that pass 1 covered all 35 for **quotations** and pass 2 covered eleven rows
 for **unquoted claims**. A row not individually measured carries a `clean` decay
 verdict that has now survived a quotation sweep and nothing more.
+
+⚠️ **This list was wrong in both directions on first publication, and only one
+direction was caught by review.** It named **G32** and **G33**, which the
+paragraph above records as measured, and it ended *"and the remaining clean
+rows"* — a phrase doing the work of an enumeration while naming nothing, which
+omitted **G1**, **G13** and **G15**. CodeRabbit caught the two wrongly included on
+[#149](https://github.com/mephistopheles4/stacks/pull/149); the three wrongly
+omitted were found only by deriving the list mechanically as
+*in-scope minus measured*, which is how it should have been produced in the first
+place. **The count 17 was right while its members were wrong**, which is the
+failure mode a total can never expose.
 
 ⚠️ **Fourteen of the 28 were cleared with a *number* test** — *"clean; no
 load-bearing number"* (G3, G4, G5, G8, G9, G11, G16, G27, G32, G33) or *"no
@@ -1571,18 +1595,26 @@ being true, the honest response is not a better regex but deleting the rule and
 running the checker. No other row on this file turns so completely on one
 sentence about software this repo does not own.
 
-**Measured, 2026-08-15.** `typescript: ^7.0.2` and `astro: ^7.2.1` in
-`package.json`; **`@astrojs/check` is not a dependency of this repo at all**, at
-any version. So there is no run that can contradict the sentence, and there never
-has been — its truth **was never established here** and cannot be re-established
-without adding a dependency. ⚠️ **And the version it is a claim about moved three
-commits ago**: `ae674de`, the tip this pass ran on, is *"ci: bump astro from
-7.1.6 to 7.2.1"*.
+**Measured, 2026-08-15.** `typescript: ^7.0.2` in the root `package.json` and
+`astro: ^7.2.1` in **`packages/site/package.json`** — the two halves of the claim
+live in different manifests, which is worth stating in a paragraph about where a
+sentence's truth-maker sits. **`@astrojs/check` is not a dependency of this repo
+at any version**, in any manifest or in `pnpm-lock.yaml`.
+
+⚠️ **"And there never has been" is established rather than asserted**, on this
+file's own rule against claims nobody checked: `git log --all -S '@astrojs/check'`
+over the manifests and the lockfile returns **no commit** — the string has never
+entered a dependency file in this repository's history, and its only appearances
+anywhere are prose. So there is no run that can contradict the sentence, there has
+never been one, and its truth cannot be established here without adding a
+dependency. ⚠️ **And the version it is a claim about moved three commits ago**:
+`ae674de`, the tip this pass ran on, is *"ci: bump astro from 7.1.6 to 7.2.1"*.
 
 ⚠️ **This is the first specimen on the map whose truth-maker is outside the
 repository.** Every earlier one — the `133 tests in ~2s` estimate, the slug
-count, CodeQL *"reports alongside the gates"*, `scripts/lib/`'s file count,
-#118's *"it published first"* — was checkable against this tree with one command.
+count, CodeQL *"reports alongside the gates"*, `scripts/lib/`'s file count, and
+[#118](https://github.com/mephistopheles4/stacks/issues/118)'s *"it published
+first"* — was checkable against this tree with one command.
 This one is checkable only against somebody else's release. `SECURITY.md`'s
 *"relied upon and unverifiable"*, which
 [#124](https://github.com/mephistopheles4/stacks/issues/124) extended as a clause
