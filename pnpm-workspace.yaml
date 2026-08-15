@@ -17,10 +17,20 @@ allowBuilds:
 # CI is unaffected either way: it installs from scratch against a frozen lockfile.
 verifyDepsBeforeRun: warn
 
-# GHSA-2v37-7h3g-55p8, high: nanoid <3.3.17 loops indefinitely on a custom
+# GHSA-2v37-7h3g-55p8, high: nanoid <3.3.18 loops indefinitely on a custom
 # generator. It arrives four ways, all of them vite>postcss, and postcss@8.5.25
 # already asks for `^3.3.17` in its own latest release — so this override looks
 # redundant and is not.
+#
+# ⚠️ The range moved and the id did not. This block first read `<3.3.17` and
+# pinned `^3.3.17` to match it exactly. On 2026-08-15 CI went red on an
+# **unchanged lockfile**: GHSA-2v37-7h3g-55p8 was amended upstream to `<3.3.18`,
+# so the same advisory that this override was written to answer now covers the
+# version it pins. Nothing in the tree changed and nothing new was published —
+# only the claim about what is vulnerable. An advisory id is not a stable
+# statement of scope, and a pin written to satisfy one exactly is one amendment
+# from being insufficient. That is the argument for `^3.3.18` over `3.3.18`:
+# a caret still admits the next patch without a second red build.
 #
 # pnpm 11 quarantines newly published versions for seven days by default
 # (`minimumReleaseAge`), which is a supply-chain policy worth having: it is the
@@ -31,12 +41,17 @@ verifyDepsBeforeRun: warn
 # override is honoured where auto-resolution is not — the policy governs which
 # version pnpm will *pick*, not one it is told to use.
 #
+# ⚠️ That cost is why `^3.3.17` did not quietly pick up 3.3.18 on its own. The
+# caret admitted it from 2026-08-07, and quarantine withheld it until 2026-08-14
+# — one day before the amendment made it required. The window and the amendment
+# are independent, and the gap between them is the whole of this incident.
+#
 # So this is deliberately not an `auditConfig.ignoreGhsas` entry. That hatch is
 # for an advisory with no fix published; here the fix existed and only needed
-# naming. Remove this the moment the tree carries 3.3.17 without help, which
-# happens as soon as a postcss release requiring `^3.3.17` reaches the lockfile.
+# naming. Remove this the moment the tree carries 3.3.18 without help, which
+# happens as soon as a postcss release requiring `^3.3.18` reaches the lockfile.
 overrides:
-  nanoid: '^3.3.17'
+  nanoid: '^3.3.18'
 
 # CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
 #
