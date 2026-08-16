@@ -905,12 +905,21 @@ cheap.
 
 ### ⚠️ What was not reached, stated rather than left to be inferred
 
-**Seventeen of the 28 in-scope rows got the mechanical sweep and a read of their
+~~**Seventeen of the 28 in-scope rows got the mechanical sweep and a read of their
 docblock, but no individual external-fact measurement**: **G1, G2, G5, G9, G13,
-G14, G15, G16, G19, G20, G21, G22, G23, G27, G28, G30, G31**. The honest boundary
+G14, G15, G16, G19, G20, G21, G22, G23, G27, G28, G30, G31**.~~ The honest boundary
 is that pass 1 covered all 35 for **quotations** and pass 2 covered eleven rows
 for **unquoted claims**. A row not individually measured carries a `clean` decay
 verdict that has now survived a quotation sweep and nothing more.
+
+⚠️ **Superseded 2026-08-16 — and this list went stale by the same failure its own
+warning below describes, one paragraph away from it.** The decay re-read part two
+individually measured **eight** of the seventeen — **G5, G9, G16, G20, G21, G22,
+G27, G28** — and **G21 moved to `exposed` off one of them**. Derived
+mechanically as *in-scope minus measured*, which is how the ⚠️ below says this
+list should have been produced in the first place, **nine remain**: **G1, G2,
+G13, G14, G15, G19, G23, G30, G31**. Marked rather than rewritten, so the
+boundary each pass actually reached stays visible.
 
 ⚠️ **This list was wrong in both directions on first publication, and only one
 direction was caught by review.** It named **G32** and **G33**, which the
@@ -970,8 +979,21 @@ em dash and #144's three instrument faults a fifth time: **every one of the five
 has failed toward a tidier answer**, which is now a strong enough regularity to
 state as an expectation rather than a coincidence.
 
+⚠️ **A sixth, caught in review of this block rather than by the pass, and it
+strengthens the regularity rather than denting it.** This paragraph first said
+*eleven* rows carry fewer than five verdict bullets. It is **ten**. The eleventh
+was **G1**, which the first script reported at **seven** bolded bullets because
+its two demonstration items — *"A vault note read through `node:child_process`"*,
+*"A tracked `.mjs` under `packages/`"* — are formatted like verdicts and are not
+verdicts. So the artifact was the *opposite* direction (a row with **more** than
+five, not fewer) and it still produced the tidier sentence, because *eleven*
+absorbed it silently while *ten plus an outlier* would have raised a question.
+**The counting script that produces every total in this file filters bullets to
+the five category names; the exploratory one did not**, and the number that
+reached prose came from the exploratory one.
+
 **A structural fact the widened sweep establishes, recorded and deliberately not
-acted on.** Eleven rows carry fewer than five verdict bullets, merging categories
+acted on.** **Ten** rows carry fewer than five verdict bullets, merging categories
 that one exposure answers together — but **G26 is the only row in the file whose
 *decay* verdict is not separable from another category's**. Every other merge
 (G12, G17, G20, G21, G22, G23, G24, G25, G34) keeps Decay as its own bullet. So
@@ -1073,6 +1095,15 @@ two specs' comments state the same division, which `absent-only.test.ts:130`
 already does and `enrich-idempotence.test.ts` contradicts. `gated`, on the same
 reasoning as G21: nothing conceded it in writing, and the concession that exists
 (`:130`) asserts the opposite.
+
+⚠️ **Both exposures ship with `Observed-red line: not recorded`, and that is the
+rule rather than an oversight.** Band four settled it: **a decay flag is
+discharged by re-measuring, not by planting**, and filling an observed-red line
+is *"a separate errand"*. Neither finding here is a defect a plant could
+demonstrate — a false sentence in a docblock has nothing to go red — so **0
+plants** is the correct cost, not a shortfall. Band two counted rows lacking an
+observed-red line, so this is said out loud: G21 already carries two from band
+one, **G33 still carries none**, and this pass did not add one.
 
 ### The verdict that stands and the reason that does not
 
