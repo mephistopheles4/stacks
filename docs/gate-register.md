@@ -992,13 +992,42 @@ absorbed it silently while *ten plus an outlier* would have raised a question.
 the five category names; the exploratory one did not**, and the number that
 reached prose came from the exploratory one.
 
+**The classifier, stated so the next pass can reproduce it rather than rewrite
+it** — added on review of
+[#151](https://github.com/mephistopheles4/stacks/pull/151), against
+[`32e808a`](https://github.com/mephistopheles4/stacks/commit/32e808a):
+
+- A **row** is a line matching `^### G(\d+) `; its section runs to the next
+  `^##` or `^###`. Expect **35**.
+- A **verdict bullet** is `^\s*-\s+\*\*<label>\*\*` where `<label>` matches
+  `weakening|satisfying|routing|vacuous|decay`, case-insensitive — **the filter
+  the exploratory script lacked**, and what excludes G1's two demonstration
+  items. A bullet absorbs following lines until the next blank line, bullet, or
+  heading, so a **wrapped** verdict is read whole (#144's third fault).
+- A bullet's **verdict** is the first of `exposed` / `nominated` / `clean`
+  after the em dash, with optional bold markers. Anything else is
+  `UNADMITTED`; expect **0**.
+- A row is **flagged** if any of its verdict bullets is not `clean`. Decay is
+  the bullet whose label *contains* `decay`, which is what catches G26's merge.
+
+⚠️ **A committed script was put and refused.** The register has never shipped
+one — #126, #144 and this pass all describe their instrument's faults in prose —
+and a script under `gates/` or `scripts/` would be new executable surface added
+by a **docs-only** pass, inheriting [#116](https://github.com/mephistopheles4/stacks/issues/116)'s
+mutation-scope question and [#113](https://github.com/mephistopheles4/stacks/issues/113)'s
+observed-red obligation for a check nothing yet requires. The predicates above
+are the reproducible half at none of that cost. **If the totals ever need to be
+gated rather than recomputed, that is a row, and it is
+[#120](https://github.com/mephistopheles4/stacks/issues/120)'s call, not a
+by-product of a re-read.**
+
 **A structural fact the widened sweep establishes, recorded and deliberately not
 acted on.** **Ten** rows carry fewer than five verdict bullets, merging categories
 that one exposure answers together — but **G26 is the only row in the file whose
 *decay* verdict is not separable from another category's**. Every other merge
-(G12, G17, G20, G21, G22, G23, G24, G25, G34) keeps Decay as its own bullet. So
-#144's aggregate of *9 exposed* is reachable only by reading G26's merged bullet
-as decay-exposed — a defensible reading, since the corpus-capture incident is
+(G12, G17, G20, G21, G22, G23, G24, G25, G34) keeps Decay as its own bullet.
+So #144's aggregate of *9 exposed* is reachable only by reading G26's merged
+bullet as decay-exposed — a defensible reading, since the incident is
 genuinely both, but **one nobody has ever stated**. Splitting it is not this
 pass's to do: G26 is an exposed row, restructuring its verdicts re-decides it,
 and #150's scope excludes the exposed six. Handed to
@@ -1060,12 +1089,32 @@ concession is about *future* non-`fetch` APIs; nobody conceded a present false
 statement.
 
 **Remedy (named, not built):** have the G21 spec assert its own scope claim —
-scan tracked `.ts` for network-capable APIs outside `fetch` and fail on any not
-carrying a written exemption, with `smoke-render.ts`'s server import as the first
-exemption and its reason (*it serves, it does not request*) beside it. That turns
-the docblock's sentence from prose into the thing the row already claims it is.
-`gated`: real, unclosed, remedy is a named check, and nothing in the repo had
-conceded it.
+scan **every tracked executable source file** for network-capable APIs outside
+`fetch` and fail on any not carrying a written exemption, with
+`smoke-render.ts`'s server import as the first exemption and its reason (*it
+serves, it does not request*) beside it. That turns the docblock's sentence from
+prose into the thing the row already claims it is. `gated`: real, unclosed,
+remedy is a named check, and nothing in the repo had conceded it.
+
+⚠️ **This remedy first said "scan tracked `.ts`", and that version shipped the
+routing-around hole this file already catalogues twice — corrected on review of
+[#151](https://github.com/mephistopheles4/stacks/pull/151).** Band three found
+**G1** green against *"a tracked `.mjs` under `packages/`"*, and band four found
+**G6** green against an **`.astro` `<script>`** carrying the forbidden statement
+*verbatim*, because `siteFiles()` does not open that file type. The repo has one
+tracked `.mjs` (`packages/site/astro.config.mjs`) and four tracked `.astro`
+files. **A `.ts`-only glob is the cheap way past a narrow scan** —
+[#124](https://github.com/mephistopheles4/stacks/issues/124)'s reason for
+sweeping `.github/**/*.yml` rather than `workflows/` — so the extension list is
+part of the remedy and not an implementation detail, and the exemption list takes
+`expectFound` and a reason per entry on `ignoreGhsas`'s shape.
+
+⚠️ **A category-3 hole inside the remedy for a category-5 finding, in the file
+that catalogues both, proposed by a pass whose whole subject is claims nobody
+checked.** Recorded rather than quietly corrected, because it is the sharpest
+evidence on this map that **the register's findings do not reach the person
+writing the next remedy** — two bands demonstrated this exact hole and neither
+reached a remedy written after both had landed.
 
 **G33 `enrich-idempotence` — `clean` → `exposed`.** The docblock opens **"The
 only gate that reaches the `## About` body insert"** and rests the row's separate
@@ -1089,12 +1138,26 @@ verdict is not this pass's to move (#128 Rule 1 — a row leaves with its band's
 category dispositioned and the others open), so it is **noted, not edited**, on
 band two's precedent for G20's residual.
 
-**Remedy (named, not built):** correct the docblock to the claim that is true —
-G33 *asserts* the body insert's idempotence, G32 *depends* on it — and have the
-two specs' comments state the same division, which `absent-only.test.ts:130`
-already does and `enrich-idempotence.test.ts` contradicts. `gated`, on the same
-reasoning as G21: nothing conceded it in writing, and the concession that exists
-(`:130`) asserts the opposite.
+**Remedy (named, not built):** correct the docblock to the claim that is true,
+which takes three verbs rather than two — ⚠️ *this remedy first said only "G33
+asserts it, G32 depends on it", which understates the finding above it and was
+corrected on review of
+[#151](https://github.com/mephistopheles4/stacks/pull/151)*:
+
+- **G33 `asserts`** the body insert's idempotence — deliberately, as its
+  whole-pass claim, and it **owns** the guarantee.
+- **G32 `depends` on it.** Its own comment at `:127–130` says so: without an
+  absent-only body write *"the pass legitimately adds one and the byte-identical
+  assertion below fails for a reason that has nothing to do with absent-only."*
+- **G32 also `detects` its failure, incidentally**, which is the half the
+  docblock denies. The dependency and the detection are the same assertion read
+  two ways, and *"G32 cannot see that write at all"* is false on the second.
+
+Have both specs' comments state that division — `absent-only.test.ts:130`
+already states the ownership half correctly (*"G33 owns that write; this row owns
+the frontmatter"*) and `enrich-idempotence.test.ts` contradicts it. `gated`, on
+the same reasoning as G21: nothing conceded it in writing, and the concession
+that exists (`:130`) asserts the opposite.
 
 ⚠️ **Both exposures ship with `Observed-red line: not recorded`, and that is the
 rule rather than an oversight.** Band four settled it: **a decay flag is
@@ -1114,7 +1177,19 @@ this folder** cannot do."* `gates/` held **17** `.test.ts` specs when that
 sentence was written
 ([`1168650`](https://github.com/mephistopheles4/stacks/commit/1168650),
 2026-08-03) and holds **29** now, with **20** importing `repo.ts`'s text
-helpers — so *seven* cannot still be right, and nothing could say so.
+helpers.
+
+⚠️ **What that does *not* establish, corrected on review of
+[#151](https://github.com/mephistopheles4/stacks/pull/151): the subset was never
+measured.** This paragraph first read *"so **seven** cannot still be right"*, and
+the two numbers behind it are the **whole folder** (17 → 29) and the **`repo.ts`
+importers** (20), neither of which is *"text-matching gates"* — a category with
+no mechanical definition anywhere in this repo, which is why it was not counted
+rather than an oversight. The subset could in principle still be seven. **An
+inference stated as a measurement, inside the pass whose subject is exactly
+that**, and it is left visible rather than swapped out: the honest form is *the
+population this number describes has moved and nobody re-derived the number*,
+which is all the decay bound needs and all that was checked.
 
 ⚠️ **It is excluded anyway, and the exclusion is the point.**
 [#113](https://github.com/mephistopheles4/stacks/issues/113) bounded decay to
