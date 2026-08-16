@@ -110,7 +110,7 @@ resolution:
 2. **Satisfying the letter** — can the gate pass while the property it names is false?
 3. **Routing around** — can the property be violated somewhere the gate does not look?
 4. **Vacuous green** — does the check return its best possible answer for its worst possible input?
-5. **Decay** — does the row rest on a load-bearing claim measured once and never re-measured?
+5. **Decay** — ~~does the row rest on a load-bearing claim measured once and never re-measured?~~ **Superseded 2026-08-16**; the original is kept on this file's mark-never-delete rule, because verdicts reached under it are still in the file and each says which test it was reached under. The bound restated by [#138](https://github.com/mephistopheles4/stacks/issues/138) and applied from the decay re-read onward: **does the row rest on a load-bearing claim whose truth was never established, or never re-established, against a check that was available?** ⚠️ **This line stated the retired bound for two days after #138 restated it and #144 moved three verdicts under the restatement** — the definition every future triage reads, left behind by the passes that changed it. Found by the decay re-read part two, from reading the definition rather than any row.
 
 The worked example for category 4 — Vitest 4's `coverage.all` removal scoring an
 untested module 100% — is cited, not restated; it lives in `docs/gates.md`'s
@@ -195,17 +195,24 @@ disagree, because a deep pass corrects verdicts in both directions: band two mov
 `clean` to `exposed` inside **G10** and **G30**, rows that were already flagged, so
 those changed the row's contents and not its side. One row has crossed. The file
 counts the current reading and says so rather than leaving it to be inferred.
-Under the historical reading G7 is flagged and the total is 25; under the current
-one, which is what every count here uses, G7 is clean and the total is 24. Rank is
-the historical record; the verdict lines are the current one.
+~~Under the historical reading G7 is flagged and the total is 25; under the
+current one, which is what every count here uses, G7 is clean and the total is
+24.~~ ⚠️ **Marked 2026-08-16 — stale in both halves, and it went stale the same
+day it was written.** The decay re-read put **G7** back on the flagged side hours
+later, so the two readings no longer disagree about G7 at all; and the total moved
+to **25** when the decay re-read part two exposed G33. Kept rather than rewritten
+because the *distinction* it draws is still the file's rule, and because a
+worked example that expired this fast is worth leaving visible. Rank is the
+historical record; the verdict lines are the current one.
 
-**4 rows carry a flag with no rank** — exposed under weakening, routing around,
-or decay outside the ranked shapes: **G6, G12, G18, G24**. ⚠️ **This was five
-until the decay re-read**, which landed band four's own G34 correction into the
-verdict line band four left standing.
+**5 rows carry a flag with no rank** — exposed under weakening, routing around,
+or decay outside the ranked shapes: **G6, G12, G18, G24, G33**. ⚠️ **This was
+five, then four, and is five again**: the decay re-read landed band four's G34
+correction into the verdict line band four left standing, and the decay re-read
+part two exposed **G33**, a row that had been clean on all five since triage.
 
-**11 rows found nothing on all five categories**: G3, G4, G5, G8, G9,
-G11, G16, G27, G32, G33, **G34**.
+**10 rows found nothing on all five categories**: G3, G4, G5, G8, G9,
+G11, G16, G27, G32, **G34**.
 
 **A correction from the previous revision of this file.** 23 category lines
 across 14 rows originally read `not discussed` or `not separately
@@ -223,16 +230,18 @@ flagged, clean and not-reached totals below are unchanged, because every
 resolved line sat inside a row that was already counted correctly on the
 other side of the flagged/clean line.
 
-Flagged (20 ranked + 4 unranked) and clean (11) partition all 35 rows.
+Flagged (20 ranked + 5 unranked) and clean (10) partition all 35 rows.
 
-**Total flagged: 24 of 35.**
+**Total flagged: 25 of 35.**
 
 ⚠️ **This was 25 until band two, and the row that moved is the point of having a
 deep pass at all.** G7's two exposures were both corrected to `clean` after four
 plants failed to reach a green suite — triage read `docs/gates.md`'s live CodeQL
 residual and nominated it, which was the right call on the evidence triage had,
 and the demonstration disagreed. **Recounted mechanically over the 35 sections,
-not adjusted by one**: 11 rows now carry five clean verdicts.
+not adjusted by one**: ~~11 rows now carry five clean verdicts~~ — **10** as of
+the decay re-read part two; the sentence is band two's and marked rather than
+rewritten.
 
 ⚠️ **The total is unchanged by the decay re-read and the membership is not, which
 is the more useful fact.** Two rows crossed in opposite directions on the same
@@ -245,6 +254,20 @@ counting script was wrong twice before it was right, most instructively on a
 name, so a per-line test read it as non-clean and kept the row flagged for the
 wrong reason. Every total here is from the version that joins a bullet to its
 continuation lines.
+
+⚠️ **The decay re-read part two moved the total for the first time since band
+two, and it moved *up*.** **G33** crossed from clean to flagged on a decay
+exposure — the docblock's *"the only gate that reaches the `## About` body
+insert"*, false in the commit that wrote it — and **G21**, already flagged,
+gained its fifth. Decay now stands at **24 clean / 11 exposed**, against 26 / 9
+before. **Recounted mechanically over the 35 sections after the edits, never
+carried forward from the narrative**, which is the discipline
+[#149](https://github.com/mephistopheles4/stacks/pull/149)'s review had to
+enforce by hand: every total in this Summary and in that block came from one run
+of the counting script against the file as it now stands. ⚠️ **That script was
+wrong once, in the flattering direction, for a fifth distinct reason** — a match
+on `**Decay**` misses G26's merged `**Vacuous green / decay**` bullet and returns
+34 sections without saying so.
 
 **A second correction, made in the round that populated this file** — before
 either band ran; *"this revision"* is what it said until band two made that read
@@ -913,6 +936,222 @@ reader can see which test each verdict was reached under.
 sweeps, 0 plants. Band four's finding holds and strengthens: **re-measurement is
 cheaper than orientation**, and a mechanical sweep over 35 rows cost less than any
 single row of band one.
+
+---
+
+## The decay re-read, part two — the fourteen cleared on a number test
+
+Commissioned by [#150](https://github.com/mephistopheles4/stacks/issues/150),
+which is the block above admitting it did not finish. Two verdicts move, one
+keeps its verdict and loses its reason, and **the file's own definition of the
+category was still the superseded one** — found by reading the definition rather
+than any row.
+
+### The population, and a correction to the ticket that commissioned this
+
+⚠️ **Recounted before starting, as #150 instructs, and its population is one row
+short.** #150 lists fourteen, derived from three wordings: *"no load-bearing
+number"* (G3, G4, G5, G8, G9, G11, G16, G27, G32, G33), *"no measured-once
+number"* (G17, G20, G21), and G22's *"not a number the row currently rests on"*.
+A fourth wording exists and neither #144 nor #150 caught it — **G28**, cleared on
+*"no constant in the current row is stated as measured once"*, which is the old
+numeric bound in different words. **Scope is fifteen**, and the extra row is the
+one a three-string match could not see. #150 asked for exactly this check rather
+than for trust, and the check earned its place on the first pass.
+
+⚠️ **The instrument was wrong once, in the flattering direction, and the fault
+was the pattern rather than the data.** A first sweep for `**Decay**` returned
+**34 of 35** sections — silently, since 34 bullets is a plausible answer.
+**G26** states `- **Vacuous green / decay**` as one merged bullet, so a match on
+the bare category name skips it. Widened to any bolded label containing *decay*,
+the count is 35 and the totals reconcile with #144's landed **26 clean / 9
+exposed** exactly. This is [#126](https://github.com/mephistopheles4/stacks/issues/126)'s
+em dash and #144's three instrument faults a fifth time: **every one of the five
+has failed toward a tidier answer**, which is now a strong enough regularity to
+state as an expectation rather than a coincidence.
+
+**A structural fact the widened sweep establishes, recorded and deliberately not
+acted on.** Eleven rows carry fewer than five verdict bullets, merging categories
+that one exposure answers together — but **G26 is the only row in the file whose
+*decay* verdict is not separable from another category's**. Every other merge
+(G12, G17, G20, G21, G22, G23, G24, G25, G34) keeps Decay as its own bullet. So
+#144's aggregate of *9 exposed* is reachable only by reading G26's merged bullet
+as decay-exposed — a defensible reading, since the corpus-capture incident is
+genuinely both, but **one nobody has ever stated**. Splitting it is not this
+pass's to do: G26 is an exposed row, restructuring its verdicts re-decides it,
+and #150's scope excludes the exposed six. Handed to
+[#120](https://github.com/mephistopheles4/stacks/issues/120) as a naming
+obligation, not a verdict.
+
+### ⚠️ The file still defined category 5 by the bound #138 replaced
+
+**The single most consequential thing this pass found, and no row surfaced it.**
+`## The five categories` — line 113, where every triage of every future row
+starts — read:
+
+> 5. **Decay** — does the row rest on a load-bearing claim measured once and
+>    never re-measured?
+
+That is the **pre-[#138](https://github.com/mephistopheles4/stacks/issues/138)**
+bound. #138 restated it to *"whose truth was never established, or never
+re-established, against a check that was available"*, #144 moved three verdicts
+under the restatement, and **neither touched the definition list**. The file
+therefore stated the superseded bound at the top and the restated one 640 lines
+down, inside the block that applied it — the same shape as
+[#149](https://github.com/mephistopheles4/stacks/pull/149)'s *"Total flagged: 25
+of 35"* against the Summary's 24, and band three's closing count before it, with
+the difference that **this one governs every future verdict rather than
+describing a past one**. A reader triaging a new row against "category 5" as the
+file defines it would have applied a bound the map retired.
+
+Marked in place rather than replaced, on the file's mark-never-delete rule: the
+old wording stays, dated, with the restatement beside it. **Nothing is
+re-decided** — #138 owns the bound and #150 explicitly does not reopen it; what
+changes is only that the file now says what was already true.
+
+### Results — two verdicts move, both `gated`
+
+**G21 `no-live-network` — `clean` → `exposed`.** The docblock's scope claim is
+*"What it covers is `fetch`, in this process — which is every request this repo
+makes, **since nothing here uses `node:http` directly**."* That last clause is
+false, and **was false when it was written**: `scripts/smoke-render.ts:18` imports
+`createServer` from `node:http`, and has since
+[`1b48730`](https://github.com/mephistopheles4/stacks/commit/1b48730)
+(2026-07-31), while the sentence was authored in
+[`95a9edb`](https://github.com/mephistopheles4/stacks/commit/95a9edb)
+(2026-08-03) — three days later. Never established, by a check that was one
+`git grep` away.
+
+⚠️ **The conclusion survives and the warrant does not, which is the whole
+finding.** `createServer` serves; it does not request — so *fetch is every
+request this repo makes* still holds today, by an argument the docblock does not
+make. A reader who checks the stated reason finds it false and has no way to tell
+whether the conclusion went with it.
+
+**Not a double-count with the routing-around verdict**, which is already
+`exposed` and quotes the first half of the same sentence. #144's Rule 2 splits
+them cleanly: *"what it covers is `fetch`, in this process"* is a claim about
+**the gate's own reach** and stays in categories 2 and 3; *"nothing here uses
+`node:http`"* is a claim about **the repository's files**, whose truth-maker
+lives outside the gate spec, and is the decay surface. The routing-around
+concession is about *future* non-`fetch` APIs; nobody conceded a present false
+statement.
+
+**Remedy (named, not built):** have the G21 spec assert its own scope claim —
+scan tracked `.ts` for network-capable APIs outside `fetch` and fail on any not
+carrying a written exemption, with `smoke-render.ts`'s server import as the first
+exemption and its reason (*it serves, it does not request*) beside it. That turns
+the docblock's sentence from prose into the thing the row already claims it is.
+`gated`: real, unclosed, remedy is a named check, and nothing in the repo had
+conceded it.
+
+**G33 `enrich-idempotence` — `clean` → `exposed`.** The docblock opens **"The
+only gate that reaches the `## About` body insert"** and rests the row's separate
+existence on **"so G32 cannot see that write at all."** Both are false, and both
+were false **in the commit that wrote them** —
+[`1d0548f`](https://github.com/mephistopheles4/stacks/commit/1d0548f) authored
+this docblock and `gates/absent-only.test.ts`'s body handling together.
+`gates/absent-only.test.ts:131` calls
+`vault.insertBodySection(book!.sourcePath, '## About', …)`, and its
+byte-identical assertion at `:136` **would go red** if that write ever stopped
+being absent-only: G32 seeds the heading, runs the pass, and compares the whole
+file. G32 does not merely reach the write — it covers it, incidentally.
+
+⚠️ **The two files coordinate and the sentence still overstates.**
+`absent-only.test.ts:130` reads *"G33 owns that write; this row owns the
+frontmatter"* — a deliberate division of labour, not an oversight, which is why
+this is a wording defect and not a design one. But the register repeats the false
+premise in a **second place**: G33's *Satisfying the letter* verdict cites *"G32
+cannot see the `## About` body insert at all"* as its supporting evidence. That
+verdict is not this pass's to move (#128 Rule 1 — a row leaves with its band's
+category dispositioned and the others open), so it is **noted, not edited**, on
+band two's precedent for G20's residual.
+
+**Remedy (named, not built):** correct the docblock to the claim that is true —
+G33 *asserts* the body insert's idempotence, G32 *depends* on it — and have the
+two specs' comments state the same division, which `absent-only.test.ts:130`
+already does and `enrich-idempotence.test.ts` contradicts. `gated`, on the same
+reasoning as G21: nothing conceded it in writing, and the concession that exists
+(`:130`) asserts the opposite.
+
+### The verdict that stands and the reason that does not
+
+**G20 `public-build-artifact` — stays `clean`, reason corrected.** Its clearance
+reads *"no measured-once number underlies the row"*. A measured-once number does
+underlie it: the docblock closes on *"what **the seven text-matching gates in
+this folder** cannot do."* `gates/` held **17** `.test.ts` specs when that
+sentence was written
+([`1168650`](https://github.com/mephistopheles4/stacks/commit/1168650),
+2026-08-03) and holds **29** now, with **20** importing `repo.ts`'s text
+helpers — so *seven* cannot still be right, and nothing could say so.
+
+⚠️ **It is excluded anyway, and the exclusion is the point.**
+[#113](https://github.com/mephistopheles4/stacks/issues/113) bounded decay to
+claims *a decision or a procedure rests on*, which is what admitted the stale
+`133 tests in ~2s` and **excluded the slug count**. Nothing rests on *seven*: it
+is a rhetorical contrast inside an argument that holds whatever the number is.
+Same class as the slug count, and excluded on the same precedent. **The verdict
+was right and its stated reason was wrong**, which is a distinction this file has
+now made three times — band two's G7, #144's five rows filed as exposed that read
+`clean` verbatim, and this — and which no total can expose.
+
+### Twelve rows re-measured and cleared, with what was checked
+
+Each nomination's **own claim** was re-measured, per #144's Rule 1 — not the fact
+it worries about.
+
+| Row | The claim, and where its truth-maker lives | Result |
+| --- | --- | --- |
+| **G3** | *"The final test asserts the corpus reaches all three kinds"* | Holds — `bad-note.test.ts:138–144`, `expectFound(…, 3)` and an exact set match |
+| **G4** | *"`adapters/update-book.test.ts` asserts with `toContain`"*; *"G1 deliberately does not scan `gates/`"* | Both hold — 11 `toContain` calls; `adapter-boundary.test.ts:26–29` states the scope note |
+| **G5** | *"`library.json` … gitignored"* | Holds, **and is asserted** — `repo-hygiene.test.ts:129–132` checks `isIgnored` for both paths |
+| **G8** | The `shelf_order` drift story; three in-spec assertions | Historical; assertions are structural and in-spec |
+| **G9** | *"Variables supplied by the platform, not by this project's `.env`"* (`PROVIDED_BY_PLATFORM`) | Holds. ⚠️ The list is **not reverse-asserted** — a category-3 allowlist matter, not decay, per the double-count rule; handed on rather than claimed here |
+| **G11** | *"the dev flow uses `--public` and is fine"* | Holds — `scripts/dev-watch.ts:114` passes `--public` |
+| **G16** | *"no load-bearing number"* | Stands. ⚠️ Observation only: `smoke-render.ts:708` hardcodes `× 24` to report cm, against `scene.ts:1056`'s *"1 unit ≈ 24cm"*, unasserted — but it formats a **message**, not the `0.005` threshold, so nothing rests on it |
+| **G17** | *"ADR-0019 already accepts that the live site may drift from `main`"* | Holds — `docs/adr/0019-deploying-is-local.md`, the 2026-08-01 entry, verbatim |
+| **G22** | *"It is now pinned behaviourally … in `covers/cache-cover.test.ts`"* | Holds — `:170` *"asks for the large cover before the small one"*, asserting `fetched()[0]` is the large URL |
+| **G27** | *"issue #62 read `7 with gaps, would fill 1, 5 left alone` off this output"* | Holds — ⚠️ **in the issue's comments, not its body**; a body-only check returns *not found* and would have produced a false exposure |
+| **G28** | *"`smoke:render` measures `Box3.setFromObject` against the case's real inner faces"* | Holds — `scene.ts:858`, surfaced to the gate through `window.__shelf.caseOverflow` |
+| **G32** | *"every write is `if (book.X === undefined)`"* | Holds — `enrich.ts:177–229`, and `:190` carries the same sentence as an in-file comment |
+
+⚠️ **G27 is the one that nearly went the wrong way, and it is the general
+lesson.** Its truth-maker is outside the repository entirely — a GitHub issue,
+which **G21 forbids any gate from fetching** — so it sits in exactly G7's
+structural position, the second member #144 gave
+[#124](https://github.com/mephistopheles4/stacks/issues/124)'s *"relied upon and
+unverifiable"* clause. The difference is that G27's claim is **true**, so the
+nomination fails on #144's Rule 1 and the verdict stands. **Unverifiable by a
+gate is not the same as false**, and a pass that conflated them would have
+manufactured an exposure out of a location fact.
+
+### ⚠️ Two corrections back to the block above
+
+Both found by reading #144's own output rather than by looking for them.
+
+1. **#144's *"the only place in the file where a band's correction never reached
+   the verdict it corrected"* (G34) is false — there is a second, and it is
+   G21.** Band one's deep-pass block states, in terms, *"The category-4 line
+   above should now read **clean, demonstrated** rather than **exposed,
+   historical, fixed**"* — and the bullet still reads `exposed`. Identical shape
+   to the G34 case #144 landed. **Not edited here**: it is band one's verdict and
+   category 2/4, not decay, and moving it changes no total (G21 stays flagged on
+   its weakening and routing-around verdicts either way). Recorded so the next
+   pass does not have to rediscover it.
+2. **#144's own count of its number-test clearances is internally
+   inconsistent**: the paragraph opens *"Fourteen of the 28 were cleared with a
+   number test"*, enumerates 10 + 3 + 1 = 14, and then closes *"Those **ten**
+   clearances are the likeliest place a further pass finds something."* The ten
+   names the first sub-list only; the sentence reads as the whole population. Left
+   marked rather than rewritten.
+
+**Cost:** ~40 min, **0 plants**, 1 counting script (wrong once), ~16 read-only
+sweeps, 0 vitest invocations beyond the closing suite run. Band four's
+*re-measurement is cheaper than orientation* holds a third time. ⚠️ **The two
+findings both came from the same question** — *was this true when it was
+written?* — rather than from *has this drifted?*, which is #138's restatement
+paying for itself: under the old bound neither row had a measured-once number and
+both would have cleared again.
 
 ---
 
@@ -2077,7 +2316,17 @@ a book that already carries a *wrong* value keeps it, correcting it by hand.
 - **Routing around** — clean; no stated gap.
 - **Vacuous green** — clean; the whole-pass assertion leaves nothing
   unexercised.
-- **Decay** — clean; no load-bearing number.
+- **Decay** — **exposed**, ⚠️ *corrected 2026-08-16 by the decay re-read part
+  two ([#150](https://github.com/mephistopheles4/stacks/issues/150)), from
+  `clean; no load-bearing number`.* The docblock's **"The only gate that
+  reaches the `## About` body insert"**, and the row's warrant for existing
+  separately — **"G32 cannot see that write at all"** — are both false, and
+  were false in the commit that wrote them: `gates/absent-only.test.ts:131`
+  calls `insertBodySection(…, '## About', …)` and its byte-identical assertion
+  would go red if that write stopped being absent-only. Disposition `gated`.
+  ⚠️ The *Satisfying the letter* verdict above cites the same false premise;
+  noted, not edited — it is not this pass's category. See the Decay re-read
+  part two block.
 
 `docs/gates.md` carries no elaboration beyond the table row.
 
@@ -2752,7 +3001,14 @@ re-counted rather than trusted.
 - **Routing around** — clean; a final completeness assertion holds the rule
   list to the planted defects, so the gate "cannot quietly come to cover ten
   of eleven."
-- **Decay** — clean; no measured-once number underlies the row — it inspects
+- **Decay** — clean, ⚠️ *reason corrected 2026-08-16 by the decay re-read part
+  two ([#150](https://github.com/mephistopheles4/stacks/issues/150)); the
+  verdict stands and the reason below did not.* A measured-once number **does**
+  underlie the row — the docblock's *"the seven text-matching gates in this
+  folder"*, against 17 specs then and 29 now — but nothing rests on it, so it
+  is excluded on [#113](https://github.com/mephistopheles4/stacks/issues/113)'s
+  load-bearing bound, the slug count's precedent. Originally: no measured-once
+  number underlies the row — it inspects
   a synthetic `dist/` it assembles itself, not a captured or dated fixture.
 
 `docs/gates.md` already answers this extensively (lines 664–734).
@@ -2814,8 +3070,16 @@ exit code anyone watched.
   out to a script making its own requests... and any future code that reaches
   the network by some other API" both sit outside it, stated rather than
   gated.
-- **Decay** — clean; no measured-once number underlies this row — the guard
-  is a runtime record of calls made, not a constant that could go stale.
+- **Decay** — **exposed**, ⚠️ *corrected 2026-08-16 by the decay re-read part
+  two ([#150](https://github.com/mephistopheles4/stacks/issues/150)), from
+  `clean; no measured-once number underlies this row`.* The old reason was
+  right about numbers and the bound is about **claims**: the docblock's
+  *"since nothing here uses `node:http` directly"* is false and **was false
+  when written** — `scripts/smoke-render.ts:18` imported it three days
+  earlier. The conclusion it supports survives (`createServer` serves, it does
+  not request); the warrant does not. Distinct from the routing-around verdict
+  by #144's Rule 2 — that one is about the gate's own reach, this one about
+  the repository's files. See the Decay re-read part two block.
 
 `docs/gates.md` already answers all three (lines 340–399).
 
