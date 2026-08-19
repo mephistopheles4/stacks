@@ -20,9 +20,17 @@ page that computes no confidence figure must not be named after one.**
 
 ---
 
-## 1. The transport: CI writes an immutable record; the machine pulls it
+## 1. The transport: CI writes a durable record; the machine pulls it
 
 **Neither push nor pull — both, split at a durable record.**
+
+⚠️ **The word is *durable*, and #121's own heading said *immutable*.** Nothing
+makes this record immutable: the `metrics` branch is unprotected and
+force-pushable by construction ([§8](#8-residuals)), and append-only is a
+convention enforced by nothing. **Durable is what git buys — the record survives
+the laptop, the store, and any rebuild of Prometheus.** Corrected here rather than
+carried, because *immutable* is the strongest available word for the property this
+design most conspicuously lacks, sitting in a heading.
 
 The hosting research found that `promtool tsdb create-blocks-from openmetrics`
 backfills a local Prometheus, so *"no history when the machine is off"* is a
@@ -234,6 +242,23 @@ needs its own bound, because they do not share a clock.
 | the three nightly-written ones | **3 days** |
 | surface D's row | **none — reported, never refused** |
 
+**Absent and stale are the same verdict, and this is entailed rather than newly
+decided.** A per-series bound has to say what it does about a series with **no
+sample at all** — never emitted, renamed, or silently dropped from the run — and
+*"the newest sample is older than 3 days"* is undefined for a series with no
+samples. **So a gated series with no sample inside its bound refuses, exactly as a
+stale one does.** Anything else fails closed in the wrong direction: **a series
+that never emitted is the failure per-series staleness exists to expose**, and it
+would be the one case the check could not see.
+
+⚠️ **This makes the check parse samples, not filenames — and one sentence in the
+gaming section below was written before that.** #121 designed the freshness check
+to read a **filename**, which was cheap and correct for an aggregate bound; #140
+then made staleness **per-series**, which a filename cannot answer. **The filename
+line survives in [§7](#7-gaming-categories-graded) as the vacuous-green entry it
+was, marked as superseded rather than deleted** — the design moved and the
+sentence did not, which is this spec's own subject arriving in the spec.
+
 **3 days, and it is not a fresh number.** The calibration window breaks on any gap
 over 3 days and the dated bootstrap expires at 3, so **a record too stale to deploy
 on is exactly a record too stale to calibrate on** — one number in three places
@@ -412,6 +437,15 @@ built to close that gap. The other two content rules — `/Library\/[^"'\s]*\.md
   vacuous**: `empty-library` already fires on a bookless build, so the trace always
   has input.
 
+  ⚠️ **(iii) is a schema-shape guard and nothing more, stated here rather than only
+  in [§7](#7-gaming-categories-graded) two hundred lines down.** It checks key
+  **names**, never values, so **body text stuffed into `subjects` — a named
+  `BookRecord` field, correctly wired — passes every assertion in it.** The
+  structural argument (*no `BookRecord` field carries a body*) is a claim about the
+  **schema**, and (iii) checks the schema; **neither checks contents.** A reader who
+  meets (iii) here and not §7 would leave with a guarantee this check does not give,
+  which is the fault this spec exists to catalogue.
+
 **The `smoke:render` beacon trap is moot** — G21 guards `fetch` in the Vitest process
 and not the Chrome that `scripts/smoke-render.ts` drives, so a client beacon would
 have reported fixture traffic as production truth. **Nothing lands on the page, so it
@@ -513,10 +547,15 @@ blind as that.** Note text reaching anywhere else is outside every runtime check
 `~/.claude`, a cover's EXIF, a sourcemap, a CI artifact upload — and inside `dist/` the
 reach is narrower than it looks, `TEXTUAL` being a nine-extension allowlist.
 
-**4 — Vacuous green.** ⚠️ **The live one: the deploy staleness check reads a
+**4 — Vacuous green.** ⚠️ ~~**The live one: the deploy staleness check reads a
 *filename*, so a metrics file containing zero samples is indistinguishable from a full
 one** — fresh, well-named, and empty. Freshness was chosen for cheapness and this is
-what it cost. **Worse on the dashboard: a series that stops being emitted draws no line
+what it cost.~~ **Superseded, and the supersession is the finding.** #140's per-series
+bound cannot be answered by a filename, so [§4](#4-the-reading-ritual-and-what-deploy-refuses)
+makes the check parse samples and treat **absent as stale**. **The entry is struck in
+place rather than deleted**: it was written against #121's aggregate design, it was
+true then, and *a claim that stopped being true when a sibling decision landed* is the
+category this register catalogues. **Worse on the dashboard: a series that stops being emitted draws no line
 at all, and no line reads as *I haven't configured that panel yet* rather than *this
 broke in March*.** **G36 on an empty trends table and an emitter producing no series:
 both sides empty, correspondence holds, green** — mitigated by an `expectFound`
@@ -544,7 +583,7 @@ as a limit of surface B rather than repaired, since this spec does not build.
 
 | Residual | Detail |
 | --- | --- |
-| ⚠️ **Once any scope is armed, the `metrics` branch is append-only in practice** — never force-pushed, never pruned, never rewritten. **Its history *is* the calibration evidence for every armed floor**; rewrite it and every floor becomes a number nobody can re-derive, **which is worse than an unarmed floor because it is indistinguishable from a good one.** **Enforced by nothing.** | §1 |
+| ⚠️ **Once any scope is armed, the `metrics` branch is append-only in practice** — never force-pushed, never pruned, never rewritten. **Its history *is* the calibration evidence for every armed floor**; rewrite it and every floor becomes a number nobody can re-derive, **which is worse than an unarmed floor because it is indistinguishable from a good one.** **Enforced by nothing**, and [#122](https://github.com/mephistopheles4/stacks/issues/122) decided **no ticket** on the precedent that the branch does not exist yet, so one would open and find nothing to do. ⚠️ **A candidate mechanism is recorded and not adopted**, so the next reader does not re-derive it: `trend:sync` could persist the last imported branch commit and **refuse a non-fast-forward tip**, rebuilding local state rather than importing across a rewrite. That is tamper-*evident*, not tamper-proof — it detects a rewrite at the next sync and cannot prevent one — and **adopting it is the implementation session's call, not this spec's.** | §1 |
 | **No deploys means no learning**, and no syncs means no D. Every surface here fires at `deploy:site` or at `trend:sync`. **Third instance of this shape in the spec.** | §4, §5 |
 | **Edge-injected markup on the deployed site is observed by nothing**, before or after D. `deploy.ts` chose a meta tag over whole-HTML comparison precisely so edge rewriting would not break the check, **so that blindness is deliberate** — and written down rather than assumed. | §5 |
 | **Invariant 2's real-build `note-body` rule is vacuous and is accepted as such.** | §5 |

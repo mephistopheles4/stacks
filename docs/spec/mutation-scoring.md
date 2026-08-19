@@ -154,30 +154,47 @@ reach* transfers to any codebase; the eight scopes below do not.
 
 ## 4. Eight declared scopes — reachable only, declared never discovered
 
+**Directory rollups first** — these are *packages*, not declared scopes, and the
+distinction is load-bearing enough to have its own warning below:
+
 ```
                        whole directory        reachable half
-packages/core/src      3301 mutants  66.6%    3301  66.6%   (nothing excluded)
-packages/cli/src        573 mutants   5.4%      68  45.6%   (505 excluded)
-packages/site/src      3612 mutants  19.6%    1503  47.1%   (2109 excluded)
+packages/core/src/**   3301 mutants  66.6%    3301  66.6%   (nothing excluded)
+packages/cli/src/**     573 mutants   5.4%      68  45.6%   (505 excluded)
+packages/site/src/**   3612 mutants  19.6%    1503  47.1%   (2109 excluded)
 ```
 
-| Scope | Mutants | Score |
-| --- | --- | --- |
-| `packages/core/src` | 1227 | 71.7% |
-| `packages/core/src/adapters` | 366 | 66.9% |
-| `packages/core/src/covers` | 493 | 62.3% |
-| `packages/core/src/import` | 256 | 66.0% |
-| `packages/core/src/metadata` | 959 | 62.3% |
-| `packages/site/src/shelf` (reachable) | 1503 | 47.1% |
-| `packages/cli/src` (reachable) | 68 | 45.6% |
-| `scripts/` (reachable) | **unmeasured** | — |
+**The declared scopes:**
 
-**The five core rows partition `packages/core/src`; they do not sit beside it.**
-`packages/core/src` at 1227 is the files directly in it, and 3,301 at 66.6% is the
-union of all five rather than a ninth scope. ⚠️ **#114's *"all 18
-`packages/core/src/*` directories"* is 5** — the glob matches 18 entries, 14 of
-them files — and it is mildly load-bearing, since the granularity decision rests
-on how many floors exist.
+| Scope | Glob | Mutants | Score |
+| --- | --- | --- | --- |
+| `packages/core/src` | **non-recursive** — the files directly in it | 1227 | 71.7% |
+| `packages/core/src/adapters` | recursive | 366 | 66.9% |
+| `packages/core/src/covers` | recursive | 493 | 62.3% |
+| `packages/core/src/import` | recursive | 256 | 66.0% |
+| `packages/core/src/metadata` | recursive | 959 | 62.3% |
+| `packages/site/src/shelf` (reachable) | recursive, minus the exclusions | 1503 | 47.1% |
+| `packages/cli/src` (reachable) | recursive, minus the exclusions | 68 | 45.6% |
+| `scripts/` (reachable) | one file — see §5 | **unmeasured** | — |
+
+**The five core rows partition `packages/core/src/**`; they do not sit beside
+it.** The declared scope `packages/core/src` at 1227 is the files **directly** in
+it, and 3,301 at 66.6% is the union of all five rather than a ninth scope.
+
+⚠️ **One string, two populations, and the spec says which is which because the
+implementer cannot tell from the name.** `packages/core/src` is a **declared
+scope** at 1227 mutants / 71.7% *and* a **directory rollup** at 3,301 / 66.6%.
+Nothing about the name distinguishes them, so **an implementer who writes
+`packages/core/src/**` where this table means non-recursive silently declares the
+union** — four of the eight scopes vanish into it, their floors with them, and
+`mutation-scope`'s partition assertion is what goes red. **The glob is the scope's
+definition; the name is only its identity.** Recorded here rather than left to be
+discovered because the two numbers are five points apart, and a floor derived from
+the wrong one is slack forever with nothing able to notice.
+
+⚠️ **#114's *"all 18 `packages/core/src/*` directories"* is 5** — the glob matches
+18 entries, 14 of them files — and it is mildly load-bearing, since the
+granularity decision rests on how many floors exist.
 
 ⚠️ **`scripts/` has never been measured and this spec invents no number for it.**
 No run included it; the widest scope was abandoned at the dry run.
@@ -387,10 +404,16 @@ table has neither numbers nor a status column, so **there was no marking
 vocabulary for a rejection row whose condition has fired.** There is now, and it
 is prose in place:
 
-> **Mutation testing (Stryker)** — *Genuinely cheap here … Revisit once the rows
-> above are green.* ⚠️ **Revisited 2026-08-11: condition met, and the cost
-> estimate in this cell was wrong — 636 tests / 5.52s, not 133 / ~2s. Now a
-> trend; see [Trends](#trends). Still not gated: the number never goes red.**
+**The exact replacement text**, as a fenced block rather than a quotation because
+its `#trends` link resolves in **`docs/gates.md`**, where the `## Trends` section
+lands — not in this file:
+
+```markdown
+**Mutation testing (Stryker)** — *Genuinely cheap here … Revisit once the rows
+above are green.* ⚠️ **Revisited 2026-08-11: condition met, and the cost estimate
+in this cell was wrong — 636 tests / 5.52s, not 133 / ~2s. Now a trend; see
+[Trends](#trends). Still not gated: the number never goes red.**
+```
 
 In place rather than as a new column, for three reasons: a column is a thing to
 keep true on all five rows including three nobody will revisit; the cell is already

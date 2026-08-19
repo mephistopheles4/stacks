@@ -1,8 +1,9 @@
 # `docs/spec/` — the locked specs
 
 **Two efforts have produced a locked spec in this folder.** Each is decided end to
-end and waiting for an implementation session, and **each carries its own build
-order and its own gate roster** — they do not share one.
+end, and **each carries its own build order and its own gate roster** — they do not
+share one. **Only the second is waiting for an implementation session**; the first
+has been built on a branch and is kept as written.
 
 | Spec | Index | State |
 |---|---|---|

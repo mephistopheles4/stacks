@@ -109,10 +109,18 @@ this spec is *work*, and the 20-run calibration window is *waiting*. **Waiting
 overlaps with work only if it starts first.**
 
 **1 — The spine.** Stryker and its ADR, `stryker.config`, `metrics.yml`, the orphan
-`metrics` branch, `pnpm trend:sync`, the `## Trends` section, and **G36
-`trend-layer`, G37 `mutation-scope`, G38 `metrics-freshness`**. It does not touch
-`gates.yml` or its `timeout-minutes: 20`, because the nightly lives in its own
+`metrics` branch, `pnpm trend:sync`, the `## Trends` section, **`scripts/deploy.ts`**,
+and **G36 `trend-layer`, G37 `mutation-scope`, G38 `metrics-freshness`**. It does not
+touch `gates.yml` or its `timeout-minutes: 20`, because the nightly lives in its own
 workflow.
+
+⚠️ **`scripts/deploy.ts` is in this step and was missing from it.** Two of the three
+spine gates are **partly deploy-side**: G37 carries the zero-mutant residual refusal
+and **G38 is a deploy refusal outright**, alongside the per-series staleness check,
+its branch-tip disambiguating fetch, the dated bootstrap and the print block. **A row
+cannot be marked landed while the behaviour it scores is unwired**, which is a gate
+whose stated scope exceeds its real scope — arriving in the ordered checklist an
+implementation session actually follows.
 
 ⚠️ **The spine's landing checklist pins `metrics.yml`'s actions by hand and says
 why**: it is the one new workflow file in this rollout, and it is authored during the
@@ -166,8 +174,16 @@ Three spec lines follow:
    than implied.
 
 **Genuinely reversible**: the Stryker dependency (`pnpm remove`, mark the ADR
-superseded), the orphan `metrics` branch (`git push --delete`; nothing references it),
-and the floors JSON with its refusal (delete both).
+superseded), the floors JSON with its refusal (delete both), and — ⚠️ **only while
+every scope is still `unarmed`** — the orphan `metrics` branch (`git push --delete`;
+nothing references it).
+
+⚠️ **That qualification was missing and the two sentences contradicted each other
+one line apart.** #122 §7 lists the branch as freely deletable *and* rules it
+append-only once anything is armed; **both are its own, adjacent, and neither
+noticed.** After arming there is no evidence-preserving deletion, because **the
+history *is* the evidence** — so backing the ratchet out post-arming means keeping
+the branch and deleting the floors file, never the reverse.
 
 ---
 

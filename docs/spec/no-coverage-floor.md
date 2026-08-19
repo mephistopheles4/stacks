@@ -35,8 +35,8 @@ red; its absence is."* **A floor is a threshold.**
 > already closed.**
 
 ⚠️ **The gate-or-trend question turned out to be fatal rather than clarifying.**
-#117 asked which one it is and expected the answer to shape the design. The answer
-is **neither**, because the artifact cannot be built either way.
+The ticket asked which one it is and expected the answer to shape the design. The
+answer is **neither**, because the artifact cannot be built either way.
 
 ### Leg 2 — `coverage.all`'s removal makes it worse than absent
 

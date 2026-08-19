@@ -138,16 +138,28 @@ The no-override design only works if the floor is the only way down. **It is not
   increase is a real event.
 - **The floor itself.**
 
-**Every route down costs the same diff, in the same file.** The floors file
-records, per scope, the **floor** and the **`ignored`** count; and once, at the
-top, a **hash of the score-affecting configuration** the floors were derived
-under. Each run stamps its own config hash into the metrics record; deploy
-compares, and a mismatch refuses with *"these floors were derived under a different
-configuration; re-derive them"* rather than silently comparing two numbers that do
-not mean the same thing.
+**Every route down has to pass through the floors file, and each has a named
+guard.** The file records, per scope, the **floor** and the **`ignored`** count;
+and once, at the top, a **hash of the score-affecting configuration** the floors
+were derived under. Each run stamps its own config hash into the metrics record;
+deploy compares, and a mismatch refuses with *"these floors were derived under a
+different configuration; re-derive them"* rather than silently comparing two
+numbers that do not mean the same thing.
 
-One sentence to defend: **every way to make the bar easier is the same one-line
-diff in the same tracked file.**
+| Route down | The diff it actually takes | Guard |
+| --- | --- | --- |
+| lower the floor | one line in the floors file | the floor check at deploy |
+| change scoring config | `stryker.config.*` **and** the floors file's hash | the config-hash comparison |
+| add a disable comment | the source file **and** the floors file's `ignored` | **G42**, at merge |
+
+⚠️ **#115's *"every way to make the bar easier is the same one-line diff in the
+same tracked file"* is replaced rather than softened.** It is false in the same
+direction twice: two of the three routes are **two diffs in two files**, and only
+the first is one line. **The true invariant is weaker and still enough**: *no route
+down reaches the deploy without a diff in the floors file, and each route has a
+named guard that goes red if that diff is missing.* A sentence whose stated scope
+exceeds its real scope is this spec's own subject, and this one was carrying an
+overclaim into the piece with the least enforcement behind it.
 
 ### G42 `ignored-mutants` — Contract seams
 
@@ -425,10 +437,19 @@ over 3 days.** Counted in **runs**, not days.
 **Nothing ends the disarmed period, and the print is the whole mechanism.**
 
 ```
-packages/core/src   armed 66.58   current 66.61  (+0.03)
-packages/cli/src    unarmed       window full (20 runs), lowest 71.32 - armable
+packages/core/src   armed 71.55   current 71.70  (+0.15)   1 mutant = 0.08
+packages/cli/src    unarmed       window full (20 runs), lowest 44.12 - armable
 scripts/            unarmed       12/20 runs, 41 days
 ```
+
+⚠️ **Every number in that block is illustrative and none is measured.** #122's
+version of it armed `packages/core/src` at **66.58** — which is the **directory
+rollup's** score, not the declared scope's 71.7% — and gave `packages/cli/src` a
+window low of **71.32** against a measured 45.6%. **One real number borrowed from
+the wrong population, sitting beside one invented outright**, in the example an
+implementer copies. The figures above are at least consistent with
+[`mutation-scoring.md`](mutation-scoring.md)'s scope table; **an implementer takes
+the shape from here and the numbers from the record.**
 
 The middle line appears at every deploy, **escalates never, files nothing** — so it
 stays inside the standing constraint — and it converts *indefinite* from a silence
@@ -517,6 +538,7 @@ discharges that**, and it is why the order is part of the spec rather than a not
 | **G42** | add one `// Stryker disable next-line` and leave `ignored` at 0 | red in `pnpm test`, at merge |
 | **G42, reverse** | raise `ignored` with no comment in the source | red |
 | **the bootstrap** | run `deploy:site` with no record at all, more than 3 days after the spine landed | refuses; **within 3 days it prints and does not refuse** |
+| **calibration** | write a `run_ok 0` row carrying a partial low score into an otherwise full window | the derivation **ignores it**, and the window is not satisfied by 20 rows of which one failed |
 
 ⚠️ **`--dry-run` exercises all of these and uploads nothing**, which is the honest
 way to plant them. `--check-only` skips straight to the origin check and does not.

@@ -166,11 +166,37 @@ load-bearing rule, *"a gate never observed failing is not yet a gate"*, **is enf
 today by the author remembering to write a sentence.** The register is the first
 structure this repo has had that can require it.
 
+### The shape G40 asserts, stated as cardinality rather than as membership
+
+⚠️ **Membership is not enough, and the earlier wording — *"all five categories
+named"* — is the failure it was written against.** A section carrying one merged
+`**Vacuous green / decay**` bullet names all five category words and satisfies a
+membership check; so does a file carrying **two** `## G26` sections, since
+correspondence asks only that each row *has* an entry. **Both are a claim nothing
+can fail on, inside the register of claims nothing can fail on.** So:
+
+- **Exactly one verdict bullet per category, per entry** — five bullets, each naming
+  one category. §1's rule made mechanical, rather than restated as prose beside a
+  check that does not enforce it.
+- **Exactly one register section per row**, and one row per section. Cardinality,
+  not membership.
+- **Exactly one** disposition from the closed vocabulary, one date, one
+  observed-red line — **or the entry says in terms that its nomination did not
+  survive**, which is the only state that carries no disposition.
+
+⚠️ **One exemption, named with its justification, because the register already
+contains the thing this forbids.** **G26**'s merged `**Vacuous green / decay**`
+bullet is marked in place under mark-never-delete, so an unexempted rule would go
+red on the file the moment it landed — *weakening a gate to make it pass*, at the
+worst possible address. **The exemption names G26 and that bullet specifically**,
+in the `gates/` allowlist idiom where every entry carries a reason and is
+reverse-asserted: **remove the merged bullet and the exemption goes red too**, so
+it cannot outlive the row it exists for.
+
 ⚠️ **The gate asserts shape and says nothing about quality, and the spec states that
-limit**: all five categories named, a disposition from the closed vocabulary, a date
-present, an observed-red line present. **Whether the analysis behind them is any good
-is outside it** — the same relationship G19 has to slugs, and G22's lesson applied to
-this gate rather than exempting it.
+limit.** **Whether the analysis behind an entry is any good is outside it** — the
+same relationship G19 has to slugs, and G22's lesson applied to this gate rather
+than exempting it.
 
 ---
 
@@ -402,7 +428,7 @@ of the technique rather than as one more instance.**
 
 | Artifact | Change |
 | --- | --- |
-| `gates/gate-register.test.ts` | **G40** — correspondence both ways between `docs/gates.md`'s numbered rows and the register's row sections; **row-side floor at 42**; entry-shape assertions (five categories named, a disposition from the closed vocabulary, a date, an observed-red line) |
+| `gates/gate-register.test.ts` | **G40** — correspondence both ways between `docs/gates.md`'s numbered rows and the register's row sections; **row-side floor at 42**; **exact cardinality** and entry shape, per §2 |
 | [`docs/gates.md`](../gates.md) | **row G40 `gate-register`, *Contract seams → gates*** |
 | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) | the per-gate evidence obligation: **a new gate lands with a register entry carrying five verdicts, a disposition, a date and an observed-red line** — and *"a gate never observed failing is not yet a gate"* stops being a sentence the author remembers to write |
 | [`docs/gate-register.md`](../gate-register.md) | entries for **all seven new rows**; the merged-verdict-bullet marking from §1; **the G19 findings** — the positional status cell, the `TABLES` hole, **and gapless's blindness to top-row deletion** — in G19's own entry |
@@ -425,6 +451,9 @@ which is the shape this effort keeps finding is not a gate.**
 | **G40**, reverse | add a register section for a row that does not exist | red |
 | **G40**, entry shape | delete a row's observed-red line | red |
 | **G40**, entry shape | write a disposition outside the four-word vocabulary | red |
+| **G40**, cardinality | merge two verdicts into one bullet on any row **but G26** | red |
+| **G40**, cardinality | add a second `## G26` section | red |
+| **G40**, the exemption | split G26's merged bullet, leaving the exemption behind | red — **the exemption is reverse-asserted** |
 | **G40**, floor | break the regex that reads `docs/gates.md`'s rows | red, not a vacuous pass over two empty sets |
 | **G40**, top-row deletion | delete the highest-numbered row | red **on the floor** — G19's gapless check stays green, which is the point |
 
