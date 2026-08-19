@@ -80,6 +80,35 @@ Since G20 the rules live in `scripts/lib/public-build.ts`, and
 `deploy:site` applies the same ones to the real build rather than its own weaker
 copy. The script still owns planting the canary and building from the fixtures.
 
+**2026-08-18 — the key trace, and the vacuous rule beside it**
+([#156](https://github.com/mephistopheles4/stacks/issues/156),
+[`docs/spec/trend-layer.md`](./spec/trend-layer.md) §5 (i) and (iii)). A twelfth
+rule, `unknown-key`: every key on every shipped book is a named `BookRecord`
+field or one of two named derived ones (`id`, `coverAspect`). It exists because
+the `note-body` rule **cannot fire on a real-vault deploy** — it greps for a
+canary planted only in `fixtures/vault` — so invariant 2's real-build check was
+vacuous, which is now written down at `FORBIDDEN` and in `deploy.ts`'s header,
+where the comment had been claiming the pre-flight re-asserts "no note bodies".
+⚠️ **It checks key names, never values**: body text stuffed into `subjects`
+passes it, and the structural argument it asserts is a claim about the schema.
+
+Planted red, observed twice. Patching `toLibraryBook` to ship
+`...keyIfPresent('narrator', 'A Narrator')` — the field-wired-through-the-seam
+case — made `pnpm deploy:site --dry-run --skip-gates` refuse over the real
+41-book `dist/`: *"[unknown-key] 1 key(s) on shipped books that no BookRecord
+field and no named derived key explains: narrator (first on "Team Topologies")"*.
+G30 went red on the same patch, which is the division of labour: **G30 catches
+the seam in CI, this catches the artifact.** G20 carries the permanent plant.
+Non-vacuity is `empty-library`'s, confirmed rather than assumed — G20 plants all
+three of its cases (no books, no `library.json`, unparseable) — and the clean
+path now prints `N distinct book key(s), every one named`, 13 on the fixture
+build and 41 books' worth on the real one.
+
+⚠️ The named-derived list is the weakenable part: an offending key is made to
+ship by adding its name there, red to green in a one-line diff that reads like
+documentation. Two entries, and the comment demands a why-sentence for a third.
+No `docs/gates.md` row — it is a clause in an existing pre-flight, under G20.
+
 ### Phase 4 evidence
 
 `stacks import audible <export>` against a real Libation export: 22 records, 17

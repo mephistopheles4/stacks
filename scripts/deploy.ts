@@ -19,8 +19,18 @@
  * cannot leak, using fixtures. It says nothing about the folder actually about
  * to be uploaded. The pre-flight below re-asserts the same properties against
  * the real `dist/` — no private books, no wishlist books, no orphan covers, no
- * note bodies, an absolute og:image — because the thing that gets published is
- * the thing worth checking.
+ * vault paths, every shipped key a named field, an absolute og:image — because
+ * the thing that gets published is the thing worth checking.
+ *
+ * ⚠️ **One of those rules does not survive the trip, and this comment used to
+ * say it did.** It claimed "no note bodies", and the `note-body` rule greps for
+ * a canary that exists only in `fixtures/vault` — so on a real-vault deploy it
+ * cannot fire. It is honest inside `pnpm gate:public`, where the canary is
+ * planted, and vacuous here. What holds invariant 2 on this folder is
+ * structural — no `BookRecord` field carries a body — and the `unknown-key`
+ * rule is that structure asserted rather than assumed. ⚠️ **It checks key
+ * names, never values.** See `scripts/lib/public-build.ts` and
+ * `docs/spec/trend-layer.md` §5.
  */
 
 import { createHash } from 'node:crypto';
@@ -318,7 +328,21 @@ if (applicable.length > 0) {
         `on disk, not what the origin is serving:\n- ${listed}`,
     );
   } else {
-    fail(`pre-flight found ${String(applicable.length)} problem(s):\n- ${listed}`);
+    // Which flags clear this: none, on any path that publishes.
+    //
+    // The convention is that every refusal here says so rather than leaving the
+    // reader to read `process.argv` — a flag whose reach is undocumented is how
+    // `--skip-gates` came to skip the whole contract with nothing saying so
+    // (#152). Stated as a fact about this refusal, checked against the code
+    // above it: `--skip-gates` skips the step-1 gate suite and never reaches
+    // here, `--dry-run` runs this and stops before the upload, and
+    // `--check-only` takes the warning branch and uploads nothing at all.
+    fail(
+      `pre-flight found ${String(applicable.length)} problem(s):\n- ${listed}\n\n` +
+        '  No flag clears this. --skip-gates skips the gate suite, not the pre-flight;\n' +
+        '  --dry-run runs it; --check-only only downgrades it, and uploads nothing.\n' +
+        '  Fix the build, or the folder goes to the internet as it is.',
+    );
   }
 }
 
@@ -392,7 +416,7 @@ function stampOf(page: string): string | undefined {
 console.log(
   checkOnly
     ? `\nlast deployed build ${stamp}`
-    : `\npre-flight OK — ${String(library.books.length)} book(s), og:image absolute, no orphans` +
+    : `\npre-flight OK — ${String(library.books.length)} book(s), every key named, og:image absolute, no orphans` +
       `\nbuild ${stamp}`,
 );
 

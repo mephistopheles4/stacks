@@ -54,6 +54,14 @@ interface ShippedBook {
   readonly status?: string;
   readonly private?: boolean;
   readonly sourcePath?: string;
+  /**
+   * Deliberately not a contract key.
+   *
+   * The `unknown-key` test needs a book carrying something no `BookRecord`
+   * field explains, and typing it here rather than casting keeps every other
+   * planted defect honest about the shape it is planting.
+   */
+  readonly narrator?: string;
 }
 
 /**
@@ -324,6 +332,24 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
+  it('unknown-key: a shipped book carrying a key nobody named', async () => {
+    /**
+     * The failure this rule exists for: somebody adds a field, wires it through
+     * `toLibraryBook`, and it ships. G30 asserts that seam against a synthetic
+     * record; this asserts it against the bytes in the folder, which is the
+     * only version of the assertion that can see a real deploy.
+     *
+     * `narrator` is not hypothetical — an Audible import knows one, `BookInput`
+     * carries `extra` for exactly that class, and nothing but this stands
+     * between an extra key and `library.json`.
+     */
+    await expectOnly('unknown-key', async () => {
+      await writeLibrary([
+        { title: 'A Book', cover: 'covers/a.jpg', status: 'read', narrator: 'A Narrator' },
+      ]);
+    });
+  });
+
   it('og-image: no share image in the folder', async () => {
     await expectOnly('og-image', async () => {
       await rm(join(dist, 'og.png'), { force: true });
@@ -340,8 +366,9 @@ describe('G20 — every rule goes red', () => {
 describe('G20 — the rule list cannot grow blind spots', () => {
   it('has watched every rule go red', () => {
     // The anti-vacuity assertion, in the spirit of `expectFound`. Adding a
-    // twelfth rule without a defect that produces it is a red build, so this
-    // gate cannot quietly come to cover all but one.
+    // rule without a defect that produces it is a red build, so this gate
+    // cannot quietly come to cover all but one. (It said "a twelfth rule" until
+    // a twelfth arrived, which is a count in a comment doing what counts do.)
     const missing = PUBLIC_BUILD_RULES.filter((rule) => !exercised.has(rule));
     expect(
       missing,

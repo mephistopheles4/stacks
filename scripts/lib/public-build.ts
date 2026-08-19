@@ -34,6 +34,8 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
+import type { LibraryBook } from '../../packages/core/src/library.ts';
+import type { BookRecord } from '../../packages/core/src/types.ts';
 import { walk } from './walk.ts';
 
 /**
@@ -52,6 +54,7 @@ export const PUBLIC_BUILD_RULES = [
   'wishlist-book',
   'foreign-cover',
   'orphan-cover',
+  'unknown-key',
   // Two rules rather than one, because `deploy:site --check-only` has to excuse
   // exactly one of them: it asserts the built page against the *current*
   // SITE_URL, and repointing SITE_URL at a local server is how you watch the
@@ -109,7 +112,24 @@ export const NOTE_BODY_CANARY = 'NOTE_BODY_CANARY_do_not_ship';
 /** Binary assets are covers and the OG image; no text to leak. */
 const TEXTUAL = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt', '.map', '.xml']);
 
-/** Things in a shipped text file that would give away the shape of the vault. */
+/**
+ * Things in a shipped text file that would give away the shape of the vault.
+ *
+ * ⚠️ **The `note-body` rule is fixture-only, and on a real-vault deploy it
+ * cannot fire.** It greps for `NOTE_BODY_CANARY`, a literal that exists in
+ * `fixtures/vault` and nowhere else — so it is honest and load-bearing inside
+ * `pnpm gate:public`, where the canary is planted and G20 watches it go red,
+ * and vacuous against the folder `deploy:site` is about to upload. Written down
+ * rather than repaired: the two `vault-path` patterns below it, a note path and
+ * the `sourcePath` field, do fire on real bytes.
+ *
+ * **What actually protects invariant 2 on a real build is structural** — no
+ * `BookRecord` field carries a body, so no build can — and the `unknown-key`
+ * rule below is that structure asserted on the artifact rather than assumed of
+ * it. ⚠️ **Neither checks contents.** Body text stuffed into `subjects` — a
+ * named field, correctly wired — passes every assertion in this file. See
+ * `docs/spec/trend-layer.md` §5, responses (i) and (iii).
+ */
 const FORBIDDEN: readonly { readonly rule: PublicBuildRule; readonly what: string; readonly pattern: RegExp }[] = [
   { rule: 'note-body', what: 'note body text', pattern: new RegExp(NOTE_BODY_CANARY) },
   { rule: 'vault-path', what: 'a vault note path', pattern: /Library\/[^"'\s]*\.md/ },
@@ -130,6 +150,63 @@ const COVERS_PATTERN = '/covers/*';
 
 /** Below this, `og.png` is a truncated copy rather than an image. */
 const MIN_OG_IMAGE_BYTES = 2048;
+
+/**
+ * Every `BookRecord` field, by the name it wears in `library.json`.
+ *
+ * Typed against `BookRecord` rather than merely written down, so a rename or a
+ * typo is a compile error. What the type cannot check is *completeness* — a new
+ * field missing from this list makes the deploy refuse until somebody adds it,
+ * which is the safe direction and is the entire check.
+ *
+ * `sourcePath` is here because it *is* a named field. Whether it may ship is a
+ * different question, and `vault-path` above already answers it.
+ */
+const RECORD_KEYS = [
+  'sourcePath',
+  'title',
+  'author',
+  'isbn',
+  'status',
+  'started',
+  'finished',
+  'rating',
+  'cover',
+  'coverSource',
+  'spineColor',
+  'pages',
+  'binding',
+  'private',
+  'faceOut',
+  'shelfOrder',
+  'tags',
+  'publisher',
+  'published',
+  'subjects',
+  'googleVolumeId',
+  'appleTrackId',
+  'openLibraryOlid',
+  'oreillyOurn',
+] as const satisfies readonly (keyof BookRecord)[];
+
+/**
+ * Keys that come from somewhere other than a record field, enumerated.
+ *
+ * `id` is derived from title and ISBN so the shelf can keep a book selected
+ * across rebuilds; `coverAspect` is measured from the cover file at build time,
+ * because a square audiobook cover forced onto a print face is squashed. Both
+ * are `library.json`'s own, and G30 names the same two.
+ *
+ * ⚠️ **This list is the most dangerous line in this file.** A key that should
+ * never have shipped is made to ship by adding its name here — red turns green
+ * in a one-line diff that reads like documentation, with no rule deleted and no
+ * assertion weakened. So: two entries, and anything joining them owes a
+ * sentence saying what derives it and why it is not a record field.
+ */
+const DERIVED_KEYS = ['id', 'coverAspect'] as const satisfies readonly (keyof LibraryBook)[];
+
+/** The whole vocabulary a shipped book may spell. */
+const SHIPPABLE_KEYS: ReadonlySet<string> = new Set<string>([...RECORD_KEYS, ...DERIVED_KEYS]);
 
 interface ShippedBook {
   readonly title?: string;
@@ -187,8 +264,30 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     observations.push(`${String(books.length)} book(s) in library.json`);
   }
 
+  // ── The key trace ─────────────────────────────────────────────────────────
+  //
+  // Every key on every shipped book is a named `BookRecord` field or a named
+  // derived one. This is G30's assertion applied to the bytes in the folder
+  // instead of to a synthetic record: G30 proves `toLibraryBook` behaves, and
+  // nothing before this proved that the file about to be uploaded is what
+  // `toLibraryBook` produced. It is the one rule here that would catch somebody
+  // adding a field, wiring it through the seam, and shipping it.
+  //
+  // ⚠️ **Key names, never values.** See the note on `FORBIDDEN` above.
+  //
+  // It cannot go vacuous: `empty-library` refuses a build with no books, no
+  // `library.json`, or an unparseable one, so a folder that reaches this loop
+  // with nothing to trace has already failed. G20 plants all three.
+  const unnamed = new Map<string, string>();
+  const traced = new Set<string>();
+
   for (const book of books ?? []) {
     const name = book.title ?? '(untitled)';
+
+    for (const key of Object.keys(book)) {
+      traced.add(key);
+      if (!SHIPPABLE_KEYS.has(key) && !unnamed.has(key)) unnamed.set(key, name);
+    }
     if (book.private === true) fail('private-book', `private book would be published: ${name}`);
     if (book.status === 'wishlist') fail('wishlist-book', `wishlist book would be published: ${name}`);
     if (book.sourcePath !== undefined) fail('vault-path', `vault path would be published: ${name}`);
@@ -199,6 +298,23 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     if (book.cover !== undefined && !SAME_ORIGIN_COVER.test(book.cover)) {
       fail('foreign-cover', `cover is not same-origin: ${name} → ${book.cover}`);
     }
+  }
+
+  if (unnamed.size > 0) {
+    fail(
+      'unknown-key',
+      `${String(unnamed.size)} key(s) on shipped books that no BookRecord field and no named ` +
+        `derived key explains: ` +
+        [...unnamed].map(([key, name]) => `${key} (first on "${name}")`).join(', ') +
+        '. Either the artifact is inventing data, or the key is deliberate — in which case name ' +
+        'it in RECORD_KEYS or DERIVED_KEYS in scripts/lib/public-build.ts, with a sentence ' +
+        'saying why',
+    );
+  } else if (traced.size > 0) {
+    // Said out loud on the clean path, so a deploy's own output shows the trace
+    // had something to trace. A rule that is silent when it passes cannot be
+    // told apart from one that never ran.
+    observations.push(`${String(traced.size)} distinct book key(s), every one named`);
   }
 
   // ── Covers ────────────────────────────────────────────────────────────────
