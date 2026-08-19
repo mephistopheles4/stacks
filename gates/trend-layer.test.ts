@@ -232,6 +232,21 @@ describe('G36 — the record says whether the run that wrote it worked', () => {
     expect(trendNamesIn(renderMetrics(completeRun()))).not.toContain('ok');
   });
 
+  it('escapes a label value rather than letting it end the label', () => {
+    // A run URL is the only label value this record carries that comes from
+    // outside, and a bare `"` in one closes the label set early — which
+    // promtool rejects as a parse error over the *whole file*, taking every
+    // other series in the run with it. Asserted here rather than through the
+    // shell, because a `&` in an argument is eaten by the tooling on this
+    // platform long before it reaches the emitter.
+    const hostile: RunFacts = {
+      ...completeRun(),
+      runUrl: 'https://example.invalid/1?a="b"\\c',
+    };
+
+    expect(renderMetrics(hostile)).toContain('run_url="https://example.invalid/1?a=\\"b\\"\\\\c"');
+  });
+
   it('closes the document so promtool will ingest it', () => {
     // OpenMetrics requires a terminating `# EOF`; without it
     // `promtool tsdb create-blocks-from openmetrics` rejects the whole file,
