@@ -36,6 +36,17 @@
 # whose verdict came from a different commit is reporting about code that is not
 # there.
 #
+# ⚠️ The `--failed` list is built in bash, not in a `${{ }}` expression, and that
+# is not a style choice. GitHub's expression language treats the **empty string
+# as falsy**, so the usual ternary emulation `cond && '' || 'x'` evaluates to
+# `'x'` on **both** branches — a constant wearing the shape of a condition. The
+# first version of this file had exactly that, twice, and it would have made
+# every run drop its series, write `run_ok 0` and exit red: a fake dead pipe as
+# the very first thing this workflow ever did. Nothing local can catch it — the
+# emitter is green, the suite is green, and the bug lives in expression
+# evaluation. Built in bash instead, and echoed, so the value is inspectable in
+# the log rather than inferred from what it did.
+#
 # ⚠️ There is no `continue-on-error` here, deliberately, and the repo still has
 # zero. Both jobs need a failing step to keep going — a crashed run writes
 # `run_ok 0` plus whatever computed and must still exit red — but that is done
@@ -116,9 +127,12 @@ jobs:
         id: emit
         run: |
           set +e
+          FAILED=""
+          [ "${{ steps.suite.outputs.status }}" = "0" ] || FAILED="gate-suite-runtime"
+          echo "series whose step failed: [$FAILED]"
           pnpm metrics:emit \
             --expect gate-suite-runtime \
-            --failed "${{ steps.suite.outputs.status == '0' && '' || 'gate-suite-runtime' }}" \
+            --failed "$FAILED" \
             --suite-seconds "${{ steps.suite.outputs.seconds }}" \
             --commit "${{ github.sha }}" \
             --event "${{ github.event_name }}" \
@@ -185,9 +199,14 @@ jobs:
         id: emit
         run: |
           set +e
+          FAILED=""
+          add() { FAILED="${FAILED:+$FAILED,}$1"; }
+          [ "${{ steps.suite.outputs.status }}" = "0" ] || add "gate-suite-runtime"
+          [ "${{ steps.mutation.outputs.status }}" = "0" ] || add "mutation-score,mutation-run-runtime,live-exclusions"
+          echo "series whose step failed: [$FAILED]"
           pnpm metrics:emit \
             --expect mutation-score,gate-suite-runtime,mutation-run-runtime,live-exclusions \
-            --failed "${{ format('{0}{1}', steps.suite.outputs.status == '0' && '' || 'gate-suite-runtime,', steps.mutation.outputs.status == '0' && '' || 'mutation-score,mutation-run-runtime,live-exclusions') }}" \
+            --failed "$FAILED" \
             --report artifacts/stryker/current/mutation.json \
             --suite-seconds "${{ steps.suite.outputs.seconds }}" \
             --mutation-seconds "${{ steps.mutation.outputs.seconds }}" \
