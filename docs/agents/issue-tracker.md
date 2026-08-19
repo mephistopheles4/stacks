@@ -46,8 +46,9 @@ installed. They are not a requirement for contributing** — see
 ## Wayfinding operations
 
 How the `/wayfinder` map shape maps onto GitHub. Both relationships below are
-**native** — they render in GitHub's own UI, so the frontier is visible without
-opening the map.
+**native** — they render in GitHub's own UI, so most of the frontier is visible
+without opening the map. The exception is **how old a claim is**, which no list
+view shows: that half comes from the timeline, a ticket at a time.
 
 - **The map** is an issue labelled `wayfinder:map`. Tickets are its **sub-issues**,
   each additionally labelled `wayfinder:research` / `prototype` / `grilling` / `task`.
@@ -64,8 +65,32 @@ opening the map.
   `gh api repos/{owner}/{repo}/issues/<n> --jq .id`.
 - **Read what blocks a ticket**: `gh api repos/{owner}/{repo}/issues/<n>/dependencies/blocked_by --jq '[.[].number]'`.
 - **The frontier** — open, unblocked, unclaimed children of a map: list the
-  map's sub-issues, drop any with a non-empty `blocked_by`, drop any with an
-  assignee.
+  map's sub-issues, drop any with a non-empty `blocked_by`, then age the claim
+  on each one that carries an assignee — the two queries under *Claim an issue*
+  above, the second's last line being the timestamp — and drop the ticket only
+  while that claim is still presumed live. **What "still live" means is
+  [`CLAUDE.md`](../../CLAUDE.md#working-rules-for-agents)'s to say**, and it is
+  not restated here, per
+  [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md).
+
+  ⚠️ **Dropping every assignee is the cheaper filter and the wrong one**, and it
+  is what this bullet said until the window above existed. The rule expires the
+  presumption instead of asking anyone to clean up after themselves, so nothing
+  is ever unassigned here — and a filter with no window then outlives what it
+  reads: the claim lapses, the ticket stays dropped, and an abandoned ticket
+  silently stops being offered to anyone. That is the whole cost of the cheap
+  version, and it falls on the tickets nobody is working. The price of the real
+  one is two calls per **assigned** child, which on a live map is a handful; an
+  unassigned child costs nothing extra, as it always did.
+
+  ⚠️ **`--paginate` on that second query is load-bearing here, and this is the
+  bullet that says why.** Truncated, it answers `[]` — and `[]` does not read as
+  a failure, it reads as *never claimed*, which this bullet turns into **free to
+  take**. So the flag's absence fails open, on the busiest tickets, which are the
+  contested ones: this repo's own #120 answers the unpaginated query with `[]`
+  while carrying two assignments. Anyone shortening the round trips will reach
+  for it first, because it looks like the expensive part and dropping it looks
+  like it worked.
 - **Resolve** a ticket: post the answer as a comment, `gh issue close`, then add
   a one-line pointer to the map's *Decisions so far*.
 
