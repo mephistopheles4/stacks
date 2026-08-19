@@ -82,7 +82,7 @@ copy. The script still owns planting the canary and building from the fixtures.
 
 **2026-08-18 — the key trace, and the vacuous rule beside it**
 ([#156](https://github.com/mephistopheles4/stacks/issues/156),
-[`docs/spec/trend-layer.md`](./spec/trend-layer.md) §5 (i) and (iii)). A twelfth
+[`docs/spec/trend-layer.md`](./spec/trend-layer.md) §5 (i) and (iii)). A new
 rule, `unknown-key`: every key on every shipped book is a named `BookRecord`
 field or one of two named derived ones (`id`, `coverAspect`). It exists because
 the `note-body` rule **cannot fire on a real-vault deploy** — it greps for a
@@ -107,7 +107,12 @@ build and 41 books' worth on the real one.
 ⚠️ The named-derived list is the weakenable part: an offending key is made to
 ship by adding its name there, red to green in a one-line diff that reads like
 documentation. Two entries, and the comment demands a why-sentence for a third.
-No `docs/gates.md` row — it is a clause in an existing pre-flight, under G20.
+`gates/library-seam.test.ts` keeps its own copy of those two names rather than
+importing them, so that edit costs two files instead of one; drift between the
+copies fails in the safe direction either way. No `docs/gates.md` row — it is a
+clause in an existing pre-flight, under G20 — but the **lesson** is there, under
+*G2 in full*, where the canary rule's "cannot pass vacuously" is true of
+`gate:public` and false of the caller that publishes.
 
 ### Phase 4 evidence
 

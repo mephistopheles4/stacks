@@ -79,8 +79,20 @@ const NOT_PUBLIC: readonly (keyof BookRecord)[] = ['sourcePath'];
  * across rebuilds; `coverAspect` is measured from the cover file at build time,
  * because books are not one shape and a square audiobook cover forced onto a
  * print face is squashed.
+ *
+ * ⚠️ **`scripts/lib/public-build.ts` holds the same two names, deliberately.**
+ * Its `unknown-key` rule runs this trace over the bytes in `dist/`, and the
+ * duplication is what makes the dangerous edit expensive: adding a key that
+ * should never ship is a one-line diff that reads like documentation, and with
+ * one shared list it would clear this gate and the deploy pre-flight together.
+ * Drift between the copies fails loudly and in the safe direction — this goes
+ * red, or the deploy refuses — so move one and move the other.
+ *
+ * Typed against `LibraryBook` rather than left as bare strings, because that is
+ * the half of the drift a reader cannot see: a renamed field leaves a stale
+ * name here that still *looks* like an exclusion.
  */
-const DERIVED: readonly string[] = ['id', 'coverAspect'];
+const DERIVED = ['id', 'coverAspect'] as const satisfies readonly (keyof LibraryBook)[];
 
 function keysOf(book: LibraryBook): readonly string[] {
   return Object.keys(book);
@@ -120,8 +132,9 @@ describe('G30 — the BookRecord → library.json seam, both directions', () => 
     const [book] = buildLibrary([FULL]).books;
     const fields = new Set<string>(Object.keys(FULL));
 
+    const derived: readonly string[] = DERIVED;
     const unexplained = keysOf(book!).filter(
-      (key) => !fields.has(key) && !DERIVED.includes(key),
+      (key) => !fields.has(key) && !derived.includes(key),
     );
 
     expect(

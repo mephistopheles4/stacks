@@ -202,6 +202,15 @@ const RECORD_KEYS = [
  * in a one-line diff that reads like documentation, with no rule deleted and no
  * assertion weakened. So: two entries, and anything joining them owes a
  * sentence saying what derives it and why it is not a record field.
+ *
+ * **Which is why `gates/library-seam.test.ts` keeps its own copy and this does
+ * not import it.** Two lists is normally the thing this repo refuses — a rule
+ * written down twice goes true in one place and false in the other — and the
+ * exception is bought deliberately: drift between them fails **loudly in the
+ * safe direction** (G30 red, or the deploy refuses), while a shared list would
+ * let the one-line weakening above clear the gate and the pre-flight at once.
+ * They answer different questions anyway: G30 asks what `toLibraryBook`
+ * produces, this asks what a folder may carry. Move one and move the other.
  */
 const DERIVED_KEYS = ['id', 'coverAspect'] as const satisfies readonly (keyof LibraryBook)[];
 
@@ -279,13 +288,13 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   // `library.json`, or an unparseable one, so a folder that reaches this loop
   // with nothing to trace has already failed. G20 plants all three.
   const unnamed = new Map<string, string>();
-  const traced = new Set<string>();
+  const tracedKeys = new Set<string>();
 
   for (const book of books ?? []) {
     const name = book.title ?? '(untitled)';
 
     for (const key of Object.keys(book)) {
-      traced.add(key);
+      tracedKeys.add(key);
       if (!SHIPPABLE_KEYS.has(key) && !unnamed.has(key)) unnamed.set(key, name);
     }
     if (book.private === true) fail('private-book', `private book would be published: ${name}`);
@@ -310,11 +319,11 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
         'it in RECORD_KEYS or DERIVED_KEYS in scripts/lib/public-build.ts, with a sentence ' +
         'saying why',
     );
-  } else if (traced.size > 0) {
+  } else if (tracedKeys.size > 0) {
     // Said out loud on the clean path, so a deploy's own output shows the trace
     // had something to trace. A rule that is silent when it passes cannot be
     // told apart from one that never ran.
-    observations.push(`${String(traced.size)} distinct book key(s), every one named`);
+    observations.push(`${String(tracedKeys.size)} distinct book key(s), every one named`);
   }
 
   // ── Covers ────────────────────────────────────────────────────────────────

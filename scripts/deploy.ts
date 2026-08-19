@@ -336,12 +336,13 @@ if (applicable.length > 0) {
     // (#152). Stated as a fact about this refusal, checked against the code
     // above it: `--skip-gates` skips the step-1 gate suite and never reaches
     // here, `--dry-run` runs this and stops before the upload, and
-    // `--check-only` takes the warning branch and uploads nothing at all.
+    // `--check-only` takes the warning branch, which publishes nothing.
     fail(
       `pre-flight found ${String(applicable.length)} problem(s):\n- ${listed}\n\n` +
-        '  No flag clears this. --skip-gates skips the gate suite, not the pre-flight;\n' +
-        '  --dry-run runs it; --check-only only downgrades it, and uploads nothing.\n' +
-        '  Fix the build, or the folder goes to the internet as it is.',
+        '  No flag clears this. --skip-gates skips the gate suite, not the pre-flight,\n' +
+        '  and --dry-run runs it. --check-only reports instead of refusing, but it\n' +
+        '  builds nothing and uploads nothing, and it drops share-image-origin.\n' +
+        '  Nothing is uploaded until this passes.',
     );
   }
 }
