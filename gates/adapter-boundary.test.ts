@@ -112,6 +112,11 @@ const ALLOWED = [
   // is `artifacts/shelf.png`, which the gate renders from the *fixture* vault —
   // it checks that file exists and never looks at a vault at all.
   'scripts/make-readme-image.ts',
+  // Reads two JSON files and prints a table: the declared mutation scopes, and
+  // the report a Stryker run wrote. Neither is vault data and neither is a path
+  // it derives — one is a fixed filename, the other is `artifacts/` or an
+  // argument. It writes nothing.
+  'scripts/mutation-scopes.ts',
   'scripts/smoke-render.ts',
   // Checks whether a worktree's directory and the shared `.env` are there
   // before creating one. Never opens the vault — it does not know what a book
