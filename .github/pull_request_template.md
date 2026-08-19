@@ -13,7 +13,7 @@ than no heading. Do not delete the two questions.
 ## Which invariant does this touch?
 
 <!--
-Name it from CLAUDE.md — the numbered invariants, the frontmatter contract, the
+Name it from AGENTS.md — the numbered invariants, the frontmatter contract, the
 vault adapter contract, or a tech decision. "None" is a fine answer for docs and
 tooling; say so rather than leaving this blank.
 -->

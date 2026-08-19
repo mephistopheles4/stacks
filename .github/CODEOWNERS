@@ -11,6 +11,7 @@
 # inside gates/, where every added line is a permission granted.
 /gates/                     @mephistopheles4
 /docs/gates.md              @mephistopheles4
+/AGENTS.md                  @mephistopheles4
 /CLAUDE.md                  @mephistopheles4
 
 # The merge gate itself, and anything that runs with the workflow token.

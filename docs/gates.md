@@ -10,7 +10,7 @@ Update it in the **same commit** as the gate it describes — the same disciplin
 
 ## Why this file exists
 
-Every rule below was already written down, in [`CLAUDE.md`](../CLAUDE.md) or the
+Every rule below was already written down, in [`AGENTS.md`](../AGENTS.md) or the
 Decision Log. A pre-publication review in July 2026 found that six of them had
 quietly stopped being true, and nothing went red:
 
@@ -88,7 +88,7 @@ absent row is not. This file is only useful if it is as easy to find what is
 | **G4** | `hand-edited-notes` | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
 | **G5** | `vault-is-truth` | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored | ✅ |
 | **G13** | `no-third-party-material` | No third-party material is committed, ever | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside two generated directories and four named brand files | ✅ |
-| **G14** | `commands` | The documented commands are the commands that exist | CLAUDE.md "Commands" | `gates/commands.test.ts` — CLI subcommands and pnpm scripts, both directions | ✅ |
+| **G14** | `commands` | The documented commands are the commands that exist | AGENTS.md "Commands" | `gates/commands.test.ts` — CLI subcommands and pnpm scripts, both directions | ✅ |
 
 ## Contract seams → gates
 
@@ -99,7 +99,7 @@ means the two have drifted.
 | --- | --- | --- | --- | --- | --- |
 | **G6** | `site-core-imports` | site → `@stacks/core` | a *value* import drags `node:fs` and sharp into the browser bundle and **the shelf silently never boots** | `gates/site-core-imports.test.ts` | ✅ |
 | **G7** | `astro-no-logic` | logic in `.astro` | `.astro` files are not typechecked (`astro check` cannot run under TS 7), so nothing else can catch this | `gates/astro-no-logic.test.ts` | ✅ |
-| **G8** | `frontmatter-contract` | frontmatter contract ↔ parser ↔ CLAUDE.md | a key the parser accepts but the contract never documents | `gates/frontmatter-contract.test.ts` | ✅ |
+| **G8** | `frontmatter-contract` | frontmatter contract ↔ parser ↔ AGENTS.md | a key the parser accepts but the contract never documents | `gates/frontmatter-contract.test.ts` | ✅ |
 | **G9** | `env-contract` | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | `gates/env-contract.test.ts` | ✅ |
 | **G19** | `constitution-scoreboard` | the constitution ↔ this scoreboard | an invariant nothing scores, a row naming a moved file, a gate nobody recorded | `gates/constitution-scoreboard.test.ts` | ✅ |
 | **G29** | `doc-links` | a document's links ↔ the file tree | a moved or renamed file leaves every route to it a dead end, and nothing says so | `gates/doc-links.test.ts` | ✅ |
@@ -110,6 +110,7 @@ means the two have drifted.
 | **G34** | `enrich-convergence` | a book a provider failed on is filled by the next run | the pacing answer for iTunes' ~20/min is "run it twice", and it rests entirely on an `http.ts` property nothing checked: a success is cached forever, a failure is never cached at all | `gates/enrich-convergence.test.ts` | ✅ |
 | **G35** | `enhanced-card` | the card a browser builds, at both viewports | *"the card opened"* was the whole assertion, and it stays true through a card with no reading line, links with no accessible name, an announcer that never changes, a sheet that dismisses on every short drag, and one Escape that closes the enlarged cover **and** the card under it | `scripts/smoke-render.ts` — `cardFailures`, `checkCoverViewer` and `checkSheet`, against `docs/spec/enhanced-card.md` §11 | ✅ |
 | **G36** | `trend-layer` | the series CI writes ↔ the `## Trends` table | a number nobody was told to read, a row promising a line that will never be drawn, or a trend named after a gate slug — which G19 structurally cannot see, because `slugByRow()` reads three hardcoded tables and the Trends table is a fourth | `gates/trend-layer.test.ts` — asserted against the rendered OpenMetrics text, not against the declaration list | ✅ |
+| **G37** | `agents-import` | the rules ↔ the file Claude Code opens by name | `AGENTS.md` carries the rules and Claude Code reads only `CLAUDE.md`, so the stub's `@AGENTS.md` import is the whole mechanism — and a rule pasted into the stub is the second constitution [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md) refused, per [ADR-0056](adr/0056-the-constitution-is-agents-md.md) | `gates/agents-import.test.ts` — the import line is also the control the absences rest on | ✅ |
 
 **G13 now allows one file this project did not make**: Google's *powered by
 Google* graphic, which the API terms require displayed and forbid altering — so
@@ -191,7 +192,7 @@ remembering, which is the exact failure the table at the top of this file lists
 six instances of.
 
 It asserts in both directions and in three dimensions: every numbered invariant
-in `CLAUDE.md` is cited by some row (⬜ is an acceptable and honest answer);
+in `AGENTS.md` is cited by some row (⬜ is an acceptable and honest answer);
 no row cites an invariant that no longer exists; every spec path named here
 resolves to a real file; every `gates/*.test.ts` appears somewhere here, so a
 gate cannot be written and left unrecorded; every row carries a status drawn
@@ -238,7 +239,7 @@ document* — and the constitution's article numbers are now held to the same
 uniqueness-and-no-gaps rule as these row numbers, which they were not before.
 
 **G29 exists because the documentation is a graph and nothing checked its
-edges.** `CLAUDE.md` routes a cold session to five files by link, every ADR
+edges.** `AGENTS.md` routes a cold session to five files by link, every ADR
 links back here, and this file links out to the specs it scores — several
 hundred local links across the tracked Markdown, a corpus that has since roughly
 tripled. (This sentence carried the two exact figures until they were both
@@ -354,7 +355,7 @@ paragraph can be; nothing here goes red on it.)
 | **G28** | `no-board-collisions` | no book's board passes through its neighbour's | `packages/site/src/shelf/placement.test.ts` | ✅ |
 
 **G21 is the first row here written for a rule that two files already claimed
-was true.** `CLAUDE.md`'s Phase 1 gate says "use cached API fixtures, no live
+was true.** `AGENTS.md`'s Phase 1 gate says "use cached API fixtures, no live
 calls in tests"; `packages/core/src/covers/download.test.ts` opens by stating
 "No test makes a live call". Both were prose, and for months both were false —
 `packages/core/src/enrich.test.ts` downloaded a real cover from
@@ -1471,8 +1472,9 @@ oldest failure in this file.
 | Changed-lines floor (diff-cover) | One contributor; it would be noise. |
 | **Mutation testing (Stryker)** | *Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green.* ⚠️ **Revisited 2026-08-11: condition met, and the cost estimate in this cell was wrong — 636 tests / 5.52s, not 133 / ~2s. Now a trend; see [Trends](#trends). Still not gated: the number never goes red.** |
 | Article XI-style residency rules | No infrastructure; nothing to pin. |
+| **A link is about what it claims to be about** | G29 checks that a link *resolves*, which is not the same question. #166 moved the invariants to `AGENTS.md` and left `CLAUDE.md` as a stub, so eight links reading `[invariant 1](CLAUDE.md)` across five files still resolved perfectly — at a file with no invariants in it, and G29 stayed green throughout. They were repointed by hand. Not gated because "this link is about what it says" is a judgement, and a gate that made it would be a gate that matches prose, which `docs/gates.md` has twice learned matches anything. |
 | GitHub repository settings | Dependabot alerts, malware alerts, grouped security updates, branch protection. They live outside the tree, so nothing in a clone can read them — and a gate that asked GitHub would need the network, which **G21 (`no-live-network`) forbids for the whole suite**. Listed in `SECURITY.md` as relied upon and unverifiable, which is the most this repo can honestly say about them. |
-| **Claiming an issue before working it** (the rule in `CLAUDE.md`'s *Working rules for agents*) | A claim is a property of the tracker and of wall-clock time, not of the tree: a spec asserting it would go red for a contributor who never touched an issue, which is the metrics-freshness rejection in [`docs/spec/trend-layer.md`](spec/trend-layer.md) §4 — *a stranger paying for your dead pipe is not a gate; it is a tax*. Reading it in CI needs the network anyway, and **G21 forbids that for the whole suite**. **The mechanism is the assignee plus a one-hour window, and both halves were chosen knowing the assignee is not a lock** — every session here authenticates as the same account, so a ticket was once claimed twice five seconds apart, and no check on the tracker could have told those two apart. It was kept because it is the only signal that renders in GitHub's own UI and that the frontier query already reads; a claim *comment* or a `claimed` label buy filterability and add a second thing to remove on abandonment, which is the state nobody cleans up. The window is the reading half and needs no cleanup: an assignment older than an hour stops being presumed live on its own. So this is an advisory recorded where a person will see it, not a lock — and the real protection remains naming the issue when a session is launched. |
+| **Claiming an issue before working it** (the rule in `AGENTS.md`'s *Working rules for agents*) | A claim is a property of the tracker and of wall-clock time, not of the tree: a spec asserting it would go red for a contributor who never touched an issue, which is the metrics-freshness rejection in [`docs/spec/trend-layer.md`](spec/trend-layer.md) §4 — *a stranger paying for your dead pipe is not a gate; it is a tax*. Reading it in CI needs the network anyway, and **G21 forbids that for the whole suite**. **The mechanism is the assignee plus a one-hour window, and both halves were chosen knowing the assignee is not a lock** — every session here authenticates as the same account, so a ticket was once claimed twice five seconds apart, and no check on the tracker could have told those two apart. It was kept because it is the only signal that renders in GitHub's own UI and that the frontier query already reads; a claim *comment* or a `claimed` label buy filterability and add a second thing to remove on abandonment, which is the state nobody cleans up. The window is the reading half and needs no cleanup: an assignment older than an hour stops being presumed live on its own. So this is an advisory recorded where a person will see it, not a lock — and the real protection remains naming the issue when a session is launched. |
 
 ## What building these gates taught
 

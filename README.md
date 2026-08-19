@@ -140,7 +140,7 @@ requests are honoured.
 | `pnpm gate:public` | proves the public build leaks no note text |
 | `pnpm deploy:site` | gates, then build from the real vault, then publish |
 
-Both lists are documented in full in [CLAUDE.md](CLAUDE.md), and
+Both lists are documented in full in [AGENTS.md](AGENTS.md), and
 `gates/commands.test.ts` holds that file to reality in both directions — adding
 a command without documenting it there is a red build.
 
@@ -153,7 +153,7 @@ terminal and Node, you'll be fine. If you're looking for an Obsidian plugin to
 install, this isn't that yet.
 
 All five phases are green and tagged (`phase-0` … `phase-4`) and it runs against
-a real library daily. The invariants in [CLAUDE.md](CLAUDE.md) are the project's
+a real library daily. The invariants in [AGENTS.md](AGENTS.md) are the project's
 **constitution**, and every article of it has a named gate that can go red —
 scored in [docs/gates.md](docs/gates.md), which a gate holds to the constitution
 in both directions so that coverage is a checked fact rather than a claim.
@@ -175,7 +175,7 @@ workflow requires them, and every gate passes without a single one installed.
 | | |
 | --- | --- |
 | [docs/progress.md](docs/progress.md) | where the project actually is — start here |
-| [CLAUDE.md](CLAUDE.md) | the invariants and contracts that must not break |
+| [AGENTS.md](AGENTS.md) | the invariants and contracts that must not break |
 | [docs/adr/](docs/adr/) | every choice made, and why |
 | [docs/gates.md](docs/gates.md) | which rule each gate protects — and which are protected by nothing |
 | [SECURITY.md](SECURITY.md) | the threat model, stated plainly |

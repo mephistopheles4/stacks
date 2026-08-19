@@ -63,6 +63,26 @@ export function readRepoFile(path: string): string {
 }
 
 /**
+ * The one file that carries the rules: the invariants, the contracts, the
+ * commands. **Three gates read it** — G8, G14 and G19 — and until #166 each of
+ * them spelled the name as its own string literal. G37 is a fourth caller and
+ * not a fourth reader: it reads `CLAUDE.md` and holds the import seam between
+ * the two, naming this file only in its failure messages.
+ *
+ * **One name, because four copies of a filename is G22/G23/G24's failure a
+ * fourth time**: a rule copied by hand drifts, and the copies are only visible
+ * to someone who greps for every spelling at once. G24's carve-out — two
+ * harnesses may each name the same value — does not apply here, because these
+ * are four tests in one harness reaching the same file for the same reason.
+ *
+ * It is `AGENTS.md` and not `CLAUDE.md` because nothing about the five
+ * invariants is Claude-specific; `CLAUDE.md` imports this file so that Claude
+ * Code, which reads only its own name, gets the same text. See
+ * docs/adr/0056-the-constitution-is-agents-md.md.
+ */
+export const AGENTS_DOC = 'AGENTS.md';
+
+/**
  * The body of a `## Heading` section, up to the next `## ` at the same level.
  *
  * **Throws when the heading is gone**, which is the whole point: three gates now

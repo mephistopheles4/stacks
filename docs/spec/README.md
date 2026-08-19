@@ -64,7 +64,7 @@ that is what would have to be true for the decision to reopen.
 > plate. Apple's own icon was 404 at every URL tried.
 
 **This spec does not implement.** It states the edits; the implementation session
-makes them. In particular, **do not edit CLAUDE.md's contract blocks ahead of the
+makes them. In particular, **do not edit AGENTS.md's contract blocks ahead of the
 code** — `gates/frontmatter-contract.test.ts` (G8) holds the contract to the
 parser in both directions, so adding seven keys to the document before the parser
 knows them is a red build.
@@ -118,7 +118,7 @@ data the next step needs, and one of them is a network pass over the real vault.
    written only when `## About` is absent); the Open Library `fields=` widening
    and the **re-captured OL fixtures** it invalidates.
 3. **Gates and contracts.** M1, M2, P1, P2, P3 (below), G26's corpus re-captured
-   through `loadEnv()`, and the CLAUDE.md edits that move with them.
+   through `loadEnv()`, and the AGENTS.md edits that move with them.
 4. **`pnpm stacks enrich`, twice, over the real vault.** All seven new keys are
    absent on **every** note that exists, so nothing downstream can be judged
    against real data until this runs — and run one undercounts by design.
@@ -176,7 +176,7 @@ served. In a gate-heavy repo the absence of one is worth a sentence.
 Each of these is a **document edit that must land in the same commit as the code
 it describes**, never before it.
 
-**`CLAUDE.md` — frontmatter contract.** Seven new optional keys:
+**`AGENTS.md` — frontmatter contract.** Seven new optional keys:
 
 ```
 publisher, published, subjects,
@@ -187,16 +187,16 @@ with `published` **stored verbatim** (whatever the provider said, timestamp
 included — the card does the tidying), `subjects`' `; ` separator and cap of 5,
 and each id key's shape check and drop-on-mismatch behaviour. G8 moves with it.
 
-**`CLAUDE.md` — vault adapter contract.** The block lists five methods and gains
+**`AGENTS.md` — vault adapter contract.** The block lists five methods and gains
 a **sixth**: a body-section insert, scalar-free, written only when the heading is
 absent. The paragraph explaining why `updateBook` rewrites lines rather than
 re-serialising applies to it verbatim and should say so.
 
-**`CLAUDE.md` — invariant 2.** One clause: the future allowlisted-section
+**`AGENTS.md` — invariant 2.** One clause: the future allowlisted-section
 publishing **must never name `## About`**. An allowlist and never a denylist is
 what makes this safe to state once — but it has to be stated.
 
-**`CLAUDE.md` — commands.** `stacks enrich`'s line changes meaning: it is
+**`AGENTS.md` — commands.** `stacks enrich`'s line changes meaning: it is
 permanently a whole-vault network pass, and **"run it twice" is the operating
 instruction**, not a workaround. `gates/commands.test.ts` holds both lists in
 both directions.
@@ -211,7 +211,7 @@ line.
 
 ## What belongs in `docs/adr/` rather than here
 
-CLAUDE.md's test for an ADR is: **hard to reverse, surprising without context,
+AGENTS.md's test for an ADR is: **hard to reverse, surprising without context,
 and a real trade-off.** Five decisions in this effort meet all three. The
 proposal is a *list*, not five written records — writing them is implementation
 work, and the next free number is **0044**.

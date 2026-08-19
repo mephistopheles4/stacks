@@ -13,7 +13,7 @@ independent language.
 
 In this repo, in this order:
 
-- **[`CLAUDE.md`](../../CLAUDE.md)** — the invariants, the contracts, and the
+- **[`AGENTS.md`](../../AGENTS.md)** — the invariants, the contracts, and the
   rules that must not be broken. This is the authority. Read it first.
 - **[`docs/progress.md`](../progress.md)** — where the project actually is.
 - **[`docs/adr/`](../adr/)** — every decision already made, one file each, with
@@ -63,7 +63,7 @@ Number a new record one past the highest in the directory.
 
 When your output names a domain concept — an issue title, a test name, a
 proposal — use the term the project already uses. Two places hold them, and the
-split is deliberate: `CLAUDE.md`'s Frontmatter contract carries every term a
+split is deliberate: `AGENTS.md`'s Frontmatter contract carries every term a
 gate enforces (in both directions, by `gates/frontmatter-contract.test.ts`), and
 [`CONTEXT.md`](../../CONTEXT.md) carries the ones nothing enforces.
 

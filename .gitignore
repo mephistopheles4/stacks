@@ -3,7 +3,7 @@ dist/
 .astro/
 .cache/
 
-# Build artifacts — always regenerable from the vault, never hand-edited (CLAUDE.md invariant 1).
+# Build artifacts — always regenerable from the vault, never hand-edited (AGENTS.md invariant 1).
 # `stacks build --public` stages both of these into packages/site/public/.
 # Everything else in that folder is committed brand art — favicon.svg, the two
 # favicon PNGs, the touch icon, and og.png — and a build must never write over

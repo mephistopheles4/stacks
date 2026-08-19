@@ -6,7 +6,7 @@ import type { BookRecord } from '../packages/core/src/types.ts';
  * G30 — a `BookRecord` field reaches `library.json`, or is named as excluded.
  *
  * **Nothing held this seam.** G8 (`frontmatter-contract`) runs frontmatter ↔
- * parser ↔ CLAUDE.md and *stops at the parser*; `gates/build-modes.test.ts`
+ * parser ↔ AGENTS.md and *stops at the parser*; `gates/build-modes.test.ts`
  * pins the two per-build differences it already knows about (`sourcePath`
  * stripped, `coverAspect` stamped) but cannot notice a **new** `BookRecord`
  * field nobody gave a `keyIfPresent` line. `toLibraryBook` enumerates its

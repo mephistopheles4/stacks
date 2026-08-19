@@ -40,7 +40,7 @@ installed. They are not a requirement for contributing** — see
   Those are the invocations only. **When a claim is due, what an assignee does
   and does not prove, and what to do when you find one is one rule, for any
   issue an agent picks up** — stated once, under *Working rules for agents* in
-  [`CLAUDE.md`](../../CLAUDE.md#working-rules-for-agents), and not restated
+  [`AGENTS.md`](../../AGENTS.md#working-rules-for-agents), and not restated
   here, per [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md).
 
 ## Wayfinding operations
@@ -69,7 +69,7 @@ view shows: that half comes from the timeline, a ticket at a time.
   on each one that carries an assignee — the two queries under *Claim an issue*
   above, the second's last line being the timestamp — and drop the ticket only
   while that claim is still presumed live. **What "still live" means is
-  [`CLAUDE.md`](../../CLAUDE.md#working-rules-for-agents)'s to say**, and it is
+  [`AGENTS.md`](../../AGENTS.md#working-rules-for-agents)'s to say**, and it is
   not restated here, per
   [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md).
 

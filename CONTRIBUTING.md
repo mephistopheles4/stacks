@@ -20,7 +20,7 @@ and 24 as a single required check called `gates`; `main` takes no direct pushes.
 
 | | |
 | --- | --- |
-| [`CLAUDE.md`](CLAUDE.md) | the invariants and the contracts — the rules that must not break |
+| [`AGENTS.md`](AGENTS.md) | the invariants and the contracts — the rules that must not break |
 | [`docs/adr/`](docs/adr/) | every choice already made, and why — read before contradicting one |
 | [`docs/gates.md`](docs/gates.md) | which rule each gate protects, and which rules are protected by nothing yet |
 | [`docs/progress.md`](docs/progress.md) | where the project actually is |

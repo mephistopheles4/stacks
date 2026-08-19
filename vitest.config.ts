@@ -5,7 +5,7 @@ export default defineConfig({
     // `gates/` holds the repo-level gates: rules about the shape of the whole
     // tree (which files may import what, which documented keys must exist)
     // rather than about one package's behaviour. They live outside `packages/`
-    // because they belong to no package — they read CLAUDE.md, .env.example and
+    // because they belong to no package — they read AGENTS.md, .env.example and
     // the source tree itself. See docs/gates.md.
     // `scripts/` was outside this list until the trend layer's first nightly
     // showed why that mattered: a module extracted into `scripts/lib/` had no

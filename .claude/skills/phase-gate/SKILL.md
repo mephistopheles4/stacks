@@ -16,7 +16,7 @@ Every phase:
 pnpm test && pnpm build
 ```
 
-Then the phase-specific check from `CLAUDE.md` → "Phase gates":
+Then the phase-specific check from `AGENTS.md` → "Phase gates":
 
 | Phase | Check |
 | --- | --- |

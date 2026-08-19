@@ -3,7 +3,7 @@
 **Status:** awaiting approval of Phase 0. Nothing built yet.
 **Live state:** see [`progress.md`](./progress.md) — that file, not this one, says where we are.
 **Why this project exists:** see [`library-brief.md`](./library-brief.md).
-**Contracts and invariants:** see [`../CLAUDE.md`](../CLAUDE.md) — invariants there win over anything here.
+**Contracts and invariants:** see [`../AGENTS.md`](../AGENTS.md) — invariants there win over anything here.
 
 This document is the *revisable whole*. Edit it directly. If you change a phase's
 scope, change it here and the executing session will pick it up on next read.
@@ -23,10 +23,11 @@ inferable from the code.
      aesthetics review before any polish
    Otherwise run autonomously until Phase 3's gate is green.
 3. A phase is done **only** when its gate passes: `pnpm test && pnpm build` green
-   **plus** the phase-specific check in CLAUDE.md. Commit at every green gate.
+   **plus** the phase-specific check in AGENTS.md. Commit at every green gate.
    Never batch two phases into one commit.
-4. Any decision the brief leaves open: **make the call**, log it in the CLAUDE.md
-   decision records, move on. Do not ask about library choices.
+4. Any decision the brief leaves open: **make the call**, record it in
+   [`docs/adr/`](adr/) in the same commit, move on. Do not ask about library
+   choices. A lesson about a *gate* goes to [`gates.md`](gates.md) instead.
 5. If a gate will not pass after **3 distinct approaches**: write up what was
    tried in `docs/blockers.md`, commit, and stop. Do not thrash.
 
@@ -53,7 +54,7 @@ Read this if you are a session picking this project up cold.
 | Where am I? | `docs/progress.md` — always current, always short |
 | What am I building? | this file, the phase below the last green gate |
 | Why? | `docs/library-brief.md` |
-| What must I never break? | Invariants in `CLAUDE.md` |
+| What must I never break? | Invariants in `AGENTS.md` |
 | What has already been decided? | `docs/adr/` |
 | What went wrong before? | `docs/blockers.md` (may not exist — that's fine) |
 
@@ -77,7 +78,7 @@ Read this if you are a session picking this project up cold.
 
 - `git init` — not a repo yet, and rule 3 requires commits per gate.
 - `.gitignore`: `node_modules/`, `dist/`, `.cache/`, `artifacts/`, `library.json`,
-  `.env`. `library.json` is gitignored per CLAUDE.md invariant 1 — doing it now
+  `.env`. `library.json` is gitignored per AGENTS.md invariant 1 — doing it now
   avoids a Phase 1 cleanup commit.
 
 ### Files
@@ -113,7 +114,7 @@ Each also gets a record in `docs/adr/`.
 
 | Dep | Scope | Why |
 | --- | --- | --- |
-| `typescript` | root dev | strict TS mandated by CLAUDE.md |
+| `typescript` | root dev | strict TS mandated by AGENTS.md |
 | `vitest` | root dev | mandated |
 | `tsx` | root dev | runs the CLI from TS source so `pnpm stacks` needs no build step |
 | `commander` | cli | mandated by the brief |
@@ -179,7 +180,7 @@ cached fixtures with **no live calls in tests**.
   `spine_color` on the spine; width from page count with a fixed fallback.
 - Shelf rows grouped by year finished.
 - InstancedMesh for the boxes; **measure before optimizing** textures (atlas vs
-  lazy per-book planes) — CLAUDE.md says don't optimize blind.
+  lazy per-book planes) — AGENTS.md says don't optimize blind.
 - Damped orbit/pan. Click → detail card as a **DOM overlay** positioned from
   raycaster hits, not in-canvas UI.
 - Generated fallback spine with title text when a book has no cover.
@@ -258,7 +259,7 @@ mistakes fixtures for data.
 - **Phase 4, Audiobookshelf import.** Explicitly excluded.
 - Deployment to a live URL. Phase 3 produces a static folder; publishing it is the
   owner's call, not an agent's.
-- A second `VaultAdapter`. CLAUDE.md forbids it — the interface exists so a
+- A second `VaultAdapter`. AGENTS.md forbids it — the interface exists so a
   Logseq/Anytype adapter is *possible*, not to build a framework.
 - Obsidian plugin packaging, multi-room shelves, highlights import (all P2 in the
   brief: design for, don't build).
