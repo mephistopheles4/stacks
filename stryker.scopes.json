@@ -144,7 +144,15 @@
         },
         {
           "path": "scripts/mutation-scopes.ts",
-          "mechanism": "No spec imports it — run by `tsx` from `pnpm mutation:score`. It is this scope's own reporter, which is why it is named here rather than left to be discovered."
+          "mechanism": "No spec imports it — run by `tsx` from `pnpm mutation:score`. It is this scope's own reporter, which is why it is named here rather than left to be discovered. Its arithmetic moved to `lib/mutation-score.ts`, which is NOT excluded: `gates/trend-layer.test.ts` reaches it in-process."
+        },
+        {
+          "path": "scripts/commit-metrics.ts",
+          "mechanism": "No spec imports it — run by `tsx` from `pnpm metrics:commit`, by `.github/workflows/metrics.yml`. Every line of it drives `git` against a real remote, which no in-process oracle reaches."
+        },
+        {
+          "path": "scripts/emit-metrics.ts",
+          "mechanism": "No spec imports it — run by `tsx` from `pnpm metrics:emit`, by `.github/workflows/metrics.yml`. The rendering it wraps lives in `lib/metrics.ts`, which is in this scope and which G36 imports in-process."
         },
         {
           "path": "scripts/make-50-book-fixture.ts",

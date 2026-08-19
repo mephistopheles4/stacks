@@ -77,3 +77,5 @@ Two other files hold what these deliberately do not:
 | [0051](./0051-the-staging-resize-chooses-its-encoder.md) | The staging resize chooses its encoder, and it is chosen per format |
 | [0052](./0052-the-enlarged-cover-is-a-real-dialog.md) | The enlarged cover is a real `<dialog>`, and the card is still not one |
 | [0053](./0053-stryker-measures-eight-declared-scopes.md) | Stryker measures eight declared scopes, pinned exactly, and gates nothing |
+| [0054](./0054-a-check-is-a-gate-or-a-trend.md) | A check is a gate or a trend, and the taxonomy is binary |
+| [0055](./0055-ci-writes-a-durable-record.md) | CI writes a durable record; the machine pulls it |

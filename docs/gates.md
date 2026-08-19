@@ -109,6 +109,7 @@ means the two have drifted.
 | **G33** | `enrich-idempotence` | running `enrich` twice changes nothing the second time | the only gate that reaches the `## About` body insert, since a body section is not a `FILLABLE` key and the absent-only gate cannot see it | `gates/enrich-idempotence.test.ts` | ✅ |
 | **G34** | `enrich-convergence` | a book a provider failed on is filled by the next run | the pacing answer for iTunes' ~20/min is "run it twice", and it rests entirely on an `http.ts` property nothing checked: a success is cached forever, a failure is never cached at all | `gates/enrich-convergence.test.ts` | ✅ |
 | **G35** | `enhanced-card` | the card a browser builds, at both viewports | *"the card opened"* was the whole assertion, and it stays true through a card with no reading line, links with no accessible name, an announcer that never changes, a sheet that dismisses on every short drag, and one Escape that closes the enlarged cover **and** the card under it | `scripts/smoke-render.ts` — `cardFailures`, `checkCoverViewer` and `checkSheet`, against `docs/spec/enhanced-card.md` §11 | ✅ |
+| **G36** | `trend-layer` | the series CI writes ↔ the `## Trends` table | a number nobody was told to read, a row promising a line that will never be drawn, or a trend named after a gate slug — which G19 structurally cannot see, because `slugByRow()` reads three hardcoded tables and the Trends table is a fourth | `gates/trend-layer.test.ts` — asserted against the rendered OpenMetrics text, not against the declaration list | ✅ |
 
 **G13 now allows one file this project did not make**: Google's *powered by
 Google* graphic, which the API terms require displayed and forbid altering — so
@@ -1314,6 +1315,76 @@ Separately, and not a gate: **Dependabot alerts** and **security updates** are
 enabled on the repository, so a vulnerable dependency also arrives as a pull
 request — which then has to pass everything above like any other change.
 
+## Trends
+
+**A check is a gate if its red has a named, reachable remedy and its verdict does
+not depend on how much test code exists. Otherwise it is a trend.** The taxonomy
+is binary — there is no third column — and the rule is
+[`docs/spec/gate-or-trend.md`](spec/gate-or-trend.md), which decides where any
+*future* check lands too. See also
+[ADR-0054](adr/0054-a-check-is-a-gate-or-a-trend.md).
+
+**A trend takes no row number and carries no status.** ✅ 🔴 ⬜ stay the whole
+vocabulary above, and this table joins none of it: a numbered row in a fourth
+table would collect uniqueness, gapless and status checks from G19 and no slug
+checks at all, which is scored-looking and half-checked. **G19 is not edited.**
+What is numbered is the ordinary gate that watches this table.
+
+**The series is never red; its absence is.** Nothing here acts on a movement —
+there is no threshold anywhere for one to breach — because *"write better tests"*
+is not a diff and a mutation score of 71.4% has no named remedy. What is watched
+is whether a number arrived at all, which is a question about the pipe rather
+than a judgment about the code. A trend that reaches nobody and a deleted one
+are the same artifact.
+
+| Trend | Measures | Cadence | Reader | Silence watched by |
+| --- | --- | --- | --- | --- |
+| `mutation-score` | killed ÷ total, per declared scope | nightly | maintainer, at `pnpm deploy:site` | `metrics-freshness` |
+| `gate-suite-runtime` | wall-clock of `pnpm test` | nightly | ” | ” |
+| `mutation-run-runtime` | wall-clock of the Stryker run | nightly | ” | ” |
+| `live-exclusions` | declared exclusions that produced ≥1 **executed** mutant, of N declared | nightly | ” | ” |
+
+⚠️ **`mutation-score` is spelled *killed ÷ total* on purpose.** The score is
+gameable by adding trivially-killable code, which dilutes the denominator upward
+— not the coverage failure mode, and closed by neither clause of the rule above.
+It sits in the Measures column so a reader meets it, rather than in a closed
+ticket.
+
+⚠️ **`live-exclusions` cannot move yet, and that is written here rather than
+discovered from a flat line.** An exclusion is negated out of Stryker's `mutate`,
+so an excluded file is never mutated and never reaches a report — which means the
+run that produces this record reports **0 by construction**, not 0 as a finding.
+The measurement the row describes needs a deliberately wider run that nothing
+builds today. What ships is a config-drift tripwire under the right name. Carried
+as an open weakness on **G36 (`trend-layer`)** in
+[`gate-register.md`](gate-register.md), because *a series incapable of movement is
+a flat line*, and a flat line arriving on time is the shape this layer exists to
+refuse.
+
+⚠️ **`metrics-freshness` is named without a row number, and that is deliberate.**
+The gate does not exist yet; it is the deploy-side refusal that lands later in
+this rollout. Row numbers are derived from landing order — the Nth new row to
+land is G(35+N) — so writing one here would be a pre-allocation, and every
+pre-allocated number on this rollout's source map was wrong, including one
+allocated twice five seconds apart by two sessions. **The number goes in when the
+row does.** Until then the column names the mechanism, which is the part that is
+already decided.
+
+**Where the numbers come from.** `.github/workflows/metrics.yml` writes one
+`metrics/<timestamp>-<sha>.prom` per run to the orphan `metrics` branch, in the
+OpenMetrics text `promtool` ingests. `pnpm trend:sync` — **not built yet** — will
+pull it into a local Prometheus. No secret exists anywhere in that design — job-level `contents:
+write` on the built-in token at one end, an anonymous fetch at the other. See
+[ADR-0055](adr/0055-ci-writes-a-durable-record.md) and
+[`docs/spec/trend-layer.md`](spec/trend-layer.md).
+
+**A row is written unconditionally, red `main` included.** A crashed run writes
+`run_ok 0` **plus whatever computed** and still exits red, so *never ran* — a gap
+in the branch — stays distinguishable from *ran and broke*, an explicit zero.
+`run_ok` is not a trend and takes no row here: it lives under a different metric
+prefix, which is what makes its exclusion structural rather than a list G36 would
+have to maintain.
+
 ## Triaging a CodeQL finding
 
 **CodeQL blocks a merge.** `main`'s ruleset carries a `code_scanning` rule
@@ -1383,7 +1454,7 @@ oldest failure in this file.
 | --- | --- |
 | Coverage percentage | Coverage measures execution, not detection. An AI asked to raise it produces exactly the gap it is asked to close. No ticket should ever exist to raise it. |
 | Changed-lines floor (diff-cover) | One contributor; it would be noise. |
-| Mutation testing (Stryker) | Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green. |
+| **Mutation testing (Stryker)** | *Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green.* ⚠️ **Revisited 2026-08-11: condition met, and the cost estimate in this cell was wrong — 636 tests / 5.52s, not 133 / ~2s. Now a trend; see [Trends](#trends). Still not gated: the number never goes red.** |
 | Article XI-style residency rules | No infrastructure; nothing to pin. |
 | GitHub repository settings | Dependabot alerts, malware alerts, grouped security updates, branch protection. They live outside the tree, so nothing in a clone can read them — and a gate that asked GitHub would need the network, which **G21 (`no-live-network`) forbids for the whole suite**. Listed in `SECURITY.md` as relied upon and unverifiable, which is the most this repo can honestly say about them. |
 

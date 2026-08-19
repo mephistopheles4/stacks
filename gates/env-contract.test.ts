@@ -22,8 +22,18 @@ const ENV_READ = /process\.env(?:\[['"]([A-Z][A-Z0-9_]*)['"]\]|\.([A-Z][A-Z0-9_]
  *  declaration still documents the variable; prose comments do not match. */
 const EXAMPLE_DECLARATION = /^[ \t]*#?[ \t]*([A-Z][A-Z0-9_]*)[ \t]*=/m;
 
-/** Variables supplied by the platform, not by this project's `.env`. */
-const PROVIDED_BY_PLATFORM = new Set(['CI', 'NODE_ENV']);
+/**
+ * Variables supplied by the platform, not by this project's `.env`.
+ *
+ * `GITHUB_SHA` and `GITHUB_EVENT_NAME` are set by GitHub Actions on every run
+ * and read by `scripts/commit-metrics.ts` for the commit subject on the
+ * `metrics` branch. Documenting them in `.env.example` would be worse than
+ * silent: that file is what a contributor copies to `.env` and fills in, and
+ * these two are **never** set by hand — a value there would be a stale commit
+ * message pretending to name a commit. Both are absent locally, which is why
+ * the script falls back to `local` and `manual` rather than to `undefined`.
+ */
+const PROVIDED_BY_PLATFORM = new Set(['CI', 'NODE_ENV', 'GITHUB_SHA', 'GITHUB_EVENT_NAME']);
 
 function keysReadInCode(): string[] {
   const sources = [...filesUnder('packages', ['.ts']), ...filesUnder('scripts', ['.ts'])].filter(

@@ -34,3 +34,8 @@ fixtures/vault-50/
 
 # Stryker sandbox (mutation runs); the reports go to the ignored artifacts/ tree
 .stryker-tmp/
+
+# One CI run's metrics record, written by scripts/emit-metrics.ts. It belongs on
+# the orphan `metrics` branch and never on main — scripts/commit-metrics.sh puts
+# it there.
+metrics/

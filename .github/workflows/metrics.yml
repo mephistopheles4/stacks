@@ -1,0 +1,226 @@
+# The metrics record.
+#
+# CI writes a durable record; the machine pulls it. This is the writing half:
+# one `metrics/<timestamp>-<sha>.prom` per run, committed to the orphan
+# `metrics` branch in the OpenMetrics text `promtool` ingests. `pnpm trend:sync`
+# will be the reading half, on the maintainer's machine, by hand — it is a
+# separate ticket and does not exist yet.
+#
+# ⚠️ Durable, never immutable, and the branch's own properties are why. See
+# docs/adr/0055-ci-writes-a-durable-record.md, which is where that argument
+# lives rather than being restated in each of the files that depends on it.
+#
+# Three properties this shape gets for free, and every alternative had to buy:
+#
+#   1. No secret exists anywhere. Job-level `contents: write` on the built-in
+#      GITHUB_TOKEN at this end; an anonymous `git fetch` at the other, because
+#      the repo is public. No Pushgateway, no hosted store, no token.
+#   2. No confident flat line. Pushgateway strips timestamps by construction and
+#      never forgets a series, so a dead nightly draws a healthy-looking one.
+#      Every sample here carries an explicit timestamp and there is no gateway
+#      holding a stale series.
+#   3. Replay. Grafana Cloud rejects samples more than two hours behind the
+#      newest for that series. A git record has no such window: a sync after two
+#      weeks away replays all fourteen days.
+#
+# It cannot live on `main`. `main-protection` covers ~DEFAULT_BRANCH with
+# `bypass_actors: []` and a pull_request rule, so no CI job can push there —
+# which is also what leaves the record on an unprotected branch.
+#
+# ⚠️ This workflow is NOT in the `gates` aggregator's `needs:`, and `gates.yml`
+# is untouched and still `contents: read`. The aggregator fails explicitly on
+# `skipped` rather than passing by omission, and a job that only runs on `push`
+# is skipped on every pull request. Adding `schedule:` to `gates.yml` would also
+# have fired the *required* check nightly, producing check runs attached to no
+# pull request — which docs/spec/gate-or-trend.md §4 forbids: a required check
+# whose verdict came from a different commit is reporting about code that is not
+# there.
+#
+# ⚠️ The `--failed` list is built in bash, not in a `${{ }}` expression, and that
+# is not a style choice. GitHub's expression language treats the **empty string
+# as falsy**, so the usual ternary emulation `cond && '' || 'x'` evaluates to
+# `'x'` on **both** branches — a constant wearing the shape of a condition. The
+# first version of this file had exactly that, twice, and it would have made
+# every run drop its series, write `run_ok 0` and exit red: a fake dead pipe as
+# the very first thing this workflow ever did. Nothing local can catch it — the
+# emitter is green, the suite is green, and the bug lives in expression
+# evaluation. Built in bash instead, and echoed, so the value is inspectable in
+# the log rather than inferred from what it did.
+#
+# ⚠️ There is no `continue-on-error` here, deliberately, and the repo still has
+# zero. Both jobs need a failing step to keep going — a crashed run writes
+# `run_ok 0` plus whatever computed and must still exit red — but that is done
+# by capturing the exit status inside the step and failing at the end, so no job
+# in this repo is warn-only and the property docs/spec/after-the-scoreboard.md
+# verified stays true.
+#
+# ⚠️ Every action below is pinned by hand to a 40-hex commit SHA. A tag is
+# mutable: whoever controls the action repository can repoint v7 at anything,
+# and it would run here with this workflow's token. This is the one new workflow
+# file in the rollout and it is authored during the only window in which nothing
+# checks its pins — `action-pins` lands two tickets later and sweeps
+# `.github/**/*.yml` from then on. The SHAs are the ones gates.yml already
+# carries, each verified against the GitHub API rather than copied from memory.
+
+name: metrics
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # 03:17 UTC. Off the hour because GitHub's scheduler queues everything
+    # written at :00 together and the delay can run to tens of minutes.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+# Read by default. Only the jobs that commit ask for more, and they ask at job
+# level rather than here, so nothing else in this file can write.
+permissions:
+  contents: read
+
+concurrency:
+  # Never `cancel-in-progress`. Cancelling a run that has already committed
+  # loses nothing, but cancelling one mid-Stryker throws away an hour of CI and
+  # leaves a gap in the record that reads exactly like a dead pipe.
+  group: metrics-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # The merge half: cheap, every push to main.
+  #
+  # It writes `gate-suite-runtime` and nothing else. The mutation run stays
+  # nightly on the owner's CI-minute call — `mutation-run-runtime` is the series
+  # that exists to say when on-merge becomes affordable, which is a decision
+  # deferred rather than one never noticed.
+  merge:
+    if: github.event_name == 'push'
+    name: merge
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `$SECONDS` rather than `date` and `bc`: whole seconds is ample
+      # resolution for a wall-clock trend, and it adds no dependency on a tool
+      # the runner image happens to ship today.
+      - name: time the suite
+        id: suite
+        run: |
+          set +e
+          start=$SECONDS
+          pnpm test
+          status=$?
+          echo "seconds=$((SECONDS - start))" >> "$GITHUB_OUTPUT"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: emit
+        id: emit
+        run: |
+          set +e
+          FAILED=""
+          [ "${{ steps.suite.outputs.status }}" = "0" ] || FAILED="gate-suite-runtime"
+          echo "series whose step failed: [$FAILED]"
+          pnpm metrics:emit \
+            --expect gate-suite-runtime \
+            --failed "$FAILED" \
+            --suite-seconds "${{ steps.suite.outputs.seconds }}" \
+            --commit "${{ github.sha }}" \
+            --event "${{ github.event_name }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+
+      - name: commit the record
+        run: pnpm metrics:commit
+
+      # Last, so the row is on the branch before anything is allowed to fail.
+      - name: fail if the run did not compute what it declared
+        run: |
+          echo "suite: ${{ steps.suite.outputs.status }}   emit: ${{ steps.emit.outputs.status }}"
+          test "${{ steps.suite.outputs.status }}" = "0"
+          test "${{ steps.emit.outputs.status }}" = "0"
+
+  # The nightly half: the whole record, on a schedule or by hand.
+  #
+  # A nightly runs whether or not `main` moved, which is what makes a movement
+  # with an empty PR window a direct measurement of the tool disagreeing with
+  # itself at a fixed commit — the noise band the ratchet's floor must sit below.
+  nightly:
+    if: github.event_name != 'push'
+    name: nightly
+    runs-on: ubuntu-latest
+    # The Stryker run is the long pole: ~5000 mutants against this suite. Set
+    # well above the observed wall-clock, because a timeout here is a gap in the
+    # record and a gap reads as a dead pipe.
+    timeout-minutes: 360
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: time the suite
+        id: suite
+        run: |
+          set +e
+          start=$SECONDS
+          pnpm test
+          status=$?
+          echo "seconds=$((SECONDS - start))" >> "$GITHUB_OUTPUT"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: time the mutation run
+        id: mutation
+        run: |
+          set +e
+          start=$SECONDS
+          pnpm mutation:run
+          status=$?
+          echo "seconds=$((SECONDS - start))" >> "$GITHUB_OUTPUT"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: emit
+        id: emit
+        run: |
+          set +e
+          FAILED=""
+          add() { FAILED="${FAILED:+$FAILED,}$1"; }
+          [ "${{ steps.suite.outputs.status }}" = "0" ] || add "gate-suite-runtime"
+          [ "${{ steps.mutation.outputs.status }}" = "0" ] || add "mutation-score,mutation-run-runtime,live-exclusions"
+          echo "series whose step failed: [$FAILED]"
+          pnpm metrics:emit \
+            --expect mutation-score,gate-suite-runtime,mutation-run-runtime,live-exclusions \
+            --failed "$FAILED" \
+            --report artifacts/stryker/current/mutation.json \
+            --suite-seconds "${{ steps.suite.outputs.seconds }}" \
+            --mutation-seconds "${{ steps.mutation.outputs.seconds }}" \
+            --commit "${{ github.sha }}" \
+            --event "${{ github.event_name }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+
+      - name: commit the record
+        run: pnpm metrics:commit
+
+      - name: fail if the run did not compute what it declared
+        run: |
+          echo "suite: ${{ steps.suite.outputs.status }}   mutation: ${{ steps.mutation.outputs.status }}   emit: ${{ steps.emit.outputs.status }}"
+          test "${{ steps.suite.outputs.status }}" = "0"
+          test "${{ steps.mutation.outputs.status }}" = "0"
+          test "${{ steps.emit.outputs.status }}" = "0"
