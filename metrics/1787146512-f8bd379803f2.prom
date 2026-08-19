@@ -1,0 +1,29 @@
+# TYPE stacks_run_ok gauge
+# HELP stacks_run_ok One when this run computed every series it declared, zero when it did not.
+stacks_run_ok 1 1787146512
+# TYPE stacks_run_info gauge
+# HELP stacks_run_info The run that wrote this file. A score never appears without its run.
+stacks_run_info{commit="f8bd379803f202e5e0f3fc2f752292bfb01f35f3",event="workflow_dispatch",run_url="https://github.com/mephistopheles4/stacks/actions/runs/32256844012"} 1 1787146512
+# TYPE stacks_run_declared_exclusions gauge
+# HELP stacks_run_declared_exclusions Exclusion entries declared in stryker.scopes.json, the denominator for live-exclusions.
+stacks_run_declared_exclusions 27 1787146512
+# TYPE stacks_trend_mutation_score gauge
+# HELP stacks_trend_mutation_score Killed plus timeout over total, per declared scope, 0..1. Stryker total score.
+stacks_trend_mutation_score{scope="packages/core/src"} 0.7171964140179299 1787146512
+stacks_trend_mutation_score{scope="packages/core/src/adapters"} 0.6693989071038251 1787146512
+stacks_trend_mutation_score{scope="packages/core/src/covers"} 0.6227180527383367 1787146512
+stacks_trend_mutation_score{scope="packages/core/src/import"} 0.66015625 1787146512
+stacks_trend_mutation_score{scope="packages/core/src/metadata"} 0.62148070907195 1787146512
+stacks_trend_mutation_score{scope="packages/site/src/shelf"} 0.469061876247505 1787146512
+stacks_trend_mutation_score{scope="packages/cli/src"} 0.45588235294117646 1787146512
+stacks_trend_mutation_score{scope="scripts"} 0.5373665480427047 1787146512
+# TYPE stacks_trend_gate_suite_runtime gauge
+# HELP stacks_trend_gate_suite_runtime Wall-clock seconds of pnpm test.
+stacks_trend_gate_suite_runtime 9 1787146512
+# TYPE stacks_trend_mutation_run_runtime gauge
+# HELP stacks_trend_mutation_run_runtime Wall-clock seconds of the Stryker run.
+stacks_trend_mutation_run_runtime 1275 1787146512
+# TYPE stacks_trend_live_exclusions gauge
+# HELP stacks_trend_live_exclusions Declared exclusions that produced at least one executed mutant. Healthy value 0.
+stacks_trend_live_exclusions 0 1787146512
+# EOF
