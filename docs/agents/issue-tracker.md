@@ -17,6 +17,21 @@ installed. They are not a requirement for contributing** — see
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
+- **Claim an issue**: `gh issue edit <number> --add-assignee <login>` — or
+  `--add-assignee "@me"` for the account `gh` is authenticated as. **When an
+  assignment happened is half of what it means, and no `gh issue` flag carries
+  it** — `updatedAt` is the issue's, not the assignment's. Read it from the
+  timeline:
+
+  ```
+  gh api repos/{owner}/{repo}/issues/<number>/timeline --jq '[.[] | select(.event == "assigned") | .created_at]'
+  ```
+
+  Those are the invocations only. **When a claim is due, what an assignee does
+  and does not prove, and what to do when you find one is one rule, for any
+  issue an agent picks up** — stated once, under *Working rules for agents* in
+  [`CLAUDE.md`](../../CLAUDE.md#working-rules-for-agents), and not restated
+  here, per [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md).
 
 ## Wayfinding operations
 
@@ -29,9 +44,6 @@ opening the map.
 - **Create a ticket under a map**: `gh issue create --parent <map> --label "wayfinder:<type>" --title "..." --body-file <file>`.
   Use `--body-file`, not `--body` — prose bodies contain apostrophes and
   backticks that break shell quoting.
-- **Claim a ticket**: `gh issue edit <n> --add-assignee <login>` **before** any
-  work. An open, unassigned ticket is unclaimed; that assignment is the lock
-  against a concurrent session picking it up.
 - **Blocking** uses GitHub's issue-dependencies API, which `gh` has no flag for:
 
   ```
