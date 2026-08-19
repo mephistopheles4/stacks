@@ -683,8 +683,8 @@ Two calls, not two implementations.
 module builds nothing — it is handed a directory — so the gate assembles a
 synthetic `dist/` in a temp folder, plants one defect, and asserts that defect
 fires that rule *and no other*. No build, no network, milliseconds. A final
-assertion holds the rule list to the defects: a twelfth rule with nothing that
-produces it fails the build, so this gate cannot quietly come to cover ten of
+assertion holds the rule list to the defects: a rule with nothing that
+produces it fails the build, so this gate cannot quietly come to cover
 all but one. That is the thing the seven text-matching gates here cannot do.
 
 Mutations, each observed. Restoring the deploy's weak `_headers` check fails
@@ -1202,6 +1202,21 @@ in a permitted field passes by construction, and a filename is never read at all
 1. **No note bodies.** The existing canary, plus a second one planted as a
    frontmatter *value*. The gate fails if either canary is missing from the
    fixture vault, so it still cannot pass vacuously.
+
+   ⚠️ **True here and false one caller along.** Since G20 this rule is shared
+   with `deploy:site`, which runs it over the **real** `dist/` — where the
+   canary is a `fixtures/vault` literal that cannot be present, so the rule
+   structurally cannot fire. It is load-bearing in `gate:public`, where the
+   canary is planted, and vacuous on the folder that actually goes to the
+   internet. Accepted rather than repaired
+   ([`docs/spec/trend-layer.md`](spec/trend-layer.md) §5, response (i)): the
+   real-build protection is structural — no `BookRecord` field carries a body —
+   and the `unknown-key` rule asserts that structure on the artifact instead of
+   assuming it, which is G30's seam check applied to real bytes. ⚠️ **Key
+   names, never values**: body text in a named field passes both.
+   *The lesson is the transferable half — a check that is honest against
+   fixtures can be vacuous against production, and moving it to the production
+   artifact does not move its meaning with it.*
 2. **Provenance — no orphan covers.** Every file in `<assets>/covers/` must be
    referenced by a book in the `library.json` shipped beside it. `copyCovers`
    never prunes, so a real-vault build followed by a fixture-vault gate run
