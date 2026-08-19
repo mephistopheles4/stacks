@@ -1,4 +1,23 @@
-# The locked spec: the enhanced card, provider provenance, and the merge
+# `docs/spec/` — the locked specs
+
+**Two efforts have produced a locked spec in this folder.** Each is decided end to
+end, and **each carries its own build order and its own gate roster** — they do not
+share one. **Only the second is waiting for an implementation session**; the first
+has been built on a branch and is kept as written.
+
+| Spec | Index | State |
+|---|---|---|
+| The enhanced book card, provider provenance, and the merge | **this file, below** | **built** on a branch; kept as written |
+| What comes after the scoreboard — mutation scoring, the trend layer, the gaming analysis | [`after-the-scoreboard.md`](after-the-scoreboard.md) | **not built** |
+
+⚠️ **Gate numbers are per-rollout and never reusable.** The first spec landed
+**G30–G35**; the second allocates **G36–G42**, derived from its own landing order
+rather than chosen. A row number is a fact about when something landed, not a name —
+**cite slug and number together, never the number alone.**
+
+---
+
+## The enhanced card, provider provenance, and the merge
 
 This folder is the output of [Map: the enhanced book card, and the provider
 provenance behind it](https://github.com/mephistopheles4/stacks/issues/88) — 15
