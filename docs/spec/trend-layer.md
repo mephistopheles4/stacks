@@ -32,6 +32,16 @@ the laptop, the store, and any rebuild of Prometheus.** Corrected here rather th
 carried, because *immutable* is the strongest available word for the property this
 design most conspicuously lacks, sitting in a heading.
 
+⚠️ **It said so in three places, and the first pass fixed one.** This heading,
+[§9](#9-the-transferable-half)'s statement of the transferable claim, and — the worst
+address — **the proposed ADR's own thesis** in
+[`after-the-scoreboard.md`](after-the-scoreboard.md#what-belongs-in-docsadr), where a
+word denied by its own consequence column would have become a permanent record.
+**Fixing the instance rather than the population is the failure this spec catalogues**,
+and it survived one round of review to be caught in the next. *Immutable* stays only in
+[`supply-chain.md`](supply-chain.md), where it describes a **40-hex git SHA** and is
+simply true.
+
 The hosting research found that `promtool tsdb create-blocks-from openmetrics`
 backfills a local Prometheus, so *"no history when the machine is off"* is a
 weakness of the **store**, not the **record**: a committed metrics record and a
@@ -596,11 +606,19 @@ as a limit of surface B rather than repaired, since this spec does not build.
 ## 9. The transferable half
 
 **Same spine; swap the store.** The transferable claim is **the split itself**: CI
-writes an immutable, timestamped record it owns, and the store is a downstream consumer
-rebuildable from it. A production codebase swaps the git branch and localhost Prometheus
-for object storage and a hosted Prometheus and keeps every other decision — a row
-written on failure, `run_ok` as a first-class metric, the pipe gated and the number
-never, and a human-invoked refusal rather than an alarm.
+writes a durable, timestamped record it owns, and the store is a downstream consumer
+rebuildable from it. A production codebase swaps the git branch and localhost
+Prometheus for object storage and a hosted Prometheus and keeps every other decision —
+a row written on failure, `run_ok` as a first-class metric, the pipe gated and the
+number never, and a human-invoked refusal rather than an alarm.
+
+⚠️ **And this is the one property that gets *stronger* on transfer, which is worth
+naming rather than assuming.** In stacks the record is durable and **not** immutable —
+the branch is force-pushable and append-only is a convention. Object storage has
+object-lock and a protected ref has rulesets, so **a production codebase can buy the
+immutability this design only approximates.** Every other inversion on this effort
+costs the transferable audience something; **this one is free**, and stating it stops
+*immutable* being read back into the stacks half.
 
 ⚠️ **Remote-write straight to a hosted Prometheus is the obvious transferable answer and
 is the weaker one**, for a reason measured here: the two-hour ingest window makes replay
