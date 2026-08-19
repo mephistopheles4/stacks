@@ -2190,6 +2190,71 @@ against; only the inline-span half was.
 
 ---
 
+### G36 — `trend-layer`
+
+**Gate:** [`gates/trend-layer.test.ts`](../gates/trend-layer.test.ts)
+**Date:** 2026-08-19
+**Triaged at landing**, per this rollout's standing rule — the five categories put
+to the row in the commit that lands it, rather than by a later pass reconstructing
+what the author knew.
+
+- **Weakening** — **exposed, accepted.** The row is watched by nothing that stops
+  a series being deleted from `TREND_SERIES` *and* its row from the table in one
+  commit. That edit is green in both directions by construction, because the gate
+  is a correspondence and a correspondence between two deleted things holds. **It
+  is the same shape as the scope list `mutation-scope` exists to close** — removing
+  a scope removes it from numerator and denominator together, so the score does not
+  move and simply stops covering that code. Not closable here without a third
+  artifact naming the four series, which is the second copy
+  [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md) refuses.
+- **Satisfying the letter** — clean. The property the row names is *the series CI
+  writes are the series the table names*, and the gate asserts exactly that, in
+  both directions, over the rendered document rather than over a declaration.
+- **Routing around** — **exposed, accepted, and named in the gate's own header.**
+  The correspondence is asserted against a **complete** run — one where every
+  declared series computed. A crashed run legitimately renders fewer series, so a
+  real emission path that only ever runs partial would never be compared. Nothing
+  routes a *new* series past the check (a new family needs a `# TYPE` line, which
+  is what the gate reads), but a series that only appears under a condition the
+  fixture does not reproduce is out of reach. **Checked against the routing-around
+  verdicts of the rows sharing this mechanism**: G14 (`repaired` — the anchored
+  regex holds and the extractor still cannot see `.alias()` or a workspace script)
+  and G19 (`repaired`; second finding `gated`). The G14 shape is the one that
+  applies, and it is why this gate reads emitted bytes rather than `TREND_SERIES`.
+- **Vacuous green** — clean, and asserted rather than argued. Both sides are
+  extractions, and an extraction that stops matching reports an empty set which
+  trivially satisfies every "each of these is in that". `expectFound` runs on both
+  sides before any comparison, and the table's body rows are collected *including*
+  a row whose name cell does not parse — the hole G29 is dispositioned `gated` for,
+  where one stray backtick switches the check off for the rest of the line. A cell
+  that does not parse arrives as its raw text and fails the kebab-case assertion,
+  rather than vanishing from the comparison.
+- **Decay** — clean at landing. The row rests on two load-bearing claims and both
+  were established against a check that was available: that G19 cannot see a fourth
+  table (read out of `slugByRow()`'s hardcoded `TABLES`, not assumed), and that the
+  emitted document's names are what a dashboard sees (asserted, not commented).
+
+**Observed-red line:** four plants, 2026-08-19, recorded at landing.
+
+| Plant | Result |
+| --- | --- |
+| a series with no row — a fifth entry in `TREND_SERIES`, emitted | **red**: *"series written to the metrics record that no row of the `## Trends` table names … planted-series"* |
+| a row naming a series nothing emits — a fifth table row | **red**: *"rows of the `## Trends` table naming a series nothing emits … planted-row"* |
+| a trend named `mutation-scope` | ⚠️ **green — the plant the ticket named does not work yet.** See below. |
+| a trend named `commands` | **red**: *"trend names that are also gate slugs … commands"* |
+| an emptied Trends table | **red**, and on the vacuity guard rather than on a comparison: *"extraction found 0 rows in the Trends table of docs/gates.md (expected at least 4)"* |
+
+⚠️ **The `mutation-scope` plant is green and that is a fact about the calendar, not
+a hole.** `mutation-scope` is the slug of a gate that has **not landed** — it is the
+next row in this rollout — so there is no gate slug for a trend of that name to
+collide with, and renaming the emitter and the table together keeps the
+correspondence intact. The clause is real and was observed on `commands`, which is
+G14's slug and exists today. **Recorded rather than quietly substituted**, because
+the ticket's acceptance criterion names `mutation-scope` specifically and a reader
+checking that box against this file would otherwise find a claim nothing supports.
+
+---
+
 ## Rows with no dedicated narrative in `docs/gates.md`
 
 G30–G34 carry only their table-row description in `docs/gates.md`; none has a

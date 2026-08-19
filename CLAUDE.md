@@ -224,6 +224,7 @@ pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish
 pnpm mutation:run        # Stryker over the eight declared scopes — minutes, not seconds
 pnpm mutation:score      # that run's report, scored per declared scope
+pnpm metrics:emit        # one run's trend series, as the OpenMetrics text CI commits
 ```
 
 `pnpm deploy:site` runs the four gates **first** and builds from the real vault
@@ -322,6 +323,26 @@ mechanism* — a file is out of reach because something specific puts it there, 
 it is not excluded. `covers/measure.ts` has no spec and stays in the denominator
 anyway, because "nothing tests it" is a gap and not a mechanism. See
 [ADR-0053](docs/adr/0053-stryker-measures-eight-declared-scopes.md).
+
+**A score is a trend, not a gate, and `docs/gates.md` now has a place for both.**
+A check is a gate when its red has a named, reachable remedy *and* its verdict
+does not depend on how much test code exists; otherwise it is a trend. The
+taxonomy is **binary** — [`docs/spec/gate-or-trend.md`](docs/spec/gate-or-trend.md)
+and [ADR-0054](docs/adr/0054-a-check-is-a-gate-or-a-trend.md) — and it decides
+where any *future* check lands, including ones nobody has thought of. A trend
+takes no row number and no status: it lives in `docs/gates.md`'s `## Trends`
+table, and what is numbered is the gate that watches that table.
+
+**`pnpm metrics:emit` is the writing half of that layer.**
+[`.github/workflows/metrics.yml`](.github/workflows/metrics.yml) calls it and
+commits one `metrics/<timestamp>-<sha>.prom` per run to the orphan **`metrics`**
+branch; `pnpm trend:sync` will be the reading half. **No secret exists anywhere
+in that design** — job-level `contents: write` on the built-in token at one end,
+an anonymous fetch at the other — and `gates.yml` is untouched, because a
+required check whose verdict came from a different commit is reporting about
+code that is not there. ⚠️ **The record is *durable*, never *immutable*:** the
+branch is unprotected and force-pushable, and append-only is enforced by
+nothing. See [ADR-0055](docs/adr/0055-ci-writes-a-durable-record.md).
 
 CLI commands — `pnpm stacks <cmd>`:
 

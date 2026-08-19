@@ -182,9 +182,24 @@ _Avoid_: sentinel, marker, test string.
 ### Checking
 
 **Gate**:
-A named spec that goes red when a rule breaks, scored in
-[`docs/gates.md`](docs/gates.md). A rule with no gate is a comment.
+A named check that goes red when a rule breaks, and that is **scored** in
+[`docs/gates.md`](docs/gates.md) — a numbered row carrying ✅, 🔴 or ⬜. A rule
+with no gate is a comment. **Scored, not merely present in that file**: since the
+`## Trends` section landed, the file also carries things that are deliberately
+not gates, and *appearing in `docs/gates.md`* stopped being the test.
 _Avoid_: test, check, CI job.
+
+**Trend**:
+A number that reaches a person on a cadence and **never goes red — only its
+absence does**. The other half of a binary taxonomy: a check is a gate when its
+red has a named, reachable remedy *and* its verdict does not depend on how much
+test code exists, and a trend otherwise
+([ADR-0054](docs/adr/0054-a-check-is-a-gate-or-a-trend.md)). A trend takes **no
+row number and no status**; it lives in `docs/gates.md`'s `## Trends` table,
+naming what it measures, its cadence, its reader, and the gate that watches its
+silence. ⚠️ The word covers the whole not-a-gate column, including things that do
+not trend; if it grates, rename the column rather than splitting it.
+_Avoid_: metric, report, dashboard, KPI.
 
 **Rule**:
 Overloaded on purpose, so say which. A **rule of the constitution** is a numbered

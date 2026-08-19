@@ -112,11 +112,18 @@ const ALLOWED = [
   // is `artifacts/shelf.png`, which the gate renders from the *fixture* vault —
   // it checks that file exists and never looks at a vault at all.
   'scripts/make-readme-image.ts',
-  // Reads two JSON files and prints a table: the declared mutation scopes, and
-  // the report a Stryker run wrote. Neither is vault data and neither is a path
-  // it derives — one is a fixed filename, the other is `artifacts/` or an
-  // argument. It writes nothing.
-  'scripts/mutation-scopes.ts',
+  // Writes one CI run's `.prom` record. The only thing it reads from disk is a
+  // Stryker report, through `lib/mutation-score.ts`; the only thing it writes is
+  // a file under `metrics/`, which is gitignored on main and lives on the orphan
+  // `metrics` branch. It does not know what a book is.
+  'scripts/emit-metrics.ts',
+  // Reads the declared mutation scopes and the report a Stryker run wrote, and
+  // tallies them. Neither is vault data and neither is a path it derives — one
+  // is a fixed filename, the other is passed in. It writes nothing.
+  'scripts/lib/mutation-score.ts',
+  // `scripts/mutation-scopes.ts` was here and is gone: its filesystem access
+  // moved into `lib/mutation-score.ts` with the arithmetic, and the rot-catcher
+  // below went red on the spent permission. That is the gate working.
   'scripts/smoke-render.ts',
   // Checks whether a worktree's directory and the shared `.env` are there
   // before creating one. Never opens the vault — it does not know what a book
