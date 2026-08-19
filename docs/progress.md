@@ -222,6 +222,7 @@ episodes were written up out of sequence; they are listed by date here, so
 - 2026-08-09 — [CodeQL became a second required gate, and one of its twelve was real](./log/2026-08-09-codeql-became-a-second-required-gate.md)
 - 2026-08-10 — [The artifacts were ours, and the cover finally has somewhere to be looked at](./log/2026-08-10-the-artifacts-were-ours.md) — the staging re-encode was subsampling chroma on 33 of 43 covers; plus the enlarged-cover dialog, and why O'Reilly still has no link
 - 2026-08-19 — [The first nightly caught its own author](./log/2026-08-19-the-first-nightly-caught-its-own-author.md) — the trend layer's first four-series row moved one scope 6.45 points, on a false comment in the pull request that built it. Five scopes reproduced exactly; two moved without a source change, which is the tool-noise band measured for the first time
+- 2026-08-19 — [The constitution leaves CLAUDE.md](./log/2026-08-19-the-constitution-leaves-claude-md.md) — the rules moved to `AGENTS.md` and `CLAUDE.md` became a one-line import; three gates observed red in two distinct states, only one of which the ticket predicted. ⚠️ The import itself is still unobserved: `/context` is owed by a human, and `G29` stayed green throughout while eight links pointed at a file with no invariants left in it
 
 ## Notes to the next session
 

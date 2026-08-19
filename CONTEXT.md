@@ -7,7 +7,7 @@ narrower sense than English does, and that **no gate pins down**.
 
 That record turned down a `CONSTITUTION.md` on the grounds that *"a rule written
 down twice is a rule that will be true in one place and false in the other"* —
-the invariants already lived in [`CLAUDE.md`](CLAUDE.md) and were already scored
+the invariants already lived in [`AGENTS.md`](AGENTS.md) and were already scored
 in [`docs/gates.md`](docs/gates.md), so a third file would have been a second
 thing to keep in sync and no new enforcement.
 
@@ -20,7 +20,7 @@ those five cannot.
 What is left is vocabulary this project has been using precisely for a year with
 nowhere saying so. Naming those costs nothing to keep true, because **nothing
 below states a rule**. If an entry here ever needs a "must", it has stopped being
-a glossary entry and belongs in `CLAUDE.md` with a gate.
+a glossary entry and belongs in `AGENTS.md` with a gate.
 
 ## Language
 
@@ -28,8 +28,8 @@ a glossary entry and belongs in `CLAUDE.md` with a gate.
 
 **Vault**:
 The folder of Obsidian notes that *is* the database. Defined by
-[invariant 1](CLAUDE.md); reached only through the **adapter**, by
-[invariant 4](CLAUDE.md).
+[invariant 1](AGENTS.md); reached only through the **adapter**, by
+[invariant 4](AGENTS.md).
 _Avoid_: library (that is the built index), database, store.
 
 **Shelved**:
@@ -69,7 +69,7 @@ _Avoid_: group, cluster, stack (a stack is horizontal), streak.
 
 **Binding**:
 Hardback or paperback. The key belongs to G8 and its rules to
-[`CLAUDE.md`](CLAUDE.md); what the word means *here* is that it names a book's
+[`AGENTS.md`](AGENTS.md); what the word means *here* is that it names a book's
 construction and nothing else — not its format, not how you read it. Absent means
 **nobody has said**, which is a state and not a third value.
 _Avoid_: format (that is print against audiobook, which nothing reads), cover
@@ -203,7 +203,7 @@ _Avoid_: metric, report, dashboard, KPI.
 
 **Rule**:
 Overloaded on purpose, so say which. A **rule of the constitution** is a numbered
-invariant in `CLAUDE.md`. A **rule of the inspector** is one named member of
+invariant in `AGENTS.md`. A **rule of the inspector** is one named member of
 `PUBLIC_BUILD_RULES`, tagging a problem found in a built folder. They are related
 only in that some inspector rules exist to enforce some articles.
 _Avoid_: using it bare where the reader cannot tell which.

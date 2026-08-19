@@ -36,7 +36,7 @@ body:
       description: |
         Optional. The things a change most often collides with are the numbered
         invariants, the frontmatter contract and the vault adapter contract, all
-        in [`CLAUDE.md`](https://github.com/mephistopheles4/stacks/blob/main/CLAUDE.md);
+        in [`AGENTS.md`](https://github.com/mephistopheles4/stacks/blob/main/AGENTS.md);
         decisions already made are one file each in
         [`docs/adr/`](https://github.com/mephistopheles4/stacks/tree/main/docs/adr).
 

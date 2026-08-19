@@ -11,7 +11,7 @@ So the realistic risks are narrow, and worth naming precisely:
 
 - **Something private reaching a public build.** The vault is somebody's reading
   notes. Note bodies must never leave it — see invariant 2 in
-  [`CLAUDE.md`](CLAUDE.md) and row G2 in [`docs/gates.md`](docs/gates.md).
+  [`AGENTS.md`](AGENTS.md) and row G2 in [`docs/gates.md`](docs/gates.md).
 - **A vault-supplied value escaping its directory.** `cover:` comes from a
   hand-edited note and gets joined to a path. That rule has been wrong before;
   it is now one implementation with a containment check (row G10).

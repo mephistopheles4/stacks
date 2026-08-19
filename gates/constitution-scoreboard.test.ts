@@ -1,7 +1,7 @@
 /**
  * G19 — the constitution ↔ the scoreboard.
  *
- * `CLAUDE.md`'s "Invariants — never violate these" is this project's
+ * `AGENTS.md`'s "Invariants — never violate these" is this project's
  * constitution: the short list of rules nothing may break. `docs/gates.md` is
  * the scoreboard that claims each one is either gated in CI or visibly not.
  *
@@ -27,6 +27,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  AGENTS_DOC,
   expectFound,
   filesUnder,
   markdownSection,
@@ -36,7 +37,7 @@ import {
   trackedFiles,
 } from './repo.ts';
 
-const CONSTITUTION = 'CLAUDE.md';
+const CONSTITUTION = AGENTS_DOC;
 const SCOREBOARD = 'docs/gates.md';
 
 /** The three tables that carry rows. Each has its own columns. */
@@ -121,7 +122,7 @@ function stemsByRow(): Map<string, string[]> {
 function articleNumbers(): number[] {
   const section = markdownSection(readRepoFile(CONSTITUTION), 'Invariants', CONSTITUTION);
   const found = [...section.matchAll(/^(\d+)\. /gm)].map((m) => Number(m[1]));
-  expectFound(found, 'numbered invariants in CLAUDE.md', 3);
+  expectFound(found, 'numbered invariants in AGENTS.md', 3);
   return found;
 }
 
@@ -204,7 +205,7 @@ describe('G19 — every article of the constitution is scored', () => {
 
     expect(
       uncited,
-      'invariants in CLAUDE.md that no row of the Invariants → gates table claims to ' +
+      'invariants in AGENTS.md that no row of the Invariants → gates table claims to ' +
         `protect. Add a row — ⬜ "no gate yet" is an acceptable answer and the honest ` +
         `one: ${uncited.join(', ')}`,
     ).toEqual([]);
@@ -223,7 +224,7 @@ describe('G19 — every article of the constitution is scored', () => {
 
     expect(
       dangling,
-      `scoreboard cites invariants that CLAUDE.md does not define: ${dangling.join(', ')}`,
+      `scoreboard cites invariants that AGENTS.md does not define: ${dangling.join(', ')}`,
     ).toEqual([]);
   });
 
@@ -236,7 +237,7 @@ describe('G19 — every article of the constitution is scored', () => {
 
     expect(
       numbers,
-      'CLAUDE.md invariants must be numbered 1..n with no repeats or gaps, because ' +
+      'AGENTS.md invariants must be numbered 1..n with no repeats or gaps, because ' +
         'the scoreboard cites them by number',
     ).toEqual(expected);
   });

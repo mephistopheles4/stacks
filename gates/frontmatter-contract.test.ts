@@ -1,7 +1,7 @@
 /**
- * G8 — frontmatter contract ↔ parser ↔ CLAUDE.md.
+ * G8 — frontmatter contract ↔ parser ↔ AGENTS.md.
  *
- * CLAUDE.md heads that section "do not change without updating this file", and
+ * AGENTS.md heads that section "do not change without updating this file", and
  * `shelf_order` was nevertheless added to the parser, and described in the prose
  * underneath, without ever reaching the documented key list. Prose is not the
  * contract; the enumeration is, and this gate holds the two together.
@@ -19,7 +19,7 @@
 import { describe, expect, it } from 'vitest';
 import { FRONTMATTER_CONTRACT, parseNote } from '../packages/core/src/frontmatter.ts';
 import type { BookRecord } from '../packages/core/src/types.ts';
-import { expectFound, readRepoFile } from './repo.ts';
+import { AGENTS_DOC, expectFound, markdownSection, readRepoFile } from './repo.ts';
 
 type ContractKey = keyof typeof FRONTMATTER_CONTRACT;
 
@@ -35,9 +35,7 @@ const ALWAYS_PRESENT = new Set<string>(['status', 'tags']);
 /** The `Required: … Optional: …` sentence, which is the contract proper. The
  *  paragraphs under it are commentary and mention keys in passing. */
 function documentedKeys(): string[] {
-  const claudeMd = readRepoFile('CLAUDE.md');
-  const section = /^## Frontmatter contract[^\n]*\n([\s\S]*?)(?=\n## )/m.exec(claudeMd)?.[1];
-  if (section === undefined) throw new Error('no "## Frontmatter contract" section in CLAUDE.md');
+  const section = markdownSection(readRepoFile(AGENTS_DOC), 'Frontmatter contract', AGENTS_DOC);
 
   const enumeration = section.split('\n').find((line) => line.startsWith('Required:'));
   if (enumeration === undefined) {
