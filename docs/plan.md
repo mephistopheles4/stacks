@@ -25,8 +25,9 @@ inferable from the code.
 3. A phase is done **only** when its gate passes: `pnpm test && pnpm build` green
    **plus** the phase-specific check in AGENTS.md. Commit at every green gate.
    Never batch two phases into one commit.
-4. Any decision the brief leaves open: **make the call**, log it in the AGENTS.md
-   decision records, move on. Do not ask about library choices.
+4. Any decision the brief leaves open: **make the call**, record it in
+   [`docs/adr/`](adr/) in the same commit, move on. Do not ask about library
+   choices. A lesson about a *gate* goes to [`gates.md`](gates.md) instead.
 5. If a gate will not pass after **3 distinct approaches**: write up what was
    tried in `docs/blockers.md`, commit, and stop. Do not thrash.
 

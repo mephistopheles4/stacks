@@ -2,9 +2,18 @@
  * G37 — the rules live in one file, and `CLAUDE.md` only points at it.
  *
  * `AGENTS.md` carries the invariants, the contracts and the commands. Claude
- * Code reads `CLAUDE.md` and not `AGENTS.md`, so `CLAUDE.md` is a stub whose
- * first content line is `@AGENTS.md` — a launch-time import the harness expands
+ * Code reads `CLAUDE.md` and not `AGENTS.md`, so `CLAUDE.md` is a stub carrying
+ * `@AGENTS.md` on a line of its own — a launch-time import the harness expands
  * before the session starts, not an instruction the model is asked to obey.
+ *
+ * **A line of its own, not the first line.** Imports are expanded wherever they
+ * appear, so position buys nothing mechanical, and the stub opens with an H1
+ * like every other document here. This paragraph said *"first content line"*
+ * until review pointed out that the assertion below does not check it — and
+ * that the stub this gate ships beside does not satisfy it either, its first
+ * content line being the heading. Tightening the gate to match the sentence
+ * would have made G37 red against the file it was written for; the sentence was
+ * the thing that was wrong.
  *
  * **The rule this protects is ADR-0026's, mechanised.** That record refused a
  * second copy of the invariants and was right to; an import is not a copy. But

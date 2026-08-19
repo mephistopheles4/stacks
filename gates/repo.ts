@@ -64,8 +64,10 @@ export function readRepoFile(path: string): string {
 
 /**
  * The one file that carries the rules: the invariants, the contracts, the
- * commands. Four gates read it — G8, G14, G19 and G37 — and until #166 three of
- * them spelled the name as their own string literal.
+ * commands. **Three gates read it** — G8, G14 and G19 — and until #166 each of
+ * them spelled the name as its own string literal. G37 is a fourth caller and
+ * not a fourth reader: it reads `CLAUDE.md` and holds the import seam between
+ * the two, naming this file only in its failure messages.
  *
  * **One name, because four copies of a filename is G22/G23/G24's failure a
  * fourth time**: a rule copied by hand drifts, and the copies are only visible
