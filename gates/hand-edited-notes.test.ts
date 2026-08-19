@@ -1,6 +1,6 @@
 /**
  * G4 — hand-edited notes are first-class (invariant 5, and the `updateBook`
- * contract in CLAUDE.md).
+ * contract in AGENTS.md).
  *
  * "Sets frontmatter keys on an existing note by rewriting individual lines —
  * key order, quoting, comments and the note body all survive byte for byte."
@@ -133,7 +133,7 @@ describe('G4 — hand-edited notes are first-class', () => {
   });
 
   it('leaves a key alone when its value is an inline list', async () => {
-    // The same documented rule — CLAUDE.md says "a key whose value is a list is
+    // The same documented rule — AGENTS.md says "a key whose value is a list is
     // left alone", not "a block list". `tags: [a, b]` and `author: [X, Y]` are
     // ordinary YAML flow sequences and entirely normal in a note typed by hand.
     //

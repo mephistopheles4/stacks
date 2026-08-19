@@ -1,7 +1,7 @@
 /**
  * G29 — a documented link points at something that exists.
  *
- * This repo's documentation is a graph, not a pile: `CLAUDE.md` routes a cold
+ * This repo's documentation is a graph, not a pile: `AGENTS.md` routes a cold
  * session to five files, every ADR links back to `gates.md`, and `gates.md`
  * links out to the specs it scores. **Nothing checked that any of those links
  * resolved.** G19 asserts that spec paths named in scoreboard *rows* exist, and

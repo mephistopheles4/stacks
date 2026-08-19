@@ -33,7 +33,7 @@ legal under one and illegal under the other. Nothing has noticed so far because
 no code has ever wanted to read a note body.
 
 The split: `library.json` never carries body text, and a `--public` build ships
-only an explicitly allowlisted section. See CLAUDE.md for the revised wording.
+only an explicitly allowlisted section. See AGENTS.md for the revised wording.
 
 ### Allowlist, never denylist
 

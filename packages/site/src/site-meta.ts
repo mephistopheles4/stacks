@@ -17,7 +17,7 @@
  * Lives in a `.ts` file rather than in the `.astro` frontmatter because
  * `.astro` files are not typechecked (`astro check` cannot run under TS 7), so
  * anything with a type or a branch belongs here. See "Site code layout" in
- * CLAUDE.md.
+ * AGENTS.md.
  */
 
 /**

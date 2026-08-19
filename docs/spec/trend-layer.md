@@ -661,7 +661,7 @@ fail.**
 | `gates/trend-layer.test.ts` | **G36** — correspondence both ways, plus trend names kebab-case, unique, and disjoint from every gate slug; `expectFound` row floor |
 | `gates/metrics-freshness.test.ts` | **G38** — the refusal driven onto a scratch repo, G17's idiom |
 | [`docs/gates.md`](../gates.md) | **rows G36 (Contract seams) and G38 (Defect gates)**; a new `## Trends` section immediately before *Triaging a CodeQL finding* |
-| [`CLAUDE.md`](../../CLAUDE.md) | `trend:sync` in the commands list — `gates/commands.test.ts` (G14) holds both lists in both directions |
+| [`AGENTS.md`](../../AGENTS.md) | `trend:sync` in the commands list — `gates/commands.test.ts` (G14) holds both lists in both directions |
 | [`CONTEXT.md`](../../CONTEXT.md) | add **`Trend`**; amend **`Gate`** to turn on *scored* rather than on *present in `docs/gates.md`* |
 | [`docs/gate-register.md`](../gate-register.md) | entries for G36 and G38, triaged in the commit that lands them |
 

@@ -1,7 +1,7 @@
 /**
  * G12 — `shelf_order` semantics.
  *
- * CLAUDE.md documents two rules that hold individually and collide in practice:
+ * AGENTS.md documents two rules that hold individually and collide in practice:
  *
  *   "Books carrying one come before every book without one, so a few favourites
  *    can be pinned without numbering the whole shelf."

@@ -6,7 +6,7 @@
   // Covers every .ts in the repo, including the site's. It does NOT cover
   // .astro files — nothing does, because `astro check` cannot run under
   // TypeScript 7 yet. That is why logic must stay out of .astro files; see
-  // "Site code layout" in CLAUDE.md. packages/site/tsconfig.json mirrors the
+  // "Site code layout" in AGENTS.md. packages/site/tsconfig.json mirrors the
   // strictness here so the editor and this gate agree about the same file.
   "include": [
     "packages/core/src/**/*.ts",

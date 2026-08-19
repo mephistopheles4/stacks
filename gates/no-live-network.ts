@@ -1,7 +1,7 @@
 /**
  * G21 — no test makes a live network call.
  *
- * `CLAUDE.md`'s Phase 1 gate says "use cached API fixtures, no live calls in
+ * `AGENTS.md`'s Phase 1 gate says "use cached API fixtures, no live calls in
  * tests", and `packages/core/src/covers/download.test.ts` opens by stating "No
  * test makes a live call". Both were prose, and both were false: for months
  * `packages/core/src/enrich.test.ts` downloaded a real cover from
