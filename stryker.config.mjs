@@ -109,5 +109,18 @@ export default {
   jsonReporter: { fileName: 'artifacts/stryker/current/mutation.json' },
   ignorePatterns: ['artifacts', '.stryker-tmp'],
   tempDirName: '.stryker-tmp',
+
+  /**
+   * ⚠️ **This cleans after a run that *completes*, and not after one that
+   * crashes** — measured: the two failed runs of 2026-08-18 each left a 3 MB
+   * `.stryker-tmp/sandbox-*` behind. The directory is gitignored, so nothing
+   * notices; delete it by hand.
+   *
+   * It cannot reach `pnpm test`, which was checked rather than assumed by
+   * planting specs in a fake sandbox: `vitest.config.ts`'s includes are anchored
+   * at `packages/` and `gates/`, and a leftover sits under `.stryker-tmp/`. No
+   * exclude is added for it, because a guard against something measured
+   * impossible is a check that can never go red.
+   */
   cleanTempDir: true,
 };

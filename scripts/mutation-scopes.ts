@@ -98,11 +98,21 @@ interface Tally {
   noCoverage: number;
   errors: number;
   ignored: number;
+  pending: number;
   statics: number;
 }
 
 function empty(): Tally {
-  return { killed: 0, timeout: 0, survived: 0, noCoverage: 0, errors: 0, ignored: 0, statics: 0 };
+  return {
+    killed: 0,
+    timeout: 0,
+    survived: 0,
+    noCoverage: 0,
+    errors: 0,
+    ignored: 0,
+    pending: 0,
+    statics: 0,
+  };
 }
 
 /**
@@ -113,6 +123,18 @@ function empty(): Tally {
  * fact. Anything unlisted folds into `errors` — which is where `CompileError`
  * and `RuntimeError` belong, and where a status a future Stryker adds belongs
  * until somebody looks at it.
+ *
+ * **`Pending` is broken out of that fold, and it is not an error.** It means a
+ * mutant was generated and has not been tested, and it exists for Stryker's
+ * real-time reporting — so a report written by a run that *finished* cannot
+ * contain one. Counted separately anyway, because the one way to see it is to
+ * score a report from a run still going, and then every score below covers only
+ * the part that completed. Left in the `errors` bucket that would have read as
+ * a tool failure rather than as an unfinished measurement.
+ *
+ * `Pending` sits outside the denominator either way, alongside `CompileError`,
+ * `RuntimeError` and `Ignored`. That is Stryker's own arithmetic, not a choice
+ * made here: excluding a mutant is not the same as counting it as killed.
  */
 const FIELD_OF: Record<string, keyof Tally> = {
   Killed: 'killed',
@@ -120,6 +142,7 @@ const FIELD_OF: Record<string, keyof Tally> = {
   Survived: 'survived',
   NoCoverage: 'noCoverage',
   Ignored: 'ignored',
+  Pending: 'pending',
 };
 
 function count(tally: Tally, status: string, isStatic: boolean): void {
@@ -237,6 +260,7 @@ for (const row of rows) {
   all.noCoverage += row.tally.noCoverage;
   all.errors += row.tally.errors;
   all.ignored += row.tally.ignored;
+  all.pending += row.tally.pending;
   all.statics += row.tally.statics;
 }
 console.log(line('all declared', all, String(excluded.size)));
@@ -244,6 +268,16 @@ console.log(line('all declared', all, String(excluded.size)));
 if (all.errors > 0 || all.ignored > 0) {
   console.log('');
   console.log(`Errors: ${all.errors}   Ignored: ${all.ignored}`);
+}
+
+// The scores above are not wrong when this fires — they are partial, which is
+// worse, because a partial score reads exactly like a finished one.
+if (all.pending > 0) {
+  console.log('');
+  console.log(
+    `⚠ ${all.pending} mutant(s) still Pending — this report is from a run that has not finished.`,
+  );
+  console.log('  Every score above covers only the part that completed.');
 }
 
 // An excluded file the report carries anyway — see the declaration above for why
