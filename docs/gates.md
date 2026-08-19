@@ -1443,7 +1443,7 @@ oldest failure in this file.
 | --- | --- |
 | Coverage percentage | Coverage measures execution, not detection. An AI asked to raise it produces exactly the gap it is asked to close. No ticket should ever exist to raise it. |
 | Changed-lines floor (diff-cover) | One contributor; it would be noise. |
-| Mutation testing (Stryker) | Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green. |
+| **Mutation testing (Stryker)** | *Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green.* ⚠️ **Revisited 2026-08-11: condition met, and the cost estimate in this cell was wrong — 636 tests / 5.52s, not 133 / ~2s. Now a trend; see [Trends](#trends). Still not gated: the number never goes red.** |
 | Article XI-style residency rules | No infrastructure; nothing to pin. |
 | GitHub repository settings | Dependabot alerts, malware alerts, grouped security updates, branch protection. They live outside the tree, so nothing in a clone can read them — and a gate that asked GitHub would need the network, which **G21 (`no-live-network`) forbids for the whole suite**. Listed in `SECURITY.md` as relied upon and unverifiable, which is the most this repo can honestly say about them. |
 
