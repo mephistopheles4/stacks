@@ -20,7 +20,14 @@ makes them.
 
 ---
 
-## The five pieces
+## The files
+
+⚠️ **The pieces and the files do not correspond one to one, and the spec does not
+count either in prose.** The destination named five pieces; this folder holds this
+index and seven more files, because **the mutation piece splits at the record** —
+measurement and enforcement are separate landings, and the split was forced rather
+than chosen. A count in a heading over a table that grows is the shape
+[`gaming-analysis.md`](gaming-analysis.md) catalogues; **the table is the inventory.**
 
 | File | Covers |
 |---|---|
