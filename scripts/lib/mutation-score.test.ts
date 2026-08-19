@@ -155,13 +155,26 @@ describe('scoreRun — a report against the declared scopes', () => {
     expect(fraction(run.perScope.get('scripts') ?? empty())).toBeNull();
   });
 
-  it('gives the first matching scope the file, so a non-recursive scope wins', () => {
-    // Declaration order is the tie-break, and the non-recursive scope is
-    // declared first in the real file for exactly this reason.
-    const run = scoreRun(report({ 'packages/core/src/frontmatter.ts': ['Killed'] }), scopes);
+  it('gives an overlapped file to the first scope that claims it', () => {
+    // ⚠️ **The globs have to actually overlap, and the first version of this
+    // test's did not.** It paired `packages/core/src/*.ts` with
+    // `packages/core/src/covers/**/*.ts` over `frontmatter.ts` — which only the
+    // first can match, so the second assertion was true however `scoreRun`
+    // selected, and a change to last-match would have passed. A vacuous pass
+    // inside the file written to close a coverage gap; found in review.
+    //
+    // The pair below is the overlap that can really happen, and it is the trap
+    // `docs/spec/mutation-scoring.md` §4 spends a warning on: the recursive
+    // glob claims everything the non-recursive one does, so writing it declares
+    // the union of five scopes rather than one.
+    const overlapping = [
+      scope('non-recursive', 'packages/core/src/*.ts'),
+      scope('recursive', 'packages/core/src/**/*.ts'),
+    ];
+    const run = scoreRun(report({ 'packages/core/src/frontmatter.ts': ['Killed'] }), overlapping);
 
-    expect(total(run.perScope.get('packages/core/src') ?? empty())).toBe(1);
-    expect(total(run.perScope.get('packages/core/src/covers') ?? empty())).toBe(0);
+    expect(total(run.perScope.get('non-recursive') ?? empty())).toBe(1);
+    expect(total(run.perScope.get('recursive') ?? empty())).toBe(0);
   });
 
   it('sets an excluded file aside instead of folding it into a denominator', () => {

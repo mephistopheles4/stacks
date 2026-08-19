@@ -70,7 +70,7 @@ run by `tsx` rather than as a Vitest spec.
 So a module computing every number this rollout reads had **no in-process oracle
 at all**. Measured directly, at the merge commit:
 
-```
+```text
 $ npx stryker run --mutate "scripts/lib/mutation-score.ts"
 INFO DryRunExecutor No tests were found
 ERROR Stryker No tests were executed.
