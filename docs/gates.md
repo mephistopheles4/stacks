@@ -240,11 +240,14 @@ uniqueness-and-no-gaps rule as these row numbers, which they were not before.
 
 **G29 exists because the documentation is a graph and nothing checked its
 edges.** `AGENTS.md` routes a cold session to five files by link, every ADR
-links back here, and this file links out to the specs it scores — 174 local
-links across 73 tracked Markdown files. Until G29, the *only* link-shaped claim
-in the repo that could go red was G19's check that spec paths named in
-scoreboard rows resolve. Everything else was a route that worked because nobody
-had moved anything yet.
+links back here, and this file links out to the specs it scores — several
+hundred local links across the tracked Markdown, a corpus that has since roughly
+tripled. (This sentence carried the two exact figures until they were both
+false, which is the same defect the paragraphs below log against this row twice
+over. The count lives in the gate's vacuity floor, where it can go red.) Until
+G29, the *only* link-shaped claim in the repo that could go red was G19's check
+that spec paths named in scoreboard rows resolve. Everything else was a route
+that worked because nobody had moved anything yet.
 
 It was written for the split of `docs/progress.md` into `docs/log/`, which is
 precisely the change that breaks routes: 17 files' worth of narrative leaving
@@ -286,12 +289,24 @@ describing. That is the defect this file already logs against itself — *"It sa
 'four' for a while after there were five"* — reproduced inside the paragraph
 congratulating the gate on measuring rather than assuming. The count belongs in
 the gate's own vacuity floor, where it can go red, and that floor is set just
-under the real number rather than at a round order-of-magnitude guess: at 100
-half the corpus could stop being checked in silence.
+under the real number rather than at a round order-of-magnitude guess — left far
+below, most of the corpus could stop being checked in silence. Which means the
+floor is raised as the corpus grows, and was not: it sat at 180 against a corpus
+nearly three times that, a floor no longer doing the job this sentence claims.
 
-**That fragment link is the only one in the repo**, which is worth stating
-plainly: the fragment half of this gate guards one real edge and a future the
-split makes likely. The slug rule approximates GitHub's, and it approximates it
+**That fragment link was the only one in the repo when this row was written, and
+it stopped being so the next day.** The claim landed in `390bb65`; `1d0548f`
+added `docs/spec/` the following morning, cross-referencing its own sections by
+anchor throughout, and the line here went on saying *only one* for the nine days
+after that — a documented claim that had quietly become false, which is the
+failure this file opens by cataloguing, sitting in the row written to catch it.
+**A prose claim about a corpus is stale one commit later, not one release
+later**, which is the argument for the floor and against this sentence ever
+carrying a number again. The fragment half is now
+exercised by a real corpus as well as by mutation, and its size is asserted by
+its own vacuity floor in `gates/doc-links.test.ts` rather than counted here: an
+exact number in this paragraph is precisely what the paragraph above rules
+against. The slug rule approximates GitHub's, and it approximates it
 in the safe direction — this repo's headings carry backticks, arrows and inline
 links, so a heading it slugifies differently produces a *false red*, never a
 false green.
@@ -1459,6 +1474,7 @@ oldest failure in this file.
 | Article XI-style residency rules | No infrastructure; nothing to pin. |
 | **A link is about what it claims to be about** | G29 checks that a link *resolves*, which is not the same question. #166 moved the invariants to `AGENTS.md` and left `CLAUDE.md` as a stub, so eight links reading `[invariant 1](CLAUDE.md)` across five files still resolved perfectly — at a file with no invariants in it, and G29 stayed green throughout. They were repointed by hand. Not gated because "this link is about what it says" is a judgement, and a gate that made it would be a gate that matches prose, which `docs/gates.md` has twice learned matches anything. |
 | GitHub repository settings | Dependabot alerts, malware alerts, grouped security updates, branch protection. They live outside the tree, so nothing in a clone can read them — and a gate that asked GitHub would need the network, which **G21 (`no-live-network`) forbids for the whole suite**. Listed in `SECURITY.md` as relied upon and unverifiable, which is the most this repo can honestly say about them. |
+| **Claiming an issue before working it** (the rule in `AGENTS.md`'s *Working rules for agents*) | A claim is a property of the tracker and of wall-clock time, not of the tree: a spec asserting it would go red for a contributor who never touched an issue, which is the metrics-freshness rejection in [`docs/spec/trend-layer.md`](spec/trend-layer.md) §4 — *a stranger paying for your dead pipe is not a gate; it is a tax*. Reading it in CI needs the network anyway, and **G21 forbids that for the whole suite**. **The mechanism is the assignee plus a one-hour window, and both halves were chosen knowing the assignee is not a lock** — every session here authenticates as the same account, so a ticket was once claimed twice five seconds apart, and no check on the tracker could have told those two apart. It was kept because it is the only signal that renders in GitHub's own UI and that the frontier query already reads; a claim *comment* or a `claimed` label buy filterability and add a second thing to remove on abandonment, which is the state nobody cleans up. The window is the reading half and needs no cleanup: an assignment older than an hour stops being presumed live on its own. So this is an advisory recorded where a person will see it, not a lock — and the real protection remains naming the issue when a session is launched. |
 
 ## What building these gates taught
 
