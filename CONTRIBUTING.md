@@ -53,6 +53,14 @@ half. A lesson about a gate goes to [`docs/gates.md`](docs/gates.md) instead.
 changed and why. Commit messages here carry reasoning, not summaries — read the
 recent history before writing one.
 
+**Subject conventional, body the paragraph.** `<type>(<scope>): <subject>`, with
+the scope drawn from `core`, `cli`, `site`, `gates`, `docs` and `ci`; a branch
+you cut yourself is `<type>/<issue>-<slug>`. Write it on the **pull request
+title**, not only on the local commit — this repo squash-merges, so the title is
+the subject that reaches `main`. **Nothing checks any of this**, deliberately: a
+red build for a mis-prefixed title is a tax on somebody whose change has no
+defect in it. See [ADR-0057](docs/adr/0057-the-pull-request-title-is-the-commit-subject.md).
+
 **If a gate defeats three distinct approaches, stop.** Write up what you tried in
 `docs/blockers.md` and end the session. Thrashing against a red gate is how a
 gate ends up weakened to make it pass.
