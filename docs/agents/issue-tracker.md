@@ -82,6 +82,15 @@ view shows: that half comes from the timeline, a ticket at a time.
   version, and it falls on the tickets nobody is working. The price of the real
   one is two calls per **assigned** child, which on a live map is a handful; an
   unassigned child costs nothing extra, as it always did.
+
+  ⚠️ **`--paginate` on that second query is load-bearing here, and this is the
+  bullet that says why.** Truncated, it answers `[]` — and `[]` does not read as
+  a failure, it reads as *never claimed*, which this bullet turns into **free to
+  take**. So the flag's absence fails open, on the busiest tickets, which are the
+  contested ones: this repo's own #120 answers the unpaginated query with `[]`
+  while carrying two assignments. Anyone shortening the round trips will reach
+  for it first, because it looks like the expensive part and dropping it looks
+  like it worked.
 - **Resolve** a ticket: post the answer as a comment, `gh issue close`, then add
   a one-line pointer to the map's *Decisions so far*.
 
