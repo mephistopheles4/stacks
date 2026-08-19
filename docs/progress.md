@@ -146,7 +146,11 @@ need only a new mapper.
 | **Fixture-capture scripts need the key in the *environment*** | ⚠️ `capture-lookup-recall.ts` read `process.env` without `loadEnv()`, so with the key only in `.env` it recorded a corpus of 429s and G26 went green against it. Fixed; the class is not — check any capture script's env before trusting what it wrote. See [`gates.md`](gates.md) |
 | **Zone bot protection can refuse the deploy check** | ⚠️ see below — the deploy still works, the *verification* does not |
 | **The scripts echo the commands they run** | ℹ️ since G24 — `gate:public` gained two `$ pnpm …` lines, `pnpm worktree` one. Nothing asserts on that stdout; checked |
-| Resolved versions | TS 7.0.2 · Vitest 4 · Astro 7.1.6 · three 0.185.1 · sharp 0.35 |
+| **Stryker's default plugin glob loads nothing under pnpm** | ⚠️ both packages install and symlink correctly and the child runner process still reports *"no TestRunner plugins were loaded"*. Name the plugin: `plugins: ["@stryker-mutator/vitest-runner"]`. See [`spec/mutation-scoring.md`](./spec/mutation-scoring.md) §1 |
+| **TypeScript 7 breaks Stryker twice, and one of them is invisible to a grep** | ⚠️ `@stryker-mutator/typescript-checker`'s peer range `">=3.6"` admits `7.0.2` and then fails at runtime, so it is not installed and `checkers: []`. Separately `@stryker-mutator/core`'s `ts-config-preprocessor.js` does a **dynamic** `await import('typescript')` and calls `ts.parseConfigFileTextToJson`, which TS 7 does not have — worked around by pointing `tsconfigFile` at a filename not in the project |
+| **`process.chdir()` does not exist in a worker thread** | ⚠️ Stryker's vitest-runner hardcodes `pool: 'threads'`, and `packages/cli/src/env.test.ts` calls `chdir` ten times — so any mutation scope wide enough to pull that spec in dies at the **dry** run, before a single mutant. `vitest.stryker.config.ts` drops the one spec |
+| **A worktree installed with `pnpm add -w` alone has no `packages/site/node_modules`** | ⚠️ distinct from the row above: `tsx` works, `pnpm test` passes, and only Stryker's sandbox fails — *"Failed to load tsconfig 'astro/tsconfigs/strict'"*, an error naming a tsconfig and pointing nowhere near the cause. `pnpm install` in the worktree |
+| Resolved versions | TS 7.0.2 · Vitest 4 · Astro 7.1.6 · three 0.185.1 · sharp 0.35 · Stryker 9.6.1 (pinned exactly) |
 
 ### The deploy check could not read the site
 

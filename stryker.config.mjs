@@ -12,7 +12,11 @@ import { readFileSync } from 'node:fs';
  * and every exclusion owes a named mechanism. `mutate` is derived from it below.
  */
 
-/** @type {{ scopes: { name: string, glob: string, exclusions: { path: string, mechanism: string }[] }[] }} */
+// The shape is documented once, in `scripts/mutation-scopes.ts`'s `Scope` and
+// `Exclusion` interfaces — restating it here would be a second copy nothing
+// holds to the first. This file is `.mjs` because Stryker's config loader cannot
+// read a `.ts` one, so the two halves cannot share a type; only one of them gets
+// to be the definition.
 const { scopes } = JSON.parse(readFileSync(new URL('./stryker.scopes.json', import.meta.url), 'utf8'));
 
 /**

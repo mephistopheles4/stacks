@@ -63,6 +63,10 @@ function globToRegExp(glob: string): RegExp {
       `unsupported glob in stryker.scopes.json: ${glob} (want dir/*.ts or dir/**/*.ts)`,
     );
   }
+  // The three replacements run in this order and the order is load-bearing:
+  // `**/` becomes a group ending in `)`, and the last step's `(?<!\))` is what
+  // stops it from then rewriting that group's own `*` quantifier. Reordering
+  // them turns `dir/**/*.ts` into a pattern that matches nothing.
   const source = glob
     .replace(/[.+^${}()|[\]\\]/g, '\\$&')
     .replace(/\*\*\//g, '(?:[^/]+/)*')
@@ -101,14 +105,26 @@ function empty(): Tally {
   return { killed: 0, timeout: 0, survived: 0, noCoverage: 0, errors: 0, ignored: 0, statics: 0 };
 }
 
+/**
+ * Stryker's statuses, mapped to the field each one lands in.
+ *
+ * `status` stays a `string` rather than a union: it arrives from a JSON file
+ * this script does not produce, so a union would be an assertion rather than a
+ * fact. Anything unlisted folds into `errors` — which is where `CompileError`
+ * and `RuntimeError` belong, and where a status a future Stryker adds belongs
+ * until somebody looks at it.
+ */
+const FIELD_OF: Record<string, keyof Tally> = {
+  Killed: 'killed',
+  Timeout: 'timeout',
+  Survived: 'survived',
+  NoCoverage: 'noCoverage',
+  Ignored: 'ignored',
+};
+
 function count(tally: Tally, status: string, isStatic: boolean): void {
   if (isStatic) tally.statics += 1;
-  if (status === 'Killed') tally.killed += 1;
-  else if (status === 'Timeout') tally.timeout += 1;
-  else if (status === 'Survived') tally.survived += 1;
-  else if (status === 'NoCoverage') tally.noCoverage += 1;
-  else if (status === 'Ignored') tally.ignored += 1;
-  else tally.errors += 1;
+  tally[FIELD_OF[status] ?? 'errors'] += 1;
 }
 
 function detected(tally: Tally): number {
@@ -140,7 +156,22 @@ const matchers = scopes.map((scope) => ({ scope, match: globToRegExp(scope.glob)
 const perScope = new Map<string, Tally>(scopes.map((scope) => [scope.name, empty()]));
 /** Files the report carries that no declared scope claims — a config fault, printed rather than hidden. */
 const unclaimed = new Map<string, number>();
-/** Excluded files that produced mutants anyway — the `live-exclusions` count, measured here first. */
+
+/**
+ * Excluded files that turned up in the report anyway.
+ *
+ * ⚠️ **Empty by construction while `mutate` is derived from this same file**,
+ * and that is worth stating rather than leaving as an apparently-live check: an
+ * exclusion is negated out of `mutate`, so Stryker never mutates it and it never
+ * reaches a report. This is **not** the spec's `live-exclusions` trend, which
+ * asks a question a run of *this* config cannot answer — it needs a deliberately
+ * wider run, and it belongs to the trend layer.
+ *
+ * What it is for is scoring a report some *other* `mutate` produced — a probe
+ * config, or one of the historical wide runs — without silently folding an
+ * excluded file into a scope's denominator. It is the same guard as `unclaimed`
+ * below, pointing the other way.
+ */
 const live = new Map<string, number>();
 
 for (const [file, entry] of Object.entries(report.files)) {
@@ -215,13 +246,12 @@ if (all.errors > 0 || all.ignored > 0) {
   console.log(`Errors: ${all.errors}   Ignored: ${all.ignored}`);
 }
 
-// `live-exclusions` — declared exclusions that produced at least one mutant.
-// Healthy value is zero, and it is a count rather than a verdict: an entry going
-// live means the mechanism written beside it stopped being true, which is a
-// thing to read, not a thing to fail on.
+// An excluded file the report carries anyway — see the declaration above for why
+// this cannot happen against a report `pnpm mutation:run` produced, and what it
+// catches in the reports that are not.
 if (live.size > 0) {
   console.log('');
-  console.log(`live exclusions — ${live.size} of ${excluded.size} produced mutants:`);
+  console.log(`excluded but present in this report — ${live.size} of ${excluded.size}:`);
   for (const [file, mutants] of live) console.log(`  ${file}  (${mutants})`);
 }
 

@@ -21,7 +21,7 @@
     "",
     "WARNING - `scripts/lib/walk.ts` is IN the scripts scope, against the spec's",
     "own draft list, and the measurement is why. The spec put it under 'no spec",
-    "imports them'; that is true only of direct imports. `gates/public-build.ts`",
+    "imports them'; true only of direct imports. `gates/public-build.test.ts`",
     "imports `lib/public-build.ts`, which imports `walk.ts`, in-process - and the",
     "run says so: 9 mutants, 6 killed. Reachability is about execution, not about",
     "who writes the import. A reachable file stays in the denominator."
