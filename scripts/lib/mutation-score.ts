@@ -166,7 +166,22 @@ export interface ScoredRun {
   live: Map<string, number>;
   /** Files the report carries that no declared scope claims — a config fault. */
   unclaimed: Map<string, number>;
-  /** Every exclusion entry declared across every scope. */
+  /**
+   * Every exclusion **entry** declared across every scope — counted from the
+   * scopes rather than from the dedup set below, which collapses a path two
+   * scopes both declare into one.
+   *
+   * ⚠️ **The two agree today and the code used to rely on that.** All 27 paths
+   * in `stryker.scopes.json` are distinct, so `excluded.size` gave the right
+   * answer and would have started under-reporting silently the day one was
+   * declared twice — with `stacks_run_declared_exclusions` publishing the wrong
+   * denominator and nothing saying so. Found by review; the code now matches
+   * what its own comment and the metric's help text already promised.
+   *
+   * ⚠️ **The numerator is per *path*.** A duplicated path would therefore make
+   * the two units visibly disagree, which is itself the signal that the scope
+   * file has a fault — and detecting that belongs to the scope gate, not here.
+   */
   declaredExclusions: number;
 }
 
@@ -229,7 +244,8 @@ export function scoreRun(report: MutationReport, scopes: Scope[]): ScoredRun {
     for (const mutant of entry.mutants) count(tally, mutant.status, mutant.static === true);
   }
 
-  return { scopes, perScope, live, unclaimed, declaredExclusions: excluded.size };
+  const declaredExclusions = scopes.reduce((sum, scope) => sum + scope.exclusions.length, 0);
+  return { scopes, perScope, live, unclaimed, declaredExclusions };
 }
 
 /** The tally of a run, summed across every declared scope. */
