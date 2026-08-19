@@ -8,13 +8,23 @@
  * would drift in the direction nobody checks, since one prints to a terminal a
  * person reads and the other writes a file a dashboard reads.
  *
- * ⚠️ **Moving it here put it in the mutation denominator, which is the point.**
- * `scripts/mutation-scopes.ts` is an excluded file — no spec imports it, it is
- * run by `tsx` — so every line of this arithmetic was unreachable to Stryker
- * while it lived there. `gates/trend-layer.test.ts` imports this module
- * in-process, so it is reachable now, and the `scripts` scope's own rule
- * applies: *a file is excluded because a named mechanism puts it out of reach,
- * or it is not excluded.*
+ * ⚠️ **Moving it here put it in the mutation denominator, and for one nightly it
+ * was in there with no oracle at all.** `scripts/mutation-scopes.ts` is an
+ * excluded file — no spec imports it, it is run by `tsx` — so every line of this
+ * arithmetic was unreachable to Stryker while it lived there. #169 claimed the
+ * move fixed that, on the grounds that *"`gates/trend-layer.test.ts` imports this
+ * module in-process"*. **It does not.** That gate imports
+ * `scripts/lib/metrics.ts`; the `mutation-score` strings in it are the *trend
+ * name*. The only importers were `emit-metrics.ts` and `mutation-scopes.ts`, both
+ * excluded and both run by `tsx` — so every mutant here was `NoCoverage`, and the
+ * file sat in the denominator contributing nothing but weight.
+ *
+ * **The first nightly is what found it**: `scripts` fell **60.19% → 53.74%** at a
+ * commit whose only change to that scope was this file arriving. No diff shows
+ * that, and no gate can — a gate cannot see an untested file. The oracle is
+ * `./mutation-score.test.ts` now, and the `scripts` scope's own rule is satisfied
+ * honestly rather than by assertion: *a file is excluded because a named
+ * mechanism puts it out of reach, or it is not excluded.*
  *
  * The score is Stryker's own **total** mutation score —
  * `(killed + timeout) / (killed + timeout + survived + no-coverage)` — and not

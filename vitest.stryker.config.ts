@@ -15,6 +15,14 @@ import { defineConfig } from 'vitest/config';
  * oracle for out of reach — which is why `packages/cli/src/env.ts` carries an
  * exclusion in `stryker.scopes.json` whose mechanism points here.
  *
+ * ⚠️ **A spec under `scripts/` must not touch the filesystem**, for the same
+ * reason as the paragraph below. `scripts/lib/repo-root.ts` resolves from
+ * `process.cwd()`, and inside the sandbox that is not the repository — so a spec
+ * that reads a real file passes under `pnpm test` and fails here, which reads as
+ * a mutation-run fault rather than as a spec that made an assumption.
+ * `scripts/lib/mutation-score.test.ts` passes its scopes and reports in as data
+ * for exactly that reason.
+ *
  * ⚠️ **`gates/` is out of the mutation scope for a related reason**, recorded
  * here because this is where a future session will come looking. `gates/repo.ts`
  * resolves `REPO_ROOT` from `process.cwd()`, and **Stryker's sandbox is not the
@@ -25,7 +33,7 @@ import { defineConfig } from 'vitest/config';
  */
 export default defineConfig({
   test: {
-    include: ['packages/**/src/**/*.test.ts', 'gates/**/*.test.ts'],
+    include: ['packages/**/src/**/*.test.ts', 'gates/**/*.test.ts', 'scripts/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**', 'packages/cli/src/env.test.ts'],
     environment: 'node',
     setupFiles: ['./gates/no-live-network.setup.ts'],
