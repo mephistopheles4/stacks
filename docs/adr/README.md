@@ -76,3 +76,4 @@ Two other files hold what these deliberately do not:
 | [0050](./0050-provider-marks-are-redrawn-monotone.md) | The provider marks are redrawn monotone glyphs, not the providers' artwork |
 | [0051](./0051-the-staging-resize-chooses-its-encoder.md) | The staging resize chooses its encoder, and it is chosen per format |
 | [0052](./0052-the-enlarged-cover-is-a-real-dialog.md) | The enlarged cover is a real `<dialog>`, and the card is still not one |
+| [0053](./0053-stryker-measures-eight-declared-scopes.md) | Stryker measures eight declared scopes, pinned exactly, and gates nothing |

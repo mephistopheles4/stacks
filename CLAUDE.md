@@ -222,6 +222,8 @@ pnpm fixtures:50         # regenerate the 50-book fixture vault
 pnpm smoke:render        # phase 2 gate: headless shelf screenshot
 pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish
+pnpm mutation:run        # Stryker over the eight declared scopes — minutes, not seconds
+pnpm mutation:score      # that run's report, scored per declared scope
 ```
 
 `pnpm deploy:site` runs the four gates **first** and builds from the real vault
@@ -303,6 +305,23 @@ is not copied: a copy drifts, and `STACKS_DEV_HOST=1` left behind in a stale one
 keeps the shelf on the network long after anyone remembers enabling it. So
 editing it changes every worktree at once, which is the point — and a surprise
 if you assumed otherwise. Remove a worktree with `git worktree remove <path>`.
+
+**`pnpm mutation:run` is a measurement, not a gate**, and nothing in `pnpm test`
+or `pnpm build` calls it. It runs Stryker over the **eight declared scopes** in
+[`stryker.scopes.json`](stryker.scopes.json) — minutes on a workstation — and
+`pnpm mutation:score` turns the one report into one number per scope, which is
+the granularity the whole thing exists for. Stryker's own headline is a single
+figure over whatever `mutate` matched, and that figure cannot say which scope
+moved.
+
+⚠️ **The scope list is the score's definition, so read
+[`docs/spec/mutation-scoring.md`](docs/spec/mutation-scoring.md) before editing
+it.** `packages/core/src` is the **non-recursive** scope, `timeoutMS` is part of
+what a score means rather than a tuning knob, and every exclusion owes a *named
+mechanism* — a file is out of reach because something specific puts it there, or
+it is not excluded. `covers/measure.ts` has no spec and stays in the denominator
+anyway, because "nothing tests it" is a gap and not a mechanism. See
+[ADR-0053](docs/adr/0053-stryker-measures-eight-declared-scopes.md).
 
 CLI commands — `pnpm stacks <cmd>`:
 

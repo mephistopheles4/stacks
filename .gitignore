@@ -31,3 +31,6 @@ fixtures/vault-50/
 # IDE workspace config
 .idea/
 .vscode/
+
+# Stryker sandbox (mutation runs); the reports go to the ignored artifacts/ tree
+.stryker-tmp/

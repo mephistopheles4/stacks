@@ -1,0 +1,176 @@
+{
+  "$comment": [
+    "The eight declared scopes, from docs/spec/mutation-scoring.md §§4-5.",
+    "",
+    "Data rather than a comment block, for two reasons. A scope's glob is its",
+    "definition and its name is only its identity, so the two have to sit beside",
+    "each other where something can compare them; and every exclusion carries a",
+    "named mechanism, which is a string a reader (and later a gate) has to be",
+    "able to find. stryker.config.mjs derives Stryker's flat `mutate` array from",
+    "this file, and scripts/mutation-scopes.ts scores each scope against it.",
+    "",
+    "WARNING - `packages/core/src` is NON-RECURSIVE. It is the files directly in",
+    "that directory: 1227 mutants at 71.7%. Writing `packages/core/src/**` here",
+    "declares the union of all five core scopes instead (3301 at 66.6%), and the",
+    "other four vanish into it with their floors. The glob below is deliberate.",
+    "",
+    "A file is excluded because a named mechanism puts it out of reach, or it is",
+    "not excluded. `covers/measure.ts` has no spec and stays in the denominator",
+    "anyway, because 'nothing tests it' is a gap and not a mechanism - which is",
+    "why every core scope's exclusion list is empty.",
+    "",
+    "WARNING - `scripts/lib/walk.ts` is IN the scripts scope, against the spec's",
+    "own draft list, and the measurement is why. The spec put it under 'no spec",
+    "imports them'; true only of direct imports. `gates/public-build.test.ts`",
+    "imports `lib/public-build.ts`, which imports `walk.ts`, in-process - and the",
+    "run says so: 9 mutants, 6 killed. Reachability is about execution, not about",
+    "who writes the import. A reachable file stays in the denominator."
+  ],
+  "scopes": [
+    {
+      "name": "packages/core/src",
+      "glob": "packages/core/src/*.ts",
+      "note": "Non-recursive: the files directly in packages/core/src, not the union of the four scopes below.",
+      "exclusions": []
+    },
+    {
+      "name": "packages/core/src/adapters",
+      "glob": "packages/core/src/adapters/**/*.ts",
+      "exclusions": []
+    },
+    {
+      "name": "packages/core/src/covers",
+      "glob": "packages/core/src/covers/**/*.ts",
+      "exclusions": []
+    },
+    {
+      "name": "packages/core/src/import",
+      "glob": "packages/core/src/import/**/*.ts",
+      "exclusions": []
+    },
+    {
+      "name": "packages/core/src/metadata",
+      "glob": "packages/core/src/metadata/**/*.ts",
+      "exclusions": []
+    },
+    {
+      "name": "packages/site/src/shelf",
+      "glob": "packages/site/src/shelf/**/*.ts",
+      "exclusions": [
+        {
+          "path": "packages/site/src/shelf/scene.ts",
+          "mechanism": "Its only oracle is `pnpm smoke:render`, which drives a headless browser. Not a Vitest spec at all, so no in-process test ever sees the active mutant."
+        },
+        {
+          "path": "packages/site/src/shelf/boot.ts",
+          "mechanism": "The page's boot chain. Reached only through `start.ts` from `Shelf.astro`, so its only oracle is the browser render."
+        },
+        {
+          "path": "packages/site/src/shelf/start.ts",
+          "mechanism": "Imported only by `packages/site/src/components/Shelf.astro`. `.astro` files are not in the Vitest project, so nothing runs it in-process."
+        },
+        {
+          "path": "packages/site/src/shelf/book-inspector.ts",
+          "mechanism": "The `?solo` turntable, imported only by `boot.ts`. Same browser-only chain."
+        },
+        {
+          "path": "packages/site/src/shelf/debug-panel.ts",
+          "mechanism": "The `?debug` panel, lazily imported by `boot.ts`. Same browser-only chain."
+        },
+        {
+          "path": "packages/site/src/shelf/diagnostics.ts",
+          "mechanism": "The black box, statically imported by `boot.ts`. Same browser-only chain."
+        },
+        {
+          "path": "packages/site/src/shelf/contact-shadow.ts",
+          "mechanism": "Its only runtime importer is `scene.ts`, which the browser drives. `placement.ts` takes `Contact` as an `import type`, which is erased and carries no runtime edge."
+        },
+        {
+          "path": "packages/site/src/shelf/post.ts",
+          "mechanism": "The bloom composer, imported only by `scene.ts`. Same browser-only chain."
+        }
+      ]
+    },
+    {
+      "name": "packages/cli/src",
+      "glob": "packages/cli/src/**/*.ts",
+      "exclusions": [
+        {
+          "path": "packages/cli/src/index.ts",
+          "mechanism": "G14 (`commands`) reads it as source *text* via a regex and never imports it. There is no import edge, so `vitest.related` never pulls a spec in and no mutant can be killed - 435 mutants, every one NoCoverage."
+        },
+        {
+          "path": "packages/cli/src/env.ts",
+          "mechanism": "Its spec `packages/cli/src/env.test.ts` calls `process.chdir()` ten times, which does not exist in a worker thread, and Stryker's vitest-runner hardcodes `pool: 'threads'`. The spec is excluded from `vitest.stryker.config.ts` to get a dry run at all, so it never sees a mutant. A property of the harness, not of the tests."
+        }
+      ]
+    },
+    {
+      "name": "scripts",
+      "glob": "scripts/**/*.ts",
+      "note": "The only scope the spec left unmeasured. Measured by #155: the whole directory is 2412 mutants at 7.71%, of which 2103 are NoCoverage in files nothing runs in-process. What is left is the publisher and the directory walker it calls.",
+      "exclusions": [
+        {
+          "path": "scripts/deploy.ts",
+          "mechanism": "Its only oracle is the `spawnSync` in `gates/deploy-branch.test.ts`, which drives it as a child process under `tsx`. The child never sees the active mutant."
+        },
+        {
+          "path": "scripts/lib/repo-root.ts",
+          "mechanism": "G22 (`repo-root`) reads it as source text via `codeOf` and never imports it. No import edge, so no mutant can be killed."
+        },
+        {
+          "path": "scripts/check-public-build.ts",
+          "mechanism": "Run by `tsx` from a pnpm script (`pnpm gate:public`); never a Vitest spec. The rules it applies live in `lib/public-build.ts`, which is in this scope."
+        },
+        {
+          "path": "scripts/smoke-render.ts",
+          "mechanism": "Run by `tsx` from a pnpm script (`pnpm smoke:render`), and it drives a headless browser. Never a Vitest spec."
+        },
+        {
+          "path": "scripts/lib/git.ts",
+          "mechanism": "No spec imports it; its only callers are `deploy.ts` and `worktree.ts`, both excluded above."
+        },
+        {
+          "path": "scripts/lib/run.ts",
+          "mechanism": "No spec imports it; every caller is a script run by `tsx`."
+        },
+        {
+          "path": "scripts/dev-watch.ts",
+          "mechanism": "No spec imports it — run by `tsx` from `pnpm dev:watch`."
+        },
+        {
+          "path": "scripts/worktree.ts",
+          "mechanism": "No spec imports it — run by `tsx` from `pnpm worktree`."
+        },
+        {
+          "path": "scripts/mutation-scopes.ts",
+          "mechanism": "No spec imports it — run by `tsx` from `pnpm mutation:score`. It is this scope's own reporter, which is why it is named here rather than left to be discovered."
+        },
+        {
+          "path": "scripts/make-50-book-fixture.ts",
+          "mechanism": "No spec imports it — a one-off run by `tsx` from `pnpm fixtures:50`."
+        },
+        {
+          "path": "scripts/make-fixture-covers.ts",
+          "mechanism": "No spec imports it — a one-off run by hand."
+        },
+        {
+          "path": "scripts/make-icons.ts",
+          "mechanism": "No spec imports it — a one-off run by hand."
+        },
+        {
+          "path": "scripts/make-readme-image.ts",
+          "mechanism": "No spec imports it — a one-off run by hand."
+        },
+        {
+          "path": "scripts/capture-api-fixtures.ts",
+          "mechanism": "No spec imports it — a one-off run by hand, and the only thing here that touches the network."
+        },
+        {
+          "path": "scripts/capture-lookup-recall.ts",
+          "mechanism": "No spec imports it — a one-off run by hand."
+        }
+      ]
+    }
+  ]
+}
