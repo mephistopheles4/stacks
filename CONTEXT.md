@@ -233,8 +233,7 @@ _Avoid_: false positive, flaky, silent pass.
 An advisory signal that a session intends to work an issue — an assignee, read
 together with how old the assignment is. It is not a lock and stops nothing:
 every session here authenticates as the same account, so the tracker cannot tell
-one holder from another. It earns a place here on both counts this glossary asks
-for: nothing gates it, and its obvious reading is the wrong one. The rule that
-uses it is in [`CLAUDE.md`](CLAUDE.md); why it is ungated is in
-[`docs/gates.md`](docs/gates.md).
+one holder from another. The rule that uses it is in [`CLAUDE.md`](CLAUDE.md);
+why it is ungated is in
+[`docs/gates.md`](docs/gates.md#not-gated-deliberately).
 _Avoid_: lock, reservation, assignment (that is the mechanism, not the idea).
