@@ -17,6 +17,31 @@ installed. They are not a requirement for contributing** — see
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
+- **Claim an issue**: `gh issue edit <number> --add-assignee <login>` — or
+  `--add-assignee "@me"` for the account `gh` is authenticated as. **When an
+  assignment happened is half of what it means, and no `gh issue` flag carries
+  it** — `updatedAt` is the issue's, not the assignment's. Ask who holds it now,
+  then when they were given it:
+
+  ```
+  gh issue view <number> --json assignees --jq '[.assignees[].login]'
+  gh api --paginate "repos/{owner}/{repo}/issues/<number>/timeline?per_page=100" --jq '.[] | select(.event == "assigned" and .assignee.login == "<login>") | .created_at'
+  ```
+
+  **Both halves are load-bearing.** An `assigned` event survives being undone, so
+  a timeline hit is not a current claim — the first query is what says that login
+  still holds it. The second prints one line per assignment *of that login*,
+  oldest first, so **the last line is the one to age**: filtering by login keeps
+  a co-assignee's timestamp out of the answer, and `--paginate` is there because
+  events arrive oldest-first and a busy issue puts the newest on the last page.
+  Do not fold the two into one call — `--slurp` is what would make a cross-page
+  `max` possible in `--jq`, and `gh` refuses the two flags together.
+
+  Those are the invocations only. **When a claim is due, what an assignee does
+  and does not prove, and what to do when you find one is one rule, for any
+  issue an agent picks up** — stated once, under *Working rules for agents* in
+  [`CLAUDE.md`](../../CLAUDE.md#working-rules-for-agents), and not restated
+  here, per [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md).
 
 ## Wayfinding operations
 
@@ -29,9 +54,6 @@ opening the map.
 - **Create a ticket under a map**: `gh issue create --parent <map> --label "wayfinder:<type>" --title "..." --body-file <file>`.
   Use `--body-file`, not `--body` — prose bodies contain apostrophes and
   backticks that break shell quoting.
-- **Claim a ticket**: `gh issue edit <n> --add-assignee <login>` **before** any
-  work. An open, unassigned ticket is unclaimed; that assignment is the lock
-  against a concurrent session picking it up.
 - **Blocking** uses GitHub's issue-dependencies API, which `gh` has no flag for:
 
   ```
