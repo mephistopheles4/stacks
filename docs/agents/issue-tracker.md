@@ -20,12 +20,22 @@ installed. They are not a requirement for contributing** — see
 - **Claim an issue**: `gh issue edit <number> --add-assignee <login>` — or
   `--add-assignee "@me"` for the account `gh` is authenticated as. **When an
   assignment happened is half of what it means, and no `gh issue` flag carries
-  it** — `updatedAt` is the issue's, not the assignment's. Read it from the
-  timeline:
+  it** — `updatedAt` is the issue's, not the assignment's. Ask who holds it now,
+  then when they were given it:
 
   ```
-  gh api repos/{owner}/{repo}/issues/<number>/timeline --jq '[.[] | select(.event == "assigned") | .created_at]'
+  gh issue view <number> --json assignees --jq '[.assignees[].login]'
+  gh api --paginate "repos/{owner}/{repo}/issues/<number>/timeline?per_page=100" --jq '.[] | select(.event == "assigned" and .assignee.login == "<login>") | .created_at'
   ```
+
+  **Both halves are load-bearing.** An `assigned` event survives being undone, so
+  a timeline hit is not a current claim — the first query is what says that login
+  still holds it. The second prints one line per assignment *of that login*,
+  oldest first, so **the last line is the one to age**: filtering by login keeps
+  a co-assignee's timestamp out of the answer, and `--paginate` is there because
+  events arrive oldest-first and a busy issue puts the newest on the last page.
+  Do not fold the two into one call — `--slurp` is what would make a cross-page
+  `max` possible in `--jq`, and `gh` refuses the two flags together.
 
   Those are the invocations only. **When a claim is due, what an assignee does
   and does not prove, and what to do when you find one is one rule, for any
