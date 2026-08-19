@@ -218,113 +218,11 @@ folder about to go on the internet. `--dry-run` stops before the upload;
 `--check-only` skips straight to asking the live site which build it is serving,
 building and uploading nothing.
 
-**It publishes `main` and refuses anything else**, before the gates rather than
-after two minutes of them. With one checkout that question answered itself by
-standing somewhere; with worktrees there can be four, on four branches, all
-reading the one `.env` — so all of them hold `SITE_URL` and the command looks
-identical from every one. `--any-branch` is the deliberate override, and a
-detached HEAD is refused outright because nobody could say afterwards what went
-out. `--dry-run` and `--check-only` are exempt: neither uploads, and a dry run
-from a feature branch is how you would check this path before merging it.
-Pinned by `gates/deploy-branch.test.ts`.
-
-**After the upload it asks the live site which build it is serving**, and then
-compares every cover the build produced against what the origin actually serves.
-A successful upload is not the same as a changed site, and the two checks fail
-differently. Every build stamps `index.html` with a hash of itself, because cover
-bytes cannot answer "which build is this": covers are named after book titles and
-keep those names, so a deploy that changes only code leaves every one of them
-identical and the cover check passes against either build — which it did, minutes
-after an upload, while the origin still served the previous `index.html` and
-therefore the previous bundle. The cover check remains for the opposite case, a
-cached copy carrying the right name and the wrong bytes, which is how the fix for
-the mobile crash appeared to deploy while phones kept crashing. The build check
-waits out edge propagation before complaining, since a deploy is not live the
-instant wrangler returns.
-
-**Both checks read the HTTP status before the body, and say "refused" rather
-than guessing.** Bot protection answers a non-browser client with a *challenge
-page*, which is HTML carrying no build stamp and a content-length of its own —
-so read as content, a refusal is indistinguishable from the stale build these
-checks exist to catch, and recommends purging a cache that was never involved.
-That is not hypothetical — it happened here, and went unnoticed for a while
-because the message read like an edge-propagation delay
-([`docs/progress.md`](docs/progress.md)). A refusal retries like anything else
-and is reported only after every attempt, since one refusal is not evidence of a
-standing one. **Do not make it pass by sending a browser user agent** — that was
-measured and does not work. See
-[ADR-0027](docs/adr/0027-deploy-check-reports-refusal.md).
-
-`pnpm worktree <branch>` adds a second checkout beside this one — `../stacks-<branch>` —
-runs `pnpm install` in it, and tells you which `.env` it will read. Both of
-those are needed because `node_modules` and `.env` are gitignored, so a bare
-`git worktree add` produces a checkout where every command fails for a reason
-that has nothing to do with the branch.
-
-**Origin is fetched first, before anything is decided, and what you were given
-is always printed.** Nothing here moves until somebody fetches, and making a
-worktree is not that — so any base you did not check is whatever was last
-pulled. That is the one failure here that says nothing: the checkout installs,
-the tests pass, and the work sits on an old commit. The fetch does not fail the
-command when it cannot reach the network, because being offline does not stop
-the rest from working; it says so and carries on.
-
-Three cases, and for a while only the first was handled:
-
-- **A new branch** is cut from `origin/main`, not from the local `main`.
-- **A branch `origin` already has** is checked out from `origin/<branch>`,
-  tracking it. It used to be created *empty off `origin/main`*, because the only
-  question asked was whether a **local** branch existed — so a branch a
-  colleague or another machine had already pushed came back as a new one of the
-  same name, and the first push either bounced or, forced, took the work with
-  it.
-- **A branch already here** is fast-forwarded when it is strictly behind, and
-  otherwise reported and left alone. Never merged or rebased: a branch that is
-  ahead or has diverged is yours to resolve, and this command exists to make you
-  a checkout.
-
-**There is one `.env`, in the main checkout, and every worktree reads it.** It
-is not copied: a copy drifts, and `STACKS_DEV_HOST=1` left behind in a stale one
-keeps the shelf on the network long after anyone remembers enabling it. So
-editing it changes every worktree at once, which is the point — and a surprise
-if you assumed otherwise. Remove a worktree with `git worktree remove <path>`.
-
-**`pnpm mutation:run` is a measurement, not a gate**, and nothing in `pnpm test`
-or `pnpm build` calls it. It runs Stryker over the **eight declared scopes** in
-[`stryker.scopes.json`](stryker.scopes.json) — minutes on a workstation — and
-`pnpm mutation:score` turns the one report into one number per scope, which is
-the granularity the whole thing exists for. Stryker's own headline is a single
-figure over whatever `mutate` matched, and that figure cannot say which scope
-moved.
-
-⚠️ **The scope list is the score's definition, so read
-[`docs/spec/mutation-scoring.md`](docs/spec/mutation-scoring.md) before editing
-it.** `packages/core/src` is the **non-recursive** scope, `timeoutMS` is part of
-what a score means rather than a tuning knob, and every exclusion owes a *named
-mechanism* — a file is out of reach because something specific puts it there, or
-it is not excluded. `covers/measure.ts` has no spec and stays in the denominator
-anyway, because "nothing tests it" is a gap and not a mechanism. See
-[ADR-0053](docs/adr/0053-stryker-measures-eight-declared-scopes.md).
-
-**A score is a trend, not a gate, and `docs/gates.md` now has a place for both.**
-A check is a gate when its red has a named, reachable remedy *and* its verdict
-does not depend on how much test code exists; otherwise it is a trend. The
-taxonomy is **binary** — [`docs/spec/gate-or-trend.md`](docs/spec/gate-or-trend.md)
-and [ADR-0054](docs/adr/0054-a-check-is-a-gate-or-a-trend.md) — and it decides
-where any *future* check lands, including ones nobody has thought of. A trend
-takes no row number and no status: it lives in `docs/gates.md`'s `## Trends`
-table, and what is numbered is the gate that watches that table.
-
-**`pnpm metrics:emit` is the writing half of that layer.**
-[`.github/workflows/metrics.yml`](.github/workflows/metrics.yml) calls it and
-commits one `metrics/<timestamp>-<sha>.prom` per run to the orphan **`metrics`**
-branch; `pnpm trend:sync` will be the reading half. **No secret exists anywhere
-in that design** — job-level `contents: write` on the built-in token at one end,
-an anonymous fetch at the other — and `gates.yml` is untouched, because a
-required check whose verdict came from a different commit is reporting about
-code that is not there. ⚠️ **The record is *durable*, never *immutable*:** the
-branch is unprotected and force-pushable, and append-only is enforced by
-nothing. See [ADR-0055](docs/adr/0055-ci-writes-a-durable-record.md).
+**The rest is in [`docs/commands.md`](docs/commands.md)** — read it before you
+deploy, cut a worktree, or read a mutation score. It carries `deploy:site`'s
+`main`-only branch guard and what it verifies after upload, `worktree`'s three
+cases and the one shared `.env`, and why a mutation score is a trend and not a
+gate.
 
 CLI commands — `pnpm stacks <cmd>`:
 
@@ -339,75 +237,14 @@ order     show the shelf order, or renumber it with gaps   (--renumber)
 import    import a library export into the vault   (audible)
 ```
 
-## One book, alone — `?solo`
+## The shelf's inspectors — `?solo` and `?debug`
 
-`?solo=N` mounts a single book on a turntable: no case, no neighbours, and an
-orbit with **no polar clamp**, so you can go over the head and under the tail.
-`?solo` on its own is the first book. It builds through `toRows`, `placeShelf`,
-`buildBook` and `addLighting` — the shelf's own functions — because an inspector
-with its own copy of the geometry would agree with the shelf right up until the
-moment it mattered.
-
-**It exists because the shelf is the worst place to look at a book.** Books
-occlude each other, the case occludes the row, and the camera cannot get above or
-below. Two defects at the head of every hardback survived two code reviews, a
-479-test suite and a gate that reports every renderer counter — because they
-moved none of them. `?solo` found both in one screenshot.
-
-**Stand somewhere by number, not by dragging: `window.__solo.look()`.** It takes
-`{ azimuth, elevation, distance, target }` — degrees, and distances in the book's
-own heights — and it is the sibling of the `window.__shelf` that `smoke:render`
-reads. The head corner was re-cut seven times before this existed, and every one
-of those rounds was judged from a hand-dragged orbit, so no two before-and-afters
-were the same picture and *"it looks better"* was never checkable. `distance` is
-clamped by the inspector's own `minDistance`: it magnifies, it does not invent.
-
-⚠️ **What you can see here, nobody can see at all — and that cuts two ways.**
-
-- **Angle.** The shipped `maxPolarAngle` is `PI * 0.52`, so a visitor never gets
-  more than 3.6° under the horizon — which is why
-  [#56](https://github.com/mephistopheles4/stacks/issues/56) decided there is no
-  tail cap and never will be.
-- **Distance.** `?solo` sets `minDistance` to 0.4 of a book's height, about
-  **four times closer than the shelf's 1.5**. So it magnifies; it does not
-  invent.
-
-⚠️ **It is still the right instrument, and "a visitor could never see that" is
-not a disposal.** That sentence was written here once, about the case's assembly
-seams, and the owner produced a shelf screenshot at the shelf's own `minDistance`
-with the seam plainly in it. What had actually happened is that the claim was
-made from a render the writer had already decided was clean. **Anything you want
-to dismiss on visibility grounds gets a shelf render at `minDistance` first, and
-somebody other than the person who wants it dismissed should look at it.**
-
-## The debug panel — `?debug`
-
-Loads a **black box** and a **tuning panel** onto the ordinary page. Neither
-exists for a visitor who does not ask.
-
-- **The black box** (`diagnostics.ts`) records a crash that leaves no error
-  behind, and is a **static** import: it has to be running before the thing it
-  measures fails. See [The mobile crash](docs/log/2026-08-01-the-mobile-crash-g15.md).
-- **The panel** (`debug-panel.ts`) is every setting the shelf has, live, and is
-  **lazy**: its 8.8 KB is paid only by a page that asked for it.
-
-Everything the shelf looks like is one object — `ShelfSettings` in
-`shelf-settings.ts` — and the panel exports it as JSON you paste back into
-`DEFAULT_SETTINGS`. `shelf-url.ts` owns the query string in both directions: the
-ten historic probes keep their flat spellings because `docs/progress.md`
-documents them with measured results, and everything else rides in `?tune=`.
-
-**A control must not lie, and that is the whole design.** `applySettings`
-returns an `ApplyReport` — `applied`, `needsRebuild`, `needsReload`, `refused` —
-and the panel renders what the shelf reported rather than what it was asked for.
-This is [`docs/progress.md`](docs/progress.md)'s oldest rule about instruments,
-*"a probe that silently did nothing would be worse than no probe"*, applied to a
-slider. It caught seven real faults; they are listed there.
-
-Decisions: [ADR-0032](docs/adr/0032-shelf-settings-are-one-object.md),
-[ADR-0033](docs/adr/0033-painters-follow-the-light.md),
-[ADR-0034](docs/adr/0034-bloom-behind-a-composer.md). Research behind them is in
-[`docs/research/`](docs/research/).
+Two query-string instruments, neither of which exists for a visitor who does not
+ask: `?solo` mounts one book on an unclamped turntable, and `?debug` loads the
+black box and the tuning panel. **Read
+[`docs/shelf-inspectors.md`](docs/shelf-inspectors.md) before changing the
+renderer, the debug panel, or `shelf-settings.ts`** — it carries why each exists,
+what only they can see, and the rule that a control must not lie.
 
 ## Decisions
 
