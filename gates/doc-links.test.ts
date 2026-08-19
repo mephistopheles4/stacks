@@ -131,12 +131,14 @@ describe('G29 — every documented link resolves', () => {
     // docs/gates.md logs under G14, G19 and G22.
     //
     // The floor sits just under the real count rather than at a round number an
-    // order of magnitude below it: at 100, half the corpus could stop being
-    // checked without anything going red, which is the same vacuity this
-    // assertion exists to prevent, one level up. It is a floor and not an exact
-    // count on purpose — docs/gates.md records what happened to the prose that
-    // tried to carry the exact numbers.
-    expectFound(docLinks(), 'local links in tracked Markdown', 180);
+    // order of magnitude below it: left far below, most of the corpus could
+    // stop being checked without anything going red, which is the same vacuity
+    // this assertion exists to prevent, one level up. So it is raised as the
+    // corpus grows — it stood at 180 while `docs/spec/` was a fraction of its
+    // size, which by the sentence above is a floor that had stopped doing its
+    // job. It is a floor and not an exact count on purpose — docs/gates.md
+    // records what happened to the prose that tried to carry the exact numbers.
+    expectFound(docLinks(), 'local links in tracked Markdown', 500);
   });
 
   it('points every link at a file that exists', () => {
@@ -152,12 +154,24 @@ describe('G29 — every documented link resolves', () => {
   });
 
   it('points every fragment at a heading that exists', () => {
-    // No link in this repo carries a fragment today, so this half is proven by
-    // mutation rather than by the corpus — recorded as such in docs/gates.md
-    // rather than claimed as coverage. It is here because the split this gate
-    // was written for is exactly when somebody starts writing `#anchor` links.
-    const broken = docLinks()
-      .filter((link) => link.target.includes('#'))
+    // This half was written against an empty corpus and proven by mutation
+    // alone: for a while no link in the repo carried a fragment at all. The
+    // future it was written for arrived — `docs/spec/` cross-references its own
+    // sections by anchor, and `docs/plan.md` routes into `issue-tracker.md` the
+    // same way — so it is now exercised by real links as well as by mutation.
+    //
+    // Which is exactly why it needs the floor the file-existence half already
+    // has. "Every fragment resolves" is trivially true of no fragments, so a
+    // corpus that quietly went back to zero — or an extraction that stopped
+    // seeing `#` — would read as green. The floor sits just under the real
+    // count, and links only ever get added, so it moves up and never down.
+    const fragments = expectFound(
+      docLinks().filter((link) => link.target.includes('#')),
+      'fragment-carrying local links',
+      40,
+    );
+
+    const broken = fragments
       .filter((link) => {
         const target = resolveTarget(link);
         if (!target.endsWith('.md') || !existsSync(target)) return false;
