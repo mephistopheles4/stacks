@@ -334,9 +334,10 @@ if (applicable.length > 0) {
     // reader to read `process.argv` — a flag whose reach is undocumented is how
     // `--skip-gates` came to skip the whole contract with nothing saying so
     // (#152). Stated as a fact about this refusal, checked against the code
-    // above it: `--skip-gates` skips the step-1 gate suite and never reaches
-    // here, `--dry-run` runs this and stops before the upload, and
-    // `--check-only` takes the warning branch, which publishes nothing.
+    // above it: `--skip-gates` skips the step-1 gate suite and its reach stops
+    // there — execution arrives here either way, and this refusal is outside
+    // it. `--dry-run` runs this and stops before the upload, and `--check-only`
+    // takes the warning branch, which publishes nothing.
     fail(
       `pre-flight found ${String(applicable.length)} problem(s):\n- ${listed}\n\n` +
         '  No flag clears this. --skip-gates skips the gate suite, not the pre-flight,\n' +

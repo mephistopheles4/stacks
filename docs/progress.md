@@ -91,6 +91,11 @@ vacuous, which is now written down at `FORBIDDEN` and in `deploy.ts`'s header,
 where the comment had been claiming the pre-flight re-asserts "no note bodies".
 ⚠️ **It checks key names, never values**: body text stuffed into `subjects`
 passes it, and the structural argument it asserts is a claim about the schema.
+G20 now plants that case rather than leaving it asserted — the canary inside
+`subjects` fires `note-body` and **not** `unknown-key`, which locates the
+boundary exactly: on a fixture build the grep of `library.json`'s contents
+catches body text in a permitted field, and on a real build that grep is the
+vacuous one. Neither check is the one a reader assumes.
 
 Planted red, observed twice. Patching `toLibraryBook` to ship
 `...keyIfPresent('narrator', 'A Narrator')` — the field-wired-through-the-seam

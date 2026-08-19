@@ -62,6 +62,8 @@ interface ShippedBook {
    * planted defect honest about the shape it is planting.
    */
   readonly narrator?: string;
+  /** A named field, used to plant body text somewhere the key trace permits. */
+  readonly subjects?: string;
 }
 
 /**
@@ -346,6 +348,27 @@ describe('G20 — every rule goes red', () => {
     await expectOnly('unknown-key', async () => {
       await writeLibrary([
         { title: 'A Book', cover: 'covers/a.jpg', status: 'read', narrator: 'A Narrator' },
+      ]);
+    });
+  });
+
+  it('note-body: a canary inside a named field, which the key trace does not see', async () => {
+    /**
+     * Where the boundary actually sits, demonstrated rather than asserted.
+     *
+     * `subjects` is a named `BookRecord` field, correctly wired, so the key
+     * trace passes over it whatever it contains — the spec says so twice and
+     * this proves it, because `expectOnly` would fail if `unknown-key` fired
+     * here. What catches it is `note-body`, greping `library.json`'s contents:
+     * honest in `gate:public` where the canary exists, and vacuous on the real
+     * `dist/`, which is exactly the gap this rule was added beside.
+     *
+     * So a fixture build catches body text in a permitted field and a real
+     * deploy does not, and neither check is the one people assume.
+     */
+    await expectOnly('note-body', async () => {
+      await writeLibrary([
+        { title: 'A Book', cover: 'covers/a.jpg', status: 'read', subjects: NOTE_BODY_CANARY },
       ]);
     });
   });
