@@ -13,7 +13,10 @@ docs/adr/0057-the-pull-request-title-is-the-commit-subject.md.
 
 ## What changed, and why
 
-<!-- The why matters more than the what; the diff already says the what. -->
+<!--
+The why matters more than the what; the diff already says the what. Lead with
+the one-paragraph summary AGENTS.md asks for — the sections below follow it.
+-->
 
 ## Which invariant does this touch?
 
