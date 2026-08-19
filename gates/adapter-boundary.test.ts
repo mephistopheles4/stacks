@@ -112,6 +112,10 @@ const ALLOWED = [
   // is `artifacts/shelf.png`, which the gate renders from the *fixture* vault —
   // it checks that file exists and never looks at a vault at all.
   'scripts/make-readme-image.ts',
+  // Reads the `.prom` files `emit-metrics.ts` wrote and copies them into a
+  // throwaway git worktree. Never opens the vault — it does not know what a book
+  // is; `git` does all of its real work, through `lib/git.ts` and `lib/run.ts`.
+  'scripts/commit-metrics.ts',
   // Writes one CI run's `.prom` record. The only thing it reads from disk is a
   // Stryker report, through `lib/mutation-score.ts`; the only thing it writes is
   // a file under `metrics/`, which is gitignored on main and lives on the orphan

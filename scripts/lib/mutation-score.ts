@@ -20,7 +20,9 @@
  * `(killed + timeout) / (killed + timeout + survived + no-coverage)` — and not
  * the *covered* variant, which drops `NoCoverage` from the denominator. Dropping
  * it would make deleting an untested file raise the number, which is the shape
- * this whole effort exists to refuse.
+ * this whole effort exists to refuse. **Verified against the eight runs
+ * committed on `experiment/stryker-cost`**: every per-scope figure this produces
+ * reproduces `docs/spec/mutation-scoring.md` §4 exactly.
  */
 
 import { readFileSync } from 'node:fs';
@@ -188,10 +190,27 @@ export function scoreRun(report: MutationReport, scopes: Scope[]): ScoredRun {
    * an exclusion is negated out of `mutate`, so Stryker never mutates it and it
    * never reaches a report.
    *
-   * This **is** the input to the spec's `live-exclusions` trend, and its healthy
-   * value is 0 for exactly that reason. What it is for is scoring a report some
-   * *other* `mutate` produced — a probe config, or one of the historical wide
-   * runs — without silently folding an excluded file into a scope's denominator.
+   * ⚠️ **This feeds the `live-exclusions` trend, and under the standard config
+   * that series cannot move.** The claim here changed sides during #157 and the
+   * correction is recorded rather than the reversal quietly kept: the version of
+   * this comment in `scripts/mutation-scopes.ts` said *"this is **not** the
+   * spec's `live-exclusions` trend, which asks a question a run of this config
+   * cannot answer — it needs a deliberately wider run"*, and **that version was
+   * right**. `docs/spec/mutation-scoring.md` §7 says the exclusion flips when you
+   * *"write a test that touches it"*; a test cannot flip a file Stryker never
+   * mutates.
+   *
+   * So what ships is the **denominator half honestly and the numerator half
+   * structurally zero** — a config-drift tripwire rather than the measurement
+   * the spec names. Carried as an open weakness on G36 in
+   * `docs/gate-register.md` rather than as a solved problem, because a series
+   * incapable of movement is a flat line, and a flat line that arrives on time
+   * is the exact shape this whole layer was built to refuse.
+   *
+   * What it does catch is scoring a report some *other* `mutate` produced — a
+   * probe config, or one of the historical wide runs on
+   * `experiment/stryker-cost` — without silently folding an excluded file into a
+   * scope's denominator.
    */
   const live = new Map<string, number>();
 

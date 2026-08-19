@@ -6,11 +6,9 @@
  * `.github/workflows/metrics.yml` commits the result to the orphan `metrics`
  * branch, one file per run.
  *
- * ⚠️ **Durable, never immutable.** The `metrics` branch is unprotected and
- * force-pushable by construction, and append-only is a convention enforced by
- * nothing. What git buys is that the record survives the laptop, the store, and
- * any rebuild of Prometheus — see
- * [ADR-0055](../../docs/adr/0055-ci-writes-a-durable-record.md).
+ * ⚠️ **Durable, never immutable** — the argument, and the branch properties it
+ * rests on, are in [ADR-0055](../../docs/adr/0055-ci-writes-a-durable-record.md)
+ * rather than repeated here.
  *
  * **Nothing here is a gate and nothing here goes red.** A trend's failure is a
  * movement a person reads, not an exit code. The only automated verdict in the
@@ -83,6 +81,19 @@ export interface RunFacts {
   runUrl: string;
   /** What this run set out to compute. `run_ok` is derived from it. */
   expected: readonly TrendName[];
+  /**
+   * Series whose producing step failed, and which are therefore **not emitted
+   * at all** — which is what makes `run_ok` go to zero, through the same
+   * mechanism as a missing input rather than through a second one.
+   *
+   * ⚠️ **Without this, a red `pnpm test` records `run_ok 1`.** The wall-clock
+   * is still there to be read, so *"computed every series it declared"* was
+   * satisfied by a run that broke — found by review, and it narrowed *ran and
+   * broke* to *ran and produced no report*. **A failed step's number is not a
+   * measurement**: a suite that fails fast is faster, and shipping that
+   * wall-clock corrupts the very trend it is a sample of.
+   */
+  failed?: readonly TrendName[];
   mutationScore?: readonly ScopeScore[];
   gateSuiteRuntime?: number;
   mutationRunRuntime?: number;
@@ -164,9 +175,10 @@ function helpFor(trend: TrendName): string {
  * (one) without either one lying about the other.
  */
 function trendFamilies(facts: RunFacts): Family[] {
+  const broke = new Set<string>(facts.failed ?? []);
   const families: Family[] = [];
 
-  if (facts.mutationScore !== undefined) {
+  if (facts.mutationScore !== undefined && !broke.has('mutation-score')) {
     families.push({
       metric: metricNameOf('mutation-score'),
       help: helpFor('mutation-score'),
@@ -175,21 +187,21 @@ function trendFamilies(facts: RunFacts): Family[] {
         .map((entry) => ({ labels: { scope: entry.scope }, value: entry.score ?? 0 })),
     });
   }
-  if (facts.gateSuiteRuntime !== undefined) {
+  if (facts.gateSuiteRuntime !== undefined && !broke.has('gate-suite-runtime')) {
     families.push({
       metric: metricNameOf('gate-suite-runtime'),
       help: helpFor('gate-suite-runtime'),
       samples: [{ labels: {}, value: facts.gateSuiteRuntime }],
     });
   }
-  if (facts.mutationRunRuntime !== undefined) {
+  if (facts.mutationRunRuntime !== undefined && !broke.has('mutation-run-runtime')) {
     families.push({
       metric: metricNameOf('mutation-run-runtime'),
       help: helpFor('mutation-run-runtime'),
       samples: [{ labels: {}, value: facts.mutationRunRuntime }],
     });
   }
-  if (facts.liveExclusions !== undefined) {
+  if (facts.liveExclusions !== undefined && !broke.has('live-exclusions')) {
     families.push({
       metric: metricNameOf('live-exclusions'),
       help: helpFor('live-exclusions'),

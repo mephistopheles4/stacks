@@ -225,6 +225,7 @@ pnpm deploy:site         # gates, then build from the real vault, then publish
 pnpm mutation:run        # Stryker over the eight declared scopes — minutes, not seconds
 pnpm mutation:score      # that run's report, scored per declared scope
 pnpm metrics:emit        # one run's trend series, as the OpenMetrics text CI commits
+pnpm metrics:commit      # put that record on the orphan `metrics` branch
 ```
 
 `pnpm deploy:site` runs the four gates **first** and builds from the real vault

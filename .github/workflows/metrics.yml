@@ -3,12 +3,12 @@
 # CI writes a durable record; the machine pulls it. This is the writing half:
 # one `metrics/<timestamp>-<sha>.prom` per run, committed to the orphan
 # `metrics` branch in the OpenMetrics text `promtool` ingests. `pnpm trend:sync`
-# is the reading half and runs on the maintainer's machine, by hand.
+# will be the reading half, on the maintainer's machine, by hand — it is a
+# separate ticket and does not exist yet.
 #
-# ⚠️ Durable, never immutable. The `metrics` branch is unprotected and
-# force-pushable by construction, and append-only is a convention enforced by
-# nothing. What git buys is that the record survives the laptop, the store, and
-# any rebuild of Prometheus. See docs/adr/0055-ci-writes-a-durable-record.md.
+# ⚠️ Durable, never immutable, and the branch's own properties are why. See
+# docs/adr/0055-ci-writes-a-durable-record.md, which is where that argument
+# lives rather than being restated in each of the files that depends on it.
 #
 # Three properties this shape gets for free, and every alternative had to buy:
 #
@@ -118,6 +118,7 @@ jobs:
           set +e
           pnpm metrics:emit \
             --expect gate-suite-runtime \
+            --failed "${{ steps.suite.outputs.status == '0' && '' || 'gate-suite-runtime' }}" \
             --suite-seconds "${{ steps.suite.outputs.seconds }}" \
             --commit "${{ github.sha }}" \
             --event "${{ github.event_name }}" \
@@ -125,7 +126,7 @@ jobs:
           echo "status=$?" >> "$GITHUB_OUTPUT"
 
       - name: commit the record
-        run: bash scripts/commit-metrics.sh
+        run: pnpm metrics:commit
 
       # Last, so the row is on the branch before anything is allowed to fail.
       - name: fail if the run did not compute what it declared
@@ -186,6 +187,7 @@ jobs:
           set +e
           pnpm metrics:emit \
             --expect mutation-score,gate-suite-runtime,mutation-run-runtime,live-exclusions \
+            --failed "${{ format('{0}{1}', steps.suite.outputs.status == '0' && '' || 'gate-suite-runtime,', steps.mutation.outputs.status == '0' && '' || 'mutation-score,mutation-run-runtime,live-exclusions') }}" \
             --report artifacts/stryker/current/mutation.json \
             --suite-seconds "${{ steps.suite.outputs.seconds }}" \
             --mutation-seconds "${{ steps.mutation.outputs.seconds }}" \
@@ -195,7 +197,7 @@ jobs:
           echo "status=$?" >> "$GITHUB_OUTPUT"
 
       - name: commit the record
-        run: bash scripts/commit-metrics.sh
+        run: pnpm metrics:commit
 
       - name: fail if the run did not compute what it declared
         run: |

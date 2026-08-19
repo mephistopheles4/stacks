@@ -21,6 +21,7 @@
     "mutation:run": "stryker run",
     "mutation:score": "tsx scripts/mutation-scopes.ts",
     "metrics:emit": "tsx scripts/emit-metrics.ts",
+    "metrics:commit": "tsx scripts/commit-metrics.ts",
     "deploy:site": "tsx scripts/deploy.ts"
   },
   "devDependencies": {

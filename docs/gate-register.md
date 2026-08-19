@@ -2221,6 +2221,22 @@ what the author knew.
   regex holds and the extractor still cannot see `.alias()` or a workspace script)
   and G19 (`repaired`; second finding `gated`). The G14 shape is the one that
   applies, and it is why this gate reads emitted bytes rather than `TREND_SERIES`.
+- **Satisfying the letter, second finding** — **exposed, `accepted`, and it is
+  about a series rather than about the gate.** `live-exclusions` is emitted, so
+  G36's correspondence is satisfied — and **the number it carries is 0 by
+  construction**. An exclusion is negated out of Stryker's `mutate`, so an
+  excluded file is never mutated and never reaches a report; `mutation-scoring.md`
+  §7 says the exclusion flips when somebody *"write[s] a test that touches it"*,
+  and a test cannot flip a file Stryker never mutates. **The measurement the
+  Trends row names needs a deliberately wider run that nothing builds.** Found by
+  review, on the strongest available evidence: `scripts/mutation-scopes.ts`'s own
+  removed comment said so — *"this is **not** the spec's `live-exclusions` trend,
+  which asks a question a run of this config cannot answer"* — and the extraction
+  changed the claim's side with no record. **The claim is restored and the
+  weakness carried**, because a series incapable of movement is a flat line, and
+  a flat line arriving on time is the exact failure this layer exists to expose.
+  ⚠️ **Not closable inside G36**: the gate's question is *did a number arrive*,
+  and one did.
 - **Vacuous green** — clean, and asserted rather than argued. Both sides are
   extractions, and an extraction that stops matching reports an empty set which
   trivially satisfies every "each of these is in that". `expectFound` runs on both

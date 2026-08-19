@@ -3,9 +3,11 @@
 **Neither push nor pull — both, split at a durable record.**
 [`.github/workflows/metrics.yml`](../../.github/workflows/metrics.yml) commits one
 `metrics/<timestamp>-<sha>.prom` per run to an **orphan `metrics` branch**, in the
-OpenMetrics text `promtool` ingests. `pnpm trend:sync` fetches that branch,
-backfills a local Prometheus, and restarts it — **run by hand, when you want to
-look.**
+OpenMetrics text `promtool` ingests. `pnpm trend:sync` will fetch that branch,
+backfill a local Prometheus, and restart it — **run by hand, when you want to
+look.** ⚠️ **The reading half is not built**; it is a separate ticket in this
+rollout, and this record describes the transport it will use rather than a
+command that exists.
 
 The full derivation is [`docs/spec/trend-layer.md`](../spec/trend-layer.md) §1,
 which this record does not restate.

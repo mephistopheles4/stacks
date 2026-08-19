@@ -1350,6 +1350,17 @@ gameable by adding trivially-killable code, which dilutes the denominator upward
 It sits in the Measures column so a reader meets it, rather than in a closed
 ticket.
 
+⚠️ **`live-exclusions` cannot move yet, and that is written here rather than
+discovered from a flat line.** An exclusion is negated out of Stryker's `mutate`,
+so an excluded file is never mutated and never reaches a report — which means the
+run that produces this record reports **0 by construction**, not 0 as a finding.
+The measurement the row describes needs a deliberately wider run that nothing
+builds today. What ships is a config-drift tripwire under the right name. Carried
+as an open weakness on **G36 (`trend-layer`)** in
+[`gate-register.md`](gate-register.md), because *a series incapable of movement is
+a flat line*, and a flat line arriving on time is the shape this layer exists to
+refuse.
+
 ⚠️ **`metrics-freshness` is named without a row number, and that is deliberate.**
 The gate does not exist yet; it is the deploy-side refusal that lands later in
 this rollout. Row numbers are derived from landing order — the Nth new row to
@@ -1361,8 +1372,8 @@ already decided.
 
 **Where the numbers come from.** `.github/workflows/metrics.yml` writes one
 `metrics/<timestamp>-<sha>.prom` per run to the orphan `metrics` branch, in the
-OpenMetrics text `promtool` ingests; `pnpm trend:sync` pulls it into a local
-Prometheus. No secret exists anywhere in that design — job-level `contents:
+OpenMetrics text `promtool` ingests. `pnpm trend:sync` — **not built yet** — will
+pull it into a local Prometheus. No secret exists anywhere in that design — job-level `contents:
 write` on the built-in token at one end, an anonymous fetch at the other. See
 [ADR-0055](adr/0055-ci-writes-a-durable-record.md) and
 [`docs/spec/trend-layer.md`](spec/trend-layer.md).

@@ -45,6 +45,7 @@ function args(argv: readonly string[]): Map<string, string> {
   const known = new Set([
     'out',
     'expect',
+    'failed',
     'report',
     'suite-seconds',
     'mutation-seconds',
@@ -106,21 +107,27 @@ function scoresFrom(path: string | undefined): {
   };
 }
 
-function trendNames(raw: string | undefined): TrendName[] {
+function trendNames(raw: string | undefined, flag: string): TrendName[] {
   const declared = new Set<string>(TREND_SERIES.map((series) => series.name));
   const wanted = (raw ?? '').split(',').map((name) => name.trim()).filter((name) => name !== '');
 
   const unknown = wanted.filter((name) => !declared.has(name));
   if (unknown.length > 0) {
-    throw new Error(
-      `--expect names series that are not declared in TREND_SERIES: ${unknown.join(', ')}`,
-    );
+    throw new Error(`${flag} names series that are not declared in TREND_SERIES: ${unknown.join(', ')}`);
   }
-  if (wanted.length === 0) throw new Error('--expect is required: name what this run set out to compute');
   return wanted as TrendName[];
 }
 
 const flags = args(process.argv.slice(2));
+
+/** `--expect` is required: a run that declares nothing can never report unhealthy. */
+function expected(): TrendName[] {
+  const wanted = trendNames(flags.get('expect'), '--expect');
+  if (wanted.length === 0) {
+    throw new Error('--expect is required: name what this run set out to compute');
+  }
+  return wanted;
+}
 
 const timestamp = seconds(flags.get('timestamp'), '--timestamp') ?? Math.floor(Date.now() / 1000);
 const commit = flags.get('commit') ?? 'unknown';
@@ -130,7 +137,11 @@ const facts: RunFacts = {
   commit,
   event: flags.get('event') ?? 'unknown',
   runUrl: flags.get('run-url') ?? 'unknown',
-  expected: trendNames(flags.get('expect')),
+  expected: expected(),
+  // Named by the caller because only the workflow knows a step's exit code, and
+  // a series whose step failed is dropped rather than published: the number is
+  // not a measurement of what the series measures.
+  failed: trendNames(flags.get('failed'), '--failed'),
   gateSuiteRuntime: seconds(flags.get('suite-seconds'), '--suite-seconds'),
   mutationRunRuntime: seconds(flags.get('mutation-seconds'), '--mutation-seconds'),
   ...scoresFrom(flags.get('report')),

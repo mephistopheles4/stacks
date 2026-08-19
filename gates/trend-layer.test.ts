@@ -213,6 +213,20 @@ describe('G36 — the record says whether the run that wrote it worked', () => {
     expect(renderMetrics(completeRun())).toMatch(/^stacks_run_ok 1 1755600000$/m);
   });
 
+  it('drops a series whose producing step failed, and says so in run_ok', () => {
+    // Without this a red `pnpm test` records `run_ok 1`: the wall-clock is still
+    // there, so "computed every series it declared" was satisfied by a run that
+    // broke. Found by review. A failed step's number is not a measurement — a
+    // suite that fails fast is faster — so the series is dropped rather than
+    // published, and `run_ok` falls out of the same mechanism as a missing input.
+    const broke: RunFacts = { ...completeRun(), failed: ['gate-suite-runtime'] };
+    const document = renderMetrics(broke);
+
+    expect(document).toMatch(/^stacks_run_ok 0 1755600000$/m);
+    expect(trendNamesIn(document)).not.toContain('gate-suite-runtime');
+    expect(trendNamesIn(document)).toContain('mutation-score');
+  });
+
   it('renders run_ok 0 plus whatever computed when one did not', () => {
     // The distinction the record exists to keep: *never ran* is a gap in the
     // branch, *ran and broke* is an explicit zero. A crashed run that wrote
