@@ -25,13 +25,23 @@ is not also a pull-request-title convention enforces nothing —
 [#167](https://github.com/mephistopheles4/stacks/issues/167) said so, and the
 setting confirms it rather than merely suggesting it.
 
-⚠️ **`allow_merge_commit` is also on, so "discarded" is true of the path this
-repo actually uses and not of every path it permits.** On a merge commit the
-local subject survives, under a `Merge pull request #N` subject that is neither
-conventional nor prose. Two of `main`'s five merge commits are that shape and
-both predate the current workflow; every pull request since has squashed. The
-convention is written for the squash path and the local commit carries it anyway,
-so neither route produces a subject nobody chose.
+**`allow_merge_commit` was on when this was written, and was turned off in this
+change** — which is what lets the sentence above be unconditional rather than a
+claim about practice. On the merge path the local subject survives under a
+`Merge pull request #N` subject that is neither conventional nor prose; two of
+`main`'s five merge commits are that shape, and both predate the current
+workflow. Closing that case in prose would have meant a conditional clause in
+three contributor-facing files, which is the duplication this record spent a
+commit removing. Closing it in the setting costs one API call and deletes the
+case. **Squash is now the only merge method**, and `delete_branch_on_merge` was
+already on — which is why the branches a harness names do not survive their own
+pull request.
+
+⚠️ **Nothing in a clone can verify any of that.** Repository settings live
+outside the tree and are already in [`gates.md`](../gates.md#not-gated-deliberately)'s
+*Not gated, deliberately* table for that reason. So this paragraph is the record,
+and it is exactly as true as the settings page — which is the weakest claim in
+this file and the one holding up the other three.
 
 ⚠️ **The same setting means the one-paragraph rule already governs a string that
 does not reach `main`.** `9cee3d7`'s body on `main` is the pull request body:
@@ -157,6 +167,30 @@ as it always has.
   with one genuine open question (`proto/` against `prototype/`). Worth logging
   beside the same session's other correction: both of the ticket's *"what is true
   today"* claims were about artifacts nobody had counted, and both were off.
+
+- **2026-08-19** — **A review asked for a conditional clause in three files, and
+  the setting was the cheaper place to put it.** CodeRabbit was right that
+  *"this repo squash-merges, so the title reaches `main`"* held only on one of two
+  enabled paths. The fix it proposed — qualify the sentence in `AGENTS.md`,
+  `CONTRIBUTING.md` and the pull request template — would have re-spent the
+  duplication the commit before it had just cut, to remove an ambiguity that
+  misled nobody into a wrong action. `allow_merge_commit` was turned off instead.
+  Worth logging as a shape rather than as an event: **when a documented claim is
+  conditional because a setting permits a path nobody uses, changing the setting
+  is a smaller diff than qualifying the prose, and it removes the case instead of
+  describing it.** The trade is that the claim now rests on something no clone can
+  check, which is why the paragraph above says so.
+
+- **2026-08-19** — **The same review's major finding was correct, and the row it
+  hit had been inconsistent with itself.** `docs/gates.md` claimed CI cannot see a
+  branch name in any form a spec could assert; `gates.yml` runs on
+  `pull_request`, where `github.head_ref` carries it — on the same event as the
+  pull request title the row conceded as a defensible surface one clause earlier.
+  The conclusion did not move, because the disqualification was always coverage
+  rather than visibility: `head_ref` exists only on a pull request, so a branch
+  that never opens one is never checked. Logged because the defect was **two
+  halves of one sentence disagreeing**, which is the cheapest kind to catch and
+  the kind three humans and two review agents had already read past.
 
 - **2026-08-19** — **A pull-request-title gate was drafted and dropped on Clause
   A, and the argument was already written down.** It is cheap — a `pull_request`
