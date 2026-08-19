@@ -4,11 +4,19 @@ what changed, what protects it, and what you decided along the way.
 
 Delete any section that genuinely does not apply — an empty heading is worse
 than no heading. Do not delete the two questions.
+
+Title: `<type>(<scope>): <subject>` — scope from core, cli, site, gates, docs,
+ci. This repo squash-merges, so the title you write here becomes the commit
+subject on main and this body becomes its message. Nothing checks either; see
+docs/adr/0057-the-pull-request-title-is-the-commit-subject.md.
 -->
 
 ## What changed, and why
 
-<!-- The why matters more than the what; the diff already says the what. -->
+<!--
+The why matters more than the what; the diff already says the what. Lead with
+the one-paragraph summary AGENTS.md asks for — the sections below follow it.
+-->
 
 ## Which invariant does this touch?
 

@@ -53,6 +53,12 @@ half. A lesson about a gate goes to [`docs/gates.md`](docs/gates.md) instead.
 changed and why. Commit messages here carry reasoning, not summaries — read the
 recent history before writing one.
 
+**Write the subject and the paragraph on the pull request, not only on the
+commit.** This repo squash-merges, so the title you put there becomes the subject
+on `main` and the body becomes its message. The shape, the scope vocabulary and
+the reason nothing checks any of it are in
+[ADR-0057](docs/adr/0057-the-pull-request-title-is-the-commit-subject.md).
+
 **If a gate defeats three distinct approaches, stop.** Write up what you tried in
 `docs/blockers.md` and end the session. Thrashing against a red gate is how a
 gate ends up weakened to make it pass.
