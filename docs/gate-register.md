@@ -3358,6 +3358,17 @@ row sharing its mechanism. One assertion, in the row whose remedy it is, rather
 than a copy in each. **Observed red**: `"tsx scripts/deploy.ts --check-only"`
 fails one of eight, naming both strings.
 
+⚠️ **A second property of this idiom, recorded here because this is where the
+next person copies it from: an exit code asserts nothing.** The harness proves a
+run got past the check under test by letting it fail on the *next* one — so
+`expect(status).toBe(1)` is equally true of a deploy that refused for your reason
+and one that ignored your check entirely and fell over a line later. This row
+gets it right by accident of wording (`not.toContain(PAST_THE_GUARD)` is on the
+refusal cases because two messages had to be told apart); **G39 got it wrong and
+was green for half an hour against a plant that deleted its refusal outright.**
+The discriminating assertion is that the *later* refusal was never reached. See
+the G39 entry's vacuous-green bullet.
+
 ### G18 — `bounded-cover-bytes`
 
 **Gate:** [`packages/core/src/covers/download.test.ts`](../packages/core/src/covers/download.test.ts)
