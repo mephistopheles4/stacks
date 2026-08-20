@@ -89,6 +89,22 @@ export interface RunFacts {
   commit: string;
   /** `push`, `schedule` or `workflow_dispatch` — which half of `metrics.yml` ran. */
   event: string;
+  /**
+   * The score-affecting Stryker configuration this run was scored under.
+   *
+   * ⚠️ **Run context, and the only field here a floor is compared through.**
+   * The floors in `stryker.floors.json` were derived under one configuration,
+   * and a score computed under another is not a number about them — lowering
+   * `timeoutMS` raises the score 0.36 points with no test touched, because a
+   * timeout counts as *detected*. So the run stamps its own, computed from the
+   * config it actually loaded rather than passed in from outside: a flag would
+   * let the stamp disagree with the configuration it claims to describe.
+   *
+   * **Optional, because a row written before this existed is not a row with a
+   * wrong hash.** It is a row from before the stamp, and the calibration window
+   * declines to count it rather than guessing. See `scripts/lib/floors.ts`.
+   */
+  configHash?: string;
   runUrl: string;
   /** What this run set out to compute. `run_ok` is derived from it. */
   expected: readonly TrendName[];
@@ -268,7 +284,12 @@ export function renderMetrics(facts: RunFacts): string {
       help: 'The run that wrote this file. A score never appears without its run.',
       samples: [
         {
-          labels: { commit: facts.commit, event: facts.event, run_url: facts.runUrl },
+          labels: {
+            commit: facts.commit,
+            event: facts.event,
+            run_url: facts.runUrl,
+            ...(facts.configHash === undefined ? {} : { config_hash: facts.configHash }),
+          },
           value: 1,
         },
       ],

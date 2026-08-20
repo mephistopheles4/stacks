@@ -4507,6 +4507,229 @@ the repair, and the two `accepted` residuals are named above.
 
 ---
 
+### G43 — `ignored-mutants`
+
+**Gate:** [`gates/ignored-mutants.test.ts`](../gates/ignored-mutants.test.ts)
+**Date:** 2026-08-19
+**Triaged at landing**, per this rollout's standing rule — and by now enforced
+rather than remembered: G41 (`gate-register`) goes red the moment a row appears
+without an entry. Written anyway, because that is what it enforces.
+
+⚠️ **The spec allocated this row G42 and it landed as G43**, the fourth
+pre-allocated number in this rollout to be one low and for the same reason G38's
+and G40's entries record: `agents-import` took G37 out-of-band from
+[#172](https://github.com/mephistopheles4/stacks/pull/172). Recorded rather than
+silently corrected, so a reader checking `docs/spec/the-ratchet.md` §4 against
+this file finds an account of which is current rather than two documents
+disagreeing.
+
+**The remedy roster was read before this gate was written**, derived by query
+rather than remembered: every entry disposed `gated` — G18 (membership), G19
+(second finding), G29, G30 — and every entry carrying a named-unbuilt remedy,
+then the routing-around verdicts of each row sharing a mechanism. **Two of them
+changed what got built**, and they are named in the bullets rather than in a
+paragraph nobody can check.
+
+- **Weakening** — **clean; this row has no allowlist and no exemption of any
+  kind.** Every declared scope is swept and every entry compared. What it
+  deliberately does not assert is the `notes` line beside the counter: a
+  note-presence check was declined because **any string satisfies it**, so it
+  would catch the honest omission and not the adversary — and a check asserting
+  note-*presence* while reading as note-*quality* states a scope exceeding its
+  real one, which is the exact fault this row was minted to repair. `accepted`,
+  with the cost stated in
+  [ADR-0061](adr/0061-the-mutation-floor-refuses-deploy.md): the file makes an
+  omission visible; it does not make it impossible.
+- **Satisfying the letter** — **exposed, and the exposure is the intended path
+  rather than a defect.** Adding a disable directive *and* raising `ignored` in
+  the same commit passes cleanly, which is precisely what the row asks for — it
+  makes the withdrawal **recorded**, never impossible. What it buys is that the
+  recording cannot be skipped in either direction: pre-raising the counter so a
+  later directive lands green is red on arrival, and a one-way check would have
+  missed that half entirely.
+- **Routing around** — **exposed, accepted, and the mechanism was chosen against
+  the verdict of the row that shares it.** **G17 (`deploy-branch`)** shares this
+  piece's other surface, and its live exposure is that *the gate spawns
+  `scripts/deploy.ts`, so the argv the shipped command supplies is invisible to
+  it* — a remedy that was named and unbuilt when this piece was designed. ⚠️
+  **It is built now, and by this rollout**: `gates/deploy-branch.test.ts` asserts
+  `deploy:site` is exactly `tsx scripts/deploy.ts`, so the shipped-argv hole is
+  red at merge for every row using the idiom. **The reason for the choice below
+  therefore changed under it and is restated rather than left standing**: not
+  *no trustworthy harness exists*, which is now false, but the cost of one —
+  see the residual at the end of this entry. So neither half here is written as
+  a spawn:
+  every judgement is a pure function in `scripts/lib/floors.ts` with an
+  in-process oracle, and `scripts/deploy.ts` is a thin caller. ⚠️ **What is left
+  is G17's shape one layer up, inherited knowingly from G38**: nothing asserts
+  that `deploy.ts` still *calls* `reportFloors`, so deleting that one line leaves
+  the whole suite green. ⚠️ **That is now a cost rather than an impossibility,
+  but the cost is larger than a first reading of G17's remedy suggests.** This
+  entry said *a gate driving the real script through `GIT_DIR` at a scratch repo
+  is available and demonstrated*, which overstated its reach — the fault this
+  whole row is about, in the sentence describing the row's own residual.
+  **Measured against the files this branch ships, `GIT_DIR` reaches one of the
+  four refusals, not four:**
+
+  - `scripts/lib/repo-root.ts` derives `REPO_ROOT` from `import.meta.dirname`,
+    **not from git**. `GIT_DIR` moves which repository git answers from; it does
+    not move `REPO_ROOT`. So `readFloors()` and `readDeclarations()` read the
+    real `stryker.floors.json` and `stryker.scopes.json` whatever `GIT_DIR` says.
+  - Every scope ships `unarmed`, so **a breach cannot fire**; the eight entries
+    correspond exactly to the eight declared scopes, so **unaccounted and orphan
+    cannot fire**.
+  - Only the **config-hash** refusal is reachable, because it compares the floors
+    file's hash against one stamped in a metrics record, and records arrive
+    through `storedRecords()` → `recordsAt()` → `gitOutput(['rev-parse', ref])`,
+    which git *does* resolve via `GIT_DIR`.
+
+  ⚠️ **Driving the other three needs a production change** — an environment
+  override on the `root` parameter `readFloors()` and `readDeclarations()`
+  already take. That is **a test seam added to a refusal path that deliberately
+  has no override flag**, which is a decision with its own argument and probably
+  its own line in [ADR-0061](adr/0061-the-mutation-floor-refuses-deploy.md),
+  not a detail for whoever writes the gate to settle in passing. Found by the
+  session scoped to build that gate, reading this branch rather than this entry.
+
+  Two more facts about the harness, recorded here so they are not rediscovered.
+  **There is no cheap next-refusal anchor after step 0c**: G17's idiom works
+  because the vault refusal follows immediately, whereas `reportFloors()` is
+  followed by step 1 — `pnpm test` — so a plant deleting the call falls through
+  into a four-minute suite spawned from inside the gate. And **`STACKS_VAULT`
+  must point at a directory that exists**, the opposite of G17, which aims it at
+  nothing to stop before 0c; `--check-only` returns from `reportFloors()`
+  immediately, so `--dry-run` is the mode that drives it.
+
+  It is **not built here, deliberately**: a whole new gate surface is past this
+  ticket, and the floor breach is the one refusal in this rollout that can stop a
+  publish on a number — it deserves a considered row rather than one written at
+  the end of the session that needed it. ⚠️ **The trap for whoever builds it:
+  the exit code asserts nothing.** The idiom proves a run got past the check
+  under test by letting it fail on the *next* one, so `expect(status).toBe(1)` is
+  equally true of a deploy that ignored the check entirely; assert that the later
+  refusal was never reached. ⚠️ **And the live route past this row is
+  `stryker.scopes.json`, not this gate**: deleting a scope *and* its floors entry
+  together satisfies every check here and at deploy, and reads as cleanup rather
+  than as a lowering. That is G38's own accepted verdict and it applies unchanged
+  to the counter — the answer sits in `stryker.scopes.json` at the edit it
+  governs, and it is a rule about what a diff must look like rather than a check.
+  The other mechanism-sharers were read and applied: **G29 (`doc-links`,
+  `gated`)** — one stray backtick switching a line's checking off — is why
+  backtick parity was checked on every line this commit adds to a document, and
+  **G19**'s positional status-cell read is why the row's `✅` was placed by
+  column rather than by eye. ⚠️ **One route this row *does* now close, and did
+  not as first written**: a directive in a scope `stryker.floors.json` does not
+  name at all. The counter iterated the entries only, so such a scope merged
+  green — and the deploy's correspondence refusal is no help there, because this
+  row exists to catch a directive at **merge**.
+- **Vacuous green** — **exposed on arrival, closed, and the demonstration is
+  the reason this bullet does not say *clean*.** Three `expectFound` floors:
+  floors entries at 8, swept source files at 60, and **declared mutation scopes
+  at 8**. ⚠️ **The third was missing and the row was vacuously green without
+  it.** The counter is keyed on the declared scopes, so emptying
+  `stryker.scopes.json`'s `scopes` produces an empty count, every floors entry is
+  then skipped for having no swept value, and the gate passes **having swept
+  nothing** — with the other two floors still green, because neither the floors
+  file nor the source tree was touched. Measured, not reasoned: the plant left
+  G43 at 2 of 2 before the third floor existed, and reddens it now. ⚠️ **G38
+  reddens on the same edit, and that is not a defence** — *another row covers it*
+  is the argument these floors exist to refuse, and it was the argument that
+  would have kept this hole. Found by an external review of the pull request,
+  not by the plants in this entry. Both lists are
+  separately deletable and either going empty leaves *every counter matches* true
+  of nothing. ⚠️ **8 equals the current population of declared scopes, and *a
+  floor equal to a population* is the shape that went wrong in the supply-chain
+  piece.** Kept deliberately, and it is not the same case: it mirrors G38's own
+  floor over the same list, and a scope legitimately removed **should** redden
+  both rows, because scope removal is the cheapest way to stop measuring an
+  inconvenient scope. ⚠️ **The floors are not the whole of it** — a gate
+  asserting *the real pair agrees* is satisfied forever by an
+  `ignoredMismatches` returning `[]` unconditionally, and no floor can see that.
+  Both directions are therefore planted against synthetic inputs in
+  `scripts/lib/floors.test.ts`, and the gate is left asserting only what the disk
+  says.
+  ⚠️ **A second reading of the same category, from the same review**:
+  `scoredIn` — the deploy's *which run do I compare against the floor* — did not
+  exclude `run_ok 0`. `renderMetrics` derives run health from *did every declared
+  series compute* and emits each family independently, so a nightly whose
+  `pnpm test` step failed carries a **full set of scores** under `run_ok 0`. The
+  calibration window refuses to derive a floor from such a run, so comparing
+  against one **could have refused a publish on a score that could never have set
+  the floor it breached** — in a design with no override. Now excluded, with the
+  divergence from the trend panel (which prints such a run, and should) written
+  at the function rather than left to be inferred.
+- **Decay** — **clean at landing, with one measured claim and one structural
+  one.** The measured claim is the population: **zero disable directives across
+  all eight scopes**, swept rather than assumed, so the counter starts at 0 and
+  any increase is a real event. The structural one is the sweep's definition — it
+  reuses `scope-check.ts`'s `sourceFiles`, so *what counts as source* cannot
+  drift between this row and G38. ⚠️ **The counter matches a directive only in a
+  comment, never the bare words, and that is load-bearing rather than tidy**:
+  every line of the implementation and every refusal message that talks about
+  disable directives sits inside the `scripts` scope, so a counter matching the
+  words would find its own prose and force `scripts` to carry a number no mutant
+  caused. ⚠️ **And a run that cannot be dated is dropped rather than
+  defaulted**, which is `parseRecordName`'s own rule — *undefined rather than a
+  guess* — applied to a sample instead of a filename. It reads as defensive
+  until somebody sees what the alternative does: a timestamp defaulted to zero
+  puts the run in 1970 and opens a twenty-thousand-day gap in the middle of a
+  streak, which the window reads as the nightly having stopped. ⚠️ **One latent
+  instance of the same species is named rather than fixed, and it is on the
+  refusal path**: `runRowsFrom` reads a `stacks_run_ok` sample as a CI run when it
+  carries no `surface` label. CI writes it bare and the edge probe writes
+  `surface="edge"`, a split `metrics.ts` calls *structural rather than a
+  convention* — so a third writer honouring it is excluded correctly, while one
+  inventing a second label vocabulary would be read as a nightly and could feed
+  the window that derives a floor. Left for whoever adds a third surface: reaching
+  it means breaking a documented structural convention first, and the alternative
+  — counting only a wholly unlabelled sample — trades a silent wrong floor for a
+  visible empty window, which is the better trade but not one to make on a frozen
+  stack for an unreachable case.
+
+⚠️ **Four findings from the two-axis review changed the code rather than the
+prose, and they are named because each was a real hole.** The **config-hash
+refusal** was gated on something being armed, which left the spec's own §12 plant
+(*lower `timeoutMS` without re-deriving*) unguarded for the whole disarmed
+period; a different hash now refuses whatever is armed, and only a *missing* one
+waits for a comparison to protect. The **deploy read the newest record rather
+than the newest nightly** — `metrics.yml` writes on every push, a merge record
+carries no score, and on a busy week that made every armed scope print *no score
+in the record*: **a floor refusing nothing at exactly the moment somebody
+deploys**. `ignoredMismatches` **iterated only the entries**, so a directive in a
+declared-but-unaccounted scope merged green — the gate silent in precisely the
+case the file is already wrong. And the **full-window print dropped the date**,
+which is §7's only guard on typing `unarmed`, at exactly the moment somebody is
+deciding what to type. All four are covered by plants in
+`scripts/lib/floors.test.ts`.
+
+**Observed-red line:** **three, recounted from the runs rather than carried
+forward.** Two are the counter's two directions; the third is the vacuity floor
+in the bullet above, planted by emptying `stryker.scopes.json` and observed at
+2-of-2 green before the floor existed and red after. 2026-08-19,
+against the real tree. A new file under `packages/core/src` carrying one disable
+directive with `ignored` left at 0 → red: *"packages/core/src: the tree holds 1
+disable directive(s), stryker.floors.json records 0"*. Then `scripts`' `ignored`
+raised to 3 with no directive anywhere in the tree → red with the same message
+the other way round: *"scripts: the tree holds 0 disable directive(s),
+stryker.floors.json records 3"*. Both plants removed and the gate re-run green
+between them.
+
+⚠️ **The deploy half of this ticket is not this row and is gated by nothing.**
+The four floors refusals — a breached floor, an unaccounted scope, an orphan
+entry, a config-hash mismatch — are `pnpm deploy:site`'s, deliberately: **a merge
+is never blocked by a metric.** **All four were planted and observed against the
+real stack via `--dry-run`, which uploads nothing — five observations across the
+four, because the configuration refusal has two paths and both were run**: a
+*different* hash with every scope unarmed, and a *missing* hash against an armed
+floor. The breach needed a record stamped with the current configuration,
+planted onto the local `refs/remotes/origin/metrics` and reverted after, with
+the ref verified back at its original SHA. ⚠️ **One residual worth
+naming**: the breach refusal states the per-mutant resolution **only when a local
+mutation report exists**, because the record carries scores and not mutant
+counts. No report means a refusal that names the scope, the score and the floor
+and stops there — degraded rather than silent, on section 0b's own rule that *no
+report is a print, never a silence*.
+
 ## ⚠️ `auditConfig.ignoreGhsas` — the category-1 verdict this rollout owed
 
 **Not a row, and it does not get one.** It is the escape hatch every other

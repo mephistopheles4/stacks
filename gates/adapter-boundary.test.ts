@@ -131,6 +131,12 @@ const ALLOWED = [
   // and file names and nothing else — and the root it walks is a parameter, so
   // it does not know which tree it was pointed at, let alone where a vault is.
   'scripts/lib/scope-check.ts',
+  // Reads `stryker.floors.json` — a fixed filename at the repo root — and opens
+  // the mutated source files `scope-check.ts` just listed, to count disable
+  // directives in them. Both are repo files, both paths are derived from the
+  // scope declaration rather than from anything a book carries, and it writes
+  // nothing: arming a floor is a hand edit, by rule.
+  'scripts/lib/floors.ts',
   // Imports the `.prom` records CI wrote into the local trend store, and writes
   // surface D's own row beside them. The only vault-derived thing it opens is
   // the *published* `dist/` — `index.html` for its build stamp and
