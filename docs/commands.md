@@ -121,10 +121,71 @@ table, and what is numbered is the gate that watches that table.
 **`pnpm metrics:emit` is the writing half of that layer.**
 [`.github/workflows/metrics.yml`](../.github/workflows/metrics.yml) calls it and
 commits one `metrics/<timestamp>-<sha>.prom` per run to the orphan **`metrics`**
-branch; `pnpm trend:sync` will be the reading half. **No secret exists anywhere
-in that design** — job-level `contents: write` on the built-in token at one end,
-an anonymous fetch at the other — and `gates.yml` is untouched, because a
-required check whose verdict came from a different commit is reporting about
-code that is not there. ⚠️ **The record is *durable*, never *immutable*:** the
-branch is unprotected and force-pushable, and append-only is enforced by
-nothing. See [ADR-0055](adr/0055-ci-writes-a-durable-record.md).
+branch; `pnpm trend:sync` below is the reading half. No secret exists anywhere in
+that design, and `gates.yml` is untouched, because a required check whose verdict
+came from a different commit is reporting about code that is not there.
+⚠️ **The record is *durable*, never *immutable*:** the branch is unprotected and
+force-pushable, and append-only is enforced by nothing. Both claims are stated
+once, in [ADR-0055](adr/0055-ci-writes-a-durable-record.md), rather than a sixth
+time here.
+
+## `pnpm trend:sync` — the reading half, and surface D
+
+**One command, run by hand, when you want to look.** It fetches the `metrics`
+branch, imports every record this machine has not seen into a local Prometheus,
+asks the live origin what it is serving, and restarts the store. Run it twice and
+the second run imports nothing — the store records what it holds by filename, so
+a merge and a nightly landing in the same second both survive.
+
+**No laptop cron and no daemon.** A second scheduled thing that can silently stop
+is the failure class this design spends its budget containing, and this one would
+leave no Actions history to inspect afterwards. The cost is stated rather than
+hidden: nothing arrives until you ask.
+
+**Replay is the point.** A hosted Prometheus rejects samples more than two hours
+behind the newest for that series; a git record has no such window, so a sync
+after two weeks away replays all fourteen days. *No history when the machine is
+off* is a weakness of the **store**, never of the **record**.
+
+### Setup: Docker, and nothing else
+
+The store is a container this command creates on first run — `stacks-prometheus`,
+serving <http://localhost:9090>, with its data and the sync's state under
+`.trend/` (gitignored). **The backfill tool and the server come from the same
+pinned image deliberately**: `promtool` writes TSDB blocks and Prometheus reads
+them, and a version disagreement between the two surfaces as *the sync worked and
+the dashboard is empty*. A `promtool` on your PATH is deliberately not used. See
+[ADR-0058](adr/0058-the-trend-store-is-a-container.md).
+
+If Docker is not answering, the command says so and imports nothing. The next run
+imports those records instead: the store's state advances only after a backfill
+succeeds.
+
+### What it refuses, and the one flag
+
+**A rewritten `metrics` branch.** The sync remembers the tip it last imported and
+refuses when that tip is no longer an ancestor of the branch. It is
+tamper-**evident** and not tamper-proof — nothing can stop a force-push to an
+unprotected branch — and what it buys is that the store never silently mirrors a
+history that changed underneath it. `pnpm trend:sync --rebuild` is the deliberate
+answer once you know what happened: it drops the local blocks and replays the
+branch as it now stands, plus every surface-D row, which only this machine has.
+See [ADR-0059](adr/0059-the-sync-refuses-a-rewritten-record.md).
+
+### Surface D — the edge check between deploys
+
+`deploy:site` asks the origin what it is serving **at** a deploy; D asks the same
+question **between** deploys, and it is folded in here rather than scheduled in
+CI. That is a fact rather than a preference: the expected build stamp is
+`sha256(index.html + library.json)` and `library.json` is built from the real
+vault, which is not in the repo, **so CI can never compute it.** It could only be
+told, which costs a token and breaks the property that no secret exists anywhere
+in this design.
+
+**D's row goes to the local store only, never the branch**, which keeps both ends
+credential-free — at the cost that D's history lives on one machine. A **refusal**
+by bot protection writes `run_ok 0` and no build number at all, and is reported as
+refused rather than as a stale build: one is no answer, the other is a real answer
+and a red one ([ADR-0027](adr/0027-deploy-check-reports-refusal.md)). D skips, and
+says so, when `SITE_URL` is unset or the local `dist/` carries no build stamp — a
+gap in D's series is honest where an invented row is not.

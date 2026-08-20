@@ -207,6 +207,7 @@ pnpm mutation:run        # Stryker over the eight declared scopes — minutes, n
 pnpm mutation:score      # that run's report, scored per declared scope
 pnpm metrics:emit        # one run's trend series, as the OpenMetrics text CI commits
 pnpm metrics:commit      # put that record on the orphan `metrics` branch
+pnpm trend:sync          # pull that record into the local store, and ask the live site what it serves
 ```
 
 `pnpm deploy:site` runs the four gates **first** and builds from the real vault
@@ -218,11 +219,14 @@ folder about to go on the internet. `--dry-run` stops before the upload;
 `--check-only` skips straight to asking the live site which build it is serving,
 building and uploading nothing.
 
+`pnpm trend:sync` needs **Docker** and nothing else, and is run by hand, never
+on a schedule.
+
 **The rest is in [`docs/commands.md`](docs/commands.md)** — read it before you
-deploy, cut a worktree, or read a mutation score. It carries `deploy:site`'s
-`main`-only branch guard and what it verifies after upload, `worktree`'s three
-cases and the one shared `.env`, and why a mutation score is a trend and not a
-gate.
+deploy, cut a worktree, read a mutation score, or sync the trend store. It
+carries `deploy:site`'s `main`-only branch guard and what it verifies after
+upload, `worktree`'s three cases and the one shared `.env`, why a mutation score
+is a trend and not a gate, and what `trend:sync` refuses.
 
 CLI commands — `pnpm stacks <cmd>`:
 

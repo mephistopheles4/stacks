@@ -30,17 +30,28 @@
  * the merge half legitimately expects one series where the nightly expects four.
  */
 
+import type { EdgeAnswer } from './edge-probe.ts';
+
 /**
- * The two metric-name prefixes, and the whole of the separation between them.
+ * The three metric-name prefixes, and the whole of the separation between them.
  *
- * Neither may be a prefix of the other: `trendNamesIn` strips `trend` to recover
- * a name, and if `run` were a prefix of it every run-health sample would parse
- * as a trend with a mangled name rather than being skipped. Asserted by G36
- * rather than left as a property of two strings that look obviously different.
+ * No one of them may be a prefix of another: `trendNamesIn` strips `trend` to
+ * recover a name, and if `run` were a prefix of it every run-health sample
+ * would parse as a trend with a mangled name rather than being skipped.
+ * Asserted by G36 and by `metrics.test.ts` rather than left as a property of
+ * three strings that look obviously different.
+ *
+ * ⚠️ **`edge` is written by the machine, never by CI**, and that is what the
+ * prefix buys. Surface D's row is produced by `pnpm trend:sync` into the local
+ * store only, so a name under `trend` would owe a `## Trends` row — and that
+ * row would make G36's reverse direction red against every CI run, which emits
+ * no such series. Structural, rather than an exception list a gate has to
+ * maintain. See `docs/spec/trend-layer.md` §5.
  */
 export const METRIC_PREFIXES = {
   run: 'stacks_run_',
   trend: 'stacks_trend_',
+  edge: 'stacks_edge_',
 } as const;
 
 /** The four series, and the whole of what this record carries as a trend. */
@@ -259,4 +270,133 @@ export function renderMetrics(facts: RunFacts): string {
     render(family, facts.timestamp),
   );
   return `${lines.join('\n')}\n# EOF\n`;
+}
+
+// ── The reading half: surface D, and the join that makes a sync ingestible ───
+
+// The verdict is defined where it is produced, and imported as a *type* — so
+// this module gains no runtime edge to anything that fetches. Four cases and
+// not three, because *refused* and *stale* are the pair ADR-0027 already paid
+// to keep apart: one is no answer at all, the other is a real answer and a red
+// one. See `./edge-probe.ts`.
+
+
+export interface EdgeFacts {
+  /** Unix seconds — the moment of the sync, not of a CI run. */
+  timestamp: number;
+  origin: string;
+  /** The build stamp the local `dist/` says was last published. */
+  expected: string;
+  build: EdgeAnswer;
+  /**
+   * The cover sweep, when it ran. The half CI could never buy: the comparison
+   * needs the local `dist/` to know what each cover should weigh.
+   */
+  covers?: { checked: number; stale: number };
+}
+
+function servingOf(build: EdgeAnswer): string {
+  if (build.kind === 'current') return build.serving;
+  if (build.kind === 'stale') return build.serving ?? 'unstamped';
+  return '';
+}
+
+/**
+ * One probe of the live origin, as the OpenMetrics text `promtool` ingests.
+ *
+ * **`run_ok 0` covers a refusal with nothing invented.** A refusal produces no
+ * `stacks_edge_build_current` sample at all — a zero there would say *the
+ * origin is serving the wrong build*, which nothing measured. Same discipline
+ * as the CI record's `run_ok 0` **plus whatever computed**, and the same reason:
+ * *never ran* and *ran and broke* have to stay distinguishable.
+ *
+ * ⚠️ **`run_ok` carries `surface="edge"`, which CI's does not.** Same metric
+ * name, so *did the pipe work* answers over both; different label set, so the
+ * two are different series and a local probe can never overwrite or dilute a
+ * CI run's health. Prometheus decides series identity on the label set, which
+ * is what makes that structural rather than a convention.
+ */
+export function renderEdgeCheck(facts: EdgeFacts): string {
+  const answered = facts.build.kind === 'current' || facts.build.kind === 'stale';
+  const context = { origin: facts.origin, expected: facts.expected };
+
+  const families: Family[] = [
+    {
+      metric: `${METRIC_PREFIXES.run}ok`,
+      help: 'One when this probe got an answer out of the origin, zero when it did not.',
+      samples: [{ labels: { surface: 'edge' }, value: answered ? 1 : 0 }],
+    },
+    {
+      metric: `${METRIC_PREFIXES.edge}info`,
+      help: 'The probe that wrote this file. A number never appears without what it asked.',
+      samples: [
+        {
+          labels: {
+            ...context,
+            serving: servingOf(facts.build),
+            // The verdict's own name is the label: `current`, `stale`,
+            // `refused`, `unreachable`. A second vocabulary here would be a
+            // place for the record and the message to disagree.
+            outcome: facts.build.kind,
+            status: facts.build.kind === 'refused' ? String(facts.build.status) : '',
+          },
+          value: 1,
+        },
+      ],
+    },
+  ];
+
+  if (answered) {
+    families.push({
+      metric: `${METRIC_PREFIXES.edge}build_current`,
+      help: 'One when the origin is serving the build that was last published, zero when it is not.',
+      samples: [{ labels: context, value: facts.build.kind === 'current' ? 1 : 0 }],
+    });
+  }
+
+  if (facts.covers !== undefined) {
+    families.push({
+      metric: `${METRIC_PREFIXES.edge}stale_covers`,
+      help: 'Covers the origin serves at a different size from the local build, of N checked.',
+      samples: [
+        {
+          labels: { ...context, checked: String(facts.covers.checked) },
+          value: facts.covers.stale,
+        },
+      ],
+    });
+  }
+
+  const lines = families.flatMap((family) => render(family, facts.timestamp));
+  return `${lines.join('\n')}\n# EOF\n`;
+}
+
+/**
+ * Many records as the one document `promtool tsdb create-blocks-from` ingests.
+ *
+ * ⚠️ **A naive concatenation writes no block at all**, which is the part worth
+ * knowing: `# EOF` terminates an OpenMetrics document, so a second document
+ * after it is *"unexpected data after # EOF"* and the **whole file** is
+ * rejected — not partially ingested. Measured 2026-08-19 against
+ * `prom/prometheus`; the same records with the terminator stripped from all but
+ * the last ingest as separate blocks with their timestamps intact.
+ *
+ * So this owns the terminator rather than trusting each record's: every `# EOF`
+ * is dropped and exactly one is appended. It owns the line endings too — a
+ * `\r` anywhere is *"invalid metric type \"gauge\\r\""*, and a record read back
+ * through git on Windows is exactly where one arrives.
+ */
+export function joinRecords(documents: readonly string[]): string {
+  if (documents.length === 0) {
+    throw new Error(
+      'nothing to join — an empty document ingests as zero blocks and reports success, ' +
+        'which reads as "synced" from the one command that exists to say whether anything arrived',
+    );
+  }
+
+  const lines = documents
+    .flatMap((document) => document.replace(/\r/g, '').split('\n'))
+    .filter((line) => line !== '' && line !== '# EOF');
+
+  return `${[...lines, '# EOF'].join('\n')}\n`;
 }

@@ -36,6 +36,12 @@ fixtures/vault-50/
 .stryker-tmp/
 
 # One CI run's metrics record, written by scripts/emit-metrics.ts. It belongs on
-# the orphan `metrics` branch and never on main — scripts/commit-metrics.sh puts
+# the orphan `metrics` branch and never on main — scripts/commit-metrics.ts puts
 # it there.
 metrics/
+
+# The local trend store: a Prometheus data directory, the sync's state, and
+# surface D's rows. Rebuildable from the `metrics` branch — except D's rows,
+# which only this machine has, which is why `pnpm trend:sync --rebuild` replays
+# them from .trend/local/ rather than re-probing history it cannot re-ask for.
+.trend/

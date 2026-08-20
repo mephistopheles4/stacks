@@ -81,3 +81,5 @@ Two other files hold what these deliberately do not:
 | [0055](./0055-ci-writes-a-durable-record.md) | CI writes a durable record; the machine pulls it |
 | [0056](./0056-the-constitution-is-agents-md.md) | The constitution is AGENTS.md, and CLAUDE.md imports it |
 | [0057](./0057-the-pull-request-title-is-the-commit-subject.md) | The pull request title is the commit subject, so the convention lands there |
+| [0058](./0058-the-trend-store-is-a-container.md) | The trend store is a pinned container the sync owns |
+| [0059](./0059-the-sync-refuses-a-rewritten-record.md) | `trend:sync` refuses a rewritten record |

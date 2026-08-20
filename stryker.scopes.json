@@ -135,6 +135,10 @@
           "mechanism": "No spec imports it; every caller is a script run by `tsx`."
         },
         {
+          "path": "scripts/lib/docker.ts",
+          "mechanism": "No spec imports it; its only caller is `trend-sync.ts`, excluded below. Every line of it spawns `docker`, which no in-process oracle reaches - `lib/git.ts`'s exclusion, for the same reason."
+        },
+        {
           "path": "scripts/dev-watch.ts",
           "mechanism": "No spec imports it — run by `tsx` from `pnpm dev:watch`."
         },
@@ -153,6 +157,10 @@
         {
           "path": "scripts/emit-metrics.ts",
           "mechanism": "No spec imports it — run by `tsx` from `pnpm metrics:emit`, by `.github/workflows/metrics.yml`. The rendering it wraps lives in `lib/metrics.ts`, which is in this scope and which G36 imports in-process."
+        },
+        {
+          "path": "scripts/trend-sync.ts",
+          "mechanism": "No spec imports it - run by `tsx` from `pnpm trend:sync`. Every line of it drives git, Docker or the network. The three pieces with an in-process oracle were extracted out of it: `lib/metrics.ts`, `lib/metrics-record.ts` and `lib/edge-probe.ts`, none of which is excluded."
         },
         {
           "path": "scripts/make-50-book-fixture.ts",
