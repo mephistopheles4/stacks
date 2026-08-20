@@ -64,7 +64,14 @@ import {
   storedRecords,
   type FetchedRecord,
 } from './lib/metrics-record.ts';
-import { readDeclarations, readReport, scoreRun, type Tally } from './lib/mutation-score.ts';
+import {
+  readDeclarations,
+  readReport,
+  scoreRun,
+  type MutationReport,
+  type Scope,
+  type Tally,
+} from './lib/mutation-score.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
@@ -263,6 +270,17 @@ try {
  */
 const RECORD_LOOKBACK = 30;
 
+/**
+ * Where `pnpm mutation:run` leaves its report on this machine.
+ *
+ * ⚠️ **Above the call below, and that is not style.** `reportTrendRecord()`
+ * runs at module scope, and a `const` it reads declared after it is in the
+ * temporal dead zone — the script dies on `Cannot access 'REPORT_PATH' before
+ * initialization` before any check runs. The functions hoist; their constants
+ * do not, which cost this file two stack traces on two separate passes.
+ */
+const REPORT_PATH = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
+
 reportTrendRecord();
 
 /**
@@ -331,16 +349,55 @@ function prWindow(records: readonly ParsedRecord[]): PrWindow {
   return [...numbers];
 }
 
+/**
+ * The last mutation run on this machine — and **three states, not two.**
+ *
+ * ⚠️ **Unreadable is its own answer, beside present and absent.** Both readers
+ * are a bare `JSON.parse`, and a `pnpm mutation:run` interrupted partway
+ * through its ~41 minutes leaves a truncated `mutation.json` behind. Read
+ * unguarded, that throws out of a **print** and takes the whole deploy with it
+ * — before the freshness verdict, before the gates, as a raw stack trace. The
+ * two steps below say the panel prints and the refusals are separate; a parse
+ * error broke both, and it broke them from the least important half.
+ *
+ * ⚠️ **One reader because there were two call sites and the crash was in both.**
+ * Guarding step 0b alone would have moved the stack trace two steps later
+ * rather than removed it — the instance fixed and the population left, which is
+ * the failure this rollout's own spec is a catalogue of.
+ *
+ * The distinction is kept rather than collapsed to `undefined`: *nobody ran it*
+ * is the ordinary case on a fresh checkout, and *it is there and I cannot read
+ * it* is a fault worth naming. Silently treating the second as the first is
+ * this repo's oldest rule about instruments, broken.
+ */
+type MutationRun =
+  | { kind: 'none' }
+  | { kind: 'unreadable'; why: string }
+  | { kind: 'read'; report: MutationReport; scopes: Scope[] };
+
+function lastMutationRun(): MutationRun {
+  if (!existsSync(REPORT_PATH)) return { kind: 'none' };
+
+  try {
+    return { kind: 'read', report: readReport(REPORT_PATH), scopes: readDeclarations().scopes };
+  } catch (error) {
+    return { kind: 'unreadable', why: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 /** Each scope's per-mutant resolution, from the last run **on this machine**. */
-function scopeResolution(): { resolution?: Map<string, Tally>; note?: string } {
-  const reportPath = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
-  if (!existsSync(reportPath)) {
+function scopeResolution(run: MutationRun): { resolution?: Map<string, Tally>; note?: string } {
+  if (run.kind === 'none') {
     return { note: 'no per-mutant resolution — `pnpm mutation:run` writes one, and the record carries only the score' };
   }
+  if (run.kind === 'unreadable') {
+    return {
+      note: `per-mutant resolution unreadable — ${run.why}\n    The report is there and cannot be parsed; \`pnpm mutation:run\` writes a fresh one.`,
+    };
+  }
 
-  const run = scoreRun(readReport(reportPath), readDeclarations().scopes);
   return {
-    resolution: run.perScope,
+    resolution: scoreRun(run.report, run.scopes).perScope,
     // Named rather than assumed: the record's score comes from a runner and the
     // resolution beside it comes from whenever this machine last ran Stryker.
     note: "resolution is this machine's last mutation run, which is not the run above",
@@ -398,7 +455,7 @@ function reportTrendRecord(): void {
     // of this machinery a refusal three days later.
     console.log(`\ntrend record — no record yet (spine landed ${SPINE_LANDED})`);
   } else {
-    const { resolution, note } = scopeResolution();
+    const { resolution, note } = scopeResolution(lastMutationRun());
     for (const line of renderPanel({
       now,
       records,
@@ -479,17 +536,28 @@ assertNoEmptyScopes();
  * question.
  */
 function assertNoEmptyScopes(): void {
-  const reportPath = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
+  const run = lastMutationRun();
 
-  if (!existsSync(reportPath)) {
+  if (run.kind === 'none') {
     console.log(
       '\n  no mutation report on this machine — the zero-mutant residual is unchecked.\n' +
         '  `pnpm mutation:run` writes one; every structural half of this rule ran in `pnpm test`.',
     );
     return;
   }
+  if (run.kind === 'unreadable') {
+    // A print and not a refusal, on this step's own rule — *no report is a
+    // print, never a silence* — and for the same reason the absent case is one:
+    // an unreadable report is a fact about this machine's last run, not about
+    // the scopes. It says so rather than reading as *checked and clean*.
+    console.log(
+      `\n  the mutation report on this machine cannot be read — ${run.why}\n` +
+        '  The zero-mutant residual is unchecked. `pnpm mutation:run` writes a fresh report.',
+    );
+    return;
+  }
 
-  const empty = emptyScopes(readReport(reportPath), readDeclarations().scopes, sourceFiles());
+  const empty = emptyScopes(run.report, run.scopes, sourceFiles());
   if (empty.length === 0) return;
 
   const listed = empty.join(', ');
