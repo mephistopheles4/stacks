@@ -125,6 +125,12 @@ const ALLOWED = [
   // tallies them. Neither is vault data and neither is a path it derives — one
   // is a fixed filename, the other is passed in. It writes nothing.
   'scripts/lib/mutation-score.ts',
+  // Lists the *paths* of source files under `packages/`, `scripts/` and
+  // `gates/`, so G38 can ask whether every one of them is in a declared
+  // mutation scope. It opens none of them — the walk reads directory entries
+  // and file names and nothing else — and the root it walks is a parameter, so
+  // it does not know which tree it was pointed at, let alone where a vault is.
+  'scripts/lib/scope-check.ts',
   // `scripts/mutation-scopes.ts` was here and is gone: its filesystem access
   // moved into `lib/mutation-score.ts` with the arithmetic, and the rot-catcher
   // below went red on the spent permission. That is the gate working.

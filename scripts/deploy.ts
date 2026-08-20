@@ -39,9 +39,11 @@ import { join } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
 import { gitOutput } from './lib/git.ts';
+import { readDeclarations, readReport } from './lib/mutation-score.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
+import { emptyScopes, sourceFiles } from './lib/scope-check.ts';
 
 // The same loader the CLI uses, rather than a third hand-rolled `.env` parser:
 // a real environment variable still wins, so `SITE_URL=... pnpm deploy` does
@@ -213,6 +215,82 @@ try {
 const vault = process.env['STACKS_VAULT'];
 if (vault === undefined || vault.length === 0) fail('STACKS_VAULT is not set (see .env.example)');
 if (!existsSync(vault)) fail(`STACKS_VAULT points at nothing: ${vault}`);
+
+// ── 0b. G38's deploy half: a declared scope that scored nothing ─────────────
+//
+// The one clause of `mutation-scope` the disk cannot answer. `pnpm test` has
+// already asserted everything structural — the scope exists, its glob matches
+// files, every source directory is declared or excluded — so what is left here
+// is the residual: **the glob matched files and Stryker still produced zero
+// mutants.** Every structural cause is red at merge in two seconds; this one
+// needs a run's evidence, and the newest run on this machine is the only
+// evidence a deploy has.
+//
+// Before the gates rather than after them, because a refusal that arrives after
+// four minutes is a refusal people learn to pre-empt with the override — the
+// argument step 0 already makes about the branch guard.
+assertNoEmptyScopes();
+
+/**
+ * Refuses when a declared scope's files exist and its mutants do not.
+ *
+ * **Which flags clear it: none, on any path that publishes.** `--skip-gates`
+ * skips the step-1 suite and its reach stops there; `--dry-run` runs this and
+ * is the honest way to watch it fail on purpose, since it uploads nothing.
+ * `--check-only` warns instead of refusing, on the pre-flight's own rule — that
+ * mode exists to investigate a stale edge, and a check that refused to run
+ * would answer the question by declining to ask it.
+ *
+ * ⚠️ **No report is a print, never a silence.** This repo's oldest rule about
+ * instruments is that a probe which silently did nothing would be worse than no
+ * probe, and a machine that has never run `pnpm mutation:run` is the ordinary
+ * case rather than a fault.
+ *
+ * ⚠️ **The residual this carries, stated rather than found later: the report is
+ * a snapshot and nothing here knows how old it is.** A legitimate scope change
+ * made after the last run reads exactly like a scope that stopped producing
+ * mutants, and the remedy — `pnpm mutation:run` — is named in the refusal
+ * because Clause A asks for a reachable one. Staleness itself belongs to
+ * `metrics-freshness`, the next row in this rollout, which reads the record's
+ * own timestamps; duplicating half of it here would be two implementations of
+ * one question.
+ */
+function assertNoEmptyScopes(): void {
+  const reportPath = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
+
+  if (!existsSync(reportPath)) {
+    console.log(
+      '\n  no mutation report on this machine — the zero-mutant residual is unchecked.\n' +
+        '  `pnpm mutation:run` writes one; every structural half of this rule ran in `pnpm test`.',
+    );
+    return;
+  }
+
+  const empty = emptyScopes(readReport(reportPath), readDeclarations().scopes, sourceFiles());
+  if (empty.length === 0) return;
+
+  const listed = empty.join(', ');
+  const why =
+    'A declared scope whose files exist and whose mutants do not is a broken declaration: ' +
+    'it measures nothing, so the code it names can go away without any number moving.\n' +
+    '    - Fix the declaration in stryker.scopes.json — point the glob at the new path, or\n' +
+    '      narrow the exclusion that widened over the last file in it.\n' +
+    '    - Deleting the scope is a legitimate fix AND the cheapest way to stop measuring an\n' +
+    '      inconvenient one. It takes the visible diff and the floors-file notes entry that\n' +
+    '      every other lowering carries.\n' +
+    '    - If the report simply predates a legitimate change: `pnpm mutation:run`.';
+
+  if (checkOnly) {
+    console.warn(`\n! declared scope(s) with no mutants in the last run: ${listed}\n  ${why}`);
+    return;
+  }
+
+  fail(
+    `declared scope(s) produced no mutants in the last run: ${listed}\n\n  ${why}\n\n` +
+      '  No flag clears this. --skip-gates skips the gate suite, not this, and --dry-run\n' +
+      '  runs it. --check-only reports instead of refusing, and publishes nothing.',
+  );
+}
 
 const project = process.env['CF_PAGES_PROJECT'] ?? 'stacks';
 
