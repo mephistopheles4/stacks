@@ -127,12 +127,28 @@ export function sourceFiles(root: string = REPO_ROOT): string[] {
 /**
  * The seven ways a declaration can be wrong, named so a failure says which.
  *
- * ⚠️ **`stale-exclusion` is a seventh clause beyond the six the ticket lists,
- * and it is here deliberately rather than by accident.** It is *"every declared
- * scope exists on disk"* applied to the other list: an exclusion naming a file
- * that has moved is a mechanism nothing is attached to, reading as a live
- * exemption. It is also half of what makes **removal** a visible diff, which is
- * the weakening this row exists to close.
+ * **Five of them are the ticket's, and two go beyond it.** The ticket lists six
+ * structural clauses; five are fault kinds — `missing-scope`, `undeclared`,
+ * `blank-mechanism`, `overlap`, `empty-glob` — and the sixth is the vacuity
+ * floors, which live in the gate rather than here because they are about the
+ * *inputs* being present at all. The two additions are declared rather than
+ * folded in:
+ *
+ * - **`stale-exclusion`** — *"every declared scope exists on disk"* applied to
+ *   the other list. An exclusion naming a file that has moved is a mechanism
+ *   attached to nothing, reading as a live exemption, and it is half of what
+ *   makes **removal** show up in a diff.
+ * - **`excluded-and-declared`** — *"no overlap"* applied across the two lists
+ *   rather than between two scopes, which is all the ticket's wording covers. A
+ *   directory in both is not a contradiction the other clauses can see: the
+ *   files in it are claimed, so `undeclared` stays quiet, and the exclusion
+ *   still names something real, so `stale-exclusion` does too.
+ *
+ * ⚠️ **`expectedMutate` below is a further check and deliberately not a clause
+ * here.** It compares the declaration against `stryker.config.mjs`, not against
+ * the tree, so it answers a different question — *is this declaration the one
+ * Stryker runs* — and folding it into a fault list about the disk would blur
+ * which of the two artifacts is wrong.
  */
 export type Clause =
   | 'missing-scope'
@@ -255,6 +271,40 @@ export function declarationFaults(
   }
 
   return faults;
+}
+
+/**
+ * The `mutate` array `stryker.config.mjs` must derive from the declarations.
+ *
+ * ⚠️ **Without this, the declaration is only half of what decides a scope's
+ * membership, and the gate reads the wrong half.** Everything above asks whether
+ * `stryker.scopes.json` describes the tree; Stryker is driven by `mutate`, which
+ * the config *derives* from that file. An edit to the derivation — dropping a
+ * scope, adding a negation, losing the test-file negation that once let 2,665
+ * mutations of the test suite into a score — leaves every clause above green and
+ * empties a scope silently. `docs/spec/mutation-scoring.md` §6 lists *"the
+ * `mutate` config changes"* as a declaration fault needing no run to detect, and
+ * this is what makes that true. Found in review of the pull request that landed
+ * the row.
+ *
+ * The order is part of the assertion: scope globs in declaration order, then
+ * every exclusion as a negation grouped by its scope, then the test negation
+ * last. Excluded *directories* are absent on purpose — nothing negates them,
+ * because no scope glob reaches them in the first place.
+ *
+ * **A second copy of the derivation, deliberately, and the one case where this
+ * repo accepts one:** the config is `.mjs` because Stryker's loader cannot read
+ * a `.ts` one, so the two halves cannot share a module. That is what a
+ * correspondence gate is for — and only one side is hand-written, so they cannot
+ * drift together.
+ */
+export function expectedMutate(declarations: Declarations): string[] {
+  const { scopes } = declarations;
+  return [
+    ...scopes.map((scope) => scope.glob),
+    ...scopes.flatMap((scope) => scope.exclusions.map((exclusion) => `!${exclusion.path}`)),
+    '!**/*.test.ts',
+  ];
 }
 
 /**

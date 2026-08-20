@@ -2360,11 +2360,32 @@ surface and exposed on the other is exactly what a single verdict would hide.
   this rollout, and duplicating half of it here would be two implementations of
   one question.
 
-⚠️ **A seventh clause beyond the six the ticket lists, declared rather than
-slipped in:** `stale-exclusion` — an exclusion naming a file that is no longer on
-disk. It is *"every declared scope exists on disk"* applied to the other list; a
-mechanism attached to nothing reads as a live exemption, and it is half of what
-makes **removal** show up in a diff.
+⚠️ **Two clauses beyond the six the ticket lists, declared rather than slipped
+in.** `stale-exclusion` is *"every declared scope exists on disk"* applied to the
+other list — a mechanism attached to nothing reads as a live exemption, and it is
+half of what makes **removal** show up in a diff. `excluded-and-declared` is
+*"no overlap"* applied across the two lists rather than between two scopes, which
+is all the ticket's wording covers; a directory in both is invisible to every
+other clause, because its files are claimed and its exclusion names something
+real. ⚠️ **The first draft of this entry counted only `stale-exclusion` and
+called it "a seventh clause"**, which left the accounting one short in the
+artifact whose whole purpose is accurate accounting. Found by CodeRabbit on
+[#179](https://github.com/mephistopheles4/stacks/pull/179).
+
+⚠️ **And an eighth check that is not a clause, added in review of that same pull
+request: the declaration is compared against `stryker.config.mjs`.** This is the
+routing-around bullet above being wrong in the direction it was written to guard.
+The bullet checked the *deploy* half against G17 and did not ask the same
+question of the merge half, and the answer was there: everything above reads
+`stryker.scopes.json`, while **Stryker is driven by `mutate`, which the config
+derives from it**. So the whole check could be routed around by editing the
+derivation instead of the declaration — one scope dropped in `stryker.config.mjs`
+leaves all seven clauses green and empties that scope with nothing to say so
+until a nightly moves. `docs/spec/mutation-scoring.md` §6 already listed *"the
+`mutate` config changes"* as a fault needing no run to detect; it was not true
+when this row landed, and it is now. **The gate imports the real config module
+rather than regex-matching its source**, since the thing being checked is a value
+the file computes.
 
 ⚠️ **A third glob shape throws rather than reporting a fault.** `globToRegExp`
 accepts `dir/*.ts` and `dir/**/*.ts` and nothing else, so `*.tsx` in the config
@@ -2372,7 +2393,7 @@ dies inside the gate with a message naming the glob. Red either way; recorded
 because the failure arrives as an exception rather than in the fault list, which
 is a difference a reader of the output will notice.
 
-**Observed-red line:** six plants, 2026-08-19, recorded at landing. The five
+**Observed-red line:** seven plants, 2026-08-19, recorded at landing. The
 structural ones were run against `gates/mutation-scope.test.ts` alone — a renamed
 directory reddens half the suite, and none of that is this row.
 
@@ -2383,6 +2404,7 @@ directory reddens half the suite, and none of that is this row.
 | blank an exclusion's mechanism — `scripts/deploy.ts`'s | **red**: *"[blank-mechanism] exclusion scripts/deploy.ts (in scope "scripts") carries no mechanism"* |
 | point a glob at nothing — `packages/core/src/covers/nowhere/**/*.ts` | **red**: *"[empty-glob] declared scope `packages/core/src/covers` has a glob … that matches no source file"*, and **`missing-scope` stays quiet**, which is the clause separating *the code went away* from *the glob stopped reaching it* |
 | empty the declared-scope list | **red on the floor, not on a comparison**: *"extraction found 0 declared mutation scopes (expected at least 8)"* |
+| **drop one scope from the derivation in `stryker.config.mjs`, touching no declaration** — the routing-around plant, added in review | **red**, naming the glob that vanished: *"stryker.config.mjs's `mutate` is no longer the declaration in stryker.scopes.json … expected [ … 34 ] to deeply equal [ … 35 ]"*, `- "packages/core/src/covers/**/*.ts"`. ⚠️ **Green on all seven clauses at the same time**, which is the whole finding |
 | **deploy residual** — declare a scope of type re-exports only, run a real `pnpm mutation:run`, then `pnpm deploy:site --dry-run` | **red, exit 1, nothing built and nothing uploaded**: *"FAILED: declared scope(s) produced no mutants in the last run: packages/core/src/typeonly"* — reached in seconds, before the gates and before the build |
 
 ⚠️ **The probe scope left `pnpm test` green, and that is the split working rather

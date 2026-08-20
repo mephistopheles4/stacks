@@ -1210,12 +1210,27 @@ is the first row that needs one: it is a `pnpm test` assertion *and* a
 
 **The split is by available evidence, not by taste.** Everything the disk can
 answer is a **declaration fault** and lands at merge, in two seconds, in front of
-whoever caused it: a declared scope whose directory is gone, a source directory
-in neither the declared nor the excluded list, an exclusion carrying no
-mechanism, two scopes claiming one file, a glob matching nothing, an exclusion
-naming a file that has moved. Every structural cause of a scope going quiet — a
-rename, a widening exclusion, a `mutate` change, the code genuinely going away —
-is one of those, and needs no mutation run to detect.
+whoever caused it — **seven kinds**: a declared scope whose directory is gone, a
+source directory in neither the declared nor the excluded list, an exclusion
+carrying no mechanism, two scopes claiming one file, a glob matching nothing, an
+exclusion naming a file that has moved, and a directory that is declared *and*
+excluded at once. The last two go beyond the six the ticket lists and say so
+where they are written: they are *"exists on disk"* and *"no overlap"* applied to
+the second list, which the ticket's wording covers for scopes only.
+
+**An eighth check answers a different question**, and it is why *"a `mutate`
+change"* belongs on the merge side at all: `stryker.config.mjs` **derives**
+`mutate` from `stryker.scopes.json`, so the declaration the seven clauses just
+checked is not necessarily the one Stryker runs. The gate imports the real config
+and compares. Without it, an edit to the derivation — dropping a scope, adding a
+negation, losing the test-file negation that once let 2,665 mutations of the test
+suite into a score — leaves every clause above green and empties a scope
+silently. **Found in review of the pull request that landed this row**, against a
+sentence claiming every structural cause was already covered.
+
+So every structural cause of a scope going quiet — a rename, a widening
+exclusion, a `mutate` change in either file, the code genuinely going away —
+needs no mutation run to detect.
 
 One clause is left over, and only a run can see it: **the glob matched files and
 Stryker still produced zero mutants.** That is `scripts/deploy.ts`'s, against

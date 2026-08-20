@@ -33,8 +33,12 @@ import { describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { readDeclarations } from '../scripts/lib/mutation-score.ts';
-import { declarationFaults, sourceFiles } from '../scripts/lib/scope-check.ts';
+import { declarationFaults, expectedMutate, sourceFiles } from '../scripts/lib/scope-check.ts';
 import { expectFound, REPO_ROOT } from './repo.ts';
+// The config Stryker actually runs, not a copy of it. `.mjs` because Stryker's
+// own loader cannot read a `.ts` config — which is why the derivation it holds
+// cannot be imported from the module that checks it, and has to be compared.
+import config from '../stryker.config.mjs';
 
 const declarations = readDeclarations();
 
@@ -70,6 +74,25 @@ describe('G38 — every source directory is declared or excluded, and nothing el
         'declaration fault: fixing it is a one-line edit, and leaving it means a scope ' +
         'stops being measured with no number moving to say so',
     ).toEqual([]);
+  });
+
+  it('drives Stryker from the declaration it was checked against', () => {
+    // ⚠️ The other half of what decides a scope's membership. Everything above
+    // reads `stryker.scopes.json`; Stryker reads `mutate`, which the config
+    // derives from it — so an edit to the *derivation* empties a scope with
+    // every clause above still green, and the first thing to notice would be a
+    // deploy refusal or a number moving in a nightly. Found in review of the
+    // pull request that landed this row.
+    //
+    // The real config module, imported and read, rather than its source text:
+    // this is a value the file computes, and a regex over the computation would
+    // be the prose-matching this repo has three separate lessons about.
+    expect(
+      config.mutate,
+      "stryker.config.mjs's `mutate` is no longer the declaration in " +
+        'stryker.scopes.json. Stryker mutates what this array says, so the scopes ' +
+        'the gate above just checked are not necessarily the scopes that get scored',
+    ).toEqual(expectedMutate(declarations));
   });
 
   it('names a directory that exists for every declared scope', () => {
