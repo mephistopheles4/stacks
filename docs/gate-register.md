@@ -97,6 +97,19 @@ this pass. Two further rows — G36 (`action-pins`) and G37 (`dependency-audit`)
 and do not exist in the tree yet; this pass does not triage them, and that gap
 is recorded as a spec obligation on #124's side, not here.
 
+⚠️ **Marked, not rewritten — the paragraph above is true of the file it was
+written against and false of this one, in three ways.** The scope is now 42
+rows, not 35. **The `## CI-only gates` table no longer exists**: it held one
+line, was never scored, and its content became row **G42
+(`dependency-audit`)**, with its prose kept under a named `## G42 —` heading in
+`docs/gates.md`. And the two rows it pre-allocates as G36 and G37 landed as
+**G40 (`action-pins`)** and **G42 (`dependency-audit`)** — the numbers moved
+twice, because a row number is derived from landing order and never chosen.
+⚠️ **The one row this paragraph's scope genuinely missed is G37
+(`agents-import`)**, which landed from outside the rollout entirely and was
+triaged by nobody until `gate-register` went red on it; its backfilled entry
+says so in terms.
+
 ⚠️ **Marked 2026-08-19: those two numbers went elsewhere.** G36 is `trend-layer`,
 G37 is `agents-import` and G38 is `mutation-scope` — all three landed after this
 paragraph was written, and the supply-chain pair it names is now further down the
@@ -2119,6 +2132,44 @@ hole describes, which is what re-planting asks for.
 
 **Cost:** ~18 min, 6 file-scoped invocations plus one full suite.
 
+### ⚠️ Two further findings about G19, added 2026-08-20 when G41 landed
+
+**Both belong here rather than in the entries of the rows that found them**, on
+this file's rule that a finding about a gate goes in that gate's entry.
+
+**1. The gapless walk is blind to top-row deletion.** It bounds at
+`n < numbers.at(-1)`, **exclusive of the maximum**, so deleting the
+highest-numbered row leaves it green. Measured rather than argued: against a
+tree with the top row's id mangled, `gates/constitution-scoreboard.test.ts` runs
+**14 tests, none failing**; mangling an interior row instead fires the check by
+name — *"row numbers missing from docs/gates.md … G40"*. **What catches the
+top-row case is G41's row-side floor and the register's *no entry without a
+row*, and nothing in G19.** That is the stated reason the floor exists on the
+row side only. Not repaired here: hardening G19 is a change this rollout would
+be *making* rather than deciding, and the same reasoning that leaves the
+`TABLES` hole alone applies.
+
+**2. ⚠️ A row can un-anchor another row's slug by citing its spec in prose, and
+this is a live defect that was introduced and caught inside one commit.**
+`stemsByRow()` matches every `` `gates/<stem>.test.ts` `` **anywhere in the row's
+cells**, and the derivation rule applies only where a row names exactly one stem
+**and no other row names that same stem.** G42's row explained which table it
+was promoted out of by naming `` `gates/constitution-scoreboard.test.ts` ``;
+two rows then claimed that stem, and **G19 silently dropped out of its own
+derivation rule** — its slug no longer forced to move with its file, with
+nothing going red and `expectFound(derived, …, 15)` untroubled at 32.
+
+Found by querying the derivation set directly rather than by any assertion. The
+row was rewritten to cite G19 by **number and slug**, which is the form G19
+itself already checks elsewhere, and the docblock now carries the rule. ⚠️ **The
+general shape is unclosed and named: prose in any row's cells can change which
+rows are derived.** A remedy would restrict stem extraction to the **Gate**
+column via `columnIndex`, which is the same one-line fix the positional-status
+remedy above wants and the same lesson — *read the column, not the row*.
+⚠️ **The pre-existing `repo-hygiene` pair (G5, G13) is the legitimate case the
+remedy must keep working**, so it is a narrowing of where the gate looks, never
+an allowlist.
+
 ### G29 — `doc-links`
 
 **Gate:** [`gates/doc-links.test.ts`](../gates/doc-links.test.ts)
@@ -2281,6 +2332,72 @@ the ticket's acceptance criterion names `mutation-scope` specifically and a read
 checking that box against this file would otherwise find a claim nothing supports.
 
 ---
+
+### G37 — `agents-import`
+
+**Gate:** [`gates/agents-import.test.ts`](../gates/agents-import.test.ts)
+**Date:** 2026-08-20
+
+⚠️ **This entry is a backfill, and saying otherwise would be the failure it
+records.** G37 landed from [#172](https://github.com/mephistopheles4/stacks/pull/172),
+**outside this rollout**, in the window between the register being written
+against 35 rows and `gate-register` landing — so it is the one row that was
+never triaged by anybody. It was found by `gates/gate-register.test.ts` on its
+**first run**, which is that gate going red on a real defect rather than on a
+planted one, and is recorded as such in G41's entry below.
+
+⚠️ **The rollout's standing rule is *every gate landing before `gate-register`
+writes its observed-red line at landing*, and this row did not** — `docs/gates.md`
+carries no `## G37` narrative and no observed-red prose, only the table row. The
+line below was therefore **planted on 2026-08-20 by the session landing G41**,
+not recorded when the gate was written. That is exactly *"the decay category
+arriving inside the artifact built to catalogue it"*, and it is written down
+rather than smoothed over.
+
+- **Weakening** — clean; no allowlist and no exemption list. `PARSED_SECTIONS`
+  is a list of three headings that must be **absent**, which is the inverse of a
+  permission: adding to it makes the gate stricter, and removing from it is a
+  deletion of an assertion rather than the granting of an exception.
+- **Satisfying the letter** — **exposed, and the gate's own docblock records the
+  near miss.** The prose said the import must be the *"first content line"*; the
+  assertion checks only that `@AGENTS.md` is alone on **a** line. Review caught
+  that the stub did not satisfy the stronger sentence either, and **the sentence
+  was corrected rather than the gate tightened** — the right call, but it leaves
+  the general shape live: the property *"a Claude session actually receives the
+  rules"* is wider than *"a line matching `/^@AGENTS\.md$/m` exists"*.
+- **Routing around** — **exposed and stated by the gate itself.** It holds the
+  **tree**, not the harness: whether a given version of Claude Code honours
+  `@AGENTS.md` is a claim about a tool, and G21 forbids the suite from asking
+  anything outside the tree. The observation standing in for it is dated and
+  version-stamped in `docs/log/2026-08-19-the-constitution-leaves-claude-md.md`.
+  ⚠️ **This is the second member of `SECURITY.md`'s *in the tree, asserting a
+  fact that lives outside it* category** — the same shape as G40's version
+  comment, reached from a different direction.
+- **Vacuous green** — clean, and the design is the reason rather than a floor.
+  The import-line assertion **is** the control the two absence assertions rest
+  on: an empty or missing `CLAUDE.md` fails it, so the absences cannot pass over
+  nothing. The docblock says so in terms.
+- **Decay** — clean at backfill. The one dated claim is the harness observation
+  above, which is version-stamped where it lives rather than asserted here.
+
+**Observed-red line:** **three plants, 2026-08-20, planted at register landing
+rather than at row landing** — the gap this entry exists to record.
+
+| Plant | Result |
+| --- | --- |
+| delete the import line, leaving `See AGENTS.md for the rules.` | **red**: *"CLAUDE.md must contain "@AGENTS.md" alone on a line … without that line a Claude session gets none of the rules — silently, because nothing else would notice"* |
+| demote the import to a mention inside a sentence — `This file imports @AGENTS.md at launch.` | **red**, same assertion. This is the plant that proves the anchoring is load-bearing: prose is not a mechanism, and the harness expands a line |
+| paste `## Invariants` into the stub — the second constitution ADR-0026 refused | **red**: *"CLAUDE.md carries sections that belong to AGENTS.md: Invariants"* |
+
+**Rank:** none. The two exposures are both *stated limits* rather than
+unadmitted holes, and neither is one this rollout can close: the harness claim
+is unreachable by construction under G21.
+
+**Disposition: `accepted`** — for the routing-around verdict, which is the only
+one carrying an exposure with no available remedy. The satisfying-the-letter
+verdict is left open rather than dispositioned; it is a nomination this backfill
+raises and does not deep-pass, and calling it `repaired` would read as work
+somebody did.
 
 ### G38 — `mutation-scope`
 
@@ -2535,6 +2652,295 @@ exercised against a scratch repository whose `origin` is itself, so **the real
 fetch has never run**: what is asserted is that a fetch of a real branch produces
 the right message, not that GitHub answers an anonymous one — which
 `pnpm trend:sync` exercises for real, on the same code path.
+### G40 — `action-pins`
+
+**Gate:** [`gates/action-pins.test.ts`](../gates/action-pins.test.ts)
+**Date:** 2026-08-20
+**Triaged at landing**, per this rollout's standing rule.
+
+⚠️ **The spec allocated this row G39 and it landed as G40**, for the same reason
+G38's entry records one row earlier: `agents-import` took G37 out-of-band from
+[#172](https://github.com/mephistopheles4/stacks/pull/172), so every
+pre-allocated number in this rollout is one low. Recorded rather than silently
+corrected. `docs/gates.md`'s own line is why: *"G19 is a stable identifier and
+tells you nothing."*
+
+**The remedy roster was read before this gate was written**, derived by query
+rather than remembered: every entry disposed `gated` (G6, G7, G29, G30, G35) and
+every entry carrying a named-unbuilt remedy, then the routing-around verdicts of
+each row sharing a mechanism. **Three of them changed what got built**, and they
+are named in the bullets rather than in a paragraph nobody can check.
+
+- **Weakening** — **exposed, and the floor is the entry.** `expectFound` at 4 is
+  lowerable, and the version-shape regex is loosenable to *non-empty* in one
+  character, which restores the deleted-comment hole exactly. **There is no
+  allowlist**: the one exemption is `uses: ./…`, which is definitional rather
+  than enumerated — it names a *shape*, not a set of blessed references, so it
+  cannot go stale and there is nothing to revisit. ⚠️ **`accepted`, stated
+  plainly**: a floor and a regex are both one edit from weaker, and no gate in
+  this repo defends its own constants. What is available is that both edits are
+  legible in a diff.
+- **Satisfying the letter** — ⚠️ **exposed, live, and the reason the limit is
+  written in two places.** The gate proves every third-party action is
+  referenced by something **shaped like** an immutable ref and that every one
+  carries a version claim; **it cannot prove the claim is true.** A hand-edit
+  swapping in a different valid SHA under `# v7.0.1` passes cleanly. That fact
+  lives at GitHub, G21 forbids the suite from asking, and **actions have no
+  lockfile**, so there is no offline route — the limit is structural rather than
+  unbuilt. ⚠️ **It is `cover_source`'s failure verbatim.** `accepted`, and
+  written beside the row in `docs/gates.md` *and* in the spec's header comment,
+  because G19 does not read spec comments and a limit recorded in one place is a
+  limit only that place's readers find.
+- **Routing around** — **closed on the axis it was written for, and the
+  mechanism was chosen against the verdicts of the rows sharing it.** A second
+  workflow, or a composite action under `.github/actions/`, is the cheap way
+  past a narrow glob; the sweep is therefore `.github/**/*.yml|yaml` rather than
+  `.github/workflows/`. **G19's routing-around verdict is the precedent** —
+  *"a real path sat outside the allowlisted roots and was invisible to the
+  checker"* — and **G14's is the demonstrated version**: a single regex against
+  one named file, which is why the sweep walks a directory and both extensions.
+  **G6's named-unbuilt remedy is the one that nearly repeated here**: a proposal
+  saying *scan tracked `.ts`* in a tree holding `.mjs` and `.astro`. ⚠️ **What
+  is *not* closed, and it is the honest residual: nothing in this repo reads
+  what a workflow *does*.** `metrics.yml` can be edited in the same pull request
+  that moves the number it records; this row covers the actions a workflow
+  calls, never its own body.
+
+  ⚠️ **A second route was open on arrival and is now closed: the key may be
+  quoted.** `"uses":` and `'uses':` are valid YAML for the same key and GitHub's
+  parser reads them identically, so the original pattern — anchored on the bare
+  word — was **routed around by one character of quoting**, and `uses :` with a
+  space before the colon slipped past it too. Found by CodeRabbit, planted three
+  ways with a fourth as the control that a quoted key on a *pinned* action stays
+  green. ⚠️ **It is the third near-miss form in this one change**, after the
+  register's colon-less disposition field and its backtick-less entry heading —
+  **the species is the finding, not the instance: a check that reads one
+  spelling of something the format lets you write several ways.** All three were
+  invisible to a plant table, because a plant table asks for the wrong *value*
+  and these are the right value in an unexpected *shape*.
+
+  ⚠️ **What is still open, stated rather than implied: this is a regex, not a
+  YAML parser.** It reads a `uses` key written on one line in block mapping
+  form — the only form this tree uses and the only form anyone writes by hand.
+  A key arriving through an anchor, a merge key, or a flow mapping is unseen.
+  **A real parse would need a YAML dependency**, which this repo declines for
+  small utilities; the choice is recorded rather than made silently, and the
+  vacuity floor is what stops the residual becoming a vacuous pass.
+- **Vacuous green** — **clean, and floored twice rather than once.** A glob that
+  stops matching is the entropic case, so both the file sweep (≥2) and the
+  `uses:`-line extraction (≥4) carry floors, and **both were planted**: pointing
+  the sweep at a directory with no workflows and breaking the `uses:` regex each
+  go red on the floor rather than passing over nothing. The `jobs:` extraction
+  **throws by name** rather than returning an empty map, which is
+  `markdownSection`'s argument applied one file type across. ⚠️ **That throw is
+  called per test rather than once in the `describe` body**, found in review: a
+  throw during collection aborts the whole file, so one restructured workflow
+  would have taken G40's four clauses down with G42's and reported as five
+  unrelated gates vanishing. Measured after the fix — the same plant now leaves
+  **5 passed, 5 failed**, with every G40 clause still running.
+
+⚠️ **The sweep reads `git ls-files`, not the disk, and the reason is an incident
+rather than a preference.** `gates/repo.ts` already documented the choice —
+*"it cannot pick up a stray untracked file and fail a gate on it"* — and on
+2026-08-20 a **read-only review agent** dropped a scratch
+`.github/actions/zztest/action.yml` into the tree while auditing this very
+commit and **reddened this gate on a file that was never committed and could
+never have run.** What CI executes is what git tracks. **The cost is G13's
+verdict, inherited knowingly**: a local `pnpm test` before `git add` passes over
+a new workflow, so the rule there is the rule here — *stage, then run.* ⚠️ **The
+plant harness had to be taught the same thing**: `git add -N` leaves an index
+entry that outlives the file, and one plant's residue silently turned the next
+plant's expected-green into a red until the cleanup cleared the index first.
+- **Decay** — ⚠️ **exposed, dated, and it is a bet rather than a slip.** Clause 2
+  pins the *shape* of Dependabot's comment; if Dependabot ever emits `# 7.0.1`
+  without the `v`, this gate goes red on a bot commit. **Measured rather than
+  assumed** against `93730e1` (`dependabot[bot]`, `# v6.0.9` → `# v6.0.10`): pin
+  and comment rewritten together, both occurrences. `accepted` — a one-character
+  diff, and a gate that reddens on an unexpected format change is behaving
+  correctly. **The floor's population is the second dated claim: 13 `uses:`
+  lines at `3e2fc88`, 2026-08-20** — 7 in `gates.yml`, 6 in `metrics.yml`,
+  against a floor of 4. ⚠️ **The count is here and in the spec header comment,
+  and deliberately not in a `docs/gates.md` row**: this entry carries a date by
+  construction, and adding a stale-able count to the file already caught
+  carrying two would write its own joke.
+
+⚠️ **`docker://` is refused rather than exempted, and it is a reversal
+honoured.** The exempted population is zero — this repo has no Dockerfile, no
+compose, no devcontainer, no container action — and `docker://alpine:latest` is
+a **mutable third-party reference**, which is what the pinning argument is
+against. A pre-written rule over `docker://image@sha256:…` was specified and
+declined: *an exemption that arrives with a legitimate first instance gets
+argued about; one written into the spec before any instance exists never does.*
+The consequence worth having is that §5's claim — *every third-party action is
+referenced by something shaped like an immutable ref* — **stays true**, where a
+`docker://` line would have falsified it with nothing going red.
+
+⚠️ **The `audit`-job assertions live in this spec, and that is G42's teeth
+rather than a convenience.** See G42's entry for why the row alone was one
+nothing can fail on.
+
+**Observed-red line:** **nineteen plants, 2026-08-20, recorded at landing.** All
+seven ways the spec's §9 table names, plus the two it names for G42's teeth,
+plus ten more. Run against `gates/action-pins.test.ts` alone. ⚠️ **The count is
+derived from the plant harness rather than typed** — it was stated as thirteen
+against a table of thirteen while nineteen had been run, because two rounds of
+review added plants and the sentence above the table was updated once.
+
+| Plant | Result |
+| --- | --- |
+| clause 1 — `uses: actions/checkout@v4` | **red**: *"these `uses:` lines do not resolve to `owner/repo[/subpath]@<40 lowercase hex>` … `.github/workflows/gates.yml:58`"* |
+| clause 2 — delete a `# vN.N.N`, leave the SHA | **red**: *"these pinned `uses:` lines carry no trailing `# vN[.N…]` comment … deleting the comment must not be a way to satisfy the pinning rule"* |
+| clause 2 — `# latest` instead of `# v7.0.1` | **red**, same assertion. **This is the plant that proves *version-shaped* is doing work** — a non-empty check passes here |
+| clause 3 — an unpinned `uses:` in `.github/actions/probe/action.yml` | **red**, naming a path **no `.github/workflows/` glob would have opened**: *"`.github/actions/probe/action.yml:5`"* |
+| the exemption — `uses: ./.github/actions/probe` | **green**, as specified |
+| the withdrawn exemption — `uses: docker://alpine:latest` | **red, two assertions**: the pin clause *and* the named `docker://` refusal, which is the one that names the argument |
+| the floor — point the sweep at a directory with no workflows | **red on the floor, not a vacuous pass**: *"extraction found 0 YAML files under .github/ (expected at least 2)"* |
+| the floor — break the `uses:` regex | **red**: *"extraction found 0 `uses:` lines under .github/ (expected at least 4)"* |
+| the `jobs:` block renamed | **red, and it throws by name** rather than reducing every G42 clause to nothing: *"no `jobs:` block in .github/workflows/gates.yml"* |
+| **G42's teeth** — delete the `audit` job | **red, two assertions**: *"no job named `audit` … delete the job and that row is a claim nothing can fail on"* |
+| **G42's teeth** — `--audit-level=moderate` | **red**: *"the `audit` job … no longer runs `pnpm audit --audit-level=high`"* |
+| **G42's teeth** — drop `audit` from `needs:` | **red**: *"a job it does not need is a job whose failure merges"* |
+| **G42's teeth** — test `!= "failure"` instead of `= "success"` | **red**: *"expected [ 'suite' ] to include 'audit'"*. ⚠️ **Skipped and cancelled must fail the gate rather than pass it by omission**, and this is the only plant that reaches that distinction |
+| the `./` exemption stretched to `../` | **red**, after narrowing. It had accepted both where the spec says `./` and nothing else |
+| control — `uses: ./…` itself | **green**, as specified |
+| **`"uses":`** — a double-quoted key hiding `actions/checkout@v4` | **red**, ⚠️ **and green before review caught it** |
+| **`'uses':`** — a single-quoted key hiding a deleted version comment | **red**, likewise |
+| **`uses :`** — a space before the colon, hiding a tag | **red**, likewise |
+| control — a quoted key on a properly pinned action | **green**, so the widening refuses nothing legitimate |
+
+⚠️ **What cannot be planted, and is marked reasoned rather than demonstrated:
+that a pinned SHA really is the version its comment claims.** It is the limit
+the satisfying-the-letter verdict states, and it is why that verdict is
+`accepted` rather than open.
+
+### G41 — `gate-register`
+
+**Gate:** [`gates/gate-register.test.ts`](../gates/gate-register.test.ts)
+**Date:** 2026-08-20
+**Triaged at landing**, per this rollout's standing rule.
+
+⚠️ **It landed in the same commit as `action-pins` and that is the point.**
+Shipped alone it would be red on 39 rows — *a gate that has never passed*, not
+one observed failing on a real defect. Shipped against 39 stub entries it would
+be green over empty sections, which is **category 4 built into the artifact
+about category 4**. So it lands with the first new row it can actually go red
+on, and **one commit discharges three obligations**: the landing rule, the
+supply-chain triage obligation, and the observed-red rule.
+
+- **Weakening** — ⚠️ **exposed, and this row *is* an allowlist, which the spec
+  did not anticipate at this size.** `MERGED_BULLETS` holds **ten** entries. The
+  spec specifies **one** — G26's merged `**Vacuous green / decay**` bullet — and
+  §4 of the same spec already records *"ten rows collapsing five verdicts into
+  one line."* Measured at `3e2fc88`: G12, G17, G20, G21, G22, G23, G24, G25, G26
+  and G34. **Exempting only G26 would have landed this gate red on nine
+  band-authored entries**, and the two ways out of that are both refusals —
+  weaken the rule, or rewrite nine verdicts §1 says are *"marked in place, not
+  split."* **The list is widened to the measured population and closed there.**
+  Every entry names a row **and its exact bullet text**, which is G13's lesson
+  (*"a directory is a standing permission, where every other line here names a
+  file"*), and **every entry is reverse-asserted in both directions** — a
+  merged bullet on an unlisted row is red, and a listed bullet the file no
+  longer carries is red as a stale permission. That is G1's recorded mitigation
+  (*"the reverse-assert catching both a stale entry and a dropped one on the
+  same change"*) and G22's demonstrated gap (*"had no stale-entry assertion,
+  which ADR-0022 requires"*). ⚠️ **`accepted`, with the cost named: ten
+  permissions where the spec budgeted one.** What the closure buys is that the
+  eleventh goes red.
+- **Satisfying the letter** — ⚠️ **exposed on dispositions, and the exposure is
+  a claim the gate declines to make.** The spec says *exactly one disposition
+  per entry*; **the file falsifies that 19 times** — ten triage-only rows carry
+  none because triage found nothing to flag, two say in terms that their
+  nomination did not survive (G21, G34), two rollout rows disposition inline in
+  their bullets (G36, G38), and four carry two because a band and a later decay
+  re-read each reached one (G1, G6, G13, G35). **Asserting the false stronger
+  claim would have been the failure, not the fix**, so what is asserted is the
+  **closed vocabulary** — which is the plant §8 actually names. ⚠️ **An entry
+  with no disposition passes this gate, and that is stated as a limit rather
+  than left implicit.** ⚠️ **And because that retreat leaves the vocabulary
+  check carrying the whole clause, a hole in it costs everything the clause has
+  left — which is what review found.** The file writes the field three ways and
+  the check required the colon, reading 29 instances and missing the one written
+  `Disposition \`gated\`.` So a fifth disposition, in a spelling the file itself
+  already uses, passed green. Closed with `:? +`, planted red, and the lesson
+  recorded rather than the count quietly corrected: **the narrower a clause
+  retreats, the more load each surviving assertion carries.**
+- **Routing around** — **exposed on arrival and closed; one residual named.**
+  The correspondence sweep reads `### G<n> — \`slug\`` and nothing else, so an
+  entry written as `## G40` or `#### G40` would be invisible while reading to a
+  human as a real entry. **That is G29's honest limit** — *"a form nobody writes
+  here is a form this does not see"* — and it is **closed rather than
+  inherited**: every `#{1,6} G<n>` heading at a level other than `###` is
+  refused outright. ⚠️ **The residual: an entry can be moved out of the file
+  entirely.** Nothing asserts the register is the only document carrying row
+  sections, and a second file would satisfy neither direction of this gate nor
+  contradict it. Named, not built.
+- **Vacuous green** — ⚠️ **exposed on one side only, and the asymmetry is the
+  finding.** *No entry without a row* already reddens on any deletion, so
+  **entries cannot go vacuous**; the row side can, if the regex over
+  `docs/gates.md` stops matching. Floored at **42**, planted. ⚠️ **And on
+  top-row deletion the floor is the only structural check in the file**, because
+  G19's gapless walk bounds at `n < numbers.at(-1)`, **exclusive of the
+  maximum** — a finding about G19 in its own right, recorded in G19's entry
+  alongside the `TABLES` hole. **An entry-side floor was declined**: it would go
+  red *alongside* the first missing entry, landing two reds on the commit whose
+  entire job is demonstrating one.
+- **Decay** — ⚠️ **exposed: the floor is a number equal to a population, which
+  is the shape that went wrong in the supply-chain piece.** 42 is safe **only**
+  under the monotonicity argument — mark-never-delete plus gapless makes the row
+  count non-decreasing in normal operation — and **a session copying the pattern
+  without that argument copies the mistake.** ⚠️ **The spec's own justification
+  for 42 is wrong and the number is right for a different reason.** It calls 42
+  *"the row population after this spec lands"*; under the numbering that
+  actually landed the rollout ends at **43**, and 42 is the population at **this
+  row's own landing commit**. Under the spec's numbering a floor of 42 would
+  have been **red at landing**, since `gate-register` lands before the ratchet's
+  row. The out-of-band G37 shifted everything by one and made the stated number
+  correct by accident. **Recorded rather than corrected in the locked spec**, on
+  G38's precedent.
+
+**Observed-red line:** ⚠️ **the first red was not planted.** On its first run
+against the tree, `gates/gate-register.test.ts` reported **`G37 has 0
+entries`** — `agents-import` had landed out-of-band from
+[#172](https://github.com/mephistopheles4/stacks/pull/172) with no register
+entry, and 37 entries stood against 38 rows. **That is this gate going red on a
+real defect on the day it was written**, which is the field
+`CONTRIBUTING.md`'s oldest rule asks for and which most rows satisfy from a
+plant. The backfilled entry is above.
+
+**Twelve further plants, 2026-08-20**, covering every way `gaming-analysis.md` §8
+names plus two near-miss forms §8 does not — **both of which were green when this
+row was first written, and both found by the spec-axis review rather than by the
+plant table.** ⚠️ **They are one species and it is worth naming: a gate reading
+*one* spelling of a field the file writes *several* ways.** §8's plant table asks
+for the wrong *value* in each case and gets a red; neither plant asks for the
+right value in an unexpected *shape*, which is where both holes lived. **A plant
+table inherits the author's idea of what the file looks like**, and that is the
+argument for a fresh-context reviewer over a longer table. **Run twice**, and the second run
+is the one that counts: the first was against a *simulated* stack, because this
+commit sits on top of `metrics-freshness` and G39's row had not landed yet, so a
+placeholder row and entry stood in to make the population 42. **Re-run in full
+against the real stack once G39 landed — all of them behaving, the suite green.** Recorded because a plant run against a stand-in is evidence about the
+stand-in until somebody re-runs it.
+
+| Plant | Result |
+| --- | --- |
+| **forward** — land a `docs/gates.md` row with no register section | **red**, and it is this commit's own demonstration: *"G40 has 0 entries; G41 has 0 entries; G42 has 0 entries"* |
+| **reverse** — a register section for a row that does not exist | **red**: *"sections naming a row that docs/gates.md does not carry"* |
+| **entry shape** — delete a row's observed-red line | **red**: *"a gate never observed failing is not yet a gate"* |
+| **entry shape** — a disposition outside the four-word vocabulary | **red** |
+| **cardinality** — merge two verdicts into one bullet on a row that is not exempted | **red** |
+| **cardinality** — a second `### G26` section | **red**: *"G26 has 2 entries"* |
+| **the exemption** — split G26's merged bullet, leaving the exemption behind | **red — the exemption is reverse-asserted**, so it cannot outlive the bullet it exists for |
+| **the floor** — break the regex that reads `docs/gates.md`'s rows | **red, not a vacuous pass over two empty sets** |
+| **an entry written at a heading level the sweep cannot see** — a `## G40` section | **red**. G29's stated limit, closed rather than inherited |
+| **an entry at the right level in the wrong format** — `### G99 — action-pins`, no backticks | **red**, ⚠️ **and it was green until review caught it.** The check was written against heading *level* alone while its own comment claimed *"the near-miss forms are refused outright"* — **a docblock whose stated reach exceeded its assertion's, arriving in the gate built to catalogue exactly that.** Both directions now key off one `ENTRY_HEADING` pattern, so the two cannot drift apart again |
+| **a fifth disposition in the one form the file writes without a colon** — `Disposition \`documented\`.` | **red**, ⚠️ **and it was green until review caught it.** The file spells this field three ways and the check required the colon, so it read 29 instances and was blind to the one at `docs/gate-register.md:3139` — **on the only assertion that survived the retreat from *exactly one disposition per entry*.** Now `:? +`, which reaches both field spellings and **no sentence**: the file legitimately says *"dispositioned `gated`"* and *"the disposition it would take is `gated`"*, and matching those would be the prose-matching failure `docs/gates.md` records three times |
+| **top-row deletion** — delete the highest-numbered row | **red on the floor**, and on the reverse direction as an orphaned entry — **while G19 stays green, gapless check included.** Verified on the real stack by running `gates/constitution-scoreboard.test.ts` against the same plant: **14 passed, 0 failed.** The interior control ran in the same pass — deleting G40 instead fires gapless by name, *"row numbers missing from docs/gates.md … G40"* — because the walk bounds at `n < numbers.at(-1)`, **exclusive of the maximum**. ⚠️ **That asymmetry is the finding, and it is about G19 rather than about this row** |
+
+⚠️ **What cannot be planted, and is marked reasoned rather than demonstrated:
+that the analysis inside an entry is any good.** This gate asserts shape. **It
+is the same limit G19 has to slugs**, and G22's lesson applied to this gate
+rather than exempting it.
 
 ## Rows with no dedicated narrative in `docs/gates.md`
 
@@ -4019,3 +4425,131 @@ mirror-direction one by the doubling plant specifically.
 no non-arithmetic regression (a book skipped from the row entirely) was tried.
 
 **Cost:** ~14 min, 5 file-scoped invocations, all under a second.
+
+### G42 — `dependency-audit`
+
+**Gate:** the `audit` job in [`.github/workflows/gates.yml`](../.github/workflows/gates.yml),
+asserted by the `action-pins` spec
+**Date:** 2026-08-20
+**Triaged at landing**, per this rollout's standing rule.
+
+⚠️ **It names a mechanism rather than a `gates/*.test.ts`, and it names the
+asserting spec by slug rather than by path — deliberately.** Naming
+`gates/action-pins.test.ts` in the row would make **two** rows claim that stem,
+which self-exempts both from G19's derivation rule and quietly costs G40 the
+anchoring that keeps a slug moving with its file. The slug is the maintained
+name and G19 already holds it to the path, so citing it loses nothing. G16
+(`books-in-case`) is the precedent for a row that declares its slug rather than
+deriving it; the self-exemption in `constitution-scoreboard.test.ts` is
+structural, so no allowlist there needed editing.
+
+⚠️ **As first written this row was one nothing can fail on, and that is the
+correction that matters most in this piece.** `specPathsNamed()` only
+existence-checks `.ts` paths and this row names none, so **delete the `audit`
+job *and* its `needs:` entry and CI is green, `pnpm test` is green, and the ✅
+still stands.** Promoting a claim into the table G19 reads is **visibility, not
+enforcement** — the supply-chain argument applied asymmetrically would have
+shipped this effort's own subject matter inside the effort. Closed inside G40's
+existing sweep at no new cost.
+
+- **Weakening** — ⚠️ **exposed, and the hatch is the entry.**
+  `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml` is an allowlist and **every
+  entry is a permission.** See the standalone verdict below, which is owed here
+  and was triaged by nobody. The threshold is the other lever: `--audit-level`
+  is one word from `critical`, and **the assertion is now on the exact string
+  `pnpm audit --audit-level=high`**, so both directions are red rather than
+  silent. `accepted` for the hatch, **`repaired` for the threshold** — it was
+  ungated and now is not.
+- **Satisfying the letter** — ⚠️ **exposed, historical, and closed by this
+  commit.** The row as first specified is the specimen: a ✅ asserting nothing.
+  What closes it is four assertions against the real workflow rather than a copy
+  of it — the job exists, its threshold is exact, the aggregator needs it, and
+  the aggregator tests its `result` against `success`. **That last one is not
+  decoration**: comparing against `'failure'` instead would let a **skipped or
+  cancelled** audit through, and a required check that never reports is a
+  failure mode this repo's own workflow comments already name.
+- **Routing around** — **exposed, and it is inherent to what the job is.** The
+  audit reads the lockfile; a dependency introduced by a path the lockfile does
+  not describe is not seen, and nothing here checks that the tree CI installs is
+  the tree the audit ran against beyond `--frozen-lockfile`. ⚠️ **The narrower
+  and more live one: the assertions name `.github/workflows/gates.yml` by
+  path.** A second workflow declaring another job called `audit` would satisfy
+  nothing and contradict nothing — accepted, because `gates` is a single
+  required status check defined in a single file, so the fact being asserted
+  genuinely lives in one place. **G14's demonstrated hole**, met by the
+  population rather than by a sweep.
+- **Vacuous green** — **clean, and floored by the job extraction rather than by
+  a count.** `jobsOf` **throws by name** when the `jobs:` block is gone, so a
+  restructured workflow fails loudly instead of handing back an empty map and
+  letting all four clauses pass over nothing; `expectFound` floors the job list
+  at 3. Both planted.
+- **Decay** — **clean, with one dated claim, and it is the strongest
+  observed-red in this rollout because nobody planted it.** The 2026-08-08
+  incident is real history: two advisories, both with patches, one of which
+  `pnpm update nanoid` **silently declined** under pnpm 11's seven-day
+  `minimumReleaseAge` quarantine. ⚠️ **The `overrides` entry answering it has
+  since decayed once on its own** — GHSA-2v37-7h3g-55p8 was **amended upstream**
+  from `<3.3.17` to `<3.3.18` on 2026-08-15 and turned CI red on an **unchanged
+  lockfile**. *An advisory id is not a stable statement of scope*, which is a
+  category-5 specimen arriving from outside the tree entirely.
+
+**Observed-red line:** **two, and they are different failures.** ⚠️ **The
+distinction is the point of this row's teeth.**
+
+| | |
+| --- | --- |
+| **the job going red on an advisory** | **2026-08-08**, real, unplanted: two high advisories, `pnpm update nanoid` reporting success and leaving the tree on the vulnerable version. Recorded in `docs/gates.md` under this heading since before the row existed |
+| **the row going red on the job disappearing** | **2026-08-20**, four plants, and **this is the assertion that did not exist.** Delete the `audit` job → *"no job named `audit` … delete the job and that row is a claim nothing can fail on"*. `--audit-level=moderate` → red. Drop `audit` from `needs:` → *"a job it does not need is a job whose failure merges"*. Test `!= "failure"` instead of `= "success"` → *"expected [ 'suite' ] to include 'audit'"* |
+
+**Disposition: `repaired`** — the row existed and asserted nothing; it now
+asserts four things about the mechanism it names. No new hole is left open by
+the repair, and the two `accepted` residuals are named above.
+
+---
+
+## ⚠️ `auditConfig.ignoreGhsas` — the category-1 verdict this rollout owed
+
+**Not a row, and it does not get one.** It is the escape hatch every other
+hatch in this spec is modelled on, and **it was triaged by nobody**: the triage
+pass read its row list *from the file*, and when it ran the file held 35 rows.
+`docs/spec/supply-chain.md` §3 makes the verdict a **spec obligation** on the
+commit landing G40 and G42 rather than an assumption, because *a handoff that
+reads as delivered and delivers nothing is category 2 arriving in the
+coordination between two tickets instead of in a gate.* Discharged here.
+
+**Measured at `3e2fc88`, 2026-08-20: the hatch has zero live entries.** The
+whole `auditConfig:` block in `pnpm-workspace.yaml` is **commented out** — it
+exists as a template carrying the rule (*"An entry needs the GHSA id, the date,
+and why it does not reach this project… Remove the entry the moment a fix ships;
+a permanent ignore is a decision nobody revisits"*) and a specimen line. So
+today it grants nothing.
+
+⚠️ **The exposure is not the entries; it is that the rule governing them is a
+comment.** Uncomment the block, add `- GHSA-xxxx-xxxx-xxxx` with no date and no
+reason, and **nothing goes red** — not `pnpm audit`, which honours it, and not
+any gate, since no gate reads `pnpm-workspace.yaml`'s audit config at all. This
+file's own opening line is the judgement: *a rule nothing can fail on is a
+comment.* It is **the same shape as the `allowBuilds` block two entries up**,
+which G13's verdict already names — *every allowlist entry is a permission* —
+except that this one is unpopulated, so the failure is latent rather than live.
+
+⚠️ **And the neighbouring `overrides: nanoid` entry is the demonstration that
+this hatch's discipline is real work rather than paperwork.** It carries the
+GHSA id, two dates, the amendment history and an explicit *"this is deliberately
+not an `ignoreGhsas` entry"* — which is precisely the *reach for that hatch
+second* rule being obeyed by a human who remembered to. Nothing enforced it.
+
+**Disposition: `accepted`.** The population is zero, so a gate written now would
+be a gate over an empty set with no observed red available — *a gate never
+observed failing is not yet a gate*, and manufacturing an entry to redden it
+would be planting the permission this verdict is about.
+
+**Remedy (named, not built):** when the first real entry lands, assert its
+**shape** in the `action-pins` spec, which already reads the supply-chain
+surface: every `ignoreGhsas` item matches `GHSA-` + the four-four-four id shape,
+and carries a trailing comment holding an ISO date and a non-empty reason. **The
+same two-sided rule as `action-pins` clause 2** — the id alone is satisfiable by
+deleting the justification, which is the cheapest way to look compliant. ⚠️
+**Explicitly *not* a check that the entry's reasoning is sound**, which is
+outside any gate here, and not a check that the advisory is still unfixed, which
+would need the network G21 forbids.

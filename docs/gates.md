@@ -112,6 +112,8 @@ means the two have drifted.
 | **G36** | `trend-layer` | the series CI writes ↔ the `## Trends` table | a number nobody was told to read, a row promising a line that will never be drawn, or a trend named after a gate slug — which G19 structurally cannot see, because `slugByRow()` reads three hardcoded tables and the Trends table is a fourth | `gates/trend-layer.test.ts` — asserted against the rendered OpenMetrics text, not against the declaration list | ✅ |
 | **G37** | `agents-import` | the rules ↔ the file Claude Code opens by name | `AGENTS.md` carries the rules and Claude Code reads only `CLAUDE.md`, so the stub's `@AGENTS.md` import is the whole mechanism — and a rule pasted into the stub is the second constitution [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md) refused, per [ADR-0056](adr/0056-the-constitution-is-agents-md.md) | `gates/agents-import.test.ts` — the import line is also the control the absences rest on | ✅ |
 | **G38** | `mutation-scope` | the declared mutation scopes ↔ the tree they claim to score | excluding a directory takes it out of numerator and denominator together, so the score does not move — it stops covering that code, and the change is invisible in the instrument built to catch changes. `git mv packages/core/src/covers packages/core/src/cover` resets a floor and reads as a refactor in review | `gates/mutation-scope.test.ts` — **and `scripts/deploy.ts`; this row runs on two surfaces**, see below | ✅ |
+| **G40** | `action-pins` | `gates.yml`'s pinning argument ↔ every `uses:` line under `.github/` | a tag or a branch where a SHA is claimed, or a SHA whose version comment was deleted to satisfy the pin — and the file argues the case carefully while nothing holds it to its own argument. ⚠️ **It proves the shape of the reference, never the truth of the comment**: a hand-edit swapping in a different valid SHA under `# v7.0.1` passes cleanly, because that fact lives at GitHub and G21 forbids the suite from asking — `cover_source`'s failure verbatim, and there is no offline route because actions have no lockfile | `gates/action-pins.test.ts` — sweeping `.github/**/*.yml\|yaml`, not `.github/workflows/`, because a composite action is the cheap way past a narrow glob | ✅ |
+| **G41** | `gate-register` | `docs/gates.md`'s numbered rows ↔ `docs/gate-register.md`'s row sections | a row whose five questions nobody asked, or an entry for a row that never landed — and **membership is not enough**: a file with two `## G26` sections satisfies *"each row has an entry"*, and one merged verdict bullet names all five category words while a count keyed on one of them reports a total silently short. Cardinality, in both directions | `gates/gate-register.test.ts` — row-side floor at 42, safe only under mark-never-delete plus gapless making the count non-decreasing | ✅ |
 
 **G13 now allows one file this project did not make**: Google's *powered by
 Google* graphic, which the API terms require displayed and forbid altering — so
@@ -355,6 +357,7 @@ paragraph can be; nothing here goes red on it.)
 | **G27** | `enrich-report` | a command's report accounts for every book it counted | `gates/enrich-report.test.ts`, over `packages/cli/src/enrich-report.ts` | ✅ |
 | **G28** | `no-board-collisions` | no book's board passes through its neighbour's | `packages/site/src/shelf/placement.test.ts` | ✅ |
 | **G39** | `metrics-freshness` | the trend record is fresh **per series**, because one series going quiet while the others stay healthy is the failure the record exists to expose — and an aggregate check cannot see it. A gated series with **no sample at all** refuses exactly as a stale one does, which makes the check parse samples rather than filenames | `gates/metrics-freshness.test.ts` — the refusal is `pnpm deploy:site`'s, driven onto a scratch repository via `GIT_DIR` on G17's idiom; the dated half is `scripts/lib/metrics-read.test.ts`, because the script cannot be told what day it is | ✅ |
+| **G42** | `dependency-audit` | a dependency with a known high or critical advisory reaching `main` | the `audit` job in `.github/workflows/gates.yml`, running `pnpm audit --audit-level=high` — asserted by the `action-pins` spec, which reads the job, its threshold, and its place in the `gates` aggregator's `needs:`. Promoted here from a table row G19 (`constitution-scoreboard`) structurally cannot read — its `TABLES` constant names three tables and that was not one of them — where the paragraph describing it would have sat green and false the day the job was deleted | ✅ |
 
 **G21 is the first row here written for a rule that two files already claimed
 was true.** `AGENTS.md`'s Phase 1 gate says "use cached API fixtures, no live
@@ -1406,14 +1409,28 @@ that would satisfy Apple's terms if it ever matters.
 What the gate still enforces regardless: no orphans, no wishlist books, and
 same-origin covers only.
 
-## CI-only gates
+## G42 — the dependency audit, and the hatch to reach for second
 
-Not every gate can be a spec. These run in the workflow and have no local
-equivalent, so they are listed here rather than in the tables above.
+**This section was `## CI-only gates`, and the table became the row.** Nothing
+here is deleted: mark-never-delete governs **rows**, and that table was never
+scored — it held one line, and `gates/constitution-scoreboard.test.ts` names
+three tables, none of which was it. So the audit gate lived in a table G19
+**structurally cannot see**: no row number, no slug, no status, no
+correspondence asserted in either direction. **Delete the `audit` job tomorrow
+and the aggregator's `needs:` breaks loudly — while the paragraph describing it
+sat here green and false.** Same resolution this file already uses for G2, G25
+and G28.
 
-| Gate | What it protects | Where |
-| --- | --- | --- |
-| `pnpm audit --audit-level=high` | a dependency with a known high or critical advisory reaching `main` | `audit` job in `gates.yml` |
+⚠️ **Promotion alone would have been visibility, not enforcement.**
+`specPathsNamed()` only existence-checks `.ts` paths and G42 names no spec file,
+so the row as first written was one nothing can fail on — the ✅ would have
+stood through the job's deletion. The teeth are in `gates/action-pins.test.ts`,
+which reads the same workflow it was already sweeping: **the job exists, it runs
+`pnpm audit --audit-level=high`, and the `gates` aggregator lists it in `needs:`
+and tests its `result` against `success`.** ⚠️ **That is also the observed-red
+line the row actually lacked**: 2026-08-08 records the job going red on an
+advisory, never the row going red on the job disappearing, and those are
+different failures.
 
 The audit is one of two gates whose result changes without the code changing —
 CodeQL, below, is the other: an advisory published tomorrow turns yesterday's

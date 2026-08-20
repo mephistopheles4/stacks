@@ -303,11 +303,27 @@ describe('G19 — every row has a name, and the name means something', () => {
     // hand-maintained name for the same gate — ADR-0026's objection.
     //
     // It applies only where a row names exactly one `gates/*.test.ts` AND no
-    // other row names that same stem, which self-exempts the six rows where
+    // other row names that same stem, which self-exempts the rows where
     // derivation is impossible rather than needing an allowlist: G5 and G13
-    // share `repo-hygiene`, and G16, G18, G25 and G28 name no `gates/` spec at
-    // all. Those six declare their slug; the other 23 are forced to move with
-    // their file.
+    // share `repo-hygiene`, and G16, G18, G25, G28, G35 and G42 name no
+    // `gates/` spec at all — G35's gate is `scripts/smoke-render.ts` and G42's
+    // is a workflow job. Those declare their slug; every other row is forced to
+    // move with its file.
+    //
+    // ⚠️ **The count is gone rather than corrected, on this file's own
+    // advice.** It read "the six rows" and "the other 23", and both were wrong:
+    // G35 had already made it seven when `enhanced-card` landed naming a script
+    // instead of a spec, and `dependency-audit` makes it eight. `docs/gates.md`
+    // says it two tables away — *"A positional reference to a table that grows
+    // is the same species as the count in the next paragraph"* — and naming the
+    // rows breaks loudly where a number just goes quietly stale.
+    //
+    // ⚠️ **A row can un-anchor another row's slug by mentioning its spec in
+    // prose, and that is not hypothetical.** G42's row cited
+    // `gates/constitution-scoreboard.test.ts` while explaining which table it
+    // was promoted out of; two rows then claimed that stem, and **G19 dropped
+    // out of its own derivation rule** with nothing going red. Cite a row by
+    // number and slug, never by another row's spec path.
     const stems = stemsByRow();
     const claims = new Map<string, number>();
     for (const list of stems.values()) {

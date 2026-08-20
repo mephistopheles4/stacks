@@ -76,6 +76,18 @@ So this section is a statement of what the project **relies on**, not a claim
 about what is currently true. If you are auditing this repo and that distinction
 matters to you, check the settings themselves; the file cannot tell you.
 
+**One distinction inside "unverifiable" is worth drawing, because the two halves
+fail differently.** Everything in the table above lives **outside the tree
+entirely**: a clone cannot name the setting's value at all, only that it is
+relied on. A second kind of claim lives **in the tree, asserting a fact that
+lives outside it** — row G40's `# v7.0.1` comments are the case, where a clone
+can check the claim's *shape* and never its *truth*, so the failure looks like a
+valid pin under a comment naming a different version. The first goes wrong by
+being switched off while every file still says it is on; the second goes wrong
+while every check stays green. No second named tier is minted for this: it would
+have had one member when it was written, and a taxonomy invented for one case is
+the shape this repo distrusts.
+
 **CodeQL is now a required check**, once its first batch of findings had been
 triaged to zero — which was the condition this paragraph set when it said the
 opposite. It blocks a pull request that introduces a **new** security alert at
@@ -111,7 +123,15 @@ a threat model:
   do worse than confuse this tool.
 - **A malicious dependency.** `pnpm` blocks install scripts by default and
   exactly two packages are opted in, each with a recorded reason. Actions are
-  pinned to commit SHAs. That is the mitigation; it is not immunity.
+  pinned to commit SHAs, and since row G40 (`action-pins`) that pinning is
+  **held in shape by a gate** rather than by habit: every `uses:` line under
+  `.github/` must resolve to a 40-character commit SHA and carry a
+  version-shaped comment, so neither a tag nor a silently deleted version
+  comment can reach `main`. **What the gate does not hold is whether the comment
+  is true.** That `3d3c42e…` really is `v7.0.1` of `actions/checkout` is a fact
+  living at GitHub; actions have no lockfile, so there is no offline way to
+  check it, and a hand-edit swapping in a different valid SHA under an unchanged
+  version comment passes. That is the mitigation; it is not immunity.
 - **What you publish.** A public build ships your titles, authors, reading dates
   and ratings. That is the product working as intended. Deciding whether you
   want that public is yours, and it is worth deciding on purpose.
