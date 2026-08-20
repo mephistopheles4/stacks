@@ -87,6 +87,21 @@ const skipGates = process.argv.includes('--skip-gates');
  */
 const checkOnly = process.argv.includes('--check-only');
 
+/**
+ * Every refusal in this file, and which flags clear it.
+ *
+ * ⚠️ **The convention: a refusal says which flags clear it, right where it is
+ * written.** Adopted because a flag whose reach is undocumented is how
+ * `--skip-gates` came to skip the whole contract with nothing saying so (#152),
+ * and because measuring this file found **roughly a dozen refusals outside
+ * `--skip-gates`'s reach and four inside it, said nowhere**. The four inside are
+ * the step-1 gate commands; everything else here refuses whatever you pass.
+ *
+ * A comment convention, not a gate — there is no way to assert "this comment is
+ * true of the code beside it" that is not a gate matching prose, which this repo
+ * has learned three times matches anything. What makes it hold is that the
+ * comment sits at the refusal, so an edit to one is an edit next to the other.
+ */
 function fail(message: string): never {
   console.error(`\nFAILED: ${message}`);
   process.exit(1);
@@ -96,6 +111,11 @@ function fail(message: string): never {
  * `runShell` — the shell and the joined command line are its business, not this
  * script's. All this adds is the failure style: a deploy that stops should say
  * so in the same shape as every other refusal here, not as a stack trace.
+ *
+ * **Which flags clear this depends on the call site, so each one says.** A
+ * failing command is a refusal like any other; what differs is whether the
+ * command runs at all, and that is the caller's question rather than this
+ * function's.
  */
 function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv = {}): void {
   try {
@@ -134,6 +154,10 @@ if (!checkOnly && !dryRun) assertPublishableBranch();
  *
  * A detached HEAD is refused too. It has no branch name, which means nobody can
  * say afterwards what was published.
+ *
+ * **Cleared by `--any-branch`, and never reached under `--dry-run` or
+ * `--check-only`** — the call above is guarded on both. `--skip-gates` does not
+ * touch it: this runs before step 1 and is not one of the gates.
  */
 function assertPublishableBranch(): void {
   if (process.argv.includes('--any-branch')) {
@@ -160,6 +184,10 @@ function assertPublishableBranch(): void {
 // relative og:image, every link-preview scraper renders nothing, and the shelf
 // arrives at its one moment — being sent to someone — as a bare URL. A deploy
 // that silently produces that is worse than one that refuses.
+//
+// No flag clears either of the two refusals below. Every mode needs this value:
+// a build bakes it into the page, and `--check-only` has nowhere to ask about
+// without it.
 const siteUrl = process.env['SITE_URL'];
 if (siteUrl === undefined || siteUrl.length === 0) {
   fail(
@@ -176,6 +204,12 @@ try {
   fail(`SITE_URL is not a valid URL: ${siteUrl}`);
 }
 
+// No flag clears either of these two. ⚠️ **Including `--check-only`, which
+// builds nothing and therefore never reads the vault** — stated rather than
+// quietly relaxed, because loosening it is a behaviour change and this pass is
+// a comment convention. A `--check-only` run on a machine with no vault
+// configured refuses here, and the refusal is about the environment rather than
+// about the site it was asked to inspect.
 const vault = process.env['STACKS_VAULT'];
 if (vault === undefined || vault.length === 0) fail('STACKS_VAULT is not set (see .env.example)');
 if (!existsSync(vault)) fail(`STACKS_VAULT points at nothing: ${vault}`);
@@ -186,6 +220,11 @@ console.log(`deploying ${vault}`);
 console.log(`        → ${siteUrl}  (Cloudflare Pages project "${project}")`);
 
 // ── 1. The gates. These stage FIXTURE data — which is why they go first ─────
+//
+// **The four refusals inside `--skip-gates`'s reach, and the only four.** Each
+// `run` below refuses by failing the command; `--skip-gates` clears all four by
+// not running them, and `--check-only` skips them for a different reason — it
+// builds nothing, so there is nothing to gate. `--dry-run` runs every one.
 if (checkOnly) {
   console.log('--check-only: not building, not uploading');
 } else if (skipGates) {
@@ -198,6 +237,10 @@ if (checkOnly) {
 }
 
 // ── 2. The real build. Last, so it overwrites whatever the gates staged ─────
+//
+// Two more command refusals. Only `--check-only` clears them, by building
+// nothing; `--skip-gates` does not reach here and `--dry-run` builds, because a
+// dry run that skipped the build would have no artifact to pre-flight.
 if (!checkOnly) {
   run('pnpm', [
     'stacks',
@@ -226,6 +269,9 @@ interface ShippedBook {
   readonly cover?: string;
 }
 
+// No flag clears this one either, and `--check-only` is the mode most likely to
+// hit it: it builds nothing, so the folder it reads is whatever was last built
+// here — possibly nothing at all.
 const libraryPath = join(DIST, 'library.json');
 if (!existsSync(libraryPath)) fail(`no library.json in ${DIST}`);
 
@@ -266,6 +312,9 @@ if (!checkOnly) {
   // is the same vacuous pass this check was just rewritten to close. Louder
   // than a problem, because it means the check itself is broken rather than the
   // build.
+  //
+  // No flag clears it. `--check-only` never arrives — the whole block is
+  // guarded on it — and `--skip-gates` skips the gate suite, not this.
   if (titles.length === 0) {
     fail(
       'no fixture notes found to check the build against. This check exists to catch the ' +
@@ -377,6 +426,11 @@ const stamp = checkOnly ? stampOfLastDeploy() : stampAndWrite();
  * use *that* build's name. Re-hashing would produce a different one — the file
  * on disk now includes the stamp the hash was taken before — and the check would
  * report a mismatch against a site that is perfectly up to date.
+ *
+ * **Reached only under `--check-only`, and no flag clears it there.** The
+ * refusal is the honest answer to the question that mode asks: an unstamped
+ * `dist/` gives the live check nothing to compare, and reporting "up to date"
+ * off no evidence is the failure this whole block exists to stop making.
  */
 function stampOfLastDeploy(): string {
   const found = stampOf(html);
@@ -403,6 +457,10 @@ function stampAndWrite(): string {
   // every deploy, for a reason nobody would guess — so the injection is asserted
   // rather than assumed. Astro emits a bare `<head>`; if that ever changes, this
   // says so here instead of at the far end.
+  //
+  // No flag clears it, on any path that publishes. `--check-only` takes the
+  // other branch above; `--dry-run` reaches this and stamps the folder it leaves
+  // behind, which is what makes a later `--check-only` able to answer at all.
   if (stampOf(marked) !== name) {
     fail('could not stamp index.html — no `<head>` to inject into, so the live check would be blind');
   }
@@ -434,6 +492,10 @@ if (dryRun) {
   process.exit(0);
 }
 
+// The upload itself, and the last refusal in the file: a failing `wrangler`
+// stops the run here. `--dry-run` and `--check-only` clear it by returning
+// above; nothing clears it on a path that publishes, which is the only kind of
+// path that reaches this line.
 run('pnpm', [
   'dlx',
   WRANGLER,
