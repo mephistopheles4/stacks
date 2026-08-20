@@ -83,3 +83,5 @@ Two other files hold what these deliberately do not:
 | [0057](./0057-the-pull-request-title-is-the-commit-subject.md) | The pull request title is the commit subject, so the convention lands there |
 | [0058](./0058-the-trend-store-is-a-container.md) | The trend store is a pinned container the sync owns |
 | [0059](./0059-the-sync-refuses-a-rewritten-record.md) | `trend:sync` refuses a rewritten record |
+| [0060](./0060-the-dashboard-is-provisioned-from-the-repo.md) | The dashboard is provisioned from the repo, and the panel order is the artifact |
+| [0061](./0061-the-pr-window-is-a-label-on-the-run.md) | The PR window is a label on the run, derived in CI |

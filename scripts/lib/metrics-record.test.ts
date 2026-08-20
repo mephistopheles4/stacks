@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseRecordName, selectNewRecords } from './metrics-record.ts';
+import { newestCommitRecord, parseRecordName, selectNewRecords } from './metrics-record.ts';
 
 const FIRST = '1787145048-f8bd379803f2.prom';
 const SECOND = '1787146512-f8bd379803f2.prom';
@@ -72,5 +72,23 @@ describe('selectNewRecords', () => {
     const sameSecond = '1787145048-9ceada9fafb4.prom';
 
     expect(selectNewRecords([FIRST, sameSecond], [FIRST])).toEqual([sameSecond]);
+  });
+});
+
+describe('newestCommitRecord — the run a new one is measured against', () => {
+  it('takes the latest by timestamp, whatever order the branch listed them', () => {
+    expect(newestCommitRecord([THIRD, FIRST, SECOND])?.name).toBe(THIRD);
+  });
+
+  it('ignores surface D rows, which carry no commit to diff against', () => {
+    // A local probe row is newer than every CI record on a machine that just
+    // synced, and `edge` is not a commit. Taking it would make every PR window
+    // `unknown` from the first sync onwards.
+    expect(newestCommitRecord([FIRST, LOCAL])?.name).toBe(FIRST);
+  });
+
+  it('has no answer for a branch with nothing on it', () => {
+    expect(newestCommitRecord([])).toBeUndefined();
+    expect(newestCommitRecord(['README.md'])).toBeUndefined();
   });
 });

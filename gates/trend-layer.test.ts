@@ -70,6 +70,7 @@ function completeRun(): RunFacts {
     commit: '0'.repeat(40),
     event: 'schedule',
     runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/1',
+    prWindow: '#177, #179',
     expected: TREND_SERIES.map((series) => series.name),
     mutationScore: [
       { scope: 'packages/core/src', score: 0.7172 },
@@ -259,6 +260,25 @@ describe('G36 — the record says whether the run that wrote it worked', () => {
     };
 
     expect(renderMetrics(hostile)).toContain('run_url="https://example.invalid/1?a=\\"b\\"\\\\c"');
+  });
+
+  it('carries the PR window beside the run, because a score never appears without it', () => {
+    // Panel 1 answers *is this real* before panel 2 answers *is this bad*, and
+    // the window is what answers it. It rides on `run_info` rather than on a
+    // series of its own — context, not a measurement — so the two arrive
+    // together or not at all.
+    expect(renderMetrics(completeRun())).toContain('pr_window="#177, #179"');
+  });
+
+  it('keeps an empty window and an unreadable one apart', () => {
+    // ⚠️ The one distinction this label exists to preserve. `[]` against a
+    // non-zero delta reads *tool noise* on sight; `unknown` is no answer at
+    // all — a shallow checkout, a pruned object, a first-ever run. Rendering
+    // the second as the first would manufacture a reading out of a gap.
+    expect(renderMetrics({ ...completeRun(), prWindow: '[]' })).toContain('pr_window="[]"');
+    expect(renderMetrics({ ...completeRun(), prWindow: 'unknown' })).toContain(
+      'pr_window="unknown"',
+    );
   });
 
   it('closes the document so promtool will ingest it', () => {

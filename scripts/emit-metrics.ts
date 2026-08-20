@@ -24,6 +24,8 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fetchRecords, newestCommitRecord } from './lib/metrics-record.ts';
+import { UNKNOWN_WINDOW, prWindow } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import {
   fraction,
@@ -132,11 +134,45 @@ function expected(): TrendName[] {
 const timestamp = seconds(flags.get('timestamp'), '--timestamp') ?? Math.floor(Date.now() / 1000);
 const commit = flags.get('commit') ?? 'unknown';
 
+/**
+ * Which pull requests merged since the run that wrote the newest record.
+ *
+ * **Computed here rather than passed in**, for the reason `metrics.yml`'s header
+ * already gives about the `--failed` list: a `${{ }}` expression is not
+ * inspectable, not testable, and this repo has already shipped one constant
+ * wearing the shape of a condition. The seam that decides what the page reads is
+ * `windowFrom` in `lib/pr-window.ts`, and it is a pure function over subjects.
+ *
+ * The previous record is found through `fetchRecords`, so **exactly one piece of
+ * code still knows where the record lives** — the same anonymous fetch the sync
+ * and the deploy staleness check use. Everything that can go wrong here (no
+ * branch yet, offline, a shallow checkout with no such object) arrives as
+ * `unknown`, which is deliberately not `[]`.
+ */
+function windowSincePreviousRun(): string {
+  const fetched = fetchRecords();
+  if (fetched === undefined) {
+    console.error('no `metrics` branch to read a previous run from — the PR window is unknown');
+    return UNKNOWN_WINDOW;
+  }
+
+  const previous = newestCommitRecord(fetched.names);
+  if (previous === undefined) {
+    console.error('nothing on the `metrics` branch yet — the PR window is unknown');
+    return UNKNOWN_WINDOW;
+  }
+
+  const window = prWindow(previous.source, commit, REPO_ROOT);
+  console.log(`PR window since ${previous.name}: ${window}`);
+  return window;
+}
+
 const facts: RunFacts = {
   timestamp,
   commit,
   event: flags.get('event') ?? 'unknown',
   runUrl: flags.get('run-url') ?? 'unknown',
+  prWindow: windowSincePreviousRun(),
   expected: expected(),
   // Named by the caller because only the workflow knows a step's exit code, and
   // a series whose step failed is dropped rather than published: the number is

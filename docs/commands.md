@@ -149,15 +149,48 @@ behind the newest for that series; a git record has no such window, so a sync
 after two weeks away replays all fourteen days. *No history when the machine is
 off* is a weakness of the **store**, never of the **record**.
 
+### The page you actually read
+
+**<http://localhost:3000/d/stacks-trend-layer>**, and the sync brings it up. It is
+a second pinned container, `stacks-grafana`, provisioned **read-only from
+[`grafana/`](../grafana) in this repository** — one datasource, one dashboard,
+`allowUiUpdates: false`, nothing mounted for it to write to.
+
+**Read panel 1 before panel 2, and the page says so at the top.** Panel 1 asks
+*is this real*: the per-scope delta since the previous run, the **PR window**, and
+the run's own commit and Actions link. An empty window (`[]`) against a movement
+is the tool disagreeing with itself at a fixed commit; `unknown` is **not** an
+empty window, it is no answer at all. Panel 2 asks *is this bad*: each scope
+against its own history, never against a target line. There is **no confidence
+figure** anywhere on it, and the refusal is written on the page rather than only
+in the record. See [ADR-0060](adr/0060-the-dashboard-is-provisioned-from-the-repo.md).
+
+**Editing the page means editing `grafana/dashboards/trend-layer.json`.** A layout
+dragged around in the browser reverts on the next provisioning reload, by design:
+the panel order is a design rule, and a rule that can be dragged is a rule nothing
+holds.
+
+**Grafana's own analytics, update checks and news feed are switched off**, because
+the whole layer rests on nothing derived from your reading leaving the machine.
+
 ### Setup: Docker, and nothing else
 
 The store is a container this command creates on first run — `stacks-prometheus`,
 serving <http://localhost:9090>, with its data and the sync's state under
-`.trend/` (gitignored). **The backfill tool and the server come from the same
+`.trend/` (gitignored). The dashboard is the second, and both sit on a
+`stacks-trend` network so Grafana can reach the store by name. **The backfill tool and the server come from the same
 pinned image deliberately**: `promtool` writes TSDB blocks and Prometheus reads
 them, and a version disagreement between the two surfaces as *the sync worked and
 the dashboard is empty*. A `promtool` on your PATH is deliberately not used. See
 [ADR-0058](adr/0058-the-trend-store-is-a-container.md).
+
+⚠️ **A container is reused only when its image *and* its mount match.** A
+`stacks-prometheus` left by another checkout of this repo keeps that checkout's
+`.trend/`, so the sync would write blocks here and Prometheus would serve there —
+`imported 11 record(s)` on a store answering for nine. Measured, not imagined:
+`pnpm worktree` makes two checkouts on one machine the ordinary case, and the
+container name is global to the Docker daemon. A mismatch recreates the container
+and says which path it was serving.
 
 If Docker is not answering, the command says so and imports nothing. The next run
 imports those records instead: the store's state advances only after a backfill

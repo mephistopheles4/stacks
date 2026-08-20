@@ -31,6 +31,14 @@
  * anywhere in it. The cost, stated rather than discovered: **D's history lives
  * on one machine**, and D is no longer continuous.
  *
+ * ⚠️ **Two containers, and the second one is the page you actually read.** The
+ * store answers PromQL; Grafana renders the fixed panel order — *is this real*
+ * above *is this bad* — from `grafana/` in this repository, provisioned
+ * read-only. The layout is therefore a diff somebody can review rather than a
+ * state on one machine, and Grafana's own outbound reporting is switched off
+ * because the no-outbound-flow principle covers the dashboard's container too.
+ * See [ADR-0060](../docs/adr/0060-the-dashboard-is-provisioned-from-the-repo.md).
+ *
  * ⚠️ **The store is a pinned container this command owns, and that is a
  * correctness property rather than a convenience.** `promtool` writes TSDB
  * blocks and Prometheus reads them, and the two disagreeing about block format
@@ -80,6 +88,58 @@ const CONFIG = join(STORE, 'prometheus.yml');
 const IMAGE = 'prom/prometheus:v2.55.1';
 const CONTAINER = 'stacks-prometheus';
 const PORT = 9090;
+
+/**
+ * The page you actually read, and it is provisioned from this repository rather
+ * than clicked together once. See `grafana/` and
+ * [ADR-0060](../docs/adr/0060-the-dashboard-is-provisioned-from-the-repo.md).
+ *
+ * Pinned for the same reason the store is: a dashboard that changes under you is
+ * not a reading of anything, and the calibration window the ratchet's floors
+ * depend on is twenty runs long.
+ */
+const GRAFANA_IMAGE = 'grafana/grafana:11.6.6';
+const GRAFANA_CONTAINER = 'stacks-grafana';
+const GRAFANA_PORT = 3000;
+
+/**
+ * A network of their own, because Grafana reaches the store by container name.
+ * `localhost` inside the Grafana container is the Grafana container, and
+ * `host.docker.internal` exists on Docker Desktop and not on plain Linux.
+ */
+const NETWORK = 'stacks-trend';
+
+/** Provisioning, mounted read-only: this repository is the artifact, not the UI. */
+const PROVISIONING = join(REPO_ROOT, 'grafana', 'provisioning').replace(/\\/g, '/');
+const DASHBOARDS = join(REPO_ROOT, 'grafana', 'dashboards').replace(/\\/g, '/');
+
+/**
+ * Grafana's outbound traffic, switched off — and this is the acceptance
+ * criterion rather than hygiene.
+ *
+ * The whole layer rests on nothing derived from the owner's reading leaving the
+ * machine, and a stock Grafana phones home twice by default: usage analytics,
+ * and a version check that carries the instance id. The news feed and the
+ * plugin-update check are the same shape. **A localhost store whose dashboard
+ * reports on itself is not a localhost store.**
+ *
+ * Anonymous access with no login form is the other half. There is no user
+ * database worth protecting on a container that holds nothing but provisioned
+ * files, and a login screen on a single-maintainer localhost page is a password
+ * to lose rather than a control.
+ */
+const GRAFANA_ENV = [
+  'GF_ANALYTICS_REPORTING_ENABLED=false',
+  'GF_ANALYTICS_CHECK_FOR_UPDATES=false',
+  'GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false',
+  'GF_ANALYTICS_FEEDBACK_LINKS_ENABLED=false',
+  'GF_NEWS_NEWS_FEED_ENABLED=false',
+  'GF_AUTH_ANONYMOUS_ENABLED=true',
+  'GF_AUTH_ANONYMOUS_ORG_ROLE=Admin',
+  'GF_AUTH_DISABLE_LOGIN_FORM=true',
+  'GF_AUTH_BASIC_ENABLED=false',
+  'GF_USERS_ALLOW_SIGN_UP=false',
+] as const;
 
 /**
  * Ten years. Prometheus's default retention is 15 days, which would delete the
@@ -152,9 +212,14 @@ function docker(args: readonly string[]): string | undefined {
 }
 
 /** `running`, `exited`, or `undefined` when there is no such container. */
-function containerState(): string | undefined {
-  const found = docker(['ps', '-a', '--filter', `name=^${CONTAINER}$`, '--format', '{{.State}}']);
+function containerStateOf(name: string): string | undefined {
+  const found = docker(['ps', '-a', '--filter', `name=^${name}$`, '--format', '{{.State}}']);
   return found === undefined || found === '' ? undefined : found;
+}
+
+/** The store's own state. Two containers now, and this one is the store's. */
+function containerState(): string | undefined {
+  return containerStateOf(CONTAINER);
 }
 
 function requireDocker(): void {
@@ -212,7 +277,34 @@ function stopStore(): void {
  * somebody prunes it, and that failure looks like a dead pipe rather than like
  * a missing container.
  */
+/**
+ * The network both containers sit on, created once and idempotently.
+ *
+ * `network create` on a network that exists exits non-zero, which `dockerOutput`
+ * turns into `undefined` — the same shape as *there is no such container*, and
+ * the same non-answer. Nothing here needs to tell the two apart: the only thing
+ * that matters is that the network exists afterwards.
+ */
+function ensureNetwork(): void {
+  if (docker(['network', 'inspect', '--format', '{{.Name}}', NETWORK]) === NETWORK) return;
+  docker(['network', 'create', NETWORK]);
+}
+
+/**
+ * Put an existing container on the network, whatever it was created with.
+ *
+ * ⚠️ **A container keeps the flags it was created with**, so a `stacks-prometheus`
+ * from before the dashboard existed is on no network at all and would be
+ * unreachable by name — on the one machine that has been running this the
+ * longest. `network connect` on a container already attached exits non-zero and
+ * is the no-op it looks like.
+ */
+function attachToNetwork(container: string): void {
+  docker(['network', 'connect', NETWORK, container]);
+}
+
 function startStore(): void {
+  ensureNetwork();
   if (containerState() !== undefined) {
     // ⚠️ **Reusing it by name alone would defeat the pin.** A container keeps
     // the image and the flags it was created with, so after `IMAGE` moves,
@@ -221,12 +313,30 @@ function startStore(): void {
     // unrepresentable. A changed `RETENTION` would be ignored the same way,
     // silently. So the image is compared and a stale container is replaced.
     const image = docker(['inspect', '--format', '{{.Config.Image}}', CONTAINER]);
-    if (image === IMAGE) {
+    // ⚠️ **The mount is checked as well as the image, and that is not
+    // symmetry.** `pnpm worktree` is a documented command here, so two checkouts
+    // of this repository on one machine is the ordinary case rather than an
+    // exotic one — and the container name is global to the daemon. A container
+    // created by the other checkout keeps *its* bind mount, so this sync writes
+    // blocks into this `.trend/` while Prometheus serves that one: the command
+    // says `imported 7 record(s)` and the dashboard shows another tree's store.
+    // **Measured here, and it is the store-that-lies failure wearing the exact
+    // costume this file's header warns about.**
+    const store = docker([
+      'inspect',
+      '--format',
+      '{{range .Mounts}}{{if eq .Destination "/trend"}}{{.Source}}{{end}}{{end}}',
+      CONTAINER,
+    ]);
+    if (image === IMAGE && store === mounted) {
       docker(['start', CONTAINER]);
+      attachToNetwork(CONTAINER);
       return;
     }
     console.log(
-      `store: recreating ${CONTAINER} — it runs ${image ?? 'an unknown image'}, want ${IMAGE}`,
+      image === IMAGE
+        ? `store: recreating ${CONTAINER} — it serves ${store ?? 'an unknown path'}, want ${mounted}`
+        : `store: recreating ${CONTAINER} — it runs ${image ?? 'an unknown image'}, want ${IMAGE}`,
     );
     docker(['rm', '-f', CONTAINER]);
   }
@@ -236,6 +346,7 @@ function startStore(): void {
     [
       'run', '-d',
       '--name', CONTAINER,
+      '--network', NETWORK,
       '-p', `${String(PORT)}:9090`,
       '-v', `${mounted}:/trend`,
       IMAGE,
@@ -244,6 +355,72 @@ function startStore(): void {
       `--storage.tsdb.retention.time=${RETENTION}`,
     ],
     REPO_ROOT,
+  );
+}
+
+/**
+ * The page, brought up beside the store.
+ *
+ * **Nothing is mounted for Grafana to write to, and that is the design.** Every
+ * dashboard and the one datasource are provisioned from `grafana/` in this
+ * repository, read-only; the container's own layer holds the sqlite file
+ * Grafana insists on and there is nothing in it worth keeping. A container
+ * anybody can delete and recreate with no loss is what makes the repository the
+ * artifact rather than a machine's state.
+ *
+ * The image is compared exactly as the store's is, for the same reason: a
+ * container reused by name alone would keep the flags — and the analytics
+ * switches — it was created with.
+ */
+function startDashboard(): void {
+  ensureNetwork();
+
+  const state = containerStateOf(GRAFANA_CONTAINER);
+  if (state !== undefined) {
+    const image = docker(['inspect', '--format', '{{.Config.Image}}', GRAFANA_CONTAINER]);
+    // The store's rule, for the store's reason: a container left by another
+    // checkout provisions that checkout's `grafana/`, so the page under review
+    // would not be the page on screen.
+    const provisioning = docker([
+      'inspect',
+      '--format',
+      '{{range .Mounts}}{{if eq .Destination "/etc/grafana/dashboards"}}{{.Source}}{{end}}{{end}}',
+      GRAFANA_CONTAINER,
+    ]);
+    if (image === GRAFANA_IMAGE && provisioning === DASHBOARDS) {
+      if (state !== 'running') docker(['start', GRAFANA_CONTAINER]);
+      attachToNetwork(GRAFANA_CONTAINER);
+      return;
+    }
+    console.log(
+      image === GRAFANA_IMAGE
+        ? `dashboard: recreating ${GRAFANA_CONTAINER} — it serves ${provisioning ?? 'an unknown path'}, want ${DASHBOARDS}`
+        : `dashboard: recreating ${GRAFANA_CONTAINER} — it runs ${image ?? 'an unknown image'}, want ${GRAFANA_IMAGE}`,
+    );
+    docker(['rm', '-f', GRAFANA_CONTAINER]);
+  }
+
+  runExe(
+    'docker',
+    [
+      'run', '-d',
+      '--name', GRAFANA_CONTAINER,
+      '--network', NETWORK,
+      '-p', `${String(GRAFANA_PORT)}:3000`,
+      '-v', `${PROVISIONING}:/etc/grafana/provisioning:ro`,
+      '-v', `${DASHBOARDS}:/etc/grafana/dashboards:ro`,
+      ...GRAFANA_ENV.flatMap((pair) => ['-e', pair]),
+      GRAFANA_IMAGE,
+    ],
+    REPO_ROOT,
+  );
+}
+
+/** Where to look, printed the same way whichever path got here. */
+function sayWhereToLook(): void {
+  console.log(
+    `dashboard: http://localhost:${String(GRAFANA_PORT)}/d/stacks-trend-layer\n` +
+      `store:     http://localhost:${String(PORT)}`,
   );
 }
 
@@ -462,7 +639,8 @@ async function main(): Promise<number> {
     }
     writeConfigIfAbsent();
     startStore();
-    console.log(`dashboard: http://localhost:${String(PORT)}`);
+    startDashboard();
+    sayWhereToLook();
     return 0;
   }
 
@@ -509,11 +687,12 @@ async function main(): Promise<number> {
   writeState({ tip: fetched?.tip ?? state.tip, imported: [...state.imported, ...wanted] });
   rmSync(INCOMING, { force: true });
   startStore();
+  startDashboard();
 
   console.log(
-    `\nimported ${String(wanted.length)} record(s) — the store now holds ${String(state.imported.length + wanted.length)}\n` +
-      `dashboard: http://localhost:${String(PORT)}`,
+    `\nimported ${String(wanted.length)} record(s) — the store now holds ${String(state.imported.length + wanted.length)}`,
   );
+  sayWhereToLook();
   return 0;
 }
 

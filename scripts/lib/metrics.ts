@@ -90,6 +90,20 @@ export interface RunFacts {
   /** `push`, `schedule` or `workflow_dispatch` — which half of `metrics.yml` ran. */
   event: string;
   runUrl: string;
+  /**
+   * Which pull requests merged between the previous record and this one:
+   * `#124, #125`, or `[]` for a window with nothing in it, or `unknown` when
+   * there was no answer to read. See [`./pr-window.ts`](./pr-window.ts), which
+   * owns those three values and the difference between the last two.
+   *
+   * ⚠️ **Required, and not defaulted here.** It is the field panel 1 is built
+   * around — *is this real* is answered before *is this bad* — and a caller that
+   * forgot it would publish an empty window, which is the tool-noise reading.
+   * A type error is the cheapest place for that to be caught. **A string and
+   * not a list**: this is a label value, and rendering it once at the source
+   * keeps the page, the deploy print and the record spelling it the same way.
+   */
+  prWindow: string;
   /** What this run set out to compute. `run_ok` is derived from it. */
   expected: readonly TrendName[];
   /**
@@ -248,7 +262,16 @@ export function renderMetrics(facts: RunFacts): string {
       help: 'The run that wrote this file. A score never appears without its run.',
       samples: [
         {
-          labels: { commit: facts.commit, event: facts.event, run_url: facts.runUrl },
+          labels: {
+            commit: facts.commit,
+            event: facts.event,
+            run_url: facts.runUrl,
+            // The window rides on `run_info` rather than on a series of its
+            // own, because it is context and not a measurement — and because
+            // *a score never appears without its run* is a layout rule the
+            // dashboard can only keep if the two arrive together.
+            pr_window: facts.prWindow,
+          },
           value: 1,
         },
       ],

@@ -1,0 +1,20 @@
+# Where the dashboards come from: this repository, and nowhere else.
+#
+# `allowUiUpdates: false` is the load-bearing line. The panel order is a design
+# rule rather than a preference — panel 1 answers *is this real* before panel 2
+# answers *is this bad* — and a rule that can be dragged into a different order
+# in the browser is a rule nothing holds. Provisioned from a file, the layout is
+# a diff somebody can review; edited in the UI, it is a state on one machine.
+apiVersion: 1
+
+providers:
+  - name: stacks
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: false

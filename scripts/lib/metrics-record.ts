@@ -85,6 +85,27 @@ export function selectNewRecords(
     .map((record) => record.name);
 }
 
+/**
+ * The newest record written by a CI run, which is the one a new run's PR window
+ * is measured against.
+ *
+ * **Surface D's rows are skipped, and that is the whole subtlety here.** They
+ * share the store and sort by the same key, they are newer than every CI record
+ * on a machine that has just synced, and `edge` stands where a commit does — so
+ * taking the newest row outright would hand `git log` the string `edge` and make
+ * every window `unknown` from the first sync onwards. The commit is read from
+ * the **filename** rather than from the document: `<timestamp>-<sha12>.prom`
+ * already carries it, and an abbreviated sha is a revision git resolves.
+ */
+export function newestCommitRecord(names: readonly string[]): RecordName | undefined {
+  return names
+    .map((name) => parseRecordName(name))
+    .filter((record): record is RecordName => record !== undefined)
+    .filter((record) => /^[0-9a-f]{7,40}$/.test(record.source))
+    .sort((one, other) => one.timestamp - other.timestamp || one.name.localeCompare(other.name))
+    .at(-1);
+}
+
 export interface FetchedRecord {
   /** The branch tip this listing came from. */
   tip: string;
