@@ -27,7 +27,14 @@
  * spine landed* is observed here rather than through the script.
  */
 
-import { METRIC_PREFIXES, TREND_SERIES, trendNamesIn, type TrendName } from './metrics.ts';
+import {
+  METRIC_PREFIXES,
+  TREND_SERIES,
+  trendNamesIn,
+  trendOfMetric,
+  unescape,
+  type TrendName,
+} from './metrics.ts';
 
 /** Seconds in a day, as the bounds below are stated in days. */
 export const DAY = 86_400;
@@ -98,7 +105,7 @@ export interface ParsedRecord {
 }
 
 /**
- * `key="value"` pairs, with the escaping `./metrics.ts` writes.
+ * `key="value"` pairs, unescaped by the function that escaped them.
  *
  * Scanned rather than split on `,`: a label value may contain one legitimately,
  * and a splitter that broke on `Health, Mind & Body` would invent two labels
@@ -110,9 +117,7 @@ function parseLabels(text: string): Record<string, string> {
   for (const match of text.matchAll(/([a-zA-Z_][a-zA-Z0-9_]*)="((?:[^"\\]|\\.)*)"/g)) {
     const key = match[1];
     if (key === undefined) continue;
-    labels[key] = (match[2] ?? '').replace(/\\(.)/g, (_, char: string) =>
-      char === 'n' ? '\n' : char,
-    );
+    labels[key] = unescape(match[2] ?? '');
   }
   return labels;
 }
@@ -144,12 +149,6 @@ export function parseSamples(document: string): Sample[] {
   return samples;
 }
 
-/** `stacks_trend_mutation_score` → `mutation-score`. The inverse of `metricNameOf`. */
-function trendOf(metric: string): string | undefined {
-  if (!metric.startsWith(METRIC_PREFIXES.trend)) return undefined;
-  return metric.slice(METRIC_PREFIXES.trend.length).replace(/_/g, '-');
-}
-
 /** One record's samples, plus which series it emitted and when. */
 export function parseRecord(document: string): ParsedRecord {
   const samples = parseSamples(document);
@@ -165,7 +164,7 @@ export function parseRecord(document: string): ParsedRecord {
   // A family's own samples are more precise than the document's newest, and
   // they are what makes this a parse of samples rather than of a header.
   for (const sample of samples) {
-    const trend = trendOf(sample.metric);
+    const trend = trendOfMetric(sample.metric);
     if (trend === undefined || sample.timestamp === undefined) continue;
     const seen = trends.get(trend);
     trends.set(trend, seen === undefined ? sample.timestamp : Math.max(seen, sample.timestamp));
@@ -206,16 +205,20 @@ export type RecordVerdict =
   | { kind: 'never'; days: number }
   | { kind: 'stale'; stale: StaleSeries[] };
 
+/**
+ * ⚠️ **`now` is the only injected input, and the absences are deliberate.**
+ * An earlier version also took the bound, the spine's date and the series list.
+ * Nothing passed any of them — and the bound half-worked, governing staleness
+ * while the bootstrap's expiry still read the constant, so an injected 90 would
+ * have produced two different answers about the same number. Three knobs no
+ * caller turns, one of them wrong: the constants below are the contract, and
+ * `now` is a parameter because the deploy cannot be told what day it is.
+ */
 export interface JudgeInput {
   /** Unix seconds. */
   now: number;
   /** What the local store holds, in any order. Empty means nothing ever arrived. */
   records: readonly ParsedRecord[];
-  /** `YYYY-MM-DD`. */
-  spineLanded?: string;
-  /** Which series are bounded. Surface D's is not among them, structurally. */
-  series?: readonly string[];
-  boundDays?: number;
 }
 
 /** The four CI-written series, which is every series the bound covers. */
@@ -232,8 +235,8 @@ export const GATED_SERIES: readonly TrendName[] = TREND_SERIES.map((series) => s
  * instrument is dead.
  */
 export function judgeRecord(input: JudgeInput): RecordVerdict {
-  const bound = (input.boundDays ?? STALE_AFTER_DAYS) * DAY;
-  const spine = Date.parse(`${input.spineLanded ?? SPINE_LANDED}T00:00:00Z`) / 1000;
+  const bound = STALE_AFTER_DAYS * DAY;
+  const spine = Date.parse(`${SPINE_LANDED}T00:00:00Z`) / 1000;
 
   if (input.records.length === 0) {
     const days = Math.floor((input.now - spine) / DAY);
@@ -243,7 +246,7 @@ export function judgeRecord(input: JudgeInput): RecordVerdict {
   const newest = newestByTrend(input.records);
   const stale: StaleSeries[] = [];
 
-  for (const series of input.series ?? GATED_SERIES) {
+  for (const series of GATED_SERIES) {
     const stamp = newest.get(series);
     // Absent and stale are the same verdict. The `undefined` is carried rather
     // than collapsed, because the two need different remedies in the message.
@@ -281,7 +284,7 @@ export function scoresOf(record: ParsedRecord): Map<string, number> {
   const scores = new Map<string, number>();
 
   for (const sample of record.samples) {
-    if (trendOf(sample.metric) !== 'mutation-score') continue;
+    if (trendOfMetric(sample.metric) !== 'mutation-score') continue;
     const scope = sample.labels['scope'];
     if (scope !== undefined) scores.set(scope, sample.value);
   }

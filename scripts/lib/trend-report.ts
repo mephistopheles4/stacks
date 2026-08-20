@@ -177,14 +177,22 @@ export function renderPanel(input: PanelInput): string[] {
   return lines;
 }
 
-export interface Disambiguation {
-  /** The branch has records the store does not — you have not synced. */
-  kind: 'newer' | 'same' | 'unreachable';
-  /** How many records the branch holds that the store does not. */
-  newer?: number;
-  /** The newest record on the branch, as a date. */
-  branchNewest?: string;
-}
+/**
+ * What the one fetch found, as three cases that cannot be confused.
+ *
+ * A union rather than a `kind` beside optional fields: `newer` without its
+ * count is not a state this can be in, and typing it as one would need a
+ * `?? 0` at the point of printing — a default standing in for a case the
+ * design forbids, which is how a message comes to say *0 records you have not
+ * imported* and send somebody the wrong way.
+ */
+export type Disambiguation =
+  /** The branch holds records the store does not — you have not synced. */
+  | { kind: 'newer'; newer: number }
+  /** The branch is no fresher, so the nightly has stopped writing. */
+  | { kind: 'same'; branchNewest?: string }
+  /** Nothing answered, so which of the two this is stays open. */
+  | { kind: 'unreachable' };
 
 /**
  * The refusal, including the half that took one request to know.
@@ -227,7 +235,7 @@ export function renderRefusal(
 
   const route =
     probe.kind === 'newer'
-      ? `\n\n  The branch holds ${String(probe.newer ?? 0)} record(s) this machine has not imported, so this\n` +
+      ? `\n\n  The branch holds ${String(probe.newer)} record(s) this machine has not imported, so this\n` +
         '  is a store that is behind rather than a pipe that has stopped:\n' +
         '      pnpm trend:sync'
       : probe.kind === 'same'
