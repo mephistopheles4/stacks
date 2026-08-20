@@ -111,6 +111,7 @@ means the two have drifted.
 | **G35** | `enhanced-card` | the card a browser builds, at both viewports | *"the card opened"* was the whole assertion, and it stays true through a card with no reading line, links with no accessible name, an announcer that never changes, a sheet that dismisses on every short drag, and one Escape that closes the enlarged cover **and** the card under it | `scripts/smoke-render.ts` — `cardFailures`, `checkCoverViewer` and `checkSheet`, against `docs/spec/enhanced-card.md` §11 | ✅ |
 | **G36** | `trend-layer` | the series CI writes ↔ the `## Trends` table | a number nobody was told to read, a row promising a line that will never be drawn, or a trend named after a gate slug — which G19 structurally cannot see, because `slugByRow()` reads three hardcoded tables and the Trends table is a fourth | `gates/trend-layer.test.ts` — asserted against the rendered OpenMetrics text, not against the declaration list | ✅ |
 | **G37** | `agents-import` | the rules ↔ the file Claude Code opens by name | `AGENTS.md` carries the rules and Claude Code reads only `CLAUDE.md`, so the stub's `@AGENTS.md` import is the whole mechanism — and a rule pasted into the stub is the second constitution [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md) refused, per [ADR-0056](adr/0056-the-constitution-is-agents-md.md) | `gates/agents-import.test.ts` — the import line is also the control the absences rest on | ✅ |
+| **G38** | `mutation-scope` | the declared mutation scopes ↔ the tree they claim to score | excluding a directory takes it out of numerator and denominator together, so the score does not move — it stops covering that code, and the change is invisible in the instrument built to catch changes. `git mv packages/core/src/covers packages/core/src/cover` resets a floor and reads as a refactor in review | `gates/mutation-scope.test.ts` — **and `scripts/deploy.ts`; this row runs on two surfaces**, see below | ✅ |
 
 **G13 now allows one file this project did not make**: Google's *powered by
 Google* graphic, which the API terms require displayed and forbid altering — so
@@ -1201,6 +1202,67 @@ this is a judge who was simply wrong, and reached for the same gavel.
 than the corners, adding the neighbour's lean in the corner case as well as the
 board case, clamping the parallel push at zero, and dropping it altogether.
 
+## G38 — one row, two surfaces
+
+**No column of this file says which surface a row runs on**, and `mutation-scope`
+is the first row that needs one: it is a `pnpm test` assertion *and* a
+`pnpm deploy:site` refusal under one slug. Said here rather than found later.
+
+**The split is by available evidence, not by taste.** Everything the disk can
+answer is a **declaration fault** and lands at merge, in two seconds, in front of
+whoever caused it — **seven kinds**: a declared scope whose directory is gone, a
+source directory in neither the declared nor the excluded list, an exclusion
+carrying no mechanism, two scopes claiming one file, a glob matching nothing, an
+exclusion naming a file that has moved, and a directory that is declared *and*
+excluded at once. The last two go beyond the six the ticket lists and say so
+where they are written: they are *"exists on disk"* and *"no overlap"* applied to
+the second list, which the ticket's wording covers for scopes only.
+
+**An eighth check answers a different question**, and it is why *"a `mutate`
+change"* belongs on the merge side at all: `stryker.config.mjs` **derives**
+`mutate` from `stryker.scopes.json`, so the declaration the seven clauses just
+checked is not necessarily the one Stryker runs. The gate imports the real config
+and compares. Without it, an edit to the derivation — dropping a scope, adding a
+negation, losing the test-file negation that once let 2,665 mutations of the test
+suite into a score — leaves every clause above green and empties a scope
+silently. **Found in review of the pull request that landed this row**, against a
+sentence claiming every structural cause was already covered.
+
+So every structural cause of a scope going quiet — a rename, a widening
+exclusion, a `mutate` change in either file, the code genuinely going away —
+needs no mutation run to detect.
+
+One clause is left over, and only a run can see it: **the glob matched files and
+Stryker still produced zero mutants.** That is `scripts/deploy.ts`'s, against
+~41 minutes on a runner for the rest.
+
+⚠️ **Asked of the tally, never of the score.** An empty denominator produces
+100% arithmetically, which is indistinguishable from a scope that is genuinely
+perfect. `total === 0` is the only reading that separates them — and it is also
+the only reading that survives what Stryker actually does, **measured rather than
+guessed**: a zero-mutant scope is **omitted from the report entirely**, so there
+is no number to compare at all.
+
+⚠️ **The remedy list contains the weakening, and that is why the rename rules
+sit in `stryker.scopes.json` itself.** *Delete the scope* is a legitimate fix for
+a zero-mutant refusal **and** the cheapest way to stop measuring an inconvenient
+one — and unlike lowering a floor, it does not read as a lowering. It reads as
+cleanup. So a scope's identity is its declared **name**, and the config edit
+carries the number across explicitly: a rename is a delete and an add in one
+diff with the number visible on both sides, a split gives every child the
+parent's floor, and a removal takes the same visible diff plus the floors-file
+notes entry every other lowering carries.
+
+⚠️ **The residual, stated rather than found later: the deploy half reads a
+snapshot and nothing there knows how old it is.** A legitimate scope change made
+after the last local run reads exactly like a scope that stopped producing
+mutants. The refusal names `pnpm mutation:run` for that case; staleness itself
+belongs to the next row in this rollout, which reads the record's own timestamps.
+
+**Observed red, six ways** — five structural, one at deploy. See
+[`docs/gate-register.md`](gate-register.md), the G38 entry, which carries the
+plants and what each one printed.
+
 ## G2 in full — the public build gate
 
 The five below are what G2 added to `gate:public`. Since G20 they are no longer
@@ -1478,7 +1540,7 @@ oldest failure in this file.
 | | Why |
 | --- | --- |
 | Coverage percentage | Coverage measures execution, not detection. An AI asked to raise it produces exactly the gap it is asked to close. No ticket should ever exist to raise it. |
-| Changed-lines floor (diff-cover) | One contributor; it would be noise. |
+| Changed-lines coverage floor | Not a gate at any surface: it fails [#112](https://github.com/mephistopheles4/stacks/issues/112)'s Clause B, which is surface-independent, and a trend has no threshold to be a floor. Worse than absent besides — Vitest 4 dropped `coverage.all`, so a pull request adding a wholly untested module scores **100%**, green in exactly the case it exists to catch. Reversal on the grounds that AI now writes the diffs was raised and refused in [#117](https://github.com/mephistopheles4/stacks/issues/117): an AI asked to satisfy a diff-local floor writes tests that execute the lines it just wrote, which is the row above with volume behind it. The original reason — *"one contributor; it would be noise"* — is no longer why. |
 | **Mutation testing (Stryker)** | *Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green.* ⚠️ **Revisited 2026-08-11: condition met, and the cost estimate in this cell was wrong — 636 tests / 5.52s, not 133 / ~2s. Now a trend; see [Trends](#trends). Still not gated: the number never goes red.** |
 | Article XI-style residency rules | No infrastructure; nothing to pin. |
 | **A link is about what it claims to be about** | G29 checks that a link *resolves*, which is not the same question. #166 moved the invariants to `AGENTS.md` and left `CLAUDE.md` as a stub, so eight links reading `[invariant 1](CLAUDE.md)` across five files still resolved perfectly — at a file with no invariants in it, and G29 stayed green throughout. They were repointed by hand. Not gated because "this link is about what it says" is a judgement, and a gate that made it would be a gate that matches prose, which `docs/gates.md` has twice learned matches anything. |

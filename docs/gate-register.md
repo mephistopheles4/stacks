@@ -97,6 +97,16 @@ this pass. Two further rows — G36 (`action-pins`) and G37 (`dependency-audit`)
 and do not exist in the tree yet; this pass does not triage them, and that gap
 is recorded as a spec obligation on #124's side, not here.
 
+⚠️ **Marked 2026-08-19: those two numbers went elsewhere.** G36 is `trend-layer`,
+G37 is `agents-import` and G38 is `mutation-scope` — all three landed after this
+paragraph was written, and the supply-chain pair it names is now further down the
+queue with numbers nobody may choose in advance. Marked rather than corrected in
+place, on this file's own mark-never-delete rule: the paragraph is a specimen of
+exactly the failure the rollout warns about, which is that **a number allocated
+before landing order is known is a guess**. Rows land in merge order and G19
+asserts gaplessness at every merge; cite slug and number together, and derive the
+number from `docs/gates.md` as you write it.
+
 **No completeness gate ships with this file.** Per #113 §8, the row-correspondence
 gate lands after population, in the same commit as the first row it can actually
 fail on — not in this commit, and not as 35 stub sections.
@@ -2269,6 +2279,170 @@ correspondence intact. The clause is real and was observed on `commands`, which 
 G14's slug and exists today. **Recorded rather than quietly substituted**, because
 the ticket's acceptance criterion names `mutation-scope` specifically and a reader
 checking that box against this file would otherwise find a claim nothing supports.
+
+---
+
+### G38 — `mutation-scope`
+
+**Gate:** [`gates/mutation-scope.test.ts`](../gates/mutation-scope.test.ts) **and**
+[`scripts/deploy.ts`](../scripts/deploy.ts)
+**Date:** 2026-08-19
+**Triaged at landing**, per this rollout's standing rule.
+
+⚠️ **The spec allocated this row G37 and it landed as G38.** `agents-import` took
+G37 while this ticket was open — the third time in this rollout a pre-allocated
+number was wrong, and the second time by a row from outside it. Recorded rather
+than silently corrected, because a reader checking the spec's roster against this
+file would otherwise find two documents disagreeing with no account of which is
+current. `docs/gates.md`'s own line is why: *"G19 is a stable identifier and tells
+you nothing."*
+
+⚠️ **The only row that runs on two surfaces**, and `docs/gates.md` has no column
+saying so — a `pnpm test` assertion and a `pnpm deploy:site` refusal under one
+slug. Both halves are triaged here, because a category that is clean on one
+surface and exposed on the other is exactly what a single verdict would hide.
+
+- **Weakening** — **exposed, and closed by where the rules are written rather
+  than by the gate.** The gate makes a rename *loud*: the scope name and its glob
+  are both checked, so `git mv packages/core/src/covers packages/core/src/cover`
+  goes red until the config is edited. What the gate cannot judge is whether the
+  edit that clears it carried the floor across — and the remedy list for a
+  zero-mutant refusal **contains the weakening**, since *delete the scope* is a
+  legitimate fix and the cheapest way to stop measuring an inconvenient one.
+  Unlike lowering a floor, it does not read as a lowering; it reads as cleanup.
+  So rename / split / removal rules sit in `stryker.scopes.json` itself, at the
+  edit they govern. **`accepted`, and stated plainly: a rule about what a diff
+  must look like is not a check.** The floors file the ratchet ticket adds is
+  where a lowering becomes visible; this row makes it impossible for the lowering
+  to happen *silently*, which is the half available now.
+- **Satisfying the letter** — **clean on the structural half, and the
+  vacuous-green plant is what shows it.** The property is *every source directory
+  is declared or excluded, with no third state*, and the check is per **file**
+  rather than per directory: a widened glob is one fault per file it swallowed,
+  so the loudness scales with the damage. Emptying the declared list makes every
+  file undeclared rather than making the check quiet.
+- **Routing around** — **exposed, accepted, and the mechanism was chosen against
+  the verdict of the row that shares it.** Per the standing rule, the remedy was
+  checked against every register row disposed `gated` or carrying a
+  named-and-unbuilt remedy: **G17 (`deploy-branch`)** is the one sharing this
+  mechanism, and its live exposure is that *the gate spawns `scripts/deploy.ts`,
+  so the argv the shipped command supplies is invisible to it* — remedy named,
+  not built. **So the deploy half is not written as a spawn.** The refusal logic
+  is a pure function in `scripts/lib/scope-check.ts` with an in-process oracle
+  (`scope-check.test.ts`) and `scripts/deploy.ts` is a thin caller, which avoids
+  the subprocess boundary rather than inheriting it. ⚠️ **What is left is G17's
+  shape one layer up**: nothing asserts that `deploy.ts` still *calls*
+  `assertNoEmptyScopes`, so deleting that one line leaves the whole suite green.
+  Same residual, one line wide instead of a whole script, and named here rather
+  than left to be found. The other mechanism-sharers were read and neither
+  applies: G1/G13's allowlist verdicts (*the damage is not the entries but what
+  the list is a list of* — met here by every exclusion owing a mechanism string
+  and by `stale-exclusion` refusing an entry that names nothing), and G19's
+  positional-read finding (this reads JSON by key, not a table by column).
+- **Vacuous green** — **clean, and asserted twice over.** Three `expectFound`
+  floors — declared scopes at 8, file exclusions at 20, excluded directories at 2
+  — plus a floor on the source sweep itself at 60, because a walk that returned
+  nothing would make every file trivially declared *and* every glob trivially
+  empty at the same time. ⚠️ **The floors are not the whole of it, and this is
+  the finding worth carrying:** a gate asserting *"the real declaration has no
+  faults"* is satisfied forever by a `declarationFaults` that returns `[]`
+  unconditionally, and no floor can see that. The judgement is therefore planted
+  in `scripts/lib/scope-check.test.ts` against synthetic trees — one plant per
+  clause — and the gate is left asserting only what the disk says.
+- **Decay** — **clean at landing, with one dated claim.** The empty-scope
+  behaviour is measured rather than assumed: an empty denominator scores 100%
+  arithmetically, which is what Stryker's summary line prints, so the residual
+  reads `total === 0` and never a percentage. ⚠️ **The deploy half reads a
+  snapshot and nothing in it knows how old that snapshot is** — a legitimate
+  scope change made after the last local run reads exactly like a scope that
+  stopped producing mutants. The refusal names `pnpm mutation:run` as the remedy
+  for that case; staleness proper belongs to `metrics-freshness`, the next row in
+  this rollout, and duplicating half of it here would be two implementations of
+  one question.
+
+⚠️ **Two clauses beyond the six the ticket lists, declared rather than slipped
+in.** `stale-exclusion` is *"every declared scope exists on disk"* applied to the
+other list — a mechanism attached to nothing reads as a live exemption, and it is
+half of what makes **removal** show up in a diff. `excluded-and-declared` is
+*"no overlap"* applied across the two lists rather than between two scopes, which
+is all the ticket's wording covers; a directory in both is invisible to every
+other clause, because its files are claimed and its exclusion names something
+real. ⚠️ **The first draft of this entry counted only `stale-exclusion` and
+called it "a seventh clause"**, which left the accounting one short in the
+artifact whose whole purpose is accurate accounting. Found by CodeRabbit on
+[#179](https://github.com/mephistopheles4/stacks/pull/179).
+
+⚠️ **A latent false red, found in the same review and fixed before merge: a
+recursive scope holding nothing directly.** `missing-scope` was asked of the
+*direct parent* of every source file, so a scope whose files all live one level
+below its root reported *"holds no source file on disk"* about a scope that holds
+several — while `empty-glob` stayed quiet, because the glob does match them. One
+fault, and its message was untrue. **It would have fired on a scope split**,
+which is the operation the rename rules above exist to bless, and the cheapest
+way out of a red like that is to undo the split. Latent rather than live: every
+declared scope today happens to hold at least one file directly, so nothing was
+red and nothing would have been until somebody did the sanctioned thing. Scope
+names are now checked against every **ancestor** directory; excluded directories
+keep the direct-parent set, because an exclusion covers the files directly in a
+directory and never a subtree. Regression test added for both halves.
+
+⚠️ **And an eighth check that is not a clause, added in review of that same pull
+request: the declaration is compared against `stryker.config.mjs`.** This is the
+routing-around bullet above being wrong in the direction it was written to guard.
+The bullet checked the *deploy* half against G17 and did not ask the same
+question of the merge half, and the answer was there: everything above reads
+`stryker.scopes.json`, while **Stryker is driven by `mutate`, which the config
+derives from it**. So the whole check could be routed around by editing the
+derivation instead of the declaration — one scope dropped in `stryker.config.mjs`
+leaves all seven clauses green and empties that scope with nothing to say so
+until a nightly moves. `docs/spec/mutation-scoring.md` §6 already listed *"the
+`mutate` config changes"* as a fault needing no run to detect; it was not true
+when this row landed, and it is now. **The gate imports the real config module
+rather than regex-matching its source**, since the thing being checked is a value
+the file computes.
+
+⚠️ **A third glob shape throws rather than reporting a fault.** `globToRegExp`
+accepts `dir/*.ts` and `dir/**/*.ts` and nothing else, so `*.tsx` in the config
+dies inside the gate with a message naming the glob. Red either way; recorded
+because the failure arrives as an exception rather than in the fault list, which
+is a difference a reader of the output will notice.
+
+**Observed-red line:** seven plants, 2026-08-19, recorded at landing. The
+structural ones were run against `gates/mutation-scope.test.ts` alone — a renamed
+directory reddens half the suite, and none of that is this row.
+
+| Plant | Result |
+| --- | --- |
+| rename a scope's directory without editing the config — `git mv packages/core/src/import packages/core/src/imports` | **red, four faults and a second assertion**: *"[missing-scope] declared scope `packages/core/src/import` holds no source file on disk"*, *"[empty-glob] … matches no source file"*, and one *"[undeclared]"* per file that moved |
+| a source directory neither declared nor excluded — `packages/core/src/probe/thing.ts` | **red**: *"[undeclared] … is in no declared scope and in no excluded directory … those are the two states, and there is no third"* |
+| blank an exclusion's mechanism — `scripts/deploy.ts`'s | **red**: *"[blank-mechanism] exclusion scripts/deploy.ts (in scope "scripts") carries no mechanism"* |
+| point a glob at nothing — `packages/core/src/covers/nowhere/**/*.ts` | **red**: *"[empty-glob] declared scope `packages/core/src/covers` has a glob … that matches no source file"*, and **`missing-scope` stays quiet**, which is the clause separating *the code went away* from *the glob stopped reaching it* |
+| empty the declared-scope list | **red on the floor, not on a comparison**: *"extraction found 0 declared mutation scopes (expected at least 8)"* |
+| **drop one scope from the derivation in `stryker.config.mjs`, touching no declaration** — the routing-around plant, added in review | **red**, naming the glob that vanished: *"stryker.config.mjs's `mutate` is no longer the declaration in stryker.scopes.json … expected [ … 34 ] to deeply equal [ … 35 ]"*, `- "packages/core/src/covers/**/*.ts"`. ⚠️ **Green on all seven clauses at the same time**, which is the whole finding |
+| **deploy residual** — declare a scope of type re-exports only, run a real `pnpm mutation:run`, then `pnpm deploy:site --dry-run` | **red, exit 1, nothing built and nothing uploaded**: *"FAILED: declared scope(s) produced no mutants in the last run: packages/core/src/typeonly"* — reached in seconds, before the gates and before the build |
+
+⚠️ **The probe scope left `pnpm test` green, and that is the split working rather
+than a hole.** Declaring `packages/core/src/typeonly` — one file of type
+re-exports — is structurally perfect: the directory exists, the glob matches it,
+nothing overlaps. Only a run can tell that it produced no mutants, which is
+precisely why that one clause is at deploy and the other six are not.
+
+**The empty-scope behaviour is now measured, and it is the third of the three
+possibilities the spec listed.** `mutation-scoring.md` §6 left it open — *"nobody
+knows what Stryker prints for an empty scope: `100`, `NaN`, or omission from the
+report"* — and expected the worst. Measured at 2026-08-19 against a full run
+(5,594 mutants, 6m55s, `9.6.1`): **omission.** The file appears nowhere in
+`mutation.json`, nowhere in the clear-text table, and `pnpm mutation:score` prints
+the scope as `0 / n/a` because its own arithmetic already returns `null` for an
+empty denominator rather than `1`. So the residual reads `total === 0`, which is
+right under all three behaviours — a check written against a *printed* `100`
+would have been written against a string that never appeared.
+
+⚠️ **One branch is unobserved and it is named rather than implied**: the
+`--check-only` path, which warns instead of refusing. It was left unrun because
+that mode continues into a live fetch of the deployed origin, and buying one
+console line with a network round-trip against the real site is a poor trade. The
+refusing path — the one that can stop a publish — is the one that was planted.
 
 ---
 
