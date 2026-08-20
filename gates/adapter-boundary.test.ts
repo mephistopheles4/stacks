@@ -131,6 +131,12 @@ const ALLOWED = [
   // and file names and nothing else — and the root it walks is a parameter, so
   // it does not know which tree it was pointed at, let alone where a vault is.
   'scripts/lib/scope-check.ts',
+  // Imports the `.prom` records CI wrote into the local trend store, and writes
+  // surface D's own row beside them. The only vault-derived thing it opens is
+  // the *published* `dist/` — `index.html` for its build stamp and
+  // `library.json` for what each cover weighs — which is the artifact, never the
+  // vault. It does not know what a book is.
+  'scripts/trend-sync.ts',
   // `scripts/mutation-scopes.ts` was here and is gone: its filesystem access
   // moved into `lib/mutation-score.ts` with the arithmetic, and the rot-catcher
   // below went red on the spent permission. That is the gate working.

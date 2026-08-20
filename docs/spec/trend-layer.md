@@ -249,8 +249,22 @@ needs its own bound, because they do not share a clock.
 
 | Series | Bound |
 | --- | --- |
-| the three nightly-written ones | **3 days** |
+| the four CI-written series | **3 days** |
 | surface D's row | **none — reported, never refused** |
+
+⚠️ **This row read *"the three nightly-written ones"*, and it is four; the row
+it counts is not D's.** Corrected in the table rather than only underneath it,
+because this one is a contract an implementer reads and a wrong number in it
+leaves a CI series outside the bound. Read against [§3](#3-four-series-no-composite) while building
+[#158](https://github.com/mephistopheles4/stacks/issues/158): the nightly writes
+all four named series, so the bound covers `mutation-score`,
+`gate-suite-runtime`, `mutation-run-runtime` and `live-exclusions` — with
+`gate-suite-runtime` bounded on the nightly's clock rather than on pushes, per
+the paragraph below. **D takes no `## Trends` row**: it is written by the machine
+and never by CI, so a row for it would make `trend-layer`'s reverse
+correspondence red against every CI run, and its samples live under a metric
+prefix that gate structurally cannot see. Both readings of *"three"* reach the
+same operational endpoint, which is the one stated here.
 
 **Absent and stale are the same verdict, and this is entailed rather than newly
 decided.** A per-series bound has to say what it does about a series with **no

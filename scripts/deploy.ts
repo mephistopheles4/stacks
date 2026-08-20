@@ -38,6 +38,14 @@ import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import {
+  PROPAGATION_ATTEMPTS,
+  describeStaleCover,
+  probeBuild,
+  probeCovers,
+  stampMeta,
+  stampOf,
+} from './lib/edge-probe.ts';
 import { gitOutput } from './lib/git.ts';
 import { readDeclarations, readReport } from './lib/mutation-score.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
@@ -59,19 +67,12 @@ const DIST_LABEL = 'packages/site/dist';
 /** Pinned: a deploy tool that silently changes under you is not a deploy tool. */
 const WRANGLER = 'wrangler@4';
 
-/**
- * How long to give the edge before calling a stale page a problem.
- *
- * A deploy is not live the instant wrangler returns — Pages has to point the
- * custom domain at the new deployment, and that took about a minute the once it
- * was measured. Checking immediately and reporting failure would cry wolf on
- * every single deploy, which is the fastest way to make a check ignored.
- *
- * Declared here rather than beside the function that uses it: `const` does not
- * hoist, and `--check-only` calls that function from the middle of the file.
- */
-const PROPAGATION_ATTEMPTS = 7;
-const PROPAGATION_WAIT_MS = 15_000;
+// How long to give the edge, how a page names its build, and how a refusal is
+// told apart from a stale answer all live in `./lib/edge-probe.ts` now. Surface
+// D — the same question asked between deploys, from `pnpm trend:sync` — is the
+// second caller, and two callers deriving one contract is what ADR-0030 is
+// about. It is also the first in-process oracle this check has ever had: from
+// here its only one drives this whole script as a child process.
 
 
 const dryRun = process.argv.includes('--dry-run');
@@ -529,7 +530,7 @@ function stampAndWrite(): string {
     .digest('hex')
     .slice(0, 12);
 
-  const marked = html.replace('<head>', `<head><meta name="stacks:build" content="${name}">`);
+  const marked = html.replace('<head>', `<head>${stampMeta(name)}`);
 
   // A stamp that failed to land would make the check below fail forever, on
   // every deploy, for a reason nobody would guess — so the injection is asserted
@@ -544,11 +545,6 @@ function stampAndWrite(): string {
   }
   writeFileSync(join(DIST, 'index.html'), marked);
   return name;
-}
-
-/** The build a page says it is, or undefined if it does not say. */
-function stampOf(page: string): string | undefined {
-  return /<meta name="stacks:build" content="([0-9a-f]+)">/.exec(page)?.[1];
 }
 
 console.log(
@@ -616,75 +612,36 @@ await verifyLive(siteUrl.replace(/\/$/, ''));
  * survives all of them.
  */
 async function verifyBuildLive(origin: string): Promise<void> {
-  for (let attempt = 1; attempt <= PROPAGATION_ATTEMPTS; attempt += 1) {
-    let live: string | undefined;
-    try {
-      // `no-store` so this measures the origin and not whatever this machine
-      // fetched a minute ago. It says nothing about a visitor's cache, and
-      // cannot: that is what the `_headers` revalidation is for.
-      const response = await fetch(`${origin}/`, { cache: 'no-store' });
+  const answer = await probeBuild(origin, stamp, {
+    onRetry: (message, attempt, attempts) =>
+      console.log(`  waiting for the edge (${String(attempt)}/${String(attempts - 1)}) — ${message}`),
+  });
 
-      // A refusal is not an answer, and for a long time this code treated it as
-      // one. Cloudflare's bot protection serves a challenge *page* with a 403,
-      // so `stampOf` found no stamp in it and the check reported "serving a
-      // build with no stamp" — indistinguishable, in the output, from the real
-      // failure it exists to catch, and it recommended purging the whole zone
-      // cache to fix a security setting that had nothing to do with caching.
-      // Read the status before reading the body.
-      if (!response.ok) {
-        // Every non-200 retries, a 403 included. The first version of this bailed
-        // at once on any 4xx, on the reasoning that a rule will say the same
-        // thing five more times. Watched through the owner allowing "definitely
-        // automated" traffic, identical requests disagreed — 403 about one time
-        // in six for a few minutes, then never again. Whether that was the
-        // setting propagating or mitigation being decided per request was not
-        // established, and it does not need to be: a single refusal is not
-        // evidence of a standing one, so bailing on the first would raise a
-        // false alarm on a zone that does let the check through — exactly the
-        // failure this code exists to stop making.
-        if (attempt === PROPAGATION_ATTEMPTS) {
-          reportUnreadable(origin, response.status);
-          return;
-        }
-        console.log(
-          `  retrying (${String(attempt)}/${String(PROPAGATION_ATTEMPTS - 1)}) — ` +
-            `origin answered HTTP ${String(response.status)}`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, PROPAGATION_WAIT_MS));
-        continue;
-      }
-
-      live = stampOf(await response.text());
-    } catch {
-      console.warn(`\n! could not reach ${origin} to ask which build it is serving`);
-      return;
-    }
-
-    if (live === stamp) {
-      console.log(`serving build ${stamp}`);
-      return;
-    }
-
-    if (attempt === PROPAGATION_ATTEMPTS) {
-      console.warn(
-        `\n! ${origin} is serving ${live === undefined ? 'a build with no stamp' : `build ${live}`}, not ${stamp}\n` +
-          '  The upload was fine. Either the edge has not caught up, or a cache is\n' +
-          '  holding the previous index.html — which points at the previous bundle, so\n' +
-          '  visitors get the old shelf however new the assets beside it are.\n' +
-          '    - Wait a minute and re-run `pnpm deploy:site --check-only`, which asks\n' +
-          '      again without rebuilding or re-uploading anything.\n' +
-          '    - If it persists: dash.cloudflare.com → your zone → Caching → Configuration →\n' +
-          '      Purge Everything, and set Browser Cache TTL to "Respect Existing Headers".',
-      );
-      return;
-    }
-
-    console.log(
-      `  waiting for the edge (${String(attempt)}/${String(PROPAGATION_ATTEMPTS - 1)}) — serving ` +
-        `${live === undefined ? 'an unstamped build' : live}, want ${stamp}`,
-    );
-    await new Promise((resolve) => setTimeout(resolve, PROPAGATION_WAIT_MS));
+  if (answer.kind === 'current') {
+    console.log(`serving build ${stamp}`);
+    return;
   }
+
+  if (answer.kind === 'unreachable') {
+    console.warn(`\n! could not reach ${origin} to ask which build it is serving`);
+    return;
+  }
+
+  if (answer.kind === 'refused') {
+    reportUnreadable(origin, answer.status);
+    return;
+  }
+
+  console.warn(
+    `\n! ${origin} is serving ${answer.serving === undefined ? 'a build with no stamp' : `build ${answer.serving}`}, not ${stamp}\n` +
+      '  The upload was fine. Either the edge has not caught up, or a cache is\n' +
+      '  holding the previous index.html — which points at the previous bundle, so\n' +
+      '  visitors get the old shelf however new the assets beside it are.\n' +
+      '    - Wait a minute and re-run `pnpm deploy:site --check-only`, which asks\n' +
+      '      again without rebuilding or re-uploading anything.\n' +
+      '    - If it persists: dash.cloudflare.com → your zone → Caching → Configuration →\n' +
+      '      Purge Everything, and set Browser Cache TTL to "Respect Existing Headers".',
+  );
 }
 
 /**
@@ -729,68 +686,67 @@ function reportUnreadable(origin: string, status: number): void {
 async function verifyLive(origin: string): Promise<void> {
   await verifyBuildLive(origin);
 
-  // Every cover, not a sample. Most covers are byte-identical between builds —
-  // only the ones that changed can reveal a stale cache — so a sample of five is
-  // very likely to land entirely on files that would match either way and
-  // report a clean site that is not. That is not hypothetical: the first version
-  // of this check sampled five and passed while the site was serving a previous
-  // build. A few dozen HEAD requests cost a second.
-  const covers = library.books
-    .map((book) => book.cover)
-    .filter((cover): cover is string => cover !== undefined);
-
-  if (covers.length === 0) return;
-
-  let unreachable = false;
-  let refused: number | undefined;
-  const checks = await Promise.all(
-    covers.map(async (cover) => {
-      const local = statSync(join(DIST, cover)).size;
-      try {
-        const response = await fetch(`${origin}/${cover}`, { method: 'HEAD' });
-        // Same trap as the build check above: a challenge page has a
-        // content-length like anything else, and comparing it against the
-        // cover's size reports a byte mismatch — which reads as a stale cache
-        // and sends you to purge a zone that was never the problem.
-        if (!response.ok) {
-          refused = response.status;
-          return undefined;
-        }
-        const served = Number(response.headers.get('content-length') ?? '0');
-        return served === local
-          ? undefined
-          : `${cover}: serving ${String(served)}B, built ${String(local)}B`;
-      } catch {
-        unreachable = true;
-        return undefined;
-      }
-    }),
+  // Every cover, not a sample — the reason is in `probeCovers`, which is where
+  // the comparison lives now. What stays here is what to say about its verdict:
+  // one probe, two readers, and `trend:sync` prints something else entirely.
+  // A cover named in `library.json` and missing from `dist/` is skipped rather
+  // than thrown on — the pre-flight's orphan rule already refused this build if
+  // one is, so reaching here means there is nothing to report. `trend:sync`
+  // builds the same map for surface D and needs the skip for real, because its
+  // `dist/` can predate a note.
+  const built = new Map(
+    library.books
+      .map((book) => book.cover)
+      .filter((cover): cover is string => cover !== undefined)
+      .filter((cover) => existsSync(join(DIST, cover)))
+      .map((cover) => [cover, statSync(join(DIST, cover)).size] as const),
   );
 
-  if (unreachable) {
+  if (built.size === 0) return;
+
+  const answer = await probeCovers(origin, built);
+
+  if (answer.kind === 'unreachable') {
     console.warn(`\n! could not reach ${origin} to check what is being served`);
     return;
   }
 
-  if (refused !== undefined) {
+  if (answer.kind === 'refused') {
     console.warn(
-      `\n! ${origin} refused the cover check — HTTP ${String(refused)}\n` +
+      `\n! ${origin} refused the cover check — HTTP ${String(answer.status)}\n` +
         '  Not a cache. See the note above: nothing here can read this origin.',
     );
     return;
   }
 
-  const stale = checks.filter((line): line is string => line !== undefined);
-  if (stale.length === 0) {
-    console.log(`checked ${String(covers.length)} cover(s) live — the site is serving this build`);
+  // An answer with no content-length is neither stale nor clean. Reading it as
+  // zero bytes reported a stale cache for a header the origin did not send —
+  // the same wrong diagnosis a refusal used to produce, and measured here.
+  if (answer.uncomparable.length > 0) {
+    console.warn(
+      `\n! ${String(answer.uncomparable.length)} cover(s) answered with no content-length, so nothing was compared:\n` +
+        answer.uncomparable
+          .slice(0, 5)
+          .map((cover) => `    ${cover}`)
+          .join('\n') +
+        '\n  Not a cache. A path this build does not have answers 200 with no length\n' +
+        '  header, so check that these covers reached the upload at all.',
+    );
+  }
+
+  if (answer.stale.length === 0) {
+    const compared = answer.checked - answer.uncomparable.length;
+    console.log(
+      `checked ${String(compared)} of ${String(answer.checked)} cover(s) live — the site is serving this build`,
+    );
     return;
   }
 
   console.warn(
-    `\n! ${origin} is serving ${String(stale.length)} cover(s) from a previous build:\n` +
-      stale
+    `\n! ${origin} is serving ${String(answer.stale.length)} cover(s) from a previous build:\n` +
+      answer.stale
         .slice(0, 5)
-        .map((line) => `    ${line}`)
+        .map((one) => `    ${describeStaleCover(one)}`)
         .join('\n') +
       '\n  The upload was fine — this is caching, and cover filenames do not change\n' +
       '  between builds, so a cached copy has the right name and the wrong bytes.\n' +

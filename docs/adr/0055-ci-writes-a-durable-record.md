@@ -3,11 +3,13 @@
 **Neither push nor pull — both, split at a durable record.**
 [`.github/workflows/metrics.yml`](../../.github/workflows/metrics.yml) commits one
 `metrics/<timestamp>-<sha>.prom` per run to an **orphan `metrics` branch**, in the
-OpenMetrics text `promtool` ingests. `pnpm trend:sync` will fetch that branch,
-backfill a local Prometheus, and restart it — **run by hand, when you want to
-look.** ⚠️ **The reading half is not built**; it is a separate ticket in this
-rollout, and this record describes the transport it will use rather than a
-command that exists.
+OpenMetrics text `promtool` ingests. `pnpm trend:sync` fetches that branch,
+backfills a local Prometheus, and restarts it — **run by hand, when you want to
+look.** The reading half landed with
+[#158](https://github.com/mephistopheles4/stacks/issues/158); the two decisions
+it made that this record does not cover are
+[ADR-0058](./0058-the-trend-store-is-a-container.md) and
+[ADR-0059](./0059-the-sync-refuses-a-rewritten-record.md).
 
 The full derivation is [`docs/spec/trend-layer.md`](../spec/trend-layer.md) §1,
 which this record does not restate.

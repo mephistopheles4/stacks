@@ -1450,11 +1450,20 @@ already decided.
 
 **Where the numbers come from.** `.github/workflows/metrics.yml` writes one
 `metrics/<timestamp>-<sha>.prom` per run to the orphan `metrics` branch, in the
-OpenMetrics text `promtool` ingests. `pnpm trend:sync` — **not built yet** — will
-pull it into a local Prometheus. No secret exists anywhere in that design — job-level `contents:
-write` on the built-in token at one end, an anonymous fetch at the other. See
+OpenMetrics text `promtool` ingests. `pnpm trend:sync` pulls it into a local
+Prometheus, by hand, when you want to look. No secret exists anywhere in that
+design — job-level `contents: write` on the built-in token at one end, an
+anonymous fetch at the other. See
 [ADR-0055](adr/0055-ci-writes-a-durable-record.md) and
 [`docs/spec/trend-layer.md`](spec/trend-layer.md).
+
+⚠️ **Surface D's row is in that store and is deliberately not a trend.** The
+edge check between deploys writes to the **local** store only, under a metric
+prefix of its own, so this table owes it no row — one for a series CI never
+emits would make G36's reverse direction red against every CI run. The four
+rows above are the whole of what the record carries as a trend, and the
+staleness bound the deploy-side check will apply covers all four; D is reported
+and never refused. See [`docs/spec/trend-layer.md`](spec/trend-layer.md) §§3–5.
 
 **A row is written unconditionally, red `main` included.** A crashed run writes
 `run_ok 0` **plus whatever computed** and still exits red, so *never ran* — a gap

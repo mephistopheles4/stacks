@@ -8,7 +8,7 @@ has been built on a branch and is kept as written.
 | Spec | Index | State |
 |---|---|---|
 | The enhanced book card, provider provenance, and the merge | **this file, below** | **built** on a branch; kept as written |
-| What comes after the scoreboard — mutation scoring, the trend layer, the gaming analysis | [`after-the-scoreboard.md`](after-the-scoreboard.md) | **not built** |
+| What comes after the scoreboard — mutation scoring, the trend layer, the gaming analysis | [`after-the-scoreboard.md`](after-the-scoreboard.md) | **part-built** — the spine has landed (Stryker, the key-trace, the metrics record, `pnpm trend:sync`); the rest is open. [#154](https://github.com/mephistopheles4/stacks/issues/154) is the live answer |
 
 ⚠️ **Gate numbers are per-rollout and never reusable.** The first spec landed
 **G30–G35**; the second allocates **G36–G42**, derived from its own landing order
