@@ -160,7 +160,16 @@ export function describeStaleCover(one: StaleCover): string {
 }
 
 export type CoverAnswer =
-  | { kind: 'checked'; checked: number; stale: StaleCover[] }
+  | {
+      kind: 'checked';
+      checked: number;
+      stale: StaleCover[];
+      /**
+       * Covers the origin answered without a `content-length`, which is not a
+       * size and must not be read as one. See `probeCovers`.
+       */
+      uncomparable: string[];
+    }
   | { kind: 'refused'; status: number }
   | { kind: 'unreachable' };
 
@@ -176,6 +185,16 @@ export type CoverAnswer =
  *
  * Sizes are passed in rather than read here, so this module never touches the
  * filesystem — which is what lets a spec exercise it in-process.
+ *
+ * ⚠️ **An answer with no `content-length` is a third outcome, not a zero.**
+ * Reading the absent header as `0` reports every such cover as *serving 0B,
+ * built 619B* — a stale-cache verdict for a header the origin simply did not
+ * send, which is the same wrong diagnosis a refusal used to produce. Measured
+ * against the live origin: a `HEAD` for a path this build does not have answers
+ * **200 with no `content-length`**, and six of six covers were reported stale
+ * when none of them exists there at all. Dropping them silently would be the
+ * other error — a cover that is genuinely missing would then pass — so they are
+ * counted and named separately.
  */
 export async function probeCovers(
   origin: string,
@@ -196,7 +215,10 @@ export async function probeCovers(
           refused = response.status;
           return undefined;
         }
-        const served = Number(response.headers.get('content-length') ?? '0');
+        const length = response.headers.get('content-length');
+        if (length === null) return cover;
+
+        const served = Number(length);
         return served === size ? undefined : { cover, served, built: size };
       } catch {
         unreachable = true;
@@ -211,6 +233,7 @@ export async function probeCovers(
   return {
     kind: 'checked',
     checked: built.size,
-    stale: checks.filter((entry): entry is StaleCover => entry !== undefined),
+    stale: checks.filter((entry): entry is StaleCover => typeof entry === 'object'),
+    uncomparable: checks.filter((entry): entry is string => typeof entry === 'string'),
   };
 }

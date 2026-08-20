@@ -249,11 +249,13 @@ needs its own bound, because they do not share a clock.
 
 | Series | Bound |
 | --- | --- |
-| the three nightly-written ones | **3 days** |
+| the four CI-written series | **3 days** |
 | surface D's row | **none — reported, never refused** |
 
-⚠️ ***"the three nightly-written ones"* is **four**, and the row it counts is not
-D's.** Read against [§3](#3-four-series-no-composite) while building
+⚠️ **This row read *"the three nightly-written ones"*, and it is four; the row
+it counts is not D's.** Corrected in the table rather than only underneath it,
+because this one is a contract an implementer reads and a wrong number in it
+leaves a CI series outside the bound. Read against [§3](#3-four-series-no-composite) while building
 [#158](https://github.com/mephistopheles4/stacks/issues/158): the nightly writes
 all four named series, so the bound covers `mutation-score`,
 `gate-suite-runtime`, `mutation-run-runtime` and `live-exclusions` — with

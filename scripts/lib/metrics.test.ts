@@ -128,12 +128,28 @@ describe('renderEdgeCheck — surface D, with nothing invented', () => {
   it('carries the cover sweep when it ran, and no sample when it did not', () => {
     // The half CI could never buy: the comparison needs the local dist/ to
     // know what each cover should weigh.
-    expect(edge({ kind: 'current', serving: 'a1b2c3d4e5f6' }, { checked: 41, stale: 2 })).toMatch(
-      /^stacks_edge_stale_covers\{[^}]*\} 2 1787183835$/m,
+    const swept = edge(
+      { kind: 'current', serving: 'a1b2c3d4e5f6' },
+      { checked: 41, stale: 2, uncomparable: 6 },
     );
+
+    expect(swept).toMatch(/^stacks_edge_stale_covers\{[^}]*\} 2 1787183835$/m);
     expect(edge({ kind: 'current', serving: 'a1b2c3d4e5f6' })).not.toContain(
       'stacks_edge_stale_covers',
     );
+  });
+
+  it('counts what could not be compared beside what was stale', () => {
+    // "0 stale of 41" while six were never compared is a green that means
+    // nothing — an origin answering without a content-length said nothing
+    // about those covers, and a zero would claim it did.
+    const swept = edge(
+      { kind: 'current', serving: 'a1b2c3d4e5f6' },
+      { checked: 41, stale: 0, uncomparable: 6 },
+    );
+
+    expect(swept).toMatch(/^stacks_edge_stale_covers\{[^}]*\} 0 1787183835$/m);
+    expect(swept).toMatch(/^stacks_edge_uncomparable_covers\{[^}]*\} 6 1787183835$/m);
   });
 
   it('names no trend, so the Trends table owes it no row', () => {

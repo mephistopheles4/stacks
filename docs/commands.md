@@ -134,8 +134,10 @@ time here.
 **One command, run by hand, when you want to look.** It fetches the `metrics`
 branch, imports every record this machine has not seen into a local Prometheus,
 asks the live origin what it is serving, and restarts the store. Run it twice and
-the second run imports nothing — the store records what it holds by filename, so
-a merge and a nightly landing in the same second both survive.
+the second run imports nothing **from the branch** — the store records what it
+holds by filename, so a merge and a nightly landing in the same second both
+survive. The probe is deliberately not idempotent: each run asks the origin
+again, so the only record a second run adds is surface D's own.
 
 **No laptop cron and no daemon.** A second scheduled thing that can silently stop
 is the failure class this design spends its budget containing, and this one would

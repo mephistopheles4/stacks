@@ -579,8 +579,26 @@ async function verifyLive(origin: string): Promise<void> {
     return;
   }
 
+  // An answer with no content-length is neither stale nor clean. Reading it as
+  // zero bytes reported a stale cache for a header the origin did not send —
+  // the same wrong diagnosis a refusal used to produce, and measured here.
+  if (answer.uncomparable.length > 0) {
+    console.warn(
+      `\n! ${String(answer.uncomparable.length)} cover(s) answered with no content-length, so nothing was compared:\n` +
+        answer.uncomparable
+          .slice(0, 5)
+          .map((cover) => `    ${cover}`)
+          .join('\n') +
+        '\n  Not a cache. A path this build does not have answers 200 with no length\n' +
+        '  header, so check that these covers reached the upload at all.',
+    );
+  }
+
   if (answer.stale.length === 0) {
-    console.log(`checked ${String(answer.checked)} cover(s) live — the site is serving this build`);
+    const compared = answer.checked - answer.uncomparable.length;
+    console.log(
+      `checked ${String(compared)} of ${String(answer.checked)} cover(s) live — the site is serving this build`,
+    );
     return;
   }
 

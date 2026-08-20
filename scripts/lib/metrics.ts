@@ -291,8 +291,13 @@ export interface EdgeFacts {
   /**
    * The cover sweep, when it ran. The half CI could never buy: the comparison
    * needs the local `dist/` to know what each cover should weigh.
+   *
+   * `uncomparable` is carried beside `stale` rather than folded into it: an
+   * origin that answered without a `content-length` said nothing about that
+   * cover, and a zero in the stale count with six covers unmeasured is the
+   * vacuous green this whole layer is arranged against.
    */
-  covers?: { checked: number; stale: number };
+  covers?: { checked: number; stale: number; uncomparable: number };
 }
 
 function servingOf(build: EdgeAnswer): string {
@@ -355,16 +360,19 @@ export function renderEdgeCheck(facts: EdgeFacts): string {
   }
 
   if (facts.covers !== undefined) {
-    families.push({
-      metric: `${METRIC_PREFIXES.edge}stale_covers`,
-      help: 'Covers the origin serves at a different size from the local build, of N checked.',
-      samples: [
-        {
-          labels: { ...context, checked: String(facts.covers.checked) },
-          value: facts.covers.stale,
-        },
-      ],
-    });
+    const sweep = { ...context, checked: String(facts.covers.checked) };
+    families.push(
+      {
+        metric: `${METRIC_PREFIXES.edge}stale_covers`,
+        help: 'Covers the origin serves at a different size from the local build, of N checked.',
+        samples: [{ labels: sweep, value: facts.covers.stale }],
+      },
+      {
+        metric: `${METRIC_PREFIXES.edge}uncomparable_covers`,
+        help: 'Covers the origin answered without a content-length, so nothing was compared.',
+        samples: [{ labels: sweep, value: facts.covers.uncomparable }],
+      },
+    );
   }
 
   const lines = families.flatMap((family) => render(family, facts.timestamp));

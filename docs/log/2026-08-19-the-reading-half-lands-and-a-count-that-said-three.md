@@ -110,17 +110,62 @@ rather than an exception list a gate would have to maintain.
   field and the check is one `merge-base --is-ancestor`. Demonstrated by pointing
   the stored tip at a commit on `main` — it refuses and imports nothing.
 
-## What this found and did not fix
+## What this found, and the third outcome it needed
 
-⚠️ **The cover check reads a missing `content-length` as zero bytes served.**
+⚠️ **The cover check read a missing `content-length` as zero bytes served.**
 Cloudflare answers a `HEAD` for a path this build does not have with **200 and
-no `content-length`**, so `served === 0` and the cover is reported as served at
+no `content-length`**, so `served === 0` and the cover was reported as served at
 another build's size. Measured while demonstrating D against a fixture `dist/`:
 six of six covers reported stale, and none of them exists on the origin at all.
 
-The behaviour is **pre-existing and unchanged** — the comparison moved out of
-`scripts/deploy.ts` into `lib/edge-probe.ts` byte for byte — so this is a
-finding rather than a regression. It is left alone deliberately: *unmeasurable*
-and *stale* are a distinction worth drawing, and drawing it wrong in the other
-direction would let a genuinely stale cover pass. It wants its own change, with
-its own red to observe.
+**Pre-existing**, in `deploy:site` since that check was written — the comparison
+moved into `lib/edge-probe.ts` byte for byte, which is what put a false positive
+in front of somebody for the first time.
+
+**Closed with a third outcome rather than either obvious fix.** Reading the
+absent header as zero invents a stale cache; *dropping* those covers from the
+list — the first repair anyone reaches for — hides a cover that genuinely never
+reached the upload. So they are neither: `probeCovers` returns them as
+`uncomparable`, both readers name them, and D's row carries
+`stacks_edge_uncomparable_covers` beside the stale count. **A zero in the stale
+count with six covers never compared is the vacuous green this whole layer is
+arranged against**, and it would have been the shape of a quieter fix.
+
+Same origin, after:
+
+```text
+  0 of 6 cover(s) match this build
+! 6 cover(s) answered with no content-length, so nothing was compared
+```
+
+## The review found four things the session did not
+
+Two axes ran before the pull request was opened, and CodeRabbit ran on it after.
+Worth recording because they caught different classes:
+
+- **A capture-output helper added to `run.ts`** — which
+  [ADR-0030](../adr/0030-two-spawn-helpers-not-one.md) had already refused in as
+  many words. Fixed by following that record's own pattern instead:
+  `dockerOutput` sits in `scripts/lib/docker.ts` beside `git.ts`.
+- **The state was written after the store was started.** `startStore` throws on
+  a bound port, and the blocks are on disk by then — so the write would be
+  skipped and the next sync would import the same records again, which is the
+  overlap hazard this command refuses elsewhere. The record is now written the
+  moment the backfill succeeds.
+- **The container was reused by name alone**, which defeats the image pin: a
+  container keeps the image and flags it was made with, so a moved `IMAGE` would
+  have `promtool` from the new one writing blocks for an old server — the exact
+  disagreement [ADR-0058](../adr/0058-the-trend-store-is-a-container.md) claims
+  is unrepresentable. It now compares `.Config.Image` and recreates. Demonstrated
+  by planting a container of that name from another image.
+- **A missing `state.json` beside existing blocks** was treated as an empty
+  store, which replays everything over them. It now refuses, exactly as an
+  unreadable one does.
+
+⚠️ **One finding was rejected with evidence rather than applied**: that the join
+must coalesce `# TYPE` and `# HELP` per family, because OpenMetrics forbids
+repeated metadata and interleaved families. True of the specification and not of
+the tool this design pins — `promtool` ingested nine concatenated records with
+repeated metadata into four blocks, and every value was then read back out of
+Prometheus. The pin is what makes that safe to rely on, which is the same
+argument ADR-0058 already rests on.

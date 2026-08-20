@@ -14,14 +14,26 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { probeBuild, probeCovers, stampOf } from './edge-probe.ts';
+import {
+  describeStaleCover,
+  probeBuild,
+  probeCovers,
+  stampMeta,
+  stampOf,
+} from './edge-probe.ts';
 
 const ORIGIN = 'https://stacks.example';
 const STAMP = 'a1b2c3d4e5f6';
 
-/** A page as the origin would serve it, stamped or not. */
+/**
+ * A page as the origin would serve it, stamped or not.
+ *
+ * Built with `stampMeta` rather than by hand: the writer and the reader are two
+ * halves of one contract, and a fixture that spells the tag itself would keep
+ * passing while a deploy stamped something this could no longer find.
+ */
 function page(stamp?: string): string {
-  const meta = stamp === undefined ? '' : `<meta name="stacks:build" content="${stamp}">`;
+  const meta = stamp === undefined ? '' : stampMeta(stamp);
   return `<!doctype html><html><head>${meta}</head><body></body></html>`;
 }
 
@@ -57,6 +69,23 @@ describe('stampOf', () => {
 
   it('says nothing about a page that says nothing', () => {
     expect(stampOf(page())).toBeUndefined();
+  });
+
+  it('reads back exactly what the deploy writes', () => {
+    // The round trip, held by a test rather than by two functions sitting near
+    // each other. A stamp that cannot be read back makes the live check blind
+    // and says so nowhere.
+    expect(stampOf(`<head>${stampMeta('0123456789ab')}</head>`)).toBe('0123456789ab');
+  });
+});
+
+describe('describeStaleCover', () => {
+  it('names the cover, what is served, and what was built', () => {
+    // One line, two readers: a deploy prints purge advice around it and a sync
+    // does not. The finding itself has to say the same thing in both.
+    expect(describeStaleCover({ cover: 'covers/x.png', served: 0, built: 619 })).toBe(
+      'covers/x.png: serving 0B, built 619B',
+    );
   });
 });
 
@@ -166,6 +195,26 @@ describe('probeCovers', () => {
       kind: 'checked',
       checked: 2,
       stale: [{ cover: 'covers/two.jpg', served: 99, built: 100 }],
+      uncomparable: [],
+    });
+  });
+
+  it('counts an answer with no content-length as uncomparable, never as 0 bytes', async () => {
+    // Measured against the live origin: a HEAD for a path this build does not
+    // have answers **200 with no content-length**, and reading that as zero
+    // reported six of six covers stale when none of them exists there at all.
+    // Dropping them instead would be the opposite error — a genuinely missing
+    // cover would pass — so they are counted and named.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, status: 200, headers: new Headers() }) as unknown as Response),
+    );
+
+    expect(await probeCovers(ORIGIN, new Map([['covers/one.jpg', 619]]))).toEqual({
+      kind: 'checked',
+      checked: 1,
+      stale: [],
+      uncomparable: ['covers/one.jpg'],
     });
   });
 
@@ -192,6 +241,11 @@ describe('probeCovers', () => {
   it('checks nothing when there is nothing to check', async () => {
     vi.stubGlobal('fetch', head({}));
 
-    expect(await probeCovers(ORIGIN, new Map())).toEqual({ kind: 'checked', checked: 0, stale: [] });
+    expect(await probeCovers(ORIGIN, new Map())).toEqual({
+      kind: 'checked',
+      checked: 0,
+      stale: [],
+      uncomparable: [],
+    });
   });
 });

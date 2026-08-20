@@ -121,7 +121,13 @@ interface StoreState {
  * recovery: it drops the blocks first, so there is nothing to overlap.
  */
 function readState(): StoreState | undefined {
-  if (!existsSync(STATE)) return { imported: [] };
+  // A **missing** state file beside blocks is the same trap as an unreadable
+  // one, and it is reachable two ways: somebody deleted it, or a run died
+  // between the backfill and the write. "The store holds nothing" would then
+  // replay every record over blocks that are already there.
+  if (!existsSync(STATE)) {
+    return existsSync(TSDB) && readdirSync(TSDB).length > 0 ? undefined : { imported: [] };
+  }
   try {
     const parsed = JSON.parse(readFileSync(STATE, 'utf8')) as Partial<StoreState>;
     return { tip: parsed.tip, imported: parsed.imported ?? [] };
@@ -207,10 +213,22 @@ function stopStore(): void {
  * a missing container.
  */
 function startStore(): void {
-  const state = containerState();
-  if (state !== undefined) {
-    docker(['start', CONTAINER]);
-    return;
+  if (containerState() !== undefined) {
+    // ⚠️ **Reusing it by name alone would defeat the pin.** A container keeps
+    // the image and the flags it was created with, so after `IMAGE` moves,
+    // `promtool` from the new image would write blocks for an old server to
+    // read — the exact disagreement this file's header claims is
+    // unrepresentable. A changed `RETENTION` would be ignored the same way,
+    // silently. So the image is compared and a stale container is replaced.
+    const image = docker(['inspect', '--format', '{{.Config.Image}}', CONTAINER]);
+    if (image === IMAGE) {
+      docker(['start', CONTAINER]);
+      return;
+    }
+    console.log(
+      `store: recreating ${CONTAINER} — it runs ${image ?? 'an unknown image'}, want ${IMAGE}`,
+    );
+    docker(['rm', '-f', CONTAINER]);
   }
 
   runExe(
@@ -243,8 +261,11 @@ function builtCovers(): Map<string, number> {
   const library = join(DIST, 'library.json');
   if (!existsSync(library)) return sizes;
 
-  const parsed = JSON.parse(readFileSync(library, 'utf8')) as { books: ShippedBook[] };
-  for (const book of parsed.books) {
+  // `books` is optional here and not in the builder's own shape: a `dist/` can
+  // be anything on disk, and a missing key would throw out of surface D and
+  // take the whole sync — import and all — down with it.
+  const parsed = JSON.parse(readFileSync(library, 'utf8')) as { books?: ShippedBook[] };
+  for (const book of parsed.books ?? []) {
     if (book.cover === undefined) continue;
     const path = join(DIST, book.cover);
     if (existsSync(path)) sizes.set(book.cover, statSync(path).size);
@@ -287,8 +308,23 @@ function sayCovers(answer: CoverAnswer): void {
   if (answer.kind === 'unreachable' || answer.kind === 'refused') return;
   if (answer.checked === 0) return;
 
+  // Said whether or not anything was stale, because "0 stale of 41" while six
+  // were never compared is a green that means nothing.
+  if (answer.uncomparable.length > 0) {
+    console.warn(
+      `! ${String(answer.uncomparable.length)} cover(s) answered with no content-length, so nothing was compared:\n` +
+        answer.uncomparable
+          .slice(0, 5)
+          .map((cover) => `    ${cover}`)
+          .join('\n') +
+        '\n  Not stale and not clean — unmeasured. A path this build does not have\n' +
+        '  answers 200 with no length header, which is the usual cause.',
+    );
+  }
+
   if (answer.stale.length === 0) {
-    console.log(`  ${String(answer.checked)} cover(s) match this build`);
+    const compared = answer.checked - answer.uncomparable.length;
+    console.log(`  ${String(compared)} of ${String(answer.checked)} cover(s) match this build`);
     return;
   }
   console.warn(
@@ -353,7 +389,11 @@ async function probeOrigin(): Promise<void> {
       covers:
         covers === undefined || covers.kind !== 'checked'
           ? undefined
-          : { checked: covers.checked, stale: covers.stale.length },
+          : {
+              checked: covers.checked,
+              stale: covers.stale.length,
+              uncomparable: covers.uncomparable.length,
+            },
     }),
     'utf8',
   );
@@ -368,7 +408,8 @@ async function main(): Promise<number> {
   const state = rebuild ? { imported: [] } : readState();
   if (state === undefined) {
     fail(
-      `${STATE} cannot be read, so the store cannot say what it already holds.\n` +
+      `${STATE} cannot be read or is missing beside blocks that are already there,\n` +
+        '  so the store cannot say what it holds.\n' +
         '  `pnpm trend:sync --rebuild` is the way back: it drops the local blocks and\n' +
         '  replays the branch plus every surface-D row, which only this machine has.',
     );
@@ -451,12 +492,23 @@ async function main(): Promise<number> {
 
   try {
     backfill();
-  } finally {
+  } catch (error) {
+    // Nothing was imported, so the state is still true. Bring the store back
+    // up regardless — it was stopped by this command, and leaving it down is a
+    // second fault on top of the one being reported.
     startStore();
+    throw error;
   }
 
+  // ⚠️ **Before the store is started, not after.** `startStore` throws on a
+  // bound port or a failed pull, and the blocks are already on disk by then —
+  // so a state written afterwards would never be written, and the next sync
+  // would import the same records again over the blocks that hold them. A
+  // dashboard that failed to start is a nuisance; a store that holds records it
+  // does not admit to is the overlap hazard this file refuses elsewhere.
   writeState({ tip: fetched?.tip ?? state.tip, imported: [...state.imported, ...wanted] });
   rmSync(INCOMING, { force: true });
+  startStore();
 
   console.log(
     `\nimported ${String(wanted.length)} record(s) — the store now holds ${String(state.imported.length + wanted.length)}\n` +
