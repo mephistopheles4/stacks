@@ -67,7 +67,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { expectFound, filesUnder, readRepoFile } from './repo.ts';
+import { expectFound, readRepoFile, sectionsOf, trackedFiles } from './repo.ts';
 
 /**
  * The workflow that defines the required check.
@@ -92,9 +92,22 @@ const GATES_WORKFLOW = '.github/workflows/gates.yml';
  *
  * Both extensions, because G6's named-and-unbuilt remedy is this failure one
  * level down: a sweep saying *scan `.ts`* in a tree holding `.mjs` and `.astro`.
+ *
+ * ⚠️ **`trackedFiles()` rather than `filesUnder()`, and the reason is an
+ * incident rather than a preference.** `repo.ts` already documents the choice —
+ * *"it cannot pick up a stray untracked file and fail a gate on it"* — and on
+ * 2026-08-20 a read-only review agent dropped a scratch
+ * `.github/actions/zztest/action.yml` into the tree and **reddened this gate on
+ * a file that was never committed and would never have run.** What CI executes
+ * is what git tracks; an unpinned action nobody staged cannot reach a runner.
+ * The cost is G13's verdict, inherited knowingly: a local `pnpm test` before
+ * `git add` passes over a new workflow, so the rule there is the rule here —
+ * **stage, then run.**
  */
 function githubYamlFiles(): string[] {
-  return filesUnder('.github', ['.yml', '.yaml']);
+  return trackedFiles().filter(
+    (path) => path.startsWith('.github/') && (path.endsWith('.yml') || path.endsWith('.yaml')),
+  );
 }
 
 interface UsesLine {
@@ -247,7 +260,6 @@ describe('G40 — every third-party action is pinned, and says which version', (
  * "gated the wrong half" by proving one thing and claiming another.
  */
 function jobsOf(source: string): Map<string, string> {
-  const jobs = new Map<string, string>();
   const body = /^jobs:\n([\s\S]*)$/m.exec(source)?.[1];
   if (body === undefined) {
     throw new Error(
@@ -256,26 +268,25 @@ function jobsOf(source: string): Map<string, string> {
     );
   }
 
-  const starts = [...body.matchAll(/^ {2}([\w-]+):$/gm)];
-  starts.forEach((match, index) => {
-    const from = match.index + match[0].length;
-    const to = index + 1 < starts.length ? starts[index + 1]!.index : body.length;
-    jobs.set(match[1] ?? '', body.slice(from, to));
-  });
-
-  return jobs;
+  return new Map(
+    sectionsOf(body, /^ {2}([\w-]+):$/gm).map((section) => [section.captures[0] ?? '', section.body]),
+  );
 }
 
 describe('G42 — the `audit` job exists, runs, and is required', () => {
-  const jobs = jobsOf(readRepoFile(GATES_WORKFLOW));
+  // Called per test rather than once in the describe body. `jobsOf` throws by
+  // design when the `jobs:` block is gone, and a throw during collection aborts
+  // the whole file — taking G40's four clauses down with G42's, so one
+  // restructured workflow would report as five unrelated gates vanishing.
+  const jobs = (): Map<string, string> => jobsOf(readRepoFile(GATES_WORKFLOW));
 
   it('finds the jobs it is about to make claims about', () => {
-    expectFound([...jobs.keys()], `jobs in ${GATES_WORKFLOW}`, 3);
+    expectFound([...jobs().keys()], `jobs in ${GATES_WORKFLOW}`, 3);
   });
 
   it('declares a job named `audit`', () => {
     expect(
-      jobs.has('audit'),
+      jobs().has('audit'),
       `no job named \`audit\` in ${GATES_WORKFLOW}. Its row in docs/gates.md says the ` +
         'dependency tree is checked for known advisories on every pull request; delete ' +
         'the job and that row is a claim nothing can fail on',
@@ -287,7 +298,7 @@ describe('G42 — the `audit` job exists, runs, and is required', () => {
     // command: lowering it to `moderate` is noise, raising it to `critical` is
     // a silent weakening, and neither shows up anywhere else.
     expect(
-      jobs.get('audit') ?? '',
+      jobs().get('audit') ?? '',
       `the \`audit\` job in ${GATES_WORKFLOW} no longer runs ` +
         '`pnpm audit --audit-level=high`. The threshold is a judgement with a written ' +
         'reason — a threshold inherited without its reason is a preference with good ' +
@@ -296,7 +307,7 @@ describe('G42 — the `audit` job exists, runs, and is required', () => {
   });
 
   it('makes the required check depend on it', () => {
-    const gates = jobs.get('gates') ?? '';
+    const gates = jobs().get('gates') ?? '';
 
     expect(
       /needs:\s*\[[^\]]*\baudit\b[^\]]*\]/.test(gates),
@@ -312,7 +323,7 @@ describe('G42 — the `audit` job exists, runs, and is required', () => {
     // nothing when it is skipped, which is the shape a required check that
     // never reports has already cost this repo once.
     expect(
-      gatesResultTests(jobs.get('gates') ?? ''),
+      gatesResultTests(jobs().get('gates') ?? ''),
       `the \`gates\` aggregator in ${GATES_WORKFLOW} does not compare ` +
         "`needs.audit.result` against 'success'. Comparing against 'failure' instead " +
         'would let a skipped or cancelled audit through',

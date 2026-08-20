@@ -97,6 +97,19 @@ this pass. Two further rows — G36 (`action-pins`) and G37 (`dependency-audit`)
 and do not exist in the tree yet; this pass does not triage them, and that gap
 is recorded as a spec obligation on #124's side, not here.
 
+⚠️ **Marked, not rewritten — the paragraph above is true of the file it was
+written against and false of this one, in three ways.** The scope is now 42
+rows, not 35. **The `## CI-only gates` table no longer exists**: it held one
+line, was never scored, and its content became row **G42
+(`dependency-audit`)**, with its prose kept under a named `## G42 —` heading in
+`docs/gates.md`. And the two rows it pre-allocates as G36 and G37 landed as
+**G40 (`action-pins`)** and **G42 (`dependency-audit`)** — the numbers moved
+twice, because a row number is derived from landing order and never chosen.
+⚠️ **The one row this paragraph's scope genuinely missed is G37
+(`agents-import`)**, which landed from outside the rollout entirely and was
+triaged by nobody until `gate-register` went red on it; its backfilled entry
+says so in terms.
+
 ⚠️ **Marked 2026-08-19: those two numbers went elsewhere.** G36 is `trend-layer`,
 G37 is `agents-import` and G38 is `mutation-scope` — all three landed after this
 paragraph was written, and the supply-chain pair it names is now further down the
@@ -2119,6 +2132,44 @@ hole describes, which is what re-planting asks for.
 
 **Cost:** ~18 min, 6 file-scoped invocations plus one full suite.
 
+### ⚠️ Two further findings about G19, added 2026-08-20 when G41 landed
+
+**Both belong here rather than in the entries of the rows that found them**, on
+this file's rule that a finding about a gate goes in that gate's entry.
+
+**1. The gapless walk is blind to top-row deletion.** It bounds at
+`n < numbers.at(-1)`, **exclusive of the maximum**, so deleting the
+highest-numbered row leaves it green. Measured rather than argued: against a
+tree with the top row's id mangled, `gates/constitution-scoreboard.test.ts` runs
+**14 tests, none failing**; mangling an interior row instead fires the check by
+name — *"row numbers missing from docs/gates.md … G40"*. **What catches the
+top-row case is G41's row-side floor and the register's *no entry without a
+row*, and nothing in G19.** That is the stated reason the floor exists on the
+row side only. Not repaired here: hardening G19 is a change this rollout would
+be *making* rather than deciding, and the same reasoning that leaves the
+`TABLES` hole alone applies.
+
+**2. ⚠️ A row can un-anchor another row's slug by citing its spec in prose, and
+this is a live defect that was introduced and caught inside one commit.**
+`stemsByRow()` matches every `` `gates/<stem>.test.ts` `` **anywhere in the row's
+cells**, and the derivation rule applies only where a row names exactly one stem
+**and no other row names that same stem.** G42's row explained which table it
+was promoted out of by naming `` `gates/constitution-scoreboard.test.ts` ``;
+two rows then claimed that stem, and **G19 silently dropped out of its own
+derivation rule** — its slug no longer forced to move with its file, with
+nothing going red and `expectFound(derived, …, 15)` untroubled at 32.
+
+Found by querying the derivation set directly rather than by any assertion. The
+row was rewritten to cite G19 by **number and slug**, which is the form G19
+itself already checks elsewhere, and the docblock now carries the rule. ⚠️ **The
+general shape is unclosed and named: prose in any row's cells can change which
+rows are derived.** A remedy would restrict stem extraction to the **Gate**
+column via `columnIndex`, which is the same one-line fix the positional-status
+remedy above wants and the same lesson — *read the column, not the row*.
+⚠️ **The pre-existing `repo-hygiene` pair (G5, G13) is the legitimate case the
+remedy must keep working**, so it is a narrowing of where the gate looks, never
+an allowlist.
+
 ### G29 — `doc-links`
 
 **Gate:** [`gates/doc-links.test.ts`](../gates/doc-links.test.ts)
@@ -2660,7 +2711,25 @@ are named in the bullets rather than in a paragraph nobody can check.
   the sweep at a directory with no workflows and breaking the `uses:` regex each
   go red on the floor rather than passing over nothing. The `jobs:` extraction
   **throws by name** rather than returning an empty map, which is
-  `markdownSection`'s argument applied one file type across.
+  `markdownSection`'s argument applied one file type across. ⚠️ **That throw is
+  called per test rather than once in the `describe` body**, found in review: a
+  throw during collection aborts the whole file, so one restructured workflow
+  would have taken G40's four clauses down with G42's and reported as five
+  unrelated gates vanishing. Measured after the fix — the same plant now leaves
+  **5 passed, 5 failed**, with every G40 clause still running.
+
+⚠️ **The sweep reads `git ls-files`, not the disk, and the reason is an incident
+rather than a preference.** `gates/repo.ts` already documented the choice —
+*"it cannot pick up a stray untracked file and fail a gate on it"* — and on
+2026-08-20 a **read-only review agent** dropped a scratch
+`.github/actions/zztest/action.yml` into the tree while auditing this very
+commit and **reddened this gate on a file that was never committed and could
+never have run.** What CI executes is what git tracks. **The cost is G13's
+verdict, inherited knowingly**: a local `pnpm test` before `git add` passes over
+a new workflow, so the rule there is the rule here — *stage, then run.* ⚠️ **The
+plant harness had to be taught the same thing**: `git add -N` leaves an index
+entry that outlives the file, and one plant's residue silently turned the next
+plant's expected-green into a red until the cleanup cleared the index first.
 - **Decay** — ⚠️ **exposed, dated, and it is a bet rather than a slip.** Clause 2
   pins the *shape* of Dependabot's comment; if Dependabot ever emits `# 7.0.1`
   without the `v`, this gate goes red on a bot commit. **Measured rather than

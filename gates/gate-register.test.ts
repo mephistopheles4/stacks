@@ -79,7 +79,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { expectFound, readRepoFile } from './repo.ts';
+import { expectFound, readRepoFile, sectionsOf } from './repo.ts';
 
 const SCOREBOARD = 'docs/gates.md';
 const REGISTER = 'docs/gate-register.md';
@@ -133,17 +133,11 @@ interface Entry {
  * exists for.
  */
 function entries(): Entry[] {
-  const source = readRepoFile(REGISTER);
-  const found: Entry[] = [];
-
-  const starts = [...source.matchAll(/^### (G\d+) — `([^`]+)`[^\n]*$/gm)];
-  starts.forEach((match, index) => {
-    const from = match.index + match[0].length;
-    const to = index + 1 < starts.length ? starts[index + 1]!.index : source.length;
-    found.push({ row: match[1] ?? '', slug: match[2] ?? '', body: source.slice(from, to) });
-  });
-
-  return found;
+  return sectionsOf(readRepoFile(REGISTER), /^### (G\d+) — `([^`]+)`[^\n]*$/gm).map((section) => ({
+    row: section.captures[0] ?? '',
+    slug: section.captures[1] ?? '',
+    body: section.body,
+  }));
 }
 
 /** Every numbered row of the scoreboard, in file order. */
