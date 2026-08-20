@@ -166,8 +166,13 @@ const VERSION_COMMENT = /^\s+#\s*v\d+(?:\.\d+)*\s*$/;
  * pin**, so unlike the withdrawn `docker://` exemption it cannot turn out to be
  * wrong. Zero instances today, and that objection does not transfer — dropping
  * it would mean a false red on something genuinely unpinnable.
+ *
+ * ⚠️ **`./` and not `../`.** The first draft accepted both; the spec says *"One
+ * exemption: `uses: ./…`"* and nothing else, and an exemption is a permission —
+ * widening one past its written scope is the category-1 move, however small the
+ * population. Found in review, at zero instances either way.
  */
-const LOCAL = /^\.{1,2}\//;
+const LOCAL = /^\.\//;
 
 function where(use: UsesLine): string {
   return `${use.file}:${use.line} — ${use.text}`;

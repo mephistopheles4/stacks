@@ -2826,7 +2826,14 @@ supply-chain triage obligation, and the observed-red rule.
   claim would have been the failure, not the fix**, so what is asserted is the
   **closed vocabulary** — which is the plant §8 actually names. ⚠️ **An entry
   with no disposition passes this gate, and that is stated as a limit rather
-  than left implicit.**
+  than left implicit.** ⚠️ **And because that retreat leaves the vocabulary
+  check carrying the whole clause, a hole in it costs everything the clause has
+  left — which is what review found.** The file writes the field three ways and
+  the check required the colon, reading 29 instances and missing the one written
+  `Disposition \`gated\`.` So a fifth disposition, in a spelling the file itself
+  already uses, passed green. Closed with `:? +`, planted red, and the lesson
+  recorded rather than the count quietly corrected: **the narrower a clause
+  retreats, the more load each surviving assertion carries.**
 - **Routing around** — **exposed on arrival and closed; one residual named.**
   The correspondence sweep reads `### G<n> — \`slug\`` and nothing else, so an
   entry written as `## G40` or `#### G40` would be invisible while reading to a
@@ -2870,8 +2877,15 @@ real defect on the day it was written**, which is the field
 `CONTRIBUTING.md`'s oldest rule asks for and which most rows satisfy from a
 plant. The backfilled entry is above.
 
-**Ten further plants, 2026-08-20**, covering every way `gaming-analysis.md` §8
-names plus the heading-form hole §8 does not. **Run twice**, and the second run
+**Twelve further plants, 2026-08-20**, covering every way `gaming-analysis.md` §8
+names plus two near-miss forms §8 does not — **both of which were green when this
+row was first written, and both found by the spec-axis review rather than by the
+plant table.** ⚠️ **They are one species and it is worth naming: a gate reading
+*one* spelling of a field the file writes *several* ways.** §8's plant table asks
+for the wrong *value* in each case and gets a red; neither plant asks for the
+right value in an unexpected *shape*, which is where both holes lived. **A plant
+table inherits the author's idea of what the file looks like**, and that is the
+argument for a fresh-context reviewer over a longer table. **Run twice**, and the second run
 is the one that counts: the first was against a *simulated* stack, because this
 commit sits on top of `metrics-freshness` and G39's row had not landed yet, so a
 placeholder row and entry stood in to make the population 42. **Re-run in full
@@ -2889,7 +2903,9 @@ stand-in until somebody re-runs it.
 | **cardinality** — a second `### G26` section | **red**: *"G26 has 2 entries"* |
 | **the exemption** — split G26's merged bullet, leaving the exemption behind | **red — the exemption is reverse-asserted**, so it cannot outlive the bullet it exists for |
 | **the floor** — break the regex that reads `docs/gates.md`'s rows | **red, not a vacuous pass over two empty sets** |
-| **an entry written at a heading level the sweep cannot see** — a `## G40` section | **red**: *"register headings naming a row at a level other than `### `"*. G29's stated limit, closed rather than inherited |
+| **an entry written at a heading level the sweep cannot see** — a `## G40` section | **red**. G29's stated limit, closed rather than inherited |
+| **an entry at the right level in the wrong format** — `### G99 — action-pins`, no backticks | **red**, ⚠️ **and it was green until review caught it.** The check was written against heading *level* alone while its own comment claimed *"the near-miss forms are refused outright"* — **a docblock whose stated reach exceeded its assertion's, arriving in the gate built to catalogue exactly that.** Both directions now key off one `ENTRY_HEADING` pattern, so the two cannot drift apart again |
+| **a fifth disposition in the one form the file writes without a colon** — `Disposition \`documented\`.` | **red**, ⚠️ **and it was green until review caught it.** The file spells this field three ways and the check required the colon, so it read 29 instances and was blind to the one at `docs/gate-register.md:3139` — **on the only assertion that survived the retreat from *exactly one disposition per entry*.** Now `:? +`, which reaches both field spellings and **no sentence**: the file legitimately says *"dispositioned `gated`"* and *"the disposition it would take is `gated`"*, and matching those would be the prose-matching failure `docs/gates.md` records three times |
 | **top-row deletion** — delete the highest-numbered row | **red on the floor**, and on the reverse direction as an orphaned entry — **while G19 stays green, gapless check included.** Verified on the real stack by running `gates/constitution-scoreboard.test.ts` against the same plant: **14 passed, 0 failed.** The interior control ran in the same pass — deleting G40 instead fires gapless by name, *"row numbers missing from docs/gates.md … G40"* — because the walk bounds at `n < numbers.at(-1)`, **exclusive of the maximum**. ⚠️ **That asymmetry is the finding, and it is about G19 rather than about this row** |
 
 ⚠️ **What cannot be planted, and is marked reasoned rather than demonstrated:

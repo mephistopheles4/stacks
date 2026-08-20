@@ -167,9 +167,42 @@ the shape this repo distrusts.
 
 | Gate | Plants |
 | --- | --- |
-| G40 / G42 | 13 — the spec's seven §9 ways, both G42 teeth ways, and four more (`# latest` against a non-empty check, both floors, and the `jobs:` block renamed) |
-| G41 | 10 — every way `gaming-analysis.md` §8 names, plus the heading-form hole it does not |
+| G40 / G42 | 15 — the spec's seven §9 ways, both G42 teeth ways, and six more (`# latest` against a non-empty check, both floors, the `jobs:` block renamed, `../` refused, and `./` still green as its control) |
+| G41 | 12 — every way `gaming-analysis.md` §8 names, plus two near-miss forms it does not |
 | G37 | 3 — backfilled, planted at register landing rather than at row landing |
+
+## Two holes a plant table could not have found
+
+**The spec-axis review found both, and they are one species: a gate reading
+*one* spelling of a field the file writes *several* ways.**
+
+- **The disposition check required a colon.** The register writes that field
+  three ways, and one address writes `Disposition \`gated\`.` with none — so the
+  check read 29 instances and was blind to the thirtieth. **A fifth disposition,
+  written in a spelling the file itself already uses, passed green.** It landed
+  on the one assertion that survived the retreat from *exactly one disposition
+  per entry*, which is the whole of that clause.
+- **The near-miss heading check read the heading *level* only.** `### G99 —
+  action-pins`, without backticks round the slug, is invisible to the
+  correspondence sweep **and** passed the check whose own comment said *"the
+  near-miss forms are refused outright."* A docblock whose stated reach exceeded
+  its assertion's — inside the gate built to catalogue that failure.
+
+⚠️ **Neither was reachable from the plant tables, and the reason generalises.**
+`gaming-analysis.md` §8 asks for the wrong *value* in each case and duly gets a
+red; **no row asks for the right value in an unexpected *shape*.** A plant table
+inherits its author's picture of what the file looks like, and both holes lived
+exactly where that picture was wrong. **That is the argument for a fresh-context
+reviewer over a longer table** — the same finding the register already records
+about G20, where the author planted a defect the file could never have had and
+the false green survived it.
+
+Both closed, both planted red, and the second closed structurally: one
+`ENTRY_HEADING` pattern now feeds the sweep and the refusal, so the two cannot
+drift apart again. The `./` exemption was narrowed in the same pass — it had
+accepted `../` where the spec says `./` and nothing else, at zero instances
+either way, because **an exemption widened past its written scope is the
+category-1 move whatever its population.**
 
 **The G41 plants were run twice, and the second run is the one that counts.**
 This commit sits on top of `metrics-freshness`

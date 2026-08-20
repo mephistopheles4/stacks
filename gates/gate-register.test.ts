@@ -132,8 +132,17 @@ interface Entry {
  * collapse a duplicate section, which is one of the two failures this gate
  * exists for.
  */
+/**
+ * The one heading shape an entry may take.
+ *
+ * Written once and used twice — by the sweep that reads entries, and by the
+ * near-miss check that refuses everything else. **Two patterns would be two
+ * definitions of "an entry", and the gap between them is the hole.**
+ */
+const ENTRY_HEADING = /^### (G\d+) — `([^`]+)`[^\n]*$/;
+
 function entries(): Entry[] {
-  return sectionsOf(readRepoFile(REGISTER), /^### (G\d+) — `([^`]+)`[^\n]*$/gm).map((section) => ({
+  return sectionsOf(readRepoFile(REGISTER), new RegExp(ENTRY_HEADING.source, 'gm')).map((section) => ({
     row: section.captures[0] ?? '',
     slug: section.captures[1] ?? '',
     body: section.body,
@@ -179,18 +188,27 @@ describe('G41 — the two documents are read, and neither read is empty', () => 
   it('has no row section written in a heading form this gate cannot see', () => {
     // G29's honest limit, closed rather than inherited: its link finder reads
     // one link form and states that a form nobody writes is a form it does not
-    // see. Here the equivalent — a `## G40` or `#### G40` entry — would be
-    // invisible to the sweep above and would read to a human as a real entry,
-    // so the near-miss forms are refused outright.
-    const strays = [...readRepoFile(REGISTER).matchAll(/^(#{1,6}) (G\d+)\b[^\n]*$/gm)]
-      .filter((match) => match[1] !== '###')
-      .map((match) => match[0]);
+    // see. Here the equivalent would read to a human as a real entry and be
+    // invisible to the sweep above, so **every heading naming a row that is not
+    // exactly `ENTRY_HEADING` is refused** — the wrong level (`## G40`), and
+    // also the right level in the wrong format (`### G40 — action-pins`, no
+    // backticks).
+    //
+    // ⚠️ **The backtick case was the hole, found in review.** This check was
+    // written against heading *level* alone while its own comment claimed the
+    // near-miss forms were refused outright — a docblock whose stated reach
+    // exceeded the assertion's, which is the failure this whole register
+    // catalogues, arriving in the gate that catalogues it. Both directions now
+    // key off one pattern, so the two cannot drift apart again.
+    const strays = [...readRepoFile(REGISTER).matchAll(/^#{1,6} (G\d+)\b[^\n]*$/gm)]
+      .map((match) => match[0])
+      .filter((heading) => !ENTRY_HEADING.test(heading));
 
     expect(
       strays,
-      'register headings naming a row at a level other than `### `. The correspondence ' +
-        `sweep reads \`### G<n> — \\\`slug\\\`\` and nothing else, so one of these is an ` +
-        `entry no gate can see: ${strays.join('; ')}`,
+      'register headings naming a row in a form the correspondence sweep cannot read. ' +
+        'It reads ``### G<n> — `slug` `` and nothing else, so each of these is an entry ' +
+        `a human sees and no gate does: ${strays.join('; ')}`,
     ).toEqual([]);
   });
 });
@@ -345,12 +363,22 @@ describe('G41 — every entry carries its evidence fields', () => {
     const wrong: string[] = [];
 
     for (const entry of entries()) {
-      // Case-insensitive, and it is not a nicety: the existing entries write
-      // `— disposition: \`repaired\`.` mid-sentence while the rollout's own
-      // entries write `**Disposition: \`accepted\`**` as a field. A
-      // case-sensitive match would have read the first and silently skipped the
-      // second — the check passing over exactly the entries this commit adds.
-      for (const match of entry.body.matchAll(/\bdisposition: `(\w+)`/gi)) {
+      // ⚠️ **The colon is optional, and that was a live hole rather than a
+      // nicety.** The file writes this field three ways: `disposition:
+      // \`repaired\`` mid-sentence (29 times), `**Disposition: \`accepted\`**`
+      // as a field, and — at one address — `Disposition \`gated\`.` **with no
+      // colon at all**. A pattern requiring the colon read the first two and
+      // was blind to the third, so a fifth disposition written in that form
+      // passed green **on the only assertion that survived the retreat from
+      // "exactly one disposition per entry"**. Found in review.
+      //
+      // Deliberately *not* widened to "a vocabulary word near the word
+      // disposition": the file legitimately discusses these words in prose —
+      // *"dispositioned \`gated\`"*, *"the disposition it would take is
+      // \`gated\`"* — and matching those is the prose-matching failure
+      // `docs/gates.md` records three separate times. `:? +` reaches both field
+      // spellings and no sentence.
+      for (const match of entry.body.matchAll(/\bdisposition:? +`(\w+)`/gi)) {
         const word = match[1] ?? '';
         if (!DISPOSITIONS.includes(word as (typeof DISPOSITIONS)[number])) {
           wrong.push(`${entry.row}: \`${word}\``);
