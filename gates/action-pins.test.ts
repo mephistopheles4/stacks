@@ -126,6 +126,27 @@ interface UsesLine {
  * Read from the **raw** file rather than through `codeOf`: clause 2 asserts
  * something about a comment, and a helper that blanks comments would erase the
  * thing being checked.
+ *
+ * ⚠️ **The key may be quoted, and may carry space before its colon.** `"uses":`
+ * and `'uses':` are valid YAML for the same key, and GitHub's parser reads them
+ * identically — so a pattern anchored on the bare word is **routed around by
+ * one character of quoting**, which is a category-3 hole and not a formatting
+ * nicety. Found by review; it is the **third** near-miss form in this one
+ * change, after the register's colon-less disposition field and its
+ * backtick-less entry heading. ⚠️ **The species is worth naming above the
+ * instances: a check that reads one spelling of something the format lets you
+ * write several ways.** Each was invisible to a plant table, because a plant
+ * table asks for the wrong *value* and these are all the right value in an
+ * unexpected *shape*.
+ *
+ * ⚠️ **This is still a regex and not a YAML parser, and the limit is stated
+ * rather than implied.** It reads a `uses` key written on one line in block
+ * mapping form, which is the only form this tree uses and the only form anyone
+ * writes by hand; a key delivered through an anchor, a merge key, or a flow
+ * mapping would not be seen. **A real parse would need a YAML dependency**, and
+ * this repo prefers zero-dep for small utilities — so the choice is recorded
+ * here rather than made silently. The floor below is what stops the residual
+ * becoming a vacuous pass.
  */
 function usesLines(): UsesLine[] {
   const found: UsesLine[] = [];
@@ -133,7 +154,7 @@ function usesLines(): UsesLine[] {
   for (const file of githubYamlFiles()) {
     const lines = readRepoFile(file).split('\n');
     lines.forEach((text, index) => {
-      const match = /^\s*(?:-\s*)?uses:\s*(\S+)(.*)$/.exec(text);
+      const match = /^\s*(?:-\s*)?(?:uses|'uses'|"uses")\s*:\s*(\S+)(.*)$/.exec(text);
       if (match === null) return;
       found.push({
         file,

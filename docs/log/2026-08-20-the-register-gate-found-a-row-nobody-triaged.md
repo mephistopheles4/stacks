@@ -163,13 +163,23 @@ the shape this repo distrusts.
 
 ## Evidence
 
-**26 plants, all behaving as expected**, run against the specs alone:
+**34 plants, all behaving as expected**, run against the specs alone, plus two
+G19 controls run separately:
 
 | Gate | Plants |
 | --- | --- |
-| G40 / G42 | 15 — the spec's seven §9 ways, both G42 teeth ways, and six more (`# latest` against a non-empty check, both floors, the `jobs:` block renamed, `../` refused, and `./` still green as its control) |
+| G40 / G42 | 19 — the spec's seven §9 ways, both G42 teeth ways, and ten more (`# latest` against a non-empty check, both floors, the `jobs:` block renamed, `../` refused with `./` still green as its control, and four for the quoted-key hole) |
 | G41 | 12 — every way `gaming-analysis.md` §8 names, plus two near-miss forms it does not |
 | G37 | 3 — backfilled, planted at register landing rather than at row landing |
+| G19 | 2 controls — top-row deletion stays green, interior deletion fires gapless |
+
+⚠️ **That headline said 26 against a table totalling 30, and CodeRabbit caught
+it.** The table had been updated twice and the number above it once — *a total
+carried forward in prose*, which is the failure `gaming-analysis.md` §4 names in
+terms (*"recount over the sections, never carry a total forward in prose"*)
+inside the register of claims that quietly stop being true. **Every number here
+is now derived from the plant harness by a script rather than typed**, which is
+the only version of this that stays true after the next plant.
 
 ## Two holes a plant table could not have found
 

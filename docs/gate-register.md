@@ -2705,6 +2705,27 @@ are named in the bullets rather than in a paragraph nobody can check.
   what a workflow *does*.** `metrics.yml` can be edited in the same pull request
   that moves the number it records; this row covers the actions a workflow
   calls, never its own body.
+
+  ⚠️ **A second route was open on arrival and is now closed: the key may be
+  quoted.** `"uses":` and `'uses':` are valid YAML for the same key and GitHub's
+  parser reads them identically, so the original pattern — anchored on the bare
+  word — was **routed around by one character of quoting**, and `uses :` with a
+  space before the colon slipped past it too. Found by CodeRabbit, planted three
+  ways with a fourth as the control that a quoted key on a *pinned* action stays
+  green. ⚠️ **It is the third near-miss form in this one change**, after the
+  register's colon-less disposition field and its backtick-less entry heading —
+  **the species is the finding, not the instance: a check that reads one
+  spelling of something the format lets you write several ways.** All three were
+  invisible to a plant table, because a plant table asks for the wrong *value*
+  and these are the right value in an unexpected *shape*.
+
+  ⚠️ **What is still open, stated rather than implied: this is a regex, not a
+  YAML parser.** It reads a `uses` key written on one line in block mapping
+  form — the only form this tree uses and the only form anyone writes by hand.
+  A key arriving through an anchor, a merge key, or a flow mapping is unseen.
+  **A real parse would need a YAML dependency**, which this repo declines for
+  small utilities; the choice is recorded rather than made silently, and the
+  vacuity floor is what stops the residual becoming a vacuous pass.
 - **Vacuous green** — **clean, and floored twice rather than once.** A glob that
   stops matching is the entropic case, so both the file sweep (≥2) and the
   `uses:`-line extraction (≥4) carry floors, and **both were planted**: pointing
@@ -2758,9 +2779,12 @@ referenced by something shaped like an immutable ref* — **stays true**, where 
 rather than a convenience.** See G42's entry for why the row alone was one
 nothing can fail on.
 
-**Observed-red line:** **thirteen plants, 2026-08-20, recorded at landing.** All
+**Observed-red line:** **nineteen plants, 2026-08-20, recorded at landing.** All
 seven ways the spec's §9 table names, plus the two it names for G42's teeth,
-plus four more. Run against `gates/action-pins.test.ts` alone.
+plus ten more. Run against `gates/action-pins.test.ts` alone. ⚠️ **The count is
+derived from the plant harness rather than typed** — it was stated as thirteen
+against a table of thirteen while nineteen had been run, because two rounds of
+review added plants and the sentence above the table was updated once.
 
 | Plant | Result |
 | --- | --- |
@@ -2777,6 +2801,12 @@ plus four more. Run against `gates/action-pins.test.ts` alone.
 | **G42's teeth** — `--audit-level=moderate` | **red**: *"the `audit` job … no longer runs `pnpm audit --audit-level=high`"* |
 | **G42's teeth** — drop `audit` from `needs:` | **red**: *"a job it does not need is a job whose failure merges"* |
 | **G42's teeth** — test `!= "failure"` instead of `= "success"` | **red**: *"expected [ 'suite' ] to include 'audit'"*. ⚠️ **Skipped and cancelled must fail the gate rather than pass it by omission**, and this is the only plant that reaches that distinction |
+| the `./` exemption stretched to `../` | **red**, after narrowing. It had accepted both where the spec says `./` and nothing else |
+| control — `uses: ./…` itself | **green**, as specified |
+| **`"uses":`** — a double-quoted key hiding `actions/checkout@v4` | **red**, ⚠️ **and green before review caught it** |
+| **`'uses':`** — a single-quoted key hiding a deleted version comment | **red**, likewise |
+| **`uses :`** — a space before the colon, hiding a tag | **red**, likewise |
+| control — a quoted key on a properly pinned action | **green**, so the widening refuses nothing legitimate |
 
 ⚠️ **What cannot be planted, and is marked reasoned rather than demonstrated:
 that a pinned SHA really is the version its comment claims.** It is the limit
@@ -2889,8 +2919,7 @@ argument for a fresh-context reviewer over a longer table. **Run twice**, and th
 is the one that counts: the first was against a *simulated* stack, because this
 commit sits on top of `metrics-freshness` and G39's row had not landed yet, so a
 placeholder row and entry stood in to make the population 42. **Re-run in full
-against the real stack once G39 landed — all ten behaving, the suite at 795 of
-795.** Recorded because a plant run against a stand-in is evidence about the
+against the real stack once G39 landed — all of them behaving, the suite green.** Recorded because a plant run against a stand-in is evidence about the
 stand-in until somebody re-runs it.
 
 | Plant | Result |
