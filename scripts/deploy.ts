@@ -84,6 +84,7 @@ import {
   type Tally,
 } from './lib/mutation-score.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
+import { numbersFrom } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
 import { emptyScopes, sourceFiles } from './lib/scope-check.ts';
@@ -362,11 +363,13 @@ function prWindow(records: readonly ParsedRecord[]): PrWindow {
   const subjects = gitOutput(['log', '--format=%s', `${from}..${to}`], REPO_ROOT);
   if (subjects === undefined) return undefined;
 
-  // The squash-merge subject, which is the only place a pull request number
-  // survives into `main`'s history here.
-  const numbers = new Set<string>();
-  for (const match of subjects.matchAll(/\(#(\d+)\)/g)) numbers.add(`#${match[1] ?? ''}`);
-  return [...numbers];
+  // ⚠️ **Through `numbersFrom`, and no longer through a regex of its own.** The
+  // record now carries a `pr_window` label — the page cannot run git, so a label
+  // is its only route to this fact — and two spellings of *what is a merged pull
+  // request* would let the print and the page disagree about one commit range.
+  // The shared one is also stricter: it anchors the suffix, so `(#99)` mentioned
+  // mid-subject is a reference rather than a merge.
+  return numbersFrom(subjects.split('\n'));
 }
 
 /**

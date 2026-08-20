@@ -24,6 +24,8 @@ function record(overrides: Partial<RunFacts>): ParsedRecord {
       commit: 'a'.repeat(40),
       event: 'schedule',
       runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/1',
+      // Nobody measured a window for a record this test invented.
+      prWindow: 'unknown',
       expected: ['gate-suite-runtime'],
       gateSuiteRuntime: 10,
       ...overrides,

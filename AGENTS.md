@@ -207,7 +207,7 @@ pnpm mutation:run        # Stryker over the eight declared scopes — minutes, n
 pnpm mutation:score      # that run's report, scored per declared scope
 pnpm metrics:emit        # one run's trend series, as the OpenMetrics text CI commits
 pnpm metrics:commit      # put that record on the orphan `metrics` branch
-pnpm trend:sync          # pull that record into the local store, and ask the live site what it serves
+pnpm trend:sync          # pull that record into the local store, put the page up, and ask the live site what it serves
 ```
 
 `pnpm deploy:site` runs the four gates **first** and builds from the real vault
@@ -226,7 +226,12 @@ same is true of the zero-mutant residual G38 (`mutation-scope`) checks, so
 neither flag reaches a refusal on any path that publishes.
 
 `pnpm trend:sync` needs **Docker** and nothing else, and is run by hand, never
-on a schedule.
+on a schedule. It brings up **two** containers: the store, and the page you read
+at <http://localhost:3000/d/stacks-trend-layer> — provisioned read-only from
+[`grafana/`](grafana), so the panel order is a diff somebody can review rather
+than a state on one machine. **Read panel 1 before panel 2**, which is what the
+page says at the top; there is no confidence figure on it and there will not be
+one ([ADR-0062](docs/adr/0062-the-dashboard-is-provisioned-from-the-repo.md)).
 
 **The rest is in [`docs/commands.md`](docs/commands.md)** — read it before you
 deploy, cut a worktree, read a mutation score, or sync the trend store. It

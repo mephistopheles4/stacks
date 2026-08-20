@@ -196,6 +196,8 @@ describe('the run stamps the configuration it was scored under', () => {
     commit: 'abc123',
     event: 'schedule',
     runUrl: 'https://example.invalid/run/1',
+    // Nobody measured a window for a record this test invented.
+    prWindow: 'unknown',
     expected: [],
   } as const;
 

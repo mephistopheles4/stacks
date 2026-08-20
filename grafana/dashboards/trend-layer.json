@@ -1,0 +1,359 @@
+{
+  "uid": "stacks-trend-layer",
+  "title": "The trend layer",
+  "description": "Release confidence is not a number this page computes. It is a state a person is in after a reading. Panel 1 asks whether a movement is real; panel 2 asks whether it is bad. Provisioned from grafana/dashboards/trend-layer.json in the stacks repository.",
+  "tags": ["stacks"],
+  "editable": false,
+  "graphTooltip": 1,
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "",
+  "time": { "from": "now-90d", "to": "now" },
+  "annotations": { "list": [] },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "How to read this page",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "mode": "markdown",
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "**Panel 1 answers *is this real*. Panel 2 answers *is this bad*. Read them in that order** — the order is a design rule, not a preference, and it is provisioned from `grafana/dashboards/trend-layer.json` so that it is a diff somebody can review rather than a state on one machine.\n\nA movement with an **empty PR window** (`[]`) is the tool disagreeing with itself at a fixed commit — [stryker-js#6073](https://github.com/stryker-mutator/stryker-js/issues/6073) — because a nightly runs whether or not `main` moved. A **one-PR window** reads *that PR*. A **five-PR window** reads *you need to look*, which is honest rather than attributive. `unknown` is **not** an empty window: it means nothing could be read, and it must never be taken for the tool-noise reading.\n\n**There is no confidence figure on this page and there will not be one.** It would be the global-coverage failure mode transposed one level up — one number, gameable, hiding which part moved; it would delete exactly what panel 1 supplies; any composite over a score and two wall-clocks is a weight vector over incommensurable units, arithmetic dressed as a fact; and it is the most invisible weakening available, because a floor lowered is a diff while a weight re-tuned raises the figure with nothing looking edited.\n\n**No axis here carries a target line**, for the same reason. A scope is read against its own history. `live-exclusions` is displayed and never thresholded; its healthy value is 0."
+      }
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Panel 1 — is this real: the run, and what merged into it",
+      "description": "A score never appears without its run. The window is every pull request that merged between the previous record and this one; `[]` is an empty window and `unknown` is no answer at all.",
+      "gridPos": { "h": 11, "w": 15, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+          "editorMode": "code",
+          "expr": "1000 * max_over_time(timestamp(stacks_run_info)[$__range:5m])",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" },
+        "sortBy": [{ "displayName": "run at", "desc": true }]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true },
+            "indexByName": { "Value": 0, "pr_window": 1, "event": 2, "commit": 3, "run_url": 4 },
+            "renameByName": {
+              "Value": "run at",
+              "pr_window": "PR window",
+              "event": "event",
+              "commit": "commit",
+              "run_url": "workflow run"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": false },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "run at" },
+            "properties": [
+              { "id": "unit", "value": "dateTimeAsIso" },
+              { "id": "custom.width", "value": 180 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "PR window" },
+            "properties": [{ "id": "custom.width", "value": 150 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "event" },
+            "properties": [{ "id": "custom.width", "value": 130 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "workflow run" },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open this run in Actions",
+                    "url": "${__value.raw}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Panel 1 — is this real: delta since the previous run, per scope",
+      "description": "Last score minus the one before it, per declared scope, however far apart the two runs were. Read this against the window on the left before reading panel 2 at all.",
+      "gridPos": { "h": 11, "w": 9, "x": 15, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+          "editorMode": "code",
+          "expr": "idelta(stacks_trend_mutation_score[$__range])",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" },
+        "sortBy": [{ "displayName": "delta", "desc": false }]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true },
+            "indexByName": { "scope": 0, "Value": 1 },
+            "renameByName": { "scope": "scope", "Value": "delta" }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": false },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] },
+          "noValue": "No delta: this store holds one run of this series, and a delta needs two."
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "delta" },
+            "properties": [
+              { "id": "unit", "value": "percentunit" },
+              { "id": "decimals", "value": 3 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Panel 2 — is this bad: each scope against its own history",
+      "description": "Read only after panel 1 says the movement is real. Never against a target line: there is no floor drawn here, and the axis is whatever the data spans. ⚠️ Where the range is wide enough that one plotted point covers several runs, that point is the LOWEST score among them. The store keeps every sample and a chart has one pixel column, so the only question is which run gets shown — and a reducer that could hide a drop behind a good neighbour in the same bin is the flattering-number failure this page exists to refuse. Panel 1 is the per-run truth.",
+      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+          "editorMode": "code",
+          "expr": "min_over_time(stacks_trend_mutation_score[$__interval])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{scope}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull"]
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "mappings": [],
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "always",
+            "pointSize": 7,
+            "spanNulls": false,
+            "insertNulls": false,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "axisSoftMin": null,
+            "axisSoftMax": null,
+            "scaleDistribution": { "type": "linear" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "The instrument: what the suite and a mutation run cost",
+      "description": "Mutation cost scales with suite runtime, and `mutation-run-runtime` is the series that says when running this on every merge becomes affordable. Neither is a verdict on the code. ⚠️ Where one plotted point covers several runs it is the SLOWEST of them — the non-flattering direction for a cost, which is why this panel reduces the opposite way to panel 2. `gate-suite-runtime` is written on every push to main, so this one bins more often than the nightly does.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
+      "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+          "editorMode": "code",
+          "expr": "max_over_time(stacks_trend_gate_suite_runtime[$__interval])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "gate suite"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+          "editorMode": "code",
+          "expr": "max_over_time(stacks_trend_mutation_run_runtime[$__interval])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "mutation run"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "mappings": [],
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "always",
+            "pointSize": 7,
+            "spanNulls": false,
+            "insertNulls": false,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "scaleDistribution": { "type": "linear" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "live-exclusions — displayed, never thresholded",
+      "description": "Declared exclusions that produced at least one executed mutant. Healthy value 0. No threshold sits on this number, deliberately: \"exclusion entry N is now false\" would be a verdict, and trends carry no verdicts.",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 31 },
+      "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_trend_live_exclusions[$__range])",
+          "format": "time_series",
+          "instant": true,
+          "range": false,
+          "legendFormat": "live"
+        }
+      ],
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "mappings": [],
+          "noValue": "no run has computed this yet",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "of this many declared",
+      "description": "The denominator the count on the left is read against: exclusion entries declared in stryker.scopes.json. Run context, not a series — a count of declarations is a property of a file and not a measurement.",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 31 },
+      "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "stacks-trend" },
+          "editorMode": "code",
+          "expr": "last_over_time(stacks_run_declared_exclusions[$__range])",
+          "format": "time_series",
+          "instant": true,
+          "range": false,
+          "legendFormat": "declared"
+        }
+      ],
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "mappings": [],
+          "noValue": "no run has declared any yet",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+        },
+        "overrides": []
+      }
+    }
+  ]
+}

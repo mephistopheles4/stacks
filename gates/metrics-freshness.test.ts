@@ -57,6 +57,8 @@ function nightly(agoSeconds: number, sha = 'aaaaaaaa'): Planted {
       commit: sha.repeat(5),
       event: 'schedule',
       runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/1',
+      // Nobody measured a window for a record this test invented.
+      prWindow: 'unknown',
       expected: GATED_SERIES,
       mutationScore: [{ scope: 'packages/core/src', score: 0.7171 }],
       gateSuiteRuntime: 10,
@@ -76,6 +78,8 @@ function merge(agoSeconds: number, sha = 'bbbbbbbb'): Planted {
       commit: sha.repeat(5),
       event: 'push',
       runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/2',
+      // Nobody measured a window for a record this test invented.
+      prWindow: 'unknown',
       expected: ['gate-suite-runtime'],
       gateSuiteRuntime: 9,
     } satisfies RunFacts),

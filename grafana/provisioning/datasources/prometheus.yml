@@ -1,0 +1,27 @@
+# The one datasource, and it is the store `pnpm trend:sync` owns.
+#
+# `http://stacks-prometheus:9090` is a container name on the `stacks-trend`
+# network, not a localhost port: `localhost` inside the Grafana container is the
+# Grafana container. The sync creates the network and attaches both ends.
+#
+# `editable: false` because this file is the artifact. A datasource edited in the
+# UI would survive until the next provisioning reload and then silently revert —
+# and the panel order being reviewable in the repo is the whole point of
+# provisioning it rather than clicking it together once.
+apiVersion: 1
+
+datasources:
+  - name: stacks-trend
+    uid: stacks-trend
+    type: prometheus
+    access: proxy
+    url: http://stacks-prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      # The record is written by CI runs, not by a scrape. There is no interval
+      # to declare that would be true of it — the nightly and the merge half run
+      # on different clocks — so this only tells the UI not to offer a step
+      # finer than the data can possibly have.
+      timeInterval: 5m
+      httpMethod: POST

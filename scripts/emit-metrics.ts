@@ -24,6 +24,15 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseRecord, runInfoOf, scoresOf } from './lib/metrics-read.ts';
+import {
+  fetchRecords,
+  parseRecordName,
+  readRecord,
+  type FetchedRecord,
+  type RecordName,
+} from './lib/metrics-record.ts';
+import { UNKNOWN_WINDOW, subjectsBetween, windowFrom } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { configHashOf } from './lib/floors.ts';
 // The config Stryker actually runs, imported rather than described. The hash
@@ -137,12 +146,91 @@ function expected(): TrendName[] {
 const timestamp = seconds(flags.get('timestamp'), '--timestamp') ?? Math.floor(Date.now() / 1000);
 const commit = flags.get('commit') ?? 'unknown';
 
+/**
+ * How far back the walk for a scored run goes. `scripts/deploy.ts` bounds the
+ * same walk at the same figure and for the same reason, stated there.
+ */
+const WINDOW_RECORD_CAP = 200;
+
+/**
+ * Which pull requests merged since the run that wrote the newest record.
+ *
+ * **Computed here rather than passed in**, for the reason `metrics.yml`'s header
+ * already gives about the `--failed` list: a `${{ }}` expression is not
+ * inspectable, not testable, and this repo has already shipped one constant
+ * wearing the shape of a condition. The seam that decides what the page reads is
+ * `windowFrom` in `lib/pr-window.ts`, and it is a pure function over subjects.
+ *
+ * The previous record is found through `fetchRecords`, so **exactly one piece of
+ * code still knows where the record lives** — the same anonymous fetch the sync
+ * and the deploy staleness check use. Everything that can go wrong here (no
+ * branch yet, offline, a shallow checkout with no such object) arrives as
+ * `unknown`, which is deliberately not `[]`.
+ */
+function windowSincePreviousRun(): string {
+  const fetched = fetchRecords();
+  if (fetched === undefined) {
+    console.error('no `metrics` branch to read a previous run from — the PR window is unknown');
+    return UNKNOWN_WINDOW;
+  }
+
+  const previous = previousScoringRun(fetched);
+  if (previous === undefined) {
+    console.error('no scored run on the `metrics` branch yet — the PR window is unknown');
+    return UNKNOWN_WINDOW;
+  }
+
+  const window = windowFrom(subjectsBetween(previous.commit, commit, REPO_ROOT));
+  console.log(`PR window since ${previous.name}: ${window}`);
+  return window;
+}
+
+/**
+ * The newest run on the branch that carried scores, and the commit it ran at.
+ *
+ * ⚠️ **The pair has to be the pair the delta compares, and *since the previous
+ * record* is not it.** A merge record lands on every push, so a nightly's
+ * previous record is usually the push it ran at — an empty window, beside a
+ * delta spanning everything since the previous *nightly*. That reads as **tool
+ * noise** on a page built so that an empty window means exactly that, which is
+ * the worst direction this label can fail in. Found on merging
+ * [#181](https://github.com/mephistopheles4/stacks/pull/181), whose deploy print
+ * derives the same window at read time and gets this right; the two now measure
+ * one interval and share `numbersFrom`.
+ *
+ * **One rule for every run, merge half included.** A merge row is not in the
+ * delta, so *since the last scored run* is as true of it as anything else, and a
+ * second rule would be a second thing to keep in step.
+ */
+function previousScoringRun(fetched: FetchedRecord): { name: string; commit: string } | undefined {
+  const newestFirst = fetched.names
+    .map((name) => parseRecordName(name))
+    .filter((record): record is RecordName => record !== undefined)
+    .sort((one, other) => other.timestamp - one.timestamp || other.name.localeCompare(one.name));
+
+  // Bounded for `scripts/deploy.ts`'s reason, and at its figure: merge records
+  // are not scored, so a busy week sits between two nightlies, and the walk has
+  // to stop somewhere. Reading a record is one `git cat-file`.
+  for (const record of newestFirst.slice(0, WINDOW_RECORD_CAP)) {
+    const bytes = readRecord(fetched.tip, record.name);
+    if (bytes === undefined) continue;
+
+    const parsed = parseRecord(bytes);
+    if (scoresOf(parsed).size === 0) continue;
+
+    const at = runInfoOf(parsed)?.['commit'];
+    if (at !== undefined && at !== 'unknown') return { name: record.name, commit: at };
+  }
+  return undefined;
+}
+
 const facts: RunFacts = {
   timestamp,
   commit,
   event: flags.get('event') ?? 'unknown',
   configHash: configHashOf(strykerConfig as unknown as Record<string, unknown>),
   runUrl: flags.get('run-url') ?? 'unknown',
+  prWindow: windowSincePreviousRun(),
   expected: expected(),
   // Named by the caller because only the workflow knows a step's exit code, and
   // a series whose step failed is dropped rather than published: the number is
