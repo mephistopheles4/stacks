@@ -71,6 +71,19 @@ fifth region unasked is the kind of drift a fixed panel order exists to prevent.
   plainly there — and unreviewable in the sense that most of its bytes are field
   config nobody reads. The alternative was a hand-written page querying the
   Prometheus HTTP API, which trades that for owning a chart library.
+- **A wide time range bins several runs into one point, and the reducer decides
+  which run you see.** Grafana asks for about one point per pixel column, so a
+  90-day range over a 1600px panel is an 81-minute step — wider than the gap
+  between two pushes on a busy afternoon. **Measured: 11 samples, 6 plotted
+  points.** No query fixes this; the store keeps every sample and a chart has one
+  pixel column. So the reducer is chosen to fail in the honest direction: panel 2
+  takes the **lowest** score in a bin, because a drop hidden behind a good
+  neighbour is the flattering-number failure the page exists to refuse, and panel
+  5 takes the **slowest** runtime, which is the same instinct pointed the other
+  way. **A raw selector is not the alternative it looks like**: Prometheus's
+  5-minute lookback means a step wider than that drops samples entirely rather
+  than merging them — the same 11 samples plot as **one** point. Panel 1's table
+  is the per-run truth and reads every record.
 - **The queries are exotic in one place.** Panel 1's run table reads
   `1000 * max_over_time(timestamp(stacks_run_info)[$__range:5m])`, because a
   record's sample time is the only *when* the store holds — `run_info`'s value is

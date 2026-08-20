@@ -53,7 +53,20 @@ describe('windowFrom — subjects to the window panel 1 shows', () => {
   });
 
   it('counts a pull request once, however many commits name it', () => {
-    expect(windowFrom(['feat: a thing (#180)', 'Revert "feat: a thing (#180)"'])).toBe('#180');
+    // ⚠️ **Both subjects have to match for this to assert anything.** It read
+    // `Revert "feat: a thing (#180)"` first, which git really does write — and
+    // which ends in a quote, so `\(#\d+\)$` never matched it and the second
+    // subject contributed nothing. The test passed on the first subject alone
+    // and would have passed with the deduplication deleted.
+    expect(windowFrom(['feat: a thing (#180)', 'fix: follow-up to the same (#180)'])).toBe('#180');
+  });
+
+  it('does not read a revert as the pull request it reverts', () => {
+    // Measured against real git: `git revert` writes `Revert "<subject>"`, so
+    // the suffix is inside a quote and the window does not name #180 twice —
+    // nor, deliberately, does it name it at all. A revert is a commit on `main`
+    // and not a pull request that merged.
+    expect(windowFrom(['Revert "feat: a thing (#180)"'])).toBe(NO_WINDOW);
   });
 
   it('survives the whitespace a git log actually hands over', () => {

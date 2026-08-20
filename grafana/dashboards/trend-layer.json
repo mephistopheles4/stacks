@@ -162,7 +162,7 @@
       "id": 4,
       "type": "timeseries",
       "title": "Panel 2 — is this bad: each scope against its own history",
-      "description": "Read only after panel 1 says the movement is real. Never against a target line: there is no floor drawn here, and the axis is whatever the data spans.",
+      "description": "Read only after panel 1 says the movement is real. Never against a target line: there is no floor drawn here, and the axis is whatever the data spans. ⚠️ Where the range is wide enough that one plotted point covers several runs, that point is the LOWEST score among them. The store keeps every sample and a chart has one pixel column, so the only question is which run gets shown — and a reducer that could hide a drop behind a good neighbour in the same bin is the flattering-number failure this page exists to refuse. Panel 1 is the per-run truth.",
       "gridPos": { "h": 11, "w": 24, "x": 0, "y": 20 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [
@@ -170,7 +170,7 @@
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "stacks-trend" },
           "editorMode": "code",
-          "expr": "max_over_time(stacks_trend_mutation_score[$__interval])",
+          "expr": "min_over_time(stacks_trend_mutation_score[$__interval])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -217,7 +217,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "The instrument: what the suite and a mutation run cost",
-      "description": "Mutation cost scales with suite runtime, and `mutation-run-runtime` is the series that says when running this on every merge becomes affordable. Neither is a verdict on the code.",
+      "description": "Mutation cost scales with suite runtime, and `mutation-run-runtime` is the series that says when running this on every merge becomes affordable. Neither is a verdict on the code. ⚠️ Where one plotted point covers several runs it is the SLOWEST of them — the non-flattering direction for a cost, which is why this panel reduces the opposite way to panel 2. `gate-suite-runtime` is written on every push to main, so this one bins more often than the nightly does.",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
       "datasource": { "type": "prometheus", "uid": "stacks-trend" },
       "targets": [

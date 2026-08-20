@@ -109,6 +109,13 @@ const GRAFANA_PORT = 3000;
  */
 const NETWORK = 'stacks-trend';
 
+/**
+ * Both containers publish here and nowhere else. Named once because
+ * `refuseReuse` compares what a container publishes against what is wanted, and
+ * the two disagreeing by a typo would recreate a healthy container every run.
+ */
+const LOOPBACK = '127.0.0.1';
+
 /** Provisioning, mounted read-only: this repository is the artifact, not the UI. */
 const PROVISIONING = join(REPO_ROOT, 'grafana', 'provisioning').replace(/\\/g, '/');
 const DASHBOARDS = join(REPO_ROOT, 'grafana', 'dashboards').replace(/\\/g, '/');
@@ -266,14 +273,6 @@ function stopStore(): void {
 }
 
 /**
- * Start the store, creating it the first time.
- *
- * Created here rather than being a precondition somebody has to remember: a
- * command that needs a container a human made once stops working the day
- * somebody prunes it, and that failure looks like a dead pipe rather than like
- * a missing container.
- */
-/**
  * The network both containers sit on, created once and idempotently.
  *
  * `network create` on a network that exists exits non-zero, which `dockerOutput`
@@ -303,48 +302,76 @@ function attachToNetwork(container: string): void {
 interface Reuse {
   name: string;
   image: string;
-  /** The mount destination whose source says which checkout the container belongs to. */
-  mountAt: string;
-  mountSource: string;
+  /** Every mount it must carry, destination to source. */
+  mounts: Readonly<Record<string, string>>;
+  /** Every port it must publish, `3000/tcp` to the one binding wanted. */
+  ports: Readonly<Record<string, string>>;
   /** Environment entries that must all be present. Absent means nothing to check. */
   env?: readonly string[];
 }
 
 /**
  * Why a container that is already there cannot be reused, or `undefined` when it
- * can. Three questions, and each was a real failure before it was a check.
+ * can. Four questions, and each was a real failure before it was a check.
+ *
+ * ⚠️ **What makes all four necessary is that `docker start` applies none of the
+ * arguments below.** A container keeps the image, the mounts, the published
+ * ports and the environment it was **created** with — so every one of these is a
+ * way for a container made by an older version of this script, or by another
+ * checkout, to look right and behave wrongly with nothing to see.
  *
  * ⚠️ **The image**, because reusing by name alone would defeat the pin: after
  * `IMAGE` moves, a `promtool` from the new image would write blocks for an old
  * server to read — the disagreement this file's header claims is
  * unrepresentable. A changed `RETENTION` would be ignored the same way, silently.
  *
- * ⚠️ **The mount**, and this is not symmetry. `pnpm worktree` is a documented
- * command here, so two checkouts on one machine is the ordinary case — and a
- * container name is global to the Docker daemon. A container created by the other
- * checkout keeps *its* bind mount, so this sync writes blocks into this `.trend/`
- * while Prometheus serves that one. **Measured: `imported 11 record(s)` against a
- * store answering for nine**, every number real and belonging to another tree.
+ * ⚠️ **The mounts, all of them.** `pnpm worktree` is a documented command here,
+ * so two checkouts on one machine is the ordinary case — and a container name is
+ * global to the Docker daemon. A container created by the other checkout keeps
+ * *its* bind mounts, so this sync writes blocks into this `.trend/` while
+ * Prometheus serves that one. **Measured: `imported 11 record(s)` against a store
+ * answering for nine**, every number real and belonging to another tree. Grafana's
+ * two are separate answers: the dashboards directory is the page, and the
+ * provisioning directory is the datasource that makes the page anything but empty.
+ *
+ * ⚠️ **The published ports**, which is why binding to loopback needed a check and
+ * not just an edit. On a machine whose container already exists, `docker start`
+ * republishes what it was created with — so an anonymous page would stay on every
+ * interface while the code claimed otherwise.
  *
  * ⚠️ **The environment**, which is the dashboard's acceptance criterion rather
- * than tidiness. A container keeps what it was *created* with, so one made before
- * an outbound switch was added keeps reporting — and that failure is silent at
- * both ends: nothing on the page changes, and the traffic is what nobody watches.
- * Every entry is compared rather than a version marker, so adding one to
- * `GRAFANA_ENV` is the whole change.
+ * than tidiness. A container made before an outbound switch was added keeps
+ * reporting — and that failure is silent at both ends: nothing on the page
+ * changes, and the traffic is what nobody watches. Every entry is compared rather
+ * than a version marker, so adding one to `GRAFANA_ENV` is the whole change.
  */
 function refuseReuse(spec: Reuse): string | undefined {
   const image = docker(['inspect', '--format', '{{.Config.Image}}', spec.name]);
   if (image !== spec.image) return `it runs ${image ?? 'an unknown image'}, want ${spec.image}`;
 
-  const source = docker([
-    'inspect',
-    '--format',
-    `{{range .Mounts}}{{if eq .Destination "${spec.mountAt}"}}{{.Source}}{{end}}{{end}}`,
-    spec.name,
-  ]);
-  if (source !== spec.mountSource) {
-    return `it serves ${source === undefined || source === '' ? 'an unknown path' : source}, want ${spec.mountSource}`;
+  const found = new Map(
+    (
+      JSON.parse(docker(['inspect', '--format', '{{json .Mounts}}', spec.name]) ?? '[]') as {
+        Destination: string;
+        Source: string;
+      }[]
+    ).map((mount) => [mount.Destination, mount.Source]),
+  );
+  for (const [destination, source] of Object.entries(spec.mounts)) {
+    const at = found.get(destination);
+    if (at !== source) return `it has ${at ?? 'nothing'} at ${destination}, want ${source}`;
+  }
+
+  const published = JSON.parse(
+    docker(['inspect', '--format', '{{json .HostConfig.PortBindings}}', spec.name]) ?? '{}',
+  ) as Record<string, { HostIp: string; HostPort: string }[] | null>;
+  for (const [port, want] of Object.entries(spec.ports)) {
+    // Exactly one binding, rather than *one of them matches*: a second binding
+    // on `0.0.0.0` publishes the page every bit as widely as a wrong first one.
+    const shown = (published[port] ?? []).map((one) => `${one.HostIp}:${one.HostPort}`);
+    if (shown.length !== 1 || shown[0] !== want) {
+      return `it publishes ${port} on ${shown.length === 0 ? 'nothing' : shown.join(', ')}, want ${want}`;
+    }
   }
 
   const declared = JSON.parse(
@@ -371,8 +398,8 @@ function startStore(): void {
     const refusal = refuseReuse({
       name: CONTAINER,
       image: IMAGE,
-      mountAt: '/trend',
-      mountSource: mounted,
+      mounts: { '/trend': mounted },
+      ports: { '9090/tcp': `${LOOPBACK}:${String(PORT)}` },
     });
     if (refusal === undefined) {
       docker(['start', CONTAINER]);
@@ -389,7 +416,7 @@ function startStore(): void {
       'run', '-d',
       '--name', CONTAINER,
       '--network', NETWORK,
-      '-p', `127.0.0.1:${String(PORT)}:9090`,
+      '-p', `${LOOPBACK}:${String(PORT)}:9090`,
       '-v', `${mounted}:/trend`,
       IMAGE,
       '--config.file=/trend/prometheus.yml',
@@ -424,8 +451,11 @@ function startDashboard(): void {
     const refusal = refuseReuse({
       name: GRAFANA_CONTAINER,
       image: GRAFANA_IMAGE,
-      mountAt: '/etc/grafana/dashboards',
-      mountSource: DASHBOARDS,
+      mounts: {
+        '/etc/grafana/dashboards': DASHBOARDS,
+        '/etc/grafana/provisioning': PROVISIONING,
+      },
+      ports: { '3000/tcp': `${LOOPBACK}:${String(GRAFANA_PORT)}` },
       env: GRAFANA_ENV,
     });
     if (refusal === undefined) {
@@ -443,7 +473,7 @@ function startDashboard(): void {
       'run', '-d',
       '--name', GRAFANA_CONTAINER,
       '--network', NETWORK,
-      '-p', `127.0.0.1:${String(GRAFANA_PORT)}:3000`,
+      '-p', `${LOOPBACK}:${String(GRAFANA_PORT)}:3000`,
       '-v', `${PROVISIONING}:/etc/grafana/provisioning:ro`,
       '-v', `${DASHBOARDS}:/etc/grafana/dashboards:ro`,
       ...GRAFANA_ENV.flatMap((pair) => ['-e', pair]),

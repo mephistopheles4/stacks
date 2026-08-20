@@ -61,8 +61,12 @@ export function windowFrom(subjects: readonly string[] | undefined): string {
     const trimmed = subject.trim();
     for (const pattern of MERGED) {
       const found = pattern.exec(trimmed);
-      // Counted once however many commits name it: a revert carries the
-      // reverted subject verbatim, suffix and all.
+      // Counted once however many commits name it. ⚠️ **Not for reverts**,
+      // which was this comment's original claim and is measurably wrong: git
+      // writes `Revert "feat: a thing (#180)"`, and the quote at the end means
+      // the suffix pattern never matches it at all. What this really covers is
+      // a window holding two commits that name the same pull request — a
+      // follow-up, or a subject matching both patterns at once.
       if (found !== null && !numbers.includes(found[1] ?? '')) numbers.push(found[1] ?? '');
     }
   }
