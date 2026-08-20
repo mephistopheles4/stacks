@@ -42,6 +42,18 @@ Write it, watch it go red against the real defect, then fix. If it was green the
 moment you wrote it, break something on purpose and show that it noticed. Every
 row in the scoreboard was held to this and several failed the first time.
 
+**A new row lands with its register entry, in the same commit.** Add a row to
+[`docs/gates.md`](docs/gates.md) and it owes a matching section in
+[`docs/gate-register.md`](docs/gate-register.md) carrying **five verdicts — one
+bullet each for weakening, satisfying the letter, routing around, vacuous green
+and decay — a date, and an observed-red line**, plus a disposition
+(`gated` / `repaired` / `accepted` / `declined`) wherever a finding survives.
+Row G41 (`gate-register`) holds the two documents to each other in both
+directions, so a row without an entry is a red build rather than a thing
+somebody notices later. **That is what stops the rule above being a sentence the
+author remembers to write** — write the observed-red line when you observe it,
+because reconstructing it weeks later is the decay this repo keeps cataloguing.
+
 **Log decisions in the same commit.** When you decide something the brief left
 open — a library, an API quirk, a workaround — it goes in
 [`docs/adr/`](docs/adr/) in the commit that makes the decision, with the *why*.
