@@ -32,6 +32,20 @@ export const RECORD_DIR = 'metrics';
 /** Where a fetched branch is kept locally. */
 export const METRICS_REF = `refs/remotes/origin/${METRICS_BRANCH}`;
 
+/**
+ * Where the deploy's **disambiguating** fetch puts the tip it just asked for.
+ *
+ * ⚠️ **A second ref, and the reason is the whole point of the refusal.** The
+ * staleness check reads `METRICS_REF` — the branch as this machine last synced
+ * it — so a probe that fetched into that ref would leave the *next* deploy
+ * seeing rows the local Prometheus never ingested. The refusal would clear
+ * itself by being hit twice, which is the *"the first thing the machinery
+ * teaches you is how to get past it"* failure the dated bootstrap exists to
+ * avoid, arriving through a different door. `pnpm trend:sync` moves
+ * `METRICS_REF`; nothing else does.
+ */
+export const PROBE_REF = `refs/remotes/origin/${METRICS_BRANCH}-probe`;
+
 export interface RecordName {
   name: string;
   /** Unix seconds, from the filename — the cheapest possible staleness read. */
@@ -100,13 +114,56 @@ export interface FetchedRecord {
  * whatever is already in the store and say what happened.
  */
 export function fetchRecords(cwd: string = REPO_ROOT): FetchedRecord | undefined {
+  return fetchInto(METRICS_REF, cwd);
+}
+
+/**
+ * The branch tip as it stands **now**, without touching what the store mirrors.
+ *
+ * The deploy's one request when the staleness refusal fires. Same fetch, same
+ * anonymity, different ref — see `PROBE_REF` for why that separation is load
+ * bearing rather than tidy.
+ */
+export function probeRecords(cwd: string = REPO_ROOT): FetchedRecord | undefined {
+  return fetchInto(PROBE_REF, cwd);
+}
+
+function fetchInto(ref: string, cwd: string): FetchedRecord | undefined {
+  // ⚠️ **`--refmap=` is what makes the probe's separate ref mean anything.**
+  // An explicit refspec does not stop git *opportunistically* updating the
+  // remote-tracking branch a fetched ref would normally land on — so a probe
+  // into `metrics-probe` was also fast-forwarding `origin/metrics`, the mirror
+  // the staleness check reads, and the refusal cleared itself on the second
+  // run. An empty refmap disables that. Found by running the refusal by hand
+  // and reading git's own two-line output; every test passed either way, and
+  // the second deploy is the one that would have published.
   const fetched = gitStatus(
-    ['fetch', '--no-tags', 'origin', `+refs/heads/${METRICS_BRANCH}:${METRICS_REF}`],
+    ['fetch', '--no-tags', '--refmap=', 'origin', `+refs/heads/${METRICS_BRANCH}:${ref}`],
     cwd,
   );
   if (fetched !== 0) return undefined;
 
-  const tip = gitOutput(['rev-parse', METRICS_REF], cwd);
+  return recordsAt(ref, cwd);
+}
+
+/**
+ * What the last sync mirrored, read off the local ref and asking nothing.
+ *
+ * **This is what "deploy reads the local store" means.** The staleness refusal
+ * fires on what this machine already has — which is exactly why *"you have not
+ * synced"* and *"CI stopped writing"* wear one face here, and why one probe is
+ * then needed to tell them apart.
+ *
+ * `undefined` when no sync has ever run: nothing has arrived, which the dated
+ * bootstrap has an answer for and a staleness bound does not.
+ */
+export function storedRecords(cwd: string = REPO_ROOT): FetchedRecord | undefined {
+  return recordsAt(METRICS_REF, cwd);
+}
+
+/** The `.prom` filenames at one ref or commit, with the tip they came from. */
+function recordsAt(ref: string, cwd: string): FetchedRecord | undefined {
+  const tip = gitOutput(['rev-parse', ref], cwd);
   if (tip === undefined || tip === '') return undefined;
 
   const listing = gitOutput(['ls-tree', '--name-only', tip, `${RECORD_DIR}/`], cwd);

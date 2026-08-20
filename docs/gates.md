@@ -354,6 +354,7 @@ paragraph can be; nothing here goes red on it.)
 | **G26** | `lookup-recall` | a lookup finds books the providers demonstrably have — and still refuses the ones they do not | `gates/lookup-recall.test.ts` + `gates/recall-corpus.ts`, replayed from `fixtures/api/lookup-recall.json` | ✅ |
 | **G27** | `enrich-report` | a command's report accounts for every book it counted | `gates/enrich-report.test.ts`, over `packages/cli/src/enrich-report.ts` | ✅ |
 | **G28** | `no-board-collisions` | no book's board passes through its neighbour's | `packages/site/src/shelf/placement.test.ts` | ✅ |
+| **G39** | `metrics-freshness` | the trend record is fresh **per series**, because one series going quiet while the others stay healthy is the failure the record exists to expose — and an aggregate check cannot see it. A gated series with **no sample at all** refuses exactly as a stale one does, which makes the check parse samples rather than filenames | `gates/metrics-freshness.test.ts` — the refusal is `pnpm deploy:site`'s, driven onto a scratch repository via `GIT_DIR` on G17's idiom; the dated half is `scripts/lib/metrics-read.test.ts`, because the script cannot be told what day it is | ✅ |
 
 **G21 is the first row here written for a rule that two files already claimed
 was true.** `AGENTS.md`'s Phase 1 gate says "use cached API fixtures, no live
@@ -1263,6 +1264,53 @@ belongs to the next row in this rollout, which reads the record's own timestamps
 [`docs/gate-register.md`](gate-register.md), the G38 entry, which carries the
 plants and what each one printed.
 
+## G39 — the row that could not live in `pnpm test`
+
+**The record's age is a property of the tree, not of a diff.** A freshness
+assertion in the suite goes red on a quiet week, and a contributor opening a pull
+request after ten idle days would meet a red gate whose remedy — *restart the
+nightly* — is not a diff they can make. That fails Clause A **for the person who
+hit it**: *a stranger paying for your dead pipe is not a gate; it is a tax.* So
+`metrics-freshness` is the **deploy refusal**, spec'd on G17 (`deploy-branch`)'s
+scratch-repository idiom, and `gates/metrics-freshness.test.ts` drives that
+refusal rather than asserting live state.
+
+⚠️ **The slug names the property checked, not the consequence**: *the record is
+fresh*, not *the deploy refuses*.
+
+**Per-series, and the cost of that is stated rather than discovered.** Four
+series written by different things on different clocks; an aggregate bound cannot
+see one of them going quiet while a working merge pipeline keeps the newest row
+minutes old. **Absent and stale are one verdict**, entailed rather than newly
+decided — *"the newest sample is older than 3 days"* is undefined for a series
+with no samples, and a series that never emitted is precisely the failure this
+exists to expose. That is what makes the check **parse samples**: `#121` designed
+it to read a filename, which was cheap and exactly right for the aggregate bound
+it was written against, and a filename cannot say which series a run emitted.
+
+**3 days, one number in three places.** The ratchet's calibration window breaks
+on any gap over 3 days and the dated bootstrap expires at 3, so a record too
+stale to deploy on is exactly a record too stale to calibrate on. The bound is a
+multiple of the nightly, never of pushes.
+
+⚠️ **The number is G39 and every plan for this rollout said G38.** Row numbers
+are derived from landing order, and `agents-import` (G37) landed between the two
+tickets that pre-allocated them — so `mutation-scope` took G38 and this row moved
+by one. Recorded rather than quietly corrected: this file's own line is why —
+*"G19 is a stable identifier and tells you nothing"* — and every pre-allocated
+number on this rollout's source map has now been wrong.
+
+⚠️ **What the gate cannot plant is the calendar.** The dated bootstrap expires on
+a day and the deploy has no way to be told what day it is, so *prints at 2 days,
+refuses at 4* is observed against the judgement itself in
+`scripts/lib/metrics-read.test.ts`. What the gate asserts is that the script
+agrees with that judgement **today** — a wiring assertion that cannot expire,
+where an assertion of *does not refuse* would have been a green that quietly
+became false three days after the spine landed.
+
+**Observed red, five ways.** See [`docs/gate-register.md`](gate-register.md), the
+G39 entry.
+
 ## G2 in full — the public build gate
 
 The five below are what G2 added to `gate:public`. Since G20 they are no longer
@@ -1417,7 +1465,7 @@ are the same artifact.
 
 | Trend | Measures | Cadence | Reader | Silence watched by |
 | --- | --- | --- | --- | --- |
-| `mutation-score` | killed ÷ total, per declared scope | nightly | maintainer, at `pnpm deploy:site` | `metrics-freshness` |
+| `mutation-score` | killed ÷ total, per declared scope | nightly | maintainer, at `pnpm deploy:site` | **G39** `metrics-freshness` |
 | `gate-suite-runtime` | wall-clock of `pnpm test` | nightly | ” | ” |
 | `mutation-run-runtime` | wall-clock of the Stryker run | nightly | ” | ” |
 | `live-exclusions` | declared exclusions that produced ≥1 **executed** mutant, of N declared | nightly | ” | ” |
@@ -1439,14 +1487,14 @@ as an open weakness on **G36 (`trend-layer`)** in
 a flat line*, and a flat line arriving on time is the shape this layer exists to
 refuse.
 
-⚠️ **`metrics-freshness` is named without a row number, and that is deliberate.**
-The gate does not exist yet; it is the deploy-side refusal that lands later in
-this rollout. Row numbers are derived from landing order — the Nth new row to
-land is G(35+N) — so writing one here would be a pre-allocation, and every
-pre-allocated number on this rollout's source map was wrong, including one
-allocated twice five seconds apart by two sessions. **The number goes in when the
-row does.** Until then the column names the mechanism, which is the part that is
-already decided.
+**`metrics-freshness` has landed, and it is G39** — the deploy-side refusal, per
+series, at `pnpm deploy:site`. The column above named the mechanism and not a
+number while the row did not exist, which is what kept it out of the
+pre-allocation trap: **the number it would have carried was G38**. Row numbers
+are derived from landing order, `agents-import` landed between the two tickets
+that guessed, and every pre-allocated number on this rollout's source map has
+been wrong — including one allocated twice, five seconds apart, by two sessions
+from the same map. The number went in when the row did.
 
 **Where the numbers come from.** `.github/workflows/metrics.yml` writes one
 `metrics/<timestamp>-<sha>.prom` per run to the orphan `metrics` branch, in the

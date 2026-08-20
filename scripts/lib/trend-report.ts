@@ -1,0 +1,291 @@
+/**
+ * The reading ritual, as text: what `pnpm deploy:site` prints, and what it says
+ * when it refuses.
+ *
+ * **It prints, and separately it refuses.** The score is printed and never
+ * refuses — *"write better tests"* is not a diff and a mutation score of 71.4%
+ * has no named remedy — while the refusals here are about the **instrument**:
+ * a record too stale to read is not a number you can act on. See
+ * `docs/spec/trend-layer.md` §4 and [ADR-0054](../../docs/adr/0054-a-check-is-a-gate-or-a-trend.md).
+ *
+ * ⚠️ **The panel order is fixed and is not cosmetic.** *Is this real* comes
+ * before *is this bad*, because this repo has conflated those two questions
+ * before ([ADR-0027](../../docs/adr/0027-deploy-check-reports-refusal.md)) — and
+ * because a delta with an **empty PR window** reads *tool noise* on sight,
+ * which is a direct measurement of
+ * [stryker-js#6073](https://github.com/stryker-mutator/stryker-js/issues/6073)
+ * rather than a signal about the code. **A score never appears without its
+ * run**, which is why the run line is printed even when nothing moved.
+ *
+ * Everything here is a pure function over parsed records. The git reads, the
+ * clock and the printing belong to `scripts/deploy.ts`.
+ */
+
+import {
+  describeAge,
+  runHealthOf,
+  runInfoOf,
+  scoresOf,
+  type ParsedRecord,
+  type RecordVerdict,
+} from './metrics-read.ts';
+import { detected, total, type Tally } from './mutation-score.ts';
+
+/** Where a person goes to see whether the nightly is still running. */
+export const METRICS_ACTIONS_URL =
+  'https://github.com/mephistopheles4/stacks/actions/workflows/metrics.yml';
+
+/** `1755600000` → `2026-08-19`, which is how a stale date is worth reading. */
+export function asDate(timestamp: number): string {
+  return new Date(timestamp * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * The pull requests merged between two runs — the window, already resolved.
+ *
+ * `undefined` means *nobody could say*: the commits a record names are not in
+ * this checkout. That is deliberately not the same as `[]`, which is a real
+ * measurement — **a nightly runs whether or not `main` moved**, so an empty
+ * window beside a non-zero delta is the tool disagreeing with itself.
+ */
+export type PrWindow = readonly string[] | undefined;
+
+export interface PanelInput {
+  /** Unix seconds. */
+  now: number;
+  /** What the store holds, newest first. */
+  records: readonly ParsedRecord[];
+  /** How many records the store holds in total, which may exceed those parsed. */
+  held: number;
+  window: PrWindow;
+  /** Per-mutant resolution from the last local mutation run, by scope. */
+  resolution?: Map<string, Tally>;
+  /** Why there is no resolution to show, when there is none. */
+  resolutionNote?: string;
+}
+
+function percent(score: number): string {
+  return `${(score * 100).toFixed(2)}%`;
+}
+
+/** `+0.15`, `-0.02`, in points of score rather than in fractions. */
+function delta(now: number, before: number): string {
+  const points = (now - before) * 100;
+  return `${points >= 0 ? '+' : '-'}${Math.abs(points).toFixed(2)}`;
+}
+
+function resolutionOf(tally: Tally): string {
+  const parts = [
+    `killed ${String(tally.killed)}`,
+    `timeout ${String(tally.timeout)}`,
+    `survived ${String(tally.survived)}`,
+    `no coverage ${String(tally.noCoverage)}`,
+  ];
+  if (tally.ignored > 0) parts.push(`ignored ${String(tally.ignored)}`);
+  if (tally.errors > 0) parts.push(`errors ${String(tally.errors)}`);
+  return `${parts.join(', ')} — ${String(detected(tally))}/${String(total(tally))}`;
+}
+
+function pad(text: string, width: number): string {
+  return text.length >= width ? text : text + ' '.repeat(width - text.length);
+}
+
+/**
+ * The records carrying a score, newest first — the panel's actual subject.
+ *
+ * ⚠️ **Not simply the newest record.** `metrics.yml` writes on `push: main`
+ * too, and a merge record legitimately carries one series; the newest record in
+ * a busy week is therefore a runtime and no score at all. **A score never
+ * appears without its run**, so the run panel 1 names is the run that produced
+ * the score — not whichever row landed last. Exported because the PR window is
+ * computed between exactly this pair, and computing it between a different two
+ * runs would attribute a movement to pull requests that had nothing to do with
+ * it.
+ */
+export function scoredRecords(records: readonly ParsedRecord[]): ParsedRecord[] {
+  return records.filter((record) => scoresOf(record).size > 0);
+}
+
+/**
+ * The panel, as lines.
+ *
+ * Empty when the store holds nothing — **printing that a record has never
+ * arrived is the whole of what the bootstrap does**, and it is the caller's
+ * line to write, since only the caller knows the spine's date.
+ */
+export function renderPanel(input: PanelInput): string[] {
+  const [newest] = input.records;
+  if (newest === undefined) return [];
+
+  const age =
+    newest.timestamp === undefined ? 'unknown' : `${describeAge(input.now - newest.timestamp)} ago`;
+  const lines = [
+    `\ntrend record — ${String(input.held)} record(s) in the local store, newest ${age}`,
+  ];
+
+  const [latest, previous] = scoredRecords(input.records);
+  lines.push('  is this real');
+
+  if (latest === undefined) {
+    lines.push(
+      `    run      no run in the ${String(input.records.length)} record(s) read carries a mutation score`,
+    );
+  } else {
+    const info = runInfoOf(latest);
+    const scoredAge =
+      latest.timestamp === undefined ? '' : `  ${describeAge(input.now - latest.timestamp)} ago`;
+    lines.push(
+      `    run      ${(info?.['commit'] ?? 'unknown').slice(0, 12)}  ${info?.['event'] ?? 'unknown'}${scoredAge}  ${info?.['run_url'] ?? ''}`.trimEnd(),
+    );
+    // ⚠️ **Printed when the run was *not* healthy, and when it did not say —
+    // so silence here means `run_ok 1` and nothing else.** The panel keeps
+    // showing the newest scored run whatever its health, because a score from a
+    // run whose suite step failed is still a real measurement and skipping it
+    // would compute the delta against the wrong window. What it must not do is
+    // show that score as though nothing happened: panel 1 is *is this real*,
+    // and the run's own health is exactly that question.
+    //
+    // ⚠️ **This is where the print and the floor legitimately part company.**
+    // The ratchet refuses to compare a floor against a `run_ok 0` row, on the
+    // asymmetry that such a row could never have *set* the floor it breached.
+    // A print showing it is honest; a refusal firing on it is not. The two
+    // predicates differ on purpose — see `scoredIn` in `./floors.ts` — and
+    // aligning them back together would restore the defect this line reports.
+    const health = runHealthOf(latest);
+    if (health !== true) {
+      lines.push(
+        `    health   ${
+          health === undefined
+            ? 'no run_ok sample — this record does not say whether its run completed'
+            : 'run_ok 0 — the run did not compute every series it declared; its scores are real, and something else it set out to measure is missing'
+        }`,
+      );
+    }
+
+    lines.push(
+      `    window   ${
+        input.window === undefined
+          ? 'unknown — the commits these records name are not in this checkout'
+          : input.window.length === 0
+            ? '[] — no pull request merged since the previous scored run, so any movement below is the tool disagreeing with itself'
+            : input.window.join(', ')
+      }`,
+    );
+  }
+
+  const scores = latest === undefined ? new Map<string, number>() : scoresOf(latest);
+  const before = previous === undefined ? new Map<string, number>() : scoresOf(previous);
+
+  lines.push('  is this bad — each scope against its own history, never against a target');
+  if (scores.size === 0) {
+    lines.push('    nothing to read — no run in the records read carries a per-scope score');
+  }
+
+  const width = Math.max(0, ...[...scores.keys()].map((scope) => scope.length));
+  for (const [scope, score] of scores) {
+    const was = before.get(scope);
+    // Three states and not two: no previous scored run at all is a fact about
+    // the store, while a scope the previous run did not carry is a fact about
+    // the declaration — and printing `(+71.70)` for either would read as a
+    // movement nothing measured.
+    const moved =
+      previous === undefined ? 'first run' : was === undefined ? 'new scope' : `(${delta(score, was)})`;
+    const tally = input.resolution?.get(scope);
+    lines.push(
+      `    ${pad(scope, width)}  ${percent(score).padStart(7)}  ${pad(moved, 12)}${
+        tally === undefined ? '' : resolutionOf(tally)
+      }`.trimEnd(),
+    );
+  }
+  if (input.resolutionNote !== undefined) lines.push(`    ${input.resolutionNote}`);
+
+  // The floors half lands with the ratchet, the last ticket in this rollout.
+  // Printed as absent rather than omitted: a person reading this block is the
+  // whole mechanism by which an unarmed scope ever gets armed, and a line that
+  // simply is not there teaches nobody that it is coming.
+  lines.push(
+    '  floors     none yet — every scope is unfloored until the ratchet lands, and arming one is a human judgement after 20 clean runs',
+  );
+  return lines;
+}
+
+/**
+ * What the one fetch found, as three cases that cannot be confused.
+ *
+ * A union rather than a `kind` beside optional fields: `newer` without its
+ * count is not a state this can be in, and typing it as one would need a
+ * `?? 0` at the point of printing — a default standing in for a case the
+ * design forbids, which is how a message comes to say *0 records you have not
+ * imported* and send somebody the wrong way.
+ */
+export type Disambiguation =
+  /** The branch holds records the store does not — you have not synced. */
+  | { kind: 'newer'; newer: number }
+  /** The branch is no fresher, so the nightly has stopped writing. */
+  | { kind: 'same'; branchNewest?: string }
+  /** Nothing answered, so which of the two this is stays open. */
+  | { kind: 'unreachable' };
+
+/**
+ * The refusal, including the half that took one request to know.
+ *
+ * ⚠️ **A stale local store is the one pair in this design that genuinely fires
+ * as a single fault with two opposite fixes**: *you have not synced*, and *CI
+ * stopped writing*. They wear the same face at the machine, so the refusal
+ * spends one anonymous fetch of the branch tip to tell them apart — one
+ * request, two messages. Extending
+ * [ADR-0027](../../docs/adr/0027-deploy-check-reports-refusal.md)'s discipline
+ * from the origin's answer to the **fault**.
+ */
+export function renderRefusal(
+  verdict: RecordVerdict,
+  now: number,
+  probe: Disambiguation,
+  scanned: number,
+): string {
+  const head =
+    verdict.kind === 'never'
+      ? `no metrics record has arrived, ${String(verdict.days)} days after the trend spine landed.\n` +
+        '  The bootstrap exemption is dated and it has expired. Three missed nightlies is a\n' +
+        '  dead pipe rather than a bootstrap, which is why this expires on a day rather than\n' +
+        '  on "until the first record arrives".'
+      : verdict.kind === 'stale'
+        ? `the trend record is stale: ${verdict.stale.map((one) => one.series).join(', ')}\n\n` +
+          '  Per-series, because one series going quiet while the others stay healthy is the\n' +
+          '  failure this record exists to expose — an aggregate check cannot see it.\n' +
+          verdict.stale
+            .map(
+              (one) =>
+                `    ${pad(one.series, 22)}${
+                  one.newest === undefined
+                    ? `no sample at all in the ${String(scanned)} newest record(s) read`
+                    : `newest sample ${describeAge(now - one.newest)} ago (${asDate(one.newest)})`
+                }`,
+            )
+            .join('\n')
+        : 'the trend record cannot be read';
+
+  const route =
+    probe.kind === 'newer'
+      ? `\n\n  The branch holds ${String(probe.newer)} record(s) this machine has not imported, so this\n` +
+        '  is a store that is behind rather than a pipe that has stopped:\n' +
+        '      pnpm trend:sync'
+      : probe.kind === 'same'
+        ? `\n\n  The branch is no fresher${
+            probe.branchNewest === undefined ? '' : `, newest row ${probe.branchNewest}`
+          } — syncing would import nothing. The nightly has\n` +
+          '  stopped writing, and GitHub disables a scheduled workflow after 60 days of\n' +
+          '  repository inactivity:\n' +
+          `      ${METRICS_ACTIONS_URL}`
+        : '\n\n  The branch could not be reached, so which of the two this is stays open:\n' +
+          '  either this machine is behind (`pnpm trend:sync`) or the nightly has stopped\n' +
+          `      ${METRICS_ACTIONS_URL}`;
+
+  return (
+    `${head}${route}\n\n` +
+    '  No flag clears this. --skip-gates skips the gate suite and its reach stops there;\n' +
+    '  --dry-run runs this check and is the honest way to watch it fail. --check-only\n' +
+    '  reports instead of refusing: it uploads nothing, and a mode that exists to ask a\n' +
+    '  live origin what it is serving must not be blocked by the age of a local record.'
+  );
+}

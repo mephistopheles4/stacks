@@ -83,3 +83,4 @@ Two other files hold what these deliberately do not:
 | [0057](./0057-the-pull-request-title-is-the-commit-subject.md) | The pull request title is the commit subject, so the convention lands there |
 | [0058](./0058-the-trend-store-is-a-container.md) | The trend store is a pinned container the sync owns |
 | [0059](./0059-the-sync-refuses-a-rewritten-record.md) | `trend:sync` refuses a rewritten record |
+| [0060](./0060-the-deploy-reads-the-mirror-and-the-probe-never-moves-it.md) | The deploy reads the mirror, and the disambiguating probe never moves it |

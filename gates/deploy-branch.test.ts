@@ -25,7 +25,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { REPO_ROOT } from './repo.ts';
+import { readRepoFile, REPO_ROOT } from './repo.ts';
 
 /**
  * A throwaway repository sitting on `branch`, for the child's git to answer
@@ -173,6 +173,30 @@ describe('G17 — deploy publishes main', () => {
         `${flag} must not act as the override`,
       ).toContain('not main');
     }
+  });
+
+  it('ships a command that supplies no argv of its own', () => {
+    // ⚠️ **The remedy `docs/gate-register.md` named for this row and did not
+    // build.** Every case here spawns `scripts/deploy.ts` directly, so the argv
+    // the *shipped* command supplies is outside the gate's reach: baking
+    // `--any-branch` into `package.json` leaves the whole suite green while
+    // every deploy overrides the guard, and the script's own written property —
+    // that the override "reads in shell history as what it is" — is false while
+    // nothing is red.
+    //
+    // Built while landing G39 (`metrics-freshness`), which inherits the hole
+    // exactly: `--check-only` baked in here would downgrade that refusal to a
+    // warning with its gate still green. One assertion, in the row whose remedy
+    // it is, rather than a copy in each.
+    const scripts = (
+      JSON.parse(readRepoFile('package.json')) as { scripts: Record<string, string> }
+    ).scripts;
+
+    expect(
+      scripts['deploy:site'],
+      'deploy:site must pass no arguments of its own — a flag baked in here is an ' +
+        'override that appears in nobody shell history and reddens nothing',
+    ).toBe('tsx scripts/deploy.ts');
   });
 
   it('reads the checkout it is actually in, not a fixture', () => {

@@ -52,6 +52,38 @@ standing one. **Do not make it pass by sending a browser user agent** — that w
 measured and does not work. See
 [ADR-0027](adr/0027-deploy-check-reports-refusal.md).
 
+## `pnpm deploy:site` — the trend panel, and what a stale record refuses
+
+**Before anything else it prints the trend record**, because a trend is obliged
+to reach a person on a cadence and the deploy is the cadence this project has.
+The panel is fixed in order: *is this real* — the run that produced the score,
+its pull-request window, and each scope's delta — then *is this bad*, each scope
+against its own history and never against a target line. Per-mutant resolution
+comes from this machine's last `pnpm mutation:run`, so it may be a different run
+from the score; the panel says so. **The score never refuses.**
+
+**What refuses is the instrument.** Every CI-written series has a **3-day**
+bound, checked **per series**: one going quiet while the others stay healthy is
+the failure the record exists to expose, and an aggregate check cannot see it. A
+gated series with **no sample at all** refuses exactly as a stale one does.
+
+**Deploy reads the local store** — the `metrics` branch as `pnpm trend:sync` last
+fetched it, never a fresh fetch — which is what makes the sync the route past the
+refusal. A stale store has two causes wearing one face, so the refusal spends
+**one anonymous fetch of the branch tip** and says which it is: *newer rows on the
+branch* means run `trend:sync`, *a branch no fresher* means the nightly has
+stopped, with the Actions link. That fetch writes its own ref and never moves the
+mirror, or a second `deploy:site` would clear the refusal by being run twice —
+[ADR-0060](adr/0060-the-deploy-reads-the-mirror-and-the-probe-never-moves-it.md).
+
+**No flag clears it**, and `--check-only` reports instead of refusing: it uploads
+nothing, and a mode whose job is asking a live origin what it is serving must not
+be blocked by the age of a local record. Gated by **G39**
+(`metrics-freshness`) in [`docs/gates.md`](gates.md).
+
+⚠️ **Honest cost: if you go a long time without deploying, you go that long
+without learning.** Nothing in the design fixes that.
+
 ## `pnpm worktree <branch>`
 
 `pnpm worktree <branch>` adds a second checkout beside this one — `../stacks-<branch>` —

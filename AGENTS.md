@@ -216,8 +216,14 @@ into `packages/site/public/` — run either after the real build and you publish
 eight invented books. It then re-checks the actual `dist/` before uploading: the
 gates prove the code path is safe using fixtures, and say nothing about the
 folder about to go on the internet. `--dry-run` stops before the upload;
-`--check-only` skips straight to asking the live site which build it is serving,
-building and uploading nothing.
+`--check-only` builds and uploads nothing, and goes to asking the live site which
+build it is serving.
+
+**Every run prints the trend record first, and refuses a stale one** — per
+series, at 3 days, gated by G39 (`metrics-freshness`). No flag clears that;
+`--check-only` reports it instead of refusing, because it publishes nothing. The
+same is true of the zero-mutant residual G38 (`mutation-scope`) checks, so
+neither flag reaches a refusal on any path that publishes.
 
 `pnpm trend:sync` needs **Docker** and nothing else, and is run by hand, never
 on a schedule.

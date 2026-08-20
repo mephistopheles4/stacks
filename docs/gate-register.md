@@ -2446,6 +2446,96 @@ refusing path — the one that can stop a publish — is the one that was plante
 
 ---
 
+### G39 — `metrics-freshness`
+
+**Gate:** [`gates/metrics-freshness.test.ts`](../gates/metrics-freshness.test.ts),
+driving [`scripts/deploy.ts`](../scripts/deploy.ts); the dated half in
+[`scripts/lib/metrics-read.test.ts`](../scripts/lib/metrics-read.test.ts)
+**Date:** 2026-08-19
+**Triaged at landing**, per this rollout's standing rule.
+
+- **Weakening** — **exposed, accepted, and it is one number.** The bound is
+  `STALE_AFTER_DAYS`; widening 3 to 90 makes the refusal never fire and deletes
+  nothing. `docs/spec/trend-layer.md` §7 grades it as **the most weakeable
+  artifact this piece produces**, and nothing here closes that — a gate asserting
+  *the bound is 3* would be a constant compared with itself. What is bought
+  instead is that the same constant is load-bearing in two more places (the
+  ratchet's calibration window, the dated bootstrap's expiry), so widening it is
+  not a local edit. ⚠️ **The override entry from #121 is superseded**: there is
+  no flag to weaken, because there is no flag. What is left is not running
+  `pnpm trend:sync`, which is not an edit and leaves no diff.
+- **Satisfying the letter** — **exposed, accepted, and inherited rather than
+  introduced.** *"Every check here proves a file arrived on time, and none proves
+  anything was measured."* A `run_ok 1` written by a job whose measurement step
+  an `if:` skipped passes this check and is false; a mutation step quietly
+  narrowed to one small directory keeps writing well-formed, punctual,
+  meaningless rows. **This row's question is the pipe, and one did arrive.** Not
+  closable here: liveness is what a *number moving* would show, and trends carry
+  no verdicts.
+- **Routing around** — **found in the roster read, and closed before landing.**
+  The gate spawns `scripts/deploy.ts` directly, so the argv the **shipped**
+  command supplies is outside its reach — G17's named-and-not-built remedy,
+  inherited exactly: `--check-only` baked into `package.json`'s `deploy:site`
+  downgrades this refusal to a warning with every test here green. Built in
+  G17's own gate, where the remedy was named, rather than copied into this one.
+  ⚠️ **The rest of the mechanism's roster was read for this**: G17 (`repaired`,
+  plus the remedy above), G38 (`accepted` — a snapshot with no age, which is what
+  this row exists to answer), G14 (`repaired` — an extractor that cannot see what
+  it does not match). The remaining route is one no assertion here reaches: the
+  refusal reads a git ref, and anything with write access to the checkout can
+  move it.
+- **Vacuous green** — **exposed, closed, and it was live for half an hour.**
+  ⚠️ **The exit code asserted nothing.** The harness proves a run got past this
+  check by letting it fail on the next one, so `status === 1` is equally true of a
+  deploy that refused on the record and of one that ignored it. Planted by
+  replacing `fail(message)` with `console.warn` — the refusal deleted, the message
+  still printed — and **all ten tests passed.** Closed by `expectRefused`, which
+  asserts the vault refusal was **never reached**, which is what G17 asserts two
+  rows down and what this file had not copied across. Five tests go red on that
+  plant now. **The gate was written, run, and green, and it was a gate against
+  nothing.**
+- **Decay** — **clean at landing, with the decay path named and refused.** The
+  dated bootstrap expires on a calendar day, and an assertion of *does not refuse
+  today* would have been a green that quietly became false on 2026-08-22. What is
+  asserted through the script is that its behaviour **agrees with `judgeRecord`
+  today**; the dated behaviour itself is planted against that function, where
+  `now` is a parameter. ⚠️ **The spine's date is a constant in the source**, and
+  it is the one thing here that will read as furniture once it is years old —
+  kept because the alternative, deriving it from git history, makes the exemption
+  conditional on a file's history rather than on a date.
+
+**Observed-red line:** five plants, 2026-08-19, recorded at landing. Run against
+`gates/metrics-freshness.test.ts` plus `scripts/lib/metrics-read.test.ts`; all
+reverted.
+
+| Plant | Result |
+| --- | --- |
+| **an aggregate bound in place of the per-series one** — every gated series dated by the record's newest sample | **red, two**: the gate's *"refuses on a nightly four days back"* and the judge's *"refuses the series that went quiet, not the record"* — *"expected 'fresh' to be 'stale'"*. This is the failure the row exists to catch: a merge row minutes old over three series four days dead |
+| **a series with no sample treated as fine** — `continue` where the absent case pushes | **red, four**, including both `--dry-run` and `--check-only`: *"expected … to contain 'no sample at all'"*. Absent and stale are one verdict, and this is the half that would have been invisible |
+| **the bound widened from 3 days to 90** | **red, six** across both files — the stale cases, and *"expected { days: 4, kind: 'bootstrap' } to equal { days: 4, kind: 'never' }"*, because the same constant expires the bootstrap |
+| **the two disambiguation messages swapped** | **red, two**: a stale store with a stale branch printed *"The branch holds 0 record(s) this machine has not imported … pnpm trend:sync"*. Same symptom, opposite fix — it sends somebody to look at CI while their own store is what is behind |
+| **the refusal downgraded to a warning** — `console.warn` in place of `fail` | ⚠️ **green, ten of ten, before `expectRefused`.** **Red, five**, after: *"the deploy must stop at the record, not carry on and fail at the next check"* |
+| **the probe's `--refmap=` removed** — a real defect, not a synthetic plant | **red, one**: *"only `pnpm trend:sync` may move the mirror"*. See below |
+
+⚠️ **The last row is a defect this session shipped and then found, and it is the
+one no test would have reported.** An explicit refspec does not stop git
+*opportunistically* updating the remote-tracking branch a fetched ref would
+normally land on, so the disambiguating probe was fast-forwarding
+`origin/metrics` — the mirror the staleness check reads. **The refusal was
+correct on the run you were looking at and absent on the next one**, which is not
+a state a single-invocation test can see, and it would have published against a
+local Prometheus holding nothing. Found by running the three refusals by hand and
+reading git's own two lines of output. Closed by `--refmap=`, and held by a ref
+comparison across the refusal. [ADR-0060](adr/0060-the-deploy-reads-the-mirror-and-the-probe-never-moves-it.md).
+
+⚠️ **Two branches are unobserved and named rather than implied.** The `never`
+verdict — *no record, past the bootstrap* — is planted against `judgeRecord` and
+not through the script, for the calendar reason above. And the probe fetch is
+exercised against a scratch repository whose `origin` is itself, so **the real
+fetch has never run**: what is asserted is that a fetch of a real branch produces
+the right message, not that GitHub answers an anonymous one — which
+`pnpm trend:sync` exercises for real, on the same code path.
+
 ## Rows with no dedicated narrative in `docs/gates.md`
 
 G30–G34 carry only their table-row description in `docs/gates.md`; none has a
@@ -3251,6 +3341,33 @@ row.
 **Observed-red (this pass):** comparing against `master` fails two of seven from
 a non-`main` checkout; baking `--any-branch` into `deploy:site` leaves 636 of 636
 green.
+
+**Remedy built (2026-08-19, [#161](https://github.com/mephistopheles4/stacks/issues/161)) — the first of the two forms named above.**
+`gates/deploy-branch.test.ts` now asserts `package.json`'s `deploy:site` is
+exactly `tsx scripts/deploy.ts`, so a flag baked into the shipped command is red
+at merge. The stronger form — driving one case through `pnpm deploy:site` itself —
+is **still not built**, and the gap it leaves is narrower but real: this compares
+one string and would not see an override arriving by any other route into argv.
+
+Built from the other side of the roster rather than by a pass over this row.
+G39 (`metrics-freshness`) is a second deploy-side refusal driven the same way, so
+it inherits this hole exactly — `--check-only` baked in here downgrades that
+refusal to a warning with its own gate green — and the standing rule for this
+rollout is that a remedy is checked against the routing-around verdicts of every
+row sharing its mechanism. One assertion, in the row whose remedy it is, rather
+than a copy in each. **Observed red**: `"tsx scripts/deploy.ts --check-only"`
+fails one of eight, naming both strings.
+
+⚠️ **A second property of this idiom, recorded here because this is where the
+next person copies it from: an exit code asserts nothing.** The harness proves a
+run got past the check under test by letting it fail on the *next* one — so
+`expect(status).toBe(1)` is equally true of a deploy that refused for your reason
+and one that ignored your check entirely and fell over a line later. This row
+gets it right by accident of wording (`not.toContain(PAST_THE_GUARD)` is on the
+refusal cases because two messages had to be told apart); **G39 got it wrong and
+was green for half an hour against a plant that deleted its refusal outright.**
+The discriminating assertion is that the *later* refusal was never reached. See
+the G39 entry's vacuous-green bullet.
 
 ### G18 — `bounded-cover-bytes`
 

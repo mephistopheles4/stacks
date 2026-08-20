@@ -130,14 +130,34 @@ export function trendNamesIn(document: string): string[] {
   const pattern = new RegExp(`^# TYPE (${METRIC_PREFIXES.trend}[a-z0-9_]+) `, 'gm');
 
   for (const match of document.matchAll(pattern)) {
-    names.push((match[1] ?? '').slice(METRIC_PREFIXES.trend.length).replace(/_/g, '-'));
+    const trend = trendOfMetric(match[1] ?? '');
+    if (trend !== undefined) names.push(trend);
   }
   return names;
 }
 
+/**
+ * `stacks_trend_mutation_score` → `mutation-score`, or `undefined` for a metric
+ * under another prefix. **The inverse of `metricNameOf`, and it lives beside it.**
+ *
+ * Written out because the reading half needs it per *sample* where
+ * `trendNamesIn` needs it per `# TYPE` line, and this repo has three rows
+ * (G10, G22, G23) logging what happens when one rule acquires several
+ * implementations: they agree until the day one of them does not.
+ */
+export function trendOfMetric(metric: string): string | undefined {
+  if (!metric.startsWith(METRIC_PREFIXES.trend)) return undefined;
+  return metric.slice(METRIC_PREFIXES.trend.length).replace(/_/g, '-');
+}
+
 /** OpenMetrics escaping for a `# HELP` line and for a label value. */
-function escape(text: string): string {
+export function escape(text: string): string {
   return text.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/"/g, '\\"');
+}
+
+/** `escape` undone, for a label value read back off the disk. Same reason as above. */
+export function unescape(text: string): string {
+  return text.replace(/\\(.)/g, (_, char: string) => (char === 'n' ? '\n' : char));
 }
 
 /**
