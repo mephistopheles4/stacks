@@ -2871,12 +2871,13 @@ real defect on the day it was written**, which is the field
 plant. The backfilled entry is above.
 
 **Ten further plants, 2026-08-20**, covering every way `gaming-analysis.md` §8
-names plus the heading-form hole §8 does not. ⚠️ **Run against a simulated
-stack, and that is stated rather than implied**: this commit is written to sit
-on top of `metrics-freshness`, whose row had not landed when the plants ran, so
-a placeholder G39 row and entry stood in to make the population 42. Every plant
-below is structural and none depends on what that row says — but the floor
-plants in particular are re-verified against the real stack before merge.
+names plus the heading-form hole §8 does not. **Run twice**, and the second run
+is the one that counts: the first was against a *simulated* stack, because this
+commit sits on top of `metrics-freshness` and G39's row had not landed yet, so a
+placeholder row and entry stood in to make the population 42. **Re-run in full
+against the real stack once G39 landed — all ten behaving, the suite at 795 of
+795.** Recorded because a plant run against a stand-in is evidence about the
+stand-in until somebody re-runs it.
 
 | Plant | Result |
 | --- | --- |
@@ -2889,7 +2890,7 @@ plants in particular are re-verified against the real stack before merge.
 | **the exemption** — split G26's merged bullet, leaving the exemption behind | **red — the exemption is reverse-asserted**, so it cannot outlive the bullet it exists for |
 | **the floor** — break the regex that reads `docs/gates.md`'s rows | **red, not a vacuous pass over two empty sets** |
 | **an entry written at a heading level the sweep cannot see** — a `## G40` section | **red**: *"register headings naming a row at a level other than `### `"*. G29's stated limit, closed rather than inherited |
-| **top-row deletion** — delete the highest-numbered row | **red on the floor**, and on the reverse direction as an orphaned entry — **while G19 stays green, gapless check included.** Verified by running `gates/constitution-scoreboard.test.ts` against the same plant: **14 tests, none failing.** The interior control was run in the same pass — deleting G40 instead fires gapless by name, *"row numbers missing from docs/gates.md … G40"* — because the walk bounds at `n < numbers.at(-1)`, **exclusive of the maximum**. ⚠️ **That asymmetry is the finding, and it is about G19 rather than about this row** |
+| **top-row deletion** — delete the highest-numbered row | **red on the floor**, and on the reverse direction as an orphaned entry — **while G19 stays green, gapless check included.** Verified on the real stack by running `gates/constitution-scoreboard.test.ts` against the same plant: **14 passed, 0 failed.** The interior control ran in the same pass — deleting G40 instead fires gapless by name, *"row numbers missing from docs/gates.md … G40"* — because the walk bounds at `n < numbers.at(-1)`, **exclusive of the maximum**. ⚠️ **That asymmetry is the finding, and it is about G19 rather than about this row** |
 
 ⚠️ **What cannot be planted, and is marked reasoned rather than demonstrated:
 that the analysis inside an entry is any good.** This gate asserts shape. **It

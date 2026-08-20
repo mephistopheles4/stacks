@@ -171,11 +171,22 @@ the shape this repo distrusts.
 | G41 | 10 — every way `gaming-analysis.md` §8 names, plus the heading-form hole it does not |
 | G37 | 3 — backfilled, planted at register landing rather than at row landing |
 
-⚠️ **The G41 plants ran against a simulated stack.** This commit sits on top of
-`metrics-freshness` ([#161](https://github.com/mephistopheles4/stacks/issues/161)),
-whose G39 row had not landed, so a placeholder row and entry stood in to make the
-population 42. Every plant is structural and none depends on what that row says,
-but the floor plants are re-verified against the real stack before merge.
+**The G41 plants were run twice, and the second run is the one that counts.**
+This commit sits on top of `metrics-freshness`
+([#161](https://github.com/mephistopheles4/stacks/issues/161)), whose G39 row had
+not landed when the gate was written — so the branch stood deliberately red on
+two assertions (G19's gapless check, and G41's own floor of 42 against 41 rows),
+and a placeholder row and entry stood in to run the plants at all. **Rebased onto
+the real row once it landed: 795 of 795 green, and every plant re-run and
+behaving.** ⚠️ **A plant run against a stand-in is evidence about the stand-in
+until somebody re-runs it**, which is why the first pass is recorded rather than
+quietly replaced.
+
+The top-row claim in particular is now measured without a stand-in: with the
+highest-numbered row's id mangled, `gates/constitution-scoreboard.test.ts` runs
+**14 passed, 0 failed** — gapless does not fire — while mangling an interior row
+fires it by name. **The floor is the only structural check in the file that sees
+it**, which is exactly why it sits on the row side.
 
 ⚠️ **One plant faked a pass and was caught by checking the run count.** A vitest
 `-t` filter passed as part of an argv string matched nothing, and *14 skipped*
