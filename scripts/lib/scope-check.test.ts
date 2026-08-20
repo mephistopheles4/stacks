@@ -97,6 +97,39 @@ describe('declarationFaults — every clause, planted', () => {
     );
   });
 
+  it('accepts a recursive scope whose files all sit below its own root', () => {
+    // ⚠️ The false red this check nearly shipped. A recursive scope holding
+    // nothing *directly* — every file one level down — is a perfectly good
+    // scope, and it is what a **split** looks like, which is the operation the
+    // rename rules exist to bless. Reported as `missing-scope` it would say
+    // "holds no source file on disk" about a scope that holds several, while
+    // `empty-glob` stayed quiet because the glob does match them. Found by
+    // CodeRabbit on #179.
+    const declarations: Declarations = {
+      scopes: [scope('packages/core/src/adapters', 'packages/core/src/adapters/**/*.ts')],
+      excludedDirectories: [],
+    };
+
+    expect(
+      declarationFaults(declarations, ['packages/core/src/adapters/obsidian/adapter.ts']),
+    ).toEqual([]);
+  });
+
+  it('keeps an excluded directory non-recursive when it asks whether it exists', () => {
+    // The other half, and why one set cannot serve both. An excluded directory
+    // covers the files *directly* in it and never a subtree — a subtree
+    // exclusion would swallow a declared scope beneath it — so a directory whose
+    // only source files live one level down excludes nothing and is stale.
+    const declarations: Declarations = {
+      scopes: [scope('scripts', 'scripts/**/*.ts')],
+      excludedDirectories: [{ path: 'gates', mechanism: 'the sandbox is not the repo' }],
+    };
+    const found = clauses(declarations, ['scripts/deploy.ts', 'gates/helpers/plumbing.ts']);
+
+    expect(found).toContain('stale-exclusion');
+    expect(found).toContain('undeclared');
+  });
+
   it('catches a source directory that is neither declared nor excluded', () => {
     expect(clauses(healthy(), [...TREE, 'packages/site/src/shelf/scene.ts'])).toEqual(['undeclared']);
   });

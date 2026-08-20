@@ -177,14 +177,42 @@ export function declarationFaults(
 ): Fault[] {
   const { scopes, excludedDirectories } = declarations;
   const faults: Fault[] = [];
+
+  /**
+   * ⚠️ **Two sets, because the two lists are recursive in opposite ways.**
+   *
+   * `directories` holds the direct parent of each source file. `ancestors` adds
+   * every directory above them, which is what a **recursive scope** needs: a
+   * scope holding nothing directly and everything one level down is a perfectly
+   * good scope — it is what a *split* looks like, the operation the rename rules
+   * bless — and checking it against direct parents alone reported
+   * `missing-scope` on it while `empty-glob` stayed quiet, because the glob does
+   * match those files. One fault, and its message was untrue.
+   *
+   * An **excluded directory** keeps the direct set, and that is not an
+   * oversight: an exclusion covers the files directly in a directory and never a
+   * subtree, since a subtree exclusion would swallow a declared scope beneath
+   * it. So a directory whose only source files live one level down excludes
+   * nothing, and saying so is the point of `stale-exclusion`.
+   *
+   * Found by CodeRabbit on #179 — latent rather than live, because every
+   * declared scope today happens to hold at least one file directly.
+   */
   const directories = new Set(files.map(directoryOf));
+  const ancestors = new Set<string>();
+  for (const directory of directories) {
+    for (let current = directory; current.length > 0; current = directoryOf(current)) {
+      ancestors.add(current);
+    }
+  }
+
   const excludedDirs = new Set(excludedDirectories.map((entry) => entry.path));
 
   // A scope's name is a directory, and the glob is only its definition. Both
   // are checked: a name pointing at nothing is a rename nobody finished, and a
   // glob matching nothing is the same rename seen from the other side.
   for (const scope of scopes) {
-    if (!directories.has(scope.name)) {
+    if (!ancestors.has(scope.name)) {
       faults.push({
         clause: 'missing-scope',
         detail:

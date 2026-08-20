@@ -2372,6 +2372,20 @@ called it "a seventh clause"**, which left the accounting one short in the
 artifact whose whole purpose is accurate accounting. Found by CodeRabbit on
 [#179](https://github.com/mephistopheles4/stacks/pull/179).
 
+⚠️ **A latent false red, found in the same review and fixed before merge: a
+recursive scope holding nothing directly.** `missing-scope` was asked of the
+*direct parent* of every source file, so a scope whose files all live one level
+below its root reported *"holds no source file on disk"* about a scope that holds
+several — while `empty-glob` stayed quiet, because the glob does match them. One
+fault, and its message was untrue. **It would have fired on a scope split**,
+which is the operation the rename rules above exist to bless, and the cheapest
+way out of a red like that is to undo the split. Latent rather than live: every
+declared scope today happens to hold at least one file directly, so nothing was
+red and nothing would have been until somebody did the sanctioned thing. Scope
+names are now checked against every **ancestor** directory; excluded directories
+keep the direct-parent set, because an exclusion covers the files directly in a
+directory and never a subtree. Regression test added for both halves.
+
 ⚠️ **And an eighth check that is not a clause, added in review of that same pull
 request: the declaration is compared against `stryker.config.mjs`.** This is the
 routing-around bullet above being wrong in the direction it was written to guard.
