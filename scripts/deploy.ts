@@ -47,11 +47,36 @@ import {
   stampOf,
 } from './lib/edge-probe.ts';
 import { gitOutput } from './lib/git.ts';
-import { readDeclarations, readReport } from './lib/mutation-score.ts';
+import {
+  GATED_SERIES,
+  SPINE_LANDED,
+  STALE_AFTER_DAYS,
+  judgeRecord,
+  parseRecord,
+  runInfoOf,
+  scoresOf,
+  type ParsedRecord,
+} from './lib/metrics-read.ts';
+import {
+  parseRecordName,
+  probeRecords,
+  readRecord,
+  storedRecords,
+  type FetchedRecord,
+} from './lib/metrics-record.ts';
+import { readDeclarations, readReport, scoreRun, type Tally } from './lib/mutation-score.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
 import { emptyScopes, sourceFiles } from './lib/scope-check.ts';
+import {
+  asDate,
+  renderPanel,
+  renderRefusal,
+  scoredRecords,
+  type Disambiguation,
+  type PrWindow,
+} from './lib/trend-report.ts';
 
 // The same loader the CLI uses, rather than a third hand-rolled `.env` parser:
 // a real environment variable still wins, so `SITE_URL=... pnpm deploy` does
@@ -207,6 +232,203 @@ try {
   fail(`SITE_URL is not a valid URL: ${siteUrl}`);
 }
 
+// ── 0b. G39's deploy half: the reading ritual, and what a stale record refuses ─
+//
+// **The moment is this one.** A trend is obliged to reach a person on a
+// cadence, and *"read it when something looks wrong"* is the unread-dashboard
+// failure wearing a schedule; a weekly calendar cadence has nothing holding it
+// and stops happening in month three, which is the same rot GitHub applies to
+// scheduled workflows after 60 days. So the deploy prints, and separately it
+// refuses. See docs/spec/trend-layer.md §4.
+//
+// Before the vault and before the gates, and both have a reason. It reads the
+// local store and git and nothing else — no vault, no site, no network on the
+// happy path — so it does not belong behind the questions about where to
+// publish from and to. And a refusal that arrives after four minutes of gates
+// is one people learn to pre-empt, which is the argument the branch guard above
+// already makes about itself.
+//
+// ⚠️ **The honest cost, stated rather than papered over: if you go a long time
+// without deploying, you go that long without learning.** The surface is only
+// as frequent as the deploys, nothing here fixes that, and it is the second of
+// three places that shape appears in this spec.
+/**
+ * How far back into the store one deploy reads.
+ *
+ * The healthy case stops on the first record: a nightly emits all four series,
+ * so the loop below breaks as soon as it has them and a second one carrying
+ * scores for the delta. The cap only binds when a series is **missing**, where
+ * every further record read buys nothing but a better sentence — once the scan
+ * is past the bound, a series not yet seen is stale whatever its true age.
+ */
+const RECORD_LOOKBACK = 30;
+
+reportTrendRecord();
+
+/**
+ * The store's newest records, parsed, newest first.
+ *
+ * ⚠️ **Parsed, not named.** The filename orders the candidates and answers
+ * nothing: staleness here is per-series, and `1755600000-a1b2c3d.prom` cannot
+ * say which series that run emitted. #121 designed this check to read a
+ * filename, which was cheap and exactly right for the aggregate bound it was
+ * written against; #140 made the bound per-series and that design could not
+ * follow. See `scripts/lib/metrics-read.ts`.
+ */
+function trendRecords(store: FetchedRecord): ParsedRecord[] {
+  const ordered = store.names
+    .map((name) => parseRecordName(name))
+    .filter((record) => record !== undefined)
+    .sort((one, other) => other.timestamp - one.timestamp || other.name.localeCompare(one.name));
+
+  const parsed: ParsedRecord[] = [];
+  const seen = new Set<string>();
+  let scored = 0;
+
+  for (const record of ordered.slice(0, RECORD_LOOKBACK)) {
+    const bytes = readRecord(store.tip, record.name);
+    if (bytes === undefined) continue;
+
+    const document = parseRecord(bytes);
+    parsed.push(document);
+    for (const [series, stamp] of document.trends) if (stamp !== undefined) seen.add(series);
+    if (scoresOf(document).size > 0) scored += 1;
+
+    // Two records carrying scores, because panel 1 is a delta and a delta needs
+    // the run before this one. A merge record carries one series, so "the
+    // previous record" and "the previous run that scored" are not the same
+    // thing.
+    if (seen.size >= GATED_SERIES.length && scored >= 2) break;
+  }
+  return parsed;
+}
+
+/**
+ * The pull requests merged between the two runs the panel compares.
+ *
+ * ⚠️ **`undefined` and `[]` are different answers, and the distinction is the
+ * whole of panel 1.** An empty window beside a non-zero delta is a direct
+ * measurement of the tool disagreeing with itself at a fixed commit — the
+ * nightly runs whether or not `main` moved — while *the commits this record
+ * names are not in this checkout* is nobody having measured anything.
+ */
+function prWindow(records: readonly ParsedRecord[]): PrWindow {
+  // The same two runs the panel compares, for the reason `scoredRecords` gives:
+  // a window measured between a different pair attributes a movement to pull
+  // requests that had nothing to do with it.
+  const [latest, previous] = scoredRecords(records);
+  const to = latest === undefined ? undefined : runInfoOf(latest)?.['commit'];
+  const from = previous === undefined ? undefined : runInfoOf(previous)?.['commit'];
+  if (to === undefined || from === undefined || to === 'unknown' || from === 'unknown') return undefined;
+
+  const subjects = gitOutput(['log', '--format=%s', `${from}..${to}`], REPO_ROOT);
+  if (subjects === undefined) return undefined;
+
+  // The squash-merge subject, which is the only place a pull request number
+  // survives into `main`'s history here.
+  const numbers = new Set<string>();
+  for (const match of subjects.matchAll(/\(#(\d+)\)/g)) numbers.add(`#${match[1] ?? ''}`);
+  return [...numbers];
+}
+
+/** Each scope's per-mutant resolution, from the last run **on this machine**. */
+function scopeResolution(): { resolution?: Map<string, Tally>; note?: string } {
+  const reportPath = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
+  if (!existsSync(reportPath)) {
+    return { note: 'no per-mutant resolution — `pnpm mutation:run` writes one, and the record carries only the score' };
+  }
+
+  const run = scoreRun(readReport(reportPath), readDeclarations().scopes);
+  return {
+    resolution: run.perScope,
+    // Named rather than assumed: the record's score comes from a runner and the
+    // resolution beside it comes from whenever this machine last ran Stryker.
+    note: "resolution is this machine's last mutation run, which is not the run above",
+  };
+}
+
+/**
+ * One anonymous fetch of the branch tip, spent only when the refusal fires.
+ *
+ * A stale local store has two unrelated causes wearing one face — **you have
+ * not synced**, and **CI stopped writing** — with opposite fixes. One request
+ * tells them apart. Counting files is the right unit here and a filename is a
+ * perfectly good answer to *"is there anything I have not imported"*; it is
+ * *which series is stale* that a name cannot answer.
+ */
+function disambiguate(store: FetchedRecord | undefined): Disambiguation {
+  const branch = probeRecords();
+  if (branch === undefined) return { kind: 'unreachable' };
+
+  const held = new Set(store?.names ?? []);
+  const newer = branch.names.filter((name) => !held.has(name));
+  if (newer.length > 0) return { kind: 'newer', newer: newer.length };
+
+  const newest = branch.names
+    .map((name) => parseRecordName(name))
+    .filter((record) => record !== undefined)
+    .sort((one, other) => other.timestamp - one.timestamp)[0];
+  return { kind: 'same', branchNewest: newest === undefined ? undefined : asDate(newest.timestamp) };
+}
+
+/**
+ * Print the panel; refuse on the instrument.
+ *
+ * **The score never refuses.** *"Write better tests"* is not a diff and 71.4%
+ * has no named remedy, so a movement is printed and acted on by a person. What
+ * refuses is a record too stale to read a movement out of — a question about
+ * the pipe rather than a judgment about the code.
+ *
+ * **Which flags clear it: none that publish.** `--skip-gates` skips the step-1
+ * suite and its reach stops there, `--dry-run` runs this and uploads nothing,
+ * and `--check-only` warns instead of refusing — the rule step 0c already
+ * applies to the empty-scope residual, and for the same reason: that mode
+ * exists to ask a live origin what it is serving, and the age of a local record
+ * says nothing about that.
+ */
+function reportTrendRecord(): void {
+  const now = Math.floor(Date.now() / 1000);
+  const store = storedRecords();
+  const records = store === undefined ? [] : trendRecords(store);
+  const verdict = judgeRecord({ now, records });
+
+  if (records.length === 0) {
+    // The dated bootstrap's whole visible half. Printed rather than silent: a
+    // deploy that said nothing during the exemption would make the first sign
+    // of this machinery a refusal three days later.
+    console.log(`\ntrend record — no record yet (spine landed ${SPINE_LANDED})`);
+  } else {
+    const { resolution, note } = scopeResolution();
+    for (const line of renderPanel({
+      now,
+      records,
+      held: store?.names.length ?? 0,
+      window: prWindow(records),
+      resolution,
+      resolutionNote: note,
+    })) {
+      console.log(line);
+    }
+  }
+
+  if (verdict.kind === 'fresh') return;
+
+  if (verdict.kind === 'bootstrap') {
+    console.log(
+      `  day ${String(verdict.days)} of the dated bootstrap; this refuses from day ${String(STALE_AFTER_DAYS)}.\n` +
+        '  `pnpm trend:sync` imports whatever the nightly has written since.',
+    );
+    return;
+  }
+
+  const message = renderRefusal(verdict, now, disambiguate(store), records.length);
+  if (checkOnly) {
+    console.warn(`\n! ${message}`);
+    return;
+  }
+  fail(message);
+}
+
 // No flag clears either of these two. ⚠️ **Including `--check-only`, which
 // builds nothing and therefore never reads the vault** — stated rather than
 // quietly relaxed, because loosening it is a behaviour change and this pass is
@@ -217,7 +439,7 @@ const vault = process.env['STACKS_VAULT'];
 if (vault === undefined || vault.length === 0) fail('STACKS_VAULT is not set (see .env.example)');
 if (!existsSync(vault)) fail(`STACKS_VAULT points at nothing: ${vault}`);
 
-// ── 0b. G38's deploy half: a declared scope that scored nothing ─────────────
+// ── 0c. G38's deploy half: a declared scope that scored nothing ─────────────
 //
 // The one clause of `mutation-scope` the disk cannot answer. `pnpm test` has
 // already asserted everything structural — the scope exists, its glob matches
@@ -251,10 +473,10 @@ assertNoEmptyScopes();
  * a snapshot and nothing here knows how old it is.** A legitimate scope change
  * made after the last run reads exactly like a scope that stopped producing
  * mutants, and the remedy — `pnpm mutation:run` — is named in the refusal
- * because Clause A asks for a reachable one. Staleness itself belongs to
- * `metrics-freshness`, the next row in this rollout, which reads the record's
- * own timestamps; duplicating half of it here would be two implementations of
- * one question.
+ * because Clause A asks for a reachable one. Staleness itself belongs to G39
+ * (`metrics-freshness`) in step 0b above, which reads the record's own
+ * timestamps; duplicating half of it here would be two implementations of one
+ * question.
  */
 function assertNoEmptyScopes(): void {
   const reportPath = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
