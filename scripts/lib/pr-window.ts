@@ -56,7 +56,25 @@ const MERGED = [/\(#(\d+)\)$/, /^Merge pull request #(\d+) /] as const;
 export function windowFrom(subjects: readonly string[] | undefined): string {
   if (subjects === undefined) return UNKNOWN_WINDOW;
 
+  const numbers = numbersFrom(subjects);
+  return numbers.length === 0 ? NO_WINDOW : numbers.join(', ');
+}
+
+/**
+ * The pull requests a list of subjects names, oldest merge first, `#124` shaped.
+ *
+ * **The one place that decides what counts as a merged pull request**, and it has
+ * two callers on purpose: this file formats it into the record's label, and
+ * `scripts/deploy.ts` prints it beside the delta. ⚠️ **They ask about different
+ * pairs of runs and must not answer differently about the same commits** — the
+ * deploy recomputes the window for whatever two scored runs it is comparing,
+ * which needs git and is therefore out of the page's reach; the label is the
+ * page's only route to the same fact. Two regexes for *what is a merged pull
+ * request* is the drift this repo gates elsewhere, so there is one.
+ */
+export function numbersFrom(subjects: readonly string[]): string[] {
   const numbers: string[] = [];
+
   for (const subject of subjects) {
     const trimmed = subject.trim();
     for (const pattern of MERGED) {
@@ -67,11 +85,11 @@ export function windowFrom(subjects: readonly string[] | undefined): string {
       // the suffix pattern never matches it at all. What this really covers is
       // a window holding two commits that name the same pull request — a
       // follow-up, or a subject matching both patterns at once.
-      if (found !== null && !numbers.includes(found[1] ?? '')) numbers.push(found[1] ?? '');
+      const number = found === null ? undefined : `#${found[1] ?? ''}`;
+      if (number !== undefined && !numbers.includes(number)) numbers.push(number);
     }
   }
-
-  return numbers.length === 0 ? NO_WINDOW : numbers.map((number) => `#${number}`).join(', ');
+  return numbers;
 }
 
 /**

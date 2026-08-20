@@ -17,6 +17,37 @@ in as many words that *"the PR window in panel 1 is the part that is specced"*.
 So it is a gap between tickets rather than a decision anybody deferred, and #159
 is where it surfaced because a panel cannot show what no record carries.
 
+## ⚠️ The pair is the pair the delta compares, and that was wrong first
+
+**Measured from the last run that *scored*, never from the last record.** This
+said *since the previous record* until [#181](https://github.com/mephistopheles4/stacks/pull/181)
+merged, and that was a defect rather than a simplification: a merge record lands
+on every push, so a nightly's previous record is usually the push it ran at. The
+window would have been empty beside a delta spanning everything since the previous
+*nightly* — and an empty window is the page's signal for **tool noise**, so the
+label would have said *nobody changed anything* about exactly the runs where
+somebody had. The worst available direction for this field to fail in, on a page
+built around it.
+
+#181's deploy print derives the same window at read time and got this right
+first: *"a window measured between a different pair attributes a movement to pull
+requests that had nothing to do with it."* Both now measure one interval.
+
+**One rule for every run, merge half included** — a merge row is not in the delta,
+so *since the last scored run* is as true of it as anything else, and a second
+rule would be a second thing to keep in step.
+
+## Two derivations, one parser
+
+The deploy print and this label are **not** one producer and one consumer, and the
+duplication is not removable: the print recomputes the window for whichever two
+scored runs it is comparing, which needs git; the page cannot run git, so a label
+is its only route to the same fact. What *is* shared is the part that can drift
+silently — `numbersFrom` in [`scripts/lib/pr-window.ts`](../../scripts/lib/pr-window.ts)
+is the one place that decides what counts as a merged pull request. The print used
+an unanchored `\(#(\d+)\)` of its own; the shared one anchors, so `(#99)` mentioned
+mid-subject is a reference rather than a merge.
+
 ## Why in CI, and why on the run
 
 **The dashboard is Prometheus and Grafana, and neither can run git.** Deriving

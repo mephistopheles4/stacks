@@ -18,6 +18,7 @@ import {
   METRIC_PREFIXES,
   joinRecords,
   renderEdgeCheck,
+  renderMetrics,
   trendNamesIn,
   type EdgeFacts,
 } from './metrics.ts';
@@ -186,5 +187,36 @@ describe('the three metric prefixes name three things', () => {
     );
 
     expect(overlapping, `prefixes that swallow another: ${overlapping.join(', ')}`).toEqual([]);
+  });
+});
+
+describe('the run stamps the configuration it was scored under', () => {
+  const facts = {
+    timestamp: AT,
+    commit: 'abc123',
+    event: 'schedule',
+    runUrl: 'https://example.invalid/run/1',
+    // Nobody measured a window for a record this test invented.
+    prWindow: 'unknown',
+    expected: [],
+  } as const;
+
+  // The floors a deploy compares against were derived under one Stryker
+  // configuration, and a score computed under another is not a number about
+  // them. Lowering `timeoutMS` raises the score with no test touched, because a
+  // timeout counts as detected — so the run has to say which configuration it
+  // ran, at the moment it ran, and it cannot be told from outside.
+  it('carries the hash as run context, beside the commit', () => {
+    const document = renderMetrics({ ...facts, configHash: 'sha256:abcdef' });
+
+    expect(document).toMatch(/^stacks_run_info\{[^}]*config_hash="sha256:abcdef"[^}]*\} 1 /m);
+  });
+
+  // ⚠️ An unstamped row is not a row with a wrong hash: it is a row from before
+  // the stamp existed. It stays renderable, and the calibration window declines
+  // to count it — which is the honest cost of closing the configuration route.
+  it('renders a row that carries no hash at all', () => {
+    expect(renderMetrics(facts)).toMatch(/^stacks_run_info\{/m);
+    expect(renderMetrics(facts)).not.toContain('config_hash');
   });
 });

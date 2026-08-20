@@ -89,6 +89,22 @@ export interface RunFacts {
   commit: string;
   /** `push`, `schedule` or `workflow_dispatch` — which half of `metrics.yml` ran. */
   event: string;
+  /**
+   * The score-affecting Stryker configuration this run was scored under.
+   *
+   * ⚠️ **Run context, and the only field here a floor is compared through.**
+   * The floors in `stryker.floors.json` were derived under one configuration,
+   * and a score computed under another is not a number about them — lowering
+   * `timeoutMS` raises the score 0.36 points with no test touched, because a
+   * timeout counts as *detected*. So the run stamps its own, computed from the
+   * config it actually loaded rather than passed in from outside: a flag would
+   * let the stamp disagree with the configuration it claims to describe.
+   *
+   * **Optional, because a row written before this existed is not a row with a
+   * wrong hash.** It is a row from before the stamp, and the calibration window
+   * declines to count it rather than guessing. See `scripts/lib/floors.ts`.
+   */
+  configHash?: string;
   runUrl: string;
   /**
    * Which pull requests merged between the previous record and this one:
@@ -144,14 +160,34 @@ export function trendNamesIn(document: string): string[] {
   const pattern = new RegExp(`^# TYPE (${METRIC_PREFIXES.trend}[a-z0-9_]+) `, 'gm');
 
   for (const match of document.matchAll(pattern)) {
-    names.push((match[1] ?? '').slice(METRIC_PREFIXES.trend.length).replace(/_/g, '-'));
+    const trend = trendOfMetric(match[1] ?? '');
+    if (trend !== undefined) names.push(trend);
   }
   return names;
 }
 
+/**
+ * `stacks_trend_mutation_score` → `mutation-score`, or `undefined` for a metric
+ * under another prefix. **The inverse of `metricNameOf`, and it lives beside it.**
+ *
+ * Written out because the reading half needs it per *sample* where
+ * `trendNamesIn` needs it per `# TYPE` line, and this repo has three rows
+ * (G10, G22, G23) logging what happens when one rule acquires several
+ * implementations: they agree until the day one of them does not.
+ */
+export function trendOfMetric(metric: string): string | undefined {
+  if (!metric.startsWith(METRIC_PREFIXES.trend)) return undefined;
+  return metric.slice(METRIC_PREFIXES.trend.length).replace(/_/g, '-');
+}
+
 /** OpenMetrics escaping for a `# HELP` line and for a label value. */
-function escape(text: string): string {
+export function escape(text: string): string {
   return text.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/"/g, '\\"');
+}
+
+/** `escape` undone, for a label value read back off the disk. Same reason as above. */
+export function unescape(text: string): string {
+  return text.replace(/\\(.)/g, (_, char: string) => (char === 'n' ? '\n' : char));
 }
 
 /**
@@ -271,6 +307,7 @@ export function renderMetrics(facts: RunFacts): string {
             // *a score never appears without its run* is a layout rule the
             // dashboard can only keep if the two arrive together.
             pr_window: facts.prWindow,
+            ...(facts.configHash === undefined ? {} : { config_hash: facts.configHash }),
           },
           value: 1,
         },

@@ -46,12 +46,56 @@ import {
   stampMeta,
   stampOf,
 } from './lib/edge-probe.ts';
+import {
+  WINDOW_RUNS,
+  calibration,
+  floorRefusals,
+  nightliesIn,
+  readFloors,
+  scoredIn,
+  renderFloorLines,
+  runRowsFrom,
+} from './lib/floors.ts';
 import { gitOutput } from './lib/git.ts';
-import { readDeclarations, readReport } from './lib/mutation-score.ts';
+import {
+  GATED_SERIES,
+  SPINE_LANDED,
+  STALE_AFTER_DAYS,
+  judgeRecord,
+  parseRecord,
+  runInfoOf,
+  scoresOf,
+  type ParsedRecord,
+} from './lib/metrics-read.ts';
+import {
+  parseRecordName,
+  probeRecords,
+  readRecord,
+  storedRecords,
+  type FetchedRecord,
+} from './lib/metrics-record.ts';
+import {
+  readDeclarations,
+  readReport,
+  scoreRun,
+  total,
+  type MutationReport,
+  type Scope,
+  type Tally,
+} from './lib/mutation-score.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
+import { numbersFrom } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
 import { emptyScopes, sourceFiles } from './lib/scope-check.ts';
+import {
+  asDate,
+  renderPanel,
+  renderRefusal,
+  scoredRecords,
+  type Disambiguation,
+  type PrWindow,
+} from './lib/trend-report.ts';
 
 // The same loader the CLI uses, rather than a third hand-rolled `.env` parser:
 // a real environment variable still wins, so `SITE_URL=... pnpm deploy` does
@@ -63,6 +107,15 @@ const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
 
 /** How `dist/` is named in messages, so they read the same on every platform. */
 const DIST_LABEL = 'packages/site/dist';
+
+/**
+ * How many records one deploy will read looking for a window, at the most.
+ *
+ * Merge records are not window members, so a busy week of pushes sits between
+ * two nightlies; this is the bound that keeps that from being an unbounded
+ * walk. Generous rather than tight — reading a record is one `git cat-file`.
+ */
+const WINDOW_RECORD_CAP = 200;
 
 /** Pinned: a deploy tool that silently changes under you is not a deploy tool. */
 const WRANGLER = 'wrangler@4';
@@ -207,6 +260,255 @@ try {
   fail(`SITE_URL is not a valid URL: ${siteUrl}`);
 }
 
+// ── 0b. G39's deploy half: the reading ritual, and what a stale record refuses ─
+//
+// **The moment is this one.** A trend is obliged to reach a person on a
+// cadence, and *"read it when something looks wrong"* is the unread-dashboard
+// failure wearing a schedule; a weekly calendar cadence has nothing holding it
+// and stops happening in month three, which is the same rot GitHub applies to
+// scheduled workflows after 60 days. So the deploy prints, and separately it
+// refuses. See docs/spec/trend-layer.md §4.
+//
+// Before the vault and before the gates, and both have a reason. It reads the
+// local store and git and nothing else — no vault, no site, no network on the
+// happy path — so it does not belong behind the questions about where to
+// publish from and to. And a refusal that arrives after four minutes of gates
+// is one people learn to pre-empt, which is the argument the branch guard above
+// already makes about itself.
+//
+// ⚠️ **The honest cost, stated rather than papered over: if you go a long time
+// without deploying, you go that long without learning.** The surface is only
+// as frequent as the deploys, nothing here fixes that, and it is the second of
+// three places that shape appears in this spec.
+/**
+ * How far back into the store one deploy reads.
+ *
+ * The healthy case stops on the first record: a nightly emits all four series,
+ * so the loop below breaks as soon as it has them and a second one carrying
+ * scores for the delta. The cap only binds when a series is **missing**, where
+ * every further record read buys nothing but a better sentence — once the scan
+ * is past the bound, a series not yet seen is stale whatever its true age.
+ */
+const RECORD_LOOKBACK = 30;
+
+/**
+ * Where `pnpm mutation:run` leaves its report on this machine.
+ *
+ * ⚠️ **Above the call below, and that is not style.** `reportTrendRecord()`
+ * runs at module scope, and a `const` it reads declared after it is in the
+ * temporal dead zone — the script dies on `Cannot access 'REPORT_PATH' before
+ * initialization` before any check runs. The functions hoist; their constants
+ * do not, which cost this file two stack traces on two separate passes.
+ */
+const REPORT_PATH = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
+
+reportTrendRecord();
+
+/**
+ * The store's newest records, parsed, newest first.
+ *
+ * ⚠️ **Parsed, not named.** The filename orders the candidates and answers
+ * nothing: staleness here is per-series, and `1755600000-a1b2c3d.prom` cannot
+ * say which series that run emitted. #121 designed this check to read a
+ * filename, which was cheap and exactly right for the aggregate bound it was
+ * written against; #140 made the bound per-series and that design could not
+ * follow. See `scripts/lib/metrics-read.ts`.
+ */
+function trendRecords(store: FetchedRecord): ParsedRecord[] {
+  const ordered = store.names
+    .map((name) => parseRecordName(name))
+    .filter((record) => record !== undefined)
+    .sort((one, other) => other.timestamp - one.timestamp || other.name.localeCompare(one.name));
+
+  const parsed: ParsedRecord[] = [];
+  const seen = new Set<string>();
+  let scored = 0;
+
+  for (const record of ordered.slice(0, RECORD_LOOKBACK)) {
+    const bytes = readRecord(store.tip, record.name);
+    if (bytes === undefined) continue;
+
+    const document = parseRecord(bytes);
+    parsed.push(document);
+    for (const [series, stamp] of document.trends) if (stamp !== undefined) seen.add(series);
+    if (scoresOf(document).size > 0) scored += 1;
+
+    // Two records carrying scores, because panel 1 is a delta and a delta needs
+    // the run before this one. A merge record carries one series, so "the
+    // previous record" and "the previous run that scored" are not the same
+    // thing.
+    if (seen.size >= GATED_SERIES.length && scored >= 2) break;
+  }
+  return parsed;
+}
+
+/**
+ * The pull requests merged between the two runs the panel compares.
+ *
+ * ⚠️ **`undefined` and `[]` are different answers, and the distinction is the
+ * whole of panel 1.** An empty window beside a non-zero delta is a direct
+ * measurement of the tool disagreeing with itself at a fixed commit — the
+ * nightly runs whether or not `main` moved — while *the commits this record
+ * names are not in this checkout* is nobody having measured anything.
+ */
+function prWindow(records: readonly ParsedRecord[]): PrWindow {
+  // The same two runs the panel compares, for the reason `scoredRecords` gives:
+  // a window measured between a different pair attributes a movement to pull
+  // requests that had nothing to do with it.
+  const [latest, previous] = scoredRecords(records);
+  const to = latest === undefined ? undefined : runInfoOf(latest)?.['commit'];
+  const from = previous === undefined ? undefined : runInfoOf(previous)?.['commit'];
+  if (to === undefined || from === undefined || to === 'unknown' || from === 'unknown') return undefined;
+
+  const subjects = gitOutput(['log', '--format=%s', `${from}..${to}`], REPO_ROOT);
+  if (subjects === undefined) return undefined;
+
+  // ⚠️ **Through `numbersFrom`, and no longer through a regex of its own.** The
+  // record now carries a `pr_window` label — the page cannot run git, so a label
+  // is its only route to this fact — and two spellings of *what is a merged pull
+  // request* would let the print and the page disagree about one commit range.
+  // The shared one is also stricter: it anchors the suffix, so `(#99)` mentioned
+  // mid-subject is a reference rather than a merge.
+  return numbersFrom(subjects.split('\n'));
+}
+
+/**
+ * The last mutation run on this machine — and **three states, not two.**
+ *
+ * ⚠️ **Unreadable is its own answer, beside present and absent.** Both readers
+ * are a bare `JSON.parse`, and a `pnpm mutation:run` interrupted partway
+ * through its ~41 minutes leaves a truncated `mutation.json` behind. Read
+ * unguarded, that throws out of a **print** and takes the whole deploy with it
+ * — before the freshness verdict, before the gates, as a raw stack trace. The
+ * two steps below say the panel prints and the refusals are separate; a parse
+ * error broke both, and it broke them from the least important half.
+ *
+ * ⚠️ **One reader because there were two call sites and the crash was in both.**
+ * Guarding step 0b alone would have moved the stack trace two steps later
+ * rather than removed it — the instance fixed and the population left, which is
+ * the failure this rollout's own spec is a catalogue of.
+ *
+ * The distinction is kept rather than collapsed to `undefined`: *nobody ran it*
+ * is the ordinary case on a fresh checkout, and *it is there and I cannot read
+ * it* is a fault worth naming. Silently treating the second as the first is
+ * this repo's oldest rule about instruments, broken.
+ */
+type MutationRun =
+  | { kind: 'none' }
+  | { kind: 'unreadable'; why: string }
+  | { kind: 'read'; report: MutationReport; scopes: Scope[] };
+
+function lastMutationRun(): MutationRun {
+  if (!existsSync(REPORT_PATH)) return { kind: 'none' };
+
+  try {
+    return { kind: 'read', report: readReport(REPORT_PATH), scopes: readDeclarations().scopes };
+  } catch (error) {
+    return { kind: 'unreadable', why: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/** Each scope's per-mutant resolution, from the last run **on this machine**. */
+function scopeResolution(run: MutationRun): { resolution?: Map<string, Tally>; note?: string } {
+  if (run.kind === 'none') {
+    return { note: 'no per-mutant resolution — `pnpm mutation:run` writes one, and the record carries only the score' };
+  }
+  if (run.kind === 'unreadable') {
+    return {
+      note: `per-mutant resolution unreadable — ${run.why}\n    The report is there and cannot be parsed; \`pnpm mutation:run\` writes a fresh one.`,
+    };
+  }
+
+  return {
+    resolution: scoreRun(run.report, run.scopes).perScope,
+    // Named rather than assumed: the record's score comes from a runner and the
+    // resolution beside it comes from whenever this machine last ran Stryker.
+    note: "resolution is this machine's last mutation run, which is not the run above",
+  };
+}
+
+/**
+ * One anonymous fetch of the branch tip, spent only when the refusal fires.
+ *
+ * A stale local store has two unrelated causes wearing one face — **you have
+ * not synced**, and **CI stopped writing** — with opposite fixes. One request
+ * tells them apart. Counting files is the right unit here and a filename is a
+ * perfectly good answer to *"is there anything I have not imported"*; it is
+ * *which series is stale* that a name cannot answer.
+ */
+function disambiguate(store: FetchedRecord | undefined): Disambiguation {
+  const branch = probeRecords();
+  if (branch === undefined) return { kind: 'unreachable' };
+
+  const held = new Set(store?.names ?? []);
+  const newer = branch.names.filter((name) => !held.has(name));
+  if (newer.length > 0) return { kind: 'newer', newer: newer.length };
+
+  const newest = branch.names
+    .map((name) => parseRecordName(name))
+    .filter((record) => record !== undefined)
+    .sort((one, other) => other.timestamp - one.timestamp)[0];
+  return { kind: 'same', branchNewest: newest === undefined ? undefined : asDate(newest.timestamp) };
+}
+
+/**
+ * Print the panel; refuse on the instrument.
+ *
+ * **The score never refuses.** *"Write better tests"* is not a diff and 71.4%
+ * has no named remedy, so a movement is printed and acted on by a person. What
+ * refuses is a record too stale to read a movement out of — a question about
+ * the pipe rather than a judgment about the code.
+ *
+ * **Which flags clear it: none that publish.** `--skip-gates` skips the step-1
+ * suite and its reach stops there, `--dry-run` runs this and uploads nothing,
+ * and `--check-only` warns instead of refusing — the rule step 0c already
+ * applies to the empty-scope residual, and for the same reason: that mode
+ * exists to ask a live origin what it is serving, and the age of a local record
+ * says nothing about that.
+ */
+function reportTrendRecord(): void {
+  const now = Math.floor(Date.now() / 1000);
+  const store = storedRecords();
+  const records = store === undefined ? [] : trendRecords(store);
+  const verdict = judgeRecord({ now, records });
+
+  if (records.length === 0) {
+    // The dated bootstrap's whole visible half. Printed rather than silent: a
+    // deploy that said nothing during the exemption would make the first sign
+    // of this machinery a refusal three days later.
+    console.log(`\ntrend record — no record yet (spine landed ${SPINE_LANDED})`);
+  } else {
+    const { resolution, note } = scopeResolution(lastMutationRun());
+    for (const line of renderPanel({
+      now,
+      records,
+      held: store?.names.length ?? 0,
+      window: prWindow(records),
+      resolution,
+      resolutionNote: note,
+    })) {
+      console.log(line);
+    }
+  }
+
+  if (verdict.kind === 'fresh') return;
+
+  if (verdict.kind === 'bootstrap') {
+    console.log(
+      `  day ${String(verdict.days)} of the dated bootstrap; this refuses from day ${String(STALE_AFTER_DAYS)}.\n` +
+        '  `pnpm trend:sync` imports whatever the nightly has written since.',
+    );
+    return;
+  }
+
+  const message = renderRefusal(verdict, now, disambiguate(store), records.length);
+  if (checkOnly) {
+    console.warn(`\n! ${message}`);
+    return;
+  }
+  fail(message);
+}
+
 // No flag clears either of these two. ⚠️ **Including `--check-only`, which
 // builds nothing and therefore never reads the vault** — stated rather than
 // quietly relaxed, because loosening it is a behaviour change and this pass is
@@ -217,7 +519,7 @@ const vault = process.env['STACKS_VAULT'];
 if (vault === undefined || vault.length === 0) fail('STACKS_VAULT is not set (see .env.example)');
 if (!existsSync(vault)) fail(`STACKS_VAULT points at nothing: ${vault}`);
 
-// ── 0b. G38's deploy half: a declared scope that scored nothing ─────────────
+// ── 0c. G38's deploy half: a declared scope that scored nothing ─────────────
 //
 // The one clause of `mutation-scope` the disk cannot answer. `pnpm test` has
 // already asserted everything structural — the scope exists, its glob matches
@@ -231,6 +533,18 @@ if (!existsSync(vault)) fail(`STACKS_VAULT points at nothing: ${vault}`);
 // four minutes is a refusal people learn to pre-empt with the override — the
 // argument step 0 already makes about the branch guard.
 assertNoEmptyScopes();
+
+// ── 0c. The mutation floor: the print, and the four refusals ────────────────
+//
+// Beside the block above and for its reason: a refusal that arrives after four
+// minutes of gates is a refusal people learn to pre-empt with an override.
+//
+// **The floor is one of three routes down and the only one this can see.** A
+// disable directive is caught at merge by `gates/ignored-mutants.test.ts`, and
+// a change to the scoring configuration is caught here by the config hash —
+// which is why the hash refuses on its own rather than beside a breach it
+// cannot vouch for.
+reportFloors();
 
 /**
  * Refuses when a declared scope's files exist and its mutants do not.
@@ -251,23 +565,34 @@ assertNoEmptyScopes();
  * a snapshot and nothing here knows how old it is.** A legitimate scope change
  * made after the last run reads exactly like a scope that stopped producing
  * mutants, and the remedy — `pnpm mutation:run` — is named in the refusal
- * because Clause A asks for a reachable one. Staleness itself belongs to
- * `metrics-freshness`, the next row in this rollout, which reads the record's
- * own timestamps; duplicating half of it here would be two implementations of
- * one question.
+ * because Clause A asks for a reachable one. Staleness itself belongs to G39
+ * (`metrics-freshness`) in step 0b above, which reads the record's own
+ * timestamps; duplicating half of it here would be two implementations of one
+ * question.
  */
 function assertNoEmptyScopes(): void {
-  const reportPath = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
+  const run = lastMutationRun();
 
-  if (!existsSync(reportPath)) {
+  if (run.kind === 'none') {
     console.log(
       '\n  no mutation report on this machine — the zero-mutant residual is unchecked.\n' +
         '  `pnpm mutation:run` writes one; every structural half of this rule ran in `pnpm test`.',
     );
     return;
   }
+  if (run.kind === 'unreadable') {
+    // A print and not a refusal, on this step's own rule — *no report is a
+    // print, never a silence* — and for the same reason the absent case is one:
+    // an unreadable report is a fact about this machine's last run, not about
+    // the scopes. It says so rather than reading as *checked and clean*.
+    console.log(
+      `\n  the mutation report on this machine cannot be read — ${run.why}\n` +
+        '  The zero-mutant residual is unchecked. `pnpm mutation:run` writes a fresh report.',
+    );
+    return;
+  }
 
-  const empty = emptyScopes(readReport(reportPath), readDeclarations().scopes, sourceFiles());
+  const empty = emptyScopes(run.report, run.scopes, sourceFiles());
   if (empty.length === 0) return;
 
   const listed = empty.join(', ');
@@ -291,6 +616,195 @@ function assertNoEmptyScopes(): void {
       '  No flag clears this. --skip-gates skips the gate suite, not this, and --dry-run\n' +
       '  runs it. --check-only reports instead of refusing, and publishes nothing.',
   );
+}
+
+/**
+ * The floors block: what every scope stands at, and the four things it refuses.
+ *
+ * **Which flags clear it: none.** That is the design rather than an omission —
+ * deploy is about to carry two metric refusals, and *the flag would get reached
+ * for on the stale-record refusal*: a dead pipe is the ordinary, blameless
+ * reason a deploy stops, so one blanket override gets typed for that and
+ * silently clears the floor as well. See
+ * [ADR-0061](../docs/adr/0061-the-mutation-floor-refuses-deploy.md).
+ * `--skip-gates` skips the step-1 suite and its reach stops there; `--dry-run`
+ * runs every refusal here and uploads nothing, which is the honest way to watch
+ * one fail on purpose.
+ *
+ * ⚠️ **`--check-only` does not reach this at all, and that differs from the
+ * block above it on purpose.** `assertNoEmptyScopes` warns under `--check-only`
+ * because that mode exists to investigate a stale edge and a residual is worth
+ * mentioning. The spec is explicit the other way here: *"`--dry-run` exercises
+ * all of these and uploads nothing. `--check-only` skips straight to the origin
+ * check and does not."* The two blocks are inconsistent by decision, not by
+ * accident.
+ *
+ * **It prints before it refuses.** The print is the whole mechanism that ends
+ * the disarmed period — it converts *indefinite* into a dated question asked
+ * repeatedly of the one person who can answer it — and a refusal that suppressed
+ * it would hide the countdown on exactly the deploys where somebody is looking.
+ *
+ * ⚠️ **Nothing here arms anything, and nothing here writes the floors file.**
+ * Arming is a human judgement after a window fills, per scope, and the windows
+ * start together — there is no single moment at which the ratchet is armed.
+ */
+function reportFloors(): void {
+  if (checkOnly) return;
+
+  const floors = readFloors();
+  const declared = readDeclarations().scopes;
+  const names = declared.map((scope) => scope.name);
+
+  // Whatever the last sync left in the object store. This fetches nothing: a
+  // deploy asks a question the store can answer offline, and how fresh that
+  // answer is has its own refusal rather than a second opinion here.
+  const rows = runRowsFrom(windowRecords(storedRecords()));
+
+  // ⚠️ **The newest run that *scored*, never the newest record.** `metrics.yml`
+  // writes on every push to `main` and a merge record carries no per-scope
+  // score, so on a busy week the newest record is a merge — read that as the
+  // newest run and every armed scope reports *no score in the record*, which is
+  // a floor refusing nothing at exactly the moment somebody is deploying. A
+  // crashed nightly is dropped for the same reason: it measured nothing.
+  //
+  // It is also the trend panel's own subject, which is what stops the two
+  // blocks below printing different numbers for one scope.
+  const scored = scoredIn(rows);
+  const newest = scored.at(-1);
+  const previous = scored.at(-2);
+
+  // The same read the trend panel above already did, handed on rather than
+  // repeated: one answer to *what did the last local run measure*.
+  const mutants = mutantsPerScope(lastMutationRun());
+  const readings = names.map((scope) => ({
+    scope,
+    score: newest?.scores.get(scope) ?? null,
+    previous: previous?.scores.get(scope),
+    mutants: mutants.get(scope),
+  }));
+
+  console.log('');
+  // ⚠️ **Stateless, on purpose.** This said "every scope is unarmed", which is
+  // true today and goes false the moment somebody arms one — a decaying claim
+  // printed above a table that states the real answer per scope anyway.
+  console.log(
+    'mutation floors — one line per declared scope; arming is a human judgement, per scope, after its own window fills',
+  );
+  const lines = renderFloorLines({
+    floors,
+    readings,
+    window: calibration(rows, names, floors.configHash),
+    today: localToday(),
+  });
+  for (const line of lines) console.log(`  ${line}`);
+
+  if (newest === undefined) {
+    console.log('');
+    console.log('  no run in the record on this machine — `pnpm trend:sync` imports what CI wrote.');
+  }
+
+  const refusals = floorRefusals({
+    floors,
+    declared: names,
+    ...(newest === undefined ? {} : { run: { ...(newest.configHash === undefined ? {} : { configHash: newest.configHash }) } }),
+    readings,
+  });
+  // The first, not all of them: a deploy refusal is read by somebody who is
+  // about to fix one thing, and four at once reads as a broken machine rather
+  // than as a decision to make.
+  const first = refusals[0];
+  if (first !== undefined) fail(first);
+}
+
+/**
+ * The records one deploy reads for the calibration window.
+ *
+ * ⚠️ **A separate read from `trendRecords`, and not a duplicate of it.** That
+ * one answers *is the record fresh* and stops as soon as it has seen every
+ * series plus one more scoring run — one or two records on a healthy machine.
+ * This one answers *how far has the window filled*, which needs twenty
+ * consecutive nightlies. Same store, same parser, different question.
+ *
+ * It reads newest-first and stops once it has enough nightlies to fill a
+ * window, so a healthy machine pays for twenty-one records rather than for the
+ * whole branch. The hard cap is what stops a store full of merge records —
+ * which score nothing and are not window members — turning one deploy into an
+ * unbounded walk.
+ */
+function windowRecords(store: FetchedRecord | undefined): ParsedRecord[] {
+  if (store === undefined) return [];
+
+  const ordered = store.names
+    .map((name) => parseRecordName(name))
+    .filter((record) => record !== undefined)
+    .sort((one, other) => other.timestamp - one.timestamp || other.name.localeCompare(one.name));
+
+  const parsed: ParsedRecord[] = [];
+  let nightlies = 0;
+
+  for (const record of ordered.slice(0, WINDOW_RECORD_CAP)) {
+    const bytes = readRecord(store.tip, record.name);
+    if (bytes === undefined) continue;
+
+    const document = parseRecord(bytes);
+    parsed.push(document);
+    // Counted through the same predicate the window uses, rather than a second
+    // copy of the literal: `floors.ts` says these two must not drift and this is
+    // where the drift would have started.
+    nightlies += nightliesIn(runRowsFrom([document])).length;
+    // One past the window, because the print's delta needs the run before the
+    // newest one.
+    if (nightlies > WINDOW_RUNS) break;
+  }
+  return parsed;
+}
+
+/**
+ * Mutants per declared scope, from the newest local run, for the per-mutant
+ * resolution the print and the breach both carry.
+ *
+ * ⚠️ **The scores come from the record and this comes from the local report,
+ * and mixing them is deliberate.** A floor is derived from CI runs and compared
+ * against CI runs — comparing one to a local report would be the two-machine
+ * comparison the calibration rule exists to forbid. But *how many mutants a
+ * scope holds* is a property of the tree rather than of the machine, and it is
+ * the number that says whether a floor is one test away or ten. Absent when no
+ * report exists, which prints as a line without it rather than as a silence.
+ */
+function mutantsPerScope(run: MutationRun): Map<string, number> {
+  const counts = new Map<string, number>();
+  // ⚠️ **Three states, not two, and this reads none of them off the disk
+  // itself.** `readReport` is a bare `JSON.parse`, and an interrupted
+  // `pnpm mutation:run` leaves a truncated `mutation.json` — a third reader here
+  // would throw out of the print and kill the deploy *before* the gates, which
+  // is the fault `lastMutationRun` was extracted to fix. *Nobody ran it* is
+  // ordinary on a fresh checkout; *it is there and unreadable* is a fault worth
+  // naming; collapsing them makes a corrupt report read as checked-and-clean.
+  // Both non-`read` states degrade the line rather than refusing, on section
+  // 0b's rule that no report is a print and never a silence.
+  if (run.kind !== 'read') return counts;
+
+  const declarations = { scopes: run.scopes };
+  const scored = scoreRun(run.report, declarations.scopes);
+  for (const scope of declarations.scopes) {
+    const tally = scored.perScope.get(scope.name);
+    if (tally !== undefined && total(tally) > 0) counts.set(scope.name, total(tally));
+  }
+  return counts;
+}
+
+/**
+ * Today, in the machine's own timezone.
+ *
+ * `toISOString` is UTC and would disagree with the date somebody typed into the
+ * floors file by hand from a local calendar — for half the day, in either
+ * direction. The count it feeds is *how long has this sat unarmed*, where being
+ * a day out is harmless and being confusing is not.
+ */
+function localToday(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${String(now.getFullYear())}-${month}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 const project = process.env['CF_PAGES_PROJECT'] ?? 'stacks';

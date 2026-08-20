@@ -37,7 +37,7 @@
  * read-only. The layout is therefore a diff somebody can review rather than a
  * state on one machine, and Grafana's own outbound reporting is switched off
  * because the no-outbound-flow principle covers the dashboard's container too.
- * See [ADR-0060](../docs/adr/0060-the-dashboard-is-provisioned-from-the-repo.md).
+ * See [ADR-0062](../docs/adr/0062-the-dashboard-is-provisioned-from-the-repo.md).
  *
  * ⚠️ **The store is a pinned container this command owns, and that is a
  * correctness property rather than a convenience.** `promtool` writes TSDB
@@ -92,7 +92,7 @@ const PORT = 9090;
 /**
  * The page you actually read, and it is provisioned from this repository rather
  * than clicked together once. See `grafana/` and
- * [ADR-0060](../docs/adr/0060-the-dashboard-is-provisioned-from-the-repo.md).
+ * [ADR-0062](../docs/adr/0062-the-dashboard-is-provisioned-from-the-repo.md).
  *
  * Pinned for the same reason the store is: a dashboard that changes under you is
  * not a reading of anything, and the calibration window the ratchet's floors

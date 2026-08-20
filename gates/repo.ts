@@ -164,6 +164,39 @@ export function codeOf(path: string): string {
 }
 
 /**
+ * A source split into sections, each running from one heading match to the next.
+ *
+ * `heading` must be a global pattern; every capture group it declares comes
+ * back in `captures`, and `body` is the text between the end of that match and
+ * the start of the following one — the last section running to end of file.
+ *
+ * **Returned as a list, never a map, and that is the whole reason it is
+ * shared.** A map keyed on the first capture silently collapses a duplicate
+ * heading, and *a file carrying two `## G26` sections* is precisely the
+ * cardinality failure G41 exists to catch. A helper that made the duplicate
+ * disappear would have to be worked around by its first caller.
+ *
+ * It lived in `gates/gate-register.test.ts` until `gates/action-pins.test.ts`
+ * needed the same shape for a workflow's `jobs:` block. Two gates sharing one
+ * copy is the point of the issue that produced G23, and the move `codeOf` and
+ * `trackedFiles` each made before it.
+ */
+export function sectionsOf(
+  source: string,
+  heading: RegExp,
+): { captures: (string | undefined)[]; body: string }[] {
+  const starts = [...source.matchAll(heading)];
+
+  return starts.map((match, index) => ({
+    captures: match.slice(1),
+    body: source.slice(
+      match.index + match[0].length,
+      index + 1 < starts.length ? starts[index + 1]!.index : source.length,
+    ),
+  }));
+}
+
+/**
  * Guards the green-washing case above: a gate that extracts nothing must fail
  * loudly, not pass vacuously.
  */

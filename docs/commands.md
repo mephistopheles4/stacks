@@ -52,6 +52,84 @@ standing one. **Do not make it pass by sending a browser user agent** — that w
 measured and does not work. See
 [ADR-0027](adr/0027-deploy-check-reports-refusal.md).
 
+## `pnpm deploy:site` — the trend panel, and what a stale record refuses
+
+**Before anything else it prints the trend record**, because a trend is obliged
+to reach a person on a cadence and the deploy is the cadence this project has.
+The panel is fixed in order: *is this real* — the run that produced the score,
+its pull-request window, and each scope's delta — then *is this bad*, each scope
+against its own history and never against a target line. Per-mutant resolution
+comes from this machine's last `pnpm mutation:run`, so it may be a different run
+from the score; the panel says so. **The score never refuses.**
+
+**What refuses is the instrument.** Every CI-written series has a **3-day**
+bound, checked **per series**: one going quiet while the others stay healthy is
+the failure the record exists to expose, and an aggregate check cannot see it. A
+gated series with **no sample at all** refuses exactly as a stale one does.
+
+**Deploy reads the local store** — the `metrics` branch as `pnpm trend:sync` last
+fetched it, never a fresh fetch — which is what makes the sync the route past the
+refusal. A stale store has two causes wearing one face, so the refusal spends
+**one anonymous fetch of the branch tip** and says which it is: *newer rows on the
+branch* means run `trend:sync`, *a branch no fresher* means the nightly has
+stopped, with the Actions link. That fetch writes its own ref and never moves the
+mirror, or a second `deploy:site` would clear the refusal by being run twice —
+[ADR-0060](adr/0060-the-deploy-reads-the-mirror-and-the-probe-never-moves-it.md).
+
+**No flag clears it**, and `--check-only` reports instead of refusing: it uploads
+nothing, and a mode whose job is asking a live origin what it is serving must not
+be blocked by the age of a local record. Gated by **G39**
+(`metrics-freshness`) in [`docs/gates.md`](gates.md).
+
+⚠️ **Honest cost: if you go a long time without deploying, you go that long
+without learning.** Nothing in the design fixes that.
+
+## `pnpm deploy:site` — the mutation floor, and the four things it refuses
+
+**Every scope ships `unarmed`, so today this refuses nothing on a score.** The
+floors live in `stryker.floors.json`, beside the Stryker config the hash below
+ties them to, and the block prints at every deploy: each scope's state, how far
+its calibration window has filled, and how long it has sat unarmed.
+
+**Arming is a human judgement, per scope, after that scope's window fills** — 20
+consecutive healthy nightlies, no gap over three days, all scored under the same
+configuration. The floor is then the lowest score observed across that window,
+applied **once, at arming**. It is not a standing function: after arming a floor
+moves up only, by hand, and **re-deriving is lowering**. There is no single
+moment at which the ratchet becomes armed, and nothing in the tooling arms
+anything.
+
+Four refusals, and **no flag clears any of them**:
+
+| Refusal | What it means |
+|---|---|
+| **breached floor** | an armed scope scored under its floor. Names the scope, the score, the floor, and — when a local mutation report exists — what one mutant is worth in that scope |
+| **unaccounted scope** | `stryker.scopes.json` declares a scope `stryker.floors.json` does not name. It would be scored by every run and floored by nothing |
+| **orphan entry** | the floors file names a scope nothing declares. Left alone the file rots into a list of places that are not there |
+| **configuration mismatch** | the run was scored under a different Stryker configuration from the one these floors were derived under. ⚠️ **A run stamped with a *different* hash refuses whatever is armed** — somebody changed the scoring configuration without re-deriving. A run carrying **no** hash is a record from before the stamp existed, which is evidence of nothing, and refuses only once a scope is armed and there is a comparison to protect |
+
+⚠️ **The absence of an override is the design, not an omission.** `deploy:site`
+now carries two metric refusals — a stale record and a floor breach — and a
+blanket flag would get reached for on the stale-record one, a blameless dead
+pipe, silently clearing the floor at the same time. The only way past a breach is
+a committed lowering: a one-line diff in `stryker.floors.json` plus a `notes`
+line saying why, in a pull request, through gates, because deploy runs from
+`main`. See [ADR-0061](adr/0061-the-mutation-floor-refuses-deploy.md).
+
+⚠️ **The cost is real and is not softened.** The day you add a book and the
+deploy refuses because a refactor last Tuesday dropped a scope below its floor,
+there is no way to ship that book today. **The design's answer is that the
+lowering is visible, not that it is avoidable.**
+
+**`--dry-run` runs all four and uploads nothing**, which is the honest way to
+watch one fail on purpose. `--skip-gates` skips the gate suite and its reach
+stops there. **`--check-only` does not reach them at all** — it builds nothing
+and exists to ask a live origin what it is serving.
+
+`ignored` — the disable-directive counter beside each floor — is the one field
+gated at merge, by **G43** (`ignored-mutants`) in [`docs/gates.md`](gates.md).
+There are zero such directives in this repo, so any increase is a real event.
+
 ## `pnpm worktree <branch>`
 
 `pnpm worktree <branch>` adds a second checkout beside this one — `../stacks-<branch>` —
@@ -163,7 +241,7 @@ is the tool disagreeing with itself at a fixed commit; `unknown` is **not** an
 empty window, it is no answer at all. Panel 2 asks *is this bad*: each scope
 against its own history, never against a target line. There is **no confidence
 figure** anywhere on it, and the refusal is written on the page rather than only
-in the record. See [ADR-0060](adr/0060-the-dashboard-is-provisioned-from-the-repo.md).
+in the record. See [ADR-0062](adr/0062-the-dashboard-is-provisioned-from-the-repo.md).
 
 **Editing the page means editing `grafana/dashboards/trend-layer.json`.** A layout
 dragged around in the browser reverts on the next provisioning reload, by design:

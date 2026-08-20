@@ -10,7 +10,7 @@ provisioned read-only from [`grafana/`](../../grafana) in this repository: one
 datasource, one dashboard, `allowUiUpdates: false`, nothing mounted for it to
 write to. The panel order is the artifact — *is this real* above *is this bad* —
 and the refusal of a composite figure is the first panel on the page rather than
-a line in a spec. [ADR-0060](../adr/0060-the-dashboard-is-provisioned-from-the-repo.md).
+a line in a spec. [ADR-0062](../adr/0062-the-dashboard-is-provisioned-from-the-repo.md).
 
 ## Three things this found, in the order they hurt
 
@@ -27,7 +27,7 @@ It is now a `pr_window` label on `stacks_run_info`, derived in CI from
 `git log <the previous record's commit>..HEAD` — the only place with the answer,
 because the page is Prometheus and Grafana and neither can run git. Three values,
 and `unknown` is deliberately not `[]`:
-[ADR-0061](../adr/0061-the-pr-window-is-a-label-on-the-run.md). Both halves of
+[ADR-0063](../adr/0063-the-pr-window-is-a-label-on-the-run.md). Both halves of
 `metrics.yml` now check out at `fetch-depth: 0`, which is the sort of dependency
 that fails **quietly** — a depth-1 checkout renders `unknown` forever and nobody
 would blame the checkout.
@@ -69,6 +69,34 @@ so the head never holds data and never blocks anything.
 name asserts a measurement is exactly as wrong as a comment when the measurement
 was never made — and it would have delayed every fresh record by three hours,
 including surface D's own row, for a limitation this store does not have.
+
+### 4. Merging #181 found the window measuring the wrong pair
+
+Added on 2026-08-20, when three rollout tickets landed on `main` under this
+branch. [#181](https://github.com/mephistopheles4/stacks/pull/181) built the
+deploy print — **the other consumer of the PR window** — and, having no producer
+to read, derived its own at read time from the record sequence. Two derivations of
+one fact, which is the shape this repo gates elsewhere; but comparing them showed
+something worse than duplication.
+
+**#181 measured between the two runs the delta compares. This branch measured
+since the previous record of any kind.** They are not the same interval: a merge
+record lands on every push, so a nightly's previous record is usually the push it
+ran at, and the label would have read `[]` — the page's signal for **tool noise** —
+beside a delta covering everything since the previous nightly. A field whose whole
+job is telling *real* from *noise*, systematically saying noise.
+
+Fixed by taking #181's rule and keeping this branch's location: the label is
+measured from the last run that **scored**, and the two now share `numbersFrom`,
+which is the one place deciding what counts as a merged pull request. ⚠️ **Neither
+half was findable from its own side.** #181's is right and self-consistent; this
+branch's was wrong and self-consistent; only the merge put them next to each other.
+
+⚠️ **Both ADRs on this branch also collided by number** — `main` had landed
+different records at 0060 and 0061 — and were renumbered to 0062 and 0063 on the
+merge. `docs/log/2026-08-19-the-ratchet-lands-disarmed.md` records the same
+collision biting that session, which makes it the second occurrence and not an
+accident.
 
 ## What is still owed
 
