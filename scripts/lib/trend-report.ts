@@ -199,12 +199,26 @@ export function renderPanel(input: PanelInput): string[] {
   }
   if (input.resolutionNote !== undefined) lines.push(`    ${input.resolutionNote}`);
 
-  // The floors half lands with the ratchet, the last ticket in this rollout.
-  // Printed as absent rather than omitted: a person reading this block is the
-  // whole mechanism by which an unarmed scope ever gets armed, and a line that
-  // simply is not there teaches nobody that it is coming.
+  // ⚠️ **This line said "none yet — every scope is unfloored until the ratchet
+  // lands" and the ratchet has landed**, so it now points at the block that
+  // owns the answer instead of standing in for it. It was written as a
+  // placeholder on purpose — *a line that simply is not there teaches nobody
+  // that it is coming* — and the same argument is why it is corrected rather
+  // than deleted: a person reading this block is the whole mechanism by which
+  // an unarmed scope ever gets armed.
+  //
+  // ⚠️ **It names the file and claims nothing about what is in it.** Two
+  // wordings were wrong before this one: *"none yet"* went false the moment the
+  // ratchet landed, and *"every scope is unarmed"* would go false the moment
+  // somebody arms one — a decaying claim in a panel that cannot read the file it
+  // describes. *"See the block below"* was wrong too, more quietly: this panel
+  // prints under `--check-only`, where the floors block deliberately does not
+  // run, so it promised something that was not there.
+  //
+  // `scripts/lib/floors.ts` reads `stryker.floors.json` and prints the state.
+  // One authority, pointed at rather than summarised.
   lines.push(
-    '  floors     none yet — every scope is unfloored until the ratchet lands, and arming one is a human judgement after 20 clean runs',
+    '  floors     stryker.floors.json — the mutation floors block reads it, and arming one is a human judgement per scope after its window fills',
   );
   return lines;
 }

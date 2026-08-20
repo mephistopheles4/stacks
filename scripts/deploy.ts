@@ -46,6 +46,16 @@ import {
   stampMeta,
   stampOf,
 } from './lib/edge-probe.ts';
+import {
+  WINDOW_RUNS,
+  calibration,
+  floorRefusals,
+  nightliesIn,
+  readFloors,
+  scoredIn,
+  renderFloorLines,
+  runRowsFrom,
+} from './lib/floors.ts';
 import { gitOutput } from './lib/git.ts';
 import {
   GATED_SERIES,
@@ -68,6 +78,7 @@ import {
   readDeclarations,
   readReport,
   scoreRun,
+  total,
   type MutationReport,
   type Scope,
   type Tally,
@@ -95,6 +106,15 @@ const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
 
 /** How `dist/` is named in messages, so they read the same on every platform. */
 const DIST_LABEL = 'packages/site/dist';
+
+/**
+ * How many records one deploy will read looking for a window, at the most.
+ *
+ * Merge records are not window members, so a busy week of pushes sits between
+ * two nightlies; this is the bound that keeps that from being an unbounded
+ * walk. Generous rather than tight — reading a record is one `git cat-file`.
+ */
+const WINDOW_RECORD_CAP = 200;
 
 /** Pinned: a deploy tool that silently changes under you is not a deploy tool. */
 const WRANGLER = 'wrangler@4';
@@ -511,6 +531,18 @@ if (!existsSync(vault)) fail(`STACKS_VAULT points at nothing: ${vault}`);
 // argument step 0 already makes about the branch guard.
 assertNoEmptyScopes();
 
+// ── 0c. The mutation floor: the print, and the four refusals ────────────────
+//
+// Beside the block above and for its reason: a refusal that arrives after four
+// minutes of gates is a refusal people learn to pre-empt with an override.
+//
+// **The floor is one of three routes down and the only one this can see.** A
+// disable directive is caught at merge by `gates/ignored-mutants.test.ts`, and
+// a change to the scoring configuration is caught here by the config hash —
+// which is why the hash refuses on its own rather than beside a breach it
+// cannot vouch for.
+reportFloors();
+
 /**
  * Refuses when a declared scope's files exist and its mutants do not.
  *
@@ -581,6 +613,195 @@ function assertNoEmptyScopes(): void {
       '  No flag clears this. --skip-gates skips the gate suite, not this, and --dry-run\n' +
       '  runs it. --check-only reports instead of refusing, and publishes nothing.',
   );
+}
+
+/**
+ * The floors block: what every scope stands at, and the four things it refuses.
+ *
+ * **Which flags clear it: none.** That is the design rather than an omission —
+ * deploy is about to carry two metric refusals, and *the flag would get reached
+ * for on the stale-record refusal*: a dead pipe is the ordinary, blameless
+ * reason a deploy stops, so one blanket override gets typed for that and
+ * silently clears the floor as well. See
+ * [ADR-0061](../docs/adr/0061-the-mutation-floor-refuses-deploy.md).
+ * `--skip-gates` skips the step-1 suite and its reach stops there; `--dry-run`
+ * runs every refusal here and uploads nothing, which is the honest way to watch
+ * one fail on purpose.
+ *
+ * ⚠️ **`--check-only` does not reach this at all, and that differs from the
+ * block above it on purpose.** `assertNoEmptyScopes` warns under `--check-only`
+ * because that mode exists to investigate a stale edge and a residual is worth
+ * mentioning. The spec is explicit the other way here: *"`--dry-run` exercises
+ * all of these and uploads nothing. `--check-only` skips straight to the origin
+ * check and does not."* The two blocks are inconsistent by decision, not by
+ * accident.
+ *
+ * **It prints before it refuses.** The print is the whole mechanism that ends
+ * the disarmed period — it converts *indefinite* into a dated question asked
+ * repeatedly of the one person who can answer it — and a refusal that suppressed
+ * it would hide the countdown on exactly the deploys where somebody is looking.
+ *
+ * ⚠️ **Nothing here arms anything, and nothing here writes the floors file.**
+ * Arming is a human judgement after a window fills, per scope, and the windows
+ * start together — there is no single moment at which the ratchet is armed.
+ */
+function reportFloors(): void {
+  if (checkOnly) return;
+
+  const floors = readFloors();
+  const declared = readDeclarations().scopes;
+  const names = declared.map((scope) => scope.name);
+
+  // Whatever the last sync left in the object store. This fetches nothing: a
+  // deploy asks a question the store can answer offline, and how fresh that
+  // answer is has its own refusal rather than a second opinion here.
+  const rows = runRowsFrom(windowRecords(storedRecords()));
+
+  // ⚠️ **The newest run that *scored*, never the newest record.** `metrics.yml`
+  // writes on every push to `main` and a merge record carries no per-scope
+  // score, so on a busy week the newest record is a merge — read that as the
+  // newest run and every armed scope reports *no score in the record*, which is
+  // a floor refusing nothing at exactly the moment somebody is deploying. A
+  // crashed nightly is dropped for the same reason: it measured nothing.
+  //
+  // It is also the trend panel's own subject, which is what stops the two
+  // blocks below printing different numbers for one scope.
+  const scored = scoredIn(rows);
+  const newest = scored.at(-1);
+  const previous = scored.at(-2);
+
+  // The same read the trend panel above already did, handed on rather than
+  // repeated: one answer to *what did the last local run measure*.
+  const mutants = mutantsPerScope(lastMutationRun());
+  const readings = names.map((scope) => ({
+    scope,
+    score: newest?.scores.get(scope) ?? null,
+    previous: previous?.scores.get(scope),
+    mutants: mutants.get(scope),
+  }));
+
+  console.log('');
+  // ⚠️ **Stateless, on purpose.** This said "every scope is unarmed", which is
+  // true today and goes false the moment somebody arms one — a decaying claim
+  // printed above a table that states the real answer per scope anyway.
+  console.log(
+    'mutation floors — one line per declared scope; arming is a human judgement, per scope, after its own window fills',
+  );
+  const lines = renderFloorLines({
+    floors,
+    readings,
+    window: calibration(rows, names, floors.configHash),
+    today: localToday(),
+  });
+  for (const line of lines) console.log(`  ${line}`);
+
+  if (newest === undefined) {
+    console.log('');
+    console.log('  no run in the record on this machine — `pnpm trend:sync` imports what CI wrote.');
+  }
+
+  const refusals = floorRefusals({
+    floors,
+    declared: names,
+    ...(newest === undefined ? {} : { run: { ...(newest.configHash === undefined ? {} : { configHash: newest.configHash }) } }),
+    readings,
+  });
+  // The first, not all of them: a deploy refusal is read by somebody who is
+  // about to fix one thing, and four at once reads as a broken machine rather
+  // than as a decision to make.
+  const first = refusals[0];
+  if (first !== undefined) fail(first);
+}
+
+/**
+ * The records one deploy reads for the calibration window.
+ *
+ * ⚠️ **A separate read from `trendRecords`, and not a duplicate of it.** That
+ * one answers *is the record fresh* and stops as soon as it has seen every
+ * series plus one more scoring run — one or two records on a healthy machine.
+ * This one answers *how far has the window filled*, which needs twenty
+ * consecutive nightlies. Same store, same parser, different question.
+ *
+ * It reads newest-first and stops once it has enough nightlies to fill a
+ * window, so a healthy machine pays for twenty-one records rather than for the
+ * whole branch. The hard cap is what stops a store full of merge records —
+ * which score nothing and are not window members — turning one deploy into an
+ * unbounded walk.
+ */
+function windowRecords(store: FetchedRecord | undefined): ParsedRecord[] {
+  if (store === undefined) return [];
+
+  const ordered = store.names
+    .map((name) => parseRecordName(name))
+    .filter((record) => record !== undefined)
+    .sort((one, other) => other.timestamp - one.timestamp || other.name.localeCompare(one.name));
+
+  const parsed: ParsedRecord[] = [];
+  let nightlies = 0;
+
+  for (const record of ordered.slice(0, WINDOW_RECORD_CAP)) {
+    const bytes = readRecord(store.tip, record.name);
+    if (bytes === undefined) continue;
+
+    const document = parseRecord(bytes);
+    parsed.push(document);
+    // Counted through the same predicate the window uses, rather than a second
+    // copy of the literal: `floors.ts` says these two must not drift and this is
+    // where the drift would have started.
+    nightlies += nightliesIn(runRowsFrom([document])).length;
+    // One past the window, because the print's delta needs the run before the
+    // newest one.
+    if (nightlies > WINDOW_RUNS) break;
+  }
+  return parsed;
+}
+
+/**
+ * Mutants per declared scope, from the newest local run, for the per-mutant
+ * resolution the print and the breach both carry.
+ *
+ * ⚠️ **The scores come from the record and this comes from the local report,
+ * and mixing them is deliberate.** A floor is derived from CI runs and compared
+ * against CI runs — comparing one to a local report would be the two-machine
+ * comparison the calibration rule exists to forbid. But *how many mutants a
+ * scope holds* is a property of the tree rather than of the machine, and it is
+ * the number that says whether a floor is one test away or ten. Absent when no
+ * report exists, which prints as a line without it rather than as a silence.
+ */
+function mutantsPerScope(run: MutationRun): Map<string, number> {
+  const counts = new Map<string, number>();
+  // ⚠️ **Three states, not two, and this reads none of them off the disk
+  // itself.** `readReport` is a bare `JSON.parse`, and an interrupted
+  // `pnpm mutation:run` leaves a truncated `mutation.json` — a third reader here
+  // would throw out of the print and kill the deploy *before* the gates, which
+  // is the fault `lastMutationRun` was extracted to fix. *Nobody ran it* is
+  // ordinary on a fresh checkout; *it is there and unreadable* is a fault worth
+  // naming; collapsing them makes a corrupt report read as checked-and-clean.
+  // Both non-`read` states degrade the line rather than refusing, on section
+  // 0b's rule that no report is a print and never a silence.
+  if (run.kind !== 'read') return counts;
+
+  const declarations = { scopes: run.scopes };
+  const scored = scoreRun(run.report, declarations.scopes);
+  for (const scope of declarations.scopes) {
+    const tally = scored.perScope.get(scope.name);
+    if (tally !== undefined && total(tally) > 0) counts.set(scope.name, total(tally));
+  }
+  return counts;
+}
+
+/**
+ * Today, in the machine's own timezone.
+ *
+ * `toISOString` is UTC and would disagree with the date somebody typed into the
+ * floors file by hand from a local calendar — for half the day, in either
+ * direction. The count it feeds is *how long has this sat unarmed*, where being
+ * a day out is harmless and being confusing is not.
+ */
+function localToday(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${String(now.getFullYear())}-${month}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 const project = process.env['CF_PAGES_PROJECT'] ?? 'stacks';

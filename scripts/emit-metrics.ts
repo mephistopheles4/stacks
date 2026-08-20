@@ -25,6 +25,11 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT } from './lib/repo-root.ts';
+import { configHashOf } from './lib/floors.ts';
+// The config Stryker actually runs, imported rather than described. The hash
+// below is a fact about the configuration this run loaded, and a flag carrying
+// it would let the stamp disagree with what was actually scored.
+import strykerConfig from '../stryker.config.mjs';
 import {
   fraction,
   readReport,
@@ -136,6 +141,7 @@ const facts: RunFacts = {
   timestamp,
   commit,
   event: flags.get('event') ?? 'unknown',
+  configHash: configHashOf(strykerConfig as unknown as Record<string, unknown>),
   runUrl: flags.get('run-url') ?? 'unknown',
   expected: expected(),
   // Named by the caller because only the workflow knows a step's exit code, and

@@ -84,6 +84,52 @@ be blocked by the age of a local record. Gated by **G39**
 ⚠️ **Honest cost: if you go a long time without deploying, you go that long
 without learning.** Nothing in the design fixes that.
 
+## `pnpm deploy:site` — the mutation floor, and the four things it refuses
+
+**Every scope ships `unarmed`, so today this refuses nothing on a score.** The
+floors live in `stryker.floors.json`, beside the Stryker config the hash below
+ties them to, and the block prints at every deploy: each scope's state, how far
+its calibration window has filled, and how long it has sat unarmed.
+
+**Arming is a human judgement, per scope, after that scope's window fills** — 20
+consecutive healthy nightlies, no gap over three days, all scored under the same
+configuration. The floor is then the lowest score observed across that window,
+applied **once, at arming**. It is not a standing function: after arming a floor
+moves up only, by hand, and **re-deriving is lowering**. There is no single
+moment at which the ratchet becomes armed, and nothing in the tooling arms
+anything.
+
+Four refusals, and **no flag clears any of them**:
+
+| Refusal | What it means |
+|---|---|
+| **breached floor** | an armed scope scored under its floor. Names the scope, the score, the floor, and — when a local mutation report exists — what one mutant is worth in that scope |
+| **unaccounted scope** | `stryker.scopes.json` declares a scope `stryker.floors.json` does not name. It would be scored by every run and floored by nothing |
+| **orphan entry** | the floors file names a scope nothing declares. Left alone the file rots into a list of places that are not there |
+| **configuration mismatch** | the run was scored under a different Stryker configuration from the one these floors were derived under. ⚠️ **A run stamped with a *different* hash refuses whatever is armed** — somebody changed the scoring configuration without re-deriving. A run carrying **no** hash is a record from before the stamp existed, which is evidence of nothing, and refuses only once a scope is armed and there is a comparison to protect |
+
+⚠️ **The absence of an override is the design, not an omission.** `deploy:site`
+now carries two metric refusals — a stale record and a floor breach — and a
+blanket flag would get reached for on the stale-record one, a blameless dead
+pipe, silently clearing the floor at the same time. The only way past a breach is
+a committed lowering: a one-line diff in `stryker.floors.json` plus a `notes`
+line saying why, in a pull request, through gates, because deploy runs from
+`main`. See [ADR-0061](adr/0061-the-mutation-floor-refuses-deploy.md).
+
+⚠️ **The cost is real and is not softened.** The day you add a book and the
+deploy refuses because a refactor last Tuesday dropped a scope below its floor,
+there is no way to ship that book today. **The design's answer is that the
+lowering is visible, not that it is avoidable.**
+
+**`--dry-run` runs all four and uploads nothing**, which is the honest way to
+watch one fail on purpose. `--skip-gates` skips the gate suite and its reach
+stops there. **`--check-only` does not reach them at all** — it builds nothing
+and exists to ask a live origin what it is serving.
+
+`ignored` — the disable-directive counter beside each floor — is the one field
+gated at merge, by **G43** (`ignored-mutants`) in [`docs/gates.md`](gates.md).
+There are zero such directives in this repo, so any increase is a real event.
+
 ## `pnpm worktree <branch>`
 
 `pnpm worktree <branch>` adds a second checkout beside this one — `../stacks-<branch>` —

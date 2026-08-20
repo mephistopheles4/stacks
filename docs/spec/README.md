@@ -8,12 +8,18 @@ has been built on a branch and is kept as written.
 | Spec | Index | State |
 |---|---|---|
 | The enhanced book card, provider provenance, and the merge | **this file, below** | **built** on a branch; kept as written |
-| What comes after the scoreboard — mutation scoring, the trend layer, the gaming analysis | [`after-the-scoreboard.md`](after-the-scoreboard.md) | **part-built** — the spine has landed (Stryker, the key-trace, the metrics record, `pnpm trend:sync`); the rest is open. [#154](https://github.com/mephistopheles4/stacks/issues/154) is the live answer |
+| What comes after the scoreboard — mutation scoring, the trend layer, the gaming analysis | [`after-the-scoreboard.md`](after-the-scoreboard.md) | **built**; kept as written. All seven rows landed. ⚠️ **Built is not armed** — the ratchet ships with every scope `unarmed`, and arming one is a human judgement per scope after its calibration window fills. [#154](https://github.com/mephistopheles4/stacks/issues/154) is the live answer |
 
 ⚠️ **Gate numbers are per-rollout and never reusable.** The first spec landed
-**G30–G35**; the second allocates **G36–G42**, derived from its own landing order
-rather than chosen. A row number is a fact about when something landed, not a name —
-**cite slug and number together, never the number alone.**
+**G30–G35**; the second landed **G36 and G38–G43**, derived from its own landing
+order rather than chosen. ⚠️ **That is not a typo and it is this warning's own
+best example**: this line read *"allocates G36–G42"* until the rollout finished,
+and it was wrong, because `agents-import` took **G37** out-of-band from
+[#172](https://github.com/mephistopheles4/stacks/pull/172) while the rollout was
+open — so every pre-allocated number in it landed one low, and four separate
+register entries record the correction. A row number is a fact about when
+something landed, not a name — **cite slug and number together, never the number
+alone.**
 
 ---
 
