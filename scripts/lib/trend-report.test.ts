@@ -88,6 +88,42 @@ describe('the panel', () => {
     expect(text).toContain('515/717');
   });
 
+  it('shows a broken run, rather than hiding it or skipping its score', () => {
+    // ⚠️ `run_ok` is derived from everything the run declared, while each family
+    // is emitted on its own input — so a nightly whose suite step failed writes
+    // zero health beside a full and correct set of scores. Nothing about the
+    // scores looks wrong, because nothing about them is wrong. Skipping the run
+    // would compute the delta against the wrong window; showing it silently
+    // would print a number stripped of the context panel 1 exists to supply.
+    const broken = record({
+      timestamp: NOW,
+      expected: ['gate-suite-runtime', 'mutation-score'],
+      failed: ['gate-suite-runtime'],
+      mutationScore: [{ scope: 'packages/core/src', score: 0.71 }],
+    });
+    const text = panel([broken]);
+
+    expect(text).toContain('71.00%');
+    expect(text).toContain('run_ok 0');
+    expect(text).toContain('something else it set out to measure is missing');
+  });
+
+  it('stays silent about health when the run was healthy', () => {
+    // Silence here has to mean `run_ok 1` and nothing else, or the line is a
+    // decoration rather than a signal.
+    expect(panel([scored(NOW, 0.71)])).not.toContain('health');
+  });
+
+  it('says so when a record does not report its health at all', () => {
+    const unstated = parseRecord(
+      '# TYPE stacks_trend_mutation_score gauge\n' +
+        '# HELP stacks_trend_mutation_score Killed plus timeout over total.\n' +
+        `stacks_trend_mutation_score{scope="packages/core/src"} 0.71 ${String(NOW)}\n# EOF\n`,
+    );
+
+    expect(panel([unstated])).toContain('does not say whether its run completed');
+  });
+
   it('says the floors half has not landed rather than omitting it', () => {
     // A line that is simply absent teaches nobody that arming is coming, and
     // the print is the entire mechanism by which an unarmed scope gets armed.

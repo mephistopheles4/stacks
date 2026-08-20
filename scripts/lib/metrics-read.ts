@@ -274,6 +274,31 @@ export function describeAge(seconds: number): string {
   return plural(Math.round(seconds / DAY), 'day');
 }
 
+/**
+ * Whether the run that wrote a record computed every series it declared, or
+ * `undefined` where it did not say.
+ *
+ * ⚠️ **A `run_ok 0` run can carry a full and correct set of scores, which is
+ * what makes this worth reading.** `renderMetrics` derives `run_ok` from
+ * *everything the run declared*, while each family is emitted on its own
+ * input — so a nightly whose `pnpm test` step failed writes zero here and a
+ * complete `mutation_score` family beside it. **Nothing about the scores looks
+ * wrong**, because nothing about them is wrong; what is missing is something
+ * else the run set out to measure.
+ *
+ * The `surface` label is what keeps this a question about CI. A local edge
+ * probe writes `run_ok{surface="edge"}` into the store's own directory —
+ * different series, same name — and the deploy reads only the branch, so this
+ * cannot meet one today. Filtered anyway, because *the deploy reads only the
+ * branch* is a fact about a call site rather than about this function.
+ */
+export function runHealthOf(record: ParsedRecord): boolean | undefined {
+  const sample = record.samples.find(
+    (one) => one.metric === `${METRIC_PREFIXES.run}ok` && one.labels['surface'] === undefined,
+  );
+  return sample === undefined ? undefined : sample.value === 1;
+}
+
 /** The run that wrote a record: `stacks_run_info`'s labels. */
 export function runInfoOf(record: ParsedRecord): Record<string, string> | undefined {
   return record.samples.find((sample) => sample.metric === `${METRIC_PREFIXES.run}info`)?.labels;

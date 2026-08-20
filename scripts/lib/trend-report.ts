@@ -21,7 +21,14 @@
  * clock and the printing belong to `scripts/deploy.ts`.
  */
 
-import { describeAge, runInfoOf, scoresOf, type ParsedRecord, type RecordVerdict } from './metrics-read.ts';
+import {
+  describeAge,
+  runHealthOf,
+  runInfoOf,
+  scoresOf,
+  type ParsedRecord,
+  type RecordVerdict,
+} from './metrics-read.ts';
 import { detected, total, type Tally } from './mutation-score.ts';
 
 /** Where a person goes to see whether the nightly is still running. */
@@ -130,6 +137,31 @@ export function renderPanel(input: PanelInput): string[] {
     lines.push(
       `    run      ${(info?.['commit'] ?? 'unknown').slice(0, 12)}  ${info?.['event'] ?? 'unknown'}${scoredAge}  ${info?.['run_url'] ?? ''}`.trimEnd(),
     );
+    // ⚠️ **Printed when the run was *not* healthy, and when it did not say —
+    // so silence here means `run_ok 1` and nothing else.** The panel keeps
+    // showing the newest scored run whatever its health, because a score from a
+    // run whose suite step failed is still a real measurement and skipping it
+    // would compute the delta against the wrong window. What it must not do is
+    // show that score as though nothing happened: panel 1 is *is this real*,
+    // and the run's own health is exactly that question.
+    //
+    // ⚠️ **This is where the print and the floor legitimately part company.**
+    // The ratchet refuses to compare a floor against a `run_ok 0` row, on the
+    // asymmetry that such a row could never have *set* the floor it breached.
+    // A print showing it is honest; a refusal firing on it is not. The two
+    // predicates differ on purpose — see `scoredIn` in `./floors.ts` — and
+    // aligning them back together would restore the defect this line reports.
+    const health = runHealthOf(latest);
+    if (health !== true) {
+      lines.push(
+        `    health   ${
+          health === undefined
+            ? 'no run_ok sample — this record does not say whether its run completed'
+            : 'run_ok 0 — the run did not compute every series it declared; its scores are real, and something else it set out to measure is missing'
+        }`,
+      );
+    }
+
     lines.push(
       `    window   ${
         input.window === undefined
