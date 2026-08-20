@@ -24,9 +24,14 @@ ever sees and no second machine reproduces.
   dashboard being localhost"* — and **a localhost store whose dashboard reports
   on itself is not a localhost store.** The four switches are in
   `scripts/trend-sync.ts`.
-- **Anonymous, with no login form.** There is no user database worth protecting
-  on a container holding nothing but provisioned files, and a password on a
-  single-maintainer localhost page is a thing to lose rather than a control.
+- **Anonymous, with no login form — and bound to `127.0.0.1`.** There is no user
+  database worth protecting on a container holding nothing but provisioned files,
+  and a password on a single-maintainer localhost page is a thing to lose rather
+  than a control. **The two decisions are one decision**: an anonymous page
+  published on every interface is a laptop handing its owner's reading to
+  whatever network it last joined, and *"nobody else can see it"* is a cost the
+  spec accepts rather than a phrase. The store is bound the same way, which
+  corrects the port mapping it landed with.
 - **A user-defined network, `stacks-trend`.** Grafana reaches the store by
   container name: `localhost` inside the Grafana container is the Grafana
   container, and `host.docker.internal` exists on Docker Desktop and not on plain

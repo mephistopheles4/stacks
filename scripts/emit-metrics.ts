@@ -25,7 +25,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fetchRecords, newestCommitRecord } from './lib/metrics-record.ts';
-import { UNKNOWN_WINDOW, prWindow } from './lib/pr-window.ts';
+import { UNKNOWN_WINDOW, subjectsBetween, windowFrom } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import {
   fraction,
@@ -162,7 +162,7 @@ function windowSincePreviousRun(): string {
     return UNKNOWN_WINDOW;
   }
 
-  const window = prWindow(previous.source, commit, REPO_ROOT);
+  const window = windowFrom(subjectsBetween(previous.source, commit, REPO_ROOT));
   console.log(`PR window since ${previous.name}: ${window}`);
   return window;
 }

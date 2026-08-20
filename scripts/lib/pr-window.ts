@@ -91,16 +91,3 @@ export function subjectsBetween(
 
   return log.split('\n');
 }
-
-/**
- * The window between two commits, ready for a label.
- *
- * `previous === undefined` is the first-ever run: there is no previous record,
- * so *"what merged since the last one"* has no answer and must not be spelled
- * as an empty one.
- */
-export function prWindow(previous: string | undefined, head: string, cwd: string): string {
-  if (previous === undefined || previous === '') return UNKNOWN_WINDOW;
-
-  return windowFrom(subjectsBetween(previous, head, cwd));
-}

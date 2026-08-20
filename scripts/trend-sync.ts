@@ -129,6 +129,7 @@ const DASHBOARDS = join(REPO_ROOT, 'grafana', 'dashboards').replace(/\\/g, '/');
  * to lose rather than a control.
  */
 const GRAFANA_ENV = [
+  'GF_ANALYTICS_ENABLED=false',
   'GF_ANALYTICS_REPORTING_ENABLED=false',
   'GF_ANALYTICS_CHECK_FOR_UPDATES=false',
   'GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false',
@@ -217,11 +218,6 @@ function containerStateOf(name: string): string | undefined {
   return found === undefined || found === '' ? undefined : found;
 }
 
-/** The store's own state. Two containers now, and this one is the store's. */
-function containerState(): string | undefined {
-  return containerStateOf(CONTAINER);
-}
-
 function requireDocker(): void {
   if (docker(['version', '--format', '{{.Server.Version}}']) !== undefined) return;
 
@@ -266,7 +262,7 @@ function backfill(): void {
 }
 
 function stopStore(): void {
-  if (containerState() === 'running') docker(['stop', CONTAINER]);
+  if (containerStateOf(CONTAINER) === 'running') docker(['stop', CONTAINER]);
 }
 
 /**
@@ -303,41 +299,87 @@ function attachToNetwork(container: string): void {
   docker(['network', 'connect', NETWORK, container]);
 }
 
+/** What an existing container has to match before this command will reuse it. */
+interface Reuse {
+  name: string;
+  image: string;
+  /** The mount destination whose source says which checkout the container belongs to. */
+  mountAt: string;
+  mountSource: string;
+  /** Environment entries that must all be present. Absent means nothing to check. */
+  env?: readonly string[];
+}
+
+/**
+ * Why a container that is already there cannot be reused, or `undefined` when it
+ * can. Three questions, and each was a real failure before it was a check.
+ *
+ * ⚠️ **The image**, because reusing by name alone would defeat the pin: after
+ * `IMAGE` moves, a `promtool` from the new image would write blocks for an old
+ * server to read — the disagreement this file's header claims is
+ * unrepresentable. A changed `RETENTION` would be ignored the same way, silently.
+ *
+ * ⚠️ **The mount**, and this is not symmetry. `pnpm worktree` is a documented
+ * command here, so two checkouts on one machine is the ordinary case — and a
+ * container name is global to the Docker daemon. A container created by the other
+ * checkout keeps *its* bind mount, so this sync writes blocks into this `.trend/`
+ * while Prometheus serves that one. **Measured: `imported 11 record(s)` against a
+ * store answering for nine**, every number real and belonging to another tree.
+ *
+ * ⚠️ **The environment**, which is the dashboard's acceptance criterion rather
+ * than tidiness. A container keeps what it was *created* with, so one made before
+ * an outbound switch was added keeps reporting — and that failure is silent at
+ * both ends: nothing on the page changes, and the traffic is what nobody watches.
+ * Every entry is compared rather than a version marker, so adding one to
+ * `GRAFANA_ENV` is the whole change.
+ */
+function refuseReuse(spec: Reuse): string | undefined {
+  const image = docker(['inspect', '--format', '{{.Config.Image}}', spec.name]);
+  if (image !== spec.image) return `it runs ${image ?? 'an unknown image'}, want ${spec.image}`;
+
+  const source = docker([
+    'inspect',
+    '--format',
+    `{{range .Mounts}}{{if eq .Destination "${spec.mountAt}"}}{{.Source}}{{end}}{{end}}`,
+    spec.name,
+  ]);
+  if (source !== spec.mountSource) {
+    return `it serves ${source === undefined || source === '' ? 'an unknown path' : source}, want ${spec.mountSource}`;
+  }
+
+  const declared = JSON.parse(
+    docker(['inspect', '--format', '{{json .Config.Env}}', spec.name]) ?? '[]',
+  ) as string[];
+  if (!(spec.env ?? []).every((pair) => declared.includes(pair))) {
+    return 'it was created without every switch this repo now sets';
+  }
+  return undefined;
+}
+
+/**
+ * Start the store, creating it the first time.
+ *
+ * Created here rather than being a precondition somebody has to remember: a
+ * command that needs a container a human made once stops working the day
+ * somebody prunes it, and that failure looks like a dead pipe rather than like
+ * a missing container.
+ */
 function startStore(): void {
   ensureNetwork();
-  if (containerState() !== undefined) {
-    // ⚠️ **Reusing it by name alone would defeat the pin.** A container keeps
-    // the image and the flags it was created with, so after `IMAGE` moves,
-    // `promtool` from the new image would write blocks for an old server to
-    // read — the exact disagreement this file's header claims is
-    // unrepresentable. A changed `RETENTION` would be ignored the same way,
-    // silently. So the image is compared and a stale container is replaced.
-    const image = docker(['inspect', '--format', '{{.Config.Image}}', CONTAINER]);
-    // ⚠️ **The mount is checked as well as the image, and that is not
-    // symmetry.** `pnpm worktree` is a documented command here, so two checkouts
-    // of this repository on one machine is the ordinary case rather than an
-    // exotic one — and the container name is global to the daemon. A container
-    // created by the other checkout keeps *its* bind mount, so this sync writes
-    // blocks into this `.trend/` while Prometheus serves that one: the command
-    // says `imported 7 record(s)` and the dashboard shows another tree's store.
-    // **Measured here, and it is the store-that-lies failure wearing the exact
-    // costume this file's header warns about.**
-    const store = docker([
-      'inspect',
-      '--format',
-      '{{range .Mounts}}{{if eq .Destination "/trend"}}{{.Source}}{{end}}{{end}}',
-      CONTAINER,
-    ]);
-    if (image === IMAGE && store === mounted) {
+
+  if (containerStateOf(CONTAINER) !== undefined) {
+    const refusal = refuseReuse({
+      name: CONTAINER,
+      image: IMAGE,
+      mountAt: '/trend',
+      mountSource: mounted,
+    });
+    if (refusal === undefined) {
       docker(['start', CONTAINER]);
       attachToNetwork(CONTAINER);
       return;
     }
-    console.log(
-      image === IMAGE
-        ? `store: recreating ${CONTAINER} — it serves ${store ?? 'an unknown path'}, want ${mounted}`
-        : `store: recreating ${CONTAINER} — it runs ${image ?? 'an unknown image'}, want ${IMAGE}`,
-    );
+    console.log(`store: recreating ${CONTAINER} — ${refusal}`);
     docker(['rm', '-f', CONTAINER]);
   }
 
@@ -347,7 +389,7 @@ function startStore(): void {
       'run', '-d',
       '--name', CONTAINER,
       '--network', NETWORK,
-      '-p', `${String(PORT)}:9090`,
+      '-p', `127.0.0.1:${String(PORT)}:9090`,
       '-v', `${mounted}:/trend`,
       IMAGE,
       '--config.file=/trend/prometheus.yml',
@@ -368,35 +410,30 @@ function startStore(): void {
  * anybody can delete and recreate with no loss is what makes the repository the
  * artifact rather than a machine's state.
  *
- * The image is compared exactly as the store's is, for the same reason: a
- * container reused by name alone would keep the flags — and the analytics
- * switches — it was created with.
+ * ⚠️ **Bound to `127.0.0.1`, not to every interface.** It runs anonymous with no
+ * login form, and *"nobody else can see it"* is one of the two honest costs the
+ * spec accepts for a localhost store — which makes it a property to keep rather
+ * than a phrase. On a laptop that joins networks it does not own, `-p 3000:3000`
+ * would quietly publish the owner's reading to the coffee shop.
  */
 function startDashboard(): void {
   ensureNetwork();
 
   const state = containerStateOf(GRAFANA_CONTAINER);
   if (state !== undefined) {
-    const image = docker(['inspect', '--format', '{{.Config.Image}}', GRAFANA_CONTAINER]);
-    // The store's rule, for the store's reason: a container left by another
-    // checkout provisions that checkout's `grafana/`, so the page under review
-    // would not be the page on screen.
-    const provisioning = docker([
-      'inspect',
-      '--format',
-      '{{range .Mounts}}{{if eq .Destination "/etc/grafana/dashboards"}}{{.Source}}{{end}}{{end}}',
-      GRAFANA_CONTAINER,
-    ]);
-    if (image === GRAFANA_IMAGE && provisioning === DASHBOARDS) {
+    const refusal = refuseReuse({
+      name: GRAFANA_CONTAINER,
+      image: GRAFANA_IMAGE,
+      mountAt: '/etc/grafana/dashboards',
+      mountSource: DASHBOARDS,
+      env: GRAFANA_ENV,
+    });
+    if (refusal === undefined) {
       if (state !== 'running') docker(['start', GRAFANA_CONTAINER]);
       attachToNetwork(GRAFANA_CONTAINER);
       return;
     }
-    console.log(
-      image === GRAFANA_IMAGE
-        ? `dashboard: recreating ${GRAFANA_CONTAINER} — it serves ${provisioning ?? 'an unknown path'}, want ${DASHBOARDS}`
-        : `dashboard: recreating ${GRAFANA_CONTAINER} — it runs ${image ?? 'an unknown image'}, want ${GRAFANA_IMAGE}`,
-    );
+    console.log(`dashboard: recreating ${GRAFANA_CONTAINER} — ${refusal}`);
     docker(['rm', '-f', GRAFANA_CONTAINER]);
   }
 
@@ -406,7 +443,7 @@ function startDashboard(): void {
       'run', '-d',
       '--name', GRAFANA_CONTAINER,
       '--network', NETWORK,
-      '-p', `${String(GRAFANA_PORT)}:3000`,
+      '-p', `127.0.0.1:${String(GRAFANA_PORT)}:3000`,
       '-v', `${PROVISIONING}:/etc/grafana/provisioning:ro`,
       '-v', `${DASHBOARDS}:/etc/grafana/dashboards:ro`,
       ...GRAFANA_ENV.flatMap((pair) => ['-e', pair]),

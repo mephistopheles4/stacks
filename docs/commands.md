@@ -178,8 +178,11 @@ the whole layer rests on nothing derived from your reading leaving the machine.
 The store is a container this command creates on first run — `stacks-prometheus`,
 serving <http://localhost:9090>, with its data and the sync's state under
 `.trend/` (gitignored). The dashboard is the second, and both sit on a
-`stacks-trend` network so Grafana can reach the store by name. **The backfill tool and the server come from the same
-pinned image deliberately**: `promtool` writes TSDB blocks and Prometheus reads
+`stacks-trend` network so Grafana can reach the store by name. **Both bind to
+`127.0.0.1`**, because *nobody else can see it* is one of the two honest costs
+this design accepts for a localhost store — a property to keep rather than a
+phrase. **The backfill tool and the server come from the same pinned image
+deliberately**: `promtool` writes TSDB blocks and Prometheus reads
 them, and a version disagreement between the two surfaces as *the sync worked and
 the dashboard is empty*. A `promtool` on your PATH is deliberately not used. See
 [ADR-0058](adr/0058-the-trend-store-is-a-container.md).
