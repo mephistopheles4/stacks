@@ -39,9 +39,11 @@ import { join } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
 import { gitOutput } from './lib/git.ts';
+import { readDeclarations, readReport } from './lib/mutation-score.ts';
 import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
+import { emptyScopes, sourceFiles } from './lib/scope-check.ts';
 
 // The same loader the CLI uses, rather than a third hand-rolled `.env` parser:
 // a real environment variable still wins, so `SITE_URL=... pnpm deploy` does
@@ -87,6 +89,21 @@ const skipGates = process.argv.includes('--skip-gates');
  */
 const checkOnly = process.argv.includes('--check-only');
 
+/**
+ * Every refusal in this file, and which flags clear it.
+ *
+ * ⚠️ **The convention: a refusal says which flags clear it, right where it is
+ * written.** Adopted because a flag whose reach is undocumented is how
+ * `--skip-gates` came to skip the whole contract with nothing saying so (#152),
+ * and because measuring this file found **roughly a dozen refusals outside
+ * `--skip-gates`'s reach and four inside it, said nowhere**. The four inside are
+ * the step-1 gate commands; everything else here refuses whatever you pass.
+ *
+ * A comment convention, not a gate — there is no way to assert "this comment is
+ * true of the code beside it" that is not a gate matching prose, which this repo
+ * has learned three times matches anything. What makes it hold is that the
+ * comment sits at the refusal, so an edit to one is an edit next to the other.
+ */
 function fail(message: string): never {
   console.error(`\nFAILED: ${message}`);
   process.exit(1);
@@ -96,6 +113,11 @@ function fail(message: string): never {
  * `runShell` — the shell and the joined command line are its business, not this
  * script's. All this adds is the failure style: a deploy that stops should say
  * so in the same shape as every other refusal here, not as a stack trace.
+ *
+ * **Which flags clear this depends on the call site, so each one says.** A
+ * failing command is a refusal like any other; what differs is whether the
+ * command runs at all, and that is the caller's question rather than this
+ * function's.
  */
 function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv = {}): void {
   try {
@@ -134,6 +156,10 @@ if (!checkOnly && !dryRun) assertPublishableBranch();
  *
  * A detached HEAD is refused too. It has no branch name, which means nobody can
  * say afterwards what was published.
+ *
+ * **Cleared by `--any-branch`, and never reached under `--dry-run` or
+ * `--check-only`** — the call above is guarded on both. `--skip-gates` does not
+ * touch it: this runs before step 1 and is not one of the gates.
  */
 function assertPublishableBranch(): void {
   if (process.argv.includes('--any-branch')) {
@@ -160,6 +186,10 @@ function assertPublishableBranch(): void {
 // relative og:image, every link-preview scraper renders nothing, and the shelf
 // arrives at its one moment — being sent to someone — as a bare URL. A deploy
 // that silently produces that is worse than one that refuses.
+//
+// No flag clears either of the two refusals below. Every mode needs this value:
+// a build bakes it into the page, and `--check-only` has nowhere to ask about
+// without it.
 const siteUrl = process.env['SITE_URL'];
 if (siteUrl === undefined || siteUrl.length === 0) {
   fail(
@@ -176,9 +206,91 @@ try {
   fail(`SITE_URL is not a valid URL: ${siteUrl}`);
 }
 
+// No flag clears either of these two. ⚠️ **Including `--check-only`, which
+// builds nothing and therefore never reads the vault** — stated rather than
+// quietly relaxed, because loosening it is a behaviour change and this pass is
+// a comment convention. A `--check-only` run on a machine with no vault
+// configured refuses here, and the refusal is about the environment rather than
+// about the site it was asked to inspect.
 const vault = process.env['STACKS_VAULT'];
 if (vault === undefined || vault.length === 0) fail('STACKS_VAULT is not set (see .env.example)');
 if (!existsSync(vault)) fail(`STACKS_VAULT points at nothing: ${vault}`);
+
+// ── 0b. G38's deploy half: a declared scope that scored nothing ─────────────
+//
+// The one clause of `mutation-scope` the disk cannot answer. `pnpm test` has
+// already asserted everything structural — the scope exists, its glob matches
+// files, every source directory is declared or excluded — so what is left here
+// is the residual: **the glob matched files and Stryker still produced zero
+// mutants.** Every structural cause is red at merge in two seconds; this one
+// needs a run's evidence, and the newest run on this machine is the only
+// evidence a deploy has.
+//
+// Before the gates rather than after them, because a refusal that arrives after
+// four minutes is a refusal people learn to pre-empt with the override — the
+// argument step 0 already makes about the branch guard.
+assertNoEmptyScopes();
+
+/**
+ * Refuses when a declared scope's files exist and its mutants do not.
+ *
+ * **Which flags clear it: none, on any path that publishes.** `--skip-gates`
+ * skips the step-1 suite and its reach stops there; `--dry-run` runs this and
+ * is the honest way to watch it fail on purpose, since it uploads nothing.
+ * `--check-only` warns instead of refusing, on the pre-flight's own rule — that
+ * mode exists to investigate a stale edge, and a check that refused to run
+ * would answer the question by declining to ask it.
+ *
+ * ⚠️ **No report is a print, never a silence.** This repo's oldest rule about
+ * instruments is that a probe which silently did nothing would be worse than no
+ * probe, and a machine that has never run `pnpm mutation:run` is the ordinary
+ * case rather than a fault.
+ *
+ * ⚠️ **The residual this carries, stated rather than found later: the report is
+ * a snapshot and nothing here knows how old it is.** A legitimate scope change
+ * made after the last run reads exactly like a scope that stopped producing
+ * mutants, and the remedy — `pnpm mutation:run` — is named in the refusal
+ * because Clause A asks for a reachable one. Staleness itself belongs to
+ * `metrics-freshness`, the next row in this rollout, which reads the record's
+ * own timestamps; duplicating half of it here would be two implementations of
+ * one question.
+ */
+function assertNoEmptyScopes(): void {
+  const reportPath = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
+
+  if (!existsSync(reportPath)) {
+    console.log(
+      '\n  no mutation report on this machine — the zero-mutant residual is unchecked.\n' +
+        '  `pnpm mutation:run` writes one; every structural half of this rule ran in `pnpm test`.',
+    );
+    return;
+  }
+
+  const empty = emptyScopes(readReport(reportPath), readDeclarations().scopes, sourceFiles());
+  if (empty.length === 0) return;
+
+  const listed = empty.join(', ');
+  const why =
+    'A declared scope whose files exist and whose mutants do not is a broken declaration: ' +
+    'it measures nothing, so the code it names can go away without any number moving.\n' +
+    '    - Fix the declaration in stryker.scopes.json — point the glob at the new path, or\n' +
+    '      narrow the exclusion that widened over the last file in it.\n' +
+    '    - Deleting the scope is a legitimate fix AND the cheapest way to stop measuring an\n' +
+    '      inconvenient one. It takes the visible diff and the floors-file notes entry that\n' +
+    '      every other lowering carries.\n' +
+    '    - If the report simply predates a legitimate change: `pnpm mutation:run`.';
+
+  if (checkOnly) {
+    console.warn(`\n! declared scope(s) with no mutants in the last run: ${listed}\n  ${why}`);
+    return;
+  }
+
+  fail(
+    `declared scope(s) produced no mutants in the last run: ${listed}\n\n  ${why}\n\n` +
+      '  No flag clears this. --skip-gates skips the gate suite, not this, and --dry-run\n' +
+      '  runs it. --check-only reports instead of refusing, and publishes nothing.',
+  );
+}
 
 const project = process.env['CF_PAGES_PROJECT'] ?? 'stacks';
 
@@ -186,6 +298,11 @@ console.log(`deploying ${vault}`);
 console.log(`        → ${siteUrl}  (Cloudflare Pages project "${project}")`);
 
 // ── 1. The gates. These stage FIXTURE data — which is why they go first ─────
+//
+// **The four refusals inside `--skip-gates`'s reach, and the only four.** Each
+// `run` below refuses by failing the command; `--skip-gates` clears all four by
+// not running them, and `--check-only` skips them for a different reason — it
+// builds nothing, so there is nothing to gate. `--dry-run` runs every one.
 if (checkOnly) {
   console.log('--check-only: not building, not uploading');
 } else if (skipGates) {
@@ -198,6 +315,10 @@ if (checkOnly) {
 }
 
 // ── 2. The real build. Last, so it overwrites whatever the gates staged ─────
+//
+// Two more command refusals. Only `--check-only` clears them, by building
+// nothing; `--skip-gates` does not reach here and `--dry-run` builds, because a
+// dry run that skipped the build would have no artifact to pre-flight.
 if (!checkOnly) {
   run('pnpm', [
     'stacks',
@@ -226,6 +347,9 @@ interface ShippedBook {
   readonly cover?: string;
 }
 
+// No flag clears this one either, and `--check-only` is the mode most likely to
+// hit it: it builds nothing, so the folder it reads is whatever was last built
+// here — possibly nothing at all.
 const libraryPath = join(DIST, 'library.json');
 if (!existsSync(libraryPath)) fail(`no library.json in ${DIST}`);
 
@@ -266,6 +390,9 @@ if (!checkOnly) {
   // is the same vacuous pass this check was just rewritten to close. Louder
   // than a problem, because it means the check itself is broken rather than the
   // build.
+  //
+  // No flag clears it. `--check-only` never arrives — the whole block is
+  // guarded on it — and `--skip-gates` skips the gate suite, not this.
   if (titles.length === 0) {
     fail(
       'no fixture notes found to check the build against. This check exists to catch the ' +
@@ -377,6 +504,11 @@ const stamp = checkOnly ? stampOfLastDeploy() : stampAndWrite();
  * use *that* build's name. Re-hashing would produce a different one — the file
  * on disk now includes the stamp the hash was taken before — and the check would
  * report a mismatch against a site that is perfectly up to date.
+ *
+ * **Reached only under `--check-only`, and no flag clears it there.** The
+ * refusal is the honest answer to the question that mode asks: an unstamped
+ * `dist/` gives the live check nothing to compare, and reporting "up to date"
+ * off no evidence is the failure this whole block exists to stop making.
  */
 function stampOfLastDeploy(): string {
   const found = stampOf(html);
@@ -403,6 +535,10 @@ function stampAndWrite(): string {
   // every deploy, for a reason nobody would guess — so the injection is asserted
   // rather than assumed. Astro emits a bare `<head>`; if that ever changes, this
   // says so here instead of at the far end.
+  //
+  // No flag clears it, on any path that publishes. `--check-only` takes the
+  // other branch above; `--dry-run` reaches this and stamps the folder it leaves
+  // behind, which is what makes a later `--check-only` able to answer at all.
   if (stampOf(marked) !== name) {
     fail('could not stamp index.html — no `<head>` to inject into, so the live check would be blind');
   }
@@ -434,6 +570,10 @@ if (dryRun) {
   process.exit(0);
 }
 
+// The upload itself, and the last refusal in the file: a failing `wrangler`
+// stops the run here. `--dry-run` and `--check-only` clear it by returning
+// above; nothing clears it on a path that publishes, which is the only kind of
+// path that reaches this line.
 run('pnpm', [
   'dlx',
   WRANGLER,

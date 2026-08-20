@@ -107,11 +107,47 @@ export function globToRegExp(glob: string): RegExp {
   return new RegExp(`^${source}$`);
 }
 
-export function readScopes(): Scope[] {
-  const parsed = JSON.parse(readFileSync(join(REPO_ROOT, 'stryker.scopes.json'), 'utf8')) as {
-    scopes: Scope[];
+/**
+ * A source directory that is deliberately in no scope, and why.
+ *
+ * The second and last state a source directory may be in — G38
+ * (`mutation-scope`) asserts there is no third. Each entry covers the files
+ * **directly** in that directory and never a subtree, because a subtree
+ * exclusion would swallow a declared scope beneath it silently.
+ */
+export interface ExcludedDirectory {
+  path: string;
+  mechanism: string;
+}
+
+export interface Declarations {
+  scopes: Scope[];
+  excludedDirectories: ExcludedDirectory[];
+}
+
+/**
+ * Everything `stryker.scopes.json` declares.
+ *
+ * **One reader, because there are now two questions asked of this file** —
+ * which scopes to score, and whether the declaration itself is coherent. A
+ * second `readFileSync` of the same path is the shape ADR-0028 refuses, and it
+ * would put the only fs access in `scripts/lib/scope-check.ts`, which is worth
+ * more as a pure module: its rules are then testable against a synthetic tree
+ * rather than only against this repo's real one.
+ */
+export function readDeclarations(): Declarations {
+  const parsed = JSON.parse(
+    readFileSync(join(REPO_ROOT, 'stryker.scopes.json'), 'utf8'),
+  ) as Partial<Declarations>;
+
+  return {
+    scopes: parsed.scopes ?? [],
+    excludedDirectories: parsed.excludedDirectories ?? [],
   };
-  return parsed.scopes;
+}
+
+export function readScopes(): Scope[] {
+  return readDeclarations().scopes;
 }
 
 /**

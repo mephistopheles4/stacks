@@ -24,7 +24,39 @@
     "imports them'; true only of direct imports. `gates/public-build.test.ts`",
     "imports `lib/public-build.ts`, which imports `walk.ts`, in-process - and the",
     "run says so: 9 mutants, 6 killed. Reachability is about execution, not about",
-    "who writes the import. A reachable file stays in the denominator."
+    "who writes the import. A reachable file stays in the denominator.",
+    "",
+    "EDITING THIS FILE - a scope's identity is its declared NAME, and the number",
+    "travels with it explicitly. G38 (`mutation-scope`) makes a rename go red",
+    "rather than silent; these three rules say what the edit that clears it must",
+    "look like, because the alternative is that a floor resets and the diff reads",
+    "as a refactor:",
+    "",
+    "  RENAME  - a delete and an add in ONE diff, with the number visible on both",
+    "            sides. `git mv packages/core/src/covers packages/core/src/cover`",
+    "            is otherwise the cheapest weakening in this rollout.",
+    "  SPLIT   - every child gets the parent's floor. Never a fresh start.",
+    "  REMOVAL - the same visible-diff rule, plus the floors-file `notes` entry",
+    "            every other lowering carries. Deleting a scope is a legitimate",
+    "            fix for a zero-mutant refusal AND the cheapest way to stop",
+    "            measuring an inconvenient one - and unlike lowering a floor, it",
+    "            does not read as a lowering. It reads as cleanup.",
+    "",
+    "EXCLUDED DIRECTORIES are the second and last state a source directory may",
+    "be in: declared, or excluded with a mechanism. There is no third. Each entry",
+    "covers the files DIRECTLY in that directory and never a subtree - a subtree",
+    "exclusion would silently swallow a declared scope beneath it, which is the",
+    "same invisible-removal move the rules above exist to close."
+  ],
+  "excludedDirectories": [
+    {
+      "path": "gates",
+      "mechanism": "`gates/repo.ts:13` is `REPO_ROOT = resolve(process.cwd())` and Stryker's sandbox is not the repository, so in a sandbox every repo-shape gate silently retargets at a copy of the tree: four gates shell out to git into a directory that is not a checkout, and G23 regex-matches source text Stryker has rewritten by construction. Mutating anything here pulls those specs in and the run dies at the dry run. Measured, and reversible on a stated condition: `REPO_ROOT` resolved from a marker rather than from `cwd`."
+    },
+    {
+      "path": "packages/site/src",
+      "mechanism": "The files directly in it - `site-meta.ts` today - are imported only by `.astro` pages, which are not in the Vitest project, so nothing runs them in-process. Same mechanism as `shelf/start.ts`, one directory up. Non-recursive: `shelf/` below it is a declared scope."
+    }
   ],
   "scopes": [
     {
