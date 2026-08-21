@@ -35,7 +35,7 @@ GitHub issues on `mephistopheles4/stacks`, via the `gh` CLI. See [`docs/agents/i
 
 ### Triage labels
 
-The five canonical roles, each label string equal to its name. Not yet created on the repo. See [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
+The five canonical roles, each label string equal to its name. All five exist on the repo since August 2026. See [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
 
 ### Domain docs
 
