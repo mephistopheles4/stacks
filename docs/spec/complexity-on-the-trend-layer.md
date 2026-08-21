@@ -2,22 +2,26 @@
 
 The locked spec for [Map: complexity on the trend layer, and CRAP decided on its
 merits](https://github.com/mephistopheles4/stacks/issues/186) — twelve closed
-tickets: three research, one prototype run over the whole repo, four decisions
-made overnight by Claude on the owner's instruction, two feasibility spikes the
-owner asked for the next morning, and two amendments the owner made from their
-results. Assembled into something an implementation session can execute
-**without reopening any of them**.
+tickets: three research ([#187](https://github.com/mephistopheles4/stacks/issues/187)–[#189](https://github.com/mephistopheles4/stacks/issues/189)),
+one prototype run over the whole repo ([#194](https://github.com/mephistopheles4/stacks/issues/194)),
+four decisions ([#190](https://github.com/mephistopheles4/stacks/issues/190)–[#193](https://github.com/mephistopheles4/stacks/issues/193)),
+two feasibility spikes ([#196](https://github.com/mephistopheles4/stacks/issues/196),
+[#197](https://github.com/mephistopheles4/stacks/issues/197)) and two amendments
+made from their results ([#198](https://github.com/mephistopheles4/stacks/issues/198),
+[#199](https://github.com/mephistopheles4/stacks/issues/199)). Assembled into
+something an implementation session can execute **without reopening any of
+them**.
 
 **Successor to [`after-the-scoreboard.md`](after-the-scoreboard.md)**, and an
 application of [`gate-or-trend.md`](gate-or-trend.md). It allocates no gate
 number. **This spec does not implement.** It states the edits; the
 implementation session makes them.
 
-⚠️ **Where an overnight decision and the owner's morning amendment disagree,
-this file carries the amendment and says so.** The overnight reasoning is kept
-where it still holds and struck where a spike falsified it, with the spike named
-— that is what would have to be true again for the amendment to reopen. The
-map's override list records the rest.
+⚠️ **Where a decision and a later amendment disagree, this file carries the
+amendment and says so.** The earlier reasoning is kept where it still holds and
+struck where a spike falsified it, with the spike named — that is what would
+have to be true again for the amendment to reopen. The map's override list
+records the rest.
 
 ---
 
@@ -40,9 +44,9 @@ duplication in 89.8%, while matched human repositories stayed flat. A nightly
 series watching this repo's own history is the one way to learn which regime it
 is in.
 
-**And the owner named the purpose the map had been circling**: this repository
-demonstrates a very high quality floor held under AI-generated code, and the
-floor is meant to *rise*, slowly, while experimenting freely. That is why the
+**And the owner named the purpose the map had been circling** (#198): this
+repository demonstrates a very high quality floor held under AI-generated code,
+and the floor is meant to *rise*, slowly, while experimenting freely. That is why the
 teeth in [§4](#4-teeth-a-cap-that-only-falls) are a ratchet and not a ceiling —
 a ceiling is a number somebody picked; a ratchet is a number the repo earned.
 
@@ -91,32 +95,61 @@ threshold**: nothing goes red when a function crosses it.
 
 ### The population
 
-**The eight declared scopes' globs, read from `stryker.scopes.json` itself.**
-Same names, so the complexity panels sit under the mutation panels per scope. No
-second list: G38 (`mutation-scope`) already holds that file to the tree.
+**A population is one `scopes[].glob` from `stryker.scopes.json`, minus
+`*.test.ts`. Nothing else is read.** Same eight names, so the complexity panels
+sit under the mutation panels per scope. No second list: G38 (`mutation-scope`)
+already holds that file to the tree.
 
-- **Mutation exclusions are not applied to the series.** Every exclusion
-  mechanism is about *oracle reach*, which says nothing about a static measure.
-  Applying them would drop `packages/site/src/shelf` from 385 functions to 113
-  and `packages/cli/src` to **three**. ⚠️ **The hook in
+Stated as a rule rather than a description, because the file carries two other
+lists and the counter reads neither:
+
+- **`exclusions` are not applied to the series.** Every exclusion mechanism is
+  about *oracle reach*, which says nothing about a static measure. Applying
+  them would drop `packages/site/src/shelf` from 385 functions to 113 and
+  `packages/cli/src` to **three**. ⚠️ **The hook in
   [§5](#5-crap-kept-local-advisory-at-pre-commit) is the opposite case**, and
-  applies them — for a reason that is exactly the mechanism each entry names.
-- **`*.test.ts` is excluded**, as Stryker's default does.
-- **The two `excludedDirectories` are not walked.** `gates/` is test files plus
-  helpers; the top level of `packages/site/src` is one file. Both remain on the
-  override list.
+  applies them — for the reason each entry's mechanism names.
+- **`excludedDirectories` is not read at all**, so there is no precedence to
+  define between it and a glob. `packages/site/src` is listed there *and*
+  `packages/site/src/shelf/**/*.ts` is a declared scope; the counter sees the
+  glob and walks `shelf/`. The top level of `packages/site/src` matches no glob
+  and is not walked; neither is `gates/`, which matches none either. Both remain
+  on the override list as candidate populations, which is the only way either
+  enters — as a new `scopes[]` entry, never through the exclusion list.
+- **`*.test.ts` is dropped from every population**, as Stryker's default does.
+
+So `complexity-functions`' denominator is a function of the glob list and the
+tree, and two implementations reading this section produce the same number.
 
 ### What a function is, and what counts
 
-Every function-like node is its own scope; a nested function's branches never
-count toward its parent. **The counting rule is ESLint's `complexity` rule,
-`variant: "classic"`** — start at 1; +1 per `if`, `?:`, each loop, each `case`,
-each `catch`, each `&&` / `||` / `??` and their assignment forms, and **every
-`?.` link** (amended: the owner chose ESLint's stance over the prototype's
-"uncounted", so the rule is one a maintained tool also enforces). Default
-parameters are not counted, matching ESLint. On the prototype's numbers this
-moves `parseNote` from 11 to 12 and leaves `asPrivate` at 11 — the spike
-measured both.
+**The counting rule is ESLint's `complexity` rule, `variant: "classic"`, at
+the exact ESLint version pinned in `package.json`** — amended in #196 from the
+prototype's hand-rolled rule, so that the rule is one a maintained tool also
+enforces. Stated here as ESLint 9+ defines it, because two of its clauses differ
+from the prototype and one of them was wrongly described in an earlier draft of
+this section:
+
+- **Start at 1; +1 per** `if`, `?:`, each loop, each `case` (classic), each
+  `catch`, each `&&` / `||` / `??` and their assignment forms, **every `?.`
+  link**, and **every default value** in a parameter or destructuring pattern
+  (ESLint PR #18152, in v9.0.0 — a default is an implicit branch).
+- **What is a function**: every function-like node is its own scope and a
+  nested function's branches never count toward its parent. ESLint also treats
+  **class field initialisers and static blocks as implicit functions**, scored
+  separately; **the roll-up counts them as functions** — they are in
+  `complexity-functions`' denominator and their complexity is in `mass`. The
+  prototype met none in this repo; the rule is written down so the first one
+  does not move the number silently.
+- On the prototype's numbers this moves `parseNote` from 11 to 12 and leaves
+  `asPrivate` at 11 — #196 measured both, with `@typescript-eslint/parser`
+  8.67.0 and whatever ESLint `pnpm add` resolved that day, which is the reason
+  the pin below is exact: the spike did not record it, and the build must.
+
+**The ESLint and `@typescript-eslint/parser` versions are pinned exact, not
+caret.** They are inputs to the number, the way `timeoutMS` is an input to the
+mutation score, and [§4](#4-teeth-a-cap-that-only-falls) hashes them for that
+reason.
 
 ### Labels
 
@@ -128,18 +161,19 @@ One `scope` label per series. Four series names rather than one series with a
 ## 3. The tooling — TypeScript 6.0.3 until 7.1, and ESLint's rule as the counter
 
 Sources: [#187](https://github.com/mephistopheles4/stacks/issues/187) (the
-overnight finding), and the owner's morning spike on
+research finding), and the spike in
+[#196](https://github.com/mephistopheles4/stacks/issues/196) on
 [`experiment/typescript-6-revert`](https://github.com/mephistopheles4/stacks/blob/experiment/typescript-6-revert/docs/research/typescript-6-revert-spike.md).
 
-**The overnight finding stands as a fact and no longer decides.** On
+**#187's finding stands as a fact and no longer decides.** On
 `typescript@7.0.2` every ESLint-based tool is blocked at `pnpm install` —
 `@typescript-eslint/parser` and `eslint-plugin-sonarjs` each pin `typescript`
 below 6.1.0 — and the only AST surface is `typescript/unstable/{sync,ast}`,
-which spawns the native compiler. Overnight, that made a hand-rolled walk the
-recommendation.
+which spawns the native compiler. That made a hand-rolled walk the
+recommendation at the time.
 
-**The owner's call: ESLint matters more than being on the newest TypeScript.**
-The spike tested it. **The repo is green on TypeScript 6.0.3** — the last
+**The owner's call (#196): ESLint matters more than being on the newest
+TypeScript.** The spike tested it. **The repo is green on TypeScript 6.0.3** — the last
 JS-based release, the bridge version — with *no code or tsconfig change*, no
 peer warning, no deprecated option hit. Cost: `pnpm typecheck` 0.76s → 2.5s,
 `pnpm build` 3.3s → 4.7s. Three things blocked by TS 7 come back:
@@ -179,10 +213,13 @@ is the one somebody else maintains.
 
 `scripts/lib/complexity.test.ts` runs the rule over a fixture file containing
 **every counted construct at least once** — `if`, `?:`, each loop kind, `case`,
-`catch`, `&&`, `||`, `??`, the three assignment forms, `?.` — and every
-uncounted one (a default parameter), with the expected total written beside it.
-It is what makes an ESLint upgrade that changes the count **red** rather than a
-quiet movement of every series at once. A sampled fixture would leave the
+`catch`, `&&`, `||`, `??`, the three assignment forms, `?.`, a default
+parameter, a default in a destructuring pattern — and **every function-shaped
+node the roll-up must see as a function**: a declaration, an expression, an
+arrow, a method, a constructor, an accessor, **a class field initialiser and a
+static block**, with the expected per-function totals and the expected function
+count written beside them. It is what makes an ESLint upgrade that changes the
+count **red** rather than a quiet movement of every series at once. A sampled fixture would leave the
 un-sampled construct as the silent change; *total* is in the sentence on
 purpose.
 
@@ -190,7 +227,8 @@ purpose.
 
 ## 4. Teeth: a cap that only falls
 
-Source: the owner's morning amendment, on
+Source: [#198](https://github.com/mephistopheles4/stacks/issues/198), the
+owner's amendment, on
 [#193](https://github.com/mephistopheles4/stacks/issues/193)'s gaming evidence
 and [`the-ratchet.md`](the-ratchet.md)'s machinery. **Supersedes the map's
 "no gate, no threshold" as the whole story** — the number is still never red on
@@ -217,10 +255,31 @@ every entry ships `unarmed`; arming is a human judgement per scope after that
 scope's twenty-run window fills; `pnpm deploy:site` prints how far each window
 has filled and refuses, with no override flag, when an armed scope exceeds its
 cap; the three routes around a refusal all land in the one file with a visible
-diff. **The fixture hash plays `configHash`'s role**: a record stamped under a
-different counting rule is refused rather than compared, because an ESLint
-upgrade that counts one more construct would otherwise breach every cap at once
-and read as a regression.
+diff.
+
+**The fixture hash plays `configHash`'s role, through the same three places.**
+A record stamped under a different counting rule is refused rather than
+compared, because an ESLint upgrade that counts one more construct would
+otherwise breach every cap at once and read as a regression. Its contract,
+stated so two implementations agree:
+
+- **Canonical inputs**: the exact `eslint` and `@typescript-eslint/parser`
+  versions as installed, the `complexity` rule's options object, and the
+  fixture's expected totals — hashed in that order, the way
+  `configHashOf()` in `scripts/lib/floors.ts` hashes the score-affecting
+  Stryker options and nothing else. Changing any of them is changing what the
+  number means.
+- **Stamped**: `RunFacts.fixtureHash`, rendered as a `fixture_hash` label on
+  the run-info family beside `config_hash`. A score never appears without its
+  run, and now neither does a count.
+- **Compared at deploy**: `stryker.floors.json` carries `fixtureHash` at the top
+  level beside `configHash`; `deploy.ts` compares it to the record's label for
+  every complexity cap the way it compares `configHash` for every floor, and
+  **a mismatch refuses, naming both hashes** — never a silent comparison of two
+  numbers that do not mean the same thing.
+- **Proved able to fail**: a unit spec plants a record whose `fixture_hash`
+  differs from the floors file's and expects the refusal; it sits beside the
+  `configHash` mismatch spec.
 
 **Why this and not a ceiling, in the owner's words**: experimenting a lot, and
 raising the floor slowly. A cap derived from the repo's own history asks nothing
@@ -238,15 +297,20 @@ the codebase legitimately, and a cap on either would refuse a feature.
 ## 5. CRAP: kept local, advisory, at pre-commit
 
 Sources: [#191](https://github.com/mephistopheles4/stacks/issues/191) and
-[#189](https://github.com/mephistopheles4/stacks/issues/189) (overnight), and
-the owner's morning spike on
-[`experiment/coverage-include-orphan`](https://github.com/mephistopheles4/stacks/blob/experiment/coverage-include-orphan/docs/research/coverage-include-orphan-spike.md).
+[#189](https://github.com/mephistopheles4/stacks/issues/189), then the spike in
+[#197](https://github.com/mephistopheles4/stacks/issues/197) on
+[`experiment/coverage-include-orphan`](https://github.com/mephistopheles4/stacks/blob/experiment/coverage-include-orphan/docs/research/coverage-include-orphan-spike.md)
+and the decision in [#199](https://github.com/mephistopheles4/stacks/issues/199).
 
-`CRAP(m) = CC² × (1 − coverage)³ + CC`, per method, as published.
+`CRAP(m) = CC² × (1 − coverage)³ + CC`, per method, as published — where
+`coverage` is **a fraction in `[0, 1]`**, never a `0–100` percentage. Istanbul's
+JSON carries counts, not percentages, so the hook computes the fraction itself
+(statements hit ÷ statements in the function) and never sees a value that
+would make the cube negative.
 
 ### What the spike changed, and what it did not
 
-**The overnight disqualifier is closed by configuration.** #189 held that in
+**#191's disqualifier is closed by configuration.** #189 held that in
 Vitest 4 a never-imported function is *missing* from the report, so CRAP would
 be undefined exactly where it should be maximal. The spike planted an orphan
 file and measured: **with `coverage.include` set to the eight scope globs, the
@@ -261,7 +325,7 @@ mutation score; and a composite on the dashboard is what `trend-layer.md` §3
 refused. **So CRAP is never a series and never a panel.** The four counts stay
 the record.
 
-**The owner's resolution: shift it left.** CRAP lives **only in a pre-commit
+**The owner's resolution (#199): shift it left.** CRAP lives **only in a pre-commit
 hook**, computed over the functions the commit touches, printed to the one
 person who can still change the code, with the *never calibrated* caveat on the
 same line. The spike measured the cost: `vitest related <file> --coverage` for
@@ -314,7 +378,7 @@ since [`no-coverage-floor.md`](no-coverage-floor.md) and what did not:
 
 ### The inversion, and what flips it
 
-Overnight the derivation was: in a production tree with JaCoCo or `llvm-cov`
+#191's derivation was: in a production tree with JaCoCo or `llvm-cov`
 the disqualifier disappears, because those instrument everything. The spike
 showed Vitest can too, with `include` — so **what flips CRAP from "refuse" to
 "local triage" is not the coverage tool any more; it is function count.** Here,
@@ -336,16 +400,17 @@ is the pre-rollout number. **This spec allocates no gate number.**
 
 | File | Change |
 | --- | --- |
-| `package.json`, lockfile | `typescript@6.0.3` exact; `eslint`, `@typescript-eslint/parser`, `eslint-plugin-sonarjs`, `@vitest/coverage-v8` (exact-peer) |
+| `package.json`, lockfile | `typescript@6.0.3` exact; `eslint`, `@typescript-eslint/parser`, `eslint-plugin-sonarjs` **exact**, because they are inputs to the number; `@vitest/coverage-v8` exact-peer to Vitest |
 | `stryker.config.mjs` | `tsconfigFile` back to the real `tsconfig.json`; `checkers` stays `[]` |
-| `eslint.config.mjs` (new) | flat config, `complexity: ['warn', { max: 0, variant: 'classic' }]`, nothing else enabled — this is a counter, not a linter |
+| `eslint.config.mjs` (new) | flat config: `files: ['**/*.ts']`, `languageOptions.parser` = `@typescript-eslint/parser` (without it ESLint fails on TypeScript syntax before any count), `complexity: ['warn', { max: 0, variant: 'classic' }]`, nothing else enabled — this is a counter, not a linter |
 | `scripts/lib/complexity.ts` (new) | run ESLint's JSON output over a population; roll up to the four counts. **Pure, in the `scripts` mutation scope unexcluded** |
 | `scripts/lib/complexity.test.ts` (new) + fixture | the inventory spec |
 | `scripts/emit-metrics.ts` | the four facts into `RunFacts`; populations from `stryker.scopes.json` |
 | `scripts/lib/metrics.ts` | four `TREND_SERIES` entries, `help` carrying the Measures column |
 | `.github/workflows/metrics.yml` | the four names on **both** `--expect` lists |
 | `docs/gates.md`, `## Trends` | four rows |
-| `stryker.floors.json` | per-scope `cap` entries for `complexity-max` and `complexity-mass-over-10`, all `unarmed`, with `fixtureHash` |
+| `stryker.floors.json` | per-scope `cap` entries for `complexity-max` and `complexity-mass-over-10`, all `unarmed`; top-level `fixtureHash` beside `configHash` |
+| `scripts/lib/floors.ts`, `scripts/lib/metrics.ts` | `RunFacts.fixtureHash` → `fixture_hash` label on the run-info family; the floors reader requires `fixtureHash` as it requires `configHash` |
 | `scripts/deploy.ts`, `scripts/lib/trend-report.ts` | the cap refusal and window countdown beside the floor's; four lines per scope in the print block |
 | `vitest.config.ts` | `coverage.provider: 'v8'`, `include` = scope globs, JSON reporter, gitignored directory — **off by default**, on only under `--coverage` |
 | `.githooks/pre-commit` (new), `docs/commands.md` | the CRAP print, and how to opt in |
@@ -367,13 +432,25 @@ make it read as scored — `scoresOf` stays mutation-specific.
 | emit `complexity-mass` with no Trends row | G36 (`trend-layer`), forward | red |
 | add a `complexity-p90` row nothing emits | G36 (`trend-layer`), reverse | red |
 | age the newest `complexity-max` sample four days | G39 (`metrics-freshness`) | `deploy:site` refuses, naming the series |
-| a population whose glob matches **no function** | `emit-metrics`' own `--expect` path | *did not compute*; `run_ok 0`, file still written |
+| a population whose glob matches **no function** | `RunFacts.failed` | all four complexity families omitted; `run_ok 0`, file still written |
 | arm one scope's cap one below its current `max` | the cap refusal, under `--dry-run` | `deploy:site` refuses, naming the scope |
+| plant a record whose `fixture_hash` differs from the floors file's | the hash comparison, under `--dry-run` | `deploy:site` refuses, naming both hashes |
 | comment `?.` out of the fixture's expected total | `complexity.test.ts` | red |
 
-The zero-function case is **per population**, reusing `scoresFrom`'s *no tally
-for scope X* shape. The cap demonstration is the observed-red the ratchet's own
-rule requires before a refusal is believed.
+**The zero-function case is serialised one way, and it is not a zero.** When
+any population yields no function, the counter returns no facts at all, and
+`emit-metrics` adds **all four** complexity names to `RunFacts.failed` — the
+mechanism `metrics.ts` already has for *a producing step that broke* — so the
+families are omitted from the record and `run_ok` is `0`. Three things this
+rules out, each for a reason: emitting the other seven scopes and omitting one
+sample, because the renderer treats a zero-sample family as emitted and the
+record would read `run_ok 1` with a population silently gone; a `0` sample for
+`complexity-max`, because that is a legal value for a scope of trivial
+functions and would be indistinguishable from the failure; and leaning on
+`scoresFrom` as precedent, because an undefined tally there **throws** rather
+than marks — the shape borrowed is `failed`, not `scoresFrom`. The cap
+demonstration is the observed-red the ratchet's own rule requires before a
+refusal is believed.
 
 ### Runtime
 
@@ -394,7 +471,7 @@ for the cap and the hook.
 | Weakening | raise a cap | **Visible**: the floors file's append-only `notes`, same as lowering a floor |
 | Satisfying the letter | function splitting: `max` −10, erosion share −3.8pp, no branch removed | **Carried open, made visible** — no ratio emitted; the signature is on the page. ⚠️ **The cap inherits it**: a split is the cheapest way under a `max` cap. `mass-over-10` is capped beside it for that reason — a split that leaves a 30 still counts — and `mass` is on the page uncapped, flat when nothing was removed |
 | Routing around | code outside the populations; `.astro` files | **Open** for the two excluded directories; `.astro` closed by *no logic in `.astro` files* — and `astro check` now *can* run, recorded as fog |
-| Vacuous green | a glob matching nothing; a hook printing 0% for a browser-only file | **Closed, per population** for the series; **closed by the exclusions** for the hook, which prints *no in-process oracle* instead of a number |
+| Vacuous green | a glob matching nothing; a hook printing 0% for a browser-only file | **Closed** for the series — one empty population fails all four families via `RunFacts.failed`, never a partial record; **closed by the exclusions** for the hook, which prints *no in-process oracle* instead of a number |
 | Decay | the number moves with no code change | *Counting-rule drift*: ESLint upgrades — **closed** by the fixture. *`anonymous_N` identity*: **closed by not tracking them**. *The hook stops running*: **open by nature** — nothing watches a local surface, which is why it is a preview and not the record |
 
 **Mutation-score dilution** (`gate-or-trend.md` §6) is **not** inherited: CRAP
@@ -402,7 +479,7 @@ is not a series and has no denominator anyone can pad on the page.
 
 **One transferable rule gained**, derived from measurement: **emit the
 denominator and the total, never the ratio, and let the page derive.** And a
-second, from the morning: **a blind spot that is configuration is not a
+second, from #197: **a blind spot that is configuration is not a
 disqualifier — measure it before refusing on it.** #189 reasoned from Vitest's
 migration guide and open issues; a one-hour spike answered what the reading
 could not.
