@@ -20,5 +20,26 @@ export default defineConfig({
     // reaches the network fails saying so instead of merely running slowly.
     // See gates/no-live-network.ts.
     setupFiles: ['./gates/no-live-network.setup.ts'],
+    // SPIKE (experiment/coverage-include-orphan, throwaway): coverage is not
+    // adopted by this repo — see docs/spec/no-coverage-floor.md §3, which
+    // declined @vitest/coverage-v8 as a dependency. This block exists only to
+    // answer docs/research/coverage-include-orphan-spike.md's empirical
+    // question and is not wired into any pnpm script or CI gate.
+    coverage: {
+      provider: 'v8',
+      reporter: ['json'],
+      reportsDirectory: '.coverage-spike',
+      include: [
+        'packages/core/src/*.ts',
+        'packages/core/src/adapters/**/*.ts',
+        'packages/core/src/covers/**/*.ts',
+        'packages/core/src/import/**/*.ts',
+        'packages/core/src/metadata/**/*.ts',
+        'packages/site/src/shelf/**/*.ts',
+        'packages/cli/src/**/*.ts',
+        'scripts/**/*.ts',
+      ],
+      exclude: ['**/*.test.ts'],
+    },
   },
 });

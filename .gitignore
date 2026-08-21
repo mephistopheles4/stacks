@@ -35,6 +35,11 @@ fixtures/vault-50/
 # Stryker sandbox (mutation runs); the reports go to the ignored artifacts/ tree
 .stryker-tmp/
 
+# SPIKE (experiment/coverage-include-orphan, throwaway): coverage-v8 JSON
+# report from vitest.config.ts's spike coverage block. Not adopted — see
+# docs/spec/no-coverage-floor.md §3 and docs/research/coverage-include-orphan-spike.md.
+.coverage-spike/
+
 # One CI run's metrics record, written by scripts/emit-metrics.ts. It belongs on
 # the orphan `metrics` branch and never on main — scripts/commit-metrics.ts puts
 # it there.
