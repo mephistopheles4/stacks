@@ -41,15 +41,26 @@ a report key 1:1 — `include` pre-instruments the *entire* declared scope, not
 only files some test happens to touch. This is the fact the prior research
 doc flagged as unconfirmed from a primary source (citing open issues #2879,
 #2674); this run confirms it directly for `@vitest/coverage-v8@4.1.10`,
-Vitest 4.1.10. The 21 files present without `include` that don't reflect the
-full 93 either way are the 28 real never-in-process files `include` adds back
-in — `packages/cli/src/index.ts`, `packages/site/src/shelf/scene.ts`,
-`scripts/deploy.ts`, `packages/core/src/adapters/vault-adapter.ts` (a
-type-only interface file) among them — exactly the files `stryker.scopes.json`
-already documents as excluded from mutation testing because they have no
-in-process oracle. **Version caveat**: measured on `4.1.10` exactly; the open
-issues the prior doc cited were against older/istanbul-provider versions and
-may not describe current behavior.
+Vitest 4.1.10.
+
+The no-`include` report has 72 keys, not 93 minus the same 93 either way —
+`include` moves files in **both** directions. **28 files appear only with
+`include` set** — real never-in-process files it adds back in, e.g.
+`packages/cli/src/index.ts`, `packages/site/src/shelf/scene.ts`,
+`scripts/deploy.ts`, and `packages/core/src/adapters/vault-adapter.ts` (a
+type-only interface file) — exactly the files `stryker.scopes.json` already
+documents as excluded from mutation testing for lacking an in-process oracle.
+**7 files appear only without `include`**: `gates/no-live-network.ts`,
+`gates/recall-corpus.ts`, `gates/repo.ts`, `stryker.config.mjs`, and three
+provider-mark SVGs under `packages/site/src/assets/` — all genuinely loaded
+during the test run (`gates/` helpers import each other; the SVGs are read as
+text fixtures) but outside the eight scope globs, so `include` correctly
+scopes them *out*. 93 − 28 + 7 = 72, which is exactly what a hook wants:
+`include` isn't only "add missing files," it is "make the report equal the
+declared scope," dropping loaded-but-out-of-scope files along with adding
+never-loaded in-scope ones. **Version caveat**: measured on `4.1.10` exactly;
+the open issues the prior doc cited were against older/istanbul-provider
+versions and may not describe current behavior.
 
 **`coverage.all` (Vitest 3 flag, removed in 4):** setting `all: true` is a
 **silent no-op at runtime** — no warning, no error, the run completes
@@ -126,8 +137,12 @@ and the intersection matched Vitest's own claimed line/statement counts.
 
 **Reliability, nested/arrow functions — a real caveat:** Istanbul's `fnMap`
 *does* include them (three `(anonymous_N)` entries above are arrow-function
-callbacks inside `isProbablySameBook`/`titleMatchScore`/`rankingScore`), so
-they are not dropped. But they carry no stable name — `anonymous_7` is a
+callbacks inside `isContainedIn`/`titleMatchScore`/`rankingScore` — `fnMap`
+ids are positional in source order, so `anonymous_7` falls between
+`isContainedIn` (id 6) and `titleMatchScore` (id 8), matching
+`isContainedIn`'s one arrow literal, `small.filter((token) =>
+large.has(token))` at `identity.ts:189`), so they are not dropped. But they
+carry no stable name — `anonymous_7` is a
 **positional id**, and a rename or reorder of surrounding code can shift which
 id an unrelated arrow function gets. A per-function CRAP time series keyed by
 name would misattribute history across a refactor for every nested arrow; a
