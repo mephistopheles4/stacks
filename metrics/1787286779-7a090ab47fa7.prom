@@ -1,0 +1,29 @@
+# TYPE stacks_run_ok gauge
+# HELP stacks_run_ok One when this run computed every series it declared, zero when it did not.
+stacks_run_ok 1 1787286779
+# TYPE stacks_run_info gauge
+# HELP stacks_run_info The run that wrote this file. A score never appears without its run.
+stacks_run_info{commit="7a090ab47fa7e9037b8cfd12ed149dcf4c7b0714",event="schedule",run_url="https://github.com/mephistopheles4/stacks/actions/runs/32445303913",pr_window="#181, #183, #184, #182",config_hash="sha256:17380c198fafc9178458a52e97a9efa215a97e621ada4ebe8b8336a85a9db99d"} 1 1787286779
+# TYPE stacks_run_declared_exclusions gauge
+# HELP stacks_run_declared_exclusions Exclusion entries declared in stryker.scopes.json, the denominator for live-exclusions.
+stacks_run_declared_exclusions 29 1787286779
+# TYPE stacks_trend_mutation_score gauge
+# HELP stacks_trend_mutation_score Killed plus timeout over total, per declared scope, 0..1. Stryker total score.
+stacks_trend_mutation_score{scope="packages/core/src"} 0.7171964140179299 1787286779
+stacks_trend_mutation_score{scope="packages/core/src/adapters"} 0.6693989071038251 1787286779
+stacks_trend_mutation_score{scope="packages/core/src/covers"} 0.6227180527383367 1787286779
+stacks_trend_mutation_score{scope="packages/core/src/import"} 0.66015625 1787286779
+stacks_trend_mutation_score{scope="packages/core/src/metadata"} 0.62148070907195 1787286779
+stacks_trend_mutation_score{scope="packages/site/src/shelf"} 0.4703925482368596 1787286779
+stacks_trend_mutation_score{scope="packages/cli/src"} 0.45588235294117646 1787286779
+stacks_trend_mutation_score{scope="scripts"} 0.6701132447070408 1787286779
+# TYPE stacks_trend_gate_suite_runtime gauge
+# HELP stacks_trend_gate_suite_runtime Wall-clock seconds of pnpm test.
+stacks_trend_gate_suite_runtime 15 1787286779
+# TYPE stacks_trend_mutation_run_runtime gauge
+# HELP stacks_trend_mutation_run_runtime Wall-clock seconds of the Stryker run.
+stacks_trend_mutation_run_runtime 1984 1787286779
+# TYPE stacks_trend_live_exclusions gauge
+# HELP stacks_trend_live_exclusions Declared exclusions that produced at least one executed mutant. Healthy value 0.
+stacks_trend_live_exclusions 0 1787286779
+# EOF
