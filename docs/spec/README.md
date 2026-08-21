@@ -1,14 +1,15 @@
 # `docs/spec/` — the locked specs
 
-**Two efforts have produced a locked spec in this folder.** Each is decided end to
+**Three efforts have produced a locked spec in this folder.** Each is decided end to
 end, and **each carries its own build order and its own gate roster** — they do not
-share one. **Only the second is waiting for an implementation session**; the first
-has been built on a branch and is kept as written.
+share one. **Only the third is waiting for an implementation session**; the first
+two have been built and are kept as written.
 
 | Spec | Index | State |
 |---|---|---|
 | The enhanced book card, provider provenance, and the merge | **this file, below** | **built** on a branch; kept as written |
 | What comes after the scoreboard — mutation scoring, the trend layer, the gaming analysis | [`after-the-scoreboard.md`](after-the-scoreboard.md) | **built**; kept as written. All seven rows landed. ⚠️ **Built is not armed** — the ratchet ships with every scope `unarmed`, and arming one is a human judgement per scope after its calibration window fills. [#154](https://github.com/mephistopheles4/stacks/issues/154) is the live answer |
+| Complexity on the trend layer — four counts, a cap that only falls, and CRAP kept local | [`complexity-on-the-trend-layer.md`](complexity-on-the-trend-layer.md) | **waiting for an implementation session**. Four series, a deploy-side cap mirroring the ratchet, TypeScript pinned to 6.0.3 until 7.1, coverage admitted as an ingredient for a pre-commit CRAP print — and **no gate row**. Twelve tickets; [the map](https://github.com/mephistopheles4/stacks/issues/186) carries the trail and the override list |
 
 ⚠️ **Gate numbers are per-rollout and never reusable.** The first spec landed
 **G30–G35**; the second landed **G36 and G38–G43**, derived from its own landing
