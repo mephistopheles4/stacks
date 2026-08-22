@@ -132,14 +132,8 @@ arithmetic, not prose.
 so the same file kept beside its spec would be counted into the very series it
 exists to pin — and adding a construct to it, which is the maintenance it is
 designed to receive, would read on the dashboard as the `scripts` scope getting
-more complex. `fixtures/` is in no scope glob, so nothing counts it and Stryker
-never mutates it.
-
-**It is still typechecked, and that is deliberate.** `fixtures/complexity/` is
-named in `tsconfig.json`'s `include`, because *TypeScript strict everywhere* has
-no fixture exemption — being outside the mutation and complexity populations is
-a statement about what measures it, not a licence to rot. Nothing about that
-membership counts it: the populations come from `stryker.scopes.json`. See
+more complex. `fixtures/` is in no scope glob and outside `tsconfig.json`, so it
+is **not typechecked**; keep it valid TypeScript by hand. See
 [ADR-0067](../docs/adr/0067-the-counters-inputs-are-pinned-exact.md).
 
 **Adding a construct** means adding it here *and* to `INVENTORY` in

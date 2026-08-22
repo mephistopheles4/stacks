@@ -47,6 +47,14 @@
 # evaluation. Built in bash instead, and echoed, so the value is inspectable in
 # the log rather than inferred from what it did.
 #
+# ⚠️ The four complexity names are on both `--expect` lists and on neither
+# `--failed` list, and that asymmetry is the design rather than an omission. The
+# counter runs *inside* `pnpm metrics:emit` rather than as a step of its own, so
+# there is no exit code here for the usual `[ status = 0 ] || add` line to read.
+# The emitter sees its own failure and names the four itself — which is also why
+# a population that yields no function fails all four together: a partial record
+# would read `run_ok 1` with a scope silently gone.
+#
 # ⚠️ There is no `continue-on-error` here, deliberately, and the repo still has
 # zero. Both jobs need a failing step to keep going — a crashed run writes
 # `run_ok 0` plus whatever computed and must still exit red — but that is done
@@ -139,7 +147,7 @@ jobs:
           [ "${{ steps.suite.outputs.status }}" = "0" ] || FAILED="gate-suite-runtime"
           echo "series whose step failed: [$FAILED]"
           pnpm metrics:emit \
-            --expect gate-suite-runtime \
+            --expect gate-suite-runtime,complexity-functions,complexity-mass,complexity-mass-over-10,complexity-max \
             --failed "$FAILED" \
             --suite-seconds "${{ steps.suite.outputs.seconds }}" \
             --commit "${{ github.sha }}" \
@@ -221,7 +229,7 @@ jobs:
           [ "${{ steps.mutation.outputs.status }}" = "0" ] || add "mutation-score,mutation-run-runtime,live-exclusions"
           echo "series whose step failed: [$FAILED]"
           pnpm metrics:emit \
-            --expect mutation-score,gate-suite-runtime,mutation-run-runtime,live-exclusions \
+            --expect mutation-score,gate-suite-runtime,mutation-run-runtime,live-exclusions,complexity-functions,complexity-mass,complexity-mass-over-10,complexity-max \
             --failed "$FAILED" \
             --report artifacts/stryker/current/mutation.json \
             --suite-seconds "${{ steps.suite.outputs.seconds }}" \

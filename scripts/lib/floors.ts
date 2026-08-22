@@ -20,7 +20,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { METRIC_PREFIXES } from './metrics.ts';
-import { runInfoOf, scoresOf, type ParsedRecord } from './metrics-read.ts';
+import { MERGE_EVENT, runInfoOf, scoresOf, type ParsedRecord } from './metrics-read.ts';
 import { globToRegExp, type Scope } from './mutation-score.ts';
 import { REPO_ROOT } from './repo-root.ts';
 import { sourceFiles } from './scope-check.ts';
@@ -361,15 +361,18 @@ export const WINDOW_RUNS = 20;
 export const MAX_GAP_DAYS = 3;
 
 /**
- * The event `metrics.yml`'s merge half runs on, and the only runs the window
- * ignores.
+ * Why the window ignores `metrics.yml`'s merge half entirely.
  *
- * A merge record is not a mutation run: it emits one series and carries no
- * score. Counting one would leave every scope with a hole in its window and so
+ * A merge record is not a mutation run: it carries no score, whatever else it
+ * emits. Counting one would leave every scope with a hole in its window and so
  * unarmable forever; breaking the streak on one would reset the window on every
  * push to `main`. It is neither — it is simply not a member.
+ *
+ * ⚠️ **The event name itself now lives in `./metrics-read.ts`**, where `halfOf`
+ * needs the same answer about a parsed record. It was a private constant here
+ * beside an export whose own note says *a second spelling of it would drift* —
+ * and the third spelling was being written a module away when this moved.
  */
-const MERGE_EVENT = 'push';
 
 /**
  * The runs that actually score — `metrics.yml`'s nightly half, in order.
@@ -403,7 +406,7 @@ export function nightliesIn(rows: readonly RunRow[]): RunRow[] {
  * ⚠️ **Deliberately not filtered on the event**, which is `scoredRecords` in
  * `./trend-report.ts`. An earlier version intersected this with
  * `event !== 'push'`, which agreed with the panel only because `metrics.yml`'s
- * merge half emits one series and never a score.
+ * merge half never emits a score.
  * `docs/spec/trend-layer.md` §2 names on-merge scoring as a deferred move: the
  * day it lands a push record carries scores, and an event filter here would skip
  * the run the panel beside it takes as its subject — so **one deploy would print

@@ -27,9 +27,10 @@
  * deriving it means a crashed run writes `run_ok 0` **plus whatever computed**,
  * which is what keeps *never ran* (a gap in the branch) distinguishable from
  * *ran and broke* (an explicit zero). Both halves of `metrics.yml` use it, and
- * the merge half legitimately expects one series where the nightly expects four.
+ * the merge half legitimately expects five series where the nightly expects eight.
  */
 
+import type { Counts } from './complexity.ts';
 import type { EdgeAnswer } from './edge-probe.ts';
 
 /**
@@ -54,7 +55,7 @@ export const METRIC_PREFIXES = {
   edge: 'stacks_edge_',
 } as const;
 
-/** The four series, and the whole of what this record carries as a trend. */
+/** The eight series, and the whole of what this record carries as a trend. */
 export const TREND_SERIES = [
   {
     name: 'mutation-score',
@@ -66,6 +67,23 @@ export const TREND_SERIES = [
     name: 'live-exclusions',
     help: 'Declared exclusions that produced at least one executed mutant. Healthy value 0.',
   },
+  // The four counts, read side by side. ⚠️ **No ratio, and that is measured
+  // rather than preferred**: the prototype put every candidate statistic
+  // through a mechanical split and thirty trivial functions, and no ratio
+  // survived both games. The record carries counts and the page derives
+  // shares — `mutation-score` being spelled *killed ÷ total*, applied one step
+  // earlier. See docs/spec/complexity-on-the-trend-layer.md §2, whose Measures
+  // column each `help` below carries.
+  {
+    name: 'complexity-functions',
+    help: 'Functions counted — the denominator the other three are read against.',
+  },
+  { name: 'complexity-mass', help: 'Σ cyclomatic complexity over those functions.' },
+  {
+    name: 'complexity-mass-over-10',
+    help: 'Σ complexity over functions with CC > 10. The cut is McCabe 1976, and is not a threshold.',
+  },
+  { name: 'complexity-max', help: "The largest single function's complexity." },
 ] as const;
 
 export type TrendName = (typeof TREND_SERIES)[number]['name'];
@@ -81,6 +99,89 @@ export interface ScopeScore {
    * health. A `null` scope emits no sample at all.
    */
   score: number | null;
+}
+
+/**
+ * One declared scope's four counts, as the record carries them.
+ *
+ * **One compound field rather than four parallel lists**, mirroring
+ * `mutationScore` — the four are produced together, fail together, and are read
+ * against each other, so a shape that let three arrive without the fourth would
+ * be a shape `complexityFactsOf` then had to talk callers out of.
+ */
+export interface ScopeComplexity extends Counts {
+  scope: string;
+}
+
+/**
+ * Each complexity series, and the count it reads off a scope.
+ *
+ * **The names and the fields in one table**, so a series can neither be
+ * rendered from the wrong count nor added without a way to fill it. The
+ * `Counts` fields are `complexity.ts`'s, imported as a type, which is what
+ * keeps the counter's vocabulary and the record's from drifting apart.
+ */
+const COMPLEXITY_FACTS = [
+  ['complexity-functions', (entry: ScopeComplexity): number => entry.functions],
+  ['complexity-mass', (entry: ScopeComplexity): number => entry.mass],
+  ['complexity-mass-over-10', (entry: ScopeComplexity): number => entry.massOver10],
+  ['complexity-max', (entry: ScopeComplexity): number => entry.max],
+] as const;
+
+/**
+ * The four names this record spells for complexity, in rendering order.
+ *
+ * **Derived from the table above, never written twice.** Two callers need the
+ * set — the all-or-nothing rule below, and anything that has to say *which*
+ * series went quiet — and a second hand-written list is the drift this repo
+ * has three logged rows about.
+ */
+export const COMPLEXITY_SERIES: readonly TrendName[] = COMPLEXITY_FACTS.map(([name]) => name);
+
+/**
+ * The complexity half of `RunFacts`, from what the counter returned per scope.
+ *
+ * ⚠️ **All four, or none of them — and this is the rule the slice exists
+ * around.** `undefined` means the counter never ran (it threw); a `null` value
+ * means that population yielded no function. Both, and an empty map, produce
+ * the same answer: every complexity name into `failed`, no families at all,
+ * and `run_ok 0` falling out of the mechanism a broken producing step already
+ * used.
+ *
+ * Three shapes this rules out, each for its own reason:
+ *
+ *   - **Emitting the seven populations that counted.** The renderer treats a
+ *     zero-sample family as emitted, so the record would read `run_ok 1` with
+ *     a population silently gone — health, describing a hole.
+ *   - **A `0` sample for `complexity-max`.** That is a legal value for a scope
+ *     of trivial functions, and indistinguishable from the failure.
+ *   - **Throwing, as `scoresFrom` does on an undefined tally.** The shape
+ *     borrowed here is `failed`, which marks; a throw would lose the other
+ *     series computed by the same run.
+ *
+ * **It lives here rather than in `scripts/emit-metrics.ts`** because that file
+ * is excluded from the `scripts` mutation scope and imported by no spec, so the
+ * rule would sit exactly where nothing can hold it. This is a pure function
+ * over a map, and `metrics.test.ts` holds it.
+ */
+export function complexityFactsOf(counted: ReadonlyMap<string, Counts | null> | undefined): {
+  complexity?: readonly ScopeComplexity[];
+  failed: readonly TrendName[];
+} {
+  const facts: ScopeComplexity[] = [];
+
+  for (const [scope, counts] of counted ?? []) {
+    // Narrowed by returning rather than by a cast: the one value this function
+    // must never let through is the one a cast would wave past.
+    if (counts === null) return { failed: COMPLEXITY_SERIES };
+    facts.push({ scope, ...counts });
+  }
+
+  // An empty map is not a healthy run either. Eight scopes are declared, so
+  // nothing to walk is a broken declaration wearing the shape of a clean pass.
+  if (facts.length === 0) return { failed: COMPLEXITY_SERIES };
+
+  return { complexity: facts, failed: [] };
 }
 
 export interface RunFacts {
@@ -136,6 +237,15 @@ export interface RunFacts {
    */
   failed?: readonly TrendName[];
   mutationScore?: readonly ScopeScore[];
+  /**
+   * The four counts per declared population, or absent when any of them failed.
+   *
+   * ⚠️ **Present means all eight scopes are here**, which `mutationScore` does
+   * not promise: a scope with no mutants emits no score sample, while a
+   * population with no function fails the whole set. Read
+   * `complexityFactsOf` for why, and rely on it — the reading half does.
+   */
+  complexity?: readonly ScopeComplexity[];
   gateSuiteRuntime?: number;
   mutationRunRuntime?: number;
   liveExclusions?: { live: number; declared: number };
@@ -232,8 +342,8 @@ function helpFor(trend: TrendName): string {
  * The families this run computed, in declaration order.
  *
  * A series is present when its input is present, and absent otherwise — which is
- * what lets the same renderer serve the nightly (four series) and the merge
- * (one) without either one lying about the other.
+ * what lets the same renderer serve the nightly (eight series) and the merge
+ * (five) without either one lying about the other.
  */
 function trendFamilies(facts: RunFacts): Family[] {
   const broke = new Set<string>(facts.failed ?? []);
@@ -268,6 +378,26 @@ function trendFamilies(facts: RunFacts): Family[] {
       help: helpFor('live-exclusions'),
       samples: [{ labels: {}, value: facts.liveExclusions.live }],
     });
+  }
+
+  // One family per count, each carrying every population — the four names
+  // rather than one series with a `stat` label, because G36 holds *names* to
+  // Trends rows and a label would be invisible to it.
+  //
+  // ⚠️ The `failed` check is per name here, as it is above, although the
+  // emitter can only ever fail the four together. A renderer that dropped the
+  // set on one name would be a second copy of the all-or-nothing rule, living
+  // where `complexityFactsOf`'s spec cannot reach it.
+  const complexity = facts.complexity;
+  if (complexity !== undefined) {
+    for (const [series, of] of COMPLEXITY_FACTS) {
+      if (broke.has(series)) continue;
+      families.push({
+        metric: metricNameOf(series),
+        help: helpFor(series),
+        samples: complexity.map((entry) => ({ labels: { scope: entry.scope }, value: of(entry) })),
+      });
+    }
   }
   return families;
 }

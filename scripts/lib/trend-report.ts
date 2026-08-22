@@ -94,8 +94,8 @@ function pad(text: string, width: number): string {
  * The records carrying a score, newest first — the panel's actual subject.
  *
  * ⚠️ **Not simply the newest record.** `metrics.yml` writes on `push: main`
- * too, and a merge record legitimately carries one series; the newest record in
- * a busy week is therefore a runtime and no score at all. **A score never
+ * too, and a merge record legitimately carries no score; the newest record in
+ * a busy week is therefore a runtime, four counts, and no score at all. **A score never
  * appears without its run**, so the run panel 1 names is the run that produced
  * the score — not whichever row landed last. Exported because the PR window is
  * computed between exactly this pair, and computing it between a different two
@@ -257,6 +257,16 @@ export function renderRefusal(
   probe: Disambiguation,
   scanned: number,
 ): string {
+  // ⚠️ Measured from the names being printed, not fixed at the width of the
+  // longest one that existed when this was written. A hardcoded 22 held until
+  // `complexity-mass-over-10` arrived at 23, and `pad` returns an over-long
+  // name unchanged — so the series ran straight into its own explanation with
+  // no space, in the message a refusal is read from. `renderPanel` measures its
+  // own column from its own data too, one function up; the `+ 2` here is the
+  // gap, where that one carries its separator in the format string.
+  const names = verdict.kind === 'stale' ? verdict.stale.map((one) => one.series.length) : [];
+  const column = Math.max(22, ...names) + 2;
+
   const head =
     verdict.kind === 'never'
       ? `no metrics record has arrived, ${String(verdict.days)} days after the trend spine landed.\n` +
@@ -270,7 +280,7 @@ export function renderRefusal(
           verdict.stale
             .map(
               (one) =>
-                `    ${pad(one.series, 22)}${
+                `    ${pad(one.series, column)}${
                   one.newest === undefined
                     ? `no sample at all in the ${String(scanned)} newest record(s) read`
                     : `newest sample ${describeAge(now - one.newest)} ago (${asDate(one.newest)})`

@@ -79,6 +79,13 @@ function completeRun(): RunFacts {
     gateSuiteRuntime: 12.5,
     mutationRunRuntime: 3600,
     liveExclusions: { live: 0, declared: 25 },
+    // ⚠️ Present, or this gate goes red in its **reverse** direction: the
+    // Trends table names four complexity rows, and a "complete" run that
+    // emitted none of them is a promise of four lines that will never be drawn.
+    complexity: [
+      { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
+      { scope: 'packages/cli/src', functions: 26, mass: 96, massOver10: 22, max: 14 },
+    ],
   };
 }
 
@@ -106,7 +113,7 @@ function tabledTrends(): string[] {
   );
 
   const names = body.map((line) => (tableCells(line)[at] ?? '').replace(/`/g, '').trim());
-  expectFound(names, 'rows in the Trends table of docs/gates.md', 4);
+  expectFound(names, 'rows in the Trends table of docs/gates.md', 8);
   return names;
 }
 
@@ -141,8 +148,8 @@ describe('G36 — the emitted series and the Trends table agree', () => {
     // Both sides are extractions, and an extraction that stops matching reports
     // an empty set — which trivially satisfies every "each of these is in that"
     // below. Asserted before the comparisons rather than trusted by them.
-    expectFound(trendNamesIn(renderMetrics(completeRun())), 'series in a rendered run', 4);
-    expectFound(tabledTrends(), 'rows in the Trends table', 4);
+    expectFound(trendNamesIn(renderMetrics(completeRun())), 'series in a rendered run', 8);
+    expectFound(tabledTrends(), 'rows in the Trends table', 8);
   });
 
   it('gives every emitted series a row', () => {

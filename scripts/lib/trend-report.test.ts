@@ -155,6 +155,22 @@ describe('the refusal', () => {
     expect(text).toContain(asDate(NOW - 4 * DAY));
   });
 
+  it('keeps a name off its own explanation, however long the name is', () => {
+    // ⚠️ Observed, not anticipated. The column was fixed at 22 and `pad`
+    // returns an over-long name unchanged, so `complexity-mass-over-10` at 23
+    // rendered as `complexity-mass-over-10no sample at all in the 1 newest
+    // record(s) read` — in the one message a refusal is actually read from.
+    const long = {
+      kind: 'stale' as const,
+      stale: [{ series: 'complexity-mass-over-10' }, { series: 'mutation-score' }],
+    };
+    const text = renderRefusal(long, NOW, { kind: 'unreachable' }, 1);
+
+    expect(text).toContain('complexity-mass-over-10  no sample at all');
+    // And the short name still lines up with the long one beside it.
+    expect(text).toMatch(/^ {4}mutation-score {11}no sample at all/m);
+  });
+
   it('sends you to the sync when the branch has rows you have not imported', () => {
     const text = renderRefusal(stale, NOW, { kind: 'newer', newer: 4 }, 5);
 

@@ -14,16 +14,32 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type { Counts } from './complexity.ts';
 import {
+  COMPLEXITY_SERIES,
   METRIC_PREFIXES,
+  TREND_SERIES,
+  complexityFactsOf,
   joinRecords,
   renderEdgeCheck,
   renderMetrics,
   trendNamesIn,
   type EdgeFacts,
+  type RunFacts,
 } from './metrics.ts';
 
 const AT = 1_787_183_835;
+
+/** A run with nothing computed, for the tests that add exactly one thing to it. */
+const BASE: RunFacts = {
+  timestamp: AT,
+  commit: 'abc123',
+  event: 'schedule',
+  runUrl: 'https://example.invalid/run/1',
+  // Nobody measured a window for a record these tests invented.
+  prWindow: 'unknown',
+  expected: [],
+};
 
 function record(value: number): string {
   return [
@@ -218,5 +234,157 @@ describe('the run stamps the configuration it was scored under', () => {
   it('renders a row that carries no hash at all', () => {
     expect(renderMetrics(facts)).toMatch(/^stacks_run_info\{/m);
     expect(renderMetrics(facts)).not.toContain('config_hash');
+  });
+});
+
+describe('the two tables that spell the complexity series', () => {
+  it('gives every declared complexity series a count to render from', () => {
+    // ⚠️ The names live in two tables in `metrics.ts` — `TREND_SERIES` for the
+    // help text, `COMPLEXITY_FACTS` for the accessor — coupled only by
+    // `TrendName`, which catches a typo and not an omission. A fifth entry
+    // added to the first alone is declared, never emitted, and G36 sees eight
+    // on both sides: red only if somebody also writes the row, or puts the
+    // name on an `--expect` list. Narrow, and four lines to close.
+    const declared = TREND_SERIES.map((series) => series.name).filter((name) =>
+      name.startsWith('complexity-'),
+    );
+
+    expect([...COMPLEXITY_SERIES].sort()).toEqual([...declared].sort());
+  });
+});
+
+describe('complexityFactsOf — all four, or none of them', () => {
+  const counts = (functions: number, mass: number, massOver10: number, max: number): Counts => ({
+    functions,
+    mass,
+    massOver10,
+    max,
+  });
+
+  const counted = (): Map<string, Counts | null> =>
+    new Map([
+      ['packages/core/src', counts(120, 340, 88, 21)],
+      ['scripts', counts(96, 410, 150, 40)],
+    ]);
+
+  it('carries one entry per population, in the order counted', () => {
+    const { complexity, failed } = complexityFactsOf(counted());
+
+    expect(failed).toEqual([]);
+    expect(complexity).toEqual([
+      { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
+      { scope: 'scripts', functions: 96, mass: 410, massOver10: 150, max: 40 },
+    ]);
+  });
+
+  it('fails all four names when any one population yielded no function', () => {
+    // The spec's loudest rule for this slice. Emitting the seven populations
+    // that counted and omitting the eighth is the shape ruled out by name: the
+    // renderer treats a zero-sample family as emitted, so the record would read
+    // `run_ok 1` with a population silently gone.
+    const partial = counted();
+    partial.set('packages/site/src/shelf', null);
+
+    const { complexity, failed } = complexityFactsOf(partial);
+
+    expect(complexity).toBeUndefined();
+    expect([...failed].sort()).toEqual([
+      'complexity-functions',
+      'complexity-mass',
+      'complexity-mass-over-10',
+      'complexity-max',
+    ]);
+  });
+
+  it('never reports a zero for max instead of a failure', () => {
+    // `0` is a legal value for a scope of trivial functions, so a zeroed entry
+    // would be indistinguishable from the failure. Asserted on the bytes rather
+    // than on the facts, because the bytes are what a dashboard ever sees.
+    const partial = counted();
+    partial.set('scripts', null);
+
+    const document = renderMetrics({
+      ...BASE,
+      expected: ['complexity-max'],
+      ...complexityFactsOf(partial),
+    });
+
+    expect(document).not.toContain('stacks_trend_complexity_max');
+    expect(document).toMatch(/^stacks_run_ok 0 /m);
+  });
+
+  it('fails all four when the counter never ran at all', () => {
+    // An ESLint throw and an empty population reach the same destination for
+    // different reasons — the caller logs which, and the record cannot tell
+    // them apart because a record that could would be inviting a third state.
+    const { complexity, failed } = complexityFactsOf(undefined);
+
+    expect(complexity).toBeUndefined();
+    expect(failed).toHaveLength(4);
+  });
+
+  it('fails all four when no population was counted', () => {
+    // Eight scopes are declared, so an empty map is the counter having found
+    // nothing to walk — a broken declaration, not a healthy run.
+    expect(complexityFactsOf(new Map()).complexity).toBeUndefined();
+    expect(complexityFactsOf(new Map()).failed).toHaveLength(4);
+  });
+
+  it('fails no series it does not own', () => {
+    const partial = counted();
+    partial.set('scripts', null);
+
+    expect(complexityFactsOf(partial).failed).not.toContain('mutation-score');
+    expect(complexityFactsOf(partial).failed).not.toContain('gate-suite-runtime');
+  });
+});
+
+describe('the complexity families, as rendered', () => {
+  const withComplexity = (): RunFacts => ({
+    ...BASE,
+    complexity: [
+      { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
+      { scope: 'scripts', functions: 96, mass: 410, massOver10: 150, max: 40 },
+    ],
+  });
+
+  it('renders four families, one sample per scope', () => {
+    const document = renderMetrics(withComplexity());
+
+    expect(document).toMatch(
+      /^stacks_trend_complexity_functions\{scope="packages\/core\/src"\} 120 /m,
+    );
+    expect(document).toMatch(/^stacks_trend_complexity_mass\{scope="scripts"\} 410 /m);
+    expect(document).toMatch(/^stacks_trend_complexity_mass_over_10\{scope="scripts"\} 150 /m);
+    expect(document).toMatch(/^stacks_trend_complexity_max\{scope="scripts"\} 40 /m);
+  });
+
+  it('names all four series in the rendered document', () => {
+    expect(trendNamesIn(renderMetrics(withComplexity()))).toEqual(
+      expect.arrayContaining([
+        'complexity-functions',
+        'complexity-mass',
+        'complexity-mass-over-10',
+        'complexity-max',
+      ]),
+    );
+  });
+
+  it('round-trips the hyphenated name through the metric name', () => {
+    // `complexity-mass-over-10` is the one name here with more than one hyphen,
+    // and `metricNameOf`/`trendOfMetric` are a pair of separate implementations
+    // — the shape this repo has three logged rows about. A name that did not
+    // survive the trip would reach the dashboard as a family nothing reads.
+    expect(trendNamesIn(renderMetrics(withComplexity()))).toContain('complexity-mass-over-10');
+  });
+
+  it('drops one complexity family without dropping the others', () => {
+    // Not a state the emitter can produce — it fails all four together — but
+    // `failed` is per-name, and a renderer that dropped the set on one name
+    // would be a second all-or-nothing rule living where nothing tests it.
+    const document = renderMetrics({ ...withComplexity(), failed: ['complexity-max'] });
+
+    expect(trendNamesIn(document)).not.toContain('complexity-max');
+    expect(trendNamesIn(document)).toContain('complexity-mass');
   });
 });

@@ -14,12 +14,6 @@
     "packages/site/src/**/*.ts",
     "scripts/**/*.ts",
     "gates/**/*.ts",
-    // The complexity counter's inventory fixture. It is deliberately in no
-    // Stryker scope and no complexity population — see fixtures/README.md — but
-    // "TypeScript strict everywhere" has no fixture exemption, so it is checked
-    // here. Being in this list changes nothing about what counts it: the
-    // populations come from stryker.scopes.json, never from here.
-    "fixtures/complexity/**/*.ts",
     "vitest.config.ts",
     "vitest.stryker.config.ts"
   ],
