@@ -92,7 +92,7 @@ and is kept as fog on
 - **The revisit condition depends on somebody else's roadmap.** "7.1's stable
   programmatic API" is a milestone this project does not control and cannot
   date. If it slips a year, the pin sits for a year.
-- **Two documents now describe a compiler the repo is no longer on**, and they
+- **Two documents still describe a compiler the repo is no longer on**, and they
   are left alone on purpose so this diff stays the compiler and nothing else:
   [`AGENTS.md`](../../AGENTS.md)'s note that `astro check` cannot run, and
   [`docs/spec/mutation-scoring.md`](../spec/mutation-scoring.md) §5 on the dead
@@ -100,6 +100,10 @@ and is kept as fog on
   They move when the thing they describe moves — `astro check` if it becomes a
   gate row, `mutation-scoring.md` if the checker is turned on — and until then
   this record is what a reader finds first, from `docs/adr/`.
+  [`docs/progress.md`](../progress.md) was a third and is **not** left: its
+  resolved-versions row and its Stryker environment finding are statements about
+  the environment this commit changed, so correcting them is this commit's debt
+  rather than a later one's.
 
 ## What was rejected
 
