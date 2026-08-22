@@ -1,8 +1,25 @@
 import { defineConfig } from 'vitest/config';
 
 /**
- * The repo's `vitest.config.ts` with the one spec that cannot run inside
+ * The repo's `vitest.config.ts` with the two specs that cannot run inside
  * Stryker's sandbox removed. Nothing else is changed.
+ *
+ * ⚠️ **`scripts/lib/complexity-tree.test.ts` is the second, and it is the
+ * filesystem warning further down made concrete.** It asserts the complexity of
+ * this repository's own source — `parseNote` reads 12 — and the sandbox is a
+ * copy of the tree with every mutant site rewritten into a `stryMutAct(...)`
+ * conditional. ESLint reads text, so an instrumented file *is* a more complex
+ * file: measured at **104** against 12, failing the dry run with
+ * `expected 104 to be 12` and taking the whole run with it before a single
+ * mutant was tested.
+ *
+ * **The consequence is smaller than `env.test.ts`'s, and is named for the same
+ * reason.** Only that file's assertions lose their mutant-killing role.
+ * `scripts/lib/complexity.test.ts` stays in: its inventory assertions read only
+ * `fixtures/complexity/inventory.ts`, which no `mutate` glob matches and which
+ * is therefore never instrumented, and its roll-up and population assertions are
+ * pure. So `scripts/lib/complexity.ts` keeps an in-process oracle and needs
+ * **no** exclusion in `stryker.scopes.json`.
  *
  * `packages/cli/src/env.test.ts` calls `process.chdir()` ten times. Stryker's
  * vitest runner hardcodes `pool: 'threads'` — its own docs say *"Currently, only
@@ -56,7 +73,12 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['packages/**/src/**/*.test.ts', 'gates/**/*.test.ts', 'scripts/**/*.test.ts'],
-    exclude: ['**/node_modules/**', '**/dist/**', 'packages/cli/src/env.test.ts'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'packages/cli/src/env.test.ts',
+      'scripts/lib/complexity-tree.test.ts',
+    ],
     environment: 'node',
     setupFiles: ['./gates/no-live-network.setup.ts'],
     reporters: ['default'],
