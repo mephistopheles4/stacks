@@ -34,7 +34,7 @@ import {
 } from './lib/metrics-record.ts';
 import { UNKNOWN_WINDOW, subjectsBetween, windowFrom } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
-import { configHashOf } from './lib/floors.ts';
+import { configHashOf, fixtureHashOf } from './lib/floors.ts';
 // The config Stryker actually runs, imported rather than described. The hash
 // below is a fact about the configuration this run loaded, and a flag carrying
 // it would let the stamp disagree with what was actually scored.
@@ -46,7 +46,7 @@ import {
   scoreRun,
   type ScoredRun,
 } from './lib/mutation-score.ts';
-import { countPopulation, type Counts } from './lib/complexity.ts';
+import { counterInputs, countPopulation, type Counts } from './lib/complexity.ts';
 import { sourceFiles } from './lib/scope-check.ts';
 import {
   TREND_SERIES,
@@ -269,13 +269,38 @@ async function complexityFacts(): Promise<ReturnType<typeof complexityFactsOf>> 
   }
 }
 
+/**
+ * The counting rule this run counted under, or nothing.
+ *
+ * ⚠️ **Stamped from the config ESLint actually resolved, never from a literal
+ * here.** `configHash`'s rule one file over: a flag or a copy would let the
+ * stamp disagree with the rule it claims to describe, which is the one input
+ * the comparison at deploy cannot see.
+ *
+ * **Absent when the counter could not run**, which is the honest answer rather
+ * than a convenience: a record with no counts in it has no counting rule to
+ * declare, and `floorRefusals` reads an absent stamp as *a record from before
+ * the stamp existed* — the same forgiving reading `configHash` gets, and safe
+ * because no families accompany it.
+ */
+async function countingStamp(): Promise<string | undefined> {
+  try {
+    return fixtureHashOf(await counterInputs());
+  } catch (error) {
+    console.error(`could not stamp the counting rule: ${String(error)}`);
+    return undefined;
+  }
+}
+
 const complexity = await complexityFacts();
+const fixtureHash = await countingStamp();
 
 const facts: RunFacts = {
   timestamp,
   commit,
   event: flags.get('event') ?? 'unknown',
   configHash: configHashOf(strykerConfig as unknown as Record<string, unknown>),
+  ...(fixtureHash === undefined ? {} : { fixtureHash }),
   runUrl: flags.get('run-url') ?? 'unknown',
   prWindow: windowSincePreviousRun(),
   expected: expected(),

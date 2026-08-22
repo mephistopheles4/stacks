@@ -19,8 +19,19 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { METRIC_PREFIXES } from './metrics.ts';
-import { MERGE_EVENT, runInfoOf, scoresOf, type ParsedRecord } from './metrics-read.ts';
+// Type-only, deliberately: `complexity.ts` imports ESLint at its top level, and
+// a value import here would drag the linter into every module that reads a
+// floor — including the deploy, which computes no count and only compares two
+// strings.
+import type { CounterInputs } from './complexity.ts';
+import { METRIC_PREFIXES, type TrendName } from './metrics.ts';
+import {
+  MERGE_EVENT,
+  runInfoOf,
+  samplesOf,
+  scoresOf,
+  type ParsedRecord,
+} from './metrics-read.ts';
 import { globToRegExp, type Scope } from './mutation-score.ts';
 import { REPO_ROOT } from './repo-root.ts';
 import { sourceFiles } from './scope-check.ts';
@@ -31,6 +42,43 @@ export type FloorValue = number | 'unarmed';
 /** The value that is not a number, spelled once. */
 export const UNARMED = 'unarmed';
 
+/**
+ * The two series that get a cap, and the whole of what may be capped.
+ *
+ * ⚠️ **`complexity-functions` and `complexity-mass` are deliberately absent.**
+ * They grow with the codebase legitimately, and a cap on either would refuse a
+ * feature — a check that punishes the work rather than the decay. Naming one of
+ * them in the floors file is therefore the same fault as misspelling a capped
+ * series, and the reader treats it as one.
+ */
+export const CAPPED_SERIES = [
+  'complexity-max',
+  'complexity-mass-over-10',
+] as const satisfies readonly TrendName[];
+
+/** A series a cap may name. */
+export type CappedSeries = (typeof CAPPED_SERIES)[number];
+
+/** A scope's cap on one series: a number it may not exceed, or explicitly not yet set. */
+export type CapValue = number | typeof UNARMED;
+
+/**
+ * One scope's cap on one series.
+ *
+ * **`ScopeFloor`'s mirror, minus `ignored`.** That counter is about disable
+ * directives in mutated source and means nothing to a count of branches. The
+ * date and the append-only notes carry over unchanged, because the reasons for
+ * them do: raising a cap is the lowering of this file, and costs a notes entry
+ * like any other.
+ */
+export interface ScopeCap {
+  cap: CapValue;
+  /** ISO date — when the entry was added, or when it was armed. */
+  armed: string;
+  /** Append-only, one line per raising, never cleared. */
+  notes: string[];
+}
+
 export interface ScopeFloor {
   floor: FloorValue;
   /** ISO date — when the entry was added, or when it was armed. */
@@ -39,11 +87,30 @@ export interface ScopeFloor {
   ignored: number;
   /** Append-only, one line per lowering, never cleared. */
   notes: string[];
+  /**
+   * This scope's caps, by series.
+   *
+   * ⚠️ **An empty map is a legal shape and a refused state.** Whether every
+   * capped series is accounted for is a *completeness* question, and this file
+   * already answers those at the refusal rather than at the parse —
+   * `correspondence` does exactly this for scopes. Throwing here instead would
+   * make the floors file unreadable on the commit that adds a scope, including
+   * to the print whose whole job is to say what is missing.
+   */
+  caps: Map<CappedSeries, ScopeCap>;
 }
 
 export interface Floors {
   /** The score-affecting Stryker configuration these floors were derived under. */
   configHash: string;
+  /**
+   * The counting rule these caps were derived under.
+   *
+   * `configHash`'s role for the other half of this file, and required for the
+   * same reason: an ESLint upgrade that counted one more construct would breach
+   * every cap at once and read as a regression. See `fixtureHashOf`.
+   */
+  fixtureHash: string;
   scopes: Map<string, ScopeFloor>;
 }
 
@@ -60,10 +127,17 @@ export function parseFloors(document: unknown): Floors {
     throw new Error('the floors file is not an object');
   }
 
-  const { configHash, scopes } = document as { configHash?: unknown; scopes?: unknown };
+  const { configHash, fixtureHash, scopes } = document as {
+    configHash?: unknown;
+    fixtureHash?: unknown;
+    scopes?: unknown;
+  };
 
   if (typeof configHash !== 'string' || configHash === '') {
     throw new Error('the floors file carries no configHash');
+  }
+  if (typeof fixtureHash !== 'string' || fixtureHash === '') {
+    throw new Error('the floors file carries no fixtureHash');
   }
   if (typeof scopes !== 'object' || scopes === null) {
     throw new Error('the floors file carries no scopes object');
@@ -73,14 +147,14 @@ export function parseFloors(document: unknown): Floors {
   for (const [name, entry] of Object.entries(scopes as Record<string, unknown>)) {
     parsed.set(name, parseEntry(name, entry));
   }
-  return { configHash, scopes: parsed };
+  return { configHash, fixtureHash, scopes: parsed };
 }
 
 function parseEntry(name: string, entry: unknown): ScopeFloor {
   if (typeof entry !== 'object' || entry === null) {
     throw new Error(`the floors entry for ${name} is not an object`);
   }
-  const { floor, armed, ignored, notes } = entry as Record<string, unknown>;
+  const { floor, armed, ignored, notes, caps } = entry as Record<string, unknown>;
 
   if (floor !== UNARMED && typeof floor !== 'number') {
     throw new Error(`the floor for ${name} is neither a number nor ${UNARMED}: ${String(floor)}`);
@@ -95,7 +169,56 @@ function parseEntry(name: string, entry: unknown): ScopeFloor {
     throw new Error(`the notes for ${name} are not a list of lines`);
   }
 
-  return { floor, armed, ignored, notes: notes as string[] };
+  return { floor, armed, ignored, notes: notes as string[], caps: parseCaps(name, caps) };
+}
+
+/**
+ * One scope's caps, by series, or a throw.
+ *
+ * ⚠️ **An unrecognised series name is a fault and never a skipped key.** That
+ * is `cover_source`'s rule in `AGENTS.md` applied to a different file: a typo
+ * that parsed would leave the series it meant to cap refusing nothing,
+ * silently, behind a line in the file that reads as protection. A cap exists to
+ * prevent exactly that, so it must not arrive through the reader.
+ */
+function parseCaps(name: string, caps: unknown): Map<CappedSeries, ScopeCap> {
+  const parsed = new Map<CappedSeries, ScopeCap>();
+  if (caps === undefined) return parsed;
+
+  if (typeof caps !== 'object' || caps === null) {
+    throw new Error(`the caps for ${name} are not an object`);
+  }
+
+  const cappable = new Set<string>(CAPPED_SERIES);
+  for (const [series, entry] of Object.entries(caps as Record<string, unknown>)) {
+    if (!cappable.has(series)) {
+      throw new Error(
+        `${name} caps ${series}, which is not a capped series. ` +
+          `The capped series are ${CAPPED_SERIES.join(' and ')}.`,
+      );
+    }
+    parsed.set(series as CappedSeries, parseCap(`${name} ${series}`, entry));
+  }
+  return parsed;
+}
+
+function parseCap(what: string, entry: unknown): ScopeCap {
+  if (typeof entry !== 'object' || entry === null) {
+    throw new Error(`the cap for ${what} is not an object`);
+  }
+  const { cap, armed, notes } = entry as Record<string, unknown>;
+
+  if (cap !== UNARMED && typeof cap !== 'number') {
+    throw new Error(`the cap for ${what} is neither a number nor ${UNARMED}: ${String(cap)}`);
+  }
+  if (typeof armed !== 'string' || armed === '') {
+    throw new Error(`the cap for ${what} carries no date`);
+  }
+  if (!Array.isArray(notes) || notes.some((note) => typeof note !== 'string')) {
+    throw new Error(`the notes for ${what} are not a list of lines`);
+  }
+
+  return { cap, armed, notes: notes as string[] };
 }
 
 /** Scopes one side names and the other does not. Both directions, always. */
@@ -261,7 +384,56 @@ export function configHashOf(config: Record<string, unknown>): string {
   for (const key of Object.keys(config).sort()) {
     if (!neutral.has(key)) scoring[key] = canonical(config[key]);
   }
-  return `sha256:${createHash('sha256').update(JSON.stringify(scoring)).digest('hex')}`;
+  return digest(scoring);
+}
+
+/**
+ * The one spelling of a hash in this file, for the reason ADR-0028 gives about
+ * two parsers of one format: this module now stamps **two** things, and a
+ * digest written twice is free to drift in the half nobody re-reads.
+ */
+function digest(value: unknown): string {
+  return `sha256:${createHash('sha256').update(JSON.stringify(value)).digest('hex')}`;
+}
+
+/**
+ * What the complexity counts *mean*, as one string.
+ *
+ * `configHashOf`'s job for the other half of this file. A cap is a number about
+ * a counting rule, and an ESLint upgrade that counts one more construct would
+ * breach every cap at once and read as a regression — so a record stamped under
+ * a different rule is **refused rather than compared**.
+ *
+ * **The canonical inputs are the spec's, in the spec's order**
+ * (`docs/spec/complexity-on-the-trend-layer.md` §4): the two installed
+ * versions, the resolved rule options, and the fixture's expected totals.
+ * Positional, in an array, so the order is structural rather than a promise in
+ * a comment — swapping the two version strings is a different hash, which is
+ * the property `floors.test.ts` plants.
+ *
+ * ⚠️ **Severity is absent from `ruleOptions` and that is `CounterInputs`'s
+ * judgement, not an omission here.** At `max: 0` every function reports whether
+ * the rule says `warn` or `error`, so severity cannot move a count — and
+ * hashing it would refuse every record across a `warn` → `error` edit whose
+ * numbers were identical either side. It is `SCORE_NEUTRAL_OPTIONS` applied to
+ * a different config: hash what changes the number, and nothing else.
+ *
+ * ⚠️ **`MCCABE_CUT` is deliberately not an input, and is guarded elsewhere.**
+ * It decides what `complexity-mass-over-10` means, but §4's canonical list is
+ * these three and a fourth would change a contract two implementations are
+ * meant to agree on. The fixture cannot see it either — its only over-the-cut
+ * function scores 13, so a cut of 10, 11 or 12 produces identical expected
+ * totals. What closes that is the series *name*, asserted against the constant
+ * in `complexity.test.ts`: move the cut and it is either red or a rename, and a
+ * rename is G36's to catch.
+ */
+export function fixtureHashOf(inputs: CounterInputs): string {
+  return digest([
+    inputs.eslintVersion,
+    inputs.parserVersion,
+    canonical(inputs.ruleOptions),
+    canonical(inputs.inventory),
+  ]);
 }
 
 /**
@@ -334,6 +506,59 @@ export function breaches(readings: readonly ScopeReading[], floors: Floors): Bre
   return found;
 }
 
+/** One scope's newest value for one capped series. */
+export interface CapReading {
+  scope: string;
+  series: CappedSeries;
+  /** `null` where the record carried no value for this pair, which is not a count. */
+  value: number | null;
+}
+
+export interface CapBreach {
+  scope: string;
+  series: CappedSeries;
+  value: number;
+  cap: number;
+}
+
+/**
+ * Every armed cap the record exceeds.
+ *
+ * **`breaches`, with the inequality turned over.** For a floor the bad
+ * direction is down and for a cap it is up; everything else about the judgement
+ * is the same, including the two absences it declines to rule on.
+ *
+ * **Strictly over**, mirroring `breaches`' strictly under. A value sitting
+ * exactly on its cap is the cap being met, and a ratchet that refused there
+ * would refuse the first deploy after arming — on the very run the cap was
+ * derived from.
+ *
+ * ⚠️ **An unarmed cap, a missing cap entry and a missing reading all refuse
+ * nothing, and they are three different absences.** Unarmed is a decision in a
+ * tracked file with a date, printed at every deploy. A missing entry is the
+ * *completeness* question `capsUnaccounted` asks at the refusal. A missing
+ * reading is the record having nothing to say, which is `metrics-freshness`'s
+ * refusal rather than this one — so this returns nothing rather than inventing
+ * a verdict on a number it does not have.
+ */
+export function capBreaches(readings: readonly CapReading[], floors: Floors): CapBreach[] {
+  const found: CapBreach[] = [];
+
+  for (const reading of readings) {
+    const entry = floors.scopes.get(reading.scope)?.caps.get(reading.series);
+    if (entry === undefined || entry.cap === UNARMED) continue;
+    if (reading.value === null || reading.value <= entry.cap) continue;
+
+    found.push({
+      scope: reading.scope,
+      series: reading.series,
+      value: reading.value,
+      cap: entry.cap,
+    });
+  }
+  return found;
+}
+
 /** One CI run, as the record carries it. Scores are percentages. */
 export interface RunRow {
   /** Unix seconds. */
@@ -353,7 +578,23 @@ export interface RunRow {
   event: string;
   /** The score-affecting configuration it ran under, absent on older rows. */
   configHash?: string;
+  /** The counting rule it ran under, absent on rows from before that stamp. */
+  fixtureHash?: string;
   scores: Map<string, number>;
+  /**
+   * Each capped series' values by scope.
+   *
+   * ⚠️ **Counts, never percentages, and that is the difference from `scores`.**
+   * The record stores a mutation score as `0..1` and everything downstream is a
+   * percentage, so `scores` converts at the read. A count of branches is already
+   * the number it means: `complexity-max` of `12` is twelve, and dividing it by
+   * a hundred would put every cap three orders of magnitude out.
+   *
+   * **A merge record populates this and leaves `scores` empty**, which is why
+   * `scoredIn` and the cap's own window disagree about which rows exist. §6 puts
+   * the counts on both events, for per-merge resolution.
+   */
+  counts: Map<CappedSeries, Map<string, number>>;
 }
 
 /** How many consecutive healthy runs a window is, and how far apart they may sit. */
@@ -430,6 +671,39 @@ export function scoredIn(rows: readonly RunRow[]): RunRow[] {
   return rows.filter((row) => row.ok && row.scores.size > 0);
 }
 
+/**
+ * The runs that actually carry counts — what a cap is compared against.
+ *
+ * ⚠️ **`scoredIn`'s twin, and a different row on a busy week.**
+ * `docs/spec/complexity-on-the-trend-layer.md` §6 puts the four counts on
+ * **both** halves of `metrics.yml` while only the nightly half scores, so the
+ * newest counting run is routinely a merge — exactly the row `scoredIn` drops,
+ * because a merge record carries no score and so has an empty `scores`. Reading
+ * the caps off `scoredIn`'s newest would report *no count in the record* for
+ * every scope, which is a cap refusing nothing at the moment somebody is
+ * deploying: the floor's own trap, one mechanism over.
+ *
+ * **Membership is asked of the samples, not of the `# TYPE` lines**, which is
+ * where this differs from `recordsCarrying` in `./metrics-read.ts`. That reader
+ * is the right one for a `ParsedRecord`; by the time `runRowsFrom` has produced
+ * a `RunRow` the type lines are gone, and the window needs rows. It is safe
+ * because of the emitter's all-or-nothing rule — when any population yields no
+ * function, **all four** names go to `failed`, every complexity family is
+ * omitted, and `run_ok` is `0` — so a family present with samples and a family
+ * declared are the same set here. ⚠️ **If that rule ever softens, this must
+ * move back to reading type membership**, because a zero-sample family would
+ * then be a carried one.
+ *
+ * **Keyed on `CAPPED_SERIES`, not on one series' name.** Probing only
+ * `complexity-max` would single out one member of a set the floors file treats
+ * as a unit, and would go quietly wrong the day a third series is capped.
+ */
+export function countedIn(rows: readonly RunRow[]): RunRow[] {
+  return rows.filter(
+    (row) => row.ok && CAPPED_SERIES.every((series) => (row.counts.get(series)?.size ?? 0) > 0),
+  );
+}
+
 const DAY_SECONDS = 86_400;
 
 export interface Calibration {
@@ -449,6 +723,79 @@ export interface Calibration {
   days: number;
   /** Lowest score observed per scope across the window, or `null` where the scope has a hole. */
   lowest: Map<string, number | null>;
+}
+
+/** The consecutive healthy nightlies at the newest end of a record, and their span. */
+interface Streak {
+  /** Every qualifying run, newest first — the countdown's numerator. */
+  streak: RunRow[];
+  /** The newest `WINDOW_RUNS` of them: the window a value is derived from. */
+  window: RunRow[];
+  /** Nightlies in the record at all, qualifying or not. */
+  candidates: number;
+  /** Days the window spans. */
+  days: number;
+}
+
+/**
+ * The streak walk both calibrations do, written once.
+ *
+ * ⚠️ **The floor and the cap must walk identically, and this is what makes that
+ * structural rather than a claim.** `docs/spec/complexity-on-the-trend-layer.md`
+ * §4 says the cap inherits its machinery *"verbatim from `the-ratchet.md`"*, and
+ * a second copy of this loop is free to drift in the half nobody re-reads —
+ * ADR-0028's shape, and the reason `digest` and `samplesOf` are each spelled
+ * once in this file too. The only thing a caller varies is **which stamp a row
+ * must carry**; everything else about *what counts as a streak* is one rule.
+ *
+ * **Nightlies only**, for both. `the-ratchet.md` is explicit — *"CI nightlies
+ * only, 20 consecutive `run_ok 1` runs, no gap over 3 days. Counted in **runs**,
+ * not days"* — and a draft of the cap counted merges as well, on the reasoning
+ * that more samples could only raise a derived cap. ⚠️ **That reasoning is
+ * false for a run-bounded window, and it is worth keeping the correction
+ * visible.** `slice(0, WINDOW_RUNS)` takes the newest twenty *runs*, so counting
+ * merges does not add samples over a fixed period — it makes twenty runs span
+ * two days instead of three weeks. The extremum is then taken over a strictly
+ * *narrower* slice of history, and the derived cap comes out **lower and
+ * tighter**, which is the opposite of what was claimed. Only a *time*-bounded
+ * window would have behaved the way that draft assumed.
+ *
+ * **Three things end a streak, and all three end it rather than being skipped
+ * over.** A run that failed, because it writes `run_ok 0` plus a partial result
+ * and *lowest observed* is the rule one bad row destroys forever. A gap over
+ * three days, which is what makes *consecutive* mean anything on a nightly
+ * cadence. And a row stamped for another configuration or counting rule, which
+ * is not a row about this floor or cap at all — including a row carrying **no**
+ * stamp, so the countdown starts when the stamp lands rather than counting rows
+ * nothing can prove were measured the same way.
+ */
+function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): Streak {
+  const ordered = nightliesIn(rows).sort((one, other) => one.timestamp - other.timestamp);
+
+  const streak: RunRow[] = [];
+  for (let index = ordered.length - 1; index >= 0; index -= 1) {
+    const row = ordered[index];
+    if (row === undefined) break;
+    if (!row.ok || !stamped(row)) break;
+
+    const newer = streak.at(-1);
+    if (newer !== undefined && newer.timestamp - row.timestamp > MAX_GAP_DAYS * DAY_SECONDS) break;
+    streak.push(row);
+  }
+
+  const window = streak.slice(0, WINDOW_RUNS);
+  const oldest = window.at(-1);
+  const newest = window.at(0);
+
+  return {
+    streak,
+    window,
+    candidates: ordered.length,
+    days:
+      newest === undefined || oldest === undefined
+        ? 0
+        : Math.round((newest.timestamp - oldest.timestamp) / DAY_SECONDS),
+  };
 }
 
 /**
@@ -484,22 +831,10 @@ export function calibration(
   scopes: readonly string[],
   configHash: string,
 ): Calibration {
-  const ordered = nightliesIn(rows).sort((one, other) => one.timestamp - other.timestamp);
-
-  const streak: RunRow[] = [];
-  for (let index = ordered.length - 1; index >= 0; index -= 1) {
-    const row = ordered[index];
-    if (row === undefined) break;
-    if (!row.ok || row.configHash !== configHash) break;
-
-    const newer = streak.at(-1);
-    if (newer !== undefined && newer.timestamp - row.timestamp > MAX_GAP_DAYS * DAY_SECONDS) break;
-    streak.push(row);
-  }
-
-  const window = streak.slice(0, WINDOW_RUNS);
-  const oldest = window.at(-1);
-  const newest = window.at(0);
+  const { streak, window, candidates, days } = streakOf(
+    rows,
+    (row) => row.configHash === configHash,
+  );
 
   const lowest = new Map<string, number | null>();
   for (const name of scopes) {
@@ -514,13 +849,88 @@ export function calibration(
 
   return {
     runs: streak.length,
-    candidates: ordered.length,
+    candidates,
     full: streak.length >= WINDOW_RUNS,
-    days:
-      newest === undefined || oldest === undefined
-        ? 0
-        : Math.round((newest.timestamp - oldest.timestamp) / DAY_SECONDS),
+    days,
     lowest,
+  };
+}
+
+/** How far the cap window has filled, and what it would arm each pair at. */
+export interface CapCalibration {
+  /** Consecutive qualifying runs, counting back from the newest. */
+  runs: number;
+  /** Runs in the record at all, qualifying or not. */
+  candidates: number;
+  full: boolean;
+  /** Days spanned by those runs. */
+  days: number;
+  /**
+   * Highest value observed per series per scope across the window, or `null`
+   * where that scope has a hole in it.
+   */
+  highest: Map<CappedSeries, Map<string, number | null>>;
+}
+
+/**
+ * How far the cap window has filled, and what it would arm each scope at.
+ *
+ * > **Cap for a scope = the highest value observed for that scope across the
+ * > calibration window, applied _once, at arming_.** After arming it moves down
+ * > only, by hand.
+ *
+ * ⚠️ **This computes; it never arms.** `calibration`'s rule exactly, and for
+ * the same reason: arming is a human judgement after the window fills, per
+ * scope, and nothing in this module writes the floors file.
+ *
+ * **The window is the floor's window**, walked by the same `streakOf` and
+ * counting the same runs: CI nightlies only, twenty consecutive healthy runs,
+ * no gap over three days. §4 says the machinery is inherited *verbatim* from
+ * `the-ratchet.md`, and sharing the walk is what makes that structural.
+ *
+ * ⚠️ **A draft counted merges as well, and the reasoning was wrong.** It is
+ * recorded in `streakOf` rather than deleted, because the mistake is easy to
+ * make twice: a run-bounded window that counts merges does not see *more* of
+ * history, it sees *less of it, faster*, and derives a tighter cap. §6's
+ * per-merge resolution is about what the record carries and what the print
+ * reads — not about which runs a cap is derived from.
+ *
+ * **The comparison is not the window, and they read different rows on purpose.**
+ * A cap is derived from nightlies and then applied to whatever ran last,
+ * including a merge. That is the intended asymmetry: the cap is a stable
+ * historical bound, and any run exceeding it is the event worth refusing on.
+ */
+export function capCalibration(
+  rows: readonly RunRow[],
+  scopes: readonly string[],
+  fixtureHash: string,
+): CapCalibration {
+  const { streak, window, candidates, days } = streakOf(
+    rows,
+    (row) => row.fixtureHash === fixtureHash,
+  );
+
+  const highest = new Map<CappedSeries, Map<string, number | null>>();
+  for (const series of CAPPED_SERIES) {
+    const perScope = new Map<string, number | null>();
+    for (const name of scopes) {
+      const seen = window.map((row) => row.counts.get(series)?.get(name));
+      perScope.set(
+        name,
+        window.length === 0 || seen.some((value) => value === undefined)
+          ? null
+          : Math.max(...(seen as number[])),
+      );
+    }
+    highest.set(series, perScope);
+  }
+
+  return {
+    runs: streak.length,
+    candidates,
+    full: streak.length >= WINDOW_RUNS,
+    days,
+    highest,
   };
 }
 
@@ -685,14 +1095,17 @@ function armedState(floor: number, reading: PrintReading | undefined): string {
  * store with no nightlies at all is the other thing entirely, and reading the
  * first as the second is reading a working pipe as a dead one.
  */
-function emptyWindowNote(window: Calibration): string | undefined {
+function emptyWindowNote(
+  window: { runs: number; candidates: number },
+  measuredUnder = 'scored under this configuration',
+): string | undefined {
   if (window.runs > 0) return undefined;
 
   const seen = window.candidates;
   return seen === 0
     ? 'no nightly in the record yet — every window starts at its first one'
     : `no window has started: the ${String(seen)} nightl${seen === 1 ? 'y' : 'ies'} in the record ` +
-      `${seen === 1 ? 'was' : 'were'} not scored under this configuration`;
+      `${seen === 1 ? 'was' : 'were'} not ${measuredUnder}`;
 }
 
 function unarmedState(name: string, entry: ScopeFloor, input: PrintInput): string {
@@ -723,6 +1136,153 @@ function unarmedState(name: string, entry: ScopeFloor, input: PrintInput): strin
     : `${state}0/${String(WINDOW_RUNS)} runs   ${sat}`;
 }
 
+/** A scope-and-series pair's newest count, plus the one before it, for the print. */
+export interface CapPrintReading extends CapReading {
+  /** The same pair's count in the previous record, where there was one. */
+  previous?: number;
+}
+
+export interface CapPrintInput {
+  floors: Floors;
+  readings: readonly CapPrintReading[];
+  window: CapCalibration;
+  /** Today, as `YYYY-MM-DD`. Passed in: a print is not where a clock belongs. */
+  today: string;
+}
+
+/**
+ * The cap block `pnpm deploy:site` prints, one line per capped pair.
+ *
+ * ```
+ * scripts  complexity-max            armed 12   current 11  (-2)
+ * scripts  complexity-mass-over-10   unarmed    14/20 runs, 14 days   (unarmed for 106 days)
+ * ```
+ *
+ * **`renderFloorLines`' twin, and it prints beside it rather than inside it.**
+ * Two blocks because they answer two questions and count two different windows;
+ * one merged table would have to explain per row which window a countdown
+ * belonged to.
+ *
+ * ⚠️ **Counts print as integers.** The floor block prints two decimals because
+ * a score is a percentage and a floor of `71.55` has to be checkable against a
+ * print reading `71.55`. A branch count has no such precision, and rendering
+ * `complexity-max` as `12.00` would claim one it does not have.
+ *
+ * **This escalates never and files nothing**, `renderFloorLines`' constraint
+ * exactly. It is also the mechanism that ends *this* disarmed period: the cap
+ * lands early, per §9 step 4, precisely so the countdown is visible for the
+ * whole window.
+ */
+export function renderCapLines(input: CapPrintInput): string[] {
+  // ⚠️ **Nested, never a `scope + separator + series` string key.** A composite
+  // key needs a separator no scope name can contain, and choosing one is a
+  // question with a wrong answer available: a draft of this line used a literal
+  // NUL, which worked perfectly and turned the module into a file `grep` reports
+  // as binary. `CapCalibration.highest` is already series-then-scope, so this
+  // matches its shape rather than inventing a second one.
+  const counts = new Map<CappedSeries, Map<string, CapPrintReading>>();
+  for (const reading of input.readings) {
+    const perScope = counts.get(reading.series) ?? new Map<string, CapPrintReading>();
+    perScope.set(reading.scope, reading);
+    counts.set(reading.series, perScope);
+  }
+
+  const rows: string[] = [];
+  const width = Math.max(...[...input.floors.scopes.keys()].map((name) => name.length), 1) + 2;
+  const seriesWidth = Math.max(...CAPPED_SERIES.map((series) => series.length)) + 3;
+
+  // ⚠️ **Measured from what is actually printed, never fixed at the width of the
+  // longest label that existed when this was written.** `trend-report.ts` says
+  // the same thing one file over and learned it the hard way: a hardcoded 22
+  // held until `complexity-mass-over-10` arrived at 23. `padded` returns an
+  // over-long string uncut, so a stale constant does not truncate — it silently
+  // stops aligning, which nothing fails on.
+  const stateWidth =
+    Math.max(
+      UNARMED.length,
+      ...[...input.floors.scopes.values()].flatMap((entry) =>
+        [...entry.caps.values()].map((cap) =>
+          cap.cap === UNARMED ? UNARMED.length : `armed ${String(cap.cap)}`.length,
+        ),
+      ),
+    ) + 3;
+
+  for (const [name, entry] of input.floors.scopes) {
+    for (const series of CAPPED_SERIES) {
+      const cap = entry.caps.get(series);
+      // A pair with no entry is `capsUnaccounted`'s refusal, which names it in
+      // full. Printing a placeholder here would report one omission twice.
+      if (cap === undefined) continue;
+
+      const reading = counts.get(series)?.get(name);
+      rows.push(
+        `${padded(name, width)}${padded(series, seriesWidth)}${
+          cap.cap === UNARMED
+            ? capUnarmedState(name, series, cap, input, stateWidth)
+            : capArmedState(cap.cap, reading, stateWidth)
+        }`,
+      );
+    }
+  }
+
+  // ⚠️ **Nothing counted and nothing present are different facts**, and the
+  // floor block carries this same note above its own table for the same reason.
+  // A store with nightlies in it and none of them counting means every one
+  // predates the counting stamp — the window starts when the stamp does — and a
+  // store with no nightlies at all is the other thing entirely. Reading the
+  // first as the second is reading a working pipe as a dead one.
+  //
+  // It is `emptyWindowNote`'s, not a second copy: both windows are now the same
+  // twenty nightlies, so a second sentence saying it differently would be a
+  // second sentence to keep true.
+  const note = emptyWindowNote(input.window, 'counted under this rule');
+  return note === undefined ? rows : [note, ...rows];
+}
+
+function capArmedState(
+  cap: number,
+  reading: CapPrintReading | undefined,
+  stateWidth: number,
+): string {
+  const parts = [padded(`armed ${String(cap)}`, stateWidth)];
+
+  if (reading === undefined || reading.value === null) {
+    parts.push('no count in the record');
+    return parts.join('');
+  }
+
+  parts.push(`current ${String(reading.value)}`);
+  if (reading.previous !== undefined) {
+    const delta = reading.value - reading.previous;
+    parts.push(`  (${delta >= 0 ? '+' : ''}${String(delta)})`);
+  }
+  return parts.join('');
+}
+
+function capUnarmedState(
+  name: string,
+  series: CappedSeries,
+  entry: ScopeCap,
+  input: CapPrintInput,
+  stateWidth: number,
+): string {
+  const state = padded(UNARMED, stateWidth);
+  const highest = input.window.highest.get(series)?.get(name);
+  const sat = `(${UNARMED} for ${String(days(entry.armed, input.today))} days)`;
+
+  if (input.window.full) {
+    const derived =
+      highest === null || highest === undefined
+        ? 'no complete history for this scope'
+        : `highest ${String(highest)} - armable`;
+    return `${state}window full (${String(WINDOW_RUNS)} runs), ${derived}   ${sat}`;
+  }
+
+  return input.window.runs > 0
+    ? `${state}${String(input.window.runs)}/${String(WINDOW_RUNS)} runs, ${String(input.window.days)} days   ${sat}`
+    : `${state}0/${String(WINDOW_RUNS)} runs   ${sat}`;
+}
+
 export interface RefusalInput {
   floors: Floors;
   /** The scopes `stryker.scopes.json` declares. */
@@ -739,7 +1299,67 @@ export interface RefusalInput {
    * not synced* from *CI stopped writing*.
    */
   run?: { configHash?: string };
+  /**
+   * The newest CI run that **counted**, which is a different row from the one
+   * above on a busy week — see `countedIn`.
+   *
+   * ⚠️ **A separate field, and merging the two was a real defect.** A draft put
+   * `fixtureHash` on `run` and filled it from whichever row had one, so a store
+   * holding counting merges but no scoring nightly produced `{ fixtureHash }`
+   * with no `configHash` — and with any floor armed, that reads to the check
+   * below as *a scoring run from before the config stamp existed* and refuses
+   * with "these floors were derived under a different configuration". A
+   * truthful sentence about a row that does not exist. Two rows answer two
+   * questions, so they arrive as two fields.
+   */
+  countedRun?: { fixtureHash?: string };
   readings: readonly ScopeReading[];
+  /**
+   * The newest value per scope per capped series.
+   *
+   * **Empty is a legal input and refuses nothing**, which is the bootstrap case
+   * again: a store holding only records from before the counts existed has
+   * nothing to compare, and the freshness refusal is the check equipped to say
+   * so.
+   */
+  capReadings?: readonly CapReading[];
+}
+
+/** A scope declared and counted, with no cap entry naming a capped series. */
+export interface CapCorrespondence {
+  scope: string;
+  series: CappedSeries;
+}
+
+/**
+ * Every declared scope that does not account for every capped series.
+ *
+ * ⚠️ **`correspondence`'s forward direction, one level down, and it exists for
+ * the identical reason.** A scope with no entry for `complexity-max` is counted
+ * by every run and capped by nothing — it refuses nothing, silently, which is
+ * the one case a cap exists to catch.
+ *
+ * **There is no reverse direction here**, and that asymmetry is not an
+ * oversight: an entry naming a scope nothing declares is already `orphans`, and
+ * an entry naming a series nothing may cap cannot survive `parseCaps`. Both
+ * rotting directions are closed before this runs.
+ */
+export function capsUnaccounted(
+  declared: readonly string[],
+  floors: Floors,
+): CapCorrespondence[] {
+  const missing: CapCorrespondence[] = [];
+
+  for (const scope of declared) {
+    const entry = floors.scopes.get(scope);
+    // A scope with no floors entry at all is `unaccounted`'s finding, reported
+    // there and not doubled here — one missing scope must read as one problem.
+    if (entry === undefined) continue;
+    for (const series of CAPPED_SERIES) {
+      if (!entry.caps.has(series)) missing.push({ scope, series });
+    }
+  }
+  return missing;
 }
 
 /**
@@ -787,6 +1407,21 @@ export function floorRefusals(input: RefusalInput): string[] {
     );
   }
 
+  const uncapped = capsUnaccounted(input.declared, input.floors);
+  if (uncapped.length > 0) {
+    const pairs = uncapped.map(({ scope, series }) => `${scope} (${series})`).join(', ');
+    refusals.push(
+      `declared scope(s) with no cap entry — uncapped: ${pairs}\n\n` +
+        `  A scope ${FLOORS_FILE} counts but does not cap is measured by every run and\n` +
+        '  capped by nothing. That is the floors entry problem one level down, and it is\n' +
+        '  silent in the same way.\n' +
+        `    - Add a "caps" entry to that scope in ${FLOORS_FILE}. "cap": "${UNARMED}" with\n` +
+        "      today's date is the honest starting value: explicitly unarmed is not\n" +
+        '      silently uncapped.\n\n' +
+        noFlag(),
+    );
+  }
+
   // ⚠️ **A different hash and a missing hash are different findings, and only
   // one of them is evidence.**
   //
@@ -827,6 +1462,37 @@ export function floorRefusals(input: RefusalInput): string[] {
     return refusals;
   }
 
+  // ⚠️ **The counting rule's own mismatch, and the same three judgements.** A
+  // *different* fixture hash is evidence that somebody changed what a count
+  // means without re-deriving; **no** hash is a record from before the stamp,
+  // which is evidence of nothing and refuses only once there is a comparison to
+  // protect. The armed predicate is about **caps**, not floors: a repo with an
+  // armed floor and no armed cap is comparing nothing here.
+  const capArmed = [...input.floors.scopes.values()].some((entry) =>
+    [...entry.caps.values()].some((cap) => cap.cap !== UNARMED),
+  );
+  const counted = input.countedRun?.fixtureHash;
+  const countedElsewhere =
+    input.countedRun !== undefined &&
+    (counted === undefined ? capArmed : counted !== input.floors.fixtureHash);
+
+  if (countedElsewhere) {
+    refusals.push(
+      'these caps were derived under a different counting rule; re-derive them\n\n' +
+        `  floors:  ${input.floors.fixtureHash}\n` +
+        `  the run: ${counted ?? 'no hash — a record from before the stamp existed'}\n\n` +
+        '  An ESLint upgrade that counts one more construct raises every count with no\n' +
+        '  branch written, so a count produced under one rule is not a number about a cap\n' +
+        '  derived under another — it would breach every cap at once and read as a\n' +
+        '  regression nobody caused. Nothing else is compared until these agree.\n' +
+        '    - If the counter change was deliberate, the caps have to be derived again\n' +
+        '      from runs counted under it, and re-deriving is raising: it costs a notes\n' +
+        `      line in ${FLOORS_FILE} like any other.\n\n` +
+        noFlag(),
+    );
+    return refusals;
+  }
+
   for (const breach of breaches(input.readings, input.floors)) {
     refusals.push(
       `${breach.scope} scored ${breach.score.toFixed(2)}, under its floor of ` +
@@ -841,6 +1507,24 @@ export function floorRefusals(input: RefusalInput): string[] {
         '      notes line saying why — in a pull request, through gates, because deploy\n' +
         '      runs from main. That is the only way past, and it is meant to be visible\n' +
         '      rather than avoidable.\n\n' +
+        noFlag(),
+    );
+  }
+
+  for (const breach of capBreaches(input.capReadings ?? [], input.floors)) {
+    refusals.push(
+      `${breach.scope} counted ${String(breach.value)} for ${breach.series}, over its cap of ` +
+        `${String(breach.cap)}\n\n` +
+        '  The cap is the highest this scope was observed to reach across its own\n' +
+        '  calibration window. A count over it means a function got harder to test than\n' +
+        '  anything this scope had held before.\n' +
+        '    - Bring the function back under the cap. `pnpm mutation:run` is not the tool\n' +
+        '      here; the count is ESLint’s complexity rule, and the remedy is fewer\n' +
+        '      branches in one function rather than more tests around it.\n' +
+        `    - Or raise the cap, which is a one-line diff in ${FLOORS_FILE} plus a notes\n` +
+        '      line saying why — in a pull request, through gates, because deploy runs\n' +
+        '      from main. Raising a cap is the lowering of this file and costs exactly\n' +
+        '      what a lowering costs.\n\n' +
         noFlag(),
     );
   }
@@ -906,14 +1590,25 @@ export function runRowsFrom(records: readonly ParsedRecord[]): RunRow[] {
     const timestamp = health.timestamp ?? record.timestamp;
     if (timestamp === undefined) continue;
 
+    // The counts are read verbatim — a branch count is already the number it
+    // means, unlike the score above it. `samplesOf` is `metrics-read.ts`'s, and
+    // deliberately not a second reader: the print block reads the same families
+    // through the same seam, and two readers of one format drift in the half
+    // nobody checks.
+    const counts = new Map<CappedSeries, Map<string, number>>();
+    for (const series of CAPPED_SERIES) counts.set(series, samplesOf(record, series));
+
     const info = runInfoOf(record);
     const configHash = info?.['config_hash'];
+    const fixtureHash = info?.['fixture_hash'];
     rows.push({
       timestamp,
       ok: health.value === 1,
       event: info?.['event'] ?? 'unknown',
       ...(configHash === undefined || configHash === '' ? {} : { configHash }),
+      ...(fixtureHash === undefined || fixtureHash === '' ? {} : { fixtureHash }),
       scores,
+      counts,
     });
   }
   return rows.sort((one, other) => one.timestamp - other.timestamp);

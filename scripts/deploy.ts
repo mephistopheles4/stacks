@@ -49,10 +49,14 @@ import {
 import {
   WINDOW_RUNS,
   calibration,
+  capCalibration,
+  CAPPED_SERIES,
+  countedIn,
   floorRefusals,
   nightliesIn,
   readFloors,
   scoredIn,
+  renderCapLines,
   renderFloorLines,
   runRowsFrom,
 } from './lib/floors.ts';
@@ -707,11 +711,57 @@ function reportFloors(): void {
     console.log('  no run in the record on this machine — `pnpm trend:sync` imports what CI wrote.');
   }
 
+  // The newest run that *counted*, which is a different row from the newest
+  // that scored. The judgement is `countedIn`'s, in `lib/floors.ts`, where a
+  // spec can reach it — this script is a thin caller, and a filter written here
+  // would be the one rule in the pair that nothing plants.
+  const counted = countedIn(rows);
+  const newestCount = counted.at(-1);
+  const previousCount = counted.at(-2);
+
+  const capReadings = names.flatMap((scope) =>
+    CAPPED_SERIES.map((series) => {
+      const before = previousCount?.counts.get(series)?.get(scope);
+      return {
+        scope,
+        series,
+        value: newestCount?.counts.get(series)?.get(scope) ?? null,
+        ...(before === undefined ? {} : { previous: before }),
+      };
+    }),
+  );
+
+  console.log('');
+  console.log(
+    'complexity caps — one line per capped series per scope; a cap only falls, and raising one costs a notes entry',
+  );
+  const capLines = renderCapLines({
+    floors,
+    readings: capReadings,
+    window: capCalibration(rows, names, floors.fixtureHash),
+    today: localToday(),
+  });
+  for (const line of capLines) console.log(`  ${line}`);
+
   const refusals = floorRefusals({
     floors,
     declared: names,
-    ...(newest === undefined ? {} : { run: { ...(newest.configHash === undefined ? {} : { configHash: newest.configHash }) } }),
+    // Two rows, two fields. A store can hold one and not the other, and each
+    // absence is its own bootstrap case rather than evidence about the other.
+    ...(newest === undefined
+      ? {}
+      : { run: { ...(newest.configHash === undefined ? {} : { configHash: newest.configHash }) } }),
+    ...(newestCount === undefined
+      ? {}
+      : {
+          countedRun: {
+            ...(newestCount.fixtureHash === undefined
+              ? {}
+              : { fixtureHash: newestCount.fixtureHash }),
+          },
+        }),
     readings,
+    capReadings,
   });
   // The first, not all of them: a deploy refusal is read by somebody who is
   // about to fix one thing, and four at once reads as a broken machine rather

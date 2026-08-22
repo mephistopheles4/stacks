@@ -206,6 +206,22 @@ export interface RunFacts {
    * declines to count it rather than guessing. See `scripts/lib/floors.ts`.
    */
   configHash?: string;
+  /**
+   * The counting rule this run's complexity counts were produced under.
+   *
+   * ⚠️ **`configHash`'s twin, for the other half of the floors file, and the
+   * only field a *cap* is compared through.** The caps in
+   * `stryker.floors.json` were derived under one counting rule, and a count
+   * produced under another is not a number about them: an ESLint upgrade that
+   * counted one more construct would breach every cap at once and read as a
+   * regression. So the run stamps its own, computed from the config ESLint
+   * actually resolved — see `fixtureHashOf` and `counterInputs`.
+   *
+   * **Optional, for `configHash`'s reason exactly.** A row written before this
+   * existed is not a row with a wrong hash; the cap's calibration window
+   * declines to count it rather than guessing.
+   */
+  fixtureHash?: string;
   runUrl: string;
   /**
    * Which pull requests merged between the previous record and this one:
@@ -438,6 +454,10 @@ export function renderMetrics(facts: RunFacts): string {
             // dashboard can only keep if the two arrive together.
             pr_window: facts.prWindow,
             ...(facts.configHash === undefined ? {} : { config_hash: facts.configHash }),
+            // Beside `config_hash` rather than on a series of its own: a count
+            // never appears without the rule that produced it, which is the
+            // same layout rule the score already keeps.
+            ...(facts.fixtureHash === undefined ? {} : { fixture_hash: facts.fixtureHash }),
           },
           value: 1,
         },

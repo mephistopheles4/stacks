@@ -91,3 +91,4 @@ Two other files hold what these deliberately do not:
 | [0065](./0065-the-csp-is-generated-not-written.md) | The CSP is generated per page by Astro, and it names the beacon it cannot remove |
 | [0066](./0066-typescript-6-until-7-1.md) | TypeScript 6.0.3, until 7.1 ships a stable programmatic API |
 | [0067](./0067-the-counters-inputs-are-pinned-exact.md) | The counter's inputs are pinned exact, and its rule options are read back rather than copied |
+| [0068](./0068-the-complexity-cap-only-falls.md) | The complexity cap only falls, and a record counted under another rule is refused |
