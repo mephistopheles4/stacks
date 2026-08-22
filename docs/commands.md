@@ -325,3 +325,90 @@ refused rather than as a stale build: one is no answer, the other is a real answ
 and a red one ([ADR-0027](adr/0027-deploy-check-reports-refusal.md)). D skips, and
 says so, when `SITE_URL` is unset or the local `dist/` carries no build stamp — a
 gap in D's series is honest where an invented row is not.
+
+## The pre-commit CRAP print — opting in, and reading the table
+
+**Not a command, and not a gate.** It is a checked-in git hook that nobody has
+until they ask for it:
+
+```sh
+git config --get core.hooksPath   # keep whatever this prints
+git config core.hooksPath .githooks
+```
+
+That is the whole install. Nothing in `pnpm install` wires it, no gate runs it,
+and CI never sees it. A contributor who never opts in never meets it — the same
+promise `CONTRIBUTING.md` makes about every optional thing in this repository.
+
+⚠️ **Read the first line before running the second.** Git has exactly one
+`core.hooksPath`, so opting in **overwrites** whatever was in it, and a husky or
+lefthook install is exactly what would be in it. `git config --unset
+core.hooksPath` empties the slot rather than restoring the old value, so opting
+out of this is only reversible if you kept what the first line printed —
+`git config core.hooksPath <what it printed>` puts it back. Nothing here is
+worth taking somebody's hook manager off them.
+
+**It prints and it never refuses.** Every failure — no dependencies installed,
+a Vitest run that died, a file ESLint could not parse — costs you the print and
+nothing else; the hook exits 0 unconditionally. `--no-verify` skips it, and for
+a print that is fine. If it ever grew a refusal it would be the pre-commit hook
+[`docs/spec/complexity-on-the-trend-layer.md`](spec/complexity-on-the-trend-layer.md)
+§4 turned down; the only teeth in this rollout are the per-scope cap at
+`deploy:site`.
+
+### What it does, on every commit
+
+For the staged files that fall in a declared mutation scope, it runs
+`vitest related <those files> --coverage` — one run, not one per file — counts
+the functions with the same ESLint rule the four complexity series use, and
+joins the two:
+
+```text
+CRAP over 20 functions this commit touches — CC² × (1 − coverage)³ + CC, exponents never calibrated
+
+       56.0  CC   7  0% (0/7)      untestedBranchy               packages/core/src/parse.ts:2
+        8.0  CC   8  100% (11/11)  renderReport                  scripts/lib/crap.ts:370
+        6.0  CC   2  0% (0/1)      (arrow)                       packages/core/src/parse.ts:9
+
+  no in-process oracle: packages/site/src/shelf/scene.ts
+
+  1.2s — this blocks nothing; `--no-verify` skips it.
+```
+
+### Reading it
+
+**Highest first, and the ranking is the whole product.** `CRAP(m) = CC² ×
+(1 − coverage)³ + CC` puts a complex function nobody executes at the top and
+collapses to plain complexity once a function is fully covered — which is why an
+8-complexity function at 100% sits *below* a 7-complexity one at 0%.
+
+⚠️ **The exponents were never calibrated, by the authors' own account.** That is
+why the caveat is on the same line as the word CRAP rather than in a footnote,
+why the number is never a series, never a panel and never a threshold, and why
+nothing anywhere asks anyone to lower it. It ranks the functions in front of you
+right now. It is not a score for the codebase, and comparing today's table to
+last week's is not a thing it can do: it keeps no history.
+
+Three things print no number at all, and each says which:
+
+- **`no in-process oracle`** — the file is on a mutation scope's exclusion list,
+  because its only oracle is a headless browser or a child process. Twenty-eight
+  files are in this state. They read 0% for a reason that is about Vitest's
+  reach rather than about the code, and a CRAP of 420 for `scene.ts` would be a
+  measurement of the harness.
+- **`implicit function — no counterpart in the coverage report`** — a class field
+  initialiser or a static block. ESLint scores both as functions; Istanbul has
+  no entry for either, so there is a complexity and there is no coverage grain.
+- **`not in the coverage report`** — the plumbing did not reach it. **This is
+  never printed as 0%**, which is the distinction the whole table rests on: a
+  file that is *in* the report untouched is a real 0% and a real, maximal CRAP,
+  and a file that is *missing* is a broken pipe.
+
+A function with no name — an arrow passed to `.filter()` — is identified by its
+`file:line` and shown as `(arrow)`. Istanbul's own `anonymous_7` ids are
+positional and shift when an unrelated arrow is added above them, so they are
+safe to print and unsafe to store. Nothing here stores them.
+
+Coverage exists in this repository for this print and for nothing else — no
+floor, no threshold, no series, no badge. See
+[ADR-0069](adr/0069-coverage-is-an-ingredient-not-a-goal.md).

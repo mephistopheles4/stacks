@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# CRAP over the functions this commit touches — opt-in, advisory, never blocks.
+#
+# Opt in with:  git config core.hooksPath .githooks
+# Opt out with: git config --unset core.hooksPath
+#
+# ⚠️ Check `git config --get core.hooksPath` FIRST and keep what it says. There
+# is one slot, so opting in overwrites whatever was in it — a husky or lefthook
+# install among the possibilities — and `--unset` empties the slot rather than
+# putting the old value back. Nothing here needs that slot badly enough to take
+# somebody's hook manager off them.
+#
+# Nothing in `pnpm install` wires this, no gate runs it, and a contributor who
+# never opts in never meets it. See docs/commands.md and
+# docs/spec/complexity-on-the-trend-layer.md §5.
+#
+# ⚠️ `exit 0` is the whole contract, and it is unconditional on purpose. This
+# prints a ranking whose exponents nobody ever calibrated; blocking a commit on
+# one would be the refusing hook §4 turned down. Every failure — no install, no
+# tsx, a Vitest run that died — costs the print and nothing else. `--no-verify`
+# skips it, and for a print that is fine.
+
+pnpm exec tsx scripts/crap.ts || printf '\nCRAP: no print this commit — the hook could not run.\n'
+
+exit 0

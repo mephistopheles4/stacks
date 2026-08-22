@@ -415,7 +415,7 @@ is the pre-rollout number. **This spec allocates no gate number.**
 | `vitest.config.ts` | `coverage.provider: 'v8'`, `include` = scope globs, JSON reporter, gitignored directory — **off by default**, on only under `--coverage` |
 | `.githooks/pre-commit` (new), `docs/commands.md` | the CRAP print, and how to opt in |
 | `grafana/dashboards/trend-layer.json` | four panels under the mutation panel per scope, and the reading sentence on panel 1 |
-| `docs/adr/` | ⚠️ **four** records, not the three this cell said until #201: TypeScript 6 until 7.1 — landed as [ADR-0066](../adr/0066-typescript-6-until-7-1.md); the counter's inputs pinned exact — landed as [ADR-0067](../adr/0067-the-counters-inputs-are-pinned-exact.md), because 0066 records the compiler trade and not the pinning of somebody else's rule implementation; the complexity cap; coverage as an ingredient |
+| `docs/adr/` | ⚠️ **four** records, not the three this cell said until #201: TypeScript 6 until 7.1 — landed as [ADR-0066](../adr/0066-typescript-6-until-7-1.md); the counter's inputs pinned exact — landed as [ADR-0067](../adr/0067-the-counters-inputs-are-pinned-exact.md), because 0066 records the compiler trade and not the pinning of somebody else's rule implementation; the complexity cap; coverage as an ingredient — landed as [ADR-0069](../adr/0069-coverage-is-an-ingredient-not-a-goal.md) |
 
 ### Cadence: both events, same bound
 

@@ -159,8 +159,12 @@
           "mechanism": "Run by `tsx` from a pnpm script (`pnpm smoke:render`), and it drives a headless browser. Never a Vitest spec."
         },
         {
+          "path": "scripts/crap.ts",
+          "mechanism": "No spec imports it — run by `tsx` from `.githooks/pre-commit`, which git invokes as a child process. Never a Vitest spec, so no in-process oracle ever sees the active mutant. The arithmetic, the join and the table it prints live in `lib/crap.ts`, which is NOT excluded: `lib/crap.test.ts` reaches every rule in-process against planted reports."
+        },
+        {
           "path": "scripts/lib/git.ts",
-          "mechanism": "No spec imports it; its only callers are `deploy.ts` and `worktree.ts`, both excluded above."
+          "mechanism": "No spec imports it; its only callers are `deploy.ts`, `worktree.ts` and `crap.ts`, all excluded here."
         },
         {
           "path": "scripts/lib/run.ts",
