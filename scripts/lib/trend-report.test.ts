@@ -10,10 +10,23 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { DAY, parseRecord, type ParsedRecord } from './metrics-read.ts';
-import { renderMetrics, type RunFacts } from './metrics.ts';
+import { DAY, MERGE_EVENT, parseRecord, type ParsedRecord } from './metrics-read.ts';
+import {
+  COMPLEXITY_SERIES,
+  renderMetrics,
+  type RunFacts,
+  type ScopeComplexity,
+} from './metrics.ts';
 import { empty, type Tally } from './mutation-score.ts';
-import { METRICS_ACTIONS_URL, asDate, renderPanel, renderRefusal, scoredRecords } from './trend-report.ts';
+import {
+  COMPLEXITY_COUNTS,
+  METRICS_ACTIONS_URL,
+  asDate,
+  renderComplexity,
+  renderPanel,
+  renderRefusal,
+  scoredRecords,
+} from './trend-report.ts';
 
 const NOW = 1_787_000_000;
 
@@ -141,6 +154,181 @@ describe('the panel', () => {
 
     expect(scoredRecords(records)).toHaveLength(2);
     expect(scoredRecords(records)[0]?.timestamp).toBe(NOW - DAY);
+  });
+});
+
+/**
+ * One scope's four counts, named.
+ *
+ * ⚠️ **Named and not positional.** This was `[scope, 412, 1204, 321, 40]`, and
+ * nothing at a call site said which number was `massOver10` and which was
+ * `max` — so a case asserting on the wrong count would have read as correct.
+ * `ScopeComplexity` is the shape `metrics.ts` already uses; borrowing it costs
+ * four words a case and makes the fixtures say what they mean.
+ */
+type Counted = ScopeComplexity;
+
+const counted = (
+  timestamp: number,
+  complexity: readonly Counted[],
+  extra: Partial<RunFacts> = {},
+): ParsedRecord => record({ timestamp, complexity, ...extra });
+
+const CORE: Counted = {
+  scope: 'packages/core/src',
+  functions: 412,
+  mass: 1204,
+  massOver10: 321,
+  max: 40,
+};
+
+/** The same scope with `mass` moved, for the cases that need a second reading. */
+const core = (changes: Partial<Counted>): Counted => ({ ...CORE, ...changes });
+
+/**
+ * ⚠️ **`MERGE_EVENT`, never the literal.** A fixture hardcoding `'push'` would
+ * keep building *nightly* records if the constant ever moved, while its name
+ * and its assertions still claimed merge — passing, and testing the other half.
+ */
+const MERGE = { event: MERGE_EVENT };
+
+/** The block under test, at the panel's own clock. */
+const complexity = (records: readonly ParsedRecord[]): string[] => renderComplexity(records, NOW);
+
+describe('the complexity block', () => {
+  it('spells the same four counts the record does, in the same order', () => {
+    // ⚠️ The drift guard, and the reason this block owns no second list of
+    // names. `COMPLEXITY_SERIES` is derived from the emitter's own table; a
+    // fifth count added there and not here would print three of four and say
+    // nothing, which is the failure a reader cannot see.
+    expect(COMPLEXITY_COUNTS.map(([series]) => series)).toEqual(COMPLEXITY_SERIES);
+  });
+
+  it('prints four lines per scope, one for each count', () => {
+    const lines = complexity([counted(NOW, [CORE, { scope: 'packages/cli/src', functions: 3, mass: 9, massOver10: 0, max: 5 }])]);
+
+    expect(lines.filter((line) => line.includes('packages/core/src'))).toHaveLength(4);
+    expect(lines.filter((line) => line.includes('packages/cli/src'))).toHaveLength(4);
+  });
+
+  it('carries every count and its value', () => {
+    const text = complexity([counted(NOW, [CORE])]).join('\n');
+
+    expect(text).toMatch(/functions {2,}412/);
+    expect(text).toMatch(/mass {2,}1204/);
+    expect(text).toMatch(/mass over 10 {2,}321/);
+    expect(text).toMatch(/max {2,}40/);
+  });
+
+  it('reads a merge against the previous merge, stepping over the nightly between', () => {
+    // ⚠️ The whole reason this block cannot reuse `scoredRecords`. The counts
+    // land on both halves, and a merge compared against a nightly prints a
+    // movement nobody made — the two halves measure the same tree at different
+    // cadences, so the interval between them is not a thing anybody asked about.
+    const text = complexity([
+      counted(NOW, [core({ mass: 1300 })], MERGE),
+      counted(NOW - DAY, [core({ functions: 999, mass: 9999, massOver10: 999, max: 99 })], { event: 'schedule' }),
+      counted(NOW - 2 * DAY, [core({ functions: 410, mass: 1200 })], MERGE),
+    ]).join('\n');
+
+    expect(text).toContain('(+100)');
+    expect(text).not.toContain('9999');
+    expect(text).toContain('merge');
+  });
+
+  it('pairs a nightly against the previous nightly for the same reason', () => {
+    const text = complexity([
+      counted(NOW, [core({ mass: 1300 })], { event: 'schedule' }),
+      counted(NOW - DAY, [core({ functions: 999, mass: 9999, massOver10: 999, max: 99 })], MERGE),
+      counted(NOW - 2 * DAY, [core({ mass: 1250 })], { event: 'schedule' }),
+    ]).join('\n');
+
+    expect(text).toContain('(+50)');
+    expect(text).toContain('nightly');
+  });
+
+  it('treats a hand-run nightly as a nightly, not as a third kind', () => {
+    // `workflow_dispatch` is a real trigger on `metrics.yml`, and pairing on the
+    // raw event label would step over the scheduled run before it.
+    const text = complexity([
+      counted(NOW, [core({ mass: 1300 })], { event: 'workflow_dispatch' }),
+      counted(NOW - DAY, [core({ mass: 1250 })], { event: 'schedule' }),
+    ]).join('\n');
+
+    expect(text).toContain('(+50)');
+  });
+
+  it('names the record the counts came from, which is not the run panel 1 printed', () => {
+    // ⚠️ Observed by running it. Panel 1 names the newest *scored* run and this
+    // anchors on the newest *carrier* — a merge carries counts and no score, so
+    // on a busy week they are two different records, and the counts would
+    // otherwise appear under somebody else's commit. A count never appears
+    // without its run, which is the score's rule one level down.
+    const text = panel([
+      counted(NOW, [CORE], { ...MERGE, commit: 'd'.repeat(40) }),
+      scored(NOW - DAY, 0.71, 'e'),
+    ]);
+
+    expect(text).toContain('eeeeeeeeeeee'); // panel 1's run: the newest scored one
+    expect(text).toMatch(/counted {2}dddddddddddd {2}merge/); // the counts' own
+  });
+
+  it('says first run rather than inventing a movement', () => {
+    const text = complexity([counted(NOW, [CORE])]).join('\n');
+
+    expect(text).toContain('first run');
+    expect(text).not.toContain('(+');
+  });
+
+  it('says new scope for a scope the previous record did not carry', () => {
+    // Three states and not two, as the block above it already learned: a scope
+    // absent from the comparison is a fact about the declaration, and printing
+    // a delta against nothing would read as a movement.
+    const text = complexity([
+      counted(NOW, [CORE, { scope: 'packages/site/src/shelf', functions: 385, mass: 900, massOver10: 210, max: 22 }]),
+      counted(NOW - DAY, [CORE]),
+    ]).join('\n');
+
+    expect(text).toContain('new scope');
+    expect(text).toContain('(+0)');
+  });
+
+  it('prints nothing but a reason when no record carries the counts', () => {
+    // The pre-#202 record, and the zero-function failure, wear one face here:
+    // the families are absent either way, and absent is not zero.
+    const lines = complexity([scored(NOW, 0.71)]);
+
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('no record read carries the four counts');
+    expect(lines.join('\n')).not.toMatch(/\b0\b/);
+  });
+
+  it('skips a record written before the series existed rather than pairing against it', () => {
+    // Membership is the `# TYPE` line, so an older record with no families is
+    // not a carrier — pairing against it would read every count as brand new.
+    const text = complexity([counted(NOW, [CORE]), scored(NOW - DAY, 0.71, 'c')]).join('\n');
+
+    expect(text).toContain('first run');
+  });
+
+  it('derives no share, no ratio and no composite — it prints the counts', () => {
+    // Spec §2: the record carries counts and the *page* derives shares. A
+    // percentage here would be the ratio that survived neither game.
+    const text = complexity([counted(NOW, [CORE]), counted(NOW - DAY, [CORE])]).join('\n');
+
+    expect(text).not.toContain('%');
+    expect(text.toLowerCase()).not.toContain('crap');
+  });
+
+  it('sits under the score and above the floors pointer in the panel', () => {
+    // Panel order is a design rule here as it is on the page: the counts are
+    // read against the score directly above them.
+    const text = panel([
+      counted(NOW, [CORE], { mutationScore: [{ scope: 'packages/core/src', score: 0.71 }] }),
+    ]);
+
+    expect(text.indexOf('71.00%')).toBeLessThan(text.indexOf('complexity'));
+    expect(text.indexOf('complexity')).toBeLessThan(text.indexOf('floors'));
   });
 });
 
