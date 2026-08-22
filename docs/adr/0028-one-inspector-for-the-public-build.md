@@ -10,8 +10,11 @@ does not log. It returns problems tagged with the rule that produced them, plus
 the observations a caller may print. The rules: `note-body`, `vault-path`,
 `empty-library`, `private-book`, `wishlist-book`, `foreign-cover`,
 `orphan-cover`, `share-image-missing`, `share-image-origin`, `robots`,
-`headers`, `og-image`. `PUBLIC_BUILD_RULES` is the list; the type is derived
-from it, and G20 asserts every member has been watched going red.
+`headers`, `og-image`, and — added later, by
+[#127](https://github.com/mephistopheles4/stacks/issues/127) — `csp`.
+`PUBLIC_BUILD_RULES` is the list; the type is derived from it, and G20 asserts
+every member has been watched going red. That last clause is what lets a rule
+join without a new gate row, and it is the mechanism #127 was written to use.
 
 ## What this does not change
 

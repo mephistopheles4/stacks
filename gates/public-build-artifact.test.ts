@@ -92,12 +92,16 @@ async function writeCleanBuild(): Promise<void> {
  * block — which is what this gate planted at first — cannot catch a rule that
  * searches past the end of a block, because there is nothing past it to find.
  */
-function headersFile(options: { coversCacheControl?: boolean } = {}): string {
+function headersFile(
+  options: { coversCacheControl?: boolean; frameOptions?: boolean; frameAncestors?: boolean } = {},
+): string {
   const revalidate = '  Cache-Control: public, max-age=0, must-revalidate';
   return [
     '# Cloudflare Pages reads this file.',
     '/*',
     '  X-Robots-Tag: noindex, nofollow',
+    ...(options.frameAncestors === false ? [] : ["  Content-Security-Policy: frame-ancestors 'none'"]),
+    ...(options.frameOptions === false ? [] : ['  X-Frame-Options: DENY']),
     '',
     '/covers/*',
     options.coversCacheControl === false ? '  X-Content-Type-Options: nosniff' : revalidate,
@@ -108,12 +112,60 @@ function headersFile(options: { coversCacheControl?: boolean } = {}): string {
   ].join('\n');
 }
 
-function indexHtml(options: { image?: string; robots?: boolean } = {}): string {
+/**
+ * A policy shaped like the one Astro emits, hashes and all.
+ *
+ * The hashes are why this rule cannot be checked by string match: Astro computes
+ * them per page from that page's own inline content, so two pages of one build
+ * carry different policies and every build carries different ones again. The
+ * rule parses directives, and these fixtures give it the noise a real policy has
+ * in it — including the `; ` that separates Astro's generated directives from
+ * the configured ones, which is not the `;` it uses everywhere else.
+ */
+function cspMeta(
+  options: { connectSrc?: string; scriptSrc?: string; omit?: string; extra?: string } = {},
+): string {
+  const keep = ([name]: readonly [string, string]): boolean => name !== options.omit;
+  const render = (pairs: readonly (readonly [string, string])[], join: string): string =>
+    pairs
+      .filter(keep)
+      .map(([name, value]) => `${name} ${value}`)
+      .join(join);
+
+  // Configured directives, in config order, joined the way Astro joins them.
+  const configured = [
+    ['default-src', "'none'"],
+    ['img-src', "'self'"],
+    ['connect-src', options.connectSrc ?? "'self'"],
+    ['base-uri', "'none'"],
+    ['form-action', "'none'"],
+  ] as const;
+
+  // The two Astro generates, each carrying a hash it computed for this page.
+  const generated = [
+    [
+      'script-src',
+      `${options.scriptSrc ?? "'self' https://static.cloudflareinsights.com"} ` +
+        `'sha256-BF0290pkb3jxQsE7z00xR8Imp8X34FLC88L0lkMnrGw='`,
+    ],
+    ['style-src', "'self' 'sha256-eZThLoRNDbx6YobQlsGZA8+qespsZfD/YQEGSwT5BvU='"],
+  ] as const;
+
+  return (
+    '<meta http-equiv="content-security-policy" content="' +
+    `${render(configured, ';')}; ${render(generated, '; ')};` +
+    `${options.extra === undefined ? '' : ` ${options.extra};`}">`
+  );
+}
+
+function indexHtml(options: { image?: string; robots?: boolean; csp?: string | false } = {}): string {
   const image = options.image ?? `${ORIGIN}/og.png`;
   const robots = options.robots ?? true;
+  const csp = options.csp ?? cspMeta();
   return [
     '<!doctype html><html><head>',
     robots ? '<meta name="robots" content="noindex, nofollow">' : '',
+    csp === false ? '' : csp,
     `<meta property="og:image" content="${image}">`,
     `<meta name="twitter:image" content="${image}">`,
     '</head><body><div id="shelf"></div></body></html>',
@@ -271,7 +323,9 @@ describe('G20 — every rule goes red', () => {
 
   it('share-image-missing: no image tag at all', async () => {
     await expectOnly('share-image-missing', async () => {
-      await writeIndex('<!doctype html><html><head><meta name="robots" content="noindex"></head><body></body></html>');
+      await writeIndex(
+        `<!doctype html><html><head><meta name="robots" content="noindex">${cspMeta()}</head><body></body></html>`,
+      );
     });
   });
 
@@ -296,7 +350,7 @@ describe('G20 — every rule goes red', () => {
       await mkdir(join(dist, 'attribution'), { recursive: true });
       await writeFile(
         join(dist, 'attribution', 'index.html'),
-        '<!doctype html><html><head><title>Attribution</title></head><body></body></html>',
+        `<!doctype html><html><head><title>Attribution</title>${cspMeta()}</head><body></body></html>`,
         'utf8',
       );
     });
@@ -308,6 +362,130 @@ describe('G20 — every rule goes red', () => {
       // the crawler reading the noindex, and a linked URL can still be indexed
       // on the strength of the link.
       await writeFile(join(dist, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
+    });
+  });
+
+  it('csp: a page that states no policy at all', async () => {
+    /**
+     * The state `main` was in until this rule existed. The shelf's one outbound
+     * request has always been same-origin, and nothing preserved that — a
+     * `fetch` to a third party added tomorrow passed every gate in this repo.
+     */
+    await expectOnly('csp', async () => {
+      await writeIndex(indexHtml({ csp: false }));
+    });
+  });
+
+  it('csp: a *second* page that states no policy', async () => {
+    /**
+     * Per-page, for the reason the robots rule is: `/attribution` is the second
+     * page, a meta CSP governs only the document it is in, and a third page
+     * shipping without one would inherit no protection from this one.
+     *
+     * It is also the page that forced the meta-tag design — Astro inlines a
+     * stylesheet under 4kB, so `/attribution` carries an inline `<style>` whose
+     * hash only a per-page policy can name.
+     */
+    await expectOnly('csp', async () => {
+      await mkdir(join(dist, 'attribution'), { recursive: true });
+      await writeFile(
+        join(dist, 'attribution', 'index.html'),
+        '<!doctype html><html><head><meta name="robots" content="noindex"></head><body></body></html>',
+        'utf8',
+      );
+    });
+  });
+
+  it("csp: connect-src widened past 'self'", async () => {
+    /**
+     * The directive that carries the argument. #119 decided stacks adds no
+     * outbound flow carrying anything derived from the owner's reading, and
+     * this is the line that makes that decision cost something to break.
+     */
+    await expectOnly('csp', async () => {
+      await writeIndex(indexHtml({ csp: cspMeta({ connectSrc: "'self' https://telemetry.example" }) }));
+    });
+  });
+
+  it('csp: a script origin nobody named', async () => {
+    /**
+     * The exception has to stay enumerable. `static.cloudflareinsights.com` is
+     * permitted because Cloudflare injects Web Analytics at the edge and the
+     * policy would otherwise log a violation on every page load; the value of
+     * naming it is that a *second* origin cannot arrive unnoticed.
+     *
+     * Hashes are deliberately not part of this comparison — they change on
+     * every build — so what is pinned is the origin set alone.
+     */
+    await expectOnly('csp', async () => {
+      await writeIndex(
+        indexHtml({ csp: cspMeta({ scriptSrc: "'self' https://static.cloudflareinsights.com https://cdn.example" }) }),
+      );
+    });
+  });
+
+  it('csp: a directive quietly dropped from the policy', async () => {
+    /**
+     * The finding that widened this rule, and it is #127's own failure shape.
+     *
+     * The rule pinned `connect-src` and the script origins and nothing else, so
+     * `default-src 'none'`, `img-src`, `base-uri` and `form-action` could each
+     * be deleted from `astro.config.mjs` with every gate green and the page
+     * pixel-identical — while `_headers` and ADR-0065 went on describing a
+     * policy that no longer said what they claimed. A comment asserting a
+     * mitigation nothing enforces is the exact defect this issue exists to
+     * close, and leaving four directives in that state inside the fix for it is
+     * not a smaller version of the problem.
+     */
+    await expectOnly('csp', async () => {
+      await writeIndex(indexHtml({ csp: cspMeta({ omit: 'default-src' }) }));
+    });
+  });
+
+  it('csp: a directive nobody named, widening the policy past `default-src`', async () => {
+    /**
+     * Raised by review on the pull request, and it is the sharper half of the
+     * finding above: the rule walked `CSP_DIRECTIVES` and never looked at what
+     * else the policy declared. **A specific fetch directive overrides
+     * `default-src` for its own resource type**, so `object-src *`,
+     * `frame-src https://example.com` or `worker-src *` each widen the policy
+     * with every named directive still exactly right.
+     *
+     * `script-src-elem` is the one that matters most: it takes precedence over
+     * `script-src` for `<script>` elements, so it would have defeated the pinned
+     * beacon origin — the one exception this rule exists to keep enumerable —
+     * without touching the `script-src` line the rule was reading.
+     */
+    await expectOnly('csp', async () => {
+      await writeIndex(indexHtml({ csp: cspMeta({ extra: 'script-src-elem https://cdn.example' }) }));
+    });
+  });
+
+  it('headers: framing is no longer denied by the header policy', async () => {
+    /**
+     * `frame-ancestors` is the one directive a `<meta>` CSP cannot carry —
+     * browsers ignore it there — so it lives in `_headers`, alone, as a policy
+     * of one directive. That is **not** a second copy of the page policy: the
+     * two are disjoint, so neither can drift from the other, and a policy with
+     * no fetch directives restricts nothing but framing.
+     */
+    await expectOnly('headers', async () => {
+      await writeFile(join(dist, '_headers'), headersFile({ frameAncestors: false }));
+    });
+  });
+
+  it('headers: framing is no longer denied to the older mechanism', async () => {
+    /**
+     * `X-Frame-Options` is kept beside `frame-ancestors` rather than replaced by
+     * it. For `DENY` the two are equivalent in every browser that matters, with
+     * one narrow exception worth the line: `frame-ancestors` covers `<embed>`
+     * and `<object>` uniformly where `X-Frame-Options` historically did not, and
+     * `X-Frame-Options` is honoured by clients predating CSP framing. Belt and
+     * braces on a control with no cost, and both are asserted so neither can be
+     * deleted on the theory that the other covers it.
+     */
+    await expectOnly('headers', async () => {
+      await writeFile(join(dist, '_headers'), headersFile({ frameOptions: false }));
     });
   });
 
