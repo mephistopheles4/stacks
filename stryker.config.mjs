@@ -43,15 +43,10 @@ export default {
   mutate,
 
   /**
-   * ⚠️ **Off by decision now, not by impossibility.** This said the TypeScript
-   * checker was *"dead here and cannot be revived"*, and that was true of
-   * `typescript@7.0.2`, whose root export no longer carried the APIs
-   * `@stryker-mutator/typescript-checker@9.6.1` calls — with a peer range
-   * `">=3.6"` that admitted `7.0.2`, so pnpm installed a combination failing at
-   * runtime rather than refusing. The repo is on `typescript@6.0.3` since
-   * [ADR-0064](docs/adr/0064-typescript-6-until-7-1.md), and the spike measured
-   * the checker **starting and working**: 2 of `measure.ts`'s 11 mutants come
-   * back `CompileError`.
+   * ⚠️ **Off by decision now, not by impossibility.** This said the checker was
+   * *"dead here and cannot be revived"*, which was a fact about
+   * `typescript@7.0.2`; on `6.0.3` it starts and works — see
+   * [ADR-0064](docs/adr/0064-typescript-6-until-7-1.md).
    *
    * It stays `[]` regardless, because turning it on is a *scoring* change, not
    * a configuration one. A `CompileError` is neither killed nor survived, so
@@ -76,23 +71,13 @@ export default {
   plugins: ['@stryker-mutator/vitest-runner'],
 
   /**
-   * The project's real tsconfig, which is the unremarkable value — and it is
-   * only unremarkable again.
-   *
-   * ⚠️ **This read `tsconfig.stryker-absent.json`, a filename deliberately not
-   * in the project**, for the whole of TypeScript 7:
-   * `@stryker-mutator/core`'s `ts-config-preprocessor.js` does a **dynamic**
-   * `await import('typescript')` — invisible to a grep — and calls
-   * `ts.parseConfigFileTextToJson`, the exact function with no TypeScript 7
-   * replacement, so Stryker crashed on startup. Pointing the lookup at a file
-   * that could not be found made the rewrite a no-op and the crash go away.
-   *
-   * **It had to come back in the same commit as the pin**, because on
-   * `typescript@6.0.3` the trick stops being harmless: `parseConfigFileTextToJson`
-   * exists again, and an absent file is now just a checker that cannot start.
-   * The spike hit exactly that — a `--dryRunOnly` run failed with the workaround
-   * still in place and succeeded the moment this line named the real file. See
-   * [ADR-0064](docs/adr/0064-typescript-6-until-7-1.md).
+   * ⚠️ **Must name a file that exists.** This read
+   * `tsconfig.stryker-absent.json` — a filename deliberately not in the project
+   * — to dodge a TypeScript 7 startup crash. On `typescript@6.0.3` that trick
+   * inverts: an absent file is a checker that cannot start. The crash, the
+   * workaround and the measurement that caught the inversion are in
+   * [ADR-0064](docs/adr/0064-typescript-6-until-7-1.md); restating them here
+   * would be a second copy nothing holds to the first.
    */
   tsconfigFile: 'tsconfig.json',
 

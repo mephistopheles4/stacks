@@ -145,7 +145,7 @@ need only a new mapper.
 | Node / pnpm / git | ✅ Node 24.14.1, pnpm 11.18.0, git 2.55.0 (Windows) |
 | `@stacks/core` resolves under tsx + vitest + astro/tsc | ✅ verified |
 | Headless Chrome for Phase 2 | ✅ system Chrome present; use `channel: 'chrome'`, no download |
-| `.astro` files are NOT typechecked | ⚠️ `astro check` can't run under TS 7 — keep logic in `.ts` |
+| `.astro` files are NOT typechecked | ⚠️ keep logic in `.ts`. `astro check` **could not run at all** under TS 7; since [ADR-0064](./adr/0064-typescript-6-until-7-1.md) it runs and is simply not wired in — measured 6.2s over 44 files, finding one real pre-existing error. Whether it becomes a gate row is open |
 | **`node -e` with ESM top-level await exits silently** | ⚠️ prints nothing, exit 0. Put scripts in a file and run with `pnpm tsx` |
 | **Bash tool sandbox blocks network** | ⚠️ outbound `fetch` needs `dangerouslyDisableSandbox` |
 | **A worktree cut by anything but `pnpm worktree` has no `node_modules`** | ⚠️ an agent harness makes its own under `.claude/worktrees/` with a bare `git worktree add`, so every command fails with `'tsx' is not recognized`, which reads as a broken toolchain rather than a missing install. `pnpm install` in it first — that step, and printing which `.env` it reads, is the whole reason `pnpm worktree` exists |

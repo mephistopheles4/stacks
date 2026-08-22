@@ -1,7 +1,7 @@
 # TypeScript 6.0.3, until 7.1 ships a stable programmatic API
 
-`typescript` is pinned to **`6.0.3` exactly** — the newest 6.x, and the last
-JS-based release before 7's Go-ported native compiler. The repo was on
+`typescript` is pinned to **`6.0.3` exactly** — the newest 6.x, and on the last
+JS-based release line before 7's Go-ported native compiler. The repo was on
 `^7.0.2` from its first commit ([ADR-0002](./0002-no-build-step.md)).
 
 **The revisit condition is a version, not a feeling: TypeScript 7.1's stable
@@ -69,9 +69,20 @@ On 6.0.3 that function exists again, and the absent file stops being harmless: i
 becomes a checker that cannot start. The spike hit exactly that — a
 `--dryRunOnly` run failed with the workaround in place and succeeded the moment
 the line named the real `tsconfig.json`. It is back to `tsconfig.json` here, and
-`pnpm mutation:run` over one of the two smallest declared scopes
-(`packages/core/src/import` — two non-test files, 256 mutants) completes with
-**0 errors**, so the flip is exercised rather than assumed.
+`pnpm mutation:run` over one of the two smallest declared scopes completes with
+**0 errors**, so the flip is exercised rather than assumed:
+
+```
+pnpm mutation:run --mutate "packages/core/src/import/**/*.ts,!**/*.test.ts"
+```
+
+256 mutants, 169 killed, 60 survived, 27 no-coverage, **0 errors**, in seconds
+rather than minutes — reproduced twice, mutant for mutant. ⚠️ **No
+artifact of that run is committed and none can be** — `artifacts/` is gitignored,
+so this claim is a re-runnable recipe rather than evidence in the tree. The run
+before the flip is the one that would have failed, and it is the reason the
+command is written out: a reader who doubts this can produce it in under a
+minute.
 
 ⚠️ **`checkers` stays `[]`, and that is now a decision rather than a
 limitation.** The old comment in `stryker.config.mjs` called the checker *"dead
@@ -92,18 +103,35 @@ and is kept as fog on
 - **The revisit condition depends on somebody else's roadmap.** "7.1's stable
   programmatic API" is a milestone this project does not control and cannot
   date. If it slips a year, the pin sits for a year.
-- **Two documents still describe a compiler the repo is no longer on**, and they
-  are left alone on purpose so this diff stays the compiler and nothing else:
-  [`AGENTS.md`](../../AGENTS.md)'s note that `astro check` cannot run, and
-  [`docs/spec/mutation-scoring.md`](../spec/mutation-scoring.md) §5 on the dead
-  checker. Both are true statements *about TypeScript 7* and false about today.
-  They move when the thing they describe moves — `astro check` if it becomes a
-  gate row, `mutation-scoring.md` if the checker is turned on — and until then
-  this record is what a reader finds first, from `docs/adr/`.
-  [`docs/progress.md`](../progress.md) was a third and is **not** left: its
-  resolved-versions row and its Stryker environment finding are statements about
-  the environment this commit changed, so correcting them is this commit's debt
-  rather than a later one's.
+- ⚠️ **Five documents stated something this pin falsifies, and the split between
+  the four corrected and the one left is a rule, not a mood.** *A statement about
+  the environment, or a live warrant something rests on, is this commit's debt. A
+  dated measurement is evidence and stays.*
+
+  **Corrected here.** [`docs/progress.md`](../progress.md) — its
+  resolved-versions row, its Stryker environment finding, and its `.astro` row,
+  all three descriptions of the environment this commit changed.
+  [`docs/gates.md`](../gates.md) — G7's failure-mode column said `astro check`
+  *cannot run under TS 7*, and that is the scoreboard's stated warrant for the
+  row, not history; it now says the tool runs and is not wired in, which is a
+  choice. [`docs/spec/mutation-scoring.md`](../spec/mutation-scoring.md) — §1 on
+  the dead checker and §8's requirement that `stryker.config.*` carry *"the
+  `tsconfigFile` workaround with its comment"*, both footnoted as superseded
+  rather than rewritten, per that folder's own rule for a locked spec.
+
+  **Left, and named so it is not mistaken for an oversight.**
+  [`docs/gate-register.md`](../gate-register.md) quotes `typescript: ^7.0.2`
+  under *"Measured, 2026-08-15"*. It is a dated observation that was true on its
+  date. Editing it would make the register lie about what was measured, which is
+  worse than letting it age.
+
+  ⚠️ **[`AGENTS.md`](../../AGENTS.md)'s note that `astro check` cannot run under
+  TypeScript 7 is the one exception, and it is a real debt rather than a
+  principled exclusion.** It is the constitution, `gates/agents-import.test.ts`
+  and `gates/constitution-scoreboard.test.ts` both read it, and editing the
+  constitution ahead of a decision about whether `astro check` becomes a gate row
+  is how a red build happens in this repo. It moves with that decision. Until
+  then this record is what a reader finds first, from `docs/adr/`.
 
 ## What was rejected
 
