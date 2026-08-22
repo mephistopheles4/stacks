@@ -22,13 +22,17 @@
  */
 
 import {
+  deltaPair,
   describeAge,
+  halfOf,
   runHealthOf,
   runInfoOf,
+  samplesOf,
   scoresOf,
   type ParsedRecord,
   type RecordVerdict,
 } from './metrics-read.ts';
+import type { TrendName } from './metrics.ts';
 import { detected, total, type Tally } from './mutation-score.ts';
 
 /** Where a person goes to see whether the nightly is still running. */
@@ -104,6 +108,144 @@ function pad(text: string, width: number): string {
  */
 export function scoredRecords(records: readonly ParsedRecord[]): ParsedRecord[] {
   return records.filter((record) => scoresOf(record).size > 0);
+}
+
+/**
+ * The four counts, and the word each is printed under.
+ *
+ * **The series names are not written twice.** `COMPLEXITY_SERIES` in
+ * `./metrics.ts` is derived from the emitter's own table, and
+ * `trend-report.test.ts` holds this list to it in order — so a fifth count
+ * added there and not here prints three of four and goes red, rather than
+ * printing three of four and saying nothing.
+ *
+ * ⚠️ **`mass over 10` is spelled out rather than shown as a ratio.** Spec §2:
+ * the record carries counts and the *page* derives shares, because no ratio
+ * survived both gaming tests. A share printed here would be the statistic the
+ * measurement was designed to avoid.
+ */
+export const COMPLEXITY_COUNTS = [
+  ['complexity-functions', 'functions'],
+  ['complexity-mass', 'mass'],
+  ['complexity-mass-over-10', 'mass over 10'],
+  ['complexity-max', 'max'],
+] as const satisfies readonly (readonly [TrendName, string])[];
+
+/**
+ * Any one of the four answers for the group.
+ *
+ * `complexityFactsOf` fails the set together, so a record carrying one family
+ * carries all four — which makes *which* series the pairing is anchored on a
+ * detail rather than a decision, and picking the first keeps it from becoming
+ * a second hand-written name.
+ */
+const [[COMPLEXITY_ANCHOR]] = COMPLEXITY_COUNTS;
+
+/** `+3`, `-10`, `+0` — whole branches, always signed, never a percentage. */
+function countDelta(now: number, before: number): string {
+  const moved = now - before;
+  return `${moved >= 0 ? '+' : '-'}${String(Math.abs(moved))}`;
+}
+
+/**
+ * What a row says where its delta would go — three states, in one place.
+ *
+ * ⚠️ **Three and not two, and the two absences are different facts.** No
+ * earlier record at all is a fact about the **store**; a row the earlier record
+ * did not carry is a fact about the **declaration**; and printing `(+0)` for
+ * either would read as a movement nothing measured.
+ *
+ * **One authority because two blocks say it.** The score block and the counts
+ * block reached this shape independently and wrote it out verbatim, differing
+ * only in how the number is formatted. A third caller spelling *"new scope"*
+ * some other way is the same class of defect as the refusal column that ran a
+ * series name into its own explanation: nothing fails, and the wording is
+ * wrong in the one place it is read from.
+ */
+function movedLabel(
+  previous: unknown,
+  was: number | undefined,
+  format: (was: number) => string,
+): string {
+  if (previous === undefined) return 'first run';
+  return was === undefined ? 'new scope' : `(${format(was)})`;
+}
+
+/**
+ * The four counts per scope, each against the previous record of its own half.
+ *
+ * ⚠️ **Halves, and never `scoredRecords`.** The counts land on both the merge
+ * and the nightly, so the pairing this block needs is the one `deltaPair`
+ * derives from `halfOf` — a merge read against a nightly reports a movement
+ * across an interval nobody asked about. The mutation block next door pairs
+ * nightly-to-nightly for free, because a merge record carries no score; that
+ * accident does not extend to here, and reusing it would look like it did.
+ *
+ * ⚠️ **Absent is not zero, and it is the common case for a while.** A record
+ * written before the series existed and a run whose population yielded no
+ * function both arrive with no families at all — `complexityFactsOf` omits the
+ * set rather than emitting a `0` for `max`, which is a legal value for a scope
+ * of trivial functions. So this says *no record carries them* and prints no
+ * number, rather than printing a wall of zeroes that reads as a measurement.
+ *
+ * **It never refuses.** Nothing in this block has a remedy that is a finite
+ * diff — the cap in `./floors.ts` is where a complexity number acquires teeth.
+ *
+ * ⚠️ **It names its own record, because that is not the run panel 1 printed.**
+ * Panel 1 shows the newest *scored* run, and this anchors on the newest
+ * *carrier* — a merge carries counts and no score, so on a busy week the two
+ * are different records and the print would otherwise show a merge's counts
+ * under a nightly's commit. Observed by running it, not by reading it. *A
+ * score never appears without its run*, one level down: a count does not
+ * either.
+ */
+export function renderComplexity(records: readonly ParsedRecord[], now: number): string[] {
+  const { latest, previous } = deltaPair(records, COMPLEXITY_ANCHOR);
+  if (latest === undefined) {
+    return ['  complexity  no record read carries the four counts — absent is not zero'];
+  }
+
+  const half = halfOf(latest);
+  const named = half ?? 'comparable';
+  const info = runInfoOf(latest);
+  const age = latest.timestamp === undefined ? '' : `  ${describeAge(now - latest.timestamp)} ago`;
+  const lines = [
+    `  complexity — four counts per scope, ${
+      previous === undefined
+        ? `no earlier ${named} record carries them, so nothing below is a movement`
+        : `against the previous ${named} record`
+    }`,
+    `    counted  ${(info?.['commit'] ?? 'unknown').slice(0, 12)}  ${named}${age}`,
+  ];
+
+  const current = COMPLEXITY_COUNTS.map(([series]) => samplesOf(latest, series));
+  const earlier = COMPLEXITY_COUNTS.map(([series]) =>
+    previous === undefined ? new Map<string, number>() : samplesOf(previous, series),
+  );
+
+  // Scope order is the anchor family's, so the four lines of a scope stay
+  // together and the scopes stay in the order the mutation block above printed
+  // them — both read off `stryker.scopes.json` in the emitter.
+  const scopes = [...(current[0]?.keys() ?? [])];
+  const scopeWidth = Math.max(0, ...scopes.map((scope) => scope.length));
+  const labelWidth = Math.max(...COMPLEXITY_COUNTS.map(([, label]) => label.length));
+  const valueWidth = Math.max(
+    0,
+    ...current.flatMap((samples) => [...samples.values()].map((value) => String(value).length)),
+  );
+
+  for (const scope of scopes) {
+    COMPLEXITY_COUNTS.forEach(([, label], index) => {
+      const value = current[index]?.get(scope);
+      if (value === undefined) return;
+      const was = earlier[index]?.get(scope);
+      const moved = movedLabel(previous, was, (before) => countDelta(value, before));
+      lines.push(
+        `    ${pad(scope, scopeWidth)}  ${pad(label, labelWidth)}  ${String(value).padStart(valueWidth)}  ${moved}`.trimEnd(),
+      );
+    });
+  }
+  return lines;
 }
 
 /**
@@ -184,12 +326,7 @@ export function renderPanel(input: PanelInput): string[] {
   const width = Math.max(0, ...[...scores.keys()].map((scope) => scope.length));
   for (const [scope, score] of scores) {
     const was = before.get(scope);
-    // Three states and not two: no previous scored run at all is a fact about
-    // the store, while a scope the previous run did not carry is a fact about
-    // the declaration — and printing `(+71.70)` for either would read as a
-    // movement nothing measured.
-    const moved =
-      previous === undefined ? 'first run' : was === undefined ? 'new scope' : `(${delta(score, was)})`;
+    const moved = movedLabel(previous, was, (earlier) => delta(score, earlier));
     const tally = input.resolution?.get(scope);
     lines.push(
       `    ${pad(scope, width)}  ${percent(score).padStart(7)}  ${pad(moved, 12)}${
@@ -198,6 +335,13 @@ export function renderPanel(input: PanelInput): string[] {
     );
   }
   if (input.resolutionNote !== undefined) lines.push(`    ${input.resolutionNote}`);
+
+  // ⚠️ **Directly under the score, and the order is the page's order.** A
+  // scope whose mass is rising while its mutation score holds or falls is
+  // where the next tests go, and that reading needs both numbers in one
+  // glance — which is also why the four panels sit under the mutation panel in
+  // `grafana/dashboards/trend-layer.json` rather than in a section of their own.
+  lines.push(...renderComplexity(input.records, input.now));
 
   // ⚠️ **This line said "none yet — every scope is unfloored until the ratchet
   // lands" and the ratchet has landed**, so it now points at the block that

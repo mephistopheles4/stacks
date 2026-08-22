@@ -423,12 +423,15 @@ export function recordsCarrying(
  * wearing one shape. The consequence is worth knowing: on a busy week the
  * newest carrier is a merge, so the comparison reads merge-to-merge.
  *
- * ⚠️ **Exported with no caller in this commit**, for `recordsCarrying`'s
- * reason: the deploy print block
- * ([#203](https://github.com/mephistopheles4/stacks/issues/203)) is its
- * consumer, and the shape was agreed with that branch before it was written —
- * two of its four print states are decided here, and the per-scope two are
- * decided in its own loop.
+ * ⚠️ **Its caller is `renderComplexity` in `./trend-report.ts`**
+ * ([#203](https://github.com/mephistopheles4/stacks/issues/203)), and the shape
+ * was agreed with that branch before either was written — two of its four print
+ * states are decided here, and the per-scope two are decided in its own loop.
+ * This read *"exported with no caller in this commit"* when it landed one
+ * commit ahead of that consumer: true as scoped, and meaningless once a squash
+ * makes *this commit* nothing a reader can point at. Corrected in the commit
+ * that supplied the caller, which is the rule this file already applies to the
+ * floors pointer next door.
  */
 export function deltaPair(
   records: readonly ParsedRecord[],
