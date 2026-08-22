@@ -72,7 +72,7 @@ the line named the real `tsconfig.json`. It is back to `tsconfig.json` here, and
 `pnpm mutation:run` over one of the two smallest declared scopes completes with
 **0 errors**, so the flip is exercised rather than assumed:
 
-```
+```sh
 pnpm mutation:run --mutate "packages/core/src/import/**/*.ts,!**/*.test.ts"
 ```
 
