@@ -1331,6 +1331,21 @@ the vault refusal and not the freshness one. The lesson is general — **a test
 whose sentinel lies past a dated check inherits that check's calendar**, and
 every fixture on the path has to satisfy the checks it does not mean to test.
 
+⚠️ **That fixed seven of G17's eight rows, and the eighth was invisible until
+`main` was red on its own.** The last row reads the **real** checkout rather
+than a scratch one — which is the only evidence the guard is wired to anything
+— so it is the one place a record cannot be planted, and no `actions/checkout`
+carries the mirrored `refs/remotes/origin/metrics` that G39's check reads. On
+`main` it therefore refused on the record and never reached the vault at all.
+**No pull request could have caught it**: CI on `pull_request` is never on
+`main`, so that branch of the row does not execute, and the fix's own pull
+request was green while the merge that followed was red. The repair moves the
+sentinel *upstream* of every environment-dependent check, to the step-0b line
+printed unconditionally once the guard has allowed the run. Two lessons, and
+the second is the sharper one: **a sentinel must sit upstream of every check
+the environment decides**, and **a row whose two directions run in different CI
+events is only half-observed by the event you are looking at.**
+
 ## G2 in full — the public build gate
 
 The five below are what G2 added to `gate:public`. Since G20 they are no longer
