@@ -28,8 +28,9 @@
  * library.json)` and `library.json` is built from the real vault, which is not
  * in the repo, **so CI can never compute it.** It could only be *told*, which
  * costs a token and breaks the design's strongest property — no secret exists
- * anywhere in it. The cost, stated rather than discovered: **D's history lives
- * on one machine**, and D is no longer continuous.
+ * anywhere in it ([ADR-0055](../docs/adr/0055-ci-writes-a-durable-record.md)).
+ * The cost, stated rather than discovered: **D's history lives on one machine**,
+ * and D is no longer continuous.
  *
  * ⚠️ **Two containers, and the second one is the page you actually read.** The
  * store answers PromQL; Grafana renders the fixed panel order — *is this real*

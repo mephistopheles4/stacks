@@ -1549,10 +1549,9 @@ from the same map. The number went in when the row did.
 `metrics/<timestamp>-<sha>.prom` per run to the orphan `metrics` branch, in the
 OpenMetrics text `promtool` ingests. `pnpm trend:sync` pulls it into a local
 Prometheus, by hand, when you want to look. No secret exists anywhere in that
-design — job-level `contents: write` on the built-in token at one end, an
-anonymous fetch at the other. See
-[ADR-0055](adr/0055-ci-writes-a-durable-record.md) and
-[`docs/spec/trend-layer.md`](spec/trend-layer.md).
+design — the mechanism is stated once, in
+[ADR-0055](adr/0055-ci-writes-a-durable-record.md), rather than again here. See
+also [`docs/spec/trend-layer.md`](spec/trend-layer.md).
 
 ⚠️ **Surface D's row is in that store and is deliberately not a trend.** The
 edge check between deploys writes to the **local** store only, under a metric

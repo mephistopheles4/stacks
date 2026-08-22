@@ -296,7 +296,7 @@ CI. That is a fact rather than a preference: the expected build stamp is
 `sha256(index.html + library.json)` and `library.json` is built from the real
 vault, which is not in the repo, **so CI can never compute it.** It could only be
 told, which costs a token and breaks the property that no secret exists anywhere
-in this design.
+in this design ([ADR-0055](adr/0055-ci-writes-a-durable-record.md)).
 
 **D's row goes to the local store only, never the branch**, which keeps both ends
 credential-free — at the cost that D's history lives on one machine. A **refusal**
