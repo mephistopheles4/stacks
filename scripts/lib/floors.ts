@@ -852,8 +852,8 @@ export function floorRefusals(input: RefusalInput): string[] {
  */
 function noFlag(): string {
   return (
-    '  No flag clears this. --skip-gates skips the gate suite, not this; --dry-run runs\n' +
-    '  it and uploads nothing, which is how to watch it fail on purpose.'
+    '  No flag clears this. --dry-run runs it and uploads nothing, which is how to\n' +
+    '  watch it fail on purpose.'
   );
 }
 

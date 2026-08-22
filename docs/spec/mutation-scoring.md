@@ -52,7 +52,7 @@ esbuild and never type-checks, so a mutant that would fail `tsc` still runs and
 gets a real verdict. Measured across eight runs: `CompileError` 0,
 `RuntimeError` 0–1.
 
-⚠️ **Superseded in part by [ADR-0064](../adr/0064-typescript-6-until-7-1.md).**
+⚠️ **Superseded in part by [ADR-0066](../adr/0066-typescript-6-until-7-1.md).**
 *"Dead and cannot be revived"* was a fact about `typescript@7.0.2`, and the repo
 is on `6.0.3`: the checker starts and works, 2 of `measure.ts`'s 11 mutants
 coming back `CompileError`. `checkers: []` **stands unchanged**, on a different
@@ -400,7 +400,7 @@ Flagged rather than left silent because **all five stryker-js#6073 ghosts sit in
 | Artifact | Change |
 | --- | --- |
 | `package.json` | `@stryker-mutator/core` and `@stryker-mutator/vitest-runner` at **exactly** `9.6.1` |
-| `stryker.config.*` | eight declared scopes, the exclusion list with a mechanism per entry, `checkers: []`, `plugins: ["@stryker-mutator/vitest-runner"]`, `timeoutMS: 120000`, the `mutate` array **including its `!**/*.test.ts` negation**, and the `tsconfigFile` workaround with its comment — ⚠️ **the workaround is gone since [ADR-0064](../adr/0064-typescript-6-until-7-1.md)**, which put the repo on TS 6 and made an absent tsconfig a checker that cannot start; `tsconfigFile` names the real `tsconfig.json`, comment intact |
+| `stryker.config.*` | eight declared scopes, the exclusion list with a mechanism per entry, `checkers: []`, `plugins: ["@stryker-mutator/vitest-runner"]`, `timeoutMS: 120000`, the `mutate` array **including its `!**/*.test.ts` negation**, and the `tsconfigFile` workaround with its comment — ⚠️ **the workaround is gone since [ADR-0066](../adr/0066-typescript-6-until-7-1.md)**, which put the repo on TS 6 and made an absent tsconfig a checker that cannot start; `tsconfigFile` names the real `tsconfig.json`, comment intact |
 | `gates/mutation-scope.test.ts` | **G37**, the structural assertions plus the glob-matches-a-file clause |
 | `scripts/deploy.ts` | the zero-mutant residual refusal |
 | [`docs/gates.md`](../gates.md) | **row G37 `mutation-scope`, *Contract seams → gates*** |

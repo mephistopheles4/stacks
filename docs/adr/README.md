@@ -87,4 +87,5 @@ Two other files hold what these deliberately do not:
 | [0061](./0061-the-mutation-floor-refuses-deploy.md) | The mutation floor refuses `deploy:site`, and there is no override |
 | [0062](./0062-the-dashboard-is-provisioned-from-the-repo.md) | The dashboard is provisioned from the repo, and the panel order is the artifact |
 | [0063](./0063-the-pr-window-is-a-label-on-the-run.md) | The PR window is a label on the run, derived in CI |
-| [0064](./0064-typescript-6-until-7-1.md) | TypeScript 6.0.3, until 7.1 ships a stable programmatic API |
+| [0064](./0064-no-flag-skips-the-deploy-gates.md) | No flag skips the deploy gates |
+| [0066](./0066-typescript-6-until-7-1.md) | TypeScript 6.0.3, until 7.1 ships a stable programmatic API |

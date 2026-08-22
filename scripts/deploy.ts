@@ -129,7 +129,6 @@ const WRANGLER = 'wrangler@4';
 
 
 const dryRun = process.argv.includes('--dry-run');
-const skipGates = process.argv.includes('--skip-gates');
 
 /**
  * `--check-only`: ask the live site which build it is serving, and stop.
@@ -149,9 +148,16 @@ const checkOnly = process.argv.includes('--check-only');
  * ⚠️ **The convention: a refusal says which flags clear it, right where it is
  * written.** Adopted because a flag whose reach is undocumented is how
  * `--skip-gates` came to skip the whole contract with nothing saying so (#152),
- * and because measuring this file found **roughly a dozen refusals outside
- * `--skip-gates`'s reach and four inside it, said nowhere**. The four inside are
- * the step-1 gate commands; everything else here refuses whatever you pass.
+ * and because measuring this file found **roughly a dozen refusals outside that
+ * flag's reach and four inside it, said nowhere**. The four inside were the
+ * step-1 gate commands, and **the flag is gone** — deleted for the reason
+ * [ADR-0064](../docs/adr/0064-no-flag-skips-the-deploy-gates.md) records.
+ *
+ * **The convention outlived it**, because it was never about one flag. Three
+ * remain, every refusal below says which of them clear it, and the roster itself
+ * is now held to `docs/commands.md` in both directions by G45 (`deploy-flags`)
+ * — so the *next* undocumented flag is red the day it lands rather than the day
+ * somebody greps.
  *
  * A comment convention, not a gate — there is no way to assert "this comment is
  * true of the code beside it" that is not a gate matching prose, which this repo
@@ -212,8 +218,8 @@ if (!checkOnly && !dryRun) assertPublishableBranch();
  * say afterwards what was published.
  *
  * **Cleared by `--any-branch`, and never reached under `--dry-run` or
- * `--check-only`** — the call above is guarded on both. `--skip-gates` does not
- * touch it: this runs before step 1 and is not one of the gates.
+ * `--check-only`** — the call above is guarded on both. Nothing else clears it,
+ * and nothing else clears the gates it runs before either.
  */
 function assertPublishableBranch(): void {
   if (process.argv.includes('--any-branch')) {
@@ -459,9 +465,8 @@ function disambiguate(store: FetchedRecord | undefined): Disambiguation {
  * refuses is a record too stale to read a movement out of — a question about
  * the pipe rather than a judgment about the code.
  *
- * **Which flags clear it: none that publish.** `--skip-gates` skips the step-1
- * suite and its reach stops there, `--dry-run` runs this and uploads nothing,
- * and `--check-only` warns instead of refusing — the rule step 0c already
+ * **Which flags clear it: none that publish.** `--dry-run` runs this and uploads
+ * nothing, and `--check-only` warns instead of refusing — the rule step 0c already
  * applies to the empty-scope residual, and for the same reason: that mode
  * exists to ask a live origin what it is serving, and the age of a local record
  * says nothing about that.
@@ -549,9 +554,9 @@ reportFloors();
 /**
  * Refuses when a declared scope's files exist and its mutants do not.
  *
- * **Which flags clear it: none, on any path that publishes.** `--skip-gates`
- * skips the step-1 suite and its reach stops there; `--dry-run` runs this and
- * is the honest way to watch it fail on purpose, since it uploads nothing.
+ * **Which flags clear it: none, on any path that publishes.** `--dry-run` runs
+ * this and is the honest way to watch it fail on purpose, since it uploads
+ * nothing.
  * `--check-only` warns instead of refusing, on the pre-flight's own rule — that
  * mode exists to investigate a stale edge, and a check that refused to run
  * would answer the question by declining to ask it.
@@ -613,8 +618,8 @@ function assertNoEmptyScopes(): void {
 
   fail(
     `declared scope(s) produced no mutants in the last run: ${listed}\n\n  ${why}\n\n` +
-      '  No flag clears this. --skip-gates skips the gate suite, not this, and --dry-run\n' +
-      '  runs it. --check-only reports instead of refusing, and publishes nothing.',
+      '  No flag clears this, and --dry-run runs it. --check-only reports instead of\n' +
+      '  refusing, and publishes nothing.',
   );
 }
 
@@ -627,9 +632,8 @@ function assertNoEmptyScopes(): void {
  * reason a deploy stops, so one blanket override gets typed for that and
  * silently clears the floor as well. See
  * [ADR-0061](../docs/adr/0061-the-mutation-floor-refuses-deploy.md).
- * `--skip-gates` skips the step-1 suite and its reach stops there; `--dry-run`
- * runs every refusal here and uploads nothing, which is the honest way to watch
- * one fail on purpose.
+ * `--dry-run` runs every refusal here and uploads nothing, which is the honest
+ * way to watch one fail on purpose.
  *
  * ⚠️ **`--check-only` does not reach this at all, and that differs from the
  * block above it on purpose.** `assertNoEmptyScopes` warns under `--check-only`
@@ -814,14 +818,19 @@ console.log(`        → ${siteUrl}  (Cloudflare Pages project "${project}")`);
 
 // ── 1. The gates. These stage FIXTURE data — which is why they go first ─────
 //
-// **The four refusals inside `--skip-gates`'s reach, and the only four.** Each
-// `run` below refuses by failing the command; `--skip-gates` clears all four by
-// not running them, and `--check-only` skips them for a different reason — it
-// builds nothing, so there is nothing to gate. `--dry-run` runs every one.
+// **Four refusals, and no flag clears any of them.** Each `run` below refuses by
+// failing the command. `--check-only` skips them for a reason that is not an
+// override — it builds nothing, so there is nothing to gate — and `--dry-run`
+// runs every one.
+//
+// ⚠️ **`--skip-gates` used to clear all four and then publish anyway.** It was
+// in this file's first commit (2026-08-01), was documented nowhere for 19 of
+// the 21 days it existed, and bought about 35 seconds. Deleted in #152; see
+// [ADR-0064](../docs/adr/0064-no-flag-skips-the-deploy-gates.md). Typing it
+// today is inert — the gates run — which is the safe direction for a flag that
+// still sits in somebody's shell history.
 if (checkOnly) {
   console.log('--check-only: not building, not uploading');
-} else if (skipGates) {
-  console.warn('\n! --skip-gates: publishing without running the contract');
 } else {
   run('pnpm', ['test']);
   run('pnpm', ['run', 'typecheck']);
@@ -832,8 +841,8 @@ if (checkOnly) {
 // ── 2. The real build. Last, so it overwrites whatever the gates staged ─────
 //
 // Two more command refusals. Only `--check-only` clears them, by building
-// nothing; `--skip-gates` does not reach here and `--dry-run` builds, because a
-// dry run that skipped the build would have no artifact to pre-flight.
+// nothing; `--dry-run` builds, because a dry run that skipped the build would
+// have no artifact to pre-flight.
 if (!checkOnly) {
   run('pnpm', [
     'stacks',
@@ -907,7 +916,7 @@ if (!checkOnly) {
   // build.
   //
   // No flag clears it. `--check-only` never arrives — the whole block is
-  // guarded on it — and `--skip-gates` skips the gate suite, not this.
+  // guarded on it — and no flag skips a gate any more.
   if (titles.length === 0) {
     fail(
       'no fixture notes found to check the build against. This check exists to catch the ' +
@@ -975,16 +984,15 @@ if (applicable.length > 0) {
     // The convention is that every refusal here says so rather than leaving the
     // reader to read `process.argv` — a flag whose reach is undocumented is how
     // `--skip-gates` came to skip the whole contract with nothing saying so
-    // (#152). Stated as a fact about this refusal, checked against the code
-    // above it: `--skip-gates` skips the step-1 gate suite and its reach stops
-    // there — execution arrives here either way, and this refusal is outside
-    // it. `--dry-run` runs this and stops before the upload, and `--check-only`
-    // takes the warning branch, which publishes nothing.
+    // (#152), and that flag is now deleted. Stated as a fact about this refusal,
+    // checked against the code above it: `--dry-run` runs this and stops before
+    // the upload, and `--check-only` takes the warning branch, which publishes
+    // nothing.
     fail(
       `pre-flight found ${String(applicable.length)} problem(s):\n- ${listed}\n\n` +
-        '  No flag clears this. --skip-gates skips the gate suite, not the pre-flight,\n' +
-        '  and --dry-run runs it. --check-only reports instead of refusing, but it\n' +
-        '  builds nothing and uploads nothing, and it drops share-image-origin.\n' +
+        '  No flag clears this, and --dry-run runs it. --check-only reports instead\n' +
+        '  of refusing, but it builds nothing and uploads nothing, and it drops\n' +
+        '  share-image-origin.\n' +
         '  Nothing is uploaded until this passes.',
     );
   }

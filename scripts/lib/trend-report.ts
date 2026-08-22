@@ -297,9 +297,9 @@ export function renderRefusal(
 
   return (
     `${head}${route}\n\n` +
-    '  No flag clears this. --skip-gates skips the gate suite and its reach stops there;\n' +
-    '  --dry-run runs this check and is the honest way to watch it fail. --check-only\n' +
-    '  reports instead of refusing: it uploads nothing, and a mode that exists to ask a\n' +
-    '  live origin what it is serving must not be blocked by the age of a local record.'
+    '  No flag clears this. --dry-run runs this check and is the honest way to watch it\n' +
+    '  fail. --check-only reports instead of refusing: it uploads nothing, and a mode\n' +
+    '  that exists to ask a live origin what it is serving must not be blocked by the\n' +
+    '  age of a local record.'
   );
 }

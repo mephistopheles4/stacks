@@ -46,7 +46,7 @@ export default {
    * ⚠️ **Off by decision now, not by impossibility.** This said the checker was
    * *"dead here and cannot be revived"*, which was a fact about
    * `typescript@7.0.2`; on `6.0.3` it starts and works — see
-   * [ADR-0064](docs/adr/0064-typescript-6-until-7-1.md).
+   * [ADR-0066](docs/adr/0066-typescript-6-until-7-1.md).
    *
    * It stays `[]` regardless, because turning it on is a *scoring* change, not
    * a configuration one. A `CompileError` is neither killed nor survived, so
@@ -76,7 +76,7 @@ export default {
    * — to dodge a TypeScript 7 startup crash. On `typescript@6.0.3` that trick
    * inverts: an absent file is a checker that cannot start. The crash, the
    * workaround and the measurement that caught the inversion are in
-   * [ADR-0064](docs/adr/0064-typescript-6-until-7-1.md); restating them here
+   * [ADR-0066](docs/adr/0066-typescript-6-until-7-1.md); restating them here
    * would be a second copy nothing holds to the first.
    */
   tsconfigFile: 'tsconfig.json',

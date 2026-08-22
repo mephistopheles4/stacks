@@ -4813,6 +4813,97 @@ put one out of reach of `pnpm test`.
 
 ---
 
+### G45 — `deploy-flags`
+
+**Gate:** [`gates/deploy-flags.test.ts`](../gates/deploy-flags.test.ts)
+**Date:** 2026-08-22
+**Triaged at landing**, and enforced rather than remembered: G41
+(`gate-register`) is red the moment a row lands without an entry.
+
+⚠️ **The row exists because the mechanism for pinning a deploy flag already
+existed and was aimed one flag to the left.** G17 (`deploy-branch`) asserts
+exactly which spellings override the *branch* guard — `--any-branch` yes,
+`--any` / `--anybranch` / `--any_branch` no — while `--skip-gates`, which cleared
+the *entire four-gate contract* on a path that still uploaded to the live
+address, was pinned by nothing and documented nowhere for 19 of the 21 days it
+existed — 2026-08-01 to 2026-08-22, documented on the 20th. `git grep` found it in **two lines of one file, both the
+implementation** ([#152](https://github.com/mephistopheles4/stacks/issues/152)).
+The flag is deleted — [ADR-0064](adr/0064-no-flag-skips-the-deploy-gates.md) —
+and this row is the mechanism aimed at the **roster** instead, which is the class
+rather than the instance: the next undocumented `--fast` is red the day it lands.
+
+- **Weakening** — **clean; no allowlist and no exemption.** Four clauses, all
+  unconditional. The only tunable numbers are the two `expectFound` floors and
+  the section floor of 4, and lowering one of those is a one-line diff *inside
+  the gate*, which is the visible kind. `declined` — nothing here needs an
+  escape, and the row exists because the last escape on this path was invisible.
+- **Satisfying the letter** — ⚠️ **exposed, and bounded rather than closed.** A
+  flag mentioned in one throwaway backticked sentence passes: the gate reads
+  whether `docs/commands.md` *names* the flag, never whether the sentence
+  explains what the flag reaches. That is the honest limit, and it is the same
+  limit G14 (`commands`) states about a documented command. `accepted` — the
+  alternative is a gate judging prose quality, which is not a gate.
+- **Routing around** — **the obvious route is closed, and the closing is clause
+  3.** The roster is only ever as wide as one regex, so `process.argv.slice(2)`,
+  `argv[2] === '--x'` or an options object parsed once would each add a flag the
+  roster checks could never learn about — the whole defect arriving *through* the
+  gate written for it. So every `process.argv` occurrence in the script must be a
+  literal `--flag` test, counted rather than extracted because `extractAll`
+  deduplicates. Planted, red. ⚠️ **The route still open is a second file**: a
+  helper under `scripts/lib/` reading argv on the deploy's behalf is outside
+  everything this reads. `accepted` — today the four reads are all in one file
+  and all one shape, and widening the sweep to `scripts/` would gate every other
+  script's flags as a side effect of this row. ⚠️ **So is the environment**: a
+  `process.env.SKIP_GATES` would evade all four clauses invisibly, and unlike the
+  helper route it would not even look like a flag. `accepted`, with no live
+  instance — `scripts/deploy.ts` reads no environment override today, and the
+  ones it reads at all are `SITE_URL`, `STACKS_VAULT` and `CF_PAGES_PROJECT`,
+  each of which G9 (`env-contract`) already holds to a documented list.
+- **Vacuous green** — **clean, and floored on both sides.** Two regexes over two
+  formats, either of which could stop matching and reduce *"every flag is
+  documented"* to a true statement about two empty sets. `expectFound` floors the
+  script side at 3, the doc side at 3, and the `pnpm deploy:site` section sweep
+  at 4 — so a renamed heading or a reformatted flag fails loudly instead of
+  passing over nothing. Both roster directions planted red, below.
+- **Decay** — **exposed, named, and it decays in the safe direction.** The doc
+  side reads prose: a rewrite of `docs/commands.md` that moved the flags into a
+  table, or dropped the backticks, would break the extraction — and every way it
+  can break is a **false red**, never a false green, because the floors fire
+  before the comparisons. ⚠️ **One live consequence, written into the file it
+  affects**: a *retired* flag cannot be named in backticks in those sections, or
+  the gate demands the script grow it back — and **the same is true of the six
+  flags the deploy *forwards* and never reads** (`--public`, `--vault`,
+  `--assets` to `stacks build`, `--filter` to pnpm, `--project-name` and
+  `--branch` to wrangler), because passing a flag on is not reading one.
+  `docs/commands.md` carries both notes where somebody would hit them.
+  `accepted` — every way this breaks is a **false red** whose message names the
+  offending flag, and the alternative (counting any `'--flag'` literal as a
+  read) would let a documented flag be satisfied by a string handed to a
+  different command.
+
+**Rank:** not ranked. This row post-dates all four bands; the bullets above are
+the same five questions asked at landing.
+
+**Observed-red line:** **three plants, each restored green afterwards**, and the
+first of them is the historical defect reproduced rather than invented.
+
+| | |
+| --- | --- |
+| **remove the `--skip-gates` sentence from `docs/commands.md`**, script unchanged | **red** — *"scripts/deploy.ts reads --skip-gates, which docs/commands.md does not document"*. This is #152's state exactly: two lines in one file, and nothing anywhere else |
+| **delete the argv read**, doc sentence left standing | **red** — *"docs/commands.md documents --skip-gates … which the script does not read"*. Observed en route to the real change, which is why the doc edit could not be forgotten |
+| **`const sneaky = process.argv.slice(2).some((a) => a === '--fast')`** | **red** on clause 3 — *"touches process.argv 4 time(s) and only 3 of those is a literal --flag test"*. The route around the other three clauses |
+
+**Disposition: `gated`.** The flag is deleted and the roster it belonged to is
+now red-capable from three directions.
+
+**Remedy (named, not built):** the routing-around verdict's second half. If a
+deploy flag is ever read from a helper rather than from `scripts/deploy.ts`, the
+sweep has to follow it there — and the honest form of that is a roster gate over
+`scripts/` as a whole, one row per script, rather than this row quietly widening
+to cover flags it does not document.
+
+---
+
 ## ⚠️ `auditConfig.ignoreGhsas` — the category-1 verdict this rollout owed
 
 **Not a row, and it does not get one.** It is the escape hatch every other
