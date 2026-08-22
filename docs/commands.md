@@ -122,9 +122,29 @@ there is no way to ship that book today. **The design's answer is that the
 lowering is visible, not that it is avoidable.**
 
 **`--dry-run` runs all four and uploads nothing**, which is the honest way to
-watch one fail on purpose. `--skip-gates` skips the gate suite and its reach
-stops there. **`--check-only` does not reach them at all** — it builds nothing
-and exists to ask a live origin what it is serving.
+watch one fail on purpose. **`--check-only` does not reach them at all** — it
+builds nothing and exists to ask a live origin what it is serving.
+
+⚠️ **A fourth flag, --skip-gates, used to sit here and does not any more.** It
+skipped the whole four-gate contract on a path that still uploaded, was written
+down nowhere for 19 of the 21 days it existed, and bought about 35 seconds.
+Deleted in [#152](https://github.com/mephistopheles4/stacks/issues/152); see
+[ADR-0064](adr/0064-no-flag-skips-the-deploy-gates.md). Typing it today is inert
+— the gates run — which is the safe direction for a flag still sitting in
+somebody's shell history.
+
+**The flags on this page are the roster.** `gates/deploy-flags.test.ts` (**G45**)
+holds these four sections to `scripts/deploy.ts` in both directions, so a flag
+documented here and unread, or read there and undocumented, is a red build.
+⚠️ **That is why the retired flag above is not in backticks**: the gate reads a
+flag as a code span, so writing a dead one that way would demand the script grow
+it back. **The same applies to the six flags this command merely forwards** —
+--public, --vault and --assets go to `stacks build`, --filter to pnpm,
+--project-name and --branch to wrangler, and not one of them is a flag you can
+type at `deploy:site`. Name those in prose, as this paragraph does, and never in
+a code span. ⚠️ **The first draft of this very paragraph broke the gate it was
+explaining**, which is the most direct evidence available that the trap is real
+and that the red is loud.
 
 `ignored` — the disable-directive counter beside each floor — is the one field
 gated at merge, by **G43** (`ignored-mutants`) in [`docs/gates.md`](gates.md).

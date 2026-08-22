@@ -201,10 +201,19 @@ describe('the refusal', () => {
   it('states which flags clear it, which is none that publish', () => {
     // The convention landed with the previous row: a refusal says which flags
     // clear it, right where it is written.
+    //
+    // ⚠️ **It named `--skip-gates` until #152 deleted that flag.** The
+    // assertion moved to the two that still exist rather than being dropped:
+    // what this row is about is a refusal naming the live roster, and a
+    // refusal naming a flag nobody can type is the same defect pointing the
+    // other way.
     const text = renderRefusal(stale, NOW, { kind: 'unreachable' }, 5);
 
     expect(text).toContain('No flag clears this');
-    expect(text).toContain('--skip-gates');
+    expect(text).toContain('--dry-run');
     expect(text).toContain('--check-only');
+    expect(text, 'a deleted flag must not survive in a refusal').not.toContain(
+      '--skip-gates',
+    );
   });
 });
