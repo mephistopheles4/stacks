@@ -62,6 +62,13 @@ function freshNightly(): { name: string; document: string } {
       gateSuiteRuntime: 10,
       mutationRunRuntime: 1275,
       liveExclusions: { live: 0, declared: 27 },
+      // ⚠️ Every CI-written series, or this record is not fresh — `GATED_SERIES`
+      // covers whatever `TREND_SERIES` holds, so a series added anywhere lands
+      // here. That is the same trap this file's header records, arriving by a
+      // different route: not a calendar this time, but a list that grew.
+      complexity: [
+        { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
+      ],
     } satisfies RunFacts),
   };
 }

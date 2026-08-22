@@ -221,13 +221,13 @@ export interface JudgeInput {
   records: readonly ParsedRecord[];
 }
 
-/** The four CI-written series, which is every series the bound covers. */
+/** The eight CI-written series, which is every series the bound covers. */
 export const GATED_SERIES: readonly TrendName[] = TREND_SERIES.map((series) => series.name);
 
 /**
  * Is this record fresh enough to deploy on?
  *
- * ⚠️ **Per-series, because the record is not one number.** Four series written
+ * ⚠️ **Per-series, because the record is not one number.** Eight series written
  * by different things on different clocks, and an aggregate freshness check
  * **cannot see the failure the record was built to expose**: one series going
  * quiet while the others stay healthy. A working nightly keeps the newest row
@@ -304,14 +304,152 @@ export function runInfoOf(record: ParsedRecord): Record<string, string> | undefi
   return record.samples.find((sample) => sample.metric === `${METRIC_PREFIXES.run}info`)?.labels;
 }
 
-/** Each declared scope's score in one record, by scope name. */
-export function scoresOf(record: ParsedRecord): Map<string, number> {
-  const scores = new Map<string, number>();
+/**
+ * One trend's per-scope samples in a record, by scope name.
+ *
+ * ⚠️ **Keyed on a `TrendName` and never on a metric string.** The name is
+ * translated here, once, by the function that owns the translation — so no
+ * caller spells `stacks_trend_complexity_mass_over_10`. That matters more than
+ * it looks: a mistyped metric string is not an error anywhere, it is an empty
+ * result, which reaches a dashboard as a blank panel and a deploy print as a
+ * scope that appears to have no number.
+ */
+export function samplesOf(record: ParsedRecord, trend: TrendName): Map<string, number> {
+  const found = new Map<string, number>();
 
   for (const sample of record.samples) {
-    if (trendOfMetric(sample.metric) !== 'mutation-score') continue;
+    if (trendOfMetric(sample.metric) !== trend) continue;
     const scope = sample.labels['scope'];
-    if (scope !== undefined) scores.set(scope, sample.value);
+    if (scope !== undefined) found.set(scope, sample.value);
   }
-  return scores;
+  return found;
+}
+
+/**
+ * Each declared scope's score in one record, by scope name.
+ *
+ * ⚠️ **Mutation-specific, and it stays that way.** `scoredRecords` decides
+ * which records carry a *score* by asking this, and a merge record carries the
+ * complexity counts now — so a broadened reading here would make every push
+ * read as a scored run and pair a merge against a nightly in the delta.
+ */
+export function scoresOf(record: ParsedRecord): Map<string, number> {
+  return samplesOf(record, 'mutation-score');
+}
+
+/**
+ * The event `metrics.yml`'s merge half runs on, and the whole of the split.
+ *
+ * ⚠️ **One spelling, here, because three modules ask the same question.**
+ * `./floors.ts` filters rows by it and its own `nightliesIn` carries the note
+ * *"a second spelling of it would drift"*; `halfOf` below asks it of a parsed
+ * record. It lives in this module rather than in `floors.ts` because the
+ * dependency runs that way — `floors.ts` imports from here and not the reverse,
+ * so the constant can only sit at this end without a cycle.
+ */
+export const MERGE_EVENT = 'push';
+
+/** Which half of `metrics.yml` wrote a record. */
+export type RecordHalf = 'merge' | 'nightly';
+
+/**
+ * The half that wrote this record, or `undefined` where it does not say.
+ *
+ * ⚠️ **Two values, from the workflow's own job conditions** — `merge` runs
+ * `if: github.event_name == 'push'` and `nightly` runs `if: != 'push'` — and
+ * deliberately not from the event name itself. A nightly fires as `schedule`
+ * *or* `workflow_dispatch`, so a reader that paired on the raw label would
+ * treat a hand-run nightly as a third kind and step over the scheduled run
+ * before it, producing a delta across an interval nobody asked about.
+ *
+ * **Exported for `deltaPair` below and for the deploy print block
+ * ([#203](https://github.com/mephistopheles4/stacks/issues/203))**, which has
+ * to say *which* half the comparison it printed came from — the answer varies
+ * week to week, so a reader who is not told cannot know.
+ */
+export function halfOf(record: ParsedRecord): RecordHalf | undefined {
+  const event = runInfoOf(record)?.['event'];
+  if (event === undefined || event === 'unknown') return undefined;
+  return event === MERGE_EVENT ? 'merge' : 'nightly';
+}
+
+/**
+ * The records carrying a series, in the order given.
+ *
+ * **Membership is the `# TYPE` line, not a sample** — `ParsedRecord.trends` —
+ * so a family the run emitted with zero samples still counts as carried, and a
+ * record written before the series existed is skipped entirely rather than
+ * arriving as a carrier with nothing in it.
+ *
+ * ⚠️ **Newest-first is the caller's job, and this does not re-sort.** It is
+ * `scoredRecords`' contract next door, established by `trendRecords` in
+ * `scripts/deploy.ts`; a second ordering rule here is how two readers of one
+ * store start disagreeing about which run is the latest.
+ *
+ * **Carrying one complexity family means carrying all four**, because
+ * `complexityFactsOf` fails the set together — so asking about any one of them
+ * answers for the group. That is a guarantee and not a coincidence; see
+ * `./metrics.ts`.
+ *
+ * ⚠️ **Exported with no caller in this commit, on purpose.** The cap
+ * ([#204](https://github.com/mephistopheles4/stacks/issues/204)) takes `[0]` as
+ * *the newest record carrying the counts* — it cannot reuse `scoredRecords`,
+ * because complexity lands on merge records and a mutation score does not — and
+ * `deltaPair` below is the print block's half. Landed here because those two
+ * branches run in parallel on this one, and whichever wrote this would have
+ * conflicted with the other.
+ */
+export function recordsCarrying(
+  records: readonly ParsedRecord[],
+  trend: TrendName,
+): ParsedRecord[] {
+  return records.filter((record) => record.trends.has(trend));
+}
+
+/**
+ * The two records a delta compares: the newest carrier, and the one before it
+ * from the same half.
+ *
+ * ⚠️ **Always an object, never a union**, so a caller narrows once. The two
+ * absences it reports are the two facts about the *store* — nothing carries the
+ * series, and only one record does — while *this scope was not in the previous
+ * record* is a fact about the **declaration** and belongs to the caller's own
+ * per-scope loop, where `renderPanel` already answers it as `new scope`.
+ * Answering that here would mean owning the caller's print vocabulary.
+ *
+ * **The half is derived from the newest carrier rather than passed in.** A
+ * caller that asked for a half the store cannot answer would get the same empty
+ * object as one asking about a series nothing carries — two different facts
+ * wearing one shape. The consequence is worth knowing: on a busy week the
+ * newest carrier is a merge, so the comparison reads merge-to-merge.
+ *
+ * ⚠️ **Exported with no caller in this commit**, for `recordsCarrying`'s
+ * reason: the deploy print block
+ * ([#203](https://github.com/mephistopheles4/stacks/issues/203)) is its
+ * consumer, and the shape was agreed with that branch before it was written —
+ * two of its four print states are decided here, and the per-scope two are
+ * decided in its own loop.
+ */
+export function deltaPair(
+  records: readonly ParsedRecord[],
+  trend: TrendName,
+): { latest?: ParsedRecord; previous?: ParsedRecord } {
+  const carriers = recordsCarrying(records, trend);
+  const [latest] = carriers;
+  if (latest === undefined) return {};
+
+  const half = halfOf(latest);
+  // ⚠️ **Two unknown halves are not the same half.** `halfOf` answers
+  // `undefined` for a record whose `event` is absent or literally `unknown` —
+  // which `emit-metrics.ts` writes whenever `--event` is not passed — and
+  // `undefined === undefined` would pair two of them, producing a delta across
+  // an interval belonging to neither half. `renderMetrics` keeps an unreadable
+  // PR window apart from an empty one for this reason: rendering a gap as an
+  // answer manufactures a reading nobody measured. So an unknown half has no
+  // previous, and the caller prints *first run*.
+  if (half === undefined) return { latest };
+
+  const previous = carriers.find((record) => record !== latest && halfOf(record) === half);
+
+  return previous === undefined ? { latest } : { latest, previous };
 }

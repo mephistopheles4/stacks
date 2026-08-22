@@ -18,20 +18,37 @@ import {
   GATED_SERIES,
   SPINE_LANDED,
   STALE_AFTER_DAYS,
+  deltaPair,
   describeAge,
+  halfOf,
   judgeRecord,
   newestByTrend,
   parseRecord,
   parseSamples,
+  recordsCarrying,
   runInfoOf,
+  samplesOf,
   scoresOf,
 } from './metrics-read.ts';
-import { renderMetrics, type RunFacts } from './metrics.ts';
+import { COMPLEXITY_SERIES, renderMetrics, type RunFacts } from './metrics.ts';
 
 const NOW = 1_787_000_000;
 const SPINE = Date.parse(`${SPINE_LANDED}T00:00:00Z`) / 1000;
 
-/** A nightly: all four series, eight scopes, the shape CI actually writes. */
+/**
+ * The complexity half of any record here.
+ *
+ * ⚠️ **Both halves of `metrics.yml` write it**, which is why it appears in the
+ * merge fixture below as well. A merge record carrying only a runtime is the
+ * shape this file planted before the counts existed, and it stopped being a
+ * shape CI produces.
+ */
+const COMPLEXITY = [
+  { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
+  { scope: 'packages/cli/src', functions: 26, mass: 96, massOver10: 22, max: 14 },
+];
+
+/** A nightly: all eight series, the shape CI actually writes on a schedule. */
 function nightly(timestamp: number, overrides: Partial<RunFacts> = {}): string {
   return renderMetrics({
     timestamp,
@@ -48,12 +65,17 @@ function nightly(timestamp: number, overrides: Partial<RunFacts> = {}): string {
     gateSuiteRuntime: 10,
     mutationRunRuntime: 1275,
     liveExclusions: { live: 0, declared: 27 },
+    complexity: COMPLEXITY,
     ...overrides,
   });
 }
 
-/** A merge row: one series, which is what `push: main` legitimately writes. */
-function merge(timestamp: number): string {
+/**
+ * A merge row: the runtime and the four counts, which is what `push: main`
+ * legitimately writes. **Not the whole record** — the mutation series stay
+ * nightly, so a merge record is still not a scored one.
+ */
+function merge(timestamp: number, overrides: Partial<RunFacts> = {}): string {
   return renderMetrics({
     timestamp,
     commit: 'b'.repeat(40),
@@ -61,8 +83,10 @@ function merge(timestamp: number): string {
     runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/2',
     // Nobody measured a window for a record this test invented.
     prWindow: 'unknown',
-    expected: ['gate-suite-runtime'],
+    expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES],
     gateSuiteRuntime: 9,
+    complexity: COMPLEXITY,
+    ...overrides,
   });
 }
 
@@ -193,14 +217,168 @@ describe('judging a record — per-series, because the record is not one number'
 
   it('bounds every CI-written series and no fewer', () => {
     // The spec's own table said "the three nightly-written ones" and it is
-    // four. A wrong number here leaves a CI series outside the bound, which is
+    // eight. A wrong number here leaves a CI series outside the bound, which is
     // the one thing that cannot be noticed by reading a green deploy.
     expect([...GATED_SERIES]).toEqual([
       'mutation-score',
       'gate-suite-runtime',
       'mutation-run-runtime',
       'live-exclusions',
+      'complexity-functions',
+      'complexity-mass',
+      'complexity-mass-over-10',
+      'complexity-max',
     ]);
+  });
+
+  it('refuses a deploy when one complexity series goes quiet and the rest do not', () => {
+    // The failure per-series staleness exists to expose, in the shape this
+    // slice adds it: a working merge pipeline keeps every other series minutes
+    // old while the counts stop arriving.
+    const quiet = judgeRecord({
+      now: NOW,
+      records: [nightly(NOW - 600, { complexity: undefined })].map((text) => parseRecord(text)),
+    });
+
+    expect(quiet.kind).toBe('stale');
+    expect(quiet.kind === 'stale' ? quiet.stale.map((one) => one.series) : []).toEqual([
+      'complexity-functions',
+      'complexity-mass',
+      'complexity-mass-over-10',
+      'complexity-max',
+    ]);
+  });
+});
+
+describe('reading one trend off a record', () => {
+  it('reads a per-scope sample by trend name, not by metric string', () => {
+    // The consumers never spell `stacks_trend_complexity_mass_over_10`. A typo
+    // in a metric string reaches PromQL and returns an empty series, which is
+    // a blank panel and not an error; a typo in a `TrendName` does not compile.
+    const record = parseRecord(nightly(NOW));
+
+    expect(samplesOf(record, 'complexity-mass').get('packages/core/src')).toBe(340);
+    expect(samplesOf(record, 'complexity-mass-over-10').get('packages/cli/src')).toBe(22);
+    expect(samplesOf(record, 'complexity-max').get('packages/core/src')).toBe(21);
+  });
+
+  it('reads nothing for a series the record does not carry', () => {
+    expect(samplesOf(parseRecord(merge(NOW)), 'mutation-score').size).toBe(0);
+  });
+
+  it('keeps scoresOf mutation-specific', () => {
+    // A merge record carries complexity now, and must still not read as a
+    // scored record: `scoredRecords` filters on exactly this, and a merge that
+    // read as scored would be paired against a nightly in the delta.
+    const record = parseRecord(merge(NOW));
+
+    expect(samplesOf(record, 'complexity-mass').size).toBe(2);
+    expect(scoresOf(record).size).toBe(0);
+  });
+
+  it('answers alike for the same question asked twice', () => {
+    // `scoresOf` is `samplesOf(record, 'mutation-score')` and stays that way.
+    // Two implementations of one rule agree until the day one of them does not.
+    const record = parseRecord(nightly(NOW));
+
+    expect([...scoresOf(record)]).toEqual([...samplesOf(record, 'mutation-score')]);
+  });
+});
+
+describe('which half of metrics.yml wrote a record', () => {
+  it('reads push as the merge half and everything else as the nightly', () => {
+    // ⚠️ Borrowed from the workflow's own job conditions — `push` and
+    // `!= push` — and not from the event name. A nightly fires as `schedule`
+    // *or* `workflow_dispatch`, so pairing on the raw label would make a
+    // hand-run nightly a third category whose delta skips the scheduled one
+    // before it.
+    expect(halfOf(parseRecord(merge(NOW)))).toBe('merge');
+    expect(halfOf(parseRecord(nightly(NOW)))).toBe('nightly');
+    expect(halfOf(parseRecord(nightly(NOW, { event: 'workflow_dispatch' })))).toBe('nightly');
+  });
+
+  it('says nothing about a record carrying no run', () => {
+    expect(halfOf(parseRecord('# EOF\n'))).toBeUndefined();
+  });
+});
+
+describe('the records a delta compares', () => {
+  /** Newest first, which is the order every caller of these hands in. */
+  const store = (...documents: string[]) => documents.map((text) => parseRecord(text));
+
+  it('keeps only the records carrying the series asked about', () => {
+    const records = store(merge(NOW), nightly(NOW - DAY), merge(NOW - 2 * DAY));
+
+    expect(recordsCarrying(records, 'mutation-score')).toHaveLength(1);
+    expect(recordsCarrying(records, 'complexity-mass')).toHaveLength(3);
+  });
+
+  it('skips a record written before the series existed', () => {
+    // A pre-#202 record carries no `# TYPE stacks_trend_complexity_*` line at
+    // all, so it must be skipped rather than paired as an empty previous —
+    // which would print a delta against a run that measured nothing.
+    const records = store(merge(NOW), merge(NOW - DAY, { complexity: undefined }));
+
+    expect(recordsCarrying(records, 'complexity-mass')).toHaveLength(1);
+  });
+
+  it('pairs the newest carrier with the previous one of the same half', () => {
+    // A nightly sits between the two merges, and a merge-to-merge delta must
+    // step over it: the two halves run on different clocks, and comparing
+    // across them attributes a movement to the wrong interval.
+    const records = store(merge(NOW), nightly(NOW - DAY), merge(NOW - 2 * DAY));
+    const { latest, previous } = deltaPair(records, 'complexity-mass');
+
+    expect(latest === undefined ? undefined : halfOf(latest)).toBe('merge');
+    expect(latest?.timestamp).toBe(NOW);
+    expect(previous?.timestamp).toBe(NOW - 2 * DAY);
+  });
+
+  it('lets the newest carrier decide which half is compared', () => {
+    const records = store(nightly(NOW), merge(NOW - DAY), nightly(NOW - 2 * DAY));
+    const { previous } = deltaPair(records, 'complexity-mass');
+
+    expect(previous?.timestamp).toBe(NOW - 2 * DAY);
+  });
+
+  it('offers no previous when only one record of the half carries the series', () => {
+    // State 2 of four — *first run*, and not a delta of zero. Printing
+    // `(+0.00)` for a run with nothing to compare against would read as a
+    // measured movement.
+    const { latest, previous } = deltaPair(store(merge(NOW), nightly(NOW - DAY)), 'complexity-mass');
+
+    expect(latest?.timestamp).toBe(NOW);
+    expect(previous).toBeUndefined();
+  });
+
+  it('refuses to pair two records whose half is unknown', () => {
+    // ⚠️ Reachable, not theoretical: `emit-metrics.ts` writes
+    // `event: flags.get('event') ?? 'unknown'`, so any hand-run emit produces
+    // one of these. `undefined === undefined` would have paired them and drawn
+    // a delta across an interval belonging to neither half — the shape
+    // `renderMetrics` already refuses when it keeps an unreadable PR window
+    // apart from an empty one. Found by review.
+    const records = store(
+      merge(NOW, { event: 'unknown' }),
+      merge(NOW - DAY, { event: 'unknown' }),
+    );
+
+    expect(halfOf(records[0] ?? parseRecord('# EOF\n'))).toBeUndefined();
+    expect(deltaPair(records, 'complexity-mass')).toEqual({ latest: records[0] });
+  });
+
+  it('still pairs when the half is known on both', () => {
+    // The guard above must not have closed the ordinary case with it.
+    const { previous } = deltaPair(store(merge(NOW), merge(NOW - DAY)), 'complexity-mass');
+
+    expect(previous?.timestamp).toBe(NOW - DAY);
+  });
+
+  it('offers nothing at all when no record carries the series', () => {
+    // State 1 of four, and the reason the filter belongs in `recordsCarrying`:
+    // the caller prints *nothing to read* off exactly this.
+    expect(deltaPair(store(merge(NOW, { complexity: undefined })), 'complexity-mass')).toEqual({});
+    expect(deltaPair(store(), 'complexity-mass')).toEqual({});
   });
 });
 

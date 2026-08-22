@@ -46,8 +46,11 @@ import {
   scoreRun,
   type ScoredRun,
 } from './lib/mutation-score.ts';
+import { countPopulation, type Counts } from './lib/complexity.ts';
+import { sourceFiles } from './lib/scope-check.ts';
 import {
   TREND_SERIES,
+  complexityFactsOf,
   renderMetrics,
   type RunFacts,
   type ScopeScore,
@@ -224,6 +227,50 @@ function previousScoringRun(fetched: FetchedRecord): { name: string; commit: str
   return undefined;
 }
 
+/**
+ * The four counts over every declared population, or the four names failed.
+ *
+ * ⚠️ **Both failure shapes reach one destination, and only the log tells them
+ * apart.** A population with no function comes back `null` from the counter; a
+ * counter that could not run at all throws, and the `catch` reports the same
+ * verdict for a different reason. The record is deliberately unable to
+ * distinguish them: a third state would need a reader, and *the counts did not
+ * arrive* is the whole of what a reader can act on.
+ *
+ * **The decision itself is not here.** `complexityFactsOf` owns it, in
+ * `lib/metrics.ts`, where a spec can reach it — this file is excluded from the
+ * `scripts` mutation scope and no spec imports it, so a rule written at this
+ * level would be a rule nothing holds.
+ *
+ * The tree is walked once and handed to every scope, rather than eight walks.
+ */
+async function complexityFacts(): Promise<ReturnType<typeof complexityFactsOf>> {
+  try {
+    const files = sourceFiles();
+    const counted = new Map<string, Counts | null>();
+
+    for (const scope of readScopes()) {
+      const counts = await countPopulation(scope, files);
+      counted.set(scope.name, counts);
+      console.log(
+        counts === null
+          ? `complexity ${scope.name}: no function in the population`
+          : `complexity ${scope.name}: ${String(counts.functions)} functions, mass ${String(
+              counts.mass,
+            )}, over-10 ${String(counts.massOver10)}, max ${String(counts.max)}`,
+      );
+    }
+    return complexityFactsOf(counted);
+  } catch (error) {
+    // Not fatal here, for `scoresFrom`'s reason: the run's other series are
+    // real measurements and dropping them would lose what did compute.
+    console.error(`could not count complexity: ${String(error)}`);
+    return complexityFactsOf(undefined);
+  }
+}
+
+const complexity = await complexityFacts();
+
 const facts: RunFacts = {
   timestamp,
   commit,
@@ -235,9 +282,15 @@ const facts: RunFacts = {
   // Named by the caller because only the workflow knows a step's exit code, and
   // a series whose step failed is dropped rather than published: the number is
   // not a measurement of what the series measures.
-  failed: trendNames(flags.get('failed'), '--failed'),
+  //
+  // ⚠️ **The complexity names join it from in here**, which is the one series
+  // group whose failure this process can see for itself: the counter runs in
+  // this file rather than in a workflow step, so there is no exit code for the
+  // caller to pass down.
+  failed: [...trendNames(flags.get('failed'), '--failed'), ...complexity.failed],
   gateSuiteRuntime: seconds(flags.get('suite-seconds'), '--suite-seconds'),
   mutationRunRuntime: seconds(flags.get('mutation-seconds'), '--mutation-seconds'),
+  complexity: complexity.complexity,
   ...scoresFrom(flags.get('report')),
 };
 

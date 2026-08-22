@@ -97,24 +97,12 @@ would move a series every time it was edited, and adding a construct to it (the
 maintenance this fixture is designed to receive) would read on the dashboard as
 the `scripts` scope getting more complex. Stryker would mutate it besides.
 
-`fixtures/` is in none of `scope-check.ts`'s `SOURCE_ROOTS` and matches no scope
-glob, so nothing counts it and Stryker never mutates it.
-
-⚠️ **It is named in `tsconfig.json`'s `include` all the same, and the first draft
-of this record got that wrong.** The draft placed the fixture outside the
-typecheck and defended it: the file is parsed by ESLint, so a fixture that
-stopped parsing fails its spec loudly, and a *type* error changes no complexity
-count, complexity being syntactic. Both halves are true and neither is the
-point. **`TypeScript strict everywhere` has no fixture exemption**, and the two
-errors the check actually found — an unused `key` and an unused `item` in the
-for-in and for-of loops — cost two words to fix and moved no count. An argument
-that a rule need not apply here, answered by applying it in under a minute, was
-not a trade-off; it was a deviation with a rationale attached. Raised by
-CodeRabbit on [#217](https://github.com/mephistopheles4/stacks/pull/217).
-
-Membership in that list changes nothing about what counts the file: the
-populations come from `stryker.scopes.json`, and `sourceFiles()` walks
-`SOURCE_ROOTS`, neither of which reads `tsconfig.json`.
+`fixtures/` is in none of `scope-check.ts`'s `SOURCE_ROOTS`, matches no scope
+glob, and is outside `tsconfig.json`'s `include`. **The last of those is a cost,
+stated plainly**: the fixture is not typechecked, so it is kept valid TypeScript
+by hand and by review rather than by a gate. That is acceptable because ESLint
+must parse the file to count it — a fixture that stopped parsing would fail the
+spec loudly — and because nothing imports it or executes it.
 
 ## What was ruled out
 

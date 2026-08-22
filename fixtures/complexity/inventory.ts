@@ -14,14 +14,9 @@
  * which is both a declared Stryker scope and a complexity population — so the
  * fixture would be counted into the very `scripts` series it exists to pin, and
  * every edit to it would move that series. `fixtures/` is in none of
- * `scope-check.ts`'s `SOURCE_ROOTS` and in no scope glob, so nothing counts
- * this file and Stryker never mutates it.
- *
- * **It is typechecked, though** — `fixtures/complexity/` is named in
- * `tsconfig.json`'s `include`, because *TypeScript strict everywhere* has no
- * fixture exemption. Being outside the measured populations says what does not
- * measure this file, not that it may rot. `pnpm typecheck` covers it and
- * counts it not at all.
+ * `scope-check.ts`'s `SOURCE_ROOTS`, in no scope glob, and outside
+ * `tsconfig.json`'s `include`. Nothing here is typechecked; keep it valid
+ * TypeScript anyway, for the reader.
  *
  * ⚠️ **Total, not sampled** — an un-sampled construct is exactly the silent
  * change this fixture exists to catch. Adding a construct to the rule means
@@ -45,8 +40,8 @@ export function declaration(a: number, b: number): number {
 export function loops(items: number[], record: Record<string, number>): number {
   let total = 0;
   for (let i = 0; i < items.length; i += 1) total += 1; // +1  for
-  for (const key in record) total += key.length; // +1  for-in
-  for (const item of items) total += item; // +1  for-of
+  for (const key in record) total += 1; // +1  for-in
+  for (const item of items) total += 1; // +1  for-of
   while (total < 10) total += 1; // +1  while
   do total += 1;
   while (total < 20); // +1  do-while

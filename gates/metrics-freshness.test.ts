@@ -37,7 +37,7 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { DAY, GATED_SERIES, SPINE_LANDED, judgeRecord } from '../scripts/lib/metrics-read.ts';
 import { RECORD_DIR } from '../scripts/lib/metrics-record.ts';
-import { renderMetrics, type RunFacts } from '../scripts/lib/metrics.ts';
+import { COMPLEXITY_SERIES, renderMetrics, type RunFacts } from '../scripts/lib/metrics.ts';
 import { expectFound, REPO_ROOT } from './repo.ts';
 
 const NOW = Math.floor(Date.now() / 1000);
@@ -47,8 +47,21 @@ interface Planted {
   document: string;
 }
 
-/** A nightly — all four series, which is what the bound covers. */
-function nightly(agoSeconds: number, sha = 'aaaaaaaa'): Planted {
+/**
+ * The complexity half of both fixtures below.
+ *
+ * ⚠️ **On the merge record too**, because both halves of `metrics.yml` write
+ * it. A merge row carrying a runtime and nothing else was the shape this file
+ * planted until the counts landed, and it stopped being a shape CI produces —
+ * a fixture of a record that no longer exists proves the refusal against the
+ * wrong world.
+ */
+const COMPLEXITY = [
+  { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
+];
+
+/** A nightly — all eight series, which is what the bound covers. */
+function nightly(agoSeconds: number, sha = 'aaaaaaaa', overrides: Partial<RunFacts> = {}): Planted {
   const timestamp = NOW - agoSeconds;
   return {
     name: `${String(timestamp)}-${sha}.prom`,
@@ -64,12 +77,18 @@ function nightly(agoSeconds: number, sha = 'aaaaaaaa'): Planted {
       gateSuiteRuntime: 10,
       mutationRunRuntime: 1275,
       liveExclusions: { live: 0, declared: 27 },
+      complexity: COMPLEXITY,
+      ...overrides,
     } satisfies RunFacts),
   };
 }
 
-/** A merge row — one series, which is what `push: main` legitimately writes. */
-function merge(agoSeconds: number, sha = 'bbbbbbbb'): Planted {
+/**
+ * A merge row — the runtime and the four counts, which is what `push: main`
+ * legitimately writes. Still not a scored record: the mutation series are
+ * nightly.
+ */
+function merge(agoSeconds: number, sha = 'bbbbbbbb', overrides: Partial<RunFacts> = {}): Planted {
   const timestamp = NOW - agoSeconds;
   return {
     name: `${String(timestamp)}-${sha}.prom`,
@@ -80,8 +99,10 @@ function merge(agoSeconds: number, sha = 'bbbbbbbb'): Planted {
       runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/2',
       // Nobody measured a window for a record this test invented.
       prWindow: 'unknown',
-      expected: ['gate-suite-runtime'],
+      expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES],
       gateSuiteRuntime: 9,
+      complexity: COMPLEXITY,
+      ...overrides,
     } satisfies RunFacts),
   };
 }
@@ -219,7 +240,7 @@ describe('G39 — the harness reaches the check at all', () => {
   it('plants a record the writer would actually write', () => {
     // The documents here come from `renderMetrics`, so a parser tested against
     // them is agreeing with the writer rather than with this file's author.
-    expectFound([...GATED_SERIES], 'series the bound covers', 4);
+    expectFound([...GATED_SERIES], 'series the bound covers', 8);
     expect(nightly(0).document).toContain('# EOF');
   });
 });
@@ -243,11 +264,47 @@ describe('G39 — per-series, because the record is not one number', () => {
   });
 
   it('refuses a series with no sample at all exactly as a stale one', () => {
-    const { status, output } = deploy(repoWith([merge(600)]));
+    const { status, output } = deploy(repoWith([merge(600, 'bbbbbbbb', { complexity: undefined })]));
 
     expectRefused(status, output);
     expect(output).toContain('no sample at all');
     expect(output).toContain('mutation-score');
+  });
+
+  it('refuses when only the counts have gone quiet, under --dry-run', () => {
+    // The complexity half is the one a working pipeline hides best: both events
+    // write it, so a merge every hour keeps the newest row minutes old while
+    // the counter itself has been failing since Saturday. Everything else here
+    // is ten minutes old and green.
+    const { status, output } = deploy(
+      repoWith([
+        nightly(600, 'cccccccc', { complexity: undefined }),
+        merge(600, 'dddddddd', { complexity: undefined }),
+        nightly(4 * DAY, 'eeeeeeee'),
+      ]),
+      ['--dry-run'],
+    );
+
+    expectRefused(status, output);
+    expect(output).toContain('the trend record is stale');
+    expect(output).toContain('complexity-max');
+    expect(output).toContain('complexity-functions');
+    expect(output).toContain('complexity-mass');
+    expect(output).toContain('complexity-mass-over-10');
+    expect(output).toContain('4 days ago');
+    // The healthy half must stay unnamed, or the refusal is an aggregate one
+    // wearing a list — the whole cost per-series staleness was paid for.
+    expect(output).not.toContain('mutation-score ');
+    expect(output).not.toContain('gate-suite-runtime ');
+  });
+
+  it('does not refuse a deploy for a flag, which is the point of ADR-0064', () => {
+    // ⚠️ `--dry-run` publishes nothing, and still cannot clear this. Asserted
+    // beside the refusal above so the two readings of the same flag stay in one
+    // place: it changes what happens *after* the checks, never whether they run.
+    const fresh = deploy(repoWith([nightly(600), merge(300)]), ['--dry-run']);
+
+    expect(fresh.output).not.toContain('the trend record is stale');
   });
 });
 

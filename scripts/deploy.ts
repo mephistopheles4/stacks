@@ -289,8 +289,8 @@ try {
 /**
  * How far back into the store one deploy reads.
  *
- * The healthy case stops on the first record: a nightly emits all four series,
- * so the loop below breaks as soon as it has them and a second one carrying
+ * The healthy case stops on the first record: a nightly emits every series, so
+ * the loop below breaks as soon as it has them and a second one carrying
  * scores for the delta. The cap only binds when a series is **missing**, where
  * every further record read buys nothing but a better sentence — once the scan
  * is past the bound, a series not yet seen is stale whatever its true age.
@@ -340,9 +340,9 @@ function trendRecords(store: FetchedRecord): ParsedRecord[] {
     if (scoresOf(document).size > 0) scored += 1;
 
     // Two records carrying scores, because panel 1 is a delta and a delta needs
-    // the run before this one. A merge record carries one series, so "the
-    // previous record" and "the previous run that scored" are not the same
-    // thing.
+    // the run before this one. A merge record carries no score — the runtime
+    // and the four counts, never `mutation-score` — so "the previous record"
+    // and "the previous run that scored" are not the same thing.
     if (seen.size >= GATED_SERIES.length && scored >= 2) break;
   }
   return parsed;

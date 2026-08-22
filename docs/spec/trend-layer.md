@@ -249,13 +249,17 @@ needs its own bound, because they do not share a clock.
 
 | Series | Bound |
 | --- | --- |
-| the four CI-written series | **3 days** |
+| every CI-written series | **3 days** |
 | surface D's row | **none — reported, never refused** |
 
-⚠️ **This row read *"the three nightly-written ones"*, and it is four; the row
-it counts is not D's.** Corrected in the table rather than only underneath it,
-because this one is a contract an implementer reads and a wrong number in it
-leaves a CI series outside the bound. Read against [§3](#3-four-series-no-composite) while building
+⚠️ **This row read *"the three nightly-written ones"*, then *"the four
+CI-written series"*, and it is eight; the row it counts is not D's.** Corrected
+in the table rather than only underneath it, because this one is a contract an
+implementer reads and a wrong number in it leaves a CI series outside the bound.
+**It is now written without a count at all** — twice wrong in two rollouts is
+the argument that the number does not belong in prose: `GATED_SERIES` derives
+from `TREND_SERIES`, so the set is whatever the record carries, and a phrase
+that cannot go stale beats a phrase that has now gone stale twice. Read against [§3](#3-four-series-no-composite) while building
 [#158](https://github.com/mephistopheles4/stacks/issues/158): the nightly writes
 all four named series, so the bound covers `mutation-score`,
 `gate-suite-runtime`, `mutation-run-runtime` and `live-exclusions` — with

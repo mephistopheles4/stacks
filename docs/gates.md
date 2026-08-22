@@ -1284,7 +1284,7 @@ refusal rather than asserting live state.
 ⚠️ **The slug names the property checked, not the consequence**: *the record is
 fresh*, not *the deploy refuses*.
 
-**Per-series, and the cost of that is stated rather than discovered.** Four
+**Per-series, and the cost of that is stated rather than discovered.** Eight
 series written by different things on different clocks; an aggregate bound cannot
 see one of them going quiet while a working merge pipeline keeps the newest row
 minutes old. **Absent and stale are one verdict**, entailed rather than newly
@@ -1516,15 +1516,43 @@ are the same artifact.
 | Trend | Measures | Cadence | Reader | Silence watched by |
 | --- | --- | --- | --- | --- |
 | `mutation-score` | killed ÷ total, per declared scope | nightly | maintainer, at `pnpm deploy:site` | **G39** `metrics-freshness` |
-| `gate-suite-runtime` | wall-clock of `pnpm test` | nightly | ” | ” |
+| `gate-suite-runtime` | wall-clock of `pnpm test` | merge and nightly | ” | ” |
 | `mutation-run-runtime` | wall-clock of the Stryker run | nightly | ” | ” |
 | `live-exclusions` | declared exclusions that produced ≥1 **executed** mutant, of N declared | nightly | ” | ” |
+| `complexity-functions` | functions counted — the denominator the other three are read against | merge and nightly | ” | ” |
+| `complexity-mass` | Σ cyclomatic complexity over those functions | merge and nightly | ” | ” |
+| `complexity-mass-over-10` | Σ complexity over functions with CC > 10 | merge and nightly | ” | ” |
+| `complexity-max` | the largest single function's complexity | merge and nightly | ” | ” |
 
 ⚠️ **`mutation-score` is spelled *killed ÷ total* on purpose.** The score is
 gameable by adding trivially-killable code, which dilutes the denominator upward
 — not the coverage failure mode, and closed by neither clause of the rule above.
 It sits in the Measures column so a reader meets it, rather than in a closed
 ticket.
+
+⚠️ **The four complexity counts are read side by side, and no ratio is offered
+because none survived the measurement.** The prototype put every candidate
+statistic through two games on this repo's own worst function — a mechanical
+three-way split, and thirty trivial functions appended beside it — and every
+ratio hid one game or the other. Counts hide neither: dilution is *functions and
+mass up by the same amount and nothing else moving*, a split is *functions up,
+mass flat, max down*. The record carries counts and the page derives shares,
+which is `mutation-score` being spelled *killed ÷ total* applied one step
+earlier. **The `> 10` cut is McCabe's own 1976 bound and is not a threshold** —
+nothing goes red when a function crosses it, and the four rows take no gate
+number for the reason every row here doesn't. See
+[`docs/spec/complexity-on-the-trend-layer.md`](spec/complexity-on-the-trend-layer.md) §2.
+
+⚠️ **They are written on *both* events**, so a movement is attributable to a
+single pull request rather than to a night's worth of them. **They are not the
+first** — `gate-suite-runtime` has been on both since the spine landed, and the
+`Cadence` cell above said `nightly` until this rollout read it, believed it, and
+wrote the claim down. Both are corrected here, because **G36 reads only the
+`Trend` column**: every other cell in this table is prose nothing holds, which
+is worth knowing before trusting one. A merge record now carries five series,
+and **still does not read as a scored one** — `scoresOf` stays
+mutation-specific, or every push would be paired against a nightly in the
+deploy's delta.
 
 ⚠️ **`live-exclusions` cannot move yet, and that is written here rather than
 discovered from a flat line.** An exclusion is negated out of Stryker's `mutate`,
@@ -1557,9 +1585,9 @@ also [`docs/spec/trend-layer.md`](spec/trend-layer.md).
 ⚠️ **Surface D's row is in that store and is deliberately not a trend.** The
 edge check between deploys writes to the **local** store only, under a metric
 prefix of its own, so this table owes it no row — one for a series CI never
-emits would make G36's reverse direction red against every CI run. The four
+emits would make G36's reverse direction red against every CI run. The eight
 rows above are the whole of what the record carries as a trend, and the
-staleness bound the deploy-side check will apply covers all four; D is reported
+staleness bound the deploy-side check will apply covers all eight; D is reported
 and never refused. See [`docs/spec/trend-layer.md`](spec/trend-layer.md) §§3–5.
 
 **A row is written unconditionally, red `main` included.** A crashed run writes
@@ -1650,6 +1678,8 @@ oldest failure in this file.
 Carried over from the Decision Log when the decisions themselves moved to
 [`docs/adr/`](./adr/). These are not decisions — they are what went wrong while
 writing the things above, which is the part most likely to go wrong again.
+
+- **2026-08-22** — **A hardcoded column width does not overflow, it swallows the gap.** The staleness refusal padded each series name to 22 characters, which was the longest name that existed when it was written. `complexity-mass-over-10` is 23, and `pad` returns an over-long string unchanged — so the refusal printed `complexity-mass-over-10no sample at all in the 1 newest record(s) read`, running the name straight into its own explanation in the one message a refusal is read from. Nothing went red: every assertion used `toContain`, and the substrings were all still there. Found by reading the output of a test that passed. The width is now measured from the names being printed, as `renderPanel` one function up already did, and a spec plants a name longer than the old constant. **The general shape is a constant derived from today's data and then frozen** — the same class as the counts in prose this file has two other rows about, with the twist that a formatting constant is invisible to every assertion that checks for content.
 
 - **2026-07-31** — **The render gate builds and serves `dist/` itself** rather than driving the dev server. Waiting on a subprocess to announce itself on stdout is a race that hangs instead of failing, and a gate that can hang is worse than one that can fail. It also means the gate screenshots what actually ships.
 
