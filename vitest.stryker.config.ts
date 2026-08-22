@@ -30,6 +30,28 @@ import { defineConfig } from 'vitest/config';
  * not a checkout. They are not excluded below because nothing under `gates/` is
  * mutated, so Vitest's related-file filter never pulls them in. Mutate anything
  * there and they come back, along with the dry-run failure.
+ *
+ * ⚠️ **`reporters` is declared here to keep Vitest's `github-actions` reporter
+ * out of the mutation run, and it is load-bearing rather than cosmetic.** Vitest
+ * appends that reporter to its own default list whenever `GITHUB_ACTIONS` is
+ * `true` — and *only* when nothing is declared, which is what naming one here
+ * turns off. Its job-summary half then writes to `$GITHUB_STEP_SUMMARY` with
+ * `flag: 'a'`, once per `onTestRunEnd`.
+ *
+ * Under `pnpm test` that fires once and costs 179 bytes. **Under Stryker it
+ * fires once per mutant**, because a mutation run is thousands of test runs
+ * through one Vitest instance: measured at 5 appends / 923 bytes over a
+ * four-mutant scope, and at **1054k over the real ~5900** — past the 1024k
+ * GitHub accepts, so the nightly's summary upload aborted and the runs before
+ * it uploaded a megabyte of the same six lines repeated, which is what made the
+ * run page slow to open.
+ *
+ * ⚠️ **Nothing local can catch it.** `GITHUB_ACTIONS` is unset on a developer
+ * machine, so the reporter is never added, so the appends never happen and the
+ * file is never written — the harness fault is invisible everywhere except the
+ * one place it fires. Declaring the list makes CI's resolved reporters equal to
+ * a laptop's, which is the property that removes the divergence rather than
+ * papering over one symptom of it.
  */
 export default defineConfig({
   test: {
@@ -37,5 +59,6 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/dist/**', 'packages/cli/src/env.test.ts'],
     environment: 'node',
     setupFiles: ['./gates/no-live-network.setup.ts'],
+    reporters: ['default'],
   },
 });
