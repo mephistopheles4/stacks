@@ -40,6 +40,11 @@ fixtures/vault-50/
 # it there.
 metrics/
 
+# One coverage run, written only when `--coverage` is passed — which nothing in
+# CI passes. It exists for the opt-in pre-commit CRAP print, which reads it and
+# throws it away; no number in it is ever a floor, a series or a badge.
+.coverage/
+
 # The local trend store: a Prometheus data directory, the sync's state, and
 # surface D's rows. Rebuildable from the `metrics` branch — except D's rows,
 # which only this machine has, which is why `pnpm trend:sync --rebuild` replays

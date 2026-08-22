@@ -4,6 +4,33 @@ Sources: [#110](https://github.com/mephistopheles4/stacks/issues/110) (what woul
 produce one), [#117](https://github.com/mephistopheles4/stacks/issues/117) (the
 refusal).
 
+> ⚠️ **The title's second clause is no longer true, and this is the re-check
+> §5's *Decay* item asked for** — *"Re-check trigger: the implementation
+> session"*, which this was. `@vitest/coverage-v8` is installed as of
+> [#205](https://github.com/mephistopheles4/stacks/issues/205); see
+> [ADR-0069](../adr/0069-coverage-is-an-ingredient-not-a-goal.md).
+>
+> **The refusal below survives in full** — no floor, no threshold, no series, no
+> badge, and nothing anywhere asks anybody to raise a number. Coverage was
+> readmitted **as an ingredient**: a formula consumes it in an opt-in pre-commit
+> print and throws it away. That distinction is the whole of what changed.
+>
+> **§3's load-bearing fact also survives**, which is worth being exact about
+> because §5 predicted its failure as the trigger and that is not what happened.
+> Stryker's vitest-runner still needs no coverage provider — nothing about #109
+> moved. A *different* consumer arrived, one this spec had no reason to
+> anticipate: a per-function ranking, computed locally, over the functions one
+> commit touches.
+>
+> **One measured claim below is now historical.** §1 leg 2 — *"a pull request
+> adding a wholly untested module scores 100%"* — was true of a report with no
+> `coverage.include`. [#197](https://github.com/mephistopheles4/stacks/issues/197)
+> measured `include` closing exactly that hole (93 files against 72), and
+> `vitest.config.ts` now sets it from `stryker.scopes.json`. **It changes
+> nothing about the disposition**: leg 1 (Clause B is surface-independent) and
+> leg 3 (an AI asked to raise a number produces the gap it is asked to close)
+> are untouched, and either alone is fatal to a floor.
+
 **This section exists because the piece was charted, tested against its own
 reversal argument, and turned down.** It is not a gap in the spec; it is a
 decision the spec owes, and the number that does not exist is worth more written
@@ -39,6 +66,16 @@ The ticket asked which one it is and expected the answer to shape the design. Th
 answer is **neither**, because the artifact cannot be built either way.
 
 ### Leg 2 — `coverage.all`'s removal makes it worse than absent
+
+> ⚠️ **Historical since [#205](https://github.com/mephistopheles4/stacks/issues/205),
+> and the leg does not carry the conclusion.** Everything below was true of a
+> report with no `coverage.include`; `vitest.config.ts` now sets it from
+> `stryker.scopes.json`, so an untested module is present at 0% rather than
+> absent, and a changed-lines floor would no longer be structurally green in the
+> case it exists to catch. **Legs 1 and 3 are untouched and either alone is
+> fatal to a floor** — see [ADR-0069](../adr/0069-coverage-is-an-ingredient-not-a-goal.md).
+> Kept as written, because the reasoning is what a later reader has to be able
+> to check.
 
 Vitest 4 removed `coverage.all`, and a report now includes only covered files — so
 **a pull request adding a wholly untested module contributes zero lines to numerator
@@ -105,6 +142,17 @@ carries no coverage number.**
 ## 3. The scope reduction — stated rather than inferred, because it is large
 
 **No coverage tooling enters this repo at all.**
+
+> ⚠️ **Superseded by [#205](https://github.com/mephistopheles4/stacks/issues/205):
+> `@vitest/coverage-v8` is installed, `coverage.include` is set, and the
+> dependency has its record — [ADR-0069](../adr/0069-coverage-is-an-ingredient-not-a-goal.md).**
+> The list below reads as a live scope reduction and is now a record of what
+> *this* decision did not have to pay for. **The sentence it rests on still
+> holds**: Stryker's vitest-runner needs no Vitest coverage provider, and
+> nothing about #109 moved. What arrived is a consumer this spec had no reason
+> to anticipate — a per-function ranking over the functions one commit touches.
+> The uploader, `fetch-depth: 0`, `diff-cover` and the second package ecosystem
+> are still refused, and no `gates.yml` job moved off depth 1.
 
 Checked against #109: **Stryker's vitest-runner uses its own `perTest` mutant
 coverage and never touches a Vitest coverage provider** — *"your `coverageAnalysis`
