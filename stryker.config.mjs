@@ -43,15 +43,22 @@ export default {
   mutate,
 
   /**
-   * ⚠️ **The TypeScript checker is dead here and cannot be revived.**
-   * `typescript@7.0.2`'s root export no longer carries the APIs
-   * `@stryker-mutator/typescript-checker@9.6.1` calls, and the checker's peer
-   * range `">=3.6"` admits `7.0.2` — so pnpm installs a combination that fails
-   * at runtime rather than refusing.
+   * ⚠️ **Off by decision now, not by impossibility.** This said the checker was
+   * *"dead here and cannot be revived"*, which was a fact about
+   * `typescript@7.0.2`; on `6.0.3` it starts and works — see
+   * [ADR-0066](docs/adr/0066-typescript-6-until-7-1.md).
    *
-   * It costs little: Vitest transpiles through esbuild and never type-checks, so
-   * a mutant that would fail `tsc` still runs and gets a real verdict. Measured
-   * across eight runs, `CompileError` 0 and `RuntimeError` 0-1.
+   * It stays `[]` regardless, because turning it on is a *scoring* change, not
+   * a configuration one. A `CompileError` is neither killed nor survived, so
+   * every scope's number moves and every calibration window behind
+   * `stryker.floors.json` restarts. That is its own decision with its own
+   * record, kept as fog on
+   * [the map](https://github.com/mephistopheles4/stacks/issues/186).
+   *
+   * Off costs little in the meantime: Vitest transpiles through esbuild and
+   * never type-checks, so a mutant that would fail `tsc` still runs and gets a
+   * real verdict. Measured across eight runs, `CompileError` 0 and
+   * `RuntimeError` 0-1.
    */
   checkers: [],
 
@@ -64,21 +71,15 @@ export default {
   plugins: ['@stryker-mutator/vitest-runner'],
 
   /**
-   * ⚠️ **A filename that is not in this project, on purpose.**
-   * `@stryker-mutator/core`'s `ts-config-preprocessor.js` does a **dynamic**
-   * `await import('typescript')` — invisible to a grep — and calls
-   * `ts.parseConfigFileTextToJson`, the exact function with no TypeScript 7
-   * replacement. Stryker crashes on startup. Pointing `tsconfigFile` at a file
-   * that is not in the project makes the preprocessor's lookup miss and the
-   * rewrite a no-op.
-   *
-   * **Safe here specifically.** The preprocessor exists to rewrite `extends` and
-   * `references` paths that escape the sandbox; this repo's `tsconfig.json`
-   * extends a file inside the project and declares no `references`, so nothing
-   * needed rewriting. A repo with a real project-references graph does not get
-   * this escape, and for it Stryker 9.6.1 is simply blocked under TypeScript 7.
+   * ⚠️ **Must name a file that exists.** This read
+   * `tsconfig.stryker-absent.json` — a filename deliberately not in the project
+   * — to dodge a TypeScript 7 startup crash. On `typescript@6.0.3` that trick
+   * inverts: an absent file is a checker that cannot start. The crash, the
+   * workaround and the measurement that caught the inversion are in
+   * [ADR-0066](docs/adr/0066-typescript-6-until-7-1.md); restating them here
+   * would be a second copy nothing holds to the first.
    */
-  tsconfigFile: 'tsconfig.stryker-absent.json',
+  tsconfigFile: 'tsconfig.json',
 
   /**
    * ⚠️ **Part of the score's definition, not a tuning knob.** At Stryker's

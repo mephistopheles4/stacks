@@ -89,3 +89,4 @@ Two other files hold what these deliberately do not:
 | [0063](./0063-the-pr-window-is-a-label-on-the-run.md) | The PR window is a label on the run, derived in CI |
 | [0064](./0064-no-flag-skips-the-deploy-gates.md) | No flag skips the deploy gates |
 | [0065](./0065-the-csp-is-generated-not-written.md) | The CSP is generated per page by Astro, and it names the beacon it cannot remove |
+| [0066](./0066-typescript-6-until-7-1.md) | TypeScript 6.0.3, until 7.1 ships a stable programmatic API |

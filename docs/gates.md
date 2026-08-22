@@ -98,7 +98,7 @@ means the two have drifted.
 | Row | Name | Seam | Failure mode | Gate | Status |
 | --- | --- | --- | --- | --- | --- |
 | **G6** | `site-core-imports` | site → `@stacks/core` | a *value* import drags `node:fs` and sharp into the browser bundle and **the shelf silently never boots** | `gates/site-core-imports.test.ts` | ✅ |
-| **G7** | `astro-no-logic` | logic in `.astro` | `.astro` files are not typechecked (`astro check` cannot run under TS 7), so nothing else can catch this | `gates/astro-no-logic.test.ts` | ✅ |
+| **G7** | `astro-no-logic` | logic in `.astro` | `.astro` files are not typechecked, so nothing else can catch this. ⚠️ **The warrant narrowed at [ADR-0066](./adr/0066-typescript-6-until-7-1.md)**: `astro check` *could not run at all* under TS 7 and now can — it is simply not wired into the gates, which is a choice rather than an impossibility | `gates/astro-no-logic.test.ts` | ✅ |
 | **G8** | `frontmatter-contract` | frontmatter contract ↔ parser ↔ AGENTS.md | a key the parser accepts but the contract never documents | `gates/frontmatter-contract.test.ts` | ✅ |
 | **G9** | `env-contract` | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | `gates/env-contract.test.ts` | ✅ |
 | **G19** | `constitution-scoreboard` | the constitution ↔ this scoreboard | an invariant nothing scores, a row naming a moved file, a gate nobody recorded | `gates/constitution-scoreboard.test.ts` | ✅ |
