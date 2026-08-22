@@ -1,0 +1,10 @@
+# TYPE stacks_run_ok gauge
+# HELP stacks_run_ok One when this run computed every series it declared, zero when it did not.
+stacks_run_ok 1 1787426899
+# TYPE stacks_run_info gauge
+# HELP stacks_run_info The run that wrote this file. A score never appears without its run.
+stacks_run_info{commit="21114a3649ee0ddc543e0f126294c8060dec49fa",event="push",run_url="https://github.com/mephistopheles4/stacks/actions/runs/32593774997",pr_window="#209, #207, #208, #210, #211, #212, #213, #216, #215",config_hash="sha256:6600c1c4798b8cc4a1b04d27ebfd6a81b3f6dad76050755968b52866426bce40"} 1 1787426899
+# TYPE stacks_trend_gate_suite_runtime gauge
+# HELP stacks_trend_gate_suite_runtime Wall-clock seconds of pnpm test.
+stacks_trend_gate_suite_runtime 15 1787426899
+# EOF
