@@ -21,28 +21,37 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { INVENTORY, MCCABE_CUT, type CounterInputs } from './complexity.ts';
 import { parseRecord } from './metrics-read.ts';
 import type { Scope } from './mutation-score.ts';
 import {
   breaches,
   calibration,
+  CAPPED_SERIES,
+  capBreaches,
+  capCalibration,
+  countedIn,
   configHashOf,
   correspondence,
+  fixtureHashOf,
   floorRefusals,
   countDisableDirectives,
   ignoredMismatches,
   nightliesIn,
   parseFloors,
+  renderCapLines,
   renderFloorLines,
   readFloors,
   readMutatedSource,
   runRowsFrom,
   scoredIn,
+  type CapCalibration,
   type RunRow,
 } from './floors.ts';
 
 const WELL_FORMED = {
   configHash: 'sha256:0123456789abcdef',
+  fixtureHash: 'sha256:fedcba9876543210',
   scopes: {
     'packages/core/src': { floor: 71.55, armed: '2026-08-19', ignored: 0, notes: [] },
     scripts: { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [] },
@@ -203,6 +212,7 @@ describe('configHashOf', () => {
 describe('breaches', () => {
   const FLOORS = parseFloors({
     configHash: 'sha256:0123456789abcdef',
+    fixtureHash: 'sha256:fedcba9876543210',
     scopes: {
       'packages/core/src': { floor: 71.55, armed: '2026-08-19', ignored: 0, notes: [] },
       scripts: { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [] },
@@ -261,6 +271,7 @@ describe('calibration', () => {
       event: 'schedule',
       configHash: HASH,
       scores: new Map([['packages/core/src', score]]),
+      counts: new Map(),
     }));
   }
 
@@ -331,6 +342,7 @@ describe('calibration', () => {
       event: 'push',
       configHash: HASH,
       scores: new Map(),
+      counts: new Map(),
     });
 
     const window = calibration(rows, ['packages/core/src'], HASH);
@@ -359,6 +371,7 @@ describe('calibration', () => {
       event: 'push',
       configHash: HASH,
       scores: new Map(),
+      counts: new Map(),
     });
 
     expect(calibration(rows, ['packages/core/src'], HASH).candidates).toBe(3);
@@ -388,6 +401,7 @@ describe('calibration', () => {
 describe('ignoredMismatches', () => {
   const FLOORS = parseFloors({
     configHash: 'sha256:0123456789abcdef',
+    fixtureHash: 'sha256:fedcba9876543210',
     scopes: {
       'packages/core/src': { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [] },
       scripts: { floor: 'unarmed', armed: '2026-08-19', ignored: 2, notes: [] },
@@ -446,6 +460,7 @@ describe('ignoredMismatches', () => {
 describe('renderFloorLines', () => {
   const FLOORS = parseFloors({
     configHash: 'sha256:0123456789abcdef',
+    fixtureHash: 'sha256:fedcba9876543210',
     scopes: {
       'packages/core/src': { floor: 71.55, armed: '2026-08-19', ignored: 0, notes: [] },
       'packages/cli/src': { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [] },
@@ -544,11 +559,26 @@ describe('renderFloorLines', () => {
 });
 
 describe('floorRefusals', () => {
+  // Both capped series, unarmed — the state the whole rollout ships in, and the
+  // one that leaves these floor-side clauses readable on their own. Without it
+  // every case below would refuse for a cap reason before reaching its subject.
+  const CAPS = {
+    'complexity-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+    'complexity-mass-over-10': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+  };
+
   const FLOORS = parseFloors({
     configHash: 'sha256:0123456789abcdef',
+    fixtureHash: 'sha256:fedcba9876543210',
     scopes: {
-      'packages/core/src': { floor: 71.55, armed: '2026-08-19', ignored: 0, notes: [] },
-      scripts: { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [] },
+      'packages/core/src': {
+        floor: 71.55,
+        armed: '2026-08-19',
+        ignored: 0,
+        notes: [],
+        caps: CAPS,
+      },
+      scripts: { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [], caps: CAPS },
     },
   });
 
@@ -655,9 +685,16 @@ describe('floorRefusals', () => {
   it('does not refuse an unstamped row while every scope is unarmed', () => {
     const unarmed = parseFloors({
       configHash: 'sha256:0123456789abcdef',
+      fixtureHash: 'sha256:fedcba9876543210',
       scopes: {
-        'packages/core/src': { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [] },
-        scripts: { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [] },
+        'packages/core/src': {
+          floor: 'unarmed',
+          armed: '2026-08-19',
+          ignored: 0,
+          notes: [],
+          caps: CAPS,
+        },
+        scripts: { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [], caps: CAPS },
       },
     });
 
@@ -671,9 +708,16 @@ describe('floorRefusals', () => {
   it('refuses a run whose hash differs, even with every scope unarmed', () => {
     const unarmed = parseFloors({
       configHash: 'sha256:0123456789abcdef',
+      fixtureHash: 'sha256:fedcba9876543210',
       scopes: {
-        'packages/core/src': { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [] },
-        scripts: { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [] },
+        'packages/core/src': {
+          floor: 'unarmed',
+          armed: '2026-08-19',
+          ignored: 0,
+          notes: [],
+          caps: CAPS,
+        },
+        scripts: { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [], caps: CAPS },
       },
     });
     const [refusal] = floorRefusals({
@@ -689,8 +733,15 @@ describe('floorRefusals', () => {
   it('refuses an unstamped row as soon as one scope is armed', () => {
     const armed = parseFloors({
       configHash: 'sha256:0123456789abcdef',
+      fixtureHash: 'sha256:fedcba9876543210',
       scopes: {
-        'packages/core/src': { floor: 71.55, armed: '2026-08-19', ignored: 0, notes: [] },
+        'packages/core/src': {
+          floor: 71.55,
+          armed: '2026-08-19',
+          ignored: 0,
+          notes: [],
+          caps: CAPS,
+        },
       },
     });
     const [refusal] = floorRefusals({
@@ -829,6 +880,7 @@ describe('the disk edge, against a tree it is handed', () => {
       join(root, 'stryker.floors.json'),
       JSON.stringify({
         configHash: 'sha256:written',
+        fixtureHash: 'sha256:counted',
         scopes: { 'packages/core/src': { floor: 70, armed: '2026-08-19', ignored: 1, notes: ['x'] } },
       }),
       'utf8',
@@ -877,7 +929,7 @@ describe('nightliesIn', () => {
   const DAY = 86_400;
 
   function row(timestamp: number, event: string, scores: Map<string, number>): RunRow {
-    return { timestamp, ok: true, event, configHash: 'sha256:abc', scores };
+    return { timestamp, ok: true, event, configHash: 'sha256:abc', scores, counts: new Map() };
   }
 
   // ⚠️ **The bug this exists to stop: reading the newest *record* rather than
@@ -914,7 +966,7 @@ describe('scoredIn', () => {
   const DAY = 86_400;
 
   function row(timestamp: number, event: string, scores: Map<string, number>, ok = true): RunRow {
-    return { timestamp, ok, event, configHash: 'sha256:abc', scores };
+    return { timestamp, ok, event, configHash: 'sha256:abc', scores, counts: new Map() };
   }
 
   // ⚠️ **Two filters, two questions, and they must not be collapsed.** The
@@ -1019,5 +1071,836 @@ describe('countDisableDirectives — the spellings a comment can take', () => {
     );
 
     expect(counted.get('packages/core/src')).toBe(0);
+  });
+});
+
+describe('fixtureHashOf', () => {
+  /** One variant of the counter's inputs. Cast once, here, so no test repeats it. */
+  function inputs(changes: Record<string, unknown> = {}): CounterInputs {
+    return {
+      eslintVersion: '10.9.0',
+      parserVersion: '8.67.0',
+      ruleOptions: [{ max: 0, variant: 'classic' }],
+      inventory: INVENTORY,
+      ...changes,
+    } as CounterInputs;
+  }
+
+  it('is a sha256, spelled the way configHashOf spells one', () => {
+    expect(fixtureHashOf(inputs())).toMatch(/^sha256:[0-9a-f]{64}$/);
+  });
+
+  it('is stable across key order inside the rule options', () => {
+    const reordered = inputs({ ruleOptions: [{ variant: 'classic', max: 0 }] });
+
+    expect(fixtureHashOf(reordered)).toBe(fixtureHashOf(inputs()));
+  });
+
+  it('changes when either installed version changes', () => {
+    expect(fixtureHashOf(inputs({ eslintVersion: '10.9.1' }))).not.toBe(fixtureHashOf(inputs()));
+    expect(fixtureHashOf(inputs({ parserVersion: '8.68.0' }))).not.toBe(fixtureHashOf(inputs()));
+  });
+
+  // ⚠️ The two versions are hashed at fixed positions rather than into one bag.
+  // Swapping their values is the cheapest proof of that: a hash over a set would
+  // not notice, and `8.67.0` of ESLint is not `10.9.0` of ESLint.
+  it('hashes the two versions positionally, not as a set', () => {
+    const swapped = inputs({ eslintVersion: '8.67.0', parserVersion: '10.9.0' });
+
+    expect(fixtureHashOf(swapped)).not.toBe(fixtureHashOf(inputs()));
+  });
+
+  it('changes when the rule is configured differently', () => {
+    expect(fixtureHashOf(inputs({ ruleOptions: [{ max: 5, variant: 'classic' }] }))).not.toBe(
+      fixtureHashOf(inputs()),
+    );
+    // ESLint's defaults are `max: 20`, so no options at all is a different rule
+    // and reads as one rather than as an absence.
+    expect(fixtureHashOf(inputs({ ruleOptions: [] }))).not.toBe(fixtureHashOf(inputs()));
+  });
+
+  it('changes when the fixture expects a different total', () => {
+    const moved = inputs({
+      inventory: { ...INVENTORY, counts: { ...INVENTORY.counts, mass: 69 } },
+    });
+
+    expect(fixtureHashOf(moved)).not.toBe(fixtureHashOf(inputs()));
+  });
+
+  // The per-function list and the roll-up are both *the fixture's expected
+  // totals*: an upgrade that re-labels one construct moves the list without
+  // moving the counts, and that is still a different counting rule.
+  it('changes when a single expected function total moves', () => {
+    const moved = inputs({
+      inventory: {
+        ...INVENTORY,
+        functions: INVENTORY.functions.map((entry, index) =>
+          index === 0 ? { ...entry, complexity: entry.complexity + 1 } : entry,
+        ),
+      },
+    });
+
+    expect(fixtureHashOf(moved)).not.toBe(fixtureHashOf(inputs()));
+  });
+});
+
+describe('parseFloors, the cap half', () => {
+  /** A floors document carrying one capped scope. */
+  function document(caps: unknown): unknown {
+    return {
+      configHash: 'sha256:0123456789abcdef',
+      fixtureHash: 'sha256:fedcba9876543210',
+      scopes: {
+        scripts: { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [], caps },
+      },
+    };
+  }
+
+  const BOTH = {
+    'complexity-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+    'complexity-mass-over-10': { cap: 13, armed: '2026-08-22', notes: ['raised once'] },
+  };
+
+  it('requires a fixtureHash the way it requires a configHash', () => {
+    const { fixtureHash: _dropped, ...without } = WELL_FORMED;
+
+    expect(() => parseFloors(without)).toThrow(/fixtureHash/);
+    expect(() => parseFloors({ ...WELL_FORMED, fixtureHash: '' })).toThrow(/fixtureHash/);
+  });
+
+  it('keeps the fixture hash beside the config hash', () => {
+    const floors = parseFloors(document(BOTH));
+
+    expect(floors.fixtureHash).toBe('sha256:fedcba9876543210');
+    expect(floors.configHash).toBe('sha256:0123456789abcdef');
+  });
+
+  it('keeps `unarmed` as a cap value distinct from every number', () => {
+    const caps = parseFloors(document(BOTH)).scopes.get('scripts')?.caps;
+
+    expect(caps?.get('complexity-max')?.cap).toBe('unarmed');
+    expect(caps?.get('complexity-mass-over-10')?.cap).toBe(13);
+    expect(caps?.get('complexity-mass-over-10')?.notes).toEqual(['raised once']);
+  });
+
+  // ⚠️ A scope with no `caps` key parses, and is refused at deploy instead.
+  // Shape is this function's question and completeness is `floorRefusals`',
+  // which is exactly how the scope-level `unaccounted` check already splits.
+  it('treats a missing caps object as no caps rather than as a fault', () => {
+    expect(parseFloors(document(undefined)).scopes.get('scripts')?.caps.size).toBe(0);
+  });
+
+  // A typo must not read as a cap on nothing. `functions` and `mass` are not
+  // capped by decision — they grow with the codebase — so naming one is the
+  // same fault as misspelling `complexity-max`.
+  it('throws on a cap naming a series that cannot be capped', () => {
+    expect(() => parseFloors(document({ 'complexity-maxx': BOTH['complexity-max'] }))).toThrow(
+      /complexity-maxx/,
+    );
+    expect(() => parseFloors(document({ 'complexity-mass': BOTH['complexity-max'] }))).toThrow(
+      /complexity-mass/,
+    );
+  });
+
+  it('throws on a cap that is neither a number nor unarmed', () => {
+    expect(() =>
+      parseFloors(document({ 'complexity-max': { cap: 'later', armed: '2026-08-22', notes: [] } })),
+    ).toThrow(/neither a number nor unarmed/);
+  });
+
+  it('throws on a cap carrying no date, so `unarmed` cannot be typed in blind', () => {
+    expect(() =>
+      parseFloors(document({ 'complexity-max': { cap: 'unarmed', notes: [] } })),
+    ).toThrow(/date/);
+  });
+
+  it('throws on notes that are not a list of lines', () => {
+    expect(() =>
+      parseFloors(document({ 'complexity-max': { cap: 4, armed: '2026-08-22', notes: 'why' } })),
+    ).toThrow(/notes/);
+  });
+});
+
+describe('CAPPED_SERIES', () => {
+  it('caps the two series the spec caps, and neither of the two it does not', () => {
+    expect([...CAPPED_SERIES]).toEqual(['complexity-max', 'complexity-mass-over-10']);
+  });
+
+  // ⚠️ **The one input to a count that the fixture hash cannot see.** Move
+  // `MCCABE_CUT` to 11 or 12 and `INVENTORY` is unchanged — its only
+  // over-the-cut function scores 13 — so the hash matches and a cap compares
+  // two numbers that no longer mean the same thing. The series name is what
+  // closes it: change the cut and this is red, or the name changes and G36
+  // catches the missing Trends row.
+  it('names the cut in the series that measures it', () => {
+    expect(CAPPED_SERIES).toContain(`complexity-mass-over-${String(MCCABE_CUT)}`);
+  });
+});
+
+describe('runRowsFrom, the cap half', () => {
+  /** A CI record carrying the counting stamp and one capped series. */
+  function counted(
+    timestamp: number,
+    hash: string,
+    max?: number,
+    event = 'push',
+  ): string {
+    return [
+      '# TYPE stacks_run_ok gauge',
+      `stacks_run_ok 1 ${String(timestamp)}`,
+      '# TYPE stacks_run_info gauge',
+      `stacks_run_info{commit="abc",event="${event}",run_url="u",config_hash="sha256:abc",fixture_hash="${hash}"} 1 ${String(timestamp)}`,
+      ...(max === undefined
+        ? []
+        : [
+            '# TYPE stacks_trend_complexity_max gauge',
+            `stacks_trend_complexity_max{scope="scripts"} ${String(max)} ${String(timestamp)}`,
+          ]),
+      '# EOF',
+      '',
+    ].join('\n');
+  }
+
+  it('reads the counting stamp beside the scoring one', () => {
+    const [row] = runRowsFrom([parseRecord(counted(1_760_000_000, 'sha256:counted', 12))]);
+
+    expect(row?.fixtureHash).toBe('sha256:counted');
+    expect(row?.configHash).toBe('sha256:abc');
+  });
+
+  // ⚠️ A count is not a score and is not divided by a hundred. `scores` holds a
+  // fraction the record stores as `0..1`; `complexity-max` is a branch count and
+  // `12` means twelve.
+  it('reads a count verbatim, never as a percentage', () => {
+    const [row] = runRowsFrom([parseRecord(counted(1_760_000_000, 'sha256:counted', 12))]);
+
+    expect(row?.counts.get('complexity-max')?.get('scripts')).toBe(12);
+  });
+
+  it('leaves a row written before the counting stamp existed with no fixture hash', () => {
+    const document = counted(1_760_000_000, 'sha256:counted', 12).replace(
+      ',fixture_hash="sha256:counted"',
+      '',
+    );
+
+    expect(runRowsFrom([parseRecord(document)])[0]?.fixtureHash).toBeUndefined();
+  });
+
+  // ⚠️ **A merge record carries counts and no score, and both halves must
+  // survive that.** `scoredIn` drops it — it has no mutation score to compare —
+  // while the cap's own window keeps it, because §6 puts the counts on both
+  // events for per-merge resolution.
+  it('keeps a merge record that counted but did not score', () => {
+    const rows = runRowsFrom([parseRecord(counted(1_760_000_000, 'sha256:counted', 12))]);
+
+    expect(rows[0]?.scores.size).toBe(0);
+    expect(rows[0]?.counts.get('complexity-max')?.get('scripts')).toBe(12);
+    expect(scoredIn(rows)).toEqual([]);
+  });
+
+  it('reads a record that carried no counts as carrying none', () => {
+    const [row] = runRowsFrom([parseRecord(counted(1_760_000_000, 'sha256:counted'))]);
+
+    expect(row?.counts.get('complexity-max')?.size ?? 0).toBe(0);
+  });
+});
+
+describe('capBreaches', () => {
+  const FLOORS = parseFloors({
+    configHash: 'sha256:0123456789abcdef',
+    fixtureHash: 'sha256:counted',
+    scopes: {
+      scripts: {
+        floor: 'unarmed',
+        armed: '2026-08-19',
+        ignored: 0,
+        notes: [],
+        caps: {
+          'complexity-max': { cap: 12, armed: '2026-08-22', notes: [] },
+          'complexity-mass-over-10': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+        },
+      },
+      'packages/cli/src': { floor: 'unarmed', armed: '2026-08-19', ignored: 0, notes: [] },
+    },
+  });
+
+  it('names the scope, the series, the value and the cap', () => {
+    const found = capBreaches(
+      [{ scope: 'scripts', series: 'complexity-max', value: 13 }],
+      FLOORS,
+    );
+
+    expect(found).toEqual([{ scope: 'scripts', series: 'complexity-max', value: 13, cap: 12 }]);
+  });
+
+  // ⚠️ **Strictly over, mirroring `breaches`' strictly under.** A value sitting
+  // exactly on its cap is the cap being met, and a ratchet that refused there
+  // would refuse the first deploy after arming — on the very run the cap was
+  // derived from.
+  it('does not breach on a value sitting exactly on its cap', () => {
+    expect(capBreaches([{ scope: 'scripts', series: 'complexity-max', value: 12 }], FLOORS)).toEqual(
+      [],
+    );
+  });
+
+  it('refuses nothing for an unarmed cap, however large the value', () => {
+    expect(
+      capBreaches([{ scope: 'scripts', series: 'complexity-mass-over-10', value: 999 }], FLOORS),
+    ).toEqual([]);
+  });
+
+  it('refuses nothing for a scope that has no cap entry at all', () => {
+    expect(
+      capBreaches([{ scope: 'packages/cli/src', series: 'complexity-max', value: 999 }], FLOORS),
+    ).toEqual([]);
+  });
+
+  // A reading the record could not supply is the freshness refusal's subject,
+  // not this one's — the same split `breaches` makes for a missing score.
+  it('invents no verdict where the record carried no value', () => {
+    expect(capBreaches([{ scope: 'scripts', series: 'complexity-max', value: null }], FLOORS)).toEqual(
+      [],
+    );
+  });
+});
+
+describe('capCalibration', () => {
+  const HASH = 'sha256:counted';
+
+  function row(timestamp: number, max: number, event = 'schedule', ok = true): RunRow {
+    return {
+      timestamp,
+      ok,
+      event,
+      configHash: 'sha256:abc',
+      fixtureHash: HASH,
+      scores: new Map(),
+      counts: new Map([['complexity-max', new Map([['scripts', max]])]]),
+    };
+  }
+
+  /** `count` runs one day apart, newest last, each carrying `max`. */
+  function runs(count: number, max = 10): RunRow[] {
+    return Array.from({ length: count }, (_, index) => row(1_760_000_000 + index * 86_400, max));
+  }
+
+  it('arms at the highest value observed, which is the cap rule', () => {
+    const rows = [...runs(19), row(1_760_000_000 + 19 * 86_400, 17)];
+
+    expect(capCalibration(rows, ['scripts'], HASH).highest.get('complexity-max')?.get('scripts')).toBe(
+      17,
+    );
+  });
+
+  it('is full at twenty consecutive healthy runs and not at nineteen', () => {
+    expect(capCalibration(runs(19), ['scripts'], HASH).full).toBe(false);
+    expect(capCalibration(runs(20), ['scripts'], HASH).full).toBe(true);
+  });
+
+  // ⚠️ **Nightlies only, exactly like the floor's window — and a draft had this
+  // the other way round.** `the-ratchet.md`: *"CI nightlies only, 20 consecutive
+  // run_ok 1 runs, no gap over 3 days. Counted in **runs**, not days."* The
+  // draft counted merges too, reasoning that more samples could only raise a
+  // derived cap. That is false for a run-bounded window: `slice(0, 20)` takes
+  // the newest twenty *runs*, so counting merges makes twenty runs span two days
+  // instead of three weeks, the maximum is taken over a narrower slice of
+  // history, and the cap comes out **tighter**. This asserts the corrected rule.
+  it('counts no merge run, matching the mutation floor window exactly', () => {
+    const merges = runs(20).map((entry) => ({ ...entry, event: 'push' }));
+
+    expect(capCalibration(merges, ['scripts'], HASH).runs).toBe(0);
+    expect(nightliesIn(merges)).toEqual([]);
+  });
+
+  // The two windows are now one walk with one varying predicate, so a run that
+  // fills the floor's window fills the cap's — same rows, same count.
+  it('fills in step with the floor window on the same rows', () => {
+    const rows = runs(20).map((entry) => ({ ...entry, configHash: 'sha256:abc' }));
+
+    expect(capCalibration(rows, ['scripts'], HASH).runs).toBe(
+      calibration(rows, ['scripts'], 'sha256:abc').runs,
+    );
+  });
+
+  it('breaks the streak on a run scored under another counting rule', () => {
+    const rows = runs(20);
+    const middle = rows[10];
+    if (middle !== undefined) middle.fixtureHash = 'sha256:elsewhere';
+
+    expect(capCalibration(rows, ['scripts'], HASH).runs).toBe(9);
+  });
+
+  it('breaks the streak on a row from before the counting stamp existed', () => {
+    const rows = runs(20).map((entry, index) =>
+      index === 10 ? { ...entry, fixtureHash: undefined } : entry,
+    );
+
+    expect(capCalibration(rows, ['scripts'], HASH).runs).toBe(9);
+  });
+
+  it('breaks the streak on a failed run and on a gap over three days', () => {
+    const failed = runs(20);
+    failed[10] = { ...row(1_760_000_000 + 10 * 86_400, 10), ok: false };
+    expect(capCalibration(failed, ['scripts'], HASH).runs).toBe(9);
+
+    const gapped = runs(20).map((entry, index) =>
+      index < 10 ? { ...entry, timestamp: entry.timestamp - 10 * 86_400 } : entry,
+    );
+    expect(capCalibration(gapped, ['scripts'], HASH).runs).toBe(10);
+  });
+
+  // A scope the window cannot see all the way across has no derived cap — the
+  // same hole `calibration` reports as `null` rather than inventing a lowest.
+  it('reports a hole rather than a number where a scope is missing from a run', () => {
+    const rows = runs(20);
+    rows[5] = { ...row(1_760_000_000 + 5 * 86_400, 10), counts: new Map() };
+
+    expect(
+      capCalibration(rows, ['scripts'], HASH).highest.get('complexity-max')?.get('scripts'),
+    ).toBeNull();
+  });
+});
+
+describe('floorRefusals, the cap half', () => {
+  /** Both capped series, unarmed, for one scope. */
+  function unarmedCaps(): Record<string, unknown> {
+    return {
+      'complexity-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+      'complexity-mass-over-10': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+    };
+  }
+
+  const FLOORS = parseFloors({
+    configHash: 'sha256:0123456789abcdef',
+    fixtureHash: 'sha256:counted',
+    scopes: {
+      scripts: {
+        floor: 'unarmed',
+        armed: '2026-08-19',
+        ignored: 0,
+        notes: [],
+        caps: {
+          'complexity-max': { cap: 12, armed: '2026-08-22', notes: [] },
+          'complexity-mass-over-10': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+        },
+      },
+      'packages/cli/src': {
+        floor: 'unarmed',
+        armed: '2026-08-19',
+        ignored: 0,
+        notes: [],
+        caps: unarmedCaps(),
+      },
+    },
+  });
+
+  const CLEAN = {
+    floors: FLOORS,
+    declared: ['scripts', 'packages/cli/src'],
+    run: { configHash: 'sha256:0123456789abcdef' },
+    countedRun: { fixtureHash: 'sha256:counted' },
+    readings: [],
+    capReadings: [
+      { scope: 'scripts', series: 'complexity-max', value: 11 },
+      { scope: 'scripts', series: 'complexity-mass-over-10', value: 40 },
+    ] as const,
+  };
+
+  it('refuses nothing when every cap is accounted for and unbreached', () => {
+    expect(floorRefusals(CLEAN)).toEqual([]);
+  });
+
+  // ⚠️ **The plant §4 asks for by name.** A record counted under a different
+  // rule is refused rather than compared, because an ESLint upgrade that
+  // counted one more construct would breach every cap at once and read as a
+  // regression that nobody caused.
+  it('refuses a record counted under a different rule, naming both hashes', () => {
+    const [refusal] = floorRefusals({
+      ...CLEAN,
+      countedRun: { fixtureHash: 'sha256:elsewhere' },
+    });
+
+    expect(refusal).toContain('sha256:counted');
+    expect(refusal).toContain('sha256:elsewhere');
+    expect(refusal?.toLowerCase()).toContain('counting rule');
+  });
+
+  // A mismatch and a breach in the same run is the deploy asserting a
+  // comparison it has just said it cannot make. The floor's hash refusal makes
+  // exactly this choice, for exactly this reason.
+  it('refuses the mismatch alone, never beside a breach it cannot vouch for', () => {
+    const refusals = floorRefusals({
+      ...CLEAN,
+      countedRun: { fixtureHash: 'sha256:elsewhere' },
+      capReadings: [{ scope: 'scripts', series: 'complexity-max', value: 99 }],
+    });
+
+    expect(refusals).toHaveLength(1);
+    expect(refusals[0]).toContain('sha256:elsewhere');
+  });
+
+  // ⚠️ **An absent stamp is not a wrong one.** A record from before this slice
+  // carries no `fixture_hash`, and refusing on it while every cap is unarmed
+  // would make the first deploy after this lands refuse — teaching whoever hit
+  // it how to get past machinery that is not yet guarding anything.
+  it('lets a record from before the counting stamp through while every cap is unarmed', () => {
+    const unarmed = parseFloors({
+      configHash: 'sha256:0123456789abcdef',
+      fixtureHash: 'sha256:counted',
+      scopes: {
+        scripts: {
+          floor: 'unarmed',
+          armed: '2026-08-19',
+          ignored: 0,
+          notes: [],
+          caps: unarmedCaps(),
+        },
+      },
+    });
+
+    const refusals = floorRefusals({
+      ...CLEAN,
+      floors: unarmed,
+      declared: ['scripts'],
+      countedRun: {},
+      capReadings: [],
+    });
+
+    expect(refusals).toEqual([]);
+  });
+
+  it('refuses an unstamped record once a cap is armed', () => {
+    const [refusal] = floorRefusals({ ...CLEAN, countedRun: {} });
+
+    expect(refusal).toContain('sha256:counted');
+    expect(refusal?.toLowerCase()).toContain('before the stamp existed');
+  });
+
+  it('names the scope, the series, the value and the cap on a breach', () => {
+    const [refusal] = floorRefusals({
+      ...CLEAN,
+      capReadings: [{ scope: 'scripts', series: 'complexity-max', value: 17 }],
+    });
+
+    expect(refusal).toContain('scripts');
+    expect(refusal).toContain('complexity-max');
+    expect(refusal).toContain('17');
+    expect(refusal).toContain('12');
+  });
+
+  // The three routes past a refusal all land in the one file with a visible
+  // diff, and raising a cap is the lowering of that file: it costs a notes
+  // entry like any other.
+  it('says raising the cap costs a notes entry, and that no flag clears it', () => {
+    const [refusal] = floorRefusals({
+      ...CLEAN,
+      capReadings: [{ scope: 'scripts', series: 'complexity-max', value: 17 }],
+    });
+
+    expect(refusal).toContain('notes');
+    expect(refusal).toContain('No flag clears this');
+    expect(refusal).not.toContain('--skip-gates');
+  });
+
+  // ⚠️ §7's vacuous-green direction, aimed at the caps: a scope carrying no cap
+  // entry for a capped series is counted by every run and capped by nothing. It
+  // is the forward direction of `correspondence`, one level down.
+  it('refuses a declared scope carrying no entry for a capped series', () => {
+    const half = parseFloors({
+      configHash: 'sha256:0123456789abcdef',
+      fixtureHash: 'sha256:counted',
+      scopes: {
+        scripts: {
+          floor: 'unarmed',
+          armed: '2026-08-19',
+          ignored: 0,
+          notes: [],
+          caps: { 'complexity-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] } },
+        },
+      },
+    });
+
+    const [refusal] = floorRefusals({
+      ...CLEAN,
+      floors: half,
+      declared: ['scripts'],
+      capReadings: [],
+    });
+
+    expect(refusal).toContain('scripts');
+    expect(refusal).toContain('complexity-mass-over-10');
+    expect(refusal).not.toContain('complexity-max ');
+  });
+});
+
+describe('renderCapLines', () => {
+  const FLOORS = parseFloors({
+    configHash: 'sha256:0123456789abcdef',
+    fixtureHash: 'sha256:counted',
+    scopes: {
+      scripts: {
+        floor: 'unarmed',
+        armed: '2026-08-19',
+        ignored: 0,
+        notes: [],
+        caps: {
+          'complexity-max': { cap: 12, armed: '2026-08-22', notes: [] },
+          'complexity-mass-over-10': { cap: 'unarmed', armed: '2026-05-11', notes: [] },
+        },
+      },
+    },
+  });
+
+  function window(runs: number, highest: number | null = 17): CapCalibration {
+    return {
+      runs,
+      candidates: runs,
+      full: runs >= 20,
+      days: runs,
+      highest: new Map([
+        ['complexity-max', new Map([['scripts', highest]])],
+        ['complexity-mass-over-10', new Map([['scripts', highest]])],
+      ]),
+    };
+  }
+
+  /** The line for one scope-and-series pair. */
+  function lineFor(series: string, lines: readonly string[]): string {
+    const found = lines.find((line) => line.includes(series));
+    expect(found, `no print line for ${series}`).toBeDefined();
+    return found ?? '';
+  }
+
+  it('states an armed cap, the current count and the move since the last record', () => {
+    const lines = renderCapLines({
+      floors: FLOORS,
+      readings: [{ scope: 'scripts', series: 'complexity-max', value: 11, previous: 13 }],
+      window: window(4),
+      today: '2026-08-25',
+    });
+
+    const line = lineFor('complexity-max', lines);
+    expect(line).toContain('scripts');
+    expect(line).toContain('armed 12');
+    expect(line).toContain('current 11');
+    expect(line).toContain('(-2)');
+  });
+
+  // ⚠️ **A count is an integer and prints as one.** The floor block prints two
+  // decimals because a score is a percentage; `complexity-max` of 12 rendered
+  // as `12.00` would read as a measurement with a precision it does not have.
+  it('prints a count as an integer, never with the score block decimals', () => {
+    const lines = renderCapLines({
+      floors: FLOORS,
+      readings: [{ scope: 'scripts', series: 'complexity-max', value: 11 }],
+      window: window(4),
+      today: '2026-08-25',
+    });
+
+    expect(lineFor('complexity-max', lines)).not.toContain('11.00');
+  });
+
+  it('says so when an armed cap has no count in the record', () => {
+    const lines = renderCapLines({
+      floors: FLOORS,
+      readings: [],
+      window: window(4),
+      today: '2026-08-25',
+    });
+
+    expect(lineFor('complexity-max', lines)).toContain('no count in the record');
+  });
+
+  // The countdown: the whole mechanism that ends the disarmed period, and the
+  // reason the cap lands early. It converts *indefinite* into a dated question.
+  it('counts the window down while a cap is unarmed', () => {
+    const lines = renderCapLines({
+      floors: FLOORS,
+      readings: [],
+      window: window(14),
+      today: '2026-08-25',
+    });
+
+    const line = lineFor('complexity-mass-over-10', lines);
+    expect(line).toContain('unarmed');
+    expect(line).toContain('14/20 runs');
+  });
+
+  // ⚠️ **The date stays on the line where the temptation is.** A full window is
+  // exactly when somebody is deciding what to type into `cap`, and how long the
+  // entry has sat unarmed is the only guard on typing `unarmed` instead.
+  it('offers the derived cap and the sat-unarmed date once the window is full', () => {
+    const lines = renderCapLines({
+      floors: FLOORS,
+      readings: [],
+      window: window(20),
+      today: '2026-08-25',
+    });
+
+    const line = lineFor('complexity-mass-over-10', lines);
+    expect(line).toContain('window full (20 runs)');
+    expect(line).toContain('highest 17 - armable');
+    expect(line).toContain('106 days');
+  });
+
+  it('reports a hole rather than offering a cap it cannot derive', () => {
+    const lines = renderCapLines({
+      floors: FLOORS,
+      readings: [],
+      window: window(20, null),
+      today: '2026-08-25',
+    });
+
+    expect(lineFor('complexity-mass-over-10', lines)).toContain('no complete history');
+  });
+
+  // ⚠️ **Nothing counted and nothing present are different facts**, and the
+  // floor block already says so above its own table. A store full of nightlies
+  // that all predate the counting stamp is a working pipe; a store with no
+  // nightlies at all is not, and a print that could not tell them apart reports
+  // the first as the second.
+  it('tells an empty record apart from one nothing counted under this rule', () => {
+    const nothing = renderCapLines({
+      floors: FLOORS,
+      readings: [],
+      window: { ...window(0), candidates: 0 },
+      today: '2026-08-25',
+    }).join('\n');
+
+    const unstamped = renderCapLines({
+      floors: FLOORS,
+      readings: [],
+      window: { ...window(0), candidates: 7 },
+      today: '2026-08-25',
+    }).join('\n');
+
+    expect(nothing).toContain('no nightly in the record yet');
+    expect(unstamped).toContain('7 nightlies');
+    // ⚠️ The floor block's wording names a *configuration*; a cap is about a
+    // counting rule, and reusing the sentence unchanged would name the wrong
+    // stamp on the one line that exists to explain an empty table.
+    expect(unstamped).toContain('counted under this rule');
+    expect(unstamped).not.toContain('scored under this configuration');
+  });
+
+  // The header used to claim this window counted every event and so filled
+  // faster than the floor's. Both halves went false when the window became
+  // nightlies-only, and a stale sentence above a table is worse than none.
+  it('claims nothing about counting merges, because it does not count them', () => {
+    const lines = renderCapLines({
+      floors: FLOORS,
+      readings: [],
+      window: window(4),
+      today: '2026-08-25',
+    }).join('\n');
+
+    expect(lines).not.toContain('every event');
+    expect(lines).not.toContain('fills faster');
+  });
+});
+
+describe('countedIn', () => {
+  function row(event: string, counts: Map<string, Map<string, number>>, ok = true): RunRow {
+    return {
+      timestamp: 1_760_000_000,
+      ok,
+      event,
+      configHash: 'sha256:abc',
+      fixtureHash: 'sha256:counted',
+      scores: new Map(),
+      counts: counts as RunRow['counts'],
+    };
+  }
+
+  function both(max: number, massOver10: number): Map<string, Map<string, number>> {
+    return new Map([
+      ['complexity-max', new Map([['scripts', max]])],
+      ['complexity-mass-over-10', new Map([['scripts', massOver10]])],
+    ]);
+  }
+
+  // ⚠️ **The whole reason this is not `scoredIn`.** §6 puts the counts on both
+  // events while only the nightly half scores, so a merge record carries counts
+  // and an empty `scores` — and `scoredIn` drops it. Reading caps off that row
+  // would report "no count in the record" for every scope, which is a cap
+  // refusing nothing at the moment somebody deploys.
+  it('keeps a merge run that counted, which scoredIn drops', () => {
+    const rows = [row('push', both(12, 40))];
+
+    expect(countedIn(rows)).toHaveLength(1);
+    expect(scoredIn(rows)).toEqual([]);
+  });
+
+  it('drops a run that carried no counts at all', () => {
+    expect(countedIn([row('schedule', new Map())])).toEqual([]);
+  });
+
+  it('drops a failed run, whatever it managed to carry', () => {
+    expect(countedIn([row('schedule', both(12, 40), false)])).toEqual([]);
+  });
+
+  // ⚠️ **Every capped series, not one of them.** Probing only `complexity-max`
+  // would single out one member of a set the floors file treats as a unit, and
+  // would read a half-emitted record as a whole one. The emitter's
+  // all-or-nothing rule means this should never be seen in practice — which is
+  // exactly why the filter must not depend on it silently.
+  it('drops a run carrying one capped series and not the other', () => {
+    const half = new Map([['complexity-max', new Map([['scripts', 12]])]]);
+
+    expect(countedIn([row('schedule', half)])).toEqual([]);
+  });
+
+  it('keeps a nightly that counted, so the window and the comparison agree', () => {
+    expect(countedIn([row('schedule', both(12, 40))])).toHaveLength(1);
+  });
+});
+
+describe('floorRefusals — the two runs are two fields', () => {
+  const FLOORS = parseFloors({
+    configHash: 'sha256:config',
+    fixtureHash: 'sha256:counted',
+    scopes: {
+      scripts: {
+        floor: 71.55,
+        armed: '2026-08-19',
+        ignored: 0,
+        notes: [],
+        caps: {
+          'complexity-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+          'complexity-mass-over-10': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+        },
+      },
+    },
+  });
+
+  // ⚠️ **The defect this split exists for.** A store can hold counting merge
+  // records and no scoring nightly. A draft carried one `run` object filled from
+  // whichever row had a hash, so that store produced `{ fixtureHash }` with no
+  // `configHash` — and with a floor armed, the config check read it as *a
+  // scoring run from before the stamp existed* and refused with "derived under a
+  // different configuration". A true sentence about a row that is not there.
+  it('does not refuse on the configuration when there is no scoring run at all', () => {
+    const refusals = floorRefusals({
+      floors: FLOORS,
+      declared: ['scripts'],
+      countedRun: { fixtureHash: 'sha256:counted' },
+      readings: [],
+      capReadings: [],
+    });
+
+    expect(refusals).toEqual([]);
+  });
+
+  // The mirror: a scoring run and no counting run says nothing about the caps.
+  it('does not refuse on the counting rule when there is no counting run at all', () => {
+    const refusals = floorRefusals({
+      floors: FLOORS,
+      declared: ['scripts'],
+      run: { configHash: 'sha256:config' },
+      readings: [],
+      capReadings: [],
+    });
+
+    expect(refusals).toEqual([]);
   });
 });

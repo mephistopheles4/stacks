@@ -235,6 +235,31 @@ describe('the run stamps the configuration it was scored under', () => {
     expect(renderMetrics(facts)).toMatch(/^stacks_run_info\{/m);
     expect(renderMetrics(facts)).not.toContain('config_hash');
   });
+
+  // The counting rule's stamp, for the caps, riding the same family for the
+  // same reason: *a score never appears without its run*, and now neither does
+  // a count. See docs/spec/complexity-on-the-trend-layer.md §4.
+  it('carries the counting stamp beside the scoring one', () => {
+    const document = renderMetrics({
+      ...facts,
+      configHash: 'sha256:abcdef',
+      fixtureHash: 'sha256:counted',
+    });
+
+    expect(document).toMatch(/^stacks_run_info\{[^}]*fixture_hash="sha256:counted"[^}]*\} 1 /m);
+    expect(document).toMatch(/^stacks_run_info\{[^}]*config_hash="sha256:abcdef"[^}]*\} 1 /m);
+  });
+
+  // ⚠️ **The two stamps are independent, and a record may carry either alone.**
+  // They answer different questions — *scored under which configuration* and
+  // *counted under which rule* — and every record written before this slice
+  // carries the first without the second.
+  it('renders a row stamped for scoring and not for counting', () => {
+    const document = renderMetrics({ ...facts, configHash: 'sha256:abcdef' });
+
+    expect(document).toContain('config_hash');
+    expect(document).not.toContain('fixture_hash');
+  });
 });
 
 describe('the two tables that spell the complexity series', () => {

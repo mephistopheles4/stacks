@@ -1,21 +1,25 @@
 {
   "$comment": [
-    "The mutation floor, per declared scope. Spec: docs/spec/the-ratchet.md.",
+    "The mutation floor and the complexity cap, per declared scope.",
+    "Specs: docs/spec/the-ratchet.md, and docs/spec/complexity-on-the-trend-layer.md §4.",
     "",
     "This file is beside stryker.config.mjs on purpose: `configHash` below ties the two",
     "together, and a diff that changes the timeout and re-derives the floors should show",
     "both changes in the same directory.",
     "",
-    "EVERY SCOPE IS `unarmed`, AND NOTHING HERE REFUSES ANYTHING YET. A floor is derived",
-    "from observed history — the lowest score a scope reached across 20 consecutive healthy",
-    "CI runs with no gap over 3 days — and applied ONCE, BY HAND, at arming. Arming is a",
+    "EVERY FLOOR AND EVERY CAP IS `unarmed`, AND NOTHING HERE REFUSES ANYTHING YET. Both",
+    "are derived from observed history and applied ONCE, BY HAND, at arming. Arming is a",
     "human judgement, per scope, after that scope's window fills. There is no moment at",
-    "which `the ratchet` becomes armed; every scope is its own decision. `pnpm deploy:site`",
+    "which `the ratchet` becomes armed; every entry is its own decision. `pnpm deploy:site`",
     "prints how far each window has filled at every deploy.",
     "",
-    "The rule initialises; it does not maintain. After arming, a floor moves UP by hand and",
-    "never down on its own — re-deriving is lowering, and costs a justification like any",
-    "other lowering.",
+    "The rule initialises; it does not maintain.",
+    "",
+    "── the floor ──────────────────────────────────────────────────────────────────────",
+    "",
+    "A floor is the LOWEST score a scope reached across 20 consecutive healthy CI runs",
+    "with no gap over 3 days. After arming it moves UP by hand and never down on its own",
+    "— re-deriving is lowering, and costs a justification like any other lowering.",
     "",
     "`floor`   a number this scope may not score under, or `unarmed`.",
     "`armed`   the date the entry was added, or the date it was armed. It is what makes",
@@ -30,24 +34,130 @@
     "          reads it. Nothing enforces this — the file makes an omission visible, it",
     "          does not make it impossible.",
     "",
-    "`configHash` is the score-affecting Stryker configuration these floors were derived",
+    "── the cap ────────────────────────────────────────────────────────────────────────",
+    "",
+    "THE RATCHET, MIRRORED, because for these two series the bad direction is UP. A cap is",
+    "the HIGHEST value a scope reached across its calibration window, applied once, at",
+    "arming. After arming it moves DOWN only, by hand. RAISING A CAP IS THE LOWERING OF",
+    "THIS FILE and costs a `notes` entry exactly like one.",
+    "",
+    "`caps`    per series, and only `complexity-max` and `complexity-mass-over-10` may",
+    "          appear. `complexity-functions` and `complexity-mass` are NOT capped, by",
+    "          decision: they grow with the codebase legitimately, and a cap on either",
+    "          would refuse a feature. Naming one of them here is a parse error, not a",
+    "          silently ignored key — a typo must not read as protection.",
+    "`cap`     a number this scope may not exceed for that series, or `unarmed`.",
+    "`armed`   as above, and it guards the same temptation.",
+    "`notes`   APPEND-ONLY, one line per raising.",
+    "",
+    "THE CAP WINDOW IS THE FLOOR'S WINDOW: CI nightlies only, 20 consecutive healthy runs,",
+    "no gap over 3 days, counted in RUNS and not days. Both are walked by one `streakOf` in",
+    "scripts/lib/floors.ts, so the two cannot drift apart. A draft counted merges here too,",
+    "on the reasoning that more samples could only raise a derived cap — which is false for",
+    "a run-bounded window, because counting merges makes 20 runs span two days instead of",
+    "three weeks and the maximum is taken over LESS history, not more. See ADR-0068.",
+    "",
+    "── the two hashes ─────────────────────────────────────────────────────────────────",
+    "",
+    "`configHash` is the score-affecting Stryker configuration these FLOORS were derived",
     "under. Each CI run stamps its own; deploy compares them, and a mismatch refuses rather",
     "than silently comparing two numbers that do not mean the same thing. Lowering",
     "timeoutMS raises the score with no test touched, because a timeout counts as detected.",
     "See scripts/lib/floors.ts for which options are hashed and which are not.",
     "",
+    "`fixtureHash` is the counting rule these CAPS were derived under: the exact eslint and",
+    "@typescript-eslint/parser versions as installed, the complexity rule's resolved",
+    "options, and the inventory fixture's expected totals, hashed in that order. An ESLint",
+    "upgrade that counts one more construct would raise every count with no branch written",
+    "— breaching every cap at once and reading as a regression nobody caused — so a record",
+    "counted under another rule is REFUSED rather than compared. See `fixtureHashOf`.",
+    "",
     "There is no override flag for any refusal this file produces, and that is the design",
-    "rather than an omission. See docs/adr/0061-the-mutation-floor-refuses-deploy.md."
+    "rather than an omission. See docs/adr/0061-the-mutation-floor-refuses-deploy.md and",
+    "docs/adr/0068-the-complexity-cap-only-falls.md."
   ],
   "configHash": "sha256:17380c198fafc9178458a52e97a9efa215a97e621ada4ebe8b8336a85a9db99d",
+  "fixtureHash": "sha256:26f7066cc66d2bbbf50bac77ca83f3dcbe5302e5c1f973e1a3758909d8f2b146",
   "scopes": {
-    "packages/core/src": { "floor": "unarmed", "armed": "2026-08-19", "ignored": 0, "notes": [] },
-    "packages/core/src/adapters": { "floor": "unarmed", "armed": "2026-08-19", "ignored": 0, "notes": [] },
-    "packages/core/src/covers": { "floor": "unarmed", "armed": "2026-08-19", "ignored": 0, "notes": [] },
-    "packages/core/src/import": { "floor": "unarmed", "armed": "2026-08-19", "ignored": 0, "notes": [] },
-    "packages/core/src/metadata": { "floor": "unarmed", "armed": "2026-08-19", "ignored": 0, "notes": [] },
-    "packages/site/src/shelf": { "floor": "unarmed", "armed": "2026-08-19", "ignored": 0, "notes": [] },
-    "packages/cli/src": { "floor": "unarmed", "armed": "2026-08-19", "ignored": 0, "notes": [] },
-    "scripts": { "floor": "unarmed", "armed": "2026-08-19", "ignored": 0, "notes": [] }
+    "packages/core/src": {
+      "floor": "unarmed",
+      "armed": "2026-08-19",
+      "ignored": 0,
+      "notes": [],
+      "caps": {
+        "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+      }
+    },
+    "packages/core/src/adapters": {
+      "floor": "unarmed",
+      "armed": "2026-08-19",
+      "ignored": 0,
+      "notes": [],
+      "caps": {
+        "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+      }
+    },
+    "packages/core/src/covers": {
+      "floor": "unarmed",
+      "armed": "2026-08-19",
+      "ignored": 0,
+      "notes": [],
+      "caps": {
+        "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+      }
+    },
+    "packages/core/src/import": {
+      "floor": "unarmed",
+      "armed": "2026-08-19",
+      "ignored": 0,
+      "notes": [],
+      "caps": {
+        "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+      }
+    },
+    "packages/core/src/metadata": {
+      "floor": "unarmed",
+      "armed": "2026-08-19",
+      "ignored": 0,
+      "notes": [],
+      "caps": {
+        "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+      }
+    },
+    "packages/site/src/shelf": {
+      "floor": "unarmed",
+      "armed": "2026-08-19",
+      "ignored": 0,
+      "notes": [],
+      "caps": {
+        "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+      }
+    },
+    "packages/cli/src": {
+      "floor": "unarmed",
+      "armed": "2026-08-19",
+      "ignored": 0,
+      "notes": [],
+      "caps": {
+        "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+      }
+    },
+    "scripts": {
+      "floor": "unarmed",
+      "armed": "2026-08-19",
+      "ignored": 0,
+      "notes": [],
+      "caps": {
+        "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+      }
+    }
   }
 }
