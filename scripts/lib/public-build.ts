@@ -65,6 +65,7 @@ export const PUBLIC_BUILD_RULES = [
   'robots',
   'headers',
   'og-image',
+  'csp',
 ] as const;
 
 export type PublicBuildRule = (typeof PUBLIC_BUILD_RULES)[number];
@@ -147,6 +148,90 @@ const SHARE_IMAGE_FILE = 'og.png';
 
 /** The `_headers` block that governs covers. Matched exactly, not searched for. */
 const COVERS_PATTERN = '/covers/*';
+
+/** The `_headers` block that governs every response, security headers included. */
+const EVERY_PATH_PATTERN = '/*';
+
+/**
+ * The policy Astro emits into every page, as a `<meta http-equiv>`.
+ *
+ * Read out of the HTML rather than out of `_headers` because that is where it
+ * is. `style-src` is hash-pinned per page from that page's own inline content —
+ * Astro inlines a stylesheet under 4kB, which is why `/attribution` carries an
+ * inline `<style>` and the index does not — so a hand-written copy in `_headers`
+ * would go stale the first time a stylesheet crossed that threshold, and the
+ * only symptom would be an unstyled page. See `packages/site/astro.config.mjs`.
+ */
+const CSP_META = /<meta\s+http-equiv="content-security-policy"\s+content="([^"]*)"/i;
+
+/**
+ * The whole policy, as `directive → the sources it must carry, exactly`.
+ *
+ * **Every directive, not merely the interesting one.** This pinned `connect-src`
+ * and the script origins alone at first, which left `default-src 'none'`,
+ * `img-src`, `base-uri` and `form-action` deletable from `astro.config.mjs` with
+ * every gate green and the page pixel-identical — while `_headers` and
+ * [ADR-0065](../../docs/adr/0065-the-csp-is-generated-not-written.md) went on
+ * describing a policy that no longer said what they claimed. That is #127's own
+ * failure shape reproduced inside the fix for it, so the rule holds the set.
+ *
+ * `connect-src 'self'` is still the line the issue was written for: the shelf's
+ * only outbound request is `fetch('/library.json')`, same origin, and that was a
+ * property measured **once, by grep**. A `fetch` to a third party added tomorrow
+ * passed `pnpm test`, `pnpm build`, `pnpm gate:public` and `pnpm smoke:render`
+ * without comment.
+ *
+ * `script-src` carries the one exception, and the reason it is named rather than
+ * merely allowed: `static.cloudflareinsights.com` is Cloudflare Web Analytics,
+ * injected at the edge and present in no file in this repo. Refusing it is a real
+ * choice and not a no-op — the browser would refuse the script and the analytics
+ * would stop — but it is a policy file overriding a zone setting for no privacy
+ * gain, since the beacon reports same-origin and carries nothing derived from the
+ * owner's reading. See ADR-0065. **The property is *same-origin except one named
+ * origin*, and a set is what keeps the exception enumerable**: the answer to
+ * "which third parties does the shelf permit" has to be a list somebody can
+ * read, so the *second* one cannot arrive unnoticed.
+ *
+ * ⚠️ **Hashes are excluded from every comparison** — Astro recomputes them on
+ * each build from each page's own inline content, so a rule that held whole
+ * directive values would be red on the next commit for a reason unconnected to
+ * what it guards. `style-src` is here for its `'self'` and for the guarantee it
+ * is present at all; its hashes are the part that legitimately changes.
+ */
+const CSP_DIRECTIVES: ReadonlyMap<string, readonly string[]> = new Map([
+  ['default-src', ["'none'"]],
+  ['img-src', ["'self'"]],
+  ['connect-src', ["'self'"]],
+  ['base-uri', ["'none'"]],
+  ['form-action', ["'none'"]],
+  ['script-src', ["'self'", 'https://static.cloudflareinsights.com']],
+  ['style-src', ["'self'"]],
+]);
+
+/**
+ * Framing, denied twice, because a `<meta>` CSP cannot deny it at all.
+ *
+ * Browsers ignore `frame-ancestors` in a meta tag, so it lives in `_headers` as
+ * **a policy of one directive**. That is not a second copy of the page policy:
+ * the two are disjoint — the meta tag carries every hash-bearing directive and
+ * this carries the only one it cannot — so neither can drift from the other, and
+ * a policy declaring no fetch directives restricts nothing except framing.
+ *
+ * `X-Frame-Options` is kept beside it rather than replaced by it. For `DENY` the
+ * two are equivalent in every browser that matters; the exception worth the line
+ * is that `frame-ancestors` covers `<embed>` and `<object>` uniformly where
+ * `X-Frame-Options` historically did not, and `X-Frame-Options` is read by
+ * clients predating CSP framing. Both are asserted, so neither can be deleted on
+ * the theory that the other covers it.
+ *
+ * ⚠️ **Described and not enforced is how `_headers` came to assert a
+ * Content-Security-Policy it did not have**, which is the whole of #127. A
+ * control this file describes, this rule checks.
+ */
+const FRAMING_DENIED: readonly { readonly what: string; readonly pattern: RegExp }[] = [
+  { what: "Content-Security-Policy: frame-ancestors 'none'", pattern: /^Content-Security-Policy:\s*frame-ancestors\s+'none'\s*$/i },
+  { what: 'X-Frame-Options: DENY', pattern: /^X-Frame-Options:\s*DENY\s*$/i },
+];
 
 /** Below this, `og.png` is a truncated copy rather than an image. */
 const MIN_OG_IMAGE_BYTES = 2048;
@@ -428,6 +513,83 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   if (unmarked.length === 0 && pages.length > 0) {
     observations.push(`${String(pages.length)} page(s), all noindex`);
   }
+  // ── What each page is allowed to talk to ──────────────────────────────────
+  //
+  // Per page, for exactly the reason `robots` is: a meta CSP governs only the
+  // document carrying it, so a page added tomorrow ships with no policy at all
+  // unless the build gives it one. Checked here rather than in `_headers`
+  // because that is where Astro puts it — see `CSP_META`.
+  //
+  // It cannot go vacuous: a build with no HTML in it has already failed
+  // `robots` above, so this loop is never silent over an empty folder.
+  let policed = 0;
+  for (const file of pages) {
+    const where = posix(relative(dir, file));
+    const found = CSP_META.exec(readFileSync(file, 'utf8'));
+
+    if (found === null) {
+      fail('csp', `no Content-Security-Policy in ${where} — nothing constrains what that page may load or connect to`);
+      continue;
+    }
+
+    const directives = parseCsp(found[1] ?? '');
+    const before = problems.length;
+
+    for (const [name, wanted] of CSP_DIRECTIVES) {
+      const declared = directives.get(name);
+      if (declared === undefined) {
+        fail('csp', `${where} declares no ${name} — the policy is weaker than the one this repo documents`);
+        continue;
+      }
+
+      // Hashes are the part that legitimately differs per page and per build.
+      const sources = declared.filter((source) => !source.startsWith("'sha"));
+      const same =
+        sources.length === wanted.length && sources.every((source) => wanted.includes(source));
+
+      if (!same) {
+        fail(
+          'csp',
+          `${where} sets ${name} to ${sources.join(' ') || '(nothing)'} — must be exactly ` +
+            `${wanted.join(' ')}. Either the build grew a source nobody named, or the change is deliberate, ` +
+            'in which case name it in CSP_DIRECTIVES in scripts/lib/public-build.ts with a sentence saying why',
+        );
+      }
+    }
+
+    // ⚠️ **The set is closed, and reading only the names above left it open.**
+    //
+    // A specific fetch directive overrides `default-src` for its own resource
+    // type, so `object-src *`, `frame-src https://…` or `worker-src *` each
+    // widen the policy with every directive above still exactly right.
+    // `script-src-elem` is the one that matters: it takes precedence over
+    // `script-src` for `<script>` elements, so it defeats the pinned beacon
+    // origin — the one exception this rule exists to keep enumerable — without
+    // touching the line the loop above reads.
+    //
+    // Raised by review on the pull request that added this rule, which is the
+    // second time here that checking the named thing missed the unnamed one.
+    for (const name of directives.keys()) {
+      if (CSP_DIRECTIVES.has(name)) continue;
+      fail(
+        'csp',
+        `${where} declares ${name}, which nothing in this repo names — a directive outside the pinned ` +
+          'set can only widen the policy, and a specific fetch directive overrides `default-src` for its ' +
+          'own resource type. Name it in CSP_DIRECTIVES in scripts/lib/public-build.ts with a sentence ' +
+          'saying why, or take it out of astro.config.mjs',
+      );
+    }
+
+    if (problems.length === before) policed += 1;
+  }
+  if (policed > 0 && policed === pages.length) {
+    // Counted, not assumed — the same rule the share-image observation follows.
+    observations.push(
+      `${String(policed)} page(s), every one policed to ${String(CSP_DIRECTIVES.size)} pinned CSP directive(s), ` +
+        `connect-src ${(CSP_DIRECTIVES.get('connect-src') ?? []).join(' ')}`,
+    );
+  }
+
   if (/^\s*Disallow:\s*\/\s*$/m.test(readIfPresent(join(dir, 'robots.txt')))) {
     // The intuitive move, and the one that fails: blocking the crawl stops the
     // crawler reading the noindex, and a linked URL can still be indexed on the
@@ -448,7 +610,23 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     // Read out of the `/covers/*` block specifically. The directive appears in
     // more than one block of the real file, so anything searching the whole
     // text is answered by a neighbouring block — see `headerBlocks`.
-    const covers = headerBlocks(headers).get(COVERS_PATTERN);
+    const blocks = headerBlocks(headers);
+
+    // The half of the policy a `<meta>` tag cannot carry. Read out of the `/*`
+    // block by name, for the same reason the covers rule is: a directive found
+    // anywhere in the text can be one a neighbouring block happens to carry.
+    const everyPath = blocks.get(EVERY_PATH_PATTERN) ?? [];
+    for (const { what, pattern } of FRAMING_DENIED) {
+      if (everyPath.some((header) => pattern.test(header))) continue;
+      fail(
+        'headers',
+        `${EVERY_PATH_PATTERN} is missing \`${what}\` — browsers ignore \`frame-ancestors\` in the ` +
+          `\`<meta>\` policy the build emits, so framing is denied here or nowhere. Headers in that ` +
+          `block: ${everyPath.join(' · ') || '(none)'}`,
+      );
+    }
+
+    const covers = blocks.get(COVERS_PATTERN);
     if (covers === undefined) {
       fail(
         'headers',
@@ -539,6 +717,29 @@ function headerBlocks(source: string): Map<string, string[]> {
   }
 
   return blocks;
+}
+
+/**
+ * A Content-Security-Policy, as `directive name → its source list`.
+ *
+ * Parsed rather than pattern-matched for the reason `headerBlocks` is: the
+ * obvious regex — find `connect-src`, look ahead for `'self'` — is answered by
+ * a neighbouring directive, and `default-src 'none'` sits two along. Splitting
+ * on `;` is the whole grammar, and Astro separates its generated directives
+ * with `; ` where it uses a bare `;` for the configured ones, so the trim
+ * matters. A repeated directive keeps the **first**, which is what browsers do.
+ */
+function parseCsp(policy: string): Map<string, string[]> {
+  const directives = new Map<string, string[]>();
+
+  for (const part of policy.split(';')) {
+    const tokens = part.trim().split(/\s+/).filter((token) => token !== '');
+    const name = tokens.shift();
+    if (name === undefined || directives.has(name.toLowerCase())) continue;
+    directives.set(name.toLowerCase(), tokens);
+  }
+
+  return directives;
 }
 
 /** Messages read the same on Windows and on the Linux CI runner. */

@@ -7,15 +7,53 @@
 # `X-Robots-Tag` does not affect link-preview scrapers — Slack, iMessage and the
 # rest are not search engines and do not consult it — so the preview still works.
 
+# ⚠️ The Content-Security-Policy is NOT here, and this file used to imply it was.
+#
+# The comment that stood here said the shelf "has no scripts from anywhere else"
+# and that "saying so costs nothing" — describing a header that was never added.
+# It was not wrong about the shelf's behaviour; it was wrong about the file it
+# was in, and it is the reason the absence went unnoticed, because a reader of
+# `_headers` was told the mitigation was present. See issue #127.
+#
+# Astro now generates the policy per page as a `<meta http-equiv>`, with
+# `script-src` and `style-src` hashes computed from what each page actually
+# contains — see the `security.csp` block in `packages/site/astro.config.mjs`
+# for why that beats a hand-written copy here.
+#
+# `gates/public-build-artifact.test.ts` (G20) holds every built page to the whole
+# directive set, by name and by source, hashes excluded. Saying so is only worth
+# anything because it is now true — the first version of that rule pinned two
+# directives and left four deletable, which is the sentence above happening again
+# one paragraph down.
+#
+# `frame-ancestors` is the one directive a `<meta>` CSP cannot carry — browsers
+# ignore it there — so it is below, as a policy of exactly one directive.
+#
+# That is **not** a second copy of the page's policy, and the distinction is the
+# point: the two are disjoint, so neither can drift from the other. A hand-written
+# copy of the whole policy would go stale (see astro.config.mjs); a directive the
+# generated one structurally cannot contain has nowhere else to live. Policies
+# compose — every one is enforced — and one declaring no fetch directives
+# restricts nothing except framing.
+#
+# `X-Frame-Options: DENY` stays beside it rather than being replaced by it. For
+# `DENY` the two are equivalent in every browser that matters; the exception worth
+# the line is that `frame-ancestors` covers `<embed>` and `<object>` uniformly
+# where `X-Frame-Options` historically did not, and `X-Frame-Options` is read by
+# clients predating CSP framing. The rule asserts both, so neither can be deleted
+# on the theory that the other covers it.
+#
+# This block is keyed `/*`, not `/`. `Referrer-Policy` and `X-Content-Type-Options`
+# were on the root page alone while the site had one page; `/attribution` is the
+# second, and it was answering Cloudflare's default
+# `strict-origin-when-cross-origin` — the same widening the `robots` rule in
+# `scripts/lib/public-build.ts` already went through, for the same reason.
 /*
   X-Robots-Tag: noindex, nofollow
-
-# The shelf is a static folder with no server behind it and no scripts from
-# anywhere else. Saying so costs nothing and removes a class of injection that
-# would otherwise be available to anything that got into library.json.
-/
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Frame-Options: DENY
 
 # Images must expire on the same schedule as the index that describes them.
 #

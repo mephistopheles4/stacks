@@ -20,7 +20,7 @@ phone was rendering when it died — are measurements and stay exactly as they a
 
 | | |
 | --- | --- |
-| **Last green gate** | G45 (`deploy-flags`) — every flag `pnpm deploy:site` reads is a flag `docs/commands.md` documents, and the reverse. It landed with the deletion of `--skip-gates`, which skipped the whole four-gate contract on a path that still **uploaded**, lived for **19 of its 21 days** in **two lines of one file, both the implementation**, and bought about **35 seconds** — measured, for the first time in the 21 days it existed ([#152](https://github.com/mephistopheles4/stacks/issues/152), [ADR-0064](./adr/0064-no-flag-skips-the-deploy-gates.md)). ⚠️ **The mechanism was already there and aimed one flag to the left**: G17 pins which spellings override the *branch* guard, while the override that cleared the *contract* was pinned by nothing. The row before this one was G44 (`stryker-reporters`) |
+| **Last green gate** | G45 (`deploy-flags`) — every flag `pnpm deploy:site` reads is a flag `docs/commands.md` documents, and the reverse. It landed with the deletion of `--skip-gates`, which skipped the whole four-gate contract on a path that still **uploaded**, lived for **19 of its 21 days** in **two lines of one file, both the implementation**, and bought about **35 seconds** — measured, for the first time in the 21 days it existed ([#152](https://github.com/mephistopheles4/stacks/issues/152), [ADR-0065](./adr/0064-no-flag-skips-the-deploy-gates.md)). ⚠️ **The mechanism was already there and aimed one flag to the left**: G17 pins which spellings override the *branch* guard, while the override that cleared the *contract* was pinned by nothing. The row before this one was G44 (`stryker-reporters`) |
 | **Before it** | G39 (`metrics-freshness`) — the trend record is fresh **per series**, or `pnpm deploy:site` refuses on any path that publishes and names which series is not (`--check-only` reports it instead; it uploads nothing). The refusal spends one anonymous fetch to tell *you have not synced* from *the nightly has stopped*. ⚠️ It was green for half an hour against a plant that deleted the refusal outright: the harness proves a run got past by letting it fail on the next check, so the exit code asserted nothing — see [the log](./log/2026-08-19-the-deploy-reads-the-record-and-refuses-per-series.md). ⚠️ Its spec said G38 in four places; that is the **fourth** wrong pre-allocated number in this effort |
 | **Stacked on it** | G40 (`action-pins`), G41 (`gate-register`) and G42 (`dependency-audit`) on `claude/mattpocock-skills-154-162-71abbe`, based on G39's branch — **three rows in one commit**, because `gate-register` shipped alone is red on every row and shipped against stubs is green over empty sections. Standalone it was deliberately red on G19's gapless check and on its own floor; **rebased onto G39 it is 795 of 795**. ⚠️ `gate-register`'s **first red was not planted** — G37 (`agents-import`) had landed out-of-band with no register entry, 37 entries against 38 rows. See [the log](./log/2026-08-20-the-register-gate-found-a-row-nobody-triaged.md) |
 | **And stacked on that** | G43 (`ignored-mutants`) on `claude/mattpocock-skills-154-163-07f854`, based on G42's branch — **the rollout's seventh and last row**, and the only one asserting a field of `stryker.floors.json`. The floors file lands with it: every scope **`unarmed`**, dated, `ignored` at 0, and one hash of the score-affecting Stryker configuration each CI run now stamps into its record. ⚠️ **Built is not armed and nothing here arms anything** — arming is a human judgement per scope after that scope's 20-run window fills, the windows start together, and there is no single moment at which the ratchet becomes armed. ⚠️ **The window starts at zero on landing**, because every record already on the branch predates the config stamp and an unstamped run cannot be shown to have been scored under these floors |
@@ -125,6 +125,52 @@ copies fails in the safe direction either way. No `docs/gates.md` row — it is 
 clause in an existing pre-flight, under G20 — but the **lesson** is there, under
 *G2 in full*, where the canary rule's "cannot pass vacuously" is true of
 `gate:public` and false of the caller that publishes.
+
+**2026-08-22 — the `csp` rule, and no new row again**
+([#127](https://github.com/mephistopheles4/stacks/issues/127),
+[ADR-0065](./adr/0065-the-csp-is-generated-not-written.md)). Every built page
+carries a `Content-Security-Policy`, and the rule holds each one to the **whole**
+directive set in `CSP_DIRECTIVES`, by name and by source, hashes excluded. Per
+page, for the reason `robots` is per page. The clean path prints `2 page(s), every
+one policed to 7 pinned CSP directive(s), connect-src 'self'`. **The set is
+closed**: a directive outside it fails too, because a specific fetch directive
+overrides `default-src` for its own resource type. Six `csp` defects planted in
+G20, each firing that rule alone, and two more under `headers`, one per framing
+control; three existing fixtures needed the meta tag added or they double-fired,
+which is the maintenance cost of every rule that reads the built HTML.
+
+⚠️ **The first version pinned two directives and left four deletable**, and review
+caught it: `default-src 'none'`, `img-src`, `base-uri` and `form-action` could
+each have been dropped from `astro.config.mjs` with every gate green and the page
+pixel-identical, while `_headers` and ADR-0065 went on describing the policy they
+no longer had. **That is the issue's own failure shape inside the commit closing
+it** — and it recurred twice more: in this very entry, which described the narrow
+rule and quoted an observation string the code had stopped printing; and one
+level out, where the rule walked its own list and never looked at what *else* the
+policy declared, so `script-src-elem` — which takes precedence over `script-src`
+for `<script>` elements — would have widened it with every pinned directive still
+exactly right. **Three passes, and each one found that checking the named thing
+had missed the unnamed one.**
+
+⚠️ **The policy is a generated `<meta http-equiv>`, not a header** — Astro
+computes `style-src` hashes per page, and `/attribution` carries an inline
+`<style>` the index does not, so a hand-written copy in `_headers` is wrong for
+one page the day it is written and wrong for both the day a stylesheet crosses
+Astro's 4kB threshold. The rule therefore reads `dist/**/*.html`, and
+`pnpm smoke:render` — real Chrome, real HTTP — enforces the policy for free,
+which a `_headers` policy could never be, since Cloudflare Pages is the only
+thing that reads that file. `frame-ancestors` cannot ride in a meta tag, so
+`_headers` carries it as a policy of one directive beside `X-Frame-Options: DENY`
+— **disjoint from the generated policy rather than a second copy of it**, which is
+why a fuller header policy was refused; both framing controls are asserted.
+
+⚠️ **`script-src` names `https://static.cloudflareinsights.com`**, and the
+reasoning is in the log entry below rather than here: the live zone injects a Web
+Analytics beacon this repo does not contain, and the beacon reports
+**same-origin**, so `connect-src` was never the question. Refusing it is a real
+choice and not a no-op — the analytics would stop — but it is a policy file
+overriding a zone setting for no privacy gain, and the dashboard is where that
+belongs. Pinned as a set so a second third-party origin cannot arrive unnoticed.
 
 ### Phase 4 evidence
 
@@ -237,6 +283,7 @@ episodes were written up out of sequence; they are listed by date here, so
 - 2026-08-19 — [The ratchet lands disarmed, and the guard that would have taught the wrong lesson](./log/2026-08-19-the-ratchet-lands-disarmed.md) — G43 (`ignored-mutants`), the floors file, and the four deploy refusals with no override. ⚠️ The config-hash guard **would have refused the first deploy after landing**, because every record on the branch predates the stamp — the exact *teach them how to get past it* failure the no-override decision exists to prevent; it now refuses only once something is armed, and the derivation is what actually shuts that route. ⚠️ **A review names an instance; the repair must cover the class** — four times in one day a fix was scoped to the example a reviewer gave and the twin was found later by somebody else; the query for the rest of the class is almost always one command. ⚠️ **Nobody finds their own defects by re-reading** — every self-found defect across the three branches came from *executing* (planting one, running a refusal by hand, pointing a check at real data), and every defect found by reading was found by somebody else. **Review substitutes for the reading, not for the running.** A plant table inherits its author's picture of the file, so it asks for the wrong value and never the right value in an unexpected shape. ⚠️ Also: `git reset --soft <branch-name>` to squash **silently reverted eleven lines of a neighbouring ticket's work** — a soft reset re-parents onto a tip that moved, and the reverted lines were prose, so nothing could have gone red. ⚠️ The merge half of `metrics.yml` scores nothing, so counting its records would have left every scope with a hole and unarmable forever. Also: a `const` in the temporal dead zone that no test could see, and why the counter must match a comment rather than the words
 - 2026-08-20 — [The register gate found a row nobody triaged](./log/2026-08-20-the-register-gate-found-a-row-nobody-triaged.md) — G40 `action-pins`, G41 `gate-register` and G42 `dependency-audit` in one commit. ⚠️ `gate-register`'s **first red was not planted**: `agents-import` (G37) had landed out-of-band with no register entry, 37 entries against 38 rows, and nothing could have noticed before. Three spec claims about the tree measured false — the row numbers, the one-row exemption that is ten, and *exactly one disposition* that the file falsifies 19 times
 - 2026-08-22 — [The summary that grew a byte per mutant, and the gate that was reading a clock](./log/2026-08-22-the-summary-that-grew-a-byte-per-mutant.md) — the nightly went red on **two independent faults on one night**, and the reported one was not why. ⚠️ **G17 had been standing on the dated bootstrap**: it drives the real deploy at a scratch repository, step 0b was inserted between the branch guard and its sentinel, a scratch repository holds no records, and the exemption expired on a calendar day — four assertions green for three days, then red on `main`, on every open pull request and on the nightly, at a commit whose only changes were documentation. G39's own docblock had closed that exact trap on G39's row three days earlier. **That half is [#209](https://github.com/mephistopheles4/stacks/pull/209)'s**, reached independently by two sessions within the hour — which the tracker cannot prevent, because every session here authenticates as one account. ⚠️ Separately, **Vitest's `github-actions` reporter appends to `$GITHUB_STEP_SUMMARY` once per `onTestRunEnd`** — once under `pnpm test`, once **per mutant** under Stryker: 923 bytes over four mutants, **1054k over ~5900**, past GitHub's 1024k. Invisible locally, because `GITHUB_ACTIONS` is unset on a laptop and the reporter is never added. G44 (`stryker-reporters`) is the row
+- 2026-08-22 — [The CSP lands, and the site was already loading somebody else's script](./log/2026-08-22-the-csp-and-the-beacon-that-was-already-there.md) — [#127](https://github.com/mephistopheles4/stacks/issues/127)'s `csp` rule joins `PUBLIC_BUILD_RULES`; no new gate row, G20's observed-red obligation discharged by joining the roster. ⚠️ **Two of the issue's own premises were false when it was written.** The shelf's "perfect same-origin record" is a property of the *repository*: the live origin serves a second `<script>` — Cloudflare Web Analytics, injected at the edge, on both pages, present in no file here — findable only by asking the origin, never by grep. The first instinct, *block it to enforce #119*, was wrong twice: the injected beacon reports **same-origin** to `/cdn-cgi/rum`, so `connect-src 'self'` was never in tension with it; and #119 rejected a beacon *stacks would build*, its own correction already accepting that edge-injected markup is observed by nothing. ⚠️ **And "blocking removes nothing" — written into five documents before review caught it — is false**: the browser refuses the script and the analytics stop. The argument that holds is narrower: blocking is a policy file overriding a zone setting for no privacy gain, since the beacon reports same-origin and carries nothing derived from the owner's reading. ⚠️ **Reading #127's one-clause compression of #119 instead of #119 produced a confident wrong recommendation.** The policy is a generated per-page `<meta http-equiv>` rather than a hand-written header, because Astro's 4kB inlining threshold means two pages of one build need different `style-src` hashes ([ADR-0065](./adr/0065-the-csp-is-generated-not-written.md)) — and `smoke:render` therefore enforces it for free, which no `_headers` policy could ever be. Also: the security headers were keyed `/`, so `/attribution` was answering Cloudflare's default `Referrer-Policy`, the robots rule's own history repeating
 
 ## Notes to the next session
 
