@@ -50,8 +50,39 @@ verifyDepsBeforeRun: warn
 # for an advisory with no fix published; here the fix existed and only needed
 # naming. Remove this the moment the tree carries 3.3.18 without help, which
 # happens as soon as a postcss release requiring `^3.3.18` reaches the lockfile.
+
+# GHSA-q8mj-m7cp-5q26, moderate: qs 6.11.1–6.15.1 throws a TypeError on
+# null/undefined entries in comma-format arrays under `encodeValuesOnly`, which
+# is a remotely triggerable crash for anything parsing untrusted query strings.
+# It arrives one way — `@stryker-mutator/core` > `typed-rest-client` — and that
+# package pins `qs` at exactly `6.15.1`, so there is no update path at Stryker 9
+# and no `pnpm update` that reaches it. Stryker 10 is the version whose
+# `typed-rest-client` 3.x carries `qs` 6.15.3 on its own; taking a major bump of
+# the mutation runner to answer a moderate advisory is the larger risk, and G38
+# scores every scope it would move.
+#
+# ⚠️ **Nothing in CI was ever going to catch this.** `pnpm audit` runs at
+# `--audit-level=high` (see the note at the foot of this file), so a `moderate`
+# passes it by construction — the `audit` job was green on every red build this
+# week. It surfaced as a GitHub Dependabot alert, which is a different
+# instrument reading a different threshold, and the two disagreeing is the
+# normal case rather than a fault.
+#
+# `^6.15.2` rather than `6.15.2`, for the reason the nanoid block above learned
+# the hard way: the fix is *first* in 6.15.2 and an advisory's range is not a
+# stable statement of scope, so a caret admits the next patch without a second
+# red build. It resolves to 6.15.3, which is what `typed-rest-client` 3.1.0 ships
+# with — so the version this pins is one its own consumer already runs, rather
+# than a combination nobody has tried. Remove this when Stryker's
+# `typed-rest-client` reaches 3.x and the lockfile carries a fixed `qs` unaided.
+#
+# This deliberately reaches every `qs` in the tree rather than the scoped
+# `typed-rest-client>qs`. There is exactly one today, and the bare form keeps a
+# second arrival from landing on the vulnerable line unnoticed — the failure the
+# nanoid entry describes, where a pin was correct and the tree moved anyway.
 overrides:
   nanoid: '^3.3.18'
+  qs: '^6.15.2'
 
 # CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
 #
