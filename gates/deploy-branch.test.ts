@@ -175,6 +175,18 @@ function currentBranch(): string {
 /** The vault refusal — proof the run got past the branch guard. */
 const PAST_THE_GUARD = 'STACKS_VAULT points at nothing';
 
+/**
+ * The trend-record line — proof the run got past the branch guard on a
+ * checkout this file cannot plant a record into.
+ *
+ * Step 0b prints this before it judges anything, so it appears whether the
+ * record is fresh, stale or absent; and the guard's `fail()` never returns, so
+ * seeing it at all means the guard allowed the run. That makes it the sentinel
+ * for the one test here that reads the real checkout, where `PAST_THE_GUARD`
+ * lies past a check the environment decides.
+ */
+const PAST_THE_STEP = 'trend record —';
+
 describe('G17 — deploy publishes main', () => {
   it('reaches the branch decision at all', () => {
     // Everything below distinguishes two messages. If the script began failing
@@ -265,7 +277,26 @@ describe('G17 — deploy publishes main', () => {
     const branch = currentBranch();
     const { output } = deploy();
 
-    if (branch === 'main') expect(output).toContain(PAST_THE_GUARD);
-    else expect(output).toContain(branch);
+    // ⚠️ **Not `PAST_THE_GUARD`, and the difference is the whole bug this
+    // line was written for.** The vault refusal sits past G39's freshness
+    // check, which reads a mirrored `refs/remotes/origin/metrics` that **no
+    // `actions/checkout` has** — so on a CI checkout of `main` the run
+    // refuses on the record and never reaches the vault at all. The scratch
+    // repositories above can plant that mirror; this one is the real
+    // checkout by definition and cannot. So the sentinel moves *upstream* of
+    // every environment-dependent check to the one line that is printed
+    // unconditionally at step 0b — which `fail()` never returning makes
+    // proof that the guard let this run through, the only thing this row
+    // claims.
+    //
+    // It was invisible until it was red on `main` and nowhere else: CI on
+    // `pull_request` is never on `main`, so no pull request can run this
+    // branch of it. The old sentinel also held only while the owner's local
+    // mirror was fresh, and would have failed on their machine after four
+    // quiet days.
+    if (branch === 'main') {
+      expect(output, 'on main, the guard must let the run reach step 0b').toContain(PAST_THE_STEP);
+      expect(output, 'the branch guard must not be what stopped it').not.toContain('not main');
+    } else expect(output).toContain(branch);
   });
 });
