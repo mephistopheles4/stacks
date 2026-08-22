@@ -50,7 +50,10 @@ contract, and neither of these is one.
 - [`.claude/skills/phase-gate/SKILL.md`](.claude/skills/phase-gate/SKILL.md) —
   closing out a phase: run the gate, show the output, record before committing.
 - [`.claude/commands/crfix.md`](.claude/commands/crfix.md) — `/crfix`, which
-  works a CodeRabbit review to completion. It runs the `coderabbit:autofix`
-  skill for the fetching and the untrusted-input handling, and overrides three
-  of its defaults: wait for the review rather than exiting, reply on each thread
-  rather than posting one summary, and take a single approval for the batch.
+  works a CodeRabbit review to completion: wait for it, evaluate each finding,
+  fix what holds up, reply on each thread. **It is self-contained on purpose.**
+  The `coderabbit:autofix` skill does the fetching faster, but that skill ships
+  with a plugin **this repo does not install** — nothing here declares one — so
+  the command names it as optional and carries the whole procedure itself.
+  Invoking a skill that is absent fails outright, which is the trap this note
+  exists to keep anyone from walking into.
