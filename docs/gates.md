@@ -1315,6 +1315,21 @@ became false three days after the spine landed.
 **Observed red, five ways.** See [`docs/gate-register.md`](gate-register.md), the
 G39 entry.
 
+⚠️ **The calendar it could not plant went off in G17 instead.** The paragraph
+above was written for G39's own assertions, and G17 (`deploy-branch`) sat one
+check *before* the sentinel both files share — a scratch repository with no
+record at all was fine for three days as the dated bootstrap, and on day three
+(2026-08-22) it was a stale one. Four rows went red on `main`, on every open
+pull request, and on the nightly — which runs the suite before it emits a
+record, so the run whose record would have cleared the refusal was the one
+that could not write it. Nothing in the diff that landed that day touched
+either file; Dependabot's bumps were the first to show it. The fix is G39's
+own idiom applied upstream: `repoOn` now plants a fresh four-series nightly at
+`refs/remotes/origin/metrics`, so a run that crosses the branch guard reaches
+the vault refusal and not the freshness one. The lesson is general — **a test
+whose sentinel lies past a dated check inherits that check's calendar**, and
+every fixture on the path has to satisfy the checks it does not mean to test.
+
 ## G2 in full — the public build gate
 
 The five below are what G2 added to `gate:public`. Since G20 they are no longer

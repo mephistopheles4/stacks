@@ -21,11 +21,50 @@
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
+import { GATED_SERIES } from '../scripts/lib/metrics-read.ts';
+import { RECORD_DIR } from '../scripts/lib/metrics-record.ts';
+import { renderMetrics, type RunFacts } from '../scripts/lib/metrics.ts';
 import { readRepoFile, REPO_ROOT } from './repo.ts';
+
+/**
+ * A nightly record written a minute ago — every gated series, so G39
+ * (`metrics-freshness`) has nothing to refuse on.
+ *
+ * ⚠️ **This gate expired once without it.** The freshness check runs *before*
+ * the vault refusal this file uses as its sentinel, and for three days after
+ * the spine landed it let an empty store through as the dated bootstrap. On
+ * day three every scratch repository here — which held no record at all —
+ * became a stale one, and four rows went red on a calendar rather than a diff:
+ * on `main`, on every pull request, and on the nightly whose record would have
+ * cleared it, which runs this suite first and so could not write one. G39's
+ * own header had named the trap — *a green that quietly becomes false three
+ * days after the spine landed* — for its own assertions, and this file was the
+ * one it did not reach.
+ */
+function freshNightly(): { name: string; document: string } {
+  const timestamp = Math.floor(Date.now() / 1000) - 60;
+  const sha = 'cccccccc';
+  return {
+    name: `${String(timestamp)}-${sha}.prom`,
+    document: renderMetrics({
+      timestamp,
+      commit: sha.repeat(5),
+      event: 'schedule',
+      runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/1',
+      // Nobody measured a window for a record this test invented.
+      prWindow: 'unknown',
+      expected: GATED_SERIES,
+      mutationScore: [{ scope: 'packages/core/src', score: 0.7171 }],
+      gateSuiteRuntime: 10,
+      mutationRunRuntime: 1275,
+      liveExclusions: { live: 0, declared: 27 },
+    } satisfies RunFacts),
+  };
+}
 
 /**
  * A throwaway repository sitting on `branch`, for the child's git to answer
@@ -42,19 +81,38 @@ import { readRepoFile, REPO_ROOT } from './repo.ts';
  * `GIT_DIR` redirects only *which repository git reads*. The script is the real
  * one, the guard is the real guard, and git really does resolve the branch —
  * nothing is stubbed except the checkout being asked about.
+ *
+ * It also carries a fresh trend record at `refs/remotes/origin/metrics` — the
+ * mirror `pnpm trend:sync` leaves behind, planted with `update-ref` exactly as
+ * G39 does — so the run that crosses the branch guard reaches the vault
+ * refusal rather than the freshness one. Each test here wants to observe one
+ * decision, and this is the other decision on the path to the sentinel.
  */
 function repoOn(branch: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'stacks-branch-'));
   const git = (...args: string[]): void => {
     execFileSync('git', args, { cwd: dir, stdio: 'ignore' });
   };
+  const commit = (message: string): string => {
+    git('add', '-A');
+    git('-c', 'user.name=gate', '-c', 'user.email=gate@example.invalid', 'commit',
+        '--allow-empty', '-m', message, '--quiet');
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+  };
   git('init', '--quiet');
   // An unborn branch has no HEAD to abbreviate — `rev-parse` fails, and the
   // guard treats a git failure as "not a checkout" and allows the deploy. So
   // the repo needs a commit before the branch name means anything.
-  git('-c', 'user.name=gate', '-c', 'user.email=gate@example.invalid', 'commit',
-      '--allow-empty', '-m', 'branch fixture', '--quiet');
+  commit('branch fixture');
   git('branch', '-M', branch);
+
+  const record = freshNightly();
+  mkdirSync(join(dir, RECORD_DIR), { recursive: true });
+  writeFileSync(join(dir, RECORD_DIR, record.name), record.document, 'utf8');
+  git('update-ref', 'refs/remotes/origin/metrics', commit('records'));
+  // The record is on the mirrored ref, not on the branch under test — the
+  // working tree goes back to the fixture it was, and HEAD stays on `branch`.
+  git('reset', '--hard', '--quiet', 'HEAD~1');
   return dir;
 }
 
