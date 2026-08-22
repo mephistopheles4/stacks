@@ -4730,6 +4730,89 @@ counts. No report means a refusal that names the scope, the score and the floor
 and stops there — degraded rather than silent, on section 0b's own rule that *no
 report is a print, never a silence*.
 
+### G44 — `stryker-reporters`
+
+**Gate:** [`gates/stryker-reporters.test.ts`](../gates/stryker-reporters.test.ts)
+**Date:** 2026-08-22
+**Triaged at landing**, and by now enforced rather than remembered: G41
+(`gate-register`) is red the moment a row lands without an entry, which is how
+this one came to be written — the row went in first and the suite said so.
+
+⚠️ **The row exists because of a defect in CI that no local run could produce.**
+Vitest adds its `github-actions` reporter to a reporter list that resolved
+**empty**, and that reporter's job-summary half appends to
+`$GITHUB_STEP_SUMMARY` on every `onTestRunEnd`. A mutation run is thousands of
+test runs through one Vitest instance, so the append fired once per mutant:
+**923 bytes over four mutants**, **1054k over ~5900**, and the nightly of
+2026-08-22 logged `$GITHUB_STEP_SUMMARY upload aborted, supports content up to a
+size of 1024k, got 1054k`. The runs before it stayed under the cap and uploaded
+most of a megabyte of six repeated lines, which is the *"really big and lags"*
+the owner reported from a browser.
+
+- **Weakening** — **clean; this row has no allowlist and no exemption.** Two
+  clauses, both unconditional. What it deliberately does *not* assert is the
+  root `vitest.config.ts`: its single append is the reporter working as
+  intended, and gating the *absence* of a reporter list there would freeze a
+  behaviour nobody chose. `declined`, and stated in the spec rather than left as
+  a gap a reader has to notice.
+- **Satisfying the letter** — **exposed, and bounded rather than closed.**
+  `reporters: ['json']` passes and is a perfectly silly thing to write; the
+  clause is *non-empty*, because non-empty is the exact condition Vitest's
+  branch tests and anything narrower would be this gate inventing a policy the
+  defect does not support. ⚠️ **`reporters: []` is the case that reads as a
+  declaration and is not one**, which is why the clause counts with
+  `expectFound` instead of asking whether the key is present — planted, red.
+  `accepted`.
+- **Routing around** — **exposed, and one route is closed by clause 1.**
+  Repointing `vitest.configFile` at another config leaves the declaration
+  standing in a file Stryker never loads; that is red, planted. ⚠️ **The route
+  still open is the environment**: a step, action or wrapper that sets
+  `GITHUB_ACTIONS` for a run driving Vitest through some other config is outside
+  everything this reads. `accepted` — the surface it would need is the whole of
+  `.github/`, and G40 already sweeps that for a different property.
+- **Vacuous green** — **clean, and floored rather than trusted.** The reporter
+  clause floors the list at 1 through `expectFound`, so a restructured config
+  that stops parsing fails loudly instead of passing over an empty read; the
+  wiring clause compares an imported value against an exact string rather than
+  grepping for one. Both planted red, and the third clause — that the
+  declaration is written *in* the file carrying its argument — went red with the
+  first.
+- **Decay** — ⚠️ **exposed, named, and the most likely thing here to rot.**
+  The gate proves the *condition*, never Vitest's honouring of it: that the
+  auto-append happens only to an empty list is third-party behaviour in a
+  released package, and a version bump could move it without anything here going
+  red. There is no offline way to observe a reporter list resolved under an
+  environment variable that a local run does not set — `cover_source`'s stated
+  limit and G40's, reached a third time. `accepted`, with the remedy named
+  below.
+
+**Rank:** not ranked. This row post-dates all four bands; the bullets above are
+the same five questions asked at landing.
+
+**Observed-red line:** **three plants, and one real failure that was not
+planted.** The real one is the nightly itself — run
+[32550244145](https://github.com/mephistopheles4/stacks/actions/runs/32550244145),
+`upload aborted … got 1054k`, on a commit whose only changes were to
+documentation. The plants, each restored green afterwards:
+
+| | |
+| --- | --- |
+| **delete `reporters`** | **red, twice** — *"extraction found 0 reporters declared in vitest.stryker.config.ts"*, and the in-file clause with it |
+| **`reporters: []`** | **red** on the same clause. The case a presence check would have passed |
+| **`vitest: { configFile: 'vitest.config.ts' }`** | **red** — *"Stryker pointing anywhere else silently restores the per-mutant append"* |
+
+**Disposition: `gated`.** The defect is fixed and the fix is now red-capable
+from three directions.
+
+**Remedy (named, not built):** the decay verdict's. A measurement rather than a
+gate — after a Vitest major, run one small-scope `stryker run` with
+`GITHUB_ACTIONS=true` and `GITHUB_STEP_SUMMARY` pointed at a scratch file, and
+check it is still zero bytes. That is four seconds by hand and cannot be a gate
+here, because it needs a mutation run and G21 plus the suite's runtime budget
+put one out of reach of `pnpm test`.
+
+---
+
 ## ⚠️ `auditConfig.ignoreGhsas` — the category-1 verdict this rollout owed
 
 **Not a row, and it does not get one.** It is the escape hatch every other

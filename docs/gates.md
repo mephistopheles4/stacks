@@ -359,6 +359,7 @@ paragraph can be; nothing here goes red on it.)
 | **G28** | `no-board-collisions` | no book's board passes through its neighbour's | `packages/site/src/shelf/placement.test.ts` | ✅ |
 | **G39** | `metrics-freshness` | the trend record is fresh **per series**, because one series going quiet while the others stay healthy is the failure the record exists to expose — and an aggregate check cannot see it. A gated series with **no sample at all** refuses exactly as a stale one does, which makes the check parse samples rather than filenames | `gates/metrics-freshness.test.ts` — the refusal is `pnpm deploy:site`'s, driven onto a scratch repository via `GIT_DIR` on G17's idiom; the dated half is `scripts/lib/metrics-read.test.ts`, because the script cannot be told what day it is | ✅ |
 | **G42** | `dependency-audit` | a dependency with a known high or critical advisory reaching `main` | the `audit` job in `.github/workflows/gates.yml`, running `pnpm audit --audit-level=high` — asserted by the `action-pins` spec, which reads the job, its threshold, and its place in the `gates` aggregator's `needs:`. Promoted here from a table row G19 (`constitution-scoreboard`) structurally cannot read — its `TABLES` constant names three tables and that was not one of them — where the paragraph describing it would have sat green and false the day the job was deleted | ✅ |
+| **G44** | `stryker-reporters` | the mutation run's Vitest reporters ↔ the ones a laptop resolves | Vitest appends its `github-actions` reporter **only to a list that resolved empty**, and that reporter's job summary appends to `$GITHUB_STEP_SUMMARY` once per `onTestRunEnd` — once under `pnpm test`, once **per mutant** under Stryker. Measured: 5 appends / 923 bytes over a four-mutant scope, **1054k over the real ~5900**, past the 1024k GitHub accepts. ⚠️ **Nothing local can catch it**: `GITHUB_ACTIONS` is unset on a developer machine, so the reporter is never added and the file is never written | `gates/stryker-reporters.test.ts` — two clauses, because the option is worth nothing in a file Stryker does not load: the `vitest.configFile` wiring, then a **non-empty** `reporters`. ⚠️ It proves the condition, never Vitest's honouring of it — G40's stated limit, reached a third time | ✅ |
 
 **G21 is the first row here written for a rule that two files already claimed
 was true.** `AGENTS.md`'s Phase 1 gate says "use cached API fixtures, no live
@@ -1314,6 +1315,21 @@ became false three days after the spine landed.
 
 **Observed red, five ways.** See [`docs/gate-register.md`](gate-register.md), the
 G39 entry.
+
+⚠️ **The calendar it could not plant went off in G17 instead.** The paragraph
+above was written for G39's own assertions, and G17 (`deploy-branch`) sat one
+check *before* the sentinel both files share — a scratch repository with no
+record at all was fine for three days as the dated bootstrap, and on day three
+(2026-08-22) it was a stale one. Four rows went red on `main`, on every open
+pull request, and on the nightly — which runs the suite before it emits a
+record, so the run whose record would have cleared the refusal was the one
+that could not write it. Nothing in the diff that landed that day touched
+either file; Dependabot's bumps were the first to show it. The fix is G39's
+own idiom applied upstream: `repoOn` now plants a fresh four-series nightly at
+`refs/remotes/origin/metrics`, so a run that crosses the branch guard reaches
+the vault refusal and not the freshness one. The lesson is general — **a test
+whose sentinel lies past a dated check inherits that check's calendar**, and
+every fixture on the path has to satisfy the checks it does not mean to test.
 
 ## G2 in full — the public build gate
 
