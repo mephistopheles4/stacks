@@ -136,7 +136,7 @@ function tabledTrends(): string[] {
   );
 
   const names = body.map((line) => (tableCells(line)[at] ?? '').replace(/`/g, '').trim());
-  expectFound(names, 'rows in the Trends table of docs/gates.md', 8);
+  expectFound(names, 'rows in the Trends table of docs/gates.md', 16);
   return names;
 }
 
@@ -171,8 +171,14 @@ describe('G36 — the emitted series and the Trends table agree', () => {
     // Both sides are extractions, and an extraction that stops matching reports
     // an empty set — which trivially satisfies every "each of these is in that"
     // below. Asserted before the comparisons rather than trusted by them.
-    expectFound(trendNamesIn(renderMetrics(completeRun())), 'series in a rendered run', 8);
-    expectFound(tabledTrends(), 'rows in the Trends table', 8);
+    //
+    // ⚠️ **The floor is a minimum and it tracks `TREND_SERIES`.** Eight
+    // original plus this branch's eight duplication names. A stale-low value is
+    // safe and a stale-high one is red, so a branch adding series raises it to
+    // what *its own* tree produces and whoever rebases second adds theirs —
+    // four sessions were appending to this list at once when it went to 16.
+    expectFound(trendNamesIn(renderMetrics(completeRun())), 'series in a rendered run', 16);
+    expectFound(tabledTrends(), 'rows in the Trends table', 16);
   });
 
   it('gives every emitted series a row', () => {

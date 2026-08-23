@@ -22,7 +22,7 @@ That reproduces exactly. It is also the special case.
 follows the closing directive:**
 
 | After the closing directive | jscpd removed |
-|---|---|
+| --- | --- |
 | nothing — the block ends the file | **5**, the block |
 | a blank line, or a comment | **6**, the block *and* the trailing line |
 | **one line of code** | **0 — nothing at all** |
