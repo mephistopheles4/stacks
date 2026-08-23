@@ -636,8 +636,13 @@
         "It is a new dependency, and `AGENTS.md` requires a record under `docs/adr/` for one.",
         "It also formats the CSS inside those files, which is every stylesheet rule this repository has. That is real coverage, not a rounding error.",
         "Measured, 2026-08-23: the plugin changes 37 lines across the 4 files. The whole contract stayed green — 1055 tests, `build`, `gate:public` and `smoke:render`.",
+        "⚠️ **That green is worth less than it looks, and G7 is a fifth gate this breaks.** Found by #238. `Shelf.astro`'s script block today is one import and `start();` — one non-import statement. G7's own header describes the shape it was written for as *two lookups, one guard, one call*, and that shape is no longer in the tree. Formatting a degenerate block proves almost nothing.",
+        "⚠️ **Measured here at `printWidth: 100`, which is this box's recommendation rather than #238's default 80.** G7's `GUARD = /^if\\s*\\(.*\\)\\s*\\{$/` needs the whole condition on one line. A two-element guard is 75 characters, survives formatting, and G7 passes 5/5. A **three**-element guard is 108 characters, Prettier splits it over five lines, and G7 fails 2 of 5. The planted block is green before formatting and red after, so the formatter is the whole cause.",
+        "⚠️ **The second failure is the worse one: G7's cap counts lines, not statements.** `block.lines` is `split('\\n')` filtered for non-empty, so one split guard becomes five. The planted block holds **5** real statements against a cap of 6 and is reported as **9**. Its message reads *\"Move the bootstrap into a .ts module\"*, which names the wrong cause — nobody added logic, the formatter added newlines.",
+        "**This is a trap rather than a break.** Nothing is red today. It arms for whoever adds a third element, which G7's header explicitly invites: the cap of 6 *\"leaves room for one more element\"*. `printWidth: 100` buys about twenty characters of headroom over 80 and does not remove it.",
         "⚠️ Measured, and it is the one change of a kind Prettier never makes elsewhere: the plugin rewrote `<span … set:html={markSvg}></span>` to a self-closing `<span … />`, and moved three comments off the line of the tag they hug. Astro compiles the self-closing form correctly and the brand SVG still reaches `dist/index.html`, so this is a recorded hazard rather than a fault.",
-        "The hazard has a name: this plugin edits markup semantics, while the rest of the formatter edits code tokens. `smoke:render` is what would catch a real one."
+        "The hazard has a name: this plugin edits markup semantics, while the rest of the formatter edits code tokens. `smoke:render` is what would catch a real one.",
+        "**So taking this option honestly means repairing G7 in the same change** — make `GUARD` tolerate a wrapped condition, and count statements rather than lines. That is the same shape as `gr-first` one row over: the formatter is fine and the gate reading it is brittle."
       ]
     },
     "astro-leave": {
@@ -646,7 +651,9 @@
       "notes": [
         "Measured: zero `.astro` files changed under every configuration probed. Prettier skips them silently, with no warning and no error.",
         "⚠️ Silence is the hazard, not the hole. `pnpm format` reports success while it never opened a quarter of the site's source, and nothing says so.",
-        "This repository already treats `.astro` as an unchecked population: `astro check` cannot run under TypeScript 7, which is why no logic may live in those files. The formatter hole falls in the same place, and #238 is the ticket that owns it."
+        "This repository already treats `.astro` as an unchecked population: `astro check` cannot run under TypeScript 7, which is why no logic may live in those files. The formatter hole falls in the same place, and #238 is the ticket that owns it.",
+        "**Measured support arrived from #238, and it is the strongest thing holding this cell.** Adding the plugin arms a G7 failure for whoever next writes a three-element guard, and the red they get says *\"Move the bootstrap into a .ts module\"* — the wrong cause. Leaving `.astro` out costs four unformatted files and arms nothing.",
+        "**The four files are also the least valuable population to format.** G7 exists to keep logic out of them, so what a formatter would tidy there is markup a human reads and 979 lines that no longer hold a program."
       ]
     },
     "astro-refuse": {
