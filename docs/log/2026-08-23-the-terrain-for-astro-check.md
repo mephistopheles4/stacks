@@ -193,6 +193,11 @@ turned out to hold six of the addresses. Twelve are listed below and six more
 are in the register, called out beneath the table. Every one must move in the
 landing commit:
 
+⚠️ **The line numbers are as of `2f672b1` and are a reading aid, not a
+contract** — [#259](https://github.com/mephistopheles4/stacks/pull/259) is
+already rewriting `packages/site/src/shelf/boot.ts` above one of them. Re-run
+the grep at the rebase and work from its output.
+
 | Address | What it says |
 | --- | --- |
 | `AGENTS.md:153` | "`.astro` files are NOT typechecked (`astro check` cannot run under TypeScript 7 yet)" |
