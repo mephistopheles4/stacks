@@ -2012,10 +2012,15 @@ never built.** G46 (`astro-types`) installed `@astrojs/check@0.9.10` on
 whole block is about stopped being G7's warrant instead of being dated and
 asserted. G7's row now rests on **coverage**: `.astro` sits outside one scope
 list that both the mutation counter and the complexity counter read. The
-docblock at `gates/astro-no-logic.test.ts:4-5` and the failure message at `:165`
-were rewritten in that commit, along with `AGENTS.md` and fifteen other
-addresses — swept as a class rather than fixed where a reviewer pointed. See
-[ADR-0075](adr/0075-astro-check-is-the-fifth-checker-and-it-runs-in-the-build.md)
+docblock at the top of `gates/astro-no-logic.test.ts` and the failure message in
+its banned-token clause were both rewritten in that commit, along with
+`AGENTS.md`, both tsconfigs, three site-module comments and the specs — swept as
+a class rather than fixed where a reviewer pointed. ⚠️ **Named by clause rather
+than by line, and given no total**: the decay block above cites `:4-5` and
+`:165`, which the same commit moved, and the sweep was counted twice before
+landing and was short both times. `git grep -n -iE "astro check|@astrojs/check|not typechecked|cannot run under"`
+is the artifact; a number here would be the third one to go stale. See
+[ADR-0075](adr/0075-astro-check-is-the-checker-for-astro-files.md)
 and the `### G46 — \`astro-types\`` entry, whose own **Decay** verdict is this
 one's successor: the same shape of claim, this time asserted by a clause that
 reads the compiler pin.

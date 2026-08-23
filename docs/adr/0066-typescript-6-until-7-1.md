@@ -144,8 +144,13 @@ and is kept as fog on
   > paragraph waited on was made: `astro check` runs inside `pnpm build` and
   > takes a row. `AGENTS.md`'s note moved in that commit, along with the root
   > `tsconfig.json` comment, G7's own docblock and failure message, and the
-  > three site-module comments carrying the same sentence — eighteen addresses,
-  > swept as a class rather than fixed where a reviewer pointed. **The
+  > three site-module comments carrying the same sentence — swept as a class
+  > rather than fixed where a reviewer pointed. ⚠️ **No total is given here on
+  > purpose**: the sweep was counted twice before the landing and was short both
+  > times, and a third figure written down would be the fourth confident number
+  > in a paragraph about claims that go stale. The grep is the artifact —
+  > `git grep -n -iE "astro check|@astrojs/check|not typechecked|cannot run
+  > under"`. **The
   > constitution's rule did not change**; only its reason did, from *`.astro` is
   > untypechecked* to *`.astro` is counted by nothing*.
   >

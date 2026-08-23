@@ -95,4 +95,5 @@ Two other files hold what these deliberately do not:
 | [0069](./0069-coverage-is-an-ingredient-not-a-goal.md) | Coverage is an ingredient, not a goal |
 | [0070](./0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md) | Stryker's type checker stays off until the compiler version is a hashed ingredient |
 | [0076](./0076-the-linter-is-type-aware-and-pinned.md) | The linter is type-aware, and every input to its verdict is pinned exact |
-| [0075](./0075-astro-check-is-the-fifth-checker-and-it-runs-in-the-build.md) | `astro check` is the checker for `.astro`, and it runs inside `pnpm build` |
+| [0075](./0075-astro-check-is-the-checker-for-astro-files.md) | `astro check` is the checker for `.astro`, and it runs inside `pnpm build` |
+>>>>>>> 6c761bc (fix(gates): the exclude glob is not why astro is untypechecked, and no total is restated)

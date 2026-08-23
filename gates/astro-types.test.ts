@@ -5,8 +5,14 @@
  * ## The gap this closes
  *
  * G7 (`astro-no-logic`) reads the `<script>` blocks of an `.astro` file as
- * text. The compiler does not read `.astro` files at all: the root tsconfig
- * excludes `**\/.astro` and lists only `.ts` sources. So the **frontmatter** —
+ * text. The compiler does not read `.astro` files at all, and the reason is the
+ * root tsconfig's **include** list, which names only `.ts` sources. ⚠️ **Not
+ * its `**\/.astro` exclusion, which is a different thing entirely**: that is a
+ * full-path glob whose last segment must be exactly `.astro`, so it excludes
+ * the *generated types directory* `packages/site/.astro/` and never matches a
+ * file called `index.astro`. Said precisely because the sibling comment in
+ * `packages/site/tsconfig.json` turns on the same distinction. So the
+ * **frontmatter** —
  * the fenced block at the top of every page, which is real TypeScript that
  * really runs at build time — was read by no gate and typechecked by nothing.
  *
@@ -29,16 +35,18 @@
  * That leaves the wiring, and a gate living only as a substring of one npm
  * script is exactly G45's finding: `--skip-gates` skipped the whole four-gate
  * contract and lived for nineteen of its twenty-one days in two lines of one
- * file, both the implementation. So three things are pinned, and each is
- * separately sufficient to un-wire the check:
+ * file, both the implementation. So **four clauses**, one per `it()` below, and
+ * each is separately sufficient to un-wire the check:
  *
  * 1. `packages/site`'s `build` script runs `astro check` **before** `astro
  *    build`. Order matters: after it, a red type error still ships a `dist/`.
- * 2. `@astrojs/check` is a dependency of that package, pinned exact. Without
+ * 2. The root `build` script still delegates to it, so `pnpm build` reaches
+ *    the check at all.
+ * 3. `@astrojs/check` is a dependency of that package, pinned exact. Without
  *    it `astro check` is not a command and the script fails for the wrong
  *    reason on a fresh checkout.
- * 3. The root `build` script still delegates to it, so `pnpm build` reaches
- *    the check at all.
+ * 4. `typescript` stays inside the range that checker supports — the coupling
+ *    the next paragraph but one explains.
  *
  * ⚠️ **It proves the wiring, never the checker's verdict** — G40's stated
  * limit and G44's, reached again. Nothing offline can make this file observe

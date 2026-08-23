@@ -15,7 +15,7 @@ below contradict a document in this tree, and one of them contradicts
 > ✅ **The block cleared the same evening, and the gate landed in this branch.**
 > [#259](https://github.com/mephistopheles4/stacks/pull/259) merged at
 > `bc59bf9`, and **G46** (`astro-types`) followed —
-> [ADR-0075](../adr/0075-astro-check-is-the-fifth-checker-and-it-runs-in-the-build.md).
+> [ADR-0075](../adr/0075-astro-check-is-the-checker-for-astro-files.md).
 > **Everything below is left as written**, because a terrain survey read after
 > the fact is worth more as a record of what was and was not known in advance
 > than as a tidy retrospective. Read the present tense as *"at `2f672b1`,
