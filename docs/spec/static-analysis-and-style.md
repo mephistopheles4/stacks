@@ -309,6 +309,17 @@ counter, swept from source by a gate at merge. **That is G43 (`ignored-mutants`)
 applied to a second tool**, and it is what dissolves the only surviving objection
 to capping the counts.
 
+⚠️ **That measurement is real and it is the special case — corrected at
+implementation, not re-decided.** jscpd honours a suppression block **only when
+no code follows it**: with the block ending the file it removes the block, with
+a blank line or a comment after it the trailing line too, and **with one line of
+code after it it removes nothing at all, silently**. Every earlier measurement
+here, [#237](https://github.com/mephistopheles4/stacks/issues/237)'s included,
+put the block at the end of a file. The counter is unchanged — it records the
+lines the source *declares*, which is what this section asks for — but
+*total-lines + ignored-lines* is an approximation rather than an identity. See
+[the log](../log/2026-08-23-the-suppression-that-suppresses-nothing.md).
+
 ⚠️ **`--ignore-pattern` reads like region suppression and is not.** Do not reach
 for it.
 

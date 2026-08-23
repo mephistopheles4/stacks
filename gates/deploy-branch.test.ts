@@ -69,6 +69,18 @@ function freshNightly(): { name: string; document: string } {
       complexity: [
         { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
       ],
+      duplication: {
+        scopes: [
+          {
+            scope: 'packages/core/src',
+            clones: 3,
+            duplicatedLines: 46,
+            ignoredLines: 0,
+            totalLines: 2381,
+          },
+        ],
+        tree: { clones: 34, duplicatedLines: 357, ignoredLines: 0, totalLines: 47_209 },
+      },
     } satisfies RunFacts),
   };
 }

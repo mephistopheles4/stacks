@@ -130,12 +130,12 @@ const ALLOWED = [
   // tallies them. Neither is vault data and neither is a path it derives — one
   // is a fixed filename, the other is passed in. It writes nothing.
   'scripts/lib/mutation-score.ts',
-  // Lists the *paths* of source files under `packages/`, `scripts/` and
-  // `gates/`, so G38 can ask whether every one of them is in a declared
-  // mutation scope. It opens none of them — the walk reads directory entries
-  // and file names and nothing else — and the root it walks is a parameter, so
-  // it does not know which tree it was pointed at, let alone where a vault is.
-  'scripts/lib/scope-check.ts',
+  // Opens the repository's own TypeScript to sweep it for jscpd suppression
+  // blocks, and reads back the JSON report jscpd wrote into a temp directory.
+  // Every path is either a repo source file it was handed or one it made
+  // itself; the root is a parameter, so it does not know which tree it was
+  // pointed at, and it writes nothing outside `os.tmpdir()`.
+  'scripts/lib/duplication.ts',
   // Reads `stryker.floors.json` — a fixed filename at the repo root — and opens
   // the mutated source files `scope-check.ts` just listed, to count disable
   // directives in them. Both are repo files, both paths are derived from the

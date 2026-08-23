@@ -86,6 +86,29 @@ function completeRun(): RunFacts {
       { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
       { scope: 'packages/cli/src', functions: 26, mass: 96, massOver10: 22, max: 14 },
     ],
+    // ⚠️ Present for the same reason, and it carries **both populations**:
+    // the Trends table names four scoped duplication rows and four whole-tree
+    // ones, and the tree four render from `tree` alone — a fixture with only
+    // `scopes` would emit four of the eight and look complete.
+    duplication: {
+      scopes: [
+        {
+          scope: 'packages/core/src',
+          clones: 3,
+          duplicatedLines: 46,
+          ignoredLines: 0,
+          totalLines: 2381,
+        },
+        {
+          scope: 'packages/cli/src',
+          clones: 0,
+          duplicatedLines: 0,
+          ignoredLines: 0,
+          totalLines: 702,
+        },
+      ],
+      tree: { clones: 34, duplicatedLines: 357, ignoredLines: 0, totalLines: 47_209 },
+    },
   };
 }
 

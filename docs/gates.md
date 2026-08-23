@@ -115,6 +115,7 @@ means the two have drifted.
 | **G40** | `action-pins` | `gates.yml`'s pinning argument ↔ every `uses:` line under `.github/` | a tag or a branch where a SHA is claimed, or a SHA whose version comment was deleted to satisfy the pin — and the file argues the case carefully while nothing holds it to its own argument. ⚠️ **It proves the shape of the reference, never the truth of the comment**: a hand-edit swapping in a different valid SHA under `# v7.0.1` passes cleanly, because that fact lives at GitHub and G21 forbids the suite from asking — `cover_source`'s failure verbatim, and there is no offline route because actions have no lockfile | `gates/action-pins.test.ts` — sweeping `.github/**/*.yml\|yaml`, not `.github/workflows/`, because a composite action is the cheap way past a narrow glob | ✅ |
 | **G41** | `gate-register` | `docs/gates.md`'s numbered rows ↔ `docs/gate-register.md`'s row sections | a row whose five questions nobody asked, or an entry for a row that never landed — and **membership is not enough**: a file with two `## G26` sections satisfies *"each row has an entry"*, and one merged verdict bullet names all five category words while a count keyed on one of them reports a total silently short. Cardinality, in both directions | `gates/gate-register.test.ts` — row-side floor at 42, safe only under mark-never-delete plus gapless making the count non-decreasing | ✅ |
 | **G43** | `ignored-mutants` | `stryker.floors.json`'s `ignored` counter ↔ a real sweep of the mutated source | a disable directive takes a mutant out of the denominator from inside a source file, nowhere near the Stryker config and nowhere near the floors file — of the three routes down it is the only one leaving no trace in either file a deploy reads. Caught at merge rather than at deploy, which is what matters where `required_approving_review_count: 0` leaves the gate suite and CodeQL the only two things that can stop one | `gates/ignored-mutants.test.ts` — the judgement is planted in `scripts/lib/floors.test.ts`; this asserts only what the disk says | ✅ |
+| **G47** | `ignored-clones` | `jscpd.floors.json`'s `ignoredLines` counters ↔ a real sweep of the tree, and its `duplicationHash` ↔ the installed jscpd | a suppression block takes its lines out of the clone count and out of the total-line denominator **together** — measured, 34 raw lines with a 12-line block report 20 — so the percentage does not move, the count falls, and the change lives in a source file nowhere near any file a deploy reads. G43's shape applied to a second tool, at merge for G43's reason. ⚠️ **The counter records what the source *declares*, not what jscpd removed**: measured, jscpd honours a block only when no code follows it, so one in the middle of a file does nothing, silently. ⚠️ The hash half does **nothing** for `stryker.floors.json`, whose stamps stay unwatched until [#224](https://github.com/mephistopheles4/stacks/issues/224) | `gates/ignored-clones.test.ts` — the judgement is planted in `scripts/lib/duplication.test.ts`; this asserts only what the disk says | ✅ |
 
 **G13 now allows one file this project did not make**: Google's *powered by
 Google* graphic, which the API terms require displayed and forbid altering — so
@@ -1524,6 +1525,14 @@ are the same artifact.
 | `complexity-mass` | Σ cyclomatic complexity over those functions | merge and nightly | ” | ” |
 | `complexity-mass-over-10` | Σ complexity over functions with CC > 10 | merge and nightly | ” | ” |
 | `complexity-max` | the largest single function's complexity | merge and nightly | ” | ” |
+| `duplication-clones` | clones found, over the eight declared scopes | merge and nightly | ” | ” |
+| `duplication-lines` | duplicated lines, over the eight declared scopes | merge and nightly | ” | ” |
+| `duplication-ignored-lines` | lines inside a `jscpd` suppression block, over the eight declared scopes | merge and nightly | ” | ” |
+| `duplication-total-lines` | lines scanned, over the eight declared scopes — the denominator | merge and nightly | ” | ” |
+| `duplication-tree-clones` | clones found, whole-tree TypeScript | merge and nightly | ” | ” |
+| `duplication-tree-lines` | duplicated lines, whole-tree TypeScript | merge and nightly | ” | ” |
+| `duplication-tree-ignored-lines` | lines inside a `jscpd` suppression block, whole-tree TypeScript | merge and nightly | ” | ” |
+| `duplication-tree-total-lines` | lines scanned, whole-tree TypeScript — no scope list can shrink it | merge and nightly | ” | ” |
 
 ⚠️ **`mutation-score` is spelled *killed ÷ total* on purpose.** The score is
 gameable by adding trivially-killable code, which dilutes the denominator upward
@@ -1554,6 +1563,49 @@ is worth knowing before trusting one. A merge record now carries five series,
 and **still does not read as a scored one** — `scoresOf` stays
 mutation-specific, or every push would be paired against a nightly in the
 deploy's delta.
+
+⚠️ **Duplication takes eight rows because a clone is a relation between two
+places, and a relation does not partition into scopes.** Eight per-scope numbers
+are structurally blind to a clone whose halves sit in two of them, and `gates/`
+is read by no scope at all — so one whole-tree TypeScript number sits beside
+them that no scope list can shrink. **The eight scope samples therefore do not
+sum to the tree number**, deliberately: a cross-scope clone is counted by both
+scopes it touches. Whole-tree means whole-tree *TypeScript*, and the restriction
+was measured rather than argued — over every file jscpd reports 1042 duplicated
+lines, **570 of them JSON this repository did not write**, including two O'Reilly
+fixtures sharing 105 identical lines because one book returns from two endpoints.
+A recorded response cannot be de-duplicated without falsifying the fixture. Counts
+and never a ratio, for the reason the four complexity rows give.
+[ADR-0072](adr/0072-a-clone-is-a-relation-between-two-places.md), and
+[`docs/spec/static-analysis-and-style.md`](spec/static-analysis-and-style.md) §5.
+
+⚠️ **`duplication-ignored-lines` counts what the source declares, not what
+jscpd removed, and the two are different numbers.** Measured at fourteen live
+lines and a three-line block, varying only what follows the closing directive:
+with the block ending the file jscpd removes 5; with a blank line or a comment
+after it, 6; **with one line of code after it, 0**. A suppression block in the
+middle of a file does nothing, silently. Every earlier measurement of the feature
+— this repository's and [#237](https://github.com/mephistopheles4/stacks/issues/237)'s
+alike — put the block at the end of a file, so all of them agreed and all of them
+were the special case. The counter records the block anyway, because a block is
+an **intent** to take code out of a measurement and the intent belongs in a diff
+whether or not the tool acts on it. **So `total-lines + ignored-lines` is an
+approximation, not an identity.**
+
+⚠️ **Adding these eight names widened `GATED_SERIES`, so the first
+`pnpm deploy:site` after this lands refuses until a CI run writes a record
+carrying them.** That is inherent to adding any series — the pipe genuinely has
+not delivered the new one yet — and it fails in the safe direction, refusing to
+publish rather than publishing against an instrument that is partly dark.
+`--check-only` reports it instead of refusing. The remedy is to let the workflow
+run, not to exempt the names.
+
+⚠️ **No duplication name joins `CAPPED_SERIES`, and that is a live
+constraint rather than an oversight.** Six of the eight are to be capped, but
+`countedIn` filters to records where **every** member of that roster has samples,
+keyed on the whole set on purpose — so a name added before twenty records carry
+its samples zeroes both cyclomatic calibration windows at once. That step is
+[#258](https://github.com/mephistopheles4/stacks/issues/258).
 
 ⚠️ **`live-exclusions` cannot move yet, and that is written here rather than
 discovered from a flat line.** An exclusion is negated out of Stryker's `mutate`,
