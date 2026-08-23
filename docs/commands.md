@@ -43,7 +43,7 @@ is restated here.** `singleQuote: true` and `printWidth: 100` live in
 [`prettier.config.mjs`](../prettier.config.mjs); `*.md`, `fixtures/` and
 `pnpm-lock.yaml` live in [`.prettierignore`](../.prettierignore). **Each carries
 its measured reason as a comment beside the setting it explains**, and
-[ADR-0071](adr/0071-prettier-formats-code-and-nothing-else.md) carries the
+[ADR-0074](adr/0074-prettier-formats-code-and-nothing-else.md) carries the
 decision behind the whole set — including which two settings are load-bearing
 for a gate rather than cosmetic, what each one was measured against, and the
 rule in another ticket that the Markdown exclusion leans on. Summarising any of

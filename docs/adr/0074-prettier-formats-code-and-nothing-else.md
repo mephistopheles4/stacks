@@ -38,10 +38,28 @@ markdownlint and [#254](https://github.com/mephistopheles4/stacks/issues/254)
 installs jscpd. So the gap this record steps around is the spec's, not this
 ticket's, and each of those owes the same thing.
 
-⚠️ **The number is the one §8 reserved, and it was free when this was written.**
-`main` carries 0070 as its highest and no open branch claimed 0071. If a sibling
-lands one first, this renumbers on the branch rather than editing a landed
-record — exactly as 0067 did when it was written as 0065.
+⚠️ **This was written as 0071 and renumbered before it landed, because 0071 was
+claimed twice.** `main` carried 0070 as its highest and no *pushed* branch held
+an 0071, which is what this session checked — and it was the wrong question. The
+[#253](https://github.com/mephistopheles4/stacks/issues/253) session had already
+committed an 0071 locally, on a branch it had not pushed, and it holds the
+`typescript-eslint` and `@eslint/js` pin. It also allocated the rest:
+[#254](https://github.com/mephistopheles4/stacks/issues/254) has 0072,
+[#255](https://github.com/mephistopheles4/stacks/issues/255) has 0073, and this
+is 0074. The renumber happened on the branch, so no landed record was edited —
+**exactly what 0067 records happening to itself**, which was written as 0065 and
+became 0067 while its stack was open.
+
+⚠️ **So a reader may find a gap here, and the gap is not a defect.** 0071 to
+0073 are claimed on sibling branches of one rollout that have not merged yet. If
+any of them is abandoned its number stays empty rather than being reused, for
+the reason 0067 gives: a record that argues *about* another record by number
+cannot survive numbers being recycled underneath it.
+
+⚠️ **The general lesson, and it is the second time this rollout has learned
+it.** `git ls-remote` cannot see a branch nobody pushed, so "no open branch
+claimed it" is a statement about the remote and not about what other sessions are
+doing. The only thing that settled this was a sibling session saying so directly.
 
 ## Why exact, and not caret
 
