@@ -200,7 +200,7 @@ pnpm typecheck           # tsc --noEmit across every .ts in the repo
 pnpm lint                # G46: the tuned type-checked rule set over every .ts
                          #   file, tests included   (--fix repairs about a quarter)
 pnpm test                # vitest: packages/**/src and gates/
-pnpm build               # typecheck, then astro build
+pnpm build               # typecheck, then astro check (G46), then astro build
 pnpm dev                 # site dev server
 pnpm dev:watch           # site + rebuild on every vault change
 pnpm stacks <cmd>        # run the CLI from source
