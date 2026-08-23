@@ -1,10 +1,18 @@
 {
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
-    // Kept in step with ../../tsconfig.base.json on purpose. `astro check` owns
-    // everything under packages/site — including its .ts files, which the root
-    // config deliberately excludes — so these settings must match or the editor
-    // and the build gate will disagree about the same file.
+    // Kept in step with ../../tsconfig.base.json on purpose, and now
+    // load-bearing: `astro check` reads this file, and `astro check` is G46
+    // (astro-types), so relaxing an option here weakens a gate from a file no
+    // clause of that gate reads.
+    //
+    // `astro check` owns everything under packages/site, .ts files included.
+    // The root config reaches those same .ts files — its include list carries
+    // `packages/site/src/**/*.ts` — but excludes `**/.astro`, so it typechecks
+    // them WITHOUT astro's generated types while this config typechecks them
+    // with. That difference is the whole of the TS2717 that #250 fixed in
+    // boot.ts. (This comment previously said the root config "deliberately
+    // excludes" the site's .ts files. It does not, and never has.)
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noUnusedLocals": true,

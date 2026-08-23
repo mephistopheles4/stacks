@@ -203,6 +203,12 @@ calibrated against, so it is its own decision with its own ADR, recorded as fog
 in [§8](#8-what-was-ruled-out-and-the-fog-that-remains). `astro check` in the
 gates is the same: fog, not this spec.
 
+> ✅ **That fog cleared 2026-08-23.** `astro check` is **G46** (`astro-types`),
+> run inside `pnpm build` — decided on
+> [#238](https://github.com/mephistopheles4/stacks/issues/238) and specified in
+> [`static-analysis-and-style.md`](static-analysis-and-style.md) §4. `checkers:
+> []` is untouched and remains this paragraph's live half.
+
 **The hand-rolled walk is kept as the prototype only.** The classic
 `ts.createSourceFile` / `ts.forEachChild` API is back on TS 6, so a zero-dep
 walker would be simpler than the one the prototype wrote — but two counters
@@ -470,7 +476,7 @@ for the cap and the hook.
 | Weakening | change what ESLint counts, or edit the fixture | **Closed** by the inventory fixture and its hash on the floors file — a count change is a red spec, and a record under a different hash is refused, not compared |
 | Weakening | raise a cap | **Visible**: the floors file's append-only `notes`, same as lowering a floor |
 | Satisfying the letter | function splitting: `max` −10, erosion share −3.8pp, no branch removed | **Carried open, made visible** — no ratio emitted; the signature is on the page. ⚠️ **The cap inherits it**: a split is the cheapest way under a `max` cap. `mass-over-10` is capped beside it for that reason — a split that leaves a 30 still counts — and `mass` is on the page uncapped, flat when nothing was removed |
-| Routing around | code outside the populations; `.astro` files | **Open** for the two excluded directories; `.astro` closed by *no logic in `.astro` files* — and `astro check` now *can* run, recorded as fog |
+| Routing around | code outside the populations; `.astro` files | **Open** for the two excluded directories; `.astro` closed by *no logic in `.astro` files* — ⚠️ **and that rule now rests on this row rather than the other way round.** `astro check` runs as G46 (`astro-types`) since 2026-08-23, so `.astro` is typechecked and still outside every population — which is exactly why G7 is kept. The fog is cleared |
 | Vacuous green | a glob matching nothing; a hook printing 0% for a browser-only file | **Closed** for the series — one empty population fails all four families via `RunFacts.failed`, never a partial record; **closed by the exclusions** for the hook, which prints *no in-process oracle* instead of a number |
 | Decay | the number moves with no code change | *Counting-rule drift*: ESLint upgrades — **closed** by the fixture. *`anonymous_N` identity*: **closed by not tracking them**. *The hook stops running*: **open by nature** — nothing watches a local surface, which is why it is a preview and not the record |
 

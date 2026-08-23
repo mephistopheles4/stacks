@@ -12,6 +12,34 @@ Written up rather than left in a transcript because two of the four findings
 below contradict a document in this tree, and one of them contradicts
 [`docs/spec/supply-chain.md`](../spec/supply-chain.md).
 
+> ✅ **The block cleared the same evening, and the gate landed in this branch.**
+> [#259](https://github.com/mephistopheles4/stacks/pull/259) merged at
+> `bc59bf9`, and **G46** (`astro-types`) followed —
+> [ADR-0071](../adr/0071-astro-check-is-the-fifth-checker-and-it-runs-in-the-build.md).
+> **Everything below is left as written**, because a terrain survey read after
+> the fact is worth more as a record of what was and was not known in advance
+> than as a tidy retrospective. Read the present tense as *"at `2f672b1`,
+> before the landing"* — that includes "still blocked", "#259 is already
+> rewriting", and the whole of "The landing kit", which is a plan that was then
+> executed. Three things in it turned out wrong or short, and each is corrected
+> in place below rather than quietly:
+>
+> - **The sweep undercounts.** Eighteen was not the population either; the
+>   landing swept `docs/adr/0066` (four addresses), `docs/spec/README.md`,
+>   `docs/spec/static-analysis-and-style.md` and
+>   `docs/spec/complexity-on-the-trend-layer.md:203` as well. **Two successive
+>   counts, both confident, both short** — the lesson is not "count again", it
+>   is that a table of hits is a snapshot and the grep is the artifact.
+> - **The gate grew a spec file the kit did not plan.** `gates/astro-types.test.ts`
+>   pins the wiring in four clauses. The kit assumed the register's recorded
+>   perturbation was the whole of criterion 2; a check living only as a
+>   substring of one npm script is [#152](https://github.com/mephistopheles4/stacks/issues/152)'s
+>   finding exactly, and the ordering clause below is the one that would not
+>   have existed without it.
+> - **The ordering was not in the kit and is the sharpest part of the row.**
+>   `astro build && astro check` still reports the error *and has already
+>   written the `dist/` carrying it*. Planted and observed red.
+
 ## What was measured, at `2f672b1`
 
 `@astrojs/check@0.9.10` installed into `packages/site` as a dev dependency,
@@ -94,7 +122,12 @@ miscalls — therefore sits in no mutation scope and no complexity population
 either. The value crossed from an unscored `.astro` file into an unscored `.ts`
 file and out to `dist/`.
 
-This is the sharper form of G7's replacement warrant.
+⚠️ **Corrected: this is a companion to G7's replacement warrant, not the
+sharper form of it.** `site-meta.ts` is a `.ts` file G7 never looks at, so
+nothing here widens G7's reach. What the paragraph shows is that the *unscored*
+region is wider than the `.astro` files themselves — a fact about the scope
+list. G7's warrant is the paragraph above this one, and that is what the row
+now carries.
 
 ### 4. The supply-chain specimen moves; it does not close
 
@@ -209,7 +242,7 @@ the grep at the rebase and work from its output.
 | `packages/site/src/site-meta.ts:18` | the same, in the module the plant corrupts |
 | `docs/gates.md:101` | G7's row — criterion 3 |
 | `docs/progress.md:194` | the environment-findings row, "whether it becomes a gate row is open" |
-| `docs/spec/complexity-on-the-trend-layer.md:185, 473, 503` | "recorded as fog", three times |
+| `docs/spec/complexity-on-the-trend-layer.md:185, 203, 473, 503` | ⚠️ **four, and only `:473` says "recorded as fog"** — this row read *"recorded as fog, three times"* and was wrong twice over: `:185` is a dated before/after measurement cell, `:503` reads "(`astro check` as a gate)", and `:203` — *"`astro check` in the gates is the same: fog, not this spec"* — was missed entirely. Corrected here rather than in the table alone, because the wrong version is the one `docs/progress.md` quoted |
 | `docs/spec/enhanced-card.md:430` | "`.astro` is not typechecked, so anything with a type lives in a `.ts` file" |
 | `docs/spec/supply-chain.md:292` | finding 4 — the clause that goes false |
 

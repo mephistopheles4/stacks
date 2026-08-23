@@ -182,6 +182,19 @@ consequence; see §6 step 1.
 > green**, for the reason the row states rather than this one: nothing runs
 > `astro check` yet, and `@astrojs/check` is not a dependency.
 
+> ✅ **S4 landed 2026-08-23 as G46 (`astro-types`)**, closing the footnote above
+> as well as the paragraph above that. `@astrojs/check@0.9.10` is a dev
+> dependency of `packages/site`, pinned exact, and its `build` script is
+> `astro check && astro build` — so `astro check` runs inside `pnpm build`,
+> which the `suite` matrix already runs, exactly as this section specifies.
+> `gates/astro-types.test.ts` pins the wiring in four clauses, each observed
+> red. ⚠️ **The order is load-bearing and was not in the spec**: `astro build &&
+> astro check` still reports the error and has already written the `dist/` that
+> carries it, so the clause asserts position and not merely presence.
+> ⚠️ **One coupling this section does not carry**: `@astrojs/check@0.9.10`'s
+> peer range is `^5.0.0 || ^6.0.0`, so [ADR-0066](../adr/0066-typescript-6-until-7-1.md)'s
+> revisit at TypeScript 7.1 un-runs this gate unless the checker widens first.
+
 ⚠️ **G7 (`astro-no-logic`) is not retired and its row text changes.** The two do
 not overlap: G7 reads `<script>` blocks as text, `astro check` typechecks
 frontmatter. A planted `absoluteUrl(42, Astro.site)` in `index.astro` passed
@@ -190,6 +203,24 @@ frontmatter. A planted `absoluteUrl(42, Astro.site)` in `index.astro` passed
 *stronger*: `.astro` sits outside every mutation scope and every complexity
 scope, both of which glob `**/*.ts`, so typechecked logic there is still counted
 by nothing.
+
+> ✅ **Held at landing, with two corrections measured on the way.** G7 is kept
+> and its row was rewritten — **replacing** the warrant rather than narrowing
+> it, since *"`.astro` files are not typechecked"* is false from that commit
+> and not merely weaker.
+>
+> ⚠️ **It is one scope list, not two.** All eight globs in `stryker.scopes.json`
+> end `*.ts`, and `scripts/lib/complexity.ts`'s `populationOf` takes its
+> population from **those same globs** minus `*.test.ts` — so the two counters
+> do not independently happen to miss `.astro`; they miss it once, and no edit
+> to either can change that without changing the other.
+>
+> ⚠️ **The plant reached two meta tags, not one.** `dist/index.html` carried
+> `<meta property="og:image" content="42">` *and*
+> `<meta name="twitter:image" content="42">`; both read the same `ogImage`
+> binding. And `site-meta.ts`, whose `absoluteUrl` the plant miscalls, is an
+> *excluded directory* in `stryker.scopes.json` — so the bad value crossed from
+> an unscored `.astro` file into an unscored `.ts` file and out to `dist/`.
 
 ### One gate is offered and declined
 

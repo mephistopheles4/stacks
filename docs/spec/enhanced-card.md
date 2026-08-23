@@ -427,8 +427,11 @@ Apple's mark shipping is what makes Apple's credit line owed — see
 ```
 
 - **`.astro` files hold markup, styles and a `<script>` that imports and calls a
-  `.ts` module — nothing more.** `.astro` is not typechecked, so anything with a
-  type lives in a `.ts` file.
+  `.ts` module — nothing more.** ⚠️ **The reason changed at G46
+  (`astro-types`), 2026-08-23**: `.astro` frontmatter *is* typechecked now, by
+  `astro check` inside `pnpm build`. What is still true is that logic there is
+  **counted by nothing** — every mutation scope and every complexity population
+  globs `*.ts` — so anything with a type lives in a `.ts` file.
 - **Styles stay in `Shelf.astro`'s `<style>` block**, extending the existing
   `:global()` idiom. Astro scopes component styles by stamping an attribute on
   elements *in the template*; nothing built with `createElement` carries it, so

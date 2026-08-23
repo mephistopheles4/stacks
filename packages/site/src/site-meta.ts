@@ -14,10 +14,17 @@
  * relative path, which is correct for viewing the page and merely useless for
  * sharing it.
  *
- * Lives in a `.ts` file rather than in the `.astro` frontmatter because
- * `.astro` files are not typechecked (`astro check` cannot run under TS 7), so
- * anything with a type or a branch belongs here. See "Site code layout" in
- * AGENTS.md.
+ * Lives in a `.ts` file rather than in the `.astro` frontmatter because logic in
+ * an `.astro` file is counted by nothing — every mutation scope and every
+ * complexity population globs `*.ts` — so anything with a type or a branch
+ * belongs here. See "Site code layout" in AGENTS.md.
+ *
+ * ⚠️ **The frontmatter is typechecked now**, by G46 (`astro-types`): the call
+ * this module's `absoluteUrl` gets from `index.astro` is checked, which it was
+ * not when `absoluteUrl(42, Astro.site)` shipped `content="42"` to two meta
+ * tags through a green build. The rule stands on coverage rather than on the
+ * compiler, and this file is the near half of that: `packages/site/src` is an
+ * excluded directory in `stryker.scopes.json`, so this module is unscored too.
  */
 
 /**

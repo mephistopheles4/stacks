@@ -297,6 +297,26 @@ here, because minting the tier is a change to the scoreboard's own vocabulary an
 effort decides rather than builds — **but the evidence condition the decline named has
 now been met, and the next session to touch this may mint it.**
 
+> ⚠️ **Corrected 2026-08-23 by G46 (`astro-types`): this member left the tier,
+> and *"none ever could"* was the wrong half of the claim to make.**
+> `@astrojs/check@0.9.10` is now a dev dependency of `packages/site`, so the
+> package **is** in the tree at a version and one `pnpm add` disproved a
+> sentence written about every future state of this repository. **The narrower
+> clause survives**: the tool is pinned to TypeScript 6.0.3 by
+> [ADR-0066](../adr/0066-typescript-6-until-7-1.md), so no run here tests the
+> TS 7 claim, and the truth-maker for *that* is still outside the repository.
+> What is new is offline in-tree evidence, which the sentence never had:
+> `@astrojs/check@0.9.10` declares `peerDependencies: { typescript: '^5.0.0 ||
+> ^6.0.0' }` — the package's own manifest saying it does not support TS 7.
+> Weaker than a run, stronger than prose.
+>
+> **The generalisable half.** *Nothing here can contradict it* was true and
+> **cheap to make false**, and it was made false by a change nobody framed as
+> touching this spec. A claim of the form *"no configuration of this repository
+> could ever"* is a claim about a space, not a measurement, and it is the shape
+> to distrust — the dated measurement beside it (`git log --all -S`, 2026-08-15,
+> no commit) aged correctly and is still true of the history it describes.
+
 **One consequential edit falls out either way.** `SECURITY.md` currently reads
 *"Actions are pinned to commit SHAs. That is the mitigation; it is not immunity."*
 **Once G39 exists that line is true and incomplete** — it must say the pinning is held

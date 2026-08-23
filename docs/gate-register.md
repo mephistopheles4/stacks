@@ -897,7 +897,7 @@ one line each here.
 | Row | Was | Now | The claim |
 | --- | --- | --- | --- |
 | **G6** | `clean` | `exposed` | The docblock says *"Two things pass"*; three do, and the third is value-imported by the site today. |
-| **G7** | `clean` | `exposed` | *"`@astrojs/check` cannot run under TypeScript 7"* — a third-party tool at a version, never established here, unassertable. |
+| **G7** | `clean` | `exposed` | *"`@astrojs/check` cannot run under TypeScript 7"* — a third-party tool at a version, never established here, unassertable. ✅ **Closed 2026-08-23**, and not by the named remedy: the checker was installed and wired, so the claim stopped being this row's warrant at all. See the entry. |
 | **G35** | `nominated, unconfirmed` | `exposed` | The `§11.x` map from gate to spec is held by nothing; the nomination's own claim re-measures true. |
 
 ⚠️ **G7 returns to the flagged side and G34 leaves it, so the total is unchanged
@@ -2005,6 +2005,35 @@ it pass; majors only.
 **Observed-red (this pass):** none, and that *is* the finding — no configuration
 of this repository can make the sentence go red, because the tool it is about is
 not installed.
+
+⚠️ **Closed 2026-08-23, by the other route, and the named remedy above was
+never built.** G46 (`astro-types`) installed `@astrojs/check@0.9.10` on
+`packages/site` and wired `astro check` into `pnpm build`, so the sentence this
+whole block is about stopped being G7's warrant instead of being dated and
+asserted. G7's row now rests on **coverage**: `.astro` sits outside one scope
+list that both the mutation counter and the complexity counter read. The
+docblock at `gates/astro-no-logic.test.ts:4-5` and the failure message at `:165`
+were rewritten in that commit, along with `AGENTS.md` and fifteen other
+addresses — swept as a class rather than fixed where a reviewer pointed. See
+[ADR-0071](adr/0071-astro-check-is-the-fifth-checker-and-it-runs-in-the-build.md)
+and the `### G46 — \`astro-types\`` entry, whose own **Decay** verdict is this
+one's successor: the same shape of claim, this time asserted by a clause that
+reads the compiler pin.
+
+⚠️ **Three measurements in this block are dated observations and stay as
+written**, per this file's rule. *"`@astrojs/check` is not a dependency of this
+repo at any version"* and *"`typescript: ^7.0.2`"* were both true on 2026-08-15
+and are both false today; the `git log --all -S '@astrojs/check'` finding is
+still true of the history it describes, and stopped being an argument on the day
+the string entered `packages/site/package.json`.
+
+⚠️ **And one attribution in this block was wrong before either ticket touched
+it.** It quotes *"`.astro` files are NOT typechecked (`astro check` cannot run
+under TypeScript 7 **yet**)"* as living in `CLAUDE.md`. The constitution moved
+to `AGENTS.md` on 2026-08-19 — [ADR-0056](adr/0056-the-constitution-is-agents-md.md)
+— and `AGENTS.md` is where that sentence was found and rewritten. Left in the
+quotation above so the dated reading is intact; named here so the register does
+not misdirect the next reader to a file with no invariants in it.
 
 ### G8 — `frontmatter-contract`
 
@@ -5004,6 +5033,111 @@ would not rot is comparing the set of files ESLint linted against the set
 `tsconfig.json` covers, which is the same population `pnpm typecheck` reads.
 That is a real gate and it is a different row; nothing here should grow a file
 count.
+### G47 — `astro-types`
+
+**Gate:** `astro check`, wired by [`gates/astro-types.test.ts`](../gates/astro-types.test.ts)
+**Date:** 2026-08-23
+**Triaged at landing**, on G45's precedent: G41 (`gate-register`) is red the
+moment a row lands without an entry.
+
+⚠️ **This row is two things, and the split is the first thing to understand
+about it.** The gate is `astro check`, which runs as the first half of
+`packages/site`'s `build` script and therefore inside `pnpm build`, which the
+`suite` matrix already runs. The **spec file pins the wiring** and nothing else.
+So every verdict below has to be read twice — once about the checker, once about
+the four assertions that keep it plugged in — and where the two answers differ,
+both are given.
+
+- **Weakening** — **clean on the spec; `accepted` on the checker.** Four clauses,
+  no allowlist, no exemption, no tunable threshold: the only numbers are the
+  version-shape patterns, and loosening one is a visible one-line diff inside
+  the gate. The checker is the other half: `astro check` has no severity dial
+  wired here, but it reads `packages/site/tsconfig.json`, and **relaxing a
+  `strict` option there weakens this gate from a file no clause reads**. Not
+  closed, and named rather than left implicit — that config's own comment says
+  it is kept in step with `tsconfig.base.json` on purpose, which is a convention
+  and not a gate.
+- **Satisfying the letter** — ⚠️ **exposed, `accepted`.** The spec proves the
+  wiring and **never the verdict**. `astro check` could be replaced by a script
+  named `astro` that exits 0, or the checker could stop reading a directory, and
+  all four clauses stay green. This is G40's stated limit reached a fourth time
+  and G44's third: *it proves the condition, never the third party's honouring
+  of it.* What bounds it is that the real check runs in the same command on
+  every CI leg, so a checker that stopped checking would have to stop
+  **silently** — and the perturbation below is the evidence that today it does
+  not.
+- **Routing around** — **the two cheap routes are closed and planted; a third is
+  open and `accepted`.** Deleting `astro check` from the script is red. Reordering
+  it to `astro build && astro check` is red, and that clause exists because the
+  reorder is the *invisible* weakening: the error is still reported and the
+  output carrying it has already been written, so a reviewer reading the log
+  sees a red build and a correct-looking script. Dropping the dependency is red,
+  and moving `typescript` off 6.x is red. ⚠️ **The open route is a second entry
+  point**: `pnpm deploy:site` builds through `scripts/deploy.ts`, and a future
+  path that calls `astro build` directly rather than through the package script
+  would bypass all of this. No such path exists today — the deploy runs
+  `pnpm build` — and widening the sweep to every invocation of `astro` in the
+  tree would gate the dev server as a side effect.
+- **Vacuous green** — **clean, and structurally rather than by inspection.** Each
+  of the four clauses was planted and each went red, so none of them is asserting
+  over an empty set. The shape that would make this vacuous — a manifest read
+  that silently returned `{}` — is refused by the clauses themselves: an absent
+  `scripts.build` yields `''`, whose `indexOf` is `-1`, which fails rather than
+  passes.
+- **Decay** — ⚠️ **exposed, `accepted`, and dated.** This row rests on a claim
+  about third-party software at a version, which is the exact shape that put
+  **G7** on the flagged side at the decay re-read. `@astrojs/check@0.9.10`
+  declares `peerDependencies: { typescript: '^5.0.0 || ^6.0.0' }`, and
+  [ADR-0066](adr/0066-typescript-6-until-7-1.md)'s revisit condition is
+  TypeScript **7.1** — so the decision that is *already scheduled* un-runs this
+  gate unless the checker widens first. **Unlike G7's version of this problem,
+  the claim is asserted rather than written down**: clause 4 reads the pin and
+  goes red if it leaves the supported range, which is
+  [#138](https://github.com/mephistopheles4/stacks/issues/138)'s adopted rule —
+  *date the claim with the versions it was established against* — applied at
+  the moment the claim was made rather than three bands later. It remains
+  `exposed` because the assertion catches the pin moving and cannot catch
+  `@astrojs/check` changing its own peer range under a version bump.
+
+**Observed-red:** **six executed plants, all red, none derived.**
+
+1. *The gate the row is about.* `absoluteUrl('/og.png', Astro.site)` in
+   `packages/site/src/pages/index.astro` became `absoluteUrl(42, Astro.site)`.
+   `pnpm build` failed with
+   `src/pages/index.astro:14:29 - error ts(2345): Argument of type 'number' is
+   not assignable to parameter of type 'string'`, and **`packages/site/dist/`
+   was not written** — the directory was deleted before the run and did not come
+   back, which is the assertion behind the ordering clause and not an inference
+   from it.
+2. `astro check` removed from the build script → clause 1 red.
+3. The script reordered to `astro build && astro check` → the ordering clause red.
+4. `@astrojs/check` loosened from `0.9.10` to `^0.9.10` → the exact-pin clause red.
+5. The root `typescript` pin moved from `6.0.3` to `7.0.2` → the peer-range
+   clause red.
+6. The root `build` script pointed at `@stacks/core` instead of `@stacks/site`
+   → the delegation clause red.
+
+⚠️ **And the counterpart, which is the finding rather than the ceremony.** With
+plant 1 in place and this row not yet landed, `pnpm typecheck` was green,
+`gates/astro-no-logic.test.ts` (G7) was green five of five, `pnpm build` was
+green, and `dist/index.html` shipped
+`<meta property="og:image" content="42">` **and**
+`<meta name="twitter:image" content="42">`. Both tags read the same `ogImage`
+binding, so the blast radius is one line wider than
+[#238](https://github.com/mephistopheles4/stacks/issues/238) recorded. Every
+revert was verified byte-clean by `git hash-object`.
+
+**Rank:** 3 — the wiring is pinned four ways and each was observed red, but the
+checker's verdict is unassertable from here and the compiler pin that makes it
+run is scheduled to move.
+
+**Named remedy for the decay verdict (not built):** when
+[ADR-0066](adr/0066-typescript-6-until-7-1.md)'s revisit happens, the peer range
+of the *installed* `@astrojs/check` is readable from `pnpm-lock.yaml` and could
+be asserted against the pin, rather than the range being restated in this gate
+where it can go stale. Declined today because a lockfile read is a fifth clause
+protecting against a bump that would already redden clause 4 from the other
+side.
 
 ---
 
