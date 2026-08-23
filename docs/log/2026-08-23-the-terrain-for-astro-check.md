@@ -385,6 +385,35 @@ than the count.** In order:
 to avoid the previous one.** Four instances, three of them produced by the fix.
 That framing is #253's and it is stronger than any count of duplicate files.
 
+⚠️ **And collision 4 was not caused by an unpushed branch being invisible. It
+was caused by a *report* about a branch going stale faster than the branch
+did.** #251 renamed onto 0075 acting on a message from #253 saying #257 held it
+— a message that was already false about its own sender when it arrived, because
+#253 had moved to 0076 before sending and did not correct it. #253 volunteered
+this rather than letting it be inferred. **That is a worse failure than the one
+it looks like**: an unpushed branch is *invisible*, which a reader can at least
+know and discount, while a stale report is *confidently wrong*, and it
+propagates to everyone who trusts it. The remote is queryable —
+`git ls-tree --name-only <remote-branch> docs/adr/` answered this in one command
+— and a message is not.
+
+**So the rule the evening actually produced is about evidence, not numbers:
+prefer the queryable surface to the report, and treat a peer's statement about
+their own branch as true when written rather than true now.** That generalises
+past ADR numbers to every claim a session makes about state it owns.
+
+⚠️ **The fifth move was declined, and declining is the intervention.** After
+this record reached 0077, #253 pointed out that 0071 had fallen free — #251
+vacated it in the rename that caused collision 4 — and proposed one of the two
+take it back, leaving no hole. Declined for three reasons. **A published
+instruction is state**: this session had already told #251 *"I am at 0077 and
+staying there regardless"*, and making that false is the very failure the
+paragraph above describes. **A hole costs nothing** — contiguity is ungated, and
+"no hole" is only a benefit if you have forgotten the rule you just wrote down.
+And every move tonight manufactured a collision, so **not moving is the only
+action with no failure mode**. 0071 belongs to #251 if anyone wants it; it
+restores their own record.
+
 ⚠️ **And it survives the objection [#263](https://github.com/mephistopheles4/stacks/issues/263)
 already writes into itself** — that a merge-time uniqueness gate would not have
 prevented any of this, since every duplicate lived on an unmerged branch.
