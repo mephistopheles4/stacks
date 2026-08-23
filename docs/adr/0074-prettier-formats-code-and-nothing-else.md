@@ -39,14 +39,16 @@ installs jscpd. So the gap this record steps around is the spec's, not this
 ticket's, and each of those owes the same thing.
 
 ⚠️ **This was written as 0071 and renumbered before it landed, because 0071 was
-claimed twice.** `main` carried 0070 as its highest and no *pushed* branch held
-an 0071, which is what this session checked — and it was the wrong question. The
-[#253](https://github.com/mephistopheles4/stacks/issues/253) session had already
-committed an 0071 locally, on a branch it had not pushed, and it holds the
-`typescript-eslint` and `@eslint/js` pin. It also allocated the rest:
-[#254](https://github.com/mephistopheles4/stacks/issues/254) has 0072,
-[#255](https://github.com/mephistopheles4/stacks/issues/255) has 0073, and this
-is 0074. The renumber happened on the branch, so no landed record was edited —
+claimed three times in one evening.** `main` carried 0070 as its highest and no
+*pushed* branch held an 0071, which is what this session checked — and it was the
+wrong question. Two sibling sessions had each already committed an 0071 locally,
+[#253](https://github.com/mephistopheles4/stacks/issues/253) and
+[#251](https://github.com/mephistopheles4/stacks/issues/251), neither having
+pushed. Settled between them: **0071 → #251**, 0072 →
+[#254](https://github.com/mephistopheles4/stacks/issues/254), 0073 →
+[#255](https://github.com/mephistopheles4/stacks/issues/255), **0074 → this
+record**, 0075 → #253, which moved second and by its own choice rather than by
+priority. Every renumber happened on a branch, so no landed record was edited —
 **exactly what 0067 records happening to itself**, which was written as 0065 and
 became 0067 while its stack was open.
 
