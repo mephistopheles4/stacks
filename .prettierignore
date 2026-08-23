@@ -18,6 +18,14 @@
 # and only at `"style": "compact"`: its default of `any` accepts an aligned
 # table. #251 adopts it and is still open, so until it lands and lands at that
 # style, the input to G41 and G31 is held by convention and by nothing else.
+#
+# ⚠️ Second reason, and it is the one that would never settle. #251 also adopts
+# MD049 at `asterisk`, and Prettier writes emphasis as `_em_` — so a formatter
+# pass and a `markdownlint --fix` pass would rewrite each other on every run,
+# whichever ran last winning. That is a *continuous* conflict rather than a
+# latent one (#236 follow-up 5), and MD060 at `compact` is flatly incompatible
+# with Prettier's column alignment besides, at 318 violations measured. Anyone
+# reversing this exclusion owes both decisions, not just the first.
 *.md
 
 # ── The fixture vault and the cached provider responses ────────────────────
