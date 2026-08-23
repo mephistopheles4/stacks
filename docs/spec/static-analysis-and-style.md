@@ -456,6 +456,19 @@ line in the spine.
 `AGENTS.md`'s test is: **hard to reverse, surprising without context, and a real
 trade-off.** Three decisions meet all three. The next free number is **0071**.
 
+> ⚠️ **0071 is spent, and this line is the fifth pre-allocated number in this
+> project to go stale.** It was taken on 2026-08-23 by
+> [#251](https://github.com/mephistopheles4/stacks/issues/251) as
+> `0071-the-markdown-fix-flag-is-allowlisted.md`. **Read this cell as *"each of
+> these three earns a record"*, never as a number** — the same rule `docs/spec/README.md`
+> already states for gate rows, and `docs/progress.md`'s "Rollout numbering" row
+> states for this effort. ⚠️ **An ADR collision is worse than a row collision
+> because it is silent**: nothing in the suite reads `docs/adr/` for duplicates
+> or holes, where a duplicate row reddens G19 and G41 on the second pull request
+> to arrive. Count the files at the tip you branch from, take the next free one
+> **at the rebase before you merge**, and expect gaps — contiguity is ungated and
+> a gap costs nothing.
+
 | Proposed record | Thesis | Source |
 |---|---|---|
 | Consistency is a defect in this repository | It is what admits every style rule to the aggregator, and its cost is that the defect test stops sorting. Reversing it un-gates three of the four new rows. The narrow variant is the recorded alternative. | [#229](https://github.com/mephistopheles4/stacks/issues/229) |

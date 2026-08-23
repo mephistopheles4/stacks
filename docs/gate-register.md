@@ -2015,7 +2015,7 @@ list that both the mutation counter and the complexity counter read. The
 docblock at `gates/astro-no-logic.test.ts:4-5` and the failure message at `:165`
 were rewritten in that commit, along with `AGENTS.md` and fifteen other
 addresses — swept as a class rather than fixed where a reviewer pointed. See
-[ADR-0071](adr/0071-astro-check-is-the-fifth-checker-and-it-runs-in-the-build.md)
+[ADR-0075](adr/0075-astro-check-is-the-fifth-checker-and-it-runs-in-the-build.md)
 and the `### G46 — \`astro-types\`` entry, whose own **Decay** verdict is this
 one's successor: the same shape of claim, this time asserted by a clause that
 reads the compiler pin.

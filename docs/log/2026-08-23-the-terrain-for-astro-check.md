@@ -15,7 +15,7 @@ below contradict a document in this tree, and one of them contradicts
 > ✅ **The block cleared the same evening, and the gate landed in this branch.**
 > [#259](https://github.com/mephistopheles4/stacks/pull/259) merged at
 > `bc59bf9`, and **G46** (`astro-types`) followed —
-> [ADR-0071](../adr/0071-astro-check-is-the-fifth-checker-and-it-runs-in-the-build.md).
+> [ADR-0075](../adr/0075-astro-check-is-the-fifth-checker-and-it-runs-in-the-build.md).
 > **Everything below is left as written**, because a terrain survey read after
 > the fact is worth more as a record of what was and was not known in advance
 > than as a tidy retrospective. Read the present tense as *"at `2f672b1`,
@@ -192,6 +192,10 @@ until the rebase**, which is `docs/spec/README.md`'s own rule and the trap
 Pick it against a re-fetched `main`. The same holds for the ADR number if one is
 written: §8 calls 0071 free and three sibling tickets may disagree by then.
 
+⚠️ **They did, within the hour, and the numbering turned out to be the sharpest
+thing this session learned.** Both are recorded in "What the numbers cost",
+below.
+
 **The row goes in the `## Defect gates` table** (`docs/gates.md:342`,
 `Row | Name | Rule | Gate | Status`), not the contract-seams table G7 sits in.
 **G42 (`dependency-audit`) is the precedent** and the answer to "what does the
@@ -298,3 +302,56 @@ assignee could not have told anyone that** — every session here authenticates 
 one account, so the tracker cannot distinguish *mine, a minute ago* from *free
 to take*, which is why the check was a session lookup matched on worktree name
 and not a `gh` query.
+
+## What the numbers cost
+
+Six sessions worked this map in parallel and **three of them independently took
+G46 and ADR-0071**. Two of the three had each told the other's number was free,
+in messages sent minutes apart. The reservation scheme did not survive contact
+with the other reserver, and it is worth writing down why it could not have.
+
+**Reserving a gate row number is worse than not reserving one, and G19 is the
+reason.** `gates/constitution-scoreboard.test.ts` asserts two things about the
+numbering: *"numbers every row uniquely"* at `:432`, and *"leaves no gap in the
+row numbering"* at `:439`, which walks `for (let n = 1; n < (numbers.at(-1) ??
+0); n += 1)` and reddens on any hole below the maximum. So a branch that takes
+G47 while G46 sits on somebody else's unmerged branch produces rows 1..45 and
+47 — a hole at 46 — and goes red. **A reservation list therefore reddens
+everyone except whoever merges first**, and the order it assumes is exactly the
+thing nobody controls.
+
+**What works is the rule the specs already state and this effort kept not
+following**: a row's number is not knowable until it lands. Several branches all
+holding G46 is the *correct* state and costs nothing. Everyone renumbers at the
+rebase immediately before their own merge, against the real tip.
+`docs/progress.md`'s "Rollout numbering" row has said so since band four —
+*"No number is reserved here"* — and this is the fifth pre-allocated number in
+this project to go stale.
+
+⚠️ **A correction to the mechanism, from #251, checked here rather than taken
+on trust.** This session first told two peers the red would be **main-only**,
+invisible on the pull request because CI sees only the branch. That is wrong for
+this workflow. `.github/workflows/gates.yml` triggers `on: pull_request` and its
+`actions/checkout` steps pass no `ref:`, so each takes the default
+`refs/pull/N/merge` — **`main` merged with the head**. The gapless walk therefore
+fails the reserving branch **in its own PR run**, and keeps failing it until a
+branch it does not control merges. **Hostage, not landmine**, and the loud
+failure is the better one: the second pull request to arrive pays, which is the
+one that should.
+
+⚠️ **Two narrower shapes do stay main-only** and are worth naming rather than
+losing to the correction: a pull request whose merge ref went stale after its
+base moved and was never re-run, and a branch numbered *below* an unmerged one
+that is **abandoned rather than merged** — which leaves the hole permanent, with
+only `main` to say so.
+
+⚠️ **And the ADR half is the opposite failure: silent.** Nothing in the suite
+reads `docs/adr/` for duplicates or holes. Contiguity is ungated, so a gap is
+free — but two sessions writing different records to the same number collide
+with nothing to catch it. That is why this record was renumbered from 0071 to
+**0075** on finding #251 had committed
+`0071-the-markdown-fix-flag-is-allowlisted.md`: not because 0075 is reserved,
+but because biasing upward is free where a duplicate is invisible. **The two
+halves take opposite advice** — gate rows: hold the lowest free number and
+renumber late, because gaps are fatal and duplicates are loud. ADRs: bias high
+and re-check late, because gaps are free and duplicates are silent.
