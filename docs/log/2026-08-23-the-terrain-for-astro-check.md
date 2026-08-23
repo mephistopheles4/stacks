@@ -305,10 +305,21 @@ and not a `gh` query.
 
 ## What the numbers cost
 
-Six sessions worked this map in parallel and **three of them independently took
-G46 and ADR-0071**. Two of the three had each told the other's number was free,
-in messages sent minutes apart. The reservation scheme did not survive contact
-with the other reserver, and it is worth writing down why it could not have.
+Six sessions worked this map in parallel. **Four of them ended up holding G46**
+— `markdown` (#251), `lint` (#253), `ignored-clones` (#254) and `astro-types`
+(#257) — and four wrote an ADR numbered `0071`.
+
+⚠️ **The finding is not that numbers collided. It is that the fix for the
+collision was invented twice, independently, and was worse than the problem.**
+The #253 session proposed a reservation list — G46 to itself, G47 to #251, G48
+to #256, G49 to #257 — and propagated it to four sessions before anyone read
+`gates/constitution-scoreboard.test.ts`. Two of the four had to check it and
+send it back. Then **#254 arrived at the same scheme from scratch**, with no
+contact with #253, and told it *"next free for you is G47"*. An idea that two
+isolated sessions reach independently is not one session's lapse; it is an
+attractive wrong answer, and that is the thing worth recognising in yourself.
+Recorded with the sessions named at #253's own request — *"a write-up that says
+three sessions took the same number describes a coincidence"*.
 
 **Reserving a gate row number is worse than not reserving one, and G19 is the
 reason.** `gates/constitution-scoreboard.test.ts` asserts two things about the
@@ -329,7 +340,8 @@ rebase immediately before their own merge, against the real tip.
 this project to go stale.
 
 ⚠️ **A correction to the mechanism, from #251, checked here rather than taken
-on trust.** This session first told two peers the red would be **main-only**,
+on trust — and it is the credit worth recording, ahead of anyone's concession.**
+This session first told two peers the red would be **main-only**,
 invisible on the pull request because CI sees only the branch. That is wrong for
 this workflow. `.github/workflows/gates.yml` triggers `on: pull_request` and its
 `actions/checkout` steps pass no `ref:`, so each takes the default
@@ -348,10 +360,37 @@ only `main` to say so.
 ⚠️ **And the ADR half is the opposite failure: silent.** Nothing in the suite
 reads `docs/adr/` for duplicates or holes. Contiguity is ungated, so a gap is
 free — but two sessions writing different records to the same number collide
-with nothing to catch it. That is why this record was renumbered from 0071 to
-**0075** on finding #251 had committed
-`0071-the-markdown-fix-flag-is-allowlisted.md`: not because 0075 is reserved,
-but because biasing upward is free where a duplicate is invisible. **The two
-halves take opposite advice** — gate rows: hold the lowest free number and
-renumber late, because gaps are fatal and duplicates are loud. ADRs: bias high
-and re-check late, because gaps are free and duplicates are silent.
+with nothing to catch it. This record moved from 0071 to **0075** on finding
+#251 had committed `0071-the-markdown-fix-flag-is-allowlisted.md`: not because
+0075 was reserved, but because biasing upward is free where a duplicate is
+invisible.
+
+⚠️ **Then it collided again, and that is the sharpest evidence there is.**
+#253 moved off 0071 to avoid #251 at the same moment this record did, and **both
+landed on 0075** — a second duplicate created by the act of resolving the first,
+between two sessions that were each being careful and each talking to the other.
+It was caught by a message crossing in flight, not by anything in the
+repository. **The failure survives the participants noticing it, because there
+is nothing to check against.** (#253 moved again, to 0076.)
+
+**The two halves take opposite advice**, and treating them alike produced every
+collision here:
+
+| | Gate rows in `docs/gates.md` | ADR numbers in `docs/adr/` |
+| --- | --- | --- |
+| A gap is | **fatal** — G19's gapless walk | **free** — ungated, and tonight made several deliberately |
+| A duplicate is | **loud** — G19's uniqueness clause, and G41 reporting *"G46 has 2 entries"* | **silent** — nothing reads the directory at all |
+| So | hold the **lowest** free number, renumber late | bias **high**, re-check late |
+
+That asymmetry is why a gate over `docs/adr/` should assert **uniqueness only
+and never contiguity**, and tonight's deliberate gaps are the proof that
+asserting contiguity would be wrong.
+
+⚠️ **One operational trap for whoever renumbers a row, from #253.** A row number
+lives in **two** files, and G41 holds them to each other in both directions:
+`gates/gate-register.test.ts:217` gives every row exactly one register entry,
+`:234` gives every entry a row, and `:248` holds the slug. So renumbering
+`docs/gates.md` without renaming the `### G<n> — \`slug\`` heading in
+`docs/gate-register.md` is as red as leaving the gap — and it reddens with a
+message about entry counts, which does not obviously read as *"you renamed half
+of a rename"*.
