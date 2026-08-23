@@ -18,8 +18,17 @@
 import { describe, expect, it } from 'vitest';
 import { AGENTS_DOC, extractAll, expectFound, markdownSection, readRepoFile } from './repo.ts';
 
-/** `.command('add')` in the CLI's commander setup. */
-const CLI_COMMAND = /\.command\(\s*'([a-z][a-z-]*)'/;
+/**
+ * `.command('add')` in the CLI's commander setup — **in either quote form**.
+ *
+ * It read one quote character until #252, which made this gate an accidental
+ * quote checker with an unreachable remedy: `.command("add")` extracted nothing
+ * and the red said the extraction found 0 CLI subcommands, naming neither the
+ * quote nor the line. Widened rather than flipped, and both forms are planted
+ * below — the seven live calls are single-quoted, so a flip would be as green
+ * here as a widen and blind to all of them.
+ */
+const CLI_COMMAND = /\.command\(\s*['"]([a-z][a-z-]*)['"]/;
 
 // package.json is read with JSON.parse rather than a regex. The first attempt
 // matched `^\s{4}"name":` and duly collected every devDependency, because they
@@ -56,6 +65,23 @@ describe('G14 — documented commands', () => {
     expectFound(cliCommands(), 'CLI subcommands', 4);
     expectFound(packageScripts(), 'package.json scripts', 6);
     expect(documentedCommandsSection().length).toBeGreaterThan(200);
+  });
+
+  it('extracts a subcommand written in either quote form', () => {
+    // Planted, because the repair is otherwise invisible in a tree whose seven
+    // live calls are all single-quoted. Until #252 the regex above hardcoded
+    // one quote character, so a contributor who hand-wrote `.command("add")`
+    // got "extraction found 0 CLI subcommands" — a message naming neither the
+    // quote nor the line, and a remedy nobody could reach from it. #231
+    // measured exactly that break under a whole-tree reformat, and #229 cites
+    // this gate as the measured warrant for admitting style rules at all.
+    //
+    // **Both forms, not only the one that was blind.** A regex flipped from `'`
+    // to `"` rather than widened satisfies a double-quote-only assertion and
+    // goes blind to every call this gate actually reads — trading one silent
+    // half for the other, with a green plant to show for it.
+    expect(extractAll(`.command("add")`, CLI_COMMAND)).toEqual(['add']);
+    expect(extractAll(`.command('add')`, CLI_COMMAND)).toEqual(['add']);
   });
 
   it('documents every CLI subcommand', () => {
