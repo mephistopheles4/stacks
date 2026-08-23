@@ -48,12 +48,20 @@ export default {
    * `typescript@7.0.2`; on `6.0.3` it starts and works — see
    * [ADR-0066](docs/adr/0066-typescript-6-until-7-1.md).
    *
-   * It stays `[]` regardless, because turning it on is a *scoring* change, not
-   * a configuration one. A `CompileError` is neither killed nor survived, so
-   * every scope's number moves and every calibration window behind
-   * `stryker.floors.json` restarts. That is its own decision with its own
-   * record, kept as fog on
-   * [the map](https://github.com/mephistopheles4/stacks/issues/186).
+   * **It stays `[]` until the `typescript` version is a hashed ingredient of the
+   * score** — decided, with the reasoning, in
+   * [ADR-0070](docs/adr/0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md).
+   * The short form: `configHashOf` hashes this object, so flipping `checkers`
+   * would be visible, but the *compiler doing the checking* is not in this
+   * object and cannot be — so a Dependabot bump of `typescript` would move every
+   * scope's score with nothing saying so. That is the hole `fixtureHash` was
+   * built to close for the complexity counter, and opening it here would be an
+   * inconsistency rather than a trade-off.
+   *
+   * Turning it on is also a *scoring* change and not a configuration one: a
+   * `CompileError` is neither killed nor survived — it leaves the denominator
+   * entirely — so every scope's number moves, in an unmeasured direction, and
+   * every calibration window behind `stryker.floors.json` restarts.
    *
    * Off costs little in the meantime: Vitest transpiles through esbuild and
    * never type-checks, so a mutant that would fail `tsc` still runs and gets a
