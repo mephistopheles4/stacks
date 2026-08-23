@@ -480,7 +480,9 @@
       "rel": [],
       "notes": [
         "This is what #229's resolution assumed: *adoption repairs those four first, or it is not adoption*. This ticket's measurement shows the assumption is avoidable, not wrong.",
-        "The repair is small. Four other gate files already use a `['\"]` character class, so the pattern to copy is in the same directory."
+        "The repair is small. Four other gate files already use a `['\"]` character class, so the pattern to copy is in the same directory.",
+        "**Measured, 2026-08-23, on branch `research/236-maximal`.** All four patterns were repaired, and the repair alone is green: 1055 tests, no reformat. Then the whole tree formatted with Markdown included and the plugin on, and the whole contract stayed green — 1055 tests, `build`, `gate:public`, `smoke:render` — at 232 files changed, +4834 / −4165. **`gr-first` unlocks `md-all`, demonstrated rather than argued.**",
+        "⚠️ The minimal repair loosens the four regexes. The better repair for the two table gates is `tableCells()` in `gates/repo.ts`, which trims each cell and is padding-agnostic by construction. That helper is why G19 and the trend-layer gate read the same repadded table and stayed green in #231."
       ]
     },
     "gr-avoid": {
@@ -599,15 +601,30 @@
       "why": "The plugin gives Prettier a parser for the `.astro` extension, so the site's markup and styles join the check.",
       "rel": [
         [
-          "inst-prettier",
-          "req",
+          "inst-editorconfig",
+          "conf",
           "It is a Prettier plugin, and an .editorconfig file has no parser to extend.",
+          "argued"
+        ],
+        [
+          "inst-none",
+          "conf",
+          "A plugin needs a formatter to plug into.",
+          "argued"
+        ],
+        [
+          "inst-later",
+          "conf",
+          "A deferred instrument has no plugin list to add to.",
           "argued"
         ]
       ],
       "notes": [
         "It is a new dependency, and `AGENTS.md` requires a record under `docs/adr/` for one.",
-        "It also formats the CSS inside those files, which is every stylesheet rule this repository has. That is real coverage, not a rounding error."
+        "It also formats the CSS inside those files, which is every stylesheet rule this repository has. That is real coverage, not a rounding error.",
+        "Measured, 2026-08-23: the plugin changes 37 lines across the 4 files. The whole contract stayed green — 1055 tests, `build`, `gate:public` and `smoke:render`.",
+        "⚠️ Measured, and it is the one change of a kind Prettier never makes elsewhere: the plugin rewrote `<span … set:html={markSvg}></span>` to a self-closing `<span … />`, and moved three comments off the line of the tag they hug. Astro compiles the self-closing form correctly and the brand SVG still reaches `dist/index.html`, so this is a recorded hazard rather than a fault.",
+        "The hazard has a name: this plugin edits markup semantics, while the rest of the formatter edits code tokens. `smoke:render` is what would catch a real one."
       ]
     },
     "astro-leave": {
@@ -669,9 +686,21 @@
       "why": "The aggregator blocks the merge and admits any stranger. The remedy is one command that needs no repository knowledge.",
       "rel": [
         [
-          "inst-prettier",
-          "req",
-          "The aggregator runs a command, and only a formatter provides one that both checks and fixes.",
+          "inst-editorconfig",
+          "conf",
+          "The aggregator runs a command, and an .editorconfig file provides none that checks or fixes.",
+          "argued"
+        ],
+        [
+          "inst-none",
+          "conf",
+          "With no tool, the aggregator has nothing to run.",
+          "argued"
+        ],
+        [
+          "inst-later",
+          "conf",
+          "A deferred instrument puts no command on the aggregator.",
           "argued"
         ]
       ],
