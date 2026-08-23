@@ -4904,6 +4904,109 @@ to cover flags it does not document.
 
 ---
 
+### G46 — `lint`
+
+**Gate:** `pnpm lint` → [`eslint.lint.config.mjs`](../eslint.lint.config.mjs), run by the `style` job in [`.github/workflows/gates.yml`](../.github/workflows/gates.yml)
+**Date:** 2026-08-23
+**Triaged at landing.** This row post-dates all four bands, so the bullets below
+are the same five questions asked on arrival rather than a band verdict.
+
+⚠️ **The row exists because the tool was already installed and was not doing
+this job.** `eslint.config.mjs` runs on every complexity measurement with one
+rule enabled at `max: 0`, which makes its report a population and never a
+verdict — its own header says *"This is not a linter"*. So the repository has
+had a linter's runtime cost, a linter's dependency and none of a linter's
+findings. On arrival the real rule set reported **33 findings in 19 files, every
+one of which `tsc --noEmit` passes**, including a floating promise and an
+unbound method among the **9** in `scene.ts` — a file outside every mutation
+scope and every complexity scope, so nothing else in this repository was reading
+it at all.
+
+- **Weakening** — ⚠️ **exposed, and it is the whole of this row's exposure.**
+  Four rule options are tuned so that four documented repository idioms stop
+  being reported, and each one is a place the rule can later be widened, or the
+  rule switched off, in a diff that reads as configuration. **No gate here reads
+  a lint config**, and the honest reason none is built is that a gate over a rule
+  set needs a second copy of the rule set to hold the first against — which is
+  the duplication [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md)
+  refuses. `accepted`, with the reason written beside every option in the file
+  and the convention stated in `docs/gates.md`'s **Not gated, deliberately**:
+  *do not remove a reason without removing the option it justifies.*
+- **Satisfying the letter** — **clean, because there is no letter to satisfy
+  separately from the finding.** A rule either reports a line or it does not;
+  unlike G14 or G45 there is no prose side that a throwaway sentence could
+  satisfy. ⚠️ The one shape that would qualify is an inline
+  `eslint-disable-next-line`, which is a visible one-line diff naming the rule it
+  silences — the same shape as every allowlist in `gates/`. `declined` — there
+  are **zero** disable comments for this config in the tree today, and a gate
+  counting them would be [G43](#g43--ignored-mutants)'s sweep applied to a
+  population that is currently empty.
+- **Routing around** — **the two obvious routes are closed by construction.**
+  The config globs `**/*.ts` with no per-directory exception, so a new file or a
+  new directory is linted the day it appears; and `pnpm lint` is a job in the
+  `gates` aggregator's `needs:` list *and* one of its `= "success"` assertions,
+  so it cannot run, go red, and be merged past. ⚠️ **The route that stays open is
+  a file the compiler cannot see.** `.astro` frontmatter is outside
+  `tsconfig.json` and therefore outside `projectService`, so logic moved into an
+  `.astro` file leaves this gate's reach entirely. `accepted` — that is the
+  standing reason AGENTS.md forbids logic in `.astro` files, and G7
+  (`astro-no-logic`) is the row that watches it.
+- **Vacuous green** — ⚠️ **exposed, and there is no floor on it.** Every other
+  row of this register that reads the tree carries an `expectFound` floor, so a
+  regex that stops matching fails loudly rather than comparing two empty sets.
+  This row has no equivalent: an `ignores` entry that accidentally swallowed
+  `packages/`, or a `files` glob that stopped matching, would leave `pnpm lint`
+  exiting 0 over nothing and looking exactly like a clean tree. `accepted`,
+  because the cheap version of the fix — asserting a file count — is a number
+  that grows with the tree and gets raised whenever it is inconvenient.
+  **Remedy named below**, and the plant in the table is what stands in for it
+  today: the canary was seen red before this row was written.
+- **Decay** — **it decays loudly and in the safe direction, and the mechanism is
+  named.** Every verdict here moves with the TypeScript version and with
+  `typescript-eslint`'s, which is the property
+  [ADR-0070](adr/0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md)
+  refuses for Stryker's type checker; both are pinned exact for that reason, and
+  the tension is recorded in
+  [ADR-0076](adr/0076-the-linter-is-type-aware-and-pinned.md) rather than left to
+  be rediscovered. `accepted` — a rule set that gained a rule at a bump reports
+  a **finding**, which is a red naming a file and a line, never a silent pass.
+  The failure mode is an upgrade that costs a session, not one that ships a
+  defect.
+
+**Rank:** not ranked. Post-dates all four bands.
+
+**Observed-red line:** **one plant, removed afterwards, and it carried its own
+reverse-assertion.** `packages/core/src/lint-canary.ts` held three defects and
+two idioms; `pnpm lint` exited **1** with exactly four errors.
+
+| | |
+| --- | --- |
+| `later();` — a promise nobody awaits | **red** — `@typescript-eslint/no-floating-promises`. The headline rule, and the one the untuned run found exactly once in 188 real files |
+| a `switch` over `'red' \| 'green' \| 'blue'` handling two of them | **red** — `@typescript-eslint/switch-exhaustiveness-check`, *"Cases not matched: \"blue\""*. In none of the five presets, so it is on because #233 named it |
+| `value: any`, then `value.whatever` | **red**, twice — `no-explicit-any` and `no-unsafe-member-access` |
+| **a `switch` with a deliberate `default:`** | **green** — the reverse-assertion. This is the shape `considerDefaultExhaustiveForUnions` exists for, and it must stay silent or the tuning has stopped working |
+| **an `async` helper that awaits nothing, taking `_dropped`** | **green** — two tuned options at once, `require-await` off and the `_` prefix honoured |
+
+**Disposition: `gated`.** All 33 arrival findings are resolved in the same
+commit — 8 by `--fix`, 8 by a typed `spyOnWarn()` in
+`packages/core/src/test-support.ts`, and the remaining 17 by hand.
+
+⚠️ **`--fix` is not what made this reachable, and the reasoning it replaced was
+about a different tool.** [#229](https://github.com/mephistopheles4/stacks/issues/229)
+§4's delivery rule — *one documented command with an optional fix flag* — was
+argued about style rules, where the flag is the whole remedy. Here 8 findings
+auto-fixed, 2 carried a suggestion and 23 had no fix at all. What made the 23
+reachable was the rule's own message naming the file, the line and the problem.
+
+**Remedy (named, not built):** the vacuous-green verdict. The check this row
+lacks is *"the linter saw the files it is supposed to see"* — and the form that
+would not rot is comparing the set of files ESLint linted against the set
+`tsconfig.json` covers, which is the same population `pnpm typecheck` reads.
+That is a real gate and it is a different row; nothing here should grow a file
+count.
+
+---
+
 ## ⚠️ `auditConfig.ignoreGhsas` — the category-1 verdict this rollout owed
 
 **Not a row, and it does not get one.** It is the escape hatch every other

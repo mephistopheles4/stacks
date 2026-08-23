@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# CRAP over the functions this commit touches — opt-in, advisory, never blocks.
+# CRAP over the functions this commit touches, and the linter's verdict —
+# opt-in, advisory, never blocks.
 #
 # Opt in with:  git config core.hooksPath .githooks
 # Opt out with: git config --unset core.hooksPath
@@ -22,5 +23,11 @@
 # skips it, and for a print that is fine.
 
 pnpm exec tsx scripts/crap.ts || printf '\nCRAP: no print this commit — the hook could not run.\n'
+
+# The linter, shifted left. `gates.yml`'s `style` job is what actually blocks;
+# this only saves the round trip. ⚠️ It is type-aware, so it costs about 7.5
+# seconds on top of the Vitest pass above — this hook was already the slow part
+# of a commit and is now slower. `--no-verify` skips both.
+pnpm lint || printf '\nlint: findings above. `pnpm lint --fix` repairs some; CI will refuse the rest.\n'
 
 exit 0

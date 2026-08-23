@@ -137,10 +137,42 @@ jobs:
       - name: pnpm audit
         run: pnpm audit --audit-level=high
 
+  # The static analysis and style verdicts.
+  #
+  # Its own job rather than steps in the matrix, for the reason the `audit` job
+  # above states: the answer does not depend on which Node version is running,
+  # and running it twice would report the same finding twice. A lint verdict is
+  # about TypeScript source, so the Node version cannot move it — in the matrix
+  # the type-aware run costs about 15 seconds and reports everything twice; here
+  # it costs about 7.5 and reports each finding once.
+  #
+  # ⚠️ **One job, one red, several tools.** As `docs/spec/static-analysis-and-style.md`
+  # §4 grows this job, a failure names `style` rather than the tool that failed.
+  # The remedy is that each command below is documented and runnable alone, so
+  # the job's output *is* the tool's output and the fix command is in it.
+  style:
+    name: style
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The tuned type-checked rule set over every .ts file. `pnpm lint --fix`
+      # repairs about a quarter of what this can report; the rest is read.
+      - name: lint
+        run: pnpm lint
+
   # The required status check. Named `gates` and nothing else.
   gates:
     name: gates
-    needs: [suite, audit]
+    needs: [suite, audit, style]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -153,5 +185,7 @@ jobs:
         run: |
           echo "suite: ${{ needs.suite.result }}"
           echo "audit: ${{ needs.audit.result }}"
+          echo "style: ${{ needs.style.result }}"
           test "${{ needs.suite.result }}" = "success"
           test "${{ needs.audit.result }}" = "success"
+          test "${{ needs.style.result }}" = "success"

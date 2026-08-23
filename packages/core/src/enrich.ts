@@ -4,7 +4,7 @@ import { spineColour } from './covers/dominant-colour.ts';
 import { isProbablySameBook, normaliseIsbn } from './identity.ts';
 import { formatSubjects } from './subjects.ts';
 import { coverUrls, lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
-import type { FrontmatterChanges, VaultAdapter } from './adapters/vault-adapter.ts';
+import type { VaultAdapter } from './adapters/vault-adapter.ts';
 import type { BookRecord } from './types.ts';
 
 /**
@@ -275,7 +275,7 @@ export async function enrichBook(
   if (filled.length === 0) return { kind: 'unfilled', title: book.title };
 
   if (options.dryRun !== true) {
-    await vault.updateBook(book.sourcePath, changes as FrontmatterChanges);
+    await vault.updateBook(book.sourcePath, changes);
   }
   return { kind: 'filled', title: book.title, fields: filled };
 }

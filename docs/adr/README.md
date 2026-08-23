@@ -94,3 +94,4 @@ Two other files hold what these deliberately do not:
 | [0068](./0068-the-complexity-cap-only-falls.md) | The complexity cap only falls, and a record counted under another rule is refused |
 | [0069](./0069-coverage-is-an-ingredient-not-a-goal.md) | Coverage is an ingredient, not a goal |
 | [0070](./0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md) | Stryker's type checker stays off until the compiler version is a hashed ingredient |
+| [0076](./0076-the-linter-is-type-aware-and-pinned.md) | The linter is type-aware, and every input to its verdict is pinned exact |

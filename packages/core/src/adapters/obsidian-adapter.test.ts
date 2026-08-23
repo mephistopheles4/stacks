@@ -1,25 +1,21 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ObsidianAdapter } from './obsidian-adapter.ts';
-import { FIXTURE_VAULT } from '../test-support.ts';
+import { FIXTURE_VAULT, spyOnWarn, type WarnSpy } from '../test-support.ts';
 
 const vault = new ObsidianAdapter(FIXTURE_VAULT);
 
 describe('listBooks against the fixture vault', () => {
-  let warnings: string[];
-  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let warn: WarnSpy;
 
   beforeEach(() => {
-    warnings = [];
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {
-      warnings.push(args.join(' '));
-    });
+    warn = spyOnWarn();
   });
 
   afterEach(() => {
-    warnSpy.mockRestore();
+    warn.restore();
   });
 
   it('returns exactly the well-formed books', async () => {
@@ -46,16 +42,16 @@ describe('listBooks against the fixture vault', () => {
   it('warns about each bad note BY NAME and keeps going (invariant 3)', async () => {
     await vault.listBooks();
 
-    expect(warnings).toHaveLength(2);
+    expect(warn.lines).toHaveLength(2);
     // "skip with a console warning listing the file" — the filename is the part
     // that makes the warning actionable, so assert on it, not just on a count.
-    expect(warnings.join('\n')).toContain('The Undelivered Manuscript.md');
-    expect(warnings.join('\n')).toContain('Untitled Import.md');
+    expect(warn.lines.join('\n')).toContain('The Undelivered Manuscript.md');
+    expect(warn.lines.join('\n')).toContain('Untitled Import.md');
   });
 
   it('says nothing at all about a note that simply is not a book', async () => {
     await vault.listBooks();
-    expect(warnings.join('\n')).not.toContain('On Reading Slowly');
+    expect(warn.lines.join('\n')).not.toContain('On Reading Slowly');
   });
 
   it('never lets a note body through (invariant 2)', async () => {

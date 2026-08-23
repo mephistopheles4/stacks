@@ -120,8 +120,12 @@ describe('G3 — never crash on a bad note', () => {
         parsed = parseNote(source, `hostile/${name}.md`);
       } catch (error) {
         // Invariant 3 in one line: one bad file must not break `stacks build`.
+        // The original is attached as `cause` so the stack that actually threw
+        // survives the rewording — the message names the fixture, and only the
+        // cause says where in the parser it died.
         throw new Error(
           `parseNote threw on ${name} — ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error },
         );
       }
 
