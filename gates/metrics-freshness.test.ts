@@ -37,7 +37,12 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { DAY, GATED_SERIES, SPINE_LANDED, judgeRecord } from '../scripts/lib/metrics-read.ts';
 import { RECORD_DIR } from '../scripts/lib/metrics-record.ts';
-import { COMPLEXITY_SERIES, renderMetrics, type RunFacts } from '../scripts/lib/metrics.ts';
+import {
+  COGNITIVE_SERIES,
+  COMPLEXITY_SERIES,
+  renderMetrics,
+  type RunFacts,
+} from '../scripts/lib/metrics.ts';
 import { expectFound, REPO_ROOT } from './repo.ts';
 
 const NOW = Math.floor(Date.now() / 1000);
@@ -60,6 +65,19 @@ const COMPLEXITY = [
   { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
 ];
 
+/**
+ * The cognitive half, on both fixtures for `COMPLEXITY`'s reason exactly.
+ *
+ * ⚠️ **`GATED_SERIES` is derived from `TREND_SERIES`, so a series added there
+ * is a series this bound demands a fresh sample of** — and an absent sample and
+ * a stale one are the same verdict. A fixture that stopped short of the
+ * cognitive four would plant a record CI no longer writes, and prove the
+ * refusal against the wrong world.
+ */
+const COGNITIVE = [
+  { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
+];
+
 /** A nightly — all eight series, which is what the bound covers. */
 function nightly(agoSeconds: number, sha = 'aaaaaaaa', overrides: Partial<RunFacts> = {}): Planted {
   const timestamp = NOW - agoSeconds;
@@ -78,6 +96,7 @@ function nightly(agoSeconds: number, sha = 'aaaaaaaa', overrides: Partial<RunFac
       mutationRunRuntime: 1275,
       liveExclusions: { live: 0, declared: 27 },
       complexity: COMPLEXITY,
+      cognitive: COGNITIVE,
       ...overrides,
     } satisfies RunFacts),
   };
@@ -99,9 +118,10 @@ function merge(agoSeconds: number, sha = 'bbbbbbbb', overrides: Partial<RunFacts
       runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/2',
       // Nobody measured a window for a record this test invented.
       prWindow: 'unknown',
-      expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES],
+      expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES, ...COGNITIVE_SERIES],
       gateSuiteRuntime: 9,
       complexity: COMPLEXITY,
+      cognitive: COGNITIVE,
       ...overrides,
     } satisfies RunFacts),
   };

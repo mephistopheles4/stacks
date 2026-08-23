@@ -355,6 +355,11 @@ export const INVENTORY = {
     { label: "Function 'optionalChain'", kind: 'function', complexity: 4 },
     { label: "Function 'defaults'", kind: 'function', complexity: 3 },
     { label: "Function 'overTheCut'", kind: 'function', complexity: 13 },
+    // ⚠️ Added for the *cognitive* counter and counted here because it is a
+    // function in the same fixture. Six nested `if`s: cyclomatic 7 against a
+    // cognitive 21, which is the divergence both series exist to carry. See
+    // `COGNITIVE_INVENTORY`.
+    { label: "Function 'deeplyNested'", kind: 'function', complexity: 7 },
     { label: "Function 'namedExpression'", kind: 'function', complexity: 2 },
     { label: 'Arrow function', kind: 'arrow', complexity: 2 },
     { label: "Async function 'asyncDeclaration'", kind: 'function', complexity: 2 },
@@ -371,7 +376,7 @@ export const INVENTORY = {
     { label: "Setter 'value'", kind: 'setter', complexity: 2 },
   ],
   /** The roll-up over the list above. Written out rather than derived: two ways of saying it. */
-  counts: { functions: 21, mass: 68, massOver10: 13, max: 13 },
+  counts: { functions: 22, mass: 75, massOver10: 13, max: 13 },
 } as const;
 
 /**

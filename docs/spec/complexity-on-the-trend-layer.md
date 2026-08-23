@@ -263,12 +263,29 @@ compared, because an ESLint upgrade that counts one more construct would
 otherwise breach every cap at once and read as a regression. Its contract,
 stated so two implementations agree:
 
-- **Canonical inputs**: the exact `eslint` and `@typescript-eslint/parser`
-  versions as installed, the `complexity` rule's options object, and the
-  fixture's expected totals — hashed in that order, the way
-  `configHashOf()` in `scripts/lib/floors.ts` hashes the score-affecting
-  Stryker options and nothing else. Changing any of them is changing what the
-  number means.
+- **Canonical inputs**: the exact `eslint`, `@typescript-eslint/parser` and
+  `eslint-plugin-sonarjs` versions as installed, **both** counting rules'
+  options objects, and **both** fixtures' expected totals — hashed in that
+  order, the way `configHashOf()` in `scripts/lib/floors.ts` hashes the
+  score-affecting Stryker options and nothing else. Changing any of them is
+  changing what the number means.
+
+  ⚠️ **This list widened from three inputs to six when the cognitive counter
+  landed** ([#255](https://github.com/mephistopheles4/stacks/issues/255)), and
+  the widening is the contract rather than an implementation detail: two
+  implementations of this spec have to hash the same things in the same order.
+  **One hash over two counting rules** was decided in
+  [#234](https://github.com/mephistopheles4/stacks/issues/234) §2, with its cost
+  recorded rather than hidden — a `sonarjs` upgrade refuses every *cyclomatic*
+  cap comparison too, although no cyclomatic number moved. That is the
+  fail-closed direction. See
+  [ADR-0073](../adr/0073-cognitive-complexity-is-published-beside-cyclomatic.md).
+
+  ⚠️ **Neither cut is an input.** `MCCABE_CUT` and `COGNITIVE_CUT` decide what
+  the two mass-over counts *mean*, and adding either would make it seven. What
+  guards them instead is the series **name** — `complexity-mass-over-10` and
+  `cognitive-mass-over-15` — asserted against the constant in each counter's
+  spec, so moving a cut is either a red test or a rename, and a rename is G36's.
 - **Stamped**: `RunFacts.fixtureHash`, rendered as a `fixture_hash` label on
   the run-info family beside `config_hash`. A score never appears without its
   run, and now neither does a count.
@@ -512,14 +529,22 @@ whose condition is a **hashing** change and not a tooling one, and the map lists
 it under *Out of scope* rather than as an open question. It was waiting on
 nothing, here or there.
 
-**One is still open: cognitive complexity as a second series**
-([#234](https://github.com/mephistopheles4/stacks/issues/234)). The bar this
-file set for it — *kept as fog until the split signature proves common* — has
-been met: [#230](https://github.com/mephistopheles4/stacks/issues/230) measured
-1105 scored pairs across all eight scopes at Pearson **r 0.9159**, with 54
-inversions where cognitive exceeds cyclomatic. So the signature holds and
-diverges really. Whether that earns a second series, replaces the first, or is
-refused is the half still on the map.
+**The list is now empty, and the last item is answered.** Cognitive complexity
+as a second series ([#234](https://github.com/mephistopheles4/stacks/issues/234))
+was the fifth, and it is **adopted**: four series beside the cyclomatic four,
+never a replacement, with its own denominator at 1105 and exactly one capped
+number. The bar this file set — *kept as fog until the split signature proves
+common* — was met by
+[#230](https://github.com/mephistopheles4/stacks/issues/230)'s 1105 scored pairs
+at Pearson **r 0.9159** with 54 inversions, and then answered rather than left
+open. See
+[ADR-0073](../adr/0073-cognitive-complexity-is-published-beside-cyclomatic.md)
+and [`static-analysis-and-style.md`](static-analysis-and-style.md) §5.
+
+⚠️ **Nothing replaces this section.** Per
+[#228](https://github.com/mephistopheles4/stacks/issues/228)'s Notes, the fog
+lives on the map's *Decisions so far* and its *Not yet specified*, and a
+question in two places goes stale in one of them. Read it there.
 
 **Research and spikes, kept on their branches**, each linked from its ticket:
 `research/complexity-tooling-for-typescript`,

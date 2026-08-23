@@ -30,7 +30,12 @@ import {
   samplesOf,
   scoresOf,
 } from './metrics-read.ts';
-import { COMPLEXITY_SERIES, renderMetrics, type RunFacts } from './metrics.ts';
+import {
+  COGNITIVE_SERIES,
+  COMPLEXITY_SERIES,
+  renderMetrics,
+  type RunFacts,
+} from './metrics.ts';
 
 const NOW = 1_787_000_000;
 const SPINE = Date.parse(`${SPINE_LANDED}T00:00:00Z`) / 1000;
@@ -46,6 +51,19 @@ const SPINE = Date.parse(`${SPINE_LANDED}T00:00:00Z`) / 1000;
 const COMPLEXITY = [
   { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
   { scope: 'packages/cli/src', functions: 26, mass: 96, massOver10: 22, max: 14 },
+];
+
+/**
+ * The cognitive half, on every record here for the reason above.
+ *
+ * ⚠️ **`functions` is deliberately *smaller* than `COMPLEXITY`'s on both
+ * scopes.** The cognitive rule never visits a class field initialiser or a
+ * static block, so its denominator is its own — and a fixture that copied the
+ * cyclomatic number would quietly assert the opposite of what the spec says.
+ */
+const COGNITIVE = [
+  { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
+  { scope: 'packages/cli/src', functions: 25, mass: 71, massOver15: 0, max: 11 },
 ];
 
 /** A nightly: all eight series, the shape CI actually writes on a schedule. */
@@ -66,6 +84,7 @@ function nightly(timestamp: number, overrides: Partial<RunFacts> = {}): string {
     mutationRunRuntime: 1275,
     liveExclusions: { live: 0, declared: 27 },
     complexity: COMPLEXITY,
+    cognitive: COGNITIVE,
     ...overrides,
   });
 }
@@ -83,9 +102,10 @@ function merge(timestamp: number, overrides: Partial<RunFacts> = {}): string {
     runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/2',
     // Nobody measured a window for a record this test invented.
     prWindow: 'unknown',
-    expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES],
+    expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES, ...COGNITIVE_SERIES],
     gateSuiteRuntime: 9,
     complexity: COMPLEXITY,
+    cognitive: COGNITIVE,
     ...overrides,
   });
 }
@@ -228,6 +248,10 @@ describe('judging a record — per-series, because the record is not one number'
       'complexity-mass',
       'complexity-mass-over-10',
       'complexity-max',
+      'cognitive-functions',
+      'cognitive-mass',
+      'cognitive-mass-over-15',
+      'cognitive-max',
     ]);
   });
 
@@ -246,6 +270,26 @@ describe('judging a record — per-series, because the record is not one number'
       'complexity-mass',
       'complexity-mass-over-10',
       'complexity-max',
+    ]);
+  });
+
+  it('refuses a deploy when the cognitive four go quiet and the cyclomatic four do not', () => {
+    // ⚠️ **The failure the second counter adds, and the one it is arranged to
+    // make possible.** The cognitive rule comes from a second supplier, so it
+    // can break on its own — and when it does, the eight numbers this
+    // repository already has 41 records of must keep arriving. A refusal
+    // naming only these four is what that looks like from the deploy.
+    const quiet = judgeRecord({
+      now: NOW,
+      records: [nightly(NOW - 600, { cognitive: undefined })].map((text) => parseRecord(text)),
+    });
+
+    expect(quiet.kind).toBe('stale');
+    expect(quiet.kind === 'stale' ? quiet.stale.map((one) => one.series) : []).toEqual([
+      'cognitive-functions',
+      'cognitive-mass',
+      'cognitive-mass-over-15',
+      'cognitive-max',
     ]);
   });
 });
