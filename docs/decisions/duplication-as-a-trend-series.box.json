@@ -40,13 +40,12 @@
       "id": "teeth",
       "name": "Teeth",
       "question": "Does a duplication number ever refuse anything?",
-      "problem": "A trend usually refuses nothing. This repository made one exception. Two complexity series carry a per-scope cap in `stryker.floors.json`. The cap is the highest value the repository already reached, and `pnpm deploy:site` refuses when a capped scope exceeds it. The complexity spec caps only the two counts that do not grow with the codebase. This row asks whether a duplication count earns the same cap.",
+      "problem": "A trend usually refuses nothing. This repository made one exception. Two complexity series carry a per-scope cap in `stryker.floors.json`. The cap is the highest value the repository already reached, and `pnpm deploy:site` refuses when a capped scope exceeds it. The spec caps the two counts that rise only when somebody writes worse code. It leaves uncapped the two that rise with any new code at all. This row asks which side a duplication count sits on.",
       "opts": [
         {
           "id": "teeth-uncapped",
           "label": "No cap. The number is read, and it refuses nothing anywhere.",
           "short": "Uncapped",
-          "chosen": true,
           "src": "#237 question 2"
         },
         {
@@ -59,6 +58,13 @@
           "id": "teeth-arm-later",
           "label": "Ship cap entries as unarmed now, and decide arming after the window fills.",
           "short": "Unarmed for now",
+          "chosen": true,
+          "src": "owner's proposal, #237 follow-up"
+        },
+        {
+          "id": "teeth-arm-now",
+          "label": "Cap it today, at whatever the first measurement reports.",
+          "short": "Arm it now",
           "strawman": true
         }
       ]
@@ -106,14 +112,14 @@
           "id": "deliberate-in-the-level",
           "label": "Leave them in the number. Name them once in the baseline, and read movement.",
           "short": "In the level",
-          "chosen": true,
           "src": "#237 session, from the measurement below"
         },
         {
           "id": "deliberate-ignore-comments",
           "label": "Put jscpd:ignore-start blocks around each intentional clone in the source.",
           "short": "Ignore blocks",
-          "src": "jscpd 5.0.16 supports the directive"
+          "src": "jscpd 5.0.16 supports the directive",
+          "chosen": true
         },
         {
           "id": "deliberate-tune",
@@ -130,16 +136,48 @@
       ]
     },
     {
+      "id": "watching",
+      "name": "How an ignore block is watched",
+      "question": "If the source can suppress a clone, what sees the suppression?",
+      "problem": "A `jscpd:ignore-start` block removes its lines from the duplicated count and from the total line count at the same time. The share does not move, and the count falls. The comment lives in a source file, far from any configuration a deploy inspects. This repository has met that exact shape before with a different tool, and it built a gate for it. This row decides whether it builds the same thing again.",
+      "opts": [
+        {
+          "id": "watching-counted",
+          "label": "A declared count per population, swept from source by a gate at merge. Links are generated, never stored.",
+          "short": "Counted and swept",
+          "chosen": true,
+          "src": "owner's proposal, #237 follow-up"
+        },
+        {
+          "id": "watching-stored-links",
+          "label": "The declaration stores a permanent code link for each block, reviewed in the diff.",
+          "short": "Stored permalinks",
+          "src": "owner's proposal, #237 follow-up"
+        },
+        {
+          "id": "watching-labels",
+          "label": "Each block becomes its own recorded series, labelled by file and line.",
+          "short": "A series per block",
+          "src": "#237 session, considered so the reason to refuse it is written down"
+        },
+        {
+          "id": "watching-none",
+          "label": "Allow the directive and watch nothing. Review catches it, or nobody does.",
+          "short": "Watch nothing",
+          "strawman": true
+        }
+      ]
+    },
+    {
       "id": "population",
       "name": "Which populations",
       "question": "Over which files does the tool run, and in how many runs?",
-      "problem": "Every other series here is counted per scope. A scope is one glob in `stryker.scopes.json`, and there are eight. Duplication differs from complexity in one way that matters. Complexity is a property of one function. A clone is a relation between two places, and the two places can sit in different scopes. So the number of runs is a real choice, not a detail.",
+      "problem": "Every other series here is counted per scope. A scope is one glob in `stryker.scopes.json`, and there are eight. Duplication differs from complexity in one way that matters. Complexity is a property of one function. A clone is a relation between two places, and the two places can sit in different scopes, or in code no scope declares at all. So the shape of the population is a real choice, not a detail.",
       "opts": [
         {
           "id": "population-scoped-union",
           "label": "One run over the eight scopes together. Count a clone in each scope it touches.",
           "short": "One run, per scope",
-          "chosen": true,
           "src": "#237 question 5, from #232's combined run"
         },
         {
@@ -159,6 +197,19 @@
           "label": "One number for the whole repository, with no scope split at all.",
           "short": "Whole tree, one number",
           "strawman": true
+        },
+        {
+          "id": "population-whole-tree-ts",
+          "label": "The whole tree, TypeScript files only. No scope list, and no data files.",
+          "short": "Whole tree, TS only",
+          "src": "#237 session, from the owner's whole-tree proposal"
+        },
+        {
+          "id": "population-scoped-plus-whole",
+          "label": "The eight scopes for the cap, and one whole-tree TypeScript number no scope list can shrink.",
+          "short": "Eight, plus a whole number",
+          "chosen": true,
+          "src": "#237 session, answering the owner's blind-spot concern"
         }
       ]
     }
@@ -217,9 +268,9 @@
           "argued"
         ],
         [
-          "population-scoped-union",
+          "watching-counted",
           "conf",
-          "A refused candidate runs no tool, so no population is read.",
+          "A refused candidate reads no source, so no directive exists to sweep for.",
           "argued"
         ]
       ],
@@ -244,7 +295,7 @@
       ]
     },
     "teeth-uncapped": {
-      "why": "The complexity spec caps two of its four counts and leaves two uncapped, because those two grow with the codebase legitimately. Duplicated lines grows with the codebase the same way.",
+      "why": "No cap. The number is read and it refuses nothing. This was the position before the owner's override, and its stated reason does not survive inspection.",
       "rel": [
         [
           "record-counts",
@@ -255,7 +306,9 @@
         ]
       ],
       "notes": [
-        "This is the doctrine the ticket proposed in its own question 1, and nothing in the box overturns it."
+        "The reason given for this cell was wrong, and the correction is why the position moved. It read: duplicated lines grows with the codebase legitimately, so a cap refuses a feature. That is the complexity spec's test for `complexity-functions` and `complexity-mass`, and duplication fails it. A clean new feature adds zero duplicated lines. Duplication rises only when somebody writes duplication, which is `complexity-mass-over-10`'s property, and that series is capped.",
+        "Legitimate growth still happens, and it is occasional. #232 found two of twelve clones are parallel type declarations by design. The floors file already answers that: a deliberate rise costs a `notes` entry, exactly as it does for a genuinely complex function.",
+        "The second reason for this cell was real. The Watching row closes it by measurement rather than by argument."
       ]
     },
     "teeth-capped": {
@@ -269,9 +322,9 @@
           "scripts/lib/floors.ts — the floors file refuses when fixtureHash differs from the record's label"
         ],
         [
-          "deliberate-in-the-level",
-          "conf",
-          "A cap set over a level that holds intentional clones refuses the next intentional clone.",
+          "watching-counted",
+          "req",
+          "Arming today means arming over a level nobody has calibrated, and over a route down nothing watches.",
           "argued"
         ]
       ],
@@ -281,7 +334,7 @@
       ]
     },
     "teeth-arm-later": {
-      "why": "The floors file admits an explicitly unarmed entry with its date, so the decision can be written down without being taken.",
+      "why": "Cap entries ship `unarmed` with their date, and arming waits for the calibration window to fill. The floors file already parses this state, so the decision is written down without being taken.",
       "rel": [
         [
           "record-counts",
@@ -291,14 +344,15 @@
           "scripts/lib/floors.ts — parseCap accepts the unarmed sentinel with a date"
         ],
         [
-          "deliberate-in-the-level",
-          "conf",
-          "An unarmed cap plans to arm, so the intentional clones must leave the level before that day.",
-          "argued"
+          "watching-counted",
+          "req",
+          "A cap that plans to arm needs the route around it watched before that day.",
+          "measured",
+          "#237 session — an ignore block moves the clone count and the denominator together, so an unwatched cap falls silently"
         ]
       ],
       "notes": [
-        "It is the cheapest way to reverse this row later, and it is not free. An unarmed cap entry is a line that reads as protection and refuses nothing, which is the shape docs/gates.md exists to refuse."
+        "The cost, unchanged by anything here: an unarmed cap entry is a line that reads as protection and refuses nothing. `docs/gates.md` exists to refuse exactly that shape. What makes it acceptable is that the file states `unarmed` explicitly, rather than carrying a number nobody chose."
       ]
     },
     "record-counts": {
@@ -354,35 +408,29 @@
       ]
     },
     "deliberate-in-the-level": {
-      "why": "The intentional clones stay in the count. They are named once when the baseline is recorded. A trend reads movement, so a constant offset costs a reader nothing.",
+      "why": "The intentional clones stay in the count. They are named once when the baseline is recorded. This was the position before the owner's override.",
       "rel": [],
       "notes": [
-        "This works only because the number refuses nothing. Under a cap the same offset spends part of the budget on clones nobody will remove.",
-        "#232 read all twelve clones by hand: about nine are real extractable duplication, two are parallel interfaces, one is a spec-mandated mirror. The offset is small and it is known."
+        "It still works, and it is now the weaker of the two. A note in a baseline document has no anchor in the source, so it drifts as the code moves and nothing reports the drift.",
+        "It also gives up the reason. #232's by-hand pass established which clones are deliberate and why. A count with a note preserves the number and loses the argument.",
+        "#232 read all twelve by hand: about nine are real extractable duplication, two are `LibraryBook` and `BookRecord` sharing a field vocabulary across the adapter boundary, and one is `floors.ts`'s `unarmedState` and `capUnarmedState`, which a spec calls the ratchet mirrored."
       ]
     },
     "deliberate-ignore-comments": {
-      "why": "jscpd honours a jscpd:ignore-start and jscpd:ignore-end pair, so an intentional clone can be marked where it lives, with a comment that says why.",
+      "why": "A `jscpd:ignore-start` and `jscpd:ignore-end` pair marks an intentional clone where it lives, with a comment beside it that says why. The reason sits next to the code, rather than in a baseline document that drifts away from it.",
       "rel": [
         [
-          "teeth-capped",
-          "conf",
-          "Ignored lines leave the clone count and the total-line denominator together, so a cap falls silently.",
+          "watching-counted",
+          "req",
+          "The directive moves the clone count and the total-line denominator together, so nothing sees it unless something counts it.",
           "measured",
           "#237 session, jscpd 5.0.16: a 34-line file with a 12-line ignore block reported 20 lines, and the pair reported 32 of 46 raw lines with 0 clones"
-        ],
-        [
-          "verdict-gate",
-          "conf",
-          "The same directive clears a threshold from inside a source file, with no diff in any file CI reads.",
-          "measured",
-          "#237 session, jscpd 5.0.16"
         ]
       ],
       "notes": [
-        "This is G38's failure shape exactly: an exclusion takes code out of the numerator and the denominator together, so the number does not move and the loss of coverage is invisible.",
-        "It is also G43's shape: a directive inside a source file, nowhere near the config and nowhere near the floors file. G43 exists because Stryker had the same hole, and closing it took a gate. A capped duplication series would owe that gate again for a new directive.",
-        "--ignore-pattern does not do this job, and the difference is worth writing down. It skips tokens that match a regex; it does not suppress a region. Measured: a // cpd-disable line above the clone changed nothing, and the clone still reported."
+        "Read this cell with the Watching row. On its own the directive is G38's failure shape and G43's directive shape at once: it takes lines out of the numerator and the denominator together, from inside a source file, nowhere near any file a deploy reads.",
+        "`--ignore-pattern` does not do this job and must not be reached for. Its help text reads like region suppression. Measured: a `// cpd-disable` line above the clone changed nothing, and the clone still reported. It skips tokens that match a regex.",
+        "The measurement corrected an overclaim on the way. An earlier reading said the whole file leaves the analysis. It does not. A file's live lines still count, and only the ignored region leaves."
       ]
     },
     "deliberate-tune": {
@@ -467,22 +515,147 @@
       "why": "One jscpd run over the repository, one set of numbers, no scope label at all. It is the shape the tool produces without configuration.",
       "rel": [
         [
-          "teeth-capped",
+          "verdict-series",
           "conf",
-          "Caps are per scope in the floors file, so a single repository number has no entry to hang on.",
+          "At jscpd's defaults, 570 of 1,042 duplicated lines are JSON this repository did not write.",
+          "measured",
+          "#237 session, whole tree: 414 files, 91,435 lines, 74 clones, 1,042 duplicated lines (1.14%). The JSON row alone is 26 clones and 570 lines (10.88%), and reading them names cached provider responses in fixtures/api/ and the provisioned Grafana dashboard"
+        ],
+        [
+          "teeth-arm-later",
+          "conf",
+          "Caps are keyed by scope in the floors file, armed or not, so a single repository number has no entry to hang on.",
           "sourced",
-          "scripts/lib/floors.ts — caps are keyed by scope name"
+          "scripts/lib/floors.ts — parseCaps is called per scope name"
         ]
       ],
       "notes": [
-        "It is the only option in this row with no cross-scope blind spot at all, which is a finding rather than an endorsement. It buys that by giving up the per-scope reading every other panel offers.",
-        "It also reads code no scope declares, so it would put gates/ and the top of packages/site/src into a number without either being declared. That is the opposite of G38's rule."
+        "The argument against this cell used to be that it reads code no scope declares, which is the opposite of G38's rule. That edge was weak and it is replaced. Reading everything means nothing can silently leave the measurement, which is more fail-closed than a declared list, not less.",
+        "What refutes it is the measurement. `fixtures/api/oreilly-isbn-hit.json` and `fixtures/api/oreilly-search-hit.json` are 105 identical lines, because one book comes back from two endpoints. That is a fact about O'Reilly's API and not about this codebase, and it has no remedy: de-duplicating a recorded response falsifies the fixture.",
+        "It keeps the property the owner wanted. The TypeScript-only variant keeps that property without the data files."
+      ]
+    },
+    "watching-counted": {
+      "why": "`stryker.floors.json` gains a second per-population counter beside `ignored`. A gate sweeps scoped source for the directive and compares the two. The nightly job knows its own commit, so it generates the links at the moment it emits.",
+      "rel": [
+        [
+          "record-counts",
+          "req",
+          "A declared count needs a defined population, or the sweep and the declaration count different files.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "This is G43 applied to a second tool, and G43's own file is the argument for it. It says a Stryker disable directive is the one route down that leaves no trace in either file the deploy reads, and it closes that at merge rather than at deploy, because `required_approving_review_count: 0` leaves the gate suite as the only pre-merge surface there is. Every word transfers.",
+        "`countDisableDirectives` is the working shape to copy: a regex that requires a comment opener immediately before the directive word, attributed to the first scope whose glob matches, over-matching on purpose because a missed directive is silent and a false positive is a red build somebody reads.",
+        "Its own comment records a trap worth inheriting. Widening that pattern once made the module's prose count itself, so the directive forms are described in the source and spelled only in a spec file that no scope reads.",
+        "Record the ignored line count as a fourth number, not only the block count. A declared block still shrinks the denominator, so without it the pre-suppression total is unrecoverable and a suppression still shows up as nothing."
+      ]
+    },
+    "watching-stored-links": {
+      "why": "Each declared block carries a permanent link to the code it covers, so a reviewer reads the actual clone from the pull request instead of taking a count on trust.",
+      "rel": [
+        [
+          "teeth-arm-later",
+          "conf",
+          "A stale link that still resolves reads as current, so a reviewer approving a cap-clearing block reads the wrong code.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "The goal is right and the storage is what fails. A permanent link pins a commit, so it never breaks and never updates. A stale link that still resolves reads as current, which is silence that looks like health.",
+        "Nothing here can check that a link resolves. G21 records any request the suite makes and fails the test that made it. So a stored link is shape-checked only, which AGENTS.md already calls a typo guard and explicitly not a correctness guarantee, about the frontmatter contributor ids.",
+        "G43's own file declined a note-presence check for the neighbouring reason: any string satisfies it, so it catches the honest omission and not the adversary."
+      ]
+    },
+    "watching-labels": {
+      "why": "Put the file and line of each block into the recorded series as labels, so the dashboard lists them with no second file to keep true.",
+      "rel": [
+        [
+          "verdict-series",
+          "conf",
+          "Pushgateway never forgets a series, so a block that moves line mints a new one and the old draws a confident flat line.",
+          "sourced",
+          "docs/spec/gate-or-trend.md §2 — Pushgateway strips timestamps by construction and never forgets a series, so a dead nightly draws a confident flat line"
+        ]
+      ],
+      "notes": [
+        "Every ignore block that moves leaves a permanent ghost. That is the exact failure the trend layer names as its own characteristic one."
+      ]
+    },
+    "watching-none": {
+      "why": "The number refuses nothing while every cap is unarmed, so an unwatched directive costs a distorted line rather than a bypassed refusal.",
+      "rel": [
+        [
+          "teeth-arm-later",
+          "conf",
+          "An unarmed cap plans to arm, and an unwatched directive is the cheapest route around it on the day it does.",
+          "measured",
+          "#237 session — the directive moves numerator and denominator together, leaving no diff in any file a deploy reads"
+        ]
+      ],
+      "notes": [
+        "It is survivable only while nothing ever arms. This repository already carries a gate whose whole existence is the same directive on a different tool."
+      ]
+    },
+    "population-whole-tree-ts": {
+      "why": "jscpd's `--format` flag restricts the scan to TypeScript. The whole tree is read, so no declaration list can shrink the population, and the JSON and Markdown that swamped the whole-tree run leave by file type.",
+      "rel": [
+        [
+          "teeth-arm-later",
+          "conf",
+          "It still has no scope key, so a cap in the floors file has no entry to hang on.",
+          "sourced",
+          "scripts/lib/floors.ts — parseCaps is called per scope name"
+        ]
+      ],
+      "notes": [
+        "Measured in the same run: 190 files, 45,869 lines, 35 clones, 363 duplicated lines, 0.79%. Against the eight declared scopes at 94 files, 25,999 lines, 12 clones, 133 lines, 0.51%.",
+        "The 23 extra clones are test and gate files. That forces an answer to #239, which owns the test-code population question and is live in another session. This box does not answer it."
+      ]
+    },
+    "population-scoped-plus-whole": {
+      "why": "Two readings from one tool. The eight declared scopes carry the numbers a cap hangs on. One whole-tree TypeScript number sits beside them, and no declaration list can shrink it.",
+      "rel": [
+        [
+          "record-counts",
+          "req",
+          "Two populations means two sets of counts, and both need the same stamped parameters.",
+          "argued"
+        ],
+        [
+          "watching-counted",
+          "req",
+          "A block in a file no scope declares is invisible to a per-scope sweep, so the sweep follows the wider population.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "It answers the concern behind the whole-tree proposal without paying its measured cost. The blind spot the owner was closing is real: `gates/` and the top of `packages/site/src` are read by no scope.",
+        "The cost is one more number and one more panel. The whole-tree number is never capped, because it holds test and gate code that #239 has not ruled on.",
+        "Within the eight, the run is still one scan rather than eight, so a clone whose halves sit in two scopes is seen. It counts in both, and the eight therefore do not sum."
+      ]
+    },
+    "teeth-arm-now": {
+      "why": "The baseline exists already, so a cap could be set from it on the first run and the calibration window skipped.",
+      "rel": [
+        [
+          "record-counts",
+          "req",
+          "A cap set before the parameters are stamped compares two numbers that need not mean the same thing.",
+          "sourced",
+          "docs/spec/complexity-on-the-trend-layer.md §4 — a record stamped under a different counting rule is refused rather than compared"
+        ]
+      ],
+      "notes": [
+        "The complexity ratchet refuses this by construction. A cap is the highest value observed across a twenty-run window, and arming is a human judgement made per scope after that window fills.",
+        "One measurement is not a level. #232's baseline was taken on one tree on one day, and nothing yet says whether 133 duplicated lines is this repository's normal or its best day."
       ]
     }
   },
   "suspected": [
     "A pre-commit hook that prints the duplication a commit adds would shift this left, as CRAP already does. It is not an edge because no option here is a hook, and the complexity spec already put the hook question to bed for its own metric.",
-    "An eslint-disable-next-line complexity comment appears able to drop a function from the shipped complexity population silently, in the same shape measured for jscpd:ignore-start. Not measured — ESLint is not installed in this worktree. If it holds, it is a hole in a shipped series and it belongs to its own issue, not to this map."
+    "An eslint-disable-next-line complexity comment appears able to drop a function from the shipped complexity population silently, in the same shape measured for jscpd:ignore-start. Filed as #244. Read rather than run, so it colours nothing here."
   ],
   "presets": [
     {
@@ -576,6 +749,63 @@
         },
         {
           "label": "Read the cascade",
+          "open": null,
+          "view": "findings"
+        }
+      ]
+    },
+    {
+      "title": "The owner's set",
+      "text": "The three cells the owner proposed, before the whole-tree measurement. Read the population row last.",
+      "steps": [
+        {
+          "label": "Reset",
+          "reset": true
+        },
+        {
+          "label": "Unarmed caps",
+          "set": {
+            "teeth": "teeth-arm-later"
+          }
+        },
+        {
+          "label": "Ignore blocks",
+          "set": {
+            "deliberate": "deliberate-ignore-comments"
+          },
+          "open": "watching"
+        },
+        {
+          "label": "Whole tree",
+          "set": {
+            "population": "population-whole-tree"
+          },
+          "open": "population"
+        },
+        {
+          "label": "Read the findings",
+          "open": null,
+          "view": "findings"
+        }
+      ]
+    },
+    {
+      "title": "Watch nothing",
+      "text": "Allow the ignore directive and count nothing. This is the configuration the measurement was taken against.",
+      "steps": [
+        {
+          "label": "Reset",
+          "reset": true
+        },
+        {
+          "label": "Stop watching",
+          "set": {
+            "watching": "watching-none"
+          },
+          "open": "watching"
+        },
+        {
+          "label": "Read the findings",
           "open": null,
           "view": "findings"
         }
