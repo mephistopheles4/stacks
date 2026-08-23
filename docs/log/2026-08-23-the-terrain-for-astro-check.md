@@ -402,6 +402,22 @@ prefer the queryable surface to the report, and treat a peer's statement about
 their own branch as true when written rather than true now.** That generalises
 past ADR numbers to every claim a session makes about state it owns.
 
+⚠️ **The four are not all one failure, and #251 drew the line.** Collisions 1
+and 2 are *the remote cannot see an unpushed branch* — invisible, but **knowably**
+invisible, which a reader can discount. Collision 4 is *a report was stale before
+it was read* — confidently wrong, and worse precisely because **acting on it
+feels like being careful**. The first is a gap in the evidence; the second is bad
+evidence. As #251 put it: **a live coordination channel has its own staleness,
+and it runs faster than the branches'.**
+
+⚠️ **Which gives the writer's half of the rule, and it is the actionable one.**
+Also #251's: *"the resolution that worked was not a better message. It was
+pushing."* No amount of care in composing a message fixes a channel whose
+staleness outruns the thing it describes. **Push, so that what you claim is
+checkable instead of reported** — and every collision here ended the moment its
+holder had a branch on the remote. The reader's rule is *query, don't trust*;
+the writer's rule is *be queryable*. Neither works alone.
+
 ⚠️ **The fifth move was declined, and declining is the intervention.** After
 this record reached 0077, #253 pointed out that 0071 had fallen free — #251
 vacated it in the rename that caused collision 4 — and proposed one of the two
