@@ -257,7 +257,7 @@ same choice `eslint.config.mjs` makes and for the same reason.
 ## Alternatives refused
 
 | Alternative | Why not |
-|---|---|
+| --- | --- |
 | **Replace cyclomatic with cognitive** | `resolveSettings` is cyclomatic 17 / cognitive 0, so a replacement blinds a 17-branch function. It also deletes every cyclomatic cap and calibration window, leaving the trend layer with no teeth. |
 | **A local advisory print** | Nothing watches a local surface. [`complexity-on-the-trend-layer.md`](../spec/complexity-on-the-trend-layer.md) §7 already grades *the hook stops running* as **open by nature**, which is why CRAP is a preview and not the record. |
 | **Three counts, dropping `mass-over` entirely** | Loses the concentration reading — *is the mass in a few bad functions or spread thin* — which is the one question the four counts answer that a single sum cannot. Recorded as the closest call in the box. |
