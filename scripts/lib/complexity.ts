@@ -154,8 +154,16 @@ function kindOf(label: string): FunctionKind {
   return 'unknown';
 }
 
-/** A repo-relative POSIX path, whatever the platform handed us. */
-function relativeTo(root: string, path: string): string {
+/**
+ * A repo-relative POSIX path, whatever the platform handed us.
+ *
+ * **Exported for the cognitive counter**, which spells a `file` field to the
+ * same contract and would otherwise hold a byte-identical copy. The two
+ * counters keep separate ESLint *configs* on purpose — one rule per report, so
+ * no count depends on a filter — and that discipline says nothing about a path
+ * helper. Two spellings of one path is what G24 exists about, one layer down.
+ */
+export function relativeTo(root: string, path: string): string {
   return relative(root, path).split(sep).join('/');
 }
 
@@ -416,8 +424,14 @@ export interface CounterInputs {
   inventory: typeof INVENTORY;
 }
 
-/** The `rules` map off a resolved config, without asserting what is in it. */
-function rulesOf(config: unknown): Record<string, unknown> {
+/**
+ * The `rules` map off a resolved config, without asserting what is in it.
+ *
+ * **Exported for the cognitive counter**, which reads its own resolved config
+ * the same way. See `relativeTo` for why the two-configs discipline does not
+ * argue for a second copy of this.
+ */
+export function rulesOf(config: unknown): Record<string, unknown> {
   if (typeof config !== 'object' || config === null) return {};
   const { rules } = config as { rules?: unknown };
   return typeof rules === 'object' && rules !== null ? (rules as Record<string, unknown>) : {};

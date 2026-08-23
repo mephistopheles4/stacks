@@ -27,7 +27,7 @@
  * deriving it means a crashed run writes `run_ok 0` **plus whatever computed**,
  * which is what keeps *never ran* (a gap in the branch) distinguishable from
  * *ran and broke* (an explicit zero). Both halves of `metrics.yml` use it, and
- * the merge half legitimately expects five series where the nightly expects eight.
+ * the merge half legitimately expects nine series where the nightly expects twelve.
  */
 
 import type { CognitiveCounts } from './cognitive.ts';
@@ -56,7 +56,7 @@ export const METRIC_PREFIXES = {
   edge: 'stacks_edge_',
 } as const;
 
-/** The eight series, and the whole of what this record carries as a trend. */
+/** The twelve series, and the whole of what this record carries as a trend. */
 export const TREND_SERIES = [
   {
     name: 'mutation-score',
@@ -453,8 +453,8 @@ function helpFor(trend: TrendName): string {
  * The families this run computed, in declaration order.
  *
  * A series is present when its input is present, and absent otherwise — which is
- * what lets the same renderer serve the nightly (eight series) and the merge
- * (five) without either one lying about the other.
+ * what lets the same renderer serve the nightly (twelve series) and the merge
+ * (nine) without either one lying about the other.
  */
 function trendFamilies(facts: RunFacts): Family[] {
   const broke = new Set<string>(facts.failed ?? []);

@@ -44,6 +44,7 @@ import {
   type CognitiveScore,
 } from './cognitive.ts';
 import { complexityOf, populationOf, type PerFunction } from './complexity.ts';
+import { TREND_SERIES } from './metrics.ts';
 import { readDeclarations, type Scope } from './mutation-score.ts';
 import { sourceFiles } from './scope-check.ts';
 
@@ -293,6 +294,39 @@ describe('the counter against the real tree', () => {
     expect(counts).not.toBeNull();
     expect(counts?.functions).toBeGreaterThan(0);
     expect(counts?.max).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('the cut', () => {
+  /**
+   * ⚠️ **The one input to a count that the fixture hash cannot see, and the
+   * cyclomatic side's guard does not reach this one.**
+   *
+   * `floors.test.ts` closes `MCCABE_CUT` with
+   * `expect(CAPPED_SERIES).toContain('complexity-mass-over-' + MCCABE_CUT)` —
+   * which works only because `complexity-mass-over-10` **is** in
+   * `CAPPED_SERIES`. No cognitive name is, deliberately and permanently:
+   * `cognitive-mass-over-15` may never be capped, because nothing may refuse on
+   * a cut nobody derived. So that mechanism is structurally unavailable here and
+   * the claim *"the series name closes it"* would be false for this cut.
+   *
+   * `TREND_SERIES` is the anchor that does work. It carries the name, and G36
+   * holds it to the `## Trends` table in both directions — so moving the cut is
+   * either red here, or a rename that G36 catches as a missing row.
+   */
+  it('names the cut in the series that measures it', () => {
+    expect(TREND_SERIES.map((series) => series.name)).toContain(
+      `cognitive-mass-over-${String(COGNITIVE_CUT)}`,
+    );
+  });
+
+  it('puts the cut above 15 and not at it', () => {
+    // A function scoring exactly the cut is inside it. Off by one here moves
+    // `cognitive-mass-over-15` on every scope at once, and the fixture cannot
+    // see it: `deeplyNested` scores 21, so a cut of 15 through 20 produces
+    // identical expected totals.
+    expect(cognitiveCountsFrom([fn(1, 1)], [score(COGNITIVE_CUT, 1)])?.massOver15).toBe(0);
+    expect(cognitiveCountsFrom([fn(1, 1)], [score(COGNITIVE_CUT + 1, 1)])?.massOver15).toBe(16);
   });
 });
 

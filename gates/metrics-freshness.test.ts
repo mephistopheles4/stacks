@@ -78,7 +78,7 @@ const COGNITIVE = [
   { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
 ];
 
-/** A nightly — all eight series, which is what the bound covers. */
+/** A nightly — all twelve series, which is what the bound covers. */
 function nightly(agoSeconds: number, sha = 'aaaaaaaa', overrides: Partial<RunFacts> = {}): Planted {
   const timestamp = NOW - agoSeconds;
   return {

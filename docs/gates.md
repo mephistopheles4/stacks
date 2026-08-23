@@ -1539,8 +1539,10 @@ other. A replacement makes a 17-branch function invisible.
 
 ⚠️ **`cognitive-functions` is a different denominator, not a copy of
 `complexity-functions`, and the spec has to say so or two implementations
-produce different numbers.** 1105 against 1114, for two reasons that are both
-silences and are not the same silence. The rule hooks the `:function` selector,
+produce different numbers.** [#230](https://github.com/mephistopheles4/stacks/issues/230)
+measured 1105 against 1114; re-measured at adoption it was 1124 against 1133.
+⚠️ **The gap of nine is the invariant, not either total** — the totals grow with
+the tree. It has two causes, both silences, and they are not the same silence. The rule hooks the `:function` selector,
 so it **never visits** a `PropertyDefinition` or a `StaticBlock` — nine such
 nodes across the eight scopes, which carry cyclomatic mass and no cognitive
 mass, and are not in the population at all. And it reports only above its

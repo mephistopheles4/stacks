@@ -66,7 +66,7 @@ const COGNITIVE = [
   { scope: 'packages/cli/src', functions: 25, mass: 71, massOver15: 0, max: 11 },
 ];
 
-/** A nightly: all eight series, the shape CI actually writes on a schedule. */
+/** A nightly: all twelve series, the shape CI actually writes on a schedule. */
 function nightly(timestamp: number, overrides: Partial<RunFacts> = {}): string {
   return renderMetrics({
     timestamp,

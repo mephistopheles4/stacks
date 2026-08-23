@@ -286,6 +286,14 @@ stated so two implementations agree:
   guards them instead is the series **name** — `complexity-mass-over-10` and
   `cognitive-mass-over-15` — asserted against the constant in each counter's
   spec, so moving a cut is either a red test or a rename, and a rename is G36's.
+
+  ⚠️ **The two assertions cannot use the same anchor, and a second implementer
+  needs to know which.** `MCCABE_CUT`'s is against `CAPPED_SERIES`;
+  `COGNITIVE_CUT`'s must be against `TREND_SERIES`, because **no cognitive name
+  is in `CAPPED_SERIES` and none ever will be** — `cognitive-mass-over-15` may
+  never be capped, which is the condition on accepting a cut nobody derived. An
+  implementation that copied the `CAPPED_SERIES` spelling across would compile,
+  pass, and guard nothing.
 - **Stamped**: `RunFacts.fixtureHash`, rendered as a `fixture_hash` label on
   the run-info family beside `config_hash`. A score never appears without its
   run, and now neither does a count.

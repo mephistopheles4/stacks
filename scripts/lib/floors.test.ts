@@ -1273,7 +1273,13 @@ describe('parseFloors, the cap half', () => {
 });
 
 describe('CAPPED_SERIES', () => {
-  it('caps the two series the spec caps, and neither of the two it does not', () => {
+  it('caps the two series the spec caps, and none of the six it does not', () => {
+    // ⚠️ Six uncapped now, not two: `complexity-functions` and
+    // `complexity-mass` grow with the tree legitimately, and **all four
+    // cognitive series** are uncapped at adoption — `cognitive-max` joins this
+    // array only once twenty records carry its family (#258), and
+    // `cognitive-mass-over-15` may never join it at all, because nothing may
+    // refuse on a cut nobody derived.
     expect([...CAPPED_SERIES]).toEqual(['complexity-max', 'complexity-mass-over-10']);
   });
 

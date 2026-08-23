@@ -24,7 +24,9 @@
  * scoring zero is silently absent — so the report is a subset of unknown size.
  * The population therefore comes from the **cyclomatic** report, minus the two
  * node kinds this rule never visits, and every function the rule said nothing
- * about counts as zero. That is why the denominators differ: 1105 against 1114.
+ * about counts as zero. That is why the denominators differ — #230 measured
+ * 1105 against 1114, and the **gap of nine** is the invariant rather than
+ * either total, which move with the tree.
  *
  * **Pure where it can be, with the disk and ESLint at the edge**, as its twin
  * is: `cognitivePopulationOf` and `cognitiveCountsFrom` touch nothing, which is
@@ -32,9 +34,20 @@
  */
 
 import { createRequire } from 'node:module';
-import { join, relative, resolve, sep } from 'node:path';
+import { join, resolve } from 'node:path';
 import { ESLint } from 'eslint';
-import { complexityOf, populationOf, type FunctionKind, type PerFunction } from './complexity.ts';
+// ⚠️ `relativeTo` and `rulesOf` are imported rather than copied. The two
+// counters keep separate ESLint *configs* on purpose — one rule per report, so
+// no count depends on a filter — and that discipline says nothing about a path
+// helper or a config reader. Two spellings of one path is G24's whole subject.
+import {
+  complexityOf,
+  populationOf,
+  relativeTo,
+  rulesOf,
+  type FunctionKind,
+  type PerFunction,
+} from './complexity.ts';
 import type { Scope } from './mutation-score.ts';
 import { REPO_ROOT } from './repo-root.ts';
 
@@ -54,9 +67,16 @@ import { REPO_ROOT } from './repo-root.ts';
  * that. A constant nobody derived must not be what stops a deploy.
  *
  * The guard against a silent change is the series *name* — move the cut and the
- * name is either wrong or renamed, and a rename is G36's to catch. That is the
- * guard `MCCABE_CUT` already uses, for the same reason: neither cut is a hash
- * input.
+ * name is either wrong or renamed, and a rename is G36's to catch. Neither cut
+ * is a hash input, so for both of them the name is what is left.
+ *
+ * ⚠️ **It is anchored differently from `MCCABE_CUT`'s, and it had to be.**
+ * `floors.test.ts` closes that one against `CAPPED_SERIES`, which works only
+ * because `complexity-mass-over-10` is in that array. **No cognitive name is,
+ * and none ever will be** — `cognitive-mass-over-15` may never be capped, which
+ * is the whole condition on accepting an underived cut. So the same assertion
+ * would be vacuous here. `cognitive.test.ts` anchors on `TREND_SERIES` instead,
+ * which carries the name and which G36 holds to the `## Trends` table.
  */
 export const COGNITIVE_CUT = 15;
 
@@ -71,7 +91,12 @@ export const COGNITIVE_CUT = 15;
  * both of those as implicit functions, so they carry cyclomatic mass and no
  * cognitive mass at all.
  *
- * Nine such nodes exist across the eight declared scopes, which is 1114 − 1105.
+ * ⚠️ **Nine such nodes across the eight declared scopes, and the nine is the
+ * durable number — not the totals either side of it.** #230 measured 1114
+ * cyclomatic functions against 1105 cognitive; re-measured on adoption the
+ * totals were 1133 and 1124, all nine of the difference in
+ * `packages/site/src/shelf`. The totals grow with the tree and the gap does
+ * not, so a reader checking this comment should check the difference.
  *
  * ⚠️ **Not to be confused with absent-at-zero.** A function this rule *visits*
  * and scores zero is silently absent from the report and **is** in the
@@ -142,11 +167,6 @@ const MESSAGE =
 
 /** The rule this counter reads, and the only one its config enables. */
 const RULE = 'sonarjs/cognitive-complexity';
-
-/** A repo-relative POSIX path, whatever the platform handed us. */
-function relativeTo(root: string, path: string): string {
-  return relative(root, path).split(sep).join('/');
-}
 
 /** The counter's own ESLint, pointed at its own config and never at the repo's. */
 function counter(): ESLint {
@@ -424,13 +444,6 @@ export interface CognitiveInputs {
    */
   ruleOptions: readonly unknown[];
   inventory: typeof COGNITIVE_INVENTORY;
-}
-
-/** The `rules` map off a resolved config, without asserting what is in it. */
-function rulesOf(config: unknown): Record<string, unknown> {
-  if (typeof config !== 'object' || config === null) return {};
-  const { rules } = config as { rules?: unknown };
-  return typeof rules === 'object' && rules !== null ? (rules as Record<string, unknown>) : {};
 }
 
 export async function cognitiveInputs(): Promise<CognitiveInputs> {

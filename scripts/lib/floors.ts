@@ -448,6 +448,14 @@ function digest(value: unknown): string {
  * both is the series *name*, asserted against the constant in each counter's
  * spec: move a cut and it is either red or a rename, and a rename is G36's to
  * catch.
+ *
+ * ⚠️ **The two assertions anchor on different arrays, and the difference is
+ * not cosmetic.** `floors.test.ts` closes `MCCABE_CUT` against `CAPPED_SERIES`,
+ * which works because `complexity-mass-over-10` is in it. `cognitive.test.ts`
+ * closes `COGNITIVE_CUT` against `TREND_SERIES`, because **no cognitive name is
+ * in `CAPPED_SERIES` and none ever will be** — `cognitive-mass-over-15` may
+ * never be capped, which is the condition on accepting a cut nobody derived.
+ * The `CAPPED_SERIES` spelling would be vacuous there.
  */
 export function fixtureHashOf(inputs: CounterInputs, cognitive: CognitiveInputs): string {
   return digest([
