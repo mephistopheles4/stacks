@@ -414,6 +414,21 @@ And every move tonight manufactured a collision, so **not moving is the only
 action with no failure mode**. 0071 belongs to #251 if anyone wants it; it
 restores their own record.
 
+⚠️ **#253's reading of its own proposal is the most transferable thing here, and
+it is not about numbers at all.** Their words: *"I reached for 0071 to avoid a
+hole, ten minutes after we had both written down that contiguity is ungated and
+gaps are free. The rule did not fail — I stopped applying it the moment a tidier
+option appeared."*
+
+**That is the failure to watch for, above every collision on this page.** The
+rule was correct, freshly written, agreed by both parties, and it lost to
+tidiness on first contact. Nothing in a repository can catch that: a gate checks
+the artifact, and this is a decision made about the artifact by someone who
+knew better a paragraph earlier. It is the same shape as every *"weakening a
+gate to make it pass"* entry in `docs/gate-register.md` — the reason is never
+that the rule was wrong, it is that following it looked untidy at the moment of
+choosing.
+
 ⚠️ **And it survives the objection [#263](https://github.com/mephistopheles4/stacks/issues/263)
 already writes into itself** — that a merge-time uniqueness gate would not have
 prevented any of this, since every duplicate lived on an unmerged branch.
