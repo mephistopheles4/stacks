@@ -1,0 +1,1196 @@
+# Cognitive complexity vs cyclomatic complexity — ticket #230
+
+Total complexity-rule functions: 1114
+Excluded (no cognitive counterpart — class field initializer / static block): 9
+Scored (paired with a cognitive-complexity value): 1105
+
+## (a) Worst function per scope, by each measure
+
+packages/core/src: cyclomatic-worst = async function 'enrichBook' (packages/core/src/enrich.ts) CC41/cog75 | cognitive-worst = async function 'enrichBook' (packages/core/src/enrich.ts) CC41/cog75 | SAME function
+packages/core/src/adapters: cyclomatic-worst = function 'renderNote' (packages/core/src/adapters/obsidian-adapter.ts) CC27/cog24 | cognitive-worst = function 'renderNote' (packages/core/src/adapters/obsidian-adapter.ts) CC27/cog24 | SAME function
+packages/core/src/covers: cyclomatic-worst = async function 'cacheCover' (packages/core/src/covers/cache-cover.ts) CC15/cog12 | cognitive-worst = async function 'cacheCover' (packages/core/src/covers/cache-cover.ts) CC15/cog12 | SAME function
+packages/core/src/import: cyclomatic-worst = function 'toAudibleBook' (packages/core/src/import/audible.ts) CC14/cog11 | cognitive-worst = async function 'importBooks' (packages/core/src/import/index.ts) CC12/cog12 | DIFFERENT function
+packages/core/src/metadata: cyclomatic-worst = async function 'fillGaps' (packages/core/src/metadata/index.ts) CC22/cog19 | cognitive-worst = async function 'fillGaps' (packages/core/src/metadata/index.ts) CC22/cog19 | SAME function
+packages/site/src/shelf: cyclomatic-worst = function 'applyLive' (packages/site/src/shelf/scene.ts) CC28/cog29 | cognitive-worst = function 'applyLive' (packages/site/src/shelf/scene.ts) CC28/cog29 | SAME function
+packages/cli/src: cyclomatic-worst = async arrow function (packages/cli/src/index.ts) CC14/cog12 | cognitive-worst = async arrow function (packages/cli/src/index.ts) CC13/cog19 | SAME function
+scripts: cyclomatic-worst = function 'inspectPublicBuild' (scripts/lib/public-build.ts) CC57/cog80 | cognitive-worst = function 'inspectPublicBuild' (scripts/lib/public-build.ts) CC57/cog80 | SAME function
+
+## Per-scope summary
+
+packages/core/src: n=84, inversions=4 (4.8%), r=0.935
+packages/core/src/adapters: n=23, inversions=2 (8.7%), r=0.984
+packages/core/src/covers: n=28, inversions=1 (3.6%), r=0.944
+packages/core/src/import: n=22, inversions=0 (0.0%), r=0.979
+packages/core/src/metadata: n=87, inversions=4 (4.6%), r=0.899
+packages/site/src/shelf: n=385, inversions=9 (2.3%), r=0.856
+packages/cli/src: n=26, inversions=1 (3.8%), r=0.938
+scripts: n=450, inversions=33 (7.3%), r=0.953
+
+## (b) Inversions (cognitive > cyclomatic)
+
+Inversions: 54 / 1105
+  async function 'backfillCoverSources' (packages/core/src/backfill-covers.ts) — CC9 / cog11
+  async function 'enrichBook' (packages/core/src/enrich.ts) — CC41 / cog75
+  function 'isValidIsbn' (packages/core/src/identity.ts) — CC7 / cog11
+  async arrow function (packages/core/src/test-support.ts) — CC4 / cog6
+  async method 'listBooks' (packages/core/src/adapters/obsidian-adapter.ts) — CC5 / cog6
+  async arrow function (packages/core/src/adapters/obsidian-adapter.ts) — CC7 / cog8
+  async function 'readCapped' (packages/core/src/covers/cache-cover.ts) — CC4 / cog5
+  async function 'findRecord' (packages/core/src/metadata/apple-books.ts) — CC15 / cog16
+  async function 'getWithRetry' (packages/core/src/metadata/http.ts) — CC7 / cog10
+  function 'mergeFields' (packages/core/src/metadata/precedence.ts) — CC8 / cog10
+  function 'firstString' (packages/core/src/metadata/types.ts) — CC6 / cog8
+  function 'makeContactShadowTexture' (packages/site/src/shelf/contact-shadow.ts) — CC7 / cog8
+  function 'showReport' (packages/site/src/shelf/debug-panel.ts) — CC7 / cog8
+  function 'buildHeadCap' (packages/site/src/shelf/head-cap.ts) — CC5 / cog6
+  function 'closeTheEnds' (packages/site/src/shelf/head-cap.ts) — CC5 / cog9
+  function 'placeRow' (packages/site/src/shelf/placement.ts) — CC15 / cog20
+  function 'buildBook' (packages/site/src/shelf/scene.ts) — CC19 / cog23
+  function 'applyLive' (packages/site/src/shelf/scene.ts) — CC28 / cog29
+  method 'get' (packages/site/src/shelf/shared-cache.ts) — CC5 / cog6
+  function 'makeSpineTexture' (packages/site/src/shelf/spine-texture.ts) — CC7 / cog10
+
+## (c) Correlation and outliers
+
+Pearson r (cyclomatic, cognitive): 0.9159
+
+Biggest discount (cyclomatic >> cognitive), top 10:
+  arrow function (packages/site/src/shelf/diagnostics.ts) [packages/site/src/shelf] — CC27 / cog7 (diff -20)
+  function 'resolveSettings' (packages/site/src/shelf/shelf-settings.ts) [packages/site/src/shelf] — CC17 / cog0 (diff -17)
+  function 'materialOf' (packages/site/src/shelf/scene.ts) [packages/site/src/shelf] — CC8 / cog0 (diff -8)
+  function 'asPrivate' (packages/core/src/frontmatter.ts) [packages/core/src] — CC11 / cog4 (diff -7)
+  function 'toMetadata' (packages/core/src/metadata/google-books.ts) [packages/core/src/metadata] — CC10 / cog3 (diff -7)
+  function 'start' (packages/site/src/shelf/start.ts) [packages/site/src/shelf] — CC8 / cog1 (diff -7)
+  async function 'lookupByIsbn' (packages/core/src/metadata/open-library.ts) [packages/core/src/metadata] — CC9 / cog3 (diff -6)
+  arrow function (packages/site/src/shelf/scene.ts) [packages/site/src/shelf] — CC8 / cog2 (diff -6)
+  function 'prWindow' (scripts/deploy.ts) [scripts] — CC10 / cog4 (diff -6)
+  arrow function (scripts/deploy.ts) [scripts] — CC7 / cog1 (diff -6)
+
+Smallest discount / biggest premium (cognitive close to or above cyclomatic), top 10:
+  async function 'enrichBook' (packages/core/src/enrich.ts) [packages/core/src] — CC41 / cog75 (diff 34)
+  function 'inspectPublicBuild' (scripts/lib/public-build.ts) [scripts] — CC57 / cog80 (diff 23)
+  function 'report' (scripts/smoke-render.ts) [scripts] — CC36 / cog51 (diff 15)
+  function 'declarationFaults' (scripts/lib/scope-check.ts) [scripts] — CC19 / cog31 (diff 12)
+  function 'renderReport' (scripts/lib/crap.ts) [scripts] — CC10 / cog19 (diff 9)
+  async function 'complexityOf' (scripts/lib/complexity.ts) [scripts] — CC16 / cog23 (diff 7)
+  async arrow function (packages/cli/src/index.ts) [packages/cli/src] — CC13 / cog19 (diff 6)
+  function 'trendRecords' (scripts/deploy.ts) [scripts] — CC8 / cog13 (diff 5)
+  function 'placeRow' (packages/site/src/shelf/placement.ts) [packages/site/src/shelf] — CC15 / cog20 (diff 5)
+  function 'coverageByFunction' (scripts/lib/crap.ts) [scripts] — CC7 / cog11 (diff 4)
+
+## Raw pairs (scope, file, name, cyclomatic, cognitive)
+
+packages/core/src	packages/core/src/add-book.ts	async function 'addBook'	16	12
+packages/core/src	packages/core/src/add-book.ts	function 'termCoverage'	2	1
+packages/core/src	packages/core/src/add-book.ts	arrow function	1	0
+packages/core/src	packages/core/src/add-book.ts	function 'findShelved'	5	3
+packages/core/src	packages/core/src/add-book.ts	arrow function	2	1
+packages/core/src	packages/core/src/add-book.ts	arrow function	2	0
+packages/core/src	packages/core/src/backfill-covers.ts	async function 'backfillCoverSources'	9	11
+packages/core/src	packages/core/src/backfill-covers.ts	arrow function	1	0
+packages/core/src	packages/core/src/enrich.ts	function 'missingFields'	3	2
+packages/core/src	packages/core/src/enrich.ts	arrow function	1	0
+packages/core/src	packages/core/src/enrich.ts	async function 'enrichBook'	41	75
+packages/core/src	packages/core/src/enrich.ts	arrow function	1	0
+packages/core/src	packages/core/src/enrich.ts	arrow function	1	0
+packages/core/src	packages/core/src/frontmatter.ts	function 'parseNote'	12	7
+packages/core/src	packages/core/src/frontmatter.ts	function 'readContributorIds'	4	4
+packages/core/src	packages/core/src/frontmatter.ts	function 'asString'	5	5
+packages/core/src	packages/core/src/frontmatter.ts	function 'asPrivate'	11	4
+packages/core/src	packages/core/src/frontmatter.ts	function 'asCoverSource'	3	1
+packages/core/src	packages/core/src/frontmatter.ts	function 'asBinding'	3	1
+packages/core/src	packages/core/src/frontmatter.ts	function 'readStatus'	3	1
+packages/core/src	packages/core/src/frontmatter.ts	function 'readTags'	3	2
+packages/core/src	packages/core/src/frontmatter.ts	arrow function	1	0
+packages/core/src	packages/core/src/frontmatter.ts	function 'asDate'	5	4
+packages/core/src	packages/core/src/frontmatter.ts	function 'asRating'	5	4
+packages/core/src	packages/core/src/frontmatter.ts	function 'asPositiveInt'	4	3
+packages/core/src	packages/core/src/frontmatter.ts	function 'asBoolean'	7	3
+packages/core/src	packages/core/src/frontmatter.ts	function 'asOrder'	3	2
+packages/core/src	packages/core/src/frontmatter.ts	function 'asHexColour'	4	3
+packages/core/src	packages/core/src/identity.ts	function 'normaliseIsbn'	1	0
+packages/core/src	packages/core/src/identity.ts	function 'isValidIsbn'	7	11
+packages/core/src	packages/core/src/identity.ts	function 'toObsidianTag'	3	2
+packages/core/src	packages/core/src/identity.ts	function 'normaliseTitleAuthor'	1	0
+packages/core/src	packages/core/src/identity.ts	function 'isProbablySameBook'	8	5
+packages/core/src	packages/core/src/identity.ts	function 'looksDerivative'	1	0
+packages/core/src	packages/core/src/identity.ts	function 'isContainedIn'	5	2
+packages/core/src	packages/core/src/identity.ts	arrow function	1	0
+packages/core/src	packages/core/src/identity.ts	function 'titleMatchScore'	3	1
+packages/core/src	packages/core/src/identity.ts	arrow function	1	0
+packages/core/src	packages/core/src/identity.ts	function 'rankingScore'	4	1
+packages/core/src	packages/core/src/identity.ts	arrow function	1	0
+packages/core/src	packages/core/src/key-if-present.ts	function 'keyIfPresent'	2	1
+packages/core/src	packages/core/src/library.ts	function 'buildLibrary'	4	0
+packages/core/src	packages/core/src/library.ts	arrow function	1	0
+packages/core/src	packages/core/src/library.ts	function 'toLibraryBook'	2	1
+packages/core/src	packages/core/src/library.ts	function 'idFor'	3	0
+packages/core/src	packages/core/src/library.ts	function 'shortHash'	2	1
+packages/core/src	packages/core/src/library.ts	function 'byFinishedThenTitle'	6	6
+packages/core/src	packages/core/src/provider-ids.ts	function 'isWellFormedId'	1	0
+packages/core/src	packages/core/src/publish.ts	async function 'publish'	4	3
+packages/core/src	packages/core/src/publish.ts	arrow function	2	1
+packages/core/src	packages/core/src/publish.ts	async function 'withCoverAspects'	1	0
+packages/core/src	packages/core/src/publish.ts	async arrow function	5	3
+packages/core/src	packages/core/src/publish.ts	async function 'pruneCovers'	6	6
+packages/core/src	packages/core/src/publish.ts	arrow function	1	0
+packages/core/src	packages/core/src/publish.ts	async function 'exists'	2	1
+packages/core/src	packages/core/src/publish.ts	function 'withLocalCovers'	1	0
+packages/core/src	packages/core/src/publish.ts	arrow function	3	2
+packages/core/src	packages/core/src/publish.ts	async function 'copyCovers'	4	4
+packages/core/src	packages/core/src/publish.ts	arrow function	1	0
+packages/core/src	packages/core/src/publish.ts	arrow function	1	0
+packages/core/src	packages/core/src/publish.ts	arrow function	1	0
+packages/core/src	packages/core/src/publish.ts	arrow function	1	0
+packages/core/src	packages/core/src/publish.ts	async function 'stageCover'	3	1
+packages/core/src	packages/core/src/publish.ts	function 'encoded'	3	1
+packages/core/src	packages/core/src/shelf-order.ts	function 'compareShelfPosition'	15	12
+packages/core/src	packages/core/src/subjects.ts	function 'formatSubjects'	2	1
+packages/core/src	packages/core/src/subjects.ts	arrow function	1	0
+packages/core/src	packages/core/src/subjects.ts	arrow function	2	1
+packages/core/src	packages/core/src/subjects.ts	function 'parseSubjects'	1	0
+packages/core/src	packages/core/src/subjects.ts	arrow function	1	0
+packages/core/src	packages/core/src/subjects.ts	arrow function	1	0
+packages/core/src	packages/core/src/test-support.ts	function 'readApiFixture'	1	0
+packages/core/src	packages/core/src/test-support.ts	function 'fixtureHttpGet'	1	0
+packages/core/src	packages/core/src/test-support.ts	async arrow function	4	6
+packages/core/src	packages/core/src/test-support.ts	function 'isHost'	2	1
+packages/core/src	packages/core/src/types.ts	function 'isBookStatus'	2	1
+packages/core/src	packages/core/src/types.ts	function 'isBinding'	2	1
+packages/core/src	packages/core/src/watch.ts	function 'isRebuildTrigger'	4	2
+packages/core/src	packages/core/src/watch.ts	function 'watchVault'	5	0
+packages/core/src	packages/core/src/watch.ts	async arrow function	3	2
+packages/core/src	packages/core/src/watch.ts	arrow function	3	2
+packages/core/src	packages/core/src/watch.ts	arrow function	1	0
+packages/core/src	packages/core/src/watch.ts	arrow function	2	1
+packages/core/src	packages/core/src/watch.ts	method 'close'	2	1
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	constructor	1	0
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	async method 'listBooks'	5	6
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	async method 'writeBook'	2	1
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	async method 'updateBook'	5	3
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	async method 'insertBodySection'	7	6
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	async method 'bookExists'	4	4
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	arrow function	2	1
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	arrow function	2	0
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	method 'coverDir'	1	0
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	private async method #markdownFiles	2	1
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	async arrow function	7	8
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	function 'renderNote'	27	24
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	function 'safeFilename'	2	1
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	async function 'exists'	2	1
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	async function 'isDirectory'	2	1
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	function 'applyChange'	11	8
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	arrow function	1	0
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	function 'hasHeading'	1	0
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	function 'serialise'	4	3
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	function 'trailingNewline'	3	0
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	function 'isTag'	1	0
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	function 'describe'	2	1
+packages/core/src/adapters	packages/core/src/adapters/obsidian-adapter.ts	function 'warn'	1	0
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	async function 'cacheCover'	15	12
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	arrow function	2	1
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	function 'looksLikeImage'	7	5
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	async function 'readCapped'	4	5
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	arrow function	1	0
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	async function 'download'	11	9
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	arrow function	1	0
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	async function 'isBlank'	4	3
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	arrow function	1	0
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	arrow function	1	0
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	async function 'aspectOf'	5	2
+packages/core/src/covers	packages/core/src/covers/cache-cover.ts	function 'slug'	2	0
+packages/core/src/covers	packages/core/src/covers/cover-budget.ts	function 'decodedTextureBytes'	1	0
+packages/core/src/covers	packages/core/src/covers/cover-budget.ts	async function 'measureCover'	4	2
+packages/core/src/covers	packages/core/src/covers/cover-keys.ts	function 'coverKeys'	3	2
+packages/core/src/covers	packages/core/src/covers/cover-path.ts	function 'coverFileName'	4	1
+packages/core/src/covers	packages/core/src/covers/cover-path.ts	function 'resolveCoverPath'	3	2
+packages/core/src/covers	packages/core/src/covers/cover-source.ts	function 'coverSourceFor'	5	4
+packages/core/src/covers	packages/core/src/covers/cover-source.ts	function 'isCoverSource'	2	1
+packages/core/src/covers	packages/core/src/covers/dominant-colour.ts	async function 'spineColour'	2	0
+packages/core/src/covers	packages/core/src/covers/dominant-colour.ts	async function 'dominantColour'	7	4
+packages/core/src/covers	packages/core/src/covers/dominant-colour.ts	async function 'pipelineFor'	6	2
+packages/core/src/covers	packages/core/src/covers/dominant-colour.ts	async function 'trimmed'	9	4
+packages/core/src/covers	packages/core/src/covers/dominant-colour.ts	function 'tally'	12	12
+packages/core/src/covers	packages/core/src/covers/dominant-colour.ts	function 'toHex'	1	0
+packages/core/src/covers	packages/core/src/covers/dominant-colour.ts	arrow function	1	0
+packages/core/src/covers	packages/core/src/covers/infer-source.ts	function 'inferCoverSource'	7	5
+packages/core/src/covers	packages/core/src/covers/measure.ts	async function 'measureCover'	4	2
+packages/core/src/import	packages/core/src/import/audible.ts	function 'parseAudibleExport'	3	1
+packages/core/src/import	packages/core/src/import/audible.ts	arrow function	1	0
+packages/core/src/import	packages/core/src/import/audible.ts	arrow function	1	0
+packages/core/src/import	packages/core/src/import/audible.ts	function 'toAudibleBook'	14	11
+packages/core/src/import	packages/core/src/import/audible.ts	function 'tagsFrom'	2	1
+packages/core/src/import	packages/core/src/import/audible.ts	arrow function	1	0
+packages/core/src/import	packages/core/src/import/audible.ts	arrow function	1	0
+packages/core/src/import	packages/core/src/import/audible.ts	function 'imageUrl'	2	1
+packages/core/src/import	packages/core/src/import/audible.ts	function 'formatDuration'	2	1
+packages/core/src/import	packages/core/src/import/audible.ts	function 'rating'	5	4
+packages/core/src/import	packages/core/src/import/audible.ts	function 'isoDate'	3	2
+packages/core/src/import	packages/core/src/import/audible.ts	function 'text'	3	2
+packages/core/src/import	packages/core/src/import/audible.ts	function 'positiveInt'	4	3
+packages/core/src/import	packages/core/src/import/index.ts	async function 'importBooks'	12	12
+packages/core/src/import	packages/core/src/import/index.ts	arrow function	3	0
+packages/core/src/import	packages/core/src/import/index.ts	arrow function	2	0
+packages/core/src/import	packages/core/src/import/index.ts	arrow function	1	0
+packages/core/src/import	packages/core/src/import/index.ts	arrow function	1	0
+packages/core/src/import	packages/core/src/import/index.ts	async function 'coverCandidates'	4	2
+packages/core/src/import	packages/core/src/import/index.ts	function 'findDuplicate'	4	3
+packages/core/src/import	packages/core/src/import/index.ts	arrow function	1	0
+packages/core/src/import	packages/core/src/import/index.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/apple-books.ts	async function 'findRecord'	15	16
+packages/core/src/metadata	packages/core/src/metadata/apple-books.ts	function 'trackIdOf'	2	1
+packages/core/src/metadata	packages/core/src/metadata/apple-books.ts	function 'genresOf'	3	2
+packages/core/src/metadata	packages/core/src/metadata/apple-books.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/apple-books.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	function 'withKey'	3	1
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	async function 'lookupByIsbn'	2	1
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	async function 'searchByTitle'	4	2
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	arrow function	3	0
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	arrow function	2	0
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	async function 'fetchVolume'	6	3
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	function 'firstVolume'	8	4
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	function 'isQuotaError'	1	0
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	function 'toMetadata'	10	3
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	function 'categoriesOf'	4	4
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	function 'coverFrom'	2	0
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	function 'largerCover'	2	1
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	function 'isbnFrom'	3	1
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	arrow function	2	0
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	function 'joinAuthors'	3	2
+packages/core/src/metadata	packages/core/src/metadata/google-books.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/http.ts	async function 'getWithRetry'	7	10
+packages/core/src/metadata	packages/core/src/metadata/http.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/http.ts	function 'createCachedHttpGet'	1	0
+packages/core/src/metadata	packages/core/src/metadata/http.ts	async arrow function	4	3
+packages/core/src/metadata	packages/core/src/metadata/index.ts	async function 'lookupByIsbn'	4	0
+packages/core/src/metadata	packages/core/src/metadata/index.ts	async function 'searchByTitle'	4	2
+packages/core/src/metadata	packages/core/src/metadata/index.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/index.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/index.ts	function 'matchesQuery'	2	0
+packages/core/src/metadata	packages/core/src/metadata/index.ts	function 'rankAgainst'	1	0
+packages/core/src/metadata	packages/core/src/metadata/index.ts	arrow function	2	1
+packages/core/src/metadata	packages/core/src/metadata/index.ts	arrow function	2	1
+packages/core/src/metadata	packages/core/src/metadata/index.ts	function 'completeness'	5	4
+packages/core/src/metadata	packages/core/src/metadata/index.ts	async function 'lookup'	5	4
+packages/core/src/metadata	packages/core/src/metadata/index.ts	async function 'complete'	1	0
+packages/core/src/metadata	packages/core/src/metadata/index.ts	async function 'completePages'	5	2
+packages/core/src/metadata	packages/core/src/metadata/index.ts	async function 'askApple'	7	2
+packages/core/src/metadata	packages/core/src/metadata/index.ts	async function 'fillGaps'	22	19
+packages/core/src/metadata	packages/core/src/metadata/index.ts	async function 'borrowOReillyCover'	5	3
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	async function 'lookupByIsbn'	9	3
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	function 'olidFrom'	4	1
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	function 'namesOf'	3	3
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	3	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	function 'listIfAny'	2	1
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	async function 'searchByTitle'	4	1
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	2	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	function 'toMetadata'	7	7
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	function 'preferIsbn13'	3	1
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	function 'authorsOf'	3	2
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	2	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/open-library.ts	function 'coverOf'	4	1
+packages/core/src/metadata	packages/core/src/metadata/oreilly.ts	async function 'lookupByIsbn'	4	2
+packages/core/src/metadata	packages/core/src/metadata/oreilly.ts	async function 'searchByTitle'	4	1
+packages/core/src/metadata	packages/core/src/metadata/oreilly.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/oreilly.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/oreilly.ts	arrow function	2	0
+packages/core/src/metadata	packages/core/src/metadata/oreilly.ts	function 'toMetadata'	3	2
+packages/core/src/metadata	packages/core/src/metadata/oreilly.ts	function 'topicsOf'	3	2
+packages/core/src/metadata	packages/core/src/metadata/oreilly.ts	arrow function	2	0
+packages/core/src/metadata	packages/core/src/metadata/oreilly.ts	arrow function	1	0
+packages/core/src/metadata	packages/core/src/metadata/oreilly.ts	function 'coverFor'	2	1
+packages/core/src/metadata	packages/core/src/metadata/precedence.ts	function 'mergeFields'	8	10
+packages/core/src/metadata	packages/core/src/metadata/precedence.ts	function 'blank'	4	1
+packages/core/src/metadata	packages/core/src/metadata/precedence.ts	function 'takeMerged'	6	6
+packages/core/src/metadata	packages/core/src/metadata/precedence.ts	function 'takeId'	4	2
+packages/core/src/metadata	packages/core/src/metadata/types.ts	function 'toPlainText'	3	2
+packages/core/src/metadata	packages/core/src/metadata/types.ts	arrow function	2	0
+packages/core/src/metadata	packages/core/src/metadata/types.ts	function 'stripTags'	2	1
+packages/core/src/metadata	packages/core/src/metadata/types.ts	function 'coverUrls'	3	0
+packages/core/src/metadata	packages/core/src/metadata/types.ts	function 'asRecord'	4	2
+packages/core/src/metadata	packages/core/src/metadata/types.ts	function 'firstString'	6	8
+packages/core/src/metadata	packages/core/src/metadata/types.ts	function 'asPositiveInt'	4	3
+packages/site/src/shelf	packages/site/src/shelf/book-inspector.ts	function 'mountBookInspector'	7	2
+packages/site/src/shelf	packages/site/src/shelf/book-inspector.ts	arrow function	2	0
+packages/site/src/shelf	packages/site/src/shelf/book-inspector.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/book-inspector.ts	arrow function	3	1
+packages/site/src/shelf	packages/site/src/shelf/book-inspector.ts	method 'dispose'	1	0
+packages/site/src/shelf	packages/site/src/shelf/books.ts	function 'toRows'	10	9
+packages/site/src/shelf	packages/site/src/shelf/books.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/books.ts	function 'fitsRow'	1	0
+packages/site/src/shelf	packages/site/src/shelf/books.ts	function 'yearOf'	4	1
+packages/site/src/shelf	packages/site/src/shelf/books.ts	function 'toShelfBook'	5	1
+packages/site/src/shelf	packages/site/src/shelf/books.ts	function 'thicknessFor'	2	1
+packages/site/src/shelf	packages/site/src/shelf/books.ts	function 'bindingFor'	3	1
+packages/site/src/shelf	packages/site/src/shelf/books.ts	function 'heightFor'	1	0
+packages/site/src/shelf	packages/site/src/shelf/books.ts	function 'fallbackColour'	2	0
+packages/site/src/shelf	packages/site/src/shelf/books.ts	function 'clamp'	1	0
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	async function 'boot'	8	7
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	method 'onSelect'	2	2
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	method 'onContextLost'	2	1
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	method 'onContextRestored'	1	0
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	method 'onShaderFailure'	1	0
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	method 'handle'	1	0
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	arrow function	2	0
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	method 'onRebuild'	2	1
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	arrow function	3	2
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	function 'publish'	1	0
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	method 'projectBook'	1	0
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	method 'stats'	1	0
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	function 'showNotice'	2	1
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	function 'clearNotice'	3	0
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	function 'watchForRebuilds'	2	1
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	async arrow function	5	4
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/boot.ts	async function 'loadLibrary'	4	3
+packages/site/src/shelf	packages/site/src/shelf/card-sheet.ts	function 'dismissThreshold'	1	0
+packages/site/src/shelf	packages/site/src/shelf/card-sheet.ts	function 'capture'	2	1
+packages/site/src/shelf	packages/site/src/shelf/card-sheet.ts	function 'release'	3	2
+packages/site/src/shelf	packages/site/src/shelf/card-sheet.ts	function 'mountSheet'	2	0
+packages/site/src/shelf	packages/site/src/shelf/card-sheet.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/card-sheet.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/card-sheet.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/card-sheet.ts	arrow function	3	2
+packages/site/src/shelf	packages/site/src/shelf/card-sheet.ts	arrow function	3	2
+packages/site/src/shelf	packages/site/src/shelf/card-sheet.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/card-sheet.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'showCard'	1	0
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'hideCard'	1	0
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'announcement'	2	1
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'cardModel'	1	0
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'blocks'	6	5
+packages/site/src/shelf	packages/site/src/shelf/card.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'tagsLine'	2	1
+packages/site/src/shelf	packages/site/src/shelf/card.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'readingLine'	4	3
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'objectLine'	7	6
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'publicationYear'	4	1
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'subjectsLine'	3	2
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'linksRow'	2	1
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'anchor'	3	1
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'text'	2	1
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'element'	1	0
+packages/site/src/shelf	packages/site/src/shelf/card.ts	function 'cover'	2	1
+packages/site/src/shelf	packages/site/src/shelf/case.ts	function 'rowsForCase'	1	0
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	function 'makeContactShadowTexture'	7	8
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	function 'makeNeighbourShadow'	2	1
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	function 'makeBackboardShade'	1	0
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	function 'makeRecessShade'	1	0
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	function 'shadePlane'	4	4
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	function 'inShadow'	3	2
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	function 'fallsAway'	2	1
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	function 'finish'	1	0
+packages/site/src/shelf	packages/site/src/shelf/contact-shadow.ts	function 'makeContactShadow'	2	1
+packages/site/src/shelf	packages/site/src/shelf/cover-viewer.ts	function 'mountCoverViewer'	1	0
+packages/site/src/shelf	packages/site/src/shelf/cover-viewer.ts	arrow function	4	2
+packages/site/src/shelf	packages/site/src/shelf/cover-viewer.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/cover-viewer.ts	method 'isOpen'	1	0
+packages/site/src/shelf	packages/site/src/shelf/cover-viewer.ts	method 'teardown'	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	function 'mountPanel'	2	1
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	3	2
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	4	4
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	5	3
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	3	1
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	2	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	2	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	3	1
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	3	2
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	3	2
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	function 'makeLamp'	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	method 'set'	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	function 'row'	2	1
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	function 'showReport'	7	8
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	function 'format'	2	1
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	function 'applyRootStyle'	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	function 'applyReadoutStyle'	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	function 'applyStatusStyle'	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	function 'applyButtonStyle'	1	0
+packages/site/src/shelf	packages/site/src/shelf/debug-panel.ts	function 'applyInputStyle'	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	function 'mountDiagnostics'	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	27	7
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	function 'render'	17	13
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	function 'carriesSettings'	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	function 'write'	2	1
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	function 'readPrevious'	6	4
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	function 'applyPanelStyle'	1	0
+packages/site/src/shelf	packages/site/src/shelf/diagnostics.ts	function 'applyButtonStyle'	1	0
+packages/site/src/shelf	packages/site/src/shelf/hash.ts	function 'hashUnit'	2	1
+packages/site/src/shelf	packages/site/src/shelf/head-cap.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/head-cap.ts	function 'headCapGeometry'	1	0
+packages/site/src/shelf	packages/site/src/shelf/head-cap.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/head-cap.ts	function 'isHeadCapGeometry'	1	0
+packages/site/src/shelf	packages/site/src/shelf/head-cap.ts	function 'buildHeadCap'	5	6
+packages/site/src/shelf	packages/site/src/shelf/head-cap.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/head-cap.ts	function 'bevel'	1	0
+packages/site/src/shelf	packages/site/src/shelf/head-cap.ts	function 'closeTheEnds'	5	9
+packages/site/src/shelf	packages/site/src/shelf/page-edges.ts	function 'noise'	1	0
+packages/site/src/shelf	packages/site/src/shelf/page-edges.ts	function 'heightAt'	1	0
+packages/site/src/shelf	packages/site/src/shelf/page-edges.ts	function 'pageStriationMap'	2	1
+packages/site/src/shelf	packages/site/src/shelf/page-edges.ts	function 'bake'	5	4
+packages/site/src/shelf	packages/site/src/shelf/page-edges.ts	function 'slopeProfile'	3	1
+packages/site/src/shelf	packages/site/src/shelf/page-edges.ts	function 'encodingScale'	3	2
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'placeShelf'	1	0
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'placeRow'	15	20
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'rowExtent'	2	1
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'propsAcrossGap'	3	1
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'runsParallel'	4	1
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'propLeanFor'	5	2
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'swayOf'	1	0
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'propShiftOf'	1	0
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'parallelPushOf'	2	1
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'swingsNothing'	2	0
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'leansInPlace'	1	0
+packages/site/src/shelf	packages/site/src/shelf/placement.ts	function 'leanFor'	1	0
+packages/site/src/shelf	packages/site/src/shelf/post.ts	function 'makePost'	1	0
+packages/site/src/shelf	packages/site/src/shelf/post.ts	method 'render'	1	0
+packages/site/src/shelf	packages/site/src/shelf/post.ts	method 'setSize'	1	0
+packages/site/src/shelf	packages/site/src/shelf/post.ts	method 'update'	1	0
+packages/site/src/shelf	packages/site/src/shelf/post.ts	method 'dispose'	1	0
+packages/site/src/shelf	packages/site/src/shelf/provider-links.ts	function 'providerLinks'	7	5
+packages/site/src/shelf	packages/site/src/shelf/provider-marks.ts	function 'markFor'	4	4
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'mountShelf'	8	3
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	6	4
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	4	2
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	8	4
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	2	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	2	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	3	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	2	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	getter 'profile'	9	9
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	getter 'settings'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	getter 'changeLog'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	method 'applySettings'	4	4
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	method 'stats'	3	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	method 'projectBook'	2	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	method 'dispose'	3	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	11	10
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'describeLinkFailure'	3	2
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'stopSamplingShadows'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	4	3
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'said'	4	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'materialOf'	8	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'describeGpu'	4	3
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'measureCaseOverflow'	2	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'buildBooks'	4	4
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	8	2
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	Class field initializer	1	n/a
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	constructor	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	method 'paint'	5	5
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	method 'dispose'	5	5
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	private method #add	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'buildBook'	19	23
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'buildShelf'	3	2
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'keyLightPosition'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'keyLightTarget'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'positionOf'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'caseLight'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'addLighting'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'fitShadowCamera'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'applyRendererSettings'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'applyLive'	28	29
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	2	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'dirtyEveryMaterial'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	4	3
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'applyLight'	3	2
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'notePosition'	2	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'samePosition'	4	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'hex'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	function 'describeProfiles'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	Class field initializer	1	n/a
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	Class field initializer	1	n/a
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	Class field initializer	1	n/a
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	Class field initializer	1	n/a
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	method 'useRenderer'	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	method 'owns'	3	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	method 'load'	4	2
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	method 'dispose'	2	1
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	arrow function	2	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	Class field initializer	1	n/a
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	Class field initializer	1	n/a
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	constructor	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	private method #handleDown	1	0
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	Class field initializer	1	n/a
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	private method #handleUp	5	3
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	Class field initializer	1	n/a
+packages/site/src/shelf	packages/site/src/shelf/scene.ts	method 'dispose'	1	0
+packages/site/src/shelf	packages/site/src/shelf/shared-cache.ts	function 'sharedCache'	1	0
+packages/site/src/shelf	packages/site/src/shelf/shared-cache.ts	method 'get'	5	6
+packages/site/src/shelf	packages/site/src/shelf/shelf-settings.ts	function 'heightOf'	1	0
+packages/site/src/shelf	packages/site/src/shelf/shelf-settings.ts	function 'resolveSettings'	17	0
+packages/site/src/shelf	packages/site/src/shelf/shelf-settings.ts	function 'mergePosition'	2	0
+packages/site/src/shelf	packages/site/src/shelf/shelf-settings.ts	function 'mergeProfiles'	3	0
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'bookLimit'	4	2
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'soloBook'	5	3
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'readSettings'	10	9
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'writeSettings'	9	9
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	arrow function	2	2
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'tuneDiff'	9	8
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'readTune'	14	12
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'isRecord'	3	1
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'same'	1	0
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'flag'	4	2
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'positive'	3	2
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'wholePositive'	3	2
+packages/site/src/shelf	packages/site/src/shelf/shelf-url.ts	function 'oneOf'	3	2
+packages/site/src/shelf	packages/site/src/shelf/spine-profile.ts	function 'slopeAt'	4	2
+packages/site/src/shelf	packages/site/src/shelf/spine-profile.ts	function 'isFlat'	2	0
+packages/site/src/shelf	packages/site/src/shelf/spine-profile.ts	function 'bakeNormalMap'	4	4
+packages/site/src/shelf	packages/site/src/shelf/spine-profile.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/spine-profile.ts	function 'spineNormalMap'	2	1
+packages/site/src/shelf	packages/site/src/shelf/spine-profile.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'spineCanvasWidth'	1	0
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'makeSpineTexture'	7	10
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	arrow function	1	0
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'addCloth'	2	1
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'contrastingInk'	3	2
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'fade'	1	0
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'splitTitle'	4	2
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'bandFor'	3	2
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'width'	2	1
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'draw'	3	2
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'fit'	4	3
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'wrap'	9	8
+packages/site/src/shelf	packages/site/src/shelf/spine-texture.ts	function 'lastName'	5	1
+packages/site/src/shelf	packages/site/src/shelf/start.ts	function 'start'	8	1
+packages/cli/src	packages/cli/src/enrich-report.ts	function 'reportEntry'	6	1
+packages/cli/src	packages/cli/src/enrich-report.ts	function 'enrichReport'	2	1
+packages/cli/src	packages/cli/src/enrich-report.ts	function 'enrichSummary'	5	4
+packages/cli/src	packages/cli/src/env.ts	function 'envFilePath'	5	3
+packages/cli/src	packages/cli/src/env.ts	function 'mainCheckout'	2	1
+packages/cli/src	packages/cli/src/env.ts	function 'loadEnv'	13	13
+packages/cli/src	packages/cli/src/index.ts	async arrow function	11	8
+packages/cli/src	packages/cli/src/index.ts	async arrow function	2	1
+packages/cli/src	packages/cli/src/index.ts	async arrow function	5	3
+packages/cli/src	packages/cli/src/index.ts	async arrow function	3	3
+packages/cli/src	packages/cli/src/index.ts	arrow function	1	0
+packages/cli/src	packages/cli/src/index.ts	arrow function	1	0
+packages/cli/src	packages/cli/src/index.ts	async arrow function	1	0
+packages/cli/src	packages/cli/src/index.ts	arrow function	2	0
+packages/cli/src	packages/cli/src/index.ts	arrow function	1	0
+packages/cli/src	packages/cli/src/index.ts	arrow function	1	0
+packages/cli/src	packages/cli/src/index.ts	async arrow function	7	7
+packages/cli/src	packages/cli/src/index.ts	arrow function	2	0
+packages/cli/src	packages/cli/src/index.ts	arrow function	1	0
+packages/cli/src	packages/cli/src/index.ts	async arrow function	12	12
+packages/cli/src	packages/cli/src/index.ts	arrow function	1	0
+packages/cli/src	packages/cli/src/index.ts	async arrow function	13	19
+packages/cli/src	packages/cli/src/index.ts	arrow function	1	0
+packages/cli/src	packages/cli/src/index.ts	async arrow function	14	12
+packages/cli/src	packages/cli/src/index.ts	function 'context'	5	1
+packages/cli/src	packages/cli/src/index.ts	function 'fail'	1	0
+scripts	scripts/capture-api-fixtures.ts	function 'openLibrarySearch'	1	0
+scripts	scripts/capture-lookup-recall.ts	async arrow function	2	0
+scripts	scripts/capture-lookup-recall.ts	function 'prune'	4	2
+scripts	scripts/capture-lookup-recall.ts	arrow function	1	0
+scripts	scripts/capture-lookup-recall.ts	arrow function	1	0
+scripts	scripts/check-public-build.ts	arrow function	1	0
+scripts	scripts/check-public-build.ts	arrow function	1	0
+scripts	scripts/check-public-build.ts	arrow function	1	0
+scripts	scripts/commit-metrics.ts	function 'records'	2	1
+scripts	scripts/commit-metrics.ts	arrow function	1	0
+scripts	scripts/commit-metrics.ts	function 'remoteHasBranch'	2	1
+scripts	scripts/commit-metrics.ts	function 'cleanUp'	2	1
+scripts	scripts/commit-metrics.ts	function 'main'	10	10
+scripts	scripts/crap.ts	function 'stagedFiles'	2	1
+scripts	scripts/crap.ts	arrow function	1	0
+scripts	scripts/crap.ts	function 'runCoverage'	3	0
+scripts	scripts/crap.ts	function 'tail'	2	0
+scripts	scripts/crap.ts	async function 'main'	7	6
+scripts	scripts/crap.ts	arrow function	2	0
+scripts	scripts/crap.ts	arrow function	2	1
+scripts	scripts/deploy.ts	function 'fail'	1	0
+scripts	scripts/deploy.ts	function 'run'	4	3
+scripts	scripts/deploy.ts	function 'assertPublishableBranch'	6	4
+scripts	scripts/deploy.ts	function 'trendRecords'	8	13
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	2	0
+scripts	scripts/deploy.ts	function 'prWindow'	10	4
+scripts	scripts/deploy.ts	function 'lastMutationRun'	4	4
+scripts	scripts/deploy.ts	function 'scopeResolution'	3	2
+scripts	scripts/deploy.ts	function 'disambiguate'	6	3
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	function 'reportTrendRecord'	9	8
+scripts	scripts/deploy.ts	function 'assertNoEmptyScopes'	5	4
+scripts	scripts/deploy.ts	function 'reportFloors'	10	11
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	4	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	7	1
+scripts	scripts/deploy.ts	function 'windowRecords'	5	6
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	2	0
+scripts	scripts/deploy.ts	function 'mutantsPerScope'	5	5
+scripts	scripts/deploy.ts	function 'localToday'	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	async function 'fixtureTitles'	2	1
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	function 'stampOfLastDeploy'	2	1
+scripts	scripts/deploy.ts	function 'stampAndWrite'	2	1
+scripts	scripts/deploy.ts	async function 'verifyBuildLive'	5	4
+scripts	scripts/deploy.ts	method 'onRetry'	1	0
+scripts	scripts/deploy.ts	function 'reportUnreadable'	1	0
+scripts	scripts/deploy.ts	async function 'verifyLive'	6	5
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/deploy.ts	arrow function	1	0
+scripts	scripts/dev-watch.ts	function 'lanAddresses'	1	0
+scripts	scripts/dev-watch.ts	arrow function	2	0
+scripts	scripts/dev-watch.ts	arrow function	2	1
+scripts	scripts/dev-watch.ts	arrow function	1	0
+scripts	scripts/dev-watch.ts	function 'vaultPath'	2	1
+scripts	scripts/dev-watch.ts	function 'start'	3	0
+scripts	scripts/dev-watch.ts	arrow function	3	3
+scripts	scripts/dev-watch.ts	arrow function	1	0
+scripts	scripts/dev-watch.ts	function 'shutdown'	3	2
+scripts	scripts/emit-metrics.ts	function 'args'	6	3
+scripts	scripts/emit-metrics.ts	function 'seconds'	4	2
+scripts	scripts/emit-metrics.ts	function 'scoresFrom'	3	2
+scripts	scripts/emit-metrics.ts	arrow function	2	1
+scripts	scripts/emit-metrics.ts	function 'trendNames'	3	1
+scripts	scripts/emit-metrics.ts	arrow function	1	0
+scripts	scripts/emit-metrics.ts	arrow function	1	0
+scripts	scripts/emit-metrics.ts	arrow function	1	0
+scripts	scripts/emit-metrics.ts	arrow function	1	0
+scripts	scripts/emit-metrics.ts	function 'expected'	2	1
+scripts	scripts/emit-metrics.ts	function 'windowSincePreviousRun'	3	2
+scripts	scripts/emit-metrics.ts	function 'previousScoringRun'	7	8
+scripts	scripts/emit-metrics.ts	arrow function	1	0
+scripts	scripts/emit-metrics.ts	arrow function	1	0
+scripts	scripts/emit-metrics.ts	arrow function	2	0
+scripts	scripts/emit-metrics.ts	async function 'complexityFacts'	4	4
+scripts	scripts/emit-metrics.ts	async function 'countingStamp'	2	1
+scripts	scripts/lib/complexity.ts	function 'kindOf'	3	3
+scripts	scripts/lib/complexity.ts	function 'relativeTo'	1	0
+scripts	scripts/lib/complexity.ts	function 'populationOf'	1	0
+scripts	scripts/lib/complexity.ts	arrow function	2	1
+scripts	scripts/lib/complexity.ts	async function 'complexityOf'	16	23
+scripts	scripts/lib/complexity.ts	async arrow function	2	1
+scripts	scripts/lib/complexity.ts	arrow function	1	0
+scripts	scripts/lib/complexity.ts	function 'countsFrom'	5	6
+scripts	scripts/lib/complexity.ts	async function 'countPopulation'	2	1
+scripts	scripts/lib/complexity.ts	function 'rulesOf'	5	3
+scripts	scripts/lib/complexity.ts	async function 'counterInputs'	3	2
+scripts	scripts/lib/crap.ts	function 'crapOf'	3	2
+scripts	scripts/lib/crap.ts	function 'atOrAfter'	4	1
+scripts	scripts/lib/crap.ts	function 'atOrBefore'	4	1
+scripts	scripts/lib/crap.ts	function 'within'	2	1
+scripts	scripts/lib/crap.ts	function 'coverageByFunction'	7	11
+scripts	scripts/lib/crap.ts	function 'fileCoverageOf'	3	3
+scripts	scripts/lib/crap.ts	function 'columnDistance'	2	0
+scripts	scripts/lib/crap.ts	function 'rowsFor'	3	2
+scripts	scripts/lib/crap.ts	arrow function	6	4
+scripts	scripts/lib/crap.ts	arrow function	2	0
+scripts	scripts/lib/crap.ts	arrow function	2	1
+scripts	scripts/lib/crap.ts	function 'rank'	1	0
+scripts	scripts/lib/crap.ts	function 'byCrap'	7	4
+scripts	scripts/lib/crap.ts	function 'route'	6	9
+scripts	scripts/lib/crap.ts	arrow function	1	0
+scripts	scripts/lib/crap.ts	function 'identify'	2	0
+scripts	scripts/lib/crap.ts	function 'renderReport'	10	19
+scripts	scripts/lib/docker.ts	function 'dockerOutput'	2	1
+scripts	scripts/lib/edge-probe.ts	function 'stampOf'	2	0
+scripts	scripts/lib/edge-probe.ts	function 'stampMeta'	1	0
+scripts	scripts/lib/edge-probe.ts	function 'sleep'	1	0
+scripts	scripts/lib/edge-probe.ts	arrow function	1	0
+scripts	scripts/lib/edge-probe.ts	async function 'probeBuild'	13	12
+scripts	scripts/lib/edge-probe.ts	function 'describeStaleCover'	1	0
+scripts	scripts/lib/edge-probe.ts	async function 'probeCovers'	3	2
+scripts	scripts/lib/edge-probe.ts	async arrow function	5	4
+scripts	scripts/lib/edge-probe.ts	arrow function	1	0
+scripts	scripts/lib/edge-probe.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	function 'parseFloors'	10	5
+scripts	scripts/lib/floors.ts	function 'parseEntry'	12	6
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	function 'parseCaps'	6	5
+scripts	scripts/lib/floors.ts	function 'parseCap'	9	5
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	function 'correspondence'	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	function 'countDisableDirectives'	7	5
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	function 'canonical'	5	3
+scripts	scripts/lib/floors.ts	function 'configHashOf'	3	3
+scripts	scripts/lib/floors.ts	function 'digest'	1	0
+scripts	scripts/lib/floors.ts	function 'fixtureHashOf'	1	0
+scripts	scripts/lib/floors.ts	function 'resolutionOf'	1	0
+scripts	scripts/lib/floors.ts	function 'breaches'	8	8
+scripts	scripts/lib/floors.ts	function 'capBreaches'	7	5
+scripts	scripts/lib/floors.ts	function 'nightliesIn'	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	function 'scoredIn'	1	0
+scripts	scripts/lib/floors.ts	arrow function	2	1
+scripts	scripts/lib/floors.ts	function 'countedIn'	1	0
+scripts	scripts/lib/floors.ts	arrow function	2	1
+scripts	scripts/lib/floors.ts	arrow function	3	0
+scripts	scripts/lib/floors.ts	function 'streakOf'	9	9
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	function 'calibration'	4	3
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	function 'capCalibration'	5	6
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	2	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	function 'ignoredMismatches'	7	6
+scripts	scripts/lib/floors.ts	function 'days'	3	1
+scripts	scripts/lib/floors.ts	function 'padded'	1	0
+scripts	scripts/lib/floors.ts	function 'renderFloorLines'	2	1
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	2	1
+scripts	scripts/lib/floors.ts	function 'armedState'	7	6
+scripts	scripts/lib/floors.ts	function 'emptyWindowNote'	6	6
+scripts	scripts/lib/floors.ts	function 'unarmedState'	5	4
+scripts	scripts/lib/floors.ts	function 'renderCapLines'	9	11
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	2	1
+scripts	scripts/lib/floors.ts	function 'capArmedState'	5	4
+scripts	scripts/lib/floors.ts	function 'capUnarmedState'	6	4
+scripts	scripts/lib/floors.ts	function 'capsUnaccounted'	5	8
+scripts	scripts/lib/floors.ts	function 'floorRefusals'	18	13
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	function 'noFlag'	1	0
+scripts	scripts/lib/floors.ts	function 'runRowsFrom'	15	13
+scripts	scripts/lib/floors.ts	arrow function	2	1
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/floors.ts	function 'readFloors'	2	0
+scripts	scripts/lib/floors.ts	function 'readMutatedSource'	2	0
+scripts	scripts/lib/floors.ts	arrow function	1	0
+scripts	scripts/lib/git.ts	function 'gitOutput'	2	1
+scripts	scripts/lib/git.ts	function 'gitStatus'	1	0
+scripts	scripts/lib/metrics-read.ts	function 'parseLabels'	4	3
+scripts	scripts/lib/metrics-read.ts	function 'parseSamples'	10	11
+scripts	scripts/lib/metrics-read.ts	function 'parseRecord'	7	7
+scripts	scripts/lib/metrics-read.ts	arrow function	1	0
+scripts	scripts/lib/metrics-read.ts	arrow function	1	0
+scripts	scripts/lib/metrics-read.ts	function 'newestByTrend'	6	9
+scripts	scripts/lib/metrics-read.ts	arrow function	1	0
+scripts	scripts/lib/metrics-read.ts	function 'judgeRecord'	7	8
+scripts	scripts/lib/metrics-read.ts	function 'describeAge'	4	3
+scripts	scripts/lib/metrics-read.ts	arrow function	2	1
+scripts	scripts/lib/metrics-read.ts	function 'runHealthOf'	2	1
+scripts	scripts/lib/metrics-read.ts	arrow function	2	1
+scripts	scripts/lib/metrics-read.ts	function 'runInfoOf'	2	0
+scripts	scripts/lib/metrics-read.ts	arrow function	1	0
+scripts	scripts/lib/metrics-read.ts	function 'samplesOf'	4	5
+scripts	scripts/lib/metrics-read.ts	function 'scoresOf'	1	0
+scripts	scripts/lib/metrics-read.ts	function 'halfOf'	5	2
+scripts	scripts/lib/metrics-read.ts	function 'recordsCarrying'	1	0
+scripts	scripts/lib/metrics-read.ts	arrow function	1	0
+scripts	scripts/lib/metrics-read.ts	function 'deltaPair'	4	3
+scripts	scripts/lib/metrics-read.ts	arrow function	2	1
+scripts	scripts/lib/metrics-record.ts	function 'parseRecordName'	4	2
+scripts	scripts/lib/metrics-record.ts	function 'selectNewRecords'	1	0
+scripts	scripts/lib/metrics-record.ts	arrow function	1	0
+scripts	scripts/lib/metrics-record.ts	arrow function	1	0
+scripts	scripts/lib/metrics-record.ts	arrow function	1	0
+scripts	scripts/lib/metrics-record.ts	arrow function	2	0
+scripts	scripts/lib/metrics-record.ts	arrow function	1	0
+scripts	scripts/lib/metrics-record.ts	function 'fetchRecords'	2	0
+scripts	scripts/lib/metrics-record.ts	function 'probeRecords'	2	0
+scripts	scripts/lib/metrics-record.ts	function 'fetchInto'	2	1
+scripts	scripts/lib/metrics-record.ts	function 'storedRecords'	2	0
+scripts	scripts/lib/metrics-record.ts	function 'recordsAt'	4	2
+scripts	scripts/lib/metrics-record.ts	arrow function	1	0
+scripts	scripts/lib/metrics-record.ts	arrow function	1	0
+scripts	scripts/lib/metrics-record.ts	function 'readRecord'	2	0
+scripts	scripts/lib/metrics-record.ts	function 'isFastForward'	4	2
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	function 'complexityFactsOf'	5	4
+scripts	scripts/lib/metrics.ts	function 'metricNameOf'	1	0
+scripts	scripts/lib/metrics.ts	function 'trendNamesIn'	4	3
+scripts	scripts/lib/metrics.ts	function 'trendOfMetric'	2	1
+scripts	scripts/lib/metrics.ts	function 'escape'	1	0
+scripts	scripts/lib/metrics.ts	function 'unescape'	1	0
+scripts	scripts/lib/metrics.ts	arrow function	2	1
+scripts	scripts/lib/metrics.ts	function 'value'	3	3
+scripts	scripts/lib/metrics.ts	function 'labels'	2	1
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	function 'render'	2	1
+scripts	scripts/lib/metrics.ts	function 'helpFor'	2	1
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	function 'trendFamilies'	13	14
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	arrow function	2	0
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	function 'ran'	1	0
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	function 'renderMetrics'	5	4
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	function 'servingOf'	4	2
+scripts	scripts/lib/metrics.ts	function 'renderEdgeCheck'	7	6
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	function 'joinRecords'	2	1
+scripts	scripts/lib/metrics.ts	arrow function	1	0
+scripts	scripts/lib/metrics.ts	arrow function	2	1
+scripts	scripts/lib/mutation-score.ts	function 'empty'	1	0
+scripts	scripts/lib/mutation-score.ts	function 'globToRegExp'	2	1
+scripts	scripts/lib/mutation-score.ts	function 'readDeclarations'	3	0
+scripts	scripts/lib/mutation-score.ts	function 'readScopes'	1	0
+scripts	scripts/lib/mutation-score.ts	function 'count'	3	1
+scripts	scripts/lib/mutation-score.ts	function 'detected'	1	0
+scripts	scripts/lib/mutation-score.ts	function 'total'	1	0
+scripts	scripts/lib/mutation-score.ts	function 'fraction'	2	1
+scripts	scripts/lib/mutation-score.ts	function 'readReport'	1	0
+scripts	scripts/lib/mutation-score.ts	function 'scoreRun'	6	9
+scripts	scripts/lib/mutation-score.ts	arrow function	1	0
+scripts	scripts/lib/mutation-score.ts	arrow function	1	0
+scripts	scripts/lib/mutation-score.ts	arrow function	1	0
+scripts	scripts/lib/mutation-score.ts	arrow function	1	0
+scripts	scripts/lib/mutation-score.ts	arrow function	1	0
+scripts	scripts/lib/mutation-score.ts	arrow function	1	0
+scripts	scripts/lib/mutation-score.ts	function 'totalOf'	3	3
+scripts	scripts/lib/pr-window.ts	function 'windowFrom'	3	2
+scripts	scripts/lib/pr-window.ts	function 'numbersFrom'	7	10
+scripts	scripts/lib/pr-window.ts	function 'subjectsBetween'	3	2
+scripts	scripts/lib/public-build.ts	function 'inspectPublicBuild'	57	80
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	arrow function	2	0
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	function 'readBooks'	4	2
+scripts	scripts/lib/public-build.ts	function 'readIfPresent'	2	1
+scripts	scripts/lib/public-build.ts	function 'headerBlocks'	6	5
+scripts	scripts/lib/public-build.ts	function 'parseCsp'	4	3
+scripts	scripts/lib/public-build.ts	arrow function	1	0
+scripts	scripts/lib/public-build.ts	function 'posix'	1	0
+scripts	scripts/lib/run.ts	function 'shellCommand'	1	0
+scripts	scripts/lib/run.ts	function 'runShell'	4	1
+scripts	scripts/lib/run.ts	function 'runExe'	2	1
+scripts	scripts/lib/scope-check.ts	function 'isSourceFile'	3	1
+scripts	scripts/lib/scope-check.ts	function 'directoryOf'	2	1
+scripts	scripts/lib/scope-check.ts	function 'matchesAnyFile'	1	0
+scripts	scripts/lib/scope-check.ts	arrow function	1	0
+scripts	scripts/lib/scope-check.ts	function 'sourceFiles'	3	1
+scripts	scripts/lib/scope-check.ts	arrow function	7	8
+scripts	scripts/lib/scope-check.ts	function 'declarationFaults'	19	31
+scripts	scripts/lib/scope-check.ts	arrow function	1	0
+scripts	scripts/lib/scope-check.ts	arrow function	1	0
+scripts	scripts/lib/scope-check.ts	arrow function	1	0
+scripts	scripts/lib/scope-check.ts	arrow function	1	0
+scripts	scripts/lib/scope-check.ts	function 'expectedMutate'	1	0
+scripts	scripts/lib/scope-check.ts	arrow function	1	0
+scripts	scripts/lib/scope-check.ts	arrow function	1	0
+scripts	scripts/lib/scope-check.ts	arrow function	1	0
+scripts	scripts/lib/scope-check.ts	function 'emptyScopes'	1	0
+scripts	scripts/lib/scope-check.ts	arrow function	3	2
+scripts	scripts/lib/scope-check.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	function 'asDate'	1	0
+scripts	scripts/lib/trend-report.ts	function 'percent'	1	0
+scripts	scripts/lib/trend-report.ts	function 'delta'	2	1
+scripts	scripts/lib/trend-report.ts	function 'resolutionOf'	3	2
+scripts	scripts/lib/trend-report.ts	function 'pad'	2	1
+scripts	scripts/lib/trend-report.ts	function 'scoredRecords'	1	0
+scripts	scripts/lib/trend-report.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	function 'countDelta'	2	1
+scripts	scripts/lib/trend-report.ts	function 'movedLabel'	3	2
+scripts	scripts/lib/trend-report.ts	function 'renderComplexity'	10	4
+scripts	scripts/lib/trend-report.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	arrow function	2	1
+scripts	scripts/lib/trend-report.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	arrow function	4	1
+scripts	scripts/lib/trend-report.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	function 'renderPanel'	22	23
+scripts	scripts/lib/trend-report.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	function 'renderRefusal'	7	10
+scripts	scripts/lib/trend-report.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	arrow function	1	0
+scripts	scripts/lib/trend-report.ts	arrow function	2	1
+scripts	scripts/lib/walk.ts	function 'walk'	4	5
+scripts	scripts/make-50-book-fixture.ts	function 'makeRandom'	1	0
+scripts	scripts/make-50-book-fixture.ts	arrow function	1	0
+scripts	scripts/make-50-book-fixture.ts	arrow function	1	0
+scripts	scripts/make-50-book-fixture.ts	arrow function	3	1
+scripts	scripts/make-fixture-covers.ts	function 'hexToRgb'	1	0
+scripts	scripts/make-fixture-covers.ts	arrow function	4	6
+scripts	scripts/make-fixture-covers.ts	function 'crc32'	3	1
+scripts	scripts/make-fixture-covers.ts	function 'chunk'	1	0
+scripts	scripts/make-fixture-covers.ts	function 'encodePng'	3	3
+scripts	scripts/make-fixture-covers.ts	arrow function	8	6
+scripts	scripts/make-icons.ts	async function 'render'	6	4
+scripts	scripts/make-icons.ts	async function 'main'	6	7
+scripts	scripts/make-icons.ts	arrow function	1	0
+scripts	scripts/make-readme-image.ts	async function 'main'	6	3
+scripts	scripts/mutation-scopes.ts	function 'score'	2	1
+scripts	scripts/mutation-scopes.ts	function 'reportOrExit'	2	1
+scripts	scripts/mutation-scopes.ts	arrow function	2	1
+scripts	scripts/mutation-scopes.ts	arrow function	1	0
+scripts	scripts/mutation-scopes.ts	arrow function	1	0
+scripts	scripts/mutation-scopes.ts	function 'line'	1	0
+scripts	scripts/smoke-render.ts	function 'expectedBookCount'	1	0
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	function 'glArgs'	2	1
+scripts	scripts/smoke-render.ts	async function 'main'	4	5
+scripts	scripts/smoke-render.ts	arrow function	2	1
+scripts	scripts/smoke-render.ts	arrow function	2	1
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	arrow function	2	1
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	async function 'checkCoverViewer'	5	7
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	async function 'clickABook'	7	7
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	async function 'swapToAnother'	5	7
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	async function 'checkSheet'	2	1
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	async function 'clickAnyBook'	4	5
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	function 'cardFailures'	16	13
+scripts	scripts/smoke-render.ts	function 'report'	36	51
+scripts	scripts/smoke-render.ts	arrow function	2	1
+scripts	scripts/smoke-render.ts	function 'run'	1	0
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	arrow function	2	1
+scripts	scripts/smoke-render.ts	async function 'buildSite'	1	0
+scripts	scripts/smoke-render.ts	function 'serveDist'	1	0
+scripts	scripts/smoke-render.ts	arrow function	7	2
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/smoke-render.ts	arrow function	3	1
+scripts	scripts/smoke-render.ts	function 'findChrome'	2	1
+scripts	scripts/smoke-render.ts	arrow function	1	0
+scripts	scripts/trend-sync.ts	function 'readState'	6	5
+scripts	scripts/trend-sync.ts	function 'writeState'	1	0
+scripts	scripts/trend-sync.ts	function 'fail'	1	0
+scripts	scripts/trend-sync.ts	function 'docker'	1	0
+scripts	scripts/trend-sync.ts	function 'containerStateOf'	3	1
+scripts	scripts/trend-sync.ts	function 'requireDocker'	2	1
+scripts	scripts/trend-sync.ts	function 'writeConfigIfAbsent'	2	1
+scripts	scripts/trend-sync.ts	function 'backfill'	1	0
+scripts	scripts/trend-sync.ts	function 'stopStore'	2	1
+scripts	scripts/trend-sync.ts	function 'ensureNetwork'	2	1
+scripts	scripts/trend-sync.ts	function 'attachToNetwork'	1	0
+scripts	scripts/trend-sync.ts	function 'refuseReuse'	16	11
+scripts	scripts/trend-sync.ts	arrow function	1	0
+scripts	scripts/trend-sync.ts	arrow function	1	0
+scripts	scripts/trend-sync.ts	arrow function	1	0
+scripts	scripts/trend-sync.ts	function 'startStore'	3	3
+scripts	scripts/trend-sync.ts	function 'startDashboard'	4	6
+scripts	scripts/trend-sync.ts	arrow function	1	0
+scripts	scripts/trend-sync.ts	function 'sayWhereToLook'	1	0
+scripts	scripts/trend-sync.ts	function 'builtCovers'	6	6
+scripts	scripts/trend-sync.ts	function 'sayBuild'	5	5
+scripts	scripts/trend-sync.ts	function 'sayCovers'	6	4
+scripts	scripts/trend-sync.ts	arrow function	1	0
+scripts	scripts/trend-sync.ts	arrow function	1	0
+scripts	scripts/trend-sync.ts	async function 'probeOrigin'	12	8
+scripts	scripts/trend-sync.ts	method 'onRetry'	1	0
+scripts	scripts/trend-sync.ts	async function 'main'	16	10
+scripts	scripts/trend-sync.ts	arrow function	1	0
+scripts	scripts/trend-sync.ts	arrow function	4	4
+scripts	scripts/worktree.ts	function 'fail'	1	0
+scripts	scripts/worktree.ts	function 'git'	3	3
+scripts	scripts/worktree.ts	function 'branchExists'	1	0
+scripts	scripts/worktree.ts	function 'fetchOrigin'	4	2
+scripts	scripts/worktree.ts	function 'onOrigin'	1	0
+scripts	scripts/worktree.ts	function 'divergence'	6	1
+scripts	scripts/worktree.ts	function 'fastForward'	1	0
+scripts	scripts/worktree.ts	function 'resolveBase'	6	4
