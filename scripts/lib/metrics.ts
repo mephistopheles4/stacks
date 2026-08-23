@@ -353,7 +353,8 @@ export interface RunFacts {
    * *from* the cyclomatic report, so a cyclomatic failure takes both sets down
    * — there is no population left to count against. A cognitive failure takes
    * only these four: the plugin is a second supplier, and losing it must not
-   * cost the measure this repository has 41 records of. `scripts/emit-metrics.ts`
+   * cost the measure this repository has a whole branch of records of.
+   * `scripts/emit-metrics.ts`
    * is where that ordering lives.
    */
   cognitive?: readonly ScopeCognitive[];

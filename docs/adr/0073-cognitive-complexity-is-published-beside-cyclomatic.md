@@ -180,14 +180,27 @@ counting rule this repository runs*, and after this ticket that rule is two
 rules — a second hash would make *which stamp does this cap answer to* a
 question every reader of the floors file has to hold.
 
-⚠️ **Adoption changed the stamp once, and the cost was measured rather than
-assumed.** Of the 41 records on the `metrics` branch, **10 carried the previous
-stamp** and 31 predate it — `fixture_hash` is younger than the record. So ten
-records stop qualifying for a cap's calibration window, and both cyclomatic
-windows restart from zero. Neither was near its twenty, every entry in
-`stryker.floors.json` is `unarmed`, and nothing refuses: `capCalibration`
-filters on the stamp and `countedIn` reads what a record carries. The cost is
-about ten nights on a window nothing was waiting on.
+⚠️ **Adoption changed the stamp once, and the cost is two numbers, not one.**
+Of the 43 records on the `metrics` branch at adoption, **12 carried the previous
+stamp** and 31 predate it — `fixture_hash` is younger than the record. So
+`countedIn`'s counted-comparison set goes **12 → 0**.
+
+**The calibration window goes 1 → 0**, and that is the figure that actually
+describes the cost. `capCalibration` walks `streakOf`, which starts from
+`nightliesIn` — and of those 12 stamped records **exactly one is a nightly**;
+the other 11 are `push`. Run against the real store before adoption it read
+`runs: 1, candidates: 5, days: 0, full: false`. So the window loses one run, not
+ten. Every entry in `stryker.floors.json` is `unarmed` and nothing refuses.
+
+⚠️ **A related fact worth having, found while measuring this**: only **5 of the
+43** records on the branch are non-`push` at all, so a twenty-*nightly* window
+fills far more slowly than "twenty records" suggests. Measured and written up by
+the [#258](https://github.com/mephistopheles4/stacks/issues/258) session.
+
+⚠️ **Every count here is as-of, because the branch is live.** This record first
+said 41 and 10; an hour later it was 43 and 12, two merges having written two
+merge records in between. The first figure was accurate when taken and wrong
+when read. **Re-measure rather than citing these.**
 
 `stryker.floors.json`'s `fixtureHash` is updated in the same commit, which is
 not optional — `floorRefusals` compares a run's stamp against the floors file's

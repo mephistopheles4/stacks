@@ -422,12 +422,17 @@ function digest(value: unknown): string {
  * because it makes *which stamp does this cap answer to* a question every
  * reader of the floors file has to hold.
  *
- * ⚠️ **Adoption changes this hash once, and that cost was measured.** Ten of
- * the 41 records on the `metrics` branch carried the previous stamp (the other
- * 31 predate it), so ten records stop qualifying for a cap's calibration window
- * and both cyclomatic windows restart from zero. Neither was near its twenty,
- * nothing is armed, and nothing refuses — `capCalibration` filters on the
- * stamp, and `countedIn` reads what a record carries. See ADR-0073.
+ * ⚠️ **Adoption changes this hash once, and the cost is two different numbers.**
+ * Of the 43 records on the `metrics` branch at adoption, **12 carried the
+ * previous stamp** and the other 31 predate it. So `countedIn`'s
+ * counted-comparison set goes 12 → 0. **The calibration window goes 1 → 0**,
+ * which is the smaller and more useful figure: `capCalibration` walks
+ * `streakOf`, which starts from `nightliesIn`, and only **one** of those 12 is
+ * a nightly — 11 are `push`. Nothing is armed and nothing refuses.
+ *
+ * ⚠️ **Any count here is as-of, because the branch is live.** It read 41 and 10
+ * an hour before it read 43 and 12; two merges wrote two merge records in
+ * between. Re-measure rather than trusting the figure in this comment.
  *
  * ⚠️ **Severity is absent from both option sets and that is the counters'
  * judgement, not an omission here.** Neither rule's severity can move a count —

@@ -277,7 +277,7 @@ describe('judging a record — per-series, because the record is not one number'
     // ⚠️ **The failure the second counter adds, and the one it is arranged to
     // make possible.** The cognitive rule comes from a second supplier, so it
     // can break on its own — and when it does, the eight numbers this
-    // repository already has 41 records of must keep arriving. A refusal
+    // repository already has a whole branch of records of must keep arriving. A refusal
     // naming only these four is what that looks like from the deploy.
     const quiet = judgeRecord({
       now: NOW,

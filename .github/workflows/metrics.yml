@@ -59,7 +59,8 @@
 # ⚠️ **The two sets fail apart, and the cognitive four are the ones that can go
 # alone.** The cognitive population is derived from the cyclomatic report, so a
 # cyclomatic failure takes all eight; a plugin failure takes only the cognitive
-# four and leaves the measure this repository has 41 records of intact. See
+# four and leaves the measure this repository has a whole branch of records of
+# intact. See
 # `scripts/emit-metrics.ts`.
 #
 # ⚠️ There is no `continue-on-error` here, deliberately, and the repo still has
