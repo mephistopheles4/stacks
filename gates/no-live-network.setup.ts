@@ -7,6 +7,6 @@
  * on `installNetworkGuard`.
  */
 
-import { installNetworkGuard } from './no-live-network.ts';
+import { installNetworkGuard } from "./no-live-network.ts";
 
 installNetworkGuard();

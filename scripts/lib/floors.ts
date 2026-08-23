@@ -16,31 +16,31 @@
  * inheriting it.
  */
 
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 // Type-only, deliberately: `complexity.ts` imports ESLint at its top level, and
 // a value import here would drag the linter into every module that reads a
 // floor — including the deploy, which computes no count and only compares two
 // strings.
-import type { CounterInputs } from './complexity.ts';
-import { METRIC_PREFIXES, type TrendName } from './metrics.ts';
+import type { CounterInputs } from "./complexity.ts";
+import { METRIC_PREFIXES, type TrendName } from "./metrics.ts";
 import {
   MERGE_EVENT,
   runInfoOf,
   samplesOf,
   scoresOf,
   type ParsedRecord,
-} from './metrics-read.ts';
-import { globToRegExp, type Scope } from './mutation-score.ts';
-import { REPO_ROOT } from './repo-root.ts';
-import { sourceFiles } from './scope-check.ts';
+} from "./metrics-read.ts";
+import { globToRegExp, type Scope } from "./mutation-score.ts";
+import { REPO_ROOT } from "./repo-root.ts";
+import { sourceFiles } from "./scope-check.ts";
 
 /** A scope's floor: a number it may not score under, or explicitly not yet set. */
-export type FloorValue = number | 'unarmed';
+export type FloorValue = number | "unarmed";
 
 /** The value that is not a number, spelled once. */
-export const UNARMED = 'unarmed';
+export const UNARMED = "unarmed";
 
 /**
  * The two series that get a cap, and the whole of what may be capped.
@@ -52,8 +52,8 @@ export const UNARMED = 'unarmed';
  * series, and the reader treats it as one.
  */
 export const CAPPED_SERIES = [
-  'complexity-max',
-  'complexity-mass-over-10',
+  "complexity-max",
+  "complexity-mass-over-10",
 ] as const satisfies readonly TrendName[];
 
 /** A series a cap may name. */
@@ -123,8 +123,8 @@ export interface Floors {
  * whole piece exists to prevent, arriving through the reader.
  */
 export function parseFloors(document: unknown): Floors {
-  if (typeof document !== 'object' || document === null) {
-    throw new Error('the floors file is not an object');
+  if (typeof document !== "object" || document === null) {
+    throw new Error("the floors file is not an object");
   }
 
   const { configHash, fixtureHash, scopes } = document as {
@@ -133,43 +133,62 @@ export function parseFloors(document: unknown): Floors {
     scopes?: unknown;
   };
 
-  if (typeof configHash !== 'string' || configHash === '') {
-    throw new Error('the floors file carries no configHash');
+  if (typeof configHash !== "string" || configHash === "") {
+    throw new Error("the floors file carries no configHash");
   }
-  if (typeof fixtureHash !== 'string' || fixtureHash === '') {
-    throw new Error('the floors file carries no fixtureHash');
+  if (typeof fixtureHash !== "string" || fixtureHash === "") {
+    throw new Error("the floors file carries no fixtureHash");
   }
-  if (typeof scopes !== 'object' || scopes === null) {
-    throw new Error('the floors file carries no scopes object');
+  if (typeof scopes !== "object" || scopes === null) {
+    throw new Error("the floors file carries no scopes object");
   }
 
   const parsed = new Map<string, ScopeFloor>();
-  for (const [name, entry] of Object.entries(scopes as Record<string, unknown>)) {
+  for (const [name, entry] of Object.entries(
+    scopes as Record<string, unknown>,
+  )) {
     parsed.set(name, parseEntry(name, entry));
   }
   return { configHash, fixtureHash, scopes: parsed };
 }
 
 function parseEntry(name: string, entry: unknown): ScopeFloor {
-  if (typeof entry !== 'object' || entry === null) {
+  if (typeof entry !== "object" || entry === null) {
     throw new Error(`the floors entry for ${name} is not an object`);
   }
-  const { floor, armed, ignored, notes, caps } = entry as Record<string, unknown>;
+  const { floor, armed, ignored, notes, caps } = entry as Record<
+    string,
+    unknown
+  >;
 
-  if (floor !== UNARMED && typeof floor !== 'number') {
-    throw new Error(`the floor for ${name} is neither a number nor ${UNARMED}: ${String(floor)}`);
+  if (floor !== UNARMED && typeof floor !== "number") {
+    throw new Error(
+      `the floor for ${name} is neither a number nor ${UNARMED}: ${String(floor)}`,
+    );
   }
-  if (typeof armed !== 'string' || armed === '') {
+  if (typeof armed !== "string" || armed === "") {
     throw new Error(`the floors entry for ${name} carries no date`);
   }
-  if (typeof ignored !== 'number' || !Number.isInteger(ignored) || ignored < 0) {
-    throw new Error(`the ignored counter for ${name} is not a count: ${String(ignored)}`);
+  if (
+    typeof ignored !== "number" ||
+    !Number.isInteger(ignored) ||
+    ignored < 0
+  ) {
+    throw new Error(
+      `the ignored counter for ${name} is not a count: ${String(ignored)}`,
+    );
   }
-  if (!Array.isArray(notes) || notes.some((note) => typeof note !== 'string')) {
+  if (!Array.isArray(notes) || notes.some((note) => typeof note !== "string")) {
     throw new Error(`the notes for ${name} are not a list of lines`);
   }
 
-  return { floor, armed, ignored, notes: notes as string[], caps: parseCaps(name, caps) };
+  return {
+    floor,
+    armed,
+    ignored,
+    notes: notes as string[],
+    caps: parseCaps(name, caps),
+  };
 }
 
 /**
@@ -185,16 +204,18 @@ function parseCaps(name: string, caps: unknown): Map<CappedSeries, ScopeCap> {
   const parsed = new Map<CappedSeries, ScopeCap>();
   if (caps === undefined) return parsed;
 
-  if (typeof caps !== 'object' || caps === null) {
+  if (typeof caps !== "object" || caps === null) {
     throw new Error(`the caps for ${name} are not an object`);
   }
 
   const cappable = new Set<string>(CAPPED_SERIES);
-  for (const [series, entry] of Object.entries(caps as Record<string, unknown>)) {
+  for (const [series, entry] of Object.entries(
+    caps as Record<string, unknown>,
+  )) {
     if (!cappable.has(series)) {
       throw new Error(
         `${name} caps ${series}, which is not a capped series. ` +
-          `The capped series are ${CAPPED_SERIES.join(' and ')}.`,
+          `The capped series are ${CAPPED_SERIES.join(" and ")}.`,
       );
     }
     parsed.set(series as CappedSeries, parseCap(`${name} ${series}`, entry));
@@ -203,18 +224,20 @@ function parseCaps(name: string, caps: unknown): Map<CappedSeries, ScopeCap> {
 }
 
 function parseCap(what: string, entry: unknown): ScopeCap {
-  if (typeof entry !== 'object' || entry === null) {
+  if (typeof entry !== "object" || entry === null) {
     throw new Error(`the cap for ${what} is not an object`);
   }
   const { cap, armed, notes } = entry as Record<string, unknown>;
 
-  if (cap !== UNARMED && typeof cap !== 'number') {
-    throw new Error(`the cap for ${what} is neither a number nor ${UNARMED}: ${String(cap)}`);
+  if (cap !== UNARMED && typeof cap !== "number") {
+    throw new Error(
+      `the cap for ${what} is neither a number nor ${UNARMED}: ${String(cap)}`,
+    );
   }
-  if (typeof armed !== 'string' || armed === '') {
+  if (typeof armed !== "string" || armed === "") {
     throw new Error(`the cap for ${what} carries no date`);
   }
-  if (!Array.isArray(notes) || notes.some((note) => typeof note !== 'string')) {
+  if (!Array.isArray(notes) || notes.some((note) => typeof note !== "string")) {
     throw new Error(`the notes for ${what} are not a list of lines`);
   }
 
@@ -243,7 +266,10 @@ export interface Correspondence {
  * silently unfloored: it is in a tracked file, it carries a date, and the
  * deploy print lists it every time.
  */
-export function correspondence(declared: readonly string[], floors: Floors): Correspondence {
+export function correspondence(
+  declared: readonly string[],
+  floors: Floors,
+): Correspondence {
   const entries = new Set(floors.scopes.keys());
 
   return {
@@ -310,9 +336,16 @@ export function countDisableDirectives(
   files: readonly SourceFile[],
   scopes: readonly Scope[],
 ): Map<string, number> {
-  const excluded = new Set(scopes.flatMap((entry) => entry.exclusions.map((one) => one.path)));
-  const matchers = scopes.map((entry) => ({ scope: entry, match: globToRegExp(entry.glob) }));
-  const counted = new Map<string, number>(scopes.map((entry) => [entry.name, 0]));
+  const excluded = new Set(
+    scopes.flatMap((entry) => entry.exclusions.map((one) => one.path)),
+  );
+  const matchers = scopes.map((entry) => ({
+    scope: entry,
+    match: globToRegExp(entry.glob),
+  }));
+  const counted = new Map<string, number>(
+    scopes.map((entry) => [entry.name, 0]),
+  );
 
   for (const file of files) {
     if (excluded.has(file.path)) continue;
@@ -341,25 +374,25 @@ export function countDisableDirectives(
  * mutants are generated or what verdict one gets.
  */
 export const SCORE_NEUTRAL_OPTIONS: readonly string[] = [
-  '$schema',
-  'packageManager',
-  'reporters',
-  'htmlReporter',
-  'jsonReporter',
-  'dashboard',
-  'logLevel',
-  'fileLogLevel',
-  'allowConsoleColors',
-  'tempDirName',
-  'cleanTempDir',
-  'incremental',
-  'incrementalFile',
+  "$schema",
+  "packageManager",
+  "reporters",
+  "htmlReporter",
+  "jsonReporter",
+  "dashboard",
+  "logLevel",
+  "fileLogLevel",
+  "allowConsoleColors",
+  "tempDirName",
+  "cleanTempDir",
+  "incremental",
+  "incrementalFile",
 ];
 
 /** JSON with object keys in a fixed order, so a re-ordered file hashes the same. */
 function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical);
-  if (typeof value !== 'object' || value === null) return value;
+  if (typeof value !== "object" || value === null) return value;
 
   const sorted: Record<string, unknown> = {};
   for (const key of Object.keys(value as Record<string, unknown>).sort()) {
@@ -393,7 +426,7 @@ export function configHashOf(config: Record<string, unknown>): string {
  * digest written twice is free to drift in the half nobody re-reads.
  */
 function digest(value: unknown): string {
-  return `sha256:${createHash('sha256').update(JSON.stringify(value)).digest('hex')}`;
+  return `sha256:${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`;
 }
 
 /**
@@ -486,7 +519,10 @@ export interface Breach {
  * so this returns nothing rather than inventing a verdict on a number it does
  * not have.
  */
-export function breaches(readings: readonly ScopeReading[], floors: Floors): Breach[] {
+export function breaches(
+  readings: readonly ScopeReading[],
+  floors: Floors,
+): Breach[] {
   const found: Breach[] = [];
 
   for (const reading of readings) {
@@ -541,7 +577,10 @@ export interface CapBreach {
  * refusal rather than this one — so this returns nothing rather than inventing
  * a verdict on a number it does not have.
  */
-export function capBreaches(readings: readonly CapReading[], floors: Floors): CapBreach[] {
+export function capBreaches(
+  readings: readonly CapReading[],
+  floors: Floors,
+): CapBreach[] {
   const found: CapBreach[] = [];
 
   for (const reading of readings) {
@@ -700,7 +739,9 @@ export function scoredIn(rows: readonly RunRow[]): RunRow[] {
  */
 export function countedIn(rows: readonly RunRow[]): RunRow[] {
   return rows.filter(
-    (row) => row.ok && CAPPED_SERIES.every((series) => (row.counts.get(series)?.size ?? 0) > 0),
+    (row) =>
+      row.ok &&
+      CAPPED_SERIES.every((series) => (row.counts.get(series)?.size ?? 0) > 0),
   );
 }
 
@@ -769,8 +810,13 @@ interface Streak {
  * stamp, so the countdown starts when the stamp lands rather than counting rows
  * nothing can prove were measured the same way.
  */
-function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): Streak {
-  const ordered = nightliesIn(rows).sort((one, other) => one.timestamp - other.timestamp);
+function streakOf(
+  rows: readonly RunRow[],
+  stamped: (row: RunRow) => boolean,
+): Streak {
+  const ordered = nightliesIn(rows).sort(
+    (one, other) => one.timestamp - other.timestamp,
+  );
 
   const streak: RunRow[] = [];
   for (let index = ordered.length - 1; index >= 0; index -= 1) {
@@ -779,7 +825,11 @@ function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): S
     if (!row.ok || !stamped(row)) break;
 
     const newer = streak.at(-1);
-    if (newer !== undefined && newer.timestamp - row.timestamp > MAX_GAP_DAYS * DAY_SECONDS) break;
+    if (
+      newer !== undefined &&
+      newer.timestamp - row.timestamp > MAX_GAP_DAYS * DAY_SECONDS
+    )
+      break;
     streak.push(row);
   }
 
@@ -1036,7 +1086,9 @@ function padded(text: string, width: number): string {
  * scheduled-workflow disablement showing itself before it bites.
  */
 export function renderFloorLines(input: PrintInput): string[] {
-  const scores = new Map(input.readings.map((reading) => [reading.scope, reading]));
+  const scores = new Map(
+    input.readings.map((reading) => [reading.scope, reading]),
+  );
   const names = [...input.floors.scopes.keys()];
   const width = Math.max(...names.map((name) => name.length), 1) + 2;
 
@@ -1066,14 +1118,14 @@ function armedState(floor: number, reading: PrintReading | undefined): string {
   const parts = [padded(`armed ${floor.toFixed(2)}`, 14)];
 
   if (reading === undefined || reading.score === null) {
-    parts.push('no score in the record');
-    return parts.join('');
+    parts.push("no score in the record");
+    return parts.join("");
   }
 
   parts.push(`current ${reading.score.toFixed(2)}`);
   if (reading.previous !== undefined) {
     const delta = reading.score - reading.previous;
-    parts.push(`  (${delta >= 0 ? '+' : ''}${delta.toFixed(2)})`);
+    parts.push(`  (${delta >= 0 ? "+" : ""}${delta.toFixed(2)})`);
   }
   // Computed live, per scope, and never a constant: what one mutant is worth
   // is the difference between a floor that is nearly met and one that is two
@@ -1082,7 +1134,7 @@ function armedState(floor: number, reading: PrintReading | undefined): string {
   if (reading.mutants !== undefined && reading.mutants > 0) {
     parts.push(`   1 mutant = ${resolutionOf(reading.mutants).toFixed(2)}`);
   }
-  return parts.join('');
+  return parts.join("");
 }
 
 /**
@@ -1097,26 +1149,31 @@ function armedState(floor: number, reading: PrintReading | undefined): string {
  */
 function emptyWindowNote(
   window: { runs: number; candidates: number },
-  measuredUnder = 'scored under this configuration',
+  measuredUnder = "scored under this configuration",
 ): string | undefined {
   if (window.runs > 0) return undefined;
 
   const seen = window.candidates;
   return seen === 0
-    ? 'no nightly in the record yet — every window starts at its first one'
-    : `no window has started: the ${String(seen)} nightl${seen === 1 ? 'y' : 'ies'} in the record ` +
-      `${seen === 1 ? 'was' : 'were'} not ${measuredUnder}`;
+    ? "no nightly in the record yet — every window starts at its first one"
+    : `no window has started: the ${String(seen)} nightl${seen === 1 ? "y" : "ies"} in the record ` +
+        `${seen === 1 ? "was" : "were"} not ${measuredUnder}`;
 }
 
-function unarmedState(name: string, entry: ScopeFloor, input: PrintInput): string {
+function unarmedState(
+  name: string,
+  entry: ScopeFloor,
+  input: PrintInput,
+): string {
   const state = padded(UNARMED, 14);
   const lowest = input.window.lowest.get(name);
   const sat = `(${UNARMED} for ${String(days(entry.armed, input.today))} days)`;
 
   if (input.window.full) {
-    const derived = lowest === null || lowest === undefined
-      ? 'no complete history for this scope'
-      : `lowest ${lowest.toFixed(2)} - armable`;
+    const derived =
+      lowest === null || lowest === undefined
+        ? "no complete history for this scope"
+        : `lowest ${lowest.toFixed(2)} - armable`;
     // ⚠️ **The date stays on this line above all others.** A full window is
     // exactly when somebody is deciding what to type into `floor`, and the date
     // is §7's only guard on typing `unarmed` instead. An earlier draft dropped
@@ -1182,14 +1239,18 @@ export function renderCapLines(input: CapPrintInput): string[] {
   // matches its shape rather than inventing a second one.
   const counts = new Map<CappedSeries, Map<string, CapPrintReading>>();
   for (const reading of input.readings) {
-    const perScope = counts.get(reading.series) ?? new Map<string, CapPrintReading>();
+    const perScope =
+      counts.get(reading.series) ?? new Map<string, CapPrintReading>();
     perScope.set(reading.scope, reading);
     counts.set(reading.series, perScope);
   }
 
   const rows: string[] = [];
-  const width = Math.max(...[...input.floors.scopes.keys()].map((name) => name.length), 1) + 2;
-  const seriesWidth = Math.max(...CAPPED_SERIES.map((series) => series.length)) + 3;
+  const width =
+    Math.max(...[...input.floors.scopes.keys()].map((name) => name.length), 1) +
+    2;
+  const seriesWidth =
+    Math.max(...CAPPED_SERIES.map((series) => series.length)) + 3;
 
   // ⚠️ **Measured from what is actually printed, never fixed at the width of the
   // longest label that existed when this was written.** `trend-report.ts` says
@@ -1202,7 +1263,9 @@ export function renderCapLines(input: CapPrintInput): string[] {
       UNARMED.length,
       ...[...input.floors.scopes.values()].flatMap((entry) =>
         [...entry.caps.values()].map((cap) =>
-          cap.cap === UNARMED ? UNARMED.length : `armed ${String(cap.cap)}`.length,
+          cap.cap === UNARMED
+            ? UNARMED.length
+            : `armed ${String(cap.cap)}`.length,
         ),
       ),
     ) + 3;
@@ -1235,7 +1298,7 @@ export function renderCapLines(input: CapPrintInput): string[] {
   // It is `emptyWindowNote`'s, not a second copy: both windows are now the same
   // twenty nightlies, so a second sentence saying it differently would be a
   // second sentence to keep true.
-  const note = emptyWindowNote(input.window, 'counted under this rule');
+  const note = emptyWindowNote(input.window, "counted under this rule");
   return note === undefined ? rows : [note, ...rows];
 }
 
@@ -1247,16 +1310,16 @@ function capArmedState(
   const parts = [padded(`armed ${String(cap)}`, stateWidth)];
 
   if (reading === undefined || reading.value === null) {
-    parts.push('no count in the record');
-    return parts.join('');
+    parts.push("no count in the record");
+    return parts.join("");
   }
 
   parts.push(`current ${String(reading.value)}`);
   if (reading.previous !== undefined) {
     const delta = reading.value - reading.previous;
-    parts.push(`  (${delta >= 0 ? '+' : ''}${String(delta)})`);
+    parts.push(`  (${delta >= 0 ? "+" : ""}${String(delta)})`);
   }
-  return parts.join('');
+  return parts.join("");
 }
 
 function capUnarmedState(
@@ -1273,7 +1336,7 @@ function capUnarmedState(
   if (input.window.full) {
     const derived =
       highest === null || highest === undefined
-        ? 'no complete history for this scope'
+        ? "no complete history for this scope"
         : `highest ${String(highest)} - armable`;
     return `${state}window full (${String(WINDOW_RUNS)} runs), ${derived}   ${sat}`;
   }
@@ -1385,39 +1448,41 @@ export function floorRefusals(input: RefusalInput): string[] {
 
   if (unaccounted.length > 0) {
     refusals.push(
-      `declared scope(s) with no floors entry — unaccounted: ${unaccounted.join(', ')}\n\n` +
+      `declared scope(s) with no floors entry — unaccounted: ${unaccounted.join(", ")}\n\n` +
         `  A scope ${FLOORS_FILE} does not name is scored by every run and floored by\n` +
-        '  nothing. It refuses nothing, silently, which is the one case a floor exists to\n' +
-        '  catch — so the deploy refuses instead.\n' +
+        "  nothing. It refuses nothing, silently, which is the one case a floor exists to\n" +
+        "  catch — so the deploy refuses instead.\n" +
         `    - Add an entry to ${FLOORS_FILE}. "floor": "${UNARMED}" with today's date is\n` +
-        '      the honest starting value: explicitly unarmed is not silently unfloored.\n\n' +
+        "      the honest starting value: explicitly unarmed is not silently unfloored.\n\n" +
         noFlag(),
     );
   }
 
   if (orphans.length > 0) {
     refusals.push(
-      `floors entries naming no declared scope — orphan(s): ${orphans.join(', ')}\n\n` +
-        '  A floor for a scope that no longer exists measures nothing, and left alone this\n' +
-        '  file rots into a list of places that are not there any more.\n' +
+      `floors entries naming no declared scope — orphan(s): ${orphans.join(", ")}\n\n` +
+        "  A floor for a scope that no longer exists measures nothing, and left alone this\n" +
+        "  file rots into a list of places that are not there any more.\n" +
         `    - Remove the entry from ${FLOORS_FILE}, or restore the scope in\n` +
-        '      stryker.scopes.json if the rename was the mistake. A rename carries the\n' +
-        '      floor across, with the number visible on both sides of one diff.\n\n' +
+        "      stryker.scopes.json if the rename was the mistake. A rename carries the\n" +
+        "      floor across, with the number visible on both sides of one diff.\n\n" +
         noFlag(),
     );
   }
 
   const uncapped = capsUnaccounted(input.declared, input.floors);
   if (uncapped.length > 0) {
-    const pairs = uncapped.map(({ scope, series }) => `${scope} (${series})`).join(', ');
+    const pairs = uncapped
+      .map(({ scope, series }) => `${scope} (${series})`)
+      .join(", ");
     refusals.push(
       `declared scope(s) with no cap entry — uncapped: ${pairs}\n\n` +
         `  A scope ${FLOORS_FILE} counts but does not cap is measured by every run and\n` +
-        '  capped by nothing. That is the floors entry problem one level down, and it is\n' +
-        '  silent in the same way.\n' +
+        "  capped by nothing. That is the floors entry problem one level down, and it is\n" +
+        "  silent in the same way.\n" +
         `    - Add a "caps" entry to that scope in ${FLOORS_FILE}. "cap": "${UNARMED}" with\n` +
         "      today's date is the honest starting value: explicitly unarmed is not\n" +
-        '      silently uncapped.\n\n' +
+        "      silently uncapped.\n\n" +
         noFlag(),
     );
   }
@@ -1439,7 +1504,9 @@ export function floorRefusals(input: RefusalInput): string[] {
   // once there is a comparison to protect. The configuration route stays shut
   // either way, because `calibration` refuses to **derive** a floor from a run
   // it cannot place under this configuration.
-  const armed = [...input.floors.scopes.values()].some((entry) => entry.floor !== UNARMED);
+  const armed = [...input.floors.scopes.values()].some(
+    (entry) => entry.floor !== UNARMED,
+  );
   const stamped = input.run?.configHash;
   const mismatched =
     input.run !== undefined &&
@@ -1447,15 +1514,15 @@ export function floorRefusals(input: RefusalInput): string[] {
 
   if (mismatched) {
     refusals.push(
-      'these floors were derived under a different configuration; re-derive them\n\n' +
+      "these floors were derived under a different configuration; re-derive them\n\n" +
         `  floors:  ${input.floors.configHash}\n` +
-        `  the run: ${stamped ?? 'no hash — a record from before the stamp existed'}\n\n` +
-        '  Lowering timeoutMS raises the score with no test touched, because a timeout\n' +
-        '  counts as detected — so a score computed under one configuration is not a\n' +
-        '  number about a floor derived under another. Nothing else is compared until\n' +
-        '  these agree.\n' +
-        '    - If the configuration change was deliberate, the floors have to be derived\n' +
-        '      again from runs made under it, and re-deriving is lowering: it costs a\n' +
+        `  the run: ${stamped ?? "no hash — a record from before the stamp existed"}\n\n` +
+        "  Lowering timeoutMS raises the score with no test touched, because a timeout\n" +
+        "  counts as detected — so a score computed under one configuration is not a\n" +
+        "  number about a floor derived under another. Nothing else is compared until\n" +
+        "  these agree.\n" +
+        "    - If the configuration change was deliberate, the floors have to be derived\n" +
+        "      again from runs made under it, and re-deriving is lowering: it costs a\n" +
         `      notes line in ${FLOORS_FILE} like any other lowering.\n\n` +
         noFlag(),
     );
@@ -1478,15 +1545,15 @@ export function floorRefusals(input: RefusalInput): string[] {
 
   if (countedElsewhere) {
     refusals.push(
-      'these caps were derived under a different counting rule; re-derive them\n\n' +
+      "these caps were derived under a different counting rule; re-derive them\n\n" +
         `  floors:  ${input.floors.fixtureHash}\n` +
-        `  the run: ${counted ?? 'no hash — a record from before the stamp existed'}\n\n` +
-        '  An ESLint upgrade that counts one more construct raises every count with no\n' +
-        '  branch written, so a count produced under one rule is not a number about a cap\n' +
-        '  derived under another — it would breach every cap at once and read as a\n' +
-        '  regression nobody caused. Nothing else is compared until these agree.\n' +
-        '    - If the counter change was deliberate, the caps have to be derived again\n' +
-        '      from runs counted under it, and re-deriving is raising: it costs a notes\n' +
+        `  the run: ${counted ?? "no hash — a record from before the stamp existed"}\n\n` +
+        "  An ESLint upgrade that counts one more construct raises every count with no\n" +
+        "  branch written, so a count produced under one rule is not a number about a cap\n" +
+        "  derived under another — it would breach every cap at once and read as a\n" +
+        "  regression nobody caused. Nothing else is compared until these agree.\n" +
+        "    - If the counter change was deliberate, the caps have to be derived again\n" +
+        "      from runs counted under it, and re-deriving is raising: it costs a notes\n" +
         `      line in ${FLOORS_FILE} like any other.\n\n` +
         noFlag(),
     );
@@ -1498,15 +1565,15 @@ export function floorRefusals(input: RefusalInput): string[] {
       `${breach.scope} scored ${breach.score.toFixed(2)}, under its floor of ` +
         `${breach.floor.toFixed(2)}\n\n` +
         (breach.resolution === undefined
-          ? ''
+          ? ""
           : `  One mutant is worth ${breach.resolution.toFixed(2)} points in this scope.\n`) +
-        '  The floor is what the tests protecting this code were observed to be worth. A\n' +
-        '  score under it means that protection weakened, whatever else changed.\n' +
-        '    - Kill the survivors: run `pnpm mutation:run` and read the per-file table.\n' +
+        "  The floor is what the tests protecting this code were observed to be worth. A\n" +
+        "  score under it means that protection weakened, whatever else changed.\n" +
+        "    - Kill the survivors: run `pnpm mutation:run` and read the per-file table.\n" +
         `    - Or lower the floor, which is a one-line diff in ${FLOORS_FILE} plus a\n` +
-        '      notes line saying why — in a pull request, through gates, because deploy\n' +
-        '      runs from main. That is the only way past, and it is meant to be visible\n' +
-        '      rather than avoidable.\n\n' +
+        "      notes line saying why — in a pull request, through gates, because deploy\n" +
+        "      runs from main. That is the only way past, and it is meant to be visible\n" +
+        "      rather than avoidable.\n\n" +
         noFlag(),
     );
   }
@@ -1515,16 +1582,16 @@ export function floorRefusals(input: RefusalInput): string[] {
     refusals.push(
       `${breach.scope} counted ${String(breach.value)} for ${breach.series}, over its cap of ` +
         `${String(breach.cap)}\n\n` +
-        '  The cap is the highest this scope was observed to reach across its own\n' +
-        '  calibration window. A count over it means a function got harder to test than\n' +
-        '  anything this scope had held before.\n' +
-        '    - Bring the function back under the cap. `pnpm mutation:run` is not the tool\n' +
-        '      here; the count is ESLint’s complexity rule, and the remedy is fewer\n' +
-        '      branches in one function rather than more tests around it.\n' +
+        "  The cap is the highest this scope was observed to reach across its own\n" +
+        "  calibration window. A count over it means a function got harder to test than\n" +
+        "  anything this scope had held before.\n" +
+        "    - Bring the function back under the cap. `pnpm mutation:run` is not the tool\n" +
+        "      here; the count is ESLint’s complexity rule, and the remedy is fewer\n" +
+        "      branches in one function rather than more tests around it.\n" +
         `    - Or raise the cap, which is a one-line diff in ${FLOORS_FILE} plus a notes\n` +
-        '      line saying why — in a pull request, through gates, because deploy runs\n' +
-        '      from main. Raising a cap is the lowering of this file and costs exactly\n' +
-        '      what a lowering costs.\n\n' +
+        "      line saying why — in a pull request, through gates, because deploy runs\n" +
+        "      from main. Raising a cap is the lowering of this file and costs exactly\n" +
+        "      what a lowering costs.\n\n" +
         noFlag(),
     );
   }
@@ -1539,8 +1606,8 @@ export function floorRefusals(input: RefusalInput): string[] {
  */
 function noFlag(): string {
   return (
-    '  No flag clears this. --dry-run runs it and uploads nothing, which is how to\n' +
-    '  watch it fail on purpose.'
+    "  No flag clears this. --dry-run runs it and uploads nothing, which is how to\n" +
+    "  watch it fail on purpose."
   );
 }
 
@@ -1573,14 +1640,16 @@ export function runRowsFrom(records: readonly ParsedRecord[]): RunRow[] {
   for (const record of records) {
     const health = record.samples.find(
       (sample) =>
-        sample.metric === `${METRIC_PREFIXES.run}ok` && sample.labels['surface'] === undefined,
+        sample.metric === `${METRIC_PREFIXES.run}ok` &&
+        sample.labels["surface"] === undefined,
     );
     if (health === undefined) continue;
 
     // The record stores a fraction; every floor, print and refusal downstream is
     // a percentage. Converted once, here, where the record is read.
     const scores = new Map<string, number>();
-    for (const [scope, score] of scoresOf(record)) scores.set(scope, score * 100);
+    for (const [scope, score] of scoresOf(record))
+      scores.set(scope, score * 100);
 
     // ⚠️ **A run that cannot be dated is dropped, not defaulted.** A sample's
     // timestamp is optional in the parser's type, and every record this project
@@ -1596,17 +1665,20 @@ export function runRowsFrom(records: readonly ParsedRecord[]): RunRow[] {
     // through the same seam, and two readers of one format drift in the half
     // nobody checks.
     const counts = new Map<CappedSeries, Map<string, number>>();
-    for (const series of CAPPED_SERIES) counts.set(series, samplesOf(record, series));
+    for (const series of CAPPED_SERIES)
+      counts.set(series, samplesOf(record, series));
 
     const info = runInfoOf(record);
-    const configHash = info?.['config_hash'];
-    const fixtureHash = info?.['fixture_hash'];
+    const configHash = info?.["config_hash"];
+    const fixtureHash = info?.["fixture_hash"];
     rows.push({
       timestamp,
       ok: health.value === 1,
-      event: info?.['event'] ?? 'unknown',
-      ...(configHash === undefined || configHash === '' ? {} : { configHash }),
-      ...(fixtureHash === undefined || fixtureHash === '' ? {} : { fixtureHash }),
+      event: info?.["event"] ?? "unknown",
+      ...(configHash === undefined || configHash === "" ? {} : { configHash }),
+      ...(fixtureHash === undefined || fixtureHash === ""
+        ? {}
+        : { fixtureHash }),
       scores,
       counts,
     });
@@ -1623,10 +1695,10 @@ export function runRowsFrom(records: readonly ParsedRecord[]): RunRow[] {
 // `scripts/deploy.ts`'s to read.
 
 /** The floors file, beside the Stryker config it is tied to by the hash. */
-export const FLOORS_FILE = 'stryker.floors.json';
+export const FLOORS_FILE = "stryker.floors.json";
 
 export function readFloors(root: string = REPO_ROOT): Floors {
-  return parseFloors(JSON.parse(readFileSync(join(root, FLOORS_FILE), 'utf8')));
+  return parseFloors(JSON.parse(readFileSync(join(root, FLOORS_FILE), "utf8")));
 }
 
 /**
@@ -1639,6 +1711,6 @@ export function readFloors(root: string = REPO_ROOT): Floors {
 export function readMutatedSource(root: string = REPO_ROOT): SourceFile[] {
   return sourceFiles(root).map((path) => ({
     path,
-    source: readFileSync(join(root, path), 'utf8'),
+    source: readFileSync(join(root, path), "utf8"),
   }));
 }

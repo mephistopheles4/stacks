@@ -1,7 +1,7 @@
-import * as THREE from 'three';
-import type { Binding } from '@stacks/core';
-import type { SpineProfile } from './shelf-settings.ts';
-import { sharedCache } from './shared-cache.ts';
+import * as THREE from "three";
+import type { Binding } from "@stacks/core";
+import type { SpineProfile } from "./shelf-settings.ts";
+import { sharedCache } from "./shared-cache.ts";
 
 /**
  * A spine's cross-section, shaded rather than built.
@@ -99,11 +99,11 @@ export function isFlat(profile: SpineProfile): boolean {
  * this whole effect's headline finding into a per-book texture cost.
  */
 function bakeNormalMap(profile: SpineProfile): THREE.CanvasTexture | undefined {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = MAP_WIDTH;
   canvas.height = MAP_HEIGHT;
 
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   if (ctx === null) return undefined;
 
   const image = ctx.createImageData(MAP_WIDTH, MAP_HEIGHT);

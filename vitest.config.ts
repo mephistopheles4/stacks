@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { coverageConfigDefaults, defineConfig } from 'vitest/config';
+import { readFileSync } from "node:fs";
+import { coverageConfigDefaults, defineConfig } from "vitest/config";
 
 /**
  * The eight declared scope globs, read from the file that declares them.
@@ -13,7 +13,7 @@ import { coverageConfigDefaults, defineConfig } from 'vitest/config';
  * G38 (`mutation-scope`) already holds that file to the tree.
  */
 const { scopes } = JSON.parse(
-  readFileSync(new URL('./stryker.scopes.json', import.meta.url), 'utf8'),
+  readFileSync(new URL("./stryker.scopes.json", import.meta.url), "utf8"),
 ) as { scopes: { glob: string }[] };
 
 export default defineConfig({
@@ -30,12 +30,16 @@ export default defineConfig({
     // untested behaviour anywhere else. A spec under `scripts/` is an ordinary
     // unit test and takes no `docs/gates.md` row — which is exactly why it could
     // not live in `gates/`, where G19 requires every file to be scored.
-    include: ['packages/**/src/**/*.test.ts', 'gates/**/*.test.ts', 'scripts/**/*.test.ts'],
-    environment: 'node',
+    include: [
+      "packages/**/src/**/*.test.ts",
+      "gates/**/*.test.ts",
+      "scripts/**/*.test.ts",
+    ],
+    environment: "node",
     // G21 — replaces `fetch` with one that records and refuses, so a test that
     // reaches the network fails saying so instead of merely running slowly.
     // See gates/no-live-network.ts.
-    setupFiles: ['./gates/no-live-network.setup.ts'],
+    setupFiles: ["./gates/no-live-network.setup.ts"],
 
     /**
      * Coverage, as an **ingredient and not a goal**.
@@ -55,7 +59,7 @@ export default defineConfig({
      * orphan and measured both ways: 93 files with `include`, 72 without.
      */
     coverage: {
-      provider: 'v8',
+      provider: "v8",
       include: scopes.map((scope) => scope.glob),
 
       /**
@@ -66,11 +70,11 @@ export default defineConfig({
        * the score nine points low. `*.test.ts` is named anyway: the scope globs
        * match specs, and a spec's own coverage is not a fact about the code.
        */
-      exclude: [...coverageConfigDefaults.exclude, '**/*.test.ts'],
+      exclude: [...coverageConfigDefaults.exclude, "**/*.test.ts"],
 
       /** JSON only, into a gitignored directory: the hook is the sole reader. */
-      reporter: ['json'],
-      reportsDirectory: '.coverage',
+      reporter: ["json"],
+      reportsDirectory: ".coverage",
     },
   },
 });

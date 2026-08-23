@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { sharedCache } from './shared-cache.ts';
+import * as THREE from "three";
+import { sharedCache } from "./shared-cache.ts";
 
 /**
  * The covering rolling over the head of a spine.
@@ -66,7 +66,9 @@ const TUCK_STEPS = 3;
  * which is why that traverse asks `isHeadCapGeometry` rather than freeing
  * everything it walks.
  */
-const CAPS = sharedCache<THREE.BufferGeometry>((geometry) => geometry.dispose());
+const CAPS = sharedCache<THREE.BufferGeometry>((geometry) =>
+  geometry.dispose(),
+);
 const built = new Set<THREE.BufferGeometry>();
 
 /**
@@ -81,7 +83,9 @@ const built = new Set<THREE.BufferGeometry>();
  * uniform scale is by **thickness**, and it is uniform precisely because the roll
  * is already in here.
  */
-export function headCapGeometry(roll: number): THREE.BufferGeometry | undefined {
+export function headCapGeometry(
+  roll: number,
+): THREE.BufferGeometry | undefined {
   const geometry = CAPS.get(roll.toFixed(4), () => {
     const made = buildHeadCap(roll);
     built.add(made);
@@ -133,7 +137,11 @@ function buildHeadCap(roll: number): THREE.BufferGeometry {
       // Centre of the roll at (y = -roll, z = -roll): angle 0 is the bottom of
       // the cap, flush with the spine face; 90° is its top, over the page block;
       // past that it descends into the boards. See `TUCK`.
-      positions.push(x, -roll + roll * Math.sin(angle), -roll + roll * Math.cos(angle));
+      positions.push(
+        x,
+        -roll + roll * Math.sin(angle),
+        -roll + roll * Math.cos(angle),
+      );
       normals.push(0, Math.sin(angle), Math.cos(angle));
       uvs.push(u, j / steps);
     }
@@ -151,9 +159,12 @@ function buildHeadCap(roll: number): THREE.BufferGeometry {
   closeTheEnds(roll, steps, angleAt, positions, normals, uvs, indices);
 
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3),
+  );
+  geometry.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   return geometry;
 }
@@ -246,7 +257,11 @@ function closeTheEnds(
      */
     for (let j = 0; j <= CAP_STEPS; j += 1) {
       const angle = angleAt(j);
-      positions.push(x, -roll + roll * Math.sin(angle), -roll + roll * Math.cos(angle));
+      positions.push(
+        x,
+        -roll + roll * Math.sin(angle),
+        -roll + roll * Math.cos(angle),
+      );
       bevel(normals, side, Math.sin(angle), Math.cos(angle));
       // Across the width, matching the arc — so the spine's normal map, which
       // varies only in `u`, shades these consistently with it.

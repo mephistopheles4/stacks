@@ -20,7 +20,11 @@
       "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
       "options": {
         "mode": "markdown",
-        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
         "content": "**Panel 1 answers *is this real*. Panel 2 answers *is this bad*. Read them in that order** — the order is a design rule, not a preference, and it is provisioned from `grafana/dashboards/trend-layer.json` so that it is a diff somebody can review rather than a state on one machine.\n\nA movement with an **empty PR window** (`[]`) is the tool disagreeing with itself at a fixed commit — [stryker-js#6073](https://github.com/stryker-mutator/stryker-js/issues/6073) — because a nightly runs whether or not `main` moved. A **one-PR window** reads *that PR*. A **five-PR window** reads *you need to look*, which is honest rather than attributive. `unknown` is **not** an empty window: it means nothing could be read, and it must never be taken for the tool-noise reading.\n\n**The four complexity panels sit under panel 2 because they are read against it, and against each other.** A scope whose mass is rising while its mutation score holds or falls is where the next tests go; a scope whose max fell while mass held was split, not simplified. They are counts and never a share: no ratio survived both games the prototype played on this repo's own worst function, so the record carries the four and the reading is made across them. `functions` is the denominator the other three are read against, and the cut at 10 inside `mass over 10` is McCabe's 1976 definition rather than a line anything goes red for.\n\n**There is no confidence figure on this page and there will not be one.** It would be the global-coverage failure mode transposed one level up — one number, gameable, hiding which part moved; it would delete exactly what panel 1 supplies; any composite over a score and two wall-clocks is a weight vector over incommensurable units, arithmetic dressed as a fact; and it is the most invisible weakening available, because a floor lowered is a diff while a weight re-tuned raises the figure with nothing looking edited.\n\n**No axis here carries a target line**, for the same reason. A scope is read against its own history. `live-exclusions` is displayed and never thresholded; its healthy value is 0."
       }
     },
@@ -46,15 +50,31 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm",
-        "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" },
+        "footer": {
+          "show": false,
+          "reducer": ["sum"],
+          "countRows": false,
+          "fields": ""
+        },
         "sortBy": [{ "displayName": "run at", "desc": true }]
       },
       "transformations": [
         {
           "id": "organize",
           "options": {
-            "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true },
-            "indexByName": { "Value": 0, "pr_window": 1, "event": 2, "commit": 3, "run_url": 4 },
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "indexByName": {
+              "Value": 0,
+              "pr_window": 1,
+              "event": 2,
+              "commit": 3,
+              "run_url": 4
+            },
             "renameByName": {
               "Value": "run at",
               "pr_window": "PR window",
@@ -67,9 +87,16 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": false },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "filterable": false
+          },
           "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "text", "value": null }]
+          }
         },
         "overrides": [
           {
@@ -127,14 +154,24 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm",
-        "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" },
+        "footer": {
+          "show": false,
+          "reducer": ["sum"],
+          "countRows": false,
+          "fields": ""
+        },
         "sortBy": [{ "displayName": "delta", "desc": false }]
       },
       "transformations": [
         {
           "id": "organize",
           "options": {
-            "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true },
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
             "indexByName": { "scope": 0, "Value": 1 },
             "renameByName": { "scope": "scope", "Value": "delta" }
           }
@@ -142,9 +179,16 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": false },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "filterable": false
+          },
           "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "text", "value": null }]
+          },
           "noValue": "No delta: this store holds one run of this series, and a delta needs two."
         },
         "overrides": [
@@ -208,7 +252,10 @@
             "scaleDistribution": { "type": "linear" },
             "thresholdsStyle": { "mode": "off" }
           },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "text", "value": null }]
+          }
         },
         "overrides": []
       }
@@ -263,7 +310,10 @@
             "scaleDistribution": { "type": "linear" },
             "thresholdsStyle": { "mode": "off" }
           },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "text", "value": null }]
+          }
         },
         "overrides": []
       }
@@ -318,7 +368,10 @@
             "scaleDistribution": { "type": "linear" },
             "thresholdsStyle": { "mode": "off" }
           },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "text", "value": null }]
+          }
         },
         "overrides": []
       }
@@ -373,7 +426,10 @@
             "scaleDistribution": { "type": "linear" },
             "thresholdsStyle": { "mode": "off" }
           },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "text", "value": null }]
+          }
         },
         "overrides": []
       }
@@ -428,7 +484,10 @@
             "scaleDistribution": { "type": "linear" },
             "thresholdsStyle": { "mode": "off" }
           },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "text", "value": null }]
+          }
         },
         "overrides": []
       }
@@ -490,7 +549,10 @@
             "scaleDistribution": { "type": "linear" },
             "thresholdsStyle": { "mode": "off" }
           },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "text", "value": null }]
+          }
         },
         "overrides": []
       }
@@ -521,7 +583,11 @@
         "textMode": "auto",
         "wideLayout": true,
         "showPercentChange": false,
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
       },
       "fieldConfig": {
         "defaults": {
@@ -530,7 +596,10 @@
           "mappings": [],
           "noValue": "no run has computed this yet",
           "color": { "mode": "fixed", "fixedColor": "text" },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "text", "value": null }]
+          }
         },
         "overrides": []
       }
@@ -561,7 +630,11 @@
         "textMode": "auto",
         "wideLayout": true,
         "showPercentChange": false,
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
       },
       "fieldConfig": {
         "defaults": {
@@ -570,7 +643,10 @@
           "mappings": [],
           "noValue": "no run has declared any yet",
           "color": { "mode": "fixed", "fixedColor": "text" },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "text", "value": null }]
+          }
         },
         "overrides": []
       }

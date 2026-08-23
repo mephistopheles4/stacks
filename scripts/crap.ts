@@ -17,10 +17,10 @@
  * read, the clock and the printing.
  */
 
-import { rmSync, readFileSync, existsSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import { join } from 'node:path';
-import { complexityOf, type PerFunction } from './lib/complexity.ts';
+import { rmSync, readFileSync, existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+import { complexityOf, type PerFunction } from "./lib/complexity.ts";
 import {
   fileCoverageOf,
   rank,
@@ -29,14 +29,14 @@ import {
   rowsFor,
   type CrapRow,
   type IstanbulReport,
-} from './lib/crap.ts';
-import { gitOutput } from './lib/git.ts';
-import { readDeclarations } from './lib/mutation-score.ts';
-import { REPO_ROOT } from './lib/repo-root.ts';
+} from "./lib/crap.ts";
+import { gitOutput } from "./lib/git.ts";
+import { readDeclarations } from "./lib/mutation-score.ts";
+import { REPO_ROOT } from "./lib/repo-root.ts";
 
 /** Where `vitest.config.ts` puts the JSON reporter's output. */
-const COVERAGE_DIR = join(REPO_ROOT, '.coverage');
-const COVERAGE_FILE = join(COVERAGE_DIR, 'coverage-final.json');
+const COVERAGE_DIR = join(REPO_ROOT, ".coverage");
+const COVERAGE_FILE = join(COVERAGE_DIR, "coverage-final.json");
 
 /**
  * Vitest's real entry point rather than its `.bin` shim.
@@ -47,7 +47,7 @@ const COVERAGE_FILE = join(COVERAGE_DIR, 'coverage-final.json');
  * one argument — `lib/run.ts`'s rule for anything arriving from outside,
  * applied to argv rather than to a branch name.
  */
-const VITEST = join(REPO_ROOT, 'node_modules/vitest/vitest.mjs');
+const VITEST = join(REPO_ROOT, "node_modules/vitest/vitest.mjs");
 
 /**
  * Added, copied, modified or renamed — the files this commit will carry.
@@ -61,12 +61,12 @@ const VITEST = join(REPO_ROOT, 'node_modules/vitest/vitest.mjs');
  */
 function stagedFiles(): string[] {
   const output = gitOutput(
-    ['diff', '--cached', '--name-only', '-z', '--diff-filter=ACMR'],
+    ["diff", "--cached", "--name-only", "-z", "--diff-filter=ACMR"],
     REPO_ROOT,
   );
-  if (output === undefined) throw new Error('git could not say what is staged');
+  if (output === undefined) throw new Error("git could not say what is staged");
 
-  return output.split('\0').filter((path) => path.length > 0);
+  return output.split("\0").filter((path) => path.length > 0);
 }
 
 /**
@@ -91,24 +91,27 @@ function stagedFiles(): string[] {
  * §5's *"per changed file"* wording deserves to know which direction the
  * difference runs.
  */
-function runCoverage(files: readonly string[]): { ok: boolean; output: string } {
+function runCoverage(files: readonly string[]): {
+  ok: boolean;
+  output: string;
+} {
   rmSync(COVERAGE_DIR, { recursive: true, force: true });
 
   const result = spawnSync(
     process.execPath,
-    [VITEST, 'related', ...files, '--run', '--coverage', '--passWithNoTests'],
-    { cwd: REPO_ROOT, encoding: 'utf8' },
+    [VITEST, "related", ...files, "--run", "--coverage", "--passWithNoTests"],
+    { cwd: REPO_ROOT, encoding: "utf8" },
   );
 
   return {
     ok: result.status === 0,
-    output: `${result.stdout ?? ''}${result.stderr ?? ''}`,
+    output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
   };
 }
 
 /** The last few lines of a Vitest run, which is where it says what went wrong. */
 function tail(output: string, lines = 12): string {
-  return output.trimEnd().split('\n').slice(-lines).join('\n');
+  return output.trimEnd().split("\n").slice(-lines).join("\n");
 }
 
 async function main(): Promise<void> {
@@ -145,10 +148,14 @@ async function main(): Promise<void> {
     return;
   }
   if (!run.ok) {
-    console.log('\n  ⚠ some tests failed — coverage below is what the failing run measured.');
+    console.log(
+      "\n  ⚠ some tests failed — coverage below is what the failing run measured.",
+    );
   }
 
-  const report = JSON.parse(readFileSync(COVERAGE_FILE, 'utf8')) as IstanbulReport;
+  const report = JSON.parse(
+    readFileSync(COVERAGE_FILE, "utf8"),
+  ) as IstanbulReport;
   const functions = await complexityOf(routing.measured);
 
   const byFile = new Map<string, PerFunction[]>();
@@ -161,7 +168,9 @@ async function main(): Promise<void> {
   );
 
   console.log(`\n${renderReport(rank(rows), routing)}`);
-  console.log(`\n  ${((Date.now() - started) / 1000).toFixed(1)}s — this blocks nothing; \`--no-verify\` skips it.`);
+  console.log(
+    `\n  ${((Date.now() - started) / 1000).toFixed(1)}s — this blocks nothing; \`--no-verify\` skips it.`,
+  );
 }
 
 /**

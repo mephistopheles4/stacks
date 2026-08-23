@@ -28,22 +28,18 @@
 
 /** `unknown` covers both an unrecognised host and a cover cached before this existed. */
 export type CoverSource =
-  | 'open-library'
-  | 'google-books'
-  | 'apple-books'
-  | 'oreilly'
-  | 'unknown';
+  "open-library" | "google-books" | "apple-books" | "oreilly" | "unknown";
 
 /** Host suffixes, longest-lived part of each provider's URL shape. */
 const HOSTS: readonly (readonly [suffix: string, source: CoverSource])[] = [
-  ['covers.openlibrary.org', 'open-library'],
-  ['openlibrary.org', 'open-library'],
-  ['books.google.com', 'google-books'],
-  ['books.googleusercontent.com', 'google-books'],
-  ['googleapis.com', 'google-books'],
-  ['mzstatic.com', 'apple-books'],
-  ['itunes.apple.com', 'apple-books'],
-  ['learning.oreilly.com', 'oreilly'],
+  ["covers.openlibrary.org", "open-library"],
+  ["openlibrary.org", "open-library"],
+  ["books.google.com", "google-books"],
+  ["books.googleusercontent.com", "google-books"],
+  ["googleapis.com", "google-books"],
+  ["mzstatic.com", "apple-books"],
+  ["itunes.apple.com", "apple-books"],
+  ["learning.oreilly.com", "oreilly"],
 ];
 
 /**
@@ -57,24 +53,27 @@ export function coverSourceFor(url: string): CoverSource {
   try {
     host = new URL(url).hostname.toLowerCase();
   } catch {
-    return 'unknown';
+    return "unknown";
   }
 
   for (const [suffix, source] of HOSTS) {
     if (host === suffix || host.endsWith(`.${suffix}`)) return source;
   }
-  return 'unknown';
+  return "unknown";
 }
 
 /** Every value the frontmatter key may hold, for validation at the parse edge. */
 export const COVER_SOURCES: readonly CoverSource[] = [
-  'open-library',
-  'google-books',
-  'apple-books',
-  'oreilly',
-  'unknown',
+  "open-library",
+  "google-books",
+  "apple-books",
+  "oreilly",
+  "unknown",
 ];
 
 export function isCoverSource(value: unknown): value is CoverSource {
-  return typeof value === 'string' && (COVER_SOURCES as readonly string[]).includes(value);
+  return (
+    typeof value === "string" &&
+    (COVER_SOURCES as readonly string[]).includes(value)
+  );
 }

@@ -1,7 +1,7 @@
-import appleBooks from '../assets/provider-marks/apple-books.svg?raw';
-import googleBooks from '../assets/provider-marks/google-books.svg?raw';
-import openLibrary from '../assets/provider-marks/open-library.svg?raw';
-import type { ProviderLink } from './provider-links.ts';
+import appleBooks from "../assets/provider-marks/apple-books.svg?raw";
+import googleBooks from "../assets/provider-marks/google-books.svg?raw";
+import openLibrary from "../assets/provider-marks/open-library.svg?raw";
+import type { ProviderLink } from "./provider-links.ts";
 
 /**
  * The three monotone marks, from the files a designer would edit.
@@ -22,8 +22,8 @@ import type { ProviderLink } from './provider-links.ts';
  * a mix — and what carries the distinction in the *form*, where a tooltip could
  * not, because a tooltip never fires on touch.
  */
-const MARKS: Readonly<Partial<Record<ProviderLink['kind'], string>>> = {
-  'open-library': openLibrary,
+const MARKS: Readonly<Partial<Record<ProviderLink["kind"], string>>> = {
+  "open-library": openLibrary,
   google: googleBooks,
   apple: appleBooks,
 };
@@ -38,20 +38,23 @@ const MARKS: Readonly<Partial<Record<ProviderLink['kind'], string>>> = {
  */
 const parsed = new Map<string, SVGSVGElement>();
 
-export function markFor(kind: ProviderLink['kind']): SVGSVGElement | undefined {
+export function markFor(kind: ProviderLink["kind"]): SVGSVGElement | undefined {
   const source = MARKS[kind];
   if (source === undefined) return undefined;
 
   let template = parsed.get(kind);
   if (template === undefined) {
-    const root = new DOMParser().parseFromString(source, 'image/svg+xml').documentElement;
+    const root = new DOMParser().parseFromString(
+      source,
+      "image/svg+xml",
+    ).documentElement;
     if (!(root instanceof SVGSVGElement)) return undefined;
     // The anchor carries the accessible name, so the artwork is decorative —
     // and `focusable` is IE/Edge-era but still what keeps an inline SVG out of
     // the tab order in some engines.
-    root.setAttribute('aria-hidden', 'true');
-    root.setAttribute('focusable', 'false');
-    root.setAttribute('class', 'card-mark');
+    root.setAttribute("aria-hidden", "true");
+    root.setAttribute("focusable", "false");
+    root.setAttribute("class", "card-mark");
     template = root;
     parsed.set(kind, template);
   }

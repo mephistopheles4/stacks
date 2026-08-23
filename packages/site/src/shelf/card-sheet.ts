@@ -27,7 +27,7 @@
  * leaves real desktop windows alone. A short desktop window getting the sheet is
  * intended: a 448px card in a 450px window is the same swallowing.
  */
-export const SHEET_QUERY = '(max-width: 700px), (max-height: 500px)';
+export const SHEET_QUERY = "(max-width: 700px), (max-height: 500px)";
 
 /** 220ms in, 180ms out — arriving wants to be seen, leaving wants to be gone. */
 export const ENTER_MS = 220;
@@ -93,7 +93,8 @@ function capture(control: HTMLElement, pointerId: number): void {
 
 function release(control: HTMLElement, pointerId: number): void {
   try {
-    if (control.hasPointerCapture(pointerId)) control.releasePointerCapture(pointerId);
+    if (control.hasPointerCapture(pointerId))
+      control.releasePointerCapture(pointerId);
   } catch {
     // Already released, which is the state this wanted anyway.
   }
@@ -121,7 +122,7 @@ export function mountSheet(options: SheetOptions): () => void {
   let dragging = false;
 
   const setOffset = (px: number): void => {
-    card.style.transform = px === 0 ? '' : `translateY(${String(px)}px)`;
+    card.style.transform = px === 0 ? "" : `translateY(${String(px)}px)`;
   };
 
   const onPointerDown = (event: PointerEvent): void => {
@@ -132,7 +133,7 @@ export function mountSheet(options: SheetOptions): () => void {
     // Follow-the-finger is JS writing `transform` directly, so it is not a
     // transition and `prefers-reduced-motion` cannot remove it — which is the
     // whole reason the reduced-motion rule is one scoped `transition: none`.
-    card.classList.add('dragging');
+    card.classList.add("dragging");
   };
 
   const onPointerMove = (event: PointerEvent): void => {
@@ -147,7 +148,7 @@ export function mountSheet(options: SheetOptions): () => void {
   const onPointerUp = (event: PointerEvent): void => {
     if (startY === undefined) return;
     startY = undefined;
-    card.classList.remove('dragging');
+    card.classList.remove("dragging");
     release(control, event.pointerId);
 
     if (dragged >= dismissThreshold(card.offsetHeight)) {
@@ -171,17 +172,17 @@ export function mountSheet(options: SheetOptions): () => void {
     onDismiss();
   };
 
-  control.addEventListener('pointerdown', onPointerDown);
-  control.addEventListener('pointermove', onPointerMove);
-  control.addEventListener('pointerup', onPointerUp);
-  control.addEventListener('pointercancel', onPointerUp);
-  control.addEventListener('click', onClick);
+  control.addEventListener("pointerdown", onPointerDown);
+  control.addEventListener("pointermove", onPointerMove);
+  control.addEventListener("pointerup", onPointerUp);
+  control.addEventListener("pointercancel", onPointerUp);
+  control.addEventListener("click", onClick);
 
   return () => {
-    control.removeEventListener('pointerdown', onPointerDown);
-    control.removeEventListener('pointermove', onPointerMove);
-    control.removeEventListener('pointerup', onPointerUp);
-    control.removeEventListener('pointercancel', onPointerUp);
-    control.removeEventListener('click', onClick);
+    control.removeEventListener("pointerdown", onPointerDown);
+    control.removeEventListener("pointermove", onPointerMove);
+    control.removeEventListener("pointerup", onPointerUp);
+    control.removeEventListener("pointercancel", onPointerUp);
+    control.removeEventListener("click", onClick);
   };
 }

@@ -18,30 +18,30 @@
  * one that gets skipped*, so a pass cannot be an accident of that book being
  * dropped from the library.
  */
-import { readFileSync, existsSync } from 'node:fs';
-import { extname, join, relative } from 'node:path';
-import { inspectPublicBuild, NOTE_BODY_CANARY } from './lib/public-build.ts';
-import { REPO_ROOT } from './lib/repo-root.ts';
-import { runShell } from './lib/run.ts';
-import { walk } from './lib/walk.ts';
+import { readFileSync, existsSync } from "node:fs";
+import { extname, join, relative } from "node:path";
+import { inspectPublicBuild, NOTE_BODY_CANARY } from "./lib/public-build.ts";
+import { REPO_ROOT } from "./lib/repo-root.ts";
+import { runShell } from "./lib/run.ts";
+import { walk } from "./lib/walk.ts";
 
-const VAULT = join(REPO_ROOT, 'fixtures', 'vault');
-const ASSETS = join(REPO_ROOT, 'packages', 'site', 'public');
-const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
+const VAULT = join(REPO_ROOT, "fixtures", "vault");
+const ASSETS = join(REPO_ROOT, "packages", "site", "public");
+const DIST = join(REPO_ROOT, "packages", "site", "dist");
 
 // 1. The canary has to actually be in the source vault, or this gate proves
 // nothing. This is the half `inspectPublicBuild` cannot check: it is handed a
 // built folder and has no idea which vault produced it, or whether that vault
 // ever contained the thing the search is for.
 const vaultText = walk(VAULT)
-  .filter((file) => extname(file) === '.md')
-  .map((file) => readFileSync(file, 'utf8'))
-  .join('\n');
+  .filter((file) => extname(file) === ".md")
+  .map((file) => readFileSync(file, "utf8"))
+  .join("\n");
 
 if (!vaultText.includes(NOTE_BODY_CANARY)) {
   console.error(
     `FAILED: the canary "${NOTE_BODY_CANARY}" is not in any fixture note body.\n` +
-      'Without it this gate would pass no matter what the build contained.',
+      "Without it this gate would pass no matter what the build contained.",
   );
   process.exit(1);
 }
@@ -53,23 +53,23 @@ console.log(`canary present in fixture vault: ${NOTE_BODY_CANARY}`);
 // the build knows where it will be served from, and a gate that builds without
 // an origin cannot tell a working preview from a broken one. Inherited by the
 // child process.
-const CANONICAL_ORIGIN = 'https://stacks.gate.example';
-process.env['SITE_URL'] = CANONICAL_ORIGIN;
+const CANONICAL_ORIGIN = "https://stacks.gate.example";
+process.env["SITE_URL"] = CANONICAL_ORIGIN;
 
 // `ASSETS` is quoted because it is absolute, and an absolute path here starts
 // at a home directory that may well have a space in it — `runShell` joins its
 // arguments verbatim and quotes nothing. `fixtures/vault` needs none: it is a
 // repo-relative literal and `cwd` is the repo root.
-runShell('pnpm', [
-  'stacks',
-  'build',
-  '--public',
-  '--vault',
-  'fixtures/vault',
-  '--assets',
+runShell("pnpm", [
+  "stacks",
+  "build",
+  "--public",
+  "--vault",
+  "fixtures/vault",
+  "--assets",
   `"${ASSETS}"`,
 ]);
-runShell('pnpm', ['--filter', '@stacks/site', 'run', 'build']);
+runShell("pnpm", ["--filter", "@stacks/site", "run", "build"]);
 
 if (!existsSync(DIST)) {
   console.error(`FAILED: no build output at ${DIST}`);
@@ -80,13 +80,13 @@ if (!existsSync(DIST)) {
 const report = inspectPublicBuild(DIST, { origin: CANONICAL_ORIGIN });
 
 for (const observation of report.observations) console.log(observation);
-console.log(`inspected ${relative(REPO_ROOT, DIST).split('\\').join('/')}`);
+console.log(`inspected ${relative(REPO_ROOT, DIST).split("\\").join("/")}`);
 
 if (report.problems.length > 0) {
   console.error(
-    `\nFAILED\n- ${report.problems.map((problem) => `[${problem.rule}] ${problem.message}`).join('\n- ')}`,
+    `\nFAILED\n- ${report.problems.map((problem) => `[${problem.rule}] ${problem.message}`).join("\n- ")}`,
   );
   process.exit(1);
 }
 
-console.log('\nOK — public build carries no note bodies, no vault paths');
+console.log("\nOK — public build carries no note bodies, no vault paths");

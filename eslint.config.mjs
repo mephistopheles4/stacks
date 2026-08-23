@@ -37,12 +37,12 @@
  * Cognitive complexity is one vendor's unreplicated measure, kept as fog in the
  * spec's §8 until the split signature proves common.
  */
-import parser from '@typescript-eslint/parser';
+import parser from "@typescript-eslint/parser";
 
 export default [
   {
-    files: ['**/*.ts'],
+    files: ["**/*.ts"],
     languageOptions: { parser },
-    rules: { complexity: ['warn', { max: 0, variant: 'classic' }] },
+    rules: { complexity: ["warn", { max: 0, variant: "classic" }] },
   },
 ];

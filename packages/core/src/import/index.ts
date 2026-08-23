@@ -1,16 +1,16 @@
-import { cacheCover } from '../covers/cache-cover.ts';
-import { coverKeys } from '../covers/cover-keys.ts';
-import { coverUrls, lookup } from '../metadata/index.ts';
-import type { HttpGet } from '../metadata/http.ts';
-import { isProbablySameBook, normaliseIsbn } from '../identity.ts';
-import type { BookInput } from '../types.ts';
-import type { VaultAdapter } from '../adapters/vault-adapter.ts';
+import { cacheCover } from "../covers/cache-cover.ts";
+import { coverKeys } from "../covers/cover-keys.ts";
+import { coverUrls, lookup } from "../metadata/index.ts";
+import type { HttpGet } from "../metadata/http.ts";
+import { isProbablySameBook, normaliseIsbn } from "../identity.ts";
+import type { BookInput } from "../types.ts";
+import type { VaultAdapter } from "../adapters/vault-adapter.ts";
 
 export {
   parseAudibleExport,
   type AudibleBook,
   type AudibleImportOptions,
-} from './audible.ts';
+} from "./audible.ts";
 
 /**
  * Writing imported books into the vault.
@@ -46,10 +46,18 @@ export interface ImportOptions {
 }
 
 export type ImportOutcome =
-  | { readonly kind: 'added'; readonly title: string; readonly path: string }
-  | { readonly kind: 'would-add'; readonly title: string }
-  | { readonly kind: 'duplicate'; readonly title: string; readonly existing: string }
-  | { readonly kind: 'failed'; readonly title: string; readonly reason: string };
+  | { readonly kind: "added"; readonly title: string; readonly path: string }
+  | { readonly kind: "would-add"; readonly title: string }
+  | {
+      readonly kind: "duplicate";
+      readonly title: string;
+      readonly existing: string;
+    }
+  | {
+      readonly kind: "failed";
+      readonly title: string;
+      readonly reason: string;
+    };
 
 export interface ImportResult {
   readonly outcomes: readonly ImportOutcome[];
@@ -70,38 +78,44 @@ export async function importBooks(
   // on disk when the other is checked.
   const existing = await vault.listBooks();
   const seen = existing.map((book) => ({
-    isbn: book.isbn ?? '',
-    titleAuthor: `${book.title} ${book.author ?? ''}`,
+    isbn: book.isbn ?? "",
+    titleAuthor: `${book.title} ${book.author ?? ""}`,
     title: book.title,
   }));
 
   for (const { input, coverUrl } of books) {
-    const titleAuthor = `${input.title} ${input.author ?? ''}`;
+    const titleAuthor = `${input.title} ${input.author ?? ""}`;
 
-    const duplicate = findDuplicate(seen, input.isbn ?? '', titleAuthor);
+    const duplicate = findDuplicate(seen, input.isbn ?? "", titleAuthor);
     if (duplicate !== undefined) {
-      outcomes.push({ kind: 'duplicate', title: input.title, existing: duplicate });
+      outcomes.push({
+        kind: "duplicate",
+        title: input.title,
+        existing: duplicate,
+      });
       continue;
     }
 
     if (options.dryRun === true) {
-      outcomes.push({ kind: 'would-add', title: input.title });
-      seen.push({ isbn: input.isbn ?? '', titleAuthor, title: input.title });
+      outcomes.push({ kind: "would-add", title: input.title });
+      seen.push({ isbn: input.isbn ?? "", titleAuthor, title: input.title });
       continue;
     }
 
     try {
       const candidates =
-        options.skipCovers === true ? [] : await coverCandidates(input, coverUrl, options);
+        options.skipCovers === true
+          ? []
+          : await coverCandidates(input, coverUrl, options);
       const cover = await cacheCover(candidates, input.title, vault);
 
       const path = await vault.writeBook({ ...input, ...coverKeys(cover) });
 
-      outcomes.push({ kind: 'added', title: input.title, path });
-      seen.push({ isbn: input.isbn ?? '', titleAuthor, title: input.title });
+      outcomes.push({ kind: "added", title: input.title, path });
+      seen.push({ isbn: input.isbn ?? "", titleAuthor, title: input.title });
     } catch (error) {
       outcomes.push({
-        kind: 'failed',
+        kind: "failed",
         title: input.title,
         reason: error instanceof Error ? error.message : String(error),
       });
@@ -110,9 +124,10 @@ export async function importBooks(
 
   return {
     outcomes,
-    added: outcomes.filter((o) => o.kind === 'added' || o.kind === 'would-add').length,
-    duplicates: outcomes.filter((o) => o.kind === 'duplicate').length,
-    failed: outcomes.filter((o) => o.kind === 'failed').length,
+    added: outcomes.filter((o) => o.kind === "added" || o.kind === "would-add")
+      .length,
+    duplicates: outcomes.filter((o) => o.kind === "duplicate").length,
+    failed: outcomes.filter((o) => o.kind === "failed").length,
   };
 }
 
@@ -131,7 +146,11 @@ async function coverCandidates(
   if (options.get === undefined) return fallback;
 
   try {
-    const [match] = await lookup(`${input.title} ${input.author ?? ''}`.trim(), options.get, options);
+    const [match] = await lookup(
+      `${input.title} ${input.author ?? ""}`.trim(),
+      options.get,
+      options,
+    );
     // The importer's own preference, and the reason the ordering rule is not
     // hidden inside the downloader: a print edition first, then whatever
     // `coverUrls` ranks, then the export's square artwork as the safety net.
@@ -169,5 +188,6 @@ function findDuplicate(
     if (hit !== undefined) return hit.title;
   }
 
-  return seen.find((book) => isProbablySameBook(titleAuthor, book.titleAuthor))?.title;
+  return seen.find((book) => isProbablySameBook(titleAuthor, book.titleAuthor))
+    ?.title;
 }

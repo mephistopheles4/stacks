@@ -3,10 +3,9 @@
 <!-- Written as 0040 and renumbered on rebase: main had taken 0040 and 0041 while
      this sat on a branch. The number is the only thing that changed. -->
 
-
 `toRows` decides whether a book fits by **placing the row with the book on the
 end and reading where it ends**. It does not estimate. Nothing outside the tests
-*calls* `shelfCost` or `rowCost` any more; both moved into
+_calls_ `shelfCost` or `rowCost` any more; both moved into
 `shelf-width.test.ts` — which is itself under `packages/site/src`, so "they no
 longer exist there", as an earlier draft of this line had it, was wrong in a way
 worth keeping visible: the distinction is between deciding and bounding, not
@@ -22,16 +21,16 @@ sums held to each other.
 A row of the live shelf ended 0.29 short of the band and turned away the next
 book. Measured, per row, on the real vault:
 
-| row | n | charged | spent | overcharge | next book charged / actual / room |
-| --- | --- | --- | --- | --- | --- |
-| 0 | 5 | 3.0322 | 3.0322 | 0.0000 | 0.5418 / 0.5418 / 0.2478 — no |
-| 1 | 10 | 3.1191 | 2.9948 | 0.1243 | 0.6839 / 0.6576 / 0.2852 — no |
-| 2 | 11 | 3.1480 | 3.0623 | 0.0857 | 0.6705 / 0.6705 / 0.2177 — no |
-| 3 | 10 | 3.2424 | 3.1100 | 0.1324 | 0.1905 / 0.1632 / **0.1700 — fits** |
+| row | n   | charged | spent  | overcharge | next book charged / actual / room   |
+| --- | --- | ------- | ------ | ---------- | ----------------------------------- |
+| 0   | 5   | 3.0322  | 3.0322 | 0.0000     | 0.5418 / 0.5418 / 0.2478 — no       |
+| 1   | 10  | 3.1191  | 2.9948 | 0.1243     | 0.6839 / 0.6576 / 0.2852 — no       |
+| 2   | 11  | 3.1480  | 3.0623 | 0.0857     | 0.6705 / 0.6705 / 0.2177 — no       |
+| 3   | 10  | 3.2424  | 3.1100 | 0.1324     | 0.1905 / 0.1632 / **0.1700 — fits** |
 
 Row 3 rejected a 0.0712 spine carrying a 0.09 year gap — 0.1632 all in — from a
 row with 0.1700 of real room. It was rejected because the row had already been
-over-charged by 0.1324, leaving a *charged* slack of 0.0376.
+over-charged by 0.1324, leaving a _charged_ slack of 0.0376.
 
 The over-charge is `shelfCost` pricing every lean at the steepest angle any book
 may reach: `MAX_LEAN` for a swing, `MAX_PROP_LEAN` for the parallel push, and a
@@ -46,7 +45,7 @@ shelf leans at about 3°, against a 14° ceiling.
 > which needs the row index, which is not known until the wrap this figure
 > decides has happened.
 
-That is true of the book's *other* possible home — the head of the next row — and
+That is true of the book's _other_ possible home — the head of the next row — and
 false of the row being offered it, which is the only place the fit test is
 asking about. `leanFor(rowIndex, position, id)` is determined by its arguments,
 and inside `toRows` all three are known:
@@ -61,7 +60,7 @@ Two supporting facts, both checked rather than assumed:
   row count or any later row. That is what let `placeRow` take `shelfY` as a
   parameter and the packer pass 0.
 - **Appending is monotonic.** A book's position in the row, and its run's lean
-  seed, are fixed by what comes *before* it — so nothing already placed moves
+  seed, are fixed by what comes _before_ it — so nothing already placed moves
   when one more book is offered. Without this, greedy packing against a trial
   placement would be unsound.
 
@@ -74,7 +73,7 @@ thing it explained.
 n ≤ ~30, on a pure-arithmetic function with no allocation beyond the placements
 themselves. Unmeasurable against a scene build.
 
-The trailing `TOUCHING` / `bookGap * 2` after a row's *last* book is no longer
+The trailing `TOUCHING` / `bookGap * 2` after a row's _last_ book is no longer
 charged. Nothing follows it, so nothing needs it.
 
 `SHELF.endReserve` starts being genuinely consumed, where before the over-charge
@@ -111,23 +110,23 @@ red at 0.0055. The face-out branch catches any δ at all.
 
 Beyond what the plan asked for, this adds a third assertion to G25 —
 `leaves a row no slack a book could have used`. The plan asked only for a
-*comment* saying the tight assertion is not vacuous. The extra assertion earns
+_comment_ saying the tight assertion is not vacuous. The extra assertion earns
 its place: it is the only one in the file with a cursor-free number on one side,
 so it is the only one that can see a cursor which over-spends. Recording the
 deviation rather than letting the diff imply it was asked for.
 
 ⚠️ **It shipped wrong, and two independent reviews caught it from opposite
-sides.** Its comparand started as a *floor* on what the next book would cost —
+sides.** Its comparand started as a _floor_ on what the next book would cost —
 footprint plus gap plus separator, with every clearance deliberately left out on
 the reasoning that a smaller number was a safer claim. It is the reverse. The
 assertion is `room < need`; a need stated too small turns a **correct** packer
-red, because a book rejected precisely *because of* the clearance it would have
+red, because a book rejected precisely _because of_ the clearance it would have
 paid leaves room above such a floor. That is the error G25 already records twice,
 committed a third time in the same file one commit later, and green on all six
 fixtures — which is how the other two looked too. The second review found the
 opposite skew in the same expression: charging `YEAR_GAP` in full overstated the
 need by up to 0.088 at a propped boundary, where the cursor hands `propShiftOf`
-back. And the separator was keyed on the *next* book rather than the one the
+back. And the separator was keyed on the _next_ book rather than the one the
 cursor is leaving, understating by 0.014 at every face-out-then-spine boundary.
 
 It is a ceiling now — `separator(last) + gap + footprint + WORST_CLEARANCE`,
@@ -136,7 +135,7 @@ cursor.
 
 ⚠️ **That ceiling was then wrong too, in the way this project has now got wrong
 four times.** `WORST_CLEARANCE` charged the angle-change branch at `MAX_LEAN`.
-That branch spends `Math.max(sway, left.sway)`, and `left.lean` is a *run* lean —
+That branch spends `Math.max(sway, left.sway)`, and `left.lean` is a _run_ lean —
 a run beginning on a book propped across a year gap carries the prop angle to
 every spine behind it. The reachable swing is `swayOf(MAX_HEIGHT,
 MAX_PROP_LEAN)` = 0.1175, against 0.0263. Under half.

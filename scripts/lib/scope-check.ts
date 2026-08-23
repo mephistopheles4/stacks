@@ -26,8 +26,8 @@
  * docs/spec/mutation-scoring.md §§6-7.
  */
 
-import { existsSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import {
   globToRegExp,
   scoreRun,
@@ -35,8 +35,8 @@ import {
   type Declarations,
   type MutationReport,
   type Scope,
-} from './mutation-score.ts';
-import { REPO_ROOT } from './repo-root.ts';
+} from "./mutation-score.ts";
+import { REPO_ROOT } from "./repo-root.ts";
 
 /**
  * Where source lives, for the purposes of "every source directory is declared
@@ -48,10 +48,10 @@ import { REPO_ROOT } from './repo-root.ts';
  * has no in-process oracle to begin with. Adding a fourth root here is a
  * deliberate act; discovering one is not possible, which is the point.
  */
-export const SOURCE_ROOTS = ['packages', 'scripts', 'gates'] as const;
+export const SOURCE_ROOTS = ["packages", "scripts", "gates"] as const;
 
 /** Directories a source sweep must never descend into. */
-const SKIP = new Set(['node_modules', 'dist', 'artifacts']);
+const SKIP = new Set(["node_modules", "dist", "artifacts"]);
 
 /**
  * A file this check counts as source.
@@ -63,13 +63,17 @@ const SKIP = new Set(['node_modules', 'dist', 'artifacts']);
  * directory and demanding a scope for it would be a rule nobody could satisfy.
  */
 export function isSourceFile(path: string): boolean {
-  return path.endsWith('.ts') && !path.endsWith('.test.ts') && !path.endsWith('.d.ts');
+  return (
+    path.endsWith(".ts") &&
+    !path.endsWith(".test.ts") &&
+    !path.endsWith(".d.ts")
+  );
 }
 
 /** The directory part of a repo-relative POSIX path. */
 export function directoryOf(path: string): string {
-  const cut = path.lastIndexOf('/');
-  return cut < 0 ? '' : path.slice(0, cut);
+  const cut = path.lastIndexOf("/");
+  return cut < 0 ? "" : path.slice(0, cut);
 }
 
 /**
@@ -109,13 +113,13 @@ export function sourceFiles(root: string = REPO_ROOT): string[] {
   const walk = (current: string): void => {
     if (!existsSync(current)) return;
     for (const entry of readdirSync(current)) {
-      if (SKIP.has(entry) || entry.startsWith('.')) continue;
+      if (SKIP.has(entry) || entry.startsWith(".")) continue;
       const full = join(current, entry);
       if (statSync(full).isDirectory()) {
         walk(full);
         continue;
       }
-      const path = relative(root, full).split(sep).join('/');
+      const path = relative(root, full).split(sep).join("/");
       if (isSourceFile(path)) found.push(path);
     }
   };
@@ -151,13 +155,13 @@ export function sourceFiles(root: string = REPO_ROOT): string[] {
  * which of the two artifacts is wrong.
  */
 export type Clause =
-  | 'missing-scope'
-  | 'empty-glob'
-  | 'undeclared'
-  | 'overlap'
-  | 'blank-mechanism'
-  | 'stale-exclusion'
-  | 'excluded-and-declared';
+  | "missing-scope"
+  | "empty-glob"
+  | "undeclared"
+  | "overlap"
+  | "blank-mechanism"
+  | "stale-exclusion"
+  | "excluded-and-declared";
 
 export interface Fault {
   clause: Clause;
@@ -201,7 +205,11 @@ export function declarationFaults(
   const directories = new Set(files.map(directoryOf));
   const ancestors = new Set<string>();
   for (const directory of directories) {
-    for (let current = directory; current.length > 0; current = directoryOf(current)) {
+    for (
+      let current = directory;
+      current.length > 0;
+      current = directoryOf(current)
+    ) {
       ancestors.add(current);
     }
   }
@@ -214,31 +222,34 @@ export function declarationFaults(
   for (const scope of scopes) {
     if (!ancestors.has(scope.name)) {
       faults.push({
-        clause: 'missing-scope',
+        clause: "missing-scope",
         detail:
           `declared scope "${scope.name}" holds no source file on disk. A rename must ` +
-          'carry the floor across explicitly — a delete and an add in one diff, with the ' +
-          'number visible on both sides.',
+          "carry the floor across explicitly — a delete and an add in one diff, with the " +
+          "number visible on both sides.",
       });
     }
     if (excludedDirs.has(scope.name)) {
       faults.push({
-        clause: 'excluded-and-declared',
+        clause: "excluded-and-declared",
         detail: `"${scope.name}" is both a declared scope and an excluded directory. Declared or excluded, never both.`,
       });
     }
   }
 
-  const matchers = scopes.map((scope) => ({ scope, match: globToRegExp(scope.glob) }));
+  const matchers = scopes.map((scope) => ({
+    scope,
+    match: globToRegExp(scope.glob),
+  }));
 
   for (const scope of scopes) {
     if (!matchesAnyFile(scope.glob, files)) {
       faults.push({
-        clause: 'empty-glob',
+        clause: "empty-glob",
         detail:
           `declared scope "${scope.name}" has a glob (${scope.glob}) that matches no source ` +
-          'file. It scores nothing, and a scope that scores nothing lowers no number when the ' +
-          'code it named goes away.',
+          "file. It scores nothing, and a scope that scores nothing lowers no number when the " +
+          "code it named goes away.",
       });
     }
   }
@@ -249,17 +260,17 @@ export function declarationFaults(
     const claims = matchers.filter((candidate) => candidate.match.test(file));
     if (claims.length > 1) {
       faults.push({
-        clause: 'overlap',
-        detail: `${file} is claimed by more than one declared scope: ${claims.map((c) => c.scope.name).join(', ')}`,
+        clause: "overlap",
+        detail: `${file} is claimed by more than one declared scope: ${claims.map((c) => c.scope.name).join(", ")}`,
       });
     }
     if (claims.length === 0 && !excludedDirs.has(directoryOf(file))) {
       faults.push({
-        clause: 'undeclared',
+        clause: "undeclared",
         detail:
           `${file} is in no declared scope and in no excluded directory. Declare the ` +
-          'directory, or exclude it and say by what mechanism it is out of reach — those ' +
-          'are the two states, and there is no third.',
+          "directory, or exclude it and say by what mechanism it is out of reach — those " +
+          "are the two states, and there is no third.",
       });
     }
   }
@@ -270,13 +281,13 @@ export function declarationFaults(
     for (const exclusion of scope.exclusions) {
       if (exclusion.mechanism.trim().length === 0) {
         faults.push({
-          clause: 'blank-mechanism',
+          clause: "blank-mechanism",
           detail: `exclusion ${exclusion.path} (in scope "${scope.name}") carries no mechanism. A file is excluded because a named mechanism puts it out of reach, or it is not excluded.`,
         });
       }
       if (!files.includes(exclusion.path)) {
         faults.push({
-          clause: 'stale-exclusion',
+          clause: "stale-exclusion",
           detail: `exclusion ${exclusion.path} (in scope "${scope.name}") names no source file on disk. The mechanism beside it is attached to nothing.`,
         });
       }
@@ -286,13 +297,13 @@ export function declarationFaults(
   for (const entry of excludedDirectories) {
     if (entry.mechanism.trim().length === 0) {
       faults.push({
-        clause: 'blank-mechanism',
+        clause: "blank-mechanism",
         detail: `excluded directory ${entry.path} carries no mechanism. Two reasons only: a named mechanism puts it out of reach, or it is not excluded.`,
       });
     }
     if (!directories.has(entry.path)) {
       faults.push({
-        clause: 'stale-exclusion',
+        clause: "stale-exclusion",
         detail: `excluded directory ${entry.path} holds no source file on disk. It excludes nothing and reads as though it does.`,
       });
     }
@@ -330,8 +341,10 @@ export function expectedMutate(declarations: Declarations): string[] {
   const { scopes } = declarations;
   return [
     ...scopes.map((scope) => scope.glob),
-    ...scopes.flatMap((scope) => scope.exclusions.map((exclusion) => `!${exclusion.path}`)),
-    '!**/*.test.ts',
+    ...scopes.flatMap((scope) =>
+      scope.exclusions.map((exclusion) => `!${exclusion.path}`),
+    ),
+    "!**/*.test.ts",
   ];
 }
 

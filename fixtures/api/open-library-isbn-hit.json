@@ -15,20 +15,12 @@
     ],
     "number_of_pages": 240,
     "identifiers": {
-      "wikidata": [
-        "Q113496690"
-      ],
-      "isbn_13": [
-        "9781603580557"
-      ],
-      "openlibrary": [
-        "OL26445570M"
-      ]
+      "wikidata": ["Q113496690"],
+      "isbn_13": ["9781603580557"],
+      "openlibrary": ["OL26445570M"]
     },
     "classifications": {
-      "lc_classifications": [
-        "QA402"
-      ]
+      "lc_classifications": ["QA402"]
     },
     "publishers": [
       {

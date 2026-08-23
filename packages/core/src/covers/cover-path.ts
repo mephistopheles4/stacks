@@ -19,7 +19,7 @@
  * every platform rather than correct on whichever one you happen to be testing.
  */
 
-import { join, resolve, sep } from 'node:path';
+import { join, resolve, sep } from "node:path";
 
 /**
  * The filename part of a `cover:` value and nothing else.
@@ -29,9 +29,12 @@ import { join, resolve, sep } from 'node:path';
  * of the directory it was joined to.
  */
 export function coverFileName(cover: string): string {
-  const lastSeparator = Math.max(cover.lastIndexOf('/'), cover.lastIndexOf('\\'));
+  const lastSeparator = Math.max(
+    cover.lastIndexOf("/"),
+    cover.lastIndexOf("\\"),
+  );
   const name = cover.slice(lastSeparator + 1).trim();
-  return name === '' || name === '.' || name === '..' ? '' : name;
+  return name === "" || name === "." || name === ".." ? "" : name;
 }
 
 /**
@@ -43,9 +46,12 @@ export function coverFileName(cover: string): string {
  * (`C:x.png` is drive-relative), and a rule this one is enforcing should not
  * depend on having enumerated every such form correctly.
  */
-export function resolveCoverPath(coverDir: string, cover: string): string | undefined {
+export function resolveCoverPath(
+  coverDir: string,
+  cover: string,
+): string | undefined {
   const name = coverFileName(cover);
-  if (name === '') return undefined;
+  if (name === "") return undefined;
 
   const root = resolve(coverDir);
   const candidate = resolve(join(root, name));

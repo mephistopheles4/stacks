@@ -10,7 +10,7 @@
 
 /** Digits only, uppercase X, so `978-1-00-000001-6` matches `9781000000016`. */
 export function normaliseIsbn(value: string): string {
-  return value.replace(/[^0-9Xx]/g, '').toUpperCase();
+  return value.replace(/[^0-9Xx]/g, "").toUpperCase();
 }
 
 /** A 10- or 13-digit ISBN with a correct check digit. */
@@ -28,7 +28,7 @@ export function isValidIsbn(value: string): boolean {
     for (let i = 0; i < 9; i += 1) {
       sum += Number(isbn[i]) * (10 - i);
     }
-    const check = isbn[9] === 'X' ? 10 : Number(isbn[9]);
+    const check = isbn[9] === "X" ? 10 : Number(isbn[9]);
     return (sum + check) % 11 === 0;
   }
   return false;
@@ -47,12 +47,12 @@ export function isValidIsbn(value: string): boolean {
  */
 export function toObsidianTag(raw: string): string | undefined {
   const cleaned = raw
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9_/-]+/g, '-')
-    .replace(/-{2,}/g, '-')
-    .replace(/^[-/]+|[-/]+$/g, '');
+    .replace(/[^a-z0-9_/-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^[-/]+|[-/]+$/g, "");
 
   if (cleaned.length === 0) return undefined;
   // A tag of digits alone is not a valid Obsidian tag.
@@ -69,13 +69,13 @@ const LEADING_ARTICLE = /\b(?:a|an|the)\b/g;
  */
 export function normaliseTitleAuthor(value: string): string {
   return value
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
-    .replace(LEADING_ARTICLE, ' ')
-    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(LEADING_ARTICLE, " ")
+    .replace(/[^a-z0-9]+/g, " ")
     .trim()
-    .replace(/\s+/g, ' ');
+    .replace(/\s+/g, " ");
 }
 
 /**
@@ -103,7 +103,8 @@ export function isProbablySameBook(a: string, b: string): boolean {
 
   const forward = titleMatchScore(left, right);
   const backward = titleMatchScore(right, left);
-  if (Math.max(forward, backward) >= 0.9 && Math.min(forward, backward) >= 0.6) return true;
+  if (Math.max(forward, backward) >= 0.9 && Math.min(forward, backward) >= 0.6)
+    return true;
 
   return isContainedIn(left, right) || isContainedIn(right, left);
 }
@@ -124,7 +125,8 @@ export function isProbablySameBook(a: string, b: string): boolean {
  * place from a book in the vault; the neighbours it suggests — notebook,
  * planner, diary — have not, and are deliberately absent.
  */
-const DERIVATIVE = /\b(?:summary|summaries|workbook|study|guide|companion|analysis|takeaways|abridged|journal)\b/;
+const DERIVATIVE =
+  /\b(?:summary|summaries|workbook|study|guide|companion|analysis|takeaways|abridged|journal)\b/;
 
 /**
  * Does this title look like a summary or study guide of another book?
@@ -155,8 +157,8 @@ const CONTAINMENT = 0.9;
 const MIN_TOKENS = 3;
 
 function isContainedIn(shorter: string, longer: string): boolean {
-  const small = shorter.split(' ').filter(Boolean);
-  const largeTokens = longer.split(' ').filter(Boolean);
+  const small = shorter.split(" ").filter(Boolean);
+  const largeTokens = longer.split(" ").filter(Boolean);
   const large = new Set(largeTokens);
   if (small.length < MIN_TOKENS || small.length > large.size) return false;
 
@@ -198,8 +200,10 @@ function isContainedIn(shorter: string, longer: string): boolean {
  * the signal and character-level distance is mostly noise.
  */
 export function titleMatchScore(query: string, candidate: string): number {
-  const wanted = normaliseTitleAuthor(query).split(' ').filter(Boolean);
-  const found = new Set(normaliseTitleAuthor(candidate).split(' ').filter(Boolean));
+  const wanted = normaliseTitleAuthor(query).split(" ").filter(Boolean);
+  const found = new Set(
+    normaliseTitleAuthor(candidate).split(" ").filter(Boolean),
+  );
   if (wanted.length === 0 || found.size === 0) return 0;
 
   const hits = wanted.filter((token) => found.has(token)).length;
@@ -235,12 +239,20 @@ export function titleMatchScore(query: string, candidate: string): number {
  * favours that author's book. It simply no longer costs a record anything to
  * have one.
  */
-export function rankingScore(query: string, title: string, author?: string): number {
-  const wanted = normaliseTitleAuthor(query).split(' ').filter(Boolean);
+export function rankingScore(
+  query: string,
+  title: string,
+  author?: string,
+): number {
+  const wanted = normaliseTitleAuthor(query).split(" ").filter(Boolean);
   const found = new Set(
-    normaliseTitleAuthor(`${title} ${author ?? ''}`).split(' ').filter(Boolean),
+    normaliseTitleAuthor(`${title} ${author ?? ""}`)
+      .split(" ")
+      .filter(Boolean),
   );
-  const titleTokens = new Set(normaliseTitleAuthor(title).split(' ').filter(Boolean));
+  const titleTokens = new Set(
+    normaliseTitleAuthor(title).split(" ").filter(Boolean),
+  );
   if (wanted.length === 0 || found.size === 0) return 0;
 
   const hits = wanted.filter((token) => found.has(token)).length;

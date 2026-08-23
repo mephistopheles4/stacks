@@ -1,12 +1,19 @@
-import { copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import sharp, { type Sharp } from 'sharp';
-import { MAX_COVER_EDGE, measureCover } from './covers/cover-budget.ts';
-import { coverFileName, resolveCoverPath } from './covers/cover-path.ts';
-import { buildLibrary, type Library } from './library.ts';
-import { SHELVED_STATUSES } from './shelf-order.ts';
-import type { BookRecord } from './types.ts';
-import type { VaultAdapter } from './adapters/vault-adapter.ts';
+import {
+  copyFile,
+  mkdir,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
+import { join } from "node:path";
+import sharp, { type Sharp } from "sharp";
+import { MAX_COVER_EDGE, measureCover } from "./covers/cover-budget.ts";
+import { coverFileName, resolveCoverPath } from "./covers/cover-path.ts";
+import { buildLibrary, type Library } from "./library.ts";
+import { SHELVED_STATUSES } from "./shelf-order.ts";
+import type { BookRecord } from "./types.ts";
+import type { VaultAdapter } from "./adapters/vault-adapter.ts";
 
 /**
  * Stages everything the static site needs into one folder.
@@ -54,7 +61,9 @@ export async function publish(
   // you everything on your own machine. Private means "not published", not
   // "hidden from you".
   const shelved = options.isPublic
-    ? books.filter((book) => SHELVED_STATUSES.has(book.status) && book.private !== true)
+    ? books.filter(
+        (book) => SHELVED_STATUSES.has(book.status) && book.private !== true,
+      )
     : books;
 
   const built = buildLibrary(shelved, {
@@ -74,8 +83,8 @@ export async function publish(
   // leaking their IP to whatever host the note happened to name.
   const library = options.isPublic ? withLocalCovers(measured) : measured;
 
-  const libraryPath = join(assetsDir, 'library.json');
-  await writeFile(libraryPath, `${JSON.stringify(library, null, 2)}\n`, 'utf8');
+  const libraryPath = join(assetsDir, "library.json");
+  await writeFile(libraryPath, `${JSON.stringify(library, null, 2)}\n`, "utf8");
 
   // The share image is *not* written here, and used to be. `og.png` is now
   // committed brand art sitting in the same folder this stages into, so a build
@@ -94,16 +103,22 @@ export async function publish(
  * cannot be read simply gets no aspect and the shelf falls back to a normal
  * book shape.
  */
-async function withCoverAspects(library: Library, assetsDir: string): Promise<Library> {
+async function withCoverAspects(
+  library: Library,
+  assetsDir: string,
+): Promise<Library> {
   const books = await Promise.all(
     library.books.map(async (book) => {
       if (book.cover === undefined) return book;
-      const coverPath = resolveCoverPath(join(assetsDir, 'covers'), book.cover);
+      const coverPath = resolveCoverPath(join(assetsDir, "covers"), book.cover);
       if (coverPath === undefined) return book;
 
       const size = await measureCover(coverPath);
       if (size === undefined || size.height === 0) return book;
-      return { ...book, coverAspect: Number((size.width / size.height).toFixed(4)) };
+      return {
+        ...book,
+        coverAspect: Number((size.width / size.height).toFixed(4)),
+      };
     }),
   );
 
@@ -140,12 +155,12 @@ async function pruneCovers(
   const files = entries.filter((entry) => entry.isFile());
   if (files.length === 0) return;
 
-  const ours = await exists(join(assetsDir, 'library.json'));
+  const ours = await exists(join(assetsDir, "library.json"));
   if (!ours) {
     console.warn(
       `warning: ${outDir} holds ${String(files.length)} file(s) but ${assetsDir} has no ` +
-        'library.json from a previous build, so it does not look like a folder stacks stages ' +
-        'into. Leaving it alone — covers from this build were still written.',
+        "library.json from a previous build, so it does not look like a folder stacks stages " +
+        "into. Leaving it alone — covers from this build were still written.",
     );
     return;
   }
@@ -178,7 +193,7 @@ function withLocalCovers(library: Library): Library {
     books: library.books.map((book) => {
       if (book.cover === undefined) return book;
       const filename = coverFileName(book.cover);
-      if (filename === '') {
+      if (filename === "") {
         const { cover: _dropped, ...rest } = book;
         return rest;
       }
@@ -220,10 +235,10 @@ async function copyCovers(
       // with `enrich.ts` — see covers/cover-path.ts for why it is not
       // `node:path`'s `basename`.
       .map((cover) => coverFileName(cover))
-      .filter((filename) => filename !== ''),
+      .filter((filename) => filename !== ""),
   );
 
-  const outDir = join(assetsDir, 'covers');
+  const outDir = join(assetsDir, "covers");
   await mkdir(outDir, { recursive: true });
   await pruneCovers(assetsDir, outDir, wanted);
 
@@ -234,7 +249,10 @@ async function copyCovers(
 
   for (const filename of wanted) {
     try {
-      await stageCover(join(vault.coverDir(), filename), join(outDir, filename));
+      await stageCover(
+        join(vault.coverDir(), filename),
+        join(outDir, filename),
+      );
       copied += 1;
     } catch {
       missing.push(filename);
@@ -269,7 +287,10 @@ async function stageCover(from: string, to: string): Promise<void> {
   // An unreadable file, or one already inside the cap, is copied untouched: a
   // cover the shelf cannot decode is a missing cover rather than a failed build,
   // and re-encoding an image that did not need it is a quiet quality loss.
-  if (size === undefined || Math.max(size.width, size.height) <= MAX_COVER_EDGE) {
+  if (
+    size === undefined ||
+    Math.max(size.width, size.height) <= MAX_COVER_EDGE
+  ) {
     await copyFile(from, to);
     return;
   }
@@ -277,7 +298,7 @@ async function stageCover(from: string, to: string): Promise<void> {
   const resized = sharp(from).resize({
     width: MAX_COVER_EDGE,
     height: MAX_COVER_EDGE,
-    fit: 'inside',
+    fit: "inside",
     withoutEnlargement: true,
   });
 
@@ -311,9 +332,13 @@ async function stageCover(from: string, to: string): Promise<void> {
  */
 function encoded(image: Sharp, format: string | undefined): Sharp {
   switch (format) {
-    case 'jpeg':
-      return image.jpeg({ quality: 90, chromaSubsampling: '4:4:4', mozjpeg: true });
-    case 'webp':
+    case "jpeg":
+      return image.jpeg({
+        quality: 90,
+        chromaSubsampling: "4:4:4",
+        mozjpeg: true,
+      });
+    case "webp":
       // The other lossy format `looksLikeImage` admits. `smartSubsample` is
       // WebP's spelling of the same fix; its default is likewise 4:2:0.
       return image.webp({ quality: 90, smartSubsample: true });

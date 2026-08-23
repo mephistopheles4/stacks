@@ -43,13 +43,13 @@
  * See docs/gates.md, row G24 (repo-root).
  */
 
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { codeOf, expectFound, filesUnder, REPO_ROOT } from './repo.ts';
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { codeOf, expectFound, filesUnder, REPO_ROOT } from "./repo.ts";
 
 /** The one file allowed to work out where the repo starts. */
-const OWNER = 'scripts/lib/repo-root.ts';
+const OWNER = "scripts/lib/repo-root.ts";
 
 /**
  * Any route from a module to its own location. Matched against `codeOf`, so the
@@ -60,46 +60,48 @@ const DERIVATION = /import\.meta\.(?:url|dirname|filename)/;
 
 /** Every script this rule governs. Tests are none of its business. */
 function governedFiles(): string[] {
-  return filesUnder('scripts', ['.ts']).filter((path) => !path.endsWith('.test.ts'));
+  return filesUnder("scripts", [".ts"]).filter(
+    (path) => !path.endsWith(".test.ts"),
+  );
 }
 
-describe('G24 — one repo root, one derivation', () => {
-  it('scans a plausible number of scripts', () => {
+describe("G24 — one repo root, one derivation", () => {
+  it("scans a plausible number of scripts", () => {
     // A `filesUnder` that walked nothing would report zero offenders and this
     // gate would be green while checking, precisely, nothing.
-    expectFound(governedFiles(), 'scripts governed by the repo-root rule', 8);
+    expectFound(governedFiles(), "scripts governed by the repo-root rule", 8);
   });
 
-  it('keeps the owner in the tree', () => {
+  it("keeps the owner in the tree", () => {
     expect(
       existsSync(join(REPO_ROOT, OWNER)),
       `${OWNER} is gone. Every assertion here is about that file; if it moved, move this ` +
-        'gate with it rather than leaving a rule pointing at nothing.',
+        "gate with it rather than leaving a rule pointing at nothing.",
     ).toBe(true);
   });
 
-  it('lets no other script derive the repo root for itself', () => {
+  it("lets no other script derive the repo root for itself", () => {
     const offenders = governedFiles().filter(
       (path) => path !== OWNER && DERIVATION.test(codeOf(path)),
     );
 
     expect(
       offenders,
-      `these work out the repo root for themselves: ${offenders.join(', ')}. There is one ` +
+      `these work out the repo root for themselves: ${offenders.join(", ")}. There is one ` +
         `derivation, in ${OWNER} — \`import { REPO_ROOT } from './lib/repo-root.ts'\` and ` +
-        'join off it. Eight scripts each doing this by hand is what produced four spellings ' +
-        'of one path.',
+        "join off it. Eight scripts each doing this by hand is what produced four spellings " +
+        "of one path.",
     ).toEqual([]);
   });
 
-  it('still finds the derivation in the owner, so the sweep is not broken', () => {
+  it("still finds the derivation in the owner, so the sweep is not broken", () => {
     // The control. Every assertion above is satisfied by a pattern that matches
     // nothing at all, and this is the one file where a match is certain.
     expect(
       DERIVATION.test(codeOf(OWNER)),
       `${OWNER} no longer derives anything the sweep can see. Either the root moved somewhere ` +
-        'else — in which case the rule above is now enforcing nothing — or the spelling changed ' +
-        'and DERIVATION needs to learn it.',
+        "else — in which case the rule above is now enforcing nothing — or the spelling changed " +
+        "and DERIVATION needs to learn it.",
     ).toBe(true);
   });
 });

@@ -28,8 +28,8 @@ records the rest.
 ## 1. What the series is for
 
 A source the owner brought — a vendor post on CRAP and cyclomatic complexity —
-split along a line this repo had already drawn: *track trends over absolute
-values* is the trend layer's own doctrine, and its 0–30 / 30–60 / 60+ thresholds
+split along a line this repo had already drawn: _track trends over absolute
+values_ is the trend layer's own doctrine, and its 0–30 / 30–60 / 60+ thresholds
 are what the trend layer refuses. Behind the post, the research
 ([#188](https://github.com/mephistopheles4/stacks/issues/188)) found the
 question the series actually answers:
@@ -39,14 +39,14 @@ question the series actually answers:
 > something simplified, or merely moved?**
 
 The only trajectory study of agentic code (SlopCodeBench, March 2026, one
-source) found complexity *concentration* rose in 80% of agent runs and
+source) found complexity _concentration_ rose in 80% of agent runs and
 duplication in 89.8%, while matched human repositories stayed flat. A nightly
 series watching this repo's own history is the one way to learn which regime it
 is in.
 
 **And the owner named the purpose the map had been circling** (#198): this
 repository demonstrates a very high quality floor held under AI-generated code,
-and the floor is meant to *rise*, slowly, while experimenting freely. That is why the
+and the floor is meant to _rise_, slowly, while experimenting freely. That is why the
 teeth in [§4](#4-teeth-a-cap-that-only-falls) are a ratchet and not a ceiling —
 a ceiling is a number somebody picked; a ratchet is a number the repo earned.
 
@@ -66,28 +66,28 @@ The prototype walked all eight declared scopes — 92 files, 1,009 functions,
 worst function (`enrichBook`, CC 40): a mechanical three-way split, and thirty
 trivial one-line functions appended beside it.
 
-| Statistic | Split | Thirty trivial functions |
-| --- | --- | --- |
-| functions | +3 | +30 |
-| sum | **+5** — branches moved, none removed | **+30** — exactly the noise |
-| mean | −0.07 | **−0.67** |
-| max | **−10** | 0 |
-| p90 | 0 | −1 |
-| share of functions > 10 | −0.3pp | −1.6pp |
-| share of mass in functions > 10 | **−3.8pp** | **−2.9pp** |
+| Statistic                       | Split                                 | Thirty trivial functions    |
+| ------------------------------- | ------------------------------------- | --------------------------- |
+| functions                       | +3                                    | +30                         |
+| sum                             | **+5** — branches moved, none removed | **+30** — exactly the noise |
+| mean                            | −0.07                                 | **−0.67**                   |
+| max                             | **−10**                               | 0                           |
+| p90                             | 0                                     | −1                          |
+| share of functions > 10         | −0.3pp                                | −1.6pp                      |
+| share of mass in functions > 10 | **−3.8pp**                            | **−2.9pp**                  |
 
 **No ratio survives both.** The raw counts, read side by side, hide neither
-game: dilution is *functions and sum up by the same amount and nothing else
-moving*; a split is *functions up, sum flat, max down*. **So the record carries
+game: dilution is _functions and sum up by the same amount and nothing else
+moving_; a split is _functions up, sum flat, max down_. **So the record carries
 counts and the page derives shares** — the reason `mutation-score` is spelled
-*killed ÷ total*, applied one step earlier. Per population:
+_killed ÷ total_, applied one step earlier. Per population:
 
-| Series | Measures |
-| --- | --- |
-| `complexity-functions` | functions counted — the denominator the other three are read against |
-| `complexity-mass` | Σ cyclomatic complexity over those functions |
-| `complexity-mass-over-10` | Σ complexity over functions with CC > 10 |
-| `complexity-max` | the largest single function's complexity |
+| Series                    | Measures                                                             |
+| ------------------------- | -------------------------------------------------------------------- |
+| `complexity-functions`    | functions counted — the denominator the other three are read against |
+| `complexity-mass`         | Σ cyclomatic complexity over those functions                         |
+| `complexity-mass-over-10` | Σ complexity over functions with CC > 10                             |
+| `complexity-max`          | the largest single function's complexity                             |
 
 **The cut is McCabe's own** — his 1976 paper proposes 10 as the upper bound for
 a module. It is a sourced constant inside the measure's definition and **not a
@@ -104,13 +104,13 @@ Stated as a rule rather than a description, because the file carries two other
 lists and the counter reads neither:
 
 - **`exclusions` are not applied to the series.** Every exclusion mechanism is
-  about *oracle reach*, which says nothing about a static measure. Applying
+  about _oracle reach_, which says nothing about a static measure. Applying
   them would drop `packages/site/src/shelf` from 385 functions to 113 and
   `packages/cli/src` to **three**. ⚠️ **The hook in
   [§5](#5-crap-kept-local-advisory-at-pre-commit) is the opposite case**, and
   applies them — for the reason each entry's mechanism names.
 - **`excludedDirectories` is not read at all**, so there is no precedence to
-  define between it and a glob. `packages/site/src` is listed there *and*
+  define between it and a glob. `packages/site/src` is listed there _and_
   `packages/site/src/shelf/**/*.ts` is a declared scope; the counter sees the
   glob and walks `shelf/`. The top level of `packages/site/src` matches no glob
   and is not walked; neither is `gates/`, which matches none either. Both remain
@@ -154,7 +154,7 @@ reason.
 ### Labels
 
 One `scope` label per series. Four series names rather than one series with a
-`stat` label, because G36 (`trend-layer`) holds *names* to Trends rows.
+`stat` label, because G36 (`trend-layer`) holds _names_ to Trends rows.
 
 ---
 
@@ -174,15 +174,15 @@ recommendation at the time.
 
 **The owner's call (#196): ESLint matters more than being on the newest
 TypeScript.** The spike tested it. **The repo is green on TypeScript 6.0.3** — the last
-JS-based release, the bridge version — with *no code or tsconfig change*, no
+JS-based release, the bridge version — with _no code or tsconfig change_, no
 peer warning, no deprecated option hit. Cost: `pnpm typecheck` 0.76s → 2.5s,
 `pnpm build` 3.3s → 4.7s. Three things blocked by TS 7 come back:
 
-| Tool | On 7.0.2 | On 6.0.3, measured |
-| --- | --- | --- |
-| `@typescript-eslint/parser` + `eslint-plugin-sonarjs` | refused at install | installs clean; `parseNote` CC 12 / cognitive 7, `asPrivate` 11 / 4 |
-| `@stryker-mutator/typescript-checker` | `checkers: []`, "dead and cannot be revived" ([`mutation-scoring.md`](mutation-scoring.md)) | starts **and works**: 2 of 11 mutants on `measure.ts` caught as `CompileError` |
-| `astro check` | cannot run ([ADR-0003](../adr/0003-site-import-type-only.md)) | runs, 6.2s over 44 files, finds one real pre-existing type error |
+| Tool                                                  | On 7.0.2                                                                                    | On 6.0.3, measured                                                             |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `@typescript-eslint/parser` + `eslint-plugin-sonarjs` | refused at install                                                                          | installs clean; `parseNote` CC 12 / cognitive 7, `asPrivate` 11 / 4            |
+| `@stryker-mutator/typescript-checker`                 | `checkers: []`, "dead and cannot be revived" ([`mutation-scoring.md`](mutation-scoring.md)) | starts **and works**: 2 of 11 mutants on `measure.ts` caught as `CompileError` |
+| `astro check`                                         | cannot run ([ADR-0003](../adr/0003-site-import-type-only.md))                               | runs, 6.2s over 44 files, finds one real pre-existing type error               |
 
 **Decided**: pin `typescript` to `6.0.3` exactly; add `eslint`,
 `@typescript-eslint/parser` and `eslint-plugin-sonarjs` as dev dependencies;
@@ -220,7 +220,7 @@ arrow, a method, a constructor, an accessor, **a class field initialiser and a
 static block**, with the expected per-function totals and the expected function
 count written beside them. It is what makes an ESLint upgrade that changes the
 count **red** rather than a quiet movement of every series at once. A sampled fixture would leave the
-un-sampled construct as the silent change; *total* is in the sentence on
+un-sampled construct as the silent change; _total_ is in the sentence on
 purpose.
 
 ---
@@ -236,7 +236,7 @@ a pull request, and the series is still a trend; what is added is the surface
 the first spec already built for exactly this.
 
 **Refused, still**: a per-function ceiling red on a pull request, and a
-pre-commit hook that refuses. Both fail Clause A (*"refactor this function"* is
+pre-commit hook that refuses. Both fail Clause A (_"refactor this function"_ is
 not a finite diff), the prototype showed a mechanical split clears a ceiling
 without removing a branch, and `--no-verify` makes a blocking hook a gate anyone
 can skip — a check claiming coverage it does not have.
@@ -285,8 +285,8 @@ stated so two implementations agree:
 raising the floor slowly. A cap derived from the repo's own history asks nothing
 until the repo has shown what it can hold; a ceiling picked from a blog post
 asks on day one and is gamed by lunchtime. Clause A is met the way the mutation
-floor meets it — the remedy is *bring the function back under the cap, or write
-the notes entry* — and the refusal lands in front of a person because
+floor meets it — the remedy is _bring the function back under the cap, or write
+the notes entry_ — and the refusal lands in front of a person because
 `deploy:site` is human-invoked.
 
 `complexity-functions` and `complexity-mass` are **not** capped. They grow with
@@ -311,7 +311,7 @@ would make the cube negative.
 ### What the spike changed, and what it did not
 
 **#191's disqualifier is closed by configuration.** #189 held that in
-Vitest 4 a never-imported function is *missing* from the report, so CRAP would
+Vitest 4 a never-imported function is _missing_ from the report, so CRAP would
 be undefined exactly where it should be maximal. The spike planted an orphan
 file and measured: **with `coverage.include` set to the eight scope globs, the
 orphan appears with a full `fnMap` and every count at 0%**; without `include`
@@ -327,7 +327,7 @@ the record.
 
 **The owner's resolution (#199): shift it left.** CRAP lives **only in a pre-commit
 hook**, computed over the functions the commit touches, printed to the one
-person who can still change the code, with the *never calibrated* caveat on the
+person who can still change the code, with the _never calibrated_ caveat on the
 same line. The spike measured the cost: `vitest related <file> --coverage` for
 one changed file is **3.3 seconds** — pre-commit, not pre-push — against a full
 suite of ~14.5s (+20% over baseline). No series, no row, no freshness bound:
@@ -346,7 +346,7 @@ it previews; the record is CI's.
 - **Population: the mutation scopes with exclusions applied** — the one place
   this spec applies them. The spike found **28 files at 0% because their oracle
   is a browser or a child process**, and that list is the exclusions list, by
-  mechanism. For those the hook prints *no in-process oracle* and no number;
+  mechanism. For those the hook prints _no in-process oracle_ and no number;
   a CRAP of 420 for `scene.ts` would be a fact about Vitest's reach, not about
   the code.
 - **Anonymous arrows** are reported by `file:line`, never tracked across
@@ -358,7 +358,7 @@ it previews; the record is CI's.
   rejected hook, and the cap is where teeth live.
 - **What a `related` run misses**: tests that reach the file through a child
   process or a browser are not in Vite's import graph — which is the same 28
-  files, already excluded. Transitive in-process imports *are* followed (the
+  files, already excluded. Transitive in-process imports _are_ followed (the
   spike confirmed 23 of 82 test files selected for one core file).
 
 ### Coverage enters the repo — as an ingredient, with its ADR
@@ -371,9 +371,9 @@ since [`no-coverage-floor.md`](no-coverage-floor.md) and what did not:
 - **Changed**: the function-grain blind spot is closed by `include`, measured;
   the network risk was the uploader, and there is no uploader.
 - **Unchanged**: **no floor, no threshold, no series, no badge.** Coverage
-  percentage stays in *Not gated, deliberately* with its row untouched; nothing
+  percentage stays in _Not gated, deliberately_ with its row untouched; nothing
   reads the number except the hook's formula, and the hook prints.
-- The map's Note — *coverage is banned as a goal, not as an input* — is what
+- The map's Note — _coverage is banned as a goal, not as an input_ — is what
   made this reachable without reopening #117.
 
 ### The inversion, and what flips it
@@ -398,49 +398,49 @@ for the tooling.
 (`metrics-freshness`); the `G38` in [`trend-layer.md`](trend-layer.md)'s prose
 is the pre-rollout number. **This spec allocates no gate number.**
 
-| File | Change |
-| --- | --- |
-| `package.json`, lockfile | `typescript@6.0.3` exact; `eslint`, `@typescript-eslint/parser`, `eslint-plugin-sonarjs` **exact**, because they are inputs to the number; `@vitest/coverage-v8` exact-peer to Vitest |
-| `stryker.config.mjs` | `tsconfigFile` back to the real `tsconfig.json`; `checkers` stays `[]` |
-| `eslint.config.mjs` (new) | flat config: `files: ['**/*.ts']`, `languageOptions.parser` = `@typescript-eslint/parser` (without it ESLint fails on TypeScript syntax before any count), `complexity: ['warn', { max: 0, variant: 'classic' }]`, nothing else enabled — this is a counter, not a linter |
-| `scripts/lib/complexity.ts` (new) | run ESLint's JSON output over a population; roll up to the four counts. **Pure, in the `scripts` mutation scope unexcluded** |
-| `scripts/lib/complexity.test.ts` (new) + fixture | the inventory spec |
-| `scripts/emit-metrics.ts` | the four facts into `RunFacts`; populations from `stryker.scopes.json` |
-| `scripts/lib/metrics.ts` | four `TREND_SERIES` entries, `help` carrying the Measures column |
-| `.github/workflows/metrics.yml` | the four names on **both** `--expect` lists |
-| `docs/gates.md`, `## Trends` | four rows |
-| `stryker.floors.json` | per-scope `cap` entries for `complexity-max` and `complexity-mass-over-10`, all `unarmed`; top-level `fixtureHash` beside `configHash` |
-| `scripts/lib/floors.ts`, `scripts/lib/metrics.ts` | `RunFacts.fixtureHash` → `fixture_hash` label on the run-info family; the floors reader requires `fixtureHash` as it requires `configHash` |
-| `scripts/deploy.ts`, `scripts/lib/trend-report.ts` | the cap refusal and window countdown beside the floor's; four lines per scope in the print block |
-| `vitest.config.ts` | `coverage.provider: 'v8'`, `include` = scope globs, JSON reporter, gitignored directory — **off by default**, on only under `--coverage` |
-| `.githooks/pre-commit` (new), `docs/commands.md` | the CRAP print, and how to opt in |
-| `grafana/dashboards/trend-layer.json` | four panels under the mutation panel per scope, and the reading sentence on panel 1 |
-| `docs/adr/` | ⚠️ **four** records, not the three this cell said until #201: TypeScript 6 until 7.1 — landed as [ADR-0066](../adr/0066-typescript-6-until-7-1.md); the counter's inputs pinned exact — landed as [ADR-0067](../adr/0067-the-counters-inputs-are-pinned-exact.md), because 0066 records the compiler trade and not the pinning of somebody else's rule implementation; the complexity cap; coverage as an ingredient — landed as [ADR-0069](../adr/0069-coverage-is-an-ingredient-not-a-goal.md) |
+| File                                               | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `package.json`, lockfile                           | `typescript@6.0.3` exact; `eslint`, `@typescript-eslint/parser`, `eslint-plugin-sonarjs` **exact**, because they are inputs to the number; `@vitest/coverage-v8` exact-peer to Vitest                                                                                                                                                                                                                                                                                                            |
+| `stryker.config.mjs`                               | `tsconfigFile` back to the real `tsconfig.json`; `checkers` stays `[]`                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `eslint.config.mjs` (new)                          | flat config: `files: ['**/*.ts']`, `languageOptions.parser` = `@typescript-eslint/parser` (without it ESLint fails on TypeScript syntax before any count), `complexity: ['warn', { max: 0, variant: 'classic' }]`, nothing else enabled — this is a counter, not a linter                                                                                                                                                                                                                        |
+| `scripts/lib/complexity.ts` (new)                  | run ESLint's JSON output over a population; roll up to the four counts. **Pure, in the `scripts` mutation scope unexcluded**                                                                                                                                                                                                                                                                                                                                                                     |
+| `scripts/lib/complexity.test.ts` (new) + fixture   | the inventory spec                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `scripts/emit-metrics.ts`                          | the four facts into `RunFacts`; populations from `stryker.scopes.json`                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `scripts/lib/metrics.ts`                           | four `TREND_SERIES` entries, `help` carrying the Measures column                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `.github/workflows/metrics.yml`                    | the four names on **both** `--expect` lists                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `docs/gates.md`, `## Trends`                       | four rows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `stryker.floors.json`                              | per-scope `cap` entries for `complexity-max` and `complexity-mass-over-10`, all `unarmed`; top-level `fixtureHash` beside `configHash`                                                                                                                                                                                                                                                                                                                                                           |
+| `scripts/lib/floors.ts`, `scripts/lib/metrics.ts`  | `RunFacts.fixtureHash` → `fixture_hash` label on the run-info family; the floors reader requires `fixtureHash` as it requires `configHash`                                                                                                                                                                                                                                                                                                                                                       |
+| `scripts/deploy.ts`, `scripts/lib/trend-report.ts` | the cap refusal and window countdown beside the floor's; four lines per scope in the print block                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `vitest.config.ts`                                 | `coverage.provider: 'v8'`, `include` = scope globs, JSON reporter, gitignored directory — **off by default**, on only under `--coverage`                                                                                                                                                                                                                                                                                                                                                         |
+| `.githooks/pre-commit` (new), `docs/commands.md`   | the CRAP print, and how to opt in                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `grafana/dashboards/trend-layer.json`              | four panels under the mutation panel per scope, and the reading sentence on panel 1                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `docs/adr/`                                        | ⚠️ **four** records, not the three this cell said until #201: TypeScript 6 until 7.1 — landed as [ADR-0066](../adr/0066-typescript-6-until-7-1.md); the counter's inputs pinned exact — landed as [ADR-0067](../adr/0067-the-counters-inputs-are-pinned-exact.md), because 0066 records the compiler trade and not the pinning of somebody else's rule implementation; the complexity cap; coverage as an ingredient — landed as [ADR-0069](../adr/0069-coverage-is-an-ingredient-not-a-goal.md) |
 
 ### Cadence: both events, same bound
 
 `gate-suite-runtime` is already emitted on both events. The counts join both
-`--expect` lists — per-merge resolution, so the PR window says *which pull
-request* moved `mass`. Bound **3 days, unchanged**. ⚠️ `scoredRecords()` decides
-which records carry a *mutation* score; complexity on a merge record must not
+`--expect` lists — per-merge resolution, so the PR window says _which pull
+request_ moved `mass`. Bound **3 days, unchanged**. ⚠️ `scoredRecords()` decides
+which records carry a _mutation_ score; complexity on a merge record must not
 make it read as scored — `scoresOf` stays mutation-specific.
 
 ### Proved able to fail
 
-| Demonstration | Held by | Expected |
-| --- | --- | --- |
-| emit `complexity-mass` with no Trends row | G36 (`trend-layer`), forward | red |
-| add a `complexity-p90` row nothing emits | G36 (`trend-layer`), reverse | red |
-| age the newest `complexity-max` sample four days | G39 (`metrics-freshness`) | `deploy:site` refuses, naming the series |
-| a population whose glob matches **no function** | `RunFacts.failed` | all four complexity families omitted; `run_ok 0`, file still written |
-| arm one scope's cap one below its current `max` | the cap refusal, under `--dry-run` | `deploy:site` refuses, naming the scope |
-| plant a record whose `fixture_hash` differs from the floors file's | the hash comparison, under `--dry-run` | `deploy:site` refuses, naming both hashes |
-| comment `?.` out of the fixture's expected total | `complexity.test.ts` | red |
+| Demonstration                                                      | Held by                                | Expected                                                             |
+| ------------------------------------------------------------------ | -------------------------------------- | -------------------------------------------------------------------- |
+| emit `complexity-mass` with no Trends row                          | G36 (`trend-layer`), forward           | red                                                                  |
+| add a `complexity-p90` row nothing emits                           | G36 (`trend-layer`), reverse           | red                                                                  |
+| age the newest `complexity-max` sample four days                   | G39 (`metrics-freshness`)              | `deploy:site` refuses, naming the series                             |
+| a population whose glob matches **no function**                    | `RunFacts.failed`                      | all four complexity families omitted; `run_ok 0`, file still written |
+| arm one scope's cap one below its current `max`                    | the cap refusal, under `--dry-run`     | `deploy:site` refuses, naming the scope                              |
+| plant a record whose `fixture_hash` differs from the floors file's | the hash comparison, under `--dry-run` | `deploy:site` refuses, naming both hashes                            |
+| comment `?.` out of the fixture's expected total                   | `complexity.test.ts`                   | red                                                                  |
 
 **The zero-function case is serialised one way, and it is not a zero.** When
 any population yields no function, the counter returns no facts at all, and
 `emit-metrics` adds **all four** complexity names to `RunFacts.failed` — the
-mechanism `metrics.ts` already has for *a producing step that broke* — so the
+mechanism `metrics.ts` already has for _a producing step that broke_ — so the
 families are omitted from the record and `run_ok` is `0`. Three things this
 rules out, each for a reason: emitting the other seven scopes and omitting one
 sample, because the renderer treats a zero-sample family as emitted and the
@@ -465,14 +465,14 @@ is unaffected. **No new runtime series.**
 Source: [#193](https://github.com/mephistopheles4/stacks/issues/193), amended
 for the cap and the hook.
 
-| Category | Vector | Disposition |
-| --- | --- | --- |
-| Weakening | change what ESLint counts, or edit the fixture | **Closed** by the inventory fixture and its hash on the floors file — a count change is a red spec, and a record under a different hash is refused, not compared |
-| Weakening | raise a cap | **Visible**: the floors file's append-only `notes`, same as lowering a floor |
+| Category              | Vector                                                                 | Disposition                                                                                                                                                                                                                                                                                                                |
+| --------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Weakening             | change what ESLint counts, or edit the fixture                         | **Closed** by the inventory fixture and its hash on the floors file — a count change is a red spec, and a record under a different hash is refused, not compared                                                                                                                                                           |
+| Weakening             | raise a cap                                                            | **Visible**: the floors file's append-only `notes`, same as lowering a floor                                                                                                                                                                                                                                               |
 | Satisfying the letter | function splitting: `max` −10, erosion share −3.8pp, no branch removed | **Carried open, made visible** — no ratio emitted; the signature is on the page. ⚠️ **The cap inherits it**: a split is the cheapest way under a `max` cap. `mass-over-10` is capped beside it for that reason — a split that leaves a 30 still counts — and `mass` is on the page uncapped, flat when nothing was removed |
-| Routing around | code outside the populations; `.astro` files | **Open** for the two excluded directories; `.astro` closed by *no logic in `.astro` files* — and `astro check` now *can* run, recorded as fog |
-| Vacuous green | a glob matching nothing; a hook printing 0% for a browser-only file | **Closed** for the series — one empty population fails all four families via `RunFacts.failed`, never a partial record; **closed by the exclusions** for the hook, which prints *no in-process oracle* instead of a number |
-| Decay | the number moves with no code change | *Counting-rule drift*: ESLint upgrades — **closed** by the fixture. *`anonymous_N` identity*: **closed by not tracking them**. *The hook stops running*: **open by nature** — nothing watches a local surface, which is why it is a preview and not the record |
+| Routing around        | code outside the populations; `.astro` files                           | **Open** for the two excluded directories; `.astro` closed by _no logic in `.astro` files_ — and `astro check` now _can_ run, recorded as fog                                                                                                                                                                              |
+| Vacuous green         | a glob matching nothing; a hook printing 0% for a browser-only file    | **Closed** for the series — one empty population fails all four families via `RunFacts.failed`, never a partial record; **closed by the exclusions** for the hook, which prints _no in-process oracle_ instead of a number                                                                                                 |
+| Decay                 | the number moves with no code change                                   | _Counting-rule drift_: ESLint upgrades — **closed** by the fixture. _`anonymous_N` identity_: **closed by not tracking them**. _The hook stops running_: **open by nature** — nothing watches a local surface, which is why it is a preview and not the record                                                             |
 
 **Mutation-score dilution** (`gate-or-trend.md` §6) is **not** inherited: CRAP
 is not a series and has no denominator anyone can pad on the page.
@@ -502,7 +502,7 @@ effort.
 - **`astro check` in the gates.** It runs on TS 6 and found one real type
   error. Whether it becomes a row, and what G7 (`astro-no-logic`) then still
   protects, is a scoreboard conversation.
-- **A duplication/verbosity series** — the signal that moved *more*
+- **A duplication/verbosity series** — the signal that moved _more_
   consistently than complexity in the only trajectory study.
 - **Cognitive complexity as a second series.** `eslint-plugin-sonarjs` is now
   installable and the spike measured it (`parseNote` 7, `asPrivate` 4); one
@@ -524,7 +524,7 @@ needs from the one before it.
 
 1. **TypeScript 6.0.3**, the `tsconfigFile` flip, and the ADR — alone, so the
    diff that changes the compiler changes nothing else. `pnpm typecheck && pnpm
-   test && pnpm build` green is the gate; the spike says it will be.
+test && pnpm build` green is the gate; the spike says it will be.
 2. **ESLint and the counter**: `eslint.config.mjs`, `lib/complexity.ts`, the
    inventory fixture and spec — **red once on purpose** (drop `?.` from the
    expected total) before it is believed.

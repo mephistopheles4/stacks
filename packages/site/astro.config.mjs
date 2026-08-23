@@ -1,4 +1,4 @@
-import { defineConfig } from 'astro/config';
+import { defineConfig } from "astro/config";
 
 // Static output only. The `--public` build has to be a plain deployable folder
 // (GitHub Pages / Cloudflare Pages), so there is no adapter and no SSR here.
@@ -8,7 +8,7 @@ export default defineConfig({
   // without this, sharing the shelf shows no preview at all. Unset for a local
   // `pnpm dev`, where there is nothing to share; the deploy sets it.
   site: process.env.SITE_URL,
-  output: 'static',
+  output: "static",
   devToolbar: { enabled: false },
 
   // The shelf's outbound record, stated so it can stop being true by accident.
@@ -62,7 +62,7 @@ export default defineConfig({
         // ⚠️ `'self'` must be listed. `resources` REPLACES Astro's defaults
         // rather than appending to them, and dropping it blocks the shelf's own
         // /_astro/*.js — a black canvas with the page otherwise intact.
-        resources: ["'self'", 'https://static.cloudflareinsights.com'],
+        resources: ["'self'", "https://static.cloudflareinsights.com"],
       },
     },
   },

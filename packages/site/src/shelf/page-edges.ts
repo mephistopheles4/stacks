@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 
 /**
  * The striation of a cut text block, as **one normal map shared by every book on
@@ -131,7 +131,8 @@ export function heightAt(u: number): number {
   // Wrapped for the same reason as the gathering above.
   const wrappedLeaf = ((leafIndex % leaves) + leaves) % leaves;
   const jitter = (noise(wrappedLeaf * 1.7) - 0.5) * 0.55;
-  const leaf = 0.5 - 0.5 * Math.cos((leafScaled - leafIndex + jitter) * Math.PI * 2);
+  const leaf =
+    0.5 - 0.5 * Math.cos((leafScaled - leafIndex + jitter) * Math.PI * 2);
 
   return coarse * (1 - LEAF_DEPTH) + leaf * LEAF_DEPTH;
 }
@@ -156,11 +157,11 @@ export function pageStriationMap(): THREE.CanvasTexture | undefined {
 }
 
 function bake(): THREE.CanvasTexture | undefined {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = TEXTURE_WIDTH;
   canvas.height = TEXTURE_HEIGHT;
 
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   if (ctx === null) return undefined;
 
   const image = ctx.createImageData(TEXTURE_WIDTH, TEXTURE_HEIGHT);

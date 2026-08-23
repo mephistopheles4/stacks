@@ -19,7 +19,7 @@
  * and missed on its first pass; a code review found it.
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawnSync } from "node:child_process";
 
 /**
  * git, captured and non-fatal — `undefined` when it fails for any reason.
@@ -28,8 +28,11 @@ import { spawnSync } from 'node:child_process';
  * the PATH, and not a checkout at all, both arrive here as `undefined`. Every
  * caller wants the same thing from all three — carry on without an answer.
  */
-export function gitOutput(args: readonly string[], cwd: string): string | undefined {
-  const result = spawnSync('git', [...args], { cwd, encoding: 'utf8' });
+export function gitOutput(
+  args: readonly string[],
+  cwd: string,
+): string | undefined {
+  const result = spawnSync("git", [...args], { cwd, encoding: "utf8" });
   return result.status === 0 ? result.stdout.trim() : undefined;
 }
 
@@ -43,5 +46,5 @@ export function gitOutput(args: readonly string[], cwd: string): string | undefi
  * script should stop for, which is exactly what separates this from `runExe`.
  */
 export function gitStatus(args: readonly string[], cwd: string): number | null {
-  return spawnSync('git', [...args], { cwd, stdio: 'inherit' }).status;
+  return spawnSync("git", [...args], { cwd, stdio: "inherit" }).status;
 }

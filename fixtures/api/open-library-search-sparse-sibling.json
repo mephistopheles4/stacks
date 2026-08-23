@@ -8,9 +8,7 @@
   "offset": null,
   "docs": [
     {
-      "author_name": [
-        "Jordan B. Peterson"
-      ],
+      "author_name": ["Jordan B. Peterson"],
       "cover_i": 8131760,
       "edition_key": [
         "OL60507092M",
@@ -156,73 +154,35 @@
       ]
     },
     {
-      "edition_key": [
-        "OL40338655M"
-      ],
-      "isbn": [
-        "9780141989426",
-        "0141989424"
-      ],
-      "publisher": [
-        "Penguin Books Ltd"
-      ],
+      "edition_key": ["OL40338655M"],
+      "isbn": ["9780141989426", "0141989424"],
+      "publisher": ["Penguin Books Ltd"],
       "title": "12 Rules for Life"
     },
     {
-      "author_name": [
-        "Speed Read Publishing"
-      ],
-      "edition_key": [
-        "OL34336540M"
-      ],
-      "isbn": [
-        "9798730704695"
-      ],
+      "author_name": ["Speed Read Publishing"],
+      "edition_key": ["OL34336540M"],
+      "isbn": ["9798730704695"],
       "number_of_pages_median": 43,
-      "publish_date": [
-        "2021"
-      ],
-      "publisher": [
-        "Independently Published"
-      ],
+      "publish_date": ["2021"],
+      "publisher": ["Independently Published"],
       "title": "Summary of 12 RULES for LIFE by Jordan Peterson"
     },
     {
-      "author_name": [
-        "Dominion Ike"
-      ],
-      "edition_key": [
-        "OL39662848M"
-      ],
-      "isbn": [
-        "9798842693306"
-      ],
-      "publish_date": [
-        "2022"
-      ],
-      "publisher": [
-        "Independently Published"
-      ],
+      "author_name": ["Dominion Ike"],
+      "edition_key": ["OL39662848M"],
+      "isbn": ["9798842693306"],
+      "publish_date": ["2022"],
+      "publisher": ["Independently Published"],
       "title": "SUMMARY of 12 Rules for Life"
     },
     {
-      "author_name": [
-        "Richdad Summaries"
-      ],
+      "author_name": ["Richdad Summaries"],
       "cover_i": 14338969,
-      "edition_key": [
-        "OL43348298M"
-      ],
-      "isbn": [
-        "9781717948816",
-        "1717948812"
-      ],
-      "publish_date": [
-        "2018"
-      ],
-      "publisher": [
-        "[publisher not identified]"
-      ],
+      "edition_key": ["OL43348298M"],
+      "isbn": ["9781717948816", "1717948812"],
+      "publish_date": ["2018"],
+      "publisher": ["[publisher not identified]"],
       "title": "Summary of 12 Rules for Life"
     }
   ]

@@ -20,20 +20,20 @@
  * Scaling the density instead renders at the target size natively.
  */
 
-import { access, mkdir, writeFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
-import sharp from 'sharp';
-import { REPO_ROOT } from './lib/repo-root.ts';
+import { access, mkdir, writeFile } from "node:fs/promises";
+import { join, relative } from "node:path";
+import sharp from "sharp";
+import { REPO_ROOT } from "./lib/repo-root.ts";
 
-const PUBLIC_DIR = join(REPO_ROOT, 'packages', 'site', 'public');
-const ASSETS_DIR = join(REPO_ROOT, 'packages', 'site', 'src', 'assets');
+const PUBLIC_DIR = join(REPO_ROOT, "packages", "site", "public");
+const ASSETS_DIR = join(REPO_ROOT, "packages", "site", "src", "assets");
 
 /** The mark's viewBox, and the basis for every density calculation below. */
 const VIEWBOX = 64;
 const BASE_DPI = 72;
 
 /** Paper, from the brand palette — the tile behind the mark. */
-const PAPER = '#FBF6EC';
+const PAPER = "#FBF6EC";
 
 interface Icon {
   /** The committed SVG this is rendered from. */
@@ -52,11 +52,11 @@ interface Icon {
 }
 
 const ICONS: readonly Icon[] = [
-  { source: join(PUBLIC_DIR, 'favicon.svg'), out: 'favicon-16.png', size: 16 },
-  { source: join(PUBLIC_DIR, 'favicon.svg'), out: 'favicon-32.png', size: 32 },
+  { source: join(PUBLIC_DIR, "favicon.svg"), out: "favicon-16.png", size: 16 },
+  { source: join(PUBLIC_DIR, "favicon.svg"), out: "favicon-32.png", size: 32 },
   {
-    source: join(ASSETS_DIR, 'stacks-mark.svg'),
-    out: 'apple-touch-icon.png',
+    source: join(ASSETS_DIR, "stacks-mark.svg"),
+    out: "apple-touch-icon.png",
     size: 180,
     flattenTo: PAPER,
   },
@@ -77,11 +77,12 @@ async function render(icon: Icon): Promise<string | undefined> {
   const density = (BASE_DPI * icon.size) / VIEWBOX;
 
   let pipeline = sharp(icon.source, { density }).resize(icon.size, icon.size, {
-    fit: 'contain',
+    fit: "contain",
     background: { r: 0, g: 0, b: 0, alpha: 0 },
   });
 
-  if (icon.flattenTo !== undefined) pipeline = pipeline.flatten({ background: icon.flattenTo });
+  if (icon.flattenTo !== undefined)
+    pipeline = pipeline.flatten({ background: icon.flattenTo });
 
   const png = await pipeline.png({ compressionLevel: 9 }).toBuffer();
   const { width, height, channels, hasAlpha } = await sharp(png).metadata();
@@ -111,9 +112,9 @@ async function main(): Promise<void> {
       await access(icon);
     } catch {
       console.error(
-        `no ${relative(REPO_ROOT, icon).split('\\').join('/')}\n\n` +
-          'The committed SVGs are the source for every icon here; one of them has moved ' +
-          'or been deleted.',
+        `no ${relative(REPO_ROOT, icon).split("\\").join("/")}\n\n` +
+          "The committed SVGs are the source for every icon here; one of them has moved " +
+          "or been deleted.",
       );
       process.exitCode = 1;
       return;
@@ -129,7 +130,7 @@ async function main(): Promise<void> {
   }
 
   if (problems.length > 0) {
-    console.error(`\nFAILED\n- ${problems.join('\n- ')}`);
+    console.error(`\nFAILED\n- ${problems.join("\n- ")}`);
     process.exitCode = 1;
   }
 }

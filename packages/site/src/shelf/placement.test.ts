@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import type { LibraryBook } from '@stacks/core';
-import { toRows, YEAR_GAP, type ShelfRow } from './books.ts';
-import { DEFAULT_SETTINGS } from './shelf-settings.ts';
-import { SHELF } from './case.ts';
+import { describe, expect, it } from "vitest";
+import type { LibraryBook } from "@stacks/core";
+import { toRows, YEAR_GAP, type ShelfRow } from "./books.ts";
+import { DEFAULT_SETTINGS } from "./shelf-settings.ts";
+import { SHELF } from "./case.ts";
 import {
   MAX_LEAN,
   MAX_PROP_LEAN,
@@ -10,7 +10,7 @@ import {
   runsParallel,
   swayOf,
   TOUCHING,
-} from './placement.ts';
+} from "./placement.ts";
 
 /**
  * What `placeShelf` claims, asserted without a GPU.
@@ -26,8 +26,8 @@ function book(id: string, over: Partial<LibraryBook> = {}): LibraryBook {
   return {
     id,
     title: id,
-    status: 'read',
-    finished: '2025-06-01',
+    status: "read",
+    finished: "2025-06-01",
     pages: 300,
     tags: [],
     ...over,
@@ -61,8 +61,13 @@ interface Placed {
 /** The shelf a book eats, ignoring any lean — its **footprint**, placed. */
 function footprintOf(placement: Placed): { left: number; right: number } {
   const half =
-    (placement.entry.faceOut ? placement.entry.coverWidth : placement.entry.thickness) / 2;
-  return { left: placement.position.x - half, right: placement.position.x + half };
+    (placement.entry.faceOut
+      ? placement.entry.coverWidth
+      : placement.entry.thickness) / 2;
+  return {
+    left: placement.position.x - half,
+    right: placement.position.x + half,
+  };
 }
 
 /**
@@ -87,8 +92,12 @@ function extentOf(placement: Placed): { left: number; right: number } {
   // swings out. `swayOf` is the second term, which is the one the cursor budgets.
   const half = placement.entry.thickness / 2;
   const swept =
-    half * Math.cos(placement.rotationZ) + swayOf(placement.entry.height, placement.rotationZ);
-  return { left: placement.position.x - swept, right: placement.position.x + swept };
+    half * Math.cos(placement.rotationZ) +
+    swayOf(placement.entry.height, placement.rotationZ);
+  return {
+    left: placement.position.x - swept,
+    right: placement.position.x + swept,
+  };
 }
 
 /**
@@ -100,7 +109,9 @@ function extentOf(placement: Placed): { left: number; right: number } {
  * book is a vertical slab `coverWidth` across: its 0.06 tilt is about Z *after*
  * the quarter turn about Y, so it swings in Y and Z and never along the row.
  */
-function cornersOf(placement: Placed & { readonly position: { readonly y: number } }): {
+function cornersOf(
+  placement: Placed & { readonly position: { readonly y: number } },
+): {
   left: readonly [{ x: number; y: number }, { x: number; y: number }];
   right: readonly [{ x: number; y: number }, { x: number; y: number }];
 } {
@@ -110,8 +121,14 @@ function cornersOf(placement: Placed & { readonly position: { readonly y: number
   if (faceOut) {
     const half = coverWidth / 2;
     return {
-      left: [{ x: cx - half, y: 0 }, { x: cx - half, y: height }],
-      right: [{ x: cx + half, y: 0 }, { x: cx + half, y: height }],
+      left: [
+        { x: cx - half, y: 0 },
+        { x: cx - half, y: height },
+      ],
+      right: [
+        { x: cx + half, y: 0 },
+        { x: cx + half, y: height },
+      ],
     };
   }
 
@@ -155,7 +172,10 @@ function boardGap(
   const a = cornersOf(left).right;
   const b = cornersOf(right).left;
 
-  const at = (edge: readonly [{ x: number; y: number }, { x: number; y: number }], y: number) => {
+  const at = (
+    edge: readonly [{ x: number; y: number }, { x: number; y: number }],
+    y: number,
+  ) => {
     const [low, high] = edge;
     const span = high.y - low.y;
     return span === 0 ? low.x : low.x + ((y - low.y) / span) * (high.x - low.x);
@@ -170,11 +190,13 @@ function boardGap(
   return Math.min(at(b, from) - at(a, from), at(b, to) - at(a, to));
 }
 
-describe('placeShelf', () => {
-  it('gives every book in a run the same angle, so they stay parallel', () => {
+describe("placeShelf", () => {
+  it("gives every book in a run the same angle, so they stay parallel", () => {
     // Independent angles per book is what produced the wedge-shaped gaps:
     // neighbours a fraction of a degree apart, touching nowhere.
-    const [row] = placeShelf(rowsOf([book('a'), book('b'), book('c'), book('d')]));
+    const [row] = placeShelf(
+      rowsOf([book("a"), book("b"), book("c"), book("d")]),
+    );
 
     const leans = (row ?? []).map((placement) => placement.rotationZ);
     expect(leans.length).toBe(4);
@@ -182,10 +204,11 @@ describe('placeShelf', () => {
     expect(leans[0]).toBeGreaterThan(0);
   });
 
-  it('packs a run flush — one hair of air between neighbours at the same angle', () => {
-    const [row] = placeShelf(rowsOf([book('a'), book('b'), book('c')]));
+  it("packs a run flush — one hair of air between neighbours at the same angle", () => {
+    const [row] = placeShelf(rowsOf([book("a"), book("b"), book("c")]));
     const [first, second] = row ?? [];
-    if (first === undefined || second === undefined) throw new Error('row too short');
+    if (first === undefined || second === undefined)
+      throw new Error("row too short");
 
     /**
      * **Boards, not footprints**, and this test asserted the footprint gap for as
@@ -203,16 +226,16 @@ describe('placeShelf', () => {
     expect(boardGap(first, second)).toBeCloseTo(TOUCHING, 10);
   });
 
-  it('props the book after a year gap against its neighbour, and the run behind it follows', () => {
+  it("props the book after a year gap against its neighbour, and the run behind it follows", () => {
     // The book after a gap has open shelf on its left — and something to rest
     // against a gap away, which is what it does. It used to stand bolt upright
     // here, which is the one thing a book with 9cm of air beside it does not do.
     const [row] = placeShelf(
       rowsOf([
-        book('a', { finished: '2025-06-01' }),
-        book('b', { finished: '2025-06-02' }),
-        book('c', { finished: '2024-06-01' }),
-        book('d', { finished: '2024-06-02' }),
+        book("a", { finished: "2025-06-01" }),
+        book("b", { finished: "2025-06-02" }),
+        book("c", { finished: "2024-06-01" }),
+        book("d", { finished: "2024-06-02" }),
       ]),
     );
 
@@ -231,25 +254,32 @@ describe('placeShelf', () => {
     expect(leans[3]).toBe(leans[2]);
   });
 
-  it('leans the propped book onto its neighbour, top corner touching, wedge at the plank', () => {
+  it("leans the propped book onto its neighbour, top corner touching, wedge at the plank", () => {
     // The whole point, stated as geometry: the gap does not shrink, it *tilts*.
     // Closing it at the top by moving the book left would only have moved it, and
     // rotating about the centre would have doubled it at the bottom.
     const gapped = [
-      book('a', { finished: '2025-06-01' }),
-      book('b', { finished: '2024-06-01' }),
+      book("a", { finished: "2025-06-01" }),
+      book("b", { finished: "2024-06-01" }),
     ];
     const [row] = placeShelf(rowsOf(gapped));
     const [left, propped] = row ?? [];
-    if (left === undefined || propped === undefined) throw new Error('row too short');
+    if (left === undefined || propped === undefined)
+      throw new Error("row too short");
 
     expect(propped.entry.gapBefore).toBe(YEAR_GAP);
 
     const lean = propped.rotationZ;
     const half = propped.entry.thickness / 2;
     // The two corners of the propped book's left board, in world x.
-    const base = propped.position.x - half * Math.cos(lean) + swayOf(propped.entry.height, lean);
-    const top = propped.position.x - half * Math.cos(lean) - swayOf(propped.entry.height, lean);
+    const base =
+      propped.position.x -
+      half * Math.cos(lean) +
+      swayOf(propped.entry.height, lean);
+    const top =
+      propped.position.x -
+      half * Math.cos(lean) -
+      swayOf(propped.entry.height, lean);
 
     const opening = YEAR_GAP + TOUCHING;
 
@@ -267,7 +297,7 @@ describe('placeShelf', () => {
     expect(base - top).toBeLessThan(opening * 2);
   });
 
-  it('reserves clearance where the angle changes, and only there', () => {
+  it("reserves clearance where the angle changes, and only there", () => {
     // A face-out book stands square between two leaning ones, so the angle
     // changes twice and each change has to pay for the swing.
     //
@@ -276,14 +306,14 @@ describe('placeShelf', () => {
     // stands its neighbour straight and leaves no angle change here to measure.
     const [row] = placeShelf(
       rowsOf([
-        book('a', { finished: '2025-06-03' }),
-        book('b', { finished: '2025-06-02', faceOut: true }),
-        book('c', { finished: '2025-06-01' }),
+        book("a", { finished: "2025-06-03" }),
+        book("b", { finished: "2025-06-02", faceOut: true }),
+        book("c", { finished: "2025-06-01" }),
       ]),
     );
     const [leaning, square, after] = row ?? [];
     if (leaning === undefined || square === undefined || after === undefined) {
-      throw new Error('row too short');
+      throw new Error("row too short");
     }
 
     // The face-out book carries a fixed 0.06 lean-*back* against its neighbours,
@@ -309,13 +339,15 @@ describe('placeShelf', () => {
     expect(behind).toBeGreaterThan(SHELF.bookGap * 2);
   });
 
-  it('gives a face-out book a contact as wide as its cover and as deep as itself', () => {
+  it("gives a face-out book a contact as wide as its cover and as deep as itself", () => {
     // Taking the cover's width for *both* painted a shadow the size of the cover
     // flat on the wood — a smudge in front of a book, thrown by a light that is
     // in front of it.
-    const [row] = placeShelf(rowsOf([book('a', { status: 'reading', finished: undefined })]));
+    const [row] = placeShelf(
+      rowsOf([book("a", { status: "reading", finished: undefined })]),
+    );
     const [placement] = row ?? [];
-    if (placement === undefined) throw new Error('no placement');
+    if (placement === undefined) throw new Error("no placement");
 
     expect(placement.entry.faceOut).toBe(true);
     expect(placement.contact.width).toBe(placement.entry.coverWidth);
@@ -323,21 +355,21 @@ describe('placeShelf', () => {
     expect(placement.contact.depth).not.toBe(placement.entry.coverWidth);
   });
 
-  it('gives a shelved book a contact as wide as its spine, on the shelf depth', () => {
-    const [row] = placeShelf(rowsOf([book('a')]));
+  it("gives a shelved book a contact as wide as its spine, on the shelf depth", () => {
+    const [row] = placeShelf(rowsOf([book("a")]));
     const [placement] = row ?? [];
-    if (placement === undefined) throw new Error('no placement');
+    if (placement === undefined) throw new Error("no placement");
 
     expect(placement.contact.width).toBe(placement.entry.thickness);
     expect(placement.contact.depth).toBe(SHELF.bookDepth);
   });
 
-  it('keeps every book of a fifty-book shelf inside the case, leans included', () => {
+  it("keeps every book of a fifty-book shelf inside the case, leans included", () => {
     const many = Array.from({ length: 50 }, (_, index) =>
       book(`book-${String(index)}`, {
         pages: 120 + ((index * 37) % 680),
         finished: `202${String(index % 5)}-0${String((index % 9) + 1)}-01`,
-        ...(index % 7 === 0 ? { status: 'reading', finished: undefined } : {}),
+        ...(index % 7 === 0 ? { status: "reading", finished: undefined } : {}),
       }),
     );
 
@@ -369,7 +401,7 @@ describe('placeShelf', () => {
     }
   });
 
-  it('never drives one board through another, anywhere up the height', () => {
+  it("never drives one board through another, anywhere up the height", () => {
     /**
      * The one thing `extentOf` cannot see.
      *
@@ -440,15 +472,15 @@ describe('placeShelf', () => {
     expect(parallelPairs).toBeGreaterThan(10);
   });
 
-  it('paints a leaning book its shadow under its foot, which is not under its middle', () => {
+  it("paints a leaning book its shadow under its foot, which is not under its middle", () => {
     // `contact` was asserted for width and depth and never for *where*, so the
     // shadow tracked `position.x` — the book's middle — while the foot it is
     // supposed to be under swings `sway` off it. Worth 2cm at an ordinary slump
     // and 5cm on a propped book, which is half a spine of daylight between a book
     // and its own shadow.
-    const [row] = placeShelf(rowsOf([book('a'), book('b'), book('c')]));
+    const [row] = placeShelf(rowsOf([book("a"), book("b"), book("c")]));
     const [placement] = row ?? [];
-    if (placement === undefined) throw new Error('no placement');
+    if (placement === undefined) throw new Error("no placement");
 
     expect(placement.rotationZ).toBeGreaterThan(0);
     const foot = swayOf(placement.entry.height, placement.rotationZ);
@@ -456,16 +488,22 @@ describe('placeShelf', () => {
     expect(placement.contact.x).toBeCloseTo(placement.position.x + foot, 12);
   });
 
-  it('places the same library the same way every time', () => {
+  it("places the same library the same way every time", () => {
     // A shelf that reshuffled its silhouette on rebuild would be a different
     // piece of furniture every deploy.
-    const books = [book('a'), book('b'), book('c', { status: 'reading', finished: undefined })];
+    const books = [
+      book("a"),
+      book("b"),
+      book("c", { status: "reading", finished: undefined }),
+    ];
     expect(placeShelf(rowsOf(books))).toEqual(placeShelf(rowsOf(books)));
   });
 
-  it('draws top-down: the newest books sit on the top shelf', () => {
+  it("draws top-down: the newest books sit on the top shelf", () => {
     const many = Array.from({ length: 40 }, (_, index) =>
-      book(`book-${String(index)}`, { finished: `2025-01-0${String((index % 9) + 1)}` }),
+      book(`book-${String(index)}`, {
+        finished: `2025-01-0${String((index % 9) + 1)}`,
+      }),
     );
 
     const rows = placeShelf(rowsOf(many));

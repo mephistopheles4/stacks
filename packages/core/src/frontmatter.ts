@@ -1,7 +1,11 @@
-import { parse as parseYaml } from 'yaml';
-import { isCoverSource, type CoverSource } from './covers/cover-source.ts';
-import { keyIfPresent } from './key-if-present.ts';
-import { CONTRIBUTOR_ID_KEYS, CONTRIBUTOR_IDS, isWellFormedId } from './provider-ids.ts';
+import { parse as parseYaml } from "yaml";
+import { isCoverSource, type CoverSource } from "./covers/cover-source.ts";
+import { keyIfPresent } from "./key-if-present.ts";
+import {
+  CONTRIBUTOR_ID_KEYS,
+  CONTRIBUTOR_IDS,
+  isWellFormedId,
+} from "./provider-ids.ts";
 import {
   DEFAULT_BOOK_STATUS,
   isBinding,
@@ -9,7 +13,7 @@ import {
   type Binding,
   type BookRecord,
   type BookStatus,
-} from './types.ts';
+} from "./types.ts";
 
 /**
  * Turning one vault note into (at most) one book.
@@ -24,9 +28,9 @@ import {
  *                   file, skip it, keep going (invariant 3).
  */
 export type ParsedNote =
-  | { readonly kind: 'book'; readonly record: BookRecord }
-  | { readonly kind: 'not-a-book' }
-  | { readonly kind: 'invalid'; readonly reason: string };
+  | { readonly kind: "book"; readonly record: BookRecord }
+  | { readonly kind: "not-a-book" }
+  | { readonly kind: "invalid"; readonly reason: string };
 
 /**
  * The frontmatter contract, as data.
@@ -47,37 +51,61 @@ export type ParsedNote =
  * a book at all.
  */
 export const FRONTMATTER_CONTRACT = {
-  type: { field: null, required: true, sample: 'book' },
-  title: { field: 'title', required: true, sample: 'A Sample Title' },
-  author: { field: 'author', required: false, sample: 'A Sample Author' },
-  isbn: { field: 'isbn', required: false, sample: '9781000000016' },
-  status: { field: 'status', required: false, sample: 'reading' },
-  started: { field: 'started', required: false, sample: '2026-01-02' },
-  finished: { field: 'finished', required: false, sample: '2026-03-04' },
-  rating: { field: 'rating', required: false, sample: '4' },
-  cover: { field: 'cover', required: false, sample: 'covers/sample.png' },
-  cover_source: { field: 'coverSource', required: false, sample: 'open-library' },
-  spine_color: { field: 'spineColor', required: false, sample: '"#2f6d7a"' },
-  pages: { field: 'pages', required: false, sample: '321' },
-  binding: { field: 'binding', required: false, sample: 'paperback' },
-  face_out: { field: 'faceOut', required: false, sample: 'true' },
-  tags: { field: 'tags', required: false, sample: '[sample]' },
-  shelf_order: { field: 'shelfOrder', required: false, sample: '20' },
-  private: { field: 'private', required: false, sample: 'true' },
-  publisher: { field: 'publisher', required: false, sample: 'A Sample Press' },
-  published: { field: 'published', required: false, sample: '2019' },
-  subjects: { field: 'subjects', required: false, sample: 'systems thinking; science' },
-  google_volume_id: { field: 'googleVolumeId', required: false, sample: 'CpbLAgAAQBAJ' },
-  apple_track_id: { field: 'appleTrackId', required: false, sample: '1384286945' },
-  openlibrary_olid: { field: 'openLibraryOlid', required: false, sample: 'OL26445570M' },
-  oreilly_ourn: {
-    field: 'oreillyOurn',
+  type: { field: null, required: true, sample: "book" },
+  title: { field: "title", required: true, sample: "A Sample Title" },
+  author: { field: "author", required: false, sample: "A Sample Author" },
+  isbn: { field: "isbn", required: false, sample: "9781000000016" },
+  status: { field: "status", required: false, sample: "reading" },
+  started: { field: "started", required: false, sample: "2026-01-02" },
+  finished: { field: "finished", required: false, sample: "2026-03-04" },
+  rating: { field: "rating", required: false, sample: "4" },
+  cover: { field: "cover", required: false, sample: "covers/sample.png" },
+  cover_source: {
+    field: "coverSource",
     required: false,
-    sample: 'urn:orm:book:0642572352530',
+    sample: "open-library",
+  },
+  spine_color: { field: "spineColor", required: false, sample: '"#2f6d7a"' },
+  pages: { field: "pages", required: false, sample: "321" },
+  binding: { field: "binding", required: false, sample: "paperback" },
+  face_out: { field: "faceOut", required: false, sample: "true" },
+  tags: { field: "tags", required: false, sample: "[sample]" },
+  shelf_order: { field: "shelfOrder", required: false, sample: "20" },
+  private: { field: "private", required: false, sample: "true" },
+  publisher: { field: "publisher", required: false, sample: "A Sample Press" },
+  published: { field: "published", required: false, sample: "2019" },
+  subjects: {
+    field: "subjects",
+    required: false,
+    sample: "systems thinking; science",
+  },
+  google_volume_id: {
+    field: "googleVolumeId",
+    required: false,
+    sample: "CpbLAgAAQBAJ",
+  },
+  apple_track_id: {
+    field: "appleTrackId",
+    required: false,
+    sample: "1384286945",
+  },
+  openlibrary_olid: {
+    field: "openLibraryOlid",
+    required: false,
+    sample: "OL26445570M",
+  },
+  oreilly_ourn: {
+    field: "oreillyOurn",
+    required: false,
+    sample: "urn:orm:book:0642572352530",
   },
 } as const satisfies Record<
   string,
-  { readonly field: keyof BookRecord | null; readonly required: boolean; readonly sample: string }
+  {
+    readonly field: keyof BookRecord | null;
+    readonly required: boolean;
+    readonly sample: string;
+  }
 >;
 
 /**
@@ -88,72 +116,77 @@ export const FRONTMATTER_CONTRACT = {
  * `BookRecord` — that is invariant 2 enforced by construction rather than by
  * remembering to strip it later.
  */
-export const FRONTMATTER_BLOCK = /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
+export const FRONTMATTER_BLOCK =
+  /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
 export function parseNote(source: string, sourcePath: string): ParsedNote {
   const match = FRONTMATTER_BLOCK.exec(source);
   if (match?.[1] === undefined) {
     // No frontmatter at all: an ordinary note, not a broken book.
-    return { kind: 'not-a-book' };
+    return { kind: "not-a-book" };
   }
 
   let data: unknown;
   try {
     data = parseYaml(match[1]);
   } catch (error) {
-    const detail = error instanceof Error ? error.message.split('\n')[0] : String(error);
-    return { kind: 'invalid', reason: `unparseable frontmatter — ${detail ?? 'YAML error'}` };
+    const detail =
+      error instanceof Error ? error.message.split("\n")[0] : String(error);
+    return {
+      kind: "invalid",
+      reason: `unparseable frontmatter — ${detail ?? "YAML error"}`,
+    };
   }
 
-  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
-    return { kind: 'not-a-book' };
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    return { kind: "not-a-book" };
   }
 
   const fields = data as Record<string, unknown>;
 
-  if (asString(fields['type']) !== 'book') {
-    return { kind: 'not-a-book' };
+  if (asString(fields["type"]) !== "book") {
+    return { kind: "not-a-book" };
   }
 
-  const title = asString(fields['title']);
+  const title = asString(fields["title"]);
   if (title === undefined || title.length === 0) {
-    return { kind: 'invalid', reason: 'missing required key: title' };
+    return { kind: "invalid", reason: "missing required key: title" };
   }
 
   return {
-    kind: 'book',
+    kind: "book",
     record: {
       sourcePath,
       title,
-      status: readStatus(fields['status']),
-      tags: readTags(fields['tags']),
-      ...keyIfPresent('author', asString(fields['author'])),
-      ...keyIfPresent('isbn', asString(fields['isbn'])),
-      ...keyIfPresent('started', asDate(fields['started'])),
-      ...keyIfPresent('finished', asDate(fields['finished'])),
-      ...keyIfPresent('rating', asRating(fields['rating'])),
-      ...keyIfPresent('cover', asString(fields['cover'])),
+      status: readStatus(fields["status"]),
+      tags: readTags(fields["tags"]),
+      ...keyIfPresent("author", asString(fields["author"])),
+      ...keyIfPresent("isbn", asString(fields["isbn"])),
+      ...keyIfPresent("started", asDate(fields["started"])),
+      ...keyIfPresent("finished", asDate(fields["finished"])),
+      ...keyIfPresent("rating", asRating(fields["rating"])),
+      ...keyIfPresent("cover", asString(fields["cover"])),
       // An unrecognised value is dropped rather than kept: a public build makes
       // provider-dependent decisions off this key, and a typo must not read as
       // a permission. Absent then means "nobody recorded it", which is the same
       // thing every cover cached before this key existed says.
-      ...keyIfPresent('coverSource', asCoverSource(fields['cover_source'])),
-      ...keyIfPresent('spineColor', asHexColour(fields['spine_color'])),
-      ...keyIfPresent('pages', asPositiveInt(fields['pages'])),
+      ...keyIfPresent("coverSource", asCoverSource(fields["cover_source"])),
+      ...keyIfPresent("spineColor", asHexColour(fields["spine_color"])),
+      ...keyIfPresent("pages", asPositiveInt(fields["pages"])),
       // Dropped rather than kept when unrecognised, for `cover_source`'s reason.
       // Absent is not an error state here: it is the normal state of every book
       // nobody has annotated, and the shelf hashes one rather than defaulting.
-      ...keyIfPresent('binding', asBinding(fields['binding'])),
-      ...keyIfPresent('faceOut', asBoolean(fields['face_out'])),
-      ...keyIfPresent('shelfOrder', asOrder(fields['shelf_order'])),
-      ...keyIfPresent('private', asPrivate(fields['private'])),
-      ...keyIfPresent('publisher', asString(fields['publisher'])),
+      ...keyIfPresent("binding", asBinding(fields["binding"])),
+      ...keyIfPresent("faceOut", asBoolean(fields["face_out"])),
+      ...keyIfPresent("shelfOrder", asOrder(fields["shelf_order"])),
+      ...keyIfPresent("private", asPrivate(fields["private"])),
+      ...keyIfPresent("publisher", asString(fields["publisher"])),
       // Stored as given — `2008` and `2027-02-25T00:00:00Z` are both valid, and
       // `asDate` is deliberately *not* used: it would drop the bare year Open
       // Library returns and truncate the timestamp O'Reilly returns, which is
       // normalisation at the parse edge by another name.
-      ...keyIfPresent('published', asString(fields['published'])),
-      ...keyIfPresent('subjects', asString(fields['subjects'])),
+      ...keyIfPresent("published", asString(fields["published"])),
+      ...keyIfPresent("subjects", asString(fields["subjects"])),
       ...readContributorIds(fields),
     },
   };
@@ -168,7 +201,9 @@ export function parseNote(source: string, sourcePath: string): ParsedNote {
  * why that is worth the little it buys, and for why it guarantees nothing about
  * whether the id is *right*.
  */
-function readContributorIds(fields: Record<string, unknown>): Record<string, string> {
+function readContributorIds(
+  fields: Record<string, unknown>,
+): Record<string, string> {
   const ids: Record<string, string> = {};
 
   for (const key of CONTRIBUTOR_ID_KEYS) {
@@ -184,13 +219,13 @@ function readContributorIds(fields: Record<string, unknown>): Record<string, str
 }
 
 function asString(value: unknown): string | undefined {
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : undefined;
   }
   // A bare `isbn: 9781000000016` is a number in YAML, and hand-edited notes do
   // that constantly.
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return undefined;
 }
 
@@ -219,11 +254,18 @@ function asPrivate(value: unknown): true | undefined {
   // — means private. `0` is here as a number as well as a string because
   // `private: 0` parses as a number, and it is plainly a no in every config
   // format anyone has used.
-  if (value === undefined || value === null || value === false || value === 0) return undefined;
+  if (value === undefined || value === null || value === false || value === 0)
+    return undefined;
 
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const text = value.trim().toLowerCase();
-    if (text === '' || text === 'false' || text === 'no' || text === 'off' || text === '0') {
+    if (
+      text === "" ||
+      text === "false" ||
+      text === "no" ||
+      text === "off" ||
+      text === "0"
+    ) {
       return undefined;
     }
   }
@@ -250,7 +292,9 @@ function readStatus(value: unknown): BookStatus {
 /** `tags: [a, b]`, `tags: a`, or absent. Anything else yields no tags. */
 function readTags(value: unknown): readonly string[] {
   if (Array.isArray(value)) {
-    return value.map(asString).filter((tag): tag is string => tag !== undefined);
+    return value
+      .map(asString)
+      .filter((tag): tag is string => tag !== undefined);
   }
   const single = asString(value);
   return single === undefined ? [] : [single];
@@ -270,14 +314,14 @@ function asDate(value: unknown): string | undefined {
 }
 
 function asRating(value: unknown): number | undefined {
-  const n = typeof value === 'number' ? value : Number(asString(value));
+  const n = typeof value === "number" ? value : Number(asString(value));
   if (!Number.isFinite(n)) return undefined;
   const rounded = Math.round(n);
   return rounded >= 1 && rounded <= 5 ? rounded : undefined;
 }
 
 function asPositiveInt(value: unknown): number | undefined {
-  const n = typeof value === 'number' ? value : Number(asString(value));
+  const n = typeof value === "number" ? value : Number(asString(value));
   if (!Number.isFinite(n)) return undefined;
   const rounded = Math.round(n);
   return rounded > 0 ? rounded : undefined;
@@ -290,22 +334,24 @@ function asPositiveInt(value: unknown): number | undefined {
  * and `face_out: "true"` clearly means the same thing.
  */
 function asBoolean(value: unknown): boolean | undefined {
-  if (typeof value === 'boolean') return value;
+  if (typeof value === "boolean") return value;
   const text = asString(value)?.toLowerCase();
-  if (text === 'true' || text === 'yes') return true;
-  if (text === 'false' || text === 'no') return false;
+  if (text === "true" || text === "yes") return true;
+  if (text === "false" || text === "no") return false;
   return undefined;
 }
 
 /** Any finite number, negative included, so you can push a book to the front. */
 function asOrder(value: unknown): number | undefined {
-  const n = typeof value === 'number' ? value : Number(asString(value));
+  const n = typeof value === "number" ? value : Number(asString(value));
   return Number.isFinite(n) ? n : undefined;
 }
 
 function asHexColour(value: unknown): string | undefined {
   const text = asString(value);
   if (text === undefined) return undefined;
-  const normalised = text.startsWith('#') ? text : `#${text}`;
-  return /^#[0-9a-fA-F]{6}$/.test(normalised) ? normalised.toLowerCase() : undefined;
+  const normalised = text.startsWith("#") ? text : `#${text}`;
+  return /^#[0-9a-fA-F]{6}$/.test(normalised)
+    ? normalised.toLowerCase()
+    : undefined;
 }

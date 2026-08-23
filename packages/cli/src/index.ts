@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
-import { Command } from 'commander';
-import { loadEnv } from './env.ts';
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { Command } from "commander";
+import { loadEnv } from "./env.ts";
 import {
   enrichReport,
   enrichSummary,
   reportEntry,
   type EnrichEntry,
-} from './enrich-report.ts';
+} from "./enrich-report.ts";
 import {
   ObsidianAdapter,
   addBook,
@@ -28,14 +28,14 @@ import {
   BOOK_STATUSES,
   SHELVED_STATUSES,
   type BookStatus,
-} from '@stacks/core';
+} from "@stacks/core";
 
 // Before anything reads process.env — a real variable still wins over the file.
 loadEnv();
 
-const DEFAULT_CACHE = '.cache';
-const DEFAULT_OUT = 'library.json';
-const DEFAULT_ASSETS = 'packages/site/public';
+const DEFAULT_CACHE = ".cache";
+const DEFAULT_OUT = "library.json";
+const DEFAULT_ASSETS = "packages/site/public";
 
 interface GlobalOptions {
   readonly vault?: string;
@@ -45,71 +45,89 @@ interface GlobalOptions {
 const program = new Command();
 
 program
-  .name('stacks')
-  .description('Reading tracker whose Obsidian vault is the database.')
-  .version('0.0.0')
-  .option('--vault <path>', 'path to the Obsidian vault (or set STACKS_VAULT)')
-  .option('--cache <path>', `where API responses are cached (default: ${DEFAULT_CACHE})`);
-
-program
-  .command('add')
-  .description('Fetch metadata and cover for a book, then write a note into the vault')
-  .argument('<isbn-or-title>', 'an ISBN, or a title to search for')
-  .option('--status <status>', `one of: ${BOOK_STATUSES.join(' | ')}`, 'read')
-  .option('--force', 'add even if the book already exists in the vault')
-  .action(async (term: string, options: { status: string; force?: boolean }) => {
-    const { vault, get } = context();
-
-    if (!isBookStatus(options.status)) {
-      fail(`--status must be one of: ${BOOK_STATUSES.join(', ')}`);
-    }
-
-    const googleBooksKey = process.env['GOOGLE_BOOKS_API_KEY'];
-    const result = await addBook(term, vault, get, {
-      status: options.status as BookStatus,
-      ...(options.force === true ? { force: true } : {}),
-      ...keyIfPresent('googleBooksKey', googleBooksKey),
-    });
-
-    switch (result.kind) {
-      case 'added':
-        console.log(`added: ${result.path}`);
-        if (result.metadata?.source !== undefined) {
-          console.log(`  metadata from ${result.metadata.source}`);
-        }
-        break;
-      case 'duplicate':
-        // Name the shelved book, not whatever a search happened to return.
-        console.log(`already in the vault: ${result.existing}`);
-        if (!result.matchedBeforeLookup && result.title !== result.existing) {
-          console.log(`  matched "${result.title}"`);
-        }
-        console.log('  use --force to add it anyway');
-        break;
-      case 'mismatch':
-        // Named, not just refused: the near miss is usually recognisable, and
-        // seeing it is how you tell "not on any provider" from "I typoed it".
-        console.log(`nothing matching "${result.term}"`);
-        console.log(`  closest was "${result.found}"`);
-        console.log('  use --force to add it anyway');
-        break;
-      case 'not-found':
-        fail(`nothing found for "${result.term}"`);
-    }
-  });
-
-program
-  .command('build')
-  .description('Parse the vault into library.json')
-  .option('--public', 'emit a shareable build: covers and metadata only, no note bodies')
-  .option('-o, --out <file>', `where to write library.json (default: ${DEFAULT_OUT})`)
+  .name("stacks")
+  .description("Reading tracker whose Obsidian vault is the database.")
+  .version("0.0.0")
+  .option("--vault <path>", "path to the Obsidian vault (or set STACKS_VAULT)")
   .option(
-    '--assets <dir>',
+    "--cache <path>",
+    `where API responses are cached (default: ${DEFAULT_CACHE})`,
+  );
+
+program
+  .command("add")
+  .description(
+    "Fetch metadata and cover for a book, then write a note into the vault",
+  )
+  .argument("<isbn-or-title>", "an ISBN, or a title to search for")
+  .option("--status <status>", `one of: ${BOOK_STATUSES.join(" | ")}`, "read")
+  .option("--force", "add even if the book already exists in the vault")
+  .action(
+    async (term: string, options: { status: string; force?: boolean }) => {
+      const { vault, get } = context();
+
+      if (!isBookStatus(options.status)) {
+        fail(`--status must be one of: ${BOOK_STATUSES.join(", ")}`);
+      }
+
+      const googleBooksKey = process.env["GOOGLE_BOOKS_API_KEY"];
+      const result = await addBook(term, vault, get, {
+        status: options.status as BookStatus,
+        ...(options.force === true ? { force: true } : {}),
+        ...keyIfPresent("googleBooksKey", googleBooksKey),
+      });
+
+      switch (result.kind) {
+        case "added":
+          console.log(`added: ${result.path}`);
+          if (result.metadata?.source !== undefined) {
+            console.log(`  metadata from ${result.metadata.source}`);
+          }
+          break;
+        case "duplicate":
+          // Name the shelved book, not whatever a search happened to return.
+          console.log(`already in the vault: ${result.existing}`);
+          if (!result.matchedBeforeLookup && result.title !== result.existing) {
+            console.log(`  matched "${result.title}"`);
+          }
+          console.log("  use --force to add it anyway");
+          break;
+        case "mismatch":
+          // Named, not just refused: the near miss is usually recognisable, and
+          // seeing it is how you tell "not on any provider" from "I typoed it".
+          console.log(`nothing matching "${result.term}"`);
+          console.log(`  closest was "${result.found}"`);
+          console.log("  use --force to add it anyway");
+          break;
+        case "not-found":
+          fail(`nothing found for "${result.term}"`);
+      }
+    },
+  );
+
+program
+  .command("build")
+  .description("Parse the vault into library.json")
+  .option(
+    "--public",
+    "emit a shareable build: covers and metadata only, no note bodies",
+  )
+  .option(
+    "-o, --out <file>",
+    `where to write library.json (default: ${DEFAULT_OUT})`,
+  )
+  .option(
+    "--assets <dir>",
     `where --public stages library.json, covers and og.png (default: ${DEFAULT_ASSETS})`,
   )
-  .option('--watch', 'rebuild whenever the vault changes')
+  .option("--watch", "rebuild whenever the vault changes")
   .action(
-    async (options: { public?: boolean; out?: string; assets?: string; watch?: boolean }) => {
+    async (options: {
+      public?: boolean;
+      out?: string;
+      assets?: string;
+      watch?: boolean;
+    }) => {
       const { vault, vaultPath } = context();
 
       const rebuild = async (): Promise<void> => {
@@ -121,15 +139,19 @@ program
         // build is just the index.
         if (options.public === true) {
           const assets = resolve(options.assets ?? DEFAULT_ASSETS);
-          const result = await publish(books, vault, assets, { isPublic: true });
+          const result = await publish(books, vault, assets, {
+            isPublic: true,
+          });
 
           console.log(
             `wrote ${result.libraryPath} — ${result.library.bookCount} book(s), public build`,
           );
-          console.log(`  covers    ${result.coversCopied} copied into ${assets}`);
+          console.log(
+            `  covers    ${result.coversCopied} copied into ${assets}`,
+          );
           if (result.coversMissing.length > 0) {
             console.warn(
-              `  missing   ${result.coversMissing.length} cover(s): ${result.coversMissing.join(', ')}`,
+              `  missing   ${result.coversMissing.length} cover(s): ${result.coversMissing.join(", ")}`,
             );
           }
           return;
@@ -138,7 +160,7 @@ program
         const library = buildLibrary(books, { isPublic: false });
         const out = resolve(options.out ?? DEFAULT_OUT);
         await mkdir(dirname(out), { recursive: true });
-        await writeFile(out, `${JSON.stringify(library, null, 2)}\n`, 'utf8');
+        await writeFile(out, `${JSON.stringify(library, null, 2)}\n`, "utf8");
         console.log(`wrote ${out} — ${library.bookCount} book(s), local build`);
       };
 
@@ -152,12 +174,14 @@ program
         } catch (error) {
           // A rebuild that throws must not kill the watch; the next save is
           // very often the fix.
-          console.error(`rebuild failed: ${error instanceof Error ? error.message : String(error)}`);
+          console.error(
+            `rebuild failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       });
 
       // Hold the process open until interrupted.
-      process.on('SIGINT', () => {
+      process.on("SIGINT", () => {
         watcher.close();
         process.exit(0);
       });
@@ -166,15 +190,19 @@ program
   );
 
 program
-  .command('status')
-  .description('Quick stats: books this year, in progress, covers still missing')
+  .command("status")
+  .description(
+    "Quick stats: books this year, in progress, covers still missing",
+  )
   .action(async () => {
     const { vault } = context();
     const books = await vault.listBooks();
     const year = String(new Date().getFullYear());
 
-    const finishedThisYear = books.filter((b) => b.finished?.startsWith(year) === true).length;
-    const reading = books.filter((b) => b.status === 'reading').length;
+    const finishedThisYear = books.filter(
+      (b) => b.finished?.startsWith(year) === true,
+    ).length;
+    const reading = books.filter((b) => b.status === "reading").length;
     const missingCovers = books.filter((b) => b.cover === undefined).length;
 
     console.log(`${books.length} book(s) in the vault`);
@@ -184,28 +212,35 @@ program
   });
 
 program
-  .command('enrich')
-  .description('Fill missing metadata on notes that already exist, never overwriting')
-  .argument('[title]', 'only enrich books whose title contains this')
-  .option('--dry-run', 'report what would be filled, without writing')
+  .command("enrich")
+  .description(
+    "Fill missing metadata on notes that already exist, never overwriting",
+  )
+  .argument("[title]", "only enrich books whose title contains this")
+  .option("--dry-run", "report what would be filled, without writing")
   .action(async (title: string | undefined, options: { dryRun?: boolean }) => {
     const { vault, get } = context();
-    const googleBooksKey = process.env['GOOGLE_BOOKS_API_KEY'];
+    const googleBooksKey = process.env["GOOGLE_BOOKS_API_KEY"];
 
     const needle = title?.toLowerCase();
     const books = (await vault.listBooks()).filter(
-      (book) => needle === undefined || book.title.toLowerCase().includes(needle),
+      (book) =>
+        needle === undefined || book.title.toLowerCase().includes(needle),
     );
 
     if (books.length === 0) {
-      fail(title === undefined ? 'no books in the vault' : `no book matching "${title}"`);
+      fail(
+        title === undefined
+          ? "no books in the vault"
+          : `no book matching "${title}"`,
+      );
     }
 
     // Only the ones with something to fill are worth a lookup.
     const candidates = books.filter((book) => missingFields(book).length > 0);
     console.log(
       `${books.length} book(s) considered, ${candidates.length} with gaps` +
-        (options.dryRun === true ? '  (dry run)' : ''),
+        (options.dryRun === true ? "  (dry run)" : ""),
     );
 
     // Collected rather than printed as they arrive, because the closing line
@@ -213,10 +248,10 @@ program
     // prints is a switch nothing can check. See enrich-report.ts.
     const entries: EnrichEntry[] = [];
     for (const book of candidates) {
-      const gaps = missingFields(book).join(', ');
+      const gaps = missingFields(book).join(", ");
       const outcome = await enrichBook(book, vault, get, {
         ...(options.dryRun === true ? { dryRun: true } : {}),
-        ...keyIfPresent('googleBooksKey', googleBooksKey),
+        ...keyIfPresent("googleBooksKey", googleBooksKey),
       });
       const entry = { outcome, gaps };
       entries.push(entry);
@@ -228,10 +263,15 @@ program
   });
 
 program
-  .command('covers')
-  .description('Report where each cover came from, or record it where nothing does')
-  .option('--backfill', 'write cover_source where it is absent, inferred from the image')
-  .option('--dry-run', 'show what --backfill would write, without writing')
+  .command("covers")
+  .description(
+    "Report where each cover came from, or record it where nothing does",
+  )
+  .option(
+    "--backfill",
+    "write cover_source where it is absent, inferred from the image",
+  )
+  .option("--dry-run", "show what --backfill would write, without writing")
   .action(async (options: { backfill?: boolean; dryRun?: boolean }) => {
     const { vault } = context();
 
@@ -243,123 +283,150 @@ program
     });
 
     for (const outcome of result.outcomes) {
-      if (outcome.kind === 'recorded') {
+      if (outcome.kind === "recorded") {
         console.log(`  ${outcome.source.padEnd(14)} ${outcome.title}`);
-      } else if (outcome.kind === 'already-known') {
-        console.log(`  ${outcome.source.padEnd(14)} ${outcome.title}   (already recorded)`);
-      } else if (outcome.kind === 'unreadable') {
-        console.warn(`  ${'?'.padEnd(14)} ${outcome.title}   (cover missing or unreadable)`);
+      } else if (outcome.kind === "already-known") {
+        console.log(
+          `  ${outcome.source.padEnd(14)} ${outcome.title}   (already recorded)`,
+        );
+      } else if (outcome.kind === "unreadable") {
+        console.warn(
+          `  ${"?".padEnd(14)} ${outcome.title}   (cover missing or unreadable)`,
+        );
       }
     }
 
     const counts = [...result.bySource].sort((a, b) => b[1] - a[1]);
     if (counts.length > 0) {
-      console.log('');
-      for (const [source, n] of counts) console.log(`  ${String(n).padStart(4)}  ${source}`);
+      console.log("");
+      for (const [source, n] of counts)
+        console.log(`  ${String(n).padStart(4)}  ${source}`);
     }
 
     if (options.backfill !== true) {
       console.log(`\n${String(result.recorded)} book(s) have no cover_source.`);
-      console.log('run with --backfill to record it, inferred from each cover image');
+      console.log(
+        "run with --backfill to record it, inferred from each cover image",
+      );
       return;
     }
 
-    const verb = options.dryRun === true ? 'would record' : 'recorded';
+    const verb = options.dryRun === true ? "would record" : "recorded";
     console.log(`\n${verb} cover_source on ${String(result.recorded)} book(s)`);
     if (options.dryRun !== true && result.recorded > 0) {
       // Said out loud, because it is a guess written into files the owner
       // edits by hand, and it will outlive anyone's memory of this run.
-      console.log('inferred from image dimensions, not observed at download time');
+      console.log(
+        "inferred from image dimensions, not observed at download time",
+      );
     }
   });
 
 program
-  .command('order')
-  .description('Show the shelf order, or renumber it with gaps')
-  .option('--renumber', 'write shelf_order into every shelved note')
-  .option('--step <n>', 'gap between numbers (default: 10)', '10')
-  .option('--dry-run', 'show what --renumber would write, without writing')
-  .action(async (options: { renumber?: boolean; step: string; dryRun?: boolean }) => {
-    const { vault } = context();
+  .command("order")
+  .description("Show the shelf order, or renumber it with gaps")
+  .option("--renumber", "write shelf_order into every shelved note")
+  .option("--step <n>", "gap between numbers (default: 10)", "10")
+  .option("--dry-run", "show what --renumber would write, without writing")
+  .action(
+    async (options: { renumber?: boolean; step: string; dryRun?: boolean }) => {
+      const { vault } = context();
 
-    const step = Number(options.step);
-    if (!Number.isFinite(step) || step <= 0) {
-      fail(`--step must be a positive number, got "${options.step}"`);
-    }
-
-    // Only books that actually appear on the shelf. Numbering a wishlist book
-    // would be numbering something nobody can see.
-    const shelved = (await vault.listBooks())
-      .filter((book) => SHELVED_STATUSES.has(book.status))
-      .sort(compareShelfPosition);
-
-    if (shelved.length === 0) {
-      console.log('no shelved books to order');
-      return;
-    }
-
-    if (options.renumber !== true) {
-      console.log(`${shelved.length} book(s), in shelf order:\n`);
-      for (const [index, book] of shelved.entries()) {
-        const current = book.shelfOrder === undefined ? '   ·' : String(book.shelfOrder).padStart(4);
-        console.log(`${current}  ${String(index + 1).padStart(3)}. ${book.title}`);
-      }
-      console.log('\nrun with --renumber to write these positions back as shelf_order');
-      return;
-    }
-
-    let written = 0;
-    for (const [index, book] of shelved.entries()) {
-      const shelfOrder = (index + 1) * step;
-      if (book.shelfOrder === shelfOrder) continue;
-
-      if (options.dryRun === true) {
-        console.log(`  ${String(shelfOrder).padStart(4)}  ${book.title}`);
-        written += 1;
-        continue;
+      const step = Number(options.step);
+      if (!Number.isFinite(step) || step <= 0) {
+        fail(`--step must be a positive number, got "${options.step}"`);
       }
 
-      try {
-        await vault.updateBook(book.sourcePath, { shelf_order: shelfOrder });
-        written += 1;
-      } catch (error) {
-        console.warn(
-          `  ! ${book.title} — ${error instanceof Error ? error.message : String(error)}`,
+      // Only books that actually appear on the shelf. Numbering a wishlist book
+      // would be numbering something nobody can see.
+      const shelved = (await vault.listBooks())
+        .filter((book) => SHELVED_STATUSES.has(book.status))
+        .sort(compareShelfPosition);
+
+      if (shelved.length === 0) {
+        console.log("no shelved books to order");
+        return;
+      }
+
+      if (options.renumber !== true) {
+        console.log(`${shelved.length} book(s), in shelf order:\n`);
+        for (const [index, book] of shelved.entries()) {
+          const current =
+            book.shelfOrder === undefined
+              ? "   ·"
+              : String(book.shelfOrder).padStart(4);
+          console.log(
+            `${current}  ${String(index + 1).padStart(3)}. ${book.title}`,
+          );
+        }
+        console.log(
+          "\nrun with --renumber to write these positions back as shelf_order",
         );
+        return;
       }
-    }
 
-    const verb = options.dryRun === true ? 'would renumber' : 'renumbered';
-    console.log(
-      `\n${verb} ${written} of ${shelved.length} book(s), in steps of ${String(step)}` +
-        `\nleaving gaps so a book can be slotted in with a number between two others`,
-    );
-  });
+      let written = 0;
+      for (const [index, book] of shelved.entries()) {
+        const shelfOrder = (index + 1) * step;
+        if (book.shelfOrder === shelfOrder) continue;
+
+        if (options.dryRun === true) {
+          console.log(`  ${String(shelfOrder).padStart(4)}  ${book.title}`);
+          written += 1;
+          continue;
+        }
+
+        try {
+          await vault.updateBook(book.sourcePath, { shelf_order: shelfOrder });
+          written += 1;
+        } catch (error) {
+          console.warn(
+            `  ! ${book.title} — ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }
+
+      const verb = options.dryRun === true ? "would renumber" : "renumbered";
+      console.log(
+        `\n${verb} ${written} of ${shelved.length} book(s), in steps of ${String(step)}` +
+          `\nleaving gaps so a book can be slotted in with a number between two others`,
+      );
+    },
+  );
 
 program
-  .command('import')
-  .description('Import a library export into the vault')
-  .argument('<source>', 'currently only "audible" (a Libation JSON export)')
-  .argument('<file>', 'path to the export file')
-  .option('--dry-run', 'report what would be imported without writing anything')
-  .option('--skip-covers', 'do not download cover art')
-  .option('--dates-from-added', 'use DateAdded as the finished date (the export has no real one)')
+  .command("import")
+  .description("Import a library export into the vault")
+  .argument("<source>", 'currently only "audible" (a Libation JSON export)')
+  .argument("<file>", "path to the export file")
+  .option("--dry-run", "report what would be imported without writing anything")
+  .option("--skip-covers", "do not download cover art")
+  .option(
+    "--dates-from-added",
+    "use DateAdded as the finished date (the export has no real one)",
+  )
   .action(
     async (
       source: string,
       file: string,
-      options: { dryRun?: boolean; skipCovers?: boolean; datesFromAdded?: boolean },
+      options: {
+        dryRun?: boolean;
+        skipCovers?: boolean;
+        datesFromAdded?: boolean;
+      },
     ) => {
-      if (source !== 'audible') {
+      if (source !== "audible") {
         fail(`unknown import source "${source}" — currently only "audible"`);
       }
       const { vault, get } = context();
 
       let data: unknown;
       try {
-        data = JSON.parse(await readFile(resolve(file), 'utf8'));
+        data = JSON.parse(await readFile(resolve(file), "utf8"));
       } catch (error) {
-        fail(`could not read ${file}: ${error instanceof Error ? error.message : String(error)}`);
+        fail(
+          `could not read ${file}: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
 
       const books = parseAudibleExport(data, {
@@ -371,34 +438,36 @@ program
 
       console.log(`${books.length} book(s) in the export`);
 
-      const gbKey = process.env['GOOGLE_BOOKS_API_KEY'];
+      const gbKey = process.env["GOOGLE_BOOKS_API_KEY"];
       const result = await importBooks(books, vault, {
         ...(options.dryRun === true ? { dryRun: true } : {}),
         ...(options.skipCovers === true ? { skipCovers: true } : { get }),
-        ...keyIfPresent('googleBooksKey', gbKey),
+        ...keyIfPresent("googleBooksKey", gbKey),
       });
 
       for (const outcome of result.outcomes) {
         switch (outcome.kind) {
-          case 'added':
+          case "added":
             console.log(`  + ${outcome.title}`);
             break;
-          case 'would-add':
+          case "would-add":
             console.log(`  + ${outcome.title}  (dry run)`);
             break;
-          case 'duplicate':
-            console.log(`  = ${outcome.title}  — already shelved as "${outcome.existing}"`);
+          case "duplicate":
+            console.log(
+              `  = ${outcome.title}  — already shelved as "${outcome.existing}"`,
+            );
             break;
-          case 'failed':
+          case "failed":
             console.warn(`  ! ${outcome.title}  — ${outcome.reason}`);
             break;
         }
       }
 
-      const verb = options.dryRun === true ? 'would add' : 'added';
+      const verb = options.dryRun === true ? "would add" : "added";
       console.log(
         `\n${verb} ${result.added}, skipped ${result.duplicates} already shelved` +
-          (result.failed > 0 ? `, ${result.failed} failed` : ''),
+          (result.failed > 0 ? `, ${result.failed} failed` : ""),
       );
     },
   );
@@ -410,10 +479,10 @@ function context(): {
   get: ReturnType<typeof createCachedHttpGet>;
 } {
   const options = program.opts<GlobalOptions>();
-  const vaultPath = options.vault ?? process.env['STACKS_VAULT'];
+  const vaultPath = options.vault ?? process.env["STACKS_VAULT"];
 
   if (vaultPath === undefined || vaultPath.trim().length === 0) {
-    fail('no vault: pass --vault <path> or set STACKS_VAULT');
+    fail("no vault: pass --vault <path> or set STACKS_VAULT");
   }
 
   return {

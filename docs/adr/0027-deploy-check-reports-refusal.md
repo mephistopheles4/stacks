@@ -5,7 +5,7 @@ as **unverified**. It does not fall back to an origin that would answer, and it
 does not dress the refusal up as a result.
 
 The failure it replaces was worse than no check. A refusal arrives as a
-*challenge page* — HTML, with a content-length like anything else — so a check
+_challenge page_ — HTML, with a content-length like anything else — so a check
 that read the body without the status found no build stamp in it and reported
 `serving a build with no stamp`: the same words as the real defect it exists to
 catch, followed by a recommendation to purge the entire zone cache. A remedy for
@@ -19,7 +19,7 @@ _Carried verbatim from the session that produced it, newest last._
   finding most likely to be rediscovered the expensive way.** The first
   diagnosis was a user-agent rule and it was wrong. Measured: curl was refused
   on its own default UA and passed with any other; Node's `fetch` was refused
-  with *every* UA, including a verbatim Chrome one; a real headless Chrome was
+  with _every_ UA, including a verbatim Chrome one; a real headless Chrome was
   refused too. The decision is made on the client's fingerprint, which no caller
   controls — so there is no header to send, and a fix that appeared to work by
   looking browsery enough would be one heuristic update from silently reverting

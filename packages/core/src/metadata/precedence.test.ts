@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { mergeFields, type Contributors } from './precedence.ts';
-import type { BookMetadata } from './types.ts';
+import { describe, expect, it } from "vitest";
+import { mergeFields, type Contributors } from "./precedence.ts";
+import type { BookMetadata } from "./types.ts";
 
 /**
  * The merge table, exercised where two providers disagree.
@@ -10,25 +10,28 @@ import type { BookMetadata } from './types.ts';
  * the order says, and a test built on those would pass against no table at all.
  */
 
-function record(source: BookMetadata['source'], fields: Partial<BookMetadata> = {}): BookMetadata {
-  return { title: 'A Book', source, ...fields };
+function record(
+  source: BookMetadata["source"],
+  fields: Partial<BookMetadata> = {},
+): BookMetadata {
+  return { title: "A Book", source, ...fields };
 }
 
 function contributorsOf(...records: BookMetadata[]): Contributors {
   return new Map(records.map((entry) => [entry.source, entry]));
 }
 
-describe('who wins each field', () => {
-  it('takes the full date over Open Library’s bare year', () => {
+describe("who wins each field", () => {
+  it("takes the full date over Open Library’s bare year", () => {
     const merged = mergeFields(
-      record('open-library'),
+      record("open-library"),
       contributorsOf(
-        record('open-library', { published: '2008' }),
-        record('google-books', { published: '2008-12-05' }),
+        record("open-library", { published: "2008" }),
+        record("google-books", { published: "2008-12-05" }),
       ),
     );
 
-    expect(merged.published).toBe('2008-12-05');
+    expect(merged.published).toBe("2008-12-05");
   });
 
   /**
@@ -44,82 +47,92 @@ describe('who wins each field', () => {
    * These two assert the same rules with the losing value on the primary, which
    * is the shape the code actually sees.
    */
-  it('overrules the primary’s own value when the table says another provider wins', () => {
+  it("overrules the primary’s own value when the table says another provider wins", () => {
     const merged = mergeFields(
-      record('open-library', { published: '2004', subjects: ['nyt:paperback_advice=2012-01-14'] }),
+      record("open-library", {
+        published: "2004",
+        subjects: ["nyt:paperback_advice=2012-01-14"],
+      }),
       contributorsOf(
-        record('open-library', {
-          published: '2004',
-          subjects: ['nyt:paperback_advice=2012-01-14'],
+        record("open-library", {
+          published: "2004",
+          subjects: ["nyt:paperback_advice=2012-01-14"],
         }),
-        record('google-books', { published: '2004-09-29' }),
-        record('apple-books', { subjects: ['Religion & Spirituality', 'Self-Improvement'] }),
+        record("google-books", { published: "2004-09-29" }),
+        record("apple-books", {
+          subjects: ["Religion & Spirituality", "Self-Improvement"],
+        }),
       ),
     );
 
-    expect(merged.published).toBe('2004-09-29');
-    expect(merged.subjects).toEqual(['Religion & Spirituality', 'Self-Improvement']);
+    expect(merged.published).toBe("2004-09-29");
+    expect(merged.subjects).toEqual([
+      "Religion & Spirituality",
+      "Self-Improvement",
+    ]);
   });
 
-  it('keeps the primary’s value when no provider in the order has one', () => {
+  it("keeps the primary’s value when no provider in the order has one", () => {
     // The other half of the same change: clearing the field to let the ordering
     // decide must not lose a value nobody else can supply.
     const merged = mergeFields(
-      record('oreilly', { publisher: "O'Reilly Media, Inc." }),
-      contributorsOf(record('oreilly', { publisher: "O'Reilly Media, Inc." })),
+      record("oreilly", { publisher: "O'Reilly Media, Inc." }),
+      contributorsOf(record("oreilly", { publisher: "O'Reilly Media, Inc." })),
     );
 
     expect(merged.publisher).toBe("O'Reilly Media, Inc.");
   });
 
-  it('takes curated categories over Open Library’s raw subject headings', () => {
+  it("takes curated categories over Open Library’s raw subject headings", () => {
     const merged = mergeFields(
-      record('open-library'),
+      record("open-library"),
       contributorsOf(
-        record('open-library', { subjects: ['critical thinking', 'systems thinking'] }),
-        record('google-books', { subjects: ['Business & Economics'] }),
+        record("open-library", {
+          subjects: ["critical thinking", "systems thinking"],
+        }),
+        record("google-books", { subjects: ["Business & Economics"] }),
       ),
     );
 
-    expect(merged.subjects).toEqual(['Business & Economics']);
+    expect(merged.subjects).toEqual(["Business & Economics"]);
   });
 
   it("takes O'Reilly's own copy of its own book's description", () => {
     const merged = mergeFields(
-      record('oreilly'),
+      record("oreilly"),
       contributorsOf(
-        record('google-books', { description: 'Google says' }),
-        record('oreilly', { description: "O'Reilly says" }),
+        record("google-books", { description: "Google says" }),
+        record("oreilly", { description: "O'Reilly says" }),
       ),
     );
 
     expect(merged.description).toBe("O'Reilly says");
   });
 
-  it('falls through to the next provider when the winner has nothing', () => {
+  it("falls through to the next provider when the winner has nothing", () => {
     const merged = mergeFields(
-      record('open-library'),
+      record("open-library"),
       contributorsOf(
-        record('open-library', { published: '2008' }),
-        record('google-books', {}),
+        record("open-library", { published: "2008" }),
+        record("google-books", {}),
       ),
     );
 
     // Open Library is *last* for `published` and still wins here, because
     // precedence ranks only among providers that actually hold the field.
-    expect(merged.published).toBe('2008');
+    expect(merged.published).toBe("2008");
   });
 
-  it('uses the default order for publisher', () => {
+  it("uses the default order for publisher", () => {
     const merged = mergeFields(
-      record('open-library'),
+      record("open-library"),
       contributorsOf(
-        record('open-library', { publisher: 'Chelsea' }),
-        record('google-books', { publisher: 'Chelsea Green Publishing' }),
+        record("open-library", { publisher: "Chelsea" }),
+        record("google-books", { publisher: "Chelsea Green Publishing" }),
       ),
     );
 
-    expect(merged.publisher).toBe('Chelsea');
+    expect(merged.publisher).toBe("Chelsea");
   });
 });
 
@@ -138,14 +151,14 @@ describe('who wins each field', () => {
  * places: the merge picks the best answer available, and the note keeps the one
  * it already had.
  */
-describe('the merge ranks providers; the note is where absent-only lives', () => {
-  it('lets the table decide even when the primary has an answer', () => {
+describe("the merge ranks providers; the note is where absent-only lives", () => {
+  it("lets the table decide even when the primary has an answer", () => {
     const merged = mergeFields(
-      record('open-library', { description: 'from Open Library' }),
+      record("open-library", { description: "from Open Library" }),
       contributorsOf(
-        record('open-library', { description: 'from Open Library' }),
-        record('google-books', { description: 'from Google' }),
-        record('oreilly', { description: "from O'Reilly" }),
+        record("open-library", { description: "from Open Library" }),
+        record("google-books", { description: "from Google" }),
+        record("oreilly", { description: "from O'Reilly" }),
       ),
     );
 
@@ -154,41 +167,44 @@ describe('the merge ranks providers; the note is where absent-only lives', () =>
     expect(merged.description).toBe("from O'Reilly");
   });
 
-  it('does not invent a value for a field nobody holds', () => {
-    const merged = mergeFields(record('open-library'), contributorsOf(record('google-books')));
+  it("does not invent a value for a field nobody holds", () => {
+    const merged = mergeFields(
+      record("open-library"),
+      contributorsOf(record("google-books")),
+    );
 
     expect(merged.publisher).toBeUndefined();
     expect(merged.subjects).toBeUndefined();
   });
 });
 
-describe('the contributor ids', () => {
-  it('takes each id from the one provider that can supply it', () => {
+describe("the contributor ids", () => {
+  it("takes each id from the one provider that can supply it", () => {
     const merged = mergeFields(
-      record('open-library', { openLibraryOlid: 'OL26445570M' }),
+      record("open-library", { openLibraryOlid: "OL26445570M" }),
       contributorsOf(
-        record('open-library', { openLibraryOlid: 'OL26445570M' }),
-        record('google-books', { volumeId: 'CpbLAgAAQBAJ' }),
-        record('apple-books', { appleTrackId: '1384286945' }),
-        record('oreilly', { oreillyOurn: 'urn:orm:book:0642572352530' }),
+        record("open-library", { openLibraryOlid: "OL26445570M" }),
+        record("google-books", { volumeId: "CpbLAgAAQBAJ" }),
+        record("apple-books", { appleTrackId: "1384286945" }),
+        record("oreilly", { oreillyOurn: "urn:orm:book:0642572352530" }),
       ),
     );
 
-    expect(merged.volumeId).toBe('CpbLAgAAQBAJ');
-    expect(merged.appleTrackId).toBe('1384286945');
-    expect(merged.openLibraryOlid).toBe('OL26445570M');
-    expect(merged.oreillyOurn).toBe('urn:orm:book:0642572352530');
+    expect(merged.volumeId).toBe("CpbLAgAAQBAJ");
+    expect(merged.appleTrackId).toBe("1384286945");
+    expect(merged.openLibraryOlid).toBe("OL26445570M");
+    expect(merged.oreillyOurn).toBe("urn:orm:book:0642572352530");
   });
 
-  it('leaves an id absent when its provider did not match, and takes it from nobody else', () => {
+  it("leaves an id absent when its provider did not match, and takes it from nobody else", () => {
     // The permanent gap: no other provider can supply Apple's id, so a book
     // Apple has never heard of is re-asked on every run forever rather than
     // having the gap closed by a sentinel. See docs/spec/metadata-merge.md §6.
     const merged = mergeFields(
-      record('open-library'),
+      record("open-library"),
       contributorsOf(
-        record('open-library', { openLibraryOlid: 'OL26445570M' }),
-        record('google-books', { volumeId: 'CpbLAgAAQBAJ' }),
+        record("open-library", { openLibraryOlid: "OL26445570M" }),
+        record("google-books", { volumeId: "CpbLAgAAQBAJ" }),
       ),
     );
 

@@ -1,4 +1,4 @@
-import sharp, { type Sharp } from 'sharp';
+import sharp, { type Sharp } from "sharp";
 
 /**
  * The colour a book's spine should be, taken from its cover.
@@ -36,7 +36,7 @@ const DARK_LIMIT = 0.06;
 /** How much of the cover's left edge stands in for the spine. */
 const SPINE_STRIP = 0.12;
 
-export type Region = 'all' | 'edge';
+export type Region = "all" | "edge";
 
 /**
  * The colour to paint a book's spine.
@@ -51,19 +51,27 @@ export type Region = 'all' | 'edge';
  * which happens when a cover image is padded with margins rather than cropped
  * to the artwork.
  */
-export async function spineColour(imagePath: string): Promise<string | undefined> {
-  return (await dominantColour(imagePath, 'edge')) ?? (await dominantColour(imagePath, 'all'));
+export async function spineColour(
+  imagePath: string,
+): Promise<string | undefined> {
+  return (
+    (await dominantColour(imagePath, "edge")) ??
+    (await dominantColour(imagePath, "all"))
+  );
 }
 
 export async function dominantColour(
   imagePath: string,
-  region: Region = 'all',
+  region: Region = "all",
 ): Promise<string | undefined> {
   let raw: { data: Buffer; info: { channels: number } };
   try {
     const pipeline = await pipelineFor(imagePath, region);
     if (pipeline === undefined) return undefined;
-    raw = await pipeline.removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    raw = await pipeline
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
   } catch {
     // An unreadable or corrupt cover means no spine colour, not a failed build.
     return undefined;
@@ -74,7 +82,10 @@ export async function dominantColour(
   const withoutExtremes = tally(data, info.channels, true);
   // For the edge strip specifically, "nothing but paper" is the caller's cue to
   // fall back to the whole cover rather than to report the paper as the spine.
-  const winner = region === 'edge' ? withoutExtremes : (withoutExtremes ?? tally(data, info.channels, false));
+  const winner =
+    region === "edge"
+      ? withoutExtremes
+      : (withoutExtremes ?? tally(data, info.channels, false));
   if (winner === undefined) return undefined;
 
   return toHex(
@@ -85,12 +96,15 @@ export async function dominantColour(
 }
 
 /** Crop first, then downsample — cropping a resized image loses the edge. */
-async function pipelineFor(imagePath: string, region: Region): Promise<Sharp | undefined> {
-  if (region === 'all') {
+async function pipelineFor(
+  imagePath: string,
+  region: Region,
+): Promise<Sharp | undefined> {
+  if (region === "all") {
     return sharp(imagePath).resize({
       width: SAMPLE_WIDTH,
       withoutEnlargement: true,
-      kernel: 'nearest',
+      kernel: "nearest",
     });
   }
 
@@ -102,7 +116,8 @@ async function pipelineFor(imagePath: string, region: Region): Promise<Sharp | u
   const source = await trimmed(imagePath);
 
   const { width, height } = await sharp(source).metadata();
-  if (width === undefined || height === undefined || width < 2 || height < 2) return undefined;
+  if (width === undefined || height === undefined || width < 2 || height < 2)
+    return undefined;
 
   return sharp(source).extract({
     left: 0,
@@ -126,11 +141,13 @@ const MIN_TRIM_SURVIVAL = 0.35;
 async function trimmed(imagePath: string): Promise<Buffer | string> {
   try {
     const original = await sharp(imagePath).metadata();
-    if (original.width === undefined || original.height === undefined) return imagePath;
+    if (original.width === undefined || original.height === undefined)
+      return imagePath;
 
     const buffer = await sharp(imagePath).trim({ threshold: 12 }).toBuffer();
     const { width, height } = await sharp(buffer).metadata();
-    if (width === undefined || height === undefined || width < 8 || height < 8) return imagePath;
+    if (width === undefined || height === undefined || width < 8 || height < 8)
+      return imagePath;
 
     const survived = (width * height) / (original.width * original.height);
     return survived >= MIN_TRIM_SURVIVAL ? buffer : imagePath;
@@ -152,7 +169,11 @@ interface Bucket {
  * With `skipExtremes`, near-white and near-black pixels are not counted at all;
  * returns `undefined` if that leaves nothing.
  */
-function tally(data: Buffer, stride: number, skipExtremes: boolean): Bucket | undefined {
+function tally(
+  data: Buffer,
+  stride: number,
+  skipExtremes: boolean,
+): Bucket | undefined {
   const bins = new Map<number, Bucket>();
 
   for (let i = 0; i + 2 < data.length; i += stride) {
@@ -166,7 +187,8 @@ function tally(data: Buffer, stride: number, skipExtremes: boolean): Bucket | un
       if (luma > LIGHT_LIMIT || luma < DARK_LIMIT) continue;
     }
 
-    const bin = ((r >> SHIFT) << (BITS * 2)) | ((g >> SHIFT) << BITS) | (b >> SHIFT);
+    const bin =
+      ((r >> SHIFT) << (BITS * 2)) | ((g >> SHIFT) << BITS) | (b >> SHIFT);
     const bucket = bins.get(bin);
     if (bucket === undefined) {
       bins.set(bin, { n: 1, r, g, b });
@@ -186,7 +208,7 @@ function tally(data: Buffer, stride: number, skipExtremes: boolean): Bucket | un
 }
 
 function toHex(r: number, g: number, b: number): string {
-  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
 }
 
 export { SPINE_STRIP };

@@ -35,9 +35,9 @@
  * reproduces `docs/spec/mutation-scoring.md` §4 exactly.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { REPO_ROOT } from './repo-root.ts';
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { REPO_ROOT } from "./repo-root.ts";
 
 export interface Exclusion {
   path: string;
@@ -101,9 +101,9 @@ export function globToRegExp(glob: string): RegExp {
   // stops it from then rewriting that group's own `*` quantifier. Reordering
   // them turns `dir/**/*.ts` into a pattern that matches nothing.
   const source = glob
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*\*\//g, '(?:[^/]+/)*')
-    .replace(/(?<!\))\*/g, '[^/]*');
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*\*\//g, "(?:[^/]+/)*")
+    .replace(/(?<!\))\*/g, "[^/]*");
   return new RegExp(`^${source}$`);
 }
 
@@ -137,7 +137,7 @@ export interface Declarations {
  */
 export function readDeclarations(): Declarations {
   const parsed = JSON.parse(
-    readFileSync(join(REPO_ROOT, 'stryker.scopes.json'), 'utf8'),
+    readFileSync(join(REPO_ROOT, "stryker.scopes.json"), "utf8"),
   ) as Partial<Declarations>;
 
   return {
@@ -171,17 +171,17 @@ export function readScopes(): Scope[] {
  * made here: excluding a mutant is not the same as counting it as killed.
  */
 const FIELD_OF: Record<string, keyof Tally> = {
-  Killed: 'killed',
-  Timeout: 'timeout',
-  Survived: 'survived',
-  NoCoverage: 'noCoverage',
-  Ignored: 'ignored',
-  Pending: 'pending',
+  Killed: "killed",
+  Timeout: "timeout",
+  Survived: "survived",
+  NoCoverage: "noCoverage",
+  Ignored: "ignored",
+  Pending: "pending",
 };
 
 function count(tally: Tally, status: string, isStatic: boolean): void {
   if (isStatic) tally.statics += 1;
-  tally[FIELD_OF[status] ?? 'errors'] += 1;
+  tally[FIELD_OF[status] ?? "errors"] += 1;
 }
 
 export function detected(tally: Tally): number {
@@ -232,15 +232,22 @@ export interface ScoredRun {
 }
 
 export function readReport(path: string): MutationReport {
-  return JSON.parse(readFileSync(path, 'utf8')) as MutationReport;
+  return JSON.parse(readFileSync(path, "utf8")) as MutationReport;
 }
 
 /** Tally one report against the declared scopes. */
 export function scoreRun(report: MutationReport, scopes: Scope[]): ScoredRun {
-  const excluded = new Set(scopes.flatMap((scope) => scope.exclusions.map((entry) => entry.path)));
-  const matchers = scopes.map((scope) => ({ scope, match: globToRegExp(scope.glob) }));
+  const excluded = new Set(
+    scopes.flatMap((scope) => scope.exclusions.map((entry) => entry.path)),
+  );
+  const matchers = scopes.map((scope) => ({
+    scope,
+    match: globToRegExp(scope.glob),
+  }));
 
-  const perScope = new Map<string, Tally>(scopes.map((scope) => [scope.name, empty()]));
+  const perScope = new Map<string, Tally>(
+    scopes.map((scope) => [scope.name, empty()]),
+  );
   const unclaimed = new Map<string, number>();
 
   /**
@@ -286,11 +293,16 @@ export function scoreRun(report: MutationReport, scopes: Scope[]): ScoredRun {
       continue;
     }
     const tally = perScope.get(owner.scope.name);
-    if (tally === undefined) throw new Error(`no tally for scope ${owner.scope.name}`);
-    for (const mutant of entry.mutants) count(tally, mutant.status, mutant.static === true);
+    if (tally === undefined)
+      throw new Error(`no tally for scope ${owner.scope.name}`);
+    for (const mutant of entry.mutants)
+      count(tally, mutant.status, mutant.static === true);
   }
 
-  const declaredExclusions = scopes.reduce((sum, scope) => sum + scope.exclusions.length, 0);
+  const declaredExclusions = scopes.reduce(
+    (sum, scope) => sum + scope.exclusions.length,
+    0,
+  );
   return { scopes, perScope, live, unclaimed, declaredExclusions };
 }
 
@@ -299,7 +311,8 @@ export function totalOf(run: ScoredRun): Tally {
   const all = empty();
   for (const scope of run.scopes) {
     const tally = run.perScope.get(scope.name);
-    if (tally === undefined) throw new Error(`no tally for scope ${scope.name}`);
+    if (tally === undefined)
+      throw new Error(`no tally for scope ${scope.name}`);
     all.killed += tally.killed;
     all.timeout += tally.timeout;
     all.survived += tally.survived;

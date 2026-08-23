@@ -5,8 +5,8 @@ narrower sense than English does, and that **no gate pins down**.
 
 ## Why this is not the third copy [ADR-0026](docs/adr/0026-constitution-is-gated-not-duplicated.md) refused
 
-That record turned down a `CONSTITUTION.md` on the grounds that *"a rule written
-down twice is a rule that will be true in one place and false in the other"* —
+That record turned down a `CONSTITUTION.md` on the grounds that _"a rule written
+down twice is a rule that will be true in one place and false in the other"_ —
 the invariants already lived in [`AGENTS.md`](AGENTS.md) and were already scored
 in [`docs/gates.md`](docs/gates.md), so a third file would have been a second
 thing to keep in sync and no new enforcement.
@@ -27,7 +27,7 @@ a glossary entry and belongs in `AGENTS.md` with a gate.
 ### Books and the shelf
 
 **Vault**:
-The folder of Obsidian notes that *is* the database. Defined by
+The folder of Obsidian notes that _is_ the database. Defined by
 [invariant 1](AGENTS.md); reached only through the **adapter**, by
 [invariant 4](AGENTS.md).
 _Avoid_: library (that is the built index), database, store.
@@ -39,7 +39,7 @@ _Avoid_: active, visible, owned.
 
 **Private**:
 Marked by its owner as not for publishing. It still appears on your own machine:
-private means *not published*, never *hidden from you*.
+private means _not published_, never _hidden from you_.
 _Avoid_: hidden, secret, draft.
 
 **Pin**:
@@ -54,7 +54,7 @@ _Avoid_: width (of what?), extent, the shape it stands on (that is **contact**).
 
 **Contact**:
 Where a book meets the plank, as a rectangle. Not the same as its **footprint**:
-a face-out book's contact is its cover's width by its own *thickness*, because
+a face-out book's contact is its cover's width by its own _thickness_, because
 what it puts on the wood is the same slab as any other book, seen end-on. The
 painted shadow is drawn from these.
 _Avoid_: footprint (the scalar), shadow (that is what is drawn from it), base.
@@ -69,7 +69,7 @@ _Avoid_: group, cluster, stack (a stack is horizontal), streak.
 
 **Binding**:
 Hardback or paperback. The key belongs to G8 and its rules to
-[`AGENTS.md`](AGENTS.md); what the word means *here* is that it names a book's
+[`AGENTS.md`](AGENTS.md); what the word means _here_ is that it names a book's
 construction and nothing else — not its format, not how you read it. Absent means
 **nobody has said**, which is a state and not a third value.
 _Avoid_: format (that is print against audiobook, which nothing reads), cover
@@ -89,17 +89,17 @@ stands proud of the chord, and how much of each half-width is spent turning into
 the joint. **Shaded, never built**: it is one shared normal map per binding on
 the flat plane that was already there, and real curved geometry was measured
 against it as the same picture at 6.7× the triangles. A paperback's is not
-`{ 0, 0 }` — perfect binding is a flat *face* with a hard turn at each edge.
+`{ 0, 0 }` — perfect binding is a flat _face_ with a hard turn at each edge.
 _Avoid_: curve (that was `spineCurve`, superseded), round, `roundedBack` (struck),
 `softHinge` (subsumed into `roll`).
 
 **Head**:
 The top edge of a book as it stands on a shelf, where the covering rolls over.
 The one edge that **cannot be faked** — a shelf is looked at from above, so the
-head is a silhouette, and no normal map moves a silhouette. There is no *tail*
+head is a silhouette, and no normal map moves a silhouette. There is no _tail_
 treatment and never will be: the lowest angle the camera permits is 3.6° above
 the horizon, so no tail is ever in frame.
-_Avoid_: top, cap (the cap is the *geometry*; the head is the edge), spine top.
+_Avoid_: top, cap (the cap is the _geometry_; the head is the edge), spine top.
 
 **Striation**:
 The grain of a cut text block — leaves stacked along the thickness. A
@@ -107,10 +107,10 @@ The grain of a cut text block — leaves stacked along the thickness. A
 varying only in `u` is correct on all four faces of the page block that can show,
 so it needs neither a material array nor per-face UVs.
 _Avoid_: texture (says nothing), pages (that is the block), grain (that word is
-taken by the *struck* roughness weave — see #68).
+taken by the _struck_ roughness weave — see #68).
 
 **Provenance**:
-Which of the four providers a cover's *bytes* were downloaded from — a separate
+Which of the four providers a cover's _bytes_ were downloaded from — a separate
 question from which provider answered for the book's metadata. The two differ
 often enough that conflating them loses real information: a book Open Library
 answered for can carry an O'Reilly cover. It is provenance and not permission —
@@ -128,14 +128,14 @@ Publisher artwork carrying front, spine and back together. It arrives from the
 same field a cover does and is not a cover — on a shelf it renders as a smear of
 three faces — so the downloader judges by shape rather than by which field
 supplied it.
-_Avoid_: wide cover, jacket (a jacket *includes* the front), bad image.
+_Avoid_: wide cover, jacket (a jacket _includes_ the front), bad image.
 
 **Domain name / contract name**:
 The same frontmatter key has two spellings, and which one is correct depends
 entirely on which side of the adapter you are on. `spineColor` is the **domain
 name**, used in `BookInput` and everywhere in `packages/core`; `spine_color` is
 the **contract name**, the one in the note on disk and the one G8 pins. Creating
-a note speaks domain names and the adapter translates; *updating* one speaks
+a note speaks domain names and the adapter translates; _updating_ one speaks
 contract names directly.
 _Avoid_: treating them as a style difference. Three commands assembled the same
 three cover keys three different ways, and this split — not anything about
@@ -155,7 +155,7 @@ _Avoid_: unset, clear, blank, null.
 A build that assumes an audience: wishlist and private books are dropped, covers
 are re-hosted same-origin, and no note body is parsed at all. The counterpart is
 a **local build**, which is for you and holds everything.
-_Avoid_: production build, release, deploy (a deploy *uploads* a public build).
+_Avoid_: production build, release, deploy (a deploy _uploads_ a public build).
 
 **Staging folder**:
 Where `stacks build --public` puts what the site needs — `library.json`, covers,
@@ -186,13 +186,13 @@ A named check that goes red when a rule breaks, and that is **scored** in
 [`docs/gates.md`](docs/gates.md) — a numbered row carrying ✅, 🔴 or ⬜. A rule
 with no gate is a comment. **Scored, not merely present in that file**: since the
 `## Trends` section landed, the file also carries things that are deliberately
-not gates, and *appearing in `docs/gates.md`* stopped being the test.
+not gates, and _appearing in `docs/gates.md`_ stopped being the test.
 _Avoid_: test, check, CI job.
 
 **Trend**:
 A number that reaches a person on a cadence and **never goes red — only its
 absence does**. The other half of a binary taxonomy: a check is a gate when its
-red has a named, reachable remedy *and* its verdict does not depend on how much
+red has a named, reachable remedy _and_ its verdict does not depend on how much
 test code exists, and a trend otherwise
 ([ADR-0054](docs/adr/0054-a-check-is-a-gate-or-a-trend.md)). A trend takes **no
 row number and no status**; it lives in `docs/gates.md`'s `## Trends` table,

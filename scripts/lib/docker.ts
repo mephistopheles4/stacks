@@ -21,7 +21,7 @@
  * mounted path reach these.
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawnSync } from "node:child_process";
 
 /**
  * Docker, captured and non-fatal — `undefined` when it fails for any reason.
@@ -31,7 +31,10 @@ import { spawnSync } from 'node:child_process';
  * does not exist. Every caller here wants the same thing from all three — carry
  * on without an answer, and say so.
  */
-export function dockerOutput(args: readonly string[], cwd: string): string | undefined {
-  const result = spawnSync('docker', [...args], { cwd, encoding: 'utf8' });
+export function dockerOutput(
+  args: readonly string[],
+  cwd: string,
+): string | undefined {
+  const result = spawnSync("docker", [...args], { cwd, encoding: "utf8" });
   return result.status === 0 ? result.stdout.trim() : undefined;
 }

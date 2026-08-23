@@ -8,10 +8,7 @@
   "offset": null,
   "docs": [
     {
-      "author_name": [
-        "Donella H. Meadows",
-        "Diana Wright"
-      ],
+      "author_name": ["Donella H. Meadows", "Diana Wright"],
       "cover_i": 14420637,
       "edition_key": [
         "OL62197415M",
@@ -108,21 +105,12 @@
       ]
     },
     {
-      "author_name": [
-        "Steven Schuster"
-      ],
+      "author_name": ["Steven Schuster"],
       "cover_i": 11326296,
-      "edition_key": [
-        "OL32701484M"
-      ],
-      "isbn": [
-        "1983847542",
-        "9781983847547"
-      ],
+      "edition_key": ["OL32701484M"],
+      "isbn": ["1983847542", "9781983847547"],
       "number_of_pages_median": 180,
-      "publish_date": [
-        "Jan 14, 2018"
-      ],
+      "publish_date": ["Jan 14, 2018"],
       "publisher": [
         "CreateSpace Independent Publishing Platform",
         "Createspace Independent Publishing Platform"
@@ -130,28 +118,13 @@
       "title": "The Art Of Thinking In Systems"
     },
     {
-      "author_name": [
-        "Marcus P Dawson"
-      ],
+      "author_name": ["Marcus P Dawson"],
       "cover_i": 10653716,
-      "edition_key": [
-        "OL42177368M",
-        "OL31977524M"
-      ],
-      "isbn": [
-        "9781914040030",
-        "9798675152810",
-        "1914040031"
-      ],
+      "edition_key": ["OL42177368M", "OL31977524M"],
+      "isbn": ["9781914040030", "9798675152810", "1914040031"],
       "number_of_pages_median": 284,
-      "publish_date": [
-        "2020",
-        "Oct 25, 2020"
-      ],
-      "publisher": [
-        "Independently Published",
-        "Marcus P. Dawson"
-      ],
+      "publish_date": ["2020", "Oct 25, 2020"],
+      "publisher": ["Independently Published", "Marcus P. Dawson"],
       "title": "Thinking in Systems and Mental Models"
     }
   ]

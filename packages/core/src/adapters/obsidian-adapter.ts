@@ -1,15 +1,19 @@
-import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { stringify as stringifyYaml } from 'yaml';
-import { coverFileName } from '../covers/cover-path.ts';
-import { FRONTMATTER_BLOCK, parseNote } from '../frontmatter.ts';
-import { isProbablySameBook, normaliseTitleAuthor, toObsidianTag } from '../identity.ts';
-import type { BookInput, BookRecord } from '../types.ts';
-import type { FrontmatterChanges, VaultAdapter } from './vault-adapter.ts';
+import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { stringify as stringifyYaml } from "yaml";
+import { coverFileName } from "../covers/cover-path.ts";
+import { FRONTMATTER_BLOCK, parseNote } from "../frontmatter.ts";
+import {
+  isProbablySameBook,
+  normaliseTitleAuthor,
+  toObsidianTag,
+} from "../identity.ts";
+import type { BookInput, BookRecord } from "../types.ts";
+import type { FrontmatterChanges, VaultAdapter } from "./vault-adapter.ts";
 
 /** Where notes and cached covers live inside the vault. */
-const LIBRARY_DIR = 'Library';
-const COVERS_DIR = 'covers';
+const LIBRARY_DIR = "Library";
+const COVERS_DIR = "covers";
 
 /**
  * The one and only adapter (CLAUDE.md forbids a second).
@@ -36,20 +40,22 @@ export class ObsidianAdapter implements VaultAdapter {
     const books: BookRecord[] = [];
 
     for (const file of await this.#markdownFiles()) {
-      const vaultRelative = relative(this.#vaultPath, file).split(sep).join('/');
+      const vaultRelative = relative(this.#vaultPath, file)
+        .split(sep)
+        .join("/");
 
       let source: string;
       try {
-        source = await readFile(file, 'utf8');
+        source = await readFile(file, "utf8");
       } catch (error) {
         warn(vaultRelative, `could not be read — ${describe(error)}`);
         continue;
       }
 
       const parsed = parseNote(source, vaultRelative);
-      if (parsed.kind === 'book') {
+      if (parsed.kind === "book") {
         books.push(parsed.record);
-      } else if (parsed.kind === 'invalid') {
+      } else if (parsed.kind === "invalid") {
         warn(vaultRelative, parsed.reason);
       }
     }
@@ -76,7 +82,7 @@ export class ObsidianAdapter implements VaultAdapter {
       path = join(dir, `${base} (${String(n)}).md`);
     }
 
-    await writeFile(path, renderNote(book), 'utf8');
+    await writeFile(path, renderNote(book), "utf8");
     return path;
   }
 
@@ -88,26 +94,33 @@ export class ObsidianAdapter implements VaultAdapter {
    * untouched. These are files the owner edits by hand; a tool that reformats
    * them on every write would be a tool you stop pointing at your vault.
    */
-  async updateBook(sourcePath: string, changes: FrontmatterChanges): Promise<void> {
-    const path = join(this.#vaultPath, ...sourcePath.split('/'));
-    const source = await readFile(path, 'utf8');
+  async updateBook(
+    sourcePath: string,
+    changes: FrontmatterChanges,
+  ): Promise<void> {
+    const path = join(this.#vaultPath, ...sourcePath.split("/"));
+    const source = await readFile(path, "utf8");
 
     const match = FRONTMATTER_BLOCK.exec(source);
     if (match?.[1] === undefined) {
       throw new Error(`${sourcePath} has no frontmatter block to update`);
     }
 
-    const eol = source.includes('\r\n') ? '\r\n' : '\n';
+    const eol = source.includes("\r\n") ? "\r\n" : "\n";
     let block = match[1];
 
     for (const [key, value] of Object.entries(changes)) {
       block = applyChange(block, key, value, eol);
     }
 
-    const updated = source.slice(0, match.index) + `---${eol}${block}${eol}---` +
-      source.slice(match.index + match[0].length - trailingNewline(match[0]).length);
+    const updated =
+      source.slice(0, match.index) +
+      `---${eol}${block}${eol}---` +
+      source.slice(
+        match.index + match[0].length - trailingNewline(match[0]).length,
+      );
 
-    await writeFile(path, updated, 'utf8');
+    await writeFile(path, updated, "utf8");
   }
 
   /**
@@ -120,7 +133,11 @@ export class ObsidianAdapter implements VaultAdapter {
    * The heading test is `^##+ heading` at the start of a line, so a mention of
    * `## About` inside a sentence does not read as the section already existing.
    */
-  async insertBodySection(sourcePath: string, heading: string, text: string): Promise<boolean> {
+  async insertBodySection(
+    sourcePath: string,
+    heading: string,
+    text: string,
+  ): Promise<boolean> {
     const body = text.trim();
     if (body.length === 0) return false;
 
@@ -129,26 +146,31 @@ export class ObsidianAdapter implements VaultAdapter {
     // making it re-derive the first would mean teaching it the vault's layout.
     const path = isAbsolute(sourcePath)
       ? sourcePath
-      : join(this.#vaultPath, ...sourcePath.split('/'));
-    const source = await readFile(path, 'utf8');
+      : join(this.#vaultPath, ...sourcePath.split("/"));
+    const source = await readFile(path, "utf8");
 
     const match = FRONTMATTER_BLOCK.exec(source);
     if (match === null) {
-      throw new Error(`${sourcePath} has no frontmatter block, so it is not a note to add to`);
+      throw new Error(
+        `${sourcePath} has no frontmatter block, so it is not a note to add to`,
+      );
     }
 
     if (hasHeading(source, heading)) return false;
 
-    const eol = source.includes('\r\n') ? '\r\n' : '\n';
+    const eol = source.includes("\r\n") ? "\r\n" : "\n";
     const section = `${heading}${eol}${eol}${body.split(/\r?\n/).join(eol)}${eol}`;
 
-    const notes = new RegExp(`^##+ +Notes[ \\t]*$`, 'm').exec(source);
+    const notes = new RegExp(`^##+ +Notes[ \\t]*$`, "m").exec(source);
     const updated =
       notes === null
-        ? `${source.replace(/\s*$/, '')}${eol}${eol}${section}`
-        : source.slice(0, notes.index) + section + eol + source.slice(notes.index);
+        ? `${source.replace(/\s*$/, "")}${eol}${eol}${section}`
+        : source.slice(0, notes.index) +
+          section +
+          eol +
+          source.slice(notes.index);
 
-    await writeFile(path, updated, 'utf8');
+    await writeFile(path, updated, "utf8");
     return true;
   }
 
@@ -156,10 +178,12 @@ export class ObsidianAdapter implements VaultAdapter {
   async bookExists(isbn: string, titleAuthor: string): Promise<boolean> {
     const books = await this.listBooks();
 
-    const wantedIsbn = isbn.replace(/[^0-9Xx]/g, '').toUpperCase();
+    const wantedIsbn = isbn.replace(/[^0-9Xx]/g, "").toUpperCase();
     if (wantedIsbn.length > 0) {
       const hit = books.some(
-        (book) => book.isbn !== undefined && book.isbn.replace(/[^0-9Xx]/g, '').toUpperCase() === wantedIsbn,
+        (book) =>
+          book.isbn !== undefined &&
+          book.isbn.replace(/[^0-9Xx]/g, "").toUpperCase() === wantedIsbn,
       );
       if (hit) return true;
     }
@@ -167,7 +191,7 @@ export class ObsidianAdapter implements VaultAdapter {
     if (normaliseTitleAuthor(titleAuthor).length === 0) return false;
 
     return books.some((book) =>
-      isProbablySameBook(titleAuthor, `${book.title} ${book.author ?? ''}`),
+      isProbablySameBook(titleAuthor, `${book.title} ${book.author ?? ""}`),
     );
   }
 
@@ -193,11 +217,11 @@ export class ObsidianAdapter implements VaultAdapter {
         return;
       }
       for (const entry of entries) {
-        if (entry.name.startsWith('.')) continue;
+        if (entry.name.startsWith(".")) continue;
         const full = join(dir, entry.name);
         if (entry.isDirectory()) {
           await walk(full);
-        } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+        } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
           found.push(full);
         }
       }
@@ -215,34 +239,44 @@ export class ObsidianAdapter implements VaultAdapter {
  * because the file has to stay readable and editable in Obsidian.
  */
 function renderNote(book: BookInput): string {
-  const frontmatter: Record<string, unknown> = { type: 'book', title: book.title };
+  const frontmatter: Record<string, unknown> = {
+    type: "book",
+    title: book.title,
+  };
 
-  if (book.author !== undefined) frontmatter['author'] = book.author;
-  if (book.isbn !== undefined) frontmatter['isbn'] = book.isbn;
-  frontmatter['status'] = book.status ?? 'read';
-  if (book.started !== undefined) frontmatter['started'] = book.started;
-  if (book.finished !== undefined) frontmatter['finished'] = book.finished;
-  if (book.rating !== undefined) frontmatter['rating'] = book.rating;
-  if (book.cover !== undefined) frontmatter['cover'] = book.cover;
-  if (book.coverSource !== undefined) frontmatter['cover_source'] = book.coverSource;
-  if (book.spineColor !== undefined) frontmatter['spine_color'] = book.spineColor;
-  if (book.pages !== undefined) frontmatter['pages'] = book.pages;
-  if (book.faceOut !== undefined) frontmatter['face_out'] = book.faceOut;
-  if (book.shelfOrder !== undefined) frontmatter['shelf_order'] = book.shelfOrder;
-  if (book.private === true) frontmatter['private'] = true;
-  if (book.publisher !== undefined) frontmatter['publisher'] = book.publisher;
-  if (book.published !== undefined) frontmatter['published'] = book.published;
-  if (book.subjects !== undefined) frontmatter['subjects'] = book.subjects;
+  if (book.author !== undefined) frontmatter["author"] = book.author;
+  if (book.isbn !== undefined) frontmatter["isbn"] = book.isbn;
+  frontmatter["status"] = book.status ?? "read";
+  if (book.started !== undefined) frontmatter["started"] = book.started;
+  if (book.finished !== undefined) frontmatter["finished"] = book.finished;
+  if (book.rating !== undefined) frontmatter["rating"] = book.rating;
+  if (book.cover !== undefined) frontmatter["cover"] = book.cover;
+  if (book.coverSource !== undefined)
+    frontmatter["cover_source"] = book.coverSource;
+  if (book.spineColor !== undefined)
+    frontmatter["spine_color"] = book.spineColor;
+  if (book.pages !== undefined) frontmatter["pages"] = book.pages;
+  if (book.faceOut !== undefined) frontmatter["face_out"] = book.faceOut;
+  if (book.shelfOrder !== undefined)
+    frontmatter["shelf_order"] = book.shelfOrder;
+  if (book.private === true) frontmatter["private"] = true;
+  if (book.publisher !== undefined) frontmatter["publisher"] = book.publisher;
+  if (book.published !== undefined) frontmatter["published"] = book.published;
+  if (book.subjects !== undefined) frontmatter["subjects"] = book.subjects;
   // The contributor ids, under the frontmatter contract's names. Written at
   // creation as well as filled later, so a book added today needs no backfill.
-  if (book.googleVolumeId !== undefined) frontmatter['google_volume_id'] = book.googleVolumeId;
-  if (book.appleTrackId !== undefined) frontmatter['apple_track_id'] = book.appleTrackId;
-  if (book.openLibraryOlid !== undefined) frontmatter['openlibrary_olid'] = book.openLibraryOlid;
-  if (book.oreillyOurn !== undefined) frontmatter['oreilly_ourn'] = book.oreillyOurn;
+  if (book.googleVolumeId !== undefined)
+    frontmatter["google_volume_id"] = book.googleVolumeId;
+  if (book.appleTrackId !== undefined)
+    frontmatter["apple_track_id"] = book.appleTrackId;
+  if (book.openLibraryOlid !== undefined)
+    frontmatter["openlibrary_olid"] = book.openLibraryOlid;
+  if (book.oreillyOurn !== undefined)
+    frontmatter["oreilly_ourn"] = book.oreillyOurn;
   // Normalised at the single write path, so no import can produce a tag
   // Obsidian will reject however carelessly it names its categories.
   const tags = [...new Set((book.tags ?? []).map(toObsidianTag).filter(isTag))];
-  if (tags.length > 0) frontmatter['tags'] = tags;
+  if (tags.length > 0) frontmatter["tags"] = tags;
 
   // Extras are written last and never overwrite a contract key, so an import
   // cannot smuggle in a different title or status through the side door.
@@ -262,7 +296,8 @@ function renderNote(book: BookInput): string {
   // Same filename rule as the builder uses, from the same place: a `cover:`
   // written with backslashes would otherwise embed as `![[covers\a.png]]` and
   // resolve to nothing.
-  const embed = book.cover === undefined ? '' : `![[${coverFileName(book.cover)}]]\n\n`;
+  const embed =
+    book.cover === undefined ? "" : `![[${coverFileName(book.cover)}]]\n\n`;
 
   return `---\n${yaml}\n---\n\n${embed}## Notes\n\n`;
 }
@@ -290,12 +325,12 @@ function renderNote(book: BookInput): string {
  */
 function safeFilename(title: string): string {
   const cleaned = title
-    .replace(/[\\/:*?"<>|#^[\]]/g, '')
-    .replace(/\s+/g, ' ')
+    .replace(/[\\/:*?"<>|#^[\]]/g, "")
+    .replace(/\s+/g, " ")
     .trim()
     .slice(0, 120)
-    .replace(/[.\s]+$/, '');
-  return cleaned.length > 0 ? cleaned : 'Untitled';
+    .replace(/[.\s]+$/, "");
+  return cleaned.length > 0 ? cleaned : "Untitled";
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -342,9 +377,10 @@ function applyChange(
   const index = lines.findIndex((line) => line.startsWith(`${key}:`));
 
   if (index >= 0) {
-    const current = lines[index]?.slice(key.length + 1).trim() ?? '';
-    const isBlockValue = current === '' && /^[ \t]*-\s/.test(lines[index + 1] ?? '');
-    const isFlowValue = current.startsWith('[') || current.startsWith('{');
+    const current = lines[index]?.slice(key.length + 1).trim() ?? "";
+    const isBlockValue =
+      current === "" && /^[ \t]*-\s/.test(lines[index + 1] ?? "");
+    const isFlowValue = current.startsWith("[") || current.startsWith("{");
     if (isBlockValue || isFlowValue) return block;
 
     if (value === undefined) lines.splice(index, 1);
@@ -364,20 +400,24 @@ function applyChange(
  * forever on exactly the note that talks about the feature.
  */
 function hasHeading(source: string, heading: string): boolean {
-  const words = heading.replace(/^#+\s*/, '');
-  return new RegExp(`^##+ +${words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[ \\t]*$`, 'm').test(source);
+  const words = heading.replace(/^#+\s*/, "");
+  return new RegExp(
+    `^##+ +${words.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[ \\t]*$`,
+    "m",
+  ).test(source);
 }
 
 /** Quotes only what YAML would otherwise misread. */
 function serialise(value: string | number | boolean): string {
-  if (typeof value !== 'string') return String(value);
-  return /^[A-Za-z][A-Za-z0-9 ._/-]*$/.test(value) && !/^(?:true|false|null|yes|no)$/i.test(value)
+  if (typeof value !== "string") return String(value);
+  return /^[A-Za-z][A-Za-z0-9 ._/-]*$/.test(value) &&
+    !/^(?:true|false|null|yes|no)$/i.test(value)
     ? value
     : JSON.stringify(value);
 }
 
 function trailingNewline(match: string): string {
-  return /\r?\n$/.exec(match)?.[0] ?? '';
+  return /\r?\n$/.exec(match)?.[0] ?? "";
 }
 
 function isTag(value: string | undefined): value is string {

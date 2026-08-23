@@ -11,19 +11,19 @@
  * check. So this also asserts the page reports the expected book count and that
  * the image contains a decent spread of distinct colours.
  */
-import { spawn } from 'node:child_process';
+import { spawn } from "node:child_process";
 // `import type`, so nothing of three's reaches this node script — the whole
 // point is that the shape cannot drift from the handle it is read off.
-import type { ShelfStats } from '../packages/site/src/shelf/scene.ts';
-import { createServer, type Server } from 'node:http';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import puppeteer, { type Page } from 'puppeteer-core';
-import { REPO_ROOT } from './lib/repo-root.ts';
-import { shellCommand } from './lib/run.ts';
+import type { ShelfStats } from "../packages/site/src/shelf/scene.ts";
+import { createServer, type Server } from "node:http";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import puppeteer, { type Page } from "puppeteer-core";
+import { REPO_ROOT } from "./lib/repo-root.ts";
+import { shellCommand } from "./lib/run.ts";
 
-const ARTIFACTS = join(REPO_ROOT, 'artifacts');
-const OUTPUT = join(ARTIFACTS, 'shelf.png');
+const ARTIFACTS = join(REPO_ROOT, "artifacts");
+const OUTPUT = join(ARTIFACTS, "shelf.png");
 
 const VIEWPORT = { width: 1440, height: 900 };
 
@@ -33,11 +33,11 @@ const VIEWPORT = { width: 1440, height: 900 };
  * shelved — you do not own them yet.
  */
 function expectedBookCount(): number {
-  const path = join(REPO_ROOT, 'packages', 'site', 'public', 'library.json');
-  const library = JSON.parse(readFileSync(path, 'utf8')) as {
+  const path = join(REPO_ROOT, "packages", "site", "public", "library.json");
+  const library = JSON.parse(readFileSync(path, "utf8")) as {
     books: { status: string }[];
   };
-  return library.books.filter((book) => book.status !== 'wishlist').length;
+  return library.books.filter((book) => book.status !== "wishlist").length;
 }
 
 /**
@@ -60,18 +60,22 @@ function expectedBookCount(): number {
  * Linux workstation with a GPU should still render the way its owner sees it.
  */
 function glArgs(): string[] {
-  const headlessRunner = process.env['CI'] === 'true';
+  const headlessRunner = process.env["CI"] === "true";
   return headlessRunner
-    ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']
-    : ['--enable-gpu', '--use-gl=angle'];
+    ? [
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader",
+      ]
+    : ["--enable-gpu", "--use-gl=angle"];
 }
 
 /** System Chrome — probed at Phase 0, so no Chromium download is needed. */
 const CHROME_CANDIDATES = [
-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/usr/bin/google-chrome',
+  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/usr/bin/google-chrome",
 ];
 
 async function main(): Promise<void> {
@@ -83,7 +87,7 @@ async function main(): Promise<void> {
     const browser = await puppeteer.launch({
       executablePath: findChrome(),
       headless: true,
-      args: ['--headless=new', '--hide-scrollbars', ...glArgs()],
+      args: ["--headless=new", "--hide-scrollbars", ...glArgs()],
     });
 
     try {
@@ -91,22 +95,27 @@ async function main(): Promise<void> {
       await page.setViewport(VIEWPORT);
 
       const errors: string[] = [];
-      page.on('pageerror', (error: unknown) => {
+      page.on("pageerror", (error: unknown) => {
         errors.push(error instanceof Error ? error.message : String(error));
       });
-      page.on('console', (message) => {
-        if (message.type() === 'error') errors.push(message.text());
+      page.on("console", (message) => {
+        if (message.type() === "error") errors.push(message.text());
       });
       // A bare "404" from the console says nothing useful; name the URL.
-      page.on('requestfailed', (request) => errors.push(`request failed: ${request.url()}`));
-      page.on('response', (response) => {
-        if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
+      page.on("requestfailed", (request) =>
+        errors.push(`request failed: ${request.url()}`),
+      );
+      page.on("response", (response) => {
+        if (response.status() >= 400)
+          errors.push(`HTTP ${response.status()}: ${response.url()}`);
       });
 
-      await page.goto(origin, { waitUntil: 'networkidle0', timeout: 30_000 });
+      await page.goto(origin, { waitUntil: "networkidle0", timeout: 30_000 });
 
       try {
-        await page.waitForFunction('window.__shelf?.ready === true', { timeout: 20_000 });
+        await page.waitForFunction("window.__shelf?.ready === true", {
+          timeout: 20_000,
+        });
       } catch {
         /**
          * The shelf never booted, and a bare "waiting failed: 20000ms" says
@@ -114,8 +123,10 @@ async function main(): Promise<void> {
          * package root once dragged node:fs and sharp into the browser bundle,
          * and this was the only visible symptom.
          */
-        console.error('the shelf never signalled ready. Page errors:');
-        for (const message of errors.length > 0 ? errors : ['(none captured)']) {
+        console.error("the shelf never signalled ready. Page errors:");
+        for (const message of errors.length > 0
+          ? errors
+          : ["(none captured)"]) {
           console.error(`  ${message}`);
         }
         process.exit(1);
@@ -123,12 +134,12 @@ async function main(): Promise<void> {
       // Let textures land and the damped camera settle before the shutter.
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const bookCount = await page.evaluate('window.__shelf.bookCount');
-      const caseOverflow = await page.evaluate('window.__shelf.caseOverflow');
+      const bookCount = await page.evaluate("window.__shelf.bookCount");
+      const caseOverflow = await page.evaluate("window.__shelf.caseOverflow");
       const stats = (await page.evaluate(readCanvasStats)) as Stats;
-      const cost = (await page.evaluate('window.__shelf.stats()')) as ShelfCost;
+      const cost = (await page.evaluate("window.__shelf.stats()")) as ShelfCost;
 
-      writeFileSync(OUTPUT, await page.screenshot({ type: 'png' }));
+      writeFileSync(OUTPUT, await page.screenshot({ type: "png" }));
 
       const cardOpened = await clickABook(page);
       const viewer = await checkCoverViewer(page);
@@ -195,7 +206,10 @@ interface Stats {
  * counts move legitimately with the fixture, and a gate that goes red on a number
  * nobody can interpret trains people to raise the number.
  */
-type ShelfCost = Pick<ShelfStats, 'textures' | 'geometries' | 'programs' | 'calls' | 'triangles'>;
+type ShelfCost = Pick<
+  ShelfStats,
+  "textures" | "geometries" | "programs" | "calls" | "triangles"
+>;
 
 /**
  * Clicks a real book and checks the detail card opens with its title.
@@ -290,13 +304,15 @@ interface CoverViewerChecked {
   readonly cardSurvivedEscape: boolean;
 }
 
-async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefined> {
+async function checkCoverViewer(
+  page: Page,
+): Promise<CoverViewerChecked | undefined> {
   // Walks the shelf for a book with a cover, since only some fixture books have
   // one and the card left open by the swap above may not be one of them.
   for (let index = 0; index < 60; index += 1) {
-    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
-      | { x: number; y: number }
-      | undefined;
+    const point = (await page.evaluate(
+      `window.__shelf.projectBook(${index})`,
+    )) as { x: number; y: number } | undefined;
     if (point === undefined) continue;
 
     await page.mouse.click(Math.round(point.x), Math.round(point.y));
@@ -319,7 +335,7 @@ async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefi
       return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0 };
     })()`)) as { open: boolean; width: number };
 
-    await page.keyboard.press('Escape');
+    await page.keyboard.press("Escape");
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     const after = (await page.evaluate(`(() => {
@@ -390,7 +406,10 @@ async function clickABook(page: Page): Promise<CardOpened | undefined> {
     })()`)) as CardOpened | undefined;
 
     if (opened === undefined || opened.title.length === 0) continue;
-    const withSwap = { ...opened, card: { ...opened.card, ...(await swapToAnother(page, index)) } };
+    const withSwap = {
+      ...opened,
+      card: { ...opened.card, ...(await swapToAnother(page, index)) },
+    };
     if (withSwap.hasImage) return withSwap;
     fallback ??= withSwap;
   }
@@ -409,14 +428,16 @@ async function clickABook(page: Page): Promise<CardOpened | undefined> {
 async function swapToAnother(
   page: Page,
   openedIndex: number,
-): Promise<Pick<CardContents, 'closeSurvivedSwap' | 'announcedAfterSwap'>> {
-  await page.evaluate(`window.__smokeCloseControl = document.getElementById('book-card-dismiss')`);
+): Promise<Pick<CardContents, "closeSurvivedSwap" | "announcedAfterSwap">> {
+  await page.evaluate(
+    `window.__smokeCloseControl = document.getElementById('book-card-dismiss')`,
+  );
 
   for (let index = 0; index < 60; index += 1) {
     if (index === openedIndex) continue;
-    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
-      | { x: number; y: number }
-      | undefined;
+    const point = (await page.evaluate(
+      `window.__shelf.projectBook(${index})`,
+    )) as { x: number; y: number } | undefined;
     if (point === undefined) continue;
 
     await page.mouse.click(Math.round(point.x), Math.round(point.y));
@@ -430,14 +451,16 @@ async function swapToAnother(
         closeSurvivedSwap: dismiss !== null && dismiss === window.__smokeCloseControl,
         announcedAfterSwap: document.getElementById('book-card-status')?.textContent ?? '',
       };
-    })()`)) as Pick<CardContents, 'closeSurvivedSwap' | 'announcedAfterSwap'> | undefined;
+    })()`)) as
+      | Pick<CardContents, "closeSurvivedSwap" | "announcedAfterSwap">
+      | undefined;
 
     if (result !== undefined) return result;
   }
 
   // No second book was reachable from this angle. Reported as unswapped rather
   // than as a pass: the assertions above have not run.
-  return { closeSurvivedSwap: false, announcedAfterSwap: '' };
+  return { closeSurvivedSwap: false, announcedAfterSwap: "" };
 }
 
 /**
@@ -493,15 +516,17 @@ async function checkSheet(page: Page): Promise<SheetChecked | undefined> {
 /** Opens whichever book this viewport can actually hit. */
 async function clickAnyBook(page: Page): Promise<boolean> {
   for (let index = 0; index < 60; index += 1) {
-    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
-      | { x: number; y: number }
-      | undefined;
+    const point = (await page.evaluate(
+      `window.__shelf.projectBook(${index})`,
+    )) as { x: number; y: number } | undefined;
     if (point === undefined) continue;
 
     await page.mouse.click(Math.round(point.x), Math.round(point.y));
     await new Promise((resolve) => setTimeout(resolve, 120));
 
-    const open = await page.evaluate(`!document.getElementById('book-card').hidden`);
+    const open = await page.evaluate(
+      `!document.getElementById('book-card').hidden`,
+    );
     if (open === true) return true;
   }
   return false;
@@ -524,23 +549,31 @@ function cardFailures(card: CardContents): string[] {
   // suppressed as the default — 19 of 41 real books are read with no dates and
   // no rating, and would otherwise render an empty group.
   if (card.reading.length === 0) {
-    failures.push('the card renders no reading line — it must render on every book');
+    failures.push(
+      "the card renders no reading line — it must render on every book",
+    );
   }
 
   // §11.3 and the fallback in §11.4: the row never vanishes, because every book
   // has a title and therefore at least a search link.
   if (card.linkCount === 0) {
-    failures.push('the card renders no provider links at all — the row always renders');
+    failures.push(
+      "the card renders no provider links at all — the row always renders",
+    );
   }
 
   // §11.5. Named, and safe to open.
   for (const link of card.links) {
-    const [target, rel, name] = link.split('|');
-    if (target !== '_blank' || rel !== 'noopener noreferrer') {
-      failures.push(`a card link opens unsafely: target="${target ?? ''}" rel="${rel ?? ''}"`);
+    const [target, rel, name] = link.split("|");
+    if (target !== "_blank" || rel !== "noopener noreferrer") {
+      failures.push(
+        `a card link opens unsafely: target="${target ?? ""}" rel="${rel ?? ""}"`,
+      );
     }
-    if ((name ?? '').length === 0) {
-      failures.push('a card link has no accessible name — an icon-only link with none is unusable');
+    if ((name ?? "").length === 0) {
+      failures.push(
+        "a card link has no accessible name — an icon-only link with none is unusable",
+      );
     }
   }
 
@@ -549,26 +582,30 @@ function cardFailures(card: CardContents): string[] {
   if (card.linkCount > 1 && card.markCount === 0) {
     failures.push(
       `${String(card.linkCount)} provider links and not one drew a mark — the artwork is ` +
-        'missing or failed to parse, which leaves an icon-only link with no icon',
+        "missing or failed to parse, which leaves an icon-only link with no icon",
     );
   }
 
   // §11.6. The announcer is the *only* way a touch screen-reader user learns
   // which book they hit, since the canvas has no accessible children.
   if (card.announced.length === 0) {
-    failures.push('the live region announced nothing when the card opened');
+    failures.push("the live region announced nothing when the card opened");
   }
   if (card.announcedAfterSwap.length === 0) {
-    failures.push('tapping another book announced nothing — a swap must re-announce');
+    failures.push(
+      "tapping another book announced nothing — a swap must re-announce",
+    );
   } else if (card.announcedAfterSwap === card.announced) {
-    failures.push(`the announcement did not change on swap (still "${card.announced}")`);
+    failures.push(
+      `the announcement did not change on swap (still "${card.announced}")`,
+    );
   }
 
   // §11.7 — "the one nothing else would notice".
   if (!card.closeSurvivedSwap) {
     failures.push(
-      'the close control did not survive a tap-to-swap. It must sit outside the subtree ' +
-        '`showCard` replaces, or focus drops to <body> mid-browse on the primary mobile gesture',
+      "the close control did not survive a tap-to-swap. It must sit outside the subtree " +
+        "`showCard` replaces, or focus drops to <body> mid-browse on the primary mobile gesture",
     );
   }
 
@@ -585,59 +622,75 @@ function report(result: {
   viewer: CoverViewerChecked | undefined;
   sheet: SheetChecked | undefined;
 }): void {
-  const { bookCount, caseOverflow, stats, cost, errors, cardOpened, viewer, sheet } = result;
+  const {
+    bookCount,
+    caseOverflow,
+    stats,
+    cost,
+    errors,
+    cardOpened,
+    viewer,
+    sheet,
+  } = result;
   const failures: string[] = [];
 
-  const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
+  const per = (total: number): string =>
+    bookCount === 0 ? "—" : (total / bookCount).toFixed(2);
 
   console.log(`canvas            ${stats.size}`);
   console.log(`books rendered    ${bookCount}`);
   console.log(`case overflow     ${caseOverflow.toFixed(4)}`);
   console.log(`distinct colours  ${stats.distinctColours}`);
   console.log(`non-background    ${stats.nonBackgroundPct.toFixed(1)}%`);
-  console.log(`textures          ${cost.textures}   geometries ${cost.geometries}   programs ${cost.programs}`);
-  console.log(`draws             ${cost.calls} (${per(cost.calls)}/book)   tris ${cost.triangles}`);
-  console.log(`click opens card  ${cardOpened?.title ?? 'NO'}`);
+  console.log(
+    `textures          ${cost.textures}   geometries ${cost.geometries}   programs ${cost.programs}`,
+  );
+  console.log(
+    `draws             ${cost.calls} (${per(cost.calls)}/book)   tris ${cost.triangles}`,
+  );
+  console.log(`click opens card  ${cardOpened?.title ?? "NO"}`);
   if (cardOpened !== undefined) {
     const c = cardOpened.card;
-    console.log(`card reading line ${c.reading || 'NONE'}`);
+    console.log(`card reading line ${c.reading || "NONE"}`);
     console.log(
       `card links        ${String(c.linkCount)} (${String(c.markCount)} marks)   object line ${
-        c.hasObjectLine ? 'yes' : 'no'
+        c.hasObjectLine ? "yes" : "no"
       }`,
     );
-    console.log(`card announced    ${c.announced || 'NOTHING'}`);
-    console.log(`card after swap   ${c.announcedAfterSwap || 'NOTHING'}`);
+    console.log(`card announced    ${c.announced || "NOTHING"}`);
+    console.log(`card after swap   ${c.announcedAfterSwap || "NOTHING"}`);
   }
   console.log(
     `cover viewer      ${
       viewer === undefined
-        ? 'NOT CHECKED'
-        : `${viewer.opened ? 'opens' : 'DOES NOT OPEN'}   ${viewer.enlargedBy.toFixed(
+        ? "NOT CHECKED"
+        : `${viewer.opened ? "opens" : "DOES NOT OPEN"}   ${viewer.enlargedBy.toFixed(
             1,
-          )}x thumbnail   escape ${viewer.escapeClosedViewer ? 'closes it' : 'DOES NOT CLOSE IT'}${
-            viewer.cardSurvivedEscape ? '' : '   AND TOOK THE CARD'
+          )}x thumbnail   escape ${viewer.escapeClosedViewer ? "closes it" : "DOES NOT CLOSE IT"}${
+            viewer.cardSurvivedEscape ? "" : "   AND TOOK THE CARD"
           }`
     }`,
   );
   console.log(
     `sheet at 375x812  ${
       sheet === undefined
-        ? 'NOT CHECKED'
-        : `full-bleed ${sheet.fullBleed ? 'yes' : 'NO'}   within cap ${
-            sheet.withinCap ? 'yes' : 'NO'
-          }   grabber ${sheet.grabberVisible ? 'yes' : 'NO'}   short drag ${
-            sheet.survivedShortDrag ? 'snaps back' : 'DISMISSES'
+        ? "NOT CHECKED"
+        : `full-bleed ${sheet.fullBleed ? "yes" : "NO"}   within cap ${
+            sheet.withinCap ? "yes" : "NO"
+          }   grabber ${sheet.grabberVisible ? "yes" : "NO"}   short drag ${
+            sheet.survivedShortDrag ? "snaps back" : "DISMISSES"
           }`
     }`,
   );
   console.log(`screenshot        ${OUTPUT}`);
 
   if (viewer === undefined) {
-    failures.push('no card with a cover could be opened, so the enlarged view was never checked');
+    failures.push(
+      "no card with a cover could be opened, so the enlarged view was never checked",
+    );
   } else {
     if (!viewer.opened) {
-      failures.push('clicking the card cover did not open the enlarged view');
+      failures.push("clicking the card cover did not open the enlarged view");
     }
     // The card renders the cover at 4.5rem. Anything under 2x is not the
     // "see it closer" this exists for — and it is what a viewer that opened
@@ -645,46 +698,55 @@ function report(result: {
     if (viewer.enlargedBy < 2) {
       failures.push(
         `the enlarged cover is only ${viewer.enlargedBy.toFixed(1)}x the thumbnail — it must ` +
-          'actually be bigger than the picture it was opened from',
+          "actually be bigger than the picture it was opened from",
       );
     }
     if (!viewer.escapeClosedViewer) {
-      failures.push('Escape did not close the enlarged cover');
+      failures.push("Escape did not close the enlarged cover");
     }
     if (!viewer.cardSurvivedEscape) {
       failures.push(
-        'Escape closed the enlarged cover *and* the card underneath it. Both listen on the ' +
-          'document, so leaving one surface must not return the user two levels',
+        "Escape closed the enlarged cover *and* the card underneath it. Both listen on the " +
+          "document, so leaving one surface must not return the user two levels",
       );
     }
   }
 
   if (sheet === undefined) {
-    failures.push('no book could be opened at 375x812, so the sheet was never checked');
+    failures.push(
+      "no book could be opened at 375x812, so the sheet was never checked",
+    );
   } else {
-    if (!sheet.fullBleed) failures.push('the sheet is not full-bleed at 375x812');
-    if (!sheet.withinCap) failures.push('the sheet exceeds its 40vh cap at 375x812');
-    if (!sheet.grabberVisible) failures.push('the grabber pill is not shown below the breakpoint');
+    if (!sheet.fullBleed)
+      failures.push("the sheet is not full-bleed at 375x812");
+    if (!sheet.withinCap)
+      failures.push("the sheet exceeds its 40vh cap at 375x812");
+    if (!sheet.grabberVisible)
+      failures.push("the grabber pill is not shown below the breakpoint");
     if (!sheet.survivedShortDrag) {
       failures.push(
-        'a drag shorter than the dismiss threshold closed the sheet. Below the threshold it ' +
-          'must snap back — otherwise every hesitant touch of the pill dismisses the card',
+        "a drag shorter than the dismiss threshold closed the sheet. Below the threshold it " +
+          "must snap back — otherwise every hesitant touch of the pill dismisses the card",
       );
     }
   }
 
   if (cardOpened === undefined) {
-    failures.push('clicking a book did not open the detail card');
+    failures.push("clicking a book did not open the detail card");
   } else {
     failures.push(...cardFailures(cardOpened.card));
     // "The card opened" is not the same as "the card is usable". A cover
     // rendering at its natural size opened a perfectly valid card that spilled
     // across the whole viewport, and this gate happily passed it.
     if (cardOpened.overflow.card > 2) {
-      failures.push(`the detail card escapes the viewport by ${cardOpened.overflow.card}px`);
+      failures.push(
+        `the detail card escapes the viewport by ${cardOpened.overflow.card}px`,
+      );
     }
     if (cardOpened.overflow.image > 2) {
-      failures.push(`the cover image overflows its card by ${cardOpened.overflow.image}px`);
+      failures.push(
+        `the cover image overflows its card by ${cardOpened.overflow.image}px`,
+      );
     }
   }
 
@@ -705,7 +767,9 @@ function report(result: {
   if (caseOverflow > 0.005) {
     failures.push(
       `a book breaks out through the side of the case by ${caseOverflow.toFixed(4)} ` +
-        '(about ' + (caseOverflow * 24).toFixed(1) + 'cm at shelf scale)',
+        "(about " +
+        (caseOverflow * 24).toFixed(1) +
+        "cm at shelf scale)",
     );
   }
 
@@ -714,20 +778,24 @@ function report(result: {
     failures.push(`expected ${expected} books on the shelf, got ${bookCount}`);
   }
   if (stats.nonBackgroundPct < 10) {
-    failures.push(`only ${stats.nonBackgroundPct.toFixed(1)}% of the canvas is not background`);
+    failures.push(
+      `only ${stats.nonBackgroundPct.toFixed(1)}% of the canvas is not background`,
+    );
   }
   if (stats.distinctColours < 40) {
-    failures.push(`only ${stats.distinctColours} distinct colours — the shelf looks blank`);
+    failures.push(
+      `only ${stats.distinctColours} distinct colours — the shelf looks blank`,
+    );
   }
   if (errors.length > 0) {
-    failures.push(`page errors:\n  ${errors.join('\n  ')}`);
+    failures.push(`page errors:\n  ${errors.join("\n  ")}`);
   }
 
   if (failures.length > 0) {
-    console.error(`\nFAILED\n- ${failures.join('\n- ')}`);
+    console.error(`\nFAILED\n- ${failures.join("\n- ")}`);
     process.exit(1);
   }
-  console.log('\nOK');
+  console.log("\nOK");
 }
 
 /**
@@ -745,11 +813,13 @@ function run(command: string, args: readonly string[]): Promise<void> {
     const child = spawn(shellCommand(command, args), {
       cwd: REPO_ROOT,
       shell: true,
-      stdio: 'inherit',
+      stdio: "inherit",
     });
-    child.on('error', reject);
-    child.on('exit', (code) =>
-      code === 0 ? resolve() : reject(new Error(`${command} exited ${String(code)}`)),
+    child.on("error", reject);
+    child.on("exit", (code) =>
+      code === 0
+        ? resolve()
+        : reject(new Error(`${command} exited ${String(code)}`)),
     );
   });
 }
@@ -762,31 +832,31 @@ function run(command: string, args: readonly string[]): Promise<void> {
  * which gate ran last. Each one regenerates what it needs.
  */
 async function buildSite(): Promise<void> {
-  await run('pnpm', ['fixtures:50']);
+  await run("pnpm", ["fixtures:50"]);
   // --public stages library.json *and* the covers it references, so the render
   // never depends on someone having copied cover files in by hand.
-  await run('pnpm', [
-    'stacks',
-    'build',
-    '--public',
-    '--vault',
-    'fixtures/vault-50',
-    '--assets',
-    'packages/site/public',
+  await run("pnpm", [
+    "stacks",
+    "build",
+    "--public",
+    "--vault",
+    "fixtures/vault-50",
+    "--assets",
+    "packages/site/public",
   ]);
-  await run('pnpm', ['--filter', '@stacks/site', 'run', 'build']);
+  await run("pnpm", ["--filter", "@stacks/site", "run", "build"]);
 }
 
 const CONTENT_TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
 };
 
 /**
@@ -804,20 +874,22 @@ const CONTENT_TYPES: Record<string, string> = {
  * to agree on it.
  */
 function serveDist(): Promise<{ server: Server; origin: string }> {
-  const root = join(REPO_ROOT, 'packages', 'site', 'dist');
+  const root = join(REPO_ROOT, "packages", "site", "dist");
 
   const server = createServer((request, response) => {
-    const path = decodeURIComponent((request.url ?? '/').split('?')[0] ?? '/');
-    const file = join(root, path === '/' ? 'index.html' : path);
+    const path = decodeURIComponent((request.url ?? "/").split("?")[0] ?? "/");
+    const file = join(root, path === "/" ? "index.html" : path);
 
     // Never serve outside dist/, even for a gate.
     if (!file.startsWith(root) || !existsSync(file)) {
-      response.writeHead(404).end('not found');
+      response.writeHead(404).end("not found");
       return;
     }
 
-    const extension = file.slice(file.lastIndexOf('.'));
-    response.writeHead(200, { 'Content-Type': CONTENT_TYPES[extension] ?? 'application/octet-stream' });
+    const extension = file.slice(file.lastIndexOf("."));
+    response.writeHead(200, {
+      "Content-Type": CONTENT_TYPES[extension] ?? "application/octet-stream",
+    });
     response.end(readFileSync(file));
   });
 
@@ -825,22 +897,24 @@ function serveDist(): Promise<{ server: Server; origin: string }> {
     // Port 0 asks the OS for a free one; `address()` is only meaningful once
     // listening has actually happened, which is why the origin is built here
     // rather than at module scope.
-    server.listen(0, '127.0.0.1', () => {
+    server.listen(0, "127.0.0.1", () => {
       const address = server.address();
-      if (address === null || typeof address === 'string') {
-        reject(new Error('the gate server is listening on a pipe, not a port'));
+      if (address === null || typeof address === "string") {
+        reject(new Error("the gate server is listening on a pipe, not a port"));
         return;
       }
       resolve({ server, origin: `http://127.0.0.1:${String(address.port)}` });
     });
-    server.on('error', reject);
+    server.on("error", reject);
   });
 }
 
 function findChrome(): string {
   const found = CHROME_CANDIDATES.find((path) => existsSync(path));
   if (found === undefined) {
-    throw new Error(`no Chrome found. Looked in:\n  ${CHROME_CANDIDATES.join('\n  ')}`);
+    throw new Error(
+      `no Chrome found. Looked in:\n  ${CHROME_CANDIDATES.join("\n  ")}`,
+    );
   }
   return found;
 }

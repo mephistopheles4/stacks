@@ -20,4 +20,4 @@ going. One bad note must never break the build.
 
 The canary phrase above is here deliberately. Phase 3's grep gate checks that no
 note body reaches the public build, and putting the canary in the file that gets
-*skipped* means the gate cannot pass merely because this book was dropped.
+_skipped_ means the gate cannot pass merely because this book was dropped.

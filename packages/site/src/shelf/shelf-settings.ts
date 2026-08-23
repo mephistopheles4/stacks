@@ -40,7 +40,7 @@
 // `import type`, never a value import: the package root re-exports the adapter,
 // sharp and the metadata layer, and a value import of it drags `node:fs` into
 // the browser bundle. Types are erased at compile time and so are safe.
-import type { Binding } from '@stacks/core';
+import type { Binding } from "@stacks/core";
 
 /**
  * A light's height, which depends on how tall the case grew.
@@ -106,21 +106,27 @@ export interface LightingSettings {
  * across major versions. `scene.ts` maps these to the real constants, the same
  * way `SHADOW_TYPES` already maps the shadow filters.
  */
-export type ToneMappingName = 'none' | 'linear' | 'reinhard' | 'cineon' | 'aces' | 'agx' | 'neutral';
+export type ToneMappingName =
+  "none" | "linear" | "reinhard" | "cineon" | "aces" | "agx" | "neutral";
 
 export const TONE_MAPPING_NAMES: readonly ToneMappingName[] = [
-  'none',
-  'linear',
-  'reinhard',
-  'cineon',
-  'aces',
-  'agx',
-  'neutral',
+  "none",
+  "linear",
+  "reinhard",
+  "cineon",
+  "aces",
+  "agx",
+  "neutral",
 ];
 
-export type ShadowTypeName = 'basic' | 'pcf' | 'soft' | 'vsm';
+export type ShadowTypeName = "basic" | "pcf" | "soft" | "vsm";
 
-export const SHADOW_TYPE_NAMES: readonly ShadowTypeName[] = ['basic', 'pcf', 'soft', 'vsm'];
+export const SHADOW_TYPE_NAMES: readonly ShadowTypeName[] = [
+  "basic",
+  "pcf",
+  "soft",
+  "vsm",
+];
 
 export interface RendererSettings {
   /**
@@ -151,7 +157,11 @@ export interface ShadowSettings {
 
 export interface SceneSettings {
   readonly background: number;
-  readonly fog: { readonly enabled: boolean; readonly near: number; readonly far: number };
+  readonly fog: {
+    readonly enabled: boolean;
+    readonly near: number;
+    readonly far: number;
+  };
 }
 
 /**
@@ -192,7 +202,7 @@ export interface SpineProfile {
  * once or spelled out at each of the four sites that iterate it, which is the
  * shape G23 caught six copies of.
  */
-export const BINDINGS: readonly Binding[] = ['hardback', 'paperback'];
+export const BINDINGS: readonly Binding[] = ["hardback", "paperback"];
 
 export interface MaterialSettings {
   readonly wood: number;
@@ -383,13 +393,13 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     antialias: true,
     maxPixelRatio: 2,
     guardResize: false,
-    toneMapping: 'none',
+    toneMapping: "none",
     exposure: 1,
   },
   shadows: {
     enabled: false,
     mapSize: 2048,
-    type: 'pcf',
+    type: "pcf",
     casters: true,
     fetch: true,
     painted: true,
@@ -485,7 +495,7 @@ export interface SettingsPatch {
   readonly shadows?: Partial<ShadowSettings>;
   readonly scene?: {
     readonly background?: number;
-    readonly fog?: Partial<SceneSettings['fog']>;
+    readonly fog?: Partial<SceneSettings["fog"]>;
   };
   /**
    * `spineProfile` is spelled out one level deeper than `Partial` reaches.
@@ -495,19 +505,23 @@ export interface SettingsPatch {
    * roll would mean restating both profiles, and getting one wrong silently
    * reshapes half the shelf. This is `PositionPatch`'s defect, in a second place.
    */
-  readonly materials?: Partial<Omit<MaterialSettings, 'spineProfile' | 'spineRoughness'>> & {
+  readonly materials?: Partial<
+    Omit<MaterialSettings, "spineProfile" | "spineRoughness">
+  > & {
     readonly spineProfile?: Partial<Record<Binding, Partial<SpineProfile>>>;
     // Scalars, so `Partial<Record<…>>` reaches all the way down on its own.
     readonly spineRoughness?: Partial<Record<Binding, number>>;
   };
   readonly books?: Partial<BooksSettings>;
   readonly lighting?: {
-    readonly ambient?: Partial<LightingSettings['ambient']>;
-    readonly key?: Partial<Omit<KeyLightSettings, 'position'>> & { readonly position?: PositionPatch };
-    readonly fill?: Partial<Omit<DirectionalLightSettings, 'position'>> & {
+    readonly ambient?: Partial<LightingSettings["ambient"]>;
+    readonly key?: Partial<Omit<KeyLightSettings, "position">> & {
+      readonly position?: PositionPatch;
+    };
+    readonly fill?: Partial<Omit<DirectionalLightSettings, "position">> & {
       readonly position?: Partial<LightPosition>;
     };
-    readonly lamp?: Partial<Omit<PointLightSettings, 'position'>> & {
+    readonly lamp?: Partial<Omit<PointLightSettings, "position">> & {
       readonly position?: Partial<LightPosition>;
     };
   };
@@ -520,7 +534,10 @@ export interface SettingsPatch {
  * expressions. That block *was* this function written longhand; lifting it is
  * most of what the settings refactor is.
  */
-export function resolveSettings(patch: SettingsPatch = {}, base: ShelfSettings = DEFAULT_SETTINGS): ShelfSettings {
+export function resolveSettings(
+  patch: SettingsPatch = {},
+  base: ShelfSettings = DEFAULT_SETTINGS,
+): ShelfSettings {
   return {
     renderer: { ...base.renderer, ...patch.renderer },
     effects: { bloom: { ...base.effects.bloom, ...patch.effects?.bloom } },
@@ -533,8 +550,14 @@ export function resolveSettings(patch: SettingsPatch = {}, base: ShelfSettings =
     materials: {
       ...base.materials,
       ...patch.materials,
-      spineProfile: mergeProfiles(base.materials.spineProfile, patch.materials?.spineProfile),
-      spineRoughness: { ...base.materials.spineRoughness, ...patch.materials?.spineRoughness },
+      spineProfile: mergeProfiles(
+        base.materials.spineProfile,
+        patch.materials?.spineProfile,
+      ),
+      spineRoughness: {
+        ...base.materials.spineRoughness,
+        ...patch.materials?.spineRoughness,
+      },
     },
     books: { ...base.books, ...patch.books },
     lighting: {
@@ -542,23 +565,35 @@ export function resolveSettings(patch: SettingsPatch = {}, base: ShelfSettings =
       key: {
         ...base.lighting.key,
         ...patch.lighting?.key,
-        position: mergePosition(base.lighting.key.position, patch.lighting?.key?.position),
+        position: mergePosition(
+          base.lighting.key.position,
+          patch.lighting?.key?.position,
+        ),
       },
       fill: {
         ...base.lighting.fill,
         ...patch.lighting?.fill,
-        position: mergePosition(base.lighting.fill.position, patch.lighting?.fill?.position),
+        position: mergePosition(
+          base.lighting.fill.position,
+          patch.lighting?.fill?.position,
+        ),
       },
       lamp: {
         ...base.lighting.lamp,
         ...patch.lighting?.lamp,
-        position: mergePosition(base.lighting.lamp.position, patch.lighting?.lamp?.position),
+        position: mergePosition(
+          base.lighting.lamp.position,
+          patch.lighting?.lamp?.position,
+        ),
       },
     },
   };
 }
 
-function mergePosition(base: LightPosition, patch: PositionPatch | undefined): LightPosition {
+function mergePosition(
+  base: LightPosition,
+  patch: PositionPatch | undefined,
+): LightPosition {
   return { ...base, ...patch, y: { ...base.y, ...patch?.y } };
 }
 

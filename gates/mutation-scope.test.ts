@@ -29,54 +29,66 @@
  * docs/spec/mutation-scoring.md §§6-7.
  */
 
-import { describe, expect, it } from 'vitest';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { readDeclarations } from '../scripts/lib/mutation-score.ts';
-import { declarationFaults, expectedMutate, sourceFiles } from '../scripts/lib/scope-check.ts';
-import { expectFound, REPO_ROOT } from './repo.ts';
+import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { readDeclarations } from "../scripts/lib/mutation-score.ts";
+import {
+  declarationFaults,
+  expectedMutate,
+  sourceFiles,
+} from "../scripts/lib/scope-check.ts";
+import { expectFound, REPO_ROOT } from "./repo.ts";
 // The config Stryker actually runs, not a copy of it. `.mjs` because Stryker's
 // own loader cannot read a `.ts` config — which is why the derivation it holds
 // cannot be imported from the module that checks it, and has to be compared.
-import config from '../stryker.config.mjs';
+import config from "../stryker.config.mjs";
 
 const declarations = readDeclarations();
 
-describe('G38 — the scope declaration is checked against something', () => {
-  it('finds the declared scopes, the exclusions and the excluded directories', () => {
+describe("G38 — the scope declaration is checked against something", () => {
+  it("finds the declared scopes, the exclusions and the excluded directories", () => {
     // Three floors, not two. Each list is separately deletable, and a check
     // over an empty list is the vacuous green every one of these gates is
     // written against: emptying `scopes` would otherwise leave "every declared
     // scope exists on disk" true of nothing.
-    expectFound(declarations.scopes, 'declared mutation scopes', 8);
+    expectFound(declarations.scopes, "declared mutation scopes", 8);
     expectFound(
       declarations.scopes.flatMap((scope) => scope.exclusions),
-      'declared file exclusions',
+      "declared file exclusions",
       20,
     );
-    expectFound(declarations.excludedDirectories, 'excluded source directories', 2);
+    expectFound(
+      declarations.excludedDirectories,
+      "excluded source directories",
+      2,
+    );
   });
 
-  it('sweeps a plausible number of source files', () => {
+  it("sweeps a plausible number of source files", () => {
     // A walk that returned nothing would make every file trivially declared and
     // every glob trivially empty — the same hole one level down.
-    expectFound(sourceFiles(), 'source files under packages/, scripts/ and gates/', 60);
+    expectFound(
+      sourceFiles(),
+      "source files under packages/, scripts/ and gates/",
+      60,
+    );
   });
 });
 
-describe('G38 — every source directory is declared or excluded, and nothing else', () => {
-  it('has no declaration fault of any kind', () => {
+describe("G38 — every source directory is declared or excluded, and nothing else", () => {
+  it("has no declaration fault of any kind", () => {
     const faults = declarationFaults(declarations, sourceFiles());
 
     expect(
       faults.map((fault) => `[${fault.clause}] ${fault.detail}`),
-      'stryker.scopes.json no longer describes the tree. Every one of these is a ' +
-        'declaration fault: fixing it is a one-line edit, and leaving it means a scope ' +
-        'stops being measured with no number moving to say so',
+      "stryker.scopes.json no longer describes the tree. Every one of these is a " +
+        "declaration fault: fixing it is a one-line edit, and leaving it means a scope " +
+        "stops being measured with no number moving to say so",
     ).toEqual([]);
   });
 
-  it('drives Stryker from the declaration it was checked against', () => {
+  it("drives Stryker from the declaration it was checked against", () => {
     // ⚠️ The other half of what decides a scope's membership. Everything above
     // reads `stryker.scopes.json`; Stryker reads `mutate`, which the config
     // derives from it — so an edit to the *derivation* empties a scope with
@@ -90,12 +102,12 @@ describe('G38 — every source directory is declared or excluded, and nothing el
     expect(
       config.mutate,
       "stryker.config.mjs's `mutate` is no longer the declaration in " +
-        'stryker.scopes.json. Stryker mutates what this array says, so the scopes ' +
-        'the gate above just checked are not necessarily the scopes that get scored',
+        "stryker.scopes.json. Stryker mutates what this array says, so the scopes " +
+        "the gate above just checked are not necessarily the scopes that get scored",
     ).toEqual(expectedMutate(declarations));
   });
 
-  it('names a directory that exists for every declared scope', () => {
+  it("names a directory that exists for every declared scope", () => {
     // Asserted separately from the sweep above because the two disagree in a
     // way worth naming: a scope may hold nothing but tests, in which case its
     // directory is on disk and `missing-scope` fires. That is the honest
@@ -107,7 +119,7 @@ describe('G38 — every source directory is declared or excluded, and nothing el
 
     expect(
       missing,
-      `declared scopes whose directory is not on disk: ${missing.join(', ')}`,
+      `declared scopes whose directory is not on disk: ${missing.join(", ")}`,
     ).toEqual([]);
   });
 });

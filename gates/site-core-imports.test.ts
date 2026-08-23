@@ -24,8 +24,8 @@
  * See docs/gates.md, row G6 (site-core-imports).
  */
 
-import { describe, expect, it } from 'vitest';
-import { expectFound, filesUnder, readRepoFile } from './repo.ts';
+import { describe, expect, it } from "vitest";
+import { expectFound, filesUnder, readRepoFile } from "./repo.ts";
 
 /**
  * Any `import`/`export … from '@stacks/core…'`, across line breaks — the
@@ -39,7 +39,8 @@ import { expectFound, filesUnder, readRepoFile } from './repo.ts';
  * value import of core. A binding list never contains either character; a
  * preceding statement always contains both.
  */
-const CORE_STATEMENT = /(?:^|\n)[ \t]*(import|export)\b([^;'"]*?)from\s*['"](@stacks\/core[^'"]*)['"]/g;
+const CORE_STATEMENT =
+  /(?:^|\n)[ \t]*(import|export)\b([^;'"]*?)from\s*['"](@stacks\/core[^'"]*)['"]/g;
 
 /** Every mention of the specifier, however it is reached — the vacuity guard. */
 const CORE_SPECIFIER = /['"](@stacks\/core[^'"]*)['"]/g;
@@ -58,13 +59,15 @@ const CORE_SPECIFIER = /['"](@stacks\/core[^'"]*)['"]/g;
  * renaming a file.
  */
 function pureSubpaths(): string[] {
-  const manifest = JSON.parse(readRepoFile('packages/core/package.json')) as {
+  const manifest = JSON.parse(readRepoFile("packages/core/package.json")) as {
     exports?: Record<string, string>;
   };
 
   return Object.entries(manifest.exports ?? {})
-    .filter(([entry]) => entry !== '.')
-    .filter(([, target]) => importsNothing(target.replace(/^\.\//, 'packages/core/')))
+    .filter(([entry]) => entry !== ".")
+    .filter(([, target]) =>
+      importsNothing(target.replace(/^\.\//, "packages/core/")),
+    )
     .map(([entry]) => `@stacks/core${entry.slice(1)}`);
 }
 
@@ -76,7 +79,9 @@ function pureSubpaths(): string[] {
  * wrong in this direction costs a false red, which is the correct way round.
  */
 function importsNothing(file: string): boolean {
-  return !/(?:^|\n)\s*(?:import|export)\b[^;\n]*\bfrom\s*['"]/.test(readRepoFile(file));
+  return !/(?:^|\n)\s*(?:import|export)\b[^;\n]*\bfrom\s*['"]/.test(
+    readRepoFile(file),
+  );
 }
 
 interface CoreImport {
@@ -87,7 +92,7 @@ interface CoreImport {
 }
 
 function siteFiles(): string[] {
-  return filesUnder('packages/site/src', ['.ts']);
+  return filesUnder("packages/site/src", [".ts"]);
 }
 
 function coreImports(): CoreImport[] {
@@ -96,16 +101,18 @@ function coreImports(): CoreImport[] {
   for (const file of siteFiles()) {
     const source = readRepoFile(file);
     for (const match of source.matchAll(CORE_STATEMENT)) {
-      const keyword = match[1] ?? '';
-      const clause = match[2] ?? '';
-      const specifier = match[3] ?? '';
+      const keyword = match[1] ?? "";
+      const clause = match[2] ?? "";
+      const specifier = match[3] ?? "";
       found.push({
         file,
-        statement: `${keyword}${clause}from '${specifier}'`.replace(/\s+/g, ' ').trim(),
+        statement: `${keyword}${clause}from '${specifier}'`
+          .replace(/\s+/g, " ")
+          .trim(),
         specifier,
         // Statement-level only: `import type {` passes, `import { type X }`
         // does not, for the reason in the header.
-        typeOnly: keyword === 'import' && /^\s*type\b/.test(clause),
+        typeOnly: keyword === "import" && /^\s*type\b/.test(clause),
       });
     }
   }
@@ -116,35 +123,36 @@ function coreImports(): CoreImport[] {
 /** Every `@stacks/core` specifier in the file, matched by a statement or not. */
 function specifierMentions(): number {
   return siteFiles().reduce(
-    (total, file) => total + [...readRepoFile(file).matchAll(CORE_SPECIFIER)].length,
+    (total, file) =>
+      total + [...readRepoFile(file).matchAll(CORE_SPECIFIER)].length,
     0,
   );
 }
 
-describe('G6 — site → @stacks/core', () => {
-  it('scans a plausible number of site files and imports', () => {
+describe("G6 — site → @stacks/core", () => {
+  it("scans a plausible number of site files and imports", () => {
     // If either the glob or the statement pattern stopped matching, "every
     // import is type-only" would hold over an empty set and this gate would
     // guard nothing while reporting green — the failure it exists to prevent,
     // committed by the gate itself.
-    expectFound(siteFiles(), 'TypeScript files under packages/site/src', 3);
-    expectFound(coreImports(), 'imports of @stacks/core in the site', 3);
+    expectFound(siteFiles(), "TypeScript files under packages/site/src", 3);
+    expectFound(coreImports(), "imports of @stacks/core in the site", 3);
   });
 
-  it('accounts for every mention of the specifier', () => {
+  it("accounts for every mention of the specifier", () => {
     // Closes the gap between "matched a statement" and "appears in the file".
     // A bare `import '@stacks/core'` or a dynamic `await import('@stacks/core')`
     // never matches CORE_STATEMENT, so without this it would slip through
     // unexamined — and both pull the whole module in.
     expect(
       coreImports().length,
-      'a reference to @stacks/core is present that is not a plain import/export … from. ' +
-        'A bare side-effect import or a dynamic import() pulls in node:fs and sharp just ' +
-        'as surely as a named value import does.',
+      "a reference to @stacks/core is present that is not a plain import/export … from. " +
+        "A bare side-effect import or a dynamic import() pulls in node:fs and sharp just " +
+        "as surely as a named value import does.",
     ).toBe(specifierMentions());
   });
 
-  it('keeps every import either type-only or on a subpath that imports nothing', () => {
+  it("keeps every import either type-only or on a subpath that imports nothing", () => {
     const pure = pureSubpaths();
     const offenders = coreImports()
       .filter((entry) => !entry.typeOnly && !pure.includes(entry.specifier))
@@ -152,14 +160,14 @@ describe('G6 — site → @stacks/core', () => {
 
     expect(
       offenders,
-      `value imports of @stacks/core in the site: ${offenders.join(' | ')}. Use ` +
-        '`import type` at statement level, or move the runtime value into a subpath that ' +
-        `imports nothing (today: ${pure.join(', ') || 'none'}). A value import drags ` +
-        'node:fs and sharp into the browser bundle and the shelf silently never boots.',
+      `value imports of @stacks/core in the site: ${offenders.join(" | ")}. Use ` +
+        "`import type` at statement level, or move the runtime value into a subpath that " +
+        `imports nothing (today: ${pure.join(", ") || "none"}). A value import drags ` +
+        "node:fs and sharp into the browser bundle and the shelf silently never boots.",
     ).toEqual([]);
   });
 
-  it('finds at least one genuinely pure subpath to allow', () => {
+  it("finds at least one genuinely pure subpath to allow", () => {
     // The vacuity guard on the purity test itself: if `importsNothing` broke and
     // returned false for everything, the assertion above would still pass on a
     // site that imports nothing — and the escape hatch would have vanished
@@ -167,12 +175,14 @@ describe('G6 — site → @stacks/core', () => {
     expect(pureSubpaths().length).toBeGreaterThan(0);
   });
 
-  it('still imports something for value from a pure subpath', () => {
+  it("still imports something for value from a pure subpath", () => {
     // The control. Every assertion above is satisfied by a site that imports
     // nothing at all from core, which would also mean the subpath escape hatch
     // had quietly stopped being exercised.
     const pure = pureSubpaths();
-    const fromSubpath = coreImports().filter((entry) => pure.includes(entry.specifier));
+    const fromSubpath = coreImports().filter((entry) =>
+      pure.includes(entry.specifier),
+    );
     expect(fromSubpath.length).toBeGreaterThan(0);
     expect(fromSubpath.every((entry) => !entry.typeOnly)).toBe(true);
   });

@@ -10,7 +10,7 @@ below is a scan across the same frame.
 
 **A `cap`-wide band of board colour down the whole joint.** The covering rolls
 over a corner, so only the corner needed clearing for it — but the boards were
-pulled back by `cap` over their whole *height*, which over-clears by `height /
+pulled back by `cap` over their whole _height_, which over-clears by `height /
 cap`, about sixty times. The full-thickness strip that then had to fill the front
 of the case put its own dark sides where the printed cover belonged. Fixed by
 making each board two boxes, an L in the YZ plane: full depth below the roll,
@@ -18,7 +18,7 @@ pulled back inside it. **+2 draws on a hardback, +0 on a paperback.**
 
 **A flat facet on the corner, standing outside the case.** The roll's ends are
 flat quarter discs and have to be — nothing beside a book is there for the
-covering to turn down onto. What made one read as a *thumbprint stuck on* was
+covering to turn down onto. What made one read as a _thumbprint stuck on_ was
 never the silhouette but the shading: a true `(±1, 0, 0)` normal catches light as
 a surface of its own, discontinuous with the roll it closes, and the eye reads a
 discontinuity in shading as a separate object. **Leaning the end normals 45° into
@@ -30,7 +30,7 @@ it.
 **A four-pixel lit sliver of board past the roll.** `capScale` had been
 `thickness + SKIN * 4` (proud, hence the highlight along the step) and then
 `thickness - SKIN * 2` (inset, hence the sliver). Neither is right, because the
-covering is not floating above the case — it *is* the outside of the case, which
+covering is not floating above the case — it _is_ the outside of the case, which
 is `thickness` wide. What made an offset look necessary was the tuck's end fans
 lying in the boards' own plane; **the tuck is no longer fanned**, so nothing is
 coplanar and `capScale` is `thickness` exactly. Nothing shows through the opening:
@@ -48,4 +48,4 @@ programs unchanged at 71 / 23 / 5. Every one of those numbers is the prediction.
 ⚠️ **None of the four moved a counter before it was fixed** — same draws, same
 triangles, same textures — which is now the fifth time that sentence has been
 written on this map. A cost-reporting gate cannot see shape. Only a picture of
-one book can, and only a *reproducible* one can be compared to the last.
+one book can, and only a _reproducible_ one can be compared to the last.

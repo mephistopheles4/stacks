@@ -1,4 +1,4 @@
-import type { LibraryBook } from '@stacks/core';
+import type { LibraryBook } from "@stacks/core";
 
 /**
  * Where a book's card can send you, and under what name.
@@ -18,7 +18,7 @@ import type { LibraryBook } from '@stacks/core';
 
 export interface ProviderLink {
   /** Which mark to draw, or `search` for the text fallback. */
-  readonly kind: 'open-library' | 'google' | 'apple' | 'search';
+  readonly kind: "open-library" | "google" | "apple" | "search";
   readonly href: string;
   /**
    * The accessible name **and** the tooltip — one string, one attribute.
@@ -69,37 +69,37 @@ export function providerLinks(book: LibraryBook): readonly ProviderLink[] {
    */
   if (book.isbn !== undefined) {
     marks.push({
-      kind: 'open-library',
+      kind: "open-library",
       href: `https://openlibrary.org/isbn/${encodeURIComponent(book.isbn)}`,
-      name: 'Open Library',
+      name: "Open Library",
     });
   } else if (book.openLibraryOlid !== undefined) {
     marks.push({
-      kind: 'open-library',
+      kind: "open-library",
       href: `https://openlibrary.org/books/${encodeURIComponent(book.openLibraryOlid)}`,
-      name: 'Open Library',
+      name: "Open Library",
     });
   }
 
   if (book.googleVolumeId !== undefined) {
     marks.push({
-      kind: 'google',
+      kind: "google",
       href: `https://books.google.com/books?id=${encodeURIComponent(book.googleVolumeId)}`,
       // **Not "Google Books".** Google's grant is a button whose artwork is an
       // image of the words "Google Preview", and an accessible name that does
       // not contain the visible text is a WCAG 2.5.3 (Label in Name) mismatch.
-      name: 'Google Preview',
+      name: "Google Preview",
     });
   }
 
   if (book.appleTrackId !== undefined) {
     marks.push({
-      kind: 'apple',
+      kind: "apple",
       // **Region-free.** The site does not know a visitor's storefront and
       // `/us/` asserts one on their behalf; Apple resolves it at request time,
       // which is the party that actually knows. Both forms were verified.
       href: `https://books.apple.com/book/id${encodeURIComponent(book.appleTrackId)}`,
-      name: 'Apple Books',
+      name: "Apple Books",
     });
   }
 
@@ -119,13 +119,13 @@ export function providerLinks(book: LibraryBook): readonly ProviderLink[] {
    * does not hold comes back as ten confident wrong books with no notice, where
    * Open Library says it matched nothing.
    */
-  const query = `${book.title} ${book.author ?? ''}`.trim();
+  const query = `${book.title} ${book.author ?? ""}`.trim();
   return [
     {
-      kind: 'search',
+      kind: "search",
       href: `https://openlibrary.org/search?q=${encodeURIComponent(query)}`,
-      name: 'Search Open Library',
-      text: 'Search Open Library',
+      name: "Search Open Library",
+      text: "Search Open Library",
     },
   ];
 }

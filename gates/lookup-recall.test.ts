@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import { isProbablySameBook, lookup, type HttpGet } from '../packages/core/src/index.ts';
-import { readRepoFile } from './repo.ts';
-import { RECALL_CORPUS, stripKey } from './recall-corpus.ts';
+import { describe, expect, it } from "vitest";
+import {
+  isProbablySameBook,
+  lookup,
+  type HttpGet,
+} from "../packages/core/src/index.ts";
+import { readRepoFile } from "./repo.ts";
+import { RECALL_CORPUS, stripKey } from "./recall-corpus.ts";
 
 /**
  * G26 — the lookup finds books the providers demonstrably have.
@@ -21,51 +25,61 @@ import { RECALL_CORPUS, stripKey } from './recall-corpus.ts';
  * path and passing for the wrong reason.
  */
 
-const RECORDINGS = JSON.parse(readRepoFile('fixtures/api/lookup-recall.json')) as Record<
-  string,
-  unknown
->;
+const RECORDINGS = JSON.parse(
+  readRepoFile("fixtures/api/lookup-recall.json"),
+) as Record<string, unknown>;
 
 const replay: HttpGet = async (url) => {
   const key = stripKey(url);
   if (!(key in RECORDINGS)) {
     throw new Error(
       `no recorded response for ${key}\n` +
-        'The lookup asked something the corpus has never seen. Re-run ' +
-        '`pnpm tsx scripts/capture-lookup-recall.ts` if that is deliberate.',
+        "The lookup asked something the corpus has never seen. Re-run " +
+        "`pnpm tsx scripts/capture-lookup-recall.ts` if that is deliberate.",
     );
   }
   // `null` is a recorded *miss*, which is not the same as an unrecorded URL.
   return RECORDINGS[key] ?? undefined;
 };
 
-describe('lookup recall', () => {
-  it('has a corpus and recordings to replay', () => {
+describe("lookup recall", () => {
+  it("has a corpus and recordings to replay", () => {
     expect(RECALL_CORPUS.length).toBeGreaterThan(0);
     // Guards the vacuous pass: an empty recording map would make every case
     // throw, but an almost-empty one could let a shrunken corpus look healthy.
-    expect(Object.keys(RECORDINGS).length).toBeGreaterThanOrEqual(RECALL_CORPUS.length * 2);
+    expect(Object.keys(RECORDINGS).length).toBeGreaterThanOrEqual(
+      RECALL_CORPUS.length * 2,
+    );
   });
 
   for (const entry of RECALL_CORPUS) {
     const name = entry.term.slice(0, 48);
 
-    if (entry.expect.kind === 'found') {
+    if (entry.expect.kind === "found") {
       const { pages, title } = entry.expect;
 
       it(`finds ${name}`, async () => {
         const [best] = await lookup(entry.term, replay);
 
-        expect(best, `nothing came back at all. ${entry.because}`).toBeDefined();
         expect(
-          isProbablySameBook(entry.label, `${best?.title ?? ''} ${best?.author ?? ''}`),
-          `best candidate was "${best?.title ?? ''}". ${entry.because}`,
+          best,
+          `nothing came back at all. ${entry.because}`,
+        ).toBeDefined();
+        expect(
+          isProbablySameBook(
+            entry.label,
+            `${best?.title ?? ""} ${best?.author ?? ""}`,
+          ),
+          `best candidate was "${best?.title ?? ""}". ${entry.because}`,
         ).toBe(true);
         expect(best?.title).toContain(title);
         // The number, not merely "some number": a page count taken from the
         // wrong edition is the failure this gate exists to catch, and it is
         // invisible in a truthy check.
-        expect(best?.pages, `wrong edition or wrong endpoint. ${entry.because}`).toBe(pages);
+        expect(
+          best?.pages,
+          `wrong edition or wrong endpoint. ${entry.because}`,
+        ).toBe(pages);
       });
       continue;
     }
@@ -75,8 +89,11 @@ describe('lookup recall', () => {
       // A refusal is the outcome; whether anything came back is not the point.
       expect(
         best === undefined ||
-          !isProbablySameBook(entry.label, `${best.title} ${best.author ?? ''}`),
-        `accepted "${best?.title ?? ''}" as this book. ${entry.because}`,
+          !isProbablySameBook(
+            entry.label,
+            `${best.title} ${best.author ?? ""}`,
+          ),
+        `accepted "${best?.title ?? ""}" as this book. ${entry.because}`,
       ).toBe(true);
     });
   }

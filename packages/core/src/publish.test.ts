@@ -1,23 +1,30 @@
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import sharp, { type Sharp } from 'sharp';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
-import { MAX_COVER_EDGE } from './covers/cover-budget.ts';
-import { publish } from './publish.ts';
-import { FIXTURE_VAULT } from './test-support.ts';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import sharp, { type Sharp } from "sharp";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ObsidianAdapter } from "./adapters/obsidian-adapter.ts";
+import { MAX_COVER_EDGE } from "./covers/cover-budget.ts";
+import { publish } from "./publish.ts";
+import { FIXTURE_VAULT } from "./test-support.ts";
 
-const CANARY = 'NOTE_BODY_CANARY_do_not_ship';
+const CANARY = "NOTE_BODY_CANARY_do_not_ship";
 const vault = new ObsidianAdapter(FIXTURE_VAULT);
 
-describe('publish', () => {
+describe("publish", () => {
   let out: string;
   let warn: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
-    out = await mkdtemp(join(tmpdir(), 'stacks-publish-'));
-    warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    out = await mkdtemp(join(tmpdir(), "stacks-publish-"));
+    warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
   });
 
   afterEach(async () => {
@@ -25,48 +32,48 @@ describe('publish', () => {
     await rm(out, { recursive: true, force: true });
   });
 
-  it('stages library.json and the covers it references', async () => {
+  it("stages library.json and the covers it references", async () => {
     const books = await vault.listBooks();
     const result = await publish(books, vault, out, { isPublic: true });
 
     const staged = await readdir(out);
-    expect(staged).toContain('library.json');
-    expect(staged).toContain('covers');
+    expect(staged).toContain("library.json");
+    expect(staged).toContain("covers");
 
     // And nothing else. `og.png` is committed brand art living in the folder
     // this stages into, so a build that wrote one would overwrite the designed
     // card with a generated one at the same path, at the same size, silently.
-    expect(staged).not.toContain('og.png');
+    expect(staged).not.toContain("og.png");
 
     // Six of the eight fixture books carry a cover; two deliberately do not.
     expect(result.coversCopied).toBe(6);
     expect(result.coversMissing).toEqual([]);
   });
 
-  it('copies only referenced covers, not the whole covers folder', async () => {
+  it("copies only referenced covers, not the whole covers folder", async () => {
     const books = await vault.listBooks();
     await publish(books, vault, out, { isPublic: true });
 
-    const copied = await readdir(join(out, 'covers'));
+    const copied = await readdir(join(out, "covers"));
     // `white-bordered.png` and `all-white.png` exist in the vault for the
     // extractor's tests and belong to no book, so they must not ship.
-    expect(copied).not.toContain('white-bordered.png');
-    expect(copied).not.toContain('all-white.png');
-    expect(copied).toContain('the-tidal-engine.png');
+    expect(copied).not.toContain("white-bordered.png");
+    expect(copied).not.toContain("all-white.png");
+    expect(copied).toContain("the-tidal-engine.png");
   });
 
-  it('writes a public library.json with no note bodies and no vault paths', async () => {
+  it("writes a public library.json with no note bodies and no vault paths", async () => {
     const books = await vault.listBooks();
     const result = await publish(books, vault, out, { isPublic: true });
 
-    const json = await readFile(result.libraryPath, 'utf8');
+    const json = await readFile(result.libraryPath, "utf8");
     expect(json).not.toContain(CANARY);
-    expect(json).not.toContain('sourcePath');
-    expect(json).not.toContain('Library/');
-    expect(json).not.toContain('.md');
+    expect(json).not.toContain("sourcePath");
+    expect(json).not.toContain("Library/");
+    expect(json).not.toContain(".md");
   });
 
-  it('measures each cover so the shelf knows the book is not one shape', async () => {
+  it("measures each cover so the shelf knows the book is not one shape", async () => {
     const books = await vault.listBooks();
     const result = await publish(books, vault, out, { isPublic: true });
 
@@ -84,45 +91,53 @@ describe('publish', () => {
     expect(bare?.coverAspect).toBeUndefined();
   });
 
-  it('reports a missing cover instead of failing the build', async () => {
+  it("reports a missing cover instead of failing the build", async () => {
     const books = await vault.listBooks();
     // Cloned from a book that actually ships: cloning the wishlist or the
     // `private: true` fixture would make the ghost be filtered out, and the
     // test would pass while asserting nothing.
     const shippable = books.find(
-      (book) => book.status !== 'wishlist' && book.private !== true && book.cover !== undefined,
+      (book) =>
+        book.status !== "wishlist" &&
+        book.private !== true &&
+        book.cover !== undefined,
     );
     expect(shippable).toBeDefined();
-    const withGhost = [...books, { ...shippable!, cover: 'covers/not-here.png', title: 'Ghost' }];
+    const withGhost = [
+      ...books,
+      { ...shippable!, cover: "covers/not-here.png", title: "Ghost" },
+    ];
 
     const result = await publish(withGhost, vault, out, { isPublic: true });
-    expect(result.coversMissing).toEqual(['not-here.png']);
+    expect(result.coversMissing).toEqual(["not-here.png"]);
 
     // Every shipping book still ships — a cover the vault lost costs the book
     // its picture, not its place. Two kinds never ship: wishlist (you do not
     // own them) and `private: true` (the owner said no), so count against
     // those rather than against everything handed in.
     const shelved = withGhost.filter(
-      (book) => book.status !== 'wishlist' && book.private !== true,
+      (book) => book.status !== "wishlist" && book.private !== true,
     );
     expect(result.library.bookCount).toBe(shelved.length);
   });
 
-  it('refuses to let a cover path climb out of the covers directory', async () => {
+  it("refuses to let a cover path climb out of the covers directory", async () => {
     const books = await vault.listBooks();
     // A book that actually ships, so the traversal is genuinely attempted —
     // cloning the private fixture would filter it out before publish ever
     // resolved the path, and the test would pass having tested nothing.
     const shipping = books.find(
-      (book) => book.status !== 'wishlist' && book.private !== true,
+      (book) => book.status !== "wishlist" && book.private !== true,
     );
-    const escaping = [{ ...shipping!, cover: '../../../../etc/passwd', title: 'Escaping' }];
+    const escaping = [
+      { ...shipping!, cover: "../../../../etc/passwd", title: "Escaping" },
+    ];
 
     const result = await publish(escaping, vault, out, { isPublic: true });
     // Only the basename is ever used, so this looks for `passwd` inside the
     // vault's covers folder and simply fails to find it.
-    expect(result.coversMissing).toEqual(['passwd']);
-    const copied = await readdir(join(out, 'covers'));
+    expect(result.coversMissing).toEqual(["passwd"]);
+    const copied = await readdir(join(out, "covers"));
     expect(copied).toEqual([]);
   });
 });
@@ -142,17 +157,20 @@ describe('publish', () => {
  * Only covers *over* the cap are re-encoded; everything else is copied byte for
  * byte, so this is the whole population that could be damaged.
  */
-describe('publish — the re-encode it imposes', () => {
+describe("publish — the re-encode it imposes", () => {
   let vaultPath: string;
 
   /** A vault holding one book whose cover is `bytes` under `filename`. */
-  async function vaultWithCover(filename: string, bytes: Buffer): Promise<ObsidianAdapter> {
-    await mkdir(join(vaultPath, 'Library', 'covers'), { recursive: true });
+  async function vaultWithCover(
+    filename: string,
+    bytes: Buffer,
+  ): Promise<ObsidianAdapter> {
+    await mkdir(join(vaultPath, "Library", "covers"), { recursive: true });
     await writeFile(
-      join(vaultPath, 'Library', 'Big.md'),
+      join(vaultPath, "Library", "Big.md"),
       `---\ntype: book\ntitle: Big\ncover: covers/${filename}\n---\n\nA body.\n`,
     );
-    await writeFile(join(vaultPath, 'Library', 'covers', filename), bytes);
+    await writeFile(join(vaultPath, "Library", "covers", filename), bytes);
     return new ObsidianAdapter(vaultPath);
   }
 
@@ -163,10 +181,17 @@ describe('publish — the re-encode it imposes', () => {
   function typeOnRed(): Sharp {
     const width = MAX_COVER_EDGE * 2;
     const height = Math.round(width * 1.5);
-    return sharp({ create: { width, height, channels: 3, background: '#c8102e' } }).composite([
+    return sharp({
+      create: { width, height, channels: 3, background: "#c8102e" },
+    }).composite([
       {
         input: {
-          create: { width: Math.round(width * 0.6), height: 24, channels: 3, background: '#ffffff' },
+          create: {
+            width: Math.round(width * 0.6),
+            height: 24,
+            channels: 3,
+            background: "#ffffff",
+          },
         },
         left: Math.round(width * 0.2),
         top: Math.round(height * 0.2),
@@ -175,27 +200,30 @@ describe('publish — the re-encode it imposes', () => {
   }
 
   beforeEach(async () => {
-    vaultPath = await mkdtemp(join(tmpdir(), 'stacks-encode-'));
+    vaultPath = await mkdtemp(join(tmpdir(), "stacks-encode-"));
   });
 
   afterEach(async () => {
     await rm(vaultPath, { recursive: true, force: true });
   });
 
-  it('does not subsample chroma on a jpeg it has to shrink', async () => {
-    const vault = await vaultWithCover('big.jpg', await typeOnRed().jpeg().toBuffer());
-    const out = await mkdtemp(join(tmpdir(), 'stacks-encode-out-'));
+  it("does not subsample chroma on a jpeg it has to shrink", async () => {
+    const vault = await vaultWithCover(
+      "big.jpg",
+      await typeOnRed().jpeg().toBuffer(),
+    );
+    const out = await mkdtemp(join(tmpdir(), "stacks-encode-out-"));
 
     try {
       await publish(await vault.listBooks(), vault, out, { isPublic: true });
-      const staged = await sharp(join(out, 'covers', 'big.jpg')).metadata();
+      const staged = await sharp(join(out, "covers", "big.jpg")).metadata();
 
       expect(staged.width).toBeLessThanOrEqual(MAX_COVER_EDGE);
       expect(
         staged.chromaSubsampling,
-        'the staged cover stores colour at half resolution — white type on a flat ' +
-          'field comes out fringed, and the fringe is ours, not the provider’s',
-      ).toBe('4:4:4');
+        "the staged cover stores colour at half resolution — white type on a flat " +
+          "field comes out fringed, and the fringe is ours, not the provider’s",
+      ).toBe("4:4:4");
     } finally {
       await rm(out, { recursive: true, force: true });
     }
@@ -207,16 +235,22 @@ describe('publish — the re-encode it imposes', () => {
    * filename. A PNG cover would be written as JPEG bytes under a `.png` name —
    * which browsers sniff and render anyway, so nothing downstream would notice.
    */
-  it('leaves a png a png', async () => {
-    const vault = await vaultWithCover('big.png', await typeOnRed().png().toBuffer());
-    const out = await mkdtemp(join(tmpdir(), 'stacks-encode-out-'));
+  it("leaves a png a png", async () => {
+    const vault = await vaultWithCover(
+      "big.png",
+      await typeOnRed().png().toBuffer(),
+    );
+    const out = await mkdtemp(join(tmpdir(), "stacks-encode-out-"));
 
     try {
       await publish(await vault.listBooks(), vault, out, { isPublic: true });
-      const staged = await sharp(join(out, 'covers', 'big.png')).metadata();
+      const staged = await sharp(join(out, "covers", "big.png")).metadata();
 
       expect(staged.width).toBeLessThanOrEqual(MAX_COVER_EDGE);
-      expect(staged.format, 'a .png cover was rewritten as some other format').toBe('png');
+      expect(
+        staged.format,
+        "a .png cover was rewritten as some other format",
+      ).toBe("png");
     } finally {
       await rm(out, { recursive: true, force: true });
     }

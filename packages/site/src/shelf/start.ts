@@ -1,4 +1,4 @@
-import { boot } from './boot.ts';
+import { boot } from "./boot.ts";
 
 /**
  * The page's one entry point: find the elements, hand them to `boot`.
@@ -16,13 +16,13 @@ import { boot } from './boot.ts';
  * the types, and a `.astro` file cannot hold the second.
  */
 export function start(): void {
-  const canvas = document.getElementById('shelf-canvas');
-  const card = document.getElementById('book-card');
-  const body = document.getElementById('book-card-body');
-  const status = document.getElementById('book-card-status');
-  const dismiss = document.getElementById('book-card-dismiss');
-  const viewer = document.getElementById('cover-viewer');
-  const viewerImage = document.getElementById('cover-viewer-image');
+  const canvas = document.getElementById("shelf-canvas");
+  const card = document.getElementById("book-card");
+  const body = document.getElementById("book-card-body");
+  const status = document.getElementById("book-card-status");
+  const dismiss = document.getElementById("book-card-dismiss");
+  const viewer = document.getElementById("cover-viewer");
+  const viewerImage = document.getElementById("cover-viewer-image");
 
   if (
     !(canvas instanceof HTMLCanvasElement) ||

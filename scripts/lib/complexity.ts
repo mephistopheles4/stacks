@@ -23,11 +23,11 @@
  * `scope-check.ts`'s split, for `scope-check.ts`'s reason.
  */
 
-import { relative, sep } from 'node:path';
-import { ESLint } from 'eslint';
-import { version as parserVersion } from '@typescript-eslint/parser';
-import { globToRegExp, type Scope } from './mutation-score.ts';
-import { REPO_ROOT } from './repo-root.ts';
+import { relative, sep } from "node:path";
+import { ESLint } from "eslint";
+import { version as parserVersion } from "@typescript-eslint/parser";
+import { globToRegExp, type Scope } from "./mutation-score.ts";
+import { REPO_ROOT } from "./repo-root.ts";
 
 /**
  * McCabe's own upper bound for a module, from the 1976 paper.
@@ -64,15 +64,15 @@ export const MCCABE_CUT = 10;
  * needs them for.
  */
 export type FunctionKind =
-  | 'function'
-  | 'arrow'
-  | 'method'
-  | 'constructor'
-  | 'getter'
-  | 'setter'
-  | 'class-field-initialiser'
-  | 'static-block'
-  | 'unknown';
+  | "function"
+  | "arrow"
+  | "method"
+  | "constructor"
+  | "getter"
+  | "setter"
+  | "class-field-initialiser"
+  | "static-block"
+  | "unknown";
 
 /** One function, as ESLint scored it. */
 export interface PerFunction {
@@ -136,14 +136,14 @@ const QUOTED = /'([^']*)'/;
  * arrow renders as *Async arrow function* and matches both.
  */
 const KINDS: readonly (readonly [string, FunctionKind])[] = [
-  ['class field initializer', 'class-field-initialiser'],
-  ['class static block', 'static-block'],
-  ['arrow function', 'arrow'],
-  ['constructor', 'constructor'],
-  ['getter', 'getter'],
-  ['setter', 'setter'],
-  ['method', 'method'],
-  ['function', 'function'],
+  ["class field initializer", "class-field-initialiser"],
+  ["class static block", "static-block"],
+  ["arrow function", "arrow"],
+  ["constructor", "constructor"],
+  ["getter", "getter"],
+  ["setter", "setter"],
+  ["method", "method"],
+  ["function", "function"],
 ];
 
 function kindOf(label: string): FunctionKind {
@@ -151,12 +151,12 @@ function kindOf(label: string): FunctionKind {
   for (const [needle, kind] of KINDS) {
     if (lowered.includes(needle)) return kind;
   }
-  return 'unknown';
+  return "unknown";
 }
 
 /** A repo-relative POSIX path, whatever the platform handed us. */
 function relativeTo(root: string, path: string): string {
-  return relative(root, path).split(sep).join('/');
+  return relative(root, path).split(sep).join("/");
 }
 
 /**
@@ -184,7 +184,9 @@ function relativeTo(root: string, path: string): string {
  */
 export function populationOf(scope: Scope, files: readonly string[]): string[] {
   const match = globToRegExp(scope.glob);
-  return files.filter((file) => match.test(file) && !file.endsWith('.test.ts')).sort();
+  return files
+    .filter((file) => match.test(file) && !file.endsWith(".test.ts"))
+    .sort();
 }
 
 /**
@@ -212,7 +214,9 @@ export function populationOf(scope: Scope, files: readonly string[]): string[] {
  * The caller decides what a broken step means; for the emitter that is
  * `RunFacts.failed`, and for the pre-commit print a diagnostic and exit 0.
  */
-export async function complexityOf(files: readonly string[]): Promise<PerFunction[]> {
+export async function complexityOf(
+  files: readonly string[],
+): Promise<PerFunction[]> {
   if (files.length === 0) return [];
 
   const eslint = new ESLint({ cwd: REPO_ROOT });
@@ -233,14 +237,18 @@ export async function complexityOf(files: readonly string[]): Promise<PerFunctio
    * population and move a series with no diff to point at.
    */
   const ignored = (
-    await Promise.all(files.map(async (file) => ((await eslint.isPathIgnored(file)) ? file : null)))
+    await Promise.all(
+      files.map(async (file) =>
+        (await eslint.isPathIgnored(file)) ? file : null,
+      ),
+    )
   ).filter((file): file is string => file !== null);
 
   if (ignored.length > 0) {
     throw new Error(
       `ESLint is configured to ignore ${ignored.length} file(s) in this population, starting ` +
         `with ${ignored[0]}. An ignored file reports no functions, which is indistinguishable ` +
-        'from a file that has none — so the population would shrink silently.',
+        "from a file that has none — so the population would shrink silently.",
     );
   }
 
@@ -254,28 +262,30 @@ export async function complexityOf(files: readonly string[]): Promise<PerFunctio
       if (message.fatal === true) {
         throw new Error(
           `ESLint could not parse ${file}: ${message.message}. A file that does not parse ` +
-            'reports no functions, which is indistinguishable from a file that has none.',
+            "reports no functions, which is indistinguishable from a file that has none.",
         );
       }
-      if (message.ruleId !== 'complexity') continue;
+      if (message.ruleId !== "complexity") continue;
 
       const parsed = MESSAGE.exec(message.message);
       if (parsed === null) {
         throw new Error(
           `unreadable complexity message on ${file}:${message.line ?? 0} — ${message.message}. ` +
-            'The rule\'s message template is an input to the count; pin a different ESLint ' +
-            'version or update the parse, but do not let a function count as zero.',
+            "The rule's message template is an input to the count; pin a different ESLint " +
+            "version or update the parse, but do not let a function count as zero.",
         );
       }
 
-      const label = parsed[1] ?? '';
+      const label = parsed[1] ?? "";
       const name = QUOTED.exec(label)?.[1];
       found.push({
         file,
         line: message.line ?? 0,
         column: message.column ?? 0,
         ...(message.endLine === undefined ? {} : { endLine: message.endLine }),
-        ...(message.endColumn === undefined ? {} : { endColumn: message.endColumn }),
+        ...(message.endColumn === undefined
+          ? {}
+          : { endColumn: message.endColumn }),
         label,
         kind: kindOf(label),
         ...(name === undefined ? {} : { name }),
@@ -345,30 +355,42 @@ export async function countPopulation(
  * these numbers are what "a different counting rule" will mean.
  */
 export const INVENTORY = {
-  file: 'fixtures/complexity/inventory.ts',
+  file: "fixtures/complexity/inventory.ts",
   /** Label and expected complexity, one per function-shaped node in the fixture. */
   functions: [
-    { label: "Function 'declaration'", kind: 'function', complexity: 6 },
-    { label: "Function 'loops'", kind: 'function', complexity: 6 },
-    { label: "Function 'switchAndCatch'", kind: 'function', complexity: 4 },
-    { label: "Function 'logicalAssignment'", kind: 'function', complexity: 4 },
-    { label: "Function 'optionalChain'", kind: 'function', complexity: 4 },
-    { label: "Function 'defaults'", kind: 'function', complexity: 3 },
-    { label: "Function 'overTheCut'", kind: 'function', complexity: 13 },
-    { label: "Function 'namedExpression'", kind: 'function', complexity: 2 },
-    { label: 'Arrow function', kind: 'arrow', complexity: 2 },
-    { label: "Async function 'asyncDeclaration'", kind: 'function', complexity: 2 },
-    { label: "Generator function 'generatorDeclaration'", kind: 'function', complexity: 2 },
-    { label: 'Async arrow function', kind: 'arrow', complexity: 2 },
-    { label: "Function 'outer'", kind: 'function', complexity: 2 },
-    { label: 'Arrow function', kind: 'arrow', complexity: 2 },
-    { label: 'Class field initializer', kind: 'class-field-initialiser', complexity: 2 },
-    { label: 'Class static block', kind: 'static-block', complexity: 1 },
-    { label: 'Constructor', kind: 'constructor', complexity: 2 },
-    { label: "Method 'method'", kind: 'method', complexity: 3 },
-    { label: "Static method 'make'", kind: 'method', complexity: 2 },
-    { label: "Getter 'value'", kind: 'getter', complexity: 2 },
-    { label: "Setter 'value'", kind: 'setter', complexity: 2 },
+    { label: "Function 'declaration'", kind: "function", complexity: 6 },
+    { label: "Function 'loops'", kind: "function", complexity: 6 },
+    { label: "Function 'switchAndCatch'", kind: "function", complexity: 4 },
+    { label: "Function 'logicalAssignment'", kind: "function", complexity: 4 },
+    { label: "Function 'optionalChain'", kind: "function", complexity: 4 },
+    { label: "Function 'defaults'", kind: "function", complexity: 3 },
+    { label: "Function 'overTheCut'", kind: "function", complexity: 13 },
+    { label: "Function 'namedExpression'", kind: "function", complexity: 2 },
+    { label: "Arrow function", kind: "arrow", complexity: 2 },
+    {
+      label: "Async function 'asyncDeclaration'",
+      kind: "function",
+      complexity: 2,
+    },
+    {
+      label: "Generator function 'generatorDeclaration'",
+      kind: "function",
+      complexity: 2,
+    },
+    { label: "Async arrow function", kind: "arrow", complexity: 2 },
+    { label: "Function 'outer'", kind: "function", complexity: 2 },
+    { label: "Arrow function", kind: "arrow", complexity: 2 },
+    {
+      label: "Class field initializer",
+      kind: "class-field-initialiser",
+      complexity: 2,
+    },
+    { label: "Class static block", kind: "static-block", complexity: 1 },
+    { label: "Constructor", kind: "constructor", complexity: 2 },
+    { label: "Method 'method'", kind: "method", complexity: 3 },
+    { label: "Static method 'make'", kind: "method", complexity: 2 },
+    { label: "Getter 'value'", kind: "getter", complexity: 2 },
+    { label: "Setter 'value'", kind: "setter", complexity: 2 },
   ],
   /** The roll-up over the list above. Written out rather than derived: two ways of saying it. */
   counts: { functions: 21, mass: 68, massOver10: 13, max: 13 },
@@ -413,19 +435,23 @@ export interface CounterInputs {
 
 /** The `rules` map off a resolved config, without asserting what is in it. */
 function rulesOf(config: unknown): Record<string, unknown> {
-  if (typeof config !== 'object' || config === null) return {};
+  if (typeof config !== "object" || config === null) return {};
   const { rules } = config as { rules?: unknown };
-  return typeof rules === 'object' && rules !== null ? (rules as Record<string, unknown>) : {};
+  return typeof rules === "object" && rules !== null
+    ? (rules as Record<string, unknown>)
+    : {};
 }
 
 export async function counterInputs(): Promise<CounterInputs> {
-  const config = await new ESLint({ cwd: REPO_ROOT }).calculateConfigForFile(INVENTORY.file);
-  const entry = rulesOf(config)['complexity'];
+  const config = await new ESLint({ cwd: REPO_ROOT }).calculateConfigForFile(
+    INVENTORY.file,
+  );
+  const entry = rulesOf(config)["complexity"];
 
   if (entry === undefined) {
     throw new Error(
-      'eslint.config.mjs resolved no `complexity` rule for the inventory fixture. The counter ' +
-        'has no counting rule, and a hash over its absence would mean nothing.',
+      "eslint.config.mjs resolved no `complexity` rule for the inventory fixture. The counter " +
+        "has no counting rule, and a hash over its absence would mean nothing.",
     );
   }
   return {

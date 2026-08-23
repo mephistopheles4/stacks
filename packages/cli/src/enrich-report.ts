@@ -1,4 +1,4 @@
-import type { EnrichOutcome } from '@stacks/core';
+import type { EnrichOutcome } from "@stacks/core";
 
 /**
  * What `stacks enrich` prints, as a value rather than as a side effect.
@@ -34,7 +34,7 @@ export interface EnrichEntry {
 }
 
 /** The totals the closing line names. One book lands in exactly one. */
-export type EnrichBucket = 'filled' | 'missed' | 'unfilled' | 'complete';
+export type EnrichBucket = "filled" | "missed" | "unfilled" | "complete";
 
 export interface EnrichReport {
   /**
@@ -71,38 +71,38 @@ export function reportEntry({ outcome, gaps }: EnrichEntry): {
   bucket: EnrichBucket;
 } {
   switch (outcome.kind) {
-    case 'filled':
+    case "filled":
       return {
-        bucket: 'filled',
+        bucket: "filled",
         line:
           `  + ${outcome.title.slice(0, 52)}\n` +
-          `      ${outcome.fields.join(', ')}  (was missing: ${gaps})`,
+          `      ${outcome.fields.join(", ")}  (was missing: ${gaps})`,
       };
-    case 'not-found':
+    case "not-found":
       return {
-        bucket: 'missed',
+        bucket: "missed",
         line: `  ? ${outcome.title.slice(0, 52)} — no provider knows it`,
       };
-    case 'mismatch':
+    case "mismatch":
       // Refusing is the right answer: metadata for a book that merely resembles
       // this one is worse than leaving the gap.
       return {
-        bucket: 'missed',
+        bucket: "missed",
         line:
           `  ! ${outcome.title.slice(0, 46)}\n` +
           `      refused "${outcome.found.slice(0, 52)}" — not the same book`,
       };
-    case 'unfilled':
+    case "unfilled":
       // Deliberately silent about *who* was asked. One of the two paths to this
       // outcome never asks anybody — see `EnrichOutcome` — so "no provider has
       // it" would be a claim this line cannot make.
       return {
-        bucket: 'unfilled',
+        bucket: "unfilled",
         line: `  = ${outcome.title.slice(0, 52)}\n      nothing to fill: ${gaps}`,
       };
-    case 'complete':
+    case "complete":
       return {
-        bucket: 'complete',
+        bucket: "complete",
         line: `  · ${outcome.title.slice(0, 52)} — nothing was missing`,
       };
   }
@@ -135,9 +135,9 @@ export function enrichReport(entries: readonly EnrichEntry[]): EnrichReport {
  */
 export function enrichSummary(report: EnrichReport, dryRun: boolean): string {
   return [
-    `${dryRun ? 'would fill' : 'filled'} ${report.filled} book(s)`,
+    `${dryRun ? "would fill" : "filled"} ${report.filled} book(s)`,
     ...(report.missed > 0 ? [`${report.missed} left alone`] : []),
     ...(report.unfilled > 0 ? [`${report.unfilled} with nothing to fill`] : []),
     ...(report.complete > 0 ? [`${report.complete} already complete`] : []),
-  ].join(', ');
+  ].join(", ");
 }

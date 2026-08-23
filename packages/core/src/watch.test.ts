@@ -1,26 +1,26 @@
-import { describe, expect, it, vi } from 'vitest';
-import { isRebuildTrigger, watchVault, type Closeable } from './watch.ts';
+import { describe, expect, it, vi } from "vitest";
+import { isRebuildTrigger, watchVault, type Closeable } from "./watch.ts";
 
-describe('isRebuildTrigger', () => {
-  it('fires for notes and cover art', () => {
-    expect(isRebuildTrigger('Library/The Tidal Engine.md')).toBe(true);
-    expect(isRebuildTrigger('Library\\covers\\thing.jpg')).toBe(true);
-    expect(isRebuildTrigger('Library/covers/thing.PNG')).toBe(true);
+describe("isRebuildTrigger", () => {
+  it("fires for notes and cover art", () => {
+    expect(isRebuildTrigger("Library/The Tidal Engine.md")).toBe(true);
+    expect(isRebuildTrigger("Library\\covers\\thing.jpg")).toBe(true);
+    expect(isRebuildTrigger("Library/covers/thing.PNG")).toBe(true);
   });
 
-  it('ignores Obsidian’s own directories', () => {
+  it("ignores Obsidian’s own directories", () => {
     // .obsidian/ changes on every pane resize and plugin tick — watching it
     // would keep the vault permanently "busy" and rebuild forever.
-    expect(isRebuildTrigger('.obsidian/workspace.json')).toBe(false);
-    expect(isRebuildTrigger('.obsidian/plugins/x/data.md')).toBe(false);
-    expect(isRebuildTrigger('.trash/Deleted.md')).toBe(false);
-    expect(isRebuildTrigger('.git/COMMIT_EDITMSG')).toBe(false);
+    expect(isRebuildTrigger(".obsidian/workspace.json")).toBe(false);
+    expect(isRebuildTrigger(".obsidian/plugins/x/data.md")).toBe(false);
+    expect(isRebuildTrigger(".trash/Deleted.md")).toBe(false);
+    expect(isRebuildTrigger(".git/COMMIT_EDITMSG")).toBe(false);
   });
 
-  it('ignores everything that is not a note or a cover', () => {
-    expect(isRebuildTrigger('Scratches/Library Export.json')).toBe(false);
+  it("ignores everything that is not a note or a cover", () => {
+    expect(isRebuildTrigger("Scratches/Library Export.json")).toBe(false);
     expect(isRebuildTrigger(null)).toBe(false);
-    expect(isRebuildTrigger('')).toBe(false);
+    expect(isRebuildTrigger("")).toBe(false);
   });
 });
 
@@ -29,24 +29,30 @@ function fakeWatcher() {
   let emit: ((filename: string | null) => void) | undefined;
   let closed = false;
   return {
-    factory: (_path: string, listener: (filename: string | null) => void): Closeable => {
+    factory: (
+      _path: string,
+      listener: (filename: string | null) => void,
+    ): Closeable => {
       emit = listener;
       return { close: () => (closed = true) };
     },
-    change: (filename = 'Library/A.md') => emit?.(filename),
+    change: (filename = "Library/A.md") => emit?.(filename),
     get closed() {
       return closed;
     },
   };
 }
 
-describe('watchVault', () => {
-  it('collapses a burst of saves into one rebuild', async () => {
+describe("watchVault", () => {
+  it("collapses a burst of saves into one rebuild", async () => {
     vi.useFakeTimers();
     const watcher = fakeWatcher();
     const onChange = vi.fn();
 
-    watchVault('/vault', onChange, { debounceMs: 500, watcher: watcher.factory });
+    watchVault("/vault", onChange, {
+      debounceMs: 500,
+      watcher: watcher.factory,
+    });
 
     // Obsidian autosaves while you type; without debouncing one sentence would
     // rebuild dozens of times.
@@ -61,20 +67,23 @@ describe('watchVault', () => {
     vi.useRealTimers();
   });
 
-  it('does not rebuild for an uninteresting file', async () => {
+  it("does not rebuild for an uninteresting file", async () => {
     vi.useFakeTimers();
     const watcher = fakeWatcher();
     const onChange = vi.fn();
 
-    watchVault('/vault', onChange, { debounceMs: 100, watcher: watcher.factory });
-    watcher.change('.obsidian/workspace.json');
+    watchVault("/vault", onChange, {
+      debounceMs: 100,
+      watcher: watcher.factory,
+    });
+    watcher.change(".obsidian/workspace.json");
     await vi.advanceTimersByTimeAsync(500);
 
     expect(onChange).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 
-  it('never runs two rebuilds at once, and picks up a change that arrived mid-run', async () => {
+  it("never runs two rebuilds at once, and picks up a change that arrived mid-run", async () => {
     vi.useFakeTimers();
     const watcher = fakeWatcher();
 
@@ -87,7 +96,10 @@ describe('watchVault', () => {
       running -= 1;
     });
 
-    watchVault('/vault', onChange, { debounceMs: 100, watcher: watcher.factory });
+    watchVault("/vault", onChange, {
+      debounceMs: 100,
+      watcher: watcher.factory,
+    });
 
     watcher.change();
     await vi.advanceTimersByTimeAsync(100);
@@ -101,9 +113,9 @@ describe('watchVault', () => {
     vi.useRealTimers();
   });
 
-  it('stops watching when closed', () => {
+  it("stops watching when closed", () => {
     const watcher = fakeWatcher();
-    const handle = watchVault('/vault', vi.fn(), { watcher: watcher.factory });
+    const handle = watchVault("/vault", vi.fn(), { watcher: watcher.factory });
     handle.close();
     expect(watcher.closed).toBe(true);
   });

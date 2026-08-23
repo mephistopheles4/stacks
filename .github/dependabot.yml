@@ -10,7 +10,7 @@ updates:
     schedule:
       interval: weekly
     commit-message:
-      prefix: 'ci'
+      prefix: "ci"
 
   - package-ecosystem: npm
     directory: /
@@ -25,11 +25,11 @@ updates:
       # all pass the gates or the group is worth looking at as a whole.
       dev-tooling:
         patterns:
-          - 'typescript'
-          - 'vitest'
-          - 'tsx'
-          - '@types/*'
-          - 'puppeteer-core'
+          - "typescript"
+          - "vitest"
+          - "tsx"
+          - "@types/*"
+          - "puppeteer-core"
         update-types:
           - minor
           - patch
@@ -37,5 +37,5 @@ updates:
       # three.js ships breaking changes in minor releases and the shelf reaches
       # deep into its API. Worth doing deliberately, against a screenshot, which
       # is not what a dependency PR is for.
-      - dependency-name: 'three'
-        update-types: ['version-update:semver-minor']
+      - dependency-name: "three"
+        update-types: ["version-update:semver-minor"]

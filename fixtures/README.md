@@ -5,13 +5,13 @@ mirrors the real layout: notes in `Library/`, covers cached in `Library/covers/`
 so a note's `cover:` value stays relative to the note itself.
 
 **One thing here is not a vault.** [`complexity/`](#the-complexity-inventory) is
-a single TypeScript file that exists to be *counted* rather than read as notes.
+a single TypeScript file that exists to be _counted_ rather than read as notes.
 Everything else on this page is about the vault.
 
 ## Everything here is invented
 
 **No third-party copyrighted material is committed to this repo — ever.** Titles,
-authors, identifiers, cover art and note bodies are all fabricated. The *shapes*
+authors, identifiers, cover art and note bodies are all fabricated. The _shapes_
 were derived from a real personal library (a nine-author edited volume, ASIN-only
 identifiers, colon subtitles, a print edition alongside its audiobook), but none
 of the content came with them.
@@ -24,20 +24,20 @@ vault, which is gitignored.
 
 ## What each file is for
 
-| File | Exercises |
-| --- | --- |
-| `The Tidal Engine.md` | the happy path — every optional key present |
-| `Compilers for the Impatient.md` | hand-set `spine_color` must beat the auto-extracted one |
-| `Signal and Sediment.md` | `abandoned` + `started` with **no `finished`** — year grouping must cope |
-| `Nine Ways of Seeing a Warehouse.md` | 9 authors; no `isbn`, identified by an extra `asin` key |
-| `The Quiet Protocol.md` | minimum viable note — only `type` + `title` + a couple of extras |
-| `Lantern Work.md` | **reordered keys**; no cover; `status: reading` (fallback spine, face-out) |
-| `A Book Kept Back.md` | `private: true` — must never reach a public build. No cover, so adding it moved the book count and nothing else |
-| `The Salt Road Ledger.md` | print edition; started 2025, finished 2026 (crosses a year boundary) |
-| `The Salt Road Ledger (Audiobook).md` | same title+author, different identifier; extra `narrator`/`duration` keys |
-| `The Undelivered Manuscript.md` | **unparseable YAML** → warn naming the file, skip, keep going |
-| `Untitled Import.md` | valid YAML, **no `title`** → a different skip path, also warned |
-| `On Reading Slowly.md` | `type: article` → **ignored silently**, no warning. Not a book ≠ malformed |
+| File                                  | Exercises                                                                                                       |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `The Tidal Engine.md`                 | the happy path — every optional key present                                                                     |
+| `Compilers for the Impatient.md`      | hand-set `spine_color` must beat the auto-extracted one                                                         |
+| `Signal and Sediment.md`              | `abandoned` + `started` with **no `finished`** — year grouping must cope                                        |
+| `Nine Ways of Seeing a Warehouse.md`  | 9 authors; no `isbn`, identified by an extra `asin` key                                                         |
+| `The Quiet Protocol.md`               | minimum viable note — only `type` + `title` + a couple of extras                                                |
+| `Lantern Work.md`                     | **reordered keys**; no cover; `status: reading` (fallback spine, face-out)                                      |
+| `A Book Kept Back.md`                 | `private: true` — must never reach a public build. No cover, so adding it moved the book count and nothing else |
+| `The Salt Road Ledger.md`             | print edition; started 2025, finished 2026 (crosses a year boundary)                                            |
+| `The Salt Road Ledger (Audiobook).md` | same title+author, different identifier; extra `narrator`/`duration` keys                                       |
+| `The Undelivered Manuscript.md`       | **unparseable YAML** → warn naming the file, skip, keep going                                                   |
+| `Untitled Import.md`                  | valid YAML, **no `title`** → a different skip path, also warned                                                 |
+| `On Reading Slowly.md`                | `type: article` → **ignored silently**, no warning. Not a book ≠ malformed                                      |
 
 ### Expected outcome of `stacks build` on this vault
 
@@ -56,7 +56,7 @@ vault, which is gitignored.
   print with an ISBN and once as an audiobook with only an ASIN. No shared
   identifier, so only title+author matching catches the pair.
 
-There is deliberately no note duplicated *verbatim* in the vault. Duplicate
+There is deliberately no note duplicated _verbatim_ in the vault. Duplicate
 detection happens at `add` time, against notes that already exist — so the vault
 itself stays a realistic library rather than containing a book twice.
 
@@ -74,16 +74,16 @@ the dominant colour" and "picked any pixel at all" would give the same answer.
 
 Each cover's **expected** dominant colour, which the Phase 1 extractor must land on:
 
-| Cover | Expected `spine_color` |
-| --- | --- |
-| `the-tidal-engine.png` | `#2f6d7a` |
-| `compilers-for-the-impatient.png` | `#8a3b2e` (overridden to `#1f2933` in the note) |
-| `signal-and-sediment.png` | `#4a6b5a` |
-| `nine-ways-of-seeing-a-warehouse.png` | `#6a5a8c` |
-| `the-salt-road-ledger.png` | `#b08442` |
-| `the-salt-road-ledger-audio.png` | `#3a4a6b` |
-| `white-bordered.png` | `#7a3f5d` — **not** white, despite a 44% white margin |
-| `all-white.png` | `#ffffff` |
+| Cover                                 | Expected `spine_color`                                |
+| ------------------------------------- | ----------------------------------------------------- |
+| `the-tidal-engine.png`                | `#2f6d7a`                                             |
+| `compilers-for-the-impatient.png`     | `#8a3b2e` (overridden to `#1f2933` in the note)       |
+| `signal-and-sediment.png`             | `#4a6b5a`                                             |
+| `nine-ways-of-seeing-a-warehouse.png` | `#6a5a8c`                                             |
+| `the-salt-road-ledger.png`            | `#b08442`                                             |
+| `the-salt-road-ledger-audio.png`      | `#3a4a6b`                                             |
+| `white-bordered.png`                  | `#7a3f5d` — **not** white, despite a 44% white margin |
+| `all-white.png`                       | `#ffffff`                                             |
 
 The last two belong to no book; they exist only for the extractor's tests.
 `white-bordered.png` is a regression fixture: the first real `stacks add`
@@ -106,7 +106,7 @@ NOTE_BODY_CANARY_do_not_ship
 
 Phase 3's gate greps the `--public` build for exactly this string and fails on any
 hit. It is planted in `The Undelivered Manuscript.md` too — the note that gets
-*skipped* — so the gate cannot pass merely because that book was dropped.
+_skipped_ — so the gate cannot pass merely because that book was dropped.
 
 ## The 50-book fixture
 
@@ -136,6 +136,6 @@ more complex. `fixtures/` is in no scope glob and outside `tsconfig.json`, so it
 is **not typechecked**; keep it valid TypeScript by hand. See
 [ADR-0067](../docs/adr/0067-the-counters-inputs-are-pinned-exact.md).
 
-**Adding a construct** means adding it here *and* to `INVENTORY` in
+**Adding a construct** means adding it here _and_ to `INVENTORY` in
 `scripts/lib/complexity.ts`, in the same commit. Sampling defeats the point: the
 un-sampled construct is exactly the silent change the file exists to catch.

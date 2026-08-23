@@ -15,8 +15,14 @@
  * See docs/gates.md, row G14 (commands).
  */
 
-import { describe, expect, it } from 'vitest';
-import { AGENTS_DOC, extractAll, expectFound, markdownSection, readRepoFile } from './repo.ts';
+import { describe, expect, it } from "vitest";
+import {
+  AGENTS_DOC,
+  extractAll,
+  expectFound,
+  markdownSection,
+  readRepoFile,
+} from "./repo.ts";
 
 /** `.command('add')` in the CLI's commander setup. */
 const CLI_COMMAND = /\.command\(\s*'([a-z][a-z-]*)'/;
@@ -35,30 +41,32 @@ const CLI_COMMAND = /\.command\(\s*'([a-z][a-z-]*)'/;
 const NOT_FOR_HUMANS = new Set<string>([]);
 
 function documentedCommandsSection(): string {
-  return markdownSection(readRepoFile(AGENTS_DOC), 'Commands', AGENTS_DOC);
+  return markdownSection(readRepoFile(AGENTS_DOC), "Commands", AGENTS_DOC);
 }
 
 function cliCommands(): string[] {
-  return extractAll(readRepoFile('packages/cli/src/index.ts'), CLI_COMMAND);
+  return extractAll(readRepoFile("packages/cli/src/index.ts"), CLI_COMMAND);
 }
 
 function packageScripts(): string[] {
-  const manifest = JSON.parse(readRepoFile('package.json')) as { scripts?: Record<string, string> };
+  const manifest = JSON.parse(readRepoFile("package.json")) as {
+    scripts?: Record<string, string>;
+  };
   return Object.keys(manifest.scripts ?? {})
     .filter((name) => !NOT_FOR_HUMANS.has(name))
     .sort();
 }
 
-describe('G14 — documented commands', () => {
-  it('extracts a plausible number from each side', () => {
+describe("G14 — documented commands", () => {
+  it("extracts a plausible number from each side", () => {
     // Three regexes, any of which could stop matching after a reformat and
     // turn every check below into a comparison against nothing.
-    expectFound(cliCommands(), 'CLI subcommands', 4);
-    expectFound(packageScripts(), 'package.json scripts', 6);
+    expectFound(cliCommands(), "CLI subcommands", 4);
+    expectFound(packageScripts(), "package.json scripts", 6);
     expect(documentedCommandsSection().length).toBeGreaterThan(200);
   });
 
-  it('documents every CLI subcommand', () => {
+  it("documents every CLI subcommand", () => {
     // Anchored to the start of a line, which is where the CLI block puts a
     // command name. A bare `\bname\b` search over the whole section was the
     // first attempt and it had a false negative immediately: adding a `covers`
@@ -66,45 +74,63 @@ describe('G14 — documented commands', () => {
     // read "covers still missing". A gate that matches prose matches anything.
     const documented = documentedCommandsSection();
     const missing = cliCommands().filter(
-      (name) => !new RegExp(`^${name}\\s{2,}\\S`, 'm').test(documented),
+      (name) => !new RegExp(`^${name}\\s{2,}\\S`, "m").test(documented),
     );
 
     expect(
       missing,
-      `registered by the CLI but absent from AGENTS.md's Commands block: ${missing.join(', ')}`,
+      `registered by the CLI but absent from AGENTS.md's Commands block: ${missing.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('documents every pnpm script', () => {
+  it("documents every pnpm script", () => {
     const documented = documentedCommandsSection();
     const missing = packageScripts().filter(
-      (name) => !documented.includes(`pnpm ${name}`) && !documented.includes(`pnpm run ${name}`),
+      (name) =>
+        !documented.includes(`pnpm ${name}`) &&
+        !documented.includes(`pnpm run ${name}`),
     );
 
     expect(
       missing,
-      `in package.json but absent from AGENTS.md's Commands block: ${missing.join(', ')}`,
+      `in package.json but absent from AGENTS.md's Commands block: ${missing.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('documents nothing that no longer exists', () => {
-    const real = new Set([...cliCommands(), ...packageScripts(), 'install', 'stacks']);
-    const claimed = extractAll(documentedCommandsSection(), /^\s*pnpm ([a-z][a-z0-9:-]*)/m);
+  it("documents nothing that no longer exists", () => {
+    const real = new Set([
+      ...cliCommands(),
+      ...packageScripts(),
+      "install",
+      "stacks",
+    ]);
+    const claimed = extractAll(
+      documentedCommandsSection(),
+      /^\s*pnpm ([a-z][a-z0-9:-]*)/m,
+    );
 
     const ghosts = claimed.filter((name) => !real.has(name));
     expect(
       ghosts,
-      `documented in AGENTS.md but not a real script or command: ${ghosts.join(', ')}`,
+      `documented in AGENTS.md but not a real script or command: ${ghosts.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('keeps the four gate commands documented, by name', () => {
+  it("keeps the four gate commands documented, by name", () => {
     // CONTRIBUTING.md calls these four "the contract". Named individually so
     // that dropping one from the docs cannot be masked by the set comparisons
     // above, which only ever check what still exists against what is written.
     const documented = documentedCommandsSection();
-    for (const command of ['pnpm test', 'pnpm build', 'pnpm gate:public', 'pnpm smoke:render']) {
-      expect(documented, `${command} is the contract and must stay documented`).toContain(command);
+    for (const command of [
+      "pnpm test",
+      "pnpm build",
+      "pnpm gate:public",
+      "pnpm smoke:render",
+    ]) {
+      expect(
+        documented,
+        `${command} is the contract and must stay documented`,
+      ).toContain(command);
     }
   });
 });

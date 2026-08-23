@@ -33,11 +33,11 @@
  * `docs/spec/trend-layer.md` §5.
  */
 
-import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { loadEnv } from '../packages/cli/src/env.ts';
-import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { loadEnv } from "../packages/cli/src/env.ts";
+import { ObsidianAdapter } from "../packages/core/src/adapters/obsidian-adapter.ts";
 import {
   PROPAGATION_ATTEMPTS,
   describeStaleCover,
@@ -45,7 +45,7 @@ import {
   probeCovers,
   stampMeta,
   stampOf,
-} from './lib/edge-probe.ts';
+} from "./lib/edge-probe.ts";
 import {
   WINDOW_RUNS,
   calibration,
@@ -59,8 +59,8 @@ import {
   renderCapLines,
   renderFloorLines,
   runRowsFrom,
-} from './lib/floors.ts';
-import { gitOutput } from './lib/git.ts';
+} from "./lib/floors.ts";
+import { gitOutput } from "./lib/git.ts";
 import {
   GATED_SERIES,
   SPINE_LANDED,
@@ -70,14 +70,14 @@ import {
   runInfoOf,
   scoresOf,
   type ParsedRecord,
-} from './lib/metrics-read.ts';
+} from "./lib/metrics-read.ts";
 import {
   parseRecordName,
   probeRecords,
   readRecord,
   storedRecords,
   type FetchedRecord,
-} from './lib/metrics-record.ts';
+} from "./lib/metrics-record.ts";
 import {
   readDeclarations,
   readReport,
@@ -86,12 +86,15 @@ import {
   type MutationReport,
   type Scope,
   type Tally,
-} from './lib/mutation-score.ts';
-import { inspectPublicBuild, type PublicBuildRule } from './lib/public-build.ts';
-import { numbersFrom } from './lib/pr-window.ts';
-import { REPO_ROOT } from './lib/repo-root.ts';
-import { runShell } from './lib/run.ts';
-import { emptyScopes, sourceFiles } from './lib/scope-check.ts';
+} from "./lib/mutation-score.ts";
+import {
+  inspectPublicBuild,
+  type PublicBuildRule,
+} from "./lib/public-build.ts";
+import { numbersFrom } from "./lib/pr-window.ts";
+import { REPO_ROOT } from "./lib/repo-root.ts";
+import { runShell } from "./lib/run.ts";
+import { emptyScopes, sourceFiles } from "./lib/scope-check.ts";
 import {
   asDate,
   renderPanel,
@@ -99,7 +102,7 @@ import {
   scoredRecords,
   type Disambiguation,
   type PrWindow,
-} from './lib/trend-report.ts';
+} from "./lib/trend-report.ts";
 
 // The same loader the CLI uses, rather than a third hand-rolled `.env` parser:
 // a real environment variable still wins, so `SITE_URL=... pnpm deploy` does
@@ -107,10 +110,10 @@ import {
 // because only the CLI was ever reading the file.
 loadEnv();
 
-const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
+const DIST = join(REPO_ROOT, "packages", "site", "dist");
 
 /** How `dist/` is named in messages, so they read the same on every platform. */
-const DIST_LABEL = 'packages/site/dist';
+const DIST_LABEL = "packages/site/dist";
 
 /**
  * How many records one deploy will read looking for a window, at the most.
@@ -122,7 +125,7 @@ const DIST_LABEL = 'packages/site/dist';
 const WINDOW_RECORD_CAP = 200;
 
 /** Pinned: a deploy tool that silently changes under you is not a deploy tool. */
-const WRANGLER = 'wrangler@4';
+const WRANGLER = "wrangler@4";
 
 // How long to give the edge, how a page names its build, and how a refusal is
 // told apart from a stale answer all live in `./lib/edge-probe.ts` now. Surface
@@ -131,8 +134,7 @@ const WRANGLER = 'wrangler@4';
 // about. It is also the first in-process oracle this check has ever had: from
 // here its only one drives this whole script as a child process.
 
-
-const dryRun = process.argv.includes('--dry-run');
+const dryRun = process.argv.includes("--dry-run");
 
 /**
  * `--check-only`: ask the live site which build it is serving, and stop.
@@ -144,7 +146,7 @@ const dryRun = process.argv.includes('--dry-run');
  * check runnable against a local server, which is the only way to watch it
  * fail on purpose.
  */
-const checkOnly = process.argv.includes('--check-only');
+const checkOnly = process.argv.includes("--check-only");
 
 /**
  * Every refusal in this file, and which flags clear it.
@@ -183,7 +185,11 @@ function fail(message: string): never {
  * command runs at all, and that is the caller's question rather than this
  * function's.
  */
-function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv = {}): void {
+function run(
+  command: string,
+  args: readonly string[],
+  env: NodeJS.ProcessEnv = {},
+): void {
   try {
     runShell(command, args, { env });
   } catch (error) {
@@ -226,23 +232,25 @@ if (!checkOnly && !dryRun) assertPublishableBranch();
  * and nothing else clears the gates it runs before either.
  */
 function assertPublishableBranch(): void {
-  if (process.argv.includes('--any-branch')) {
-    console.log('--any-branch: publishing a branch other than main, deliberately');
+  if (process.argv.includes("--any-branch")) {
+    console.log(
+      "--any-branch: publishing a branch other than main, deliberately",
+    );
     return;
   }
 
   // Not a checkout at all — a tarball, say. Nothing to assert against, and
   // refusing here would block a legitimate deploy for no reason.
-  const branch = gitOutput(['rev-parse', '--abbrev-ref', 'HEAD'], REPO_ROOT);
+  const branch = gitOutput(["rev-parse", "--abbrev-ref", "HEAD"], REPO_ROOT);
   if (branch === undefined) return;
-  if (branch === 'main') return;
+  if (branch === "main") return;
 
   fail(
-    `on branch "${branch === 'HEAD' ? 'a detached HEAD' : branch}", not main.\n` +
-      `  This publishes to ${process.env['SITE_URL'] ?? 'the live site'}, and every worktree\n` +
-      '  shares one .env — so this command looks the same from every checkout you have open.\n\n' +
-      '  Merge first, or say so on purpose:\n' +
-      '      pnpm deploy:site --any-branch',
+    `on branch "${branch === "HEAD" ? "a detached HEAD" : branch}", not main.\n` +
+      `  This publishes to ${process.env["SITE_URL"] ?? "the live site"}, and every worktree\n` +
+      "  shares one .env — so this command looks the same from every checkout you have open.\n\n" +
+      "  Merge first, or say so on purpose:\n" +
+      "      pnpm deploy:site --any-branch",
   );
 }
 
@@ -254,14 +262,14 @@ function assertPublishableBranch(): void {
 // No flag clears either of the two refusals below. Every mode needs this value:
 // a build bakes it into the page, and `--check-only` has nowhere to ask about
 // without it.
-const siteUrl = process.env['SITE_URL'];
+const siteUrl = process.env["SITE_URL"];
 if (siteUrl === undefined || siteUrl.length === 0) {
   fail(
-    'SITE_URL is not set.\n' +
-      '  Cloudflare Pages serves your production branch at https://<project>.pages.dev,\n' +
-      '  so set it to that (or your custom domain) in .env:\n' +
-      '      SITE_URL=https://stacks.pages.dev\n' +
-      '  Without it the link preview shows no image, which is the one thing it is for.',
+    "SITE_URL is not set.\n" +
+      "  Cloudflare Pages serves your production branch at https://<project>.pages.dev,\n" +
+      "  so set it to that (or your custom domain) in .env:\n" +
+      "      SITE_URL=https://stacks.pages.dev\n" +
+      "  Without it the link preview shows no image, which is the one thing it is for.",
   );
 }
 try {
@@ -310,7 +318,13 @@ const RECORD_LOOKBACK = 30;
  * initialization` before any check runs. The functions hoist; their constants
  * do not, which cost this file two stack traces on two separate passes.
  */
-const REPORT_PATH = join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
+const REPORT_PATH = join(
+  REPO_ROOT,
+  "artifacts",
+  "stryker",
+  "current",
+  "mutation.json",
+);
 
 reportTrendRecord();
 
@@ -328,7 +342,10 @@ function trendRecords(store: FetchedRecord): ParsedRecord[] {
   const ordered = store.names
     .map((name) => parseRecordName(name))
     .filter((record) => record !== undefined)
-    .sort((one, other) => other.timestamp - one.timestamp || other.name.localeCompare(one.name));
+    .sort(
+      (one, other) =>
+        other.timestamp - one.timestamp || other.name.localeCompare(one.name),
+    );
 
   const parsed: ParsedRecord[] = [];
   const seen = new Set<string>();
@@ -340,7 +357,8 @@ function trendRecords(store: FetchedRecord): ParsedRecord[] {
 
     const document = parseRecord(bytes);
     parsed.push(document);
-    for (const [series, stamp] of document.trends) if (stamp !== undefined) seen.add(series);
+    for (const [series, stamp] of document.trends)
+      if (stamp !== undefined) seen.add(series);
     if (scoresOf(document).size > 0) scored += 1;
 
     // Two records carrying scores, because panel 1 is a delta and a delta needs
@@ -366,11 +384,21 @@ function prWindow(records: readonly ParsedRecord[]): PrWindow {
   // a window measured between a different pair attributes a movement to pull
   // requests that had nothing to do with it.
   const [latest, previous] = scoredRecords(records);
-  const to = latest === undefined ? undefined : runInfoOf(latest)?.['commit'];
-  const from = previous === undefined ? undefined : runInfoOf(previous)?.['commit'];
-  if (to === undefined || from === undefined || to === 'unknown' || from === 'unknown') return undefined;
+  const to = latest === undefined ? undefined : runInfoOf(latest)?.["commit"];
+  const from =
+    previous === undefined ? undefined : runInfoOf(previous)?.["commit"];
+  if (
+    to === undefined ||
+    from === undefined ||
+    to === "unknown" ||
+    from === "unknown"
+  )
+    return undefined;
 
-  const subjects = gitOutput(['log', '--format=%s', `${from}..${to}`], REPO_ROOT);
+  const subjects = gitOutput(
+    ["log", "--format=%s", `${from}..${to}`],
+    REPO_ROOT,
+  );
   if (subjects === undefined) return undefined;
 
   // ⚠️ **Through `numbersFrom`, and no longer through a regex of its own.** The
@@ -379,7 +407,7 @@ function prWindow(records: readonly ParsedRecord[]): PrWindow {
   // request* would let the print and the page disagree about one commit range.
   // The shared one is also stricter: it anchors the suffix, so `(#99)` mentioned
   // mid-subject is a reference rather than a merge.
-  return numbersFrom(subjects.split('\n'));
+  return numbersFrom(subjects.split("\n"));
 }
 
 /**
@@ -404,26 +432,38 @@ function prWindow(records: readonly ParsedRecord[]): PrWindow {
  * this repo's oldest rule about instruments, broken.
  */
 type MutationRun =
-  | { kind: 'none' }
-  | { kind: 'unreadable'; why: string }
-  | { kind: 'read'; report: MutationReport; scopes: Scope[] };
+  | { kind: "none" }
+  | { kind: "unreadable"; why: string }
+  | { kind: "read"; report: MutationReport; scopes: Scope[] };
 
 function lastMutationRun(): MutationRun {
-  if (!existsSync(REPORT_PATH)) return { kind: 'none' };
+  if (!existsSync(REPORT_PATH)) return { kind: "none" };
 
   try {
-    return { kind: 'read', report: readReport(REPORT_PATH), scopes: readDeclarations().scopes };
+    return {
+      kind: "read",
+      report: readReport(REPORT_PATH),
+      scopes: readDeclarations().scopes,
+    };
   } catch (error) {
-    return { kind: 'unreadable', why: error instanceof Error ? error.message : String(error) };
+    return {
+      kind: "unreadable",
+      why: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
 /** Each scope's per-mutant resolution, from the last run **on this machine**. */
-function scopeResolution(run: MutationRun): { resolution?: Map<string, Tally>; note?: string } {
-  if (run.kind === 'none') {
-    return { note: 'no per-mutant resolution — `pnpm mutation:run` writes one, and the record carries only the score' };
+function scopeResolution(run: MutationRun): {
+  resolution?: Map<string, Tally>;
+  note?: string;
+} {
+  if (run.kind === "none") {
+    return {
+      note: "no per-mutant resolution — `pnpm mutation:run` writes one, and the record carries only the score",
+    };
   }
-  if (run.kind === 'unreadable') {
+  if (run.kind === "unreadable") {
     return {
       note: `per-mutant resolution unreadable — ${run.why}\n    The report is there and cannot be parsed; \`pnpm mutation:run\` writes a fresh one.`,
     };
@@ -448,17 +488,20 @@ function scopeResolution(run: MutationRun): { resolution?: Map<string, Tally>; n
  */
 function disambiguate(store: FetchedRecord | undefined): Disambiguation {
   const branch = probeRecords();
-  if (branch === undefined) return { kind: 'unreachable' };
+  if (branch === undefined) return { kind: "unreachable" };
 
   const held = new Set(store?.names ?? []);
   const newer = branch.names.filter((name) => !held.has(name));
-  if (newer.length > 0) return { kind: 'newer', newer: newer.length };
+  if (newer.length > 0) return { kind: "newer", newer: newer.length };
 
   const newest = branch.names
     .map((name) => parseRecordName(name))
     .filter((record) => record !== undefined)
     .sort((one, other) => other.timestamp - one.timestamp)[0];
-  return { kind: 'same', branchNewest: newest === undefined ? undefined : asDate(newest.timestamp) };
+  return {
+    kind: "same",
+    branchNewest: newest === undefined ? undefined : asDate(newest.timestamp),
+  };
 }
 
 /**
@@ -485,7 +528,9 @@ function reportTrendRecord(): void {
     // The dated bootstrap's whole visible half. Printed rather than silent: a
     // deploy that said nothing during the exemption would make the first sign
     // of this machinery a refusal three days later.
-    console.log(`\ntrend record — no record yet (spine landed ${SPINE_LANDED})`);
+    console.log(
+      `\ntrend record — no record yet (spine landed ${SPINE_LANDED})`,
+    );
   } else {
     const { resolution, note } = scopeResolution(lastMutationRun());
     for (const line of renderPanel({
@@ -500,17 +545,22 @@ function reportTrendRecord(): void {
     }
   }
 
-  if (verdict.kind === 'fresh') return;
+  if (verdict.kind === "fresh") return;
 
-  if (verdict.kind === 'bootstrap') {
+  if (verdict.kind === "bootstrap") {
     console.log(
       `  day ${String(verdict.days)} of the dated bootstrap; this refuses from day ${String(STALE_AFTER_DAYS)}.\n` +
-        '  `pnpm trend:sync` imports whatever the nightly has written since.',
+        "  `pnpm trend:sync` imports whatever the nightly has written since.",
     );
     return;
   }
 
-  const message = renderRefusal(verdict, now, disambiguate(store), records.length);
+  const message = renderRefusal(
+    verdict,
+    now,
+    disambiguate(store),
+    records.length,
+  );
   if (checkOnly) {
     console.warn(`\n! ${message}`);
     return;
@@ -524,8 +574,9 @@ function reportTrendRecord(): void {
 // a comment convention. A `--check-only` run on a machine with no vault
 // configured refuses here, and the refusal is about the environment rather than
 // about the site it was asked to inspect.
-const vault = process.env['STACKS_VAULT'];
-if (vault === undefined || vault.length === 0) fail('STACKS_VAULT is not set (see .env.example)');
+const vault = process.env["STACKS_VAULT"];
+if (vault === undefined || vault.length === 0)
+  fail("STACKS_VAULT is not set (see .env.example)");
 if (!existsSync(vault)) fail(`STACKS_VAULT points at nothing: ${vault}`);
 
 // ── 0c. G38's deploy half: a declared scope that scored nothing ─────────────
@@ -582,21 +633,21 @@ reportFloors();
 function assertNoEmptyScopes(): void {
   const run = lastMutationRun();
 
-  if (run.kind === 'none') {
+  if (run.kind === "none") {
     console.log(
-      '\n  no mutation report on this machine — the zero-mutant residual is unchecked.\n' +
-        '  `pnpm mutation:run` writes one; every structural half of this rule ran in `pnpm test`.',
+      "\n  no mutation report on this machine — the zero-mutant residual is unchecked.\n" +
+        "  `pnpm mutation:run` writes one; every structural half of this rule ran in `pnpm test`.",
     );
     return;
   }
-  if (run.kind === 'unreadable') {
+  if (run.kind === "unreadable") {
     // A print and not a refusal, on this step's own rule — *no report is a
     // print, never a silence* — and for the same reason the absent case is one:
     // an unreadable report is a fact about this machine's last run, not about
     // the scopes. It says so rather than reading as *checked and clean*.
     console.log(
       `\n  the mutation report on this machine cannot be read — ${run.why}\n` +
-        '  The zero-mutant residual is unchecked. `pnpm mutation:run` writes a fresh report.',
+        "  The zero-mutant residual is unchecked. `pnpm mutation:run` writes a fresh report.",
     );
     return;
   }
@@ -604,26 +655,28 @@ function assertNoEmptyScopes(): void {
   const empty = emptyScopes(run.report, run.scopes, sourceFiles());
   if (empty.length === 0) return;
 
-  const listed = empty.join(', ');
+  const listed = empty.join(", ");
   const why =
-    'A declared scope whose files exist and whose mutants do not is a broken declaration: ' +
-    'it measures nothing, so the code it names can go away without any number moving.\n' +
-    '    - Fix the declaration in stryker.scopes.json — point the glob at the new path, or\n' +
-    '      narrow the exclusion that widened over the last file in it.\n' +
-    '    - Deleting the scope is a legitimate fix AND the cheapest way to stop measuring an\n' +
-    '      inconvenient one. It takes the visible diff and the floors-file notes entry that\n' +
-    '      every other lowering carries.\n' +
-    '    - If the report simply predates a legitimate change: `pnpm mutation:run`.';
+    "A declared scope whose files exist and whose mutants do not is a broken declaration: " +
+    "it measures nothing, so the code it names can go away without any number moving.\n" +
+    "    - Fix the declaration in stryker.scopes.json — point the glob at the new path, or\n" +
+    "      narrow the exclusion that widened over the last file in it.\n" +
+    "    - Deleting the scope is a legitimate fix AND the cheapest way to stop measuring an\n" +
+    "      inconvenient one. It takes the visible diff and the floors-file notes entry that\n" +
+    "      every other lowering carries.\n" +
+    "    - If the report simply predates a legitimate change: `pnpm mutation:run`.";
 
   if (checkOnly) {
-    console.warn(`\n! declared scope(s) with no mutants in the last run: ${listed}\n  ${why}`);
+    console.warn(
+      `\n! declared scope(s) with no mutants in the last run: ${listed}\n  ${why}`,
+    );
     return;
   }
 
   fail(
     `declared scope(s) produced no mutants in the last run: ${listed}\n\n  ${why}\n\n` +
-      '  No flag clears this, and --dry-run runs it. --check-only reports instead of\n' +
-      '  refusing, and publishes nothing.',
+      "  No flag clears this, and --dry-run runs it. --check-only reports instead of\n" +
+      "  refusing, and publishes nothing.",
   );
 }
 
@@ -691,12 +744,12 @@ function reportFloors(): void {
     mutants: mutants.get(scope),
   }));
 
-  console.log('');
+  console.log("");
   // ⚠️ **Stateless, on purpose.** This said "every scope is unarmed", which is
   // true today and goes false the moment somebody arms one — a decaying claim
   // printed above a table that states the real answer per scope anyway.
   console.log(
-    'mutation floors — one line per declared scope; arming is a human judgement, per scope, after its own window fills',
+    "mutation floors — one line per declared scope; arming is a human judgement, per scope, after its own window fills",
   );
   const lines = renderFloorLines({
     floors,
@@ -707,8 +760,10 @@ function reportFloors(): void {
   for (const line of lines) console.log(`  ${line}`);
 
   if (newest === undefined) {
-    console.log('');
-    console.log('  no run in the record on this machine — `pnpm trend:sync` imports what CI wrote.');
+    console.log("");
+    console.log(
+      "  no run in the record on this machine — `pnpm trend:sync` imports what CI wrote.",
+    );
   }
 
   // The newest run that *counted*, which is a different row from the newest
@@ -731,9 +786,9 @@ function reportFloors(): void {
     }),
   );
 
-  console.log('');
+  console.log("");
   console.log(
-    'complexity caps — one line per capped series per scope; a cap only falls, and raising one costs a notes entry',
+    "complexity caps — one line per capped series per scope; a cap only falls, and raising one costs a notes entry",
   );
   const capLines = renderCapLines({
     floors,
@@ -750,7 +805,13 @@ function reportFloors(): void {
     // absence is its own bootstrap case rather than evidence about the other.
     ...(newest === undefined
       ? {}
-      : { run: { ...(newest.configHash === undefined ? {} : { configHash: newest.configHash }) } }),
+      : {
+          run: {
+            ...(newest.configHash === undefined
+              ? {}
+              : { configHash: newest.configHash }),
+          },
+        }),
     ...(newestCount === undefined
       ? {}
       : {
@@ -791,7 +852,10 @@ function windowRecords(store: FetchedRecord | undefined): ParsedRecord[] {
   const ordered = store.names
     .map((name) => parseRecordName(name))
     .filter((record) => record !== undefined)
-    .sort((one, other) => other.timestamp - one.timestamp || other.name.localeCompare(one.name));
+    .sort(
+      (one, other) =>
+        other.timestamp - one.timestamp || other.name.localeCompare(one.name),
+    );
 
   const parsed: ParsedRecord[] = [];
   let nightlies = 0;
@@ -836,13 +900,14 @@ function mutantsPerScope(run: MutationRun): Map<string, number> {
   // naming; collapsing them makes a corrupt report read as checked-and-clean.
   // Both non-`read` states degrade the line rather than refusing, on section
   // 0b's rule that no report is a print and never a silence.
-  if (run.kind !== 'read') return counts;
+  if (run.kind !== "read") return counts;
 
   const declarations = { scopes: run.scopes };
   const scored = scoreRun(run.report, declarations.scopes);
   for (const scope of declarations.scopes) {
     const tally = scored.perScope.get(scope.name);
-    if (tally !== undefined && total(tally) > 0) counts.set(scope.name, total(tally));
+    if (tally !== undefined && total(tally) > 0)
+      counts.set(scope.name, total(tally));
   }
   return counts;
 }
@@ -857,11 +922,11 @@ function mutantsPerScope(run: MutationRun): Map<string, number> {
  */
 function localToday(): string {
   const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  return `${String(now.getFullYear())}-${month}-${String(now.getDate()).padStart(2, '0')}`;
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${String(now.getFullYear())}-${month}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-const project = process.env['CF_PAGES_PROJECT'] ?? 'stacks';
+const project = process.env["CF_PAGES_PROJECT"] ?? "stacks";
 
 console.log(`deploying ${vault}`);
 console.log(`        → ${siteUrl}  (Cloudflare Pages project "${project}")`);
@@ -880,12 +945,12 @@ console.log(`        → ${siteUrl}  (Cloudflare Pages project "${project}")`);
 // today is inert — the gates run — which is the safe direction for a flag that
 // still sits in somebody's shell history.
 if (checkOnly) {
-  console.log('--check-only: not building, not uploading');
+  console.log("--check-only: not building, not uploading");
 } else {
-  run('pnpm', ['test']);
-  run('pnpm', ['run', 'typecheck']);
-  run('pnpm', ['gate:public']);
-  run('pnpm', ['smoke:render']);
+  run("pnpm", ["test"]);
+  run("pnpm", ["run", "typecheck"]);
+  run("pnpm", ["gate:public"]);
+  run("pnpm", ["smoke:render"]);
 }
 
 // ── 2. The real build. Last, so it overwrites whatever the gates staged ─────
@@ -894,16 +959,18 @@ if (checkOnly) {
 // nothing; `--dry-run` builds, because a dry run that skipped the build would
 // have no artifact to pre-flight.
 if (!checkOnly) {
-  run('pnpm', [
-    'stacks',
-    'build',
-    '--public',
-    '--vault',
+  run("pnpm", [
+    "stacks",
+    "build",
+    "--public",
+    "--vault",
     `"${vault}"`,
-    '--assets',
-    'packages/site/public',
+    "--assets",
+    "packages/site/public",
   ]);
-  run('pnpm', ['--filter', '@stacks/site', 'run', 'build'], { SITE_URL: siteUrl });
+  run("pnpm", ["--filter", "@stacks/site", "run", "build"], {
+    SITE_URL: siteUrl,
+  });
 }
 
 // ── 3. Pre-flight on the artifact that is actually about to be published ────
@@ -924,18 +991,23 @@ interface ShippedBook {
 // No flag clears this one either, and `--check-only` is the mode most likely to
 // hit it: it builds nothing, so the folder it reads is whatever was last built
 // here — possibly nothing at all.
-const libraryPath = join(DIST, 'library.json');
+const libraryPath = join(DIST, "library.json");
 if (!existsSync(libraryPath)) fail(`no library.json in ${DIST}`);
 
-const library = JSON.parse(readFileSync(libraryPath, 'utf8')) as { books: ShippedBook[] };
-const html = existsSync(join(DIST, 'index.html'))
-  ? readFileSync(join(DIST, 'index.html'), 'utf8')
-  : '';
+const library = JSON.parse(readFileSync(libraryPath, "utf8")) as {
+  books: ShippedBook[];
+};
+const html = existsSync(join(DIST, "index.html"))
+  ? readFileSync(join(DIST, "index.html"), "utf8")
+  : "";
 
 const report = inspectPublicBuild(DIST, { origin: siteUrl });
 for (const observation of report.observations) console.log(`  ${observation}`);
 
-const problems: { rule: PublicBuildRule | 'stale-fixtures'; message: string }[] = [...report.problems];
+const problems: {
+  rule: PublicBuildRule | "stale-fixtures";
+  message: string;
+}[] = [...report.problems];
 
 // The one check that stays here, because it is not about publishability at all.
 //
@@ -958,7 +1030,9 @@ if (!checkOnly) {
   // Said first, because the fixture vault contains two deliberately broken
   // notes and the adapter warns about them by name. Unannounced, in the middle
   // of a deploy, those read as something wrong with the vault being published.
-  console.log('\n  reading fixture titles — any skip warnings below are the fixtures’ own, by design');
+  console.log(
+    "\n  reading fixture titles — any skip warnings below are the fixtures’ own, by design",
+  );
   const titles = await fixtureTitles();
   // An empty list would satisfy the filter below however the build went, which
   // is the same vacuous pass this check was just rewritten to close. Louder
@@ -969,9 +1043,9 @@ if (!checkOnly) {
   // guarded on it — and no flag skips a gate any more.
   if (titles.length === 0) {
     fail(
-      'no fixture notes found to check the build against. This check exists to catch the ' +
-        'gates’ staged data surviving into a deploy, and with nothing to compare it would ' +
-        'pass over any build at all.',
+      "no fixture notes found to check the build against. This check exists to catch the " +
+        "gates’ staged data surviving into a deploy, and with nothing to compare it would " +
+        "pass over any build at all.",
     );
   }
 
@@ -979,9 +1053,8 @@ if (!checkOnly) {
   const staged = titles.filter((title) => shipped.has(title));
   if (staged.length > 0) {
     problems.push({
-      rule: 'stale-fixtures',
-      message:
-        `fixture books are in the build — the real vault build did not run last: ${staged.slice(0, 3).join(', ')}`,
+      rule: "stale-fixtures",
+      message: `fixture books are in the build — the real vault build did not run last: ${staged.slice(0, 3).join(", ")}`,
     });
   }
 }
@@ -995,7 +1068,7 @@ if (!checkOnly) {
  * weaker check, not a broken deploy.
  */
 async function fixtureTitles(): Promise<string[]> {
-  const vaultPath = join(REPO_ROOT, 'fixtures', 'vault');
+  const vaultPath = join(REPO_ROOT, "fixtures", "vault");
   if (!existsSync(vaultPath)) return [];
   const books = await new ObsidianAdapter(vaultPath).listBooks();
   return books.map((book) => book.title);
@@ -1015,11 +1088,13 @@ async function fixtureTitles(): Promise<string[]> {
  * problems carry a rule.
  */
 const applicable = checkOnly
-  ? problems.filter((problem) => problem.rule !== 'share-image-origin')
+  ? problems.filter((problem) => problem.rule !== "share-image-origin")
   : problems;
 
 if (applicable.length > 0) {
-  const listed = applicable.map((problem) => `[${problem.rule}] ${problem.message}`).join('\n- ');
+  const listed = applicable
+    .map((problem) => `[${problem.rule}] ${problem.message}`)
+    .join("\n- ");
   if (checkOnly) {
     // Careful about what this claims. `--check-only` builds nothing, so this is
     // the `dist/` sitting on *this* machine — which may be whatever `gate:public`
@@ -1040,10 +1115,10 @@ if (applicable.length > 0) {
     // nothing.
     fail(
       `pre-flight found ${String(applicable.length)} problem(s):\n- ${listed}\n\n` +
-        '  No flag clears this, and --dry-run runs it. --check-only reports instead\n' +
-        '  of refusing, but it builds nothing and uploads nothing, and it drops\n' +
-        '  share-image-origin.\n' +
-        '  Nothing is uploaded until this passes.',
+        "  No flag clears this, and --dry-run runs it. --check-only reports instead\n" +
+        "  of refusing, but it builds nothing and uploads nothing, and it drops\n" +
+        "  share-image-origin.\n" +
+        "  Nothing is uploaded until this passes.",
     );
   }
 }
@@ -1087,22 +1162,22 @@ function stampOfLastDeploy(): string {
   const found = stampOf(html);
   if (found === undefined) {
     fail(
-      'dist/index.html carries no build stamp, so there is nothing to compare.\n' +
-        '  It was built before stamping existed, or by something other than a deploy.\n' +
-        '  Run `pnpm deploy:site` and the check will have an answer.',
+      "dist/index.html carries no build stamp, so there is nothing to compare.\n" +
+        "  It was built before stamping existed, or by something other than a deploy.\n" +
+        "  Run `pnpm deploy:site` and the check will have an answer.",
     );
   }
   return found;
 }
 
 function stampAndWrite(): string {
-  const name = createHash('sha256')
-    .update(readFileSync(join(DIST, 'index.html')))
+  const name = createHash("sha256")
+    .update(readFileSync(join(DIST, "index.html")))
     .update(readFileSync(libraryPath))
-    .digest('hex')
+    .digest("hex")
     .slice(0, 12);
 
-  const marked = html.replace('<head>', `<head>${stampMeta(name)}`);
+  const marked = html.replace("<head>", `<head>${stampMeta(name)}`);
 
   // A stamp that failed to land would make the check below fail forever, on
   // every deploy, for a reason nobody would guess — so the injection is asserted
@@ -1113,9 +1188,11 @@ function stampAndWrite(): string {
   // other branch above; `--dry-run` reaches this and stamps the folder it leaves
   // behind, which is what makes a later `--check-only` able to answer at all.
   if (stampOf(marked) !== name) {
-    fail('could not stamp index.html — no `<head>` to inject into, so the live check would be blind');
+    fail(
+      "could not stamp index.html — no `<head>` to inject into, so the live check would be blind",
+    );
   }
-  writeFileSync(join(DIST, 'index.html'), marked);
+  writeFileSync(join(DIST, "index.html"), marked);
   return name;
 }
 
@@ -1123,18 +1200,20 @@ console.log(
   checkOnly
     ? `\nlast deployed build ${stamp}`
     : `\npre-flight OK — ${String(library.books.length)} book(s), every key named, og:image absolute, no orphans` +
-      `\nbuild ${stamp}`,
+        `\nbuild ${stamp}`,
 );
 
 // ── 4. Upload ───────────────────────────────────────────────────────────────
 if (checkOnly) {
-  await verifyLive(siteUrl.replace(/\/$/, ''));
+  await verifyLive(siteUrl.replace(/\/$/, ""));
   process.exit(0);
 }
 
 if (dryRun) {
   console.log(`\n--dry-run: not uploading. ${DIST} is ready.`);
-  console.log(`to publish: pnpm dlx ${WRANGLER} pages deploy packages/site/dist --project-name ${project}`);
+  console.log(
+    `to publish: pnpm dlx ${WRANGLER} pages deploy packages/site/dist --project-name ${project}`,
+  );
   process.exit(0);
 }
 
@@ -1142,16 +1221,16 @@ if (dryRun) {
 // stops the run here. `--dry-run` and `--check-only` clear it by returning
 // above; nothing clears it on a path that publishes, which is the only kind of
 // path that reaches this line.
-run('pnpm', [
-  'dlx',
+run("pnpm", [
+  "dlx",
   WRANGLER,
-  'pages',
-  'deploy',
-  'packages/site/dist',
-  '--project-name',
+  "pages",
+  "deploy",
+  "packages/site/dist",
+  "--project-name",
   project,
-  '--branch',
-  'main',
+  "--branch",
+  "main",
 ]);
 
 console.log(`\ndeployed → ${siteUrl}`);
@@ -1172,7 +1251,7 @@ console.log(`\ndeployed → ${siteUrl}`);
 // this check nothing to read, and it says so rather than guessing. A check that
 // cannot tell "stale" from "refused" is worse than no check, because it spends
 // the owner's trust on a diagnosis it did not make.
-await verifyLive(siteUrl.replace(/\/$/, ''));
+await verifyLive(siteUrl.replace(/\/$/, ""));
 
 /**
  * Which build the origin is actually serving.
@@ -1186,32 +1265,36 @@ await verifyLive(siteUrl.replace(/\/$/, ''));
 async function verifyBuildLive(origin: string): Promise<void> {
   const answer = await probeBuild(origin, stamp, {
     onRetry: (message, attempt, attempts) =>
-      console.log(`  waiting for the edge (${String(attempt)}/${String(attempts - 1)}) — ${message}`),
+      console.log(
+        `  waiting for the edge (${String(attempt)}/${String(attempts - 1)}) — ${message}`,
+      ),
   });
 
-  if (answer.kind === 'current') {
+  if (answer.kind === "current") {
     console.log(`serving build ${stamp}`);
     return;
   }
 
-  if (answer.kind === 'unreachable') {
-    console.warn(`\n! could not reach ${origin} to ask which build it is serving`);
+  if (answer.kind === "unreachable") {
+    console.warn(
+      `\n! could not reach ${origin} to ask which build it is serving`,
+    );
     return;
   }
 
-  if (answer.kind === 'refused') {
+  if (answer.kind === "refused") {
     reportUnreadable(origin, answer.status);
     return;
   }
 
   console.warn(
-    `\n! ${origin} is serving ${answer.serving === undefined ? 'a build with no stamp' : `build ${answer.serving}`}, not ${stamp}\n` +
-      '  The upload was fine. Either the edge has not caught up, or a cache is\n' +
-      '  holding the previous index.html — which points at the previous bundle, so\n' +
-      '  visitors get the old shelf however new the assets beside it are.\n' +
-      '    - Wait a minute and re-run `pnpm deploy:site --check-only`, which asks\n' +
-      '      again without rebuilding or re-uploading anything.\n' +
-      '    - If it persists: dash.cloudflare.com → your zone → Caching → Configuration →\n' +
+    `\n! ${origin} is serving ${answer.serving === undefined ? "a build with no stamp" : `build ${answer.serving}`}, not ${stamp}\n` +
+      "  The upload was fine. Either the edge has not caught up, or a cache is\n" +
+      "  holding the previous index.html — which points at the previous bundle, so\n" +
+      "  visitors get the old shelf however new the assets beside it are.\n" +
+      "    - Wait a minute and re-run `pnpm deploy:site --check-only`, which asks\n" +
+      "      again without rebuilding or re-uploading anything.\n" +
+      "    - If it persists: dash.cloudflare.com → your zone → Caching → Configuration →\n" +
       '      Purge Everything, and set Browser Cache TTL to "Respect Existing Headers".',
   );
 }
@@ -1239,19 +1322,19 @@ function reportUnreadable(origin: string, status: number): void {
   console.warn(
     `\n! could not read ${origin} — HTTP ${String(status)}, ` +
       `${String(PROPAGATION_ATTEMPTS)} attempts\n` +
-      '  The upload was fine. This is not a cache: the origin refused to serve\n' +
-      '  this check at all, so it never saw a page to read a build stamp out of.\n' +
+      "  The upload was fine. This is not a cache: the origin refused to serve\n" +
+      "  this check at all, so it never saw a page to read a build stamp out of.\n" +
       `  So nothing has confirmed what ${origin} is serving to visitors.\n` +
-      '  Bot protection is the usual cause, but this only knows a status code —\n' +
-      '  so name it rather than assume it:\n' +
+      "  Bot protection is the usual cause, but this only knows a status code —\n" +
+      "  so name it rather than assume it:\n" +
       `    - Check by hand: open ${origin}, view source, and look for\n` +
       `      <meta name="stacks:build" content="${stamp}">. If that is right,\n` +
-      '      the deploy is fine and only this check is blind.\n' +
-      '    - Name the cause: dash.cloudflare.com → your zone → Security → Events.\n' +
-      '      Each row says which service mitigated the request, which beats\n' +
-      '      guessing from out here. Fix it there, at the zone.\n' +
-      '  Sending a browser user agent does NOT fix this and has been tried: the\n' +
-      '  refusal is decided on the client fingerprint. See ADR-0027.',
+      "      the deploy is fine and only this check is blind.\n" +
+      "    - Name the cause: dash.cloudflare.com → your zone → Security → Events.\n" +
+      "      Each row says which service mitigated the request, which beats\n" +
+      "      guessing from out here. Fix it there, at the zone.\n" +
+      "  Sending a browser user agent does NOT fix this and has been tried: the\n" +
+      "  refusal is decided on the client fingerprint. See ADR-0027.",
   );
 }
 
@@ -1278,15 +1361,15 @@ async function verifyLive(origin: string): Promise<void> {
 
   const answer = await probeCovers(origin, built);
 
-  if (answer.kind === 'unreachable') {
+  if (answer.kind === "unreachable") {
     console.warn(`\n! could not reach ${origin} to check what is being served`);
     return;
   }
 
-  if (answer.kind === 'refused') {
+  if (answer.kind === "refused") {
     console.warn(
       `\n! ${origin} refused the cover check — HTTP ${String(answer.status)}\n` +
-        '  Not a cache. See the note above: nothing here can read this origin.',
+        "  Not a cache. See the note above: nothing here can read this origin.",
     );
     return;
   }
@@ -1300,9 +1383,9 @@ async function verifyLive(origin: string): Promise<void> {
         answer.uncomparable
           .slice(0, 5)
           .map((cover) => `    ${cover}`)
-          .join('\n') +
-        '\n  Not a cache. A path this build does not have answers 200 with no length\n' +
-        '  header, so check that these covers reached the upload at all.',
+          .join("\n") +
+        "\n  Not a cache. A path this build does not have answers 200 with no length\n" +
+        "  header, so check that these covers reached the upload at all.",
     );
   }
 
@@ -1319,14 +1402,14 @@ async function verifyLive(origin: string): Promise<void> {
       answer.stale
         .slice(0, 5)
         .map((one) => `    ${describeStaleCover(one)}`)
-        .join('\n') +
-      '\n  The upload was fine — this is caching, and cover filenames do not change\n' +
-      '  between builds, so a cached copy has the right name and the wrong bytes.\n' +
-      '    - Pages usually purges its edge within a minute or two of a deploy. Re-run\n' +
-      '      this check before doing anything else.\n' +
-      '    - If it persists: dash.cloudflare.com → your zone → Caching → Configuration →\n' +
+        .join("\n") +
+      "\n  The upload was fine — this is caching, and cover filenames do not change\n" +
+      "  between builds, so a cached copy has the right name and the wrong bytes.\n" +
+      "    - Pages usually purges its edge within a minute or two of a deploy. Re-run\n" +
+      "      this check before doing anything else.\n" +
+      "    - If it persists: dash.cloudflare.com → your zone → Caching → Configuration →\n" +
       '      Purge Everything, and set Browser Cache TTL to "Respect Existing Headers".\n' +
-      '      A zone overrides the Cache-Control this build sends, and its default is 4\n' +
-      '      hours, which is why `_headers` alone does not settle it on a custom domain.',
+      "      A zone overrides the Cache-Control this build sends, and its default is 4\n" +
+      "      hours, which is why `_headers` alone does not settle it on a custom domain.",
   );
 }

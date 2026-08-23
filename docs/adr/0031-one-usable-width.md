@@ -18,11 +18,11 @@ left them, because reconciling them changes where books sit and that PR's claim
 was that nothing moved. Settling it found two more, and the two it found are the
 larger ones.
 
-| where | what it treated as usable | what it charged a book |
-| --- | --- | --- |
-| `toRows`, via `scene.ts` | `width - padding * 2 - LEAN_ALLOWANCE` = 3.23 | `footprint + 0.008` |
-| the placement cursor | `width` = 3.4, flush from `-width / 2` | `+ 0.002` shelved, `+ 0.016` face-out |
-| `leanThatFits` | `width` = 3.4, full | — |
+| where                    | what it treated as usable                     | what it charged a book                |
+| ------------------------ | --------------------------------------------- | ------------------------------------- |
+| `toRows`, via `scene.ts` | `width - padding * 2 - LEAN_ALLOWANCE` = 3.23 | `footprint + 0.008`                   |
+| the placement cursor     | `width` = 3.4, flush from `-width / 2`        | `+ 0.002` shelved, `+ 0.016` face-out |
+| `leanThatFits`           | `width` = 3.4, full                           | —                                     |
 
 The per-book charge is the one nobody had noticed, and it dwarfed the argument.
 Across a twenty-seven book row the packer over-reserved 0.006 a book — **0.162**,
@@ -74,7 +74,7 @@ had quietly stopped meeting. That is a visible change and the reason this could
 not ride along with ADR-0029.
 
 **`toRows(books)` no longer takes a capacity**, for ADR-0029's reason. The cost
-was foreseen there — "row wrap has to be provoked by *feeding more books*" — and
+was foreseen there — "row wrap has to be provoked by _feeding more books_" — and
 it arrived: `books.test.ts` had six call sites handing it a shelf of 0.5 or 10,
 none of which exist, and each had to be re-expressed against the real one. The
 fourth copy of the capacity formula went with it. It was in
@@ -85,7 +85,7 @@ be watching.
 **`SHELF.padding` is now `SHELF.endReserve`**, at one end rather than two. Its
 docstring said "breathing room at each end" and the flush cursor had been
 contradicting it for as long as both existed. It also inherits `LEAN_ALLOWANCE`'s
-real job: clearance is charged to the *left* of the book that leans, so the last
+real job: clearance is charged to the _left_ of the book that leans, so the last
 book of a row has nothing on its right to charge and its own swing is paid for by
 the reserve and by nothing else. G25 holds it at or above
 `swayOf(MAX_HEIGHT, MAX_LEAN)` for that reason, and it is the assertion to read
@@ -96,7 +96,7 @@ before tuning that number.
 **G16 is still the backstop, and it did not move.** `pnpm smoke:render` reports
 `case overflow 0.0012` after this, exactly as before — which is `SKIN`, the hair
 by which a printed cover floats above its board, and not slop. Everything in G25
-asserts what the placements *claim*. Only the render confirms the scene agrees,
+asserts what the placements _claim_. Only the render confirms the scene agrees,
 and it exists because the arithmetic was once wrong in a way that re-checking the
 arithmetic could not catch: the cursor advances by a book's thickness, and a book
 rotated about its centre is wider than that.
@@ -107,7 +107,7 @@ and the book's lean is not — which puts the leaning corner on the wood. A book
 that leans left and starts a finger's width clear of the side is leaning on
 nothing, and that is the tell that made the whole row look wrong.
 
-It is worth writing down that this is *not* the identity it looks like. The swept
+It is worth writing down that this is _not_ the identity it looks like. The swept
 left extent does not equal `-W/2`; it sits `(t/2)(1 - cos θ)` inside it, about
 1e-4, because half the book's thickness foreshortens under the lean. The
 footprint edge is the exact claim, and it is what G25 asserts.

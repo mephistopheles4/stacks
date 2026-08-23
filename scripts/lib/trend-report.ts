@@ -31,13 +31,13 @@ import {
   scoresOf,
   type ParsedRecord,
   type RecordVerdict,
-} from './metrics-read.ts';
-import type { TrendName } from './metrics.ts';
-import { detected, total, type Tally } from './mutation-score.ts';
+} from "./metrics-read.ts";
+import type { TrendName } from "./metrics.ts";
+import { detected, total, type Tally } from "./mutation-score.ts";
 
 /** Where a person goes to see whether the nightly is still running. */
 export const METRICS_ACTIONS_URL =
-  'https://github.com/mephistopheles4/stacks/actions/workflows/metrics.yml';
+  "https://github.com/mephistopheles4/stacks/actions/workflows/metrics.yml";
 
 /** `1755600000` → `2026-08-19`, which is how a stale date is worth reading. */
 export function asDate(timestamp: number): string {
@@ -75,7 +75,7 @@ function percent(score: number): string {
 /** `+0.15`, `-0.02`, in points of score rather than in fractions. */
 function delta(now: number, before: number): string {
   const points = (now - before) * 100;
-  return `${points >= 0 ? '+' : '-'}${Math.abs(points).toFixed(2)}`;
+  return `${points >= 0 ? "+" : "-"}${Math.abs(points).toFixed(2)}`;
 }
 
 function resolutionOf(tally: Tally): string {
@@ -87,11 +87,11 @@ function resolutionOf(tally: Tally): string {
   ];
   if (tally.ignored > 0) parts.push(`ignored ${String(tally.ignored)}`);
   if (tally.errors > 0) parts.push(`errors ${String(tally.errors)}`);
-  return `${parts.join(', ')} — ${String(detected(tally))}/${String(total(tally))}`;
+  return `${parts.join(", ")} — ${String(detected(tally))}/${String(total(tally))}`;
 }
 
 function pad(text: string, width: number): string {
-  return text.length >= width ? text : text + ' '.repeat(width - text.length);
+  return text.length >= width ? text : text + " ".repeat(width - text.length);
 }
 
 /**
@@ -106,7 +106,9 @@ function pad(text: string, width: number): string {
  * runs would attribute a movement to pull requests that had nothing to do with
  * it.
  */
-export function scoredRecords(records: readonly ParsedRecord[]): ParsedRecord[] {
+export function scoredRecords(
+  records: readonly ParsedRecord[],
+): ParsedRecord[] {
   return records.filter((record) => scoresOf(record).size > 0);
 }
 
@@ -125,10 +127,10 @@ export function scoredRecords(records: readonly ParsedRecord[]): ParsedRecord[] 
  * measurement was designed to avoid.
  */
 export const COMPLEXITY_COUNTS = [
-  ['complexity-functions', 'functions'],
-  ['complexity-mass', 'mass'],
-  ['complexity-mass-over-10', 'mass over 10'],
-  ['complexity-max', 'max'],
+  ["complexity-functions", "functions"],
+  ["complexity-mass", "mass"],
+  ["complexity-mass-over-10", "mass over 10"],
+  ["complexity-max", "max"],
 ] as const satisfies readonly (readonly [TrendName, string])[];
 
 /**
@@ -144,7 +146,7 @@ const [[COMPLEXITY_ANCHOR]] = COMPLEXITY_COUNTS;
 /** `+3`, `-10`, `+0` — whole branches, always signed, never a percentage. */
 function countDelta(now: number, before: number): string {
   const moved = now - before;
-  return `${moved >= 0 ? '+' : '-'}${String(Math.abs(moved))}`;
+  return `${moved >= 0 ? "+" : "-"}${String(Math.abs(moved))}`;
 }
 
 /**
@@ -167,8 +169,8 @@ function movedLabel(
   was: number | undefined,
   format: (was: number) => string,
 ): string {
-  if (previous === undefined) return 'first run';
-  return was === undefined ? 'new scope' : `(${format(was)})`;
+  if (previous === undefined) return "first run";
+  return was === undefined ? "new scope" : `(${format(was)})`;
 }
 
 /**
@@ -199,28 +201,40 @@ function movedLabel(
  * score never appears without its run*, one level down: a count does not
  * either.
  */
-export function renderComplexity(records: readonly ParsedRecord[], now: number): string[] {
+export function renderComplexity(
+  records: readonly ParsedRecord[],
+  now: number,
+): string[] {
   const { latest, previous } = deltaPair(records, COMPLEXITY_ANCHOR);
   if (latest === undefined) {
-    return ['  complexity  no record read carries the four counts — absent is not zero'];
+    return [
+      "  complexity  no record read carries the four counts — absent is not zero",
+    ];
   }
 
   const half = halfOf(latest);
-  const named = half ?? 'comparable';
+  const named = half ?? "comparable";
   const info = runInfoOf(latest);
-  const age = latest.timestamp === undefined ? '' : `  ${describeAge(now - latest.timestamp)} ago`;
+  const age =
+    latest.timestamp === undefined
+      ? ""
+      : `  ${describeAge(now - latest.timestamp)} ago`;
   const lines = [
     `  complexity — four counts per scope, ${
       previous === undefined
         ? `no earlier ${named} record carries them, so nothing below is a movement`
         : `against the previous ${named} record`
     }`,
-    `    counted  ${(info?.['commit'] ?? 'unknown').slice(0, 12)}  ${named}${age}`,
+    `    counted  ${(info?.["commit"] ?? "unknown").slice(0, 12)}  ${named}${age}`,
   ];
 
-  const current = COMPLEXITY_COUNTS.map(([series]) => samplesOf(latest, series));
+  const current = COMPLEXITY_COUNTS.map(([series]) =>
+    samplesOf(latest, series),
+  );
   const earlier = COMPLEXITY_COUNTS.map(([series]) =>
-    previous === undefined ? new Map<string, number>() : samplesOf(previous, series),
+    previous === undefined
+      ? new Map<string, number>()
+      : samplesOf(previous, series),
   );
 
   // Scope order is the anchor family's, so the four lines of a scope stay
@@ -228,10 +242,14 @@ export function renderComplexity(records: readonly ParsedRecord[], now: number):
   // them — both read off `stryker.scopes.json` in the emitter.
   const scopes = [...(current[0]?.keys() ?? [])];
   const scopeWidth = Math.max(0, ...scopes.map((scope) => scope.length));
-  const labelWidth = Math.max(...COMPLEXITY_COUNTS.map(([, label]) => label.length));
+  const labelWidth = Math.max(
+    ...COMPLEXITY_COUNTS.map(([, label]) => label.length),
+  );
   const valueWidth = Math.max(
     0,
-    ...current.flatMap((samples) => [...samples.values()].map((value) => String(value).length)),
+    ...current.flatMap((samples) =>
+      [...samples.values()].map((value) => String(value).length),
+    ),
   );
 
   for (const scope of scopes) {
@@ -239,7 +257,9 @@ export function renderComplexity(records: readonly ParsedRecord[], now: number):
       const value = current[index]?.get(scope);
       if (value === undefined) return;
       const was = earlier[index]?.get(scope);
-      const moved = movedLabel(previous, was, (before) => countDelta(value, before));
+      const moved = movedLabel(previous, was, (before) =>
+        countDelta(value, before),
+      );
       lines.push(
         `    ${pad(scope, scopeWidth)}  ${pad(label, labelWidth)}  ${String(value).padStart(valueWidth)}  ${moved}`.trimEnd(),
       );
@@ -260,13 +280,15 @@ export function renderPanel(input: PanelInput): string[] {
   if (newest === undefined) return [];
 
   const age =
-    newest.timestamp === undefined ? 'unknown' : `${describeAge(input.now - newest.timestamp)} ago`;
+    newest.timestamp === undefined
+      ? "unknown"
+      : `${describeAge(input.now - newest.timestamp)} ago`;
   const lines = [
     `\ntrend record — ${String(input.held)} record(s) in the local store, newest ${age}`,
   ];
 
   const [latest, previous] = scoredRecords(input.records);
-  lines.push('  is this real');
+  lines.push("  is this real");
 
   if (latest === undefined) {
     lines.push(
@@ -275,9 +297,11 @@ export function renderPanel(input: PanelInput): string[] {
   } else {
     const info = runInfoOf(latest);
     const scoredAge =
-      latest.timestamp === undefined ? '' : `  ${describeAge(input.now - latest.timestamp)} ago`;
+      latest.timestamp === undefined
+        ? ""
+        : `  ${describeAge(input.now - latest.timestamp)} ago`;
     lines.push(
-      `    run      ${(info?.['commit'] ?? 'unknown').slice(0, 12)}  ${info?.['event'] ?? 'unknown'}${scoredAge}  ${info?.['run_url'] ?? ''}`.trimEnd(),
+      `    run      ${(info?.["commit"] ?? "unknown").slice(0, 12)}  ${info?.["event"] ?? "unknown"}${scoredAge}  ${info?.["run_url"] ?? ""}`.trimEnd(),
     );
     // ⚠️ **Printed when the run was *not* healthy, and when it did not say —
     // so silence here means `run_ok 1` and nothing else.** The panel keeps
@@ -298,8 +322,8 @@ export function renderPanel(input: PanelInput): string[] {
       lines.push(
         `    health   ${
           health === undefined
-            ? 'no run_ok sample — this record does not say whether its run completed'
-            : 'run_ok 0 — the run did not compute every series it declared; its scores are real, and something else it set out to measure is missing'
+            ? "no run_ok sample — this record does not say whether its run completed"
+            : "run_ok 0 — the run did not compute every series it declared; its scores are real, and something else it set out to measure is missing"
         }`,
       );
     }
@@ -307,20 +331,26 @@ export function renderPanel(input: PanelInput): string[] {
     lines.push(
       `    window   ${
         input.window === undefined
-          ? 'unknown — the commits these records name are not in this checkout'
+          ? "unknown — the commits these records name are not in this checkout"
           : input.window.length === 0
-            ? '[] — no pull request merged since the previous scored run, so any movement below is the tool disagreeing with itself'
-            : input.window.join(', ')
+            ? "[] — no pull request merged since the previous scored run, so any movement below is the tool disagreeing with itself"
+            : input.window.join(", ")
       }`,
     );
   }
 
-  const scores = latest === undefined ? new Map<string, number>() : scoresOf(latest);
-  const before = previous === undefined ? new Map<string, number>() : scoresOf(previous);
+  const scores =
+    latest === undefined ? new Map<string, number>() : scoresOf(latest);
+  const before =
+    previous === undefined ? new Map<string, number>() : scoresOf(previous);
 
-  lines.push('  is this bad — each scope against its own history, never against a target');
+  lines.push(
+    "  is this bad — each scope against its own history, never against a target",
+  );
   if (scores.size === 0) {
-    lines.push('    nothing to read — no run in the records read carries a per-scope score');
+    lines.push(
+      "    nothing to read — no run in the records read carries a per-scope score",
+    );
   }
 
   const width = Math.max(0, ...[...scores.keys()].map((scope) => scope.length));
@@ -330,11 +360,12 @@ export function renderPanel(input: PanelInput): string[] {
     const tally = input.resolution?.get(scope);
     lines.push(
       `    ${pad(scope, width)}  ${percent(score).padStart(7)}  ${pad(moved, 12)}${
-        tally === undefined ? '' : resolutionOf(tally)
+        tally === undefined ? "" : resolutionOf(tally)
       }`.trimEnd(),
     );
   }
-  if (input.resolutionNote !== undefined) lines.push(`    ${input.resolutionNote}`);
+  if (input.resolutionNote !== undefined)
+    lines.push(`    ${input.resolutionNote}`);
 
   // ⚠️ **Directly under the score, and the order is the page's order.** A
   // scope whose mass is rising while its mutation score holds or falls is
@@ -362,7 +393,7 @@ export function renderPanel(input: PanelInput): string[] {
   // `scripts/lib/floors.ts` reads `stryker.floors.json` and prints the state.
   // One authority, pointed at rather than summarised.
   lines.push(
-    '  floors     stryker.floors.json — the mutation floors block reads it, and arming one is a human judgement per scope after its window fills',
+    "  floors     stryker.floors.json — the mutation floors block reads it, and arming one is a human judgement per scope after its window fills",
   );
   return lines;
 }
@@ -378,11 +409,11 @@ export function renderPanel(input: PanelInput): string[] {
  */
 export type Disambiguation =
   /** The branch holds records the store does not — you have not synced. */
-  | { kind: 'newer'; newer: number }
+  | { kind: "newer"; newer: number }
   /** The branch is no fresher, so the nightly has stopped writing. */
-  | { kind: 'same'; branchNewest?: string }
+  | { kind: "same"; branchNewest?: string }
   /** Nothing answered, so which of the two this is stays open. */
-  | { kind: 'unreachable' };
+  | { kind: "unreachable" };
 
 /**
  * The refusal, including the half that took one request to know.
@@ -408,19 +439,22 @@ export function renderRefusal(
   // no space, in the message a refusal is read from. `renderPanel` measures its
   // own column from its own data too, one function up; the `+ 2` here is the
   // gap, where that one carries its separator in the format string.
-  const names = verdict.kind === 'stale' ? verdict.stale.map((one) => one.series.length) : [];
+  const names =
+    verdict.kind === "stale"
+      ? verdict.stale.map((one) => one.series.length)
+      : [];
   const column = Math.max(22, ...names) + 2;
 
   const head =
-    verdict.kind === 'never'
+    verdict.kind === "never"
       ? `no metrics record has arrived, ${String(verdict.days)} days after the trend spine landed.\n` +
-        '  The bootstrap exemption is dated and it has expired. Three missed nightlies is a\n' +
-        '  dead pipe rather than a bootstrap, which is why this expires on a day rather than\n' +
+        "  The bootstrap exemption is dated and it has expired. Three missed nightlies is a\n" +
+        "  dead pipe rather than a bootstrap, which is why this expires on a day rather than\n" +
         '  on "until the first record arrives".'
-      : verdict.kind === 'stale'
-        ? `the trend record is stale: ${verdict.stale.map((one) => one.series).join(', ')}\n\n` +
-          '  Per-series, because one series going quiet while the others stay healthy is the\n' +
-          '  failure this record exists to expose — an aggregate check cannot see it.\n' +
+      : verdict.kind === "stale"
+        ? `the trend record is stale: ${verdict.stale.map((one) => one.series).join(", ")}\n\n` +
+          "  Per-series, because one series going quiet while the others stay healthy is the\n" +
+          "  failure this record exists to expose — an aggregate check cannot see it.\n" +
           verdict.stale
             .map(
               (one) =>
@@ -430,30 +464,32 @@ export function renderRefusal(
                     : `newest sample ${describeAge(now - one.newest)} ago (${asDate(one.newest)})`
                 }`,
             )
-            .join('\n')
-        : 'the trend record cannot be read';
+            .join("\n")
+        : "the trend record cannot be read";
 
   const route =
-    probe.kind === 'newer'
+    probe.kind === "newer"
       ? `\n\n  The branch holds ${String(probe.newer)} record(s) this machine has not imported, so this\n` +
-        '  is a store that is behind rather than a pipe that has stopped:\n' +
-        '      pnpm trend:sync'
-      : probe.kind === 'same'
+        "  is a store that is behind rather than a pipe that has stopped:\n" +
+        "      pnpm trend:sync"
+      : probe.kind === "same"
         ? `\n\n  The branch is no fresher${
-            probe.branchNewest === undefined ? '' : `, newest row ${probe.branchNewest}`
+            probe.branchNewest === undefined
+              ? ""
+              : `, newest row ${probe.branchNewest}`
           } — syncing would import nothing. The nightly has\n` +
-          '  stopped writing, and GitHub disables a scheduled workflow after 60 days of\n' +
-          '  repository inactivity:\n' +
+          "  stopped writing, and GitHub disables a scheduled workflow after 60 days of\n" +
+          "  repository inactivity:\n" +
           `      ${METRICS_ACTIONS_URL}`
-        : '\n\n  The branch could not be reached, so which of the two this is stays open:\n' +
-          '  either this machine is behind (`pnpm trend:sync`) or the nightly has stopped\n' +
+        : "\n\n  The branch could not be reached, so which of the two this is stays open:\n" +
+          "  either this machine is behind (`pnpm trend:sync`) or the nightly has stopped\n" +
           `      ${METRICS_ACTIONS_URL}`;
 
   return (
     `${head}${route}\n\n` +
-    '  No flag clears this. --dry-run runs this check and is the honest way to watch it\n' +
-    '  fail. --check-only reports instead of refusing: it uploads nothing, and a mode\n' +
-    '  that exists to ask a live origin what it is serving must not be blocked by the\n' +
-    '  age of a local record.'
+    "  No flag clears this. --dry-run runs this check and is the honest way to watch it\n" +
+    "  fail. --check-only reports instead of refusing: it uploads nothing, and a mode\n" +
+    "  that exists to ask a live origin what it is serving must not be blocked by the\n" +
+    "  age of a local record."
   );
 }

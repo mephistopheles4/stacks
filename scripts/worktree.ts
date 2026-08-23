@@ -47,11 +47,11 @@
  * does — but that safety is three separate coincidences, and the Astro dev
  * server's file watcher and your editor's indexer share none of them.
  */
-import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { mainCheckout } from '../packages/cli/src/env.ts';
-import { gitOutput, gitStatus } from './lib/git.ts';
-import { runExe, runShell } from './lib/run.ts';
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { mainCheckout } from "../packages/cli/src/env.ts";
+import { gitOutput, gitStatus } from "./lib/git.ts";
+import { runExe, runShell } from "./lib/run.ts";
 
 /**
  * What may appear in a branch name here.
@@ -81,7 +81,7 @@ function fail(message: string): never {
  */
 function git(args: readonly string[], cwd: string): void {
   try {
-    runExe('git', args, cwd);
+    runExe("git", args, cwd);
   } catch (error) {
     fail(`\n${error instanceof Error ? error.message : String(error)}`);
   }
@@ -96,7 +96,12 @@ function git(args: readonly string[], cwd: string): void {
  * eight lines apart.
  */
 function branchExists(name: string, cwd: string): boolean {
-  return gitOutput(['rev-parse', '--verify', '--quiet', `refs/heads/${name}`], cwd) !== undefined;
+  return (
+    gitOutput(
+      ["rev-parse", "--verify", "--quiet", `refs/heads/${name}`],
+      cwd,
+    ) !== undefined
+  );
 }
 
 /**
@@ -117,25 +122,44 @@ function branchExists(name: string, cwd: string): boolean {
  * never fetched.
  */
 function fetchOrigin(cwd: string): boolean {
-  const hasOrigin = gitOutput(['remote'], cwd)?.split('\n').includes('origin') === true;
+  const hasOrigin =
+    gitOutput(["remote"], cwd)?.split("\n").includes("origin") === true;
   if (!hasOrigin) return false;
 
-  if (gitStatus(['fetch', 'origin', '--quiet'], cwd) !== 0) {
-    console.warn('\n! could not reach origin — working from the last fetch, which may be old\n');
+  if (gitStatus(["fetch", "origin", "--quiet"], cwd) !== 0) {
+    console.warn(
+      "\n! could not reach origin — working from the last fetch, which may be old\n",
+    );
   }
   return true;
 }
 
 /** Whether `origin` has a branch of this name, as of the last fetch. */
 function onOrigin(name: string, cwd: string): boolean {
-  return gitOutput(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${name}`], cwd) !== undefined;
+  return (
+    gitOutput(
+      ["rev-parse", "--verify", "--quiet", `refs/remotes/origin/${name}`],
+      cwd,
+    ) !== undefined
+  );
 }
 
 /** How a local branch stands against its counterpart on origin. */
-function divergence(name: string, cwd: string): { behind: number; ahead: number } | undefined {
-  const counts = gitOutput(['rev-list', '--left-right', '--count', `origin/${name}...${name}`], cwd);
-  const [behind, ahead] = (counts ?? '').split(/\s+/).map(Number);
-  if (behind === undefined || ahead === undefined || Number.isNaN(behind) || Number.isNaN(ahead)) {
+function divergence(
+  name: string,
+  cwd: string,
+): { behind: number; ahead: number } | undefined {
+  const counts = gitOutput(
+    ["rev-list", "--left-right", "--count", `origin/${name}...${name}`],
+    cwd,
+  );
+  const [behind, ahead] = (counts ?? "").split(/\s+/).map(Number);
+  if (
+    behind === undefined ||
+    ahead === undefined ||
+    Number.isNaN(behind) ||
+    Number.isNaN(ahead)
+  ) {
     return undefined;
   }
   return { behind, ahead };
@@ -157,7 +181,9 @@ function divergence(name: string, cwd: string): { behind: number; ahead: number 
  * to do on the way.
  */
 function fastForward(name: string, cwd: string): boolean {
-  return gitStatus(['fetch', 'origin', `${name}:${name}`, '--quiet'], cwd) === 0;
+  return (
+    gitStatus(["fetch", "origin", `${name}:${name}`, "--quiet"], cwd) === 0
+  );
 }
 
 /**
@@ -166,43 +192,53 @@ function fastForward(name: string, cwd: string): boolean {
  * Falls back to the local `main` when there is no remote at all — a clone with
  * no origin is a legitimate way to work on this.
  */
-function resolveBase(cwd: string, hasOrigin: boolean): { ref: string; describe: string } {
-  const ref = hasOrigin && gitOutput(['rev-parse', '--verify', '--quiet', 'origin/main'], cwd)
-    ? 'origin/main'
-    : 'main';
+function resolveBase(
+  cwd: string,
+  hasOrigin: boolean,
+): { ref: string; describe: string } {
+  const ref =
+    hasOrigin &&
+    gitOutput(["rev-parse", "--verify", "--quiet", "origin/main"], cwd)
+      ? "origin/main"
+      : "main";
 
-  const describe = gitOutput(['log', '-1', '--format=%h %s', ref], cwd) ?? '(unknown)';
-  const behind = gitOutput(['rev-list', '--count', `main..${ref}`], cwd);
+  const describe =
+    gitOutput(["log", "-1", "--format=%h %s", ref], cwd) ?? "(unknown)";
+  const behind = gitOutput(["rev-list", "--count", `main..${ref}`], cwd);
 
   return {
     ref,
     describe:
-      behind !== undefined && behind !== '0'
+      behind !== undefined && behind !== "0"
         ? `${ref}  ${describe}\n          (your local main is ${behind} behind this)`
         : `${ref}  ${describe}`,
   };
 }
 
 const branch = process.argv[2];
-if (branch === undefined || branch.startsWith('-')) {
-  console.error('usage: pnpm worktree <branch>\n');
-  console.error('Existing worktrees:');
-  gitStatus(['worktree', 'list'], process.cwd());
-  console.error('\nRemove one with: git worktree remove <path>');
+if (branch === undefined || branch.startsWith("-")) {
+  console.error("usage: pnpm worktree <branch>\n");
+  console.error("Existing worktrees:");
+  gitStatus(["worktree", "list"], process.cwd());
+  console.error("\nRemove one with: git worktree remove <path>");
   process.exit(1);
 }
 
 if (!BRANCH.test(branch)) {
-  fail(`"${branch}" is not a branch name this script will use.\n` + `Allowed: ${String(BRANCH)}`);
+  fail(
+    `"${branch}" is not a branch name this script will use.\n` +
+      `Allowed: ${String(BRANCH)}`,
+  );
 }
 
 const main = mainCheckout();
-if (main === undefined) fail('Not a git checkout — nothing to add a worktree to.');
+if (main === undefined)
+  fail("Not a git checkout — nothing to add a worktree to.");
 
 // Beside the main checkout, and named after it, so a directory listing shows
 // which project a stray worktree belongs to. Slashes in `feat/shadows` would
 // otherwise ask for a nested directory nobody meant to create.
-const target = join(dirname(main), `stacks-${branch.replace(/\//g, '-')}`);
+const target = join(dirname(main), `stacks-${branch.replace(/\//g, "-")}`);
 if (existsSync(target)) fail(`${target} already exists.`);
 
 console.log(`worktree  ${target}`);
@@ -238,7 +274,9 @@ if (existing) {
   } else if (moved.behind === 0 && moved.ahead === 0) {
     console.log(`base      up to date with origin/${branch}`);
   } else if (moved.ahead === 0) {
-    console.log(`base      ${String(moved.behind)} behind origin/${branch} — fast-forwarding`);
+    console.log(
+      `base      ${String(moved.behind)} behind origin/${branch} — fast-forwarding`,
+    );
     if (!fastForward(branch, main)) {
       console.warn(
         `          could not fast-forward — it is probably checked out in another worktree.\n` +
@@ -246,7 +284,9 @@ if (existing) {
       );
     }
   } else if (moved.behind === 0) {
-    console.log(`base      ${String(moved.ahead)} ahead of origin/${branch} — left alone`);
+    console.log(
+      `base      ${String(moved.ahead)} ahead of origin/${branch} — left alone`,
+    );
   } else {
     console.log(
       `base      diverged from origin/${branch}: ${String(moved.ahead)} ahead, ` +
@@ -256,8 +296,10 @@ if (existing) {
 
   // Printed after any fast-forward, so it names the commit you will actually
   // be standing on rather than the one you would have been.
-  console.log(`          ${gitOutput(['log', '-1', '--format=%h %s', branch], main) ?? '(unknown)'}`);
-  addArgs = ['worktree', 'add', target, branch];
+  console.log(
+    `          ${gitOutput(["log", "-1", "--format=%h %s", branch], main) ?? "(unknown)"}`,
+  );
+  addArgs = ["worktree", "add", target, branch];
 } else if (alreadyPushed) {
   // ── Origin has this branch and we do not ─────────────────────────────────
   //
@@ -273,9 +315,17 @@ if (existing) {
   console.log(`branch    ${branch} (new here, tracking origin/${branch})`);
   console.log(
     `base      origin/${branch}  ` +
-      `${gitOutput(['log', '-1', '--format=%h %s', `origin/${branch}`], main) ?? '(unknown)'}`,
+      `${gitOutput(["log", "-1", "--format=%h %s", `origin/${branch}`], main) ?? "(unknown)"}`,
   );
-  addArgs = ['worktree', 'add', '--track', target, '-b', branch, `origin/${branch}`];
+  addArgs = [
+    "worktree",
+    "add",
+    "--track",
+    target,
+    "-b",
+    branch,
+    `origin/${branch}`,
+  ];
 } else {
   // ── Genuinely new ────────────────────────────────────────────────────────
   //
@@ -293,19 +343,19 @@ if (existing) {
   // the default push policy, but a confusing refusal is a poor substitute for
   // not pointing it there. First push sets its own:
   // `git push -u origin <branch>`.
-  addArgs = ['worktree', 'add', '--no-track', target, '-b', branch, base.ref];
+  addArgs = ["worktree", "add", "--no-track", target, "-b", branch, base.ref];
 }
 
-console.log('');
+console.log("");
 git(addArgs, main);
 
-console.log('\nInstalling dependencies…');
+console.log("\nInstalling dependencies…");
 // `runShell` because pnpm is a `.cmd` shim and needs one. Nothing variable goes
 // on this command line; the path it runs in travels as `cwd`, not as an
 // argument — which is the whole reason this may take a shell where `git` above
 // may not.
 try {
-  runShell('pnpm', ['install'], { cwd: target });
+  runShell("pnpm", ["install"], { cwd: target });
 } catch (error) {
   fail(`\n${error instanceof Error ? error.message : String(error)}`);
 }
@@ -314,11 +364,15 @@ try {
 // second ago — so the one it will read is always the main checkout's. Said out
 // loud because it is shared: editing it here changes every worktree at once,
 // which is the point, and a surprise if you assumed a copy.
-const env = join(main, '.env');
+const env = join(main, ".env");
 console.log(
-  `\n.env      ${existsSync(env) ? `${env} (shared)` : 'NOT FOUND — vault commands will fail until one exists'}`,
+  `\n.env      ${existsSync(env) ? `${env} (shared)` : "NOT FOUND — vault commands will fail until one exists"}`,
 );
 
 console.log(`\nReady:\n  cd ${target}\n  pnpm test`);
-console.log('\nPorts: `pnpm dev` picks the next free one from 4321. `pnpm dev:watch`');
-console.log('takes PORT from .env, which is shared — set it per shell to run two.');
+console.log(
+  "\nPorts: `pnpm dev` picks the next free one from 4321. `pnpm dev:watch`",
+);
+console.log(
+  "takes PORT from .env, which is shared — set it per shell to run two.",
+);

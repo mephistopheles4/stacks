@@ -1,4 +1,4 @@
-# The contributor set *is* the set of id keys, and they are ids rather than URLs
+# The contributor set _is_ the set of id keys, and they are ids rather than URLs
 
 A book's note records four optional scalars — `google_volume_id`,
 `apple_track_id`, `openlibrary_olid`, `oreilly_ourn` — and **which of them are
@@ -8,13 +8,13 @@ present is the record of which providers matched the book**. There is no
 ## A contributor is a provider whose record was confirmed to be this book
 
 An **identity** claim, not a data-flow one, and that is the point. The
-alternative — *a provider whose data reached the note* — means "supplied the
+alternative — _a provider whose data reached the note_ — means "supplied the
 cover" today and "supplied fields" after the merge revision, so the same key
 would mean two different things either side of it and every note written before
 would need re-reading.
 
 Under this definition Apple was **already** a contributor and always had been:
-`findCover` ran `isProbablySameBook`, established the record *is* this book, and
+`findCover` ran `isProbablySameBook`, established the record _is_ this book, and
 then discarded everything but one artwork URL. The fact was never missing.
 
 ## Four scalars, and that is forced rather than preferred

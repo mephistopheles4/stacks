@@ -1,6 +1,6 @@
 name: Defect
 description: Something behaves differently from what is documented or expected.
-title: '<what broke, in one line>'
+title: "<what broke, in one line>"
 # No `labels:` here on purpose. The five labels in docs/agents/triage-labels.md
 # now exist, so this is no longer about a form silently applying nothing — it is
 # that `needs-triage` on every new issue carries no information, because it

@@ -54,10 +54,10 @@ export function stampMeta(name: string): string {
 }
 
 export type EdgeAnswer =
-  | { kind: 'current'; serving: string }
-  | { kind: 'stale'; serving: string | undefined }
-  | { kind: 'refused'; status: number }
-  | { kind: 'unreachable' };
+  | { kind: "current"; serving: string }
+  | { kind: "stale"; serving: string | undefined }
+  | { kind: "refused"; status: number }
+  | { kind: "unreachable" };
 
 export interface ProbeOptions {
   attempts?: number;
@@ -106,15 +106,16 @@ export async function probeBuild(
       // `no-store` so this measures the origin and not whatever this machine
       // fetched a minute ago. It says nothing about a visitor's cache, and
       // cannot: that is what the `_headers` revalidation is for.
-      response = await fetch(`${origin}/`, { cache: 'no-store' });
+      response = await fetch(`${origin}/`, { cache: "no-store" });
     } catch {
-      return { kind: 'unreachable' };
+      return { kind: "unreachable" };
     }
 
     // Read the status before reading the body: a challenge page parses like
     // any other page and carries no stamp.
     if (!response.ok) {
-      if (attempt === attempts) return { kind: 'refused', status: response.status };
+      if (attempt === attempts)
+        return { kind: "refused", status: response.status };
 
       options.onRetry?.(
         `origin answered HTTP ${String(response.status)}`,
@@ -126,19 +127,19 @@ export async function probeBuild(
     }
 
     serving = stampOf(await response.text());
-    if (serving === expected) return { kind: 'current', serving };
+    if (serving === expected) return { kind: "current", serving };
 
-    if (attempt === attempts) return { kind: 'stale', serving };
+    if (attempt === attempts) return { kind: "stale", serving };
 
     options.onRetry?.(
-      `serving ${serving ?? 'an unstamped build'}, want ${expected}`,
+      `serving ${serving ?? "an unstamped build"}, want ${expected}`,
       attempt,
       attempts,
     );
     await sleep(waitMs);
   }
 
-  return { kind: 'stale', serving };
+  return { kind: "stale", serving };
 }
 
 export interface StaleCover {
@@ -161,7 +162,7 @@ export function describeStaleCover(one: StaleCover): string {
 
 export type CoverAnswer =
   | {
-      kind: 'checked';
+      kind: "checked";
       checked: number;
       stale: StaleCover[];
       /**
@@ -170,8 +171,8 @@ export type CoverAnswer =
        */
       uncomparable: string[];
     }
-  | { kind: 'refused'; status: number }
-  | { kind: 'unreachable' };
+  | { kind: "refused"; status: number }
+  | { kind: "unreachable" };
 
 /**
  * Whether the origin's covers are this build's covers, by size.
@@ -206,7 +207,7 @@ export async function probeCovers(
   const checks = await Promise.all(
     [...built].map(async ([cover, size]) => {
       try {
-        const response = await fetch(`${origin}/${cover}`, { method: 'HEAD' });
+        const response = await fetch(`${origin}/${cover}`, { method: "HEAD" });
         // Same trap as the build probe: a challenge page has a content-length
         // like anything else, and comparing it against the cover's size reports
         // a byte mismatch — which reads as a stale cache and sends you to purge
@@ -215,7 +216,7 @@ export async function probeCovers(
           refused = response.status;
           return undefined;
         }
-        const length = response.headers.get('content-length');
+        const length = response.headers.get("content-length");
         if (length === null) return cover;
 
         const served = Number(length);
@@ -227,13 +228,17 @@ export async function probeCovers(
     }),
   );
 
-  if (unreachable) return { kind: 'unreachable' };
-  if (refused !== undefined) return { kind: 'refused', status: refused };
+  if (unreachable) return { kind: "unreachable" };
+  if (refused !== undefined) return { kind: "refused", status: refused };
 
   return {
-    kind: 'checked',
+    kind: "checked",
     checked: built.size,
-    stale: checks.filter((entry): entry is StaleCover => typeof entry === 'object'),
-    uncomparable: checks.filter((entry): entry is string => typeof entry === 'string'),
+    stale: checks.filter(
+      (entry): entry is StaleCover => typeof entry === "object",
+    ),
+    uncomparable: checks.filter(
+      (entry): entry is string => typeof entry === "string",
+    ),
   };
 }

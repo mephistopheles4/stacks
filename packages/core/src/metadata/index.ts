@@ -1,16 +1,21 @@
-import { isProbablySameBook, isValidIsbn, rankingScore } from '../identity.ts';
-import * as appleBooks from './apple-books.ts';
-import * as googleBooks from './google-books.ts';
-import * as openLibrary from './open-library.ts';
-import * as oreilly from './oreilly.ts';
-import { mergeFields, type Contributors } from './precedence.ts';
-import type { HttpGet } from './http.ts';
-import type { BookMetadata } from './types.ts';
+import { isProbablySameBook, isValidIsbn, rankingScore } from "../identity.ts";
+import * as appleBooks from "./apple-books.ts";
+import * as googleBooks from "./google-books.ts";
+import * as openLibrary from "./open-library.ts";
+import * as oreilly from "./oreilly.ts";
+import { mergeFields, type Contributors } from "./precedence.ts";
+import type { HttpGet } from "./http.ts";
+import type { BookMetadata } from "./types.ts";
 
-export { createCachedHttpGet, type HttpGet } from './http.ts';
-export { coverUrls } from './types.ts';
-export type { BookMetadata, MetadataSource } from './types.ts';
-export { DEFAULT_ORDER, FIELD_ORDER, MERGED_FIELDS, type MergedField } from './precedence.ts';
+export { createCachedHttpGet, type HttpGet } from "./http.ts";
+export { coverUrls } from "./types.ts";
+export type { BookMetadata, MetadataSource } from "./types.ts";
+export {
+  DEFAULT_ORDER,
+  FIELD_ORDER,
+  MERGED_FIELDS,
+  type MergedField,
+} from "./precedence.ts";
 
 /**
  * Open Library first, Google Books second (CLAUDE.md).
@@ -68,7 +73,11 @@ export async function searchByTitle(
   const primary = await openLibrary.searchByTitle(query, get);
   if (primary.some((book) => matchesQuery(query, book))) return primary;
 
-  const fallback = await googleBooks.searchByTitle(query, get, options.googleBooksKey);
+  const fallback = await googleBooks.searchByTitle(
+    query,
+    get,
+    options.googleBooksKey,
+  );
   // Primary results are kept rather than replaced. They did not match the query
   // well, but neither may Google's, and dropping them would leave a caller that
   // wants *any* candidate with fewer than it had before.
@@ -91,7 +100,7 @@ export async function searchByTitle(
 }
 
 function matchesQuery(query: string, book: BookMetadata): boolean {
-  return isProbablySameBook(query, `${book.title} ${book.author ?? ''}`);
+  return isProbablySameBook(query, `${book.title} ${book.author ?? ""}`);
 }
 
 /**
@@ -110,9 +119,13 @@ function matchesQuery(query: string, book: BookMetadata): boolean {
  * large-print at 320, and the true one at 262. Taking the first *matching*
  * candidate rather than the best one silently picks 206.
  */
-function rankAgainst(term: string, results: readonly BookMetadata[]): BookMetadata[] {
+function rankAgainst(
+  term: string,
+  results: readonly BookMetadata[],
+): BookMetadata[] {
   const score = (book: BookMetadata): number =>
-    (matchesQuery(term, book) ? 1 : 0) + rankingScore(term, book.title, book.author);
+    (matchesQuery(term, book) ? 1 : 0) +
+    rankingScore(term, book.title, book.author);
 
   return [...results].sort((a, b) => {
     const difference = score(b) - score(a);
@@ -170,7 +183,11 @@ export async function lookup(
   // Only the result that will actually be used is enriched. Filling every
   // candidate would cost one request per search hit to answer a question nobody
   // asked.
-  const filled = await complete(await completePages(best, get, options), get, options);
+  const filled = await complete(
+    await completePages(best, get, options),
+    get,
+    options,
+  );
   return [filled, ...results.slice(1)];
 }
 
@@ -214,7 +231,11 @@ async function completePages(
 ): Promise<BookMetadata> {
   if (book.pages !== undefined || book.volumeId === undefined) return book;
 
-  const detail = await googleBooks.fetchVolume(book.volumeId, get, options.googleBooksKey);
+  const detail = await googleBooks.fetchVolume(
+    book.volumeId,
+    get,
+    options.googleBooksKey,
+  );
   return detail?.pages === undefined ? book : { ...book, pages: detail.pages };
 }
 
@@ -246,12 +267,12 @@ async function askApple(
 
   // `findRecord` returns nothing unless `isProbablySameBook` agreed, so reaching
   // here *is* the confirmation that makes Apple a contributor.
-  contributors.set('apple-books', record);
+  contributors.set("apple-books", record);
 
   const weakCover =
     book.coverUrl === undefined ||
     book.coverIsSpeculative === true ||
-    book.source === 'google-books' ||
+    book.source === "google-books" ||
     book.coverUrlLarge !== undefined;
 
   return !weakCover || record.coverUrlLarge === undefined
@@ -279,9 +300,12 @@ async function fillGaps(
 ): Promise<BookMetadata> {
   // A speculative cover counts as missing: it is a URL we invented from an
   // ISBN, and the endpoint answers with a placeholder as readily as with art.
-  const needsCover = primary.coverUrl === undefined || primary.coverIsSpeculative === true;
-  if (primary.source === 'google-books') {
-    return needsCover ? await borrowOReillyCover(primary, get, contributors) : primary;
+  const needsCover =
+    primary.coverUrl === undefined || primary.coverIsSpeculative === true;
+  if (primary.source === "google-books") {
+    return needsCover
+      ? await borrowOReillyCover(primary, get, contributors)
+      : primary;
   }
 
   /**
@@ -295,28 +319,38 @@ async function fillGaps(
    */
   const candidate =
     primary.isbn === undefined
-      ? (await googleBooks.searchByTitle(
-          `${primary.title} ${primary.author ?? ''}`.trim(),
+      ? (
+          await googleBooks.searchByTitle(
+            `${primary.title} ${primary.author ?? ""}`.trim(),
+            get,
+            options.googleBooksKey,
+          )
+        )[0]
+      : await googleBooks.lookupByIsbn(
+          primary.isbn,
           get,
           options.googleBooksKey,
-        ))[0]
-      : await googleBooks.lookupByIsbn(primary.isbn, get, options.googleBooksKey);
+        );
 
   if (candidate === undefined)
-    return needsCover ? await borrowOReillyCover(primary, get, contributors) : primary;
+    return needsCover
+      ? await borrowOReillyCover(primary, get, contributors)
+      : primary;
 
   // An ISBN lookup is already proof of identity; a title search is not.
   const sameBook =
     primary.isbn !== undefined ||
     isProbablySameBook(
-      `${primary.title} ${primary.author ?? ''}`,
-      `${candidate.title} ${candidate.author ?? ''}`,
+      `${primary.title} ${primary.author ?? ""}`,
+      `${candidate.title} ${candidate.author ?? ""}`,
     );
   if (!sameBook)
-    return needsCover ? await borrowOReillyCover(primary, get, contributors) : primary;
+    return needsCover
+      ? await borrowOReillyCover(primary, get, contributors)
+      : primary;
 
   // Confirmed to be this book, which is the bar a contributor has to clear.
-  contributors.set('google-books', candidate);
+  contributors.set("google-books", candidate);
 
   const filled: BookMetadata = {
     ...primary,
@@ -364,7 +398,7 @@ async function borrowOReillyCover(
   get: HttpGet,
   contributors: Contributors,
 ): Promise<BookMetadata> {
-  if (book.isbn === undefined || book.source === 'oreilly') return book;
+  if (book.isbn === undefined || book.source === "oreilly") return book;
 
   const candidate = await oreilly.lookupByIsbn(book.isbn, get);
   if (candidate === undefined) return book;
@@ -372,7 +406,7 @@ async function borrowOReillyCover(
   // An ISBN lookup is proof of identity, so this record is a contributor even
   // when it has no cover to lend — O'Reilly's `ourn` is worth recording for a
   // book it holds whatever the art situation is.
-  contributors.set('oreilly', candidate);
+  contributors.set("oreilly", candidate);
 
   if (candidate.coverUrl === undefined) return book;
   return { ...book, coverUrl: candidate.coverUrl, coverIsSpeculative: false };

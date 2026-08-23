@@ -1,11 +1,19 @@
-import { cacheCover } from './covers/cache-cover.ts';
-import { resolveCoverPath } from './covers/cover-path.ts';
-import { spineColour } from './covers/dominant-colour.ts';
-import { isProbablySameBook, normaliseIsbn } from './identity.ts';
-import { formatSubjects } from './subjects.ts';
-import { coverUrls, lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
-import type { FrontmatterChanges, VaultAdapter } from './adapters/vault-adapter.ts';
-import type { BookRecord } from './types.ts';
+import { cacheCover } from "./covers/cache-cover.ts";
+import { resolveCoverPath } from "./covers/cover-path.ts";
+import { spineColour } from "./covers/dominant-colour.ts";
+import { isProbablySameBook, normaliseIsbn } from "./identity.ts";
+import { formatSubjects } from "./subjects.ts";
+import {
+  coverUrls,
+  lookup,
+  type BookMetadata,
+  type HttpGet,
+} from "./metadata/index.ts";
+import type {
+  FrontmatterChanges,
+  VaultAdapter,
+} from "./adapters/vault-adapter.ts";
+import type { BookRecord } from "./types.ts";
 
 /**
  * Filling the gaps in a note that already exists.
@@ -41,32 +49,32 @@ import type { BookRecord } from './types.ts';
  * not. See docs/spec/metadata-merge.md §6.
  */
 const FILLABLE = [
-  'author',
-  'isbn',
-  'pages',
-  'cover',
-  'publisher',
-  'published',
-  'subjects',
-  'googleVolumeId',
-  'appleTrackId',
-  'openLibraryOlid',
-  'oreillyOurn',
+  "author",
+  "isbn",
+  "pages",
+  "cover",
+  "publisher",
+  "published",
+  "subjects",
+  "googleVolumeId",
+  "appleTrackId",
+  "openLibraryOlid",
+  "oreillyOurn",
 ] as const;
 
 /** Which frontmatter key each fillable record field is written under. */
 const CONTRACT_NAME: Readonly<Record<(typeof FILLABLE)[number], string>> = {
-  author: 'author',
-  isbn: 'isbn',
-  pages: 'pages',
-  cover: 'cover',
-  publisher: 'publisher',
-  published: 'published',
-  subjects: 'subjects',
-  googleVolumeId: 'google_volume_id',
-  appleTrackId: 'apple_track_id',
-  openLibraryOlid: 'openlibrary_olid',
-  oreillyOurn: 'oreilly_ourn',
+  author: "author",
+  isbn: "isbn",
+  pages: "pages",
+  cover: "cover",
+  publisher: "publisher",
+  published: "published",
+  subjects: "subjects",
+  googleVolumeId: "google_volume_id",
+  appleTrackId: "apple_track_id",
+  openLibraryOlid: "openlibrary_olid",
+  oreillyOurn: "oreilly_ourn",
 };
 
 /**
@@ -83,16 +91,19 @@ const CONTRACT_NAME: Readonly<Record<(typeof FILLABLE)[number], string>> = {
  * comment is the reason anyone knows Google's two endpoints disagree.
  */
 const SIMPLE_FILLS = [
-  ['publisher', 'publisher'],
-  ['published', 'published'],
-  ['googleVolumeId', 'volumeId'],
-  ['appleTrackId', 'appleTrackId'],
-  ['openLibraryOlid', 'openLibraryOlid'],
-  ['oreillyOurn', 'oreillyOurn'],
-] as const satisfies readonly (readonly [(typeof FILLABLE)[number], keyof BookMetadata])[];
+  ["publisher", "publisher"],
+  ["published", "published"],
+  ["googleVolumeId", "volumeId"],
+  ["appleTrackId", "appleTrackId"],
+  ["openLibraryOlid", "openLibraryOlid"],
+  ["oreillyOurn", "oreillyOurn"],
+] as const satisfies readonly (readonly [
+  (typeof FILLABLE)[number],
+  keyof BookMetadata,
+])[];
 
 /** The heading a provider's description is written under, and never published. */
-export const ABOUT_HEADING = '## About';
+export const ABOUT_HEADING = "## About";
 
 export interface EnrichOptions {
   readonly dryRun?: boolean;
@@ -119,16 +130,27 @@ export interface EnrichOptions {
  * the only one here that says something is wrong.
  */
 export type EnrichOutcome =
-  | { readonly kind: 'filled'; readonly title: string; readonly fields: readonly string[] }
-  | { readonly kind: 'complete'; readonly title: string }
-  | { readonly kind: 'unfilled'; readonly title: string }
-  | { readonly kind: 'not-found'; readonly title: string }
-  | { readonly kind: 'mismatch'; readonly title: string; readonly found: string };
+  | {
+      readonly kind: "filled";
+      readonly title: string;
+      readonly fields: readonly string[];
+    }
+  | { readonly kind: "complete"; readonly title: string }
+  | { readonly kind: "unfilled"; readonly title: string }
+  | { readonly kind: "not-found"; readonly title: string }
+  | {
+      readonly kind: "mismatch";
+      readonly title: string;
+      readonly found: string;
+    };
 
 export function missingFields(book: BookRecord): string[] {
-  const missing: string[] = FILLABLE.filter((field) => book[field] === undefined);
+  const missing: string[] = FILLABLE.filter(
+    (field) => book[field] === undefined,
+  );
   // A cover with no colour is a gap too, and one that needs no network at all.
-  if (book.cover !== undefined && book.spineColor === undefined) missing.push('spine_color');
+  if (book.cover !== undefined && book.spineColor === undefined)
+    missing.push("spine_color");
   return missing;
 }
 
@@ -139,7 +161,7 @@ export async function enrichBook(
   options: EnrichOptions = {},
 ): Promise<EnrichOutcome> {
   const missing = missingFields(book);
-  if (missing.length === 0) return { kind: 'complete', title: book.title };
+  if (missing.length === 0) return { kind: "complete", title: book.title };
 
   const changes: Record<string, string | number> = {};
   const filled: string[] = [];
@@ -148,43 +170,44 @@ export async function enrichBook(
 
   // A spine colour can be read from the cover already on disk, so it is worth
   // doing before deciding whether the network is needed at all.
-  if (missing.includes('spine_color') && book.cover !== undefined) {
+  if (missing.includes("spine_color") && book.cover !== undefined) {
     const coverPath = resolveCoverPath(vault.coverDir(), book.cover);
-    const colour = coverPath === undefined ? undefined : await spineColour(coverPath);
+    const colour =
+      coverPath === undefined ? undefined : await spineColour(coverPath);
     if (colour !== undefined) {
-      changes['spine_color'] = colour;
-      filled.push('spine_color');
+      changes["spine_color"] = colour;
+      filled.push("spine_color");
     }
   }
 
-  const needsLookup = missing.some((field) => field !== 'spine_color');
+  const needsLookup = missing.some((field) => field !== "spine_color");
   if (needsLookup) {
-    const term = book.isbn ?? `${book.title} ${book.author ?? ''}`.trim();
+    const term = book.isbn ?? `${book.title} ${book.author ?? ""}`.trim();
     const [found] = await lookup(term, get, options);
 
     if (found === undefined) {
-      if (filled.length === 0) return { kind: 'not-found', title: book.title };
+      if (filled.length === 0) return { kind: "not-found", title: book.title };
     } else if (
       // An ISBN search is proof of identity; a title search is a suggestion.
       book.isbn === undefined &&
       !isProbablySameBook(
-        `${book.title} ${book.author ?? ''}`,
-        `${found.title} ${found.author ?? ''}`,
+        `${book.title} ${book.author ?? ""}`,
+        `${found.title} ${found.author ?? ""}`,
       )
     ) {
-      return { kind: 'mismatch', title: book.title, found: found.title };
+      return { kind: "mismatch", title: book.title, found: found.title };
     } else {
       if (book.author === undefined && found.author !== undefined) {
-        changes['author'] = found.author;
-        filled.push('author');
+        changes["author"] = found.author;
+        filled.push("author");
       }
       if (book.isbn === undefined && found.isbn !== undefined) {
-        changes['isbn'] = normaliseIsbn(found.isbn);
-        filled.push('isbn');
+        changes["isbn"] = normaliseIsbn(found.isbn);
+        filled.push("isbn");
       }
       if (book.pages === undefined && found.pages !== undefined) {
-        changes['pages'] = found.pages;
-        filled.push('pages');
+        changes["pages"] = found.pages;
+        filled.push("pages");
       }
 
       // Every write here is `if (book.X === undefined)`, without exception. That
@@ -195,7 +218,7 @@ export async function enrichBook(
       // it stays a hand edit.
       for (const [field, from] of SIMPLE_FILLS) {
         const value = found[from];
-        if (book[field] === undefined && typeof value === 'string') {
+        if (book[field] === undefined && typeof value === "string") {
           changes[CONTRACT_NAME[field]] = value;
           filled.push(CONTRACT_NAME[field]);
         }
@@ -204,8 +227,8 @@ export async function enrichBook(
       if (book.subjects === undefined && found.subjects !== undefined) {
         const subjects = formatSubjects(found.subjects);
         if (subjects !== undefined) {
-          changes['subjects'] = subjects;
-          filled.push('subjects');
+          changes["subjects"] = subjects;
+          filled.push("subjects");
         }
       }
 
@@ -218,20 +241,22 @@ export async function enrichBook(
         // cover it would have fetched and reporting one it never could.
         const offered = candidates.some((url) => url !== undefined);
         const cover =
-          options.dryRun === true ? undefined : await cacheCover(candidates, book.title, vault);
+          options.dryRun === true
+            ? undefined
+            : await cacheCover(candidates, book.title, vault);
         if (cover !== undefined) {
-          changes['cover'] = cover.relativePath;
+          changes["cover"] = cover.relativePath;
           // Written alongside the cover, never on its own: the two describe the
           // same bytes, and a `cover_source` next to a cover it did not come
           // from would be worse than none at all.
-          changes['cover_source'] = cover.source;
-          filled.push('cover');
+          changes["cover_source"] = cover.source;
+          filled.push("cover");
           if (book.spineColor === undefined && cover.spineColor !== undefined) {
-            changes['spine_color'] = cover.spineColor;
-            if (!filled.includes('spine_color')) filled.push('spine_color');
+            changes["spine_color"] = cover.spineColor;
+            if (!filled.includes("spine_color")) filled.push("spine_color");
           }
         } else if (offered && options.dryRun === true) {
-          filled.push('cover');
+          filled.push("cover");
         }
       }
     }
@@ -264,7 +289,8 @@ export async function enrichBook(
      * absent without reading the note, and claiming a write it never attempted
      * is the same lie.
      */
-    const wrote = options.dryRun !== true &&
+    const wrote =
+      options.dryRun !== true &&
       (await vault.insertBodySection(book.sourcePath, ABOUT_HEADING, about));
     if (wrote) filled.push(ABOUT_HEADING);
   }
@@ -272,11 +298,10 @@ export async function enrichBook(
   // Something was missing — that is why this function ran past its first line —
   // and none of it could be filled. Distinct from `complete` above, which is
   // reached only when there was nothing to do in the first place.
-  if (filled.length === 0) return { kind: 'unfilled', title: book.title };
+  if (filled.length === 0) return { kind: "unfilled", title: book.title };
 
   if (options.dryRun !== true) {
     await vault.updateBook(book.sourcePath, changes as FrontmatterChanges);
   }
-  return { kind: 'filled', title: book.title, fields: filled };
+  return { kind: "filled", title: book.title, fields: filled };
 }
-

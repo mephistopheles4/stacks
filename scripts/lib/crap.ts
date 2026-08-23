@@ -20,9 +20,13 @@
  * synthetic report rather than measured against this repo's real one.
  */
 
-import { relative } from 'node:path';
-import { populationOf, type FunctionKind, type PerFunction } from './complexity.ts';
-import type { Declarations } from './mutation-score.ts';
+import { relative } from "node:path";
+import {
+  populationOf,
+  type FunctionKind,
+  type PerFunction,
+} from "./complexity.ts";
+import type { Declarations } from "./mutation-score.ts";
 
 /**
  * The caveat that travels on the same line as the word CRAP.
@@ -32,13 +36,13 @@ import type { Declarations } from './mutation-score.ts';
  * number without also reading that nobody ever calibrated the exponents — the
  * fact that keeps a ranking a ranking and stops it becoming a verdict.
  */
-export const NEVER_CALIBRATED = 'exponents never calibrated';
+export const NEVER_CALIBRATED = "exponents never calibrated";
 
 /** The formula, spelled out where the reader meets the number. */
-export const CRAP_FORMULA = 'CC² × (1 − coverage)³ + CC';
+export const CRAP_FORMULA = "CC² × (1 − coverage)³ + CC";
 
 /** What an excluded file prints instead of a number. */
-export const NO_ORACLE = 'no in-process oracle';
+export const NO_ORACLE = "no in-process oracle";
 
 /**
  * The two kinds ESLint scores as functions and Istanbul cannot.
@@ -51,8 +55,8 @@ export const NO_ORACLE = 'no in-process oracle';
  * shares its line with whatever else is declared there.
  */
 const NO_FNMAP_COUNTERPART: ReadonlySet<FunctionKind> = new Set([
-  'class-field-initialiser',
-  'static-block',
+  "class-field-initialiser",
+  "static-block",
 ]);
 
 /** A position in Istanbul's maps. Columns are 0-based, and occasionally null. */
@@ -76,7 +80,10 @@ export interface IstanbulRange {
  */
 export interface IstanbulFile {
   statementMap: Record<string, IstanbulRange>;
-  fnMap: Record<string, { name?: string; decl: IstanbulRange; loc: IstanbulRange }>;
+  fnMap: Record<
+    string,
+    { name?: string; decl: IstanbulRange; loc: IstanbulRange }
+  >;
   /** Execution counts, by statement id. */
   s: Record<string, number>;
 }
@@ -147,12 +154,18 @@ export function crapOf(complexity: number, coverage: number): number {
  * sharing a function's last line, which lowers coverage and raises CRAP for
  * exactly the longest functions in the table.
  */
-function atOrAfter(position: IstanbulPosition, start: IstanbulPosition): boolean {
+function atOrAfter(
+  position: IstanbulPosition,
+  start: IstanbulPosition,
+): boolean {
   if (position.line !== start.line) return position.line > start.line;
   return (position.column ?? 0) >= (start.column ?? 0);
 }
 
-function atOrBefore(position: IstanbulPosition, end: IstanbulPosition): boolean {
+function atOrBefore(
+  position: IstanbulPosition,
+  end: IstanbulPosition,
+): boolean {
   if (position.line !== end.line) return position.line < end.line;
   return (position.column ?? 0) <= (end.column ?? Number.POSITIVE_INFINITY);
 }
@@ -175,7 +188,9 @@ function within(position: IstanbulPosition, range: IstanbulRange): boolean {
  * and no division: `NaN` formats as a number, sorts unpredictably, and would
  * put an empty function at the top of a table about risk.
  */
-export function coverageByFunction(file: IstanbulFile): Map<string, StatementCoverage> {
+export function coverageByFunction(
+  file: IstanbulFile,
+): Map<string, StatementCoverage> {
   const statements = Object.entries(file.statementMap);
   const byFunction = new Map<string, StatementCoverage>();
 
@@ -212,7 +227,8 @@ export function fileCoverageOf(
   repoRoot: string,
 ): IstanbulFile | undefined {
   for (const [key, coverage] of Object.entries(report)) {
-    if (relative(repoRoot, key).split(/[\\/]/).join('/') === file) return coverage;
+    if (relative(repoRoot, key).split(/[\\/]/).join("/") === file)
+      return coverage;
   }
   return undefined;
 }
@@ -259,24 +275,35 @@ export function rowsFor(
     };
 
     if (NO_FNMAP_COUNTERPART.has(fn.kind)) {
-      return { ...base, note: 'implicit function — no counterpart in the coverage report' };
+      return {
+        ...base,
+        note: "implicit function — no counterpart in the coverage report",
+      };
     }
-    if (!coverage) return { ...base, note: 'not in the coverage report' };
+    if (!coverage) return { ...base, note: "not in the coverage report" };
 
     const candidates = declarations.filter(
-      ([, entry]) => entry.decl.start.line === fn.line || entry.loc.start.line === fn.line,
+      ([, entry]) =>
+        entry.decl.start.line === fn.line || entry.loc.start.line === fn.line,
     );
-    if (candidates.length === 0) return { ...base, note: 'not in the coverage report' };
+    if (candidates.length === 0)
+      return { ...base, note: "not in the coverage report" };
 
     const [id] = candidates.reduce((best, candidate) =>
-      columnDistance(fn, candidate[1].decl) < columnDistance(fn, best[1].decl) ? candidate : best,
+      columnDistance(fn, candidate[1].decl) < columnDistance(fn, best[1].decl)
+        ? candidate
+        : best,
     );
 
     const measured = coverage.get(id);
     if (!measured || measured.total === 0) {
-      return { ...base, coverage: measured, note: 'no statement to measure' };
+      return { ...base, coverage: measured, note: "no statement to measure" };
     }
-    return { ...base, coverage: measured, crap: crapOf(fn.complexity, measured.fraction) };
+    return {
+      ...base,
+      coverage: measured,
+      crap: crapOf(fn.complexity, measured.fraction),
+    };
   });
 
   return rows;
@@ -328,7 +355,10 @@ function byCrap(left: CrapRow, right: CrapRow): number {
  * `outside` bucket — a spec is in no population, and saying so is quieter than
  * a fourth category nobody acts on.
  */
-export function route(files: readonly string[], declarations: Declarations): Routing {
+export function route(
+  files: readonly string[],
+  declarations: Declarations,
+): Routing {
   /**
    * The population rule is `populationOf`'s and is asked for rather than
    * repeated — glob membership and the `*.test.ts` drop both. A second copy of
@@ -351,7 +381,8 @@ export function route(files: readonly string[], declarations: Declarations): Rou
     }
 
     const exclusion = scope.exclusions.find((entry) => entry.path === file);
-    if (exclusion) routing.excluded.push({ file, mechanism: exclusion.mechanism });
+    if (exclusion)
+      routing.excluded.push({ file, mechanism: exclusion.mechanism });
     else routing.measured.push(file);
   }
   return routing;
@@ -376,45 +407,48 @@ function identify(row: CrapRow): string {
  * hook keeps no history, which is what makes a positionally-keyed name safe to
  * print and unsafe to store.
  */
-export function renderReport(rows: readonly CrapRow[], routing: Routing): string {
+export function renderReport(
+  rows: readonly CrapRow[],
+  routing: Routing,
+): string {
   const lines: string[] = [];
 
   if (rows.length > 0) {
     lines.push(
-      `CRAP over ${rows.length} ${rows.length === 1 ? 'function' : 'functions'} this commit touches — ${CRAP_FORMULA}, ${NEVER_CALIBRATED}`,
+      `CRAP over ${rows.length} ${rows.length === 1 ? "function" : "functions"} this commit touches — ${CRAP_FORMULA}, ${NEVER_CALIBRATED}`,
     );
-    lines.push('');
+    lines.push("");
 
     for (const row of rows) {
-      const score = row.crap === undefined ? '—' : row.crap.toFixed(1);
+      const score = row.crap === undefined ? "—" : row.crap.toFixed(1);
       const covered =
         row.coverage === undefined
-          ? '—'
+          ? "—"
           : `${Math.round(row.coverage.fraction * 100)}% (${row.coverage.hit}/${row.coverage.total})`;
 
       lines.push(
         [
-          '  ',
+          "  ",
           score.padStart(9),
-          '  CC ',
+          "  CC ",
           String(row.complexity).padStart(3),
-          '  ',
+          "  ",
           covered.padEnd(12),
-          '  ',
+          "  ",
           identify(row).padEnd(28),
           `  ${row.file}:${row.line}`,
-          row.note ? `  — ${row.note}` : '',
-        ].join(''),
+          row.note ? `  — ${row.note}` : "",
+        ].join(""),
       );
     }
   }
 
   if (routing.excluded.length > 0) {
-    if (lines.length > 0) lines.push('');
+    if (lines.length > 0) lines.push("");
     for (const { file } of routing.excluded) {
       lines.push(`  ${NO_ORACLE}: ${file}`);
     }
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }

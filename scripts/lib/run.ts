@@ -40,8 +40,8 @@
  * into a helper would mean four modes of one function to save two lines.
  */
 
-import { spawnSync } from 'node:child_process';
-import { REPO_ROOT } from './repo-root.ts';
+import { spawnSync } from "node:child_process";
+import { REPO_ROOT } from "./repo-root.ts";
 
 /**
  * A command and its arguments as the single string `shell: true` requires.
@@ -52,7 +52,7 @@ import { REPO_ROOT } from './repo-root.ts';
  * shape the two synchronous callers wrote a paragraph each about avoiding.
  */
 export function shellCommand(command: string, args: readonly string[]): string {
-  return [command, ...args].join(' ');
+  return [command, ...args].join(" ");
 }
 
 /**
@@ -76,11 +76,12 @@ export function runShell(
   const result = spawnSync(line, {
     cwd: options.cwd ?? REPO_ROOT,
     shell: true,
-    stdio: 'inherit',
+    stdio: "inherit",
     env: { ...process.env, ...options.env },
   });
 
-  if (result.status !== 0) throw new Error(`${line} exited ${String(result.status)}`);
+  if (result.status !== 0)
+    throw new Error(`${line} exited ${String(result.status)}`);
 }
 
 /**
@@ -93,10 +94,16 @@ export function runShell(
  * script — which is why it takes an array and offers no way to opt into a
  * shell.
  */
-export function runExe(command: string, args: readonly string[], cwd: string): void {
-  const result = spawnSync(command, [...args], { cwd, stdio: 'inherit' });
+export function runExe(
+  command: string,
+  args: readonly string[],
+  cwd: string,
+): void {
+  const result = spawnSync(command, [...args], { cwd, stdio: "inherit" });
 
   if (result.status !== 0) {
-    throw new Error(`${command} ${args.join(' ')} exited ${String(result.status)}`);
+    throw new Error(
+      `${command} ${args.join(" ")} exited ${String(result.status)}`,
+    );
   }
 }

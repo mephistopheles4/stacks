@@ -41,11 +41,11 @@
  * See docs/gates.md, row G37 (agents-import).
  */
 
-import { describe, expect, it } from 'vitest';
-import { AGENTS_DOC, readRepoFile } from './repo.ts';
+import { describe, expect, it } from "vitest";
+import { AGENTS_DOC, readRepoFile } from "./repo.ts";
 
 /** The stub Claude Code opens by name. */
-const STUB = 'CLAUDE.md';
+const STUB = "CLAUDE.md";
 
 /**
  * The import, alone on its line. Anchored both ends because `@AGENTS.md`
@@ -59,7 +59,7 @@ const IMPORT_LINE = /^@AGENTS\.md$/m;
  * The three headings other gates parse. A copy of any of them in the stub is
  * the start of the second constitution ADR-0026 refused.
  */
-const PARSED_SECTIONS = ['Invariants', 'Commands', 'Frontmatter contract'];
+const PARSED_SECTIONS = ["Invariants", "Commands", "Frontmatter contract"];
 
 /**
  * Fenced blocks and inline code blanked out, so a heading *quoted* in the
@@ -67,32 +67,32 @@ const PARSED_SECTIONS = ['Invariants', 'Commands', 'Frontmatter contract'];
  * this the same way.
  */
 function proseOf(markdown: string): string {
-  return markdown.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '');
+  return markdown.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]*`/g, "");
 }
 
-describe('G37 — the constitution has one home', () => {
-  it('imports AGENTS.md from CLAUDE.md, on its own line', () => {
+describe("G37 — the constitution has one home", () => {
+  it("imports AGENTS.md from CLAUDE.md, on its own line", () => {
     const stub = proseOf(readRepoFile(STUB));
 
     expect(
       IMPORT_LINE.test(stub),
       `${STUB} must contain "@AGENTS.md" alone on a line. Claude Code reads ` +
         `${STUB} and not ${AGENTS_DOC}, so without that line a Claude session ` +
-        'gets none of the rules — silently, because nothing else would notice.',
+        "gets none of the rules — silently, because nothing else would notice.",
     ).toBe(true);
   });
 
-  it('keeps the parsed sections out of the stub', () => {
+  it("keeps the parsed sections out of the stub", () => {
     const stub = proseOf(readRepoFile(STUB));
     const duplicated = PARSED_SECTIONS.filter((heading) =>
-      new RegExp(`^## ${heading}`, 'm').test(stub),
+      new RegExp(`^## ${heading}`, "m").test(stub),
     );
 
     expect(
       duplicated,
-      `${STUB} carries sections that belong to ${AGENTS_DOC}: ${duplicated.join(', ')}. ` +
-        'ADR-0026 refused a second copy of the invariants; one text, imported, is ' +
-        'not a copy, and a heading here is where it stops being one.',
+      `${STUB} carries sections that belong to ${AGENTS_DOC}: ${duplicated.join(", ")}. ` +
+        "ADR-0026 refused a second copy of the invariants; one text, imported, is " +
+        "not a copy, and a heading here is where it stops being one.",
     ).toEqual([]);
   });
 });

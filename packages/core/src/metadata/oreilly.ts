@@ -1,7 +1,13 @@
-import { looksDerivative, normaliseIsbn } from '../identity.ts';
-import { keyIfPresent } from '../key-if-present.ts';
-import type { HttpGet } from './http.ts';
-import { asPositiveInt, asRecord, firstString, toPlainText, type BookMetadata } from './types.ts';
+import { looksDerivative, normaliseIsbn } from "../identity.ts";
+import { keyIfPresent } from "../key-if-present.ts";
+import type { HttpGet } from "./http.ts";
+import {
+  asPositiveInt,
+  asRecord,
+  firstString,
+  toPlainText,
+  type BookMetadata,
+} from "./types.ts";
 
 /**
  * O'Reilly, consulted last, for the books the other three have never heard of.
@@ -40,7 +46,7 @@ import { asPositiveInt, asRecord, firstString, toPlainText, type BookMetadata } 
  * what the response already hands over.
  */
 
-const SEARCH = 'https://learning.oreilly.com/api/v2/search/';
+const SEARCH = "https://learning.oreilly.com/api/v2/search/";
 
 /**
  * `formats=book` — the catalogue is videos, courses and live events too.
@@ -48,15 +54,18 @@ const SEARCH = 'https://learning.oreilly.com/api/v2/search/';
  * Without it a search for "software engineering" returns all of them mixed
  * together, and a video is not something this shelf can hold.
  */
-const BOOKS_ONLY = 'formats=book';
+const BOOKS_ONLY = "formats=book";
 
-export async function lookupByIsbn(isbn: string, get: HttpGet): Promise<BookMetadata | undefined> {
+export async function lookupByIsbn(
+  isbn: string,
+  get: HttpGet,
+): Promise<BookMetadata | undefined> {
   const normalised = normaliseIsbn(isbn);
   if (normalised.length === 0) return undefined;
 
   const url = `${SEARCH}?query=${normalised}&field=isbn&${BOOKS_ONLY}&limit=1`;
   const body = asRecord(await get(url));
-  const results = Array.isArray(body?.['results']) ? body['results'] : [];
+  const results = Array.isArray(body?.["results"]) ? body["results"] : [];
   return toMetadata(asRecord(results[0]));
 }
 
@@ -70,29 +79,33 @@ export async function searchByTitle(
     `&field=title&${BOOKS_ONLY}&limit=${String(limit)}`;
 
   const body = asRecord(await get(url));
-  const results = Array.isArray(body?.['results']) ? body['results'] : [];
+  const results = Array.isArray(body?.["results"]) ? body["results"] : [];
 
   const wantsDerivative = looksDerivative(query);
 
-  return results
-    .map((entry) => toMetadata(asRecord(entry)))
-    .filter((item): item is BookMetadata => item !== undefined)
-    // Same trap as the other two: study guides carry every word of the title.
-    .filter((item) => wantsDerivative || !looksDerivative(item.title));
+  return (
+    results
+      .map((entry) => toMetadata(asRecord(entry)))
+      .filter((item): item is BookMetadata => item !== undefined)
+      // Same trap as the other two: study guides carry every word of the title.
+      .filter((item) => wantsDerivative || !looksDerivative(item.title))
+  );
 }
 
-function toMetadata(result: Record<string, unknown> | undefined): BookMetadata | undefined {
+function toMetadata(
+  result: Record<string, unknown> | undefined,
+): BookMetadata | undefined {
   if (result === undefined) return undefined;
 
-  const title = firstString(result['title']);
+  const title = firstString(result["title"]);
   if (title === undefined) return undefined;
 
   return {
     title,
     // `authors` is an array; the first, matching how `open-library.ts` narrows
     // `author_name` — the frontmatter contract's `author` is a scalar.
-    ...keyIfPresent('author', firstString(result['authors'])),
-    ...keyIfPresent('isbn', firstString(result['isbn'])),
+    ...keyIfPresent("author", firstString(result["authors"])),
+    ...keyIfPresent("isbn", firstString(result["isbn"])),
     /**
      * `virtual_pages`, and it is not a print page count.
      *
@@ -102,18 +115,18 @@ function toMetadata(result: Record<string, unknown> | undefined): BookMetadata |
      * edition being read — but it is a different kind of fact from the numbers
      * G26 pins exactly, and it should not be compared against them.
      */
-    ...keyIfPresent('pages', asPositiveInt(result['virtual_pages'])),
-    ...keyIfPresent('coverUrl', coverFor(result)),
-    ...keyIfPresent('publisher', firstString(result['publishers'])),
+    ...keyIfPresent("pages", asPositiveInt(result["virtual_pages"])),
+    ...keyIfPresent("coverUrl", coverFor(result)),
+    ...keyIfPresent("publisher", firstString(result["publishers"])),
     // Verbatim, `T00:00:00Z` and all. This is the exact value #102 had in mind:
     // the vault keeps what the provider said, the card renders `2027`.
-    ...keyIfPresent('published', firstString(result['issued'])),
-    ...keyIfPresent('subjects', topicsOf(result['topics_payload'])),
+    ...keyIfPresent("published", firstString(result["issued"])),
+    ...keyIfPresent("subjects", topicsOf(result["topics_payload"])),
     // `<span><div><p>…` on every result, so the markup comes off here rather
     // than in whatever writes it into a Markdown body.
-    ...keyIfPresent('description', toPlainText(result['description'])),
-    ...keyIfPresent('oreillyOurn', firstString(result['ourn'])),
-    source: 'oreilly',
+    ...keyIfPresent("description", toPlainText(result["description"])),
+    ...keyIfPresent("oreillyOurn", firstString(result["ourn"])),
+    source: "oreilly",
   };
 }
 
@@ -127,7 +140,7 @@ function toMetadata(result: Record<string, unknown> | undefined): BookMetadata |
 function topicsOf(value: unknown): readonly string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const names = value
-    .map((topic) => firstString(asRecord(topic)?.['name']))
+    .map((topic) => firstString(asRecord(topic)?.["name"]))
     .filter((name): name is string => name !== undefined);
   return names.length === 0 ? undefined : names;
 }
@@ -149,7 +162,7 @@ function topicsOf(value: unknown): readonly string[] | undefined {
 const COVER_WIDTH = 1200;
 
 function coverFor(result: Record<string, unknown>): string | undefined {
-  const ourn = firstString(result['ourn']);
+  const ourn = firstString(result["ourn"]);
   if (ourn === undefined) return undefined;
   return `https://learning.oreilly.com/covers/${ourn}/${String(COVER_WIDTH)}w/`;
 }

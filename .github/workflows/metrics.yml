@@ -78,7 +78,7 @@ on:
   schedule:
     # 03:17 UTC. Off the hour because GitHub's scheduler queues everything
     # written at :00 together and the delay can run to tens of minutes.
-    - cron: '17 3 * * *'
+    - cron: "17 3 * * *"
   workflow_dispatch:
 
 # Read by default. Only the jobs that commit ask for more, and they ask at job
@@ -121,7 +121,7 @@ jobs:
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '24'
+          node-version: "24"
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -194,7 +194,7 @@ jobs:
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '24'
+          node-version: "24"
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile

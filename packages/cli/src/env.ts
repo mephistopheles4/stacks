@@ -1,6 +1,6 @@
-import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 /**
  * Where `.env` lives for the checkout you are standing in.
@@ -22,7 +22,7 @@ import { dirname, resolve } from 'node:path';
  *
  * A real environment variable still beats both; see `loadEnv`.
  */
-export function envFilePath(file = '.env'): string | undefined {
+export function envFilePath(file = ".env"): string | undefined {
   const beside = resolve(file);
   if (existsSync(beside)) return beside;
 
@@ -53,9 +53,9 @@ export function envFilePath(file = '.env'): string | undefined {
  */
 export function mainCheckout(): string | undefined {
   try {
-    const common = execFileSync('git', ['rev-parse', '--git-common-dir'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
+    const common = execFileSync("git", ["rev-parse", "--git-common-dir"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
     });
     // resolve() does two jobs: makes the relative answer absolute, and
     // normalises git's forward slashes, which on Windows are otherwise a
@@ -76,22 +76,22 @@ export function mainCheckout(): string | undefined {
  * A real environment variable always wins — the file is a default, not an
  * override, so `STACKS_VAULT=... pnpm stacks build` still does what it says.
  */
-export function loadEnv(file = '.env'): void {
+export function loadEnv(file = ".env"): void {
   const path = envFilePath(file);
   if (path === undefined) return; // No .env is the normal case, not a problem.
 
   let contents: string;
   try {
-    contents = readFileSync(path, 'utf8');
+    contents = readFileSync(path, "utf8");
   } catch {
     return; // Unreadable is the same as absent: a default that did not apply.
   }
 
   for (const line of contents.split(/\r?\n/)) {
     const trimmed = line.trim();
-    if (trimmed.length === 0 || trimmed.startsWith('#')) continue;
+    if (trimmed.length === 0 || trimmed.startsWith("#")) continue;
 
-    const separator = trimmed.indexOf('=');
+    const separator = trimmed.indexOf("=");
     if (separator <= 0) continue;
 
     const key = trimmed.slice(0, separator).trim();

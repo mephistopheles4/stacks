@@ -1,19 +1,22 @@
-import type { Binding, LibraryBook } from '@stacks/core';
+import type { Binding, LibraryBook } from "@stacks/core";
 // Deliberately the subpath, not the package root. The root re-exports the
 // adapter, sharp and the metadata layer; a *value* import of it drags node:fs
 // and sharp into the browser bundle and the shelf never boots. Types are erased
 // at compile time and so are safe from the root; values are not.
-import { compareShelfPosition, SHELVED_STATUSES } from '@stacks/core/shelf-order';
-import { SHELF, USABLE_WIDTH } from './case.ts';
-import { hashUnit } from './hash.ts';
-import type { BooksSettings } from './shelf-settings.ts';
+import {
+  compareShelfPosition,
+  SHELVED_STATUSES,
+} from "@stacks/core/shelf-order";
+import { SHELF, USABLE_WIDTH } from "./case.ts";
+import { hashUnit } from "./hash.ts";
+import type { BooksSettings } from "./shelf-settings.ts";
 // The packer depends on the placer, which reads oddly until you see why: a row's
 // capacity is only meaningful if what it charges a book is what the cursor will
 // spend on it. It used to read the cursor's own *arithmetic* through `shelfCost`
 // so the two could not drift — which is exactly what had happened, twice, and is
 // ADR-0031. It now runs the cursor itself, which is ADR-0042: there is no charge
 // left to drift from the spend.
-import { rowExtent } from './placement.ts';
+import { rowExtent } from "./placement.ts";
 
 /**
  * Turning a library into shelf rows.
@@ -86,13 +89,13 @@ export const MAX_HEIGHT = 0.95;
 
 /** For books with no cover to extract a colour from. */
 const FALLBACK_COLOURS = [
-  '#6b4f6b',
-  '#4a6b5a',
-  '#2f6d7a',
-  '#8a5a3b',
-  '#5a5f8c',
-  '#7a4550',
-  '#3f6b5a',
+  "#6b4f6b",
+  "#4a6b5a",
+  "#2f6d7a",
+  "#8a5a3b",
+  "#5a5f8c",
+  "#7a4550",
+  "#3f6b5a",
 ];
 
 /**
@@ -105,7 +108,10 @@ const FALLBACK_COLOURS = [
  * (newest first) and a year change opens a small gap where a bookend would sit,
  * so the grouping is still legible without leaving the case looking abandoned.
  */
-export function toRows(books: readonly LibraryBook[], settings: BooksSettings): ShelfRow[] {
+export function toRows(
+  books: readonly LibraryBook[],
+  settings: BooksSettings,
+): ShelfRow[] {
   const shelved = books.filter((book) => SHELVED_STATUSES.has(book.status));
 
   // Books in progress come first — they are the ones you would reach for.
@@ -127,10 +133,12 @@ export function toRows(books: readonly LibraryBook[], settings: BooksSettings): 
     // rather than one being assumed — an earlier version charged the gap either
     // way, and charged it to a book that never got one.
     let candidate =
-      isYearChange && current.length > 0 ? { ...entry, gapBefore: YEAR_GAP } : entry;
+      isYearChange && current.length > 0
+        ? { ...entry, gapBefore: YEAR_GAP }
+        : entry;
 
     if (current.length > 0 && !fitsRow([...current, candidate], rows.length)) {
-      rows.push({ label: previousYear ?? '', books: current });
+      rows.push({ label: previousYear ?? "", books: current });
       current = [];
       candidate = entry;
     }
@@ -139,7 +147,8 @@ export function toRows(books: readonly LibraryBook[], settings: BooksSettings): 
     previousYear = year;
   }
 
-  if (current.length > 0) rows.push({ label: previousYear ?? '', books: current });
+  if (current.length > 0)
+    rows.push({ label: previousYear ?? "", books: current });
   return rows;
 }
 
@@ -190,8 +199,8 @@ export const YEAR_GAP = 0.09;
  * finished, so the in-progress shelf is always its own group.
  */
 export function yearOf(book: LibraryBook): string {
-  if (book.status === 'reading') return 'reading';
-  return book.finished?.slice(0, 4) ?? 'undated';
+  if (book.status === "reading") return "reading";
+  return book.finished?.slice(0, 4) ?? "undated";
 }
 
 function toShelfBook(book: LibraryBook, settings: BooksSettings): ShelfBook {
@@ -200,7 +209,7 @@ function toShelfBook(book: LibraryBook, settings: BooksSettings): ShelfBook {
   // `face_out` in the note wins in both directions when it is set; otherwise a
   // book in progress stands cover-forward on its own, the way one you are
   // mid-way through ends up propped on the shelf rather than filed away.
-  const faceOut = book.faceOut ?? book.status === 'reading';
+  const faceOut = book.faceOut ?? book.status === "reading";
   const height = heightFor(book.id, binding);
 
   // The cover's own proportions, not one shape imposed on every book. Audiobook
@@ -243,7 +252,8 @@ function thicknessFor(pages: number | undefined, id: string): number {
     const spread = (THICKEST - THINNEST) * 0.3;
     return middle + (hashUnit(`${id}-thickness`) - 0.5) * spread;
   }
-  const t = (pages - PAGES_AT_THINNEST) / (PAGES_AT_THICKEST - PAGES_AT_THINNEST);
+  const t =
+    (pages - PAGES_AT_THINNEST) / (PAGES_AT_THICKEST - PAGES_AT_THINNEST);
   return THINNEST + clamp(t, 0, 1) * (THICKEST - THINNEST);
 }
 
@@ -264,7 +274,10 @@ function thicknessFor(pages: number | undefined, id: string): number {
  * notice and that would look wrong.
  */
 function bindingFor(book: LibraryBook, paperbackRatio: number): Binding {
-  return book.binding ?? (hashUnit(`${book.id}-binding`) < paperbackRatio ? 'paperback' : 'hardback');
+  return (
+    book.binding ??
+    (hashUnit(`${book.id}-binding`) < paperbackRatio ? "paperback" : "hardback")
+  );
 }
 
 /**
@@ -296,7 +309,7 @@ const HEIGHT_BAND: Record<Binding, readonly [low: number, high: number]> = {
 
 function fallbackColour(id: string): string {
   const index = Math.floor(hashUnit(`${id}-colour`) * FALLBACK_COLOURS.length);
-  return FALLBACK_COLOURS[index] ?? '#6b4f6b';
+  return FALLBACK_COLOURS[index] ?? "#6b4f6b";
 }
 
 function clamp(value: number, min: number, max: number): number {

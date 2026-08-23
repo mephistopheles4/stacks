@@ -22,13 +22,13 @@
  * annoying part.
  */
 
-import { access } from 'node:fs/promises';
-import { join } from 'node:path';
-import sharp from 'sharp';
-import { REPO_ROOT } from './lib/repo-root.ts';
+import { access } from "node:fs/promises";
+import { join } from "node:path";
+import sharp from "sharp";
+import { REPO_ROOT } from "./lib/repo-root.ts";
 
-const SOURCE = join(REPO_ROOT, 'artifacts', 'shelf.png');
-const TARGET = join(REPO_ROOT, 'docs', 'images', 'shelf.png');
+const SOURCE = join(REPO_ROOT, "artifacts", "shelf.png");
+const TARGET = join(REPO_ROOT, "docs", "images", "shelf.png");
 
 /** Left edge to just past the case; top of the title to just under the plinth. */
 const CROP = { left: 0, top: 15, width: 1050, height: 810 } as const;
@@ -37,14 +37,16 @@ async function main(): Promise<void> {
   try {
     await access(SOURCE);
   } catch {
-    console.error(`no ${SOURCE}\n\nRun \`pnpm smoke:render\` first — it renders the fixture shelf.`);
+    console.error(
+      `no ${SOURCE}\n\nRun \`pnpm smoke:render\` first — it renders the fixture shelf.`,
+    );
     process.exitCode = 1;
     return;
   }
 
   const { width, height } = await sharp(SOURCE).metadata();
   if (width === undefined || height === undefined) {
-    console.error('could not read the screenshot dimensions');
+    console.error("could not read the screenshot dimensions");
     process.exitCode = 1;
     return;
   }
@@ -61,7 +63,10 @@ async function main(): Promise<void> {
     return;
   }
 
-  await sharp(SOURCE).extract({ ...CROP }).png({ compressionLevel: 9 }).toFile(TARGET);
+  await sharp(SOURCE)
+    .extract({ ...CROP })
+    .png({ compressionLevel: 9 })
+    .toFile(TARGET);
 
   const out = await sharp(TARGET).metadata();
   console.log(`docs/images/shelf.png  ${out.width}x${out.height}`);

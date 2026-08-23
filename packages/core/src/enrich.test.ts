@@ -1,21 +1,21 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import sharp from 'sharp';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
-import { enrichBook, missingFields } from './enrich.ts';
-import type { HttpGet } from './metadata/http.ts';
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import sharp from "sharp";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ObsidianAdapter } from "./adapters/obsidian-adapter.ts";
+import { enrichBook, missingFields } from "./enrich.ts";
+import type { HttpGet } from "./metadata/http.ts";
 
 /** Open Library answers with a complete record; nothing else responds. */
 const knowsTheBook: HttpGet = async (url) =>
-  url.includes('/search.json')
+  url.includes("/search.json")
     ? {
         docs: [
           {
-            title: 'Thinking in Systems',
-            author_name: ['Donella H. Meadows'],
-            isbn: ['9781603580557'],
+            title: "Thinking in Systems",
+            author_name: ["Donella H. Meadows"],
+            isbn: ["9781603580557"],
             number_of_pages_median: 240,
           },
         ],
@@ -32,7 +32,9 @@ const knowsNothing: HttpGet = async () => undefined;
  * counted in `enrich`'s header and reported in none of its lines.
  */
 const knowsTheTitleOnly: HttpGet = async (url) =>
-  url.includes('/api/books') ? { 'ISBN:9781603580557': { title: 'Thinking in Systems' } } : undefined;
+  url.includes("/api/books")
+    ? { "ISBN:9781603580557": { title: "Thinking in Systems" } }
+    : undefined;
 
 /**
  * The cover the stubbed `fetch` serves.
@@ -52,7 +54,7 @@ const knowsTheTitleOnly: HttpGet = async (url) =>
  */
 async function coverBytes(): Promise<Buffer> {
   return await sharp({
-    create: { width: 400, height: 600, channels: 3, background: '#2f6d7a' },
+    create: { width: 400, height: 600, channels: 3, background: "#2f6d7a" },
   })
     .jpeg()
     .toBuffer();
@@ -70,30 +72,40 @@ function respondWithCover(bytes: Uint8Array): Response {
         controller.close();
       },
     }),
-    { headers: { 'content-type': 'image/jpeg' } },
+    { headers: { "content-type": "image/jpeg" } },
   );
 }
 
-describe('missingFields', () => {
-  it('counts a cover with no spine colour as a gap', () => {
-    const base = { sourcePath: 'Library/A.md', title: 'A', status: 'read' as const, tags: [] };
-    expect(missingFields({ ...base, cover: 'covers/a.jpg' })).toContain('spine_color');
-    expect(missingFields({ ...base, cover: 'covers/a.jpg', spineColor: '#123456' })).not.toContain(
-      'spine_color',
+describe("missingFields", () => {
+  it("counts a cover with no spine colour as a gap", () => {
+    const base = {
+      sourcePath: "Library/A.md",
+      title: "A",
+      status: "read" as const,
+      tags: [],
+    };
+    expect(missingFields({ ...base, cover: "covers/a.jpg" })).toContain(
+      "spine_color",
     );
+    expect(
+      missingFields({ ...base, cover: "covers/a.jpg", spineColor: "#123456" }),
+    ).not.toContain("spine_color");
   });
 });
 
-describe('enrichBook', () => {
+describe("enrichBook", () => {
   let dir: string;
   let vault: ObsidianAdapter;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'stacks-enrich-'));
+    dir = await mkdtemp(join(tmpdir(), "stacks-enrich-"));
     vault = new ObsidianAdapter(dir);
 
     const bytes = await coverBytes();
-    vi.stubGlobal('fetch', vi.fn(async () => respondWithCover(bytes)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => respondWithCover(bytes)),
+    );
   });
 
   afterEach(async () => {
@@ -101,36 +113,41 @@ describe('enrichBook', () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  it('fills only what is missing and leaves the rest alone', async () => {
+  it("fills only what is missing and leaves the rest alone", async () => {
     await vault.writeBook({
-      title: 'Thinking in Systems',
-      author: 'Donella H. Meadows',
-      status: 'reading',
+      title: "Thinking in Systems",
+      author: "Donella H. Meadows",
+      status: "reading",
       rating: 4,
     });
     const [book] = await vault.listBooks();
 
     const outcome = await enrichBook(book!, vault, knowsTheBook);
-    expect(outcome.kind).toBe('filled');
+    expect(outcome.kind).toBe("filled");
 
     const [after] = await vault.listBooks();
-    expect(after?.isbn).toBe('9781603580557');
+    expect(after?.isbn).toBe("9781603580557");
     expect(after?.pages).toBe(240);
     // Status and rating are untouched — this is the whole difference between
     // enrich and delete-and-re-add.
-    expect(after?.status).toBe('reading');
+    expect(after?.status).toBe("reading");
     expect(after?.rating).toBe(4);
   });
 
-  it('refuses when the author is written differently enough to be uncertain', async () => {
+  it("refuses when the author is written differently enough to be uncertain", async () => {
     // "D. Meadows" against "Donella H. Meadows" does not clear the identity
     // bar. Strict on purpose: this runs unattended over a whole vault, and a
     // wrong ISBN written into a note is far harder to notice than a gap left
     // open. Spell the author out and it fills.
-    await vault.writeBook({ title: 'Thinking in Systems', author: 'D. Meadows' });
+    await vault.writeBook({
+      title: "Thinking in Systems",
+      author: "D. Meadows",
+    });
     const [book] = await vault.listBooks();
 
-    expect((await enrichBook(book!, vault, knowsTheBook)).kind).toBe('mismatch');
+    expect((await enrichBook(book!, vault, knowsTheBook)).kind).toBe(
+      "mismatch",
+    );
   });
 
   /**
@@ -145,31 +162,33 @@ describe('enrichBook', () => {
    * case is how the defect G27 exists for was written in the first place.
    */
   const NO_GAPS = {
-    title: 'Thinking in Systems',
-    author: 'Donella H. Meadows',
-    isbn: '9781603580557',
+    title: "Thinking in Systems",
+    author: "Donella H. Meadows",
+    isbn: "9781603580557",
     pages: 240,
-    cover: 'covers/x.jpg',
-    spineColor: '#2f6d7a',
-    publisher: 'Chelsea Green',
-    published: '2008',
-    subjects: 'systems thinking',
-    googleVolumeId: 'CpbLAgAAQBAJ',
-    appleTrackId: '1384286945',
-    openLibraryOlid: 'OL26445570M',
-    oreillyOurn: 'urn:orm:book:0642572352530',
+    cover: "covers/x.jpg",
+    spineColor: "#2f6d7a",
+    publisher: "Chelsea Green",
+    published: "2008",
+    subjects: "systems thinking",
+    googleVolumeId: "CpbLAgAAQBAJ",
+    appleTrackId: "1384286945",
+    openLibraryOlid: "OL26445570M",
+    oreillyOurn: "urn:orm:book:0642572352530",
   } as const;
 
-  it('reports complete and writes nothing when there are no gaps', async () => {
+  it("reports complete and writes nothing when there are no gaps", async () => {
     await vault.writeBook(NO_GAPS);
     const [book] = await vault.listBooks();
-    const before = await readFile(join(dir, book!.sourcePath), 'utf8');
+    const before = await readFile(join(dir, book!.sourcePath), "utf8");
 
-    expect((await enrichBook(book!, vault, knowsNothing)).kind).toBe('complete');
-    expect(await readFile(join(dir, book!.sourcePath), 'utf8')).toBe(before);
+    expect((await enrichBook(book!, vault, knowsNothing)).kind).toBe(
+      "complete",
+    );
+    expect(await readFile(join(dir, book!.sourcePath), "utf8")).toBe(before);
   });
 
-  it('says unfilled, not complete, when there was a gap and nothing to put in it', async () => {
+  it("says unfilled, not complete, when there was a gap and nothing to put in it", async () => {
     // The distinction the CLI's report is built on: this book has a gap, the
     // provider answers, and the answer carries nothing the note lacks. Calling
     // that "complete" is what let a book vanish from the report entirely — see
@@ -177,42 +196,59 @@ describe('enrichBook', () => {
     const { author: _dropped, ...withoutAuthor } = NO_GAPS;
     await vault.writeBook(withoutAuthor);
     const [book] = await vault.listBooks();
-    expect(missingFields(book!), 'only the author is missing').toEqual(['author']);
+    expect(missingFields(book!), "only the author is missing").toEqual([
+      "author",
+    ]);
 
     // Not `not-found`: a provider did answer. It simply had no author either.
-    expect((await enrichBook(book!, vault, knowsTheTitleOnly)).kind).toBe('unfilled');
+    expect((await enrichBook(book!, vault, knowsTheTitleOnly)).kind).toBe(
+      "unfilled",
+    );
   });
 
-  it('refuses metadata from a book that merely shares words with this one', async () => {
+  it("refuses metadata from a book that merely shares words with this one", async () => {
     // Shares "systems" and "thinking", so the provider's own relevance filter
     // lets it through — the identity check is the only thing standing between
     // this note and another book's ISBN.
-    await vault.writeBook({ title: 'Systems Thinking for Gardeners', author: 'Someone Else' });
+    await vault.writeBook({
+      title: "Systems Thinking for Gardeners",
+      author: "Someone Else",
+    });
     const [book] = await vault.listBooks();
 
     const outcome = await enrichBook(book!, vault, knowsTheBook);
-    expect(outcome.kind).toBe('mismatch');
+    expect(outcome.kind).toBe("mismatch");
 
     // Nothing was written — a wrong ISBN is worse than no ISBN.
     const [after] = await vault.listBooks();
     expect(after?.isbn).toBeUndefined();
   });
 
-  it('says not-found when no provider knows the book', async () => {
-    await vault.writeBook({ title: 'A Book Nobody Has Written', author: 'Nobody' });
+  it("says not-found when no provider knows the book", async () => {
+    await vault.writeBook({
+      title: "A Book Nobody Has Written",
+      author: "Nobody",
+    });
     const [book] = await vault.listBooks();
 
-    expect((await enrichBook(book!, vault, knowsNothing)).kind).toBe('not-found');
+    expect((await enrichBook(book!, vault, knowsNothing)).kind).toBe(
+      "not-found",
+    );
   });
 
-  it('writes nothing under dryRun', async () => {
-    await vault.writeBook({ title: 'Thinking in Systems', author: 'Donella H. Meadows' });
+  it("writes nothing under dryRun", async () => {
+    await vault.writeBook({
+      title: "Thinking in Systems",
+      author: "Donella H. Meadows",
+    });
     const [book] = await vault.listBooks();
-    const before = await readFile(join(dir, book!.sourcePath), 'utf8');
+    const before = await readFile(join(dir, book!.sourcePath), "utf8");
 
-    const outcome = await enrichBook(book!, vault, knowsTheBook, { dryRun: true });
+    const outcome = await enrichBook(book!, vault, knowsTheBook, {
+      dryRun: true,
+    });
 
-    expect(outcome.kind).toBe('filled');
-    expect(await readFile(join(dir, book!.sourcePath), 'utf8')).toBe(before);
+    expect(outcome.kind).toBe("filled");
+    expect(await readFile(join(dir, book!.sourcePath), "utf8")).toBe(before);
   });
 });

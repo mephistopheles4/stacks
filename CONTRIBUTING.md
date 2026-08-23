@@ -18,12 +18,12 @@ and 24 as a single required check called `gates`; `main` takes no direct pushes.
 
 ## Read these first
 
-| | |
-| --- | --- |
-| [`AGENTS.md`](AGENTS.md) | the invariants and the contracts — the rules that must not break |
-| [`docs/adr/`](docs/adr/) | every choice already made, and why — read before contradicting one |
-| [`docs/gates.md`](docs/gates.md) | which rule each gate protects, and which rules are protected by nothing yet |
-| [`docs/progress.md`](docs/progress.md) | where the project actually is |
+|                                        |                                                                             |
+| -------------------------------------- | --------------------------------------------------------------------------- |
+| [`AGENTS.md`](AGENTS.md)               | the invariants and the contracts — the rules that must not break            |
+| [`docs/adr/`](docs/adr/)               | every choice already made, and why — read before contradicting one          |
+| [`docs/gates.md`](docs/gates.md)       | which rule each gate protects, and which rules are protected by nothing yet |
+| [`docs/progress.md`](docs/progress.md) | where the project actually is                                               |
 
 **The rules live in those files, not in this one.** They are deliberately not
 restated here. A rule written down twice is a rule that will be true in one
@@ -56,7 +56,7 @@ because reconstructing it weeks later is the decay this repo keeps cataloguing.
 
 **Log decisions in the same commit.** When you decide something the brief left
 open — a library, an API quirk, a workaround — it goes in
-[`docs/adr/`](docs/adr/) in the commit that makes the decision, with the *why*.
+[`docs/adr/`](docs/adr/) in the commit that makes the decision, with the _why_.
 Not the next commit. Records are append-only: a decision that turned out wrong
 earns a new record saying so, and the correction is usually the more useful
 half. A lesson about a gate goes to [`docs/gates.md`](docs/gates.md) instead.

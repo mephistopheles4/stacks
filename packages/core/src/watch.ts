@@ -1,4 +1,4 @@
-import { watch, type FSWatcher } from 'node:fs';
+import { watch, type FSWatcher } from "node:fs";
 
 /**
  * Watching a vault for changes worth rebuilding for.
@@ -16,7 +16,10 @@ export interface WatchOptions {
   /** How long the vault must be quiet before rebuilding. */
   readonly debounceMs?: number;
   /** Injected in tests so they need no timers or real files. */
-  readonly watcher?: (path: string, listener: (filename: string | null) => void) => Closeable;
+  readonly watcher?: (
+    path: string,
+    listener: (filename: string | null) => void,
+  ) => Closeable;
 }
 
 export interface Closeable {
@@ -88,7 +91,7 @@ export function watchVault(
   const started: Closeable =
     options.watcher?.(vaultPath, schedule) ??
     (watch(vaultPath, { recursive: true }, (_event, filename) =>
-      schedule(typeof filename === 'string' ? filename : null),
+      schedule(typeof filename === "string" ? filename : null),
     ) as FSWatcher);
 
   return {

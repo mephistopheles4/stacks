@@ -19,13 +19,13 @@
  * See docs/gates.md, rows G5 (vault-is-truth) and G13 (no-third-party-material).
  */
 
-import { describe, expect, it } from 'vitest';
-import { execFileSync } from 'node:child_process';
-import { expectFound, REPO_ROOT, trackedFiles } from './repo.ts';
+import { describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
+import { expectFound, REPO_ROOT, trackedFiles } from "./repo.ts";
 
 function isIgnored(path: string): boolean {
   try {
-    execFileSync('git', ['check-ignore', '-q', '--', path], { cwd: REPO_ROOT });
+    execFileSync("git", ["check-ignore", "-q", "--", path], { cwd: REPO_ROOT });
     return true;
   } catch {
     return false;
@@ -43,14 +43,17 @@ function isIgnored(path: string): boolean {
  */
 function matchesIgnoreRule(path: string): boolean {
   try {
-    execFileSync('git', ['check-ignore', '-q', '--no-index', '--', path], { cwd: REPO_ROOT });
+    execFileSync("git", ["check-ignore", "-q", "--no-index", "--", path], {
+      cwd: REPO_ROOT,
+    });
     return true;
   } catch {
     return false;
   }
 }
 
-const BINARY = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip)$/i;
+const BINARY =
+  /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip)$/i;
 
 /**
  * The only committed binaries, and why each is allowed.
@@ -69,7 +72,10 @@ const BINARY = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|pdf|mp3|m4a|m4b|mp4|zip
  * exists to stop. An entry here is a claim about *provenance*, never about file
  * type.
  */
-const GENERATED_BINARY_DIRS = ['fixtures/vault/Library/covers/', 'docs/images/'];
+const GENERATED_BINARY_DIRS = [
+  "fixtures/vault/Library/covers/",
+  "docs/images/",
+];
 
 /**
  * The brand art, allowed one filename at a time.
@@ -87,10 +93,10 @@ const GENERATED_BINARY_DIRS = ['fixtures/vault/Library/covers/', 'docs/images/']
  * that appears beside them goes red.
  */
 const BRAND_BINARY_FILES = [
-  'packages/site/public/favicon-16.png',
-  'packages/site/public/favicon-32.png',
-  'packages/site/public/apple-touch-icon.png',
-  'packages/site/public/og.png',
+  "packages/site/public/favicon-16.png",
+  "packages/site/public/favicon-32.png",
+  "packages/site/public/apple-touch-icon.png",
+  "packages/site/public/og.png",
   /**
    * ⚠️ **The one committed binary this project did not make**, and the only
    * entry here that is somebody else's file rather than its own brand art.
@@ -111,30 +117,30 @@ const BRAND_BINARY_FILES = [
    * distinction `docs/gates.md` draws about this row: a directory is a standing
    * permission, and the next third-party binary dropped beside it should go red.
    */
-  'packages/site/public/poweredby-google.png',
+  "packages/site/public/poweredby-google.png",
 ];
 
-describe('G5 — library.json is a build artifact', () => {
-  it('is not tracked by git', () => {
+describe("G5 — library.json is a build artifact", () => {
+  it("is not tracked by git", () => {
     const tracked = trackedFiles();
-    expectFound(tracked, 'tracked files', 20);
+    expectFound(tracked, "tracked files", 20);
 
-    const committed = tracked.filter((path) => path.endsWith('library.json'));
+    const committed = tracked.filter((path) => path.endsWith("library.json"));
     expect(
       committed,
-      `library.json is a build artifact and must stay regenerable: ${committed.join(', ')}`,
+      `library.json is a build artifact and must stay regenerable: ${committed.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('is gitignored wherever it gets written', () => {
+  it("is gitignored wherever it gets written", () => {
     // Both the default local output and the staged public one.
-    expect(isIgnored('library.json')).toBe(true);
-    expect(isIgnored('packages/site/public/library.json')).toBe(true);
+    expect(isIgnored("library.json")).toBe(true);
+    expect(isIgnored("packages/site/public/library.json")).toBe(true);
   });
 
-  it('keeps the rest of the build output out too', () => {
-    expect(isIgnored('packages/site/public/covers/anything.jpg')).toBe(true);
-    expect(isIgnored('artifacts/shelf.png')).toBe(true);
+  it("keeps the rest of the build output out too", () => {
+    expect(isIgnored("packages/site/public/covers/anything.jpg")).toBe(true);
+    expect(isIgnored("artifacts/shelf.png")).toBe(true);
 
     // `og.png` sits in that same folder and is deliberately *not* ignored: it
     // is the designed share card, committed, and `publish()` no longer writes
@@ -142,12 +148,12 @@ describe('G5 — library.json is a build artifact', () => {
     // says the two decisions have to move together — and it reads the rule
     // rather than the outcome, because the outcome cannot change while the file
     // is tracked.
-    expect(matchesIgnoreRule('packages/site/public/og.png')).toBe(false);
+    expect(matchesIgnoreRule("packages/site/public/og.png")).toBe(false);
   });
 });
 
-describe('G13 — no third-party material is committed', () => {
-  it('tracks no binary outside the generated fixture covers and the brand art', () => {
+describe("G13 — no third-party material is committed", () => {
+  it("tracks no binary outside the generated fixture covers and the brand art", () => {
     const allowedFiles = new Set(BRAND_BINARY_FILES);
     const offenders = trackedFiles().filter(
       (path) =>
@@ -158,29 +164,32 @@ describe('G13 — no third-party material is committed', () => {
 
     expect(
       offenders,
-      'committed binaries outside the generated fixture covers and the brand art. Real ' +
+      "committed binaries outside the generated fixture covers and the brand art. Real " +
         "cover art is somebody else's copyrighted image and is never committed — see " +
-        `fixtures/README.md: ${offenders.join(', ')}`,
+        `fixtures/README.md: ${offenders.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('still tracks the generated fixture covers, so the rule is not vacuous', () => {
+  it("still tracks the generated fixture covers, so the rule is not vacuous", () => {
     // If the fixture covers vanished, the assertion above would pass over an
     // empty set and stop meaning anything.
     const fixtures = trackedFiles().filter((path) =>
       GENERATED_BINARY_DIRS.some((dir) => path.startsWith(dir)),
     );
-    expectFound(fixtures, 'generated fixture covers', 5);
+    expectFound(fixtures, "generated fixture covers", 5);
   });
 
-  it('has no allowlisted directory that has gone empty', () => {
+  it("has no allowlisted directory that has gone empty", () => {
     for (const dir of GENERATED_BINARY_DIRS) {
       const inside = trackedFiles().filter((path) => path.startsWith(dir));
-      expect(inside.length, `${dir} is allowlisted but tracks nothing — drop it`).toBeGreaterThan(0);
+      expect(
+        inside.length,
+        `${dir} is allowlisted but tracks nothing — drop it`,
+      ).toBeGreaterThan(0);
     }
   });
 
-  it('tracks every allowlisted brand file', () => {
+  it("tracks every allowlisted brand file", () => {
     // Both halves of a named entry. A file that stopped being committed leaves
     // a permission behind for something nobody ships, and — because the page
     // links all four — a 404 on every visit that no other gate would notice.
@@ -192,12 +201,12 @@ describe('G13 — no third-party material is committed', () => {
 
     expect(
       missing,
-      'allowlisted as brand art but not tracked — the page links every one of these, ' +
-        `so a missing file is a 404 on every visit: ${missing.join(', ')}`,
+      "allowlisted as brand art but not tracked — the page links every one of these, " +
+        `so a missing file is a 404 on every visit: ${missing.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('keeps docs/images to exactly the generated screenshot', () => {
+  it("keeps docs/images to exactly the generated screenshot", () => {
     // A directory-level permission is broader than the rest of this allowlist,
     // and nothing here can inspect an image to tell an invented shelf from a
     // real one. So the *filename* is pinned instead: dropping any other picture
@@ -205,13 +214,15 @@ describe('G13 — no third-party material is committed', () => {
     // shows up in review as a changed binary rather than as a new file nobody
     // looks at. Regenerate with:
     //   pnpm smoke:render && pnpm tsx scripts/make-readme-image.ts
-    const images = trackedFiles().filter((path) => path.startsWith('docs/images/'));
+    const images = trackedFiles().filter((path) =>
+      path.startsWith("docs/images/"),
+    );
 
     expect(
       images,
-      'docs/images/ holds the README screenshot rendered from the fixture vault, and ' +
-        'nothing else. A picture of a real shelf publishes real titles and real cover ' +
-        `art — see fixtures/README.md: ${images.join(', ')}`,
-    ).toEqual(['docs/images/shelf.png']);
+      "docs/images/ holds the README screenshot rendered from the fixture vault, and " +
+        "nothing else. A picture of a real shelf publishes real titles and real cover " +
+        `art — see fixtures/README.md: ${images.join(", ")}`,
+    ).toEqual(["docs/images/shelf.png"]);
   });
 });

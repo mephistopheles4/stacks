@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 
 /**
  * One GET, returning parsed JSON, or `undefined` when the response is unusable
@@ -12,7 +12,7 @@ import { join } from 'node:path';
  */
 export type HttpGet = (url: string) => Promise<unknown | undefined>;
 
-const USER_AGENT = 'stacks/0.0 (personal reading tracker)';
+const USER_AGENT = "stacks/0.0 (personal reading tracker)";
 
 /**
  * Statuses worth trying again.
@@ -29,10 +29,13 @@ const BACKOFF_MS = 1200;
 async function getWithRetry(url: string): Promise<unknown | undefined> {
   for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
     try {
-      const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+      const response = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT },
+      });
 
       if (response.ok) return await response.json();
-      if (!TRANSIENT.has(response.status) || attempt === ATTEMPTS) return undefined;
+      if (!TRANSIENT.has(response.status) || attempt === ATTEMPTS)
+        return undefined;
     } catch {
       // A dropped connection is transient too; fall through to the wait.
       if (attempt === ATTEMPTS) return undefined;
@@ -51,11 +54,11 @@ async function getWithRetry(url: string): Promise<unknown | undefined> {
  */
 export function createCachedHttpGet(cacheDir: string): HttpGet {
   return async (url) => {
-    const key = createHash('sha256').update(url).digest('hex').slice(0, 32);
+    const key = createHash("sha256").update(url).digest("hex").slice(0, 32);
     const path = join(cacheDir, `${key}.json`);
 
     try {
-      return JSON.parse(await readFile(path, 'utf8')) as unknown;
+      return JSON.parse(await readFile(path, "utf8")) as unknown;
     } catch {
       // Cache miss — fall through to the network.
     }
@@ -65,7 +68,7 @@ export function createCachedHttpGet(cacheDir: string): HttpGet {
 
     try {
       await mkdir(cacheDir, { recursive: true });
-      await writeFile(path, JSON.stringify(body), 'utf8');
+      await writeFile(path, JSON.stringify(body), "utf8");
     } catch {
       // A cache we cannot write is a slower tool, not a broken one.
     }

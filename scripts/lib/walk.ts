@@ -12,8 +12,8 @@
  * says what its absence means to them.
  */
 
-import { existsSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 export function walk(dir: string): string[] {
   if (!existsSync(dir)) return [];

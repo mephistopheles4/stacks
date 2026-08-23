@@ -9,17 +9,17 @@ building it taught.
 both.**
 
 - **Open Library short-circuited Google** — `if (primary.length > 0) return
-  primary`, so any result at all ended the search. Real, and **it fixes none of
-  these five**: Open Library returns *nothing* for all of them, so it was never
-  the thing standing in the way. "Fallback" now means *when the primary has no
-  good answer* rather than *when it is silent*, which is what CLAUDE.md always
+primary`, so any result at all ended the search. Real, and **it fixes none of
+  these five**: Open Library returns _nothing_ for all of them, so it was never
+  the thing standing in the way. "Fallback" now means _when the primary has no
+  good answer_ rather than _when it is silent_, which is what CLAUDE.md always
   said. Google is still not asked when Open Library has actually found the book,
   so the working path costs no extra requests against a shared quota.
 - **`enrich` looked only at candidate `[0]`** — the real cause, and the fix is
-  not "look at all of them". Four candidates pass the matcher for *The Subtle
-  Art of Not Giving a F\*ck*: a box set, a censored-title edition at 206 pages, a
+  not "look at all of them". Four candidates pass the matcher for _The Subtle
+  Art of Not Giving a F\*ck_: a box set, a censored-title edition at 206 pages, a
   16pt large-print at 320, and the true one at 262. **Taking the first
-  *matching* candidate silently picks 206.** So `lookup` now ranks — matching the
+  _matching_ candidate silently picks 206.** So `lookup` now ranks — matching the
   query dominates, `titleMatchScore` separates editions within that — and the
   ranking lives there rather than in `enrich`, because `stacks add` had the same
   defect through the same function.
@@ -27,11 +27,11 @@ both.**
   `pageCount: 0` in a search response and `368` from `/volumes/An8Q0QEACAAJ`.
   Ranking alone finds that book and still leaves it with no pages, so the chosen
   volume is re-asked by id — once, after the match is settled. `printedPageCount`
-  was considered and dropped: it disagrees with `pageCount` in *both* directions,
+  was considered and dropped: it disagrees with `pageCount` in _both_ directions,
   so it is not reliably the truer number and choosing per book would be guessing.
 
 **The fourth cause did not exist.** The issue reported something reordering or
-dropping Google's first candidate for *Beyond Vibe Coding* and asked for a trace
+dropping Google's first candidate for _Beyond Vibe Coding_ and asked for a trace
 rather than a guess — correctly, because the trace found no such thing. Google
 simply ranks a different Vibe Coding book first, and the only filter that fired
 removed a genuine study guide. The issue reached that hypothesis by probing the

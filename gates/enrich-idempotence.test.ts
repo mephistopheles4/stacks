@@ -1,11 +1,11 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
-import { isHost } from '../packages/core/src/test-support.ts';
-import { enrichBook } from '../packages/core/src/enrich.ts';
-import type { HttpGet } from '../packages/core/src/metadata/index.ts';
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { ObsidianAdapter } from "../packages/core/src/adapters/obsidian-adapter.ts";
+import { isHost } from "../packages/core/src/test-support.ts";
+import { enrichBook } from "../packages/core/src/enrich.ts";
+import type { HttpGet } from "../packages/core/src/metadata/index.ts";
 
 /**
  * G33 — running `enrich` twice changes nothing the second time.
@@ -27,47 +27,47 @@ import type { HttpGet } from '../packages/core/src/metadata/index.ts';
  */
 
 const provider: HttpGet = async (url) => {
-  if (isHost(url, 'openlibrary.org')) {
+  if (isHost(url, "openlibrary.org")) {
     return {
-      'ISBN:9781603580557': {
-        title: 'Thinking in Systems',
-        authors: [{ name: 'Donella H. Meadows' }],
+      "ISBN:9781603580557": {
+        title: "Thinking in Systems",
+        authors: [{ name: "Donella H. Meadows" }],
         number_of_pages: 240,
-        publishers: [{ name: 'Chelsea' }],
-        publish_date: '2008',
-        subjects: [{ name: 'systems thinking' }, { name: 'science' }],
-        key: '/books/OL26445570M',
+        publishers: [{ name: "Chelsea" }],
+        publish_date: "2008",
+        subjects: [{ name: "systems thinking" }, { name: "science" }],
+        key: "/books/OL26445570M",
       },
     };
   }
-  if (isHost(url, 'www.googleapis.com')) {
+  if (isHost(url, "www.googleapis.com")) {
     return {
       items: [
         {
-          id: 'CpbLAgAAQBAJ',
+          id: "CpbLAgAAQBAJ",
           volumeInfo: {
-            title: 'Thinking in Systems',
-            authors: ['Donella H. Meadows'],
-            publisher: 'Chelsea Green Publishing',
-            publishedDate: '2008-12-05',
-            categories: ['Business & Economics'],
-            description: 'A primer on systems thinking.',
+            title: "Thinking in Systems",
+            authors: ["Donella H. Meadows"],
+            publisher: "Chelsea Green Publishing",
+            publishedDate: "2008-12-05",
+            categories: ["Business & Economics"],
+            description: "A primer on systems thinking.",
             pageCount: 242,
           },
         },
       ],
     };
   }
-  if (isHost(url, 'itunes.apple.com')) {
+  if (isHost(url, "itunes.apple.com")) {
     return {
       results: [
         {
-          trackName: 'Thinking in Systems',
-          artistName: 'Donella H. Meadows',
+          trackName: "Thinking in Systems",
+          artistName: "Donella H. Meadows",
           trackId: 1384286945,
-          releaseDate: '2008-12-05T08:00:00Z',
-          genres: ['Books', 'Science & Nature'],
-          description: 'Apple’s blurb.',
+          releaseDate: "2008-12-05T08:00:00Z",
+          genres: ["Books", "Science & Nature"],
+          description: "Apple’s blurb.",
         },
       ],
     };
@@ -75,12 +75,12 @@ const provider: HttpGet = async (url) => {
   return undefined;
 };
 
-describe('G33 — the whole pass is idempotent', () => {
+describe("G33 — the whole pass is idempotent", () => {
   let dir: string;
   let vault: ObsidianAdapter;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'stacks-idempotent-'));
+    dir = await mkdtemp(join(tmpdir(), "stacks-idempotent-"));
     vault = new ObsidianAdapter(dir);
   });
 
@@ -88,33 +88,42 @@ describe('G33 — the whole pass is idempotent', () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  it('writes on the first run and nothing at all on the second', async () => {
-    await vault.writeBook({ title: 'Thinking in Systems', isbn: '9781603580557' });
+  it("writes on the first run and nothing at all on the second", async () => {
+    await vault.writeBook({
+      title: "Thinking in Systems",
+      isbn: "9781603580557",
+    });
 
     const [first] = await vault.listBooks();
     const path = join(dir, first!.sourcePath);
-    const before = await readFile(path, 'utf8');
+    const before = await readFile(path, "utf8");
 
     await enrichBook(first!, vault, provider);
-    const afterFirst = await readFile(path, 'utf8');
+    const afterFirst = await readFile(path, "utf8");
 
-    expect(afterFirst, 'the first run filled nothing, so this proves nothing').not.toBe(before);
+    expect(
+      afterFirst,
+      "the first run filled nothing, so this proves nothing",
+    ).not.toBe(before);
     // The write this gate exists for: not a frontmatter key, so nothing else
     // watches it.
-    expect(afterFirst).toContain('## About');
+    expect(afterFirst).toContain("## About");
 
     const [second] = await vault.listBooks();
     await enrichBook(second!, vault, provider);
 
     expect(
-      await readFile(path, 'utf8'),
-      'the second run changed the note. Re-running is the documented way to finish a ' +
-        'rate-limited pass, so a second run that writes is a pass nobody can safely repeat',
+      await readFile(path, "utf8"),
+      "the second run changed the note. Re-running is the documented way to finish a " +
+        "rate-limited pass, so a second run that writes is a pass nobody can safely repeat",
     ).toBe(afterFirst);
   });
 
-  it('appends no second ## About when the note already has one', async () => {
-    await vault.writeBook({ title: 'Thinking in Systems', isbn: '9781603580557' });
+  it("appends no second ## About when the note already has one", async () => {
+    await vault.writeBook({
+      title: "Thinking in Systems",
+      isbn: "9781603580557",
+    });
     const [book] = await vault.listBooks();
     const path = join(dir, book!.sourcePath);
 
@@ -122,7 +131,7 @@ describe('G33 — the whole pass is idempotent', () => {
     const [again] = await vault.listBooks();
     await enrichBook(again!, vault, provider);
 
-    const contents = await readFile(path, 'utf8');
+    const contents = await readFile(path, "utf8");
     expect(contents.match(/^## About$/gm) ?? []).toHaveLength(1);
   });
 });

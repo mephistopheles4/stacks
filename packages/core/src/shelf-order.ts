@@ -33,8 +33,8 @@ export function compareShelfPosition(a: Positionable, b: Positionable): number {
    * the generated part rather than overriding the one rule that reflects what
    * you are doing right now.
    */
-  if (a.status === 'reading' && b.status !== 'reading') return -1;
-  if (b.status === 'reading' && a.status !== 'reading') return 1;
+  if (a.status === "reading" && b.status !== "reading") return -1;
+  if (b.status === "reading" && a.status !== "reading") return 1;
 
   /**
    * Then an explicit `shelf_order`, lowest first. Numbered books come before
@@ -49,12 +49,16 @@ export function compareShelfPosition(a: Positionable, b: Positionable): number {
     if (left !== right) return left - right;
   }
 
-  const leftDate = a.finished ?? a.started ?? '';
-  const rightDate = b.finished ?? b.started ?? '';
+  const leftDate = a.finished ?? a.started ?? "";
+  const rightDate = b.finished ?? b.started ?? "";
   if (leftDate !== rightDate) return rightDate.localeCompare(leftDate);
 
   return a.title.localeCompare(b.title);
 }
 
 /** Statuses that appear on the shelf at all. Wishlist books are not owned yet. */
-export const SHELVED_STATUSES: ReadonlySet<string> = new Set(['read', 'reading', 'abandoned']);
+export const SHELVED_STATUSES: ReadonlySet<string> = new Set([
+  "read",
+  "reading",
+  "abandoned",
+]);

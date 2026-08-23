@@ -31,7 +31,7 @@
  * See docs/spec/metadata-merge.md §4.
  */
 
-export const SUBJECT_SEPARATOR = '; ';
+export const SUBJECT_SEPARATOR = "; ";
 
 /**
  * Five, in the winning provider's own order.
@@ -53,7 +53,7 @@ export const MAX_SUBJECTS = 5;
 export function formatSubjects(values: readonly string[]): string | undefined {
   const kept = values
     .map((value) => value.trim())
-    .filter((value) => value.length > 0 && !value.includes(';'))
+    .filter((value) => value.length > 0 && !value.includes(";"))
     .slice(0, MAX_SUBJECTS);
 
   return kept.length === 0 ? undefined : kept.join(SUBJECT_SEPARATOR);
@@ -68,7 +68,7 @@ export function formatSubjects(values: readonly string[]): string | undefined {
  */
 export function parseSubjects(value: string): readonly string[] {
   return value
-    .split(';')
+    .split(";")
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
 }

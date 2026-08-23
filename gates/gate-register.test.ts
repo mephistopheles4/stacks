@@ -78,23 +78,23 @@
  * docs/spec/gaming-analysis.md §§2-3.
  */
 
-import { describe, expect, it } from 'vitest';
-import { expectFound, readRepoFile, sectionsOf } from './repo.ts';
+import { describe, expect, it } from "vitest";
+import { expectFound, readRepoFile, sectionsOf } from "./repo.ts";
 
-const SCOREBOARD = 'docs/gates.md';
-const REGISTER = 'docs/gate-register.md';
+const SCOREBOARD = "docs/gates.md";
+const REGISTER = "docs/gate-register.md";
 
 /** The five categories, spelled as the register's verdict bullets spell them. */
 const CATEGORIES = [
-  'weakening',
-  'satisfying the letter',
-  'routing around',
-  'vacuous green',
-  'decay',
+  "weakening",
+  "satisfying the letter",
+  "routing around",
+  "vacuous green",
+  "decay",
 ] as const;
 
 /** `gated` / `repaired` / `accepted` / `declined`. There is no fifth. */
-const DISPOSITIONS = ['gated', 'repaired', 'accepted', 'declined'] as const;
+const DISPOSITIONS = ["gated", "repaired", "accepted", "declined"] as const;
 
 /**
  * The merged verdict bullets the register already contains, each named with its
@@ -107,16 +107,25 @@ const DISPOSITIONS = ['gated', 'repaired', 'accepted', 'declined'] as const;
  * permission, where every other line here names a file."*
  */
 const MERGED_BULLETS: readonly { row: string; lead: string }[] = [
-  { row: 'G12', lead: 'Weakening / satisfying the letter / routing around / vacuous green' },
-  { row: 'G17', lead: 'Satisfying the letter / vacuous green' },
-  { row: 'G20', lead: 'Satisfying the letter / vacuous green' },
-  { row: 'G21', lead: 'Satisfying the letter / vacuous green' },
-  { row: 'G22', lead: 'Satisfying the letter / vacuous green' },
-  { row: 'G23', lead: 'Satisfying the letter / vacuous green' },
-  { row: 'G24', lead: 'Weakening / satisfying the letter / routing around / vacuous green' },
-  { row: 'G25', lead: 'Satisfying the letter / vacuous green' },
-  { row: 'G26', lead: 'Vacuous green / decay' },
-  { row: 'G34', lead: 'Weakening / satisfying the letter / routing around / vacuous green' },
+  {
+    row: "G12",
+    lead: "Weakening / satisfying the letter / routing around / vacuous green",
+  },
+  { row: "G17", lead: "Satisfying the letter / vacuous green" },
+  { row: "G20", lead: "Satisfying the letter / vacuous green" },
+  { row: "G21", lead: "Satisfying the letter / vacuous green" },
+  { row: "G22", lead: "Satisfying the letter / vacuous green" },
+  { row: "G23", lead: "Satisfying the letter / vacuous green" },
+  {
+    row: "G24",
+    lead: "Weakening / satisfying the letter / routing around / vacuous green",
+  },
+  { row: "G25", lead: "Satisfying the letter / vacuous green" },
+  { row: "G26", lead: "Vacuous green / decay" },
+  {
+    row: "G34",
+    lead: "Weakening / satisfying the letter / routing around / vacuous green",
+  },
 ];
 
 interface Entry {
@@ -142,18 +151,21 @@ interface Entry {
 const ENTRY_HEADING = /^### (G\d+) — `([^`]+)`[^\n]*$/;
 
 function entries(): Entry[] {
-  return sectionsOf(readRepoFile(REGISTER), new RegExp(ENTRY_HEADING.source, 'gm')).map((section) => ({
-    row: section.captures[0] ?? '',
-    slug: section.captures[1] ?? '',
+  return sectionsOf(
+    readRepoFile(REGISTER),
+    new RegExp(ENTRY_HEADING.source, "gm"),
+  ).map((section) => ({
+    row: section.captures[0] ?? "",
+    slug: section.captures[1] ?? "",
     body: section.body,
   }));
 }
 
 /** Every numbered row of the scoreboard, in file order. */
 function scoreboardRows(): { row: string; slug: string }[] {
-  return [...readRepoFile(SCOREBOARD).matchAll(/^\| \*\*(G\d+)\*\* \| `([^`]+)`/gm)].map(
-    (match) => ({ row: match[1] ?? '', slug: match[2] ?? '' }),
-  );
+  return [
+    ...readRepoFile(SCOREBOARD).matchAll(/^\| \*\*(G\d+)\*\* \| `([^`]+)`/gm),
+  ].map((match) => ({ row: match[1] ?? "", slug: match[2] ?? "" }));
 }
 
 /**
@@ -164,10 +176,12 @@ function scoreboardRows(): { row: string; slug: string }[] {
  * those would make the cardinality rule assert something nobody wrote.
  */
 function verdictLeads(entry: Entry): string[] {
-  const triage = entry.body.split(/^\*\*Rank:\*\*/m)[0] ?? '';
+  const triage = entry.body.split(/^\*\*Rank:\*\*/m)[0] ?? "";
   return [...triage.matchAll(/^- \*\*(.+?)\*\*/gm)]
-    .map((match) => (match[1] ?? '').trim())
-    .filter((lead) => CATEGORIES.some((category) => lead.toLowerCase().includes(category)));
+    .map((match) => (match[1] ?? "").trim())
+    .filter((lead) =>
+      CATEGORIES.some((category) => lead.toLowerCase().includes(category)),
+    );
 }
 
 /** The categories one bullet's lead-in names. */
@@ -175,8 +189,8 @@ function categoriesIn(lead: string): string[] {
   return CATEGORIES.filter((category) => lead.toLowerCase().includes(category));
 }
 
-describe('G41 — the two documents are read, and neither read is empty', () => {
-  it('finds the rows and the entries', () => {
+describe("G41 — the two documents are read, and neither read is empty", () => {
+  it("finds the rows and the entries", () => {
     // Row side only, and 42 is the population at this row's landing commit —
     // safe solely under mark-never-delete plus gapless making the count
     // non-decreasing. On top-row deletion this is the only structural check in
@@ -185,7 +199,7 @@ describe('G41 — the two documents are read, and neither read is empty', () => 
     expectFound(entries(), `row sections in ${REGISTER}`, 1);
   });
 
-  it('has no row section written in a heading form this gate cannot see', () => {
+  it("has no row section written in a heading form this gate cannot see", () => {
     // G29's honest limit, closed rather than inherited: its link finder reads
     // one link form and states that a form nobody writes is a form it does not
     // see. Here the equivalent would read to a human as a real entry and be
@@ -200,23 +214,26 @@ describe('G41 — the two documents are read, and neither read is empty', () => 
     // exceeded the assertion's, which is the failure this whole register
     // catalogues, arriving in the gate that catalogues it. Both directions now
     // key off one pattern, so the two cannot drift apart again.
-    const strays = [...readRepoFile(REGISTER).matchAll(/^#{1,6} (G\d+)\b[^\n]*$/gm)]
+    const strays = [
+      ...readRepoFile(REGISTER).matchAll(/^#{1,6} (G\d+)\b[^\n]*$/gm),
+    ]
       .map((match) => match[0])
       .filter((heading) => !ENTRY_HEADING.test(heading));
 
     expect(
       strays,
-      'register headings naming a row in a form the correspondence sweep cannot read. ' +
-        'It reads ``### G<n> — `slug` `` and nothing else, so each of these is an entry ' +
-        `a human sees and no gate does: ${strays.join('; ')}`,
+      "register headings naming a row in a form the correspondence sweep cannot read. " +
+        "It reads ``### G<n> — `slug` `` and nothing else, so each of these is an entry " +
+        `a human sees and no gate does: ${strays.join("; ")}`,
     ).toEqual([]);
   });
 });
 
-describe('G41 — correspondence, in both directions and by count', () => {
-  it('gives every row exactly one register entry', () => {
+describe("G41 — correspondence, in both directions and by count", () => {
+  it("gives every row exactly one register entry", () => {
     const counts = new Map<string, number>();
-    for (const entry of entries()) counts.set(entry.row, (counts.get(entry.row) ?? 0) + 1);
+    for (const entry of entries())
+      counts.set(entry.row, (counts.get(entry.row) ?? 0) + 1);
 
     const wrong = scoreboardRows()
       .map(({ row }) => ({ row, count: counts.get(row) ?? 0 }))
@@ -226,12 +243,12 @@ describe('G41 — correspondence, in both directions and by count', () => {
     expect(
       wrong,
       `rows of ${SCOREBOARD} without exactly one \`### \` section in ${REGISTER}. ` +
-        'A row with none is a gate whose five questions nobody asked; a row with two is ' +
-        `a correspondence check satisfied by a duplicate: ${wrong.join('; ')}`,
+        "A row with none is a gate whose five questions nobody asked; a row with two is " +
+        `a correspondence check satisfied by a duplicate: ${wrong.join("; ")}`,
     ).toEqual([]);
   });
 
-  it('gives every register entry a row', () => {
+  it("gives every register entry a row", () => {
     const rows = new Set(scoreboardRows().map(({ row }) => row));
     const orphans = entries()
       .filter((entry) => !rows.has(entry.row))
@@ -241,53 +258,67 @@ describe('G41 — correspondence, in both directions and by count', () => {
       orphans,
       `sections in ${REGISTER} naming a row that ${SCOREBOARD} does not carry. Either ` +
         `the row was retired without marking, or the entry names a number that never ` +
-        `landed: ${orphans.join(', ')}`,
+        `landed: ${orphans.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('names each row by the slug the scoreboard gives it', () => {
+  it("names each row by the slug the scoreboard gives it", () => {
     // The second copy ADR-0026 objects to, held to the first. G19 already keeps
     // a row's slug anchored to its spec stem; this keeps the register anchored
     // to the row.
     const slugs = new Map(scoreboardRows().map(({ row, slug }) => [row, slug]));
     const wrong = entries()
-      .filter((entry) => slugs.has(entry.row) && slugs.get(entry.row) !== entry.slug)
-      .map((entry) => `${entry.row} is "${slugs.get(entry.row)}", entered as "${entry.slug}"`);
+      .filter(
+        (entry) => slugs.has(entry.row) && slugs.get(entry.row) !== entry.slug,
+      )
+      .map(
+        (entry) =>
+          `${entry.row} is "${slugs.get(entry.row)}", entered as "${entry.slug}"`,
+      );
 
     expect(
       wrong,
-      `register entries naming a row by a slug it no longer has: ${wrong.join('; ')}`,
+      `register entries naming a row by a slug it no longer has: ${wrong.join("; ")}`,
     ).toEqual([]);
   });
 });
 
-describe('G41 — every entry carries the five verdicts, one bullet each', () => {
-  it('names all five categories exactly once per entry', () => {
+describe("G41 — every entry carries the five verdicts, one bullet each", () => {
+  it("names all five categories exactly once per entry", () => {
     const wrong: string[] = [];
 
     for (const entry of entries()) {
       const named = verdictLeads(entry).flatMap(categoriesIn);
-      const missing = CATEGORIES.filter((category) => !named.includes(category));
+      const missing = CATEGORIES.filter(
+        (category) => !named.includes(category),
+      );
       const twice = CATEGORIES.filter(
         (category) => named.filter((one) => one === category).length > 1,
       );
-      if (missing.length) wrong.push(`${entry.row} names no ${missing.join(', ')} verdict`);
-      if (twice.length) wrong.push(`${entry.row} names ${twice.join(', ')} more than once`);
+      if (missing.length)
+        wrong.push(`${entry.row} names no ${missing.join(", ")} verdict`);
+      if (twice.length)
+        wrong.push(`${entry.row} names ${twice.join(", ")} more than once`);
     }
 
     expect(
       wrong,
-      `register entries whose five category verdicts are not each named once: ${wrong.join('; ')}`,
+      `register entries whose five category verdicts are not each named once: ${wrong.join("; ")}`,
     ).toEqual([]);
   });
 
-  it('merges two verdicts into one bullet only where the list says so', () => {
-    const allowed = new Set(MERGED_BULLETS.map(({ row, lead }) => `${row}|${lead}`));
+  it("merges two verdicts into one bullet only where the list says so", () => {
+    const allowed = new Set(
+      MERGED_BULLETS.map(({ row, lead }) => `${row}|${lead}`),
+    );
     const unlisted: string[] = [];
 
     for (const entry of entries()) {
       for (const lead of verdictLeads(entry)) {
-        if (categoriesIn(lead).length > 1 && !allowed.has(`${entry.row}|${lead}`)) {
+        if (
+          categoriesIn(lead).length > 1 &&
+          !allowed.has(`${entry.row}|${lead}`)
+        ) {
           unlisted.push(`${entry.row}: "${lead}"`);
         }
       }
@@ -295,20 +326,22 @@ describe('G41 — every entry carries the five verdicts, one bullet each', () =>
 
     expect(
       unlisted,
-      'verdict bullets naming more than one category, on a row the exemption list does ' +
-        'not name. A mechanical count keyed on one category word misses a merged bullet ' +
-        'and reports a total that is silently one short, which is why the list is ' +
-        `closed: ${unlisted.join('; ')}`,
+      "verdict bullets naming more than one category, on a row the exemption list does " +
+        "not name. A mechanical count keyed on one category word misses a merged bullet " +
+        "and reports a total that is silently one short, which is why the list is " +
+        `closed: ${unlisted.join("; ")}`,
     ).toEqual([]);
   });
 
-  it('keeps no exemption that has outlived its bullet', () => {
+  it("keeps no exemption that has outlived its bullet", () => {
     // The reverse assertion. An allowlist entry is a permission, and a
     // permission nobody revisits is the category-1 failure this register
     // catalogues — so split G26's merged bullet, or any of the other nine, and
     // the exemption for it goes red rather than sitting there granting nothing.
     const present = new Set(
-      entries().flatMap((entry) => verdictLeads(entry).map((lead) => `${entry.row}|${lead}`)),
+      entries().flatMap((entry) =>
+        verdictLeads(entry).map((lead) => `${entry.row}|${lead}`),
+      ),
     );
     const stale = MERGED_BULLETS.filter(
       ({ row, lead }) => !present.has(`${row}|${lead}`),
@@ -316,31 +349,35 @@ describe('G41 — every entry carries the five verdicts, one bullet each', () =>
 
     expect(
       stale,
-      'exemptions naming a merged verdict bullet the register no longer carries. The ' +
-        'entry is now a standing permission for a shape nobody writes — delete it: ' +
-        `${stale.join('; ')}`,
+      "exemptions naming a merged verdict bullet the register no longer carries. The " +
+        "entry is now a standing permission for a shape nobody writes — delete it: " +
+        `${stale.join("; ")}`,
     ).toEqual([]);
   });
 });
 
-describe('G41 — every entry carries its evidence fields', () => {
-  it('carries exactly one `**Gate:**` and one `**Date:**`', () => {
+describe("G41 — every entry carries its evidence fields", () => {
+  it("carries exactly one `**Gate:**` and one `**Date:**`", () => {
     const wrong: string[] = [];
 
     for (const entry of entries()) {
       const gates = [...entry.body.matchAll(/^\*\*Gate:\*\*/gm)].length;
-      const dates = [...entry.body.matchAll(/^\*\*Date:\*\* *(\d{4}-\d{2}-\d{2})\s*$/gm)].length;
-      if (gates !== 1) wrong.push(`${entry.row} has ${gates} \`**Gate:**\` lines`);
-      if (dates !== 1) wrong.push(`${entry.row} has ${dates} ISO \`**Date:**\` lines`);
+      const dates = [
+        ...entry.body.matchAll(/^\*\*Date:\*\* *(\d{4}-\d{2}-\d{2})\s*$/gm),
+      ].length;
+      if (gates !== 1)
+        wrong.push(`${entry.row} has ${gates} \`**Gate:**\` lines`);
+      if (dates !== 1)
+        wrong.push(`${entry.row} has ${dates} ISO \`**Date:**\` lines`);
     }
 
     expect(
       wrong,
-      `register entries without exactly one Gate line and one ISO date: ${wrong.join('; ')}`,
+      `register entries without exactly one Gate line and one ISO date: ${wrong.join("; ")}`,
     ).toEqual([]);
   });
 
-  it('carries an observed-red line on every entry', () => {
+  it("carries an observed-red line on every entry", () => {
     // `CONTRIBUTING.md`'s oldest rule — *a gate never observed failing is not
     // yet a gate* — has been enforced until now by the author remembering to
     // write a sentence. This is the first structure that can require it.
@@ -350,12 +387,12 @@ describe('G41 — every entry carries its evidence fields', () => {
 
     expect(
       missing,
-      'register entries with no `**Observed-red**` line. A gate never observed failing ' +
-        `is not yet a gate: ${missing.join(', ')}`,
+      "register entries with no `**Observed-red**` line. A gate never observed failing " +
+        `is not yet a gate: ${missing.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('uses no disposition outside the four-word vocabulary', () => {
+  it("uses no disposition outside the four-word vocabulary", () => {
     // A fifth "documented" disposition was floated and refused: by this repo's
     // own constitution that is not a closure, since *a rule nothing can fail on
     // is a comment*. A finding closed by writing a rule down is an `accepted`
@@ -379,7 +416,7 @@ describe('G41 — every entry carries its evidence fields', () => {
       // `docs/gates.md` records three separate times. `:? +` reaches both field
       // spellings and no sentence.
       for (const match of entry.body.matchAll(/\bdisposition:? +`(\w+)`/gi)) {
-        const word = match[1] ?? '';
+        const word = match[1] ?? "";
         if (!DISPOSITIONS.includes(word as (typeof DISPOSITIONS)[number])) {
           wrong.push(`${entry.row}: \`${word}\``);
         }
@@ -388,8 +425,8 @@ describe('G41 — every entry carries its evidence fields', () => {
 
     expect(
       wrong,
-      `dispositions outside \`${DISPOSITIONS.join('` / `')}\`. There is no fifth: ` +
-        `${wrong.join('; ')}`,
+      `dispositions outside \`${DISPOSITIONS.join("` / `")}\`. There is no fifth: ` +
+        `${wrong.join("; ")}`,
     ).toEqual([]);
   });
 });

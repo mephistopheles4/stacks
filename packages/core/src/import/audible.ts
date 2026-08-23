@@ -1,5 +1,5 @@
-import type { BookInput } from '../types.ts';
-import { keyIfPresent } from '../key-if-present.ts';
+import type { BookInput } from "../types.ts";
+import { keyIfPresent } from "../key-if-present.ts";
 
 /**
  * Maps a Libation Audible-library export into book notes.
@@ -17,7 +17,7 @@ import { keyIfPresent } from '../key-if-present.ts';
  */
 
 /** Amazon's image CDN; `PictureLarge` is the full-resolution art. */
-const IMAGE_CDN = 'https://m.media-amazon.com/images/I';
+const IMAGE_CDN = "https://m.media-amazon.com/images/I";
 
 export interface AudibleImportOptions {
   /**
@@ -47,49 +47,55 @@ export function parseAudibleExport(
     .filter((book): book is AudibleBook => book !== undefined);
 }
 
-function toAudibleBook(record: unknown, options: AudibleImportOptions): AudibleBook | undefined {
-  if (typeof record !== 'object' || record === null) return undefined;
+function toAudibleBook(
+  record: unknown,
+  options: AudibleImportOptions,
+): AudibleBook | undefined {
+  if (typeof record !== "object" || record === null) return undefined;
   const fields = record as Record<string, unknown>;
 
-  const base = text(fields['Title']);
+  const base = text(fields["Title"]);
   if (base === undefined) return undefined;
 
-  const subtitle = text(fields['Subtitle']);
+  const subtitle = text(fields["Subtitle"]);
   const title = subtitle === undefined ? base : `${base}: ${subtitle}`;
 
   // Audible has no notion of "abandoned" or "wishlist" — it is finished or not.
-  const finished = fields['IsFinished'] === true;
-  const added = isoDate(fields['DateAdded']);
+  const finished = fields["IsFinished"] === true;
+  const added = isoDate(fields["DateAdded"]);
 
   const extra: Record<string, string | number | boolean> = {};
-  const narrator = text(fields['NarratorNames']);
-  const asin = text(fields['AudibleProductId']);
-  const minutes = positiveInt(fields['LengthInMinutes']);
-  const publisher = text(fields['Publisher']);
+  const narrator = text(fields["NarratorNames"]);
+  const asin = text(fields["AudibleProductId"]);
+  const minutes = positiveInt(fields["LengthInMinutes"]);
+  const publisher = text(fields["Publisher"]);
 
-  if (narrator !== undefined) extra['narrator'] = narrator;
-  if (asin !== undefined) extra['asin'] = asin;
-  if (minutes !== undefined) extra['duration'] = formatDuration(minutes);
-  if (publisher !== undefined) extra['publisher'] = publisher;
-  extra['source'] = 'audible';
+  if (narrator !== undefined) extra["narrator"] = narrator;
+  if (asin !== undefined) extra["asin"] = asin;
+  if (minutes !== undefined) extra["duration"] = formatDuration(minutes);
+  if (publisher !== undefined) extra["publisher"] = publisher;
+  extra["source"] = "audible";
 
   const input: BookInput = {
     title,
-    status: finished ? 'read' : 'reading',
-    tags: tagsFrom(fields['CategoriesNames']),
+    status: finished ? "read" : "reading",
+    tags: tagsFrom(fields["CategoriesNames"]),
     extra,
-    ...keyIfPresent('author', text(fields['AuthorNames'])),
-    ...keyIfPresent('rating', rating(fields['MyRatingOverall'])),
+    ...keyIfPresent("author", text(fields["AuthorNames"])),
+    ...keyIfPresent("rating", rating(fields["MyRatingOverall"])),
     ...keyIfPresent(
-      'finished',
+      "finished",
       finished && options.dateAddedAsFinished === true ? added : undefined,
     ),
-    ...keyIfPresent('started', finished ? undefined : added),
+    ...keyIfPresent("started", finished ? undefined : added),
   };
 
   return {
     input,
-    ...keyIfPresent('coverUrl', imageUrl(fields['PictureLarge']) ?? imageUrl(fields['PictureId'])),
+    ...keyIfPresent(
+      "coverUrl",
+      imageUrl(fields["PictureLarge"]) ?? imageUrl(fields["PictureId"]),
+    ),
   };
 }
 
@@ -100,10 +106,10 @@ function tagsFrom(value: unknown): string[] {
     raw === undefined
       ? []
       : raw
-          .split(';')
+          .split(";")
           .map((tag) => tag.trim().toLowerCase())
           .filter((tag) => tag.length > 0);
-  return ['audiobook', ...categories];
+  return ["audiobook", ...categories];
 }
 
 function imageUrl(value: unknown): string | undefined {
@@ -119,7 +125,7 @@ function formatDuration(minutes: number): string {
 
 /** Audible rates out of 5, same as the frontmatter contract. */
 function rating(value: unknown): number | undefined {
-  const n = typeof value === 'number' ? value : Number(text(value));
+  const n = typeof value === "number" ? value : Number(text(value));
   if (!Number.isFinite(n)) return undefined;
   const rounded = Math.round(n);
   return rounded >= 1 && rounded <= 5 ? rounded : undefined;
@@ -132,12 +138,12 @@ function isoDate(value: unknown): string | undefined {
 }
 
 function text(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
+  if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function positiveInt(value: unknown): number | undefined {
-  const n = typeof value === 'number' ? value : Number(value);
+  const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) && n > 0 ? Math.round(n) : undefined;
 }

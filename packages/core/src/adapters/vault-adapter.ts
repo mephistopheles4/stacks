@@ -1,10 +1,12 @@
-import type { BookInput, BookRecord } from '../types.ts';
+import type { BookInput, BookRecord } from "../types.ts";
 
 /**
  * Frontmatter keys to set, by their contract names (`shelf_order`, not
  * `shelfOrder`). `undefined` removes the key.
  */
-export type FrontmatterChanges = Readonly<Record<string, string | number | boolean | undefined>>;
+export type FrontmatterChanges = Readonly<
+  Record<string, string | number | boolean | undefined>
+>;
 
 /**
  * The only way any code in this project touches vault files (invariant 4).
@@ -66,7 +68,11 @@ export interface VaultAdapter {
    * every re-run claims to have written something and the report becomes a
    * control that lies — G27's defect, one field over.
    */
-  insertBodySection(sourcePath: string, heading: string, text: string): Promise<boolean>;
+  insertBodySection(
+    sourcePath: string,
+    heading: string,
+    text: string,
+  ): Promise<boolean>;
 
   /** Dedupe check: ISBN first, then a normalised title+author. */
   bookExists(isbn: string, titleAuthor: string): Promise<boolean>;

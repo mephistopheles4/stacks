@@ -34,7 +34,7 @@ import {
   trendOfMetric,
   unescape,
   type TrendName,
-} from './metrics.ts';
+} from "./metrics.ts";
 
 /** Seconds in a day, as the bounds below are stated in days. */
 export const DAY = 86_400;
@@ -74,7 +74,7 @@ export const STALE_AFTER_DAYS = 3;
  * *"until the first record arrives"*. Three missed nightlies is a dead pipe,
  * not a bootstrap.
  */
-export const SPINE_LANDED = '2026-08-19';
+export const SPINE_LANDED = "2026-08-19";
 
 /** One sample line, as parsed. */
 export interface Sample {
@@ -114,10 +114,12 @@ export interface ParsedRecord {
  */
 function parseLabels(text: string): Record<string, string> {
   const labels: Record<string, string> = {};
-  for (const match of text.matchAll(/([a-zA-Z_][a-zA-Z0-9_]*)="((?:[^"\\]|\\.)*)"/g)) {
+  for (const match of text.matchAll(
+    /([a-zA-Z_][a-zA-Z0-9_]*)="((?:[^"\\]|\\.)*)"/g,
+  )) {
     const key = match[1];
     if (key === undefined) continue;
-    labels[key] = unescape(match[2] ?? '');
+    labels[key] = unescape(match[2] ?? "");
   }
   return labels;
 }
@@ -129,21 +131,24 @@ const SAMPLE_LINE =
 export function parseSamples(document: string): Sample[] {
   const samples: Sample[] = [];
 
-  for (const raw of document.split('\n')) {
+  for (const raw of document.split("\n")) {
     // A record read back through git on Windows arrives with `\r` on every
     // line, and this module is downstream of exactly that path.
-    const line = raw.replace(/\r$/, '').trim();
-    if (line === '' || line.startsWith('#')) continue;
+    const line = raw.replace(/\r$/, "").trim();
+    if (line === "" || line.startsWith("#")) continue;
 
     const match = SAMPLE_LINE.exec(line);
     if (match === null) continue;
 
     const timestamp = match[4] === undefined ? undefined : Number(match[4]);
     samples.push({
-      metric: match[1] ?? '',
+      metric: match[1] ?? "",
       labels: match[2] === undefined ? {} : parseLabels(match[2]),
       value: Number(match[3]),
-      timestamp: timestamp === undefined || !Number.isFinite(timestamp) ? undefined : timestamp,
+      timestamp:
+        timestamp === undefined || !Number.isFinite(timestamp)
+          ? undefined
+          : timestamp,
     });
   }
   return samples;
@@ -167,14 +172,19 @@ export function parseRecord(document: string): ParsedRecord {
     const trend = trendOfMetric(sample.metric);
     if (trend === undefined || sample.timestamp === undefined) continue;
     const seen = trends.get(trend);
-    trends.set(trend, seen === undefined ? sample.timestamp : Math.max(seen, sample.timestamp));
+    trends.set(
+      trend,
+      seen === undefined ? sample.timestamp : Math.max(seen, sample.timestamp),
+    );
   }
 
   return { samples, trends, timestamp };
 }
 
 /** The newest sample each series carries, across every record given. */
-export function newestByTrend(records: readonly ParsedRecord[]): Map<string, number> {
+export function newestByTrend(
+  records: readonly ParsedRecord[],
+): Map<string, number> {
   const newest = new Map<string, number>();
 
   for (const record of records) {
@@ -200,10 +210,10 @@ export interface StaleSeries {
  * `bootstrap` prints and does not refuse; every other non-`fresh` kind refuses.
  */
 export type RecordVerdict =
-  | { kind: 'fresh' }
-  | { kind: 'bootstrap'; days: number }
-  | { kind: 'never'; days: number }
-  | { kind: 'stale'; stale: StaleSeries[] };
+  | { kind: "fresh" }
+  | { kind: "bootstrap"; days: number }
+  | { kind: "never"; days: number }
+  | { kind: "stale"; stale: StaleSeries[] };
 
 /**
  * ⚠️ **`now` is the only injected input, and the absences are deliberate.**
@@ -222,7 +232,9 @@ export interface JudgeInput {
 }
 
 /** The eight CI-written series, which is every series the bound covers. */
-export const GATED_SERIES: readonly TrendName[] = TREND_SERIES.map((series) => series.name);
+export const GATED_SERIES: readonly TrendName[] = TREND_SERIES.map(
+  (series) => series.name,
+);
 
 /**
  * Is this record fresh enough to deploy on?
@@ -240,7 +252,9 @@ export function judgeRecord(input: JudgeInput): RecordVerdict {
 
   if (input.records.length === 0) {
     const days = Math.floor((input.now - spine) / DAY);
-    return days >= STALE_AFTER_DAYS ? { kind: 'never', days } : { kind: 'bootstrap', days };
+    return days >= STALE_AFTER_DAYS
+      ? { kind: "never", days }
+      : { kind: "bootstrap", days };
   }
 
   const newest = newestByTrend(input.records);
@@ -254,24 +268,24 @@ export function judgeRecord(input: JudgeInput): RecordVerdict {
     else if (input.now - stamp > bound) stale.push({ series, newest: stamp });
   }
 
-  return stale.length === 0 ? { kind: 'fresh' } : { kind: 'stale', stale };
+  return stale.length === 0 ? { kind: "fresh" } : { kind: "stale", stale };
 }
 
 /** `4 days`, `19 hours`, `3 minutes` — an age a person reads without arithmetic. */
 export function describeAge(seconds: number): string {
   const plural = (count: number, unit: string): string =>
-    `${String(count)} ${unit}${count === 1 ? '' : 's'}`;
+    `${String(count)} ${unit}${count === 1 ? "" : "s"}`;
 
   // Bucketed on the **rounded** value rather than on the raw seconds, so an age
   // one second short of an hour reads `1 hour` and never `60 minutes`.
-  if (seconds < 90) return plural(Math.max(0, Math.round(seconds)), 'second');
+  if (seconds < 90) return plural(Math.max(0, Math.round(seconds)), "second");
 
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return plural(minutes, 'minute');
+  if (minutes < 60) return plural(minutes, "minute");
 
   const hours = Math.round(seconds / 3600);
-  if (hours < 36) return plural(hours, 'hour');
-  return plural(Math.round(seconds / DAY), 'day');
+  if (hours < 36) return plural(hours, "hour");
+  return plural(Math.round(seconds / DAY), "day");
 }
 
 /**
@@ -294,14 +308,20 @@ export function describeAge(seconds: number): string {
  */
 export function runHealthOf(record: ParsedRecord): boolean | undefined {
   const sample = record.samples.find(
-    (one) => one.metric === `${METRIC_PREFIXES.run}ok` && one.labels['surface'] === undefined,
+    (one) =>
+      one.metric === `${METRIC_PREFIXES.run}ok` &&
+      one.labels["surface"] === undefined,
   );
   return sample === undefined ? undefined : sample.value === 1;
 }
 
 /** The run that wrote a record: `stacks_run_info`'s labels. */
-export function runInfoOf(record: ParsedRecord): Record<string, string> | undefined {
-  return record.samples.find((sample) => sample.metric === `${METRIC_PREFIXES.run}info`)?.labels;
+export function runInfoOf(
+  record: ParsedRecord,
+): Record<string, string> | undefined {
+  return record.samples.find(
+    (sample) => sample.metric === `${METRIC_PREFIXES.run}info`,
+  )?.labels;
 }
 
 /**
@@ -314,12 +334,15 @@ export function runInfoOf(record: ParsedRecord): Record<string, string> | undefi
  * result, which reaches a dashboard as a blank panel and a deploy print as a
  * scope that appears to have no number.
  */
-export function samplesOf(record: ParsedRecord, trend: TrendName): Map<string, number> {
+export function samplesOf(
+  record: ParsedRecord,
+  trend: TrendName,
+): Map<string, number> {
   const found = new Map<string, number>();
 
   for (const sample of record.samples) {
     if (trendOfMetric(sample.metric) !== trend) continue;
-    const scope = sample.labels['scope'];
+    const scope = sample.labels["scope"];
     if (scope !== undefined) found.set(scope, sample.value);
   }
   return found;
@@ -334,7 +357,7 @@ export function samplesOf(record: ParsedRecord, trend: TrendName): Map<string, n
  * read as a scored run and pair a merge against a nightly in the delta.
  */
 export function scoresOf(record: ParsedRecord): Map<string, number> {
-  return samplesOf(record, 'mutation-score');
+  return samplesOf(record, "mutation-score");
 }
 
 /**
@@ -347,10 +370,10 @@ export function scoresOf(record: ParsedRecord): Map<string, number> {
  * dependency runs that way — `floors.ts` imports from here and not the reverse,
  * so the constant can only sit at this end without a cycle.
  */
-export const MERGE_EVENT = 'push';
+export const MERGE_EVENT = "push";
 
 /** Which half of `metrics.yml` wrote a record. */
-export type RecordHalf = 'merge' | 'nightly';
+export type RecordHalf = "merge" | "nightly";
 
 /**
  * The half that wrote this record, or `undefined` where it does not say.
@@ -368,9 +391,9 @@ export type RecordHalf = 'merge' | 'nightly';
  * week to week, so a reader who is not told cannot know.
  */
 export function halfOf(record: ParsedRecord): RecordHalf | undefined {
-  const event = runInfoOf(record)?.['event'];
-  if (event === undefined || event === 'unknown') return undefined;
-  return event === MERGE_EVENT ? 'merge' : 'nightly';
+  const event = runInfoOf(record)?.["event"];
+  if (event === undefined || event === "unknown") return undefined;
+  return event === MERGE_EVENT ? "merge" : "nightly";
 }
 
 /**
@@ -452,7 +475,9 @@ export function deltaPair(
   // previous, and the caller prints *first run*.
   if (half === undefined) return { latest };
 
-  const previous = carriers.find((record) => record !== latest && halfOf(record) === half);
+  const previous = carriers.find(
+    (record) => record !== latest && halfOf(record) === half,
+  );
 
   return previous === undefined ? { latest } : { latest, previous };
 }

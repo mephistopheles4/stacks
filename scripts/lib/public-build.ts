@@ -32,11 +32,11 @@
  * docs/adr/0028-one-inspector-for-the-public-build.md.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { extname, join, relative } from 'node:path';
-import type { LibraryBook } from '../../packages/core/src/library.ts';
-import type { BookRecord } from '../../packages/core/src/types.ts';
-import { walk } from './walk.ts';
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { extname, join, relative } from "node:path";
+import type { LibraryBook } from "../../packages/core/src/library.ts";
+import type { BookRecord } from "../../packages/core/src/types.ts";
+import { walk } from "./walk.ts";
 
 /**
  * The rules, as data.
@@ -47,25 +47,25 @@ import { walk } from './walk.ts';
  * that assertion would start passing over a rule nobody tests.
  */
 export const PUBLIC_BUILD_RULES = [
-  'note-body',
-  'vault-path',
-  'empty-library',
-  'private-book',
-  'wishlist-book',
-  'foreign-cover',
-  'orphan-cover',
-  'unknown-key',
+  "note-body",
+  "vault-path",
+  "empty-library",
+  "private-book",
+  "wishlist-book",
+  "foreign-cover",
+  "orphan-cover",
+  "unknown-key",
   // Two rules rather than one, because `deploy:site --check-only` has to excuse
   // exactly one of them: it asserts the built page against the *current*
   // SITE_URL, and repointing SITE_URL at a local server is how you watch the
   // live check fail on purpose. A page that lost its share tag entirely is
   // still worth saying out loud in that mode.
-  'share-image-missing',
-  'share-image-origin',
-  'robots',
-  'headers',
-  'og-image',
-  'csp',
+  "share-image-missing",
+  "share-image-origin",
+  "robots",
+  "headers",
+  "og-image",
+  "csp",
 ] as const;
 
 export type PublicBuildRule = (typeof PUBLIC_BUILD_RULES)[number];
@@ -108,10 +108,20 @@ export interface InspectOptions {
  * G2, and a canary that drifts between the place it is planted and the place it
  * is searched for is worse than no canary: both halves keep passing.
  */
-export const NOTE_BODY_CANARY = 'NOTE_BODY_CANARY_do_not_ship';
+export const NOTE_BODY_CANARY = "NOTE_BODY_CANARY_do_not_ship";
 
 /** Binary assets are covers and the OG image; no text to leak. */
-const TEXTUAL = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt', '.map', '.xml']);
+const TEXTUAL = new Set([
+  ".html",
+  ".js",
+  ".mjs",
+  ".css",
+  ".json",
+  ".svg",
+  ".txt",
+  ".map",
+  ".xml",
+]);
 
 /**
  * Things in a shipped text file that would give away the shape of the vault.
@@ -131,26 +141,39 @@ const TEXTUAL = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt'
  * named field, correctly wired — passes every assertion in this file. See
  * `docs/spec/trend-layer.md` §5, responses (i) and (iii).
  */
-const FORBIDDEN: readonly { readonly rule: PublicBuildRule; readonly what: string; readonly pattern: RegExp }[] = [
-  { rule: 'note-body', what: 'note body text', pattern: new RegExp(NOTE_BODY_CANARY) },
-  { rule: 'vault-path', what: 'a vault note path', pattern: /Library\/[^"'\s]*\.md/ },
-  { rule: 'vault-path', what: 'the sourcePath field', pattern: /"sourcePath"/ },
+const FORBIDDEN: readonly {
+  readonly rule: PublicBuildRule;
+  readonly what: string;
+  readonly pattern: RegExp;
+}[] = [
+  {
+    rule: "note-body",
+    what: "note body text",
+    pattern: new RegExp(NOTE_BODY_CANARY),
+  },
+  {
+    rule: "vault-path",
+    what: "a vault note path",
+    pattern: /Library\/[^"'\s]*\.md/,
+  },
+  { rule: "vault-path", what: "the sourcePath field", pattern: /"sourcePath"/ },
 ];
 
 /** Every `og:` and `twitter:` meta tag in a built page, as [key, value]. */
-const SHARE_TAG = /<meta\s+(?:property|name)="((?:og|twitter):[a-z]+)"\s+content="([^"]*)"/g;
+const SHARE_TAG =
+  /<meta\s+(?:property|name)="((?:og|twitter):[a-z]+)"\s+content="([^"]*)"/g;
 
 /** A cover this build serves itself: one path segment, under `covers/`. */
 const SAME_ORIGIN_COVER = /^covers\/[^/\\]+$/;
 
 /** The committed share card, and the only image a page may point at. */
-const SHARE_IMAGE_FILE = 'og.png';
+const SHARE_IMAGE_FILE = "og.png";
 
 /** The `_headers` block that governs covers. Matched exactly, not searched for. */
-const COVERS_PATTERN = '/covers/*';
+const COVERS_PATTERN = "/covers/*";
 
 /** The `_headers` block that governs every response, security headers included. */
-const EVERY_PATH_PATTERN = '/*';
+const EVERY_PATH_PATTERN = "/*";
 
 /**
  * The policy Astro emits into every page, as a `<meta http-equiv>`.
@@ -162,7 +185,8 @@ const EVERY_PATH_PATTERN = '/*';
  * would go stale the first time a stylesheet crossed that threshold, and the
  * only symptom would be an unstyled page. See `packages/site/astro.config.mjs`.
  */
-const CSP_META = /<meta\s+http-equiv="content-security-policy"\s+content="([^"]*)"/i;
+const CSP_META =
+  /<meta\s+http-equiv="content-security-policy"\s+content="([^"]*)"/i;
 
 /**
  * The whole policy, as `directive → the sources it must carry, exactly`.
@@ -199,13 +223,13 @@ const CSP_META = /<meta\s+http-equiv="content-security-policy"\s+content="([^"]*
  * is present at all; its hashes are the part that legitimately changes.
  */
 const CSP_DIRECTIVES: ReadonlyMap<string, readonly string[]> = new Map([
-  ['default-src', ["'none'"]],
-  ['img-src', ["'self'"]],
-  ['connect-src', ["'self'"]],
-  ['base-uri', ["'none'"]],
-  ['form-action', ["'none'"]],
-  ['script-src', ["'self'", 'https://static.cloudflareinsights.com']],
-  ['style-src', ["'self'"]],
+  ["default-src", ["'none'"]],
+  ["img-src", ["'self'"]],
+  ["connect-src", ["'self'"]],
+  ["base-uri", ["'none'"]],
+  ["form-action", ["'none'"]],
+  ["script-src", ["'self'", "https://static.cloudflareinsights.com"]],
+  ["style-src", ["'self'"]],
 ]);
 
 /**
@@ -228,9 +252,15 @@ const CSP_DIRECTIVES: ReadonlyMap<string, readonly string[]> = new Map([
  * Content-Security-Policy it did not have**, which is the whole of #127. A
  * control this file describes, this rule checks.
  */
-const FRAMING_DENIED: readonly { readonly what: string; readonly pattern: RegExp }[] = [
-  { what: "Content-Security-Policy: frame-ancestors 'none'", pattern: /^Content-Security-Policy:\s*frame-ancestors\s+'none'\s*$/i },
-  { what: 'X-Frame-Options: DENY', pattern: /^X-Frame-Options:\s*DENY\s*$/i },
+const FRAMING_DENIED: readonly {
+  readonly what: string;
+  readonly pattern: RegExp;
+}[] = [
+  {
+    what: "Content-Security-Policy: frame-ancestors 'none'",
+    pattern: /^Content-Security-Policy:\s*frame-ancestors\s+'none'\s*$/i,
+  },
+  { what: "X-Frame-Options: DENY", pattern: /^X-Frame-Options:\s*DENY\s*$/i },
 ];
 
 /** Below this, `og.png` is a truncated copy rather than an image. */
@@ -248,30 +278,30 @@ const MIN_OG_IMAGE_BYTES = 2048;
  * different question, and `vault-path` above already answers it.
  */
 const RECORD_KEYS = [
-  'sourcePath',
-  'title',
-  'author',
-  'isbn',
-  'status',
-  'started',
-  'finished',
-  'rating',
-  'cover',
-  'coverSource',
-  'spineColor',
-  'pages',
-  'binding',
-  'private',
-  'faceOut',
-  'shelfOrder',
-  'tags',
-  'publisher',
-  'published',
-  'subjects',
-  'googleVolumeId',
-  'appleTrackId',
-  'openLibraryOlid',
-  'oreillyOurn',
+  "sourcePath",
+  "title",
+  "author",
+  "isbn",
+  "status",
+  "started",
+  "finished",
+  "rating",
+  "cover",
+  "coverSource",
+  "spineColor",
+  "pages",
+  "binding",
+  "private",
+  "faceOut",
+  "shelfOrder",
+  "tags",
+  "publisher",
+  "published",
+  "subjects",
+  "googleVolumeId",
+  "appleTrackId",
+  "openLibraryOlid",
+  "oreillyOurn",
 ] as const satisfies readonly (keyof BookRecord)[];
 
 /**
@@ -297,10 +327,16 @@ const RECORD_KEYS = [
  * They answer different questions anyway: G30 asks what `toLibraryBook`
  * produces, this asks what a folder may carry. Move one and move the other.
  */
-const DERIVED_KEYS = ['id', 'coverAspect'] as const satisfies readonly (keyof LibraryBook)[];
+const DERIVED_KEYS = [
+  "id",
+  "coverAspect",
+] as const satisfies readonly (keyof LibraryBook)[];
 
 /** The whole vocabulary a shipped book may spell. */
-const SHIPPABLE_KEYS: ReadonlySet<string> = new Set<string>([...RECORD_KEYS, ...DERIVED_KEYS]);
+const SHIPPABLE_KEYS: ReadonlySet<string> = new Set<string>([
+  ...RECORD_KEYS,
+  ...DERIVED_KEYS,
+]);
 
 interface ShippedBook {
   readonly title?: string;
@@ -310,10 +346,13 @@ interface ShippedBook {
   readonly sourcePath?: string;
 }
 
-export function inspectPublicBuild(dir: string, options: InspectOptions): PublicBuildReport {
+export function inspectPublicBuild(
+  dir: string,
+  options: InspectOptions,
+): PublicBuildReport {
   const problems: BuildProblem[] = [];
   const observations: string[] = [];
-  const origin = options.origin.replace(/\/$/, '');
+  const origin = options.origin.replace(/\/$/, "");
 
   const fail = (rule: PublicBuildRule, message: string): void => {
     problems.push({ rule, message });
@@ -329,11 +368,14 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     if (!TEXTUAL.has(extname(file))) continue;
     scanned += 1;
 
-    const contents = readFileSync(file, 'utf8');
+    const contents = readFileSync(file, "utf8");
     for (const { rule, what, pattern } of FORBIDDEN) {
       const hit = pattern.exec(contents);
       if (hit !== null) {
-        fail(rule, `${posix(relative(dir, file))} contains ${what}: ${JSON.stringify(hit[0].slice(0, 80))}`);
+        fail(
+          rule,
+          `${posix(relative(dir, file))} contains ${what}: ${JSON.stringify(hit[0].slice(0, 80))}`,
+        );
       }
     }
   }
@@ -347,13 +389,13 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     // produced something. Either way the four book-level rules below have
     // nothing to read, so this has to be loud.
     fail(
-      'empty-library',
-      existsSync(join(dir, 'library.json'))
-        ? 'library.json is not valid JSON — nothing can be checked about the books it lists'
-        : 'no library.json in the build — there is no shelf to publish',
+      "empty-library",
+      existsSync(join(dir, "library.json"))
+        ? "library.json is not valid JSON — nothing can be checked about the books it lists"
+        : "no library.json in the build — there is no shelf to publish",
     );
   } else if (books.length === 0) {
-    fail('empty-library', 'library.json contains no books at all');
+    fail("empty-library", "library.json contains no books at all");
   } else {
     observations.push(`${String(books.length)} book(s) in library.json`);
   }
@@ -376,39 +418,49 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   const tracedKeys = new Set<string>();
 
   for (const book of books ?? []) {
-    const name = book.title ?? '(untitled)';
+    const name = book.title ?? "(untitled)";
 
     for (const key of Object.keys(book)) {
       tracedKeys.add(key);
       if (!SHIPPABLE_KEYS.has(key) && !unnamed.has(key)) unnamed.set(key, name);
     }
-    if (book.private === true) fail('private-book', `private book would be published: ${name}`);
-    if (book.status === 'wishlist') fail('wishlist-book', `wishlist book would be published: ${name}`);
-    if (book.sourcePath !== undefined) fail('vault-path', `vault path would be published: ${name}`);
+    if (book.private === true)
+      fail("private-book", `private book would be published: ${name}`);
+    if (book.status === "wishlist")
+      fail("wishlist-book", `wishlist book would be published: ${name}`);
+    if (book.sourcePath !== undefined)
+      fail("vault-path", `vault path would be published: ${name}`);
     // A hand-edited or imported note may carry an absolute URL, and the shelf
     // passes `cover` straight to an <img> src — which has a visitor's browser
     // fetching from a third party and leaking their IP to whatever host the
     // note happened to name.
     if (book.cover !== undefined && !SAME_ORIGIN_COVER.test(book.cover)) {
-      fail('foreign-cover', `cover is not same-origin: ${name} → ${book.cover}`);
+      fail(
+        "foreign-cover",
+        `cover is not same-origin: ${name} → ${book.cover}`,
+      );
     }
   }
 
   if (unnamed.size > 0) {
     fail(
-      'unknown-key',
+      "unknown-key",
       `${String(unnamed.size)} key(s) on shipped books that no BookRecord field and no named ` +
         `derived key explains: ` +
-        [...unnamed].map(([key, name]) => `${key} (first on "${name}")`).join(', ') +
-        '. Either the artifact is inventing data, or the key is deliberate — in which case name ' +
-        'it in RECORD_KEYS or DERIVED_KEYS in scripts/lib/public-build.ts, with a sentence ' +
-        'saying why',
+        [...unnamed]
+          .map(([key, name]) => `${key} (first on "${name}")`)
+          .join(", ") +
+        ". Either the artifact is inventing data, or the key is deliberate — in which case name " +
+        "it in RECORD_KEYS or DERIVED_KEYS in scripts/lib/public-build.ts, with a sentence " +
+        "saying why",
     );
   } else if (tracedKeys.size > 0) {
     // Said out loud on the clean path, so a deploy's own output shows the trace
     // had something to trace. A rule that is silent when it passes cannot be
     // told apart from one that never ran.
-    observations.push(`${String(tracedKeys.size)} distinct book key(s), every one named`);
+    observations.push(
+      `${String(tracedKeys.size)} distinct book key(s), every one named`,
+    );
   }
 
   // ── Covers ────────────────────────────────────────────────────────────────
@@ -418,21 +470,21 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   // fixture one, and `library.json` is replaced while thirty-three real covers
   // stay behind. `publish()` prunes now and G2 asserts that; this asserts it
   // again on the folder `astro build` assembled, which `publish()` never sees.
-  const coversDir = join(dir, 'covers');
+  const coversDir = join(dir, "covers");
   if (existsSync(coversDir)) {
     const referenced = new Set(
       (books ?? [])
         .map((book) => book.cover)
         .filter((cover): cover is string => cover !== undefined)
-        .map((cover) => cover.replace(/^covers\//, '')),
+        .map((cover) => cover.replace(/^covers\//, "")),
     );
     const staged = readdirSync(coversDir);
     const orphans = staged.filter((name) => !referenced.has(name));
     if (orphans.length > 0) {
       fail(
-        'orphan-cover',
+        "orphan-cover",
         `${String(orphans.length)} cover(s) that no book in library.json points at — ` +
-          `each filename is a book title: ${orphans.slice(0, 5).join(', ')}`,
+          `each filename is a book title: ${orphans.slice(0, 5).join(", ")}`,
       );
     } else {
       observations.push(`${String(staged.length)} cover(s), all referenced`);
@@ -445,15 +497,15 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   // index.html fails these rather than passing them by construction. The
   // earlier version wrapped all of this in an `existsSync` and would have gone
   // green over a folder with no page in it at all.
-  const html = readIfPresent(join(dir, 'index.html'));
+  const html = readIfPresent(join(dir, "index.html"));
 
   const imageTags = [...html.matchAll(SHARE_TAG)].filter(
-    ([, key]) => key === 'og:image' || key === 'twitter:image',
+    ([, key]) => key === "og:image" || key === "twitter:image",
   );
   if (imageTags.length === 0) {
     fail(
-      'share-image-missing',
-      'no og:image or twitter:image in the built page — link previews show nothing',
+      "share-image-missing",
+      "no og:image or twitter:image in the built page — link previews show nothing",
     );
   }
 
@@ -471,9 +523,9 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   for (const [, key, value] of imageTags) {
     if (value !== wanted) {
       fail(
-        'share-image-origin',
+        "share-image-origin",
         `${String(key)} is "${String(value)}" — must be exactly ${wanted}, or preview scrapers ` +
-          'render nothing',
+          "render nothing",
       );
     } else {
       pointing += 1;
@@ -481,7 +533,9 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   }
   // Counted, not assumed. Saying "correct" beside a failure that says otherwise
   // is how a log stops being read.
-  observations.push(`${String(pointing)}/${String(imageTags.length)} share image URL(s) → ${wanted}`);
+  observations.push(
+    `${String(pointing)}/${String(imageTags.length)} share image URL(s) → ${wanted}`,
+  );
 
   /**
    * Shareable, not searchable — on **every** page, not just the index.
@@ -496,17 +550,23 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
    * page needs no share card, and requiring one would be a rule invented by this
    * change rather than carried by it.
    */
-  const pages = walk(dir).filter((file) => extname(file) === '.html');
+  const pages = walk(dir).filter((file) => extname(file) === ".html");
   const unmarked = pages.filter(
-    (file) => !/<meta\s+name="robots"\s+content="[^"]*noindex/.test(readFileSync(file, 'utf8')),
+    (file) =>
+      !/<meta\s+name="robots"\s+content="[^"]*noindex/.test(
+        readFileSync(file, "utf8"),
+      ),
   );
 
   if (pages.length === 0) {
-    fail('robots', 'the build contains no HTML at all — there is no page to publish');
+    fail(
+      "robots",
+      "the build contains no HTML at all — there is no page to publish",
+    );
   }
   for (const file of unmarked) {
     fail(
-      'robots',
+      "robots",
       `no \`noindex\` robots meta in ${posix(relative(dir, file))} — that page would be searchable`,
     );
   }
@@ -525,34 +585,41 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   let policed = 0;
   for (const file of pages) {
     const where = posix(relative(dir, file));
-    const found = CSP_META.exec(readFileSync(file, 'utf8'));
+    const found = CSP_META.exec(readFileSync(file, "utf8"));
 
     if (found === null) {
-      fail('csp', `no Content-Security-Policy in ${where} — nothing constrains what that page may load or connect to`);
+      fail(
+        "csp",
+        `no Content-Security-Policy in ${where} — nothing constrains what that page may load or connect to`,
+      );
       continue;
     }
 
-    const directives = parseCsp(found[1] ?? '');
+    const directives = parseCsp(found[1] ?? "");
     const before = problems.length;
 
     for (const [name, wanted] of CSP_DIRECTIVES) {
       const declared = directives.get(name);
       if (declared === undefined) {
-        fail('csp', `${where} declares no ${name} — the policy is weaker than the one this repo documents`);
+        fail(
+          "csp",
+          `${where} declares no ${name} — the policy is weaker than the one this repo documents`,
+        );
         continue;
       }
 
       // Hashes are the part that legitimately differs per page and per build.
       const sources = declared.filter((source) => !source.startsWith("'sha"));
       const same =
-        sources.length === wanted.length && sources.every((source) => wanted.includes(source));
+        sources.length === wanted.length &&
+        sources.every((source) => wanted.includes(source));
 
       if (!same) {
         fail(
-          'csp',
-          `${where} sets ${name} to ${sources.join(' ') || '(nothing)'} — must be exactly ` +
-            `${wanted.join(' ')}. Either the build grew a source nobody named, or the change is deliberate, ` +
-            'in which case name it in CSP_DIRECTIVES in scripts/lib/public-build.ts with a sentence saying why',
+          "csp",
+          `${where} sets ${name} to ${sources.join(" ") || "(nothing)"} — must be exactly ` +
+            `${wanted.join(" ")}. Either the build grew a source nobody named, or the change is deliberate, ` +
+            "in which case name it in CSP_DIRECTIVES in scripts/lib/public-build.ts with a sentence saying why",
         );
       }
     }
@@ -572,11 +639,11 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     for (const name of directives.keys()) {
       if (CSP_DIRECTIVES.has(name)) continue;
       fail(
-        'csp',
+        "csp",
         `${where} declares ${name}, which nothing in this repo names — a directive outside the pinned ` +
-          'set can only widen the policy, and a specific fetch directive overrides `default-src` for its ' +
-          'own resource type. Name it in CSP_DIRECTIVES in scripts/lib/public-build.ts with a sentence ' +
-          'saying why, or take it out of astro.config.mjs',
+          "set can only widen the policy, and a specific fetch directive overrides `default-src` for its " +
+          "own resource type. Name it in CSP_DIRECTIVES in scripts/lib/public-build.ts with a sentence " +
+          "saying why, or take it out of astro.config.mjs",
       );
     }
 
@@ -586,21 +653,27 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     // Counted, not assumed — the same rule the share-image observation follows.
     observations.push(
       `${String(policed)} page(s), every one policed to ${String(CSP_DIRECTIVES.size)} pinned CSP directive(s), ` +
-        `connect-src ${(CSP_DIRECTIVES.get('connect-src') ?? []).join(' ')}`,
+        `connect-src ${(CSP_DIRECTIVES.get("connect-src") ?? []).join(" ")}`,
     );
   }
 
-  if (/^\s*Disallow:\s*\/\s*$/m.test(readIfPresent(join(dir, 'robots.txt')))) {
+  if (/^\s*Disallow:\s*\/\s*$/m.test(readIfPresent(join(dir, "robots.txt")))) {
     // The intuitive move, and the one that fails: blocking the crawl stops the
     // crawler reading the noindex, and a linked URL can still be indexed on the
     // strength of the link alone.
-    fail('robots', 'robots.txt disallows crawling, which prevents the noindex being read');
+    fail(
+      "robots",
+      "robots.txt disallows crawling, which prevents the noindex being read",
+    );
   }
 
   // ── Cache headers ─────────────────────────────────────────────────────────
-  const headers = readIfPresent(join(dir, '_headers'));
-  if (headers === '') {
-    fail('headers', '_headers did not reach the build — covers and og.png would be indexable');
+  const headers = readIfPresent(join(dir, "_headers"));
+  if (headers === "") {
+    fail(
+      "headers",
+      "_headers did not reach the build — covers and og.png would be indexable",
+    );
   } else {
     // Pages defaults images to max-age=14400 and HTML/JSON to max-age=0, and
     // every cover filename is rewritten in place by each deploy. Without this
@@ -619,24 +692,26 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     for (const { what, pattern } of FRAMING_DENIED) {
       if (everyPath.some((header) => pattern.test(header))) continue;
       fail(
-        'headers',
+        "headers",
         `${EVERY_PATH_PATTERN} is missing \`${what}\` — browsers ignore \`frame-ancestors\` in the ` +
           `\`<meta>\` policy the build emits, so framing is denied here or nowhere. Headers in that ` +
-          `block: ${everyPath.join(' · ') || '(none)'}`,
+          `block: ${everyPath.join(" · ") || "(none)"}`,
       );
     }
 
     const covers = blocks.get(COVERS_PATTERN);
     if (covers === undefined) {
       fail(
-        'headers',
+        "headers",
         `_headers has no ${COVERS_PATTERN} block — covers would keep Pages' four-hour image default`,
       );
-    } else if (!covers.some((header) => /^Cache-Control:.*\bmax-age=0\b/i.test(header))) {
+    } else if (
+      !covers.some((header) => /^Cache-Control:.*\bmax-age=0\b/i.test(header))
+    ) {
       fail(
-        'headers',
+        "headers",
         `${COVERS_PATTERN} does not revalidate — library.json and the covers it describes would ` +
-          `expire on different schedules. Headers in that block: ${covers.join(' · ') || '(none)'}`,
+          `expire on different schedules. Headers in that block: ${covers.join(" · ") || "(none)"}`,
       );
     }
   }
@@ -649,10 +724,13 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   const ogImage = join(dir, SHARE_IMAGE_FILE);
   const ogBytes = existsSync(ogImage) ? statSync(ogImage).size : undefined;
   if (ogBytes === undefined) {
-    fail('og-image', `${SHARE_IMAGE_FILE} did not make it into the build output`);
+    fail(
+      "og-image",
+      `${SHARE_IMAGE_FILE} did not make it into the build output`,
+    );
   } else if (ogBytes < MIN_OG_IMAGE_BYTES) {
     fail(
-      'og-image',
+      "og-image",
       `${SHARE_IMAGE_FILE} is ${String(ogBytes)} bytes — implausibly small for the share card`,
     );
   } else {
@@ -671,10 +749,12 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
  * fix.
  */
 function readBooks(dir: string): ShippedBook[] | undefined {
-  const path = join(dir, 'library.json');
+  const path = join(dir, "library.json");
   if (!existsSync(path)) return undefined;
   try {
-    const parsed = JSON.parse(readFileSync(path, 'utf8')) as { books?: ShippedBook[] };
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as {
+      books?: ShippedBook[];
+    };
     return parsed.books ?? [];
   } catch {
     return undefined;
@@ -683,7 +763,7 @@ function readBooks(dir: string): ShippedBook[] | undefined {
 
 /** Empty string for a file that is not there, so callers can just pattern-match. */
 function readIfPresent(path: string): string {
-  return existsSync(path) ? readFileSync(path, 'utf8') : '';
+  return existsSync(path) ? readFileSync(path, "utf8") : "";
 }
 
 /**
@@ -707,7 +787,7 @@ function headerBlocks(source: string): Map<string, string[]> {
   let current: string[] | undefined;
 
   for (const line of source.split(/\r?\n/)) {
-    if (line.trim() === '' || line.trimStart().startsWith('#')) continue;
+    if (line.trim() === "" || line.trimStart().startsWith("#")) continue;
     if (/^\s/.test(line)) {
       current?.push(line.trim());
       continue;
@@ -732,8 +812,11 @@ function headerBlocks(source: string): Map<string, string[]> {
 function parseCsp(policy: string): Map<string, string[]> {
   const directives = new Map<string, string[]>();
 
-  for (const part of policy.split(';')) {
-    const tokens = part.trim().split(/\s+/).filter((token) => token !== '');
+  for (const part of policy.split(";")) {
+    const tokens = part
+      .trim()
+      .split(/\s+/)
+      .filter((token) => token !== "");
     const name = tokens.shift();
     if (name === undefined || directives.has(name.toLowerCase())) continue;
     directives.set(name.toLowerCase(), tokens);
@@ -744,5 +827,5 @@ function parseCsp(policy: string): Map<string, string[]> {
 
 /** Messages read the same on Windows and on the Linux CI runner. */
 function posix(path: string): string {
-  return path.split('\\').join('/');
+  return path.split("\\").join("/");
 }

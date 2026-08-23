@@ -48,10 +48,18 @@
  * cost is that Docker is required; see `docs/commands.md`.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { loadEnv } from '../packages/cli/src/env.ts';
-import { dockerOutput } from './lib/docker.ts';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { join } from "node:path";
+import { loadEnv } from "../packages/cli/src/env.ts";
+import { dockerOutput } from "./lib/docker.ts";
 import {
   describeStaleCover,
   probeBuild,
@@ -59,35 +67,35 @@ import {
   stampOf,
   type CoverAnswer,
   type EdgeAnswer,
-} from './lib/edge-probe.ts';
-import { joinRecords, renderEdgeCheck } from './lib/metrics.ts';
+} from "./lib/edge-probe.ts";
+import { joinRecords, renderEdgeCheck } from "./lib/metrics.ts";
 import {
   METRICS_BRANCH,
   fetchRecords,
   isFastForward,
   readRecord,
   selectNewRecords,
-} from './lib/metrics-record.ts';
-import { REPO_ROOT } from './lib/repo-root.ts';
-import { runExe } from './lib/run.ts';
+} from "./lib/metrics-record.ts";
+import { REPO_ROOT } from "./lib/repo-root.ts";
+import { runExe } from "./lib/run.ts";
 
 loadEnv();
 
 /** The local store. Gitignored: it is rebuildable from the branch, and D's rows. */
-const STORE = join(REPO_ROOT, '.trend');
-const TSDB = join(STORE, 'tsdb');
+const STORE = join(REPO_ROOT, ".trend");
+const TSDB = join(STORE, "tsdb");
 /** Surface D's rows. **Never on the branch** — that is what keeps both ends credential-free. */
-const LOCAL = join(STORE, 'local');
-const INCOMING = join(STORE, 'incoming.prom');
-const STATE = join(STORE, 'state.json');
-const CONFIG = join(STORE, 'prometheus.yml');
+const LOCAL = join(STORE, "local");
+const INCOMING = join(STORE, "incoming.prom");
+const STATE = join(STORE, "state.json");
+const CONFIG = join(STORE, "prometheus.yml");
 
 /**
  * Pinned, and both halves come from it. A store that changes under you is not a
  * record of anything, and the parser and the server have to agree about blocks.
  */
-const IMAGE = 'prom/prometheus:v2.55.1';
-const CONTAINER = 'stacks-prometheus';
+const IMAGE = "prom/prometheus:v2.55.1";
+const CONTAINER = "stacks-prometheus";
 const PORT = 9090;
 
 /**
@@ -99,8 +107,8 @@ const PORT = 9090;
  * not a reading of anything, and the calibration window the ratchet's floors
  * depend on is twenty runs long.
  */
-const GRAFANA_IMAGE = 'grafana/grafana:11.6.6';
-const GRAFANA_CONTAINER = 'stacks-grafana';
+const GRAFANA_IMAGE = "grafana/grafana:11.6.6";
+const GRAFANA_CONTAINER = "stacks-grafana";
 const GRAFANA_PORT = 3000;
 
 /**
@@ -108,18 +116,21 @@ const GRAFANA_PORT = 3000;
  * `localhost` inside the Grafana container is the Grafana container, and
  * `host.docker.internal` exists on Docker Desktop and not on plain Linux.
  */
-const NETWORK = 'stacks-trend';
+const NETWORK = "stacks-trend";
 
 /**
  * Both containers publish here and nowhere else. Named once because
  * `refuseReuse` compares what a container publishes against what is wanted, and
  * the two disagreeing by a typo would recreate a healthy container every run.
  */
-const LOOPBACK = '127.0.0.1';
+const LOOPBACK = "127.0.0.1";
 
 /** Provisioning, mounted read-only: this repository is the artifact, not the UI. */
-const PROVISIONING = join(REPO_ROOT, 'grafana', 'provisioning').replace(/\\/g, '/');
-const DASHBOARDS = join(REPO_ROOT, 'grafana', 'dashboards').replace(/\\/g, '/');
+const PROVISIONING = join(REPO_ROOT, "grafana", "provisioning").replace(
+  /\\/g,
+  "/",
+);
+const DASHBOARDS = join(REPO_ROOT, "grafana", "dashboards").replace(/\\/g, "/");
 
 /**
  * Grafana's outbound traffic, switched off — and this is the acceptance
@@ -137,17 +148,17 @@ const DASHBOARDS = join(REPO_ROOT, 'grafana', 'dashboards').replace(/\\/g, '/');
  * to lose rather than a control.
  */
 const GRAFANA_ENV = [
-  'GF_ANALYTICS_ENABLED=false',
-  'GF_ANALYTICS_REPORTING_ENABLED=false',
-  'GF_ANALYTICS_CHECK_FOR_UPDATES=false',
-  'GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false',
-  'GF_ANALYTICS_FEEDBACK_LINKS_ENABLED=false',
-  'GF_NEWS_NEWS_FEED_ENABLED=false',
-  'GF_AUTH_ANONYMOUS_ENABLED=true',
-  'GF_AUTH_ANONYMOUS_ORG_ROLE=Admin',
-  'GF_AUTH_DISABLE_LOGIN_FORM=true',
-  'GF_AUTH_BASIC_ENABLED=false',
-  'GF_USERS_ALLOW_SIGN_UP=false',
+  "GF_ANALYTICS_ENABLED=false",
+  "GF_ANALYTICS_REPORTING_ENABLED=false",
+  "GF_ANALYTICS_CHECK_FOR_UPDATES=false",
+  "GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false",
+  "GF_ANALYTICS_FEEDBACK_LINKS_ENABLED=false",
+  "GF_NEWS_NEWS_FEED_ENABLED=false",
+  "GF_AUTH_ANONYMOUS_ENABLED=true",
+  "GF_AUTH_ANONYMOUS_ORG_ROLE=Admin",
+  "GF_AUTH_DISABLE_LOGIN_FORM=true",
+  "GF_AUTH_BASIC_ENABLED=false",
+  "GF_USERS_ALLOW_SIGN_UP=false",
 ] as const;
 
 /**
@@ -155,12 +166,12 @@ const GRAFANA_ENV = [
  * replay this command exists to perform — and silently, some hours later, so
  * the sync that imported two weeks would look like it worked.
  */
-const RETENTION = '10y';
+const RETENTION = "10y";
 
 /** Docker takes a forward-slashed path on every platform; Windows does not give one. */
-const mounted = STORE.replace(/\\/g, '/');
+const mounted = STORE.replace(/\\/g, "/");
 
-const rebuild = process.argv.includes('--rebuild');
+const rebuild = process.argv.includes("--rebuild");
 
 /**
  * D's probe, and it is deliberately shorter than a deploy's.
@@ -195,10 +206,14 @@ function readState(): StoreState | undefined {
   // between the backfill and the write. "The store holds nothing" would then
   // replay every record over blocks that are already there.
   if (!existsSync(STATE)) {
-    return existsSync(TSDB) && readdirSync(TSDB).length > 0 ? undefined : { imported: [] };
+    return existsSync(TSDB) && readdirSync(TSDB).length > 0
+      ? undefined
+      : { imported: [] };
   }
   try {
-    const parsed = JSON.parse(readFileSync(STATE, 'utf8')) as Partial<StoreState>;
+    const parsed = JSON.parse(
+      readFileSync(STATE, "utf8"),
+    ) as Partial<StoreState>;
     return { tip: parsed.tip, imported: parsed.imported ?? [] };
   } catch {
     return undefined;
@@ -206,7 +221,7 @@ function readState(): StoreState | undefined {
 }
 
 function writeState(state: StoreState): void {
-  writeFileSync(STATE, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+  writeFileSync(STATE, `${JSON.stringify(state, null, 2)}\n`, "utf8");
 }
 
 function fail(message: string): never {
@@ -222,18 +237,26 @@ function docker(args: readonly string[]): string | undefined {
 
 /** `running`, `exited`, or `undefined` when there is no such container. */
 function containerStateOf(name: string): string | undefined {
-  const found = docker(['ps', '-a', '--filter', `name=^${name}$`, '--format', '{{.State}}']);
-  return found === undefined || found === '' ? undefined : found;
+  const found = docker([
+    "ps",
+    "-a",
+    "--filter",
+    `name=^${name}$`,
+    "--format",
+    "{{.State}}",
+  ]);
+  return found === undefined || found === "" ? undefined : found;
 }
 
 function requireDocker(): void {
-  if (docker(['version', '--format', '{{.Server.Version}}']) !== undefined) return;
+  if (docker(["version", "--format", "{{.Server.Version}}"]) !== undefined)
+    return;
 
   fail(
-    'Docker is not answering, and the trend store is a container.\n' +
+    "Docker is not answering, and the trend store is a container.\n" +
       `  The backfill and the server both come from ${IMAGE}, pinned, so the\n` +
-      '  parser that writes blocks and the server that reads them cannot disagree.\n' +
-      '  Start Docker Desktop and run this again. See docs/commands.md.',
+      "  parser that writes blocks and the server that reads them cannot disagree.\n" +
+      "  Start Docker Desktop and run this again. See docs/commands.md.",
   );
 }
 
@@ -244,33 +267,40 @@ function writeConfigIfAbsent(): void {
   writeFileSync(
     CONFIG,
     [
-      '# Written by `pnpm trend:sync`. Prometheus requires a config file; this one',
-      '# scrapes nothing, because every sample here arrives by backfill from the',
-      '# orphan `metrics` branch. See docs/spec/trend-layer.md §1.',
-      'global:',
-      '  scrape_interval: 1m',
-      '',
-    ].join('\n'),
-    'utf8',
+      "# Written by `pnpm trend:sync`. Prometheus requires a config file; this one",
+      "# scrapes nothing, because every sample here arrives by backfill from the",
+      "# orphan `metrics` branch. See docs/spec/trend-layer.md §1.",
+      "global:",
+      "  scrape_interval: 1m",
+      "",
+    ].join("\n"),
+    "utf8",
   );
 }
 
 function backfill(): void {
   runExe(
-    'docker',
+    "docker",
     [
-      'run', '--rm',
-      '-v', `${mounted}:/trend`,
-      '--entrypoint', 'promtool',
+      "run",
+      "--rm",
+      "-v",
+      `${mounted}:/trend`,
+      "--entrypoint",
+      "promtool",
       IMAGE,
-      'tsdb', 'create-blocks-from', 'openmetrics', '/trend/incoming.prom', '/trend/tsdb',
+      "tsdb",
+      "create-blocks-from",
+      "openmetrics",
+      "/trend/incoming.prom",
+      "/trend/tsdb",
     ],
     REPO_ROOT,
   );
 }
 
 function stopStore(): void {
-  if (containerStateOf(CONTAINER) === 'running') docker(['stop', CONTAINER]);
+  if (containerStateOf(CONTAINER) === "running") docker(["stop", CONTAINER]);
 }
 
 /**
@@ -282,8 +312,11 @@ function stopStore(): void {
  * that matters is that the network exists afterwards.
  */
 function ensureNetwork(): void {
-  if (docker(['network', 'inspect', '--format', '{{.Name}}', NETWORK]) === NETWORK) return;
-  docker(['network', 'create', NETWORK]);
+  if (
+    docker(["network", "inspect", "--format", "{{.Name}}", NETWORK]) === NETWORK
+  )
+    return;
+  docker(["network", "create", NETWORK]);
 }
 
 /**
@@ -296,7 +329,7 @@ function ensureNetwork(): void {
  * is the no-op it looks like.
  */
 function attachToNetwork(container: string): void {
-  docker(['network', 'connect', NETWORK, container]);
+  docker(["network", "connect", NETWORK, container]);
 }
 
 /** What an existing container has to match before this command will reuse it. */
@@ -347,12 +380,15 @@ interface Reuse {
  * than a version marker, so adding one to `GRAFANA_ENV` is the whole change.
  */
 function refuseReuse(spec: Reuse): string | undefined {
-  const image = docker(['inspect', '--format', '{{.Config.Image}}', spec.name]);
-  if (image !== spec.image) return `it runs ${image ?? 'an unknown image'}, want ${spec.image}`;
+  const image = docker(["inspect", "--format", "{{.Config.Image}}", spec.name]);
+  if (image !== spec.image)
+    return `it runs ${image ?? "an unknown image"}, want ${spec.image}`;
 
   const found = new Map(
     (
-      JSON.parse(docker(['inspect', '--format', '{{json .Mounts}}', spec.name]) ?? '[]') as {
+      JSON.parse(
+        docker(["inspect", "--format", "{{json .Mounts}}", spec.name]) ?? "[]",
+      ) as {
         Destination: string;
         Source: string;
       }[]
@@ -360,26 +396,34 @@ function refuseReuse(spec: Reuse): string | undefined {
   );
   for (const [destination, source] of Object.entries(spec.mounts)) {
     const at = found.get(destination);
-    if (at !== source) return `it has ${at ?? 'nothing'} at ${destination}, want ${source}`;
+    if (at !== source)
+      return `it has ${at ?? "nothing"} at ${destination}, want ${source}`;
   }
 
   const published = JSON.parse(
-    docker(['inspect', '--format', '{{json .HostConfig.PortBindings}}', spec.name]) ?? '{}',
+    docker([
+      "inspect",
+      "--format",
+      "{{json .HostConfig.PortBindings}}",
+      spec.name,
+    ]) ?? "{}",
   ) as Record<string, { HostIp: string; HostPort: string }[] | null>;
   for (const [port, want] of Object.entries(spec.ports)) {
     // Exactly one binding, rather than *one of them matches*: a second binding
     // on `0.0.0.0` publishes the page every bit as widely as a wrong first one.
-    const shown = (published[port] ?? []).map((one) => `${one.HostIp}:${one.HostPort}`);
+    const shown = (published[port] ?? []).map(
+      (one) => `${one.HostIp}:${one.HostPort}`,
+    );
     if (shown.length !== 1 || shown[0] !== want) {
-      return `it publishes ${port} on ${shown.length === 0 ? 'nothing' : shown.join(', ')}, want ${want}`;
+      return `it publishes ${port} on ${shown.length === 0 ? "nothing" : shown.join(", ")}, want ${want}`;
     }
   }
 
   const declared = JSON.parse(
-    docker(['inspect', '--format', '{{json .Config.Env}}', spec.name]) ?? '[]',
+    docker(["inspect", "--format", "{{json .Config.Env}}", spec.name]) ?? "[]",
   ) as string[];
   if (!(spec.env ?? []).every((pair) => declared.includes(pair))) {
-    return 'it was created without every switch this repo now sets';
+    return "it was created without every switch this repo now sets";
   }
   return undefined;
 }
@@ -399,29 +443,34 @@ function startStore(): void {
     const refusal = refuseReuse({
       name: CONTAINER,
       image: IMAGE,
-      mounts: { '/trend': mounted },
-      ports: { '9090/tcp': `${LOOPBACK}:${String(PORT)}` },
+      mounts: { "/trend": mounted },
+      ports: { "9090/tcp": `${LOOPBACK}:${String(PORT)}` },
     });
     if (refusal === undefined) {
-      docker(['start', CONTAINER]);
+      docker(["start", CONTAINER]);
       attachToNetwork(CONTAINER);
       return;
     }
     console.log(`store: recreating ${CONTAINER} — ${refusal}`);
-    docker(['rm', '-f', CONTAINER]);
+    docker(["rm", "-f", CONTAINER]);
   }
 
   runExe(
-    'docker',
+    "docker",
     [
-      'run', '-d',
-      '--name', CONTAINER,
-      '--network', NETWORK,
-      '-p', `${LOOPBACK}:${String(PORT)}:9090`,
-      '-v', `${mounted}:/trend`,
+      "run",
+      "-d",
+      "--name",
+      CONTAINER,
+      "--network",
+      NETWORK,
+      "-p",
+      `${LOOPBACK}:${String(PORT)}:9090`,
+      "-v",
+      `${mounted}:/trend`,
       IMAGE,
-      '--config.file=/trend/prometheus.yml',
-      '--storage.tsdb.path=/trend/tsdb',
+      "--config.file=/trend/prometheus.yml",
+      "--storage.tsdb.path=/trend/tsdb",
       `--storage.tsdb.retention.time=${RETENTION}`,
     ],
     REPO_ROOT,
@@ -453,31 +502,37 @@ function startDashboard(): void {
       name: GRAFANA_CONTAINER,
       image: GRAFANA_IMAGE,
       mounts: {
-        '/etc/grafana/dashboards': DASHBOARDS,
-        '/etc/grafana/provisioning': PROVISIONING,
+        "/etc/grafana/dashboards": DASHBOARDS,
+        "/etc/grafana/provisioning": PROVISIONING,
       },
-      ports: { '3000/tcp': `${LOOPBACK}:${String(GRAFANA_PORT)}` },
+      ports: { "3000/tcp": `${LOOPBACK}:${String(GRAFANA_PORT)}` },
       env: GRAFANA_ENV,
     });
     if (refusal === undefined) {
-      if (state !== 'running') docker(['start', GRAFANA_CONTAINER]);
+      if (state !== "running") docker(["start", GRAFANA_CONTAINER]);
       attachToNetwork(GRAFANA_CONTAINER);
       return;
     }
     console.log(`dashboard: recreating ${GRAFANA_CONTAINER} — ${refusal}`);
-    docker(['rm', '-f', GRAFANA_CONTAINER]);
+    docker(["rm", "-f", GRAFANA_CONTAINER]);
   }
 
   runExe(
-    'docker',
+    "docker",
     [
-      'run', '-d',
-      '--name', GRAFANA_CONTAINER,
-      '--network', NETWORK,
-      '-p', `${LOOPBACK}:${String(GRAFANA_PORT)}:3000`,
-      '-v', `${PROVISIONING}:/etc/grafana/provisioning:ro`,
-      '-v', `${DASHBOARDS}:/etc/grafana/dashboards:ro`,
-      ...GRAFANA_ENV.flatMap((pair) => ['-e', pair]),
+      "run",
+      "-d",
+      "--name",
+      GRAFANA_CONTAINER,
+      "--network",
+      NETWORK,
+      "-p",
+      `${LOOPBACK}:${String(GRAFANA_PORT)}:3000`,
+      "-v",
+      `${PROVISIONING}:/etc/grafana/provisioning:ro`,
+      "-v",
+      `${DASHBOARDS}:/etc/grafana/dashboards:ro`,
+      ...GRAFANA_ENV.flatMap((pair) => ["-e", pair]),
       GRAFANA_IMAGE,
     ],
     REPO_ROOT,
@@ -494,7 +549,7 @@ function sayWhereToLook(): void {
 
 // ── Surface D ───────────────────────────────────────────────────────────────
 
-const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
+const DIST = join(REPO_ROOT, "packages", "site", "dist");
 
 interface ShippedBook {
   readonly cover?: string;
@@ -503,13 +558,15 @@ interface ShippedBook {
 /** What each cover weighs in the build that was last published. */
 function builtCovers(): Map<string, number> {
   const sizes = new Map<string, number>();
-  const library = join(DIST, 'library.json');
+  const library = join(DIST, "library.json");
   if (!existsSync(library)) return sizes;
 
   // `books` is optional here and not in the builder's own shape: a `dist/` can
   // be anything on disk, and a missing key would throw out of surface D and
   // take the whole sync — import and all — down with it.
-  const parsed = JSON.parse(readFileSync(library, 'utf8')) as { books?: ShippedBook[] };
+  const parsed = JSON.parse(readFileSync(library, "utf8")) as {
+    books?: ShippedBook[];
+  };
   for (const book of parsed.books ?? []) {
     if (book.cover === undefined) continue;
     const path = join(DIST, book.cover);
@@ -519,38 +576,40 @@ function builtCovers(): Map<string, number> {
 }
 
 function sayBuild(origin: string, expected: string, answer: EdgeAnswer): void {
-  if (answer.kind === 'current') {
+  if (answer.kind === "current") {
     console.log(`  ${origin} is serving build ${expected}`);
     return;
   }
-  if (answer.kind === 'stale') {
+  if (answer.kind === "stale") {
     console.warn(
-      `! ${origin} is serving ${answer.serving === undefined ? 'a build with no stamp' : `build ${answer.serving}`}, not ${expected}\n` +
-        '  A real answer, and a red one: the site changed under the last deploy, or a\n' +
-        '  cache is holding the previous index.html. `pnpm deploy:site --check-only`\n' +
-        '  asks again without rebuilding anything.',
+      `! ${origin} is serving ${answer.serving === undefined ? "a build with no stamp" : `build ${answer.serving}`}, not ${expected}\n` +
+        "  A real answer, and a red one: the site changed under the last deploy, or a\n" +
+        "  cache is holding the previous index.html. `pnpm deploy:site --check-only`\n" +
+        "  asks again without rebuilding anything.",
     );
     return;
   }
-  if (answer.kind === 'refused') {
+  if (answer.kind === "refused") {
     console.warn(
       `! ${origin} refused this check — HTTP ${String(answer.status)}, after ${String(PROBE.attempts)} attempts\n` +
-        '  Refused, not stale: nothing was read, so nothing is claimed about what the\n' +
-        '  site is serving. The row records run_ok 0 and no build number.\n' +
-        '  Bot protection is the usual cause; name it at dash.cloudflare.com → your\n' +
-        '  zone → Security → Events. Sending a browser user agent does NOT fix this\n' +
-        '  and has been measured. See ADR-0027.',
+        "  Refused, not stale: nothing was read, so nothing is claimed about what the\n" +
+        "  site is serving. The row records run_ok 0 and no build number.\n" +
+        "  Bot protection is the usual cause; name it at dash.cloudflare.com → your\n" +
+        "  zone → Security → Events. Sending a browser user agent does NOT fix this\n" +
+        "  and has been measured. See ADR-0027.",
     );
     return;
   }
   // The row is still written: *nothing answered* is a fact about the origin,
   // and D's series going quiet is the one thing per-series staleness could not
   // then tell apart from D never having run.
-  console.warn(`! could not reach ${origin} at all — recording run_ok 0 and no build number`);
+  console.warn(
+    `! could not reach ${origin} at all — recording run_ok 0 and no build number`,
+  );
 }
 
 function sayCovers(answer: CoverAnswer): void {
-  if (answer.kind === 'unreachable' || answer.kind === 'refused') return;
+  if (answer.kind === "unreachable" || answer.kind === "refused") return;
   if (answer.checked === 0) return;
 
   // Said whether or not anything was stale, because "0 stale of 41" while six
@@ -561,15 +620,17 @@ function sayCovers(answer: CoverAnswer): void {
         answer.uncomparable
           .slice(0, 5)
           .map((cover) => `    ${cover}`)
-          .join('\n') +
-        '\n  Not stale and not clean — unmeasured. A path this build does not have\n' +
-        '  answers 200 with no length header, which is the usual cause.',
+          .join("\n") +
+        "\n  Not stale and not clean — unmeasured. A path this build does not have\n" +
+        "  answers 200 with no length header, which is the usual cause.",
     );
   }
 
   if (answer.stale.length === 0) {
     const compared = answer.checked - answer.uncomparable.length;
-    console.log(`  ${String(compared)} of ${String(answer.checked)} cover(s) match this build`);
+    console.log(
+      `  ${String(compared)} of ${String(answer.checked)} cover(s) match this build`,
+    );
     return;
   }
   console.warn(
@@ -577,7 +638,7 @@ function sayCovers(answer: CoverAnswer): void {
       answer.stale
         .slice(0, 5)
         .map((one) => `    ${describeStaleCover(one)}`)
-        .join('\n'),
+        .join("\n"),
   );
 }
 
@@ -589,19 +650,21 @@ function sayCovers(answer: CoverAnswer): void {
  * measurement of nothing.
  */
 async function probeOrigin(): Promise<void> {
-  const origin = process.env['SITE_URL']?.replace(/\/$/, '');
-  if (origin === undefined || origin === '') {
-    console.log('surface D: skipped — SITE_URL is not set (see .env.example)');
+  const origin = process.env["SITE_URL"]?.replace(/\/$/, "");
+  if (origin === undefined || origin === "") {
+    console.log("surface D: skipped — SITE_URL is not set (see .env.example)");
     return undefined;
   }
 
-  const index = join(DIST, 'index.html');
-  const expected = existsSync(index) ? stampOf(readFileSync(index, 'utf8')) : undefined;
+  const index = join(DIST, "index.html");
+  const expected = existsSync(index)
+    ? stampOf(readFileSync(index, "utf8"))
+    : undefined;
   if (expected === undefined) {
     console.log(
-      `surface D: skipped — ${existsSync(index) ? 'dist/index.html carries no build stamp' : 'there is no local dist/'}.\n` +
-        '  D asks whether the origin is serving what you last published, so it needs\n' +
-        '  that build on this machine. Run `pnpm deploy:site` and it will have one.',
+      `surface D: skipped — ${existsSync(index) ? "dist/index.html carries no build stamp" : "there is no local dist/"}.\n` +
+        "  D asks whether the origin is serving what you last published, so it needs\n" +
+        "  that build on this machine. Run `pnpm deploy:site` and it will have one.",
     );
     return undefined;
   }
@@ -610,14 +673,16 @@ async function probeOrigin(): Promise<void> {
   const build = await probeBuild(origin, expected, {
     ...PROBE,
     onRetry: (message, attempt, attempts) =>
-      console.log(`  retrying (${String(attempt)}/${String(attempts - 1)}) — ${message}`),
+      console.log(
+        `  retrying (${String(attempt)}/${String(attempts - 1)}) — ${message}`,
+      ),
   });
   sayBuild(origin, expected, build);
 
   // Only when the origin answered at all. Asking thirty times more of a zone
   // that refused the first request tells nobody anything.
   const covers =
-    build.kind === 'refused' || build.kind === 'unreachable'
+    build.kind === "refused" || build.kind === "unreachable"
       ? undefined
       : await probeCovers(origin, builtCovers());
   if (covers !== undefined) sayCovers(covers);
@@ -632,7 +697,7 @@ async function probeOrigin(): Promise<void> {
       expected,
       build,
       covers:
-        covers === undefined || covers.kind !== 'checked'
+        covers === undefined || covers.kind !== "checked"
           ? undefined
           : {
               checked: covers.checked,
@@ -640,7 +705,7 @@ async function probeOrigin(): Promise<void> {
               uncomparable: covers.uncomparable.length,
             },
     }),
-    'utf8',
+    "utf8",
   );
 }
 
@@ -654,9 +719,9 @@ async function main(): Promise<number> {
   if (state === undefined) {
     fail(
       `${STATE} cannot be read or is missing beside blocks that are already there,\n` +
-        '  so the store cannot say what it holds.\n' +
-        '  `pnpm trend:sync --rebuild` is the way back: it drops the local blocks and\n' +
-        '  replays the branch plus every surface-D row, which only this machine has.',
+        "  so the store cannot say what it holds.\n" +
+        "  `pnpm trend:sync --rebuild` is the way back: it drops the local blocks and\n" +
+        "  replays the branch plus every surface-D row, which only this machine has.",
     );
   }
 
@@ -665,9 +730,12 @@ async function main(): Promise<number> {
   if (fetched === undefined) {
     console.warn(
       `! could not fetch the \`${METRICS_BRANCH}\` branch — offline, or nothing has written one yet.\n` +
-        '  Carrying on with whatever is already in the store.',
+        "  Carrying on with whatever is already in the store.",
     );
-  } else if (state.tip !== undefined && !isFastForward(state.tip, fetched.tip)) {
+  } else if (
+    state.tip !== undefined &&
+    !isFastForward(state.tip, fetched.tip)
+  ) {
     // Tamper-evident, not tamper-proof: nothing can stop a force-push to an
     // unprotected branch. What this buys is that the next sync notices, rather
     // than importing across a rewrite and leaving a store nobody can reconcile
@@ -676,19 +744,19 @@ async function main(): Promise<number> {
     fail(
       `the \`${METRICS_BRANCH}\` branch was rewritten.\n` +
         `  imported through ${state.tip.slice(0, 12)}, which is not an ancestor of ${fetched.tip.slice(0, 12)}.\n` +
-        '  Append-only is a convention here and nothing enforces it, so this is what\n' +
-        '  noticing looks like. The local store still holds everything imported before\n' +
-        '  the rewrite; the branch may not.\n' +
-        '    - Establish what happened first. A rewritten record is not a sync problem.\n' +
-        '    - `pnpm trend:sync --rebuild` then rebuilds the store from the branch as it\n' +
-        '      now stands, plus every local surface-D row, which only this machine has.',
+        "  Append-only is a convention here and nothing enforces it, so this is what\n" +
+        "  noticing looks like. The local store still holds everything imported before\n" +
+        "  the rewrite; the branch may not.\n" +
+        "    - Establish what happened first. A rewritten record is not a sync problem.\n" +
+        "    - `pnpm trend:sync --rebuild` then rebuilds the store from the branch as it\n" +
+        "      now stands, plus every local surface-D row, which only this machine has.",
     );
   }
 
   await probeOrigin();
 
   const onBranch = fetched?.names ?? [];
-  const inStore = readdirSync(LOCAL).filter((name) => name.endsWith('.prom'));
+  const inStore = readdirSync(LOCAL).filter((name) => name.endsWith(".prom"));
   const wanted = selectNewRecords([...onBranch, ...inStore], state.imported);
 
   // Reachable when D skipped — when D probed, the row it just wrote is itself
@@ -701,8 +769,10 @@ async function main(): Promise<number> {
     // Still bring the store up. A sync that imported nothing on a machine that
     // rebooted would otherwise report success and leave no dashboard running,
     // which reads as "there is no data" rather than as "nothing is serving it".
-    if (docker(['version', '--format', '{{.Server.Version}}']) === undefined) {
-      console.warn('! Docker is not answering, so the dashboard is not running. See docs/commands.md');
+    if (docker(["version", "--format", "{{.Server.Version}}"]) === undefined) {
+      console.warn(
+        "! Docker is not answering, so the dashboard is not running. See docs/commands.md",
+      );
       return 0;
     }
     writeConfigIfAbsent();
@@ -715,7 +785,7 @@ async function main(): Promise<number> {
   const documents = wanted.map((name) => {
     const local = join(LOCAL, name);
     const bytes = existsSync(local)
-      ? readFileSync(local, 'utf8')
+      ? readFileSync(local, "utf8")
       : fetched === undefined
         ? undefined
         : readRecord(fetched.tip, name);
@@ -723,8 +793,10 @@ async function main(): Promise<number> {
     return bytes;
   });
 
-  writeFileSync(INCOMING, joinRecords(documents), 'utf8');
-  console.log(`\nimporting ${String(wanted.length)} record(s): ${wanted[0] ?? ''} … ${wanted.at(-1) ?? ''}`);
+  writeFileSync(INCOMING, joinRecords(documents), "utf8");
+  console.log(
+    `\nimporting ${String(wanted.length)} record(s): ${wanted[0] ?? ""} … ${wanted.at(-1) ?? ""}`,
+  );
 
   requireDocker();
   writeConfigIfAbsent();
@@ -752,7 +824,10 @@ async function main(): Promise<number> {
   // would import the same records again over the blocks that hold them. A
   // dashboard that failed to start is a nuisance; a store that holds records it
   // does not admit to is the overlap hazard this file refuses elsewhere.
-  writeState({ tip: fetched?.tip ?? state.tip, imported: [...state.imported, ...wanted] });
+  writeState({
+    tip: fetched?.tip ?? state.tip,
+    imported: [...state.imported, ...wanted],
+  });
   rmSync(INCOMING, { force: true });
   startStore();
   startDashboard();

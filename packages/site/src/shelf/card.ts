@@ -1,13 +1,13 @@
-import type { LibraryBook } from '@stacks/core';
+import type { LibraryBook } from "@stacks/core";
 // A *value* import, and legal only because it comes from a pure subpath — the
 // package root would drag `node:fs` and sharp into the browser bundle (G6). It
 // is here rather than reimplemented so the split rule and the join rule are one
 // piece of code: a second copy of `;` in this file is how a genre with a comma
 // in it quietly becomes two.
-import { parseSubjects } from '@stacks/core/subjects';
-import { COVER_BUTTON_CLASS } from './cover-viewer.ts';
-import { providerLinks, type ProviderLink } from './provider-links.ts';
-import { markFor } from './provider-marks.ts';
+import { parseSubjects } from "@stacks/core/subjects";
+import { COVER_BUTTON_CLASS } from "./cover-viewer.ts";
+import { providerLinks, type ProviderLink } from "./provider-links.ts";
+import { markFor } from "./provider-marks.ts";
 
 /**
  * The book detail card: what it shows, in what order, and what it drops.
@@ -57,11 +57,13 @@ export function hideCard(elements: CardElements): void {
   // Cleared silently — clearing a live region produces no announcement, and
   // confirming a dismissal the user just performed is noise on a surface they
   // will dismiss dozens of times.
-  elements.status.textContent = '';
+  elements.status.textContent = "";
 }
 
 export function announcement(book: LibraryBook): string {
-  return book.author === undefined ? book.title : `${book.title} by ${book.author}`;
+  return book.author === undefined
+    ? book.title
+    : `${book.title} by ${book.author}`;
 }
 
 /**
@@ -113,20 +115,23 @@ export function cardModel(book: LibraryBook): CardModel {
 function blocks(book: LibraryBook): HTMLElement[] {
   const model = cardModel(book);
 
-  const header = element('div', 'card-header');
+  const header = element("div", "card-header");
   if (model.cover !== undefined) header.append(cover(model.cover, model.title));
 
-  const titles = element('div', 'card-titles');
-  titles.append(text('h2', model.title));
-  if (model.author !== undefined) titles.append(text('p', model.author, 'author'));
+  const titles = element("div", "card-titles");
+  titles.append(text("h2", model.title));
+  if (model.author !== undefined)
+    titles.append(text("p", model.author, "author"));
   header.append(titles);
 
   const nodes: (HTMLElement | undefined)[] = [
     header,
-    text('p', model.reading, 'reading'),
-    model.tags === undefined ? undefined : text('p', model.tags, 'tags'),
-    model.object === undefined ? undefined : text('p', model.object, 'object'),
-    model.subjects === undefined ? undefined : text('p', model.subjects, 'subjects'),
+    text("p", model.reading, "reading"),
+    model.tags === undefined ? undefined : text("p", model.tags, "tags"),
+    model.object === undefined ? undefined : text("p", model.object, "object"),
+    model.subjects === undefined
+      ? undefined
+      : text("p", model.subjects, "subjects"),
     linksRow(model.links),
   ];
 
@@ -150,11 +155,11 @@ function blocks(book: LibraryBook): HTMLElement[] {
  *
  * An exact match, not a prefix: `audiobook-club` would be the owner's.
  */
-const IMPORTER_TAGS: readonly string[] = ['audiobook'];
+const IMPORTER_TAGS: readonly string[] = ["audiobook"];
 
 function tagsLine(tags: readonly string[]): string | undefined {
   const owned = tags.filter((tag) => !IMPORTER_TAGS.includes(tag));
-  return owned.length === 0 ? undefined : owned.join(' · ');
+  return owned.length === 0 ? undefined : owned.join(" · ");
 }
 
 /**
@@ -172,8 +177,8 @@ function readingLine(book: LibraryBook): string {
   const parts: string[] = [book.status];
   if (book.finished !== undefined) parts.push(`finished ${book.finished}`);
   else if (book.started !== undefined) parts.push(`started ${book.started}`);
-  if (book.rating !== undefined) parts.push('★'.repeat(book.rating));
-  return parts.join(' · ');
+  if (book.rating !== undefined) parts.push("★".repeat(book.rating));
+  return parts.join(" · ");
 }
 
 /**
@@ -195,7 +200,7 @@ function objectLine(book: LibraryBook): string | undefined {
   // A visible string in its own right, independent of the link it produces.
   if (book.isbn !== undefined) parts.push(book.isbn);
 
-  return parts.length === 0 ? undefined : parts.join(' · ');
+  return parts.length === 0 ? undefined : parts.join(" · ");
 }
 
 /**
@@ -209,7 +214,9 @@ function objectLine(book: LibraryBook): string | undefined {
  * vanishing, so a hand-editor who wrote `forthcoming` sees `forthcoming`. The
  * card must never hide what the note says.
  */
-export function publicationYear(published: string | undefined): string | undefined {
+export function publicationYear(
+  published: string | undefined,
+): string | undefined {
   if (published === undefined) return undefined;
   return /\d{4}/.exec(published)?.[0] ?? published;
 }
@@ -225,21 +232,21 @@ export function publicationYear(published: string | undefined): string | undefin
 function subjectsLine(book: LibraryBook): string | undefined {
   if (book.subjects === undefined) return undefined;
   const parts = parseSubjects(book.subjects);
-  return parts.length === 0 ? undefined : parts.join(' · ');
+  return parts.length === 0 ? undefined : parts.join(" · ");
 }
 
 /** The card's terminal element, where an interactive row belongs. */
 function linksRow(links: readonly ProviderLink[]): HTMLElement {
-  const row = element('div', 'card-links');
+  const row = element("div", "card-links");
   for (const link of links) row.append(anchor(link));
   return row;
 }
 
 function anchor(link: ProviderLink): HTMLAnchorElement {
-  const node = document.createElement('a');
+  const node = document.createElement("a");
   node.href = link.href;
-  node.target = '_blank';
-  node.rel = 'noopener noreferrer';
+  node.target = "_blank";
+  node.rel = "noopener noreferrer";
   node.className = `card-link card-link-${link.kind}`;
 
   if (link.text !== undefined) {
@@ -287,18 +294,18 @@ function element(tag: string, className: string): HTMLElement {
  * tap-to-swap, so the click is delegated from the card body one level up.
  */
 function cover(src: string, title: string): HTMLElement {
-  const image = document.createElement('img');
-  image.src = src.startsWith('/') ? src : `/${src}`;
+  const image = document.createElement("img");
+  image.src = src.startsWith("/") ? src : `/${src}`;
   image.alt = `Cover of ${title}`;
-  image.loading = 'lazy';
+  image.loading = "lazy";
 
-  const button = document.createElement('button');
-  button.type = 'button';
+  const button = document.createElement("button");
+  button.type = "button";
   button.className = COVER_BUTTON_CLASS;
   // The tooltip only; the accessible name is the alt text, and adding a second
   // naming mechanism is what double-announces — the rule `ProviderLink.name`
   // already states for the marks row.
-  button.title = 'See the cover larger';
+  button.title = "See the cover larger";
   button.append(image);
   return button;
 }

@@ -13,16 +13,16 @@ them at every deploy, and arming one is a human judgement after that scope's
 ## The config-hash guard would have refused the first deploy after landing
 
 The floors file carries one hash of the score-affecting Stryker configuration;
-each CI run now stamps its own; deploy compares them. Written as *a mismatch
-always refuses*, that check was correct in the abstract and wrong here on the
+each CI run now stamps its own; deploy compares them. Written as _a mismatch
+always refuses_, that check was correct in the abstract and wrong here on the
 first run: **every one of the eleven records already on the `metrics` branch
 predates the stamp**, so the newest run carries no hash, so the first
-`pnpm deploy:site` after this landed refused with *"these floors were derived
-under a different configuration"*.
+`pnpm deploy:site` after this landed refused with _"these floors were derived
+under a different configuration"_.
 
 That is precisely the failure the neighbouring ticket had already named for its
-own bootstrap — *"the first thing the new machinery would teach you is how to get
-past it, the precise habit the no-override decision exists to prevent."* Found by
+own bootstrap — _"the first thing the new machinery would teach you is how to get
+past it, the precise habit the no-override decision exists to prevent."_ Found by
 running `--dry-run` rather than by reading, which is the only reason it was found
 before merge.
 
@@ -40,7 +40,7 @@ checks reached it independently; a third almost certainly would.
 
 ⚠️ **It is not a weakening, and the reason is structural rather than careful.**
 With every floor unarmed no score is compared to anything, so the guard decides
-nothing. The configuration route is shut in the *other* place: the calibration
+nothing. The configuration route is shut in the _other_ place: the calibration
 window refuses to **derive** a floor from a run that carries no hash or the wrong
 one, so no floor can ever be produced from runs nothing can vouch for. The
 refusal guards the comparison; the window guards the derivation. Only the second
@@ -67,7 +67,7 @@ it should, and the two cannot drift.
 ## Zero counted and zero present are different facts
 
 The first print read `0/20 runs` on a machine holding a full store, which reads
-as *the nightly is dead*. It is not: it is *every run predates the stamp*. The
+as _the nightly is dead_. It is not: it is _every run predates the stamp_. The
 window now carries `candidates` beside `runs`, and the block says which of the
 two it is looking at — **once, above the table**, because the window is one fact
 about the record rather than eight about the scopes.
@@ -105,17 +105,17 @@ A two-axis review — standards and spec, in parallel — found four holes that
 them.** Worth recording as a class: every one was a case of the code agreeing
 with a sentence I had written rather than with the situation.
 
-- **The deploy read the newest *record*, not the newest *nightly*.** A merge
+- **The deploy read the newest _record_, not the newest _nightly_.** A merge
   record carries no per-scope score, and ten of the eleven records in this
-  store are merges — so on a busy week every armed scope would have printed *no
-  score in the record* and the floor would have refused nothing **at exactly the
+  store are merges — so on a busy week every armed scope would have printed _no
+  score in the record_ and the floor would have refused nothing **at exactly the
   moment somebody is deploying.** The window already knew the difference; the
   reading did not. `nightliesIn` is now exported and both sides call it, which
-  is what the window's own comment had claimed all along (*"so the two cannot
-  drift"*) while `deploy.ts` held a second copy of the literal `'push'`.
+  is what the window's own comment had claimed all along (_"so the two cannot
+  drift"_) while `deploy.ts` held a second copy of the literal `'push'`.
 - **The config-hash refusal was gated on something being armed**, which was the
   bootstrap fix above over-applied: it also disarmed the spec's own §12 plant
-  (*lower `timeoutMS` without re-deriving*) for the entire disarmed period. The
+  (_lower `timeoutMS` without re-deriving_) for the entire disarmed period. The
   split that fixes both: **a different hash is evidence and refuses whatever is
   armed; a missing hash is not evidence and waits for a comparison to protect.**
 - **The counter iterated the floors entries only**, so a disable directive in a
@@ -123,7 +123,7 @@ with a sentence I had written rather than with the situation.
   precisely the case where the file is already wrong.
 - **The full-window print dropped the `unarmed for N days` guard** at exactly the
   moment somebody is deciding what to type into `floor`, while the comment three
-  lines up said dropping it *"would drop the guard"*.
+  lines up said dropping it _"would drop the guard"_.
 
 ⚠️ **A fifth, and the cheapest of all: a citation to `ADR-0060` that resolved to
 a real but unrelated record**, because this ADR was renumbered to 0061 mid-rebase
@@ -137,8 +137,8 @@ lines of a neighbouring ticket's work**, and nothing could have gone red.
 
 Three tickets in this rollout ran as stacked branches, rebased and force-pushed
 continuously. Squashing this one's WIP commits with
-`git reset --soft claude/mattpocock-skills-154-162-71abbe` resolved the *branch
-name*, whose tip had moved from `dd77d55` to `4f1dd19` in the meantime. A soft
+`git reset --soft claude/mattpocock-skills-154-162-71abbe` resolved the _branch
+name_, whose tip had moved from `dd77d55` to `4f1dd19` in the meantime. A soft
 reset keeps your tree and re-parents it, so the resulting commit's diff is
 **your tree against their new tip** — which quietly undoes every change of
 theirs you do not have. In this case a paragraph they had just added to
@@ -156,7 +156,7 @@ found by running `git merge-base --is-ancestor` on a hunch, not by any assertion
 
 **It belongs in this record because it is this effort's own subject arriving one
 level up.** The rollout is a set of gates against silent weakening, and the
-silent weakening that actually happened was in the coordination *between* the
+silent weakening that actually happened was in the coordination _between_ the
 tickets, in a file class no gate reads, on a day when three sessions were
 rewriting each other's bases. Verified afterwards from the other side: pure
 addition on the register, no deletions in any of their files.
@@ -200,7 +200,7 @@ three of the four cannot fire at all. Driving them needs an environment override
 on the `root` parameter — **a test seam on a refusal path that deliberately has
 no override flag**, which is a decision rather than a detail.
 
-It is the same fault as the matcher above — *stated scope exceeds real scope* —
+It is the same fault as the matcher above — _stated scope exceeds real scope_ —
 **from the opposite direction, and that direction is the rare one.** The register
 is full of checks whose reach falls short of what they claim. This was a
 **weakness** claimed larger than it is, sitting in the paragraph admitting the
@@ -219,14 +219,14 @@ rather than agreeing with it:
 > different questions, and this repo's plant idiom only ever asks the first.
 
 That is why **re-reading cannot find them**, and why every defect found by
-*reading* in this stack was found by somebody else. A plant table inherits its
-author's picture of what the file looks like, so it enumerates *wrong values* —
+_reading_ in this stack was found by somebody else. A plant table inherits its
+author's picture of what the file looks like, so it enumerates _wrong values_ —
 a tag instead of a SHA, a missing entry, a breached floor. **The right value in
 an unexpected shape is invisible to it by construction**, because the author
 would have had to already know the shape in order to plant it.
 
-⚠️ **This sentence read *"every defect in this stack was found by somebody
-else"*, which is false, and it is the third instance of one species in this
+⚠️ **This sentence read _"every defect in this stack was found by somebody
+else"_, which is false, and it is the third instance of one species in this
 file.** Four defects were self-caught across two branches — a gate green against
 a plant that deleted its own refusal, a probe fast-forwarding the mirror its own
 check reads, a panel quoting the newest record rather than the newest scored run,
@@ -236,8 +236,8 @@ the roster rule forces. **Not one by re-reading**, which is the whole point and
 what the wider claim obscured.
 
 ⚠️ **It survived the correction two sections below, which had already fixed the
-same claim in its other spelling.** For an hour this file asserted *every defect*
-in one section and *every defect found by reading* in another. **Correcting one
+same claim in its other spelling.** For an hour this file asserted _every defect_
+in one section and _every defect found by reading_ in another. **Correcting one
 instance of a claim and leaving the other is the same fault as a check that reads
 one spelling of a directive** — the failure this row is named for, committed
 twice in the document describing it. Caught by the session whose branch the
@@ -246,8 +246,8 @@ counterexamples come from.
 ⚠️ **This row has its own latent instance, and it is on the refusal path.**
 `runRowsFrom` treats a `stacks_run_ok` sample as a CI run when it carries no
 `surface` label. Measured: `renderMetrics` writes it bare, `renderEdgeCheck`
-writes `surface="edge"`, and `metrics.ts` calls that split *structural rather
-than a convention* because Prometheus decides series identity on the label set.
+writes `surface="edge"`, and `metrics.ts` calls that split _structural rather
+than a convention_ because Prometheus decides series identity on the label set.
 So a third writer **following** that convention is excluded correctly, and one
 breaking it would be read as a nightly and could feed the calibration window that
 derives a floor.
@@ -262,7 +262,7 @@ second label vocabulary first.
 
 ### Nobody finds their own defects by re-reading
 
-⚠️ **This section said *"not one session found the worst thing in its own work"*,
+⚠️ **This section said _"not one session found the worst thing in its own work"_,
 and that was false. The correction is recorded rather than applied silently,
 because how it got here is the more useful half.**
 
@@ -279,8 +279,8 @@ checked, propagating across a handoff.** Both counterexamples are in this tree:
 [ADR-0060](../adr/0060-the-deploy-reads-the-mirror-and-the-probe-never-moves-it.md).
 
 ⚠️ **Note where it sat: immediately below the subsection above, on residuals
-claimed larger than they are.** *Nobody re-measures a hole they have already
-confessed to: it reads as honesty, so it never gets checked* — an overreaching
+claimed larger than they are.** _Nobody re-measures a hole they have already
+confessed to: it reads as honesty, so it never gets checked_ — an overreaching
 headline, in the paragraph about overreaching headlines, one message away from
 being checkable. It is left in the record as the specimen that subsection
 predicts rather than quietly fixed out of it.
@@ -293,7 +293,7 @@ Every defect a session found in its own work came from **execution**: planting a
 defect and watching the suite stay green, running a refusal by hand and reading
 git's own output, pointing a check at the real eleven-record branch, running the
 derivation query the roster rule demands. **Not one came from reading.** Every
-defect found by *reading* somebody's code was found by somebody else — an
+defect found by _reading_ somebody's code was found by somebody else — an
 external tool twice, a standards axis three times, a neighbouring session for the
 `run_ok 0` consequence.
 
@@ -304,7 +304,7 @@ data all yield evidence that model never had.
 ⚠️ **The corollary is the part worth keeping: review substitutes for the reading,
 not for the running.** They are not alternatives. A change carrying only review
 has been read twice — the second time by someone with a different picture, which
-is why it catches things — but it has still never been *run* by anyone. Both
+is why it catches things — but it has still never been _run_ by anyone. Both
 halves of this row's own history say so: the two-axis review and CodeRabbit found
 seven defects between them by reading, and the four that mattered most here — the
 first-deploy refusal, the vacuous gate, the crash on a truncated report, the
@@ -328,12 +328,12 @@ branches:
 **Four instances in one day, and every time the fix was scoped to the instance,
 the twin was found later by somebody else:**
 
-| the instance named | the class | who found the twin |
-|---|---|---|
-| a false claim in one section of this log | the same claim in another section | the third session, an hour later |
-| a bare `JSON.parse` at one call site | the twin two steps later, and mine a third | its own author, then me |
-| a `uses` key routed past a gate by quoting | the same key with a space before the colon | a reviewer, after the first fix |
-| a directive matcher reading a line comment | every other opener a comment can take | a neighbouring session's finding, applied here |
+| the instance named                         | the class                                  | who found the twin                             |
+| ------------------------------------------ | ------------------------------------------ | ---------------------------------------------- |
+| a false claim in one section of this log   | the same claim in another section          | the third session, an hour later               |
+| a bare `JSON.parse` at one call site       | the twin two steps later, and mine a third | its own author, then me                        |
+| a `uses` key routed past a gate by quoting | the same key with a space before the colon | a reviewer, after the first fix                |
+| a directive matcher reading a line comment | every other opener a comment can take      | a neighbouring session's finding, applied here |
 
 ⚠️ **The reason it keeps happening is that the narrow fix is genuinely
 sufficient for the report.** The reviewer's example passes, the plant goes green,
@@ -342,9 +342,9 @@ population. **The one command is the whole remedy**: after fixing what a review
 named, grep for the shape rather than the string, and read what comes back.
 
 ⚠️ **And the three findings above are one finding, applied at three
-altitudes.** *Nobody finds their own defects by re-reading* is the limit on a
-session reading its own code. *A plant table cannot prove what it was never
-taught to recognise* is the same limit on the artifact that session writes to
+altitudes.** _Nobody finds their own defects by re-reading_ is the limit on a
+session reading its own code. _A plant table cannot prove what it was never
+taught to recognise_ is the same limit on the artifact that session writes to
 check itself. And this one is the limit one level up again: **a session cannot
 see the shape of its own findings either.** Each of the three of us fixed our own
 instance of this species and moved on, and none of us could see the species from
@@ -354,8 +354,8 @@ reader.
 
 ⚠️ **A verification is an artifact with a scope too, which is the same lesson on
 the other side of the desk.** Twice today a session verified a **SHA** and
-reported a **branch** — true when checked, false by the time it was read. *"Those
-are different objects"* is the correction, and it is worth as much as the
+reported a **branch** — true when checked, false by the time it was read. _"Those
+are different objects"_ is the correction, and it is worth as much as the
 class-versus-instance one: a published verification goes stale exactly like a
 published instruction, and both are the copy somebody else is acting on.
 

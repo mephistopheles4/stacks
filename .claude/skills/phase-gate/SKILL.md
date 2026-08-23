@@ -18,12 +18,12 @@ pnpm test && pnpm build
 
 Then the phase-specific check from `AGENTS.md` → "Phase gates":
 
-| Phase | Check |
-| --- | --- |
-| 0 | `pnpm stacks --help` lists all four commands; `pnpm dev` renders an empty shelf |
-| 1 | `pnpm stacks build` on fixtures → valid `library.json`; malformed fixture logged + skipped |
-| 2 | `pnpm smoke:render` → non-blank `artifacts/shelf.png`; click-opens-card test passes |
-| 3 | `--public` output greps clean for `NOTE_BODY_CANARY_do_not_ship`; OG image exists |
+| Phase | Check                                                                                      |
+| ----- | ------------------------------------------------------------------------------------------ |
+| 0     | `pnpm stacks --help` lists all four commands; `pnpm dev` renders an empty shelf            |
+| 1     | `pnpm stacks build` on fixtures → valid `library.json`; malformed fixture logged + skipped |
+| 2     | `pnpm smoke:render` → non-blank `artifacts/shelf.png`; click-opens-card test passes        |
+| 3     | `--public` output greps clean for `NOTE_BODY_CANARY_do_not_ship`; OG image exists          |
 
 **Show the output.** Reviewing evidence is faster than re-running the check.
 If a gate fails, fix the root cause — never weaken the gate to make it pass.

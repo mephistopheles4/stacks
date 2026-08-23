@@ -1,6 +1,6 @@
 name: Idea or change
 description: Something the tool should do, or should do differently.
-title: '<what it should do, in one line>'
+title: "<what it should do, in one line>"
 # No `labels:` — see the note in defect.yml. Same reasoning.
 body:
   - type: markdown

@@ -7,7 +7,8 @@
  * Library answered for can carry an O'Reilly cover, which is what `fillGaps`
  * produces when nothing else has art for it.
  */
-export type MetadataSource = 'open-library' | 'google-books' | 'oreilly' | 'apple-books';
+export type MetadataSource =
+  "open-library" | "google-books" | "oreilly" | "apple-books";
 
 /** What a lookup yields, normalised across providers. */
 export interface BookMetadata {
@@ -99,10 +100,13 @@ export function toPlainText(value: unknown): string | undefined {
   const raw = firstString(value);
   if (raw === undefined) return undefined;
 
-  const text = stripTags(raw.replace(/<br\s*\/?>|<\/p>|<\/div>/gi, '\n'))
-    .replace(/&(amp|lt|gt|quot|#39|apos);/g, (_, name: string) => ENTITIES[name] ?? '')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\s*\n\s*/g, '\n')
+  const text = stripTags(raw.replace(/<br\s*\/?>|<\/p>|<\/div>/gi, "\n"))
+    .replace(
+      /&(amp|lt|gt|quot|#39|apos);/g,
+      (_, name: string) => ENTITIES[name] ?? "",
+    )
+    .replace(/[ \t]+/g, " ")
+    .replace(/\s*\n\s*/g, "\n")
     .trim();
 
   return text.length === 0 ? undefined : text;
@@ -124,22 +128,22 @@ export function toPlainText(value: unknown): string | undefined {
  */
 function stripTags(value: string): string {
   let text = value;
-  for (let previous = ''; previous !== text; ) {
+  for (let previous = ""; previous !== text;) {
     previous = text;
     // A tag opens with a letter or a slash. `a < b and c > d` is prose, and a
     // looser `<[^<>]*>` eats the four words between the operators — which is a
     // sanitiser quietly deleting content, the other way to get this wrong.
-    text = text.replace(/<\/?[a-zA-Z][^<>]*>/g, '');
+    text = text.replace(/<\/?[a-zA-Z][^<>]*>/g, "");
   }
-  return text.replace(/[<>]/g, '');
+  return text.replace(/[<>]/g, "");
 }
 
 const ENTITIES: Readonly<Record<string, string>> = {
-  amp: '&',
-  lt: '<',
-  gt: '>',
+  amp: "&",
+  lt: "<",
+  gt: ">",
   quot: '"',
-  '#39': "'",
+  "#39": "'",
   apos: "'",
 };
 
@@ -156,19 +160,21 @@ const ENTITIES: Readonly<Record<string, string>> = {
  * the importer, which prepends a print edition's cover to the export's own
  * artwork — may not have found one.
  */
-export function coverUrls(metadata: BookMetadata | undefined): readonly (string | undefined)[] {
+export function coverUrls(
+  metadata: BookMetadata | undefined,
+): readonly (string | undefined)[] {
   return [metadata?.coverUrlLarge, metadata?.coverUrl];
 }
 
 /** Narrows an unknown JSON body to an indexable object. */
 export function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+  return typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined;
 }
 
 export function firstString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
+  if (typeof value === "string" && value.trim().length > 0) return value.trim();
   if (Array.isArray(value)) {
     for (const item of value) {
       const found = firstString(item);
@@ -179,6 +185,6 @@ export function firstString(value: unknown): string | undefined {
 }
 
 export function asPositiveInt(value: unknown): number | undefined {
-  const n = typeof value === 'number' ? value : Number(value);
+  const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) && n > 0 ? Math.round(n) : undefined;
 }

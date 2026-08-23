@@ -44,7 +44,7 @@ export interface CoverViewer {
 }
 
 /** The class `card.ts` puts on the button wrapping a cover. */
-export const COVER_BUTTON_CLASS = 'card-cover';
+export const COVER_BUTTON_CLASS = "card-cover";
 
 export function mountCoverViewer(
   elements: CoverViewerElements,
@@ -65,7 +65,7 @@ export function mountCoverViewer(
     if (!(target instanceof Element)) return;
 
     const button = target.closest(`.${COVER_BUTTON_CLASS}`);
-    const thumbnail = button?.querySelector('img');
+    const thumbnail = button?.querySelector("img");
     if (!(thumbnail instanceof HTMLImageElement)) return;
 
     // Read off the thumbnail rather than passed in: one element holds the src
@@ -75,7 +75,7 @@ export function mountCoverViewer(
     // Named for the book, not "Book cover". `showModal` puts focus on the close
     // button, so the dialog's own name is the only thing announced on arrival —
     // a static one would say the same words over every cover on the shelf.
-    dialog.setAttribute('aria-label', thumbnail.alt);
+    dialog.setAttribute("aria-label", thumbnail.alt);
     dialog.showModal();
   };
 
@@ -90,14 +90,14 @@ export function mountCoverViewer(
     dialog.close();
   };
 
-  body.addEventListener('click', onBodyClick);
-  dialog.addEventListener('click', onDialogClick);
+  body.addEventListener("click", onBodyClick);
+  dialog.addEventListener("click", onDialogClick);
 
   return {
     isOpen: () => dialog.open,
     teardown: () => {
-      body.removeEventListener('click', onBodyClick);
-      dialog.removeEventListener('click', onDialogClick);
+      body.removeEventListener("click", onBodyClick);
+      dialog.removeEventListener("click", onDialogClick);
     },
   };
 }

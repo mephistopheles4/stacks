@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync } from "node:fs";
 
 /**
  * Stryker, configured for this stack. Spec: docs/spec/mutation-scoring.md §§1-5.
@@ -17,7 +17,9 @@ import { readFileSync } from 'node:fs';
 // holds to the first. This file is `.mjs` because Stryker's config loader cannot
 // read a `.ts` one, so the two halves cannot share a type; only one of them gets
 // to be the definition.
-const { scopes } = JSON.parse(readFileSync(new URL('./stryker.scopes.json', import.meta.url), 'utf8'));
+const { scopes } = JSON.parse(
+  readFileSync(new URL("./stryker.scopes.json", import.meta.url), "utf8"),
+);
 
 /**
  * The declared scopes, then every exclusion as a negation, then the test-file
@@ -31,15 +33,17 @@ const { scopes } = JSON.parse(readFileSync(new URL('./stryker.scopes.json', impo
  */
 const mutate = [
   ...scopes.map((scope) => scope.glob),
-  ...scopes.flatMap((scope) => scope.exclusions.map((exclusion) => `!${exclusion.path}`)),
-  '!**/*.test.ts',
+  ...scopes.flatMap((scope) =>
+    scope.exclusions.map((exclusion) => `!${exclusion.path}`),
+  ),
+  "!**/*.test.ts",
 ];
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
-  $schema: './node_modules/@stryker-mutator/core/schema/stryker-schema.json',
-  packageManager: 'pnpm',
-  testRunner: 'vitest',
+  $schema: "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  packageManager: "pnpm",
+  testRunner: "vitest",
   mutate,
 
   /**
@@ -76,7 +80,7 @@ export default {
    * of them and reports *"no TestRunner plugins were loaded"*. Naming the plugin
    * explicitly is the fix.
    */
-  plugins: ['@stryker-mutator/vitest-runner'],
+  plugins: ["@stryker-mutator/vitest-runner"],
 
   /**
    * ⚠️ **Must name a file that exists.** This read
@@ -87,7 +91,7 @@ export default {
    * [ADR-0066](docs/adr/0066-typescript-6-until-7-1.md); restating them here
    * would be a second copy nothing holds to the first.
    */
-  tsconfigFile: 'tsconfig.json',
+  tsconfigFile: "tsconfig.json",
 
   /**
    * ⚠️ **Part of the score's definition, not a tuning knob.** At Stryker's
@@ -106,18 +110,18 @@ export default {
    * sandbox removed — see the file for which, and why each one is a property of
    * the harness rather than a choice.
    */
-  vitest: { configFile: 'vitest.stryker.config.ts' },
+  vitest: { configFile: "vitest.stryker.config.ts" },
 
   /**
    * `html` is not decoration. The nine-point error in the first run was invisible
    * in the summary line and obvious in the per-file table, so the artifact that
    * carries a per-file table is part of the instrument.
    */
-  reporters: ['progress', 'clear-text', 'html', 'json'],
-  htmlReporter: { fileName: 'artifacts/stryker/current/mutation.html' },
-  jsonReporter: { fileName: 'artifacts/stryker/current/mutation.json' },
-  ignorePatterns: ['artifacts', '.stryker-tmp'],
-  tempDirName: '.stryker-tmp',
+  reporters: ["progress", "clear-text", "html", "json"],
+  htmlReporter: { fileName: "artifacts/stryker/current/mutation.html" },
+  jsonReporter: { fileName: "artifacts/stryker/current/mutation.json" },
+  ignorePatterns: ["artifacts", ".stryker-tmp"],
+  tempDirName: ".stryker-tmp",
 
   /**
    * ⚠️ **This cleans after a run that *completes*, and not after one that

@@ -1,7 +1,16 @@
-import { looksDerivative, normaliseIsbn, titleMatchScore } from '../identity.ts';
-import type { HttpGet } from './http.ts';
-import { asPositiveInt, asRecord, firstString, type BookMetadata } from './types.ts';
-import { keyIfPresent } from '../key-if-present.ts';
+import {
+  looksDerivative,
+  normaliseIsbn,
+  titleMatchScore,
+} from "../identity.ts";
+import type { HttpGet } from "./http.ts";
+import {
+  asPositiveInt,
+  asRecord,
+  firstString,
+  type BookMetadata,
+} from "./types.ts";
+import { keyIfPresent } from "../key-if-present.ts";
 
 /**
  * Open Library — the primary provider.
@@ -14,8 +23,8 @@ import { keyIfPresent } from '../key-if-present.ts';
  * - `/search.json` returns `{ numFound, docs: [ … ] }`.
  */
 
-const API_BOOKS = 'https://openlibrary.org/api/books';
-const SEARCH = 'https://openlibrary.org/search.json';
+const API_BOOKS = "https://openlibrary.org/api/books";
+const SEARCH = "https://openlibrary.org/search.json";
 
 /**
  * What the search asks for. **Exported because it is part of a URL, and the URL
@@ -33,7 +42,7 @@ const SEARCH = 'https://openlibrary.org/search.json';
  * to one. See docs/spec/provider-provenance.md §8.
  */
 export const SEARCH_FIELDS =
-  'title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject';
+  "title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject";
 
 export async function lookupByIsbn(
   isbn: string,
@@ -43,32 +52,36 @@ export async function lookupByIsbn(
   if (normalised.length === 0) return undefined;
 
   const key = `ISBN:${normalised}`;
-  const body = asRecord(await get(`${API_BOOKS}?bibkeys=${key}&format=json&jscmd=data`));
+  const body = asRecord(
+    await get(`${API_BOOKS}?bibkeys=${key}&format=json&jscmd=data`),
+  );
   const entry = asRecord(body?.[key]);
   if (entry === undefined) return undefined; // includes the `{}` miss
 
-  const title = firstString(entry['title']);
+  const title = firstString(entry["title"]);
   if (title === undefined) return undefined;
 
-  const identifiers = asRecord(entry['identifiers']);
+  const identifiers = asRecord(entry["identifiers"]);
 
   return {
     title,
-    source: 'open-library',
-    ...keyIfPresent('author', authorsOf(entry['authors'])),
+    source: "open-library",
+    ...keyIfPresent("author", authorsOf(entry["authors"])),
     ...keyIfPresent(
-      'isbn',
-      firstString(identifiers?.['isbn_13']) ?? firstString(identifiers?.['isbn_10']) ?? normalised,
+      "isbn",
+      firstString(identifiers?.["isbn_13"]) ??
+        firstString(identifiers?.["isbn_10"]) ??
+        normalised,
     ),
-    ...keyIfPresent('pages', asPositiveInt(entry['number_of_pages'])),
-    ...keyIfPresent('coverUrl', coverOf(entry['cover'])),
-    ...keyIfPresent('publisher', namesOf(entry['publishers'])[0]),
+    ...keyIfPresent("pages", asPositiveInt(entry["number_of_pages"])),
+    ...keyIfPresent("coverUrl", coverOf(entry["cover"])),
+    ...keyIfPresent("publisher", namesOf(entry["publishers"])[0]),
     // Stored exactly as given: this endpoint answers `"2008"` where the other
     // three give a full date, which is precisely why Open Library is last in the
     // `published` order and why nothing normalises on the way in.
-    ...keyIfPresent('published', firstString(entry['publish_date'])),
-    ...keyIfPresent('subjects', listIfAny(namesOf(entry['subjects']))),
-    ...keyIfPresent('openLibraryOlid', olidFrom(entry['key'])),
+    ...keyIfPresent("published", firstString(entry["publish_date"])),
+    ...keyIfPresent("subjects", listIfAny(namesOf(entry["subjects"]))),
+    ...keyIfPresent("openLibraryOlid", olidFrom(entry["key"])),
   };
 }
 
@@ -80,7 +93,9 @@ export async function lookupByIsbn(
  */
 function olidFrom(value: unknown): string | undefined {
   const key = firstString(value);
-  return key === undefined ? undefined : (/(OL\d+M)$/.exec(key)?.[1] ?? undefined);
+  return key === undefined
+    ? undefined
+    : (/(OL\d+M)$/.exec(key)?.[1] ?? undefined);
 }
 
 /** `[{name}]` — the shape Open Library uses for publishers, subjects and authors. */
@@ -90,7 +105,7 @@ function namesOf(value: unknown): string[] {
     return single === undefined ? [] : [single];
   }
   return value
-    .map((item) => firstString(asRecord(item)?.['name']) ?? firstString(item))
+    .map((item) => firstString(asRecord(item)?.["name"]) ?? firstString(item))
     .filter((name): name is string => name !== undefined);
 }
 
@@ -112,7 +127,7 @@ export async function searchByTitle(
   const url = `${SEARCH}?q=${encodeURIComponent(query)}&limit=${limit}&fields=${SEARCH_FIELDS}`;
 
   const body = asRecord(await get(url));
-  const docs = Array.isArray(body?.['docs']) ? body['docs'] : [];
+  const docs = Array.isArray(body?.["docs"]) ? body["docs"] : [];
 
   // Unless a summary is what was asked for, drop them: they contain every word
   // of the real title and so rank alongside it.
@@ -128,13 +143,15 @@ export async function searchByTitle(
     .map(({ item }) => item);
 }
 
-function toMetadata(doc: Record<string, unknown> | undefined): BookMetadata | undefined {
+function toMetadata(
+  doc: Record<string, unknown> | undefined,
+): BookMetadata | undefined {
   if (doc === undefined) return undefined;
-  const title = firstString(doc['title']);
+  const title = firstString(doc["title"]);
   if (title === undefined) return undefined;
 
-  const coverId = asPositiveInt(doc['cover_i']);
-  const isbn = preferIsbn13(doc['isbn']);
+  const coverId = asPositiveInt(doc["cover_i"]);
+  const isbn = preferIsbn13(doc["isbn"]);
 
   /**
    * Search results often omit `cover_i` for a book that does have cover art, so
@@ -151,40 +168,46 @@ function toMetadata(doc: Record<string, unknown> | undefined): BookMetadata | un
 
   return {
     title,
-    source: 'open-library',
-    ...keyIfPresent('author', firstString(doc['author_name'])),
-    ...keyIfPresent('isbn', isbn),
-    ...keyIfPresent('pages', asPositiveInt(doc['number_of_pages_median'])),
-    ...keyIfPresent('coverUrl', coverUrl),
-    ...keyIfPresent('publisher', namesOf(doc['publisher'])[0]),
-    ...keyIfPresent('published', namesOf(doc['publish_date'])[0]),
-    ...keyIfPresent('subjects', listIfAny(namesOf(doc['subject']))),
+    source: "open-library",
+    ...keyIfPresent("author", firstString(doc["author_name"])),
+    ...keyIfPresent("isbn", isbn),
+    ...keyIfPresent("pages", asPositiveInt(doc["number_of_pages_median"])),
+    ...keyIfPresent("coverUrl", coverUrl),
+    ...keyIfPresent("publisher", namesOf(doc["publisher"])[0]),
+    ...keyIfPresent("published", namesOf(doc["publish_date"])[0]),
+    ...keyIfPresent("subjects", listIfAny(namesOf(doc["subject"]))),
     // The search path's only route to an OLID. Editions are listed oldest-ish
     // first and any of them identifies the work well enough for the link this
     // builds, so the first is taken rather than an edition matched by hand.
-    ...keyIfPresent('openLibraryOlid', namesOf(doc['edition_key'])[0]),
+    ...keyIfPresent("openLibraryOlid", namesOf(doc["edition_key"])[0]),
     // A URL built from an ISBN is a guess; one built from a real cover id is not.
-    ...(coverId === undefined && coverUrl !== undefined ? { coverIsSpeculative: true } : {}),
+    ...(coverId === undefined && coverUrl !== undefined
+      ? { coverIsSpeculative: true }
+      : {}),
   };
 }
 
 /** Search returns every edition's ISBN jumbled together; 13-digit ones first. */
 function preferIsbn13(value: unknown): string | undefined {
   if (!Array.isArray(value)) return firstString(value);
-  const all = value.filter((item): item is string => typeof item === 'string');
+  const all = value.filter((item): item is string => typeof item === "string");
   return all.find((isbn) => normaliseIsbn(isbn).length === 13) ?? all[0];
 }
 
 function authorsOf(value: unknown): string | undefined {
   if (!Array.isArray(value)) return firstString(value);
   const names = value
-    .map((author) => firstString(asRecord(author)?.['name']))
+    .map((author) => firstString(asRecord(author)?.["name"]))
     .filter((name): name is string => name !== undefined);
-  return names.length > 0 ? names.join(', ') : undefined;
+  return names.length > 0 ? names.join(", ") : undefined;
 }
 
 function coverOf(value: unknown): string | undefined {
   const cover = asRecord(value);
   if (cover === undefined) return undefined;
-  return firstString(cover['large']) ?? firstString(cover['medium']) ?? firstString(cover['small']);
+  return (
+    firstString(cover["large"]) ??
+    firstString(cover["medium"]) ??
+    firstString(cover["small"])
+  );
 }

@@ -1,11 +1,14 @@
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
-import { isHost } from '../packages/core/src/test-support.ts';
-import { enrichBook } from '../packages/core/src/enrich.ts';
-import { createCachedHttpGet, type HttpGet } from '../packages/core/src/metadata/index.ts';
+import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ObsidianAdapter } from "../packages/core/src/adapters/obsidian-adapter.ts";
+import { isHost } from "../packages/core/src/test-support.ts";
+import { enrichBook } from "../packages/core/src/enrich.ts";
+import {
+  createCachedHttpGet,
+  type HttpGet,
+} from "../packages/core/src/metadata/index.ts";
 
 /**
  * G34 — a book a provider failed on is filled by the next run.
@@ -33,23 +36,23 @@ import { createCachedHttpGet, type HttpGet } from '../packages/core/src/metadata
  */
 
 const OPEN_LIBRARY = {
-  'ISBN:9781603580557': {
-    title: 'Thinking in Systems',
-    authors: [{ name: 'Donella H. Meadows' }],
+  "ISBN:9781603580557": {
+    title: "Thinking in Systems",
+    authors: [{ name: "Donella H. Meadows" }],
     number_of_pages: 240,
-    publishers: [{ name: 'Chelsea' }],
-    publish_date: '2008',
-    key: '/books/OL26445570M',
+    publishers: [{ name: "Chelsea" }],
+    publish_date: "2008",
+    key: "/books/OL26445570M",
   },
 };
 
 const APPLE_HIT = {
   results: [
     {
-      trackName: 'Thinking in Systems',
-      artistName: 'Donella H. Meadows',
+      trackName: "Thinking in Systems",
+      artistName: "Donella H. Meadows",
       trackId: 1384286945,
-      genres: ['Science & Nature'],
+      genres: ["Science & Nature"],
     },
   ],
 };
@@ -63,8 +66,8 @@ const APPLE_HIT = {
 function flakyApple(): HttpGet {
   let appleAsked = 0;
   return async (url) => {
-    if (isHost(url, 'openlibrary.org')) return OPEN_LIBRARY;
-    if (isHost(url, 'itunes.apple.com')) {
+    if (isHost(url, "openlibrary.org")) return OPEN_LIBRARY;
+    if (isHost(url, "itunes.apple.com")) {
       appleAsked += 1;
       return appleAsked === 1 ? undefined : APPLE_HIT;
     }
@@ -72,12 +75,12 @@ function flakyApple(): HttpGet {
   };
 }
 
-describe('G34 — a rate-limited book self-heals on the next run', () => {
+describe("G34 — a rate-limited book self-heals on the next run", () => {
   let dir: string;
   let vault: ObsidianAdapter;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'stacks-converge-'));
+    dir = await mkdtemp(join(tmpdir(), "stacks-converge-"));
     vault = new ObsidianAdapter(dir);
   });
 
@@ -85,9 +88,12 @@ describe('G34 — a rate-limited book self-heals on the next run', () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  it('leaves the id absent when the provider fails, and fills it next time', async () => {
+  it("leaves the id absent when the provider fails, and fills it next time", async () => {
     const get = flakyApple();
-    await vault.writeBook({ title: 'Thinking in Systems', isbn: '9781603580557' });
+    await vault.writeBook({
+      title: "Thinking in Systems",
+      isbn: "9781603580557",
+    });
 
     const [first] = await vault.listBooks();
     await enrichBook(first!, vault, get);
@@ -95,13 +101,14 @@ describe('G34 — a rate-limited book self-heals on the next run', () => {
     const [afterOne] = await vault.listBooks();
     expect(
       afterOne?.appleTrackId,
-      'run one recorded an Apple id although Apple never answered',
+      "run one recorded an Apple id although Apple never answered",
     ).toBeUndefined();
     // The gap is a gap, not a sentinel: nothing about the failure is written
     // down, which is what keeps the book a candidate forever and lets it heal.
-    expect(afterOne?.openLibraryOlid, 'the providers that did answer still filled').toBe(
-      'OL26445570M',
-    );
+    expect(
+      afterOne?.openLibraryOlid,
+      "the providers that did answer still filled",
+    ).toBe("OL26445570M");
 
     await enrichBook(afterOne!, vault, get);
 
@@ -109,9 +116,9 @@ describe('G34 — a rate-limited book self-heals on the next run', () => {
     expect(
       afterTwo?.appleTrackId,
       'run two did not fill the gap run one missed. "Run it twice" is the documented ' +
-        'pacing answer for iTunes\' ~20/min, and it only works while a failure is never ' +
-        'cached — see http.ts:64',
-    ).toBe('1384286945');
+        "pacing answer for iTunes' ~20/min, and it only works while a failure is never " +
+        "cached — see http.ts:64",
+    ).toBe("1384286945");
   });
 });
 
@@ -127,11 +134,11 @@ describe('G34 — a rate-limited book self-heals on the next run', () => {
  *
  * `vi.stubGlobal` is G21's named escape hatch: no request leaves the machine.
  */
-describe('G34 — a failure is never cached, a success is cached forever', () => {
+describe("G34 — a failure is never cached, a success is cached forever", () => {
   let cache: string;
 
   beforeEach(async () => {
-    cache = await mkdtemp(join(tmpdir(), 'stacks-cache-'));
+    cache = await mkdtemp(join(tmpdir(), "stacks-cache-"));
   });
 
   afterEach(async () => {
@@ -139,38 +146,38 @@ describe('G34 — a failure is never cached, a success is cached forever', () =>
     await rm(cache, { recursive: true, force: true });
   });
 
-  it('writes nothing to the cache when the request fails', async () => {
+  it("writes nothing to the cache when the request fails", async () => {
     // A 404 rather than a 429, deliberately: both reach the same
     // `body === undefined` line, and the transient path would spend 3.6s in
     // backoff proving the same thing.
-    vi.stubGlobal('fetch', async () => new Response('', { status: 404 }));
+    vi.stubGlobal("fetch", async () => new Response("", { status: 404 }));
 
     const get = createCachedHttpGet(cache);
-    expect(await get('https://example.invalid/a')).toBeUndefined();
+    expect(await get("https://example.invalid/a")).toBeUndefined();
 
     expect(
       await readdir(cache),
-      'a failed request left a cache entry. The next run would replay the failure instead ' +
+      "a failed request left a cache entry. The next run would replay the failure instead " +
         'of re-asking, and "run it twice" would stop being true',
     ).toEqual([]);
   });
 
-  it('caches a success and never asks again', async () => {
+  it("caches a success and never asks again", async () => {
     let asked = 0;
-    vi.stubGlobal('fetch', async () => {
+    vi.stubGlobal("fetch", async () => {
       asked += 1;
       return new Response(JSON.stringify({ ok: true }), {
         status: 200,
-        headers: { 'content-type': 'application/json' },
+        headers: { "content-type": "application/json" },
       });
     });
 
     const get = createCachedHttpGet(cache);
-    expect(await get('https://example.invalid/b')).toEqual({ ok: true });
-    expect(await get('https://example.invalid/b')).toEqual({ ok: true });
+    expect(await get("https://example.invalid/b")).toEqual({ ok: true });
+    expect(await get("https://example.invalid/b")).toEqual({ ok: true });
 
     // No TTL, on purpose: a provider id is a stable bibliographic pointer, not
     // a fact that decays.
-    expect(asked, 'the second call went back to the network').toBe(1);
+    expect(asked, "the second call went back to the network").toBe(1);
   });
 });

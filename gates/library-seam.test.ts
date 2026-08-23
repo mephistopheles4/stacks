@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { buildLibrary, type LibraryBook } from '../packages/core/src/library.ts';
-import type { BookRecord } from '../packages/core/src/types.ts';
+import { describe, expect, it } from "vitest";
+import {
+  buildLibrary,
+  type LibraryBook,
+} from "../packages/core/src/library.ts";
+import type { BookRecord } from "../packages/core/src/types.ts";
 
 /**
  * G30 — a `BookRecord` field reaches `library.json`, or is named as excluded.
@@ -36,30 +39,30 @@ import type { BookRecord } from '../packages/core/src/types.ts';
  * nobody wired up.
  */
 const FULL: BookRecord = {
-  sourcePath: 'Library/a-book.md',
-  title: 'A Book',
-  author: 'An Author',
-  isbn: '9781603580557',
-  status: 'read',
-  started: '2026-01-02',
-  finished: '2026-03-04',
+  sourcePath: "Library/a-book.md",
+  title: "A Book",
+  author: "An Author",
+  isbn: "9781603580557",
+  status: "read",
+  started: "2026-01-02",
+  finished: "2026-03-04",
   rating: 4,
-  cover: 'covers/a-book.png',
-  coverSource: 'open-library',
-  spineColor: '#2f6d7a',
+  cover: "covers/a-book.png",
+  coverSource: "open-library",
+  spineColor: "#2f6d7a",
   pages: 321,
-  binding: 'paperback',
+  binding: "paperback",
   private: true,
   faceOut: true,
   shelfOrder: 20,
-  tags: ['a-tag'],
-  publisher: 'A Press',
-  published: '2019-03-05T07:00:00Z',
-  subjects: 'systems thinking; science',
-  googleVolumeId: 'CpbLAgAAQBAJ',
-  appleTrackId: '1384286945',
-  openLibraryOlid: 'OL26445570M',
-  oreillyOurn: 'urn:orm:book:0642572352530',
+  tags: ["a-tag"],
+  publisher: "A Press",
+  published: "2019-03-05T07:00:00Z",
+  subjects: "systems thinking; science",
+  googleVolumeId: "CpbLAgAAQBAJ",
+  appleTrackId: "1384286945",
+  openLibraryOlid: "OL26445570M",
+  oreillyOurn: "urn:orm:book:0642572352530",
 };
 
 /**
@@ -70,7 +73,7 @@ const FULL: BookRecord = {
  * list, publicly and locally alike — which is a decision rather than an
  * accident, so anything added here needs a sentence saying why.
  */
-const NOT_PUBLIC: readonly (keyof BookRecord)[] = ['sourcePath'];
+const NOT_PUBLIC: readonly (keyof BookRecord)[] = ["sourcePath"];
 
 /**
  * `LibraryBook` keys that come from somewhere other than a record field.
@@ -92,14 +95,17 @@ const NOT_PUBLIC: readonly (keyof BookRecord)[] = ['sourcePath'];
  * the half of the drift a reader cannot see: a renamed field leaves a stale
  * name here that still *looks* like an exclusion.
  */
-const DERIVED = ['id', 'coverAspect'] as const satisfies readonly (keyof LibraryBook)[];
+const DERIVED = [
+  "id",
+  "coverAspect",
+] as const satisfies readonly (keyof LibraryBook)[];
 
 function keysOf(book: LibraryBook): readonly string[] {
   return Object.keys(book);
 }
 
-describe('G30 — the BookRecord → library.json seam, both directions', () => {
-  it('carries every record field into a local build', () => {
+describe("G30 — the BookRecord → library.json seam, both directions", () => {
+  it("carries every record field into a local build", () => {
     const [book] = buildLibrary([FULL]).books;
     const shipped = new Set(keysOf(book!));
 
@@ -109,26 +115,28 @@ describe('G30 — the BookRecord → library.json seam, both directions', () => 
 
     expect(
       missing,
-      'these BookRecord fields reach no build. A field the merge writes into the vault and ' +
-        'nobody gave a `keyIfPresent` line is invisible: the note has it, the shelf never ' +
-        'sees it, and every other test still passes. Add the line, or name the field in ' +
-        'NOT_PUBLIC above and say why',
+      "these BookRecord fields reach no build. A field the merge writes into the vault and " +
+        "nobody gave a `keyIfPresent` line is invisible: the note has it, the shelf never " +
+        "sees it, and every other test still passes. Add the line, or name the field in " +
+        "NOT_PUBLIC above and say why",
     ).toEqual([]);
   });
 
-  it('strips exactly the named exclusions from a public build, and nothing else', () => {
+  it("strips exactly the named exclusions from a public build, and nothing else", () => {
     const [local] = buildLibrary([FULL]).books;
     const [shared] = buildLibrary([FULL], { isPublic: true }).books;
 
-    const dropped = keysOf(local!).filter((key) => !keysOf(shared!).includes(key));
+    const dropped = keysOf(local!).filter(
+      (key) => !keysOf(shared!).includes(key),
+    );
 
     expect(
       [...dropped].sort(),
-      'a public build drops a different set of fields than the one named here',
+      "a public build drops a different set of fields than the one named here",
     ).toEqual([...NOT_PUBLIC].sort());
   });
 
-  it('traces every shipped key back to a record field or a named derived one', () => {
+  it("traces every shipped key back to a record field or a named derived one", () => {
     const [book] = buildLibrary([FULL]).books;
     const fields = new Set<string>(Object.keys(FULL));
 
@@ -139,12 +147,12 @@ describe('G30 — the BookRecord → library.json seam, both directions', () => 
 
     expect(
       unexplained,
-      'library.json carries a key that is neither a BookRecord field nor a named derived ' +
-        'one. Either it is derived — say so in DERIVED — or the artifact is inventing data',
+      "library.json carries a key that is neither a BookRecord field nor a named derived " +
+        "one. Either it is derived — say so in DERIVED — or the artifact is inventing data",
     ).toEqual([]);
   });
 
-  it('is checking something at all', () => {
+  it("is checking something at all", () => {
     // The vacuity guard the other rows in this file learned to carry: an empty
     // record would satisfy every assertion above by construction.
     expect(Object.keys(FULL).length).toBeGreaterThanOrEqual(24);

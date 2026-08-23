@@ -8,17 +8,25 @@
  * because hand-edited notes are first-class (invariant 5).
  */
 
-import type { CoverSource } from './covers/cover-source.ts';
+import type { CoverSource } from "./covers/cover-source.ts";
 
-export const BOOK_STATUSES = ['reading', 'read', 'abandoned', 'wishlist'] as const;
+export const BOOK_STATUSES = [
+  "reading",
+  "read",
+  "abandoned",
+  "wishlist",
+] as const;
 
 export type BookStatus = (typeof BOOK_STATUSES)[number];
 
 /** A note with no `status:` key is treated as read. */
-export const DEFAULT_BOOK_STATUS: BookStatus = 'read';
+export const DEFAULT_BOOK_STATUS: BookStatus = "read";
 
 export function isBookStatus(value: unknown): value is BookStatus {
-  return typeof value === 'string' && (BOOK_STATUSES as readonly string[]).includes(value);
+  return (
+    typeof value === "string" &&
+    (BOOK_STATUSES as readonly string[]).includes(value)
+  );
 }
 
 /**
@@ -36,12 +44,14 @@ export function isBookStatus(value: unknown): value is BookStatus {
  * third value would be one more thing to choose between for variance the shelf
  * already has.
  */
-export const BINDINGS = ['hardback', 'paperback'] as const;
+export const BINDINGS = ["hardback", "paperback"] as const;
 
 export type Binding = (typeof BINDINGS)[number];
 
 export function isBinding(value: unknown): value is Binding {
-  return typeof value === 'string' && (BINDINGS as readonly string[]).includes(value);
+  return (
+    typeof value === "string" && (BINDINGS as readonly string[]).includes(value)
+  );
 }
 
 /**

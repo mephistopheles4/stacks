@@ -1,7 +1,13 @@
-import { looksDerivative, normaliseIsbn } from '../identity.ts';
-import type { HttpGet } from './http.ts';
-import { asPositiveInt, asRecord, firstString, toPlainText, type BookMetadata } from './types.ts';
-import { keyIfPresent } from '../key-if-present.ts';
+import { looksDerivative, normaliseIsbn } from "../identity.ts";
+import type { HttpGet } from "./http.ts";
+import {
+  asPositiveInt,
+  asRecord,
+  firstString,
+  toPlainText,
+  type BookMetadata,
+} from "./types.ts";
+import { keyIfPresent } from "../key-if-present.ts";
 
 /**
  * Google Books — the fallback, and a shaky one.
@@ -17,7 +23,7 @@ import { keyIfPresent } from '../key-if-present.ts';
  * your own API key — until then, treat it as a bonus, never a guarantee.
  */
 
-const VOLUMES = 'https://www.googleapis.com/books/v1/volumes';
+const VOLUMES = "https://www.googleapis.com/books/v1/volumes";
 
 /**
  * A personal API key moves you off the shared anonymous quota.
@@ -39,7 +45,10 @@ export async function lookupByIsbn(
 ): Promise<BookMetadata | undefined> {
   const normalised = normaliseIsbn(isbn);
   if (normalised.length === 0) return undefined;
-  return firstVolume(await get(withKey(`${VOLUMES}?q=isbn:${normalised}&maxResults=1`, apiKey)), normalised);
+  return firstVolume(
+    await get(withKey(`${VOLUMES}?q=isbn:${normalised}&maxResults=1`, apiKey)),
+    normalised,
+  );
 }
 
 export async function searchByTitle(
@@ -47,19 +56,27 @@ export async function searchByTitle(
   get: HttpGet,
   apiKey?: string,
 ): Promise<BookMetadata[]> {
-  const url = withKey(`${VOLUMES}?q=${encodeURIComponent(query)}&maxResults=5`, apiKey);
+  const url = withKey(
+    `${VOLUMES}?q=${encodeURIComponent(query)}&maxResults=5`,
+    apiKey,
+  );
   const body = asRecord(await get(url));
   if (body === undefined || isQuotaError(body)) return [];
 
   const wantsDerivative = looksDerivative(query);
-  const items = Array.isArray(body['items']) ? body['items'] : [];
-  return items
-    .map((item) =>
-      toMetadata(asRecord(asRecord(item)?.['volumeInfo']), firstString(asRecord(item)?.['id'])),
-    )
-    .filter((item): item is BookMetadata => item !== undefined)
-    // Same trap as Open Library: summaries rank alongside the real book.
-    .filter((item) => wantsDerivative || !looksDerivative(item.title));
+  const items = Array.isArray(body["items"]) ? body["items"] : [];
+  return (
+    items
+      .map((item) =>
+        toMetadata(
+          asRecord(asRecord(item)?.["volumeInfo"]),
+          firstString(asRecord(item)?.["id"]),
+        ),
+      )
+      .filter((item): item is BookMetadata => item !== undefined)
+      // Same trap as Open Library: summaries rank alongside the real book.
+      .filter((item) => wantsDerivative || !looksDerivative(item.title))
+  );
 }
 
 /**
@@ -84,28 +101,35 @@ export async function fetchVolume(
   if (id.length === 0) return undefined;
   const base = `${VOLUMES}/${encodeURIComponent(id)}`;
   const url =
-    apiKey === undefined || apiKey.length === 0 ? base : `${base}?key=${encodeURIComponent(apiKey)}`;
+    apiKey === undefined || apiKey.length === 0
+      ? base
+      : `${base}?key=${encodeURIComponent(apiKey)}`;
 
   const body = asRecord(await get(url));
   if (body === undefined || isQuotaError(body)) return undefined;
-  return toMetadata(asRecord(body['volumeInfo']), id);
+  return toMetadata(asRecord(body["volumeInfo"]), id);
 }
 
-function firstVolume(body: unknown, fallbackIsbn: string): BookMetadata | undefined {
+function firstVolume(
+  body: unknown,
+  fallbackIsbn: string,
+): BookMetadata | undefined {
   const root = asRecord(body);
   if (root === undefined || isQuotaError(root)) return undefined;
 
-  const items = Array.isArray(root['items']) ? root['items'] : [];
-  const info = asRecord(asRecord(items[0])?.['volumeInfo']);
-  const metadata = toMetadata(info, firstString(asRecord(items[0])?.['id']));
+  const items = Array.isArray(root["items"]) ? root["items"] : [];
+  const info = asRecord(asRecord(items[0])?.["volumeInfo"]);
+  const metadata = toMetadata(info, firstString(asRecord(items[0])?.["id"]));
   if (metadata === undefined) return undefined;
 
-  return metadata.isbn === undefined ? { ...metadata, isbn: fallbackIsbn } : metadata;
+  return metadata.isbn === undefined
+    ? { ...metadata, isbn: fallbackIsbn }
+    : metadata;
 }
 
 /** `{ error: { code: 429, … } }` — a miss, deliberately not an exception. */
 function isQuotaError(body: Record<string, unknown>): boolean {
-  return asRecord(body['error']) !== undefined;
+  return asRecord(body["error"]) !== undefined;
 }
 
 function toMetadata(
@@ -113,34 +137,40 @@ function toMetadata(
   volumeId: string | undefined,
 ): BookMetadata | undefined {
   if (info === undefined) return undefined;
-  const title = firstString(info['title']);
+  const title = firstString(info["title"]);
   if (title === undefined) return undefined;
 
-  const subtitle = firstString(info['subtitle']);
-  const imageLinks = asRecord(info['imageLinks']);
+  const subtitle = firstString(info["subtitle"]);
+  const imageLinks = asRecord(info["imageLinks"]);
 
   return {
     title: subtitle === undefined ? title : `${title}: ${subtitle}`,
-    source: 'google-books',
-    ...keyIfPresent('author', joinAuthors(info['authors'])),
-    ...keyIfPresent('isbn', isbnFrom(info['industryIdentifiers'])),
-    ...keyIfPresent('pages', asPositiveInt(info['pageCount'])),
-    ...keyIfPresent('volumeId', volumeId),
+    source: "google-books",
+    ...keyIfPresent("author", joinAuthors(info["authors"])),
+    ...keyIfPresent("isbn", isbnFrom(info["industryIdentifiers"])),
+    ...keyIfPresent("pages", asPositiveInt(info["pageCount"])),
+    ...keyIfPresent("volumeId", volumeId),
     ...keyIfPresent(
-      'coverUrl',
-      coverFrom(firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail'])),
+      "coverUrl",
+      coverFrom(
+        firstString(imageLinks?.["thumbnail"]) ??
+          firstString(imageLinks?.["smallThumbnail"]),
+      ),
     ),
     ...keyIfPresent(
-      'coverUrlLarge',
-      largerCover(firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail'])),
+      "coverUrlLarge",
+      largerCover(
+        firstString(imageLinks?.["thumbnail"]) ??
+          firstString(imageLinks?.["smallThumbnail"]),
+      ),
     ),
-    ...keyIfPresent('publisher', firstString(info['publisher'])),
-    ...keyIfPresent('published', firstString(info['publishedDate'])),
+    ...keyIfPresent("publisher", firstString(info["publisher"])),
+    ...keyIfPresent("published", firstString(info["publishedDate"])),
     // `categories` is short and curated — "Computers", "Business & Economics" —
     // which is why Google leads the subjects order against Open Library's 34 raw
     // headings for the same book.
-    ...keyIfPresent('subjects', categoriesOf(info['categories'])),
-    ...keyIfPresent('description', toPlainText(info['description'])),
+    ...keyIfPresent("subjects", categoriesOf(info["categories"])),
+    ...keyIfPresent("description", toPlainText(info["description"])),
   };
 }
 
@@ -149,7 +179,9 @@ function categoriesOf(value: unknown): readonly string[] | undefined {
     const single = firstString(value);
     return single === undefined ? undefined : [single];
   }
-  const names = value.filter((name): name is string => typeof name === 'string');
+  const names = value.filter(
+    (name): name is string => typeof name === "string",
+  );
   return names.length === 0 ? undefined : names;
 }
 
@@ -166,7 +198,7 @@ function categoriesOf(value: unknown): readonly string[] | undefined {
  * mixed-content.
  */
 function coverFrom(url: string | undefined): string | undefined {
-  return url?.replace(/^http:/, 'https:').replace(/&edge=curl/, '');
+  return url?.replace(/^http:/, "https:").replace(/&edge=curl/, "");
 }
 
 /**
@@ -183,19 +215,27 @@ function coverFrom(url: string | undefined): string | undefined {
  */
 function largerCover(url: string | undefined): string | undefined {
   const cleaned = coverFrom(url);
-  return cleaned === undefined ? undefined : cleaned.replace(/zoom=\d/, 'zoom=4');
+  return cleaned === undefined
+    ? undefined
+    : cleaned.replace(/zoom=\d/, "zoom=4");
 }
 
 function isbnFrom(value: unknown): string | undefined {
   if (!Array.isArray(value)) return undefined;
-  const entries = value.map(asRecord).filter((entry): entry is Record<string, unknown> => entry !== undefined);
+  const entries = value
+    .map(asRecord)
+    .filter((entry): entry is Record<string, unknown> => entry !== undefined);
   const byType = (type: string): string | undefined =>
-    firstString(entries.find((entry) => entry['type'] === type)?.['identifier']);
-  return byType('ISBN_13') ?? byType('ISBN_10');
+    firstString(
+      entries.find((entry) => entry["type"] === type)?.["identifier"],
+    );
+  return byType("ISBN_13") ?? byType("ISBN_10");
 }
 
 function joinAuthors(value: unknown): string | undefined {
   if (!Array.isArray(value)) return firstString(value);
-  const names = value.filter((name): name is string => typeof name === 'string');
-  return names.length > 0 ? names.join(', ') : undefined;
+  const names = value.filter(
+    (name): name is string => typeof name === "string",
+  );
+  return names.length > 0 ? names.join(", ") : undefined;
 }

@@ -27,7 +27,7 @@
  * and reports are passed in as data, which `scoreRun` already accepts.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 import {
   empty,
   detected,
@@ -38,10 +38,14 @@ import {
   totalOf,
   type MutationReport,
   type Scope,
-} from './mutation-score.ts';
+} from "./mutation-score.ts";
 
 /** A scope with no exclusions, which is what five of the eight real ones are. */
-function scope(name: string, glob: string, exclusions: Scope['exclusions'] = []): Scope {
+function scope(
+  name: string,
+  glob: string,
+  exclusions: Scope["exclusions"] = [],
+): Scope {
   return { name, glob, exclusions };
 }
 
@@ -56,46 +60,52 @@ function report(files: Record<string, string[]>): MutationReport {
   };
 }
 
-describe('globToRegExp — the two shapes, and nothing else', () => {
-  it('matches a non-recursive scope to its own directory only', () => {
+describe("globToRegExp — the two shapes, and nothing else", () => {
+  it("matches a non-recursive scope to its own directory only", () => {
     // The trap `docs/spec/mutation-scoring.md` §4 spends a warning on:
     // `packages/core/src` is the files *directly* in that directory, and
     // writing `**` there silently declares the union of five scopes.
-    const match = globToRegExp('packages/core/src/*.ts');
+    const match = globToRegExp("packages/core/src/*.ts");
 
-    expect(match.test('packages/core/src/frontmatter.ts')).toBe(true);
-    expect(match.test('packages/core/src/covers/measure.ts')).toBe(false);
+    expect(match.test("packages/core/src/frontmatter.ts")).toBe(true);
+    expect(match.test("packages/core/src/covers/measure.ts")).toBe(false);
   });
 
-  it('matches a recursive scope at any depth, including zero', () => {
-    const match = globToRegExp('packages/core/src/covers/**/*.ts');
+  it("matches a recursive scope at any depth, including zero", () => {
+    const match = globToRegExp("packages/core/src/covers/**/*.ts");
 
-    expect(match.test('packages/core/src/covers/measure.ts')).toBe(true);
-    expect(match.test('packages/core/src/covers/deep/nested/file.ts')).toBe(true);
-    expect(match.test('packages/core/src/frontmatter.ts')).toBe(false);
+    expect(match.test("packages/core/src/covers/measure.ts")).toBe(true);
+    expect(match.test("packages/core/src/covers/deep/nested/file.ts")).toBe(
+      true,
+    );
+    expect(match.test("packages/core/src/frontmatter.ts")).toBe(false);
   });
 
-  it('anchors both ends', () => {
+  it("anchors both ends", () => {
     // Unanchored, `packages/cli/src/**/*.ts` would claim
     // `vendor/packages/cli/src/x.ts` — a file from another tree folding into a
     // declared scope's denominator.
-    const match = globToRegExp('packages/cli/src/**/*.ts');
+    const match = globToRegExp("packages/cli/src/**/*.ts");
 
-    expect(match.test('vendor/packages/cli/src/index.ts')).toBe(false);
-    expect(match.test('packages/cli/src/index.ts.bak')).toBe(false);
+    expect(match.test("vendor/packages/cli/src/index.ts")).toBe(false);
+    expect(match.test("packages/cli/src/index.ts.bak")).toBe(false);
   });
 
-  it('throws on any third shape rather than accepting it', () => {
+  it("throws on any third shape rather than accepting it", () => {
     // Deliberately not a glob library: a dependency that silently accepted a
     // third shape would hide the next mistake instead of rejecting it.
-    expect(() => globToRegExp('packages/**')).toThrow(/unsupported glob/);
-    expect(() => globToRegExp('packages/core/src/*.js')).toThrow(/unsupported glob/);
-    expect(() => globToRegExp('packages/*/src/*.ts')).toThrow(/unsupported glob/);
+    expect(() => globToRegExp("packages/**")).toThrow(/unsupported glob/);
+    expect(() => globToRegExp("packages/core/src/*.js")).toThrow(
+      /unsupported glob/,
+    );
+    expect(() => globToRegExp("packages/*/src/*.ts")).toThrow(
+      /unsupported glob/,
+    );
   });
 });
 
-describe('the tally is Stryker total score, not covered score', () => {
-  it('counts a timeout as detected', () => {
+describe("the tally is Stryker total score, not covered score", () => {
+  it("counts a timeout as detected", () => {
     // A timeout is *detected*, which is Stryker's own arithmetic. #165 found
     // four mutants in `head-cap.ts` being scored as kills for straddling a 15s
     // budget — the reason `timeoutMS` is part of what a score means.
@@ -106,7 +116,7 @@ describe('the tally is Stryker total score, not covered score', () => {
     expect(fraction(tally)).toBe(0.5);
   });
 
-  it('keeps NoCoverage in the denominator', () => {
+  it("keeps NoCoverage in the denominator", () => {
     // The *covered* variant drops it, which would make deleting an untested
     // file raise the number — the shape this whole effort exists to refuse.
     const tally = { ...empty(), killed: 1, noCoverage: 3 };
@@ -115,15 +125,22 @@ describe('the tally is Stryker total score, not covered score', () => {
     expect(fraction(tally)).toBe(0.25);
   });
 
-  it('keeps Ignored, CompileError and Pending out of the denominator', () => {
+  it("keeps Ignored, CompileError and Pending out of the denominator", () => {
     // Excluding a mutant is not the same as counting it as killed.
-    const tally = { ...empty(), killed: 1, survived: 1, ignored: 5, errors: 5, pending: 5 };
+    const tally = {
+      ...empty(),
+      killed: 1,
+      survived: 1,
+      ignored: 5,
+      errors: 5,
+      pending: 5,
+    };
 
     expect(total(tally)).toBe(2);
     expect(fraction(tally)).toBe(0.5);
   });
 
-  it('scores an empty scope as null rather than as 1', () => {
+  it("scores an empty scope as null rather than as 1", () => {
     // ⚠️ The decision the residual check downstream depends on. An empty
     // denominator produces 100% arithmetically, which is indistinguishable from
     // a scope that is genuinely perfect — and a declared scope matching no
@@ -132,30 +149,34 @@ describe('the tally is Stryker total score, not covered score', () => {
   });
 });
 
-describe('scoreRun — a report against the declared scopes', () => {
+describe("scoreRun — a report against the declared scopes", () => {
   const scopes = [
-    scope('packages/core/src', 'packages/core/src/*.ts'),
-    scope('packages/core/src/covers', 'packages/core/src/covers/**/*.ts'),
-    scope('scripts', 'scripts/**/*.ts', [
-      { path: 'scripts/deploy.ts', mechanism: 'driven as a child process' },
+    scope("packages/core/src", "packages/core/src/*.ts"),
+    scope("packages/core/src/covers", "packages/core/src/covers/**/*.ts"),
+    scope("scripts", "scripts/**/*.ts", [
+      { path: "scripts/deploy.ts", mechanism: "driven as a child process" },
     ]),
   ];
 
-  it('files each mutant into the scope whose glob claims it', () => {
+  it("files each mutant into the scope whose glob claims it", () => {
     const run = scoreRun(
       report({
-        'packages/core/src/frontmatter.ts': ['Killed', 'Killed', 'Survived'],
-        'packages/core/src/covers/measure.ts': ['Killed', 'Survived'],
+        "packages/core/src/frontmatter.ts": ["Killed", "Killed", "Survived"],
+        "packages/core/src/covers/measure.ts": ["Killed", "Survived"],
       }),
       scopes,
     );
 
-    expect(fraction(run.perScope.get('packages/core/src') ?? empty())).toBeCloseTo(2 / 3);
-    expect(fraction(run.perScope.get('packages/core/src/covers') ?? empty())).toBe(0.5);
-    expect(fraction(run.perScope.get('scripts') ?? empty())).toBeNull();
+    expect(
+      fraction(run.perScope.get("packages/core/src") ?? empty()),
+    ).toBeCloseTo(2 / 3);
+    expect(
+      fraction(run.perScope.get("packages/core/src/covers") ?? empty()),
+    ).toBe(0.5);
+    expect(fraction(run.perScope.get("scripts") ?? empty())).toBeNull();
   });
 
-  it('gives an overlapped file to the first scope that claims it', () => {
+  it("gives an overlapped file to the first scope that claims it", () => {
     // ⚠️ **The globs have to actually overlap, and the first version of this
     // test's did not.** It paired `packages/core/src/*.ts` with
     // `packages/core/src/covers/**/*.ts` over `frontmatter.ts` — which only the
@@ -168,52 +189,64 @@ describe('scoreRun — a report against the declared scopes', () => {
     // glob claims everything the non-recursive one does, so writing it declares
     // the union of five scopes rather than one.
     const overlapping = [
-      scope('non-recursive', 'packages/core/src/*.ts'),
-      scope('recursive', 'packages/core/src/**/*.ts'),
+      scope("non-recursive", "packages/core/src/*.ts"),
+      scope("recursive", "packages/core/src/**/*.ts"),
     ];
-    const run = scoreRun(report({ 'packages/core/src/frontmatter.ts': ['Killed'] }), overlapping);
+    const run = scoreRun(
+      report({ "packages/core/src/frontmatter.ts": ["Killed"] }),
+      overlapping,
+    );
 
-    expect(total(run.perScope.get('non-recursive') ?? empty())).toBe(1);
-    expect(total(run.perScope.get('recursive') ?? empty())).toBe(0);
+    expect(total(run.perScope.get("non-recursive") ?? empty())).toBe(1);
+    expect(total(run.perScope.get("recursive") ?? empty())).toBe(0);
   });
 
-  it('sets an excluded file aside instead of folding it into a denominator', () => {
+  it("sets an excluded file aside instead of folding it into a denominator", () => {
     // Empty by construction against a report `pnpm mutation:run` produced, and
     // the guard that matters for a report some *other* `mutate` produced.
-    const run = scoreRun(report({ 'scripts/deploy.ts': ['Survived', 'Survived'] }), scopes);
+    const run = scoreRun(
+      report({ "scripts/deploy.ts": ["Survived", "Survived"] }),
+      scopes,
+    );
 
-    expect(run.live.get('scripts/deploy.ts')).toBe(2);
-    expect(total(run.perScope.get('scripts') ?? empty())).toBe(0);
+    expect(run.live.get("scripts/deploy.ts")).toBe(2);
+    expect(total(run.perScope.get("scripts") ?? empty())).toBe(0);
   });
 
-  it('reports a file no scope claims rather than dropping it', () => {
-    const run = scoreRun(report({ 'fixtures/whatever.ts': ['Killed'] }), scopes);
+  it("reports a file no scope claims rather than dropping it", () => {
+    const run = scoreRun(
+      report({ "fixtures/whatever.ts": ["Killed"] }),
+      scopes,
+    );
 
-    expect(run.unclaimed.get('fixtures/whatever.ts')).toBe(1);
+    expect(run.unclaimed.get("fixtures/whatever.ts")).toBe(1);
   });
 
-  it('counts declared exclusion entries, not unique paths', () => {
+  it("counts declared exclusion entries, not unique paths", () => {
     // The two agree while every declared path is distinct, which is why this is
     // asserted rather than left to coincide. `stacks_run_declared_exclusions`
     // publishes it as the denominator `live-exclusions` is read against.
     const twice = [
-      scope('a', 'packages/core/src/*.ts', [
-        { path: 'packages/core/src/x.ts', mechanism: 'one' },
+      scope("a", "packages/core/src/*.ts", [
+        { path: "packages/core/src/x.ts", mechanism: "one" },
       ]),
-      scope('b', 'packages/cli/src/**/*.ts', [
-        { path: 'packages/core/src/x.ts', mechanism: 'two' },
+      scope("b", "packages/cli/src/**/*.ts", [
+        { path: "packages/core/src/x.ts", mechanism: "two" },
       ]),
     ];
 
     expect(scoreRun(report({}), twice).declaredExclusions).toBe(2);
   });
 
-  it('treats an unknown status as an error rather than as a kill', () => {
+  it("treats an unknown status as an error rather than as a kill", () => {
     // `status` arrives from a JSON file this code does not produce, so a status
     // a future Stryker adds lands outside the denominator until somebody looks
     // at it — never silently inside it.
-    const run = scoreRun(report({ 'packages/core/src/a.ts': ['Killed', 'SomethingNew'] }), scopes);
-    const tally = run.perScope.get('packages/core/src') ?? empty();
+    const run = scoreRun(
+      report({ "packages/core/src/a.ts": ["Killed", "SomethingNew"] }),
+      scopes,
+    );
+    const tally = run.perScope.get("packages/core/src") ?? empty();
 
     expect(tally.errors).toBe(1);
     expect(total(tally)).toBe(1);
@@ -221,21 +254,21 @@ describe('scoreRun — a report against the declared scopes', () => {
   });
 });
 
-describe('totalOf — the all-declared row', () => {
-  it('sums every scope and nothing else', () => {
+describe("totalOf — the all-declared row", () => {
+  it("sums every scope and nothing else", () => {
     const scopes = [
-      scope('packages/core/src', 'packages/core/src/*.ts'),
-      scope('scripts', 'scripts/**/*.ts', [
-        { path: 'scripts/deploy.ts', mechanism: 'driven as a child process' },
+      scope("packages/core/src", "packages/core/src/*.ts"),
+      scope("scripts", "scripts/**/*.ts", [
+        { path: "scripts/deploy.ts", mechanism: "driven as a child process" },
       ]),
     ];
     const run = scoreRun(
       report({
-        'packages/core/src/a.ts': ['Killed', 'Survived'],
-        'scripts/lib/walk.ts': ['Killed', 'Killed'],
+        "packages/core/src/a.ts": ["Killed", "Survived"],
+        "scripts/lib/walk.ts": ["Killed", "Killed"],
         // Excluded and unclaimed files must not reach the total.
-        'scripts/deploy.ts': ['Survived', 'Survived', 'Survived'],
-        'fixtures/x.ts': ['Survived'],
+        "scripts/deploy.ts": ["Survived", "Survived", "Survived"],
+        "fixtures/x.ts": ["Survived"],
       }),
       scopes,
     );

@@ -5,23 +5,11 @@
       "artistViewUrl": "https://books.apple.com/us/artist/falcon-press/1558825840?uo=4",
       "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication115/v4/f5/7f/5a/f57f5acb-fc65-eeb2-0cb7-ad3ff14b25ce/54f32d6d-34d5-40ca-afd9-8fcd383ee184_cover_image.jpg/60x60bb.jpg",
       "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication115/v4/f5/7f/5a/f57f5acb-fc65-eeb2-0cb7-ad3ff14b25ce/54f32d6d-34d5-40ca-afd9-8fcd383ee184_cover_image.jpg/100x100bb.jpg",
-      "artistIds": [
-        1558825840
-      ],
+      "artistIds": [1558825840],
       "artistId": 1558825840,
       "artistName": "Falcon Press",
-      "genres": [
-        "Study Aids",
-        "Books",
-        "Reference",
-        "Science & Nature"
-      ],
-      "genreIds": [
-        "10136",
-        "38",
-        "9033",
-        "9019"
-      ],
+      "genres": ["Study Aids", "Books", "Reference", "Science & Nature"],
+      "genreIds": ["10136", "38", "9033", "9019"],
       "releaseDate": "2021-06-03T15:44:18Z",
       "trackId": 1570658999,
       "trackName": "Summary of Donella H. Meadows's Thinking in Systems",
@@ -37,9 +25,7 @@
       "artistViewUrl": "https://books.apple.com/us/artist/supersummary/1503360254?uo=4",
       "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/68/66/d1/6866d1a9-4e16-1b3b-9129-81311e8a3626/69f8bb25-1418-4778-a043-ba49ed41674e_cover_image.jpg/60x60bb.jpg",
       "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/68/66/d1/6866d1a9-4e16-1b3b-9129-81311e8a3626/69f8bb25-1418-4778-a043-ba49ed41674e_cover_image.jpg/100x100bb.jpg",
-      "artistIds": [
-        1503360254
-      ],
+      "artistIds": [1503360254],
       "artistId": 1503360254,
       "artistName": "SuperSummary",
       "genres": [
@@ -49,13 +35,7 @@
         "Business & Personal Finance",
         "Management & Leadership"
       ],
-      "genreIds": [
-        "10037",
-        "38",
-        "9029",
-        "9009",
-        "10014"
-      ],
+      "genreIds": ["10037", "38", "9029", "9009", "10014"],
       "releaseDate": "2025-10-26T07:00:00Z",
       "trackId": 6762508135,
       "trackName": "Study Guide: Thinking in Systems by Donella H. Meadows (SuperSummary)",
@@ -71,19 +51,11 @@
       "artistViewUrl": "https://books.apple.com/us/artist/slingshot-books/1569215319?uo=4",
       "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/1b/bb/d2/1bbbd29b-31a5-8f44-23be-d831745ec034/20de0f47-2d9d-4570-a632-73932e2a09cd_cover_image.jpg/60x60bb.jpg",
       "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/1b/bb/d2/1bbbd29b-31a5-8f44-23be-d831745ec034/20de0f47-2d9d-4570-a632-73932e2a09cd_cover_image.jpg/100x100bb.jpg",
-      "artistIds": [
-        1569215319
-      ],
+      "artistIds": [1569215319],
       "artistId": 1569215319,
       "artistName": "Slingshot Books",
-      "genres": [
-        "Business & Personal Finance",
-        "Books"
-      ],
-      "genreIds": [
-        "9009",
-        "38"
-      ],
+      "genres": ["Business & Personal Finance", "Books"],
+      "genreIds": ["9009", "38"],
       "releaseDate": "2021-10-27T07:00:00Z",
       "trackId": 1592251032,
       "trackName": "Summary of Donella H. Meadows's Limits to Growth",
@@ -99,23 +71,11 @@
       "artistViewUrl": "https://books.apple.com/us/artist/michael-j-caduto/423813553?uo=4",
       "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication115/v4/c7/57/a1/c757a148-5d37-10a3-98c6-5bac4ba6d951/9781684580910-frontcover.jpg/60x60bb.jpg",
       "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication115/v4/c7/57/a1/c757a148-5d37-10a3-98c6-5bac4ba6d951/9781684580910-frontcover.jpg/100x100bb.jpg",
-      "artistIds": [
-        423813553
-      ],
+      "artistIds": [423813553],
       "artistId": 423813553,
       "artistName": "Michael J. Caduto",
-      "genres": [
-        "Science & Nature",
-        "Books",
-        "Nature",
-        "Ecology"
-      ],
-      "genreIds": [
-        "9019",
-        "38",
-        "10088",
-        "11066"
-      ],
+      "genres": ["Science & Nature", "Books", "Nature", "Ecology"],
+      "genreIds": ["9019", "38", "10088", "11066"],
       "releaseDate": "2021-06-04T07:00:00Z",
       "trackId": 1578595383,
       "trackName": "Pond and Brook",
@@ -131,9 +91,7 @@
       "artistViewUrl": "https://books.apple.com/us/artist/donella-h-meadows/594533357?uo=4",
       "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/a1/e2/76/a1e276af-cbb7-93e2-8b6a-3b79d9965b00/9786555644531_20220815161430.jpg/60x60bb.jpg",
       "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/a1/e2/76/a1e276af-cbb7-93e2-8b6a-3b79d9965b00/9786555644531_20220815161430.jpg/100x100bb.jpg",
-      "artistIds": [
-        594533357
-      ],
+      "artistIds": [594533357],
       "artistId": 594533357,
       "artistName": "Donella H. Meadows",
       "genres": [
@@ -173,9 +131,7 @@
       "artistViewUrl": "https://books.apple.com/us/artist/donella-h-meadows/594533357?uo=4",
       "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/bd/25/d5/bd25d559-28d2-c4ea-f9ab-e685dc730345/cover_pensare_sistemi_2500.jpg/60x60bb.jpg",
       "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/bd/25/d5/bd25d559-28d2-c4ea-f9ab-e685dc730345/cover_pensare_sistemi_2500.jpg/100x100bb.jpg",
-      "artistIds": [
-        594533357
-      ],
+      "artistIds": [594533357],
       "artistId": 594533357,
       "artistName": "Donella H. Meadows",
       "genres": [
@@ -184,12 +140,7 @@
         "Business & Personal Finance",
         "Management & Leadership"
       ],
-      "genreIds": [
-        "10011",
-        "38",
-        "9009",
-        "10014"
-      ],
+      "genreIds": ["10011", "38", "9009", "10014"],
       "releaseDate": "2019-02-26T08:00:00Z",
       "trackId": 1454358103,
       "trackName": "Pensare per sistemi. Interpretare il presente, orientare il futuro verso uno sviluppo sostenibile",

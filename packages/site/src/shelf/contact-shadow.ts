@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 
 /**
  * Shadows, painted rather than rasterised.
@@ -142,20 +142,25 @@ export function makeContactShadowTexture(
   shelfDepth: number,
   light: CaseLight,
 ): THREE.CanvasTexture | undefined {
-  const height = Math.max(64, Math.round((TEXTURE_WIDTH * shelfDepth) / shelfWidth));
+  const height = Math.max(
+    64,
+    Math.round((TEXTURE_WIDTH * shelfDepth) / shelfWidth),
+  );
 
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = TEXTURE_WIDTH;
   canvas.height = height;
 
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   if (ctx === null) return undefined;
 
   // World → texture. The plane this lands on is rotated so that its local +Y
   // becomes world -Z, which puts the *back* of the shelf at the top of the
   // canvas — hence z is mapped without a flip.
-  const toX = (x: number): number => ((x + shelfWidth / 2) / shelfWidth) * TEXTURE_WIDTH;
-  const toY = (z: number): number => ((z + shelfDepth / 2) / shelfDepth) * height;
+  const toX = (x: number): number =>
+    ((x + shelfWidth / 2) / shelfWidth) * TEXTURE_WIDTH;
+  const toY = (z: number): number =>
+    ((z + shelfDepth / 2) / shelfDepth) * height;
   const scaleX = TEXTURE_WIDTH / shelfWidth;
   const scaleY = height / shelfDepth;
 
@@ -165,8 +170,8 @@ export function makeContactShadowTexture(
   // book, and drawing it here means an empty shelf still has depth instead of
   // reading as a flat plank.
   const ao = ctx.createLinearGradient(0, 0, 0, height * 0.45);
-  ao.addColorStop(0, 'rgba(0, 0, 0, 0.42)');
-  ao.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ao.addColorStop(0, "rgba(0, 0, 0, 0.42)");
+  ao.addColorStop(1, "rgba(0, 0, 0, 0)");
   ctx.fillStyle = ao;
   ctx.fillRect(0, 0, TEXTURE_WIDTH, height * 0.45);
 
@@ -189,7 +194,7 @@ export function makeContactShadowTexture(
 
     const start = TEXTURE_WIDTH - reach;
     const penumbra = ctx.createLinearGradient(start, 0, start + softPx, 0);
-    penumbra.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    penumbra.addColorStop(0, "rgba(0, 0, 0, 0)");
     penumbra.addColorStop(1, `rgba(0, 0, 0, ${String(SIDE_ALPHA)})`);
     ctx.fillStyle = penumbra;
     ctx.fillRect(start, row, softPx, 1);
@@ -203,12 +208,12 @@ export function makeContactShadowTexture(
   // which looks far worse than no cast shadow at all — so the books are skipped
   // and the shelf keeps its corner darkening. Checked by writing and reading
   // back, because an unsupported filter assigns silently.
-  ctx.filter = 'blur(2px)';
-  const canBlur = ctx.filter !== 'none';
-  ctx.filter = 'none';
+  ctx.filter = "blur(2px)";
+  const canBlur = ctx.filter !== "none";
+  ctx.filter = "none";
   if (!canBlur) return finish(canvas);
 
-  ctx.fillStyle = '#000000';
+  ctx.fillStyle = "#000000";
 
   // Two passes, because a shadow has a soft body and a hard root. The blurred
   // pass is the shape thrown onto the plank; the tight pass is the line where
@@ -228,7 +233,7 @@ export function makeContactShadowTexture(
     }
   }
 
-  ctx.filter = 'none';
+  ctx.filter = "none";
   ctx.globalAlpha = 1;
 
   return finish(canvas);
@@ -247,12 +252,15 @@ export function makeContactShadowTexture(
  * occluder is beside the cover rather than above it: the shadow is a band down
  * one side, not a shape.
  */
-export function makeNeighbourShadow(width: number, height: number): THREE.Mesh | undefined {
-  const canvas = document.createElement('canvas');
+export function makeNeighbourShadow(
+  width: number,
+  height: number,
+): THREE.Mesh | undefined {
+  const canvas = document.createElement("canvas");
   canvas.width = 64;
   canvas.height = 4;
 
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   if (ctx === null) return undefined;
 
   const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
@@ -261,9 +269,9 @@ export function makeNeighbourShadow(width: number, height: number): THREE.Mesh |
   // and shaped — the occluder is a *taller* neighbour, so its top corner throws
   // a diagonal rather than a straight band. That part is not reproduced here: it
   // would need each book to know how tall the one beside it is.
-  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0)');
-  gradient.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+  gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
+  gradient.addColorStop(0.5, "rgba(0, 0, 0, 0)");
+  gradient.addColorStop(1, "rgba(0, 0, 0, 0.55)");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -273,7 +281,11 @@ export function makeNeighbourShadow(width: number, height: number): THREE.Mesh |
   // more to get right than it saves.
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(width, height),
-    new THREE.MeshBasicMaterial({ map: finish(canvas), transparent: true, depthWrite: false }),
+    new THREE.MeshBasicMaterial({
+      map: finish(canvas),
+      transparent: true,
+      depthWrite: false,
+    }),
   );
   mesh.renderOrder = 1;
   return mesh;
@@ -314,8 +326,12 @@ export function makeBackboardShade(
   const fall = depth * light.yPerZ;
   const reach = depth * light.xPerZ;
 
-  return shadePlane(width, openHeight, (inward, below) =>
-    BACKBOARD_ALPHA * Math.max(inShadow(fall - below), inShadow(reach - inward)),
+  return shadePlane(
+    width,
+    openHeight,
+    (inward, below) =>
+      BACKBOARD_ALPHA *
+      Math.max(inShadow(fall - below), inShadow(reach - inward)),
   );
 }
 
@@ -336,11 +352,15 @@ export function makeBackboardShade(
  * faces in the same plane, and stops short of the planks so it never darkens
  * the wood's own front edge.
  */
-export function makeRecessShade(width: number, openHeight: number): THREE.Mesh | undefined {
+export function makeRecessShade(
+  width: number,
+  openHeight: number,
+): THREE.Mesh | undefined {
   return shadePlane(width, openHeight, (inward, below) =>
     Math.max(
       RECESS_ALPHA * fallsAway(below / RECESS_REACH),
-      SIDE_SHADE_ALPHA * fallsAway(Math.min(inward, width - inward) / SIDE_SHADE_REACH),
+      SIDE_SHADE_ALPHA *
+        fallsAway(Math.min(inward, width - inward) / SIDE_SHADE_REACH),
     ),
   );
 }
@@ -368,11 +388,11 @@ function shadePlane(
 ): THREE.Mesh | undefined {
   const rows = Math.max(32, Math.round((SHADE_TEXTURE_WIDTH * height) / width));
 
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = SHADE_TEXTURE_WIDTH;
   canvas.height = rows;
 
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   if (ctx === null) return undefined;
 
   const image = ctx.createImageData(canvas.width, rows);
@@ -386,14 +406,20 @@ function shadePlane(
     for (let column = 0; column < canvas.width; column += 1) {
       const inward = (1 - (column + 0.5) / canvas.width) * width;
       const alpha = alphaAt(inward, below);
-      image.data[(row * canvas.width + column) * 4 + 3] = Math.round(255 * alpha);
+      image.data[(row * canvas.width + column) * 4 + 3] = Math.round(
+        255 * alpha,
+      );
     }
   }
   ctx.putImageData(image, 0, 0);
 
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(width, height),
-    new THREE.MeshBasicMaterial({ map: finish(canvas), transparent: true, depthWrite: false }),
+    new THREE.MeshBasicMaterial({
+      map: finish(canvas),
+      transparent: true,
+      depthWrite: false,
+    }),
   );
   mesh.renderOrder = 1;
   return mesh;
@@ -448,7 +474,12 @@ export function makeContactShadow(
   y: number,
   light: CaseLight,
 ): THREE.Mesh | undefined {
-  const texture = makeContactShadowTexture(contacts, shelfWidth, shelfDepth, light);
+  const texture = makeContactShadowTexture(
+    contacts,
+    shelfWidth,
+    shelfDepth,
+    light,
+  );
   if (texture === undefined) return undefined;
 
   const mesh = new THREE.Mesh(

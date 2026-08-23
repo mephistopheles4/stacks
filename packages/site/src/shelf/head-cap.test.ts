@@ -1,7 +1,7 @@
-import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
-import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
-import { DEFAULT_SETTINGS } from './shelf-settings.ts';
+import * as THREE from "three";
+import { describe, expect, it } from "vitest";
+import { headCapGeometry, isHeadCapGeometry } from "./head-cap.ts";
+import { DEFAULT_SETTINGS } from "./shelf-settings.ts";
 
 /**
  * The head cap, as geometry.
@@ -20,8 +20,10 @@ const PLACES = 6;
 const geometry = must(headCapGeometry(ROLL));
 
 /** `headCapGeometry` answers `undefined` only where a canvas is refused. */
-function must(geometry: THREE.BufferGeometry | undefined): THREE.BufferGeometry {
-  if (geometry === undefined) throw new Error('no head cap geometry');
+function must(
+  geometry: THREE.BufferGeometry | undefined,
+): THREE.BufferGeometry {
+  if (geometry === undefined) throw new Error("no head cap geometry");
   return geometry;
 }
 
@@ -32,7 +34,7 @@ function attribute(name: string): Float32Array {
 
 /** Every position, as `[x, y, z]` triples. */
 function positions(): [number, number, number][] {
-  const flat = attribute('position');
+  const flat = attribute("position");
   const out: [number, number, number][] = [];
   for (let i = 0; i < flat.length; i += 3) {
     out.push([flat[i] ?? 0, flat[i + 1] ?? 0, flat[i + 2] ?? 0]);
@@ -40,8 +42,8 @@ function positions(): [number, number, number][] {
   return out;
 }
 
-describe('the head cap', () => {
-  it('⚠️ never reaches outside the roll it is closing', () => {
+describe("the head cap", () => {
+  it("⚠️ never reaches outside the roll it is closing", () => {
     // The defect this replaces, and the sharpest way to state it: **every vertex
     // is on or inside the arc**. The ends were squared off at first, and a
     // square's outer corner sits `roll × √2` from the arc's centre against the
@@ -57,7 +59,7 @@ describe('the head cap', () => {
     }
   });
 
-  it('tucks in past the quarter rather than stopping dead on the boards', () => {
+  it("tucks in past the quarter rather than stopping dead on the boards", () => {
     // A turn that ends at 90° leaves its back edge exactly where the boards'
     // front face is — and the cap is parked `SKIN` proud of the spine, so
     // *exactly* is a slot running the width of the head, which reads as a square
@@ -72,7 +74,7 @@ describe('the head cap', () => {
     expect(deepest[1]).toBeLessThan(0);
   });
 
-  it('is 26 triangles of arc and 20 of ends — the tuck is not fanned', () => {
+  it("is 26 triangles of arc and 20 of ends — the tuck is not fanned", () => {
     // #56 built the arc at 32 x 10 = 640 and never varied either number. #66
     // found the width subdivision provably free — nothing varies along `x`, so it
     // subdivides a straight line — and the cost identical at 4 triangles and at
@@ -87,7 +89,7 @@ describe('the head cap', () => {
     expect(geometry.getIndex()?.count).toBe((26 + 20) * 3);
   });
 
-  it('puts its crest at y = 0 and its foot at z = 0', () => {
+  it("puts its crest at y = 0 and its foot at z = 0", () => {
     // The caller's contract: a mesh parked at the top of the spine face lands
     // where the covering's flat part stopped. Get either wrong and the cap floats
     // above the book or sinks into it.
@@ -100,7 +102,7 @@ describe('the head cap', () => {
     expect(Math.min(...ys)).toBeCloseTo(-ROLL, PLACES);
   });
 
-  it('⚠️ is closed at both ends, and no end normal faces straight out', () => {
+  it("⚠️ is closed at both ends, and no end normal faces straight out", () => {
     // Both halves matter and they pull against each other.
     //
     // **Closed**: without ends this is an awning over a wedge of nothing and you
@@ -115,7 +117,7 @@ describe('the head cap', () => {
     // fix. Restoring the honest normal is a one-token change that looks like
     // tidying and undoes it.
     let ends = 0;
-    const normals = attribute('normal');
+    const normals = attribute("normal");
     for (let i = 0; i < normals.length; i += 3) {
       const x = normals[i] ?? 0;
       expect(Math.abs(x)).toBeLessThan(0.9);
@@ -126,7 +128,7 @@ describe('the head cap', () => {
     expect(ends).toBe((1 + (10 + 1)) * 2);
   });
 
-  it('⚠️ carries the roll itself, so the caller scales by thickness and not by it', () => {
+  it("⚠️ carries the roll itself, so the caller scales by thickness and not by it", () => {
     // The bug this test exists for, and the one the counters could not see: the
     // arc spans one *width* unit along `x` while rolling by `roll` in `y` and
     // `z`. A caller who scaled uniformly by the roll got a narrow tab centred on
@@ -147,7 +149,7 @@ describe('the head cap', () => {
     expect(width).not.toBeCloseTo(rise, 3);
   });
 
-  it('spans exactly the spine it rolls over', () => {
+  it("spans exactly the spine it rolls over", () => {
     // Width units, so the mesh's uniform thickness scale puts its edges on the
     // spine's edges. A cap wider than its book would clip through the neighbour.
     const xs = positions().map(([x]) => x);
@@ -156,13 +158,13 @@ describe('the head cap', () => {
     expect(Math.max(...xs)).toBeCloseTo(0.5, 12);
   });
 
-  it('rolls by more or less when the knob says so', () => {
+  it("rolls by more or less when the knob says so", () => {
     // A control must not lie, and this one is `rebuild`-class — so the geometry
     // has to actually be re-baked rather than a cached one handed back.
     const deeper = must(headCapGeometry(ROLL * 2));
 
     const riseOf = (g: THREE.BufferGeometry): number => {
-      const flat = g.getAttribute('position').array as Float32Array;
+      const flat = g.getAttribute("position").array as Float32Array;
       const ys: number[] = [];
       for (let i = 1; i < flat.length; i += 3) ys.push(flat[i] ?? 0);
       return Math.max(...ys) - Math.min(...ys);
@@ -172,11 +174,11 @@ describe('the head cap', () => {
     expect(deeper).not.toBe(geometry);
   });
 
-  it('runs u across the width, so the spine profile shades it too', () => {
+  it("runs u across the width, so the spine profile shades it too", () => {
     // This is what makes the cap cost no texture of its own — it borrows the
     // normal map the spine plane is already carrying.
-    const uvs = attribute('uv');
-    const positions = attribute('position');
+    const uvs = attribute("uv");
+    const positions = attribute("position");
 
     for (let vertex = 0; vertex * 2 < uvs.length; vertex += 1) {
       const x = positions[vertex * 3] ?? 0;
@@ -184,10 +186,10 @@ describe('the head cap', () => {
     }
   });
 
-  it('turns through a full quarter, from facing you to facing up', () => {
+  it("turns through a full quarter, from facing you to facing up", () => {
     // Asserted over the whole normal set rather than the first and last vertex,
     // which stopped being the arc's ends when the closing faces were appended.
-    const normals = attribute('normal');
+    const normals = attribute("normal");
     let facingOut = false;
     let facingUp = false;
     for (let i = 0; i < normals.length; i += 3) {
@@ -201,7 +203,7 @@ describe('the head cap', () => {
     expect(facingUp).toBe(true);
   });
 
-  it('is one geometry for the whole shelf, and says so to the disposer', () => {
+  it("is one geometry for the whole shelf, and says so to the disposer", () => {
     // Shared like `UNIT_BOX`: a mount that freed it would leave the next shelf
     // drawing caps out of a disposed buffer.
     expect(headCapGeometry(ROLL)).toBe(geometry);

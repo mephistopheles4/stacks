@@ -1,5 +1,5 @@
 packages:
-  - 'packages/*'
+  - "packages/*"
 
 # pnpm blocks postinstall scripts by default; these need theirs to work.
 # esbuild: required by vite/vitest/astro — without its postinstall the binary is missing.
@@ -81,8 +81,8 @@ verifyDepsBeforeRun: warn
 # second arrival from landing on the vulnerable line unnoticed — the failure the
 # nanoid entry describes, where a pin was correct and the tree moved anyway.
 overrides:
-  nanoid: '^3.3.18'
-  qs: '^6.15.2'
+  nanoid: "^3.3.18"
+  qs: "^6.15.2"
 
 # CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
 #

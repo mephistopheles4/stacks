@@ -38,14 +38,14 @@
  * and any future code that reaches the network by some other API.
  */
 
-import { afterEach, expect } from 'vitest';
+import { afterEach, expect } from "vitest";
 
 /** Every URL a test tried to reach, since the last test ended. */
 const attempts: string[] = [];
 
 /** The URL, whichever of `fetch`'s three input shapes it arrived as. */
 export function urlOf(input: unknown): string {
-  if (typeof input === 'string') return input;
+  if (typeof input === "string") return input;
   if (input instanceof URL) return input.href;
   if (input instanceof Request) return input.url;
   return String(input);
@@ -59,9 +59,9 @@ export function urlOf(input: unknown): string {
 export function refusalMessage(url: string): string {
   return (
     `Live network call to ${url}\n` +
-    'Tests must not touch the network — see docs/gates.md, row G21 (no-live-network). Stub it:\n' +
+    "Tests must not touch the network — see docs/gates.md, row G21 (no-live-network). Stub it:\n" +
     "  vi.stubGlobal('fetch', vi.fn(async () => new Response(…)))\n" +
-    'packages/core/src/covers/download.test.ts is the worked example.'
+    "packages/core/src/covers/download.test.ts is the worked example."
   );
 }
 
@@ -106,8 +106,8 @@ export function installNetworkGuard(): void {
 
     expect(
       made,
-      'this test made a live network call, which is what docs/gates.md row G21 ' +
-        `forbids:\n${made.map((url) => refusalMessage(url)).join('\n\n')}`,
+      "this test made a live network call, which is what docs/gates.md row G21 " +
+        `forbids:\n${made.map((url) => refusalMessage(url)).join("\n\n")}`,
     ).toEqual([]);
   });
 }

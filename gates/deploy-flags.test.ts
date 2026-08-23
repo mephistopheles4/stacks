@@ -49,11 +49,17 @@
  * See docs/gates.md, row G45 (deploy-flags).
  */
 
-import { describe, expect, it } from 'vitest';
-import { codeOf, expectFound, extractAll, readRepoFile, sectionsOf } from './repo.ts';
+import { describe, expect, it } from "vitest";
+import {
+  codeOf,
+  expectFound,
+  extractAll,
+  readRepoFile,
+  sectionsOf,
+} from "./repo.ts";
 
-const DEPLOY_SCRIPT = 'scripts/deploy.ts';
-const COMMANDS_DOC = 'docs/commands.md';
+const DEPLOY_SCRIPT = "scripts/deploy.ts";
+const COMMANDS_DOC = "docs/commands.md";
 
 /**
  * `process.argv.includes('--dry-run')` — the one shape this script reads flags
@@ -97,15 +103,22 @@ function flagsRead(): string[] {
  */
 function flagsDocumented(): string[] {
   const deploySections = sectionsOf(readRepoFile(COMMANDS_DOC), COMMAND_HEADING)
-    .filter((section) => section.captures[0]?.startsWith('`pnpm deploy:site`') === true)
+    .filter(
+      (section) =>
+        section.captures[0]?.startsWith("`pnpm deploy:site`") === true,
+    )
     .map((section) => section.body);
 
-  expectFound(deploySections, `\`pnpm deploy:site\` sections in ${COMMANDS_DOC}`, 4);
-  return extractAll(deploySections.join('\n'), DOCUMENTED_FLAG);
+  expectFound(
+    deploySections,
+    `\`pnpm deploy:site\` sections in ${COMMANDS_DOC}`,
+    4,
+  );
+  return extractAll(deploySections.join("\n"), DOCUMENTED_FLAG);
 }
 
-describe('G45 — the deploy flag roster', () => {
-  it('extracts a plausible roster from each side', () => {
+describe("G45 — the deploy flag roster", () => {
+  it("extracts a plausible roster from each side", () => {
     // Two regexes over two formats, either of which could stop matching after a
     // refactor or a reformat and reduce both checks below to a comparison
     // between two empty sets — where "every flag is documented" is true and
@@ -114,19 +127,19 @@ describe('G45 — the deploy flag roster', () => {
     expectFound(flagsDocumented(), `flags documented in ${COMMANDS_DOC}`, 3);
   });
 
-  it('documents every flag the deploy reads', () => {
+  it("documents every flag the deploy reads", () => {
     const documented = new Set(flagsDocumented());
     const undocumented = flagsRead().filter((flag) => !documented.has(flag));
 
     expect(
       undocumented,
-      `${DEPLOY_SCRIPT} reads ${undocumented.join(', ')}, which ${COMMANDS_DOC} does not ` +
-        'document. A flag on the publish path that only the source mentions is #152 again: ' +
-        'reachable by whoever reads the code and by nobody who reads the docs',
+      `${DEPLOY_SCRIPT} reads ${undocumented.join(", ")}, which ${COMMANDS_DOC} does not ` +
+        "document. A flag on the publish path that only the source mentions is #152 again: " +
+        "reachable by whoever reads the code and by nobody who reads the docs",
     ).toEqual([]);
   });
 
-  it('reads argv in the one shape this gate can see, and in no other', () => {
+  it("reads argv in the one shape this gate can see, and in no other", () => {
     // Without this the roster is only as wide as the regex above, and the way
     // out is not even devious: `process.argv.slice(2)`, `argv[2] === '--x'`, or
     // an options object parsed once would each add a flag the two checks above
@@ -137,25 +150,26 @@ describe('G45 — the deploy flag roster', () => {
     // question here is whether *every* mention is accounted for.
     const source = codeOf(DEPLOY_SCRIPT);
     const reads = [...source.matchAll(/process\.argv/g)].length;
-    const roster = [...source.matchAll(new RegExp(ARGV_FLAG.source, 'g'))].length;
+    const roster = [...source.matchAll(new RegExp(ARGV_FLAG.source, "g"))]
+      .length;
 
     expect(
       roster,
       `${DEPLOY_SCRIPT} touches process.argv ${String(reads)} time(s) and only ` +
         `${String(roster)} of those is a literal --flag test. The rest are invisible to ` +
-        'this gate, so a flag read that way is undocumented by construction',
+        "this gate, so a flag read that way is undocumented by construction",
     ).toBe(reads);
   });
 
-  it('reads every flag the deploy sections document', () => {
+  it("reads every flag the deploy sections document", () => {
     const read = new Set(flagsRead());
     const inert = flagsDocumented().filter((flag) => !read.has(flag));
 
     expect(
       inert,
-      `${COMMANDS_DOC} documents ${inert.join(', ')} under \`pnpm deploy:site\`, which the ` +
-        'script does not read. A documented flag that does nothing reads as an escape hatch ' +
-        'and is not one',
+      `${COMMANDS_DOC} documents ${inert.join(", ")} under \`pnpm deploy:site\`, which the ` +
+        "script does not read. A documented flag that does nothing reads as an escape hatch " +
+        "and is not one",
     ).toEqual([]);
   });
 });

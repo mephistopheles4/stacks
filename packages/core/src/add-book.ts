@@ -1,17 +1,22 @@
-import { cacheCover } from './covers/cache-cover.ts';
-import { coverKeys } from './covers/cover-keys.ts';
+import { cacheCover } from "./covers/cache-cover.ts";
+import { coverKeys } from "./covers/cover-keys.ts";
 import {
   isProbablySameBook,
   isValidIsbn,
   normaliseIsbn,
   normaliseTitleAuthor,
-} from './identity.ts';
-import { ABOUT_HEADING } from './enrich.ts';
-import { coverUrls, lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
-import { formatSubjects } from './subjects.ts';
-import type { BookInput, BookRecord, BookStatus } from './types.ts';
-import type { VaultAdapter } from './adapters/vault-adapter.ts';
-import { keyIfPresent } from './key-if-present.ts';
+} from "./identity.ts";
+import { ABOUT_HEADING } from "./enrich.ts";
+import {
+  coverUrls,
+  lookup,
+  type BookMetadata,
+  type HttpGet,
+} from "./metadata/index.ts";
+import { formatSubjects } from "./subjects.ts";
+import type { BookInput, BookRecord, BookStatus } from "./types.ts";
+import type { VaultAdapter } from "./adapters/vault-adapter.ts";
+import { keyIfPresent } from "./key-if-present.ts";
 
 export interface AddBookOptions {
   readonly status?: BookStatus;
@@ -22,9 +27,13 @@ export interface AddBookOptions {
 }
 
 export type AddBookResult =
-  | { readonly kind: 'added'; readonly path: string; readonly metadata?: BookMetadata }
   | {
-      readonly kind: 'duplicate';
+      readonly kind: "added";
+      readonly path: string;
+      readonly metadata?: BookMetadata;
+    }
+  | {
+      readonly kind: "duplicate";
       /** What was searched for, or what the providers resolved it to. */
       readonly title: string;
       /** The book already on the shelf — the one the user actually wants named. */
@@ -32,10 +41,10 @@ export type AddBookResult =
       /** True when the vault answered before any provider was asked. */
       readonly matchedBeforeLookup: boolean;
     }
-  | { readonly kind: 'not-found'; readonly term: string }
+  | { readonly kind: "not-found"; readonly term: string }
   | {
       /** The providers answered, but with a different book. */
-      readonly kind: 'mismatch';
+      readonly kind: "mismatch";
       readonly term: string;
       /** What came back, so the reader can see the near-miss and judge it. */
       readonly found: string;
@@ -68,7 +77,7 @@ export async function addBook(
   const alreadyShelved = findShelved(shelved, term, undefined, term);
   if (alreadyShelved !== undefined) {
     return {
-      kind: 'duplicate',
+      kind: "duplicate",
       title: term,
       existing: alreadyShelved,
       matchedBeforeLookup: true,
@@ -77,15 +86,20 @@ export async function addBook(
 
   const [metadata] = await lookup(term, get, options);
   if (metadata === undefined) {
-    return { kind: 'not-found', term };
+    return { kind: "not-found", term };
   }
 
   // And again once the providers have said what the term actually resolves to,
   // since a partial title can name a book the first check could not recognise.
-  const duplicate = findShelved(shelved, metadata.title, metadata.author, metadata.isbn ?? '');
+  const duplicate = findShelved(
+    shelved,
+    metadata.title,
+    metadata.author,
+    metadata.isbn ?? "",
+  );
   if (duplicate !== undefined) {
     return {
-      kind: 'duplicate',
+      kind: "duplicate",
       title: metadata.title,
       existing: duplicate,
       matchedBeforeLookup: false,
@@ -122,9 +136,12 @@ export async function addBook(
    * is asymmetric where identity is not.
    */
   if (options.force !== true && !isValidIsbn(term)) {
-    const found = `${metadata.title} ${metadata.author ?? ''}`.trim();
-    if (!isProbablySameBook(term, found) && termCoverage(term, found) < TERM_COVERAGE) {
-      return { kind: 'mismatch', term, found };
+    const found = `${metadata.title} ${metadata.author ?? ""}`.trim();
+    if (
+      !isProbablySameBook(term, found) &&
+      termCoverage(term, found) < TERM_COVERAGE
+    ) {
+      return { kind: "mismatch", term, found };
     }
   }
 
@@ -132,25 +149,30 @@ export async function addBook(
 
   const book: BookInput = {
     title: metadata.title,
-    status: options.status ?? 'read',
-    ...keyIfPresent('author', metadata.author),
-    ...keyIfPresent('isbn', metadata.isbn === undefined ? undefined : normaliseIsbn(metadata.isbn)),
-    ...keyIfPresent('pages', metadata.pages),
+    status: options.status ?? "read",
+    ...keyIfPresent("author", metadata.author),
+    ...keyIfPresent(
+      "isbn",
+      metadata.isbn === undefined ? undefined : normaliseIsbn(metadata.isbn),
+    ),
+    ...keyIfPresent("pages", metadata.pages),
     ...coverKeys(cover),
     // The merge revision's fields, written at creation. `BookInput` and
     // `FILLABLE` grow together or the merge is inert: both are closed lists, so
     // a field the merge starts carrying and neither of these knows about is
     // written into no note at all.
-    ...keyIfPresent('publisher', metadata.publisher),
-    ...keyIfPresent('published', metadata.published),
+    ...keyIfPresent("publisher", metadata.publisher),
+    ...keyIfPresent("published", metadata.published),
     ...keyIfPresent(
-      'subjects',
-      metadata.subjects === undefined ? undefined : formatSubjects(metadata.subjects),
+      "subjects",
+      metadata.subjects === undefined
+        ? undefined
+        : formatSubjects(metadata.subjects),
     ),
-    ...keyIfPresent('googleVolumeId', metadata.volumeId),
-    ...keyIfPresent('appleTrackId', metadata.appleTrackId),
-    ...keyIfPresent('openLibraryOlid', metadata.openLibraryOlid),
-    ...keyIfPresent('oreillyOurn', metadata.oreillyOurn),
+    ...keyIfPresent("googleVolumeId", metadata.volumeId),
+    ...keyIfPresent("appleTrackId", metadata.appleTrackId),
+    ...keyIfPresent("openLibraryOlid", metadata.openLibraryOlid),
+    ...keyIfPresent("oreillyOurn", metadata.oreillyOurn),
   };
 
   const path = await vault.writeBook(book);
@@ -165,7 +187,7 @@ export async function addBook(
     await vault.insertBodySection(path, ABOUT_HEADING, metadata.description);
   }
 
-  return { kind: 'added', path, metadata };
+  return { kind: "added", path, metadata };
 }
 
 /**
@@ -189,8 +211,10 @@ export async function addBook(
 const TERM_COVERAGE = 0.7;
 
 function termCoverage(term: string, candidate: string): number {
-  const wanted = normaliseTitleAuthor(term).split(' ').filter(Boolean);
-  const found = new Set(normaliseTitleAuthor(candidate).split(' ').filter(Boolean));
+  const wanted = normaliseTitleAuthor(term).split(" ").filter(Boolean);
+  const found = new Set(
+    normaliseTitleAuthor(candidate).split(" ").filter(Boolean),
+  );
   if (wanted.length === 0) return 0;
   return wanted.filter((token) => found.has(token)).length / wanted.length;
 }
@@ -221,8 +245,8 @@ function findShelved(
     if (byIsbn !== undefined) return byIsbn.title;
   }
 
-  const titleAuthor = `${title} ${author ?? ''}`;
+  const titleAuthor = `${title} ${author ?? ""}`;
   return shelved.find((book) =>
-    isProbablySameBook(titleAuthor, `${book.title} ${book.author ?? ''}`),
+    isProbablySameBook(titleAuthor, `${book.title} ${book.author ?? ""}`),
   )?.title;
 }

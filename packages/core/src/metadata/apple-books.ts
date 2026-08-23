@@ -1,7 +1,13 @@
-import { isProbablySameBook } from '../identity.ts';
-import { keyIfPresent } from '../key-if-present.ts';
-import type { HttpGet } from './http.ts';
-import { asPositiveInt, asRecord, firstString, toPlainText, type BookMetadata } from './types.ts';
+import { isProbablySameBook } from "../identity.ts";
+import { keyIfPresent } from "../key-if-present.ts";
+import type { HttpGet } from "./http.ts";
+import {
+  asPositiveInt,
+  asRecord,
+  firstString,
+  toPlainText,
+  type BookMetadata,
+} from "./types.ts";
 
 /**
  * Apple Books — best-in-class artwork, and a metadata contributor.
@@ -30,7 +36,7 @@ import { asPositiveInt, asRecord, firstString, toPlainText, type BookMetadata } 
  * books without an ISBN. Accepted knowingly; see docs/spec/metadata-merge.md §6.
  */
 
-const SEARCH = 'https://itunes.apple.com/search';
+const SEARCH = "https://itunes.apple.com/search";
 
 /**
  * Artwork comes back as a 100px URL with the size embedded in the path;
@@ -44,20 +50,22 @@ const ARTWORK_SIZE = /\/\d+x\d+bb?\.(jpg|png)$/;
  * Every ebook carries it, so it says nothing about the book and would spend one
  * of the five capped subject slots on every note that has any.
  */
-const GENERIC_GENRE = 'Books';
+const GENERIC_GENRE = "Books";
 
 export async function findRecord(
   title: string,
   author: string | undefined,
   get: HttpGet,
 ): Promise<BookMetadata | undefined> {
-  const term = `${title} ${author ?? ''}`.trim();
+  const term = `${title} ${author ?? ""}`.trim();
   if (term.length === 0) return undefined;
 
   const body = asRecord(
-    await get(`${SEARCH}?term=${encodeURIComponent(term)}&entity=ebook&limit=5`),
+    await get(
+      `${SEARCH}?term=${encodeURIComponent(term)}&entity=ebook&limit=5`,
+    ),
   );
-  const results = Array.isArray(body?.['results']) ? body['results'] : [];
+  const results = Array.isArray(body?.["results"]) ? body["results"] : [];
 
   /**
    * The first match wins — **but a match with no artwork does not end the
@@ -79,13 +87,19 @@ export async function findRecord(
     const item = asRecord(entry);
     if (item === undefined) continue;
 
-    const found = firstString(item['trackName']);
+    const found = firstString(item["trackName"]);
     if (found === undefined) continue;
 
-    const foundAuthor = firstString(item['artistName']) ?? '';
-    if (!isProbablySameBook(`${title} ${author ?? ''}`, `${found} ${foundAuthor}`)) continue;
+    const foundAuthor = firstString(item["artistName"]) ?? "";
+    if (
+      !isProbablySameBook(`${title} ${author ?? ""}`, `${found} ${foundAuthor}`)
+    )
+      continue;
 
-    const artwork = firstString(item['artworkUrl100'])?.replace(ARTWORK_SIZE, '/1200x1200bb.$1');
+    const artwork = firstString(item["artworkUrl100"])?.replace(
+      ARTWORK_SIZE,
+      "/1200x1200bb.$1",
+    );
 
     if (matched !== undefined) {
       if (artwork === undefined) continue;
@@ -94,19 +108,19 @@ export async function findRecord(
 
     matched = {
       title: found,
-      source: 'apple-books',
-      ...keyIfPresent('author', firstString(item['artistName'])),
+      source: "apple-books",
+      ...keyIfPresent("author", firstString(item["artistName"])),
       // Only ever a *candidate* cover, which is why it lands on `coverUrlLarge`
       // and never on `coverUrl`: the downloader keeps whichever of the queue is
       // cover-shaped, and this is the one worth trying first.
-      ...keyIfPresent('coverUrlLarge', artwork),
+      ...keyIfPresent("coverUrlLarge", artwork),
       // A number in the response and a string in the note — the frontmatter
       // holds scalars and every other id is a string, so the shape check has one
       // rule to state rather than two.
-      ...keyIfPresent('appleTrackId', trackIdOf(item['trackId'])),
-      ...keyIfPresent('published', firstString(item['releaseDate'])),
-      ...keyIfPresent('subjects', genresOf(item['genres'])),
-      ...keyIfPresent('description', toPlainText(item['description'])),
+      ...keyIfPresent("appleTrackId", trackIdOf(item["trackId"])),
+      ...keyIfPresent("published", firstString(item["releaseDate"])),
+      ...keyIfPresent("subjects", genresOf(item["genres"])),
+      ...keyIfPresent("description", toPlainText(item["description"])),
     };
 
     if (artwork !== undefined) return matched;
@@ -123,7 +137,7 @@ function trackIdOf(value: unknown): string | undefined {
 function genresOf(value: unknown): readonly string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const names = value
-    .filter((genre): genre is string => typeof genre === 'string')
+    .filter((genre): genre is string => typeof genre === "string")
     .filter((genre) => genre !== GENERIC_GENRE);
   return names.length === 0 ? undefined : names;
 }

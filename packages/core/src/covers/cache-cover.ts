@@ -1,9 +1,9 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import sharp from 'sharp';
-import { coverSourceFor, type CoverSource } from './cover-source.ts';
-import { spineColour } from './dominant-colour.ts';
-import type { VaultAdapter } from '../adapters/vault-adapter.ts';
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import sharp from "sharp";
+import { coverSourceFor, type CoverSource } from "./cover-source.ts";
+import { spineColour } from "./dominant-colour.ts";
+import type { VaultAdapter } from "../adapters/vault-adapter.ts";
 
 export interface CachedCover {
   /** Vault-relative, as it goes into the note's `cover:` key. */
@@ -61,7 +61,7 @@ export async function cacheCover(
   title: string,
   vault: VaultAdapter,
 ): Promise<CachedCover | undefined> {
-  const candidates = (typeof urls === 'string' ? [urls] : urls).filter(
+  const candidates = (typeof urls === "string" ? [urls] : urls).filter(
     (u): u is string => u !== undefined && u.length > 0,
   );
 
@@ -85,7 +85,8 @@ export async function cacheCover(
   const winner = chosen ?? fallback;
   if (winner === undefined) return undefined;
 
-  const extension = /\.(jpe?g|png|webp)(?:$|\?)/i.exec(winner.url)?.[1]?.toLowerCase() ?? 'jpg';
+  const extension =
+    /\.(jpe?g|png|webp)(?:$|\?)/i.exec(winner.url)?.[1]?.toLowerCase() ?? "jpg";
   const filename = `${slug(title)}.${extension}`;
   const dir = vault.coverDir();
   const absolute = join(dir, filename);
@@ -124,7 +125,9 @@ export async function cacheCover(
 const MAX_COVER_BYTES = 20 * 1024 * 1024;
 const DOWNLOAD_TIMEOUT_MS = 15_000;
 
-const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const PNG_SIGNATURE = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
 
 /**
  * What the bytes actually are, whatever the URL and the response header claimed.
@@ -146,8 +149,8 @@ export function looksLikeImage(bytes: Buffer): boolean {
   if (bytes.subarray(0, 8).equals(PNG_SIGNATURE)) return true;
   // WebP is a RIFF container: "RIFF" <4-byte length> "WEBP".
   return (
-    bytes.subarray(0, 4).toString('latin1') === 'RIFF' &&
-    bytes.subarray(8, 12).toString('latin1') === 'WEBP'
+    bytes.subarray(0, 4).toString("latin1") === "RIFF" &&
+    bytes.subarray(8, 12).toString("latin1") === "WEBP"
   );
 }
 
@@ -160,7 +163,9 @@ export function looksLikeImage(bytes: Buffer): boolean {
  * makes an endless response cost 20 MB instead of the heap — `arrayBuffer()`
  * would have to buffer all of it before anything could measure it.
  */
-async function readCapped(body: ReadableStream<Uint8Array>): Promise<Buffer | undefined> {
+async function readCapped(
+  body: ReadableStream<Uint8Array>,
+): Promise<Buffer | undefined> {
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -195,15 +200,19 @@ export async function download(url: string): Promise<Buffer | undefined> {
     // announces itself as anything but an image is refused before its body is
     // read. Absent is tolerated: some CDNs omit it, and the magic-byte check
     // below is the one that actually decides.
-    const declaredType = response.headers.get('content-type');
-    if (declaredType !== null && !declaredType.toLowerCase().trimStart().startsWith('image/')) {
+    const declaredType = response.headers.get("content-type");
+    if (
+      declaredType !== null &&
+      !declaredType.toLowerCase().trimStart().startsWith("image/")
+    ) {
       return undefined;
     }
 
     // Refusing on the declared length is the only check that costs nothing to
     // fail — no body is transferred at all.
-    const declaredLength = Number(response.headers.get('content-length'));
-    if (Number.isFinite(declaredLength) && declaredLength > MAX_COVER_BYTES) return undefined;
+    const declaredLength = Number(response.headers.get("content-length"));
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_COVER_BYTES)
+      return undefined;
 
     const bytes = await readCapped(response.body);
     if (bytes === undefined) return undefined;
@@ -244,7 +253,8 @@ export async function isBlank(bytes: Buffer): Promise<boolean> {
     if (channels.length === 0) return false;
 
     const mean = channels.reduce((sum, c) => sum + c.mean, 0) / channels.length;
-    const deviation = channels.reduce((sum, c) => sum + c.stdev, 0) / channels.length;
+    const deviation =
+      channels.reduce((sum, c) => sum + c.stdev, 0) / channels.length;
     return mean > BLANK_BRIGHTNESS && deviation < BLANK_VARIANCE;
   } catch {
     return false;
@@ -254,7 +264,8 @@ export async function isBlank(bytes: Buffer): Promise<boolean> {
 async function aspectOf(bytes: Buffer): Promise<number | undefined> {
   try {
     const { width, height } = await sharp(bytes).metadata();
-    if (width === undefined || height === undefined || height === 0) return undefined;
+    if (width === undefined || height === undefined || height === 0)
+      return undefined;
     return width / height;
   } catch {
     return undefined;
@@ -265,9 +276,9 @@ export function slug(title: string): string {
   return (
     title
       .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 60) || 'cover'
+      .normalize("NFKD")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "cover"
   );
 }

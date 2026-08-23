@@ -58,9 +58,9 @@ export function loops(items: number[], record: Record<string, number>): number {
  */
 export function switchAndCatch(kind: string): number {
   switch (kind) {
-    case 'a':
+    case "a":
       return 1; // +1  case
-    case 'b':
+    case "b":
       return 2; // +1  case
     default:
       break; // +0  no test
@@ -88,7 +88,9 @@ export function logicalAssignment(seed: number): number {
  * in one expression. This is the clause the prototype's hand-rolled walk did
  * not have, and the one that moved `parseNote` from 11 to 12.
  */
-export function optionalChain(input?: { a?: { b?: () => number } }): number | undefined {
+export function optionalChain(input?: {
+  a?: { b?: () => number };
+}): number | undefined {
   return input?.a?.b?.(); // +3  three links
 }
 
@@ -98,7 +100,10 @@ export function optionalChain(input?: { a?: { b?: () => number } }): number | un
  * A default is an implicit branch (ESLint PR #18152, in v9.0.0). Both shapes
  * are `AssignmentPattern` to the rule, which is why one of each is here.
  */
-export function defaults(first = 1, { second = 2 }: { second?: number }): number {
+export function defaults(
+  first = 1,
+  { second = 2 }: { second?: number },
+): number {
   return first + second; // +1 parameter default, +1 destructuring default
 }
 
@@ -147,7 +152,8 @@ export function* generatorDeclaration(flag: boolean): Generator<number> {
   yield flag ? 1 : 2; // +1
 }
 
-export const asyncArrow = async (flag: boolean): Promise<number> => (flag ? 1 : 2); // +1
+export const asyncArrow = async (flag: boolean): Promise<number> =>
+  flag ? 1 : 2; // +1
 
 /**
  * Nesting: a nested function's branches never count toward its parent.

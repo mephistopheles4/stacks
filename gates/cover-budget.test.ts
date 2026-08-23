@@ -24,26 +24,26 @@
  * See docs/gates.md, row G15 (cover-budget).
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { ObsidianAdapter } from "../packages/core/src/adapters/obsidian-adapter.ts";
 import {
   MAX_COVER_EDGE,
   TEXTURE_BUDGET_BYTES,
   decodedTextureBytes,
   measureCover,
-} from '../packages/core/src/covers/cover-budget.ts';
-import { publish } from '../packages/core/src/publish.ts';
-import { REPO_ROOT, expectFound } from './repo.ts';
+} from "../packages/core/src/covers/cover-budget.ts";
+import { publish } from "../packages/core/src/publish.ts";
+import { REPO_ROOT, expectFound } from "./repo.ts";
 
-const FIXTURE_VAULT = join(REPO_ROOT, 'fixtures', 'vault');
+const FIXTURE_VAULT = join(REPO_ROOT, "fixtures", "vault");
 
 let assets: string;
 
 beforeEach(async () => {
-  assets = await mkdtemp(join(tmpdir(), 'stacks-cover-budget-'));
+  assets = await mkdtemp(join(tmpdir(), "stacks-cover-budget-"));
 });
 
 afterEach(async () => {
@@ -60,7 +60,7 @@ async function stagedCovers(): Promise<Staged[]> {
   const vault = new ObsidianAdapter(FIXTURE_VAULT);
   await publish(await vault.listBooks(), vault, assets, { isPublic: true });
 
-  const dir = join(assets, 'covers');
+  const dir = join(assets, "covers");
   const names = await readdir(dir);
 
   return Promise.all(
@@ -73,13 +73,13 @@ async function stagedCovers(): Promise<Staged[]> {
 
 const mb = (bytes: number): string => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
-describe('G15 — staged covers fit in graphics memory', () => {
-  it('has a cover in the fixture vault that is over the cap to begin with', async () => {
+describe("G15 — staged covers fit in graphics memory", () => {
+  it("has a cover in the fixture vault that is over the cap to begin with", async () => {
     // Without an oversized source this gate would pass over covers that never
     // needed resizing, which is the same vacuous-green trap the canary check in
     // G2 closes. `the-tidal-engine.png` is generated at 1400x2100 by
     // scripts/make-fixture-covers.ts precisely because real covers are that big.
-    const dir = join(FIXTURE_VAULT, 'Library', 'covers');
+    const dir = join(FIXTURE_VAULT, "Library", "covers");
     const names = await readdir(dir);
 
     const sizes = await Promise.all(
@@ -93,18 +93,23 @@ describe('G15 — staged covers fit in graphics memory', () => {
     expectFound(oversized, `fixture cover(s) larger than ${MAX_COVER_EDGE}px`);
   });
 
-  it('caps every staged cover on its long edge', async () => {
-    const covers = expectFound(await stagedCovers(), 'staged cover(s)');
+  it("caps every staged cover on its long edge", async () => {
+    const covers = expectFound(await stagedCovers(), "staged cover(s)");
 
-    const tooBig = covers.filter((cover) => Math.max(cover.width, cover.height) > MAX_COVER_EDGE);
+    const tooBig = covers.filter(
+      (cover) => Math.max(cover.width, cover.height) > MAX_COVER_EDGE,
+    );
     expect(
-      tooBig.map((cover) => `${cover.name} ${String(cover.width)}x${String(cover.height)}`),
+      tooBig.map(
+        (cover) =>
+          `${cover.name} ${String(cover.width)}x${String(cover.height)}`,
+      ),
       `covers over ${String(MAX_COVER_EDGE)}px: each one is tens of MB of GPU texture`,
     ).toEqual([]);
   });
 
-  it('keeps the whole shelf inside the texture budget', async () => {
-    const covers = expectFound(await stagedCovers(), 'staged cover(s)');
+  it("keeps the whole shelf inside the texture budget", async () => {
+    const covers = expectFound(await stagedCovers(), "staged cover(s)");
     const total = covers.reduce(
       (sum, cover) => sum + decodedTextureBytes(cover.width, cover.height),
       0,
@@ -114,19 +119,21 @@ describe('G15 — staged covers fit in graphics memory', () => {
       total,
       `${String(covers.length)} covers decode to ${mb(total)} of GPU texture, over the ` +
         `${mb(TEXTURE_BUDGET_BYTES)} budget. Do not raise the budget — stop uploading every ` +
-        'cover at once.',
+        "cover at once.",
     ).toBeLessThanOrEqual(TEXTURE_BUDGET_BYTES);
   });
 
-  it('does not stretch a cover it resizes', async () => {
+  it("does not stretch a cover it resizes", async () => {
     // `withCoverAspects` measures the staged file and the shelf draws the cover
     // at that ratio, so a resize that changed the proportions would not look
     // wrong here — it would look wrong on the shelf, at the true aspect of the
     // squashed image.
-    const dir = join(FIXTURE_VAULT, 'Library', 'covers');
-    const source = await measureCover(join(dir, 'the-tidal-engine.png'));
+    const dir = join(FIXTURE_VAULT, "Library", "covers");
+    const source = await measureCover(join(dir, "the-tidal-engine.png"));
     const covers = await stagedCovers();
-    const staged = covers.find((cover) => cover.name === 'the-tidal-engine.png');
+    const staged = covers.find(
+      (cover) => cover.name === "the-tidal-engine.png",
+    );
 
     expect(staged).toBeDefined();
     expect(source).toBeDefined();
@@ -137,12 +144,12 @@ describe('G15 — staged covers fit in graphics memory', () => {
     expect(Math.abs(before - after)).toBeLessThan(0.01);
   });
 
-  it('leaves a cover that is already small alone, byte for byte', async () => {
+  it("leaves a cover that is already small alone, byte for byte", async () => {
     // Re-encoding an image that did not need it is a quiet quality loss, and the
     // fixture vault is mostly 200x300 thumbnails. Compared as bytes rather than
     // as dimensions: a re-encode preserves the dimensions exactly, so measuring
     // those would pass whether or not the file was touched.
-    const sourceDir = join(FIXTURE_VAULT, 'Library', 'covers');
+    const sourceDir = join(FIXTURE_VAULT, "Library", "covers");
     const covers = await stagedCovers();
 
     // Bucketed by the size of the *source*, not of the staged file. A cover that
@@ -153,15 +160,22 @@ describe('G15 — staged covers fit in graphics memory', () => {
     for (const cover of covers) {
       const source = await measureCover(join(sourceDir, cover.name));
       if (source === undefined) continue;
-      if (Math.max(source.width, source.height) <= MAX_COVER_EDGE) untouched.push(cover.name);
+      if (Math.max(source.width, source.height) <= MAX_COVER_EDGE)
+        untouched.push(cover.name);
     }
 
-    expectFound(untouched, 'staged cover(s) whose source was already within the cap');
+    expectFound(
+      untouched,
+      "staged cover(s) whose source was already within the cap",
+    );
 
     for (const name of untouched) {
       const source = await readFile(join(sourceDir, name));
-      const staged = await readFile(join(assets, 'covers', name));
-      expect(staged.equals(source), `${name} was re-encoded when it did not need to be`).toBe(true);
+      const staged = await readFile(join(assets, "covers", name));
+      expect(
+        staged.equals(source),
+        `${name} was re-encoded when it did not need to be`,
+      ).toBe(true);
     }
   });
 });

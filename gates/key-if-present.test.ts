@@ -46,13 +46,13 @@
  * See docs/gates.md, row G23 (key-if-present).
  */
 
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
-import { codeOf, expectFound, filesUnder, REPO_ROOT } from './repo.ts';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
+import { codeOf, expectFound, filesUnder, REPO_ROOT } from "./repo.ts";
 
 /** The one definition. */
-const OWNER = 'packages/core/src/key-if-present.ts';
+const OWNER = "packages/core/src/key-if-present.ts";
 
 /**
  * The owner's own spec, which names the helper constantly and uses it for
@@ -61,7 +61,7 @@ const OWNER = 'packages/core/src/key-if-present.ts';
  * revert into. That is not hypothetical — it is how this clause first passed a
  * mutation it was written to fail.
  */
-const OWNER_SPEC = 'packages/core/src/key-if-present.test.ts';
+const OWNER_SPEC = "packages/core/src/key-if-present.test.ts";
 
 /**
  * The seven files that call the helper — named, not merely counted.
@@ -74,13 +74,13 @@ const OWNER_SPEC = 'packages/core/src/key-if-present.test.ts';
  * commit. If it is still here and no longer calling, that is the defect.
  */
 const EXPECTED_CALLERS: readonly string[] = [
-  'packages/cli/src/index.ts',
-  'packages/core/src/add-book.ts',
-  'packages/core/src/frontmatter.ts',
-  'packages/core/src/import/audible.ts',
-  'packages/core/src/library.ts',
-  'packages/core/src/metadata/google-books.ts',
-  'packages/core/src/metadata/open-library.ts',
+  "packages/cli/src/index.ts",
+  "packages/core/src/add-book.ts",
+  "packages/core/src/frontmatter.ts",
+  "packages/core/src/import/audible.ts",
+  "packages/core/src/library.ts",
+  "packages/core/src/metadata/google-books.ts",
+  "packages/core/src/metadata/open-library.ts",
 ];
 
 /**
@@ -91,20 +91,21 @@ const EXPECTED_CALLERS: readonly string[] = [
  * vary this. `\{\}` rather than `\{` is load-bearing — `frontmatter.ts` returns
  * `[]` from the same shape for a different reason, and that is not this.
  */
-const RETURNS_NOTHING_WHEN_ABSENT = /return\s+[A-Za-z_$][\w$]*\s*===\s*undefined\s*\?\s*\{\}/;
+const RETURNS_NOTHING_WHEN_ABSENT =
+  /return\s+[A-Za-z_$][\w$]*\s*===\s*undefined\s*\?\s*\{\}/;
 
 /** Every `.ts` in the repo's three code roots, tests included — a copy is a copy. */
 function scanned(): string[] {
   return [
-    ...filesUnder('packages', ['.ts']),
-    ...filesUnder('gates', ['.ts']),
-    ...filesUnder('scripts', ['.ts']),
+    ...filesUnder("packages", [".ts"]),
+    ...filesUnder("gates", [".ts"]),
+    ...filesUnder("scripts", [".ts"]),
   ];
 }
 
-describe('G23 — one absent-key helper', () => {
-  it('scans a plausible number of source files', () => {
-    expectFound(scanned(), 'source files to scan', 60);
+describe("G23 — one absent-key helper", () => {
+  it("scans a plausible number of source files", () => {
+    expectFound(scanned(), "source files to scan", 60);
   });
 
   /**
@@ -117,20 +118,21 @@ describe('G23 — one absent-key helper', () => {
    * empty set for ever. Asserting the owner still matches is what makes the
    * other assertions mean something.
    */
-  it('matches the owner, so the pattern cannot silently stop matching', () => {
+  it("matches the owner, so the pattern cannot silently stop matching", () => {
     expect(RETURNS_NOTHING_WHEN_ABSENT.test(codeOf(OWNER))).toBe(true);
   });
 
-  it('finds no second implementation, under any name', () => {
+  it("finds no second implementation, under any name", () => {
     const copies = scanned().filter(
-      (path) => path !== OWNER && RETURNS_NOTHING_WHEN_ABSENT.test(codeOf(path)),
+      (path) =>
+        path !== OWNER && RETURNS_NOTHING_WHEN_ABSENT.test(codeOf(path)),
     );
 
     expect(
       copies,
       `these files define their own absent-key helper. There is one, in ${OWNER}, ` +
-        'and it is called `keyIfPresent` — import it. This gate matches the body ' +
-        'rather than the name because the last six copies wore three different names.',
+        "and it is called `keyIfPresent` — import it. This gate matches the body " +
+        "rather than the name because the last six copies wore three different names.",
     ).toEqual([]);
   });
 
@@ -143,10 +145,12 @@ describe('G23 — one absent-key helper', () => {
    * is the same shape as G22's `routes every cover download` clause: a positive
    * check cannot detect a missing one, so both directions get asserted.
    */
-  it('is actually used, by every file that used to have its own copy', () => {
+  it("is actually used, by every file that used to have its own copy", () => {
     const callers = scanned().filter(
       (path) =>
-        path !== OWNER && path !== OWNER_SPEC && /\bkeyIfPresent\s*\(/.test(codeOf(path)),
+        path !== OWNER &&
+        path !== OWNER_SPEC &&
+        /\bkeyIfPresent\s*\(/.test(codeOf(path)),
     );
 
     // Seven, and not one fewer. A floor set below the true count leaves room
@@ -164,9 +168,9 @@ describe('G23 — one absent-key helper', () => {
     // clause is about.
     expect(
       EXPECTED_CALLERS.filter((path) => !callers.includes(path)),
-      'these files used to call keyIfPresent and no longer do',
+      "these files used to call keyIfPresent and no longer do",
     ).toEqual([]);
-    expectFound(callers, 'files calling keyIfPresent', EXPECTED_CALLERS.length);
+    expectFound(callers, "files calling keyIfPresent", EXPECTED_CALLERS.length);
   });
 
   /**
@@ -179,11 +183,13 @@ describe('G23 — one absent-key helper', () => {
    * the same slack this gate already went green through once, arriving by a
    * different door.
    */
-  it('names no file that has moved', () => {
+  it("names no file that has moved", () => {
     const missing = [OWNER, OWNER_SPEC, ...EXPECTED_CALLERS].filter(
       (path) => !existsSync(join(REPO_ROOT, path)),
     );
-    expect(missing, 'paths this gate hardcodes that no longer exist').toEqual([]);
+    expect(missing, "paths this gate hardcodes that no longer exist").toEqual(
+      [],
+    );
   });
 
   /**
@@ -203,29 +209,34 @@ describe('G23 — one absent-key helper', () => {
    * The probe lives under `artifacts/`, which `filesUnder` skips and git
    * ignores, so it cannot be seen by the sweeps above while it exists.
    */
-  it('blanks comments, via the same codeOf the sweeps use', () => {
-    const dir = join(REPO_ROOT, 'artifacts');
-    const probe = 'artifacts/__g23-comment-probe.ts';
+  it("blanks comments, via the same codeOf the sweeps use", () => {
+    const dir = join(REPO_ROOT, "artifacts");
+    const probe = "artifacts/__g23-comment-probe.ts";
     mkdirSync(dir, { recursive: true });
     writeFileSync(
       join(REPO_ROOT, probe),
-      '/* return commented === undefined ? {} : x; */\n' +
-        '// return alsoCommented === undefined ? {} : x;\n' +
+      "/* return commented === undefined ? {} : x; */\n" +
+        "// return alsoCommented === undefined ? {} : x;\n" +
         'export const url = "https://example.com/a";\n' +
-        'export const real = 1;\n',
-      'utf8',
+        "export const real = 1;\n",
+      "utf8",
     );
 
     const code = codeOf(probe);
 
-    expect(RETURNS_NOTHING_WHEN_ABSENT.test(code), 'a commented-out body counted as code').toBe(
-      false,
+    expect(
+      RETURNS_NOTHING_WHEN_ABSENT.test(code),
+      "a commented-out body counted as code",
+    ).toBe(false);
+    expect(code, "a URL was eaten as a comment").toContain(
+      "https://example.com/a",
     );
-    expect(code, 'a URL was eaten as a comment').toContain('https://example.com/a');
-    expect(code, 'real code was blanked').toContain('export const real = 1;');
+    expect(code, "real code was blanked").toContain("export const real = 1;");
   });
 
   afterAll(() => {
-    rmSync(join(REPO_ROOT, 'artifacts/__g23-comment-probe.ts'), { force: true });
+    rmSync(join(REPO_ROOT, "artifacts/__g23-comment-probe.ts"), {
+      force: true,
+    });
   });
 });

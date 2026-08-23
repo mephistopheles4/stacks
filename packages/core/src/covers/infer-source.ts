@@ -33,7 +33,7 @@
  * not tell"), and a confident wrong answer is worse than an honest absence.
  */
 
-import type { CoverSource } from './cover-source.ts';
+import type { CoverSource } from "./cover-source.ts";
 
 /** Open Library's `-L` cap. A portrait cover comes back exactly this tall. */
 const OPEN_LIBRARY_MAX_EDGE = 500;
@@ -66,10 +66,11 @@ export function inferCoverSource(shape: CoverShape): CoverSource | undefined {
   // Checked first: a 500-tall cover is Open Library's cap, and that is the
   // strongest signal available. Squares are excluded — Apple serves square
   // audiobook art, and a 500x500 could be either.
-  if (longEdge === OPEN_LIBRARY_MAX_EDGE && width !== height) return 'open-library';
+  if (longEdge === OPEN_LIBRARY_MAX_EDGE && width !== height)
+    return "open-library";
 
-  if (width >= LARGE_ART_WIDTH) return 'apple-books';
-  if (width <= THUMBNAIL_WIDTH) return 'google-books';
+  if (width >= LARGE_ART_WIDTH) return "apple-books";
+  if (width <= THUMBNAIL_WIDTH) return "google-books";
 
   // Between a thumbnail and full art, with no Open Library cap: could be a
   // resized anything. Say so rather than pick.

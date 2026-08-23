@@ -27,11 +27,11 @@
  * See docs/gates.md, row G4 (hand-edited-notes).
  */
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { ObsidianAdapter } from "../packages/core/src/adapters/obsidian-adapter.ts";
 
 /**
  * Everything a hand-edited note does that a naive rewriter destroys:
@@ -43,43 +43,43 @@ import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.
  *   - a body with a wikilink, an embed and a `---` rule that is not a fence.
  */
 const HAND_EDITED = [
-  '---',
+  "---",
   'title: "The Tidal Engine"',
-  'type: book',
-  '# picked this up after the Vane essay — reread the middle third',
+  "type: book",
+  "# picked this up after the Vane essay — reread the middle third",
   "author: 'Marisol Vane'",
-  'status: read',
-  'rating: 4',
-  'narrator: A Reader Who Is Not In The Contract',
-  'finished: 2026-04-11',
-  '---',
-  '',
-  '![[the-tidal-engine.png]]',
-  '',
-  '## Notes',
-  '',
-  'Opens slowly. See also [[Thinking in Systems]].',
-  '',
-  '---',
-  '',
-  'A second section, below a horizontal rule that is not a fence.',
-  '',
-].join('\n');
+  "status: read",
+  "rating: 4",
+  "narrator: A Reader Who Is Not In The Contract",
+  "finished: 2026-04-11",
+  "---",
+  "",
+  "![[the-tidal-engine.png]]",
+  "",
+  "## Notes",
+  "",
+  "Opens slowly. See also [[Thinking in Systems]].",
+  "",
+  "---",
+  "",
+  "A second section, below a horizontal rule that is not a fence.",
+  "",
+].join("\n");
 
-describe('G4 — hand-edited notes are first-class', () => {
+describe("G4 — hand-edited notes are first-class", () => {
   let dir: string;
   let vault: ObsidianAdapter;
 
   const write = async (name: string, contents: string): Promise<void> => {
-    await mkdir(join(dir, 'Library'), { recursive: true });
-    await writeFile(join(dir, 'Library', name), contents, 'utf8');
+    await mkdir(join(dir, "Library"), { recursive: true });
+    await writeFile(join(dir, "Library", name), contents, "utf8");
   };
 
   const read = async (name: string): Promise<string> =>
-    readFile(join(dir, 'Library', name), 'utf8');
+    readFile(join(dir, "Library", name), "utf8");
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'stacks-gate-g4-'));
+    dir = await mkdtemp(join(tmpdir(), "stacks-gate-g4-"));
     vault = new ObsidianAdapter(dir);
   });
 
@@ -87,52 +87,57 @@ describe('G4 — hand-edited notes are first-class', () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  it('changes one existing scalar line and nothing else, byte for byte', async () => {
-    await write('Tidal.md', HAND_EDITED);
+  it("changes one existing scalar line and nothing else, byte for byte", async () => {
+    await write("Tidal.md", HAND_EDITED);
 
-    await vault.updateBook('Library/Tidal.md', { rating: 5 });
+    await vault.updateBook("Library/Tidal.md", { rating: 5 });
 
     // The whole claim in one expression: the file the owner gets back is the
     // file they wrote, with one line different. Field-by-field checks pass even
     // when the comment moved or the body lost its trailing newline.
-    expect(await read('Tidal.md')).toBe(HAND_EDITED.replace('rating: 4', 'rating: 5'));
-  });
-
-  it('appends a key it has never seen without disturbing the rest', async () => {
-    await write('Tidal.md', HAND_EDITED);
-
-    await vault.updateBook('Library/Tidal.md', { shelf_order: 20 });
-
-    // Appending is the other half of the splice, and it is where a stray
-    // newline round the closing fence would show up.
-    expect(await read('Tidal.md')).toBe(
-      HAND_EDITED.replace('finished: 2026-04-11\n---', 'finished: 2026-04-11\nshelf_order: 20\n---'),
+    expect(await read("Tidal.md")).toBe(
+      HAND_EDITED.replace("rating: 4", "rating: 5"),
     );
   });
 
-  it('leaves a key alone when its value is a block list', async () => {
+  it("appends a key it has never seen without disturbing the rest", async () => {
+    await write("Tidal.md", HAND_EDITED);
+
+    await vault.updateBook("Library/Tidal.md", { shelf_order: 20 });
+
+    // Appending is the other half of the splice, and it is where a stray
+    // newline round the closing fence would show up.
+    expect(await read("Tidal.md")).toBe(
+      HAND_EDITED.replace(
+        "finished: 2026-04-11\n---",
+        "finished: 2026-04-11\nshelf_order: 20\n---",
+      ),
+    );
+  });
+
+  it("leaves a key alone when its value is a block list", async () => {
     // Rewriting the `tags:` line would orphan the two `- ` lines under it and
     // leave the file unparseable — the documented "scalars only" rule.
     const withBlockList = [
-      '---',
-      'type: book',
-      'title: A Tagged Book',
-      'tags:',
-      '  - engineering',
-      '  - nonfiction',
-      '---',
-      '',
-      '## Notes',
-      '',
-    ].join('\n');
-    await write('Tagged.md', withBlockList);
+      "---",
+      "type: book",
+      "title: A Tagged Book",
+      "tags:",
+      "  - engineering",
+      "  - nonfiction",
+      "---",
+      "",
+      "## Notes",
+      "",
+    ].join("\n");
+    await write("Tagged.md", withBlockList);
 
-    await vault.updateBook('Library/Tagged.md', { tags: 'clobbered' });
+    await vault.updateBook("Library/Tagged.md", { tags: "clobbered" });
 
-    expect(await read('Tagged.md')).toBe(withBlockList);
+    expect(await read("Tagged.md")).toBe(withBlockList);
   });
 
-  it('leaves a key alone when its value is an inline list', async () => {
+  it("leaves a key alone when its value is an inline list", async () => {
     // The same documented rule — AGENTS.md says "a key whose value is a list is
     // left alone", not "a block list". `tags: [a, b]` and `author: [X, Y]` are
     // ordinary YAML flow sequences and entirely normal in a note typed by hand.
@@ -144,32 +149,35 @@ describe('G4 — hand-edited notes are first-class', () => {
     // parser reporting the note as authorless is precisely what routed it into
     // the overwrite that then dropped the second author.
     const withInlineList = [
-      '---',
-      'type: book',
-      'title: A Book With Two Authors',
-      'author: [Marisol Vane, Tomas Ek]',
-      'tags: [engineering, nonfiction]',
-      '---',
-      '',
-      '## Notes',
-      '',
-    ].join('\n');
-    await write('Inline.md', withInlineList);
+      "---",
+      "type: book",
+      "title: A Book With Two Authors",
+      "author: [Marisol Vane, Tomas Ek]",
+      "tags: [engineering, nonfiction]",
+      "---",
+      "",
+      "## Notes",
+      "",
+    ].join("\n");
+    await write("Inline.md", withInlineList);
 
-    await vault.updateBook('Library/Inline.md', { author: 'Someone Else', tags: 'clobbered' });
+    await vault.updateBook("Library/Inline.md", {
+      author: "Someone Else",
+      tags: "clobbered",
+    });
 
-    expect(await read('Inline.md')).toBe(withInlineList);
+    expect(await read("Inline.md")).toBe(withInlineList);
   });
 
-  it('still parses the note it just rewrote', async () => {
+  it("still parses the note it just rewrote", async () => {
     // A byte-perfect file that no longer loads would satisfy every assertion
     // above. This is the end-to-end check that the round trip is real.
-    await write('Tidal.md', HAND_EDITED);
-    await vault.updateBook('Library/Tidal.md', { rating: 5 });
+    await write("Tidal.md", HAND_EDITED);
+    await vault.updateBook("Library/Tidal.md", { rating: 5 });
 
     const books = await vault.listBooks();
     expect(books).toHaveLength(1);
-    expect(books[0]?.title).toBe('The Tidal Engine');
+    expect(books[0]?.title).toBe("The Tidal Engine");
     expect(books[0]?.rating).toBe(5);
   });
 });

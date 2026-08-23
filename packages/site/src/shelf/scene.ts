@@ -1,7 +1,7 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { LibraryBook } from '@stacks/core';
-import { toRows, type ShelfBook } from './books.ts';
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import type { LibraryBook } from "@stacks/core";
+import { toRows, type ShelfBook } from "./books.ts";
 import {
   LIFT,
   makeBackboardShade,
@@ -10,10 +10,10 @@ import {
   makeRecessShade,
   type CaseLight,
   type Contact,
-} from './contact-shadow.ts';
-import { rowsForCase, SHELF } from './case.ts';
-import type { Post } from './post.ts';
-import { placeShelf, type Placement } from './placement.ts';
+} from "./contact-shadow.ts";
+import { rowsForCase, SHELF } from "./case.ts";
+import type { Post } from "./post.ts";
+import { placeShelf, type Placement } from "./placement.ts";
 import {
   BINDINGS,
   DEFAULT_SETTINGS,
@@ -22,12 +22,12 @@ import {
   type ShadowTypeName,
   type ShelfSettings,
   type ToneMappingName,
-} from './shelf-settings.ts';
-import { hashUnit } from './hash.ts';
-import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
-import { pageStriationMap } from './page-edges.ts';
-import { spineNormalMap } from './spine-profile.ts';
-import { makeSpineTexture } from './spine-texture.ts';
+} from "./shelf-settings.ts";
+import { hashUnit } from "./hash.ts";
+import { headCapGeometry, isHeadCapGeometry } from "./head-cap.ts";
+import { pageStriationMap } from "./page-edges.ts";
+import { spineNormalMap } from "./spine-profile.ts";
+import { makeSpineTexture } from "./spine-texture.ts";
 
 /**
  * The shelf.
@@ -297,7 +297,10 @@ export function mountShelf(
   const shadows = settings.shadows.enabled;
   const shadowFetch = settings.shadows.fetch;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: contextAntialias });
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: contextAntialias,
+  });
   applyRendererSettings(renderer, settings);
 
   /**
@@ -314,7 +317,11 @@ export function mountShelf(
   scene.background = background;
   // Kept as a field rather than read off `scene.fog` later: turning fog off sets
   // `scene.fog` to null, and turning it back on needs the object it used to be.
-  const fog = new THREE.Fog(settings.scene.background, settings.scene.fog.near, settings.scene.fog.far);
+  const fog = new THREE.Fog(
+    settings.scene.background,
+    settings.scene.fog.near,
+    settings.scene.fog.far,
+  );
   scene.fog = settings.scene.fog.enabled ? fog : null;
 
   const rows = toRows(books, settings.books);
@@ -381,7 +388,13 @@ export function mountShelf(
   // The seam: all of the arithmetic happens first, in a module with no Three.js
   // in it, and the scene graph is built from what it returned.
   const placements = placeShelf(rows);
-  const { placed, painters } = buildBooks(scene, placements, textures, lookup, settings);
+  const { placed, painters } = buildBooks(
+    scene,
+    placements,
+    textures,
+    lookup,
+    settings,
+  );
 
   const picker = new Picker(
     canvas,
@@ -461,14 +474,25 @@ export function mountShelf(
     }
 
     // After the map is drawn and before it is ever read again. See `shadowFetch`.
-    if (drawn === 1 && shadows && !shadowFetch) stopSamplingShadows(renderer, scene);
+    if (drawn === 1 && shadows && !shadowFetch)
+      stopSamplingShadows(renderer, scene);
   };
 
   let shaderFailures = 0;
 
-  renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader): void => {
+  renderer.debug.onShaderError = (
+    gl,
+    program,
+    vertexShader,
+    fragmentShader,
+  ): void => {
     shaderFailures += 1;
-    const report = describeLinkFailure(gl, program, vertexShader, fragmentShader);
+    const report = describeLinkFailure(
+      gl,
+      program,
+      vertexShader,
+      fragmentShader,
+    );
 
     // Only the first report is kept. Halting stops the *next* frame; three
     // returns from this callback and carries on walking the render list, so one
@@ -477,14 +501,15 @@ export function mountShelf(
     // list is a growing write on a device that is already in trouble, which is
     // the last thing a black box should do. The console still gets every one.
     if (shaderFailures === 1) shaderErrors.push(...report);
-    else if (shaderFailures === 2) shaderErrors.push('(more programs failed after it — see the console)');
+    else if (shaderFailures === 2)
+      shaderErrors.push("(more programs failed after it — see the console)");
 
     // Three's own message lives in the `else` branch of the test that calls this
     // handler, so installing one *silences* it. Anyone reading a console — which
     // is how this failure was found in the first place — would have watched the
     // report get quieter as it got better. This says strictly more than the line
     // it replaced.
-    console.error(`THREE program would not link:\n  ${report.join('\n  ')}`);
+    console.error(`THREE program would not link:\n  ${report.join("\n  ")}`);
 
     halted = true;
     cancelAnimationFrame(frame);
@@ -498,7 +523,11 @@ export function mountShelf(
     if (clientWidth === 0 || clientHeight === 0) return;
     // Read through `settings` rather than off a local captured at mount, so
     // toggling the guard in the panel takes effect on the very next resize.
-    if (settings.renderer.guardResize && clientWidth === sizedTo.width && clientHeight === sizedTo.height) {
+    if (
+      settings.renderer.guardResize &&
+      clientWidth === sizedTo.width &&
+      clientHeight === sizedTo.height
+    ) {
       return;
     }
     sizedTo = { width: clientWidth, height: clientHeight };
@@ -537,11 +566,11 @@ export function mountShelf(
     renderLoop();
   };
 
-  canvas.addEventListener('webglcontextlost', handleContextLost);
-  canvas.addEventListener('webglcontextrestored', handleContextRestored);
+  canvas.addEventListener("webglcontextlost", handleContextLost);
+  canvas.addEventListener("webglcontextrestored", handleContextRestored);
 
   if (composed) {
-    void import('./post.ts').then(({ makePost }) => {
+    void import("./post.ts").then(({ makePost }) => {
       // The mount may have been disposed while the chunk was in flight.
       if (halted || disposed) return;
       post = makePost(renderer, scene, camera, settings);
@@ -591,11 +620,11 @@ export function mountShelf(
     get profile(): string {
       const { renderer: r, shadows: s } = settings;
       return (
-        `aa=${composed ? 'smaa' : antialias ? 'on' : 'off'} dpr<=${String(r.maxPixelRatio)} ` +
-        `bloom=${settings.effects.bloom.enabled ? settings.effects.bloom.strength.toFixed(2) : 'off'} ` +
-        `shadows=${s.enabled ? `${s.type}@${String(s.mapSize)}` : 'off'} ` +
-        `casters=${s.casters ? 'on' : 'off'} guard=${r.guardResize ? 'on' : 'off'} ` +
-        `painted=${s.painted ? 'on' : 'off'} fetch=${s.fetch ? 'on' : 'off'} ` +
+        `aa=${composed ? "smaa" : antialias ? "on" : "off"} dpr<=${String(r.maxPixelRatio)} ` +
+        `bloom=${settings.effects.bloom.enabled ? settings.effects.bloom.strength.toFixed(2) : "off"} ` +
+        `shadows=${s.enabled ? `${s.type}@${String(s.mapSize)}` : "off"} ` +
+        `casters=${s.casters ? "on" : "off"} guard=${r.guardResize ? "on" : "off"} ` +
+        `painted=${s.painted ? "on" : "off"} fetch=${s.fetch ? "on" : "off"} ` +
         `tone=${r.toneMapping}@${r.exposure.toFixed(2)}`
       );
     },
@@ -629,7 +658,8 @@ export function mountShelf(
 
       for (const entry of report.applied) {
         if (changes.length < MAX_CHANGES) changes.push(entry);
-        else if (changes.length === MAX_CHANGES) changes.push('(more changes followed)');
+        else if (changes.length === MAX_CHANGES)
+          changes.push("(more changes followed)");
       }
 
       return report;
@@ -656,7 +686,9 @@ export function mountShelf(
 
       // Aim at the front face of the spine, not the centre of the box — the
       // centre is buried inside the book and behind its neighbours.
-      const point = book.group.localToWorld(new THREE.Vector3(0, 0, book.frontZ));
+      const point = book.group.localToWorld(
+        new THREE.Vector3(0, 0, book.frontZ),
+      );
       point.project(camera);
 
       const rect = canvas.getBoundingClientRect();
@@ -670,8 +702,8 @@ export function mountShelf(
       disposed = true;
       post?.dispose();
       cancelAnimationFrame(frame);
-      canvas.removeEventListener('webglcontextlost', handleContextLost);
-      canvas.removeEventListener('webglcontextrestored', handleContextRestored);
+      canvas.removeEventListener("webglcontextlost", handleContextLost);
+      canvas.removeEventListener("webglcontextrestored", handleContextRestored);
       observer.disconnect();
       picker.dispose();
       controls.dispose();
@@ -704,7 +736,9 @@ export function mountShelf(
           object.geometry.dispose();
         }
 
-        for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        for (const material of Array.isArray(object.material)
+          ? object.material
+          : [object.material]) {
           if (
             material instanceof THREE.MeshStandardMaterial ||
             material instanceof THREE.MeshBasicMaterial
@@ -759,19 +793,19 @@ function describeLinkFailure(
 
     const limit = (name: keyof WebGLRenderingContext): string => {
       const value: unknown = gl.getParameter(gl[name] as number);
-      return typeof value === 'number' ? String(value) : '?';
+      return typeof value === "number" ? String(value) : "?";
     };
 
     return [
       `material:  ${materialOf(gl.getShaderSource(vertexShader))}`,
       `link log:  ${said(gl.getProgramInfoLog(program))}`,
-      `validate:  ${gl.getProgramParameter(program, gl.VALIDATE_STATUS) === true ? 'ok' : 'failed'}`,
+      `validate:  ${gl.getProgramParameter(program, gl.VALIDATE_STATUS) === true ? "ok" : "failed"}`,
       `vertex:    ${said(gl.getShaderInfoLog(vertexShader))}`,
       `fragment:  ${said(gl.getShaderInfoLog(fragmentShader))}`,
       `gl error:  ${String(gl.getError())}`,
-      `varying:   ${limit('MAX_VARYING_VECTORS')}`,
-      `uniforms:  vtx ${limit('MAX_VERTEX_UNIFORM_VECTORS')} frag ${limit('MAX_FRAGMENT_UNIFORM_VECTORS')}`,
-      `samplers:  frag ${limit('MAX_TEXTURE_IMAGE_UNITS')} vtx ${limit('MAX_VERTEX_TEXTURE_IMAGE_UNITS')} all ${limit('MAX_COMBINED_TEXTURE_IMAGE_UNITS')}`,
+      `varying:   ${limit("MAX_VARYING_VECTORS")}`,
+      `uniforms:  vtx ${limit("MAX_VERTEX_UNIFORM_VECTORS")} frag ${limit("MAX_FRAGMENT_UNIFORM_VECTORS")}`,
+      `samplers:  frag ${limit("MAX_TEXTURE_IMAGE_UNITS")} vtx ${limit("MAX_VERTEX_TEXTURE_IMAGE_UNITS")} all ${limit("MAX_COMBINED_TEXTURE_IMAGE_UNITS")}`,
     ];
   } catch (error) {
     // An instrument that throws takes down the thing it is measuring.
@@ -791,12 +825,17 @@ function describeLinkFailure(
  * program at compile time, so without dirtying the materials the flag would
  * change nothing until something else forced a recompile.
  */
-function stopSamplingShadows(renderer: THREE.WebGLRenderer, scene: THREE.Scene): void {
+function stopSamplingShadows(
+  renderer: THREE.WebGLRenderer,
+  scene: THREE.Scene,
+): void {
   renderer.shadowMap.enabled = false;
 
   scene.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return;
-    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+    for (const material of Array.isArray(object.material)
+      ? object.material
+      : [object.material]) {
       material.needsUpdate = true;
     }
   });
@@ -804,8 +843,8 @@ function stopSamplingShadows(renderer: THREE.WebGLRenderer, scene: THREE.Scene):
 
 /** A GL info log, or a word for its silence — an empty one is itself a finding. */
 function said(log: string | null): string {
-  const text = log?.trim() ?? '';
-  return text.length === 0 ? '(silent)' : text;
+  const text = log?.trim() ?? "";
+  return text.length === 0 ? "(silent)" : text;
 }
 
 /**
@@ -818,21 +857,23 @@ function said(log: string | null): string {
  * line was printing.
  */
 function materialOf(source: string | null): string {
-  const type = /^#define SHADER_TYPE (.+)$/m.exec(source ?? '')?.[1]?.trim();
-  const name = /^#define SHADER_NAME (.+)$/m.exec(source ?? '')?.[1]?.trim();
-  return [type ?? 'unknown', name].filter((part) => part !== undefined && part.length > 0).join(' ');
+  const type = /^#define SHADER_TYPE (.+)$/m.exec(source ?? "")?.[1]?.trim();
+  const name = /^#define SHADER_NAME (.+)$/m.exec(source ?? "")?.[1]?.trim();
+  return [type ?? "unknown", name]
+    .filter((part) => part !== undefined && part.length > 0)
+    .join(" ");
 }
 
 function describeGpu(renderer: THREE.WebGLRenderer): string | undefined {
   try {
     const gl = renderer.getContext();
-    const extension = gl.getExtension('WEBGL_debug_renderer_info') as {
+    const extension = gl.getExtension("WEBGL_debug_renderer_info") as {
       readonly UNMASKED_RENDERER_WEBGL: number;
     } | null;
     if (extension === null) return undefined;
 
     const name: unknown = gl.getParameter(extension.UNMASKED_RENDERER_WEBGL);
-    return typeof name === 'string' ? name : undefined;
+    return typeof name === "string" ? name : undefined;
   } catch {
     return undefined;
   }
@@ -847,7 +888,10 @@ function describeGpu(renderer: THREE.WebGLRenderer): string | undefined {
  * about its centre is wider than that — measuring the arithmetic again would
  * only repeat its assumption.
  */
-function measureCaseOverflow(scene: THREE.Scene, placed: readonly PlacedBook[]): number {
+function measureCaseOverflow(
+  scene: THREE.Scene,
+  placed: readonly PlacedBook[],
+): number {
   scene.updateMatrixWorld(true);
 
   const inner = SHELF.width / 2;
@@ -915,11 +959,21 @@ function buildBooks(
 
       // `frontZ` is half the book's depth by definition, so twice it is the
       // depth to build at — exactly, since halving and doubling a double is.
-      const book = buildBook(entry, placement.frontZ * 2, textures, shadedFromRight, settings);
+      const book = buildBook(
+        entry,
+        placement.frontZ * 2,
+        textures,
+        shadedFromRight,
+        settings,
+      );
 
       book.rotation.y = placement.rotationY;
       book.rotation.z = placement.rotationZ;
-      book.position.set(placement.position.x, placement.position.y, placement.position.z);
+      book.position.set(
+        placement.position.x,
+        placement.position.y,
+        placement.position.z,
+      );
 
       scene.add(book);
       placed.push({ group: book, frontZ: placement.frontZ });
@@ -950,7 +1004,11 @@ function buildBooks(
     const recess = makeRecessShade(SHELF.width, openHeight);
     if (recess !== undefined) {
       const shelfY = row * SHELF.rowHeight + SHELF.plankThickness / 2;
-      recess.position.set(0, shelfY + openHeight / 2, BOOK_FRONT_Z + RECESS_CLEARANCE);
+      recess.position.set(
+        0,
+        shelfY + openHeight / 2,
+        BOOK_FRONT_Z + RECESS_CLEARANCE,
+      );
       scene.add(recess);
     }
   }
@@ -985,7 +1043,11 @@ class Painters {
   readonly #rowCount: number;
   #meshes: THREE.Mesh[] = [];
 
-  constructor(scene: THREE.Scene, byRow: readonly (readonly Contact[])[], rowCount: number) {
+  constructor(
+    scene: THREE.Scene,
+    byRow: readonly (readonly Contact[])[],
+    rowCount: number,
+  ) {
     this.#scene = scene;
     this.#byRow = byRow;
     this.#rowCount = rowCount;
@@ -1009,7 +1071,12 @@ class Painters {
       );
       if (shadow !== undefined) this.#add(shadow);
 
-      const shade = makeBackboardShade(SHELF.width, openHeight, INTERIOR_DEPTH, light);
+      const shade = makeBackboardShade(
+        SHELF.width,
+        openHeight,
+        INTERIOR_DEPTH,
+        light,
+      );
       if (shade !== undefined) {
         shade.position.set(
           0,
@@ -1129,7 +1196,10 @@ export function buildBook(
    * of these — see `spine-profile.ts`. `undefined` for a flat profile, which is
    * the only way *off* costs nothing.
    */
-  const profile = spineNormalMap(settings.materials.spineProfile, entry.binding);
+  const profile = spineNormalMap(
+    settings.materials.spineProfile,
+    entry.binding,
+  );
 
   /**
    * Binding's third effect, and the cheapest thing on this whole map.
@@ -1147,13 +1217,19 @@ export function buildBook(
    * of it. What was a flat `0.62` on every spine is now cloth against card.
    */
   const spine = new THREE.MeshStandardMaterial({
-    color: spineTexture === undefined ? new THREE.Color(entry.colour) : new THREE.Color(0xffffff),
+    color:
+      spineTexture === undefined
+        ? new THREE.Color(entry.colour)
+        : new THREE.Color(0xffffff),
     roughness: settings.materials.spineRoughness[entry.binding],
     ...(spineTexture === undefined ? {} : { map: spineTexture }),
     ...(profile === undefined ? {} : { normalMap: profile }),
   });
   // Pages: slightly lighter than the boards, never pure white.
-  const pages = new THREE.MeshStandardMaterial({ color: 0xd9cdb8, roughness: 0.95 });
+  const pages = new THREE.MeshStandardMaterial({
+    color: 0xd9cdb8,
+    roughness: 0.95,
+  });
 
   /**
    * The cut text block, given leaves.
@@ -1216,9 +1292,11 @@ export function buildBook(
   // lost its rim, which reads as a modelling error rather than as a second
   // format. A paperback's cover is glued flush to the block, so there is no
   // square at all, and the card it is cut from is a fifth of a board.
-  const paperback = entry.binding === 'paperback';
+  const paperback = entry.binding === "paperback";
   const board = Math.min(paperback ? PAPER_COVER : BOARD, thickness * 0.3);
-  const square = paperback ? 0 : Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
+  const square = paperback
+    ? 0
+    : Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
 
   /**
    * Parts receive shadow but do not cast it — the page block below casts for the
@@ -1266,7 +1344,8 @@ export function buildBook(
    * anything. See `closeTheEnds`.
    */
   const capScale = thickness;
-  const cap = entry.binding === 'hardback' ? settings.books.headCap * capScale : 0;
+  const cap =
+    entry.binding === "hardback" ? settings.books.headCap * capScale : 0;
 
   /**
    * The case, and the one thing to understand about it: **the covering rolls over
@@ -1339,7 +1418,11 @@ export function buildBook(
   // The page block, recessed inside the case at head, tail and fore-edge — and
   // the one part of a book that casts, standing in for all of it.
   const block = solid(pages);
-  block.scale.set(thickness - board * 2, height - square * 2, depth - frontDepth - square);
+  block.scale.set(
+    thickness - board * 2,
+    height - square * 2,
+    depth - frontDepth - square,
+  );
   block.position.set(0, 0, (square - frontDepth) / 2);
   block.castShadow = castShadows;
 
@@ -1516,7 +1599,11 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
       new THREE.BoxGeometry(SHELF.sideThickness, unitHeight, SHELF.depth),
       wood,
     );
-    upright.position.set((side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0);
+    upright.position.set(
+      (side * (SHELF.width + SHELF.sideThickness)) / 2,
+      unitHeight / 2,
+      0,
+    );
     upright.castShadow = castShadows;
     upright.receiveShadow = true;
     group.add(upright);
@@ -1551,22 +1638,37 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
  * shadows painted into the wood are computed from this light — and a painted
  * shadow whose light has quietly moved is worse than no shadow at all.
  */
-function keyLightPosition(unitHeight: number, settings: ShelfSettings): THREE.Vector3 {
+function keyLightPosition(
+  unitHeight: number,
+  settings: ShelfSettings,
+): THREE.Vector3 {
   return positionOf(settings.lighting.key.position, unitHeight);
 }
 
-function keyLightTarget(unitHeight: number, settings: ShelfSettings): THREE.Vector3 {
+function keyLightTarget(
+  unitHeight: number,
+  settings: ShelfSettings,
+): THREE.Vector3 {
   return new THREE.Vector3(0, unitHeight * settings.lighting.key.aimHeight, 0);
 }
 
 /** Resolves a settings position against a case of a given height. */
-function positionOf(position: LightPosition, unitHeight: number): THREE.Vector3 {
-  return new THREE.Vector3(position.x, heightOf(position.y, unitHeight), position.z);
+function positionOf(
+  position: LightPosition,
+  unitHeight: number,
+): THREE.Vector3 {
+  return new THREE.Vector3(
+    position.x,
+    heightOf(position.y, unitHeight),
+    position.z,
+  );
 }
 
 /** The key light as the painters need it. See `CaseLight`. */
 function caseLight(unitHeight: number, settings: ShelfSettings): CaseLight {
-  const toTarget = keyLightTarget(unitHeight, settings).sub(keyLightPosition(unitHeight, settings));
+  const toTarget = keyLightTarget(unitHeight, settings).sub(
+    keyLightPosition(unitHeight, settings),
+  );
   return {
     xPerZ: Math.abs(toTarget.x / toTarget.z),
     yPerZ: Math.abs(toTarget.y / toTarget.z),
@@ -1621,7 +1723,10 @@ export function addLighting(
   );
   scene.add(ambient);
 
-  const key = new THREE.DirectionalLight(settings.lighting.key.colour, settings.lighting.key.intensity);
+  const key = new THREE.DirectionalLight(
+    settings.lighting.key.colour,
+    settings.lighting.key.intensity,
+  );
   key.position.copy(keyLightPosition(unitHeight, settings));
   // Left off entirely rather than relying on `shadowMap.enabled`, so the depth
   // target is never allocated at all — which is the thing being measured.
@@ -1651,7 +1756,10 @@ export function addLighting(
 
   scene.add(key);
 
-  const fill = new THREE.DirectionalLight(settings.lighting.fill.colour, settings.lighting.fill.intensity);
+  const fill = new THREE.DirectionalLight(
+    settings.lighting.fill.colour,
+    settings.lighting.fill.intensity,
+  );
   fill.position.copy(positionOf(settings.lighting.fill.position, unitHeight));
   scene.add(fill);
 
@@ -1712,8 +1820,13 @@ function fitShadowCamera(
  * records failing to link on a Pixel 10. Exposure alone is a plain uniform and
  * recompiles nothing.
  */
-function applyRendererSettings(renderer: THREE.WebGLRenderer, settings: ShelfSettings): void {
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.renderer.maxPixelRatio));
+function applyRendererSettings(
+  renderer: THREE.WebGLRenderer,
+  settings: ShelfSettings,
+): void {
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, settings.renderer.maxPixelRatio),
+  );
   renderer.shadowMap.enabled = settings.shadows.enabled;
   renderer.shadowMap.type = SHADOW_TYPES[settings.shadows.type];
   renderer.toneMapping = TONE_MAPPINGS[settings.renderer.toneMapping];
@@ -1751,7 +1864,12 @@ function applyLive(
    * A *transition*: what changed since the last apply. Used for the live work,
    * which is by definition a thing you do once when a value moves.
    */
-  const note = (list: string[], label: string, was: unknown, now: unknown): void => {
+  const note = (
+    list: string[],
+    label: string,
+    was: unknown,
+    now: unknown,
+  ): void => {
     if (was !== now) list.push(`${label}: ${String(was)} → ${String(now)}`);
   };
 
@@ -1767,17 +1885,37 @@ function applyLive(
    * standing diff cannot forget, and it clears by itself the moment a rebuild
    * makes it true.
    */
-  const standing = (list: string[], label: string, built: unknown, now: unknown): void => {
+  const standing = (
+    list: string[],
+    label: string,
+    built: unknown,
+    now: unknown,
+  ): void => {
     if (built !== now) list.push(`${label}: ${String(built)} → ${String(now)}`);
   };
 
   /* --- the renderer ------------------------------------------------------- */
 
   // A context-creation attribute. There is no live path, only a reload.
-  standing(needsReload, 'antialias', mountedWith.renderer.antialias, next.renderer.antialias);
+  standing(
+    needsReload,
+    "antialias",
+    mountedWith.renderer.antialias,
+    next.renderer.antialias,
+  );
 
-  note(applied, 'dpr', current.renderer.maxPixelRatio, next.renderer.maxPixelRatio);
-  note(applied, 'tone mapping', current.renderer.toneMapping, next.renderer.toneMapping);
+  note(
+    applied,
+    "dpr",
+    current.renderer.maxPixelRatio,
+    next.renderer.maxPixelRatio,
+  );
+  note(
+    applied,
+    "tone mapping",
+    current.renderer.toneMapping,
+    next.renderer.toneMapping,
+  );
 
   /**
    * Exposure does nothing at all under `NoToneMapping`, which is the default.
@@ -1789,21 +1927,31 @@ function applyLive(
    * failure this whole report type exists to prevent. The panel disables the
    * control for the same reason; this is the backstop.
    */
-  if (next.renderer.exposure !== DEFAULT_SETTINGS.renderer.exposure && next.renderer.toneMapping === 'none') {
-    refused.push('exposure does nothing until a tone mapping is chosen');
+  if (
+    next.renderer.exposure !== DEFAULT_SETTINGS.renderer.exposure &&
+    next.renderer.toneMapping === "none"
+  ) {
+    refused.push("exposure does nothing until a tone mapping is chosen");
   }
   if (current.renderer.exposure !== next.renderer.exposure) {
-    if (next.renderer.toneMapping === 'none') {
+    if (next.renderer.toneMapping === "none") {
       /* already stated as refused, above — standing, so it does not vanish */
     } else {
-      applied.push(`exposure: ${current.renderer.exposure.toFixed(2)} → ${next.renderer.exposure.toFixed(2)}`);
+      applied.push(
+        `exposure: ${current.renderer.exposure.toFixed(2)} → ${next.renderer.exposure.toFixed(2)}`,
+      );
     }
   }
   applyRendererSettings(renderer, next);
 
   // `guardResize` is read on the next resize, so it is live in the only sense
   // that matters — there is nothing to assign.
-  note(applied, 'resize guard', current.renderer.guardResize, next.renderer.guardResize);
+  note(
+    applied,
+    "resize guard",
+    current.renderer.guardResize,
+    next.renderer.guardResize,
+  );
 
   /* --- shadows ------------------------------------------------------------ */
 
@@ -1821,10 +1969,15 @@ function applyLive(
   if (current.shadows.enabled !== next.shadows.enabled) {
     lights.key.castShadow = next.shadows.enabled;
     dirtyEveryMaterial(scene);
-    applied.push(`shadows: ${current.shadows.enabled ? 'on' : 'off'} → ${next.shadows.enabled ? 'on' : 'off'}`);
+    applied.push(
+      `shadows: ${current.shadows.enabled ? "on" : "off"} → ${next.shadows.enabled ? "on" : "off"}`,
+    );
   }
-  note(applied, 'shadow type', current.shadows.type, next.shadows.type);
-  if (current.shadows.enabled !== next.shadows.enabled || current.shadows.type !== next.shadows.type) {
+  note(applied, "shadow type", current.shadows.type, next.shadows.type);
+  if (
+    current.shadows.enabled !== next.shadows.enabled ||
+    current.shadows.type !== next.shadows.type
+  ) {
     // `autoUpdate` is off — the map is drawn once, deliberately — so nothing
     // would redraw it, and a freshly enabled shadow map would stay empty.
     // `WebGLShadowMap.render()` also returns early when this is unset, before
@@ -1834,10 +1987,30 @@ function applyLive(
 
   // All four are decided while the scene is built, so they are measured against
   // what it was built with and stay outstanding until it is built again.
-  standing(needsRebuild, 'shadow map size', mountedWith.shadows.mapSize, next.shadows.mapSize);
-  standing(needsRebuild, 'shadow casters', mountedWith.shadows.casters, next.shadows.casters);
-  standing(needsRebuild, 'shadow fetch', mountedWith.shadows.fetch, next.shadows.fetch);
-  standing(needsRebuild, 'painted shading', mountedWith.shadows.painted, next.shadows.painted);
+  standing(
+    needsRebuild,
+    "shadow map size",
+    mountedWith.shadows.mapSize,
+    next.shadows.mapSize,
+  );
+  standing(
+    needsRebuild,
+    "shadow casters",
+    mountedWith.shadows.casters,
+    next.shadows.casters,
+  );
+  standing(
+    needsRebuild,
+    "shadow fetch",
+    mountedWith.shadows.fetch,
+    next.shadows.fetch,
+  );
+  standing(
+    needsRebuild,
+    "painted shading",
+    mountedWith.shadows.painted,
+    next.shadows.painted,
+  );
 
   /* --- effects ------------------------------------------------------------ */
 
@@ -1845,18 +2018,38 @@ function applyLive(
   // is a standing rebuild. Its three numbers are plain uniforms once the chain
   // exists — and are silently inert while it does not, which is why they are
   // only reported as applied when it does.
-  standing(needsRebuild, 'bloom', mountedWith.effects.bloom.enabled, next.effects.bloom.enabled);
+  standing(
+    needsRebuild,
+    "bloom",
+    mountedWith.effects.bloom.enabled,
+    next.effects.bloom.enabled,
+  );
   if (next.effects.bloom.enabled && mountedWith.effects.bloom.enabled) {
-    note(applied, 'bloom strength', current.effects.bloom.strength, next.effects.bloom.strength);
-    note(applied, 'bloom radius', current.effects.bloom.radius, next.effects.bloom.radius);
-    note(applied, 'bloom threshold', current.effects.bloom.threshold, next.effects.bloom.threshold);
+    note(
+      applied,
+      "bloom strength",
+      current.effects.bloom.strength,
+      next.effects.bloom.strength,
+    );
+    note(
+      applied,
+      "bloom radius",
+      current.effects.bloom.radius,
+      next.effects.bloom.radius,
+    );
+    note(
+      applied,
+      "bloom threshold",
+      current.effects.bloom.threshold,
+      next.effects.bloom.threshold,
+    );
     post?.update(next);
   } else if (
     next.effects.bloom.strength !== current.effects.bloom.strength ||
     next.effects.bloom.radius !== current.effects.bloom.radius ||
     next.effects.bloom.threshold !== current.effects.bloom.threshold
   ) {
-    refused.push('bloom is off, so its numbers do nothing');
+    refused.push("bloom is off, so its numbers do nothing");
   }
 
   /* --- the scene ---------------------------------------------------------- */
@@ -1867,11 +2060,13 @@ function applyLive(
     // the room, not a coloured haze — so changing one and not the other leaves a
     // visible ring around the shelf.
     fog.color.setHex(next.scene.background);
-    applied.push(`background: ${hex(current.scene.background)} → ${hex(next.scene.background)}`);
+    applied.push(
+      `background: ${hex(current.scene.background)} → ${hex(next.scene.background)}`,
+    );
   }
 
-  note(applied, 'fog near', current.scene.fog.near, next.scene.fog.near);
-  note(applied, 'fog far', current.scene.fog.far, next.scene.fog.far);
+  note(applied, "fog near", current.scene.fog.near, next.scene.fog.near);
+  note(applied, "fog far", current.scene.fog.far, next.scene.fog.far);
   // Mutated in place. `near`, `far` and `color` are plain uniforms and cost
   // nothing to change — but *assigning* `scene.fog` rebuilds every program in
   // the scene, even to an identical value, because presence of fog is in the
@@ -1881,32 +2076,63 @@ function applyLive(
   fog.far = next.scene.fog.far;
   if (current.scene.fog.enabled !== next.scene.fog.enabled) {
     scene.fog = next.scene.fog.enabled ? fog : null;
-    applied.push(`fog: ${current.scene.fog.enabled ? 'on' : 'off'} → ${next.scene.fog.enabled ? 'on' : 'off'}`);
+    applied.push(
+      `fog: ${current.scene.fog.enabled ? "on" : "off"} → ${next.scene.fog.enabled ? "on" : "off"}`,
+    );
   }
 
   /* --- materials ---------------------------------------------------------- */
 
   if (current.materials.wood !== next.materials.wood) {
     woodwork.wood.color.setHex(next.materials.wood);
-    applied.push(`wood: ${hex(current.materials.wood)} → ${hex(next.materials.wood)}`);
+    applied.push(
+      `wood: ${hex(current.materials.wood)} → ${hex(next.materials.wood)}`,
+    );
   }
   if (current.materials.woodDark !== next.materials.woodDark) {
     woodwork.backing.color.setHex(next.materials.woodDark);
-    applied.push(`backing: ${hex(current.materials.woodDark)} → ${hex(next.materials.woodDark)}`);
+    applied.push(
+      `backing: ${hex(current.materials.woodDark)} → ${hex(next.materials.woodDark)}`,
+    );
   }
-  note(applied, 'wood roughness', current.materials.woodRoughness, next.materials.woodRoughness);
-  note(applied, 'backing roughness', current.materials.backingRoughness, next.materials.backingRoughness);
+  note(
+    applied,
+    "wood roughness",
+    current.materials.woodRoughness,
+    next.materials.woodRoughness,
+  );
+  note(
+    applied,
+    "backing roughness",
+    current.materials.backingRoughness,
+    next.materials.backingRoughness,
+  );
   woodwork.wood.roughness = next.materials.woodRoughness;
   woodwork.backing.roughness = next.materials.backingRoughness;
 
   // The books' own materials are made per book inside `buildBook`, so there is no
   // handle to reach them through. Honest rather than silent.
-  standing(needsRebuild, 'cover roughness', mountedWith.materials.coverRoughness, next.materials.coverRoughness);
-  standing(needsRebuild, 'cover metalness', mountedWith.materials.coverMetalness, next.materials.coverMetalness);
+  standing(
+    needsRebuild,
+    "cover roughness",
+    mountedWith.materials.coverRoughness,
+    next.materials.coverRoughness,
+  );
+  standing(
+    needsRebuild,
+    "cover metalness",
+    mountedWith.materials.coverMetalness,
+    next.materials.coverMetalness,
+  );
   // Same bucket and the same sentence: the books' own materials are made per book
   // inside `buildBook`, so there is no handle to reach them through. The map
   // itself is re-baked on the rebuild, which is where the profile's shape is read.
-  standing(needsRebuild, 'page edges', mountedWith.materials.pageStriation, next.materials.pageStriation);
+  standing(
+    needsRebuild,
+    "page edges",
+    mountedWith.materials.pageStriation,
+    next.materials.pageStriation,
+  );
   for (const binding of BINDINGS) {
     standing(
       needsRebuild,
@@ -1917,7 +2143,7 @@ function applyLive(
   }
   standing(
     needsRebuild,
-    'spine profile',
+    "spine profile",
     describeProfiles(mountedWith.materials.spineProfile),
     describeProfiles(next.materials.spineProfile),
   );
@@ -1928,14 +2154,30 @@ function applyLive(
   // are geometry built once in `buildBook` — and the height reaches further than
   // that, since a face-out book's footprint is its cover width, so the row
   // packing itself would have to run again. Nothing about that is live.
-  standing(needsRebuild, 'paperback mix', mountedWith.books.paperbackRatio, next.books.paperbackRatio);
+  standing(
+    needsRebuild,
+    "paperback mix",
+    mountedWith.books.paperbackRatio,
+    next.books.paperbackRatio,
+  );
   // A mesh per hardback, and the covering below it shortened to make room. Both
   // are decided while the book is built.
-  standing(needsRebuild, 'head cap', mountedWith.books.headCap, next.books.headCap);
+  standing(
+    needsRebuild,
+    "head cap",
+    mountedWith.books.headCap,
+    next.books.headCap,
+  );
 
   /* --- lighting ----------------------------------------------------------- */
 
-  applyLight(lights.ambient, current.lighting.ambient, next.lighting.ambient, 'ambient', applied);
+  applyLight(
+    lights.ambient,
+    current.lighting.ambient,
+    next.lighting.ambient,
+    "ambient",
+    applied,
+  );
 
   lights.key.position.copy(positionOf(next.lighting.key.position, unitHeight));
   lights.keyTarget.position.copy(keyLightTarget(unitHeight, next));
@@ -1944,21 +2186,73 @@ function applyLive(
   // own frustum ends in a hard straight line across the wood.
   fitShadowCamera(lights.key, lights.keyTarget, unitHeight);
   if (next.shadows.enabled) renderer.shadowMap.needsUpdate = true;
-  applyLight(lights.key, current.lighting.key, next.lighting.key, 'key', applied);
-  notePosition(applied, 'key', current.lighting.key.position, next.lighting.key.position);
-  note(applied, 'key aim', current.lighting.key.aimHeight, next.lighting.key.aimHeight);
+  applyLight(
+    lights.key,
+    current.lighting.key,
+    next.lighting.key,
+    "key",
+    applied,
+  );
+  notePosition(
+    applied,
+    "key",
+    current.lighting.key.position,
+    next.lighting.key.position,
+  );
+  note(
+    applied,
+    "key aim",
+    current.lighting.key.aimHeight,
+    next.lighting.key.aimHeight,
+  );
 
-  lights.fill.position.copy(positionOf(next.lighting.fill.position, unitHeight));
-  applyLight(lights.fill, current.lighting.fill, next.lighting.fill, 'fill', applied);
-  notePosition(applied, 'fill', current.lighting.fill.position, next.lighting.fill.position);
+  lights.fill.position.copy(
+    positionOf(next.lighting.fill.position, unitHeight),
+  );
+  applyLight(
+    lights.fill,
+    current.lighting.fill,
+    next.lighting.fill,
+    "fill",
+    applied,
+  );
+  notePosition(
+    applied,
+    "fill",
+    current.lighting.fill.position,
+    next.lighting.fill.position,
+  );
 
-  lights.lamp.position.copy(positionOf(next.lighting.lamp.position, unitHeight));
+  lights.lamp.position.copy(
+    positionOf(next.lighting.lamp.position, unitHeight),
+  );
   lights.lamp.distance = next.lighting.lamp.distance;
   lights.lamp.decay = next.lighting.lamp.decay;
-  applyLight(lights.lamp, current.lighting.lamp, next.lighting.lamp, 'lamp', applied);
-  notePosition(applied, 'lamp', current.lighting.lamp.position, next.lighting.lamp.position);
-  note(applied, 'lamp distance', current.lighting.lamp.distance, next.lighting.lamp.distance);
-  note(applied, 'lamp decay', current.lighting.lamp.decay, next.lighting.lamp.decay);
+  applyLight(
+    lights.lamp,
+    current.lighting.lamp,
+    next.lighting.lamp,
+    "lamp",
+    applied,
+  );
+  notePosition(
+    applied,
+    "lamp",
+    current.lighting.lamp.position,
+    next.lighting.lamp.position,
+  );
+  note(
+    applied,
+    "lamp distance",
+    current.lighting.lamp.distance,
+    next.lighting.lamp.distance,
+  );
+  note(
+    applied,
+    "lamp decay",
+    current.lighting.lamp.decay,
+    next.lighting.lamp.decay,
+  );
 
   /**
    * The painted shadows follow the light, rather than being left describing
@@ -1977,7 +2271,7 @@ function applyLive(
       current.lighting.key.aimHeight !== next.lighting.key.aimHeight)
   ) {
     painters.paint(next);
-    applied.push('painted shadows repainted for the new light');
+    applied.push("painted shadows repainted for the new light");
   }
 
   return { applied, needsRebuild, needsReload, refused };
@@ -2004,7 +2298,9 @@ function applyLive(
 function dirtyEveryMaterial(scene: THREE.Scene): void {
   scene.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return;
-    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+    for (const material of Array.isArray(object.material)
+      ? object.material
+      : [object.material]) {
       material.needsUpdate = true;
     }
   });
@@ -2023,21 +2319,33 @@ function applyLight(
   }
   if (was.intensity !== now.intensity) {
     light.intensity = now.intensity;
-    applied.push(`${label} intensity: ${String(was.intensity)} → ${String(now.intensity)}`);
+    applied.push(
+      `${label} intensity: ${String(was.intensity)} → ${String(now.intensity)}`,
+    );
   }
 }
 
-function notePosition(applied: string[], label: string, was: LightPosition, now: LightPosition): void {
+function notePosition(
+  applied: string[],
+  label: string,
+  was: LightPosition,
+  now: LightPosition,
+): void {
   if (!samePosition(was, now)) applied.push(`${label} position moved`);
 }
 
 function samePosition(a: LightPosition, b: LightPosition): boolean {
-  return a.x === b.x && a.z === b.z && a.y.ofHeight === b.y.ofHeight && a.y.plus === b.y.plus;
+  return (
+    a.x === b.x &&
+    a.z === b.z &&
+    a.y.ofHeight === b.y.ofHeight &&
+    a.y.plus === b.y.plus
+  );
 }
 
 /** Colours read as `#rrggbb` in a change log; a decimal `7031610` reads as nothing. */
 function hex(value: number): string {
-  return `#${value.toString(16).padStart(6, '0')}`;
+  return `#${value.toString(16).padStart(6, "0")}`;
 }
 
 /**
@@ -2047,10 +2355,13 @@ function hex(value: number): string {
  * every apply a change — a permanently amber lamp on a control nobody had
  * touched, which is the panel lying in the quieter direction.
  */
-function describeProfiles(profiles: ShelfSettings['materials']['spineProfile']): string {
-  return BINDINGS
-    .map((binding) => `${binding} ${profiles[binding].rise.toFixed(3)}/${profiles[binding].roll.toFixed(2)}`)
-    .join(' ');
+function describeProfiles(
+  profiles: ShelfSettings["materials"]["spineProfile"],
+): string {
+  return BINDINGS.map(
+    (binding) =>
+      `${binding} ${profiles[binding].rise.toFixed(3)}/${profiles[binding].roll.toFixed(2)}`,
+  ).join(" ");
 }
 
 /* -------------------------------------------------------------------------- */
@@ -2081,14 +2392,17 @@ class TextureCache {
 
   /** Whether this cache made a texture — and is therefore the one to free it. */
   owns(texture: THREE.Texture | null | undefined): boolean {
-    return texture !== null && texture !== undefined && this.#owned.has(texture);
+    return (
+      texture !== null && texture !== undefined && this.#owned.has(texture)
+    );
   }
 
   load(path: string): Promise<THREE.Texture | undefined> {
     const existing = this.#cache.get(path);
     if (existing !== undefined) return existing;
 
-    const url = path.startsWith('http') || path.startsWith('/') ? path : `/${path}`;
+    const url =
+      path.startsWith("http") || path.startsWith("/") ? path : `/${path}`;
     const promise = new Promise<THREE.Texture | undefined>((resolve) => {
       this.#loader.load(
         url,
@@ -2164,8 +2478,8 @@ class Picker {
     this.#books = [...books];
     this.#lookup = lookup;
     this.#onSelect = onSelect;
-    canvas.addEventListener('pointerdown', this.#handleDown);
-    canvas.addEventListener('pointerup', this.#handleUp);
+    canvas.addEventListener("pointerdown", this.#handleDown);
+    canvas.addEventListener("pointerup", this.#handleUp);
   }
 
   #handleDown = (event: PointerEvent): void => {
@@ -2188,11 +2502,13 @@ class Picker {
 
     // Recursive: a book is a group of parts, and any of them counts as a hit.
     const hit = this.#raycaster.intersectObjects(this.#books, true)[0];
-    this.#onSelect?.(hit === undefined ? undefined : this.#lookup.get(hit.object));
+    this.#onSelect?.(
+      hit === undefined ? undefined : this.#lookup.get(hit.object),
+    );
   };
 
   dispose(): void {
-    this.#canvas.removeEventListener('pointerdown', this.#handleDown);
-    this.#canvas.removeEventListener('pointerup', this.#handleUp);
+    this.#canvas.removeEventListener("pointerdown", this.#handleDown);
+    this.#canvas.removeEventListener("pointerup", this.#handleUp);
   }
 }

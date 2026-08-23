@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 /**
  * The repo's `vitest.config.ts` with the two specs that cannot run inside
@@ -72,15 +72,19 @@ import { defineConfig } from 'vitest/config';
  */
 export default defineConfig({
   test: {
-    include: ['packages/**/src/**/*.test.ts', 'gates/**/*.test.ts', 'scripts/**/*.test.ts'],
-    exclude: [
-      '**/node_modules/**',
-      '**/dist/**',
-      'packages/cli/src/env.test.ts',
-      'scripts/lib/complexity-tree.test.ts',
+    include: [
+      "packages/**/src/**/*.test.ts",
+      "gates/**/*.test.ts",
+      "scripts/**/*.test.ts",
     ],
-    environment: 'node',
-    setupFiles: ['./gates/no-live-network.setup.ts'],
-    reporters: ['default'],
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "packages/cli/src/env.test.ts",
+      "scripts/lib/complexity-tree.test.ts",
+    ],
+    environment: "node",
+    setupFiles: ["./gates/no-live-network.setup.ts"],
+    reporters: ["default"],
   },
 });

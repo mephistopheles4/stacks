@@ -1,8 +1,8 @@
-import type { CachedCover } from './cache-cover.ts';
-import type { BookInput } from '../types.ts';
+import type { CachedCover } from "./cache-cover.ts";
+import type { BookInput } from "../types.ts";
 
 /** The three keys a cached cover contributes to a note. */
-export type CoverKeys = Pick<BookInput, 'cover' | 'coverSource' | 'spineColor'>;
+export type CoverKeys = Pick<BookInput, "cover" | "coverSource" | "spineColor">;
 
 /**
  * A cached cover as the keys that describe it, or nothing.

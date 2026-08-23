@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { keyIfPresent } from './key-if-present.ts';
+import { describe, expect, it } from "vitest";
+import { keyIfPresent } from "./key-if-present.ts";
 
 /**
  * The one thing this helper does that `{ key: value }` does not.
@@ -18,41 +18,43 @@ import { keyIfPresent } from './key-if-present.ts';
  * `CONTEXT.md`, **Removal**, for the second one.
  */
 
-const BASE = { title: 'The Tidal Engine' } as const;
+const BASE = { title: "The Tidal Engine" } as const;
 
-describe('keyIfPresent', () => {
-  it('contributes the key when the value is there', () => {
-    expect(keyIfPresent('author', 'M. Okonkwo')).toEqual({ author: 'M. Okonkwo' });
-  });
-
-  it('contributes nothing when the value is absent', () => {
-    expect(keyIfPresent('author', undefined)).toEqual({});
-  });
-
-  describe('absent means the key is not there, not that it holds undefined', () => {
-    it('is not listed by Object.keys', () => {
-      expect(Object.keys(keyIfPresent('author', undefined))).toEqual([]);
-    });
-
-    it('is not reported present by `in`', () => {
-      expect('author' in keyIfPresent('author', undefined)).toBe(false);
-    });
-
-    it('is not carried forward by a spread', () => {
-      const spread = { ...BASE, ...keyIfPresent('author', undefined) };
-      expect(spread).not.toHaveProperty('author');
-      expect(Object.keys(spread)).toEqual(['title']);
+describe("keyIfPresent", () => {
+  it("contributes the key when the value is there", () => {
+    expect(keyIfPresent("author", "M. Okonkwo")).toEqual({
+      author: "M. Okonkwo",
     });
   });
 
-  it('does not disturb a key the target already has', () => {
-    const spread = { ...BASE, ...keyIfPresent('title', undefined) };
-    expect(spread.title).toBe('The Tidal Engine');
+  it("contributes nothing when the value is absent", () => {
+    expect(keyIfPresent("author", undefined)).toEqual({});
   });
 
-  it('overwrites when the value is there, which is the point of spreading it last', () => {
-    expect({ ...BASE, ...keyIfPresent('title', 'Ember Protocol') }).toEqual({
-      title: 'Ember Protocol',
+  describe("absent means the key is not there, not that it holds undefined", () => {
+    it("is not listed by Object.keys", () => {
+      expect(Object.keys(keyIfPresent("author", undefined))).toEqual([]);
+    });
+
+    it("is not reported present by `in`", () => {
+      expect("author" in keyIfPresent("author", undefined)).toBe(false);
+    });
+
+    it("is not carried forward by a spread", () => {
+      const spread = { ...BASE, ...keyIfPresent("author", undefined) };
+      expect(spread).not.toHaveProperty("author");
+      expect(Object.keys(spread)).toEqual(["title"]);
+    });
+  });
+
+  it("does not disturb a key the target already has", () => {
+    const spread = { ...BASE, ...keyIfPresent("title", undefined) };
+    expect(spread.title).toBe("The Tidal Engine");
+  });
+
+  it("overwrites when the value is there, which is the point of spreading it last", () => {
+    expect({ ...BASE, ...keyIfPresent("title", "Ember Protocol") }).toEqual({
+      title: "Ember Protocol",
     });
   });
 
@@ -63,10 +65,10 @@ describe('keyIfPresent', () => {
    * than a missing answer.
    */
   it.each([
-    ['zero', 'shelf_order', 0],
-    ['the empty string', 'author', ''],
-    ['false', 'face_out', false],
-  ])('treats %s as present', (_label, key, value) => {
+    ["zero", "shelf_order", 0],
+    ["the empty string", "author", ""],
+    ["false", "face_out", false],
+  ])("treats %s as present", (_label, key, value) => {
     expect(keyIfPresent(key, value)).toEqual({ [key]: value });
     expect(key in keyIfPresent(key, value)).toBe(true);
   });

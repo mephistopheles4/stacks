@@ -1,4 +1,4 @@
-import type { ShelfHandle } from './scene.ts';
+import type { ShelfHandle } from "./scene.ts";
 
 /**
  * A black box, for a crash that leaves no error behind.
@@ -45,7 +45,7 @@ declare global {
  * shelf died on the defaults" and is the single most misleading thing this file
  * could say.
  */
-const STORAGE_KEY = 'stacks.blackbox.v2';
+const STORAGE_KEY = "stacks.blackbox.v2";
 
 const SAMPLE_MS = 1000;
 
@@ -136,15 +136,15 @@ export function mountDiagnostics(
   const started = Date.now();
   const errors: string[] = [];
 
-  const panel = document.createElement('pre');
-  panel.className = 'shelf-diagnostics';
+  const panel = document.createElement("pre");
+  panel.className = "shelf-diagnostics";
   applyPanelStyle(panel);
 
-  const copy = document.createElement('button');
-  copy.textContent = 'copy';
+  const copy = document.createElement("button");
+  copy.textContent = "copy";
   applyButtonStyle(copy);
 
-  const body = document.createElement('span');
+  const body = document.createElement("span");
   panel.append(copy, body);
   host.append(panel);
 
@@ -156,13 +156,16 @@ export function mountDiagnostics(
     return {
       seconds: Math.round((Date.now() - started) / 1000),
       books: options.books,
-      profile: shelf?.profile ?? 'no shelf',
+      profile: shelf?.profile ?? "no shelf",
       textures: stats?.textures ?? 0,
       geometries: stats?.geometries ?? 0,
       programs: stats?.programs ?? 0,
       calls: stats?.calls ?? 0,
       triangles: stats?.triangles ?? 0,
-      buffer: stats === undefined ? 'none' : `${String(stats.bufferWidth)}x${String(stats.bufferHeight)}`,
+      buffer:
+        stats === undefined
+          ? "none"
+          : `${String(stats.bufferWidth)}x${String(stats.bufferHeight)}`,
       pixelRatio: stats?.pixelRatio ?? window.devicePixelRatio,
       ...(heap === undefined
         ? {}
@@ -170,7 +173,9 @@ export function mountDiagnostics(
             heapMb: Math.round(heap.usedJSHeapSize / 1024 / 1024),
             heapLimitMb: Math.round(heap.jsHeapSizeLimit / 1024 / 1024),
           }),
-      ...(navigator.deviceMemory === undefined ? {} : { deviceMemoryGb: navigator.deviceMemory }),
+      ...(navigator.deviceMemory === undefined
+        ? {}
+        : { deviceMemoryGb: navigator.deviceMemory }),
       ...(shelf?.gpu === undefined ? {} : { gpu: shelf.gpu }),
       screen: `${String(window.innerWidth)}x${String(window.innerHeight)} @${String(window.devicePixelRatio)}`,
       errors: [...errors],
@@ -180,7 +185,9 @@ export function mountDiagnostics(
       ...(shelf === undefined || shelf.changeLog.length === 0
         ? {}
         : { changes: [...shelf.changeLog] }),
-      ...(window.location.search === '' ? {} : { query: window.location.search }),
+      ...(window.location.search === ""
+        ? {}
+        : { query: window.location.search }),
     };
   };
 
@@ -211,24 +218,26 @@ export function mountDiagnostics(
   };
 
   const onCopy = (): void => {
-    void navigator.clipboard.writeText(JSON.stringify({ previous, current: sample() }, null, 2));
-    copy.textContent = 'copied';
+    void navigator.clipboard.writeText(
+      JSON.stringify({ previous, current: sample() }, null, 2),
+    );
+    copy.textContent = "copied";
   };
 
-  window.addEventListener('error', onError);
-  window.addEventListener('unhandledrejection', onRejection);
-  window.addEventListener('pagehide', onPageHide);
-  copy.addEventListener('click', onCopy);
+  window.addEventListener("error", onError);
+  window.addEventListener("unhandledrejection", onRejection);
+  window.addEventListener("pagehide", onPageHide);
+  copy.addEventListener("click", onCopy);
 
   tick();
   const timer = window.setInterval(tick, SAMPLE_MS);
 
   return () => {
     window.clearInterval(timer);
-    window.removeEventListener('error', onError);
-    window.removeEventListener('unhandledrejection', onRejection);
-    window.removeEventListener('pagehide', onPageHide);
-    copy.removeEventListener('click', onCopy);
+    window.removeEventListener("error", onError);
+    window.removeEventListener("unhandledrejection", onRejection);
+    window.removeEventListener("pagehide", onPageHide);
+    copy.removeEventListener("click", onCopy);
     panel.remove();
   };
 }
@@ -244,36 +253,48 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
     `buffer   ${current.buffer}  dpr ${current.pixelRatio.toFixed(2)}`,
     `screen   ${current.screen}`,
     current.heapMb === undefined
-      ? 'heap     n/a'
+      ? "heap     n/a"
       : `heap     ${String(current.heapMb)} / ${String(current.heapLimitMb ?? 0)} MB`,
-    current.deviceMemoryGb === undefined ? 'ram      n/a' : `ram      ${String(current.deviceMemoryGb)} GB`,
-    `gpu      ${current.gpu ?? 'n/a'}`,
+    current.deviceMemoryGb === undefined
+      ? "ram      n/a"
+      : `ram      ${String(current.deviceMemoryGb)} GB`,
+    `gpu      ${current.gpu ?? "n/a"}`,
     `uptime   ${String(current.seconds)}s`,
   ];
 
   if (current.shaders !== undefined) {
-    lines.push('', 'SHADER WOULD NOT LINK — drawing stopped', ...current.shaders.map((line) => `  ${line}`));
+    lines.push(
+      "",
+      "SHADER WOULD NOT LINK — drawing stopped",
+      ...current.shaders.map((line) => `  ${line}`),
+    );
   }
 
   if (current.changes !== undefined) {
-    lines.push('', 'changed this session', ...current.changes.map((change) => `  ${change}`));
+    lines.push(
+      "",
+      "changed this session",
+      ...current.changes.map((change) => `  ${change}`),
+    );
   }
 
   if (current.errors.length > 0) {
-    lines.push('', 'errors', ...current.errors.map((error) => `  ${error}`));
+    lines.push("", "errors", ...current.errors.map((error) => `  ${error}`));
   }
 
   if (previous !== undefined) {
     lines.push(
-      '',
+      "",
       previous.clean === true
-        ? '— previous session ended cleanly —'
-        : '— PREVIOUS SESSION DIED (no clean exit) —',
+        ? "— previous session ended cleanly —"
+        : "— PREVIOUS SESSION DIED (no clean exit) —",
       `  after ${String(previous.seconds)}s with ${String(previous.books)} books`,
-      `  profile ${previous.profile ?? 'unknown'}`,
+      `  profile ${previous.profile ?? "unknown"}`,
       `  textures ${String(previous.textures)}  draws ${String(previous.calls)}`,
       `  buffer ${previous.buffer}  dpr ${previous.pixelRatio.toFixed(2)}`,
-      previous.heapMb === undefined ? '  heap n/a' : `  heap ${String(previous.heapMb)} MB`,
+      previous.heapMb === undefined
+        ? "  heap n/a"
+        : `  heap ${String(previous.heapMb)} MB`,
       ...(previous.changes ?? []).map((change) => `  · ${change}`),
       ...(previous.shaders ?? []).map((line) => `  ! ${line}`),
       ...previous.errors.map((error) => `  ! ${error}`),
@@ -289,16 +310,19 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
      * did it — that is what the change list above is for — so it says the thing
      * it does know and names the way out.
      */
-    if (previous.clean !== true && carriesSettings(previous.query ?? window.location.search)) {
+    if (
+      previous.clean !== true &&
+      carriesSettings(previous.query ?? window.location.search)
+    ) {
       lines.push(
-        '',
-        '  ⚠ that URL still carries those settings — reloading repeats it.',
-        '    load the page with no query but ?debug to get back to the defaults.',
+        "",
+        "  ⚠ that URL still carries those settings — reloading repeats it.",
+        "    load the page with no query but ?debug to get back to the defaults.",
       );
     }
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 /**
@@ -310,7 +334,7 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
  */
 function carriesSettings(query: string): boolean {
   const params = new URLSearchParams(query);
-  params.delete('debug');
+  params.delete("debug");
   return [...params.keys()].length > 0;
 }
 
@@ -336,9 +360,9 @@ function readPrevious(): Snapshot | undefined {
     const parsed: unknown = JSON.parse(raw);
     // Shape-checked rather than trusted: this is data the user could have edited,
     // and a stale record from an older build would otherwise render as undefined.
-    if (typeof parsed !== 'object' || parsed === null) return undefined;
+    if (typeof parsed !== "object" || parsed === null) return undefined;
     const snapshot = parsed as Snapshot;
-    return typeof snapshot.seconds === 'number' ? snapshot : undefined;
+    return typeof snapshot.seconds === "number" ? snapshot : undefined;
   } catch {
     return undefined;
   }
@@ -366,16 +390,16 @@ function readPrevious(): Snapshot | undefined {
  */
 function applyPanelStyle(panel: HTMLElement): void {
   Object.assign(panel.style, {
-    position: 'absolute',
-    bottom: '0.5rem',
-    left: '0.5rem',
-    zIndex: '10',
-    margin: '0',
-    padding: '0.5rem 0.6rem',
+    position: "absolute",
+    bottom: "0.5rem",
+    left: "0.5rem",
+    zIndex: "10",
+    margin: "0",
+    padding: "0.5rem 0.6rem",
     // Narrower than the viewport on purpose. The GPU string is long enough to
     // reach the book card at the other corner, and a record you cannot read
     // beside a card you cannot read is worse than either alone.
-    maxWidth: 'min(30rem, calc(100vw - 1rem))',
+    maxWidth: "min(30rem, calc(100vw - 1rem))",
     /**
      * Stops short of the header rather than merely short of the viewport.
      *
@@ -385,25 +409,25 @@ function applyPanelStyle(panel: HTMLElement): void {
      * would keep it on-screen and still cover the name, which is the thing this
      * move was for. The reserve clears `header` at its largest clamp plus a gap.
      */
-    maxHeight: 'calc(100vh - 6.5rem)',
-    overflow: 'auto',
-    borderRadius: '0.4rem',
-    background: 'rgba(10, 8, 7, 0.82)',
-    color: '#9ff0b4',
-    font: '11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace',
-    whiteSpace: 'pre',
+    maxHeight: "calc(100vh - 6.5rem)",
+    overflow: "auto",
+    borderRadius: "0.4rem",
+    background: "rgba(10, 8, 7, 0.82)",
+    color: "#9ff0b4",
+    font: "11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace",
+    whiteSpace: "pre",
   } satisfies Partial<CSSStyleDeclaration>);
 }
 
 function applyButtonStyle(button: HTMLElement): void {
   Object.assign(button.style, {
-    float: 'right',
-    marginLeft: '0.75rem',
-    padding: '0.15rem 0.5rem',
-    border: '1px solid rgba(159, 240, 180, 0.4)',
-    borderRadius: '0.25rem',
-    background: 'transparent',
-    color: 'inherit',
-    font: 'inherit',
+    float: "right",
+    marginLeft: "0.75rem",
+    padding: "0.15rem 0.5rem",
+    border: "1px solid rgba(159, 240, 180, 0.4)",
+    borderRadius: "0.25rem",
+    background: "transparent",
+    color: "inherit",
+    font: "inherit",
   } satisfies Partial<CSSStyleDeclaration>);
 }

@@ -17,36 +17,36 @@ fields travel).
 ISBN lookup, or by `isProbablySameBook`.
 
 This is an **identity** claim, not a data-flow claim, and that is the point. The
-alternative — *"a provider whose data reached the note"* — means "supplied the
+alternative — _"a provider whose data reached the note"_ — means "supplied the
 cover" today and "supplied fields" after the merge revision, so the same key
 would mean two different things either side of it and every note written before
 would need re-reading.
 
 Under this definition **Apple was already a contributor and always has been**:
 `findCover` runs `isProbablySameBook` at `apple-books.ts:50`, establishes the
-matched record *is* this book, and discards everything but the artwork URL. The
+matched record _is_ this book, and discards everything but the artwork URL. The
 fact was never missing; it was thrown away.
 
 **Metadata provenance is a sibling of `cover_source`, never folded into it.**
-Core splits them deliberately (`metadata/types.ts:2` — *"Not the same question as
-`CoverSource`"*). `cover_source` records where a cover's **bytes** came from and
-is not evidence of which provider *described* the book.
+Core splits them deliberately (`metadata/types.ts:2` — _"Not the same question as
+`CoverSource`"_). `cover_source` records where a cover's **bytes** came from and
+is not evidence of which provider _described_ the book.
 
 ---
 
 ## 2. What is recorded
 
-**The contributor set *is* the set of id keys present.** There is no separate
+**The contributor set _is_ the set of id keys present.** There is no separate
 `contributors:` list and none is needed — a list would be derivable from the id
 keys, and a derived value stored beside its source is exactly the drift this
 repo's gates exist to catch.
 
-| Frontmatter key | `BookRecord` / `LibraryBook` field | Value | Shape check | Builds a link |
-|---|---|---|---|---|
-| `google_volume_id` | `googleVolumeId` | Google's `volumeId` | alphanumeric volume key | yes |
-| `apple_track_id` | `appleTrackId` | Apple's numeric `trackId` | digits | yes |
-| `openlibrary_olid` | `openLibraryOlid` | OLID, e.g. `OL26445570M` | `OL\d+M` | yes |
-| `oreilly_ourn` | `oreillyOurn` | `urn:orm:book:…` | `urn:orm:book:…` | **no** |
+| Frontmatter key    | `BookRecord` / `LibraryBook` field | Value                     | Shape check             | Builds a link |
+| ------------------ | ---------------------------------- | ------------------------- | ----------------------- | ------------- |
+| `google_volume_id` | `googleVolumeId`                   | Google's `volumeId`       | alphanumeric volume key | yes           |
+| `apple_track_id`   | `appleTrackId`                     | Apple's numeric `trackId` | digits                  | yes           |
+| `openlibrary_olid` | `openLibraryOlid`                  | OLID, e.g. `OL26445570M`  | `OL\d+M`                | yes           |
+| `oreilly_ourn`     | `oreillyOurn`                      | `urn:orm:book:…`          | `urn:orm:book:…`        | **no**        |
 
 **No winner key.** `MetadataSource` (`metadata/types.ts:10`) stays internal and
 continues not to reach a note. A single note-level winner is only meaningful
@@ -55,7 +55,7 @@ be born describing something that no longer exists. Anything finer than the
 contributor set is per-field provenance, which nobody asked for.
 
 **And the precedence table cannot reconstruct attribution anyway.** Fixed
-provider orders make the *rule* static, but which provider actually supplied a
+provider orders make the _rule_ static, but which provider actually supplied a
 given field still varies per book, because a provider only wins a field it
 happens to have. So declining per-field provenance is correct rather than
 coincidental.
@@ -75,7 +75,7 @@ own merits instead of by an adapter limitation.
 **Key names name the provider's own field, and for O'Reilly that is the guard.**
 CLAUDE.md documents `archive_id` as a trap: for one book it is `0642572352530`,
 which passes an ISBN-13 check digit while starting `064`; for another it is a
-well-formed 979 ISBN *seven off* the book's real one. The value recorded here is
+well-formed 979 ISBN _seven off_ the book's real one. The value recorded here is
 `ourn`, a different field. A key named `oreilly_id` would invite pasting the
 wrong one, and the shape check below would pass it because both are well formed.
 **The name does work no validator can.**
@@ -83,7 +83,7 @@ wrong one, and the shape check below would pass it because both are well formed.
 ### O'Reilly is recorded although it cannot be linked
 
 Its library URLs 307 to a **403** whether the book exists or not. It is recorded
-anyway, because contribution was defined by *matching* and O'Reilly's match is as
+anyway, because contribution was defined by _matching_ and O'Reilly's match is as
 real as Google's.
 
 **The case that decides it is an O'Reilly early release**: Open Library has never
@@ -117,7 +117,7 @@ not needed.
 ## 4. Unrecognised values are dropped at parse, per provider
 
 Shape-checked at the parse edge and **dropped on mismatch**, mirroring
-`cover_source`'s rule at the same edge: the failure is a *missing* link rather
+`cover_source`'s rule at the same edge: the failure is a _missing_ link rather
 than a dead one. `cover_source`'s reasoning does not transfer literally — that is
 a closed enum and an id is opaque — but **shape is checkable where value is not**
 (see the table in §2).
@@ -140,7 +140,7 @@ parses, the book still shelves.
 `cover_source` had the same problem and solved it without touching the
 providers — `covers/infer-source.ts` guesses a cover's origin from the shape of
 the file on disk. **That escape hatch does not exist here.** A note records an
-*answer*, never who gave it, so a Google `volumeId` cannot be recovered from a
+_answer_, never who gave it, so a Google `volumeId` cannot be recovered from a
 note at any price. **Re-fetching is the only route**, which is why the backfill
 is a real pass rather than a footnote.
 
@@ -181,7 +181,7 @@ interesting.
 `BookRecord` field ships only when someone adds a `keyIfPresent` line — nothing
 reaches a public build by accident.
 
-⚠️ **But "local only" *is* expressible, contrary to what was claimed twice on
+⚠️ **But "local only" _is_ expressible, contrary to what was claimed twice on
 this map.** `toLibraryBook` already ends:
 
 ```ts
@@ -205,7 +205,7 @@ Numbers deliberately unassigned; roster in [`README.md`](README.md#gate-roster).
 **P1 — `BookRecord` → `library.json`, both directions.** No gate holds this seam
 today. G8 runs frontmatter ↔ parser ↔ CLAUDE.md and **stops at the parser**;
 `gates/build-modes.test.ts` pins the two known per-build differences
-(`sourcePath` stripped, `coverAspect` stamped) but cannot notice a *new*
+(`sourcePath` stripped, `coverAspect` stamped) but cannot notice a _new_
 `BookRecord` field nobody gave a `keyIfPresent` line. **Seven new fields cross
 that seam in this effort.**
 
@@ -216,7 +216,7 @@ In G8's own idiom — a runtime fixture, no source parsing:
 - **the reverse**: every `LibraryBook` key must trace back to a record field or
   to a **named** derived one (`id`, `coverAspect`).
 
-*The named exclusion set is the whole point* — a field deliberately kept out of
+_The named exclusion set is the whole point_ — a field deliberately kept out of
 the artifact has to be **named** there, which is what stops "we meant to" and "we
 forgot" from looking identical.
 
@@ -235,7 +235,7 @@ re-running an import is idempotent. G21-safe: no live calls.
 
 **P3 — convergence after a provider failure.** Stub a provider to fail on run one
 and answer on run two; assert the id lands. This asserts that the rate-limit
-answer is *true* — that a 429'd book self-heals. Without it, the whole pacing
+answer is _true_ — that a 429'd book self-heals. Without it, the whole pacing
 decision rests on an undocumented property of `http.ts` that nothing checks, and
 a well-meant change adding negative caching would break it silently.
 
@@ -272,5 +272,5 @@ Each new gate costs a row in [`docs/gates.md`](../gates.md), which **G19**
    every run forever, with nothing recorded in the note.
 4. **35 of 41 real books carry `pages` with no recoverable provenance.** A book
    whose Google data predates ids and which Google can no longer match is
-   unattributable *in principle* — the "no inference escape hatch" in §5 makes
+   unattributable _in principle_ — the "no inference escape hatch" in §5 makes
    that unclosable. See [`attribution-surface.md`](attribution-surface.md) §5.

@@ -23,9 +23,9 @@
  * See docs/gates.md, row G19 (constitution-scoreboard).
  */
 
-import { describe, expect, it } from 'vitest';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
   AGENTS_DOC,
   expectFound,
@@ -35,13 +35,17 @@ import {
   REPO_ROOT,
   tableCells,
   trackedFiles,
-} from './repo.ts';
+} from "./repo.ts";
 
 const CONSTITUTION = AGENTS_DOC;
-const SCOREBOARD = 'docs/gates.md';
+const SCOREBOARD = "docs/gates.md";
 
 /** The three tables that carry rows. Each has its own columns. */
-const TABLES = ['Invariants → gates', 'Contract seams → gates', 'Defect gates'] as const;
+const TABLES = [
+  "Invariants → gates",
+  "Contract seams → gates",
+  "Defect gates",
+] as const;
 
 /**
  * The index of a named column in a table, by reading its header row.
@@ -60,13 +64,15 @@ const TABLES = ['Invariants → gates', 'Contract seams → gates', 'Defect gate
  */
 function columnIndex(table: string, column: string): number {
   const section = markdownSection(readRepoFile(SCOREBOARD), table, SCOREBOARD);
-  const header = section.split('\n').find((line) => /^\|\s*Row\s*\|/.test(line));
+  const header = section
+    .split("\n")
+    .find((line) => /^\|\s*Row\s*\|/.test(line));
   const index = header === undefined ? -1 : tableCells(header).indexOf(column);
 
   if (index < 0) {
     throw new Error(
       `no "${column}" column in the "${table}" table of ${SCOREBOARD}. A gate reads it ` +
-        'by name, so a renamed column must fail here rather than silently read another one.',
+        "by name, so a renamed column must fail here rather than silently read another one.",
     );
   }
   return index;
@@ -76,10 +82,10 @@ function columnIndex(table: string, column: string): number {
 function rowsOf(table: string): { id: string; cells: string[] }[] {
   const section = markdownSection(readRepoFile(SCOREBOARD), table, SCOREBOARD);
   const rows = section
-    .split('\n')
+    .split("\n")
     .filter((line) => /^\|\s*\*\*G\d+\*\*\s*\|/.test(line))
     .map((line) => ({
-      id: /\*\*(G\d+)\*\*/.exec(line)?.[1] ?? '',
+      id: /\*\*(G\d+)\*\*/.exec(line)?.[1] ?? "",
       cells: tableCells(line),
     }));
 
@@ -92,13 +98,13 @@ function slugByRow(): Map<string, string> {
   const slugs = new Map<string, string>();
 
   for (const table of TABLES) {
-    const nameAt = columnIndex(table, 'Name');
+    const nameAt = columnIndex(table, "Name");
     for (const row of rowsOf(table)) {
-      slugs.set(row.id, (row.cells[nameAt] ?? '').replace(/`/g, '').trim());
+      slugs.set(row.id, (row.cells[nameAt] ?? "").replace(/`/g, "").trim());
     }
   }
 
-  expectFound([...slugs.keys()], 'rows carrying a Name cell', 20);
+  expectFound([...slugs.keys()], "rows carrying a Name cell", 20);
   return slugs;
 }
 
@@ -112,31 +118,40 @@ function stemsByRow(): Map<string, string[]> {
   const stems = new Map<string, string[]>();
 
   for (const row of scoreboardRows()) {
-    const line = row.cells.join(' | ');
-    stems.set(row.id, [...line.matchAll(/`gates\/([^`\s/]+)\.test\.ts`/g)].map((m) => m[1] ?? ''));
+    const line = row.cells.join(" | ");
+    stems.set(
+      row.id,
+      [...line.matchAll(/`gates\/([^`\s/]+)\.test\.ts`/g)].map(
+        (m) => m[1] ?? "",
+      ),
+    );
   }
   return stems;
 }
 
 /** `1.`, `2.`, … — the article numbers, in the order the constitution lists them. */
 function articleNumbers(): number[] {
-  const section = markdownSection(readRepoFile(CONSTITUTION), 'Invariants', CONSTITUTION);
+  const section = markdownSection(
+    readRepoFile(CONSTITUTION),
+    "Invariants",
+    CONSTITUTION,
+  );
   const found = [...section.matchAll(/^(\d+)\. /gm)].map((m) => Number(m[1]));
-  expectFound(found, 'numbered invariants in AGENTS.md', 3);
+  expectFound(found, "numbered invariants in AGENTS.md", 3);
   return found;
 }
 
 /** Every `| **G7** | … |` row in the scoreboard, whichever table it sits in. */
 function scoreboardRows(): { id: string; cells: string[] }[] {
   const rows = readRepoFile(SCOREBOARD)
-    .split('\n')
+    .split("\n")
     .filter((line) => /^\|\s*\*\*G\d+\*\*\s*\|/.test(line))
     .map((line) => {
       const cells = tableCells(line);
-      return { id: /\*\*(G\d+)\*\*/.exec(cells[0] ?? '')?.[1] ?? '', cells };
+      return { id: /\*\*(G\d+)\*\*/.exec(cells[0] ?? "")?.[1] ?? "", cells };
     });
 
-  expectFound(rows, 'scoreboard rows in docs/gates.md', 10);
+  expectFound(rows, "scoreboard rows in docs/gates.md", 10);
   return rows;
 }
 
@@ -152,10 +167,12 @@ function scoreboardRows(): { id: string; cells: string[] }[] {
  * gate that matches prose matches anything.
  */
 function invariantSourceCells(): string[] {
-  const sourceAt = columnIndex('Invariants → gates', 'Source');
-  const sources = rowsOf('Invariants → gates').map((row) => row.cells[sourceAt] ?? '');
+  const sourceAt = columnIndex("Invariants → gates", "Source");
+  const sources = rowsOf("Invariants → gates").map(
+    (row) => row.cells[sourceAt] ?? "",
+  );
 
-  expectFound(sources, 'Source cells in the Invariants → gates table', 5);
+  expectFound(sources, "Source cells in the Invariants → gates table", 5);
   return sources;
 }
 
@@ -165,9 +182,15 @@ function invariantSourceCells(): string[] {
  * asserting against a vocabulary the document no longer uses.
  */
 function allowedStatuses(): string[] {
-  const key = markdownSection(readRepoFile(SCOREBOARD), 'Status key', SCOREBOARD);
-  const symbols = [...key.matchAll(/^\|\s*([^|\s]+)\s*\|\s*[a-z]/gm)].map((m) => m[1] ?? '');
-  expectFound(symbols, 'status symbols in the scoreboard key', 2);
+  const key = markdownSection(
+    readRepoFile(SCOREBOARD),
+    "Status key",
+    SCOREBOARD,
+  );
+  const symbols = [...key.matchAll(/^\|\s*([^|\s]+)\s*\|\s*[a-z]/gm)].map(
+    (m) => m[1] ?? "",
+  );
+  expectFound(symbols, "status symbols in the scoreboard key", 2);
   return symbols;
 }
 
@@ -183,8 +206,8 @@ function allowedStatuses(): string[] {
  */
 function specPathsNamed(): string[] {
   const rows = scoreboardRows()
-    .map((row) => row.cells.join(' | '))
-    .join('\n');
+    .map((row) => row.cells.join(" | "))
+    .join("\n");
 
   const paths = new Set<string>();
   for (const match of rows.matchAll(/`([^`\s*]+\/[^`\s*]+\.ts)`/g)) {
@@ -192,43 +215,51 @@ function specPathsNamed(): string[] {
   }
 
   const found = [...paths].sort();
-  expectFound(found, 'spec files named in docs/gates.md rows', 10);
+  expectFound(found, "spec files named in docs/gates.md rows", 10);
   return found;
 }
 
-describe('G19 — every article of the constitution is scored', () => {
-  it('cites every numbered invariant in a Source cell', () => {
-    const sources = invariantSourceCells().join('\n');
+describe("G19 — every article of the constitution is scored", () => {
+  it("cites every numbered invariant in a Source cell", () => {
+    const sources = invariantSourceCells().join("\n");
     const uncited = articleNumbers().filter(
-      (n) => !new RegExp(`invariant ${n}\\b`, 'i').test(sources),
+      (n) => !new RegExp(`invariant ${n}\\b`, "i").test(sources),
     );
 
     expect(
       uncited,
-      'invariants in AGENTS.md that no row of the Invariants → gates table claims to ' +
+      "invariants in AGENTS.md that no row of the Invariants → gates table claims to " +
         `protect. Add a row — ⬜ "no gate yet" is an acceptable answer and the honest ` +
-        `one: ${uncited.join(', ')}`,
+        `one: ${uncited.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('cites no invariant that does not exist', () => {
+  it("cites no invariant that does not exist", () => {
     // The reverse direction. Deleting invariant 5 while a row still cites it
     // leaves the scoreboard protecting a rule the constitution no longer has.
     const articles = new Set(articleNumbers());
-    const cited = [...invariantSourceCells().join('\n').matchAll(/invariant (\d+)/gi)].map((m) =>
-      Number(m[1]),
+    const cited = [
+      ...invariantSourceCells()
+        .join("\n")
+        .matchAll(/invariant (\d+)/gi),
+    ].map((m) => Number(m[1]));
+    expectFound(
+      cited,
+      "invariant citations in the Invariants → gates table",
+      3,
     );
-    expectFound(cited, 'invariant citations in the Invariants → gates table', 3);
 
-    const dangling = [...new Set(cited)].filter((n) => !articles.has(n)).sort((a, b) => a - b);
+    const dangling = [...new Set(cited)]
+      .filter((n) => !articles.has(n))
+      .sort((a, b) => a - b);
 
     expect(
       dangling,
-      `scoreboard cites invariants that AGENTS.md does not define: ${dangling.join(', ')}`,
+      `scoreboard cites invariants that AGENTS.md does not define: ${dangling.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('numbers the articles uniquely and without gaps', () => {
+  it("numbers the articles uniquely and without gaps", () => {
     // The scoreboard's row numbers are held to this below; the constitution's
     // article numbers were not, which let two rules both be "invariant 2" —
     // and a citation of 2 would then be ambiguous about what it protects.
@@ -237,68 +268,72 @@ describe('G19 — every article of the constitution is scored', () => {
 
     expect(
       numbers,
-      'AGENTS.md invariants must be numbered 1..n with no repeats or gaps, because ' +
-        'the scoreboard cites them by number',
+      "AGENTS.md invariants must be numbered 1..n with no repeats or gaps, because " +
+        "the scoreboard cites them by number",
     ).toEqual(expected);
   });
 });
 
-describe('G19 — the scoreboard describes files that exist', () => {
-  it('names no spec that has been moved or deleted', () => {
-    const missing = specPathsNamed().filter((path) => !existsSync(join(REPO_ROOT, path)));
+describe("G19 — the scoreboard describes files that exist", () => {
+  it("names no spec that has been moved or deleted", () => {
+    const missing = specPathsNamed().filter(
+      (path) => !existsSync(join(REPO_ROOT, path)),
+    );
 
     expect(
       missing,
-      'docs/gates.md names spec files that do not exist. A row pointing at a moved ' +
-        `file reads as protection and is none: ${missing.join(', ')}`,
+      "docs/gates.md names spec files that do not exist. A row pointing at a moved " +
+        `file reads as protection and is none: ${missing.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('scores every gate in gates/ in a row, not merely in prose', () => {
+  it("scores every gate in gates/ in a row, not merely in prose", () => {
     // The direction nobody thinks of: writing a gate and never scoring it. This
     // reads rows rather than the file for the same reason the citation check
     // does — a filename that happens to appear in a paragraph is not a row, and
     // counting it as one lets a gate be "scored" by commentary about something
     // else entirely.
     const rows = scoreboardRows()
-      .map((row) => row.cells.join(' | '))
-      .join('\n');
-    const specs = filesUnder('gates', ['.test.ts']);
-    expectFound(specs, 'gate specs under gates/', 10);
+      .map((row) => row.cells.join(" | "))
+      .join("\n");
+    const specs = filesUnder("gates", [".test.ts"]);
+    expectFound(specs, "gate specs under gates/", 10);
 
     const unscored = specs.filter((path) => !rows.includes(path));
 
     expect(
       unscored,
-      `gates that no row in docs/gates.md names: ${unscored.join(', ')}`,
+      `gates that no row in docs/gates.md names: ${unscored.join(", ")}`,
     ).toEqual([]);
   });
 });
 
-describe('G19 — every row has a name, and the name means something', () => {
-  it('gives every row a kebab-case slug', () => {
+describe("G19 — every row has a name, and the name means something", () => {
+  it("gives every row a kebab-case slug", () => {
     const wrong = [...slugByRow()]
       .filter(([, slug]) => !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug))
       .map(([id, slug]) => `${id} ("${slug}")`);
 
     expect(
       wrong,
-      'rows whose Name is missing or is not a kebab-case slug. The slug is what ' +
-        `citations elsewhere in the repo spell, so it has to be spellable: ${wrong.join(', ')}`,
+      "rows whose Name is missing or is not a kebab-case slug. The slug is what " +
+        `citations elsewhere in the repo spell, so it has to be spellable: ${wrong.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('gives no two rows the same slug', () => {
+  it("gives no two rows the same slug", () => {
     const slugs = [...slugByRow().values()];
-    const duplicated = [...new Set(slugs.filter((slug, i) => slugs.indexOf(slug) !== i))];
+    const duplicated = [
+      ...new Set(slugs.filter((slug, i) => slugs.indexOf(slug) !== i)),
+    ];
 
     expect(
       duplicated,
-      `slugs used by more than one row — a name that names two things names neither: ${duplicated.join(', ')}`,
+      `slugs used by more than one row — a name that names two things names neither: ${duplicated.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('matches the spec stem wherever a row uniquely claims one', () => {
+  it("matches the spec stem wherever a row uniquely claims one", () => {
     // The rule that keeps a slug anchored instead of being a third
     // hand-maintained name for the same gate — ADR-0026's objection.
     //
@@ -332,22 +367,25 @@ describe('G19 — every row has a name, and the name means something', () => {
 
     const derived = [...slugByRow()].filter(([id]) => {
       const list = stems.get(id) ?? [];
-      return list.length === 1 && claims.get(list[0] ?? '') === 1;
+      return list.length === 1 && claims.get(list[0] ?? "") === 1;
     });
-    expectFound(derived, 'rows whose slug is derivable from a spec stem', 15);
+    expectFound(derived, "rows whose slug is derivable from a spec stem", 15);
 
     const wrong = derived
       .filter(([id, slug]) => slug !== (stems.get(id) ?? [])[0])
-      .map(([id, slug]) => `${id} names gates/${(stems.get(id) ?? [])[0]}.test.ts but is called "${slug}"`);
+      .map(
+        ([id, slug]) =>
+          `${id} names gates/${(stems.get(id) ?? [])[0]}.test.ts but is called "${slug}"`,
+      );
 
     expect(
       wrong,
-      `rows whose slug contradicts the one spec they name: ${wrong.join('; ')}`,
+      `rows whose slug contradicts the one spec they name: ${wrong.join("; ")}`,
     ).toEqual([]);
   });
 });
 
-describe('G19 — citations elsewhere spell the current name', () => {
+describe("G19 — citations elsewhere spell the current name", () => {
   /**
    * Every row cited by the repo's cross-reference idiom — a line saying
    * `docs/gates.md, row G7 (astro-no-logic)`.
@@ -363,80 +401,100 @@ describe('G19 — citations elsewhere spell the current name', () => {
    * make the document worse to read for no protection — the citation idiom is
    * what a reader follows.
    */
-  function citations(): { file: string; id: string; slug: string | undefined }[] {
+  function citations(): {
+    file: string;
+    id: string;
+    slug: string | undefined;
+  }[] {
     const found: { file: string; id: string; slug: string | undefined }[] = [];
 
     for (const path of trackedFiles()) {
       if (!/\.(ts|md)$/.test(path)) continue;
-      for (const line of readRepoFile(path).split('\n')) {
+      for (const line of readRepoFile(path).split("\n")) {
         if (!/gates\.md, rows? /.test(line)) continue;
         for (const match of line.matchAll(/\b(G\d+)\b(?: \(([^)]*)\))?/g)) {
-          found.push({ file: path, id: match[1] ?? '', slug: match[2] });
+          found.push({ file: path, id: match[1] ?? "", slug: match[2] });
         }
       }
     }
     return found;
   }
 
-  it('finds enough citations to be checking anything', () => {
-    expectFound(citations(), 'row citations across the repo', 20);
+  it("finds enough citations to be checking anything", () => {
+    expectFound(citations(), "row citations across the repo", 20);
   });
 
-  it('carries a well-formed slug on every citation', () => {
+  it("carries a well-formed slug on every citation", () => {
     // Asserted as the complement of the check below, because a citation the
     // slug pattern cannot parse — `row G21 (no live network)` — is not wrong,
     // it is *unchecked*, and a silent skip is how a gate that matches loosely
     // matches anything.
     const malformed = citations()
-      .filter((c) => c.slug === undefined || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(c.slug))
-      .map((c) => `${c.file}: "row ${c.id}${c.slug === undefined ? '' : ` (${c.slug})`}"`);
+      .filter(
+        (c) => c.slug === undefined || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(c.slug),
+      )
+      .map(
+        (c) =>
+          `${c.file}: "row ${c.id}${c.slug === undefined ? "" : ` (${c.slug})`}"`,
+      );
 
     expect(
       malformed,
-      'citations of a row that do not carry a parseable slug. Spell it ' +
-        `"row G7 (astro-no-logic)" so this gate can check it: ${malformed.join(', ')}`,
+      "citations of a row that do not carry a parseable slug. Spell it " +
+        `"row G7 (astro-no-logic)" so this gate can check it: ${malformed.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('names each row by its current slug', () => {
+  it("names each row by its current slug", () => {
     const slugs = slugByRow();
     const stale = citations()
-      .filter((c) => c.slug !== undefined && slugs.has(c.id) && slugs.get(c.id) !== c.slug)
-      .map((c) => `${c.file}: row ${c.id} is "${slugs.get(c.id)}", cited as "${c.slug}"`);
+      .filter(
+        (c) =>
+          c.slug !== undefined && slugs.has(c.id) && slugs.get(c.id) !== c.slug,
+      )
+      .map(
+        (c) =>
+          `${c.file}: row ${c.id} is "${slugs.get(c.id)}", cited as "${c.slug}"`,
+      );
 
     expect(
       stale,
-      'citations naming a row by a slug it no longer has. This is the second copy ' +
-        `that ADR-0026 is about, which is why it is gated: ${stale.join('; ')}`,
+      "citations naming a row by a slug it no longer has. This is the second copy " +
+        `that ADR-0026 is about, which is why it is gated: ${stale.join("; ")}`,
     ).toEqual([]);
   });
 });
 
-describe('G19 — the scoreboard is well formed', () => {
-  it('gives every row a status from its own key', () => {
+describe("G19 — the scoreboard is well formed", () => {
+  it("gives every row a status from its own key", () => {
     const allowed = allowedStatuses();
     const wrong = scoreboardRows()
       .filter((row) => {
-        const status = row.cells.at(-1) ?? '';
+        const status = row.cells.at(-1) ?? "";
         return !allowed.some((symbol) => status.startsWith(symbol));
       })
-      .map((row) => `${row.id} ("${row.cells.at(-1) ?? ''}")`);
+      .map((row) => `${row.id} ("${row.cells.at(-1) ?? ""}")`);
 
     expect(
       wrong,
-      `rows whose status is not one of ${allowed.join(' ')} — the key at the top of ` +
-        `docs/gates.md defines the vocabulary: ${wrong.join(', ')}`,
+      `rows whose status is not one of ${allowed.join(" ")} — the key at the top of ` +
+        `docs/gates.md defines the vocabulary: ${wrong.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('numbers every row uniquely', () => {
+  it("numbers every row uniquely", () => {
     const ids = scoreboardRows().map((row) => row.id);
-    const duplicated = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+    const duplicated = [
+      ...new Set(ids.filter((id, i) => ids.indexOf(id) !== i)),
+    ];
 
-    expect(duplicated, `row numbers used twice: ${duplicated.join(', ')}`).toEqual([]);
+    expect(
+      duplicated,
+      `row numbers used twice: ${duplicated.join(", ")}`,
+    ).toEqual([]);
   });
 
-  it('leaves no gap in the row numbering', () => {
+  it("leaves no gap in the row numbering", () => {
     // The scoreboard documents this rule under "Retiring a row"; it is asserted
     // here rather than invented here.
     const numbers = scoreboardRows()
@@ -450,7 +508,7 @@ describe('G19 — the scoreboard is well formed', () => {
     expect(
       gaps,
       `row numbers missing from docs/gates.md. Retire a row by marking it, not by ` +
-        `deleting it: ${gaps.join(', ')}`,
+        `deleting it: ${gaps.join(", ")}`,
     ).toEqual([]);
   });
 });

@@ -26,13 +26,13 @@
  * vacuous-green shape this whole layer is arranged against.
  */
 
-import { gitOutput } from './git.ts';
+import { gitOutput } from "./git.ts";
 
 /** A window with nothing in it — and that is a reading, not a placeholder. */
-export const NO_WINDOW = '[]';
+export const NO_WINDOW = "[]";
 
 /** No answer at all. Never `[]`, for the reason in this file's header. */
-export const UNKNOWN_WINDOW = 'unknown';
+export const UNKNOWN_WINDOW = "unknown";
 
 /**
  * `(#180)` at the end of a subject — what this repo's squash-merge writes — or
@@ -57,7 +57,7 @@ export function windowFrom(subjects: readonly string[] | undefined): string {
   if (subjects === undefined) return UNKNOWN_WINDOW;
 
   const numbers = numbersFrom(subjects);
-  return numbers.length === 0 ? NO_WINDOW : numbers.join(', ');
+  return numbers.length === 0 ? NO_WINDOW : numbers.join(", ");
 }
 
 /**
@@ -85,8 +85,9 @@ export function numbersFrom(subjects: readonly string[]): string[] {
       // the suffix pattern never matches it at all. What this really covers is
       // a window holding two commits that name the same pull request — a
       // follow-up, or a subject matching both patterns at once.
-      const number = found === null ? undefined : `#${found[1] ?? ''}`;
-      if (number !== undefined && !numbers.includes(number)) numbers.push(number);
+      const number = found === null ? undefined : `#${found[1] ?? ""}`;
+      if (number !== undefined && !numbers.includes(number))
+        numbers.push(number);
     }
   }
   return numbers;
@@ -106,10 +107,14 @@ export function subjectsBetween(
   head: string,
   cwd: string,
 ): readonly string[] | undefined {
-  if (gitOutput(['cat-file', '-e', `${previous}^{commit}`], cwd) === undefined) return undefined;
+  if (gitOutput(["cat-file", "-e", `${previous}^{commit}`], cwd) === undefined)
+    return undefined;
 
-  const log = gitOutput(['log', '--reverse', '--format=%s', `${previous}..${head}`], cwd);
+  const log = gitOutput(
+    ["log", "--reverse", "--format=%s", `${previous}..${head}`],
+    cwd,
+  );
   if (log === undefined) return undefined;
 
-  return log.split('\n');
+  return log.split("\n");
 }

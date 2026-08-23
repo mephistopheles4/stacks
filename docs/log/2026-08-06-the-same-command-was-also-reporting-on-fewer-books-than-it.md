@@ -10,7 +10,7 @@ of six.** The sixth — `The Infinity Machine`, an `isbn` gap with nothing anywh
 to fill it — produced no line and entered no total.
 
 **The cause is one overloaded outcome.** `enrichBook` returned `complete` both
-when a book had *no gaps* and when it had gaps it could not fill. The first is
+when a book had _no gaps_ and when it had gaps it could not fill. The first is
 genuinely nothing to say; the second is not. `case 'complete': break;` could only
 treat them alike, and a `break` that reported neither looked exactly like one
 that reported both.
@@ -18,7 +18,7 @@ that reported both.
 Split into `complete` and `unfilled`, and the report lifted out of the command's
 action callback into `packages/cli/src/enrich-report.ts`, where something can
 call it. **The arithmetic is now held by shape rather than by care**:
-`reportEntry` returns a book's printed line *and* the total it belongs to
+`reportEntry` returns a book's printed line _and_ the total it belongs to
 together, so there is no way to write one without the other, and the compiler
 refuses a kind that is missed. Two paths reach `unfilled` — a lookup that offered
 nothing, and a `spine_color` gap whose cover is not on disk — and they share a
@@ -26,10 +26,10 @@ kind deliberately, because the printed line must not claim a provider was asked
 when none was.
 
 **Why this one is worth a gate.** It had already changed an answer: #62's first
-resolution read *"7 with gaps, would fill 1, 5 left alone"* off this output and
+resolution read _"7 with gaps, would fill 1, 5 left alone"_ off this output and
 concluded a seventh book had fallen through the lookup. Nothing had. G26 and G27
 came out of the same investigation and are opposite failures — a tool that
-returned the wrong answer, and a tool that returned a *true* answer about a
+returned the wrong answer, and a tool that returned a _true_ answer about a
 smaller set than it claimed. The second is harder to notice, because every line
 it prints is correct.
 

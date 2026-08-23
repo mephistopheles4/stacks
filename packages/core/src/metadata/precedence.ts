@@ -1,4 +1,4 @@
-import type { BookMetadata, MetadataSource } from './types.ts';
+import type { BookMetadata, MetadataSource } from "./types.ts";
 
 /**
  * Who wins which field — the table, as data.
@@ -32,14 +32,19 @@ import type { BookMetadata, MetadataSource } from './types.ts';
  * a quota decision with a far larger blast radius than this table.
  */
 export const DEFAULT_ORDER: readonly MetadataSource[] = [
-  'open-library',
-  'google-books',
-  'oreilly',
-  'apple-books',
+  "open-library",
+  "google-books",
+  "oreilly",
+  "apple-books",
 ];
 
 /** The fields this module merges across contributors. */
-export const MERGED_FIELDS = ['publisher', 'published', 'subjects', 'description'] as const;
+export const MERGED_FIELDS = [
+  "publisher",
+  "published",
+  "subjects",
+  "description",
+] as const;
 
 export type MergedField = (typeof MERGED_FIELDS)[number];
 
@@ -55,19 +60,21 @@ export type MergedField = (typeof MERGED_FIELDS)[number];
  * The gate names them and asserts they are absent from this map, so "missing"
  * and "forgotten" cannot look the same.
  */
-export const FIELD_ORDER: Readonly<Partial<Record<MergedField, readonly MetadataSource[]>>> = {
+export const FIELD_ORDER: Readonly<
+  Partial<Record<MergedField, readonly MetadataSource[]>>
+> = {
   /** Open Library gives a bare `"2008"`; the other three give full dates. */
-  published: ['google-books', 'oreilly', 'apple-books', 'open-library'],
+  published: ["google-books", "oreilly", "apple-books", "open-library"],
   /**
    * Google's `categories` and Apple's `genres` are short and curated; Open
    * Library's 34 raw subjects for one book are noise in a scalar capped at five.
    */
-  subjects: ['google-books', 'apple-books', 'oreilly', 'open-library'],
+  subjects: ["google-books", "apple-books", "oreilly", "open-library"],
   /**
    * Open Library has none at all. O'Reilly only *has* a record when it is an
    * O'Reilly book, where its own copy is authoritative.
    */
-  description: ['oreilly', 'google-books', 'apple-books'],
+  description: ["oreilly", "google-books", "apple-books"],
 };
 
 /**
@@ -87,7 +94,10 @@ export type Contributors = Map<MetadataSource, BookMetadata>;
  * already carries is never replaced — the precedence order decides who fills a
  * *gap*, not who overrules a fact already established.
  */
-export function mergeFields(primary: BookMetadata, contributors: Contributors): BookMetadata {
+export function mergeFields(
+  primary: BookMetadata,
+  contributors: Contributors,
+): BookMetadata {
   /**
    * Built as a `BookMetadata` throughout, rather than as a bag of unknowns cast
    * back at the end.
@@ -153,11 +163,11 @@ export function mergeFields(primary: BookMetadata, contributors: Contributors): 
  */
 function blank(field: MergedField): Partial<BookMetadata> {
   switch (field) {
-    case 'publisher':
+    case "publisher":
       return { publisher: undefined };
-    case 'published':
+    case "published":
       return { published: undefined };
-    case 'subjects':
+    case "subjects":
       return { subjects: undefined };
     default:
       return { description: undefined };
@@ -174,22 +184,26 @@ function takeMerged(
   if (value === undefined) return into;
 
   switch (field) {
-    case 'subjects':
+    case "subjects":
       return Array.isArray(value) ? { ...into, subjects: value } : into;
     default:
-      return typeof value === 'string' ? { ...into, [field]: value } : into;
+      return typeof value === "string" ? { ...into, [field]: value } : into;
   }
 }
 
 /** One contributor id from the one provider that can supply it. */
-function takeId(into: BookMetadata, field: IdField, from: BookMetadata | undefined): BookMetadata {
+function takeId(
+  into: BookMetadata,
+  field: IdField,
+  from: BookMetadata | undefined,
+): BookMetadata {
   const value = from?.[field];
-  return into[field] === undefined && typeof value === 'string'
+  return into[field] === undefined && typeof value === "string"
     ? { ...into, [field]: value }
     : into;
 }
 
-type IdField = 'volumeId' | 'appleTrackId' | 'openLibraryOlid' | 'oreillyOurn';
+type IdField = "volumeId" | "appleTrackId" | "openLibraryOlid" | "oreillyOurn";
 
 /**
  * Each contributor id and the one provider that can supply it.
@@ -200,8 +214,8 @@ type IdField = 'volumeId' | 'appleTrackId' | 'openLibraryOlid' | 'oreillyOurn';
  * belongs.
  */
 const ID_FIELDS: readonly (readonly [IdField, MetadataSource])[] = [
-  ['volumeId', 'google-books'],
-  ['appleTrackId', 'apple-books'],
-  ['openLibraryOlid', 'open-library'],
-  ['oreillyOurn', 'oreilly'],
+  ["volumeId", "google-books"],
+  ["appleTrackId", "apple-books"],
+  ["openLibraryOlid", "open-library"],
+  ["oreillyOurn", "oreilly"],
 ];

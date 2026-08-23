@@ -9,18 +9,18 @@ tickets; all eight closed. Three of them were research and their answers are in
 **The panel's entire contract is that a control must not lie**, which is this
 file's oldest rule about instruments applied to a slider. Every row carries a
 class dot — live, rebuild, reload — and the panel prints what `applySettings`
-*reported* rather than what it asked for. Seven faults were caught by building
+_reported_ rather than what it asked for. Seven faults were caught by building
 it that way, and not one by a test:
 
-| | |
-| --- | --- |
-| the shadow toggle enabled the shadow map over a light whose `castShadow` was latched at mount | shelf looks identical, reported applied |
-| `materialNeedsLights()` excludes `MeshBasicMaterial`, so a live toggle relinked only the *lit* materials | a **different program set than the equivalent reload** — it would have appeared to work on the Pixel while the shipped default still killed it |
-| `toneMappingExposure` only exists inside `#ifdef TONE_MAPPING`, and `none` is the default | the slider moved, the picture did not |
-| moving the light left the shadow frustum sized for where it used to be | a hard straight line across the wood, which reads as a rendering fault |
-| *assigning* `scene.fog` rebuilds every program even to an identical value | every tick of every slider was a full recompile |
-| a refusal was computed from the transition, so nudging any later slider cleared it | the URL asserted a configuration the shelf was not in |
-| `renderer.info` resets inside every `render()`, and a composer renders several times | the panel read `draws 1  tris 1` on a shelf drawing 331 |
+|                                                                                                          |                                                                                                                                                |
+| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| the shadow toggle enabled the shadow map over a light whose `castShadow` was latched at mount            | shelf looks identical, reported applied                                                                                                        |
+| `materialNeedsLights()` excludes `MeshBasicMaterial`, so a live toggle relinked only the _lit_ materials | a **different program set than the equivalent reload** — it would have appeared to work on the Pixel while the shipped default still killed it |
+| `toneMappingExposure` only exists inside `#ifdef TONE_MAPPING`, and `none` is the default                | the slider moved, the picture did not                                                                                                          |
+| moving the light left the shadow frustum sized for where it used to be                                   | a hard straight line across the wood, which reads as a rendering fault                                                                         |
+| _assigning_ `scene.fog` rebuilds every program even to an identical value                                | every tick of every slider was a full recompile                                                                                                |
+| a refusal was computed from the transition, so nudging any later slider cleared it                       | the URL asserted a configuration the shelf was not in                                                                                          |
+| `renderer.info` resets inside every `render()`, and a composer renders several times                     | the panel read `draws 1  tris 1` on a shelf drawing 331                                                                                        |
 
 **The black box survived the change.** `profile` is a getter, not a string built
 at mount, and it carries a **change sequence** — a crash after eight toggles

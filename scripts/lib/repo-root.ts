@@ -22,6 +22,6 @@
  * the root out again.
  */
 
-import { resolve } from 'node:path';
+import { resolve } from "node:path";
 
-export const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
+export const REPO_ROOT = resolve(import.meta.dirname, "..", "..");

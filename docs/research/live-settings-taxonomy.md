@@ -21,21 +21,21 @@ which was never a probe. `?debug` is not a setting; it is what mounts the panel.
 ## The classes
 
 The ticket's four classes are close, and wrong in one structural way: **a class is a property of
-a *transition*, not of a setting.** Several settings are asymmetric — `shadows` off→on allocates
+a _transition_, not of a setting.** Several settings are asymmetric — `shadows` off→on allocates
 a 32 MB render target and relinks the material that kills the Pixel 10, while on→off relinks the
 same materials and frees nothing. The panel's UI has to hold the transition, not just the switch.
 
 Seven classes, replacing the ticket's four:
 
-| class | meaning |
-| --- | --- |
-| **CONTEXT** | only a new `WebGLRenderer`, and so a new GL context, can change it |
-| **REBUILD** | the value is baked into geometry, placement or a canvas texture; needs `dispose()` + `mountShelf()` |
-| **RELINK** | live, but every affected material must be recompiled and re-linked on the GPU |
-| **REALLOC** | live, no recompile, but a GPU allocation is thrown away and remade |
-| **SCENE** | live, no recompile and no reallocation — but it means walking the scene graph and mutating or disposing objects, so it needs to know *which* objects |
-| **UNIFORM** | live: a property assignment and the next frame |
-| **DESYNC** | live for the real lighting, and it silently falsifies the painted shading |
+| class       | meaning                                                                                                                                              |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **CONTEXT** | only a new `WebGLRenderer`, and so a new GL context, can change it                                                                                   |
+| **REBUILD** | the value is baked into geometry, placement or a canvas texture; needs `dispose()` + `mountShelf()`                                                  |
+| **RELINK**  | live, but every affected material must be recompiled and re-linked on the GPU                                                                        |
+| **REALLOC** | live, no recompile, but a GPU allocation is thrown away and remade                                                                                   |
+| **SCENE**   | live, no recompile and no reallocation — but it means walking the scene graph and mutating or disposing objects, so it needs to know _which_ objects |
+| **UNIFORM** | live: a property assignment and the next frame                                                                                                       |
+| **DESYNC**  | live for the real lighting, and it silently falsifies the painted shading                                                                            |
 
 `DESYNC` is the class the ticket does not contain, and it matters most — see the key light row.
 `SCENE` looks like `UNIFORM` and is not: an assignment is reversible from the value alone, a
@@ -48,37 +48,37 @@ hardware.
 
 ### The ten probes
 
-| # | setting | transition | class | what it costs | what it needs to take effect | prov. |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 | `antialias` (`?aa`) | either | **CONTEXT** | a whole new context: ~24 MB of cover re-upload, 3 program links, ~200 ms | `dispose()` + `new WebGLRenderer({ antialias })`. `renderer.antialias = x` is an inert own-property assignment — the context attribute stayed `true` after it | M, S |
-| 2 | `maxPixelRatio` (`?dpr`) | either | **REALLOC** | the multisampled colour+depth buffer is discarded and remade — the single largest allocation in the scene (~65 MB at 1054×1926×4×MSAA). **Not trivial** | `renderer.setPixelRatio(n)` alone; it calls `setSize(_width,_height,false)` internally (`WebGLRenderer.js:628`). No recompile, no texture loss | M, S |
-| 3 | `shadows` (`?shadows`) | **off→on** | **RELINK** | +32 MB render target (measured: 23.8 → 55.8 MB), +1 program for the depth material, **+1 relink of the `MeshBasicMaterial`** — the program that will not link on the Pixel 10 | `shadowMap.enabled = true`, `key.castShadow = true`, `shadowMap.needsUpdate = true`, **and `material.needsUpdate = true` on every material** — see "the asymmetry" below | M, S |
-| 3 | `shadows` | **on→off** | **RELINK** | relinks the same materials and **frees nothing**: `renderer.info.memory.textures` did not drop. three has no path that releases the shadow target | same, minus the allocation. `scene.ts:611-618` already says this | M, S |
-| 4 | `shadowMapSize` (`?shadowmap`) | either | **REALLOC** | discards and remakes the depth target (16 MB at 2048²) | `key.shadow.mapSize.set(n,n)` **is not enough** — it silently corrupts the shadow. You must also `shadow.map.depthTexture.dispose(); shadow.map.dispose(); shadow.map = null`, then `shadowMap.needsUpdate = true`. See "the trap" below | M, S |
-| 5 | `shadowType` (`?shadowtype`) | either | **RELINK** | every material in the scene, including the basic ones; VSM additionally allocates (+4 programs, +1 texture) | `shadowMap.type = T` **plus `shadowMap.needsUpdate = true`**. three dirties every material itself (`WebGLShadowMap.js:130-152`) — but only inside `render()`, which this shelf early-returns from because `autoUpdate = false` (`:95`). Type alone did nothing at all | M, S |
-| 6 | `shadowCasters` (`?casters`) | either | **SCENE** | nothing. 0 new programs, the target stays allocated | `mesh.castShadow` on the caster meshes, then `shadowMap.needsUpdate = true`. **Not a blanket `traverse`** — see "the casters trap" below. Without `needsUpdate` the image does not move | M |
-| 7 | `guardResize` (`?guard`) | either | *(neither)* | nothing — it is not a renderer setting at all, but a branch in the shelf's own `resize()` | assign the boolean; it takes effect on the next resize event | S |
-| 8 | `painted` (`?painted`) | **on→off** | **SCENE** | dispose 12 canvas textures and drop one cached program. **No relink**: removing the last `MeshBasicMaterial` changes no cache key for the lit materials | remove and dispose the painted meshes. Doable live | S |
-| 8 | `painted` | **off→on** | **REBUILD** | full remount | the per-book neighbour band is welded into `buildBook()` via `shadedFromRight` (`scene.ts:730-740`), so re-adding painted shading is not a scene-graph add — it is a book rebuild | S |
-| 9 | `shadowFetch` (`?shadowfetch`) | on→off | **RELINK** | relinks every material; frees nothing | exactly what `stopSamplingShadows()` does. Only meaningful while `shadows` is on, and as written it is a one-way door | S |
-| 10 | `books` (`?books=N`) | either | **REBUILD** | full remount: ~24 MB of cover re-upload, ~200 ms | `placeShelf`, `rowsForCase`, the case geometry, the camera framing and the shadow frustum radius are all functions of the book count, computed at mount | S |
+| #   | setting                        | transition | class       | what it costs                                                                                                                                                                 | what it needs to take effect                                                                                                                                                                                                                                          | prov. |
+| --- | ------------------------------ | ---------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 1   | `antialias` (`?aa`)            | either     | **CONTEXT** | a whole new context: ~24 MB of cover re-upload, 3 program links, ~200 ms                                                                                                      | `dispose()` + `new WebGLRenderer({ antialias })`. `renderer.antialias = x` is an inert own-property assignment — the context attribute stayed `true` after it                                                                                                         | M, S  |
+| 2   | `maxPixelRatio` (`?dpr`)       | either     | **REALLOC** | the multisampled colour+depth buffer is discarded and remade — the single largest allocation in the scene (~65 MB at 1054×1926×4×MSAA). **Not trivial**                       | `renderer.setPixelRatio(n)` alone; it calls `setSize(_width,_height,false)` internally (`WebGLRenderer.js:628`). No recompile, no texture loss                                                                                                                        | M, S  |
+| 3   | `shadows` (`?shadows`)         | **off→on** | **RELINK**  | +32 MB render target (measured: 23.8 → 55.8 MB), +1 program for the depth material, **+1 relink of the `MeshBasicMaterial`** — the program that will not link on the Pixel 10 | `shadowMap.enabled = true`, `key.castShadow = true`, `shadowMap.needsUpdate = true`, **and `material.needsUpdate = true` on every material** — see "the asymmetry" below                                                                                              | M, S  |
+| 3   | `shadows`                      | **on→off** | **RELINK**  | relinks the same materials and **frees nothing**: `renderer.info.memory.textures` did not drop. three has no path that releases the shadow target                             | same, minus the allocation. `scene.ts:611-618` already says this                                                                                                                                                                                                      | M, S  |
+| 4   | `shadowMapSize` (`?shadowmap`) | either     | **REALLOC** | discards and remakes the depth target (16 MB at 2048²)                                                                                                                        | `key.shadow.mapSize.set(n,n)` **is not enough** — it silently corrupts the shadow. You must also `shadow.map.depthTexture.dispose(); shadow.map.dispose(); shadow.map = null`, then `shadowMap.needsUpdate = true`. See "the trap" below                              | M, S  |
+| 5   | `shadowType` (`?shadowtype`)   | either     | **RELINK**  | every material in the scene, including the basic ones; VSM additionally allocates (+4 programs, +1 texture)                                                                   | `shadowMap.type = T` **plus `shadowMap.needsUpdate = true`**. three dirties every material itself (`WebGLShadowMap.js:130-152`) — but only inside `render()`, which this shelf early-returns from because `autoUpdate = false` (`:95`). Type alone did nothing at all | M, S  |
+| 6   | `shadowCasters` (`?casters`)   | either     | **SCENE**   | nothing. 0 new programs, the target stays allocated                                                                                                                           | `mesh.castShadow` on the caster meshes, then `shadowMap.needsUpdate = true`. **Not a blanket `traverse`** — see "the casters trap" below. Without `needsUpdate` the image does not move                                                                               | M     |
+| 7   | `guardResize` (`?guard`)       | either     | _(neither)_ | nothing — it is not a renderer setting at all, but a branch in the shelf's own `resize()`                                                                                     | assign the boolean; it takes effect on the next resize event                                                                                                                                                                                                          | S     |
+| 8   | `painted` (`?painted`)         | **on→off** | **SCENE**   | dispose 12 canvas textures and drop one cached program. **No relink**: removing the last `MeshBasicMaterial` changes no cache key for the lit materials                       | remove and dispose the painted meshes. Doable live                                                                                                                                                                                                                    | S     |
+| 8   | `painted`                      | **off→on** | **REBUILD** | full remount                                                                                                                                                                  | the per-book neighbour band is welded into `buildBook()` via `shadedFromRight` (`scene.ts:730-740`), so re-adding painted shading is not a scene-graph add — it is a book rebuild                                                                                     | S     |
+| 9   | `shadowFetch` (`?shadowfetch`) | on→off     | **RELINK**  | relinks every material; frees nothing                                                                                                                                         | exactly what `stopSamplingShadows()` does. Only meaningful while `shadows` is on, and as written it is a one-way door                                                                                                                                                 | S     |
+| 10  | `books` (`?books=N`)           | either     | **REBUILD** | full remount: ~24 MB of cover re-upload, ~200 ms                                                                                                                              | `placeShelf`, `rowsForCase`, the case geometry, the camera framing and the shadow frustum radius are all functions of the book count, computed at mount                                                                                                               | S     |
 
 ### Lighting, fog and colour
 
-| setting | class | what it costs | what it needs | prov. |
-| --- | --- | --- | --- | --- |
-| ambient intensity / colour | **UNIFORM** | nothing | assign; `WebGLLights.setup()` runs every render | M |
-| key light **intensity** | **UNIFORM** | nothing | assign | M |
-| key light **colour** (`COLOURS.key`) | **UNIFORM** | nothing | `key.color.set(…)` | M |
-| key light **position** (`keyLightPosition()`) | **DESYNC** | the real lighting moves instantly; the **painted shading does not**, and the shadow camera's far plane does not either | see below | M, S |
-| key `castShadow` | **RELINK** (lit materials only) | +1 program | assign; `WebGLLights` bumps `state.version` (`:485`) and `WebGLRenderer.js:2392` catches it — **for lit materials only** | M |
-| shadow camera frustum (`left/right/top/bottom/near/far`) | **UNIFORM** | nothing | **must call `shadowCamera.updateProjectionMatrix()`** and then `shadowMap.needsUpdate = true`. With `needsUpdate` but no `updateProjectionMatrix()` the image was byte-identical | M |
-| fill light colour / intensity / position | **UNIFORM** | nothing | assign | M |
-| lamp (`PointLight`) colour / intensity / distance / decay / position | **UNIFORM** | nothing | assign | M |
-| `scene.background` (`COLOURS.background`) | **UNIFORM** | nothing | `scene.background.set(…)`. **Also the fog colour** — change one and not the other and the horizon stops matching the wall | M |
-| fog `near` / `far` | **UNIFORM** | nothing | assign; read into uniforms every frame (`WebGLMaterials.js:27-32`) | M |
-| fog **present or absent** (`scene.fog = null`) | **RELINK** | +2 programs | assign only — three detects it (`WebGLRenderer.js:2452`) | M |
-| `COLOURS.wood` / `woodDark` | **UNIFORM** | nothing | `material.color.set(…)` | M |
+| setting                                                              | class                           | what it costs                                                                                                          | what it needs                                                                                                                                                                    | prov. |
+| -------------------------------------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| ambient intensity / colour                                           | **UNIFORM**                     | nothing                                                                                                                | assign; `WebGLLights.setup()` runs every render                                                                                                                                  | M     |
+| key light **intensity**                                              | **UNIFORM**                     | nothing                                                                                                                | assign                                                                                                                                                                           | M     |
+| key light **colour** (`COLOURS.key`)                                 | **UNIFORM**                     | nothing                                                                                                                | `key.color.set(…)`                                                                                                                                                               | M     |
+| key light **position** (`keyLightPosition()`)                        | **DESYNC**                      | the real lighting moves instantly; the **painted shading does not**, and the shadow camera's far plane does not either | see below                                                                                                                                                                        | M, S  |
+| key `castShadow`                                                     | **RELINK** (lit materials only) | +1 program                                                                                                             | assign; `WebGLLights` bumps `state.version` (`:485`) and `WebGLRenderer.js:2392` catches it — **for lit materials only**                                                         | M     |
+| shadow camera frustum (`left/right/top/bottom/near/far`)             | **UNIFORM**                     | nothing                                                                                                                | **must call `shadowCamera.updateProjectionMatrix()`** and then `shadowMap.needsUpdate = true`. With `needsUpdate` but no `updateProjectionMatrix()` the image was byte-identical | M     |
+| fill light colour / intensity / position                             | **UNIFORM**                     | nothing                                                                                                                | assign                                                                                                                                                                           | M     |
+| lamp (`PointLight`) colour / intensity / distance / decay / position | **UNIFORM**                     | nothing                                                                                                                | assign                                                                                                                                                                           | M     |
+| `scene.background` (`COLOURS.background`)                            | **UNIFORM**                     | nothing                                                                                                                | `scene.background.set(…)`. **Also the fog colour** — change one and not the other and the horizon stops matching the wall                                                        | M     |
+| fog `near` / `far`                                                   | **UNIFORM**                     | nothing                                                                                                                | assign; read into uniforms every frame (`WebGLMaterials.js:27-32`)                                                                                                               | M     |
+| fog **present or absent** (`scene.fog = null`)                       | **RELINK**                      | +2 programs                                                                                                            | assign only — three detects it (`WebGLRenderer.js:2452`)                                                                                                                         | M     |
+| `COLOURS.wood` / `woodDark`                                          | **UNIFORM**                     | nothing                                                                                                                | `material.color.set(…)`                                                                                                                                                          | M     |
 
 ## The three things the source says that the ticket does not assume
 
@@ -94,7 +94,7 @@ byte-identical image, zero new programs and zero rebound materials**. The shadow
 disappeared once every material was explicitly dirtied. `stopSamplingShadows()` in `scene.ts` is
 right, and it is right for this reason.
 
-### 2. The asymmetry that makes a live `shadows` toggle dangerous *and* misleading
+### 2. The asymmetry that makes a live `shadows` toggle dangerous _and_ misleading
 
 `materialNeedsLights()` (`WebGLRenderer.js:2811`) returns false for `MeshBasicMaterial`. So the
 lights-version bump that a `castShadow` change triggers recompiles the lit materials and **never
@@ -120,7 +120,7 @@ relinks the killer program. There is no safe version of this toggle; there is on
 
 ### 3. `autoUpdate = false` is load-bearing far beyond the shadow pass
 
-`WebGLShadowMap.render()` early-returns at `:94-95` when `enabled` is false *or* when
+`WebGLShadowMap.render()` early-returns at `:94-95` when `enabled` is false _or_ when
 `autoUpdate === false && needsUpdate === false`. Everything the shadow system does on a change —
 the type-change traverse that dirties all materials (`:130-152`), the target reallocation
 (`:203`), the `_previousType` latch (`:367`) — lives **after** that return.
@@ -136,8 +136,8 @@ produced 2 new programs and a visibly different image.
 Changing `key.shadow.mapSize` and asking for a shadow update **corrupts the shadow silently**.
 `WebGLShadowMap.js:203` only allocates when `shadow.map === null || typeChanged`, so the depth
 map stays 2048² while the pass renders into a 512×512 viewport of it. Measured, the image became
-mean 29.368 / 383 distinct colours — *the identical fingerprint as shadows switched off
-entirely*. The shadow does not get coarser; it disappears. Disposing the target and nulling it
+mean 29.368 / 383 distinct colours — _the identical fingerprint as shadows switched off
+entirely_. The shadow does not get coarser; it disappears. Disposing the target and nulling it
 first gave a real 512² map and a real shadow (29.139 / 510).
 
 ### The casters trap: the off direction is safe, the on direction is not
@@ -156,7 +156,7 @@ for 49 silhouettes removed).
 
 So `traverse(o => { if (o.isMesh) o.castShadow = true })` would turn on roughly seven casters per
 book plus the backboard and the painted planes: it re-introduces the regression that was fixed,
-*and* draws a different silhouette, since the boards and spine stand outside the block by the
+_and_ draws a different silhouette, since the boards and spine stand outside the block by the
 binder's square. The panel must either remember the meshes it switched off, or `mountShelf` must
 hand out the caster set. **My measurement used a blanket walk on a synthetic scene where every
 mesh was a caster, so it measured the mechanism and not this distinction.**
@@ -170,7 +170,7 @@ result into a `<canvas>` and uploads it as a `CanvasTexture`** (`contact-shadow.
 
 Moving the light live is a uniform write — measured, instant, no recompile. It also leaves every
 painted shadow describing a light that is no longer there. `scene.ts:1016-1018` states the rule
-already: *a painted shadow whose light has quietly moved is worse than no shadow at all.*
+already: _a painted shadow whose light has quietly moved is worse than no shadow at all._
 
 There is a second stale consequence in the same move: `shadowCamera.far` is derived from the
 light's position (`key.position.distanceTo(target.position) + radius`, `scene.ts:1109`). Move the
@@ -199,7 +199,7 @@ The machinery exists — `renderer.debug.onShaderError` halts the loop and fires
    a second (`diagnostics.ts`); a context death between the click and the next tick loses the one
    fact that matters — which setting did it. Write intent first, apply second.
 2. **`profile` becomes a lie the moment settings mutate.** `diagnostics.ts:119` reads
-   `handle.profile`, captured at mount (`scene.ts:471`). The snapshot must carry the *current*
+   `handle.profile`, captured at mount (`scene.ts:471`). The snapshot must carry the _current_
    settings, or the black box stops being a bisect and becomes an anecdote — the exact failure
    issue #39 names.
 3. **Revert the killer in the persisted state.** Otherwise the reload that is supposed to recover
@@ -243,7 +243,7 @@ depth buffers — the largest allocation in the scene. Measured: no recompile, n
 buffer 1440×900 ↔ 720×450 immediately. It belongs in `REALLOC`, not in "trivial".
 
 **But the specific claim behind `?guard=1` did not reproduce.** `scene.ts:184-190` says assigning
-`canvas.width` reallocates the drawing buffer *even when the value is identical*. Measured on
+`canvas.width` reallocates the drawing buffer _even when the value is identical_. Measured on
 Chrome 150.0.7871.187 / ANGLE with a real GPU:
 
 ```
@@ -279,7 +279,7 @@ the switch, and record that its rationale is unconfirmed rather than disproven. 
   callback that reports an unchanged size, so if the observer does not fire in that case the
   switch is inert on every device rather than just this one.
 - **The live `painted` on→off path.** The 3 → 2 programs and 23.8 → 22.3 MB figures come from
-  comparing two *mounts* (`?painted=0` as its own page load). The live removal was not exercised;
+  comparing two _mounts_ (`?painted=0` as its own page load). The live removal was not exercised;
   that it needs no relink is read from the cache key, not measured.
 
 ## Method

@@ -11,7 +11,7 @@
  * Declared here rather than by adding `astro/client` to the root config, which
  * would pull DOM and Vite ambient types over the CLI and core packages as well.
  */
-declare module '*.svg?raw' {
+declare module "*.svg?raw" {
   const contents: string;
   export default contents;
 }

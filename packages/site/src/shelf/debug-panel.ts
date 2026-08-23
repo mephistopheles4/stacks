@@ -1,4 +1,4 @@
-import type { ApplyReport, ShelfHandle } from './scene.ts';
+import type { ApplyReport, ShelfHandle } from "./scene.ts";
 import {
   BINDINGS,
   DEFAULT_SETTINGS,
@@ -6,8 +6,8 @@ import {
   SHADOW_TYPE_NAMES,
   TONE_MAPPING_NAMES,
   type ShelfSettings,
-} from './shelf-settings.ts';
-import { writeSettings } from './shelf-url.ts';
+} from "./shelf-settings.ts";
+import { writeSettings } from "./shelf-url.ts";
 
 /**
  * The tuning panel: every setting the shelf has, live, behind `?debug`.
@@ -50,26 +50,29 @@ export interface PanelOptions {
   readonly onRebuild?: (settings: ShelfSettings) => void;
 }
 
-export function mountPanel(host: HTMLElement, options: PanelOptions): () => void {
+export function mountPanel(
+  host: HTMLElement,
+  options: PanelOptions,
+): () => void {
   const { handle } = options;
   let settings = handle.settings;
 
-  const root = document.createElement('div');
-  root.className = 'shelf-panel';
+  const root = document.createElement("div");
+  root.className = "shelf-panel";
   applyRootStyle(root);
 
-  const readout = document.createElement('pre');
+  const readout = document.createElement("pre");
   applyReadoutStyle(readout);
 
-  const status = document.createElement('div');
+  const status = document.createElement("div");
   applyStatusStyle(status);
 
-  const body = document.createElement('div');
-  body.style.display = 'grid';
-  body.style.gap = '0.15rem';
+  const body = document.createElement("div");
+  body.style.display = "grid";
+  body.style.gap = "0.15rem";
   // Grid items also default to `min-width: auto`, so without this the widest row
   // sets the track width and the whole panel overflows again one level up.
-  body.style.minWidth = '0';
+  body.style.minWidth = "0";
 
   /**
    * Collapsed by default on a narrow screen.
@@ -80,16 +83,16 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    */
   let open = window.innerWidth > 700;
 
-  const toggle = document.createElement('button');
+  const toggle = document.createElement("button");
   applyButtonStyle(toggle);
-  toggle.style.width = '100%';
+  toggle.style.width = "100%";
 
   const paint = (): void => {
-    toggle.textContent = open ? 'hide controls ▲' : 'show controls ▼';
-    body.style.display = open ? 'grid' : 'none';
+    toggle.textContent = open ? "hide controls ▲" : "show controls ▼";
+    body.style.display = open ? "grid" : "none";
   };
 
-  toggle.addEventListener('click', () => {
+  toggle.addEventListener("click", () => {
     open = !open;
     paint();
   });
@@ -135,8 +138,9 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   ): { slot: HTMLElement } => {
     const lamp = makeLamp();
     const relight = (): void => {
-      const pending = klass !== 'live' && get(settings) !== get(handle.mountedWith);
-      lamp.set(pending ? 'pending' : active(settings) ? 'on' : 'off', klass);
+      const pending =
+        klass !== "live" && get(settings) !== get(handle.mountedWith);
+      lamp.set(pending ? "pending" : active(settings) ? "on" : "off", klass);
     };
     lamps.push(relight);
     relight();
@@ -152,33 +156,34 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     showReport(status, report, options.onRebuild !== undefined);
     // Only for things a rebuild actually fixes. `refused` deliberately does not
     // raise it: offering a button that cannot help is its own small lie.
-    rebuildButton.hidden = report.needsRebuild.length === 0 || options.onRebuild === undefined;
+    rebuildButton.hidden =
+      report.needsRebuild.length === 0 || options.onRebuild === undefined;
     pendingRebuild = report.needsRebuild.length > 0 ? next : undefined;
   };
 
   let pendingRebuild: ShelfSettings | undefined;
 
-  const rebuildButton = document.createElement('button');
-  rebuildButton.textContent = 'rebuild shelf to apply';
+  const rebuildButton = document.createElement("button");
+  rebuildButton.textContent = "rebuild shelf to apply";
   applyButtonStyle(rebuildButton);
-  rebuildButton.style.width = '100%';
-  rebuildButton.style.borderColor = 'rgba(255, 205, 120, 0.6)';
+  rebuildButton.style.width = "100%";
+  rebuildButton.style.borderColor = "rgba(255, 205, 120, 0.6)";
   rebuildButton.hidden = true;
-  rebuildButton.addEventListener('click', () => {
+  rebuildButton.addEventListener("click", () => {
     if (pendingRebuild !== undefined) options.onRebuild?.(pendingRebuild);
   });
 
   /* --- the controls ------------------------------------------------------ */
 
   const group = (title: string): HTMLElement => {
-    const heading = document.createElement('div');
+    const heading = document.createElement("div");
     heading.textContent = title;
     Object.assign(heading.style, {
-      marginTop: '0.5rem',
-      opacity: '0.55',
-      letterSpacing: '0.08em',
-      textTransform: 'uppercase',
-      fontSize: '9px',
+      marginTop: "0.5rem",
+      opacity: "0.55",
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+      fontSize: "9px",
     } satisfies Partial<CSSStyleDeclaration>);
     body.append(heading);
     return heading;
@@ -191,10 +196,10 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     set: (s: ShelfSettings, value: boolean) => ShelfSettings,
     active?: (s: ShelfSettings) => boolean,
   ): { input: HTMLInputElement; row: HTMLElement } => {
-    const input = document.createElement('input');
-    input.type = 'checkbox';
+    const input = document.createElement("input");
+    input.type = "checkbox";
     input.checked = get(settings);
-    input.addEventListener('change', () => {
+    input.addEventListener("change", () => {
       apply(set(settings, input.checked));
     });
     resync.push(() => (input.checked = get(settings)));
@@ -214,23 +219,23 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     set: (s: ShelfSettings, value: number) => ShelfSettings,
     active?: (s: ShelfSettings) => boolean,
   ): { input: HTMLInputElement; row: HTMLElement } => {
-    const input = document.createElement('input');
-    input.type = 'range';
+    const input = document.createElement("input");
+    input.type = "range";
     input.min = String(min);
     input.max = String(max);
     input.step = String(step);
     input.value = String(get(settings));
     // Fixed, and the label gives way around it. A slider narrower than this is
     // hard to land a value on, especially with a thumb.
-    input.style.width = '6.5rem';
+    input.style.width = "6.5rem";
 
-    const value = document.createElement('span');
+    const value = document.createElement("span");
     value.textContent = format(get(settings));
-    value.style.minWidth = '2.4rem';
-    value.style.textAlign = 'right';
-    value.style.opacity = '0.75';
+    value.style.minWidth = "2.4rem";
+    value.style.textAlign = "right";
+    value.style.opacity = "0.75";
 
-    input.addEventListener('input', () => {
+    input.addEventListener("input", () => {
       const parsed = Number(input.value);
       value.textContent = format(parsed);
       apply(set(settings, parsed));
@@ -253,16 +258,18 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     get: (s: ShelfSettings) => number,
     set: (s: ShelfSettings, value: number) => ShelfSettings,
   ): void => {
-    const input = document.createElement('input');
-    input.type = 'color';
-    input.value = `#${get(settings).toString(16).padStart(6, '0')}`;
-    input.style.width = '2.5rem';
-    input.style.height = '1.1rem';
-    input.style.padding = '0';
-    input.addEventListener('input', () => {
+    const input = document.createElement("input");
+    input.type = "color";
+    input.value = `#${get(settings).toString(16).padStart(6, "0")}`;
+    input.style.width = "2.5rem";
+    input.style.height = "1.1rem";
+    input.style.padding = "0";
+    input.addEventListener("input", () => {
       apply(set(settings, Number.parseInt(input.value.slice(1), 16)));
     });
-    resync.push(() => (input.value = `#${get(settings).toString(16).padStart(6, '0')}`));
+    resync.push(
+      () => (input.value = `#${get(settings).toString(16).padStart(6, "0")}`),
+    );
     const line = row(label, klass, input);
     line.prepend(lampFor(klass, get, () => true).slot);
     body.append(line);
@@ -276,16 +283,16 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     set: (s: ShelfSettings, value: T) => ShelfSettings,
     active?: (s: ShelfSettings) => boolean,
   ): void => {
-    const select = document.createElement('select');
+    const select = document.createElement("select");
     applyInputStyle(select);
     for (const option of options_) {
-      const node = document.createElement('option');
+      const node = document.createElement("option");
       node.value = option;
       node.textContent = option;
       select.append(node);
     }
     select.value = get(settings);
-    select.addEventListener('change', () => {
+    select.addEventListener("change", () => {
       apply(set(settings, select.value as T));
     });
     resync.push(() => (select.value = get(settings)));
@@ -296,58 +303,129 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
 
   /* --- light -------------------------------------------------------------- */
 
-  group('key light');
-  colour('colour', 'live', (s) => s.lighting.key.colour, (s, v) =>
-    resolveSettings({ lighting: { key: { colour: v } } }, s),
+  group("key light");
+  colour(
+    "colour",
+    "live",
+    (s) => s.lighting.key.colour,
+    (s, v) => resolveSettings({ lighting: { key: { colour: v } } }, s),
   );
-  slider('intensity', 'live', 0, 8, 0.05, (s) => s.lighting.key.intensity, (s, v) =>
-    resolveSettings({ lighting: { key: { intensity: v } } }, s),
+  slider(
+    "intensity",
+    "live",
+    0,
+    8,
+    0.05,
+    (s) => s.lighting.key.intensity,
+    (s, v) => resolveSettings({ lighting: { key: { intensity: v } } }, s),
   );
   // The three axes separately rather than a gizmo. A gizmo is the nicer control
   // and it is not the one that works on a phone, one-handed, next to the shelf
   // it is moving — which is where this gets used.
-  slider('x  (right +)', 'live', -14, 14, 0.1, (s) => s.lighting.key.position.x, (s, v) =>
-    resolveSettings({ lighting: { key: { position: { x: v } } } }, s),
+  slider(
+    "x  (right +)",
+    "live",
+    -14,
+    14,
+    0.1,
+    (s) => s.lighting.key.position.x,
+    (s, v) => resolveSettings({ lighting: { key: { position: { x: v } } } }, s),
   );
-  slider('y  (above case)', 'live', -4, 14, 0.1, (s) => s.lighting.key.position.y.plus, (s, v) =>
-    resolveSettings({ lighting: { key: { position: { y: { plus: v } } } } }, s),
+  slider(
+    "y  (above case)",
+    "live",
+    -4,
+    14,
+    0.1,
+    (s) => s.lighting.key.position.y.plus,
+    (s, v) =>
+      resolveSettings(
+        { lighting: { key: { position: { y: { plus: v } } } } },
+        s,
+      ),
   );
-  slider('z  (toward you +)', 'live', -14, 14, 0.1, (s) => s.lighting.key.position.z, (s, v) =>
-    resolveSettings({ lighting: { key: { position: { z: v } } } }, s),
+  slider(
+    "z  (toward you +)",
+    "live",
+    -14,
+    14,
+    0.1,
+    (s) => s.lighting.key.position.z,
+    (s, v) => resolveSettings({ lighting: { key: { position: { z: v } } } }, s),
   );
-  slider('aim height', 'live', 0, 1, 0.01, (s) => s.lighting.key.aimHeight, (s, v) =>
-    resolveSettings({ lighting: { key: { aimHeight: v } } }, s),
+  slider(
+    "aim height",
+    "live",
+    0,
+    1,
+    0.01,
+    (s) => s.lighting.key.aimHeight,
+    (s, v) => resolveSettings({ lighting: { key: { aimHeight: v } } }, s),
   );
 
-  group('fill light');
-  colour('colour', 'live', (s) => s.lighting.fill.colour, (s, v) =>
-    resolveSettings({ lighting: { fill: { colour: v } } }, s),
+  group("fill light");
+  colour(
+    "colour",
+    "live",
+    (s) => s.lighting.fill.colour,
+    (s, v) => resolveSettings({ lighting: { fill: { colour: v } } }, s),
   );
-  slider('intensity', 'live', 0, 4, 0.05, (s) => s.lighting.fill.intensity, (s, v) =>
-    resolveSettings({ lighting: { fill: { intensity: v } } }, s),
-  );
-
-  group('lamp');
-  colour('colour', 'live', (s) => s.lighting.lamp.colour, (s, v) =>
-    resolveSettings({ lighting: { lamp: { colour: v } } }, s),
-  );
-  slider('intensity', 'live', 0, 40, 0.5, (s) => s.lighting.lamp.intensity, (s, v) =>
-    resolveSettings({ lighting: { lamp: { intensity: v } } }, s),
-  );
-  slider('reach', 'live', 1, 40, 0.5, (s) => s.lighting.lamp.distance, (s, v) =>
-    resolveSettings({ lighting: { lamp: { distance: v } } }, s),
+  slider(
+    "intensity",
+    "live",
+    0,
+    4,
+    0.05,
+    (s) => s.lighting.fill.intensity,
+    (s, v) => resolveSettings({ lighting: { fill: { intensity: v } } }, s),
   );
 
-  group('ambient');
-  slider('intensity', 'live', 0, 3, 0.05, (s) => s.lighting.ambient.intensity, (s, v) =>
-    resolveSettings({ lighting: { ambient: { intensity: v } } }, s),
+  group("lamp");
+  colour(
+    "colour",
+    "live",
+    (s) => s.lighting.lamp.colour,
+    (s, v) => resolveSettings({ lighting: { lamp: { colour: v } } }, s),
+  );
+  slider(
+    "intensity",
+    "live",
+    0,
+    40,
+    0.5,
+    (s) => s.lighting.lamp.intensity,
+    (s, v) => resolveSettings({ lighting: { lamp: { intensity: v } } }, s),
+  );
+  slider(
+    "reach",
+    "live",
+    1,
+    40,
+    0.5,
+    (s) => s.lighting.lamp.distance,
+    (s, v) => resolveSettings({ lighting: { lamp: { distance: v } } }, s),
+  );
+
+  group("ambient");
+  slider(
+    "intensity",
+    "live",
+    0,
+    3,
+    0.05,
+    (s) => s.lighting.ambient.intensity,
+    (s, v) => resolveSettings({ lighting: { ambient: { intensity: v } } }, s),
   );
 
   /* --- fidelity ----------------------------------------------------------- */
 
-  group('fidelity');
-  choice('tone mapping', 'live', TONE_MAPPING_NAMES, (s) => s.renderer.toneMapping, (s, v) =>
-    resolveSettings({ renderer: { toneMapping: v } }, s),
+  group("fidelity");
+  choice(
+    "tone mapping",
+    "live",
+    TONE_MAPPING_NAMES,
+    (s) => s.renderer.toneMapping,
+    (s, v) => resolveSettings({ renderer: { toneMapping: v } }, s),
   );
 
   /**
@@ -360,31 +438,39 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    * has already decided which of those is worse.
    */
   const exposure = slider(
-    'exposure',
-    'live',
+    "exposure",
+    "live",
     0.1,
     3,
     0.01,
     (s) => s.renderer.exposure,
     (s, v) => resolveSettings({ renderer: { exposure: v } }, s),
-    (s) => s.renderer.toneMapping !== 'none',
+    (s) => s.renderer.toneMapping !== "none",
   );
   const syncExposure = (): void => {
-    const off = settings.renderer.toneMapping === 'none';
+    const off = settings.renderer.toneMapping === "none";
     exposure.input.disabled = off;
-    exposure.row.style.opacity = off ? '0.55' : '1';
-    exposure.row.title = off ? 'pick a tone mapping first — exposure has no effect under "none"' : '';
+    exposure.row.style.opacity = off ? "0.55" : "1";
+    exposure.row.title = off
+      ? 'pick a tone mapping first — exposure has no effect under "none"'
+      : "";
   };
   afterApply.push(syncExposure);
   syncExposure();
-  slider('cover gloss', 'rebuild', 0, 1, 0.01, (s) => s.materials.coverRoughness, (s, v) =>
-    resolveSettings({ materials: { coverRoughness: v } }, s),
+  slider(
+    "cover gloss",
+    "rebuild",
+    0,
+    1,
+    0.01,
+    (s) => s.materials.coverRoughness,
+    (s, v) => resolveSettings({ materials: { coverRoughness: v } }, s),
   );
   // Red at zero, and truthfully: no map is uploaded and no jitter applied, so the
   // page block is the flat cream slab it used to be.
   slider(
-    'page edges',
-    'rebuild',
+    "page edges",
+    "rebuild",
     0,
     3,
     0.05,
@@ -392,8 +478,14 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     (s, v) => resolveSettings({ materials: { pageStriation: v } }, s),
     (s) => s.materials.pageStriation > 0,
   );
-  slider('cover metal', 'rebuild', 0, 1, 0.01, (s) => s.materials.coverMetalness, (s, v) =>
-    resolveSettings({ materials: { coverMetalness: v } }, s),
+  slider(
+    "cover metal",
+    "rebuild",
+    0,
+    1,
+    0.01,
+    (s) => s.materials.coverMetalness,
+    (s, v) => resolveSettings({ materials: { coverMetalness: v } }, s),
   );
 
   /* --- the books ---------------------------------------------------------- */
@@ -410,9 +502,15 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    * direction. That is not a lie the lamp has to report: the control is doing
    * what it says, which is dialling the *hash*, and a declaration is not a vote.
    */
-  group('books');
-  slider('paperback mix', 'rebuild', 0, 1, 0.05, (s) => s.books.paperbackRatio, (s, v) =>
-    resolveSettings({ books: { paperbackRatio: v } }, s),
+  group("books");
+  slider(
+    "paperback mix",
+    "rebuild",
+    0,
+    1,
+    0.05,
+    (s) => s.books.paperbackRatio,
+    (s, v) => resolveSettings({ books: { paperbackRatio: v } }, s),
   );
   /**
    * Red at zero, and truthfully: no cap is built at all, so the ~20 draw calls
@@ -428,8 +526,8 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    * question it can: is this control doing anything.
    */
   slider(
-    'head cap',
-    'rebuild',
+    "head cap",
+    "rebuild",
     0,
     0.3,
     0.01,
@@ -452,48 +550,61 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    */
   for (const binding of BINDINGS) {
     const lit = (s: ShelfSettings): boolean =>
-      s.materials.spineProfile[binding].rise !== 0 && s.materials.spineProfile[binding].roll !== 0;
+      s.materials.spineProfile[binding].rise !== 0 &&
+      s.materials.spineProfile[binding].roll !== 0;
 
     slider(
       `${binding} rise`,
-      'rebuild',
+      "rebuild",
       0,
       0.25,
       0.005,
       (s) => s.materials.spineProfile[binding].rise,
-      (s, v) => resolveSettings({ materials: { spineProfile: { [binding]: { rise: v } } } }, s),
+      (s, v) =>
+        resolveSettings(
+          { materials: { spineProfile: { [binding]: { rise: v } } } },
+          s,
+        ),
       lit,
     );
     slider(
       `${binding} roll`,
-      'rebuild',
+      "rebuild",
       0,
       1,
       0.01,
       (s) => s.materials.spineProfile[binding].roll,
-      (s, v) => resolveSettings({ materials: { spineProfile: { [binding]: { roll: v } } } }, s),
+      (s, v) =>
+        resolveSettings(
+          { materials: { spineProfile: { [binding]: { roll: v } } } },
+          s,
+        ),
       lit,
     );
     // Cloth against card, as one number each — and the thing #68 measured as
     // carrying everything a grain map in this slot was doing.
     slider(
       `${binding} cloth`,
-      'rebuild',
+      "rebuild",
       0,
       1,
       0.01,
       (s) => s.materials.spineRoughness[binding],
-      (s, v) => resolveSettings({ materials: { spineRoughness: { [binding]: v } } }, s),
+      (s, v) =>
+        resolveSettings({ materials: { spineRoughness: { [binding]: v } } }, s),
     );
   }
 
-  group('bloom');
-  toggleRow('enabled', 'rebuild', (s) => s.effects.bloom.enabled, (s, v) =>
-    resolveSettings({ effects: { bloom: { enabled: v } } }, s),
+  group("bloom");
+  toggleRow(
+    "enabled",
+    "rebuild",
+    (s) => s.effects.bloom.enabled,
+    (s, v) => resolveSettings({ effects: { bloom: { enabled: v } } }, s),
   );
   slider(
-    'strength',
-    'live',
+    "strength",
+    "live",
     0,
     2,
     0.01,
@@ -502,8 +613,8 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     (s) => s.effects.bloom.enabled,
   );
   slider(
-    'radius',
-    'live',
+    "radius",
+    "live",
     0,
     1.5,
     0.01,
@@ -512,8 +623,8 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     (s) => s.effects.bloom.enabled,
   );
   slider(
-    'threshold',
-    'live',
+    "threshold",
+    "live",
     0,
     1.5,
     0.01,
@@ -524,34 +635,40 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
 
   /* --- shadows ------------------------------------------------------------ */
 
-  group('shadows');
-  toggleRow('painted', 'rebuild', (s) => s.shadows.painted, (s, v) =>
-    resolveSettings({ shadows: { painted: v } }, s),
+  group("shadows");
+  toggleRow(
+    "painted",
+    "rebuild",
+    (s) => s.shadows.painted,
+    (s, v) => resolveSettings({ shadows: { painted: v } }, s),
   );
-  toggleRow('real-time', 'live', (s) => s.shadows.enabled, (s, v) =>
-    resolveSettings({ shadows: { enabled: v } }, s),
+  toggleRow(
+    "real-time",
+    "live",
+    (s) => s.shadows.enabled,
+    (s, v) => resolveSettings({ shadows: { enabled: v } }, s),
   );
   choice(
-    'filter',
-    'live',
+    "filter",
+    "live",
     SHADOW_TYPE_NAMES,
     (s) => s.shadows.type,
     (s, v) => resolveSettings({ shadows: { type: v } }, s),
     (s) => s.shadows.enabled,
   );
   choice(
-    'map size',
-    'rebuild',
-    ['512', '1024', '2048', '4096'] as const,
-    (s) => String(s.shadows.mapSize) as '512' | '1024' | '2048' | '4096',
+    "map size",
+    "rebuild",
+    ["512", "1024", "2048", "4096"] as const,
+    (s) => String(s.shadows.mapSize) as "512" | "1024" | "2048" | "4096",
     (s, v) => resolveSettings({ shadows: { mapSize: Number(v) } }, s),
     // No depth target is allocated while real-time shadows are off, so its size
     // is inert — the same as the filter and the casters beside it.
     (s) => s.shadows.enabled,
   );
   toggleRow(
-    'casters',
-    'rebuild',
+    "casters",
+    "rebuild",
     (s) => s.shadows.casters,
     (s, v) => resolveSettings({ shadows: { casters: v } }, s),
     (s) => s.shadows.casters && s.shadows.enabled,
@@ -560,8 +677,8 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   // *reading* it. It was in the URL vocabulary and had no control, which made
   // the panel silently narrower than the URL it writes.
   toggleRow(
-    'sample the map',
-    'rebuild',
+    "sample the map",
+    "rebuild",
     (s) => s.shadows.fetch,
     (s, v) => resolveSettings({ shadows: { fetch: v } }, s),
     (s) => s.shadows.fetch && s.shadows.enabled,
@@ -569,34 +686,70 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
 
   /* --- scene -------------------------------------------------------------- */
 
-  group('case & room');
-  colour('background', 'live', (s) => s.scene.background, (s, v) =>
-    resolveSettings({ scene: { background: v } }, s),
+  group("case & room");
+  colour(
+    "background",
+    "live",
+    (s) => s.scene.background,
+    (s, v) => resolveSettings({ scene: { background: v } }, s),
   );
-  colour('wood', 'live', (s) => s.materials.wood, (s, v) =>
-    resolveSettings({ materials: { wood: v } }, s),
+  colour(
+    "wood",
+    "live",
+    (s) => s.materials.wood,
+    (s, v) => resolveSettings({ materials: { wood: v } }, s),
   );
-  colour('backboard', 'live', (s) => s.materials.woodDark, (s, v) =>
-    resolveSettings({ materials: { woodDark: v } }, s),
+  colour(
+    "backboard",
+    "live",
+    (s) => s.materials.woodDark,
+    (s, v) => resolveSettings({ materials: { woodDark: v } }, s),
   );
-  slider('wood roughness', 'live', 0, 1, 0.01, (s) => s.materials.woodRoughness, (s, v) =>
-    resolveSettings({ materials: { woodRoughness: v } }, s),
+  slider(
+    "wood roughness",
+    "live",
+    0,
+    1,
+    0.01,
+    (s) => s.materials.woodRoughness,
+    (s, v) => resolveSettings({ materials: { woodRoughness: v } }, s),
   );
-  toggleRow('fog', 'live', (s) => s.scene.fog.enabled, (s, v) =>
-    resolveSettings({ scene: { fog: { enabled: v } } }, s),
+  toggleRow(
+    "fog",
+    "live",
+    (s) => s.scene.fog.enabled,
+    (s, v) => resolveSettings({ scene: { fog: { enabled: v } } }, s),
   );
-  slider('fog near', 'live', 1, 40, 0.5, (s) => s.scene.fog.near, (s, v) =>
-    resolveSettings({ scene: { fog: { near: v } } }, s),
+  slider(
+    "fog near",
+    "live",
+    1,
+    40,
+    0.5,
+    (s) => s.scene.fog.near,
+    (s, v) => resolveSettings({ scene: { fog: { near: v } } }, s),
   );
-  slider('fog far', 'live', 2, 80, 0.5, (s) => s.scene.fog.far, (s, v) =>
-    resolveSettings({ scene: { fog: { far: v } } }, s),
+  slider(
+    "fog far",
+    "live",
+    2,
+    80,
+    0.5,
+    (s) => s.scene.fog.far,
+    (s, v) => resolveSettings({ scene: { fog: { far: v } } }, s),
   );
 
   /* --- renderer ----------------------------------------------------------- */
 
-  group('renderer');
-  slider('pixel ratio cap', 'live', 0.5, 3, 0.1, (s) => s.renderer.maxPixelRatio, (s, v) =>
-    resolveSettings({ renderer: { maxPixelRatio: v } }, s),
+  group("renderer");
+  slider(
+    "pixel ratio cap",
+    "live",
+    0.5,
+    3,
+    0.1,
+    (s) => s.renderer.maxPixelRatio,
+    (s, v) => resolveSettings({ renderer: { maxPixelRatio: v } }, s),
   );
   /**
    * Superseded while bloom is on, because MSAA is not what is running.
@@ -609,8 +762,8 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    * prevent, and the only one that was in code written for it.
    */
   const aa = toggleRow(
-    'antialias',
-    'reload',
+    "antialias",
+    "reload",
     (s) => s.renderer.antialias,
     (s, v) => resolveSettings({ renderer: { antialias: v } }, s),
     // Red while bloom is on: the MSAA this asks for is not what is running.
@@ -619,33 +772,41 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   const syncAntialias = (): void => {
     const superseded = settings.effects.bloom.enabled;
     aa.input.disabled = superseded;
-    aa.row.style.opacity = superseded ? '0.55' : '1';
-    aa.row.title = superseded ? 'bloom is on, so antialiasing is an SMAA pass rather than MSAA' : '';
+    aa.row.style.opacity = superseded ? "0.55" : "1";
+    aa.row.title = superseded
+      ? "bloom is on, so antialiasing is an SMAA pass rather than MSAA"
+      : "";
   };
   afterApply.push(syncAntialias);
   syncAntialias();
-  toggleRow('resize guard', 'live', (s) => s.renderer.guardResize, (s, v) =>
-    resolveSettings({ renderer: { guardResize: v } }, s),
+  toggleRow(
+    "resize guard",
+    "live",
+    (s) => s.renderer.guardResize,
+    (s, v) => resolveSettings({ renderer: { guardResize: v } }, s),
   );
 
   /* --- export ------------------------------------------------------------- */
 
-  const exportButton = document.createElement('button');
-  exportButton.textContent = 'copy settings JSON';
+  const exportButton = document.createElement("button");
+  exportButton.textContent = "copy settings JSON";
   applyButtonStyle(exportButton);
-  exportButton.style.width = '100%';
-  exportButton.style.marginTop = '0.5rem';
-  exportButton.addEventListener('click', () => {
+  exportButton.style.width = "100%";
+  exportButton.style.marginTop = "0.5rem";
+  exportButton.addEventListener("click", () => {
     void navigator.clipboard.writeText(JSON.stringify(settings, null, 2));
-    exportButton.textContent = 'copied — paste into shelf-settings.ts';
-    window.setTimeout(() => (exportButton.textContent = 'copy settings JSON'), 2500);
+    exportButton.textContent = "copied — paste into shelf-settings.ts";
+    window.setTimeout(
+      () => (exportButton.textContent = "copy settings JSON"),
+      2500,
+    );
   });
 
-  const resetButton = document.createElement('button');
-  resetButton.textContent = 'reset to shipped defaults';
+  const resetButton = document.createElement("button");
+  resetButton.textContent = "reset to shipped defaults";
   applyButtonStyle(resetButton);
-  resetButton.style.width = '100%';
-  resetButton.addEventListener('click', () => {
+  resetButton.style.width = "100%";
+  resetButton.addEventListener("click", () => {
     apply(DEFAULT_SETTINGS);
     // Every control moved at once, so every control re-reads itself. This has to
     // happen whether or not a rebuild is available — `onRebuild` is documented
@@ -665,10 +826,10 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   const tick = (): void => {
     const stats = handle.stats();
     readout.textContent = [
-      `fps      ${stats.fps === 0 ? '—' : stats.fps.toFixed(0).padStart(2)}   draws ${String(stats.calls)}`,
+      `fps      ${stats.fps === 0 ? "—" : stats.fps.toFixed(0).padStart(2)}   draws ${String(stats.calls)}`,
       `textures ${String(stats.textures)}   tris ${String(stats.triangles)}`,
       `buffer   ${String(stats.bufferWidth)}x${String(stats.bufferHeight)} @${stats.pixelRatio.toFixed(2)}`,
-    ].join('\n');
+    ].join("\n");
   };
 
   tick();
@@ -690,7 +851,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
  * cannot be anything else — `antialias` is a context-creation attribute, and no
  * amount of bookkeeping makes it live.
  */
-type Klass = 'live' | 'rebuild' | 'reload';
+type Klass = "live" | "rebuild" | "reload";
 
 /**
  * What a lamp says, and it is about **state**, not about category.
@@ -712,55 +873,62 @@ type Klass = 'live' | 'rebuild' | 'reload';
  * without a tooltip: a control that cannot affect anything says so in the same
  * place, in the same language, as one that is simply switched off.
  */
-type Lamp = 'on' | 'off' | 'pending';
+type Lamp = "on" | "off" | "pending";
 
-const LAMP: Record<Lamp, { readonly colour: string; readonly glow: string; readonly help: string }> = {
+const LAMP: Record<
+  Lamp,
+  { readonly colour: string; readonly glow: string; readonly help: string }
+> = {
   on: {
-    colour: '#5ee08a',
-    glow: 'rgba(94, 224, 138, 0.75)',
-    help: 'on — taking effect now',
+    colour: "#5ee08a",
+    glow: "rgba(94, 224, 138, 0.75)",
+    help: "on — taking effect now",
   },
   off: {
-    colour: '#e05a5a',
-    glow: 'rgba(224, 90, 90, 0.6)',
-    help: 'off — this setting is doing nothing at the moment',
+    colour: "#e05a5a",
+    glow: "rgba(224, 90, 90, 0.6)",
+    help: "off — this setting is doing nothing at the moment",
   },
   pending: {
-    colour: '#e8b64c',
-    glow: 'rgba(232, 182, 76, 0.8)',
-    help: 'changed, and the shelf has not caught up — rebuild or reload to apply',
+    colour: "#e8b64c",
+    glow: "rgba(232, 182, 76, 0.8)",
+    help: "changed, and the shelf has not caught up — rebuild or reload to apply",
   },
 };
 
 const KLASS_HELP: Record<Klass, string> = {
-  live: 'changes the shelf immediately',
-  rebuild: 'needs the shelf rebuilt — press the rebuild button',
-  reload: 'needs a new WebGL context — reload the page',
+  live: "changes the shelf immediately",
+  rebuild: "needs the shelf rebuilt — press the rebuild button",
+  reload: "needs a new WebGL context — reload the page",
 };
 
 /** Diameter of the lit part. The slot around it is `LAMP_SLOT`. */
 const LAMP_SIZE = 10;
 const LAMP_SLOT = 18;
 
-function makeLamp(): { slot: HTMLElement; set: (state: Lamp, klass: Klass) => void } {
-  const slot = document.createElement('span');
+function makeLamp(): {
+  slot: HTMLElement;
+  set: (state: Lamp, klass: Klass) => void;
+} {
+  const slot = document.createElement("span");
   Object.assign(slot.style, {
     flex: `0 0 ${String(LAMP_SLOT)}px`,
     height: `${String(LAMP_SLOT)}px`,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
   } satisfies Partial<CSSStyleDeclaration>);
 
-  const led = document.createElement('span');
+  const led = document.createElement("span");
   Object.assign(led.style, {
     width: `${String(LAMP_SIZE)}px`,
     height: `${String(LAMP_SIZE)}px`,
-    borderRadius: '50%',
+    borderRadius: "50%",
     // A little inner highlight, so it reads as a lit lens rather than a flat
     // circle — the difference between an indicator and a bullet point.
-    backgroundImage: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.55), transparent 60%)',
-    transition: 'background-color 120ms linear, box-shadow 120ms linear',
+    backgroundImage:
+      "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.55), transparent 60%)",
+    transition: "background-color 120ms linear, box-shadow 120ms linear",
   } satisfies Partial<CSSStyleDeclaration>);
   slot.append(led);
 
@@ -776,32 +944,36 @@ function makeLamp(): { slot: HTMLElement; set: (state: Lamp, klass: Klass) => vo
   };
 }
 
-function row(label: string, _klass: Klass, ...controls: HTMLElement[]): HTMLElement {
-  const line = document.createElement('label');
+function row(
+  label: string,
+  _klass: Klass,
+  ...controls: HTMLElement[]
+): HTMLElement {
+  const line = document.createElement("label");
   Object.assign(line.style, {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.4rem',
-    padding: '0.05rem 0',
+    display: "flex",
+    alignItems: "center",
+    gap: "0.4rem",
+    padding: "0.05rem 0",
     // Without this a flex item refuses to shrink below its content width, which
     // is what pushed every checkbox off the right-hand edge behind a horizontal
     // scrollbar.
-    minWidth: '0',
+    minWidth: "0",
   } satisfies Partial<CSSStyleDeclaration>);
 
-  const text = document.createElement('span');
+  const text = document.createElement("span");
   text.textContent = label;
   Object.assign(text.style, {
-    flex: '1 1 auto',
-    minWidth: '0',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    flex: "1 1 auto",
+    minWidth: "0",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   } satisfies Partial<CSSStyleDeclaration>);
 
   // Controls keep their size; the label is what gives way. A slider that shrank
   // would be unusable long before a truncated word is unreadable.
-  for (const control of controls) control.style.flex = '0 0 auto';
+  for (const control of controls) control.style.flex = "0 0 auto";
 
   line.append(text, ...controls);
   return line;
@@ -815,25 +987,29 @@ function row(label: string, _klass: Klass, ...controls: HTMLElement[]): HTMLElem
  * while the shelf did not is the failure the whole report type exists to make
  * impossible to miss.
  */
-function showReport(status: HTMLElement, report: ApplyReport, canRebuild: boolean): void {
+function showReport(
+  status: HTMLElement,
+  report: ApplyReport,
+  canRebuild: boolean,
+): void {
   const lines: string[] = [];
 
   // First, because it is the one no button can fix.
-  if (report.refused.length > 0) lines.push(`✗ ${report.refused.join(', ')}`);
+  if (report.refused.length > 0) lines.push(`✗ ${report.refused.join(", ")}`);
 
   if (report.needsReload.length > 0) {
-    lines.push(`⟳ reload to apply: ${report.needsReload.join(', ')}`);
+    lines.push(`⟳ reload to apply: ${report.needsReload.join(", ")}`);
   }
   if (report.needsRebuild.length > 0) {
     lines.push(
-      `${canRebuild ? '⃝' : '⚠'} not applied yet: ${report.needsRebuild.join(', ')}${
-        canRebuild ? '' : ' (no rebuild available — reload)'
+      `${canRebuild ? "⃝" : "⚠"} not applied yet: ${report.needsRebuild.join(", ")}${
+        canRebuild ? "" : " (no rebuild available — reload)"
       }`,
     );
   }
-  if (report.applied.length > 0) lines.push(`✓ ${report.applied.join(', ')}`);
+  if (report.applied.length > 0) lines.push(`✓ ${report.applied.join(", ")}`);
 
-  status.textContent = lines.join('\n');
+  status.textContent = lines.join("\n");
 }
 
 function format(value: number): string {
@@ -844,13 +1020,13 @@ function format(value: number): string {
 
 function applyRootStyle(root: HTMLElement): void {
   Object.assign(root.style, {
-    position: 'absolute',
-    top: '0.5rem',
-    right: '0.5rem',
-    zIndex: '11',
-    width: 'min(19rem, calc(100vw - 1rem))',
-    maxHeight: 'calc(100vh - 1rem)',
-    overflowY: 'auto',
+    position: "absolute",
+    top: "0.5rem",
+    right: "0.5rem",
+    zIndex: "11",
+    width: "min(19rem, calc(100vw - 1rem))",
+    maxHeight: "calc(100vh - 1rem)",
+    overflowY: "auto",
     /**
      * Never sideways.
      *
@@ -859,52 +1035,52 @@ function applyRootStyle(root: HTMLElement): void {
      * — the controls were off-screen on the axis nobody thinks to scroll. The
      * rows shrink their labels instead; see `row`.
      */
-    overflowX: 'hidden',
-    padding: '0.5rem 0.6rem',
-    borderRadius: '0.4rem',
-    background: 'rgba(10, 8, 7, 0.86)',
-    color: '#e7dccd',
-    font: '11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace',
+    overflowX: "hidden",
+    padding: "0.5rem 0.6rem",
+    borderRadius: "0.4rem",
+    background: "rgba(10, 8, 7, 0.86)",
+    color: "#e7dccd",
+    font: "11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace",
   } satisfies Partial<CSSStyleDeclaration>);
 }
 
 function applyReadoutStyle(node: HTMLElement): void {
   Object.assign(node.style, {
-    margin: '0 0 0.4rem',
-    color: '#9ff0b4',
-    whiteSpace: 'pre',
-    font: 'inherit',
+    margin: "0 0 0.4rem",
+    color: "#9ff0b4",
+    whiteSpace: "pre",
+    font: "inherit",
   } satisfies Partial<CSSStyleDeclaration>);
 }
 
 function applyStatusStyle(node: HTMLElement): void {
   Object.assign(node.style, {
-    marginTop: '0.4rem',
-    whiteSpace: 'pre-wrap',
-    opacity: '0.85',
-    fontSize: '10px',
+    marginTop: "0.4rem",
+    whiteSpace: "pre-wrap",
+    opacity: "0.85",
+    fontSize: "10px",
   } satisfies Partial<CSSStyleDeclaration>);
 }
 
 function applyButtonStyle(button: HTMLElement): void {
   Object.assign(button.style, {
-    marginTop: '0.25rem',
-    padding: '0.2rem 0.5rem',
-    border: '1px solid rgba(231, 220, 205, 0.35)',
-    borderRadius: '0.25rem',
-    background: 'transparent',
-    color: 'inherit',
-    font: 'inherit',
-    cursor: 'pointer',
+    marginTop: "0.25rem",
+    padding: "0.2rem 0.5rem",
+    border: "1px solid rgba(231, 220, 205, 0.35)",
+    borderRadius: "0.25rem",
+    background: "transparent",
+    color: "inherit",
+    font: "inherit",
+    cursor: "pointer",
   } satisfies Partial<CSSStyleDeclaration>);
 }
 
 function applyInputStyle(node: HTMLElement): void {
   Object.assign(node.style, {
-    background: 'rgba(255,255,255,0.06)',
-    color: 'inherit',
-    border: '1px solid rgba(231, 220, 205, 0.25)',
-    borderRadius: '0.2rem',
-    font: 'inherit',
+    background: "rgba(255,255,255,0.06)",
+    color: "inherit",
+    border: "1px solid rgba(231, 220, 205, 0.25)",
+    borderRadius: "0.2rem",
+    font: "inherit",
   } satisfies Partial<CSSStyleDeclaration>);
 }

@@ -20,15 +20,15 @@
  * See docs/gates.md, row G17 (deploy-branch).
  */
 
-import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
-import { GATED_SERIES } from '../scripts/lib/metrics-read.ts';
-import { RECORD_DIR } from '../scripts/lib/metrics-record.ts';
-import { renderMetrics, type RunFacts } from '../scripts/lib/metrics.ts';
-import { readRepoFile, REPO_ROOT } from './repo.ts';
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
+import { GATED_SERIES } from "../scripts/lib/metrics-read.ts";
+import { RECORD_DIR } from "../scripts/lib/metrics-record.ts";
+import { renderMetrics, type RunFacts } from "../scripts/lib/metrics.ts";
+import { readRepoFile, REPO_ROOT } from "./repo.ts";
 
 /**
  * A nightly record written a minute ago — every gated series, so G39
@@ -47,18 +47,18 @@ import { readRepoFile, REPO_ROOT } from './repo.ts';
  */
 function freshNightly(): { name: string; document: string } {
   const timestamp = Math.floor(Date.now() / 1000) - 60;
-  const sha = 'cccccccc';
+  const sha = "cccccccc";
   return {
     name: `${String(timestamp)}-${sha}.prom`,
     document: renderMetrics({
       timestamp,
       commit: sha.repeat(5),
-      event: 'schedule',
-      runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/1',
+      event: "schedule",
+      runUrl: "https://github.com/mephistopheles4/stacks/actions/runs/1",
       // Nobody measured a window for a record this test invented.
-      prWindow: 'unknown',
+      prWindow: "unknown",
       expected: GATED_SERIES,
-      mutationScore: [{ scope: 'packages/core/src', score: 0.7171 }],
+      mutationScore: [{ scope: "packages/core/src", score: 0.7171 }],
       gateSuiteRuntime: 10,
       mutationRunRuntime: 1275,
       liveExclusions: { live: 0, declared: 27 },
@@ -67,7 +67,13 @@ function freshNightly(): { name: string; document: string } {
       // here. That is the same trap this file's header records, arriving by a
       // different route: not a calendar this time, but a list that grew.
       complexity: [
-        { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
+        {
+          scope: "packages/core/src",
+          functions: 120,
+          mass: 340,
+          massOver10: 88,
+          max: 21,
+        },
       ],
     } satisfies RunFacts),
   };
@@ -96,35 +102,47 @@ function freshNightly(): { name: string; document: string } {
  * decision, and this is the other decision on the path to the sentinel.
  */
 function repoOn(branch: string): string {
-  const dir = mkdtempSync(join(tmpdir(), 'stacks-branch-'));
+  const dir = mkdtempSync(join(tmpdir(), "stacks-branch-"));
   const git = (...args: string[]): void => {
-    execFileSync('git', args, { cwd: dir, stdio: 'ignore' });
+    execFileSync("git", args, { cwd: dir, stdio: "ignore" });
   };
   const commit = (message: string): string => {
-    git('add', '-A');
-    git('-c', 'user.name=gate', '-c', 'user.email=gate@example.invalid', 'commit',
-        '--allow-empty', '-m', message, '--quiet');
-    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+    git("add", "-A");
+    git(
+      "-c",
+      "user.name=gate",
+      "-c",
+      "user.email=gate@example.invalid",
+      "commit",
+      "--allow-empty",
+      "-m",
+      message,
+      "--quiet",
+    );
+    return execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: dir,
+      encoding: "utf8",
+    }).trim();
   };
-  git('init', '--quiet');
+  git("init", "--quiet");
   // An unborn branch has no HEAD to abbreviate — `rev-parse` fails, and the
   // guard treats a git failure as "not a checkout" and allows the deploy. So
   // the repo needs a commit before the branch name means anything.
-  commit('branch fixture');
-  git('branch', '-M', branch);
+  commit("branch fixture");
+  git("branch", "-M", branch);
 
   const record = freshNightly();
   mkdirSync(join(dir, RECORD_DIR), { recursive: true });
-  writeFileSync(join(dir, RECORD_DIR, record.name), record.document, 'utf8');
-  git('update-ref', 'refs/remotes/origin/metrics', commit('records'));
+  writeFileSync(join(dir, RECORD_DIR, record.name), record.document, "utf8");
+  git("update-ref", "refs/remotes/origin/metrics", commit("records"));
   // The record is on the mirrored ref, not on the branch under test — the
   // working tree goes back to the fixture it was, and HEAD stays on `branch`.
-  git('reset', '--hard', '--quiet', 'HEAD~1');
+  git("reset", "--hard", "--quiet", "HEAD~1");
   return dir;
 }
 
-const ON_MAIN = repoOn('main');
-const OFF_MAIN = repoOn('some-feature');
+const ON_MAIN = repoOn("main");
+const OFF_MAIN = repoOn("some-feature");
 
 afterAll(() => {
   for (const dir of [ON_MAIN, OFF_MAIN]) {
@@ -148,39 +166,51 @@ afterAll(() => {
  * beats `.env`, so this holds on a machine that has a working deploy configured
  * and on CI, which has no `.env` at all.
  */
-function deploy(
-  options: { repo?: string; args?: readonly string[] } = {},
-): { status: number; output: string } {
+function deploy(options: { repo?: string; args?: readonly string[] } = {}): {
+  status: number;
+  output: string;
+} {
   const result = spawnSync(
     process.execPath,
-    ['--import', 'tsx', join(REPO_ROOT, 'scripts', 'deploy.ts'), ...(options.args ?? [])],
+    [
+      "--import",
+      "tsx",
+      join(REPO_ROOT, "scripts", "deploy.ts"),
+      ...(options.args ?? []),
+    ],
     {
       cwd: REPO_ROOT,
-      encoding: 'utf8',
+      encoding: "utf8",
       env: {
         ...process.env,
-        SITE_URL: 'https://example.invalid',
-        STACKS_VAULT: join(REPO_ROOT, 'no-such-vault-for-this-gate'),
+        SITE_URL: "https://example.invalid",
+        STACKS_VAULT: join(REPO_ROOT, "no-such-vault-for-this-gate"),
         // Absent, the guard reads this checkout — which is what the last test
         // here wants and what every other test here must not depend on.
         ...(options.repo === undefined
           ? {}
-          : { GIT_DIR: join(options.repo, '.git'), GIT_WORK_TREE: options.repo }),
+          : {
+              GIT_DIR: join(options.repo, ".git"),
+              GIT_WORK_TREE: options.repo,
+            }),
       },
     },
   );
-  return { status: result.status ?? -1, output: `${result.stdout}${result.stderr}` };
+  return {
+    status: result.status ?? -1,
+    output: `${result.stdout}${result.stderr}`,
+  };
 }
 
 function currentBranch(): string {
-  return execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+  return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
     cwd: REPO_ROOT,
-    encoding: 'utf8',
+    encoding: "utf8",
   }).trim();
 }
 
 /** The vault refusal — proof the run got past the branch guard. */
-const PAST_THE_GUARD = 'STACKS_VAULT points at nothing';
+const PAST_THE_GUARD = "STACKS_VAULT points at nothing";
 
 /**
  * The trend-record line — proof the run got past the branch guard on a
@@ -192,10 +222,10 @@ const PAST_THE_GUARD = 'STACKS_VAULT points at nothing';
  * for the one test here that reads the real checkout, where `PAST_THE_GUARD`
  * lies past a check the environment decides.
  */
-const PAST_THE_STEP = 'trend record —';
+const PAST_THE_STEP = "trend record —";
 
-describe('G17 — deploy publishes main', () => {
-  it('reaches the branch decision at all', () => {
+describe("G17 — deploy publishes main", () => {
+  it("reaches the branch decision at all", () => {
     // Everything below distinguishes two messages. If the script began failing
     // earlier — a syntax error, a missing import — every assertion would still
     // be comparing strings, and the ones expecting a refusal would pass for the
@@ -203,56 +233,68 @@ describe('G17 — deploy publishes main', () => {
     expect(deploy({ repo: ON_MAIN }).output).toContain(PAST_THE_GUARD);
   });
 
-  it('lets main through', () => {
+  it("lets main through", () => {
     const { output } = deploy({ repo: ON_MAIN });
 
-    expect(output, 'on main, the guard must not be what stops the deploy').toContain(
-      PAST_THE_GUARD,
-    );
-    expect(output).not.toContain('not main');
+    expect(
+      output,
+      "on main, the guard must not be what stops the deploy",
+    ).toContain(PAST_THE_GUARD);
+    expect(output).not.toContain("not main");
   });
 
-  it('refuses anything else, and says which branch and how to override', () => {
+  it("refuses anything else, and says which branch and how to override", () => {
     const { status, output } = deploy({ repo: OFF_MAIN });
 
     expect(status).toBe(1);
-    expect(output).toContain('not main');
+    expect(output).toContain("not main");
     // Naming the branch is what proves the guard read one rather than matching
     // a constant — and a bare "wrong branch" leaves you checking which.
-    expect(output).toContain('some-feature');
-    expect(output, 'a refusal has to say how to override it').toContain('--any-branch');
+    expect(output).toContain("some-feature");
+    expect(output, "a refusal has to say how to override it").toContain(
+      "--any-branch",
+    );
     expect(output).not.toContain(PAST_THE_GUARD);
   });
 
-  it('refuses a detached HEAD, which has no name to record', () => {
-    const detached = repoOn('doomed');
-    execFileSync('git', ['checkout', '--detach', '--quiet'], { cwd: detached, stdio: 'ignore' });
+  it("refuses a detached HEAD, which has no name to record", () => {
+    const detached = repoOn("doomed");
+    execFileSync("git", ["checkout", "--detach", "--quiet"], {
+      cwd: detached,
+      stdio: "ignore",
+    });
 
-    expect(deploy({ repo: detached }).output).toContain('detached HEAD');
+    expect(deploy({ repo: detached }).output).toContain("detached HEAD");
     rmSync(detached, { recursive: true, force: true });
   });
 
-  it('exempts --dry-run and --check-only, which upload nothing', () => {
+  it("exempts --dry-run and --check-only, which upload nothing", () => {
     // A dry run from a feature branch is exactly how someone checks this path
     // before merging it, so blocking it would punish the careful case.
-    expect(deploy({ repo: OFF_MAIN, args: ['--dry-run'] }).output).toContain(PAST_THE_GUARD);
-    expect(deploy({ repo: OFF_MAIN, args: ['--check-only'] }).output).not.toContain('not main');
+    expect(deploy({ repo: OFF_MAIN, args: ["--dry-run"] }).output).toContain(
+      PAST_THE_GUARD,
+    );
+    expect(
+      deploy({ repo: OFF_MAIN, args: ["--check-only"] }).output,
+    ).not.toContain("not main");
   });
 
-  it('takes --any-branch as the override, and nothing that merely resembles it', () => {
-    expect(deploy({ repo: OFF_MAIN, args: ['--any-branch'] }).output).toContain(PAST_THE_GUARD);
+  it("takes --any-branch as the override, and nothing that merely resembles it", () => {
+    expect(deploy({ repo: OFF_MAIN, args: ["--any-branch"] }).output).toContain(
+      PAST_THE_GUARD,
+    );
 
     // An override you can stumble into is not one. These are what a
     // half-remembered flag becomes.
-    for (const flag of ['--any', '--branch', '--anybranch', '--any_branch']) {
+    for (const flag of ["--any", "--branch", "--anybranch", "--any_branch"]) {
       expect(
         deploy({ repo: OFF_MAIN, args: [flag] }).output,
         `${flag} must not act as the override`,
-      ).toContain('not main');
+      ).toContain("not main");
     }
   });
 
-  it('ships a command that supplies no argv of its own', () => {
+  it("ships a command that supplies no argv of its own", () => {
     // ⚠️ **The remedy `docs/gate-register.md` named for this row and did not
     // build.** Every case here spawns `scripts/deploy.ts` directly, so the argv
     // the *shipped* command supplies is outside the gate's reach: baking
@@ -266,17 +308,19 @@ describe('G17 — deploy publishes main', () => {
     // warning with its gate still green. One assertion, in the row whose remedy
     // it is, rather than a copy in each.
     const scripts = (
-      JSON.parse(readRepoFile('package.json')) as { scripts: Record<string, string> }
+      JSON.parse(readRepoFile("package.json")) as {
+        scripts: Record<string, string>;
+      }
     ).scripts;
 
     expect(
-      scripts['deploy:site'],
-      'deploy:site must pass no arguments of its own — a flag baked in here is an ' +
-        'override that appears in nobody shell history and reddens nothing',
-    ).toBe('tsx scripts/deploy.ts');
+      scripts["deploy:site"],
+      "deploy:site must pass no arguments of its own — a flag baked in here is an " +
+        "override that appears in nobody shell history and reddens nothing",
+    ).toBe("tsx scripts/deploy.ts");
   });
 
-  it('reads the checkout it is actually in, not a fixture', () => {
+  it("reads the checkout it is actually in, not a fixture", () => {
     // Every test above redirects git at a scratch repository, which is what
     // makes both directions testable at all. This one does not, so it is the
     // only evidence that the guard is wired to the real thing. It asserts
@@ -301,9 +345,15 @@ describe('G17 — deploy publishes main', () => {
     // branch of it. The old sentinel also held only while the owner's local
     // mirror was fresh, and would have failed on their machine after four
     // quiet days.
-    if (branch === 'main') {
-      expect(output, 'on main, the guard must let the run reach step 0b').toContain(PAST_THE_STEP);
-      expect(output, 'the branch guard must not be what stopped it').not.toContain('not main');
+    if (branch === "main") {
+      expect(
+        output,
+        "on main, the guard must let the run reach step 0b",
+      ).toContain(PAST_THE_STEP);
+      expect(
+        output,
+        "the branch guard must not be what stopped it",
+      ).not.toContain("not main");
     } else expect(output).toContain(branch);
   });
 });

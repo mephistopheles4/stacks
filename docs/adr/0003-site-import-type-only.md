@@ -1,6 +1,6 @@
 # The site may only `import type` from `@stacks/core`
 
-A *value* import from `@stacks/core` drags `node:fs` and sharp into the browser bundle and the shelf silently never boots. The bar is statement-level: inline `import { type X }` is rejected too, because under bundler resolution the statement survives type erasure.
+A _value_ import from `@stacks/core` drags `node:fs` and sharp into the browser bundle and the shelf silently never boots. The bar is statement-level: inline `import { type X }` is rejected too, because under bundler resolution the statement survives type erasure.
 
 Runtime values the site genuinely shares live in a pure subpath, `@stacks/core/shelf-order`, which imports nothing. The companion rule — no logic in `.astro` files — exists because those files cannot be typechecked at all.
 

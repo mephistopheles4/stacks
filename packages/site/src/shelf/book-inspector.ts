@@ -1,10 +1,10 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { LibraryBook } from '@stacks/core';
-import { toRows } from './books.ts';
-import { placeShelf } from './placement.ts';
-import { addLighting, buildBook, COVERS } from './scene.ts';
-import type { ShelfSettings } from './shelf-settings.ts';
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import type { LibraryBook } from "@stacks/core";
+import { toRows } from "./books.ts";
+import { placeShelf } from "./placement.ts";
+import { addLighting, buildBook, COVERS } from "./scene.ts";
+import type { ShelfSettings } from "./shelf-settings.ts";
 
 /**
  * One book, alone, from every angle — `?solo`.
@@ -104,8 +104,13 @@ export function mountBookInspector(
   const placement = placeShelf(rows)[0]?.[0];
   if (entry === undefined || placement === undefined) return undefined;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: settings.renderer.antialias });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.renderer.maxPixelRatio));
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: settings.renderer.antialias,
+  });
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, settings.renderer.maxPixelRatio),
+  );
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(settings.scene.background);
@@ -132,7 +137,11 @@ export function mountBookInspector(
    */
   addLighting(scene, entry.height, settings);
 
-  camera.position.set(entry.height * 0.9, entry.height * 0.55, entry.height * 1.5);
+  camera.position.set(
+    entry.height * 0.9,
+    entry.height * 0.55,
+    entry.height * 1.5,
+  );
   controls.target.set(0, 0, 0);
   controls.update();
 
@@ -163,7 +172,11 @@ export function mountBookInspector(
 
   window.__solo = {
     title: chosen.title,
-    size: { thickness: entry.thickness, height: entry.height, depth: placement.frontZ * 2 },
+    size: {
+      thickness: entry.thickness,
+      height: entry.height,
+      depth: placement.frontZ * 2,
+    },
     binding: entry.binding,
     look,
   };

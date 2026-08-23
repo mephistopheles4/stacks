@@ -36,15 +36,21 @@
  * without touching bytes; there is no shared file for two runs to contend on.
  */
 
-import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { REPO_ROOT } from './lib/repo-root.ts';
-import { gitOutput, gitStatus } from './lib/git.ts';
-import { runExe } from './lib/run.ts';
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { REPO_ROOT } from "./lib/repo-root.ts";
+import { gitOutput, gitStatus } from "./lib/git.ts";
+import { runExe } from "./lib/run.ts";
 
-const BRANCH = 'metrics';
-const SOURCE = join(REPO_ROOT, process.argv[2] ?? 'metrics');
+const BRANCH = "metrics";
+const SOURCE = join(REPO_ROOT, process.argv[2] ?? "metrics");
 
 /**
  * Per-run, and never `metrics`. `git switch --orphan` is the one command here
@@ -60,15 +66,15 @@ const STAGING = `metrics-staging-${String(process.pid)}`;
  * clone, which is how the branch-already-exists bug was found.
  */
 const AUTHOR = [
-  '-c',
-  'user.name=github-actions[bot]',
-  '-c',
-  'user.email=41898282+github-actions[bot]@users.noreply.github.com',
+  "-c",
+  "user.name=github-actions[bot]",
+  "-c",
+  "user.email=41898282+github-actions[bot]@users.noreply.github.com",
 ];
 
 function records(): string[] {
   try {
-    return readdirSync(SOURCE).filter((name) => name.endsWith('.prom'));
+    return readdirSync(SOURCE).filter((name) => name.endsWith(".prom"));
   } catch {
     return [];
   }
@@ -77,8 +83,11 @@ function records(): string[] {
 function remoteHasBranch(): boolean {
   // `ls-remote --heads` prints nothing and exits 0 for a branch that is not
   // there, so the output is the answer and the exit code is not.
-  const found = gitOutput(['ls-remote', '--heads', 'origin', BRANCH], REPO_ROOT);
-  return found !== undefined && found !== '';
+  const found = gitOutput(
+    ["ls-remote", "--heads", "origin", BRANCH],
+    REPO_ROOT,
+  );
+  return found !== undefined && found !== "";
 }
 
 /**
@@ -88,8 +97,8 @@ function remoteHasBranch(): boolean {
  * how a reader learns to skim past the line that matters.
  */
 function cleanUp(worktree: string, staged: boolean): void {
-  gitStatus(['worktree', 'remove', '--force', worktree], REPO_ROOT);
-  if (staged) gitStatus(['branch', '-D', STAGING], REPO_ROOT);
+  gitStatus(["worktree", "remove", "--force", worktree], REPO_ROOT);
+  if (staged) gitStatus(["branch", "-D", STAGING], REPO_ROOT);
 }
 
 /**
@@ -116,54 +125,76 @@ function main(): number {
     return 1;
   }
 
-  const worktree = join(mkdtempSync(join(tmpdir(), 'stacks-metrics-')), 'record');
+  const worktree = join(
+    mkdtempSync(join(tmpdir(), "stacks-metrics-")),
+    "record",
+  );
   let staged = false;
 
   try {
     if (remoteHasBranch()) {
-      runExe('git', ['fetch', 'origin', BRANCH, '--depth=1'], REPO_ROOT);
-      runExe('git', ['worktree', 'add', '--detach', worktree, 'FETCH_HEAD'], REPO_ROOT);
+      runExe("git", ["fetch", "origin", BRANCH, "--depth=1"], REPO_ROOT);
+      runExe(
+        "git",
+        ["worktree", "add", "--detach", worktree, "FETCH_HEAD"],
+        REPO_ROOT,
+      );
     } else {
       // `--orphan` rather than branching off main: the record shares no history
       // with the code, and a metrics branch carrying the whole tree would make
       // every `trend:sync` fetch the repository twice.
-      runExe('git', ['worktree', 'add', '--detach', worktree, 'HEAD'], REPO_ROOT);
-      runExe('git', ['switch', '--orphan', STAGING], worktree);
+      runExe(
+        "git",
+        ["worktree", "add", "--detach", worktree, "HEAD"],
+        REPO_ROOT,
+      );
+      runExe("git", ["switch", "--orphan", STAGING], worktree);
       staged = true;
-      gitStatus(['rm', '-rf', '--quiet', '.'], worktree);
+      gitStatus(["rm", "-rf", "--quiet", "."], worktree);
     }
 
-    const destination = join(worktree, 'metrics');
+    const destination = join(worktree, "metrics");
     mkdirSync(destination, { recursive: true });
-    for (const name of found) copyFileSync(join(SOURCE, name), join(destination, name));
+    for (const name of found)
+      copyFileSync(join(SOURCE, name), join(destination, name));
 
-    runExe('git', ['add', 'metrics'], worktree);
+    runExe("git", ["add", "metrics"], worktree);
 
     // `diff --cached --quiet` exits 1 when there *is* something staged, which is
     // the case this wants to proceed on — an exit code as an answer, which is
     // exactly what `gitStatus` is for.
-    if (gitStatus(['diff', '--cached', '--quiet'], worktree) === 0) {
-      console.log('nothing new to record');
+    if (gitStatus(["diff", "--cached", "--quiet"], worktree) === 0) {
+      console.log("nothing new to record");
       return 0;
     }
 
-    const subject = `metrics: ${process.env.GITHUB_SHA ?? 'local'} (${process.env.GITHUB_EVENT_NAME ?? 'manual'})`;
-    runExe('git', [...AUTHOR, 'commit', '-m', subject], worktree);
+    const subject = `metrics: ${process.env.GITHUB_SHA ?? "local"} (${process.env.GITHUB_EVENT_NAME ?? "manual"})`;
+    runExe("git", [...AUTHOR, "commit", "-m", subject], worktree);
 
     for (let attempt = 1; attempt <= 3; attempt += 1) {
-      if (gitStatus(['push', 'origin', `HEAD:refs/heads/${BRANCH}`], worktree) === 0) return 0;
+      if (
+        gitStatus(["push", "origin", `HEAD:refs/heads/${BRANCH}`], worktree) ===
+        0
+      )
+        return 0;
 
       if (attempt === 3) {
-        console.error('could not push the record after three attempts');
+        console.error("could not push the record after three attempts");
         return 1;
       }
-      console.error(`push ${String(attempt)} rejected; rebasing on the branch tip and retrying`);
-      runExe('git', [...AUTHOR, 'pull', '--rebase', 'origin', BRANCH], worktree);
+      console.error(
+        `push ${String(attempt)} rejected; rebasing on the branch tip and retrying`,
+      );
+      runExe(
+        "git",
+        [...AUTHOR, "pull", "--rebase", "origin", BRANCH],
+        worktree,
+      );
     }
     return 1;
   } finally {
     cleanUp(worktree, staged);
-    rmSync(join(worktree, '..'), { recursive: true, force: true });
+    rmSync(join(worktree, ".."), { recursive: true, force: true });
   }
 }
 

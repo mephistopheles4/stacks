@@ -1,26 +1,26 @@
 # 2026-08-08 — the collisions, and the gate that can finally see them
 
 The owner looked at the propped books in a close-up and marked two places where
-one board was plainly *inside* another. Both were real, and neither moved any
+one board was plainly _inside_ another. Both were real, and neither moved any
 number this project had:
 
-| where | how deep | cause |
-| --- | --- | --- |
-| a propped book against a leaning one | 8mm | the prop measured its reach to the neighbour's **footprint** |
-| the same, where the neighbour is shorter | 18mm | the same, plus the neighbour's lean added to a *corner* contact |
-| any tall book followed by a short one in a run | 2.3mm | "a run packs flush" — false since runs existed |
+| where                                          | how deep | cause                                                           |
+| ---------------------------------------------- | -------- | --------------------------------------------------------------- |
+| a propped book against a leaning one           | 8mm      | the prop measured its reach to the neighbour's **footprint**    |
+| the same, where the neighbour is shorter       | 18mm     | the same, plus the neighbour's lean added to a _corner_ contact |
+| any tall book followed by a short one in a run | 2.3mm    | "a run packs flush" — false since runs existed                  |
 
 The first two are [ADR-0039](../adr/0039-a-book-after-a-year-gap-props-against-its-neighbour.md)'s;
 the third predates all of this. A leaning book's low corner bulges `sway` right
 of its footprint and its top corner recedes `sway` left of it, so a footprint is
-not a book, and `sway` scales with *height* — which is why two books at the same
+not a book, and `sway` scales with _height_ — which is why two books at the same
 angle and different heights do not sit where the cursor thinks they do.
 
 **No gate could see any of it, and that is the finding.** G16 measures the case's
 inner faces and two books can intersect each other happily inside those; every
 width assertion in `shelf-width.test.ts` works in footprints, which is what the
 cursor budgets in and exactly the wrong coordinate for this question; and
-`placement.test.ts` asserted flushness between two books of *identical* height,
+`placement.test.ts` asserted flushness between two books of _identical_ height,
 where the defect is identically zero. 509 tests, four of them about this file's
 spacing, and the render is what caught it — again.
 
@@ -40,7 +40,7 @@ review axis was looking for:
 - **`MAX_PROP_LEAN` was 9.2° and it bound**, which meant the second book of a
   chain stopped short of its neighbour — a book resting on air, in a request whose
   words were "even if there is a gap with a bigger angle". The compounding it
-  guarded against does not compound: the chain case contacts a *corner*, where the
+  guarded against does not compound: the chain case contacts a _corner_, where the
   neighbour's slope is already accounted for, so it converges at 12.7° on the
   worst fixture and 9.8° on the real shelf. The ceiling is 14.3° and nothing
   reaches it.

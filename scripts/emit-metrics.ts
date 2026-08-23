@@ -22,32 +22,40 @@
  * nothing would collapse the two into one silence.
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { parseRecord, runInfoOf, scoresOf } from './lib/metrics-read.ts';
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { parseRecord, runInfoOf, scoresOf } from "./lib/metrics-read.ts";
 import {
   fetchRecords,
   parseRecordName,
   readRecord,
   type FetchedRecord,
   type RecordName,
-} from './lib/metrics-record.ts';
-import { UNKNOWN_WINDOW, subjectsBetween, windowFrom } from './lib/pr-window.ts';
-import { REPO_ROOT } from './lib/repo-root.ts';
-import { configHashOf, fixtureHashOf } from './lib/floors.ts';
+} from "./lib/metrics-record.ts";
+import {
+  UNKNOWN_WINDOW,
+  subjectsBetween,
+  windowFrom,
+} from "./lib/pr-window.ts";
+import { REPO_ROOT } from "./lib/repo-root.ts";
+import { configHashOf, fixtureHashOf } from "./lib/floors.ts";
 // The config Stryker actually runs, imported rather than described. The hash
 // below is a fact about the configuration this run loaded, and a flag carrying
 // it would let the stamp disagree with what was actually scored.
-import strykerConfig from '../stryker.config.mjs';
+import strykerConfig from "../stryker.config.mjs";
 import {
   fraction,
   readReport,
   readScopes,
   scoreRun,
   type ScoredRun,
-} from './lib/mutation-score.ts';
-import { counterInputs, countPopulation, type Counts } from './lib/complexity.ts';
-import { sourceFiles } from './lib/scope-check.ts';
+} from "./lib/mutation-score.ts";
+import {
+  counterInputs,
+  countPopulation,
+  type Counts,
+} from "./lib/complexity.ts";
+import { sourceFiles } from "./lib/scope-check.ts";
 import {
   TREND_SERIES,
   complexityFactsOf,
@@ -55,31 +63,31 @@ import {
   type RunFacts,
   type ScopeScore,
   type TrendName,
-} from './lib/metrics.ts';
+} from "./lib/metrics.ts";
 
 /** `--flag value` pairs, and nothing else. Unknown flags throw rather than being ignored. */
 function args(argv: readonly string[]): Map<string, string> {
   const known = new Set([
-    'out',
-    'expect',
-    'failed',
-    'report',
-    'suite-seconds',
-    'mutation-seconds',
-    'commit',
-    'event',
-    'run-url',
-    'timestamp',
+    "out",
+    "expect",
+    "failed",
+    "report",
+    "suite-seconds",
+    "mutation-seconds",
+    "commit",
+    "event",
+    "run-url",
+    "timestamp",
   ]);
   const parsed = new Map<string, string>();
 
   for (let i = 0; i < argv.length; i += 2) {
-    const flag = (argv[i] ?? '').replace(/^--/, '');
+    const flag = (argv[i] ?? "").replace(/^--/, "");
     const value = argv[i + 1];
     if (!known.has(flag) || value === undefined) {
       throw new Error(
-        `unknown or valueless flag: ${argv[i] ?? ''}. A typo'd flag must fail here rather ` +
-          'than be dropped, which would write a record missing a series and call it healthy.',
+        `unknown or valueless flag: ${argv[i] ?? ""}. A typo'd flag must fail here rather ` +
+          "than be dropped, which would write a record missing a series and call it healthy.",
       );
     }
     parsed.set(flag, value);
@@ -89,9 +97,10 @@ function args(argv: readonly string[]): Map<string, string> {
 
 /** A number from a flag, or `undefined` when the flag is absent. Never `NaN`. */
 function seconds(raw: string | undefined, flag: string): number | undefined {
-  if (raw === undefined || raw === '') return undefined;
+  if (raw === undefined || raw === "") return undefined;
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) throw new Error(`${flag} is not a number: ${raw}`);
+  if (!Number.isFinite(parsed))
+    throw new Error(`${flag} is not a number: ${raw}`);
   return parsed;
 }
 
@@ -114,7 +123,8 @@ function scoresFrom(path: string | undefined): {
 
   const mutationScore = run.scopes.map((scope) => {
     const tally = run.perScope.get(scope.name);
-    if (tally === undefined) throw new Error(`no tally for scope ${scope.name}`);
+    if (tally === undefined)
+      throw new Error(`no tally for scope ${scope.name}`);
     return { scope: scope.name, score: fraction(tally) };
   });
 
@@ -126,11 +136,16 @@ function scoresFrom(path: string | undefined): {
 
 function trendNames(raw: string | undefined, flag: string): TrendName[] {
   const declared = new Set<string>(TREND_SERIES.map((series) => series.name));
-  const wanted = (raw ?? '').split(',').map((name) => name.trim()).filter((name) => name !== '');
+  const wanted = (raw ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter((name) => name !== "");
 
   const unknown = wanted.filter((name) => !declared.has(name));
   if (unknown.length > 0) {
-    throw new Error(`${flag} names series that are not declared in TREND_SERIES: ${unknown.join(', ')}`);
+    throw new Error(
+      `${flag} names series that are not declared in TREND_SERIES: ${unknown.join(", ")}`,
+    );
   }
   return wanted as TrendName[];
 }
@@ -139,15 +154,19 @@ const flags = args(process.argv.slice(2));
 
 /** `--expect` is required: a run that declares nothing can never report unhealthy. */
 function expected(): TrendName[] {
-  const wanted = trendNames(flags.get('expect'), '--expect');
+  const wanted = trendNames(flags.get("expect"), "--expect");
   if (wanted.length === 0) {
-    throw new Error('--expect is required: name what this run set out to compute');
+    throw new Error(
+      "--expect is required: name what this run set out to compute",
+    );
   }
   return wanted;
 }
 
-const timestamp = seconds(flags.get('timestamp'), '--timestamp') ?? Math.floor(Date.now() / 1000);
-const commit = flags.get('commit') ?? 'unknown';
+const timestamp =
+  seconds(flags.get("timestamp"), "--timestamp") ??
+  Math.floor(Date.now() / 1000);
+const commit = flags.get("commit") ?? "unknown";
 
 /**
  * How far back the walk for a scored run goes. `scripts/deploy.ts` bounds the
@@ -173,17 +192,23 @@ const WINDOW_RECORD_CAP = 200;
 function windowSincePreviousRun(): string {
   const fetched = fetchRecords();
   if (fetched === undefined) {
-    console.error('no `metrics` branch to read a previous run from — the PR window is unknown');
+    console.error(
+      "no `metrics` branch to read a previous run from — the PR window is unknown",
+    );
     return UNKNOWN_WINDOW;
   }
 
   const previous = previousScoringRun(fetched);
   if (previous === undefined) {
-    console.error('no scored run on the `metrics` branch yet — the PR window is unknown');
+    console.error(
+      "no scored run on the `metrics` branch yet — the PR window is unknown",
+    );
     return UNKNOWN_WINDOW;
   }
 
-  const window = windowFrom(subjectsBetween(previous.commit, commit, REPO_ROOT));
+  const window = windowFrom(
+    subjectsBetween(previous.commit, commit, REPO_ROOT),
+  );
   console.log(`PR window since ${previous.name}: ${window}`);
   return window;
 }
@@ -205,11 +230,16 @@ function windowSincePreviousRun(): string {
  * delta, so *since the last scored run* is as true of it as anything else, and a
  * second rule would be a second thing to keep in step.
  */
-function previousScoringRun(fetched: FetchedRecord): { name: string; commit: string } | undefined {
+function previousScoringRun(
+  fetched: FetchedRecord,
+): { name: string; commit: string } | undefined {
   const newestFirst = fetched.names
     .map((name) => parseRecordName(name))
     .filter((record): record is RecordName => record !== undefined)
-    .sort((one, other) => other.timestamp - one.timestamp || other.name.localeCompare(one.name));
+    .sort(
+      (one, other) =>
+        other.timestamp - one.timestamp || other.name.localeCompare(one.name),
+    );
 
   // Bounded for `scripts/deploy.ts`'s reason, and at its figure: merge records
   // are not scored, so a busy week sits between two nightlies, and the walk has
@@ -221,8 +251,9 @@ function previousScoringRun(fetched: FetchedRecord): { name: string; commit: str
     const parsed = parseRecord(bytes);
     if (scoresOf(parsed).size === 0) continue;
 
-    const at = runInfoOf(parsed)?.['commit'];
-    if (at !== undefined && at !== 'unknown') return { name: record.name, commit: at };
+    const at = runInfoOf(parsed)?.["commit"];
+    if (at !== undefined && at !== "unknown")
+      return { name: record.name, commit: at };
   }
   return undefined;
 }
@@ -244,7 +275,9 @@ function previousScoringRun(fetched: FetchedRecord): { name: string; commit: str
  *
  * The tree is walked once and handed to every scope, rather than eight walks.
  */
-async function complexityFacts(): Promise<ReturnType<typeof complexityFactsOf>> {
+async function complexityFacts(): Promise<
+  ReturnType<typeof complexityFactsOf>
+> {
   try {
     const files = sourceFiles();
     const counted = new Map<string, Counts | null>();
@@ -298,10 +331,10 @@ const fixtureHash = await countingStamp();
 const facts: RunFacts = {
   timestamp,
   commit,
-  event: flags.get('event') ?? 'unknown',
+  event: flags.get("event") ?? "unknown",
   configHash: configHashOf(strykerConfig as unknown as Record<string, unknown>),
   ...(fixtureHash === undefined ? {} : { fixtureHash }),
-  runUrl: flags.get('run-url') ?? 'unknown',
+  runUrl: flags.get("run-url") ?? "unknown",
   prWindow: windowSincePreviousRun(),
   expected: expected(),
   // Named by the caller because only the workflow knows a step's exit code, and
@@ -312,11 +345,17 @@ const facts: RunFacts = {
   // group whose failure this process can see for itself: the counter runs in
   // this file rather than in a workflow step, so there is no exit code for the
   // caller to pass down.
-  failed: [...trendNames(flags.get('failed'), '--failed'), ...complexity.failed],
-  gateSuiteRuntime: seconds(flags.get('suite-seconds'), '--suite-seconds'),
-  mutationRunRuntime: seconds(flags.get('mutation-seconds'), '--mutation-seconds'),
+  failed: [
+    ...trendNames(flags.get("failed"), "--failed"),
+    ...complexity.failed,
+  ],
+  gateSuiteRuntime: seconds(flags.get("suite-seconds"), "--suite-seconds"),
+  mutationRunRuntime: seconds(
+    flags.get("mutation-seconds"),
+    "--mutation-seconds",
+  ),
   complexity: complexity.complexity,
-  ...scoresFrom(flags.get('report')),
+  ...scoresFrom(flags.get("report")),
 };
 
 const document = renderMetrics(facts);
@@ -325,10 +364,10 @@ const document = renderMetrics(facts);
 // because a directory listing is the cheapest possible staleness read, and
 // `<sha>` second because two runs can share a second but not a commit *and* a
 // second.
-const directory = join(REPO_ROOT, flags.get('out') ?? 'metrics');
+const directory = join(REPO_ROOT, flags.get("out") ?? "metrics");
 mkdirSync(directory, { recursive: true });
 const file = join(directory, `${timestamp}-${commit.slice(0, 12)}.prom`);
-writeFileSync(file, document, 'utf8');
+writeFileSync(file, document, "utf8");
 
 console.log(file);
 console.log(document);
@@ -336,6 +375,8 @@ console.log(document);
 // Read back out of the rendered document rather than recomputed here, so the
 // exit code cannot disagree with the bytes that were written.
 if (/^stacks_run_ok 0 /m.test(document)) {
-  console.error('run_ok 0 — a declared series did not compute. The record was written anyway.');
+  console.error(
+    "run_ok 0 — a declared series did not compute. The record was written anyway.",
+  );
   process.exit(1);
 }

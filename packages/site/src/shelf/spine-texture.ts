@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 
 /**
  * The printed spine: title and author, set vertically, on the book's own colour.
@@ -76,13 +76,15 @@ export interface SpineTextOptions {
   readonly height: number;
 }
 
-export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture | undefined {
+export function makeSpineTexture(
+  options: SpineTextOptions,
+): THREE.CanvasTexture | undefined {
   const across = spineCanvasWidth(options.thickness, options.height);
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = across;
   canvas.height = TEXTURE_HEIGHT;
 
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   if (ctx === null) return undefined;
 
   ctx.fillStyle = options.colour;
@@ -96,8 +98,8 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
   ctx.save();
   ctx.translate(across / 2, TEXTURE_HEIGHT / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
 
   // The rotated canvas is TEXTURE_HEIGHT long and `across` tall.
   const length = TEXTURE_HEIGHT;
@@ -114,7 +116,10 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
 
   const text = band.caps ? main.toUpperCase() : main;
   const budget = available * 0.72;
-  const lines = band.lines === 2 ? wrap(ctx, text, budget, tracking) : [fit(ctx, text, budget, tracking)];
+  const lines =
+    band.lines === 2
+      ? wrap(ctx, text, budget, tracking)
+      : [fit(ctx, text, budget, tracking)];
 
   const left = -length / 2 + padding;
   // Two lines run *across* the spine, so the block is centred on the width and
@@ -131,7 +136,8 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
    * The *widest* line, not the last: a wrapped title is a block, and hanging a
    * rule off a short second line would leave it floating under the first.
    */
-  const titleEnd = left + Math.max(...lines.map((line) => width(ctx, line, tracking)));
+  const titleEnd =
+    left + Math.max(...lines.map((line) => width(ctx, line, tracking)));
 
   if (options.author !== undefined) {
     const authorSize = across * 0.24;
@@ -168,7 +174,10 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
       }
     } else {
       // Just after the title, but never past the foot.
-      const at = Math.min(titleEnd + titleSize * 0.9, length / 2 - padding - authorWidth);
+      const at = Math.min(
+        titleEnd + titleSize * 0.9,
+        length / 2 - padding - authorWidth,
+      );
       ctx.fillText(author, at, titleSize * 0.55);
     }
   }
@@ -187,7 +196,11 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
  * Cheap, and it stops a spine reading as a flat rectangle of colour when the
  * title is short.
  */
-function addCloth(ctx: CanvasRenderingContext2D, colour: string, across: number): void {
+function addCloth(
+  ctx: CanvasRenderingContext2D,
+  colour: string,
+  across: number,
+): void {
   const ink = contrastingInk(colour);
   ctx.strokeStyle = fade(ink, 0.28);
   ctx.lineWidth = Math.max(1, across * 0.018);
@@ -201,17 +214,17 @@ function addCloth(ctx: CanvasRenderingContext2D, colour: string, across: number)
 
 /** Light type on a dark board, dark type on a pale one. */
 function contrastingInk(colour: string): string {
-  const hex = colour.replace('#', '');
+  const hex = colour.replace("#", "");
   const r = Number.parseInt(hex.slice(0, 2), 16);
   const g = Number.parseInt(hex.slice(2, 4), 16);
   const b = Number.parseInt(hex.slice(4, 6), 16);
-  if (!Number.isFinite(r + g + b)) return '#f5efe6';
+  if (!Number.isFinite(r + g + b)) return "#f5efe6";
   const luma = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luma > 0.58 ? '#241f1b' : '#f5efe6';
+  return luma > 0.58 ? "#241f1b" : "#f5efe6";
 }
 
 function fade(colour: string, alpha: number): string {
-  const hex = colour.replace('#', '');
+  const hex = colour.replace("#", "");
   const r = Number.parseInt(hex.slice(0, 2), 16);
   const g = Number.parseInt(hex.slice(2, 4), 16);
   const b = Number.parseInt(hex.slice(4, 6), 16);
@@ -228,14 +241,18 @@ function fade(colour: string, alpha: number): string {
  * cut it roughly 5/15/13, so together they are real variety rather than one rule
  * firing twice.
  */
-export function splitTitle(title: string): { main: string; hasSubtitle: boolean } {
-  const colon = title.indexOf(':');
+export function splitTitle(title: string): {
+  main: string;
+  hasSubtitle: boolean;
+} {
+  const colon = title.indexOf(":");
   if (colon === -1) return { main: title.trim(), hasSubtitle: false };
 
   const main = title.slice(0, colon).trim();
   const rest = title.slice(colon + 1).trim();
   // A colon with nothing after it is punctuation, not a subtitle.
-  if (main.length === 0 || rest.length === 0) return { main: title.trim(), hasSubtitle: false };
+  if (main.length === 0 || rest.length === 0)
+    return { main: title.trim(), hasSubtitle: false };
   return { main, hasSubtitle: true };
 }
 
@@ -267,9 +284,11 @@ interface TitleBand {
 export function bandFor(main: string): TitleBand {
   // Short: the one title that can afford the room, and caps is what a real spine
   // does with it.
-  if (main.length <= 12) return { size: 0.42, weight: 700, caps: true, tracking: 0.14, lines: 1 };
+  if (main.length <= 12)
+    return { size: 0.42, weight: 700, caps: true, tracking: 0.14, lines: 1 };
   // Medium: roughly what every book used to get.
-  if (main.length <= 28) return { size: 0.36, weight: 600, caps: false, tracking: 0, lines: 1 };
+  if (main.length <= 28)
+    return { size: 0.36, weight: 600, caps: false, tracking: 0, lines: 1 };
   // Long: smaller and lighter, and **wrapped rather than cut**. A real spine sets
   // a 56-character title in two lines; this used to end it in an ellipsis.
   return { size: 0.26, weight: 400, caps: false, tracking: 0, lines: 2 };
@@ -283,13 +302,23 @@ export function bandFor(main: string): TitleBand {
  * saying so. Three functions rather than one so measuring and drawing cannot
  * disagree about what a tracked string is.
  */
-function width(ctx: CanvasRenderingContext2D, text: string, tracking: number): number {
+function width(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  tracking: number,
+): number {
   if (tracking === 0) return ctx.measureText(text).width;
   // Trailing tracking is space after the last glyph and is not part of the ink.
   return ctx.measureText(text).width + tracking * Math.max(0, text.length - 1);
 }
 
-function draw(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, tracking: number): void {
+function draw(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  tracking: number,
+): void {
   if (tracking === 0) {
     ctx.fillText(text, x, y);
     return;
@@ -302,7 +331,12 @@ function draw(ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
 }
 
 /** Titles are long and spines are short; cut at a character with an ellipsis. */
-function fit(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, tracking: number): string {
+function fit(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  tracking: number,
+): string {
   if (width(ctx, text, tracking) <= maxWidth) return text;
 
   let cut = text;
@@ -319,27 +353,33 @@ function fit(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, trac
  * not enough — a title long enough to need three lines would be a paragraph on a
  * spine.
  */
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, tracking: number): string[] {
+function wrap(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  tracking: number,
+): string[] {
   if (width(ctx, text, tracking) <= maxWidth) return [text];
 
   const words = text.split(/\s+/);
-  let first = '';
+  let first = "";
   let index = 0;
   while (index < words.length) {
-    const candidate = first === '' ? (words[index] ?? '') : `${first} ${words[index] ?? ''}`;
-    if (first !== '' && width(ctx, candidate, tracking) > maxWidth) break;
+    const candidate =
+      first === "" ? (words[index] ?? "") : `${first} ${words[index] ?? ""}`;
+    if (first !== "" && width(ctx, candidate, tracking) > maxWidth) break;
     first = candidate;
     index += 1;
   }
 
-  const rest = words.slice(index).join(' ');
+  const rest = words.slice(index).join(" ");
   if (rest.length === 0) return [fit(ctx, first, maxWidth, tracking)];
   return [first, fit(ctx, rest, maxWidth, tracking)];
 }
 
 /** One name on a spine. "Yegge, Steve, Gene Kim" is not a name. */
 function lastName(author: string): string {
-  const first = author.split(',')[0]?.trim() ?? author;
+  const first = author.split(",")[0]?.trim() ?? author;
   const words = first.split(/\s+/);
   return words.length > 1 ? (words.at(-1) ?? first) : first;
 }

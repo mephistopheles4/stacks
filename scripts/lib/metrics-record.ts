@@ -20,14 +20,14 @@
  * shallow fetch is the other end and has no such need: it appends and pushes.
  */
 
-import { gitOutput, gitStatus } from './git.ts';
-import { REPO_ROOT } from './repo-root.ts';
+import { gitOutput, gitStatus } from "./git.ts";
+import { REPO_ROOT } from "./repo-root.ts";
 
 /** The orphan branch CI commits one `.prom` file per run to. */
-export const METRICS_BRANCH = 'metrics';
+export const METRICS_BRANCH = "metrics";
 
 /** The directory inside that branch, and inside the local store, holding them. */
-export const RECORD_DIR = 'metrics';
+export const RECORD_DIR = "metrics";
 
 /** Where a fetched branch is kept locally. */
 export const METRICS_REF = `refs/remotes/origin/${METRICS_BRANCH}`;
@@ -69,7 +69,7 @@ export function parseRecordName(name: string): RecordName | undefined {
   const timestamp = Number(match[1]);
   if (!Number.isFinite(timestamp)) return undefined;
 
-  return { name, timestamp, source: match[2] ?? '' };
+  return { name, timestamp, source: match[2] ?? "" };
 }
 
 /**
@@ -95,7 +95,10 @@ export function selectNewRecords(
     .map((name) => parseRecordName(name))
     .filter((record): record is RecordName => record !== undefined)
     .filter((record) => !seen.has(record.name))
-    .sort((one, other) => one.timestamp - other.timestamp || one.name.localeCompare(other.name))
+    .sort(
+      (one, other) =>
+        one.timestamp - other.timestamp || one.name.localeCompare(other.name),
+    )
     .map((record) => record.name);
 }
 
@@ -113,7 +116,9 @@ export interface FetchedRecord {
  * all three leave the caller with the same move, which is to carry on with
  * whatever is already in the store and say what happened.
  */
-export function fetchRecords(cwd: string = REPO_ROOT): FetchedRecord | undefined {
+export function fetchRecords(
+  cwd: string = REPO_ROOT,
+): FetchedRecord | undefined {
   return fetchInto(METRICS_REF, cwd);
 }
 
@@ -124,7 +129,9 @@ export function fetchRecords(cwd: string = REPO_ROOT): FetchedRecord | undefined
  * anonymity, different ref — see `PROBE_REF` for why that separation is load
  * bearing rather than tidy.
  */
-export function probeRecords(cwd: string = REPO_ROOT): FetchedRecord | undefined {
+export function probeRecords(
+  cwd: string = REPO_ROOT,
+): FetchedRecord | undefined {
   return fetchInto(PROBE_REF, cwd);
 }
 
@@ -138,7 +145,13 @@ function fetchInto(ref: string, cwd: string): FetchedRecord | undefined {
   // and reading git's own two-line output; every test passed either way, and
   // the second deploy is the one that would have published.
   const fetched = gitStatus(
-    ['fetch', '--no-tags', '--refmap=', 'origin', `+refs/heads/${METRICS_BRANCH}:${ref}`],
+    [
+      "fetch",
+      "--no-tags",
+      "--refmap=",
+      "origin",
+      `+refs/heads/${METRICS_BRANCH}:${ref}`,
+    ],
     cwd,
   );
   if (fetched !== 0) return undefined;
@@ -157,22 +170,27 @@ function fetchInto(ref: string, cwd: string): FetchedRecord | undefined {
  * `undefined` when no sync has ever run: nothing has arrived, which the dated
  * bootstrap has an answer for and a staleness bound does not.
  */
-export function storedRecords(cwd: string = REPO_ROOT): FetchedRecord | undefined {
+export function storedRecords(
+  cwd: string = REPO_ROOT,
+): FetchedRecord | undefined {
   return recordsAt(METRICS_REF, cwd);
 }
 
 /** The `.prom` filenames at one ref or commit, with the tip they came from. */
 function recordsAt(ref: string, cwd: string): FetchedRecord | undefined {
-  const tip = gitOutput(['rev-parse', ref], cwd);
-  if (tip === undefined || tip === '') return undefined;
+  const tip = gitOutput(["rev-parse", ref], cwd);
+  if (tip === undefined || tip === "") return undefined;
 
-  const listing = gitOutput(['ls-tree', '--name-only', tip, `${RECORD_DIR}/`], cwd);
+  const listing = gitOutput(
+    ["ls-tree", "--name-only", tip, `${RECORD_DIR}/`],
+    cwd,
+  );
   if (listing === undefined) return undefined;
 
   const names = listing
-    .split('\n')
-    .map((line) => line.trim().replace(new RegExp(`^${RECORD_DIR}/`), ''))
-    .filter((name) => name !== '');
+    .split("\n")
+    .map((line) => line.trim().replace(new RegExp(`^${RECORD_DIR}/`), ""))
+    .filter((name) => name !== "");
 
   return { tip, names };
 }
@@ -184,8 +202,12 @@ function recordsAt(ref: string, cwd: string): FetchedRecord | undefined {
  * committed and not as a checkout filter would render it — a `.prom` file with
  * a `\r` in it is a parse error over the whole document.
  */
-export function readRecord(tip: string, name: string, cwd: string = REPO_ROOT): string | undefined {
-  return gitOutput(['cat-file', 'blob', `${tip}:${RECORD_DIR}/${name}`], cwd);
+export function readRecord(
+  tip: string,
+  name: string,
+  cwd: string = REPO_ROOT,
+): string | undefined {
+  return gitOutput(["cat-file", "blob", `${tip}:${RECORD_DIR}/${name}`], cwd);
 }
 
 /**
@@ -204,9 +226,14 @@ export function readRecord(tip: string, name: string, cwd: string = REPO_ROOT): 
  * answer for a store whose objects were pruned: this cannot see a rewrite there
  * and must not claim to.
  */
-export function isFastForward(from: string, to: string, cwd: string = REPO_ROOT): boolean {
+export function isFastForward(
+  from: string,
+  to: string,
+  cwd: string = REPO_ROOT,
+): boolean {
   if (from === to) return true;
-  if (gitOutput(['cat-file', '-e', `${from}^{commit}`], cwd) === undefined) return true;
+  if (gitOutput(["cat-file", "-e", `${from}^{commit}`], cwd) === undefined)
+    return true;
 
-  return gitStatus(['merge-base', '--is-ancestor', from, to], cwd) === 0;
+  return gitStatus(["merge-base", "--is-ancestor", from, to], cwd) === 0;
 }

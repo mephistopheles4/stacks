@@ -19,12 +19,12 @@ never on a schedule — a second scheduled thing that can silently stop is the
 failure class this design spends its budget containing, and a laptop cron would
 leave no Actions history to inspect afterwards.
 
-| Piece | Where |
-| --- | --- |
+| Piece                                          | Where                           |
+| ---------------------------------------------- | ------------------------------- |
 | where the record lives, and which of it is new | `scripts/lib/metrics-record.ts` |
-| the join, and surface D's row | `scripts/lib/metrics.ts` |
-| the origin probe, shared with `deploy:site` | `scripts/lib/edge-probe.ts` |
-| the store, the state, the container | `scripts/trend-sync.ts` |
+| the join, and surface D's row                  | `scripts/lib/metrics.ts`        |
+| the origin probe, shared with `deploy:site`    | `scripts/lib/edge-probe.ts`     |
+| the store, the state, the container            | `scripts/trend-sync.ts`         |
 
 Three of those four have an in-process oracle, which is the lesson from the last
 entry applied rather than repeated: the parts with logic were extracted so a
@@ -50,9 +50,9 @@ just wrote, because the import is idempotent and the probe is deliberately not.
 
 ⚠️ **The join is the part that had to be got right, and it was measured before
 it was written.** `# EOF` terminates an OpenMetrics document, so a naive
-concatenation is *"unexpected data after # EOF"* and **no block is written at
-all** — not a partial ingest. Same for a stray `\r`, which is *"invalid metric
-type \"gauge\r\""* over the whole file. The join owns both: every terminator is
+concatenation is _"unexpected data after # EOF"_ and **no block is written at
+all** — not a partial ingest. Same for a stray `\r`, which is _"invalid metric
+type \"gauge\r\""_ over the whole file. The join owns both: every terminator is
 dropped and exactly one appended, and everything is written LF.
 
 ## Surface D, live
@@ -60,11 +60,11 @@ dropped and exactly one appended, and everything is written LF.
 Against the real origin, with the local `dist/` stamped as the last deploy left
 it:
 
-| Asked | Answered |
-| --- | --- |
-| serving the build I published? | `stacks_edge_build_current 1`, `run_ok{surface="edge"} 1` |
-| the same, with a stamp nothing serves | `build_current 0`, **outcome `stale`** — a real answer and a red one |
-| refused by bot protection | `run_ok 0`, **no build sample at all** — covered by spec, not reproducible on a zone that now allows the check |
+| Asked                                 | Answered                                                                                                       |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| serving the build I published?        | `stacks_edge_build_current 1`, `run_ok{surface="edge"} 1`                                                      |
+| the same, with a stamp nothing serves | `build_current 0`, **outcome `stale`** — a real answer and a red one                                           |
+| refused by bot protection             | `run_ok 0`, **no build sample at all** — covered by spec, not reproducible on a zone that now allows the check |
 
 **D's rows are written to `.trend/local/` and never to the branch**, which is
 what keeps both ends credential-free. The cost is that D's history lives on one
@@ -72,19 +72,19 @@ machine, and `--rebuild` replays those rows from disk for exactly that reason:
 the branch can rebuild every CI series, and nothing can rebuild D's.
 
 `run_ok` carries `surface="edge"` where CI's carries no label. Same metric name,
-so *did the pipe work* answers over both; different label set, so Prometheus
+so _did the pipe work_ answers over both; different label set, so Prometheus
 holds them as different series and a local probe can never dilute a CI run's
 health.
 
 ## The count that said three
 
 The ticket flagged a live ambiguity rather than letting it be guessed: §3 of the
-spec names **four** series, and §4's staleness table bounds *"the three
-nightly-written ones"* plus surface D. Both cannot be right.
+spec names **four** series, and §4's staleness table bounds _"the three
+nightly-written ones"_ plus surface D. Both cannot be right.
 
 **Resolved: the bound covers all four CI-written series, and D takes no `##
-Trends` row.** The two readings of *"three"* — a miscount, or *the three written
-**only** by the nightly*, with `gate-suite-runtime` bounded by the paragraph
+Trends` row.** The two readings of _"three"_ — a miscount, or _the three written
+**only** by the nightly_, with `gate-suite-runtime` bounded by the paragraph
 that says the bound is a multiple of the nightly and never of pushes — reach the
 same operational endpoint, so the endpoint is what was written down, in
 [`docs/spec/trend-layer.md`](../spec/trend-layer.md) §4 and in `docs/gates.md`.
@@ -100,7 +100,7 @@ rather than an exception list a gate would have to maintain.
 - **The store is a pinned container the sync owns** —
   [ADR-0058](../adr/0058-the-trend-store-is-a-container.md). `promtool` and the
   server come from one image because a version disagreement between them
-  surfaces as *the sync worked and the dashboard is empty*. Retention is set to
+  surfaces as _the sync worked and the dashboard is empty_. Retention is set to
   ten years explicitly: the default fifteen days would delete the replay this
   command exists to perform, quietly, hours later.
 - **A rewritten record is refused** —
@@ -123,7 +123,7 @@ moved into `lib/edge-probe.ts` byte for byte, which is what put a false positive
 in front of somebody for the first time.
 
 **Closed with a third outcome rather than either obvious fix.** Reading the
-absent header as zero invents a stale cache; *dropping* those covers from the
+absent header as zero invents a stale cache; _dropping_ those covers from the
 list — the first repair anyone reaches for — hides a cover that genuinely never
 reached the upload. So they are neither: `probeCovers` returns them as
 `uncomparable`, both readers name them, and D's row carries

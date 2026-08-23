@@ -30,8 +30,8 @@
  * the merge half legitimately expects five series where the nightly expects eight.
  */
 
-import type { Counts } from './complexity.ts';
-import type { EdgeAnswer } from './edge-probe.ts';
+import type { Counts } from "./complexity.ts";
+import type { EdgeAnswer } from "./edge-probe.ts";
 
 /**
  * The three metric-name prefixes, and the whole of the separation between them.
@@ -50,22 +50,25 @@ import type { EdgeAnswer } from './edge-probe.ts';
  * maintain. See `docs/spec/trend-layer.md` §5.
  */
 export const METRIC_PREFIXES = {
-  run: 'stacks_run_',
-  trend: 'stacks_trend_',
-  edge: 'stacks_edge_',
+  run: "stacks_run_",
+  trend: "stacks_trend_",
+  edge: "stacks_edge_",
 } as const;
 
 /** The eight series, and the whole of what this record carries as a trend. */
 export const TREND_SERIES = [
   {
-    name: 'mutation-score',
-    help: 'Killed plus timeout over total, per declared scope, 0..1. Stryker total score.',
+    name: "mutation-score",
+    help: "Killed plus timeout over total, per declared scope, 0..1. Stryker total score.",
   },
-  { name: 'gate-suite-runtime', help: 'Wall-clock seconds of pnpm test.' },
-  { name: 'mutation-run-runtime', help: 'Wall-clock seconds of the Stryker run.' },
+  { name: "gate-suite-runtime", help: "Wall-clock seconds of pnpm test." },
   {
-    name: 'live-exclusions',
-    help: 'Declared exclusions that produced at least one executed mutant. Healthy value 0.',
+    name: "mutation-run-runtime",
+    help: "Wall-clock seconds of the Stryker run.",
+  },
+  {
+    name: "live-exclusions",
+    help: "Declared exclusions that produced at least one executed mutant. Healthy value 0.",
   },
   // The four counts, read side by side. ⚠️ **No ratio, and that is measured
   // rather than preferred**: the prototype put every candidate statistic
@@ -75,18 +78,21 @@ export const TREND_SERIES = [
   // earlier. See docs/spec/complexity-on-the-trend-layer.md §2, whose Measures
   // column each `help` below carries.
   {
-    name: 'complexity-functions',
-    help: 'Functions counted — the denominator the other three are read against.',
+    name: "complexity-functions",
+    help: "Functions counted — the denominator the other three are read against.",
   },
-  { name: 'complexity-mass', help: 'Σ cyclomatic complexity over those functions.' },
   {
-    name: 'complexity-mass-over-10',
-    help: 'Σ complexity over functions with CC > 10. The cut is McCabe 1976, and is not a threshold.',
+    name: "complexity-mass",
+    help: "Σ cyclomatic complexity over those functions.",
   },
-  { name: 'complexity-max', help: "The largest single function's complexity." },
+  {
+    name: "complexity-mass-over-10",
+    help: "Σ complexity over functions with CC > 10. The cut is McCabe 1976, and is not a threshold.",
+  },
+  { name: "complexity-max", help: "The largest single function's complexity." },
 ] as const;
 
-export type TrendName = (typeof TREND_SERIES)[number]['name'];
+export type TrendName = (typeof TREND_SERIES)[number]["name"];
 
 /** One declared scope's score, or `null` where the scope produced no mutants. */
 export interface ScopeScore {
@@ -122,10 +128,13 @@ export interface ScopeComplexity extends Counts {
  * keeps the counter's vocabulary and the record's from drifting apart.
  */
 const COMPLEXITY_FACTS = [
-  ['complexity-functions', (entry: ScopeComplexity): number => entry.functions],
-  ['complexity-mass', (entry: ScopeComplexity): number => entry.mass],
-  ['complexity-mass-over-10', (entry: ScopeComplexity): number => entry.massOver10],
-  ['complexity-max', (entry: ScopeComplexity): number => entry.max],
+  ["complexity-functions", (entry: ScopeComplexity): number => entry.functions],
+  ["complexity-mass", (entry: ScopeComplexity): number => entry.mass],
+  [
+    "complexity-mass-over-10",
+    (entry: ScopeComplexity): number => entry.massOver10,
+  ],
+  ["complexity-max", (entry: ScopeComplexity): number => entry.max],
 ] as const;
 
 /**
@@ -136,7 +145,9 @@ const COMPLEXITY_FACTS = [
  * series went quiet — and a second hand-written list is the drift this repo
  * has three logged rows about.
  */
-export const COMPLEXITY_SERIES: readonly TrendName[] = COMPLEXITY_FACTS.map(([name]) => name);
+export const COMPLEXITY_SERIES: readonly TrendName[] = COMPLEXITY_FACTS.map(
+  ([name]) => name,
+);
 
 /**
  * The complexity half of `RunFacts`, from what the counter returned per scope.
@@ -164,7 +175,9 @@ export const COMPLEXITY_SERIES: readonly TrendName[] = COMPLEXITY_FACTS.map(([na
  * rule would sit exactly where nothing can hold it. This is a pure function
  * over a map, and `metrics.test.ts` holds it.
  */
-export function complexityFactsOf(counted: ReadonlyMap<string, Counts | null> | undefined): {
+export function complexityFactsOf(
+  counted: ReadonlyMap<string, Counts | null> | undefined,
+): {
   complexity?: readonly ScopeComplexity[];
   failed: readonly TrendName[];
 } {
@@ -269,7 +282,7 @@ export interface RunFacts {
 
 /** `mutation-score` → `stacks_trend_mutation_score`. OpenMetrics names take no hyphen. */
 export function metricNameOf(trend: string): string {
-  return `${METRIC_PREFIXES.trend}${trend.replace(/-/g, '_')}`;
+  return `${METRIC_PREFIXES.trend}${trend.replace(/-/g, "_")}`;
 }
 
 /**
@@ -283,10 +296,13 @@ export function metricNameOf(trend: string): string {
  */
 export function trendNamesIn(document: string): string[] {
   const names: string[] = [];
-  const pattern = new RegExp(`^# TYPE (${METRIC_PREFIXES.trend}[a-z0-9_]+) `, 'gm');
+  const pattern = new RegExp(
+    `^# TYPE (${METRIC_PREFIXES.trend}[a-z0-9_]+) `,
+    "gm",
+  );
 
   for (const match of document.matchAll(pattern)) {
-    const trend = trendOfMetric(match[1] ?? '');
+    const trend = trendOfMetric(match[1] ?? "");
     if (trend !== undefined) names.push(trend);
   }
   return names;
@@ -303,17 +319,19 @@ export function trendNamesIn(document: string): string[] {
  */
 export function trendOfMetric(metric: string): string | undefined {
   if (!metric.startsWith(METRIC_PREFIXES.trend)) return undefined;
-  return metric.slice(METRIC_PREFIXES.trend.length).replace(/_/g, '-');
+  return metric.slice(METRIC_PREFIXES.trend.length).replace(/_/g, "-");
 }
 
 /** OpenMetrics escaping for a `# HELP` line and for a label value. */
 export function escape(text: string): string {
-  return text.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/"/g, '\\"');
+  return text.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/"/g, '\\"');
 }
 
 /** `escape` undone, for a label value read back off the disk. Same reason as above. */
 export function unescape(text: string): string {
-  return text.replace(/\\(.)/g, (_, char: string) => (char === 'n' ? '\n' : char));
+  return text.replace(/\\(.)/g, (_, char: string) =>
+    char === "n" ? "\n" : char,
+  );
 }
 
 /**
@@ -323,13 +341,17 @@ export function unescape(text: string): string {
  * rejects — so a value small enough to reach it is fixed rather than defaulted.
  */
 function value(n: number): string {
-  return Number.isInteger(n) ? String(n) : (String(n).includes('e') ? n.toFixed(9) : String(n));
+  return Number.isInteger(n)
+    ? String(n)
+    : String(n).includes("e")
+      ? n.toFixed(9)
+      : String(n);
 }
 
 function labels(pairs: Record<string, string>): string {
   const entries = Object.entries(pairs);
-  if (entries.length === 0) return '';
-  return `{${entries.map(([key, text]) => `${key}="${escape(text)}"`).join(',')}}`;
+  if (entries.length === 0) return "";
+  return `{${entries.map(([key, text]) => `${key}="${escape(text)}"`).join(",")}}`;
 }
 
 interface Family {
@@ -341,16 +363,22 @@ interface Family {
 function render(family: Family, timestamp: number): string[] {
   // TYPE before HELP, which is the order OpenMetrics documents for metric
   // family metadata. Every series here is a gauge: each one can go down.
-  const lines = [`# TYPE ${family.metric} gauge`, `# HELP ${family.metric} ${escape(family.help)}`];
+  const lines = [
+    `# TYPE ${family.metric} gauge`,
+    `# HELP ${family.metric} ${escape(family.help)}`,
+  ];
   for (const sample of family.samples) {
-    lines.push(`${family.metric}${labels(sample.labels)} ${value(sample.value)} ${timestamp}`);
+    lines.push(
+      `${family.metric}${labels(sample.labels)} ${value(sample.value)} ${timestamp}`,
+    );
   }
   return lines;
 }
 
 function helpFor(trend: TrendName): string {
   const found = TREND_SERIES.find((series) => series.name === trend);
-  if (found === undefined) throw new Error(`no declared trend series called ${trend}`);
+  if (found === undefined)
+    throw new Error(`no declared trend series called ${trend}`);
   return found.help;
 }
 
@@ -365,33 +393,42 @@ function trendFamilies(facts: RunFacts): Family[] {
   const broke = new Set<string>(facts.failed ?? []);
   const families: Family[] = [];
 
-  if (facts.mutationScore !== undefined && !broke.has('mutation-score')) {
+  if (facts.mutationScore !== undefined && !broke.has("mutation-score")) {
     families.push({
-      metric: metricNameOf('mutation-score'),
-      help: helpFor('mutation-score'),
+      metric: metricNameOf("mutation-score"),
+      help: helpFor("mutation-score"),
       samples: facts.mutationScore
         .filter((entry) => entry.score !== null)
-        .map((entry) => ({ labels: { scope: entry.scope }, value: entry.score ?? 0 })),
+        .map((entry) => ({
+          labels: { scope: entry.scope },
+          value: entry.score ?? 0,
+        })),
     });
   }
-  if (facts.gateSuiteRuntime !== undefined && !broke.has('gate-suite-runtime')) {
+  if (
+    facts.gateSuiteRuntime !== undefined &&
+    !broke.has("gate-suite-runtime")
+  ) {
     families.push({
-      metric: metricNameOf('gate-suite-runtime'),
-      help: helpFor('gate-suite-runtime'),
+      metric: metricNameOf("gate-suite-runtime"),
+      help: helpFor("gate-suite-runtime"),
       samples: [{ labels: {}, value: facts.gateSuiteRuntime }],
     });
   }
-  if (facts.mutationRunRuntime !== undefined && !broke.has('mutation-run-runtime')) {
+  if (
+    facts.mutationRunRuntime !== undefined &&
+    !broke.has("mutation-run-runtime")
+  ) {
     families.push({
-      metric: metricNameOf('mutation-run-runtime'),
-      help: helpFor('mutation-run-runtime'),
+      metric: metricNameOf("mutation-run-runtime"),
+      help: helpFor("mutation-run-runtime"),
       samples: [{ labels: {}, value: facts.mutationRunRuntime }],
     });
   }
-  if (facts.liveExclusions !== undefined && !broke.has('live-exclusions')) {
+  if (facts.liveExclusions !== undefined && !broke.has("live-exclusions")) {
     families.push({
-      metric: metricNameOf('live-exclusions'),
-      help: helpFor('live-exclusions'),
+      metric: metricNameOf("live-exclusions"),
+      help: helpFor("live-exclusions"),
       samples: [{ labels: {}, value: facts.liveExclusions.live }],
     });
   }
@@ -411,7 +448,10 @@ function trendFamilies(facts: RunFacts): Family[] {
       families.push({
         metric: metricNameOf(series),
         help: helpFor(series),
-        samples: complexity.map((entry) => ({ labels: { scope: entry.scope }, value: of(entry) })),
+        samples: complexity.map((entry) => ({
+          labels: { scope: entry.scope },
+          value: of(entry),
+        })),
       });
     }
   }
@@ -420,7 +460,9 @@ function trendFamilies(facts: RunFacts): Family[] {
 
 /** Whether the run produced every series it declared it would. */
 function ran(facts: RunFacts, trend: TrendName): boolean {
-  return trendFamilies(facts).some((family) => family.metric === metricNameOf(trend));
+  return trendFamilies(facts).some(
+    (family) => family.metric === metricNameOf(trend),
+  );
 }
 
 /**
@@ -436,12 +478,12 @@ export function renderMetrics(facts: RunFacts): string {
   const health: Family[] = [
     {
       metric: `${METRIC_PREFIXES.run}ok`,
-      help: 'One when this run computed every series it declared, zero when it did not.',
+      help: "One when this run computed every series it declared, zero when it did not.",
       samples: [{ labels: {}, value: ok ? 1 : 0 }],
     },
     {
       metric: `${METRIC_PREFIXES.run}info`,
-      help: 'The run that wrote this file. A score never appears without its run.',
+      help: "The run that wrote this file. A score never appears without its run.",
       samples: [
         {
           labels: {
@@ -453,11 +495,15 @@ export function renderMetrics(facts: RunFacts): string {
             // *a score never appears without its run* is a layout rule the
             // dashboard can only keep if the two arrive together.
             pr_window: facts.prWindow,
-            ...(facts.configHash === undefined ? {} : { config_hash: facts.configHash }),
+            ...(facts.configHash === undefined
+              ? {}
+              : { config_hash: facts.configHash }),
             // Beside `config_hash` rather than on a series of its own: a count
             // never appears without the rule that produced it, which is the
             // same layout rule the score already keeps.
-            ...(facts.fixtureHash === undefined ? {} : { fixture_hash: facts.fixtureHash }),
+            ...(facts.fixtureHash === undefined
+              ? {}
+              : { fixture_hash: facts.fixtureHash }),
           },
           value: 1,
         },
@@ -471,7 +517,7 @@ export function renderMetrics(facts: RunFacts): string {
   if (facts.liveExclusions !== undefined) {
     health.push({
       metric: `${METRIC_PREFIXES.run}declared_exclusions`,
-      help: 'Exclusion entries declared in stryker.scopes.json, the denominator for live-exclusions.',
+      help: "Exclusion entries declared in stryker.scopes.json, the denominator for live-exclusions.",
       samples: [{ labels: {}, value: facts.liveExclusions.declared }],
     });
   }
@@ -479,7 +525,7 @@ export function renderMetrics(facts: RunFacts): string {
   const lines = [...health, ...trendFamilies(facts)].flatMap((family) =>
     render(family, facts.timestamp),
   );
-  return `${lines.join('\n')}\n# EOF\n`;
+  return `${lines.join("\n")}\n# EOF\n`;
 }
 
 // ── The reading half: surface D, and the join that makes a sync ingestible ───
@@ -489,7 +535,6 @@ export function renderMetrics(facts: RunFacts): string {
 // not three, because *refused* and *stale* are the pair ADR-0027 already paid
 // to keep apart: one is no answer at all, the other is a real answer and a red
 // one. See `./edge-probe.ts`.
-
 
 export interface EdgeFacts {
   /** Unix seconds — the moment of the sync, not of a CI run. */
@@ -511,9 +556,9 @@ export interface EdgeFacts {
 }
 
 function servingOf(build: EdgeAnswer): string {
-  if (build.kind === 'current') return build.serving;
-  if (build.kind === 'stale') return build.serving ?? 'unstamped';
-  return '';
+  if (build.kind === "current") return build.serving;
+  if (build.kind === "stale") return build.serving ?? "unstamped";
+  return "";
 }
 
 /**
@@ -532,18 +577,19 @@ function servingOf(build: EdgeAnswer): string {
  * is what makes that structural rather than a convention.
  */
 export function renderEdgeCheck(facts: EdgeFacts): string {
-  const answered = facts.build.kind === 'current' || facts.build.kind === 'stale';
+  const answered =
+    facts.build.kind === "current" || facts.build.kind === "stale";
   const context = { origin: facts.origin, expected: facts.expected };
 
   const families: Family[] = [
     {
       metric: `${METRIC_PREFIXES.run}ok`,
-      help: 'One when this probe got an answer out of the origin, zero when it did not.',
-      samples: [{ labels: { surface: 'edge' }, value: answered ? 1 : 0 }],
+      help: "One when this probe got an answer out of the origin, zero when it did not.",
+      samples: [{ labels: { surface: "edge" }, value: answered ? 1 : 0 }],
     },
     {
       metric: `${METRIC_PREFIXES.edge}info`,
-      help: 'The probe that wrote this file. A number never appears without what it asked.',
+      help: "The probe that wrote this file. A number never appears without what it asked.",
       samples: [
         {
           labels: {
@@ -553,7 +599,8 @@ export function renderEdgeCheck(facts: EdgeFacts): string {
             // `refused`, `unreachable`. A second vocabulary here would be a
             // place for the record and the message to disagree.
             outcome: facts.build.kind,
-            status: facts.build.kind === 'refused' ? String(facts.build.status) : '',
+            status:
+              facts.build.kind === "refused" ? String(facts.build.status) : "",
           },
           value: 1,
         },
@@ -564,8 +611,10 @@ export function renderEdgeCheck(facts: EdgeFacts): string {
   if (answered) {
     families.push({
       metric: `${METRIC_PREFIXES.edge}build_current`,
-      help: 'One when the origin is serving the build that was last published, zero when it is not.',
-      samples: [{ labels: context, value: facts.build.kind === 'current' ? 1 : 0 }],
+      help: "One when the origin is serving the build that was last published, zero when it is not.",
+      samples: [
+        { labels: context, value: facts.build.kind === "current" ? 1 : 0 },
+      ],
     });
   }
 
@@ -574,19 +623,19 @@ export function renderEdgeCheck(facts: EdgeFacts): string {
     families.push(
       {
         metric: `${METRIC_PREFIXES.edge}stale_covers`,
-        help: 'Covers the origin serves at a different size from the local build, of N checked.',
+        help: "Covers the origin serves at a different size from the local build, of N checked.",
         samples: [{ labels: sweep, value: facts.covers.stale }],
       },
       {
         metric: `${METRIC_PREFIXES.edge}uncomparable_covers`,
-        help: 'Covers the origin answered without a content-length, so nothing was compared.',
+        help: "Covers the origin answered without a content-length, so nothing was compared.",
         samples: [{ labels: sweep, value: facts.covers.uncomparable }],
       },
     );
   }
 
   const lines = families.flatMap((family) => render(family, facts.timestamp));
-  return `${lines.join('\n')}\n# EOF\n`;
+  return `${lines.join("\n")}\n# EOF\n`;
 }
 
 /**
@@ -607,14 +656,14 @@ export function renderEdgeCheck(facts: EdgeFacts): string {
 export function joinRecords(documents: readonly string[]): string {
   if (documents.length === 0) {
     throw new Error(
-      'nothing to join — an empty document ingests as zero blocks and reports success, ' +
+      "nothing to join — an empty document ingests as zero blocks and reports success, " +
         'which reads as "synced" from the one command that exists to say whether anything arrived',
     );
   }
 
   const lines = documents
-    .flatMap((document) => document.replace(/\r/g, '').split('\n'))
-    .filter((line) => line !== '' && line !== '# EOF');
+    .flatMap((document) => document.replace(/\r/g, "").split("\n"))
+    .filter((line) => line !== "" && line !== "# EOF");
 
-  return `${[...lines, '# EOF'].join('\n')}\n`;
+  return `${[...lines, "# EOF"].join("\n")}\n`;
 }

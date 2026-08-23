@@ -21,10 +21,10 @@
  * See docs/gates.md, row G29 (doc-links).
  */
 
-import { describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { expectFound, readRepoFile, REPO_ROOT, trackedFiles } from './repo.ts';
+import { describe, expect, it } from "vitest";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { expectFound, readRepoFile, REPO_ROOT, trackedFiles } from "./repo.ts";
 
 /** One `[text](target)` occurrence, with enough context to name it in a failure. */
 interface DocLink {
@@ -52,8 +52,8 @@ interface DocLink {
  */
 function withoutCode(source: string): string {
   return source
-    .replace(/^```[\s\S]*?^```/gm, (match) => match.replace(/[^\n]/g, ' '))
-    .replace(/(`+)[^\n]*?\1/g, (match) => match.replace(/[^\n]/g, ' '));
+    .replace(/^```[\s\S]*?^```/gm, (match) => match.replace(/[^\n]/g, " "))
+    .replace(/(`+)[^\n]*?\1/g, (match) => match.replace(/[^\n]/g, " "));
 }
 
 /**
@@ -68,8 +68,8 @@ function withoutCode(source: string): string {
 function docLinks(): DocLink[] {
   const found: DocLink[] = [];
 
-  for (const path of trackedFiles().filter((file) => file.endsWith('.md'))) {
-    const lines = withoutCode(readRepoFile(path)).split('\n');
+  for (const path of trackedFiles().filter((file) => file.endsWith(".md"))) {
+    const lines = withoutCode(readRepoFile(path)).split("\n");
 
     lines.forEach((text, index) => {
       for (const match of text.matchAll(/\]\(([^)\s]+)\)/g)) {
@@ -86,7 +86,7 @@ function docLinks(): DocLink[] {
 
 /** The repo-relative path a link resolves to, fragment stripped. */
 function resolveTarget(link: DocLink): string {
-  const [pathPart = ''] = link.target.split('#');
+  const [pathPart = ""] = link.target.split("#");
   const decoded = decodeURIComponent(pathPart);
   const base = dirname(join(REPO_ROOT, link.from));
   return resolve(base, decoded);
@@ -107,25 +107,25 @@ function anchorsOf(source: string): Set<string> {
   const anchors = new Set<string>();
 
   for (const match of source.matchAll(/^#{1,6} +(.+?)\s*$/gm)) {
-    const heading = (match[1] ?? '')
-      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // links keep their text
-      .replace(/[`*_~]/g, '')
+    const heading = (match[1] ?? "")
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1") // links keep their text
+      .replace(/[`*_~]/g, "")
       .trim();
 
     anchors.add(
       heading
         .toLowerCase()
-        .replace(/[^\p{L}\p{N} _-]/gu, '')
+        .replace(/[^\p{L}\p{N} _-]/gu, "")
         .trim()
-        .replace(/ +/g, '-'),
+        .replace(/ +/g, "-"),
     );
   }
 
   return anchors;
 }
 
-describe('G29 — every documented link resolves', () => {
-  it('finds enough links to be checking anything', () => {
+describe("G29 — every documented link resolves", () => {
+  it("finds enough links to be checking anything", () => {
     // The vacuity guard. A regex that stops matching returns an empty set, and
     // an empty set trivially satisfies "every link resolves" — the defect
     // docs/gates.md logs under G14, G19 and G22.
@@ -138,22 +138,22 @@ describe('G29 — every documented link resolves', () => {
     // size, which by the sentence above is a floor that had stopped doing its
     // job. It is a floor and not an exact count on purpose — docs/gates.md
     // records what happened to the prose that tried to carry the exact numbers.
-    expectFound(docLinks(), 'local links in tracked Markdown', 500);
+    expectFound(docLinks(), "local links in tracked Markdown", 500);
   });
 
-  it('points every link at a file that exists', () => {
+  it("points every link at a file that exists", () => {
     const broken = docLinks()
       .filter((link) => !existsSync(resolveTarget(link)))
       .map((link) => `${link.from}:${link.line} → ${link.target}`);
 
     expect(
       broken,
-      'links whose target does not exist. A document that links to a moved file ' +
-        `reads as a route and is a dead end:\n  ${broken.join('\n  ')}`,
+      "links whose target does not exist. A document that links to a moved file " +
+        `reads as a route and is a dead end:\n  ${broken.join("\n  ")}`,
     ).toEqual([]);
   });
 
-  it('points every fragment at a heading that exists', () => {
+  it("points every fragment at a heading that exists", () => {
     // This half was written against an empty corpus and proven by mutation
     // alone: for a while no link in the repo carried a fragment at all. The
     // future it was written for arrived — `docs/spec/` cross-references its own
@@ -166,23 +166,25 @@ describe('G29 — every documented link resolves', () => {
     // seeing `#` — would read as green. The floor sits just under the real
     // count, and links only ever get added, so it moves up and never down.
     const fragments = expectFound(
-      docLinks().filter((link) => link.target.includes('#')),
-      'fragment-carrying local links',
+      docLinks().filter((link) => link.target.includes("#")),
+      "fragment-carrying local links",
       40,
     );
 
     const broken = fragments
       .filter((link) => {
         const target = resolveTarget(link);
-        if (!target.endsWith('.md') || !existsSync(target)) return false;
-        const fragment = decodeURIComponent(link.target.split('#')[1] ?? '');
-        return !anchorsOf(readFileSync(target, 'utf8')).has(fragment.toLowerCase());
+        if (!target.endsWith(".md") || !existsSync(target)) return false;
+        const fragment = decodeURIComponent(link.target.split("#")[1] ?? "");
+        return !anchorsOf(readFileSync(target, "utf8")).has(
+          fragment.toLowerCase(),
+        );
       })
       .map((link) => `${link.from}:${link.line} → ${link.target}`);
 
     expect(
       broken,
-      `links whose #fragment names no heading in the target:\n  ${broken.join('\n  ')}`,
+      `links whose #fragment names no heading in the target:\n  ${broken.join("\n  ")}`,
     ).toEqual([]);
   });
 });

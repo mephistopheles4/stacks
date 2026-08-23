@@ -10,7 +10,7 @@ this project that writes below the frontmatter.
 **"Never published" becomes structural rather than a discipline.** A body
 section is not a `BookRecord` field, so no build can carry it by any path —
 `toLibraryBook` enumerates fields, and there is no field to enumerate. The
-frontmatter alternative would have relied on somebody *not* adding a
+frontmatter alternative would have relied on somebody _not_ adding a
 `keyIfPresent` line, which is a weaker guarantee than one the type system makes
 impossible.
 

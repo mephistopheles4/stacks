@@ -30,7 +30,7 @@ which reads like an invitation to put the binding mixture beside it.
 
 That would have been wrong, and the ticket that found it out is #56. It shipped
 `softHinge` and `headCap` as **one** knob, and the single knob changed the
-shading of all 49 books *and* the silhouette of 20 — so the cap's +20 draw calls
+shading of all 49 books _and_ the silhouette of 20 — so the cap's +20 draw calls
 could not be seen in any measurement, because a shading change was moving at the
 same time. Splitting them is what made the cost legible. The category boundary is
 that lesson written down: a group whose members all cost nothing but a recompile
@@ -41,7 +41,7 @@ where a rebuild is doing real work.
 
 2.6mm of board and 3mm of binder's square are measurements of real bookbinding.
 They are facts, and they stay constants in `scene.ts` where nobody can dial them.
-What is in `books` is the opposite: the *mixture*, which is unknowable without
+What is in `books` is the opposite: the _mixture_, which is unknowable without
 seeing it, and which #57 settled on a picture rather than on an argument.
 
 That is the test for admitting anything else here. A number somebody could look

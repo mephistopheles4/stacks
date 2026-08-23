@@ -25,10 +25,16 @@
  * See docs/gates.md, row G22 (cover-candidates).
  */
 
-import { describe, expect, it } from 'vitest';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { codeOf, expectFound, filesUnder, readRepoFile, REPO_ROOT } from './repo.ts';
+import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import {
+  codeOf,
+  expectFound,
+  filesUnder,
+  readRepoFile,
+  REPO_ROOT,
+} from "./repo.ts";
 
 /**
  * The one place that ranks cover URLs — and the providers that populate the
@@ -40,48 +46,53 @@ import { codeOf, expectFound, filesUnder, readRepoFile, REPO_ROOT } from './repo
  * the preference rule, and a gate that forbade them would be forbidding the
  * field's existence.
  */
-const OWNER_DIR = 'packages/core/src/metadata/';
+const OWNER_DIR = "packages/core/src/metadata/";
 
 /** Where the ranking itself lives, named so a move has to be deliberate. */
-const OWNER = 'packages/core/src/metadata/types.ts';
+const OWNER = "packages/core/src/metadata/types.ts";
 
 /**
  * Files that name `cacheCover` without calling it: the module that defines it,
  * and the package root that re-exports it. Neither has candidates to rank.
  */
 const NOT_A_CALLER: ReadonlySet<string> = new Set([
-  'packages/core/src/covers/cache-cover.ts',
-  'packages/core/src/index.ts',
+  "packages/core/src/covers/cache-cover.ts",
+  "packages/core/src/index.ts",
 ]);
 
 function sourceFiles(): string[] {
-  return filesUnder('packages', ['.ts']).filter((path) => !path.endsWith('.test.ts'));
+  return filesUnder("packages", [".ts"]).filter(
+    (path) => !path.endsWith(".test.ts"),
+  );
 }
 
-describe('G22 — one cover-preference implementation', () => {
-  it('scans a plausible number of source files', () => {
-    expectFound(sourceFiles(), 'source files to scan', 20);
+describe("G22 — one cover-preference implementation", () => {
+  it("scans a plausible number of source files", () => {
+    expectFound(sourceFiles(), "source files to scan", 20);
   });
 
-  it('keeps the helper where the gate says it is', () => {
+  it("keeps the helper where the gate says it is", () => {
     // Everything below is scoped to a directory, so a `coverUrls` that moved
     // out of the metadata layer would leave this gate asserting over nothing.
-    expect(existsSync(join(REPO_ROOT, OWNER)), `${OWNER} is missing`).toBe(true);
+    expect(existsSync(join(REPO_ROOT, OWNER)), `${OWNER} is missing`).toBe(
+      true,
+    );
     expect(readRepoFile(OWNER), `${OWNER} should define coverUrls`).toMatch(
       /export function coverUrls\b/,
     );
   });
 
-  it('is the only place that ranks the two cover URLs', () => {
+  it("is the only place that ranks the two cover URLs", () => {
     // Anchors the search positively before asserting the negative. `expectFound`
     // above guards the file *walk*, not the *symbol*: renaming `coverUrlLarge`
     // would otherwise leave this sweeping for a string that no longer exists and
     // passing over an empty set — the vacuity failure docs/gates.md records
     // three instances of.
     const inOwner = sourceFiles().filter(
-      (path) => path.startsWith(OWNER_DIR) && /\bcoverUrlLarge\b/.test(codeOf(path)),
+      (path) =>
+        path.startsWith(OWNER_DIR) && /\bcoverUrlLarge\b/.test(codeOf(path)),
     );
-    expectFound(inOwner, 'files in the metadata layer naming coverUrlLarge', 2);
+    expectFound(inOwner, "files in the metadata layer naming coverUrlLarge", 2);
 
     const offenders = sourceFiles().filter((path) => {
       if (path.startsWith(OWNER_DIR)) return false;
@@ -90,13 +101,13 @@ describe('G22 — one cover-preference implementation', () => {
 
     expect(
       offenders,
-      'these name coverUrlLarge outside the metadata layer, which means they are ' +
+      "these name coverUrlLarge outside the metadata layer, which means they are " +
         `ordering the candidates by hand instead of calling coverUrls() from ${OWNER}. ` +
-        `Getting the order backwards costs cover quality and fails no test: ${offenders.join(', ')}`,
+        `Getting the order backwards costs cover quality and fails no test: ${offenders.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('routes every cover download through the ranked list', () => {
+  it("routes every cover download through the ranked list", () => {
     // The reverse direction: a caller that reaches for cacheCover must have got
     // its candidates from somewhere. Each of these builds its list differently
     // — the importer deliberately prepends the export's own artwork — but all
@@ -104,17 +115,19 @@ describe('G22 — one cover-preference implementation', () => {
     const callers = sourceFiles().filter(
       (path) => !NOT_A_CALLER.has(path) && /\bcacheCover\(/.test(codeOf(path)),
     );
-    expectFound(callers, 'modules that call cacheCover', 3);
+    expectFound(callers, "modules that call cacheCover", 3);
 
-    const unranked = callers.filter((path) => !/\bcoverUrls\(/.test(codeOf(path)));
+    const unranked = callers.filter(
+      (path) => !/\bcoverUrls\(/.test(codeOf(path)),
+    );
 
     expect(
       unranked,
-      `these download a cover without ranking the candidates through coverUrls(): ${unranked.join(', ')}`,
+      `these download a cover without ranking the candidates through coverUrls(): ${unranked.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('exempts no file that actually calls cacheCover', () => {
+  it("exempts no file that actually calls cacheCover", () => {
     // The allowlist bites permissively: a file on it is skipped by the caller
     // check above, permanently. ADR-0022 requires every allowlisted entry to
     // still exist *and* still need its exemption; G10 asserts the same of its
@@ -131,17 +144,20 @@ describe('G22 — one cover-preference implementation', () => {
     // definition is the one `cacheCover(` that is not a call, so it is removed
     // before looking.
     for (const path of NOT_A_CALLER) {
-      expect(existsSync(join(REPO_ROOT, path)), `exempt file no longer exists: ${path}`).toBe(true);
+      expect(
+        existsSync(join(REPO_ROOT, path)),
+        `exempt file no longer exists: ${path}`,
+      ).toBe(true);
 
       const withoutDefinition = codeOf(path).replace(
         /(?:export\s+)?(?:async\s+)?function\s+cacheCover\s*\(/g,
-        '',
+        "",
       );
 
       expect(
         /\bcacheCover\(/.test(withoutDefinition),
         `${path} is exempt from the caller check, but it calls cacheCover. Drop it from ` +
-          'NOT_A_CALLER and rank its candidates through coverUrls().',
+          "NOT_A_CALLER and rank its candidates through coverUrls().",
       ).toBe(false);
     }
   });

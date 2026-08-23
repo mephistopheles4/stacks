@@ -50,7 +50,7 @@ one ADR-0023 relies on: the analysis must not be path-filtered.
 - `alerts_threshold: errors` — errors only, not warnings.
 
 The second is the judgement call. CodeQL rated **all twelve** of its first
-findings on this repository *high*, and exactly one was a real bug: a polynomial
+findings on this repository _high_, and exactly one was a real bug: a polynomial
 ReDoS in `safeFilename`. One was a plain false positive — a password-hashing
 rule firing on the SHA-256 that names a cache file, in a project with no
 account, no database and no authentication. The other ten were in test files.
@@ -60,7 +60,7 @@ This is a local CLI and a static site, so the severities are calibrated for
 somebody else's threat model. Blocking on warnings at that signal-to-noise ratio
 produces a check people learn to route around rather than read, and a gate
 nobody trusts is worse than one that is not there — it looks like protection.
-`docs/gates.md` records the triage under *"Triaging a CodeQL finding"*.
+`docs/gates.md` records the triage under _"Triaging a CodeQL finding"_.
 
 ## What this cost elsewhere
 
@@ -70,4 +70,4 @@ paragraph asserting the exact opposite), `CONTRIBUTING.md`, `docs/progress.md`,
 and `docs/agents/issue-tracker.md`. None of them is gateable — the ruleset lives
 outside the tree, and a test that asked GitHub would need the network, which G21
 (`no-live-network`) forbids for the whole suite. They are listed in
-`docs/gates.md` under *"Not gated, deliberately"* for that reason.
+`docs/gates.md` under _"Not gated, deliberately"_ for that reason.

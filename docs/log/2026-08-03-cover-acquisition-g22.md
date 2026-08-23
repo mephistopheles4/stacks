@@ -8,7 +8,7 @@ copies did not support the premise.
 **They had not drifted.** `add-book.ts` and `enrich.ts` held byte-identical
 candidate expressions, and the importer's differs because it does something
 different — it runs a `lookup` to find a print cover and prepends it. Two
-orderings, not three, and the third is not a copy. What *had* diverged was the
+orderings, not three, and the third is not a copy. What _had_ diverged was the
 write path, and the cause is not cover logic: `writeBook` takes a `BookInput` in
 the domain vocabulary (`coverSource`), `updateBook` takes `FrontmatterChanges` in
 the file vocabulary (`cover_source`), and `enrich` is the only caller that has to
@@ -16,7 +16,7 @@ cross that boundary. That is what produced the third assembly.
 
 So: `cacheCover` now takes `readonly (string | undefined)[]` and does its own
 filtering, which deletes the duplicated guard at all three sites; `coverUrls()`
-in `metadata/types.ts` states *large before small* once; and
+in `metadata/types.ts` states _large before small_ once; and
 `covers/cover-keys.ts` shapes a `CachedCover` into its three keys for the two
 callers that build a `BookInput`. **`enrich` stays hand-written**, deliberately —
 its "never overwrite a hand-set spine colour" guard and its `filled` reporting
@@ -24,7 +24,7 @@ are its own, and a shaper flexible enough to serve them would assert less than
 one that only serves creation. Two of three is the honest outcome.
 
 `--dry-run` keeps its own "was a URL on offer" check for the same reason: that is
-the difference between reporting a cover it *would* have fetched and one it never
+the difference between reporting a cover it _would_ have fetched and one it never
 could, and it is the command's reporting concern, not the downloader's.
 
 G22 is structural because the failure it guards is silent — see
@@ -44,7 +44,7 @@ existing one changed.
   `Object.keys`, `in`, and spreading, and `frontmatter.ts` documents that as the
   reason. So this is a consolidation, not a deletion, and it carries an
   exception that has to be stated rather than discovered: `undefined` in a
-  `FrontmatterChanges` *removes* the key, so near `updateBook` the distinction
+  `FrontmatterChanges` _removes_ the key, so near `updateBook` the distinction
   is load-bearing in the opposite direction.
 
   Filed as [#29](https://github.com/mephistopheles4/stacks/issues/29). Not among

@@ -1,6 +1,6 @@
-import type { CoverSource } from './covers/cover-source.ts';
-import type { Binding, BookRecord } from './types.ts';
-import { keyIfPresent } from './key-if-present.ts';
+import type { CoverSource } from "./covers/cover-source.ts";
+import type { Binding, BookRecord } from "./types.ts";
+import { keyIfPresent } from "./key-if-present.ts";
 
 /**
  * `library.json` — the build artifact the shelf reads.
@@ -106,29 +106,29 @@ function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
     title: record.title,
     status: record.status,
     tags: record.tags,
-    ...keyIfPresent('author', record.author),
-    ...keyIfPresent('isbn', record.isbn),
-    ...keyIfPresent('started', record.started),
-    ...keyIfPresent('finished', record.finished),
-    ...keyIfPresent('rating', record.rating),
-    ...keyIfPresent('cover', record.cover),
-    ...keyIfPresent('coverSource', record.coverSource),
-    ...keyIfPresent('spineColor', record.spineColor),
-    ...keyIfPresent('pages', record.pages),
-    ...keyIfPresent('binding', record.binding),
-    ...keyIfPresent('faceOut', record.faceOut),
-    ...keyIfPresent('shelfOrder', record.shelfOrder),
+    ...keyIfPresent("author", record.author),
+    ...keyIfPresent("isbn", record.isbn),
+    ...keyIfPresent("started", record.started),
+    ...keyIfPresent("finished", record.finished),
+    ...keyIfPresent("rating", record.rating),
+    ...keyIfPresent("cover", record.cover),
+    ...keyIfPresent("coverSource", record.coverSource),
+    ...keyIfPresent("spineColor", record.spineColor),
+    ...keyIfPresent("pages", record.pages),
+    ...keyIfPresent("binding", record.binding),
+    ...keyIfPresent("faceOut", record.faceOut),
+    ...keyIfPresent("shelfOrder", record.shelfOrder),
     // Carried so a local index can show you which books are held back. A public
     // build never contains one, so this is only ever `true` in a build that
     // stays on your machine.
-    ...keyIfPresent('private', record.private),
-    ...keyIfPresent('publisher', record.publisher),
-    ...keyIfPresent('published', record.published),
-    ...keyIfPresent('subjects', record.subjects),
-    ...keyIfPresent('googleVolumeId', record.googleVolumeId),
-    ...keyIfPresent('appleTrackId', record.appleTrackId),
-    ...keyIfPresent('openLibraryOlid', record.openLibraryOlid),
-    ...keyIfPresent('oreillyOurn', record.oreillyOurn),
+    ...keyIfPresent("private", record.private),
+    ...keyIfPresent("publisher", record.publisher),
+    ...keyIfPresent("published", record.published),
+    ...keyIfPresent("subjects", record.subjects),
+    ...keyIfPresent("googleVolumeId", record.googleVolumeId),
+    ...keyIfPresent("appleTrackId", record.appleTrackId),
+    ...keyIfPresent("openLibraryOlid", record.openLibraryOlid),
+    ...keyIfPresent("oreillyOurn", record.oreillyOurn),
   };
 
   // A public build must expose no vault paths (brief, "share build").
@@ -142,13 +142,13 @@ function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
 function idFor(record: BookRecord): string {
   const slug = record.title
     .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
     .slice(0, 60);
   // Two editions of the same title (print and audiobook) must not collide.
   const discriminator = record.isbn ?? record.sourcePath;
-  return `${slug || 'untitled'}-${shortHash(discriminator)}`;
+  return `${slug || "untitled"}-${shortHash(discriminator)}`;
 }
 
 function shortHash(value: string): string {
@@ -163,7 +163,9 @@ function shortHash(value: string): string {
 /** Newest finished first; unfinished books last, alphabetically. */
 function byFinishedThenTitle(a: LibraryBook, b: LibraryBook): number {
   if (a.finished !== undefined && b.finished !== undefined) {
-    return a.finished === b.finished ? a.title.localeCompare(b.title) : b.finished.localeCompare(a.finished);
+    return a.finished === b.finished
+      ? a.title.localeCompare(b.title)
+      : b.finished.localeCompare(a.finished);
   }
   if (a.finished !== undefined) return -1;
   if (b.finished !== undefined) return 1;

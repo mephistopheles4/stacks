@@ -12,7 +12,7 @@ tags: [imported]
 **Also broken on purpose. Do not add a title.**
 
 The YAML here parses perfectly well — the problem is that `title` is missing,
-and `title` is one of only two required keys. This is a *different* failure from
+and `title` is one of only two required keys. This is a _different_ failure from
 unparseable YAML, and it deserves its own skip-with-warning path.
 
 A book that cannot be named cannot be shelved.

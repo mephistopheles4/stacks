@@ -21,7 +21,7 @@
  *   blows the budget with perfectly reasonable covers in it.
  */
 
-import sharp from 'sharp';
+import sharp from "sharp";
 
 /**
  * Longest edge of a staged cover, in pixels.
@@ -79,7 +79,9 @@ export interface CoverSize {
  * vault may hold anything under `covers/`; the shelf falls back to a generated
  * spine, so an unreadable file is a missing cover rather than a failed build.
  */
-export async function measureCover(path: string): Promise<CoverSize | undefined> {
+export async function measureCover(
+  path: string,
+): Promise<CoverSize | undefined> {
   try {
     const { width, height } = await sharp(path).metadata();
     if (width === undefined || height === undefined) return undefined;

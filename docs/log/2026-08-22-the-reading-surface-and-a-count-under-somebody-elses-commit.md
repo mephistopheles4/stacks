@@ -18,7 +18,7 @@ commit, with nothing on the page saying so.
 
 **Every spec written for the block passed while it did this.** They asserted on
 substrings of the rendered lines, and the line that was wrong was the one
-*above* them. What found it was rendering the block against eight realistic
+_above_ them. What found it was rendering the block against eight realistic
 scopes and reading the output — the second of the three panels printed
 `schedule` on its run line and `merge` on its complexity line, four lines apart.
 
@@ -29,7 +29,7 @@ The block now prints its own record:
     counted  a1b2c3d4e5f6  merge  12 hours ago
 ```
 
-*A score never appears without its run* is [`trend-layer.md`](../spec/trend-layer.md)'s
+_A score never appears without its run_ is [`trend-layer.md`](../spec/trend-layer.md)'s
 rule; this is the same rule one level down, and it needed stating separately
 because the two blocks do not anchor on the same record. Related: the same pass
 found that `renderPanel`'s three-state label — `first run`, `new scope`, a
@@ -55,8 +55,8 @@ and the numbers are real — `packages/site/src/shelf` at 394 functions and
 touched**, because a hand-made row in the shared store is a run that never
 happened and would outlive whoever remembered making it.
 
-So the half of the acceptance criterion that reads *renders the panels against
-a real record* is **covered for the rendering and open for the record**. It
+So the half of the acceptance criterion that reads _renders the panels against
+a real record_ is **covered for the rendering and open for the record**. It
 closes when #202 merges and the first CI record carries the four families —
 the same shape of deferral as #204's observed-red demonstration.
 
@@ -74,6 +74,6 @@ today carries no complexity families at all. It printed:
   complexity  no record read carries the four counts — absent is not zero
 ```
 
-which is the *prints nothing and says so* criterion met against real data
+which is the _prints nothing and says so_ criterion met against real data
 rather than a fixture — and the pre-#202 record and the zero-function failure
 wear one face here, deliberately, because absent is not a `0` for `max`.

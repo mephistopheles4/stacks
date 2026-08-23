@@ -17,7 +17,7 @@ re-derived and re-explained in this repo before this file existed — twice for
 the first, once for the second:
 
 **`pnpm` needs a shell.** It is a `.cmd` shim on Windows and will not spawn
-without one. Node then deprecates passing an args *array* alongside `shell: true`
+without one. Node then deprecates passing an args _array_ alongside `shell: true`
 (DEP0190), because the two are concatenated rather than escaped — so the command
 has to be built as a single string. That was written out in `deploy.ts`,
 `check-public-build.ts` and `worktree.ts`, three times, in three wordings.
@@ -25,8 +25,8 @@ has to be built as a single string. That was written out in `deploy.ts`,
 **`git` must not have one.** A branch name reaches
 [`worktree.ts`](../../scripts/worktree.ts)'s `git()`, and under a shell an args
 array is concatenated rather than escaped. `BRANCH` already rejects the
-characters that would matter, but — in that file's own words, kept — *a
-validation regex and a shell are two chances to be wrong where no shell is one.*
+characters that would matter, but — in that file's own words, kept — _a
+validation regex and a shell are two chances to be wrong where no shell is one._
 `git` is a real executable on every platform and needs nothing.
 
 ## The trade-off
@@ -72,7 +72,7 @@ framing is the caller's.
 
 **Capturing output, and running for an exit code that may be non-zero on
 purpose.** These are a different contract — `runExe` throws, and these must not
-— *and* they are git-specific, since "a ref that is absent exits 1" is git's
+— _and_ they are git-specific, since "a ref that is absent exits 1" is git's
 vocabulary and `run.ts` has none. They live in
 [`scripts/lib/git.ts`](../../scripts/lib/git.ts) as `gitOutput` and `gitStatus`.
 
@@ -111,8 +111,8 @@ asked eight lines below it, with its own `spawnSync` and a different `stdio`.
 - **2026-08-04** — **`gitOutput` and `gitStatus` went to `scripts/lib/git.ts`,
   not into `run.ts`.** Four call sites and one whole file's worth of reasoning
   argued for keeping git's vocabulary out of the general helper, and that
-  argument survives the correction above: what changed is *where they live
-  together*, not whether `run.ts` should know about refs. A third export on
+  argument survives the correction above: what changed is _where they live
+  together_, not whether `run.ts` should know about refs. A third export on
   `run.ts` returning a status instead of throwing would also have been the flag
   in a different costume — same function, two meanings, picked by return type
   instead of a boolean.

@@ -15,7 +15,7 @@ days old and moved without help, which is what made the failure look like a
 package-specific quirk rather than a clock.
 
 The policy is worth keeping — seven days is the window in which a compromised
-release gets caught — but it declines *security* patches inside it, silently, and
+release gets caught — but it declines _security_ patches inside it, silently, and
 the silence is the problem. An explicit `overrides` entry is honoured where
 auto-resolution is not: the policy governs which version pnpm will pick, not one
 it is told to use.

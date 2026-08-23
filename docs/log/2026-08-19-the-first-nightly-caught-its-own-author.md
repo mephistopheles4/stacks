@@ -14,12 +14,12 @@ not true.
 The squash to `main` fired the merge half; a `workflow_dispatch` fired the
 nightly twenty minutes later. Both wrote to the orphan `metrics` branch.
 
-| | merge | nightly |
-| --- | --- | --- |
-| `gate-suite-runtime` | 11 s | 9 s |
-| `mutation-run-runtime` | — | **1275 s** (21 min) |
-| `live-exclusions` | — | 0 of 27 declared |
-| `run_ok` | 1 | 1 |
+|                        | merge | nightly             |
+| ---------------------- | ----- | ------------------- |
+| `gate-suite-runtime`   | 11 s  | 9 s                 |
+| `mutation-run-runtime` | —     | **1275 s** (21 min) |
+| `live-exclusions`      | —     | 0 of 27 declared    |
+| `run_ok`               | 1     | 1                   |
 
 **The 360-minute ceiling is generous, not tight.** The Stryker run used 6% of
 it, on a 2-core `ubuntu-latest` runner against a wall-clock only ever measured on
@@ -32,16 +32,16 @@ dispatched, and it is now a number rather than a worry — which is what
 Against [#165](https://github.com/mephistopheles4/stacks/pull/165)'s measurement
 at the same commit:
 
-| Scope | #165 | first nightly | |
-| --- | --- | --- | --- |
-| `packages/core/src` | 71.72% | 71.7196% | exact |
-| `packages/core/src/adapters` | 66.94% | 66.9399% | exact |
-| `packages/core/src/covers` | 62.27% | 62.2718% | exact |
-| `packages/core/src/import` | 66.02% | 66.0156% | exact |
-| `packages/cli/src` | 45.59% | 45.5882% | exact |
-| `packages/core/src/metadata` | 62.25% | 62.1481% | **−0.10** |
-| `packages/site/src/shelf` | 46.84% | 46.9062% | **+0.07** |
-| `scripts` | 60.19% | **53.74%** | **−6.45** |
+| Scope                        | #165   | first nightly |           |
+| ---------------------------- | ------ | ------------- | --------- |
+| `packages/core/src`          | 71.72% | 71.7196%      | exact     |
+| `packages/core/src/adapters` | 66.94% | 66.9399%      | exact     |
+| `packages/core/src/covers`   | 62.27% | 62.2718%      | exact     |
+| `packages/core/src/import`   | 66.02% | 66.0156%      | exact     |
+| `packages/cli/src`           | 45.59% | 45.5882%      | exact     |
+| `packages/core/src/metadata` | 62.25% | 62.1481%      | **−0.10** |
+| `packages/site/src/shelf`    | 46.84% | 46.9062%      | **+0.07** |
+| `scripts`                    | 60.19% | **53.74%**    | **−6.45** |
 
 **The two small movers are the tool disagreeing with itself at a fixed commit**
 — [stryker-js#6073](https://github.com/stryker-mutator/stryker-js/issues/6073),
@@ -63,7 +63,7 @@ mutation denominator like this:
 > now
 
 **It does not.** That gate imports `scripts/lib/metrics.ts`; the `mutation-score`
-strings in it are the *trend name*, not an import. The only importers were
+strings in it are the _trend name_, not an import. The only importers were
 `emit-metrics.ts` and `mutation-scopes.ts` — both excluded from the scope, both
 run by `tsx` rather than as a Vitest spec.
 
@@ -109,10 +109,10 @@ of 86 mutants, 2.66 tests per mutant), against no measurable score at all.
 
 **And the scope arithmetic closes exactly, which is the check that matters.**
 
-| | mutants | detected | score |
-| --- | --- | --- | --- |
-| `scripts`, first nightly | 562 | 302 | **53.74%** |
-| `scripts`, with the spec | 562 | 363 | **64.59%** |
+|                          | mutants | detected | score      |
+| ------------------------ | ------- | -------- | ---------- |
+| `scripts`, first nightly | 562     | 302      | **53.74%** |
+| `scripts`, with the spec | 562     | 363      | **64.59%** |
 
 **363 − 302 = 61 — precisely the 61 mutants the new spec kills.** The mutant
 population does not move, because a `*.test.ts` is negated out of `mutate`; only
@@ -129,12 +129,12 @@ it is a different population.
 `packages/core/src/adapters` produced **366 mutants** in #165 and in the first
 nightly, and **365** in the local run above. No file in that scope changed.
 
-⚠️ **#165 says the mutant *count* is the stable thing** — *"the mutant count is
+⚠️ **#165 says the mutant _count_ is the stable thing** — _"the mutant count is
 1503 either way, which is the number that would have signalled a scoping error
-rather than a timeout one"*. This is one observation against that, and **the
+rather than a timeout one"_. This is one observation against that, and **the
 cause is not established**: the two runs differ by machine and platform as well
-as by run, so *"counts drift between runs"* and *"counts differ across
-platforms"* are both consistent with it and this cannot separate them.
+as by run, so _"counts drift between runs"_ and _"counts differ across
+platforms"_ are both consistent with it and this cannot separate them.
 
 Recorded as an open question rather than a finding, because a count that can move
 by itself weakens a claim the ratchet will lean on. **The nightly is the
@@ -143,9 +143,9 @@ instrument that settles it** — same runner, same platform, twenty runs.
 One mutant also came back `Errors: 1` in the local run, unattributed.
 
 ⚠️ **Excluding it instead would have been permissible and wrong.**
-`stryker.scopes.json`'s governing rule — *a file is excluded because a named
-mechanism puts it out of reach, or it is not excluded* — would have been
-satisfied by *"no spec imports it"*, the same mechanism thirteen other entries
+`stryker.scopes.json`'s governing rule — _a file is excluded because a named
+mechanism puts it out of reach, or it is not excluded_ — would have been
+satisfied by _"no spec imports it"_, the same mechanism thirteen other entries
 carry. And the `scripts` score would have gone **up**. That is the gaming
 category this whole rollout is arranged against, available in one JSON entry,
 with the number moving the right way. The gap was real; filling it was the

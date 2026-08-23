@@ -1,7 +1,7 @@
-import type { ShelfBook, ShelfRow } from './books.ts';
-import { SHELF, rowsForCase } from './case.ts';
-import type { Contact } from './contact-shadow.ts';
-import { hashUnit } from './hash.ts';
+import type { ShelfBook, ShelfRow } from "./books.ts";
+import { SHELF, rowsForCase } from "./case.ts";
+import type { Contact } from "./contact-shadow.ts";
+import { hashUnit } from "./hash.ts";
 
 /**
  * Where every book on the shelf ends up — all of the arithmetic, none of the
@@ -38,7 +38,11 @@ import { hashUnit } from './hash.ts';
 export interface Placement {
   /** The book itself, carried rather than matched up by index afterwards. */
   readonly entry: ShelfBook;
-  readonly position: { readonly x: number; readonly y: number; readonly z: number };
+  readonly position: {
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+  };
   /** A face-out book is turned a quarter turn to show its cover. */
   readonly rotationY: number;
   /** The lean. Positive tips the top of the book to the left. */
@@ -66,7 +70,11 @@ export function placeShelf(rows: readonly ShelfRow[]): Placement[][] {
 
   return rows.map((row, rowIndex) =>
     // Drawn top-down: the newest books sit on the top shelf.
-    placeRow(row.books, rowIndex, (rowCount - 1 - rowIndex) * SHELF.rowHeight + SHELF.plankThickness / 2),
+    placeRow(
+      row.books,
+      rowIndex,
+      (rowCount - 1 - rowIndex) * SHELF.rowHeight + SHELF.plankThickness / 2,
+    ),
   );
 }
 
@@ -104,7 +112,7 @@ export function placeRow(
    * produced the wedge-shaped gaps: neighbours a fraction of a degree apart,
    * touching nowhere.
    */
-  let runLean = leanFor(rowIndex, index, books[0]?.book.id ?? '');
+  let runLean = leanFor(rowIndex, index, books[0]?.book.id ?? "");
 
   /**
    * Whatever is immediately to the left, as one record.
@@ -273,14 +281,22 @@ export function placeRow(
           // shows. A propped book leans twice that far, where the same omission
           // is 0.004 and reads as a hairline of daylight under the book. The
           // exact form costs one cosine.
-          y: shelfY + (entry.height / 2) * Math.cos(lean) + (entry.thickness / 2) * Math.sin(Math.abs(lean)),
+          y:
+            shelfY +
+            (entry.height / 2) * Math.cos(lean) +
+            (entry.thickness / 2) * Math.sin(Math.abs(lean)),
           z,
         },
         // Under the book's foot, which is not under its middle once it leans:
         // the bottom edge swings out by `sway`, and the painted shadow follows
         // it. Worth 2cm on an ordinary slump and 5cm on a propped book, which
         // is half a spine of daylight between a book and its own shadow.
-        contact: { x: x + sway, width: entry.thickness, z, depth: SHELF.bookDepth },
+        contact: {
+          x: x + sway,
+          width: entry.thickness,
+          z,
+          depth: SHELF.bookDepth,
+        },
         frontZ: depth / 2,
       });
 
@@ -313,7 +329,10 @@ export function placeRow(
  *
  * An empty row ends where the cursor starts.
  */
-export function rowExtent(books: readonly ShelfBook[], rowIndex: number): number {
+export function rowExtent(
+  books: readonly ShelfBook[],
+  rowIndex: number,
+): number {
   const placements = placeRow(books, rowIndex, 0);
   const last = placements[placements.length - 1];
   if (last === undefined) return -SHELF.width / 2;
@@ -396,7 +415,10 @@ export function propsAcrossGap(entry: ShelfBook): boolean {
  * a gap or a face-out book opens a new run. So this is the cursor's `else`,
  * stated once rather than reproduced in G25's cost model.
  */
-export function runsParallel(entry: ShelfBook, previous: ShelfBook | undefined): boolean {
+export function runsParallel(
+  entry: ShelfBook,
+  previous: ShelfBook | undefined,
+): boolean {
   return (
     previous !== undefined &&
     leansInPlace(entry) &&
@@ -437,7 +459,11 @@ export function runsParallel(entry: ShelfBook, previous: ShelfBook | undefined):
  * with the `liftedFoot` term below; without it the two disagree by 4mm at the
  * steepest angle, which is a seam a `TOUCHING` standoff hides rather than closes.
  */
-export function propLeanFor(gap: number, height: number, left: Neighbour): number {
+export function propLeanFor(
+  gap: number,
+  height: number,
+  left: Neighbour,
+): number {
   if (gap <= 0 || height <= 0 || left.height <= 0) return 0;
 
   const sway = swayOf(left.height, left.lean);
@@ -448,7 +474,8 @@ export function propLeanFor(gap: number, height: number, left: Neighbour): numbe
   const bulge = sway - foreshorten;
   const recede = sway + foreshorten;
   // Its top corner, above the plank — which its own low corner is standing on.
-  const cornerHeight = left.height * Math.cos(left.lean) + left.thickness * Math.sin(left.lean);
+  const cornerHeight =
+    left.height * Math.cos(left.lean) + left.thickness * Math.sin(left.lean);
   // Its board does not start at the plank: a leaning book stands on its *bottom
   // left* corner, so its bottom right one is `thickness · sin θ` in the air, and
   // the sloped face has already carried that much of its run before it reaches
@@ -457,7 +484,8 @@ export function propLeanFor(gap: number, height: number, left: Neighbour): numbe
 
   // It stops `TOUCHING` short, for the reason two books in a run do: the
   // alternative is two surfaces at exactly zero, fighting over the same depth.
-  const crossing = Math.max(gap - bulge - liftedFoot - TOUCHING, 0) * Math.cos(left.lean);
+  const crossing =
+    Math.max(gap - bulge - liftedFoot - TOUCHING, 0) * Math.cos(left.lean);
   const board = left.lean + Math.asin(Math.min(crossing / height, 1));
 
   const lean =
@@ -499,7 +527,11 @@ export function swayOf(height: number, lean: number): number {
  * It is shelf the book gives *back*, which is why G25's cost model can charge a
  * year gap in full and still be an upper bound.
  */
-export function propShiftOf(thickness: number, height: number, lean: number): number {
+export function propShiftOf(
+  thickness: number,
+  height: number,
+  lean: number,
+): number {
   return (thickness / 2) * (1 - Math.cos(lean)) + swayOf(height, lean);
 }
 
@@ -581,7 +613,11 @@ export function leansInPlace(entry: ShelfBook): boolean {
  * the wave reading as machinery. Both are derived from the row and the book id,
  * so a shelf looks the same on every rebuild.
  */
-export function leanFor(rowIndex: number, position: number, id: string): number {
+export function leanFor(
+  rowIndex: number,
+  position: number,
+  id: string,
+): number {
   const wave = Math.sin(position * 0.62 + rowIndex * 2.3);
   const jitter = hashUnit(id) - 0.5;
   // Biased positive: +Z rotation tips the top of the book to the left.

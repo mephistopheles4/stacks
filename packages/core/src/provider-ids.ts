@@ -1,4 +1,4 @@
-import type { BookRecord } from './types.ts';
+import type { BookRecord } from "./types.ts";
 
 /**
  * The four contributor ids: which frontmatter key, which field, what shape.
@@ -24,22 +24,22 @@ import type { BookRecord } from './types.ts';
 export const CONTRIBUTOR_IDS = {
   /** Google's volume key, e.g. `CpbLAgAAQBAJ`. */
   google_volume_id: {
-    field: 'googleVolumeId',
+    field: "googleVolumeId",
     shape: /^[A-Za-z0-9_-]{6,32}$/,
   },
   /** Apple's numeric `trackId`, e.g. `1384286945`. */
   apple_track_id: {
-    field: 'appleTrackId',
+    field: "appleTrackId",
     shape: /^\d{5,20}$/,
   },
   /** An Open Library *edition* id — `M`, never a work's `W`. */
   openlibrary_olid: {
-    field: 'openLibraryOlid',
+    field: "openLibraryOlid",
     shape: /^OL\d+M$/,
   },
   /** O'Reilly's `ourn`, e.g. `urn:orm:book:0642572352530`. */
   oreilly_ourn: {
-    field: 'oreillyOurn',
+    field: "oreillyOurn",
     shape: /^urn:orm:book:[A-Za-z0-9._-]+$/,
   },
 } as const satisfies Record<
@@ -49,7 +49,9 @@ export const CONTRIBUTOR_IDS = {
 
 export type ContributorIdKey = keyof typeof CONTRIBUTOR_IDS;
 
-export const CONTRIBUTOR_ID_KEYS = Object.keys(CONTRIBUTOR_IDS) as readonly ContributorIdKey[];
+export const CONTRIBUTOR_ID_KEYS = Object.keys(
+  CONTRIBUTOR_IDS,
+) as readonly ContributorIdKey[];
 
 /**
  * Whether a value is the right *shape* for its provider.

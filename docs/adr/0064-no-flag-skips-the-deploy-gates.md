@@ -24,8 +24,8 @@ It sat between `--check-only`, which uploads nothing, and the `else` that runs
 `pnpm test`, `typecheck`, `gate:public` and `smoke:render`. **It was not a dry
 run.** It warned, and then built and uploaded to the live address.
 
-**It shipped in this file's first commit** — `7724545`, *"Add a deploy that
-cannot publish the fixtures"* (#6), on **2026-08-01** — and no record, doc or
+**It shipped in this file's first commit** — `7724545`, _"Add a deploy that
+cannot publish the fixtures"_ (#6), on **2026-08-01** — and no record, doc or
 usage line ever explained it. `git grep` found it in two lines of one file for
 the **19 days** after. `docs/commands.md` gained a sentence about it on
 **2026-08-20**, in `4c77f84`, two days before this record; that fixed the title
@@ -46,13 +46,13 @@ saved.
 immediately before this change — so the numbers are what the flag was skipping,
 not what it would skip now that this commit has added a gate:
 
-| Gate | |
-|---|---|
-| `pnpm test` — 83 files, 893 tests | 11.9s |
-| `pnpm typecheck` | 0.7s |
-| `pnpm gate:public` | 3.3s |
-| `pnpm smoke:render` | 19.1s |
-| **the whole contract** | **~35s** |
+| Gate                              |          |
+| --------------------------------- | -------- |
+| `pnpm test` — 83 files, 893 tests | 11.9s    |
+| `pnpm typecheck`                  | 0.7s     |
+| `pnpm gate:public`                | 3.3s     |
+| `pnpm smoke:render`               | 19.1s    |
+| **the whole contract**            | **~35s** |
 
 That number is the decision. A blanket override on the most irreversible command
 in the repo is not worth half a minute, and **nothing else was ever claimed for
@@ -63,13 +63,13 @@ record at all.
 
 **Narrowing it to `--dry-run`'s no-upload path was seriously considered**, and it
 was not the ticket's own reasoning that argued for it. #152 proposed deletion on
-the grounds that the flag's *"only plausible use — skipping a slow suite while
-iterating — is already served better by `--dry-run`, which runs all four gates."*
+the grounds that the flag's _"only plausible use — skipping a slow suite while
+iterating — is already served better by `--dry-run`, which runs all four gates."_
 
 ⚠️ **That premise is false, and this repo's own log is the counter-example.**
 [`progress.md`](../progress.md) records `pnpm deploy:site --dry-run --skip-gates`
 as how a planted red was observed against the real 41-book `dist/` — and
-`--dry-run` alone cannot serve that loop, because it *runs* the suite the loop
+`--dry-run` alone cannot serve that loop, because it _runs_ the suite the loop
 exists to skip. The two flags composed, and the composition was useful.
 
 **The measurement settled it anyway.** The loop that evidence documents costs 35
@@ -81,22 +81,22 @@ is **cheap**, not occupied by a safer flag.
 
 ## Why a gate as well, when deletion was the decision
 
-#152 offered *"pin its shape under G17"* only as an alternative **if deletion is
+#152 offered _"pin its shape under G17"_ only as an alternative **if deletion is
 wrong**, so the gate is more than the ticket asked for. It is here because the
 ticket's own diagnosis was about a class and its proposal was about an instance:
-*"The mechanism for pinning an override's shape exists, is proven, and was never
-aimed at the one override that clears the whole contract."* Deleting the flag
-leaves that mechanism still aimed one flag to the left, and leaves *"deploy:site
-has no blanket override"* — a claim [#115](https://github.com/mephistopheles4/stacks/issues/115)'s
+_"The mechanism for pinning an override's shape exists, is proven, and was never
+aimed at the one override that clears the whole contract."_ Deleting the flag
+leaves that mechanism still aimed one flag to the left, and leaves _"deploy:site
+has no blanket override"_ — a claim [#115](https://github.com/mephistopheles4/stacks/issues/115)'s
 ratchet was designed around — true and held by nothing. `docs/gates.md` scores
 every rule as gated or visibly not, and this one now has a row rather than a
-line in that file's *Not gated, deliberately* table.
+line in that file's _Not gated, deliberately_ table.
 
 ## What this closes, and what it does not
 
 [ADR-0061](0061-the-mutation-floor-refuses-deploy.md) placed the mutation-floor
 refusals outside every flag's reach on the merits, and named this flag as the
-reason a *"removing the flag makes the adversary's move the only move"* argument
+reason a _"removing the flag makes the adversary's move the only move"_ argument
 was false about this repo. **That sentence is now out of date in the direction it
 hoped for.** ADR-0061 is left as written — it is a record — and this is the
 record that changes the fact underneath it.
@@ -110,8 +110,8 @@ rejecting unknown flags outright is a separate change nobody has asked for.
 gates while `--check-only` never reaches them is not gated and cannot easily be:
 the gate commands sit past step 0, and every harness that drives this script
 stops the run at step 0 rather than spend two minutes and a network. What holds
-reach is the convention `scripts/deploy.ts` adopted at `fail()` — *a refusal says
-which flags clear it, written at the refusal.* A comment, named as one, and the
+reach is the convention `scripts/deploy.ts` adopted at `fail()` — _a refusal says
+which flags clear it, written at the refusal._ A comment, named as one, and the
 thing that makes it hold is that the comment sits beside the code it describes.
 
 ## How this was decided
@@ -120,7 +120,7 @@ From [#152](https://github.com/mephistopheles4/stacks/issues/152), which was
 itself the record its own last section asked for:
 
 > That ticket needed to know what the flag does, because #115's mutation-score
-> ratchet was designed around the claim that `deploy:site` has *no* blanket
+> ratchet was designed around the claim that `deploy:site` has _no_ blanket
 > override. It resolved the half it owned — the ratchet's refusals sit outside
 > this flag's reach, per #140 — and deliberately did **not** decide this flag's
 > fate, on the grounds that a pre-existing override on the publish path is a repo

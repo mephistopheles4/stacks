@@ -36,29 +36,33 @@
  * docs/spec/the-ratchet.md §4.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 import {
   countDisableDirectives,
   ignoredMismatches,
   readFloors,
   readMutatedSource,
-} from '../scripts/lib/floors.ts';
-import { readScopes } from '../scripts/lib/mutation-score.ts';
-import { expectFound } from './repo.ts';
+} from "../scripts/lib/floors.ts";
+import { readScopes } from "../scripts/lib/mutation-score.ts";
+import { expectFound } from "./repo.ts";
 
 const floors = readFloors();
 const scopes = readScopes();
 const source = readMutatedSource();
 
-describe('G43 — the counter is asserted against something', () => {
-  it('finds the floors entries and the source they are counted over', () => {
+describe("G43 — the counter is asserted against something", () => {
+  it("finds the floors entries and the source they are counted over", () => {
     // Two floors, because the two lists are separately deletable and either one
     // going empty makes the comparison below true of nothing. Emptying `scopes`
     // in the floors file would otherwise leave "every counter matches" green
     // with no counter left to match — the vacuous green every one of these
     // gates is written against.
-    expectFound([...floors.scopes.keys()], 'scopes in stryker.floors.json', 8);
-    expectFound(source, 'mutated source files swept for disable directives', 60);
+    expectFound([...floors.scopes.keys()], "scopes in stryker.floors.json", 8);
+    expectFound(
+      source,
+      "mutated source files swept for disable directives",
+      60,
+    );
     // ⚠️ **Three floors, and this is the one whose absence was a real hole.**
     // The counter is keyed on the *declared* scopes: empty `stryker.scopes.json`
     // and `countDisableDirectives` returns an empty map, every floors entry is
@@ -68,12 +72,12 @@ describe('G43 — the counter is asserted against something', () => {
     // emptying `scopes` left G43 at 2 of 2 before this line existed. G38 would
     // redden on the same edit, and *another row covers it* is exactly the
     // argument this repo's vacuity floors exist to refuse.
-    expectFound(scopes, 'declared mutation scopes', 8);
+    expectFound(scopes, "declared mutation scopes", 8);
   });
 });
 
-describe('G43 — every recorded counter is what the tree actually holds', () => {
-  it('agrees with the sweep, in both directions', () => {
+describe("G43 — every recorded counter is what the tree actually holds", () => {
+  it("agrees with the sweep, in both directions", () => {
     const counted = countDisableDirectives(source, scopes);
     const mismatched = ignoredMismatches(counted, floors);
 
@@ -83,11 +87,11 @@ describe('G43 — every recorded counter is what the tree actually holds', () =>
           `${one.scope}: the tree holds ${String(one.swept)} disable directive(s), ` +
           `stryker.floors.json records ${String(one.recorded)}`,
       ),
-      'stryker.floors.json no longer describes the mutated source. A disable directive ' +
-        'takes a mutant out of the denominator without moving any number that says so, ' +
-        'so the count belongs beside the floor it changes the meaning of. Update the ' +
-        '`ignored` field for the scope named — and if you did not add the directive, ' +
-        'find out who did before you update anything',
+      "stryker.floors.json no longer describes the mutated source. A disable directive " +
+        "takes a mutant out of the denominator without moving any number that says so, " +
+        "so the count belongs beside the floor it changes the meaning of. Update the " +
+        "`ignored` field for the scope named — and if you did not add the directive, " +
+        "find out who did before you update anything",
     ).toEqual([]);
   });
 });

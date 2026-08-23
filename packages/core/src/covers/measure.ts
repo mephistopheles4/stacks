@@ -7,7 +7,7 @@
  * generate real images to assert against.
  */
 
-import sharp from 'sharp';
+import sharp from "sharp";
 
 export async function measureCover(
   path: string,

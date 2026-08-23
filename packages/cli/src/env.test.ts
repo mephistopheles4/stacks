@@ -13,13 +13,13 @@
  * with nothing else.
  */
 
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { envFilePath, loadEnv, mainCheckout } from './env.ts';
+import { envFilePath, loadEnv, mainCheckout } from "./env.ts";
 
 /**
  * Gitignored under `.env.*`, so a stray copy cannot be committed.
@@ -50,10 +50,13 @@ const HERE = process.cwd();
  * tests in the one place they most needed to be green.
  */
 const FIRST_WORKTREE = /^worktree (.+)$/m.exec(
-  execFileSync('git', ['worktree', 'list', '--porcelain'], { cwd: HERE, encoding: 'utf8' }),
+  execFileSync("git", ["worktree", "list", "--porcelain"], {
+    cwd: HERE,
+    encoding: "utf8",
+  }),
 )?.[1];
 
-const MAIN = resolve(FIRST_WORKTREE ?? '');
+const MAIN = resolve(FIRST_WORKTREE ?? "");
 
 let worktree: string;
 
@@ -62,44 +65,53 @@ beforeAll(() => {
   // main checkout is the right answer for the wrong reason — so a guard on the
   // resolved value passes exactly where a broken parse would do least harm and
   // fails where it does most. (Observed, on the first run of this line.)
-  expect(FIRST_WORKTREE, 'could not parse a main checkout out of `git worktree list`').toBeDefined();
+  expect(
+    FIRST_WORKTREE,
+    "could not parse a main checkout out of `git worktree list`",
+  ).toBeDefined();
   // Detached, so the test creates no branch and cannot collide with one.
-  worktree = join(mkdtempSync(join(tmpdir(), 'stacks-worktree-')), 'checkout');
-  execFileSync('git', ['worktree', 'add', '--detach', worktree], { cwd: MAIN, stdio: 'ignore' });
+  worktree = join(mkdtempSync(join(tmpdir(), "stacks-worktree-")), "checkout");
+  execFileSync("git", ["worktree", "add", "--detach", worktree], {
+    cwd: MAIN,
+    stdio: "ignore",
+  });
 });
 
 afterAll(() => {
   process.chdir(HERE);
   try {
-    execFileSync('git', ['worktree', 'remove', '--force', worktree], { cwd: MAIN, stdio: 'ignore' });
+    execFileSync("git", ["worktree", "remove", "--force", worktree], {
+      cwd: MAIN,
+      stdio: "ignore",
+    });
   } catch {
     // Windows will refuse while anything still holds the directory. Prune drops
     // the registration either way, so a failure here cannot leave the repo
     // believing in a worktree that is gone.
-    execFileSync('git', ['worktree', 'prune'], { cwd: MAIN, stdio: 'ignore' });
+    execFileSync("git", ["worktree", "prune"], { cwd: MAIN, stdio: "ignore" });
   }
 });
 
 afterEach(() => {
   process.chdir(HERE);
   rmSync(join(MAIN, PROBE), { force: true });
-  delete process.env['STACKS_PROBE_VALUE'];
+  delete process.env["STACKS_PROBE_VALUE"];
 });
 
-describe('mainCheckout', () => {
-  it('resolves the repo root from the repo root', () => {
+describe("mainCheckout", () => {
+  it("resolves the repo root from the repo root", () => {
     expect(mainCheckout()).toBe(MAIN);
   });
 
-  it('resolves the repo root from a subdirectory', () => {
+  it("resolves the repo root from a subdirectory", () => {
     // `--git-common-dir` answers `../../.git` here. Without the resolve() in
     // the implementation this returns `packages`, and the fallback would then
     // look for `.env` in a directory that has never held one.
-    process.chdir(join(MAIN, 'packages', 'site'));
+    process.chdir(join(MAIN, "packages", "site"));
     expect(mainCheckout()).toBe(MAIN);
   });
 
-  it('resolves the main checkout from a linked worktree', () => {
+  it("resolves the main checkout from a linked worktree", () => {
     // The case the whole feature exists for: `--git-common-dir` is absolute
     // here and points into the main checkout, not into this directory.
     process.chdir(worktree);
@@ -107,51 +119,51 @@ describe('mainCheckout', () => {
   });
 });
 
-describe('envFilePath', () => {
-  it('prefers the file beside you', () => {
+describe("envFilePath", () => {
+  it("prefers the file beside you", () => {
     // Standing in MAIN explicitly, so "beside you" and "the fallback" name the
     // same file for opposite reasons and the assertion cannot pass by accident
     // when this suite is itself running inside a worktree.
     process.chdir(MAIN);
-    writeFileSync(join(MAIN, PROBE), 'STACKS_PROBE_VALUE=beside\n');
+    writeFileSync(join(MAIN, PROBE), "STACKS_PROBE_VALUE=beside\n");
     expect(envFilePath(PROBE)).toBe(join(MAIN, PROBE));
   });
 
-  it('falls back to the main checkout from a worktree', () => {
-    writeFileSync(join(MAIN, PROBE), 'STACKS_PROBE_VALUE=shared\n');
+  it("falls back to the main checkout from a worktree", () => {
+    writeFileSync(join(MAIN, PROBE), "STACKS_PROBE_VALUE=shared\n");
     process.chdir(worktree);
 
     expect(envFilePath(PROBE)).toBe(join(MAIN, PROBE));
   });
 
-  it('is undefined when no checkout has one', () => {
+  it("is undefined when no checkout has one", () => {
     process.chdir(worktree);
     expect(envFilePath(PROBE)).toBeUndefined();
   });
 });
 
-describe('loadEnv', () => {
-  it('reads the main checkout file from a worktree', () => {
-    writeFileSync(join(MAIN, PROBE), 'STACKS_PROBE_VALUE=shared\n');
+describe("loadEnv", () => {
+  it("reads the main checkout file from a worktree", () => {
+    writeFileSync(join(MAIN, PROBE), "STACKS_PROBE_VALUE=shared\n");
     process.chdir(worktree);
 
     loadEnv(PROBE);
-    expect(process.env['STACKS_PROBE_VALUE']).toBe('shared');
+    expect(process.env["STACKS_PROBE_VALUE"]).toBe("shared");
   });
 
-  it('still lets a real environment variable win', () => {
+  it("still lets a real environment variable win", () => {
     // The file is a default, not an override. This is what keeps
     // `STACKS_VAULT=... pnpm stacks build` doing what it says, in a worktree
     // exactly as in the main checkout.
-    writeFileSync(join(MAIN, PROBE), 'STACKS_PROBE_VALUE=shared\n');
-    process.env['STACKS_PROBE_VALUE'] = 'from the shell';
+    writeFileSync(join(MAIN, PROBE), "STACKS_PROBE_VALUE=shared\n");
+    process.env["STACKS_PROBE_VALUE"] = "from the shell";
     process.chdir(worktree);
 
     loadEnv(PROBE);
-    expect(process.env['STACKS_PROBE_VALUE']).toBe('from the shell');
+    expect(process.env["STACKS_PROBE_VALUE"]).toBe("from the shell");
   });
 
-  it('does nothing when there is no file, rather than throwing', () => {
+  it("does nothing when there is no file, rather than throwing", () => {
     // Invariant 3's habit: the absence of optional configuration is the normal
     // case and must never be an exception.
     process.chdir(worktree);

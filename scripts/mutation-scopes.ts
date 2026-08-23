@@ -21,8 +21,8 @@
  * and exits 0 unless it cannot find its inputs.
  */
 
-import { join } from 'node:path';
-import { REPO_ROOT } from './lib/repo-root.ts';
+import { join } from "node:path";
+import { REPO_ROOT } from "./lib/repo-root.ts";
 import {
   fraction,
   readReport,
@@ -32,10 +32,11 @@ import {
   totalOf,
   type MutationReport,
   type Tally,
-} from './lib/mutation-score.ts';
+} from "./lib/mutation-score.ts";
 
 const REPORT =
-  process.argv[2] ?? join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
+  process.argv[2] ??
+  join(REPO_ROOT, "artifacts", "stryker", "current", "mutation.json");
 
 /**
  * ⚠️ **What a zero-mutant scope prints is a decision, not an accident.**
@@ -47,7 +48,7 @@ const REPORT =
  */
 function score(tally: Tally): string {
   const value = fraction(tally);
-  return value === null ? 'n/a' : `${(100 * value).toFixed(2)}%`;
+  return value === null ? "n/a" : `${(100 * value).toFixed(2)}%`;
 }
 
 function reportOrExit(path: string): MutationReport {
@@ -55,7 +56,9 @@ function reportOrExit(path: string): MutationReport {
     return readReport(path);
   } catch {
     console.error(`No mutation report at ${path}.`);
-    console.error('Run `pnpm mutation:run` first, or pass a report path as the first argument.');
+    console.error(
+      "Run `pnpm mutation:run` first, or pass a report path as the first argument.",
+    );
     process.exit(1);
   }
 }
@@ -69,7 +72,10 @@ const rows = scopes.map((scope) => {
   return { scope, tally };
 });
 
-const nameWidth = Math.max(...rows.map((row) => row.scope.name.length), 'all declared'.length);
+const nameWidth = Math.max(
+  ...rows.map((row) => row.scope.name.length),
+  "all declared".length,
+);
 const cell = (text: string, width: number): string => text.padStart(width);
 
 function line(name: string, tally: Tally, exclusions: string): string {
@@ -83,58 +89,65 @@ function line(name: string, tally: Tally, exclusions: string): string {
     cell(String(tally.noCoverage), 6),
     cell(String(tally.statics), 6),
     cell(exclusions, 4),
-  ].join('  ');
+  ].join("  ");
 }
 
 console.log(`Report: ${REPORT}`);
-console.log('');
+console.log("");
 console.log(
   [
-    cell('scope', nameWidth),
-    cell('mutants', 7),
-    cell('score', 7),
-    cell('killed', 6),
-    cell('timeout', 7),
-    cell('survived', 8),
-    cell('no cov', 6),
-    cell('static', 6),
-    cell('excl', 4),
-  ].join('  '),
+    cell("scope", nameWidth),
+    cell("mutants", 7),
+    cell("score", 7),
+    cell("killed", 6),
+    cell("timeout", 7),
+    cell("survived", 8),
+    cell("no cov", 6),
+    cell("static", 6),
+    cell("excl", 4),
+  ].join("  "),
 );
-for (const row of rows) console.log(line(row.scope.name, row.tally, String(row.scope.exclusions.length)));
+for (const row of rows)
+  console.log(
+    line(row.scope.name, row.tally, String(row.scope.exclusions.length)),
+  );
 
 const all = totalOf(run);
-console.log(line('all declared', all, String(run.declaredExclusions)));
+console.log(line("all declared", all, String(run.declaredExclusions)));
 
 if (all.errors > 0 || all.ignored > 0) {
-  console.log('');
+  console.log("");
   console.log(`Errors: ${all.errors}   Ignored: ${all.ignored}`);
 }
 
 // The scores above are not wrong when this fires — they are partial, which is
 // worse, because a partial score reads exactly like a finished one.
 if (all.pending > 0) {
-  console.log('');
+  console.log("");
   console.log(
     `⚠ ${all.pending} mutant(s) still Pending — this report is from a run that has not finished.`,
   );
-  console.log('  Every score above covers only the part that completed.');
+  console.log("  Every score above covers only the part that completed.");
 }
 
 // An excluded file the report carries anyway — see `scoreRun` for why this
 // cannot happen against a report `pnpm mutation:run` produced, and what it
 // catches in the reports that are not.
 if (run.live.size > 0) {
-  console.log('');
-  console.log(`excluded but present in this report — ${run.live.size} of ${run.declaredExclusions}:`);
-  for (const [file, mutants] of run.live) console.log(`  ${file}  (${mutants})`);
+  console.log("");
+  console.log(
+    `excluded but present in this report — ${run.live.size} of ${run.declaredExclusions}:`,
+  );
+  for (const [file, mutants] of run.live)
+    console.log(`  ${file}  (${mutants})`);
 }
 
 // A file Stryker mutated that no scope claims. Not possible while `mutate` is
 // derived from the same file this script reads — printed anyway, because the day
 // somebody hand-edits `mutate` is the day it stops being impossible.
 if (run.unclaimed.size > 0) {
-  console.log('');
-  console.log('mutated but claimed by no declared scope:');
-  for (const [file, mutants] of run.unclaimed) console.log(`  ${file}  (${mutants})`);
+  console.log("");
+  console.log("mutated but claimed by no declared scope:");
+  for (const [file, mutants] of run.unclaimed)
+    console.log(`  ${file}  (${mutants})`);
 }

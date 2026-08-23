@@ -1,11 +1,11 @@
-import type { Library, LibraryBook } from '@stacks/core';
-import { hideCard, showCard, type CardElements } from './card.ts';
-import { mountSheet } from './card-sheet.ts';
-import { mountCoverViewer, type CoverViewerElements } from './cover-viewer.ts';
-import { mountDiagnostics } from './diagnostics.ts';
-import { mountShelf, type ShelfHandle, type ShelfStats } from './scene.ts';
-import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
-import { bookLimit, readSettings, soloBook } from './shelf-url.ts';
+import type { Library, LibraryBook } from "@stacks/core";
+import { hideCard, showCard, type CardElements } from "./card.ts";
+import { mountSheet } from "./card-sheet.ts";
+import { mountCoverViewer, type CoverViewerElements } from "./cover-viewer.ts";
+import { mountDiagnostics } from "./diagnostics.ts";
+import { mountShelf, type ShelfHandle, type ShelfStats } from "./scene.ts";
+import { resolveSettings, type ShelfSettings } from "./shelf-settings.ts";
+import { bookLimit, readSettings, soloBook } from "./shelf-url.ts";
 
 /**
  * Wires the page up: load the library, mount the shelf, show a card on click.
@@ -65,7 +65,7 @@ export async function boot(
   const limit = bookLimit(params);
   const all = await loadLibrary();
   const books = limit === undefined ? all : all.slice(0, limit);
-  const debug = params.has('debug');
+  const debug = params.has("debug");
 
   /**
    * `?solo=N` — one book on a turntable instead of the shelf.
@@ -80,8 +80,13 @@ export async function boot(
    */
   const solo = soloBook(params);
   if (solo !== undefined) {
-    const { mountBookInspector } = await import('./book-inspector.ts');
-    mountBookInspector(canvas, all, solo, resolveSettings(readSettings(params)));
+    const { mountBookInspector } = await import("./book-inspector.ts");
+    mountBookInspector(
+      canvas,
+      all,
+      solo,
+      resolveSettings(readSettings(params)),
+    );
     return undefined;
   }
 
@@ -160,7 +165,7 @@ export async function boot(
    */
   if (debug && canvas.parentElement !== null) {
     const host = canvas.parentElement;
-    const { mountPanel } = await import('./debug-panel.ts');
+    const { mountPanel } = await import("./debug-panel.ts");
 
     const showPanel = (current: ShelfHandle): void => {
       unmountPanel?.();
@@ -206,8 +211,8 @@ export async function boot(
 
   const coverViewer = mountCoverViewer(card.coverViewer, card.body);
 
-  document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
     // The enlarged cover is a modal `<dialog>`, so the platform closes it on
     // Escape and the keydown still reaches here. Without this guard one press
     // would take the viewer *and* the card underneath it — the user having
@@ -248,19 +253,20 @@ function publish(handle: ShelfHandle): void {
  * a sentence, because a visitor who knows the shelf is missing can reload, and a
  * visitor looking at a black rectangle cannot tell it apart from the design.
  */
-const NOTICE_CLASS = 'shelf-notice';
+const NOTICE_CLASS = "shelf-notice";
 
 // Says what happened, not why. `webglcontextlost` carries no reason, and the
 // first wording asserted one — "ran out of graphics memory" — that the evidence
 // then contradicted: the page survived the loss and exited cleanly, so nothing
 // was killed for running out of anything it could name.
-const LOST_MESSAGE = 'The browser reset the shelf’s 3D canvas. Reload to bring it back.';
+const LOST_MESSAGE =
+  "The browser reset the shelf’s 3D canvas. Reload to bring it back.";
 
 // Says what happened and where to look, because the whole point of stopping is
 // that somebody reads the panel. Without `?debug` there is no panel, so the
 // sentence has to be able to stand alone.
 const SHADER_MESSAGE =
-  'This device would not compile the shelf’s shaders, so drawing has stopped. Reload with ?debug to see what the driver said.';
+  "This device would not compile the shelf’s shaders, so drawing has stopped. Reload with ?debug to see what the driver said.";
 
 const UNAVAILABLE_MESSAGE =
   "This browser wouldn't give the page a 3D canvas, so the shelf can't be drawn. Reloading usually fixes it.";
@@ -271,12 +277,12 @@ function showNotice(canvas: HTMLCanvasElement, message: string): void {
 
   clearNotice(canvas);
 
-  const notice = document.createElement('p');
+  const notice = document.createElement("p");
   notice.className = NOTICE_CLASS;
   // textContent, not innerHTML — same rule as the card, and these strings are
   // fixed anyway.
   notice.textContent = message;
-  notice.setAttribute('role', 'status');
+  notice.setAttribute("role", "status");
   host.append(notice);
 }
 
@@ -303,7 +309,7 @@ function watchForRebuilds(): void {
 
   const check = async (): Promise<void> => {
     try {
-      const response = await fetch('/library.json', { cache: 'no-store' });
+      const response = await fetch("/library.json", { cache: "no-store" });
       if (!response.ok) return;
       const { generatedAt } = (await response.json()) as Library;
 
@@ -328,7 +334,7 @@ function watchForRebuilds(): void {
  */
 async function loadLibrary(): Promise<LibraryBook[]> {
   try {
-    const response = await fetch('/library.json');
+    const response = await fetch("/library.json");
     if (!response.ok) return [];
     const library = (await response.json()) as Library;
     return Array.isArray(library.books) ? [...library.books] : [];
@@ -336,4 +342,3 @@ async function loadLibrary(): Promise<LibraryBook[]> {
     return [];
   }
 }
-

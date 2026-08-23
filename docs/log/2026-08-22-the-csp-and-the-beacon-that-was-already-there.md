@@ -9,8 +9,8 @@ when it was written, and one of them could only be found by asking the origin.
 ## The site's "perfect same-origin record" was not a property of the site
 
 The issue opens with the shelf's one outbound request, `fetch('/library.json')`,
-and calls it *"a real property of a site whose whole premise is that the
-published build is the owner's reading."* It is a real property of **this
+and calls it _"a real property of a site whose whole premise is that the
+published build is the owner's reading."_ It is a real property of **this
 repository**. `packages/site/dist/index.html` ships one `<script>` tag.
 
 `https://stacks.aymandiab.com/` serves two. The second is
@@ -22,7 +22,7 @@ zone, present in no file here. It is on `/attribution` as well, a page that ship
 
 **No grep could have found it**, which is why a measurement taken across the
 repository read as a measurement of the site. #119's category-5 entry had already
-named the decay — *"measured once, by grep, at this commit"* — and the thing that
+named the decay — _"measured once, by grep, at this commit"_ — and the thing that
 actually decayed was not the number's freshness but its **subject**.
 
 The first instinct was wrong and worth recording: block it, on the reading that
@@ -33,16 +33,16 @@ issue #119 forbade a client beacon. Two corrections killed that.
   — the directive the entire issue is about — was never in tension with the
   beacon at all. The two questions are orthogonal, and it took reading the
   sibling repo to see it.
-- **#119 rejected something else.** Option C was a beacon *stacks would build* to
+- **#119 rejected something else.** Option C was a beacon _stacks would build_ to
   count an invariant, defeated by three arguments that are all specific to that
   counter. #119's own correction comment then settled this case directly:
-  *"edge-injected markup on the deployed site is observed by nothing, before or
-  after this ticket, and stacks accepts that"* — with #127 framed as constraining
+  _"edge-injected markup on the deployed site is observed by nothing, before or
+  after this ticket, and stacks accepts that"_ — with #127 framed as constraining
   what such script may **do**, never detecting it.
 
 ⚠️ **A third thing was wrong, and review caught it after the code was already
-right.** The first draft of every document here said blocking the beacon *"removes
-nothing"*. It does not: a `script-src` omitting the origin makes the browser refuse
+right.** The first draft of every document here said blocking the beacon _"removes
+nothing"_. It does not: a `script-src` omitting the origin makes the browser refuse
 the script, so the analytics genuinely stop. What survives is the injected tag and
 a violation logged on every page load.
 
@@ -90,7 +90,7 @@ the security block:
 > The shelf is a static folder with no server behind it and no scripts from
 > anywhere else. Saying so costs nothing and removes a class of injection…
 
-*"Saying so costs nothing"* described a header that was never added. The comment
+_"Saying so costs nothing"_ described a header that was never added. The comment
 was right about the shelf and wrong about the file it was in — so the absence was
 invisible from the one place anybody would look for it. Corrected in the same diff,
 which is what the ticket comment demanded and why it existed.
@@ -117,7 +117,7 @@ whole-policy match would be red on the next commit for a reason unconnected to
 what it guards. Hashes are filtered out of every comparison; `style-src` is held
 to its `'self'` and to being present at all, which is the stable part of it.
 
-**The set is closed**: a directive *outside* it fails too. That half was the last
+**The set is closed**: a directive _outside_ it fails too. That half was the last
 thing found, and it is the one that mattered — a specific fetch directive
 overrides `default-src` for its own resource type, so `object-src *` or
 `worker-src *` widen the policy with every pinned directive still exactly right,
@@ -135,14 +135,14 @@ every gate green — the issue's failure shape inside the commit closing it. Rev
 caught the code; a second pass caught this write-up and `progress.md` still
 describing the narrow version; a third caught the rule reading only its own list
 and never the policy's. **Each time, checking the named thing missed the unnamed
-one** — and the fix that generalises is to ask what the check does *not* look at,
+one** — and the fix that generalises is to ask what the check does _not_ look at,
 which is not a question a list of things to check ever prompts.
 
 **Widening a rule is not done until the prose describing it moves too**, and the
 sentence that survives longest is the one nobody re-reads because they wrote it.
 
 Six `csp` defects planted, each firing that rule and nothing else: a page with no
-policy, a *second* page with no policy, `connect-src` widened, an unnamed script
+policy, a _second_ page with no policy, `connect-src` widened, an unnamed script
 origin, a directive quietly dropped, and a directive nobody named. Two more under
 `headers`, one per framing control. Three existing fixtures needed the meta tag
 added or they double-fired —

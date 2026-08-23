@@ -30,7 +30,7 @@ installed. They are not a requirement for contributing** — see
 
   **Both halves are load-bearing.** An `assigned` event survives being undone, so
   a timeline hit is not a current claim — the first query is what says that login
-  still holds it. The second prints one line per assignment *of that login*,
+  still holds it. The second prints one line per assignment _of that login_,
   oldest first, so **the last line is the one to age**: filtering by login keeps
   a co-assignee's timestamp out of the answer, and `--paginate` is there because
   events arrive oldest-first and a busy issue puts the newest on the last page.
@@ -39,7 +39,7 @@ installed. They are not a requirement for contributing** — see
 
   Those are the invocations only. **When a claim is due, what an assignee does
   and does not prove, and what to do when you find one is one rule, for any
-  issue an agent picks up** — stated once, under *Working rules for agents* in
+  issue an agent picks up** — stated once, under _Working rules for agents_ in
   [`AGENTS.md`](../../AGENTS.md#working-rules-for-agents), and not restated
   here, per [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md).
 
@@ -63,10 +63,11 @@ view shows: that half comes from the timeline, a ticket at a time.
 
   `issue_id` is the blocker's **REST id**, not its number — get it with
   `gh api repos/{owner}/{repo}/issues/<n> --jq .id`.
+
 - **Read what blocks a ticket**: `gh api repos/{owner}/{repo}/issues/<n>/dependencies/blocked_by --jq '[.[].number]'`.
 - **The frontier** — open, unblocked, unclaimed children of a map: list the
   map's sub-issues, drop any with a non-empty `blocked_by`, then age the claim
-  on each one that carries an assignee — the two queries under *Claim an issue*
+  on each one that carries an assignee — the two queries under _Claim an issue_
   above, the second's last line being the timestamp — and drop the ticket only
   while that claim is still presumed live. **What "still live" means is
   [`AGENTS.md`](../../AGENTS.md#working-rules-for-agents)'s to say**, and it is
@@ -85,14 +86,15 @@ view shows: that half comes from the timeline, a ticket at a time.
 
   ⚠️ **`--paginate` on that second query is load-bearing here, and this is the
   bullet that says why.** Truncated, it answers `[]` — and `[]` does not read as
-  a failure, it reads as *never claimed*, which this bullet turns into **free to
+  a failure, it reads as _never claimed_, which this bullet turns into **free to
   take**. So the flag's absence fails open, on the busiest tickets, which are the
   contested ones: this repo's own #120 answers the unpaginated query with `[]`
   while carrying two assignments. Anyone shortening the round trips will reach
   for it first, because it looks like the expensive part and dropping it looks
   like it worked.
+
 - **Resolve** a ticket: post the answer as a comment, `gh issue close`, then add
-  a one-line pointer to the map's *Decisions so far*.
+  a one-line pointer to the map's _Decisions so far_.
 
 ## Pull requests as a triage surface
 
@@ -123,4 +125,4 @@ pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render
 
 A defect worth fixing is usually worth a named gate that goes red — see
 [`docs/gates.md`](../gates.md). An issue describing a defect is more useful when
-it says which gate *would* have caught it, or that none would.
+it says which gate _would_ have caught it, or that none would.

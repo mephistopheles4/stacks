@@ -8,20 +8,23 @@ export {
   type BookInput,
   type BookRecord,
   type BookStatus,
-} from './types.ts';
+} from "./types.ts";
 
-export type { FrontmatterChanges, VaultAdapter } from './adapters/vault-adapter.ts';
-export { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
+export type {
+  FrontmatterChanges,
+  VaultAdapter,
+} from "./adapters/vault-adapter.ts";
+export { ObsidianAdapter } from "./adapters/obsidian-adapter.ts";
 
-export { parseNote, type ParsedNote } from './frontmatter.ts';
+export { parseNote, type ParsedNote } from "./frontmatter.ts";
 
-export { keyIfPresent } from './key-if-present.ts';
+export { keyIfPresent } from "./key-if-present.ts";
 
 export {
   compareShelfPosition,
   SHELVED_STATUSES,
   type Positionable,
-} from './shelf-order.ts';
+} from "./shelf-order.ts";
 
 export {
   isProbablySameBook,
@@ -29,16 +32,20 @@ export {
   normaliseIsbn,
   normaliseTitleAuthor,
   titleMatchScore,
-} from './identity.ts';
+} from "./identity.ts";
 
 export {
   buildLibrary,
   type BuildLibraryOptions,
   type Library,
   type LibraryBook,
-} from './library.ts';
+} from "./library.ts";
 
-export { dominantColour, spineColour, type Region } from './covers/dominant-colour.ts';
+export {
+  dominantColour,
+  spineColour,
+  type Region,
+} from "./covers/dominant-colour.ts";
 
 export {
   createCachedHttpGet,
@@ -49,18 +56,22 @@ export {
   type HttpGet,
   type MetadataOptions,
   type MetadataSource,
-} from './metadata/index.ts';
+} from "./metadata/index.ts";
 
-export { addBook, type AddBookOptions, type AddBookResult } from './add-book.ts';
+export {
+  addBook,
+  type AddBookOptions,
+  type AddBookResult,
+} from "./add-book.ts";
 
 export {
   enrichBook,
   missingFields,
   type EnrichOptions,
   type EnrichOutcome,
-} from './enrich.ts';
+} from "./enrich.ts";
 
-export { cacheCover, type CachedCover } from './covers/cache-cover.ts';
+export { cacheCover, type CachedCover } from "./covers/cache-cover.ts";
 
 export {
   importBooks,
@@ -71,16 +82,16 @@ export {
   type ImportOptions,
   type ImportOutcome,
   type ImportResult,
-} from './import/index.ts';
+} from "./import/index.ts";
 
 export {
   isRebuildTrigger,
   watchVault,
   type Closeable,
   type WatchOptions,
-} from './watch.ts';
+} from "./watch.ts";
 
-export { publish, type PublishOptions, type PublishResult } from './publish.ts';
+export { publish, type PublishOptions, type PublishResult } from "./publish.ts";
 
 export {
   backfillCoverSources,
@@ -88,6 +99,10 @@ export {
   type BackfillOutcome,
   type BackfillResult,
   type MeasureCover,
-} from './backfill-covers.ts';
-export { measureCover } from './covers/measure.ts';
-export { COVER_SOURCES, isCoverSource, type CoverSource } from './covers/cover-source.ts';
+} from "./backfill-covers.ts";
+export { measureCover } from "./covers/measure.ts";
+export {
+  COVER_SOURCES,
+  isCoverSource,
+  type CoverSource,
+} from "./covers/cover-source.ts";
