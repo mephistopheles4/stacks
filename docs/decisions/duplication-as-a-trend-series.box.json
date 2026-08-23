@@ -1,0 +1,585 @@
+{
+  "title": "Duplication as a trend series — adopt, and counting what",
+  "eyebrow": "stacks · issue #237 · map #228 · 2026-08-23",
+  "dims": [
+    {
+      "id": "verdict",
+      "name": "The verdict",
+      "question": "Does duplication become a series, a gate, or nothing?",
+      "problem": "This repository sorts every automated check into one of two kinds. A gate blocks a merge or a deploy. A trend is a number that reaches a person and blocks nothing. The rule that sorts them is `docs/spec/gate-or-trend.md`. Duplication is a candidate check. This row picks its kind, and refusal is a permitted answer.",
+      "opts": [
+        {
+          "id": "verdict-series",
+          "label": "A trend series. The number reaches the maintainer and blocks nothing.",
+          "short": "Trend series",
+          "chosen": true,
+          "src": "#237 question 1"
+        },
+        {
+          "id": "verdict-gate",
+          "label": "A gate. A duplication level above a threshold turns a build red.",
+          "short": "Gate",
+          "src": "#232 notes jscpd's --threshold flag"
+        },
+        {
+          "id": "verdict-refuse",
+          "label": "Nothing. Record the refusal in docs/gates.md, Not gated deliberately.",
+          "short": "Adopt nothing",
+          "strawman": true,
+          "src": "#228 Destination — refusal is a first-class result"
+        },
+        {
+          "id": "verdict-later",
+          "label": "Decide after a formatter and a linter land, because both change the tree.",
+          "short": "Decide later",
+          "strawman": true
+        }
+      ]
+    },
+    {
+      "id": "teeth",
+      "name": "Teeth",
+      "question": "Does a duplication number ever refuse anything?",
+      "problem": "A trend usually refuses nothing. This repository made one exception. Two complexity series carry a per-scope cap in `stryker.floors.json`. The cap is the highest value the repository already reached, and `pnpm deploy:site` refuses when a capped scope exceeds it. The complexity spec caps only the two counts that do not grow with the codebase. This row asks whether a duplication count earns the same cap.",
+      "opts": [
+        {
+          "id": "teeth-uncapped",
+          "label": "No cap. The number is read, and it refuses nothing anywhere.",
+          "short": "Uncapped",
+          "chosen": true,
+          "src": "#237 question 2"
+        },
+        {
+          "id": "teeth-capped",
+          "label": "A per-scope cap in the floors file, which pnpm deploy:site refuses against.",
+          "short": "Capped, ratchet",
+          "src": "docs/spec/complexity-on-the-trend-layer.md §4"
+        },
+        {
+          "id": "teeth-arm-later",
+          "label": "Ship cap entries as unarmed now, and decide arming after the window fills.",
+          "short": "Unarmed for now",
+          "strawman": true
+        }
+      ]
+    },
+    {
+      "id": "record",
+      "name": "What the record carries",
+      "question": "Which numbers land in the record, and what stamps their meaning?",
+      "problem": "A trend record is a line of numbers written each run. Two properties decide whether it can be compared to its own past. First, the shape: a count or a share. Second, a hash of every input that changes the number, stamped beside it. The complexity series already carries such a hash, named `fixtureHash`, over the ESLint version and the rule options. A duplication number has its own inputs: the jscpd version, the token threshold, the line threshold and the detection mode.",
+      "opts": [
+        {
+          "id": "record-counts",
+          "label": "Three counts per population, and a duplication hash separate from fixtureHash.",
+          "short": "Counts, own hash",
+          "chosen": true,
+          "src": "#237 question 3, applying complexity spec §2 and §4"
+        },
+        {
+          "id": "record-ratio",
+          "label": "The duplication percentage, which is the number jscpd prints.",
+          "short": "The percentage",
+          "src": "jscpd console reporter output"
+        },
+        {
+          "id": "record-shared-hash",
+          "label": "Fold the jscpd inputs into the existing fixtureHash, so one hash covers both tools.",
+          "short": "One shared hash",
+          "src": "#237 session — the floors file already reads one fixtureHash"
+        },
+        {
+          "id": "record-unhashed",
+          "label": "Record the number with no hash beside it, and trust the pinned versions.",
+          "short": "No hash",
+          "strawman": true
+        }
+      ]
+    },
+    {
+      "id": "deliberate",
+      "name": "Deliberate near-repetition",
+      "question": "What happens to the clones this repository wrote on purpose?",
+      "problem": "Some repeated code here is intentional. Two TypeScript interfaces share a field vocabulary across the adapter boundary by design. One pair of functions is `mirrored` because a spec says so. A duplication tool reports all of them. This row decides what the measurement does about that: it can suppress them in the source, it can tune the threshold past them, or it can leave them in the number.",
+      "opts": [
+        {
+          "id": "deliberate-in-the-level",
+          "label": "Leave them in the number. Name them once in the baseline, and read movement.",
+          "short": "In the level",
+          "chosen": true,
+          "src": "#237 session, from the measurement below"
+        },
+        {
+          "id": "deliberate-ignore-comments",
+          "label": "Put jscpd:ignore-start blocks around each intentional clone in the source.",
+          "short": "Ignore blocks",
+          "src": "jscpd 5.0.16 supports the directive"
+        },
+        {
+          "id": "deliberate-tune",
+          "label": "Raise the token threshold until the intentional clones stop reporting.",
+          "short": "Tune the threshold",
+          "src": "#237 question 4"
+        },
+        {
+          "id": "deliberate-nothing",
+          "label": "State no rule. Whoever reads the series judges each clone at the time.",
+          "short": "No rule",
+          "strawman": true
+        }
+      ]
+    },
+    {
+      "id": "population",
+      "name": "Which populations",
+      "question": "Over which files does the tool run, and in how many runs?",
+      "problem": "Every other series here is counted per scope. A scope is one glob in `stryker.scopes.json`, and there are eight. Duplication differs from complexity in one way that matters. Complexity is a property of one function. A clone is a relation between two places, and the two places can sit in different scopes. So the number of runs is a real choice, not a detail.",
+      "opts": [
+        {
+          "id": "population-scoped-union",
+          "label": "One run over the eight scopes together. Count a clone in each scope it touches.",
+          "short": "One run, per scope",
+          "chosen": true,
+          "src": "#237 question 5, from #232's combined run"
+        },
+        {
+          "id": "population-scoped-separate",
+          "label": "Eight runs, one per scope. The eight numbers sum to a total.",
+          "short": "Eight separate runs",
+          "src": "complexity spec §2, one population per glob"
+        },
+        {
+          "id": "population-plus-gates",
+          "label": "The eight scopes, and gates/ as a ninth population.",
+          "short": "Add gates/",
+          "src": "complexity spec §2 override list"
+        },
+        {
+          "id": "population-whole-tree",
+          "label": "One number for the whole repository, with no scope split at all.",
+          "short": "Whole tree, one number",
+          "strawman": true
+        }
+      ]
+    }
+  ],
+  "rel": {
+    "verdict-series": {
+      "why": "Duplication passes clause B of the sorting rule without argument: the population excludes test files, so no assertion moves the number. It fails clause A, because the remedy for a high level is a refactor and not a finite diff.",
+      "rel": [
+        [
+          "record-counts",
+          "req",
+          "A series that cannot be compared to its own past is a flat line with noise on it.",
+          "sourced",
+          "docs/spec/gate-or-trend.md §2 — a trend's characteristic failure is silence that looks like health"
+        ]
+      ],
+      "notes": [
+        "Clause A is arguable here, and the spec says what to do about that. jscpd names the exact file and line range of both halves of a clone, which looks like a named remedy. gate-or-trend.md §1 states that a candidate which passes clause B and is argued through clause A is suspect rather than classified. Trend is the classification that survives that instruction.",
+        "The source that put duplication on this map: SlopCodeBench, March 2026, found duplication rose in 89.8% of agent runs against flat human baselines. One study, unreplicated. It motivates the series and proves nothing about this repository."
+      ]
+    },
+    "verdict-gate": {
+      "why": "jscpd ships a --threshold flag that exits 1 above a duplication percentage, so a gate is one flag away. The map's routing ticket found that style rules may gate, which invites the question here.",
+      "rel": [
+        [
+          "deliberate-in-the-level",
+          "conf",
+          "Three of twelve clones here are intentional, so a threshold reddens a build for a design decision.",
+          "measured",
+          "#232 — two parallel interfaces plus one spec-mandated mirror, read by hand"
+        ],
+        [
+          "teeth-uncapped",
+          "conf",
+          "A gate needs a number to breach, so it cannot run without a threshold.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "#229 routed this ticket explicitly: duplication produces a count rather than a complaint, so it sorts by the older gate-or-trend rule and not by the new stranger standard."
+      ]
+    },
+    "verdict-refuse": {
+      "why": "The map names refusal as a first-class result. docs/gates.md already holds eight refusals in its Not gated deliberately section, so the verdict has a home.",
+      "rel": [
+        [
+          "record-counts",
+          "conf",
+          "A refused candidate writes no record, so no hash and no counts exist.",
+          "argued"
+        ],
+        [
+          "teeth-uncapped",
+          "conf",
+          "A refused candidate produces no number, so there is nothing to cap or to leave uncapped.",
+          "argued"
+        ],
+        [
+          "population-scoped-union",
+          "conf",
+          "A refused candidate runs no tool, so no population is read.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "The honest case for it: the repository already carries 45 gates and eight series. Each new number costs a nightly step, a freshness bound and a row somebody keeps true.",
+        "The case against it: this is the one signal the only trajectory study of agent-written code found more consistent than complexity, and complexity is already measured here."
+      ]
+    },
+    "verdict-later": {
+      "why": "A formatter and a linter both change the tree. A duplication baseline taken before either lands describes a tree that will not exist.",
+      "rel": [
+        [
+          "record-counts",
+          "conf",
+          "A deferred candidate writes no record now, so no hash is defined.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "It is weaker than it looks. jscpd tokenizes, so whitespace and quote style do not move its number. #231 measured the reformat diff at 348 files, and none of that diff changes a token stream.",
+        "A linter that removes real duplication does move the number. That is a code change, and a series exists to see code changes."
+      ]
+    },
+    "teeth-uncapped": {
+      "why": "The complexity spec caps two of its four counts and leaves two uncapped, because those two grow with the codebase legitimately. Duplicated lines grows with the codebase the same way.",
+      "rel": [
+        [
+          "record-counts",
+          "req",
+          "Without a stamped hash a movement cannot be told from a re-measurement under new parameters.",
+          "sourced",
+          "docs/spec/complexity-on-the-trend-layer.md §4 — a record under a different counting rule is refused, not compared"
+        ]
+      ],
+      "notes": [
+        "This is the doctrine the ticket proposed in its own question 1, and nothing in the box overturns it."
+      ]
+    },
+    "teeth-capped": {
+      "why": "The floors file already carries cap machinery, and CAPPED_SERIES is a list a name can join. A cap derived from the repository's own history asks nothing until the repository shows what it holds.",
+      "rel": [
+        [
+          "record-counts",
+          "req",
+          "A cap compares a stored number to a new one, so both must carry the same stamped hash.",
+          "sourced",
+          "scripts/lib/floors.ts — the floors file refuses when fixtureHash differs from the record's label"
+        ],
+        [
+          "deliberate-in-the-level",
+          "conf",
+          "A cap set over a level that holds intentional clones refuses the next intentional clone.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "Clause A is met more cleanly here than for complexity. jscpd prints both halves of the clone, so the remedy names two file ranges rather than a whole function.",
+        "The cost is a second hash ingredient. fixtureHash covers ESLint and its rule options only, so a duplication cap needs its own hash or the two tools' calibrations couple."
+      ]
+    },
+    "teeth-arm-later": {
+      "why": "The floors file admits an explicitly unarmed entry with its date, so the decision can be written down without being taken.",
+      "rel": [
+        [
+          "record-counts",
+          "req",
+          "An unarmed cap still reads a record, so the hash must exist before arming.",
+          "sourced",
+          "scripts/lib/floors.ts — parseCap accepts the unarmed sentinel with a date"
+        ],
+        [
+          "deliberate-in-the-level",
+          "conf",
+          "An unarmed cap plans to arm, so the intentional clones must leave the level before that day.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "It is the cheapest way to reverse this row later, and it is not free. An unarmed cap entry is a line that reads as protection and refuses nothing, which is the shape docs/gates.md exists to refuse."
+      ]
+    },
+    "record-counts": {
+      "why": "Three counts per population: clones found, duplicated lines, and total lines. The page derives the share. A duplication hash covers the jscpd version, the token threshold, the line threshold and the mode.",
+      "rel": [],
+      "notes": [
+        "The fixture that pins the tool is the same shape as the complexity inventory: a pair of files with a known clone, and the expected clone count and token count written beside them. A jscpd upgrade that retokenizes then turns red rather than moving every series at once.",
+        "The hash stays separate from fixtureHash on purpose. A shared hash makes an ESLint upgrade refuse every duplication record, and the two tools share no input."
+      ]
+    },
+    "record-ratio": {
+      "why": "The percentage is what jscpd prints and what a reader asks for first. It is one number instead of three.",
+      "rel": [
+        [
+          "deliberate-in-the-level",
+          "conf",
+          "A share falls when the tree grows, so a fixed set of intentional clones reads as improvement.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "The arithmetic: #232 measured 133 duplicated lines in 25,999, which is 0.51%. Add five thousand clean lines and the same 133 reads 0.43%.",
+        "The complexity prototype put every candidate ratio through two gaming moves and no ratio survived both. The record carries counts and the page derives shares, one step earlier than mutation-score being spelled killed over total."
+      ]
+    },
+    "record-shared-hash": {
+      "why": "One hash is one thing to keep true. The floors file already reads a single fixtureHash, so nothing new is parsed.",
+      "rel": [
+        [
+          "teeth-uncapped",
+          "conf",
+          "A shared hash makes an ESLint upgrade refuse duplication records that no ESLint input touched.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "The complexity hash is documented as the ESLint version, the parser version, the rule options and the inventory totals. jscpd reads none of them."
+      ]
+    },
+    "record-unhashed": {
+      "why": "package.json can pin jscpd exactly, and the thresholds can live in one checked-in config. A hash then restates what two files already say.",
+      "rel": [
+        [
+          "verdict-series",
+          "conf",
+          "One threshold step moved the identical tree from 12 clones to 82, so an unstamped number is not comparable.",
+          "measured",
+          "#232 — jscpd defaults 50/5 gave 12 clones and 0.51%; 20/3 gave 82 clones and 2.51%"
+        ]
+      ],
+      "notes": [
+        "The complexity series answered this already. A pinned version states an intention and node_modules states a fact, and only the fact is an input to the number."
+      ]
+    },
+    "deliberate-in-the-level": {
+      "why": "The intentional clones stay in the count. They are named once when the baseline is recorded. A trend reads movement, so a constant offset costs a reader nothing.",
+      "rel": [],
+      "notes": [
+        "This works only because the number refuses nothing. Under a cap the same offset spends part of the budget on clones nobody will remove.",
+        "#232 read all twelve clones by hand: about nine are real extractable duplication, two are parallel interfaces, one is a spec-mandated mirror. The offset is small and it is known."
+      ]
+    },
+    "deliberate-ignore-comments": {
+      "why": "jscpd honours a jscpd:ignore-start and jscpd:ignore-end pair, so an intentional clone can be marked where it lives, with a comment that says why.",
+      "rel": [
+        [
+          "teeth-capped",
+          "conf",
+          "Ignored lines leave the clone count and the total-line denominator together, so a cap falls silently.",
+          "measured",
+          "#237 session, jscpd 5.0.16: a 34-line file with a 12-line ignore block reported 20 lines, and the pair reported 32 of 46 raw lines with 0 clones"
+        ],
+        [
+          "verdict-gate",
+          "conf",
+          "The same directive clears a threshold from inside a source file, with no diff in any file CI reads.",
+          "measured",
+          "#237 session, jscpd 5.0.16"
+        ]
+      ],
+      "notes": [
+        "This is G38's failure shape exactly: an exclusion takes code out of the numerator and the denominator together, so the number does not move and the loss of coverage is invisible.",
+        "It is also G43's shape: a directive inside a source file, nowhere near the config and nowhere near the floors file. G43 exists because Stryker had the same hole, and closing it took a gate. A capped duplication series would owe that gate again for a new directive.",
+        "--ignore-pattern does not do this job, and the difference is worth writing down. It skips tokens that match a regex; it does not suppress a region. Measured: a // cpd-disable line above the clone changed nothing, and the clone still reported."
+      ]
+    },
+    "deliberate-tune": {
+      "why": "The intentional clones here are short. A higher token threshold drops them without any annotation in the source.",
+      "rel": [
+        [
+          "verdict-series",
+          "conf",
+          "One threshold step that drops intentional clones also drops real ones; the same step moved 82 clones to 12.",
+          "measured",
+          "#232 — the identical tree read 2.51% at 20/3 and 0.51% at 50/5"
+        ]
+      ],
+      "notes": [
+        "The ticket already named the risk: a measure tuned until it stops complaining is a measure that stopped measuring. That is a reason to refuse rather than to tune."
+      ]
+    },
+    "deliberate-nothing": {
+      "why": "The series refuses nothing, so nobody must agree in advance about what the number includes. A reader judges each clone when they look.",
+      "rel": [
+        [
+          "teeth-capped",
+          "conf",
+          "A cap needs a stated rule for what the number holds, or its refusal has no agreed meaning.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "Nothing in this box rules it out under the chosen set. It differs from the chosen cell only in whether the intentional clones are named once in writing.",
+        "The reason to name them anyway: the first reader who meets 12 clones and no note re-derives the by-hand reading #232 already did."
+      ]
+    },
+    "population-scoped-union": {
+      "why": "One jscpd run over the eight scope globs together, with test files dropped. Each clone counts in every scope it touches. The run sees a clone whose halves sit in different scopes.",
+      "rel": [
+        [
+          "record-counts",
+          "req",
+          "A clone counted in two scopes makes the eight numbers non-additive, so the totals must be per scope.",
+          "argued"
+        ]
+      ],
+      "notes": [
+        "The cost, recorded rather than hidden: the eight numbers no longer sum to a repository total. A cross-scope clone appears twice by construction.",
+        "The gap this closes is latent today and not hypothetical. #232 measured the combined run at 12 clones and 133 duplicated lines, and the eight per-scope runs sum to exactly the same. The two agree now, so the switch costs nothing and closes the hole before it opens.",
+        "The population rule is complexity spec §2 verbatim: one glob per scope, minus *.test.ts, with the exclusions list not applied and excludedDirectories not read."
+      ]
+    },
+    "population-scoped-separate": {
+      "why": "Eight independent runs, one per scope, exactly as the complexity counter walks its populations. The eight numbers sum to a repository total.",
+      "rel": [
+        [
+          "verdict-series",
+          "conf",
+          "Separate runs cannot see a clone spanning two scopes, which is the failure duplication exists to catch.",
+          "measured",
+          "#232 — jscpd matches across files by construction, and its per-scope and combined runs agree only because no cross-scope clone exists today"
+        ]
+      ],
+      "notes": [
+        "It is the option that matches every other series in this repository, and that is a real argument for it. The counter-argument is a domain fact: complexity is a property of one function, and a clone is a relation between two places.",
+        "A relation does not partition into scopes. That sentence is the whole of why this row is not settled by consistency."
+      ]
+    },
+    "population-plus-gates": {
+      "why": "gates/ is 42 files of load-bearing code that no complexity series watches. The complexity spec keeps it on an override list as a candidate population.",
+      "rel": [
+        [
+          "record-counts",
+          "req",
+          "gates/ is far more sensitive to the threshold than the source scopes, so its number is meaningless unstamped.",
+          "measured",
+          "#232 — gates/ read 4 clones and 0.47% at 50/5, then 119 clones and 7.71% at 20/3, a 30x jump against 5x over the source scopes"
+        ]
+      ],
+      "notes": [
+        "#232 checked the feared false positive and it is not there at the tool's defaults. All four clones in gates/ are import boilerplate or shared fixture construction, and none is an assertion.",
+        "This overlaps #239, which is live in another session and owns the test-code population question. This box defers to it and decides nothing about test files."
+      ]
+    },
+    "population-whole-tree": {
+      "why": "One jscpd run over the repository, one set of numbers, no scope label at all. It is the shape the tool produces without configuration.",
+      "rel": [
+        [
+          "teeth-capped",
+          "conf",
+          "Caps are per scope in the floors file, so a single repository number has no entry to hang on.",
+          "sourced",
+          "scripts/lib/floors.ts — caps are keyed by scope name"
+        ]
+      ],
+      "notes": [
+        "It is the only option in this row with no cross-scope blind spot at all, which is a finding rather than an endorsement. It buys that by giving up the per-scope reading every other panel offers.",
+        "It also reads code no scope declares, so it would put gates/ and the top of packages/site/src into a number without either being declared. That is the opposite of G38's rule."
+      ]
+    }
+  },
+  "suspected": [
+    "A pre-commit hook that prints the duplication a commit adds would shift this left, as CRAP already does. It is not an edge because no option here is a hook, and the complexity spec already put the hook question to bed for its own metric.",
+    "An eslint-disable-next-line complexity comment appears able to drop a function from the shipped complexity population silently, in the same shape measured for jscpd:ignore-start. Not measured — ESLint is not installed in this worktree. If it holds, it is a hole in a shipped series and it belongs to its own issue, not to this map."
+  ],
+  "presets": [
+    {
+      "title": "As recommended",
+      "text": "The chosen set is Claude's recommendation, not the owner's decision. Open the two rows that carry the argument.",
+      "steps": [
+        {
+          "label": "Reset to the chosen set",
+          "reset": true,
+          "view": "findings"
+        },
+        {
+          "label": "Open Teeth",
+          "open": "teeth"
+        },
+        {
+          "label": "Open Deliberate near-repetition",
+          "open": "deliberate"
+        },
+        {
+          "label": "Back to the findings",
+          "open": null
+        }
+      ]
+    },
+    {
+      "title": "Cap it after all",
+      "text": "The strongest reason not to cap. Turn the cap on, then allow the ignore directive, and read the conflict.",
+      "steps": [
+        {
+          "label": "Reset",
+          "reset": true
+        },
+        {
+          "label": "Cap the series",
+          "set": {
+            "teeth": "teeth-capped"
+          },
+          "open": "teeth"
+        },
+        {
+          "label": "Allow ignore blocks",
+          "set": {
+            "deliberate": "deliberate-ignore-comments"
+          },
+          "open": "deliberate"
+        },
+        {
+          "label": "Read the findings",
+          "open": null,
+          "view": "findings"
+        }
+      ]
+    },
+    {
+      "title": "Adopt nothing",
+      "text": "The strawman the map calls a first-class result. Select it and see what switches off.",
+      "steps": [
+        {
+          "label": "Reset",
+          "reset": true
+        },
+        {
+          "label": "Refuse the candidate",
+          "set": {
+            "verdict": "verdict-refuse"
+          },
+          "open": "verdict"
+        },
+        {
+          "label": "Read the ruled-out list",
+          "open": null,
+          "view": "findings"
+        }
+      ]
+    },
+    {
+      "title": "The break test",
+      "text": "Change the most connected chosen cell. Record the percentage instead of counts, and read what moves.",
+      "steps": [
+        {
+          "label": "Reset",
+          "reset": true
+        },
+        {
+          "label": "Record the share",
+          "set": {
+            "record": "record-ratio"
+          },
+          "open": "record"
+        },
+        {
+          "label": "Read the cascade",
+          "open": null,
+          "view": "findings"
+        }
+      ]
+    }
+  ]
+}
