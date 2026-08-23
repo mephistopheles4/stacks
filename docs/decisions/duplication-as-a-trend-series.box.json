@@ -611,7 +611,9 @@
       ],
       "notes": [
         "Measured in the same run: 190 files, 45,869 lines, 35 clones, 363 duplicated lines, 0.79%. Against the eight declared scopes at 94 files, 25,999 lines, 12 clones, 133 lines, 0.51%.",
-        "The 23 extra clones are test and gate files. That forces an answer to #239, which owns the test-code population question and is live in another session. This box does not answer it."
+        "The 23 extra clones are test and gate files, so this cell puts test code into a duplication number. #239 has now closed, and it does not settle that. It refused test-code *complexity*, and its reason was that test code is structurally simple: 80% of test functions score 1, the maximum across all 1,931 of them is exactly 10, and `complexity-mass-over-10` is therefore identically zero over every test population.",
+        "That reason does not transfer, and it inverts. Duplication is the property on which test code is most extreme, not least: #232 measured `gates/` jumping from 4 clones to 119 across one threshold step, a 30x swing against 5x over the source scopes. A population that is flat for complexity is the loudest one for duplication.",
+        "What does transfer is #239's other measurement: gate test code and package test code are indistinguishable populations, at mean 1.42 against 1.41. So if duplication ever takes a test population, there is no case for splitting `gates/` out from the rest of the test code."
       ]
     },
     "population-scoped-plus-whole": {
@@ -632,7 +634,7 @@
       ],
       "notes": [
         "It answers the concern behind the whole-tree proposal without paying its measured cost. The blind spot the owner was closing is real: `gates/` and the top of `packages/site/src` are read by no scope.",
-        "The cost is one more number and one more panel. The whole-tree number is never capped, because it holds test and gate code that #239 has not ruled on.",
+        "The cost is one more number and one more panel. The whole-tree number is never capped, because it holds test and gate code whose duplication level nobody has calibrated. #239 refused a test population for complexity and its reason does not carry over, so this is an open question rather than a settled one.",
         "Within the eight, the run is still one scan rather than eight, so a clone whose halves sit in two scopes is seen. It counts in both, and the eight therefore do not sum."
       ]
     },
