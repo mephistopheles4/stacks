@@ -386,6 +386,24 @@ That asymmetry is why a gate over `docs/adr/` should assert **uniqueness only
 and never contiguity**, and tonight's deliberate gaps are the proof that
 asserting contiguity would be wrong.
 
+⚠️ **It happened a third time, on the artifact about it happening.** Having
+agreed this deserved its own issue, this session and #256 independently moved to
+file one; #256 got there first with
+[#263](https://github.com/mephistopheles4/stacks/issues/263) at 21:50, and this
+session was stopped by a message from #253 rather than by anything checkable.
+**Three collisions of one kind in one evening, and the last two were produced by
+the fix for the one before** — moving off 0071 created the 0075 duplicate, and
+agreeing to file created the near-duplicate issue. Each participant was acting
+correctly and none could see the others' work in progress.
+
+⚠️ **Which is also the honest limit on the gate #263 proposes, and #263 says so
+itself: a uniqueness check would not have prevented any of tonight.** Both ADR
+duplicates lived on unmerged branches, so a merge-time assertion catches only
+the second one to arrive. What it buys is converting a **silent landed
+collision** into a **late red** — real, because the silent version is found by a
+human reading a directory listing months later, if at all. It buys nothing for
+live coordination between sessions, and nothing here should imply otherwise.
+
 ⚠️ **One operational trap for whoever renumbers a row, from #253.** A row number
 lives in **two** files, and G41 holds them to each other in both directions:
 `gates/gate-register.test.ts:217` gives every row exactly one register entry,
