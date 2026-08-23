@@ -493,21 +493,33 @@ refuses; coverage as a standalone series, floor, goal or badge; CRAP as a series
 or a panel; a per-PR complexity delta as a check; building any of it in this
 effort.
 
-**Not yet specified**, on the map:
+**Not yet specified** — **on the map, and nowhere else now.** This list carried
+five items. They became tickets on
+[#228](https://github.com/mephistopheles4/stacks/issues/228), whose Notes say
+this section is emptied when the first of them resolves; ten of that map's
+tickets have since closed. Three of the five are among them —
+[#237](https://github.com/mephistopheles4/stacks/issues/237) (a
+duplication series), [#238](https://github.com/mephistopheles4/stacks/issues/238)
+(`astro check` as a gate) and
+[#239](https://github.com/mephistopheles4/stacks/issues/239) (test-code
+complexity) — and the list stayed here through all three. **A question in two
+places goes stale in one of them**, which is the whole reason that instruction
+exists. Read the fog there.
 
-- **Stryker's type checker back on.** The spike proved it works on TS 6 (2 of
-  11 mutants on `measure.ts` become `CompileError`). Turning it on changes every
-  scope's score — a `CompileError` is neither killed nor survived — so every
-  calibration window restarts. Its own ADR, after the TS 6 pin lands.
-- **`astro check` in the gates.** It runs on TS 6 and found one real type
-  error. Whether it becomes a row, and what G7 (`astro-no-logic`) then still
-  protects, is a scoreboard conversation.
-- **A duplication/verbosity series** — the signal that moved *more*
-  consistently than complexity in the only trajectory study.
-- **Cognitive complexity as a second series.** `eslint-plugin-sonarjs` is now
-  installable and the spike measured it (`parseNote` 7, `asPrivate` 4); one
-  vendor, unreplicated, kept as fog until the split signature proves common.
-- **Test-code complexity**, and whether the gates deserve a population.
+⚠️ **One of the five was never fog.** *Stryker's type checker back on* is
+settled by [ADR-0070](../adr/0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md),
+whose condition is a **hashing** change and not a tooling one, and the map lists
+it under *Out of scope* rather than as an open question. It was waiting on
+nothing, here or there.
+
+**One is still open: cognitive complexity as a second series**
+([#234](https://github.com/mephistopheles4/stacks/issues/234)). The bar this
+file set for it — *kept as fog until the split signature proves common* — has
+been met: [#230](https://github.com/mephistopheles4/stacks/issues/230) measured
+1105 scored pairs across all eight scopes at Pearson **r 0.9159**, with 54
+inversions where cognitive exceeds cyclomatic. So the signature holds and
+diverges really. Whether that earns a second series, replaces the first, or is
+refused is the half still on the map.
 
 **Research and spikes, kept on their branches**, each linked from its ticket:
 `research/complexity-tooling-for-typescript`,
