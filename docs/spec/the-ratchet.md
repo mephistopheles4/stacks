@@ -22,16 +22,16 @@ ratchet never retires.**
 
 Three candidates were live, and the third was taken:
 
-- **Print-only.** A mutation-score drop is a *test-quality* fact refusing a
-  *content* deploy, and the deploy is not where it was caused. A real category
+- **Print-only.** A mutation-score drop is a _test-quality_ fact refusing a
+  _content_ deploy, and the deploy is not where it was caused. A real category
   mismatch, and the reason **consult-only, indefinitely, stayed an acceptable
   outcome to the end.**
 - **Refuse, with a flag** in the `--any-branch` shape.
 - **Refuse, with no flag at all.** ✅
 
 **The owner's reason is the deciding one**: `deploy:site` is about to carry two
-metric refusals — a stale record and a floor breach — and *"the flag would get
-reached for on the stale-record refusal."* One blanket override reached for to
+metric refusals — a stale record and a floor breach — and _"the flag would get
+reached for on the stale-record refusal."_ One blanket override reached for to
 clear a dead pipe silently clears the floor as well. **Adding no flag dissolves
 that rather than documenting it.**
 
@@ -40,31 +40,31 @@ and `deploy:site` refuses because a refactor last Tuesday dropped a scope below
 its floor, there is no way to ship that book today. You open a pull request, wait
 for gates, merge, and deploy. **That pressure is exactly what produces a hurried
 lowering with a rubber-stamped justification.** The design's answer is that the
-lowering is *visible*, not that it is avoidable.
+lowering is _visible_, not that it is avoidable.
 
 ### ⚠️ Three sentences #115 wrote here are false about this repo, and are replaced
 
-| Sentence | Replacement |
-| --- | --- |
-| *"Removing the flag makes the adversary's move the only move."* | **False.** `scripts/deploy.ts:66` defines an undocumented `--skip-gates` that skips the whole four-gate block and publishes. **The three metric refusals are placed outside every flag's reach on the merits** ([#140](https://github.com/mephistopheles4/stacks/issues/140)), and the flag's own fate is [#152](https://github.com/mephistopheles4/stacks/issues/152), a repo issue outside this effort. The conclusion survives; the reason does not. |
-| *"`--dry-run` and `--check-only` skip the check as they skip every other refusal."* | **False for `--dry-run`**, which is neither `checkOnly` nor `skipGates` and therefore **runs all four gates**, skipping only the branch guard. So §1's own recommended escape — *"a dry run is how you would find out before merging"* — **works better than claimed**: a floor in the deploy path is exercised by `--dry-run`, not bypassed by it. |
-| *"a repo whose reviewer is usually its author"* | **False in the understating direction. By rule, nobody** — see [§5](#5-what-the-guard-actually-is). |
+| Sentence                                                                            | Replacement                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _"Removing the flag makes the adversary's move the only move."_                     | **False.** `scripts/deploy.ts:66` defines an undocumented `--skip-gates` that skips the whole four-gate block and publishes. **The three metric refusals are placed outside every flag's reach on the merits** ([#140](https://github.com/mephistopheles4/stacks/issues/140)), and the flag's own fate is [#152](https://github.com/mephistopheles4/stacks/issues/152), a repo issue outside this effort. The conclusion survives; the reason does not. |
+| _"`--dry-run` and `--check-only` skip the check as they skip every other refusal."_ | **False for `--dry-run`**, which is neither `checkOnly` nor `skipGates` and therefore **runs all four gates**, skipping only the branch guard. So §1's own recommended escape — _"a dry run is how you would find out before merging"_ — **works better than claimed**: a floor in the deploy path is exercised by `--dry-run`, not bypassed by it.                                                                                                     |
+| _"a repo whose reviewer is usually its author"_                                     | **False in the understating direction. By rule, nobody** — see [§5](#5-what-the-guard-actually-is).                                                                                                                                                                                                                                                                                                                                                     |
 
 **And `scripts/deploy.ts` gains a convention: every refusal states which flags
 clear it.** Adopted as a comment convention, not a gate — a check born because a
 document was unclear is the shape this effort keeps declining, and G17 already
-proves an override's *shape* is spec-able if teeth are ever wanted. It generalises
+proves an override's _shape_ is spec-able if teeth are ever wanted. It generalises
 past `--skip-gates` to all four flags, so it survives whatever #152 decides.
 
 ---
 
 ## 2. The number is a rule, not a value
 
-[#114](https://github.com/mephistopheles4/stacks/issues/114) made *"start low,
-below the measured noise floor by a stated margin"* obsolete **in the inconvenient
+[#114](https://github.com/mephistopheles4/stacks/issues/114) made _"start low,
+below the measured noise floor by a stated margin"_ obsolete **in the inconvenient
 direction**. The noise band at `timeoutMS: 120000` is **0.01 points**, and two
 runs were byte-identical to a third across 3,301 mutants. The score is effectively
-deterministic given the tree — so a floor *"below the noise band by a margin"*
+deterministic given the tree — so a floor _"below the noise band by a margin"_
 sits at ~66.5% against a current 66.6% and **refuses on any real decrease at
 all**: deleting one test that killed two mutants moves `packages/core/src` by
 ~0.16. **The measurement is far too precise to be the thing that sizes the
@@ -86,19 +86,19 @@ any other lowering.
 
 **Accepted cost: the ratchet ships disarmed and stays disarmed for a while**,
 which will read as the piece being unfinished. And **a rule fixed in advance is
-still gameable once** — by choosing the window's *length* after watching the
+still gameable once** — by choosing the window's _length_ after watching the
 numbers.
 
 ---
 
 ## 3. What the score is: static mutants in, at a 120-second timeout
 
-#114 recommended *"exclude or separately account for `static` mutants."*
+#114 recommended _"exclude or separately account for `static` mutants."_
 **Refused**, on two arguments.
 
 **Excluding builds a gaming surface into the design.** A mutant becomes static by
 living at module scope — `covers/cover-source.ts`'s `HOSTS` table is exactly that.
-So *"exclude static"* means **a survivor nobody wants to kill can be removed from
+So _"exclude static"_ means **a survivor nobody wants to kill can be removed from
 the denominator by hoisting it to module level**, which is an ordinary-looking
 refactor and precisely what a hurried agent does incidentally. The exclusion would
 be invisible in the headline number.
@@ -108,7 +108,7 @@ Stryker's default timeout and **0.01 at `timeoutMS: 120000`**, with core showing
 zero ghosts across six runs. **So `timeoutMS: 120000` is part of the floor's
 definition, not a tuning knob.**
 
-⚠️ **Note which way that cuts.** Timeout counts as *detected*, which is why the
+⚠️ **Note which way that cuts.** Timeout counts as _detected_, which is why the
 default-timeout runs scored **higher** (66.95, 66.79) than the 120s runs (66.58,
 66.59). **The honest configuration is also the less flattering one**, and lowering
 `timeoutMS` raises the score with no test touched. [§4](#4-three-routes-down-and-they-all-land-in-one-file)
@@ -142,22 +142,22 @@ The no-override design only works if the floor is the only way down. **It is not
 guard.** The file records, per scope, the **floor** and the **`ignored`** count;
 and once, at the top, a **hash of the score-affecting configuration** the floors
 were derived under. Each run stamps its own config hash into the metrics record;
-deploy compares, and a mismatch refuses with *"these floors were derived under a
-different configuration; re-derive them"* rather than silently comparing two
+deploy compares, and a mismatch refuses with _"these floors were derived under a
+different configuration; re-derive them"_ rather than silently comparing two
 numbers that do not mean the same thing.
 
-| Route down | The diff it actually takes | Guard |
-| --- | --- | --- |
-| lower the floor | one line in the floors file | the floor check at deploy |
-| change scoring config | `stryker.config.*` **and** the floors file's hash | the config-hash comparison |
-| add a disable comment | the source file **and** the floors file's `ignored` | **G42**, at merge |
+| Route down            | The diff it actually takes                          | Guard                      |
+| --------------------- | --------------------------------------------------- | -------------------------- |
+| lower the floor       | one line in the floors file                         | the floor check at deploy  |
+| change scoring config | `stryker.config.*` **and** the floors file's hash   | the config-hash comparison |
+| add a disable comment | the source file **and** the floors file's `ignored` | **G42**, at merge          |
 
-⚠️ **#115's *"every way to make the bar easier is the same one-line diff in the
-same tracked file"* is replaced rather than softened.** It is false in the same
+⚠️ **#115's _"every way to make the bar easier is the same one-line diff in the
+same tracked file"_ is replaced rather than softened.** It is false in the same
 direction twice: two of the three routes are **two diffs in two files**, and only
-the first is one line. **The true invariant is weaker and still enough**: *no route
+the first is one line. **The true invariant is weaker and still enough**: _no route
 down reaches the deploy without a diff in the floors file, and each route has a
-named guard that goes red if that diff is missing.* A sentence whose stated scope
+named guard that goes red if that diff is missing._ A sentence whose stated scope
 exceeds its real scope is this spec's own subject, and this one was carrying an
 overclaim into the piece with the least enforcement behind it.
 
@@ -167,7 +167,7 @@ overclaim into the piece with the least enforcement behind it.
 The decline rested partly on a row-number collision hazard that
 [#141](https://github.com/mephistopheles4/stacks/issues/141) dissolved by deriving
 numbers from landing order — **and nothing re-checked the decline.** The second
-reason (*"zero instances, a natural home elsewhere"*) survives and is **overridden**,
+reason (_"zero instances, a natural home elsewhere"_) survives and is **overridden**,
 because with `required_approving_review_count: 0` **`gates` and CodeQL are the only
 two things in this repo that can stop a merge.** A `gates/` row is no longer the
 belt to review's braces; it is the only pre-merge surface that exists.
@@ -175,12 +175,12 @@ belt to review's braces; it is the only pre-merge surface that exists.
 > **G42 asserts the floors file's `ignored` counter equals an actual grep for
 > `Stryker disable` across mutated source.**
 
-It closes §4's own stated cost — *"a disable comment lands in a pull request and
-nothing says a word until someone deploys"* — at merge instead of at deploy.
+It closes §4's own stated cost — _"a disable comment lands in a pull request and
+nothing says a word until someone deploys"_ — at merge instead of at deploy.
 
 **A note-presence check was declined**, on Clause B: any string satisfies it. It
 would catch the honest omission and not the adversary, and **a gate asserting
-*note-presence* while reading as *note-quality* states a scope exceeding its real
+_note-presence_ while reading as _note-quality_ states a scope exceeding its real
 one** — which is the exact fault the row was minted to repair.
 
 **The slug names what is counted, not the document.** `mutation-floors` was the
@@ -189,7 +189,7 @@ because the gate asserts **one field** of that file and says nothing about the
 floors beside it.
 
 **G42 needs no observed-red rule of its own**: [#122](https://github.com/mephistopheles4/stacks/issues/122)
-requires that of every gate landing *before* the register gate, and G42 lands
+requires that of every gate landing _before_ the register gate, and G42 lands
 after — so `gate-register` (G40) is live and goes red the moment a row appears
 without an entry. **The obligation is enforced rather than remembered.**
 
@@ -204,11 +204,11 @@ Measured at `25b007b`:
   implementation, absent from every `.md`, from `gates/`, from `.github/`, and
   from the command's own usage text.
 - **`main-protection` carries `required_approving_review_count: 0`**,
-  `bypass_actors: []`, `require_code_owner_review: false`. A pull request *is*
+  `bypass_actors: []`, `require_code_owner_review: false`. A pull request _is_
   required and `gates` and CodeQL must pass. **No human read is required at any
   point.**
 - **`.github/CODEOWNERS` contributes nothing here.** Its own header says it is
-  *"for review routing rather than permission"*, and GitHub does not request review
+  _"for review routing rather than permission"_, and GitHub does not request review
   from a pull request's author.
 
 **Requiring review was struck as unavailable, not declined as costly.** This repo
@@ -230,8 +230,8 @@ next opens the file** — not about anyone reading it before merge. It is still 
 reviewer**, and the collapse of both guards costs it nothing.
 
 ⚠️ **What is genuinely lost, said plainly rather than absorbed.** For **stacks**,
-the ratchet's anti-weakening property is now: *a lowering is permanently recorded
-and self-describing, and nothing prevents it or reviews it.* For the
+the ratchet's anti-weakening property is now: _a lowering is permanently recorded
+and self-describing, and nothing prevents it or reviews it._ For the
 **transferable design**, a repo with real reviewers gets the property #115
 described. See [§9](#9-the-two-inversions-this-piece-carries).
 
@@ -246,13 +246,13 @@ re-derives the floors should show both changes in the same directory.
 **Canonical schema — four per-scope fields plus one top-level hash.** ⚠️ #115
 stated it two ways and this supersedes both:
 
-| | Field | Why |
-| --- | --- | --- |
-| per scope | `floor` — a number, or `unarmed` | §2 |
-| per scope | `armed` — the date the entry was added or armed | makes `unarmed for 94 days` printable |
-| per scope | `ignored` — the disable-comment counter, starting at 0 | §4, asserted by G42 |
-| per scope | `notes` — **append-only**, one line per lowering, never cleared | §5 |
-| once, at the top | the hash of the score-affecting Stryker configuration | §4 |
+|                  | Field                                                           | Why                                   |
+| ---------------- | --------------------------------------------------------------- | ------------------------------------- |
+| per scope        | `floor` — a number, or `unarmed`                                | §2                                    |
+| per scope        | `armed` — the date the entry was added or armed                 | makes `unarmed for 94 days` printable |
+| per scope        | `ignored` — the disable-comment counter, starting at 0          | §4, asserted by G42                   |
+| per scope        | `notes` — **append-only**, one line per lowering, never cleared | §5                                    |
+| once, at the top | the hash of the score-affecting Stryker configuration           | §4                                    |
 
 `notes` earns its place from `auditConfig.ignoreGhsas`: **that hatch's force is not
 that it is a diff, it is that the justification sits next to the permission,
@@ -274,13 +274,13 @@ it passes in precisely the case it exists to catch.
 
 **Every declared scope has an entry; every entry names a declared scope. Either
 mismatch refuses at deploy**, and the fix is a one-line diff in the same file.
-That is G19's own trick — the scoreboard's answer to *a row nothing can fail on* is
+That is G19's own trick — the scoreboard's answer to _a row nothing can fail on_ is
 a completeness assertion in both directions — applied to floors.
 
 - **Added scope** → unaccounted → refuses until an entry exists. Its value may be
   `unarmed` with the date. **Explicitly unarmed is not silently unfloored**: it is
   in a tracked file, it has a date, and the deploy print lists it every time —
-  *"`scripts/`: unarmed for 94 days"*.
+  _"`scripts/`: unarmed for 94 days"_.
 - **Removed scope** → orphan entry → refuses until removed. Symmetric, and it stops
   the file rotting into a list of places that no longer exist.
 - **Renamed scope** → G37's structural gate goes red, and the edit carries the floor
@@ -294,16 +294,16 @@ written.
 
 ⚠️ **The weakest link here: `unarmed` is a value somebody can type to make a
 refusal go away.** Guarded by the date and the print line — an entry reading
-*unarmed for 94 days* is legible in a way a mechanism would only duplicate. **A
+_unarmed for 94 days_ is legible in a way a mechanism would only duplicate. **A
 judgement call, and named as one.**
 
-**Every scope gets a real floor; no size exemption.** #116 offered *"no floor on
-that scope"* for `packages/cli/src` at 68 mutants. **Refused**, because *"this scope
-doesn't get a floor because its number is jumpy"* is **deriving policy from the
+**Every scope gets a real floor; no size exemption.** #116 offered _"no floor on
+that scope"_ for `packages/cli/src` at 68 mutants. **Refused**, because _"this scope
+doesn't get a floor because its number is jumpy"_ is **deriving policy from the
 measurement** — the move already rejected one layer down — and a size threshold is a
 number nobody can derive. The practical cost is absorbed by §2 without a special
 case, and **the deploy print states each scope's per-mutant resolution, computed
-live**: *"`packages/cli/src`: 45.6%, floor 44.1% — one mutant is 1.47 points here."*
+live**: _"`packages/cli/src`: 45.6%, floor 44.1% — one mutant is 1.47 points here."_
 
 ⚠️ **`packages/cli/src` is named in the spec as where the first lowering will
 land.** A legitimate refactor of `enrich-report.ts` costing two mutants refuses the
@@ -311,7 +311,7 @@ deploy, and the only path is a pull request lowering the floor. **That is the
 reflexive-lowering pressure arriving at a specific address, and it belongs named
 rather than discovered.**
 
-**Rejected: floor it but mark it advisory.** *Advisory* is a second, quieter tier
+**Rejected: floor it but mark it advisory.** _Advisory_ is a second, quieter tier
 that any scope can be argued into once the precedent exists, and nothing is ever
 argued out of it.
 
@@ -319,20 +319,20 @@ argued out of it.
 
 ## 8. No target, and the Destination amendment
 
-The effort's original destination said *"a ratchet whose floor rises toward a
-target."* **There is no target.** Three reasons:
+The effort's original destination said _"a ratchet whose floor rises toward a
+target."_ **There is no target.** Three reasons:
 
 - **A target is strictly more arbitrary than a floor.** The floor has observed
   history under it once armed; 80% is an industry number, not a derived one.
 - **"The ratchet retires" is indistinguishable from "the ratchet stopped being
   maintained."**
-- ⚠️ **A target reintroduces what the initiative bans.** *"Rising toward a target"*
+- ⚠️ **A target reintroduces what the initiative bans.** _"Rising toward a target"_
   is a global-percentage goal in per-directory clothes. The moment one exists the
-  live question becomes *how do we get core from 66.6 to 80* — and
+  live question becomes _how do we get core from 66.6 to 80_ — and
   [`gate-or-trend.md`](gate-or-trend.md#6-what-the-rule-does-not-close) leaves on
   the record that **mutation score is still gameable by adding trivially-killable
-  code**. `docs/gates.md`'s coverage row says it in one line: *an AI asked to raise
-  it produces exactly the gap it is asked to close.* Mutation score is harder to
+  code**. `docs/gates.md`'s coverage row says it in one line: _an AI asked to raise
+  it produces exactly the gap it is asked to close._ Mutation score is harder to
   game than coverage; **a target is what makes gaming it worth someone's
   afternoon.**
 
@@ -343,7 +343,7 @@ own history, never to an aspiration.
 
 **Cost, stated: nothing in this design ever asks for the score to go up.**
 `packages/site/src/shelf` at 47.1% and `cli/src/index.ts`'s 435 invisible mutants
-get floors that ratify them. **The floor's message is *don't get worse*, and that is
+get floors that ratify them. **The floor's message is _don't get worse_, and that is
 all it says.**
 
 **Rejected: a per-scope target set by hand, non-binding, purely as intent.** A
@@ -365,7 +365,7 @@ calibration value indefinitely. **That is a worse failure than a slack floor,
 because it is silent** — the piece looks armed and does nothing.
 
 **Rejected: a raise proposed automatically and merged by a human.** An auto-opened
-pull request *is* a job acting on a metric movement, and *"but a human merges it"*
+pull request _is_ a job acting on a metric movement, and _"but a human merges it"_
 is the reasoning that erodes the constraint everywhere else.
 
 ---
@@ -378,17 +378,17 @@ correspondence, manual raising, the append-only `notes`.
 **The surface inverts.** `deploy:site` works here because it is human-invoked, from
 `main`, by the one person who can act on the refusal. **In a production codebase
 with continuous deployment every one of those is false, and a deploy floor with no
-override converts a *test-quality regression* into an *availability incident*** —
+override converts a _test-quality regression_ into an _availability incident_** —
 you cannot ship a hotfix because a mutation score dropped last Tuesday. That is not
-a weaker version; it is a serious defect, and shipping it under a *transferable*
+a weaker version; it is a serious defect, and shipping it under a _transferable_
 label would be this spec putting its name to something harmful.
 
 > **Transferable: the floor is a required pull-request check, no override, and the
 > remedy is the same visible lowering in the same pull request** — which satisfies
 > Clause A without touching the deploy path. **Explicitly not at deploy.**
 
-What flipped it: **dependency on shipping.** And the effort's *a merge is never
-blocked by a metric* is a **stacks** rule; its reason is served in production by a
+What flipped it: **dependency on shipping.** And the effort's _a merge is never
+blocked by a metric_ is a **stacks** rule; its reason is served in production by a
 blocked merge just as well as by a refused deploy, because a blocked merge stops
 nothing that is already live. **The transferable half does not inherit it, and that
 is stated rather than silently dropped.**
@@ -423,7 +423,7 @@ over 3 days.** Counted in **runs**, not days.
   does not watch.**
 - ⚠️ **Only `run_ok 1` rows count, and this interaction was live in nobody's ticket.**
   A crashed run writes `run_ok 0` **plus whatever computed** — a partial score — and
-  *lowest observed* is the rule one bad row destroys forever. A single crash that
+  _lowest observed_ is the rule one bad row destroys forever. A single crash that
   measured three files before dying would slacken every floor derived from that
   window.
 - **Why 20.** Long enough that ordinary churn lands inside it, which is the quantity
@@ -452,7 +452,7 @@ implementer copies. The figures above are at least consistent with
 the shape from here and the numbers from the record.**
 
 The middle line appears at every deploy, **escalates never, files nothing** — so it
-stays inside the standing constraint — and it converts *indefinite* from a silence
+stays inside the standing constraint — and it converts _indefinite_ from a silence
 into **a dated question asked repeatedly of the one person who can answer it.**
 `12/20 runs` beside the day count is deliberate: **41 days and 12 runs says the
 nightly has been skipping**, which is the 60-day scheduled-workflow rule showing
@@ -475,7 +475,7 @@ a tracked file carrying a date and printed at every deploy. **Verified: zero
 reach for either.
 
 ⚠️ **You only see the prompt if you deploy.** This is the **third** independent place
-that appears in this spec — after the trend layer's *no deploys means no learning*
+that appears in this spec — after the trend layer's _no deploys means no learning_
 and surface D's fold — which makes it a pattern rather than a third caveat. **Three
 mechanisms reach the human through `pnpm deploy:site`, and all three are silent for
 anyone who is not deploying.**
@@ -503,7 +503,7 @@ which is the only one of the two that is closed.
 **3 — Routing around.** `// Stryker disable` — **now caught at merge by G42**, which
 is the change #147 made to this section. Hoisting a survivor to module scope —
 closed by §3 counting static mutants. `git mv` retiring a floor — closed by G37 plus
-floor-carrying. **Scope *removal* — closed by
+floor-carrying. **Scope _removal_ — closed by
 [`mutation-scoring.md`](mutation-scoring.md#7-a-scopes-identity-is-its-declared-name),
 added after this section was written.**
 
@@ -529,16 +529,16 @@ discharges that**, and it is why the order is part of the spec rather than a not
 
 ## 12. How it is proved able to fail
 
-| Check | Plant this | Expect |
-| --- | --- | --- |
-| **the floor** | set one scope's `floor` above its current score | `pnpm deploy:site` refuses, naming the scope, the score, the floor and the per-mutant resolution |
-| **correspondence, forward** | add a scope to `stryker.config` and not to the floors file | refuses: unaccounted scope |
-| **correspondence, reverse** | delete a scope from `stryker.config` and leave its entry | refuses: orphan entry |
-| **the config hash** | lower `timeoutMS` without re-deriving | refuses: *these floors were derived under a different configuration* |
-| **G42** | add one `// Stryker disable next-line` and leave `ignored` at 0 | red in `pnpm test`, at merge |
-| **G42, reverse** | raise `ignored` with no comment in the source | red |
-| **the bootstrap** | run `deploy:site` with no record at all, more than 3 days after the spine landed | refuses; **within 3 days it prints and does not refuse** |
-| **calibration** | write a `run_ok 0` row carrying a partial low score into an otherwise full window | the derivation **ignores it**, and the window is not satisfied by 20 rows of which one failed |
+| Check                       | Plant this                                                                        | Expect                                                                                           |
+| --------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **the floor**               | set one scope's `floor` above its current score                                   | `pnpm deploy:site` refuses, naming the scope, the score, the floor and the per-mutant resolution |
+| **correspondence, forward** | add a scope to `stryker.config` and not to the floors file                        | refuses: unaccounted scope                                                                       |
+| **correspondence, reverse** | delete a scope from `stryker.config` and leave its entry                          | refuses: orphan entry                                                                            |
+| **the config hash**         | lower `timeoutMS` without re-deriving                                             | refuses: _these floors were derived under a different configuration_                             |
+| **G42**                     | add one `// Stryker disable next-line` and leave `ignored` at 0                   | red in `pnpm test`, at merge                                                                     |
+| **G42, reverse**            | raise `ignored` with no comment in the source                                     | red                                                                                              |
+| **the bootstrap**           | run `deploy:site` with no record at all, more than 3 days after the spine landed  | refuses; **within 3 days it prints and does not refuse**                                         |
+| **calibration**             | write a `run_ok 0` row carrying a partial low score into an otherwise full window | the derivation **ignores it**, and the window is not satisfied by 20 rows of which one failed    |
 
 ⚠️ **`--dry-run` exercises all of these and uploads nothing**, which is the honest
 way to plant them. `--check-only` skips straight to the origin check and does not.

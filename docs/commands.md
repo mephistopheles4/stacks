@@ -2,7 +2,7 @@
 
 The command lists themselves live in [`AGENTS.md`](../AGENTS.md), where
 `gates/commands.test.ts` (G14) holds them to `package.json` and the CLI in both
-directions. This file carries the *why* behind three of them — the parts a
+directions. This file carries the _why_ behind three of them — the parts a
 session needs only when it is deploying, cutting a worktree, or reading a
 mutation score.
 
@@ -40,8 +40,8 @@ waits out edge propagation before complaining, since a deploy is not live the
 instant wrangler returns.
 
 **Both checks read the HTTP status before the body, and say "refused" rather
-than guessing.** Bot protection answers a non-browser client with a *challenge
-page*, which is HTML carrying no build stamp and a content-length of its own —
+than guessing.** Bot protection answers a non-browser client with a _challenge
+page_, which is HTML carrying no build stamp and a content-length of its own —
 so read as content, a refusal is indistinguishable from the stale build these
 checks exist to catch, and recommends purging a cache that was never involved.
 That is not hypothetical — it happened here, and went unnoticed for a while
@@ -56,8 +56,8 @@ measured and does not work. See
 
 **Before anything else it prints the trend record**, because a trend is obliged
 to reach a person on a cadence and the deploy is the cadence this project has.
-The panel is fixed in order: *is this real* — the run that produced the score,
-its pull-request window, and each scope's delta — then *is this bad*, each scope
+The panel is fixed in order: _is this real_ — the run that produced the score,
+its pull-request window, and each scope's delta — then _is this bad_, each scope
 against its own history and never against a target line. Per-mutant resolution
 comes from this machine's last `pnpm mutation:run`, so it may be a different run
 from the score; the panel says so. **The score never refuses.**
@@ -70,8 +70,8 @@ gated series with **no sample at all** refuses exactly as a stale one does.
 **Deploy reads the local store** — the `metrics` branch as `pnpm trend:sync` last
 fetched it, never a fresh fetch — which is what makes the sync the route past the
 refusal. A stale store has two causes wearing one face, so the refusal spends
-**one anonymous fetch of the branch tip** and says which it is: *newer rows on the
-branch* means run `trend:sync`, *a branch no fresher* means the nightly has
+**one anonymous fetch of the branch tip** and says which it is: _newer rows on the
+branch_ means run `trend:sync`, _a branch no fresher_ means the nightly has
 stopped, with the Actions link. That fetch writes its own ref and never moves the
 mirror, or a second `deploy:site` would clear the refusal by being run twice —
 [ADR-0060](adr/0060-the-deploy-reads-the-mirror-and-the-probe-never-moves-it.md).
@@ -101,12 +101,12 @@ anything.
 
 Four refusals, and **no flag clears any of them**:
 
-| Refusal | What it means |
-|---|---|
-| **breached floor** | an armed scope scored under its floor. Names the scope, the score, the floor, and — when a local mutation report exists — what one mutant is worth in that scope |
-| **unaccounted scope** | `stryker.scopes.json` declares a scope `stryker.floors.json` does not name. It would be scored by every run and floored by nothing |
-| **orphan entry** | the floors file names a scope nothing declares. Left alone the file rots into a list of places that are not there |
-| **configuration mismatch** | the run was scored under a different Stryker configuration from the one these floors were derived under. ⚠️ **A run stamped with a *different* hash refuses whatever is armed** — somebody changed the scoring configuration without re-deriving. A run carrying **no** hash is a record from before the stamp existed, which is evidence of nothing, and refuses only once a scope is armed and there is a comparison to protect |
+| Refusal                    | What it means                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **breached floor**         | an armed scope scored under its floor. Names the scope, the score, the floor, and — when a local mutation report exists — what one mutant is worth in that scope                                                                                                                                                                                                                                                                  |
+| **unaccounted scope**      | `stryker.scopes.json` declares a scope `stryker.floors.json` does not name. It would be scored by every run and floored by nothing                                                                                                                                                                                                                                                                                                |
+| **orphan entry**           | the floors file names a scope nothing declares. Left alone the file rots into a list of places that are not there                                                                                                                                                                                                                                                                                                                 |
+| **configuration mismatch** | the run was scored under a different Stryker configuration from the one these floors were derived under. ⚠️ **A run stamped with a _different_ hash refuses whatever is armed** — somebody changed the scoring configuration without re-deriving. A run carrying **no** hash is a record from before the stamp existed, which is evidence of nothing, and refuses only once a scope is armed and there is a comparison to protect |
 
 ⚠️ **The absence of an override is the design, not an omission.** `deploy:site`
 now carries two metric refusals — a stale record and a floor breach — and a
@@ -170,7 +170,7 @@ Three cases, and for a while only the first was handled:
 
 - **A new branch** is cut from `origin/main`, not from the local `main`.
 - **A branch `origin` already has** is checked out from `origin/<branch>`,
-  tracking it. It used to be created *empty off `origin/main`*, because the only
+  tracking it. It used to be created _empty off `origin/main`_, because the only
   question asked was whether a **local** branch existed — so a branch a
   colleague or another machine had already pushed came back as a new one of the
   same name, and the first push either bounced or, forced, took the work with
@@ -199,8 +199,8 @@ moved.
 ⚠️ **The scope list is the score's definition, so read
 [`docs/spec/mutation-scoring.md`](spec/mutation-scoring.md) before editing
 it.** `packages/core/src` is the **non-recursive** scope, `timeoutMS` is part of
-what a score means rather than a tuning knob, and every exclusion owes a *named
-mechanism* — a file is out of reach because something specific puts it there, or
+what a score means rather than a tuning knob, and every exclusion owes a _named
+mechanism_ — a file is out of reach because something specific puts it there, or
 it is not excluded. `covers/measure.ts` has no spec and stays in the denominator
 anyway, because "nothing tests it" is a gap and not a mechanism. See
 [ADR-0053](adr/0053-stryker-measures-eight-declared-scopes.md).
@@ -208,11 +208,11 @@ anyway, because "nothing tests it" is a gap and not a mechanism. See
 ## `pnpm metrics:emit` and the trend layer
 
 **A score is a trend, not a gate, and `docs/gates.md` now has a place for both.**
-A check is a gate when its red has a named, reachable remedy *and* its verdict
+A check is a gate when its red has a named, reachable remedy _and_ its verdict
 does not depend on how much test code exists; otherwise it is a trend. The
 taxonomy is **binary** — [`docs/spec/gate-or-trend.md`](spec/gate-or-trend.md)
 and [ADR-0054](adr/0054-a-check-is-a-gate-or-a-trend.md) — and it decides
-where any *future* check lands, including ones nobody has thought of. A trend
+where any _future_ check lands, including ones nobody has thought of. A trend
 takes no row number and no status: it lives in `docs/gates.md`'s `## Trends`
 table, and what is numbered is the gate that watches that table.
 
@@ -222,7 +222,7 @@ commits one `metrics/<timestamp>-<sha>.prom` per run to the orphan **`metrics`**
 branch; `pnpm trend:sync` below is the reading half. No secret exists anywhere in
 that design, and `gates.yml` is untouched, because a required check whose verdict
 came from a different commit is reporting about code that is not there.
-⚠️ **The record is *durable*, never *immutable*:** the branch is unprotected and
+⚠️ **The record is _durable_, never _immutable_:** the branch is unprotected and
 force-pushable, and append-only is enforced by nothing. Both claims are stated
 once, in [ADR-0055](adr/0055-ci-writes-a-durable-record.md), rather than a sixth
 time here.
@@ -244,8 +244,8 @@ hidden: nothing arrives until you ask.
 
 **Replay is the point.** A hosted Prometheus rejects samples more than two hours
 behind the newest for that series; a git record has no such window, so a sync
-after two weeks away replays all fourteen days. *No history when the machine is
-off* is a weakness of the **store**, never of the **record**.
+after two weeks away replays all fourteen days. _No history when the machine is
+off_ is a weakness of the **store**, never of the **record**.
 
 ### The page you actually read
 
@@ -255,10 +255,10 @@ a second pinned container, `stacks-grafana`, provisioned **read-only from
 `allowUiUpdates: false`, nothing mounted for it to write to.
 
 **Read panel 1 before panel 2, and the page says so at the top.** Panel 1 asks
-*is this real*: the per-scope delta since the previous run, the **PR window**, and
+_is this real_: the per-scope delta since the previous run, the **PR window**, and
 the run's own commit and Actions link. An empty window (`[]`) against a movement
 is the tool disagreeing with itself at a fixed commit; `unknown` is **not** an
-empty window, it is no answer at all. Panel 2 asks *is this bad*: each scope
+empty window, it is no answer at all. Panel 2 asks _is this bad_: each scope
 against its own history, never against a target line. There is **no confidence
 figure** anywhere on it, and the refusal is written on the page rather than only
 in the record. See [ADR-0062](adr/0062-the-dashboard-is-provisioned-from-the-repo.md).
@@ -277,15 +277,15 @@ The store is a container this command creates on first run — `stacks-prometheu
 serving <http://localhost:9090>, with its data and the sync's state under
 `.trend/` (gitignored). The dashboard is the second, and both sit on a
 `stacks-trend` network so Grafana can reach the store by name. **Both bind to
-`127.0.0.1`**, because *nobody else can see it* is one of the two honest costs
+`127.0.0.1`**, because _nobody else can see it_ is one of the two honest costs
 this design accepts for a localhost store — a property to keep rather than a
 phrase. **The backfill tool and the server come from the same pinned image
 deliberately**: `promtool` writes TSDB blocks and Prometheus reads
-them, and a version disagreement between the two surfaces as *the sync worked and
-the dashboard is empty*. A `promtool` on your PATH is deliberately not used. See
+them, and a version disagreement between the two surfaces as _the sync worked and
+the dashboard is empty_. A `promtool` on your PATH is deliberately not used. See
 [ADR-0058](adr/0058-the-trend-store-is-a-container.md).
 
-⚠️ **A container is reused only when its image *and* its mount match.** A
+⚠️ **A container is reused only when its image _and_ its mount match.** A
 `stacks-prometheus` left by another checkout of this repo keeps that checkout's
 `.trend/`, so the sync would write blocks here and Prometheus would serve there —
 `imported 11 record(s)` on a store answering for nine. Measured, not imagined:
@@ -380,7 +380,7 @@ CRAP over 20 functions this commit touches — CC² × (1 − coverage)³ + CC, 
 **Highest first, and the ranking is the whole product.** `CRAP(m) = CC² ×
 (1 − coverage)³ + CC` puts a complex function nobody executes at the top and
 collapses to plain complexity once a function is fully covered — which is why an
-8-complexity function at 100% sits *below* a 7-complexity one at 0%.
+8-complexity function at 100% sits _below_ a 7-complexity one at 0%.
 
 ⚠️ **The exponents were never calibrated, by the authors' own account.** That is
 why the caveat is on the same line as the word CRAP rather than in a footnote,
@@ -401,8 +401,8 @@ Three things print no number at all, and each says which:
   no entry for either, so there is a complexity and there is no coverage grain.
 - **`not in the coverage report`** — the plumbing did not reach it. **This is
   never printed as 0%**, which is the distinction the whole table rests on: a
-  file that is *in* the report untouched is a real 0% and a real, maximal CRAP,
-  and a file that is *missing* is a broken pipe.
+  file that is _in_ the report untouched is a real 0% and a real, maximal CRAP,
+  and a file that is _missing_ is a broken pipe.
 
 A function with no name — an arrow passed to `.filter()` — is identified by its
 `file:line` and shown as `(arrow)`. Istanbul's own `anonymous_7` ids are

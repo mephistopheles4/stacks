@@ -16,11 +16,11 @@ Raw compiler speed, and only that. Measured by the spike
 `experiment/typescript-6-revert`) with no source and no tsconfig change on
 either side:
 
-| Check | TS 7.0.2 | TS 6.0.3 |
-| --- | --- | --- |
-| `pnpm typecheck` | 0.76s | 2.50s |
-| `pnpm build` | 3.32s | 4.73s |
-| `pnpm test` | 890/890, 13.08s | 890/890, 12.99s |
+| Check            | TS 7.0.2        | TS 6.0.3        |
+| ---------------- | --------------- | --------------- |
+| `pnpm typecheck` | 0.76s           | 2.50s           |
+| `pnpm build`     | 3.32s           | 4.73s           |
+| `pnpm test`      | 890/890, 13.08s | 890/890, 12.99s |
 
 That is the native compiler's entire reason for existing, given up. It is
 affordable **at this size and nowhere stated to be affordable at another**: the
@@ -51,8 +51,8 @@ spike:
   mutants come back `CompileError`. ⚠️ **It stays off**; see below.
 - **`astro check`.** Runs, 6.2s over 44 files, and finds one real pre-existing
   type error. [ADR-0003](./0003-site-import-type-only.md) recorded it as unable
-  to run under TS 7 and concluded *"pinning the whole repo back to TS 6 to
-  satisfy one tool costs more than it returns"*. **That reasoning still holds and
+  to run under TS 7 and concluded _"pinning the whole repo back to TS 6 to
+  satisfy one tool costs more than it returns"_. **That reasoning still holds and
   its premise stopped being true**: the pin is not being paid for one tool.
   0003's mitigation — no logic in `.astro` files — is untouched here, and whether
   `astro check` becomes a gate row is a separate scoreboard conversation.
@@ -85,8 +85,8 @@ command is written out: a reader who doubts this can produce it in under a
 minute.
 
 ⚠️ **`checkers` stays `[]`, and that is now a decision rather than a
-limitation.** The old comment in `stryker.config.mjs` called the checker *"dead
-here and cannot be revived"*; it is revivable as of this commit and stays off,
+limitation.** The old comment in `stryker.config.mjs` called the checker _"dead
+here and cannot be revived"_; it is revivable as of this commit and stays off,
 because turning it on is a **scoring** change. A `CompileError` is neither killed
 nor survived, so every declared scope's number moves and every calibration window
 behind `stryker.floors.json` restarts. It earns its own record, after this one,
@@ -96,7 +96,7 @@ and is kept as fog on
 ## What it costs
 
 - ⚠️ **This is a downgrade, and downgrades age in one direction.** Every day on
-  6.0.3 is a day of 7.x fixes not taken, and the pin is *exact*, so nothing
+  6.0.3 is a day of 7.x fixes not taken, and the pin is _exact_, so nothing
   arrives by accident either. What limits the exposure is that 6.0.3 is a
   released, supported compiler the whole suite is green on — not that the risk is
   small.
@@ -104,24 +104,24 @@ and is kept as fog on
   programmatic API" is a milestone this project does not control and cannot
   date. If it slips a year, the pin sits for a year.
 - ⚠️ **Five documents stated something this pin falsifies, and the split between
-  the four corrected and the one left is a rule, not a mood.** *A statement about
+  the four corrected and the one left is a rule, not a mood.** _A statement about
   the environment, or a live warrant something rests on, is this commit's debt. A
-  dated measurement is evidence and stays.*
+  dated measurement is evidence and stays._
 
   **Corrected here.** [`docs/progress.md`](../progress.md) — its
   resolved-versions row, its Stryker environment finding, and its `.astro` row,
   all three descriptions of the environment this commit changed.
   [`docs/gates.md`](../gates.md) — G7's failure-mode column said `astro check`
-  *cannot run under TS 7*, and that is the scoreboard's stated warrant for the
+  _cannot run under TS 7_, and that is the scoreboard's stated warrant for the
   row, not history; it now says the tool runs and is not wired in, which is a
   choice. [`docs/spec/mutation-scoring.md`](../spec/mutation-scoring.md) — §1 on
-  the dead checker and §8's requirement that `stryker.config.*` carry *"the
-  `tsconfigFile` workaround with its comment"*, both footnoted as superseded
+  the dead checker and §8's requirement that `stryker.config.*` carry _"the
+  `tsconfigFile` workaround with its comment"_, both footnoted as superseded
   rather than rewritten, per that folder's own rule for a locked spec.
 
   **Left, and named so it is not mistaken for an oversight.**
   [`docs/gate-register.md`](../gate-register.md) quotes `typescript: ^7.0.2`
-  under *"Measured, 2026-08-15"*. It is a dated observation that was true on its
+  under _"Measured, 2026-08-15"_. It is a dated observation that was true on its
   date. Editing it would make the register lie about what was measured, which is
   worse than letting it age.
 

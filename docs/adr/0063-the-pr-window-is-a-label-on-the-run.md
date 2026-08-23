@@ -13,28 +13,28 @@ listed it, and both the dashboard
 ([#159](https://github.com/mephistopheles4/stacks/issues/159)) and the deploy
 print ([#161](https://github.com/mephistopheles4/stacks/issues/161)) name it as
 something they show. [`docs/spec/trend-layer.md`](../spec/trend-layer.md) §6 says
-in as many words that *"the PR window in panel 1 is the part that is specced"*.
+in as many words that _"the PR window in panel 1 is the part that is specced"_.
 So it is a gap between tickets rather than a decision anybody deferred, and #159
 is where it surfaced because a panel cannot show what no record carries.
 
 ## ⚠️ The pair is the pair the delta compares, and that was wrong first
 
-**Measured from the last run that *scored*, never from the last record.** This
-said *since the previous record* until [#181](https://github.com/mephistopheles4/stacks/pull/181)
+**Measured from the last run that _scored_, never from the last record.** This
+said _since the previous record_ until [#181](https://github.com/mephistopheles4/stacks/pull/181)
 merged, and that was a defect rather than a simplification: a merge record lands
 on every push, so a nightly's previous record is usually the push it ran at. The
 window would have been empty beside a delta spanning everything since the previous
-*nightly* — and an empty window is the page's signal for **tool noise**, so the
-label would have said *nobody changed anything* about exactly the runs where
+_nightly_ — and an empty window is the page's signal for **tool noise**, so the
+label would have said _nobody changed anything_ about exactly the runs where
 somebody had. The worst available direction for this field to fail in, on a page
 built around it.
 
 #181's deploy print derives the same window at read time and got this right
-first: *"a window measured between a different pair attributes a movement to pull
-requests that had nothing to do with it."* Both now measure one interval.
+first: _"a window measured between a different pair attributes a movement to pull
+requests that had nothing to do with it."_ Both now measure one interval.
 
 **One rule for every run, merge half included** — a merge row is not in the delta,
-so *since the last scored run* is as true of it as anything else, and a second
+so _since the last scored run_ is as true of it as anything else, and a second
 rule would be a second thing to keep in step.
 
 ## Two derivations, one parser
@@ -42,7 +42,7 @@ rule would be a second thing to keep in step.
 The deploy print and this label are **not** one producer and one consumer, and the
 duplication is not removable: the print recomputes the window for whichever two
 scored runs it is comparing, which needs git; the page cannot run git, so a label
-is its only route to the same fact. What *is* shared is the part that can drift
+is its only route to the same fact. What _is_ shared is the part that can drift
 silently — `numbersFrom` in [`scripts/lib/pr-window.ts`](../../scripts/lib/pr-window.ts)
 is the one place that decides what counts as a merged pull request. The print used
 an unanchored `\(#(\d+)\)` of its own; the shared one anchors, so `(#99)` mentioned
@@ -54,18 +54,18 @@ mid-subject is a reference rather than a merge.
 the window at read time would mean the page could not show it at all; deriving it
 in the sync would put a different answer on the deploy print than on the page,
 which is the two-answers shape [`metrics-record.ts`](../../scripts/lib/metrics-record.ts)
-already refuses about *where the record lives*.
+already refuses about _where the record lives_.
 
 **On `run_info` rather than as a series**, because it is context and not a
-measurement — and because *a score never appears without its run* is a layout
+measurement — and because _a score never appears without its run_ is a layout
 rule the page can only keep if the two arrive together. A series of its own would
 also owe a `## Trends` row under G36, which would be a row for a thing that never
 moves.
 
 **Three values, and the third is the point.** `unknown` is not `[]`. An empty
 window against a non-zero delta is the tool disagreeing with itself at a fixed
-commit — the noise band the ratchet's floor must sit below — so spelling *no
-answer* as *nothing merged* would manufacture that reading out of a shallow
+commit — the noise band the ratchet's floor must sit below — so spelling _no
+answer_ as _nothing merged_ would manufacture that reading out of a shallow
 checkout. The seam that decides it is `windowFrom` in
 [`scripts/lib/pr-window.ts`](../../scripts/lib/pr-window.ts), a pure function over
 commit subjects, and every way of failing to read the history arrives there as
@@ -79,7 +79,7 @@ one absent answer.
   think to blame the checkout.
 - **One more anonymous fetch per run**, of the `metrics` branch, through
   `fetchRecords` — the same code path the sync and the deploy staleness check
-  use, so the *where* stays in one place.
+  use, so the _where_ stays in one place.
 - **The subject is the only evidence.** `(#180)` at the end of a squash-merge
   subject, or git's own `Merge pull request #124 from …`. A `#52` mentioned
   mid-subject is an issue reference and is deliberately not read as a merge; a
@@ -94,5 +94,5 @@ one absent answer.
 
 Implementing #159, which cannot satisfy its own first acceptance criterion
 without it. Flagged in that ticket's commit as the second place this work goes
-past the spec's *"What lands where"* table — the dashboard artifact being the
+past the spec's _"What lands where"_ table — the dashboard artifact being the
 first, which the ticket itself declared.

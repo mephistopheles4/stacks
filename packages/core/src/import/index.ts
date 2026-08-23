@@ -6,11 +6,7 @@ import { isProbablySameBook, normaliseIsbn } from '../identity.ts';
 import type { BookInput } from '../types.ts';
 import type { VaultAdapter } from '../adapters/vault-adapter.ts';
 
-export {
-  parseAudibleExport,
-  type AudibleBook,
-  type AudibleImportOptions,
-} from './audible.ts';
+export { parseAudibleExport, type AudibleBook, type AudibleImportOptions } from './audible.ts';
 
 /**
  * Writing imported books into the vault.
@@ -131,7 +127,11 @@ async function coverCandidates(
   if (options.get === undefined) return fallback;
 
   try {
-    const [match] = await lookup(`${input.title} ${input.author ?? ''}`.trim(), options.get, options);
+    const [match] = await lookup(
+      `${input.title} ${input.author ?? ''}`.trim(),
+      options.get,
+      options,
+    );
     // The importer's own preference, and the reason the ordering rule is not
     // hidden inside the downloader: a print edition first, then whatever
     // `coverUrls` ranks, then the export's square artwork as the safety net.

@@ -66,7 +66,11 @@ export function placeShelf(rows: readonly ShelfRow[]): Placement[][] {
 
   return rows.map((row, rowIndex) =>
     // Drawn top-down: the newest books sit on the top shelf.
-    placeRow(row.books, rowIndex, (rowCount - 1 - rowIndex) * SHELF.rowHeight + SHELF.plankThickness / 2),
+    placeRow(
+      row.books,
+      rowIndex,
+      (rowCount - 1 - rowIndex) * SHELF.rowHeight + SHELF.plankThickness / 2,
+    ),
   );
 }
 
@@ -273,7 +277,10 @@ export function placeRow(
           // shows. A propped book leans twice that far, where the same omission
           // is 0.004 and reads as a hairline of daylight under the book. The
           // exact form costs one cosine.
-          y: shelfY + (entry.height / 2) * Math.cos(lean) + (entry.thickness / 2) * Math.sin(Math.abs(lean)),
+          y:
+            shelfY +
+            (entry.height / 2) * Math.cos(lean) +
+            (entry.thickness / 2) * Math.sin(Math.abs(lean)),
           z,
         },
         // Under the book's foot, which is not under its middle once it leans:

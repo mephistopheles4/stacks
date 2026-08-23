@@ -20,7 +20,7 @@ actually planted, gates actually run, dispositions filled in. Where the two
 disagree, the Deep pass block is the evidence and the triage line is the guess it
 replaced — and **they disagree in every band, in both directions**: three rows in
 band one, four in band two, two in band three, two in band four. ⚠️ Band one's
-own section counts *results* rather than rows and says "two"; both are right about
+own section counts _results_ rather than rows and says "two"; both are right about
 different things. See **Band one**, **Band two**, **Band three** and **Band
 four**, below.
 
@@ -28,7 +28,7 @@ four**, below.
 sits on three rows — G6, G7 and G35 — from
 [#144](https://github.com/mephistopheles4/stacks/issues/144), which re-read
 category 5 alone against a bound
-[#138](https://github.com/mephistopheles4/stacks/issues/138) restated *after* all
+[#138](https://github.com/mephistopheles4/stacks/issues/138) restated _after_ all
 four bands had closed. It plants nothing and deep-passes nothing; it corrects
 decay verdicts reached under a rule that no longer applies. See **The decay
 re-read**, below.
@@ -65,7 +65,7 @@ four, each planted for the first time — so **four remain**: G5, G31, G32, G33.
 five of those new lines sit in a Deep pass block, not in the triage line above it,
 which is the distinction this whole paragraph is about.
 
-⚠️ **Band four's own correction to this tally said *six*, and it was right about
+⚠️ **Band four's own correction to this tally said _six_, and it was right about
 the file it could see.** `8b8abab` was written against a register holding bands
 one and three but not band two, which had not yet landed — so G15 and G35 still
 looked unsupplied. **Recounted mechanically over the 35 sections** once all four
@@ -146,24 +146,24 @@ owned the two rules this file had adopted as working answers, and the ordering
 question it had left open.
 
 For the deep pass, in the priority order #113 fixed: **1** rows flagged under
-*vacuous green*, **2** rows whose gate matches *text rather than structure*,
-**3** rows whose gate carries an *allowlist*. A row takes the highest
+_vacuous green_, **2** rows whose gate matches _text rather than structure_,
+**3** rows whose gate carries an _allowlist_. A row takes the highest
 (lowest-numbered) tier it qualifies for.
 
 **Rule 1 — highest tier wins: confirmed, with the unit named.** Rank is a
-*scheduling* device. It decides when a row is first visited, and it never
+_scheduling_ device. It decides when a row is first visited, and it never
 narrows what gets demonstrated once it is: a row leaves its band with **that
 band's category** dispositioned and its other non-clean verdicts still open,
 recorded as open rather than closed by the row having been visited. Without
-that clause, *deep-passed* would come to mean *one of four exposures
-demonstrated* — category 4 arriving in the process instead of in a gate.
+that clause, _deep-passed_ would come to mean _one of four exposures
+demonstrated_ — category 4 arriving in the process instead of in a gate.
 
 **Rule 2 — tier 4 is replaced, not confirmed.** #113's tiers are not a ranking
-of the five categories: tier 1 *is* a category, but tiers 2 and 3 are
+of the five categories: tier 1 _is_ a category, but tiers 2 and 3 are
 **mechanisms** (text-matching, an allowlist). So the ranking ranks **how
 well-specified the demonstration is** — which is right for scheduling and wrong
-for triage, and that single fact explains both gaps triage found. *Asserted
-outside `gates/`* is neither a category nor a mechanism but a fact about
+for triage, and that single fact explains both gaps triage found. _Asserted
+outside `gates/`_ is neither a category nor a mechanism but a fact about
 **location**, so it leaves the ranking and becomes a **separate per-row axis**,
 recorded beside the five verdicts and used as a tiebreak within a band.
 
@@ -175,7 +175,7 @@ ranking's invariant is now unqualified — **ranked implies flagged**, with no
 exception clause to carry.
 
 **Rule 3 — the unranked flagged rows are the last band, ordered by what they
-need.** A *decay* flag is discharged by **re-measuring a claim, not by planting
+need.** A _decay_ flag is discharged by **re-measuring a claim, not by planting
 a defect**, so decay rows are cheap, mechanical and independent of one another:
 they go first, by row number — **G12, G18, G24, G34** — and three of those four
 already carry their answer in `docs/gates.md`'s own prose, which makes their
@@ -195,9 +195,9 @@ orders it; it does not define it.
 
 **20 rows carry a rank:**
 
-| Rank 1 — vacuous green | Rank 2 — text over structure | Rank 3 — allowlist |
-| --- | --- | --- |
-| G17, G20, G21, G22, G23, G25, G26, G31 | G2, G7, G14, G15, G19, G28, G29, G35 | G1, G10, G13, G30 |
+| Rank 1 — vacuous green                 | Rank 2 — text over structure         | Rank 3 — allowlist |
+| -------------------------------------- | ------------------------------------ | ------------------ |
+| G17, G20, G21, G22, G23, G25, G26, G31 | G2, G7, G14, G15, G19, G28, G29, G35 | G1, G10, G13, G30  |
 
 **All 20 are flagged**, as of the decay re-read. Rule 2 removed the tier-4 column
 that used to require an exception; band two produced the first one of a different
@@ -211,7 +211,7 @@ never demonstrated against and could not have judged under the bound that existe
 then. **A rank is a record of what was suspected, not of what was found**, so it
 stays either way; what moved is the verdict line.
 
-**"Flagged" throughout this file means the row's verdicts *as they stand*, not
+**"Flagged" throughout this file means the row's verdicts _as they stand_, not
 whether it was ever nominated.** Both readings are defensible and they now
 disagree, because a deep pass corrects verdicts in both directions: band two moved
 **G7** off the flagged side entirely, and band three moved two verdicts from
@@ -219,12 +219,11 @@ disagree, because a deep pass corrects verdicts in both directions: band two mov
 those changed the row's contents and not its side. One row has crossed. The file
 counts the current reading and says so rather than leaving it to be inferred.
 ~~Under the historical reading G7 is flagged and the total is 25; under the
-current one, which is what every count here uses, G7 is clean and the total is
-24.~~ ⚠️ **Marked 2026-08-16 — stale in both halves, and it went stale the same
+current one, which is what every count here uses, G7 is clean and the total is 24.~~ ⚠️ **Marked 2026-08-16 — stale in both halves, and it went stale the same
 day it was written.** The decay re-read put **G7** back on the flagged side hours
 later, so the two readings no longer disagree about G7 at all; and the total moved
 to **25** when the decay re-read part two exposed G33. Kept rather than rewritten
-because the *distinction* it draws is still the file's rule, and because a
+because the _distinction_ it draws is still the file's rule, and because a
 worked example that expired this fast is worth leaving visible. Rank is the
 historical record; the verdict lines are the current one.
 
@@ -246,7 +245,7 @@ defaulted to `clean` to protect this Summary's count: 19 resolved to `clean`
 with a stated reason, 4 resolved to genuine, low-confidence `nominated,
 unconfirmed` exposures (G31's routing-around and vacuous-green nominations,
 G14's routing-around nomination, G35's decay nomination). None resolved to
-*not reached* — every one was assessable from evidence already in the repo.
+_not reached_ — every one was assessable from evidence already in the repo.
 The only headline change from that resolution is **G31 moving from rank 2 to
 rank 1** (its vacuous-green nomination outranks its text-matching one); the
 flagged, clean and not-reached totals below are unchanged, because every
@@ -270,18 +269,18 @@ rewritten.
 is the more useful fact.** Two rows crossed in opposite directions on the same
 day: **G7** back to flagged on a decay exposure band two never demonstrated
 against, and **G34** to clean, band four's refutation finally reaching the verdict
-line it refuted. A carried-forward *"still 24"* would have been true and would
+line it refuted. A carried-forward _"still 24"_ would have been true and would
 have hidden both. **Recounted mechanically over the 35 sections** — and the
 counting script was wrong twice before it was right, most instructively on a
-**wrapped bullet**: G34 states its first verdict on the line *after* the category
+**wrapped bullet**: G34 states its first verdict on the line _after_ the category
 name, so a per-line test read it as non-clean and kept the row flagged for the
 wrong reason. Every total here is from the version that joins a bullet to its
 continuation lines.
 
 ⚠️ **The decay re-read part two moved the total for the first time since band
-two, and it moved *up*.** **G33** crossed from clean to flagged on a decay
-exposure — the docblock's *"the only gate that reaches the `## About` body
-insert"*, false in the commit that wrote it — and **G21**, already flagged,
+two, and it moved _up_.** **G33** crossed from clean to flagged on a decay
+exposure — the docblock's _"the only gate that reaches the `## About` body
+insert"_, false in the commit that wrote it — and **G21**, already flagged,
 gained its fifth. Decay now stands at **24 clean / 11 exposed**, against 26 / 9
 before. **Recounted mechanically over the 35 sections after the edits, never
 carried forward from the narrative**, which is the discipline
@@ -293,9 +292,9 @@ on `**Decay**` misses G26's merged `**Vacuous green / decay**` bullet and return
 34 sections without saying so.
 
 **A second correction, made in the round that populated this file** — before
-either band ran; *"this revision"* is what it said until band two made that read
+either band ran; _"this revision"_ is what it said until band two made that read
 as band two's. The previous round left category
-bullets stating a *reason* with no *verdict* word in front of it — `related to
+bullets stating a _reason_ with no _verdict_ word in front of it — `related to
 the above`, `designed against, explicitly`, `asserted outside gates/
 entirely`, and similar — the same defect one level down from the 23-line
 round before it. A property check (below) rather than an enumerated list
@@ -341,16 +340,16 @@ ticket was open, in the revision above. The band is defined by rank, so it
 took the eighth member rather than orphaning it — band two is rank 2, which
 G31 had just left.
 
-| Row | Disposition | In one line |
-| --- | --- | --- |
-| G17 `deploy-branch` | `repaired` | The gate spawns the script, so `--any-branch` baked into `deploy:site` is invisible to it. |
-| G20 `public-build-artifact` | `repaired` | The module's verdict is gated; the command's response to it is not. |
-| G21 `no-live-network` | *verdict corrected* | Nomination did not survive: both halves re-planted red. Nothing to dispose of. |
-| G22 `cover-candidates` | `repaired` | Callers are forced *through* `coverUrls()`; what they do with the result is unwatched. |
-| G23 `key-if-present` | cat. 4 *corrected*; cat. 3 `accepted` | Vacuity anchor holds; a second implementation in early-return form still passes. |
-| G25 `one-usable-width` | `accepted` | The floor is real at 0.004 and not closable without making a correct packer red. |
-| G26 `lookup-recall` | `repaired` | A corpus and its recordings, wrong together, are invisible — which is how it actually happened. |
-| G31 `merge-precedence` | `repaired` | The gate never imports the merge. Four defects, 5 of 5 green each time. |
+| Row                         | Disposition                           | In one line                                                                                     |
+| --------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| G17 `deploy-branch`         | `repaired`                            | The gate spawns the script, so `--any-branch` baked into `deploy:site` is invisible to it.      |
+| G20 `public-build-artifact` | `repaired`                            | The module's verdict is gated; the command's response to it is not.                             |
+| G21 `no-live-network`       | _verdict corrected_                   | Nomination did not survive: both halves re-planted red. Nothing to dispose of.                  |
+| G22 `cover-candidates`      | `repaired`                            | Callers are forced _through_ `coverUrls()`; what they do with the result is unwatched.          |
+| G23 `key-if-present`        | cat. 4 _corrected_; cat. 3 `accepted` | Vacuity anchor holds; a second implementation in early-return form still passes.                |
+| G25 `one-usable-width`      | `accepted`                            | The floor is real at 0.004 and not closable without making a correct packer red.                |
+| G26 `lookup-recall`         | `repaired`                            | A corpus and its recordings, wrong together, are invisible — which is how it actually happened. |
+| G31 `merge-precedence`      | `repaired`                            | The gate never imports the merge. Four defects, 5 of 5 green each time.                         |
 
 **Two results contradict the triage above**, which is the whole point of a pass
 that demonstrates rather than reads: **G31 did not clear** — the entry called it
@@ -375,7 +374,7 @@ was **dominated by G31** at roughly twice any of its siblings. The difference is
 the state of the evidence: the four uniform rows all carried exposures
 `docs/gates.md` already documented, so their plants only had to **confirm**,
 while G31 was uncharacterised and needed four plants to establish both that the
-vacuity is real *and* that the property survives elsewhere.
+vacuity is real _and_ that the property survives elsewhere.
 
 > **~2 minutes of orientation per row, plus ~2 minutes per plant. A documented
 > exposure needs about two plants; an unconfirmed nomination needs about four.**
@@ -397,7 +396,7 @@ puppeteer are G16 and G35, both in later bands.
 **Totals:** eight rows, ~63 minutes, 35 vitest invocations. ⚠️ **Both figures are
 agent-reported, not instrumented** — self-accounted wall-clock summed across the
 band's two halves, in the same spirit as G20's unobserved exit code above. The
-*shape* of the model (orientation is fixed, plants are cheap, unconfirmed
+_shape_ of the model (orientation is fixed, plants are cheap, unconfirmed
 nominations cost roughly double) is what later bands should carry; the minutes
 are an order of magnitude, not a measurement.
 
@@ -428,29 +427,29 @@ retired the tier.
 ## Band two — the deep pass has run on rank 2
 
 **Commissioned by [#132](https://github.com/mephistopheles4/stacks/issues/132).**
-The eight rows triage flagged under *text over structure* — a gate matching prose
+The eight rows triage flagged under _text over structure_ — a gate matching prose
 where it should match structure. Same shape as band one, one tier down: plant a
 defect the file could actually have, watch what the gate does, and record what
 was run rather than what `docs/gates.md` already claimed.
 
-| Row | Disposition | In one line |
-| --- | --- | --- |
-| G2 `public-build` | `accepted` | Real body prose ships into `library.json` while the canary check reports clean. |
-| G7 `astro-no-logic` | *verdict corrected* | Three plants, three reds. The approximation is real; a silent pass is not reachable. |
-| G14 `commands` | `repaired` | The anchored regex holds — and the extractor still cannot see `.alias()` or a workspace script. |
-| G15 `cover-budget` | `accepted` | 23.0 MB of spine textures, measured, outside every budget the gate counts. |
-| G19 `constitution-scoreboard` | `repaired`; second finding `gated` | Three holes re-plant red. The status cell is read **positionally**. |
-| G28 `no-board-collisions` | `repaired` | Four plants, both directions, each fails the same two of twelve. |
-| G29 `doc-links` | `gated` | One stray backtick switches the gate off for the rest of the line. |
-| G35 `enhanced-card` | `repaired` | The widened checks catch what the single assertion could not. |
+| Row                           | Disposition                        | In one line                                                                                     |
+| ----------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| G2 `public-build`             | `accepted`                         | Real body prose ships into `library.json` while the canary check reports clean.                 |
+| G7 `astro-no-logic`           | _verdict corrected_                | Three plants, three reds. The approximation is real; a silent pass is not reachable.            |
+| G14 `commands`                | `repaired`                         | The anchored regex holds — and the extractor still cannot see `.alias()` or a workspace script. |
+| G15 `cover-budget`            | `accepted`                         | 23.0 MB of spine textures, measured, outside every budget the gate counts.                      |
+| G19 `constitution-scoreboard` | `repaired`; second finding `gated` | Three holes re-plant red. The status cell is read **positionally**.                             |
+| G28 `no-board-collisions`     | `repaired`                         | Four plants, both directions, each fails the same two of twelve.                                |
+| G29 `doc-links`               | `gated`                            | One stray backtick switches the gate off for the rest of the line.                              |
+| G35 `enhanced-card`           | `repaired`                         | The widened checks catch what the single assertion could not.                                   |
 
 **Four rows contradict the triage above** — twice as many as band one, which is
-what a band of *"the gate matches prose"* rows should be expected to produce.
+what a band of _"the gate matches prose"_ rows should be expected to produce.
 **G7's exposure did not survive** three planted attempts to reach a green suite;
 **G14's routing-around nomination did**, twice over, and is now demonstrated
 rather than suspected; **G19 was recorded as historical and fixed** and carries a
-live defect nobody had found; and **G29's self-audit was credited as *measured,
-not assumed*** while measuring the corpus rather than the mechanism.
+live defect nobody had found; and **G29's self-audit was credited as _measured,
+not assumed_** while measuring the corpus rather than the mechanism.
 
 ### `gated` gets a meaning — and two bands reached the same one, separately
 
@@ -462,9 +461,9 @@ say what it meant.
 
 **The reading adopted here: `gated` means the finding is real and unclosed, and
 its remedy is a named check for the implementation session to build.** It is the
-disposition a map that *decides* can reach, where `repaired` and `accepted` both
-describe something that already happened. The alternative reading — *"already
-caught by some other gate"* — was rejected: a finding caught by an existing gate
+disposition a map that _decides_ can reach, where `repaired` and `accepted` both
+describe something that already happened. The alternative reading — _"already
+caught by some other gate"_ — was rejected: a finding caught by an existing gate
 is not a finding, and would have its verdict corrected instead.
 
 ⚠️ **That leaves `accepted` and `gated` describing the same facts, and band two
@@ -479,17 +478,17 @@ and the disposition is **`gated`**. It reads as a rule about paperwork and is no
 nobody has seen is how a register comes to record consent that was never given.
 
 By that rule: **G2** and **G15** are `accepted` — `docs/gates.md` says the canary
-rule is *"still a text match by construction"* and spends fifty lines on G15's
+rule is _"still a text match by construction"_ and spends fifty lines on G15's
 scope mismatch, naming a non-gate substitute instead of claiming closure. **G29**
 is `gated` — the stray-backtick hole is new, its entry credited the opposite, and
 a cheap remedy is named. Band three's **G30** lands the same way for the same
-reason: *"no history at all"*.
+reason: _"no history at all"_.
 
-⚠️ **This section read *"because this band is the first to need one"* until band
+⚠️ **This section read _"because this band is the first to need one"_ until band
 three merged first, and that sentence was false when it was written rather than
 made false afterwards.** Band three minted `gated` in parallel, for G30, and
-arrived at the same reading by a different route — *"the remedy is a gate change,
-it is named here, and it is owed to the spec"*, chosen by eliminating the other
+arrived at the same reading by a different route — _"the remedy is a gate change,
+it is named here, and it is owed to the spec"_, chosen by eliminating the other
 three exactly as band two eliminated them. **Two sessions with no contact
 defining one disputed word the same way is better evidence for the reading than
 either band's argument for it**, and it is worth more than the tidier claim it
@@ -502,8 +501,8 @@ without either allocation being wrong.
 ⚠️ **Under this reading band one's G20 residual would be a `gated`, and it carries
 no disposition today** — the commented-out `process.exit(1)` that leaves
 `pnpm gate:public` a printer that cannot fail, remedy named, nothing decided.
-Those are one statement, not two: the disposition it *would* take is `gated`, and
-the disposition it *has* is none, because the vocabulary did not exist when band
+Those are one statement, not two: the disposition it _would_ take is `gated`, and
+the disposition it _has_ is none, because the vocabulary did not exist when band
 one wrote it. Left alone rather than edited, being another band's row; noted so
 the gap is visible from this side.
 
@@ -513,8 +512,8 @@ the gap is visible from this side.
 runs.** Band one was ~63 minutes over the same number of rows. ⚠️ **The
 difference is not that band two was slower per plant; it is that band two
 planted more, on instruction, and hit live findings that then had to be
-isolated.** Band one's own model predicted this exactly — *"a documented exposure
-needs about two plants; an unconfirmed nomination needs about four"* — and band
+isolated.** Band one's own model predicted this exactly — _"a documented exposure
+needs about two plants; an unconfirmed nomination needs about four"_ — and band
 two's expensive rows are the ones where the plant came back green and the finding
 had to be built up from there: G2 needed a throwaway single-book vault before the
 exposure separated from the fixture's own coincidence, and G15 needed the real
@@ -526,8 +525,8 @@ to get a number at all.
 puppeteer in total — against a 6.5s suite that is itself not a cost centre. The
 row cost ~35 minutes and almost none of it was puppeteer. **Cost in this deep
 pass is reading and isolation time; it has now been mispredicted twice, in both
-directions, by reasoning about what a spec *runs* instead of what a finding
-*takes*.**
+directions, by reasoning about what a spec _runs_ instead of what a finding
+_takes_.**
 
 **Both figures are agent-reported, not instrumented**, on band one's own caveat.
 
@@ -536,21 +535,21 @@ directions, by reasoning about what a spec *runs* instead of what a finding
 ## Band three — the deep pass has run on rank 3
 
 **Commissioned by [#133](https://github.com/mephistopheles4/stacks/issues/133).**
-Four rows, all flagged for carrying an *allowlist*, all probed the way band one
+Four rows, all flagged for carrying an _allowlist_, all probed the way band one
 probed rank 1: plant the defect, run the suite, read what the gate did. Each
 carries a **Deep pass** block under its entry.
 
-| Row | Disposition | In one line |
-| --- | --- | --- |
-| G1 `adapter-boundary` | cat. 1 `accepted`; cat. 3 `repaired` | The rot-checks hold; a vault note read through `node:child_process` is not a vault read to this gate. |
-| G10 `cover-path` | cat. 1 `accepted`; cat. 3 *corrected*, `repaired` | Three of four re-implementations of the original defect pass suite-wide, including the same Windows bug spelled `.at(-1)`. |
-| G13 `no-third-party-material` | cat. 1 `accepted`; cat. 3 `repaired` | `docs/images/` is pinned and holds; `fixtures/vault/Library/covers/` is still a directory, and `.svg` is not a binary here. |
-| G30 `library-seam` | cat. 1 and cat. 2 *corrected*, `gated` | A new field wired end-to-end through the frontmatter contract never reaches `library.json`, 636 of 636 green. |
+| Row                           | Disposition                                       | In one line                                                                                                                 |
+| ----------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| G1 `adapter-boundary`         | cat. 1 `accepted`; cat. 3 `repaired`              | The rot-checks hold; a vault note read through `node:child_process` is not a vault read to this gate.                       |
+| G10 `cover-path`              | cat. 1 `accepted`; cat. 3 _corrected_, `repaired` | Three of four re-implementations of the original defect pass suite-wide, including the same Windows bug spelled `.at(-1)`.  |
+| G13 `no-third-party-material` | cat. 1 `accepted`; cat. 3 `repaired`              | `docs/images/` is pinned and holds; `fixtures/vault/Library/covers/` is still a directory, and `.svg` is not a binary here. |
+| G30 `library-seam`            | cat. 1 and cat. 2 _corrected_, `gated`            | A new field wired end-to-end through the frontmatter contract never reaches `library.json`, 636 of 636 green.               |
 
-**#133 asked two questions and they came back with opposite answers.** *Does each
-entry still name something real, and would the gate notice if it stopped?* —
-**yes, every time.** *Can the gate be satisfied by editing its exemption list
-rather than by fixing the code?* — **yes, every time, and that is not where the
+**#133 asked two questions and they came back with opposite answers.** _Does each
+entry still name something real, and would the gate notice if it stopped?_ —
+**yes, every time.** _Can the gate be satisfied by editing its exemption list
+rather than by fixing the code?_ — **yes, every time, and that is not where the
 damage is.** Three of these four allowlists are exactly the artifact
 `CONTRIBUTING.md` asks for, and the exposures this band found are all one step to
 the side: not the entries, but what the list is a list **of**.
@@ -560,12 +559,12 @@ the side: not the entries, but what the list is a list **of**.
 [#133](https://github.com/mephistopheles4/stacks/issues/133) says twice that a
 row leaves this band with its **category-3** verdict dispositioned. All four register entries put the allowlist finding under
 **Weakening** — category 1 — and they are right to: widening an exemption is
-*editing the gate*, which is category 1's own text.
+_editing the gate_, which is category 1's own text.
 
 Band one already settled the general form of this when it retired tier 4:
-*"#113's tiers are not a ranking of the five categories — tier 1 is a category,
-tiers 2 and 3 are mechanisms."* Tier 3 says the gate is *written with an
-allowlist*; it does not say which of the five an exposure lands in. **So this
+_"#113's tiers are not a ranking of the five categories — tier 1 is a category,
+tiers 2 and 3 are mechanisms."_ Tier 3 says the gate is _written with an
+allowlist_; it does not say which of the five an exposure lands in. **So this
 band dispositions every non-clean verdict its plants reached and privileges no
 category** — which is how three of these rows come away with a category-1
 disposition and a category-3 one, and G30 with a category-1 and a category-2.
@@ -576,8 +575,8 @@ Band one established that a nomination which does not survive has its **verdict
 corrected** rather than dispositioned. Every one of its corrections ran the same
 way: `nominated, unconfirmed` → `clean`.
 
-⚠️ **This band made two corrections in the other direction** — G10's *Routing
-around* and G30's *Satisfying the letter*, both recorded `clean` in triage, both
+⚠️ **This band made two corrections in the other direction** — G10's _Routing
+around_ and G30's _Satisfying the letter_, both recorded `clean` in triage, both
 `exposed` under a plant. That direction is the one only a demonstration can
 reach: a triage verdict of `clean` is a claim nobody goes back to, and G30's was
 `clean` on the reasoning that its fixture is "fully-populated" — true on the day
@@ -593,8 +592,8 @@ lines of spec.
 
 `repaired` would be false, `accepted` claims a remedy is unavailable when one is
 sitting there, and `declined` is a decision this band has no authority to make.
-That leaves `gated`, read **forward**: *the remedy is a gate change, it is named
-here, and it is owed to the spec* — the same tense band one's `repaired` rows
+That leaves `gated`, read **forward**: _the remedy is a gate change, it is named
+here, and it is owed to the spec_ — the same tense band one's `repaired` rows
 already used when they named remedies nobody had built. Recorded as a reading
 rather than assumed, and handed to
 [band four](https://github.com/mephistopheles4/stacks/issues/134) and
@@ -606,10 +605,10 @@ overturn.
 Every reverse-assert in the band was made to fire, and every historical defect
 these rows name was re-planted and still goes red:
 
-- **G1** — deleting `packages/core/src/watch.ts` from `ALLOWED` fails *"lets no
-  unlisted file reach the filesystem directly"*; adding
-  `packages/core/src/library.ts`, which does not import `fs`, fails *"keeps every
-  allowlist entry on a file that still imports fs"*; the historical
+- **G1** — deleting `packages/core/src/watch.ts` from `ALLOWED` fails _"lets no
+  unlisted file reach the filesystem directly"_; adding
+  `packages/core/src/library.ts`, which does not import `fs`, fails _"keeps every
+  allowlist entry on a file that still imports fs"_; the historical
   `import { readFileSync } from 'node:fs'` in
   `packages/site/src/shelf/scene.ts` goes red.
 - **G10** — `cover.split('/').pop()` restored to `packages/core/src/enrich.ts`,
@@ -624,12 +623,12 @@ these rows name was re-planted and still goes red:
 ⚠️ **So the rot half of every allowlist here works, and none of them checks the
 one thing that matters: whether a permission was warranted.** Demonstrated on the
 two lists where granting is cheapest. G1: a `readFileSync` vault read added to
-`packages/core/src/library.ts` plus an `ALLOWED` line reading *"Reads the built
-index back for a fast rebuild path. Not note data"* — **636 of 636 green**, both
+`packages/core/src/library.ts` plus an `ALLOWED` line reading _"Reads the built
+index back for a fast rebuild path. Not note data"_ — **636 of 636 green**, both
 reverse-asserts satisfied, because the file does exist and does import `fs`. G10:
 a `basename` import plus one entry in `MAY_IMPORT_BASENAME` — **636 of 636
-green**. Both are `accepted`. `CONTRIBUTING.md` asks for *"a written
-justification and a reviewable one-line diff"* and that is precisely what these
+green**. Both are `accepted`. `CONTRIBUTING.md` asks for _"a written
+justification and a reviewable one-line diff"_ and that is precisely what these
 produce; no mechanical check reads a justification, and the remedy is review.
 
 ### Cost
@@ -642,7 +641,7 @@ needed four**, which is the ratio band one predicted.
 [#133](https://github.com/mephistopheles4/stacks/issues/133) asked this band to
 spend its slack on more plants rather than on finishing early, and it did: **22 plants over four rows, at 6.5 vitest invocations per row
 against band one's 4.4**. Three of the four rows' sharpest findings came from
-the *extra* plants —
+the _extra_ plants —
 G10's `.at(-1)`, G13's `.svg`, G30's end-to-end field — none of which the first
 two plants on those rows would have reached. Compute remains a non-issue: the
 full suite is ~6.3s and file-scoped runs are under 1s.
@@ -678,18 +677,18 @@ last.** Four of the five were discharged by **re-measuring a claim** rather than
 by planting against a gate, which is what a decay flag asks for; G6 needed a
 demonstration designed from scratch, and produced the band's result.
 
-| Row | Disposition | In one line |
-| --- | --- | --- |
-| G12 `shelf-order` | `repaired` | The code repair holds; the gate still quotes the sentence the repair replaced. |
-| G18 `bounded-cover-bytes` | `accepted` (time) + `gated` (membership) | The measurement says *three providers*; there have been four since 2026-08-08. |
-| G24 `repo-root` | `accepted` | The load-bearing claim re-measures true. A second count in the same paragraph was wrong on arrival. |
-| G34 `enrich-convergence` | *verdict corrected* | The property is asserted, not merely commented — and `docs/gates.md`'s own row states it. |
-| G6 `site-core-imports` | `repaired` | **Two routes past the gate, and the suite, and the build. `smoke:render` is the only thing that catches them.** |
+| Row                       | Disposition                              | In one line                                                                                                     |
+| ------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| G12 `shelf-order`         | `repaired`                               | The code repair holds; the gate still quotes the sentence the repair replaced.                                  |
+| G18 `bounded-cover-bytes` | `accepted` (time) + `gated` (membership) | The measurement says _three providers_; there have been four since 2026-08-08.                                  |
+| G24 `repo-root`           | `accepted`                               | The load-bearing claim re-measures true. A second count in the same paragraph was wrong on arrival.             |
+| G34 `enrich-convergence`  | _verdict corrected_                      | The property is asserted, not merely commented — and `docs/gates.md`'s own row states it.                       |
+| G6 `site-core-imports`    | `repaired`                               | **Two routes past the gate, and the suite, and the build. `smoke:render` is the only thing that catches them.** |
 
 ⚠️ **G6 in full, because it is what this band exists to produce.** The
 nomination named a re-export chain and a dynamic `import()`. The **dynamic
 import is closed** — planted, red, and closed deliberately by a test whose
-comment names it. The two routes that *do* work were not on the list: a
+comment names it. The two routes that _do_ work were not on the list: a
 **relative path** into `packages/core/` (no `@stacks/core` literal, so the file
 is read and nothing in it is seen) and the **`.astro` `<script>` block**, which
 uses the forbidden statement verbatim in a file type `siteFiles()` does not
@@ -698,23 +697,23 @@ and `pnpm build` **succeeding** while vite externalizes `sharp` and `node:fs`
 into the browser bundle.
 
 **And the backstop is real, which is the other half of the honesty.** `pnpm
-smoke:render` goes red on both, in the same required check — *"the shelf never
-signalled ready"*. The invariant is defended in CI; it is not defended by the
+smoke:render` goes red on both, in the same required check — _"the shelf never
+signalled ready"_. The invariant is defended in CI; it is not defended by the
 gate written for it, and the red a visitor to that failure gets names no rule,
 no file and no line.
 
 ### Two results contradict the triage
 
 **G34 cleared** — the strongest-worded decay nomination in the unranked set
-fails on both its legs, and one of them (*"not in `docs/gates.md`'s own row
-text"*) is contradicted by line 110 of that file. **G12 half-cleared**: the
-triage line's *"already repaired"* is true of the behaviour and false of the
+fails on both its legs, and one of them (_"not in `docs/gates.md`'s own row
+text"_) is contradicted by line 110 of that file. **G12 half-cleared**: the
+triage line's _"already repaired"_ is true of the behaviour and false of the
 record.
 
 ### What re-measurement costs, against band one's model
 
-Band one's model — *~2 min orientation per row, ~2 min per plant; a documented
-exposure needs ~2 plants, an unconfirmed nomination ~4* — was measured on rows
+Band one's model — _~2 min orientation per row, ~2 min per plant; a documented
+exposure needs ~2 plants, an unconfirmed nomination ~4_ — was measured on rows
 that get **planted against**. ⚠️ **It does not transfer to a decay row, and the
 direction is the surprise: re-measurement is cheaper than orientation.**
 
@@ -738,7 +737,7 @@ verdicts are worth.
 
 - **The independence condition in #134's Notes was not met.** It asks for a
   fresh-context agent given the register entry and not this map's
-  *Decisions-so-far*. This band was run by the session that read the map, which
+  _Decisions-so-far_. This band was run by the session that read the map, which
   is the weaker arrangement: for the three decay rows whose answer is a document
   comparison the risk is small, and for **G6**, where the demonstration had to be
   designed, it is not — a reader who wants that result independent should note
@@ -758,8 +757,8 @@ branched from `e372e2d` and both wrote this file, so the sections above and belo
 were composed rather than merged: band three's runs first, band four rebased onto
 it, and **the arithmetic was recounted across all three bands rather than
 patched**. The recount was needed rather than tidy — band three left this file's
-opening lines reading *"Triage for 27 rows; the deep pass has run on the other
-8"* and *"the eight rank-1 rows only"*, which described the file before its own
+opening lines reading _"Triage for 27 rows; the deep pass has run on the other
+8"_ and _"the eight rank-1 rows only"_, which described the file before its own
 section was in it. Nothing in wayfinding catches two sessions editing one file;
 reading the tip again before publishing does, which is the same lesson band one
 recorded and the second time this file has recorded it.
@@ -794,11 +793,11 @@ there, not here.
 other verdict in this file is untouched.
 
 [#138](https://github.com/mephistopheles4/stacks/issues/138) restated category 5
-— from *"a load-bearing claim that drifted"* to ***"a load-bearing claim whose
+— from _"a load-bearing claim that drifted"_ to _**"a load-bearing claim whose
 truth was never established, or never re-established, against a check that was
-available"*** — and admitted **gate-spec docblocks** as a subject, on the measured
+available"**_ — and admitted **gate-spec docblocks** as a subject, on the measured
 ground that a docblock is keyed to its row by G19 forcing slug to equal file stem
-where `docs/gates.md`'s prose is not. Both changes landed *after* all four bands
+where `docs/gates.md`'s prose is not. Both changes landed _after_ all four bands
 closed, so **every decay verdict in this file was reached under a rule that no
 longer applies.**
 
@@ -809,16 +808,16 @@ correction is the first result of the pass.** Counted over the 35 sections at
 both `f3505ee` (the commit #144 cites) and `ae674de` — identical, so this is not
 drift:
 
-| | #144's body | counted |
-| --- | --- | --- |
-| `clean` | 23 | **27** |
-| `exposed` | 11 | **6** |
-| resolves to neither token | 1 (G34) | **2 (G34, G35)** |
+|                           | #144's body | counted          |
+| ------------------------- | ----------- | ---------------- |
+| `clean`                   | 23          | **27**           |
+| `exposed`                 | 11          | **6**            |
+| resolves to neither token | 1 (G34)     | **2 (G34, G35)** |
 
-Five rows filed as *exposed* read `- **Decay** — clean.` verbatim — **G10**,
-**G13**, **G15**, **G21**, **G30** — and **G35**, filed as *clean*, is a second
-row resolving to neither token. The mechanism is **not established**: *"any
-`exposed` anywhere in the section"* would explain the five, but **G1**'s weakening
+Five rows filed as _exposed_ read `- **Decay** — clean.` verbatim — **G10**,
+**G13**, **G15**, **G21**, **G30** — and **G35**, filed as _clean_, is a second
+row resolving to neither token. The mechanism is **not established**: _"any
+`exposed` anywhere in the section"_ would explain the five, but **G1**'s weakening
 bullet reads `exposed` and #144 files G1 as clean, so that route is ruled out and
 the real one is unknown. Recorded as unknown rather than guessed at.
 
@@ -829,8 +828,8 @@ row whose decay finding is among the file's strongest.
 
 **Scope: 28 rows** — the 29 not-exposed, less **G34**, whose decay nomination
 band four discharged by demonstration three days ago. ⚠️ #144's own arithmetic
-(*"24 − 5 = 19"*) subtracts G12, G18 and G24 twice: they were already out as
-exposed. **G6 stays in** — band four ran it for *routing around* and never touched
+(_"24 − 5 = 19"_) subtracts G12, G18 and G24 twice: they were already out as
+exposed. **G6 stays in** — band four ran it for _routing around_ and never touched
 its decay line — and that decision earned a finding.
 
 The 6 exposed rows are **out**, on #144's one-directional argument: a widened
@@ -842,21 +841,21 @@ Neither was decidable from #138 alone, and both are handed to
 [#120](https://github.com/mephistopheles4/stacks/issues/120) to confirm.
 
 **Rule 1 — the discharge test: re-measure the nomination's claim, not the fact.**
-Band four's *"a decay flag is discharged by re-measuring, not by planting"* leaves
-open *what* gets re-measured. Read forward from its own two outcomes, the answer
-is the nomination's claim — typically *"this load-bearing claim is held by
-nothing."* **G34** failed because that claim was false (the property is asserted
+Band four's _"a decay flag is discharged by re-measuring, not by planting"_ leaves
+open _what_ gets re-measured. Read forward from its own two outcomes, the answer
+is the nomination's claim — typically _"this load-bearing claim is held by
+nothing."_ **G34** failed because that claim was false (the property is asserted
 and a plant turns it red). **G35** survives because it is true (nothing reaches
 bare `§N`). Without this rule the two rows are indistinguishable, since the
 underlying fact is currently fine in both.
 
 **Rule 2 — the docblock surface does not double-count categories 2 and 3.** A
-docblock overstating **the gate's own reach** is *satisfying the letter* or
-*routing around*, and stays there — band one's **G31**, band three's **G1**
+docblock overstating **the gate's own reach** is _satisfying the letter_ or
+_routing around_, and stays there — band one's **G31**, band three's **G1**
 remedy. A docblock asserting a fact whose **truth-maker lives outside the gate
 spec** — another document's text, another file's contents, a third-party tool's
-behaviour — is the decay surface. The test is mechanical: *where does the thing
-that makes this sentence true or false live?* Without it this pass either
+behaviour — is the decay surface. The test is mechanical: _where does the thing
+that makes this sentence true or false live?_ Without it this pass either
 re-litigates dispositioned findings or drops rows silently.
 
 ### Method, and the two ways the instrument was wrong before it was right
@@ -876,17 +875,17 @@ the flattering direction** — #126's counting-script bug, twice more:
   stale; both are verbatim correct.
 - **Widening the corpus to all 114 tracked `.md` files made the one true positive
   disappear** — G12's superseded sentence is preserved, correctly, in
-  `docs/log/`. A quotation must be checked against *the document it claims to
-  quote*, not against the repository.
+  `docs/log/`. A quotation must be checked against _the document it claims to
+  quote_, not against the repository.
 
 **Pass 2, by hand, the unquoted external-fact claims.** Eleven rows measured
 individually: **G3** (CLAUDE.md invariant 3, verbatim ✓), **G4**
 (`update-book.test.ts` asserts with `toContain` — 11 occurrences ✓), **G6**,
-**G7**, **G8** (CLAUDE.md's *"do not change without updating this file"* heading
+**G7**, **G8** (CLAUDE.md's _"do not change without updating this file"_ heading
 ✓), **G10** (`covers/cover-path.test.ts` exists ✓), **G11** (`dev-watch.ts:114`
 does pass `--public` ✓), **G17** (ADR-0019 does accept the drift, at its `:11` ✓),
 **G32** (`enrich.ts` guards every write on `=== undefined` ✓), **G33**
-(`types.ts:51`: *"there is deliberately no `body` field"* ✓), **G35**.
+(`types.ts:51`: _"there is deliberately no `body` field"_ ✓), **G35**.
 
 ### Results
 
@@ -894,11 +893,11 @@ does pass `--public` ✓), **G17** (ADR-0019 does accept the drift, at its `:11`
 **G35 from `nominated, unconfirmed`**. Detail in each row's Decay re-read block;
 one line each here.
 
-| Row | Was | Now | The claim |
-| --- | --- | --- | --- |
-| **G6** | `clean` | `exposed` | The docblock says *"Two things pass"*; three do, and the third is value-imported by the site today. |
-| **G7** | `clean` | `exposed` | *"`@astrojs/check` cannot run under TypeScript 7"* — a third-party tool at a version, never established here, unassertable. |
-| **G35** | `nominated, unconfirmed` | `exposed` | The `§11.x` map from gate to spec is held by nothing; the nomination's own claim re-measures true. |
+| Row     | Was                      | Now       | The claim                                                                                                                   |
+| ------- | ------------------------ | --------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **G6**  | `clean`                  | `exposed` | The docblock says _"Two things pass"_; three do, and the third is value-imported by the site today.                         |
+| **G7**  | `clean`                  | `exposed` | _"`@astrojs/check` cannot run under TypeScript 7"_ — a third-party tool at a version, never established here, unassertable. |
+| **G35** | `nominated, unconfirmed` | `exposed` | The `§11.x` map from gate to spec is held by nothing; the nomination's own claim re-measures true.                          |
 
 ⚠️ **G7 returns to the flagged side and G34 leaves it, so the total is unchanged
 at 24 of 35 while the membership is not.** Band two moved G7 off the flagged side
@@ -909,7 +908,7 @@ rows crossing in opposite directions is exactly what a carried-forward total
 hides**, which is why the Summary's count is recounted over the 35 sections
 rather than adjusted.
 
-⚠️ **This paragraph read *"the total returns to 25"* until CodeRabbit caught it on
+⚠️ **This paragraph read _"the total returns to 25"_ until CodeRabbit caught it on
 [#149](https://github.com/mephistopheles4/stacks/pull/149), and it is the sharpest
 thing in this section.** It was written before this pass decided to land G34's
 correction, and never revisited once that decision made the number 24 — so the
@@ -921,8 +920,8 @@ committed by the pass that cites band three's closing-count failure.
 
 **One nomination raised and refused**, recorded because refusing it is the useful
 half: **G6**'s pure-subpath purity looked unheld from the docblock and is in fact
-*measured* by `pureSubpaths()`. Band two's rule — *a claim about a gate is read
-from the gate, not from the gate's prose* — catching a nomination **mid-pass**
+_measured_ by `pureSubpaths()`. Band two's rule — _a claim about a gate is read
+from the gate, not from the gate's prose_ — catching a nomination **mid-pass**
 rather than after publication, which is the first time on this map it has been
 cheap.
 
@@ -939,27 +938,27 @@ verdict that has now survived a quotation sweep and nothing more.
 warning below describes, one paragraph away from it.** The decay re-read part two
 individually measured **eight** of the seventeen — **G5, G9, G16, G20, G21, G22,
 G27, G28** — and **G21 moved to `exposed` off one of them**. Derived
-mechanically as *in-scope minus measured*, which is how the ⚠️ below says this
+mechanically as _in-scope minus measured_, which is how the ⚠️ below says this
 list should have been produced in the first place, **nine remain**: **G1, G2,
 G13, G14, G15, G19, G23, G30, G31**. Marked rather than rewritten, so the
 boundary each pass actually reached stays visible.
 
 ⚠️ **This list was wrong in both directions on first publication, and only one
 direction was caught by review.** It named **G32** and **G33**, which the
-paragraph above records as measured, and it ended *"and the remaining clean
-rows"* — a phrase doing the work of an enumeration while naming nothing, which
+paragraph above records as measured, and it ended _"and the remaining clean
+rows"_ — a phrase doing the work of an enumeration while naming nothing, which
 omitted **G1**, **G13** and **G15**. CodeRabbit caught the two wrongly included on
 [#149](https://github.com/mephistopheles4/stacks/pull/149); the three wrongly
 omitted were found only by deriving the list mechanically as
-*in-scope minus measured*, which is how it should have been produced in the first
+_in-scope minus measured_, which is how it should have been produced in the first
 place. **The count 17 was right while its members were wrong**, which is the
 failure mode a total can never expose.
 
-⚠️ **Fourteen of the 28 were cleared with a *number* test** — *"clean; no
-load-bearing number"* (G3, G4, G5, G8, G9, G11, G16, G27, G32, G33) or *"no
-measured-once number"* (G17, G20, G21) or G22's *"not a number the row currently
-rests on"*. **The restated bound asks about load-bearing *claims*, and a claim
-need not be numeric** — #138's own headline specimen, *"it published first"*, is
+⚠️ **Fourteen of the 28 were cleared with a _number_ test** — _"clean; no
+load-bearing number"_ (G3, G4, G5, G8, G9, G11, G16, G27, G32, G33) or _"no
+measured-once number"_ (G17, G20, G21) or G22's _"not a number the row currently
+rests on"_. **The restated bound asks about load-bearing _claims_, and a claim
+need not be numeric** — #138's own headline specimen, _"it published first"_, is
 not a number. Those ten clearances are the likeliest place a further pass finds
 something, and the wording is left in place rather than rewritten, so the next
 reader can see which test each verdict was reached under.
@@ -982,11 +981,11 @@ than any row.
 ### The population, and a correction to the ticket that commissioned this
 
 ⚠️ **Recounted before starting, as #150 instructs, and its population is one row
-short.** #150 lists fourteen, derived from three wordings: *"no load-bearing
-number"* (G3, G4, G5, G8, G9, G11, G16, G27, G32, G33), *"no measured-once
-number"* (G17, G20, G21), and G22's *"not a number the row currently rests on"*.
+short.** #150 lists fourteen, derived from three wordings: _"no load-bearing
+number"_ (G3, G4, G5, G8, G9, G11, G16, G27, G32, G33), _"no measured-once
+number"_ (G17, G20, G21), and G22's _"not a number the row currently rests on"_.
 A fourth wording exists and neither #144 nor #150 caught it — **G28**, cleared on
-*"no constant in the current row is stated as measured once"*, which is the old
+_"no constant in the current row is stated as measured once"_, which is the old
 numeric bound in different words. **Scope is fifteen**, and the extra row is the
 one a three-string match could not see. #150 asked for exactly this check rather
 than for trust, and the check earned its place on the first pass.
@@ -995,7 +994,7 @@ than for trust, and the check earned its place on the first pass.
 was the pattern rather than the data.** A first sweep for `**Decay**` returned
 **34 of 35** sections — silently, since 34 bullets is a plausible answer.
 **G26** states `- **Vacuous green / decay**` as one merged bullet, so a match on
-the bare category name skips it. Widened to any bolded label containing *decay*,
+the bare category name skips it. Widened to any bolded label containing _decay_,
 the count is 35 and the totals reconcile with #144's landed **26 clean / 9
 exposed** exactly. This is [#126](https://github.com/mephistopheles4/stacks/issues/126)'s
 em dash and #144's three instrument faults a fifth time: **every one of the five
@@ -1004,13 +1003,13 @@ state as an expectation rather than a coincidence.
 
 ⚠️ **A sixth, caught in review of this block rather than by the pass, and it
 strengthens the regularity rather than denting it.** This paragraph first said
-*eleven* rows carry fewer than five verdict bullets. It is **ten**. The eleventh
+_eleven_ rows carry fewer than five verdict bullets. It is **ten**. The eleventh
 was **G1**, which the first script reported at **seven** bolded bullets because
-its two demonstration items — *"A vault note read through `node:child_process`"*,
-*"A tracked `.mjs` under `packages/`"* — are formatted like verdicts and are not
-verdicts. So the artifact was the *opposite* direction (a row with **more** than
-five, not fewer) and it still produced the tidier sentence, because *eleven*
-absorbed it silently while *ten plus an outlier* would have raised a question.
+its two demonstration items — _"A vault note read through `node:child_process`"_,
+_"A tracked `.mjs` under `packages/`"_ — are formatted like verdicts and are not
+verdicts. So the artifact was the _opposite_ direction (a row with **more** than
+five, not fewer) and it still produced the tidier sentence, because _eleven_
+absorbed it silently while _ten plus an outlier_ would have raised a question.
 **The counting script that produces every total in this file filters bullets to
 the five category names; the exploratory one did not**, and the number that
 reached prose came from the exploratory one.
@@ -1031,7 +1030,7 @@ it** — added on review of
   after the em dash, with optional bold markers. Anything else is
   `UNADMITTED`; expect **0**.
 - A row is **flagged** if any of its verdict bullets is not `clean`. Decay is
-  the bullet whose label *contains* `decay`, which is what catches G26's merge.
+  the bullet whose label _contains_ `decay`, which is what catches G26's merge.
 
 ⚠️ **A committed script was put and refused.** The register has never shipped
 one — #126, #144 and this pass all describe their instrument's faults in prose —
@@ -1047,9 +1046,9 @@ by-product of a re-read.**
 **A structural fact the widened sweep establishes, recorded and deliberately not
 acted on.** **Ten** rows carry fewer than five verdict bullets, merging categories
 that one exposure answers together — but **G26 is the only row in the file whose
-*decay* verdict is not separable from another category's**. Every other merge
+_decay_ verdict is not separable from another category's**. Every other merge
 (G12, G17, G20, G21, G22, G23, G24, G25, G34) keeps Decay as its own bullet.
-So #144's aggregate of *9 exposed* is reachable only by reading G26's merged
+So #144's aggregate of _9 exposed_ is reachable only by reading G26's merged
 bullet as decay-exposed — a defensible reading, since the incident is
 genuinely both, but **one nobody has ever stated**. Splitting it is not this
 pass's to do: G26 is an exposed row, restructuring its verdicts re-decides it,
@@ -1067,13 +1066,13 @@ starts — read:
 >    never re-measured?
 
 That is the **pre-[#138](https://github.com/mephistopheles4/stacks/issues/138)**
-bound. #138 restated it to *"whose truth was never established, or never
-re-established, against a check that was available"*, #144 moved three verdicts
+bound. #138 restated it to _"whose truth was never established, or never
+re-established, against a check that was available"_, #144 moved three verdicts
 under the restatement, and **neither touched the definition list**. The file
 therefore stated the superseded bound at the top and the restated one 640 lines
 down, inside the block that applied it — the same shape as
-[#149](https://github.com/mephistopheles4/stacks/pull/149)'s *"Total flagged: 25
-of 35"* against the Summary's 24, and band three's closing count before it, with
+[#149](https://github.com/mephistopheles4/stacks/pull/149)'s _"Total flagged: 25
+of 35"_ against the Summary's 24, and band three's closing count before it, with
 the difference that **this one governs every future verdict rather than
 describing a past one**. A reader triaging a new row against "category 5" as the
 file defines it would have applied a bound the map retired.
@@ -1086,8 +1085,8 @@ changes is only that the file now says what was already true.
 ### Results — two verdicts move, both `gated`
 
 **G21 `no-live-network` — `clean` → `exposed`.** The docblock's scope claim is
-*"What it covers is `fetch`, in this process — which is every request this repo
-makes, **since nothing here uses `node:http` directly**."* That last clause is
+_"What it covers is `fetch`, in this process — which is every request this repo
+makes, **since nothing here uses `node:http` directly**."_ That last clause is
 false, and **was false when it was written**: `scripts/smoke-render.ts:18` imports
 `createServer` from `node:http`, and has since
 [`1b48730`](https://github.com/mephistopheles4/stacks/commit/1b48730)
@@ -1097,34 +1096,34 @@ false, and **was false when it was written**: `scripts/smoke-render.ts:18` impor
 `git grep` away.
 
 ⚠️ **The conclusion survives and the warrant does not, which is the whole
-finding.** `createServer` serves; it does not request — so *fetch is every
-request this repo makes* still holds today, by an argument the docblock does not
+finding.** `createServer` serves; it does not request — so _fetch is every
+request this repo makes_ still holds today, by an argument the docblock does not
 make. A reader who checks the stated reason finds it false and has no way to tell
 whether the conclusion went with it.
 
 **Not a double-count with the routing-around verdict**, which is already
 `exposed` and quotes the first half of the same sentence. #144's Rule 2 splits
-them cleanly: *"what it covers is `fetch`, in this process"* is a claim about
-**the gate's own reach** and stays in categories 2 and 3; *"nothing here uses
-`node:http`"* is a claim about **the repository's files**, whose truth-maker
+them cleanly: _"what it covers is `fetch`, in this process"_ is a claim about
+**the gate's own reach** and stays in categories 2 and 3; _"nothing here uses
+`node:http`"_ is a claim about **the repository's files**, whose truth-maker
 lives outside the gate spec, and is the decay surface. The routing-around
-concession is about *future* non-`fetch` APIs; nobody conceded a present false
+concession is about _future_ non-`fetch` APIs; nobody conceded a present false
 statement.
 
 **Remedy (named, not built):** have the G21 spec assert its own scope claim —
 scan **every tracked executable source file** for network-capable APIs outside
 `fetch` and fail on any not carrying a written exemption, with
-`smoke-render.ts`'s server import as the first exemption and its reason (*it
-serves, it does not request*) beside it. That turns the docblock's sentence from
+`smoke-render.ts`'s server import as the first exemption and its reason (_it
+serves, it does not request_) beside it. That turns the docblock's sentence from
 prose into the thing the row already claims it is. `gated`: real, unclosed,
 remedy is a named check, and nothing in the repo had conceded it.
 
 ⚠️ **This remedy first said "scan tracked `.ts`", and that version shipped the
 routing-around hole this file already catalogues twice — corrected on review of
 [#151](https://github.com/mephistopheles4/stacks/pull/151).** Band three found
-**G1** green against *"a tracked `.mjs` under `packages/`"*, and band four found
+**G1** green against _"a tracked `.mjs` under `packages/`"_, and band four found
 **G6** green against an **`.astro` `<script>`** carrying the forbidden statement
-*verbatim*, because `siteFiles()` does not open that file type. The repo has one
+_verbatim_, because `siteFiles()` does not open that file type. The repo has one
 tracked `.mjs` (`packages/site/astro.config.mjs`) and four tracked `.astro`
 files. **A `.ts`-only glob is the cheap way past a narrow scan** —
 [#124](https://github.com/mephistopheles4/stacks/issues/124)'s reason for
@@ -1152,40 +1151,40 @@ being absent-only: G32 seeds the heading, runs the pass, and compares the whole
 file. G32 does not merely reach the write — it covers it, incidentally.
 
 ⚠️ **The two files coordinate and the sentence still overstates.**
-`absent-only.test.ts:130` reads *"G33 owns that write; this row owns the
-frontmatter"* — a deliberate division of labour, not an oversight, which is why
+`absent-only.test.ts:130` reads _"G33 owns that write; this row owns the
+frontmatter"_ — a deliberate division of labour, not an oversight, which is why
 this is a wording defect and not a design one. But the register repeats the false
-premise in a **second place**: G33's *Satisfying the letter* verdict cites *"G32
-cannot see the `## About` body insert at all"* as its supporting evidence. That
+premise in a **second place**: G33's _Satisfying the letter_ verdict cites _"G32
+cannot see the `## About` body insert at all"_ as its supporting evidence. That
 verdict is not this pass's to move (#128 Rule 1 — a row leaves with its band's
 category dispositioned and the others open), so it is **noted, not edited**, on
 band two's precedent for G20's residual.
 
 **Remedy (named, not built):** correct the docblock to the claim that is true,
-which takes three verbs rather than two — ⚠️ *this remedy first said only "G33
+which takes three verbs rather than two — ⚠️ _this remedy first said only "G33
 asserts it, G32 depends on it", which understates the finding above it and was
 corrected on review of
-[#151](https://github.com/mephistopheles4/stacks/pull/151)*:
+[#151](https://github.com/mephistopheles4/stacks/pull/151)_:
 
 - **G33 `asserts`** the body insert's idempotence — deliberately, as its
   whole-pass claim, and it **owns** the guarantee.
 - **G32 `depends` on it.** Its own comment at `:127–130` says so: without an
-  absent-only body write *"the pass legitimately adds one and the byte-identical
-  assertion below fails for a reason that has nothing to do with absent-only."*
+  absent-only body write _"the pass legitimately adds one and the byte-identical
+  assertion below fails for a reason that has nothing to do with absent-only."_
 - **G32 also `detects` its failure, incidentally**, which is the half the
   docblock denies. The dependency and the detection are the same assertion read
-  two ways, and *"G32 cannot see that write at all"* is false on the second.
+  two ways, and _"G32 cannot see that write at all"_ is false on the second.
 
 Have both specs' comments state that division — `absent-only.test.ts:130`
-already states the ownership half correctly (*"G33 owns that write; this row owns
-the frontmatter"*) and `enrich-idempotence.test.ts` contradicts it. `gated`, on
+already states the ownership half correctly (_"G33 owns that write; this row owns
+the frontmatter"_) and `enrich-idempotence.test.ts` contradicts it. `gated`, on
 the same reasoning as G21: nothing conceded it in writing, and the concession
 that exists (`:130`) asserts the opposite.
 
 ⚠️ **Both exposures ship with `Observed-red line: not recorded`, and that is the
 rule rather than an oversight.** Band four settled it: **a decay flag is
 discharged by re-measuring, not by planting**, and filling an observed-red line
-is *"a separate errand"*. Neither finding here is a defect a plant could
+is _"a separate errand"_. Neither finding here is a defect a plant could
 demonstrate — a false sentence in a docblock has nothing to go red — so **0
 plants** is the correct cost, not a shortfall. Band two counted rows lacking an
 observed-red line, so this is said out loud: G21 already carries two from band
@@ -1194,30 +1193,30 @@ one, **G33 still carries none**, and this pass did not add one.
 ### The verdict that stands and the reason that does not
 
 **G20 `public-build-artifact` — stays `clean`, reason corrected.** Its clearance
-reads *"no measured-once number underlies the row"*. A measured-once number does
-underlie it: the docblock closes on *"what **the seven text-matching gates in
-this folder** cannot do."* `gates/` held **17** `.test.ts` specs when that
+reads _"no measured-once number underlies the row"_. A measured-once number does
+underlie it: the docblock closes on _"what **the seven text-matching gates in
+this folder** cannot do."_ `gates/` held **17** `.test.ts` specs when that
 sentence was written
 ([`1168650`](https://github.com/mephistopheles4/stacks/commit/1168650),
 2026-08-03) and holds **29** now, with **20** importing `repo.ts`'s text
 helpers.
 
-⚠️ **What that does *not* establish, corrected on review of
+⚠️ **What that does _not_ establish, corrected on review of
 [#151](https://github.com/mephistopheles4/stacks/pull/151): the subset was never
-measured.** This paragraph first read *"so **seven** cannot still be right"*, and
+measured.** This paragraph first read _"so **seven** cannot still be right"_, and
 the two numbers behind it are the **whole folder** (17 → 29) and the **`repo.ts`
-importers** (20), neither of which is *"text-matching gates"* — a category with
+importers** (20), neither of which is _"text-matching gates"_ — a category with
 no mechanical definition anywhere in this repo, which is why it was not counted
 rather than an oversight. The subset could in principle still be seven. **An
 inference stated as a measurement, inside the pass whose subject is exactly
-that**, and it is left visible rather than swapped out: the honest form is *the
-population this number describes has moved and nobody re-derived the number*,
+that**, and it is left visible rather than swapped out: the honest form is _the
+population this number describes has moved and nobody re-derived the number_,
 which is all the decay bound needs and all that was checked.
 
 ⚠️ **It is excluded anyway, and the exclusion is the point.**
 [#113](https://github.com/mephistopheles4/stacks/issues/113) bounded decay to
-claims *a decision or a procedure rests on*, which is what admitted the stale
-`133 tests in ~2s` and **excluded the slug count**. Nothing rests on *seven*: it
+claims _a decision or a procedure rests on_, which is what admitted the stale
+`133 tests in ~2s` and **excluded the slug count**. Nothing rests on _seven_: it
 is a rhetorical contrast inside an argument that holds whatever the number is.
 Same class as the slug count, and excluded on the same precedent. **The verdict
 was right and its stated reason was wrong**, which is a distinction this file has
@@ -1229,27 +1228,27 @@ now made three times — band two's G7, #144's five rows filed as exposed that r
 Each nomination's **own claim** was re-measured, per #144's Rule 1 — not the fact
 it worries about.
 
-| Row | The claim, and where its truth-maker lives | Result |
-| --- | --- | --- |
-| **G3** | *"The final test asserts the corpus reaches all three kinds"* | Holds — `bad-note.test.ts:138–144`, `expectFound(…, 3)` and an exact set match |
-| **G4** | *"`adapters/update-book.test.ts` asserts with `toContain`"*; *"G1 deliberately does not scan `gates/`"* | Both hold — 11 `toContain` calls; `adapter-boundary.test.ts:26–29` states the scope note |
-| **G5** | *"`library.json` … gitignored"* | Holds, **and is asserted** — `repo-hygiene.test.ts:129–132` checks `isIgnored` for both paths |
-| **G8** | The `shelf_order` drift story; three in-spec assertions | Historical; assertions are structural and in-spec |
-| **G9** | *"Variables supplied by the platform, not by this project's `.env`"* (`PROVIDED_BY_PLATFORM`) | Holds. ⚠️ The list is **not reverse-asserted** — a category-3 allowlist matter, not decay, per the double-count rule; handed on rather than claimed here |
-| **G11** | *"the dev flow uses `--public` and is fine"* | Holds — `scripts/dev-watch.ts:114` passes `--public` |
-| **G16** | *"no load-bearing number"* | Stands. ⚠️ Observation only: `smoke-render.ts:708` hardcodes `× 24` to report cm, against `scene.ts:1056`'s *"1 unit ≈ 24cm"*, unasserted — but it formats a **message**, not the `0.005` threshold, so nothing rests on it |
-| **G17** | *"ADR-0019 already accepts that the live site may drift from `main`"* | Holds — `docs/adr/0019-deploying-is-local.md`, the 2026-08-01 entry, verbatim |
-| **G22** | *"It is now pinned behaviourally … in `covers/cache-cover.test.ts`"* | Holds — `:170` *"asks for the large cover before the small one"*, asserting `fetched()[0]` is the large URL |
-| **G27** | *"issue #62 read `7 with gaps, would fill 1, 5 left alone` off this output"* | Holds — ⚠️ **in the issue's comments, not its body**; a body-only check returns *not found* and would have produced a false exposure |
-| **G28** | *"`smoke:render` measures `Box3.setFromObject` against the case's real inner faces"* | Holds — `scene.ts:858`, surfaced to the gate through `window.__shelf.caseOverflow` |
-| **G32** | *"every write is `if (book.X === undefined)`"* | Holds — `enrich.ts:177–229`, and `:190` carries the same sentence as an in-file comment |
+| Row     | The claim, and where its truth-maker lives                                                              | Result                                                                                                                                                                                                                      |
+| ------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **G3**  | _"The final test asserts the corpus reaches all three kinds"_                                           | Holds — `bad-note.test.ts:138–144`, `expectFound(…, 3)` and an exact set match                                                                                                                                              |
+| **G4**  | _"`adapters/update-book.test.ts` asserts with `toContain`"_; _"G1 deliberately does not scan `gates/`"_ | Both hold — 11 `toContain` calls; `adapter-boundary.test.ts:26–29` states the scope note                                                                                                                                    |
+| **G5**  | _"`library.json` … gitignored"_                                                                         | Holds, **and is asserted** — `repo-hygiene.test.ts:129–132` checks `isIgnored` for both paths                                                                                                                               |
+| **G8**  | The `shelf_order` drift story; three in-spec assertions                                                 | Historical; assertions are structural and in-spec                                                                                                                                                                           |
+| **G9**  | _"Variables supplied by the platform, not by this project's `.env`"_ (`PROVIDED_BY_PLATFORM`)           | Holds. ⚠️ The list is **not reverse-asserted** — a category-3 allowlist matter, not decay, per the double-count rule; handed on rather than claimed here                                                                    |
+| **G11** | _"the dev flow uses `--public` and is fine"_                                                            | Holds — `scripts/dev-watch.ts:114` passes `--public`                                                                                                                                                                        |
+| **G16** | _"no load-bearing number"_                                                                              | Stands. ⚠️ Observation only: `smoke-render.ts:708` hardcodes `× 24` to report cm, against `scene.ts:1056`'s _"1 unit ≈ 24cm"_, unasserted — but it formats a **message**, not the `0.005` threshold, so nothing rests on it |
+| **G17** | _"ADR-0019 already accepts that the live site may drift from `main`"_                                   | Holds — `docs/adr/0019-deploying-is-local.md`, the 2026-08-01 entry, verbatim                                                                                                                                               |
+| **G22** | _"It is now pinned behaviourally … in `covers/cache-cover.test.ts`"_                                    | Holds — `:170` _"asks for the large cover before the small one"_, asserting `fetched()[0]` is the large URL                                                                                                                 |
+| **G27** | _"issue #62 read `7 with gaps, would fill 1, 5 left alone` off this output"_                            | Holds — ⚠️ **in the issue's comments, not its body**; a body-only check returns _not found_ and would have produced a false exposure                                                                                        |
+| **G28** | _"`smoke:render` measures `Box3.setFromObject` against the case's real inner faces"_                    | Holds — `scene.ts:858`, surfaced to the gate through `window.__shelf.caseOverflow`                                                                                                                                          |
+| **G32** | _"every write is `if (book.X === undefined)`"_                                                          | Holds — `enrich.ts:177–229`, and `:190` carries the same sentence as an in-file comment                                                                                                                                     |
 
 ⚠️ **G27 is the one that nearly went the wrong way, and it is the general
 lesson.** Its truth-maker is outside the repository entirely — a GitHub issue,
 which **G21 forbids any gate from fetching** — so it sits in exactly G7's
 structural position, the second member #144 gave
-[#124](https://github.com/mephistopheles4/stacks/issues/124)'s *"relied upon and
-unverifiable"* clause. The difference is that G27's claim is **true**, so the
+[#124](https://github.com/mephistopheles4/stacks/issues/124)'s _"relied upon and
+unverifiable"_ clause. The difference is that G27's claim is **true**, so the
 nomination fails on #144's Rule 1 and the verdict stands. **Unverifiable by a
 gate is not the same as false**, and a pass that conflated them would have
 manufactured an exposure out of a location fact.
@@ -1258,27 +1257,27 @@ manufactured an exposure out of a location fact.
 
 Both found by reading #144's own output rather than by looking for them.
 
-1. **#144's *"the only place in the file where a band's correction never reached
-   the verdict it corrected"* (G34) is false — there is a second, and it is
-   G21.** Band one's deep-pass block states, in terms, *"The category-4 line
+1. **#144's _"the only place in the file where a band's correction never reached
+   the verdict it corrected"_ (G34) is false — there is a second, and it is
+   G21.** Band one's deep-pass block states, in terms, _"The category-4 line
    above should now read **clean, demonstrated** rather than **exposed,
-   historical, fixed**"* — and the bullet still reads `exposed`. Identical shape
+   historical, fixed**"_ — and the bullet still reads `exposed`. Identical shape
    to the G34 case #144 landed. **Not edited here**: it is band one's verdict and
    category 2/4, not decay, and moving it changes no total (G21 stays flagged on
    its weakening and routing-around verdicts either way). Recorded so the next
    pass does not have to rediscover it.
 2. **#144's own count of its number-test clearances is internally
-   inconsistent**: the paragraph opens *"Fourteen of the 28 were cleared with a
-   number test"*, enumerates 10 + 3 + 1 = 14, and then closes *"Those **ten**
-   clearances are the likeliest place a further pass finds something."* The ten
+   inconsistent**: the paragraph opens _"Fourteen of the 28 were cleared with a
+   number test"_, enumerates 10 + 3 + 1 = 14, and then closes _"Those **ten**
+   clearances are the likeliest place a further pass finds something."_ The ten
    names the first sub-list only; the sentence reads as the whole population. Left
    marked rather than rewritten.
 
 **Cost:** ~40 min, **0 plants**, 1 counting script (wrong once), ~16 read-only
 sweeps, 0 vitest invocations beyond the closing suite run. Band four's
-*re-measurement is cheaper than orientation* holds a third time. ⚠️ **The two
-findings both came from the same question** — *was this true when it was
-written?* — rather than from *has this drifted?*, which is #138's restatement
+_re-measurement is cheaper than orientation_ holds a third time. ⚠️ **The two
+findings both came from the same question** — _was this true when it was
+written?_ — rather than from _has this drifted?_, which is #138's restatement
 paying for itself: under the old bound neither row had a measured-once number and
 both would have cleared again.
 
@@ -1291,7 +1290,7 @@ both would have cleared again.
 **Gate:** [`gates/adapter-boundary.test.ts`](../gates/adapter-boundary.test.ts)
 **Date:** 2026-08-11
 
-- **Weakening** — exposed. The gate *is* an allowlist ("each entry justified,
+- **Weakening** — exposed. The gate _is_ an allowlist ("each entry justified,
   each reverse-asserted"), and every allowlist entry is a permission by
   `CONTRIBUTING.md`'s own rule. `docs/gates.md` records the reverse-assert
   catching both a stale entry and a dropped one on the same change, which is
@@ -1319,16 +1318,16 @@ the G1/G3/G6/G7 paragraph).
 category 3 verdict confirmed, disposition: `repaired`.**
 
 The historical defect re-plants red — `import { readFileSync } from 'node:fs'`
-at the top of `packages/site/src/shelf/scene.ts` fails *"lets no unlisted file
-reach the filesystem directly"* — and both rot-checks fire on demand: deleting
+at the top of `packages/site/src/shelf/scene.ts` fails _"lets no unlisted file
+reach the filesystem directly"_ — and both rot-checks fire on demand: deleting
 `packages/core/src/watch.ts` from `ALLOWED` fails the same assertion, and adding
-`packages/core/src/library.ts`, which imports no `fs`, fails *"keeps every
-allowlist entry on a file that still imports fs"*. The docblock's *"without (2)
-the allowlist only ever grows"* is true and watched.
+`packages/core/src/library.ts`, which imports no `fs`, fails _"keeps every
+allowlist entry on a file that still imports fs"_. The docblock's _"without (2)
+the allowlist only ever grows"_ is true and watched.
 
 **Category 1 is real and is the shape the repo asked for.** A `readFileSync`
 vault read added to `packages/core/src/library.ts`, plus one `ALLOWED` line
-reading *"Reads the built index back for a fast rebuild path. Not note data"*,
+reading _"Reads the built index back for a fast rebuild path. Not note data"_,
 leaves **636 of 636 green**. Both reverse-asserts pass because they are true —
 the file exists, and it does import `fs`. They check an entry's **facts**; the
 **warrant** is prose, and no gate reads prose. `accepted`: `CONTRIBUTING.md`
@@ -1346,7 +1345,7 @@ suite-wide:
   green** and `tsc --noEmit` clean. Invariant 4 is violated and the gate that
   exists for invariant 4 has no verdict, because `FS_IMPORT` is a list of
   specifiers and `node:child_process` is not on it. The regex is careful about
-  *how* `fs` is reached and silent about *what else reaches a file*.
+  _how_ `fs` is reached and silent about _what else reaches a file_.
 - **A tracked `.mjs` under `packages/`.** `filesUnder('packages', ['.ts'])`
   matches on extension, so `packages/site/astro.config.mjs` — a real, tracked
   file — may import `node:fs` freely: **636 of 636 green**. `.mjs`, `.cjs`,
@@ -1356,14 +1355,14 @@ suite-wide:
 **Remedy (named, not built):** two, and they are independent. Widen
 `filesUnder`'s extension list to the four ESM/CJS spellings, which costs one
 argument. Then extend the detector past `fs` — `node:child_process` is the
-demonstrated hole, and the honest framing is that the gate currently checks *"no
-unlisted file imports `fs`"* while the docblock claims *"nothing outside the
-adapters may read or write vault files directly"*, which is the wider property.
+demonstrated hole, and the honest framing is that the gate currently checks _"no
+unlisted file imports `fs`"_ while the docblock claims _"nothing outside the
+adapters may read or write vault files directly"_, which is the wider property.
 Either narrow the docblock to what is checked, or widen the check; a gate whose
 stated scope exceeds its real scope is band one's G31 finding arriving here.
 
-**Observed-red (this pass):** `fs` in `scene.ts` fails *"lets no unlisted file
-reach the filesystem directly"*; `watch.ts` removed from `ALLOWED` fails the
+**Observed-red (this pass):** `fs` in `scene.ts` fails _"lets no unlisted file
+reach the filesystem directly"_; `watch.ts` removed from `ALLOWED` fails the
 same; `library.ts` added to `ALLOWED` fails the stale-entry check. The
 `child_process` read and the `.mjs` import both leave 636 of 636 green.
 
@@ -1375,7 +1374,7 @@ same; `library.ts` added to `ALLOWED` fails the stale-entry check. The
 - **Weakening** — clean; no allowlist in this row itself.
 - **Satisfying the letter** — exposed, and `docs/gates.md` says so directly:
   "The existing `gate:public` is a good gate that cannot see three things. It
-  greps the *contents* of *text* files... a private value in a permitted field
+  greps the _contents_ of _text_ files... a private value in a permitted field
   passes by construction, and a filename is never read at all." Four of the
   five gaps this describes were closed by the G2-in-full extensions; the
   canary rule (no note bodies) is still a text match by construction.
@@ -1396,13 +1395,13 @@ same; `library.ts` added to `ALLOWED` fails the stale-entry check. The
 
 **Deep pass (2026-08-12, band two) — disposition: `accepted`.**
 
-`docs/gates.md` already says the canary rule is *"still a text match by
-construction"*. This pass turned that sentence into a demonstration, and it took
+`docs/gates.md` already says the canary rule is _"still a text match by
+construction"_. This pass turned that sentence into a demonstration, and it took
 three plants, because the first two were defeated by things nobody was claiming
 credit for.
 
 An `excerpt` field added to `BookRecord` and populated from the note body — a
-plausible *"preview snippet"* feature — **left the gate 12 of 12 green**, because
+plausible _"preview snippet"_ feature — **left the gate 12 of 12 green**, because
 `toLibraryBook` in `packages/core/src/library.ts` enumerates its fields and
 silently dropped it. That is a real structural guard, and it is not this gate.
 Extending the plant through `toLibraryBook` so the field actually reaches
@@ -1417,12 +1416,12 @@ fixture note that has no canary in it, published with the same plant in place,
 ⚠️ **The interaction with G30 is worth carrying forward, and it is not what the
 first reading of it suggests.** `gates/library-seam.test.ts` runs its three checks
 over `Object.keys(FULL)` — **a hand-written record literal, not the `BookRecord`
-type** — and `FULL: BookRecord` type-checks while missing any *optional* field,
+type** — and `FULL: BookRecord` type-checks while missing any _optional_ field,
 which is nearly every field the contract has. So a body-derived `excerpt?: string`
 added to the type and to `toLibraryBook` and **not** added to `FULL` is invisible
 to G30 in both directions at once: no build G30 inspects contains it, so neither
 the carries-every-field check nor the key-trace has anything to say about it. And
-if somebody *does* add it to `FULL`, as that const's own docblock urges, G30 then
+if somebody _does_ add it to `FULL`, as that const's own docblock urges, G30 then
 **requires it to reach `library.json`** unless it is named in `NOT_PUBLIC` with a
 sentence.
 
@@ -1433,7 +1432,7 @@ G30; not edited there, and **not a defect in G30**, whose direction is the right
 one for the seam it guards.
 
 ⚠️ **This paragraph said something stronger and wrong until G30's source was
-read** — *"G30 requires it to ship"*, asserted from the gate's docblock rather
+read** — _"G30 requires it to ship"_, asserted from the gate's docblock rather
 than from `Object.keys(FULL)`. Left recorded rather than quietly fixed: a claim
 about a gate, written from the gate's prose, inside the register of gates whose
 prose exceeds their reach.
@@ -1441,7 +1440,7 @@ prose exceeds their reach.
 ⚠️ **Band three reached the same mechanism from the opposite side, in parallel,
 and its verdict is the one to read.** Its G30 entry demonstrates that **a new
 field wired end-to-end through the frontmatter contract never reaches
-`library.json` at all, 636 of 636 green** — the *under*-shipping failure, where
+`library.json` at all, 636 of 636 green** — the _under_-shipping failure, where
 this row worried about over-shipping. Both are `Object.keys(FULL)` being a hand
 list: it cannot notice a field that was never added to it, in either direction.
 **Two bands, two opposite fears, one blind spot** — which is a better argument
@@ -1450,8 +1449,8 @@ band three's `gated`; nothing here overrides it.
 
 **`accepted` rather than `gated`** because the limit is already recorded, four of
 the five gaps it names are closed, and reaching the exposure needs a deliberate
-multi-file feature that reads note bodies — invariant 2's *"nothing below the
-frontmatter block is parsed"* has to fall first. The remedy below is available,
+multi-file feature that reads note bodies — invariant 2's _"nothing below the
+frontmatter block is parsed"_ has to fall first. The remedy below is available,
 not adopted.
 
 **Named remedy (not built):** a differential check — build one note twice with
@@ -1499,7 +1498,7 @@ it.
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
-- **Satisfying the letter** — clean. "G4 was red on arrival" is evidence *for*
+- **Satisfying the letter** — clean. "G4 was red on arrival" is evidence _for_
   the gate, not against it — it caught `updateBook`'s scalar-vs-flow-collection
   gap (`author: [A, B]` silently replaced) the moment it was written, with no
   mutation required.
@@ -1546,7 +1545,7 @@ found.
 **Date:** 2026-08-11
 
 - **Weakening** — exposed, and this is the row `docs/gates.md` uses to explain
-  the category generally: "a *directory* is a standing permission, where every
+  the category generally: "a _directory_ is a standing permission, where every
   other line here names a file." The fix pins `docs/images/` to exactly
   `shelf.png`; the brand art went in as four filenames rather than a directory
   entry, for the same reason.
@@ -1571,18 +1570,18 @@ restored to `.gitignore`" (three ways).
 category 3 confirmed and widened, disposition: `repaired`.**
 
 Both of this row's documented repairs hold. A second image staged into
-`docs/images/` fails *"keeps docs/images to exactly the generated screenshot"*,
+`docs/images/` fails _"keeps docs/images to exactly the generated screenshot"_,
 so the filename pin that replaced the directory permission does what the row
-says it does. `git rm --cached packages/site/public/og.png` fails *"tracks every
-allowlisted brand file"* — the half that catches a permission outliving the file
+says it does. `git rm --cached packages/site/public/og.png` fails _"tracks every
+allowlisted brand file"_ — the half that catches a permission outliving the file
 it was granted for.
 
 ⚠️ **The other directory was never pinned, and it is the one that matters.**
 `GENERATED_BINARY_DIRS` still holds `fixtures/vault/Library/covers/`, and a PNG
 staged into it is **636 of 636 green** — no assertion looks at the filename, the
 byte count, or where the bytes came from. `docs/gates.md` uses this exact row to
-explain the category (*"a directory is a standing permission, where every other
-line here names a file"*), then fixed one of its two directories. The unfixed one
+explain the category (_"a directory is a standing permission, where every other
+line here names a file"_), then fixed one of its two directories. The unfixed one
 is where a downloaded cover already sits on disk in the shape a contributor would
 copy. `accepted` for category 1: pinning it by filename would fight
 `scripts/make-fixture-covers.ts`, whose whole job is emitting new ones, so the
@@ -1596,8 +1595,8 @@ container extensions and **names no vector and no font format**. A hand-written
 green**. This is not hypothetical shape: the repo already tracks six `.svg`
 files, so a seventh raises nothing anywhere, and a licensed icon set or a
 webfont is third-party material by exactly the argument
-`fixtures/README.md` makes about cover art. The row's own text is *"an entry
-here is a claim about provenance, never about file type"* — and the sweep that
+`fixtures/README.md` makes about cover art. The row's own text is _"an entry
+here is a claim about provenance, never about file type"_ — and the sweep that
 decides what needs a claim is a claim about file type.
 
 **Remedy (named, not built):** add `svg`, `woff`, `woff2`, `ttf`, `otf`, `eot`
@@ -1624,8 +1623,8 @@ PNG copied into `fixtures/vault/Library/covers/`, and a staged `.svg` and
   the Commands section, so a new `covers` command passed as documented purely
   because `status`'s description reads "covers still missing." Found by the
   next command added, not by the gate itself. Now anchored to line start.
-- **Routing around** — **exposed**, ⚠️ *upgraded from `nominated, unconfirmed`
-  by band two, which demonstrated both halves.* Read directly in
+- **Routing around** — **exposed**, ⚠️ _upgraded from `nominated, unconfirmed`
+  by band two, which demonstrated both halves._ Read directly in
   `gates/commands.test.ts`: `cliCommands()` extracts subcommands with a single
   regex (`.command('name')`) against `packages/cli/src/index.ts`, and
   `packageScripts()` reads only the root `package.json`. A command registered
@@ -1651,11 +1650,11 @@ directly; `docs/gates.md` carries no prose on either.
 `docs/gates.md` logs "a gate that matches prose matches anything."
 
 **Deep pass (2026-08-12, band two) — disposition: `repaired`, and the row's
-*other* nomination is the live one.**
+_other_ nomination is the live one.**
 
 The historical defect re-plants cleanly. Removing the `covers` line from
 `CLAUDE.md`'s Commands block, leaving `status`'s description with the word
-*"covers"* in it, fails `documents every CLI subcommand` by name under today's
+_"covers"_ in it, fails `documents every CLI subcommand` by name under today's
 anchored regex — 4 of 5. Reverting **the gate** to the historical bare `\bname\b`
 form with `CLAUDE.md` still broken passes **5 of 5**. That is the original false
 negative reproduced on the current tree, and it converts the claimed repair into
@@ -1667,10 +1666,10 @@ commander-registered subcommand that would run — leaves the gate **5 of 5 gree
 because `cliCommands()` matches only `.command('name')`. And
 `packages/site/package.json` **already defines a `preview` script that `CLAUDE.md`
 does not document**, invisible today because `packageScripts()` reads the root
-manifest only. The Commands section's own claim — *"both lists below, in both
-directions"* — is true of the lists it builds and not of the repo.
+manifest only. The Commands section's own claim — _"both lists below, in both
+directions"_ — is true of the lists it builds and not of the repo.
 
-⚠️ **A third shape turned up by accident, and it is a false *positive*.** A plant
+⚠️ **A third shape turned up by accident, and it is a false _positive_.** A plant
 whose code comment contained the literal text `.command('name')` was extracted as
 a phantom command called `name` and failed the gate loudly. `cliCommands()` does
 not blank comments before matching. Harmless in the direction it fires — it
@@ -1708,14 +1707,14 @@ prototyped.
 - **Weakening** — clean; no allowlist.
 - **Satisfying the letter** — clean; demonstrated red-capable ("an inline
   `import { type X }`").
-- **Routing around** — nominated, unconfirmed. The seam bars a *value* import
+- **Routing around** — nominated, unconfirmed. The seam bars a _value_ import
   of `@stacks/core` from site code; nothing in `docs/gates.md` says whether a
   re-export chain or a dynamic `import()` string would still be caught by
   whatever static sweep this gate runs.
 - **Vacuous green** — clean, same demonstration.
-- **Decay** — **exposed**, ⚠️ *corrected 2026-08-15 by the decay re-read
-  ([#144](https://github.com/mephistopheles4/stacks/issues/144)), from `clean`.*
-  The docblock opens *"Two things pass"* and enumerates two; **three pass, and
+- **Decay** — **exposed**, ⚠️ _corrected 2026-08-15 by the decay re-read
+  ([#144](https://github.com/mephistopheles4/stacks/issues/144)), from `clean`._
+  The docblock opens _"Two things pass"_ and enumerates two; **three pass, and
   the third is value-imported by the site today**. See the Decay re-read block,
   which also records the nomination this pass raised first and then refused.
 
@@ -1733,7 +1732,7 @@ of the four ranked shapes).
 route it did name turned out to be closed.** Three plants.
 
 **Plant A — `await import('@stacks/core')` in `packages/site/src/shelf/boot.ts`:
-red**, 1 of 5, on *"accounts for every mention of the specifier"*. Deliberately
+red**, 1 of 5, on _"accounts for every mention of the specifier"_. Deliberately
 so — that test's own comment names the dynamic import and the bare side-effect
 import as the gap it exists to close. The nomination's first leg does not
 survive.
@@ -1742,7 +1741,7 @@ survive.
 the same file: green.** G6 passes 5 of 5, the full suite passes **636 of 636**,
 `pnpm typecheck` is clean, and `pnpm build` **succeeds**. The bundle really does
 pull it in: vite reports `sharp`, `node:fs/promises`, `node:crypto`,
-`child_process` and five more *"externalized for browser compatibility"*. Both
+`child_process` and five more _"externalized for browser compatibility"_. Both
 regexes match on the literal `@stacks/core`, and a relative path into the
 package contains no such literal, so the file is read and nothing in it is seen.
 
@@ -1754,11 +1753,11 @@ forbids, in a file the row does not open: `siteFiles()` is
 whose `<script>` blocks are client bundles like any other.
 
 **The backstop exists, and was measured rather than assumed.** `pnpm
-smoke:render` goes **red on both B and C** — *"the shelf never signalled ready.
-Page errors: (0 , Op.createRequire) is not a function"* — and it runs in CI in
+smoke:render` goes **red on both B and C** — _"the shelf never signalled ready.
+Page errors: (0 , Op.createRequire) is not a function"_ — and it runs in CI in
 the same required `gates` check, after `pnpm build`. So the invariant is
 defended; it is not defended by this gate. The docblock's own failure claim
-(*"no build error… the shelf silently never boots"*) reproduced exactly, twice.
+(_"no build error… the shelf silently never boots"_) reproduced exactly, twice.
 
 ⚠️ **The backstop is narrower than that reads, and the qualification is the
 row's, not the suite's** — G25's residue, in the same shape. Both plants landed
@@ -1766,7 +1765,7 @@ in files the client bundle actually pulls in (`boot.ts`, `Shelf.astro`), which i
 why `smoke:render` saw them. **A relative value import in a site `.ts` that the
 bundle never reaches** — a module only a spec imports — would leave the bundle
 clean and `smoke:render` green, and G6 is blind to it either way. Not planted, so
-recorded as untested rather than claimed: *"CI catches this"* holds for the two
+recorded as untested rather than claimed: _"CI catches this"_ holds for the two
 routes demonstrated and is not established in general.
 
 ⚠️ **What that red does not say is the reason this is still `repaired` and not
@@ -1778,21 +1777,21 @@ its red is actionable, and these two are not interchangeable.
 
 **Remedy, named and not built** — two additions to the existing gate, neither
 needing an allowlist: extend `siteFiles()` to `.astro`, matching the `<script>`
-block G7 already extracts; and sweep for relative specifiers that *resolve* into
+block G7 already extracts; and sweep for relative specifiers that _resolve_ into
 `packages/core/`, which is a path computation rather than a second spelling to
 match. The re-export leg of the nomination is not reproduced as stated — an
 `export … from '@stacks/core'` in site code is matched by `CORE_STATEMENT` and
 goes red — the real chain is the relative path.
 
-**Observed-red (this pass):** plant A red on *"accounts for every mention of the
-specifier"*; plants B and C green on G6 (636 of 636 suite-wide, build clean) and
+**Observed-red (this pass):** plant A red on _"accounts for every mention of the
+specifier"_; plants B and C green on G6 (636 of 636 suite-wide, build clean) and
 red on `pnpm smoke:render`.
 
 **Decay re-read (2026-08-15, [#144](https://github.com/mephistopheles4/stacks/issues/144)) — verdict corrected `clean` → `exposed`; disposition: `gated`.**
 
 ⚠️ **This entry records a nomination this pass raised and then refused, because
-refusing it is the more useful half.** The docblock says of the pure subpath *"It
-imports nothing"* — a load-bearing claim about **a different file**, which is what
+refusing it is the more useful half.** The docblock says of the pure subpath _"It
+imports nothing"_ — a load-bearing claim about **a different file**, which is what
 makes the subpath exempt from the rule the row exists to enforce. The obvious
 reading is that nothing holds it: let `shelf-order.ts` acquire one import and the
 site's value import of it becomes a `node:fs` edge into the browser bundle, which
@@ -1800,43 +1799,43 @@ is G6's own failure verbatim.
 
 **The reading is wrong, and reading the gate instead of its prose is what
 settled it.** `pureSubpaths()` does not name the subpath — it **measures** it:
-a subpath passes only when `packages/core/package.json` exports it *and*
+a subpath passes only when `packages/core/package.json` exports it _and_
 `importsNothing()` finds no imports in the file it points at. A single import
 added to `shelf-order.ts` drops it out of the exempt set and turns
 `packages/site/src/shelf/books.ts:6` into an offender. The property is asserted,
 by a mechanism whose own comment says why the earlier hardcoded name was the
-wrong shape: *"an allowlist entry says nothing about whether the module it names
-still imports nothing. The name was the check."* This is band four's G34 outcome
-arriving from the other direction, and band two's rule — *a claim about a gate is
-read from the gate, not from the gate's prose* — catching a nomination mid-pass
+wrong shape: _"an allowlist entry says nothing about whether the module it names
+still imports nothing. The name was the check."_ This is band four's G34 outcome
+arriving from the other direction, and band two's rule — _a claim about a gate is
+read from the gate, not from the gate's prose_ — catching a nomination mid-pass
 rather than after publication.
 
 ⚠️ **The exposure is the sentence directly above that mechanism.** The docblock's
 `:10` list opens **"Two things pass"** and names `import type` and
 `@stacks/core/shelf-order`. **Three pass.** `packages/core/package.json` exports
-`./shelf-order` *and* `./subjects`; `subjects.ts` has **0 imports**, so
+`./shelf-order` _and_ `./subjects`; `subjects.ts` has **0 imports**, so
 `pureSubpaths()` admits it; and `packages/site/src/shelf/card.ts:7` value-imports
 `@stacks/core/subjects` today, at **636 of 636 green**. `CLAUDE.md:150` carries
-the same singular: *"a pure subpath — `@stacks/core/shelf-order` — that imports
-nothing."*
+the same singular: _"a pure subpath — `@stacks/core/shelf-order` — that imports
+nothing."_
 
 **The shape is precise, and it is the mirror of band one's G31.** G31 was a
 docblock claiming **more** reach than the gate has. This is a docblock claiming
-**less**, and it decayed *because* the gate was generalised: the same commit that
+**less**, and it decayed _because_ the gate was generalised: the same commit that
 replaced the hardcoded name with a measurement left the enumeration eleven lines
 above it naming one. Nothing operational rests on the prose — the gate derives
 its own list — so the cost is not a false green. It is that both documents a
 contributor would consult tell them a legitimate import is forbidden, and
-`card.ts:84` already carries a comment reasoning about what is *"not importable
-here (G6)"*.
+`card.ts:84` already carries a comment reasoning about what is _"not importable
+here (G6)"_.
 
 **Named remedy (not built):** the population exists as a value in the tree —
 `pureSubpaths()` already computes it — so
 [#138](https://github.com/mephistopheles4/stacks/issues/138)'s adopted rule
 applies and the check is nearly free: assert that the subpaths named in the
 docblock and in `CLAUDE.md:150` equal `pureSubpaths()`. ⚠️ **It is a prose
-assertion, which #113 declined in general on *"prose has no key"*** — admissible
-here for #138's stated reason: this prose *does* have a key, the exports map.
+assertion, which #113 declined in general on _"prose has no key"_** — admissible
+here for #138's stated reason: this prose _does_ have a key, the exports map.
 
 **Observed-red (this pass):** none planted; discharged by re-measurement, per
 band four's rule. `shelf-order.ts` 0 imports, `subjects.ts` 0 imports, `exports`
@@ -1848,8 +1847,8 @@ holds exactly `.`, `./shelf-order`, `./subjects`, suite 636 of 636.
 **Date:** 2026-08-11
 
 - **Weakening** — clean.
-- **Satisfying the letter** — **clean**, ⚠️ *corrected from `exposed` by band
-  two, which could not reach a green suite in three planted attempts.* The nomination
+- **Satisfying the letter** — **clean**, ⚠️ _corrected from `exposed` by band
+  two, which could not reach a green suite in three planted attempts._ The nomination
   read: exposed, current and self-acknowledged by the repo's own CodeQL triage
   — `js/bad-tag-filter` fired on `SCRIPT_BLOCK` in this spec, flagging the
   regex as approximate; `docs/gates.md` records that the miss it warns about
@@ -1858,18 +1857,18 @@ holds exactly `.`, `./shelf-order`, `./subjects`, suite 636 of 636.
   real and the exposure is not**: every truncation it admits leaves debris no
   bootstrap-shape pattern accepts. See the Deep pass block, including the
   reason that defence is thinner than a `clean` verdict makes it sound.
-- **Routing around** — **clean**, ⚠️ *corrected with the above, being the same
-  limit from the other side*: "Fixing it properly means an HTML parser
+- **Routing around** — **clean**, ⚠️ _corrected with the above, being the same
+  limit from the other side_: "Fixing it properly means an HTML parser
   dependency... to protect against a first-party commit," explicitly declined.
   The same three plants answer both.
 - **Vacuous green** — clean; the miss throws rather than passing silently.
-- **Decay** — **exposed**, ⚠️ *corrected 2026-08-15 by the decay re-read
-  ([#144](https://github.com/mephistopheles4/stacks/issues/144)), from `clean`.*
+- **Decay** — **exposed**, ⚠️ _corrected 2026-08-15 by the decay re-read
+  ([#144](https://github.com/mephistopheles4/stacks/issues/144)), from `clean`._
   The docblock's opening claim is about a **third-party tool at a version**:
-  *"`@astrojs/check` cannot run under TypeScript 7 — TS 7's native compiler does
-  not expose the programmatic API the Astro language server needs."* It is the
+  _"`@astrojs/check` cannot run under TypeScript 7 — TS 7's native compiler does
+  not expose the programmatic API the Astro language server needs."_ It is the
   whole warrant for this row existing — a rule instead of a compiler — and it is
-  restated in `CLAUDE.md` with the word ***yet***, which concedes it expires. See
+  restated in `CLAUDE.md` with the word _**yet**_, which concedes it expires. See
   the Decay re-read block.
 
 `docs/gates.md` already answers this — the CodeQL triage §2 worked example and
@@ -1880,24 +1879,24 @@ the G1/G3/G6/G7 red-capable paragraph.
 **Rank:** 2 (text over structure) — the CodeQL finding is squarely a
 regex-approximation exposure, not fully closed.
 
-**Deep pass (2026-08-12, band two) — *verdict corrected*, no disposition.**
+**Deep pass (2026-08-12, band two) — _verdict corrected_, no disposition.**
 
 Four attempts to get banned or unscanned logic past `SCRIPT_BLOCK` into a green
 suite, in `packages/site/src/components/Shelf.astro`, the repo's only `.astro`
 file with a script block. **Three were planted and run, and all three went red;
 the fourth was reasoning and was never run.** An HTML comment containing a
 literal `<script>…</script>` — which `stripComments` never touches, since it
-handles `//` and `/* */` only — was matched *inside the comment* and failed
+handles `//` and `/* */` only — was matched _inside the comment_ and failed
 `finds at least one import in each script block`. A `</script>` sequence smuggled
 inside a string literal, placed before a banned `function` declaration, truncated
 the capture exactly as CodeQL warns. A malformed opening tag, `<script
 data-note="a>b">`, stopped `[^>]*` early. **No executed plant produced a pass.**
 
-⚠️ **This paragraph read *"all four went red"* until CodeRabbit caught it on
+⚠️ **This paragraph read _"all four went red"_ until CodeRabbit caught it on
 [#137](https://github.com/mephistopheles4/stacks/pull/137), and the arithmetic
 matters more here than anywhere else in the band.** The fourth item is the
 structural argument in the next paragraph — that a truncation always leaves debris
-no end-anchored pattern accepts — which was *derived*, not observed, and counting
+no end-anchored pattern accepts — which was _derived_, not observed, and counting
 it as a red run inflated the evidence behind **the one verdict in band two that
 was corrected to `clean`**. Three failed plants are still no demonstrated
 exposure, so the correction stands; **the claim that carried it does not, and a
@@ -1912,7 +1911,7 @@ saw it**. What went red was `allows only bootstrap statements`, firing on the
 leftover fragment `HREF?.setAttribute('data-x', '`. The gate caught a real defect
 **with the wrong assertion**, as a side effect of the truncation rather than by
 inspecting the smuggled code. That holds for a structural reason worth writing
-down — the capture ends *at* the literal `</script>`, which by construction sits
+down — the capture ends _at_ the literal `</script>`, which by construction sits
 inside an unclosed string or call, so the tail can never satisfy the end-anchored
 `LOOKUP`/`GUARD`/`CALL`/`BRACE` patterns — but it is a property of where the
 debris lands, not of anything the gate set out to check. **A future edit that
@@ -1944,21 +1943,21 @@ green after revert — plus one reasoning-only step that ran nothing.
 **Decay re-read (2026-08-15, [#144](https://github.com/mephistopheles4/stacks/issues/144)) — verdict corrected `clean` → `exposed`; disposition: `gated`.**
 
 ⚠️ **G7 returns to the flagged side, and not by contradicting band two.** Band
-two corrected this row's *routing-around* and *satisfying-the-letter* verdicts on
+two corrected this row's _routing-around_ and _satisfying-the-letter_ verdicts on
 three failed plants, and that work stands untouched. Decay is the fifth category,
 it was never demonstrated against, and it is re-read here under a bound
 [#138](https://github.com/mephistopheles4/stacks/issues/138) restated after band
 two closed.
 
 **The claim.** `gates/astro-no-logic.test.ts:4-5`, present tense:
-*"`@astrojs/check` cannot run under TypeScript 7 — TS 7's native compiler does
-not expose the programmatic API the Astro language server needs."* It is repeated
-where a user meets it, in the gate's own failure message at `:165` — *"(astro
-check cannot run under TS 7)"* — and in `CLAUDE.md`: *"`.astro` files are NOT
-typechecked (`astro check` cannot run under TypeScript 7 **yet**)."*
+_"`@astrojs/check` cannot run under TypeScript 7 — TS 7's native compiler does
+not expose the programmatic API the Astro language server needs."_ It is repeated
+where a user meets it, in the gate's own failure message at `:165` — _"(astro
+check cannot run under TS 7)"_ — and in `CLAUDE.md`: _"`.astro` files are NOT
+typechecked (`astro check` cannot run under TypeScript 7 **yet**)."_
 
 **Why it is load-bearing rather than colour.** It is the entire warrant for the
-row. G7 exists *because* no compiler can read these files; if the claim stopped
+row. G7 exists _because_ no compiler can read these files; if the claim stopped
 being true, the honest response is not a better regex but deleting the rule and
 running the checker. No other row on this file turns so completely on one
 sentence about software this repo does not own.
@@ -1976,22 +1975,22 @@ entered a dependency file in this repository's history, and its only appearances
 anywhere are prose. So there is no run that can contradict the sentence, there has
 never been one, and its truth cannot be established here without adding a
 dependency. ⚠️ **And the version it is a claim about moved three commits ago**:
-`ae674de`, the tip this pass ran on, is *"ci: bump astro from 7.1.6 to 7.2.1"*.
+`ae674de`, the tip this pass ran on, is _"ci: bump astro from 7.1.6 to 7.2.1"_.
 
 ⚠️ **This is the first specimen on the map whose truth-maker is outside the
 repository.** Every earlier one — the `133 tests in ~2s` estimate, the slug
-count, CodeQL *"reports alongside the gates"*, `scripts/lib/`'s file count, and
-[#118](https://github.com/mephistopheles4/stacks/issues/118)'s *"it published
-first"* — was checkable against this tree with one command.
+count, CodeQL _"reports alongside the gates"_, `scripts/lib/`'s file count, and
+[#118](https://github.com/mephistopheles4/stacks/issues/118)'s _"it published
+first"_ — was checkable against this tree with one command.
 This one is checkable only against somebody else's release. `SECURITY.md`'s
-*"relied upon and unverifiable"*, which
+_"relied upon and unverifiable"_, which
 [#124](https://github.com/mephistopheles4/stacks/issues/124) extended as a clause
-rather than minting as a category and noted *would have exactly one member
-today*, now has a second — reached from decay rather than from supply chain, and
+rather than minting as a category and noted _would have exactly one member
+today_, now has a second — reached from decay rather than from supply chain, and
 worth [#120](https://github.com/mephistopheles4/stacks/issues/120) re-reading that
 declination against.
 
-**Named remedy (not built):** the claim's population *does* exist as values in
+**Named remedy (not built):** the claim's population _does_ exist as values in
 this tree — `astro` and `typescript` in `package.json` — so
 [#138](https://github.com/mephistopheles4/stacks/issues/138)'s adopted rule
 applies: date the claim with the versions it was established against and assert
@@ -2002,7 +2001,7 @@ counts were given. ⚠️ **Cost stated rather than implied:** pinned to minors 
 goes red on ordinary Dependabot traffic, which is how a gate gets weakened to make
 it pass; majors only.
 
-**Observed-red (this pass):** none, and that *is* the finding — no configuration
+**Observed-red (this pass):** none, and that _is_ the finding — no configuration
 of this repository can make the sentence go red, because the tool it is about is
 not installed.
 
@@ -2057,8 +2056,8 @@ nowhere."
   row's own headline: it "shipped with three holes of its own, all found by
   review before merge" — a spec-path allowlist scoped to three directory
   prefixes that missed G10's real path; a gate counted as scored if its
-  filename appeared *anywhere* in the file, paragraphs included; and a
-  citation counted if the words "invariant N" appeared in *any* cell of *any*
+  filename appeared _anywhere_ in the file, paragraphs included; and a
+  citation counted if the words "invariant N" appeared in _any_ cell of _any_
   row. The third is explicitly "verbatim the defect logged above for G14."
 - **Routing around** — exposed, historical, fixed; the directory-prefix hole
   above is exactly this shape: a real path (G10's `covers/cover-path.test.ts`)
@@ -2098,8 +2097,8 @@ original roots.
 scores the scoreboard.** `gives every row a status from its own key` reads the
 status as **`row.cells.at(-1)`** — positionally — while every other check in the
 file resolves its column by name through `columnIndex()`, the helper whose own
-docblock exists because *"the Source column was renamed"* is a different failure
-from *"the citation is missing"*. Append a trailing **Notes** column to
+docblock exists because _"the Source column was renamed"_ is a different failure
+from _"the citation is missing"_. Append a trailing **Notes** column to
 `Invariants → gates`, set G1's real **Status** to `❌` — a symbol outside the key
 — and put `✅` in the new column: the test still fails on the other rows, **but
 G1 drops out of the failure list**. The one row genuinely carrying an invalid
@@ -2107,7 +2106,7 @@ status is silently exonerated, because `.at(-1)` now reads the Notes cell.
 
 **It is a coincidence, not a property, that this works today.** All three tables
 end in `Status`; they already carry **6, 6 and 5 columns**, so their shapes differ
-and *"a column was added"* is plainly something this file could have. The gate
+and _"a column was added"_ is plainly something this file could have. The gate
 holding this repo's constitution to its scoreboard finds the status by counting
 from the end.
 
@@ -2126,7 +2125,7 @@ without the bad status and the plant with it.
 the directory-prefix re-plant, which is the same hole from the other side.
 
 ⚠️ **Not observed:** the pre-fix gate code was never run beside the plants — it
-is not in the tree. *"The old code would have passed"* is read off the current
+is not in the tree. _"The old code would have passed"_ is read off the current
 logic, not watched. What was watched is that today's code catches the shape each
 hole describes, which is what re-planting asks for.
 
@@ -2142,11 +2141,11 @@ this file's rule that a finding about a gate goes in that gate's entry.
 highest-numbered row leaves it green. Measured rather than argued: against a
 tree with the top row's id mangled, `gates/constitution-scoreboard.test.ts` runs
 **14 tests, none failing**; mangling an interior row instead fires the check by
-name — *"row numbers missing from docs/gates.md … G40"*. **What catches the
-top-row case is G41's row-side floor and the register's *no entry without a
-row*, and nothing in G19.** That is the stated reason the floor exists on the
+name — _"row numbers missing from docs/gates.md … G40"_. **What catches the
+top-row case is G41's row-side floor and the register's _no entry without a
+row_, and nothing in G19.** That is the stated reason the floor exists on the
 row side only. Not repaired here: hardening G19 is a change this rollout would
-be *making* rather than deciding, and the same reasoning that leaves the
+be _making_ rather than deciding, and the same reasoning that leaves the
 `TABLES` hole alone applies.
 
 **2. ⚠️ A row can un-anchor another row's slug by citing its spec in prose, and
@@ -2165,7 +2164,7 @@ itself already checks elsewhere, and the docblock now carries the rule. ⚠️ *
 general shape is unclosed and named: prose in any row's cells can change which
 rows are derived.** A remedy would restrict stem extraction to the **Gate**
 column via `columnIndex`, which is the same one-line fix the positional-status
-remedy above wants and the same lesson — *read the column, not the row*.
+remedy above wants and the same lesson — _read the column, not the row_.
 ⚠️ **The pre-existing `repo-hygiene` pair (G5, G13) is the legitimate case the
 remedy must keep working**, so it is a narrowing of where the gate looks, never
 an allowlist.
@@ -2208,20 +2207,20 @@ regex's text-matching limit.
 **Deep pass (2026-08-12, band two) — disposition: `gated`. The self-audit
 measured the corpus, not the mechanism.**
 
-The triage entry credits the code-blanking pass as *measured, not assumed* — *"the
-only links it hides are the `x.md` syntax examples"*. That is true of the files as
+The triage entry credits the code-blanking pass as _measured, not assumed_ — _"the
+only links it hides are the `x.md` syntax examples"_. That is true of the files as
 they stand and says nothing about what the pass **can** hide. Planted in
 `docs/gates.md`: one line carrying a stray opening backtick before
 `--legacy-mode`, a genuinely broken link to `docs/nonexistent-file-xyz.md` after
 it, and an unrelated closing backtick later on the same line. **3 of 3 green — the
-broken link is invisible**, because the inline-code regex ``` (`+)[^\n]*?\1 ```
+broken link is invisible**, because the inline-code regex ``(`+)[^\n]*?\1``
 pairs the two backticks and blanks everything between them. The identical line
 with the backticks removed fails `points every link at a file that exists`, naming
 `docs/gates.md:174 → docs/nonexistent-file-xyz.md`. Same link, same file; only the
 accidental code span differs.
 
 ⚠️ **This is not the routing-around gap the entry already records.** That one is
-about link *forms nobody writes here* — reference-style definitions, `<a href>`.
+about link _forms nobody writes here_ — reference-style definitions, `<a href>`.
 This is an ordinary typo, an unclosed backtick, switching the gate off for the
 rest of the line, in a repo whose documents are dense with backticks and links,
 and where G29 is the gate holding every other document's links to the tree. It
@@ -2260,7 +2259,7 @@ to the row in the commit that lands it, rather than by a later pass reconstructi
 what the author knew.
 
 - **Weakening** — **exposed, accepted.** The row is watched by nothing that stops
-  a series being deleted from `TREND_SERIES` *and* its row from the table in one
+  a series being deleted from `TREND_SERIES` _and_ its row from the table in one
   commit. That edit is green in both directions by construction, because the gate
   is a correspondence and a correspondence between two deleted things holds. **It
   is the same shape as the scope list `mutation-scope` exists to close** — removing
@@ -2269,8 +2268,8 @@ what the author knew.
   artifact naming the four series, which is the second copy
   [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md) refuses.
 - **Satisfying the letter** — **the gate is clean; one of the series it watches
-  is not.** The property the row names is *the series CI writes are the series
-  the table names*, and the gate asserts exactly that, in both directions, over
+  is not.** The property the row names is _the series CI writes are the series
+  the table names_, and the gate asserts exactly that, in both directions, over
   the rendered document rather than over a declaration.
 
   ⚠️ **`accepted`, and it is about a series rather than about the gate.**
@@ -2278,21 +2277,22 @@ what the author knew.
   number it carries is 0 by construction**. An exclusion is negated out of
   Stryker's `mutate`, so an excluded file is never mutated and never reaches a
   report; `mutation-scoring.md` §7 says the exclusion flips when somebody
-  *"write[s] a test that touches it"*, and a test cannot flip a file Stryker
+  _"write[s] a test that touches it"_, and a test cannot flip a file Stryker
   never mutates. **The measurement the Trends row names needs a deliberately
   wider run that nothing builds.** Found by review, on the strongest available
-  evidence: `scripts/mutation-scopes.ts`'s own removed comment said so — *"this
+  evidence: `scripts/mutation-scopes.ts`'s own removed comment said so — _"this
   is **not** the spec's `live-exclusions` trend, which asks a question a run of
-  this config cannot answer"* — and the extraction changed the claim's side with
+  this config cannot answer"_ — and the extraction changed the claim's side with
   no record. **The claim is restored and the weakness carried**, because a series
   incapable of movement is a flat line, and a flat line arriving on time is the
   exact failure this layer exists to expose. ⚠️ **Not closable inside G36**: the
-  gate's question is *did a number arrive*, and one did.
+  gate's question is _did a number arrive_, and one did.
+
 - **Routing around** — **exposed, accepted, and named in the gate's own header.**
   The correspondence is asserted against a **complete** run — one where every
   declared series computed. A crashed run legitimately renders fewer series, so a
   real emission path that only ever runs partial would never be compared. Nothing
-  routes a *new* series past the check (a new family needs a `# TYPE` line, which
+  routes a _new_ series past the check (a new family needs a `# TYPE` line, which
   is what the gate reads), but a series that only appears under a condition the
   fixture does not reproduce is out of reach. **Checked against the routing-around
   verdicts of the rows sharing this mechanism**: G14 (`repaired` — the anchored
@@ -2302,7 +2302,7 @@ what the author knew.
 - **Vacuous green** — clean, and asserted rather than argued. Both sides are
   extractions, and an extraction that stops matching reports an empty set which
   trivially satisfies every "each of these is in that". `expectFound` runs on both
-  sides before any comparison, and the table's body rows are collected *including*
+  sides before any comparison, and the table's body rows are collected _including_
   a row whose name cell does not parse — the hole G29 is dispositioned `gated` for,
   where one stray backtick switches the check off for the rest of the line. A cell
   that does not parse arrives as its raw text and fails the kebab-case assertion,
@@ -2314,13 +2314,13 @@ what the author knew.
 
 **Observed-red line:** four plants, 2026-08-19, recorded at landing.
 
-| Plant | Result |
-| --- | --- |
-| a series with no row — a fifth entry in `TREND_SERIES`, emitted | **red**: *"series written to the metrics record that no row of the `## Trends` table names … planted-series"* |
-| a row naming a series nothing emits — a fifth table row | **red**: *"rows of the `## Trends` table naming a series nothing emits … planted-row"* |
-| a trend named `mutation-scope` | ⚠️ **green — the plant the ticket named does not work yet.** See below. |
-| a trend named `commands` | **red**: *"trend names that are also gate slugs … commands"* |
-| an emptied Trends table | **red**, and on the vacuity guard rather than on a comparison: *"extraction found 0 rows in the Trends table of docs/gates.md (expected at least 4)"* |
+| Plant                                                           | Result                                                                                                                                                |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a series with no row — a fifth entry in `TREND_SERIES`, emitted | **red**: _"series written to the metrics record that no row of the `## Trends` table names … planted-series"_                                         |
+| a row naming a series nothing emits — a fifth table row         | **red**: _"rows of the `## Trends` table naming a series nothing emits … planted-row"_                                                                |
+| a trend named `mutation-scope`                                  | ⚠️ **green — the plant the ticket named does not work yet.** See below.                                                                               |
+| a trend named `commands`                                        | **red**: _"trend names that are also gate slugs … commands"_                                                                                          |
+| an emptied Trends table                                         | **red**, and on the vacuity guard rather than on a comparison: _"extraction found 0 rows in the Trends table of docs/gates.md (expected at least 4)"_ |
 
 ⚠️ **The `mutation-scope` plant is green and that is a fact about the calendar, not
 a hole.** `mutation-scope` is the slug of a gate that has **not landed** — it is the
@@ -2346,12 +2346,12 @@ never triaged by anybody. It was found by `gates/gate-register.test.ts` on its
 **first run**, which is that gate going red on a real defect rather than on a
 planted one, and is recorded as such in G41's entry below.
 
-⚠️ **The rollout's standing rule is *every gate landing before `gate-register`
-writes its observed-red line at landing*, and this row did not** — `docs/gates.md`
+⚠️ **The rollout's standing rule is _every gate landing before `gate-register`
+writes its observed-red line at landing_, and this row did not** — `docs/gates.md`
 carries no `## G37` narrative and no observed-red prose, only the table row. The
 line below was therefore **planted on 2026-08-20 by the session landing G41**,
-not recorded when the gate was written. That is exactly *"the decay category
-arriving inside the artifact built to catalogue it"*, and it is written down
+not recorded when the gate was written. That is exactly _"the decay category
+arriving inside the artifact built to catalogue it"_, and it is written down
 rather than smoothed over.
 
 - **Weakening** — clean; no allowlist and no exemption list. `PARSED_SECTIONS`
@@ -2359,19 +2359,19 @@ rather than smoothed over.
   permission: adding to it makes the gate stricter, and removing from it is a
   deletion of an assertion rather than the granting of an exception.
 - **Satisfying the letter** — **exposed, and the gate's own docblock records the
-  near miss.** The prose said the import must be the *"first content line"*; the
+  near miss.** The prose said the import must be the _"first content line"_; the
   assertion checks only that `@AGENTS.md` is alone on **a** line. Review caught
   that the stub did not satisfy the stronger sentence either, and **the sentence
   was corrected rather than the gate tightened** — the right call, but it leaves
-  the general shape live: the property *"a Claude session actually receives the
-  rules"* is wider than *"a line matching `/^@AGENTS\.md$/m` exists"*.
+  the general shape live: the property _"a Claude session actually receives the
+  rules"_ is wider than _"a line matching `/^@AGENTS\.md$/m` exists"_.
 - **Routing around** — **exposed and stated by the gate itself.** It holds the
   **tree**, not the harness: whether a given version of Claude Code honours
   `@AGENTS.md` is a claim about a tool, and G21 forbids the suite from asking
   anything outside the tree. The observation standing in for it is dated and
   version-stamped in `docs/log/2026-08-19-the-constitution-leaves-claude-md.md`.
-  ⚠️ **This is the second member of `SECURITY.md`'s *in the tree, asserting a
-  fact that lives outside it* category** — the same shape as G40's version
+  ⚠️ **This is the second member of `SECURITY.md`'s _in the tree, asserting a
+  fact that lives outside it_ category** — the same shape as G40's version
   comment, reached from a different direction.
 - **Vacuous green** — clean, and the design is the reason rather than a floor.
   The import-line assertion **is** the control the two absence assertions rest
@@ -2383,13 +2383,13 @@ rather than smoothed over.
 **Observed-red line:** **three plants, 2026-08-20, planted at register landing
 rather than at row landing** — the gap this entry exists to record.
 
-| Plant | Result |
-| --- | --- |
-| delete the import line, leaving `See AGENTS.md for the rules.` | **red**: *"CLAUDE.md must contain "@AGENTS.md" alone on a line … without that line a Claude session gets none of the rules — silently, because nothing else would notice"* |
-| demote the import to a mention inside a sentence — `This file imports @AGENTS.md at launch.` | **red**, same assertion. This is the plant that proves the anchoring is load-bearing: prose is not a mechanism, and the harness expands a line |
-| paste `## Invariants` into the stub — the second constitution ADR-0026 refused | **red**: *"CLAUDE.md carries sections that belong to AGENTS.md: Invariants"* |
+| Plant                                                                                        | Result                                                                                                                                                                     |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| delete the import line, leaving `See AGENTS.md for the rules.`                               | **red**: _"CLAUDE.md must contain "@AGENTS.md" alone on a line … without that line a Claude session gets none of the rules — silently, because nothing else would notice"_ |
+| demote the import to a mention inside a sentence — `This file imports @AGENTS.md at launch.` | **red**, same assertion. This is the plant that proves the anchoring is load-bearing: prose is not a mechanism, and the harness expands a line                             |
+| paste `## Invariants` into the stub — the second constitution ADR-0026 refused               | **red**: _"CLAUDE.md carries sections that belong to AGENTS.md: Invariants"_                                                                                               |
 
-**Rank:** none. The two exposures are both *stated limits* rather than
+**Rank:** none. The two exposures are both _stated limits_ rather than
 unadmitted holes, and neither is one this rollout can close: the harness claim
 is unreachable by construction under G21.
 
@@ -2411,8 +2411,8 @@ G37 while this ticket was open — the third time in this rollout a pre-allocate
 number was wrong, and the second time by a row from outside it. Recorded rather
 than silently corrected, because a reader checking the spec's roster against this
 file would otherwise find two documents disagreeing with no account of which is
-current. `docs/gates.md`'s own line is why: *"G19 is a stable identifier and tells
-you nothing."*
+current. `docs/gates.md`'s own line is why: _"G19 is a stable identifier and tells
+you nothing."_
 
 ⚠️ **The only row that runs on two surfaces**, and `docs/gates.md` has no column
 saying so — a `pnpm test` assertion and a `pnpm deploy:site` refusal under one
@@ -2420,21 +2420,21 @@ slug. Both halves are triaged here, because a category that is clean on one
 surface and exposed on the other is exactly what a single verdict would hide.
 
 - **Weakening** — **exposed, and closed by where the rules are written rather
-  than by the gate.** The gate makes a rename *loud*: the scope name and its glob
+  than by the gate.** The gate makes a rename _loud_: the scope name and its glob
   are both checked, so `git mv packages/core/src/covers packages/core/src/cover`
   goes red until the config is edited. What the gate cannot judge is whether the
   edit that clears it carried the floor across — and the remedy list for a
-  zero-mutant refusal **contains the weakening**, since *delete the scope* is a
+  zero-mutant refusal **contains the weakening**, since _delete the scope_ is a
   legitimate fix and the cheapest way to stop measuring an inconvenient one.
   Unlike lowering a floor, it does not read as a lowering; it reads as cleanup.
   So rename / split / removal rules sit in `stryker.scopes.json` itself, at the
   edit they govern. **`accepted`, and stated plainly: a rule about what a diff
   must look like is not a check.** The floors file the ratchet ticket adds is
   where a lowering becomes visible; this row makes it impossible for the lowering
-  to happen *silently*, which is the half available now.
+  to happen _silently_, which is the half available now.
 - **Satisfying the letter** — **clean on the structural half, and the
-  vacuous-green plant is what shows it.** The property is *every source directory
-  is declared or excluded, with no third state*, and the check is per **file**
+  vacuous-green plant is what shows it.** The property is _every source directory
+  is declared or excluded, with no third state_, and the check is per **file**
   rather than per directory: a widened glob is one fault per file it swallowed,
   so the loudness scales with the damage. Emptying the declared list makes every
   file undeclared rather than making the check quiet.
@@ -2442,27 +2442,27 @@ surface and exposed on the other is exactly what a single verdict would hide.
   the verdict of the row that shares it.** Per the standing rule, the remedy was
   checked against every register row disposed `gated` or carrying a
   named-and-unbuilt remedy: **G17 (`deploy-branch`)** is the one sharing this
-  mechanism, and its live exposure is that *the gate spawns `scripts/deploy.ts`,
-  so the argv the shipped command supplies is invisible to it* — remedy named,
+  mechanism, and its live exposure is that _the gate spawns `scripts/deploy.ts`,
+  so the argv the shipped command supplies is invisible to it_ — remedy named,
   not built. **So the deploy half is not written as a spawn.** The refusal logic
   is a pure function in `scripts/lib/scope-check.ts` with an in-process oracle
   (`scope-check.test.ts`) and `scripts/deploy.ts` is a thin caller, which avoids
   the subprocess boundary rather than inheriting it. ⚠️ **What is left is G17's
-  shape one layer up**: nothing asserts that `deploy.ts` still *calls*
+  shape one layer up**: nothing asserts that `deploy.ts` still _calls_
   `assertNoEmptyScopes`, so deleting that one line leaves the whole suite green.
   Same residual, one line wide instead of a whole script, and named here rather
   than left to be found. The other mechanism-sharers were read and neither
-  applies: G1/G13's allowlist verdicts (*the damage is not the entries but what
-  the list is a list of* — met here by every exclusion owing a mechanism string
+  applies: G1/G13's allowlist verdicts (_the damage is not the entries but what
+  the list is a list of_ — met here by every exclusion owing a mechanism string
   and by `stale-exclusion` refusing an entry that names nothing), and G19's
   positional-read finding (this reads JSON by key, not a table by column).
 - **Vacuous green** — **clean, and asserted twice over.** Three `expectFound`
   floors — declared scopes at 8, file exclusions at 20, excluded directories at 2
   — plus a floor on the source sweep itself at 60, because a walk that returned
-  nothing would make every file trivially declared *and* every glob trivially
+  nothing would make every file trivially declared _and_ every glob trivially
   empty at the same time. ⚠️ **The floors are not the whole of it, and this is
-  the finding worth carrying:** a gate asserting *"the real declaration has no
-  faults"* is satisfied forever by a `declarationFaults` that returns `[]`
+  the finding worth carrying:** a gate asserting _"the real declaration has no
+  faults"_ is satisfied forever by a `declarationFaults` that returns `[]`
   unconditionally, and no floor can see that. The judgement is therefore planted
   in `scripts/lib/scope-check.test.ts` against synthetic trees — one plant per
   clause — and the gate is left asserting only what the disk says.
@@ -2478,10 +2478,10 @@ surface and exposed on the other is exactly what a single verdict would hide.
   one question.
 
 ⚠️ **Two clauses beyond the six the ticket lists, declared rather than slipped
-in.** `stale-exclusion` is *"every declared scope exists on disk"* applied to the
+in.** `stale-exclusion` is _"every declared scope exists on disk"_ applied to the
 other list — a mechanism attached to nothing reads as a live exemption, and it is
 half of what makes **removal** show up in a diff. `excluded-and-declared` is
-*"no overlap"* applied across the two lists rather than between two scopes, which
+_"no overlap"_ applied across the two lists rather than between two scopes, which
 is all the ticket's wording covers; a directory in both is invisible to every
 other clause, because its files are claimed and its exclusion names something
 real. ⚠️ **The first draft of this entry counted only `stale-exclusion` and
@@ -2491,8 +2491,8 @@ artifact whose whole purpose is accurate accounting. Found by CodeRabbit on
 
 ⚠️ **A latent false red, found in the same review and fixed before merge: a
 recursive scope holding nothing directly.** `missing-scope` was asked of the
-*direct parent* of every source file, so a scope whose files all live one level
-below its root reported *"holds no source file on disk"* about a scope that holds
+_direct parent_ of every source file, so a scope whose files all live one level
+below its root reported _"holds no source file on disk"_ about a scope that holds
 several — while `empty-glob` stayed quiet, because the glob does match them. One
 fault, and its message was untrue. **It would have fired on a scope split**,
 which is the operation the rename rules above exist to bless, and the cheapest
@@ -2506,14 +2506,14 @@ directory and never a subtree. Regression test added for both halves.
 ⚠️ **And an eighth check that is not a clause, added in review of that same pull
 request: the declaration is compared against `stryker.config.mjs`.** This is the
 routing-around bullet above being wrong in the direction it was written to guard.
-The bullet checked the *deploy* half against G17 and did not ask the same
+The bullet checked the _deploy_ half against G17 and did not ask the same
 question of the merge half, and the answer was there: everything above reads
 `stryker.scopes.json`, while **Stryker is driven by `mutate`, which the config
 derives from it**. So the whole check could be routed around by editing the
 derivation instead of the declaration — one scope dropped in `stryker.config.mjs`
 leaves all seven clauses green and empties that scope with nothing to say so
-until a nightly moves. `docs/spec/mutation-scoring.md` §6 already listed *"the
-`mutate` config changes"* as a fault needing no run to detect; it was not true
+until a nightly moves. `docs/spec/mutation-scoring.md` §6 already listed _"the
+`mutate` config changes"_ as a fault needing no run to detect; it was not true
 when this row landed, and it is now. **The gate imports the real config module
 rather than regex-matching its source**, since the thing being checked is a value
 the file computes.
@@ -2528,15 +2528,15 @@ is a difference a reader of the output will notice.
 structural ones were run against `gates/mutation-scope.test.ts` alone — a renamed
 directory reddens half the suite, and none of that is this row.
 
-| Plant | Result |
-| --- | --- |
-| rename a scope's directory without editing the config — `git mv packages/core/src/import packages/core/src/imports` | **red, four faults and a second assertion**: *"[missing-scope] declared scope `packages/core/src/import` holds no source file on disk"*, *"[empty-glob] … matches no source file"*, and one *"[undeclared]"* per file that moved |
-| a source directory neither declared nor excluded — `packages/core/src/probe/thing.ts` | **red**: *"[undeclared] … is in no declared scope and in no excluded directory … those are the two states, and there is no third"* |
-| blank an exclusion's mechanism — `scripts/deploy.ts`'s | **red**: *"[blank-mechanism] exclusion scripts/deploy.ts (in scope "scripts") carries no mechanism"* |
-| point a glob at nothing — `packages/core/src/covers/nowhere/**/*.ts` | **red**: *"[empty-glob] declared scope `packages/core/src/covers` has a glob … that matches no source file"*, and **`missing-scope` stays quiet**, which is the clause separating *the code went away* from *the glob stopped reaching it* |
-| empty the declared-scope list | **red on the floor, not on a comparison**: *"extraction found 0 declared mutation scopes (expected at least 8)"* |
-| **drop one scope from the derivation in `stryker.config.mjs`, touching no declaration** — the routing-around plant, added in review | **red**, naming the glob that vanished: *"stryker.config.mjs's `mutate` is no longer the declaration in stryker.scopes.json … expected [ … 34 ] to deeply equal [ … 35 ]"*, `- "packages/core/src/covers/**/*.ts"`. ⚠️ **Green on all seven clauses at the same time**, which is the whole finding |
-| **deploy residual** — declare a scope of type re-exports only, run a real `pnpm mutation:run`, then `pnpm deploy:site --dry-run` | **red, exit 1, nothing built and nothing uploaded**: *"FAILED: declared scope(s) produced no mutants in the last run: packages/core/src/typeonly"* — reached in seconds, before the gates and before the build |
+| Plant                                                                                                                               | Result                                                                                                                                                                                                                                                                                             |
+| ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| rename a scope's directory without editing the config — `git mv packages/core/src/import packages/core/src/imports`                 | **red, four faults and a second assertion**: _"[missing-scope] declared scope `packages/core/src/import` holds no source file on disk"_, _"[empty-glob] … matches no source file"_, and one _"[undeclared]"_ per file that moved                                                                   |
+| a source directory neither declared nor excluded — `packages/core/src/probe/thing.ts`                                               | **red**: _"[undeclared] … is in no declared scope and in no excluded directory … those are the two states, and there is no third"_                                                                                                                                                                 |
+| blank an exclusion's mechanism — `scripts/deploy.ts`'s                                                                              | **red**: _"[blank-mechanism] exclusion scripts/deploy.ts (in scope "scripts") carries no mechanism"_                                                                                                                                                                                               |
+| point a glob at nothing — `packages/core/src/covers/nowhere/**/*.ts`                                                                | **red**: _"[empty-glob] declared scope `packages/core/src/covers` has a glob … that matches no source file"_, and **`missing-scope` stays quiet**, which is the clause separating _the code went away_ from _the glob stopped reaching it_                                                         |
+| empty the declared-scope list                                                                                                       | **red on the floor, not on a comparison**: _"extraction found 0 declared mutation scopes (expected at least 8)"_                                                                                                                                                                                   |
+| **drop one scope from the derivation in `stryker.config.mjs`, touching no declaration** — the routing-around plant, added in review | **red**, naming the glob that vanished: _"stryker.config.mjs's `mutate` is no longer the declaration in stryker.scopes.json … expected [ … 34 ] to deeply equal [ … 35 ]"_, `- "packages/core/src/covers/**/*.ts"`. ⚠️ **Green on all seven clauses at the same time**, which is the whole finding |
+| **deploy residual** — declare a scope of type re-exports only, run a real `pnpm mutation:run`, then `pnpm deploy:site --dry-run`    | **red, exit 1, nothing built and nothing uploaded**: _"FAILED: declared scope(s) produced no mutants in the last run: packages/core/src/typeonly"_ — reached in seconds, before the gates and before the build                                                                                     |
 
 ⚠️ **The probe scope left `pnpm test` green, and that is the split working rather
 than a hole.** Declaring `packages/core/src/typeonly` — one file of type
@@ -2545,14 +2545,14 @@ nothing overlaps. Only a run can tell that it produced no mutants, which is
 precisely why that one clause is at deploy and the other six are not.
 
 **The empty-scope behaviour is now measured, and it is the third of the three
-possibilities the spec listed.** `mutation-scoring.md` §6 left it open — *"nobody
+possibilities the spec listed.** `mutation-scoring.md` §6 left it open — _"nobody
 knows what Stryker prints for an empty scope: `100`, `NaN`, or omission from the
-report"* — and expected the worst. Measured at 2026-08-19 against a full run
+report"_ — and expected the worst. Measured at 2026-08-19 against a full run
 (5,594 mutants, 6m55s, `9.6.1`): **omission.** The file appears nowhere in
 `mutation.json`, nowhere in the clear-text table, and `pnpm mutation:score` prints
 the scope as `0 / n/a` because its own arithmetic already returns `null` for an
 empty denominator rather than `1`. So the residual reads `total === 0`, which is
-right under all three behaviours — a check written against a *printed* `100`
+right under all three behaviours — a check written against a _printed_ `100`
 would have been written against a string that never appeared.
 
 ⚠️ **One branch is unobserved and it is named rather than implied**: the
@@ -2575,19 +2575,19 @@ driving [`scripts/deploy.ts`](../scripts/deploy.ts); the dated half in
   `STALE_AFTER_DAYS`; widening 3 to 90 makes the refusal never fire and deletes
   nothing. `docs/spec/trend-layer.md` §7 grades it as **the most weakeable
   artifact this piece produces**, and nothing here closes that — a gate asserting
-  *the bound is 3* would be a constant compared with itself. What is bought
+  _the bound is 3_ would be a constant compared with itself. What is bought
   instead is that the same constant is load-bearing in two more places (the
   ratchet's calibration window, the dated bootstrap's expiry), so widening it is
   not a local edit. ⚠️ **The override entry from #121 is superseded**: there is
   no flag to weaken, because there is no flag. What is left is not running
   `pnpm trend:sync`, which is not an edit and leaves no diff.
 - **Satisfying the letter** — **exposed, accepted, and inherited rather than
-  introduced.** *"Every check here proves a file arrived on time, and none proves
-  anything was measured."* A `run_ok 1` written by a job whose measurement step
+  introduced.** _"Every check here proves a file arrived on time, and none proves
+  anything was measured."_ A `run_ok 1` written by a job whose measurement step
   an `if:` skipped passes this check and is false; a mutation step quietly
   narrowed to one small directory keeps writing well-formed, punctual,
   meaningless rows. **This row's question is the pipe, and one did arrive.** Not
-  closable here: liveness is what a *number moving* would show, and trends carry
+  closable here: liveness is what a _number moving_ would show, and trends carry
   no verdicts.
 - **Routing around** — **found in the roster read, and closed before landing.**
   The gate spawns `scripts/deploy.ts` directly, so the argv the **shipped**
@@ -2612,8 +2612,8 @@ driving [`scripts/deploy.ts`](../scripts/deploy.ts); the dated half in
   plant now. **The gate was written, run, and green, and it was a gate against
   nothing.**
 - **Decay** — **clean at landing, with the decay path named and refused.** The
-  dated bootstrap expires on a calendar day, and an assertion of *does not refuse
-  today* would have been a green that quietly became false on 2026-08-22. What is
+  dated bootstrap expires on a calendar day, and an assertion of _does not refuse
+  today_ would have been a green that quietly became false on 2026-08-22. What is
   asserted through the script is that its behaviour **agrees with `judgeRecord`
   today**; the dated behaviour itself is planted against that function, where
   `now` is a parameter. ⚠️ **The spine's date is a constant in the source**, and
@@ -2625,18 +2625,18 @@ driving [`scripts/deploy.ts`](../scripts/deploy.ts); the dated half in
 `gates/metrics-freshness.test.ts` plus `scripts/lib/metrics-read.test.ts`; all
 reverted.
 
-| Plant | Result |
-| --- | --- |
-| **an aggregate bound in place of the per-series one** — every gated series dated by the record's newest sample | **red, two**: the gate's *"refuses on a nightly four days back"* and the judge's *"refuses the series that went quiet, not the record"* — *"expected 'fresh' to be 'stale'"*. This is the failure the row exists to catch: a merge row minutes old over three series four days dead |
-| **a series with no sample treated as fine** — `continue` where the absent case pushes | **red, four**, including both `--dry-run` and `--check-only`: *"expected … to contain 'no sample at all'"*. Absent and stale are one verdict, and this is the half that would have been invisible |
-| **the bound widened from 3 days to 90** | **red, six** across both files — the stale cases, and *"expected { days: 4, kind: 'bootstrap' } to equal { days: 4, kind: 'never' }"*, because the same constant expires the bootstrap |
-| **the two disambiguation messages swapped** | **red, two**: a stale store with a stale branch printed *"The branch holds 0 record(s) this machine has not imported … pnpm trend:sync"*. Same symptom, opposite fix — it sends somebody to look at CI while their own store is what is behind |
-| **the refusal downgraded to a warning** — `console.warn` in place of `fail` | ⚠️ **green, ten of ten, before `expectRefused`.** **Red, five**, after: *"the deploy must stop at the record, not carry on and fail at the next check"* |
-| **the probe's `--refmap=` removed** — a real defect, not a synthetic plant | **red, one**: *"only `pnpm trend:sync` may move the mirror"*. See below |
+| Plant                                                                                                          | Result                                                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **an aggregate bound in place of the per-series one** — every gated series dated by the record's newest sample | **red, two**: the gate's _"refuses on a nightly four days back"_ and the judge's _"refuses the series that went quiet, not the record"_ — _"expected 'fresh' to be 'stale'"_. This is the failure the row exists to catch: a merge row minutes old over three series four days dead |
+| **a series with no sample treated as fine** — `continue` where the absent case pushes                          | **red, four**, including both `--dry-run` and `--check-only`: _"expected … to contain 'no sample at all'"_. Absent and stale are one verdict, and this is the half that would have been invisible                                                                                   |
+| **the bound widened from 3 days to 90**                                                                        | **red, six** across both files — the stale cases, and _"expected { days: 4, kind: 'bootstrap' } to equal { days: 4, kind: 'never' }"_, because the same constant expires the bootstrap                                                                                              |
+| **the two disambiguation messages swapped**                                                                    | **red, two**: a stale store with a stale branch printed _"The branch holds 0 record(s) this machine has not imported … pnpm trend:sync"_. Same symptom, opposite fix — it sends somebody to look at CI while their own store is what is behind                                      |
+| **the refusal downgraded to a warning** — `console.warn` in place of `fail`                                    | ⚠️ **green, ten of ten, before `expectRefused`.** **Red, five**, after: _"the deploy must stop at the record, not carry on and fail at the next check"_                                                                                                                             |
+| **the probe's `--refmap=` removed** — a real defect, not a synthetic plant                                     | **red, one**: _"only `pnpm trend:sync` may move the mirror"_. See below                                                                                                                                                                                                             |
 
 ⚠️ **The last row is a defect this session shipped and then found, and it is the
 one no test would have reported.** An explicit refspec does not stop git
-*opportunistically* updating the remote-tracking branch a fetched ref would
+_opportunistically_ updating the remote-tracking branch a fetched ref would
 normally land on, so the disambiguating probe was fast-forwarding
 `origin/metrics` — the mirror the staleness check reads. **The refusal was
 correct on the run you were looking at and absent on the next one**, which is not
@@ -2646,12 +2646,13 @@ reading git's own two lines of output. Closed by `--refmap=`, and held by a ref
 comparison across the refusal. [ADR-0060](adr/0060-the-deploy-reads-the-mirror-and-the-probe-never-moves-it.md).
 
 ⚠️ **Two branches are unobserved and named rather than implied.** The `never`
-verdict — *no record, past the bootstrap* — is planted against `judgeRecord` and
+verdict — _no record, past the bootstrap_ — is planted against `judgeRecord` and
 not through the script, for the calendar reason above. And the probe fetch is
 exercised against a scratch repository whose `origin` is itself, so **the real
 fetch has never run**: what is asserted is that a fetch of a real branch produces
 the right message, not that GitHub answers an anonymous one — which
 `pnpm trend:sync` exercises for real, on the same code path.
+
 ### G40 — `action-pins`
 
 **Gate:** [`gates/action-pins.test.ts`](../gates/action-pins.test.ts)
@@ -2662,8 +2663,8 @@ the right message, not that GitHub answers an anonymous one — which
 G38's entry records one row earlier: `agents-import` took G37 out-of-band from
 [#172](https://github.com/mephistopheles4/stacks/pull/172), so every
 pre-allocated number in this rollout is one low. Recorded rather than silently
-corrected. `docs/gates.md`'s own line is why: *"G19 is a stable identifier and
-tells you nothing."*
+corrected. `docs/gates.md`'s own line is why: _"G19 is a stable identifier and
+tells you nothing."_
 
 **The remedy roster was read before this gate was written**, derived by query
 rather than remembered: every entry disposed `gated` (G6, G7, G29, G30, G35) and
@@ -2672,10 +2673,10 @@ each row sharing a mechanism. **Three of them changed what got built**, and they
 are named in the bullets rather than in a paragraph nobody can check.
 
 - **Weakening** — **exposed, and the floor is the entry.** `expectFound` at 4 is
-  lowerable, and the version-shape regex is loosenable to *non-empty* in one
+  lowerable, and the version-shape regex is loosenable to _non-empty_ in one
   character, which restores the deleted-comment hole exactly. **There is no
   allowlist**: the one exemption is `uses: ./…`, which is definitional rather
-  than enumerated — it names a *shape*, not a set of blessed references, so it
+  than enumerated — it names a _shape_, not a set of blessed references, so it
   cannot go stale and there is nothing to revisit. ⚠️ **`accepted`, stated
   plainly**: a floor and a regex are both one edit from weaker, and no gate in
   this repo defends its own constants. What is available is that both edits are
@@ -2688,7 +2689,7 @@ are named in the bullets rather than in a paragraph nobody can check.
   lives at GitHub, G21 forbids the suite from asking, and **actions have no
   lockfile**, so there is no offline route — the limit is structural rather than
   unbuilt. ⚠️ **It is `cover_source`'s failure verbatim.** `accepted`, and
-  written beside the row in `docs/gates.md` *and* in the spec's header comment,
+  written beside the row in `docs/gates.md` _and_ in the spec's header comment,
   because G19 does not read spec comments and a limit recorded in one place is a
   limit only that place's readers find.
 - **Routing around** — **closed on the axis it was written for, and the
@@ -2696,13 +2697,13 @@ are named in the bullets rather than in a paragraph nobody can check.
   workflow, or a composite action under `.github/actions/`, is the cheap way
   past a narrow glob; the sweep is therefore `.github/**/*.yml|yaml` rather than
   `.github/workflows/`. **G19's routing-around verdict is the precedent** —
-  *"a real path sat outside the allowlisted roots and was invisible to the
-  checker"* — and **G14's is the demonstrated version**: a single regex against
+  _"a real path sat outside the allowlisted roots and was invisible to the
+  checker"_ — and **G14's is the demonstrated version**: a single regex against
   one named file, which is why the sweep walks a directory and both extensions.
   **G6's named-unbuilt remedy is the one that nearly repeated here**: a proposal
-  saying *scan tracked `.ts`* in a tree holding `.mjs` and `.astro`. ⚠️ **What
-  is *not* closed, and it is the honest residual: nothing in this repo reads
-  what a workflow *does*.** `metrics.yml` can be edited in the same pull request
+  saying _scan tracked `.ts`_ in a tree holding `.mjs` and `.astro`. ⚠️ **What
+  is _not_ closed, and it is the honest residual: nothing in this repo reads
+  what a workflow _does_.** `metrics.yml` can be edited in the same pull request
   that moves the number it records; this row covers the actions a workflow
   calls, never its own body.
 
@@ -2711,13 +2712,13 @@ are named in the bullets rather than in a paragraph nobody can check.
   parser reads them identically, so the original pattern — anchored on the bare
   word — was **routed around by one character of quoting**, and `uses :` with a
   space before the colon slipped past it too. Found by CodeRabbit, planted three
-  ways with a fourth as the control that a quoted key on a *pinned* action stays
+  ways with a fourth as the control that a quoted key on a _pinned_ action stays
   green. ⚠️ **It is the third near-miss form in this one change**, after the
   register's colon-less disposition field and its backtick-less entry heading —
   **the species is the finding, not the instance: a check that reads one
   spelling of something the format lets you write several ways.** All three were
-  invisible to a plant table, because a plant table asks for the wrong *value*
-  and these are the right value in an unexpected *shape*.
+  invisible to a plant table, because a plant table asks for the wrong _value_
+  and these are the right value in an unexpected _shape_.
 
   ⚠️ **What is still open, stated rather than implied: this is a regex, not a
   YAML parser.** It reads a `uses` key written on one line in block mapping
@@ -2726,6 +2727,7 @@ are named in the bullets rather than in a paragraph nobody can check.
   **A real parse would need a YAML dependency**, which this repo declines for
   small utilities; the choice is recorded rather than made silently, and the
   vacuity floor is what stops the residual becoming a vacuous pass.
+
 - **Vacuous green** — **clean, and floored twice rather than once.** A glob that
   stops matching is the entropic case, so both the file sweep (≥2) and the
   `uses:`-line extraction (≥4) carry floors, and **both were planted**: pointing
@@ -2741,18 +2743,19 @@ are named in the bullets rather than in a paragraph nobody can check.
 
 ⚠️ **The sweep reads `git ls-files`, not the disk, and the reason is an incident
 rather than a preference.** `gates/repo.ts` already documented the choice —
-*"it cannot pick up a stray untracked file and fail a gate on it"* — and on
+_"it cannot pick up a stray untracked file and fail a gate on it"_ — and on
 2026-08-20 a **read-only review agent** dropped a scratch
 `.github/actions/zztest/action.yml` into the tree while auditing this very
 commit and **reddened this gate on a file that was never committed and could
 never have run.** What CI executes is what git tracks. **The cost is G13's
 verdict, inherited knowingly**: a local `pnpm test` before `git add` passes over
-a new workflow, so the rule there is the rule here — *stage, then run.* ⚠️ **The
+a new workflow, so the rule there is the rule here — _stage, then run._ ⚠️ **The
 plant harness had to be taught the same thing**: `git add -N` leaves an index
 entry that outlives the file, and one plant's residue silently turned the next
 plant's expected-green into a red until the cleanup cleared the index first.
+
 - **Decay** — ⚠️ **exposed, dated, and it is a bet rather than a slip.** Clause 2
-  pins the *shape* of Dependabot's comment; if Dependabot ever emits `# 7.0.1`
+  pins the _shape_ of Dependabot's comment; if Dependabot ever emits `# 7.0.1`
   without the `v`, this gate goes red on a bot commit. **Measured rather than
   assumed** against `93730e1` (`dependabot[bot]`, `# v6.0.9` → `# v6.0.10`): pin
   and comment rewritten together, both occurrences. `accepted` — a one-character
@@ -2769,10 +2772,10 @@ honoured.** The exempted population is zero — this repo has no Dockerfile, no
 compose, no devcontainer, no container action — and `docker://alpine:latest` is
 a **mutable third-party reference**, which is what the pinning argument is
 against. A pre-written rule over `docker://image@sha256:…` was specified and
-declined: *an exemption that arrives with a legitimate first instance gets
-argued about; one written into the spec before any instance exists never does.*
-The consequence worth having is that §5's claim — *every third-party action is
-referenced by something shaped like an immutable ref* — **stays true**, where a
+declined: _an exemption that arrives with a legitimate first instance gets
+argued about; one written into the spec before any instance exists never does._
+The consequence worth having is that §5's claim — _every third-party action is
+referenced by something shaped like an immutable ref_ — **stays true**, where a
 `docker://` line would have falsified it with nothing going red.
 
 ⚠️ **The `audit`-job assertions live in this spec, and that is G42's teeth
@@ -2786,27 +2789,27 @@ derived from the plant harness rather than typed** — it was stated as thirteen
 against a table of thirteen while nineteen had been run, because two rounds of
 review added plants and the sentence above the table was updated once.
 
-| Plant | Result |
-| --- | --- |
-| clause 1 — `uses: actions/checkout@v4` | **red**: *"these `uses:` lines do not resolve to `owner/repo[/subpath]@<40 lowercase hex>` … `.github/workflows/gates.yml:58`"* |
-| clause 2 — delete a `# vN.N.N`, leave the SHA | **red**: *"these pinned `uses:` lines carry no trailing `# vN[.N…]` comment … deleting the comment must not be a way to satisfy the pinning rule"* |
-| clause 2 — `# latest` instead of `# v7.0.1` | **red**, same assertion. **This is the plant that proves *version-shaped* is doing work** — a non-empty check passes here |
-| clause 3 — an unpinned `uses:` in `.github/actions/probe/action.yml` | **red**, naming a path **no `.github/workflows/` glob would have opened**: *"`.github/actions/probe/action.yml:5`"* |
-| the exemption — `uses: ./.github/actions/probe` | **green**, as specified |
-| the withdrawn exemption — `uses: docker://alpine:latest` | **red, two assertions**: the pin clause *and* the named `docker://` refusal, which is the one that names the argument |
-| the floor — point the sweep at a directory with no workflows | **red on the floor, not a vacuous pass**: *"extraction found 0 YAML files under .github/ (expected at least 2)"* |
-| the floor — break the `uses:` regex | **red**: *"extraction found 0 `uses:` lines under .github/ (expected at least 4)"* |
-| the `jobs:` block renamed | **red, and it throws by name** rather than reducing every G42 clause to nothing: *"no `jobs:` block in .github/workflows/gates.yml"* |
-| **G42's teeth** — delete the `audit` job | **red, two assertions**: *"no job named `audit` … delete the job and that row is a claim nothing can fail on"* |
-| **G42's teeth** — `--audit-level=moderate` | **red**: *"the `audit` job … no longer runs `pnpm audit --audit-level=high`"* |
-| **G42's teeth** — drop `audit` from `needs:` | **red**: *"a job it does not need is a job whose failure merges"* |
-| **G42's teeth** — test `!= "failure"` instead of `= "success"` | **red**: *"expected [ 'suite' ] to include 'audit'"*. ⚠️ **Skipped and cancelled must fail the gate rather than pass it by omission**, and this is the only plant that reaches that distinction |
-| the `./` exemption stretched to `../` | **red**, after narrowing. It had accepted both where the spec says `./` and nothing else |
-| control — `uses: ./…` itself | **green**, as specified |
-| **`"uses":`** — a double-quoted key hiding `actions/checkout@v4` | **red**, ⚠️ **and green before review caught it** |
-| **`'uses':`** — a single-quoted key hiding a deleted version comment | **red**, likewise |
-| **`uses :`** — a space before the colon, hiding a tag | **red**, likewise |
-| control — a quoted key on a properly pinned action | **green**, so the widening refuses nothing legitimate |
+| Plant                                                                | Result                                                                                                                                                                                          |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| clause 1 — `uses: actions/checkout@v4`                               | **red**: _"these `uses:` lines do not resolve to `owner/repo[/subpath]@<40 lowercase hex>` … `.github/workflows/gates.yml:58`"_                                                                 |
+| clause 2 — delete a `# vN.N.N`, leave the SHA                        | **red**: _"these pinned `uses:` lines carry no trailing `# vN[.N…]` comment … deleting the comment must not be a way to satisfy the pinning rule"_                                              |
+| clause 2 — `# latest` instead of `# v7.0.1`                          | **red**, same assertion. **This is the plant that proves _version-shaped_ is doing work** — a non-empty check passes here                                                                       |
+| clause 3 — an unpinned `uses:` in `.github/actions/probe/action.yml` | **red**, naming a path **no `.github/workflows/` glob would have opened**: _"`.github/actions/probe/action.yml:5`"_                                                                             |
+| the exemption — `uses: ./.github/actions/probe`                      | **green**, as specified                                                                                                                                                                         |
+| the withdrawn exemption — `uses: docker://alpine:latest`             | **red, two assertions**: the pin clause _and_ the named `docker://` refusal, which is the one that names the argument                                                                           |
+| the floor — point the sweep at a directory with no workflows         | **red on the floor, not a vacuous pass**: _"extraction found 0 YAML files under .github/ (expected at least 2)"_                                                                                |
+| the floor — break the `uses:` regex                                  | **red**: _"extraction found 0 `uses:` lines under .github/ (expected at least 4)"_                                                                                                              |
+| the `jobs:` block renamed                                            | **red, and it throws by name** rather than reducing every G42 clause to nothing: _"no `jobs:` block in .github/workflows/gates.yml"_                                                            |
+| **G42's teeth** — delete the `audit` job                             | **red, two assertions**: _"no job named `audit` … delete the job and that row is a claim nothing can fail on"_                                                                                  |
+| **G42's teeth** — `--audit-level=moderate`                           | **red**: _"the `audit` job … no longer runs `pnpm audit --audit-level=high`"_                                                                                                                   |
+| **G42's teeth** — drop `audit` from `needs:`                         | **red**: _"a job it does not need is a job whose failure merges"_                                                                                                                               |
+| **G42's teeth** — test `!= "failure"` instead of `= "success"`       | **red**: _"expected [ 'suite' ] to include 'audit'"_. ⚠️ **Skipped and cancelled must fail the gate rather than pass it by omission**, and this is the only plant that reaches that distinction |
+| the `./` exemption stretched to `../`                                | **red**, after narrowing. It had accepted both where the spec says `./` and nothing else                                                                                                        |
+| control — `uses: ./…` itself                                         | **green**, as specified                                                                                                                                                                         |
+| **`"uses":`** — a double-quoted key hiding `actions/checkout@v4`     | **red**, ⚠️ **and green before review caught it**                                                                                                                                               |
+| **`'uses':`** — a single-quoted key hiding a deleted version comment | **red**, likewise                                                                                                                                                                               |
+| **`uses :`** — a space before the colon, hiding a tag                | **red**, likewise                                                                                                                                                                               |
+| control — a quoted key on a properly pinned action                   | **green**, so the widening refuses nothing legitimate                                                                                                                                           |
 
 ⚠️ **What cannot be planted, and is marked reasoned rather than demonstrated:
 that a pinned SHA really is the version its comment claims.** It is the limit
@@ -2820,35 +2823,35 @@ the satisfying-the-letter verdict states, and it is why that verdict is
 **Triaged at landing**, per this rollout's standing rule.
 
 ⚠️ **It landed in the same commit as `action-pins` and that is the point.**
-Shipped alone it would be red on 39 rows — *a gate that has never passed*, not
+Shipped alone it would be red on 39 rows — _a gate that has never passed_, not
 one observed failing on a real defect. Shipped against 39 stub entries it would
 be green over empty sections, which is **category 4 built into the artifact
 about category 4**. So it lands with the first new row it can actually go red
 on, and **one commit discharges three obligations**: the landing rule, the
 supply-chain triage obligation, and the observed-red rule.
 
-- **Weakening** — ⚠️ **exposed, and this row *is* an allowlist, which the spec
+- **Weakening** — ⚠️ **exposed, and this row _is_ an allowlist, which the spec
   did not anticipate at this size.** `MERGED_BULLETS` holds **ten** entries. The
   spec specifies **one** — G26's merged `**Vacuous green / decay**` bullet — and
-  §4 of the same spec already records *"ten rows collapsing five verdicts into
-  one line."* Measured at `3e2fc88`: G12, G17, G20, G21, G22, G23, G24, G25, G26
+  §4 of the same spec already records _"ten rows collapsing five verdicts into
+  one line."_ Measured at `3e2fc88`: G12, G17, G20, G21, G22, G23, G24, G25, G26
   and G34. **Exempting only G26 would have landed this gate red on nine
   band-authored entries**, and the two ways out of that are both refusals —
-  weaken the rule, or rewrite nine verdicts §1 says are *"marked in place, not
-  split."* **The list is widened to the measured population and closed there.**
+  weaken the rule, or rewrite nine verdicts §1 says are _"marked in place, not
+  split."_ **The list is widened to the measured population and closed there.**
   Every entry names a row **and its exact bullet text**, which is G13's lesson
-  (*"a directory is a standing permission, where every other line here names a
-  file"*), and **every entry is reverse-asserted in both directions** — a
+  (_"a directory is a standing permission, where every other line here names a
+  file"_), and **every entry is reverse-asserted in both directions** — a
   merged bullet on an unlisted row is red, and a listed bullet the file no
   longer carries is red as a stale permission. That is G1's recorded mitigation
-  (*"the reverse-assert catching both a stale entry and a dropped one on the
-  same change"*) and G22's demonstrated gap (*"had no stale-entry assertion,
-  which ADR-0022 requires"*). ⚠️ **`accepted`, with the cost named: ten
+  (_"the reverse-assert catching both a stale entry and a dropped one on the
+  same change"_) and G22's demonstrated gap (_"had no stale-entry assertion,
+  which ADR-0022 requires"_). ⚠️ **`accepted`, with the cost named: ten
   permissions where the spec budgeted one.** What the closure buys is that the
   eleventh goes red.
 - **Satisfying the letter** — ⚠️ **exposed on dispositions, and the exposure is
-  a claim the gate declines to make.** The spec says *exactly one disposition
-  per entry*; **the file falsifies that 19 times** — ten triage-only rows carry
+  a claim the gate declines to make.** The spec says _exactly one disposition
+  per entry_; **the file falsifies that 19 times** — ten triage-only rows carry
   none because triage found nothing to flag, two say in terms that their
   nomination did not survive (G21, G34), two rollout rows disposition inline in
   their bullets (G36, G38), and four carry two because a band and a later decay
@@ -2860,29 +2863,29 @@ supply-chain triage obligation, and the observed-red rule.
   check carrying the whole clause, a hole in it costs everything the clause has
   left — which is what review found.** The file writes the field three ways and
   the check required the colon, reading 29 instances and missing the one written
-  `Disposition \`gated\`.` So a fifth disposition, in a spelling the file itself
-  already uses, passed green. Closed with `:? +`, planted red, and the lesson
+  `Disposition \`gated\`.`So a fifth disposition, in a spelling the file itself
+already uses, passed green. Closed with`:? +`, planted red, and the lesson
   recorded rather than the count quietly corrected: **the narrower a clause
   retreats, the more load each surviving assertion carries.**
 - **Routing around** — **exposed on arrival and closed; one residual named.**
-  The correspondence sweep reads `### G<n> — \`slug\`` and nothing else, so an
-  entry written as `## G40` or `#### G40` would be invisible while reading to a
-  human as a real entry. **That is G29's honest limit** — *"a form nobody writes
-  here is a form this does not see"* — and it is **closed rather than
-  inherited**: every `#{1,6} G<n>` heading at a level other than `###` is
+  The correspondence sweep reads `### G<n> — \`slug\``and nothing else, so an
+entry written as`## G40`or`#### G40`would be invisible while reading to a
+human as a real entry. **That is G29's honest limit** — *"a form nobody writes
+here is a form this does not see"* — and it is **closed rather than
+inherited**: every`#{1,6} G<n>`heading at a level other than`###` is
   refused outright. ⚠️ **The residual: an entry can be moved out of the file
   entirely.** Nothing asserts the register is the only document carrying row
   sections, and a second file would satisfy neither direction of this gate nor
   contradict it. Named, not built.
 - **Vacuous green** — ⚠️ **exposed on one side only, and the asymmetry is the
-  finding.** *No entry without a row* already reddens on any deletion, so
+  finding.** _No entry without a row_ already reddens on any deletion, so
   **entries cannot go vacuous**; the row side can, if the regex over
   `docs/gates.md` stops matching. Floored at **42**, planted. ⚠️ **And on
   top-row deletion the floor is the only structural check in the file**, because
   G19's gapless walk bounds at `n < numbers.at(-1)`, **exclusive of the
   maximum** — a finding about G19 in its own right, recorded in G19's entry
   alongside the `TABLES` hole. **An entry-side floor was declined**: it would go
-  red *alongside* the first missing entry, landing two reds on the commit whose
+  red _alongside_ the first missing entry, landing two reds on the commit whose
   entire job is demonstrating one.
 - **Decay** — ⚠️ **exposed: the floor is a number equal to a population, which
   is the shape that went wrong in the supply-chain piece.** 42 is safe **only**
@@ -2890,7 +2893,7 @@ supply-chain triage obligation, and the observed-red rule.
   count non-decreasing in normal operation — and **a session copying the pattern
   without that argument copies the mistake.** ⚠️ **The spec's own justification
   for 42 is wrong and the number is right for a different reason.** It calls 42
-  *"the row population after this spec lands"*; under the numbering that
+  _"the row population after this spec lands"_; under the numbering that
   actually landed the rollout ends at **43**, and 42 is the population at **this
   row's own landing commit**. Under the spec's numbering a floor of 42 would
   have been **red at landing**, since `gate-register` lands before the ratchet's
@@ -2911,31 +2914,31 @@ plant. The backfilled entry is above.
 names plus two near-miss forms §8 does not — **both of which were green when this
 row was first written, and both found by the spec-axis review rather than by the
 plant table.** ⚠️ **They are one species and it is worth naming: a gate reading
-*one* spelling of a field the file writes *several* ways.** §8's plant table asks
-for the wrong *value* in each case and gets a red; neither plant asks for the
-right value in an unexpected *shape*, which is where both holes lived. **A plant
+_one_ spelling of a field the file writes _several_ ways.** §8's plant table asks
+for the wrong _value_ in each case and gets a red; neither plant asks for the
+right value in an unexpected _shape_, which is where both holes lived. **A plant
 table inherits the author's idea of what the file looks like**, and that is the
 argument for a fresh-context reviewer over a longer table. **Run twice**, and the second run
-is the one that counts: the first was against a *simulated* stack, because this
+is the one that counts: the first was against a _simulated_ stack, because this
 commit sits on top of `metrics-freshness` and G39's row had not landed yet, so a
 placeholder row and entry stood in to make the population 42. **Re-run in full
 against the real stack once G39 landed — all of them behaving, the suite green.** Recorded because a plant run against a stand-in is evidence about the
 stand-in until somebody re-runs it.
 
-| Plant | Result |
-| --- | --- |
-| **forward** — land a `docs/gates.md` row with no register section | **red**, and it is this commit's own demonstration: *"G40 has 0 entries; G41 has 0 entries; G42 has 0 entries"* |
-| **reverse** — a register section for a row that does not exist | **red**: *"sections naming a row that docs/gates.md does not carry"* |
-| **entry shape** — delete a row's observed-red line | **red**: *"a gate never observed failing is not yet a gate"* |
-| **entry shape** — a disposition outside the four-word vocabulary | **red** |
-| **cardinality** — merge two verdicts into one bullet on a row that is not exempted | **red** |
-| **cardinality** — a second `### G26` section | **red**: *"G26 has 2 entries"* |
-| **the exemption** — split G26's merged bullet, leaving the exemption behind | **red — the exemption is reverse-asserted**, so it cannot outlive the bullet it exists for |
-| **the floor** — break the regex that reads `docs/gates.md`'s rows | **red, not a vacuous pass over two empty sets** |
-| **an entry written at a heading level the sweep cannot see** — a `## G40` section | **red**. G29's stated limit, closed rather than inherited |
-| **an entry at the right level in the wrong format** — `### G99 — action-pins`, no backticks | **red**, ⚠️ **and it was green until review caught it.** The check was written against heading *level* alone while its own comment claimed *"the near-miss forms are refused outright"* — **a docblock whose stated reach exceeded its assertion's, arriving in the gate built to catalogue exactly that.** Both directions now key off one `ENTRY_HEADING` pattern, so the two cannot drift apart again |
-| **a fifth disposition in the one form the file writes without a colon** — `Disposition \`documented\`.` | **red**, ⚠️ **and it was green until review caught it.** The file spells this field three ways and the check required the colon, so it read 29 instances and was blind to the one at `docs/gate-register.md:3139` — **on the only assertion that survived the retreat from *exactly one disposition per entry*.** Now `:? +`, which reaches both field spellings and **no sentence**: the file legitimately says *"dispositioned `gated`"* and *"the disposition it would take is `gated`"*, and matching those would be the prose-matching failure `docs/gates.md` records three times |
-| **top-row deletion** — delete the highest-numbered row | **red on the floor**, and on the reverse direction as an orphaned entry — **while G19 stays green, gapless check included.** Verified on the real stack by running `gates/constitution-scoreboard.test.ts` against the same plant: **14 passed, 0 failed.** The interior control ran in the same pass — deleting G40 instead fires gapless by name, *"row numbers missing from docs/gates.md … G40"* — because the walk bounds at `n < numbers.at(-1)`, **exclusive of the maximum**. ⚠️ **That asymmetry is the finding, and it is about G19 rather than about this row** |
+| Plant                                                                                                   | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **forward** — land a `docs/gates.md` row with no register section                                       | **red**, and it is this commit's own demonstration: _"G40 has 0 entries; G41 has 0 entries; G42 has 0 entries"_                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **reverse** — a register section for a row that does not exist                                          | **red**: _"sections naming a row that docs/gates.md does not carry"_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **entry shape** — delete a row's observed-red line                                                      | **red**: _"a gate never observed failing is not yet a gate"_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **entry shape** — a disposition outside the four-word vocabulary                                        | **red**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **cardinality** — merge two verdicts into one bullet on a row that is not exempted                      | **red**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **cardinality** — a second `### G26` section                                                            | **red**: _"G26 has 2 entries"_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **the exemption** — split G26's merged bullet, leaving the exemption behind                             | **red — the exemption is reverse-asserted**, so it cannot outlive the bullet it exists for                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **the floor** — break the regex that reads `docs/gates.md`'s rows                                       | **red, not a vacuous pass over two empty sets**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **an entry written at a heading level the sweep cannot see** — a `## G40` section                       | **red**. G29's stated limit, closed rather than inherited                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **an entry at the right level in the wrong format** — `### G99 — action-pins`, no backticks             | **red**, ⚠️ **and it was green until review caught it.** The check was written against heading _level_ alone while its own comment claimed _"the near-miss forms are refused outright"_ — **a docblock whose stated reach exceeded its assertion's, arriving in the gate built to catalogue exactly that.** Both directions now key off one `ENTRY_HEADING` pattern, so the two cannot drift apart again                                                                                                                                                                                |
+| **a fifth disposition in the one form the file writes without a colon** — `Disposition \`documented\`.` | **red**, ⚠️ **and it was green until review caught it.** The file spells this field three ways and the check required the colon, so it read 29 instances and was blind to the one at `docs/gate-register.md:3139` — **on the only assertion that survived the retreat from _exactly one disposition per entry_.** Now `:? +`, which reaches both field spellings and **no sentence**: the file legitimately says _"dispositioned `gated`"_ and _"the disposition it would take is `gated`"_, and matching those would be the prose-matching failure `docs/gates.md` records three times |
+| **top-row deletion** — delete the highest-numbered row                                                  | **red on the floor**, and on the reverse direction as an orphaned entry — **while G19 stays green, gapless check included.** Verified on the real stack by running `gates/constitution-scoreboard.test.ts` against the same plant: **14 passed, 0 failed.** The interior control ran in the same pass — deleting G40 instead fires gapless by name, _"row numbers missing from docs/gates.md … G40"_ — because the walk bounds at `n < numbers.at(-1)`, **exclusive of the maximum**. ⚠️ **That asymmetry is the finding, and it is about G19 rather than about this row**              |
 
 ⚠️ **What cannot be planted, and is marked reasoned rather than demonstrated:
 that the analysis inside an entry is any good.** This gate asserts shape. **It
@@ -2984,13 +2987,13 @@ directly.
 disposition: `gated`.** ⚠️ **The band's strongest finding, and it is this row's
 own stated purpose failing.**
 
-**Category 2 read `clean` and is `exposed`.** The verdict rested on *"the spec
+**Category 2 read `clean` and is `exposed`.** The verdict rested on _"the spec
 builds a fully-populated fixture record specifically so a missing key cannot hide
-behind an unexercised branch"* — which describes `FULL` on the day it was
+behind an unexercised branch"_ — which describes `FULL` on the day it was
 written and is held by nothing since. **Every field of `BookRecord` except
 `sourcePath`, `title`, `status` and `tags` is optional**, so `const FULL:
-BookRecord` type-checks with any number of fields absent, and *"carries every
-record field into a local build"* computes its `missing` set from
+BookRecord` type-checks with any number of fields absent, and _"carries every
+record field into a local build"_ computes its `missing` set from
 `Object.keys(FULL)` — the fixture, never the type.
 
 Planted end to end, as the merge would actually do it: `translator` added to
@@ -3000,20 +3003,20 @@ line, and to `CLAUDE.md`'s key enumeration — and **not** to `toLibraryBook` an
 (`frontmatter-contract`) passes it in all three directions**, which is correct —
 G8's job stops at the parser. The field reaches the vault and reaches no build.
 
-⚠️ That is verbatim what this gate's own docblock says nothing else held: *"the
+⚠️ That is verbatim what this gate's own docblock says nothing else held: _"the
 merge takes the field into the vault, the shelf never sees it, and every test
-still passes."* It is true today with the gate in place. The vacuity anchor does
+still passes."_ It is true today with the gate in place. The vacuity anchor does
 not help — `Object.keys(FULL).length >= 24` against a `FULL` of exactly 24 keys
 is satisfied at its own boundary and cannot notice a twenty-fifth field.
 
 **Category 1 read `exposed, mild` for `NOT_PUBLIC` and the mild list is the
 wrong one.** `NOT_PUBLIC` is genuinely reverse-asserted — adding `rating` to it
-fails *"strips exactly the named exclusions from a public build"*. **`DERIVED` is
+fails _"strips exactly the named exclusions from a public build"_. **`DERIVED` is
 not asserted in either direction.** A name in it that the build never emits is
 absorbed silently (`'shelfSlot'` added to `DERIVED` alone: 636 of 636 green), and
 it converts the third assertion into a one-line dismissal: emitting an
-unexplained `shelfSlot` key from `toLibraryBook` fails *"traces every shipped key
-back to a record field or a named derived one"*, and adding `'shelfSlot'` to
+unexplained `shelfSlot` key from `toLibraryBook` fails _"traces every shipped key
+back to a record field or a named derived one"_, and adding `'shelfSlot'` to
 `DERIVED` returns the suite to **636 of 636 green** with `library.json` still
 carrying an invented key. The gate names two lists, guards one, and the entry
 called the guarded one mild.
@@ -3067,10 +3070,10 @@ nothing emits, and so does the `shelfSlot` key once `DERIVED` names it.
   refactor, "documents every field the merge actually merges" would iterate
   zero fields and pass, and "implements the order each exception row
   documents" would loop zero times and pass — the file's own `for (const
-  [field, order] of Object.entries(FIELD_ORDER))` has no companion assertion
+[field, order] of Object.entries(FIELD_ORDER))` has no companion assertion
   that the set it iterates is non-empty.
 - **Decay** — clean. The one hardcoded real-world string (`"Health, Mind &
-  Body"`, Apple's category text) would fail loudly if the provider's wording
+Body"`, Apple's category text) would fail loudly if the provider's wording
   changed, not decay silently — the opposite of this category's shape.
 
 `docs/gates.md` carries no elaboration beyond the table row; every finding
@@ -3105,14 +3108,14 @@ defects that each break the merge:
 The mechanics were confirmed by inspection as well as by planting. The gate
 imports `DEFAULT_ORDER`, `FIELD_ORDER` and `MERGED_FIELDS` and never imports the
 merge, so no assertion in it can observe what the merge does: the first test
-*filters* `MERGED_FIELDS`, so a shorter list stays `[]`; the second iterates
+_filters_ `MERGED_FIELDS`, so a shorter list stays `[]`; the second iterates
 `Object.entries(FIELD_ORDER)`, so empty means zero iterations; the third asserts
 `not.toContain`, which an empty object satisfies more easily still. Only the
 fourth carries a floor, and it guards the document's side rather than the code's.
 
 ⚠️ **The gate's own docblock over-claims, in the direction that matters.** It
-opens *"the merge decides which provider wins each field"* and promises red
-*"when the document names an order the code does not implement"* — but it
+opens _"the merge decides which provider wins each field"_ and promises red
+_"when the document names an order the code does not implement"_ — but it
 compares two tables. It is red when the constants disagree with the document and
 green when the merge stops reading the constants. A gate whose stated scope
 exceeds its real scope is this map's own subject matter, found inside a gate the
@@ -3128,7 +3131,7 @@ each of the four providers and, for every field documented in
 `docs/spec/metadata-merge.md`, assert the merged result carries the value
 belonging to the provider **the document** ranks first. That kills the other
 three, none of which a constants-only comparison can see, and it moves the row
-from *the two tables agree* to *the merge implements the table*. Existing gate,
+from _the two tables agree_ to _the merge implements the table_. Existing gate,
 no new row.
 
 **Observed-red (this pass):** nothing turned G31 red. Emptying `FIELD_ORDER`,
@@ -3152,7 +3155,7 @@ bypassing it in the merge, and dropping either `description` or `publisher` from
 - **Decay** — clean; no load-bearing number.
 
 Its one stated residual is an accepted design tradeoff, not a gaming exposure:
-a book that already carries a *wrong* value keeps it, correcting it by hand.
+a book that already carries a _wrong_ value keeps it, correcting it by hand.
 
 `docs/gates.md` carries no elaboration beyond the table row.
 
@@ -3174,15 +3177,15 @@ a book that already carries a *wrong* value keeps it, correcting it by hand.
 - **Routing around** — clean; no stated gap.
 - **Vacuous green** — clean; the whole-pass assertion leaves nothing
   unexercised.
-- **Decay** — **exposed**, ⚠️ *corrected 2026-08-16 by the decay re-read part
+- **Decay** — **exposed**, ⚠️ _corrected 2026-08-16 by the decay re-read part
   two ([#150](https://github.com/mephistopheles4/stacks/issues/150)), from
-  `clean; no load-bearing number`.* The docblock's **"The only gate that
+  `clean; no load-bearing number`._ The docblock's **"The only gate that
   reaches the `## About` body insert"**, and the row's warrant for existing
   separately — **"G32 cannot see that write at all"** — are both false, and
   were false in the commit that wrote them: `gates/absent-only.test.ts:131`
   calls `insertBodySection(…, '## About', …)` and its byte-identical assertion
   would go red if that write stopped being absent-only. Disposition `gated`.
-  ⚠️ The *Satisfying the letter* verdict above cites the same false premise;
+  ⚠️ The _Satisfying the letter_ verdict above cites the same false premise;
   noted, not edited — it is not this pass's category. See the Decay re-read
   part two block.
 
@@ -3200,15 +3203,15 @@ a book that already carries a *wrong* value keeps it, correcting it by hand.
 - **Weakening / satisfying the letter / routing around / vacuous green** —
   clean, on the evidence available; the spec exercises `enrichBook` end to
   end rather than mocking the property it depends on.
-- **Decay** — **clean** — *verdict landed 2026-08-15 by the decay re-read
+- **Decay** — **clean** — _verdict landed 2026-08-15 by the decay re-read
   ([#144](https://github.com/mephistopheles4/stacks/issues/144)); the correction
   is band four's, made in the Deep pass block below on 2026-08-11 and never
-  written into this line.* ⚠️ **This is the only place in the file where a
+  written into this line._ ⚠️ **This is the only place in the file where a
   band's correction did not reach the verdict it corrected** — the Summary
   counted G34 flagged on a nomination the block underneath it had already
-  refuted on both legs, and #144 flagged the line as *"resolving to neither
-  token and owing a verdict regardless"*. Nothing is re-decided here. Originally,
-  and refuted below: *nominated, low confidence.* The row's whole guarantee rests
+  refuted on both legs, and #144 flagged the line as _"resolving to neither
+  token and owing a verdict regardless"_. Nothing is re-decided here. Originally,
+  and refuted below: _nominated, low confidence._ The row's whole guarantee rests
   on an
   undocumented property of `http.ts` — a cache write only on success, never on
   failure — that the spec's own comment calls out as load-bearing: "Without
@@ -3231,15 +3234,15 @@ nomination comes from the spec's own doc comment.
 read off the test file's doc comment; neither the row nor the code was checked
 against it.
 
-**Leg one — *"recorded only in this test file's doc comment, not in `CLAUDE.md`
-or `docs/gates.md`'s own row text"* — false.** `docs/gates.md` line 110 is G34's
-own Failure-mode cell, and it states the property verbatim: *"a success is
-cached forever, a failure is never cached at all"*. It is also in
+**Leg one — _"recorded only in this test file's doc comment, not in `CLAUDE.md`
+or `docs/gates.md`'s own row text"_ — false.** `docs/gates.md` line 110 is G34's
+own Failure-mode cell, and it states the property verbatim: _"a success is
+cached forever, a failure is never cached at all"_. It is also in
 `docs/spec/README.md` (P3) and `docs/spec/metadata-merge.md` §"Cache, rate
 limits, convergence".
 
-**Leg two — *"if the comment is ever trimmed… has no other home"* — false, and
-this is the substantive half: the property is *asserted*, not merely
+**Leg two — _"if the comment is ever trimmed… has no other home"_ — false, and
+this is the substantive half: the property is _asserted_, not merely
 documented.** Negative caching planted at
 [`packages/core/src/metadata/http.ts`](../packages/core/src/metadata/http.ts):64
 — writing a cache entry on the `body === undefined` path — turns
@@ -3248,7 +3251,7 @@ A doc comment cannot go red; this does.
 
 **The anchor's scope, measured.** With that plant in place **exactly 1 test of
 636 in the repository fails**, and it is that one. Singular, but real. ⚠️ **The
-row's *headline* convergence test stays green under it** — it passes
+row's _headline_ convergence test stays green under it** — it passes
 `flakyApple()` as the `HttpGet` directly and so never touches
 `createCachedHttpGet` at all. Which is precisely why the second `describe` block
 was added, and it is doing exactly the work its own comment claims.
@@ -3257,8 +3260,8 @@ Also re-measured: the line citation `http.ts:64` in that spec's failure message
 still lands on `if (body === undefined) return undefined;`. Accurate today, and
 held there by nothing.
 
-**Observed-red (this pass):** negative caching at `http.ts:64` → red on *"writes
-nothing to the cache when the request fails"*, 1 of 3 in the file and 1 of 636
+**Observed-red (this pass):** negative caching at `http.ts:64` → red on _"writes
+nothing to the cache when the request fails"_, 1 of 3 in the file and 1 of 636
 repo-wide. The row had no observed-red line before this pass; it has one now.
 
 ### G35 — `enhanced-card`
@@ -3269,7 +3272,7 @@ repo-wide. The row had no observed-red line before this pass; it has one now.
 - **Weakening** — clean; no `EXEMPT`/allowlist construct found in
   `scripts/smoke-render.ts`'s card checks.
 - **Satisfying the letter** — exposed, and the row's own Failure-mode cell in
-  `docs/gates.md` says so directly: "*'the card opened'* was the whole
+  `docs/gates.md` says so directly: "_'the card opened'_ was the whole
   assertion, and it stays true through a card with no reading line, links with
   no accessible name, an announcer that never changes, a sheet that dismisses
   on every short drag, and one Escape that closes the enlarged cover **and**
@@ -3285,9 +3288,9 @@ repo-wide. The row had no observed-red line before this pass; it has one now.
   satisfying-the-letter finding above — the original single-assertion shape
   ("the card opened") is exactly this category, returning its best possible
   answer against the worst inputs the row now checks for.
-- **Decay** — **exposed**, ⚠️ *corrected 2026-08-15 by the decay re-read
+- **Decay** — **exposed**, ⚠️ _corrected 2026-08-15 by the decay re-read
   ([#144](https://github.com/mephistopheles4/stacks/issues/144)), from `nominated,
-  unconfirmed`; the nomination survives re-measurement.* Originally, and still
+unconfirmed`; the nomination survives re-measurement._ Originally, and still
   accurate as a description: `scripts/smoke-render.ts`
   cites specific spec subsections in its own comments — "§11.1 and §11.2",
   "§11.3 and the fallback in §11.4", "§11.5", "§11.6", "§11.7" — as the map
@@ -3312,7 +3315,7 @@ The widened checks catch what the single assertion could not. Restoring the
 Escape-closes-both defect verbatim — dropping `if (coverViewer.isOpen()) return;`
 from `boot.ts` — and removing `node.title` from icon-only links in `card.ts`, both
 live at once, fails `pnpm smoke:render` with **four named lines**: the Escape-scope
-failure once, and *"a card link has no accessible name"* three times, once per
+failure once, and _"a card link has no accessible name"_ three times, once per
 icon-only link on the clicked book. A third plant, suppressing the status word for
 `read` books, fails **3 of 21** in `card.test.ts`.
 
@@ -3321,7 +3324,7 @@ icon-only link on the clicked book. A third plant, suppressing the status word f
 checks to what `docs/spec/enhanced-card.md` §11 requires. All five citations were
 walked item by item against that spec's eight-item list and **all resolve
 correctly today**. Nothing enforces they still will — G29 checks Markdown link
-fragments, not bare `§N` prose — so the verdict stays *nominated, unconfirmed*:
+fragments, not bare `§N` prose — so the verdict stays _nominated, unconfirmed_:
 there is drift to be had and none yet, which is exactly what that verdict is for.
 
 ⚠️ **The row's own demonstration is fixture-blind, and it is band one's G20
@@ -3330,8 +3333,8 @@ argument arriving here as a gap rather than as a repair.** The browser-side chec
 gives **every** `status: read` book a date — so no book in the fixture
 `smoke:render` builds against can produce an empty reading line. The defect was
 watched failing at the unit level instead. The real-vault shape this row's history
-cites, books with no dates, does not exist in the corpus the gate runs on. *A
-defect the gate plants must be a defect the file could actually have* has a
+cites, books with no dates, does not exist in the corpus the gate runs on. _A
+defect the gate plants must be a defect the file could actually have_ has a
 sibling: **a fixture must be able to exhibit the defect the check is for.**
 
 **Named remedy (not built, for the decay nomination):** parse the `§\d+\.\d+`
@@ -3353,9 +3356,9 @@ above — no contrived fixture was built to make it fire.
 **Decay re-read (2026-08-15, [#144](https://github.com/mephistopheles4/stacks/issues/144)) — verdict corrected `nominated, unconfirmed` → `exposed`; disposition: `gated`.**
 
 ⚠️ **This row is why the discharge test had to be written down.** Band two walked
-all five citations item by item, found they *"all resolve correctly today"*, and
-left the verdict at `nominated, unconfirmed` — *"there is drift to be had and none
-yet."* Under the old bound (*a claim measured once and never re-measured*) that
+all five citations item by item, found they _"all resolve correctly today"_, and
+left the verdict at `nominated, unconfirmed` — _"there is drift to be had and none
+yet."_ Under the old bound (_a claim measured once and never re-measured_) that
 was the honest answer. Under
 [#138](https://github.com/mephistopheles4/stacks/issues/138)'s restated bound it
 is not, and the reason is the rule this pass settled: **what gets re-measured is
@@ -3369,17 +3372,17 @@ the spec's acceptance list has **eight** items and the comments cite seven —
 browser, which is correct and is not a citation fault.
 
 **The nomination's claim also re-measures true, and that is what decides it.**
-*"Nothing enforces that those numbers still name what the comment claims"* — G29
+_"Nothing enforces that those numbers still name what the comment claims"_ — G29
 holds Markdown link targets and skips bare `§N` prose by construction, and no
 other spec reaches it. So the map from what this gate checks to what the spec
 requires is established by a human walking it, twice, and by nothing in between
-or after. That is *"never re-established against a check that was available"* as a
+or after. That is _"never re-established against a check that was available"_ as a
 **standing condition** rather than a historical accident, which is what the
 restated bound admits and the old one did not.
 
 **Contrast with band four's G34, deliberately**, because the two look alike and
 came out opposite. G34's nomination claimed the load-bearing property was
-*"recorded only in this test file's doc comment"*; band four checked and it was
+_"recorded only in this test file's doc comment"_; band four checked and it was
 false — the property is asserted, and a plant turns it red. G35's nomination
 claims nothing enforces the citations; this pass checked and it is **true**. Same
 test, opposite results: **a nomination fails when its own claim is false, not
@@ -3434,11 +3437,11 @@ category 3 verdict corrected from `clean` to `exposed`, disposition:
 `repaired`.**
 
 The structural half is genuinely red-capable and the original defect re-plants:
-`cover.split('/').pop()` restored to `packages/core/src/enrich.ts` fails *"is the
-only module that derives a filename from a cover value"*, naming that file.
+`cover.split('/').pop()` restored to `packages/core/src/enrich.ts` fails _"is the
+only module that derives a filename from a cover value"_, naming that file.
 `MAY_IMPORT_BASENAME` is empty, so its stale-entry loop iterates over nothing
 today — but it is not vacuous by construction: given one entry that does not
-import `basename`, it fails *"has no stale allowlist entries"*. Category 4 stays
+import `basename`, it fails _"has no stale allowlist entries"_. Category 4 stays
 `clean`, now demonstrated rather than assumed.
 
 Category 1 behaves as G1's does: adding `packages/core/src/enrich.ts` to
@@ -3450,12 +3453,12 @@ the historical triple-implementation is the defect this row closed. It closed
 **one spelling of it**. Four re-implementations of the same rule were planted in
 `packages/core/src/enrich.ts`, one at a time; **three pass suite-wide**:
 
-| Plant | Result |
-| --- | --- |
-| `cover.split('/').pop() ?? cover` | **red** — the original, still caught |
-| `cover.split('/').at(-1) ?? cover` | **636 of 636 green** |
-| `import { basename } from 'path'` (unprefixed) | **636 of 636 green** |
-| `import path from 'node:path'; path.basename(cover)` | **636 of 636 green** |
+| Plant                                                | Result                               |
+| ---------------------------------------------------- | ------------------------------------ |
+| `cover.split('/').pop() ?? cover`                    | **red** — the original, still caught |
+| `cover.split('/').at(-1) ?? cover`                   | **636 of 636 green**                 |
+| `import { basename } from 'path'` (unprefixed)       | **636 of 636 green**                 |
+| `import path from 'node:path'; path.basename(cover)` | **636 of 636 green**                 |
 
 ⚠️ **`.at(-1)` is not a stylistic variant — it is the same bug.**
 `'..\\..\\x.png'.split('/')` yields a single element whichever tail accessor
@@ -3536,33 +3539,33 @@ G12 paragraph.
 `status === 'reading'` ahead of `shelfOrder`
 ([`packages/core/src/shelf-order.ts`](../packages/core/src/shelf-order.ts):36–37),
 the gate is 6 of 6 green, and deleting those two lines — the pre-repair order —
-fails **4 of 6**, including *"a newly started book leads even a fully renumbered
-shelf"*, which is the regression the row exists for. `CLAUDE.md`'s current
-sentence, *"Unset means the default order: newest finished first"*, reads true.
+fails **4 of 6**, including _"a newly started book leads even a fully renumbered
+shelf"_, which is the regression the row exists for. `CLAUDE.md`'s current
+sentence, _"Unset means the default order: newest finished first"_, reads true.
 
 ⚠️ **The decay is repaired in the code and still live in the row's own
 justification.** [`gates/shelf-order.test.ts`](../gates/shelf-order.test.ts):8
-presents, in the present tense and as something *"CLAUDE.md documents"*:
+presents, in the present tense and as something _"CLAUDE.md documents"_:
 
 > "Unset means the default order: reading first, then newest finished."
 
 That sentence is not in `CLAUDE.md`. It **was**, verbatim, until `b0c5d85`
-(2026-07-31) — *the commit that made the repair* — which rewrote it in
+(2026-07-31) — _the commit that made the repair_ — which rewrote it in
 `CLAUDE.md` and left the quotation standing in the test file **it edited in the
 same commit**. `packages/core/src/shelf-order.ts`:27 carries the same superseded
 text inside its own reasoning. `git grep` returns exactly two hits for the
 phrase, both citations, and zero in the document being cited.
 
-So the row's *"already repaired"* triage line is right about the behaviour and
+So the row's _"already repaired"_ triage line is right about the behaviour and
 wrong about the record: a reader who follows the gate to its stated source finds
 a different rule than the one quoted. A lesser instance in the same family:
-`CLAUDE.md`:90 still states *"Books carrying one come before every book without
-one"* unqualified, and it is line 142 — fifty-two lines later — that says a book
+`CLAUDE.md`:90 still states _"Books carrying one come before every book without
+one"_ unqualified, and it is line 142 — fifty-two lines later — that says a book
 you are reading beats a pin.
 
 **Remedy, named and not built:** correct both quotations, and cite the sentence
 rather than reproducing it. ⚠️ **A gate is declined rather than merely
-unbuilt** — *"every quotation matches its source"* is a text-matching check
+unbuilt** — _"every quotation matches its source"_ is a text-matching check
 over prose, [#113](https://github.com/mephistopheles4/stacks/issues/113)'s
 category 2 by construction, and it would be the widest-scoped gate in the repo.
 
@@ -3580,7 +3583,7 @@ lines) fails 4 of 6. The row had no observed-red line before this pass.
   comment."
 - **Satisfying the letter** — exposed, current, and unresolved — the clearest
   self-documented instance in the file: "G15 is green and the crash is not
-  fixed... it protects *a* property of the build rather than *the* cause of
+  fixed... it protects _a_ property of the build rather than _the_ cause of
   the crash, and reading a green G15 as 'phones are fine' is exactly the
   mistake this scoreboard exists to prevent." The gap between what the gate
   measures and what a reader takes it to mean has not been closed.
@@ -3593,7 +3596,7 @@ lines) fails 4 of 6. The row had no observed-red line before this pass.
   fatal on a phone."
 - **Decay** — clean, distinct from the routing-around finding above. The two
   budget constants (`MAX_COVER_EDGE`, `TEXTURE_BUDGET_BYTES`) are designed to
-  go *red* as the library grows, not to quietly stop meaning anything —
+  go _red_ as the library grows, not to quietly stop meaning anything —
   `docs/gates.md` says the correct response when that happens "is to stop
   uploading every cover at once, not to raise the number," which is the
   opposite of a silently-decaying claim. Raising the number instead is the
@@ -3627,13 +3630,13 @@ in `gates/` imports `spine-texture.ts` at all**. The spine cost is structurally
 invisible to this gate, not merely uncounted.
 
 ⚠️ **The weakening exposure is one line and nothing else notices.** Setting
-`TEXTURE_BUDGET_BYTES` to `0` fails 4 of 5 with a real message (*"6 covers decode
-to 2.4 MB of GPU texture, over the 0.0 MB budget"*), so the assertion is genuinely
+`TEXTURE_BUDGET_BYTES` to `0` fails 4 of 5 with a real message (_"6 covers decode
+to 2.4 MB of GPU texture, over the 0.0 MB budget"_), so the assertion is genuinely
 exercised and not vacuous. Setting it to 10 GB passes **5 of 5**, with no other
 change — and both constants are referenced **only** inside
 `gates/cover-budget.test.ts`, so the whole 636-test suite has nothing to say about
-raising them. The row's own warning — *"a budget that gets raised whenever it
-fails is a comment"* — is defended by nothing but the reviewer.
+raising them. The row's own warning — _"a budget that gets raised whenever it
+fails is a comment"_ — is defended by nothing but the reviewer.
 
 **`accepted` rather than `gated`**: the gap is documented at length, and the file
 names an explicit non-gate substitute (`?debug`, `?solo`, manual review on a real
@@ -3684,9 +3687,9 @@ vaults, 3 file-scoped vitest runs.
 
 **Rank:** none. **Not flagged**: every one of the five verdicts above is clean.
 
-⚠️ **This row is why tier 4 was replaced** ([#128](https://github.com/mephistopheles4/stacks/issues/128), Rule 2). It used to read *rank 4*, which made it
+⚠️ **This row is why tier 4 was replaced** ([#128](https://github.com/mephistopheles4/stacks/issues/128), Rule 2). It used to read _rank 4_, which made it
 the one ranked-but-not-flagged row and forced the ranking to carry an exception
-clause. *Asserted outside `gates/`* is a fact about **location**, not a category
+clause. _Asserted outside `gates/`_ is a fact about **location**, not a category
 verdict, so it is now a per-row axis rather than a tier — and a row clean on all
 five has nothing to demonstrate and is **not deep-pass membership at all**.
 
@@ -3698,7 +3701,7 @@ five has nothing to demonstrate and is **not deep-pass membership at all**.
 **Date:** 2026-08-11
 
 - **Weakening** — clean; the override flags (`--any`, `--branch`, `--anybranch`,
-  `--any_branch`) are tested to *not* work as an accidental stumble-into.
+  `--any_branch`) are tested to _not_ work as an accidental stumble-into.
 - **Satisfying the letter / vacuous green** — exposed, historical, fixed, and
   this is the row the commissioning ticket itself names as one of three live
   instances of category 4: its first version read whichever branch the suite
@@ -3731,7 +3734,7 @@ saw nothing.
 
 A live exposure remains in the same category, and it is what sets the
 disposition. The gate spawns `scripts/deploy.ts` directly, so it never sees the
-argv the *shipped command* supplies: adding `--any-branch` to `package.json`'s
+argv the _shipped command_ supplies: adding `--any-branch` to `package.json`'s
 `deploy:site` script leaves all 636 tests green while every deploy overrides the
 guard. `scripts/deploy.ts` states that the override is "named so it cannot be
 typed by accident and reads in shell history as what it is" — baked into the npm
@@ -3766,13 +3769,13 @@ fails one of eight, naming both strings.
 
 ⚠️ **A second property of this idiom, recorded here because this is where the
 next person copies it from: an exit code asserts nothing.** The harness proves a
-run got past the check under test by letting it fail on the *next* one — so
+run got past the check under test by letting it fail on the _next_ one — so
 `expect(status).toBe(1)` is equally true of a deploy that refused for your reason
 and one that ignored your check entirely and fell over a line later. This row
 gets it right by accident of wording (`not.toContain(PAST_THE_GUARD)` is on the
 refusal cases because two messages had to be told apart); **G39 got it wrong and
 was green for half an hour against a plant that deleted its refusal outright.**
-The discriminating assertion is that the *later* refusal was never reached. See
+The discriminating assertion is that the _later_ refusal was never reached. See
 the G39 entry's vacuous-green bullet.
 
 ### G18 — `bounded-cover-bytes`
@@ -3810,15 +3813,15 @@ failing.
 **Rank:** none. **Flagged** under Decay; no tier 1–3 mechanism flaw is
 documented, and decay is not one of the ranked shapes.
 
-⚠️ **This row used to read *rank 4*, and the rank was pointing at the wrong
+⚠️ **This row used to read _rank 4_, and the rank was pointing at the wrong
 job** ([#128](https://github.com/mephistopheles4/stacks/issues/128), Rule 2).
 Its real work is a **re-measurement**, not a plant, so it belongs with the decay
 group in the unranked band — where it is scheduled second, by row number. That
 its location tier said something different from its actual work is the clearest
 argument for making location an axis rather than a tier.
 
-⚠️ **Its claim may not be re-measurable at all**: *"what the three providers did
-on 1 August 2026"* cannot be re-checked without the network, which **G21**
+⚠️ **Its claim may not be re-measurable at all**: _"what the three providers did
+on 1 August 2026"_ cannot be re-checked without the network, which **G21**
 forbids. That tension is the row's real question, and `accepted` is a legitimate
 answer to it — see [band four](https://github.com/mephistopheles4/stacks/issues/134).
 
@@ -3827,7 +3830,7 @@ answer to it — see [band four](https://github.com/mephistopheles4/stacks/issue
 **Deep pass (2026-08-11, band four) — the claim splits in two: `accepted` on
 time, `gated` on membership.**
 
-The spec is 14 of 14 green, so the *"six of fourteen"* denominator still reads
+The spec is 14 of 14 green, so the _"six of fourteen"_ denominator still reads
 fourteen.
 
 **Half one — what a provider serves today: `accepted`, and honestly.** The
@@ -3838,8 +3841,8 @@ written down is what the row does not say now: not merely a **date**, but the
 **population** the date applies to.
 
 ⚠️ **Half two — and this is why the row is not simply `accepted`. The population
-moved, and that half needs no network at all.** The claim is *"what the **three**
-providers did on 1 August 2026"*. **O'Reilly became a fourth provider at
+moved, and that half needs no network at all.** The claim is _"what the **three**
+providers did on 1 August 2026"_. **O'Reilly became a fourth provider at
 `ff93f0a`, 2026-08-08 — seven days later** — and its covers are the sole source
 for its own early releases, served from
 `learning.oreilly.com/covers/urn:orm:book:<ourn>/1200w/` and downloaded through
@@ -3851,7 +3854,7 @@ The gap lands on the worst candidate available. That URL ends in `/1200w/` and
 carries **no file extension**, so `Content-Type` is the only pre-body signal
 there is — and the risk the row names in its own words is that a provider
 answering something other than `image/` is refused **silently**, because
-`cacheCover` treats every failure as *"no cover"*. A book quietly logged bare, on
+`cacheCover` treats every failure as _"no cover"_. A book quietly logged bare, on
 the one provider no other provider can answer for.
 
 **Remedy, named and not built:** assert that the set of providers the G18
@@ -3878,7 +3881,7 @@ re-counted rather than trusted.
 - **Satisfying the letter / vacuous green** — exposed, historical, fixed, and
   this is the entry `docs/gates.md` itself flags as "the entry worth reading
   here": the `_headers` rule was observed red only against "a `_headers`
-  containing nothing *but* the covers block: a shape this repo has never had,
+  containing nothing _but_ the covers block: a shape this repo has never had,
   and the one shape in which the bug is invisible." The gate's own
   demonstration used an unrealistic fixture, so it passed against the
   realistic one with the real defect present — "a defect the gate plants must
@@ -3886,11 +3889,11 @@ re-counted rather than trusted.
 - **Routing around** — clean; a final completeness assertion holds the rule
   list to the planted defects, so the gate "cannot quietly come to cover ten
   of eleven."
-- **Decay** — clean, ⚠️ *reason corrected 2026-08-16 by the decay re-read part
+- **Decay** — clean, ⚠️ _reason corrected 2026-08-16 by the decay re-read part
   two ([#150](https://github.com/mephistopheles4/stacks/issues/150)); the
-  verdict stands and the reason below did not.* A measured-once number **does**
-  underlie the row — the docblock's *"the seven text-matching gates in this
-  folder"*, against 17 specs then and 29 now — but nothing rests on it, so it
+  verdict stands and the reason below did not._ A measured-once number **does**
+  underlie the row — the docblock's _"the seven text-matching gates in this
+  folder"_, against 17 specs then and 29 now — but nothing rests on it, so it
   is excluded on [#113](https://github.com/mephistopheles4/stacks/issues/113)'s
   load-bearing bound, the slug count's precedent. Originally: no measured-once
   number underlies the row — it inspects
@@ -3918,7 +3921,7 @@ back to the covers-only shape it originally shipped. The repair is the fixture,
 not the rule.
 
 A live exposure remains one level up, at the caller boundary. `inspectPublicBuild`
-reports faithfully, but nothing asserts that a caller *acts* on the report:
+reports faithfully, but nothing asserts that a caller _acts_ on the report:
 commenting out `process.exit(1)` in `scripts/check-public-build.ts` — leaving the
 `FAILED` print in place — leaves all 636 tests green and `pnpm typecheck` clean,
 so **`pnpm gate:public` becomes a printer that cannot fail**. Confirmed by
@@ -3955,11 +3958,11 @@ exit code anyone watched.
   out to a script making its own requests... and any future code that reaches
   the network by some other API" both sit outside it, stated rather than
   gated.
-- **Decay** — **exposed**, ⚠️ *corrected 2026-08-16 by the decay re-read part
+- **Decay** — **exposed**, ⚠️ _corrected 2026-08-16 by the decay re-read part
   two ([#150](https://github.com/mephistopheles4/stacks/issues/150)), from
-  `clean; no measured-once number underlies this row`.* The old reason was
+  `clean; no measured-once number underlies this row`._ The old reason was
   right about numbers and the bound is about **claims**: the docblock's
-  *"since nothing here uses `node:http` directly"* is false and **was false
+  _"since nothing here uses `node:http` directly"_ is false and **was false
   when written** — `scripts/smoke-render.ts:18` imported it three days
   earlier. The conclusion it supports survives (`createServer` serves, it does
   not request); the warrant does not. Distinct from the routing-around verdict
@@ -3981,8 +3984,8 @@ cover from `archive.org`."
 nothing to dispose of.** A disposition presupposes a finding; a nomination that
 fails to survive is not dispositioned, its **verdict is corrected** — which is
 how this register records a cleared suspicion without minting the fifth
-disposition #113 refused. The category-4 line above should now read *clean,
-demonstrated* rather than *exposed, historical, fixed*.
+disposition #113 refused. The category-4 line above should now read _clean,
+demonstrated_ rather than _exposed, historical, fixed_.
 
 Both halves re-planted red against the current tree. Deleting `setupFiles` from
 `vitest.config.ts` — the exact mutation that once left all seven checks green —
@@ -3994,8 +3997,8 @@ which is the point, and the sharpest thing this pass found here: every assertion
 in that file is indifferent to the cover, so **a throw-only guard would have left
 it green**. The `afterEach` recording, not the throw, is the load-bearing half.
 
-**Still open, and not this band's:** the *weakening* verdict (`vi.stubGlobal` as
-a documented hatch) and the *routing around* verdict (a test that shells out to
+**Still open, and not this band's:** the _weakening_ verdict (`vi.stubGlobal` as
+a documented hatch) and the _routing around_ verdict (a test that shells out to
 a script making its own requests — `gates/deploy-branch.test.ts` really does
 spawn one — and any future non-`fetch` network API). Per Rule 1, those stay open
 rather than closing because the row was visited.
@@ -4053,7 +4056,7 @@ swapping `[...coverUrls(match), ...fallback]` for `[...fallback, ...coverUrls(ma
 inverts the file's own stated rule three lines above it — putting Audible's
 square artwork ahead of the print cover — and leaves all 636 tests green. Both
 structural checks still pass (it names no `coverUrlLarge`; it does call
-`coverUrls(`), because **G22's caller check forces callers *through* the helper
+`coverUrls(`), because **G22's caller check forces callers _through_ the helper
 and says nothing about what they do with its result**. That sentence is the
 general lesson, and it is the shape #128 found again in G31.
 
@@ -4108,7 +4111,7 @@ inflated-floor defect went red today: rewriting all 20 `keyIfPresent` spreads in
 **naming that exact file**, and a behaviour-identical rewrite of the owner's
 ternary in `packages/core/src/key-if-present.ts` fails the anchor check. The
 floor repair holds and the vacuity anchor works, so the category-4 line should
-now read *clean, demonstrated*.
+now read _clean, demonstrated_.
 
 What the plants demonstrated instead is the **category-3** gap the gate's own
 docblock names, and this pass turned it from a stated bound into an observed one:
@@ -4116,7 +4119,7 @@ a genuine seventh implementation, written as the early-return form
 `if (value === undefined) return {};` rather than the anchored ternary shape,
 sits in the tree with **all 636 tests green**. The docblock argues the anchor
 cannot be widened without flagging `packages/core/src/covers/cover-keys.ts`, an
-innocent file — so the wider gate is argued *unavailable*, not merely unbuilt,
+innocent file — so the wider gate is argued _unavailable_, not merely unbuilt,
 which is `accepted` rather than `declined`.
 
 **Band one over-delivered here**, and that is worth saying plainly: category 3
@@ -4157,31 +4160,31 @@ a file that derives nothing" (control).
 question here.** Of the five files in `scripts/lib/`, only `public-build.ts` and
 `walk.ts` import `fs`, and both were already allowlisted at `1168650`
 (2026-08-03), a day before G24 landed at `15fd6f1` (2026-08-04); `repo-root.ts`
-is `node:path`, `run.ts` and `git.ts` are `node:child_process`. So *"the
-consolidation shipped here changes G1's allowlist by exactly nothing"* still
+is `node:path`, `run.ts` and `git.ts` are `node:child_process`. So _"the
+consolidation shipped here changes G1's allowlist by exactly nothing"_ still
 holds, the row's own correction of its issue's second-order argument stands, and
-there is nothing outstanding to build — `accepted`, in the sense of *checked and
-found still correct*, not *lived with*.
+there is nothing outstanding to build — `accepted`, in the sense of _checked and
+found still correct_, not _lived with_.
 
 The sweep is red-capable today: adding `new URL('..', import.meta.url)` to
-`scripts/make-icons.ts` fails *"lets no other script derive the repo root for
-itself"*. ⚠️ Worth noting which spelling that is — the docblock calls
-`new URL('..', import.meta.url)` the form *"nobody has written here yet"* and
+`scripts/make-icons.ts` fails _"lets no other script derive the repo root for
+itself"_. ⚠️ Worth noting which spelling that is — the docblock calls
+`new URL('..', import.meta.url)` the form _"nobody has written here yet"_ and
 says the `import.meta` anchor was chosen to cover it. It does.
 
 ⚠️ **A second claim in the same paragraph is wrong, and it is not decay.**
-*"`scripts/lib/` holds three other shared files"* appears in
+_"`scripts/lib/` holds three other shared files"_ appears in
 [`gates/repo-root.test.ts`](../gates/repo-root.test.ts):24 and in
 `docs/gates.md` line 880. At `15fd6f1` — **the commit that wrote both
 sentences** — `scripts/lib/` held five files: `repo-root.ts` plus `git.ts`,
 `public-build.ts`, `run.ts` and `walk.ts`. Four others, not three, and `git.ts`
 was added by that same commit.
 
-**It was wrong on arrival and has never had a true state**, so *decay* — which
-asks whether a claim *was* measured and has since drifted — does not name it.
+**It was wrong on arrival and has never had a true state**, so _decay_ — which
+asks whether a claim _was_ measured and has since drifted — does not name it.
 ⚠️ **Flagged for [#120](https://github.com/mephistopheles4/stacks/issues/120)
 rather than settled here**: whether the five categories should admit
-*asserted-but-never-measured* as a widening of category 5, or whether it sits
+_asserted-but-never-measured_ as a widening of category 5, or whether it sits
 outside them, is a decision about the taxonomy and not a verdict on a row. And
 the honest counter-argument is on the record too — under #113's own bound the
 count is **not load-bearing**: it decorates the one-owner-not-a-directory
@@ -4209,7 +4212,7 @@ and state the property. A gate is declined for G12's reason.
   across the row's own history: an early assertion "passed with the packer
   mutated to wrap at nine tenths of the shelf" because it priced a candidate
   by calling the function it was checking; the outcome-bound floor was
-  written as a minimum that made a *correct* packer red, "the same error this
+  written as a minimum that made a _correct_ packer red, "the same error this
   row already records twice, committed a third time"; `WORST_CLEARANCE` used
   `MAX_LEAN` where it needed `MAX_PROP_LEAN`, "this row's own oldest mistake,
   made a fourth time, three paragraphs after writing it down"; and the
@@ -4252,7 +4255,7 @@ backstop for exactly this residue. Knowingly lived with, with the trade-off
 argued in the file.
 
 ⚠️ **One qualification the numbers do not carry.** At δ = 0.004 the full suite
-*did* go red — four failures in `packages/site/src/shelf/placement.test.ts` —
+_did_ go red — four failures in `packages/site/src/shelf/placement.test.ts` —
 but that injection site happens to break flush-run geometry. **Whether every
 sub-floor over-spend is caught somewhere was not tested**, so "the suite catches
 what this row misses" is not established, and the accepted residue is the row's,
@@ -4334,7 +4337,7 @@ wrong together.
 **Date:** 2026-08-11
 
 - **Weakening** — clean; no allowlist.
-- **Satisfying the letter** — clean. "G27 is a tool that returned a *true*
+- **Satisfying the letter** — clean. "G27 is a tool that returned a _true_
   answer about a smaller set than it claimed" describes the pre-gate CLI
   defect the row was written to catch (one `break` folding two distinct
   outcomes into `complete`), not a flaw in the gate's own mechanism — the fix
@@ -4403,8 +4406,8 @@ left entirely unchecked, and the current row catches it with the same assertion
 that catches an undersized one.
 
 ⚠️ **The re-plant corrects the row's own moral.** `docs/gates.md` reads the repair
-as *"a check that disagrees with the code is not automatically the one that is
-right"* — true, and not what closes the hole. The restored defect produced a
+as _"a check that disagrees with the code is not automatically the one that is
+right"_ — true, and not what closes the hole. The restored defect produced a
 discrepancy of **9.1e-7 here, four orders of magnitude below the 0.26mm** the
 row's history describes, and it still went red: the assertion is
 `toBeCloseTo(TOUCHING, 10)`. **What closes this hole is the precision.** At ten
@@ -4446,7 +4449,7 @@ structural, so no allowlist there needed editing.
 ⚠️ **As first written this row was one nothing can fail on, and that is the
 correction that matters most in this piece.** `specPathsNamed()` only
 existence-checks `.ts` paths and this row names none, so **delete the `audit`
-job *and* its `needs:` entry and CI is green, `pnpm test` is green, and the ✅
+job _and_ its `needs:` entry and CI is green, `pnpm test` is green, and the ✅
 still stands.** Promoting a claim into the table G19 reads is **visibility, not
 enforcement** — the supply-chain argument applied asymmetrically would have
 shipped this effort's own subject matter inside the effort. Closed inside G40's
@@ -4490,16 +4493,16 @@ existing sweep at no new cost.
   `minimumReleaseAge` quarantine. ⚠️ **The `overrides` entry answering it has
   since decayed once on its own** — GHSA-2v37-7h3g-55p8 was **amended upstream**
   from `<3.3.17` to `<3.3.18` on 2026-08-15 and turned CI red on an **unchanged
-  lockfile**. *An advisory id is not a stable statement of scope*, which is a
+  lockfile**. _An advisory id is not a stable statement of scope_, which is a
   category-5 specimen arriving from outside the tree entirely.
 
 **Observed-red line:** **two, and they are different failures.** ⚠️ **The
 distinction is the point of this row's teeth.**
 
-| | |
-| --- | --- |
-| **the job going red on an advisory** | **2026-08-08**, real, unplanted: two high advisories, `pnpm update nanoid` reporting success and leaving the tree on the vulnerable version. Recorded in `docs/gates.md` under this heading since before the row existed |
-| **the row going red on the job disappearing** | **2026-08-20**, four plants, and **this is the assertion that did not exist.** Delete the `audit` job → *"no job named `audit` … delete the job and that row is a claim nothing can fail on"*. `--audit-level=moderate` → red. Drop `audit` from `needs:` → *"a job it does not need is a job whose failure merges"*. Test `!= "failure"` instead of `= "success"` → *"expected [ 'suite' ] to include 'audit'"* |
+|                                               |                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **the job going red on an advisory**          | **2026-08-08**, real, unplanted: two high advisories, `pnpm update nanoid` reporting success and leaving the tree on the vulnerable version. Recorded in `docs/gates.md` under this heading since before the row existed                                                                                                                                                                                         |
+| **the row going red on the job disappearing** | **2026-08-20**, four plants, and **this is the assertion that did not exist.** Delete the `audit` job → _"no job named `audit` … delete the job and that row is a claim nothing can fail on"_. `--audit-level=moderate` → red. Drop `audit` from `needs:` → _"a job it does not need is a job whose failure merges"_. Test `!= "failure"` instead of `= "success"` → _"expected [ 'suite' ] to include 'audit'"_ |
 
 **Disposition: `repaired`** — the row existed and asserted nothing; it now
 asserts four things about the mechanism it names. No new hole is left open by
@@ -4535,13 +4538,13 @@ paragraph nobody can check.
   deliberately does not assert is the `notes` line beside the counter: a
   note-presence check was declined because **any string satisfies it**, so it
   would catch the honest omission and not the adversary — and a check asserting
-  note-*presence* while reading as note-*quality* states a scope exceeding its
+  note-_presence_ while reading as note-_quality_ states a scope exceeding its
   real one, which is the exact fault this row was minted to repair. `accepted`,
   with the cost stated in
   [ADR-0061](adr/0061-the-mutation-floor-refuses-deploy.md): the file makes an
   omission visible; it does not make it impossible.
 - **Satisfying the letter** — **exposed, and the exposure is the intended path
-  rather than a defect.** Adding a disable directive *and* raising `ignored` in
+  rather than a defect.** Adding a disable directive _and_ raising `ignored` in
   the same commit passes cleanly, which is precisely what the row asks for — it
   makes the withdrawal **recorded**, never impossible. What it buys is that the
   recording cannot be skipped in either direction: pre-raising the counter so a
@@ -4549,24 +4552,24 @@ paragraph nobody can check.
   missed that half entirely.
 - **Routing around** — **exposed, accepted, and the mechanism was chosen against
   the verdict of the row that shares it.** **G17 (`deploy-branch`)** shares this
-  piece's other surface, and its live exposure is that *the gate spawns
+  piece's other surface, and its live exposure is that _the gate spawns
   `scripts/deploy.ts`, so the argv the shipped command supplies is invisible to
-  it* — a remedy that was named and unbuilt when this piece was designed. ⚠️
+  it_ — a remedy that was named and unbuilt when this piece was designed. ⚠️
   **It is built now, and by this rollout**: `gates/deploy-branch.test.ts` asserts
   `deploy:site` is exactly `tsx scripts/deploy.ts`, so the shipped-argv hole is
   red at merge for every row using the idiom. **The reason for the choice below
   therefore changed under it and is restated rather than left standing**: not
-  *no trustworthy harness exists*, which is now false, but the cost of one —
+  _no trustworthy harness exists_, which is now false, but the cost of one —
   see the residual at the end of this entry. So neither half here is written as
   a spawn:
   every judgement is a pure function in `scripts/lib/floors.ts` with an
   in-process oracle, and `scripts/deploy.ts` is a thin caller. ⚠️ **What is left
   is G17's shape one layer up, inherited knowingly from G38**: nothing asserts
-  that `deploy.ts` still *calls* `reportFloors`, so deleting that one line leaves
+  that `deploy.ts` still _calls_ `reportFloors`, so deleting that one line leaves
   the whole suite green. ⚠️ **That is now a cost rather than an impossibility,
   but the cost is larger than a first reading of G17's remedy suggests.** This
-  entry said *a gate driving the real script through `GIT_DIR` at a scratch repo
-  is available and demonstrated*, which overstated its reach — the fault this
+  entry said _a gate driving the real script through `GIT_DIR` at a scratch repo
+  is available and demonstrated_, which overstated its reach — the fault this
   whole row is about, in the sentence describing the row's own residual.
   **Measured against the files this branch ships, `GIT_DIR` reaches one of the
   four refusals, not four:**
@@ -4581,7 +4584,7 @@ paragraph nobody can check.
   - Only the **config-hash** refusal is reachable, because it compares the floors
     file's hash against one stamped in a metrics record, and records arrive
     through `storedRecords()` → `recordsAt()` → `gitOutput(['rev-parse', ref])`,
-    which git *does* resolve via `GIT_DIR`.
+    which git _does_ resolve via `GIT_DIR`.
 
   ⚠️ **Driving the other three needs a production change** — an environment
   override on the `root` parameter `readFloors()` and `readDeclarations()`
@@ -4605,10 +4608,10 @@ paragraph nobody can check.
   publish on a number — it deserves a considered row rather than one written at
   the end of the session that needed it. ⚠️ **The trap for whoever builds it:
   the exit code asserts nothing.** The idiom proves a run got past the check
-  under test by letting it fail on the *next* one, so `expect(status).toBe(1)` is
+  under test by letting it fail on the _next_ one, so `expect(status).toBe(1)` is
   equally true of a deploy that ignored the check entirely; assert that the later
   refusal was never reached. ⚠️ **And the live route past this row is
-  `stryker.scopes.json`, not this gate**: deleting a scope *and* its floors entry
+  `stryker.scopes.json`, not this gate**: deleting a scope _and_ its floors entry
   together satisfies every check here and at deploy, and reads as cleanup rather
   than as a lowering. That is G38's own accepted verdict and it applies unchanged
   to the counter — the answer sits in `stryker.scopes.json` at the edit it
@@ -4617,13 +4620,14 @@ paragraph nobody can check.
   `gated`)** — one stray backtick switching a line's checking off — is why
   backtick parity was checked on every line this commit adds to a document, and
   **G19**'s positional status-cell read is why the row's `✅` was placed by
-  column rather than by eye. ⚠️ **One route this row *does* now close, and did
+  column rather than by eye. ⚠️ **One route this row _does_ now close, and did
   not as first written**: a directive in a scope `stryker.floors.json` does not
   name at all. The counter iterated the entries only, so such a scope merged
   green — and the deploy's correspondence refusal is no help there, because this
   row exists to catch a directive at **merge**.
+
 - **Vacuous green** — **exposed on arrival, closed, and the demonstration is
-  the reason this bullet does not say *clean*.** Three `expectFound` floors:
+  the reason this bullet does not say _clean_.** Three `expectFound` floors:
   floors entries at 8, swept source files at 60, and **declared mutation scopes
   at 8**. ⚠️ **The third was missing and the row was vacuously green without
   it.** The counter is keyed on the declared scopes, so emptying
@@ -4632,26 +4636,26 @@ paragraph nobody can check.
   nothing** — with the other two floors still green, because neither the floors
   file nor the source tree was touched. Measured, not reasoned: the plant left
   G43 at 2 of 2 before the third floor existed, and reddens it now. ⚠️ **G38
-  reddens on the same edit, and that is not a defence** — *another row covers it*
+  reddens on the same edit, and that is not a defence** — _another row covers it_
   is the argument these floors exist to refuse, and it was the argument that
   would have kept this hole. Found by an external review of the pull request,
   not by the plants in this entry. Both lists are
-  separately deletable and either going empty leaves *every counter matches* true
-  of nothing. ⚠️ **8 equals the current population of declared scopes, and *a
-  floor equal to a population* is the shape that went wrong in the supply-chain
+  separately deletable and either going empty leaves _every counter matches_ true
+  of nothing. ⚠️ **8 equals the current population of declared scopes, and _a
+  floor equal to a population_ is the shape that went wrong in the supply-chain
   piece.** Kept deliberately, and it is not the same case: it mirrors G38's own
   floor over the same list, and a scope legitimately removed **should** redden
   both rows, because scope removal is the cheapest way to stop measuring an
   inconvenient scope. ⚠️ **The floors are not the whole of it** — a gate
-  asserting *the real pair agrees* is satisfied forever by an
+  asserting _the real pair agrees_ is satisfied forever by an
   `ignoredMismatches` returning `[]` unconditionally, and no floor can see that.
   Both directions are therefore planted against synthetic inputs in
   `scripts/lib/floors.test.ts`, and the gate is left asserting only what the disk
   says.
   ⚠️ **A second reading of the same category, from the same review**:
-  `scoredIn` — the deploy's *which run do I compare against the floor* — did not
-  exclude `run_ok 0`. `renderMetrics` derives run health from *did every declared
-  series compute* and emits each family independently, so a nightly whose
+  `scoredIn` — the deploy's _which run do I compare against the floor_ — did not
+  exclude `run_ok 0`. `renderMetrics` derives run health from _did every declared
+  series compute_ and emits each family independently, so a nightly whose
   `pnpm test` step failed carries a **full set of scores** under `run_ok 0`. The
   calibration window refuses to derive a floor from such a run, so comparing
   against one **could have refused a publish on a score that could never have set
@@ -4662,23 +4666,23 @@ paragraph nobody can check.
   one.** The measured claim is the population: **zero disable directives across
   all eight scopes**, swept rather than assumed, so the counter starts at 0 and
   any increase is a real event. The structural one is the sweep's definition — it
-  reuses `scope-check.ts`'s `sourceFiles`, so *what counts as source* cannot
+  reuses `scope-check.ts`'s `sourceFiles`, so _what counts as source_ cannot
   drift between this row and G38. ⚠️ **The counter matches a directive only in a
   comment, never the bare words, and that is load-bearing rather than tidy**:
   every line of the implementation and every refusal message that talks about
   disable directives sits inside the `scripts` scope, so a counter matching the
   words would find its own prose and force `scripts` to carry a number no mutant
   caused. ⚠️ **And a run that cannot be dated is dropped rather than
-  defaulted**, which is `parseRecordName`'s own rule — *undefined rather than a
-  guess* — applied to a sample instead of a filename. It reads as defensive
+  defaulted**, which is `parseRecordName`'s own rule — _undefined rather than a
+  guess_ — applied to a sample instead of a filename. It reads as defensive
   until somebody sees what the alternative does: a timestamp defaulted to zero
   puts the run in 1970 and opens a twenty-thousand-day gap in the middle of a
   streak, which the window reads as the nightly having stopped. ⚠️ **One latent
   instance of the same species is named rather than fixed, and it is on the
   refusal path**: `runRowsFrom` reads a `stacks_run_ok` sample as a CI run when it
   carries no `surface` label. CI writes it bare and the edge probe writes
-  `surface="edge"`, a split `metrics.ts` calls *structural rather than a
-  convention* — so a third writer honouring it is excluded correctly, while one
+  `surface="edge"`, a split `metrics.ts` calls _structural rather than a
+  convention_ — so a third writer honouring it is excluded correctly, while one
   inventing a second label vocabulary would be read as a nightly and could feed
   the window that derives a floor. Left for whoever adds a third surface: reaching
   it means breaking a documented structural convention first, and the alternative
@@ -4689,12 +4693,12 @@ paragraph nobody can check.
 ⚠️ **Four findings from the two-axis review changed the code rather than the
 prose, and they are named because each was a real hole.** The **config-hash
 refusal** was gated on something being armed, which left the spec's own §12 plant
-(*lower `timeoutMS` without re-deriving*) unguarded for the whole disarmed
-period; a different hash now refuses whatever is armed, and only a *missing* one
+(_lower `timeoutMS` without re-deriving_) unguarded for the whole disarmed
+period; a different hash now refuses whatever is armed, and only a _missing_ one
 waits for a comparison to protect. The **deploy read the newest record rather
 than the newest nightly** — `metrics.yml` writes on every push, a merge record
-carries no score, and on a busy week that made every armed scope print *no score
-in the record*: **a floor refusing nothing at exactly the moment somebody
+carries no score, and on a busy week that made every armed scope print _no score
+in the record_: **a floor refusing nothing at exactly the moment somebody
 deploys**. `ignoredMismatches` **iterated only the entries**, so a directive in a
 declared-but-unaccounted scope merged green — the gate silent in precisely the
 case the file is already wrong. And the **full-window print dropped the date**,
@@ -4707,11 +4711,11 @@ forward.** Two are the counter's two directions; the third is the vacuity floor
 in the bullet above, planted by emptying `stryker.scopes.json` and observed at
 2-of-2 green before the floor existed and red after. 2026-08-19,
 against the real tree. A new file under `packages/core/src` carrying one disable
-directive with `ignored` left at 0 → red: *"packages/core/src: the tree holds 1
-disable directive(s), stryker.floors.json records 0"*. Then `scripts`' `ignored`
+directive with `ignored` left at 0 → red: _"packages/core/src: the tree holds 1
+disable directive(s), stryker.floors.json records 0"_. Then `scripts`' `ignored`
 raised to 3 with no directive anywhere in the tree → red with the same message
-the other way round: *"scripts: the tree holds 0 disable directive(s),
-stryker.floors.json records 3"*. Both plants removed and the gate re-run green
+the other way round: _"scripts: the tree holds 0 disable directive(s),
+stryker.floors.json records 3"_. Both plants removed and the gate re-run green
 between them.
 
 ⚠️ **The deploy half of this ticket is not this row and is gated by nothing.**
@@ -4720,15 +4724,15 @@ entry, a config-hash mismatch — are `pnpm deploy:site`'s, deliberately: **a me
 is never blocked by a metric.** **All four were planted and observed against the
 real stack via `--dry-run`, which uploads nothing — five observations across the
 four, because the configuration refusal has two paths and both were run**: a
-*different* hash with every scope unarmed, and a *missing* hash against an armed
+_different_ hash with every scope unarmed, and a _missing_ hash against an armed
 floor. The breach needed a record stamped with the current configuration,
 planted onto the local `refs/remotes/origin/metrics` and reverted after, with
 the ref verified back at its original SHA. ⚠️ **One residual worth
 naming**: the breach refusal states the per-mutant resolution **only when a local
 mutation report exists**, because the record carries scores and not mutant
 counts. No report means a refusal that names the scope, the score and the floor
-and stops there — degraded rather than silent, on section 0b's own rule that *no
-report is a print, never a silence*.
+and stops there — degraded rather than silent, on section 0b's own rule that _no
+report is a print, never a silence_.
 
 ### G44 — `stryker-reporters`
 
@@ -4746,18 +4750,18 @@ test runs through one Vitest instance, so the append fired once per mutant:
 **923 bytes over four mutants**, **1054k over ~5900**, and the nightly of
 2026-08-22 logged `$GITHUB_STEP_SUMMARY upload aborted, supports content up to a
 size of 1024k, got 1054k`. The runs before it stayed under the cap and uploaded
-most of a megabyte of six repeated lines, which is the *"really big and lags"*
+most of a megabyte of six repeated lines, which is the _"really big and lags"_
 the owner reported from a browser.
 
 - **Weakening** — **clean; this row has no allowlist and no exemption.** Two
-  clauses, both unconditional. What it deliberately does *not* assert is the
+  clauses, both unconditional. What it deliberately does _not_ assert is the
   root `vitest.config.ts`: its single append is the reporter working as
-  intended, and gating the *absence* of a reporter list there would freeze a
+  intended, and gating the _absence_ of a reporter list there would freeze a
   behaviour nobody chose. `declined`, and stated in the spec rather than left as
   a gap a reader has to notice.
 - **Satisfying the letter** — **exposed, and bounded rather than closed.**
   `reporters: ['json']` passes and is a perfectly silly thing to write; the
-  clause is *non-empty*, because non-empty is the exact condition Vitest's
+  clause is _non-empty_, because non-empty is the exact condition Vitest's
   branch tests and anything narrower would be this gate inventing a policy the
   defect does not support. ⚠️ **`reporters: []` is the case that reads as a
   declaration and is not one**, which is why the clause counts with
@@ -4775,10 +4779,10 @@ the owner reported from a browser.
   that stops parsing fails loudly instead of passing over an empty read; the
   wiring clause compares an imported value against an exact string rather than
   grepping for one. Both planted red, and the third clause — that the
-  declaration is written *in* the file carrying its argument — went red with the
+  declaration is written _in_ the file carrying its argument — went red with the
   first.
 - **Decay** — ⚠️ **exposed, named, and the most likely thing here to rot.**
-  The gate proves the *condition*, never Vitest's honouring of it: that the
+  The gate proves the _condition_, never Vitest's honouring of it: that the
   auto-append happens only to an empty list is third-party behaviour in a
   released package, and a version bump could move it without anything here going
   red. There is no offline way to observe a reporter list resolved under an
@@ -4795,11 +4799,11 @@ planted.** The real one is the nightly itself — run
 `upload aborted … got 1054k`, on a commit whose only changes were to
 documentation. The plants, each restored green afterwards:
 
-| | |
-| --- | --- |
-| **delete `reporters`** | **red, twice** — *"extraction found 0 reporters declared in vitest.stryker.config.ts"*, and the in-file clause with it |
-| **`reporters: []`** | **red** on the same clause. The case a presence check would have passed |
-| **`vitest: { configFile: 'vitest.config.ts' }`** | **red** — *"Stryker pointing anywhere else silently restores the per-mutant append"* |
+|                                                  |                                                                                                                        |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **delete `reporters`**                           | **red, twice** — _"extraction found 0 reporters declared in vitest.stryker.config.ts"_, and the in-file clause with it |
+| **`reporters: []`**                              | **red** on the same clause. The case a presence check would have passed                                                |
+| **`vitest: { configFile: 'vitest.config.ts' }`** | **red** — _"Stryker pointing anywhere else silently restores the per-mutant append"_                                   |
 
 **Disposition: `gated`.** The defect is fixed and the fix is now red-capable
 from three directions.
@@ -4822,9 +4826,9 @@ put one out of reach of `pnpm test`.
 
 ⚠️ **The row exists because the mechanism for pinning a deploy flag already
 existed and was aimed one flag to the left.** G17 (`deploy-branch`) asserts
-exactly which spellings override the *branch* guard — `--any-branch` yes,
+exactly which spellings override the _branch_ guard — `--any-branch` yes,
 `--any` / `--anybranch` / `--any_branch` no — while `--skip-gates`, which cleared
-the *entire four-gate contract* on a path that still uploaded to the live
+the _entire four-gate contract_ on a path that still uploaded to the live
 address, was pinned by nothing and documented nowhere for 19 of the 21 days it
 existed — 2026-08-01 to 2026-08-22, documented on the 20th. `git grep` found it in **two lines of one file, both the
 implementation** ([#152](https://github.com/mephistopheles4/stacks/issues/152)).
@@ -4834,19 +4838,18 @@ rather than the instance: the next undocumented `--fast` is red the day it lands
 
 - **Weakening** — **clean; no allowlist and no exemption.** Four clauses, all
   unconditional. The only tunable numbers are the two `expectFound` floors and
-  the section floor of 4, and lowering one of those is a one-line diff *inside
-  the gate*, which is the visible kind. `declined` — nothing here needs an
+  the section floor of 4, and lowering one of those is a one-line diff _inside
+  the gate_, which is the visible kind. `declined` — nothing here needs an
   escape, and the row exists because the last escape on this path was invisible.
 - **Satisfying the letter** — ⚠️ **exposed, and bounded rather than closed.** A
   flag mentioned in one throwaway backticked sentence passes: the gate reads
-  whether `docs/commands.md` *names* the flag, never whether the sentence
+  whether `docs/commands.md` _names_ the flag, never whether the sentence
   explains what the flag reaches. That is the honest limit, and it is the same
   limit G14 (`commands`) states about a documented command. `accepted` — the
   alternative is a gate judging prose quality, which is not a gate.
-- **Routing around** — **the obvious route is closed, and the closing is clause
-  3.** The roster is only ever as wide as one regex, so `process.argv.slice(2)`,
+- **Routing around** — **the obvious route is closed, and the closing is clause 3.** The roster is only ever as wide as one regex, so `process.argv.slice(2)`,
   `argv[2] === '--x'` or an options object parsed once would each add a flag the
-  roster checks could never learn about — the whole defect arriving *through* the
+  roster checks could never learn about — the whole defect arriving _through_ the
   gate written for it. So every `process.argv` occurrence in the script must be a
   literal `--flag` test, counted rather than extracted because `extractAll`
   deduplicates. Planted, red. ⚠️ **The route still open is a second file**: a
@@ -4860,8 +4863,8 @@ rather than the instance: the next undocumented `--fast` is red the day it lands
   ones it reads at all are `SITE_URL`, `STACKS_VAULT` and `CF_PAGES_PROJECT`,
   each of which G9 (`env-contract`) already holds to a documented list.
 - **Vacuous green** — **clean, and floored on both sides.** Two regexes over two
-  formats, either of which could stop matching and reduce *"every flag is
-  documented"* to a true statement about two empty sets. `expectFound` floors the
+  formats, either of which could stop matching and reduce _"every flag is
+  documented"_ to a true statement about two empty sets. `expectFound` floors the
   script side at 3, the doc side at 3, and the `pnpm deploy:site` section sweep
   at 4 — so a renamed heading or a reformatted flag fails loudly instead of
   passing over nothing. Both roster directions planted red, below.
@@ -4870,9 +4873,9 @@ rather than the instance: the next undocumented `--fast` is red the day it lands
   table, or dropped the backticks, would break the extraction — and every way it
   can break is a **false red**, never a false green, because the floors fire
   before the comparisons. ⚠️ **One live consequence, written into the file it
-  affects**: a *retired* flag cannot be named in backticks in those sections, or
+  affects**: a _retired_ flag cannot be named in backticks in those sections, or
   the gate demands the script grow it back — and **the same is true of the six
-  flags the deploy *forwards* and never reads** (`--public`, `--vault`,
+  flags the deploy _forwards_ and never reads** (`--public`, `--vault`,
   `--assets` to `stacks build`, `--filter` to pnpm, `--project-name` and
   `--branch` to wrangler), because passing a flag on is not reading one.
   `docs/commands.md` carries both notes where somebody would hit them.
@@ -4887,11 +4890,11 @@ the same five questions asked at landing.
 **Observed-red line:** **three plants, each restored green afterwards**, and the
 first of them is the historical defect reproduced rather than invented.
 
-| | |
-| --- | --- |
-| **remove the `--skip-gates` sentence from `docs/commands.md`**, script unchanged | **red** — *"scripts/deploy.ts reads --skip-gates, which docs/commands.md does not document"*. This is #152's state exactly: two lines in one file, and nothing anywhere else |
-| **delete the argv read**, doc sentence left standing | **red** — *"docs/commands.md documents --skip-gates … which the script does not read"*. Observed en route to the real change, which is why the doc edit could not be forgotten |
-| **`const sneaky = process.argv.slice(2).some((a) => a === '--fast')`** | **red** on clause 3 — *"touches process.argv 4 time(s) and only 3 of those is a literal --flag test"*. The route around the other three clauses |
+|                                                                                  |                                                                                                                                                                                |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **remove the `--skip-gates` sentence from `docs/commands.md`**, script unchanged | **red** — _"scripts/deploy.ts reads --skip-gates, which docs/commands.md does not document"_. This is #152's state exactly: two lines in one file, and nothing anywhere else   |
+| **delete the argv read**, doc sentence left standing                             | **red** — _"docs/commands.md documents --skip-gates … which the script does not read"_. Observed en route to the real change, which is why the doc edit could not be forgotten |
+| **`const sneaky = process.argv.slice(2).some((a) => a === '--fast')`**           | **red** on clause 3 — _"touches process.argv 4 time(s) and only 3 of those is a literal --flag test"_. The route around the other three clauses                                |
 
 **Disposition: `gated`.** The flag is deleted and the roster it belonged to is
 now red-capable from three directions.
@@ -4908,37 +4911,37 @@ to cover flags it does not document.
 
 **Not a row, and it does not get one.** It is the escape hatch every other
 hatch in this spec is modelled on, and **it was triaged by nobody**: the triage
-pass read its row list *from the file*, and when it ran the file held 35 rows.
+pass read its row list _from the file_, and when it ran the file held 35 rows.
 `docs/spec/supply-chain.md` §3 makes the verdict a **spec obligation** on the
-commit landing G40 and G42 rather than an assumption, because *a handoff that
+commit landing G40 and G42 rather than an assumption, because _a handoff that
 reads as delivered and delivers nothing is category 2 arriving in the
-coordination between two tickets instead of in a gate.* Discharged here.
+coordination between two tickets instead of in a gate._ Discharged here.
 
 **Measured at `3e2fc88`, 2026-08-20: the hatch has zero live entries.** The
 whole `auditConfig:` block in `pnpm-workspace.yaml` is **commented out** — it
-exists as a template carrying the rule (*"An entry needs the GHSA id, the date,
+exists as a template carrying the rule (_"An entry needs the GHSA id, the date,
 and why it does not reach this project… Remove the entry the moment a fix ships;
-a permanent ignore is a decision nobody revisits"*) and a specimen line. So
+a permanent ignore is a decision nobody revisits"_) and a specimen line. So
 today it grants nothing.
 
 ⚠️ **The exposure is not the entries; it is that the rule governing them is a
 comment.** Uncomment the block, add `- GHSA-xxxx-xxxx-xxxx` with no date and no
 reason, and **nothing goes red** — not `pnpm audit`, which honours it, and not
 any gate, since no gate reads `pnpm-workspace.yaml`'s audit config at all. This
-file's own opening line is the judgement: *a rule nothing can fail on is a
-comment.* It is **the same shape as the `allowBuilds` block two entries up**,
-which G13's verdict already names — *every allowlist entry is a permission* —
+file's own opening line is the judgement: _a rule nothing can fail on is a
+comment._ It is **the same shape as the `allowBuilds` block two entries up**,
+which G13's verdict already names — _every allowlist entry is a permission_ —
 except that this one is unpopulated, so the failure is latent rather than live.
 
 ⚠️ **And the neighbouring `overrides: nanoid` entry is the demonstration that
 this hatch's discipline is real work rather than paperwork.** It carries the
-GHSA id, two dates, the amendment history and an explicit *"this is deliberately
-not an `ignoreGhsas` entry"* — which is precisely the *reach for that hatch
-second* rule being obeyed by a human who remembered to. Nothing enforced it.
+GHSA id, two dates, the amendment history and an explicit _"this is deliberately
+not an `ignoreGhsas` entry"_ — which is precisely the _reach for that hatch
+second_ rule being obeyed by a human who remembered to. Nothing enforced it.
 
 **Disposition: `accepted`.** The population is zero, so a gate written now would
-be a gate over an empty set with no observed red available — *a gate never
-observed failing is not yet a gate*, and manufacturing an entry to redden it
+be a gate over an empty set with no observed red available — _a gate never
+observed failing is not yet a gate_, and manufacturing an entry to redden it
 would be planting the permission this verdict is about.
 
 **Remedy (named, not built):** when the first real entry lands, assert its
@@ -4947,6 +4950,6 @@ surface: every `ignoreGhsas` item matches `GHSA-` + the four-four-four id shape,
 and carries a trailing comment holding an ISO date and a non-empty reason. **The
 same two-sided rule as `action-pins` clause 2** — the id alone is satisfiable by
 deleting the justification, which is the cheapest way to look compliant. ⚠️
-**Explicitly *not* a check that the entry's reasoning is sound**, which is
+**Explicitly _not_ a check that the entry's reasoning is sound**, which is
 outside any gate here, and not a check that the advisory is still unfixed, which
 would need the network G21 forbids.

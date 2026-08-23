@@ -5,15 +5,15 @@ Three things, decided together because they land on one artifact:
 - **Commit subject** — [Conventional Commits](https://www.conventionalcommits.org/):
   `<type>(<scope>): <subject>`. The scope is **optional**, and drawn only from
   the things that exist: `core`, `cli`, `site`, `gates`, `docs`, `ci`.
-- **The body is still the paragraph.** `AGENTS.md`'s *"Commit at every green gate
-  with a one-paragraph summary"* is restated, not replaced: **subject is
+- **The body is still the paragraph.** `AGENTS.md`'s _"Commit at every green gate
+  with a one-paragraph summary"_ is restated, not replaced: **subject is
   conventional, body is the paragraph.**
 - **Branch** — `<type>/<issue>-<slug>`, e.g. `docs/167-conventional-commits`.
   Same type vocabulary, plus three kinds that never become a commit on `main`
   and so carry no issue number: `research/`, `prototype/`, `experiment/`.
 
 **None of it is gated**, and the reason lives in
-[`gates.md`](../gates.md#not-gated-deliberately) under *Not gated, deliberately*
+[`gates.md`](../gates.md#not-gated-deliberately) under _Not gated, deliberately_
 rather than being restated here — that row is the canonical text.
 
 ## The repository setting is the whole argument
@@ -39,7 +39,7 @@ pull request.
 
 ⚠️ **Nothing in a clone can verify any of that.** Repository settings live
 outside the tree and are already in [`gates.md`](../gates.md#not-gated-deliberately)'s
-*Not gated, deliberately* table for that reason. So this paragraph is the record,
+_Not gated, deliberately_ table for that reason. So this paragraph is the record,
 and it is exactly as true as the settings page — which is the weakest claim in
 this file and the one holding up the other three.
 
@@ -47,7 +47,7 @@ this file and the one holding up the other three.
 does not reach `main`.** `9cee3d7`'s body on `main` is the pull request body:
 four markdown headings and a table, not a paragraph. That is not a violation
 anyone committed — it is the rule pointing at the wrong artifact. Restating it
-without saying *where* would leave it pointing there.
+without saying _where_ would leave it pointing there.
 
 **So the rule binds the pull request, and the local commit inherits it.** Write
 the paragraph on the local commit as before, because a commit that never gets a
@@ -65,21 +65,21 @@ both govern the squashed message body.
 
 ## The branch survey, which corrects the ticket
 
-#167's *What is true today* says branches are `claude/<slug>-<hash>`. **After a
+#167's _What is true today_ says branches are `claude/<slug>-<hash>`. **After a
 `git fetch --prune`, `origin` has 20 work branches and every one of them already
 carries a kind:**
 
-| prefix | branches |
-| --- | --- |
-| `research/` | 11 |
-| `proto/` | 4 |
-| `prototype/` | 3 |
-| `experiment/` | 1 |
-| `deep-pass/` | 1 |
+| prefix        | branches |
+| ------------- | -------- |
+| `research/`   | 11       |
+| `proto/`      | 4        |
+| `prototype/`  | 3        |
+| `experiment/` | 1        |
+| `deep-pass/`  | 1        |
 
 **So this is mostly ratification, and the one real decision is `proto/` against
 `prototype/`** — 4 against 3, a split too even to call a majority, and the exact
-shape of the repo's own rule that *a name that names two things names neither*.
+shape of the repo's own rule that _a name that names two things names neither_.
 **`prototype/` wins**, on the only tiebreak that is not taste: every other prefix
 here is an unabbreviated word. Existing `proto/` branches are **not renamed** —
 they are pushed, none of them is on `main`, and renaming a pushed branch breaks
@@ -100,7 +100,7 @@ makes. A `/` in the name is already flattened to `-` there
 
 ## Why this is not gated — the short form
 
-The full reason is the *Not gated, deliberately* row in
+The full reason is the _Not gated, deliberately_ row in
 [`gates.md`](../gates.md#not-gated-deliberately) and is not repeated here.
 In one line: **a commit-lint red is a rename for the maintainer and a tax on a
 stranger whose change has no defect in it**, which is Clause A of
@@ -116,8 +116,8 @@ because a convention adopted for filterability that silently returns a subset is
 worse than no filter.
 
 **The narrative subject survives, which is why this was cheap.** Conventional
-Commits constrains the prefix, not the sentence: *"The scoreboard said CodeQL does
-not block, two days after it started blocking"* becomes
+Commits constrains the prefix, not the sentence: _"The scoreboard said CodeQL does
+not block, two days after it started blocking"_ becomes
 `docs(gates): the scoreboard said CodeQL does not block, two days after it
 started blocking`. This repo's history is its best documentation and the change
 is additive to it.
@@ -137,7 +137,7 @@ as it always has.
   `squash_merge_commit_title: PR_TITLE`, `squash_merge_commit_message: PR_BODY` —
   so it is a configured fact, not an inference about how the button behaves.
   Recorded because it also produced the finding the ticket did not have: the
-  *body* rule has the same problem as the subject rule, and nobody had noticed
+  _body_ rule has the same problem as the subject rule, and nobody had noticed
   because the pull request bodies here are good.
 
 - **2026-08-19** — **The branch survey was run against stale refs, and the review
@@ -145,10 +145,10 @@ as it always has.
   fetched: it showed 24 work branches including three `claude/*` and
   `166-agents-md`, and a `git fetch --prune` reduced that to 20 with no
   exceptions at all. The first draft of this record therefore built its central
-  table — and a *"3 of 24"* claim in `gates.md` — on branches that no longer
-  existed. `AGENTS.md` warns about exactly this for `pnpm worktree`: *"any base
-  you did not check is whatever was last pulled"*, and *"that is the one failure
-  here that says nothing"*. It says nothing about branch listings either. The
+  table — and a _"3 of 24"_ claim in `gates.md` — on branches that no longer
+  existed. `AGENTS.md` warns about exactly this for `pnpm worktree`: _"any base
+  you did not check is whatever was last pulled"_, and _"that is the one failure
+  here that says nothing"_. It says nothing about branch listings either. The
   corrected figure makes the argument stronger, which is the part worth
   distrusting: a stale measurement that flatters the conclusion is the one nobody
   re-runs.
@@ -162,15 +162,15 @@ as it always has.
   paragraph about measuring rather than waiving.
 
 - **2026-08-19** — **The ticket's premise about branches was wrong even before the
-  prune.** *"Branches: `claude/<slug>-<hash>`"* described 3 of 24 then and 0 of 20
+  prune.** _"Branches: `claude/<slug>-<hash>`"_ described 3 of 24 then and 0 of 20
   now. The other prefixes turn the branch half from a proposal into a ratification
   with one genuine open question (`proto/` against `prototype/`). Worth logging
-  beside the same session's other correction: both of the ticket's *"what is true
-  today"* claims were about artifacts nobody had counted, and both were off.
+  beside the same session's other correction: both of the ticket's _"what is true
+  today"_ claims were about artifacts nobody had counted, and both were off.
 
 - **2026-08-19** — **A review asked for a conditional clause in three files, and
   the setting was the cheaper place to put it.** CodeRabbit was right that
-  *"this repo squash-merges, so the title reaches `main`"* held only on one of two
+  _"this repo squash-merges, so the title reaches `main`"_ held only on one of two
   enabled paths. The fix it proposed — qualify the sentence in `AGENTS.md`,
   `CONTRIBUTING.md` and the pull request template — would have re-spent the
   duplication the commit before it had just cut, to remove an ambiguity that
@@ -197,8 +197,8 @@ as it always has.
   job, no network from the test suite, so [G21](../gates.md) never enters it — and
   cheapness is not the question. The question is whose red it is, and
   [`trend-layer.md`](../spec/trend-layer.md) §4 had already reached it for a
-  different check: *"That fails Clause A **for the person who hit it**. A stranger
-  paying for your dead pipe is not a gate; it is a tax."* This is the second check
+  different check: _"That fails Clause A **for the person who hit it**. A stranger
+  paying for your dead pipe is not a gate; it is a tax."_ This is the second check
   that argument disposes of, which makes it precedent rather than a new finding —
   and the reason the row in `gates.md` cites it rather than re-deriving it. The
   check remains unarguable for the maintainer and a tax for everybody else, and

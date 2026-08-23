@@ -110,8 +110,14 @@ function cornersOf(placement: Placed & { readonly position: { readonly y: number
   if (faceOut) {
     const half = coverWidth / 2;
     return {
-      left: [{ x: cx - half, y: 0 }, { x: cx - half, y: height }],
-      right: [{ x: cx + half, y: 0 }, { x: cx + half, y: height }],
+      left: [
+        { x: cx - half, y: 0 },
+        { x: cx - half, y: height },
+      ],
+      right: [
+        { x: cx + half, y: 0 },
+        { x: cx + half, y: height },
+      ],
     };
   }
 
@@ -235,10 +241,7 @@ describe('placeShelf', () => {
     // The whole point, stated as geometry: the gap does not shrink, it *tilts*.
     // Closing it at the top by moving the book left would only have moved it, and
     // rotating about the centre would have doubled it at the bottom.
-    const gapped = [
-      book('a', { finished: '2025-06-01' }),
-      book('b', { finished: '2024-06-01' }),
-    ];
+    const gapped = [book('a', { finished: '2025-06-01' }), book('b', { finished: '2024-06-01' })];
     const [row] = placeShelf(rowsOf(gapped));
     const [left, propped] = row ?? [];
     if (left === undefined || propped === undefined) throw new Error('row too short');

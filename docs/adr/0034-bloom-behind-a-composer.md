@@ -18,7 +18,7 @@ since the shelf existed. Nothing is added to `package.json`, there is no new
 publisher, and the files are already on disk under three's own `exports`.
 CLAUDE.md's rule is about dependencies; this is not one.
 
-What *does* deserve a decision is the composer, because it changes how every
+What _does_ deserve a decision is the composer, because it changes how every
 frame is produced and it takes something away.
 
 ## It costs the multisampling, and that had to be said out loud
@@ -67,11 +67,11 @@ frame fixes it.
 
 On the 49-book fixture, at 1280×800 on an RTX 5090:
 
-| | distinct colours | non-background | fps |
-| --- | --- | --- | --- |
-| bloom off | 1281 | 25.3% | 240 |
-| bloom on (shipped defaults) | 1214 | 25.4% | 240 |
-| bloom on, strength 0.9 | 1329 | 28.8% | 240 |
+|                             | distinct colours | non-background | fps |
+| --------------------------- | ---------------- | -------------- | --- |
+| bloom off                   | 1281             | 25.3%          | 240 |
+| bloom on (shipped defaults) | 1214             | 25.4%          | 240 |
+| bloom on, strength 0.9      | 1329             | 28.8%          | 240 |
 
 Free on this hardware, and it visibly changes the image in both directions —
 checked, because a new effect gets the same treatment every original probe got.
@@ -98,7 +98,7 @@ Three reasons, and the first is on its own sufficient:
    painted planes. It is replace-or-nothing, and replacing is undoing
    [ADR-0016](0016-painted-shadows.md).
 3. **Its one unique contribution is cheaper elsewhere.** What AO would add that
-   the painters do not is inter-book occlusion — the *shaped* diagonal a taller
+   the painters do not is inter-book occlusion — the _shaped_ diagonal a taller
    neighbour throws, which `docs/progress.md` already names as the honest limit
    of the painted version. Teaching `makeNeighbourShadow` its neighbour's height
    buys most of that for no frames at all.

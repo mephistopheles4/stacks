@@ -1,7 +1,7 @@
 # The summary that grew a byte per mutant, and the gate that was reading a clock
 
-**2026-08-22.** The nightly went red. The report was *"the summary became too
-large"*, plus the observation that the run page had been slow to open in a
+**2026-08-22.** The nightly went red. The report was _"the summary became too
+large"_, plus the observation that the run page had been slow to open in a
 browser for a while. **Both halves were real and neither was why the run
 failed.** There were two independent faults, one of them a calendar.
 
@@ -46,7 +46,7 @@ been green on `push` at 17:35 the evening before. **A green and a red at one
 commit is a clock, not a diff.**
 
 Four assertions in `gates/deploy-branch.test.ts` (G17), all of them the ones
-expecting to reach the *past the guard* sentinel:
+expecting to reach the _past the guard_ sentinel:
 
 ```
 AssertionError: expected '--any-branch: publishing a branch oth…' to contain 'STACKS_VAULT points at nothing'
@@ -70,9 +70,9 @@ was reading a wall clock at all — so the fix belongs in the fixture, and
 `refs/remotes/origin/metrics` with the `update-ref` idiom G39 already uses.
 
 ⚠️ **G39's own docblock closed this trap on G39's row and it was already open
-one row over.** Its last paragraph: an assertion of *does not refuse* would
-have been *"a green that quietly became false three days after the spine
-landed"*. That is a precise description of what G17 did, written down three
+one row over.** Its last paragraph: an assertion of _does not refuse_ would
+have been _"a green that quietly became false three days after the spine
+landed"_. That is a precise description of what G17 did, written down three
 days earlier, in the file that introduced the step G17 was walking through.
 
 ⚠️ **This half was fixed twice, by two sessions, within the hour.**
@@ -81,12 +81,12 @@ landed; this session reached the same diagnosis and very nearly the same patch
 independently, and dropped its own. **Two facts are worth keeping from the
 collision.** The first is that #209's version is better in a way that reads as
 a detail and is not: it `reset --hard`s the record commit back off the branch
-under test, so the fixture stays *a repository sitting on `branch`* rather than
-becoming *a repository sitting on `branch` with a `metrics/` directory in it* —
+under test, so the fixture stays _a repository sitting on `branch`_ rather than
+becoming _a repository sitting on `branch` with a `metrics/` directory in it_ —
 a fixture that quietly acquires state is how the next interposed check gets its
 answer chosen for it. The second is that nothing in the tracker could have
 prevented the duplication: every session here authenticates as the same
-account, so *mine, claimed a minute ago* and *free to take* are one record,
+account, so _mine, claimed a minute ago_ and _free to take_ are one record,
 which `AGENTS.md`'s working rules already name as the case the tracker cannot
 answer. The red was on `main`, so both sessions met it on arrival rather than
 by picking up a ticket.
@@ -110,7 +110,7 @@ appended to the resolved reporter list whenever `GITHUB_ACTIONS` is `true`, and
 its job-summary half is:
 
 ```js
-writeFileSync(this.options.jobSummary.outputPath, summary, { flag: "a" });
+writeFileSync(this.options.jobSummary.outputPath, summary, { flag: 'a' });
 ```
 
 `flag: 'a'`, on every `onTestRunEnd`. Under `pnpm test` that fires **once** —
@@ -120,11 +120,11 @@ run is thousands of test runs through one Vitest instance.
 
 Measured rather than reasoned about, twice:
 
-| | |
-| --- | --- |
-| `pnpm test`, run twice at one file | 179 → **358 bytes**. It appends |
+|                                                            |                                                    |
+| ---------------------------------------------------------- | -------------------------------------------------- |
+| `pnpm test`, run twice at one file                         | 179 → **358 bytes**. It appends                    |
 | `stryker run --mutate packages/core/src/key-if-present.ts` | 4 mutants + the dry run = **5 appends, 923 bytes** |
-| the real nightly, ~5900 mutants | **1054k**, against GitHub's 1024k |
+| the real nightly, ~5900 mutants                            | **1054k**, against GitHub's 1024k                  |
 
 So the browser complaint and the CI error are one fault at two points on a
 ramp: for weeks the run page was loading most of a megabyte of the same six
@@ -141,8 +141,8 @@ bytes → 0**, same score, same four mutants killed.
 `GITHUB_ACTIONS` is unset on a developer machine, so the reporter is never
 added, so the append never happens and the file is never written. The same
 shape as `metrics.yml`'s empty-string ternary, whose docblock says it verbatim:
-*"Nothing local can catch it — the emitter is green, the suite is green, and
-the bug lives in expression evaluation."*
+_"Nothing local can catch it — the emitter is green, the suite is green, and
+the bug lives in expression evaluation."_
 
 ⚠️ **And it decayed silently.** The summary grew with the mutant count and cost
 nothing until it crossed a threshold, so there was no commit to blame and no

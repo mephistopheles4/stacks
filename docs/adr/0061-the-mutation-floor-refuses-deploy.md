@@ -22,8 +22,8 @@ dead pipe is the ordinary, blameless reason a deploy stops, so a blanket overrid
 gets typed for that, and it silently clears the floor at the same time. Adding no
 flag dissolves that problem rather than documenting it.
 
-The alternative reasoning was *"removing the flag makes the adversary's move the
-only move"*, and that is **false about this repo**:
+The alternative reasoning was _"removing the flag makes the adversary's move the
+only move"_, and that is **false about this repo**:
 [`scripts/deploy.ts`](../../scripts/deploy.ts) already defines an undocumented
 `--skip-gates` ([#152](https://github.com/mephistopheles4/stacks/issues/152)). The
 three metric refusals are placed outside every flag's reach **on the merits**, so
@@ -38,12 +38,12 @@ did not, and the replacement is recorded rather than the original quietly kept.
   way to publish that book today: you open a pull request, wait for gates, merge,
   and deploy. **That pressure is exactly what produces a hurried lowering with a
   rubber-stamped justification.** The design's answer is that the lowering is
-  *visible*, not that it is avoidable. `packages/cli/src` is named in the spec as
+  _visible_, not that it is avoidable. `packages/cli/src` is named in the spec as
   where the first lowering will land — 68 mutants, so one mutant is worth about
   1.5 points.
 - ⚠️ **The anti-weakening guarantee is weakest in the repo relying on it most.**
   All of the no-override design rests on the lowering being a permanent,
-  self-describing record. It does *not* rest on anyone reading it before merge,
+  self-describing record. It does _not_ rest on anyone reading it before merge,
   and here nobody is required to: `main-protection` carries
   `required_approving_review_count: 0`, `bypass_actors: []`, and GitHub does not
   let a pull request's author approve it — so requiring a review was struck as
@@ -57,7 +57,7 @@ did not, and the replacement is recorded rather than the original quietly kept.
   honest omission and not the adversary. **The file makes the omission visible;
   it does not make it impossible.**
 - **You only see any of it if you deploy.** This is the third place that shape
-  appears in this layer, after the trend layer's *no deploys means no learning*
+  appears in this layer, after the trend layer's _no deploys means no learning_
   and surface D's fold — which makes it a pattern rather than a third caveat.
 - ⚠️ **The floor will probably never be raised**, and that is an accepted risk
   rather than a caveat. A ratchet whose only prompt is a print line, actioned by
@@ -76,18 +76,18 @@ did not, and the replacement is recorded rather than the original quietly kept.
   committing a new high-water mark is a job acting on a metric movement — and out
   mechanically, which is the better guard: `main-protection` has zero bypass
   actors and the floors file lives on `main`, so **a job physically cannot commit
-  a raise.** *"An auto-opened pull request that a human merges"* is the same
+  a raise.** _"An auto-opened pull request that a human merges"_ is the same
   thing wearing a review.
 - **A target the floor rises toward.** There is no target. A target is strictly
-  more arbitrary than a floor, *"the ratchet retires"* is indistinguishable from
-  *"the ratchet stopped being maintained"*, and a target reintroduces the
+  more arbitrary than a floor, _"the ratchet retires"_ is indistinguishable from
+  _"the ratchet stopped being maintained"_, and a target reintroduces the
   global-percentage goal this effort bans — **mutation score is still gameable by
   adding trivially-killable code, and a target is what makes gaming it worth
   someone's afternoon.**
-- **A size exemption for `packages/cli/src`.** *"This scope doesn't get a floor
-  because its number is jumpy"* is deriving policy from the measurement, and a
+- **A size exemption for `packages/cli/src`.** _"This scope doesn't get a floor
+  because its number is jumpy"_ is deriving policy from the measurement, and a
   size threshold is a number nobody can derive.
-- **Floor it but mark it advisory.** *Advisory* is a second, quieter tier that
+- **Floor it but mark it advisory.** _Advisory_ is a second, quieter tier that
   any scope can be argued into once the precedent exists, and nothing is ever
   argued out of it.
 
@@ -95,10 +95,10 @@ did not, and the replacement is recorded rather than the original quietly kept.
 
 `stryker.floors.json` carries one hash of the score-affecting Stryker
 configuration; each run stamps its own; deploy compares. A mismatch refuses with
-*these floors were derived under a different configuration* rather than silently
+_these floors were derived under a different configuration_ rather than silently
 comparing two numbers that do not mean the same thing. This is what closes
 `timeoutMS`: **lowering it raises the score 0.36 points with no test touched**,
-because a timeout counts as *detected*.
+because a timeout counts as _detected_.
 
 ⚠️ **A different hash and a missing hash are different findings, and only one of
 them is evidence.** A run stamped with a hash that is not the floors file's means
@@ -110,8 +110,8 @@ protect.
 
 **Without that split the first `deploy:site` after this landed would have
 refused**, because every record already on the `metrics` branch predates the
-stamp — and *the first thing the new machinery would teach you would be how to
-get past it*, which is the precise habit the no-override decision exists to
+stamp — and _the first thing the new machinery would teach you would be how to
+get past it_, which is the precise habit the no-override decision exists to
 prevent. The configuration route stays shut either way: the calibration window
 refuses to **derive** a floor from a run it cannot place under this
 configuration, so no floor can ever come from runs nothing can vouch for.

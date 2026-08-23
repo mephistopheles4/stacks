@@ -30,7 +30,7 @@ the sheet grows a second state to hold it all.
 **The card has no non-pointer opening path at all**: a book is selected by a
 raycaster hit on a `<canvas>` with no accessible children. A keyboard user cannot
 open it; a VoiceOver-on-touch user can, without knowing which book they will get.
-So the announcement is the *only* way they learn what they hit, which is why it
+So the announcement is the _only_ way they learn what they hit, which is why it
 is short — `«Title» by «Author»` — rather than complete.
 
 - **No `role="dialog"`.** Several screen readers announce a dialog only when
@@ -39,7 +39,7 @@ is short — `«Title» by «Author»` — rather than complete.
   is the only deliberate way in.
 - **The announcer is a permanent, visually-hidden sibling.** It cannot live
   inside the card: a `hidden` element is out of the accessibility tree, so a live
-  region there could not announce the card *opening* at all.
+  region there could not announce the card _opening_ at all.
 - **On dismissal focus moves to the canvas only if it was inside the card.** One
   conditional rule for all four dismissals; moving it unconditionally would yank
   focus from wherever the user actually was.
@@ -51,11 +51,11 @@ leans on there being no focus origin to return to.
 
 The presentation switch is CSS-only, but **the drag is not**: dragging the
 desktop `×` must do nothing. The rule, stated once so it cannot be read two ways:
-*the drag is inert above the breakpoint, and the breakpoint is expressed once and
-read by both.* `SHEET_QUERY` is that expression; the stylesheet points at it by
+_the drag is inert above the breakpoint, and the breakpoint is expressed once and
+read by both._ `SHEET_QUERY` is that expression; the stylesheet points at it by
 comment, and a test asserts the two spellings match.
 
-⚠️ **Do not add a third holder.** Rendering card *content* by breakpoint was
+⚠️ **Do not add a third holder.** Rendering card _content_ by breakpoint was
 rejected for this, and the attribution surface was placed bottom-left — behind
 the sheet on a phone, accepted — rather than re-homing below the breakpoint,
 which would have made it three.

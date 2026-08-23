@@ -4,7 +4,7 @@
 third row of the [after-the-scoreboard rollout](https://github.com/mephistopheles4/stacks/issues/154).
 
 `pnpm deploy:site` now prints the trend record and refuses on a stale one, per
-series. **G39 (`metrics-freshness`)**, *Defect gates*. Four things came out of
+series. **G39 (`metrics-freshness`)**, _Defect gates_. Four things came out of
 building it that the spec could not have known, and one of them is a hole this
 session put in its own gate and then found by planting.
 
@@ -44,28 +44,28 @@ of them are `push: main` rows carrying **one** series — `metrics.yml` legitima
 writes a merge row with a suite wall-clock and nothing else — and the only row
 with per-scope scores is a `workflow_dispatch` twelve hours back.
 
-So the first version printed *"no mutation-score samples in the newest record"*
+So the first version printed _"no mutation-score samples in the newest record"_
 over a store holding eight perfectly good scores. **A score never appears without
 its run**, which the spec states as a layout rule; the correction is that the run
-panel 1 names has to be *the run that scored*, and the PR window has to be
+panel 1 names has to be _the run that scored_, and the PR window has to be
 measured between **that** pair. Measuring it between the two newest records would
 attribute a movement to pull requests that had nothing to do with it.
 
 ## The disambiguating fetch must not move the mirror
 
-The refusal spends one anonymous fetch to tell *you have not synced* from *CI
-stopped writing*. The obvious implementation reuses `fetchRecords`, which writes
+The refusal spends one anonymous fetch to tell _you have not synced_ from _CI
+stopped writing_. The obvious implementation reuses `fetchRecords`, which writes
 `refs/remotes/origin/metrics` — **the very ref the staleness check reads.**
 
 That would make the refusal clear itself by being hit twice: the second
 `deploy:site` sees rows the local Prometheus never ingested, and publishes. It is
-the *"the first thing the machinery teaches you is how to get past it"* failure
+the _"the first thing the machinery teaches you is how to get past it"_ failure
 the dated bootstrap exists to prevent, arriving through a different door. The
 probe fetches into `refs/remotes/origin/metrics-probe` and `pnpm trend:sync` is
 the only thing that moves the mirror. [ADR-0060](../adr/0060-the-deploy-reads-the-mirror-and-the-probe-never-moves-it.md).
 
 ⚠️ **And the separate ref did not close it, which is the part worth carrying.**
-Naming an explicit refspec does not stop git *opportunistically* updating the
+Naming an explicit refspec does not stop git _opportunistically_ updating the
 remote-tracking branch a fetched ref would normally land on. The probe was
 fast-forwarding the mirror anyway, and said so in its own output:
 
@@ -92,11 +92,11 @@ map.
 ## What could not be planted, and where it went instead
 
 The dated bootstrap expires on a calendar day and **the deploy cannot be told what
-day it is.** *Prints at 2 days, refuses at 4* is therefore observed against
+day it is.** _Prints at 2 days, refuses at 4_ is therefore observed against
 `judgeRecord` in `scripts/lib/metrics-read.test.ts`, not through the script.
 
 What the gate asserts instead is that the script's behaviour **agrees with that
-judgement today**. An assertion of *does not refuse* would have been a green that
+judgement today**. An assertion of _does not refuse_ would have been a green that
 quietly became false on 2026-08-22 — a gate decaying inside the rollout built to
 catalogue decay.
 

@@ -6,14 +6,14 @@ caught. `pnpm test` went 133 → 211.
 
 Six defects, all of them documented rules that had quietly stopped being true:
 
-| | Found by |
-| --- | --- |
-| `updateBook` overwrote an inline list — `author: [A, B]` — losing an author. Reachable: an array parses as *authorless*, which is what sends `enrich` to look one up | G4 |
-| `enrich` re-implemented the cover-path rule and got it wrong on Windows, under a comment saying it could not | G10 |
-| a third copy of that rule in the wikilink embed, resolving to nothing for a backslash path | G10 |
-| the public staging folder was additive: real covers survived a fixture-vault gate run, filenames slugged from real titles, gate green | G2 |
-| wishlist books shipped in `library.json` though nothing displayed them | G2 |
-| `shelf_order` collided with "reading first" — one `--renumber` and the next book you picked up sorted last | G12 |
+|                                                                                                                                                                      | Found by |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `updateBook` overwrote an inline list — `author: [A, B]` — losing an author. Reachable: an array parses as _authorless_, which is what sends `enrich` to look one up | G4       |
+| `enrich` re-implemented the cover-path rule and got it wrong on Windows, under a comment saying it could not                                                         | G10      |
+| a third copy of that rule in the wikilink embed, resolving to nothing for a backslash path                                                                           | G10      |
+| the public staging folder was additive: real covers survived a fixture-vault gate run, filenames slugged from real titles, gate green                                | G2       |
+| wishlist books shipped in `library.json` though nothing displayed them                                                                                               | G2       |
+| `shelf_order` collided with "reading first" — one `--renumber` and the next book you picked up sorted last                                                           | G12      |
 
 Plus `shelf_order` missing from the documented key list (G8) and `PORT` from
 `.env.example` (G9).

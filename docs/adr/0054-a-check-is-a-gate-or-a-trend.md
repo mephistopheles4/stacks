@@ -1,6 +1,6 @@
 # A check is a gate or a trend, and the taxonomy is binary
 
-**A check is a *gate* if both clauses hold. Otherwise it is a *trend*. There is
+**A check is a _gate_ if both clauses hold. Otherwise it is a _trend_. There is
 no third column.**
 
 > **Clause A — a gate's red has a named, reachable remedy.** When it goes red,
@@ -30,11 +30,11 @@ checks nobody has thought of yet.
 
 ## Why binary
 
-**A third term — *report*, for a per-PR informational number — was considered and
+**A third term — _report_, for a per-PR informational number — was considered and
 refused.** The two existing words are already used loosely across `docs/` and the
 public write-up, and a third does not sharpen a vocabulary that is not holding
-two. The properties that matter do not distinguish them: *does it block?* no,
-both; *must it reach a person?* yes, both. What differs is delivery, which is
+two. The properties that matter do not distinguish them: _does it block?_ no,
+both; _must it reach a person?_ yes, both. What differs is delivery, which is
 plumbing rather than vocabulary. And
 [ADR-0026](0026-constitution-is-gated-not-duplicated.md) transposes exactly — a
 third name is a third thing to keep true.
@@ -46,23 +46,23 @@ pass it: you cannot make `adapter-boundary` green by writing tests. And it split
 the two metrics this effort is about rather than lumping them together —
 
 - **Mutation score passes it.** A test that kills no mutants moves the number
-  zero. This is precisely why this repo's standing ban is on *coverage
-  percentage* and not on mutation score.
+  zero. This is precisely why this repo's standing ban is on _coverage
+  percentage_ and not on mutation score.
 - **A changed-lines coverage floor fails it.** Diff-locality changes **where** the
   measure applies, not **what kind** of measure it is. You still raise it by
   adding tests that execute lines. That is why
   [`docs/spec/no-coverage-floor.md`](../spec/no-coverage-floor.md) exists and why
   nothing in this rollout has a coverage number in it.
 
-⚠️ **Clause A is judgment-laden and Clause B is not.** *"Is there a named
-remedy?"* has an arguer's escape in it: somebody determined to gate a metric can
+⚠️ **Clause A is judgment-laden and Clause B is not.** _"Is there a named
+remedy?"_ has an arguer's escape in it: somebody determined to gate a metric can
 always assert a remedy exists. **A future check that passes B and is argued
 through A should be treated as suspect, not as classified.**
 
-**"Unarguable" means *the response is unarguable*, not *the answer never
-moves*.** Determinism is out as a criterion, and the repo already knew it:
-`gates.yml` says of `audit` that it is *"the one gate whose result can change
-without the code changing"*. Two of the three blocking checks on `main` are
+**"Unarguable" means _the response is unarguable_, not _the answer never
+moves_.** Determinism is out as a criterion, and the repo already knew it:
+`gates.yml` says of `audit` that it is _"the one gate whose result can change
+without the code changing"_. Two of the three blocking checks on `main` are
 non-deterministic given the commit, deliberately. What they carry instead is a
 remedy that survives the non-determinism.
 
@@ -73,8 +73,8 @@ be checkable. The series is never red; its absence is.**
 
 That threads both standing constraints without a fudge. Nothing acts on a metric
 movement, because movement is structurally incapable of being red — there is no
-threshold anywhere for it to breach. And it refuses *"a trend has no teeth"*,
-which this repo cannot afford: *a rule nothing can fail on is a comment* applies
+threshold anywhere for it to breach. And it refuses _"a trend has no teeth"_,
+which this repo cannot afford: _a rule nothing can fail on is a comment_ applies
 to the instrument as much as to the rule. **An unread dashboard and a deleted one
 are the same artifact.**
 
@@ -85,8 +85,8 @@ this repo's oldest enemy.
 ## Where trends live: `docs/gates.md`, unscored
 
 **Admitted to the file, and held by not being scored.** Mutation testing was
-already a row there, under *Not gated, deliberately*, carrying the revisit
-condition this rollout is discharging — so answering *no* would mean deleting the
+already a row there, under _Not gated, deliberately_, carrying the revisit
+condition this rollout is discharging — so answering _no_ would mean deleting the
 thing that scheduled the revisit, against the file's own **mark, do not delete**.
 
 **A trend consumes no row number and carries no status**, and
@@ -114,10 +114,10 @@ this repo's rules.
   every gate slug: a collision would otherwise be silent.
 - **The taxonomy applies to future checks**, including ones outside this rollout.
   That is the point of writing it down rather than deciding per number.
-- ⚠️ ***Trend* becomes the name for the whole not-a-gate column, including things
+- ⚠️ **_Trend_ becomes the name for the whole not-a-gate column, including things
   that do not trend.** An ill-fitting word doing correct work, recorded rather
   than hidden. **If it grates later, the fix is to rename the column, not to
-  split it** — *instrument* and *signal* are both available.
+  split it** — _instrument_ and _signal_ are both available.
 - ⚠️ **Clause A is tree-size-sensitive, and that was found rather than designed.**
   Put it to the `audit` job: in stacks the tree is small, a fix usually exists,
   and `ignoreGhsas` is one line — a **gate**. In a large production tree a daily
@@ -126,5 +126,5 @@ this repo's rules.
   opposite classification, and what flipped it is tree size.
 - **What the rule does not close**: mutation score is still gameable by adding
   trivially-killable code, which dilutes the denominator upward. **Neither clause
-  closes it**, which is why `docs/gates.md` spells the measure *killed ÷ total*
+  closes it**, which is why `docs/gates.md` spells the measure _killed ÷ total_
   in front of the reader rather than burying it.

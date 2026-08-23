@@ -2,10 +2,10 @@
 
 **Date:** 2026-08-23
 **Status:** accepted
-**Supersedes the fog item:** *"Stryker's type checker back on"*, on
-[#186](https://github.com/mephistopheles4/stacks/issues/186)'s *Not yet
-specified*, which reserved this decision *"its own ADR, after the TS 6 pin
-lands"*. The pin landed in `738ee75`; this is that ADR.
+**Supersedes the fog item:** _"Stryker's type checker back on"_, on
+[#186](https://github.com/mephistopheles4/stacks/issues/186)'s _Not yet
+specified_, which reserved this decision _"its own ADR, after the TS 6 pin
+lands"_. The pin landed in `738ee75`; this is that ADR.
 
 ## Decision
 
@@ -67,7 +67,7 @@ condition rather than a refusal.
 
 `configHashOf` hashes the Stryker configuration object, minus the output and
 logging options in `SCORE_NEUTRAL_OPTIONS`. `checkers` is hashed, correctly — so
-the *flip itself* would be visible. What is **not** in that object, and cannot
+the _flip itself_ would be visible. What is **not** in that object, and cannot
 be, is the version of `typescript` doing the checking. A one-line Dependabot bump
 of the compiler would then move every scope's score with **no hash change and
 nothing saying so**.
@@ -80,14 +80,14 @@ to close for the complexity counter, in almost the same words:
 > no branch written — breaching every cap at once and reading as a regression
 > nobody caused.
 
-Swap *ESLint* for *TypeScript* and *count* for *verdict* and the sentence
+Swap _ESLint_ for _TypeScript_ and _count_ for _verdict_ and the sentence
 survives intact. Having built a hash to shut that door on one series, opening it
 on the other is not a trade-off; it is an inconsistency.
 
 `SCORE_NEUTRAL_OPTIONS`' own doctrine points the same way. It is a **denylist in
-a repo that prefers allowlists**, and its comment says why: *"this fails closed
+a repo that prefers allowlists**, and its comment says why: _"this fails closed
 by treating anything unrecognised as score-affecting: an option nobody has
-classified is hashed."* An unhashed compiler version is the one score-affecting
+classified is hashed."_ An unhashed compiler version is the one score-affecting
 input that failure mode cannot reach, because it is not an option at all.
 
 **The mutant is not lost meanwhile.** With `checkers: []` the mutant still runs —
@@ -118,6 +118,6 @@ which direction any scope moves, spends that on a guess.
   `checkers: []` it cannot reach a verdict, which is correct conservatism under
   the denylist. Whether it belongs in `SCORE_NEUTRAL_OPTIONS` is
   [#224](https://github.com/mephistopheles4/stacks/issues/224)'s third question
-  and is deliberately left there — and note that answering it *yes* would have to
+  and is deliberately left there — and note that answering it _yes_ would have to
   be revisited the moment this ADR's condition is met, because a checker that is
   on makes `tsconfigFile` score-affecting again.

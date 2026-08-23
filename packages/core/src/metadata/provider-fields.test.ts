@@ -71,7 +71,8 @@ describe("O'Reilly keeps what it always sent", () => {
 });
 
 describe('stripping tags takes more than one pass', () => {
-  const withDescription = (description: string): HttpGet =>
+  const withDescription =
+    (description: string): HttpGet =>
     async () => ({ results: [{ title: 'A Book', description }] });
 
   it.each([

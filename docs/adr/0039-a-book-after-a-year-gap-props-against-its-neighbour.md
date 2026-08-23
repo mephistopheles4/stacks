@@ -8,7 +8,7 @@ this reasoning, which was in `placement.ts` from the day the gap was:
 > and nothing to rest against, so it stands up straight and becomes the support
 > for the books after it.
 
-The second half of that is what was wrong. There *is* something to rest against;
+The second half of that is what was wrong. There _is_ something to rest against;
 it is one gap away. A book with 9cm of air beside it does not stand square on a
 real shelf, it topples until it meets its neighbour — and the owner had noticed
 these gaps for months before asking what caused them, which is the tell that they
@@ -18,7 +18,7 @@ So the book leans until its top corner reaches the neighbour's board, at whateve
 angle that takes: about 6° for a gap this wide, and the run behind it inherits
 that angle the way a run always inherits the lean of whatever holds up its left
 end. `MAX_LEAN` — the 3.5° ceiling on an ordinary slump, "beyond that it looks
-knocked over" — does not apply, because a book that has *been* knocked over is
+knocked over" — does not apply, because a book that has _been_ knocked over is
 what this is. It gets its own ceiling, `MAX_PROP_LEAN`.
 
 ## The gap does not close. It tilts.
@@ -41,10 +41,10 @@ belongs, and shifts the book left by `propShiftOf`.
 
 Two contacts, depending on how tall the neighbour is:
 
-| | contact | angle |
-| --- | --- | --- |
-| neighbour tall enough to be met | this book's top corner, on its board | `θ = leftLean + asin(reach · cos leftLean / height)` |
-| neighbour shorter | the neighbour's top corner, on this book's board | `tan θ = (gap + recede) / cornerHeight` |
+|                                 | contact                                          | angle                                                |
+| ------------------------------- | ------------------------------------------------ | ---------------------------------------------------- |
+| neighbour tall enough to be met | this book's top corner, on its board             | `θ = leftLean + asin(reach · cos leftLean / height)` |
+| neighbour shorter               | the neighbour's top corner, on this book's board | `tan θ = (gap + recede) / cornerHeight`              |
 
 They agree at the boundary (this book's contact height equals the neighbour's
 corner height), so a neighbour a millimetre shorter does not change the answer by
@@ -54,14 +54,14 @@ book resting on thin air above a shorter neighbour.
 ⚠️ **The neighbour's footprint is not the neighbour**, and the first version of
 this measured to the footprint. A leaning book's low corner bulges `sway` right
 of it and its top corner recedes `sway` left of it, so the real distance to cross
-is not the one the cursor is holding — and the error is an *over*-lean, which
+is not the one the cursor is holding — and the error is an _over_-lean, which
 means one board driven through another rather than a gap left open. It came to
 8mm at one place on the live shelf and 18mm at another, both plainly visible in a
 close-up, and it survived a green test suite and a green G16.
 
 Only the board case adds the neighbour's own lean, and that asymmetry is the
-thing to keep straight: a book resting on a sloped *face* lies parallel to it, so
-the slope is part of the angle. A book resting on a *corner* does not — the slope
+thing to keep straight: a book resting on a sloped _face_ lies parallel to it, so
+the slope is part of the angle. A book resting on a _corner_ does not — the slope
 is already accounted for in where that corner is, and adding it again is exactly
 the over-lean above.
 
@@ -88,10 +88,10 @@ was meant to buy.
 about 6°; the live shelf's steepest is 9.8°, and a fixture with a year change at
 every one of sixty books tops out at 12.7°. The ceiling is 14.3°.
 
-⚠️ **It was 9.2° and it *bound*, and that was wrong.** The second book of a chain
+⚠️ **It was 9.2° and it _bound_, and that was wrong.** The second book of a chain
 stopped 4.7° short of its neighbour — a book resting on air, in the one case the
-owner can actually see — and the owner had said *"even if there is a gap with a
-bigger angle"*, which is permission for whatever angle it takes. The ceiling was
+owner can actually see — and the owner had said _"even if there is a gap with a
+bigger angle"_, which is permission for whatever angle it takes. The ceiling was
 declining the spec's own escape clause without asking.
 
 It was there to stop compounding, and compounding turned out not to compound. A
@@ -106,11 +106,11 @@ nothing reaches, and a slider for it would dial nothing.
 
 ## `SHELF.endReserve` was sized for an angle that stopped being the steepest
 
-Clearance for a lean is charged to the *left* of the book that leans; the last
+Clearance for a lean is charged to the _left_ of the book that leans; the last
 book of a row has nothing on its right, so its swing is paid for by `endReserve`
 and by nothing else. G25 pins that: `endReserve ≥ swayOf(MAX_HEIGHT, …)`.
 
-Against `MAX_LEAN`, which is the steepest a book slumps *of its own accord*. A
+Against `MAX_LEAN`, which is the steepest a book slumps _of its own accord_. A
 propped book leans four times further and a run inherits the angle, so the last
 spine of a row can carry 0.117 of swing into a reserve sized for 0.03 — and the
 gate that exists to catch exactly that was comparing against a constant that had
@@ -133,7 +133,7 @@ on it is what stops "conservative" from meaning "unchecked".
 ## "A run packs flush" was false the whole time
 
 The comment said neighbours at the same angle stay parallel and never collide,
-which is true of the *boards* and false of the books. A book tilted about its
+which is true of the _boards_ and false of the books. A book tilted about its
 middle stands on a base swung `sway` right of its footprint, and `sway` is half
 its **height** times the angle — so at one angle, from footprints `t` apart, a
 tall book and a short one do not have bases `t` apart. A tall book followed by a
@@ -154,7 +154,7 @@ left in place while calling the collision fixed. Half an error is not a fix, and
 
 The packer charges it at `MAX_PROP_LEAN`, per book rather than per angle change,
 which is the part that had no precedent: every clearance before this was charged
-where the angle *changed*, on the belief that nothing was owed where it did not.
+where the angle _changed_, on the belief that nothing was owed where it did not.
 
 ## Two things that were quietly wrong, and only showed up at this angle
 
@@ -164,7 +164,7 @@ tolerable approximation becomes a defect:
 - The lift that keeps a tilted book's low corner on the plank dropped its cosine.
   That is 0.0008 of a unit at the steepest ordinary slump and 0.004 at a propped
   one — a hairline of daylight under the book. The exact form costs one cosine.
-- The painted contact shadow was drawn under the book's *middle*, and a leaning
+- The painted contact shadow was drawn under the book's _middle_, and a leaning
   book's foot is not under its middle: the bottom edge swings out by `sway`.
   Worth 2cm on an ordinary slump and 5cm on a propped book, which is half a spine
   of daylight between a book and its own shadow.

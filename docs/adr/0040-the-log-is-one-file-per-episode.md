@@ -24,7 +24,7 @@ nothing able to go red on it.
 
 [ADR-0024](0024-decision-record-is-adrs.md) had already made this exact move
 once, for the same reason, and it states the rule that decided which file could
-be touched: *"Nothing parses the log, which is why it could move at all."* Two
+be touched: _"Nothing parses the log, which is why it could move at all."_ Two
 gates throw on a missing `CLAUDE.md` heading, so those stay put permanently.
 Nothing parses `progress.md` — so it could move, and `gates.md` (which G19 does
 parse) was left alone.
@@ -35,11 +35,11 @@ ADR-0024 asserted its entries were "only legible in sequence", then **reversed
 on the same day** after measuring 11% back-references. Making the same shape of
 claim again without measuring would repeat exactly that.
 
-Searching all 1551 lines for explicit reference markers — *see above*,
-*superseded*, *as noted*, *the same bug* — returns **two hits, and both are
+Searching all 1551 lines for explicit reference markers — _see above_,
+_superseded_, _as noted_, _the same bug_ — returns **two hits, and both are
 inside the mobile-crash episode**. Cross-episode references measure zero.
 
-That result decides the unit in both directions: episodes are separable, *and*
+That result decides the unit in both directions: episodes are separable, _and_
 the 460-line mobile crash stays one file. Splitting it into its ten subsections
 is the only move here that would actually have broken a reference.
 
@@ -56,7 +56,7 @@ directory short. Nothing else in the repo would have noticed, and the failure
 mode is a document that reads as a route and is a dead end.
 
 There is a trade recorded in `docs/gates.md`: prose references that name a
-section *in words* rather than linking to it are invisible to any link checker,
+section _in words_ rather than linking to it are invisible to any link checker,
 and four of them existed. They were fixed by hand. A gate asserting that a named
 section still exists somewhere is possible and was rejected as over-engineering
 for four sentences.
@@ -81,7 +81,7 @@ they are recorded here so the next person renaming one knows what reads it.
 ## What was not done
 
 **`gates.md` was not split**, though it is 1112 lines of which only 65 are
-table. Its spine is *parsed* — G19 reads 28 rows, `## Status key` and
+table. Its spine is _parsed_ — G19 reads 28 rows, `## Status key` and
 `## Invariants → gates`, and `markdownSection` throws on a renamed heading. A
 probe replaying G19's own helpers against four hypothetical versions confirmed
 the prose tail can be moved with zero test changes, and also found the trap: a
@@ -95,5 +95,5 @@ deliberately, not forgotten — the evidence is in
 but the number is the retirement mechanism: `docs/gates.md`'s "Retiring a row"
 requires unique, gapless numbering so a rule that stops applying leaves a
 visible hole, and a name cannot encode absence. The answer, if taken, is the ADR
-convention already used in this directory — number *and* slug, `G19 —
+convention already used in this directory — number _and_ slug, `G19 —
 constitution-scoreboard` — which is additive and belongs in its own commit.

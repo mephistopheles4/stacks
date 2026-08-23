@@ -10,14 +10,14 @@ The ticket that opened the merge revision said a merge change "can silently
 rewrite titles, authors and page counts on books that were fine". **Under this
 project's write paths it cannot**, and noticing that is most of the decision:
 
-| Surface | What it does | Guard |
-|---|---|---|
-| `lookup` / `fillGaps` | decides which provider's record wins | none — this *is* the merge |
-| `addBook` | writes a **new** note | `BookInput`, a closed list |
-| `enrichBook` | writes to an **existing** note | `FILLABLE`, plus `if (book.X === undefined)` on every write |
+| Surface               | What it does                         | Guard                                                       |
+| --------------------- | ------------------------------------ | ----------------------------------------------------------- |
+| `lookup` / `fillGaps` | decides which provider's record wins | none — this _is_ the merge                                  |
+| `addBook`             | writes a **new** note                | `BookInput`, a closed list                                  |
+| `enrichBook`          | writes to an **existing** note       | `FILLABLE`, plus `if (book.X === undefined)` on every write |
 
 So a merge change alters what a brand-new `stacks add` records, and which value
-fills an existing *gap*. A page count already present is never touched.
+fills an existing _gap_. A page count already present is never touched.
 
 **The trap is the mirror image**, and it is why this is a decision rather than an
 observation: taking a new field in the merge writes it **nowhere**, because
@@ -42,7 +42,7 @@ assume a provider supplied it.
 
 The characteristic failure of this effort is prevented by construction rather
 than detected — which is the better arrangement, and also the one that rots
-quietly. **G32** asserts the *claim* rather than the branch: a note carrying
+quietly. **G32** asserts the _claim_ rather than the branch: a note carrying
 every fillable key, handed a provider that disagrees about all of them, must come
 back byte-identical. A test that checked the `if` would pass a refactor that
 moved the `if`.
@@ -50,7 +50,7 @@ moved the `if`.
 ⚠️ That gate's first version **passed against the exact defect it exists for**.
 Its fixture carried every fillable key, so `enrichBook` returned `complete`
 before touching the network and the fill loop never ran. It now leaves exactly
-one gap that nothing can fill, and its vacuity guard asserts *that shape* rather
+one gap that nothing can fill, and its vacuity guard asserts _that shape_ rather
 than asserting there are no gaps — which was the thing causing the problem.
 
 ## How this was decided

@@ -17,13 +17,13 @@ and that URL was really being fetched. Fixed by stubbing `fetch` in that file:
 
 **The belief that this could not happen was written down in three places**, and
 this file was one of them — the note under worktrees explains that `.cache/` is
-safe to keep per-checkout *because* tests inject a fixture-backed `HttpGet`. The
+safe to keep per-checkout _because_ tests inject a fixture-backed `HttpGet`. The
 claim is true; the reasoning is the incomplete model that let this through, and
 it is left standing above as the record of what everyone thought. The other two
 are `CLAUDE.md`'s Phase 1 gate and `covers/download.test.ts`'s opening comment.
 
 G21 makes it mechanical. Two findings worth carrying, both in
-[`gates.md`](../gates.md) in full: a guard that only *throws* is swallowed by
+[`gates.md`](../gates.md) in full: a guard that only _throws_ is swallowed by
 `download`'s deliberate `catch { return undefined }` and reports **7 passed**,
 so the gate records attempts and asserts in an `afterEach` instead; and the
 gate's own spec was vacuous until the installation was split into its own file,

@@ -108,9 +108,7 @@ function tabledTrends(): string[] {
   // one stray backtick switching the gate off for the rest of the line — so a
   // cell that does not parse arrives here as its raw text and fails the
   // well-formedness check below rather than vanishing from the comparison.
-  const body = lines.filter(
-    (line) => line !== header && !/^\|[\s|:-]+\|$/.test(line.trim()),
-  );
+  const body = lines.filter((line) => line !== header && !/^\|[\s|:-]+\|$/.test(line.trim()));
 
   const names = body.map((line) => (tableCells(line)[at] ?? '').replace(/`/g, '').trim());
   expectFound(names, 'rows in the Trends table of docs/gates.md', 8);
@@ -154,9 +152,7 @@ describe('G36 — the emitted series and the Trends table agree', () => {
 
   it('gives every emitted series a row', () => {
     const tabled = new Set(tabledTrends());
-    const unlisted = trendNamesIn(renderMetrics(completeRun())).filter(
-      (name) => !tabled.has(name),
-    );
+    const unlisted = trendNamesIn(renderMetrics(completeRun())).filter((name) => !tabled.has(name));
 
     expect(
       unlisted,

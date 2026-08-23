@@ -2,7 +2,7 @@
 
 Picking a book up off the shelf and reading what you thought of it.
 
-This is P2 in the brief — *architectural insurance: design for, don't build*.
+This is P2 in the brief — _architectural insurance: design for, don't build_.
 Nothing here is implemented. It exists so that the decisions being made now, in
 the renderer and in the publisher, don't quietly foreclose it, and so that the
 reasoning survives the session it was worked out in.
@@ -27,8 +27,8 @@ Invariant 2 currently reads:
 > **Note bodies are private.** Nothing below the frontmatter block is ever parsed
 > into `library.json` or shipped in any build.
 
-The brief is narrower — *"never parsed for the public build"* (line 80), *"notes
-stay private **by default**"* (line 31). Two different rules, and this feature is
+The brief is narrower — _"never parsed for the public build"_ (line 80), _"notes
+stay private **by default**"_ (line 31). Two different rules, and this feature is
 legal under one and illegal under the other. Nothing has noticed so far because
 no code has ever wanted to read a note body.
 
@@ -41,8 +41,8 @@ Everything under a `## Thoughts` heading ships. Everything else in the body does
 not.
 
 The direction is the whole decision. An allowlist fails closed: misspell the
-heading and nothing publishes, which you notice and fix. A denylist — *everything
-except `## Private`* — fails open: forget the heading once and the entire note
+heading and nothing publishes, which you notice and fix. A denylist — _everything
+except `## Private`_ — fails open: forget the heading once and the entire note
 ships. This project has already made that call for `private: yes`, for the same
 asymmetry. Wrongly private is a gap you spot in a second; wrongly public is on a
 URL that may already have been sent or crawled.
@@ -84,7 +84,7 @@ arbitrary files.
   section is that same bug with a wider reach: vault text naming any file in the
   vault, to code whose job is to copy files into a public folder.
 - **Wikilinks are flattened to their display text.** `[[Some Other Book|that
-  one]]` becomes `that one`. A live link points at a note that does not exist
+one]]` becomes `that one`. A live link points at a note that does not exist
   publicly, and the target itself is vault structure.
 - **Plain text ships, not HTML.** Markdown → HTML means a dependency and
   `innerHTML`; the detail card is built with `textContent` deliberately, and one
@@ -116,7 +116,7 @@ deciding which side something belongs on.
 ### The gate has to change with it, or it goes vacuous
 
 `gate:public` plants `NOTE_BODY_CANARY_do_not_ship` in fixture note bodies and
-fails if the built folder contains it. The moment *some* body text legitimately
+fails if the built folder contains it. The moment _some_ body text legitimately
 ships, that gate proves less than it did.
 
 The specific way it rots: if the canary only ever lives in notes that have no

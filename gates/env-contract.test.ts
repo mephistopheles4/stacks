@@ -79,10 +79,7 @@ describe('G9 — env contract', () => {
     const read = new Set(keysReadInCode());
     const unread = keysDocumented().filter((key) => !read.has(key));
 
-    expect(
-      unread,
-      `documented in .env.example but read nowhere: ${unread.join(', ')}`,
-    ).toEqual([]);
+    expect(unread, `documented in .env.example but read nowhere: ${unread.join(', ')}`).toEqual([]);
   });
 
   it('pins STACKS_VAULT, so a rename cannot pass quietly', () => {

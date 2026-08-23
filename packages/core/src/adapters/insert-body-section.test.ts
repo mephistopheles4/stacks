@@ -30,7 +30,19 @@ describe('insertBodySection', () => {
   const read = async (name: string): Promise<string> =>
     readFile(join(dir, 'Library', name), 'utf8');
 
-  const NOTE = ['---', 'type: book', 'title: A Book', '---', '', '![[cover.png]]', '', '## Notes', '', 'My own thoughts.', ''].join('\n');
+  const NOTE = [
+    '---',
+    'type: book',
+    'title: A Book',
+    '---',
+    '',
+    '![[cover.png]]',
+    '',
+    '## Notes',
+    '',
+    'My own thoughts.',
+    '',
+  ].join('\n');
 
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), 'stacks-body-'));
@@ -64,7 +76,10 @@ describe('insertBodySection', () => {
   });
 
   it('writes nothing at all when the heading is already there', async () => {
-    const withSection = NOTE.replace('## Notes', '## About\n\nThe blurb it already had.\n\n## Notes');
+    const withSection = NOTE.replace(
+      '## Notes',
+      '## About\n\nThe blurb it already had.\n\n## Notes',
+    );
     await note('a.md', withSection);
 
     await vault.insertBodySection('Library/a.md', '## About', 'A different blurb.');
@@ -79,7 +94,9 @@ describe('insertBodySection', () => {
 
     await vault.insertBodySection('Library/a.md', '## About', 'A blurb.');
 
-    expect(await read('a.md')).toBe('---\ntype: book\ntitle: A Book\n---\n\n## About\n\nA blurb.\n');
+    expect(await read('a.md')).toBe(
+      '---\ntype: book\ntitle: A Book\n---\n\n## About\n\nA blurb.\n',
+    );
   });
 
   it('keeps CRLF files on CRLF', async () => {

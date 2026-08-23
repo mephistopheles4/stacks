@@ -106,7 +106,8 @@ export interface LightingSettings {
  * across major versions. `scene.ts` maps these to the real constants, the same
  * way `SHADOW_TYPES` already maps the shadow filters.
  */
-export type ToneMappingName = 'none' | 'linear' | 'reinhard' | 'cineon' | 'aces' | 'agx' | 'neutral';
+export type ToneMappingName =
+  'none' | 'linear' | 'reinhard' | 'cineon' | 'aces' | 'agx' | 'neutral';
 
 export const TONE_MAPPING_NAMES: readonly ToneMappingName[] = [
   'none',
@@ -503,7 +504,9 @@ export interface SettingsPatch {
   readonly books?: Partial<BooksSettings>;
   readonly lighting?: {
     readonly ambient?: Partial<LightingSettings['ambient']>;
-    readonly key?: Partial<Omit<KeyLightSettings, 'position'>> & { readonly position?: PositionPatch };
+    readonly key?: Partial<Omit<KeyLightSettings, 'position'>> & {
+      readonly position?: PositionPatch;
+    };
     readonly fill?: Partial<Omit<DirectionalLightSettings, 'position'>> & {
       readonly position?: Partial<LightPosition>;
     };
@@ -520,7 +523,10 @@ export interface SettingsPatch {
  * expressions. That block *was* this function written longhand; lifting it is
  * most of what the settings refactor is.
  */
-export function resolveSettings(patch: SettingsPatch = {}, base: ShelfSettings = DEFAULT_SETTINGS): ShelfSettings {
+export function resolveSettings(
+  patch: SettingsPatch = {},
+  base: ShelfSettings = DEFAULT_SETTINGS,
+): ShelfSettings {
   return {
     renderer: { ...base.renderer, ...patch.renderer },
     effects: { bloom: { ...base.effects.bloom, ...patch.effects?.bloom } },

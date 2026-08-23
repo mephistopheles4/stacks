@@ -49,7 +49,9 @@ describe('normaliseTitleAuthor', () => {
     // "Iglesias, Tomás" and "Tomas Iglesias" produce the same *tokens* in a
     // different order. Normalisation deliberately stays a string transform;
     // order-insensitivity lives in the token-set comparison instead.
-    expect(normaliseTitleAuthor('Iglesias, Tomás')).not.toBe(normaliseTitleAuthor('Tomas Iglesias'));
+    expect(normaliseTitleAuthor('Iglesias, Tomás')).not.toBe(
+      normaliseTitleAuthor('Tomas Iglesias'),
+    );
     expect(normaliseTitleAuthor('Iglesias, Tomás').split(' ').sort()).toEqual(
       normaliseTitleAuthor('Tomas Iglesias').split(' ').sort(),
     );
@@ -72,7 +74,10 @@ describe('isProbablySameBook', () => {
 
   it('matches the print and audiobook editions in the fixture vault', () => {
     expect(
-      isProbablySameBook('The Salt Road Ledger Beatrix Okonkwo', 'Salt Road Ledger, The Okonkwo, Beatrix'),
+      isProbablySameBook(
+        'The Salt Road Ledger Beatrix Okonkwo',
+        'Salt Road Ledger, The Okonkwo, Beatrix',
+      ),
     ).toBe(true);
   });
 
@@ -101,10 +106,7 @@ describe('isProbablySameBook', () => {
     // every word of the real title is in there. The knock-off's cover was
     // downloaded and written onto the real book.
     expect(
-      isProbablySameBook(
-        "Summary of Will Larson's Staff Engineer",
-        'Staff Engineer Will Larson',
-      ),
+      isProbablySameBook("Summary of Will Larson's Staff Engineer", 'Staff Engineer Will Larson'),
     ).toBe(false);
     expect(
       isProbablySameBook('Workbook for Atomic Habits James Clear', 'Atomic Habits James Clear'),
@@ -123,15 +125,17 @@ describe('isProbablySameBook', () => {
   });
 
   it('does not let a one-word title match everything it appears inside', () => {
-    expect(isProbablySameBook('Nexus', 'Nexus: A Brief History of Information Networks')).toBe(false);
+    expect(isProbablySameBook('Nexus', 'Nexus: A Brief History of Information Networks')).toBe(
+      false,
+    );
   });
 
   it('does NOT collapse two different books by the same author', () => {
     // The author tokens match on both sides; only the title tokens keep these
     // apart, which is exactly the false positive a looser rule would produce.
-    expect(isProbablySameBook('The Tidal Engine Marisol Vane', 'The Quiet Protocol Marisol Vane')).toBe(
-      false,
-    );
+    expect(
+      isProbablySameBook('The Tidal Engine Marisol Vane', 'The Quiet Protocol Marisol Vane'),
+    ).toBe(false);
     expect(isProbablySameBook('Compilers for the Impatient Roy', 'Lantern Work Roy')).toBe(false);
   });
 
@@ -144,7 +148,10 @@ describe('isProbablySameBook', () => {
 describe('titleMatchScore', () => {
   it('ranks an exact title above one merely containing it', () => {
     const exact = titleMatchScore('salt road ledger', 'The Salt Road Ledger');
-    const padded = titleMatchScore('salt road ledger', 'The Salt Road Ledger and Other Long Stories');
+    const padded = titleMatchScore(
+      'salt road ledger',
+      'The Salt Road Ledger and Other Long Stories',
+    );
     expect(exact).toBeGreaterThan(padded);
   });
 
@@ -158,7 +165,10 @@ describe('a prefix is not a subtitle', () => {
     // "Beyond Order:" is two tokens, which the old drift allowance let through,
     // so the sequel was refused as a duplicate of the original.
     expect(
-      isProbablySameBook('12 Rules for Life', 'Beyond Order: 12 More Rules for Life Jordan B. Peterson'),
+      isProbablySameBook(
+        '12 Rules for Life',
+        'Beyond Order: 12 More Rules for Life Jordan B. Peterson',
+      ),
     ).toBe(false);
   });
 
@@ -186,7 +196,10 @@ describe('companion volumes', () => {
     // vault, so `stacks add "The Power of Now Journal"` was refused as a
     // duplicate of the book it sits next to on a shelf.
     expect(
-      isProbablySameBook('The Power of Now Eckhart Tolle', 'The Power of Now Journal Eckhart Tolle'),
+      isProbablySameBook(
+        'The Power of Now Eckhart Tolle',
+        'The Power of Now Journal Eckhart Tolle',
+      ),
     ).toBe(false);
   });
 
@@ -226,7 +239,10 @@ describe('rankingScore', () => {
     expect(authored).toBeGreaterThanOrEqual(empty);
 
     // The old scoring, kept here as the thing that must not come back.
-    const authoredOld = titleMatchScore('12 Rules for Life', '12 Rules for Life Jordan B. Peterson');
+    const authoredOld = titleMatchScore(
+      '12 Rules for Life',
+      '12 Rules for Life Jordan B. Peterson',
+    );
     const emptyOld = titleMatchScore('12 Rules for Life', '12 Rules for Life ');
     expect(emptyOld).toBeGreaterThan(authoredOld);
   });

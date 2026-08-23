@@ -25,33 +25,33 @@ but they bind you to the Google APIs Terms of Service, **§6**:
 > You agree to display any attribution(s) required by Google **as described in
 > the documentation for the API**.
 
-The Books branding page *is* that documentation, and this project holds a
+The Books branding page _is_ that documentation, and this project holds a
 `GOOGLE_BOOKS_API_KEY` obtained under those terms. Two limbs:
 
-| Limb | Clause | Status |
-|---|---|---|
-| **§2 per-result link** | *"Every book result displayed in your application must have a prominent link to … the Google Books page for that book."* | **Already discharged** by the card's Google mark |
-| **§4 the graphic** | *"the 'powered by Google' logo must appear adjacent to these results."* | **This surface** |
+| Limb                   | Clause                                                                                                                   | Status                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| **§2 per-result link** | _"Every book result displayed in your application must have a prominent link to … the Google Books page for that book."_ | **Already discharged** by the card's Google mark |
+| **§4 the graphic**     | _"the 'powered by Google' logo must appear adjacent to these results."_                                                  | **This surface**                                 |
 
 **The link limb needed no new work, and the populations match by construction.**
-The contributor set *is* the set of id keys present, so "book with Google-derived
+The contributor set _is_ the set of id keys present, so "book with Google-derived
 data" and "book that renders a Google mark" are the same set, filled from one
 `enrich` pass. Nothing was added to make the obligation and the affordance line
 up.
 
 ⚠️ **The two limbs are separate and must not be conflated.** A published claim on
 this map — that an open card discharges the corner's obligation because it
-carries the Google mark — is **wrong**: the mark is the *link* limb and the
-occluded graphic is the *graphic* limb. The card cannot stand in for the corner.
+carries the Google mark — is **wrong**: the mark is the _link_ limb and the
+occluded graphic is the _graphic_ limb. The card cannot stand in for the corner.
 See §4.
 
 **Two strains recorded rather than smoothed:** "prominent" is read generously
 (the mark is an icon at the terminal end of an eight-row card that only exists
-after a click), and a *text* link would also have discharged §2 — not taken, but
+after a click), and a _text_ link would also have discharged §2 — not taken, but
 it remains the cheap escape if the mark's redistribution residual ever bites.
 
 **It binds although the data reaches the vault first.** §6 attaches to
-*displaying* the data; if inserting a hop between fetch and display discharged
+_displaying_ the data; if inserting a hop between fetch and display discharged
 it, every API attribution requirement would be one cache away from nothing, and
 this project caches every response in `.cache/` already. Smallness, `noindex` and
 non-commercial use did **not** decide it, for the same reason the mark research
@@ -90,7 +90,7 @@ inferring — and it was: at 375×812 with the shelf live,
 `elementFromPoint(link centre)` returns the anchor, not the canvas, with the
 surface at `z-index: 5` against a `.shelf` carrying none.
 
-⚠️ **The reason is *not* that `header` is `pointer-events: none`.** That
+⚠️ **The reason is _not_ that `header` is `pointer-events: none`.** That
 justification belonged to a placement that was rejected (into the header lockup);
 in the locked design the surface is a `<body>` child and the header is not
 involved.
@@ -132,22 +132,22 @@ otherwise inert, and a new Astro page is the shape the constraint already names.
 
 > **Apple Books is a service mark of Apple Inc.**
 
-Apple's §7.1 governing sentence is *"listing all the Apple trademarks used in
+Apple's §7.1 governing sentence is _"listing all the Apple trademarks used in
 your communication. **List only the trademarks actually used in your
-materials.**"* It then gives three variants, **all scoped to the badge**, and the
+materials.**"_ It then gives three variants, **all scoped to the badge**, and the
 card locked the **icon**, for which Apple publishes **no variant at all**. Read
 against the governing sentence rather than the nearest example, the badge
-variant's *"The Apple logo is a trademark of Apple Inc., registered in the U.S.
-and other countries"* sentence is **dropped, because the Apple logo is not
+variant's _"The Apple logo is a trademark of Apple Inc., registered in the U.S.
+and other countries"_ sentence is **dropped, because the Apple logo is not
 used**.
 
 ⚠️ **If the vendored icon artwork turns out to carry the Apple logo, that
 sentence returns.** That is a check on the asset, not a reopened decision.
 
-Apple explicitly permits this placement — *"Follow standard practices for the
+Apple explicitly permits this placement — _"Follow standard practices for the
 placement of legal copy, such as creating additional screens or providing
-interactive links"* — and requires it *"only once in your communication or
-website"*, which one route satisfies for the whole site.
+interactive links"_ — and requires it _"only once in your communication or
+website"_, which one route satisfies for the whole site.
 
 **The line is owed only if the Apple mark ships.** It rides on the same surface
 because one element discharging two obligations is what makes the surface
@@ -162,16 +162,16 @@ the desktop card owns bottom-right, and on a phone the full-bleed sheet owns the
 entire bottom edge whenever a card is open. `?attribproto=` mounted the surface
 on the real page so this is a number rather than an argument:
 
-| place | desktop | portrait 375×812 | landscape 667×375 |
-|---|---|---|---|
-| **bottom-left** *(chosen)* | clear | **100% behind the sheet** with a card open | **100% behind the sheet** |
-| top-right | clear | **3211px² on the header caption** | clear |
-| under the header | clear | clear | clear |
+| place                      | desktop | portrait 375×812                           | landscape 667×375         |
+| -------------------------- | ------- | ------------------------------------------ | ------------------------- |
+| **bottom-left** _(chosen)_ | clear   | **100% behind the sheet** with a card open | **100% behind the sheet** |
+| top-right                  | clear   | **3211px² on the header caption**          | clear                     |
+| under the header           | clear   | clear                                      | clear                     |
 
 ⚠️ **The instrument was wrong before the placements were.** The first pass
-measured overlap against the *card* only and reported top-right as clear in every
-state — while at 375px its text lands directly on *"Drag to look around · click a
-book"*. **The page has two things to collide with and the rig was watching one.**
+measured overlap against the _card_ only and reported top-right as clear in every
+state — while at 375px its text lands directly on _"Drag to look around · click a
+book"_. **The page has two things to collide with and the rig was watching one.**
 `measure()` now reports `onHeader` too. This is CLAUDE.md's `?solo` lesson
 repeating itself.
 
@@ -179,14 +179,14 @@ repeating itself.
 with a card open — the whole of it. **Accepted by the owner, deliberately, after
 the measurement and the objection were both put.**
 
-**The objection, on the record:** a card-*conditional* graphic was rejected
+**The objection, on the record:** a card-_conditional_ graphic was rejected
 because it would be absent exactly when the obligation is live. Occluded by an
 overlay is not the same as conditionally rendered, but the visible result on a
-phone is the same — and an occluded *paragraph* is hidden text where an occluded
-*anchor* is a control nobody can reach.
+phone is the same — and an occluded _paragraph_ is hidden text where an occluded
+_anchor_ is a control nobody can reach.
 
-**The basis that holds:** *occluded by a dismissible, non-modal overlay is not
-the same as conditionally rendered.* The element is in the DOM and displayed on
+**The basis that holds:** _occluded by a dismissible, non-modal overlay is not
+the same as conditionally rendered._ The element is in the DOM and displayed on
 load; the sheet is one gesture from dismissal and swaps rather than stacks.
 
 ⚠️ **The residual, stated rather than smoothed:** while a card is open on a
@@ -205,7 +205,7 @@ at two.
 
 ## 5. The asset: vendored, not hotlinked
 
-**Vendored**, against the ticket's own stated constraint *and* against a
+**Vendored**, against the ticket's own stated constraint _and_ against a
 mid-session recommendation. Google serves
 `books.google.com/googlebooks/images/poweredby.png` from its own host with no
 registration, so hotlinking would make the redistribution question vanish
@@ -219,15 +219,15 @@ outright. Three reasons it is not taken:
   have turn up beside your name. **A privacy regression accepted to satisfy an
   obligation that has nothing to do with privacy is a bad trade.**
 - **An attribution you do not host can fail silently.** The URL is advertised by
-  a page more than a decade stale, and a broken image is a *failed* obligation
+  a page more than a decade stale, and a broken image is a _failed_ obligation
   that looks exactly like a met one.
 - **The redistribution residual is weaker here than for the card's bare marks.**
-  Every grant found is permission to *use* artwork and silent about
+  Every grant found is permission to _use_ artwork and silent about
   redistribution; this one image is different in kind — Google **requires** its
   display and serves it unconditionally.
 
 **A text-only "Powered by Google" was not an option** — the clause says
-*graphic*, and *"Do not change any of the Google marks in any way."*
+_graphic_, and _"Do not change any of the Google marks in any way."_
 
 ⚠️ **The graphic's real footprint is unmeasured.** Every width in §2 inherits an
 **assumed 144×26**; `poweredby.png` has not been fetched, only confirmed to
@@ -248,8 +248,8 @@ mark row is not reopened.**
 The reading: **Google means search engines.** Apple Books is a bookshop and Open
 Library is a library catalogue. ⚠️ **The counter-argument is on the record rather
 than left to be rediscovered:** Open Library genuinely runs a search over a book
-catalogue, *"or other search services"* is broader than "search engines", and
-*"there are no exceptions"* is the identical phrasing this map read as absolute
+catalogue, _"or other search services"_ is broader than "search engines", and
+_"there are no exceptions"_ is the identical phrasing this map read as absolute
 when O'Reilly used it. This is a judgement, not a certainty — a made decision
 rather than a future surprise.
 
@@ -272,7 +272,7 @@ never had one to think about.
   into `index.html` (`scripts/deploy.ts:369`). ⚠️ **A change confined to
   `/attribution` moves no stamp**, so the live build check would not notice it
   had shipped. Stated as an accepted limitation rather than fixed: the stamp
-  exists to prove *the bundle* changed, and the route is static text that shares
+  exists to prove _the bundle_ changed, and the route is static text that shares
   the bundle.
 
 Nothing here changes what `deploy:site` uploads — wrangler publishes `dist/`.
@@ -287,7 +287,7 @@ Nothing here changes what `deploy:site` uploads — wrangler publishes `dist/`.
    population is every book Google cannot match after `enrich`.
 3. **35 of 41 real books carry `pages` with no recoverable provenance.** A book
    whose Google data predates ids and which Google can no longer match is
-   unattributable *in principle*, because a note records an answer and never who
+   unattributable _in principle_, because a note records an answer and never who
    gave it. **Its size is unknowable by construction.** The page-level graphic
    reduces its practical weight to nothing — it covers every book on the page
    whether or not it carries an id — and post-`enrich`, `google_volume_id`

@@ -171,10 +171,7 @@ export interface Fault {
  * *the first* thing wrong makes a rename look like one fault when it is
  * usually three.
  */
-export function declarationFaults(
-  declarations: Declarations,
-  files: readonly string[],
-): Fault[] {
+export function declarationFaults(declarations: Declarations, files: readonly string[]): Fault[] {
   const { scopes, excludedDirectories } = declarations;
   const faults: Fault[] = [];
 

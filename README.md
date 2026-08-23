@@ -99,15 +99,15 @@ serves files.
 
 Worth deciding on purpose, because this is the part that leaves your machine:
 
-| Published | Never published |
-| --- | --- |
-| Title, author, ISBN | Note bodies — anything you wrote |
-| Reading status, start and finish dates | Vault paths and filenames |
-| Rating, tags, page count | Books marked `private: true` |
-| Cover images, re-hosted at 512px | Wishlist books — you don't own them |
+| Published                              | Never published                     |
+| -------------------------------------- | ----------------------------------- |
+| Title, author, ISBN                    | Note bodies — anything you wrote    |
+| Reading status, start and finish dates | Vault paths and filenames           |
+| Rating, tags, page count               | Books marked `private: true`        |
+| Cover images, re-hosted at 512px       | Wishlist books — you don't own them |
 
 `private: true` **fails closed**: anything that isn't clearly a "no" keeps the
-book unpublished, because `private: yes` is a *string* in YAML and a strict
+book unpublished, because `private: yes` is a _string_ in YAML and a strict
 boolean check would have published it. Wrongly private is a missing spine you
 fix in a second; wrongly public may already have been crawled.
 
@@ -117,28 +117,28 @@ requests are honoured.
 
 ## Commands
 
-| `pnpm stacks …` | What it does |
-| --- | --- |
-| `add` | fetch metadata and a cover, then write a note into the vault |
-| `build` | parse the vault into `library.json` (`--public`, `--watch`) |
-| `status` | books this year, in progress, covers still missing |
-| `covers` | report where each cover came from, or record it (`--backfill`) |
-| `enrich` | fill missing metadata on existing notes, never overwriting |
-| `order` | show the shelf order, or renumber it (`--renumber`) |
-| `import` | import a library export into the vault (`audible`) |
+| `pnpm stacks …` | What it does                                                   |
+| --------------- | -------------------------------------------------------------- |
+| `add`           | fetch metadata and a cover, then write a note into the vault   |
+| `build`         | parse the vault into `library.json` (`--public`, `--watch`)    |
+| `status`        | books this year, in progress, covers still missing             |
+| `covers`        | report where each cover came from, or record it (`--backfill`) |
+| `enrich`        | fill missing metadata on existing notes, never overwriting     |
+| `order`         | show the shelf order, or renumber it (`--renumber`)            |
+| `import`        | import a library export into the vault (`audible`)             |
 
-| Script | What it does |
-| --- | --- |
-| `pnpm dev` | site dev server |
-| `pnpm dev:watch` | vault watcher + dev server, live-reloading |
-| `pnpm test` | vitest, all workspaces and the gates |
-| `pnpm typecheck` | `tsc --noEmit` across every `.ts` in the repo |
-| `pnpm build` | typecheck + static site build |
+| Script                   | What it does                                            |
+| ------------------------ | ------------------------------------------------------- |
+| `pnpm dev`               | site dev server                                         |
+| `pnpm dev:watch`         | vault watcher + dev server, live-reloading              |
+| `pnpm test`              | vitest, all workspaces and the gates                    |
+| `pnpm typecheck`         | `tsc --noEmit` across every `.ts` in the repo           |
+| `pnpm build`             | typecheck + static site build                           |
 | `pnpm worktree <branch>` | a second checkout, cut from `origin/main` and installed |
-| `pnpm fixtures:50` | regenerate the 50-book fixture vault |
-| `pnpm smoke:render` | headless shelf screenshot gate |
-| `pnpm gate:public` | proves the public build leaks no note text |
-| `pnpm deploy:site` | gates, then build from the real vault, then publish |
+| `pnpm fixtures:50`       | regenerate the 50-book fixture vault                    |
+| `pnpm smoke:render`      | headless shelf screenshot gate                          |
+| `pnpm gate:public`       | proves the public build leaks no note text              |
+| `pnpm deploy:site`       | gates, then build from the real vault, then publish     |
 
 Both lists are documented in full in [AGENTS.md](AGENTS.md), and
 `gates/commands.test.ts` holds that file to reality in both directions — adding
@@ -172,15 +172,15 @@ workflow requires them, and every gate passes without a single one installed.
 
 ## Documentation
 
-| | |
-| --- | --- |
-| [docs/progress.md](docs/progress.md) | where the project actually is — start here |
-| [AGENTS.md](AGENTS.md) | the invariants and contracts that must not break |
-| [docs/adr/](docs/adr/) | every choice made, and why |
-| [docs/gates.md](docs/gates.md) | which rule each gate protects — and which are protected by nothing |
-| [SECURITY.md](SECURITY.md) | the threat model, stated plainly |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1, and what one maintainer can escalate |
-| [docs/library-brief.md](docs/library-brief.md) | the original product spec (historical) |
+|                                                |                                                                    |
+| ---------------------------------------------- | ------------------------------------------------------------------ |
+| [docs/progress.md](docs/progress.md)           | where the project actually is — start here                         |
+| [AGENTS.md](AGENTS.md)                         | the invariants and contracts that must not break                   |
+| [docs/adr/](docs/adr/)                         | every choice made, and why                                         |
+| [docs/gates.md](docs/gates.md)                 | which rule each gate protects — and which are protected by nothing |
+| [SECURITY.md](SECURITY.md)                     | the threat model, stated plainly                                   |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)       | Contributor Covenant 2.1, and what one maintainer can escalate     |
+| [docs/library-brief.md](docs/library-brief.md) | the original product spec (historical)                             |
 
 `library.json` is a build artifact: always regenerable from the vault, never
 hand-edited, gitignored.

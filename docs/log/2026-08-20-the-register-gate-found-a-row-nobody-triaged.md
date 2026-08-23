@@ -7,7 +7,7 @@
 [`docs/spec/gaming-analysis.md`](../spec/gaming-analysis.md) §§2–3.
 
 The bundling was forced rather than chosen. `gate-register` shipped alone is red
-on every row that has no entry — *a gate that has never passed*, not one observed
+on every row that has no entry — _a gate that has never passed_, not one observed
 failing on a real defect — and shipped against stub entries it is green over
 empty sections, which is the category-4 failure built into the artifact about
 category 4. So it lands with the first new row it can go red on, and one commit
@@ -34,8 +34,8 @@ plant. The backfilled entry is in the register, and it says in terms that it is
 a backfill: **the rollout's rule is that every gate landing before
 `gate-register` writes its observed-red line at landing, and G37 did not.**
 `docs/gates.md` carries no `## G37` narrative at all, so its three plants were
-run on 2026-08-20 by the session landing G41 — *the decay category arriving
-inside the artifact built to catalogue it*, written down rather than smoothed
+run on 2026-08-20 by the session landing G41 — _the decay category arriving
+inside the artifact built to catalogue it_, written down rather than smoothed
 over.
 
 ## Three things the specs got wrong about the tree, all measured
@@ -52,11 +52,11 @@ from landing order and never chosen.
 
 **The merged-verdict exemption is ten rows, not one.** `gaming-analysis.md` §2
 specifies a single exemption for G26's `**Vacuous green / decay**` bullet. §4 of
-that same file records *"ten rows collapsing five verdicts into one line."*
+that same file records _"ten rows collapsing five verdicts into one line."_
 Measured: G12, G17, G20, G21, G22, G23, G24, G25, G26 and G34. Exempting only
 G26 would have landed the gate red on nine band-authored entries, and the two
 ways out of that are both refusals — weaken the rule, or rewrite nine verdicts §1
-says are *"marked in place, not split."* The list is widened to the measured
+says are _"marked in place, not split."_ The list is widened to the measured
 population, closed there, and **reverse-asserted in both directions**: a merged
 bullet on an unlisted row is red, and a listed bullet the file no longer carries
 is red as a stale permission.
@@ -75,9 +75,9 @@ disagreeing in silence.
 
 ## The floor is right for a different reason than the spec gives
 
-`gaming-analysis.md` §3 sets the row-side floor at **42** and calls it *"the row
-population after this spec lands"*, flagging loudly that *a floor equal to a
-population* is the shape that went wrong in the supply-chain piece.
+`gaming-analysis.md` §3 sets the row-side floor at **42** and calls it _"the row
+population after this spec lands"_, flagging loudly that _a floor equal to a
+population_ is the shape that went wrong in the supply-chain piece.
 
 Under the spec's own numbering that floor would have been **red at landing**:
 `gate-register` lands three rows into a 35-row file, at 41, and the ratchet's row
@@ -95,17 +95,17 @@ named-unbuilt remedy, then the routing-around verdicts of each row sharing a
 mechanism. **Three of them changed what got built**, which is the answer to
 whether the obligation is paperwork:
 
-- **G19's** *"a real path sat outside the allowlisted roots and was invisible to
-  the checker"* and **G14's** demonstrated *single regex against one named file*
+- **G19's** _"a real path sat outside the allowlisted roots and was invisible to
+  the checker"_ and **G14's** demonstrated _single regex against one named file_
   are why `action-pins` walks `.github/**/*.yml|yaml` rather than naming its two
   workflows. **G6's** named-unbuilt remedy is the one that nearly repeated here —
-  a proposal saying *scan tracked `.ts`* in a tree holding `.mjs` and `.astro`.
-- **G29's** honest limit — *"a form nobody writes here is a form this does not
-  see"* — is **closed rather than inherited**: a register entry written as
+  a proposal saying _scan tracked `.ts`_ in a tree holding `.mjs` and `.astro`.
+- **G29's** honest limit — _"a form nobody writes here is a form this does not
+  see"_ — is **closed rather than inherited**: a register entry written as
   `## G40` instead of `### G40` would read to a human as real and be invisible to
   the sweep, so every near-miss heading level is refused outright.
-- **G1's** *"the reverse-assert catching both a stale entry and a dropped one"*
-  and **G22's** *"had no stale-entry assertion, which ADR-0022 requires"* are why
+- **G1's** _"the reverse-assert catching both a stale entry and a dropped one"_
+  and **G22's** _"had no stale-entry assertion, which ADR-0022 requires"_ are why
   the ten-row exemption list is asserted in both directions rather than one.
 
 ## The audit row asserted nothing, and now asserts four things
@@ -113,7 +113,7 @@ whether the obligation is paperwork:
 `dependency-audit` was promoted out of `## CI-only gates`, a table
 `gates/constitution-scoreboard.test.ts` **structurally cannot read** — its
 `TABLES` constant names three tables and that was not one of them. But promotion
-alone is *visibility, not enforcement*: `specPathsNamed()` only existence-checks
+alone is _visibility, not enforcement_: `specPathsNamed()` only existence-checks
 `.ts` paths, and the row names none, so **deleting the `audit` job and its
 `needs:` entry would have left the ✅ standing.**
 
@@ -138,8 +138,8 @@ Measured: **the hatch has zero live entries** — the whole `auditConfig:` block
 `pnpm-workspace.yaml` is commented out. ⚠️ **The exposure is not the entries; it
 is that the rule governing them is a comment.** Uncomment the block, add an id
 with no date and no reason, and nothing goes red — no gate reads that file's
-audit config at all. `docs/gates.md`'s own opening line is the judgement: *a rule
-nothing can fail on is a comment.* `accepted`, with the remedy named: gate the
+audit config at all. `docs/gates.md`'s own opening line is the judgement: _a rule
+nothing can fail on is a comment._ `accepted`, with the remedy named: gate the
 **shape** of the first real entry when one lands, two-sided, because the id alone
 is satisfiable by deleting the justification.
 
@@ -151,7 +151,7 @@ prove the claim is true.** A hand-edit swapping in a different valid SHA under
 `# v7.0.1` passes cleanly — `cover_source`'s failure verbatim. The fact lives at
 GitHub, G21 forbids the suite from asking, and **actions have no lockfile**, so
 there is no offline route. The limit is written beside the row in
-`docs/gates.md` *and* in the spec's header comment, because G19 does not read
+`docs/gates.md` _and_ in the spec's header comment, because G19 does not read
 spec comments and the reverse is also true.
 
 `SECURITY.md` gains the distinction that falls out of it: a claim living
@@ -166,17 +166,17 @@ the shape this repo distrusts.
 **34 plants, all behaving as expected**, run against the specs alone, plus two
 G19 controls run separately:
 
-| Gate | Plants |
-| --- | --- |
+| Gate      | Plants                                                                                                                                                                                                                                |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | G40 / G42 | 19 — the spec's seven §9 ways, both G42 teeth ways, and ten more (`# latest` against a non-empty check, both floors, the `jobs:` block renamed, `../` refused with `./` still green as its control, and four for the quoted-key hole) |
-| G41 | 12 — every way `gaming-analysis.md` §8 names, plus two near-miss forms it does not |
-| G37 | 3 — backfilled, planted at register landing rather than at row landing |
-| G19 | 2 controls — top-row deletion stays green, interior deletion fires gapless |
+| G41       | 12 — every way `gaming-analysis.md` §8 names, plus two near-miss forms it does not                                                                                                                                                    |
+| G37       | 3 — backfilled, planted at register landing rather than at row landing                                                                                                                                                                |
+| G19       | 2 controls — top-row deletion stays green, interior deletion fires gapless                                                                                                                                                            |
 
 ⚠️ **That headline said 26 against a table totalling 30, and CodeRabbit caught
-it.** The table had been updated twice and the number above it once — *a total
-carried forward in prose*, which is the failure `gaming-analysis.md` §4 names in
-terms (*"recount over the sections, never carry a total forward in prose"*)
+it.** The table had been updated twice and the number above it once — _a total
+carried forward in prose_, which is the failure `gaming-analysis.md` §4 names in
+terms (_"recount over the sections, never carry a total forward in prose"_)
 inside the register of claims that quietly stop being true. **Every number here
 is now derived from the plant harness by a script rather than typed**, which is
 the only version of this that stays true after the next plant.
@@ -184,23 +184,23 @@ the only version of this that stays true after the next plant.
 ## Two holes a plant table could not have found
 
 **The spec-axis review found both, and they are one species: a gate reading
-*one* spelling of a field the file writes *several* ways.**
+_one_ spelling of a field the file writes _several_ ways.**
 
 - **The disposition check required a colon.** The register writes that field
   three ways, and one address writes `Disposition \`gated\`.` with none — so the
   check read 29 instances and was blind to the thirtieth. **A fifth disposition,
   written in a spelling the file itself already uses, passed green.** It landed
-  on the one assertion that survived the retreat from *exactly one disposition
-  per entry*, which is the whole of that clause.
-- **The near-miss heading check read the heading *level* only.** `### G99 —
-  action-pins`, without backticks round the slug, is invisible to the
-  correspondence sweep **and** passed the check whose own comment said *"the
-  near-miss forms are refused outright."* A docblock whose stated reach exceeded
+  on the one assertion that survived the retreat from _exactly one disposition
+  per entry_, which is the whole of that clause.
+- **The near-miss heading check read the heading _level_ only.** `### G99 —
+action-pins`, without backticks round the slug, is invisible to the
+  correspondence sweep **and** passed the check whose own comment said _"the
+  near-miss forms are refused outright."_ A docblock whose stated reach exceeded
   its assertion's — inside the gate built to catalogue that failure.
 
 ⚠️ **Neither was reachable from the plant tables, and the reason generalises.**
-`gaming-analysis.md` §8 asks for the wrong *value* in each case and duly gets a
-red; **no row asks for the right value in an unexpected *shape*.** A plant table
+`gaming-analysis.md` §8 asks for the wrong _value_ in each case and duly gets a
+red; **no row asks for the right value in an unexpected _shape_.** A plant table
 inherits its author's picture of what the file looks like, and both holes lived
 exactly where that picture was wrong. **That is the argument for a fresh-context
 reviewer over a longer table** — the same finding the register already records
@@ -232,7 +232,7 @@ fires it by name. **The floor is the only structural check in the file that sees
 it**, which is exactly why it sits on the row side.
 
 ⚠️ **One plant faked a pass and was caught by checking the run count.** A vitest
-`-t` filter passed as part of an argv string matched nothing, and *14 skipped*
+`-t` filter passed as part of an argv string matched nothing, and _14 skipped_
 reported as green — on the plant whose whole job was proving G19 stays green.
 Re-run without the filter, the claim held: **top-row deletion leaves all 14 of
 G19's tests passing**, while deleting an interior row fires gapless by name. The

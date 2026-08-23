@@ -113,7 +113,10 @@ function stemsByRow(): Map<string, string[]> {
 
   for (const row of scoreboardRows()) {
     const line = row.cells.join(' | ');
-    stems.set(row.id, [...line.matchAll(/`gates\/([^`\s/]+)\.test\.ts`/g)].map((m) => m[1] ?? ''));
+    stems.set(
+      row.id,
+      [...line.matchAll(/`gates\/([^`\s/]+)\.test\.ts`/g)].map((m) => m[1] ?? ''),
+    );
   }
   return stems;
 }
@@ -215,9 +218,11 @@ describe('G19 — every article of the constitution is scored', () => {
     // The reverse direction. Deleting invariant 5 while a row still cites it
     // leaves the scoreboard protecting a rule the constitution no longer has.
     const articles = new Set(articleNumbers());
-    const cited = [...invariantSourceCells().join('\n').matchAll(/invariant (\d+)/gi)].map((m) =>
-      Number(m[1]),
-    );
+    const cited = [
+      ...invariantSourceCells()
+        .join('\n')
+        .matchAll(/invariant (\d+)/gi),
+    ].map((m) => Number(m[1]));
     expectFound(cited, 'invariant citations in the Invariants → gates table', 3);
 
     const dangling = [...new Set(cited)].filter((n) => !articles.has(n)).sort((a, b) => a - b);
@@ -268,10 +273,9 @@ describe('G19 — the scoreboard describes files that exist', () => {
 
     const unscored = specs.filter((path) => !rows.includes(path));
 
-    expect(
-      unscored,
-      `gates that no row in docs/gates.md names: ${unscored.join(', ')}`,
-    ).toEqual([]);
+    expect(unscored, `gates that no row in docs/gates.md names: ${unscored.join(', ')}`).toEqual(
+      [],
+    );
   });
 });
 
@@ -338,7 +342,10 @@ describe('G19 — every row has a name, and the name means something', () => {
 
     const wrong = derived
       .filter(([id, slug]) => slug !== (stems.get(id) ?? [])[0])
-      .map(([id, slug]) => `${id} names gates/${(stems.get(id) ?? [])[0]}.test.ts but is called "${slug}"`);
+      .map(
+        ([id, slug]) =>
+          `${id} names gates/${(stems.get(id) ?? [])[0]}.test.ts but is called "${slug}"`,
+      );
 
     expect(
       wrong,

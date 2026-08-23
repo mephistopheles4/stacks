@@ -15,7 +15,7 @@ actually contains.
 **A hand-written policy in `_headers` was the obvious alternative and the wrong
 one.** Astro inlines a stylesheet under 4kB — so `/attribution` ships an inline
 `<style>` and the index does not, and the two pages need different `style-src`
-hashes *from the same build*. Any hand-written copy is therefore either wrong for
+hashes _from the same build_. Any hand-written copy is therefore either wrong for
 one page or loosened with `'unsafe-inline'` until it is wrong for both.
 
 Worse, the threshold moves. A CSS edit either side of 4kB flips a page between
@@ -36,8 +36,8 @@ Two consequences, one of them a genuine gain:
   `X-Frame-Options: DENY`. That is not a second copy of the page policy, and the
   distinction is the whole of it: the two are **disjoint**, so neither can drift
   from the other. Policies compose — each is enforced independently — and one
-  declaring no fetch directives restricts nothing but framing. See *What was
-  rejected* below, where a fuller header policy is weighed and refused.
+  declaring no fetch directives restricts nothing but framing. See _What was
+  rejected_ below, where a fuller header policy is weighed and refused.
 - **`pnpm smoke:render` enforces this policy for free.** It builds `dist/`, serves
   it over HTTP and loads it in real Chrome, which honours a meta CSP. A
   `_headers` policy would have been invisible to it, because Cloudflare Pages is
@@ -59,7 +59,7 @@ no-op.** That was wrong and is corrected here rather than quietly reworded: a
 analytics genuinely stop working. What survives is the injected tag and a
 violation logged on every page load.
 
-So the argument is not *"blocking achieves nothing"*. It is that **blocking is a
+So the argument is not _"blocking achieves nothing"_. It is that **blocking is a
 policy file overriding a zone setting the owner deliberately enabled, for no
 privacy gain.** The beacon reports same-origin and carries nothing derived from
 the owner's reading, so refusing it buys none of what invariant 2 or #119's
@@ -69,20 +69,20 @@ the injection; a CSP that fought it would leave the tag, lose the data, and log
 the disagreement forever.
 
 **It does not contradict [#119](https://github.com/mephistopheles4/stacks/issues/119).**
-That ticket rejected *option C*, a client beacon **stacks would build** to count
+That ticket rejected _option C_, a client beacon **stacks would build** to count
 an invariant, and all three arguments that defeat it are specific to that counter:
 it vetoes the localhost dashboard, the observer would ship inside the artifact it
-observes, and a zero-expected counter cannot distinguish *held* from *never ran*.
+observes, and a zero-expected counter cannot distinguish _held_ from _never ran_.
 None touches a zone feature. #119's own correction comment already settled the
 case directly:
 
 > edge-injected markup on the deployed site is **observed by nothing**, before or
 > after this ticket, and stacks accepts that
 
-and framed this issue as narrowing it *"from the other end — a CSP constrains what
-injected script could **do** — without ever detecting that it happened."* That is
+and framed this issue as narrowing it _"from the other end — a CSP constrains what
+injected script could **do** — without ever detecting that it happened."_ That is
 what this policy does. The no-outbound-flow principle is scoped to flows
-*"carrying anything derived from the owner's reading"*, and a page-load count on a
+_"carrying anything derived from the owner's reading"_, and a page-load count on a
 two-page site carries none of it.
 
 ⚠️ **The injected beacon reports same-origin, to `/cdn-cgi/rum`.** Only a
@@ -98,7 +98,7 @@ failure is silent in the other direction: the page renders and analytics records
 nothing.
 
 ⚠️ **`'self'` must be listed explicitly** in `scriptDirective.resources`. That
-field *replaces* Astro's defaults rather than appending to them, and dropping it
+field _replaces_ Astro's defaults rather than appending to them, and dropping it
 blocks the shelf's own `/_astro/*.js` — a black canvas with the page otherwise
 intact.
 
@@ -134,10 +134,10 @@ every comparison; `style-src` is held to its `'self'` and to being present at al
 which is the stable part of it.
 
 **The script origins are pinned as a set so the exception stays enumerable.** The
-property is *same-origin except one named origin*, and the answer to "which third
+property is _same-origin except one named origin_, and the answer to "which third
 parties does the shelf permit" has to be a list somebody can read. This is
 `cover_source`'s reasoning applied to a different question: the value of naming
-the exception is that the *second* one cannot arrive unnoticed.
+the exception is that the _second_ one cannot arrive unnoticed.
 
 **Both framing controls are asserted too**, out of the `/*` block by name, for the
 same reason. They were described here and in `_headers` as the enforced half of
@@ -149,7 +149,7 @@ that the other covers it.
 
 ⚠️ **A supplementary header policy carrying the hash-free directives.** The
 strongest alternative, and the first draft of this record never argued against it
-— it argued only against a *whole* hand-written policy, which is a weaker claim
+— it argued only against a _whole_ hand-written policy, which is a weaker claim
 that the 4kB hash problem disposes of on its own. Stated properly: `_headers`
 could carry `connect-src 'self'`, `base-uri 'none'`, `form-action 'none'` and
 `frame-ancestors 'none'` as a second policy. Policies compose by intersection, so
@@ -158,14 +158,14 @@ reach non-HTML responses a meta tag cannot.
 
 **Refused, because it duplicates the directives that are already generated.**
 Three of those four are in `CSP_DIRECTIVES` and in the meta tag, and a rule
-written down twice is the defect this repo has already paid for and named — *"a
+written down twice is the defect this repo has already paid for and named — _"a
 canary that drifts between the place it is planted and the place it is searched
-for is worse than no canary: both halves keep passing."* The gate would then be
+for is worse than no canary: both halves keep passing."_ The gate would then be
 holding two policies to one intent, and the interesting failure is not either one
 being absent but the two disagreeing.
 
 **What that alternative was actually right about is `frame-ancestors`**, which the
-generated policy *structurally cannot contain*. So that one directive is adopted
+generated policy _structurally cannot contain_. So that one directive is adopted
 in the header — alone. The split is by what the meta tag can carry rather than by
 what is convenient, which is what makes the two sets disjoint and the drift
 question moot. The non-HTML-response coverage is given up knowingly: `library.json`

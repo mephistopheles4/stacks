@@ -16,9 +16,9 @@ the reasons below.
 ## Why this needed a decision at all
 
 Because the other three genuinely do not have these books, and the failure was
-silent. *Learning AI-Native Software Engineering* is dated 2027-02-25; Open
+silent. _Learning AI-Native Software Engineering_ is dated 2027-02-25; Open
 Library, Google and Apple hold nothing for it under its title or its ISBN. So
-`stacks add` answered with *AI-Powered Software Engineering* — a different book
+`stacks add` answered with _AI-Powered Software Engineering_ — a different book
 by four different authors — and wrote it into the vault without a word. The
 guard that now refuses that is a separate change; this one gives the right
 answer rather than merely refusing the wrong one.
@@ -36,15 +36,15 @@ video is not something this shelf can hold.
 A library URL ends in O'Reilly's internal `archive_id`, never the ISBN. Two
 books show it, and the second is the one that matters:
 
-| book | URL `archive_id` | real `isbn` |
-| --- | --- | --- |
-| *Learning AI-Native Software Engineering* | `0642572352530` | `9798341674738` |
-| *Evals for AI Engineers* | `9798341660717` | `9798341660724` |
+| book                                      | URL `archive_id` | real `isbn`     |
+| ----------------------------------------- | ---------------- | --------------- |
+| _Learning AI-Native Software Engineering_ | `0642572352530`  | `9798341674738` |
+| _Evals for AI Engineers_                  | `9798341660717`  | `9798341660724` |
 
 The first is spottable by eye: `064` is a prefix no Bookland range assigns,
 though it does pass an ISBN-13 check digit. **The second is not spottable at
 all.** It is a well-formed 979 ISBN-13 that validates perfectly and is still
-*seven off* the book's real identifier — so no check-digit test catches it, and
+_seven off_ the book's real identifier — so no check-digit test catches it, and
 neither does a prefix test. The only reliable rule is the field name.
 
 `isbn` is therefore taken from the response body and the archive id is used for
@@ -64,18 +64,18 @@ That was wrong, and checking rather than reasoning is what showed it:
 - **`publish.ts` has never read `cover_source`.** Nothing filters on it. Every
   cover is published whatever its source.
 - The shelf already re-hosts **26 covers from Apple**, whose terms this repo's
-  own comment says *"book covers are not among the content types its terms
-  enumerate at all"* — the least clear of the four.
+  own comment says _"book covers are not among the content types its terms
+  enumerate at all"_ — the least clear of the four.
 
 So the proposed exclusion would have been **stricter than the status quo,
 applied to one provider, on no evidence**, while `cover_source` sat there
-reading like a policy it had never implemented. The owner's question — *isn't
-the worst case a takedown notice?* — is the right frame for a personal shelf of
+reading like a policy it had never implemented. The owner's question — _isn't
+the worst case a takedown notice?_ — is the right frame for a personal shelf of
 37 covers, and the honest answer is yes.
 
 Covers are therefore taken like everyone else's, and `cover_source: oreilly` is
 recorded for what that key actually buys: if a provider ever asks for its art to
-come down, the answer can be *those two* rather than *all of them*. An index for
+come down, the answer can be _those two_ rather than _all of them_. An index for
 acting precisely, not a licence check. CLAUDE.md's claim that it "decides what a
 public build may re-host" is corrected in the same commit — that sentence is
 what talked this record into the wrong answer in the first place.
@@ -92,7 +92,7 @@ wrong instead of two.
 
 ## `fillGaps` falls through to O'Reilly for a cover
 
-The gap the fallback chain could not close on its own. *Evals for AI Engineers*
+The gap the fallback chain could not close on its own. _Evals for AI Engineers_
 **is** in Open Library, so the ISBN lookup stops there and never reaches a
 fourth provider — and Open Library's cover for it is a 43-byte placeholder,
 Google has no art, Apple has never heard of it. The book sat on the shelf as a

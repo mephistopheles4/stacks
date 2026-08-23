@@ -15,7 +15,7 @@ only about the store the record is replayed into.
 **`promtool` writes TSDB blocks and Prometheus reads them.** The two are one
 program's halves, and a version disagreement between them does not announce
 itself: the backfill exits 0, the blocks land, and the dashboard is empty. That
-failure reads as *the sync did not work* when the sync worked perfectly — the
+failure reads as _the sync did not work_ when the sync worked perfectly — the
 shape this whole layer exists to refuse, arriving in the layer's own plumbing.
 Taking both from one pinned tag makes it unrepresentable rather than unlikely.
 
@@ -32,7 +32,7 @@ image to move twice.
   be exercised here.
 - **The container is the sync's to stop and start.** Prometheus holds a lock on
   its data directory, so the backfill happens with the store down — which is what
-  *"restarts Prometheus"* means in the spec, and what makes new blocks visible
+  _"restarts Prometheus"_ means in the spec, and what makes new blocks visible
   without waiting for a reload.
 - **Retention is set to ten years, explicitly.** Prometheus defaults to fifteen
   days, which would delete the replay this command exists to perform — quietly,
@@ -45,8 +45,8 @@ image to move twice.
 the version-skew argument above: it reintroduces exactly the disagreement the
 single image removes, and buys only the ability to skip one `docker run`.
 
-**A native Prometheus install, managed by hand.** Rejected because *"restart
-Prometheus"* then means managing somebody's service manager from a pnpm script,
+**A native Prometheus install, managed by hand.** Rejected because _"restart
+Prometheus"_ then means managing somebody's service manager from a pnpm script,
 on three platforms, and a sync that cannot restart the store cannot guarantee the
 blocks it just wrote are visible.
 

@@ -10,14 +10,14 @@ what a gate does was checked by running its parsing logic, not by reading it.
 
 ## The measurement that decides it
 
-|  | `progress.md` | `gates.md` |
-| --- | --- | --- |
-| Total lines | 1551 | 1112 |
-| Lines that are table | 116 | 65 |
-| Parsed by a gate | **nothing** | 28 `\| **G**n \|` rows, `## Status key`, `## Invariants → gates` |
-| Other readers | `phase-gate` skill names 3 sections | — |
-| Largest single section | *The mobile crash — G15*, **460 lines (30%)** | *Defect gates* commentary, ~590 lines |
-| Sections at H2 | 24 | 14 |
+|                        | `progress.md`                                 | `gates.md`                                                       |
+| ---------------------- | --------------------------------------------- | ---------------------------------------------------------------- |
+| Total lines            | 1551                                          | 1112                                                             |
+| Lines that are table   | 116                                           | 65                                                               |
+| Parsed by a gate       | **nothing**                                   | 28 `\| **G**n \|` rows, `## Status key`, `## Invariants → gates` |
+| Other readers          | `phase-gate` skill names 3 sections           | —                                                                |
+| Largest single section | _The mobile crash — G15_, **460 lines (30%)** | _Defect gates_ commentary, ~590 lines                            |
+| Sections at H2         | 24                                            | 14                                                               |
 
 So both files are **~94% append-only prose tail wrapped around a small spine**.
 That ratio is the finding. "The files are big" is the symptom; "the spine and
@@ -61,11 +61,11 @@ Applied here, that single sentence separates the two files completely.
 
 All 28 rows live in exactly three tables, in three H2 sections:
 
-| Section | Rows |
-| --- | --- |
-| `Invariants → gates` | G1 G2 G3 G4 G5 G13 G14 |
-| `Contract seams → gates` | G6 G7 G8 G9 G19 |
-| `Defect gates` | G10–G12, G15–G18, G20–G28 |
+| Section                  | Rows                      |
+| ------------------------ | ------------------------- |
+| `Invariants → gates`     | G1 G2 G3 G4 G5 G13 G14    |
+| `Contract seams → gates` | G6 G7 G8 G9 G19           |
+| `Defect gates`           | G10–G12, G15–G18, G20–G28 |
 
 Everything after the `Defect gates` table — roughly **880 lines** — is
 commentary that no assertion touches.
@@ -73,12 +73,12 @@ commentary that no assertion touches.
 **Verified rather than assumed.** G19's helpers were replayed verbatim against
 four hypothetical versions of the file:
 
-| Case | Result |
-| --- | --- |
-| A — the file as it stands | 28 rows, both sections parse |
-| B — **everything after the G28 row deleted** | **28 rows, both sections parse** |
-| C — B plus a trailing `## Where the commentary went` | 28 rows, both sections parse |
-| D — `## Status key` renamed to `## Key` | **throws**, as designed |
+| Case                                                 | Result                           |
+| ---------------------------------------------------- | -------------------------------- |
+| A — the file as it stands                            | 28 rows, both sections parse     |
+| B — **everything after the G28 row deleted**         | **28 rows, both sections parse** |
+| C — B plus a trailing `## Where the commentary went` | 28 rows, both sections parse     |
+| D — `## Status key` renamed to `## Key`              | **throws**, as designed          |
 
 So moving the whole prose tail out of `gates.md` is gate-compatible with **zero
 test changes**. Case D is the boundary: the two parsed headings, the three
@@ -94,14 +94,14 @@ One trap worth writing down, because it is invisible until it bites.
 The lookahead means **a parsed section must be followed by another `## ` heading**.
 It survives case B only because `Status key` and `Invariants → gates` both sit
 near the top with sections after them. Move the tail such that either becomes
-the *last* H2 in the file and the gate throws. Case C is the cheap insurance:
+the _last_ H2 in the file and the gate throws. Case C is the cheap insurance:
 leave a terminating heading behind.
 
-### `progress.md` — nothing *parses* it, but one thing reads it
+### `progress.md` — nothing _parses_ it, but one thing reads it
 
 No gate, no script, no CI workflow and no `package.json` entry mentions
 `progress.md`. Nothing throws. In the mechanical sense it is in the condition
-ADR-0024 called *"which is why it could move at all"*.
+ADR-0024 called _"which is why it could move at all"_.
 
 **One soft reader exists and the first sweep missed it.**
 `.claude/skills/phase-gate/SKILL.md:41` instructs an agent closing a phase to:
@@ -119,35 +119,35 @@ load-bearing in the same soft way. Note that `Environment findings` (48 lines) i
 tail, which is not obvious from its genre.
 
 The sweep that missed it filtered paths containing `worktrees`, and this
-checkout *is* `.claude/worktrees/…`, so it excluded the whole tree. Recorded
+checkout _is_ `.claude/worktrees/…`, so it excluded the whole tree. Recorded
 because the failure mode is silent and the corrected sweep is one flag
 different.
 
 ## Are the episodes actually separable? Measured, not asserted
 
 ADR-0024 asserted that its entries were "only legible in sequence", then
-**reversed on the same day** after measuring: *"15 of 138 with an explicit
-back-reference — 11%"*. The reversal is recorded because the assertion had been
+**reversed on the same day** after measuring: _"15 of 138 with an explicit
+back-reference — 11%"_. The reversal is recorded because the assertion had been
 presented as characterising the file when it did not. Making the same shape of
 claim here without the same measurement would repeat exactly that.
 
-So, measured. Searching all 1551 lines for explicit reference markers — *see
-above*, *superseded*, *as noted*, *described above*, *the same bug* — returns
+So, measured. Searching all 1551 lines for explicit reference markers — _see
+above_, _superseded_, _as noted_, _described above_, _the same bug_ — returns
 **two hits**:
 
-| Line | Text | Where |
-| --- | --- | --- |
-| 208 | "**The blank reload.** Not the same bug." | inside *The mobile crash* |
-| 628 | "### Superseded: which *part* of the shadow pass costs" | inside *The mobile crash* |
+| Line | Text                                                    | Where                     |
+| ---- | ------------------------------------------------------- | ------------------------- |
+| 208  | "**The blank reload.** Not the same bug."               | inside _The mobile crash_ |
+| 628  | "### Superseded: which _part_ of the shadow pass costs" | inside _The mobile crash_ |
 
 **Both are internal to a single episode, so cross-episode references measure
 zero.** That is a stronger result than ADR-0024's 11% and it points the same
-way: extraction is safe, and the unit is the *episode*. It also independently
-confirms the unit choice — both markers live inside *The mobile crash*, so
+way: extraction is safe, and the unit is the _episode_. It also independently
+confirms the unit choice — both markers live inside _The mobile crash_, so
 keeping that 460-line investigation as one file keeps both references internal.
 Splitting it into its ten H3 subsections is what would break them.
 
-A looser pattern (adding bare *below*, *earlier*, *previously*) hits 7 of 21
+A looser pattern (adding bare _below_, _earlier_, _previously_) hits 7 of 21
 sections, but inspection shows those are ordinary prose rather than pointers.
 The strict count is the honest one; the loose count is reported so the next
 person does not think it was hidden.
@@ -163,7 +163,7 @@ these two files**. Every cross-reference into them is file-level, so links to
 present.
 
 **Corrected once this was actually swept.** An earlier draft of this paragraph
-said there were zero anchor links *anywhere in the tree*. There is one —
+said there were zero anchor links _anywhere in the tree_. There is one —
 `docs/plan.md:291` → `agents/issue-tracker.md#wayfinding-operations` — and the
 first measurement missed it because the regex only looked for fragments whose
 target was `progress.md` or `gates.md`, which is the question that had been
@@ -174,7 +174,7 @@ measured, which is the failure this whole document is about.
 checked, and this repo cites issues constantly (#39, #50, #56, #62). An issue
 deep-linking a section would break silently and no gate here could ever see it.
 
-The bad news is the references that are *prose*, naming a section in words:
+The bad news is the references that are _prose_, naming a section in words:
 
 - `CLAUDE.md:322` — "See **"The mobile crash"** in `docs/progress.md`"
 - `gates.md:478` — "still unmeasured; see `docs/progress.md`"
@@ -200,7 +200,7 @@ GitHub-style kebab-case slugs), but it is a Rust binary in CI for a job ~50
 lines of TypeScript already does, and every other gate here is a vitest file.
 
 **The link gate forces an edit to `gates.md` whichever file is split first.**
-G19's `unscored` check requires every `gates/*.test.ts` to appear in a *row*, so
+G19's `unscored` check requires every `gates/*.test.ts` to appear in a _row_, so
 a new `gates/doc-links.test.ts` needs a scoreboard row or G19 goes red on its
 first run. Its number is not knowable in advance — `gates.md:196` records that
 same renumber race happening to one row three times across three branches, each
@@ -211,7 +211,7 @@ time because the next free number was free until somebody else merged.
 Five external ideas are load-bearing; the rest of what turns up on this topic is
 SEO filler.
 
-**Diátaxis** — split by the *purpose* a reader arrives with, never by size. Its
+**Diátaxis** — split by the _purpose_ a reader arrives with, never by size. Its
 four modes are tutorial / how-to / reference / explanation, and its operating
 instruction is to take the page that causes the most pain, ask which mode it
 belongs to, and split where it mixes. Both files here mix **reference** (the
@@ -221,17 +221,17 @@ does not have a mode for "dated record of what happened", which is the honest
 gap — that genre is a changelog, not documentation.
 
 **Keep a Changelog / Common Changelog** — the applicable convention for the
-dated tail. Its relevant idea is the *Unreleased* section: new entries land in
+dated tail. Its relevant idea is the _Unreleased_ section: new entries land in
 one known place at the top and get relocated on a cadence, so the file is never
 archaeology. It explicitly does **not** standardise per-release files; projects
 that split do so as a local variation. That is a caution against inventing
 ceremony here.
 
 **ADR / MADR** — already this repo's pattern, already validated by ADR-0024:
-one file per unit, an index, reasoning carried verbatim. The unit is *one
-decision*, not one entry, which is why the shadow investigation is a single
+one file per unit, an index, reasoning carried verbatim. The unit is _one
+decision_, not one entry, which is why the shadow investigation is a single
 record holding twenty-five entries. Any split of `progress.md` should use the
-same unit rule — *The mobile crash* is **one** document, not eight.
+same unit rule — _The mobile crash_ is **one** document, not eight.
 
 **DITA topic-based authoring** — the old, industrial version of the same claim:
 one self-contained topic per file, assembled by a map. Worth knowing only
@@ -241,12 +241,12 @@ from, and that is precisely the shape being proposed.
 **Progressive disclosure / context engineering** — the current-practice answer,
 and the one that matters most given how this repo is worked on. Anthropic's
 [guidance](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
-is direct: models have an **"attention budget"**, and *"as token count increases,
+is direct: models have an **"attention budget"**, and _"as token count increases,
 the model's ability to accurately recall information from that context
-decreases"*. The prescription is a hybrid — a small always-loaded spine plus
-*"lightweight identifiers … used to dynamically load data into context at
-runtime"* — and it explicitly counts *"folder hierarchies, naming conventions,
-and timestamps"* as signal that helps agents navigate without reading
+decreases"_. The prescription is a hybrid — a small always-loaded spine plus
+_"lightweight identifiers … used to dynamically load data into context at
+runtime"_ — and it explicitly counts _"folder hierarchies, naming conventions,
+and timestamps"_ as signal that helps agents navigate without reading
 everything. This is the same architecture Claude Code skills use (`SKILL.md` +
 `references/` loaded on demand), and it is the closest published analogue to
 this repo's situation: a cold agent told to read `progress.md` **first**.
@@ -255,7 +255,7 @@ this repo's situation: a cold agent told to read `progress.md` **first**.
 pointing at deeper documents — structurally what is proposed below — but it
 remains a community proposal rather than a W3C or IETF standard, and traffic
 analyses find the file essentially untouched by the crawlers it targets. Adopt
-the *shape*; do not adopt the filename or claim conformance to a standard.
+the _shape_; do not adopt the filename or claim conformance to a standard.
 
 ## The recommendation
 
@@ -269,7 +269,7 @@ The first three are named by the `phase-gate` skill; the whole set is roughly
 140 lines and restores the file to the "index, not a narrative" contract it
 already claims.
 
-Move each investigation to one file per *episode*, named and dated so the
+Move each investigation to one file per _episode_, named and dated so the
 directory listing is itself the index — the metadata-as-signal point above:
 
 ```
@@ -298,7 +298,7 @@ bottom of the spine (case C).
 
 **Not `docs/gates/`.** The repo already has `gates/` (the specs, walked by
 `filesUnder('gates', …)`) and `docs/gates.md`. A `docs/gates/` directory would
-be a third thing called *gates*, shadowing the basename of its own sibling file.
+be a third thing called _gates_, shadowing the basename of its own sibling file.
 Mechanically fine, and in this repo it would be the first objection raised.
 
 **Do this one second, or not at all.** The gain is real but smaller, the risk is
@@ -316,8 +316,8 @@ Splitting `progress.md` alone captures most of the benefit.
   ones that matter. The unit is the episode.
 
 **[ADR-0025](../adr/0025-history-not-rewritten.md) was checked and does not
-apply.** Its title reads as though it governs this, but *"history is not
-rewritten"* is about **git** history — the decision not to run `git filter-repo`
+apply.** Its title reads as though it governs this, but _"history is not
+rewritten"_ is about **git** history — the decision not to run `git filter-repo`
 before going public, because the tags `phase-0`…`phase-4` and the remote point
 into it. Relocating documentation is a tracked, reviewable move that preserves
 every commit; nothing in that record constrains it.
@@ -327,7 +327,7 @@ every commit; nothing in that record constrains it.
 - Whether the owner wants `docs/log/` or a different name. `docs/history/` and
   `docs/records/` are equally defensible; this only picks one to be concrete.
 - Whether the prose-reference problem (`CLAUDE.md:322`) is worth gating beyond
-  link resolution. Asserting that a *named section* still exists somewhere is
+  link resolution. Asserting that a _named section_ still exists somewhere is
   possible but probably over-engineering; rewording the four sentences is
   cheaper and there are only four.
 - ~~Whether `pnpm test` runtime is affected by a link gate over ~60 files.~~
@@ -338,5 +338,5 @@ every commit; nothing in that record constrains it.
 The `progress.md` half was built, with the link gate first. See
 [ADR-0040](../adr/0040-the-log-is-one-file-per-episode.md) for the decision and
 `docs/gates.md` row **G29** for what the gate cost and caught — including a
-false positive it raised against *this file*, which is why inline code is now
+false positive it raised against _this file_, which is why inline code is now
 blanked before links are extracted.

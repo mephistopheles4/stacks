@@ -46,14 +46,14 @@ and the closers differ.
 > **Category 5: does the row rest on a load-bearing claim whose truth was never
 > established, or never re-established, against a check that was available?**
 
-⚠️ **It was originally *"a load-bearing claim that drifted"*, and the restatement
-matters.** *Drift* splits the effort's own specimens **four to one**; *nobody ran the
-available check* splits them **five to nothing**. **No sixth category, no new
+⚠️ **It was originally _"a load-bearing claim that drifted"_, and the restatement
+matters.** _Drift_ splits the effort's own specimens **four to one**; _nobody ran the
+available check_ splits them **five to nothing**. **No sixth category, no new
 symbol**, and the judgment cost — Clause A's arguability arriving inside the taxonomy
 — is **accepted rather than discovered later.**
 
 **Load-bearing means a decision or a procedure rests on it, numeric or not.** That
-admits the stale *"133 tests in ~2s"*, which is the stated reason the parked-Stryker
+admits the stale _"133 tests in ~2s"_, which is the stated reason the parked-Stryker
 row said a revisit would be cheap, and excludes the slug count, on which nothing
 rests. **The bound is what keeps this an analysis of gates rather than a
 documentation audit.**
@@ -82,10 +82,10 @@ rule — but **no future entry merges two**, and any counting instrument asserts
 35 sections before reporting a total.
 
 ⚠️ **Map-authored is a property, not a category and not an axis.** A set defined by
-*how can a gate be green while its intent is unmet* cannot take a member answering
-*who produced this*. **The consequence is written down instead: several specimens sit
-outside the register's reach by construction**, four of them one shape — *true when
-written, falsified by a sibling landing in parallel*, **which nothing in the
+_how can a gate be green while its intent is unmet_ cannot take a member answering
+_who produced this_. **The consequence is written down instead: several specimens sit
+outside the register's reach by construction**, four of them one shape — _true when
+written, falsified by a sibling landing in parallel_, **which nothing in the
 wayfinding process serialises.**
 
 ---
@@ -104,13 +104,13 @@ standing obligation on every future gate as a side effect, rather than on its me
 
 The two alternatives are ruled out by this repo's own history rather than by taste:
 
-- *A comment in each spec, beside the gate it is about* is **exactly where the
+- _A comment in each spec, beside the gate it is about_ is **exactly where the
   existing analysis already lives**, and that is why the extraction finding was a
-  finding. `docs/gates.md` records *"a gate that matches prose matches anything"*
-  three times and *"a positive check cannot detect a missing one"* three times, each
+  finding. `docs/gates.md` records _"a gate that matches prose matches anything"_
+  three times and _"a positive check cannot detect a missing one"_ three times, each
   beside a different row, **none of it indexed** — a real analysis with no way to query
   it.
-- *A standalone document on its own* is a second copy of the row list with nothing
+- _A standalone document on its own_ is a second copy of the row list with nothing
   holding it to the first — the failure the top of `docs/gates.md` lists six instances
   of, and what
   [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md) refused a third file
@@ -130,22 +130,22 @@ against.**
 
 **Four dispositions, and there is no fifth.**
 
-| | |
-| --- | --- |
-| `gated` | the finding is real and unclosed, **and its remedy is a named check the implementation session builds** |
-| `repaired` | closes by changing the existing gate; no new row |
-| `accepted` | does not close; goes to the residual register with why |
-| `declined` | a gate was **possible** and deliberately not built |
+|            |                                                                                                         |
+| ---------- | ------------------------------------------------------------------------------------------------------- |
+| `gated`    | the finding is real and unclosed, **and its remedy is a named check the implementation session builds** |
+| `repaired` | closes by changing the existing gate; no new row                                                        |
+| `accepted` | does not close; goes to the residual register with why                                                  |
+| `declined` | a gate was **possible** and deliberately not built                                                      |
 
 ⚠️ **A fifth "documented" disposition was floated and refused.** By this repo's own
-constitution that is not a closure: `docs/gates.md` opens with *"a rule nothing can
-fail on is a comment."* **A finding closed by writing a rule down is an `accepted`
+constitution that is not a closure: `docs/gates.md` opens with _"a rule nothing can
+fail on is a comment."_ **A finding closed by writing a rule down is an `accepted`
 finding wearing a closure's clothes**, and this effort exists because that distinction
 stopped being made.
 
 ⚠️ **`gated`'s reading was minted twice, in parallel, by two sessions with no
 contact — and they reached the same one by different routes**, each eliminating the
-other three. **The rival reading — *already caught elsewhere* — is refused**, since a
+other three. **The rival reading — _already caught elsewhere_ — is refused**, since a
 finding caught by a gate is not a finding. **Two independent derivations are better
 evidence for the reading than either argument for it**, so the register records the
 convergence rather than a priority claim. **Confirmed here.**
@@ -159,20 +159,20 @@ precisely what nobody goes back to.**
 
 ### The observed-red field
 
-`docs/gates.md` records *"Observed red by copying the screenshot to a second name"*,
-*"Observed red at six of fourteen"*, *"Observed red eight ways"* — **dozens of times,
+`docs/gates.md` records _"Observed red by copying the screenshot to a second name"_,
+_"Observed red at six of fourteen"_, _"Observed red eight ways"_ — **dozens of times,
 always as prose, never as a field.** So `CONTRIBUTING.md`'s oldest and most
-load-bearing rule, *"a gate never observed failing is not yet a gate"*, **is enforced
+load-bearing rule, _"a gate never observed failing is not yet a gate"_, **is enforced
 today by the author remembering to write a sentence.** The register is the first
 structure this repo has had that can require it.
 
 ### The shape G40 asserts, stated as cardinality rather than as membership
 
-⚠️ **Membership is not enough, and the earlier wording — *"all five categories
-named"* — is the failure it was written against.** A section carrying one merged
+⚠️ **Membership is not enough, and the earlier wording — _"all five categories
+named"_ — is the failure it was written against.** A section carrying one merged
 `**Vacuous green / decay**` bullet names all five category words and satisfies a
 membership check; so does a file carrying **two** `## G26` sections, since
-correspondence asks only that each row *has* an entry. **Both are a claim nothing
+correspondence asks only that each row _has_ an entry. **Both are a claim nothing
 can fail on, inside the register of claims nothing can fail on.** So:
 
 - **Exactly one verdict bullet per category, per entry** — five bullets, each naming
@@ -187,7 +187,7 @@ can fail on, inside the register of claims nothing can fail on.** So:
 ⚠️ **One exemption, named with its justification, because the register already
 contains the thing this forbids.** **G26**'s merged `**Vacuous green / decay**`
 bullet is marked in place under mark-never-delete, so an unexempted rule would go
-red on the file the moment it landed — *weakening a gate to make it pass*, at the
+red on the file the moment it landed — _weakening a gate to make it pass_, at the
 worst possible address. **The exemption names G26 and that bullet specifically**,
 in the `gates/` allowlist idiom where every entry carries a reason and is
 reverse-asserted: **remove the merged bullet and the exemption goes red too**, so
@@ -200,23 +200,23 @@ than exempting it.
 
 ---
 
-## 3. G40 `gate-register` — *Contract seams*
+## 3. G40 `gate-register` — _Contract seams_
 
 **The register keys on gate rows only, by construction rather than by rule.** Trends
 take no row number and the gate keys on row numbers, **so there is nothing to omit** —
-and the `| **G\d+** |` match *is* the required statement of the key. That dissolves the
+and the `| **G\d+** |` match _is_ the required statement of the key. That dissolves the
 collision the trend decision flagged: **a trend's observed-red field would have been
 unsatisfiable, and writing an entry that satisfied the shape check anyway is exactly
 the category-4 failure the register exists to catalogue.**
 
-**Table: *Contract seams*, with G14 (`commands`), G19 (`constitution-scoreboard`) and
+**Table: _Contract seams_, with G14 (`commands`), G19 (`constitution-scoreboard`) and
 G42 (`ignored-mutants`)** — the other both-directions correspondence gates. **The slug
 matches the document it holds**, as `constitution-scoreboard` matches its file, rather
 than naming its own mechanism.
 
 ### The floor: row side only, at 42
 
-⚠️ **The two sides are not symmetric.** *No row without an entry* already reddens on
+⚠️ **The two sides are not symmetric.** _No row without an entry_ already reddens on
 any deletion, so **entries cannot go vacuous**. The **row side** can: if the gate's
 regex over `docs/gates.md` stops matching, both directions pass over nothing.
 `gates/repo.ts` defaults `atLeast = 1`, so an unstated floor is a floor of one.
@@ -228,22 +228,22 @@ stated structural reason**: mark-never-delete plus gapless makes the row count
 ⚠️ **The mechanism underneath it was wrong when first stated, and the corrected version
 is stronger:**
 
-| Deletion | Caught by |
-| --- | --- |
-| any row, interior | G19 gapless, **and** the floor |
-| **the highest-numbered row** | **the floor**, and the register's *no entry without a row* — **G19's gapless check is blind to it**, because it bounds its walk at `n < numbers.at(-1)`, exclusive of the maximum |
-| the gate's regex stops matching `docs/gates.md` | the floor |
+| Deletion                                        | Caught by                                                                                                                                                                         |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| any row, interior                               | G19 gapless, **and** the floor                                                                                                                                                    |
+| **the highest-numbered row**                    | **the floor**, and the register's _no entry without a row_ — **G19's gapless check is blind to it**, because it bounds its walk at `n < numbers.at(-1)`, exclusive of the maximum |
+| the gate's regex stops matching `docs/gates.md` | the floor                                                                                                                                                                         |
 
 **So on top-row deletion the floor is the only structural check in the file.** ⚠️ **That
 is a finding about G19 in its own right, and it belongs in G19's own register entry**
 alongside the `TABLES` hole.
 
-**An entry-side floor was declined**: it would go red *alongside* the first missing
+**An entry-side floor was declined**: it would go red _alongside_ the first missing
 entry, landing two reds on the commit whose entire job is demonstrating one.
 
 ⚠️ **The floor was 41 and is 42.** It was set equal to the population and defended on
-monotonicity; the ratchet's row moved the population. **Flagged loudly because *a floor
-equal to a population* is precisely the shape that went wrong in the supply-chain
+monotonicity; the ratchet's row moved the population. **Flagged loudly because _a floor
+equal to a population_ is precisely the shape that went wrong in the supply-chain
 piece** — it is safe here **only** under the monotonicity argument, and a session that
 copies the pattern without it copies the mistake.
 
@@ -261,7 +261,7 @@ discharges three obligations**: the landing rule, the supply-chain triage obliga
 and the observed-red rule.
 
 ⚠️ **Its placement stays where the rollout put it. Moving it into the spine would land
-it with no new row to go red on**, which is *green against stubs* by the back door.
+it with no new row to go red on**, which is _green against stubs_ by the back door.
 
 **One rule the order forces, and it is in the spec rather than in a comment: every gate
 landing before `gate-register` writes its observed-red line at landing.** On this order
@@ -286,15 +286,15 @@ scope, found inside the audit of exactly that failure:
   never the merge.** Four defects that each break the merge left it at **5 of 5
   green**, and dropping a field from `MERGED_FIELDS` failed **exactly one test in the
   repository** — a unit spec with no scoreboard row. Its own docblock promises red
-  *"when the document names an order the code does not implement."*
+  _"when the document names an order the code does not implement."_
 - **G30 `library-seam`: a new field wired end-to-end through the frontmatter contract
   never reaches `library.json`, at 636 of 636 green and `tsc` clean** — verbatim what
   its docblock says it exists to prevent. The gate computes `missing` from **the
   fixture, never the type**.
-- **G6 `site-core-imports`: two routes past the gate, the suite *and* the build.** A
+- **G6 `site-core-imports`: two routes past the gate, the suite _and_ the build.** A
   **relative path** into `packages/core/` carries no `@stacks/core` literal, so the
   file is read and nothing in it is seen; an **`.astro` `<script>`** carries the
-  forbidden statement *verbatim* in a file type the gate does not open. Either leaves
+  forbidden statement _verbatim_ in a file type the gate does not open. Either leaves
   `pnpm build` **succeeding** while vite externalizes `sharp` and `node:fs` into the
   browser bundle. ⚠️ **`pnpm smoke:render` goes red on both, in the same required
   check — so the invariant is defended in CI and not by the gate written for it**, and
@@ -304,15 +304,15 @@ scope, found inside the audit of exactly that failure:
 **Two findings about the method, both worth more than any single row:**
 
 ⚠️ **Neither independence nor demonstration is sufficient alone.** G20 is the recorded
-case: the author *did* plant a defect, planted one **the file could never have had**,
+case: the author _did_ plant a defect, planted one **the file could never have had**,
 and the false green survived it. **So a fresh-context agent runs the pass, and every
 gap that can be planted is planted.** A finding that cannot be planted is marked
 **reasoned, not demonstrated**, rather than dressed as evidence.
 
 ⚠️ **Every count that went wrong was caught by counting mechanically, and none by
 reading a summary.** The register's own shape failed the same way four times — ten rows
-collapsing five verdicts into one line, 23 lines reading *"not discussed"* under a
-headline claiming *"0 not reached"*, ten more stating a reason where a verdict belongs,
+collapsing five verdicts into one line, 23 lines reading _"not discussed"_ under a
+headline claiming _"0 not reached"_, ten more stating a reason where a verdict belongs,
 and a row counted flagged while clean five times. **Each time the register asserted
 something no per-row entry could contradict** — a claim nothing can fail on, arriving in
 the catalogue of claims nothing can fail on. **Instruments were wrong six times, every
@@ -322,10 +322,10 @@ a total forward in prose.**
 
 ### The remedy roster
 
-⚠️ **The question this spec was handed: *the register's findings do not reach the person
-writing the next remedy.*** It was demonstrated — a remedy proposed after two bands had
+⚠️ **The question this spec was handed: _the register's findings do not reach the person
+writing the next remedy._** It was demonstrated — a remedy proposed after two bands had
 each landed a demonstration of the same routing-around hole **shipped that hole
-anyway**, saying *scan tracked `.ts`* in a repo with one tracked `.mjs` and four tracked
+anyway**, saying _scan tracked `.ts`_ in a repo with one tracked `.mjs` and four tracked
 `.astro` files.
 
 **The answer is a roster, and its rule is that the roster is derived, never
@@ -342,7 +342,7 @@ G13, G14, G15, G17, G18, G19, G20, G21, G22, G24, G26, G29, G30, G31, G33, G35 �
 the excluded-file mutant-count ceiling that
 [`mutation-scoring.md`](mutation-scoring.md#5-the-exclusion-list-named-files-a-mechanism-each)
 leaves as an honest limit rather than a closed hole. **Each remedy's text lives in its
-entry**; this spec names the population so that *"I read the ones I remembered"* is not
+entry**; this spec names the population so that _"I read the ones I remembered"_ is not
 available.
 
 ⚠️ **None of them is scheduled here.** The roster is a reading obligation, not a
@@ -366,7 +366,7 @@ congratulating the author for measuring rather than assuming, which is the resta
 bound landing on sections written before it existed.
 
 ⚠️ **Corrections do not maintain the sections they invalidate.** One correction declares
-*"nothing in the gaming section changes"* three paragraphs after falsifying two of that
+_"nothing in the gaming section changes"_ three paragraphs after falsifying two of that
 section's four category-1 claims — **an absence claimed as a mechanism and kept after the
 absence ended.** Another left two entries superseded and unmarked.
 
@@ -377,8 +377,8 @@ discharges that**, and it is why the order is part of the spec rather than a not
 ⚠️ **The priming-list check returned nothing missed, and that is the weak half** — every
 flagged item is something a section says about itself, so reading it is unavoidable.
 **The cold pass found twenty-two items no upstream ticket flagged, and the two largest
-sit on the two pieces the list did not cover at all.** *An audit primed with its own
-answer list measures the list.*
+sit on the two pieces the list did not cover at all.** _An audit primed with its own
+answer list measures the list._
 
 **Two live findings from the cold pass are carried into their pieces rather than left
 here**: the two guards the ratchet was described as resting on
@@ -390,8 +390,8 @@ and floor population in the supply-chain posture
 rather than fixed: six hand-delivered comments, with one uninstructed piece volunteering
 a section and another, equally uninstructed, writing none. **A roster forces the
 completeness check that woven reasoning does not** — the transferable rule stated in
-[`supply-chain.md`](supply-chain.md#7-gaming-categories): *the argument belongs where the
-decision is made; the roster belongs at the end.*
+[`supply-chain.md`](supply-chain.md#7-gaming-categories): _the argument belongs where the
+decision is made; the roster belongs at the end._
 
 ---
 
@@ -401,20 +401,20 @@ decision is made; the roster belongs at the end.*
 stop being true does not get to exempt its own output.** All are category 5 under the
 restated bound; **all are repaired in the spec, never silently.**
 
-| Specimen | Why it is load-bearing |
-| --- | --- |
-| A row number **allocated twice, five seconds apart**, by two sessions from one shared map | ⚠️ **Nothing in wayfinding could have caught it. What would have is G19's unique-and-gapless assertion turning the second spec red** — the scoreboard catching a defect in the effort designing its successor |
-| *"It published first"* — an ordering claim asserted from the shape of the work; measured, **five seconds in the other direction** | Inside a correction record, on an effort whose subject is claims nobody checked |
-| The roster listing **five specs where there are six** | It *is* the row inventory. **A roster that omits a row is the artifact whose stated job is completeness, incomplete** |
-| The reversibility budget counting **three one-way doors where there are six** | ⚠️ **The strongest of these.** The index of irreversible acts, wrong about how many there are, **in the section that exists to count them** |
-| *"Grepped all 26 closed tickets"* — it was **19** | A coverage claim stated as *"verified rather than assumed"* while covering 73% of its stated population |
-| *"Four consistent `# vN.N.N` comments"* — it counted **actions**, not comments; seven on four actions | One `grep` was available and nobody ran it, **inside the paragraph arguing that a claim about the tree must be measured** |
-| A **decayed *reason*, not a number**: a decision declined on a hazard a sibling ticket had dissolved, never re-checked | ⚠️ **Invisible to the method that caught every other specimen.** The rest were found by recounting; **a reason has no number to recount** |
-| A pass shipping *"Total flagged: 25 of 35"* against its own Summary's **24** | Two contradicting aggregate claims **inside the register of claims that quietly stop being true** |
-| The register **stating the retired decay bound at the top and the restated one 640 lines down** | ⚠️ **The list every future triage starts from** — governing future verdicts rather than describing past ones |
+| Specimen                                                                                                                          | Why it is load-bearing                                                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A row number **allocated twice, five seconds apart**, by two sessions from one shared map                                         | ⚠️ **Nothing in wayfinding could have caught it. What would have is G19's unique-and-gapless assertion turning the second spec red** — the scoreboard catching a defect in the effort designing its successor |
+| _"It published first"_ — an ordering claim asserted from the shape of the work; measured, **five seconds in the other direction** | Inside a correction record, on an effort whose subject is claims nobody checked                                                                                                                               |
+| The roster listing **five specs where there are six**                                                                             | It _is_ the row inventory. **A roster that omits a row is the artifact whose stated job is completeness, incomplete**                                                                                         |
+| The reversibility budget counting **three one-way doors where there are six**                                                     | ⚠️ **The strongest of these.** The index of irreversible acts, wrong about how many there are, **in the section that exists to count them**                                                                   |
+| _"Grepped all 26 closed tickets"_ — it was **19**                                                                                 | A coverage claim stated as _"verified rather than assumed"_ while covering 73% of its stated population                                                                                                       |
+| _"Four consistent `# vN.N.N` comments"_ — it counted **actions**, not comments; seven on four actions                             | One `grep` was available and nobody ran it, **inside the paragraph arguing that a claim about the tree must be measured**                                                                                     |
+| A **decayed _reason_, not a number**: a decision declined on a hazard a sibling ticket had dissolved, never re-checked            | ⚠️ **Invisible to the method that caught every other specimen.** The rest were found by recounting; **a reason has no number to recount**                                                                     |
+| A pass shipping _"Total flagged: 25 of 35"_ against its own Summary's **24**                                                      | Two contradicting aggregate claims **inside the register of claims that quietly stop being true**                                                                                                             |
+| The register **stating the retired decay bound at the top and the restated one 640 lines down**                                   | ⚠️ **The list every future triage starts from** — governing future verdicts rather than describing past ones                                                                                                  |
 
-⚠️ **Four of these share one shape — *true when written, falsified by a sibling landing
-in parallel* — and nothing in the process serialises it.** **What catches it is
+⚠️ **Four of these share one shape — _true when written, falsified by a sibling landing
+in parallel_ — and nothing in the process serialises it.** **What catches it is
 recounting mechanically at the point of assembly**, which is what this spec did and what
 the roster rule in §4 institutionalises.
 
@@ -426,36 +426,36 @@ of the technique rather than as one more instance.**
 
 ## 7. What lands where
 
-| Artifact | Change |
-| --- | --- |
-| `gates/gate-register.test.ts` | **G40** — correspondence both ways between `docs/gates.md`'s numbered rows and the register's row sections; **row-side floor at 42**; **exact cardinality** and entry shape, per §2 |
-| [`docs/gates.md`](../gates.md) | **row G40 `gate-register`, *Contract seams → gates*** |
-| [`CONTRIBUTING.md`](../../CONTRIBUTING.md) | the per-gate evidence obligation: **a new gate lands with a register entry carrying five verdicts, a disposition, a date and an observed-red line** — and *"a gate never observed failing is not yet a gate"* stops being a sentence the author remembers to write |
-| [`docs/gate-register.md`](../gate-register.md) | entries for **all seven new rows**; the merged-verdict-bullet marking from §1; **the G19 findings** — the positional status cell, the `TABLES` hole, **and gapless's blindness to top-row deletion** — in G19's own entry |
-| [`docs/spec/`](.) | this file, as the roster's index |
+| Artifact                                       | Change                                                                                                                                                                                                                                                             |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `gates/gate-register.test.ts`                  | **G40** — correspondence both ways between `docs/gates.md`'s numbered rows and the register's row sections; **row-side floor at 42**; **exact cardinality** and entry shape, per §2                                                                                |
+| [`docs/gates.md`](../gates.md)                 | **row G40 `gate-register`, _Contract seams → gates_**                                                                                                                                                                                                              |
+| [`CONTRIBUTING.md`](../../CONTRIBUTING.md)     | the per-gate evidence obligation: **a new gate lands with a register entry carrying five verdicts, a disposition, a date and an observed-red line** — and _"a gate never observed failing is not yet a gate"_ stops being a sentence the author remembers to write |
+| [`docs/gate-register.md`](../gate-register.md) | entries for **all seven new rows**; the merged-verdict-bullet marking from §1; **the G19 findings** — the positional status cell, the `TABLES` hole, **and gapless's blindness to top-row deletion** — in G19's own entry                                          |
+| [`docs/spec/`](.)                              | this file, as the roster's index                                                                                                                                                                                                                                   |
 
 ⚠️ **G19 is not edited, and that is a disposition rather than an omission.** Every one
 of the seven new rows lands in an existing table, so **nothing this rollout adds
 exercises the `TABLES` hole**. Hardening a green gate against a vector this rollout never
 reaches is a change this effort would be **making** rather than deciding. **The cost,
-stated: the hole then stays closed by convention — *we put rows in the three tables* —
+stated: the hole then stays closed by convention — _we put rows in the three tables_ —
 which is the shape this effort keeps finding is not a gate.**
 
 ---
 
 ## 8. How it is proved able to fail
 
-| Check | Plant this | Expect |
-| --- | --- | --- |
-| **G40**, forward | land a `docs/gates.md` row with no register section | red — **and this is the demonstration, on G39's own landing commit** |
-| **G40**, reverse | add a register section for a row that does not exist | red |
-| **G40**, entry shape | delete a row's observed-red line | red |
-| **G40**, entry shape | write a disposition outside the four-word vocabulary | red |
-| **G40**, cardinality | merge two verdicts into one bullet on any row **but G26** | red |
-| **G40**, cardinality | add a second `## G26` section | red |
-| **G40**, the exemption | split G26's merged bullet, leaving the exemption behind | red — **the exemption is reverse-asserted** |
-| **G40**, floor | break the regex that reads `docs/gates.md`'s rows | red, not a vacuous pass over two empty sets |
-| **G40**, top-row deletion | delete the highest-numbered row | red **on the floor** — G19's gapless check stays green, which is the point |
+| Check                     | Plant this                                                | Expect                                                                     |
+| ------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **G40**, forward          | land a `docs/gates.md` row with no register section       | red — **and this is the demonstration, on G39's own landing commit**       |
+| **G40**, reverse          | add a register section for a row that does not exist      | red                                                                        |
+| **G40**, entry shape      | delete a row's observed-red line                          | red                                                                        |
+| **G40**, entry shape      | write a disposition outside the four-word vocabulary      | red                                                                        |
+| **G40**, cardinality      | merge two verdicts into one bullet on any row **but G26** | red                                                                        |
+| **G40**, cardinality      | add a second `## G26` section                             | red                                                                        |
+| **G40**, the exemption    | split G26's merged bullet, leaving the exemption behind   | red — **the exemption is reverse-asserted**                                |
+| **G40**, floor            | break the regex that reads `docs/gates.md`'s rows         | red, not a vacuous pass over two empty sets                                |
+| **G40**, top-row deletion | delete the highest-numbered row                           | red **on the floor** — G19's gapless check stays green, which is the point |
 
 ⚠️ **What cannot be planted, and is marked reasoned rather than demonstrated: that the
 analysis inside an entry is any good.** G40 asserts shape. **The limit is stated in §2

@@ -5,7 +5,7 @@
 **Why this project exists:** see [`library-brief.md`](./library-brief.md).
 **Contracts and invariants:** see [`../AGENTS.md`](../AGENTS.md) — invariants there win over anything here.
 
-This document is the *revisable whole*. Edit it directly. If you change a phase's
+This document is the _revisable whole_. Edit it directly. If you change a phase's
 scope, change it here and the executing session will pick it up on next read.
 
 ---
@@ -18,16 +18,16 @@ inferable from the code.
 1. Execute **Phase 0 → Phase 3**. Phase 4 (Audiobookshelf) is **out of scope for
    this run** — do not start it.
 2. Stop and check in at **exactly two points**:
-   - after the Phase 0 plan, before executing it *(← we are here)*
+   - after the Phase 0 plan, before executing it _(← we are here)_
    - after Phase 2's **first** rendered screenshot lands in `artifacts/`, for an
      aesthetics review before any polish
-   Otherwise run autonomously until Phase 3's gate is green.
+     Otherwise run autonomously until Phase 3's gate is green.
 3. A phase is done **only** when its gate passes: `pnpm test && pnpm build` green
    **plus** the phase-specific check in AGENTS.md. Commit at every green gate.
    Never batch two phases into one commit.
 4. Any decision the brief leaves open: **make the call**, record it in
    [`docs/adr/`](adr/) in the same commit, move on. Do not ask about library
-   choices. A lesson about a *gate* goes to [`gates.md`](gates.md) instead.
+   choices. A lesson about a _gate_ goes to [`gates.md`](gates.md) instead.
 5. If a gate will not pass after **3 distinct approaches**: write up what was
    tried in `docs/blockers.md`, commit, and stop. Do not thrash.
 
@@ -49,14 +49,14 @@ response shape instead of a schema we invented.
 
 Read this if you are a session picking this project up cold.
 
-| Question | Answer |
-| --- | --- |
-| Where am I? | `docs/progress.md` — always current, always short |
-| What am I building? | this file, the phase below the last green gate |
-| Why? | `docs/library-brief.md` |
-| What must I never break? | Invariants in `AGENTS.md` |
-| What has already been decided? | `docs/adr/` |
-| What went wrong before? | `docs/blockers.md` (may not exist — that's fine) |
+| Question                       | Answer                                            |
+| ------------------------------ | ------------------------------------------------- |
+| Where am I?                    | `docs/progress.md` — always current, always short |
+| What am I building?            | this file, the phase below the last green gate    |
+| Why?                           | `docs/library-brief.md`                           |
+| What must I never break?       | Invariants in `AGENTS.md`                         |
+| What has already been decided? | `docs/adr/`                                       |
+| What went wrong before?        | `docs/blockers.md` (may not exist — that's fine)  |
 
 **Session protocol**
 
@@ -112,14 +112,14 @@ fixtures/vault/              10 notes + covers/ + README.md   (see §7)
 
 Each also gets a record in `docs/adr/`.
 
-| Dep | Scope | Why |
-| --- | --- | --- |
-| `typescript` | root dev | strict TS mandated by AGENTS.md |
-| `vitest` | root dev | mandated |
-| `tsx` | root dev | runs the CLI from TS source so `pnpm stacks` needs no build step |
-| `commander` | cli | mandated by the brief |
-| `astro` | site | mandated |
-| `three`, `@types/three` | site | mandated; vanilla, not R3F (already decided) |
+| Dep                     | Scope    | Why                                                              |
+| ----------------------- | -------- | ---------------------------------------------------------------- |
+| `typescript`            | root dev | strict TS mandated by AGENTS.md                                  |
+| `vitest`                | root dev | mandated                                                         |
+| `tsx`                   | root dev | runs the CLI from TS source so `pnpm stacks` needs no build step |
+| `commander`             | cli      | mandated by the brief                                            |
+| `astro`                 | site     | mandated                                                         |
+| `three`, `@types/three` | site     | mandated; vanilla, not R3F (already decided)                     |
 
 Deferred, with the phase that introduces them: `yaml` (P1 — will not hand-roll a
 YAML parser), `puppeteer` (P2), cover-color/OG image library (P1/P3, choose and
@@ -214,34 +214,34 @@ exit non-zero on any hit) · OG image generated.
 
 ## 7. Fixture design
 
-Fixtures were derived from the *structure* of a real personal library, with all
+Fixtures were derived from the _structure_ of a real personal library, with all
 copyrighted content discarded. Titles, authors, identifiers and covers are
 invented. See §1 for the constraint this satisfies.
 
 **Structural traits mirrored** (each exists because it was observed in a real
 library and will otherwise break something later):
 
-| Trait | Fixture |
-| --- | --- |
-| 9-author edited volume | one book with a long `author` list |
-| `Title (Series Name and Suffix)` | one title with a parenthetical series suffix |
-| colon subtitles | several |
+| Trait                                | Fixture                                      |
+| ------------------------------------ | -------------------------------------------- |
+| 9-author edited volume               | one book with a long `author` list           |
+| `Title (Series Name and Suffix)`     | one title with a parenthetical series suffix |
+| colon subtitles                      | several                                      |
 | same book, two files, one identifier | duplicate note pair — exercises `bookExists` |
-| ASIN identifiers, no ISBN | 3 books ASIN-only; the rest carry ISBNs |
-| print + separate audio narration | audiobook fixture sharing a print title |
-| publication dates spanning years | `finished` dates spread across 2024–2026 |
+| ASIN identifiers, no ISBN            | 3 books ASIN-only; the rest carry ISBNs      |
+| print + separate audio narration     | audiobook fixture sharing a print title      |
+| publication dates spanning years     | `finished` dates spread across 2024–2026     |
 
 **Deliberate breakage** — 10 notes total:
 
 - 2 books with `cover` omitted → exercises the fallback spine.
 - 1 note with **genuinely unparseable YAML** → the "never crash" case (invariant 3).
 - 1 note with valid YAML but **no `title`** → a different skip path. A note
-  missing `type: book` is *not* malformed, it is simply not a book, and must not
+  missing `type: book` is _not_ malformed, it is simply not a book, and must not
   warn.
 
 **Covers:** generated PNGs — solid field, title text, a distinct hue each. Better
-than real art here, because `spine_color` extraction then has a *known expected
-value* per fixture, so the test asserts a real number rather than "some hex came back."
+than real art here, because `spine_color` extraction then has a _known expected
+value_ per fixture, so the test asserts a real number rather than "some hex came back."
 
 **Note bodies:** several notes, including the malformed one, contain the canary
 phrase `NOTE_BODY_CANARY_do_not_ship`. Phase 3's grep gate greps for exactly this.
@@ -260,7 +260,7 @@ mistakes fixtures for data.
 - Deployment to a live URL. Phase 3 produces a static folder; publishing it is the
   owner's call, not an agent's.
 - A second `VaultAdapter`. AGENTS.md forbids it — the interface exists so a
-  Logseq/Anytype adapter is *possible*, not to build a framework.
+  Logseq/Anytype adapter is _possible_, not to build a framework.
 - Obsidian plugin packaging, multi-room shelves, highlights import (all P2 in the
   brief: design for, don't build).
 
@@ -277,7 +277,7 @@ This repo **deliberately does not opt into its issue-tracker pipeline.**
   handoff at phase boundaries.
 - **Do not run:** `setup-matt-pocock-skills`, `to-prd`, `to-issues`, `triage`,
   `implement`. They publish to an issue tracker this project does not have, and
-  their PRD→issues→implement pipeline is a *substitute* for the phase-gate model,
+  their PRD→issues→implement pipeline is a _substitute_ for the phase-gate model,
   not an addition to it. The phases in §3–§6 already are the tickets, and their
   gates are executable commands rather than issue states. Running both means every
   session must first work out which system it is obeying.

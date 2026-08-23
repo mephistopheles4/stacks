@@ -16,7 +16,7 @@ prose, in two files. `scene.ts`:
 > shadows painted into the wood are computed from this light — and a painted
 > shadow whose light has quietly moved is worse than no shadow at all.
 
-And `docs/progress.md` records that the two cast shadows are *deliberately*
+And `docs/progress.md` records that the two cast shadows are _deliberately_
 derived from the light's real position "rather than tuned, so moving the light
 cannot leave them describing where it used to be". A live light control is
 exactly that failure, reintroduced through a UI.
@@ -52,13 +52,13 @@ light's new position.
 **The recess shading is not repainted, because it is not derived from the
 light.** `makeRecessShade` is the corner where a shelf meets its backboard: dark
 on both sides whichever way the light points. `docs/progress.md` is explicit that
-this one is deliberately *not* derived — "a cast shadow from an upright would
+this one is deliberately _not_ derived — "a cast shadow from an upright would
 fall on one side only and would barely touch a book, while the corner is dark on
 both sides whatever the light does". So it is painted once at mount and left
 alone. Repainting it would be harmless and would also quietly assert something
 untrue about what it depends on.
 
-**The contacts are held, not recomputed.** They are a function of the *layout* —
+**The contacts are held, not recomputed.** They are a function of the _layout_ —
 where the books were actually put — and not of the light. Re-deriving them on
 each repaint would be a second chance to disagree with `placeShelf`, which is the
 exact drift [ADR-0029](0029-placement-imports-the-case.md) and G25 exist to stop.

@@ -8,7 +8,7 @@ sad face; reloading shows nothing at all. Two symptoms, two different causes.
 
 **The crash.** Covers shipped at whatever size the provider supplied. On disk
 that is 8.4 MB, which looks fine. But the shelf is WebGL, so each cover is
-decoded into an *uncompressed* GPU texture and every one is uploaded before the
+decoded into an _uncompressed_ GPU texture and every one is uploaded before the
 first frame — **314 MB**, with a single 2400×2400 audiobook cover accounting for
 30 MB by itself. A desktop GPU has room not to notice. A phone kills the
 renderer.
@@ -19,10 +19,10 @@ catches it — the `.astro` script may not, under the "no logic in `.astro`" rul
 So the page rendered as nothing, with no indication anything was meant to be
 there.
 
-| | before | after |
-| --- | --- | --- |
-| covers on disk | 8.4 MB | 1.1 MB |
-| decoded GPU texture | 314 MB | 30.2 MB |
+|                      | before    | after   |
+| -------------------- | --------- | ------- |
+| covers on disk       | 8.4 MB    | 1.1 MB  |
+| decoded GPU texture  | 314 MB    | 30.2 MB |
 | largest single cover | 2400×2400 | 512×512 |
 
 Both halves are gated: `gates/cover-budget.test.ts` was observed red on the
@@ -52,7 +52,7 @@ behind a query parameter and both inert for an ordinary visitor:
   reaches `onerror`, and a USB debugging session disconnects at exactly the
   moment the data matters — a console can show a clean log and then nothing. The
   black box writes a snapshot to `localStorage` every second and shows it back on
-  the next load. `pagehide` fires on an ordinary navigation and does *not* fire
+  the next load. `pagehide` fires on an ordinary navigation and does _not_ fire
   when the process is killed, so **a stored record with no `clean` flag is a
   record of a crash**, and its counters are the last thing the page knew.
 - **`?books=N`** renders only the first N. If five books kill a phone, the fixed
@@ -84,13 +84,13 @@ uptime   12s
 …and the canvas was gone, replaced by the context-lost notice.
 
 **Five books. 632 triangles. Eleven textures. Sixty-one draw calls.** Whatever
-kills the shelf is paid *before a book is drawn*, so library size is not the
+kills the shelf is paid _before a book is drawn_, so library size is not the
 variable, and every plan that starts "upload fewer covers" is a fix for a cause
 that is not this one. The lazy loader is not the answer to this bug.
 
 **And it is not the tab being killed.** The reload reported
 `— previous session ended cleanly —`, which can only happen if `pagehide` fired,
-which can only happen if the page survived. So the *context* went away while the
+which can only happen if the page survived. So the _context_ went away while the
 document lived. The original report — a blank page and a sad face — was a tab
 death, and that is a different failure from this one; the 314 MB fix plausibly
 did resolve it, and this was underneath all along.
@@ -99,17 +99,17 @@ That leaves the fixed cost, which is four settings — and rather than bundle th
 into a "mobile profile" that would very likely make the crash vanish while
 leaving nobody able to say which knob did it, each is now its own probe:
 
-| probe | what it changes | why it is ranked here |
-| --- | --- | --- |
-| `?aa=0` | `antialias: false` | 4× MSAA colour+depth at 1054×1926 is ~65 MB — by far the largest allocation, on a brand-new tile-based PowerVR driver where the resolve is the expensive path |
-| `?dpr=1` | caps `devicePixelRatio` | sets the size everything else is a multiple of |
-| `?shadows=0` | no shadow map, no casting light | the 2048² depth target is 16 MB |
-| `?guard=1` | skip `setSize` when unchanged | assigning `canvas.width` reallocates even when identical, so an unguarded `ResizeObserver` churns the whole framebuffer on every layout event — still plausible because the failure is delayed (12s, 19s), not at first paint |
+| probe        | what it changes                 | why it is ranked here                                                                                                                                                                                                         |
+| ------------ | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `?aa=0`      | `antialias: false`              | 4× MSAA colour+depth at 1054×1926 is ~65 MB — by far the largest allocation, on a brand-new tile-based PowerVR driver where the resolve is the expensive path                                                                 |
+| `?dpr=1`     | caps `devicePixelRatio`         | sets the size everything else is a multiple of                                                                                                                                                                                |
+| `?shadows=0` | no shadow map, no casting light | the 2048² depth target is 16 MB                                                                                                                                                                                               |
+| `?guard=1`   | skip `setSize` when unchanged   | assigning `canvas.width` reallocates even when identical, so an unguarded `ResizeObserver` churns the whole framebuffer on every layout event — still plausible because the failure is delayed (12s, 19s), not at first paint |
 
 `?books=0` renders an empty case that still pays the entire fixed cost, which
 isolates renderer setup with no ambiguity from book content at all.
 
-Each probe was verified to have a *real* effect before shipping, not merely a
+Each probe was verified to have a _real_ effect before shipping, not merely a
 label: `aa=0` flips `gl.getContextAttributes().antialias`, `dpr=1` takes the
 drawing buffer from 1000×1800 to 500×900, `shadows=0` drops the renderer from 13
 textures and 3 programs to 11 and 2. A probe that silently did nothing would be
@@ -155,7 +155,7 @@ most of what makes the case read as furniture rather than as coloured boxes, and
 a shelf without them is not the shelf. `smoke:render` shows the difference —
 distinct colours 1305 → 1202 at identical 25.5% coverage — and it is visible.
 
-So the question is not *whether* to have shadows but *which cheaper form of them*
+So the question is not _whether_ to have shadows but _which cheaper form of them_
 a phone can hold, and nothing about that is answered yet.
 
 Note also what a device check would cost: "mobile" is not detectable in any way
@@ -171,16 +171,16 @@ Three changes, every one a strict improvement on every device:
 **1. The shadow map is drawn once, not sixty times a second.** Nothing in this
 scene moves. Books are placed at mount and stay there, the light never moves, and
 a directional light's shadow map is a function of the light and the geometry —
-*not* of the camera, which is the only thing that does move. So the renderer was
+_not_ of the camera, which is the only thing that does move. So the renderer was
 running a full extra pass every frame to compute an image identical to the last
 one. `shadowMap.autoUpdate = false` with a single `needsUpdate` ends that.
 
 Measured on the 49-book fixture, in steady state:
 
-| | textures | draws |
-| --- | --- | --- |
-| shadows on | 50 | **302** |
-| shadows off | 48 | **302** |
+|             | textures | draws   |
+| ----------- | -------- | ------- |
+| shadows on  | 50       | **302** |
+| shadows off | 48       | **302** |
 
 The frame costs the same either way. The two extra textures are the shadow target,
 allocated once, which is the point.
@@ -193,12 +193,12 @@ silhouette is ~3mm small on a 230mm book — under half a texel here.
 
 **3. The shadow camera is fitted to the case, which it never was.** A
 `DirectionalLight` aims at the origin through a fixed ±5 orthographic box; the
-case stands *on* the origin and grows upward, so a five-row unit at 5.6 tall was
+case stands _on_ the origin and grows upward, so a five-row unit at 5.6 tall was
 half outside its own shadow frustum and the top of a tall shelf fell out of it
 entirely. Aiming at the middle of the case and sizing the box to a bounding
 sphere fixes that and pays twice: the same 2048² map now covers ~7 units instead
 of 10, so every texel does about twice the work. `smoke:render` reports distinct
-colours 1305 → **1318** — slightly *more* detail than before, not less.
+colours 1305 → **1318** — slightly _more_ detail than before, not less.
 
 **Whether that is enough for the phone is still an empirical question.** The pass
 cost is gone; the depth target is still allocated and still sampled per fragment
@@ -209,20 +209,20 @@ fixed it — so the probes stay, and `?casters=0` still discriminates.
 
 The probes came back exhausted. On the Pixel 10 Pro, with 31 books:
 
-| configuration | result |
-| --- | --- |
-| `shadows=off` | **118 s, clean exit** |
-| `shadows=soft@2048` | dead |
-| `shadows=basic@2048` | dead |
-| `shadows=basic@512` | dead |
-| `shadows=soft@2048&casters=0` | dead at 44 s |
+| configuration                 | result                |
+| ----------------------------- | --------------------- |
+| `shadows=off`                 | **118 s, clean exit** |
+| `shadows=soft@2048`           | dead                  |
+| `shadows=basic@2048`          | dead                  |
+| `shadows=basic@512`           | dead                  |
+| `shadows=soft@2048&casters=0` | dead at 44 s          |
 
 Soft filtering and basic, 2048 and 512, and with the casters removed so nothing
 was drawn into the map at all. **Only the absence of a depth target survives.**
 
 Every one of those runs renders the identical frame: 195 draws, 1,720 triangles,
 7–10 MB of heap on a phone with 8 GB. That is not a load, and this was never a
-memory problem — the *first* bug was (314 MB of covers, real and worth fixing),
+memory problem — the _first_ bug was (314 MB of covers, real and worth fixing),
 and carrying that frame into a second unrelated failure cost most of a day. What
 this looks like is a driver fault: the GPU is Imagination's PowerVR D-Series,
 which the Tensor G5 took up in place of ARM Mali, so both the silicon and its
@@ -230,7 +230,7 @@ driver are months old and almost no WebGL content has run on them.
 
 **Nothing here can fix that. Not depending on it can.**
 
-Three's shadows are *shadow mapping*: render the scene from the light into a
+Three's shadows are _shadow mapping_: render the scene from the light into a
 depth texture, then have every fragment sample it. That is a technique for scenes
 that change — and nothing on this shelf does. Books are placed once, the light
 never moves, and a shadow does not depend on the camera, which is the only thing
@@ -256,8 +256,8 @@ all. There, the corner darkening remains and the books' own shadows are skipped.
 ### The case shades itself, and the books were never the point
 
 The owner walked through a `?shadows=1` screenshot naming four things the painted
-version was missing, beginning with *"the shelf itself casts a shadow on top of
-all books"*. It does not, and neither does anything else: every book on the shelf
+version was missing, beginning with _"the shelf itself casts a shadow on top of
+all books"_. It does not, and neither does anything else: every book on the shelf
 stands its front within 2cm of the case's front plane, so a ray leaving a cover
 escapes into the room almost immediately and is blocked by nothing.
 
@@ -268,13 +268,13 @@ quarters of the way down the backboard, which is why only a strip along the
 bottom of each shelf stays lit. Read as a picture, that is a dark band across the
 top of every shelf, and it is what a viewer attributes to the books.
 
-Three painters, all one plane per *row* rather than per book:
+Three painters, all one plane per _row_ rather than per book:
 
-| | what it is |
-| --- | --- |
-| backboard shade | the plank above and the right-hand upright, cast on the back wall |
-| recess shade | the corner light does not reach: under each plank, and at both uprights |
-| upright wedge | the right upright's real shadow across the plank — widest at the back, nothing at the front edge |
+|                 | what it is                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------ |
+| backboard shade | the plank above and the right-hand upright, cast on the back wall                                |
+| recess shade    | the corner light does not reach: under each plank, and at both uprights                          |
+| upright wedge   | the right upright's real shadow across the plank — widest at the back, nothing at the front edge |
 
 The two cast shadows are **derived from the key light's actual position** rather
 than tuned, so moving the light cannot leave them describing where it used to be.
@@ -298,7 +298,7 @@ is in front of it.
 
 The honest limits: books still do not shade each other beyond the band a shelved
 book throws down one side of a face-out cover, and that band is straight where
-the real one is *shaped* — the occluder is a taller neighbour, so its top corner
+the real one is _shaped_ — the occluder is a taller neighbour, so its top corner
 throws a diagonal. Reproducing that needs each book to know how tall the one
 beside it is.
 
@@ -325,7 +325,7 @@ Two details worth keeping:
 
 - The failing material is a `MeshBasicMaterial` — a painted shadow plane, which
   is unlit and wants nothing to do with shadows. Turning `shadowMap.enabled` on
-  recompiles *every* material in the scene, and three's `meshbasic` shader
+  recompiles _every_ material in the scene, and three's `meshbasic` shader
   includes no shadow chunk in either stage, so the only difference in that
   program is two inert `#define`s. It compiles clean and will not link.
 - **`VALIDATE_STATUS false` in that message means nothing.** Three prints
@@ -373,12 +373,12 @@ count drops 3 → 2 and the material that will not link is simply not there. So
 `?painted=0&shadows=1` renders real shadows in a scene with no basic material at
 all:
 
-| | meaning |
-| --- | --- |
-| it runs | the fault is specific to those programs, and there is something to change |
-| it still fails | the lit materials fail too, and there is not |
+|                | meaning                                                                   |
+| -------------- | ------------------------------------------------------------------------- |
+| it runs        | the fault is specific to those programs, and there is something to change |
+| it still fails | the lit materials fail too, and there is not                              |
 
-It also makes `?shadows=1` a *clean* reference for the first time. The two
+It also makes `?shadows=1` a _clean_ reference for the first time. The two
 shadow systems are independent, so asking for real shadows has always drawn them
 on top of the painted ones and double-darkened everything the two agree about —
 which is a thing to know when reading any earlier screenshot taken that way.
@@ -387,14 +387,14 @@ which is a thing to know when reading any earlier screenshot taken that way.
 
 The full bisect, with the last three rows added by the instruments above:
 
-| configuration | result |
-| --- | --- |
-| `shadows=0` | **118 s, clean exit** |
-| `shadows=soft@2048` / `basic@2048` / `basic@512` | dead |
-| `shadows=1&casters=0` | dead at 44 s |
-| `shadows=1&books=0&painted=0` | dead — an **empty case** |
-| `shadows=1&shadowfetch=0` | **survives** |
-| `shadows=1&shadowtype=vsm` | dead |
+| configuration                                    | result                   |
+| ------------------------------------------------ | ------------------------ |
+| `shadows=0`                                      | **118 s, clean exit**    |
+| `shadows=soft@2048` / `basic@2048` / `basic@512` | dead                     |
+| `shadows=1&casters=0`                            | dead at 44 s             |
+| `shadows=1&books=0&painted=0`                    | dead — an **empty case** |
+| `shadows=1&shadowfetch=0`                        | **survives**             |
+| `shadows=1&shadowtype=vsm`                       | dead                     |
 
 Read together those last three settle it. An empty case dies, so nothing about
 the library, the covers or the painted shading is involved. `shadowfetch=0`
@@ -406,7 +406,7 @@ the other three share, so the fault is not the comparison sampler either.
 
 What every dying configuration has and the surviving one does not is simply
 **materials that read the shadow map at all**. Stated honestly, `shadowfetch=0`
-does not separate *sampling* from *binding* — turning `shadowMap.enabled` off
+does not separate _sampling_ from _binding_ — turning `shadowMap.enabled` off
 also stops three uploading the shadow uniforms and binding those textures each
 frame — and nothing available here can separate them. It does not matter: the
 conclusion is the same either way.
@@ -419,7 +419,7 @@ Pro the answer is definitive and negative, and the investigation is closed.
 
 **Nobody has published this exact symptom** — searched, and there is no report of
 a Pixel 10, a Tensor G5 or a PowerVR D-Series losing a WebGL context on a shadow
-map. What *is* published is the reputation: the Pixel 10 shipped with Imagination
+map. What _is_ published is the reputation: the Pixel 10 shipped with Imagination
 driver **v24.3** while **v25.1** already existed, its GPU sat at its 396 MHz idle
 clock under load against a rated 1 GHz, games showed flickering textures and
 screen tearing, and Google acknowledged it and began shipping driver fixes in
@@ -433,7 +433,7 @@ and `?shadows=1` is kept partly so it can be re-tested after one. Nothing in thi
 repo can detect it, so it needs a person and a phone — the same thing that found
 it.
 
-### Superseded: which *part* of the shadow pass costs
+### Superseded: which _part_ of the shadow pass costs
 
 Three candidates, undistinguished: the depth target's **size**, PCFSoft's
 **filtering**, or simply having a second **pass** at all — the shelf has ~190
@@ -448,8 +448,8 @@ shadow-casting parts at 31 books, so the pass roughly doubles the draw calls.
 **`casters=0` is the only one that discriminates.** The other two make the shadow
 work smaller, so surviving either says just "less was cheaper" and leaves you
 guessing at which axis. `casters=0` keeps the depth target allocated and the pass
-running, over an empty scene: if the shelf lives, the cost is *drawing the
-casters*, and thinning them — the page block is sealed inside the case and cannot
+running, over an empty scene: if the shelf lives, the cost is _drawing the
+casters_, and thinning them — the page block is sealed inside the case and cannot
 cast anything visible — fixes it with the shadows intact. If it still dies, the
 cost is the target or the shader sampling it, no amount of thinning will help,
 and the answer is baked contact shadows: the scene is static, so that shading can

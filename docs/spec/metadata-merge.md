@@ -15,19 +15,19 @@ struck).
 **The merge was never a global ranking.** `fillGaps` fills gaps from **Google
 only** — Open Library never completes a Google-primary record (`index.ts:242`
 short-circuits it) — and on top sit three named exceptions (`completePages`,
-`preferAppleArtwork`, `borrowOReillyCover`). That structure is *kept*: one chain
+`preferAppleArtwork`, `borrowOReillyCover`). That structure is _kept_: one chain
 for the record, plus exceptions where the chain gives a worse answer.
 
 **Default order — Open Library → Google → O'Reilly → Apple.** Governs `title`,
 `author`, `isbn`, `publisher`.
 
-| Field | Order | Why it overrides the default |
-|---|---|---|
-| `pages` | Google by `volumeId`, then default | a search response reports `pageCount: 0` where the detail endpoint has the real number (existing `completePages`; `metadata/types.ts:38-47`) |
-| `cover` | Apple → O'Reilly → default | Apple is ~800×1200 against Google's ~128px; O'Reilly rescues books whose only cover is Open Library's 43-byte placeholder (existing) |
-| `published` | Google → O'Reilly → Apple → Open Library | Open Library gives a bare `"2008"`; the other three give full dates |
-| `subjects` | Google → Apple → O'Reilly → Open Library | Google's `categories` and Apple's `genres` are short and curated; Open Library's 35 raw subjects are noise in a capped scalar |
-| `description` | O'Reilly → Google → Apple | Open Library has none; O'Reilly only *has* a record when it is an O'Reilly book, where its own copy is authoritative; Apple's carries HTML markup |
+| Field         | Order                                    | Why it overrides the default                                                                                                                      |
+| ------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pages`       | Google by `volumeId`, then default       | a search response reports `pageCount: 0` where the detail endpoint has the real number (existing `completePages`; `metadata/types.ts:38-47`)      |
+| `cover`       | Apple → O'Reilly → default               | Apple is ~800×1200 against Google's ~128px; O'Reilly rescues books whose only cover is Open Library's 43-byte placeholder (existing)              |
+| `published`   | Google → O'Reilly → Apple → Open Library | Open Library gives a bare `"2008"`; the other three give full dates                                                                               |
+| `subjects`    | Google → Apple → O'Reilly → Open Library | Google's `categories` and Apple's `genres` are short and curated; Open Library's 35 raw subjects are noise in a capped scalar                     |
+| `description` | O'Reilly → Google → Apple                | Open Library has none; O'Reilly only _has_ a record when it is an O'Reilly book, where its own copy is authoritative; Apple's carries HTML markup |
 
 **`pages` and `cover` are exceptions implemented as mechanisms, not as
 orderings**, and they are deliberately absent from `FIELD_ORDER` in the code:
@@ -38,8 +38,8 @@ absence rather than letting it pass unremarked, so "deliberately not there" and
 "forgotten" cannot look the same.
 
 **Every exception is a fixed provider order, and never a rule about the value.**
-Rules like *"prefer the most precise date"* were rejected deliberately: they only
-approximate an ordering anyway ("prefer a full date" *is* "put Open Library last
+Rules like _"prefer the most precise date"_ were rejected deliberately: they only
+approximate an ordering anyway ("prefer a full date" _is_ "put Open Library last
 for dates"), while a fixed table is testable with one fixture per field, states
 itself in a line, and can be asserted by a gate. A quality judgement embedded in
 the merge would have to be re-encoded in the gate to check it.
@@ -47,7 +47,7 @@ the merge would have to be re-encoded in the gate to check it.
 ⚠️ **Accepted cost: when a provider's data quality changes, the table is wrong
 until a human notices and edits it.** Nothing detects that.
 
-**The *ask*-order does not change.** O'Reilly is still asked only when neither
+**The _ask_-order does not change.** O'Reilly is still asked only when neither
 Open Library nor Google found the book — that is a quota decision in CLAUDE.md
 with a far larger blast radius than this work. Ranking only ever picks among
 providers that actually returned a record.
@@ -63,7 +63,7 @@ code in both directions.
 Apple joins the ranking for `description`, `published` and `subjects`.
 
 The expensive part was already done and thrown away: `isProbablySameBook`
-confirms the record *is* this book at `apple-books.ts:50` before the function
+confirms the record _is_ this book at `apple-books.ts:50` before the function
 discards everything but one URL. Only the return type was in the way.
 
 **Asked for every book, not opportunistically.** Today `preferAppleArtwork` runs
@@ -88,7 +88,7 @@ the matched `trackId` for [`provider-provenance.md`](provider-provenance.md).
 **Not taken, with reasons on the record:**
 
 - `language` — Google and O'Reilly only; on a mostly-English library it writes
-  `en` on some books and nothing on the rest, recording *which provider answered*
+  `en` on some books and nothing on the rest, recording _which provider answered_
   rather than a fact about the book.
 - user ratings — unreliable on Apple, unnormalised across providers.
 - price — irrelevant to a reading tracker.
@@ -105,21 +105,21 @@ struck.
 
 Two facts drove every choice. **`updateBook` leaves a list value alone** rather
 than mangling it (`vault-adapter.ts:38`; G4 was red on arrival over exactly
-this), so a list-valued field can be written to a *new* note and never maintained
+this), so a list-valued field can be written to a _new_ note and never maintained
 on an existing one. And **`toLibraryBook` enumerates its fields**, so nothing
 reaches a public build by accident — publishing is structurally opt-in.
 
-| Field | Container |
-|---|---|
-| `publisher` | frontmatter scalar |
-| `published` | frontmatter scalar, **stored verbatim** — whatever the winning provider said, timestamp included |
-| `subjects` | frontmatter scalar, **`; `-joined**, capped at 5 in the winning provider's own order; Apple's generic `"Books"` genre dropped |
-| `description` | **note body**, its own `## About` section above `## Notes` |
+| Field         | Container                                                                                                                     |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `publisher`   | frontmatter scalar                                                                                                            |
+| `published`   | frontmatter scalar, **stored verbatim** — whatever the winning provider said, timestamp included                              |
+| `subjects`    | frontmatter scalar, **`; `-joined**, capped at 5 in the winning provider's own order; Apple's generic `"Books"` genre dropped |
+| `description` | **note body**, its own `## About` section above `## Notes`                                                                    |
 
 ⚠️ **`published` is stored verbatim, and this supersedes [#97](https://github.com/mephistopheles4/stacks/issues/97)'s
 own "`YYYY` or `YYYY-MM-DD`, never a timestamp".** [#102](https://github.com/mephistopheles4/stacks/issues/102)
-§4 ruled later and explicitly **rejected** normalising at write time as *"the one
-irreversible option on the table"* — undoing it means re-asking the providers,
+§4 ruled later and explicitly **rejected** normalising at write time as _"the one
+irreversible option on the table"_ — undoing it means re-asking the providers,
 which is a whole network pass. The note keeps `2019-03-05T07:00:00Z` if that is
 what Apple said; **tidiness is a display need** and lives in the card, which
 renders the first four-digit run and falls back to the string verbatim
@@ -135,7 +135,7 @@ them on the way in. **Do not write a normaliser.**
 
 Provider category values **contain commas natively**. Not hypothetically — this
 repo's own G26 corpus holds Apple's `"Health, Mind & Body"`, and Apple is
-*second* in the subjects order. Comma-joined and split back on `,`, one genre
+_second_ in the subjects order. Comma-joined and split back on `,`, one genre
 silently becomes two, and nothing goes red.
 
 - **Separator: `; `** — `subjects: systems thinking; business & economics; science`
@@ -192,14 +192,14 @@ state once — but it has to be stated, and the CLAUDE.md edit in
 authors and page counts on books that were fine. Under today's write paths it
 cannot.** There are three surfaces, not one:
 
-| Surface | What it does | Guard |
-|---|---|---|
-| `lookup` / `fillGaps` | decides which provider's record wins | none — this *is* the merge |
-| `addBook` | writes a **new** note | `BookInput` is a closed list (`add-book.ts:131`) |
-| `enrichBook` | writes to an **existing** note | `FILLABLE` (`enrich.ts:24`) **and** every write is `if (book.X === undefined)` |
+| Surface               | What it does                         | Guard                                                                          |
+| --------------------- | ------------------------------------ | ------------------------------------------------------------------------------ |
+| `lookup` / `fillGaps` | decides which provider's record wins | none — this _is_ the merge                                                     |
+| `addBook`             | writes a **new** note                | `BookInput` is a closed list (`add-book.ts:131`)                               |
+| `enrichBook`          | writes to an **existing** note       | `FILLABLE` (`enrich.ts:24`) **and** every write is `if (book.X === undefined)` |
 
 A pure merge change alters what a brand-new `stacks add` records, and which value
-fills an existing *gap*. A page count already present is never touched.
+fills an existing _gap_. A page count already present is never touched.
 
 **The trap is the mirror image: taking a new field in the merge writes it
 nowhere.** `BookInput` and `FILLABLE` are both closed lists, so a merge that
@@ -207,8 +207,8 @@ starts carrying `publisher` would put it in no note at all. **Fields and
 write-permission move together, or the decision is inert.**
 
 **Decided: the merge changes, `BookInput` and `FILLABLE` grow to match, and every
-write stays conditional on the key being absent.** `enrich`'s *"fills missing
-metadata … never overwriting"* survives intact.
+write stays conditional on the key being absent.** `enrich`'s _"fills missing
+metadata … never overwriting"_ survives intact.
 
 ⚠️ **The accepted cost, stated plainly: a book already carrying a wrong value
 keeps it forever, and correcting it stays a hand edit.** That was taken knowingly
@@ -221,8 +221,8 @@ gate **M2** asserts the claim rather than a branch.
 ⚠️ **Two namespaces are live here and must not be mixed.** `FILLABLE` entries
 index `book[field]` on a `BookRecord` (`enrich.ts:24,58`), so they are **camelCase
 field names**; the `changes` object handed to `updateBook` is a
-`FrontmatterChanges`, keyed *"by their contract names (`shelf_order`, not
-`shelfOrder`)"* (`vault-adapter.ts:7`). The list below is the first; the
+`FrontmatterChanges`, keyed _"by their contract names (`shelf_order`, not
+`shelfOrder`)"_ (`vault-adapter.ts:7`). The list below is the first; the
 frontmatter spellings are in
 [`provider-provenance.md`](provider-provenance.md) §2 and
 [§4](#4-containers) above.
@@ -254,7 +254,7 @@ so **17 is a ceiling**.)
 
 ## 6. The pass
 
-**`stacks enrich` *is* the backfill pass. No new command, no flag, no dry-run
+**`stacks enrich` _is_ the backfill pass. No new command, no flag, no dry-run
 inversion.** The ids and the re-merged fields come out of one set of responses by
 construction rather than by discipline, and `enrich` inherits its `[title]`
 filter, `--dry-run` and the whole `EnrichOutcome` report with no new machinery.
@@ -269,7 +269,7 @@ class of burst.
 ### The one property everything rests on
 
 `createCachedHttpGet` writes the cache only when `getWithRetry` returned
-something — `if (body === undefined) return undefined;` at `http.ts:64`, *before*
+something — `if (body === undefined) return undefined;` at `http.ts:64`, _before_
 the write. So:
 
 - **a success is cached forever** (no TTL — the reader returns the file and stops);
@@ -294,7 +294,7 @@ exists.
   (`http.ts:25`) with 1.2s/2.4s backoff over 3 attempts; a book that exhausts
   them gets no Apple id. Because failures are not cached and successes are, **run
   two makes network calls only for what run one missed** — the pass paces itself
-  *across* runs rather than inside one.
+  _across_ runs rather than inside one.
 - ⚠️ **"Run it twice" is the operating instruction, not a workaround**, and run
   one's summary **undercounts by design**. This must reach the CLI docs, not be
   discovered in the field.
@@ -308,9 +308,9 @@ A book Apple has never heard of leaves `apple_track_id` absent, `missingFields`
 reports it, and the book is a candidate **on every run forever**. Accepted, with
 **nothing recorded in the note**.
 
-- A zero-result answer is valid JSON, so it *is* cached — the repeat costs one
+- A zero-result answer is valid JSON, so it _is_ cached — the repeat costs one
   request ever.
-- A network failure is *not* cached, so a book that missed out to an outage is
+- A network failure is _not_ cached, so a book that missed out to an outage is
   re-asked and **self-heals**.
 
 Rejected: a negative sentinel (`apple_track_id: none`) puts a non-id in an id key,
@@ -324,7 +324,7 @@ permanently and silently the one time a request failed.
 
 **ISBN lookup is proof; `isProbablySameBook` everywhere else.** No stricter bar
 for ids, for two reasons: it is already the bar for the higher-stakes write (the
-same guard decides whether to take a *cover*, and this codebase's own comment says
+same guard decides whether to take a _cover_, and this codebase's own comment says
 wrong art is worse than none), and a second threshold is a second thing to
 calibrate, needing its own gate or drifting.
 
@@ -339,12 +339,12 @@ Requiring ISBN-proof identity for ids was rejected because it kills
 
 ### Failure reporting: unchanged
 
-`enrichBook` sees one merged record, so *"Apple has no record"* and *"Apple's top
-five were all near-misses"* both arrive as an absent `appleTrackId`. **They stay
+`enrichBook` sees one merged record, so _"Apple has no record"_ and _"Apple's top
+five were all near-misses"_ both arrive as an absent `appleTrackId`. **They stay
 collapsed.** The `filled` line already names which fields landed —
 `google_volume_id, openlibrary_olid` with no Apple says Apple gave nothing — and
 whole-book failures keep today's `not-found` and `mismatch` lines, which refuse
-and write nothing. Refusing the *whole pass* on any mismatch is refused:
+and write nothing. Refusing the _whole pass_ on any mismatch is refused:
 invariant 3's spirit is that one bad note must not break the run, and
 `enrichBook` already refuses per book.
 
@@ -355,7 +355,7 @@ invariant 3's spirit is that one bad note must not break the run, and
 2. **The header will read `41 book(s) considered, 41 with gaps` on every run
    forever**, and `complete` goes from rare to nearly never. **Left alone.** The
    header was always a progress preamble, not a finding; G27's rule is about the
-   *closing* arithmetic and that still holds exactly. Making the count meaningful
+   _closing_ arithmetic and that still holds exactly. Making the count meaningful
    again would require recording that a provider had been asked and declined —
    the sentinel by another name. `complete` **stays** although it is nearly
    unreachable: dropping an unreachable case is how the original G27 defect was
@@ -387,7 +387,7 @@ providers say. Asserting the claim rather than the branch — the G27 lesson.
 
 **M3 — G26's corpus re-captured through `loadEnv()`.** Not a new gate: a merge
 change moves `lookup-recall`'s expectations, so the corpus must be re-captured —
-and its own recorded lesson (2026-08-08) is that a corpus captured *without* the
+and its own recorded lesson (2026-08-08) is that a corpus captured _without_ the
 Google key replayed **refusals as answers** and went green for two days. This is
 precisely the environment that bit before.
 

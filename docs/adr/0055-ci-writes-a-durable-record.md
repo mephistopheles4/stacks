@@ -14,7 +14,7 @@ it made that this record does not cover are
 The full derivation is [`docs/spec/trend-layer.md`](../spec/trend-layer.md) §1,
 which this record does not restate.
 
-## ⚠️ The word is *durable*, and it is not *immutable*
+## ⚠️ The word is _durable_, and it is not _immutable_
 
 Nothing makes this record immutable. **The `metrics` branch is unprotected and
 force-pushable by construction**, and append-only is a convention enforced by
@@ -22,7 +22,7 @@ nothing. **Durable is what git buys: the record survives the laptop, the store,
 and any rebuild of Prometheus.**
 
 This is stated at the top rather than in a consequence line because the design's
-own source said *immutable* in three places, including the heading of the ticket
+own source said _immutable_ in three places, including the heading of the ticket
 that proposed it and the thesis of this record. **The strongest available word
 for the property this design most conspicuously lacks, sitting in a title, is the
 worst possible place for it** — a reader who takes the title at face value plans
@@ -31,7 +31,7 @@ around a guarantee that does not exist.
 ## Why a git record rather than a hosted store
 
 The hosting research found that `promtool tsdb create-blocks-from openmetrics`
-backfills a local Prometheus — so *"no history when the machine is off"* is a
+backfills a local Prometheus — so _"no history when the machine is off"_ is a
 weakness of the **store**, not the **record**. A committed record and a local
 dashboard **compose rather than compete**, and no hosted option can absorb that
 replay.
@@ -83,8 +83,8 @@ different commit is reporting about code that is not there.**
   bytes — a lost row, or a conflict CI has to resolve unattended. Separate paths
   reduce the race to a ref update, which `git pull --rebase` retries cleanly.
 - **A row is written unconditionally, red `main` included.** A crashed run writes
-  **`run_ok 0` plus whatever computed** and still exits red, so *never ran* — a
-  gap in the branch — stays distinguishable from *ran and broke*, an explicit
+  **`run_ok 0` plus whatever computed** and still exits red, so _never ran_ — a
+  gap in the branch — stays distinguishable from _ran and broke_, an explicit
   zero. In `scripts/emit-metrics.ts` the record is written **before** the exit
   code is decided, and `run_ok` is **derived** from what the run declared it would
   compute rather than passed in, so nothing can report health after computing
@@ -99,7 +99,7 @@ different commit is reporting about code that is not there.**
   and event plumbing, to record scores for pull requests that never merged. **An
   unmerged PR's score was never part of the project's history.**
 - ⚠️ **Once any mutation floor is armed, this branch is append-only in practice** —
-  never force-pushed, never pruned, never rewritten, because **its history *is*
+  never force-pushed, never pruned, never rewritten, because **its history _is_
   the calibration evidence for every armed floor. Enforced by nothing**, said here
   rather than implied.
 - **Reversibility**: while every scope is still `unarmed`, deleting the `metrics`

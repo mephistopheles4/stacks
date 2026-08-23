@@ -174,7 +174,9 @@ describe("O'Reilly, for the books the other three do not have", () => {
     const seen: string[] = [];
     const watched: HttpGet = async (url) => {
       seen.push(url);
-      return url.includes('/search.json') ? readApiFixture('open-library-search-hit.json') : undefined;
+      return url.includes('/search.json')
+        ? readApiFixture('open-library-search-hit.json')
+        : undefined;
     };
 
     await searchByTitle('thinking in systems', watched);
@@ -316,7 +318,9 @@ describe('API miss', () => {
     const get: HttpGet = async (url) =>
       isHost(url, GOOGLE_BOOKS)
         ? { items: [] }
-        : { docs: [{ title: 'Obscure Book', author_name: ['A N Other'], isbn: ['9781000000016'] }] };
+        : {
+            docs: [{ title: 'Obscure Book', author_name: ['A N Other'], isbn: ['9781000000016'] }],
+          };
 
     const [result] = await lookup('obscure book', get);
     expect(result?.coverUrl).toContain('covers.openlibrary.org/b/isbn/');

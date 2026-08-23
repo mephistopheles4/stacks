@@ -13,9 +13,9 @@ asserted. **What it asserts, and what it cost to get right, are recorded in
 
 ## Why not a third file
 
-`docs/gates.md` opens by naming this exact failure — *"A rule written down twice
+`docs/gates.md` opens by naming this exact failure — _"A rule written down twice
 is a rule that will be true in one place and false in the other — this project
-has the scars to prove it"* — and then lists documented claims that had quietly
+has the scars to prove it"_ — and then lists documented claims that had quietly
 stopped being true. A `CONSTITUTION.md` restating five invariants that already
 exist in `CLAUDE.md`, and are already scored in `gates.md`, creates a third copy
 and a second thing to keep in sync, in a repo whose own history is the argument
@@ -25,8 +25,8 @@ Two gates already parse `CLAUDE.md` by heading and **throw** when it changes
 shape, so the invariants are load-bearing where they are. Moving them would cost
 that and buy nothing.
 
-The naming gap the case study exposed was real but small: it says *constitution*
-and *articles* where the repo says *invariants*. That is answered by a sentence
+The naming gap the case study exposed was real but small: it says _constitution_
+and _articles_ where the repo says _invariants_. That is answered by a sentence
 in `CLAUDE.md` and one in `README.md`, not by a file.
 
 ## How this was decided

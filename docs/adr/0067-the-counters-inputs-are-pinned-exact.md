@@ -18,7 +18,7 @@ about the counter's own inputs, which 0066 does not cover.
 
 **They are inputs to the number, the way `timeoutMS` is an input to the mutation
 score.** The four complexity series are read as trends across months, so the
-question a reader asks of a movement is *did the code change*. A caret range
+question a reader asks of a movement is _did the code change_. A caret range
 makes `pnpm install` a second answer to that question, and one that leaves no
 diff.
 
@@ -64,8 +64,8 @@ The failure is silent and lands on the deploy path.
 
 So `counterInputs()` calls `ESLint#calculateConfigForFile` and takes what ESLint
 actually resolved. It is exactly `RunFacts.configHash`'s rule one layer over —
-*the run stamps its own, computed from the config it actually loaded rather than
-passed in from outside* — and it was adopted here for that precedent.
+_the run stamps its own, computed from the config it actually loaded rather than
+passed in from outside_ — and it was adopted here for that precedent.
 
 **The cost is real and small**: the options are now available only through an
 async call, since resolving a config is async. That is one `await` in the two
@@ -77,10 +77,10 @@ this record.** ESLint normalises a rule to `[severity, ...options]`, and
 `warn` and under `error` alike, so severity cannot move a single count — and
 hashing it would refuse records on the deploy path whose numbers either side were
 identical. That is `configHashOf`'s `SCORE_NEUTRAL_OPTIONS` applied to a
-different configuration file: *hash what changes the number, and nothing else*.
+different configuration file: _hash what changes the number, and nothing else_.
 It is also what §4 asks for in its own words — **the `complexity` rule's options
 object**. The counter-argument, recorded because it is what would reopen this: it
-sits awkwardly beside *stamp the configuration you loaded*, since severity is
+sits awkwardly beside _stamp the configuration you loaded_, since severity is
 part of what was loaded. The reply is that `configHashOf` already draws exactly
 this line and drew it first.
 
@@ -112,7 +112,7 @@ spec loudly — and because nothing imports it or executes it.
 - **Deriving the parse from `meta.messages` at runtime** — building the regex
   from the rule's own declared template, reached through
   `eslint/use-at-your-own-risk`. It would survive a re-wording, but a series
-  whose definition rests on a module named *use at your own risk* cannot promise
+  whose definition rests on a module named _use at your own risk_ cannot promise
   that last year's number and this year's mean the same thing — 0066's objection
   to `typescript/unstable`, verbatim. The parse is anchored on the template's
   literal spans instead, and an unreadable message **throws**.
@@ -121,7 +121,7 @@ spec loudly — and because nothing imports it or executes it.
   raises instead. The caller decides what a broken step means — for the emitter
   that is `RunFacts.failed`, for the pre-commit print a diagnostic and exit 0.
 - **A sampled fixture.** The un-sampled construct is exactly the silent change
-  the fixture exists to catch. *Total* is in the spec's sentence on purpose.
+  the fixture exists to catch. _Total_ is in the spec's sentence on purpose.
 
 ## How this was decided
 
@@ -144,7 +144,7 @@ quiet.
 0064 to `main` and [#215](https://github.com/mephistopheles4/stacks/pull/215)
 claimed 0065, so the pin became [0066](./0066-typescript-6-until-7-1.md) and this
 became 0067. Nothing about the decision changed; the renumber happened on the
-branch, so no landed record was edited. Recorded because this file argues *about*
+branch, so no landed record was edited. Recorded because this file argues _about_
 the pin's record by number, and a reader finding 0064 elsewhere would otherwise
 land on a different decision entirely.
 
@@ -153,4 +153,4 @@ table names three ADRs for the whole rollout and none of them is this one, so
 #201's session proposed folding the pin rationale into 0066 and writing nothing.
 #200 declined: 0066 is about the compiler, this is about pinning somebody else's
 rule implementation, and the README forbids editing a landed record. Recorded
-here so the *reason* the spec's count moved from three to four is legible.
+here so the _reason_ the spec's count moved from three to four is legible.

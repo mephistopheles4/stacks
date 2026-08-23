@@ -133,9 +133,7 @@ describe('G30 — the BookRecord → library.json seam, both directions', () => 
     const fields = new Set<string>(Object.keys(FULL));
 
     const derived: readonly string[] = DERIVED;
-    const unexplained = keysOf(book!).filter(
-      (key) => !fields.has(key) && !derived.includes(key),
-    );
+    const unexplained = keysOf(book!).filter((key) => !fields.has(key) && !derived.includes(key));
 
     expect(
       unexplained,

@@ -27,12 +27,7 @@
  */
 
 /** `unknown` covers both an unrecognised host and a cover cached before this existed. */
-export type CoverSource =
-  | 'open-library'
-  | 'google-books'
-  | 'apple-books'
-  | 'oreilly'
-  | 'unknown';
+export type CoverSource = 'open-library' | 'google-books' | 'apple-books' | 'oreilly' | 'unknown';
 
 /** Host suffixes, longest-lived part of each provider's URL shape. */
 const HOSTS: readonly (readonly [suffix: string, source: CoverSource])[] = [

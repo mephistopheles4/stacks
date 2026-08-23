@@ -74,7 +74,8 @@ export async function dominantColour(
   const withoutExtremes = tally(data, info.channels, true);
   // For the edge strip specifically, "nothing but paper" is the caller's cue to
   // fall back to the whole cover rather than to report the paper as the spine.
-  const winner = region === 'edge' ? withoutExtremes : (withoutExtremes ?? tally(data, info.channels, false));
+  const winner =
+    region === 'edge' ? withoutExtremes : (withoutExtremes ?? tally(data, info.channels, false));
   if (winner === undefined) return undefined;
 
   return toHex(

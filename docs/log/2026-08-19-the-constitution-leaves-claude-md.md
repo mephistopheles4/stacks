@@ -25,9 +25,9 @@ Error: ENOENT: no such file or directory, open
  ❯ claudeMdCommandsSection gates/commands.test.ts:37:61
 ```
 
-⚠️ **This is not the failure the ticket predicted.** It said G19 *"throws when it
+⚠️ **This is not the failure the ticket predicted.** It said G19 _"throws when it
 cannot find the `Invariants` section, rather than reporting zero uncited
-invariants"* — true, but only reachable when the file exists. Against a missing
+invariants"_ — true, but only reachable when the file exists. Against a missing
 file, `node:fs` raises `ENOENT` inside `readRepoFile`, three frames below the
 gate's own check. The gate is fine and the loud failure is real; the prediction
 named the wrong mechanism, which matters only because the prediction was the
@@ -62,8 +62,8 @@ Unprompted, and exactly what G19 is for.
 ## The check that could not be made
 
 **Whether Claude Code expands `@AGENTS.md` is unverified.** The tool's docs say
-it does — *"Claude Code reads `CLAUDE.md`, not `AGENTS.md`. If your repository
-already uses `AGENTS.md`… create a `CLAUDE.md` that imports it"*
+it does — _"Claude Code reads `CLAUDE.md`, not `AGENTS.md`. If your repository
+already uses `AGENTS.md`… create a `CLAUDE.md` that imports it"_
 ([code.claude.com/docs/en/memory](https://code.claude.com/docs/en/memory)) — and
 the same page gives the Windows reason not to use a symlink. But documentation
 is not observation, and two attempts to observe it here failed:
@@ -72,15 +72,14 @@ is not observation, and two attempts to observe it here failed:
   and is unavailable to a non-interactive session.
 - A headless probe — `claude -p "…quote invariant 3…" --allowed-tools ""` in the
   new worktree — returned `Failed to authenticate: OAuth session expired and
-  could not be refreshed`.
+could not be refreshed`.
 
 **Owed, by a human, before this is trusted:** open a session in the repo, run
 `/context`, and confirm **both** `CLAUDE.md` and `AGENTS.md` appear under
 **Memory files**. `CLAUDE.md` alone means the stub loaded and the import did
 not, which is the failure that looks like success — every rule silently absent,
 and nothing in the tree able to notice. Record the CLI version beside the
-result; the environment this was built in was **Claude Code 2.1.235** on Windows
-11.
+result; the environment this was built in was **Claude Code 2.1.235** on Windows 11.
 
 ## What is gated now, and what is not
 

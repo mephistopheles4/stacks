@@ -26,7 +26,8 @@ const pageUrl = absoluteUrl('/', Astro.site);
       it, and the touch icon is a PNG because iOS accepts nothing else. The
       three PNGs are rasterised from the SVGs by `scripts/make-icons.ts` and
       committed alongside them.
-    --><link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -37,7 +38,8 @@ const pageUrl = absoluteUrl('/', Astro.site);
       reads as a rendering fault rather than as branding. The palette's paper
       belongs on the icons and the share card, which are seen on somebody else's
       background, never against this one.
-    --><meta name="theme-color" content="#1a1613" />
+    -->
+    <meta name="theme-color" content="#1a1613" />
     <title>Stacks</title>
     <meta name="description" content="A reading library, rendered as a shelf." />
     <!--
@@ -50,7 +52,8 @@ const pageUrl = absoluteUrl('/', Astro.site);
       indexed on the strength of the link alone. Blocking the crawl is the
       intuitive move and the one that fails. Let them read the page; tell them
       not to index it.
-    --><meta name="robots" content="noindex, nofollow" />
+    -->
+    <meta name="robots" content="noindex, nofollow" />
     <meta property="og:title" content="Stacks" />
     <meta property="og:description" content="A reading library, rendered as a shelf." />
     <meta property="og:image" content={ogImage} />
@@ -68,7 +71,7 @@ const pageUrl = absoluteUrl('/', Astro.site);
         reader announces "Stacks" twice in a row for one logo.
       -->
       <div class="brand">
-        <span class="mark" aria-hidden="true" set:html={markSvg}></span>
+        <span class="mark" aria-hidden="true" set:html={markSvg} />
         <h1>stacks</h1>
       </div>
       <p>Drag to look around · click a book</p>
@@ -102,7 +105,12 @@ const pageUrl = absoluteUrl('/', Astro.site);
     overflow: hidden;
     background: #1a1613;
     color: var(--ink);
-    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      sans-serif;
   }
 
   /*

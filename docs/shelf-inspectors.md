@@ -27,7 +27,7 @@ moved none of them. `?solo` found both in one screenshot.
 own heights — and it is the sibling of the `window.__shelf` that `smoke:render`
 reads. The head corner was re-cut seven times before this existed, and every one
 of those rounds was judged from a hand-dragged orbit, so no two before-and-afters
-were the same picture and *"it looks better"* was never checkable. `distance` is
+were the same picture and _"it looks better"_ was never checkable. `distance` is
 clamped by the inspector's own `minDistance`: it magnifies, it does not invent.
 
 ⚠️ **What you can see here, nobody can see at all — and that cuts two ways.**
@@ -69,7 +69,7 @@ documents them with measured results, and everything else rides in `?tune=`.
 returns an `ApplyReport` — `applied`, `needsRebuild`, `needsReload`, `refused` —
 and the panel renders what the shelf reported rather than what it was asked for.
 This is [`docs/progress.md`](progress.md)'s oldest rule about instruments,
-*"a probe that silently did nothing would be worse than no probe"*, applied to a
+_"a probe that silently did nothing would be worse than no probe"_, applied to a
 slider. It caught seven real faults; they are listed there.
 
 Decisions: [ADR-0032](adr/0032-shelf-settings-are-one-object.md),

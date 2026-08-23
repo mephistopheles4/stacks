@@ -13,7 +13,7 @@ deploy reads).
 in after a reading** — so the page's job is to make that reading cheap and honest,
 and every choice below falls out of that rather than out of a metric list.
 
-⚠️ **The artifact is renamed. *"Release-confidence dashboard"* stops existing; it
+⚠️ **The artifact is renamed. _"Release-confidence dashboard"_ stops existing; it
 is the trend layer** — one name where the effort carried two, on
 [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md)'s reasoning. **A
 page that computes no confidence figure must not be named after one.**
@@ -24,12 +24,12 @@ page that computes no confidence figure must not be named after one.**
 
 **Neither push nor pull — both, split at a durable record.**
 
-⚠️ **The word is *durable*, and #121's own heading said *immutable*.** Nothing
+⚠️ **The word is _durable_, and #121's own heading said _immutable_.** Nothing
 makes this record immutable: the `metrics` branch is unprotected and
 force-pushable by construction ([§8](#8-residuals)), and append-only is a
 convention enforced by nothing. **Durable is what git buys — the record survives
 the laptop, the store, and any rebuild of Prometheus.** Corrected here rather than
-carried, because *immutable* is the strongest available word for the property this
+carried, because _immutable_ is the strongest available word for the property this
 design most conspicuously lacks, sitting in a heading.
 
 ⚠️ **It said so in three places, and the first pass fixed one.** This heading,
@@ -38,12 +38,12 @@ address — **the proposed ADR's own thesis** in
 [`after-the-scoreboard.md`](after-the-scoreboard.md#what-belongs-in-docsadr), where a
 word denied by its own consequence column would have become a permanent record.
 **Fixing the instance rather than the population is the failure this spec catalogues**,
-and it survived one round of review to be caught in the next. *Immutable* stays only in
+and it survived one round of review to be caught in the next. _Immutable_ stays only in
 [`supply-chain.md`](supply-chain.md), where it describes a **40-hex git SHA** and is
 simply true.
 
 The hosting research found that `promtool tsdb create-blocks-from openmetrics`
-backfills a local Prometheus, so *"no history when the machine is off"* is a
+backfills a local Prometheus, so _"no history when the machine is off"_ is a
 weakness of the **store**, not the **record**: a committed metrics record and a
 local dashboard **compose rather than compete**, and no hosted option can absorb
 that replay. This spec makes that the spine rather than an option.
@@ -81,12 +81,12 @@ what leaves the record on an unprotected, force-pushable branch. See
 minutes apart, and appending to one shared file makes them contend on the same
 bytes — a lost row, or a conflict CI has to resolve unattended. Separate paths
 reduce the race to a ref update, which `git pull --rebase` retries cleanly. ⚠️ **It
-also makes the deploy staleness check read a *filename* rather than parse anything,
+also makes the deploy staleness check read a _filename_ rather than parse anything,
 which is a cost as well as a saving** — see [§7](#7-gaming-categories-graded).
 
 **A row is written unconditionally**, including when `main` is red. A crashed run
-writes **`run_ok 0` plus whatever computed** and still exits red, so *never ran* (a
-gap) and *ran and broke* (an explicit zero) stay distinguishable.
+writes **`run_ok 0` plus whatever computed** and still exits red, so _never ran_ (a
+gap) and _ran and broke_ (an explicit zero) stay distinguishable.
 
 **No laptop cron, no daemon.** A second scheduled thing that can silently stop is
 the exact failure class this design spends its budget containing, **and this one
@@ -134,15 +134,15 @@ counter from the deployed site, which is what defeats the client beacon in
 
 ## 2. The unit is a run, and "is this real" is answered before "is this bad"
 
-The constraint that outranks the metric list — *what must this page show for a
-person to tell in thirty seconds whether it matters* — resolves into a **fixed
+The constraint that outranks the metric list — _what must this page show for a
+person to tell in thirty seconds whether it matters_ — resolves into a **fixed
 panel order**, because this repo has conflated those two questions before
 ([ADR-0027](../adr/0027-deploy-check-reports-refusal.md)).
 
 - **Panel 1, "is this real."** Per-scope delta since the previous run, the **PR
   window** (`[]`, or `#124, #125`), and the run's own identity — commit, workflow
-  run URL. **An empty window with a non-zero delta reads *tool noise* on sight.** A
-  one-PR window reads *that PR*. A five-PR window reads *you need to look*, which is
+  run URL. **An empty window with a non-zero delta reads _tool noise_ on sight.** A
+  one-PR window reads _that PR_. A five-PR window reads _you need to look_, which is
   honest rather than attributive.
 - **Panel 2, "is this bad."** Per-scope score against its own history. Read only
   after panel 1 says real. **Never against a target line.**
@@ -158,7 +158,7 @@ if the cost allows — recorded so it is a decision deferred rather than one nev
 noticed. `mutation-run-runtime` exists to tell you when that becomes affordable.
 
 **The cost**: the `commit → PR → session` join closes at **pull-request granularity
-only**, so a nightly point covers *every PR merged since the last one* and its
+only**, so a nightly point covers _every PR merged since the last one_ and its
 context is a **window** of sessions rather than one.
 
 ⚠️ **What nightly buys back is better than what it costs.** A nightly runs whether
@@ -175,28 +175,28 @@ tool-noise band that was measured once, and it is the load-bearing number
 The table lands in `docs/gates.md`'s new `## Trends` section — shape and placement
 in [`gate-or-trend.md`](gate-or-trend.md#the-trends-section).
 
-| Series | The judgment it supports |
-| --- | --- |
-| `mutation-score`, per declared scope | the reason the page exists |
-| `gate-suite-runtime` | mutation cost scales with suite runtime. **This is the number whose staleness made the parked row's cost estimate wrong.** |
-| `mutation-run-runtime` | when on-merge becomes affordable — a series existing to serve a decision already deferred |
-| `live-exclusions` | *declared exclusions that produced ≥1 executed mutant, of N declared.* Healthy value 0, **displayed and never thresholded** |
+| Series                               | The judgment it supports                                                                                                    |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `mutation-score`, per declared scope | the reason the page exists                                                                                                  |
+| `gate-suite-runtime`                 | mutation cost scales with suite runtime. **This is the number whose staleness made the parked row's cost estimate wrong.**  |
+| `mutation-run-runtime`               | when on-merge becomes affordable — a series existing to serve a decision already deferred                                   |
+| `live-exclusions`                    | _declared exclusions that produced ≥1 executed mutant, of N declared._ Healthy value 0, **displayed and never thresholded** |
 
 The noise band is **derived** from panel 1, not a fifth series. `live-exclusions` is
-**a count, deliberately**: *"exclusion entry N is now false"* would be a verdict, and
+**a count, deliberately**: _"exclusion entry N is now false"_ would be a verdict, and
 trends carry no verdicts.
 
-**Cut, with reasons — and ⚠️ *cut* means nowhere**, because the taxonomy is binary
+**Cut, with reasons — and ⚠️ _cut_ means nowhere**, because the taxonomy is binary
 and a metric that is neither a gate nor on this page is not parked somewhere
 unnamed:
 
-| Candidate | Why |
-| --- | --- |
-| `pnpm audit` count, CodeQL alert count | both are gates; they already block and already reach a person, so a count adds no judgment |
-| count of ⬜ rows in `docs/gates.md` | flat at zero, moves only when the owner adds an invariant — a step function, not a trend |
-| flake rate | no cheap source; measuring it means re-running |
-| time-to-green on `main` | one contributor, which is the same *"it would be noise"* the standing rejection row says about diff-cover |
-| changed-lines coverage per PR | wrong key for a run-unit page — and **[`no-coverage-floor.md`](no-coverage-floor.md) removed its producer entirely** |
+| Candidate                              | Why                                                                                                                  |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `pnpm audit` count, CodeQL alert count | both are gates; they already block and already reach a person, so a count adds no judgment                           |
+| count of ⬜ rows in `docs/gates.md`    | flat at zero, moves only when the owner adds an invariant — a step function, not a trend                             |
+| flake rate                             | no cheap source; measuring it means re-running                                                                       |
+| time-to-green on `main`                | one contributor, which is the same _"it would be noise"_ the standing rejection row says about diff-cover            |
+| changed-lines coverage per PR          | wrong key for a run-unit page — and **[`no-coverage-floor.md`](no-coverage-floor.md) removed its producer entirely** |
 
 ### No composite, and the refusal is written on the page
 
@@ -204,7 +204,7 @@ A single confidence figure is refused. Four arguments, the last being the real o
 
 1. It is the **global-coverage failure mode transposed** one level up from the
    initiative's named anti-target — one number, gameable, hiding which part moved.
-2. §2 made *which scope* the readable signal; a composite deletes precisely what
+2. §2 made _which scope_ the readable signal; a composite deletes precisely what
    panel 1 exists to supply.
 3. The series are a score and two wall-clocks. **Any composite is a weight vector
    over incommensurable units — arithmetic dressed as a fact.**
@@ -220,7 +220,7 @@ composite.
 
 **The moment is `pnpm deploy:site`.** A cadence is obligatory under
 [`gate-or-trend.md`](gate-or-trend.md#2-trends-are-obliged-to-reach-a-person-and-only-silence-is-red),
-so *"read it when something looks wrong"* was ruled out before this started — it is
+so _"read it when something looks wrong"_ was ruled out before this started — it is
 the unread-dashboard failure wearing a schedule. **A weekly calendar cadence has
 nothing holding it and stops happening in month three**, the same rot GitHub applies
 to scheduled workflows after 60 days.
@@ -240,20 +240,20 @@ record was built to expose**: one series going quiet while the others stay healt
 working nightly keeps the newest row minutes old forever.
 
 That failure is documented twice by the tickets that then assumed aggregate freshness
-would cover it — the **confident flat line**, and *"a series that stops being emitted
+would cover it — the **confident flat line**, and _"a series that stops being emitted
 draws no line at all, which reads as not configured yet rather than broken in
-March."*
+March."_
 
 **So: per-series.** The cost is stated rather than discovered later — each series
 needs its own bound, because they do not share a clock.
 
-| Series | Bound |
-| --- | --- |
-| every CI-written series | **3 days** |
-| surface D's row | **none — reported, never refused** |
+| Series                  | Bound                              |
+| ----------------------- | ---------------------------------- |
+| every CI-written series | **3 days**                         |
+| surface D's row         | **none — reported, never refused** |
 
-⚠️ **This row read *"the three nightly-written ones"*, then *"the four
-CI-written series"*, and it is eight; the row it counts is not D's.** Corrected
+⚠️ **This row read _"the three nightly-written ones"_, then _"the four
+CI-written series"_, and it is eight; the row it counts is not D's.** Corrected
 in the table rather than only underneath it, because this one is a contract an
 implementer reads and a wrong number in it leaves a CI series outside the bound.
 **It is now written without a count at all** — twice wrong in two rollouts is
@@ -267,13 +267,13 @@ all four named series, so the bound covers `mutation-score`,
 the paragraph below. **D takes no `## Trends` row**: it is written by the machine
 and never by CI, so a row for it would make `trend-layer`'s reverse
 correspondence red against every CI run, and its samples live under a metric
-prefix that gate structurally cannot see. Both readings of *"three"* reach the
+prefix that gate structurally cannot see. Both readings of _"three"_ reach the
 same operational endpoint, which is the one stated here.
 
 **Absent and stale are the same verdict, and this is entailed rather than newly
 decided.** A per-series bound has to say what it does about a series with **no
 sample at all** — never emitted, renamed, or silently dropped from the run — and
-*"the newest sample is older than 3 days"* is undefined for a series with no
+_"the newest sample is older than 3 days"_ is undefined for a series with no
 samples. **So a gated series with no sample inside its bound refuses, exactly as a
 stale one does.** Anything else fails closed in the wrong direction: **a series
 that never emitted is the failure per-series staleness exists to expose**, and it
@@ -299,32 +299,32 @@ too, but that is bursty and a week without a merge is not a fault.
 past the refusal.
 
 ⚠️ **Which surfaces the one pair that genuinely fires as one fault, and it is not the
-predicted one.** A stale *local* store has two unrelated causes wearing one face:
+predicted one.** A stale _local_ store has two unrelated causes wearing one face:
 **you have not synced**, and **CI stopped writing**. Same message, opposite fixes.
 **Closed by one anonymous fetch of the branch tip when the refusal fires** — newer
-rows on the branch means *run `trend:sync`*; a stale branch means *the nightly has
-not run since X*, with the Actions link. One request, two messages, and
+rows on the branch means _run `trend:sync`_; a stale branch means _the nightly has
+not run since X_, with the Actions link. One request, two messages, and
 [ADR-0027](../adr/0027-deploy-check-reports-refusal.md)'s discipline extended to the
 **fault** rather than only to the origin's answer.
 
 ### The dated bootstrap
 
 ⚠️ **As specified without it, your first `deploy:site` after the spine would
-refuse.** The staleness refusal was designed for a record that *exists and goes
-stale*; the rollout creates a window where **no record has ever existed**, and an
+refuse.** The staleness refusal was designed for a record that _exists and goes
+stale_; the rollout creates a window where **no record has ever existed**, and an
 empty record is maximally stale. **That is the worst possible first contact, because
 the first thing the new machinery would teach you is how to get past it** — the
 precise habit the no-override decision exists to prevent.
 
-| State | Behaviour |
-| --- | --- |
-| no record has ever arrived | prints `no record yet (spine landed <date>)`, **does not refuse** |
-| still no record after **3 days** | refuses |
-| a record exists and is stale | refuses, per the bound above |
+| State                            | Behaviour                                                         |
+| -------------------------------- | ----------------------------------------------------------------- |
+| no record has ever arrived       | prints `no record yet (spine landed <date>)`, **does not refuse** |
+| still no record after **3 days** | refuses                                                           |
+| a record exists and is stale     | refuses, per the bound above                                      |
 
 **The expiry is the point.** Three missed nightlies is a dead pipe rather than a
-bootstrap, and expiring on a **date** rather than on *"until the first record
-arrives"* is what stops the *never ran* / *ran and broke* distinction collapsing into
+bootstrap, and expiring on a **date** rather than on _"until the first record
+arrives"_ is what stops the _never ran_ / _ran and broke_ distinction collapsing into
 a permanent free pass. ⚠️ **The bootstrap exemption is the single most likely thing
 in this design to become permanent furniture** — a special case whose entire job is
 suppressing a refusal — **which is why it is dated and expiring rather than
@@ -333,15 +333,15 @@ conditional.**
 **A `gates/` staleness spec was rejected**, and the reason is a rule rather than a
 preference: the metrics record's age is a property of the tree, so a freshness
 assertion in `pnpm test` **goes red on a quiet week**, and a contributor opening a
-pull request after ten idle days meets a red gate whose remedy — *restart the
-nightly* — is not a diff they can make. That fails Clause A **for the person who hit
-it**. *A stranger paying for your dead pipe is not a gate; it is a tax.*
+pull request after ten idle days meets a red gate whose remedy — _restart the
+nightly_ — is not a diff they can make. That fails Clause A **for the person who hit
+it**. _A stranger paying for your dead pipe is not a gate; it is a tax._
 
-**G38 `metrics-freshness`, *Defect gates*.** The refusal is spec-able on G17
+**G38 `metrics-freshness`, _Defect gates_.** The refusal is spec-able on G17
 (`deploy-branch`)'s precedent — it drives `scripts/deploy.ts`'s refusal logic onto a
 scratch repository via `GIT_DIR` rather than asserting live state. ⚠️ **The slug
-names the property checked, not the consequence**: *the record is fresh*, not *the
-deploy refuses*.
+names the property checked, not the consequence**: _the record is fresh_, not _the
+deploy refuses_.
 
 ⚠️ **The honest cost, stated rather than papered over: if you go a long time without
 deploying, you go that long without learning.** The refusal surface is only as
@@ -352,15 +352,15 @@ frequent as the deploys. **Nothing in this design fixes that**, and it is the
 
 ## 5. Runtime counters: four surfaces, not one
 
-*"Runtime production counters for select invariants"* has to resolve before it can be
+_"Runtime production counters for select invariants"_ has to resolve before it can be
 specced, and on a static site it resolves to four surfaces:
 
-| | What it is | Status |
-| --- | --- | --- |
+|                              | What it is                                               | Status                                                          |
+| ---------------------------- | -------------------------------------------------------- | --------------------------------------------------------------- |
 | **A** — build-time assertion | assert the invariant over the real `dist/` before upload | **exists**, `scripts/deploy.ts` runs `inspectPublicBuild(DIST)` |
-| **B** — edge check | ask the live origin what it is serving | **exists**, `verifyBuildLive` plus the cover-byte comparison |
-| **C** — client beacon | code on the page reporting home | **rejected for stacks**, transferable-only |
-| **D** — scheduled edge check | B, between deploys | **adopted**, folded into `pnpm trend:sync` |
+| **B** — edge check           | ask the live origin what it is serving                   | **exists**, `verifyBuildLive` plus the cover-byte comparison    |
+| **C** — client beacon        | code on the page reporting home                          | **rejected for stacks**, transferable-only                      |
+| **D** — scheduled edge check | B, between deploys                                       | **adopted**, folded into `pnpm trend:sync`                      |
 
 **So the runtime layer for stacks is A + B + D**, and two of the three already exist
 with scar tissue on them.
@@ -373,7 +373,7 @@ It has four real merits, and three arguments defeat it in ascending order.
 change without the repo moving, and that class has bitten here: a fix uploaded
 cleanly while the custom domain served the previous build's covers for four hours. It
 is **the only thing that can see a visitor's cache**, which `verifyBuildLive`'s own
-comment concedes it *"cannot"*. `docs/notes-on-the-shelf.md` will put note text on
+comment concedes it _"cannot"_. `docs/notes-on-the-shelf.md` will put note text on
 the client **by design**, at which point correctness stops being a property of
 `dist/`'s bytes. And **a zero-expected counter is an assertion, not analytics.**
 
@@ -382,8 +382,8 @@ both CI metrics and runtime counters is Workers Analytics Engine, which is not
 Prometheus, **so C's price is not the beacon, it is the query language.** The
 **observer ships inside the observed artifact**, so in merit 2's own failure mode a
 stale bundle's own reporter certifies it, and independence is the entire premise of
-defence in depth. And fatally: **a zero-expected counter cannot distinguish *held*
-from *never ran*.** 0 forever reads identically as endpoint-down, ad-blocked, bundle
+defence in depth. And fatally: **a zero-expected counter cannot distinguish _held_
+from _never ran_.** 0 forever reads identically as endpoint-down, ad-blocked, bundle
 failed, nobody visited — **and for a personal site zero visitors is a legitimate
 state**, so silence cannot be made red. Making the zero mean something needs a
 denominator: page loads. Which is visitor analytics over the owner's reading, which
@@ -403,14 +403,14 @@ and a laptop schedule was already rejected in as many words.
 **So D is not scheduled at all: `pnpm trend:sync` probes the origin and writes D's
 row beside the ones it fetched.** One command, one moment, one place that knows where
 the record lives. `run_ok 0` covers a **refusal** by bot protection with nothing
-invented, distinct from *the origin is serving a stale build*, which is a real answer
+invented, distinct from _the origin is serving a stale build_, which is a real answer
 and a red one — the distinction
 [ADR-0027](../adr/0027-deploy-check-reports-refusal.md) already paid for.
 
 ⚠️ **Moving D back into CI was checked against the tree and dies on a fact.** The
 build stamp is `sha256(index.html + library.json)`, and `library.json` is built from
 the **real vault**, which is not in the repo — **so CI can never compute the expected
-stamp.** It could only be *told*, which costs a personal access token and breaks the
+stamp.** It could only be _told_, which costs a personal access token and breaks the
 design's strongest property, and it buys only half of D because the cover comparison
 needs the local `dist/` regardless. **Refused: fold stands, no token.**
 
@@ -460,8 +460,8 @@ built to close that gap. The other two content rules — `/Library\/[^"'\s]*\.md
   parses the shipped `library.json`; assert that **every key on every shipped book is
   a named `BookRecord` field or a named derived one.** That is G30's assertion over
   real bytes instead of its synthetic record. No vault bodies read, no new capability,
-  and it is the one check that would catch *somebody added a field, wired it through
-  the seam, and shipped it* on the actual folder going to Cloudflare. **It cannot be
+  and it is the one check that would catch _somebody added a field, wired it through
+  the seam, and shipped it_ on the actual folder going to Cloudflare. **It cannot be
   vacuous**: `empty-library` already fires on a bookless build, so the trace always
   has input.
 
@@ -469,7 +469,7 @@ built to close that gap. The other two content rules — `/Library\/[^"'\s]*\.md
   in [§7](#7-gaming-categories-graded) two hundred lines down.** It checks key
   **names**, never values, so **body text stuffed into `subjects` — a named
   `BookRecord` field, correctly wired — passes every assertion in it.** The
-  structural argument (*no `BookRecord` field carries a body*) is a claim about the
+  structural argument (_no `BookRecord` field carries a body_) is a claim about the
   **schema**, and (iii) checks the schema; **neither checks contents.** A reader who
   meets (iii) here and not §7 would leave with a guarantee this check does not give,
   which is the fault this spec exists to catalogue.
@@ -492,7 +492,7 @@ localhost dashboard survives.**
 ⚠️ **The decision was enforced by nothing, and now is.** As this section was written
 there was no `Content-Security-Policy` in `packages/site/public/_headers`, no
 `http-equiv` anywhere in `packages/site/`, and no gate with an opinion on what the
-shelf may connect to — so *"the site's only outbound request is same-origin"* was
+shelf may connect to — so _"the site's only outbound request is same-origin"_ was
 **true by measurement and not by property**, which is this effort's own diagnosis
 turning up in its own output. Tracked off-map as
 [#127](https://github.com/mephistopheles4/stacks/issues/127).
@@ -522,7 +522,7 @@ SHA-scraping from stdout reaches ~19% and is rejected.
 
 **Two things the dashboard design did not know to ask.** Claude Code ships a
 **first-party OpenTelemetry Prometheus exporter**, which holds the cost figures
-transcripts lack and *structurally cannot* do the join — no SHA, branch, repo or PR
+transcripts lack and _structurally cannot_ do the join — no SHA, branch, repo or PR
 attribute anywhere — **so counters and context are different sources, not one.** And
 **Prometheus is right for the numbers and wrong for the context**: UUIDs and PR
 numbers as labels is the cardinality mistake, which makes **annotations (~40 KB/month)
@@ -537,7 +537,7 @@ to it is not.
 which for this repo includes **note-body text** — a second unguarded path around
 invariant 2 that no gate watches, because every gate watches `library.json` and
 `dist/`, not `~/.claude`. **Nothing is leaking today**: invariant 2 governs what gets
-*published*, and an agent reading a note into a local transcript is not a publish. It
+_published_, and an agent reading a note into a local transcript is not a publish. It
 earns **no ticket**, on the precedent that no gate can reach outside the repo — a
 ticket would open and find nothing to do. **It is the strongest argument on this
 effort for the dashboard being localhost.**
@@ -552,7 +552,7 @@ Written by #118, #119 and #121; **graded cold** by
 **1 — Weakening.** The **staleness bound** is a single number; widening 3 days to 90
 makes the refusal never fire without deleting anything — **the most weakeable artifact
 this piece produces.** ⚠️ **The override entry is superseded**: #121 wrote that
-overriding a stale-record refusal is *"one flag and no diff at all"*; #140 placed the
+overriding a stale-record refusal is _"one flag and no diff at all"_; #140 placed the
 three metric refusals outside every flag's reach, so **there is no override to
 weaken** — what is left is not running `trend:sync`, which is not an edit and leaves no
 diff. **G36's correspondence set** is weakened by narrowing which series it checks —
@@ -570,7 +570,7 @@ correctness, and not readership** — every row could correspond perfectly to a 
 that has emitted nothing since March. **The cadence cell says "nightly" and G36 checks
 the cell exists**, not that a workflow schedule matches it. **And the ritual prints;
 printing is not reading** — accepted rather than closed, because no mechanism should
-distinguish read from displayed. **(iii) checks key *names*, never values**: body text
+distinguish read from displayed. **(iii) checks key _names_, never values**: body text
 stuffed into `subjects` passes every assertion in it.
 
 **3 — Routing around.** The record sits on an **unprotected branch by construction**,
@@ -586,16 +586,16 @@ blind as that.** Note text reaching anywhere else is outside every runtime check
 reach is narrower than it looks, `TEXTUAL` being a nine-extension allowlist.
 
 **4 — Vacuous green.** ⚠️ ~~**The live one: the deploy staleness check reads a
-*filename*, so a metrics file containing zero samples is indistinguishable from a full
+_filename_, so a metrics file containing zero samples is indistinguishable from a full
 one** — fresh, well-named, and empty. Freshness was chosen for cheapness and this is
 what it cost.~~ **Superseded, and the supersession is the finding.** #140's per-series
 bound cannot be answered by a filename, so [§4](#4-the-reading-ritual-and-what-deploy-refuses)
 makes the check parse samples and treat **absent as stale**. **The entry is struck in
 place rather than deleted**: it was written against #121's aggregate design, it was
-true then, and *a claim that stopped being true when a sibling decision landed* is the
+true then, and _a claim that stopped being true when a sibling decision landed_ is the
 category this register catalogues. **Worse on the dashboard: a series that stops being emitted draws no line
-at all, and no line reads as *I haven't configured that panel yet* rather than *this
-broke in March*.** **G36 on an empty trends table and an emitter producing no series:
+at all, and no line reads as _I haven't configured that panel yet_ rather than _this
+broke in March_.** **G36 on an empty trends table and an emitter producing no series:
 both sides empty, correspondence holds, green** — mitigated by an `expectFound`
 minimum row count. **The confident flat line** is this category in the store.
 
@@ -604,13 +604,13 @@ minimum row count. **The confident flat line** is this category in the store.
 is a response to it.** The **staleness bound** is measured once against an assumed
 cadence, and the on-merge move already named would make it stale with nothing
 re-reading it. **"Per-run files stay cheap"** is true at hundreds of files and untested
-at tens of thousands. And **the claim the entire no-beacon answer rests on** — *the
-site's only outbound request is same-origin `/library.json`* — **was measured once, by
+at tens of thousands. And **the claim the entire no-beacon answer rests on** — _the
+site's only outbound request is same-origin `/library.json`_ — **was measured once, by
 grep, and nothing re-measures it**; that is precisely what #127 converts from a
 measurement into a property.
 
 ⚠️ **Two grading findings this section owes and did not have.** #121's addendum
-**silently repeals its own *"there is no credential"*** — closed here by D's row going
+**silently repeals its own _"there is no credential"_** — closed here by D's row going
 to the local store only. And `scripts/deploy.ts` **prints nothing on a coverless build**
 and **compares `content-length`, not bytes**, in the cover check D inherits — recorded
 as a limit of surface B rather than repaired, since this spec does not build.
@@ -619,15 +619,15 @@ as a limit of surface B rather than repaired, since this spec does not build.
 
 ## 8. Residuals
 
-| Residual | Detail |
-| --- | --- |
-| ⚠️ **Once any scope is armed, the `metrics` branch is append-only in practice** — never force-pushed, never pruned, never rewritten. **Its history *is* the calibration evidence for every armed floor**; rewrite it and every floor becomes a number nobody can re-derive, **which is worse than an unarmed floor because it is indistinguishable from a good one.** **Enforced by nothing**, and [#122](https://github.com/mephistopheles4/stacks/issues/122) decided **no ticket** on the precedent that the branch does not exist yet, so one would open and find nothing to do. ⚠️ **A candidate mechanism is recorded and not adopted**, so the next reader does not re-derive it: `trend:sync` could persist the last imported branch commit and **refuse a non-fast-forward tip**, rebuilding local state rather than importing across a rewrite. That is tamper-*evident*, not tamper-proof — it detects a rewrite at the next sync and cannot prevent one — and **adopting it is the implementation session's call, not this spec's.** | §1 |
-| **No deploys means no learning**, and no syncs means no D. Every surface here fires at `deploy:site` or at `trend:sync`. **Third instance of this shape in the spec.** | §4, §5 |
-| **Edge-injected markup on the deployed site is observed by nothing**, before or after D. `deploy.ts` chose a meta tag over whole-HTML comparison precisely so edge rewriting would not break the check, **so that blindness is deliberate** — and written down rather than assumed. | §5 |
-| **Invariant 2's real-build `note-body` rule is vacuous and is accepted as such.** | §5 |
-| **The site's outbound-request property is true by measurement, not by property** — [#127](https://github.com/mephistopheles4/stacks/issues/127). | §5 |
-| **`~/.claude` transcripts hold note-body text in plaintext**, watched by nothing and reachable by no gate. | §6 |
-| **The localhost store is invisible to anyone but the maintainer** — free here, disqualifying transferable. | §1 |
+| Residual                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Detail |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| ⚠️ **Once any scope is armed, the `metrics` branch is append-only in practice** — never force-pushed, never pruned, never rewritten. **Its history _is_ the calibration evidence for every armed floor**; rewrite it and every floor becomes a number nobody can re-derive, **which is worse than an unarmed floor because it is indistinguishable from a good one.** **Enforced by nothing**, and [#122](https://github.com/mephistopheles4/stacks/issues/122) decided **no ticket** on the precedent that the branch does not exist yet, so one would open and find nothing to do. ⚠️ **A candidate mechanism is recorded and not adopted**, so the next reader does not re-derive it: `trend:sync` could persist the last imported branch commit and **refuse a non-fast-forward tip**, rebuilding local state rather than importing across a rewrite. That is tamper-_evident_, not tamper-proof — it detects a rewrite at the next sync and cannot prevent one — and **adopting it is the implementation session's call, not this spec's.** | §1     |
+| **No deploys means no learning**, and no syncs means no D. Every surface here fires at `deploy:site` or at `trend:sync`. **Third instance of this shape in the spec.**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | §4, §5 |
+| **Edge-injected markup on the deployed site is observed by nothing**, before or after D. `deploy.ts` chose a meta tag over whole-HTML comparison precisely so edge rewriting would not break the check, **so that blindness is deliberate** — and written down rather than assumed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | §5     |
+| **Invariant 2's real-build `note-body` rule is vacuous and is accepted as such.**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | §5     |
+| **The site's outbound-request property is true by measurement, not by property** — [#127](https://github.com/mephistopheles4/stacks/issues/127).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | §5     |
+| **`~/.claude` transcripts hold note-body text in plaintext**, watched by nothing and reachable by no gate.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | §6     |
+| **The localhost store is invisible to anyone but the maintainer** — free here, disqualifying transferable.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | §1     |
 
 ---
 
@@ -640,13 +640,13 @@ Prometheus for object storage and a hosted Prometheus and keeps every other deci
 a row written on failure, `run_ok` as a first-class metric, the pipe gated and the
 number never, and a human-invoked refusal rather than an alarm.
 
-⚠️ **And this is the one property that gets *stronger* on transfer, which is worth
+⚠️ **And this is the one property that gets _stronger_ on transfer, which is worth
 naming rather than assuming.** In stacks the record is durable and **not** immutable —
 the branch is force-pushable and append-only is a convention. Object storage has
 object-lock and a protected ref has rulesets, so **a production codebase can buy the
 immutability this design only approximates.** Every other inversion on this effort
 costs the transferable audience something; **this one is free**, and stating it stops
-*immutable* being read back into the stacks half.
+_immutable_ being read back into the stacks half.
 
 ⚠️ **Remote-write straight to a hosted Prometheus is the obvious transferable answer and
 is the weaker one**, for a reason measured here: the two-hour ingest window makes replay
@@ -654,7 +654,7 @@ impossible, so a design with no durable record loses history it can never get ba
 **The record is not a workaround for having no server. It is the part worth
 transferring.**
 
-⚠️ **And this gets *cheaper* off this repo, not harder.** On a private repo the metrics
+⚠️ **And this gets _cheaper_ off this repo, not harder.** On a private repo the metrics
 branch is not world-readable, and the public-repo constraint is what forced two of the
 eliminations in §1.
 
@@ -666,13 +666,13 @@ denominator a server already has. One rule generalises out of it:
 
 > **Every zero-expected counter ships with its denominator.**
 
-*Derived rather than separately decided*, and flagged as such so it can be pushed back
+_Derived rather than separately decided_, and flagged as such so it can be pushed back
 on: **all three arguments that defeat C are properties of static hosting, not of runtime
 counters.**
 
-**The vacuous-canary lesson transfers unchanged and is the more useful half**: *a check
+**The vacuous-canary lesson transfers unchanged and is the more useful half**: _a check
 that is honest against fixtures can be vacuous against production, and moving it to the
-production artifact does not move its meaning with it.* **Any codebase running the same
+production artifact does not move its meaning with it._ **Any codebase running the same
 assertion in CI and in a pre-deploy step owes an answer to whether the second one can
 fail.**
 
@@ -680,18 +680,18 @@ fail.**
 
 ## 10. What lands where
 
-| Artifact | Change |
-| --- | --- |
-| `.github/workflows/metrics.yml` | **new** — `push: main` + `schedule:` + `workflow_dispatch`, job-level `contents: write`, writes one `.prom` per run to the orphan `metrics` branch |
-| `metrics` branch | **new**, orphan, unprotected by construction |
-| `package.json` | `trend:sync` — fetch, backfill via `promtool`, probe the origin for D, restart Prometheus |
-| `scripts/deploy.ts` | the print block; the per-series staleness refusal with its branch-tip disambiguating fetch; the dated bootstrap; **(iii)'s key-trace over the real `library.json`** |
-| `gates/trend-layer.test.ts` | **G36** — correspondence both ways, plus trend names kebab-case, unique, and disjoint from every gate slug; `expectFound` row floor |
-| `gates/metrics-freshness.test.ts` | **G38** — the refusal driven onto a scratch repo, G17's idiom |
-| [`docs/gates.md`](../gates.md) | **rows G36 (Contract seams) and G38 (Defect gates)**; a new `## Trends` section immediately before *Triaging a CodeQL finding* |
-| [`AGENTS.md`](../../AGENTS.md) | `trend:sync` in the commands list — `gates/commands.test.ts` (G14) holds both lists in both directions |
-| [`CONTEXT.md`](../../CONTEXT.md) | add **`Trend`**; amend **`Gate`** to turn on *scored* rather than on *present in `docs/gates.md`* |
-| [`docs/gate-register.md`](../gate-register.md) | entries for G36 and G38, triaged in the commit that lands them |
+| Artifact                                       | Change                                                                                                                                                              |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/metrics.yml`                | **new** — `push: main` + `schedule:` + `workflow_dispatch`, job-level `contents: write`, writes one `.prom` per run to the orphan `metrics` branch                  |
+| `metrics` branch                               | **new**, orphan, unprotected by construction                                                                                                                        |
+| `package.json`                                 | `trend:sync` — fetch, backfill via `promtool`, probe the origin for D, restart Prometheus                                                                           |
+| `scripts/deploy.ts`                            | the print block; the per-series staleness refusal with its branch-tip disambiguating fetch; the dated bootstrap; **(iii)'s key-trace over the real `library.json`** |
+| `gates/trend-layer.test.ts`                    | **G36** — correspondence both ways, plus trend names kebab-case, unique, and disjoint from every gate slug; `expectFound` row floor                                 |
+| `gates/metrics-freshness.test.ts`              | **G38** — the refusal driven onto a scratch repo, G17's idiom                                                                                                       |
+| [`docs/gates.md`](../gates.md)                 | **rows G36 (Contract seams) and G38 (Defect gates)**; a new `## Trends` section immediately before _Triaging a CodeQL finding_                                      |
+| [`AGENTS.md`](../../AGENTS.md)                 | `trend:sync` in the commands list — `gates/commands.test.ts` (G14) holds both lists in both directions                                                              |
+| [`CONTEXT.md`](../../CONTEXT.md)               | add **`Trend`**; amend **`Gate`** to turn on _scored_ rather than on _present in `docs/gates.md`_                                                                   |
+| [`docs/gate-register.md`](../gate-register.md) | entries for G36 and G38, triaged in the commit that lands them                                                                                                      |
 
 ⚠️ **`metrics.yml` is authored during the only window in which nothing checks its
 pins** — G39 (`action-pins`) lands in the second commit and sweeps `.github/**/*.yml`
@@ -702,18 +702,18 @@ why.**
 
 ## 11. How it is proved able to fail
 
-| Check | Plant this | Expect |
-| --- | --- | --- |
-| **G36**, forward | emit a series with no row in the Trends table | red |
-| **G36**, reverse | add a Trends row naming a series nothing emits | red |
-| **G36**, name space | name a trend `mutation-scope` | red — collides with a gate slug |
-| **G36**, vacuity | empty the Trends table | red, not a vacuous pass |
-| **G38** | set the store's newest nightly row 4 days back | `deploy:site` refuses, naming which **series** is stale |
-| **G38**, disambiguation | make the local store stale while the branch has newer rows | refusal says *run `trend:sync`*, not *the nightly is dead* |
-| **G38**, bootstrap | run with no record 4 days after the spine landed | refuses; **at 2 days it prints and does not refuse** |
-| **(iii) key-trace** | add a key to a shipped book that is neither a `BookRecord` field nor a named derived one | pre-flight refuses on the real `dist/` |
-| **`run_ok`** | make the mutation step exit non-zero | a row with `run_ok 0` **is still written**, and the job exits red |
+| Check                   | Plant this                                                                               | Expect                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **G36**, forward        | emit a series with no row in the Trends table                                            | red                                                               |
+| **G36**, reverse        | add a Trends row naming a series nothing emits                                           | red                                                               |
+| **G36**, name space     | name a trend `mutation-scope`                                                            | red — collides with a gate slug                                   |
+| **G36**, vacuity        | empty the Trends table                                                                   | red, not a vacuous pass                                           |
+| **G38**                 | set the store's newest nightly row 4 days back                                           | `deploy:site` refuses, naming which **series** is stale           |
+| **G38**, disambiguation | make the local store stale while the branch has newer rows                               | refusal says _run `trend:sync`_, not _the nightly is dead_        |
+| **G38**, bootstrap      | run with no record 4 days after the spine landed                                         | refuses; **at 2 days it prints and does not refuse**              |
+| **(iii) key-trace**     | add a key to a shipped book that is neither a `BookRecord` field nor a named derived one | pre-flight refuses on the real `dist/`                            |
+| **`run_ok`**            | make the mutation step exit non-zero                                                     | a row with `run_ok 0` **is still written**, and the job exits red |
 
 ⚠️ **What cannot be planted, and is marked as reasoned rather than demonstrated**: the
-confident flat line, GitHub's 60-day disablement, and *"printing is not reading"*. Each
+confident flat line, GitHub's 60-day disablement, and _"printing is not reading"_. Each
 is a real limit; none has a red to observe.

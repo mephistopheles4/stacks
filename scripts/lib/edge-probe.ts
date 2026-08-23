@@ -116,11 +116,7 @@ export async function probeBuild(
     if (!response.ok) {
       if (attempt === attempts) return { kind: 'refused', status: response.status };
 
-      options.onRetry?.(
-        `origin answered HTTP ${String(response.status)}`,
-        attempt,
-        attempts,
-      );
+      options.onRetry?.(`origin answered HTTP ${String(response.status)}`, attempt, attempts);
       await sleep(waitMs);
       continue;
     }

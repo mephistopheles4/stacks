@@ -10,7 +10,7 @@ _Carried verbatim from the Decision Log this repository kept from July 2026, new
 
 - **2026-07-31** — **The first import source is Audible via Libation's JSON export, not Audiobookshelf.** The brief named Audiobookshelf; the owner had a Libation export in hand and no self-hosted ABS instance. The gate's real content — dedupe by ISBN then normalised title+author, and a re-run that adds nothing — is met and tested either way. An ABS importer would reuse `importBooks` unchanged; only the mapper is source-specific.
 
-- **2026-07-31** — **`BookInput.extra` carries keys outside the frontmatter contract.** The parser has always tolerated extra keys (invariant 5), but the *writer* silently dropped them, so an import could not keep the narrator, ASIN and runtime it found. Contract keys always win, so an import cannot smuggle in a different `title` through the side door.
+- **2026-07-31** — **`BookInput.extra` carries keys outside the frontmatter contract.** The parser has always tolerated extra keys (invariant 5), but the _writer_ silently dropped them, so an import could not keep the narrator, ASIN and runtime it found. Contract keys always win, so an import cannot smuggle in a different `title` through the side door.
 
 - **2026-07-31** — **`Account` and `Description` are never imported.** The first is the owner's email address; the second is the publisher's marketing copy — someone else's text. Tested by asserting neither appears anywhere in the mapped output.
 

@@ -1,6 +1,6 @@
 # Google's attribution binds this site, and is discharged by a vendored page element
 
-The shelf carries a persistent bottom-left surface: a *powered by Google*
+The shelf carries a persistent bottom-left surface: a _powered by Google_
 graphic and an **Attribution** link, with `/attribution` behind it.
 
 ⚠️ **Not legal advice.** Nobody involved is a lawyer and no lawyer reviewed
@@ -10,20 +10,20 @@ this. What follows is a reading of what Google and Apple say they require.
 
 The Books API's own Terms of Service carry **no attribution clause at all** —
 fees, content removal, privacy. But they bind you to the Google APIs Terms of
-Service, §6: *"You agree to display any attribution(s) required by Google **as
-described in the documentation for the API**."* The Books branding page is that
+Service, §6: _"You agree to display any attribution(s) required by Google **as
+described in the documentation for the API**."_ The Books branding page is that
 documentation, and it closes the loop from its own side twice.
 
 So it is a **live clause pointing at a stale page**, not a stale page asserting
 on its own authority — and the correction strengthens it rather than weakening
 it. This project holds a key obtained under those terms.
 
-**What did *not* decide it:** personal use, non-commercial, `noindex`. That is
+**What did _not_ decide it:** personal use, non-commercial, `noindex`. That is
 the same move the mark research refused when it would not let the Internet
 Archive's non-profit status stand in for a trademark licence.
 
 **It binds although the data reaches the vault first.** §6 attaches to
-*displaying* the data; if inserting a hop between fetch and display discharged
+_displaying_ the data; if inserting a hop between fetch and display discharged
 it, every API attribution requirement would be one cache away from nothing — and
 this project caches every response already.
 
@@ -32,17 +32,17 @@ this project caches every response already.
 `pages` drives spine thickness, so the shelf renders Google-derived **geometry**
 continuously with no card open. A card-conditional graphic would be absent for
 the entire time the obligation is live. That also disqualifies a colophon behind
-a click: *"always displayed"* is strained by anything requiring an interaction.
+a click: _"always displayed"_ is strained by anything requiring an interaction.
 
 The per-result link limb needed no new work: the card's Google mark links
 `books.google.com/books?id={volumeId}` on exactly the books Google contributed
-to, because the id key *is* the record of contribution
+to, because the id key _is_ the record of contribution
 ([ADR-0047](0047-the-contributor-set-is-the-id-keys.md)). Obligation and
 affordance share a population by construction.
 
 ⚠️ **The two limbs are separate.** A published claim on the map — that an open
-card discharges the corner's obligation — is wrong: the mark is the *link* limb
-and the occluded graphic is the *graphic* limb.
+card discharges the corner's obligation — is wrong: the mark is the _link_ limb
+and the occluded graphic is the _graphic_ limb.
 
 ## Vendored, against the recommendation
 
@@ -56,7 +56,7 @@ and argued down:
   to do with privacy.
 - **An attribution you do not host can fail silently**, and a broken image is a
   failed obligation that looks exactly like a met one.
-- **The redistribution residual is weaker here**: Google *requires* this image's
+- **The redistribution residual is weaker here**: Google _requires_ this image's
   display and serves it unconditionally.
 
 **The artwork has since landed**, at `packages/site/public/poweredby-google.png`,
@@ -68,21 +68,21 @@ card's three marks going a different way — redrawn monotone rather than vendor
 
 ## Half size and 0.8, and where the legibility floor actually is
 
-The owner asked for it *"half its current size"* with *"a little bit of subtle
-transparency so the colors arent too sharp"* — the badge was a lit chip in a
+The owner asked for it _"half its current size"_ with _"a little bit of subtle
+transparency so the colors arent too sharp"_ — the badge was a lit chip in a
 near-black room and Google's four saturated letters were the loudest colour on a
 page whose subject is book covers. It renders at **31×15 with `opacity: 0.8`**,
 the padding and radius halved with it so the plate stays a plate.
 
 **The file is untouched.** It is still `poweredby.png` byte for byte, still
-served from this origin, and it is drawn *whole and in proportion* — scaling is
+served from this origin, and it is drawn _whole and in proportion_ — scaling is
 a different act from cropping or recolouring, and G13's allowance is about the
 committed binary, which has not moved.
 
 ⚠️ **`opacity` is nonetheless the first thing here that changes the mark's
 rendered appearance rather than only the surface under it**, and that is the
 owner's call rather than a finding. One value on one element, so the mark is
-never faded *relative to* its own plate — a logo at a different opacity from its
+never faded _relative to_ its own plate — a logo at a different opacity from its
 background would read as doctored rather than quiet.
 
 ⚠️ **On a 1× display, half size costs the words "POWERED BY".** Measured, at 62 /
@@ -105,7 +105,7 @@ committed file, not by a checked property.
 
 ⚠️ **Google's "no competing search services" clause is read narrowly** — Google
 means search engines; Apple Books is a bookshop and Open Library a catalogue.
-The counter-argument is on the record: *"there are no exceptions"* is the same
+The counter-argument is on the record: _"there are no exceptions"_ is the same
 phrasing this map treated as absolute when O'Reilly used it. A judgement, not a
 certainty.
 

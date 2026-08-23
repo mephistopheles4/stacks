@@ -19,19 +19,19 @@ join without a new gate row, and it is the mechanism #127 was written to use.
 ## What this does not change
 
 The **ordering** in [`deploy.ts`](../../scripts/deploy.ts) is untouched and is
-still the thing that matters most: the gates stage a *fixture* vault into
+still the thing that matters most: the gates stage a _fixture_ vault into
 `packages/site/public/` and therefore run first, and the real build runs last.
 [ADR-0012](0012-public-build-staging.md) is why.
 
-The **separation** `CLAUDE.md` states is untouched too — *"the gates prove the
+The **separation** `CLAUDE.md` states is untouched too — _"the gates prove the
 code path is safe using fixtures, and say nothing about the folder about to go
-on the internet."* That remains exactly true. Two calls against two different
+on the internet."_ That remains exactly true. Two calls against two different
 folders is what it always described; two divergent implementations was never the
 point of it.
 
 **G2 is untouched.** It keeps asserting `private`/`wishlist` against
 `publish()`'s output, which is a different claim from asserting them against the
-artifact: G2 proves the filter *works*, the artifact rules prove it *ran*. Both
+artifact: G2 proves the filter _works_, the artifact rules prove it _ran_. Both
 stay.
 
 ## The trade-off
@@ -45,9 +45,9 @@ other existed — and it had already failed in the way accidental redundancy doe
 Neither was a superset of the other, and the weaker half of both divergences was
 on `deploy:site`, the only one of the two that publishes anything:
 
-| rule | `gate:public` | `deploy:site` |
-| --- | --- | --- |
-| `_headers` | exists **and** `/covers/*` carries `max-age=0` | exists |
+| rule        | `gate:public`                                     | `deploy:site`                                            |
+| ----------- | ------------------------------------------------- | -------------------------------------------------------- |
+| `_headers`  | exists **and** `/covers/*` carries `max-age=0`    | exists                                                   |
 | share image | every `og:image` **and** `twitter:image` absolute | one substring match, so a page with no `og:image` passed |
 
 The `_headers` gap is not hypothetical: it is how the fix for the mobile crash
@@ -70,8 +70,8 @@ know which vault produced it. Resolving that needs an `expect:
 something the module then uses once: the shallowness this change exists to
 remove.
 
-It is also a different question. Every other rule asks *is this folder safe to
-publish*; that one asks *did my build steps run in the right order*. Its failure
+It is also a different question. Every other rule asks _is this folder safe to
+publish_; that one asks _did my build steps run in the right order_. Its failure
 means the deploy script is broken, not that the build is unsafe. The genuinely
 unsafe half of the same incident — real covers surviving beside a fixture
 `library.json` — is `orphan-cover`, and that did move in.
@@ -89,7 +89,7 @@ had therefore never matched a shipped book at all.
   `_headers` and `og:image` divergences were found afterwards, by building the
   table above to check whether the duplication was actually costing anything. It
   was, and in the direction that matters. Recorded because the reasoning runs
-  the opposite way to the intuition — the *publishing* path is the one you would
+  the opposite way to the intuition — the _publishing_ path is the one you would
   expect to be strictest, and it was the weaker one precisely because nobody was
   comparing them.
 
@@ -102,9 +102,9 @@ had therefore never matched a shipped book at all.
 
 - **2026-08-03** — **Tagged problems rather than a flat `string[]`, decided from
   `--check-only`'s behaviour.** It collected problems and deliberately did not
-  fail on them, which rules out a throwing interface. It also skipped *all* of
+  fail on them, which rules out a throwing interface. It also skipped _all_ of
   them, though only `share-image` genuinely cannot hold for it — that check
-  asserts the built `og:image` matches the *current* `SITE_URL`, and repointing
+  asserts the built `og:image` matches the _current_ `SITE_URL`, and repointing
   `SITE_URL` at a local server is how you watch the live check fail on purpose.
   The blanket skip was a workaround for problems being anonymous. With a rule on
   each, `--check-only` now drops that one and reports the rest as warnings
@@ -112,7 +112,7 @@ had therefore never matched a shipped book at all.
 
 - **2026-08-03** — **Merging two half-rules is its own hazard, and it bit
   immediately.** Review of the first draft found that where the two
-  implementations had each kept *half* of one rule, the merged version kept only
+  implementations had each kept _half_ of one rule, the merged version kept only
   one half rather than the conjunction. `og:image` had to be absolute against
   the origin (the gate's half) **and** name the `og.png` this build wrote (the
   deploy's half); the draft asserted the first alone, so `<origin>/hero.png`

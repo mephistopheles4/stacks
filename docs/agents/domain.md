@@ -4,8 +4,8 @@ How the engineering skills should consume this repo's domain documentation when
 exploring the codebase.
 
 This repo is **single-context**. It has three packages — `core`, `cli`, `site` —
-but they are layers of one domain sharing one vocabulary (a *book*, a *note*, a
-*vault*, a *shelf*, a *public build*), not separate bounded contexts. There is no
+but they are layers of one domain sharing one vocabulary (a _book_, a _note_, a
+_vault_, a _shelf_, a _public build_), not separate bounded contexts. There is no
 `CONTEXT-MAP.md` and there should not be one unless a package grows a genuinely
 independent language.
 
@@ -22,8 +22,8 @@ In this repo, in this order:
 - **[`docs/gates.md`](../gates.md)** — which rule each gate protects, which are
   protected by nothing, and what went wrong while writing them.
 - **[`CONTEXT.md`](../../CONTEXT.md)** at the repo root — the glossary. Terms
-  this project uses in a narrower sense than English does *and that no gate
-  pins down*; a term a gate already holds is linked from there rather than
+  this project uses in a narrower sense than English does _and that no gate
+  pins down_; a term a gate already holds is linked from there rather than
   restated, for [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md)'s
   reason. It states no rules, so it cannot rot into a second constitution.
 
@@ -36,18 +36,18 @@ terms or decisions actually get resolved.
 Three files, three genres. Putting something in the wrong one is how this
 project's documentation drifted before.
 
-| It is… | It goes to |
-| --- | --- |
-| a decision — hard to reverse, surprising without context, a real trade-off | a new record in [`docs/adr/`](../adr/) |
-| a lesson about a gate — what it caught, how it went red, why it was vacuous | [`docs/gates.md`](../gates.md) |
-| where the project is, or a fact about the environment it runs in | [`docs/progress.md`](../progress.md) |
-| none of those | a commit message |
+| It is…                                                                      | It goes to                             |
+| --------------------------------------------------------------------------- | -------------------------------------- |
+| a decision — hard to reverse, surprising without context, a real trade-off  | a new record in [`docs/adr/`](../adr/) |
+| a lesson about a gate — what it caught, how it went red, why it was vacuous | [`docs/gates.md`](../gates.md)         |
+| where the project is, or a fact about the environment it runs in            | [`docs/progress.md`](../progress.md)   |
+| none of those                                                               | a commit message                       |
 
 **The ADRs here were extracted retroactively.** They came from a 138-entry
 chronological Decision Log, which is why record 0001 predates this convention by
 months and why several carry a long **How this was decided** section. That is
 deliberate — the reasoning is the valuable half — and it is not the shape a
-*new* record has to take. A new one can be three sentences.
+_new_ record has to take. A new one can be three sentences.
 
 ## Records are append-only
 

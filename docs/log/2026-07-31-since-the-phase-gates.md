@@ -10,6 +10,6 @@ Most of it was defects that only real data exposes:
 - Google Books works now a key is configured; Apple Books added purely for
   cover art, which is ~800x1200 against Google's ~128px
 - matching learned to refuse summaries and study guides, which had put the
-  wrong book's cover — and once the wrong book's *note* — into the vault
+  wrong book's cover — and once the wrong book's _note_ — into the vault
 - covers that are Google's "image not available" card are refused
 - tags are normalised to what Obsidian accepts

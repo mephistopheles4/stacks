@@ -3,12 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { Command } from 'commander';
 import { loadEnv } from './env.ts';
-import {
-  enrichReport,
-  enrichSummary,
-  reportEntry,
-  type EnrichEntry,
-} from './enrich-report.ts';
+import { enrichReport, enrichSummary, reportEntry, type EnrichEntry } from './enrich-report.ts';
 import {
   ObsidianAdapter,
   addBook,
@@ -108,62 +103,60 @@ program
     `where --public stages library.json, covers and og.png (default: ${DEFAULT_ASSETS})`,
   )
   .option('--watch', 'rebuild whenever the vault changes')
-  .action(
-    async (options: { public?: boolean; out?: string; assets?: string; watch?: boolean }) => {
-      const { vault, vaultPath } = context();
+  .action(async (options: { public?: boolean; out?: string; assets?: string; watch?: boolean }) => {
+    const { vault, vaultPath } = context();
 
-      const rebuild = async (): Promise<void> => {
-        const books = await vault.listBooks();
+    const rebuild = async (): Promise<void> => {
+      const books = await vault.listBooks();
 
-        // A public build stages a whole folder — metadata and the covers it
-        // actually references. The link-preview image is committed brand art in
-        // `packages/site/public/` and is deliberately not written here. A local
-        // build is just the index.
-        if (options.public === true) {
-          const assets = resolve(options.assets ?? DEFAULT_ASSETS);
-          const result = await publish(books, vault, assets, { isPublic: true });
+      // A public build stages a whole folder — metadata and the covers it
+      // actually references. The link-preview image is committed brand art in
+      // `packages/site/public/` and is deliberately not written here. A local
+      // build is just the index.
+      if (options.public === true) {
+        const assets = resolve(options.assets ?? DEFAULT_ASSETS);
+        const result = await publish(books, vault, assets, { isPublic: true });
 
-          console.log(
-            `wrote ${result.libraryPath} — ${result.library.bookCount} book(s), public build`,
+        console.log(
+          `wrote ${result.libraryPath} — ${result.library.bookCount} book(s), public build`,
+        );
+        console.log(`  covers    ${result.coversCopied} copied into ${assets}`);
+        if (result.coversMissing.length > 0) {
+          console.warn(
+            `  missing   ${result.coversMissing.length} cover(s): ${result.coversMissing.join(', ')}`,
           );
-          console.log(`  covers    ${result.coversCopied} copied into ${assets}`);
-          if (result.coversMissing.length > 0) {
-            console.warn(
-              `  missing   ${result.coversMissing.length} cover(s): ${result.coversMissing.join(', ')}`,
-            );
-          }
-          return;
         }
+        return;
+      }
 
-        const library = buildLibrary(books, { isPublic: false });
-        const out = resolve(options.out ?? DEFAULT_OUT);
-        await mkdir(dirname(out), { recursive: true });
-        await writeFile(out, `${JSON.stringify(library, null, 2)}\n`, 'utf8');
-        console.log(`wrote ${out} — ${library.bookCount} book(s), local build`);
-      };
+      const library = buildLibrary(books, { isPublic: false });
+      const out = resolve(options.out ?? DEFAULT_OUT);
+      await mkdir(dirname(out), { recursive: true });
+      await writeFile(out, `${JSON.stringify(library, null, 2)}\n`, 'utf8');
+      console.log(`wrote ${out} — ${library.bookCount} book(s), local build`);
+    };
 
-      await rebuild();
-      if (options.watch !== true) return;
+    await rebuild();
+    if (options.watch !== true) return;
 
-      console.log(`\nwatching ${vaultPath} — Ctrl-C to stop`);
-      const watcher = watchVault(vaultPath, async () => {
-        try {
-          await rebuild();
-        } catch (error) {
-          // A rebuild that throws must not kill the watch; the next save is
-          // very often the fix.
-          console.error(`rebuild failed: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      });
+    console.log(`\nwatching ${vaultPath} — Ctrl-C to stop`);
+    const watcher = watchVault(vaultPath, async () => {
+      try {
+        await rebuild();
+      } catch (error) {
+        // A rebuild that throws must not kill the watch; the next save is
+        // very often the fix.
+        console.error(`rebuild failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
 
-      // Hold the process open until interrupted.
-      process.on('SIGINT', () => {
-        watcher.close();
-        process.exit(0);
-      });
-      await new Promise<never>(() => {});
-    },
-  );
+    // Hold the process open until interrupted.
+    process.on('SIGINT', () => {
+      watcher.close();
+      process.exit(0);
+    });
+    await new Promise<never>(() => {});
+  });
 
 program
   .command('status')
@@ -301,7 +294,8 @@ program
     if (options.renumber !== true) {
       console.log(`${shelved.length} book(s), in shelf order:\n`);
       for (const [index, book] of shelved.entries()) {
-        const current = book.shelfOrder === undefined ? '   ·' : String(book.shelfOrder).padStart(4);
+        const current =
+          book.shelfOrder === undefined ? '   ·' : String(book.shelfOrder).padStart(4);
         console.log(`${current}  ${String(index + 1).padStart(3)}. ${book.title}`);
       }
       console.log('\nrun with --renumber to write these positions back as shelf_order');

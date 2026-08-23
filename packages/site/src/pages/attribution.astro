@@ -26,7 +26,8 @@ const ogImage = absoluteUrl('/og.png', Astro.site);
       inherited: this is the second page this site has ever had, and `noindex`
       is a per-page tag. `gate:public`'s robots rule reads every built page for
       exactly this reason.
-    --><meta name="robots" content="noindex, nofollow" />
+    -->
+    <meta name="robots" content="noindex, nofollow" />
     <meta property="og:title" content="Attribution — Stacks" />
     <meta property="og:image" content={ogImage} />
     <meta property="og:type" content="website" />
@@ -36,15 +37,14 @@ const ogImage = absoluteUrl('/og.png', Astro.site);
       <h1>Attribution</h1>
 
       <p>
-        Book data on this shelf comes from four catalogues. Nothing here is
-        affiliated with any of them.
+        Book data on this shelf comes from four catalogues. Nothing here is affiliated with any of
+        them.
       </p>
 
       <h2>Google</h2>
       <p>
-        Book data from Google Books. The <em>powered by Google</em> graphic is
-        displayed on the shelf itself, and every book Google contributed to
-        carries a link back to its Google Books page.
+        Book data from Google Books. The <em>powered by Google</em> graphic is displayed on the shelf
+        itself, and every book Google contributed to carries a link back to its Google Books page.
       </p>
 
       <h2>Apple</h2>
@@ -63,8 +63,8 @@ const ogImage = absoluteUrl('/og.png', Astro.site);
         The mark that shipped is the Apple logo silhouette. So it returns.
       -->
       <p>
-        The Apple logo is a trademark of Apple Inc., registered in the U.S. and
-        other countries. Apple Books is a service mark of Apple Inc.
+        The Apple logo is a trademark of Apple Inc., registered in the U.S. and other countries.
+        Apple Books is a service mark of Apple Inc.
       </p>
 
       <h2>Credits</h2>
@@ -76,8 +76,7 @@ const ogImage = absoluteUrl('/og.png', Astro.site);
         URL returns does not reach it.
       -->
       <p>
-        Book metadata and cover art from Open Library, Google Books, Apple Books
-        and O&rsquo;Reilly.
+        Book metadata and cover art from Open Library, Google Books, Apple Books and O&rsquo;Reilly.
       </p>
 
       <!--
@@ -108,7 +107,12 @@ const ogImage = absoluteUrl('/og.png', Astro.site);
     margin: 0;
     background: #1a1613;
     color: #f2e8dc;
-    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      sans-serif;
     line-height: 1.6;
   }
 

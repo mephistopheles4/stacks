@@ -131,7 +131,11 @@ const TEXTUAL = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt'
  * named field, correctly wired — passes every assertion in this file. See
  * `docs/spec/trend-layer.md` §5, responses (i) and (iii).
  */
-const FORBIDDEN: readonly { readonly rule: PublicBuildRule; readonly what: string; readonly pattern: RegExp }[] = [
+const FORBIDDEN: readonly {
+  readonly rule: PublicBuildRule;
+  readonly what: string;
+  readonly pattern: RegExp;
+}[] = [
   { rule: 'note-body', what: 'note body text', pattern: new RegExp(NOTE_BODY_CANARY) },
   { rule: 'vault-path', what: 'a vault note path', pattern: /Library\/[^"'\s]*\.md/ },
   { rule: 'vault-path', what: 'the sourcePath field', pattern: /"sourcePath"/ },
@@ -229,7 +233,10 @@ const CSP_DIRECTIVES: ReadonlyMap<string, readonly string[]> = new Map([
  * control this file describes, this rule checks.
  */
 const FRAMING_DENIED: readonly { readonly what: string; readonly pattern: RegExp }[] = [
-  { what: "Content-Security-Policy: frame-ancestors 'none'", pattern: /^Content-Security-Policy:\s*frame-ancestors\s+'none'\s*$/i },
+  {
+    what: "Content-Security-Policy: frame-ancestors 'none'",
+    pattern: /^Content-Security-Policy:\s*frame-ancestors\s+'none'\s*$/i,
+  },
   { what: 'X-Frame-Options: DENY', pattern: /^X-Frame-Options:\s*DENY\s*$/i },
 ];
 
@@ -333,7 +340,10 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     for (const { rule, what, pattern } of FORBIDDEN) {
       const hit = pattern.exec(contents);
       if (hit !== null) {
-        fail(rule, `${posix(relative(dir, file))} contains ${what}: ${JSON.stringify(hit[0].slice(0, 80))}`);
+        fail(
+          rule,
+          `${posix(relative(dir, file))} contains ${what}: ${JSON.stringify(hit[0].slice(0, 80))}`,
+        );
       }
     }
   }
@@ -383,7 +393,8 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
       if (!SHIPPABLE_KEYS.has(key) && !unnamed.has(key)) unnamed.set(key, name);
     }
     if (book.private === true) fail('private-book', `private book would be published: ${name}`);
-    if (book.status === 'wishlist') fail('wishlist-book', `wishlist book would be published: ${name}`);
+    if (book.status === 'wishlist')
+      fail('wishlist-book', `wishlist book would be published: ${name}`);
     if (book.sourcePath !== undefined) fail('vault-path', `vault path would be published: ${name}`);
     // A hand-edited or imported note may carry an absolute URL, and the shelf
     // passes `cover` straight to an <img> src — which has a visitor's browser
@@ -481,7 +492,9 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   }
   // Counted, not assumed. Saying "correct" beside a failure that says otherwise
   // is how a log stops being read.
-  observations.push(`${String(pointing)}/${String(imageTags.length)} share image URL(s) → ${wanted}`);
+  observations.push(
+    `${String(pointing)}/${String(imageTags.length)} share image URL(s) → ${wanted}`,
+  );
 
   /**
    * Shareable, not searchable — on **every** page, not just the index.
@@ -528,7 +541,10 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     const found = CSP_META.exec(readFileSync(file, 'utf8'));
 
     if (found === null) {
-      fail('csp', `no Content-Security-Policy in ${where} — nothing constrains what that page may load or connect to`);
+      fail(
+        'csp',
+        `no Content-Security-Policy in ${where} — nothing constrains what that page may load or connect to`,
+      );
       continue;
     }
 
@@ -538,7 +554,10 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     for (const [name, wanted] of CSP_DIRECTIVES) {
       const declared = directives.get(name);
       if (declared === undefined) {
-        fail('csp', `${where} declares no ${name} — the policy is weaker than the one this repo documents`);
+        fail(
+          'csp',
+          `${where} declares no ${name} — the policy is weaker than the one this repo documents`,
+        );
         continue;
       }
 
@@ -733,7 +752,10 @@ function parseCsp(policy: string): Map<string, string[]> {
   const directives = new Map<string, string[]>();
 
   for (const part of policy.split(';')) {
-    const tokens = part.trim().split(/\s+/).filter((token) => token !== '');
+    const tokens = part
+      .trim()
+      .split(/\s+/)
+      .filter((token) => token !== '');
     const name = tokens.shift();
     if (name === undefined || directives.has(name.toLowerCase())) continue;
     directives.set(name.toLowerCase(), tokens);

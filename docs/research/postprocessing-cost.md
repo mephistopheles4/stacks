@@ -8,7 +8,7 @@ answered on a device, it says so.
 **Short answer:** bloom and AO are **not one ticket**. Bloom is a bounded,
 measurable change with no new failure mode. AO reintroduces the exact GPU access
 pattern that killed every real-time shadow configuration on the owner's phone,
-*and* it recomputes darkening the case already paints by hand. Ship the bloom
+_and_ it recomputes darkening the case already paints by hand. Ship the bloom
 chain if it is wanted; file AO separately, behind a device probe, and expect to
 abandon it.
 
@@ -46,7 +46,7 @@ The argument for that reading, rather than just the precedent:
   `package.json` exports them deliberately (`"./examples/jsm/*"` and
   `"./addons/*"`).
 - **The ticket's counter-argument is real but is about something else.** Addons
-  *are* less stable than core: they carry no independent semver, they break
+  _are_ less stable than core: they carry no independent semver, they break
   between three minors, and `scene.ts` already documents one such break in a
   neighbouring API (three 0.185 silently substituted `PCFShadowMap` for
   `PCFSoftShadowMap`, so `?shadowtype=soft` had not been running soft filtering
@@ -89,15 +89,15 @@ deltas are against the shelf's actual tree-shaken three, not against a synthetic
 one. Nothing in the repo was modified; the entry points live in the scratchpad
 and import `boot.ts` by absolute path.
 
-| chain | minified | gzip | brotli |
-| --- | --- | --- | --- |
-| shelf today (baseline) | 703,901 | 158,922 | 128,869 |
-| `+ EffectComposer + RenderPass + OutputPass` | **+12,580** | **+2,818** | +1,891 |
-| `+ UnrealBloomPass` (on top of that) | **+10,397** | **+1,907** | +1,701 |
-| **bloom chain, total** | **+22,977** | **+4,725** | +3,592 |
-| `+ GTAOPass` (on top of bloom) | **+40,728** | **+7,763** | +6,035 |
-| **bloom + GTAO, total** | **+63,705** | **+12,488** | +9,627 |
-| `SSAOPass` instead of GTAO (over scaffolding) | +26,002 | +4,944 | +3,761 |
+| chain                                         | minified    | gzip        | brotli  |
+| --------------------------------------------- | ----------- | ----------- | ------- |
+| shelf today (baseline)                        | 703,901     | 158,922     | 128,869 |
+| `+ EffectComposer + RenderPass + OutputPass`  | **+12,580** | **+2,818**  | +1,891  |
+| `+ UnrealBloomPass` (on top of that)          | **+10,397** | **+1,907**  | +1,701  |
+| **bloom chain, total**                        | **+22,977** | **+4,725**  | +3,592  |
+| `+ GTAOPass` (on top of bloom)                | **+40,728** | **+7,763**  | +6,035  |
+| **bloom + GTAO, total**                       | **+63,705** | **+12,488** | +9,627  |
+| `SSAOPass` instead of GTAO (over scaffolding) | +26,002     | +4,944      | +3,761  |
 
 Cross-checked against a second, independent baseline (`import * as THREE` with
 tree-shaking suppressed, so the deltas are pure addon code): bloom chain +21,556
@@ -119,13 +119,13 @@ shader. Gzip does, so the gap mostly closes after compression.
 
 The ticket assumes the diagnostics panel is lazy-loaded behind `?debug`. **It is
 not.** `boot.ts:2` imports `mountDiagnostics` statically and `boot.ts:82` gates
-it at *runtime* on `params.has('debug')`. There is no `await import()` anywhere
+it at _runtime_ on `params.has('debug')`. There is no `await import()` anywhere
 in `packages/site/src`, and Astro emits the island as a single chunk.
 
 So:
 
 - **Ships to every visitor today:** the full number above, whatever gate is put
-  in front of the *behaviour*.
+  in front of the _behaviour_.
 - **Behind a real lazy load:** 0 for a visitor without the flag — but that number
   does not exist until someone introduces dynamic-import infrastructure, which
   is its own change with its own consequences (a second network round-trip
@@ -177,11 +177,11 @@ inert `#define`s that produced an unlinkable program on this driver.
 Then there are new programs. The chain adds fullscreen-quad materials that have
 never been compiled on this device:
 
-| addition | new programs (approx.) |
-| --- | --- |
-| `OutputPass` (`RawShaderMaterial`) + composer's internal copy pass | 2 |
-| `UnrealBloomPass` — luminosity high-pass, 5 separable-blur materials each with its own `KERNEL_RADIUS`, composite | 7 |
-| `GTAOPass` — `MeshNormalMaterial` scene override, GTAO, Poisson denoise, blend, copy | 5 |
+| addition                                                                                                          | new programs (approx.) |
+| ----------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `OutputPass` (`RawShaderMaterial`) + composer's internal copy pass                                                | 2                      |
+| `UnrealBloomPass` — luminosity high-pass, 5 separable-blur materials each with its own `KERNEL_RADIUS`, composite | 7                      |
+| `GTAOPass` — `MeshNormalMaterial` scene override, GTAO, Poisson denoise, blend, copy                              | 5                      |
 
 The shelf runs on **3** programs today (2 with `?painted=0`). The bloom chain
 roughly quadruples that; adding GTAO takes it past 15.
@@ -253,13 +253,13 @@ gate any AO work, and what makes the sequencing in §6 cheap.
 
 `contact-shadow.ts` paints four things, all computed once from the layout:
 
-| painter | what it darkens |
-| --- | --- |
-| `makeContactShadow` | a soft body and a tighter root where each book meets the plank |
-| `makeRecessShade` | the corner light does not reach — under each plank, at both uprights |
-| `makeBackboardShade` | the plank above and the right upright, cast on the back wall |
-| upright wedge | the right upright's real shadow across the plank |
-| `makeNeighbourShadow` | the band a shelved book throws down one side of a face-out cover |
+| painter               | what it darkens                                                      |
+| --------------------- | -------------------------------------------------------------------- |
+| `makeContactShadow`   | a soft body and a tighter root where each book meets the plank       |
+| `makeRecessShade`     | the corner light does not reach — under each plank, at both uprights |
+| `makeBackboardShade`  | the plank above and the right upright, cast on the back wall         |
+| upright wedge         | the right upright's real shadow across the plank                     |
+| `makeNeighbourShadow` | the band a shelved book throws down one side of a face-out cover     |
 
 Screen-space AO darkens **creases and contacts**: exactly the book/plank contact
 line, exactly the plank/upright/backboard corners. Two of the four painters
@@ -277,7 +277,7 @@ So the overlapping components are **replace-or-nothing**:
 
 - `makeRecessShade` — replaced outright by AO, or kept and AO attenuated to
   nothing at the corners. There is no compose.
-- `makeContactShadow`'s **root** — same. Its soft **body** is a *cast* shadow,
+- `makeContactShadow`'s **root** — same. Its soft **body** is a _cast_ shadow,
   directional, derived from the key light's real position; AO cannot produce it
   and would not remove the need for it.
 - `makeBackboardShade` and the **upright wedge** are cast shadows from a specific
@@ -286,7 +286,7 @@ So the overlapping components are **replace-or-nothing**:
 **What AO adds that the painters cannot** is exactly the honest limit
 `docs/progress.md` records against itself: books do not shade each other beyond
 the one band a shelved book throws down a face-out cover, and that band "is
-straight where the real one is *shaped* — the occluder is a taller neighbour, so
+straight where the real one is _shaped_ — the occluder is a taller neighbour, so
 its top corner throws a diagonal. Reproducing that needs each book to know how
 tall the one beside it is." AO gets that for free, and it gets the darkening
 between adjacent spines that nothing paints today.
@@ -316,7 +316,7 @@ EffectComposer
 
 Why that order, each verified against 0.185's source rather than recalled:
 
-- **AO before bloom.** AO multiplies scene luminance *down* at contacts. Run
+- **AO before bloom.** AO multiplies scene luminance _down_ at contacts. Run
   bloom first and a contact blooms and is then darkened, leaving a halo brighter
   than the thing that cast it. `GTAOPass` composites through `blendMaterial` onto
   the read buffer (`GTAOPass.js:571–578`), so downstream passes see an already
@@ -334,7 +334,7 @@ Why that order, each verified against 0.185's source rather than recalled:
   placed after it operates on display-referred values.
 - **AA is not free any more, and this is the trap.** `EffectComposer` never sets
   `samples` on its render targets. The shelf's `new THREE.WebGLRenderer({ canvas,
-  antialias: true })` multisamples the *default framebuffer*, into which the
+antialias: true })` multisamples the _default framebuffer_, into which the
   composer only ever draws one fullscreen quad — no geometry edges, nothing to
   resolve. So adopting a composer **silently throws away the antialiasing the
   shelf runs with today**, on a scene made almost entirely of thin vertical book
@@ -344,7 +344,7 @@ Why that order, each verified against 0.185's source rather than recalled:
   `SMAAPass`'s own doc comment says it "operates in `linear-srgb` so this pass
   must be executed **before** `OutputPass`" — but it is 50 kB of source, larger
   than the entire bloom chain. `FXAAPass` is ~7 kB and is luma-based, so it goes
-  *after* tone mapping; three's source documents SMAA's position and is silent on
+  _after_ tone mapping; three's source documents SMAA's position and is silent on
   FXAA's, so treat that placement as convention and check it on screen.
 
 ### And it makes `?aa` a lie, which this repo has a rule about
@@ -359,7 +359,7 @@ kept deliberately, so `?shadows=1` can be re-tested after a driver update.
 
 So a composer has to do one of two things: make `?aa` switch between MSAA on the
 canvas and an SMAA/FXAA pass in the chain, or retire `?aa` honestly — the way
-`?shadowtype=soft` was *mapped* rather than dropped once 0.185 made it a lie, so
+`?shadowtype=soft` was _mapped_ rather than dropped once 0.185 made it a lie, so
 an old URL still works and says what it actually got. Either is fine. Silently
 leaving it in place is not, and it is a third reason the composer is the thing
 that wants an ADR.
@@ -369,15 +369,15 @@ that wants an ADR.
 At the Pixel 10 Pro's measured drawing buffer — 1054×1926 at dpr 2, i.e.
 2,030,004 px — with RGBA16F at 8 B/px and depth at 4 B/px:
 
-| allocation | MiB |
-| --- | --- |
-| composer `rt1` + `rt2` (colour + depth each) | 46.5 |
-| `UnrealBloomPass` (bright target + 5 mip levels × 2, all half-res and down) | 14.2 |
-| `GTAOPass` (normal RT + its depth **texture**, GTAO RT, denoise RT) | 54.2 |
-| **bloom chain total** | **60.7** |
-| **with GTAO** | **114.9** |
-| *(memo)* 4× MSAA the composer makes useless, and you would stop paying | ~62 |
-| *(memo)* the 2048² shadow map that killed the context | 16 |
+| allocation                                                                  | MiB       |
+| --------------------------------------------------------------------------- | --------- |
+| composer `rt1` + `rt2` (colour + depth each)                                | 46.5      |
+| `UnrealBloomPass` (bright target + 5 mip levels × 2, all half-res and down) | 14.2      |
+| `GTAOPass` (normal RT + its depth **texture**, GTAO RT, denoise RT)         | 54.2      |
+| **bloom chain total**                                                       | **60.7**  |
+| **with GTAO**                                                               | **114.9** |
+| _(memo)_ 4× MSAA the composer makes useless, and you would stop paying      | ~62       |
+| _(memo)_ the 2048² shadow map that killed the context                       | 16        |
 
 So bloom is roughly a **wash on allocation** if `antialias` is turned off with it,
 which it should be anyway. AO adds 54 MiB against nothing.
@@ -406,10 +406,10 @@ reintroduction of the mechanism that closed the mobile-crash investigation.
 Minimum viable chain:
 
 ```ts
-const composer = new EffectComposer(renderer);          // rt1/rt2, HalfFloat
+const composer = new EffectComposer(renderer); // rt1/rt2, HalfFloat
 composer.addPass(new RenderPass(scene, camera));
 composer.addPass(new UnrealBloomPass(size, strength, radius, threshold));
-composer.addPass(new SMAAPass());                        // or FXAAPass, after OutputPass
+composer.addPass(new SMAAPass()); // or FXAAPass, after OutputPass
 composer.addPass(new OutputPass());
 // renderLoop: composer.render() instead of renderer.render(scene, camera)
 // and construct the renderer with antialias: false whenever the composer is on
@@ -437,7 +437,7 @@ probably negative:
 3. `onShaderError` either halts with a link report or it does not.
 
 If it fails, the ticket closes with a one-line answer and a row in the bisect
-table, and nothing has been built. If it survives, AO is then a *design*
+table, and nothing has been built. If it survives, AO is then a _design_
 question, not an engineering one — because §4 says it collides with two of the
 four painters and only adds one thing they cannot do (inter-book occlusion and
 the shaped diagonal a taller neighbour throws). At that point compare it against

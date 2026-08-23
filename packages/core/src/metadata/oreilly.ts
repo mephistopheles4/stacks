@@ -74,11 +74,13 @@ export async function searchByTitle(
 
   const wantsDerivative = looksDerivative(query);
 
-  return results
-    .map((entry) => toMetadata(asRecord(entry)))
-    .filter((item): item is BookMetadata => item !== undefined)
-    // Same trap as the other two: study guides carry every word of the title.
-    .filter((item) => wantsDerivative || !looksDerivative(item.title));
+  return (
+    results
+      .map((entry) => toMetadata(asRecord(entry)))
+      .filter((item): item is BookMetadata => item !== undefined)
+      // Same trap as the other two: study guides carry every word of the title.
+      .filter((item) => wantsDerivative || !looksDerivative(item.title))
+  );
 }
 
 function toMetadata(result: Record<string, unknown> | undefined): BookMetadata | undefined {

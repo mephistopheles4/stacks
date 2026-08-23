@@ -7,15 +7,15 @@ only thing in this repository that reads a coverage number is the opt-in
 pre-commit CRAP print.
 
 This reopens [`docs/spec/no-coverage-floor.md`](../spec/no-coverage-floor.md)
-**narrowly and on purpose**. That spec refused coverage *tooling*, and the two
-facts it refused on have both moved. What it refused *for* has not moved at all,
+**narrowly and on purpose**. That spec refused coverage _tooling_, and the two
+facts it refused on have both moved. What it refused _for_ has not moved at all,
 and this record exists to keep those two halves apart.
 
 ## What changed
 
 **The function-grain blind spot is closed by `include`, and it was measured.**
 [#189](https://github.com/mephistopheles4/stacks/issues/189) held that under
-Vitest 4 a never-imported function is *missing* from the report rather than
+Vitest 4 a never-imported function is _missing_ from the report rather than
 present at 0% — so CRAP would be undefined exactly where it should be maximal,
 which is what disqualified it in
 [#191](https://github.com/mephistopheles4/stacks/issues/191). The
@@ -33,7 +33,7 @@ exactly as the exclusion list says it would.
 
 **The network risk was the uploader, and there is no uploader.**
 [#110](https://github.com/mephistopheles4/stacks/issues/110)'s concern was a
-coverage *service*. Collection is local. The full suite runs green under
+coverage _service_. Collection is local. The full suite runs green under
 `--coverage` — 945 of 945 — with G21 (`no-live-network`) silent, which is not an
 absence of evidence: G21 replaces `fetch` with one that records and refuses, so
 a single request would have failed the test that made it.
@@ -44,9 +44,9 @@ nothing runs the full suite with coverage on.
 
 ## What did not change
 
-**No goal. No floor, no threshold, no series, no badge.** The *Coverage
-percentage* row in [`docs/gates.md`](../gates.md)'s **Not gated, deliberately**
-stands exactly as written, and so does *Changed-lines coverage floor* beside it.
+**No goal. No floor, no threshold, no series, no badge.** The _Coverage
+percentage_ row in [`docs/gates.md`](../gates.md)'s **Not gated, deliberately**
+stands exactly as written, and so does _Changed-lines coverage floor_ beside it.
 Both legs that killed the floor survive this record intact:
 
 - **Clause B is surface-independent** — you still raise coverage by adding tests
@@ -69,17 +69,17 @@ quietly leaves them saying it is the drift this repository's docs culture exists
 to catch. Both are recorded here rather than left to be rediscovered.
 
 **[`no-coverage-floor.md`](../spec/no-coverage-floor.md) is amended, because it
-asked to be.** Its title's second clause — *"and no coverage tooling at all"* —
-is no longer true, and its own §5 *Decay* item named the re-check trigger as
-*"the implementation session"*, which this was. A banner at the top of that file
+asked to be.** Its title's second clause — _"and no coverage tooling at all"_ —
+is no longer true, and its own §5 _Decay_ item named the re-check trigger as
+_"the implementation session"_, which this was. A banner at the top of that file
 now says what changed and what did not. ⚠️ **§5 predicted the wrong failure**:
 it expected a Stryker release to force a provider in. Nothing about #109 moved —
 Stryker's vitest-runner still needs none. A consumer that spec had no reason to
 anticipate arrived instead.
 
 **[`docs/gates.md`](../gates.md) is deliberately untouched**, and one clause in
-it is now historical. The *Changed-lines coverage floor* row argues in part that
-*"a pull request adding a wholly untested module scores 100%"* — true of a report
+it is now historical. The _Changed-lines coverage floor_ row argues in part that
+_"a pull request adding a wholly untested module scores 100%"_ — true of a report
 with no `coverage.include`, and not true of this repository's report any more.
 The row's **disposition does not move**: its other two legs are Clause B and the
 AI-volume argument, and either alone is fatal to a floor. The row is left as
@@ -94,15 +94,15 @@ Three properties, each chosen because the alternative is a claim that quietly
 goes stale.
 
 **`include` is derived, never copied.** `no-coverage-floor.md` §2 named the trap
-in the act of proposing the fix — *"`coverage.include` closes the hole and is
+in the act of proposing the fix — _"`coverage.include` closes the hole and is
 then itself a claim that can go stale, unwatched, in the effort about claims
-that go stale."* `vitest.config.ts` reads `stryker.scopes.json`, so a scope
+that go stale."_ `vitest.config.ts` reads `stryker.scopes.json`, so a scope
 added, renamed or re-globbed moves the coverage population in the same edit, and
 G38 (`mutation-scope`) already holds that file to the tree. There is no second
 list to drift.
 
 **Absent is not zero.** A file `include` puts in the report untouched is a real
-0% and a real, maximal CRAP — that is the blind spot closing. A file *missing*
+0% and a real, maximal CRAP — that is the blind spot closing. A file _missing_
 from the report is a broken pipe, and the print says so rather than inventing
 the worst number in the table out of a plumbing fault. The two cases are
 different states in `lib/crap.ts` and are specced apart.
@@ -110,7 +110,7 @@ different states in `lib/crap.ts` and are specced apart.
 **The exclusions are applied here and nowhere else.** Twenty-eight files in this
 repo read 0% because their only oracle is a browser or a child process. A CRAP
 of 420 for `scene.ts` would be a fact about Vitest's reach, not about the code,
-so an excluded file prints *no in-process oracle* and no number. The four
+so an excluded file prints _no in-process oracle_ and no number. The four
 complexity series do the opposite — they never read `exclusions`, because a
 function's complexity is a fact about the code whatever runs it.
 
@@ -122,7 +122,7 @@ function's complexity is a fact about the code whatever runs it.
 - ⚠️ **`vitest` itself moves from `^4.1.11` to `4.1.11`, and that is the half
   that makes "exact-peer" mean anything.** `@vitest/coverage-v8@4.1.11` declares
   `"vitest": "4.1.11"` as an exact peer, and this repository has no `.npmrc`, so
-  pnpm's default is to *warn* on an unmet peer rather than refuse. Pinning only
+  pnpm's default is to _warn_ on an unmet peer rather than refuse. Pinning only
   the provider would leave a minor Vitest bump producing a mismatched pair and a
   warning nobody reads. Both are now pinned the way `@stryker-mutator/core` and
   `@stryker-mutator/vitest-runner` are: exact, together, in one edit.
@@ -147,7 +147,7 @@ resolution, carried into
 
 > **The owner's resolution (#199): shift it left.** CRAP lives **only in a
 > pre-commit hook**, computed over the functions the commit touches, printed to
-> the one person who can still change the code, with the *never calibrated*
+> the one person who can still change the code, with the _never calibrated_
 > caveat on the same line.
 
 And the half of #191 that survived its own disqualifier being closed:

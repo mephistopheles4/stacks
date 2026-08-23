@@ -56,20 +56,20 @@ generated site.
 Some of this project's dependency defence is a GitHub setting rather than a file
 in this repository, and that distinction matters more than it looks:
 
-| | |
-| --- | --- |
-| Dependabot alerts | vulnerabilities in the dependency tree |
-| Dependabot security updates | a pull request per alert with an available patch |
-| Grouped security updates | those PRs arriving as one, not one per package |
-| Dependabot malware alerts | a dependency found to be malicious, not merely vulnerable |
-| CodeQL (default setup) | static analysis of the TypeScript, on push and on pull requests |
+|                             |                                                                                         |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| Dependabot alerts           | vulnerabilities in the dependency tree                                                  |
+| Dependabot security updates | a pull request per alert with an available patch                                        |
+| Grouped security updates    | those PRs arriving as one, not one per package                                          |
+| Dependabot malware alerts   | a dependency found to be malicious, not merely vulnerable                               |
+| CodeQL (default setup)      | static analysis of the TypeScript, on push and on pull requests                         |
 | Branch protection on `main` | pull request required, `gates` must pass, CodeQL must find no new high alert, no bypass |
 
 **Nothing in this repository can check that any of them is switched on.** They
 live in repository settings, outside the tree, so a clone cannot read them —
 and a test that asked GitHub would need the network, which
 [G21 (`no-live-network`)](docs/gates.md) forbids for the whole suite. Recorded
-in [`docs/gates.md`](docs/gates.md) under *"Not gated, deliberately"* rather
+in [`docs/gates.md`](docs/gates.md) under _"Not gated, deliberately"_ rather
 than left as an assumption.
 
 So this section is a statement of what the project **relies on**, not a claim
@@ -81,7 +81,7 @@ fail differently.** Everything in the table above lives **outside the tree
 entirely**: a clone cannot name the setting's value at all, only that it is
 relied on. A second kind of claim lives **in the tree, asserting a fact that
 lives outside it** — row G40's `# v7.0.1` comments are the case, where a clone
-can check the claim's *shape* and never its *truth*, so the failure looks like a
+can check the claim's _shape_ and never its _truth_, so the failure looks like a
 valid pin under a comment naming a different version. The first goes wrong by
 being switched off while every file still says it is on; the second goes wrong
 while every check stays green. No second named tier is minted for this: it would
@@ -100,12 +100,12 @@ you can read them instead of hiding them behind a check name.
 
 **The alert threshold is `errors`, not warnings, and that is a judgement call
 with evidence behind it.** CodeQL rated all twelve of its first findings here
-*high*; one was a real bug. A check that blocks on that ratio is one you learn
+_high_; one was a real bug. A check that blocks on that ratio is one you learn
 to route around rather than read, which would be worse than not having it. See
-[`docs/gates.md`](docs/gates.md) — *"Triaging a CodeQL finding"* — for how that
+[`docs/gates.md`](docs/gates.md) — _"Triaging a CodeQL finding"_ — for how that
 call was reached and what the other eleven turned out to be.
 
-Two things this list is *not* covering twice. `pnpm audit --audit-level=high` is
+Two things this list is _not_ covering twice. `pnpm audit --audit-level=high` is
 a required CI check and lives in [`.github/workflows/gates.yml`](.github/workflows/gates.yml)
 — that one is in the tree and does go red. And the `groups:` block in
 [`.github/dependabot.yml`](.github/dependabot.yml) groups **version** updates;

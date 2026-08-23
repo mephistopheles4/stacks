@@ -13,7 +13,7 @@ cheapest way to test both, and it was turned down.
 ## The trade-off
 
 Against importing: a test can no longer shrink the shelf. Row wrap and case
-overflow have to be provoked by *feeding more books*, which is slower to write
+overflow have to be provoked by _feeding more books_, which is slower to write
 and reads less directly. This is a real cost and it is paid on the two most
 interesting properties.
 
@@ -28,11 +28,11 @@ see.
 That is not a hypothetical risk in this file. Three different answers to "how
 wide is a shelf" were already live when the lift happened:
 
-| where | what it treats as usable |
-| --- | --- |
-| `toRows` (via `scene.ts`) | `SHELF.width - padding * 2 - LEAN_ALLOWANCE` |
-| the placement cursor | `SHELF.width`, flush against the upright, no padding at all |
-| `leanThatFits` | `SHELF.width`, full |
+| where                     | what it treats as usable                                    |
+| ------------------------- | ----------------------------------------------------------- |
+| `toRows` (via `scene.ts`) | `SHELF.width - padding * 2 - LEAN_ALLOWANCE`                |
+| the placement cursor      | `SHELF.width`, flush against the upright, no padding at all |
+| `leanThatFits`            | `SHELF.width`, full                                         |
 
 They disagree, deliberately or otherwise, and nothing compares them. Injection
 would have made a fourth disagreement — the test's — invisible, in the one place
@@ -44,14 +44,14 @@ behaviour change and this was not one.
 **G16 is untouched, and this does not weaken it.** `caseOverflow` is still
 `Box3.setFromObject` walked over the rendered scene, still measured by
 `pnpm smoke:render`, still the only thing that can catch the defect it exists
-for: the cursor advances by a book's *thickness*, and a book rotated about its
+for: the cursor advances by a book's _thickness_, and a book rotated about its
 centre is wider than that, so re-checking the arithmetic only repeats its
 assumption. The new unit tests assert what the placements **claim**. Only the
 render confirms the scene agrees.
 
 **`ShelfHandle` sheds nothing.** An architecture review suggested `bookCount`,
 `caseOverflow` and `projectBook` could retire once placement had an interface.
-Two of them cannot: `caseOverflow` *is* G16's measurement and `projectBook` needs
+Two of them cannot: `caseOverflow` _is_ G16's measurement and `projectBook` needs
 the camera. `bookCount` could have, and deliberately did not — see below.
 
 ## How this was decided
@@ -62,7 +62,7 @@ the camera. `bookCount` could have, and deliberately did not — see below.
   and a test asserting about its own private shelf is that failure with the
   arithmetic still correct.
 
-- **2026-08-03** — **`bookCount` stays on `ShelfHandle`, and became *more*
+- **2026-08-03** — **`bookCount` stays on `ShelfHandle`, and became _more_
   valuable, not less.** Before the lift, placement and `scene.add` happened in
   one loop: a book that was placed was a book that was added, and the two could
   not disagree. Splitting them makes "the arithmetic produced 50 placements, the
@@ -95,7 +95,7 @@ the camera. `bookCount` could have, and deliberately did not — see below.
   method is the part worth keeping.
 
 - **2026-08-03** — **The screenshot cannot be compared byte for byte, and this
-  was measured rather than assumed.** Three runs of *identical* code produced
+  was measured rather than assumed.** Three runs of _identical_ code produced
   three different PNG hashes. Decoded to pixels, runs agree exactly or differ by
   20–41 pixels out of 1,296,000, always at channel delta 1 — driver-level
   antialiasing jitter, present with the code reverted. So the noise floor is

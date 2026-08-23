@@ -264,7 +264,8 @@ export async function enrichBook(
      * absent without reading the note, and claiming a write it never attempted
      * is the same lie.
      */
-    const wrote = options.dryRun !== true &&
+    const wrote =
+      options.dryRun !== true &&
       (await vault.insertBodySection(book.sourcePath, ABOUT_HEADING, about));
     if (wrote) filled.push(ABOUT_HEADING);
   }
@@ -279,4 +280,3 @@ export async function enrichBook(
   }
   return { kind: 'filled', title: book.title, fields: filled };
 }
-

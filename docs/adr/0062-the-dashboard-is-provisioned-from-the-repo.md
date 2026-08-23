@@ -5,8 +5,8 @@ as `stacks-grafana` — beside the store, and provisions it **read-only from
 [`grafana/`](../../grafana) in this repository**: one datasource, one dashboard,
 `allowUiUpdates: false`. Nothing is mounted for Grafana to write to.
 
-**The panel order is why.** *"Is this real"* is answered before *"is this
-bad"* — [`docs/spec/trend-layer.md`](../spec/trend-layer.md) §2 makes that a
+**The panel order is why.** _"Is this real"_ is answered before _"is this
+bad"_ — [`docs/spec/trend-layer.md`](../spec/trend-layer.md) §2 makes that a
 design rule rather than a preference, on
 [ADR-0027](./0027-deploy-check-reports-refusal.md)'s history of conflating the
 two questions. **A rule that can be dragged into a different order in a browser
@@ -20,8 +20,8 @@ ever sees and no second machine reproduces.
   criterion rather than hygiene.** A stock Grafana phones home: usage analytics,
   a version check, a plugin-update check, a news feed. The whole trend layer
   rests on nothing derived from the owner's reading leaving the machine —
-  `docs/spec/trend-layer.md` §5's *"the strongest argument on this effort for the
-  dashboard being localhost"* — and **a localhost store whose dashboard reports
+  `docs/spec/trend-layer.md` §5's _"the strongest argument on this effort for the
+  dashboard being localhost"_ — and **a localhost store whose dashboard reports
   on itself is not a localhost store.** The four switches are in
   `scripts/trend-sync.ts`.
 - **Anonymous, with no login form — and bound to `127.0.0.1`.** There is no user
@@ -29,7 +29,7 @@ ever sees and no second machine reproduces.
   and a password on a single-maintainer localhost page is a thing to lose rather
   than a control. **The two decisions are one decision**: an anonymous page
   published on every interface is a laptop handing its owner's reading to
-  whatever network it last joined, and *"nobody else can see it"* is a cost the
+  whatever network it last joined, and _"nobody else can see it"_ is a cost the
   spec accepts rather than a phrase. The store is bound the same way, which
   corrects the port mapping it landed with.
 - **A user-defined network, `stacks-trend`.** Grafana reaches the store by
@@ -55,7 +55,7 @@ which G19 requires to be scored. What holds the order instead is
 and the refusal is **written on the page**, as the first panel, rather than
 recorded only here. Grafana's stock threshold step at 80 is stripped from every
 panel's field config; `live-exclusions` is a bare count with `colorMode: none`,
-because *"exclusion entry N is now false"* would be a verdict and trends carry no
+because _"exclusion entry N is now false"_ would be a verdict and trends carry no
 verdicts.
 
 **Surface D's series are not on this page.** They are in the store and nothing
@@ -65,7 +65,7 @@ fifth region unasked is the kind of drift a fixed panel order exists to prevent.
 ## What it costs
 
 - **A second container, and a second pinned image.** ~600 MB, and it moves the
-  Docker requirement from *the store needs it* to *the reading needs it*.
+  Docker requirement from _the store needs it_ to _the reading needs it_.
 - **A Grafana dashboard JSON is a poor diff.** It is reviewable in the sense that
   matters — panel order, queries, thresholds, and the text of the refusal are all
   plainly there — and unreviewable in the sense that most of its bytes are field
@@ -86,7 +86,7 @@ fifth region unasked is the kind of drift a fixed panel order exists to prevent.
   is the per-run truth and reads every record.
 - **The queries are exotic in one place.** Panel 1's run table reads
   `1000 * max_over_time(timestamp(stacks_run_info)[$__range:5m])`, because a
-  record's sample time is the only *when* the store holds — `run_info`'s value is
+  record's sample time is the only _when_ the store holds — `run_info`'s value is
   1 — and an instant query alone would sort the runs by nothing. The `5m`
   subquery step is Prometheus's lookback delta, so no sample can fall between two
   steps.
@@ -94,6 +94,6 @@ fifth region unasked is the kind of drift a fixed panel order exists to prevent.
 ## How this was decided
 
 Implementing [#159](https://github.com/mephistopheles4/stacks/issues/159). The
-spec's *"What lands where"* table names no dashboard artifact; the ticket says so
+spec's _"What lands where"_ table names no dashboard artifact; the ticket says so
 in as many words and goes past it deliberately, which is what makes this a
 decision worth a record rather than an application of one.

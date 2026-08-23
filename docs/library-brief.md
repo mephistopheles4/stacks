@@ -8,13 +8,13 @@
 
 ## Problem Statement
 
-Reading activity is scattered: books finished, books in progress, and the notes they generate live in different places with no connective tissue and no way to *see* the accumulated library. There's no low-friction way to log a book, have it automatically become a first-class note in an Obsidian vault, and see it appear on a visual shelf that can be shared with friends.
+Reading activity is scattered: books finished, books in progress, and the notes they generate live in different places with no connective tissue and no way to _see_ the accumulated library. There's no low-friction way to log a book, have it automatically become a first-class note in an Obsidian vault, and see it appear on a visual shelf that can be shared with friends.
 
 ## Product Concept
 
 A local-first reading tracker where **the Obsidian vault is the database**. Logging a book creates a markdown note with structured frontmatter; the tool reads the vault to generate a 3D bookshelf (covers as textures) rendered in the browser and exportable as a shareable static site.
 
-**Core architectural bet:** no separate database. Frontmatter in book notes *is* the data model. This makes the tool Obsidian-native, git-friendly, and trivially portable. If this bet fails (frontmatter too limiting), fall back to a `library.json` index generated from the vault.
+**Core architectural bet:** no separate database. Frontmatter in book notes _is_ the data model. This makes the tool Obsidian-native, git-friendly, and trivially portable. If this bet fails (frontmatter too limiting), fall back to a `library.json` index generated from the vault.
 
 ## Goals
 
@@ -54,39 +54,44 @@ Me, then friends who ask "what is that." Design for one opinionated user; generi
 ### Components
 
 **1. `stacks` CLI (Node/TypeScript)**
+
 - `stacks add <isbn|title>` — fetch metadata (Open Library first, Google Books fallback), download cover, write `Library/<Title>.md` with frontmatter, cache cover to `Library/covers/`.
 - `stacks import audiobookshelf` — pull finished/in-progress items from a self-hosted Audiobookshelf instance via its API (config: URL + token in `.env`).
 - `stacks build` — parse vault → emit `library.json` → trigger static site build.
 - `stacks status` — quick stats (books this year, in progress, unshelved covers).
 
 **2. Vault schema (frontmatter contract)**
+
 ```yaml
 ---
 type: book
-title: "Thinking in Systems"
-author: "Donella Meadows"
-isbn: "9781603580557"
-status: read          # reading | read | abandoned | wishlist
+title: 'Thinking in Systems'
+author: 'Donella Meadows'
+isbn: '9781603580557'
+status: read # reading | read | abandoned | wishlist
 started: 2026-06-01
 finished: 2026-07-12
-rating: 5             # optional, 1–5
+rating: 5 # optional, 1–5
 cover: covers/thinking-in-systems.jpg
-spine_color: "#4a6b5a"   # auto-extracted from cover, overridable
+spine_color: '#4a6b5a' # auto-extracted from cover, overridable
 tags: [systems, nonfiction]
 ---
 ## Notes
 Free-form notes, [[backlinks]], highlights…
 ```
+
 - Notes body is never parsed for the public build — only frontmatter + cover.
 - `spine_color` auto-extracted via dominant-color analysis of the cover at add time.
 
 **3. 3D shelf (Astro site + Three.js / react-three-fiber island)**
+
 - Procedurally generated shelf: books as boxes, cover texture on front face, `spine_color` on spine, width proportional to page count (fallback: fixed).
 - Shelves fill left-to-right, grouped by year finished (one shelf row = one year) — instantly readable as "my reading over time."
 - Interactions: orbit/pan (damped), click a book → card with cover, title, author, dates, rating; "reading now" books lean or sit face-out.
 - Performance target: 60fps with 200 books on a mid-range phone (instanced meshes, compressed textures, lazy texture load).
 
 **4. Share build**
+
 - `stacks build --public` outputs a fully static site (no notes content, no vault paths).
 - OG image auto-generated: flat 2D render of the shelf for link previews.
 
@@ -104,6 +109,7 @@ Free-form notes, [[backlinks]], highlights…
 ## Requirements
 
 ### P0 — prototype isn't real without these
+
 - [ ] `stacks add` with ISBN lookup, cover download, frontmatter note creation (Given a valid ISBN, When I run `stacks add`, Then a note + cover exist and `stacks build` renders it)
 - [ ] Vault parser that tolerates hand-edited frontmatter and skips malformed notes with a warning (never crash the build on one bad file)
 - [ ] 3D shelf rendering all `status: read|reading` books with cover textures, orbit controls, click-to-inspect
@@ -111,6 +117,7 @@ Free-form notes, [[backlinks]], highlights…
 - [ ] Graceful cover fallback: generated spine with title text when no cover found
 
 ### P1 — fast follows
+
 - [ ] Audiobookshelf import
 - [ ] Year-per-shelf grouping + shelf labels
 - [ ] Dominant-color spine extraction
@@ -118,6 +125,7 @@ Free-form notes, [[backlinks]], highlights…
 - [ ] `stacks add` by fuzzy title search (interactive picker) when no ISBN
 
 ### P2 — architectural insurance (design for, don't build)
+
 - Obsidian plugin packaging of the CLI commands
 - Multiple rooms/shelves by tag or genre
 - Highlights import (Readwise-style) into note bodies
@@ -125,7 +133,7 @@ Free-form notes, [[backlinks]], highlights…
 
 ## Open Questions
 
-- **Blocking (decide in Phase 0):** Astro island with react-three-fiber vs. vanilla Three.js in a plain Vite page? R3F is nicer for interaction; vanilla is lighter. Recommend R3F, but decide before scaffolding. *(Owner: you)*
+- **Blocking (decide in Phase 0):** Astro island with react-three-fiber vs. vanilla Three.js in a plain Vite page? R3F is nicer for interaction; vanilla is lighter. Recommend R3F, but decide before scaffolding. _(Owner: you)_
 - **Non-blocking:** Open Library cover quality varies — is Google Books' API quota acceptable as the fallback for a personal tool? Resolve during Phase 1.
 - **Non-blocking:** Should `wishlist` books render as ghosted/translucent on the shelf or be excluded? Taste call, decide when the shelf exists.
 
@@ -151,12 +159,14 @@ Procedural shelf from `library.json`, instanced books, texture loading, orbit + 
 Done when: import against your real instance dedupes correctly against existing notes (match on ISBN, then normalized title+author).
 
 ### Long-running agent guidance
+
 - Give the agent the **done-criteria above as executable gates**: each phase ends with `pnpm test && pnpm build` green plus a phase-specific smoke script (e.g., Phase 2: headless render → screenshot → non-empty pixel check). Agents push much further when "done" is a command, not a vibe.
 - Seed a `fixtures/vault/` with ~10 books (2 missing covers, 1 malformed frontmatter, 1 audiobook) at Phase 0 so every later phase has real test material.
 - Instruct the agent to commit per phase with a summary, and to write decisions it makes (library choices, API quirks) into `CLAUDE.md` — that file is your paper trail across sessions.
 - Phase 2 is the one to babysit visually: have the agent produce a screenshot artifact per iteration so you can course-correct the aesthetic early (shelf proportions and lighting are taste, not tests).
 
 ## Success Metrics (for a fun project)
+
 - **Leading:** you log your next real book with `stacks add` instead of thinking "I'll do it later" (30-second target holds).
 - **Leading:** shelf renders your actual library, not just fixtures, within the first week.
 - **Lagging:** you send the link to at least one friend unprompted — the true test of "fun to share."

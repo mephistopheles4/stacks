@@ -3,7 +3,7 @@
 `rankAgainst` scores a candidate with `rankingScore(term, title, author)`, whose
 brevity penalty is measured over the **title alone**. The author still counts
 towards coverage, so naming one in the query still favours that author's book —
-it simply no longer costs a record anything to *have* one. Exact ties are then
+it simply no longer costs a record anything to _have_ one. Exact ties are then
 settled by how much the record actually says, never by the provider's response
 order.
 
@@ -37,7 +37,7 @@ _Carried verbatim from the session that produced it, newest last._
   missed, for three different reasons.** Open Library had it in `doc[0]` and
   ranking took `doc[1]`. Google was never asked by title, because the
   short-circuit in `searchByTitle` returns early when Open Library has any
-  *matching* result — and the sparse record matched; the one Google request that
+  _matching_ result — and the sparse record matched; the one Google request that
   did fire was `fillGaps` asking by the sparse edition's ISBN, which Google does
   not hold (`totalItems: 0`). Apple had `artistName: "Jordan B. Peterson"` in
   the response it took the artwork from, reads it at `apple-books.ts:49` to
@@ -58,11 +58,11 @@ _Carried verbatim from the session that produced it, newest last._
   instead of inherited from the provider.
 
 - **2026-08-08** — **Completeness breaks ties and never enters the score.** A
-  fuller record is not a better *match*. Letting it weigh on the ranking itself
+  fuller record is not a better _match_. Letting it weigh on the ranking itself
   is how a thoroughly catalogued box set beats the book someone asked for —
   which is the failure `rankAgainst` was originally written to stop, and three
-  of its documented cases (*The Subtle Art* at 262 pages against a 206-page
-  censored edition and a 320-page large-print, *The New Emotional Intelligence*
-  against *Emotional Intelligence 2.0*, *Staff Engineer* against *Summary of
-  Will Larson's Staff Engineer*) were run under both scorings before the change
+  of its documented cases (_The Subtle Art_ at 262 pages against a 206-page
+  censored edition and a 320-page large-print, _The New Emotional Intelligence_
+  against _Emotional Intelligence 2.0_, _Staff Engineer_ against _Summary of
+  Will Larson's Staff Engineer_) were run under both scorings before the change
   was written. None moved; G26 covers all three.

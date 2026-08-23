@@ -8,11 +8,11 @@ providers. `packages/core/src/metadata/precedence.ts` holds it as data;
 
 ## Why not a rule about the value
 
-The obvious alternative reads better: *prefer the most precise date*, *prefer the
-description with no markup*, *prefer the longer author list*. Every one of them
+The obvious alternative reads better: _prefer the most precise date_, _prefer the
+description with no markup_, _prefer the longer author list_. Every one of them
 was rejected, and for the same reason twice over.
 
-**They are only approximating an ordering anyway.** "Prefer a full date" *is*
+**They are only approximating an ordering anyway.** "Prefer a full date" _is_
 "put Open Library last for dates" — Open Library is the provider that answers
 `"2008"` where the other three give `2008-12-05`. The rule is a paraphrase of the
 table with the provider names removed, and the paraphrase is what makes it feel
@@ -20,7 +20,7 @@ principled.
 
 **A quality judgement cannot be gated cheaply.** A fixed table is testable with
 one fixture per field and states itself in a line, so a gate can read it and
-compare. A rule embedded in the merge would have to be *re-encoded* in the gate
+compare. A rule embedded in the merge would have to be _re-encoded_ in the gate
 to check it — at which point the gate is asserting a second implementation of the
 same judgement, and the two drift exactly where the judgement is subtle.
 
@@ -40,15 +40,15 @@ absent from the table**: `completePages` re-asks Google for the volume it alread
 chose, and the cover queue is assembled by the downloader from `coverUrlLarge`
 before `coverUrl`. Neither is expressible as a ranking over gathered records.
 
-G31 asserts their *absence*, which is the part worth writing down — otherwise
+G31 asserts their _absence_, which is the part worth writing down — otherwise
 "deliberately not there" and "forgotten" look identical, which is the same
 failure mode the named-exclusion set in **G30** exists to prevent.
 
 ## How this was decided
 
 Map [#88](https://github.com/mephistopheles4/stacks/issues/88), ticket
-[#97](https://github.com/mephistopheles4/stacks/issues/97) — *"Which providers
-contribute which fields, and which one wins?"*, resolved against the field audit
+[#97](https://github.com/mephistopheles4/stacks/issues/97) — _"Which providers
+contribute which fields, and which one wins?"_, resolved against the field audit
 in [#95](https://github.com/mephistopheles4/stacks/issues/95).
 
 That ticket also corrected its own premise, which is the part most worth keeping:

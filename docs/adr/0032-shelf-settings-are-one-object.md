@@ -49,7 +49,7 @@ letting the boundary show in one named place beat collapsing the vocabularies.
 
 **The case's geometry.** `SHELF` stays in `case.ts`. It is not an aesthetic knob:
 `placement.ts` packs against `USABLE_WIDTH`, and G25 / [ADR-0031](0031-one-usable-width.md)
-exist *because* that number had five live answers which disagreed by 0.162 across
+exist _because_ that number had five live answers which disagreed by 0.162 across
 a row. Putting it in a hand-editable blob re-creates that defect with a slider on
 it, and a control that silently re-places every book is not what was asked for.
 
@@ -88,7 +88,7 @@ a control that lied:
    `materialNeedsLights()`, which returns **false** for `MeshBasicMaterial`. So a
    live shadow toggle relinks the lit materials and leaves the painted shadow
    planes alone — and those planes are the entire point, because the program that
-   will not link on the Pixel 10 *is* one of them. A live toggle would have
+   will not link on the Pixel 10 _is_ one of them. A live toggle would have
    appeared to work on the device that cannot hold the shipped default. The
    control dirties every material explicitly, which restores the equivalence
    between the panel and the URL it writes.
@@ -97,7 +97,7 @@ a control that lied:
 
 - `profile` is now a getter reading current state rather than a string built at
   mount. It had to be: it is written into every black box snapshot, and a
-  `profile` naming the settings the page *started* with would lie on the one
+  `profile` naming the settings the page _started_ with would lie on the one
   instrument that survives a tab death.
 - `mountShelf` gained a mutable `settings` binding. Everything that reports on
   the shelf reads through it.

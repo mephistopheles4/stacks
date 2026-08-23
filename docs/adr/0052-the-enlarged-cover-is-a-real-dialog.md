@@ -18,14 +18,14 @@ inert, Escape closes it, and focus returns to the control that opened it. All
 four were verified in a browser.
 
 So the two surfaces do not follow one rule about dialogs. They follow one rule
-about *not lying*, which produces opposite answers because they behave
+about _not lying_, which produces opposite answers because they behave
 differently.
 
 ## ⚠️ One Escape, two listeners
 
 The page's own `keydown` handler dismisses the card, and it listens on the
 document — where the dialog's Escape also arrives. Left alone, one keypress
-closed the viewer *and* the card underneath it: the user asked to leave one
+closed the viewer _and_ the card underneath it: the user asked to leave one
 surface and was returned two levels.
 
 `boot.ts` skips its handler while the viewer is open. This is the one part of
@@ -47,7 +47,7 @@ exactly one book. Same fact that put the close control outside it.
 
 The viewer shows the same file the card does, so `MAX_COVER_EDGE` bounds it:
 about **7× the 4.5rem thumbnail**, and full-bleed on a phone. It is never scaled
-*past* native size — a blurry big cover is a worse answer than an honest small
+_past_ native size — a blurry big cover is a worse answer than an honest small
 one.
 
 Going beyond that is a publish decision, not a card one: it needs a second,
@@ -57,6 +57,6 @@ nobody has asked for that.
 
 ## How this was decided
 
-The owner, from a shelf screenshot: *"i want that when we click on the image in
+The owner, from a shelf screenshot: _"i want that when we click on the image in
 the book details we open a bigger version of the cover so the user can see it
-closer"*.
+closer"_.

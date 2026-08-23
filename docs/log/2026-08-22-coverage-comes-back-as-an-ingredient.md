@@ -5,7 +5,7 @@ the last step of the complexity rollout, and the only one a contributor can
 decline. `@vitest/coverage-v8` enters the repository, `coverage.include` is
 derived from `stryker.scopes.json`, and an opt-in pre-commit hook prints CRAP
 over the functions a commit touches. No floor, no threshold, no series, no
-badge; the *Coverage percentage* row in `docs/gates.md` is untouched, which was
+badge; the _Coverage percentage_ row in `docs/gates.md` is untouched, which was
 an acceptance criterion rather than an oversight.
 
 The decision is [ADR-0069](../adr/0069-coverage-is-an-ingredient-not-a-goal.md).
@@ -28,7 +28,7 @@ Then the first real report went past:
 
 **Every `loc.end` the V8 provider writes carries `"column": null`.** The range
 check read a null column as `0` at both ends — correct for a start, and at an
-end it means *this range stops at the beginning of its last line*. Every
+end it means _this range stops at the beginning of its last line_. Every
 statement sharing a function's closing line was dropped from that function's
 total. Coverage reads low, CRAP reads high, and it does so worst for the longest
 functions in the file — the ones the table is sorted to put at the top.
@@ -49,21 +49,21 @@ Three states look identical if you are careless and are not:
   disqualified CRAP over, closed by `include` and measured again here: a probe
   file no spec imports scored **CC 7, 0/7 statements, CRAP 56.0**.
 - **In the report because nothing in-process can reach it** — `scene.ts`, 581
-  statements, 0 hit, whose only oracle is a headless browser. Prints *no
-  in-process oracle* and no number. This is the one place in the rollout that
+  statements, 0 hit, whose only oracle is a headless browser. Prints _no
+  in-process oracle_ and no number. This is the one place in the rollout that
   applies the mutation-scope exclusions; the four series never read them,
   because a function's complexity is a fact about the code whatever runs it.
-- **Not in the report at all** — the plumbing broke. Prints *not in the coverage
-  report*, and specifically **not 0%**, because inventing the worst number in
+- **Not in the report at all** — the plumbing broke. Prints _not in the coverage
+  report_, and specifically **not 0%**, because inventing the worst number in
   the table out of a broken pipe is how an instrument starts lying.
 
 ## What the print cost, measured
 
-| Run | Wall clock |
-| --- | --- |
-| `pnpm test` (unchanged, coverage off) | 12.1s |
-| full suite `--coverage` | ~15s, 945/945 green |
-| the hook on a 3-file commit | 3.0s |
+| Run                                   | Wall clock          |
+| ------------------------------------- | ------------------- |
+| `pnpm test` (unchanged, coverage off) | 12.1s               |
+| full suite `--coverage`               | ~15s, 945/945 green |
+| the hook on a 3-file commit           | 3.0s                |
 
 `--passWithNoTests` turned out to be load-bearing rather than tidy. A commit
 adding a file no spec imports selects no tests; without the flag Vitest exits 1,

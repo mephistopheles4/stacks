@@ -1,14 +1,13 @@
 # The mark
 
 Four bars: a full line, a broken one with a dot past the break, a third line.
-One 64-unit viewBox, `rx="5.5"` on every bar, bars `y=12 / 26.5 / 41` at height
-11. Three colourways of the same geometry.
+One 64-unit viewBox, `rx="5.5"` on every bar, bars `y=12 / 26.5 / 41` at height 11. Three colourways of the same geometry.
 
-| File | Colours | Used by |
-| --- | --- | --- |
-| `stacks-mark.svg` | ink, rust, ochre | `scripts/make-icons.ts` → `apple-touch-icon.png` |
+| File                      | Colours            | Used by                                             |
+| ------------------------- | ------------------ | --------------------------------------------------- |
+| `stacks-mark.svg`         | ink, rust, ochre   | `scripts/make-icons.ts` → `apple-touch-icon.png`    |
 | `stacks-mark-inverse.svg` | board, rust, ochre | the page header, inlined by `src/pages/index.astro` |
-| `stacks-mark-mono.svg` | `currentColor` | nothing yet — for a surface that has one ink |
+| `stacks-mark-mono.svg`    | `currentColor`     | nothing yet — for a surface that has one ink        |
 
 `packages/site/public/favicon.svg` is the same artwork on a paper tile with
 `rx="12"`, and is the source the two favicon PNGs are rasterised from. The

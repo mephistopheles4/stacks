@@ -29,9 +29,9 @@ The printed planes sit **exactly on** the case — `x = thickness / 2`,
 `z = depth / 2` — and their materials carry
 
 ```ts
-polygonOffset = true
-polygonOffsetFactor = -1
-polygonOffsetUnits = -2
+polygonOffset = true;
+polygonOffsetFactor = -1;
+polygonOffsetUnits = -2;
 ```
 
 so the depth test resolves the tie in the artwork's favour without the geometry
@@ -41,7 +41,7 @@ spec's minimum resolvable step, doubled for margin on the hardware this project
 has history with.
 
 The head cap moved with them, to `z = depth / 2`. It is real volume rather than
-a decal and takes no offset of its own, but its foot has to land *on* the
+a decal and takes no offset of its own, but its foot has to land _on_ the
 printed spine's top edge — a cap left at `+ SKIN` would be a lip across the
 whole head.
 
@@ -56,13 +56,13 @@ what it is looking for.
 ⚠️ **Nothing here reaches the shadow pass, and that is checked rather than
 assumed.** three's `WebGLShadowMap.getDepthMaterial` copies `side`, `alphaTest`,
 `map`, displacement and clipping — not `polygonOffset`. So decal and board write
-the same depth into the shadow map, which is harmless because it is the *same*
+the same depth into the shadow map, which is harmless because it is the _same_
 depth; and the printed planes do not cast anyway.
 
 ⚠️ **The one change that breaks this is a depth or normal prepass.** SSAO and
 its relatives render the scene through an override `MeshDepthMaterial` that
 ignores per-material offset. Coplanar surfaces would then fight in the depth
-*texture*, and every decal on every book would speckle along its edges. ADR-0034
+_texture_, and every decal on every book would speckle along its edges. ADR-0034
 put bloom behind a composer through an ordinary `RenderPass`, which is fine;
 the next effect may not be.
 

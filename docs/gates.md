@@ -14,34 +14,34 @@ Every rule below was already written down, in [`AGENTS.md`](../AGENTS.md) or the
 Decision Log. A pre-publication review in July 2026 found that six of them had
 quietly stopped being true, and nothing went red:
 
-| Documented claim | Reality when checked |
-| --- | --- |
-| Decision Log: "only the basename of a `cover:` value is ever used … Tested" | true in `publish.ts`, false in `enrich.ts` |
-| progress.md: audiobook covers carry their true aspect | true under `--public`, false under `pnpm dev` |
-| `gate:public` certifies the build carries nothing private | greps text *contents*; never looks at filenames |
-| CLAUDE.md: "Unset means the default order" | unreachable after one `stacks order --renumber` |
-| Working rules: a Decision Log entry in the same commit | ~8 decisions unlogged across 18 commits |
-| progress.md: "Ten commits of work" | 18, two of them credited from before the tag |
+| Documented claim                                                            | Reality when checked                            |
+| --------------------------------------------------------------------------- | ----------------------------------------------- |
+| Decision Log: "only the basename of a `cover:` value is ever used … Tested" | true in `publish.ts`, false in `enrich.ts`      |
+| progress.md: audiobook covers carry their true aspect                       | true under `--public`, false under `pnpm dev`   |
+| `gate:public` certifies the build carries nothing private                   | greps text _contents_; never looks at filenames |
+| CLAUDE.md: "Unset means the default order"                                  | unreachable after one `stacks order --renumber` |
+| Working rules: a Decision Log entry in the same commit                      | ~8 decisions unlogged across 18 commits         |
+| progress.md: "Ten commits of work"                                          | 18, two of them credited from before the tag    |
 
 A rule nothing can fail on is a comment. The point of a row here is that it can
-go **red**, and that it has been *observed* going red at least once — the same
-standard the Phase 0 gate hardening set: *"A gate never observed failing is not
-yet a gate."*
+go **red**, and that it has been _observed_ going red at least once — the same
+standard the Phase 0 gate hardening set: _"A gate never observed failing is not
+yet a gate."_
 
 ## Status key
 
-| | |
-| --- | --- |
-| ✅ | gated, and proven red-capable |
-| 🔴 | gate written, currently failing on a real defect |
-| ⬜ | no gate yet |
+|     |                                                  |
+| --- | ------------------------------------------------ |
+| ✅  | gated, and proven red-capable                    |
+| 🔴  | gate written, currently failing on a real defect |
+| ⬜  | no gate yet                                      |
 
 ### Every row has a number and a name
 
 `G19` is a stable identifier and tells you nothing. The **Name** column carries a
 kebab-case slug — `constitution-scoreboard`, `no-live-network` — and citations
-elsewhere spell both: *"See docs/gates.md, row G19 (constitution-scoreboard)."*
-Same convention as [`docs/adr/`](adr/), where a record is a number *and* a name
+elsewhere spell both: _"See docs/gates.md, row G19 (constitution-scoreboard)."_
+Same convention as [`docs/adr/`](adr/), where a record is a number _and_ a name
 for the same reason.
 
 **The number stays because it is the retirement mechanism.** A rule that stops
@@ -76,67 +76,67 @@ therefore unique and gapless, and G19 asserts both.
 
 The same goes for a rule that was never gated: ⬜ is an honest answer and an
 absent row is not. This file is only useful if it is as easy to find what is
-*not* protected as what is.
+_not_ protected as what is.
 
 ## Invariants → gates
 
-| Row | Name | Rule | Source | Gate | Status |
-| --- | --- | --- | --- | --- | --- |
-| **G1** | `adapter-boundary` | All vault access goes through the adapter | invariant 4 | `gates/adapter-boundary.test.ts` — an allowlist, each entry justified, each reverse-asserted | ✅ |
-| **G2** | `public-build` | Note bodies are private; a public build is coherent | invariant 2 | `gates/public-build.test.ts` — asserted against `publish()`'s output, see below | ✅ |
-| **G3** | `bad-note` | Never crash on a bad note | invariant 3 | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind | ✅ |
-| **G4** | `hand-edited-notes` | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
-| **G5** | `vault-is-truth` | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored | ✅ |
-| **G13** | `no-third-party-material` | No third-party material is committed, ever | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside two generated directories and four named brand files | ✅ |
-| **G14** | `commands` | The documented commands are the commands that exist | AGENTS.md "Commands" | `gates/commands.test.ts` — CLI subcommands and pnpm scripts, both directions | ✅ |
+| Row     | Name                      | Rule                                                | Source                             | Gate                                                                                                          | Status |
+| ------- | ------------------------- | --------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------ |
+| **G1**  | `adapter-boundary`        | All vault access goes through the adapter           | invariant 4                        | `gates/adapter-boundary.test.ts` — an allowlist, each entry justified, each reverse-asserted                  | ✅     |
+| **G2**  | `public-build`            | Note bodies are private; a public build is coherent | invariant 2                        | `gates/public-build.test.ts` — asserted against `publish()`'s output, see below                               | ✅     |
+| **G3**  | `bad-note`                | Never crash on a bad note                           | invariant 3                        | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind                                 | ✅     |
+| **G4**  | `hand-edited-notes`       | Hand-edited notes are first-class                   | invariant 5                        | `gates/hand-edited-notes.test.ts`                                                                             | ✅     |
+| **G5**  | `vault-is-truth`          | The vault is the source of truth                    | invariant 1                        | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored                                        | ✅     |
+| **G13** | `no-third-party-material` | No third-party material is committed, ever          | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside two generated directories and four named brand files | ✅     |
+| **G14** | `commands`                | The documented commands are the commands that exist | AGENTS.md "Commands"               | `gates/commands.test.ts` — CLI subcommands and pnpm scripts, both directions                                  | ✅     |
 
 ## Contract seams → gates
 
 A seam is a correspondence between two artifacts that nothing verifies. Red
 means the two have drifted.
 
-| Row | Name | Seam | Failure mode | Gate | Status |
-| --- | --- | --- | --- | --- | --- |
-| **G6** | `site-core-imports` | site → `@stacks/core` | a *value* import drags `node:fs` and sharp into the browser bundle and **the shelf silently never boots** | `gates/site-core-imports.test.ts` | ✅ |
-| **G7** | `astro-no-logic` | logic in `.astro` | `.astro` files are not typechecked, so nothing else can catch this. ⚠️ **The warrant narrowed at [ADR-0066](./adr/0066-typescript-6-until-7-1.md)**: `astro check` *could not run at all* under TS 7 and now can — it is simply not wired into the gates, which is a choice rather than an impossibility | `gates/astro-no-logic.test.ts` | ✅ |
-| **G8** | `frontmatter-contract` | frontmatter contract ↔ parser ↔ AGENTS.md | a key the parser accepts but the contract never documents | `gates/frontmatter-contract.test.ts` | ✅ |
-| **G9** | `env-contract` | `.env.example` ↔ `process.env` | a variable the code needs and no one knows to set | `gates/env-contract.test.ts` | ✅ |
-| **G19** | `constitution-scoreboard` | the constitution ↔ this scoreboard | an invariant nothing scores, a row naming a moved file, a gate nobody recorded | `gates/constitution-scoreboard.test.ts` | ✅ |
-| **G29** | `doc-links` | a document's links ↔ the file tree | a moved or renamed file leaves every route to it a dead end, and nothing says so | `gates/doc-links.test.ts` | ✅ |
-| **G30** | `library-seam` | `BookRecord` ↔ `library.json`, both ways | a field the vault holds and no `keyIfPresent` line ships: the note has it, the shelf never sees it, every other test passes | `gates/library-seam.test.ts` | ✅ |
-| **G31** | `merge-precedence` | the precedence table ↔ the merge | a provider order the code implements and no document names, or the reverse — and the `; ` subjects separator, which two packages hold | `gates/merge-precedence.test.ts` | ✅ |
-| **G32** | `absent-only` | a key a note already carries is never rewritten | a merge change quietly replacing values on books that were correct — the characteristic failure of this effort, and structurally prevented rather than detected | `gates/absent-only.test.ts` | ✅ |
-| **G33** | `enrich-idempotence` | running `enrich` twice changes nothing the second time | the only gate that reaches the `## About` body insert, since a body section is not a `FILLABLE` key and the absent-only gate cannot see it | `gates/enrich-idempotence.test.ts` | ✅ |
-| **G34** | `enrich-convergence` | a book a provider failed on is filled by the next run | the pacing answer for iTunes' ~20/min is "run it twice", and it rests entirely on an `http.ts` property nothing checked: a success is cached forever, a failure is never cached at all | `gates/enrich-convergence.test.ts` | ✅ |
-| **G35** | `enhanced-card` | the card a browser builds, at both viewports | *"the card opened"* was the whole assertion, and it stays true through a card with no reading line, links with no accessible name, an announcer that never changes, a sheet that dismisses on every short drag, and one Escape that closes the enlarged cover **and** the card under it | `scripts/smoke-render.ts` — `cardFailures`, `checkCoverViewer` and `checkSheet`, against `docs/spec/enhanced-card.md` §11 | ✅ |
-| **G36** | `trend-layer` | the series CI writes ↔ the `## Trends` table | a number nobody was told to read, a row promising a line that will never be drawn, or a trend named after a gate slug — which G19 structurally cannot see, because `slugByRow()` reads three hardcoded tables and the Trends table is a fourth | `gates/trend-layer.test.ts` — asserted against the rendered OpenMetrics text, not against the declaration list | ✅ |
-| **G37** | `agents-import` | the rules ↔ the file Claude Code opens by name | `AGENTS.md` carries the rules and Claude Code reads only `CLAUDE.md`, so the stub's `@AGENTS.md` import is the whole mechanism — and a rule pasted into the stub is the second constitution [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md) refused, per [ADR-0056](adr/0056-the-constitution-is-agents-md.md) | `gates/agents-import.test.ts` — the import line is also the control the absences rest on | ✅ |
-| **G38** | `mutation-scope` | the declared mutation scopes ↔ the tree they claim to score | excluding a directory takes it out of numerator and denominator together, so the score does not move — it stops covering that code, and the change is invisible in the instrument built to catch changes. `git mv packages/core/src/covers packages/core/src/cover` resets a floor and reads as a refactor in review | `gates/mutation-scope.test.ts` — **and `scripts/deploy.ts`; this row runs on two surfaces**, see below | ✅ |
-| **G40** | `action-pins` | `gates.yml`'s pinning argument ↔ every `uses:` line under `.github/` | a tag or a branch where a SHA is claimed, or a SHA whose version comment was deleted to satisfy the pin — and the file argues the case carefully while nothing holds it to its own argument. ⚠️ **It proves the shape of the reference, never the truth of the comment**: a hand-edit swapping in a different valid SHA under `# v7.0.1` passes cleanly, because that fact lives at GitHub and G21 forbids the suite from asking — `cover_source`'s failure verbatim, and there is no offline route because actions have no lockfile | `gates/action-pins.test.ts` — sweeping `.github/**/*.yml\|yaml`, not `.github/workflows/`, because a composite action is the cheap way past a narrow glob | ✅ |
-| **G41** | `gate-register` | `docs/gates.md`'s numbered rows ↔ `docs/gate-register.md`'s row sections | a row whose five questions nobody asked, or an entry for a row that never landed — and **membership is not enough**: a file with two `## G26` sections satisfies *"each row has an entry"*, and one merged verdict bullet names all five category words while a count keyed on one of them reports a total silently short. Cardinality, in both directions | `gates/gate-register.test.ts` — row-side floor at 42, safe only under mark-never-delete plus gapless making the count non-decreasing | ✅ |
-| **G43** | `ignored-mutants` | `stryker.floors.json`'s `ignored` counter ↔ a real sweep of the mutated source | a disable directive takes a mutant out of the denominator from inside a source file, nowhere near the Stryker config and nowhere near the floors file — of the three routes down it is the only one leaving no trace in either file a deploy reads. Caught at merge rather than at deploy, which is what matters where `required_approving_review_count: 0` leaves the gate suite and CodeQL the only two things that can stop one | `gates/ignored-mutants.test.ts` — the judgement is planted in `scripts/lib/floors.test.ts`; this asserts only what the disk says | ✅ |
+| Row     | Name                      | Seam                                                                           | Failure mode                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Gate                                                                                                                                                      | Status |
+| ------- | ------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| **G6**  | `site-core-imports`       | site → `@stacks/core`                                                          | a _value_ import drags `node:fs` and sharp into the browser bundle and **the shelf silently never boots**                                                                                                                                                                                                                                                                                                                                                                                                                            | `gates/site-core-imports.test.ts`                                                                                                                         | ✅     |
+| **G7**  | `astro-no-logic`          | logic in `.astro`                                                              | `.astro` files are not typechecked, so nothing else can catch this. ⚠️ **The warrant narrowed at [ADR-0066](./adr/0066-typescript-6-until-7-1.md)**: `astro check` _could not run at all_ under TS 7 and now can — it is simply not wired into the gates, which is a choice rather than an impossibility                                                                                                                                                                                                                             | `gates/astro-no-logic.test.ts`                                                                                                                            | ✅     |
+| **G8**  | `frontmatter-contract`    | frontmatter contract ↔ parser ↔ AGENTS.md                                      | a key the parser accepts but the contract never documents                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `gates/frontmatter-contract.test.ts`                                                                                                                      | ✅     |
+| **G9**  | `env-contract`            | `.env.example` ↔ `process.env`                                                 | a variable the code needs and no one knows to set                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `gates/env-contract.test.ts`                                                                                                                              | ✅     |
+| **G19** | `constitution-scoreboard` | the constitution ↔ this scoreboard                                             | an invariant nothing scores, a row naming a moved file, a gate nobody recorded                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `gates/constitution-scoreboard.test.ts`                                                                                                                   | ✅     |
+| **G29** | `doc-links`               | a document's links ↔ the file tree                                             | a moved or renamed file leaves every route to it a dead end, and nothing says so                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `gates/doc-links.test.ts`                                                                                                                                 | ✅     |
+| **G30** | `library-seam`            | `BookRecord` ↔ `library.json`, both ways                                       | a field the vault holds and no `keyIfPresent` line ships: the note has it, the shelf never sees it, every other test passes                                                                                                                                                                                                                                                                                                                                                                                                          | `gates/library-seam.test.ts`                                                                                                                              | ✅     |
+| **G31** | `merge-precedence`        | the precedence table ↔ the merge                                               | a provider order the code implements and no document names, or the reverse — and the `; ` subjects separator, which two packages hold                                                                                                                                                                                                                                                                                                                                                                                                | `gates/merge-precedence.test.ts`                                                                                                                          | ✅     |
+| **G32** | `absent-only`             | a key a note already carries is never rewritten                                | a merge change quietly replacing values on books that were correct — the characteristic failure of this effort, and structurally prevented rather than detected                                                                                                                                                                                                                                                                                                                                                                      | `gates/absent-only.test.ts`                                                                                                                               | ✅     |
+| **G33** | `enrich-idempotence`      | running `enrich` twice changes nothing the second time                         | the only gate that reaches the `## About` body insert, since a body section is not a `FILLABLE` key and the absent-only gate cannot see it                                                                                                                                                                                                                                                                                                                                                                                           | `gates/enrich-idempotence.test.ts`                                                                                                                        | ✅     |
+| **G34** | `enrich-convergence`      | a book a provider failed on is filled by the next run                          | the pacing answer for iTunes' ~20/min is "run it twice", and it rests entirely on an `http.ts` property nothing checked: a success is cached forever, a failure is never cached at all                                                                                                                                                                                                                                                                                                                                               | `gates/enrich-convergence.test.ts`                                                                                                                        | ✅     |
+| **G35** | `enhanced-card`           | the card a browser builds, at both viewports                                   | _"the card opened"_ was the whole assertion, and it stays true through a card with no reading line, links with no accessible name, an announcer that never changes, a sheet that dismisses on every short drag, and one Escape that closes the enlarged cover **and** the card under it                                                                                                                                                                                                                                              | `scripts/smoke-render.ts` — `cardFailures`, `checkCoverViewer` and `checkSheet`, against `docs/spec/enhanced-card.md` §11                                 | ✅     |
+| **G36** | `trend-layer`             | the series CI writes ↔ the `## Trends` table                                   | a number nobody was told to read, a row promising a line that will never be drawn, or a trend named after a gate slug — which G19 structurally cannot see, because `slugByRow()` reads three hardcoded tables and the Trends table is a fourth                                                                                                                                                                                                                                                                                       | `gates/trend-layer.test.ts` — asserted against the rendered OpenMetrics text, not against the declaration list                                            | ✅     |
+| **G37** | `agents-import`           | the rules ↔ the file Claude Code opens by name                                 | `AGENTS.md` carries the rules and Claude Code reads only `CLAUDE.md`, so the stub's `@AGENTS.md` import is the whole mechanism — and a rule pasted into the stub is the second constitution [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md) refused, per [ADR-0056](adr/0056-the-constitution-is-agents-md.md)                                                                                                                                                                                                          | `gates/agents-import.test.ts` — the import line is also the control the absences rest on                                                                  | ✅     |
+| **G38** | `mutation-scope`          | the declared mutation scopes ↔ the tree they claim to score                    | excluding a directory takes it out of numerator and denominator together, so the score does not move — it stops covering that code, and the change is invisible in the instrument built to catch changes. `git mv packages/core/src/covers packages/core/src/cover` resets a floor and reads as a refactor in review                                                                                                                                                                                                                 | `gates/mutation-scope.test.ts` — **and `scripts/deploy.ts`; this row runs on two surfaces**, see below                                                    | ✅     |
+| **G40** | `action-pins`             | `gates.yml`'s pinning argument ↔ every `uses:` line under `.github/`           | a tag or a branch where a SHA is claimed, or a SHA whose version comment was deleted to satisfy the pin — and the file argues the case carefully while nothing holds it to its own argument. ⚠️ **It proves the shape of the reference, never the truth of the comment**: a hand-edit swapping in a different valid SHA under `# v7.0.1` passes cleanly, because that fact lives at GitHub and G21 forbids the suite from asking — `cover_source`'s failure verbatim, and there is no offline route because actions have no lockfile | `gates/action-pins.test.ts` — sweeping `.github/**/*.yml\|yaml`, not `.github/workflows/`, because a composite action is the cheap way past a narrow glob | ✅     |
+| **G41** | `gate-register`           | `docs/gates.md`'s numbered rows ↔ `docs/gate-register.md`'s row sections       | a row whose five questions nobody asked, or an entry for a row that never landed — and **membership is not enough**: a file with two `## G26` sections satisfies _"each row has an entry"_, and one merged verdict bullet names all five category words while a count keyed on one of them reports a total silently short. Cardinality, in both directions                                                                                                                                                                           | `gates/gate-register.test.ts` — row-side floor at 42, safe only under mark-never-delete plus gapless making the count non-decreasing                      | ✅     |
+| **G43** | `ignored-mutants`         | `stryker.floors.json`'s `ignored` counter ↔ a real sweep of the mutated source | a disable directive takes a mutant out of the denominator from inside a source file, nowhere near the Stryker config and nowhere near the floors file — of the three routes down it is the only one leaving no trace in either file a deploy reads. Caught at merge rather than at deploy, which is what matters where `required_approving_review_count: 0` leaves the gate suite and CodeQL the only two things that can stop one                                                                                                   | `gates/ignored-mutants.test.ts` — the judgement is planted in `scripts/lib/floors.test.ts`; this asserts only what the disk says                          | ✅     |
 
-**G13 now allows one file this project did not make**: Google's *powered by
-Google* graphic, which the API terms require displayed and forbid altering — so
+**G13 now allows one file this project did not make**: Google's _powered by
+Google_ graphic, which the API terms require displayed and forbid altering — so
 unlike the card's three provider marks, which are redrawn
 ([ADR-0050](adr/0050-provider-marks-are-redrawn-monotone.md)), it cannot be
 redrawn or replaced with text. It is named as a **file**, for the reason the
 paragraph below gives about directories.
 
-⚠️ It also caught something worth recording about how this row is *run*: a local
+⚠️ It also caught something worth recording about how this row is _run_: a local
 `pnpm test` before `git add` passes over an untracked binary, because G13 reads
 what git tracks. The commit that added the PNG claimed a green suite truthfully
 and CI went red on the same code seconds later. Stage, then run.
 
 **G13 grew a second allowlisted directory when the README got a screenshot**,
-and that is the most dangerous kind of entry in this file: a *directory* is a
+and that is the most dangerous kind of entry in this file: a _directory_ is a
 standing permission, where every other line here names a file. Nothing in a test
 can look at a PNG and tell an invented shelf from a real one — and a picture of
 a real shelf publishes real titles and real cover art, which is the whole thing
 G13 exists to stop.
 
 So the filename is pinned instead: `docs/images/` must track exactly
-`shelf.png`. Dropping another picture in beside it goes red, while *replacing*
+`shelf.png`. Dropping another picture in beside it goes red, while _replacing_
 that one stays possible and shows up in review as a changed binary rather than
 as a new file nobody opens. It is a weaker guarantee than the covers row, stated
 as such rather than dressed up: the image is safe because
@@ -148,7 +148,7 @@ second name.
 the same rule read the other way round. Its provenance is the cleanest this list
 holds — the mark and the share card were drawn for this app, so there is no
 third party anywhere near them, and that is exactly the claim an entry here is
-*for*. But they live in `packages/site/public/`, which is where
+_for_. But they live in `packages/site/public/`, which is where
 `stacks build --public` stages a real vault's covers. A prefix entry there would
 have permitted the thing G13 exists to stop, in the one directory where a real
 cover is already on disk.
@@ -166,7 +166,7 @@ ignored.
 **Observed red three ways**: an unlisted PNG copied in beside the icons;
 `git rm --cached` on `og.png`; and the old `packages/site/public/og.png` line
 restored to `.gitignore`. The third is why that assertion reads the ignore
-*rule* rather than asking whether the file is ignored. `git check-ignore`
+_rule_ rather than asking whether the file is ignored. `git check-ignore`
 consults the index and never reports a tracked file as ignored — correct, since
 tracking wins — so the obvious spelling passed green with the rule sitting right
 there in `.gitignore`, which is the exact state it exists to catch. `--no-index`
@@ -181,7 +181,7 @@ commit that added them.
 once.** `invariantSourceCells` reached for `tableCells(line)[2]` — fine while
 the Invariants table had Source third, and quietly wrong the moment a column was
 inserted before it, because `[2]` on a shifted table returns a real string from
-the *Gate* cell rather than nothing. The citation check would then have asked
+the _Gate_ cell rather than nothing. The citation check would then have asked
 the wrong column whether it mentions an invariant and kept passing. Columns are
 now found by reading the header row, and a missing header **throws naming the
 column** rather than returning `-1` and reporting "no invariant is cited" — the
@@ -189,7 +189,7 @@ column** rather than returning `-1` and reporting "no invariant is cited" — th
 the message names `Source` and `Name` respectively rather than the symptom.
 
 **G19 gates this file, which until it existed was the only unenforced thing in
-the repo.** Every gate here *mentioned* `docs/gates.md` — in a comment. Nothing
+the repo.** Every gate here _mentioned_ `docs/gates.md` — in a comment. Nothing
 read it. So the document whose entire job is to record which rules are
 mechanically enforced was itself a documented claim resting on somebody
 remembering, which is the exact failure the table at the top of this file lists
@@ -222,7 +222,7 @@ claims from quietly becoming false was itself making three:
 
 - **A spec path was only checked if it began with `gates/`, `packages/` or
   `scripts/`.** Every other root was invisible — including G10's
-  `covers/cover-path.test.ts`, the repo's *one real instance* of a row naming a
+  `covers/cover-path.test.ts`, the repo's _one real instance_ of a row naming a
   file that does not exist. That row was corrected by hand in the same commit,
   so the gate's first act was to not catch the only thing it was there for. An
   allowlist of directory names was the wrong shape for "does this resolve"; the
@@ -233,13 +233,13 @@ claims from quietly becoming false was itself making three:
 - **A citation counted if the words "invariant N" appeared in any cell of any
   row**, so an incidental mention in an unrelated gate's Failure-mode cell
   satisfied "invariant 6 is protected". This one is verbatim the defect logged
-  above for G14 — *a gate that matches prose matches anything* — repeated inside
+  above for G14 — _a gate that matches prose matches anything_ — repeated inside
   a file whose comments congratulate themselves on avoiding it.
 
 All three were **verified by mutation, not by reading**: each was reproduced
-green before the fix and red after. The shared lesson is one line — *anchor an
+green before the fix and red after. The shared lesson is one line — _anchor an
 assertion to the cell that carries the claim, not to the row and never to the
-document* — and the constitution's article numbers are now held to the same
+document_ — and the constitution's article numbers are now held to the same
 uniqueness-and-no-gaps rule as these row numbers, which they were not before.
 
 **G29 exists because the documentation is a graph and nothing checked its
@@ -249,7 +249,7 @@ hundred local links across the tracked Markdown, a corpus that has since roughly
 tripled. (This sentence carried the two exact figures until they were both
 false, which is the same defect the paragraphs below log against this row twice
 over. The count lives in the gate's vacuity floor, where it can go red.) Until
-G29, the *only* link-shaped claim in the repo that could go red was G19's check
+G29, the _only_ link-shaped claim in the repo that could go red was G19's check
 that spec paths named in scoreboard rows resolve. Everything else was a route
 that worked because nobody had moved anything yet.
 
@@ -269,7 +269,7 @@ a different tool with a different failure mode and does not belong in `pnpm test
 file-existence half went red on its own accord: `docs/research/splitting-the-long-docs.md`
 describes the extraction this gate performs as `` `](./x.md)` ``, in inline
 code, and the first version read that as a route to a file that does not exist.
-Correct by the gate's own rules and wrong in substance — prose *quoting* a path
+Correct by the gate's own rules and wrong in substance — prose _quoting_ a path
 is not a link to it, and a gate that cannot tell the difference makes
 documenting the gate an error. Fenced blocks were already blanked; inline spans
 now are too. The fragment half went red on a one-character typo planted in
@@ -277,7 +277,7 @@ now are too. The fragment half went red on a one-character typo planted in
 reverted.
 
 **What the blanking costs was measured, not assumed.** Blanking inline code can
-in principle hide a *real* link — a line with mismatched backticks pairs the
+in principle hide a _real_ link — a line with mismatched backticks pairs the
 wrong two and swallows whatever sits between them, which would be a false green
 of exactly the kind this row exists to prevent. Measured across the tracked
 corpus by extracting with and without the pass and diffing: **the only links it
@@ -289,8 +289,8 @@ link is hidden.
 Deliberately stated without totals. The first draft of this paragraph carried
 three exact counts and **two of them were false one edit later**, because the
 commentary above added another `x.md` example and moved the numbers it was
-describing. That is the defect this file already logs against itself — *"It said
-'four' for a while after there were five"* — reproduced inside the paragraph
+describing. That is the defect this file already logs against itself — _"It said
+'four' for a while after there were five"_ — reproduced inside the paragraph
 congratulating the gate on measuring rather than assuming. The count belongs in
 the gate's own vacuity floor, where it can go red, and that floor is set just
 under the real number rather than at a round order-of-magnitude guess — left far
@@ -301,7 +301,7 @@ nearly three times that, a floor no longer doing the job this sentence claims.
 **That fragment link was the only one in the repo when this row was written, and
 it stopped being so the next day.** The claim landed in `390bb65`; `1d0548f`
 added `docs/spec/` the following morning, cross-referencing its own sections by
-anchor throughout, and the line here went on saying *only one* for the nine days
+anchor throughout, and the line here went on saying _only one_ for the nine days
 after that — a documented claim that had quietly become false, which is the
 failure this file opens by cataloguing, sitting in the row written to catch it.
 **A prose claim about a corpus is stale one commit later, not one release
@@ -312,7 +312,7 @@ its own vacuity floor in `gates/doc-links.test.ts` rather than counted here: an
 exact number in this paragraph is precisely what the paragraph above rules
 against. The slug rule approximates GitHub's, and it approximates it
 in the safe direction — this repo's headings carry backticks, arrows and inline
-links, so a heading it slugifies differently produces a *false red*, never a
+links, so a heading it slugifies differently produces a _false red_, never a
 false green.
 
 ## Defect gates
@@ -334,33 +334,33 @@ otherwise about, counted in prose so nothing could go red. Naming the rows at
 least breaks loudly when one is renumbered — which has now happened twice, to the
 same row. The cover-preference row was written as G20, became G21 when the
 public-build inspector took that number first, and became G22 when the
-no-live-network guard took *that* one. Three branches, three sessions, and each
+no-live-network guard took _that_ one. Three branches, three sessions, and each
 time the next free number was free right up until somebody else merged: what
 number a row will carry is not knowable until it lands. Loud is the most a
 paragraph can be; nothing here goes red on it.)
 
-| Row | Name | Rule | Gate | Status |
-| --- | --- | --- | --- | --- |
-| **G10** | `cover-path` | one cover-path rule, one implementation | `gates/cover-path.test.ts` + `packages/core/src/covers/cover-path.test.ts` | ✅ |
-| **G11** | `build-modes` | the two build modes differ only where documented | `gates/build-modes.test.ts` | ✅ |
-| **G12** | `shelf-order` | `shelf_order` semantics | `gates/shelf-order.test.ts` | ✅ characterized |
-| **G15** | `cover-budget` | what ships fits in a phone's graphics memory | `gates/cover-budget.test.ts` | ✅ |
-| **G16** | `books-in-case` | every book stays inside its own case | `pnpm smoke:render` | ✅ |
-| **G17** | `deploy-branch` | a deploy publishes `main`, or says why not | `gates/deploy-branch.test.ts` | ✅ |
-| **G18** | `bounded-cover-bytes` | a provider's bytes are bounded and are an image | `packages/core/src/covers/download.test.ts` | ✅ |
-| **G20** | `public-build-artifact` | one inspection of the folder about to be published | `gates/public-build-artifact.test.ts` | ✅ |
-| **G21** | `no-live-network` | no test makes a live network call | `gates/no-live-network.ts` + `gates/no-live-network.setup.ts`, specced by `gates/no-live-network.test.ts` | ✅ |
-| **G22** | `cover-candidates` | one cover-preference rule, one implementation, right way round | `gates/cover-candidates.test.ts` + `packages/core/src/covers/cache-cover.test.ts` | ✅ |
-| **G23** | `key-if-present` | one absent-key helper, one implementation, under any name | `gates/key-if-present.test.ts` + `packages/core/src/key-if-present.test.ts` | ✅ |
-| **G24** | `repo-root` | one repo root, one derivation | `gates/repo-root.test.ts` | ✅ |
-| **G25** | `one-usable-width` | the packer's capacity and the placer's consumption are one number | `packages/site/src/shelf/shelf-width.test.ts` + `packages/site/src/shelf/books.test.ts` | ✅ |
-| **G26** | `lookup-recall` | a lookup finds books the providers demonstrably have — and still refuses the ones they do not | `gates/lookup-recall.test.ts` + `gates/recall-corpus.ts`, replayed from `fixtures/api/lookup-recall.json` | ✅ |
-| **G27** | `enrich-report` | a command's report accounts for every book it counted | `gates/enrich-report.test.ts`, over `packages/cli/src/enrich-report.ts` | ✅ |
-| **G28** | `no-board-collisions` | no book's board passes through its neighbour's | `packages/site/src/shelf/placement.test.ts` | ✅ |
-| **G39** | `metrics-freshness` | the trend record is fresh **per series**, because one series going quiet while the others stay healthy is the failure the record exists to expose — and an aggregate check cannot see it. A gated series with **no sample at all** refuses exactly as a stale one does, which makes the check parse samples rather than filenames | `gates/metrics-freshness.test.ts` — the refusal is `pnpm deploy:site`'s, driven onto a scratch repository via `GIT_DIR` on G17's idiom; the dated half is `scripts/lib/metrics-read.test.ts`, because the script cannot be told what day it is | ✅ |
-| **G42** | `dependency-audit` | a dependency with a known high or critical advisory reaching `main` | the `audit` job in `.github/workflows/gates.yml`, running `pnpm audit --audit-level=high` — asserted by the `action-pins` spec, which reads the job, its threshold, and its place in the `gates` aggregator's `needs:`. Promoted here from a table row G19 (`constitution-scoreboard`) structurally cannot read — its `TABLES` constant names three tables and that was not one of them — where the paragraph describing it would have sat green and false the day the job was deleted | ✅ |
-| **G44** | `stryker-reporters` | the mutation run's Vitest reporters ↔ the ones a laptop resolves | Vitest appends its `github-actions` reporter **only to a list that resolved empty**, and that reporter's job summary appends to `$GITHUB_STEP_SUMMARY` once per `onTestRunEnd` — once under `pnpm test`, once **per mutant** under Stryker. Measured: 5 appends / 923 bytes over a four-mutant scope, **1054k over the real ~5900**, past the 1024k GitHub accepts. ⚠️ **Nothing local can catch it**: `GITHUB_ACTIONS` is unset on a developer machine, so the reporter is never added and the file is never written | `gates/stryker-reporters.test.ts` — two clauses, because the option is worth nothing in a file Stryker does not load: the `vitest.configFile` wiring, then a **non-empty** `reporters`. ⚠️ It proves the condition, never Vitest's honouring of it — G40's stated limit, reached a third time | ✅ |
-| **G45** | `deploy-flags` | every flag `pnpm deploy:site` reads is a flag `docs/commands.md` documents, and the reverse. `--skip-gates` skipped the whole four-gate contract on a path that still uploaded, and for **19 of the 21 days it existed** lived in **two lines of one file, both the implementation** — not in `AGENTS.md`, not in `docs/`, not in the command's own usage text. ⚠️ **The mechanism existed and was aimed one flag to the left**: G17 pins which spellings override the *branch* guard, while the override that cleared the *contract* was pinned by nothing | `gates/deploy-flags.test.ts` — the roster in both directions, floored at 3 a side so a regex that stops matching cannot pass two empty sets off as agreement, plus a third clause pinning the extraction itself: every `process.argv` occurrence in the script must be a literal `--flag` test, or a flag read some other way is undocumented by construction. ⚠️ It pins the roster, **never a flag's reach**: the gate commands sit past step 0 and every harness that drives this script stops there. Reach is held by the comment convention at `fail()`, and named as a comment | ✅ |
+| Row     | Name                    | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Gate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Status                                                                                                                                                                                                                                                                                        |
+| ------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **G10** | `cover-path`            | one cover-path rule, one implementation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `gates/cover-path.test.ts` + `packages/core/src/covers/cover-path.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | ✅                                                                                                                                                                                                                                                                                            |
+| **G11** | `build-modes`           | the two build modes differ only where documented                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `gates/build-modes.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | ✅                                                                                                                                                                                                                                                                                            |
+| **G12** | `shelf-order`           | `shelf_order` semantics                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `gates/shelf-order.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | ✅ characterized                                                                                                                                                                                                                                                                              |
+| **G15** | `cover-budget`          | what ships fits in a phone's graphics memory                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `gates/cover-budget.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | ✅                                                                                                                                                                                                                                                                                            |
+| **G16** | `books-in-case`         | every book stays inside its own case                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `pnpm smoke:render`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | ✅                                                                                                                                                                                                                                                                                            |
+| **G17** | `deploy-branch`         | a deploy publishes `main`, or says why not                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `gates/deploy-branch.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | ✅                                                                                                                                                                                                                                                                                            |
+| **G18** | `bounded-cover-bytes`   | a provider's bytes are bounded and are an image                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `packages/core/src/covers/download.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | ✅                                                                                                                                                                                                                                                                                            |
+| **G20** | `public-build-artifact` | one inspection of the folder about to be published                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `gates/public-build-artifact.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | ✅                                                                                                                                                                                                                                                                                            |
+| **G21** | `no-live-network`       | no test makes a live network call                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `gates/no-live-network.ts` + `gates/no-live-network.setup.ts`, specced by `gates/no-live-network.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | ✅                                                                                                                                                                                                                                                                                            |
+| **G22** | `cover-candidates`      | one cover-preference rule, one implementation, right way round                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `gates/cover-candidates.test.ts` + `packages/core/src/covers/cache-cover.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | ✅                                                                                                                                                                                                                                                                                            |
+| **G23** | `key-if-present`        | one absent-key helper, one implementation, under any name                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `gates/key-if-present.test.ts` + `packages/core/src/key-if-present.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | ✅                                                                                                                                                                                                                                                                                            |
+| **G24** | `repo-root`             | one repo root, one derivation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `gates/repo-root.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | ✅                                                                                                                                                                                                                                                                                            |
+| **G25** | `one-usable-width`      | the packer's capacity and the placer's consumption are one number                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `packages/site/src/shelf/shelf-width.test.ts` + `packages/site/src/shelf/books.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | ✅                                                                                                                                                                                                                                                                                            |
+| **G26** | `lookup-recall`         | a lookup finds books the providers demonstrably have — and still refuses the ones they do not                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `gates/lookup-recall.test.ts` + `gates/recall-corpus.ts`, replayed from `fixtures/api/lookup-recall.json`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | ✅                                                                                                                                                                                                                                                                                            |
+| **G27** | `enrich-report`         | a command's report accounts for every book it counted                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `gates/enrich-report.test.ts`, over `packages/cli/src/enrich-report.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | ✅                                                                                                                                                                                                                                                                                            |
+| **G28** | `no-board-collisions`   | no book's board passes through its neighbour's                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `packages/site/src/shelf/placement.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | ✅                                                                                                                                                                                                                                                                                            |
+| **G39** | `metrics-freshness`     | the trend record is fresh **per series**, because one series going quiet while the others stay healthy is the failure the record exists to expose — and an aggregate check cannot see it. A gated series with **no sample at all** refuses exactly as a stale one does, which makes the check parse samples rather than filenames                                                                                                                                                                                                                           | `gates/metrics-freshness.test.ts` — the refusal is `pnpm deploy:site`'s, driven onto a scratch repository via `GIT_DIR` on G17's idiom; the dated half is `scripts/lib/metrics-read.test.ts`, because the script cannot be told what day it is                                                                                                                                                                                                                                                                                                                                       | ✅                                                                                                                                                                                                                                                                                            |
+| **G42** | `dependency-audit`      | a dependency with a known high or critical advisory reaching `main`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | the `audit` job in `.github/workflows/gates.yml`, running `pnpm audit --audit-level=high` — asserted by the `action-pins` spec, which reads the job, its threshold, and its place in the `gates` aggregator's `needs:`. Promoted here from a table row G19 (`constitution-scoreboard`) structurally cannot read — its `TABLES` constant names three tables and that was not one of them — where the paragraph describing it would have sat green and false the day the job was deleted                                                                                               | ✅                                                                                                                                                                                                                                                                                            |
+| **G44** | `stryker-reporters`     | the mutation run's Vitest reporters ↔ the ones a laptop resolves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Vitest appends its `github-actions` reporter **only to a list that resolved empty**, and that reporter's job summary appends to `$GITHUB_STEP_SUMMARY` once per `onTestRunEnd` — once under `pnpm test`, once **per mutant** under Stryker. Measured: 5 appends / 923 bytes over a four-mutant scope, **1054k over the real ~5900**, past the 1024k GitHub accepts. ⚠️ **Nothing local can catch it**: `GITHUB_ACTIONS` is unset on a developer machine, so the reporter is never added and the file is never written                                                                | `gates/stryker-reporters.test.ts` — two clauses, because the option is worth nothing in a file Stryker does not load: the `vitest.configFile` wiring, then a **non-empty** `reporters`. ⚠️ It proves the condition, never Vitest's honouring of it — G40's stated limit, reached a third time | ✅  |
+| **G45** | `deploy-flags`          | every flag `pnpm deploy:site` reads is a flag `docs/commands.md` documents, and the reverse. `--skip-gates` skipped the whole four-gate contract on a path that still uploaded, and for **19 of the 21 days it existed** lived in **two lines of one file, both the implementation** — not in `AGENTS.md`, not in `docs/`, not in the command's own usage text. ⚠️ **The mechanism existed and was aimed one flag to the left**: G17 pins which spellings override the _branch_ guard, while the override that cleared the _contract_ was pinned by nothing | `gates/deploy-flags.test.ts` — the roster in both directions, floored at 3 a side so a regex that stops matching cannot pass two empty sets off as agreement, plus a third clause pinning the extraction itself: every `process.argv` occurrence in the script must be a literal `--flag` test, or a flag read some other way is undocumented by construction. ⚠️ It pins the roster, **never a flag's reach**: the gate commands sit past step 0 and every harness that drives this script stops there. Reach is held by the comment convention at `fail()`, and named as a comment | ✅                                                                                                                                                                                                                                                                                            |
 
 **G21 is the first row here written for a rule that two files already claimed
 was true.** `AGENTS.md`'s Phase 1 gate says "use cached API fixtures, no live
@@ -410,8 +410,8 @@ Splitting installation into `no-live-network.setup.ts` makes
 `globalThis.fetch === guardedFetch` true only if the setup file ran; the same
 mutation now fails four of seven, and one of the four spends 1.2s fetching a
 real cover from `archive.org`, which is the absence demonstrating itself. This
-is the same lesson as G19's three holes — *anchor the assertion to the thing
-that carries the claim* — arrived at from the opposite direction, and it is the
+is the same lesson as G19's three holes — _anchor the assertion to the thing
+that carries the claim_ — arrived at from the opposite direction, and it is the
 reason a gate is not finished when it passes.
 
 **What it covers is `fetch`, in this process** — every request this repo makes,
@@ -437,15 +437,15 @@ never on `main`, would only ever exercise the refusal, while the owner, who
 mostly is, would run a gate that quietly asserted nothing. Strongest where it
 never runs, inert where it matters. Now `GIT_DIR` points the child's git at a
 scratch repository sitting on a known branch: the script is real, the guard is
-real, git really resolves the branch, and only *which checkout is being asked
-about* is controlled. One test deliberately omits that redirection, so
+real, git really resolves the branch, and only _which checkout is being asked
+about_ is controlled. One test deliberately omits that redirection, so
 something still proves the guard is wired to the actual repository.
 
 Two mutations, because a positive check cannot detect a missing guard on its
 own. Deleting the guard fails four of seven. Inverting the comparison — refuse
 `main`, allow everything else — fails six, including "lets main through", which
 is what proves that one is not vacuous. Among the casualties either way is the
-check that `--any`, `--branch`, `--anybranch` and `--any_branch` do *not* work
+check that `--any`, `--branch`, `--anybranch` and `--any_branch` do _not_ work
 as the override: an escape hatch you can stumble into is not one.
 
 **G18 is the second row written for a defect that has not happened**, and the
@@ -480,7 +480,7 @@ scaffolding. At `highWaterMark: 0` nothing is pulled until something reads.
 
 **Every case here stubs `fetch`, so the checks were also run once against the
 live providers** — which is the failure mode a gate made of stubs cannot see. A
-tightened `Content-Type` check refuses covers *silently*, because `cacheCover`
+tightened `Content-Type` check refuses covers _silently_, because `cacheCover`
 treats every failure as "no cover" by design, so a provider answering
 `application/octet-stream` would have meant books quietly logged bare with
 nothing going red. All three answer properly: Open Library `image/jpeg`
@@ -514,8 +514,8 @@ a missing one.
 one implementation" while asserting only the second clause. Reversing
 `coverUrls` — the exact defect described two paragraphs up — left all 290 tests
 green, because no structural check can see which way round two elements of a
-tuple are. The prose had even argued the point away: *nothing about it is wrong
-except the choice, so nothing but a structural check can catch it.* That was true
+tuple are. The prose had even argued the point away: _nothing about it is wrong
+except the choice, so nothing but a structural check can catch it._ That was true
 of three scattered copies and false the moment they became one function.
 Consolidating the rule is what made it cheaply assertable, and the draft carried
 over a justification from before the consolidation it was shipping with.
@@ -535,7 +535,7 @@ them tested something adjacent.
 
 That adjacent thing was worth having anyway, and is the rest of
 `cache-cover.test.ts`. `blank.test.ts` and `download.test.ts` each proved one
-step of `cacheCover` in isolation; nothing proved the *order* they run in — which
+step of `cacheCover` in isolation; nothing proved the _order_ they run in — which
 candidate wins, what happens when none is cover-shaped, and which URL the
 recorded `source` is taken from. That was exercised only incidentally, through
 `add-book.test.ts` and `enrich.test.ts`, where a change in preference would still
@@ -548,7 +548,7 @@ instance of a failure mode already logged in this file:
   ADR-0022 requires and G10 has. A file on it was exempt permanently, so
   `index.ts` growing a real `cacheCover` call would never have been noticed. The
   first fix for this did not work either, and the reason is worth keeping: it
-  asked whether each exempt file still *defines or re-exports* `cacheCover`,
+  asked whether each exempt file still _defines or re-exports_ `cacheCover`,
   which `index.ts` does forever — so a file could re-export it **and** call it
   and still sail through both checks, which is precisely the case the exemption
   exists to make impossible. The mutation that found it is the one the first
@@ -561,8 +561,8 @@ instance of a failure mode already logged in this file:
   empty set;
 - both halves matched **raw file text, comments included**. A caller that
   hand-ordered its candidates needed only to mention `coverUrls()` in a comment
-  to look compliant. Verbatim the G14 and G19 defect — *a gate that matches prose
-  matches anything* — for the third time, in a file whose commentary on the first
+  to look compliant. Verbatim the G14 and G19 defect — _a gate that matches prose
+  matches anything_ — for the third time, in a file whose commentary on the first
   two is directly above. Blanking comments then reintroduced the same shape one
   level down: `//` inside `https://covers.openlibrary.org/…` is not a comment,
   and treating it as one would have hidden real code from the sweep. The
@@ -571,12 +571,12 @@ instance of a failure mode already logged in this file:
   starting a comment.
 
 **What this row does not gate**: that `cover`, `cover_source` and `spine_color`
-are written together. That rule — *a note's `cover_source` describes the bytes of
-that note's `cover`* — has four writers, and one of them, `stacks covers
+are written together. That rule — _a note's `cover_source` describes the bytes of
+that note's `cover`_ — has four writers, and one of them, `stacks covers
 --backfill`, never downloads anything at all: it infers provenance from the shape
 of a cover already on disk and upholds the rule by a different route. So no
 structural check can demand the three appear together, and `covers/cover-keys.ts`
-makes the pairing unconstructible on the *creation* path only. Stated here
+makes the pairing unconstructible on the _creation_ path only. Stated here
 because that is a narrower guarantee than the section heading suggests.
 
 **G16 observed red at 0.0203** — about 0.5cm at shelf scale — by deleting the
@@ -585,7 +585,7 @@ by eye, on a phone: a leaning book's bottom corner driven into the face-out book
 beside it, and a row's first book driven into the case's own side.
 
 Nothing in the layout could have caught it. The cursor advances by a book's
-*thickness*, and a book rotated about its centre is wider than that — so
+_thickness_, and a book rotated about its centre is wider than that — so
 re-checking the arithmetic would only have repeated its assumption. G16 measures
 `Box3.setFromObject` against the case's real inner faces instead, which is the
 same argument that put `gate:public` on the built folder rather than on
@@ -599,7 +599,7 @@ coincidence.
 **G10 observed red** on `enrich.ts`, which shadowed `node:path`'s `basename`
 with a `/`-only split, so `..\..\x.png` traversed on Windows — the platform this
 project runs on — under a comment saying it could not. The structural half then
-found a *third* copy of the rule in `obsidian-adapter.ts`'s wikilink embed.
+found a _third_ copy of the rule in `obsidian-adapter.ts`'s wikilink embed.
 
 **G15 is the first defect found by a user rather than by a gate**, and it is the
 one that took the site down. The shelf loaded on a phone, drew, and then the tab
@@ -608,22 +608,22 @@ provider supplied — 8.4 MB on the wire, which looks entirely reasonable, and
 **314 MB once decoded into GPU textures**, which is not. Every one is uploaded
 before the first frame.
 
-Nothing in the suite could have seen it. `gate:public` reads the *contents* of
-*text* files, so it opens no JPEG; `smoke:render` screenshots a desktop GL
+Nothing in the suite could have seen it. `gate:public` reads the _contents_ of
+_text_ files, so it opens no JPEG; `smoke:render` screenshots a desktop GL
 context with gigabytes of headroom, which is exactly why the bug was invisible
 here and fatal on a phone. The size of what shipped was measured by nothing.
 
 **G15 is green and the crash is not fixed.** The owner has since reproduced it on
 multiple phones in private tabs, with the compressed covers confirmed arriving.
 That does not make the gate wrong — shipping 314 MB of texture was a real defect
-and this holds it fixed — but it does mean the row protects *a* property of the
-build rather than *the* cause of the crash, and reading a green G15 as "phones
+and this holds it fixed — but it does mean the row protects _a_ property of the
+build rather than _the_ cause of the crash, and reading a green G15 as "phones
 are fine" is exactly the mistake this scoreboard exists to prevent. The cause is
 still unmeasured; see `docs/progress.md`. G15 also counts only cover files, so
 the ~22 MB of per-book spine `CanvasTexture`s is outside every budget here.
 
 **And the bisect has since put it further out of reach.** The shelf loses its
-context on the owner's phone with *five* books — 632 triangles, 11 textures — so
+context on the owner's phone with _five_ books — 632 triangles, 11 textures — so
 the cost that matters is fixed and paid before a book is drawn. No budget over
 what ships can see that, because it is a property of the renderer's own setup:
 the multisampled framebuffer, the shadow map, the pixel ratio. G15 remains worth
@@ -634,7 +634,7 @@ is the same blindness that let G15's defect ship. The current substitute is a
 person with a phone and four query parameters, which is honest rather than good.
 
 The probes found it: **the shadow pass**, with antialiasing and pixel ratio 2
-both left on — and then found that *every* real-time configuration fails, down to
+both left on — and then found that _every_ real-time configuration fails, down to
 one where nothing is drawn into the map. The shelf now paints its shadows instead
 of rasterising them, which removes the dependency rather than tuning it.
 
@@ -647,7 +647,7 @@ that person's time cheap, which is the most this repo can honestly offer.
 
 The gate asserts two different things, because two different things go wrong: no
 single cover exceeds `MAX_COVER_EDGE` (a property of the staging code), and the
-whole shelf fits `TEXTURE_BUDGET_BYTES` (a property of the *library*, which grows
+whole shelf fits `TEXTURE_BUDGET_BYTES` (a property of the _library_, which grows
 as books are added). The second is expected to go red one day on a build that
 changed nothing — on a machine, rather than on someone's phone. **When it does,
 the answer is to stop uploading every cover at once, not to raise the number.** A
@@ -662,7 +662,7 @@ observed red by removing one entry from that list.
 
 **G12's design question was resolved by the owner: a book you are reading wins.**
 Two documented rules collided — a numbered book beat an unnumbered one before
-status was considered, and `--renumber` numbers *every* shelved book, so after
+status was considered, and `--renumber` numbers _every_ shelved book, so after
 one run "unset means reading first" described a state the vault could no longer
 be in and the next book picked up sorted behind all thirty-one. Status now sorts
 ahead of `shelf_order`. `--renumber` keeps its purpose: the pins still order
@@ -672,13 +672,13 @@ themselves among the finished books.
 "scalars only" rule recognised a block list (`tags:` then indented `- ` lines)
 but not a flow collection on one line, so `author: [Marisol Vane, Tomas Ek]` was
 replaced wholesale. Reachable, not theoretical: `asString` returns undefined for
-an array, so a two-author note parses as *authorless*, which is exactly what
+an array, so a two-author note parses as _authorless_, which is exactly what
 sends `stacks enrich` to look an author up and overwrite the list — silent data
 loss in a hand-edited note, which is the thing invariant 5 exists to prevent.
 
 **G2 was red on the orphan-cover assertion**, which is the one that mattered:
 the staging folder was additive, so a real-vault build followed by either gate —
-both stage the *fixture* vault into the same folder — left every real cover in
+both stage the _fixture_ vault into the same folder — left every real cover in
 place under a filename slugged from a real book title, while `gate:public`
 reported the build clean. It reads text-file contents; these are JPEGs. Proven
 by disabling the prune and watching the gate fail. Two further leaks closed with
@@ -692,7 +692,7 @@ against the same `dist/` — once by `gate:public` and once by `deploy:site`'s
 pre-flight — and neither was a superset of the other. The gate checked that
 `_headers` makes `/covers/*` revalidate; the deploy checked only that the file
 existed, which is the precise gap that let the fix for the mobile crash reach an
-origin nobody could see. The gate checked that every `og:image` *and*
+origin nobody could see. The gate checked that every `og:image` _and_
 `twitter:image` is absolute; the deploy checked for one substring, so a page
 having lost its `og:image` entirely would have passed. **The weaker half was on
 the only one of the two that publishes anything.** Neither script knew the other
@@ -707,7 +707,7 @@ Two calls, not two implementations.
 **It is the first gate here cheap enough to observe every rule go red.** The
 module builds nothing — it is handed a directory — so the gate assembles a
 synthetic `dist/` in a temp folder, plants one defect, and asserts that defect
-fires that rule *and no other*. No build, no network, milliseconds. A final
+fires that rule _and no other_. No build, no network, milliseconds. A final
 assertion holds the rule list to the defects: a rule with nothing that
 produces it fails the build, so this gate cannot quietly come to cover
 all but one. That is the thing the seven text-matching gates here cannot do.
@@ -720,16 +720,16 @@ baseline is not itself doing the work.
 
 **And then review found the gate was watching the wrong shape, which is the
 entry worth reading here.** The `_headers` rule had been carried over verbatim
-as *find `/covers/*`, then look ahead for a `Cache-Control` with `max-age=0`* —
+as _find `/covers/*`, then look ahead for a `Cache-Control` with `max-age=0`_ —
 a lazy scan that does not stop at the end of a block. The real `_headers` has an
 `/og.png` block directly after `/covers/*` carrying exactly that directive, so
 deleting the covers block's own `Cache-Control` line left the rule green.
-G20 had observed it red, but against a `_headers` containing nothing *but* the
+G20 had observed it red, but against a `_headers` containing nothing _but_ the
 covers block: a shape this repo has never had, and the one shape in which the
 bug is invisible. **A defect the gate plants must be a defect the file could
 actually have.** The file is now parsed into blocks and the covers block is read
-by name; planting the realistic shape against the old scan reports *no problems
-at all*, which is how it was confirmed.
+by name; planting the realistic shape against the old scan reports _no problems
+at all_, which is how it was confirmed.
 
 Two more the same review found, both the same species — one rule that two
 implementations had each kept half of, and neither half noticed:
@@ -737,7 +737,7 @@ implementations had each kept half of, and neither half noticed:
 - **The share image.** `gate:public` required the URL absolute against the
   origin; `deploy:site` required the literal `<origin>/og.png`. The merged rule
   had kept only the first, so `<origin>/hero.png` passed — a file no build ever
-  wrote. It is now the whole URL, and it is *two* rules rather than one, because
+  wrote. It is now the whole URL, and it is _two_ rules rather than one, because
   `--check-only` has to excuse a SITE_URL mismatch without also excusing a page
   that lost its share tag altogether.
 - **The canary.** Owned by the module now, where it was an independent literal
@@ -745,10 +745,10 @@ implementations had each kept half of, and neither half noticed:
   planted and where it is looked for leaves both halves passing.
 
 **One check deliberately stayed in `deploy.ts`**: that no fixture book is in the
-build. `gate:public` requires those titles *present* in the folder it inspects
-and the deploy requires them *absent* — the same strings with opposite verdicts
+build. `gate:public` requires those titles _present_ in the folder it inspects
+and the deploy requires them _absent_ — the same strings with opposite verdicts
 — so a module that cannot know which vault produced a folder is the wrong owner.
-It also asserts build *ordering* rather than publishability.
+It also asserts build _ordering_ rather than publishability.
 
 That check was two hardcoded titles, and **one of the two had never matched
 anything**: `Compilers for the Impatient` carries a subtitle in its frontmatter,
@@ -812,7 +812,7 @@ better than the alternatives they replaced:
   to have no exempt list at all.
 
 **The vacuity anchor is the assertion this row needs most**, for a reason worth
-stating generally: *every clause of this gate is phrased as an absence*, and an
+stating generally: _every clause of this gate is phrased as an absence_, and an
 absence is satisfied for free the moment the pattern stops matching anything. So
 the gate asserts the owner still matches before asserting nothing else does.
 **Observed red** by changing the owner to return `Object.create(null)` instead
@@ -826,8 +826,8 @@ by reading the regex. That is a happier result than the one first written here,
 and the correction is worth keeping: the anchor is robust to layout and brittle
 only to the behaviour changing, which is the right way round.
 
-The permissive half is asserted too, for G17's reason: *a positive check cannot
-detect a missing one*. "No file defines its own" is satisfied perfectly by a
+The permissive half is asserted too, for G17's reason: _a positive check cannot
+detect a missing one_. "No file defines its own" is satisfied perfectly by a
 repo where every caller has gone back to writing the key unconditionally, so the
 gate also requires the helper to have seven callers. That is the same clause G22
 needed and for the same reason, arrived at independently both times, which
@@ -838,7 +838,7 @@ the entry here worth reading. The floor was set to six — the number of files
 that had carried a copy — and reverting one caller left six still calling it, so
 the gate stayed green through exactly the regression it describes. The cause was
 an overcount rather than a wrong constant: the sweep counted
-`key-if-present.test.ts`, which names the helper on every line and *uses* it for
+`key-if-present.test.ts`, which names the helper on every line and _uses_ it for
 nothing. A spec is not a caller. **An inflated floor is slack, and slack in a
 floor is indistinguishable from the defect it is meant to stop** — the general
 form of a rule this file already has for allowlists, applied to a number.
@@ -855,7 +855,7 @@ than being written a second time inside a change about not writing things a
 second time.
 
 **What this row does not gate.** `FrontmatterChanges` inverts the rule this
-helper embodies: near `updateBook`, `undefined` *removes* a key from a note in
+helper embodies: near `updateBook`, `undefined` _removes_ a key from a note in
 the owner's vault, so the ordinary absent-is-harmless reflex writes to somebody's
 files. That is real and stated in `CONTEXT.md` under **Removal** — but it has no
 gate here, because it has no live instance either: all three `updateBook`
@@ -866,7 +866,7 @@ and needs a cast to widen. Gating a hazard nothing can currently reach would be
 a rule nothing can fail on, which is what this file is against.
 
 **G24 is the fourth "one rule, one implementation" row**, after G10, G22 and
-G23, and the first whose *stated benefit turned out to be false*. That is the
+G23, and the first whose _stated benefit turned out to be false_. That is the
 part worth keeping.
 
 The issue that produced it argued two things. The first was real: eight scripts
@@ -878,7 +878,7 @@ second-order benefit and probably the more durable one".
 **It is not a benefit at all, and this file had already recorded the
 experiment.** G1 allowlists files that import `fs`. Of the three things proposed
 for the harness, only `walk` touched `fs` — and `walk` had already been
-extracted, which *grew* the allowlist by one: `scripts/lib/walk.ts` earned an
+extracted, which _grew_ the allowlist by one: `scripts/lib/walk.ts` earned an
 entry while `check-public-build.ts` kept its own, still needing `readFileSync`.
 `REPO_ROOT` is `node:path` and `run` is `node:child_process`; neither can ever
 appear on that list. The consolidation shipped here changes G1's allowlist by
@@ -890,15 +890,15 @@ one was enough. What the sweep did find is better than the claim it replaced —
 `dev-watch.ts` and `smoke-render.ts` were both passing an args array alongside
 `shell: true`, the exact shape the two scripts with the comment wrote a
 paragraph each about avoiding. So the platform knowledge was not duplicated and
-agreeing; it was written in three places and *absent from the two that also
-needed it*, which is the strongest available argument for one home and is not
+agreeing; it was written in three places and _absent from the two that also
+needed it_, which is the strongest available argument for one home and is not
 the argument the issue made.
 
 **The gate can anchor on a name where G23 could not**, and the reason is
 structural rather than lucky: a module cannot reach its own location without
 `import.meta`, so `import.meta.(url|dirname|filename)` catches every spelling
 including the `new URL('..', import.meta.url)` form nobody here has written yet.
-G23 had to match a returned *shape* because its helper had three names; this one
+G23 had to match a returned _shape_ because its helper had three names; this one
 has no name to hide behind.
 
 **One owner rather than a directory**, on G1's own argument against
@@ -953,24 +953,24 @@ from recording the disagreement instead of closing it.
 **The bound has three terms now, and the third one is charged where the earlier
 two said nothing was owed.** It was one maximal swing per angle change; propping
 a book across a year gap added a maximal prop per gap, and then the parallel
-push added one per *book*:
+push added one per _book_:
 
-| term | charged where | because |
-| --- | --- | --- |
-| one maximal swing | the angle changes | the real lean needs the row index, which the wrap has not decided |
-| one maximal prop | a book props across a gap | the prop angle needs the neighbour, which the wrap has not chosen |
+| term                      | charged where                 | because                                                                         |
+| ------------------------- | ----------------------------- | ------------------------------------------------------------------------------- |
+| one maximal swing         | the angle changes             | the real lean needs the row index, which the wrap has not decided               |
+| one maximal prop          | a book props across a gap     | the prop angle needs the neighbour, which the wrap has not chosen               |
 | one maximal parallel push | every pair of spines in a run | two parallel books of different heights do not stand where their footprints say |
 
 The third is the one that had no precedent, and it is a correction to a belief
-this row was built on: *"neighbours at the same angle stay parallel and never
-collide"*. True of the boards, false of the books — a book tilted about its middle
+this row was built on: _"neighbours at the same angle stay parallel and never
+collide"_. True of the boards, false of the books — a book tilted about its middle
 stands on a base swung `sway` off its footprint, and `sway` scales with height, so
 a tall book followed by a short one had its low corner 2.3mm inside its
 neighbour's board on the live shelf. Every clearance before it was charged where
-the angle *changed*, on the belief that nothing was owed where it did not.
+the angle _changed_, on the belief that nothing was owed where it did not.
 
 ⚠️ **The bound for it was written wrong first, in the way this row exists to
-catch.** The first version *called* `parallelPushOf` — the function it was
+catch.** The first version _called_ `parallelPushOf` — the function it was
 bounding — with the same arguments and the same trailing term, so that part of the
 excess assertion could not fail for any value of the charge. Same defect as the
 `toRows`-asks-`toRows` version below, in the same file, three years of lessons
@@ -995,7 +995,7 @@ tidiness complaint.
 
 **One assertion here was wrong twice, in opposite directions, and the second
 version passed everything.** "One more book would not have fitted" first priced
-the candidate *without* its year gap — but `toRows` turned that book away
+the candidate _without_ its year gap — but `toRows` turned that book away
 carrying `YEAR_GAP` and the clearance an upright book pays, so the assertion was
 stronger than anything the packer promises. It passed by 0.02 where the
 guarantee allows 0.09: green today, red on a correct packer the day a book gets
@@ -1029,7 +1029,7 @@ changes angle nowhere, and without that case a constant over-charge hides inside
 the bound.
 
 **It does not replace G16, and the two failed differently here.** Everything in
-this row asserts what the placements *claim*; G16 measures `Box3.setFromObject`
+this row asserts what the placements _claim_; G16 measures `Box3.setFromObject`
 against the case's real inner faces on a rendered scene. It reported
 `case overflow 0.0012` before this change and after it — which is `SKIN`, the
 hair by which a printed cover floats above its board, not slop — so the density
@@ -1041,31 +1041,31 @@ That is the shape of evidence a unit test cannot produce.
 ⚠️ **Everything above this heading describes a packer that no longer exists.**
 `toRows` used to charge `shelfCost` and wrap on the estimate. It runs the cursor
 and wraps on the answer — [ADR-0042](adr/0042-the-packer-runs-the-placer.md).
-The conservatism the inequality above *bounds* was, all along, shelf left empty:
+The conservatism the inequality above _bounds_ was, all along, shelf left empty:
 **0.09 to 0.13 a row on the live shelf**, and on one row it turned away a book
 that needed 0.163 from 0.170 of real room.
 
 **The bound was documented as unavoidable and was not.** The reason given —
 "the real lean comes from `leanFor`, which needs the row index, which is not
 known until the wrap this figure decides has happened" — is true of the book's
-*other* possible home, the head of the next row, and false of the row being
+_other_ possible home, the head of the next row, and false of the row being
 offered it. `leanFor(rowIndex, position, id)` is determined by its arguments,
 and both indices are fixed at pack time: rows finalise in order, so the row being
 filled is `rows.length` and the candidate's place in it is `current.length`. The
 circularity was in the sentence, not in the code, and it survived two rewrites of
-this row because the row asserted the bound was *sound* and never asked whether
-it was *needed*.
+this row because the row asserted the bound was _sound_ and never asked whether
+it was _needed_.
 
 **`shelfCost` and `rowCost` moved into `shelf-width.test.ts` rather than dying
 with the estimate**, and the direction of the inequality is why. Deleting them
-would have left nothing bounding what the *cursor* spends against numbers the
+would have left nothing bounding what the _cursor_ spends against numbers the
 cursor cannot move, and the obvious replacement — restating capacity as
 `rowExtent` — is the defendant-as-judge defect three paragraphs up, committed a
 third time. So the model changed standing: it decides nothing and bounds
 everything, and being loose costs nothing now that no row wraps on it.
 
 **A third group asks what the first two cannot.** "Packs no row past the band"
-and "packs every row tight" are both about the *decision*, and both read
+and "packs every row tight" are both about the _decision_, and both read
 `rowExtent` on the left — which is what `fitsRow` wraps, so a cursor that
 over-spends moves the wrap and the measurement together and neither notices.
 `leaves a row no slack a book could have used` is about the outcome: the wood
@@ -1075,7 +1075,7 @@ left at a row's end, against a cursor-free number.
 next book's footprint plus its gap plus a separator — "an absolute minimum",
 written on the reasoning that leaving out every clearance made the claim safer.
 It does the opposite. The assertion is `room < need`, so a need stated too small
-turns a *correct* packer red: a book rejected **because of** the clearance it
+turns a _correct_ packer red: a book rejected **because of** the clearance it
 would have paid leaves room above such a floor. That is the same error this row
 already records twice, committed a third time, in the same file, one commit
 later — and it was green on all six fixtures, which is exactly how the other two
@@ -1083,14 +1083,14 @@ looked. Two independent read-only reviews found it from opposite sides: one that
 the floor was too small to be sound, one that charging `YEAR_GAP` in full made it
 too large by up to 0.088 at a propped boundary. It is `separator + gap +
 footprint + WORST_CLEARANCE` now, every term at its worst, and the separator is
-taken from the book the cursor is *leaving* rather than the one it is arriving
+taken from the book the cursor is _leaving_ rather than the one it is arriving
 at — reading it off `next` understated the cost by 0.014 for every face-out book
 followed by a spine.
 
 ⚠️⚠️ **And then `WORST_CLEARANCE` itself was `MAX_LEAN` where it had to be
 `MAX_PROP_LEAN` — this row's own oldest mistake, made a fourth time, three
 paragraphs after writing it down.** The angle-change branch spends
-`Math.max(sway, left.sway)`, and `left.lean` is a *run* lean: a run that begins
+`Math.max(sway, left.sway)`, and `left.lean` is a _run_ lean: a run that begins
 on a book propped across a year gap hands that angle to every spine behind it. So
 the swing reachable there is `swayOf(MAX_HEIGHT, MAX_PROP_LEAN)` = 0.1175 against
 the 0.0263 `MAX_LEAN` allows, and the ceiling was under half the real worst case.
@@ -1100,12 +1100,12 @@ An independent verifier swept cover aspect, page count and face-out position
 against the shipped `paperbackRatio` — 5,940 configurations — and found 375 that
 fail. The margin, `min(ceiling − trueNeed)` over every boundary:
 
-| library | `MAX_LEAN` | `MAX_PROP_LEAN` |
-| --- | --- | --- |
-| `mixed` | +0.0518 | +0.1399 |
-| `alternating` | +0.0347 | +0.1227 |
-| the owner's real vault | **+0.0023** | +0.0904 |
-| `squareCoverAfterProp` | **−0.0388** | +0.0493 |
+| library                | `MAX_LEAN`  | `MAX_PROP_LEAN` |
+| ---------------------- | ----------- | --------------- |
+| `mixed`                | +0.0518     | +0.1399         |
+| `alternating`          | +0.0347     | +0.1227         |
+| the owner's real vault | **+0.0023** | +0.0904         |
+| `squareCoverAfterProp` | **−0.0388** | +0.0493         |
 
 `squareCoverAfterProp` is a fixture now — every book its own year so every run
 inherits a prop angle, and one face-out book with an audiobook's square cover
@@ -1121,9 +1121,9 @@ cost model, which does not read `WORST_CLEARANCE`.
 **Observed red, and the detection floors are measured, not assumed.** Bisected on
 `cursor += entry.thickness + TOUCHING + δ`, the shelved branch:
 
-| δ | verdict | caught by |
-| --- | --- | --- |
-| 0.005 | green | — |
+| δ          | verdict | caught by                                           |
+| ---------- | ------- | --------------------------------------------------- |
+| 0.005      | green   | —                                                   |
 | **0.0055** | **red** | `never spends more than the model allows` (`mixed`) |
 
 The face-out branch catches **any** over-spend — δ = 0.00001 is red on the
@@ -1137,13 +1137,13 @@ The sharp floor belonged to the outcome assertion while it was unsound; making i
 sound cost the sharpness, and the honest floor is now the cost model's 0.0055.
 Before that, the row claimed the moved model caught a hair-sized cursor
 over-spend — a misreading of "adding a hair to every book's cost" further up,
-which is a hair added to the *charge*, not to the *spend*. Three numbers, three
+which is a hair added to the _charge_, not to the _spend_. Three numbers, three
 corrections, none of them from running the suite: the suite was green for all
 three. **A detection floor that is written down is a gate; one that is assumed is
 what this row exists to prevent.** Do not restate these in either direction
 without re-running the bisection.
 
-**The one thing this row now carries alone.** Clearance is charged to the *left*
+**The one thing this row now carries alone.** Clearance is charged to the _left_
 of the book that leans, where the angle changes, so the last book of a row has
 nothing on its right to charge and its swing is paid for by `SHELF.endReserve`
 and by nothing else. That was `LEAN_ALLOWANCE`'s job before it was folded in.
@@ -1151,8 +1151,8 @@ The assertion `endReserve ≥ swayOf(MAX_HEIGHT, MAX_PROP_LEAN)` is the one to r
 before tuning that number, and it is why the reserve is not merely aesthetic.
 
 ⚠️ **It said `MAX_LEAN` there, and stayed green for a whole change after that
-stopped bounding anything.** `MAX_LEAN` is the steepest a book slumps *of its own
-accord* — 3.5°. A book propped across a year gap leans four times further, and a
+stopped bounding anything.** `MAX_LEAN` is the steepest a book slumps _of its own
+accord_ — 3.5°. A book propped across a year gap leans four times further, and a
 run inherits the prop angle, so the last book of a row can carry it. The reserve
 was sized for a swing of 0.03 against an actual worst of 0.117, and the gate that
 exists to notice compared it against the constant that had stopped applying. **A
@@ -1166,17 +1166,17 @@ instead.
 **Three gates were watching this file and none of them could see a book inside
 another book.** G16 measures `Box3.setFromObject` against the case's real inner
 faces — two books can intersect each other happily well inside those. G25 works
-in *footprints*, the untilted slab a book would occupy, which is the right
+in _footprints_, the untilted slab a book would occupy, which is the right
 coordinate for the cursor's budget and precisely the wrong one for this question:
 two neighbours can have disjoint footprints and still intersect, and overlapping
 footprints and not, which is why a run packs flush. And `placement.test.ts`'s own
-flushness assertion used three books of *identical height*, where the defect is
+flushness assertion used three books of _identical height_, where the defect is
 identically zero.
 
 So 509 tests, four of them about this file's spacing, a render gate, and the
 thing that found it was the owner looking at a close-up. Three collisions, all
 real: 8mm and 18mm where a propped book measured its reach to its neighbour's
-*footprint* rather than to its corners, and 2.3mm between any tall book and a
+_footprint_ rather than to its corners, and 2.3mm between any tall book and a
 shorter one in the same run, which predates propping by as long as there have
 been runs.
 
@@ -1212,7 +1212,7 @@ board case, clamping the parallel push at zero, and dropping it altogether.
 ## G38 — one row, two surfaces
 
 **No column of this file says which surface a row runs on**, and `mutation-scope`
-is the first row that needs one: it is a `pnpm test` assertion *and* a
+is the first row that needs one: it is a `pnpm test` assertion _and_ a
 `pnpm deploy:site` refusal under one slug. Said here rather than found later.
 
 **The split is by available evidence, not by taste.** Everything the disk can
@@ -1220,13 +1220,13 @@ answer is a **declaration fault** and lands at merge, in two seconds, in front o
 whoever caused it — **seven kinds**: a declared scope whose directory is gone, a
 source directory in neither the declared nor the excluded list, an exclusion
 carrying no mechanism, two scopes claiming one file, a glob matching nothing, an
-exclusion naming a file that has moved, and a directory that is declared *and*
+exclusion naming a file that has moved, and a directory that is declared _and_
 excluded at once. The last two go beyond the six the ticket lists and say so
-where they are written: they are *"exists on disk"* and *"no overlap"* applied to
+where they are written: they are _"exists on disk"_ and _"no overlap"_ applied to
 the second list, which the ticket's wording covers for scopes only.
 
-**An eighth check answers a different question**, and it is why *"a `mutate`
-change"* belongs on the merge side at all: `stryker.config.mjs` **derives**
+**An eighth check answers a different question**, and it is why _"a `mutate`
+change"_ belongs on the merge side at all: `stryker.config.mjs` **derives**
 `mutate` from `stryker.scopes.json`, so the declaration the seven clauses just
 checked is not necessarily the one Stryker runs. The gate imports the real config
 and compares. Without it, an edit to the derivation — dropping a scope, adding a
@@ -1251,7 +1251,7 @@ guessed**: a zero-mutant scope is **omitted from the report entirely**, so there
 is no number to compare at all.
 
 ⚠️ **The remedy list contains the weakening, and that is why the rename rules
-sit in `stryker.scopes.json` itself.** *Delete the scope* is a legitimate fix for
+sit in `stryker.scopes.json` itself.** _Delete the scope_ is a legitimate fix for
 a zero-mutant refusal **and** the cheapest way to stop measuring an inconvenient
 one — and unlike lowering a floor, it does not read as a lowering. It reads as
 cleanup. So a scope's identity is its declared **name**, and the config edit
@@ -1274,21 +1274,21 @@ plants and what each one printed.
 
 **The record's age is a property of the tree, not of a diff.** A freshness
 assertion in the suite goes red on a quiet week, and a contributor opening a pull
-request after ten idle days would meet a red gate whose remedy — *restart the
-nightly* — is not a diff they can make. That fails Clause A **for the person who
-hit it**: *a stranger paying for your dead pipe is not a gate; it is a tax.* So
+request after ten idle days would meet a red gate whose remedy — _restart the
+nightly_ — is not a diff they can make. That fails Clause A **for the person who
+hit it**: _a stranger paying for your dead pipe is not a gate; it is a tax._ So
 `metrics-freshness` is the **deploy refusal**, spec'd on G17 (`deploy-branch`)'s
 scratch-repository idiom, and `gates/metrics-freshness.test.ts` drives that
 refusal rather than asserting live state.
 
-⚠️ **The slug names the property checked, not the consequence**: *the record is
-fresh*, not *the deploy refuses*.
+⚠️ **The slug names the property checked, not the consequence**: _the record is
+fresh_, not _the deploy refuses_.
 
 **Per-series, and the cost of that is stated rather than discovered.** Eight
 series written by different things on different clocks; an aggregate bound cannot
 see one of them going quiet while a working merge pipeline keeps the newest row
 minutes old. **Absent and stale are one verdict**, entailed rather than newly
-decided — *"the newest sample is older than 3 days"* is undefined for a series
+decided — _"the newest sample is older than 3 days"_ is undefined for a series
 with no samples, and a series that never emitted is precisely the failure this
 exists to expose. That is what makes the check **parse samples**: `#121` designed
 it to read a filename, which was cheap and exactly right for the aggregate bound
@@ -1303,15 +1303,15 @@ multiple of the nightly, never of pushes.
 are derived from landing order, and `agents-import` (G37) landed between the two
 tickets that pre-allocated them — so `mutation-scope` took G38 and this row moved
 by one. Recorded rather than quietly corrected: this file's own line is why —
-*"G19 is a stable identifier and tells you nothing"* — and every pre-allocated
+_"G19 is a stable identifier and tells you nothing"_ — and every pre-allocated
 number on this rollout's source map has now been wrong.
 
 ⚠️ **What the gate cannot plant is the calendar.** The dated bootstrap expires on
-a day and the deploy has no way to be told what day it is, so *prints at 2 days,
-refuses at 4* is observed against the judgement itself in
+a day and the deploy has no way to be told what day it is, so _prints at 2 days,
+refuses at 4_ is observed against the judgement itself in
 `scripts/lib/metrics-read.test.ts`. What the gate asserts is that the script
 agrees with that judgement **today** — a wiring assertion that cannot expire,
-where an assertion of *does not refuse* would have been a green that quietly
+where an assertion of _does not refuse_ would have been a green that quietly
 became false three days after the spine landed.
 
 **Observed red, five ways.** See [`docs/gate-register.md`](gate-register.md), the
@@ -1319,7 +1319,7 @@ G39 entry.
 
 ⚠️ **The calendar it could not plant went off in G17 instead.** The paragraph
 above was written for G39's own assertions, and G17 (`deploy-branch`) sat one
-check *before* the sentinel both files share — a scratch repository with no
+check _before_ the sentinel both files share — a scratch repository with no
 record at all was fine for three days as the dated bootstrap, and on day three
 (2026-08-22) it was a stale one. Four rows went red on `main`, on every open
 pull request, and on the nightly — which runs the suite before it emits a
@@ -1341,7 +1341,7 @@ carries the mirrored `refs/remotes/origin/metrics` that G39's check reads. On
 **No pull request could have caught it**: CI on `pull_request` is never on
 `main`, so that branch of the row does not execute, and the fix's own pull
 request was green while the merge that followed was red. The repair moves the
-sentinel *upstream* of every environment-dependent check, to the step-0b line
+sentinel _upstream_ of every environment-dependent check, to the step-0b line
 printed unconditionally once the guard has allowed the run. Two lessons, and
 the second is the sharper one: **a sentinel must sit upstream of every check
 the environment decides**, and **a row whose two directions run in different CI
@@ -1350,20 +1350,20 @@ events is only half-observed by the event you are looking at.**
 ## G2 in full — the public build gate
 
 The five below are what G2 added to `gate:public`. Since G20 they are no longer
-*in* `gate:public`: rules 2–5 apply to any built folder, so they live in
+_in_ `gate:public`: rules 2–5 apply to any built folder, so they live in
 `scripts/lib/public-build.ts` and `deploy:site` applies the same ones to the
-real build. What stays in the script is the half that is about the *source* —
+real build. What stays in the script is the half that is about the _source_ —
 planting the canary in a fixture vault and refusing to run without it — plus
 building from it. G2 itself is unchanged and still asserts against `publish()`'s
-output, which is a different claim: G2 proves the filter *works*, the artifact
-rules prove it *ran*.
+output, which is a different claim: G2 proves the filter _works_, the artifact
+rules prove it _ran_.
 
 The existing `gate:public` is a good gate that cannot see three things. It greps
-the *contents* of *text* files for three known-bad patterns. So a private value
+the _contents_ of _text_ files for three known-bad patterns. So a private value
 in a permitted field passes by construction, and a filename is never read at all.
 
 1. **No note bodies.** The existing canary, plus a second one planted as a
-   frontmatter *value*. The gate fails if either canary is missing from the
+   frontmatter _value_. The gate fails if either canary is missing from the
    fixture vault, so it still cannot pass vacuously.
 
    ⚠️ **True here and false one caller along.** Since G20 this rule is shared
@@ -1377,9 +1377,10 @@ in a permitted field passes by construction, and a filename is never read at all
    and the `unknown-key` rule asserts that structure on the artifact instead of
    assuming it, which is G30's seam check applied to real bytes. ⚠️ **Key
    names, never values**: body text in a named field passes both.
-   *The lesson is the transferable half — a check that is honest against
+   _The lesson is the transferable half — a check that is honest against
    fixtures can be vacuous against production, and moving it to the production
-   artifact does not move its meaning with it.*
+   artifact does not move its meaning with it._
+
 2. **Provenance — no orphan covers.** Every file in `<assets>/covers/` must be
    referenced by a book in the `library.json` shipped beside it. `copyCovers`
    never prunes, so a real-vault build followed by a fixture-vault gate run
@@ -1406,10 +1407,10 @@ in a permitted field passes by construction, and a filename is never read at all
 
 ## Where cover art may go
 
-| Surface | Rule |
-| --- | --- |
-| The repo | **Never.** `fixtures/` is wholly invented; see `fixtures/README.md`. |
-| A public build | Open Library art, re-hosted, with a courtesy link back. |
+| Surface        | Rule                                                                 |
+| -------------- | -------------------------------------------------------------------- |
+| The repo       | **Never.** `fixtures/` is wholly invented; see `fixtures/README.md`. |
+| A public build | Open Library art, re-hosted, with a courtesy link back.              |
 
 Copyright is the lesser constraint here; the providers' own terms are stricter
 and are what this follows. Open Library's docs contemplate download and
@@ -1476,7 +1477,7 @@ the allowlists in `gates/`, and the same rule applies: an entry that outlives
 its reason is a permission nobody revisits.
 
 **Reach for that hatch second, and only after checking whether a fix exists.**
-The gate failed on 2026-08-08 for two advisories that both *had* patches, and
+The gate failed on 2026-08-08 for two advisories that both _had_ patches, and
 one of them still would not install: pnpm 11 quarantines newly published
 versions for seven days (`minimumReleaseAge`), so `pnpm update nanoid` reported
 success and left the tree on the vulnerable version. A silent decline is the
@@ -1497,7 +1498,7 @@ request — which then has to pass everything above like any other change.
 not depend on how much test code exists. Otherwise it is a trend.** The taxonomy
 is binary — there is no third column — and the rule is
 [`docs/spec/gate-or-trend.md`](spec/gate-or-trend.md), which decides where any
-*future* check lands too. See also
+_future_ check lands too. See also
 [ADR-0054](adr/0054-a-check-is-a-gate-or-a-trend.md).
 
 **A trend takes no row number and carries no status.** ✅ 🔴 ⬜ stay the whole
@@ -1507,24 +1508,24 @@ checks at all, which is scored-looking and half-checked. **G19 is not edited.**
 What is numbered is the ordinary gate that watches this table.
 
 **The series is never red; its absence is.** Nothing here acts on a movement —
-there is no threshold anywhere for one to breach — because *"write better tests"*
+there is no threshold anywhere for one to breach — because _"write better tests"_
 is not a diff and a mutation score of 71.4% has no named remedy. What is watched
 is whether a number arrived at all, which is a question about the pipe rather
 than a judgment about the code. A trend that reaches nobody and a deleted one
 are the same artifact.
 
-| Trend | Measures | Cadence | Reader | Silence watched by |
-| --- | --- | --- | --- | --- |
-| `mutation-score` | killed ÷ total, per declared scope | nightly | maintainer, at `pnpm deploy:site` | **G39** `metrics-freshness` |
-| `gate-suite-runtime` | wall-clock of `pnpm test` | merge and nightly | ” | ” |
-| `mutation-run-runtime` | wall-clock of the Stryker run | nightly | ” | ” |
-| `live-exclusions` | declared exclusions that produced ≥1 **executed** mutant, of N declared | nightly | ” | ” |
-| `complexity-functions` | functions counted — the denominator the other three are read against | merge and nightly | ” | ” |
-| `complexity-mass` | Σ cyclomatic complexity over those functions | merge and nightly | ” | ” |
-| `complexity-mass-over-10` | Σ complexity over functions with CC > 10 | merge and nightly | ” | ” |
-| `complexity-max` | the largest single function's complexity | merge and nightly | ” | ” |
+| Trend                     | Measures                                                                | Cadence           | Reader                            | Silence watched by          |
+| ------------------------- | ----------------------------------------------------------------------- | ----------------- | --------------------------------- | --------------------------- |
+| `mutation-score`          | killed ÷ total, per declared scope                                      | nightly           | maintainer, at `pnpm deploy:site` | **G39** `metrics-freshness` |
+| `gate-suite-runtime`      | wall-clock of `pnpm test`                                               | merge and nightly | ”                                 | ”                           |
+| `mutation-run-runtime`    | wall-clock of the Stryker run                                           | nightly           | ”                                 | ”                           |
+| `live-exclusions`         | declared exclusions that produced ≥1 **executed** mutant, of N declared | nightly           | ”                                 | ”                           |
+| `complexity-functions`    | functions counted — the denominator the other three are read against    | merge and nightly | ”                                 | ”                           |
+| `complexity-mass`         | Σ cyclomatic complexity over those functions                            | merge and nightly | ”                                 | ”                           |
+| `complexity-mass-over-10` | Σ complexity over functions with CC > 10                                | merge and nightly | ”                                 | ”                           |
+| `complexity-max`          | the largest single function's complexity                                | merge and nightly | ”                                 | ”                           |
 
-⚠️ **`mutation-score` is spelled *killed ÷ total* on purpose.** The score is
+⚠️ **`mutation-score` is spelled _killed ÷ total_ on purpose.** The score is
 gameable by adding trivially-killable code, which dilutes the denominator upward
 — not the coverage failure mode, and closed by neither clause of the rule above.
 It sits in the Measures column so a reader meets it, rather than in a closed
@@ -1534,16 +1535,16 @@ ticket.
 because none survived the measurement.** The prototype put every candidate
 statistic through two games on this repo's own worst function — a mechanical
 three-way split, and thirty trivial functions appended beside it — and every
-ratio hid one game or the other. Counts hide neither: dilution is *functions and
-mass up by the same amount and nothing else moving*, a split is *functions up,
-mass flat, max down*. The record carries counts and the page derives shares,
-which is `mutation-score` being spelled *killed ÷ total* applied one step
+ratio hid one game or the other. Counts hide neither: dilution is _functions and
+mass up by the same amount and nothing else moving_, a split is _functions up,
+mass flat, max down_. The record carries counts and the page derives shares,
+which is `mutation-score` being spelled _killed ÷ total_ applied one step
 earlier. **The `> 10` cut is McCabe's own 1976 bound and is not a threshold** —
 nothing goes red when a function crosses it, and the four rows take no gate
 number for the reason every row here doesn't. See
 [`docs/spec/complexity-on-the-trend-layer.md`](spec/complexity-on-the-trend-layer.md) §2.
 
-⚠️ **They are written on *both* events**, so a movement is attributable to a
+⚠️ **They are written on _both_ events**, so a movement is attributable to a
 single pull request rather than to a night's worth of them. **They are not the
 first** — `gate-suite-runtime` has been on both since the spine landed, and the
 `Cadence` cell above said `nightly` until this rollout read it, believed it, and
@@ -1561,8 +1562,8 @@ run that produces this record reports **0 by construction**, not 0 as a finding.
 The measurement the row describes needs a deliberately wider run that nothing
 builds today. What ships is a config-drift tripwire under the right name. Carried
 as an open weakness on **G36 (`trend-layer`)** in
-[`gate-register.md`](gate-register.md), because *a series incapable of movement is
-a flat line*, and a flat line arriving on time is the shape this layer exists to
+[`gate-register.md`](gate-register.md), because _a series incapable of movement is
+a flat line_, and a flat line arriving on time is the shape this layer exists to
 refuse.
 
 **`metrics-freshness` has landed, and it is G39** — the deploy-side refusal, per
@@ -1591,8 +1592,8 @@ staleness bound the deploy-side check will apply covers all eight; D is reported
 and never refused. See [`docs/spec/trend-layer.md`](spec/trend-layer.md) §§3–5.
 
 **A row is written unconditionally, red `main` included.** A crashed run writes
-`run_ok 0` **plus whatever computed** and still exits red, so *never ran* — a gap
-in the branch — stays distinguishable from *ran and broke*, an explicit zero.
+`run_ok 0` **plus whatever computed** and still exits red, so _never ran_ — a gap
+in the branch — stays distinguishable from _ran and broke_, an explicit zero.
 `run_ok` is not a trend and takes no row here: it lives under a different metric
 prefix, which is what makes its exclusion structural rather than a list G36 would
 have to maintain.
@@ -1609,14 +1610,14 @@ pull request can land, not after. The first batch was 12 alerts, all rated
 being surprised by.
 
 ⚠️ **This paragraph said the opposite for two days, and nothing could go red.**
-It read *"CodeQL reports alongside the gates rather than blocking a merge"* —
-made false by `6cbb380`, the commit titled *"CodeQL becomes a second required
-gate, and the five claims that made false"*. That commit went looking for
+It read _"CodeQL reports alongside the gates rather than blocking a merge"_ —
+made false by `6cbb380`, the commit titled _"CodeQL becomes a second required
+gate, and the five claims that made false"_. That commit went looking for
 exactly this, corrected five claims elsewhere, and never touched the one file
 whose job is recording what is enforced. **Nothing in a clone can check it**:
 the ruleset lives outside the tree, and a gate that asked GitHub would need the
 network, which G21 (`no-live-network`) forbids for the whole suite. So this
-claim belongs to the last row of *"Not gated, deliberately"* — relied upon and
+claim belongs to the last row of _"Not gated, deliberately"_ — relied upon and
 unverifiable — and the only available mitigation is that it now says so instead
 of stating it flatly.
 
@@ -1645,7 +1646,7 @@ Three questions, in order:
    appearance of a fix.
 3. **Is it worth fixing anyway, for a reason that is not security?** Usually
    yes, and this is where the value has actually been. `js/polynomial-redos` on
-   `safeFilename` was real: bounding the input fixed the backtracking *and* a
+   `safeFilename` was real: bounding the input fixed the backtracking _and_ a
    truncation bug nobody had noticed, where the 120-character cap ran after the
    trailing-dot strip and could put a dot back on the end of a Windows filename.
    The nine `js/incomplete-url-substring-sanitization` hits were test-only and
@@ -1662,16 +1663,16 @@ oldest failure in this file.
 
 ## Not gated, deliberately
 
-| | Why |
-| --- | --- |
-| Coverage percentage | Coverage measures execution, not detection. An AI asked to raise it produces exactly the gap it is asked to close. No ticket should ever exist to raise it. |
-| Changed-lines coverage floor | Not a gate at any surface: it fails [#112](https://github.com/mephistopheles4/stacks/issues/112)'s Clause B, which is surface-independent, and a trend has no threshold to be a floor. Worse than absent besides — Vitest 4 dropped `coverage.all`, so a pull request adding a wholly untested module scores **100%**, green in exactly the case it exists to catch. Reversal on the grounds that AI now writes the diffs was raised and refused in [#117](https://github.com/mephistopheles4/stacks/issues/117): an AI asked to satisfy a diff-local floor writes tests that execute the lines it just wrote, which is the row above with volume behind it. The original reason — *"one contributor; it would be noise"* — is no longer why. |
-| **Mutation testing (Stryker)** | *Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green.* ⚠️ **Revisited 2026-08-11: condition met, and the cost estimate in this cell was wrong — 636 tests / 5.52s, not 133 / ~2s. Now a trend; see [Trends](#trends). Still not gated: the number never goes red.** |
-| Article XI-style residency rules | No infrastructure; nothing to pin. |
-| **A link is about what it claims to be about** | G29 checks that a link *resolves*, which is not the same question. #166 moved the invariants to `AGENTS.md` and left `CLAUDE.md` as a stub, so eight links reading `[invariant 1](CLAUDE.md)` across five files still resolved perfectly — at a file with no invariants in it, and G29 stayed green throughout. They were repointed by hand. Not gated because "this link is about what it says" is a judgement, and a gate that made it would be a gate that matches prose, which `docs/gates.md` has twice learned matches anything. |
-| GitHub repository settings | Dependabot alerts, malware alerts, grouped security updates, branch protection. They live outside the tree, so nothing in a clone can read them — and a gate that asked GitHub would need the network, which **G21 (`no-live-network`) forbids for the whole suite**. Listed in `SECURITY.md` as relied upon and unverifiable, which is the most this repo can honestly say about them. |
-| **A branch name or a commit subject follows the convention** ([ADR-0057](adr/0057-the-pull-request-title-is-the-commit-subject.md)) | Commit-lint is available and it is the wrong instrument. Put [`gate-or-trend.md`](spec/gate-or-trend.md)'s **Clause A** to it — *does its red have a named, reachable remedy?* — and the answer depends on who hit it: for the maintainer, rename the pull request; for a stranger, the build is red for something that is not a defect in their change, and `CONTRIBUTING.md` promises that a contributor with no agent skills installed passes every gate. **That is the disposal [`trend-layer.md`](spec/trend-layer.md) §4 already made of a staleness spec** — *"That fails Clause A **for the person who hit it**. A stranger paying for your dead pipe is not a gate; it is a tax"* — reached a second time, for a convention rather than a pipe, which makes it precedent rather than a fresh judgement. **The surface would be defensible even though the check is not**: the repository squash-merges with `squash_merge_commit_title: PR_TITLE`, so the only string worth checking is the pull request title on `pull_request` — never `commit-msg`, which lints a message the squash throws away. That door is documented here rather than left to be rediscovered. ⚠️ **The branch half is disqualified by coverage, and the first draft of this row said something else and was wrong.** It claimed CI cannot see a branch name at all; `gates.yml` runs on `pull_request`, so `github.head_ref` carries it, exactly as the same event carries the title conceded one clause earlier — the two halves of one sentence disagreed, and a review caught it. What actually disqualifies it: `head_ref` exists **only on a pull request**, so a branch that never opens one is never checked, and the branches a harness names are deleted by the squash that merges them. A check firing on some branches and reading as covering all of them is the shape this file's [*Why this file exists*](#why-this-file-exists) is a list of. |
-| **Claiming an issue before working it** (the rule in `AGENTS.md`'s *Working rules for agents*) | A claim is a property of the tracker and of wall-clock time, not of the tree: a spec asserting it would go red for a contributor who never touched an issue, which is the metrics-freshness rejection in [`docs/spec/trend-layer.md`](spec/trend-layer.md) §4 — *a stranger paying for your dead pipe is not a gate; it is a tax*. Reading it in CI needs the network anyway, and **G21 forbids that for the whole suite**. **The mechanism is the assignee plus a one-hour window, and both halves were chosen knowing the assignee is not a lock** — every session here authenticates as the same account, so a ticket was once claimed twice five seconds apart, and no check on the tracker could have told those two apart. It was kept because it is the only signal that renders in GitHub's own UI and that the frontier query already reads; a claim *comment* or a `claimed` label buy filterability and add a second thing to remove on abandonment, which is the state nobody cleans up. The window is the reading half and needs no cleanup: an assignment older than an hour stops being presumed live on its own. So this is an advisory recorded where a person will see it, not a lock — and the real protection remains naming the issue when a session is launched. |
+|                                                                                                                                     | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Coverage percentage                                                                                                                 | Coverage measures execution, not detection. An AI asked to raise it produces exactly the gap it is asked to close. No ticket should ever exist to raise it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Changed-lines coverage floor                                                                                                        | Not a gate at any surface: it fails [#112](https://github.com/mephistopheles4/stacks/issues/112)'s Clause B, which is surface-independent, and a trend has no threshold to be a floor. Worse than absent besides — Vitest 4 dropped `coverage.all`, so a pull request adding a wholly untested module scores **100%**, green in exactly the case it exists to catch. Reversal on the grounds that AI now writes the diffs was raised and refused in [#117](https://github.com/mephistopheles4/stacks/issues/117): an AI asked to satisfy a diff-local floor writes tests that execute the lines it just wrote, which is the row above with volume behind it. The original reason — _"one contributor; it would be noise"_ — is no longer why.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Mutation testing (Stryker)**                                                                                                      | _Genuinely cheap here — 133 tests in ~2s — and the real measure of whether these gates have teeth. Parked only because it is second-order to having CI at all. Revisit once the rows above are green._ ⚠️ **Revisited 2026-08-11: condition met, and the cost estimate in this cell was wrong — 636 tests / 5.52s, not 133 / ~2s. Now a trend; see [Trends](#trends). Still not gated: the number never goes red.**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Article XI-style residency rules                                                                                                    | No infrastructure; nothing to pin.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **A link is about what it claims to be about**                                                                                      | G29 checks that a link _resolves_, which is not the same question. #166 moved the invariants to `AGENTS.md` and left `CLAUDE.md` as a stub, so eight links reading `[invariant 1](CLAUDE.md)` across five files still resolved perfectly — at a file with no invariants in it, and G29 stayed green throughout. They were repointed by hand. Not gated because "this link is about what it says" is a judgement, and a gate that made it would be a gate that matches prose, which `docs/gates.md` has twice learned matches anything.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| GitHub repository settings                                                                                                          | Dependabot alerts, malware alerts, grouped security updates, branch protection. They live outside the tree, so nothing in a clone can read them — and a gate that asked GitHub would need the network, which **G21 (`no-live-network`) forbids for the whole suite**. Listed in `SECURITY.md` as relied upon and unverifiable, which is the most this repo can honestly say about them.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **A branch name or a commit subject follows the convention** ([ADR-0057](adr/0057-the-pull-request-title-is-the-commit-subject.md)) | Commit-lint is available and it is the wrong instrument. Put [`gate-or-trend.md`](spec/gate-or-trend.md)'s **Clause A** to it — _does its red have a named, reachable remedy?_ — and the answer depends on who hit it: for the maintainer, rename the pull request; for a stranger, the build is red for something that is not a defect in their change, and `CONTRIBUTING.md` promises that a contributor with no agent skills installed passes every gate. **That is the disposal [`trend-layer.md`](spec/trend-layer.md) §4 already made of a staleness spec** — _"That fails Clause A **for the person who hit it**. A stranger paying for your dead pipe is not a gate; it is a tax"_ — reached a second time, for a convention rather than a pipe, which makes it precedent rather than a fresh judgement. **The surface would be defensible even though the check is not**: the repository squash-merges with `squash_merge_commit_title: PR_TITLE`, so the only string worth checking is the pull request title on `pull_request` — never `commit-msg`, which lints a message the squash throws away. That door is documented here rather than left to be rediscovered. ⚠️ **The branch half is disqualified by coverage, and the first draft of this row said something else and was wrong.** It claimed CI cannot see a branch name at all; `gates.yml` runs on `pull_request`, so `github.head_ref` carries it, exactly as the same event carries the title conceded one clause earlier — the two halves of one sentence disagreed, and a review caught it. What actually disqualifies it: `head_ref` exists **only on a pull request**, so a branch that never opens one is never checked, and the branches a harness names are deleted by the squash that merges them. A check firing on some branches and reading as covering all of them is the shape this file's [_Why this file exists_](#why-this-file-exists) is a list of. |
+| **Claiming an issue before working it** (the rule in `AGENTS.md`'s _Working rules for agents_)                                      | A claim is a property of the tracker and of wall-clock time, not of the tree: a spec asserting it would go red for a contributor who never touched an issue, which is the metrics-freshness rejection in [`docs/spec/trend-layer.md`](spec/trend-layer.md) §4 — _a stranger paying for your dead pipe is not a gate; it is a tax_. Reading it in CI needs the network anyway, and **G21 forbids that for the whole suite**. **The mechanism is the assignee plus a one-hour window, and both halves were chosen knowing the assignee is not a lock** — every session here authenticates as the same account, so a ticket was once claimed twice five seconds apart, and no check on the tracker could have told those two apart. It was kept because it is the only signal that renders in GitHub's own UI and that the frontier query already reads; a claim _comment_ or a `claimed` label buy filterability and add a second thing to remove on abandonment, which is the state nobody cleans up. The window is the reading half and needs no cleanup: an assignment older than an hour stops being presumed live on its own. So this is an advisory recorded where a person will see it, not a lock — and the real protection remains naming the issue when a session is launched.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ## What building these gates taught
 
@@ -1685,32 +1686,32 @@ writing the things above, which is the part most likely to go wrong again.
 
 - **2026-07-31** — The gate's pixel probe waits two `requestAnimationFrame`s before `readPixels`. Without it the drawing buffer has already been cleared, and the gate reports a blank shelf that is in fact rendering correctly — it did exactly that once.
 
-- **2026-08-01** — **G14 had a false negative, found by the next command added.** It searched CLAUDE.md's Commands section for `\bname\b`, so a new `covers` command passed as documented because `status`'s description reads "covers still missing". Now anchored to the start of a line, where the block actually puts a command name. A gate that matches prose matches anything — and this one was written *in* the phase about documented claims quietly ceasing to be true.
+- **2026-08-01** — **G14 had a false negative, found by the next command added.** It searched CLAUDE.md's Commands section for `\bname\b`, so a new `covers` command passed as documented because `status`'s description reads "covers still missing". Now anchored to the start of a line, where the block actually puts a command name. A gate that matches prose matches anything — and this one was written _in_ the phase about documented claims quietly ceasing to be true.
 
 - **2026-08-01** — **G1 caught both halves of this change without being asked**, which is what the reverse-assert is for: `scripts/worktree.ts` arrived importing `fs` with no allowlist entry, and `scripts/dev-watch.ts` stopped importing it, making its standing exception spent. One line added, one removed. A list that only grew would have kept the second.
 
-- **2026-08-01** — **G17's first version was strongest where it never ran and inert where it mattered.** It read whichever branch the suite happened to be on and returned early when that was `main` — so CI, which runs on `pull_request` and is therefore never on `main`, exercised only the refusal, while the owner, who mostly is on `main`, ran a gate that quietly asserted nothing. A silent `return` that reads as coverage is the vacuous-green trap `expectFound` exists for, written into a gate in the phase about exactly that. Fixed with `GIT_DIR`, which points the child's git at a scratch repository on a known branch: the script is real, the guard is real, git really resolves the branch, and the only thing controlled is *which checkout is being asked about*. One test omits the redirection on purpose, so something still proves the guard is wired to the real repository. Two mutations rather than one, because a positive check cannot detect a missing guard: deleting the guard fails four of seven, inverting it fails six — including "lets main through", which is what makes that direction non-vacuous.
+- **2026-08-01** — **G17's first version was strongest where it never ran and inert where it mattered.** It read whichever branch the suite happened to be on and returned early when that was `main` — so CI, which runs on `pull_request` and is therefore never on `main`, exercised only the refusal, while the owner, who mostly is on `main`, ran a gate that quietly asserted nothing. A silent `return` that reads as coverage is the vacuous-green trap `expectFound` exists for, written into a gate in the phase about exactly that. Fixed with `GIT_DIR`, which points the child's git at a scratch repository on a known branch: the script is real, the guard is real, git really resolves the branch, and the only thing controlled is _which checkout is being asked about_. One test omits the redirection on purpose, so something still proves the guard is wired to the real repository. Two mutations rather than one, because a positive check cannot detect a missing guard: deleting the guard fails four of seven, inverting it fails six — including "lets main through", which is what makes that direction non-vacuous.
 
-- **2026-08-01** — **The `.env` probe file is named per process, because the test writes into the *main* checkout.** That is the point of the fallback and it makes the file a shared resource the moment two worktrees run `pnpm test` at once: one suite's `afterEach` deletes the file the other is mid-way through reading, and it presents as a flaky assertion rather than as a collision. Exactly the render gate's fixed-port defect one layer down, and worth stating twice because the first instance was found by reasoning and this one by being asked the same question again.
+- **2026-08-01** — **The `.env` probe file is named per process, because the test writes into the _main_ checkout.** That is the point of the fallback and it makes the file a shared resource the moment two worktrees run `pnpm test` at once: one suite's `afterEach` deletes the file the other is mid-way through reading, and it presents as a flaky assertion rather than as a collision. Exactly the render gate's fixed-port defect one layer down, and worth stating twice because the first instance was found by reasoning and this one by being asked the same question again.
 
 - **2026-08-01** — **README's status line was wrong for months and nothing could go red.** It said "Phase 0 (scaffold). The shelf renders, and it is empty" while all five phases were tagged, the tool ran against a real vault and the site was deployed — the same defect class G14 gates one file over, and the first thing a visitor would have read. `docs/progress.md`'s "Current state" table was stale the same way, saying the last green gate was G15 and that the mobile crash was unfixed, fifty lines above a narrative recording it closed; that one is worse, because CLAUDE.md sends every reader there first. **G14 covers CLAUDE.md's command lists, not README's**, and README's table had drifted to missing four scripts and five CLI commands. Filled in and pointed at the gated list rather than gated itself — a second gated copy of the same lists is a thing to keep in sync, and the owner should decide whether that trade is worth it.
 
-- **2026-08-01** — **The README fix introduced the defect the README fix was about, and it was caught in review.** The new status section claimed "269 tests across 34 files" — a hardcoded count, in the one file with no gate, inside the commit whose other half is about documented claims quietly ceasing to be true. The next test anyone adds makes it false and nothing goes red. Identical in shape to the "It said 'four' for a while after there were five" note already sitting in `gates.md`. Removed rather than gated: pointing at the scoreboard says the same thing and cannot rot. Worth logging because the mistake was made *while writing about the mistake*, which is the strongest argument in this repo for why review is not optional and why numbers belong in gate output rather than in prose.
+- **2026-08-01** — **The README fix introduced the defect the README fix was about, and it was caught in review.** The new status section claimed "269 tests across 34 files" — a hardcoded count, in the one file with no gate, inside the commit whose other half is about documented claims quietly ceasing to be true. The next test anyone adds makes it false and nothing goes red. Identical in shape to the "It said 'four' for a while after there were five" note already sitting in `gates.md`. Removed rather than gated: pointing at the scoreboard says the same thing and cannot rot. Worth logging because the mistake was made _while writing about the mistake_, which is the strongest argument in this repo for why review is not optional and why numbers belong in gate output rather than in prose.
 
-- **2026-08-06** — **Twenty-five gates, and not one of them asked whether the thing worked.** Every row above checks a *contract*: which frontmatter keys exist, what the public build ships, that the packer and the placer agree, that no test touches the network. Issue #63 was none of those. The metadata lookup refused five books in the real vault as "not the same book" while Google was holding three of them, and the whole scoreboard stayed green, because **recall is not a contract and nothing was watching it**. The gap is a category, not an oversight: contracts are cheap to gate because both sides are in the repo, and recall is not, because the right answer lives at a provider. That is exactly why it went unwatched for so long, and it is not a reason to leave it unwatched. G26 is the first row here whose expected answers — 255, 368, 262 — are facts about the world rather than about this code.
+- **2026-08-06** — **Twenty-five gates, and not one of them asked whether the thing worked.** Every row above checks a _contract_: which frontmatter keys exist, what the public build ships, that the packer and the placer agree, that no test touches the network. Issue #63 was none of those. The metadata lookup refused five books in the real vault as "not the same book" while Google was holding three of them, and the whole scoreboard stayed green, because **recall is not a contract and nothing was watching it**. The gap is a category, not an oversight: contracts are cheap to gate because both sides are in the repo, and recall is not, because the right answer lives at a provider. That is exactly why it went unwatched for so long, and it is not a reason to leave it unwatched. G26 is the first row here whose expected answers — 255, 368, 262 — are facts about the world rather than about this code.
 
-- **2026-08-06** — **The corpus pins the refusals as hard as the finds, and that is not symmetry for its own sake.** The bug immediately before this one went the other way: a matcher accepting *Emotional Intelligence 2.0* for *The New Emotional Intelligence*, recorded in #62 with the instruction *"do not loosen it"*. A recall gate that only asserted positives would be passed by a matcher that says yes to everything — so the cheapest way to make G26 green would have been to reintroduce the defect it sits next to. Two of the five corpus entries exist to make that route red.
+- **2026-08-06** — **The corpus pins the refusals as hard as the finds, and that is not symmetry for its own sake.** The bug immediately before this one went the other way: a matcher accepting _Emotional Intelligence 2.0_ for _The New Emotional Intelligence_, recorded in #62 with the instruction _"do not loosen it"_. A recall gate that only asserted positives would be passed by a matcher that says yes to everything — so the cheapest way to make G26 green would have been to reintroduce the defect it sits next to. Two of the five corpus entries exist to make that route red.
 
-- **2026-08-06** — **The issue's own root-cause list was 3 for 4, and the trace is what separated them.** Two causes were real and provable from source. A third — a filter or a `undefined` return reordering candidates — was written up as needing investigation, and did not exist: Google simply ranks the wrong book first, and the one filter that fired removed a genuine study guide. The issue reached that hypothesis by probing the API with a *shorter query than the code sends*, which returns different rankings. Worth logging because the wrong lead was the most specific-sounding item in the report, and a session that trusted it would have gone hunting through `looksDerivative` for a bug that was never there.
+- **2026-08-06** — **The issue's own root-cause list was 3 for 4, and the trace is what separated them.** Two causes were real and provable from source. A third — a filter or a `undefined` return reordering candidates — was written up as needing investigation, and did not exist: Google simply ranks the wrong book first, and the one filter that fired removed a genuine study guide. The issue reached that hypothesis by probing the API with a _shorter query than the code sends_, which returns different rankings. Worth logging because the wrong lead was the most specific-sounding item in the report, and a session that trusted it would have gone hunting through `looksDerivative` for a bug that was never there.
 
-- **2026-08-06** — **One `break` did two jobs badly, and the shape of the code is what hid it.** `stacks enrich` printed `6 with gaps` and then `would fill 3, 2 left alone` — five books out of six — because `enrichBook` returned `complete` for two situations that are not the same thing (*nothing was missing*, and *something was missing and none of it could be filled*), and a `case 'complete': break;` that did neither looked exactly like one that did both. G27 asserts the claim rather than the branch: every book the header counted appears in one line and one total, and no book with a gap comes back "nothing was missing". **The fix is structural rather than careful** — `reportEntry` returns a book's line *and* its total together, so there is no longer a way to write one without the other, and the compiler refuses a missing kind. Only the fold back into `complete` needs a gate, and that is what the second test is. Observed red by making exactly that mutation: two of five fixture books turn "complete" and the assertion names why.
+- **2026-08-06** — **One `break` did two jobs badly, and the shape of the code is what hid it.** `stacks enrich` printed `6 with gaps` and then `would fill 3, 2 left alone` — five books out of six — because `enrichBook` returned `complete` for two situations that are not the same thing (_nothing was missing_, and _something was missing and none of it could be filled_), and a `case 'complete': break;` that did neither looked exactly like one that did both. G27 asserts the claim rather than the branch: every book the header counted appears in one line and one total, and no book with a gap comes back "nothing was missing". **The fix is structural rather than careful** — `reportEntry` returns a book's line _and_ its total together, so there is no longer a way to write one without the other, and the compiler refuses a missing kind. Only the fold back into `complete` needs a gate, and that is what the second test is. Observed red by making exactly that mutation: two of five fixture books turn "complete" and the assertion names why.
 
-- **2026-08-06** — **A report is an instrument, and this one had already misled a decision.** Issue #62 read *"7 with gaps, would fill 1, 5 left alone"* off the output above and concluded a seventh book had fallen through the lookup. Nothing had; the arithmetic was the defect. Worth logging beside G26 because the two rows were found in the same investigation and are opposite failures: G26 is a tool that returned the wrong answer, G27 is a tool that returned a *true* answer about a smaller set than it claimed. The second is the harder one to notice, because every line it prints is correct. `docs/progress.md`'s oldest rule about instruments — *a probe that silently did nothing would be worse than no probe* — applied to a summary line.
+- **2026-08-06** — **A report is an instrument, and this one had already misled a decision.** Issue #62 read _"7 with gaps, would fill 1, 5 left alone"_ off the output above and concluded a seventh book had fallen through the lookup. Nothing had; the arithmetic was the defect. Worth logging beside G26 because the two rows were found in the same investigation and are opposite failures: G26 is a tool that returned the wrong answer, G27 is a tool that returned a _true_ answer about a smaller set than it claimed. The second is the harder one to notice, because every line it prints is correct. `docs/progress.md`'s oldest rule about instruments — _a probe that silently did nothing would be worse than no probe_ — applied to a summary line.
 
 - **2026-08-02** — **G1 caught the new script before any of this was committed**, which is the second time the reverse-assert has earned its keep on a change nobody thought was about the adapter: `scripts/make-readme-image.ts` arrived importing `node:fs/promises` with no allowlist entry, exactly as `scripts/worktree.ts` did. One line added, with the justification that matters — its only input is `artifacts/shelf.png` and it never learns what a book is.
 
-- **2026-08-08** — **G26 was replaying refusals as answers, because its corpus had been captured without a Google API key.** `scripts/capture-lookup-recall.ts` read `process.env.GOOGLE_BOOKS_API_KEY` directly and never called `loadEnv()`, unlike the CLI and the deploy — so the invocation printed in its own header, with the key sitting in `.env` where every other command finds it, tripped the script's own *"the corpus will be wrong"* warning and recorded a corpus in which Google 429s. The gate then went green against it for two days. **A quota error is not a negative result**, and one had already been written down as fact: *From Zero to Profit with AI* was pinned `no-match` — "genuinely absent from both providers" — while Google held it all along at 172 pages. That is the confusion [ADR-0005](adr/0005-three-metadata-providers.md) exists to prevent, arriving through the fixture rather than through the code. The lesson is narrower than "load your env": **a gate whose fixtures are captured by a script is only as true as that script's environment, and nothing was checking it.** The warning existed and was printed to a terminal nobody was reading. Fixed in `0092de0`; the corrected expectation is the only one of five that moved, which is why it went unnoticed.
+- **2026-08-08** — **G26 was replaying refusals as answers, because its corpus had been captured without a Google API key.** `scripts/capture-lookup-recall.ts` read `process.env.GOOGLE_BOOKS_API_KEY` directly and never called `loadEnv()`, unlike the CLI and the deploy — so the invocation printed in its own header, with the key sitting in `.env` where every other command finds it, tripped the script's own _"the corpus will be wrong"_ warning and recorded a corpus in which Google 429s. The gate then went green against it for two days. **A quota error is not a negative result**, and one had already been written down as fact: _From Zero to Profit with AI_ was pinned `no-match` — "genuinely absent from both providers" — while Google held it all along at 172 pages. That is the confusion [ADR-0005](adr/0005-three-metadata-providers.md) exists to prevent, arriving through the fixture rather than through the code. The lesson is narrower than "load your env": **a gate whose fixtures are captured by a script is only as true as that script's environment, and nothing was checking it.** The warning existed and was printed to a terminal nobody was reading. Fixed in `0092de0`; the corrected expectation is the only one of five that moved, which is why it went unnoticed.
 
-- **2026-08-22** — **The ticket's proposal was right and its stated reason was false, and only a measurement told them apart.** [#152](https://github.com/mephistopheles4/stacks/issues/152) argued for deleting `--skip-gates` on the grounds that its *"only plausible use … is already served better by `--dry-run`, which runs all four gates."* ⚠️ **This repo's own log is the counter-example**: `docs/progress.md` records `pnpm deploy:site --dry-run --skip-gates` as how a planted red was observed against the real 41-book `dist/`, and `--dry-run` alone cannot serve that loop, because it *runs* the suite the loop exists to skip. The two flags composed. That evidence very nearly bought a narrowed flag, a doc paragraph and a gate to hold it — until the four gates were timed: **11.9s + 0.7s + 3.3s + 19.1s ≈ 35 seconds.** The niche was real, and it was worth 35 seconds rather than a permanent override on the publish path. **The lesson is not "the ticket was wrong"** — the ticket's conclusion survived. It is that a premise phrased as *already served better* is a claim about cost, and nobody had measured the cost in the 21 days the flag existed, including the three passes that verified the flag itself. ⚠️ **This entry said *eight months* until it was checked** — an unmeasured duration written five times across an ADR, a gate register, a spine, a script comment and this bullet, in the same commit whose lesson is that unmeasured costs get asserted. Caught in review before it was pushed; logged rather than quietly fixed, because the number was invented in the act of complaining that nobody measures.
+- **2026-08-22** — **The ticket's proposal was right and its stated reason was false, and only a measurement told them apart.** [#152](https://github.com/mephistopheles4/stacks/issues/152) argued for deleting `--skip-gates` on the grounds that its _"only plausible use … is already served better by `--dry-run`, which runs all four gates."_ ⚠️ **This repo's own log is the counter-example**: `docs/progress.md` records `pnpm deploy:site --dry-run --skip-gates` as how a planted red was observed against the real 41-book `dist/`, and `--dry-run` alone cannot serve that loop, because it _runs_ the suite the loop exists to skip. The two flags composed. That evidence very nearly bought a narrowed flag, a doc paragraph and a gate to hold it — until the four gates were timed: **11.9s + 0.7s + 3.3s + 19.1s ≈ 35 seconds.** The niche was real, and it was worth 35 seconds rather than a permanent override on the publish path. **The lesson is not "the ticket was wrong"** — the ticket's conclusion survived. It is that a premise phrased as _already served better_ is a claim about cost, and nobody had measured the cost in the 21 days the flag existed, including the three passes that verified the flag itself. ⚠️ **This entry said _eight months_ until it was checked** — an unmeasured duration written five times across an ADR, a gate register, a spine, a script comment and this bullet, in the same commit whose lesson is that unmeasured costs get asserted. Caught in review before it was pushed; logged rather than quietly fixed, because the number was invented in the act of complaining that nobody measures.
 
-- **2026-08-22** — **The pinning mechanism existed, was proven, and was aimed one flag to the left.** G17 (`deploy-branch`) has asserted since 2026-08-01 exactly which spellings override the branch guard — `--any-branch` yes, `--any` / `--branch` / `--anybranch` / `--any_branch` no — an unusually careful piece of work about a flag that refuses to *publish a branch*. The flag that skipped the **entire four-gate contract** and then published was covered by nothing, and `git grep` found it in two lines of one file. Worth logging because the gap was not a missing capability or a hard problem: it was a row scoped to the flag somebody happened to be thinking about. **G45 is that mechanism aimed at the roster instead of at one flag**, which is the class rather than the instance — the same lesson this file already logs from the other direction on 2026-08-19, *a review names an instance; the repair must cover the class.*
+- **2026-08-22** — **The pinning mechanism existed, was proven, and was aimed one flag to the left.** G17 (`deploy-branch`) has asserted since 2026-08-01 exactly which spellings override the branch guard — `--any-branch` yes, `--any` / `--branch` / `--anybranch` / `--any_branch` no — an unusually careful piece of work about a flag that refuses to _publish a branch_. The flag that skipped the **entire four-gate contract** and then published was covered by nothing, and `git grep` found it in two lines of one file. Worth logging because the gap was not a missing capability or a hard problem: it was a row scoped to the flag somebody happened to be thinking about. **G45 is that mechanism aimed at the roster instead of at one flag**, which is the class rather than the instance — the same lesson this file already logs from the other direction on 2026-08-19, _a review names an instance; the repair must cover the class._

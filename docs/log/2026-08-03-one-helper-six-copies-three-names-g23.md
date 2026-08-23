@@ -13,13 +13,13 @@ an existing helper, searched the one name they had in mind, found nothing, and
 wrote it. Grepping `maybe` returns four of six, which reads like a small local
 habit rather than a repo-wide rule with two aliases — and the architecture
 review that produced six duplication candidates from this codebase missed this
-one for exactly that reason. So G23 matches on what the body *returns*, never on
+one for exactly that reason. So G23 matches on what the body _returns_, never on
 what the function is called; see [`gates.md`](../gates.md), which also carries
 the two mutations that came back green before the gate was right.
 
 **The issue's stated hazard turned out to have no live instance**, and that is
 worth recording rather than quietly dropping. `FrontmatterChanges` really does
-invert the rule — near `updateBook`, `undefined` *removes* a key from a note in
+invert the rule — near `updateBook`, `undefined` _removes_ a key from a note in
 the owner's vault — but no code is positioned to trip over it: all three
 `updateBook` callers build changes from literals or guarded assignment, and none
 of the seventeen inline conditional spreads is anywhere near one. `enrich.ts` cannot
