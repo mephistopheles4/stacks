@@ -422,17 +422,19 @@ function digest(value: unknown): string {
  * because it makes *which stamp does this cap answer to* a question every
  * reader of the floors file has to hold.
  *
- * ⚠️ **Adoption changes this hash once, and the cost is two different numbers.**
- * Of the 43 records on the `metrics` branch at adoption, **12 carried the
- * previous stamp** and the other 31 predate it. So `countedIn`'s
- * counted-comparison set goes 12 → 0. **The calibration window goes 1 → 0**,
- * which is the smaller and more useful figure: `capCalibration` walks
- * `streakOf`, which starts from `nightliesIn`, and only **one** of those 12 is
- * a nightly — 11 are `push`. Nothing is armed and nothing refuses.
+ * ⚠️ **Adoption changes this hash once, and exactly one thing moves: the
+ * calibration window, 1 → 0.** `capCalibration` is the only hash-filtered path
+ * — `streakOf` with `row.fixtureHash === fixtureHash` — and of the 12 records
+ * carrying the previous stamp only **one** is a nightly, the other 11 being
+ * `push`, which `nightliesIn` drops. Nothing is armed.
  *
- * ⚠️ **Any count here is as-of, because the branch is live.** It read 41 and 10
- * an hour before it read 43 and 12; two merges wrote two merge records in
- * between. Re-measure rather than trusting the figure in this comment.
+ * ⚠️ **`countedIn` is not hash-filtered and does not move here.** It reads
+ * `row.ok` and `CAPPED_SERIES` samples, never `fixtureHash`. Only a change to
+ * the roster moves it, which is a different event on a different ticket. Do not
+ * record the two as a pair.
+ *
+ * ⚠️ **Any count here is as-of, because the branch is live** — 10 stamped at 41
+ * records, 12 at 43. Re-measure rather than trusting the figure in this comment.
  *
  * ⚠️ **Severity is absent from both option sets and that is the counters'
  * judgement, not an omission here.** Neither rule's severity can move a count —

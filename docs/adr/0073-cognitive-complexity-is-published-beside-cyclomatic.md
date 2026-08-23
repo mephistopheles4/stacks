@@ -180,27 +180,42 @@ counting rule this repository runs*, and after this ticket that rule is two
 rules — a second hash would make *which stamp does this cap answer to* a
 question every reader of the floors file has to hold.
 
-⚠️ **Adoption changed the stamp once, and the cost is two numbers, not one.**
-Of the 43 records on the `metrics` branch at adoption, **12 carried the previous
-stamp** and 31 predate it — `fixture_hash` is younger than the record. So
-`countedIn`'s counted-comparison set goes **12 → 0**.
+⚠️ **Adoption changed the stamp once, and exactly one thing moves.** The
+calibration window goes **1 → 0**.
 
-**The calibration window goes 1 → 0**, and that is the figure that actually
-describes the cost. `capCalibration` walks `streakOf`, which starts from
-`nightliesIn` — and of those 12 stamped records **exactly one is a nightly**;
-the other 11 are `push`. Run against the real store before adoption it read
-`runs: 1, candidates: 5, days: 0, full: false`. So the window loses one run, not
-ten. Every entry in `stryker.floors.json` is `unarmed` and nothing refuses.
+`capCalibration` is the **only** hash-filtered path: it walks `streakOf` with
+`(row) => row.fixtureHash === fixtureHash`. Of the 12 records carrying the
+previous stamp, **exactly one is a nightly** — the other 11 are `push`, and
+`streakOf` starts from `nightliesIn`. Run against the real store before
+adoption it read `runs: 1, candidates: 5, days: 0, full: false`. So the window
+loses one run. Every entry in `stryker.floors.json` is `unarmed`.
 
-⚠️ **A related fact worth having, found while measuring this**: only **5 of the
-43** records on the branch are non-`push` at all, so a twenty-*nightly* window
-fills far more slowly than "twenty records" suggests. Measured and written up by
-the [#258](https://github.com/mephistopheles4/stacks/issues/258) session.
+⚠️ **`countedIn` does *not* move, and an earlier draft of this record said it
+did.** `floors.ts` filters it on `row.ok` and on `CAPPED_SERIES` samples; it
+never reads `fixtureHash`. So a hash change cannot touch it, and the only thing
+that can is a change to the roster itself — which is
+[#258](https://github.com/mephistopheles4/stacks/issues/258)'s ticket, not this
+one. **The two are separate events and must not be recorded as a pair:** *this
+merge moves the hash* → window 1 → 0, `countedIn` unchanged; *#258 adds roster
+names* → `countedIn` drops, window unchanged.
 
-⚠️ **Every count here is as-of, because the branch is live.** This record first
-said 41 and 10; an hour later it was 43 and 12, two merges having written two
-merge records in between. The first figure was accurate when taken and wrong
-when read. **Re-measure rather than citing these.**
+⚠️ **A transient deploy refusal exists between this merge and the next CI
+record, and it has no override.** `floorRefusals` computes `countedElsewhere`
+as `counted !== floors.fixtureHash` **whether or not a cap is armed**. In the
+gap, `stryker.floors.json` carries the new hash while the newest counted record
+in the local store still carries the old one, so `pnpm deploy:site` refuses with
+*"these caps were derived under a different counting rule"*. It heals on its
+own: the `push: main` run for this merge writes a record under the new hash
+within minutes, and `pnpm trend:sync` brings it local. **A deploy attempted
+before that sync will refuse and there is no flag to clear it** — `--check-only`
+reports instead, as it does for staleness. Same shape as the freshness gap
+below, and worth knowing rather than rediscovering at a publish.
+
+⚠️ **Every count here is as-of, because the branch is live.** At 41 records it
+was 10 stamped; at 43 it is 12, the two new ones being the #259 and #260 merge
+records, both carrying the old hash. Also measured: only **5 of the 43** are
+non-`push` at all, so a twenty-*nightly* window fills far more slowly than
+"twenty records" suggests. **Re-measure rather than citing any of these.**
 
 `stryker.floors.json`'s `fixtureHash` is updated in the same commit, which is
 not optional — `floorRefusals` compares a run's stamp against the floors file's
