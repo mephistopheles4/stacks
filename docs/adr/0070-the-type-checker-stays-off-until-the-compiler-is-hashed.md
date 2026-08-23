@@ -16,7 +16,8 @@ of silently changing one.
 
 Nothing in this decision changes `stryker.config.mjs`'s exported object, so
 **the config hash does not move and no calibration window restarts.** The only
-edits are a comment and this file.
+decision-bearing edits are a comment in that file and this one; `docs/adr/README.md`
+also gains the index entry every record here carries.
 
 ## Context
 
@@ -35,7 +36,7 @@ configuration one.
 **What a `CompileError` actually does to the number.** The score is Stryker's
 total variant, and `scripts/lib/mutation-score.ts` states the arithmetic:
 
-```
+```text
 (killed + timeout) / (killed + timeout + survived + noCoverage)
 ```
 
