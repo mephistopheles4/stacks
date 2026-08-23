@@ -98,18 +98,22 @@ This is the sharper form of G7's replacement warrant.
 
 ### 4. The supply-chain specimen moves; it does not close
 
-[`docs/spec/supply-chain.md`](../spec/supply-chain.md) §292 holds
-*"`@astrojs/check` cannot run under TypeScript 7"* up as the one claim whose
-truth-maker is outside the repository, on the ground that **the package is not a
-dependency at any version, so no run here can contradict the sentence**.
+[`docs/spec/supply-chain.md`](../spec/supply-chain.md) §5, under *"`SECURITY.md`'s
+unverifiable clause is extended, not tiered"*, holds G7's warrant —
+*"`@astrojs/check` cannot run under TypeScript 7"* — up as the second claim whose
+truth-maker is outside the repository, on the ground that the package **"is not a
+dependency at any version, so no run here can contradict it and none ever
+could."**
 
 ⚠️ **Installing it does not settle that.** The repository is pinned to
 `typescript@6.0.3` by [ADR-0066](../adr/0066-typescript-6-until-7-1.md), so a run
 here tests the tool against TS 6 and says nothing about TS 7. The specimen
 survives, with a narrower reason: *unfalsifiable without unpinning the compiler*
-rather than *unfalsifiable because the tool is absent*. **That first clause of
-the paragraph goes false the moment the landing commit adds the dependency, and
-it must be edited in that commit.**
+rather than *unfalsifiable because the tool is absent*. **But "not a dependency
+at any version" and "none ever could" both go flatly false the moment the
+landing commit installs it**, and they must be edited in that commit — the
+second of them is the load-bearing half, because it is a claim about every
+possible future state of this repository and one `pnpm add` disproves it.
 
 What *is* new evidence, and is obtainable offline: `@astrojs/check@0.9.10`
 declares `peerDependencies: { typescript: '^5.0.0 || ^6.0.0' }`. The package
@@ -183,8 +187,11 @@ new merged bullet is a red.
 ### The stale-claim sweep — the class, not the instance
 
 `git grep -n -iE "astro check|@astrojs/check|not typechecked|cannot run under"`
-finds the population. **Twelve addresses carry a claim this commit falsifies**,
-and every one must move in that commit:
+finds the population — **run it over the whole tree**, including
+`docs/gate-register.md`, which the first sweep here excluded as noise and which
+turned out to hold six of the addresses. Twelve are listed below and six more
+are in the register, called out beneath the table. Every one must move in the
+landing commit:
 
 | Address | What it says |
 | --- | --- |
@@ -204,6 +211,26 @@ and every one must move in that commit:
 ⚠️ **`docs/adr/0003-site-import-type-only.md:11` is on the list and is handled
 differently.** It is a dated decision record, and this repo's rule is that an ADR
 carries its original reasoning verbatim. Mark it superseded; do not rewrite it.
+
+⚠️ **`docs/gate-register.md` carries six more addresses and takes the same
+treatment**, for the same reason: it records dated findings, and its own idiom
+for a claim that has moved is a *"⚠️ corrected …"* annotation in place. Line 900
+is the decay verdict table; 1869 and 1954 quote the warrant; 1969 is the
+measurement *"`@astrojs/check` is not a dependency of this repo at any version"*,
+which the landing commit falsifies outright. Line 1973's
+`git log --all -S '@astrojs/check'` finding stays true — it is a claim about the
+history as of 2026-08-15 — but it stops being an argument, and the entry should
+say which of the two it is. **The decay disposition on that entry is `gated`
+against a remedy that was never built; landing this gate closes it the other
+way, and the entry should say so rather than leaving a `gated` line pointing at
+nothing.**
+
+⚠️ **Line 1957 is stale already and not because of this ticket.** It attributes
+*"`.astro` files are NOT typechecked (`astro check` cannot run under TypeScript 7
+**yet**)"* to `CLAUDE.md`; the constitution moved to `AGENTS.md` on 2026-08-19
+and that is where the sentence lives now. Fix the attribution in the same pass —
+it is one word, and a register that misnames where a quoted claim lives is the
+failure it exists to catalogue.
 
 ⚠️ **`fixtures/README.md:136` and `docs/adr/0067:102` match the grep and are
 not in this class** — both are about the complexity fixture being untypechecked,
