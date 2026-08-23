@@ -373,7 +373,9 @@
       ],
       "notes": [
         "Measured: Prettier leaves the unparseable-YAML fixture structurally intact. It cannot parse the broken frontmatter, so it passes it through and touches only the body prose.",
-        "Measured: the Markdown changes are emphasis markers, a blank line after every heading, and table repadding. Prose is not rewrapped, because proseWrap defaults to preserve."
+        "Measured: the Markdown changes are emphasis markers, a blank line after every heading, and table repadding. Prose is not rewrapped, because proseWrap defaults to preserve.",
+        "⚠️ **markdownlint is the other tool on this ground, and #235 adopted it.** Measured with markdownlint 0.41.1 against `docs/gates.md` in both forms — MD060 at its default `style: any` reports **0** violations for either, so it permits Prettier's tables and holds no spacing stable. At `style: compact` Prettier's output scores **318**, a straight conflict. At `style: aligned` the tree as it stands today scores **384**, so that style is not a free swap.",
+        "⚠️ **Check `emphasis-style` and `strong-style` against #235's roster before taking this option.** markdownlint ships `style/prettier.json`, whose comment reads *\"Disables rules that may conflict with Prettier\"*; it disables 23 rules, and those two are on the list because Prettier rewrites `*word*` to `_word_`. MD060 is **not** on the list, which independently confirms the measurement above."
       ]
     },
     "md-nodocs": {
@@ -405,7 +407,9 @@
       "notes": [
         "Measured green: 100 files changed, +3197 / −3132, all 1055 tests passed, plus `pnpm build` and `pnpm gate:public`.",
         "⚠️ The honest cost: 147 Markdown files stay outside the check, and this repository's documentation is load-bearing. The formatter then covers TypeScript and JSON only.",
-        "The Markdown half is not lost. It is markdownlint's ticket, #235, which is live in another session."
+        "The Markdown half is not lost. It is markdownlint's ticket, #235, now closed and adopted.",
+        "**This option is the one that cannot fight markdownlint**, because Prettier never opens a Markdown file. Any MD060 style is then free, including `compact`, which is the only style that keeps G41's and G31's input at one space.",
+        "⚠️ **It does not follow that MD060 protects those two gates today.** #235's resolution claims it is *\"the only thing in the repo that holds their input stable\"*, and that holds only at `style: compact`. Measured: the default `any` accepts both spacings, and #235's resolution names no style. Under this option the exposure is latent rather than live — nothing here repads a table — but it is the reason `gr-first` is worth taking even alongside `md-none`."
       ]
     },
     "md-later": {
