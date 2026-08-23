@@ -52,6 +52,7 @@ import {
   TREE_POPULATION,
   declarationCorrespondence,
   duplicationInputs,
+  ignoredMismatches,
   readDeclarations,
   sweepIgnoredLines,
   treePopulationOf,
@@ -100,24 +101,24 @@ describe('G47 — the counters are asserted against something', () => {
 });
 
 describe('G47 — every recorded counter is what the tree actually holds', () => {
-  it('agrees with the sweep, in both directions', () => {
+  it('agrees with the sweep, and reports a swept population it fails to name', () => {
     const swept = new Map(
       [...populations].map(([name, population]) => [name, sweepIgnoredLines(population)]),
     );
 
-    const mismatched = [...swept]
-      .map(([population, counted]) => ({
-        population,
-        counted,
-        recorded: declared.populations.get(population)?.ignoredLines,
-      }))
-      .filter((one) => one.recorded !== undefined && one.recorded !== one.counted);
+    // ⚠️ **`ignoredMismatches`, never a comparison spelled again here.** This
+    // file's header says the judgement is planted in `duplication.test.ts`, and
+    // that is only true if this row runs *that* judgement — a copy would leave
+    // the planted one green while this one broke, and this one green while the
+    // planted one broke. It is also the drift this whole commit exists to
+    // count. G43 calls its equivalent for the same reason.
+    const mismatched = ignoredMismatches(swept, declared);
 
     expect(
       mismatched.map(
         (one) =>
-          `${one.population}: the tree holds ${String(one.counted)} suppressed line(s), ` +
-          `jscpd.floors.json records ${String(one.recorded ?? 0)}`,
+          `${one.population}: the tree holds ${String(one.swept)} suppressed line(s), ` +
+          `jscpd.floors.json records ${String(one.recorded)}`,
       ),
       'jscpd.floors.json no longer describes the tree. A suppression block takes its lines ' +
         'out of the clone count and out of the denominator together, so the percentage does ' +

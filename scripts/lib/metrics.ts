@@ -31,7 +31,7 @@
  */
 
 import type { Counts } from './complexity.ts';
-import type { DuplicationCounts } from './duplication.ts';
+import type { AllCounts, DuplicationCounts } from './duplication.ts';
 import type { EdgeAnswer } from './edge-probe.ts';
 
 /**
@@ -274,9 +274,10 @@ export interface DuplicationFacts {
  * every duplication name into `failed`, no families at all, and `run_ok 0`
  * falling out of the mechanism a broken producing step already used.
  */
-export function duplicationFactsOf(
-  counted: { scopes: ReadonlyMap<string, DuplicationCounts | null>; tree: DuplicationCounts | null } | undefined,
-): { duplication?: DuplicationFacts; failed: readonly TrendName[] } {
+export function duplicationFactsOf(counted: AllCounts | undefined): {
+  duplication?: DuplicationFacts;
+  failed: readonly TrendName[];
+} {
   if (counted === undefined || counted.tree === null) return { failed: DUPLICATION_SERIES };
 
   const scopes: ScopeDuplication[] = [];
@@ -333,6 +334,23 @@ export interface RunFacts {
    * declines to count it rather than guessing.
    */
   fixtureHash?: string;
+  /**
+   * The counting rule this run's duplication counts were produced under.
+   *
+   * ⚠️ **`fixtureHash`'s twin for the second tool, and it rides here for the
+   * same reason: a count never appears without the rule that produced it.**
+   * [#232](https://github.com/mephistopheles4/stacks/issues/232) measured 12
+   * clones at 50/5 and 82 at 20/3 over the identical tree, so a record carrying
+   * counts and no threshold stamp cannot be compared to any other record —
+   * including by the caps
+   * [#258](https://github.com/mephistopheles4/stacks/issues/258) will add, whose
+   * calibration window is **the records this commit starts writing**. Omitting
+   * it now would mean twenty records that no cap can be placed against.
+   *
+   * **Optional, for `configHash`'s reason exactly.** A row written before this
+   * existed is not a row with a wrong hash.
+   */
+  duplicationHash?: string;
   runUrl: string;
   /**
    * Which pull requests merged between the previous record and this one:
@@ -601,6 +619,11 @@ export function renderMetrics(facts: RunFacts): string {
             // never appears without the rule that produced it, which is the
             // same layout rule the score already keeps.
             ...(facts.fixtureHash === undefined ? {} : { fixture_hash: facts.fixtureHash }),
+            // Beside the other two, and never on a series of its own, for the
+            // reason `fixture_hash` gives one line up.
+            ...(facts.duplicationHash === undefined
+              ? {}
+              : { duplication_hash: facts.duplicationHash }),
           },
           value: 1,
         },

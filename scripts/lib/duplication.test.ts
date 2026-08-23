@@ -217,22 +217,38 @@ describe('ignoredLinesIn — what a suppression withholds', () => {
 });
 
 describe('repoRelative — a report path back to this repo’s spelling', () => {
-  const root = join('C:', 'repo');
+  /**
+   * ⚠️ **Both spellings are asserted on both platforms, deliberately.** The
+   * first draft built these paths with `join`, so each ran only in its host's
+   * dialect — green on Windows, three failures on both CI runners. This module
+   * reads paths a *different program* wrote, so the rule has to be one rule; a
+   * spec that asks the host what a path looks like cannot show that it is.
+   */
+  const windows = 'C:/repo';
+  const posix = '/home/runner/work/stacks';
 
-  it('relativises an absolute path', () => {
-    expect(repoRelative(join(root, 'packages', 'core', 'src', 'library.ts'), root)).toBe(
+  it('relativises an absolute path in either dialect', () => {
+    expect(repoRelative('C:\\repo\\packages\\core\\src\\library.ts', windows)).toBe(
+      'packages/core/src/library.ts',
+    );
+    expect(repoRelative(`${posix}/packages/core/src/library.ts`, posix)).toBe(
       'packages/core/src/library.ts',
     );
   });
 
-  it('sees through Windows’ extended-length prefix, which `relative` does not', () => {
-    expect(repoRelative(`\\\\?\\${join(root, 'scripts', 'deploy.ts')}`, root)).toBe(
-      'scripts/deploy.ts',
-    );
+  it('sees through Windows’ extended-length prefix', () => {
+    expect(repoRelative('\\\\?\\C:\\repo\\scripts\\deploy.ts', windows)).toBe('scripts/deploy.ts');
   });
 
-  it('leaves an already-relative path alone but normalises its separators', () => {
-    expect(repoRelative('scripts\\lib\\floors.ts', root)).toBe('scripts/lib/floors.ts');
+  it('normalises separators on a path that is already relative', () => {
+    expect(repoRelative('scripts\\lib\\floors.ts', windows)).toBe('scripts/lib/floors.ts');
+    expect(repoRelative('scripts/lib/floors.ts', posix)).toBe('scripts/lib/floors.ts');
+  });
+
+  it('returns a path outside the root whole, rather than as a chain of `..`', () => {
+    // A `..` chain matches no scope glob, so it would attribute to nobody with
+    // no sign that anything was wrong. Whole, it is at least recognisable.
+    expect(repoRelative('D:\\elsewhere\\x.ts', windows)).toBe('D:/elsewhere/x.ts');
   });
 });
 

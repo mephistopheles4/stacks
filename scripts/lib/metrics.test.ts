@@ -281,6 +281,25 @@ describe('the two tables that spell the complexity series', () => {
   });
 });
 
+describe('the duplication counting rule rides on run_info', () => {
+  it('appears beside the other two stamps, never as a series of its own', () => {
+    const document = renderMetrics({
+      ...BASE,
+      expected: [],
+      duplicationHash: 'sha256:abc123',
+    });
+
+    expect(document).toContain('duplication_hash="sha256:abc123"');
+    expect(document).not.toContain('stacks_trend_duplication_hash');
+  });
+
+  it('is absent rather than empty when the counter could not name a rule', () => {
+    // `configHash`'s rule: a row written before the stamp existed is not a row
+    // with a wrong hash, and an empty label would read as one.
+    expect(renderMetrics({ ...BASE, expected: [] })).not.toContain('duplication_hash');
+  });
+});
+
 describe('duplicationFactsOf — all eight, or none of them', () => {
   const counts = (
     clones: number,

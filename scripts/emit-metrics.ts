@@ -34,7 +34,7 @@ import {
 } from './lib/metrics-record.ts';
 import { UNKNOWN_WINDOW, subjectsBetween, windowFrom } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
-import { configHashOf, fixtureHashOf } from './lib/floors.ts';
+import { configHashOf, duplicationHashOf, fixtureHashOf } from './lib/floors.ts';
 // The config Stryker actually runs, imported rather than described. The hash
 // below is a fact about the configuration this run loaded, and a flag carrying
 // it would let the stamp disagree with what was actually scored.
@@ -55,6 +55,7 @@ import {
 import {
   TREE_POPULATION,
   countAllPopulations,
+  duplicationInputs,
   permalinkFor,
   sweepIgnoreBlocks,
   treePopulationOf,
@@ -306,8 +307,8 @@ async function duplicationFacts(): Promise<ReturnType<typeof duplicationFactsOf>
     const files = sourceFiles();
     const counted = countAllPopulations(readScopes(), (scope) => populationOf(scope, files));
 
-    for (const [scope, counts] of counted.scopes) console.log(describe(scope, counts));
-    console.log(describe(TREE_POPULATION, counted.tree));
+    for (const [scope, counts] of counted.scopes) console.log(describeCounts(scope, counts));
+    console.log(describeCounts(TREE_POPULATION, counted.tree));
 
     // Generated here, printed, and stored nowhere — see `ignoreBlocksIn`. A
     // link pinned into the record stays valid while it stops describing a block
@@ -326,7 +327,7 @@ async function duplicationFacts(): Promise<ReturnType<typeof duplicationFactsOf>
 }
 
 /** One population's line in the run log. */
-function describe(population: string, counts: DuplicationCounts | null): string {
+function describeCounts(population: string, counts: DuplicationCounts | null): string {
   return counts === null
     ? `duplication ${population}: no counts`
     : `duplication ${population}: ${String(counts.clones)} clones, ${String(
@@ -361,12 +362,31 @@ const complexity = await complexityFacts();
 const duplication = await duplicationFacts();
 const fixtureHash = await countingStamp();
 
+/**
+ * The duplication counting rule this run counted under, or nothing.
+ *
+ * `countingStamp`'s twin, and absent on the same terms: a run whose counter
+ * could not start has no rule to declare, and an absent stamp reads as *a
+ * record from before the stamp existed* rather than as a wrong one.
+ */
+function duplicationStamp(): string | undefined {
+  try {
+    return duplicationHashOf(duplicationInputs());
+  } catch (error) {
+    console.error(`could not stamp the duplication rule: ${String(error)}`);
+    return undefined;
+  }
+}
+
+const duplicationHash = duplicationStamp();
+
 const facts: RunFacts = {
   timestamp,
   commit,
   event: flags.get('event') ?? 'unknown',
   configHash: configHashOf(strykerConfig),
   ...(fixtureHash === undefined ? {} : { fixtureHash }),
+  ...(duplicationHash === undefined ? {} : { duplicationHash }),
   runUrl: flags.get('run-url') ?? 'unknown',
   prWindow: windowSincePreviousRun(),
   expected: expected(),

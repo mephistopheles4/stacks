@@ -35,7 +35,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
-import { isAbsolute, join, relative, sep } from 'node:path';
+import { join } from 'node:path';
 import { globToRegExp, type Scope } from './mutation-score.ts';
 import { REPO_ROOT } from './repo-root.ts';
 import { walkSource } from './walk.ts';
@@ -429,12 +429,24 @@ function duplicatedLinesOf(clone: ReportedClone): number {
  * attribution keyed on a coincidence.
  *
  * The `\\?\` prefix is Windows' extended-length form and carries no meaning
- * here; `relative` does not see through it, so it is removed first.
+ * here, so it is removed first.
+ *
+ * ⚠️ **Separator normalisation, then a prefix strip — never `isAbsolute` and
+ * `relative`, and CI is what said so.** Those two answer by the *host*
+ * platform: on Linux `isAbsolute('C:/repo/x.ts')` is false and
+ * `split(sep).join('/')` leaves a backslash untouched, so the first draft passed
+ * on Windows and failed three ways on both CI runners. The counter reads paths a
+ * different program wrote, which is exactly where a host-dependent rule has no
+ * business — normalising both sides to forward slashes gives one answer
+ * everywhere, and a path outside the root comes back whole rather than as a
+ * chain of `..` no scope glob would match.
  */
 export function repoRelative(reported: string, root: string = REPO_ROOT): string {
-  const cleaned = reported.replace(/^\\\\\?\\/, '');
-  const path = isAbsolute(cleaned) ? relative(root, cleaned) : cleaned;
-  return path.split(sep).join('/');
+  const normalise = (path: string): string => path.replace(/^\\\\\?\\/, '').replace(/\\/g, '/');
+
+  const cleaned = normalise(reported);
+  const base = normalise(root);
+  return cleaned.startsWith(`${base}/`) ? cleaned.slice(base.length + 1) : cleaned;
 }
 
 /**
@@ -492,8 +504,8 @@ export function attributeClones(
  * module graph rather than hardcoding `node_modules/jscpd/…` is what makes this
  * work under pnpm's virtual store, where the real directory is nested.
  */
-function jscpdEntry(root: string = REPO_ROOT): string {
-  return repoRequire(root).resolve('jscpd/run-jscpd.js');
+function jscpdEntry(): string {
+  return repoRequire(REPO_ROOT).resolve('jscpd/run-jscpd.js');
 }
 
 /**
