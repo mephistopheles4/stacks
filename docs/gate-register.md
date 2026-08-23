@@ -2020,7 +2020,7 @@ than by line, and given no total**: the decay block above cites `:4-5` and
 `:165`, which the same commit moved, and the sweep was counted twice before
 landing and was short both times. `git grep -n -iE "astro check|@astrojs/check|not typechecked|cannot run under"`
 is the artifact; a number here would be the third one to go stale. See
-[ADR-0075](adr/0075-astro-check-is-the-checker-for-astro-files.md)
+[ADR-0077](adr/0077-astro-check-is-the-checker-for-astro-files.md)
 and the `### G46 — \`astro-types\`` entry, whose own **Decay** verdict is this
 one's successor: the same shape of claim, this time asserted by a clause that
 reads the compiler pin.

@@ -15,7 +15,7 @@ below contradict a document in this tree, and one of them contradicts
 > ✅ **The block cleared the same evening, and the gate landed in this branch.**
 > [#259](https://github.com/mephistopheles4/stacks/pull/259) merged at
 > `bc59bf9`, and **G46** (`astro-types`) followed —
-> [ADR-0075](../adr/0075-astro-check-is-the-checker-for-astro-files.md).
+> [ADR-0077](../adr/0077-astro-check-is-the-checker-for-astro-files.md).
 > **Everything below is left as written**, because a terrain survey read after
 > the fact is worth more as a record of what was and was not known in advance
 > than as a tidy retrospective. Read the present tense as *"at `2f672b1`,
@@ -365,13 +365,35 @@ with nothing to catch it. This record moved from 0071 to **0075** on finding
 0075 was reserved, but because biasing upward is free where a duplicate is
 invisible.
 
-⚠️ **Then it collided again, and that is the sharpest evidence there is.**
-#253 moved off 0071 to avoid #251 at the same moment this record did, and **both
-landed on 0075** — a second duplicate created by the act of resolving the first,
-between two sessions that were each being careful and each talking to the other.
-It was caught by a message crossing in flight, not by anything in the
-repository. **The failure survives the participants noticing it, because there
-is nothing to check against.** (#253 moved again, to 0076.)
+⚠️ **Then it collided three more times, and the sequence is the finding rather
+than the count.** In order:
+
+1. **Four sessions write a `0071-*` file** — #251, #253, #255, #256, with #257
+   about to make five.
+2. **#253 and #257 both land on 0075** — each moving to avoid collision 1, at the
+   same moment, while messaging each other about that exact hazard. #253 moved on
+   to 0076.
+3. **#256 and #257 both move to file the issue about it.** #256 got there first
+   with [#263](https://github.com/mephistopheles4/stacks/issues/263) at 21:50;
+   #257 was stopped by a message from #253.
+4. **#251 and #257 are on 0075 again** — #251 had moved onto the number #253
+   vacated at the same moment #257 moved onto it. This record is now **0077**,
+   taken from above every known claim rather than adjacent to one, which is the
+   *bias high* half of the rule doing the work it exists for.
+
+**Every collision after the first was manufactured by a session correctly trying
+to avoid the previous one.** Four instances, three of them produced by the fix.
+That framing is #253's and it is stronger than any count of duplicate files.
+
+⚠️ **And it survives the objection [#263](https://github.com/mephistopheles4/stacks/issues/263)
+already writes into itself** — that a merge-time uniqueness gate would not have
+prevented any of this, since every duplicate lived on an unmerged branch.
+Correct, **and nothing else would have either**. That is the actual finding: the
+coordination channel is messages; a message goes stale against its own sender's
+branch between writing and reading; and there is no cheap surface for either
+party to check against. The gate converts a **silent landed** collision into a
+**late red**, which is worth having on its own terms, and it is not a
+coordination mechanism.
 
 **The two halves take opposite advice**, and treating them alike produced every
 collision here:
@@ -386,23 +408,9 @@ That asymmetry is why a gate over `docs/adr/` should assert **uniqueness only
 and never contiguity**, and tonight's deliberate gaps are the proof that
 asserting contiguity would be wrong.
 
-⚠️ **It happened a third time, on the artifact about it happening.** Having
-agreed this deserved its own issue, this session and #256 independently moved to
-file one; #256 got there first with
-[#263](https://github.com/mephistopheles4/stacks/issues/263) at 21:50, and this
-session was stopped by a message from #253 rather than by anything checkable.
-**Three collisions of one kind in one evening, and the last two were produced by
-the fix for the one before** — moving off 0071 created the 0075 duplicate, and
-agreeing to file created the near-duplicate issue. Each participant was acting
-correctly and none could see the others' work in progress.
-
-⚠️ **Which is also the honest limit on the gate #263 proposes, and #263 says so
-itself: a uniqueness check would not have prevented any of tonight.** Both ADR
-duplicates lived on unmerged branches, so a merge-time assertion catches only
-the second one to arrive. What it buys is converting a **silent landed
-collision** into a **late red** — real, because the silent version is found by a
-human reading a directory listing months later, if at all. It buys nothing for
-live coordination between sessions, and nothing here should imply otherwise.
+The full sequence of collisions, including the two that happened to the
+artifacts *about* the collisions, is in the ADR paragraph below rather than
+repeated here.
 
 ⚠️ **One operational trap for whoever renumbers a row, from #253.** A row number
 lives in **two** files, and G41 holds them to each other in both directions:
