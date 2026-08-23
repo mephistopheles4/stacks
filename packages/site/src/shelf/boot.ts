@@ -21,10 +21,25 @@ declare global {
    * Declared rather than pulled from `vite/client`: vite is a transitive
    * dependency of astro, so it is not resolvable from the root tsconfig under
    * pnpm's strict layout, and adding it as a direct dependency to satisfy one
-   * boolean would be worse than four lines.
+   * boolean would be worse than six lines.
+   *
+   * ⚠️ **Every part of this shape is load-bearing, because it has to merge
+   * with vite's own declaration member for member.** The root config excludes
+   * the generated `.astro` type directory and the site's config includes it,
+   * so under `astro check` this block meets `vite/types/importMeta.d.ts` and
+   * `astro/client.d.ts`, while under `pnpm typecheck` it stands alone.
+   * Describing the same slice is not enough: an inline
+   * `{ readonly DEV: boolean }` here was TS2717 against astro's
+   * `readonly env: ImportMetaEnv`, and a `readonly DEV` would be TS2687
+   * against vite's mutable one. Named interface, mutable `DEV`, readonly
+   * `env` — do not tighten either modifier.
    */
+  interface ImportMetaEnv {
+    DEV: boolean;
+  }
+
   interface ImportMeta {
-    readonly env: { readonly DEV: boolean };
+    readonly env: ImportMetaEnv;
   }
 
   interface Window {
