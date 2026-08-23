@@ -1,0 +1,50 @@
+# TYPE stacks_run_ok gauge
+# HELP stacks_run_ok One when this run computed every series it declared, zero when it did not.
+stacks_run_ok 1 1787504278
+# TYPE stacks_run_info gauge
+# HELP stacks_run_info The run that wrote this file. A score never appears without its run.
+stacks_run_info{commit="5993f45a2d48db85b6964a9ca71a2e132c0caa64",event="push",run_url="https://github.com/mephistopheles4/stacks/actions/runs/32653275453",pr_window="#242, #246, #247",config_hash="sha256:5c94b749e9d95484e8864f86038d171d6b83f396c1e321d77dd3efc85fc0baaf",fixture_hash="sha256:26f7066cc66d2bbbf50bac77ca83f3dcbe5302e5c1f973e1a3758909d8f2b146"} 1 1787504278
+# TYPE stacks_trend_gate_suite_runtime gauge
+# HELP stacks_trend_gate_suite_runtime Wall-clock seconds of pnpm test.
+stacks_trend_gate_suite_runtime 15 1787504278
+# TYPE stacks_trend_complexity_functions gauge
+# HELP stacks_trend_complexity_functions Functions counted — the denominator the other three are read against.
+stacks_trend_complexity_functions{scope="packages/core/src"} 84 1787504278
+stacks_trend_complexity_functions{scope="packages/core/src/adapters"} 23 1787504278
+stacks_trend_complexity_functions{scope="packages/core/src/covers"} 28 1787504278
+stacks_trend_complexity_functions{scope="packages/core/src/import"} 22 1787504278
+stacks_trend_complexity_functions{scope="packages/core/src/metadata"} 87 1787504278
+stacks_trend_complexity_functions{scope="packages/site/src/shelf"} 394 1787504278
+stacks_trend_complexity_functions{scope="packages/cli/src"} 26 1787504278
+stacks_trend_complexity_functions{scope="scripts"} 450 1787504278
+# TYPE stacks_trend_complexity_mass gauge
+# HELP stacks_trend_complexity_mass Σ cyclomatic complexity over those functions.
+stacks_trend_complexity_mass{scope="packages/core/src"} 309 1787504278
+stacks_trend_complexity_mass{scope="packages/core/src/adapters"} 95 1787504278
+stacks_trend_complexity_mass{scope="packages/core/src/covers"} 125 1787504278
+stacks_trend_complexity_mass{scope="packages/core/src/import"} 71 1787504278
+stacks_trend_complexity_mass{scope="packages/core/src/metadata"} 287 1787504278
+stacks_trend_complexity_mass{scope="packages/site/src/shelf"} 929 1787504278
+stacks_trend_complexity_mass{scope="packages/cli/src"} 118 1787504278
+stacks_trend_complexity_mass{scope="scripts"} 1349 1787504278
+# TYPE stacks_trend_complexity_mass_over_10 gauge
+# HELP stacks_trend_complexity_mass_over_10 Σ complexity over functions with CC > 10. The cut is McCabe 1976, and is not a threshold.
+stacks_trend_complexity_mass_over_10{scope="packages/core/src"} 95 1787504278
+stacks_trend_complexity_mass_over_10{scope="packages/core/src/adapters"} 38 1787504278
+stacks_trend_complexity_mass_over_10{scope="packages/core/src/covers"} 38 1787504278
+stacks_trend_complexity_mass_over_10{scope="packages/core/src/import"} 26 1787504278
+stacks_trend_complexity_mass_over_10{scope="packages/core/src/metadata"} 37 1787504278
+stacks_trend_complexity_mass_over_10{scope="packages/site/src/shelf"} 148 1787504278
+stacks_trend_complexity_mass_over_10{scope="packages/cli/src"} 63 1787504278
+stacks_trend_complexity_mass_over_10{scope="scripts"} 281 1787504278
+# TYPE stacks_trend_complexity_max gauge
+# HELP stacks_trend_complexity_max The largest single function's complexity.
+stacks_trend_complexity_max{scope="packages/core/src"} 41 1787504278
+stacks_trend_complexity_max{scope="packages/core/src/adapters"} 27 1787504278
+stacks_trend_complexity_max{scope="packages/core/src/covers"} 15 1787504278
+stacks_trend_complexity_max{scope="packages/core/src/import"} 14 1787504278
+stacks_trend_complexity_max{scope="packages/core/src/metadata"} 22 1787504278
+stacks_trend_complexity_max{scope="packages/site/src/shelf"} 28 1787504278
+stacks_trend_complexity_max{scope="packages/cli/src"} 14 1787504278
+stacks_trend_complexity_max{scope="scripts"} 57 1787504278
+# EOF
