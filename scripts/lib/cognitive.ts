@@ -447,7 +447,10 @@ export interface CognitiveInputs {
 }
 
 export async function cognitiveInputs(): Promise<CognitiveInputs> {
-  const config = await counter().calculateConfigForFile(COGNITIVE_INVENTORY.file);
+  // `calculateConfigForFile` is typed `any`, which is the shape `rulesOf` below
+  // already refuses to trust. Annotated `unknown` so the refusal starts here
+  // rather than one call later. Same annotation, same reason, as `counterInputs`.
+  const config: unknown = await counter().calculateConfigForFile(COGNITIVE_INVENTORY.file);
   const entry = rulesOf(config)[RULE];
 
   if (entry === undefined) {

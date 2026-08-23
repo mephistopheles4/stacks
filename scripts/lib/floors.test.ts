@@ -1094,7 +1094,7 @@ describe('fixtureHashOf', () => {
       ruleOptions: [0],
       inventory: COGNITIVE_INVENTORY,
       ...changes,
-    } as CognitiveInputs;
+    };
   }
 
   /** The stamp both counters produce together, which is the only stamp there is. */
