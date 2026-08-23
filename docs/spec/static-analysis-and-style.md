@@ -147,6 +147,13 @@ verdict and a Markdown verdict are all Node-independent.
 job holding most of the register. A row records what is protected; a job records
 where it runs.
 
+⚠️ **S4 is not in this job, and that is not an oversight.** Four gate rows land
+and three of them run in `style`; `astro check` runs inside `pnpm build`, which
+the `suite` matrix already runs, per
+[#238](https://github.com/mephistopheles4/stacks/issues/238). A summary that
+says *"four gate rows in one CI job"* is wrong about this spec, whichever
+document it appears in.
+
 ⚠️ **Accepted cost of one job:** a red names `style` rather than the tool. The
 remedy is that each of the three commands is documented and runnable alone, so
 the job's output is the tool's output and the fix command is in it.
@@ -243,9 +250,33 @@ is *worse*, being a bound about a different measure. `cognitive-mass-over-15`
 is published and never capped, which also discharges the condition on accepting
 15 — nothing may ever refuse on it.
 
-**The duplication counts take caps** on the `complexity-mass-over-10` argument
-rather than the `complexity-functions` one: a clean feature adds zero duplicated
-lines, so the count does not grow with the tree legitimately.
+**Six of the eight duplication series take caps**, on the
+`complexity-mass-over-10` argument rather than the `complexity-functions` one: a
+clean feature adds zero duplicated lines, so the count does not grow with the
+tree legitimately. **The names are exact and they are the whole list**, because
+`scripts/lib/floors.test.ts` asserts `CAPPED_SERIES` by array equality and
+`countedIn` needs a sample from every member:
+
+| Series | Capped | Why |
+|---|---|---|
+| `duplication-clones` | **yes** | A clean feature adds no clone. |
+| `duplication-lines` | **yes** | `complexity-mass-over-10`'s property, stated by [#237](https://github.com/mephistopheles4/stacks/issues/237). |
+| `duplication-ignored-lines` | **yes** | See below. |
+| `duplication-total-lines` | no | The denominator. It grows with the tree legitimately, which is `complexity-functions`' reason. |
+| `duplication-tree-clones` | **yes** | As `duplication-clones`. |
+| `duplication-tree-lines` | **yes** | As `duplication-lines`. |
+| `duplication-tree-ignored-lines` | **yes** | As `duplication-ignored-lines`. |
+| `duplication-tree-total-lines` | no | As `duplication-total-lines`. |
+
+⚠️ **`duplication-ignored-lines` is capped, and that goes beyond what
+[#237](https://github.com/mephistopheles4/stacks/issues/237) wrote.** The ticket
+established that suppression blocks are *counted*; it did not say whether the
+count can refuse. It is capped here because an uncapped one leaves the gaming
+route open: wrap a clone in `jscpd:ignore` and the clone count falls, the capped
+series passes, and the counter that noticed refuses nothing. A counter nothing
+can refuse on is a number, not a guard. **Nothing goes red at adoption** — like
+every cap here it ships disarmed, so a legitimate suppression is a human
+judgement rather than an immediate refusal.
 
 ⚠️ **A name joins `CAPPED_SERIES` only once twenty records carry its samples.**
 This is a real code constraint, not a caution. `scripts/lib/floors.ts`'s
@@ -325,10 +356,10 @@ rather than inside one.
    config, for step 5's reason and for `eslint.config.mjs`'s own stated one.
    **No cap name joins `CAPPED_SERIES`.**
 
-9. **Arming, twenty records later.** `cognitive-max` and the duplication cap
-   names join `CAPPED_SERIES` once the records carry their families. Steps 7 and
-   8 may land in either order; **this step may not be folded into either of
-   them.**
+9. **Arming, twenty records later.** Seven names join `CAPPED_SERIES` once the
+   records carry their families — `cognitive-max` and the six duplication series
+   §5 lists, and no others. Steps 7 and 8 may land in either order; **this step
+   may not be folded into either of them.**
 
 Steps 2 through 4 are a chain. Steps 5, 7 and 8 are independent of each other
 once step 1 is done.
