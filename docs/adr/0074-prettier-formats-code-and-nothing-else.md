@@ -44,18 +44,30 @@ its highest and no *pushed* branch held an 0071, which is what this session
 checked — and it was the wrong question, because a branch nobody has pushed is
 invisible to it and that is the normal state of a session mid-work.
 
-**Settled allocation:** 0071 → [#251](https://github.com/mephistopheles4/stacks/issues/251),
-0072 → [#254](https://github.com/mephistopheles4/stacks/issues/254),
-0073 → [#255](https://github.com/mephistopheles4/stacks/issues/255),
-**0074 → this record**, 0075 → [#257](https://github.com/mephistopheles4/stacks/issues/257),
-0076 → [#253](https://github.com/mephistopheles4/stacks/issues/253).
+**This record deliberately does not carry the allocation table.** It carried one,
+and rewrote it three times in two hours as sibling sessions renumbered around
+each other — each version accurate when written and wrong within the hour. A
+record that must be re-edited whenever somebody else rebases is not recording a
+decision; the roster lives on
+[#263](https://github.com/mephistopheles4/stacks/issues/263), where being
+provisional is the point.
 
-⚠️ **The second collision is the one worth keeping, because resolving the first
-caused it.** #253 and #257 had each moved off 0071 to avoid the pile-up, and both
-moved to **0075** — two sessions colliding precisely because they were being
-careful, and neither able to see the other. #253 moved again, to 0076. So the
-count is not one duplicate but two, the second manufactured by the fix for the
-first.
+**What is verifiable, by reading pushed branches rather than by report:** 0072
+([#254](https://github.com/mephistopheles4/stacks/issues/254)), **0074 (this
+record)**, and 0076 ([#253](https://github.com/mephistopheles4/stacks/issues/253)).
+Those three are distinct and this one is uncontested. Every other number on this
+rollout sits on a branch nobody has pushed, so no claim about it can be checked
+from outside the session making it.
+
+⚠️ **The collisions after the first were manufactured by the fixes for it, and
+that is the finding.** #253 and #257 each moved off 0071 *to avoid* the pile-up
+and both moved to **0075**; #253 then moved again, to 0076, and reported 0075 as
+#257's — while [#251](https://github.com/mephistopheles4/stacks/issues/251), on
+the strength of that same message, had already renamed *its* record to 0075. Two
+sessions colliding precisely because they were being careful, then a third
+colliding on the resolution, **with the reports moving faster than the branches
+they described**. Not one duplicate but a sequence, each caused by the repair of
+the last.
 
 ⚠️ **And nothing in this repository would have caught either.** Gate row numbers
 are held by `G19` (`constitution-scoreboard`), which asserts them **unique and
@@ -69,10 +81,14 @@ Every renumber happened on a branch, so no landed record was edited — **exactl
 what 0067 records happening to itself**, which was written as 0065 and became
 0067 while its stack was open.
 
-⚠️ **Verification status, stated because this record is partly about not taking
-claims on report.** 0072, 0074 and 0076 were confirmed by reading the pushed
-branches. 0071, 0073 and 0075 come from the sessions holding them, whose branches
-were still unpushed when this was written and could not be checked from outside.
+⚠️ **The general lesson, and it is what survived when the roster did not.**
+`git ls-remote` cannot see a branch nobody pushed, and mid-work is exactly when a
+branch is unpushed — so *"no branch claims this number"* is a statement about the
+remote, never about what other sessions are doing. The tracker cannot close the
+gap either: every session here authenticates as the same GitHub account, so an
+assignee cannot distinguish *mine, a minute ago* from *free to take*. **Nothing
+but a session saying so directly settled any of it**, and a message describing a
+branch went stale faster than the branch did.
 
 ⚠️ **So a reader may find a gap here, and the gap is not a defect.** 0071 to
 0073 are claimed on sibling branches of one rollout that have not merged yet. If
