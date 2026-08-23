@@ -13,9 +13,9 @@
 export default {
   // The tree holds 9,490 single-quoted strings against 661 double — 93 percent
   // — so this records a convention rather than imposing one. It is also load
-  // bearing: G14 (`commands`) and G45 (`deploy-flags`) both hardcode a single
-  // quote in their extraction regex, and flipping the tree to double quotes
-  // reduces both to assertions over nothing.
+  // bearing *until #252 lands*: G14 (`commands`) and G45 (`deploy-flags`) both
+  // hardcode a single quote in their extraction regex today, and flipping the
+  // tree to double quotes reduces both to assertions over nothing.
   //
   // ⚠️ That is an accidental quote gate, not a designed one, and dodging it
   // here freezes it rather than fixing it. The repair is #252; a contributor

@@ -194,8 +194,8 @@ red build.
 pnpm install
 pnpm typecheck           # tsc --noEmit across every .ts in the repo
 pnpm test                # vitest: packages/**/src and gates/
-pnpm format              # Prettier over code — never Markdown, fixtures/ or .astro
-pnpm format:check        # that check, as CI runs it — read docs/commands.md first
+pnpm format              # Prettier over code — Markdown and fixtures/ excluded
+pnpm format:check        # the same check, reporting instead of writing (.astro reaches neither)
 pnpm build               # typecheck, then astro build
 pnpm dev                 # site dev server
 pnpm dev:watch           # site + rebuild on every vault change

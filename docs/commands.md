@@ -38,17 +38,17 @@ a block one *under* its cap of 6 is reported as nine. That is a false red whose
 message tells the contributor to move code that nobody moved. Taking the plugin
 means repairing G7 in the same change.
 
-**The configuration is two overrides and two exclusions, and each is recorded
-where it is set** — [`prettier.config.mjs`](../prettier.config.mjs) and
-[`.prettierignore`](../.prettierignore) carry the reasoning rather than this
-file, per [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md). In one
-line each: `singleQuote` because the tree is already 93 percent single-quoted
-**and because G14 and G45 hardcode a single quote in their extraction regex**;
-`printWidth: 100` because it is the measured minimum, 80 and 120 both touching
-more files; Markdown excluded because Prettier right-pads table cells and G41
-and G31 read an exact single space at a pipe; `fixtures/` excluded because
-Prettier requotes the frontmatter of 11 vault notes and the adapter contract
-promises those files survive byte for byte.
+**The configuration is two overrides and three exclusions, and not one of them
+is restated here.** `singleQuote: true` and `printWidth: 100` live in
+[`prettier.config.mjs`](../prettier.config.mjs); `*.md`, `fixtures/` and
+`pnpm-lock.yaml` live in [`.prettierignore`](../.prettierignore). **Each carries
+its measured reason as a comment beside the setting it explains**, and
+[ADR-0071](adr/0071-prettier-formats-code-and-nothing-else.md) carries the
+decision behind the whole set — including which two settings are load-bearing
+for a gate rather than cosmetic, what each one was measured against, and the
+rule in another ticket that the Markdown exclusion leans on. Summarising any of
+that a second time here is what
+[ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md) exists to prevent.
 
 **Prettier is pinned exact**, not caret-ranged, for
 [ADR-0067](adr/0067-the-counters-inputs-are-pinned-exact.md)'s reason: the tool version
