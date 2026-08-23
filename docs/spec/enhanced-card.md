@@ -13,7 +13,7 @@ new fields on the card), [#105](https://github.com/mephistopheles4/stacks/issues
 (search fallback target).
 
 **Where a resolution and a later amendment disagree, this file carries the later
-one.** Every such supersession is footnoted at [§13](#13-supersessions-the-order-the-decisions-actually-landed-in),
+one.** Every such supersession is footnoted at [§13](#13-supersessions--the-order-the-decisions-actually-landed-in),
 because reading the closed tickets in issue order gives the wrong answer three
 times.
 

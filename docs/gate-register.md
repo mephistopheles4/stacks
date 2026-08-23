@@ -979,7 +979,7 @@ keeps its verdict and loses its reason, and **the file's own definition of the
 category was still the superseded one** — found by reading the definition rather
 than any row.
 
-### The population, and a correction to the ticket that commissioned this
+### The population, and a correction to #150, the ticket that commissioned this
 
 ⚠️ **Recounted before starting, as #150 instructs, and its population is one row
 short.** #150 lists fourteen, derived from three wordings: *"no load-bearing
