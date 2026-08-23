@@ -46,7 +46,7 @@ const PROVIDER_NAMES: Readonly<Record<string, string>> = {
 };
 
 function documentedOrder(field: string): readonly string[] | undefined {
-  const row = new RegExp(`^\\| \`${field}\` \\| ([^|]+) \\|`, 'm').exec(SPEC);
+  const row = new RegExp(`^\\|\\s*\`${field}\`\\s*\\| ([^|]+)\\|`, 'm').exec(SPEC);
   if (row?.[1] === undefined) return undefined;
 
   return row[1]
@@ -58,9 +58,7 @@ function documentedOrder(field: string): readonly string[] | undefined {
 
 describe('G31 — the precedence table ↔ the merge', () => {
   it('documents every field the merge actually merges', () => {
-    const undocumented = MERGED_FIELDS.filter(
-      (field) => !new RegExp(`\`${field}\``).test(SPEC),
-    );
+    const undocumented = MERGED_FIELDS.filter((field) => !new RegExp(`\`${field}\``).test(SPEC));
 
     expect(
       undocumented,

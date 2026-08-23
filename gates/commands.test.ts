@@ -19,7 +19,7 @@ import { describe, expect, it } from 'vitest';
 import { AGENTS_DOC, extractAll, expectFound, markdownSection, readRepoFile } from './repo.ts';
 
 /** `.command('add')` in the CLI's commander setup. */
-const CLI_COMMAND = /\.command\(\s*'([a-z][a-z-]*)'/;
+const CLI_COMMAND = /\.command\(\s*['"]([a-z][a-z-]*)['"]/;
 
 // package.json is read with JSON.parse rather than a regex. The first attempt
 // matched `^\s{4}"name":` and duly collected every devDependency, because they

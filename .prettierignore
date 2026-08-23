@@ -1,0 +1,9 @@
+node_modules
+pnpm-lock.yaml
+artifacts
+.cache
+dist
+
+# fx-exclude stays chosen: the vault notes stand in for a real Obsidian vault,
+# and the adapter contract promises their quoting survives byte for byte.
+fixtures/

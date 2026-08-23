@@ -142,16 +142,18 @@ interface Entry {
 const ENTRY_HEADING = /^### (G\d+) — `([^`]+)`[^\n]*$/;
 
 function entries(): Entry[] {
-  return sectionsOf(readRepoFile(REGISTER), new RegExp(ENTRY_HEADING.source, 'gm')).map((section) => ({
-    row: section.captures[0] ?? '',
-    slug: section.captures[1] ?? '',
-    body: section.body,
-  }));
+  return sectionsOf(readRepoFile(REGISTER), new RegExp(ENTRY_HEADING.source, 'gm')).map(
+    (section) => ({
+      row: section.captures[0] ?? '',
+      slug: section.captures[1] ?? '',
+      body: section.body,
+    }),
+  );
 }
 
 /** Every numbered row of the scoreboard, in file order. */
 function scoreboardRows(): { row: string; slug: string }[] {
-  return [...readRepoFile(SCOREBOARD).matchAll(/^\| \*\*(G\d+)\*\* \| `([^`]+)`/gm)].map(
+  return [...readRepoFile(SCOREBOARD).matchAll(/^\|\s*\*\*(G\d+)\*\*\s*\|\s*`([^`]+)`/gm)].map(
     (match) => ({ row: match[1] ?? '', slug: match[2] ?? '' }),
   );
 }
@@ -310,9 +312,9 @@ describe('G41 — every entry carries the five verdicts, one bullet each', () =>
     const present = new Set(
       entries().flatMap((entry) => verdictLeads(entry).map((lead) => `${entry.row}|${lead}`)),
     );
-    const stale = MERGED_BULLETS.filter(
-      ({ row, lead }) => !present.has(`${row}|${lead}`),
-    ).map(({ row, lead }) => `${row}: "${lead}"`);
+    const stale = MERGED_BULLETS.filter(({ row, lead }) => !present.has(`${row}|${lead}`)).map(
+      ({ row, lead }) => `${row}: "${lead}"`,
+    );
 
     expect(
       stale,

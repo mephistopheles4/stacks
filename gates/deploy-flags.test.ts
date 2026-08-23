@@ -64,7 +64,7 @@ const COMMANDS_DOC = 'docs/commands.md';
  * `docs/gates.md` and once more here: this file's subject is a flag whose only
  * two lines were code, in a file whose commentary discussed it at length.
  */
-const ARGV_FLAG = /process\.argv\.includes\(\s*'(--[a-z][a-z-]*)'\s*\)/;
+const ARGV_FLAG = /process\.argv\.includes\(\s*['"](--[a-z][a-z-]*)['"]\s*\)/;
 
 /** A flag as `docs/commands.md` writes one: in backticks. */
 const DOCUMENTED_FLAG = /`(--[a-z][a-z-]*)`/;
