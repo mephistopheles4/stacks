@@ -57,13 +57,13 @@ repository this week.
 
 The one command that restores this state:
 
-```
+```sh
 pnpm --filter @stacks/site add -D --save-exact "@astrojs/check@0.9.10"
 ```
 
 ### 1. The baseline is exactly what the spec predicted
 
-```
+```text
 src/shelf/boot.ts:27:14 - error ts(2717): Subsequent property declarations must
 have the same type.  Property 'env' must be of type 'ImportMetaEnv', but here
 has type '{ readonly DEV: boolean; }'.
@@ -169,7 +169,7 @@ Apply after #250 is on `main`, all in **one commit**.
 
 Put `astro check` in **`packages/site/package.json`**'s `build` script:
 
-```
+```json
 "build": "astro check && astro build"
 ```
 
