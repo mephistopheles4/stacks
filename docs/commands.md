@@ -2,14 +2,58 @@
 
 The command lists themselves live in [`AGENTS.md`](../AGENTS.md), where
 `gates/commands.test.ts` (G14) holds them to `package.json` and the CLI in both
-directions. This file carries the *why* behind three of them — the parts a
-session needs only when it is deploying, cutting a worktree, or reading a
-mutation score.
+directions. This file carries the *why* behind four of them — the parts a
+session needs only when it is deploying, cutting a worktree, formatting the
+tree, or reading a mutation score.
 
 ⚠️ **`deploy:site`'s gate-ordering rule stayed in `AGENTS.md` on purpose** — it
 is compaction-fragile safety, not reference, and no code catches it. It is not
 restated here, because a rule with two homes is a rule that drifts
 ([ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md)).
+
+## `pnpm format` and `pnpm format:check` — and the quarter of the site they never open
+
+**`pnpm format` rewrites the tree; `pnpm format:check` exits non-zero and names
+every file that would change.** The check is the gate form and the write is its
+whole remedy, which is the property that let a style rule onto the aggregator at
+all: whoever hits the red runs one command they did not have to know this
+repository to find ([#229](https://github.com/mephistopheles4/stacks/issues/229)).
+
+⚠️ **`pnpm format` reports success having never opened four files, and they are
+every stylesheet rule the site has.** Prettier infers a parser from the
+extension and has none for `.astro`, so under a directory sweep it skips
+`Shelf.astro`, `index.astro`, `Attribution.astro` and `attribution.astro` in
+silence — **979 lines, and this repository has no `.css` file at all**. Named on
+the command line those same four files are an *error* (`No parser could be
+inferred`, exit 2); swept as part of `.` they are simply absent from the count.
+So a green `format:check` says nothing whatever about a quarter of the site's
+source, and the number it prints is not a coverage figure.
+
+**The gap is left open on purpose.** `prettier-plugin-astro` closes it and is a
+new dependency, which `AGENTS.md` says owes a record under `docs/adr/` — and
+[#238](https://github.com/mephistopheles4/stacks/issues/238) measured what it
+would cost: formatting `.astro` splits a three-element bootstrap guard across
+five lines, and **G7 (`astro-no-logic`) counts lines rather than statements**, so
+a block one *under* its cap of 6 is reported as nine. That is a false red whose
+message tells the contributor to move code that nobody moved. Taking the plugin
+means repairing G7 in the same change.
+
+**The configuration is two overrides and two exclusions, and each is recorded
+where it is set** — [`prettier.config.mjs`](../prettier.config.mjs) and
+[`.prettierignore`](../.prettierignore) carry the reasoning rather than this
+file, per [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md). In one
+line each: `singleQuote` because the tree is already 93 percent single-quoted
+**and because G14 and G45 hardcode a single quote in their extraction regex**;
+`printWidth: 100` because it is the measured minimum, 80 and 120 both touching
+more files; Markdown excluded because Prettier right-pads table cells and G41
+and G31 read an exact single space at a pipe; `fixtures/` excluded because
+Prettier requotes the frontmatter of 11 vault notes and the adapter contract
+promises those files survive byte for byte.
+
+**Prettier is pinned exact**, not caret-ranged, for
+[ADR-0067](adr/0067-the-counters-inputs-are-pinned-exact.md)'s reason: the tool version
+is an input to what the check *means*, and a minor bump that changes a default
+turns an unchanged tree red.
 
 ## `pnpm deploy:site` — the branch guard
 

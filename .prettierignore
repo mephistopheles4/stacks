@@ -1,0 +1,36 @@
+# What the formatter must not open.
+#
+# Prettier also reads .gitignore, so build output, artifacts/, .cache/ and the
+# generated fixtures/vault-50/ are already out. This file names the things that
+# are tracked and must still be left alone.
+
+# ── Every Markdown file ────────────────────────────────────────────────────
+#
+# Prettier right-pads Markdown table cells to align a column. G41
+# (`gate-register`) and G31 (`merge-precedence`) both anchor on an exact single
+# space at a pipe, and both extract *nothing* from an aligned table — G41
+# silently, caught only by its own vacuous-extraction guard. Measured in #231:
+# formatting Markdown turns those two gates red, 3 tests between them.
+#
+# ⚠️ The protection this leaves standing is markdownlint's MD060 at
+# `"style": "compact"` (#251), and only at that style. MD060's default of `any`
+# accepts an aligned table, which both regexes are blind to.
+*.md
+
+# ── The fixture vault and the cached provider responses ────────────────────
+#
+# Excluded on fidelity, not on breakage: nothing fails when these are
+# formatted. Prettier requotes the YAML frontmatter of 11 vault notes —
+# `title`, `author`, `isbn`, `url`, `asin`, `spine_color` — and AGENTS.md's
+# adapter contract promises `updateBook` leaves "key order, quoting, comments
+# and the note body ... byte for byte" intact. Quoting is named in that
+# sentence. The real vault lives outside this repository, so these fixtures are
+# the only stand-in for it, and a formatter that reaches them makes them stop
+# resembling the thing they are fixtures of.
+#
+# The same exclusion covers fixtures/api/ — reformatting a recorded API
+# response is the same category of error as reformatting a note.
+fixtures/
+
+# ── Generated ──────────────────────────────────────────────────────────────
+pnpm-lock.yaml
