@@ -148,7 +148,7 @@
         },
         {
           "path": "scripts/lib/repo-root.ts",
-          "mechanism": "G22 (`repo-root`) reads it as source text via `codeOf` and never imports it. No import edge, so no mutant can be killed."
+          "mechanism": "G24 (`repo-root`) reads it as source text via `codeOf` and never imports it. No import edge, so no mutant can be killed."
         },
         {
           "path": "scripts/check-public-build.ts",
