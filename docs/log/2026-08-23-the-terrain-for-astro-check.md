@@ -270,7 +270,7 @@ and that is where the sentence lives now. Fix the attribution in the same pass �
 it is one word, and a register that misnames where a quoted claim lives is the
 failure it exists to catalogue.
 
-⚠️ **`fixtures/README.md:136` and `docs/adr/0067:102` match the grep and are
+⚠️ **`fixtures/README.md:136` and [`docs/adr/0067-the-counters-inputs-are-pinned-exact.md:102`](../adr/0067-the-counters-inputs-are-pinned-exact.md) match the grep and are
 not in this class** — both are about the complexity fixture being untypechecked,
 which this change does not touch. Named here so the next reader does not have to
 re-establish it.

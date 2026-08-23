@@ -21,8 +21,10 @@
  *
  * ⚠️ **The gate is `astro check`; this file is the pin that keeps it wired.**
  * The check itself runs as the first half of `packages/site`'s `build` script,
- * inside `pnpm build`, which the `suite` matrix already runs — so a type error
- * in an `.astro` page fails CI at the build, not here.
+ * inside `pnpm build`, which the `suite` matrix already runs — verified, not
+ * quoted: `.github/workflows/gates.yml:81-82` is a `build` step running
+ * `pnpm build`, on every Node version in the matrix. So a type error in an
+ * `.astro` page fails CI at the build, not here.
  *
  * That leaves the wiring, and a gate living only as a substring of one npm
  * script is exactly G45's finding: `--skip-gates` skipped the whole four-gate
