@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test-code complexity: its own population, its own series, or refused — eagle-eye</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Drafting: one ink on one paper; amber = caution only, green = normal only; neutrals are ink at alpha; no radius, no shadow. */
+:root{
+  --dw-paper:#fafaf7; --dw-ink:#22262b; --dw-caution:#d97706; --dw-normal:#15803d;
+  --dw-ink-80:rgb(34 38 43 / .8); --dw-ink-55:rgb(34 38 43 / .55); --dw-ink-30:rgb(34 38 43 / .3); --dw-ink-12:rgb(34 38 43 / .12); --dw-grid:rgb(34 38 43 / .05);
+  --dw-font:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  /* Spacing scale. Raise these to loosen the whole page; nothing hardcodes a gap that is on this scale. */
+  --sp-1:8px; --sp-2:14px; --sp-3:20px; --sp-4:28px; --sp-5:36px; --sp-6:48px;
+  --sp-gutter:36px;              /* the left/right margin every band shares */
+  --card-min:350px;              /* option card track width in the row detail */
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+*{box-sizing:border-box}
+/* `hidden` is a property the shell sets on .exportbox and .preset-note. Both carry display:flex,
+   which outranks the UA rule for [hidden] — so without this line neither panel ever hides. */
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;font-family:var(--dw-font);font-size:15px;line-height:1.6;color:var(--dw-ink);background-color:var(--dw-paper);
+  background-image:linear-gradient(to right,var(--dw-grid) 1px,transparent 1px),linear-gradient(to bottom,var(--dw-grid) 1px,transparent 1px);background-size:24px 24px}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+input,textarea{font:inherit;color:inherit;background:var(--dw-paper);border:1px solid var(--dw-ink-30)}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.16em;font-weight:500;color:var(--dw-ink-55)}
+.num{font-variant-numeric:tabular-nums}
+.chip{font-size:11px;text-transform:uppercase;letter-spacing:.16em;padding:6px 14px;border:1px solid var(--dw-ink);color:var(--dw-ink);background:transparent;white-space:nowrap;
+  transition:color .16s var(--ease),border-color .16s var(--ease),background-color .16s var(--ease)}
+.chip:hover{color:var(--dw-caution);border-color:var(--dw-caution)}
+.chip.on{background:var(--dw-ink);color:var(--dw-paper);border-color:var(--dw-ink)}
+.chip.on:hover{color:var(--dw-paper);border-color:var(--dw-ink)}
+.chip.ghost{border-color:var(--dw-ink-30);color:var(--dw-ink-55)}
+/* Reset holding an undo offer. Amber, because taking a reset back is a recovery, not a normal move. */
+/* Filled, not outlined: every chip goes amber on hover, so an outline would say nothing here. */
+#reset.armed{background:var(--dw-caution);border-color:var(--dw-caution);color:var(--dw-paper)}
+.state{display:inline-flex;align-items:center;gap:6px;font-size:11px;text-transform:uppercase;letter-spacing:.16em;padding:4px 13px;border:1px solid currentColor;white-space:nowrap}
+.state::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.state.caution{color:var(--dw-caution)} .state.normal{color:var(--dw-normal)} .state.ink{color:var(--dw-ink-55)}
+.tier{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--dw-ink-55);white-space:nowrap}
+.tier.measured{color:var(--dw-normal)} .tier.sourced{color:var(--dw-ink)} .tier.argued{color:var(--dw-caution)}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;flex:none}
+.dot.caution{background:var(--dw-caution)} .dot.normal{background:var(--dw-normal)} .dot.ink{background:var(--dw-ink)}
+.page{min-height:100%;padding:var(--sp-4);display:flex;flex-direction:column}
+.sheet{flex:1;border:2px solid var(--dw-ink);background:rgb(250 250 247 / .72);display:flex;flex-direction:column;min-height:calc(100vh - var(--sp-4) * 2)}
+#view{flex:1;display:flex;flex-direction:column;min-height:0}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:var(--sp-4);padding:var(--sp-4) var(--sp-gutter) var(--sp-3);border-bottom:1px solid var(--dw-ink-30);flex-wrap:wrap}
+.head h1{font-size:24px;font-weight:600;line-height:1.25;margin:10px 0 0}
+.controls{display:flex;gap:var(--sp-3);align-items:center;flex-wrap:wrap}
+.controls .group{display:flex;gap:var(--sp-1);align-items:center;flex-wrap:wrap}
+.preset-note{display:flex;gap:var(--sp-4);align-items:flex-start;padding:var(--sp-2) var(--sp-gutter);border-bottom:1px solid var(--dw-ink-12);font-size:13px;line-height:1.55;color:var(--dw-ink-80)}
+.preset-note p{margin:0;flex:1;max-width:78ch}
+.steps{display:flex;gap:var(--sp-1);flex-wrap:wrap}
+.steps button{font-size:11px;text-transform:uppercase;letter-spacing:.16em;padding:5px 12px;border:1px solid var(--dw-ink-30);color:var(--dw-ink-80);
+  transition:color .16s var(--ease),border-color .16s var(--ease),opacity .2s var(--ease)}
+.steps button:hover{color:var(--dw-caution);border-color:var(--dw-caution)}
+.steps button.next{border-color:var(--dw-ink);color:var(--dw-ink)}
+.steps button.done{opacity:.4}
+/* Export: the one line worth reading stays open; the long Markdown folds away. */
+.exportbox{padding:var(--sp-2) var(--sp-gutter) var(--sp-3);border-bottom:1px solid var(--dw-ink-12);display:flex;flex-direction:column;gap:var(--sp-2)}
+.exportbox textarea{width:100%;font-size:12.5px;line-height:1.5;padding:var(--sp-2);resize:vertical;margin-top:var(--sp-1)}
+.exportbox .row{display:flex;gap:var(--sp-1);align-items:center;flex-wrap:wrap}
+.exportbox input{flex:1;min-width:240px;font-size:12.5px;padding:7px 10px}
+.exportbox details{border-top:1px solid var(--dw-ink-12);padding-top:var(--sp-2);margin-top:0}
+.exportbox .spacer{margin-left:auto;display:flex;gap:var(--sp-1)}
+.restore{flex:1;min-width:0;font-size:12.5px;padding:7px 10px;border:1px dashed var(--dw-ink-30);color:var(--dw-ink-80);overflow-x:auto;white-space:nowrap;user-select:all}
+/* findings view */
+.findings{flex:1;display:grid;grid-template-columns:400px minmax(0,1fr);min-height:0}
+.index{border-right:1px solid var(--dw-ink-30);display:flex;flex-direction:column}
+.index .row{display:grid;grid-template-columns:28px 1fr auto;gap:var(--sp-2);align-items:center;padding:var(--sp-2) var(--sp-4);border-bottom:1px solid var(--dw-ink-12);font-size:13px;line-height:1.5;width:100%;
+  transition:background-color .16s var(--ease),box-shadow .2s var(--ease),color .16s var(--ease)}
+.index .row:hover{background:rgb(34 38 43 / .04)}
+.index .row.open{box-shadow:inset 3px 0 0 var(--dw-ink)}
+.index .row.over{background:var(--dw-ink);color:var(--dw-paper)}
+.index .row.over .label,.index .row.over .muted{color:rgb(250 250 247 / .55)}
+.index .row.predict{cursor:pointer}
+.index .row.predicted{box-shadow:inset 3px 0 0 var(--dw-caution)}
+.index .row.hit{box-shadow:inset 3px 0 0 var(--dw-normal)}
+.index .row.miss{box-shadow:inset 3px 0 0 var(--dw-caution);background:rgb(217 119 6 / .08)}
+.index .row.fp{box-shadow:inset 3px 0 0 var(--dw-ink-30)}
+.muted{color:var(--dw-ink-55)}
+.index .legend{margin-top:auto;padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--dw-ink-30);display:flex;gap:var(--sp-3);flex-wrap:wrap;line-height:1.9}
+.right{display:flex;flex-direction:column;min-width:0}
+.verdict-bar{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-4);padding:var(--sp-3) var(--sp-6);border-bottom:1px solid var(--dw-ink-12)}
+.stamp{border:2.5px solid currentColor;padding:4px 14px;font-size:18px;text-transform:uppercase;letter-spacing:.12em;font-weight:600;transform:rotate(-2.5deg);white-space:nowrap}
+.stamp.caution{color:var(--dw-caution)} .stamp.normal{color:var(--dw-normal)} .stamp.ink{color:var(--dw-ink-30)}
+.body{flex:1;padding:var(--sp-5) var(--sp-6) var(--sp-6);display:flex;flex-direction:column;gap:var(--sp-4);min-width:0}
+.find{display:grid;grid-template-columns:11px 48px 84px minmax(0,1fr);gap:var(--sp-2);align-items:baseline}
+.find .pt{width:11px;height:11px;border-radius:50%;background:var(--dw-ink);align-self:center}
+.find .lead{border-top:1.5px dashed var(--dw-ink-30);align-self:center}
+.find .tag{color:var(--dw-caution);font-size:11px;text-transform:uppercase;letter-spacing:.16em;font-weight:500}
+.find .tag.ink{color:var(--dw-ink-55)}
+.find .txt{font-size:15px;line-height:1.6}
+.h2{font-size:30px;text-transform:uppercase;letter-spacing:.12em;font-weight:600;line-height:1.15;margin:0}
+.annot{font-size:13px;line-height:1.6;color:var(--dw-ink-80);max-width:68ch}
+details{border-top:1px solid var(--dw-ink-12);padding-top:var(--sp-2);margin-top:var(--sp-1)}
+summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:var(--sp-2);padding:2px 0;transition:color .16s var(--ease)}
+summary:hover{color:var(--dw-caution)}
+summary::-webkit-details-marker{display:none}
+summary::after{content:'+';color:var(--dw-ink-55);transition:transform .2s var(--ease)}
+details[open] summary::after{content:'–'}
+details ul{margin:var(--sp-2) 0 var(--sp-1);padding-left:20px;font-size:13px;line-height:1.6;color:var(--dw-ink-80)}
+details li{margin-bottom:var(--sp-1)}
+details[open] > :not(summary){animation:ee-unfold .22s var(--ease) both}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr));gap:var(--sp-4)}
+.card{position:relative;border:1px solid var(--dw-ink-30);padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-2);font-size:13px;line-height:1.6;
+  transition:border-color .2s var(--ease),background-color .2s var(--ease),color .2s var(--ease),opacity .25s var(--ease)}
+.card.chosen{border:2px solid var(--dw-ink)}
+.card.over{background:var(--dw-ink);color:var(--dw-paper);border-color:var(--dw-ink)}
+.card.over .muted,.card.over .label,.card.over .tier{color:rgb(250 250 247 / .6)}
+/* The tab straddles the card's top border and keeps a paper background, so it never sits on the
+   dark fill. Paper-on-paper is the rule above's blind spot: it must stay ink, not go pale. */
+.card.over .tab{color:var(--dw-ink)}
+.card.straw{border-style:dashed;border-width:1.5px}
+.card.closed{opacity:.5}
+.card .tab{position:absolute;top:0;left:16px;transform:translateY(-50%);background:var(--dw-paper);padding:0 8px}
+.card .ttl{font-size:15.5px;font-weight:600;line-height:1.45;margin-top:6px}
+.card .cons{border-top:1px solid var(--dw-ink-12);padding-top:var(--sp-2);margin-top:var(--sp-1);display:flex;flex-direction:column;gap:var(--sp-1)}
+.card.over .cons{border-top-color:rgb(250 250 247 / .2)}
+.card .cons div{display:flex;gap:var(--sp-1);align-items:baseline}
+.card .act{margin-top:auto;display:flex;gap:var(--sp-2);align-items:center;justify-content:space-between;padding-top:var(--sp-2);flex-wrap:wrap}
+.card .act .chip{padding:5px 12px}
+.card.over .act .chip{border-color:var(--dw-paper);color:var(--dw-paper)}
+.card.over .act .chip.on{background:var(--dw-paper);color:var(--dw-ink)}
+/* The row in plain sentences, above the cards. Two halves: the authored `problem` says what the
+   row is about to somebody who does not know the domain, and the derived lines say where it stands.
+   Only an author can write the first — a row named "Reachable by whom" explains itself to nobody. */
+.summary{border-left:2px solid var(--dw-ink);padding:var(--sp-1) 0 var(--sp-1) var(--sp-3);margin-top:var(--sp-2);display:flex;flex-direction:column;gap:6px;max-width:84ch}
+.summary p{margin:0;font-size:14px;line-height:1.65;color:var(--dw-ink-80)}
+.summary p b{color:var(--dw-ink);font-weight:600}
+.summary .problem{font-size:14.5px;line-height:1.75;color:var(--dw-ink)}
+/* Not `.state` — that name is the status pill above, and it carries nowrap, a border and a ::before
+   dot. A wrapper called .state inherited all three and overflowed the row. */
+.summary .derived{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--dw-ink-12);padding-top:var(--sp-2);margin-top:2px}
+.summary .hot{color:var(--dw-caution)}
+.summary .hot b{color:var(--dw-caution)}
+.coach{border:1.5px dashed var(--dw-caution);padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-2);font-size:13px;line-height:1.6}
+.coach p{margin:0}
+/* sheet view */
+.sheetview{flex:1;display:flex;flex-direction:column;min-height:0}
+.grid{flex:1;display:grid;grid-template-columns:72px 220px repeat(var(--cols,4),minmax(0,1fr));grid-auto-rows:minmax(60px,auto);font-size:13px;line-height:1.55;overflow:auto}
+.grid .hd{padding:var(--sp-2) var(--sp-2);border-bottom:1px solid var(--dw-ink-30)}
+.grid .ref{padding:var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-3);border-bottom:1px solid var(--dw-ink-12)}
+.grid .dim{padding:var(--sp-2);font-weight:500;border-bottom:1px solid var(--dw-ink-12);width:100%;transition:color .16s var(--ease)}
+.grid .dim:hover{color:var(--dw-caution)}
+.grid .cell{position:relative;padding:var(--sp-2);border-bottom:1px solid var(--dw-ink-12);border-right:1px solid var(--dw-ink-12);width:100%;height:100%;color:var(--dw-ink-55);
+  transition:background-color .16s var(--ease),color .16s var(--ease),box-shadow .2s var(--ease)}
+.grid .cell:hover{background:rgb(34 38 43 / .04);color:var(--dw-ink)}
+.grid .cell.empty{cursor:default;border-right:0}
+.grid .cell.chosen{box-shadow:inset 0 0 0 2px var(--dw-ink);color:var(--dw-ink);font-weight:600}
+.grid .cell.over{background:var(--dw-ink);color:var(--dw-paper);font-weight:600}
+.grid .cell.straw{border-left:1.5px dashed var(--dw-ink-30);border-right:1.5px dashed var(--dw-ink-30)}
+.grid .cell.conf{color:var(--dw-caution)}
+.grid .cell.out{color:var(--dw-ink-30);text-decoration:line-through}
+.grid .cell.req{color:var(--dw-normal)}
+.grid .cell.over.conf{background:var(--dw-ink);color:var(--dw-caution)}
+.tip{position:fixed;z-index:10;max-width:400px;background:var(--dw-paper);border:1px solid var(--dw-ink);padding:var(--sp-2) var(--sp-3);font-size:13px;line-height:1.55;color:var(--dw-ink-80);pointer-events:none;
+  opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .13s var(--ease),transform .13s var(--ease),visibility .13s}
+.tip.show{opacity:1;visibility:visible;transform:none}
+.tip .ttl{color:var(--dw-ink);font-weight:600;margin-bottom:6px}
+.tip .foot{margin-top:var(--sp-2);display:flex;gap:var(--sp-2);flex-wrap:wrap}
+.titleblock{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr .8fr;border-top:2px solid var(--dw-ink)}
+.titleblock > div{padding:var(--sp-3) var(--sp-4);border-right:1px solid var(--dw-ink-12);display:flex;flex-direction:column;gap:var(--sp-1);min-width:0}
+.titleblock > div:last-child{border-right:0}
+
+/* ---- motion. One rule: a band animates when the reader moved to it, never on every click. ---- */
+@keyframes ee-rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes ee-unfold{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes ee-stamp{0%{opacity:0;transform:rotate(-2.5deg) scale(.9)}60%{transform:rotate(-2.5deg) scale(1.04)}100%{opacity:1;transform:rotate(-2.5deg) scale(1)}}
+/* .anim — the whole band arrived: a different view. .anim-body — only the right pane changed:
+   a row opened, a coach phase advanced. The index and the verdict bar hold still for that one,
+   because restacking a list the reader is pointing at reads as a flash. */
+#view.anim .verdict-bar,#view.anim .index .row,#view.anim .grid{animation:ee-rise .3s var(--ease) both}
+#view.anim .index .row:nth-child(n+2){animation-delay:.015s}
+#view.anim .index .row:nth-child(n+5){animation-delay:.03s}
+#view:is(.anim,.anim-body) .body > *{animation:ee-rise .3s var(--ease) both}
+#view:is(.anim,.anim-body) .body > :nth-child(2){animation-delay:.04s}
+#view:is(.anim,.anim-body) .body > :nth-child(3){animation-delay:.07s}
+#view:is(.anim,.anim-body) .body > :nth-child(n+4){animation-delay:.1s}
+#view:is(.anim,.anim-body) .card{animation:ee-rise .34s var(--ease) both}
+#view:is(.anim,.anim-body) .card:nth-child(2){animation-delay:.05s}
+#view:is(.anim,.anim-body) .card:nth-child(3){animation-delay:.09s}
+#view:is(.anim,.anim-body) .card:nth-child(n+4){animation-delay:.13s}
+.stamp.vchg{animation:ee-stamp .34s var(--ease) both}
+@media (max-width:1000px){.findings{grid-template-columns:1fr}.index{border-right:0;border-bottom:1px solid var(--dw-ink-30)}
+  :root{--sp-gutter:24px;--sp-6:32px;--card-min:280px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="page"><div class="sheet">
+  <div class="head">
+    <div>
+      <div class="label" id="eyebrow"></div>
+      <h1 id="title"></h1>
+    </div>
+    <div class="controls">
+      <div class="group"><span class="label">View</span><button class="chip" id="viewFind">Findings</button><button class="chip" id="viewSheet">Sheet</button></div>
+      <div class="group" id="presetGroup"><span class="label">Presets</span><span id="presets" style="display:flex;gap:6px;flex-wrap:wrap"></span></div>
+      <div class="group"><button class="chip ghost" id="coachToggle">Coach: off</button><button class="chip ghost" id="exportBtn">Export</button><button class="chip ghost" id="reset">Reset</button></div>
+    </div>
+  </div>
+  <div class="preset-note" id="presetNote" hidden><p id="presetText"></p><div class="steps" id="presetSteps"></div></div>
+  <div class="exportbox" id="exportBox" hidden>
+    <div class="row"><span class="label">Paste this to Claude</span><span class="label" id="exportStatus"></span><span class="spacer"><button class="chip" id="copyBtn">Copy</button><button class="chip ghost" id="closeExport">Close</button></span></div>
+    <div class="row"><code class="restore" id="restoreCode" title="Your configuration, as one line"></code></div>
+    <details id="exportDetails">
+      <summary class="label">Full Markdown, and load a restore code</summary>
+      <div class="row" style="margin-top:var(--sp-2)"><label class="label" for="loadCode">Load</label><input id="loadCode" type="text" spellcheck="false" placeholder="eagle-eye: option-id, option-id"><button class="chip" id="loadBtn">Load</button></div>
+      <textarea id="exportText" rows="14" spellcheck="false" aria-label="Your configuration as Markdown"></textarea>
+    </details>
+  </div>
+  <div id="view"></div>
+</div></div>
+<div class="tip" id="tip"></div>
+
+<script>
+const BOX = {"title":"Test-code complexity: its own population, its own series, or refused","eyebrow":"Wayfinder #239 · map #228 · 2026-08-23","dims":[{"id":"verdict","name":"The verdict","question":"What happens to the complexity of this repo's test code?","problem":"This repo counts cyclomatic complexity for eight populations of product code. Every `*.test.ts` file is dropped before the count. More than half of this repo's functions therefore never reach the trend layer. This row decides what to do about that: build an instrument, refuse one, or wait. A careless pick either adds a panel nobody acts on, or leaves the enforcement code unmeasured forever.","opts":[{"id":"verdict-refuse","label":"Refuse. Test code gets no complexity series.","short":"Refuse","chosen":true,"src":"this session's recommendation"},{"id":"verdict-series","label":"Give test code its own population and its own series.","short":"Its own series","src":"#239, question 1"},{"id":"verdict-fold","label":"Fold test code into the eight existing populations.","short":"Fold in","strawman":true},{"id":"verdict-once","label":"Measure once by hand. Record the numbers. Build nothing.","short":"Measure once","strawman":true},{"id":"verdict-later","label":"Decide later, after the first product cap arms.","short":"Decide later","strawman":true}]},{"id":"boundary","name":"The population boundary","question":"Which test files count as one population?","problem":"A population is the set of files one number describes. The product series use eight populations, one per declared scope. Test code offers three candidate boundaries: the gates alone, every test file as one set, or one test set per product scope. The boundary decides what a movement in the number can mean. A boundary that mixes unlike code produces a number nobody can attribute.","opts":[{"id":"boundary-none","label":"No population. Nothing is grouped.","short":"None","chosen":true,"src":"this session's recommendation"},{"id":"boundary-gates","label":"`gates/` alone. The constitution's enforcement code.","short":"gates/ alone","src":"#239, question 2"},{"id":"boundary-all","label":"Every `*.test.ts` file, as one population.","short":"All test files","src":"#239, question 2"},{"id":"boundary-twin","label":"One test population beside each declared scope.","short":"Per-scope twin","src":"#239, question 2"},{"id":"boundary-hand","label":"No fixed boundary. Somebody picks the files when they ask.","short":"By hand, on request","strawman":true}]},{"id":"mechanism","name":"How a test population enters the counter","question":"What edit makes the counter see a test file?","problem":"`populationOf` in `scripts/lib/complexity.ts` reads one thing: a `scopes[].glob` from `stryker.scopes.json`, minus `*.test.ts`. The walk that feeds it drops test files too. `stryker.config.mjs` derives Stryker's mutation targets from the same `scopes[]` array. So the declaration file serves two instruments at once. This row decides which edit declares a test population, and each option pays a different price somewhere else.","opts":[{"id":"mech-none","label":"No declaration. `populationOf` stays as it is.","short":"No edit","chosen":true,"src":"this session's recommendation"},{"id":"mech-scope","label":"A new `scopes[]` entry in `stryker.scopes.json`.","short":"New scopes[] entry","src":"complexity-on-the-trend-layer.md §2"},{"id":"mech-second-list","label":"A second list, beside `scopes[]`, read only by the counter.","short":"A second list","src":"complexity-on-the-trend-layer.md §2, where it is refused"},{"id":"mech-drop-filter","label":"Drop the `*.test.ts` filter from the population rule.","short":"Drop the filter","src":"#239, question 1"},{"id":"mech-hand","label":"Run the counter by hand on a file list, when somebody asks.","short":"By hand","strawman":true}]},{"id":"series","name":"Which counts a test population emits","question":"Which of the four counts would a test series carry?","problem":"The trend layer emits four counts per population: `complexity-functions`, `complexity-mass`, `complexity-max` and `complexity-mass-over-10`. The first two grow with the codebase. The last two describe the worst functions, and only those two carry caps. This row decides which counts a test population would report. A count that cannot move is a panel with a flat line on it.","opts":[{"id":"series-none","label":"None. No count is emitted for test code.","short":"No series","chosen":true,"src":"this session's recommendation"},{"id":"series-four","label":"All four counts, as the product populations carry them.","short":"All four","src":"#239, question 2"},{"id":"series-uncapped","label":"`complexity-functions` and `complexity-mass` only.","short":"The two volume counts","src":"this session, from complexity-on-the-trend-layer.md §4"},{"id":"series-capped","label":"`complexity-max` and `complexity-mass-over-10` only.","short":"The two worst-case counts","src":"this session, from complexity-on-the-trend-layer.md §4"},{"id":"series-new","label":"A fifth count, written for test code.","short":"A new count","strawman":true}]},{"id":"cap","name":"Teeth","question":"Does a test series get a cap that refuses a deploy?","problem":"A cap is this repo's only teeth for a metric. It arms at the highest value seen across a twenty-run window. After that it moves down only, by hand. An armed cap makes `pnpm deploy:site` refuse when a scope exceeds it. The spec already refuses a per-function ceiling on a pull request, because *refactor this function* is not a finite diff. This row asks whether test code earns the surviving surface.","opts":[{"id":"cap-none","label":"No cap, because no series exists.","short":"No cap","chosen":true,"src":"this session's recommendation"},{"id":"cap-capped","label":"Cap it, as the product populations are capped.","short":"Capped","src":"#239, question 3"},{"id":"cap-uncapped","label":"A series with no cap. Report only.","short":"Uncapped","src":"#239, question 3"},{"id":"cap-max-only","label":"Cap `complexity-max` alone. Leave the rest uncapped.","short":"Cap max only","src":"this session"},{"id":"cap-ceiling","label":"A per-function ceiling, red on a pull request.","short":"A PR ceiling","strawman":true}]},{"id":"reader","name":"Reader and action","question":"Who reads the number, and what do they then do?","problem":"`gate-or-trend.md` §2 obliges a trend to name a reader and a cadence. A series that reaches nobody is deleted in effect, whatever the dashboard shows. This row names the person and the action. The ticket asks the same question in its own words: if there is no named action, that argues for refusal rather than for a quieter panel.","opts":[{"id":"reader-none","label":"Nobody, because no number exists.","short":"No reader","chosen":true,"src":"this session's recommendation"},{"id":"reader-deploy","label":"The maintainer, at `pnpm deploy:site`, as today.","short":"Maintainer at deploy","src":"gate-or-trend.md §2"},{"id":"reader-panel","label":"A dashboard panel. No reader is named.","short":"A panel only","strawman":true},{"id":"reader-review","label":"A named review step before anyone edits a gate.","short":"A gate-edit review","src":"#239, question 4"}]},{"id":"record","name":"Where the verdict is written down","question":"Which document carries the refusal?","problem":"A refusal that lives only in a closed ticket is invisible to the next session. This repo keeps three homes for such a record: the map's own spec, `docs/gates.md` under *Not gated, deliberately*, and `docs/adr/`. Each home carries a different promise about who reads it. The wrong home makes the next session re-derive the same numbers.","opts":[{"id":"record-spec","label":"The map's spec, `docs/spec/static-analysis-and-style.md`.","short":"The map's spec","chosen":true,"src":"map #228, Destination"},{"id":"record-gates-md","label":"`docs/gates.md`, under *Not gated, deliberately*.","short":"docs/gates.md","src":"#229's resolution"},{"id":"record-adr","label":"Its own record under `docs/adr/`.","short":"Its own ADR","src":"AGENTS.md, working rules for agents"},{"id":"record-nowhere","label":"Nowhere. Close the ticket and move on.","short":"Nowhere","strawman":true}]}],"rel":{"verdict-refuse":{"why":"Test code gets no complexity population and no series. The measurement in this ticket is the whole deliverable.","rel":[["mech-none","req","A refusal edits no code, so the population rule stays as it is.","argued"],["series-none","req","No population emits no count.","argued"],["record-spec","req","The map's Destination asks for a verdict per candidate, in the spec.","sourced","map #228, Destination"]],"notes":["Refusal is a first-class result on this map. The Destination says so.","This option costs nothing to reverse. The counter already takes an explicit file list."]},"verdict-series":{"why":"Test code gets its own populations and its own trend panels, beside the product ones.","rel":[["mech-none","conf","A series needs a declaration, and the current rule reads only product globs.","sourced","complexity-on-the-trend-layer.md §2"],["reader-deploy","req","A trend must name a reader and a cadence.","sourced","gate-or-trend.md §2"],["series-none","conf","A series that emits no count is not a series.","argued"]]},"verdict-fold":{"why":"Test files join the eight product populations. One number covers both kinds of code.","rel":[["mech-drop-filter","req","Only the removal of the `*.test.ts` filter folds the two sets together.","sourced","complexity-on-the-trend-layer.md §2"],["boundary-none","req","A fold declares no new population. It widens the eight that exist.","argued"]],"notes":["The ticket calls this almost certainly wrong. It moves every number at once and restarts every cap window.","Measured cost: mean complexity across all test functions is 1.37, against 2.92 for product code. A fold halves every mean."]},"verdict-once":{"why":"Somebody measures test complexity by hand, records the numbers, and builds no instrument.","rel":[["mech-none","req","A one-off measurement needs no declaration and no edit.","argued"],["series-none","req","A one-off measurement emits no series.","argued"]],"notes":["Nothing in this box rules this out, and this session did exactly this.","It differs from the chosen option in one way only: it makes no promise about the future."]},"verdict-later":{"why":"The question waits until the first product cap arms and the repo learns what a cap costs.","rel":[["record-nowhere","req","A deferral records no verdict, so it needs no home.","argued"]],"notes":["The first cap arms after a twenty-run window fills. Nothing states when that happens.","A deferral with no date is a refusal that nobody has to defend."]},"boundary-none":{"why":"No test files are grouped into anything. The eight product populations stay as they are.","rel":[]},"boundary-hand":{"why":"No boundary is fixed in advance. Somebody names the files each time a question arises.","rel":[["mech-hand","req","A boundary chosen per question cannot be declared in advance.","argued"]],"notes":["A boundary that changes per question produces no series, because a series needs a stable denominator.","Nothing in this box rules this out. It is the configuration this session ran."]},"boundary-gates":{"why":"The 38 gate specs become one population. The ticket's case: nothing tests the tests.","rel":[["mech-scope","conf","`stryker.config.mjs` derives `mutate` from `scopes[]`, so Stryker then mutates gates/ and the dry run dies.","sourced","stryker.scopes.json, excludedDirectories[0].mechanism"],["series-capped","conf","Gate test code peaks at complexity 9, so `complexity-max` is flat and `complexity-mass-over-10` is 0.","measured","#239 run, 2026-08-23: 672 functions, max 9"],["cap-capped","conf","A cap arms at the highest observed value, and no gate test function passes 9.","measured","#239 run, 2026-08-23"]],"notes":["Measured: gate test code is indistinguishable from package test code. Mean 1.42 against 1.41, max 9 against 10.","A `gates/**/*.ts` entry measures the four helper files, not the 38 gates. That is 24 functions with a maximum of 6."]},"boundary-all":{"why":"Every test file in the repo forms one population, across packages, scripts and gates.","rel":[["series-capped","conf","Across all 1931 test functions the maximum is 10, so `complexity-mass-over-10` is identically 0.","measured","#239 run, 2026-08-23"],["cap-capped","conf","A cap on a count that is always 0 can never go red.","measured","#239 run, 2026-08-23"],["mech-scope","conf","A `scopes[]` glob cannot reach a test file, because two filters drop it first.","sourced","complexity.ts:185 and scope-check.ts isSourceFile"]],"notes":["One population across three roots hides which root moved. That is the attribution cost.","Measured: 79.5% of test functions score 1. The product figure is 48.6%."]},"boundary-twin":{"why":"Each declared scope gains a test twin, so a panel pair sits under each product panel.","rel":[["series-capped","conf","Every twin has a maximum of 10 or less and a mass-over-10 of 0.","measured","#239 run, 2026-08-23: eight twins measured"],["mech-scope","conf","A `scopes[]` glob cannot reach a test file, because two filters drop it first.","sourced","complexity.ts:185 and scope-check.ts isSourceFile"],["mech-second-list","req","Eight more populations need eight more declarations, and `scopes[]` cannot hold them.","argued"]],"notes":["This boundary doubles the panel count from 32 to 64, for counts that do not move.","It also leaves gates/ out, because gates/ matches no product scope. That is the ticket's own question 2."]},"mech-none":{"why":"Nothing changes. `populationOf` reads a product glob and drops every test file.","rel":[["verdict-fold","conf","A fold needs the `*.test.ts` filter removed, and this option keeps it.","sourced","complexity.ts:185"],["cap-ceiling","conf","A ceiling needs a per-function count over test files, and no declaration produces one.","sourced","complexity.ts:185"]]},"mech-hand":{"why":"Nothing is declared. Somebody calls the counter with an explicit file list when a question arises.","rel":[["series-none","req","A hand run emits nothing to the trend layer.","argued"]],"notes":["`complexityOf` already takes an explicit file list, so this option needs no code at all.","This session used exactly this route to produce every number in the resolution."]},"mech-scope":{"why":"A test population is declared the way the spec says a new population enters: a `scopes[]` entry.","rel":[["series-none","req","Two filters drop every test file, so this entry produces no test count at all.","measured","#239 run: gates/**/*.ts yields 4 helper files, 24 functions"]],"notes":["The spec names this as the only way gates/ enters. It does not say the entry also declares a mutation scope.","G38 (`mutation-scope`) refuses a deploy when a declared scope produces no mutant. This entry produces the opposite problem: a dry run that dies."]},"mech-second-list":{"why":"A list beside `scopes[]` declares test populations, and only the complexity counter reads it.","rel":[["record-adr","req","A second declaration list is a hard-to-reverse decision, so it owes a record.","sourced","AGENTS.md, working rules for agents"]],"notes":["The spec refuses this in one line: *No second list: G38 already holds that file to the tree.*","A second list is unheld. Nothing compares it to the tree, so a renamed directory drops a population in silence."]},"mech-drop-filter":{"why":"The `*.test.ts` filter leaves `populationOf`, so every declared glob picks up its test files.","rel":[["boundary-twin","conf","The filter is repo-wide, so its removal folds test code into the product populations instead.","sourced","complexity.ts:185"],["cap-none","req","Every product number moves at once, so every armed cap must disarm and every window restarts.","sourced","complexity-on-the-trend-layer.md §4"]],"notes":["The walk drops test files a second time, in `isSourceFile`. Both filters must go.","Measured effect on one scope: `packages/core/src` moves from 84 functions to 283, and its mean falls from 3.68 to 1.95."]},"series-none":{"why":"Nothing is emitted. The four families keep their eight populations of product code.","rel":[["reader-panel","conf","A panel needs a number, and no count is emitted for test code.","argued"]]},"series-four":{"why":"A test population reports the same four counts a product population reports.","rel":[["cap-capped","req","The four counts arrive with the cap rule the spec attaches to two of them.","sourced","complexity-on-the-trend-layer.md §4"],["reader-deploy","req","Four more families need the reader that the existing four name.","sourced","gate-or-trend.md §2"]],"notes":["Two of the four are measured flat on every candidate boundary. This option ships two dead panels per population."]},"series-uncapped":{"why":"Only the two counts that grow with the codebase are emitted. Neither carries a cap.","rel":[["cap-uncapped","req","The spec leaves `complexity-functions` and `complexity-mass` uncapped, because they grow legitimately.","sourced","complexity-on-the-trend-layer.md §4"],["reader-review","conf","A count of functions names no function, so no reviewer can act on it.","argued"]],"notes":["You raise both counts when you add a test. That is Clause B's shape, applied to a series rather than to a gate.","The number that results is a measure of test volume. `pnpm test` already reports that faster."]},"series-capped":{"why":"Only the two worst-case counts are emitted, so a panel shows the worst test function per population.","rel":[["reader-review","req","A worst-case count is actionable only if somebody reads the named function.","argued"]],"notes":["Measured dead on arrival: `complexity-mass-over-10` is 0 for every candidate test population in this repo.","`complexity-max` sits at 10 for all test files, 9 for gates/ and 8 for scripts/. Three populations, three flat lines."]},"series-new":{"why":"A fifth count is designed for test code, for example the count of helpers above complexity 5.","rel":[["record-adr","req","A fifth measure changes what the trend layer means, so it owes a record.","sourced","AGENTS.md, working rules for agents"],["mech-none","conf","A new count needs a population to count over.","argued"]],"notes":["Measured target size: 41 test functions score between 5 and 10. Two of them reach 10.","G36 (`trend-layer`) holds trend names to the rows in `docs/gates.md`, so a fifth family needs a fifth row."]},"cap-none":{"why":"No cap exists, because there is no series for a cap to watch.","rel":[]},"cap-ceiling":{"why":"A per-function complexity ceiling goes red on a pull request when any test function passes it.","rel":[["series-capped","req","A ceiling reads a per-function number, which only the worst-case counts carry.","argued"]],"notes":["The spec already refuses this shape for product code, in §4, on Clause A: *refactor this function* is not a finite diff.","It also refuses a pre-commit hook that blocks, because `--no-verify` makes it a gate anyone can skip."]},"cap-capped":{"why":"A test population's cap arms after its window fills, and `pnpm deploy:site` then refuses a breach.","rel":[["reader-deploy","req","A cap refuses at the deploy, which is where the maintainer meets it.","sourced","gate-or-trend.md §3"],["verdict-refuse","conf","A cap needs a series, and a refusal builds none.","argued"]],"notes":["A cap armed at 10 refuses the first test helper that reaches 11. The remedy is *refactor this test helper*.","The spec already calls that remedy insufficient for Clause A, in its refusal of a per-function ceiling."]},"cap-uncapped":{"why":"The series reports and never refuses. Only its own silence is red.","rel":[["reader-deploy","req","A trend with no teeth still owes a named reader and a cadence.","sourced","gate-or-trend.md §2"]]},"cap-max-only":{"why":"`complexity-max` carries a cap. The other counts report only.","rel":[["series-uncapped","conf","`complexity-max` is not in the uncapped pair, so this option needs it emitted.","argued"],["boundary-all","conf","A cap on a count pinned at 10 arms at 10 and never moves.","measured","#239 run, 2026-08-23"]]},"reader-none":{"why":"Nobody reads a test complexity number, because none is produced.","rel":[]},"reader-deploy":{"why":"The maintainer meets the number at `pnpm deploy:site`, beside the mutation scores and the four product families.","rel":[["record-nowhere","conf","A named reader needs a document that tells the next session who reads what.","argued"]],"notes":["`pnpm deploy:site` already prints the trend record first and refuses a stale one, per G39."]},"reader-panel":{"why":"The number appears on the Grafana dashboard. No document names a reader or an action.","rel":[["record-nowhere","req","A panel with no named reader needs no record either.","argued"]],"notes":["The spec forbids this shape: a trend must name a reader and a cadence.","An unread dashboard and a deleted one are the same artifact. The spec says so in those words."]},"reader-review":{"why":"Before anyone edits a gate, they read the list of test helpers above a stated complexity.","rel":[["boundary-gates","req","A gate-edit review reads gate code, so it needs the gates as a population.","argued"]],"notes":["This is the one live action the measurement suggests. The complexity in test code sits in named helpers.","Measured: `shelfCost` at 10, `citations`, `indexHtml` and `coreImports` at 7. All are helpers, not test bodies.","A review step is a process, not a series. It needs no trend layer at all."]},"record-spec":{"why":"The verdict lands in the spec this map produces, beside the other candidates' verdicts.","rel":[["verdict-later","conf","The spec records a verdict per candidate, and *later* is not a verdict.","sourced","map #228, Destination"]]},"record-gates-md":{"why":"The refusal joins the eight entries under *Not gated, deliberately*.","rel":[],"notes":["That section records rules no gate protects. A refused series is not a rule, so the fit is poor.","#229 chose this home for a style-rule refusal. A style rule is a candidate gate; this candidate is a trend."]},"record-adr":{"why":"The verdict gets its own file under `docs/adr/`, with the reasoning carried verbatim.","rel":[],"notes":["AGENTS.md asks for a record when a decision is hard to reverse, surprising, and a real trade-off.","This refusal is cheap to reverse, so it fails the first of the three tests."]},"record-nowhere":{"why":"The closed ticket carries the answer. No document changes.","rel":[],"notes":["The map's Decisions-so-far still points at the ticket, so the answer is not lost.","It is lost to anyone who reads the spec instead of the map, which is the audience the Destination names."]}},"suspected":["series-uncapped conflicts with verdict-series, because Clause B rules out a check you turn green by adding tests. Clause B is written for gates, and a trend is not a gate, so this is an analogy rather than a rule.","boundary-gates requires its own series, because gate code is the code most likely to be subtly wrong. Nothing measured supports the claim that complexity finds that wrongness."],"presets":[{"title":"As recommended","text":"The chosen set: refuse the series, record the verdict in the spec, keep the measurement. Open the two rows that carry the argument.","steps":[{"label":"Reset to the chosen set","reset":true,"view":"findings"},{"label":"Open the verdict","open":"verdict"},{"label":"Open which counts","open":"series"},{"label":"Back to the findings","open":null,"view":"findings"}]},{"title":"The cheap route","text":"One population of every test file, the two volume counts, no cap. The cheapest instrument anybody would build. Read what it fails to require.","steps":[{"label":"Reset","reset":true},{"label":"Build a series","set":{"verdict":"verdict-series"}},{"label":"One population of all test files","set":{"boundary":"boundary-all"}},{"label":"The two volume counts, uncapped","set":{"series":"series-uncapped","cap":"cap-uncapped"}},{"label":"Open the mechanism row","open":"mechanism"}]},{"title":"Do the gates deserve a population","text":"The ticket's own case, selected. A `scopes[]` entry for gates/, with the worst-case counts. Both edges out of it are red.","steps":[{"label":"Reset","reset":true},{"label":"Build a series over gates/","set":{"verdict":"verdict-series","boundary":"boundary-gates"}},{"label":"Declare it as the spec says","set":{"mechanism":"mech-scope"}},{"label":"The two worst-case counts","set":{"series":"series-capped"}},{"label":"Open the boundary row","open":"boundary"}]},{"title":"The strawman run","text":"Measure once by hand, build nothing. Nothing in this box rules it out, and this session did exactly that.","steps":[{"label":"Reset","reset":true},{"label":"Measure once","set":{"verdict":"verdict-once"}},{"label":"Open the verdict","open":"verdict"}]}]};
+</script>
+<script>
+
+const EagleEye = (() => {
+  const TIER_RANK = { measured: 3, sourced: 2, argued: 1 };
+
+  function index(box){
+    const optById = {}, chosenOf = {};
+    box.dims.forEach(d => { d.opts.forEach(o => { optById[o.id] = { ...o, dim: d }; }); chosenOf[d.id] = d.opts.find(o => o.chosen).id; });
+    return { optById, chosenOf };
+  }
+
+  // sel: {dimId: optId}. touched: Set of dimIds the user has clicked in. Returns everything the panel needs.
+  function analyse(box, sel, touched = new Set()){
+    const { optById, chosenOf } = index(box);
+    const selected = new Set(Object.values(sel));
+    const overrides = box.dims.filter(d => sel[d.id] !== chosenOf[d.id]).map(d => sel[d.id]);
+    const conflicts = [], unmet = [], met = [], closed = new Map(), pulled = new Map();
+    const edgesOf = id => (box.rel[id]?.rel || []).map(([tid, kind, why, tier, src]) => ({ from: id, to: tid, kind, why, tier: tier || 'argued', src }));
+
+    selected.forEach(id => edgesOf(id).forEach(e => {
+      if (optById[e.to].dim.id === optById[id].dim.id) return; // same row: a swap, not a relation
+      const tSel = selected.has(e.to);
+      if (e.kind === 'conf') { if (tSel) { if (!conflicts.some(c => c.from === e.to && c.to === e.from)) conflicts.push(e); } else closed.set(e.to, (closed.get(e.to) || []).concat(e)); }
+      else { if (tSel) met.push(e); else { unmet.push(e); pulled.set(e.to, (pulled.get(e.to) || []).concat(e)); } }
+    }));
+
+    const verdict = !overrides.length ? 'as chosen' : conflicts.length ? 'does not hold' : unmet.length ? 'incomplete' : 'consistent';
+    const active = conflicts.concat(unmet, met);
+    const basis = active.length ? Object.entries(active.reduce((m, e) => (m[e.tier] = (m[e.tier] || 0) + 1, m), {})) : [];
+
+    // ---- the six moves ----
+    const moves = [];
+
+    // 1. untouched row: bound to the most overridden rows, never clicked.
+    const overriddenDims = new Set(overrides.map(id => optById[id].dim.id));
+    const bindCount = {};
+    box.dims.forEach(d => { if (overriddenDims.has(d.id) || touched.has(d.id)) return;
+      let n = 0; d.opts.forEach(o => edgesOf(o.id).forEach(e => { if (overriddenDims.has(optById[e.to].dim.id)) n++; }));
+      overrides.forEach(id => edgesOf(id).forEach(e => { if (optById[e.to].dim.id === d.id) n++; }));
+      if (n) bindCount[d.id] = n; });
+    const untouched = Object.entries(bindCount).sort((a, b) => b[1] - a[1])[0];
+    if (untouched) moves.push({ kind: 'row not opened', text: `<b>${box.dims.find(d => d.id === untouched[0]).name}</b> has ${untouched[1]} edge${untouched[1] > 1 ? 's' : ''} to the rows you changed. You did not open it. Open it.` });
+
+    // 2. weakest edge under the verdict
+    const weakest = active.slice().sort((a, b) => TIER_RANK[a.tier] - TIER_RANK[b.tier])[0];
+    if (weakest && overrides.length) moves.push({ kind: 'weakest edge', text: `The verdict depends on the edge <b>${optById[weakest.from].dim.name} ${weakest.kind === 'conf' ? 'vs' : 'needs'} ${optById[weakest.to].dim.name}</b>. This edge is <span class="tier ${weakest.tier}">${weakest.tier}</span>. “${weakest.why}” ${weakest.tier === 'argued' ? 'Nobody measured it. Measure this edge first.' : weakest.tier === 'sourced' ? 'A document says so. Read the source.' : ''}` });
+
+    // 3. load-bearing option: the selected cell with the most edges to other selected cells (either direction)
+    const degree = {};
+    selected.forEach(id => { degree[id] = 0; });
+    selected.forEach(id => edgesOf(id).forEach(e => { if (optById[e.to].dim.id === optById[id].dim.id) return;
+      degree[id]++; if (selected.has(e.to)) degree[e.to]++; }));
+    const lb = Object.entries(degree).sort((a, b) => b[1] - a[1])[0];
+    if (lb && lb[1]) moves.push({ kind: 'most connected', text: `<b>${optById[lb[0]].dim.name}: ${optById[lb[0]].short || optById[lb[0]].label}</b> has ${lb[1]} edge${lb[1] === 1 ? '' : 's'} to the other selected options. If you change this option, the most options change with it.` });
+
+    // 4. free rows: no edges in or out, any option
+    const inbound = new Set(); box.dims.forEach(d => d.opts.forEach(o => edgesOf(o.id).forEach(e => inbound.add(optById[e.to].dim.id))));
+    const free = box.dims.filter(d => !inbound.has(d.id) && d.opts.every(o => edgesOf(o.id).length === 0));
+    if (free.length) moves.push({ kind: 'row with no edges', text: `<b>${free.map(d => d.name).join(', ')}</b> ${free.length > 1 ? 'have' : 'has'} no edges. Decide ${free.length > 1 ? 'these rows' : 'this row'} alone, or add the edge that is missing.` });
+
+    // 5. survived strawmen: strawman options not ruled out by the selection, whose own conflicts are not selected
+    const survived = [];
+    box.dims.forEach(d => d.opts.filter(o => o.strawman).forEach(o => {
+      if (selected.has(o.id)) return;
+      const ruledOut = closed.has(o.id);
+      const wouldConflict = edgesOf(o.id).some(e => e.kind === 'conf' && selected.has(e.to) && optById[e.to].dim.id !== d.id);
+      // a selected option that requires a *different* option in this row excludes the strawman just as surely as a conflict
+      const pulledAway = [...selected].some(sid => optById[sid].dim.id !== d.id && edgesOf(sid).some(e => e.kind === 'req' && optById[e.to].dim.id === d.id && e.to !== o.id));
+      if (!ruledOut && !wouldConflict && !pulledAway) survived.push(optById[o.id]);
+    }));
+    if (survived.length) moves.push({ kind: 'strawman not rejected', text: `${survived.map(o => `<b>${o.dim.name}: ${o.short || o.label}</b>`).join('; ')}. No selected option rules ${survived.length > 1 ? 'these strawmen' : 'this strawman'} out. Give the reason to reject ${survived.length > 1 ? 'them' : 'it'}, or pick ${survived.length > 1 ? 'one' : 'it'}.` });
+
+    // 6. cogency
+    const argued = active.filter(e => e.tier === 'argued').length;
+    moves.push({ kind: 'cogency', text: overrides.length
+      ? `${argued} of ${active.length} active edges are argued. Nobody measured them. If all the edges are true, the verdict is “${verdict}”. If one argued edge is false, the verdict can change.`
+      : `The chosen set has no conflicts. Nobody tested it. Change one option to see which edges hold it.` });
+
+    // affected rows for coach mode: rows whose cells changed colour because of the overrides
+    // only edges that involve an override count — what the chosen set rules out on its own is the baseline, not a change
+    const affected = new Set();
+    const viaOverride = e => overriddenDims.has(optById[e.from].dim.id) || overriddenDims.has(optById[e.to].dim.id);
+    conflicts.filter(viaOverride).forEach(e => { affected.add(optById[e.from].dim.id); affected.add(optById[e.to].dim.id); });
+    unmet.filter(viaOverride).forEach(e => affected.add(optById[e.to].dim.id));
+    closed.forEach((es, tid) => { if (es.some(viaOverride)) affected.add(optById[tid].dim.id); });
+    overriddenDims.forEach(d => affected.delete(d));
+
+    return { optById, chosenOf, selected, overrides, conflicts, unmet, met, closed, pulled, verdict, basis, moves, affected, suspected: box.suspected || [] };
+  }
+
+  return { analyse, index };
+})();
+
+</script>
+<script>
+// ---- shell: reads BOX, calls EagleEye.analyse, paints. No grid logic in here. ----
+const { optById, chosenOf } = EagleEye.index(BOX);
+const sel = { ...chosenOf }, touched = new Set();
+let view = 'findings', openRow = null, coach = false, pending = null;
+// Reset throws away every override at once. The button keeps the pre-reset state and offers it back
+// while the pointer rests on it; the pointer leaving starts a ten-second fuse rather than dropping
+// the offer, so a slip of the mouse does not cost the work.
+const UNDO_GRACE_MS = 10000;
+let undoSnap = null, undoFuse = null, resetHot = false;
+const $ = id => document.getElementById(id);
+const S = id => optById[id].short || optById[id].label;
+const ref = d => String(BOX.dims.indexOf(d) + 1).padStart(2, '0');
+const edgesOf = id => (BOX.rel[id]?.rel || []).map(([to, kind, why, tier, src]) => ({ from: id, to, kind, why, tier: tier || 'argued', src }));
+const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const tierTag = t => `<span class="tier ${t}">${t}</span>`;
+const nm = id => `<b>${ref(optById[id].dim)} ${esc(optById[id].dim.name)}: ${esc(S(id))}</b>`;
+const COLS = Math.max(...BOX.dims.map(d => d.opts.length));
+document.documentElement.style.setProperty('--cols', COLS);
+$('title').textContent = BOX.title;
+$('eyebrow').textContent = BOX.eyebrow || `Morphological box · ${BOX.dims.length} decisions · ${Object.values(BOX.rel).reduce((n, r) => n + (r.rel || []).length, 0)} edges`;
+
+function resetAll(){ Object.assign(sel, chosenOf); touched.clear(); pending = null; openRow = null; disarmUndo(); }
+function override(d, o){
+  if (pending && !pending.revealed) return;
+  disarmUndo();   // the snapshot means "the state just before that reset"; a new pick makes it a lie
+  touched.add(d.id);
+  const was = sel[d.id];
+  sel[d.id] = (sel[d.id] === o.id && o.id !== chosenOf[d.id]) ? chosenOf[d.id] : o.id;
+  pending = (coach && sel[d.id] !== was && sel[d.id] !== chosenOf[d.id]) ? { dimId: d.id, predicted: new Set(), revealed: false } : null;
+  if (pending) { openRow = null; view = 'findings'; }
+  update();
+}
+const vcls = v => ({ 'does not hold': 'caution', 'incomplete': 'caution', 'consistent': 'normal', 'as chosen': 'ink' }[v]);
+
+function verdictBar(r){
+  const basis = r.overrides.length ? `Active edges: ${r.basis.map(([t, n]) => `${n} ${tierTag(t)}`).join(' · ')}` : 'No option changed. Nobody tested the chosen set.';
+  return `<div class="verdict-bar"><div><div class="label">Verdict for the selected options · ${r.overrides.length} change${r.overrides.length === 1 ? '' : 's'}</div><div class="annot">${basis}</div></div><div class="stamp ${vcls(r.verdict)}">${r.verdict}</div></div>`;
+}
+function cellState(r, id){
+  const o = optById[id], isChosen = id === chosenOf[o.dim.id], c = [];
+  if (o.strawman) c.push('straw');
+  if (r.selected.has(id)) { c.push(isChosen ? 'chosen' : 'over'); if (r.conflicts.some(e => e.from === id || e.to === id)) c.push('conf'); else if (r.overrides.length && r.met.some(e => e.to === id)) c.push('req'); }
+  else if (r.overrides.length) { if (r.pulled.has(id)) c.push('req'); else if (r.closed.has(id)) c.push('out'); }
+  return c;
+}
+function rowDot(r, d){
+  const id = sel[d.id];
+  if (r.conflicts.some(e => e.from === id || e.to === id)) return '<span class="dot caution"></span>';
+  if (r.unmet.some(e => optById[e.to].dim.id === d.id)) return '<span class="dot caution"></span>';
+  if (r.overrides.length && r.met.some(e => e.to === id)) return '<span class="dot normal"></span>';
+  return '<span></span>';
+}
+
+// ---- findings view ----
+function renderFindings(r){
+  const veil = pending && !pending.revealed;
+  const rows = BOX.dims.map(d => {
+    const id = sel[d.id], isOver = id !== chosenOf[d.id];
+    const cls = ['row', openRow === d.id ? 'open' : '', isOver && !pending ? 'over' : ''];
+    if (pending) { if (!pending.revealed) { if (d.id !== pending.dimId) cls.push('predict'); if (pending.predicted.has(d.id)) cls.push('predicted'); }
+      else { const hit = r.affected.has(d.id), g = pending.predicted.has(d.id); if (hit && g) cls.push('hit'); else if (hit) cls.push('miss'); else if (g) cls.push('fp'); } }
+    return `<button class="${cls.join(' ')}" data-row="${d.id}"><span class="label num">${ref(d)}</span><span><span style="font-weight:500">${esc(d.name)}</span> <span class="muted">· ${esc(S(id))}${isOver ? ' ←' : ''}</span></span>${veil ? '<span></span>' : rowDot(r, d)}</button>`;
+  }).join('');
+  const legend = `<div class="legend label"><span><span class="dot caution"></span> conflict, or requirement not met</span><span><span class="dot normal"></span> requirement met</span><span>← option you changed</span></div>`;
+  let right = verdictBar(r);
+  if (veil) {
+    const o = optById[sel[pending.dimId]];
+    right += `<div class="body"><div class="coach"><div class="label" style="color:var(--dw-caution)">Coach · predict, then reveal</div><p>You changed <b>${esc(o.dim.name)}</b> to “${esc(S(o.id))}”. Which rows does this change affect? Click those rows in the index. Then click Reveal.</p><p class="label">${pending.predicted.size} row${pending.predicted.size === 1 ? '' : 's'} predicted</p><div style="display:flex;gap:8px"><button class="chip on" id="reveal">Reveal</button><button class="chip" id="skipPredict">Skip</button></div></div><p class="annot">The index shows no colours and the findings are hidden until you predict. You remember more when you predict first.</p></div>`;
+  } else if (openRow) right += renderRowDetail(r, BOX.dims.find(d => d.id === openRow));
+  else right += renderFindList(r);
+  $('view').innerHTML = `<div class="findings"><div class="index">${rows}${legend}</div><div class="right">${right}</div></div>`;
+  $('view').querySelectorAll('[data-row]').forEach(b => b.addEventListener('click', () => {
+    const d = b.dataset.row;
+    if (pending && !pending.revealed) { if (d !== pending.dimId) { pending.predicted.has(d) ? pending.predicted.delete(d) : pending.predicted.add(d); update(); } return; }
+    openRow = openRow === d ? null : d; update();
+  }));
+  wire();
+}
+function renderFindList(r){
+  let h = '<div class="body">';
+  if (pending && pending.revealed) { const hits = [...pending.predicted].filter(d => r.affected.has(d)).length, missed = [...r.affected].filter(d => !pending.predicted.has(d)).length, fp = pending.predicted.size - hits;
+    h += `<div class="coach"><div class="label" style="color:var(--dw-caution)">Coach · result</div><p><b>${hits} correct</b> · ${missed} not predicted (amber rows) · ${fp} predicted, not affected. ${missed ? 'You did not know the edges of the amber rows. Read their reasons below.' : 'You predicted every affected row.'}</p></div>`; }
+  if (r.overrides.length) h += `<div><div class="label">Options you changed</div><div class="h2" style="margin-top:6px">${r.overrides.map(id => esc(S(id))).join(' + ')}</div><p class="annot" style="margin:12px 0 0">${r.overrides.map(id => `<b>${esc(optById[id].dim.name)}.</b> ${esc(BOX.rel[id]?.why || '')}`).join(' ')}</p></div>`;
+  else h += `<div><div class="label">Start here</div><div class="h2" style="margin-top:6px">${BOX.dims.length} rows, one chosen option in each</div><p class="annot" style="margin:12px 0 0">Click a row in the index. You see its options and the effect of each one. Change an option there, or in the Sheet view. The findings below describe a set that nobody tested.</p></div>`;
+  const finds = [];
+  r.conflicts.forEach(e => finds.push({ tag: 'conflict', caution: true, txt: `${nm(e.from)} vs ${nm(e.to)}. ${esc(e.why)} ${tierTag(e.tier)}` }));
+  r.unmet.forEach(e => finds.push({ tag: 'requirement not met', caution: true, txt: `${nm(e.from)} requires ${nm(e.to)}. ${esc(e.why)} ${tierTag(e.tier)} <i>That option is not selected.</i>` }));
+  r.moves.forEach(m => finds.push({ tag: m.kind, caution: false, txt: m.text }));
+  h += `<div style="display:flex;flex-direction:column;gap:var(--sp-3)">${finds.map((f, i) => `<div class="find"><span class="pt"></span><span class="lead"></span><span class="tag ${f.caution ? '' : 'ink'}">Find ${String(i + 1).padStart(2, '0')}</span><span class="txt"><b>${f.tag}.</b> ${f.txt}</span></div>`).join('')}</div>`;
+  if (r.overrides.length) {
+    if (r.closed.size) h += `<details><summary class="label">Options ruled out (${r.closed.size})</summary><ul>${[...r.closed.entries()].map(([tid, es]) => `<li>${nm(tid)} — ${es.map(e => esc(e.why) + ' ' + tierTag(e.tier)).join(' ')}</li>`).join('')}</ul></details>`;
+    if (r.met.length) h += `<details><summary class="label">Requirements met (${r.met.length})</summary><ul>${r.met.map(e => `<li>${nm(e.from)} requires ${nm(e.to)} ${tierTag(e.tier)}</li>`).join('')}</ul></details>`;
+    const notes = r.overrides.flatMap(id => (BOX.rel[id]?.notes || []).map(n => `<li><b>${esc(optById[id].dim.name)}.</b> ${esc(n)}</li>`));
+    if (notes.length) h += `<details><summary class="label">Notes (${notes.length})</summary><ul>${notes.join('')}</ul></details>`;
+  }
+  if (r.suspected?.length) h += `<details><summary class="label">Suspected edges, not in the grid (${r.suspected.length})</summary><ul>${r.suspected.map(s => `<li>${esc(s)}</li>`).join('')}</ul></details>`;
+  return h + '</div>';
+}
+// The row said plainly, before the reader meets four cards of detail. The `problem` half is
+// authored: what this decision is about, for a reader who does not know the domain. The rest is
+// derived from the box and the selection, so it cannot go stale.
+function rowSummary(r, d){
+  const id = sel[d.id], isChosen = id === chosenOf[d.id];
+  const straw = d.opts.filter(o => o.strawman).length;
+  const tag = oid => `<b>${ref(optById[oid].dim)} ${esc(S(oid))}</b>`;
+  const rowTag = did => { const x = BOX.dims.find(y => y.id === did); return `<b>${ref(x)} ${esc(x.name)}</b>`; };
+
+  const inbound = [];
+  [...r.selected].filter(s => optById[s].dim.id !== d.id)
+    .forEach(s => edgesOf(s).forEach(e => { if (optById[e.to].dim.id === d.id) inbound.push(e); }));
+  const needThis = inbound.filter(e => e.kind === 'req' && e.to === id);
+  const reach = new Set();
+  d.opts.forEach(o => edgesOf(o.id).forEach(e => { if (optById[e.to].dim.id !== d.id) reach.add(optById[e.to].dim.id); }));
+  inbound.forEach(e => reach.add(optById[e.from].dim.id));
+  const closedHere = d.opts.filter(o => r.closed.has(o.id));
+  const conf = r.conflicts.filter(e => e.from === id || e.to === id);
+  const unmet = r.unmet.filter(e => e.from === id);
+  const list = (arr, n = 4) => arr.slice(0, n).join(', ') + (arr.length > n ? `, and ${arr.length - n} more` : '');
+
+  const L = [];
+  L.push(`This row holds ${d.opts.length} options${straw ? `, ${straw === 1 ? 'one of them a strawman' : `${straw} of them strawmen`}` : ''}. `
+    + (isChosen ? `You are on <b>${esc(S(id))}</b>, which is the chosen option.`
+                : `You changed it to <b>${esc(S(id))}</b>. The chosen option is <b>${esc(S(chosenOf[d.id]))}</b>.`));
+  L.push(needThis.length
+    ? `${needThis.length} selected option${needThis.length > 1 ? 's require' : ' requires'} it: ${list(needThis.map(e => tag(e.from)))}.`
+    : `No selected option requires it. Nothing downstream is holding this row in place.`);
+  L.push(reach.size
+    ? `Its options carry edges to ${reach.size} other row${reach.size > 1 ? 's' : ''}: ${list([...reach].sort((a, b) => BOX.dims.findIndex(x => x.id === a) - BOX.dims.findIndex(x => x.id === b)).map(rowTag))}. Change this row and those are the rows to read next.`
+    : `Its options carry no edges. Decide this row alone, or add the edge that is missing.`);
+  if (conf.length) L.push(`<span class="hot">Your pick conflicts with ${tag(conf[0].from === id ? conf[0].to : conf[0].from)}.</span> ${esc(conf[0].why)}`);
+  if (unmet.length) L.push(`<span class="hot">It requires ${unmet.length} option${unmet.length > 1 ? 's' : ''} you have not selected.</span> Read the card below for each one.`);
+  if (closedHere.length) L.push(`${closedHere.length} option${closedHere.length > 1 ? 's here are' : ' here is'} ruled out by what you selected in other rows.`);
+  const problem = d.problem ? `<p class="problem">${esc(d.problem)}</p>` : '';
+  return `<div class="summary"><div class="label">In short</div>${problem}<div class="derived">${L.map(t => `<p>${t}</p>`).join('')}</div></div>`;
+}
+function renderRowDetail(r, d){
+  const cards = d.opts.map(o => {
+    const id = o.id, isSel = sel[d.id] === id, isChosen = chosenOf[d.id] === id, st = cellState(r, id);
+    const what = EagleEye.analyse(BOX, { ...sel, [d.id]: id }, touched);
+    const out = edgesOf(id).filter(e => optById[e.to].dim.id !== d.id);
+    const inbound = [];
+    [...r.selected].filter(s => optById[s].dim.id !== d.id).forEach(s => edgesOf(s).forEach(e => { if (e.to === id) inbound.push(e); }));
+    const line = e => `<div><span class="dot ${e.kind === 'conf' ? 'caution' : 'normal'}" style="margin-top:8px"></span><span>${e.kind === 'conf' ? 'Rules out' : 'Requires'} ${nm(e.to)}${r.selected.has(e.to) ? (e.kind === 'conf' ? ' <b>— that option is selected: conflict.</b>' : ' — that option is selected.') : (e.kind === 'req' ? ' <b>— that option is not selected.</b>' : '.')} ${esc(e.why)} ${tierTag(e.tier)}</span></div>`;
+    const inl = e => `<div><span class="dot ${e.kind === 'conf' ? 'caution' : 'normal'}" style="margin-top:8px"></span><span>${nm(e.from)} ${e.kind === 'conf' ? 'rules this option out' : 'requires this option'}. ${esc(e.why)} ${tierTag(e.tier)}</span></div>`;
+    const cls = ['card', isSel ? (isChosen ? 'chosen' : 'over') : '', o.strawman ? 'straw' : '', st.includes('out') ? 'closed' : ''].join(' ');
+    return `<div class="${cls}"><span class="tab label">${o.strawman ? 'strawman' : isChosen ? 'chosen' : isSel ? 'your change' : 'option'}${o.src ? ' · ' + esc(o.src) : ''}</span>
+      <div class="ttl">${esc(o.label)}</div>
+      <div class="muted">${esc(BOX.rel[id]?.why || '')}</div>
+      ${(BOX.rel[id]?.notes || []).map(n => `<div class="muted" style="border-left:1.5px solid var(--dw-ink-30);padding-left:8px">${esc(n)}</div>`).join('')}
+      <div class="cons"><div class="label" style="display:block">${isSel ? 'Verdict with this option' : 'Verdict if you pick this option'} <span class="state ${vcls(what.verdict)}">${what.verdict}</span></div>${out.map(line).join('')}${inbound.map(inl).join('')}${!out.length && !inbound.length ? '<div class="muted">This option has no edges. It is independent, or an edge is missing.</div>' : ''}</div>
+      <div class="act"><span class="muted">rules out ${out.filter(e => e.kind === 'conf').length} · requires ${out.filter(e => e.kind === 'req').length} · ${inbound.length} edge${inbound.length === 1 ? '' : 's'} in</span><button class="chip ${isSel ? 'on' : ''}" data-pick="${id}">${isSel ? (isChosen ? 'Chosen' : 'Undo change') : 'Pick'}</button></div></div>`;
+  }).join('');
+  // The summary sits inside the header column, directly under the question: same subject, so a
+  // full body gap between them would read as two separate things.
+  return `<div class="body"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-4);flex-wrap:wrap"><div style="flex:1;min-width:0"><div class="label">Row ${ref(d)} · ${d.opts.length} options${d.opts.some(o => o.strawman) ? ' · ' + d.opts.filter(o => o.strawman).length + ' strawman' : ''}</div><div class="h2" style="margin-top:6px">${esc(d.name)}</div>${d.question ? `<p class="annot" style="margin:8px 0 0">${esc(d.question)}</p>` : ''}${rowSummary(r, d)}</div><button class="chip ghost" data-back>← Findings</button></div><div class="cards">${cards}</div></div>`;
+}
+
+// ---- sheet view ----
+function renderSheet(r){
+  const hd = ['Ref', 'Decision', ...Array.from({ length: COLS }, (_, i) => String.fromCharCode(65 + i))].map(h => `<div class="hd label">${h}</div>`).join('');
+  const rows = BOX.dims.map(d => {
+    let h = `<div class="ref label num">${ref(d)}</div><button class="dim" data-open="${d.id}" title="Read this row in Findings">${esc(d.name)}</button>`;
+    for (let i = 0; i < COLS; i++) { const o = d.opts[i]; if (!o) { h += '<div class="cell empty"></div>'; continue; }
+      h += `<button class="cell ${cellState(r, o.id).join(' ')}" data-cell="${o.id}">${esc(S(o.id))}${sel[d.id] === o.id && chosenOf[d.id] !== o.id ? ' ←' : ''}</button>`; }
+    return h;
+  }).join('');
+  const tb = `<div class="titleblock">
+    <div><span class="label">Verdict</span><span class="state ${vcls(r.verdict)}">${r.verdict}</span></div>
+    <div><span class="label">Active edges</span><span class="num" style="font-size:13px">${r.overrides.length ? r.basis.map(([t, n]) => `${n} ${t}`).join(' · ') : '—'}</span></div>
+    <div><span class="label">Changed</span><span class="num" style="font-size:13px">${r.overrides.length} of ${BOX.dims.length}${r.overrides.length ? ' · rows ' + r.overrides.map(id => ref(optById[id].dim)).join(', ') : ''}</span></div>
+    <div><span class="label">Problems</span><span class="num" style="font-size:13px">${r.conflicts.length} conflict${r.conflicts.length === 1 ? '' : 's'} · ${r.unmet.length} not met</span></div>
+    <div><span class="label">Findings</span><button class="chip" data-tofind style="padding:3px 10px">Read ${r.moves.length + r.conflicts.length + r.unmet.length} →</button></div></div>`;
+  $('view').innerHTML = `<div class="sheetview"><div class="grid">${hd}${rows}</div>${tb}</div>`;
+  $('view').querySelectorAll('[data-cell]').forEach(b => {
+    const o = optById[b.dataset.cell];
+    b.addEventListener('click', () => override(o.dim, o));
+    b.addEventListener('mouseenter', () => showTip(r, o, b)); b.addEventListener('focus', () => showTip(r, o, b));
+    b.addEventListener('mouseleave', hideTip); b.addEventListener('blur', hideTip);
+  });
+  $('view').querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => { openRow = b.dataset.open; view = 'findings'; update(); }));
+  $('view').querySelector('[data-tofind]')?.addEventListener('click', () => { openRow = null; view = 'findings'; update(); });
+}
+function showTip(r, o, el){
+  const out = edgesOf(o.id).filter(e => optById[e.to].dim.id !== o.dim.id);
+  const st = cellState(r, o.id);
+  const status = st.includes('conf') ? '<span class="state caution">conflict</span>' : st.includes('out') ? '<span class="state caution">ruled out</span>' : st.includes('req') ? '<span class="state normal">required</span>' : st.includes('over') ? '<span class="state ink">your change</span>' : st.includes('chosen') ? '<span class="state ink">chosen</span>' : '';
+  const why = (BOX.rel[o.id]?.why || '').split(/(?<=\.)\s/)[0];
+  $('tip').innerHTML = `<div class="ttl">${esc(o.label)}</div><div>${esc(why)}</div><div class="foot"><span class="label">rules out ${out.filter(e => e.kind === 'conf').length} · requires ${out.filter(e => e.kind === 'req').length}</span>${status}</div><div class="label" style="margin-top:6px">Click the option to pick it. Click the row name to read the row.</div>`;
+  const b = el.getBoundingClientRect(), t = $('tip'); t.classList.add('show');
+  let x = b.left, y = b.bottom + 8; if (x + 412 > innerWidth) x = innerWidth - 412; if (y + t.offsetHeight > innerHeight) y = b.top - t.offsetHeight - 8;
+  t.style.left = x + 'px'; t.style.top = y + 'px';
+}
+function hideTip(){ $('tip').classList.remove('show'); }
+
+// ---- export / restore: the round trip. Format is specified in SKILL.md; change both together. ----
+function encodeSel(){ return BOX.dims.filter(d => sel[d.id] !== chosenOf[d.id]).map(d => sel[d.id]).join(', '); }
+function exportMarkdown(){
+  const r = EagleEye.analyse(BOX, sel, touched), strip = s => s.replace(/<[^>]+>/g, '');
+  const L = [`## eagle-eye · ${BOX.title} · ${r.overrides.length} change${r.overrides.length === 1 ? '' : 's'} · ${r.verdict}`, ''];
+  L.push('| # | Decision | Chosen | My choice |', '| --- | --- | --- | --- |');
+  BOX.dims.forEach(d => L.push(`| ${ref(d)} | ${d.name} | ${S(chosenOf[d.id])} | ${sel[d.id] === chosenOf[d.id] ? '— (keep)' : '**' + S(sel[d.id]) + '**'} |`));
+  if (r.conflicts.length) { L.push('', '### Conflicts'); r.conflicts.forEach(e => L.push(`- ${strip(nm(e.from))} vs ${strip(nm(e.to))} — ${e.why} [${e.tier}]`)); }
+  if (r.unmet.length) { L.push('', '### Requirements not met'); r.unmet.forEach(e => L.push(`- ${strip(nm(e.from))} requires ${strip(nm(e.to))} — ${e.why} [${e.tier}]`)); }
+  if (r.closed.size) { L.push('', '### Ruled out'); [...r.closed.entries()].forEach(([tid, es]) => L.push(`- ${strip(nm(tid))} — ${es.map(e => e.why).join(' ')}`)); }
+  L.push('', '### Findings'); r.moves.forEach((m, i) => L.push(`- ${m.kind}: ${strip(m.text)}`));
+  L.push('', `Restore code: \`eagle-eye: ${encodeSel() || 'none'}\``, '', 'Claude: read these changes against the box file, re-argue the set, and tell me what else moves.');
+  return L.join('\n');
+}
+function loadCode(raw){
+  const ids = raw.replace(/^\s*eagle-eye:\s*/i, '').split(',').map(s => s.trim()).filter(Boolean);
+  Object.assign(sel, chosenOf); const bad = [];
+  ids.forEach(id => { if (id === 'none') return; if (optById[id]) { sel[optById[id].dim.id] = id; touched.add(optById[id].dim.id); } else bad.push(id); });
+  pending = null; update();
+  $('exportStatus').textContent = bad.length ? `Loaded. Unknown: ${bad.join(', ')}` : (ids.length ? 'Loaded.' : 'Reset to chosen.');
+}
+function syncHash(){ const s = encodeSel().replace(/,\s*/g, ','); history.replaceState(null, '', s ? `#sel=${s}` : location.pathname + location.search); }
+function decodeHash(){ const m = /sel=([^&]*)/.exec(location.hash); if (m) loadCode(decodeURIComponent(m[1])); }
+
+function wire(){
+  $('view').querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => { const o = optById[b.dataset.pick]; override(o.dim, o); }));
+  $('view').querySelector('[data-back]')?.addEventListener('click', () => { openRow = null; update(); });
+  $('reveal')?.addEventListener('click', () => { pending.revealed = true; update(); });
+  $('skipPredict')?.addEventListener('click', () => { pending = null; update(); });
+}
+// Motion follows how far the reader moved. A new view animates the whole band; a row opened animates
+// the right pane only, so the index does not restack under the pointer. Neither key reads the
+// selection, so picking a cell repaints without any animation at all.
+let lastView = '', lastPane = '', lastVerdict = '';
+function paintExport(){
+  if ($('exportBox').hidden) return;
+  $('restoreCode').textContent = `eagle-eye: ${encodeSel() || 'none'}`;
+  if ($('exportDetails').open) $('exportText').value = exportMarkdown();
+}
+function update(){
+  hideTip();
+  const r = EagleEye.analyse(BOX, sel, touched);
+  $('viewFind').classList.toggle('on', view === 'findings'); $('viewSheet').classList.toggle('on', view === 'sheet');
+  view === 'sheet' ? renderSheet(r) : renderFindings(r);
+  const pane = `${openRow || ''}|${pending ? (pending.revealed ? 'reveal' : 'predict') : ''}`;
+  const v = $('view');
+  v.classList.remove('anim', 'anim-body');
+  if (view !== lastView) { void v.offsetWidth; v.classList.add('anim'); }
+  else if (pane !== lastPane) { void v.offsetWidth; v.classList.add('anim-body'); }
+  lastView = view; lastPane = pane;
+  const stamp = v.querySelector('.stamp');
+  if (stamp && r.verdict !== lastVerdict) { void stamp.offsetWidth; stamp.classList.add('vchg'); }
+  lastVerdict = r.verdict;
+  markSteps(); syncHash(); paintExport();
+}
+$('viewFind').addEventListener('click', () => { view = 'findings'; update(); });
+$('viewSheet').addEventListener('click', () => { view = 'sheet'; update(); });
+// ---- Reset, and the ten seconds you have to take it back ----
+function snapshotState(){ return { sel: { ...sel }, touched: new Set(touched), openRow, view }; }
+function restoreState(s){ Object.assign(sel, s.sel); touched.clear(); s.touched.forEach(t => touched.add(t)); openRow = s.openRow; view = s.view; pending = null; }
+function paintReset(){
+  const offering = !!undoSnap && resetHot;
+  $('reset').textContent = offering ? 'Undo' : 'Reset';
+  $('reset').classList.toggle('armed', offering);
+  $('reset').title = offering ? 'Put back the options you had before the reset'
+    : undoSnap ? 'Reset. Hover to take the last reset back' : 'Put every row back to its chosen option';
+}
+function disarmUndo(){ clearTimeout(undoFuse); undoFuse = null; undoSnap = null; paintReset(); }
+function resetHover(on){
+  resetHot = on;
+  clearTimeout(undoFuse); undoFuse = null;
+  // The pointer leaving is not a decision. Hold the offer for ten seconds before dropping it.
+  if (!on && undoSnap) undoFuse = setTimeout(disarmUndo, UNDO_GRACE_MS);
+  paintReset();
+}
+$('reset').addEventListener('mouseenter', () => resetHover(true));
+$('reset').addEventListener('focus', () => resetHover(true));
+$('reset').addEventListener('mouseleave', () => resetHover(false));
+$('reset').addEventListener('blur', () => resetHover(false));
+$('reset').addEventListener('click', () => {
+  if (undoSnap && resetHot) { const s = undoSnap; disarmUndo(); restoreState(s); update(); return; }
+  const before = snapshotState();
+  const hadOverrides = BOX.dims.some(d => sel[d.id] !== chosenOf[d.id]);
+  resetAll(); update();                      // resetAll disarms, so arm after it
+  if (hadOverrides) { undoSnap = before; paintReset(); }
+});
+const setCoach = on => { coach = on; pending = null; $('coachToggle').textContent = `Coach: ${on ? 'on' : 'off'}`; $('coachToggle').classList.toggle('on', on); $('coachToggle').classList.toggle('ghost', !on); };
+$('coachToggle').addEventListener('click', () => { setCoach(!coach); update(); });
+$('exportBtn').addEventListener('click', () => { const b = $('exportBox'); b.hidden = !b.hidden; $('exportStatus').textContent = ''; paintExport(); });
+$('closeExport').addEventListener('click', () => { $('exportBox').hidden = true; });
+$('exportDetails').addEventListener('toggle', paintExport);
+$('copyBtn').addEventListener('click', async () => { $('exportText').value = exportMarkdown(); try { await navigator.clipboard.writeText($('exportText').value); $('exportStatus').textContent = 'Copied.'; } catch { $('exportText').select(); $('exportStatus').textContent = 'Press Ctrl/Cmd+C.'; } });
+$('loadBtn').addEventListener('click', () => loadCode($('loadCode').value));
+$('loadCode').addEventListener('keydown', e => { if (e.key === 'Enter') loadCode($('loadCode').value); });
+
+// ---- presets: declarative, from the box file. step = { label, set?: {dimId: optId}, open?: dimId|null, view?: 'findings'|'sheet', coach?: bool, reset?: true, predict?: true } ----
+const PRESETS = BOX.presets || [];
+let preset = -1, stepIdx = 0;
+function runStep(s){
+  if (s.reset) resetAll();
+  if (s.coach !== undefined) setCoach(s.coach);
+  if (s.set) Object.entries(s.set).forEach(([d, o]) => { if (optById[o] && optById[o].dim.id === d) { touched.add(d); sel[d] = o; } });
+  if (s.predict && s.set) { const d = Object.keys(s.set)[0]; pending = { dimId: d, predicted: new Set(), revealed: false }; openRow = null; view = 'findings'; }
+  if (s.open !== undefined) openRow = s.open;
+  if (s.view) view = s.view;
+}
+function paintPresets(){
+  if (!PRESETS.length) { $('presetGroup').hidden = true; return; }
+  $('presets').innerHTML = PRESETS.map((p, i) => `<button class="chip ${i === preset ? 'on' : ''}" data-p="${i}">${esc(p.title)}</button>`).join('') + `<button class="chip ghost" data-p="-1">Free</button>`;
+  $('presets').querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => { preset = +b.dataset.p; stepIdx = 0; paintPresets(); }));
+  $('presetNote').hidden = preset < 0;
+  if (preset >= 0) { $('presetText').textContent = PRESETS[preset].text || ''; $('presetSteps').innerHTML = PRESETS[preset].steps.map((s, i) => `<button data-i="${i}">${i + 1}. ${esc(s.label)}</button>`).join('');
+    $('presetSteps').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { const i = +b.dataset.i; runStep(PRESETS[preset].steps[i]); stepIdx = i + 1; update(); })); }
+  markSteps();
+}
+function markSteps(){ $('presetSteps').querySelectorAll('button').forEach((b, i) => { b.classList.toggle('done', i < stepIdx); b.classList.toggle('next', i === stepIdx); }); }
+paintPresets(); paintReset(); decodeHash(); update();
+</script>
+</body>
+</html>
