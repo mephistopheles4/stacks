@@ -170,6 +170,18 @@ tsconfigs disagree about `ImportMetaEnv`, because the root config excludes
 `**/.astro` and the site's includes it. That fix is a prerequisite, not a
 consequence; see §6 step 1.
 
+> ⚠️ **Superseded by [#250](https://github.com/mephistopheles4/stacks/issues/250):
+> the error is fixed and `astro check` reports `0 errors, 0 warnings, 0 hints`
+> over 44 files.** The paragraph above reads as live state and is now a record of
+> what S4 had to clear first. **Its diagnosis was right and its remedy was not
+> where it pointed**: nothing in either tsconfig changed. `boot.ts` declared an
+> inline `{ readonly DEV: boolean }` where vite and astro both declare
+> `readonly env: ImportMetaEnv`, so the two declarations collided instead of
+> merging — naming the interface was the whole fix. The configs go on disagreeing
+> about the `.astro` directory, which is their purpose. **S4 itself is still not
+> green**, for the reason the row states rather than this one: nothing runs
+> `astro check` yet, and `@astrojs/check` is not a dependency.
+
 ⚠️ **G7 (`astro-no-logic`) is not retired and its row text changes.** The two do
 not overlap: G7 reads `<script>` blocks as text, `astro check` typechecks
 frontmatter. A planted `absoluteUrl(42, Astro.site)` in `index.astro` passed
@@ -315,6 +327,11 @@ rather than inside one.
 1. **The `ImportMetaEnv` disagreement.** Two tsconfigs disagree, and
    `astro check` reports it. Nothing else in this rollout can be judged green
    while one error is outstanding. **Blocks S4.**
+
+   > ✅ **Done — [#250](https://github.com/mephistopheles4/stacks/issues/250).**
+   > `astro check`: `0 errors, 0 warnings, 0 hints` over 44 files. The step
+   > stands as written because the order still holds; see §4's footnote for why
+   > the remedy was not in either tsconfig.
 
 2. **markdownlint, at the corrected config.** `.markdownlint.jsonc` — that exact
    name, because it is on CodeRabbit's list *and* takes comments, while
