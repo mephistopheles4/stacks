@@ -433,6 +433,13 @@ function digest(value: unknown): string {
  * the roster moves it, which is a different event on a different ticket. Do not
  * record the two as a pair.
  *
+ * ⚠️ **But it is anything but unread, and that is what makes the roster event
+ * dangerous.** `scripts/deploy.ts` takes `newestCount` off its result and
+ * derives `countedRun` from it — the sole input to `countedElsewhere` below —
+ * spreading it in **only when `newestCount` is defined**. Empty it by adding a
+ * roster name before records carry that family, and every cap reading prints
+ * `null` *and* the counting-rule refusal silently cannot fire.
+ *
  * ⚠️ **Any count here is as-of, because the branch is live** — 10 stamped at 41
  * records, 12 at 43. Re-measure rather than trusting the figure in this comment.
  *

@@ -190,14 +190,28 @@ previous stamp, **exactly one is a nightly** — the other 11 are `push`, and
 adoption it read `runs: 1, candidates: 5, days: 0, full: false`. So the window
 loses one run. Every entry in `stryker.floors.json` is `unarmed`.
 
-⚠️ **`countedIn` does *not* move, and an earlier draft of this record said it
-did.** `floors.ts` filters it on `row.ok` and on `CAPPED_SERIES` samples; it
-never reads `fixtureHash`. So a hash change cannot touch it, and the only thing
-that can is a change to the roster itself — which is
-[#258](https://github.com/mephistopheles4/stacks/issues/258)'s ticket, not this
-one. **The two are separate events and must not be recorded as a pair:** *this
-merge moves the hash* → window 1 → 0, `countedIn` unchanged; *#258 adds roster
-names* → `countedIn` drops, window unchanged.
+⚠️ **`countedIn` does *not* move here, and an earlier draft of this record said
+it did.** It filters on `row.ok` and on `CAPPED_SERIES` samples and never reads
+`fixtureHash`, so a hash change cannot touch it. The only thing that can is a
+change to the roster itself — [#258](https://github.com/mephistopheles4/stacks/issues/258)'s
+ticket, not this one. **The two are separate events and must not be recorded as
+a pair:** *this merge moves the hash* → window 1 → 0, `countedIn` unchanged;
+*#258 adds roster names* → `countedIn` drops, window unchanged.
+
+⚠️ **What `countedIn` feeds is the reason the second event is dangerous, and it
+is not a delay.** `scripts/deploy.ts` calls it once and takes `newestCount` and
+`previousCount` off the result. Those flow two ways: into `capReadings`, which
+is every printed cap line; and into `countedRun`, which is the **only** input to
+the counting-rule refusal below. `deploy.ts` spreads `countedRun` in **only when
+`newestCount` is defined**. So a roster name added before records carry its
+family empties `countedIn`, and then:
+
+- every cap reading prints `null`, and
+- `countedRun` is absent, `countedElsewhere` is `false`, and **the
+  counting-rule refusal cannot fire at all**.
+
+**The caps go blind and the guard switches itself off, with nothing red.** That
+is the argument for waiting, and it is much stronger than *a window restarts*.
 
 ⚠️ **A transient deploy refusal exists between this merge and the next CI
 record, and it has no override.** `floorRefusals` computes `countedElsewhere`
@@ -250,5 +264,5 @@ same choice `eslint.config.mjs` makes and for the same reason.
 | **A shared denominator with the cyclomatic series** | Wrong by nine in 1114, and **silently** so. Small and silent is the combination this repo refuses. |
 | **A second `fixtureHash`** | See above: it makes *which stamp does this cap answer to* a live question for every reader of the floors file, to avoid a refusal that is fail-closed. |
 | **Cap `cognitive-mass-over-15` too** | Needs a defensible cut and there is none. A constant nobody derived must not be what stops a deploy. |
-| **Add `cognitive-max` to `CAPPED_SERIES` now** | `countedIn` is keyed on the whole set, so every existing record stops qualifying at once and both cyclomatic windows restart. Waiting costs nothing because `countedIn` reads what a record carries, not when the list changed. [#258](https://github.com/mephistopheles4/stacks/issues/258). |
+| **Add `cognitive-max` to `CAPPED_SERIES` now** | `countedIn` is keyed on the whole set, so every existing record stops qualifying at once — and because `deploy.ts` derives `countedRun` from its output, that **disarms the counting-rule refusal and blanks every cap reading, with nothing red**. Not merely a delay. Waiting costs nothing because `countedIn` reads what a record carries, not when the list changed. [#258](https://github.com/mephistopheles4/stacks/issues/258). |
 | **Enable the rule in `eslint.config.mjs`** | That file holds one rule on purpose: a second rule puts findings in the same report that the counter must then filter, and a filter is a place for a count to go quietly wrong. Also measured on the linter side — merging configs drags the type service onto the counter through flat config's per-file merge. |
