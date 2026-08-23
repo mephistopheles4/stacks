@@ -171,7 +171,7 @@ quotes routing an unpinned action past three clauses at once. **None of those
 three was found by the session that owned the branch**: two came from a
 fresh-context spec reviewer and one from CodeRabbit, and that session verified
 and extended them. The attribution matters because of what it adds up to
-[below](#nobody-found-their-own-worst-defect).
+[below](#nobody-finds-their-own-defects-by-re-reading).
 
 Stryker parses **comment nodes**, so the opener is stripped before its own
 matcher runs. A jsdoc-style opener and a continuation line inside a block comment
