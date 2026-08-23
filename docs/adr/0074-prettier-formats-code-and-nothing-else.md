@@ -38,19 +38,41 @@ markdownlint and [#254](https://github.com/mephistopheles4/stacks/issues/254)
 installs jscpd. So the gap this record steps around is the spec's, not this
 ticket's, and each of those owes the same thing.
 
-⚠️ **This was written as 0071 and renumbered before it landed, because 0071 was
-claimed three times in one evening.** `main` carried 0070 as its highest and no
-*pushed* branch held an 0071, which is what this session checked — and it was the
-wrong question. Two sibling sessions had each already committed an 0071 locally,
-[#253](https://github.com/mephistopheles4/stacks/issues/253) and
-[#251](https://github.com/mephistopheles4/stacks/issues/251), neither having
-pushed. Settled between them: **0071 → #251**, 0072 →
-[#254](https://github.com/mephistopheles4/stacks/issues/254), 0073 →
-[#255](https://github.com/mephistopheles4/stacks/issues/255), **0074 → this
-record**, 0075 → #253, which moved second and by its own choice rather than by
-priority. Every renumber happened on a branch, so no landed record was edited —
-**exactly what 0067 records happening to itself**, which was written as 0065 and
-became 0067 while its stack was open.
+⚠️ **This was written as 0071 and renumbered before it landed, because four
+sessions wrote a file numbered `0071-*` in one evening.** `main` carried 0070 as
+its highest and no *pushed* branch held an 0071, which is what this session
+checked — and it was the wrong question, because a branch nobody has pushed is
+invisible to it and that is the normal state of a session mid-work.
+
+**Settled allocation:** 0071 → [#251](https://github.com/mephistopheles4/stacks/issues/251),
+0072 → [#254](https://github.com/mephistopheles4/stacks/issues/254),
+0073 → [#255](https://github.com/mephistopheles4/stacks/issues/255),
+**0074 → this record**, 0075 → [#257](https://github.com/mephistopheles4/stacks/issues/257),
+0076 → [#253](https://github.com/mephistopheles4/stacks/issues/253).
+
+⚠️ **The second collision is the one worth keeping, because resolving the first
+caused it.** #253 and #257 had each moved off 0071 to avoid the pile-up, and both
+moved to **0075** — two sessions colliding precisely because they were being
+careful, and neither able to see the other. #253 moved again, to 0076. So the
+count is not one duplicate but two, the second manufactured by the fix for the
+first.
+
+⚠️ **And nothing in this repository would have caught either.** Gate row numbers
+are held by `G19` (`constitution-scoreboard`), which asserts them **unique and
+gapless** and fails loudly on a duplicate. **ADR numbers are held by nothing** —
+a sweep of `gates/` finds no check that walks `docs/adr/` at all, so two records
+numbered 0075 would both merge and the second would simply be findable by a
+number that means two things. That asymmetry is a live gap and is recorded here
+rather than fixed, because this ticket may not add a gate as a side effect.
+
+Every renumber happened on a branch, so no landed record was edited — **exactly
+what 0067 records happening to itself**, which was written as 0065 and became
+0067 while its stack was open.
+
+⚠️ **Verification status, stated because this record is partly about not taking
+claims on report.** 0072, 0074 and 0076 were confirmed by reading the pushed
+branches. 0071, 0073 and 0075 come from the sessions holding them, whose branches
+were still unpushed when this was written and could not be checked from outside.
 
 ⚠️ **So a reader may find a gap here, and the gap is not a defect.** 0071 to
 0073 are claimed on sibling branches of one rollout that have not merged yet. If
