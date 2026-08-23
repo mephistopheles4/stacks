@@ -12,15 +12,18 @@
 /** @type {import('prettier').Config} */
 export default {
   // The tree holds 9,490 single-quoted strings against 661 double — 93 percent
-  // — so this records a convention rather than imposing one. It is also load
-  // bearing *until #252 lands*: G14 (`commands`) and G45 (`deploy-flags`) both
-  // hardcode a single quote in their extraction regex today, and flipping the
-  // tree to double quotes reduces both to assertions over nothing.
+  // — so this records a convention rather than imposing one.
   //
-  // ⚠️ That is an accidental quote gate, not a designed one, and dodging it
-  // here freezes it rather than fixing it. The repair is #252; a contributor
-  // who hand-writes `command("add")` still gets a red that says the extraction
-  // found 0 CLI subcommands.
+  // It used to be load-bearing as well, and deliberately is not any more.
+  // G14 (`commands`) and G45 (`deploy-flags`) both hardcoded a single quote in
+  // their extraction regex, so flipping the tree to double quotes reduced both
+  // to assertions over nothing — an accidental quote gate whose red read
+  // *extraction found 0 CLI subcommands* and named no quote. #252 repaired it
+  // (`fdd2be1`); both now match `['"]`.
+  //
+  // ⚠️ That ordering was the point. Setting this before the repair would have
+  // *frozen* the trap rather than fixing it, which is why #256 was blocked on
+  // #252 even though nothing here ever needed it to pass.
   singleQuote: true,
 
   // A measured minimum on today's tree, not a taste and not a derived number.

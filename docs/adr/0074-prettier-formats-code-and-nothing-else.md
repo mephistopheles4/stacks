@@ -79,22 +79,30 @@ which this record does not answer.
 The tree already holds **9,490 single-quoted strings against 661** — 93 percent
 — so the setting records a convention rather than imposing one.
 
-**More than convention: two gates depend on it.** G14 (`commands`) extracts CLI
-subcommands with `/\.command\(\s*'([a-z][a-z-]*)'/` and G45 (`deploy-flags`)
-extracts flags with `/process\.argv\.includes\(\s*'(--[a-z][a-z-]*)'\s*\)/`.
-Both hardcode a single quote. Flip the tree to double quotes and both reduce to
-assertions over nothing — caught only because each carries an
-`expectFound` vacuous-extraction guard, which is a red saying *extraction found
-0 CLI subcommands* rather than *the quote form changed*.
+**It used to be more than convention, and the fact that it no longer is was the
+whole reason this ticket was ordered where it was.** G14 (`commands`) extracted
+CLI subcommands with `/\.command\(\s*'([a-z][a-z-]*)'/` and G45 (`deploy-flags`)
+extracted flags with `/process\.argv\.includes\(\s*'(--[a-z][a-z-]*)'\s*\)/`.
+Both hardcoded a single quote, so flipping the tree to double quotes reduced both
+to assertions over nothing — caught only because each carries an `expectFound`
+vacuous-extraction guard, and even then the red read *extraction found 0 CLI
+subcommands* rather than *the quote form changed*. An accidental quote gate, and
+one whose remedy was unreachable for anyone who did not already know it existed.
 
-⚠️ **So this setting freezes an accidental gate rather than fixing one, and that
-is a cost this record does not hide.** A contributor who hand-writes
-`command("add")` still gets a red that names no quote.
-[#252](https://github.com/mephistopheles4/stacks/issues/252) is the repair, and
-it was ordered ahead of adoption for exactly this reason —
-[#236](https://github.com/mephistopheles4/stacks/issues/236) recommended it
-*although the configuration no longer needs it*, because dodging makes the trap
-easy to forget once the build is green.
+**[#252](https://github.com/mephistopheles4/stacks/issues/252) repaired it**
+before this landed — merged as `fdd2be1`; both patterns now match `['"]`.
+
+⚠️ **So the ordering, not the setting, is the decision here.** This
+configuration passed every gate without the repair, which is exactly why the
+repair was easy to skip: adopting first would have **frozen** the trap under a
+formatter that made it invisible, and a contributor hand-writing
+`command("add")` would still have got a red that named no quote.
+[#236](https://github.com/mephistopheles4/stacks/issues/236) recommended the
+repair *although the configuration no longer needs it*, and
+[#229](https://github.com/mephistopheles4/stacks/issues/229) is where the
+principle comes from — a red must name a defect in the change. **Ordered first,
+landed first.** With it in, `singleQuote` is a record of what the tree already
+does and nothing more, which is what it should have been all along.
 
 ## Why `printWidth: 100`
 
