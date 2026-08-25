@@ -349,6 +349,35 @@ G41: the row in `docs/gates.md` and the `### G47 — \`astro-types\`` heading in
 sitting on one number cost exactly one rebase each, which is what the
 alternative was supposed to save.
 
+⚠️ **And then the same session got the number wrong again, on the right
+surface.** After #262 merged, this session read `main`'s `docs/gates.md`,
+reported *"no gate row, so the highest is still G46"*, and was corrected by
+#254 — whose row **G47 `ignored-clones` was right there in the file.**
+
+The rule was followed and the answer was still wrong, which is the interesting
+part. The query was:
+
+```sh
+git show origin/main:docs/gates.md \
+  | Select-String '^\| \*\*(G\d+)\*\*' | Select-Object -Last 4
+```
+
+**`docs/gates.md` holds three tables** — *Invariants → gates*, *Contract seams →
+gates*, *Defect gates* — so **file order is not numeric order**. `G47` landed in
+the *second* table at line 118; `-Last 4` returned the tail of the *third*, which
+ends at G46. A cap on a listing, and a conclusion drawn from the capped end.
+The honest query takes a maximum over every match:
+
+```sh
+... | Select-String '^\|\s*\*\*G(\d+)\*\*' -AllMatches | Measure-Object -Maximum
+```
+
+**Querying the right surface is not enough; the query has to be right too.** A
+wrong query returns a confident number with no error, which is worse than a
+stale report — a stale report at least came from a moment when it was true. This
+one was never true. The two rules pair: *prefer the queryable surface to the
+report*, and *never conclude from a listing you capped*.
+
 ⚠️ **The sweep afterwards is the part worth budgeting for.** A row number is not
 one string: after renumbering the two structural files, **`G46` appeared in 22
 more places** across ADRs, specs, source comments, both tsconfigs, the gate
