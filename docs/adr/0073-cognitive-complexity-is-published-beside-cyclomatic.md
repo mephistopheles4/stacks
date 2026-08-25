@@ -211,7 +211,21 @@ family empties `countedIn`, and then:
   counting-rule refusal cannot fire at all**.
 
 **The caps go blind and the guard switches itself off, with nothing red.** That
-is the argument for waiting, and it is much stronger than *a window restarts*.
+is the argument for waiting.
+
+⚠️ **And it is the *only* argument, because the widely-repeated one is false.**
+Both this map's spec and an earlier draft of this record said a roster add
+"zeroes both cyclomatic calibration windows". **It does not.** `capCalibration`
+takes its window from `streakOf`, which filters on `row.ok` and the fixture
+hash and **never reads `row.counts`** — so the window is roster-independent.
+Only the hash moves a window, which is this merge's doing and not #258's.
+Verified in `streakOf` rather than reasoned from the roster's shape, after
+[#258](https://github.com/mephistopheles4/stacks/issues/258) and
+[#254](https://github.com/mephistopheles4/stacks/issues/254) converged on it
+independently. ⚠️ **The false version is the more dangerous one to leave
+standing**, because a delayed window sounds survivable and a silently disarmed
+refusal is not — so anyone weighing an early add against the wrong sentence
+weighs it against the lesser harm.
 
 ⚠️ **A transient deploy refusal exists between this merge and the next CI
 record, and it has no override.** `floorRefusals` computes `countedElsewhere`

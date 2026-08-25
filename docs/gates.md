@@ -1563,10 +1563,21 @@ measure.
 ⚠️ **No cognitive name is in `CAPPED_SERIES` yet, and that is a code constraint
 rather than a caution.** `scripts/lib/floors.ts`'s `countedIn` filters to rows
 where **every** member of that set has samples, keyed on the whole set on
-purpose. Adding `cognitive-max` at adoption would make every record on the
-`metrics` branch stop qualifying at once and restart both cyclomatic calibration
-windows. Waiting costs nothing, because `countedIn` reads what a record carries
-rather than what a type declares.
+purpose, so adding `cognitive-max` before records carry that family makes it
+return nothing at all.
+
+⚠️ **What that breaks is the *reading*, not the window, and the difference is
+the whole point.** `capCalibration` takes its window from `streakOf`, which
+filters on `row.ok` and the fixture hash and **never reads `row.counts`** — so
+the calibration window is roster-independent and does not restart. What
+collapses is downstream of `countedIn`: `scripts/deploy.ts` derives
+`newestCount` from it, so **every cap line prints `null`**, and `countedRun`
+— the sole input to the counting-rule refusal — is spread in only when
+`newestCount` is defined, so **that refusal silently disarms itself**. The caps
+go blind and the guard switches off, with nothing red. That is a worse failure
+than a delayed window and it is the reason to wait. Waiting costs nothing,
+because `countedIn` reads what a record carries rather than what a type
+declares.
 
 ⚠️ **`mutation-score` is spelled *killed ÷ total* on purpose.** The score is
 gameable by adding trivially-killable code, which dilutes the denominator upward
