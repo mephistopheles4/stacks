@@ -458,7 +458,7 @@ coordination mechanism.
 **The two halves take opposite advice**, and treating them alike produced every
 collision here:
 
-| | Gate rows in `docs/gates.md` | ADR numbers in `docs/adr/` |
+| Property | Gate rows in `docs/gates.md` | ADR numbers in `docs/adr/` |
 | --- | --- | --- |
 | A gap is | **fatal** — G19's gapless walk | **free** — ungated, and tonight made several deliberately |
 | A duplicate is | **loud** — G19's uniqueness clause, and G41 reporting *"G46 has 2 entries"* | **silent** — nothing reads the directory at all |
