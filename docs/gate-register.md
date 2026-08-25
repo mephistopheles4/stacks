@@ -5289,6 +5289,7 @@ are different numbers, and `total-lines + ignored-lines` is an approximation
 rather than an identity. Two cases in `scripts/lib/duplication.test.ts` pin the
 behaviour, so a jscpd that fixes it goes red here rather than moving eight series
 at once with nothing to point at.
+
 ### G49 — `format`
 
 **Gate:** the `style` job in [`.github/workflows/gates.yml`](../.github/workflows/gates.yml), running `pnpm format:check`

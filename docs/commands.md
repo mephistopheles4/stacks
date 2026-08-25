@@ -54,6 +54,7 @@ gate reads this config, and the comment is what stands in for one.
 a TypeScript program before any rule runs. The same call is in
 `.githooks/pre-commit`, where it prints and never blocks — so opting that hook in
 now costs the Vitest coverage pass *and* this.
+
 ## `pnpm format` and `pnpm format:check` — and the quarter of the site they never open
 
 **`pnpm format` rewrites the tree; `pnpm format:check` exits non-zero and names

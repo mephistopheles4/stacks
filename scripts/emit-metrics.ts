@@ -46,12 +46,7 @@ import {
   scoreRun,
   type ScoredRun,
 } from './lib/mutation-score.ts';
-import {
-  counterInputs,
-  countPopulation,
-  populationOf,
-  type Counts,
-} from './lib/complexity.ts';
+import { counterInputs, countPopulation, populationOf, type Counts } from './lib/complexity.ts';
 import {
   cognitiveInputs,
   countCognitivePopulation,

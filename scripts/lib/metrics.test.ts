@@ -326,7 +326,13 @@ describe('duplicationFactsOf — all eight, or none of them', () => {
 
     expect(failed).toEqual([]);
     expect(duplication?.scopes).toEqual([
-      { scope: 'packages/core/src', clones: 3, duplicatedLines: 46, ignoredLines: 0, totalLines: 2381 },
+      {
+        scope: 'packages/core/src',
+        clones: 3,
+        duplicatedLines: 46,
+        ignoredLines: 0,
+        totalLines: 2381,
+      },
       { scope: 'scripts', clones: 5, duplicatedLines: 53, ignoredLines: 0, totalLines: 12_491 },
     ]);
     expect(duplication?.tree).toEqual(counts(34, 357, 47_209));

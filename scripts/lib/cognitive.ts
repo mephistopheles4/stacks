@@ -323,10 +323,7 @@ export async function countCognitivePopulation(
   const population = populationOf(scope, files);
   if (population.length === 0) return null;
 
-  const [counted, scored] = await Promise.all([
-    complexityOf(population),
-    cognitiveOf(population),
-  ]);
+  const [counted, scored] = await Promise.all([complexityOf(population), cognitiveOf(population)]);
   return cognitiveCountsFrom(cognitivePopulationOf(counted), scored);
 }
 

@@ -32,4 +32,18 @@ export default {
   // lines somebody wrapped near 80 — this repository's comment blocks are
   // hand-wrapped, and a wider width unwraps them.
   printWidth: 100,
+
+  // ⚠️ `.markdownlint.jsonc` is read by a hand-rolled parser, not a JSONC one.
+  //
+  // Prettier's default `trailingComma: 'all'` added one after the last key, and
+  // markdownlint-cli2 accepted it — JSONC permits trailing commas, so
+  // `pnpm lint:md` stayed green and the change looked safe. **G48's own gate
+  // does not**: `enabledRules` in `scripts/lib/markdown-lint.ts` strips `//`
+  // lines and hands the rest to `JSON.parse`, which rejects it outright.
+  //
+  // So the file has two readers that disagree about the same bytes, and the
+  // stricter one is ours. Formatting it is still right — it is tracked code and
+  // a green `format:check` should mean something about it — so the override is
+  // narrowed to the one setting that broke it rather than excluding the file.
+  overrides: [{ files: '*.jsonc', options: { trailingComma: 'none' } }],
 };

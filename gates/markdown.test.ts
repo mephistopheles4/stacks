@@ -137,9 +137,9 @@ describe('G48 — the Markdown check runs on every pull request', () => {
     // A `needs:` entry with no `result` test is a dependency that reports and
     // cannot refuse: skipped and cancelled both have to fail the gate rather
     // than pass it by omission, which is why this compares against 'success'.
-    const tested = [
-      ...aggregator.matchAll(/needs\.([\w-]+)\.result\s*\}\}"\s*=\s*"success"/g),
-    ].map((match) => match[1]);
+    const tested = [...aggregator.matchAll(/needs\.([\w-]+)\.result\s*\}\}"\s*=\s*"success"/g)].map(
+      (match) => match[1],
+    );
 
     expect(
       tested,
@@ -192,7 +192,7 @@ describe('G48 — the fix pass rewrites what was measured, and nothing else', ()
 
     expect(
       pinned,
-      'markdownlint-cli2 must be pinned exact in package.json. What a rule\'s fix does ' +
+      "markdownlint-cli2 must be pinned exact in package.json. What a rule's fix does " +
         'is a property of a version, and the fix allowlist is measured against one',
     ).toMatch(/^\d+\.\d+\.\d+$/);
   });

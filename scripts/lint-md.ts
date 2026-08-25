@@ -91,7 +91,7 @@ async function refuseUnlessEveryFixIsMeasured(): Promise<void> {
   if (undeclared.length > 0) {
     fail(
       `markdownlint can now rewrite ${undeclared.join(', ')}, which nobody has measured\n` +
-        'on this tree. That is the version bump #235 warned about: what a rule\'s fix\n' +
+        "on this tree. That is the version bump #235 warned about: what a rule's fix\n" +
         'does is a property of a version, not of a tool.\n\n' +
         'Run `pnpm lint:md`, apply those rules by hand, look at the diff, and add the\n' +
         'name to FIX_ALLOWLIST in scripts/lib/markdown-lint.ts with what you saw.',

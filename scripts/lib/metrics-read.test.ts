@@ -118,7 +118,12 @@ function merge(timestamp: number, overrides: Partial<RunFacts> = {}): string {
     runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/2',
     // Nobody measured a window for a record this test invented.
     prWindow: 'unknown',
-    expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES, ...DUPLICATION_SERIES, ...COGNITIVE_SERIES],
+    expected: [
+      'gate-suite-runtime',
+      ...COMPLEXITY_SERIES,
+      ...DUPLICATION_SERIES,
+      ...COGNITIVE_SERIES,
+    ],
     gateSuiteRuntime: 9,
     complexity: COMPLEXITY,
     duplication: DUPLICATION,
