@@ -158,17 +158,34 @@ jobs:
   # and running it twice would report the same finding twice. A lint verdict is
   # about TypeScript source, so the Node version cannot move it — in the matrix
   # the type-aware run costs about 15 seconds and reports everything twice; here
-  # it costs about 7.5 and reports each finding once.
+  # it costs about 7.5 and reports each finding once. A Markdown rule break is
+  # the same on Node 22 and Node 24 for the same reason.
   #
   # ⚠️ **One job, one red, several tools.** As `docs/spec/static-analysis-and-style.md`
   # §4 grows this job, a failure names `style` rather than the tool that failed.
   # The remedy is that each command below is documented and runnable alone, so
   # the job's output *is* the tool's output and the fix command is in it.
+  #
+  # ⚠️ **One job, but one row per check.** Each command here takes its own row in
+  # docs/gates.md: a job records *where* a check runs, a row records *what* is
+  # protected, and the two are not the same thing.
   style:
     name: style
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # `persist-credentials: false` because nothing in this job speaks to git.
+      # `actions/checkout` writes an auth configuration into the checkout by
+      # default so later steps can push; this job checks out, installs, and runs
+      # a linter. `permissions: contents: read` already bounds what the token can
+      # do — this bounds how long it is lying around, which is a different
+      # question and the one zizmor's `artipacked` rule asks.
+      #
+      # ⚠️ **The `suite` and `audit` checkouts do not set it and this comment is
+      # not an oversight.** They predate this job and neither pushes either, so
+      # the same line belongs on both — as its own change, not as a side effect
+      # of adopting a Markdown linter. Raised by CodeRabbit on #264 against all
+      # three; only the step that PR introduced was in its scope.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -184,6 +201,12 @@ jobs:
       # repairs about a quarter of what this can report; the rest is read.
       - name: lint
         run: pnpm lint
+
+      # The narrow rule set over tracked Markdown. `pnpm lint:md:fix` repairs
+      # the seven rules whose fixes are measured safe here; the rest need a
+      # person, on purpose. The command prints that line with the failure.
+      - name: lint:md
+        run: pnpm lint:md
 
   # The required status check. Named `gates` and nothing else.
   gates:

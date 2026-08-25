@@ -6,7 +6,7 @@ Nothing in this scene moves — books are placed at mount, the light never moves
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **Deferred to the Phase 2 aesthetics review:** real covers often yield desaturated spine colours (a live `stacks add` gave `#d6d6d5` for a genuinely pale cover). The extractor is not wrong, but a shelf of grey spines may read badly. Do not tune this blind — decide it against a screenshot.
 

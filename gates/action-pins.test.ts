@@ -67,7 +67,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { expectFound, readRepoFile, sectionsOf, trackedFiles } from './repo.ts';
+import { expectFound, jobsOf, readRepoFile, trackedFiles } from './repo.ts';
 
 /**
  * The workflow that defines the required check.
@@ -278,33 +278,12 @@ describe('G40 — every third-party action is pinned, and says which version', (
   });
 });
 
-/**
- * The jobs of a workflow, by name.
- *
- * Split on two-space-indented `name:` keys under `jobs:` so a clause about the
- * `audit` job is asserted against the `audit` job — G22's lesson, whose row
- * "gated the wrong half" by proving one thing and claiming another.
- */
-function jobsOf(source: string): Map<string, string> {
-  const body = /^jobs:\n([\s\S]*)$/m.exec(source)?.[1];
-  if (body === undefined) {
-    throw new Error(
-      `no \`jobs:\` block in ${GATES_WORKFLOW}. A gate reads it, so a restructured ` +
-        'workflow must fail here rather than reduce every clause below to nothing.',
-    );
-  }
-
-  return new Map(
-    sectionsOf(body, /^ {2}([\w-]+):$/gm).map((section) => [section.captures[0] ?? '', section.body]),
-  );
-}
-
 describe('G42 — the `audit` job exists, runs, and is required', () => {
   // Called per test rather than once in the describe body. `jobsOf` throws by
   // design when the `jobs:` block is gone, and a throw during collection aborts
   // the whole file — taking G40's four clauses down with G42's, so one
   // restructured workflow would report as five unrelated gates vanishing.
-  const jobs = (): Map<string, string> => jobsOf(readRepoFile(GATES_WORKFLOW));
+  const jobs = (): Map<string, string> => jobsOf(readRepoFile(GATES_WORKFLOW), GATES_WORKFLOW);
 
   it('finds the jobs it is about to make claims about', () => {
     expectFound([...jobs().keys()], `jobs in ${GATES_WORKFLOW}`, 3);

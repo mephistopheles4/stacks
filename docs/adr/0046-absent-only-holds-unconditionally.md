@@ -11,7 +11,7 @@ rewrite titles, authors and page counts on books that were fine". **Under this
 project's write paths it cannot**, and noticing that is most of the decision:
 
 | Surface | What it does | Guard |
-|---|---|---|
+| --- | --- | --- |
 | `lookup` / `fillGaps` | decides which provider's record wins | none — this *is* the merge |
 | `addBook` | writes a **new** note | `BookInput`, a closed list |
 | `enrichBook` | writes to an **existing** note | `FILLABLE`, plus `if (book.X === undefined)` on every write |

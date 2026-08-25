@@ -35,7 +35,7 @@ Everything else about the deploy is unchanged and was re-verified live: 31/31
 covers 200, no private or wishlist books, `noindex` served as both a meta tag and
 an `X-Robots-Tag` header, `og:image` absolute.
 
-### It still crashes — the covers were not the cause
+## It still crashes — the covers were not the cause
 
 **Necessary, not sufficient.** The owner has since reproduced the crash on
 multiple phones, in private tabs, having confirmed in desktop devtools that the
@@ -65,11 +65,11 @@ Both paths were observed working, in both directions: a normal navigation
 records `ended cleanly`, and a record without the flag renders as
 `PREVIOUS SESSION DIED`.
 
-### The bisect answered on the first try: five books
+## The bisect answered on the first try: five books
 
 Run on the owner's Pixel 10 Pro against the live site, `?debug&books=5`:
 
-```
+```text
 books    5
 textures 11  geom 8  prog 3
 draws    61  tris 632
@@ -120,12 +120,12 @@ The panel now prints the active profile, so a screenshot of a crash says which
 settings produced it. A bisect whose result cannot be tied to a configuration is
 an anecdote.
 
-### It was the shadow pass
+## It was the shadow pass
 
 `?debug&books=5&shadows=0` survived, so the owner went straight to the whole
 shelf. Thirty-one books, antialiasing **on**, pixel ratio **2**, shadows off:
 
-```
+```text
 books    31
 profile  aa=on dpr<=2 shadows=off guard=off
 textures 58  geom 11  prog 2
@@ -147,7 +147,7 @@ allocation, and it is not the problem: the shelf runs with it on. The
 context. Sizing an allocation predicted the wrong answer, which is the argument
 for probing over reasoning about it.
 
-### Shadows stay on by default — owner's call
+## Shadows stay on by default — owner's call
 
 The obvious move from that result is to default them off. **Rejected**, and it is
 an aesthetics decision, which in this project belongs to the owner: shadows are
@@ -164,7 +164,7 @@ visitors that nothing in this repo could check — the same shape as the Cloudfl
 zone setting that no gate can see. Whatever survives should be the default for
 everyone.
 
-### The shadows were optimised instead, and the pass is now free
+## The shadows were optimised instead, and the pass is now free
 
 Three changes, every one a strict improvement on every device:
 
@@ -205,7 +205,7 @@ cost is gone; the depth target is still allocated and still sampled per fragment
 by PCFSoft. If the driver's problem was either of those, this will not have
 fixed it — so the probes stay, and `?casters=0` still discriminates.
 
-### Every real-time configuration crashes; the shadows are painted instead
+## Every real-time configuration crashes; the shadows are painted instead
 
 The probes came back exhausted. On the Pixel 10 Pro, with 31 books:
 
@@ -253,7 +253,7 @@ writing and reading back, because where it is missing the same code would paint
 hard black rectangles under every book, which is worse than no cast shadow at
 all. There, the corner darkening remains and the books' own shadows are skipped.
 
-### The case shades itself, and the books were never the point
+## The case shades itself, and the books were never the point
 
 The owner walked through a `?shadows=1` screenshot naming four things the painted
 version was missing, beginning with *"the shelf itself casts a shadow on top of
@@ -302,12 +302,12 @@ the real one is *shaped* — the occluder is a taller neighbour, so its top corn
 throws a diagonal. Reproducing that needs each book to know how tall the one
 beside it is.
 
-### Why the real-time path cannot be rescued here: the shader will not link
+## Why the real-time path cannot be rescued here: the shader will not link
 
 Remote debugging from the Pixel 10 Pro, with unminified dev sources, finally said
 what six configurations of the bisect could not:
 
-```
+```text
 THREE.WebGLProgram: Shader Error 0 - VALIDATE_STATUS false
 Material Type: MeshBasicMaterial
 Program Info Log:                          ← empty, and so are both shader logs
@@ -336,7 +336,7 @@ Two details worth keeping:
 `?shadows=1` keeps the real-time path for hardware that can hold it. On this
 device the answer is definitive and negative.
 
-### Two instruments, so the next attempt is not another guess
+## Two instruments, so the next attempt is not another guess
 
 The reason nothing had ever been readable is that **the instrument died with the
 page it was measuring**. Three notices the failed link, logs it, and carries on
@@ -353,7 +353,7 @@ scheduled once and stays at one; without it, 1119 → 1600 over two seconds.
 which three never does — then reads the validate log, both shader logs, `getError`,
 and the limits that usually explain a program that compiles but will not link:
 
-```
+```text
 SHADER WOULD NOT LINK — drawing stopped
   link log:  (silent)
   validate:  ok
@@ -383,7 +383,7 @@ shadow systems are independent, so asking for real shadows has always drawn them
 on top of the painted ones and double-darkened everything the two agree about —
 which is a thing to know when reading any earlier screenshot taken that way.
 
-### Closed: nothing that reads a shadow map survives on this device
+## Closed: nothing that reads a shadow map survives on this device
 
 The full bisect, with the last three rows added by the instruments above:
 
@@ -433,13 +433,13 @@ and `?shadows=1` is kept partly so it can be re-tested after one. Nothing in thi
 repo can detect it, so it needs a person and a phone — the same thing that found
 it.
 
-### Superseded: which *part* of the shadow pass costs
+## Superseded: which *part* of the shadow pass costs
 
 Three candidates, undistinguished: the depth target's **size**, PCFSoft's
 **filtering**, or simply having a second **pass** at all — the shelf has ~190
 shadow-casting parts at 31 books, so the pass roughly doubles the draw calls.
 
-```
+```text
 ?shadows=1&casters=0                         ← run this one first
 ?shadows=1&shadowmap=1024&shadowtype=pcf
 ?shadows=1&shadowmap=512&shadowtype=basic

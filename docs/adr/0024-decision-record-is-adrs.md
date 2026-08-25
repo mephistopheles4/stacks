@@ -6,7 +6,7 @@ The log's other genres went where they already belonged: gate observations to [`
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-08-02** — **The Decision Log moved to `docs/decisions.md`, unchanged, because it was 85% of CLAUDE.md by weight.** Measured before deciding: the operative part of that file — invariants, contracts, commands, working rules, the things an agent must actually obey — was 187 lines and 2,261 words; the log was 152 lines and 12,977 across 132 entries. So the rules were outnumbered five to one in their own file by the record of decisions *about* them. Nothing parses the log, which is why it could move at all; `gates/commands.test.ts` and `gates/frontmatter-contract.test.ts` both **throw** on a missing `## Commands` or `## Frontmatter contract` heading, so those two stay where they are permanently. Not one entry was edited — the file is byte-identical below its new header.
 

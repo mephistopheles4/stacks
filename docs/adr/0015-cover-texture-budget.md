@@ -6,7 +6,7 @@ The shelf is WebGL: every cover is decoded into an *uncompressed* GPU texture an
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-08-01** — **Covers are resized to 512px when staged, because the shelf is WebGL and a JPEG is not what a phone has to hold.** The vault keeps whatever the provider gave — Apple's artwork runs to 2400px — and that is right for the vault; it is your copy of the cover. It was wrong for the shelf, where every cover is decoded into an *uncompressed* GPU texture and all of them are uploaded before the first frame. Thirty-one covers were 8.4 MB on the wire and **314 MB decoded**. The desktop absorbed it; a phone killed the tab, and reloading hit a browser that then refused to hand out a context at all. Found by the owner on a phone, not by any gate — see `docs/gates.md`, row G15. A cover already inside the cap is copied byte for byte rather than re-encoded, so nothing is degraded that did not need touching.
 

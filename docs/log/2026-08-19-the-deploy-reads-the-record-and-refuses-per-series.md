@@ -69,7 +69,7 @@ Naming an explicit refspec does not stop git *opportunistically* updating the
 remote-tracking branch a fetched ref would normally land on. The probe was
 fast-forwarding the mirror anyway, and said so in its own output:
 
-```
+```text
  * [new branch]      metrics    -> origin/metrics-probe
    d902779..a44b2ca  metrics    -> origin/metrics
 ```

@@ -12,7 +12,7 @@ failed.** There were two independent faults, one of them a calendar.
 Run [32550244145](https://github.com/mephistopheles4/stacks/actions/runs/32550244145),
 `schedule`, commit `5438035`. Two lines matter, and they are in different steps:
 
-```
+```text
 ##[error]$GITHUB_STEP_SUMMARY upload aborted, supports content up to a size of 1024k, got 1054k.
 ...
 suite: 1   mutation: 0   emit: 1
@@ -48,7 +48,7 @@ commit is a clock, not a diff.**
 Four assertions in `gates/deploy-branch.test.ts` (G17), all of them the ones
 expecting to reach the *past the guard* sentinel:
 
-```
+```text
 AssertionError: expected '--any-branch: publishing a branch oth…' to contain 'STACKS_VAULT points at nothing'
 + FAILED: no metrics record has arrived, 3 days after the trend spine landed.
 ```

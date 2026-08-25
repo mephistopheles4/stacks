@@ -31,7 +31,7 @@ alone; the second pass in `rankAgainst` was undoing the first.
 
 ## How this was decided
 
-_Carried verbatim from the session that produced it, newest last._
+*Carried verbatim from the session that produced it, newest last.*
 
 - **2026-08-08** — **Three providers all knew the author; all three were
   missed, for three different reasons.** Open Library had it in `doc[0]` and

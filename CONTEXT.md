@@ -30,34 +30,34 @@ a glossary entry and belongs in `AGENTS.md` with a gate.
 The folder of Obsidian notes that *is* the database. Defined by
 [invariant 1](AGENTS.md); reached only through the **adapter**, by
 [invariant 4](AGENTS.md).
-_Avoid_: library (that is the built index), database, store.
+*Avoid*: library (that is the built index), database, store.
 
 **Shelved**:
 A book in a status that puts it on the shelf. Wishlist books are not shelved —
 you do not own them — and that is a different exclusion from **private**.
-_Avoid_: active, visible, owned.
+*Avoid*: active, visible, owned.
 
 **Private**:
 Marked by its owner as not for publishing. It still appears on your own machine:
 private means *not published*, never *hidden from you*.
-_Avoid_: hidden, secret, draft.
+*Avoid*: hidden, secret, draft.
 
 **Pin**:
 Placing a book on the shelf by hand rather than by date. Semantics are G12's.
-_Avoid_: sort key, manual order, priority.
+*Avoid*: sort key, manual order, priority.
 
 **Footprint**:
 How much shelf a book eats along the row — a single number. A face-out book has
 been turned side-on, so its footprint is the width of its cover rather than its
 own thickness, which is why row packing counts this and not thickness.
-_Avoid_: width (of what?), extent, the shape it stands on (that is **contact**).
+*Avoid*: width (of what?), extent, the shape it stands on (that is **contact**).
 
 **Contact**:
 Where a book meets the plank, as a rectangle. Not the same as its **footprint**:
 a face-out book's contact is its cover's width by its own *thickness*, because
 what it puts on the wood is the same slab as any other book, seen end-on. The
 painted shadow is drawn from these.
-_Avoid_: footprint (the scalar), shadow (that is what is drawn from it), base.
+*Avoid*: footprint (the scalar), shadow (that is what is drawn from it), base.
 
 **Run**:
 A group of touching books sharing one slump angle, because they are resting on
@@ -65,14 +65,14 @@ each other rather than each leaning independently. Broken by a year gap or by a
 face-out book, either of which gives whatever follows something upright to lean
 against. Giving every book its own angle is what produced wedge-shaped gaps —
 neighbours a fraction of a degree apart, touching nowhere.
-_Avoid_: group, cluster, stack (a stack is horizontal), streak.
+*Avoid*: group, cluster, stack (a stack is horizontal), streak.
 
 **Binding**:
 Hardback or paperback. The key belongs to G8 and its rules to
 [`AGENTS.md`](AGENTS.md); what the word means *here* is that it names a book's
 construction and nothing else — not its format, not how you read it. Absent means
 **nobody has said**, which is a state and not a third value.
-_Avoid_: format (that is print against audiobook, which nothing reads), cover
+*Avoid*: format (that is print against audiobook, which nothing reads), cover
 type, hardcover (no provider has ever called a book on this shelf one).
 
 **Square**:
@@ -81,7 +81,7 @@ tail and fore-edge — why the top of a real book is mostly paper with a thin ri
 of cover round it. A paperback has none; its cover is glued flush. The square and
 the board thickness move **together**, because a case still 2.6mm thick that has
 lost its rim reads as a modelling error rather than as a second format.
-_Avoid_: overhang, margin, lip, bleed.
+*Avoid*: overhang, margin, lip, bleed.
 
 **Profile**:
 A spine's cross-section, as `{ rise, roll }` in width units — how far the centre
@@ -90,7 +90,7 @@ the joint. **Shaded, never built**: it is one shared normal map per binding on
 the flat plane that was already there, and real curved geometry was measured
 against it as the same picture at 6.7× the triangles. A paperback's is not
 `{ 0, 0 }` — perfect binding is a flat *face* with a hard turn at each edge.
-_Avoid_: curve (that was `spineCurve`, superseded), round, `roundedBack` (struck),
+*Avoid*: curve (that was `spineCurve`, superseded), round, `roundedBack` (struck),
 `softHinge` (subsumed into `roll`).
 
 **Head**:
@@ -99,14 +99,14 @@ The one edge that **cannot be faked** — a shelf is looked at from above, so th
 head is a silhouette, and no normal map moves a silhouette. There is no *tail*
 treatment and never will be: the lowest angle the camera permits is 3.6° above
 the horizon, so no tail is ever in frame.
-_Avoid_: top, cap (the cap is the *geometry*; the head is the edge), spine top.
+*Avoid*: top, cap (the cap is the *geometry*; the head is the edge), spine top.
 
 **Striation**:
 The grain of a cut text block — leaves stacked along the thickness. A
 **one-dimensional** pattern, which is the whole reason it costs nothing: one map
 varying only in `u` is correct on all four faces of the page block that can show,
 so it needs neither a material array nor per-face UVs.
-_Avoid_: texture (says nothing), pages (that is the block), grain (that word is
+*Avoid*: texture (says nothing), pages (that is the block), grain (that word is
 taken by the *struck* roughness weave — see #68).
 
 **Provenance**:
@@ -115,20 +115,20 @@ question from which provider answered for the book's metadata. The two differ
 often enough that conflating them loses real information: a book Open Library
 answered for can carry an O'Reilly cover. It is provenance and not permission —
 nothing reads it, and every cover is published whatever its source.
-_Avoid_: source (ambiguous — a record's `source` is the metadata provider).
+*Avoid*: source (ambiguous — a record's `source` is the metadata provider).
 
 **Candidate**:
 A URL that might turn out to be a cover. A book has a list of them rather than
 one, because whether a URL is a usable cover is only knowable by fetching it and
 looking. Which candidate wins is G22's; the word just means "not yet decided".
-_Avoid_: cover URL (that is the one that won), option, fallback.
+*Avoid*: cover URL (that is the one that won), option, fallback.
 
 **Spread**:
 Publisher artwork carrying front, spine and back together. It arrives from the
 same field a cover does and is not a cover — on a shelf it renders as a smear of
 three faces — so the downloader judges by shape rather than by which field
 supplied it.
-_Avoid_: wide cover, jacket (a jacket *includes* the front), bad image.
+*Avoid*: wide cover, jacket (a jacket *includes* the front), bad image.
 
 **Domain name / contract name**:
 The same frontmatter key has two spellings, and which one is correct depends
@@ -137,7 +137,7 @@ name**, used in `BookInput` and everywhere in `packages/core`; `spine_color` is
 the **contract name**, the one in the note on disk and the one G8 pins. Creating
 a note speaks domain names and the adapter translates; *updating* one speaks
 contract names directly.
-_Avoid_: treating them as a style difference. Three commands assembled the same
+*Avoid*: treating them as a style difference. Three commands assembled the same
 three cover keys three different ways, and this split — not anything about
 covers — is why.
 
@@ -147,7 +147,7 @@ from the file. Everywhere else in this codebase an absent value means "say
 nothing" — that side is `keyIfPresent`, and G23 holds it — but here it means
 "take it out". The one place where the ordinary `undefined`-is-absence reflex
 writes to somebody's vault.
-_Avoid_: unset, clear, blank, null.
+*Avoid*: unset, clear, blank, null.
 
 ### Building and publishing
 
@@ -155,29 +155,29 @@ _Avoid_: unset, clear, blank, null.
 A build that assumes an audience: wishlist and private books are dropped, covers
 are re-hosted same-origin, and no note body is parsed at all. The counterpart is
 a **local build**, which is for you and holds everything.
-_Avoid_: production build, release, deploy (a deploy *uploads* a public build).
+*Avoid*: production build, release, deploy (a deploy *uploads* a public build).
 
 **Staging folder**:
 Where `stacks build --public` puts what the site needs — `library.json`, covers,
 the share image. It is an input to the site build.
-_Avoid_: output, dist, assets.
+*Avoid*: output, dist, assets.
 
 **Built folder**:
 What `astro build` assembles from the staging folder plus the site's own code.
 It is the thing that gets uploaded, and it is **not** the staging folder — a
 whole class of this project's bugs comes from treating them as one, so the two
 have separate names on purpose.
-_Avoid_: build output, bundle, the build (say which one).
+*Avoid*: build output, bundle, the build (say which one).
 
 **Origin**:
 The address the shelf will be served from. A build needs to know it, because a
 relative share-image URL renders as nothing in every preview scraper.
-_Avoid_: host, domain, base URL, SITE_URL (that is the variable, not the idea).
+*Avoid*: host, domain, base URL, SITE_URL (that is the variable, not the idea).
 
 **Canary**:
 A phrase planted in fixture note bodies so that a check for note-body leakage can
 distinguish "found nothing" from "looked nowhere".
-_Avoid_: sentinel, marker, test string.
+*Avoid*: sentinel, marker, test string.
 
 ### Checking
 
@@ -187,7 +187,7 @@ A named check that goes red when a rule breaks, and that is **scored** in
 with no gate is a comment. **Scored, not merely present in that file**: since the
 `## Trends` section landed, the file also carries things that are deliberately
 not gates, and *appearing in `docs/gates.md`* stopped being the test.
-_Avoid_: test, check, CI job.
+*Avoid*: test, check, CI job.
 
 **Trend**:
 A number that reaches a person on a cadence and **never goes red — only its
@@ -199,33 +199,33 @@ row number and no status**; it lives in `docs/gates.md`'s `## Trends` table,
 naming what it measures, its cadence, its reader, and the gate that watches its
 silence. ⚠️ The word covers the whole not-a-gate column, including things that do
 not trend; if it grates, rename the column rather than splitting it.
-_Avoid_: metric, report, dashboard, KPI.
+*Avoid*: metric, report, dashboard, KPI.
 
 **Rule**:
 Overloaded on purpose, so say which. A **rule of the constitution** is a numbered
 invariant in `AGENTS.md`. A **rule of the inspector** is one named member of
 `PUBLIC_BUILD_RULES`, tagging a problem found in a built folder. They are related
 only in that some inspector rules exist to enforce some articles.
-_Avoid_: using it bare where the reader cannot tell which.
+*Avoid*: using it bare where the reader cannot tell which.
 
 **Problem**:
 Something wrong with a built folder, reported with the inspector rule that found
 it. Reported, never thrown and never printed by the code that finds it — the
 caller decides whether a problem is fatal.
-_Avoid_: error, failure, violation.
+*Avoid*: error, failure, violation.
 
 **Observation**:
 What an inspection saw when nothing was wrong — counts, totals, the URLs it
 matched. Returned rather than logged, because an inspection that says nothing on
 success reads exactly like one that never ran.
-_Avoid_: log, output, info.
+*Avoid*: log, output, info.
 
 **Vacuous pass**:
 A check that reports success because it examined nothing: an empty list every
 predicate satisfies, a regex that stopped matching, a fixture that no longer
 contains what the assertion looks for. The specific failure most of this repo's
 gate design is arranged against.
-_Avoid_: false positive, flaky, silent pass.
+*Avoid*: false positive, flaky, silent pass.
 
 ### The tracker
 
@@ -236,4 +236,4 @@ every session here authenticates as the same account, so the tracker cannot tell
 one holder from another. The rule that uses it is in [`AGENTS.md`](AGENTS.md);
 why it is ungated is in
 [`docs/gates.md`](docs/gates.md#not-gated-deliberately).
-_Avoid_: lock, reservation, assignment (that is the mechanism, not the idea).
+*Avoid*: lock, reservation, assignment (that is the mechanism, not the idea).

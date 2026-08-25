@@ -6,7 +6,7 @@ Rotating a book about its centre swings its corners out by `(height/2)·sin θ`,
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-08-01** — **A leaning book is wider than its thickness, and the layout never reserved the difference.** Rotating a book about its centre swings its top-left and bottom-right corners out by `(height/2)·sin θ` ≈ 0.03 — a thin book's entire thickness — while the cursor advances by thickness alone. Two neighbours at the *same* angle stay parallel and never notice, which is why a run packs flush; wherever the angle **changes**, that swing lands inside whatever is beside it. Both collisions the owner found are this one bug: a leaning book driven into the face-out book on its right, and a row's first book driven into the case's own side, the latter newly visible because the row now starts flush instead of a finger's width clear. Clearance is therefore added at angle changes and only there. It is also **capped by what the row can pay for** — `toRows` packs without knowing anything about leaning, so a row with several face-out books changes angle at each one and could push the last book through the right-hand upright, which is a worse defect than the one being fixed and would only appear on a full shelf.
 

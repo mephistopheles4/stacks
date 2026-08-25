@@ -68,7 +68,7 @@ draw off independent hashes — are unit tests over pure functions, both observe
 red. A scoreboard row implies a rule that can go red for a reason a reader can
 act on, and "textures went up by three" is not that.
 
-### The review caught a bug no counter could
+## The review caught a bug no counter could
 
 **The head cap was ~6× too narrow, and every number said it was fine.**
 `headCapGeometry` spanned one *width* unit along `x` while rolling at radius 1 —
@@ -102,7 +102,7 @@ Two smaller things the review found, both real:
   few. A leak on a debug surface built to diagnose leaks is the one failure this
   project has already measured itself avoiding.
 
-### The head of a hardback was wrong twice, and `?solo` is what found it
+## The head of a hardback was wrong twice, and `?solo` is what found it
 
 Reported from a screenshot, after the reviews above and with the whole suite
 green. **Both faults moved not one renderer counter** — same draws, same
@@ -160,7 +160,7 @@ instrument this project has built rather than guessed with, after the black box
 and the panel, and it was earned the same way: something was wrong, everything
 said it was fine.
 
-### The bloom question is answered, and the page block does not cross
+## The bloom question is answered, and the page block does not cross
 
 #54 left this open — *"a brighter or striated page block may cross the bloom
 threshold"* — and it was the half of the map's fog #68 could not close.
