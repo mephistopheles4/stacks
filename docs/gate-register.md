@@ -2007,7 +2007,7 @@ of this repository can make the sentence go red, because the tool it is about is
 not installed.
 
 ⚠️ **Closed 2026-08-23, by the other route, and the named remedy above was
-never built.** G46 (`astro-types`) installed `@astrojs/check@0.9.10` on
+never built.** G47 (`astro-types`) installed `@astrojs/check@0.9.10` on
 `packages/site` and wired `astro check` into `pnpm build`, so the sentence this
 whole block is about stopped being G7's warrant instead of being dated and
 asserted. G7's row now rests on **coverage**: `.astro` sits outside one scope
@@ -2021,7 +2021,7 @@ than by line, and given no total**: the decay block above cites `:4-5` and
 landing and was short both times. `git grep -n -iE "astro check|@astrojs/check|not typechecked|cannot run under"`
 is the artifact; a number here would be the third one to go stale. See
 [ADR-0077](adr/0077-astro-check-is-the-checker-for-astro-files.md)
-and the `### G46 — \`astro-types\`` entry, whose own **Decay** verdict is this
+and the `### G47 — \`astro-types\`` entry, whose own **Decay** verdict is this
 one's successor: the same shape of claim, this time asserted by a clause that
 reads the compiler pin.
 

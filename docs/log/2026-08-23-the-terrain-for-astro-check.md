@@ -14,7 +14,7 @@ below contradict a document in this tree, and one of them contradicts
 
 > ✅ **The block cleared the same evening, and the gate landed in this branch.**
 > [#259](https://github.com/mephistopheles4/stacks/pull/259) merged at
-> `bc59bf9`, and **G46** (`astro-types`) followed —
+> `bc59bf9`, and **G47** (`astro-types`) followed —
 > [ADR-0077](../adr/0077-astro-check-is-the-checker-for-astro-files.md).
 > **Everything below is left as written**, because a terrain survey read after
 > the fact is worth more as a record of what was and was not known in advance
@@ -338,6 +338,24 @@ rebase immediately before their own merge, against the real tip.
 `docs/progress.md`'s "Rollout numbering" row has said so since band four —
 *"No number is reserved here"* — and this is the fifth pre-allocated number in
 this project to go stale.
+
+✅ **And it resolved exactly that way, which is the point.**
+[#261](https://github.com/mephistopheles4/stacks/pull/261) merged first, so
+**G46 is `lint`** and this row became **G47** at the rebase — read off `main`'s
+own `docs/gates.md` rather than taken from the message announcing it, which is
+the rule this page spends its length on. The renumber moved **two** files, per
+G41: the row in `docs/gates.md` and the `### G47 — \`astro-types\`` heading in
+`docs/gate-register.md`. Nothing was lost and nobody was blocked; four branches
+sitting on one number cost exactly one rebase each, which is what the
+alternative was supposed to save.
+
+⚠️ **The sweep afterwards is the part worth budgeting for.** A row number is not
+one string: after renumbering the two structural files, **`G46` appeared in 22
+more places** across ADRs, specs, source comments, both tsconfigs, the gate
+docblocks and this log — and the sweep had to *distinguish* them, because
+`main` now legitimately holds a different `G46`. A blind replace would have
+renamed somebody else's row. The historical sentences on this page were left at
+G46 deliberately: they describe what was true when it happened.
 
 ⚠️ **A correction to the mechanism, from #251, checked here rather than taken
 on trust — and it is the credit worth recording, ahead of anyone's concession.**

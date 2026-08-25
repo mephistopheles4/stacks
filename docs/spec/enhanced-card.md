@@ -427,7 +427,7 @@ Apple's mark shipping is what makes Apple's credit line owed — see
 ```
 
 - **`.astro` files hold markup, styles and a `<script>` that imports and calls a
-  `.ts` module — nothing more.** ⚠️ **The reason changed at G46
+  `.ts` module — nothing more.** ⚠️ **The reason changed at G47
   (`astro-types`), 2026-08-23**: `.astro` frontmatter *is* typechecked now, by
   `astro check` inside `pnpm build`. What is still true is that logic there is
   **counted by nothing** — every mutation scope and every complexity population

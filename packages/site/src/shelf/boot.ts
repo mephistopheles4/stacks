@@ -14,7 +14,7 @@ import { bookLimit, readSettings, soloBook } from './shelf-url.ts';
  * logic in an .astro file is counted by nothing: every mutation scope and every
  * complexity population globs `*.ts`. See "Site code layout" in AGENTS.md.
  *
- * It is no longer true that .astro is untypechecked -- G46 (`astro-types`) runs
+ * It is no longer true that .astro is untypechecked -- G47 (`astro-types`) runs
  * `astro check` inside `pnpm build` -- and that is exactly why the rule now
  * rests on coverage rather than on the compiler.
  */

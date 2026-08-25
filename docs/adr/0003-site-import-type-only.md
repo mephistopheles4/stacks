@@ -4,7 +4,7 @@ A *value* import from `@stacks/core` drags `node:fs` and sharp into the browser 
 
 Runtime values the site genuinely shares live in a pure subpath, `@stacks/core/shelf-order`, which imports nothing. The companion rule — no logic in `.astro` files — survives, on a warrant that is no longer this one.
 
-> ⚠️ **Superseded on 2026-08-23 by G46 (`astro-types`).** This paragraph read *"those files cannot be typechecked at all"*, and the dated entry below rejected `astro check` on the same ground. [ADR-0066](./0066-typescript-6-until-7-1.md) pinned the repo to TypeScript 6.0.3 for other reasons, and `@astrojs/check@0.9.10` runs there; `astro check` now runs inside `pnpm build`. **The rule this record defends is unchanged and its reason is replaced**: logic stays out of `.astro` because every mutation scope and every complexity population globs `*.ts`, so logic there is counted by nothing. The entry below is left verbatim, per this file's own rule.
+> ⚠️ **Superseded on 2026-08-23 by G47 (`astro-types`).** This paragraph read *"those files cannot be typechecked at all"*, and the dated entry below rejected `astro check` on the same ground. [ADR-0066](./0066-typescript-6-until-7-1.md) pinned the repo to TypeScript 6.0.3 for other reasons, and `@astrojs/check@0.9.10` runs there; `astro check` now runs inside `pnpm build`. **The rule this record defends is unchanged and its reason is replaced**: logic stays out of `.astro` because every mutation scope and every complexity population globs `*.ts`, so logic there is counted by nothing. The entry below is left verbatim, per this file's own rule.
 
 ## How this was decided
 

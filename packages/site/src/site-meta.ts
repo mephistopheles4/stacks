@@ -19,7 +19,7 @@
  * complexity population globs `*.ts` — so anything with a type or a branch
  * belongs here. See "Site code layout" in AGENTS.md.
  *
- * ⚠️ **The frontmatter is typechecked now**, by G46 (`astro-types`): the call
+ * ⚠️ **The frontmatter is typechecked now**, by G47 (`astro-types`): the call
  * this module's `absoluteUrl` gets from `index.astro` is checked, which it was
  * not when `absoluteUrl(42, Astro.site)` shipped `content="42"` to two meta
  * tags through a green build. The rule stands on coverage rather than on the

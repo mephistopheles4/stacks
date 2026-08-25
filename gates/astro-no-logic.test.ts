@@ -1,7 +1,7 @@
 /**
  * G7 — no logic in `.astro` files.
  *
- * ⚠️ **This row's warrant was replaced, not narrowed, when G46 (`astro-types`)
+ * ⚠️ **This row's warrant was replaced, not narrowed, when G47 (`astro-types`)
  * landed.** It opened: *"`.astro` files are not typechecked. `@astrojs/check`
  * cannot run under TypeScript 7 … So the mitigation is a rule instead of a
  * compiler."* Both halves are now false. `@astrojs/check@0.9.10` runs against
@@ -176,7 +176,7 @@ describe('G7 — no logic in .astro files', () => {
         expect(
           pattern.test(stripComments(block.body)),
           `${block.file}: \`${token}\` in a <script> block. .astro is typechecked ` +
-            '(G46 runs astro check inside pnpm build) and counted by nothing — every ' +
+            '(G47 runs astro check inside pnpm build) and counted by nothing — every ' +
             'mutation scope and every complexity population globs *.ts — so logic here ' +
             'is logic no counter reads. Move it into packages/site/src/shelf/*.ts and ' +
             'call it from here.',

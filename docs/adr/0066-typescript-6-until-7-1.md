@@ -56,7 +56,7 @@ spike:
   its premise stopped being true**: the pin is not being paid for one tool.
   0003's mitigation — no logic in `.astro` files — is untouched here, and whether
   `astro check` becomes a gate row is a separate scoreboard conversation.
-  ✅ **Held on 2026-08-23**: that conversation reached a row, **G46**
+  ✅ **Held on 2026-08-23**: that conversation reached a row, **G47**
   (`astro-types`), and *"one real pre-existing type error"* is the TS2717 in
   `boot.ts` that [#250](https://github.com/mephistopheles4/stacks/issues/250)
   fixed. 0003's mitigation still stands, on a warrant this record's own debt
@@ -119,7 +119,7 @@ and is kept as fog on
   [`docs/gates.md`](../gates.md) — G7's failure-mode column said `astro check`
   *cannot run under TS 7*, and that is the scoreboard's stated warrant for the
   row, not history; it now says the tool runs and is not wired in, which is a
-  choice. ⚠️ **That sentence lasted eight days**: at G46 the tool *is* wired in,
+  choice. ⚠️ **That sentence lasted eight days**: at G47 the tool *is* wired in,
   and G7's column was rewritten again — this time replacing the warrant rather
   than narrowing it. [`docs/spec/mutation-scoring.md`](../spec/mutation-scoring.md) — §1 on
   the dead checker and §8's requirement that `stryker.config.*` carry *"the
@@ -140,7 +140,7 @@ and is kept as fog on
   is how a red build happens in this repo. It moves with that decision. Until
   then this record is what a reader finds first, from `docs/adr/`.
 
-  > ✅ **Debt discharged 2026-08-23, by G46 (`astro-types`).** The decision this
+  > ✅ **Debt discharged 2026-08-23, by G47 (`astro-types`).** The decision this
   > paragraph waited on was made: `astro check` runs inside `pnpm build` and
   > takes a row. `AGENTS.md`'s note moved in that commit, along with the root
   > `tsconfig.json` comment, G7's own docblock and failure message, and the
@@ -159,7 +159,7 @@ and is kept as fog on
   > what they compute"*; one of them is now load-bearing in `pnpm build`.
   > `@astrojs/check@0.9.10` declares `peerDependencies: { typescript: '^5.0.0 ||
   > ^6.0.0' }`, so **this record's own revisit condition — TypeScript 7.1 —
-  > un-runs G46 unless the checker has widened by then.** That is asserted
+  > un-runs G47 unless the checker has widened by then.** That is asserted
   > rather than written down: `gates/astro-types.test.ts` reads the pin and goes
   > red if it leaves the supported range, so the revisit meets the coupling as a
   > failing test rather than as a paragraph somebody has to remember.

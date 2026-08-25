@@ -182,7 +182,7 @@ consequence; see §6 step 1.
 > green**, for the reason the row states rather than this one: nothing runs
 > `astro check` yet, and `@astrojs/check` is not a dependency.
 
-> ✅ **S4 landed 2026-08-23 as G46 (`astro-types`)**, closing the footnote above
+> ✅ **S4 landed 2026-08-23 as G47 (`astro-types`)**, closing the footnote above
 > as well as the paragraph above that. `@astrojs/check@0.9.10` is a dev
 > dependency of `packages/site`, pinned exact, and its `build` script is
 > `astro check && astro build` — so `astro check` runs inside `pnpm build`,

@@ -2,7 +2,7 @@
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
     // Kept in step with ../../tsconfig.base.json on purpose, and now
-    // load-bearing: `astro check` reads this file, and `astro check` is G46
+    // load-bearing: `astro check` reads this file, and `astro check` is G47
     // (astro-types), so relaxing an option here weakens a gate from a file no
     // clause of that gate reads.
     //

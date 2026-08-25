@@ -150,7 +150,7 @@ it with no provenance at all.
   `@stacks/core/shelf-order` — that imports nothing.
 - **Site code layout: no logic in `.astro` files.** They hold markup, styles, and
   a `<script>` that imports and calls a `.ts` module — nothing more. `.astro`
-  frontmatter **is** typechecked, by `astro check` inside `pnpm build` (G46,
+  frontmatter **is** typechecked, by `astro check` inside `pnpm build` (G47,
   `astro-types`); the rule stands on a different footing. **Logic in an `.astro`
   file is counted by nothing**: all eight globs in `stryker.scopes.json` end
   `*.ts` and the complexity populations are those same globs, so a function
@@ -200,7 +200,7 @@ pnpm typecheck           # tsc --noEmit across every .ts in the repo
 pnpm lint                # G46: the tuned type-checked rule set over every .ts
                          #   file, tests included   (--fix repairs about a quarter)
 pnpm test                # vitest: packages/**/src and gates/
-pnpm build               # typecheck, then astro check (G46), then astro build
+pnpm build               # typecheck, then astro check (G47), then astro build
 pnpm dev                 # site dev server
 pnpm dev:watch           # site + rebuild on every vault change
 pnpm stacks <cmd>        # run the CLI from source
