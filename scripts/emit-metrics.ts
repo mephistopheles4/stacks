@@ -34,7 +34,7 @@ import {
 } from './lib/metrics-record.ts';
 import { UNKNOWN_WINDOW, subjectsBetween, windowFrom } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
-import { configHashOf, fixtureHashOf } from './lib/floors.ts';
+import { configHashOf, duplicationHashOf, fixtureHashOf } from './lib/floors.ts';
 // The config Stryker actually runs, imported rather than described. The hash
 // below is a fact about the configuration this run loaded, and a flag carrying
 // it would let the stamp disagree with what was actually scored.
@@ -47,16 +47,31 @@ import {
   type ScoredRun,
 } from './lib/mutation-score.ts';
 import {
+  counterInputs,
+  countPopulation,
+  populationOf,
+  type Counts,
+} from './lib/complexity.ts';
+import {
   cognitiveInputs,
   countCognitivePopulation,
   type CognitiveCounts,
 } from './lib/cognitive.ts';
-import { counterInputs, countPopulation, type Counts } from './lib/complexity.ts';
+import {
+  TREE_POPULATION,
+  countAllPopulations,
+  duplicationInputs,
+  permalinkFor,
+  sweepIgnoreBlocks,
+  treePopulationOf,
+  type DuplicationCounts,
+} from './lib/duplication.ts';
 import { sourceFiles } from './lib/scope-check.ts';
 import {
   TREND_SERIES,
   cognitiveFactsOf,
   complexityFactsOf,
+  duplicationFactsOf,
   renderMetrics,
   type RunFacts,
   type ScopeScore,
@@ -276,6 +291,81 @@ async function complexityFacts(): Promise<ReturnType<typeof complexityFactsOf>> 
 }
 
 /**
+ * The four counts over each of the two duplication populations, or the eight
+ * names failed.
+ *
+ * ⚠️ **Ten jscpd runs, and each one is there for a reason the others cannot
+ * cover.** One over the **union** of the eight populations, because a clone is
+ * a relation between two places and eight separate runs are structurally blind
+ * to a clone spanning two scopes — that run is where every scope's clone count
+ * and duplicated-line count comes from, attributed by glob. Eight more, one per
+ * scope, because jscpd publishes no per-file line count and **its denominator
+ * must not be reimplemented**: a hand-rolled one disagreed with jscpd on three
+ * of ninety-five files, once by twenty-seven lines. And one over the whole tree.
+ *
+ * **The decision itself is not here.** `duplicationFactsOf` owns it, in
+ * `lib/metrics.ts`, for the reason `complexityFacts` gives one function down:
+ * this file is excluded from the `scripts` mutation scope and imported by no
+ * spec, so a rule written at this level would be a rule nothing holds.
+ */
+async function duplicationFacts(): Promise<ReturnType<typeof duplicationFactsOf>> {
+  try {
+    const files = sourceFiles();
+    const counted = countAllPopulations(readScopes(), (scope) => populationOf(scope, files));
+
+    for (const [scope, counts] of counted.scopes) console.log(describeCounts(scope, counts));
+    console.log(describeCounts(TREE_POPULATION, counted.tree));
+
+    // Generated here, printed, and stored nowhere — see `ignoreBlocksIn`. A
+    // link pinned into the record stays valid while it stops describing a block
+    // that moved, and it must never be a metrics label.
+    for (const block of sweepIgnoreBlocks(treePopulationOf())) {
+      console.log(`  suppression: ${permalinkFor(block, commit)}`);
+    }
+
+    return duplicationFactsOf(counted);
+  } catch (error) {
+    // Not fatal here, for `complexityFacts`' reason: the run's other series are
+    // real measurements and dropping them would lose what did compute.
+    console.error(`could not count duplication: ${String(error)}`);
+    return duplicationFactsOf(undefined);
+  }
+}
+
+/** One population's line in the run log. */
+function describeCounts(population: string, counts: DuplicationCounts | null): string {
+  return counts === null
+    ? `duplication ${population}: no counts`
+    : `duplication ${population}: ${String(counts.clones)} clones, ${String(
+        counts.duplicatedLines,
+      )} duplicated of ${String(counts.totalLines)} lines, ${String(counts.ignoredLines)} ignored`;
+}
+
+/**
+ * The counting rule this run counted under, or nothing.
+ *
+ * ⚠️ **Stamped from the config ESLint actually resolved, never from a literal
+ * here.** `configHash`'s rule one file over: a flag or a copy would let the
+ * stamp disagree with the rule it claims to describe, which is the one input
+ * the comparison at deploy cannot see.
+ *
+ * **Absent when the counter could not run**, which is the honest answer rather
+ * than a convenience: a record with no counts in it has no counting rule to
+ * declare, and `floorRefusals` reads an absent stamp as *a record from before
+ * the stamp existed* — the same forgiving reading `configHash` gets, and safe
+ * because no families accompany it.
+ */
+async function countingStamp(): Promise<string | undefined> {
+  try {
+    // ⚠️ **One stamp over both counting rules**, per #234 §2.
+    return fixtureHashOf(await counterInputs(), await cognitiveInputs());
+  } catch (error) {
+    console.error(`could not stamp the counting rule: ${String(error)}`);
+    return undefined;
+  }
+}
+
+/**
  * The four cognitive counts over every declared population, or the four names failed.
  *
  * `complexityFacts`' twin, with one ordering that is the design rather than a
@@ -283,7 +373,7 @@ async function complexityFacts(): Promise<ReturnType<typeof complexityFactsOf>> 
  * cognitive four and nothing else.** The cyclomatic counter is a different
  * matter — the cognitive population is *derived* from its report, so if it
  * throws there is no denominator left and both sets are gone. That asymmetry
- * follows the dependency and is stated on `RunFacts.cognitive` too.
+ * follows the dependency and is enforced at the call site below.
  *
  * ⚠️ **Two ESLint passes per scope, and the second is not free.** The cognitive
  * rule cannot report a function scoring zero, so the population has to come
@@ -313,34 +403,8 @@ async function cognitiveFacts(): Promise<ReturnType<typeof cognitiveFactsOf>> {
   }
 }
 
-/**
- * The counting rule this run counted under, or nothing.
- *
- * ⚠️ **Stamped from the config ESLint actually resolved, never from a literal
- * here.** `configHash`'s rule one file over: a flag or a copy would let the
- * stamp disagree with the rule it claims to describe, which is the one input
- * the comparison at deploy cannot see.
- *
- * **Absent when the counter could not run**, which is the honest answer rather
- * than a convenience: a record with no counts in it has no counting rule to
- * declare, and `floorRefusals` reads an absent stamp as *a record from before
- * the stamp existed* — the same forgiving reading `configHash` gets, and safe
- * because no families accompany it.
- */
-async function countingStamp(): Promise<string | undefined> {
-  try {
-    // ⚠️ **One stamp over both rules**, per #234 §2. A `sonarjs` upgrade
-    // therefore refuses every cyclomatic cap comparison too, although no
-    // cyclomatic number moved — the fail-closed direction, recorded in
-    // ADR-0073 rather than hidden.
-    return fixtureHashOf(await counterInputs(), await cognitiveInputs());
-  } catch (error) {
-    console.error(`could not stamp the counting rule: ${String(error)}`);
-    return undefined;
-  }
-}
-
 const complexity = await complexityFacts();
+const duplication = await duplicationFacts();
 
 /**
  * ⚠️ **A cyclomatic failure takes the cognitive four with it, and this line is
@@ -354,13 +418,30 @@ const complexity = await complexityFacts();
  * samples whose denominator came from a run the same file had already declared
  * broken. Found in review on #266; the comment promised it and the code did not.
  *
- * The reverse does **not** hold: a cognitive failure leaves the cyclomatic four
- * alone, because the plugin is a second supplier and losing it must not cost the
- * measure this repository has a whole branch of records of.
+ * The reverse does **not** hold, and duplication is independent of both — it
+ * reads no ESLint report at all.
  */
 const cognitive =
   complexity.failed.length > 0 ? cognitiveFactsOf(undefined) : await cognitiveFacts();
 const fixtureHash = await countingStamp();
+
+/**
+ * The duplication counting rule this run counted under, or nothing.
+ *
+ * `countingStamp`'s twin, and absent on the same terms: a run whose counter
+ * could not start has no rule to declare, and an absent stamp reads as *a
+ * record from before the stamp existed* rather than as a wrong one.
+ */
+function duplicationStamp(): string | undefined {
+  try {
+    return duplicationHashOf(duplicationInputs());
+  } catch (error) {
+    console.error(`could not stamp the duplication rule: ${String(error)}`);
+    return undefined;
+  }
+}
+
+const duplicationHash = duplicationStamp();
 
 const facts: RunFacts = {
   timestamp,
@@ -368,6 +449,7 @@ const facts: RunFacts = {
   event: flags.get('event') ?? 'unknown',
   configHash: configHashOf(strykerConfig),
   ...(fixtureHash === undefined ? {} : { fixtureHash }),
+  ...(duplicationHash === undefined ? {} : { duplicationHash }),
   runUrl: flags.get('run-url') ?? 'unknown',
   prWindow: windowSincePreviousRun(),
   expected: expected(),
@@ -375,18 +457,20 @@ const facts: RunFacts = {
   // a series whose step failed is dropped rather than published: the number is
   // not a measurement of what the series measures.
   //
-  // ⚠️ **The complexity names join it from in here**, which is the one series
-  // group whose failure this process can see for itself: the counter runs in
-  // this file rather than in a workflow step, so there is no exit code for the
-  // caller to pass down.
+  // ⚠️ **The complexity and duplication names join it from in here**, which are
+  // the two series groups whose failure this process can see for itself: both
+  // counters run in this file rather than in a workflow step, so there is no
+  // exit code for the caller to pass down.
   failed: [
     ...trendNames(flags.get('failed'), '--failed'),
     ...complexity.failed,
+    ...duplication.failed,
     ...cognitive.failed,
   ],
   gateSuiteRuntime: seconds(flags.get('suite-seconds'), '--suite-seconds'),
   mutationRunRuntime: seconds(flags.get('mutation-seconds'), '--mutation-seconds'),
   complexity: complexity.complexity,
+  duplication: duplication.duplication,
   cognitive: cognitive.cognitive,
   ...scoresFrom(flags.get('report')),
 };

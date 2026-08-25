@@ -205,6 +205,7 @@ pnpm fixtures:50         # regenerate the 50-book fixture vault
 pnpm smoke:render        # phase 2 gate: headless shelf screenshot
 pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish
+pnpm duplication:report  # jscpd over the eight scopes and the whole tree, as a table
 pnpm mutation:run        # Stryker over the eight declared scopes — minutes, not seconds
 pnpm mutation:score      # that run's report, scored per declared scope
 pnpm metrics:emit        # one run's trend series, as the OpenMetrics text CI commits
@@ -226,6 +227,13 @@ series, at 3 days, gated by G39 (`metrics-freshness`). No flag clears that;
 `--check-only` reports it instead of refusing, because it publishes nothing. The
 same is true of the zero-mutant residual G38 (`mutation-scope`) checks, so
 neither flag reaches a refusal on any path that publishes.
+
+`pnpm duplication:report` prints the same counts CI records — one counter, two
+callers — for the eight declared scopes and for whole-tree TypeScript, plus a
+permalink for every suppression block. **The eight scope rows do not sum to the
+tree row**: a clone is a relation between two places, so a clone spanning two
+scopes is counted by both ([ADR-0072](docs/adr/0072-a-clone-is-a-relation-between-two-places.md)).
+It is a print and never a gate; nothing in it refuses anything.
 
 `pnpm trend:sync` needs **Docker** and nothing else, and is run by hand, never
 on a schedule. It brings up **two** containers: the store, and the page you read

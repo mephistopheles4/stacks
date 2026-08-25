@@ -115,6 +115,7 @@ means the two have drifted.
 | **G40** | `action-pins` | `gates.yml`'s pinning argument ↔ every `uses:` line under `.github/` | a tag or a branch where a SHA is claimed, or a SHA whose version comment was deleted to satisfy the pin — and the file argues the case carefully while nothing holds it to its own argument. ⚠️ **It proves the shape of the reference, never the truth of the comment**: a hand-edit swapping in a different valid SHA under `# v7.0.1` passes cleanly, because that fact lives at GitHub and G21 forbids the suite from asking — `cover_source`'s failure verbatim, and there is no offline route because actions have no lockfile | `gates/action-pins.test.ts` — sweeping `.github/**/*.yml\|yaml`, not `.github/workflows/`, because a composite action is the cheap way past a narrow glob | ✅ |
 | **G41** | `gate-register` | `docs/gates.md`'s numbered rows ↔ `docs/gate-register.md`'s row sections | a row whose five questions nobody asked, or an entry for a row that never landed — and **membership is not enough**: a file with two `## G26` sections satisfies *"each row has an entry"*, and one merged verdict bullet names all five category words while a count keyed on one of them reports a total silently short. Cardinality, in both directions | `gates/gate-register.test.ts` — row-side floor at 42, safe only under mark-never-delete plus gapless making the count non-decreasing | ✅ |
 | **G43** | `ignored-mutants` | `stryker.floors.json`'s `ignored` counter ↔ a real sweep of the mutated source | a disable directive takes a mutant out of the denominator from inside a source file, nowhere near the Stryker config and nowhere near the floors file — of the three routes down it is the only one leaving no trace in either file a deploy reads. Caught at merge rather than at deploy, which is what matters where `required_approving_review_count: 0` leaves the gate suite and CodeQL the only two things that can stop one | `gates/ignored-mutants.test.ts` — the judgement is planted in `scripts/lib/floors.test.ts`; this asserts only what the disk says | ✅ |
+| **G47** | `ignored-clones` | `jscpd.floors.json`'s `ignoredLines` counters ↔ a real sweep of the tree, and its `duplicationHash` ↔ the installed jscpd | a suppression block takes its lines out of the clone count and out of the total-line denominator **together** — measured, 34 raw lines with a 12-line block report 20 — so the percentage does not move, the count falls, and the change lives in a source file nowhere near any file a deploy reads. G43's shape applied to a second tool, at merge for G43's reason. ⚠️ **The counter records what the source *declares*, not what jscpd removed**: measured, jscpd honours a block only when no code follows it, so one in the middle of a file does nothing, silently. ⚠️ The hash half does **nothing** for `stryker.floors.json`, whose stamps stay unwatched until [#224](https://github.com/mephistopheles4/stacks/issues/224) | `gates/ignored-clones.test.ts` — the judgement is planted in `scripts/lib/duplication.test.ts`; this asserts only what the disk says | ✅ |
 
 **G13 now allows one file this project did not make**: Google's *powered by
 Google* graphic, which the API terms require displayed and forbid altering — so
@@ -1524,59 +1525,61 @@ are the same artifact.
 | `complexity-mass` | Σ cyclomatic complexity over those functions | merge and nightly | ” | ” |
 | `complexity-mass-over-10` | Σ complexity over functions with CC > 10 | merge and nightly | ” | ” |
 | `complexity-max` | the largest single function's complexity | merge and nightly | ” | ” |
-| `cognitive-functions` | functions in the cognitive population — **its own denominator**, smaller than the row above by the nodes the rule never visits | merge and nightly | ” | ” |
+| `duplication-clones` | clones found, over the eight declared scopes | merge and nightly | ” | ” |
+| `duplication-lines` | duplicated lines, over the eight declared scopes | merge and nightly | ” | ” |
+| `duplication-ignored-lines` | lines inside a `jscpd` suppression block, over the eight declared scopes | merge and nightly | ” | ” |
+| `duplication-total-lines` | lines scanned, over the eight declared scopes — the denominator | merge and nightly | ” | ” |
+| `duplication-tree-clones` | clones found, whole-tree TypeScript | merge and nightly | ” | ” |
+| `duplication-tree-lines` | duplicated lines, whole-tree TypeScript | merge and nightly | ” | ” |
+| `duplication-tree-ignored-lines` | lines inside a `jscpd` suppression block, whole-tree TypeScript | merge and nightly | ” | ” |
+| `duplication-tree-total-lines` | lines scanned, whole-tree TypeScript — no scope list can shrink it | merge and nightly | ” | ” |
+| `cognitive-functions` | functions in the cognitive population — **its own denominator**, smaller than `complexity-functions` by the nodes the rule never visits | merge and nightly | ” | ” |
 | `cognitive-mass` | Σ cognitive complexity over those functions, a function the rule was silent about counting zero | merge and nightly | ” | ” |
 | `cognitive-mass-over-15` | Σ cognitive complexity over functions scoring above 15 | merge and nightly | ” | ” |
 | `cognitive-max` | the largest single function's cognitive complexity | merge and nightly | ” | ” |
 
 ⚠️ **The cognitive four are published *beside* the cyclomatic four and never
-instead of them.** The two measures agree broadly and diverge really — 1105
-scored pairs at Pearson r 0.9159, and 54 places where cognitive exceeds
-cyclomatic — and `resolveSettings` scores cyclomatic 17 and cognitive **0**,
-because every `?.` link is a branch to one measure and nothing at all to the
-other. A replacement makes a 17-branch function invisible.
+instead of them.** The two measures agree broadly and diverge really — #230
+measured 1105 scored pairs at Pearson r 0.9159 with 54 inversions — and
+`resolveSettings` scores cyclomatic 17 and cognitive **0**, because every `?.`
+link is a branch to one measure and nothing at all to the other. A replacement
+makes a 17-branch function invisible.
 [ADR-0073](adr/0073-cognitive-complexity-is-published-beside-cyclomatic.md).
 
 ⚠️ **`cognitive-functions` is a different denominator, not a copy of
 `complexity-functions`, and the spec has to say so or two implementations
-produce different numbers.** [#230](https://github.com/mephistopheles4/stacks/issues/230)
-measured 1105 against 1114; re-measured at adoption it was 1124 against 1133.
-⚠️ **The gap of nine is the invariant, not either total** — the totals grow with
-the tree. It has two causes, both silences, and they are not the same silence. The rule hooks the `:function` selector,
-so it **never visits** a `PropertyDefinition` or a `StaticBlock` — nine such
-nodes across the eight scopes, which carry cyclomatic mass and no cognitive
-mass, and are not in the population at all. And it reports only above its
-threshold, so at `0` a function scoring zero is **silently absent** — those
-*are* in the population, and **absent at zero counts as zero**.
+produce different numbers.** #230 measured 1105 against 1114; re-measured at
+adoption it was 1124 against 1133. **The gap of nine is the invariant, not
+either total** — the totals grow with the tree. It has two causes, both
+silences, and they are not the same silence. The rule hooks the `:function`
+selector, so it **never visits** a `PropertyDefinition` or a `StaticBlock` —
+nine such nodes, all in `packages/site/src/shelf`, carrying cyclomatic mass and
+no cognitive mass, and **not in the population at all**. And it reports only
+above its threshold, so at `0` a function scoring zero is **silently absent** —
+those *are* in the population, and **absent at zero counts as zero**.
 
 ⚠️ **The cut of 15 is the supplier's own default and nothing may ever refuse on
 it.** McCabe published 10 in 1976 with his reasoning; `DEFAULT_THRESHOLD = 15`
 is published without any. The distinguishing test — *is the number published
 with reasoning, or merely published?* — passes 10 and fails 15. So
-`cognitive-mass-over-15` is published and takes **no cap**, which is what
-discharges the condition on accepting 15 at all, and `cognitive-max` is the only
-cognitive series a cap may ever reach. A mirrored cap is unreachable: it would
-need a mass-over count, which needs a cut, and every available cut is underived
-for this measure — McCabe's 10 is *worse*, being a bound about a different
+`cognitive-mass-over-15` is published and takes **no cap**, which discharges the
+condition on accepting 15 at all, and `cognitive-max` is the only cognitive
+series a cap may ever reach. A mirrored cap is unreachable: it needs a mass-over
+count, which needs a cut, and McCabe's 10 is *worse* — a bound about a different
 measure.
 
 ⚠️ **No cognitive name is in `CAPPED_SERIES` yet, and that is a code constraint
-rather than a caution.** `scripts/lib/floors.ts`'s `countedIn` filters to rows
-where **every** member of that set has samples, keyed on the whole set on
-purpose, so adding `cognitive-max` before records carry that family makes it
-return nothing at all.
-
-⚠️ **What that breaks is the *reading*, not the window, and the difference is
-the whole point.** `capCalibration` takes its window from `streakOf`, which
-filters on `row.ok` and the fixture hash and **never reads `row.counts`** — so
-the calibration window is roster-independent and does not restart. What
-collapses is downstream of `countedIn`: `scripts/deploy.ts` derives
-`newestCount` from it, so **every cap line prints `null`**, and `countedRun`
-— the sole input to the counting-rule refusal — is spread in only when
-`newestCount` is defined, so **that refusal silently disarms itself**. The caps
-go blind and the guard switches off, with nothing red. That is a worse failure
-than a delayed window and it is the reason to wait. Waiting costs nothing,
-because `countedIn` reads what a record carries rather than what a type
+rather than a caution.** `countedIn` filters to rows where **every** member of
+that set has samples, so adding `cognitive-max` before records carry that family
+makes it return nothing at all. **What that breaks is the *reading*, not the
+window.** `capCalibration` takes its window from `streakOf`, which filters on
+`row.ok` and the fixture hash and **never reads `row.counts`** — the window is
+roster-independent. What collapses is downstream: `scripts/deploy.ts` derives
+`newestCount` from `countedIn`, so **every cap line prints `null`**, and
+`countedRun` — the sole input to the counting-rule refusal — is spread in only
+when `newestCount` is defined, so **that refusal silently disarms itself**. The
+caps go blind and the guard switches off, with nothing red. Waiting costs
+nothing, because `countedIn` reads what a record carries rather than what a type
 declares.
 
 ⚠️ **`mutation-score` is spelled *killed ÷ total* on purpose.** The score is
@@ -1604,11 +1607,62 @@ first** — `gate-suite-runtime` has been on both since the spine landed, and th
 `Cadence` cell above said `nightly` until this rollout read it, believed it, and
 wrote the claim down. Both are corrected here, because **G36 reads only the
 `Trend` column**: every other cell in this table is prose nothing holds, which
-is worth knowing before trusting one. A merge record now carries **nine** series
-— the suite runtime, the four `complexity-*` and the four `cognitive-*` — and
-**still does not read as a scored one** — `scoresOf` stays
+is worth knowing before trusting one. A merge record now carries **seventeen**
+series — the suite runtime, four `complexity-*`, eight `duplication-*` and four
+`cognitive-*` —
+and **still does not read as a scored one** — `scoresOf` stays
 mutation-specific, or every push would be paired against a nightly in the
 deploy's delta.
+
+⚠️ **Duplication takes eight rows because a clone is a relation between two
+places, and a relation does not partition into scopes.** Eight per-scope numbers
+are structurally blind to a clone whose halves sit in two of them, and `gates/`
+is read by no scope at all — so one whole-tree TypeScript number sits beside
+them that no scope list can shrink. **The eight scope samples therefore do not
+sum to the tree number**, deliberately: a cross-scope clone is counted by both
+scopes it touches. Whole-tree means whole-tree *TypeScript*, and the restriction
+was measured rather than argued — over every file jscpd reports 1042 duplicated
+lines, **570 of them JSON this repository did not write**, including two O'Reilly
+fixtures sharing 105 identical lines because one book returns from two endpoints.
+A recorded response cannot be de-duplicated without falsifying the fixture. Counts
+and never a ratio, for the reason the four complexity rows give.
+[ADR-0072](adr/0072-a-clone-is-a-relation-between-two-places.md), and
+[`docs/spec/static-analysis-and-style.md`](spec/static-analysis-and-style.md) §5.
+
+⚠️ **`duplication-ignored-lines` counts what the source declares, not what
+jscpd removed, and the two are different numbers.** Measured at fourteen live
+lines and a three-line block, varying only what follows the closing directive:
+with the block ending the file jscpd removes 5; with a blank line or a comment
+after it, 6; **with one line of code after it, 0**. A suppression block in the
+middle of a file does nothing, silently. Every earlier measurement of the feature
+— this repository's and [#237](https://github.com/mephistopheles4/stacks/issues/237)'s
+alike — put the block at the end of a file, so all of them agreed and all of them
+were the special case. The counter records the block anyway, because a block is
+an **intent** to take code out of a measurement and the intent belongs in a diff
+whether or not the tool acts on it. **So `total-lines + ignored-lines` is an
+approximation, not an identity.**
+
+⚠️ **Adding these eight names widened `GATED_SERIES`, so the first
+`pnpm deploy:site` after this lands refuses until a CI run writes a record
+carrying them.** That is inherent to adding any series — the pipe genuinely has
+not delivered the new one yet — and it fails in the safe direction, refusing to
+publish rather than publishing against an instrument that is partly dark.
+`--check-only` reports it instead of refusing. The remedy is to let the workflow
+run, not to exempt the names.
+
+⚠️ **No duplication name joins `CAPPED_SERIES`, and that is a live
+constraint rather than an oversight.** Six of the eight are to be capped, but
+`countedIn` filters to records where **every** member of that roster has samples,
+keyed on the whole set on purpose — so a name added before twenty records carry
+its samples makes it return **nothing**. ⚠️ **The damage is to the reading
+rather than to the window**, which is the opposite of what this paragraph said
+when it landed: `capCalibration` takes its window from `streakOf`, which reads
+`ok` and the fixture hash and never the counts, so the window does not move. What
+does is `scripts/deploy.ts`'s `newestCount` — it goes `undefined`, **every cap
+line prints `null`**, and `countedElsewhere` cannot fire without a `countedRun`,
+so the counting-rule refusal disarms itself. Blind caps and a dead guard, with
+nothing red. That step is
+[#258](https://github.com/mephistopheles4/stacks/issues/258).
 
 ⚠️ **`live-exclusions` cannot move yet, and that is written here rather than
 discovered from a flat line.** An exclusion is negated out of Stryker's `mutate`,
@@ -1728,7 +1782,7 @@ oldest failure in this file.
 | GitHub repository settings | Dependabot alerts, malware alerts, grouped security updates, branch protection. They live outside the tree, so nothing in a clone can read them — and a gate that asked GitHub would need the network, which **G21 (`no-live-network`) forbids for the whole suite**. Listed in `SECURITY.md` as relied upon and unverifiable, which is the most this repo can honestly say about them. |
 | **A branch name or a commit subject follows the convention** ([ADR-0057](adr/0057-the-pull-request-title-is-the-commit-subject.md)) | Commit-lint is available and it is the wrong instrument. Put [`gate-or-trend.md`](spec/gate-or-trend.md)'s **Clause A** to it — *does its red have a named, reachable remedy?* — and the answer depends on who hit it: for the maintainer, rename the pull request; for a stranger, the build is red for something that is not a defect in their change, and `CONTRIBUTING.md` promises that a contributor with no agent skills installed passes every gate. **That is the disposal [`trend-layer.md`](spec/trend-layer.md) §4 already made of a staleness spec** — *"That fails Clause A **for the person who hit it**. A stranger paying for your dead pipe is not a gate; it is a tax"* — reached a second time, for a convention rather than a pipe, which makes it precedent rather than a fresh judgement. **The surface would be defensible even though the check is not**: the repository squash-merges with `squash_merge_commit_title: PR_TITLE`, so the only string worth checking is the pull request title on `pull_request` — never `commit-msg`, which lints a message the squash throws away. That door is documented here rather than left to be rediscovered. ⚠️ **The branch half is disqualified by coverage, and the first draft of this row said something else and was wrong.** It claimed CI cannot see a branch name at all; `gates.yml` runs on `pull_request`, so `github.head_ref` carries it, exactly as the same event carries the title conceded one clause earlier — the two halves of one sentence disagreed, and a review caught it. What actually disqualifies it: `head_ref` exists **only on a pull request**, so a branch that never opens one is never checked, and the branches a harness names are deleted by the squash that merges them. A check firing on some branches and reading as covering all of them is the shape this file's [*Why this file exists*](#why-this-file-exists) is a list of. |
 | **The linter's own config** (`eslint.lint.config.mjs`) | G46 gates the tree and nothing gates the rule set. Four options are tuned so that four documented repository idioms stop being reported — measured, and each carries its reason in the file — and each is a place a rule can be widened again later, or switched off, in a diff that reads as configuration rather than as a weakening. No gate here reads a lint config, and building one would mean a second copy of the rule set for the first to be held against. What stands in its place is the comment convention: **do not remove a reason without removing the option it justifies.** Recorded on [#233](https://github.com/mephistopheles4/stacks/issues/233) as debt 5 and not solved. |
-| **Test-code complexity as a series or a population** | **Refused on measurement, and the measurement is the deliverable.** No test function in this repository exceeds McCabe 10 — the maximum across all **1931** of them is exactly 10, and four fifths score 1 — so `complexity-mass-over-10` is **identically zero** for every candidate test population and `complexity-max` is a flat line. Those are precisely the two counts the spec caps, dead on arrival. ⚠️ **The cognitive half is narrower than it first reads and the claim is limited accordingly**: `cognitive-mass-over-15` is identically zero for any test population — nothing there comes near 15 — but `cognitive-max` is **not**, because at threshold `0` any test helper with a `for` or an `if` scores at least 1. So adopting cognitive complexity does not reopen this, and the reason is the over-the-cut count rather than both counts. ⚠️ **The gates are not special**, which answers the fog item this question inherited: gate test code is indistinguishable from package test code — mean 1.42 against 1.41, max 9 against 10. ⚠️ **A `gates/**/*.ts` entry would not even measure the gates**: `populationOf` drops every `*.test.ts` file, twice, so it would reach four helper files and 24 functions — and `stryker.config.mjs` derives `mutate` from the same array, so the entry would also declare a mutation scope whose dry run `excludedDirectories` says dies. ⚠️ **One configuration survives and nothing rules it out**, recorded because only an *argued* edge stands against it: one population of all test files, the two volume counts, uncapped, read at the deploy, behind a second declaration list and its own ADR. [#239](https://github.com/mephistopheles4/stacks/issues/239) |
+| **Test-code complexity as a series or a population** | **Refused on measurement, and the measurement is the deliverable.** No test function in this repository exceeds McCabe 10 — the maximum across all **1931** of them is exactly 10, and four fifths score 1 — so `complexity-mass-over-10` is **identically zero** for every candidate test population and `complexity-max` is a flat line. Those are precisely the two counts the spec caps, dead on arrival. ⚠️ **The cognitive half is narrower than it first reads and the claim is limited accordingly**: `cognitive-mass-over-15` is identically zero for any test population — nothing there comes near 15 — but `cognitive-max` is **not**, because at threshold `0` any test helper with a `for` or an `if` scores at least 1. So adopting cognitive complexity does not reopen this, and the reason is the over-the-cut count rather than both counts. ⚠️ **The gates are not special**, which answers the fog item this question inherited: gate test code is indistinguishable from package test code — mean 1.42 against 1.41, max 9 against 10. ⚠️ **One configuration survives and nothing rules it out**, recorded because only an *argued* edge stands against it: one population of all test files, the two volume counts, uncapped, read at the deploy, behind a second declaration list and its own ADR. [#239](https://github.com/mephistopheles4/stacks/issues/239) |
 | **Claiming an issue before working it** (the rule in `AGENTS.md`'s *Working rules for agents*) | A claim is a property of the tracker and of wall-clock time, not of the tree: a spec asserting it would go red for a contributor who never touched an issue, which is the metrics-freshness rejection in [`docs/spec/trend-layer.md`](spec/trend-layer.md) §4 — *a stranger paying for your dead pipe is not a gate; it is a tax*. Reading it in CI needs the network anyway, and **G21 forbids that for the whole suite**. **The mechanism is the assignee plus a one-hour window, and both halves were chosen knowing the assignee is not a lock** — every session here authenticates as the same account, so a ticket was once claimed twice five seconds apart, and no check on the tracker could have told those two apart. It was kept because it is the only signal that renders in GitHub's own UI and that the frontier query already reads; a claim *comment* or a `claimed` label buy filterability and add a second thing to remove on abandonment, which is the state nobody cleans up. The window is the reading half and needs no cleanup: an assignment older than an hour stops being presumed live on its own. So this is an advisory recorded where a person will see it, not a lock — and the real protection remains naming the issue when a session is launched. |
 
 ## What building these gates taught
@@ -1737,11 +1791,11 @@ Carried over from the Decision Log when the decisions themselves moved to
 [`docs/adr/`](./adr/). These are not decisions — they are what went wrong while
 writing the things above, which is the part most likely to go wrong again.
 
-- **2026-08-23** — **Adding a trend series reddens four things that are not the trend layer, because a freshness bound derived from a list grows with the list.** `GATED_SERIES` is `TREND_SERIES.map(...)`, and `judgeRecord` treats *no sample at all* and *a stale sample* as the same verdict — correctly, since both mean nobody can read that number. So the four cognitive names were, from the instant they were declared, four names `pnpm deploy:site` demanded a fresh sample of. Three record fixtures had to grow the same way (`scripts/lib/metrics-read.test.ts`, G39's and — the one nobody would predict — **G17's**, `deploy-branch`, whose four assertions were suddenly observing a *freshness* refusal instead of the branch guard they exist to test). ⚠️ **Every one of them failed loudly and none of them failed informatively**: the message named the stale series, which reads as *the pipe is broken* rather than *your fixture is out of date*. The general shape is **a derived list used as an expectation in fixtures that build their records by hand** — the derivation keeps the production path honest and leaves every hand-built fixture behind, and G39's own header already records this trap arriving once before, by a calendar rather than by a list. The fixtures now carry a comment saying so, which is the whole of the mitigation available. ⚠️ **The real-world half is not a fixture and does not fix itself instantly**: no record on the `metrics` branch carries the new series either, so the first deploy after the merge refuses until a `push: main` run writes one and `pnpm trend:sync` brings it local.
+- **2026-08-23** — **Adding a trend series reddens four things that are not the trend layer, because a freshness bound derived from a list grows with the list.** `GATED_SERIES` is `TREND_SERIES.map(...)`, and `judgeRecord` treats *no sample at all* and *a stale sample* as the same verdict — correctly, since both mean nobody can read that number. So four cognitive names were, from the instant they were declared, four names `pnpm deploy:site` demanded a fresh sample of. Three record fixtures had to grow the same way, and — the one nobody would predict — **G17 (`deploy-branch`)**, whose four assertions were suddenly observing a *freshness* refusal instead of the branch guard they exist to test. ⚠️ **Every one failed loudly and none failed informatively**: the message names the stale series, which reads as *the pipe is broken* rather than *your fixture is out of date*. The shape is **a derived list used as an expectation by fixtures that build their records by hand** — the derivation keeps the production path honest and leaves every hand-built fixture behind. Independently hit by the duplication work on the same day, which is what makes it structural rather than one session's slip.
 
-- **2026-08-23** — **Two sessions measured the same store four times and produced four different right answers to four different questions, and the number nobody should have quoted was the one both of them argued about.** Pricing the `fixtureHash` change on `origin/metrics` gave **41 records, 10 stamped**, written into an ADR, a `stryker.floors.json` comment and a commit body. A concurrent session said 12; that was re-measured and confirmed as 12 — at **43 records**, two pull requests having merged in between, both writing merge records under the old stamp. The other session then retracted 12 and asked for a revert to 10, having found their own 12 came from counting `complexity_max` samples rather than stamps. **All four figures were correct**: 10 stamped at 41, 12 stamped at 43, 12 sample-carrying at 41, 14 at 43. Two filters, two timestamps, and one coincidence — 12 — that made two sessions think they disagreed about a fact when they disagreed about a question. ⚠️ **The error that survived every recount was not a number at all.** Both sessions wrote that the hash change moves `countedIn`. It cannot: `floors.ts` filters it on `row.ok` and `CAPPED_SERIES` samples and **never reads `fixtureHash`**, and `capCalibration` — `streakOf` on `row.fixtureHash === fixtureHash` — is the only hash-filtered path in the file. The real effect was the window, 1 → 0, because only one stamped record is a nightly. **The lesson is in two halves, and only the first is about counting. Name the filter before arguing about its cardinality** — a count is only a fact once the predicate is agreed. **Then find where the value is consumed**, which is the half no recount reaches and where both surviving errors actually were. ⚠️ **A third wrong claim was produced *while correcting the second*, by the same failure one level down**: this session asserted `countedIn` had "zero call sites in any production path", on a `Select-String -Path scripts,gates` that does not recurse and matched nothing at all. A search that returns nothing and a search that finds nothing are the same output — `expectFound`'s whole argument, arriving in an investigation rather than in a gate. It has **one** call site, `scripts/deploy.ts`, and it is load-bearing: `newestCount` feeds every printed cap line *and* `countedRun`, the only input to the counting-rule refusal. So the claim was self-undermining — the same document documented a refusal computed from a set it called unread — and, worse, it would have told the next session that adding a roster name early is harmless when in fact it blanks every cap reading and switches the refusal off with nothing red. Secondary and cheaper: a count taken from a live remote is **as-of** and must say so, or carry no number — the three rhetorical *"the measure this repository has 41 records of"* asides in this diff now carry none, since the figure was doing no work and only rotting.
+- **2026-08-23** — **A test whose name states a property and whose body checks something weaker is worse than no test, and this repo shipped one in a pull request whose own documentation lectures about it.** `scores a declared population and gets a smaller denominator than the cyclomatic one` asserted `population.length > 0` and nothing else — no comparison, no inequality — so a regression in `cognitivePopulationOf` would have stayed green forever behind a name and a comment that both claimed otherwise. Caught by CodeRabbit, not by the author and not by a two-axis review that had already read the file. ⚠️ **The tell is available without running anything**: the assertion mentions one quantity where the name mentions two. `expectFound` exists because an *extraction* that matches nothing reads as health; this is the same failure one level up, where an *assertion* that compares nothing reads as coverage. The repair asserts both halves — that the cognitive population is smaller, and that the difference equals the never-visited nodes exactly — and was verified by planting the regression and watching it go red.
 
-- **2026-08-23** — **A gate caught a use of `import.meta.url` that was not what it was looking for, and it was right to.** G24 (`repo-root`) sweeps `scripts/` for `import\.meta\.(url|dirname|filename)` and flagged `createRequire(import.meta.url)` in the new cognitive counter — which resolves a *package*, not the repo root, so on its face a false positive. It is not one. The gate's own comment says a rule matching prose matches anything, which is why it matches code and cannot read intent; and the fix it forced — `createRequire(join(REPO_ROOT, 'package.json'))` — is **more correct than the code it rejected**, because the plugin is a dependency of the *root* `package.json` and the root is where *as installed* is true of. Worth logging as the counter-example to the usual reading: a broad syntactic gate firing on an innocent use is not automatically noise, and the cheapest test of whether it is noise is to write the version that satisfies it and see whether it reads better. Here it did. **The temptation to widen `DERIVATION` with an exception was the wrong move available**, and it was available.
+- **2026-08-23** — **A gate caught a use of `import.meta.url` that was not what it was looking for, and it was right to.** G24 (`repo-root`) sweeps `scripts/` for `import\.meta\.(url|dirname|filename)` and flagged `createRequire(import.meta.url)` in the cognitive counter — which resolves a *package*, not the repo root, so on its face a false positive. It is not one. The gate's own comment says a rule matching prose matches anything, which is why it matches code and cannot read intent; and the fix it forced — `createRequire(join(REPO_ROOT, 'package.json'))` — is **more correct than the code it rejected**, because the plugin is a dependency of the *root* `package.json`. **The temptation to widen `DERIVATION` with an exception was the wrong move available**, and it was available.
 
 - **2026-08-22** — **A hardcoded column width does not overflow, it swallows the gap.** The staleness refusal padded each series name to 22 characters, which was the longest name that existed when it was written. `complexity-mass-over-10` is 23, and `pad` returns an over-long string unchanged — so the refusal printed `complexity-mass-over-10no sample at all in the 1 newest record(s) read`, running the name straight into its own explanation in the one message a refusal is read from. Nothing went red: every assertion used `toContain`, and the substrings were all still there. Found by reading the output of a test that passed. The width is now measured from the names being printed, as `renderPanel` one function up already did, and a spec plants a name longer than the old constant. **The general shape is a constant derived from today's data and then frozen** — the same class as the counts in prose this file has two other rows about, with the twist that a formatting constant is invisible to every assertion that checks for content.
 

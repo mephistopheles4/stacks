@@ -86,11 +86,33 @@ function completeRun(): RunFacts {
       { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
       { scope: 'packages/cli/src', functions: 26, mass: 96, massOver10: 22, max: 14 },
     ],
+    // ⚠️ Present for the same reason, and it carries **both populations**:
+    // the Trends table names four scoped duplication rows and four whole-tree
+    // ones, and the tree four render from `tree` alone — a fixture with only
+    // `scopes` would emit four of the eight and look complete.
+    duplication: {
+      scopes: [
+        {
+          scope: 'packages/core/src',
+          clones: 3,
+          duplicatedLines: 46,
+          ignoredLines: 0,
+          totalLines: 2381,
+        },
+        {
+          scope: 'packages/cli/src',
+          clones: 0,
+          duplicatedLines: 0,
+          ignoredLines: 0,
+          totalLines: 702,
+        },
+      ],
+      tree: { clones: 34, duplicatedLines: 357, ignoredLines: 0, totalLines: 47_209 },
+    },
     // ⚠️ Present for the same reason, and with a **smaller** `functions` than
-    // the row above it: the cognitive rule never visits a class field
+    // the complexity rows above: the cognitive rule never visits a class field
     // initialiser or a static block, so its denominator is its own. A fixture
-    // that copied the cyclomatic count would quietly assert the opposite of
-    // what the spec says.
+    // copying the cyclomatic count would assert the opposite of the spec.
     cognitive: [
       { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
       { scope: 'packages/cli/src', functions: 25, mass: 71, massOver15: 0, max: 11 },
@@ -122,7 +144,7 @@ function tabledTrends(): string[] {
   );
 
   const names = body.map((line) => (tableCells(line)[at] ?? '').replace(/`/g, '').trim());
-  expectFound(names, 'rows in the Trends table of docs/gates.md', 12);
+  expectFound(names, 'rows in the Trends table of docs/gates.md', 20);
   return names;
 }
 
@@ -157,8 +179,14 @@ describe('G36 — the emitted series and the Trends table agree', () => {
     // Both sides are extractions, and an extraction that stops matching reports
     // an empty set — which trivially satisfies every "each of these is in that"
     // below. Asserted before the comparisons rather than trusted by them.
-    expectFound(trendNamesIn(renderMetrics(completeRun())), 'series in a rendered run', 12);
-    expectFound(tabledTrends(), 'rows in the Trends table', 12);
+    //
+    // ⚠️ **The floor is a minimum and it tracks `TREND_SERIES`.** Eight
+    // original plus this branch's eight duplication names. A stale-low value is
+    // safe and a stale-high one is red, so a branch adding series raises it to
+    // what *its own* tree produces and whoever rebases second adds theirs —
+    // four sessions were appending to this list at once when it went to 16.
+    expectFound(trendNamesIn(renderMetrics(completeRun())), 'series in a rendered run', 20);
+    expectFound(tabledTrends(), 'rows in the Trends table', 20);
   });
 
   it('gives every emitted series a row', () => {

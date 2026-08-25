@@ -38,8 +38,9 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { DAY, GATED_SERIES, SPINE_LANDED, judgeRecord } from '../scripts/lib/metrics-read.ts';
 import { RECORD_DIR } from '../scripts/lib/metrics-record.ts';
 import {
-  COGNITIVE_SERIES,
   COMPLEXITY_SERIES,
+  COGNITIVE_SERIES,
+  DUPLICATION_SERIES,
   renderMetrics,
   type RunFacts,
 } from '../scripts/lib/metrics.ts';
@@ -61,24 +62,37 @@ interface Planted {
  * a fixture of a record that no longer exists proves the refusal against the
  * wrong world.
  */
+const COGNITIVE = [
+  { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
+];
+
 const COMPLEXITY = [
   { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
 ];
 
 /**
- * The cognitive half, on both fixtures for `COMPLEXITY`'s reason exactly.
+ * The duplication half of both fixtures below.
  *
- * ⚠️ **`GATED_SERIES` is derived from `TREND_SERIES`, so a series added there
- * is a series this bound demands a fresh sample of** — and an absent sample and
- * a stale one are the same verdict. A fixture that stopped short of the
- * cognitive four would plant a record CI no longer writes, and prove the
- * refusal against the wrong world.
+ * **On the merge record too**, for `COMPLEXITY`'s reason exactly: both halves of
+ * `metrics.yml` write it, because the counter runs inside the emitter rather
+ * than as a workflow step. Two scopes and a tree, because the scoped families
+ * and the unlabelled tree families render differently and a fixture carrying
+ * only the first would plant a record that is half of what CI writes.
  */
-const COGNITIVE = [
-  { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
-];
+const DUPLICATION = {
+  scopes: [
+    {
+      scope: 'packages/core/src',
+      clones: 3,
+      duplicatedLines: 46,
+      ignoredLines: 0,
+      totalLines: 2381,
+    },
+  ],
+  tree: { clones: 34, duplicatedLines: 357, ignoredLines: 0, totalLines: 47_209 },
+};
 
-/** A nightly — all twelve series, which is what the bound covers. */
+/** A nightly — all eight series, which is what the bound covers. */
 function nightly(agoSeconds: number, sha = 'aaaaaaaa', overrides: Partial<RunFacts> = {}): Planted {
   const timestamp = NOW - agoSeconds;
   return {
@@ -96,7 +110,8 @@ function nightly(agoSeconds: number, sha = 'aaaaaaaa', overrides: Partial<RunFac
       mutationRunRuntime: 1275,
       liveExclusions: { live: 0, declared: 27 },
       complexity: COMPLEXITY,
-      cognitive: COGNITIVE,
+      duplication: DUPLICATION,
+    cognitive: COGNITIVE,
       ...overrides,
     } satisfies RunFacts),
   };
@@ -118,10 +133,11 @@ function merge(agoSeconds: number, sha = 'bbbbbbbb', overrides: Partial<RunFacts
       runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/2',
       // Nobody measured a window for a record this test invented.
       prWindow: 'unknown',
-      expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES, ...COGNITIVE_SERIES],
+      expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES, ...DUPLICATION_SERIES, ...COGNITIVE_SERIES],
       gateSuiteRuntime: 9,
       complexity: COMPLEXITY,
-      cognitive: COGNITIVE,
+      duplication: DUPLICATION,
+    cognitive: COGNITIVE,
       ...overrides,
     } satisfies RunFacts),
   };
@@ -260,7 +276,7 @@ describe('G39 — the harness reaches the check at all', () => {
   it('plants a record the writer would actually write', () => {
     // The documents here come from `renderMetrics`, so a parser tested against
     // them is agreeing with the writer rather than with this file's author.
-    expectFound([...GATED_SERIES], 'series the bound covers', 8);
+    expectFound([...GATED_SERIES], 'series the bound covers', 20);
     expect(nightly(0).document).toContain('# EOF');
   });
 });

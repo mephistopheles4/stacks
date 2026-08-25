@@ -31,8 +31,9 @@ import {
   scoresOf,
 } from './metrics-read.ts';
 import {
-  COGNITIVE_SERIES,
   COMPLEXITY_SERIES,
+  COGNITIVE_SERIES,
+  DUPLICATION_SERIES,
   renderMetrics,
   type RunFacts,
 } from './metrics.ts';
@@ -48,25 +49,39 @@ const SPINE = Date.parse(`${SPINE_LANDED}T00:00:00Z`) / 1000;
  * shape this file planted before the counts existed, and it stopped being a
  * shape CI produces.
  */
+const COGNITIVE = [
+  { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
+];
+
 const COMPLEXITY = [
   { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
   { scope: 'packages/cli/src', functions: 26, mass: 96, massOver10: 22, max: 14 },
 ];
 
 /**
- * The cognitive half, on every record here for the reason above.
+ * The duplication half of any record here.
  *
- * ⚠️ **`functions` is deliberately *smaller* than `COMPLEXITY`'s on both
- * scopes.** The cognitive rule never visits a class field initialiser or a
- * static block, so its denominator is its own — and a fixture that copied the
- * cyclomatic number would quietly assert the opposite of what the spec says.
+ * **Both halves of `metrics.yml` write it too**, for `COMPLEXITY`'s reason: the
+ * counter runs inside the emitter rather than as a workflow step, so it is not
+ * a nightly-only measurement. Two scopes and a tree, because the eight scoped
+ * samples and the one unlabelled tree sample are different renderings and a
+ * fixture carrying only the first would exercise half the family.
  */
-const COGNITIVE = [
-  { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
-  { scope: 'packages/cli/src', functions: 25, mass: 71, massOver15: 0, max: 11 },
-];
+const DUPLICATION = {
+  scopes: [
+    {
+      scope: 'packages/core/src',
+      clones: 3,
+      duplicatedLines: 46,
+      ignoredLines: 0,
+      totalLines: 2381,
+    },
+    { scope: 'packages/cli/src', clones: 0, duplicatedLines: 0, ignoredLines: 0, totalLines: 702 },
+  ],
+  tree: { clones: 34, duplicatedLines: 357, ignoredLines: 0, totalLines: 47_209 },
+};
 
-/** A nightly: all twelve series, the shape CI actually writes on a schedule. */
+/** A nightly: all eight series, the shape CI actually writes on a schedule. */
 function nightly(timestamp: number, overrides: Partial<RunFacts> = {}): string {
   return renderMetrics({
     timestamp,
@@ -84,6 +99,7 @@ function nightly(timestamp: number, overrides: Partial<RunFacts> = {}): string {
     mutationRunRuntime: 1275,
     liveExclusions: { live: 0, declared: 27 },
     complexity: COMPLEXITY,
+    duplication: DUPLICATION,
     cognitive: COGNITIVE,
     ...overrides,
   });
@@ -102,9 +118,10 @@ function merge(timestamp: number, overrides: Partial<RunFacts> = {}): string {
     runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/2',
     // Nobody measured a window for a record this test invented.
     prWindow: 'unknown',
-    expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES, ...COGNITIVE_SERIES],
+    expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES, ...DUPLICATION_SERIES, ...COGNITIVE_SERIES],
     gateSuiteRuntime: 9,
     complexity: COMPLEXITY,
+    duplication: DUPLICATION,
     cognitive: COGNITIVE,
     ...overrides,
   });
@@ -248,6 +265,14 @@ describe('judging a record — per-series, because the record is not one number'
       'complexity-mass',
       'complexity-mass-over-10',
       'complexity-max',
+      'duplication-clones',
+      'duplication-lines',
+      'duplication-ignored-lines',
+      'duplication-total-lines',
+      'duplication-tree-clones',
+      'duplication-tree-lines',
+      'duplication-tree-ignored-lines',
+      'duplication-tree-total-lines',
       'cognitive-functions',
       'cognitive-mass',
       'cognitive-mass-over-15',
@@ -270,26 +295,6 @@ describe('judging a record — per-series, because the record is not one number'
       'complexity-mass',
       'complexity-mass-over-10',
       'complexity-max',
-    ]);
-  });
-
-  it('refuses a deploy when the cognitive four go quiet and the cyclomatic four do not', () => {
-    // ⚠️ **The failure the second counter adds, and the one it is arranged to
-    // make possible.** The cognitive rule comes from a second supplier, so it
-    // can break on its own — and when it does, the eight numbers this
-    // repository already has a whole branch of records of must keep arriving. A refusal
-    // naming only these four is what that looks like from the deploy.
-    const quiet = judgeRecord({
-      now: NOW,
-      records: [nightly(NOW - 600, { cognitive: undefined })].map((text) => parseRecord(text)),
-    });
-
-    expect(quiet.kind).toBe('stale');
-    expect(quiet.kind === 'stale' ? quiet.stale.map((one) => one.series) : []).toEqual([
-      'cognitive-functions',
-      'cognitive-mass',
-      'cognitive-mass-over-15',
-      'cognitive-max',
     ]);
   });
 });

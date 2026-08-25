@@ -69,10 +69,21 @@ function freshNightly(): { name: string; document: string } {
       complexity: [
         { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
       ],
-      // ⚠️ And the cognitive four, which is the same trap arriving a third
-      // time by the same route: `GATED_SERIES` grew, so a record this file
-      // plants without them is stale on arrival and every assertion below
-      // observes the freshness refusal instead of the branch guard.
+      duplication: {
+        scopes: [
+          {
+            scope: 'packages/core/src',
+            clones: 3,
+            duplicatedLines: 46,
+            ignoredLines: 0,
+            totalLines: 2381,
+          },
+        ],
+        tree: { clones: 34, duplicatedLines: 357, ignoredLines: 0, totalLines: 47_209 },
+      },
+      // ⚠️ And the cognitive four — the same trap by the same route: `GATED_SERIES`
+      // grew, so a record planted without them is stale on arrival and every
+      // assertion below observes the freshness refusal instead of the branch guard.
       cognitive: [
         { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
       ],
