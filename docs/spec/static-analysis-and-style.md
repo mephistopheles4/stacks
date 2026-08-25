@@ -311,7 +311,7 @@ are capped **in `jscpd.floors.json`, not in `CAPPED_SERIES`** — see the two
 mechanisms below:
 
 | Series | Capped | Where | Why |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `cognitive-max` | **yes** | `CAPPED_SERIES` | The only cognitive series that takes one, per the paragraph above. |
 | `duplication-clones` | **yes** | `jscpd.floors.json` | A clean feature adds no clone. |
 | `duplication-lines` | **yes** | `jscpd.floors.json` | `complexity-mass-over-10`'s property, stated by [#237](https://github.com/mephistopheles4/stacks/issues/237). |
