@@ -123,10 +123,19 @@ whole-tree number could then disappear entirely with no row going red.
   `whole-tree`.
 - **No duplication name joins `CAPPED_SERIES` here.** `countedIn` filters to
   records where every member of that roster has samples, keyed on the whole set
-  on purpose, so a name added before twenty records carry its samples zeroes both
-  cyclomatic calibration windows at once.
-  [#258](https://github.com/mephistopheles4/stacks/issues/258) owns that step and
-  it may not be folded in.
+  on purpose — so a name added before twenty records carry its samples makes it
+  return **nothing**.
+
+  ⚠️ **What that breaks is the *reading*, not the window, and an earlier draft
+  of this record said otherwise.** The calibration window is untouched:
+  `capCalibration` derives it from `streakOf`, which reads `row.ok` and the
+  fixture hash and **never** `row.counts`. What collapses is
+  `scripts/deploy.ts`'s `newestCount`, which becomes `undefined` — so **every
+  cap line prints `null`**, and `countedElsewhere` requires a `countedRun` it no
+  longer has, so the counting-rule refusal **switches itself off**. Blind caps
+  and a disarmed guard, with nothing red. Corrected against the code by
+  [#258](https://github.com/mephistopheles4/stacks/issues/258); that ticket owns
+  the step and it may not be folded in here.
 - The tool is **jscpd**, pinned exact. The ESLint rule that sounds like it does
   this job compares whole function bodies only and gets a fresh closure per file,
   so it is structurally unable to look across files — and it found **zero** clones

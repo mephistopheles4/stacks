@@ -1604,7 +1604,14 @@ run, not to exempt the names.
 constraint rather than an oversight.** Six of the eight are to be capped, but
 `countedIn` filters to records where **every** member of that roster has samples,
 keyed on the whole set on purpose — so a name added before twenty records carry
-its samples zeroes both cyclomatic calibration windows at once. That step is
+its samples makes it return **nothing**. ⚠️ **The damage is to the reading
+rather than to the window**, which is the opposite of what this paragraph said
+when it landed: `capCalibration` takes its window from `streakOf`, which reads
+`ok` and the fixture hash and never the counts, so the window does not move. What
+does is `scripts/deploy.ts`'s `newestCount` — it goes `undefined`, **every cap
+line prints `null`**, and `countedElsewhere` cannot fire without a `countedRun`,
+so the counting-rule refusal disarms itself. Blind caps and a dead guard, with
+nothing red. That step is
 [#258](https://github.com/mephistopheles4/stacks/issues/258).
 
 ⚠️ **`live-exclusions` cannot move yet, and that is written here rather than

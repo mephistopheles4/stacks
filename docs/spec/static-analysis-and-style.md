@@ -295,9 +295,24 @@ This is a real code constraint, not a caution. `scripts/lib/floors.ts`'s
 `countedIn` filters to rows where **every** member of `CAPPED_SERIES` has
 samples — keyed on the whole set on purpose, so that probing one member cannot
 single it out. Add a name at adoption and every existing record on the `metrics`
-branch fails that filter at once, zeroing both cyclomatic calibration windows.
+branch fails that filter at once, so `countedIn` returns nothing.
 **Waiting costs nothing**, because `countedIn` reads what a record carries
 rather than what a type declares.
+
+⚠️ **The consequence named above is wrong, and the real one is worse —
+corrected at implementation against the code, not re-decided.** This paragraph
+said the collapse *zeroes both cyclomatic calibration windows*. It does not
+touch them: `capCalibration` takes its window from `streakOf`, which reads
+`row.ok` and the fixture hash and **never** `row.counts`, so the window is
+roster-independent. What collapses is the **reading** — `scripts/deploy.ts`'s
+`newestCount` goes `undefined`, so **every cap line prints `null`**, and
+`countedElsewhere` needs a `countedRun` it no longer has, so the counting-rule
+refusal **switches itself off**. Blind caps and a disarmed guard, with nothing
+red, which is a quieter failure than a zeroed window would have been. Found by
+[#258](https://github.com/mephistopheles4/stacks/issues/258) and verified in the
+code by [#254](https://github.com/mephistopheles4/stacks/issues/254) and
+[#255](https://github.com/mephistopheles4/stacks/issues/255); it strengthens the
+rule rather than weakening it.
 
 ### Suppression is allowed and it is counted
 
