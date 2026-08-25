@@ -314,7 +314,11 @@ export function mountShelf(
   scene.background = background;
   // Kept as a field rather than read off `scene.fog` later: turning fog off sets
   // `scene.fog` to null, and turning it back on needs the object it used to be.
-  const fog = new THREE.Fog(settings.scene.background, settings.scene.fog.near, settings.scene.fog.far);
+  const fog = new THREE.Fog(
+    settings.scene.background,
+    settings.scene.fog.near,
+    settings.scene.fog.far,
+  );
   scene.fog = settings.scene.fog.enabled ? fog : null;
 
   const rows = toRows(books, settings.books);
@@ -477,7 +481,8 @@ export function mountShelf(
     // list is a growing write on a device that is already in trouble, which is
     // the last thing a black box should do. The console still gets every one.
     if (shaderFailures === 1) shaderErrors.push(...report);
-    else if (shaderFailures === 2) shaderErrors.push('(more programs failed after it — see the console)');
+    else if (shaderFailures === 2)
+      shaderErrors.push('(more programs failed after it — see the console)');
 
     // Three's own message lives in the `else` branch of the test that calls this
     // handler, so installing one *silences* it. Anyone reading a console — which
@@ -498,7 +503,11 @@ export function mountShelf(
     if (clientWidth === 0 || clientHeight === 0) return;
     // Read through `settings` rather than off a local captured at mount, so
     // toggling the guard in the panel takes effect on the very next resize.
-    if (settings.renderer.guardResize && clientWidth === sizedTo.width && clientHeight === sizedTo.height) {
+    if (
+      settings.renderer.guardResize &&
+      clientWidth === sizedTo.width &&
+      clientHeight === sizedTo.height
+    ) {
       return;
     }
     sizedTo = { width: clientWidth, height: clientHeight };
@@ -846,7 +855,9 @@ function said(log: string | null): string {
 function materialOf(source: string | null): string {
   const type = /^#define SHADER_TYPE (.+)$/m.exec(source ?? '')?.[1]?.trim();
   const name = /^#define SHADER_NAME (.+)$/m.exec(source ?? '')?.[1]?.trim();
-  return [type ?? 'unknown', name].filter((part) => part !== undefined && part.length > 0).join(' ');
+  return [type ?? 'unknown', name]
+    .filter((part) => part !== undefined && part.length > 0)
+    .join(' ');
 }
 
 function describeGpu(renderer: THREE.WebGLRenderer): string | undefined {
@@ -1651,7 +1662,10 @@ export function addLighting(
   );
   scene.add(ambient);
 
-  const key = new THREE.DirectionalLight(settings.lighting.key.colour, settings.lighting.key.intensity);
+  const key = new THREE.DirectionalLight(
+    settings.lighting.key.colour,
+    settings.lighting.key.intensity,
+  );
   key.position.copy(keyLightPosition(unitHeight, settings));
   // Left off entirely rather than relying on `shadowMap.enabled`, so the depth
   // target is never allocated at all — which is the thing being measured.
@@ -1681,7 +1695,10 @@ export function addLighting(
 
   scene.add(key);
 
-  const fill = new THREE.DirectionalLight(settings.lighting.fill.colour, settings.lighting.fill.intensity);
+  const fill = new THREE.DirectionalLight(
+    settings.lighting.fill.colour,
+    settings.lighting.fill.intensity,
+  );
   fill.position.copy(positionOf(settings.lighting.fill.position, unitHeight));
   scene.add(fill);
 
@@ -1819,14 +1836,19 @@ function applyLive(
    * failure this whole report type exists to prevent. The panel disables the
    * control for the same reason; this is the backstop.
    */
-  if (next.renderer.exposure !== DEFAULT_SETTINGS.renderer.exposure && next.renderer.toneMapping === 'none') {
+  if (
+    next.renderer.exposure !== DEFAULT_SETTINGS.renderer.exposure &&
+    next.renderer.toneMapping === 'none'
+  ) {
     refused.push('exposure does nothing until a tone mapping is chosen');
   }
   if (current.renderer.exposure !== next.renderer.exposure) {
     if (next.renderer.toneMapping === 'none') {
       /* already stated as refused, above — standing, so it does not vanish */
     } else {
-      applied.push(`exposure: ${current.renderer.exposure.toFixed(2)} → ${next.renderer.exposure.toFixed(2)}`);
+      applied.push(
+        `exposure: ${current.renderer.exposure.toFixed(2)} → ${next.renderer.exposure.toFixed(2)}`,
+      );
     }
   }
   applyRendererSettings(renderer, next);
@@ -1851,10 +1873,15 @@ function applyLive(
   if (current.shadows.enabled !== next.shadows.enabled) {
     lights.key.castShadow = next.shadows.enabled;
     dirtyEveryMaterial(scene);
-    applied.push(`shadows: ${current.shadows.enabled ? 'on' : 'off'} → ${next.shadows.enabled ? 'on' : 'off'}`);
+    applied.push(
+      `shadows: ${current.shadows.enabled ? 'on' : 'off'} → ${next.shadows.enabled ? 'on' : 'off'}`,
+    );
   }
   note(applied, 'shadow type', current.shadows.type, next.shadows.type);
-  if (current.shadows.enabled !== next.shadows.enabled || current.shadows.type !== next.shadows.type) {
+  if (
+    current.shadows.enabled !== next.shadows.enabled ||
+    current.shadows.type !== next.shadows.type
+  ) {
     // `autoUpdate` is off — the map is drawn once, deliberately — so nothing
     // would redraw it, and a freshly enabled shadow map would stay empty.
     // `WebGLShadowMap.render()` also returns early when this is unset, before
@@ -1911,7 +1938,9 @@ function applyLive(
   fog.far = next.scene.fog.far;
   if (current.scene.fog.enabled !== next.scene.fog.enabled) {
     scene.fog = next.scene.fog.enabled ? fog : null;
-    applied.push(`fog: ${current.scene.fog.enabled ? 'on' : 'off'} → ${next.scene.fog.enabled ? 'on' : 'off'}`);
+    applied.push(
+      `fog: ${current.scene.fog.enabled ? 'on' : 'off'} → ${next.scene.fog.enabled ? 'on' : 'off'}`,
+    );
   }
 
   /* --- materials ---------------------------------------------------------- */
@@ -1925,18 +1954,38 @@ function applyLive(
     applied.push(`backing: ${hex(current.materials.woodDark)} → ${hex(next.materials.woodDark)}`);
   }
   note(applied, 'wood roughness', current.materials.woodRoughness, next.materials.woodRoughness);
-  note(applied, 'backing roughness', current.materials.backingRoughness, next.materials.backingRoughness);
+  note(
+    applied,
+    'backing roughness',
+    current.materials.backingRoughness,
+    next.materials.backingRoughness,
+  );
   woodwork.wood.roughness = next.materials.woodRoughness;
   woodwork.backing.roughness = next.materials.backingRoughness;
 
   // The books' own materials are made per book inside `buildBook`, so there is no
   // handle to reach them through. Honest rather than silent.
-  standing(needsRebuild, 'cover roughness', mountedWith.materials.coverRoughness, next.materials.coverRoughness);
-  standing(needsRebuild, 'cover metalness', mountedWith.materials.coverMetalness, next.materials.coverMetalness);
+  standing(
+    needsRebuild,
+    'cover roughness',
+    mountedWith.materials.coverRoughness,
+    next.materials.coverRoughness,
+  );
+  standing(
+    needsRebuild,
+    'cover metalness',
+    mountedWith.materials.coverMetalness,
+    next.materials.coverMetalness,
+  );
   // Same bucket and the same sentence: the books' own materials are made per book
   // inside `buildBook`, so there is no handle to reach them through. The map
   // itself is re-baked on the rebuild, which is where the profile's shape is read.
-  standing(needsRebuild, 'page edges', mountedWith.materials.pageStriation, next.materials.pageStriation);
+  standing(
+    needsRebuild,
+    'page edges',
+    mountedWith.materials.pageStriation,
+    next.materials.pageStriation,
+  );
   for (const binding of BINDINGS) {
     standing(
       needsRebuild,
@@ -1958,7 +2007,12 @@ function applyLive(
   // are geometry built once in `buildBook` — and the height reaches further than
   // that, since a face-out book's footprint is its cover width, so the row
   // packing itself would have to run again. Nothing about that is live.
-  standing(needsRebuild, 'paperback mix', mountedWith.books.paperbackRatio, next.books.paperbackRatio);
+  standing(
+    needsRebuild,
+    'paperback mix',
+    mountedWith.books.paperbackRatio,
+    next.books.paperbackRatio,
+  );
   // A mesh per hardback, and the covering below it shortened to make room. Both
   // are decided while the book is built.
   standing(needsRebuild, 'head cap', mountedWith.books.headCap, next.books.headCap);
@@ -2063,7 +2117,12 @@ function applyLight(
   }
 }
 
-function notePosition(applied: string[], label: string, was: LightPosition, now: LightPosition): void {
+function notePosition(
+  applied: string[],
+  label: string,
+  was: LightPosition,
+  now: LightPosition,
+): void {
   if (!samePosition(was, now)) applied.push(`${label} position moved`);
 }
 
@@ -2084,9 +2143,10 @@ function hex(value: number): string {
  * touched, which is the panel lying in the quieter direction.
  */
 function describeProfiles(profiles: ShelfSettings['materials']['spineProfile']): string {
-  return BINDINGS
-    .map((binding) => `${binding} ${profiles[binding].rise.toFixed(3)}/${profiles[binding].roll.toFixed(2)}`)
-    .join(' ');
+  return BINDINGS.map(
+    (binding) =>
+      `${binding} ${profiles[binding].rise.toFixed(3)}/${profiles[binding].roll.toFixed(2)}`,
+  ).join(' ');
 }
 
 /* -------------------------------------------------------------------------- */
