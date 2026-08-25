@@ -12,3 +12,6 @@
 # Prettier's first pass over the tree — 91 files, `pnpm format` and nothing
 # else, with no hand edits in the commit. See docs/adr/0074.
 a6acc714d99b4ea51321797c25c7b6f05850dfd7
+
+# The second pass, over the two files the merge with `main` brought in.
+0fdebc8d388d6648afbb20f0e1f110d628ec6041
