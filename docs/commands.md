@@ -189,7 +189,7 @@ anything.
 Four refusals, and **no flag clears any of them**:
 
 | Refusal | What it means |
-|---|---|
+| --- | --- |
 | **breached floor** | an armed scope scored under its floor. Names the scope, the score, the floor, and — when a local mutation report exists — what one mutant is worth in that scope |
 | **unaccounted scope** | `stryker.scopes.json` declares a scope `stryker.floors.json` does not name. It would be scored by every run and floored by nothing |
 | **orphan entry** | the floors file names a scope nothing declares. Left alone the file rots into a list of places that are not there |
@@ -291,6 +291,68 @@ mechanism* — a file is out of reach because something specific puts it there, 
 it is not excluded. `covers/measure.ts` has no spec and stays in the denominator
 anyway, because "nothing tests it" is a gap and not a mechanism. See
 [ADR-0053](adr/0053-stryker-measures-eight-declared-scopes.md).
+
+## `pnpm duplication:report`
+
+The duplication counts, printed rather than recorded. **The same counter CI
+emits** — one counter, one set of thresholds, two callers — so the numbers on
+your screen are the numbers that reach the `metrics` branch. Nothing here is a
+gate and nothing here refuses on a number; it exits non-zero only when jscpd
+could not run at all.
+
+**Two populations, and they do not add up.** The eight declared scopes, and
+whole-tree TypeScript. A clone is a relation between two places, so a clone
+whose halves sit in two scopes is counted by **both** — the eight rows are
+deliberately not a partition of the ninth. The whole-tree row exists because a
+scope list is structurally blind to exactly that clone, and because `gates/` is
+read by no scope at all. See
+[ADR-0072](adr/0072-a-clone-is-a-relation-between-two-places.md).
+
+**Whole-tree means whole-tree *TypeScript*, and the restriction is measured.**
+Over every file jscpd reports 1042 duplicated lines, **570 of them JSON this
+repository did not write** — cached provider responses and a provisioned
+dashboard. Two O'Reilly fixtures share 105 identical lines because one book comes
+back from two endpoints, and a recorded response cannot be de-duplicated without
+falsifying the fixture.
+
+**The thresholds are the measurement, not settings around it.** 50 tokens, 5
+lines, `mild` mode. One step looser gives 82 clones where these give 12, over the
+identical tree — so the three are hashed together with the jscpd version into
+`jscpd.floors.json`'s `duplicationHash`, kept **separate** from the complexity
+counter's `fixtureHash`, and G47 (`ignored-clones`) holds the stamp to the tool
+actually installed.
+
+**The share column is derived here and recorded nowhere.** A ratio falls when the
+tree grows and nothing else happens, so the record carries counts and the reader
+derives the fraction — the rule the complexity counts already follow.
+
+### Suppression blocks
+
+`jscpd` suppression blocks are permitted, **counted, and declared**. A block
+removes its lines from the clone count and from the total-line denominator
+together — measured, 34 raw lines with a 12-line block report 20 — so the
+percentage does not move and nothing else anywhere says a suppression happened.
+The per-population count therefore lives in `jscpd.floors.json`, where a diff
+shows it, and **G46 sweeps the tree at merge** to hold the file to it.
+
+- **Write it as a whole-line `//` comment.** That is the only permitted form.
+  jscpd honours four and removes a *different span* for each, so the other three
+  are a red build rather than a wrong number.
+- **Add a `notes` line** saying why the block is there. Append-only, never
+  cleared — `stryker.floors.json`'s rule and its reason.
+- ⚠️ **A block only works when no code follows it.** Measured: with the block
+  ending the file jscpd removes it; with one line of code after it, jscpd
+  honours **nothing at all**, silently. The counter records the block either
+  way, because a block is an *intent* to take code out of a measurement.
+- ⚠️ **`--ignore-pattern` is not this and must not be reached for.** Its help
+  text reads like region suppression; measured, it skips matching *tokens* and
+  leaves the clone reported.
+
+**The permalinks are generated at print time and stored nowhere.** A pinned link
+stays valid while it stops describing a block that moved, and a stale link that
+still resolves reads as current. They are never a metrics label either —
+Pushgateway never forgets a series, so a per-block label would mint a new one
+every time a block moved a line.
 
 ## `pnpm metrics:emit` and the trend layer
 
@@ -412,6 +474,81 @@ refused rather than as a stale build: one is no answer, the other is a real answ
 and a red one ([ADR-0027](adr/0027-deploy-check-reports-refusal.md)). D skips, and
 says so, when `SITE_URL` is unset or the local `dist/` carries no build stamp — a
 gap in D's series is honest where an invented row is not.
+
+## `pnpm lint:md` and `pnpm lint:md:fix` — the Markdown gate, and why its fix is allowlisted
+
+**`pnpm lint:md` reports; `pnpm lint:md:fix` repairs the seven rules whose fixes
+were measured safe on this tree.** Both read tracked Markdown outside
+`fixtures/`, at the rule set in
+[`.markdownlint.jsonc`](../.markdownlint.jsonc), where every rule turned off
+carries the measurement that turned it off. The gate runs in CI in the `style`
+job, and a red there is this command's own output.
+
+The documentation here is load-bearing rather than decorative, which is why a
+Markdown rule break is a defect and not a matter of taste. G19 holds
+`docs/gates.md` to `AGENTS.md`, G14 holds `docs/commands.md` to `package.json`,
+G41 extracts `docs/gate-register.md` **by heading**, and nine gate regexes read
+table pipes and emphasis markers as text. When a gate parses a document, the
+document's shape is part of the contract.
+
+⚠️ **The rule set is narrow because a default run here is actively dangerous,
+and the danger is silent.** At default rules a fix pass over this tree changed 55
+files, turned 11 issue references into H1 headings — every `#167's …` became a
+heading and lost the reference — stripped an intentional space from 16 code
+spans, two of which are regexes gates depend on, and renumbered a **verbatim
+quotation** in `docs/gate-register.md` sitting under a heading that says the file
+"still defined category 5". `pnpm test` on that damaged tree was **all 1055 tests
+green**. Prettier's Markdown damage is loud, because four gates go red; this
+tool's is not. The narrow allowlist is the entire protection.
+
+**Three settings are worth knowing about**, because each is a rule whose default
+would have protected nothing:
+
+| Setting | Why not the default |
+| --- | --- |
+| `MD060: compact` | MD060's default is `any`, which enforces consistency *within* a table and accepts a column-aligned one. G41 and G31 hardcode an exact single space at a pipe, so an aligned table passes the linter and goes invisible to both gates. Since Prettier excludes Markdown rather than repairing those regexes, this setting is their sole protection. |
+| `MD050: asterisk` | MD050 governs `**strong**`, which is what the nine gate regexes match — MD049 governs `*emphasis*` and is measurably blind to `__G41__`. Zero findings today, so it is purely preventive. |
+| `MD013: off` | 1540 findings, 76% of everything the tool reports here, and no auto-fix at any limit. The longest Markdown line is a 2048-character table row, which does not wrap. Recorded in [`gates.md`](gates.md#not-gated-deliberately). |
+
+⚠️ **The fix pass refuses rather than filters, and that is not a stylistic
+choice.** markdownlint-cli2's discovered root config beats every mechanism for
+narrowing it — `--config` is documented as *"the base configuration"*,
+`optionsOverride.config` is never consulted, and an `overrides` entry at
+`combine: "replace"` loses too, all three measured at 0.23.2. So a second config
+file would read as a restriction and restrict nothing. Instead
+`scripts/lint-md.ts` measures what the installed version can actually rewrite,
+against one probe document per adopted rule, and **stops before touching a file**
+when that set is not exactly the allowlist **plus the declared exclusions** in
+`scripts/lib/markdown-lint.ts` — eight names today, not seven, because MD050 is
+fixable and declared. It stops for a second reason too: when the tree itself
+holds a finding on one of those excluded rules.
+
+That refusal is the mechanised form of a debt: what a rule's fix *does* is a
+property of a version, not of a tool, so the allowlist is re-measured at every
+bump. G48 (`markdown`) asserts the same measurement at merge, so neither the
+command nor CI can drift away from it alone.
+
+**MD050 is the one rule the tool can fix that the allowlist does not carry**, and
+that omission is declared rather than accidental: it has zero findings here, so
+no fix pass was ever run against it, and this list holds only names somebody
+watched.
+
+⚠️ **A declared exclusion is not a rule the fix pass skips.** Nothing narrows the
+run — that is the paragraph above — so `--fix` would apply MD050's fix like any
+other enabled rule's. Measured: `text __x__ text` became `text **x** text` while
+four documents in this repository said it would be left alone. **So the exclusion
+is enforced by declining the whole pass**: write `__G41__` into a scoreboard row
+and `pnpm lint:md` goes red naming MD050 and the line, and `pnpm lint:md:fix`
+**refuses** and tells you to repair it by hand and read the diff. Doing that, and
+finding the fix right, is what promotes the rule to the allowlist.
+
+**The version is pinned exact** — `markdownlint-cli2` at `0.23.2` — for
+[ADR-0067](adr/0067-the-counters-inputs-are-pinned-exact.md)'s reason. ⚠️ **The
+rules reconcile with CodeRabbit and the versions cannot.** CodeRabbit reads
+`.markdownlint.jsonc` out of the repository and skips its own markdownlint run
+once a workflow runs one, so there is no rule set to negotiate; but its docs name
+`0.23.1` and it floats, and this repo can pin only its own copy. That residual is
+tolerable because the review half is advisory.
 
 ## The pre-commit hook — opting in, and reading the CRAP table
 

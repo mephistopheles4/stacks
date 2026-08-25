@@ -13,7 +13,7 @@ a cause that was not there, on a diagnosis it had not made.
 
 ## How this was decided
 
-_Carried verbatim from the session that produced it, newest last._
+*Carried verbatim from the session that produced it, newest last.*
 
 - **2026-08-03** — **A browser user agent does not fix this, and that is the
   finding most likely to be rediscovered the expensive way.** The first

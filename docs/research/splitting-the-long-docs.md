@@ -10,7 +10,7 @@ what a gate does was checked by running its parsing logic, not by reading it.
 
 ## The measurement that decides it
 
-|  | `progress.md` | `gates.md` |
+| | `progress.md` | `gates.md` |
 | --- | --- | --- |
 | Total lines | 1551 | 1112 |
 | Lines that are table | 116 | 65 |
@@ -87,7 +87,7 @@ tables and the row numbering are immovable.
 One trap worth writing down, because it is invisible until it bites.
 `markdownSection` is:
 
-```
+```text
 ^## <heading>[^\n]*\n([\s\S]*?)(?=\n## )
 ```
 
@@ -272,7 +272,7 @@ already claims.
 Move each investigation to one file per *episode*, named and dated so the
 directory listing is itself the index — the metadata-as-signal point above:
 
-```
+```text
 docs/log/2026-08-01-the-mobile-crash.md        (460 lines, closed)
 docs/log/2026-08-08-the-gaps-and-collisions.md
 docs/log/2026-07-2x-worktrees-and-the-deploy-guard.md

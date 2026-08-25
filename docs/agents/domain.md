@@ -76,5 +76,5 @@ inventing language the project doesn't use (reconsider) or there's a real gap
 If your output contradicts an existing record, surface it explicitly rather than
 silently overriding:
 
-> _Contradicts [ADR-0013](../adr/0013-cover-provenance-and-rehosting.md) on
-> re-hosting cover art — but worth reopening because…_
+> *Contradicts [ADR-0013](../adr/0013-cover-provenance-and-rehosting.md) on
+> re-hosting cover art — but worth reopening because…*

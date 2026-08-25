@@ -317,7 +317,7 @@ on the correct side of that split.
 
 **The verdict-admission check**, run against this revision:
 
-```
+```text
 unadmitted: 0
 ```
 
@@ -409,7 +409,7 @@ the unranked band (5). Bands two and three have since taken twelve of them;
 from the prose above — the discipline `aaf7347` established after the summary
 went wrong four times in a row:
 
-```
+```text
 Rank: 1     8
 Rank: 2     8
 Rank: 3     4
@@ -767,7 +767,7 @@ recorded and the second time this file has recorded it.
 **Recounted mechanically from the sections as they stand**, not carried forward
 from any band's own sentence:
 
-```
+```text
 Deep pass: band one    8
 Deep pass: band three  4
 Deep pass: band four   5
@@ -2652,6 +2652,7 @@ exercised against a scratch repository whose `origin` is itself, so **the real
 fetch has never run**: what is asserted is that a fetch of a real branch produces
 the right message, not that GitHub answers an anonymous one — which
 `pnpm trend:sync` exercises for real, on the same code path.
+
 ### G40 — `action-pins`
 
 **Gate:** [`gates/action-pins.test.ts`](../gates/action-pins.test.ts)
@@ -2751,6 +2752,7 @@ a new workflow, so the rule there is the rule here — *stage, then run.* ⚠️
 plant harness had to be taught the same thing**: `git add -N` leaves an index
 entry that outlives the file, and one plant's residue silently turned the next
 plant's expected-green into a red until the cleanup cleared the index first.
+
 - **Decay** — ⚠️ **exposed, dated, and it is a bet rather than a slip.** Clause 2
   pins the *shape* of Dependabot's comment; if Dependabot ever emits `# 7.0.1`
   without the `v`, this gate goes red on a bot commit. **Measured rather than
@@ -2865,7 +2867,7 @@ supply-chain triage obligation, and the observed-red rule.
   recorded rather than the count quietly corrected: **the narrower a clause
   retreats, the more load each surviving assertion carries.**
 - **Routing around** — **exposed on arrival and closed; one residual named.**
-  The correspondence sweep reads `### G<n> — \`slug\`` and nothing else, so an
+  The correspondence sweep reads ``### G<n> — `slug` `` and nothing else, so an
   entry written as `## G40` or `#### G40` would be invisible while reading to a
   human as a real entry. **That is G29's honest limit** — *"a form nobody writes
   here is a form this does not see"* — and it is **closed rather than
@@ -5005,6 +5007,175 @@ would not rot is comparing the set of files ESLint linted against the set
 That is a real gate and it is a different row; nothing here should grow a file
 count.
 
+### G48 — `markdown`
+
+**Gate:** [`gates/markdown.test.ts`](../gates/markdown.test.ts)
+**Date:** 2026-08-23
+**Triaged at landing**, on the same enforcement as the two rows above: G41
+(`gate-register`) is red the moment a row lands without an entry.
+
+⚠️ **The row exists because the documentation here is parsed and the parsers
+could not see its shape.** Three live defects: a six-cell row in a five-column
+table, where `✅` did not render and the Status column showed a test-file path —
+in the scoreboard G19 holds to the constitution; a dead same-document anchor that
+G29 **structurally cannot reach**, because `gates/doc-links.test.ts:78` skips
+every target starting with `#`; and a duplicate heading in `docs/gate-register.md`
+itself, the file G41 extracts **by heading**. Forty-five gates saw none of them.
+They were repaired ahead of this row landing, so the gate does not arrive red on
+its own day one.
+
+⚠️ **The second clause exists because the *remedy* is more dangerous than the
+defect, and its damage is silent.** At default rules a `--fix` pass over this tree
+changed 55 files, +172/−151: 11 issue references became H1 headings and lost the
+reference, 16 code spans were stripped of an intentional space — ten of them the
+`` `; `` separator G31 gates, one of them G41's own extraction regex, whose
+trailing space is what separates `### G4 ` from `### G41 ` — and a **verbatim
+quotation** in this file was renumbered, under a heading that says the file
+"still defined category 5". **`pnpm test` over that damaged tree was all 1055
+tests green.** Prettier's Markdown damage is loud, because four gates go red;
+this tool's is not.
+
+- **Weakening** — ⚠️ **exposed by construction, and the exposure is four hatches,
+  not the two this bullet first counted.** `FIX_ALLOWLIST` and
+  `FIXABLE_NOT_ALLOWLISTED` in `scripts/lib/markdown-lint.ts` are exactly the
+  escape-hatch shape this register catalogues; six rules are turned off in
+  `.markdownlint.jsonc`; `"default": false` turns off every rule nobody named;
+  and **one inline `<!-- markdownlint-disable-file MD041 -->`** sits in
+  `.github/pull_request_template.md`. `accepted`, and each on its own footing.
+  The off-rules carry the measurement that turned them off **at the line that
+  turns them off**, which is why the config is `.jsonc` and not `.json`, and a
+  clause here refuses any `false` without a comment above it. The fix lists are
+  **reverse-asserted in both directions** against a live measurement rather than
+  a declaration, so widening one to silence a red immediately contradicts what
+  the tool does.
+  ⚠️ **`"default": false` reads as the widest hatch and is the opposite**, which
+  is worth stating because the intuition runs the wrong way: at the *default*
+  setting roughly thirty unadopted rules ran, and seven of them were fixable and
+  unmeasured, so the permissive configuration was the dangerous one. A clause
+  holds the enabled set to the probe set in both directions, which is what makes
+  the fix measurement complete rather than merely large.
+  ⚠️ **The inline disable is the one hatch nothing counts**, and that is the
+  honest gap. G43 (`ignored-mutants`) sweeps suppression directives out of source
+  for a different tool; nothing here does the equivalent for
+  `markdownlint-disable`. `accepted` with one live instance, whose reason is
+  written in the file beside it — a pull request's top-level heading is its
+  title, so MD041 is right about a document and wrong about that one. **Named
+  rather than left to be discovered**: a second one arriving would be invisible,
+  and the remedy is below.
+- **Satisfying the letter** — ⚠️ **exposed, and it is the honest limit.** The
+  workflow clauses read whether the `style` job *names* `pnpm lint:md`, never
+  whether the job would run it: a step made conditional on something always
+  false, or an `if:` on the job, passes every clause here. `accepted` — that is
+  G45's stated limit about a documented flag and G42's about the `audit` job,
+  reached a third time, and the alternative is a gate that executes CI. ⚠️ **A
+  second instance, and it is the wider one**: nothing here asserts the tree is
+  *clean*. `pnpm lint:md` in the `style` job is what does that, and asserting it
+  again in the suite would run the linter twice per matrix leg to report the same
+  finding — which is precisely why the check is a job beside `audit` rather than
+  a step in `suite`.
+- **Routing around** — **the route that matters is closed, and closing it is the
+  whole second clause.** The obvious evasion is not deleting the job: it is the
+  fix pass quietly growing. What a rule's fix *does* is a property of a version,
+  so a declared list of seven would be a claim about 0.23.2 sitting in a file
+  that outlives it — true on the day it was written and unfalsifiable
+  afterwards. So the clause **measures**: one probe document per adopted rule,
+  linted, fixed, and linted again, and what actually changed must equal what the
+  two lists name. Planted, red, both directions. ⚠️ **The route still open is the
+  config**: turn a rule off in `.markdownlint.jsonc` and it stops being measured,
+  because the probes are linted under the adopted set. `accepted` — the same diff
+  has to delete the rule's reason comment or fail the clause that demands one,
+  and a rule turned off with its measurement removed is a visible one-line diff,
+  which is the shape every allowlist in `gates/` already relies on.
+- **Vacuous green** — **the live one, and it is floored explicitly.** Fixability
+  is measured as *reported before, absent after*, so **a rule that stops firing
+  on its own probe measures as unfixable** — the exact widening this row exists
+  to catch, arriving as a pass. A reformatted probe, a rule renamed upstream, or
+  a `.markdownlint.jsonc` edit that disables one would each do it silently. So
+  every adopted rule must fire on its own probe, asserted as its own clause and
+  planted red. The job side is floored the same way: `jobs()` throws when the
+  `jobs:` block is gone, and a separate clause refuses a parse that finds fewer
+  than four jobs, so a restructured workflow cannot reduce three clauses to true
+  statements about an empty map.
+- **Decay** — **exposed, named, and it decays in the safe direction.** The
+  workflow side reads YAML as text: a job renamed, a `needs:` written as a block
+  sequence instead of a flow list, or a `run:` split across lines would each
+  break the extraction — and **every one of those is a false red** naming the
+  job, never a false green, because the parse floor fires first. The fix-set
+  clause decays the other way and is the one worth watching: it re-measures on
+  every run, so it does not go stale, but it **costs a real markdownlint fix pass
+  in the suite** and is the slowest thing in this file. ⚠️ **One live consequence,
+  written where somebody will hit it**: `MD050` is fixable, very likely safe, and
+  deliberately not on the allowlist, because it has zero findings here and this
+  repo does not allowlist a name nobody watched a diff for. Promote it the first
+  time a real finding makes a measurement possible — and promote it by *moving*
+  it, so the seven stays seven or becomes eight on purpose.
+
+⚠️ **A fifth clause exists because the fourth bullet's sentence was false when
+first written, and nothing in the suite could have said so.** A declared
+exclusion is not a rule the fix pass skips: nothing narrows the run — that is why
+the allowlist is a refusal at all — so `--fix` rewrote MD050 like any other
+enabled rule while four documents said it would be left alone. **Measured**:
+`text __x__ text` became `text **x** text`. The widening clause above cannot
+catch it, because it fires only for a rule on *neither* list, and MD050 is on
+one. So the exclusion is enforced by declining the whole pass, `unmeasuredFindings`
+is that decision kept pure, and the clause asserts it in both directions — a
+declared-excluded rule stops the pass, and an allowlisted one must not, or the
+fix command refuses on every tree it exists to repair. **This is the shape the
+row's own docblock warns about, arriving in the row that warns about it**: a fix
+that closes the half you were looking at reads as a fix for the whole thing.
+
+**Rank:** not ranked. This row post-dates all four bands; the bullets above are
+the same five questions asked at landing.
+
+**Observed-red line:** **six plants, each restored green afterwards, and two
+defects that were not planted** — both of the same species, and both found by
+review rather than by the author.
+
+| | |
+| --- | --- |
+| **delete the `style` job**, everything else unchanged | **red** on three clauses — *"no job named `style` in .github/workflows/gates.yml"*, and the two aggregator clauses with it |
+| **drop `style` from the `gates` aggregator's `needs:`**, job left in place | **red** — *"the `gates` aggregator no longer lists `style` in its `needs:`"*. The job still runs and blocks nothing, which is the failure G42's row was written for |
+| **empty `FIXABLE_NOT_ALLOWLISTED`**, so MD050 is fixable and on neither list | **red** — the measured set is one wider than the declared one. This is the version-bump shape, reproduced by hand |
+| **respace MD060's probe table**, so the rule stops breaking on it | **red** on two clauses — the probe floor names MD060, *and* the fix-set clause narrows by one. The vacuous green caught by the guard written for it |
+| **`text __x__ text` in a tracked file**, before the fifth clause existed | **the defect, not a plant.** `pnpm lint:md:fix` rewrote it to `text **x** text` — an unmeasured fix, against four documents saying otherwise, with every clause green. After: the pass **refuses** and the text survives byte for byte |
+| **trailing spaces and a hard tab in a tracked file**, before `"default": false` | **the second defect, not a plant, and the same species one level out.** `pnpm lint:md:fix` rewrote both — **MD009** and **MD010**, on neither list and never probed, because the config ran roughly thirty rules at their defaults and *a rule nobody adopted is a rule nobody probes*. A wider sweep found **MD004, MD030, MD039, MD047, MD058** on the same footing. After: neither rule runs, and the file survives byte for byte |
+| **`"default": true` in the config** | **red** — *"`.markdownlint.jsonc` must set `\"default\": false\"`"*. The permissive setting is the dangerous one, which is the opposite of how it reads |
+| **`"MD009": true` added to the config**, no probe for it | **red** — the enabled set and the probe set differ by one. This is the second defect reproduced as a plant, so the repair cannot rot back to it |
+
+**Disposition: `gated`.** The three defects are repaired, the rule set that would
+have caught them runs on every pull request, and the fix pass that could quietly
+undo the repair refuses before it touches a file.
+
+⚠️ **The lesson this row cost twice, and it is the register's own thesis turned
+on the register.** Both unplanted defects are *the right mechanism aimed at the
+wrong half* — [#235](https://github.com/mephistopheles4/stacks/issues/235)'s
+recorded failure shape, arriving in the row that quotes it. The allowlist closed
+the version-bump half and left the already-enabled half open; the refusal then
+closed the undeclared half and left the *declared* half open. Each repair's own
+measurement agreed it was complete, **because each was built from the half it
+was looking at** — the probe run reported MD050 fixable on the very first pass
+and it read as agreement. Neither was found by re-reading. **The first came from
+an adversarial reviewer asking what the code does rather than what it says, and
+the second from two reviewers independently planting a file and running the
+command** — which is `2026-08-19-the-ratchet-lands-disarmed.md`'s rule holding a
+third time: *nobody finds their own defects by re-reading; review substitutes
+for the reading, not for the running.*
+
+**Remedy (named, not built), two of them.** First, the satisfying-the-letter
+verdict's first half. If a `style` step is ever made conditional, the clauses
+here would not notice — and the honest form of that check is not this row growing
+a YAML evaluator, but the `gates` aggregator asserting that each job it needs
+reported a result it actually ran. That is one check for every job rather than
+one per row, and it belongs wherever `action-pins` already reads the aggregator.
+
+Second, the weakening verdict's fourth hatch: **`markdownlint-disable` comments
+are counted by nothing.** G43 already sweeps a second tool's suppression
+directives out of source and declares the count, and the same shape applies here
+— a swept count of inline disables, per file, with the one live instance
+declared. Not built because one instance with its reason beside it is not yet a
+population, and a sweep written before there is anything to sweep is a gate whose
+first red would be its own arrival.
+
 ---
 
 ## ⚠️ `auditConfig.ignoreGhsas` — the category-1 verdict this rollout owed
@@ -5054,7 +5225,71 @@ deleting the justification, which is the cheapest way to look compliant. ⚠️
 outside any gate here, and not a check that the advisory is still unfixed, which
 would need the network G21 forbids.
 
-### G47 — `format`
+### G47 — `ignored-clones`
+
+**Gate:** [`gates/ignored-clones.test.ts`](../gates/ignored-clones.test.ts)
+**Date:** 2026-08-23
+**Triaged at landing**, per this rollout's standing rule and now enforced by G41
+rather than remembered.
+
+⚠️ **The number was taken against a re-fetched `origin/main` immediately before
+pushing, not when this entry was drafted** — four sibling tickets on the same map
+each add a numbered row concurrently, and G19's gapless walk makes a stale claim
+a red merge for whoever lands second. Recorded because the alternative reads as
+carelessness rather than as a race.
+
+**Observed-red**, twice, and the second time it was the gate that was wrong. A
+suppression block was planted into `packages/cli/src/env.ts` and the row went red
+naming both populations that file belongs to — `packages/cli/src` and
+`whole-tree`, six lines each. ⚠️ **The plant then disagreed with jscpd**, which
+removed nothing: the mechanical insertion had landed the closing directive
+*inside the file's header comment*, where jscpd does not see it and the sweep
+did. The sweep gained block-comment awareness, and the second plant — at a real
+code location — agreed.
+
+- **Weakening** — **clean; no allowlist and no exemption.** Nine populations are
+  swept and all nine compared, in both directions, plus a correspondence check so
+  a population measured but undeclared is named rather than skipped. What it
+  deliberately does not assert is the `notes` line beside the counter: **any
+  string satisfies it**, so it would catch the honest omission and not the
+  adversary — G43's declined check, declined again here for its reason.
+  `accepted`.
+- **Satisfying the letter** — **exposed, and it is the intended path.** Adding a
+  suppression block *and* its declared line count in one commit passes cleanly,
+  which is exactly what the row asks for: it makes the withdrawal **recorded**,
+  never impossible. Both directions are held, so pre-raising a counter so a later
+  block lands green is red on arrival. Disposition `accepted`.
+- **Routing around** — **exposed, and named rather than closed.** The whole row
+  reads only source text, so a suppression written in a form the sweep's
+  `DETECT` pattern misses is invisible to it. That is why detection deliberately
+  over-matches every comment form jscpd honours and *refuses* three of the four,
+  rather than counting them: a refused form is a red build, a missed one is
+  silence. ⚠️ **The residual is real and measured**: `commentStateAfter` is not
+  a lexer, so a string literal containing a block-comment opener could hide a
+  directive from the sweep while jscpd still honoured it. It takes that string
+  *and* a directive in one file to reach. Disposition `accepted`.
+- **Vacuous green** — **gated, with three floors rather than one.** The row
+  would pass over nothing if the declaration file were emptied, if the declared
+  scopes were emptied, or if the tree walk returned nothing — and the third is
+  the one whose absence was a real hole in G43, so all three are written out
+  here instead of inherited. Disposition `gated`.
+- **Decay** — **repaired in part, and the remainder is named.** The counting
+  rule this file records is compared to the jscpd actually installed, so a
+  threshold edit or a tool upgrade that changes what every count *means* is red
+  at merge instead of being discovered at a deploy. ⚠️ **That does nothing for
+  `stryker.floors.json`**, whose own comment records that no gate, test or CI
+  check compares its two stamps — [#224](https://github.com/mephistopheles4/stacks/issues/224)
+  owns that, and reading this row as cover for it would be wrong. Disposition
+  `repaired`.
+
+⚠️ **The residual worth carrying forward is not in any of the five.** The counter
+records what the source **declares**, and jscpd honours a block only when no code
+follows it — measured. So the declared count and the lines jscpd actually removed
+are different numbers, and `total-lines + ignored-lines` is an approximation
+rather than an identity. Two cases in `scripts/lib/duplication.test.ts` pin the
+behaviour, so a jscpd that fixes it goes red here rather than moving eight series
+at once with nothing to point at.
+### G49 — `format`
 
 **Gate:** the `style` job in [`.github/workflows/gates.yml`](../.github/workflows/gates.yml), running `pnpm format:check`
 **Date:** 2026-08-25

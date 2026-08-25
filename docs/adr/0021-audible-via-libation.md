@@ -6,7 +6,7 @@ The brief named Audiobookshelf; the owner had a Libation export in hand and no s
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **The first import source is Audible via Libation's JSON export, not Audiobookshelf.** The brief named Audiobookshelf; the owner had a Libation export in hand and no self-hosted ABS instance. The gate's real content — dedupe by ISBN then normalised title+author, and a re-run that adds nothing — is met and tested either way. An ABS importer would reuse `importBooks` unchanged; only the mapper is source-specific.
 

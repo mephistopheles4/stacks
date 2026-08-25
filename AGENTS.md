@@ -1,9 +1,11 @@
 # AGENTS.md — Stacks (reading tracker + 3D library)
 
 ## What this project is
+
 A local-first reading tracker where the notes vault IS the database. A CLI (`stacks`) writes book notes with structured frontmatter into an Obsidian vault; a static site (Astro + vanilla Three.js) renders the vault as a 3D bookshelf. Public builds expose covers + metadata only — never note bodies.
 
 ## Start here — orientation for a cold session
+
 1. `docs/progress.md` — where the project actually is. Read this first, always.
    It is a **spine**: current state, the gate log, environment findings, and an
    index of every investigation. The narratives themselves live one per file in
@@ -49,7 +51,8 @@ scoring it there is a red build, in both directions.
 5. **Hand-edited notes are first-class.** The parser must tolerate extra frontmatter keys, reordered keys, and missing optional keys. Only `type: book` + `title` are required.
 
 ## Architecture
-```
+
+```text
 packages/
   core/     # vault adapter interface + obsidian adapter, metadata fetchers, library.json builder
   cli/      # stacks CLI (commander), depends on core
@@ -61,6 +64,7 @@ docs/
 ```
 
 ## Vault adapter contract
+
 ```ts
 interface VaultAdapter {
   listBooks(): Promise<BookRecord[]>;          // parse all type:book notes
@@ -71,6 +75,7 @@ interface VaultAdapter {
   coverDir(): string;                          // where covers are cached
 }
 ```
+
 - `writeBook` **creates**; it never overwrites. A colliding filename gains a numeric suffix.
 - `updateBook` sets frontmatter keys on an existing note by rewriting individual lines — key order, quoting, comments and the note body all survive byte for byte. Scalars only; a key whose value is a list is left alone. Re-serialising the YAML would reformat files the owner edits by hand.
 - `insertBodySection` is **the only method that writes below the frontmatter**, and it exists for one thing: the provider description the merge stores under `## About`. It writes **only when the heading is absent** — absent-only applied to a section, which is also what makes a whole `enrich` pass idempotent — placing it above `## Notes` so a provider's prose never lands under the owner's own. Everything else in the file survives byte for byte, `updateBook`'s promise extended to the half it never touched. It takes the vault-relative path a `BookRecord` carries or the absolute one `writeBook` returns.
@@ -78,6 +83,7 @@ interface VaultAdapter {
 - Do NOT build a second adapter. Do NOT add adapter config plumbing beyond a single constructor arg (vault path). The interface exists so a Logseq/Anytype adapter is possible later, not to be a framework.
 
 ## Frontmatter contract (do not change without updating this file)
+
 Required: `type: book`, `title`. Optional: `author`, `isbn`, `status` (reading|read|abandoned|wishlist, default: read), `started`, `finished`, `rating` (1–5), `cover` (relative path), `cover_source` (open-library|google-books|apple-books|oreilly|unknown), `spine_color` (hex), `pages`, `binding` (hardback|paperback), `face_out` (bool), `tags`, `shelf_order` (number), `private` (bool), `publisher`, `published` (verbatim), `subjects` (semicolon-separated, max 5), `google_volume_id`, `apple_track_id`, `openlibrary_olid`, `oreilly_ourn`.
 
 This list is the contract, and `gates/frontmatter-contract.test.ts` holds it to
@@ -141,6 +147,7 @@ it with no provenance at all.
 **A book you are reading comes ahead of all of that**, numbered or not. `stacks order --renumber` numbers every shelved book, so any rule that only applied to unnumbered books stopped applying at all after one run — and the next book you picked up sorted behind every pin. Pinned by `gates/shelf-order.test.ts`.
 
 ## Tech decisions (made — don't relitigate)
+
 - **Vanilla Three.js, not react-three-fiber.** Plain Astro island, no React on the page. Use InstancedMesh for book boxes, per-instance cover textures via a texture atlas or lazy per-book planes — measure first, don't optimize blind.
 - Book detail card = plain DOM overlay positioned from raycaster hits, not in-canvas UI.
 - **The site may only `import type` from `@stacks/core`.** The package root
@@ -167,7 +174,9 @@ it with no provenance at all.
 - TypeScript strict everywhere. Vitest. pnpm workspaces.
 
 ## Phase gates — a phase is DONE only when its gate passes
+
 Every phase: `pnpm test && pnpm build` green, plus:
+
 - **Phase 0 (scaffold):** `pnpm stacks --help` prints commands; site dev server renders empty shelf; fixtures vault committed.
 - **Phase 1 (data layer):** `pnpm stacks build` on fixtures produces valid library.json with exactly the well-formed books; malformed fixture logged + skipped; tests cover ISBN hit / fuzzy title / API miss / malformed frontmatter (use cached API fixtures, no live calls in tests — gated by G21 (`no-live-network`), which records
   any request the suite makes and fails the test that made it; `vi.stubGlobal`
@@ -177,6 +186,7 @@ Every phase: `pnpm test && pnpm build` green, plus:
 - **Phase 4 (Audiobookshelf import):** import against mock ABS API dedupes by ISBN then normalized title+author; re-running import is idempotent.
 
 ## Working rules for agents
+
 - **Assign an issue to yourself before you cut a branch or a worktree for it** — any issue an agent picks up, not only a wayfinder ticket. Reading, searching and triaging need no claim; the claim is due before the first durable artifact exists. **The assignee is an advisory, not a lock**: it records that somebody intends to work the issue, so the next session can decide knowingly, and it prevents nothing. Read it back through a window — **an assignment less than one hour old is presumed live** — and on finding a live one, take a different issue, or establish that whoever holds it has finished before carrying on. Nothing needs unassigning when work is abandoned, because the window expires the presumption on its own. ⚠️ **The case the tracker cannot answer is an assignee that is already your own account.** Every session here authenticates as the same user, so *mine, claimed a minute ago* and *free to take* are the same record. Establish outside the tracker whether another of your own sessions holds it; your own name on it is not permission. The invocation lives in [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md), and this rule is [not gated, deliberately](docs/gates.md#not-gated-deliberately).
 - Commit at every green gate with a one-paragraph summary. Never batch multiple phases into one commit. **The subject is conventional and the body is that paragraph** — `<type>(<scope>): <subject>`, scope optional and from `core cli site gates docs ci`. A branch you cut yourself is `<type>/<issue>-<slug>`, or `research/`, `prototype/` or `experiment/` for one that never becomes a commit. ⚠️ **Put both on the pull request too, and treat that copy as the real one**: this repo squash-merges with `PR_TITLE`/`PR_BODY`, so the pull request title *is* the subject that reaches `main` and the local one is discarded. A branch the harness named is exempt, because the name exists before a session can read this. [ADR-0057](docs/adr/0057-the-pull-request-title-is-the-commit-subject.md), and [not gated, deliberately](docs/gates.md#not-gated-deliberately).
 - When you make a decision the brief left open (library choice, API quirk, workaround), record it in [`docs/adr/`](docs/adr/) in the same commit — if it is hard to reverse, surprising without context, and a real trade-off. A gate lesson goes to [`docs/gates.md`](docs/gates.md) instead.
@@ -190,7 +200,7 @@ Held to reality by `gates/commands.test.ts` — both lists below, in both
 directions. Adding a script or a CLI command without documenting it here is a
 red build.
 
-```
+```sh
 pnpm install
 pnpm typecheck           # tsc --noEmit across every .ts in the repo
 pnpm lint                # G46: the tuned type-checked rule set over every .ts
@@ -201,12 +211,15 @@ pnpm format:check        # the same check, reporting instead of writing (.astro 
 pnpm build               # typecheck, then astro build
 pnpm dev                 # site dev server
 pnpm dev:watch           # site + rebuild on every vault change
+pnpm lint:md             # the Markdown gate: the narrow rule set over tracked docs
+pnpm lint:md:fix         # the same, applying the seven fixes measured safe here
 pnpm stacks <cmd>        # run the CLI from source
 pnpm worktree <branch>   # a second checkout, cut from origin/main and installed
 pnpm fixtures:50         # regenerate the 50-book fixture vault
 pnpm smoke:render        # phase 2 gate: headless shelf screenshot
 pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish
+pnpm duplication:report  # jscpd over the eight scopes and the whole tree, as a table
 pnpm mutation:run        # Stryker over the eight declared scopes — minutes, not seconds
 pnpm mutation:score      # that run's report, scored per declared scope
 pnpm metrics:emit        # one run's trend series, as the OpenMetrics text CI commits
@@ -229,6 +242,24 @@ series, at 3 days, gated by G39 (`metrics-freshness`). No flag clears that;
 same is true of the zero-mutant residual G38 (`mutation-scope`) checks, so
 neither flag reaches a refusal on any path that publishes.
 
+`pnpm duplication:report` prints the same counts CI records — one counter, two
+callers — for the eight declared scopes and for whole-tree TypeScript, plus a
+permalink for every suppression block. **The eight scope rows do not sum to the
+tree row**: a clone is a relation between two places, so a clone spanning two
+scopes is counted by both ([ADR-0072](docs/adr/0072-a-clone-is-a-relation-between-two-places.md)).
+It is a print and never a gate; nothing in it refuses anything.
+
+`pnpm lint:md` is the Markdown gate, and its rule set is **narrow because a
+default run here is dangerous**: at default rules a fix pass changed 55 files,
+corrupted 11 issue references, stripped a documented separator out of 16 code
+spans and renumbered a verbatim quotation — with all 1055 tests green throughout.
+`pnpm lint:md:fix` is allowlisted to seven rules for that reason. Nothing can
+narrow a markdownlint run below the root config, so the allowlist is a
+**refusal**: the fix pass declines to run at all when a version bump widens what
+the tool can rewrite, or when the tree holds a finding whose fix nobody has
+watched. Every rule turned off carries its measured reason in
+`.markdownlint.jsonc`.
+
 `pnpm trend:sync` needs **Docker** and nothing else, and is run by hand, never
 on a schedule. It brings up **two** containers: the store, and the page you read
 at <http://localhost:3000/d/stacks-trend-layer> — provisioned read-only from
@@ -246,7 +277,7 @@ mutation score is a trend and not a gate, what `trend:sync` refuses, and why
 
 CLI commands — `pnpm stacks <cmd>`:
 
-```
+```text
 add       fetch metadata and a cover, then write a note into the vault
 build     parse the vault into library.json   (--public, --watch)
 status    quick stats: books this year, in progress, covers still missing

@@ -15,7 +15,7 @@ differently.
 **State A — the file moved, nothing in its place.** `git mv CLAUDE.md AGENTS.md`,
 then the three gates:
 
-```
+```text
 Test Files  3 failed (3)
      Tests  10 failed | 14 passed (24)
 
@@ -36,7 +36,7 @@ argument that this needed no new gate.
 **State B — the stub written, sections absent.** This is the state the repo
 actually ships, and here the designed messages fire:
 
-```
+```text
 Error: no "## Commands" section in CLAUDE.md
 Error: no "## Invariants" section in CLAUDE.md. A gate reads it, so a renamed
 heading must fail here rather than reduce that gate to assertions over nothing.
@@ -51,7 +51,7 @@ Same count, different cause. Both were run before any gate was repointed.
 **State C — G19 refused the new gate until it was scored.** After repointing,
 with `gates/agents-import.test.ts` written and `docs/gates.md` not yet touched:
 
-```
+```text
 × scores every gate in gates/ in a row, not merely in prose
 AssertionError: gates that no row in docs/gates.md names:
 gates/agents-import.test.ts

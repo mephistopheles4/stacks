@@ -6,7 +6,7 @@ Both rules exist because the obvious version was wrong in a way nothing noticed:
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **A book you are reading outranks `shelf_order`.** Owner's call, resolving a collision between two documented rules. `shelf_order` used to win over everything, on the reasoning that someone who numbered a shelf meant it — but `order --renumber` numbers *every* shelved book, so after one run no unnumbered book existed, "unset means reading first" described an unreachable state, and the next book picked up sorted behind all thirty-one. Pinning a favourite should not cost you sight of what you are reading. The shelf is generated, not curated (brief, goal 3): `shelf_order` arranges the generated part rather than overriding the one rule that tracks what you are doing now.
 

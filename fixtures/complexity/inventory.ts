@@ -120,6 +120,52 @@ export function overTheCut(n: number): number {
   return total;
 }
 
+/**
+ * Nesting, which is the whole of what cognitive complexity adds. Cyclomatic
+ * 1 + 6 = 7; cognitive **21**.
+ *
+ * ⚠️ **This function exists for the cognitive counter and it is the pair to
+ * `overTheCut`, not a duplicate of it.** Read the two side by side and the
+ * split signature is the fixture rather than a claim about it: `overTheCut` is
+ * twelve *flat* `if`s — cyclomatic 13, cognitive 12, the two measures agreeing
+ * — while this one is six *nested* `if`s and scores cyclomatic 7 against
+ * cognitive 21. Half the branches, nearly twice the cognitive score.
+ *
+ * Cognitive complexity charges each `if` its own nesting depth: `+1, +2, +3,
+ * +4, +5, +6` = 21. That increment is the one construct with no cyclomatic
+ * counterpart at all, and it is why the two series are published side by side
+ * rather than one instead of the other — see ADR-0073.
+ *
+ * ⚠️ **It is also the only function here that exceeds the cut**, so without it
+ * `cognitive-mass-over-15` would be pinned by nothing: every other function in
+ * this file scores 12 or less, and a fixture whose over-the-cut total is zero
+ * cannot tell a working count from one that never fires. `overTheCut` does the
+ * same job for `complexity-mass-over-10` and stops short of 15 on the cognitive
+ * side, which is what makes a second function necessary rather than a wider one.
+ */
+export function deeplyNested(a: boolean, b: boolean, c: boolean, d: boolean, e: boolean, f: boolean): number {
+  if (a) {
+    // +1  nesting 0
+    if (b) {
+      // +2  nesting 1
+      if (c) {
+        // +3  nesting 2
+        if (d) {
+          // +4  nesting 3
+          if (e) {
+            // +5  nesting 4
+            if (f) {
+              // +6  nesting 5
+              return 6;
+            }
+          }
+        }
+      }
+    }
+  }
+  return 0;
+}
+
 // ── Function-shaped nodes ───────────────────────────────────────────────────
 
 /** A function expression. 1 + 1 = 2. */

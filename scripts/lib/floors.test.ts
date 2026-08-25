@@ -21,6 +21,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { COGNITIVE_INVENTORY, type CognitiveInputs } from './cognitive.ts';
 import { INVENTORY, MCCABE_CUT, type CounterInputs } from './complexity.ts';
 import { parseRecord } from './metrics-read.ts';
 import type { Scope } from './mutation-score.ts';
@@ -1127,7 +1128,7 @@ describe('countDisableDirectives — the spellings a comment can take', () => {
 });
 
 describe('fixtureHashOf', () => {
-  /** One variant of the counter's inputs. Cast once, here, so no test repeats it. */
+  /** One variant of the cyclomatic counter's inputs. Cast once, so no test repeats it. */
   function inputs(changes: Record<string, unknown> = {}): CounterInputs {
     return {
       eslintVersion: '10.9.0',
@@ -1138,45 +1139,78 @@ describe('fixtureHashOf', () => {
     };
   }
 
+  /** One variant of the *cognitive* counter's inputs, likewise. */
+  function cognitive(changes: Record<string, unknown> = {}): CognitiveInputs {
+    return {
+      sonarjsVersion: '4.2.0',
+      ruleOptions: [0],
+      inventory: COGNITIVE_INVENTORY,
+      ...changes,
+    };
+  }
+
+  /** The stamp both counters produce together, which is the only stamp there is. */
+  function hash(one: CounterInputs = inputs(), other: CognitiveInputs = cognitive()): string {
+    return fixtureHashOf(one, other);
+  }
+
   it('is a sha256, spelled the way configHashOf spells one', () => {
-    expect(fixtureHashOf(inputs())).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(hash()).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
   it('is stable across key order inside the rule options', () => {
-    const reordered = inputs({ ruleOptions: [{ variant: 'classic', max: 0 }] });
-
-    expect(fixtureHashOf(reordered)).toBe(fixtureHashOf(inputs()));
+    expect(hash(inputs({ ruleOptions: [{ variant: 'classic', max: 0 }] }))).toBe(hash());
   });
 
-  it('changes when either installed version changes', () => {
-    expect(fixtureHashOf(inputs({ eslintVersion: '10.9.1' }))).not.toBe(fixtureHashOf(inputs()));
-    expect(fixtureHashOf(inputs({ parserVersion: '8.68.0' }))).not.toBe(fixtureHashOf(inputs()));
+  it('changes when any of the three installed versions changes', () => {
+    // ⚠️ Three, not two. The plugin version is an input because the cognitive
+    // counts are its rule's output — and it is folded into *this* hash rather
+    // than a second one, per #234 §2, which is what makes a plugin upgrade
+    // refuse the cyclomatic caps as well.
+    expect(hash(inputs({ eslintVersion: '10.9.1' }))).not.toBe(hash());
+    expect(hash(inputs({ parserVersion: '8.68.0' }))).not.toBe(hash());
+    expect(hash(inputs(), cognitive({ sonarjsVersion: '4.3.0' }))).not.toBe(hash());
   });
 
-  // ⚠️ The two versions are hashed at fixed positions rather than into one bag.
+  // ⚠️ The versions are hashed at fixed positions rather than into one bag.
   // Swapping their values is the cheapest proof of that: a hash over a set would
   // not notice, and `8.67.0` of ESLint is not `10.9.0` of ESLint.
-  it('hashes the two versions positionally, not as a set', () => {
-    const swapped = inputs({ eslintVersion: '8.67.0', parserVersion: '10.9.0' });
-
-    expect(fixtureHashOf(swapped)).not.toBe(fixtureHashOf(inputs()));
+  it('hashes the versions positionally, not as a set', () => {
+    expect(hash(inputs({ eslintVersion: '8.67.0', parserVersion: '10.9.0' }))).not.toBe(hash());
   });
 
-  it('changes when the rule is configured differently', () => {
-    expect(fixtureHashOf(inputs({ ruleOptions: [{ max: 5, variant: 'classic' }] }))).not.toBe(
-      fixtureHashOf(inputs()),
-    );
+  it('changes when either rule is configured differently', () => {
+    expect(hash(inputs({ ruleOptions: [{ max: 5, variant: 'classic' }] }))).not.toBe(hash());
     // ESLint's defaults are `max: 20`, so no options at all is a different rule
     // and reads as one rather than as an absence.
-    expect(fixtureHashOf(inputs({ ruleOptions: [] }))).not.toBe(fixtureHashOf(inputs()));
+    expect(hash(inputs({ ruleOptions: [] }))).not.toBe(hash());
   });
 
-  it('changes when the fixture expects a different total', () => {
-    const moved = inputs({
-      inventory: { ...INVENTORY, counts: { ...INVENTORY.counts, mass: 69 } },
-    });
+  it('changes when the cognitive threshold moves', () => {
+    // ⚠️ The threshold is count-affecting where severity is not: raise it and
+    // every function scoring at or below it vanishes from the report while
+    // staying in the denominator, so `cognitive-mass` collapses with no code
+    // changed. That is why it is hashed and severity is not.
+    expect(hash(inputs(), cognitive({ ruleOptions: [15] }))).not.toBe(hash());
+    expect(hash(inputs(), cognitive({ ruleOptions: [] }))).not.toBe(hash());
+  });
 
-    expect(fixtureHashOf(moved)).not.toBe(fixtureHashOf(inputs()));
+  it('changes when either fixture expects a different total', () => {
+    expect(
+      hash(inputs({ inventory: { ...INVENTORY, counts: { ...INVENTORY.counts, mass: 69 } } })),
+    ).not.toBe(hash());
+
+    expect(
+      hash(
+        inputs(),
+        cognitive({
+          inventory: {
+            ...COGNITIVE_INVENTORY,
+            counts: { ...COGNITIVE_INVENTORY.counts, mass: 56 },
+          },
+        }),
+      ),
+    ).not.toBe(hash());
   });
 
   // The per-function list and the roll-up are both *the fixture's expected
@@ -1192,7 +1226,24 @@ describe('fixtureHashOf', () => {
       },
     });
 
-    expect(fixtureHashOf(moved)).not.toBe(fixtureHashOf(inputs()));
+    expect(hash(moved)).not.toBe(hash());
+  });
+
+  it('changes when a function the cognitive rule was silent about starts scoring', () => {
+    // ⚠️ The absent-at-zero rows are hashed like any other, and they are the
+    // ones an upgrade is most likely to move: a plugin that starts counting
+    // `??=` turns a `null` into a number without touching a single total the
+    // cyclomatic fixture holds. It must read as a different counting rule.
+    const scoring = cognitive({
+      inventory: {
+        ...COGNITIVE_INVENTORY,
+        functions: COGNITIVE_INVENTORY.functions.map((entry) =>
+          entry.cognitive === null ? { ...entry, cognitive: 1 } : entry,
+        ),
+      },
+    });
+
+    expect(hash(inputs(), scoring)).not.toBe(hash());
   });
 });
 
@@ -1274,7 +1325,13 @@ describe('parseFloors, the cap half', () => {
 });
 
 describe('CAPPED_SERIES', () => {
-  it('caps the two series the spec caps, and neither of the two it does not', () => {
+  it('caps the two series the spec caps, and none of the six it does not', () => {
+    // ⚠️ Six uncapped now, not two: `complexity-functions` and
+    // `complexity-mass` grow with the tree legitimately, and **all four
+    // cognitive series** are uncapped at adoption — `cognitive-max` joins this
+    // array only once twenty records carry its family (#258), and
+    // `cognitive-mass-over-15` may never join it at all, because nothing may
+    // refuse on a cut nobody derived.
     expect([...CAPPED_SERIES]).toEqual(['complexity-max', 'complexity-mass-over-10']);
   });
 

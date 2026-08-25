@@ -73,7 +73,7 @@ decision, not a pass/fail.
 
 ### Baseline — a real `pnpm build` in this worktree
 
-```
+```text
 packages/site/dist/_astro/Shelf.astro_astro_type_script_index_0_lang.Bf9RxLi2.js
   568,041 bytes minified
   143,920 bytes gzip
@@ -305,7 +305,7 @@ chain.**
 
 ## 5. Order of operations
 
-```
+```text
 EffectComposer
   1. RenderPass(scene, camera)          // scene → rt, linear-sRGB, HalfFloat
   2. GTAOPass(scene, camera, w, h)      // if AO ships at all; blends AO onto the beauty

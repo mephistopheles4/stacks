@@ -15,6 +15,12 @@
  * The linter's rules live in `eslint.lint.config.mjs`, so the file people edit
  * when a rule annoys them is not the file that defines the count.
  *
+ * ⚠️ **That paragraph used to claim the filter did not exist. It does** — at
+ * `scripts/lib/complexity.ts`, which skips every message whose `ruleId` is not
+ * `complexity`. So the argument above is about not *needing* one, which is a
+ * weaker and truer thing: the filter is there, it works, and the discipline is
+ * that no count should have to depend on it.
+ *
  * ⚠️ **The parser is load-bearing, not a preference.** Without it ESLint fails
  * on TypeScript syntax before it counts anything — and the failure arrives as a
  * parse error per file, so a missing parser reads as *this repo has no
@@ -26,10 +32,13 @@
  * ⚠️ **This file is an input to the number.** The rule options below, together
  * with the exact `eslint` and `@typescript-eslint/parser` versions, are what the
  * count means — the way `timeoutMS` is an input to the mutation score. They are
- * pinned exact in `package.json` today; the fixture hash that is to carry them
- * onto the record, and the cap that will refuse a record stamped under a
- * different rule, land with the cap and **do not exist yet**. See ADR-0067 and
- * `docs/spec/complexity-on-the-trend-layer.md` §§3-4.
+ * pinned exact in `package.json`, and the fixture hash that carries them onto
+ * the record **exists** — `fixtureHashOf` in `scripts/lib/floors.ts`, stamped
+ * on every run as `fixture_hash`. ⚠️ It now covers `eslint.cognitive.mjs` too:
+ * one hash over both counting rules, so a `sonarjs` upgrade refuses a
+ * *cyclomatic* cap comparison as well. What still does not exist is an **armed**
+ * cap for it to refuse; every entry in `stryker.floors.json` ships `unarmed`.
+ * See ADR-0067, ADR-0073 and `docs/spec/complexity-on-the-trend-layer.md` §§3-4.
  *
  * ⚠️ **The options live here and nowhere else, and the library reads them back
  * off the resolved config rather than keeping its own copy.** A second literal
@@ -39,9 +48,21 @@
  * say so. It is `RunFacts.configHash`'s rule applied one layer over — *stamp the
  * configuration you actually loaded, never the one you were handed.*
  *
- * `eslint-plugin-sonarjs` is installed and deliberately **not enabled**.
- * Cognitive complexity is one vendor's unreplicated measure, kept as fog in the
- * spec's §8 until the split signature proves common.
+ * ⚠️ **`eslint-plugin-sonarjs` is enabled now, and not here.** This paragraph
+ * used to say it was *"installed and deliberately not enabled … kept as fog in
+ * the spec's §8 until the split signature proves common"*. **The split
+ * signature was measured and it holds** — 1105 scored pairs, Pearson r 0.9159,
+ * and 54 places where cognitive complexity exceeds cyclomatic across 7 of 8
+ * scopes — so the condition that fog set is discharged, and the question is
+ * answered rather than open.
+ *
+ * The answer: cognitive complexity is published as **four series beside the
+ * cyclomatic four**, never as a replacement, and its rule lives in
+ * **`eslint.cognitive.mjs`** — a config of its own. Not here, because this file
+ * holds one rule on purpose and the paragraph above is why. See
+ * [ADR-0073](docs/adr/0073-cognitive-complexity-is-published-beside-cyclomatic.md),
+ * [#234](https://github.com/mephistopheles4/stacks/issues/234) and
+ * `docs/spec/static-analysis-and-style.md` §5.
  */
 import parser from '@typescript-eslint/parser';
 

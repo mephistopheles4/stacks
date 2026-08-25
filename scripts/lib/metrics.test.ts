@@ -15,11 +15,14 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Counts } from './complexity.ts';
+import type { DuplicationCounts } from './duplication.ts';
 import {
   COMPLEXITY_SERIES,
   METRIC_PREFIXES,
   TREND_SERIES,
   complexityFactsOf,
+  DUPLICATION_SERIES,
+  duplicationFactsOf,
   joinRecords,
   renderEdgeCheck,
   renderMetrics,
@@ -277,6 +280,122 @@ describe('the two tables that spell the complexity series', () => {
     );
 
     expect([...COMPLEXITY_SERIES].sort()).toEqual([...declared].sort());
+  });
+});
+
+describe('the duplication counting rule rides on run_info', () => {
+  it('appears beside the other two stamps, never as a series of its own', () => {
+    const document = renderMetrics({
+      ...BASE,
+      expected: [],
+      duplicationHash: 'sha256:abc123',
+    });
+
+    expect(document).toContain('duplication_hash="sha256:abc123"');
+    expect(document).not.toContain('stacks_trend_duplication_hash');
+  });
+
+  it('is absent rather than empty when the counter could not name a rule', () => {
+    // `configHash`'s rule: a row written before the stamp existed is not a row
+    // with a wrong hash, and an empty label would read as one.
+    expect(renderMetrics({ ...BASE, expected: [] })).not.toContain('duplication_hash');
+  });
+});
+
+describe('duplicationFactsOf — all eight, or none of them', () => {
+  const counts = (
+    clones: number,
+    duplicatedLines: number,
+    totalLines: number,
+    ignoredLines = 0,
+  ): DuplicationCounts => ({ clones, duplicatedLines, ignoredLines, totalLines });
+
+  const counted = (): {
+    scopes: Map<string, DuplicationCounts | null>;
+    tree: DuplicationCounts | null;
+  } => ({
+    scopes: new Map([
+      ['packages/core/src', counts(3, 46, 2381)],
+      ['scripts', counts(5, 53, 12_491)],
+    ]),
+    tree: counts(34, 357, 47_209),
+  });
+
+  it('carries one entry per scope in the order counted, and the tree beside them', () => {
+    const { duplication, failed } = duplicationFactsOf(counted());
+
+    expect(failed).toEqual([]);
+    expect(duplication?.scopes).toEqual([
+      { scope: 'packages/core/src', clones: 3, duplicatedLines: 46, ignoredLines: 0, totalLines: 2381 },
+      { scope: 'scripts', clones: 5, duplicatedLines: 53, ignoredLines: 0, totalLines: 12_491 },
+    ]);
+    expect(duplication?.tree).toEqual(counts(34, 357, 47_209));
+  });
+
+  it('fails all eight names when one scope produced nothing', () => {
+    const partial = counted();
+    partial.scopes.set('packages/site/src/shelf', null);
+
+    const { duplication, failed } = duplicationFactsOf(partial);
+
+    expect(duplication).toBeUndefined();
+    expect(failed).toEqual(DUPLICATION_SERIES);
+  });
+
+  it('fails all eight when the tree population produced nothing, scopes included', () => {
+    // ⚠️ The tree is one run of the same tool under the same hash, so a record
+    // carrying the scoped four without it would need a reader able to say which
+    // half is missing. *The counts did not arrive* is the whole of what a
+    // reader can act on.
+    const { duplication, failed } = duplicationFactsOf({ ...counted(), tree: null });
+
+    expect(duplication).toBeUndefined();
+    expect(failed).toEqual(DUPLICATION_SERIES);
+  });
+
+  it('treats an empty scope map as a broken declaration, not a clean pass', () => {
+    const { duplication, failed } = duplicationFactsOf({
+      scopes: new Map(),
+      tree: counts(34, 357, 47_209),
+    });
+
+    expect(duplication).toBeUndefined();
+    expect(failed).toEqual(DUPLICATION_SERIES);
+  });
+
+  it('fails all eight when the counter never ran', () => {
+    expect(duplicationFactsOf(undefined).failed).toEqual(DUPLICATION_SERIES);
+  });
+
+  it('labels the scoped families by scope and leaves the tree families unlabelled', () => {
+    // The whole of the difference between the two populations, asserted on the
+    // bytes: eight names rather than four with a `population` label, because
+    // G36 holds names to Trends rows and would be blind to a label.
+    const document = renderMetrics({
+      ...BASE,
+      expected: ['duplication-clones', 'duplication-tree-clones'],
+      ...duplicationFactsOf(counted()),
+    });
+
+    expect(document).toContain('stacks_trend_duplication_clones{scope="scripts"} 5 ');
+    expect(document).toContain('stacks_trend_duplication_tree_clones 34 ');
+    expect(document).toMatch(/^stacks_run_ok 1 /m);
+  });
+
+  it('never reports a zero clone count instead of a failure', () => {
+    // `0` is a legal value for a scope with no duplication in it, so a zeroed
+    // family would be indistinguishable from the failure.
+    const partial = counted();
+    partial.scopes.set('scripts', null);
+
+    const document = renderMetrics({
+      ...BASE,
+      expected: ['duplication-clones'],
+      ...duplicationFactsOf(partial),
+    });
+
+    expect(document).not.toContain('stacks_trend_duplication_clones');
+    expect(document).toMatch(/^stacks_run_ok 0 /m);
   });
 });
 
