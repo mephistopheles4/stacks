@@ -308,7 +308,13 @@ roster-independent. What collapses is the **reading** — `scripts/deploy.ts`'s
 `newestCount` goes `undefined`, so **every cap line prints `null`**, and
 `countedElsewhere` needs a `countedRun` it no longer has, so the counting-rule
 refusal **switches itself off**. Blind caps and a disarmed guard, with nothing
-red, which is a quieter failure than a zeroed window would have been. Found by
+red.
+
+⚠️ **The false version was not merely inaccurate, it was reassuring in the
+wrong direction**, which is why it is struck rather than softened: *a delayed
+calibration window* sounds survivable, and *a silently disarmed refusal* does
+not. Anyone who weighed an early roster add against the old sentence weighed it
+against the lesser harm. Found by
 [#258](https://github.com/mephistopheles4/stacks/issues/258) and verified in the
 code by [#254](https://github.com/mephistopheles4/stacks/issues/254) and
 [#255](https://github.com/mephistopheles4/stacks/issues/255); it strengthens the

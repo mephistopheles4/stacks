@@ -133,7 +133,10 @@ whole-tree number could then disappear entirely with no row going red.
   `scripts/deploy.ts`'s `newestCount`, which becomes `undefined` — so **every
   cap line prints `null`**, and `countedElsewhere` requires a `countedRun` it no
   longer has, so the counting-rule refusal **switches itself off**. Blind caps
-  and a disarmed guard, with nothing red. Corrected against the code by
+  and a disarmed guard, with nothing red. ⚠️ **The wrong version was
+  reassuring in the wrong direction** — *a delayed window* sounds survivable
+  where *a silently disarmed refusal* does not, so anyone weighing an early add
+  against it weighed it against the lesser harm. Corrected against the code by
   [#258](https://github.com/mephistopheles4/stacks/issues/258); that ticket owns
   the step and it may not be folded in here.
 - The tool is **jscpd**, pinned exact. The ESLint rule that sounds like it does
