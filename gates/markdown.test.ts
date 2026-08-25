@@ -220,6 +220,55 @@ describe('G48 — the fix pass rewrites what was measured, and nothing else', ()
     ).toEqual([]);
   });
 
+  it('reads the config in every shape its own format permits', () => {
+    // ⚠️ **This clause exists because the gate was stricter than the file it
+    // reads.** `enabledRules` stripped `//` lines and handed the rest to
+    // `JSON.parse`, which rejects a **trailing comma** — legal JSONC, accepted
+    // by markdownlint-cli2, and so something a person may write in good faith.
+    // Two readers of the same bytes disagreed and the stricter one was the
+    // gate: `pnpm lint:md` stayed green while this spec failed with
+    // `SyntaxError … at position 452`, naming neither the file nor the cause.
+    //
+    // Found by the #256 session when Prettier's `trailingComma: "all"` added
+    // one. A formatter override stops the formatter; this asserts the class, so
+    // a hand-edit cannot reopen it. Each variant below is the real config with
+    // one legal JSONC construct added, and must read identically to it.
+    const source = readRepoFile(CONFIG_FILE);
+    const expected = enabledRules(source);
+
+    // ⚠️ **Idempotent on purpose.** The first version appended a comma
+    // unconditionally, so run against a file that already carried one it built
+    // `,,` — not legal JSONC, correctly refused, and the clause failed for a
+    // reason that had nothing to do with what it asserts. A variant builder has
+    // to produce the same document from any starting state, or it tests the
+    // starting state instead of the rule.
+    // ⚠️ **Both anchors are line-anchored, and the block-comment one was not.**
+    // It read `source.replace('{', …)`, which inserts at the *first* `{` in the
+    // file — the opening brace today only because no header comment happens to
+    // contain a brace. This config's comments discuss settings like
+    // `{ "style": "compact" }`, so one such comment would put the insertion
+    // inside a `//` line, make the variant a no-op, and fail the guard below
+    // with a message about the wrong thing. `/^\{$/m` cannot match a comment
+    // line. Raised as `js/incomplete-sanitization` by CodeQL — a false positive
+    // as a *security* finding, since nothing here sanitises anything, and a
+    // true one about the string handling, which is the third question
+    // `docs/gates.md`'s triage section asks.
+    const variants: Record<string, string> = {
+      'a trailing comma before the closing brace': source.replace(/,?(\s*)\}(\s*)$/, ',$1}$2'),
+      'a block comment': source.replace(/^\{$/m, '{\n  /* a block comment */'),
+    };
+
+    for (const [what, variant] of Object.entries(variants)) {
+      expect(variant, `the ${what} variant did not change the source`).not.toBe(source);
+      expect(
+        enabledRules(variant),
+        `${CONFIG_FILE} with ${what} must read the same as without it. JSONC permits it ` +
+          'and the linter accepts it, so a gate that refuses it is stricter than the ' +
+          'format its own file is named for',
+      ).toEqual(expected);
+    }
+  });
+
   it('probes every rule the config enables, and enables every rule it probes', () => {
     // ⚠️ **The clause that closes the class, and it was found the hard way —
     // twice.** The fix measurement is only ever as wide as `PROBES`, so a rule

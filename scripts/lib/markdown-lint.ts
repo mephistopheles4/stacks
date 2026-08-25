@@ -209,17 +209,50 @@ export const PROBES: readonly { readonly rule: string; readonly markdown: string
  * `pnpm lint:md:fix` rewriting MD009 and MD010 unmeasured. G48 holds this set
  * and `PROBES` to each other so the gap cannot reopen.
  *
- * Comment lines are stripped rather than parsed with a JSONC library: the only
+ * JSONC is reduced to JSON here rather than parsed with a library: the only
  * consumer is this repo's own config, `jsonc-parser` is a transitive dependency
  * of the linter rather than a declared one, and a hand-rolled parser for a file
- * somebody else writes would be the wrong trade — for this one it is six lines.
+ * somebody else writes would be the wrong trade — for this one it is a few lines.
+ *
+ * ⚠️ **It must accept everything the file's own format permits, and the first
+ * version did not.** It stripped `//` lines and handed the rest to `JSON.parse`,
+ * which rejects a **trailing comma** — legal JSONC, accepted by
+ * markdownlint-cli2, and therefore something a person may write into this file
+ * in good faith. **Two readers of the same bytes disagreed, and the stricter one
+ * was the gate**: `pnpm lint:md` stayed green while G48 failed with
+ * `SyntaxError … at position 452`, which names neither the file nor the cause.
+ * Found by the #256 session when Prettier's `trailingComma: "all"` added one.
+ * Their fix was a formatter override, which stops the *formatter*; this is the
+ * class, because a hand-edit could still do it.
+ *
+ * So block comments and trailing commas are reduced too, and a parse that still
+ * fails **throws a message naming the file**, because the failure this guards is
+ * somebody's ordinary edit and a byte offset tells them nothing.
  */
 export function enabledRules(source: string): { rules: string[]; defaultOn: boolean } {
-  const stripped = source
+  const json = source
+    // `//` to end of line. Whole-line only, which is how this file writes them.
     .split('\n')
     .filter((line) => !/^\s*\/\//.test(line))
-    .join('\n');
-  const config = JSON.parse(stripped) as Record<string, unknown>;
+    .join('\n')
+    // `/* … */`, including across lines. Legal JSONC and nothing here uses it,
+    // but "nothing uses it yet" is what was true of trailing commas too.
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    // A comma before the closing `}` or `]`, at any nesting depth.
+    .replace(/,(\s*[}\]])/g, '$1');
+
+  let config: Record<string, unknown>;
+  try {
+    config = JSON.parse(json) as Record<string, unknown>;
+  } catch (cause) {
+    throw new Error(
+      `${CONFIG_FILE} could not be read as JSONC. This gate reduces comments and ` +
+        'trailing commas and then parses the rest, so a construct beyond those — a ' +
+        'single-quoted string, an unquoted key — reaches it as broken JSON. Repair the ' +
+        `file, or widen the reduction above: ${String(cause)}`,
+      { cause },
+    );
+  }
 
   const rules = Object.entries(config)
     .filter(([key, value]) => /^MD\d+$/.test(key) && value !== false)
