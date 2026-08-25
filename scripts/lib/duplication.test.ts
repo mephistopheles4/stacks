@@ -256,7 +256,7 @@ describe('attributeClones — a clone is a relation, and relations do not partit
   const scopes: Scope[] = [
     { name: 'alpha', glob: 'alpha/**/*.ts', exclusions: [] },
     { name: 'beta', glob: 'beta/**/*.ts', exclusions: [] },
-  ] as unknown as Scope[];
+  ];
 
   const clone = (first: string, second: string, span: number): ReportedClone => ({
     firstFile: { name: first, start: 1, end: 1 + span },
