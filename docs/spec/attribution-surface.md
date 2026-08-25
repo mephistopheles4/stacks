@@ -29,7 +29,7 @@ The Books branding page *is* that documentation, and this project holds a
 `GOOGLE_BOOKS_API_KEY` obtained under those terms. Two limbs:
 
 | Limb | Clause | Status |
-|---|---|---|
+| --- | --- | --- |
 | **§2 per-result link** | *"Every book result displayed in your application must have a prominent link to … the Google Books page for that book."* | **Already discharged** by the card's Google mark |
 | **§4 the graphic** | *"the 'powered by Google' logo must appear adjacent to these results."* | **This surface** |
 
@@ -163,7 +163,7 @@ entire bottom edge whenever a card is open. `?attribproto=` mounted the surface
 on the real page so this is a number rather than an argument:
 
 | place | desktop | portrait 375×812 | landscape 667×375 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **bottom-left** *(chosen)* | clear | **100% behind the sheet** with a card open | **100% behind the sheet** |
 | top-right | clear | **3211px² on the header caption** | clear |
 | under the header | clear | clear | clear |

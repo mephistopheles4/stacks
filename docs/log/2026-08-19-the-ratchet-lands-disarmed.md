@@ -329,7 +329,7 @@ branches:
 the twin was found later by somebody else:**
 
 | the instance named | the class | who found the twin |
-|---|---|---|
+| --- | --- | --- |
 | a false claim in one section of this log | the same claim in another section | the third session, an hour later |
 | a bare `JSON.parse` at one call site | the twin two steps later, and mine a third | its own author, then me |
 | a `uses` key routed past a gate by quoting | the same key with a space before the colon | a reviewer, after the first fix |

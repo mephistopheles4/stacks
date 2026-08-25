@@ -197,6 +197,40 @@ export function sectionsOf(
 }
 
 /**
+ * The jobs of a GitHub Actions workflow, by name.
+ *
+ * Split on two-space-indented keys under `jobs:` so a clause about the `audit`
+ * job is asserted against the `audit` job — G22's lesson, whose row "gated the
+ * wrong half" by proving one thing and claiming another.
+ *
+ * **Here rather than in one spec because two specs read it.** `action-pins`
+ * (G40, G42) owned it first; `markdown` (G48) needs the same question answered
+ * about the `style` job, and a second parser of one file is the shape G10, G22,
+ * G23, G24 and G25 all exist to refuse — two implementations agree until the
+ * day the file changes, and then the gate that is wrong is the one nobody
+ * re-read.
+ *
+ * `where` names the file in the throw, because the caller knows which workflow
+ * it handed over and this function does not read one.
+ */
+export function jobsOf(source: string, where: string): Map<string, string> {
+  const body = /^jobs:\n([\s\S]*)$/m.exec(source)?.[1];
+  if (body === undefined) {
+    throw new Error(
+      `no \`jobs:\` block in ${where}. A gate reads it, so a restructured ` +
+        'workflow must fail here rather than reduce every clause below to nothing.',
+    );
+  }
+
+  return new Map(
+    sectionsOf(body, /^ {2}([\w-]+):$/gm).map((section) => [
+      section.captures[0] ?? '',
+      section.body,
+    ]),
+  );
+}
+
+/**
  * Guards the green-washing case above: a gate that extracts nothing must fail
  * loudly, not pass vacuously.
  */

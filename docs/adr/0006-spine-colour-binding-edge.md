@@ -6,7 +6,7 @@ Sharp's own `stats().dominant` was rejected: it bins colours and returns the bin
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **Own dominant-colour algorithm rather than sharp's `stats().dominant`**, which bins colours and returns the bin representative (`#286878` for a cover that is exactly `#2f6d7a`) — close enough to look right, useless to assert on. Ours bins coarsely to find the winning region, then averages the real pixels in it.
 

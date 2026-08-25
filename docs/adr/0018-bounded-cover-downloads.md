@@ -6,7 +6,7 @@ The cap stops a native decoder being handed 400 MB. The allowlist stops it being
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-08-01** — **A gap disclosed indefinitely is a comment, which is the same thing an ungated rule is.** `SECURITY.md` had named the unbounded cover download by name for weeks — no timeout, no size cap, no content-type check before `sharp` — and an external pre-publication review found exactly that and called it the clearest remaining technical issue. It was reading the disclosure. Recording a hole is not the same as closing it, and this project's own standard says a rule nothing can fail on is a comment; that applies to the threat model too. Now gated as G18.
 

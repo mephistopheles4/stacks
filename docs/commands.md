@@ -146,7 +146,7 @@ anything.
 Four refusals, and **no flag clears any of them**:
 
 | Refusal | What it means |
-|---|---|
+| --- | --- |
 | **breached floor** | an armed scope scored under its floor. Names the scope, the score, the floor, and — when a local mutation report exists — what one mutant is worth in that scope |
 | **unaccounted scope** | `stryker.scopes.json` declares a scope `stryker.floors.json` does not name. It would be scored by every run and floored by nothing |
 | **orphan entry** | the floors file names a scope nothing declares. Left alone the file rots into a list of places that are not there |
@@ -431,6 +431,81 @@ refused rather than as a stale build: one is no answer, the other is a real answ
 and a red one ([ADR-0027](adr/0027-deploy-check-reports-refusal.md)). D skips, and
 says so, when `SITE_URL` is unset or the local `dist/` carries no build stamp — a
 gap in D's series is honest where an invented row is not.
+
+## `pnpm lint:md` and `pnpm lint:md:fix` — the Markdown gate, and why its fix is allowlisted
+
+**`pnpm lint:md` reports; `pnpm lint:md:fix` repairs the seven rules whose fixes
+were measured safe on this tree.** Both read tracked Markdown outside
+`fixtures/`, at the rule set in
+[`.markdownlint.jsonc`](../.markdownlint.jsonc), where every rule turned off
+carries the measurement that turned it off. The gate runs in CI in the `style`
+job, and a red there is this command's own output.
+
+The documentation here is load-bearing rather than decorative, which is why a
+Markdown rule break is a defect and not a matter of taste. G19 holds
+`docs/gates.md` to `AGENTS.md`, G14 holds `docs/commands.md` to `package.json`,
+G41 extracts `docs/gate-register.md` **by heading**, and nine gate regexes read
+table pipes and emphasis markers as text. When a gate parses a document, the
+document's shape is part of the contract.
+
+⚠️ **The rule set is narrow because a default run here is actively dangerous,
+and the danger is silent.** At default rules a fix pass over this tree changed 55
+files, turned 11 issue references into H1 headings — every `#167's …` became a
+heading and lost the reference — stripped an intentional space from 16 code
+spans, two of which are regexes gates depend on, and renumbered a **verbatim
+quotation** in `docs/gate-register.md` sitting under a heading that says the file
+"still defined category 5". `pnpm test` on that damaged tree was **all 1055 tests
+green**. Prettier's Markdown damage is loud, because four gates go red; this
+tool's is not. The narrow allowlist is the entire protection.
+
+**Three settings are worth knowing about**, because each is a rule whose default
+would have protected nothing:
+
+| Setting | Why not the default |
+| --- | --- |
+| `MD060: compact` | MD060's default is `any`, which enforces consistency *within* a table and accepts a column-aligned one. G41 and G31 hardcode an exact single space at a pipe, so an aligned table passes the linter and goes invisible to both gates. Since Prettier excludes Markdown rather than repairing those regexes, this setting is their sole protection. |
+| `MD050: asterisk` | MD050 governs `**strong**`, which is what the nine gate regexes match — MD049 governs `*emphasis*` and is measurably blind to `__G41__`. Zero findings today, so it is purely preventive. |
+| `MD013: off` | 1540 findings, 76% of everything the tool reports here, and no auto-fix at any limit. The longest Markdown line is a 2048-character table row, which does not wrap. Recorded in [`gates.md`](gates.md#not-gated-deliberately). |
+
+⚠️ **The fix pass refuses rather than filters, and that is not a stylistic
+choice.** markdownlint-cli2's discovered root config beats every mechanism for
+narrowing it — `--config` is documented as *"the base configuration"*,
+`optionsOverride.config` is never consulted, and an `overrides` entry at
+`combine: "replace"` loses too, all three measured at 0.23.2. So a second config
+file would read as a restriction and restrict nothing. Instead
+`scripts/lint-md.ts` measures what the installed version can actually rewrite,
+against one probe document per adopted rule, and **stops before touching a file**
+when that set is not exactly the allowlist **plus the declared exclusions** in
+`scripts/lib/markdown-lint.ts` — eight names today, not seven, because MD050 is
+fixable and declared. It stops for a second reason too: when the tree itself
+holds a finding on one of those excluded rules.
+
+That refusal is the mechanised form of a debt: what a rule's fix *does* is a
+property of a version, not of a tool, so the allowlist is re-measured at every
+bump. G48 (`markdown`) asserts the same measurement at merge, so neither the
+command nor CI can drift away from it alone.
+
+**MD050 is the one rule the tool can fix that the allowlist does not carry**, and
+that omission is declared rather than accidental: it has zero findings here, so
+no fix pass was ever run against it, and this list holds only names somebody
+watched.
+
+⚠️ **A declared exclusion is not a rule the fix pass skips.** Nothing narrows the
+run — that is the paragraph above — so `--fix` would apply MD050's fix like any
+other enabled rule's. Measured: `text __x__ text` became `text **x** text` while
+four documents in this repository said it would be left alone. **So the exclusion
+is enforced by declining the whole pass**: write `__G41__` into a scoreboard row
+and `pnpm lint:md` goes red naming MD050 and the line, and `pnpm lint:md:fix`
+**refuses** and tells you to repair it by hand and read the diff. Doing that, and
+finding the fix right, is what promotes the rule to the allowlist.
+
+**The version is pinned exact** — `markdownlint-cli2` at `0.23.2` — for
+[ADR-0067](adr/0067-the-counters-inputs-are-pinned-exact.md)'s reason. ⚠️ **The
+rules reconcile with CodeRabbit and the versions cannot.** CodeRabbit reads
+`.markdownlint.jsonc` out of the repository and skips its own markdownlint run
+once a workflow runs one, so there is no rule set to negotiate; but its docs name
+`0.23.1` and it floats, and this repo can pin only its own copy. That residual is
+tolerable because the review half is advisory.
 
 ## The pre-commit hook — opting in, and reading the CRAP table
 

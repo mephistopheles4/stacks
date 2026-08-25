@@ -22,7 +22,7 @@ for the record, plus exceptions where the chain gives a worse answer.
 `author`, `isbn`, `publisher`.
 
 | Field | Order | Why it overrides the default |
-|---|---|---|
+| --- | --- | --- |
 | `pages` | Google by `volumeId`, then default | a search response reports `pageCount: 0` where the detail endpoint has the real number (existing `completePages`; `metadata/types.ts:38-47`) |
 | `cover` | Apple → O'Reilly → default | Apple is ~800×1200 against Google's ~128px; O'Reilly rescues books whose only cover is Open Library's 43-byte placeholder (existing) |
 | `published` | Google → O'Reilly → Apple → Open Library | Open Library gives a bare `"2008"`; the other three give full dates |
@@ -110,7 +110,7 @@ on an existing one. And **`toLibraryBook` enumerates its fields**, so nothing
 reaches a public build by accident — publishing is structurally opt-in.
 
 | Field | Container |
-|---|---|
+| --- | --- |
 | `publisher` | frontmatter scalar |
 | `published` | frontmatter scalar, **stored verbatim** — whatever the winning provider said, timestamp included |
 | `subjects` | frontmatter scalar, **`; `-joined**, capped at 5 in the winning provider's own order; Apple's generic `"Books"` genre dropped |
@@ -193,7 +193,7 @@ authors and page counts on books that were fine. Under today's write paths it
 cannot.** There are three surfaces, not one:
 
 | Surface | What it does | Guard |
-|---|---|---|
+| --- | --- | --- |
 | `lookup` / `fillGaps` | decides which provider's record wins | none — this *is* the merge |
 | `addBook` | writes a **new** note | `BookInput` is a closed list (`add-book.ts:131`) |
 | `enrichBook` | writes to an **existing** note | `FILLABLE` (`enrich.ts:24`) **and** every write is `if (book.X === undefined)` |
@@ -227,7 +227,7 @@ frontmatter spellings are in
 [`provider-provenance.md`](provider-provenance.md) §2 and
 [§4](#4-containers) above.
 
-```
+```text
 author, isbn, pages, cover,                       (today)
 publisher, published, subjects,                   (this spec)
 googleVolumeId, appleTrackId,                     (provider-provenance.md)

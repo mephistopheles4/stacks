@@ -6,7 +6,7 @@ A single box has to answer for the cover, the spine, the boards and the page edg
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **One mesh per book, not InstancedMesh.** CLAUDE.md says measure before optimising: 49 books render fine, and InstancedMesh would force a texture atlas for per-book covers. Revisit at the 200-book performance target, with a measurement. *(Superseded below: a book is now a small group of parts. InstancedMesh is still rejected, for the same reason.)*
 

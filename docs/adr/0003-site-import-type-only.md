@@ -6,7 +6,7 @@ Runtime values the site genuinely shares live in a pure subpath, `@stacks/core/s
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **`astro check` rejected — `@astrojs/check` cannot run under TypeScript 7.** TS 7's native compiler does not expose the programmatic API the Astro language server needs (withastro/roadmap#1321). Pinning the whole repo back to TS 6 to satisfy one tool costs more than it returns, so `.astro` files stay untypechecked and the mitigation is the "no logic in `.astro`" rule above. Revisit when Astro supports TS 7.
 

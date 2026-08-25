@@ -6,7 +6,7 @@ A copy drifts with nothing going red: repoint the vault in the main checkout and
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-08-01** — **`STACKS_DEV_HOST=1` puts `pnpm dev:watch` on the network, opt-in.** Two of this project's bugs — the crash and the lost context — appeared only on a phone, and there is no other way to see local changes on one without deploying. Off by default because it is the only setting here with a consequence outside the machine: while it is on, anything on the same Wi-Fi can open the shelf and read what you read. The dev build is the same `--public` one the site ships, so `private:` and wishlist books stay off it either way. Read from `.env` as well as the environment, because a variable documented in `.env.example` that only works when exported from a shell is a setting that appears to exist and does not.
 
