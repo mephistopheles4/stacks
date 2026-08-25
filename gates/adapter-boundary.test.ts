@@ -107,6 +107,13 @@ const ALLOWED = [
   // knows nothing about vaults, notes or builds, and the callers own what they
   // point it at.
   'scripts/lib/walk.ts',
+  // Writes one probe document per Markdown rule into a fresh temp directory and
+  // deletes it again, to measure what the installed markdownlint can actually
+  // rewrite. Its only read of the tree is `.markdownlint.jsonc`, a fixed
+  // filename at the repo root, copied in so the probes are measured under the
+  // adopted rule set. `fixtures/` is excluded from the population it declares,
+  // so it could not reach a note even by glob.
+  'scripts/lib/markdown-lint.ts',
   'scripts/make-50-book-fixture.ts',
   'scripts/make-fixture-covers.ts',
   // Rasterises the committed brand SVGs into the icon PNGs. Its inputs are two

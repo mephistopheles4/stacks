@@ -6,7 +6,7 @@ A real cover is somebody else's copyrighted image, and this is the easiest rule 
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **Fixtures are entirely invented.** Owner constraint: no third-party copyrighted material in the repo. Structural traits (9-author volume, ASIN-only identifiers, print+audiobook pair, colon subtitles) were derived from a real library; none of its content was. See `fixtures/README.md`.
 

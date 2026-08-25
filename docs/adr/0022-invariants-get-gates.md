@@ -6,7 +6,7 @@ Gate code lives in `gates/` because it belongs to no package — it reads CLAUDE
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **Verified the gate can actually fail** before trusting it: a deliberately broken assertion turns `pnpm test` red (exit 1) and the `&&` chain in `pnpm build` stops on failure. A gate never observed failing is not yet a gate.
 

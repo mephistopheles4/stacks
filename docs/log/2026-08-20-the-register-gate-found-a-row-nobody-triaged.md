@@ -19,7 +19,7 @@ obligation, and the observed-red rule.
 `gates/gate-register.test.ts` was run against the tree the moment it compiled,
 before a single row had been added. It reported:
 
-```
+```text
 G37 has 0 entries
 ```
 

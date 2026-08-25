@@ -30,7 +30,7 @@ than chosen. A count in a heading over a table that grows is the shape
 [`gaming-analysis.md`](gaming-analysis.md) catalogues; **the table is the inventory.**
 
 | File | Covers |
-|---|---|
+| --- | --- |
 | [`gate-or-trend.md`](gate-or-trend.md) | **Read first.** The two-clause rule deciding where any check lands, the trends table, and what the `gates` aggregator may depend on |
 | [`mutation-scoring.md`](mutation-scoring.md) | Stryker at 9.6.1, the three startup fixes, the eight declared scopes and their exclusions, and **G37 `mutation-scope`** |
 | [`the-ratchet.md`](the-ratchet.md) | The floors file, the deploy refusal with no override, the three routes down, the calibration window, and **G42 `ignored-mutants`** |
@@ -76,7 +76,7 @@ than as verdict pairs**, because *stacks: gate / production: trend* reads as a t
 parameter and deletes the finding.
 
 | Inversion | What flipped it |
-|---|---|
+| --- | --- |
 | The **`audit` job** is a gate here and a trend in a large tree | **Tree size.** Clause A — *does a red have a fix somebody can actually make* — answers yes with a one-line hatch and no for a daily advisory four levels down. ⚠️ **A discovery about the taxonomy that the taxonomy could not make from inside itself.** [`supply-chain.md`](supply-chain.md) |
 | The **ratchet's surface**: deploy here, a required pull-request check there | **Dependency on shipping.** A deploy floor with no override converts a test-quality regression into an **availability incident** once anyone depends on shipping. ⚠️ **It has a tail**: warn-only and first-week contributor visibility both flip as consequences. [`the-ratchet.md`](the-ratchet.md) |
 | The **ratchet's guard** is weakest in the repo relying on it most | **Who is required to read.** By rule, nobody here — and requiring it is mechanically unavailable at one maintainer. Elsewhere the same diff hits CODEOWNERS. **The surface is right here and wrong there; the guard is weak here and strong there.** [`the-ratchet.md`](the-ratchet.md) |
@@ -197,7 +197,7 @@ commit, table order as the file reads them**: *Contract seams → gates* before 
 gates*.
 
 | # | Slug | Table | Lands with | Asserts |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | **G36** | `trend-layer` | Contract seams | spine | series ↔ Trends table, both directions; trend names kebab-case, unique, disjoint from every gate slug |
 | **G37** | `mutation-scope` | Contract seams | spine | declared scopes exist, every source directory declared-or-excluded, every exclusion carries a mechanism, every scope's glob matches a file — **plus a deploy-side residual** |
 | **G38** | `metrics-freshness` | Defect gates | spine | given a stale record, `deploy:site` refuses — per series, on G17's scratch-repo idiom |
@@ -228,7 +228,7 @@ Each is a **document edit landing in the same commit as the code it describes**,
 before it.
 
 | File | Edit |
-|---|---|
+| --- | --- |
 | [`docs/gates.md`](../gates.md) | seven rows; a new **`## Trends`** section immediately before *Triaging a CodeQL finding*; **`## CI-only gates` removed**, its prose kept under a named `## G41 —` heading; the **Mutation testing** rejection row **marked in place, dated, with the corrected count beside the wrong one**; the **Changed-lines** rejection row **replaced**, `(diff-cover)` dropped |
 | [`CLAUDE.md`](../../CLAUDE.md) | `pnpm trend:sync` in the commands list — G14 holds both lists in both directions |
 | [`CONTEXT.md`](../../CONTEXT.md) | add **`Trend`**; amend **`Gate`** to turn on *scored* rather than on *present in `docs/gates.md`*. **Proposed and not made**: a **Vacuity floor** entry in the *Checking* section |
@@ -251,7 +251,7 @@ trade-off**. Four decisions meet all three. The proposal is a *list*, not four w
 records — writing them is implementation work — and **the next free number is 0053**.
 
 | Proposed record | Thesis | Source |
-|---|---|---|
+| --- | --- | --- |
 | **Stryker is a dependency, pinned exactly at 9.6.1** | Required outright by `CLAUDE.md`'s no-dependency-without-a-record rule. `^9.6.0` is a correctness bug, not a style preference, and the peer range asserts a compatibility that does not exist. Accepted cost: a large tree, three startup workarounds, and a project-references graph would block it entirely. | [#109](https://github.com/mephistopheles4/stacks/issues/109), [#114](https://github.com/mephistopheles4/stacks/issues/114) |
 | **A check is a gate or a trend, and the taxonomy is binary** | Two clauses, no third column. Reversing it unsupports the coverage refusal, the trends table and three row placements at once. Accepted cost: *trend* names things that do not trend, and Clause A is arguable where Clause B is mechanical. | [#112](https://github.com/mephistopheles4/stacks/issues/112) |
 | **The mutation floor refuses `deploy:site` with no override** | Removing the override is what makes a lowering the only move; the trade is that a legitimate refactor can block shipping a book today, and the guard is weakest in the repo relying on it most. Inverts for the transferable design. | [#115](https://github.com/mephistopheles4/stacks/issues/115), [#147](https://github.com/mephistopheles4/stacks/issues/147) |
@@ -298,7 +298,7 @@ Every open risk this spec accepts, in one place, so none is rediscovered as a su
 Detail is in the file named.
 
 | Residual | Where |
-|---|---|
+| --- | --- |
 | **Mutation score is raised by adding trivially-killable code**, and neither clause closes it. Any floor inherits it | [gate-or-trend](gate-or-trend.md), [the-ratchet](the-ratchet.md) |
 | **The ratchet's floor will probably never be raised.** A piece that looks armed and does nothing is worse than a slack floor, because it is silent | [the-ratchet](the-ratchet.md) |
 | **Nothing enforces the `notes` line** on a lowering, and **nobody is required to read the diff** — by rule, not by preference | [the-ratchet](the-ratchet.md) |
@@ -330,7 +330,7 @@ behind them live in **research documents that are not in this checkout** — eac
 on its own throwaway `research/*` branch:
 
 | Finding | Branch |
-|---|---|
+| --- | --- |
 | [`stryker-on-this-stack.md`](https://github.com/mephistopheles4/stacks/blob/2b79301/docs/research/stryker-on-this-stack.md) | `research/stryker-compat` |
 | [`changed-lines-coverage.md`](https://github.com/mephistopheles4/stacks/blob/2040718/docs/research/changed-lines-coverage.md) | `research/changed-lines-coverage` |
 | [`trend-layer-hosting.md`](https://github.com/mephistopheles4/stacks/blob/d25b059/docs/research/trend-layer-hosting.md) | `research/trend-layer-hosting` |

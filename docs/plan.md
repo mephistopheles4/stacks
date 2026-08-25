@@ -83,7 +83,7 @@ Read this if you are a session picking this project up cold.
 
 ### Files
 
-```
+```text
 package.json                 workspaces + scripts: test, build, dev, stacks, typecheck
 pnpm-workspace.yaml
 tsconfig.base.json           strict, noUncheckedIndexedAccess, NodeNext

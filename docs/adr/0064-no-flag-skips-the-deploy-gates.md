@@ -13,7 +13,7 @@ sections of [`commands.md`](../commands.md), in both directions.
 
 Two lines in one file, both the implementation:
 
-```
+```ts
 const skipGates = process.argv.includes('--skip-gates');
 ...
 } else if (skipGates) {
@@ -47,7 +47,7 @@ immediately before this change — so the numbers are what the flag was skipping
 not what it would skip now that this commit has added a gate:
 
 | Gate | |
-|---|---|
+| --- | --- |
 | `pnpm test` — 83 files, 893 tests | 11.9s |
 | `pnpm typecheck` | 0.7s |
 | `pnpm gate:public` | 3.3s |

@@ -50,7 +50,7 @@ left to do.
 Containment stops being something a gate checks and becomes something that
 follows:
 
-```
+```text
 right edge = -W/2 + spent  ≤  -W/2 + charged  ≤  -W/2 + USABLE_WIDTH
 ```
 
@@ -114,7 +114,7 @@ footprint edge is the exact claim, and it is what G25 asserts.
 
 ## How this was decided
 
-_Carried verbatim from the decision log kept while settling it._
+*Carried verbatim from the decision log kept while settling it.*
 
 - **2026-08-04** — **One usable width; the packer charges the placer's own
   arithmetic; `leanThatFits` deleted.** Three answers were filed; five were

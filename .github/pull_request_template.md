@@ -1,4 +1,12 @@
+<!-- markdownlint-disable-file MD041 -->
 <!--
+This file starts at `##` on purpose, and the disable above is why it is allowed
+to. A pull request's top-level heading is its *title*, which GitHub renders
+separately — an `#` here would duplicate it and render at heading-one size
+inside the body. So MD041's "first line should be a top-level heading" is right
+about a document and wrong about this one. File-scoped rather than repo-wide:
+every other tracked Markdown file here is a document and does want the rule.
+
 Most changes here are written by agents. This template is the handover note:
 what changed, what protects it, and what you decided along the way.
 

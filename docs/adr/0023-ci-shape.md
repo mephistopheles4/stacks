@@ -6,7 +6,7 @@ Requiring `suite (22)` and `suite (24)` by name would mean editing the branch ru
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **One required check, named `gates`, aggregating a `suite` matrix.** Requiring `suite (22)` and `suite (24)` by name would mean editing the branch ruleset every time the matrix changes, and a required check that never reports blocks the pull request forever. The aggregator keeps one stable name. For the same reason the workflow is **never path-filtered**: a skipped required workflow reports nothing, which is indistinguishable from a check that has not run yet.
 
