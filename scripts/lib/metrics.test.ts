@@ -199,7 +199,9 @@ describe('the three metric prefixes name three things', () => {
     // series under the shorter with a mangled name — which is health-shaped.
     const prefixes = Object.values(METRIC_PREFIXES);
     const overlapping = prefixes.flatMap((one) =>
-      prefixes.filter((other) => other !== one && other.startsWith(one)).map((other) => `${one} ⊂ ${other}`),
+      prefixes
+        .filter((other) => other !== one && other.startsWith(one))
+        .map((other) => `${one} ⊂ ${other}`),
     );
 
     expect(overlapping, `prefixes that swallow another: ${overlapping.join(', ')}`).toEqual([]);

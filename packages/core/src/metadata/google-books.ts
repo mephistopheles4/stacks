@@ -39,7 +39,10 @@ export async function lookupByIsbn(
 ): Promise<BookMetadata | undefined> {
   const normalised = normaliseIsbn(isbn);
   if (normalised.length === 0) return undefined;
-  return firstVolume(await get(withKey(`${VOLUMES}?q=isbn:${normalised}&maxResults=1`, apiKey)), normalised);
+  return firstVolume(
+    await get(withKey(`${VOLUMES}?q=isbn:${normalised}&maxResults=1`, apiKey)),
+    normalised,
+  );
 }
 
 export async function searchByTitle(
@@ -53,13 +56,15 @@ export async function searchByTitle(
 
   const wantsDerivative = looksDerivative(query);
   const items = Array.isArray(body['items']) ? body['items'] : [];
-  return items
-    .map((item) =>
-      toMetadata(asRecord(asRecord(item)?.['volumeInfo']), firstString(asRecord(item)?.['id'])),
-    )
-    .filter((item): item is BookMetadata => item !== undefined)
-    // Same trap as Open Library: summaries rank alongside the real book.
-    .filter((item) => wantsDerivative || !looksDerivative(item.title));
+  return (
+    items
+      .map((item) =>
+        toMetadata(asRecord(asRecord(item)?.['volumeInfo']), firstString(asRecord(item)?.['id'])),
+      )
+      .filter((item): item is BookMetadata => item !== undefined)
+      // Same trap as Open Library: summaries rank alongside the real book.
+      .filter((item) => wantsDerivative || !looksDerivative(item.title))
+  );
 }
 
 /**
@@ -84,7 +89,9 @@ export async function fetchVolume(
   if (id.length === 0) return undefined;
   const base = `${VOLUMES}/${encodeURIComponent(id)}`;
   const url =
-    apiKey === undefined || apiKey.length === 0 ? base : `${base}?key=${encodeURIComponent(apiKey)}`;
+    apiKey === undefined || apiKey.length === 0
+      ? base
+      : `${base}?key=${encodeURIComponent(apiKey)}`;
 
   const body = asRecord(await get(url));
   if (body === undefined || isQuotaError(body)) return undefined;
@@ -128,11 +135,15 @@ function toMetadata(
     ...keyIfPresent('volumeId', volumeId),
     ...keyIfPresent(
       'coverUrl',
-      coverFrom(firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail'])),
+      coverFrom(
+        firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail']),
+      ),
     ),
     ...keyIfPresent(
       'coverUrlLarge',
-      largerCover(firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail'])),
+      largerCover(
+        firstString(imageLinks?.['thumbnail']) ?? firstString(imageLinks?.['smallThumbnail']),
+      ),
     ),
     ...keyIfPresent('publisher', firstString(info['publisher'])),
     ...keyIfPresent('published', firstString(info['publishedDate'])),
@@ -188,7 +199,9 @@ function largerCover(url: string | undefined): string | undefined {
 
 function isbnFrom(value: unknown): string | undefined {
   if (!Array.isArray(value)) return undefined;
-  const entries = value.map(asRecord).filter((entry): entry is Record<string, unknown> => entry !== undefined);
+  const entries = value
+    .map(asRecord)
+    .filter((entry): entry is Record<string, unknown> => entry !== undefined);
   const byType = (type: string): string | undefined =>
     firstString(entries.find((entry) => entry['type'] === type)?.['identifier']);
   return byType('ISBN_13') ?? byType('ISBN_10');

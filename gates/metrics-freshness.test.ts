@@ -127,10 +127,20 @@ function repoWith(stored: readonly Planted[] | undefined, branch?: readonly Plan
   };
   const commit = (records: readonly Planted[]): string => {
     mkdirSync(join(dir, RECORD_DIR), { recursive: true });
-    for (const record of records) writeFileSync(join(dir, RECORD_DIR, record.name), record.document, 'utf8');
+    for (const record of records)
+      writeFileSync(join(dir, RECORD_DIR, record.name), record.document, 'utf8');
     git('add', '-A');
-    git('-c', 'user.name=gate', '-c', 'user.email=gate@example.invalid', 'commit',
-        '--allow-empty', '-m', 'records', '--quiet');
+    git(
+      '-c',
+      'user.name=gate',
+      '-c',
+      'user.email=gate@example.invalid',
+      'commit',
+      '--allow-empty',
+      '-m',
+      'records',
+      '--quiet',
+    );
     return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
   };
 
@@ -138,8 +148,17 @@ function repoWith(stored: readonly Planted[] | undefined, branch?: readonly Plan
   // The branch guard runs first and reads this repository too, so it has to be
   // one the deploy is allowed to publish from — otherwise every test here would
   // be observing G17's refusal instead of this one.
-  git('-c', 'user.name=gate', '-c', 'user.email=gate@example.invalid', 'commit',
-      '--allow-empty', '-m', 'root', '--quiet');
+  git(
+    '-c',
+    'user.name=gate',
+    '-c',
+    'user.email=gate@example.invalid',
+    'commit',
+    '--allow-empty',
+    '-m',
+    'root',
+    '--quiet',
+  );
   git('branch', '-M', 'main');
 
   if (stored !== undefined) {
@@ -264,7 +283,9 @@ describe('G39 — per-series, because the record is not one number', () => {
   });
 
   it('refuses a series with no sample at all exactly as a stale one', () => {
-    const { status, output } = deploy(repoWith([merge(600, 'bbbbbbbb', { complexity: undefined })]));
+    const { status, output } = deploy(
+      repoWith([merge(600, 'bbbbbbbb', { complexity: undefined })]),
+    );
 
     expectRefused(status, output);
     expect(output).toContain('no sample at all');

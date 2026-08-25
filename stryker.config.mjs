@@ -17,7 +17,9 @@ import { readFileSync } from 'node:fs';
 // holds to the first. This file is `.mjs` because Stryker's config loader cannot
 // read a `.ts` one, so the two halves cannot share a type; only one of them gets
 // to be the definition.
-const { scopes } = JSON.parse(readFileSync(new URL('./stryker.scopes.json', import.meta.url), 'utf8'));
+const { scopes } = JSON.parse(
+  readFileSync(new URL('./stryker.scopes.json', import.meta.url), 'utf8'),
+);
 
 /**
  * The declared scopes, then every exclusion as a negation, then the test-file

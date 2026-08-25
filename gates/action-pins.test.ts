@@ -295,7 +295,10 @@ function jobsOf(source: string): Map<string, string> {
   }
 
   return new Map(
-    sectionsOf(body, /^ {2}([\w-]+):$/gm).map((section) => [section.captures[0] ?? '', section.body]),
+    sectionsOf(body, /^ {2}([\w-]+):$/gm).map((section) => [
+      section.captures[0] ?? '',
+      section.body,
+    ]),
   );
 }
 

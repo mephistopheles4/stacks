@@ -99,10 +99,7 @@ describe('who wins each field', () => {
   it('falls through to the next provider when the winner has nothing', () => {
     const merged = mergeFields(
       record('open-library'),
-      contributorsOf(
-        record('open-library', { published: '2008' }),
-        record('google-books', {}),
-      ),
+      contributorsOf(record('open-library', { published: '2008' }), record('google-books', {})),
     );
 
     // Open Library is *last* for `published` and still wins here, because

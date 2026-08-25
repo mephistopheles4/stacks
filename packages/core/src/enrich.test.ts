@@ -32,7 +32,9 @@ const knowsNothing: HttpGet = async () => undefined;
  * counted in `enrich`'s header and reported in none of its lines.
  */
 const knowsTheTitleOnly: HttpGet = async (url) =>
-  url.includes('/api/books') ? { 'ISBN:9781603580557': { title: 'Thinking in Systems' } } : undefined;
+  url.includes('/api/books')
+    ? { 'ISBN:9781603580557': { title: 'Thinking in Systems' } }
+    : undefined;
 
 /**
  * The cover the stubbed `fetch` serves.
@@ -93,7 +95,10 @@ describe('enrichBook', () => {
     vault = new ObsidianAdapter(dir);
 
     const bytes = await coverBytes();
-    vi.stubGlobal('fetch', vi.fn(async () => respondWithCover(bytes)));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => respondWithCover(bytes)),
+    );
   });
 
   afterEach(async () => {

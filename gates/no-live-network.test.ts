@@ -76,7 +76,10 @@ describe('G21 — the guard is actually installed', () => {
   it('leaves a stubbed fetch alone, which is the documented escape hatch', async () => {
     // A test that genuinely needs a response stubs one. The guard must not see
     // those calls, or every legitimate stub would report itself as a live call.
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('ok')));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('ok')),
+    );
 
     expect(await (await globalThis.fetch(SOMEWHERE)).text()).toBe('ok');
     expect(attemptedRequests()).toEqual([]);

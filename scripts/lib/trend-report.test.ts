@@ -53,7 +53,10 @@ const scored = (timestamp: number, score: number, commit = 'a'): ParsedRecord =>
     mutationScore: [{ scope: 'packages/core/src', score }],
   });
 
-function panel(records: readonly ParsedRecord[], extra: Partial<Parameters<typeof renderPanel>[0]> = {}): string {
+function panel(
+  records: readonly ParsedRecord[],
+  extra: Partial<Parameters<typeof renderPanel>[0]> = {},
+): string {
   return renderPanel({ now: NOW, records, held: records.length, window: [], ...extra }).join('\n');
 }
 
@@ -62,7 +65,10 @@ describe('the panel', () => {
     // `metrics.yml` writes on `push: main` too, so the newest record in a busy
     // week is a runtime and no score at all. A score never appears without its
     // run — the run has to be the one that scored.
-    const text = panel([record({ timestamp: NOW, commit: 'b'.repeat(40) }), scored(NOW - DAY, 0.71)]);
+    const text = panel([
+      record({ timestamp: NOW, commit: 'b'.repeat(40) }),
+      scored(NOW - DAY, 0.71),
+    ]);
 
     expect(text).toContain('aaaaaaaaaaaa');
     expect(text).not.toContain('bbbbbbbbbbbb');
@@ -150,7 +156,7 @@ describe('the panel', () => {
   });
 
   it('picks out the scored records in order', () => {
-    const records = [record({}), scored(NOW - DAY, 0.71), scored(NOW - 2 * DAY, 0.70, 'c')];
+    const records = [record({}), scored(NOW - DAY, 0.71), scored(NOW - 2 * DAY, 0.7, 'c')];
 
     expect(scoredRecords(records)).toHaveLength(2);
     expect(scoredRecords(records)[0]?.timestamp).toBe(NOW - DAY);
@@ -205,7 +211,12 @@ describe('the complexity block', () => {
   });
 
   it('prints four lines per scope, one for each count', () => {
-    const lines = complexity([counted(NOW, [CORE, { scope: 'packages/cli/src', functions: 3, mass: 9, massOver10: 0, max: 5 }])]);
+    const lines = complexity([
+      counted(NOW, [
+        CORE,
+        { scope: 'packages/cli/src', functions: 3, mass: 9, massOver10: 0, max: 5 },
+      ]),
+    ]);
 
     expect(lines.filter((line) => line.includes('packages/core/src'))).toHaveLength(4);
     expect(lines.filter((line) => line.includes('packages/cli/src'))).toHaveLength(4);
@@ -227,7 +238,9 @@ describe('the complexity block', () => {
     // cadences, so the interval between them is not a thing anybody asked about.
     const text = complexity([
       counted(NOW, [core({ mass: 1300 })], MERGE),
-      counted(NOW - DAY, [core({ functions: 999, mass: 9999, massOver10: 999, max: 99 })], { event: 'schedule' }),
+      counted(NOW - DAY, [core({ functions: 999, mass: 9999, massOver10: 999, max: 99 })], {
+        event: 'schedule',
+      }),
       counted(NOW - 2 * DAY, [core({ functions: 410, mass: 1200 })], MERGE),
     ]).join('\n');
 
@@ -285,7 +298,10 @@ describe('the complexity block', () => {
     // absent from the comparison is a fact about the declaration, and printing
     // a delta against nothing would read as a movement.
     const text = complexity([
-      counted(NOW, [CORE, { scope: 'packages/site/src/shelf', functions: 385, mass: 900, massOver10: 210, max: 22 }]),
+      counted(NOW, [
+        CORE,
+        { scope: 'packages/site/src/shelf', functions: 385, mass: 900, massOver10: 210, max: 22 },
+      ]),
       counted(NOW - DAY, [CORE]),
     ]).join('\n');
 
@@ -333,7 +349,10 @@ describe('the complexity block', () => {
 });
 
 describe('the refusal', () => {
-  const stale = { kind: 'stale' as const, stale: [{ series: 'mutation-score', newest: NOW - 4 * DAY }] };
+  const stale = {
+    kind: 'stale' as const,
+    stale: [{ series: 'mutation-score', newest: NOW - 4 * DAY }],
+  };
 
   it('names which series is stale and how old it is', () => {
     const text = renderRefusal(stale, NOW, { kind: 'unreachable' }, 5);
@@ -416,8 +435,6 @@ describe('the refusal', () => {
     expect(text).toContain('No flag clears this');
     expect(text).toContain('--dry-run');
     expect(text).toContain('--check-only');
-    expect(text, 'a deleted flag must not survive in a refusal').not.toContain(
-      '--skip-gates',
-    );
+    expect(text, 'a deleted flag must not survive in a refusal').not.toContain('--skip-gates');
   });
 });

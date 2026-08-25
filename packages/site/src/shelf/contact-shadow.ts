@@ -314,8 +314,10 @@ export function makeBackboardShade(
   const fall = depth * light.yPerZ;
   const reach = depth * light.xPerZ;
 
-  return shadePlane(width, openHeight, (inward, below) =>
-    BACKBOARD_ALPHA * Math.max(inShadow(fall - below), inShadow(reach - inward)),
+  return shadePlane(
+    width,
+    openHeight,
+    (inward, below) => BACKBOARD_ALPHA * Math.max(inShadow(fall - below), inShadow(reach - inward)),
   );
 }
 

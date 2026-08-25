@@ -107,7 +107,10 @@ describe('countDisableDirectives', () => {
   it('attributes a disable comment to the scope whose glob claims the file', () => {
     const counted = countDisableDirectives(
       [
-        { path: 'packages/core/src/library.ts', source: '// Stryker disable next-line all\nconst a = 1;\n' },
+        {
+          path: 'packages/core/src/library.ts',
+          source: '// Stryker disable next-line all\nconst a = 1;\n',
+        },
         { path: 'scripts/lib/walk.ts', source: 'const b = 2;\n' },
       ],
       SCOPES,
@@ -141,7 +144,8 @@ describe('countDisableDirectives', () => {
       [
         {
           path: 'packages/core/src/library.ts',
-          source: '/* Stryker disable all */\nconst a = 1;\n// Stryker disable next-line all\nconst b = 2;\n',
+          source:
+            '/* Stryker disable all */\nconst a = 1;\n// Stryker disable next-line all\nconst b = 2;\n',
         },
       ],
       SCOPES,
@@ -173,8 +177,13 @@ describe('configHashOf', () => {
   };
 
   it('does not depend on the order the fields were written in', () => {
-    const reordered = { timeoutMS: 120000, testRunner: 'vitest', mutate: CONFIG.mutate,
-      jsonReporter: CONFIG.jsonReporter, reporters: CONFIG.reporters };
+    const reordered = {
+      timeoutMS: 120000,
+      testRunner: 'vitest',
+      mutate: CONFIG.mutate,
+      jsonReporter: CONFIG.jsonReporter,
+      reporters: CONFIG.reporters,
+    };
 
     expect(configHashOf(reordered)).toBe(configHashOf(CONFIG));
   });
@@ -220,10 +229,7 @@ describe('breaches', () => {
   });
 
   it('names the scope, the score, the floor and what one mutant is worth', () => {
-    const found = breaches(
-      [{ scope: 'packages/core/src', score: 71.39, mutants: 1250 }],
-      FLOORS,
-    );
+    const found = breaches([{ scope: 'packages/core/src', score: 71.39, mutants: 1250 }], FLOORS);
 
     expect(found).toHaveLength(1);
     expect(found[0]?.scope).toBe('packages/core/src');
@@ -394,7 +400,9 @@ describe('calibration', () => {
     const hole = rows[3];
     if (hole !== undefined) hole.scores = new Map();
 
-    expect(calibration(rows, ['packages/core/src'], HASH).lowest.get('packages/core/src')).toBeNull();
+    expect(
+      calibration(rows, ['packages/core/src'], HASH).lowest.get('packages/core/src'),
+    ).toBeNull();
   });
 });
 
@@ -409,7 +417,10 @@ describe('ignoredMismatches', () => {
   });
 
   it('is silent when every counter matches the sweep', () => {
-    const counted = new Map([['packages/core/src', 0], ['scripts', 2]]);
+    const counted = new Map([
+      ['packages/core/src', 0],
+      ['scripts', 2],
+    ]);
 
     expect(ignoredMismatches(counted, FLOORS)).toEqual([]);
   });
@@ -419,7 +430,10 @@ describe('ignoredMismatches', () => {
   // at deploy, which matters because the gate suite and CodeQL are the only two
   // things in this repo that can stop a merge.
   it('reports a directive the file does not account for', () => {
-    const counted = new Map([['packages/core/src', 1], ['scripts', 2]]);
+    const counted = new Map([
+      ['packages/core/src', 1],
+      ['scripts', 2],
+    ]);
     const found = ignoredMismatches(counted, FLOORS);
 
     expect(found).toHaveLength(1);
@@ -435,7 +449,11 @@ describe('ignoredMismatches', () => {
   // green in any scope somebody forgot to account for — the gate silent in
   // precisely the case the file is already wrong.
   it('reports a directive in a declared scope the floors file does not name', () => {
-    const counted = new Map([['packages/core/src', 0], ['scripts', 2], ['packages/new', 1]]);
+    const counted = new Map([
+      ['packages/core/src', 0],
+      ['scripts', 2],
+      ['packages/new', 1],
+    ]);
     const found = ignoredMismatches(counted, FLOORS);
 
     expect(found).toHaveLength(1);
@@ -443,13 +461,20 @@ describe('ignoredMismatches', () => {
   });
 
   it('says nothing about a scope with no entry and no directive', () => {
-    const counted = new Map([['packages/core/src', 0], ['scripts', 2], ['packages/new', 0]]);
+    const counted = new Map([
+      ['packages/core/src', 0],
+      ['scripts', 2],
+      ['packages/new', 0],
+    ]);
 
     expect(ignoredMismatches(counted, FLOORS)).toEqual([]);
   });
 
   it('reports a counter the tree does not account for', () => {
-    const counted = new Map([['packages/core/src', 0], ['scripts', 0]]);
+    const counted = new Map([
+      ['packages/core/src', 0],
+      ['scripts', 0],
+    ]);
     const found = ignoredMismatches(counted, FLOORS);
 
     expect(found).toHaveLength(1);
@@ -480,12 +505,15 @@ describe('renderFloorLines', () => {
   // and gave another a window low 26 points off its measured value. The shape
   // comes from the spec; the numbers come from the record.
   it('gives an armed scope its score, its delta and what one mutant is worth', () => {
-    const line = lineFor('packages/core/src', renderFloorLines({
-      floors: FLOORS,
-      readings: [{ scope: 'packages/core/src', score: 71.7, previous: 71.55, mutants: 1250 }],
-      window: { runs: 20, candidates: 20, full: true, days: 19, lowest: new Map() },
-      today: '2026-08-19',
-    }));
+    const line = lineFor(
+      'packages/core/src',
+      renderFloorLines({
+        floors: FLOORS,
+        readings: [{ scope: 'packages/core/src', score: 71.7, previous: 71.55, mutants: 1250 }],
+        window: { runs: 20, candidates: 20, full: true, days: 19, lowest: new Map() },
+        today: '2026-08-19',
+      }),
+    );
 
     expect(line).toContain('packages/core/src');
     expect(line).toContain('armed 71.55');
@@ -497,12 +525,21 @@ describe('renderFloorLines', () => {
   // "window full (20 runs), lowest 44.12 - armable" — the print is the whole
   // mechanism that ends the disarmed period, so a full window has to say so.
   it('tells an unarmed scope with a full window what it would arm at', () => {
-    const line = lineFor('packages/cli/src', renderFloorLines({
-      floors: FLOORS,
-      readings: [{ scope: 'packages/cli/src', score: 45.6, mutants: 68 }],
-      window: { runs: 20, candidates: 20, full: true, days: 21, lowest: new Map([['packages/cli/src', 44.12]]) },
-      today: '2026-08-19',
-    }));
+    const line = lineFor(
+      'packages/cli/src',
+      renderFloorLines({
+        floors: FLOORS,
+        readings: [{ scope: 'packages/cli/src', score: 45.6, mutants: 68 }],
+        window: {
+          runs: 20,
+          candidates: 20,
+          full: true,
+          days: 21,
+          lowest: new Map([['packages/cli/src', 44.12]]),
+        },
+        today: '2026-08-19',
+      }),
+    );
 
     expect(line).toContain('unarmed');
     expect(line).toContain('window full (20 runs)');
@@ -518,12 +555,21 @@ describe('renderFloorLines', () => {
   // the nightly has been skipping, which is the 60-day scheduled-workflow rule
   // showing itself before it bites.
   it('counts the window in runs, with the day count beside it', () => {
-    const line = lineFor('scripts', renderFloorLines({
-      floors: FLOORS,
-      readings: [{ scope: 'scripts', score: null }],
-      window: { runs: 12, candidates: 12, full: false, days: 41, lowest: new Map([['scripts', null]]) },
-      today: '2026-08-19',
-    }));
+    const line = lineFor(
+      'scripts',
+      renderFloorLines({
+        floors: FLOORS,
+        readings: [{ scope: 'scripts', score: null }],
+        window: {
+          runs: 12,
+          candidates: 12,
+          full: false,
+          days: 41,
+          lowest: new Map([['scripts', null]]),
+        },
+        today: '2026-08-19',
+      }),
+    );
 
     expect(line).toContain('12/20 runs');
     expect(line).toContain('41 days');
@@ -547,12 +593,15 @@ describe('renderFloorLines', () => {
   });
 
   it('says how long an entry has sat unarmed', () => {
-    const line = lineFor('scripts', renderFloorLines({
-      floors: FLOORS,
-      readings: [{ scope: 'scripts', score: null }],
-      window: { runs: 0, candidates: 0, full: false, days: 0, lowest: new Map() },
-      today: '2026-08-19',
-    }));
+    const line = lineFor(
+      'scripts',
+      renderFloorLines({
+        floors: FLOORS,
+        readings: [{ scope: 'scripts', score: null }],
+        window: { runs: 0, candidates: 0, full: false, days: 0, lowest: new Map() },
+        today: '2026-08-19',
+      }),
+    );
 
     expect(line).toContain('unarmed for 100 days');
   });
@@ -772,7 +821,13 @@ describe('floorRefusals', () => {
 });
 
 describe('runRowsFrom', () => {
-  function ci(timestamp: number, ok: number, hash: string, score?: number, event = 'schedule'): string {
+  function ci(
+    timestamp: number,
+    ok: number,
+    hash: string,
+    score?: number,
+    event = 'schedule',
+  ): string {
     return [
       '# TYPE stacks_run_ok gauge',
       `stacks_run_ok ${String(ok)} ${String(timestamp)}`,
@@ -839,12 +894,7 @@ describe('runRowsFrom', () => {
   // the honest move: defaulting to 0 would put the run in 1970 and silently
   // open a gap of twenty thousand days in the middle of the streak.
   it('drops a run whose health sample carries no timestamp', () => {
-    const undated = [
-      '# TYPE stacks_run_ok gauge',
-      'stacks_run_ok 1',
-      '# EOF',
-      '',
-    ].join('\n');
+    const undated = ['# TYPE stacks_run_ok gauge', 'stacks_run_ok 1', '# EOF', ''].join('\n');
 
     expect(runRowsFrom([parseRecord(undated)])).toEqual([]);
   });
@@ -881,7 +931,9 @@ describe('the disk edge, against a tree it is handed', () => {
       JSON.stringify({
         configHash: 'sha256:written',
         fixtureHash: 'sha256:counted',
-        scopes: { 'packages/core/src': { floor: 70, armed: '2026-08-19', ignored: 1, notes: ['x'] } },
+        scopes: {
+          'packages/core/src': { floor: 70, armed: '2026-08-19', ignored: 1, notes: ['x'] },
+        },
       }),
       'utf8',
     );
@@ -1239,12 +1291,7 @@ describe('CAPPED_SERIES', () => {
 
 describe('runRowsFrom, the cap half', () => {
   /** A CI record carrying the counting stamp and one capped series. */
-  function counted(
-    timestamp: number,
-    hash: string,
-    max?: number,
-    event = 'push',
-  ): string {
+  function counted(timestamp: number, hash: string, max?: number, event = 'push'): string {
     return [
       '# TYPE stacks_run_ok gauge',
       `stacks_run_ok 1 ${String(timestamp)}`,
@@ -1325,10 +1372,7 @@ describe('capBreaches', () => {
   });
 
   it('names the scope, the series, the value and the cap', () => {
-    const found = capBreaches(
-      [{ scope: 'scripts', series: 'complexity-max', value: 13 }],
-      FLOORS,
-    );
+    const found = capBreaches([{ scope: 'scripts', series: 'complexity-max', value: 13 }], FLOORS);
 
     expect(found).toEqual([{ scope: 'scripts', series: 'complexity-max', value: 13, cap: 12 }]);
   });
@@ -1338,9 +1382,9 @@ describe('capBreaches', () => {
   // would refuse the first deploy after arming — on the very run the cap was
   // derived from.
   it('does not breach on a value sitting exactly on its cap', () => {
-    expect(capBreaches([{ scope: 'scripts', series: 'complexity-max', value: 12 }], FLOORS)).toEqual(
-      [],
-    );
+    expect(
+      capBreaches([{ scope: 'scripts', series: 'complexity-max', value: 12 }], FLOORS),
+    ).toEqual([]);
   });
 
   it('refuses nothing for an unarmed cap, however large the value', () => {
@@ -1358,9 +1402,9 @@ describe('capBreaches', () => {
   // A reading the record could not supply is the freshness refusal's subject,
   // not this one's — the same split `breaches` makes for a missing score.
   it('invents no verdict where the record carried no value', () => {
-    expect(capBreaches([{ scope: 'scripts', series: 'complexity-max', value: null }], FLOORS)).toEqual(
-      [],
-    );
+    expect(
+      capBreaches([{ scope: 'scripts', series: 'complexity-max', value: null }], FLOORS),
+    ).toEqual([]);
   });
 });
 
@@ -1387,9 +1431,9 @@ describe('capCalibration', () => {
   it('arms at the highest value observed, which is the cap rule', () => {
     const rows = [...runs(19), row(1_760_000_000 + 19 * 86_400, 17)];
 
-    expect(capCalibration(rows, ['scripts'], HASH).highest.get('complexity-max')?.get('scripts')).toBe(
-      17,
-    );
+    expect(
+      capCalibration(rows, ['scripts'], HASH).highest.get('complexity-max')?.get('scripts'),
+    ).toBe(17);
   });
 
   it('is full at twenty consecutive healthy runs and not at nineteen', () => {

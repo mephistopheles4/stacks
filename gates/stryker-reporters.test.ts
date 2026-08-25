@@ -86,7 +86,7 @@ describe('G44 — the mutation run declares its reporters', () => {
     expectFound(
       [strykerVitestConfig.test?.reporters ?? []].flat(),
       `reporters declared in ${STRYKER_VITEST_CONFIG} — an empty or absent list is what ` +
-        "lets Vitest add `github-actions`, whose job summary appends once per mutant",
+        'lets Vitest add `github-actions`, whose job summary appends once per mutant',
     );
   });
 

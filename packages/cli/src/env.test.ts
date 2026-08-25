@@ -62,7 +62,10 @@ beforeAll(() => {
   // main checkout is the right answer for the wrong reason — so a guard on the
   // resolved value passes exactly where a broken parse would do least harm and
   // fails where it does most. (Observed, on the first run of this line.)
-  expect(FIRST_WORKTREE, 'could not parse a main checkout out of `git worktree list`').toBeDefined();
+  expect(
+    FIRST_WORKTREE,
+    'could not parse a main checkout out of `git worktree list`',
+  ).toBeDefined();
   // Detached, so the test creates no branch and cannot collide with one.
   worktree = join(mkdtempSync(join(tmpdir(), 'stacks-worktree-')), 'checkout');
   execFileSync('git', ['worktree', 'add', '--detach', worktree], { cwd: MAIN, stdio: 'ignore' });
@@ -71,7 +74,10 @@ beforeAll(() => {
 afterAll(() => {
   process.chdir(HERE);
   try {
-    execFileSync('git', ['worktree', 'remove', '--force', worktree], { cwd: MAIN, stdio: 'ignore' });
+    execFileSync('git', ['worktree', 'remove', '--force', worktree], {
+      cwd: MAIN,
+      stdio: 'ignore',
+    });
   } catch {
     // Windows will refuse while anything still holds the directory. Prune drops
     // the registration either way, so a failure here cannot leave the repo

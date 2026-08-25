@@ -122,9 +122,7 @@ const LIBRARIES: Record<string, LibraryBook[]> = {
     }),
   ),
   /** Thick books only, so rows wrap on few books and land close to capacity. */
-  thick: Array.from({ length: 40 }, (_, index) =>
-    book(`thick-${String(index)}`, { pages: 800 }),
-  ),
+  thick: Array.from({ length: 40 }, (_, index) => book(`thick-${String(index)}`, { pages: 800 })),
   /** A single book, and a single row. */
   one: [book('only')],
   /**
@@ -221,7 +219,8 @@ function shelfCost(entry: ShelfBook, previous: ShelfBook | undefined): number {
           sway: 0,
           right: 0,
           faceOut: false,
-        }) + (entry.thickness / 2) * (1 - Math.cos(MAX_PROP_LEAN))
+        }) +
+        (entry.thickness / 2) * (1 - Math.cos(MAX_PROP_LEAN))
       : 0;
 
   return (entry.gapBefore ?? 0) + occupies + clearance + Math.max(parallel, 0);
@@ -379,13 +378,15 @@ const WORST_PARALLEL_PUSH =
 
 /** The left face of a book, ignoring its lean. */
 function footprintLeft(placement: Placement): number {
-  const half = (placement.entry.faceOut ? placement.entry.coverWidth : placement.entry.thickness) / 2;
+  const half =
+    (placement.entry.faceOut ? placement.entry.coverWidth : placement.entry.thickness) / 2;
   return placement.position.x - half;
 }
 
 /** The right face of a book, ignoring its lean. */
 function footprintRight(placement: Placement): number {
-  const half = (placement.entry.faceOut ? placement.entry.coverWidth : placement.entry.thickness) / 2;
+  const half =
+    (placement.entry.faceOut ? placement.entry.coverWidth : placement.entry.thickness) / 2;
   return placement.position.x + half;
 }
 
@@ -404,18 +405,21 @@ describe('the cursor spends no more than the geometry allows', () => {
     });
   });
 
-  it.each(CASES)('is over by no more than one maximal swing per angle change — %s', (_name, library) => {
-    // Without a ceiling the first assertion passes on a packer that charges the
-    // whole shelf for every book. The excess has to be *named*, not merely
-    // non-negative.
-    const rows = rowsOf(library);
-    const placed = placeShelf(rows);
+  it.each(CASES)(
+    'is over by no more than one maximal swing per angle change — %s',
+    (_name, library) => {
+      // Without a ceiling the first assertion passes on a packer that charges the
+      // whole shelf for every book. The excess has to be *named*, not merely
+      // non-negative.
+      const rows = rowsOf(library);
+      const placed = placeShelf(rows);
 
-    rows.forEach((row, index) => {
-      const excess = charged(row) - spent(placed[index] ?? []);
-      expect(excess).toBeLessThanOrEqual(clearanceBound(row) + 1e-12);
-    });
-  });
+      rows.forEach((row, index) => {
+        const excess = charged(row) - spent(placed[index] ?? []);
+        expect(excess).toBeLessThanOrEqual(clearanceBound(row) + 1e-12);
+      });
+    },
+  );
 
   it('is exact on a row that changes angle nowhere', () => {
     // One face-out book alone: it stands square, the case side is vertical, so
@@ -446,48 +450,51 @@ describe('the packer honours its own capacity', () => {
     });
   });
 
-  it.each(CASES)('packs every row tight — one more book would not have fitted — %s', (_name, library) => {
-    const rows = rowsOf(library);
+  it.each(CASES)(
+    'packs every row tight — one more book would not have fitted — %s',
+    (_name, library) => {
+      const rows = rowsOf(library);
 
-    if (rows.length === 1) {
-      // Said rather than skipped. A single-row library has no wrap to check, and
-      // a loop that silently never runs reports the same green as one that did.
-      expect(library.length).toBe(1);
-      return;
-    }
+      if (rows.length === 1) {
+        // Said rather than skipped. A single-row library has no wrap to check, and
+        // a loop that silently never runs reports the same green as one that did.
+        expect(library.length).toBe(1);
+        return;
+      }
 
-    let checked = 0;
-    for (let index = 0; index < rows.length - 1; index += 1) {
-      const row = rows[index];
-      const next = rows[index + 1]?.books[0];
-      if (row === undefined || next === undefined) continue;
+      let checked = 0;
+      for (let index = 0; index < rows.length - 1; index += 1) {
+        const row = rows[index];
+        const next = rows[index + 1]?.books[0];
+        if (row === undefined || next === undefined) continue;
 
-      const last = row.books[row.books.length - 1];
-      if (last === undefined) continue;
+        const last = row.books[row.books.length - 1];
+        if (last === undefined) continue;
 
-      // The book the packer turned away, placed as it *would* have been placed
-      // had it stayed — on the end of the previous row, carrying the year gap
-      // that row would have opened for it.
-      //
-      // Both halves of that were got wrong once. Taking the candidate *without*
-      // its year gap asserts something stronger than the packer promises: the
-      // book `toRows` turned away was carrying YEAR_GAP and the clearance an
-      // upright book pays, and the same book at the head of the next row carries
-      // neither. It passed by 0.02 where the guarantee allows 0.09, so a slightly
-      // thinner book turned a correct packer red.
-      //
-      // And re-running `toRows` on the row plus one more book makes the assertion
-      // vacuous: the same function that made the decision cannot be the judge of
-      // it. That version passed with the packer mutated to wrap at nine tenths of
-      // the shelf. So this places the trial row itself, against a band restated
-      // from `SHELF` — which is what `ROW_END` is for.
-      const isYearChange = yearOf(next.book) !== yearOf(last.book);
-      const rejected = isYearChange ? { ...next, gapBefore: YEAR_GAP } : next;
-      expect(rowExtent([...row.books, rejected], index)).toBeGreaterThan(ROW_END);
-      checked += 1;
-    }
-    expect(checked).toBe(rows.length - 1);
-  });
+        // The book the packer turned away, placed as it *would* have been placed
+        // had it stayed — on the end of the previous row, carrying the year gap
+        // that row would have opened for it.
+        //
+        // Both halves of that were got wrong once. Taking the candidate *without*
+        // its year gap asserts something stronger than the packer promises: the
+        // book `toRows` turned away was carrying YEAR_GAP and the clearance an
+        // upright book pays, and the same book at the head of the next row carries
+        // neither. It passed by 0.02 where the guarantee allows 0.09, so a slightly
+        // thinner book turned a correct packer red.
+        //
+        // And re-running `toRows` on the row plus one more book makes the assertion
+        // vacuous: the same function that made the decision cannot be the judge of
+        // it. That version passed with the packer mutated to wrap at nine tenths of
+        // the shelf. So this places the trial row itself, against a band restated
+        // from `SHELF` — which is what `ROW_END` is for.
+        const isYearChange = yearOf(next.book) !== yearOf(last.book);
+        const rejected = isYearChange ? { ...next, gapBefore: YEAR_GAP } : next;
+        expect(rowExtent([...row.books, rejected], index)).toBeGreaterThan(ROW_END);
+        checked += 1;
+      }
+      expect(checked).toBe(rows.length - 1);
+    },
+  );
 
   it.each(CASES)('leaves a row no slack a book could have used — %s', (_name, library) => {
     // The defect ADR-0042 is about, stated as the shelf sees it rather than as

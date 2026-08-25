@@ -323,7 +323,7 @@ export function unescape(text: string): string {
  * rejects — so a value small enough to reach it is fixed rather than defaulted.
  */
 function value(n: number): string {
-  return Number.isInteger(n) ? String(n) : (String(n).includes('e') ? n.toFixed(9) : String(n));
+  return Number.isInteger(n) ? String(n) : String(n).includes('e') ? n.toFixed(9) : String(n);
 }
 
 function labels(pairs: Record<string, string>): string {
@@ -489,7 +489,6 @@ export function renderMetrics(facts: RunFacts): string {
 // not three, because *refused* and *stale* are the pair ADR-0027 already paid
 // to keep apart: one is no answer at all, the other is a real answer and a red
 // one. See `./edge-probe.ts`.
-
 
 export interface EdgeFacts {
   /** Unix seconds — the moment of the sync, not of a CI run. */

@@ -128,7 +128,10 @@ export function tableCells(line: string): string[] {
  * `expectFound`.
  */
 export function extractAll(source: string, pattern: RegExp): string[] {
-  const global = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
+  const global = new RegExp(
+    pattern.source,
+    pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`,
+  );
   const found = new Set<string>();
   for (const match of source.matchAll(global)) {
     if (match[1] !== undefined) found.add(match[1]);

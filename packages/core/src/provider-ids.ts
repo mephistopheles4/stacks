@@ -42,10 +42,7 @@ export const CONTRIBUTOR_IDS = {
     field: 'oreillyOurn',
     shape: /^urn:orm:book:[A-Za-z0-9._-]+$/,
   },
-} as const satisfies Record<
-  string,
-  { readonly field: keyof BookRecord; readonly shape: RegExp }
->;
+} as const satisfies Record<string, { readonly field: keyof BookRecord; readonly shape: RegExp }>;
 
 export type ContributorIdKey = keyof typeof CONTRIBUTOR_IDS;
 

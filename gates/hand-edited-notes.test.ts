@@ -106,7 +106,10 @@ describe('G4 — hand-edited notes are first-class', () => {
     // Appending is the other half of the splice, and it is where a stray
     // newline round the closing fence would show up.
     expect(await read('Tidal.md')).toBe(
-      HAND_EDITED.replace('finished: 2026-04-11\n---', 'finished: 2026-04-11\nshelf_order: 20\n---'),
+      HAND_EDITED.replace(
+        'finished: 2026-04-11\n---',
+        'finished: 2026-04-11\nshelf_order: 20\n---',
+      ),
     );
   });
 

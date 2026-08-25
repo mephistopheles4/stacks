@@ -194,8 +194,22 @@ describe('rowsFor', () => {
 
     const rows = rowsFor(
       [
-        fn({ line: 5, column: 41, complexity: 2, kind: 'arrow', label: 'Arrow function', name: undefined }),
-        fn({ line: 5, column: 11, complexity: 2, kind: 'arrow', label: 'Arrow function', name: undefined }),
+        fn({
+          line: 5,
+          column: 41,
+          complexity: 2,
+          kind: 'arrow',
+          label: 'Arrow function',
+          name: undefined,
+        }),
+        fn({
+          line: 5,
+          column: 11,
+          complexity: 2,
+          kind: 'arrow',
+          label: 'Arrow function',
+          name: undefined,
+        }),
       ],
       sameLine,
     );
@@ -216,8 +230,20 @@ describe('rowsFor', () => {
     // match from attaching another function's coverage to them.
     const rows = rowsFor(
       [
-        fn({ line: 1, complexity: 4, kind: 'class-field-initialiser', label: 'Class field initializer', name: undefined }),
-        fn({ line: 11, complexity: 2, kind: 'static-block', label: 'Class static block', name: undefined }),
+        fn({
+          line: 1,
+          complexity: 4,
+          kind: 'class-field-initialiser',
+          label: 'Class field initializer',
+          name: undefined,
+        }),
+        fn({
+          line: 11,
+          complexity: 2,
+          kind: 'static-block',
+          label: 'Class static block',
+          name: undefined,
+        }),
       ],
       file,
     );
@@ -269,7 +295,9 @@ describe('route', () => {
       {
         name: 'packages/site/src/shelf',
         glob: 'packages/site/src/shelf/**/*.ts',
-        exclusions: [{ path: 'packages/site/src/shelf/scene.ts', mechanism: 'the browser drives it' }],
+        exclusions: [
+          { path: 'packages/site/src/shelf/scene.ts', mechanism: 'the browser drives it' },
+        ],
       },
     ],
   };

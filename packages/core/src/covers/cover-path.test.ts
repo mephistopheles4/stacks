@@ -63,9 +63,10 @@ describe('resolveCoverPath', () => {
     for (const cover of hostile) {
       const resolved = resolveCoverPath(COVER_DIR, cover);
       if (resolved === undefined) continue; // refused outright, which is fine
-      expect(resolved.startsWith(COVER_DIR + sep), `\`cover: ${cover}\` escaped to ${resolved}`).toBe(
-        true,
-      );
+      expect(
+        resolved.startsWith(COVER_DIR + sep),
+        `\`cover: ${cover}\` escaped to ${resolved}`,
+      ).toBe(true);
     }
   });
 

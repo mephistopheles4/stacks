@@ -109,7 +109,7 @@ describe('G34 — a rate-limited book self-heals on the next run', () => {
     expect(
       afterTwo?.appleTrackId,
       'run two did not fill the gap run one missed. "Run it twice" is the documented ' +
-        'pacing answer for iTunes\' ~20/min, and it only works while a failure is never ' +
+        "pacing answer for iTunes' ~20/min, and it only works while a failure is never " +
         'cached — see http.ts:64',
     ).toBe('1384286945');
   });

@@ -136,10 +136,7 @@ describe('parsing a record', () => {
   });
 
   it('takes the newest sample per series across records', () => {
-    const newest = newestByTrend([
-      parseRecord(merge(NOW)),
-      parseRecord(nightly(NOW - 2 * DAY)),
-    ]);
+    const newest = newestByTrend([parseRecord(merge(NOW)), parseRecord(nightly(NOW - 2 * DAY))]);
 
     expect(newest.get('gate-suite-runtime')).toBe(NOW);
     expect(newest.get('mutation-score')).toBe(NOW - 2 * DAY);
@@ -345,7 +342,10 @@ describe('the records a delta compares', () => {
     // State 2 of four — *first run*, and not a delta of zero. Printing
     // `(+0.00)` for a run with nothing to compare against would read as a
     // measured movement.
-    const { latest, previous } = deltaPair(store(merge(NOW), nightly(NOW - DAY)), 'complexity-mass');
+    const { latest, previous } = deltaPair(
+      store(merge(NOW), nightly(NOW - DAY)),
+      'complexity-mass',
+    );
 
     expect(latest?.timestamp).toBe(NOW);
     expect(previous).toBeUndefined();
@@ -358,10 +358,7 @@ describe('the records a delta compares', () => {
     // a delta across an interval belonging to neither half — the shape
     // `renderMetrics` already refuses when it keeps an unreadable PR window
     // apart from an empty one. Found by review.
-    const records = store(
-      merge(NOW, { event: 'unknown' }),
-      merge(NOW - DAY, { event: 'unknown' }),
-    );
+    const records = store(merge(NOW, { event: 'unknown' }), merge(NOW - DAY, { event: 'unknown' }));
 
     expect(halfOf(records[0] ?? parseRecord('# EOF\n'))).toBeUndefined();
     expect(deltaPair(records, 'complexity-mass')).toEqual({ latest: records[0] });

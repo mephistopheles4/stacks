@@ -176,7 +176,9 @@ describe('G13 — no third-party material is committed', () => {
   it('has no allowlisted directory that has gone empty', () => {
     for (const dir of GENERATED_BINARY_DIRS) {
       const inside = trackedFiles().filter((path) => path.startsWith(dir));
-      expect(inside.length, `${dir} is allowlisted but tracks nothing — drop it`).toBeGreaterThan(0);
+      expect(inside.length, `${dir} is allowlisted but tracks nothing — drop it`).toBeGreaterThan(
+        0,
+      );
     }
   });
 

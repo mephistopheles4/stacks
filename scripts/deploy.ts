@@ -131,7 +131,6 @@ const WRANGLER = 'wrangler@4';
 // about. It is also the first in-process oracle this check has ever had: from
 // here its only one drives this whole script as a child process.
 
-
 const dryRun = process.argv.includes('--dry-run');
 
 /**
@@ -368,7 +367,8 @@ function prWindow(records: readonly ParsedRecord[]): PrWindow {
   const [latest, previous] = scoredRecords(records);
   const to = latest === undefined ? undefined : runInfoOf(latest)?.['commit'];
   const from = previous === undefined ? undefined : runInfoOf(previous)?.['commit'];
-  if (to === undefined || from === undefined || to === 'unknown' || from === 'unknown') return undefined;
+  if (to === undefined || from === undefined || to === 'unknown' || from === 'unknown')
+    return undefined;
 
   const subjects = gitOutput(['log', '--format=%s', `${from}..${to}`], REPO_ROOT);
   if (subjects === undefined) return undefined;
@@ -421,7 +421,9 @@ function lastMutationRun(): MutationRun {
 /** Each scope's per-mutant resolution, from the last run **on this machine**. */
 function scopeResolution(run: MutationRun): { resolution?: Map<string, Tally>; note?: string } {
   if (run.kind === 'none') {
-    return { note: 'no per-mutant resolution — `pnpm mutation:run` writes one, and the record carries only the score' };
+    return {
+      note: 'no per-mutant resolution — `pnpm mutation:run` writes one, and the record carries only the score',
+    };
   }
   if (run.kind === 'unreadable') {
     return {
@@ -458,7 +460,10 @@ function disambiguate(store: FetchedRecord | undefined): Disambiguation {
     .map((name) => parseRecordName(name))
     .filter((record) => record !== undefined)
     .sort((one, other) => other.timestamp - one.timestamp)[0];
-  return { kind: 'same', branchNewest: newest === undefined ? undefined : asDate(newest.timestamp) };
+  return {
+    kind: 'same',
+    branchNewest: newest === undefined ? undefined : asDate(newest.timestamp),
+  };
 }
 
 /**
@@ -708,7 +713,9 @@ function reportFloors(): void {
 
   if (newest === undefined) {
     console.log('');
-    console.log('  no run in the record on this machine — `pnpm trend:sync` imports what CI wrote.');
+    console.log(
+      '  no run in the record on this machine — `pnpm trend:sync` imports what CI wrote.',
+    );
   }
 
   // The newest run that *counted*, which is a different row from the newest
@@ -935,7 +942,9 @@ const html = existsSync(join(DIST, 'index.html'))
 const report = inspectPublicBuild(DIST, { origin: siteUrl });
 for (const observation of report.observations) console.log(`  ${observation}`);
 
-const problems: { rule: PublicBuildRule | 'stale-fixtures'; message: string }[] = [...report.problems];
+const problems: { rule: PublicBuildRule | 'stale-fixtures'; message: string }[] = [
+  ...report.problems,
+];
 
 // The one check that stays here, because it is not about publishability at all.
 //
@@ -958,7 +967,9 @@ if (!checkOnly) {
   // Said first, because the fixture vault contains two deliberately broken
   // notes and the adapter warns about them by name. Unannounced, in the middle
   // of a deploy, those read as something wrong with the vault being published.
-  console.log('\n  reading fixture titles — any skip warnings below are the fixtures’ own, by design');
+  console.log(
+    '\n  reading fixture titles — any skip warnings below are the fixtures’ own, by design',
+  );
   const titles = await fixtureTitles();
   // An empty list would satisfy the filter below however the build went, which
   // is the same vacuous pass this check was just rewritten to close. Louder
@@ -980,8 +991,7 @@ if (!checkOnly) {
   if (staged.length > 0) {
     problems.push({
       rule: 'stale-fixtures',
-      message:
-        `fixture books are in the build — the real vault build did not run last: ${staged.slice(0, 3).join(', ')}`,
+      message: `fixture books are in the build — the real vault build did not run last: ${staged.slice(0, 3).join(', ')}`,
     });
   }
 }
@@ -1113,7 +1123,9 @@ function stampAndWrite(): string {
   // other branch above; `--dry-run` reaches this and stamps the folder it leaves
   // behind, which is what makes a later `--check-only` able to answer at all.
   if (stampOf(marked) !== name) {
-    fail('could not stamp index.html — no `<head>` to inject into, so the live check would be blind');
+    fail(
+      'could not stamp index.html — no `<head>` to inject into, so the live check would be blind',
+    );
   }
   writeFileSync(join(DIST, 'index.html'), marked);
   return name;
@@ -1123,7 +1135,7 @@ console.log(
   checkOnly
     ? `\nlast deployed build ${stamp}`
     : `\npre-flight OK — ${String(library.books.length)} book(s), every key named, og:image absolute, no orphans` +
-      `\nbuild ${stamp}`,
+        `\nbuild ${stamp}`,
 );
 
 // ── 4. Upload ───────────────────────────────────────────────────────────────
@@ -1134,7 +1146,9 @@ if (checkOnly) {
 
 if (dryRun) {
   console.log(`\n--dry-run: not uploading. ${DIST} is ready.`);
-  console.log(`to publish: pnpm dlx ${WRANGLER} pages deploy packages/site/dist --project-name ${project}`);
+  console.log(
+    `to publish: pnpm dlx ${WRANGLER} pages deploy packages/site/dist --project-name ${project}`,
+  );
   process.exit(0);
 }
 
@@ -1186,7 +1200,9 @@ await verifyLive(siteUrl.replace(/\/$/, ''));
 async function verifyBuildLive(origin: string): Promise<void> {
   const answer = await probeBuild(origin, stamp, {
     onRetry: (message, attempt, attempts) =>
-      console.log(`  waiting for the edge (${String(attempt)}/${String(attempts - 1)}) — ${message}`),
+      console.log(
+        `  waiting for the edge (${String(attempt)}/${String(attempts - 1)}) — ${message}`,
+      ),
   });
 
   if (answer.kind === 'current') {
