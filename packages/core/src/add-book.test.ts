@@ -1,10 +1,11 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
 import { addBook } from './add-book.ts';
 import type { HttpGet } from './metadata/http.ts';
+import { spyOnWarn, type WarnSpy } from './test-support.ts';
 
 /** A reader that fails every request, standing in for a book no API knows. */
 const noProvider: HttpGet = async () => undefined;
@@ -101,16 +102,16 @@ describe('addBook — is this the book that was asked for', () => {
 describe('addBook — duplicate reporting', () => {
   let dir: string;
   let vault: ObsidianAdapter;
-  let warn: ReturnType<typeof vi.spyOn>;
+  let warn: WarnSpy;
 
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), 'stacks-add-'));
     vault = new ObsidianAdapter(dir);
-    warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    warn = spyOnWarn();
   });
 
   afterEach(async () => {
-    warn.mockRestore();
+    warn.restore();
     await rm(dir, { recursive: true, force: true });
   });
 

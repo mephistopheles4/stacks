@@ -690,21 +690,22 @@ export function mountShelf(
       // `dispose()` is idempotent, so that costs nothing and is cheaper than
       // working out which is which.
       scene.traverse((object) => {
-        if (!(object instanceof THREE.Mesh)) return;
+        const mesh = asMesh(object);
+        if (mesh === undefined) return;
 
         // Geometries too — but never the shared shapes, which outlive any one
         // mount. Every book is a scaled `UNIT_BOX`, `UNIT_PLANE` or head cap, so a
         // blanket dispose here would free them for the whole module and leave a
         // second shelf drawing nothing at all.
         if (
-          object.geometry !== UNIT_BOX &&
-          object.geometry !== UNIT_PLANE &&
-          !isHeadCapGeometry(object.geometry)
+          mesh.geometry !== UNIT_BOX &&
+          mesh.geometry !== UNIT_PLANE &&
+          !isHeadCapGeometry(mesh.geometry)
         ) {
-          object.geometry.dispose();
+          mesh.geometry.dispose();
         }
 
-        for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
           if (
             material instanceof THREE.MeshStandardMaterial ||
             material instanceof THREE.MeshBasicMaterial
@@ -734,6 +735,15 @@ export function mountShelf(
  * asking for: "Adreno 750" versus "SwiftShader" is the difference between a
  * memory problem and a machine with no GPU acceleration at all.
  */
+/** The GL limits `describeLinkFailure` reads — constants, and no method names. */
+type GlLimit =
+  | 'MAX_VARYING_VECTORS'
+  | 'MAX_VERTEX_UNIFORM_VECTORS'
+  | 'MAX_FRAGMENT_UNIFORM_VECTORS'
+  | 'MAX_TEXTURE_IMAGE_UNITS'
+  | 'MAX_VERTEX_TEXTURE_IMAGE_UNITS'
+  | 'MAX_COMBINED_TEXTURE_IMAGE_UNITS';
+
 /**
  * Everything the driver will say about a program that would not link.
  *
@@ -757,8 +767,13 @@ function describeLinkFailure(
   try {
     gl.validateProgram(program);
 
-    const limit = (name: keyof WebGLRenderingContext): string => {
-      const value: unknown = gl.getParameter(gl[name] as number);
+    // The six names, spelled out rather than `keyof WebGLRenderingContext`.
+    // That wider type let a *method* name through — `gl['getParameter']` is as
+    // valid a key as `gl['MAX_VARYING_VECTORS']` — and reading one unbound is
+    // both meaningless here and a `this`-scoping hazard everywhere else. Naming
+    // the constants also makes `as number` unnecessary: all six are `GLenum`.
+    const limit = (name: GlLimit): string => {
+      const value: unknown = gl.getParameter(gl[name]);
       return typeof value === 'number' ? String(value) : '?';
     };
 
@@ -793,13 +808,24 @@ function describeLinkFailure(
  */
 function stopSamplingShadows(renderer: THREE.WebGLRenderer, scene: THREE.Scene): void {
   renderer.shadowMap.enabled = false;
+  dirtyEveryMaterial(scene);
+}
 
-  scene.traverse((object) => {
-    if (!(object instanceof THREE.Mesh)) return;
-    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-      material.needsUpdate = true;
-    }
-  });
+/**
+ * The mesh this object is, with three's own generic defaults back on it.
+ *
+ * ⚠️ **`object instanceof THREE.Mesh` does not give you a `THREE.Mesh`.**
+ * TypeScript fills a generic class's parameters with `any` when it narrows by
+ * the constructor, so the result is `Mesh<any, any, any>` and every read off it
+ * — `.geometry`, `.material` — is an unsafe member access on `any`. Nothing
+ * about the check is wrong; the type it produces is just weaker than the one
+ * three declares. Assigning it to the plain `THREE.Mesh` here restores
+ * `BufferGeometry` and `Material | Material[]`, so a real mistake at one of the
+ * three call sites is caught by the compiler instead of being absorbed by
+ * `any`.
+ */
+function asMesh(object: THREE.Object3D): THREE.Mesh | undefined {
+  return object instanceof THREE.Mesh ? object : undefined;
 }
 
 /** A GL info log, or a word for its silence — an empty one is itself a finding. */
@@ -1191,7 +1217,11 @@ export function buildBook(
     metalness: settings.materials.coverMetalness,
   });
   if (entry.book.cover !== undefined) {
-    textures.load(entry.book.cover).then((texture) => {
+    // Deliberately not awaited: the book is built and mounted now, and the
+    // cover swaps itself in when it arrives. `void` rather than a `.catch`
+    // because `load` resolves `undefined` on every failure and never rejects —
+    // a missing cover is a coloured board, which is the fallback above.
+    void textures.load(entry.book.cover).then((texture) => {
       if (texture !== undefined) {
         cover.map = texture;
         cover.color.set(0xffffff);
@@ -2000,11 +2030,17 @@ function applyLive(
  *
  * Found by the research on #41, not by a test. It is the whole reason that
  * ticket existed before this control did.
+ *
+ * `stopSamplingShadows` calls this rather than repeating the traverse, and the
+ * reasoning above is why the two are the same operation: both turn the shadow
+ * map off and both need the unlit materials relinked, or the change is invisible
+ * until something else forces a recompile.
  */
 function dirtyEveryMaterial(scene: THREE.Scene): void {
   scene.traverse((object) => {
-    if (!(object instanceof THREE.Mesh)) return;
-    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+    const mesh = asMesh(object);
+    if (mesh === undefined) return;
+    for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
       material.needsUpdate = true;
     }
   });

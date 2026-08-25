@@ -4,10 +4,16 @@
  * One rule is enabled, and it is enabled at a threshold nothing can satisfy:
  * `complexity` at `max: 0` reports *every* function, because the rule's own
  * floor is 1. That turns a lint rule into an inventory — the report is the
- * population, and the number is in the message. Nothing else is on, and nothing
- * else should be: a second rule would put findings in the same report that
- * `scripts/lib/complexity.ts` would then have to filter, and a filter is a
- * place for a count to go quietly wrong.
+ * population, and the number is in the message.
+ *
+ * Nothing else is on, and nothing else should be — but not for the reason this
+ * paragraph used to give. It said a second rule would put findings in a report
+ * `scripts/lib/complexity.ts` would have to filter, and that a filter is a place
+ * for a count to go quietly wrong. That filter exists, it is on `ruleId`, and it
+ * is exact, so it forbade nothing. The real reason is narrower: this file states
+ * what the complexity number means and its options are hashed onto the record.
+ * The linter's rules live in `eslint.lint.config.mjs`, so the file people edit
+ * when a rule annoys them is not the file that defines the count.
  *
  * ⚠️ **The parser is load-bearing, not a preference.** Without it ESLint fails
  * on TypeScript syntax before it counts anything — and the failure arrives as a

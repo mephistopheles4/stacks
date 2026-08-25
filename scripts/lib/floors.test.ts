@@ -1083,7 +1083,7 @@ describe('fixtureHashOf', () => {
       ruleOptions: [{ max: 0, variant: 'classic' }],
       inventory: INVENTORY,
       ...changes,
-    } as CounterInputs;
+    };
   }
 
   it('is a sha256, spelled the way configHashOf spells one', () => {

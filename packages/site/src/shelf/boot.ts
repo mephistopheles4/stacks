@@ -345,8 +345,19 @@ async function loadLibrary(): Promise<LibraryBook[]> {
   try {
     const response = await fetch('/library.json');
     if (!response.ok) return [];
-    const library = (await response.json()) as Library;
-    return Array.isArray(library.books) ? [...library.books] : [];
+    // ⚠️ **Two assertions and one real check, and the check is only the shape.**
+    // `response.json()` is `any`, so `as Library` is a promise about a file
+    // nothing validated; `Array.isArray` then confirms `books` is an array and
+    // says nothing about what is in it, which is what the second assertion
+    // admits. The `unknown` binding exists because `Array.isArray` narrows to
+    // `any[]`, and without it that `any` would leave through the return type
+    // and spread into every caller.
+    //
+    // That is the honest description of a JSON boundary with no validator, and
+    // it is deliberate: a malformed `library.json` shows an empty or a broken
+    // shelf, never a failed build. The shelf reads a build artifact it produced.
+    const books: unknown = ((await response.json()) as Library).books;
+    return Array.isArray(books) ? (books as LibraryBook[]) : [];
   } catch {
     return [];
   }

@@ -2,26 +2,26 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp, { type Sharp } from 'sharp';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
 import { MAX_COVER_EDGE } from './covers/cover-budget.ts';
 import { publish } from './publish.ts';
-import { FIXTURE_VAULT } from './test-support.ts';
+import { FIXTURE_VAULT, spyOnWarn, type WarnSpy } from './test-support.ts';
 
 const CANARY = 'NOTE_BODY_CANARY_do_not_ship';
 const vault = new ObsidianAdapter(FIXTURE_VAULT);
 
 describe('publish', () => {
   let out: string;
-  let warn: ReturnType<typeof vi.spyOn>;
+  let warn: WarnSpy;
 
   beforeEach(async () => {
     out = await mkdtemp(join(tmpdir(), 'stacks-publish-'));
-    warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    warn = spyOnWarn();
   });
 
   afterEach(async () => {
-    warn.mockRestore();
+    warn.restore();
     await rm(out, { recursive: true, force: true });
   });
 

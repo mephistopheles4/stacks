@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { vi } from 'vitest';
 import type { HttpGet } from './metadata/http.ts';
 
 export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -27,6 +28,54 @@ export function fixtureHttpGet(routes: Readonly<Record<string, string>>): HttpGe
       }
     }
     throw new Error(`no fixture mapped for ${url} — tests must not hit the network`);
+  };
+}
+
+/** A silenced `console.warn`, and what was said to it. */
+export interface WarnSpy {
+  /** One entry per call, arguments joined with a space — the shape assertions want. */
+  readonly lines: readonly string[];
+  /** Puts the real `console.warn` back. Call it in `afterEach`. */
+  restore(): void;
+}
+
+/**
+ * Silence `console.warn` and record what it was told.
+ *
+ * Invariant 3 makes a warning the *product* of a bad note rather than noise, so
+ * four specs spy on `console.warn` — to keep a deliberate warning out of the
+ * test output, and in one case to assert which files it named.
+ *
+ * ⚠️ **This exists because the obvious annotation is untypeable.** All four
+ * wrote `let warn: ReturnType<typeof vi.spyOn>`, which resolves to
+ * `MockInstance<any>`, so `warn.mockRestore()` is an unsafe call on an unsafe
+ * member access — eight lint findings, one idiom, four files. A parameterised
+ * annotation is clean and so is a shared helper; the helper was chosen because
+ * it is the one that every future spec inherits. See ADR-0076.
+ *
+ * It returns `lines` rather than the spy because the spy is not what any caller
+ * wanted: three of the four ignore it entirely, and the fourth was pushing
+ * `args.join(' ')` into a local array of its own.
+ *
+ * ⚠️ **This is the first `vitest` import in a file here that is not a `.test.ts`,
+ * and it must stay unreachable from `index.ts`.** `@stacks/core`'s root export is
+ * what the site imports from, and a value path from there to `vitest` would put
+ * the test framework in the browser bundle — the same failure mode as the
+ * `node:fs` and sharp one that "the site may only `import type`" exists for. The
+ * protection today is that nothing re-exports this file and only specs import it.
+ * Keep it that way.
+ */
+export function spyOnWarn(): WarnSpy {
+  const lines: string[] = [];
+  const spy = vi.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {
+    lines.push(args.join(' '));
+  });
+
+  return {
+    lines,
+    restore: () => {
+      spy.mockRestore();
+    },
   };
 }
 

@@ -1,11 +1,11 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ObsidianAdapter } from '../adapters/obsidian-adapter.ts';
 import { parseAudibleExport } from './audible.ts';
 import { importBooks } from './index.ts';
-import { readApiFixture } from '../test-support.ts';
+import { readApiFixture, spyOnWarn, type WarnSpy } from '../test-support.ts';
 
 const EXPORT = readApiFixture('audible-export.json');
 
@@ -75,15 +75,15 @@ describe('parseAudibleExport', () => {
 
 describe('importBooks', () => {
   let dir: string;
-  let warn: ReturnType<typeof vi.spyOn>;
+  let warn: WarnSpy;
 
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), 'stacks-import-'));
-    warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    warn = spyOnWarn();
   });
 
   afterEach(async () => {
-    warn.mockRestore();
+    warn.restore();
     await rm(dir, { recursive: true, force: true });
   });
 

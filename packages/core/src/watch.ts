@@ -1,4 +1,4 @@
-import { watch, type FSWatcher } from 'node:fs';
+import { watch } from 'node:fs';
 
 /**
  * Watching a vault for changes worth rebuilding for.
@@ -89,7 +89,7 @@ export function watchVault(
     options.watcher?.(vaultPath, schedule) ??
     (watch(vaultPath, { recursive: true }, (_event, filename) =>
       schedule(typeof filename === 'string' ? filename : null),
-    ) as FSWatcher);
+    ));
 
   return {
     close(): void {

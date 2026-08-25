@@ -50,7 +50,6 @@ describe('the striation profile', () => {
     // scale would mean the map either shimmers at distance or has nothing up
     // close, and no filtering could fix either.
     const samples = 4096;
-    let coarseTurns = 0;
     let fineTurns = 0;
     let previous = heightAt(0);
     let rising = true;
@@ -71,7 +70,7 @@ describe('the striation profile', () => {
     // And the gathering envelope is there underneath: sampled at gathering
     // centres, the block is not one flat level.
     const centres = Array.from({ length: 14 }, (_, index) => heightAt((index + 0.5) / 14));
-    coarseTurns = new Set(centres.map((value) => value.toFixed(2))).size;
+    const coarseTurns = new Set(centres.map((value) => value.toFixed(2))).size;
     expect(coarseTurns).toBeGreaterThan(5);
   });
 

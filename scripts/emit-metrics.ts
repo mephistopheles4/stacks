@@ -299,7 +299,7 @@ const facts: RunFacts = {
   timestamp,
   commit,
   event: flags.get('event') ?? 'unknown',
-  configHash: configHashOf(strykerConfig as unknown as Record<string, unknown>),
+  configHash: configHashOf(strykerConfig),
   ...(fixtureHash === undefined ? {} : { fixtureHash }),
   runUrl: flags.get('run-url') ?? 'unknown',
   prWindow: windowSincePreviousRun(),

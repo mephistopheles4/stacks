@@ -419,7 +419,12 @@ function rulesOf(config: unknown): Record<string, unknown> {
 }
 
 export async function counterInputs(): Promise<CounterInputs> {
-  const config = await new ESLint({ cwd: REPO_ROOT }).calculateConfigForFile(INVENTORY.file);
+  // `calculateConfigForFile` is typed `any`, which is the shape `rulesOf` below
+  // already refuses to trust. Annotated `unknown` so the refusal starts here
+  // rather than one call later.
+  const config: unknown = await new ESLint({ cwd: REPO_ROOT }).calculateConfigForFile(
+    INVENTORY.file,
+  );
   const entry = rulesOf(config)['complexity'];
 
   if (entry === undefined) {

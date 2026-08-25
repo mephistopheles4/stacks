@@ -9,8 +9,13 @@ import { join } from 'node:path';
  * Everything that talks to an API takes this as an argument rather than calling
  * `fetch` itself. That is the seam the tests use: they pass a reader backed by
  * captured fixtures, so no test ever makes a live call.
+ *
+ * ⚠️ **`unknown`, not `unknown | undefined`.** `unknown` already admits
+ * `undefined`, so the union constrained nothing and read as though it did — the
+ * "or `undefined`" above is the whole contract, and it lives in this sentence
+ * because there is no type that can carry it.
  */
-export type HttpGet = (url: string) => Promise<unknown | undefined>;
+export type HttpGet = (url: string) => Promise<unknown>;
 
 const USER_AGENT = 'stacks/0.0 (personal reading tracker)';
 
@@ -26,7 +31,7 @@ const TRANSIENT = new Set([429, 500, 502, 503, 504]);
 const ATTEMPTS = 3;
 const BACKOFF_MS = 1200;
 
-async function getWithRetry(url: string): Promise<unknown | undefined> {
+async function getWithRetry(url: string): Promise<unknown> {
   for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
     try {
       const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
