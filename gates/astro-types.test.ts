@@ -80,17 +80,48 @@ function manifest(path: string): Manifest {
   return JSON.parse(readRepoFile(path)) as Manifest;
 }
 
+/**
+ * One npm script split into the commands `&&` actually sequences.
+ *
+ * ⚠️ **Substring matching is not enough here, and review caught it.** An
+ * `indexOf('astro check')` is satisfied by `astro check; astro build`, where a
+ * failed check does **not** stop the build — the exact defect the ordering
+ * clause exists for, passing the clause written to catch it. It is also
+ * satisfied by `echo "astro check" && astro build`, which runs no checker at
+ * all. Both are *satisfying the letter*, which is the verdict this row's own
+ * register entry carries.
+ *
+ * Splitting on `&&` alone is what makes the difference: `;` and `|` never
+ * produce a segment that *begins* with the command, so a segment test rejects
+ * them by construction rather than by enumerating them.
+ */
+function commands(script: string): string[] {
+  return script
+    .split('&&')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
+/** The index of the first command that is `name`, run as a command. */
+function indexOfCommand(script: string, name: string): number {
+  return commands(script).findIndex((command) =>
+    new RegExp(`^${name.replace(/ /g, '\\s+')}(\\s|$)`).test(command),
+  );
+}
+
 describe('G47 — the check is wired into the build', () => {
   it('runs `astro check` in the site build script, before `astro build`', () => {
     const script = manifest(SITE_MANIFEST).scripts?.build ?? '';
-    const check = script.indexOf('astro check');
-    const build = script.indexOf('astro build');
+    const check = indexOfCommand(script, 'astro check');
+    const build = indexOfCommand(script, 'astro build');
 
     expect(
       check,
-      `${SITE_MANIFEST}'s \`build\` script must run \`astro check\`. Without it .astro ` +
-        'frontmatter is typechecked by nothing, and a wrong-typed value reaches dist/ ' +
-        `through a green build. Script is: ${script}`,
+      `${SITE_MANIFEST}'s \`build\` script must run \`astro check\` as a command in an ` +
+        '`&&` chain. Without it .astro frontmatter is typechecked by nothing, and a ' +
+        'wrong-typed value reaches dist/ through a green build. ⚠️ `astro check; astro ' +
+        'build` does not count — `;` runs the build whatever the check said — and ' +
+        `neither does the string appearing inside another command. Script is: ${script}`,
     ).toBeGreaterThanOrEqual(0);
 
     // Order, not merely presence. `astro build && astro check` still reports the
@@ -112,11 +143,15 @@ describe('G47 — the check is wired into the build', () => {
     // The clause above is a fact about a script nothing calls unless this holds.
     const script = manifest(ROOT_MANIFEST).scripts?.build ?? '';
 
+    // Same shape as the clause above, and for the same reason: a regex over the
+    // whole string matches `echo "--filter @stacks/site run build"`, which
+    // delegates to nothing. The delegation has to be a command.
     expect(
-      script,
-      "the root `build` script must delegate to @stacks/site's build, or `pnpm build` " +
-        `never reaches \`astro check\` and the clause above pins an orphan: ${script}`,
-    ).toMatch(/--filter\s+@stacks\/site\s+run\s+build/);
+      indexOfCommand(script, 'pnpm --filter @stacks/site run build'),
+      "the root `build` script must delegate to @stacks/site's build as a command in an " +
+        '`&&` chain, or `pnpm build` never reaches `astro check` and the clause above ' +
+        `pins an orphan: ${script}`,
+    ).toBeGreaterThanOrEqual(0);
   });
 });
 

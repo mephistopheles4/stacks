@@ -5077,7 +5077,15 @@ both are given.
   reorder is the *invisible* weakening: the error is still reported and the
   output carrying it has already been written, so a reviewer reading the log
   sees a red build and a correct-looking script. Dropping the dependency is red,
-  and moving `typescript` off 6.x is red. ⚠️ **The open route is a second entry
+  and moving `typescript` **outside the 5.x/6.x range `@astrojs/check` supports**
+  is red — a move to 7.x, not a move to 5.x, which the clause accepts. ⚠️ **Two
+  further routes were closed after review**, and both were live: `astro check;
+  astro build` satisfied an `indexOf` while `;` runs the build whatever the check
+  said, and `echo "astro check" && astro build` satisfied it while running no
+  checker at all. Both are *satisfying the letter* — the verdict this very entry
+  carries — arriving inside the clause written to catch the ordering defect.
+  The clauses now split on `&&` and test each command, so `;` and `|` are
+  rejected by construction rather than by enumeration. Planted, both red. ⚠️ **The open route is a second entry
   point**: `pnpm deploy:site` builds through `scripts/deploy.ts`, and a future
   path that calls `astro build` directly rather than through the package script
   would bypass all of this. No such path exists today — the deploy runs
@@ -5104,7 +5112,7 @@ both are given.
   `exposed` because the assertion catches the pin moving and cannot catch
   `@astrojs/check` changing its own peer range under a version bump.
 
-**Observed-red:** **six executed plants, all red, none derived.**
+**Observed-red:** **eight executed plants, all red, none derived.**
 
 1. *The gate the row is about.* `absoluteUrl('/og.png', Astro.site)` in
    `packages/site/src/pages/index.astro` became `absoluteUrl(42, Astro.site)`.
@@ -5121,6 +5129,12 @@ both are given.
    clause red.
 6. The root `build` script pointed at `@stacks/core` instead of `@stacks/site`
    → the delegation clause red.
+7. `astro check; astro build` → clause 1 red. **Added after review**, and it is
+   the one that matters: `;` runs the build whatever the check said, so this is
+   the ordering defect wearing a correct-looking script, and it passed the
+   original `indexOf` clause.
+8. `echo "astro check" && astro build` → clause 1 red. Also added after review —
+   the string present, the checker never run.
 
 ⚠️ **And the counterpart, which is the finding rather than the ceremony.** With
 plant 1 in place and this row not yet landed, `pnpm typecheck` was green,

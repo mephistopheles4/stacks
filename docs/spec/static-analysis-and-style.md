@@ -123,6 +123,16 @@ trap: the map's own ticket brief mislabelled `repo-root` as G22, corrected in
 [#231](https://github.com/mephistopheles4/stacks/issues/231). The highest live
 row is **G45**. **Cite slug and number together, never the number alone.**
 
+> ⚠️ **"The highest live row is G45" is historical, and this paragraph is not
+> being updated to a new number.** It was true when written; S1 landed as **G46**
+> (`lint`), S4 as **G47** (`astro-types`), and the rest are still moving. Writing
+> today's highest into a spec four branches are editing is the *reservation* this
+> very paragraph warns about — it was G45, then G46, then G47 inside one day, and
+> a branch that renumbered to match would have been wrong within the hour. **Read
+> the highest row off `docs/gates.md` on a re-fetched `main`, at your own rebase.**
+> The sentence stays as the record of what was true, on this folder's rule for a
+> locked spec.
+
 Each new gate costs a row in [`docs/gates.md`](../gates.md), which **G19**
 (`constitution-scoreboard`) enforces in both directions, and a five-cell section
 in [`docs/gate-register.md`](../gate-register.md), which **G41**
@@ -133,7 +143,7 @@ in [`docs/gate-register.md`](../gate-register.md), which **G41**
 | **S1** | `lint` — the tuned type-checked rule set over every `.ts` file | 36 findings in 20 files that no gate reads. `tsc --noEmit` passes on all of them. |
 | **S2** | `format` — Prettier's check mode over code only | Nothing normalises source shape, and G14 and G45 already punish a quote form with a red that names no quote. |
 | **S3** | `markdown` — markdownlint on the narrow rule set | Three live documentation defects exist that 45 gates miss. |
-| **S4** | `astro-types` — `astro check` inside `pnpm build` | `.astro` frontmatter is read by no gate and typechecked by no compiler. |
+| **S4** | `astro-types` — `astro check` inside `pnpm build` | `.astro` frontmatter is read by no gate and typechecked by no compiler. ✅ **Landed as G47**; this cell is the *warrant*, so it records why the row was built and is not rewritten to say the gap is closed. |
 
 ### One CI job, not three
 
