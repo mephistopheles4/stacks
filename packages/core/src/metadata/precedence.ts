@@ -130,7 +130,7 @@ export function mergeFields(primary: BookMetadata, contributors: Contributors): 
     // Nobody in the order held it — including the primary, whose own value is
     // reinstated here rather than lost.
     if (filled[field] === undefined && primary[field] !== undefined) {
-      filled = { ...filled, [field]: primary[field] } as BookMetadata;
+      filled = { ...filled, [field]: primary[field] };
     }
   }
 

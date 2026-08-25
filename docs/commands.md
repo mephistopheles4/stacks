@@ -2,15 +2,58 @@
 
 The command lists themselves live in [`AGENTS.md`](../AGENTS.md), where
 `gates/commands.test.ts` (G14) holds them to `package.json` and the CLI in both
-directions. This file carries the *why* behind four of them — the parts a
-session needs only when it is deploying, cutting a worktree, formatting the
-tree, or reading a mutation score.
+directions. This file carries the *why* behind five of them — the parts a
+session needs only when it is linting, formatting the tree, deploying, cutting
+a worktree, or reading a mutation score.
 
 ⚠️ **`deploy:site`'s gate-ordering rule stayed in `AGENTS.md` on purpose** — it
 is compaction-fragile safety, not reference, and no code catches it. It is not
 restated here, because a rule with two homes is a rule that drifts
 ([ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md)).
 
+## `pnpm lint` — the rule set, the fix flag, and the file it is not in
+
+**G46.** The type-checked recommended set from `typescript-eslint`, plus
+`eslint:recommended`, plus `switch-exhaustiveness-check`, over every `.ts` file
+in the repository — **tests included, no split, no allowlist**. It exits
+non-zero on a single finding, and the `style` job in `gates.yml` runs it on every
+pull request.
+
+⚠️ **It is not `eslint.config.mjs`, and running the two together is the mistake
+this arrangement exists to prevent.** That file is the complexity counter: one
+rule, at a threshold nothing can satisfy, whose resolved options are hashed onto
+the trend record. The linter lives in `eslint.lint.config.mjs` and `pnpm lint`
+loads it with `--config`, which *replaces* the config lookup rather than adding
+to it. Flat config merges every config object whose `files` glob matches, so a
+single file would put the linter's `projectService` on the counter's run — and
+the counter cannot opt out, because `scripts/lib/complexity.ts` constructs
+`new ESLint({ cwd })` with no `overrideConfigFile`. Measured on
+[#233](https://github.com/mephistopheles4/stacks/issues/233): **88 extra rules
+cost 0.7 seconds and the one option costs 5.1**, taking the counter from 1.5s to
+7.3s while changing no count.
+
+**`pnpm lint --fix` repairs about a quarter of what this can report**, and that
+is the honest figure rather than a hedge: of the 33 findings on the tree the day
+it landed, 8 auto-fixed, 2 carried an editor suggestion and **23 had no fix at
+all**. Run it, then read the rest. What makes the 23 reachable is the rule's own
+message naming the file, the line and the problem — not the flag.
+
+**Four rule options are tuned, and each one is in the config with its reason.**
+`require-await` is off, `no-unused-vars` honours the `_` prefix,
+`no-irregular-whitespace` skips regular expressions, and
+`switch-exhaustiveness-check` accepts a `default:` clause. Measured on
+[#233](https://github.com/mephistopheles4/stacks/issues/233), against the tree at
+`c8ba4ee`: untuned the set reported **75** findings and tuned it reported **36**,
+removing none of the real ones. All 39 it stopped reporting named deliberate,
+documented idiom — a linter that flags the house style trains people to ignore
+it. ⚠️ **Do
+not remove one of those reasons without removing the option it justifies**: no
+gate reads this config, and the comment is what stands in for one.
+
+**It takes about 7.5 seconds**, against `pnpm typecheck`'s 2.2, because it builds
+a TypeScript program before any rule runs. The same call is in
+`.githooks/pre-commit`, where it prints and never blocks — so opting that hook in
+now costs the Vitest coverage pass *and* this.
 ## `pnpm format` and `pnpm format:check` — and the quarter of the site they never open
 
 **`pnpm format` rewrites the tree; `pnpm format:check` exits non-zero and names
@@ -370,7 +413,7 @@ and a red one ([ADR-0027](adr/0027-deploy-check-reports-refusal.md)). D skips, a
 says so, when `SITE_URL` is unset or the local `dist/` carries no build stamp — a
 gap in D's series is honest where an invented row is not.
 
-## The pre-commit CRAP print — opting in, and reading the table
+## The pre-commit hook — opting in, and reading the CRAP table
 
 **Not a command, and not a gate.** It is a checked-in git hook that nobody has
 until they ask for it:
@@ -391,6 +434,18 @@ core.hooksPath` empties the slot rather than restoring the old value, so opting
 out of this is only reversible if you kept what the first line printed —
 `git config core.hooksPath <what it printed>` puts it back. Nothing here is
 worth taking somebody's hook manager off them.
+
+**It runs two things, and neither can block a commit.** The CRAP print described
+below, and then `pnpm lint` — G46 shifted left, so a finding is seen before the
+round trip through CI rather than after it. Each is called with `|| printf …`
+and the script ends in an unconditional `exit 0`, so a failure of either costs
+the print and nothing else. The `style` job in `gates.yml` is what actually
+refuses.
+
+⚠️ **Both halves are slow, and the lint half is type-aware.** The CRAP print runs
+a Vitest coverage pass and `pnpm lint` builds a TypeScript program — about 7.5
+seconds on its own. This hook was already the slow part of a commit and is now
+slower; `--no-verify` skips both.
 
 **It prints and it never refuses.** Every failure — no dependencies installed,
 a Vitest run that died, a file ESLint could not parse — costs you the print and

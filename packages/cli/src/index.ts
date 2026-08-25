@@ -22,7 +22,6 @@ import {
   watchVault,
   BOOK_STATUSES,
   SHELVED_STATUSES,
-  type BookStatus,
 } from '@stacks/core';
 
 // Before anything reads process.env — a real variable still wins over the file.
@@ -61,7 +60,7 @@ program
 
     const googleBooksKey = process.env['GOOGLE_BOOKS_API_KEY'];
     const result = await addBook(term, vault, get, {
-      status: options.status as BookStatus,
+      status: options.status,
       ...(options.force === true ? { force: true } : {}),
       ...keyIfPresent('googleBooksKey', googleBooksKey),
     });

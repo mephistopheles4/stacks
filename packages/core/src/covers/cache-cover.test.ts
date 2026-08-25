@@ -57,9 +57,21 @@ function serve(bodies: Readonly<Record<string, Buffer | undefined>>): void {
   );
 }
 
-/** Every URL `fetch` was called with, in call order. */
+/**
+ * Every URL `fetch` was called with, in call order.
+ *
+ * `fetch` takes `string | URL | Request`, and only the first two stringify to
+ * anything useful — `String(new Request(url))` is `[object Object]`, so a
+ * `toContain` assertion against it would pass or fail for reasons unrelated to
+ * the URL. Every call here passes a string; the other two arms are read rather
+ * than assumed.
+ */
 function fetched(): string[] {
-  return vi.mocked(fetch).mock.calls.map(([url]) => String(url));
+  return vi
+    .mocked(fetch)
+    .mock.calls.map(([url]) =>
+      typeof url === 'string' ? url : url instanceof URL ? url.href : url.url,
+    );
 }
 
 describe('cacheCover', () => {

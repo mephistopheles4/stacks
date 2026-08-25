@@ -9,6 +9,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint --config eslint.lint.config.mjs .",
     "build": "pnpm run typecheck && pnpm --filter @stacks/site run build",
     "test": "vitest run",
     "format": "prettier --write .",
@@ -28,6 +29,7 @@
     "deploy:site": "tsx scripts/deploy.ts"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@stryker-mutator/core": "9.6.1",
     "@stryker-mutator/vitest-runner": "9.6.1",
     "@types/node": "^26.2.0",
@@ -40,6 +42,7 @@
     "sharp": "^0.35.3",
     "tsx": "^4.23.12",
     "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0",
     "vitest": "4.1.11"
   }
 }

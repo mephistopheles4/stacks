@@ -193,6 +193,8 @@ red build.
 ```
 pnpm install
 pnpm typecheck           # tsc --noEmit across every .ts in the repo
+pnpm lint                # G46: the tuned type-checked rule set over every .ts
+                         #   file, tests included   (--fix repairs about a quarter)
 pnpm test                # vitest: packages/**/src and gates/
 pnpm format              # Prettier over code — Markdown and fixtures/ excluded
 pnpm format:check        # the same check, reporting instead of writing (.astro reaches neither)
@@ -236,10 +238,11 @@ page says at the top; there is no confidence figure on it and there will not be
 one ([ADR-0062](docs/adr/0062-the-dashboard-is-provisioned-from-the-repo.md)).
 
 **The rest is in [`docs/commands.md`](docs/commands.md)** — read it before you
-deploy, cut a worktree, read a mutation score, or sync the trend store. It
-carries `deploy:site`'s `main`-only branch guard and what it verifies after
-upload, `worktree`'s three cases and the one shared `.env`, why a mutation score
-is a trend and not a gate, and what `trend:sync` refuses.
+deploy, cut a worktree, read a mutation score, sync the trend store, or widen a
+lint rule. It carries `deploy:site`'s `main`-only branch guard and what it
+verifies after upload, `worktree`'s three cases and the one shared `.env`, why a
+mutation score is a trend and not a gate, what `trend:sync` refuses, and why
+`lint` loads a config file of its own rather than the counter's.
 
 CLI commands — `pnpm stacks <cmd>`:
 

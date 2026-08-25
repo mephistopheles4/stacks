@@ -47,7 +47,7 @@ function answering(responses: readonly (Response | Error)[]): typeof fetch {
     const next = responses[at];
     if (next instanceof Error) throw next;
     return next as Response;
-  }) as unknown as typeof fetch;
+  });
 }
 
 const QUICK = { attempts: 3, waitMs: 0 };

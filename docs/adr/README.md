@@ -95,3 +95,4 @@ Two other files hold what these deliberately do not:
 | [0069](./0069-coverage-is-an-ingredient-not-a-goal.md) | Coverage is an ingredient, not a goal |
 | [0070](./0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md) | Stryker's type checker stays off until the compiler version is a hashed ingredient |
 | [0074](./0074-prettier-formats-code-and-nothing-else.md) | Prettier formats code and nothing else, and two of its settings are load-bearing |
+| [0076](./0076-the-linter-is-type-aware-and-pinned.md) | The linter is type-aware, and every input to its verdict is pinned exact |
