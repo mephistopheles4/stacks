@@ -1534,6 +1534,54 @@ are the same artifact.
 | `duplication-tree-lines` | duplicated lines, whole-tree TypeScript | merge and nightly | ” | ” |
 | `duplication-tree-ignored-lines` | lines inside a `jscpd` suppression block, whole-tree TypeScript | merge and nightly | ” | ” |
 | `duplication-tree-total-lines` | lines scanned, whole-tree TypeScript — no scope list can shrink it | merge and nightly | ” | ” |
+| `cognitive-functions` | functions in the cognitive population — **its own denominator**, smaller than `complexity-functions` by the nodes the rule never visits | merge and nightly | ” | ” |
+| `cognitive-mass` | Σ cognitive complexity over those functions, a function the rule was silent about counting zero | merge and nightly | ” | ” |
+| `cognitive-mass-over-15` | Σ cognitive complexity over functions scoring above 15 | merge and nightly | ” | ” |
+| `cognitive-max` | the largest single function's cognitive complexity | merge and nightly | ” | ” |
+
+⚠️ **The cognitive four are published *beside* the cyclomatic four and never
+instead of them.** The two measures agree broadly and diverge really — #230
+measured 1105 scored pairs at Pearson r 0.9159 with 54 inversions — and
+`resolveSettings` scores cyclomatic 17 and cognitive **0**, because every `?.`
+link is a branch to one measure and nothing at all to the other. A replacement
+makes a 17-branch function invisible.
+[ADR-0073](adr/0073-cognitive-complexity-is-published-beside-cyclomatic.md).
+
+⚠️ **`cognitive-functions` is a different denominator, not a copy of
+`complexity-functions`, and the spec has to say so or two implementations
+produce different numbers.** #230 measured 1105 against 1114; re-measured at
+adoption it was 1124 against 1133. **The gap of nine is the invariant, not
+either total** — the totals grow with the tree. It has two causes, both
+silences, and they are not the same silence. The rule hooks the `:function`
+selector, so it **never visits** a `PropertyDefinition` or a `StaticBlock` —
+nine such nodes, all in `packages/site/src/shelf`, carrying cyclomatic mass and
+no cognitive mass, and **not in the population at all**. And it reports only
+above its threshold, so at `0` a function scoring zero is **silently absent** —
+those *are* in the population, and **absent at zero counts as zero**.
+
+⚠️ **The cut of 15 is the supplier's own default and nothing may ever refuse on
+it.** McCabe published 10 in 1976 with his reasoning; `DEFAULT_THRESHOLD = 15`
+is published without any. The distinguishing test — *is the number published
+with reasoning, or merely published?* — passes 10 and fails 15. So
+`cognitive-mass-over-15` is published and takes **no cap**, which discharges the
+condition on accepting 15 at all, and `cognitive-max` is the only cognitive
+series a cap may ever reach. A mirrored cap is unreachable: it needs a mass-over
+count, which needs a cut, and McCabe's 10 is *worse* — a bound about a different
+measure.
+
+⚠️ **No cognitive name is in `CAPPED_SERIES` yet, and that is a code constraint
+rather than a caution.** `countedIn` filters to rows where **every** member of
+that set has samples, so adding `cognitive-max` before records carry that family
+makes it return nothing at all. **What that breaks is the *reading*, not the
+window.** `capCalibration` takes its window from `streakOf`, which filters on
+`row.ok` and the fixture hash and **never reads `row.counts`** — the window is
+roster-independent. What collapses is downstream: `scripts/deploy.ts` derives
+`newestCount` from `countedIn`, so **every cap line prints `null`**, and
+`countedRun` — the sole input to the counting-rule refusal — is spread in only
+when `newestCount` is defined, so **that refusal silently disarms itself**. The
+caps go blind and the guard switches off, with nothing red. Waiting costs
+nothing, because `countedIn` reads what a record carries rather than what a type
+declares.
 
 ⚠️ **`mutation-score` is spelled *killed ÷ total* on purpose.** The score is
 gameable by adding trivially-killable code, which dilutes the denominator upward
@@ -1560,7 +1608,9 @@ first** — `gate-suite-runtime` has been on both since the spine landed, and th
 `Cadence` cell above said `nightly` until this rollout read it, believed it, and
 wrote the claim down. Both are corrected here, because **G36 reads only the
 `Trend` column**: every other cell in this table is prose nothing holds, which
-is worth knowing before trusting one. A merge record now carries five series,
+is worth knowing before trusting one. A merge record now carries **seventeen**
+series — the suite runtime, four `complexity-*`, eight `duplication-*` and four
+`cognitive-*` —
 and **still does not read as a scored one** — `scoresOf` stays
 mutation-specific, or every push would be paired against a nightly in the
 deploy's delta.
@@ -1733,6 +1783,7 @@ oldest failure in this file.
 | GitHub repository settings | Dependabot alerts, malware alerts, grouped security updates, branch protection. They live outside the tree, so nothing in a clone can read them — and a gate that asked GitHub would need the network, which **G21 (`no-live-network`) forbids for the whole suite**. Listed in `SECURITY.md` as relied upon and unverifiable, which is the most this repo can honestly say about them. |
 | **A branch name or a commit subject follows the convention** ([ADR-0057](adr/0057-the-pull-request-title-is-the-commit-subject.md)) | Commit-lint is available and it is the wrong instrument. Put [`gate-or-trend.md`](spec/gate-or-trend.md)'s **Clause A** to it — *does its red have a named, reachable remedy?* — and the answer depends on who hit it: for the maintainer, rename the pull request; for a stranger, the build is red for something that is not a defect in their change, and `CONTRIBUTING.md` promises that a contributor with no agent skills installed passes every gate. **That is the disposal [`trend-layer.md`](spec/trend-layer.md) §4 already made of a staleness spec** — *"That fails Clause A **for the person who hit it**. A stranger paying for your dead pipe is not a gate; it is a tax"* — reached a second time, for a convention rather than a pipe, which makes it precedent rather than a fresh judgement. **The surface would be defensible even though the check is not**: the repository squash-merges with `squash_merge_commit_title: PR_TITLE`, so the only string worth checking is the pull request title on `pull_request` — never `commit-msg`, which lints a message the squash throws away. That door is documented here rather than left to be rediscovered. ⚠️ **The branch half is disqualified by coverage, and the first draft of this row said something else and was wrong.** It claimed CI cannot see a branch name at all; `gates.yml` runs on `pull_request`, so `github.head_ref` carries it, exactly as the same event carries the title conceded one clause earlier — the two halves of one sentence disagreed, and a review caught it. What actually disqualifies it: `head_ref` exists **only on a pull request**, so a branch that never opens one is never checked, and the branches a harness names are deleted by the squash that merges them. A check firing on some branches and reading as covering all of them is the shape this file's [*Why this file exists*](#why-this-file-exists) is a list of. |
 | **The linter's own config** (`eslint.lint.config.mjs`) | G46 gates the tree and nothing gates the rule set. Four options are tuned so that four documented repository idioms stop being reported — measured, and each carries its reason in the file — and each is a place a rule can be widened again later, or switched off, in a diff that reads as configuration rather than as a weakening. No gate here reads a lint config, and building one would mean a second copy of the rule set for the first to be held against. What stands in its place is the comment convention: **do not remove a reason without removing the option it justifies.** Recorded on [#233](https://github.com/mephistopheles4/stacks/issues/233) as debt 5 and not solved. |
+| **Test-code complexity as a series or a population** | **Refused on measurement, and the measurement is the deliverable.** No test function in this repository exceeds McCabe 10 — the maximum across all **1931** of them is exactly 10, and four fifths score 1 — so `complexity-mass-over-10` is **identically zero** for every candidate test population and `complexity-max` is a flat line. Those are precisely the two counts the spec caps, dead on arrival. ⚠️ **The cognitive half is narrower than it first reads and the claim is limited accordingly**: `cognitive-mass-over-15` is identically zero for any test population — nothing there comes near 15 — but `cognitive-max` is **not**, because at threshold `0` any test helper with a `for` or an `if` scores at least 1. So adopting cognitive complexity does not reopen this, and the reason is the over-the-cut count rather than both counts. ⚠️ **The gates are not special**, which answers the fog item this question inherited: gate test code is indistinguishable from package test code — mean 1.42 against 1.41, max 9 against 10. ⚠️ **One configuration survives and nothing rules it out**, recorded because only an *argued* edge stands against it: one population of all test files, the two volume counts, uncapped, read at the deploy, behind a second declaration list and its own ADR. [#239](https://github.com/mephistopheles4/stacks/issues/239) |
 | **Markdown line length (MD013)** | **1540 findings, 76% of everything markdownlint reports here, and no auto-fix at any limit.** Refused as part of G48 (`markdown`) rather than left unmentioned, because the rule most people would expect in a Markdown rule set is the one this repo cannot have. **No limit rescues it**: the longest Markdown line in the tree is **2048 characters** and it is a table row in [`adr/0016-painted-shadows.md`](adr/0016-painted-shadows.md); this file has one at 2025. A table row does not wrap. 1008 lines exceed 100 characters and 416 exceed 200, so even a limit near 200 leaves 416 hand edits *and* still cannot pass the tables. ⚠️ **The rule is off in `.markdownlint.jsonc` and this row is the reason**, so a later session that turns it back on meets the measurement before the 1540 reds. [#235](https://github.com/mephistopheles4/stacks/issues/235) |
 | **Claiming an issue before working it** (the rule in `AGENTS.md`'s *Working rules for agents*) | A claim is a property of the tracker and of wall-clock time, not of the tree: a spec asserting it would go red for a contributor who never touched an issue, which is the metrics-freshness rejection in [`docs/spec/trend-layer.md`](spec/trend-layer.md) §4 — *a stranger paying for your dead pipe is not a gate; it is a tax*. Reading it in CI needs the network anyway, and **G21 forbids that for the whole suite**. **The mechanism is the assignee plus a one-hour window, and both halves were chosen knowing the assignee is not a lock** — every session here authenticates as the same account, so a ticket was once claimed twice five seconds apart, and no check on the tracker could have told those two apart. It was kept because it is the only signal that renders in GitHub's own UI and that the frontier query already reads; a claim *comment* or a `claimed` label buy filterability and add a second thing to remove on abandonment, which is the state nobody cleans up. The window is the reading half and needs no cleanup: an assignment older than an hour stops being presumed live on its own. So this is an advisory recorded where a person will see it, not a lock — and the real protection remains naming the issue when a session is launched. |
 
@@ -1741,6 +1792,12 @@ oldest failure in this file.
 Carried over from the Decision Log when the decisions themselves moved to
 [`docs/adr/`](./adr/). These are not decisions — they are what went wrong while
 writing the things above, which is the part most likely to go wrong again.
+
+- **2026-08-23** — **Adding a trend series reddens four things that are not the trend layer, because a freshness bound derived from a list grows with the list.** `GATED_SERIES` is `TREND_SERIES.map(...)`, and `judgeRecord` treats *no sample at all* and *a stale sample* as the same verdict — correctly, since both mean nobody can read that number. So four cognitive names were, from the instant they were declared, four names `pnpm deploy:site` demanded a fresh sample of. Three record fixtures had to grow the same way, and — the one nobody would predict — **G17 (`deploy-branch`)**, whose four assertions were suddenly observing a *freshness* refusal instead of the branch guard they exist to test. ⚠️ **Every one failed loudly and none failed informatively**: the message names the stale series, which reads as *the pipe is broken* rather than *your fixture is out of date*. The shape is **a derived list used as an expectation by fixtures that build their records by hand** — the derivation keeps the production path honest and leaves every hand-built fixture behind. Independently hit by the duplication work on the same day, which is what makes it structural rather than one session's slip.
+
+- **2026-08-23** — **A test whose name states a property and whose body checks something weaker is worse than no test, and this repo shipped one in a pull request whose own documentation lectures about it.** `scores a declared population and gets a smaller denominator than the cyclomatic one` asserted `population.length > 0` and nothing else — no comparison, no inequality — so a regression in `cognitivePopulationOf` would have stayed green forever behind a name and a comment that both claimed otherwise. Caught by CodeRabbit, not by the author and not by a two-axis review that had already read the file. ⚠️ **The tell is available without running anything**: the assertion mentions one quantity where the name mentions two. `expectFound` exists because an *extraction* that matches nothing reads as health; this is the same failure one level up, where an *assertion* that compares nothing reads as coverage. The repair asserts both halves — that the cognitive population is smaller, and that the difference equals the never-visited nodes exactly — and was verified by planting the regression and watching it go red.
+
+- **2026-08-23** — **A gate caught a use of `import.meta.url` that was not what it was looking for, and it was right to.** G24 (`repo-root`) sweeps `scripts/` for `import\.meta\.(url|dirname|filename)` and flagged `createRequire(import.meta.url)` in the cognitive counter — which resolves a *package*, not the repo root, so on its face a false positive. It is not one. The gate's own comment says a rule matching prose matches anything, which is why it matches code and cannot read intent; and the fix it forced — `createRequire(join(REPO_ROOT, 'package.json'))` — is **more correct than the code it rejected**, because the plugin is a dependency of the *root* `package.json`. **The temptation to widen `DERIVATION` with an exception was the wrong move available**, and it was available.
 
 - **2026-08-22** — **A hardcoded column width does not overflow, it swallows the gap.** The staleness refusal padded each series name to 22 characters, which was the longest name that existed when it was written. `complexity-mass-over-10` is 23, and `pad` returns an over-long string unchanged — so the refusal printed `complexity-mass-over-10no sample at all in the 1 newest record(s) read`, running the name straight into its own explanation in the one message a refusal is read from. Nothing went red: every assertion used `toContain`, and the substrings were all still there. Found by reading the output of a test that passed. The width is now measured from the names being printed, as `renderPanel` one function up already did, and a spec plants a name longer than the old constant. **The general shape is a constant derived from today's data and then frozen** — the same class as the counts in prose this file has two other rows about, with the twist that a formatting constant is invisible to every assertion that checks for content.
 

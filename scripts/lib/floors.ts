@@ -23,6 +23,7 @@ import { join } from 'node:path';
 // a value import here would drag the linter into every module that reads a
 // floor — including the deploy, which computes no count and only compares two
 // strings.
+import type { CognitiveInputs } from './cognitive.ts';
 import type { CounterInputs } from './complexity.ts';
 // Type-only for `complexity.ts`'s reason one line up: `duplication.ts` spawns a
 // subprocess and walks the tree, and a value import here would drag both into
@@ -409,34 +410,80 @@ function digest(value: unknown): string {
  * a different rule is **refused rather than compared**.
  *
  * **The canonical inputs are the spec's, in the spec's order**
- * (`docs/spec/complexity-on-the-trend-layer.md` §4): the two installed
- * versions, the resolved rule options, and the fixture's expected totals.
+ * (`docs/spec/complexity-on-the-trend-layer.md` §4): the three installed
+ * versions, both resolved rule option sets, and both fixtures' expected totals.
  * Positional, in an array, so the order is structural rather than a promise in
- * a comment — swapping the two version strings is a different hash, which is
- * the property `floors.test.ts` plants.
+ * a comment — swapping two version strings is a different hash, which is the
+ * property `floors.test.ts` plants.
  *
- * ⚠️ **Severity is absent from `ruleOptions` and that is `CounterInputs`'s
- * judgement, not an omission here.** At `max: 0` every function reports whether
- * the rule says `warn` or `error`, so severity cannot move a count — and
- * hashing it would refuse every record across a `warn` → `error` edit whose
- * numbers were identical either side. It is `SCORE_NEUTRAL_OPTIONS` applied to
- * a different config: hash what changes the number, and nothing else.
+ * ⚠️ **One hash over two counting rules, decided in
+ * [#234](https://github.com/mephistopheles4/stacks/issues/234) §2 with its cost
+ * recorded rather than hidden.** A `sonarjs` upgrade now refuses every
+ * *cyclomatic* cap comparison too, although no cyclomatic number moved. That is
+ * the fail-closed direction, and it was preferred to a second stamp: a cap is a
+ * number about *the counting rule this repository runs*, and after this ticket
+ * that rule is two rules. The alternative — a second hash — was put and refused
+ * because it makes *which stamp does this cap answer to* a question every
+ * reader of the floors file has to hold.
  *
- * ⚠️ **`MCCABE_CUT` is deliberately not an input, and is guarded elsewhere.**
- * It decides what `complexity-mass-over-10` means, but §4's canonical list is
- * these three and a fourth would change a contract two implementations are
- * meant to agree on. The fixture cannot see it either — its only over-the-cut
- * function scores 13, so a cut of 10, 11 or 12 produces identical expected
- * totals. What closes that is the series *name*, asserted against the constant
- * in `complexity.test.ts`: move the cut and it is either red or a rename, and a
- * rename is G36's to catch.
+ * ⚠️ **Adoption changes this hash once, and exactly one thing moves: the
+ * calibration window, 1 → 0.** `capCalibration` is the only hash-filtered path
+ * — `streakOf` with `row.fixtureHash === fixtureHash` — and of the 12 records
+ * carrying the previous stamp only **one** is a nightly, the other 11 being
+ * `push`, which `nightliesIn` drops. Nothing is armed.
+ *
+ * ⚠️ **`countedIn` is not hash-filtered and does not move here.** It reads
+ * `row.ok` and `CAPPED_SERIES` samples, never `fixtureHash`. Only a change to
+ * the roster moves it, which is a different event on a different ticket. Do not
+ * record the two as a pair.
+ *
+ * ⚠️ **But it is anything but unread, and that is what makes the roster event
+ * dangerous.** `scripts/deploy.ts` takes `newestCount` off its result and
+ * derives `countedRun` from it — the sole input to `countedElsewhere` below —
+ * spreading it in **only when `newestCount` is defined**. Empty it by adding a
+ * roster name before records carry that family, and every cap reading prints
+ * `null` *and* the counting-rule refusal silently cannot fire.
+ *
+ * ⚠️ **Any count here is as-of, because the branch is live** — 10 stamped at 41
+ * records, 12 at 43. Re-measure rather than trusting the figure in this comment.
+ *
+ * ⚠️ **Severity is absent from both option sets and that is the counters'
+ * judgement, not an omission here.** Neither rule's severity can move a count —
+ * at `max: 0` and at a threshold of `0` every reporting function reports
+ * whether the rule says `warn` or `error` — so hashing it would refuse every
+ * record across an edit whose numbers were identical either side. It is
+ * `SCORE_NEUTRAL_OPTIONS` applied to a different config: hash what changes the
+ * number, and nothing else. ⚠️ The cognitive **threshold** is a different
+ * matter and *is* hashed; `CognitiveInputs.ruleOptions` says why.
+ *
+ * ⚠️ **Neither cut is an input, and both are guarded elsewhere.**
+ * `MCCABE_CUT` decides what `complexity-mass-over-10` means and `COGNITIVE_CUT`
+ * what `cognitive-mass-over-15` means, but §4's canonical list is these six and
+ * a seventh would change a contract two implementations are meant to agree on.
+ * Neither fixture can see its cut either — the cyclomatic one's only
+ * over-the-cut function scores 13, so a cut of 10, 11 or 12 produces identical
+ * totals, and the cognitive one's scores 21, so 15 through 20 do. What closes
+ * both is the series *name*, asserted against the constant in each counter's
+ * spec: move a cut and it is either red or a rename, and a rename is G36's to
+ * catch.
+ *
+ * ⚠️ **The two assertions anchor on different arrays, and the difference is
+ * not cosmetic.** `floors.test.ts` closes `MCCABE_CUT` against `CAPPED_SERIES`,
+ * which works because `complexity-mass-over-10` is in it. `cognitive.test.ts`
+ * closes `COGNITIVE_CUT` against `TREND_SERIES`, because **no cognitive name is
+ * in `CAPPED_SERIES` and none ever will be** — `cognitive-mass-over-15` may
+ * never be capped, which is the condition on accepting a cut nobody derived.
+ * The `CAPPED_SERIES` spelling would be vacuous there.
  */
-export function fixtureHashOf(inputs: CounterInputs): string {
+export function fixtureHashOf(inputs: CounterInputs, cognitive: CognitiveInputs): string {
   return digest([
     inputs.eslintVersion,
     inputs.parserVersion,
+    cognitive.sonarjsVersion,
     canonical(inputs.ruleOptions),
+    canonical(cognitive.ruleOptions),
     canonical(inputs.inventory),
+    canonical(cognitive.inventory),
   ]);
 }
 

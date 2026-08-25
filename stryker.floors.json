@@ -102,7 +102,7 @@
     "docs/adr/0068-the-complexity-cap-only-falls.md."
   ],
   "configHash": "sha256:cb1d60c7a05c978d12d4d49feb413bd2e5b8b76bb85c72fe9260c859dd05ee7b",
-  "fixtureHash": "sha256:26f7066cc66d2bbbf50bac77ca83f3dcbe5302e5c1f973e1a3758909d8f2b146",
+  "fixtureHash": "sha256:47485de655758e1601a4ef78b0ef152a19f4d16c580298ced3ce4450abe1af3a",
   "scopes": {
     "packages/core/src": {
       "floor": "unarmed",

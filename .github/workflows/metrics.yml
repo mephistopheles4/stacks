@@ -153,7 +153,7 @@ jobs:
           [ "${{ steps.suite.outputs.status }}" = "0" ] || FAILED="gate-suite-runtime"
           echo "series whose step failed: [$FAILED]"
           pnpm metrics:emit \
-            --expect gate-suite-runtime,complexity-functions,complexity-mass,complexity-mass-over-10,complexity-max,duplication-clones,duplication-lines,duplication-ignored-lines,duplication-total-lines,duplication-tree-clones,duplication-tree-lines,duplication-tree-ignored-lines,duplication-tree-total-lines \
+            --expect gate-suite-runtime,complexity-functions,complexity-mass,complexity-mass-over-10,complexity-max,cognitive-functions,cognitive-mass,cognitive-mass-over-15,cognitive-max,duplication-clones,duplication-lines,duplication-ignored-lines,duplication-total-lines,duplication-tree-clones,duplication-tree-lines,duplication-tree-ignored-lines,duplication-tree-total-lines \
             --failed "$FAILED" \
             --suite-seconds "${{ steps.suite.outputs.seconds }}" \
             --commit "${{ github.sha }}" \
@@ -235,7 +235,7 @@ jobs:
           [ "${{ steps.mutation.outputs.status }}" = "0" ] || add "mutation-score,mutation-run-runtime,live-exclusions"
           echo "series whose step failed: [$FAILED]"
           pnpm metrics:emit \
-            --expect mutation-score,gate-suite-runtime,mutation-run-runtime,live-exclusions,complexity-functions,complexity-mass,complexity-mass-over-10,complexity-max,duplication-clones,duplication-lines,duplication-ignored-lines,duplication-total-lines,duplication-tree-clones,duplication-tree-lines,duplication-tree-ignored-lines,duplication-tree-total-lines \
+            --expect mutation-score,gate-suite-runtime,mutation-run-runtime,live-exclusions,complexity-functions,complexity-mass,complexity-mass-over-10,complexity-max,cognitive-functions,cognitive-mass,cognitive-mass-over-15,cognitive-max,duplication-clones,duplication-lines,duplication-ignored-lines,duplication-total-lines,duplication-tree-clones,duplication-tree-lines,duplication-tree-ignored-lines,duplication-tree-total-lines \
             --failed "$FAILED" \
             --report artifacts/stryker/current/mutation.json \
             --suite-seconds "${{ steps.suite.outputs.seconds }}" \

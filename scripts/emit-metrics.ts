@@ -53,6 +53,11 @@ import {
   type Counts,
 } from './lib/complexity.ts';
 import {
+  cognitiveInputs,
+  countCognitivePopulation,
+  type CognitiveCounts,
+} from './lib/cognitive.ts';
+import {
   TREE_POPULATION,
   countAllPopulations,
   duplicationInputs,
@@ -64,6 +69,7 @@ import {
 import { sourceFiles } from './lib/scope-check.ts';
 import {
   TREND_SERIES,
+  cognitiveFactsOf,
   complexityFactsOf,
   duplicationFactsOf,
   renderMetrics,
@@ -351,15 +357,72 @@ function describeCounts(population: string, counts: DuplicationCounts | null): s
  */
 async function countingStamp(): Promise<string | undefined> {
   try {
-    return fixtureHashOf(await counterInputs());
+    // ⚠️ **One stamp over both counting rules**, per #234 §2.
+    return fixtureHashOf(await counterInputs(), await cognitiveInputs());
   } catch (error) {
     console.error(`could not stamp the counting rule: ${String(error)}`);
     return undefined;
   }
 }
 
+/**
+ * The four cognitive counts over every declared population, or the four names failed.
+ *
+ * `complexityFacts`' twin, with one ordering that is the design rather than a
+ * convenience: **this runs in its own `try`, so a cognitive failure costs the
+ * cognitive four and nothing else.** The cyclomatic counter is a different
+ * matter — the cognitive population is *derived* from its report, so if it
+ * throws there is no denominator left and both sets are gone. That asymmetry
+ * follows the dependency and is enforced at the call site below.
+ *
+ * ⚠️ **Two ESLint passes per scope, and the second is not free.** The cognitive
+ * rule cannot report a function scoring zero, so the population has to come
+ * from somewhere, and the only thing that knows it is the cyclomatic report.
+ * `countCognitivePopulation` runs both.
+ */
+async function cognitiveFacts(): Promise<ReturnType<typeof cognitiveFactsOf>> {
+  try {
+    const files = sourceFiles();
+    const counted = new Map<string, CognitiveCounts | null>();
+
+    for (const scope of readScopes()) {
+      const counts = await countCognitivePopulation(scope, files);
+      counted.set(scope.name, counts);
+      console.log(
+        counts === null
+          ? `cognitive ${scope.name}: no function in the population`
+          : `cognitive ${scope.name}: ${String(counts.functions)} functions, mass ${String(
+              counts.mass,
+            )}, over-15 ${String(counts.massOver15)}, max ${String(counts.max)}`,
+      );
+    }
+    return cognitiveFactsOf(counted);
+  } catch (error) {
+    console.error(`could not count cognitive complexity: ${String(error)}`);
+    return cognitiveFactsOf(undefined);
+  }
+}
+
 const complexity = await complexityFacts();
 const duplication = await duplicationFacts();
+
+/**
+ * ⚠️ **A cyclomatic failure takes the cognitive four with it, and this line is
+ * what makes that true rather than merely documented.**
+ *
+ * `RunFacts.cognitive` states the contract — the cognitive population is
+ * *derived* from the cyclomatic report, so if that report is not trustworthy
+ * there is no denominator to count against. But `cognitiveFacts()` runs its own
+ * independent ESLint pass, so without this guard it could succeed where
+ * `complexityFacts()` had just failed, and the record would carry cognitive
+ * samples whose denominator came from a run the same file had already declared
+ * broken. Found in review on #266; the comment promised it and the code did not.
+ *
+ * The reverse does **not** hold, and duplication is independent of both — it
+ * reads no ESLint report at all.
+ */
+const cognitive =
+  complexity.failed.length > 0 ? cognitiveFactsOf(undefined) : await cognitiveFacts();
 const fixtureHash = await countingStamp();
 
 /**
@@ -402,11 +465,13 @@ const facts: RunFacts = {
     ...trendNames(flags.get('failed'), '--failed'),
     ...complexity.failed,
     ...duplication.failed,
+    ...cognitive.failed,
   ],
   gateSuiteRuntime: seconds(flags.get('suite-seconds'), '--suite-seconds'),
   mutationRunRuntime: seconds(flags.get('mutation-seconds'), '--mutation-seconds'),
   complexity: complexity.complexity,
   duplication: duplication.duplication,
+  cognitive: cognitive.cognitive,
   ...scoresFrom(flags.get('report')),
 };
 

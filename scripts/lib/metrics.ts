@@ -30,6 +30,7 @@
  * the merge half legitimately expects five series where the nightly expects eight.
  */
 
+import type { CognitiveCounts } from './cognitive.ts';
 import type { Counts } from './complexity.ts';
 import type { AllCounts, DuplicationCounts } from './duplication.ts';
 import type { EdgeAnswer } from './edge-probe.ts';
@@ -115,6 +116,26 @@ export const TREND_SERIES = [
     name: 'duplication-tree-total-lines',
     help: 'Lines scanned, whole-tree TypeScript — no scope list can shrink it.',
   },
+  // The cognitive four, **beside the cyclomatic four and never instead of
+  // them**. The two measures agree broadly and diverge really: one function
+  // here scores cyclomatic 17 and cognitive 0, so a replacement would make a
+  // 17-branch function invisible. ⚠️ Its own denominator — the rule never
+  // visits a `PropertyDefinition` or a `StaticBlock`, and is silent at zero
+  // rather than reporting one, so **absent at zero counts as zero**. See
+  // ADR-0073 and docs/spec/static-analysis-and-style.md §5.
+  {
+    name: 'cognitive-functions',
+    help: 'Functions in the cognitive population — smaller than complexity-functions, and its own denominator.',
+  },
+  {
+    name: 'cognitive-mass',
+    help: 'Σ cognitive complexity over those functions, a function the rule was silent about counting zero.',
+  },
+  {
+    name: 'cognitive-mass-over-15',
+    help: "Σ cognitive complexity over functions scoring above 15. The cut is the supplier's default and nothing refuses on it.",
+  },
+  { name: 'cognitive-max', help: "The largest single function's cognitive complexity." },
 ] as const;
 
 export type TrendName = (typeof TREND_SERIES)[number]['name'];
@@ -251,6 +272,68 @@ const DUPLICATION_FACTS = [
 
 /** The eight names this record spells for duplication. Derived, never written twice. */
 export const DUPLICATION_SERIES: readonly TrendName[] = DUPLICATION_FACTS.map(([name]) => name);
+
+/**
+ * One declared scope's four cognitive counts, as the record carries them.
+ *
+ * `ScopeComplexity`'s twin. **A separate shape rather than a `measure` label on
+ * one**, for the reason the four names are four families rather than one with a
+ * `stat` label: G36 holds *names* to `Trends` rows, and a label is invisible to
+ * it. The two also fail independently — see `RunFacts.cognitive`.
+ */
+export interface ScopeCognitive extends CognitiveCounts {
+  scope: string;
+}
+
+/**
+ * Each cognitive series, and the count it reads off a scope.
+ *
+ * `COMPLEXITY_FACTS`' twin, and the fields are `cognitive.ts`'s, imported as a
+ * type — which is what keeps the counter's vocabulary and the record's from
+ * drifting apart.
+ *
+ * ⚠️ **`massOver15`, not `massOver10`.** The two cuts are different numbers for
+ * different reasons: McCabe's 10 is published with its derivation and the
+ * cognitive 15 is the supplier's own default, published without one. Sharing a
+ * field name across the two would be the first step toward sharing a cut.
+ */
+const COGNITIVE_FACTS = [
+  ['cognitive-functions', (entry: ScopeCognitive): number => entry.functions],
+  ['cognitive-mass', (entry: ScopeCognitive): number => entry.mass],
+  ['cognitive-mass-over-15', (entry: ScopeCognitive): number => entry.massOver15],
+  ['cognitive-max', (entry: ScopeCognitive): number => entry.max],
+] as const;
+
+/** The four names this record spells for cognitive complexity, in rendering order. */
+export const COGNITIVE_SERIES: readonly TrendName[] = COGNITIVE_FACTS.map(([name]) => name);
+
+/**
+ * The cognitive half of `RunFacts`, from what the second counter returned.
+ *
+ * `complexityFactsOf`'s twin, and **all four or none of them** for the same
+ * three reasons stated there. One difference worth reading: a `null` value here
+ * means that population had **no function at all**, never that the rule scored
+ * everything zero — a real population of flat functions produces
+ * `{ functions: N, mass: 0, massOver15: 0, max: 0 }`, which is a measurement
+ * and is emitted. `cognitiveCountsFrom` owns that distinction; this function
+ * only has to not undo it.
+ */
+export function cognitiveFactsOf(counted: ReadonlyMap<string, CognitiveCounts | null> | undefined): {
+  cognitive?: readonly ScopeCognitive[];
+  failed: readonly TrendName[];
+} {
+  const facts: ScopeCognitive[] = [];
+
+  for (const [scope, counts] of counted ?? []) {
+    // Narrowed by returning rather than by a cast, as its twin is.
+    if (counts === null) return { failed: COGNITIVE_SERIES };
+    facts.push({ scope, ...counts });
+  }
+
+  if (facts.length === 0) return { failed: COGNITIVE_SERIES };
+
+  return { cognitive: facts, failed: [] };
+}
 
 /** The two populations' counts, as one fact — they come from one tool and one hash. */
 export interface DuplicationFacts {
@@ -399,6 +482,20 @@ export interface RunFacts {
    * `duplicationFactsOf` for why, and rely on it — the renderer below does.
    */
   duplication?: DuplicationFacts;
+  /**
+   * The four cognitive counts per declared population, or absent when they failed.
+   *
+   * ⚠️ **It fails independently of `complexity`, and the asymmetry is real
+   * rather than an oversight.** The cognitive counter derives its denominator
+   * *from* the cyclomatic report, so a cyclomatic failure takes both sets down
+   * — there is no population left to count against. A cognitive failure takes
+   * only these four: the plugin is a second supplier, and losing it must not
+   * cost the measure this repository has a whole branch of records of.
+   * `scripts/emit-metrics.ts` is where that ordering is enforced rather than
+   * merely described — review on #266 found the comment promising it and the
+   * code not doing it.
+   */
+  cognitive?: readonly ScopeCognitive[];
   gateSuiteRuntime?: number;
   mutationRunRuntime?: number;
   liveExclusions?: { live: number; declared: number };
@@ -573,6 +670,22 @@ function trendFamilies(facts: RunFacts): Family[] {
               value: of(entry),
             }))
           : [{ labels: {}, value: of(duplication.tree) }],
+      });
+    }
+  }
+
+  // The cognitive four, on the same terms as the complexity four and in their
+  // own loop over their own facts — the two measures are read side by side and
+  // fail apart. ⚠️ A `0` sample is legitimate here where it would be suspect
+  // above: a scope of flat functions has a cognitive max of exactly zero.
+  const cognitive = facts.cognitive;
+  if (cognitive !== undefined) {
+    for (const [series, of] of COGNITIVE_FACTS) {
+      if (broke.has(series)) continue;
+      families.push({
+        metric: metricNameOf(series),
+        help: helpFor(series),
+        samples: cognitive.map((entry) => ({ labels: { scope: entry.scope }, value: of(entry) })),
       });
     }
   }

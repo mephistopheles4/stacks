@@ -81,6 +81,12 @@ function freshNightly(): { name: string; document: string } {
         ],
         tree: { clones: 34, duplicatedLines: 357, ignoredLines: 0, totalLines: 47_209 },
       },
+      // ⚠️ And the cognitive four — the same trap by the same route: `GATED_SERIES`
+      // grew, so a record planted without them is stale on arrival and every
+      // assertion below observes the freshness refusal instead of the branch guard.
+      cognitive: [
+        { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
+      ],
     } satisfies RunFacts),
   };
 }
