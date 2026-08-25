@@ -1,9 +1,10 @@
 # Prettier formats code and nothing else, and two of its settings are load-bearing
 
 `prettier` is a dev dependency pinned **exact** — `3.9.6`, not a caret range.
-Its configuration is two overrides and two exclusions:
-`singleQuote: true`, `printWidth: 100`, every `*.md` file ignored, and the whole
-of `fixtures/` ignored. `pnpm format` writes and `pnpm format:check` reports.
+Its configuration is two overrides and three exclusions:
+`singleQuote: true`, `printWidth: 100`, every `*.md` file ignored, the whole of
+`fixtures/` ignored, and `pnpm-lock.yaml` ignored because it is generated.
+`pnpm format` writes and `pnpm format:check` reports.
 
 One decision, one subject: **what a formatter is allowed to touch in a
 repository whose gates read source as text.**

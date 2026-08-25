@@ -16,12 +16,17 @@ Those four are the contract. If they are green, the project is where
 [`docs/progress.md`](docs/progress.md) says it is. CI runs all four on Node 22
 and 24 as a single required check called `gates`; `main` takes no direct pushes.
 
-`gates` also runs a `style` job, and if it fails the whole remedy is one
-command:
+**Those four are the behavioural contract, and they are not the whole of
+`gates`.** It also requires a `style` job, so a tree that passes all four can
+still take a red. Run these two before pushing:
 
 ```bash
-pnpm format
+pnpm lint && pnpm format:check
 ```
+
+`pnpm format` rewrites the tree and is the whole remedy for the second;
+`pnpm lint --fix` repairs about a quarter of what the first reports and the
+rest is read. Both are documented in [`docs/commands.md`](docs/commands.md).
 
 **One-time setup, so `git blame` skips the reformat commit** — GitHub already
 does this from the default branch, and a local clone needs telling once:
