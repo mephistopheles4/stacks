@@ -242,9 +242,20 @@ describe('G48 — the fix pass rewrites what was measured, and nothing else', ()
     // reason that had nothing to do with what it asserts. A variant builder has
     // to produce the same document from any starting state, or it tests the
     // starting state instead of the rule.
+    // ⚠️ **Both anchors are line-anchored, and the block-comment one was not.**
+    // It read `source.replace('{', …)`, which inserts at the *first* `{` in the
+    // file — the opening brace today only because no header comment happens to
+    // contain a brace. This config's comments discuss settings like
+    // `{ "style": "compact" }`, so one such comment would put the insertion
+    // inside a `//` line, make the variant a no-op, and fail the guard below
+    // with a message about the wrong thing. `/^\{$/m` cannot match a comment
+    // line. Raised as `js/incomplete-sanitization` by CodeQL — a false positive
+    // as a *security* finding, since nothing here sanitises anything, and a
+    // true one about the string handling, which is the third question
+    // `docs/gates.md`'s triage section asks.
     const variants: Record<string, string> = {
       'a trailing comma before the closing brace': source.replace(/,?(\s*)\}(\s*)$/, ',$1}$2'),
-      'a block comment': source.replace('{', '{\n  /* a block comment */'),
+      'a block comment': source.replace(/^\{$/m, '{\n  /* a block comment */'),
     };
 
     for (const [what, variant] of Object.entries(variants)) {
