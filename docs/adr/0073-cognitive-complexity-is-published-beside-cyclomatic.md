@@ -61,7 +61,13 @@ cyclomatic 13, cognitive 12, the two measures agreeing — and `deeplyNested`,
 six *nested* `if`s at cyclomatic 7 and cognitive **21**. Half the branches,
 nearly twice the score.
 
-### The denominator is its own: 1105, not 1114
+### The denominator is its own, and smaller by nine
+
+⚠️ **The durable number is the gap of nine, not either total.** #230 measured
+**1105 against 1114**; re-measured at adoption it was **1124 against 1133**.
+Both totals grow with the tree and the difference does not, so the figures below
+are dated evidence rather than current facts — check the difference, never the
+totals.
 
 **Two silences, and they are not the same silence.** Both had to be written
 down, or two implementations of this spec produce different numbers — which
@@ -70,8 +76,10 @@ down, or two implementations of this spec produce different numbers — which
 
 - The rule hooks the `:function` selector, which **never visits** a
   `PropertyDefinition` or a `StaticBlock`. ESLint's `complexity` scores both as
-  implicit functions. Nine such nodes exist across the eight declared scopes,
-  and they are **not in the cognitive population at all** — 1114 − 9 = 1105.
+  implicit functions. **Nine such nodes** existed across the eight declared
+  scopes at both measurements — 1114 − 9 = 1105 on #230's, 1133 − 9 = 1124 at
+  adoption — and they are **not in the cognitive population at all**. All nine
+  live in `packages/site/src/shelf`.
 - The rule reports only when a score is **above** its threshold, so at `0` a
   function scoring zero is **silently absent**. Those functions *are* in the
   population, and **absent at zero counts as zero**.

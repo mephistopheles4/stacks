@@ -341,7 +341,25 @@ async function countingStamp(): Promise<string | undefined> {
 }
 
 const complexity = await complexityFacts();
-const cognitive = await cognitiveFacts();
+
+/**
+ * ⚠️ **A cyclomatic failure takes the cognitive four with it, and this line is
+ * what makes that true rather than merely documented.**
+ *
+ * `RunFacts.cognitive` states the contract — the cognitive population is
+ * *derived* from the cyclomatic report, so if that report is not trustworthy
+ * there is no denominator to count against. But `cognitiveFacts()` runs its own
+ * independent ESLint pass, so without this guard it could succeed where
+ * `complexityFacts()` had just failed, and the record would carry cognitive
+ * samples whose denominator came from a run the same file had already declared
+ * broken. Found in review on #266; the comment promised it and the code did not.
+ *
+ * The reverse does **not** hold: a cognitive failure leaves the cyclomatic four
+ * alone, because the plugin is a second supplier and losing it must not cost the
+ * measure this repository has a whole branch of records of.
+ */
+const cognitive =
+  complexity.failed.length > 0 ? cognitiveFactsOf(undefined) : await cognitiveFacts();
 const fixtureHash = await countingStamp();
 
 const facts: RunFacts = {

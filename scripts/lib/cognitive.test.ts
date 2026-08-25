@@ -261,13 +261,30 @@ describe('the counter against the real tree', () => {
     files = sourceFiles();
   });
 
-  it('scores a declared population and gets a smaller denominator than the cyclomatic one', () => {
+  it('scores a declared population and gets a smaller denominator than the cyclomatic one', async () => {
     // ⚠️ The property the whole spec turns on, asserted against the tree rather
     // than argued: the cognitive denominator is *smaller*, because of the two
     // node kinds the rule never visits. Asserted as an inequality and a bound
     // rather than as a number, because both move with the code.
-    const population = populationOf(scopeNamed('packages/core/src'), files);
+    //
+    // ⚠️ **This test asserted only `population.length > 0` until review on #266
+    // caught it** — a name and a comment claiming an inequality over a body that
+    // compared nothing, so a regression in `cognitivePopulationOf` stayed green.
+    // The vacuous-green trap this repo has three gate rows about, written into a
+    // pull request whose own documentation lectures about it.
+    const population = populationOf(scopeNamed('packages/site/src/shelf'), files);
     expect(population.length).toBeGreaterThan(0);
+
+    const counted = await complexityOf(population);
+    const cognitive = cognitivePopulationOf(counted);
+
+    // Smaller, and smaller by exactly the nodes the rule never visits — the
+    // difference is the claim, so both halves are asserted. `packages/site/src/shelf`
+    // is the scope chosen because it is where all nine such nodes live.
+    expect(cognitive.length).toBeLessThan(counted.length);
+    expect(counted.length - cognitive.length).toBe(
+      counted.filter((entry) => UNVISITED_BY_COGNITIVE.includes(entry.kind)).length,
+    );
   });
 
   it('never scores a function outside the population it was given', async () => {
@@ -281,7 +298,14 @@ describe('the counter against the real tree', () => {
       cognitiveOf(population),
     ]);
 
-    const known = new Set(counted.map((entry) => `${entry.file}:${String(entry.line)}`));
+    // ⚠️ Built from the **cognitive** population, not the full cyclomatic set.
+    // Review on #266: a score reported on a never-visited kind would be no
+    // orphan against `counted`, yet `cognitiveCountsFrom` would add it to `mass`
+    // while `functions` excluded it — the one inconsistency this test exists to
+    // rule out, and the wider set could not see it.
+    const known = new Set(
+      cognitivePopulationOf(counted).map((entry) => `${entry.file}:${String(entry.line)}`),
+    );
     const orphans = scored
       .map((entry) => `${entry.file}:${String(entry.line)}`)
       .filter((at) => !known.has(at));

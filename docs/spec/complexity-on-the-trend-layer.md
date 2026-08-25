@@ -540,8 +540,15 @@ nothing, here or there.
 **The list is now empty, and the last item is answered.** Cognitive complexity
 as a second series ([#234](https://github.com/mephistopheles4/stacks/issues/234))
 was the fifth, and it is **adopted**: four series beside the cyclomatic four,
-never a replacement, with its own denominator at 1105 and exactly one capped
-number. The bar this file set — *kept as fog until the split signature proves
+never a replacement, with **its own denominator** — smaller than the cyclomatic
+one by the nine nodes the rule never visits, which is the durable figure rather
+than either total — and **exactly one series a cap may ever reach**,
+`cognitive-max`. ⚠️ **No cognitive series is capped today**: `CAPPED_SERIES`
+holds `complexity-max` and `complexity-mass-over-10` and nothing else, and
+`cognitive-max` joins it only once twenty records carry the families
+([#258](https://github.com/mephistopheles4/stacks/issues/258)).
+`cognitive-mass-over-15` may never join it at all. The bar this file set —
+*kept as fog until the split signature proves
 common* — was met by
 [#230](https://github.com/mephistopheles4/stacks/issues/230)'s 1105 scored pairs
 at Pearson **r 0.9159** with 54 inversions, and then answered rather than left
