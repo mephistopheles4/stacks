@@ -306,20 +306,54 @@ is published and never capped, which also discharges the condition on accepting
 **Six of the eight duplication series take caps**, on the
 `complexity-mass-over-10` argument rather than the `complexity-functions` one: a
 clean feature adds zero duplicated lines, so the count does not grow with the
-tree legitimately. **The names are exact and they are the whole list**, because
-`scripts/lib/floors.test.ts` asserts `CAPPED_SERIES` by array equality and
-`countedIn` needs a sample from every member:
+tree legitimately. **The names are exact and they are the whole list**, and they
+are capped **in `jscpd.floors.json`, not in `CAPPED_SERIES`** — see the two
+mechanisms below:
 
-| Series | Capped | Why |
-| --- | --- | --- |
-| `duplication-clones` | **yes** | A clean feature adds no clone. |
-| `duplication-lines` | **yes** | `complexity-mass-over-10`'s property, stated by [#237](https://github.com/mephistopheles4/stacks/issues/237). |
-| `duplication-ignored-lines` | **yes** | See below. |
-| `duplication-total-lines` | no | The denominator. It grows with the tree legitimately, which is `complexity-functions`' reason. |
-| `duplication-tree-clones` | **yes** | As `duplication-clones`. |
-| `duplication-tree-lines` | **yes** | As `duplication-lines`. |
-| `duplication-tree-ignored-lines` | **yes** | As `duplication-ignored-lines`. |
-| `duplication-tree-total-lines` | no | As `duplication-total-lines`. |
+| Series | Capped | Where | Why |
+|---|---|---|---|
+| `cognitive-max` | **yes** | `CAPPED_SERIES` | The only cognitive series that takes one, per the paragraph above. |
+| `duplication-clones` | **yes** | `jscpd.floors.json` | A clean feature adds no clone. |
+| `duplication-lines` | **yes** | `jscpd.floors.json` | `complexity-mass-over-10`'s property, stated by [#237](https://github.com/mephistopheles4/stacks/issues/237). |
+| `duplication-ignored-lines` | **yes** | `jscpd.floors.json` | See below. |
+| `duplication-total-lines` | no | — | The denominator. It grows with the tree legitimately, which is `complexity-functions`' reason. |
+| `duplication-tree-clones` | **yes** | `jscpd.floors.json` | As `duplication-clones`. |
+| `duplication-tree-lines` | **yes** | `jscpd.floors.json` | As `duplication-lines`. |
+| `duplication-tree-ignored-lines` | **yes** | `jscpd.floors.json` | As `duplication-ignored-lines`. |
+| `duplication-tree-total-lines` | no | — | As `duplication-total-lines`. |
+
+⚠️ **Two cap mechanisms, not one, and this table's `Where` column is the
+amendment — decided by the owner on 2026-08-23, after
+[#254](https://github.com/mephistopheles4/stacks/issues/254) measured what this
+section had assumed.** An earlier revision said all seven names join
+`CAPPED_SERIES`. **Which series are capped and why has not changed**; only the
+file and the key have. Two findings force it, and each is fatal on its own:
+
+- **The three whole-tree series carry no `scope=` label at all.** Caps hang off
+  `ScopeFloor`, keyed by declared mutation scope, and the whole tree is not one
+  and never will be —
+  [ADR-0072](../adr/0072-a-clone-is-a-relation-between-two-places.md) records
+  this under *What this costs* as **"A population that cannot carry a cap"**, and
+  `correspondence()` refuses a deploy over a floors key that is not a declared
+  scope. Routing them through `CAPPED_SERIES` would demand 24 entries
+  (3 series × 8 declared scopes) that can never resolve a value and can never be
+  armed.
+- **`CAPPED_SERIES` is calibrated under the wrong hash for a duplication
+  number.** `capCalibration(rows, scopes, fixtureHash)` derives **every** member
+  under a single hash, and `fixtureHash` covers the ESLint side. `duplicationHash`
+  exists precisely because a jscpd threshold *is* the number —
+  [#232](https://github.com/mephistopheles4/stacks/issues/232) measured **12
+  clones at 50/5 against 82 at 20/3 over an identical tree**. A duplication cap
+  in `CAPPED_SERIES` would not restart its window on a threshold change, and
+  would compare counts produced under two counting rules. That is the failure
+  `duplicationHash` was minted to prevent, reintroduced one level up.
+
+So `cognitive-max` alone joins `CAPPED_SERIES` — it is per-scope, it is an
+ESLint-rule measure, and `fixtureHash` already covers its counting rule. The six
+duplication caps get a parallel mechanism in `jscpd.floors.json`, keyed on
+`duplicationHash` and on that file's **nine** populations, `whole-tree` among
+them. The tree series gain a real key, and every cap stays calibrated under the
+rule that produced its number.
 
 ⚠️ **`duplication-ignored-lines` is capped, and that goes beyond what
 [#237](https://github.com/mephistopheles4/stacks/issues/237) wrote.** The ticket
@@ -458,10 +492,21 @@ rather than inside one.
    config, for step 5's reason and for `eslint.config.mjs`'s own stated one.
    **No cap name joins `CAPPED_SERIES`.**
 
-9. **Arming, twenty records later.** Seven names join `CAPPED_SERIES` once the
-   records carry their families — `cognitive-max` and the six duplication series
-   §5 lists, and no others. Steps 7 and 8 may land in either order; **this step
-   may not be folded into either of them.**
+9. **Arming, twenty records later.** **`cognitive-max` alone joins
+   `CAPPED_SERIES`**, and the six duplication series §5 lists are capped in
+   `jscpd.floors.json` under `duplicationHash` — two mechanisms, for the reasons
+   §5 gives. Both wait until the records carry their families. Steps 7 and 8 may
+   land in either order; **this step may not be folded into either of them.**
+
+   ⚠️ **This step said *"Seven names join `CAPPED_SERIES`"* until 2026-08-23.**
+   Amended with §5's table, same owner decision, same day. **The twenty-record
+   wait is unchanged and applies to both mechanisms.**
+
+   ⚠️ **The twenty are twenty *nightlies*, and the store gets about one a day.**
+   `capCalibration` walks `streakOf`, which starts from `nightliesIn(rows)`, and
+   `nightliesIn` is `row.event !== "push"` — so merges do not count toward it. At
+   the observed cadence that is **about three weeks of wall clock**, not twenty
+   merges, and any change to the governing hash restarts it from zero.
 
 Steps 2 through 4 are a chain. Steps 5, 7 and 8 are independent of each other
 once step 1 is done.
