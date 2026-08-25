@@ -124,7 +124,7 @@ export function toPlainText(value: unknown): string | undefined {
  */
 function stripTags(value: string): string {
   let text = value;
-  for (let previous = ''; previous !== text; ) {
+  for (let previous = ''; previous !== text;) {
     previous = text;
     // A tag opens with a letter or a slash. `a < b and c > d` is prose, and a
     // looser `<[^<>]*>` eats the four words between the operators — which is a

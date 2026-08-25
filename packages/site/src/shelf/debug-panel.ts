@@ -297,57 +297,124 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   /* --- light -------------------------------------------------------------- */
 
   group('key light');
-  colour('colour', 'live', (s) => s.lighting.key.colour, (s, v) =>
-    resolveSettings({ lighting: { key: { colour: v } } }, s),
+  colour(
+    'colour',
+    'live',
+    (s) => s.lighting.key.colour,
+    (s, v) => resolveSettings({ lighting: { key: { colour: v } } }, s),
   );
-  slider('intensity', 'live', 0, 8, 0.05, (s) => s.lighting.key.intensity, (s, v) =>
-    resolveSettings({ lighting: { key: { intensity: v } } }, s),
+  slider(
+    'intensity',
+    'live',
+    0,
+    8,
+    0.05,
+    (s) => s.lighting.key.intensity,
+    (s, v) => resolveSettings({ lighting: { key: { intensity: v } } }, s),
   );
   // The three axes separately rather than a gizmo. A gizmo is the nicer control
   // and it is not the one that works on a phone, one-handed, next to the shelf
   // it is moving — which is where this gets used.
-  slider('x  (right +)', 'live', -14, 14, 0.1, (s) => s.lighting.key.position.x, (s, v) =>
-    resolveSettings({ lighting: { key: { position: { x: v } } } }, s),
+  slider(
+    'x  (right +)',
+    'live',
+    -14,
+    14,
+    0.1,
+    (s) => s.lighting.key.position.x,
+    (s, v) => resolveSettings({ lighting: { key: { position: { x: v } } } }, s),
   );
-  slider('y  (above case)', 'live', -4, 14, 0.1, (s) => s.lighting.key.position.y.plus, (s, v) =>
-    resolveSettings({ lighting: { key: { position: { y: { plus: v } } } } }, s),
+  slider(
+    'y  (above case)',
+    'live',
+    -4,
+    14,
+    0.1,
+    (s) => s.lighting.key.position.y.plus,
+    (s, v) => resolveSettings({ lighting: { key: { position: { y: { plus: v } } } } }, s),
   );
-  slider('z  (toward you +)', 'live', -14, 14, 0.1, (s) => s.lighting.key.position.z, (s, v) =>
-    resolveSettings({ lighting: { key: { position: { z: v } } } }, s),
+  slider(
+    'z  (toward you +)',
+    'live',
+    -14,
+    14,
+    0.1,
+    (s) => s.lighting.key.position.z,
+    (s, v) => resolveSettings({ lighting: { key: { position: { z: v } } } }, s),
   );
-  slider('aim height', 'live', 0, 1, 0.01, (s) => s.lighting.key.aimHeight, (s, v) =>
-    resolveSettings({ lighting: { key: { aimHeight: v } } }, s),
+  slider(
+    'aim height',
+    'live',
+    0,
+    1,
+    0.01,
+    (s) => s.lighting.key.aimHeight,
+    (s, v) => resolveSettings({ lighting: { key: { aimHeight: v } } }, s),
   );
 
   group('fill light');
-  colour('colour', 'live', (s) => s.lighting.fill.colour, (s, v) =>
-    resolveSettings({ lighting: { fill: { colour: v } } }, s),
+  colour(
+    'colour',
+    'live',
+    (s) => s.lighting.fill.colour,
+    (s, v) => resolveSettings({ lighting: { fill: { colour: v } } }, s),
   );
-  slider('intensity', 'live', 0, 4, 0.05, (s) => s.lighting.fill.intensity, (s, v) =>
-    resolveSettings({ lighting: { fill: { intensity: v } } }, s),
+  slider(
+    'intensity',
+    'live',
+    0,
+    4,
+    0.05,
+    (s) => s.lighting.fill.intensity,
+    (s, v) => resolveSettings({ lighting: { fill: { intensity: v } } }, s),
   );
 
   group('lamp');
-  colour('colour', 'live', (s) => s.lighting.lamp.colour, (s, v) =>
-    resolveSettings({ lighting: { lamp: { colour: v } } }, s),
+  colour(
+    'colour',
+    'live',
+    (s) => s.lighting.lamp.colour,
+    (s, v) => resolveSettings({ lighting: { lamp: { colour: v } } }, s),
   );
-  slider('intensity', 'live', 0, 40, 0.5, (s) => s.lighting.lamp.intensity, (s, v) =>
-    resolveSettings({ lighting: { lamp: { intensity: v } } }, s),
+  slider(
+    'intensity',
+    'live',
+    0,
+    40,
+    0.5,
+    (s) => s.lighting.lamp.intensity,
+    (s, v) => resolveSettings({ lighting: { lamp: { intensity: v } } }, s),
   );
-  slider('reach', 'live', 1, 40, 0.5, (s) => s.lighting.lamp.distance, (s, v) =>
-    resolveSettings({ lighting: { lamp: { distance: v } } }, s),
+  slider(
+    'reach',
+    'live',
+    1,
+    40,
+    0.5,
+    (s) => s.lighting.lamp.distance,
+    (s, v) => resolveSettings({ lighting: { lamp: { distance: v } } }, s),
   );
 
   group('ambient');
-  slider('intensity', 'live', 0, 3, 0.05, (s) => s.lighting.ambient.intensity, (s, v) =>
-    resolveSettings({ lighting: { ambient: { intensity: v } } }, s),
+  slider(
+    'intensity',
+    'live',
+    0,
+    3,
+    0.05,
+    (s) => s.lighting.ambient.intensity,
+    (s, v) => resolveSettings({ lighting: { ambient: { intensity: v } } }, s),
   );
 
   /* --- fidelity ----------------------------------------------------------- */
 
   group('fidelity');
-  choice('tone mapping', 'live', TONE_MAPPING_NAMES, (s) => s.renderer.toneMapping, (s, v) =>
-    resolveSettings({ renderer: { toneMapping: v } }, s),
+  choice(
+    'tone mapping',
+    'live',
+    TONE_MAPPING_NAMES,
+    (s) => s.renderer.toneMapping,
+    (s, v) => resolveSettings({ renderer: { toneMapping: v } }, s),
   );
 
   /**
@@ -373,12 +440,20 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     const off = settings.renderer.toneMapping === 'none';
     exposure.input.disabled = off;
     exposure.row.style.opacity = off ? '0.55' : '1';
-    exposure.row.title = off ? 'pick a tone mapping first — exposure has no effect under "none"' : '';
+    exposure.row.title = off
+      ? 'pick a tone mapping first — exposure has no effect under "none"'
+      : '';
   };
   afterApply.push(syncExposure);
   syncExposure();
-  slider('cover gloss', 'rebuild', 0, 1, 0.01, (s) => s.materials.coverRoughness, (s, v) =>
-    resolveSettings({ materials: { coverRoughness: v } }, s),
+  slider(
+    'cover gloss',
+    'rebuild',
+    0,
+    1,
+    0.01,
+    (s) => s.materials.coverRoughness,
+    (s, v) => resolveSettings({ materials: { coverRoughness: v } }, s),
   );
   // Red at zero, and truthfully: no map is uploaded and no jitter applied, so the
   // page block is the flat cream slab it used to be.
@@ -392,8 +467,14 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     (s, v) => resolveSettings({ materials: { pageStriation: v } }, s),
     (s) => s.materials.pageStriation > 0,
   );
-  slider('cover metal', 'rebuild', 0, 1, 0.01, (s) => s.materials.coverMetalness, (s, v) =>
-    resolveSettings({ materials: { coverMetalness: v } }, s),
+  slider(
+    'cover metal',
+    'rebuild',
+    0,
+    1,
+    0.01,
+    (s) => s.materials.coverMetalness,
+    (s, v) => resolveSettings({ materials: { coverMetalness: v } }, s),
   );
 
   /* --- the books ---------------------------------------------------------- */
@@ -411,8 +492,14 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    * what it says, which is dialling the *hash*, and a declaration is not a vote.
    */
   group('books');
-  slider('paperback mix', 'rebuild', 0, 1, 0.05, (s) => s.books.paperbackRatio, (s, v) =>
-    resolveSettings({ books: { paperbackRatio: v } }, s),
+  slider(
+    'paperback mix',
+    'rebuild',
+    0,
+    1,
+    0.05,
+    (s) => s.books.paperbackRatio,
+    (s, v) => resolveSettings({ books: { paperbackRatio: v } }, s),
   );
   /**
    * Red at zero, and truthfully: no cap is built at all, so the ~20 draw calls
@@ -488,8 +575,11 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   }
 
   group('bloom');
-  toggleRow('enabled', 'rebuild', (s) => s.effects.bloom.enabled, (s, v) =>
-    resolveSettings({ effects: { bloom: { enabled: v } } }, s),
+  toggleRow(
+    'enabled',
+    'rebuild',
+    (s) => s.effects.bloom.enabled,
+    (s, v) => resolveSettings({ effects: { bloom: { enabled: v } } }, s),
   );
   slider(
     'strength',
@@ -525,11 +615,17 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   /* --- shadows ------------------------------------------------------------ */
 
   group('shadows');
-  toggleRow('painted', 'rebuild', (s) => s.shadows.painted, (s, v) =>
-    resolveSettings({ shadows: { painted: v } }, s),
+  toggleRow(
+    'painted',
+    'rebuild',
+    (s) => s.shadows.painted,
+    (s, v) => resolveSettings({ shadows: { painted: v } }, s),
   );
-  toggleRow('real-time', 'live', (s) => s.shadows.enabled, (s, v) =>
-    resolveSettings({ shadows: { enabled: v } }, s),
+  toggleRow(
+    'real-time',
+    'live',
+    (s) => s.shadows.enabled,
+    (s, v) => resolveSettings({ shadows: { enabled: v } }, s),
   );
   choice(
     'filter',
@@ -570,33 +666,69 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   /* --- scene -------------------------------------------------------------- */
 
   group('case & room');
-  colour('background', 'live', (s) => s.scene.background, (s, v) =>
-    resolveSettings({ scene: { background: v } }, s),
+  colour(
+    'background',
+    'live',
+    (s) => s.scene.background,
+    (s, v) => resolveSettings({ scene: { background: v } }, s),
   );
-  colour('wood', 'live', (s) => s.materials.wood, (s, v) =>
-    resolveSettings({ materials: { wood: v } }, s),
+  colour(
+    'wood',
+    'live',
+    (s) => s.materials.wood,
+    (s, v) => resolveSettings({ materials: { wood: v } }, s),
   );
-  colour('backboard', 'live', (s) => s.materials.woodDark, (s, v) =>
-    resolveSettings({ materials: { woodDark: v } }, s),
+  colour(
+    'backboard',
+    'live',
+    (s) => s.materials.woodDark,
+    (s, v) => resolveSettings({ materials: { woodDark: v } }, s),
   );
-  slider('wood roughness', 'live', 0, 1, 0.01, (s) => s.materials.woodRoughness, (s, v) =>
-    resolveSettings({ materials: { woodRoughness: v } }, s),
+  slider(
+    'wood roughness',
+    'live',
+    0,
+    1,
+    0.01,
+    (s) => s.materials.woodRoughness,
+    (s, v) => resolveSettings({ materials: { woodRoughness: v } }, s),
   );
-  toggleRow('fog', 'live', (s) => s.scene.fog.enabled, (s, v) =>
-    resolveSettings({ scene: { fog: { enabled: v } } }, s),
+  toggleRow(
+    'fog',
+    'live',
+    (s) => s.scene.fog.enabled,
+    (s, v) => resolveSettings({ scene: { fog: { enabled: v } } }, s),
   );
-  slider('fog near', 'live', 1, 40, 0.5, (s) => s.scene.fog.near, (s, v) =>
-    resolveSettings({ scene: { fog: { near: v } } }, s),
+  slider(
+    'fog near',
+    'live',
+    1,
+    40,
+    0.5,
+    (s) => s.scene.fog.near,
+    (s, v) => resolveSettings({ scene: { fog: { near: v } } }, s),
   );
-  slider('fog far', 'live', 2, 80, 0.5, (s) => s.scene.fog.far, (s, v) =>
-    resolveSettings({ scene: { fog: { far: v } } }, s),
+  slider(
+    'fog far',
+    'live',
+    2,
+    80,
+    0.5,
+    (s) => s.scene.fog.far,
+    (s, v) => resolveSettings({ scene: { fog: { far: v } } }, s),
   );
 
   /* --- renderer ----------------------------------------------------------- */
 
   group('renderer');
-  slider('pixel ratio cap', 'live', 0.5, 3, 0.1, (s) => s.renderer.maxPixelRatio, (s, v) =>
-    resolveSettings({ renderer: { maxPixelRatio: v } }, s),
+  slider(
+    'pixel ratio cap',
+    'live',
+    0.5,
+    3,
+    0.1,
+    (s) => s.renderer.maxPixelRatio,
+    (s, v) => resolveSettings({ renderer: { maxPixelRatio: v } }, s),
   );
   /**
    * Superseded while bloom is on, because MSAA is not what is running.
@@ -620,12 +752,17 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     const superseded = settings.effects.bloom.enabled;
     aa.input.disabled = superseded;
     aa.row.style.opacity = superseded ? '0.55' : '1';
-    aa.row.title = superseded ? 'bloom is on, so antialiasing is an SMAA pass rather than MSAA' : '';
+    aa.row.title = superseded
+      ? 'bloom is on, so antialiasing is an SMAA pass rather than MSAA'
+      : '';
   };
   afterApply.push(syncAntialias);
   syncAntialias();
-  toggleRow('resize guard', 'live', (s) => s.renderer.guardResize, (s, v) =>
-    resolveSettings({ renderer: { guardResize: v } }, s),
+  toggleRow(
+    'resize guard',
+    'live',
+    (s) => s.renderer.guardResize,
+    (s, v) => resolveSettings({ renderer: { guardResize: v } }, s),
   );
 
   /* --- export ------------------------------------------------------------- */
@@ -714,7 +851,10 @@ type Klass = 'live' | 'rebuild' | 'reload';
  */
 type Lamp = 'on' | 'off' | 'pending';
 
-const LAMP: Record<Lamp, { readonly colour: string; readonly glow: string; readonly help: string }> = {
+const LAMP: Record<
+  Lamp,
+  { readonly colour: string; readonly glow: string; readonly help: string }
+> = {
   on: {
     colour: '#5ee08a',
     glow: 'rgba(94, 224, 138, 0.75)',

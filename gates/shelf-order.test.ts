@@ -22,10 +22,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  compareShelfPosition,
-  type Positionable,
-} from '../packages/core/src/shelf-order.ts';
+import { compareShelfPosition, type Positionable } from '../packages/core/src/shelf-order.ts';
 
 function book(over: Partial<Positionable> & { title: string }): Positionable {
   return { status: 'read', ...over };

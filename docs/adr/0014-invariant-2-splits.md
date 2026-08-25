@@ -6,7 +6,7 @@ An allowlist and never a denylist, for the same reason `private:` fails closed: 
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-08-01** — **Invariant 2 splits, because "never ship a note body" and "never ship a note body to the public" were being treated as one rule.** The brief says *"never parsed for the public build"* and *"notes stay private **by default**"*; CLAUDE.md said *"shipped in any build"*. Nothing noticed, because no code has ever wanted to read a body. The owner's intent to publish thoughts on a book makes the difference load-bearing, so: `library.json` never carries body text at all, and a public build may ship *one allowlisted section*, as its own per-book file. An **allowlist** — everything under `## Thoughts` ships — never a denylist, because *everything except `## Private`* fails open and one forgotten heading publishes a whole note. The presence of the section is the signal, so there is no new frontmatter key and no third state on `private:`; "publish the book, not its notes" is simply not writing a section, which is what every note in every existing vault already does. **The extraction happens in the adapter**, returning only the matched section, because a filter applied downstream means any bug in the chain is a leak while an adapter that never returns the remainder leaves nothing downstream to leak. Embeds are rejected and wikilinks flattened for the same reason only a `cover:` basename is ever used — vault-controlled text reaching code that copies files. Designed, not built (brief P2). See `docs/notes-on-the-shelf.md`.
 

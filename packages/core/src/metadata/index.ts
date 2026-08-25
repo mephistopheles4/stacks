@@ -295,11 +295,13 @@ async function fillGaps(
    */
   const candidate =
     primary.isbn === undefined
-      ? (await googleBooks.searchByTitle(
-          `${primary.title} ${primary.author ?? ''}`.trim(),
-          get,
-          options.googleBooksKey,
-        ))[0]
+      ? (
+          await googleBooks.searchByTitle(
+            `${primary.title} ${primary.author ?? ''}`.trim(),
+            get,
+            options.googleBooksKey,
+          )
+        )[0]
       : await googleBooks.lookupByIsbn(primary.isbn, get, options.googleBooksKey);
 
   if (candidate === undefined)
@@ -312,8 +314,7 @@ async function fillGaps(
       `${primary.title} ${primary.author ?? ''}`,
       `${candidate.title} ${candidate.author ?? ''}`,
     );
-  if (!sameBook)
-    return needsCover ? await borrowOReillyCover(primary, get, contributors) : primary;
+  if (!sameBook) return needsCover ? await borrowOReillyCover(primary, get, contributors) : primary;
 
   // Confirmed to be this book, which is the bar a contributor has to clear.
   contributors.set('google-books', candidate);

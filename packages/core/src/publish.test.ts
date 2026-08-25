@@ -102,9 +102,7 @@ describe('publish', () => {
     // its picture, not its place. Two kinds never ship: wishlist (you do not
     // own them) and `private: true` (the owner said no), so count against
     // those rather than against everything handed in.
-    const shelved = withGhost.filter(
-      (book) => book.status !== 'wishlist' && book.private !== true,
-    );
+    const shelved = withGhost.filter((book) => book.status !== 'wishlist' && book.private !== true);
     expect(result.library.bookCount).toBe(shelved.length);
   });
 
@@ -113,9 +111,7 @@ describe('publish', () => {
     // A book that actually ships, so the traversal is genuinely attempted —
     // cloning the private fixture would filter it out before publish ever
     // resolved the path, and the test would pass having tested nothing.
-    const shipping = books.find(
-      (book) => book.status !== 'wishlist' && book.private !== true,
-    );
+    const shipping = books.find((book) => book.status !== 'wishlist' && book.private !== true);
     const escaping = [{ ...shipping!, cover: '../../../../etc/passwd', title: 'Escaping' }];
 
     const result = await publish(escaping, vault, out, { isPublic: true });
@@ -166,7 +162,12 @@ describe('publish — the re-encode it imposes', () => {
     return sharp({ create: { width, height, channels: 3, background: '#c8102e' } }).composite([
       {
         input: {
-          create: { width: Math.round(width * 0.6), height: 24, channels: 3, background: '#ffffff' },
+          create: {
+            width: Math.round(width * 0.6),
+            height: 24,
+            channels: 3,
+            background: '#ffffff',
+          },
         },
         left: Math.round(width * 0.2),
         top: Math.round(height * 0.2),

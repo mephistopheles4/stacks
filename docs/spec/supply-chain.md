@@ -297,7 +297,7 @@ here, because minting the tier is a change to the scoreboard's own vocabulary an
 effort decides rather than builds — **but the evidence condition the decline named has
 now been met, and the next session to touch this may mint it.**
 
-> ⚠️ **Corrected 2026-08-23 by G47 (`astro-types`): this member left the tier,
+> ⚠️ **Corrected 2026-08-23 by G50 (`astro-types`): this member left the tier,
 > and *"none ever could"* was the wrong half of the claim to make.**
 > `@astrojs/check@0.9.10` is now a dev dependency of `packages/site`, so the
 > package **is** in the tree at a version and one `pnpm add` disproved a

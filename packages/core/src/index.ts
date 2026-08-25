@@ -17,11 +17,7 @@ export { parseNote, type ParsedNote } from './frontmatter.ts';
 
 export { keyIfPresent } from './key-if-present.ts';
 
-export {
-  compareShelfPosition,
-  SHELVED_STATUSES,
-  type Positionable,
-} from './shelf-order.ts';
+export { compareShelfPosition, SHELVED_STATUSES, type Positionable } from './shelf-order.ts';
 
 export {
   isProbablySameBook,
@@ -53,12 +49,7 @@ export {
 
 export { addBook, type AddBookOptions, type AddBookResult } from './add-book.ts';
 
-export {
-  enrichBook,
-  missingFields,
-  type EnrichOptions,
-  type EnrichOutcome,
-} from './enrich.ts';
+export { enrichBook, missingFields, type EnrichOptions, type EnrichOutcome } from './enrich.ts';
 
 export { cacheCover, type CachedCover } from './covers/cache-cover.ts';
 
@@ -73,12 +64,7 @@ export {
   type ImportResult,
 } from './import/index.ts';
 
-export {
-  isRebuildTrigger,
-  watchVault,
-  type Closeable,
-  type WatchOptions,
-} from './watch.ts';
+export { isRebuildTrigger, watchVault, type Closeable, type WatchOptions } from './watch.ts';
 
 export { publish, type PublishOptions, type PublishResult } from './publish.ts';
 

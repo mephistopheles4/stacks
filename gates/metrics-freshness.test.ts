@@ -37,7 +37,13 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { DAY, GATED_SERIES, SPINE_LANDED, judgeRecord } from '../scripts/lib/metrics-read.ts';
 import { RECORD_DIR } from '../scripts/lib/metrics-record.ts';
-import { COMPLEXITY_SERIES, renderMetrics, type RunFacts } from '../scripts/lib/metrics.ts';
+import {
+  COMPLEXITY_SERIES,
+  COGNITIVE_SERIES,
+  DUPLICATION_SERIES,
+  renderMetrics,
+  type RunFacts,
+} from '../scripts/lib/metrics.ts';
 import { expectFound, REPO_ROOT } from './repo.ts';
 
 const NOW = Math.floor(Date.now() / 1000);
@@ -56,9 +62,35 @@ interface Planted {
  * a fixture of a record that no longer exists proves the refusal against the
  * wrong world.
  */
+const COGNITIVE = [
+  { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
+];
+
 const COMPLEXITY = [
   { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
 ];
+
+/**
+ * The duplication half of both fixtures below.
+ *
+ * **On the merge record too**, for `COMPLEXITY`'s reason exactly: both halves of
+ * `metrics.yml` write it, because the counter runs inside the emitter rather
+ * than as a workflow step. Two scopes and a tree, because the scoped families
+ * and the unlabelled tree families render differently and a fixture carrying
+ * only the first would plant a record that is half of what CI writes.
+ */
+const DUPLICATION = {
+  scopes: [
+    {
+      scope: 'packages/core/src',
+      clones: 3,
+      duplicatedLines: 46,
+      ignoredLines: 0,
+      totalLines: 2381,
+    },
+  ],
+  tree: { clones: 34, duplicatedLines: 357, ignoredLines: 0, totalLines: 47_209 },
+};
 
 /** A nightly — all eight series, which is what the bound covers. */
 function nightly(agoSeconds: number, sha = 'aaaaaaaa', overrides: Partial<RunFacts> = {}): Planted {
@@ -78,6 +110,8 @@ function nightly(agoSeconds: number, sha = 'aaaaaaaa', overrides: Partial<RunFac
       mutationRunRuntime: 1275,
       liveExclusions: { live: 0, declared: 27 },
       complexity: COMPLEXITY,
+      duplication: DUPLICATION,
+      cognitive: COGNITIVE,
       ...overrides,
     } satisfies RunFacts),
   };
@@ -99,9 +133,16 @@ function merge(agoSeconds: number, sha = 'bbbbbbbb', overrides: Partial<RunFacts
       runUrl: 'https://github.com/mephistopheles4/stacks/actions/runs/2',
       // Nobody measured a window for a record this test invented.
       prWindow: 'unknown',
-      expected: ['gate-suite-runtime', ...COMPLEXITY_SERIES],
+      expected: [
+        'gate-suite-runtime',
+        ...COMPLEXITY_SERIES,
+        ...DUPLICATION_SERIES,
+        ...COGNITIVE_SERIES,
+      ],
       gateSuiteRuntime: 9,
       complexity: COMPLEXITY,
+      duplication: DUPLICATION,
+      cognitive: COGNITIVE,
       ...overrides,
     } satisfies RunFacts),
   };
@@ -127,10 +168,20 @@ function repoWith(stored: readonly Planted[] | undefined, branch?: readonly Plan
   };
   const commit = (records: readonly Planted[]): string => {
     mkdirSync(join(dir, RECORD_DIR), { recursive: true });
-    for (const record of records) writeFileSync(join(dir, RECORD_DIR, record.name), record.document, 'utf8');
+    for (const record of records)
+      writeFileSync(join(dir, RECORD_DIR, record.name), record.document, 'utf8');
     git('add', '-A');
-    git('-c', 'user.name=gate', '-c', 'user.email=gate@example.invalid', 'commit',
-        '--allow-empty', '-m', 'records', '--quiet');
+    git(
+      '-c',
+      'user.name=gate',
+      '-c',
+      'user.email=gate@example.invalid',
+      'commit',
+      '--allow-empty',
+      '-m',
+      'records',
+      '--quiet',
+    );
     return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
   };
 
@@ -138,8 +189,17 @@ function repoWith(stored: readonly Planted[] | undefined, branch?: readonly Plan
   // The branch guard runs first and reads this repository too, so it has to be
   // one the deploy is allowed to publish from — otherwise every test here would
   // be observing G17's refusal instead of this one.
-  git('-c', 'user.name=gate', '-c', 'user.email=gate@example.invalid', 'commit',
-      '--allow-empty', '-m', 'root', '--quiet');
+  git(
+    '-c',
+    'user.name=gate',
+    '-c',
+    'user.email=gate@example.invalid',
+    'commit',
+    '--allow-empty',
+    '-m',
+    'root',
+    '--quiet',
+  );
   git('branch', '-M', 'main');
 
   if (stored !== undefined) {
@@ -240,7 +300,7 @@ describe('G39 — the harness reaches the check at all', () => {
   it('plants a record the writer would actually write', () => {
     // The documents here come from `renderMetrics`, so a parser tested against
     // them is agreeing with the writer rather than with this file's author.
-    expectFound([...GATED_SERIES], 'series the bound covers', 8);
+    expectFound([...GATED_SERIES], 'series the bound covers', 20);
     expect(nightly(0).document).toContain('# EOF');
   });
 });
@@ -264,7 +324,9 @@ describe('G39 — per-series, because the record is not one number', () => {
   });
 
   it('refuses a series with no sample at all exactly as a stale one', () => {
-    const { status, output } = deploy(repoWith([merge(600, 'bbbbbbbb', { complexity: undefined })]));
+    const { status, output } = deploy(
+      repoWith([merge(600, 'bbbbbbbb', { complexity: undefined })]),
+    );
 
     expectRefused(status, output);
     expect(output).toContain('no sample at all');

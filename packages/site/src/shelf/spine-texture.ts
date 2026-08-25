@@ -114,7 +114,8 @@ export function makeSpineTexture(options: SpineTextOptions): THREE.CanvasTexture
 
   const text = band.caps ? main.toUpperCase() : main;
   const budget = available * 0.72;
-  const lines = band.lines === 2 ? wrap(ctx, text, budget, tracking) : [fit(ctx, text, budget, tracking)];
+  const lines =
+    band.lines === 2 ? wrap(ctx, text, budget, tracking) : [fit(ctx, text, budget, tracking)];
 
   const left = -length / 2 + padding;
   // Two lines run *across* the spine, so the block is centred on the width and
@@ -289,7 +290,13 @@ function width(ctx: CanvasRenderingContext2D, text: string, tracking: number): n
   return ctx.measureText(text).width + tracking * Math.max(0, text.length - 1);
 }
 
-function draw(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, tracking: number): void {
+function draw(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  tracking: number,
+): void {
   if (tracking === 0) {
     ctx.fillText(text, x, y);
     return;
@@ -302,7 +309,12 @@ function draw(ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
 }
 
 /** Titles are long and spines are short; cut at a character with an ellipsis. */
-function fit(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, tracking: number): string {
+function fit(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  tracking: number,
+): string {
   if (width(ctx, text, tracking) <= maxWidth) return text;
 
   let cut = text;
@@ -319,7 +331,12 @@ function fit(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, trac
  * not enough — a title long enough to need three lines would be a paragraph on a
  * spine.
  */
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, tracking: number): string[] {
+function wrap(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  tracking: number,
+): string[] {
   if (width(ctx, text, tracking) <= maxWidth) return [text];
 
   const words = text.split(/\s+/);

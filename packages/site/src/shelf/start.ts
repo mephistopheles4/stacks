@@ -7,7 +7,7 @@ import { boot } from './boot.ts';
  * logic in an `.astro` file is counted by nothing — every mutation scope and
  * every complexity population globs `*.ts` — so anything with a type belongs
  * here, where the counters can see it. ⚠️ **It is typechecked either way now**:
- * G47 (`astro-types`) runs `astro check` inside `pnpm build`, so the reason this
+ * G50 (`astro-types`) runs `astro check` inside `pnpm build`, so the reason this
  * paragraph used to give — *`astro check` cannot run under TypeScript 7* — is
  * no longer the reason, and coverage is. G7
  * caps a script block at a handful of bootstrap statements for that reason, and

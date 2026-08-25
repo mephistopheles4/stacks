@@ -14,7 +14,7 @@ below contradict a document in this tree, and one of them contradicts
 
 > ✅ **The block cleared the same evening, and the gate landed in this branch.**
 > [#259](https://github.com/mephistopheles4/stacks/pull/259) merged at
-> `bc59bf9`, and **G47** (`astro-types`) followed —
+> `bc59bf9`, and **G50** (`astro-types`) followed —
 > [ADR-0077](../adr/0077-astro-check-is-the-checker-for-astro-files.md).
 > **Everything below is left as written**, because a terrain survey read after
 > the fact is worth more as a record of what was and was not known in advance
@@ -341,13 +341,20 @@ this project to go stale.
 
 ✅ **And it resolved exactly that way, which is the point.**
 [#261](https://github.com/mephistopheles4/stacks/pull/261) merged first, so
-**G46 is `lint`** and this row became **G47** at the rebase — read off `main`'s
+**G46 is `lint`** and this row became **G47** at that rebase — read off `main`'s
 own `docs/gates.md` rather than taken from the message announcing it, which is
 the rule this page spends its length on. The renumber moved **two** files, per
-G41: the row in `docs/gates.md` and the `### G47 — \`astro-types\`` heading in
-`docs/gate-register.md`. Nothing was lost and nobody was blocked; four branches
-sitting on one number cost exactly one rebase each, which is what the
-alternative was supposed to save.
+G41: the row in `docs/gates.md` and the `### G<n> — \`astro-types\`` heading in
+`docs/gate-register.md`.
+
+⚠️ **And then it moved twice more, which is the honest shape of it.** #262 took
+G47 for `ignored-clones`, #264 took G48 for `markdown`, #267 took G49 for
+`format`, and this row landed at **G50** — merging last in an agreed order, onto
+a `main` nothing would move under it again. **The number changed four times and
+cost four renumbers**, and that is the *cheap* outcome: a reservation list would
+have spent the same effort and reddened builds while doing it, because G19's
+gapless walk punishes the hole and not the duplicate. Nobody was ever blocked
+and nothing was lost.
 
 ⚠️ **And then the same session got the number wrong again, on the right
 surface.** After #262 merged, this session read `main`'s `docs/gates.md`,

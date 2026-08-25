@@ -125,10 +125,7 @@ export interface DiagnosticsOptions {
  * Returns a teardown for symmetry with the rest of the shelf; the page normally
  * lives until it is navigated away from, so nothing calls it today.
  */
-export function mountDiagnostics(
-  host: HTMLElement,
-  options: DiagnosticsOptions,
-): () => void {
+export function mountDiagnostics(host: HTMLElement, options: DiagnosticsOptions): () => void {
   // Read before the first write, or this session overwrites the record it is
   // being mounted to show.
   const previous = readPrevious();
@@ -162,7 +159,8 @@ export function mountDiagnostics(
       programs: stats?.programs ?? 0,
       calls: stats?.calls ?? 0,
       triangles: stats?.triangles ?? 0,
-      buffer: stats === undefined ? 'none' : `${String(stats.bufferWidth)}x${String(stats.bufferHeight)}`,
+      buffer:
+        stats === undefined ? 'none' : `${String(stats.bufferWidth)}x${String(stats.bufferHeight)}`,
       pixelRatio: stats?.pixelRatio ?? window.devicePixelRatio,
       ...(heap === undefined
         ? {}
@@ -246,13 +244,19 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
     current.heapMb === undefined
       ? 'heap     n/a'
       : `heap     ${String(current.heapMb)} / ${String(current.heapLimitMb ?? 0)} MB`,
-    current.deviceMemoryGb === undefined ? 'ram      n/a' : `ram      ${String(current.deviceMemoryGb)} GB`,
+    current.deviceMemoryGb === undefined
+      ? 'ram      n/a'
+      : `ram      ${String(current.deviceMemoryGb)} GB`,
     `gpu      ${current.gpu ?? 'n/a'}`,
     `uptime   ${String(current.seconds)}s`,
   ];
 
   if (current.shaders !== undefined) {
-    lines.push('', 'SHADER WOULD NOT LINK — drawing stopped', ...current.shaders.map((line) => `  ${line}`));
+    lines.push(
+      '',
+      'SHADER WOULD NOT LINK — drawing stopped',
+      ...current.shaders.map((line) => `  ${line}`),
+    );
   }
 
   if (current.changes !== undefined) {

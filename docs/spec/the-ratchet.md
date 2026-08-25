@@ -75,7 +75,7 @@ it.** #114 measured six runs on an unchanged tree. Naming a margin now would be
 inventing a figure — the exact thing #114 existed to prevent.
 
 > **Floor for a scope = the lowest score observed for that scope across the
-> calibration window, applied _once, at arming_.**
+> calibration window, applied *once, at arming*.**
 
 ⚠️ **"Once, at arming" is load-bearing and was nearly lost.** If the rule is a
 standing function, then after a genuine regression **the rule itself produces a
@@ -220,8 +220,8 @@ means mutating the live ruleset that protects everything. The optionality is
 measured; the deadlock is inferred, and the spec states the first flatly and labels
 the second.
 
-> **So "a reviewable diff" narrows to the argument it always rested on: _the
-> justification sits next to the permission, in the same file, permanently._**
+> **So "a reviewable diff" narrows to the argument it always rested on: *the
+> justification sits next to the permission, in the same file, permanently.***
 
 That is a claim about a **permanent, self-describing record read whenever somebody
 next opens the file** — not about anyone reading it before merge. It is still why
@@ -436,7 +436,7 @@ over 3 days.** Counted in **runs**, not days.
 
 **Nothing ends the disarmed period, and the print is the whole mechanism.**
 
-```
+```text
 packages/core/src   armed 71.55   current 71.70  (+0.15)   1 mutant = 0.08
 packages/cli/src    unarmed       window full (20 runs), lowest 44.12 - armable
 scripts/            unarmed       12/20 runs, 41 days

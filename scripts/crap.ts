@@ -161,7 +161,9 @@ async function main(): Promise<void> {
   );
 
   console.log(`\n${renderReport(rank(rows), routing)}`);
-  console.log(`\n  ${((Date.now() - started) / 1000).toFixed(1)}s — this blocks nothing; \`--no-verify\` skips it.`);
+  console.log(
+    `\n  ${((Date.now() - started) / 1000).toFixed(1)}s — this blocks nothing; \`--no-verify\` skips it.`,
+  );
 }
 
 /**

@@ -80,10 +80,14 @@ describe('G11 — build modes', () => {
 
     // The fixture vault must actually contain both kinds, or the assertions
     // below hold over a set nothing was ever removed from.
-    expect(local.some((book) => book['status'] === 'wishlist'), 'need a wishlist fixture').toBe(
-      true,
-    );
-    expect(local.some((book) => book['private'] === true), 'need a private fixture').toBe(true);
+    expect(
+      local.some((book) => book['status'] === 'wishlist'),
+      'need a wishlist fixture',
+    ).toBe(true);
+    expect(
+      local.some((book) => book['private'] === true),
+      'need a private fixture',
+    ).toBe(true);
 
     expect(publicBuild.map((book) => book['id'])).toEqual(shipping.map((book) => book['id']));
   });

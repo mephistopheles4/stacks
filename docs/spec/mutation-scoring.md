@@ -24,7 +24,7 @@ is the transferable half**, and it is the part worth carrying.
 
 ## 1. The dependency
 
-```
+```text
 @stryker-mutator/core          9.6.1   (pinned exactly)
 @stryker-mutator/vitest-runner 9.6.1   (pinned exactly)
 checkers: []
@@ -167,7 +167,7 @@ reach* transfers to any codebase; the eight scopes below do not.
 **Directory rollups first** — these are *packages*, not declared scopes, and the
 distinction is load-bearing enough to have its own warning below:
 
-```
+```text
                        whole directory        reachable half
 packages/core/src/**   3301 mutants  66.6%    3301  66.6%   (nothing excluded)
 packages/cli/src/**     573 mutants   5.4%      68  45.6%   (505 excluded)

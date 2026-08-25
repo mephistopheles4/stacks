@@ -12,7 +12,7 @@ requires the shorter title to begin the longer one** at its first token, because
 a subtitle extends a title at the end while words in front of it announce a
 different book.
 
-_This paragraph exists because it was missing._ The two guards arrived in
+*This paragraph exists because it was missing.* The two guards arrived in
 `ac369b5` and that commit did not touch this file, so for eight days the record
 described a rule the code had already outgrown. The entries below are the
 history and are only ever appended to; **this head is the current decision and
@@ -20,7 +20,7 @@ has to be brought with it.**
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **Dedupe by title+author is fuzzy, not exact.** Also found by running it: `stacks add "thinking in systems"` created a second note beside "Thinking in systems : a primer". Exact equality of the normal form cannot match a title carrying its subtitle against one that isn't. `isProbablySameBook` requires high token containment one way and substantial overlap the other, which still keeps two different books by the same author apart.
 

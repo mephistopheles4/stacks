@@ -3,7 +3,7 @@
 `@astrojs/check@0.9.10` is a dev dependency of `packages/site`, pinned exact,
 and that package's `build` script is `astro check && astro build`. So
 `pnpm build` typechecks `.astro` frontmatter, the `suite` matrix already runs
-`pnpm build` on both Node versions, and the row is **G47** (`astro-types`).
+`pnpm build` on both Node versions, and the row is **G50** (`astro-types`).
 
 This record exists for the dependency, which `AGENTS.md` requires, and for two
 consequences that are not obvious from the one-line change that carries them.

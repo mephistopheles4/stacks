@@ -203,7 +203,7 @@ calibrated against, so it is its own decision with its own ADR, recorded as fog
 in [§8](#8-what-was-ruled-out-and-the-fog-that-remains). `astro check` in the
 gates is the same: fog, not this spec.
 
-> ✅ **That fog cleared 2026-08-23.** `astro check` is **G47** (`astro-types`),
+> ✅ **That fog cleared 2026-08-23.** `astro check` is **G50** (`astro-types`),
 > run inside `pnpm build` — decided on
 > [#238](https://github.com/mephistopheles4/stacks/issues/238) and specified in
 > [`static-analysis-and-style.md`](static-analysis-and-style.md) §4. `checkers:
@@ -269,12 +269,37 @@ compared, because an ESLint upgrade that counts one more construct would
 otherwise breach every cap at once and read as a regression. Its contract,
 stated so two implementations agree:
 
-- **Canonical inputs**: the exact `eslint` and `@typescript-eslint/parser`
-  versions as installed, the `complexity` rule's options object, and the
-  fixture's expected totals — hashed in that order, the way
-  `configHashOf()` in `scripts/lib/floors.ts` hashes the score-affecting
-  Stryker options and nothing else. Changing any of them is changing what the
-  number means.
+- **Canonical inputs**: the exact `eslint`, `@typescript-eslint/parser` and
+  `eslint-plugin-sonarjs` versions as installed, **both** counting rules'
+  options objects, and **both** fixtures' expected totals — hashed in that
+  order, the way `configHashOf()` in `scripts/lib/floors.ts` hashes the
+  score-affecting Stryker options and nothing else. Changing any of them is
+  changing what the number means.
+
+  ⚠️ **This list widened from three inputs to six when the cognitive counter
+  landed** ([#255](https://github.com/mephistopheles4/stacks/issues/255)), and
+  the widening is the contract rather than an implementation detail: two
+  implementations of this spec have to hash the same things in the same order.
+  **One hash over two counting rules** was decided in
+  [#234](https://github.com/mephistopheles4/stacks/issues/234) §2, with its cost
+  recorded rather than hidden — a `sonarjs` upgrade refuses every *cyclomatic*
+  cap comparison too, although no cyclomatic number moved. That is the
+  fail-closed direction. See
+  [ADR-0073](../adr/0073-cognitive-complexity-is-published-beside-cyclomatic.md).
+
+  ⚠️ **Neither cut is an input.** `MCCABE_CUT` and `COGNITIVE_CUT` decide what
+  the two mass-over counts *mean*, and adding either would make it seven. What
+  guards them instead is the series **name** — `complexity-mass-over-10` and
+  `cognitive-mass-over-15` — asserted against the constant in each counter's
+  spec, so moving a cut is either a red test or a rename, and a rename is G36's.
+
+  ⚠️ **The two assertions cannot use the same anchor, and a second implementer
+  needs to know which.** `MCCABE_CUT`'s is against `CAPPED_SERIES`;
+  `COGNITIVE_CUT`'s must be against `TREND_SERIES`, because **no cognitive name
+  is in `CAPPED_SERIES` and none ever will be** — `cognitive-mass-over-15` may
+  never be capped, which is the condition on accepting a cut nobody derived. An
+  implementation that copied the `CAPPED_SERIES` spelling across would compile,
+  pass, and guard nothing.
 - **Stamped**: `RunFacts.fixtureHash`, rendered as a `fixture_hash` label on
   the run-info family beside `config_hash`. A score never appears without its
   run, and now neither does a count.
@@ -476,7 +501,7 @@ for the cap and the hook.
 | Weakening | change what ESLint counts, or edit the fixture | **Closed** by the inventory fixture and its hash on the floors file — a count change is a red spec, and a record under a different hash is refused, not compared |
 | Weakening | raise a cap | **Visible**: the floors file's append-only `notes`, same as lowering a floor |
 | Satisfying the letter | function splitting: `max` −10, erosion share −3.8pp, no branch removed | **Carried open, made visible** — no ratio emitted; the signature is on the page. ⚠️ **The cap inherits it**: a split is the cheapest way under a `max` cap. `mass-over-10` is capped beside it for that reason — a split that leaves a 30 still counts — and `mass` is on the page uncapped, flat when nothing was removed |
-| Routing around | code outside the populations; `.astro` files | **Open** for the two excluded directories; `.astro` closed by *no logic in `.astro` files* — ⚠️ **and that rule now rests on this row rather than the other way round.** `astro check` runs as G47 (`astro-types`) since 2026-08-23, so `.astro` is typechecked and still outside every population — which is exactly why G7 is kept. The fog is cleared |
+| Routing around | code outside the populations; `.astro` files | **Open** for the two excluded directories; `.astro` closed by *no logic in `.astro` files* — ⚠️ **and that rule now rests on this row rather than the other way round.** `astro check` runs as G50 (`astro-types`) since 2026-08-23, so `.astro` is typechecked and still outside every population — which is exactly why G7 is kept. The fog is cleared |
 | Vacuous green | a glob matching nothing; a hook printing 0% for a browser-only file | **Closed** for the series — one empty population fails all four families via `RunFacts.failed`, never a partial record; **closed by the exclusions** for the hook, which prints *no in-process oracle* instead of a number |
 | Decay | the number moves with no code change | *Counting-rule drift*: ESLint upgrades — **closed** by the fixture. *`anonymous_N` identity*: **closed by not tracking them**. *The hook stops running*: **open by nature** — nothing watches a local surface, which is why it is a preview and not the record |
 
@@ -518,14 +543,29 @@ whose condition is a **hashing** change and not a tooling one, and the map lists
 it under *Out of scope* rather than as an open question. It was waiting on
 nothing, here or there.
 
-**One is still open: cognitive complexity as a second series**
-([#234](https://github.com/mephistopheles4/stacks/issues/234)). The bar this
-file set for it — *kept as fog until the split signature proves common* — has
-been met: [#230](https://github.com/mephistopheles4/stacks/issues/230) measured
-1105 scored pairs across all eight scopes at Pearson **r 0.9159**, with 54
-inversions where cognitive exceeds cyclomatic. So the signature holds and
-diverges really. Whether that earns a second series, replaces the first, or is
-refused is the half still on the map.
+**The list is now empty, and the last item is answered.** Cognitive complexity
+as a second series ([#234](https://github.com/mephistopheles4/stacks/issues/234))
+was the fifth, and it is **adopted**: four series beside the cyclomatic four,
+never a replacement, with **its own denominator** — smaller than the cyclomatic
+one by the nine nodes the rule never visits, which is the durable figure rather
+than either total — and **exactly one series a cap may ever reach**,
+`cognitive-max`. ⚠️ **No cognitive series is capped today**: `CAPPED_SERIES`
+holds `complexity-max` and `complexity-mass-over-10` and nothing else, and
+`cognitive-max` joins it only once twenty records carry the families
+([#258](https://github.com/mephistopheles4/stacks/issues/258)).
+`cognitive-mass-over-15` may never join it at all. The bar this file set —
+*kept as fog until the split signature proves
+common* — was met by
+[#230](https://github.com/mephistopheles4/stacks/issues/230)'s 1105 scored pairs
+at Pearson **r 0.9159** with 54 inversions, and then answered rather than left
+open. See
+[ADR-0073](../adr/0073-cognitive-complexity-is-published-beside-cyclomatic.md)
+and [`static-analysis-and-style.md`](static-analysis-and-style.md) §5.
+
+⚠️ **Nothing replaces this section.** Per
+[#228](https://github.com/mephistopheles4/stacks/issues/228)'s Notes, the fog
+lives on the map's *Decisions so far* and its *Not yet specified*, and a
+question in two places goes stale in one of them. Read it there.
 
 **Research and spikes, kept on their branches**, each linked from its ticket:
 `research/complexity-tooling-for-typescript`,

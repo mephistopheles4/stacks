@@ -5,7 +5,7 @@
   },
   // Covers every .ts in the repo, including the site's. It does NOT cover
   // .astro files — `astro check` does, run by packages/site's build script
-  // inside `pnpm build`; see G47 (astro-types) in docs/gates.md. Logic still
+  // inside `pnpm build`; see G50 (astro-types) in docs/gates.md. Logic still
   // belongs in .ts, for a different reason now: every mutation scope and every
   // complexity population globs *.ts, so logic in an .astro file is counted by
   // nothing. See "Site code layout" in AGENTS.md.

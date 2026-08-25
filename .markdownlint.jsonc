@@ -1,0 +1,144 @@
+// The Markdown rule set. Narrow on purpose, and every choice below was
+// measured on this tree rather than taken from a default.
+//
+// Read `docs/spec/static-analysis-and-style.md` §6 step 2 and
+// https://github.com/mephistopheles4/stacks/issues/235 before widening it. A
+// default run here is actively dangerous: at default rules a `--fix` pass
+// changed 55 files, turned 11 issue references into H1 headings, stripped an
+// intentional space from 16 code spans — two of which are regexes that gates
+// depend on — and renumbered a verbatim quotation, with all 1055 tests green
+// throughout. Prettier's Markdown damage is loud; this tool's is silent, and
+// the narrow allowlist is the entire protection.
+//
+// `.markdownlint.jsonc` is the filename, and it is not a preference. It is on
+// CodeRabbit's recognised list *and* it takes comments, so each rule turned off
+// carries its measured reason at the line that turns it off. The `-cli2`
+// variant CodeRabbit reads is `.json`, without comments. CodeRabbit also skips
+// its own markdownlint run once a workflow runs one, so this file reconciles
+// review and CI by construction — the rules reconcile and the versions cannot,
+// because CodeRabbit floats and this repo pins only its own copy.
+{
+  // ⚠️ **`default: false` is what makes this an allowlist, and without it the
+  // narrowness is a fiction.** This file used to say *"everything not named
+  // below keeps its markdownlint default"*, which left roughly thirty
+  // unadopted, unmeasured rules live — and several of them fixable. Measured:
+  // a file with trailing spaces and a hard tab reported **MD009** and
+  // **MD010**, and `pnpm lint:md:fix` rewrote both, with no refusal, because
+  // the fix-set measurement probes the adopted rules and a rule nobody adopted
+  // is a rule nobody probes. The refusal cannot protect what the config never
+  // told it about.
+  //
+  // So the enabled set is exactly the fifteen rules
+  // https://github.com/mephistopheles4/stacks/issues/235 §3 enumerates, and
+  // G48 asserts that set equals the probe set in both directions — add a rule
+  // here without a probe and the build is red.
+  //
+  // ⚠️ **Turning the defaults off loses MD009, MD010 and MD047**, and that is
+  // the intended reading rather than an oversight: the tree holds 0 leading
+  // tabs, 0 trailing spaces and 0 missing final newlines, and
+  // https://github.com/mephistopheles4/stacks/issues/236 already refused
+  // `.editorconfig` over that exact class on the grounds that a gate over it is
+  // green on day one and can never go red.
+  "default": false,
+
+  // Structure — MD056 (table column count), MD051 (link fragments), MD040
+  // (fenced code language), MD024 (duplicate heading), MD001 (heading
+  // increment), MD041 (first-line heading), MD033 (inline HTML), MD034 (bare
+  // URLs), MD012 (multiple blanks), MD022/MD031/MD032 (blank lines around
+  // headings, fences and lists). Three live defects that 45 gates could not see
+  // were caught by the first three of those.
+  "MD001": true,
+  "MD012": true,
+  "MD022": true,
+  "MD024": true,
+  "MD031": true,
+  "MD032": true,
+  "MD033": true,
+  "MD034": true,
+  "MD040": true,
+  "MD041": true,
+  "MD051": true,
+  "MD056": true,
+  //
+  //   Consistency — MD049 and MD050 below. Admitted by the routing rule's
+  //   broad reading — *consistency is a defect here* — decided in
+  //   https://github.com/mephistopheles4/stacks/issues/229 and stated in
+  //   docs/spec/static-analysis-and-style.md §2, which is also where the cost
+  //   of that reading is recorded. It has no record under docs/adr/ yet; the
+  //   spec's §8 proposes one, and its number is not knowable until it lands.
+
+  // Exactly one space at a table pipe.
+  //
+  // ⚠️ **`compact`, never the default.** MD060 is not an exactly-one-space rule:
+  // its default is `any`, which enforces consistency *within* a table and
+  // accepts a column-aligned one. Two gate regexes hardcode an exact single
+  // space at a pipe — `gates/gate-register.test.ts` (G41) and
+  // `gates/merge-precedence.test.ts` (G31) — and an aligned table passes MD060
+  // at `any` while going invisible to both. Since Prettier excludes Markdown
+  // rather than repairing those regexes, this line is their sole protection.
+  //
+  // `aligned_delimiter` is a second knob on this rule and is left at its
+  // default; nothing measured moves when it is set.
+  "MD060": { "style": "compact" },
+
+  // Strong emphasis is `**`, never `__`.
+  //
+  // Nine regexes across G19, G31, G36 and G41 hardcode `\*\*` — for example
+  // `/^\|\s*\*\*G\d+\*\*\s*\|/`. A `__G12__` written into a scoreboard row goes
+  // invisible to four gates at once with every test green. Zero findings on
+  // this tree, so it is purely preventive and costs nothing.
+  //
+  // ⚠️ MD050 is the rule that sees this, not MD049. `\*\*` is *strong*
+  // emphasis. #235 attached the warrant to MD049 first and that was the wrong
+  // rule; `MD049: asterisk` is measurably clean on `__G41__`.
+  "MD050": { "style": "asterisk" },
+
+  // Emphasis is `*`, never `_`.
+  //
+  // Kept on the owner's call, under the routing rule's broad reading — a
+  // consistency rule is a defect rule under it, per
+  // docs/spec/static-analysis-and-style.md §2. It protects no text a gate reads;
+  // that warrant belongs to MD050 above. It is the one rule in this set resting on
+  // the broad reading alone, and the one to drop first if the set proves noisy.
+  //
+  // ⚠️ It also fights a formatter. Prettier writes `_em_` and this rule writes
+  // `*em*`, so bringing Markdown under Prettier means dropping MD049 **and**
+  // re-deciding MD060, whose `compact` and Prettier's alignment cannot both
+  // hold. Neither is obvious from either tool's own configuration.
+  "MD049": { "style": "asterisk" },
+
+  // --- Off, each on a measurement. Turning one back on means meeting its
+  // --- reason first. Findings are counts over this tree at 0.23.2.
+
+  // 1540 findings, 76% of everything this tool reports here, and no auto-fix at
+  // any limit. The longest Markdown line is 2048 characters and it is a table
+  // row in docs/adr/0016-painted-shadows.md; docs/gates.md has one at 2025. A
+  // table row does not wrap, so no limit rescues it. The refusal is recorded in
+  // docs/gates.md's *Not gated, deliberately*.
+  "MD013": false,
+
+  // 11 findings, **11 of 11 false positives**. Every one is a paragraph opening
+  // with an issue reference — `#167's *What is true today* says…`. Its fix
+  // turns them into H1 headings and destroys the reference.
+  "MD018": false,
+
+  // 16 findings, **16 of 16 false positives**. Ten are `` `; ` ``, the subjects
+  // separator AGENTS.md documents and G31 gates in both directions. One is
+  // `` `^### G(\d+) ` ``, G41's own documented extraction regex, whose trailing
+  // space is what separates `### G4 ` from `### G41 `.
+  "MD038": false,
+
+  // 3 findings. It renumbers ordered lists inside blockquotes. In
+  // docs/gate-register.md it renumbered a **verbatim quotation** sitting under
+  // a heading that says the file "still defined category 5". This repo's
+  // decision policy is to carry original reasoning verbatim, so this rule is
+  // aimed straight at it.
+  "MD029": false,
+
+  // 1 finding. This repo writes sentence headings, which end in a full stop.
+  "MD026": false,
+
+  // 8 findings, all of them standalone bold lines used as sub-headings, which
+  // is this repo's house style.
+  "MD036": false
+}

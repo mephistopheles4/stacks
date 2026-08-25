@@ -102,7 +102,7 @@ touches the painted shadow planes**.
 
 Measured, starting from the shipped default (shadows off) and enabling them live:
 
-```
+```text
 naive enable (shadowMap.enabled, key.castShadow, shadowMap.needsUpdate)
   → 2 new programs, rebound: wood + all 8 books        ← the MeshBasicMaterial is NOT rebuilt
 then material.needsUpdate = true on everything
@@ -246,7 +246,7 @@ buffer 1440×900 ↔ 720×450 immediately. It belongs in `REALLOC`, not in "triv
 `canvas.width` reallocates the drawing buffer *even when the value is identical*. Measured on
 Chrome 150.0.7871.187 / ANGLE with a real GPU:
 
-```
+```text
 render, read back                     29.138
 setSize(720,450) — identical size     29.138   ← contents survived
 setSize(721,450) — one pixel wider     0.000   ← contents gone, buffer really was remade

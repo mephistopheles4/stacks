@@ -6,7 +6,7 @@ This is an app monorepo, not a library release, so dual-ESM and `dist/` plumbing
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **No build step for `core` and `cli`.** They export TS source (`exports: "./src/index.ts"`) consumed directly by tsx, vitest and Vite — the internal-packages pattern. `pnpm build` is `tsc --noEmit` + `astro build`. This is an app monorepo, not a library release, so dual-ESM/`dist` plumbing buys nothing. Verified: `@stacks/core` resolves under all three consumers.
 

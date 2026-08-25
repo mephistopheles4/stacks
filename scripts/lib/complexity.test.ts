@@ -62,7 +62,8 @@ describe('the inventory fixture', () => {
   });
 
   it('assigns every function-shaped node the kind the roll-up expects', () => {
-    const key = (entry: { label: string; kind: string }): string => `${entry.label} → ${entry.kind}`;
+    const key = (entry: { label: string; kind: string }): string =>
+      `${entry.label} → ${entry.kind}`;
 
     expect(counted.map((entry) => key(entry)).sort()).toEqual(
       INVENTORY.functions.map((entry) => key(entry)).sort(),
@@ -114,9 +115,9 @@ describe('the inventory fixture', () => {
     expect(counted.find((entry) => entry.label === "Function 'declaration'")?.name).toBe(
       'declaration',
     );
-    expect(counted.filter((entry) => entry.kind === 'arrow').every((e) => e.name === undefined)).toBe(
-      true,
-    );
+    expect(
+      counted.filter((entry) => entry.kind === 'arrow').every((e) => e.name === undefined),
+    ).toBe(true);
   });
 });
 
@@ -174,9 +175,10 @@ describe('the population rule', () => {
 
   it('drops *.test.ts, and nothing else', () => {
     const scope: Scope = { name: 's', glob: 'scripts/**/*.ts', exclusions: [] };
-    expect(
-      populationOf(scope, ['scripts/a.ts', 'scripts/a.test.ts', 'scripts/lib/b.ts']),
-    ).toEqual(['scripts/a.ts', 'scripts/lib/b.ts']);
+    expect(populationOf(scope, ['scripts/a.ts', 'scripts/a.test.ts', 'scripts/lib/b.ts'])).toEqual([
+      'scripts/a.ts',
+      'scripts/lib/b.ts',
+    ]);
   });
 
   it('is idempotent about test files, so it does not matter who walked the tree', () => {

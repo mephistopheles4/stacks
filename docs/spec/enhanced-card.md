@@ -46,7 +46,7 @@ decision 4 — *what you brought to the book, then what the book is, then the ex
 line inserted before the links row.
 
 | # | Block | Content | Presence |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 1 | Cover | `<img>`, alt `Cover of «title»` | when `cover` is present |
 | 2 | Title | `<h2>`, `book.title` | always |
 | 3 | Author | `book.author` | when present |
@@ -99,7 +99,7 @@ on local builds (wishlist books never reach a public build).
 ### Field presence in the real vault, for anyone sizing this
 
 | key | seed (12) | fixture-50 | real vault (41) |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `cover` | 6 | 44 | 41 |
 | `author` | 12 | 50 | 41 |
 | `isbn` | 6 | 0 | 35 |
@@ -120,7 +120,7 @@ empty on every note that exists today.
 Every rule below was exercised by a prototype shot, not asserted.
 
 | Absent | Result |
-|---|---|
+| --- | --- |
 | `cover` | header row is the title column alone — one row shorter, **no placeholder** |
 | `author` | dropped; title alone in the header |
 | reading facts | line still renders, carrying the status word alone |
@@ -146,7 +146,7 @@ overflowed by 146px even in today's sparse state.
 cover, then a column holding title and author. Everything else full-width below.
 
 | element | size | colour | margin-top |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | cover | `2.75rem` wide, auto height, `border-radius: 0.2rem` | — | — |
 | title `<h2>` | `1rem` / 1.3, weight 600, `-0.01em`, `overflow-wrap: anywhere` | `#f2e8dc` | 0 |
 | author | `0.9rem` | `#c9b8a4` | `0.2rem` |
@@ -163,7 +163,7 @@ and a larger cover there was never put to the owner; [#91](https://github.com/me
 Measured heights, for regression reference:
 
 | viewport | cap | filled | today (pre-`enrich`) |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | portrait 375×812 | 325px | **270** | 233 |
 | landscape 667×375 | 150px | **253 (+103)** | — |
 | desktop (own 448 max) | — | **303** | — |
@@ -254,7 +254,7 @@ nothing has drawn.
 **`prefers-reduced-motion`** — one rule covering all three motions:
 
 | motion | reduced |
-|---|---|
+| --- | --- |
 | slide on open | **off** — appears instantly |
 | slide on dismiss | **off** — disappears instantly |
 | snap-back | **off** — instant |
@@ -284,7 +284,7 @@ the *only* way they learn what they hit, which is why it is short rather than
 complete.
 
 | Concern | Decision |
-|---|---|
+| --- | --- |
 | Focus on open | **Does not move.** The card is non-modal; a canvas click leaves focus on `<body>`, so there is no origin to restore. The `<aside>` follows the canvas in DOM order, so one Tab from `<body>` reaches the close control. |
 | Focus on close | **Move focus to the `<canvas>` only if focus is currently inside the card**; otherwise leave it alone. One conditional rule covering all four dismissals. |
 | `<canvas>` | gains **`tabindex="-1"`** — programmatically focusable, never a tab stop, so nobody who never opens a card gains one. |
@@ -327,7 +327,7 @@ tooltip, because a tooltip never fires on touch and touch is the primary case.
 ### Destinations
 
 | | |
-|---|---|
+| --- | --- |
 | **Which marks** | Every linkable contributor, **max 3** — Open Library, Google, Apple |
 | **Order** | [`metadata-merge.md`](metadata-merge.md)'s default provider order with O'Reilly skipped → **Open Library, Google, Apple** |
 | **Open Library** | `https://openlibrary.org/isbn/{isbn}` when an ISBN exists, `https://openlibrary.org/books/{OLID}` otherwise |
@@ -359,7 +359,7 @@ Row-wide: **`title` is both the tooltip and the accessible name; no `aria-label`
 anywhere in the row; mark SVGs are `aria-hidden="true" focusable="false"`.**
 
 | link | visible | `title` |
-|---|---|---|
+| --- | --- | --- |
 | Open Library | mark | `Open Library` |
 | Google | the button's own words | `Google Preview` |
 | Apple | icon | `Apple Books` |
@@ -415,7 +415,7 @@ Apple's mark shipping is what makes Apple's credit line owed — see
 
 ## 9. DOM structure and where things live
 
-```
+```html
 <div class="shelf">
   <canvas id="shelf-canvas" tabindex="-1"></canvas>
   <aside id="book-card" class="card" aria-label="Book details" hidden>
@@ -427,7 +427,7 @@ Apple's mark shipping is what makes Apple's credit line owed — see
 ```
 
 - **`.astro` files hold markup, styles and a `<script>` that imports and calls a
-  `.ts` module — nothing more.** ⚠️ **The reason changed at G47
+  `.ts` module — nothing more.** ⚠️ **The reason changed at G50
   (`astro-types`), 2026-08-23**: `.astro` frontmatter *is* typechecked now, by
   `astro check` inside `pnpm build`. What is still true is that logic there is
   **counted by nothing** — every mutation scope and every complexity population
@@ -455,7 +455,7 @@ Every field is already in `library.json` in **both** builds. Existing:
 `cover?`, `pages?`, `binding?`, `tags`. New, from this effort:
 
 | field | source |
-|---|---|
+| --- | --- |
 | `publisher?`, `published?`, `subjects?` | [`metadata-merge.md`](metadata-merge.md) → [`provider-provenance.md`](provider-provenance.md) §6 |
 | `googleVolumeId?`, `appleTrackId?`, `openlibraryOlid?`, `oreillyOurn?` | [`provider-provenance.md`](provider-provenance.md) |
 
@@ -553,7 +553,7 @@ moved it. Recorded so a reader who opens the tickets in number order does not
 implement the earlier answer.
 
 | Earlier | Later, and what this file carries |
-|---|---|
+| --- | --- |
 | [#101](https://github.com/mephistopheles4/stacks/issues/101): links named by `aria-label`, `title` struck row-wide | [#92](https://github.com/mephistopheles4/stacks/issues/92): **`title` as tooltip and accessible name, no `aria-label`.** Dropping the pair defeats the double-announce reason cleanly; the touch reason is accepted as a cost. |
 | [#98](https://github.com/mephistopheles4/stacks/issues/98) + [#101](https://github.com/mephistopheles4/stacks/issues/101): Google's name is "Google Books" | [#92](https://github.com/mephistopheles4/stacks/issues/92): **"Google Preview"**, fixed by the licensed artwork, on WCAG 2.5.3 grounds. |
 | [#98](https://github.com/mephistopheles4/stacks/issues/98): fallback is "Search Google Books" | [#105](https://github.com/mephistopheles4/stacks/issues/105): **Open Library**. `books.google.com/books?q=` 302s to general Google Search, and a book Google does not hold returns ten confident wrong results with no notice. |

@@ -48,7 +48,15 @@
  * cost is that Docker is required; see `docs/commands.md`.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
 import { dockerOutput } from './lib/docker.ts';
@@ -259,11 +267,18 @@ function backfill(): void {
   runExe(
     'docker',
     [
-      'run', '--rm',
-      '-v', `${mounted}:/trend`,
-      '--entrypoint', 'promtool',
+      'run',
+      '--rm',
+      '-v',
+      `${mounted}:/trend`,
+      '--entrypoint',
+      'promtool',
       IMAGE,
-      'tsdb', 'create-blocks-from', 'openmetrics', '/trend/incoming.prom', '/trend/tsdb',
+      'tsdb',
+      'create-blocks-from',
+      'openmetrics',
+      '/trend/incoming.prom',
+      '/trend/tsdb',
     ],
     REPO_ROOT,
   );
@@ -414,11 +429,16 @@ function startStore(): void {
   runExe(
     'docker',
     [
-      'run', '-d',
-      '--name', CONTAINER,
-      '--network', NETWORK,
-      '-p', `${LOOPBACK}:${String(PORT)}:9090`,
-      '-v', `${mounted}:/trend`,
+      'run',
+      '-d',
+      '--name',
+      CONTAINER,
+      '--network',
+      NETWORK,
+      '-p',
+      `${LOOPBACK}:${String(PORT)}:9090`,
+      '-v',
+      `${mounted}:/trend`,
       IMAGE,
       '--config.file=/trend/prometheus.yml',
       '--storage.tsdb.path=/trend/tsdb',
@@ -471,12 +491,18 @@ function startDashboard(): void {
   runExe(
     'docker',
     [
-      'run', '-d',
-      '--name', GRAFANA_CONTAINER,
-      '--network', NETWORK,
-      '-p', `${LOOPBACK}:${String(GRAFANA_PORT)}:3000`,
-      '-v', `${PROVISIONING}:/etc/grafana/provisioning:ro`,
-      '-v', `${DASHBOARDS}:/etc/grafana/dashboards:ro`,
+      'run',
+      '-d',
+      '--name',
+      GRAFANA_CONTAINER,
+      '--network',
+      NETWORK,
+      '-p',
+      `${LOOPBACK}:${String(GRAFANA_PORT)}:3000`,
+      '-v',
+      `${PROVISIONING}:/etc/grafana/provisioning:ro`,
+      '-v',
+      `${DASHBOARDS}:/etc/grafana/dashboards:ro`,
       ...GRAFANA_ENV.flatMap((pair) => ['-e', pair]),
       GRAFANA_IMAGE,
     ],
@@ -702,7 +728,9 @@ async function main(): Promise<number> {
     // rebooted would otherwise report success and leave no dashboard running,
     // which reads as "there is no data" rather than as "nothing is serving it".
     if (docker(['version', '--format', '{{.Server.Version}}']) === undefined) {
-      console.warn('! Docker is not answering, so the dashboard is not running. See docs/commands.md');
+      console.warn(
+        '! Docker is not answering, so the dashboard is not running. See docs/commands.md',
+      );
       return 0;
     }
     writeConfigIfAbsent();
@@ -724,7 +752,9 @@ async function main(): Promise<number> {
   });
 
   writeFileSync(INCOMING, joinRecords(documents), 'utf8');
-  console.log(`\nimporting ${String(wanted.length)} record(s): ${wanted[0] ?? ''} … ${wanted.at(-1) ?? ''}`);
+  console.log(
+    `\nimporting ${String(wanted.length)} record(s): ${wanted[0] ?? ''} … ${wanted.at(-1) ?? ''}`,
+  );
 
   requireDocker();
   writeConfigIfAbsent();

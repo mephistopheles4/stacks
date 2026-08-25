@@ -26,8 +26,7 @@
  * docs/spec/mutation-scoring.md §§6-7.
  */
 
-import { existsSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { walkSource } from './walk.ts';
 import {
   globToRegExp,
   scoreRun,
@@ -49,9 +48,6 @@ import { REPO_ROOT } from './repo-root.ts';
  * deliberate act; discovering one is not possible, which is the point.
  */
 export const SOURCE_ROOTS = ['packages', 'scripts', 'gates'] as const;
-
-/** Directories a source sweep must never descend into. */
-const SKIP = new Set(['node_modules', 'dist', 'artifacts']);
 
 /**
  * A file this check counts as source.
@@ -89,12 +85,13 @@ function matchesAnyFile(glob: string, files: readonly string[]): boolean {
 /**
  * Every source file under the roots above, as paths relative to `root`, POSIX.
  *
- * The only thing in this module that touches a disk. Dot-directories are
- * skipped along with the three build outputs — `.astro/` holds generated
- * declarations and `.stryker-tmp/` is a copy of the tree, which is exactly the
- * kind of input that would make this check report on a sandbox. A root that
- * does not exist has no files rather than throwing, so a repo without a
- * `gates/` is a shorter list and not a crash.
+ * The only thing in this module that touches a disk, and the traversal itself
+ * is `walkSource`'s — shared with the duplication counter's tree population,
+ * which held the same seven lines until that counter reported them as a clone.
+ * What stays here is this module's half of the difference: **which roots**, and
+ * **which files count as source**. The skip rules, the POSIX spelling and the
+ * *a missing root is a shorter list rather than a crash* behaviour live with
+ * the walk.
  *
  * **`root` is a parameter for the reason G20's inspector takes one**: handed a
  * directory, this cannot know which tree produced it, and that is what lets its
@@ -104,24 +101,7 @@ function matchesAnyFile(glob: string, files: readonly string[]): boolean {
  * the first place.
  */
 export function sourceFiles(root: string = REPO_ROOT): string[] {
-  const found: string[] = [];
-
-  const walk = (current: string): void => {
-    if (!existsSync(current)) return;
-    for (const entry of readdirSync(current)) {
-      if (SKIP.has(entry) || entry.startsWith('.')) continue;
-      const full = join(current, entry);
-      if (statSync(full).isDirectory()) {
-        walk(full);
-        continue;
-      }
-      const path = relative(root, full).split(sep).join('/');
-      if (isSourceFile(path)) found.push(path);
-    }
-  };
-
-  for (const source of SOURCE_ROOTS) walk(join(root, source));
-  return found.sort();
+  return walkSource(SOURCE_ROOTS, isSourceFile, root);
 }
 
 /**
@@ -171,10 +151,7 @@ export interface Fault {
  * *the first* thing wrong makes a rename look like one fault when it is
  * usually three.
  */
-export function declarationFaults(
-  declarations: Declarations,
-  files: readonly string[],
-): Fault[] {
+export function declarationFaults(declarations: Declarations, files: readonly string[]): Fault[] {
   const { scopes, excludedDirectories } = declarations;
   const faults: Fault[] = [];
 

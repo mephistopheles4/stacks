@@ -23,7 +23,7 @@ installed. They are not a requirement for contributing** — see
   it** — `updatedAt` is the issue's, not the assignment's. Ask who holds it now,
   then when they were given it:
 
-  ```
+  ```sh
   gh issue view <number> --json assignees --jq '[.assignees[].login]'
   gh api --paginate "repos/{owner}/{repo}/issues/<number>/timeline?per_page=100" --jq '.[] | select(.event == "assigned" and .assignee.login == "<login>") | .created_at'
   ```
@@ -57,7 +57,7 @@ view shows: that half comes from the timeline, a ticket at a time.
   backticks that break shell quoting.
 - **Blocking** uses GitHub's issue-dependencies API, which `gh` has no flag for:
 
-  ```
+  ```sh
   gh api --method POST repos/{owner}/{repo}/issues/<blocked>/dependencies/blocked_by -F issue_id=<id>
   ```
 
@@ -96,8 +96,8 @@ view shows: that half comes from the timeline, a ticket at a time.
 
 ## Pull requests as a triage surface
 
-**PRs as a request surface: no.** _(Set to `yes` if this repo treats external
-PRs as feature requests; `/triage` reads this flag.)_
+**PRs as a request surface: no.** *(Set to `yes` if this repo treats external
+PRs as feature requests; `/triage` reads this flag.)*
 
 GitHub shares one number space across issues and PRs, so a bare `#42` may be
 either — resolve with `gh pr view 42` and fall back to `gh issue view 42`.

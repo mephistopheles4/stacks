@@ -126,8 +126,7 @@ export function toRows(books: readonly LibraryBook[], settings: BooksSettings): 
     // nothing and leans against the case. So the two cases are placed separately
     // rather than one being assumed — an earlier version charged the gap either
     // way, and charged it to a book that never got one.
-    let candidate =
-      isYearChange && current.length > 0 ? { ...entry, gapBefore: YEAR_GAP } : entry;
+    let candidate = isYearChange && current.length > 0 ? { ...entry, gapBefore: YEAR_GAP } : entry;
 
     if (current.length > 0 && !fitsRow([...current, candidate], rows.length)) {
       rows.push({ label: previousYear ?? '', books: current });
@@ -264,7 +263,9 @@ function thicknessFor(pages: number | undefined, id: string): number {
  * notice and that would look wrong.
  */
 function bindingFor(book: LibraryBook, paperbackRatio: number): Binding {
-  return book.binding ?? (hashUnit(`${book.id}-binding`) < paperbackRatio ? 'paperback' : 'hardback');
+  return (
+    book.binding ?? (hashUnit(`${book.id}-binding`) < paperbackRatio ? 'paperback' : 'hardback')
+  );
 }
 
 /**

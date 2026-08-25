@@ -42,7 +42,7 @@ keys, and a derived value stored beside its source is exactly the drift this
 repo's gates exist to catch.
 
 | Frontmatter key | `BookRecord` / `LibraryBook` field | Value | Shape check | Builds a link |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `google_volume_id` | `googleVolumeId` | Google's `volumeId` | alphanumeric volume key | yes |
 | `apple_track_id` | `appleTrackId` | Apple's numeric `trackId` | digits | yes |
 | `openlibrary_olid` | `openLibraryOlid` | OLID, e.g. `OL26445570M` | `OL\d+M` | yes |

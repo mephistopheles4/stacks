@@ -42,7 +42,7 @@ shipped with the hole open.** Naming an explicit refspec does not stop git
 normally land on: a probe into `origin/metrics-probe` was also fast-forwarding
 `origin/metrics`, printing both lines of its own accord.
 
-```
+```text
  * [new branch]      metrics    -> origin/metrics-probe
    d902779..a44b2ca  metrics    -> origin/metrics
 ```

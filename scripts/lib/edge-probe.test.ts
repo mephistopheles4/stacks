@@ -14,13 +14,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  describeStaleCover,
-  probeBuild,
-  probeCovers,
-  stampMeta,
-  stampOf,
-} from './edge-probe.ts';
+import { describeStaleCover, probeBuild, probeCovers, stampMeta, stampOf } from './edge-probe.ts';
 
 const ORIGIN = 'https://stacks.example';
 const STAMP = 'a1b2c3d4e5f6';

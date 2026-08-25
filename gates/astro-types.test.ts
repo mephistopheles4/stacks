@@ -1,5 +1,5 @@
 /**
- * G47 — `astro check` runs inside `pnpm build`, so `.astro` frontmatter is
+ * G50 — `astro check` runs inside `pnpm build`, so `.astro` frontmatter is
  * typechecked by something.
  *
  * ## The gap this closes
@@ -61,7 +61,7 @@
  * `@astrojs/check` has widened by then. Asserted below so the coupling cannot
  * be discovered by a red build in a branch about something else.
  *
- * See docs/gates.md, row G47 (astro-types).
+ * See docs/gates.md, row G50 (astro-types).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -109,7 +109,7 @@ function indexOfCommand(script: string, name: string): number {
   );
 }
 
-describe('G47 — the check is wired into the build', () => {
+describe('G50 — the check is wired into the build', () => {
   it('runs `astro check` in the site build script, before `astro build`', () => {
     const script = manifest(SITE_MANIFEST).scripts?.build ?? '';
     const check = indexOfCommand(script, 'astro check');
@@ -155,10 +155,11 @@ describe('G47 — the check is wired into the build', () => {
   });
 });
 
-describe('G47 — the checker is installed, and installable', () => {
+describe('G50 — the checker is installed, and installable', () => {
   it('declares `@astrojs/check` on the site package, pinned exact', () => {
     const site = manifest(SITE_MANIFEST);
-    const version = site.devDependencies?.['@astrojs/check'] ?? site.dependencies?.['@astrojs/check'];
+    const version =
+      site.devDependencies?.['@astrojs/check'] ?? site.dependencies?.['@astrojs/check'];
 
     expect(
       version,

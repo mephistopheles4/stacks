@@ -75,7 +75,9 @@ describe('toRows', () => {
       // rationale in full and carries the assertions that do notice; this one
       // exists so a packer that stops wrapping *at all* fails in the packer's own
       // file, next to the tests for what it is packing.
-      expect(rowExtent(row.books, index)).toBeLessThanOrEqual(-SHELF.width / 2 + USABLE_WIDTH + 1e-12);
+      expect(rowExtent(row.books, index)).toBeLessThanOrEqual(
+        -SHELF.width / 2 + USABLE_WIDTH + 1e-12,
+      );
     });
   });
 
@@ -111,7 +113,10 @@ describe('toRows', () => {
   });
 
   it('leaves wishlist books off the shelf — you do not own them', () => {
-    const rows = rowsOf([book('owned'), book('wanted', { status: 'wishlist', finished: undefined })]);
+    const rows = rowsOf([
+      book('owned'),
+      book('wanted', { status: 'wishlist', finished: undefined }),
+    ]);
 
     expect(rows.flatMap((row) => row.books).map((entry) => entry.book.id)).toEqual(['owned']);
   });
@@ -197,7 +202,10 @@ describe('binding', () => {
     const declared = [book('a', { binding: 'hardback' }), book('b', { binding: 'paperback' })];
 
     for (const ratio of [0, 0.6, 1]) {
-      const entries = toRows(declared, { ...DEFAULT_SETTINGS.books, paperbackRatio: ratio }).flatMap((row) => row.books);
+      const entries = toRows(declared, {
+        ...DEFAULT_SETTINGS.books,
+        paperbackRatio: ratio,
+      }).flatMap((row) => row.books);
       expect(entries.map((entry) => entry.binding)).toEqual(['hardback', 'paperback']);
     }
   });
@@ -233,7 +241,9 @@ describe('binding', () => {
     // So the tallest book on a 60%-paperback shelf must be able to be a
     // paperback: with a shared hash it never could, because a paperback would
     // always draw from the bottom of the range.
-    const entries = toRows(LIBRARY, { ...DEFAULT_SETTINGS.books, paperbackRatio: 0.6 }).flatMap((row) => row.books);
+    const entries = toRows(LIBRARY, { ...DEFAULT_SETTINGS.books, paperbackRatio: 0.6 }).flatMap(
+      (row) => row.books,
+    );
     const paperbacks = entries.filter((entry) => entry.binding === 'paperback');
     const hardbacks = entries.filter((entry) => entry.binding === 'hardback');
 
@@ -247,7 +257,9 @@ describe('binding', () => {
     // `MAX_HEIGHT` bounds the worst swing a lean can produce, which is what
     // `SHELF.endReserve` covers (G25). A band that reached outside it would make
     // the packer's reserve wrong and walk books out through the side of the case.
-    const entries = toRows(LIBRARY, { ...DEFAULT_SETTINGS.books, paperbackRatio: 0.6 }).flatMap((row) => row.books);
+    const entries = toRows(LIBRARY, { ...DEFAULT_SETTINGS.books, paperbackRatio: 0.6 }).flatMap(
+      (row) => row.books,
+    );
     for (const entry of entries) {
       expect(entry.height).toBeGreaterThanOrEqual(MIN_HEIGHT);
       expect(entry.height).toBeLessThanOrEqual(MAX_HEIGHT);

@@ -6,7 +6,7 @@ After uploading it asks the live site which build it is serving, because a succe
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-08-01** — **Deploying is a local operation, by construction.** The vault is private, local and gitignored, so CI can build the *fixture* site and never the real one. There is no deploy-on-merge and the live site can drift from `main` with nothing enforcing otherwise — an honest consequence of local-first rather than something to engineer around. Every check that must happen before publishing therefore happens in `pnpm deploy:site`.
 

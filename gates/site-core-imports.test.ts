@@ -39,7 +39,8 @@ import { expectFound, filesUnder, readRepoFile } from './repo.ts';
  * value import of core. A binding list never contains either character; a
  * preceding statement always contains both.
  */
-const CORE_STATEMENT = /(?:^|\n)[ \t]*(import|export)\b([^;'"]*?)from\s*['"](@stacks\/core[^'"]*)['"]/g;
+const CORE_STATEMENT =
+  /(?:^|\n)[ \t]*(import|export)\b([^;'"]*?)from\s*['"](@stacks\/core[^'"]*)['"]/g;
 
 /** Every mention of the specifier, however it is reached — the vacuity guard. */
 const CORE_SPECIFIER = /['"](@stacks\/core[^'"]*)['"]/g;

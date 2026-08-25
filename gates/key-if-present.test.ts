@@ -145,8 +145,7 @@ describe('G23 — one absent-key helper', () => {
    */
   it('is actually used, by every file that used to have its own copy', () => {
     const callers = scanned().filter(
-      (path) =>
-        path !== OWNER && path !== OWNER_SPEC && /\bkeyIfPresent\s*\(/.test(codeOf(path)),
+      (path) => path !== OWNER && path !== OWNER_SPEC && /\bkeyIfPresent\s*\(/.test(codeOf(path)),
     );
 
     // Seven, and not one fewer. A floor set below the true count leaves room

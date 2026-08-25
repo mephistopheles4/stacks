@@ -6,11 +6,11 @@ share one. **The third and fourth are waiting for an implementation session**; t
 first two have been built and are kept as written.
 
 | Spec | Index | State |
-|---|---|---|
+| --- | --- | --- |
 | The enhanced book card, provider provenance, and the merge | **this file, below** | **built** on a branch; kept as written |
 | What comes after the scoreboard — mutation scoring, the trend layer, the gaming analysis | [`after-the-scoreboard.md`](after-the-scoreboard.md) | **built**; kept as written. All seven rows landed. ⚠️ **Built is not armed** — the ratchet ships with every scope `unarmed`, and arming one is a human judgement per scope after its calibration window fills. [#154](https://github.com/mephistopheles4/stacks/issues/154) is the live answer |
 | Complexity on the trend layer — four counts, a cap that only falls, and CRAP kept local | [`complexity-on-the-trend-layer.md`](complexity-on-the-trend-layer.md) | **waiting for an implementation session**. Four series, a deploy-side cap mirroring the ratchet, TypeScript pinned to 6.0.3 until 7.1, coverage admitted as an ingredient for a pre-commit CRAP print — and **no gate row**. Twelve tickets; [the map](https://github.com/mephistopheles4/stacks/issues/186) carries the trail and the override list |
-| Static analysis and style — one routing rule, a verdict per candidate | [`static-analysis-and-style.md`](static-analysis-and-style.md) | **partly landed** — S4 (`astro check`) is **G47** (`astro-types`) as of 2026-08-23, and its prerequisite step 1 closed with [#250](https://github.com/mephistopheles4/stacks/issues/250); the other three gate rows and all twelve trend rows are still waiting for an implementation session. Four gate rows — three of them in one `style` job beside `audit`, and `astro check` inside `pnpm build` — twelve new trend rows, and three refusals recorded. ⚠️ **Deliberately thin** — eleven tickets hold the reasoning and the file links rather than retells, per [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md). [The map](https://github.com/mephistopheles4/stacks/issues/228) carries the trail, and the eleven verdicts were also read as one configuration in a morphological box that is deliberately not in this checkout |
+| Static analysis and style — one routing rule, a verdict per candidate | [`static-analysis-and-style.md`](static-analysis-and-style.md) | **partly landed** — S4 (`astro check`) is **G50** (`astro-types`) as of 2026-08-23, and its prerequisite step 1 closed with [#250](https://github.com/mephistopheles4/stacks/issues/250); the other three gate rows and all twelve trend rows are still waiting for an implementation session. Four gate rows — three of them in one `style` job beside `audit`, and `astro check` inside `pnpm build` — twelve new trend rows, and three refusals recorded. ⚠️ **Deliberately thin** — eleven tickets hold the reasoning and the file links rather than retells, per [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md). [The map](https://github.com/mephistopheles4/stacks/issues/228) carries the trail, and the eleven verdicts were also read as one configuration in a morphological box that is deliberately not in this checkout |
 
 ⚠️ **Gate numbers are per-rollout and never reusable.** The first spec landed
 **G30–G35**; the second landed **G36 and G38–G43**, derived from its own landing
@@ -82,7 +82,7 @@ knows them is a red build.
 ## The four files
 
 | File | Covers |
-|---|---|
+| --- | --- |
 | [`metadata-merge.md`](metadata-merge.md) | Per-field provider precedence, Apple as a full contributor, which fields are taken and in what container, absent-only, the `## About` body section, and **the `enrich` pass** that runs all of it |
 | [`provider-provenance.md`](provider-provenance.md) | What a contributor is, the four id keys, ids-never-URLs, parse-time shape checks, and how all seven new fields reach `library.json` |
 | [`enhanced-card.md`](enhanced-card.md) | The card's content and hierarchy, the bottom sheet, dismissal and motion, accessibility, the provider links row, DOM structure, and acceptance |
@@ -98,7 +98,7 @@ that are not in this checkout** — each was captured on its own throwaway
 `research/*` branch and linked from its ticket:
 
 | Finding | Branch |
-|---|---|
+| --- | --- |
 | [`outbound-links-from-isbn.md`](https://github.com/mephistopheles4/stacks/blob/55f9303/docs/research/outbound-links-from-isbn.md) | `research/outbound-links` |
 | [`provider-id-urls.md`](https://github.com/mephistopheles4/stacks/blob/04eb320/docs/research/provider-id-urls.md) | `research/provider-id-urls` |
 | [`discarded-provider-fields.md`](https://github.com/mephistopheles4/stacks/blob/491efdf/docs/research/discarded-provider-fields.md) | `research/discarded-fields` |
@@ -153,7 +153,7 @@ Landed as **G30**–**G34**; the labels below are how the spec referred to them
 before they had numbers.
 
 | Label | Gate | Why nothing today catches it |
-|---|---|---|
+| --- | --- | --- |
 | **M1** | Precedence contract seam — the documented table ↔ the implementation, **both directions** | Precedence is gated by nothing. Also the natural home for the `; ` subjects separator, which two packages hold. |
 | **M2** | Absent-only over the grown `FILLABLE` — a note already carrying a key comes back **byte-identical** whatever the providers say | True by construction today, and about to grow from four fillable fields to eleven |
 | **M3** | *(not a new gate)* G26 `lookup-recall`'s corpus **re-captured through `loadEnv()`** | A merge change moves its expectations, and a corpus captured without the Google key once replayed refusals as answers for two days |
@@ -186,7 +186,7 @@ it describes**, never before it.
 
 **`AGENTS.md` — frontmatter contract.** Seven new optional keys:
 
-```
+```text
 publisher, published, subjects,
 google_volume_id, apple_track_id, openlibrary_olid, oreilly_ourn
 ```
@@ -225,7 +225,7 @@ proposal is a *list*, not five written records — writing them is implementatio
 work, and the next free number is **0044**.
 
 | Proposed record | Thesis | Source |
-|---|---|---|
+| --- | --- | --- |
 | Precedence is a table of fixed provider orders, never a rule about the value | A quality judgement embedded in the merge would have to be re-encoded in the gate to check it; a fixed table is one line and one fixture per field. Accepted cost: the table goes stale silently. | [#97](https://github.com/mephistopheles4/stacks/issues/97) |
 | A provider description lives in the note **body**, not in frontmatter | "Never published" becomes structural rather than a discipline — a body section is not a `BookRecord` field. Costs the adapter a sixth method: the riskiest write this project would own. | [#97](https://github.com/mephistopheles4/stacks/issues/97) |
 | The contributor set *is* the set of id keys present — ids, never URLs, and no winner key | An `href` is outside the `textContent` rule's protection; a note records an answer, never who gave it, so there is no inference escape hatch and backfill is a real pass. | [#96](https://github.com/mephistopheles4/stacks/issues/96), [#99](https://github.com/mephistopheles4/stacks/issues/99) |
@@ -275,7 +275,7 @@ Every open risk this effort accepted, in one place, so none of them is
 rediscovered as a surprise. Detail is in the file named.
 
 | Residual | Where |
-|---|---|
+| --- | --- |
 | Vendoring three provider SVGs plus the Google graphic is an open **redistribution** question, accepted as ordinary risk | [card §12](enhanced-card.md#12-residuals-carried-not-smoothed), [attribution §5](attribution-surface.md#5-the-asset-vendored-not-hotlinked) |
 | `apple_track_id` is **title-matched on all 41 books** — Apple has no ISBN endpoint. A wrong id is invisible until a visitor clicks it and hits a hard-404 | [provenance §9](provider-provenance.md#9-residuals) |
 | Parse-time shape checks are a **typo guard, not a correctness guarantee** | [provenance §4](provider-provenance.md#4-unrecognised-values-are-dropped-at-parse-per-provider) |

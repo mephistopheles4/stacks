@@ -58,9 +58,7 @@ function documentedOrder(field: string): readonly string[] | undefined {
 
 describe('G31 — the precedence table ↔ the merge', () => {
   it('documents every field the merge actually merges', () => {
-    const undocumented = MERGED_FIELDS.filter(
-      (field) => !new RegExp(`\`${field}\``).test(SPEC),
-    );
+    const undocumented = MERGED_FIELDS.filter((field) => !new RegExp(`\`${field}\``).test(SPEC));
 
     expect(
       undocumented,

@@ -128,12 +128,18 @@ function fetchOrigin(cwd: string): boolean {
 
 /** Whether `origin` has a branch of this name, as of the last fetch. */
 function onOrigin(name: string, cwd: string): boolean {
-  return gitOutput(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${name}`], cwd) !== undefined;
+  return (
+    gitOutput(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${name}`], cwd) !==
+    undefined
+  );
 }
 
 /** How a local branch stands against its counterpart on origin. */
 function divergence(name: string, cwd: string): { behind: number; ahead: number } | undefined {
-  const counts = gitOutput(['rev-list', '--left-right', '--count', `origin/${name}...${name}`], cwd);
+  const counts = gitOutput(
+    ['rev-list', '--left-right', '--count', `origin/${name}...${name}`],
+    cwd,
+  );
   const [behind, ahead] = (counts ?? '').split(/\s+/).map(Number);
   if (behind === undefined || ahead === undefined || Number.isNaN(behind) || Number.isNaN(ahead)) {
     return undefined;
@@ -167,9 +173,10 @@ function fastForward(name: string, cwd: string): boolean {
  * no origin is a legitimate way to work on this.
  */
 function resolveBase(cwd: string, hasOrigin: boolean): { ref: string; describe: string } {
-  const ref = hasOrigin && gitOutput(['rev-parse', '--verify', '--quiet', 'origin/main'], cwd)
-    ? 'origin/main'
-    : 'main';
+  const ref =
+    hasOrigin && gitOutput(['rev-parse', '--verify', '--quiet', 'origin/main'], cwd)
+      ? 'origin/main'
+      : 'main';
 
   const describe = gitOutput(['log', '-1', '--format=%h %s', ref], cwd) ?? '(unknown)';
   const behind = gitOutput(['rev-list', '--count', `main..${ref}`], cwd);
@@ -256,7 +263,9 @@ if (existing) {
 
   // Printed after any fast-forward, so it names the commit you will actually
   // be standing on rather than the one you would have been.
-  console.log(`          ${gitOutput(['log', '-1', '--format=%h %s', branch], main) ?? '(unknown)'}`);
+  console.log(
+    `          ${gitOutput(['log', '-1', '--format=%h %s', branch], main) ?? '(unknown)'}`,
+  );
   addArgs = ['worktree', 'add', target, branch];
 } else if (alreadyPushed) {
   // ── Origin has this branch and we do not ─────────────────────────────────

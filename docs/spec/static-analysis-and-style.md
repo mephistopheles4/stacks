@@ -82,7 +82,7 @@ One row per candidate. **Read the ticket for the reasoning** — the Verdict
 column is an index, not an argument.
 
 | Candidate | Verdict | Ticket |
-|---|---|---|
+| --- | --- | --- |
 | ESLint as a linter | **Gate.** The type-checked recommended set tuned to four repo idioms, plus `switch-exhaustiveness-check`. Type information over the whole tree, one rule set for every file, in a second config file. | [#233](https://github.com/mephistopheles4/stacks/issues/233) |
 | A formatter | **Gate.** Prettier over code only — `singleQuote: true`, `printWidth: 100`, Markdown and `fixtures/` excluded. `.editorconfig` refused on measurement. | [#236](https://github.com/mephistopheles4/stacks/issues/236) |
 | markdownlint | **Gate**, on a narrow rule set. The fix flag runs for seven rules measured safe. Six rules are off with a measured reason each. | [#235](https://github.com/mephistopheles4/stacks/issues/235) |
@@ -125,9 +125,9 @@ row is **G45**. **Cite slug and number together, never the number alone.**
 
 > ⚠️ **"The highest live row is G45" is historical, and this paragraph is not
 > being updated to a new number.** It was true when written; S1 landed as **G46**
-> (`lint`), S4 as **G47** (`astro-types`), and the rest are still moving. Writing
+> (`lint`), S4 as **G50** (`astro-types`), and the rest are still moving. Writing
 > today's highest into a spec four branches are editing is the *reservation* this
-> very paragraph warns about — it was G45, then G46, then G47 inside one day, and
+> very paragraph warns about — it was G45, then G46, then G47, then G50 inside one day, and
 > a branch that renumbered to match would have been wrong within the hour. **Read
 > the highest row off `docs/gates.md` on a re-fetched `main`, at your own rebase.**
 > The sentence stays as the record of what was true, on this folder's rule for a
@@ -139,11 +139,11 @@ in [`docs/gate-register.md`](../gate-register.md), which **G41**
 (`gate-register`) enforces the same way.
 
 | Label | Gate | Why nothing today catches it |
-|---|---|---|
+| --- | --- | --- |
 | **S1** | `lint` — the tuned type-checked rule set over every `.ts` file | 36 findings in 20 files that no gate reads. `tsc --noEmit` passes on all of them. |
 | **S2** | `format` — Prettier's check mode over code only | Nothing normalises source shape, and G14 and G45 already punish a quote form with a red that names no quote. |
 | **S3** | `markdown` — markdownlint on the narrow rule set | Three live documentation defects exist that 45 gates miss. |
-| **S4** | `astro-types` — `astro check` inside `pnpm build` | `.astro` frontmatter is read by no gate and typechecked by no compiler. ✅ **Landed as G47**; this cell is the *warrant*, so it records why the row was built and is not rewritten to say the gap is closed. |
+| **S4** | `astro-types` — `astro check` inside `pnpm build` | `.astro` frontmatter is read by no gate and typechecked by no compiler. ✅ **Landed as G50**; this cell is the *warrant*, so it records why the row was built and is not rewritten to say the gap is closed. |
 
 ### One CI job, not three
 
@@ -192,7 +192,7 @@ consequence; see §6 step 1.
 > green**, for the reason the row states rather than this one: nothing runs
 > `astro check` yet, and `@astrojs/check` is not a dependency.
 
-> ✅ **S4 landed 2026-08-23 as G47 (`astro-types`)**, closing the footnote above
+> ✅ **S4 landed 2026-08-23 as G50 (`astro-types`)**, closing the footnote above
 > as well as the paragraph above that. `@astrojs/check@0.9.10` is a dev
 > dependency of `packages/site`, pinned exact, and its `build` script is
 > `astro check && astro build` — so `astro check` runs inside `pnpm build`,
@@ -252,7 +252,7 @@ every other cell there is prose nothing holds.
 its own series rather than a label:
 
 | Series | Measures |
-|---|---|
+| --- | --- |
 | `duplication-clones` | clones found, over the eight declared scopes |
 | `duplication-lines` | duplicated lines, over the eight declared scopes |
 | `duplication-ignored-lines` | lines inside `jscpd:ignore` blocks, over the eight declared scopes |
@@ -311,7 +311,7 @@ tree legitimately. **The names are exact and they are the whole list**, because
 `countedIn` needs a sample from every member:
 
 | Series | Capped | Why |
-|---|---|---|
+| --- | --- | --- |
 | `duplication-clones` | **yes** | A clean feature adds no clone. |
 | `duplication-lines` | **yes** | `complexity-mass-over-10`'s property, stated by [#237](https://github.com/mephistopheles4/stacks/issues/237). |
 | `duplication-ignored-lines` | **yes** | See below. |
@@ -336,9 +336,30 @@ This is a real code constraint, not a caution. `scripts/lib/floors.ts`'s
 `countedIn` filters to rows where **every** member of `CAPPED_SERIES` has
 samples — keyed on the whole set on purpose, so that probing one member cannot
 single it out. Add a name at adoption and every existing record on the `metrics`
-branch fails that filter at once, zeroing both cyclomatic calibration windows.
+branch fails that filter at once, so `countedIn` returns nothing.
 **Waiting costs nothing**, because `countedIn` reads what a record carries
 rather than what a type declares.
+
+⚠️ **The consequence named above is wrong, and the real one is worse —
+corrected at implementation against the code, not re-decided.** This paragraph
+said the collapse *zeroes both cyclomatic calibration windows*. It does not
+touch them: `capCalibration` takes its window from `streakOf`, which reads
+`row.ok` and the fixture hash and **never** `row.counts`, so the window is
+roster-independent. What collapses is the **reading** — `scripts/deploy.ts`'s
+`newestCount` goes `undefined`, so **every cap line prints `null`**, and
+`countedElsewhere` needs a `countedRun` it no longer has, so the counting-rule
+refusal **switches itself off**. Blind caps and a disarmed guard, with nothing
+red.
+
+⚠️ **The false version was not merely inaccurate, it was reassuring in the
+wrong direction**, which is why it is struck rather than softened: *a delayed
+calibration window* sounds survivable, and *a silently disarmed refusal* does
+not. Anyone who weighed an early roster add against the old sentence weighed it
+against the lesser harm. Found by
+[#258](https://github.com/mephistopheles4/stacks/issues/258) and verified in the
+code by [#254](https://github.com/mephistopheles4/stacks/issues/254) and
+[#255](https://github.com/mephistopheles4/stacks/issues/255); it strengthens the
+rule rather than weakening it.
 
 ### Suppression is allowed and it is counted
 
@@ -349,6 +370,17 @@ G43's directive shape at once. So the ignored lines are a declared per-populatio
 counter, swept from source by a gate at merge. **That is G43 (`ignored-mutants`)
 applied to a second tool**, and it is what dissolves the only surviving objection
 to capping the counts.
+
+⚠️ **That measurement is real and it is the special case — corrected at
+implementation, not re-decided.** jscpd honours a suppression block **only when
+no code follows it**: with the block ending the file it removes the block, with
+a blank line or a comment after it the trailing line too, and **with one line of
+code after it it removes nothing at all, silently**. Every earlier measurement
+here, [#237](https://github.com/mephistopheles4/stacks/issues/237)'s included,
+put the block at the end of a file. The counter is unchanged — it records the
+lines the source *declares*, which is what this section asks for — but
+*total-lines + ignored-lines* is an approximation rather than an identity. See
+[the log](../log/2026-08-23-the-suppression-that-suppresses-nothing.md).
 
 ⚠️ **`--ignore-pattern` reads like region suppression and is not.** Do not reach
 for it.
@@ -378,6 +410,18 @@ rather than inside one.
    name, because it is on CodeRabbit's list *and* takes comments, while
    `.markdownlint-cli2.jsonc` is not on that list. `MD060` at **`compact`**, not
    its default of `any`. The fix pass runs for the seven safe rules only.
+
+   > ✅ **Done — [#251](https://github.com/mephistopheles4/stacks/issues/251).**
+   > G48 (`markdown`), the `style` job, and `pnpm lint:md` / `pnpm lint:md:fix`.
+   > `MD060` at `compact` and `MD050` at `asterisk` as specified. 146 tracked
+   > files, 0 findings. ⚠️ **Two things this step did not anticipate.** The fix
+   > allowlist **cannot be a config file** — a discovered `.markdownlint.jsonc`
+   > beats `--config`, `optionsOverride.config` and `overrides` alike, measured
+   > — so it is a refusal the command runs before touching a file. And the rule
+   > set needs **`"default": false"`**: at markdownlint's defaults roughly
+   > thirty unadopted rules ran, seven of them fixable and unmeasured, so the
+   > narrowness this step is entirely about was a fiction until the config named
+   > its whole set. See [ADR-0075](../adr/0075-the-markdown-fix-flag-is-allowlisted.md).
 
    ⚠️ **This lands before or with Prettier**, and the reason is a coupling
    neither ticket owns: [#236](https://github.com/mephistopheles4/stacks/issues/236)
@@ -433,7 +477,7 @@ describes**, never before it.
 holds this list and `package.json` to each other in both directions, so a script
 added without its line is a red build.
 
-**`docs/commands.md`.** A `## \`pnpm <name>\`` section per new command, matching
+**`docs/commands.md`.** A ``## `pnpm <name>` `` section per new command, matching
 the heading form G45 extracts. The rule set choices, the fix flag's scope, and
 what each command refuses belong here rather than in this spec.
 
@@ -464,7 +508,15 @@ line in the spine.
 ## 8. What belongs in `docs/adr/` rather than here
 
 `AGENTS.md`'s test is: **hard to reverse, surprising without context, and a real
-trade-off.** Three decisions meet all three. The next free number is **0071**.
+trade-off.** Three decisions meet all three.
+
+⚠️ **This section used to name 0071 as the next free number, and that was the
+pre-allocation trap this rollout keeps walking into.** It is spent —
+[#251](https://github.com/mephistopheles4/stacks/issues/251) took it for a record
+this table does not list, then renamed to **0075** when a sibling turned out to
+have committed 0071 on an unpushed branch. **Count `docs/adr/` at the tip you
+branch from.** A number here is a fact about landing order, and an unpushed
+branch is invisible to every query except asking the session that holds it.
 
 > ⚠️ **0071 is spent, and this line is the fifth pre-allocated number in this
 > project to go stale.** It was taken on 2026-08-23 by
@@ -480,7 +532,7 @@ trade-off.** Three decisions meet all three. The next free number is **0071**.
 > a gap costs nothing.
 
 | Proposed record | Thesis | Source |
-|---|---|---|
+| --- | --- | --- |
 | Consistency is a defect in this repository | It is what admits every style rule to the aggregator, and its cost is that the defect test stops sorting. Reversing it un-gates three of the four new rows. The narrow variant is the recorded alternative. | [#229](https://github.com/mephistopheles4/stacks/issues/229) |
 | A clone is a relation between two places, so the duplication number is per-scope **and** whole-tree | The scope list cannot express a cross-scope clone, so one number is structurally blind and the other counts fixtures nobody wrote. Costs two series where every other measure has one. | [#237](https://github.com/mephistopheles4/stacks/issues/237) |
 | Cognitive complexity is published beside cyclomatic, never instead of it | The two measures disagree about extraction because they disagree about what complexity is. `resolveSettings` is cyclomatic 17 and cognitive **0**. Costs four rows and a second supplier's pin. | [#234](https://github.com/mephistopheles4/stacks/issues/234) |
@@ -500,7 +552,7 @@ already carries its reasoning on its ticket.
 **Three entries for `docs/gates.md`'s Not gated, deliberately.**
 
 | Entry | Why |
-|---|---|
+| --- | --- |
 | **Test-code complexity** | No test function in this repository exceeds McCabe 10 — the maximum across all 1931 of them is exactly 10 — so `complexity-mass-over-10` is identically zero for every candidate test population and `complexity-max` is a flat line. Those are the two counts the spec caps. Gate test code is indistinguishable from package test code (mean 1.42 against 1.41). [#239](https://github.com/mephistopheles4/stacks/issues/239) |
 | **`.editorconfig`** | The tree holds 0 leading tabs, 0 trailing spaces and 0 missing final newlines. A gate over it is green on day one and can never go red. ⚠️ Prettier **reads** `.editorconfig` and merges key by key, so adding one later silently steers the formatter. [#236](https://github.com/mephistopheles4/stacks/issues/236) |
 | **MD013 (line length)** | 1540 findings, 76% of everything markdownlint reports, no auto-fix at any limit, and the longest Markdown line is a 2048-character table row, which does not wrap. No limit rescues it. [#235](https://github.com/mephistopheles4/stacks/issues/235) |
@@ -539,7 +591,7 @@ Every open risk this effort accepts, in one place, so none is rediscovered as a
 surprise.
 
 | Residual | Where |
-|---|---|
+| --- | --- |
 | **The defect test stops sorting** under the broad consistency reading. The reach test does all the work. | §2, [#229](https://github.com/mephistopheles4/stacks/issues/229) §3 |
 | **MD049 rests on the broad reading alone** and is the one verdict the narrow variant would flip | §3 |
 | **A red names `style`, not the tool**, because three gates share one CI job | §4 |

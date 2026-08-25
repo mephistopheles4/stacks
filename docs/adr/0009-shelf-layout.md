@@ -6,7 +6,7 @@ The brief sketched one row per year; in 3D that leaves every shelf two-thirds em
 
 ## How this was decided
 
-_Carried verbatim from the Decision Log this repository kept from July 2026, newest last._
+*Carried verbatim from the Decision Log this repository kept from July 2026, newest last.*
 
 - **2026-07-31** — **Books flow continuously and wrap, rather than one shelf row per year.** The brief sketched year-per-row; in 3D that leaves every shelf two-thirds empty wood, which reads as a chart and not as furniture. Directed by the owner at the aesthetics review ("I want a real bookcase feel"). Chronological order is kept — newest first — and a year change opens a bookend-sized gap, so the grouping stays legible.
 

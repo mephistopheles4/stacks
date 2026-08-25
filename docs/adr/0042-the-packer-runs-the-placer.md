@@ -3,7 +3,6 @@
 <!-- Written as 0040 and renumbered on rebase: main had taken 0040 and 0041 while
      this sat on a branch. The number is the only thing that changed. -->
 
-
 `toRows` decides whether a book fits by **placing the row with the book on the
 end and reading where it ends**. It does not estimate. Nothing outside the tests
 *calls* `shelfCost` or `rowCost` any more; both moved into

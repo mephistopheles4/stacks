@@ -69,6 +69,24 @@ function freshNightly(): { name: string; document: string } {
       complexity: [
         { scope: 'packages/core/src', functions: 120, mass: 340, massOver10: 88, max: 21 },
       ],
+      duplication: {
+        scopes: [
+          {
+            scope: 'packages/core/src',
+            clones: 3,
+            duplicatedLines: 46,
+            ignoredLines: 0,
+            totalLines: 2381,
+          },
+        ],
+        tree: { clones: 34, duplicatedLines: 357, ignoredLines: 0, totalLines: 47_209 },
+      },
+      // ⚠️ And the cognitive four — the same trap by the same route: `GATED_SERIES`
+      // grew, so a record planted without them is stale on arrival and every
+      // assertion below observes the freshness refusal instead of the branch guard.
+      cognitive: [
+        { scope: 'packages/core/src', functions: 118, mass: 296, massOver15: 61, max: 24 },
+      ],
     } satisfies RunFacts),
   };
 }
@@ -102,8 +120,17 @@ function repoOn(branch: string): string {
   };
   const commit = (message: string): string => {
     git('add', '-A');
-    git('-c', 'user.name=gate', '-c', 'user.email=gate@example.invalid', 'commit',
-        '--allow-empty', '-m', message, '--quiet');
+    git(
+      '-c',
+      'user.name=gate',
+      '-c',
+      'user.email=gate@example.invalid',
+      'commit',
+      '--allow-empty',
+      '-m',
+      message,
+      '--quiet',
+    );
     return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
   };
   git('init', '--quiet');
@@ -148,9 +175,10 @@ afterAll(() => {
  * beats `.env`, so this holds on a machine that has a working deploy configured
  * and on CI, which has no `.env` at all.
  */
-function deploy(
-  options: { repo?: string; args?: readonly string[] } = {},
-): { status: number; output: string } {
+function deploy(options: { repo?: string; args?: readonly string[] } = {}): {
+  status: number;
+  output: string;
+} {
   const result = spawnSync(
     process.execPath,
     ['--import', 'tsx', join(REPO_ROOT, 'scripts', 'deploy.ts'), ...(options.args ?? [])],
