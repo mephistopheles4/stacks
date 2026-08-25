@@ -32,21 +32,84 @@ function makeRandom(seed: number): () => number {
   };
 }
 
-const FIRST = ['Tidal', 'Quiet', 'Salt', 'Lantern', 'Signal', 'Warehouse', 'Compiler', 'Sediment', 'Harbour', 'Ember', 'Glass', 'Iron', 'Paper', 'River', 'Northern'];
-const SECOND = ['Engine', 'Protocol', 'Ledger', 'Work', 'Road', 'Atlas', 'Notebook', 'Almanac', 'Machine', 'Garden', 'Archive', 'Circuit'];
-const SUBTITLE = ['A Field Guide', 'Notes on Craft', 'An Investigation', 'Essays', 'A Primer', 'Selected Writings'];
-const SURNAME = ['Vane', 'Roy', 'Ness', 'Solberg', 'Iglesias', 'Okonkwo', 'Whitlock', 'Ferreira', 'Lindqvist', 'Petrov', 'Haddad', 'Novak'];
-const GIVEN = ['Marisol', 'Dev', 'Halvard', 'Ingrid', 'Tomás', 'Beatrix', 'Ada', 'Bo', 'Greta', 'Ivan', 'Farida', 'Emil'];
+const FIRST = [
+  'Tidal',
+  'Quiet',
+  'Salt',
+  'Lantern',
+  'Signal',
+  'Warehouse',
+  'Compiler',
+  'Sediment',
+  'Harbour',
+  'Ember',
+  'Glass',
+  'Iron',
+  'Paper',
+  'River',
+  'Northern',
+];
+const SECOND = [
+  'Engine',
+  'Protocol',
+  'Ledger',
+  'Work',
+  'Road',
+  'Atlas',
+  'Notebook',
+  'Almanac',
+  'Machine',
+  'Garden',
+  'Archive',
+  'Circuit',
+];
+const SUBTITLE = [
+  'A Field Guide',
+  'Notes on Craft',
+  'An Investigation',
+  'Essays',
+  'A Primer',
+  'Selected Writings',
+];
+const SURNAME = [
+  'Vane',
+  'Roy',
+  'Ness',
+  'Solberg',
+  'Iglesias',
+  'Okonkwo',
+  'Whitlock',
+  'Ferreira',
+  'Lindqvist',
+  'Petrov',
+  'Haddad',
+  'Novak',
+];
+const GIVEN = [
+  'Marisol',
+  'Dev',
+  'Halvard',
+  'Ingrid',
+  'Tomás',
+  'Beatrix',
+  'Ada',
+  'Bo',
+  'Greta',
+  'Ivan',
+  'Farida',
+  'Emil',
+];
 const TAGS = ['nonfiction', 'fiction', 'essays', 'history', 'programming', 'ecology', 'craft'];
 
 const random = makeRandom(20260731);
-const pick = <T,>(items: readonly T[]): T => items[Math.floor(random() * items.length)] as T;
+const pick = <T>(items: readonly T[]): T => items[Math.floor(random() * items.length)] as T;
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT_COVERS, { recursive: true });
 
 const covers = readdirSync(SOURCE_COVERS).filter(
-  (file) => file.endsWith('.png') && !file.startsWith('all-white') && !file.startsWith('white-bordered'),
+  (file) =>
+    file.endsWith('.png') && !file.startsWith('all-white') && !file.startsWith('white-bordered'),
 );
 for (const cover of covers) {
   copyFileSync(join(SOURCE_COVERS, cover), join(OUT_COVERS, cover));
@@ -81,8 +144,7 @@ let written = 0;
 
 for (let i = 0; written < BOOK_COUNT; i += 1) {
   const hasSubtitle = random() < 0.35;
-  const title =
-    `${pick(FIRST)} ${pick(SECOND)}` + (hasSubtitle ? `: ${pick(SUBTITLE)}` : '');
+  const title = `${pick(FIRST)} ${pick(SECOND)}` + (hasSubtitle ? `: ${pick(SUBTITLE)}` : '');
   if (used.has(title)) continue;
   used.add(title);
 
@@ -90,7 +152,8 @@ for (let i = 0; written < BOOK_COUNT; i += 1) {
   const roll = random();
 
   // Roughly the real mix: mostly read, a few in progress, a couple parked.
-  const status = roll < 0.78 ? 'read' : roll < 0.88 ? 'reading' : roll < 0.95 ? 'wishlist' : 'abandoned';
+  const status =
+    roll < 0.78 ? 'read' : roll < 0.88 ? 'reading' : roll < 0.95 ? 'wishlist' : 'abandoned';
 
   // Spread across four years so year-grouping has real rows to build.
   const year = 2023 + Math.floor(random() * 4);
@@ -100,7 +163,13 @@ for (let i = 0; written < BOOK_COUNT; i += 1) {
   // ~15% have no cover, exercising the generated fallback spine at scale.
   const cover = random() < 0.15 ? undefined : pick(covers);
 
-  const lines = ['---', 'type: book', `title: "${title}"`, `author: "${author}"`, `status: ${status}`];
+  const lines = [
+    '---',
+    'type: book',
+    `title: "${title}"`,
+    `author: "${author}"`,
+    `status: ${status}`,
+  ];
   if (status === 'read' || status === 'abandoned') lines.push(`started: ${year}-${month}-${day}`);
   if (status === 'read') lines.push(`finished: ${year}-${month}-${day}`);
   if (status === 'read' && random() < 0.7) lines.push(`rating: ${1 + Math.floor(random() * 5)}`);
@@ -132,7 +201,9 @@ for (let i = 0; written < BOOK_COUNT; i += 1) {
   if (identified) {
     const n = 1 + Math.floor(random() * 8999);
     lines.push(`isbn: "978${String(1000000000 + n * 7).slice(0, 10)}"`);
-    lines.push(`google_volume_id: ${'ABCDEFGHJKLMNPQRSTUVWXYZ'[n % 24]}${String(n).padStart(6, '0')}QBAJ`);
+    lines.push(
+      `google_volume_id: ${'ABCDEFGHJKLMNPQRSTUVWXYZ'[n % 24]}${String(n).padStart(6, '0')}QBAJ`,
+    );
     lines.push(`apple_track_id: ${String(1000000000 + n)}`);
     lines.push(`openlibrary_olid: OL${String(20000000 + n)}M`);
     lines.push(`publisher: "${pick(['Meridian House', 'Coldwater Press', 'Underhill & Sons'])}"`);

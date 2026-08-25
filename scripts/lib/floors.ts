@@ -30,13 +30,7 @@ import type { CounterInputs } from './complexity.ts';
 // the deploy, which computes no count and only compares two strings.
 import type { DuplicationInputs } from './duplication.ts';
 import { METRIC_PREFIXES, type TrendName } from './metrics.ts';
-import {
-  MERGE_EVENT,
-  runInfoOf,
-  samplesOf,
-  scoresOf,
-  type ParsedRecord,
-} from './metrics-read.ts';
+import { MERGE_EVENT, runInfoOf, samplesOf, scoresOf, type ParsedRecord } from './metrics-read.ts';
 import { globToRegExp, type Scope } from './mutation-score.ts';
 import { REPO_ROOT } from './repo-root.ts';
 import { sourceFiles } from './scope-check.ts';
@@ -1125,9 +1119,7 @@ export function renderFloorLines(input: PrintInput): string[] {
     const reading = scores.get(name);
 
     return `${padded(name, width)}${
-      entry.floor === UNARMED
-        ? unarmedState(name, entry, input)
-        : armedState(entry.floor, reading)
+      entry.floor === UNARMED ? unarmedState(name, entry, input) : armedState(entry.floor, reading)
     }`;
   });
 
@@ -1183,7 +1175,7 @@ function emptyWindowNote(
   return seen === 0
     ? 'no nightly in the record yet — every window starts at its first one'
     : `no window has started: the ${String(seen)} nightl${seen === 1 ? 'y' : 'ies'} in the record ` +
-      `${seen === 1 ? 'was' : 'were'} not ${measuredUnder}`;
+        `${seen === 1 ? 'was' : 'were'} not ${measuredUnder}`;
 }
 
 function unarmedState(name: string, entry: ScopeFloor, input: PrintInput): string {
@@ -1192,9 +1184,10 @@ function unarmedState(name: string, entry: ScopeFloor, input: PrintInput): strin
   const sat = `(${UNARMED} for ${String(days(entry.armed, input.today))} days)`;
 
   if (input.window.full) {
-    const derived = lowest === null || lowest === undefined
-      ? 'no complete history for this scope'
-      : `lowest ${lowest.toFixed(2)} - armable`;
+    const derived =
+      lowest === null || lowest === undefined
+        ? 'no complete history for this scope'
+        : `lowest ${lowest.toFixed(2)} - armable`;
     // ⚠️ **The date stays on this line above all others.** A full window is
     // exactly when somebody is deciding what to type into `floor`, and the date
     // is §7's only guard on typing `unarmed` instead. An earlier draft dropped
@@ -1422,10 +1415,7 @@ export interface CapCorrespondence {
  * an entry naming a series nothing may cap cannot survive `parseCaps`. Both
  * rotting directions are closed before this runs.
  */
-export function capsUnaccounted(
-  declared: readonly string[],
-  floors: Floors,
-): CapCorrespondence[] {
+export function capsUnaccounted(declared: readonly string[], floors: Floors): CapCorrespondence[] {
   const missing: CapCorrespondence[] = [];
 
   for (const scope of declared) {

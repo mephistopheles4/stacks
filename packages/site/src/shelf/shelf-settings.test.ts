@@ -142,7 +142,14 @@ describe('the defaults', () => {
         toneMapping: 'none',
         exposure: 1,
       },
-      shadows: { enabled: false, mapSize: 2048, type: 'pcf', casters: true, fetch: true, painted: true },
+      shadows: {
+        enabled: false,
+        mapSize: 2048,
+        type: 'pcf',
+        casters: true,
+        fetch: true,
+        painted: true,
+      },
     };
 
     expect(DEFAULT_SETTINGS.renderer).toEqual(shipped.renderer);

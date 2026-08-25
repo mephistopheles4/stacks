@@ -1,0 +1,20 @@
+# Revisions `git blame` should skip.
+#
+# Add a commit here only when it changed formatting and nothing else — a
+# whole-tree reformat, a rename sweep. A commit that also changed behaviour
+# must never be listed, because skipping it hides the behaviour change too.
+#
+# GitHub reads this file from the default branch with no configuration. Locally
+# it needs one line, which CONTRIBUTING.md carries:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Prettier's first pass over the tree — 91 files, `pnpm format` and nothing
+# else, with no hand edits in the commit. See docs/adr/0074.
+a6acc714d99b4ea51321797c25c7b6f05850dfd7
+
+# The second pass, over the two files the merge with `main` brought in.
+0fdebc8d388d6648afbb20f0e1f110d628ec6041
+
+# The third pass, over what #251, #254 and #255 brought in.
+d35a1f388878a5421d7e21f4da6ad8dd9dce81b3

@@ -295,8 +295,7 @@ async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefi
   // one and the card left open by the swap above may not be one of them.
   for (let index = 0; index < 60; index += 1) {
     const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
-      | { x: number; y: number }
-      | undefined;
+      { x: number; y: number } | undefined;
     if (point === undefined) continue;
 
     await page.mouse.click(Math.round(point.x), Math.round(point.y));
@@ -348,9 +347,8 @@ async function clickABook(page: Page): Promise<CardOpened | undefined> {
   // Covers are assigned to fixture books at random and only some are
   // full-resolution, so this walks the whole shelf rather than the first few.
   for (let index = 0; index < 60; index += 1) {
-    const point = (await page.evaluate(
-      `window.__shelf.projectBook(${index})`,
-    )) as { x: number; y: number } | undefined;
+    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
+      { x: number; y: number } | undefined;
     if (point === undefined) continue;
 
     await page.mouse.click(Math.round(point.x), Math.round(point.y));
@@ -415,8 +413,7 @@ async function swapToAnother(
   for (let index = 0; index < 60; index += 1) {
     if (index === openedIndex) continue;
     const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
-      | { x: number; y: number }
-      | undefined;
+      { x: number; y: number } | undefined;
     if (point === undefined) continue;
 
     await page.mouse.click(Math.round(point.x), Math.round(point.y));
@@ -494,8 +491,7 @@ async function checkSheet(page: Page): Promise<SheetChecked | undefined> {
 async function clickAnyBook(page: Page): Promise<boolean> {
   for (let index = 0; index < 60; index += 1) {
     const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
-      | { x: number; y: number }
-      | undefined;
+      { x: number; y: number } | undefined;
     if (point === undefined) continue;
 
     await page.mouse.click(Math.round(point.x), Math.round(point.y));
@@ -595,7 +591,9 @@ function report(result: {
   console.log(`case overflow     ${caseOverflow.toFixed(4)}`);
   console.log(`distinct colours  ${stats.distinctColours}`);
   console.log(`non-background    ${stats.nonBackgroundPct.toFixed(1)}%`);
-  console.log(`textures          ${cost.textures}   geometries ${cost.geometries}   programs ${cost.programs}`);
+  console.log(
+    `textures          ${cost.textures}   geometries ${cost.geometries}   programs ${cost.programs}`,
+  );
   console.log(`draws             ${cost.calls} (${per(cost.calls)}/book)   tris ${cost.triangles}`);
   console.log(`click opens card  ${cardOpened?.title ?? 'NO'}`);
   if (cardOpened !== undefined) {
@@ -705,7 +703,9 @@ function report(result: {
   if (caseOverflow > 0.005) {
     failures.push(
       `a book breaks out through the side of the case by ${caseOverflow.toFixed(4)} ` +
-        '(about ' + (caseOverflow * 24).toFixed(1) + 'cm at shelf scale)',
+        '(about ' +
+        (caseOverflow * 24).toFixed(1) +
+        'cm at shelf scale)',
     );
   }
 
@@ -817,7 +817,9 @@ function serveDist(): Promise<{ server: Server; origin: string }> {
     }
 
     const extension = file.slice(file.lastIndexOf('.'));
-    response.writeHead(200, { 'Content-Type': CONTENT_TYPES[extension] ?? 'application/octet-stream' });
+    response.writeHead(200, {
+      'Content-Type': CONTENT_TYPES[extension] ?? 'application/octet-stream',
+    });
     response.end(readFileSync(file));
   });
 

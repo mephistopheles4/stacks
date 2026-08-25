@@ -4,8 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { parseNote } from './frontmatter.ts';
 import { FIXTURE_VAULT } from './test-support.ts';
 
-const note = (name: string): string =>
-  readFileSync(join(FIXTURE_VAULT, 'Library', name), 'utf8');
+const note = (name: string): string => readFileSync(join(FIXTURE_VAULT, 'Library', name), 'utf8');
 
 describe('parseNote — the three outcomes', () => {
   it('parses a well-formed book', () => {
@@ -112,7 +111,9 @@ describe('parseNote — hand-edited notes are first-class', () => {
   });
 
   it('discards a rating outside 1–5 instead of rejecting the book', () => {
-    expect(pick(parseNote('---\ntype: book\ntitle: X\nrating: 9\n---\n', 'x')).rating).toBeUndefined();
+    expect(
+      pick(parseNote('---\ntype: book\ntitle: X\nrating: 9\n---\n', 'x')).rating,
+    ).toBeUndefined();
     expect(pick(parseNote('---\ntype: book\ntitle: X\nrating: 4\n---\n', 'x')).rating).toBe(4);
   });
 });
@@ -189,8 +190,9 @@ describe('private, which fails closed', () => {
     for (const value of ['false', 'no', 'off', '0', '']) {
       expect(pick(withPrivate(value)).private, `private: ${value}`).toBeUndefined();
     }
-    expect(pick(parseNote('---\ntype: book\ntitle: A Book\n---\n\nbody\n', 'p.md')).private)
-      .toBeUndefined();
+    expect(
+      pick(parseNote('---\ntype: book\ntitle: A Book\n---\n\nbody\n', 'p.md')).private,
+    ).toBeUndefined();
   });
 
   it('never lets a malformed value publish a book by accident', () => {

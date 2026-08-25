@@ -163,7 +163,9 @@ function shortHash(value: string): string {
 /** Newest finished first; unfinished books last, alphabetically. */
 function byFinishedThenTitle(a: LibraryBook, b: LibraryBook): number {
   if (a.finished !== undefined && b.finished !== undefined) {
-    return a.finished === b.finished ? a.title.localeCompare(b.title) : b.finished.localeCompare(a.finished);
+    return a.finished === b.finished
+      ? a.title.localeCompare(b.title)
+      : b.finished.localeCompare(a.finished);
   }
   if (a.finished !== undefined) return -1;
   if (b.finished !== undefined) return 1;

@@ -35,10 +35,7 @@ const SEARCH = 'https://openlibrary.org/search.json';
 export const SEARCH_FIELDS =
   'title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject';
 
-export async function lookupByIsbn(
-  isbn: string,
-  get: HttpGet,
-): Promise<BookMetadata | undefined> {
+export async function lookupByIsbn(isbn: string, get: HttpGet): Promise<BookMetadata | undefined> {
   const normalised = normaliseIsbn(isbn);
   if (normalised.length === 0) return undefined;
 

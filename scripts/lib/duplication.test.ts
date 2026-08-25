@@ -123,14 +123,9 @@ describe('ignoredLinesIn — what a suppression withholds', () => {
     // Found by planting, not by reading: a mechanical plant put an `ignore-end`
     // into the middle of a file's header comment. The sweep counted six lines
     // and jscpd removed **none** — its denominator went up by two, not down.
-    const source = [
-      'const a = 1;',
-      '/**',
-      ` * ${START}`,
-      ` * ${END}`,
-      ' */',
-      'const b = 2;',
-    ].join('\n');
+    const source = ['const a = 1;', '/**', ` * ${START}`, ` * ${END}`, ' */', 'const b = 2;'].join(
+      '\n',
+    );
 
     expect(ignoredLinesIn(source, 'a.ts')).toBe(0);
   });
@@ -209,7 +204,10 @@ describe('ignoredLinesIn — what a suppression withholds', () => {
   });
 
   it('sweeps a population off the disk and totals it', () => {
-    writeFileSync(join(temp, 'a.ts'), ['const a = 1;', `// ${START}`, 'const b = 2;', `// ${END}`].join('\n'));
+    writeFileSync(
+      join(temp, 'a.ts'),
+      ['const a = 1;', `// ${START}`, 'const b = 2;', `// ${END}`].join('\n'),
+    );
     writeFileSync(join(temp, 'b.ts'), 'const c = 3;\n');
 
     expect(sweepIgnoredLines(['a.ts', 'b.ts'], temp)).toBe(3);
@@ -305,11 +303,7 @@ describe('the populations', () => {
     writeFileSync(join(temp, 'gates', 'd.mts'), 'const d = 1;\n');
     writeFileSync(join(temp, 'gates', 'e.md'), '# not typescript\n');
 
-    expect(treePopulationOf(temp)).toEqual([
-      'gates/a.test.ts',
-      'gates/b.ts',
-      'gates/d.mts',
-    ]);
+    expect(treePopulationOf(temp)).toEqual(['gates/a.test.ts', 'gates/b.ts', 'gates/d.mts']);
   });
 
   it('deduplicates a file two scopes both claim', () => {
@@ -368,11 +362,12 @@ describe('parseDeclarations — a malformed declaration file is never a partial 
 
   it('throws on a counter that is not a count', () => {
     for (const ignoredLines of [-1, 1.5, '3', null]) {
-      expect(() =>
-        parseDeclarations({
-          duplicationHash: 'sha256:abc',
-          populations: { scripts: { ignoredLines, notes: [] } },
-        }),
+      expect(
+        () =>
+          parseDeclarations({
+            duplicationHash: 'sha256:abc',
+            populations: { scripts: { ignoredLines, notes: [] } },
+          }),
         `ignoredLines: ${String(ignoredLines)}`,
       ).toThrow(/not a count/);
     }
@@ -398,30 +393,64 @@ describe('ignoredMismatches — both directions, and neither is redundant', () =
   });
 
   it('is silent when every counter is what the tree holds', () => {
-    expect(ignoredMismatches(new Map([['scripts', 0], ['gates', 5]]), declared)).toEqual([]);
+    expect(
+      ignoredMismatches(
+        new Map([
+          ['scripts', 0],
+          ['gates', 5],
+        ]),
+        declared,
+      ),
+    ).toEqual([]);
   });
 
   it('reports a block that arrived with the counter left alone', () => {
-    expect(ignoredMismatches(new Map([['scripts', 6], ['gates', 5]]), declared)).toEqual([
-      { population: 'scripts', swept: 6, recorded: 0 },
-    ]);
+    expect(
+      ignoredMismatches(
+        new Map([
+          ['scripts', 6],
+          ['gates', 5],
+        ]),
+        declared,
+      ),
+    ).toEqual([{ population: 'scripts', swept: 6, recorded: 0 }]);
   });
 
   it('reports a counter raised with no block under it, which stops pre-raising', () => {
-    expect(ignoredMismatches(new Map([['scripts', 0], ['gates', 0]]), declared)).toEqual([
-      { population: 'gates', swept: 0, recorded: 5 },
-    ]);
+    expect(
+      ignoredMismatches(
+        new Map([
+          ['scripts', 0],
+          ['gates', 0],
+        ]),
+        declared,
+      ),
+    ).toEqual([{ population: 'gates', swept: 0, recorded: 5 }]);
   });
 
   it('reports a swept population the file does not name at all', () => {
     expect(
-      ignoredMismatches(new Map([['scripts', 0], ['gates', 5], ['packages', 3]]), declared),
+      ignoredMismatches(
+        new Map([
+          ['scripts', 0],
+          ['gates', 5],
+          ['packages', 3],
+        ]),
+        declared,
+      ),
     ).toEqual([{ population: 'packages', swept: 3, recorded: 0 }]);
   });
 
   it('leaves a merely missing entry to the correspondence check', () => {
     expect(
-      ignoredMismatches(new Map([['scripts', 0], ['gates', 5], ['packages', 0]]), declared),
+      ignoredMismatches(
+        new Map([
+          ['scripts', 0],
+          ['gates', 5],
+          ['packages', 0],
+        ]),
+        declared,
+      ),
     ).toEqual([]);
     expect(declarationCorrespondence(['scripts', 'gates', 'packages'], declared)).toEqual({
       undeclared: ['packages'],

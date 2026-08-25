@@ -5289,3 +5289,62 @@ are different numbers, and `total-lines + ignored-lines` is an approximation
 rather than an identity. Two cases in `scripts/lib/duplication.test.ts` pin the
 behaviour, so a jscpd that fixes it goes red here rather than moving eight series
 at once with nothing to point at.
+
+### G49 — `format`
+
+**Gate:** the `style` job in [`.github/workflows/gates.yml`](../.github/workflows/gates.yml), running `pnpm format:check`
+**Date:** 2026-08-25
+**Observed-red line:** `.command('add')` hand-written as `.command("add")` in `packages/cli/src/index.ts` — `pnpm format:check` exits **1** with *"[warn] packages/cli/src/index.ts"*, against exit **0** on the clean tree immediately before and after (perturbation, with a control through the identical invocation on both sides).
+**Triaged at landing**, and enforced rather than remembered: G41
+(`gate-register`) is red the moment a row lands without an entry.
+
+⚠️ **The row exists because "nothing normalises source shape" was not a
+cosmetic gap.** G14 (`commands`) extracted CLI subcommands with
+`/\.command\(\s*'([a-z][a-z-]*)'/` and G45 (`deploy-flags`) extracted flags with
+`/process\.argv\.includes\(\s*'(--[a-z][a-z-]*)'\s*\)/`. Both hardcoded a single
+quote, so the tree already carried an **accidental quote gate**: hand-write
+`command("add")` and the red reads *extraction found 0 CLI subcommands*, naming
+no quote and pointing at nothing. [#252](https://github.com/mephistopheles4/stacks/issues/252)
+repaired both to `['"]` **before** this landed, on purpose — adopting first
+would have frozen the trap under a formatter that made it invisible.
+
+- **Weakening** — **clean; no allowlist and no exemption on the check itself.**
+  `pnpm format:check` is `prettier --check .` with no path arguments and no
+  skip flag, so the population is whatever the two ignore files say and cannot
+  be narrowed at the call site. The ignore files are the exemption surface and
+  they are two entries plus one generated file, each carrying its measured
+  reason beside it: `*.md` because Prettier right-pads table cells under G41's
+  and G31's exact-space anchors, `fixtures/` because it requotes the
+  frontmatter of 11 vault notes against the adapter contract's byte-for-byte
+  promise, `pnpm-lock.yaml` because it is generated.
+- **Satisfying the letter** — ⚠️ **exposed, and the exposure is the `.astro`
+  hole.** A green here is satisfied while four files and 979 lines — *every*
+  stylesheet rule the site has, since this repository holds no `.css` file —
+  are never opened. Bounded rather than closed: the gap is one dependency wide
+  (`prettier-plugin-astro`), and it is declined for a measured reason rather
+  than overlooked, because formatting `.astro` splits a bootstrap guard across
+  five lines and G7 counts lines rather than statements
+  ([#238](https://github.com/mephistopheles4/stacks/issues/238)).
+- **Routing around** — **the obvious route is closed by the ignore files being
+  read, not by trust.** A contributor cannot pass a narrower path, because the
+  command takes none. What is *open* is adding a line to `.prettierignore`,
+  which is a one-line reviewable diff of exactly the shape this repository
+  already uses for `auditConfig.ignoreGhsas` and the `gates/` allowlists — and
+  unlike a suppression comment it cannot hide inside a source file.
+- **Vacuous green** — ⚠️ **exposed in one direction and it is the `.astro`
+  one.** `prettier --check .` over a directory **skips a file it has no parser
+  for, silently, and exits 0** — measured; named on the command line the same
+  files error with `No parser could be inferred` and exit 2. So the count this
+  gate prints is not a coverage figure, and a future extension whose parser is
+  missing would join the silence rather than announce itself. **The mitigation
+  is documentation, not machinery**, and it is placed where a reader of the
+  command meets it rather than only here.
+- **Decay** — **exposed, named, and it decays loudly rather than quietly.**
+  `prettier` is pinned **exact** ([ADR-0067](adr/0067-the-counters-inputs-are-pinned-exact.md)'s
+  reason, applied to a formatter): a caret range would let a minor bump change a
+  default and redden an unchanged tree on a pull request that touched none of
+  the files it names. Pinned, that decay becomes a deliberate version bump with
+  its own reformat commit. ⚠️ **What has no answer here is the recurring half** —
+  how the repository absorbs a rule-set change at every upgrade — which is
+  [#227](https://github.com/mephistopheles4/stacks/issues/227) and is out of
+  this row's scope by the spec's own §9.

@@ -197,9 +197,7 @@ describe('scoreRun — a report against the declared scopes', () => {
     // asserted rather than left to coincide. `stacks_run_declared_exclusions`
     // publishes it as the denominator `live-exclusions` is read against.
     const twice = [
-      scope('a', 'packages/core/src/*.ts', [
-        { path: 'packages/core/src/x.ts', mechanism: 'one' },
-      ]),
+      scope('a', 'packages/core/src/*.ts', [{ path: 'packages/core/src/x.ts', mechanism: 'one' }]),
       scope('b', 'packages/cli/src/**/*.ts', [
         { path: 'packages/core/src/x.ts', mechanism: 'two' },
       ]),

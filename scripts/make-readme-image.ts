@@ -37,7 +37,9 @@ async function main(): Promise<void> {
   try {
     await access(SOURCE);
   } catch {
-    console.error(`no ${SOURCE}\n\nRun \`pnpm smoke:render\` first — it renders the fixture shelf.`);
+    console.error(
+      `no ${SOURCE}\n\nRun \`pnpm smoke:render\` first — it renders the fixture shelf.`,
+    );
     process.exitCode = 1;
     return;
   }
@@ -61,7 +63,10 @@ async function main(): Promise<void> {
     return;
   }
 
-  await sharp(SOURCE).extract({ ...CROP }).png({ compressionLevel: 9 }).toFile(TARGET);
+  await sharp(SOURCE)
+    .extract({ ...CROP })
+    .png({ compressionLevel: 9 })
+    .toFile(TARGET);
 
   const out = await sharp(TARGET).metadata();
   console.log(`docs/images/shelf.png  ${out.width}x${out.height}`);

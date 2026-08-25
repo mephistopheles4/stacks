@@ -237,7 +237,9 @@ function tuneDiff(settings: ShelfSettings): string | undefined {
     ...(settings.renderer.toneMapping === d.renderer.toneMapping
       ? {}
       : { toneMapping: settings.renderer.toneMapping }),
-    ...(settings.renderer.exposure === d.renderer.exposure ? {} : { exposure: settings.renderer.exposure }),
+    ...(settings.renderer.exposure === d.renderer.exposure
+      ? {}
+      : { exposure: settings.renderer.exposure }),
   };
 
   return Object.keys(tune).length === 0 ? undefined : JSON.stringify(tune);
@@ -278,7 +280,9 @@ function readTune(params: URLSearchParams): SettingsPatch {
     renderer,
     ...(isRecord(tune.lighting) ? { lighting: tune.lighting as SettingsPatch['lighting'] } : {}),
     ...(isRecord(tune.scene) ? { scene: tune.scene as SettingsPatch['scene'] } : {}),
-    ...(isRecord(tune.materials) ? { materials: tune.materials as SettingsPatch['materials'] } : {}),
+    ...(isRecord(tune.materials)
+      ? { materials: tune.materials as SettingsPatch['materials'] }
+      : {}),
     ...(isRecord(tune.books) ? { books: tune.books as SettingsPatch['books'] } : {}),
     ...(isRecord(tune.effects) ? { effects: tune.effects as SettingsPatch['effects'] } : {}),
   };

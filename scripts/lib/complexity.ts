@@ -271,7 +271,7 @@ export async function complexityOf(files: readonly string[]): Promise<PerFunctio
       if (parsed === null) {
         throw new Error(
           `unreadable complexity message on ${file}:${message.line ?? 0} — ${message.message}. ` +
-            'The rule\'s message template is an input to the count; pin a different ESLint ' +
+            "The rule's message template is an input to the count; pin a different ESLint " +
             'version or update the parse, but do not let a function count as zero.',
         );
       }

@@ -53,7 +53,11 @@ describe('the ten probes', () => {
       'aa=0&dpr=1&guard=1&shadows=1&shadowmap=512&shadowtype=vsm&casters=0&shadowfetch=0&painted=0',
     );
 
-    expect(settings.renderer).toMatchObject({ antialias: false, maxPixelRatio: 1, guardResize: true });
+    expect(settings.renderer).toMatchObject({
+      antialias: false,
+      maxPixelRatio: 1,
+      guardResize: true,
+    });
     expect(settings.shadows).toEqual({
       enabled: true,
       mapSize: 512,

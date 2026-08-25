@@ -100,7 +100,9 @@ function headersFile(
     '# Cloudflare Pages reads this file.',
     '/*',
     '  X-Robots-Tag: noindex, nofollow',
-    ...(options.frameAncestors === false ? [] : ["  Content-Security-Policy: frame-ancestors 'none'"]),
+    ...(options.frameAncestors === false
+      ? []
+      : ["  Content-Security-Policy: frame-ancestors 'none'"]),
     ...(options.frameOptions === false ? [] : ['  X-Frame-Options: DENY']),
     '',
     '/covers/*',
@@ -158,7 +160,9 @@ function cspMeta(
   );
 }
 
-function indexHtml(options: { image?: string; robots?: boolean; csp?: string | false } = {}): string {
+function indexHtml(
+  options: { image?: string; robots?: boolean; csp?: string | false } = {},
+): string {
   const image = options.image ?? `${ORIGIN}/og.png`;
   const robots = options.robots ?? true;
   const csp = options.csp ?? cspMeta();
@@ -222,7 +226,10 @@ describe('G20 — every rule goes red', () => {
   it('note-body: a canary in a shipped chunk', async () => {
     await expectOnly('note-body', async () => {
       await mkdir(join(dist, '_astro'), { recursive: true });
-      await writeFile(join(dist, '_astro', 'shelf.js'), `const x = ${JSON.stringify(NOTE_BODY_CANARY)};`);
+      await writeFile(
+        join(dist, '_astro', 'shelf.js'),
+        `const x = ${JSON.stringify(NOTE_BODY_CANARY)};`,
+      );
     });
   });
 
@@ -403,7 +410,9 @@ describe('G20 — every rule goes red', () => {
      * this is the line that makes that decision cost something to break.
      */
     await expectOnly('csp', async () => {
-      await writeIndex(indexHtml({ csp: cspMeta({ connectSrc: "'self' https://telemetry.example" }) }));
+      await writeIndex(
+        indexHtml({ csp: cspMeta({ connectSrc: "'self' https://telemetry.example" }) }),
+      );
     });
   });
 
@@ -419,7 +428,11 @@ describe('G20 — every rule goes red', () => {
      */
     await expectOnly('csp', async () => {
       await writeIndex(
-        indexHtml({ csp: cspMeta({ scriptSrc: "'self' https://static.cloudflareinsights.com https://cdn.example" }) }),
+        indexHtml({
+          csp: cspMeta({
+            scriptSrc: "'self' https://static.cloudflareinsights.com https://cdn.example",
+          }),
+        }),
       );
     });
   });
@@ -457,7 +470,9 @@ describe('G20 — every rule goes red', () => {
      * without touching the `script-src` line the rule was reading.
      */
     await expectOnly('csp', async () => {
-      await writeIndex(indexHtml({ csp: cspMeta({ extra: 'script-src-elem https://cdn.example' }) }));
+      await writeIndex(
+        indexHtml({ csp: cspMeta({ extra: 'script-src-elem https://cdn.example' }) }),
+      );
     });
   });
 
@@ -508,7 +523,10 @@ describe('G20 — every rule goes red', () => {
 
   it('headers: no /covers/* block at all', async () => {
     await expectOnly('headers', async () => {
-      await writeFile(join(dist, '_headers'), '/*\n  X-Robots-Tag: noindex\n\n/og.png\n  Cache-Control: max-age=0\n');
+      await writeFile(
+        join(dist, '_headers'),
+        '/*\n  X-Robots-Tag: noindex\n\n/og.png\n  Cache-Control: max-age=0\n',
+      );
     });
   });
 

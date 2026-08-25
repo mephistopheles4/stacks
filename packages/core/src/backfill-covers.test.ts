@@ -17,7 +17,10 @@ function measuring(shapes: Record<string, { width: number; height: number }>): M
 }
 
 async function note(name: string, frontmatter: string, body = 'A body.'): Promise<void> {
-  await writeFile(join(vaultPath, 'Library', `${name}.md`), `---\n${frontmatter}\n---\n\n${body}\n`);
+  await writeFile(
+    join(vaultPath, 'Library', `${name}.md`),
+    `---\n${frontmatter}\n---\n\n${body}\n`,
+  );
 }
 
 beforeEach(async () => {

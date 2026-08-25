@@ -208,6 +208,13 @@ jobs:
       - name: lint:md
         run: pnpm lint:md
 
+      # Reports; never writes. `pnpm format` is the remedy and it is named in
+      # the failure, which is what lets a style rule onto this aggregator at
+      # all — the person who hits the red can clear it without knowing this
+      # repository.
+      - name: format:check
+        run: pnpm format:check
+
   # The required status check. Named `gates` and nothing else.
   gates:
     name: gates

@@ -46,12 +46,7 @@ import {
   scoreRun,
   type ScoredRun,
 } from './lib/mutation-score.ts';
-import {
-  counterInputs,
-  countPopulation,
-  populationOf,
-  type Counts,
-} from './lib/complexity.ts';
+import { counterInputs, countPopulation, populationOf, type Counts } from './lib/complexity.ts';
 import {
   cognitiveInputs,
   countCognitivePopulation,
@@ -147,11 +142,16 @@ function scoresFrom(path: string | undefined): {
 
 function trendNames(raw: string | undefined, flag: string): TrendName[] {
   const declared = new Set<string>(TREND_SERIES.map((series) => series.name));
-  const wanted = (raw ?? '').split(',').map((name) => name.trim()).filter((name) => name !== '');
+  const wanted = (raw ?? '')
+    .split(',')
+    .map((name) => name.trim())
+    .filter((name) => name !== '');
 
   const unknown = wanted.filter((name) => !declared.has(name));
   if (unknown.length > 0) {
-    throw new Error(`${flag} names series that are not declared in TREND_SERIES: ${unknown.join(', ')}`);
+    throw new Error(
+      `${flag} names series that are not declared in TREND_SERIES: ${unknown.join(', ')}`,
+    );
   }
   return wanted as TrendName[];
 }

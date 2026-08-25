@@ -475,9 +475,7 @@ export function attributeClones(
   root: string = REPO_ROOT,
 ): Map<string, { clones: number; duplicatedLines: number }> {
   const matchers = scopes.map((scope) => ({ name: scope.name, match: globToRegExp(scope.glob) }));
-  const counted = new Map(
-    scopes.map((scope) => [scope.name, { clones: 0, duplicatedLines: 0 }]),
-  );
+  const counted = new Map(scopes.map((scope) => [scope.name, { clones: 0, duplicatedLines: 0 }]));
 
   for (const clone of clones) {
     const halves = [clone.firstFile.name, clone.secondFile.name].map((name) =>

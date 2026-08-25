@@ -54,7 +54,10 @@ function healthy(): Declarations {
       scope('packages/core/src', 'packages/core/src/*.ts'),
       scope('packages/core/src/adapters', 'packages/core/src/adapters/**/*.ts'),
       scope('scripts', 'scripts/**/*.ts', [
-        { path: 'scripts/deploy.ts', mechanism: 'driven as a child process; never sees the mutant' },
+        {
+          path: 'scripts/deploy.ts',
+          mechanism: 'driven as a child process; never sees the mutant',
+        },
       ]),
     ],
     excludedDirectories: [{ path: 'gates', mechanism: 'REPO_ROOT is the sandbox, not the repo' }],
@@ -131,7 +134,9 @@ describe('declarationFaults — every clause, planted', () => {
   });
 
   it('catches a source directory that is neither declared nor excluded', () => {
-    expect(clauses(healthy(), [...TREE, 'packages/site/src/shelf/scene.ts'])).toEqual(['undeclared']);
+    expect(clauses(healthy(), [...TREE, 'packages/site/src/shelf/scene.ts'])).toEqual([
+      'undeclared',
+    ]);
   });
 
   it('catches a glob that matches nothing while its directory still exists', () => {

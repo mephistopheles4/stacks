@@ -362,4 +362,3 @@ async function loadLibrary(): Promise<LibraryBook[]> {
     return [];
   }
 }
-

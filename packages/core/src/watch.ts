@@ -87,9 +87,9 @@ export function watchVault(
 
   const started: Closeable =
     options.watcher?.(vaultPath, schedule) ??
-    (watch(vaultPath, { recursive: true }, (_event, filename) =>
+    watch(vaultPath, { recursive: true }, (_event, filename) =>
       schedule(typeof filename === 'string' ? filename : null),
-    ));
+    );
 
   return {
     close(): void {

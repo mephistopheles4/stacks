@@ -104,7 +104,9 @@ export class ObsidianAdapter implements VaultAdapter {
       block = applyChange(block, key, value, eol);
     }
 
-    const updated = source.slice(0, match.index) + `---${eol}${block}${eol}---` +
+    const updated =
+      source.slice(0, match.index) +
+      `---${eol}${block}${eol}---` +
       source.slice(match.index + match[0].length - trailingNewline(match[0]).length);
 
     await writeFile(path, updated, 'utf8');
@@ -159,7 +161,9 @@ export class ObsidianAdapter implements VaultAdapter {
     const wantedIsbn = isbn.replace(/[^0-9Xx]/g, '').toUpperCase();
     if (wantedIsbn.length > 0) {
       const hit = books.some(
-        (book) => book.isbn !== undefined && book.isbn.replace(/[^0-9Xx]/g, '').toUpperCase() === wantedIsbn,
+        (book) =>
+          book.isbn !== undefined &&
+          book.isbn.replace(/[^0-9Xx]/g, '').toUpperCase() === wantedIsbn,
       );
       if (hit) return true;
     }
@@ -365,7 +369,9 @@ function applyChange(
  */
 function hasHeading(source: string, heading: string): boolean {
   const words = heading.replace(/^#+\s*/, '');
-  return new RegExp(`^##+ +${words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[ \\t]*$`, 'm').test(source);
+  return new RegExp(`^##+ +${words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[ \\t]*$`, 'm').test(
+    source,
+  );
 }
 
 /** Quotes only what YAML would otherwise misread. */

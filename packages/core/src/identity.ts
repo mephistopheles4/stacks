@@ -124,7 +124,8 @@ export function isProbablySameBook(a: string, b: string): boolean {
  * place from a book in the vault; the neighbours it suggests — notebook,
  * planner, diary — have not, and are deliberately absent.
  */
-const DERIVATIVE = /\b(?:summary|summaries|workbook|study|guide|companion|analysis|takeaways|abridged|journal)\b/;
+const DERIVATIVE =
+  /\b(?:summary|summaries|workbook|study|guide|companion|analysis|takeaways|abridged|journal)\b/;
 
 /**
  * Does this title look like a summary or study guide of another book?
@@ -238,7 +239,9 @@ export function titleMatchScore(query: string, candidate: string): number {
 export function rankingScore(query: string, title: string, author?: string): number {
   const wanted = normaliseTitleAuthor(query).split(' ').filter(Boolean);
   const found = new Set(
-    normaliseTitleAuthor(`${title} ${author ?? ''}`).split(' ').filter(Boolean),
+    normaliseTitleAuthor(`${title} ${author ?? ''}`)
+      .split(' ')
+      .filter(Boolean),
   );
   const titleTokens = new Set(normaliseTitleAuthor(title).split(' ').filter(Boolean));
   if (wanted.length === 0 || found.size === 0) return 0;

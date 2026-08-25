@@ -58,11 +58,7 @@ export const CONFIG_FILE = '.markdownlint.jsonc';
  * a document, and one of those notes is malformed on purpose because invariant
  * 3 requires it.
  */
-export const MARKDOWN_GLOBS: readonly string[] = [
-  '**/*.md',
-  '!fixtures/**',
-  '!**/node_modules/**',
-];
+export const MARKDOWN_GLOBS: readonly string[] = ['**/*.md', '!fixtures/**', '!**/node_modules/**'];
 
 /**
  * The population as a list of files, from git rather than from the disk.
@@ -276,7 +272,11 @@ async function lint(
  * can rewrite, and this says what the *tree* would hand it.
  */
 export async function rulesFoundInTree(): Promise<string[]> {
-  const reported = await lint(REPO_ROOT, false, markdownFiles().map((path) => `:${path}`));
+  const reported = await lint(
+    REPO_ROOT,
+    false,
+    markdownFiles().map((path) => `:${path}`),
+  );
   const rules = new Set<string>();
   for (const forFile of reported.values()) for (const rule of forFile) rules.add(rule);
   return [...rules].sort();

@@ -120,8 +120,17 @@ function repoOn(branch: string): string {
   };
   const commit = (message: string): string => {
     git('add', '-A');
-    git('-c', 'user.name=gate', '-c', 'user.email=gate@example.invalid', 'commit',
-        '--allow-empty', '-m', message, '--quiet');
+    git(
+      '-c',
+      'user.name=gate',
+      '-c',
+      'user.email=gate@example.invalid',
+      'commit',
+      '--allow-empty',
+      '-m',
+      message,
+      '--quiet',
+    );
     return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
   };
   git('init', '--quiet');
@@ -166,9 +175,10 @@ afterAll(() => {
  * beats `.env`, so this holds on a machine that has a working deploy configured
  * and on CI, which has no `.env` at all.
  */
-function deploy(
-  options: { repo?: string; args?: readonly string[] } = {},
-): { status: number; output: string } {
+function deploy(options: { repo?: string; args?: readonly string[] } = {}): {
+  status: number;
+  output: string;
+} {
   const result = spawnSync(
     process.execPath,
     ['--import', 'tsx', join(REPO_ROOT, 'scripts', 'deploy.ts'), ...(options.args ?? [])],

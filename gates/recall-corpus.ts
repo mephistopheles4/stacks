@@ -54,8 +54,7 @@ export const RECALL_CORPUS: readonly RecallCase[] = [
       'endpoint reports 368. Ranking alone finds the book but not its pages.',
   },
   {
-    term:
-      'The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life Mark Manson',
+    term: 'The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life Mark Manson',
     label:
       'The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life Mark Manson',
     expect: { kind: 'found', pages: 262, title: 'The Subtle Art of Not Giving a F*ck' },
@@ -65,8 +64,7 @@ export const RECALL_CORPUS: readonly RecallCase[] = [
       'needed, not the first passing one.',
   },
   {
-    term:
-      'From Zero to Profit with AI: The Contemporary Guide to Online Income Generation and Accelerated Growth Helen B. Keating',
+    term: 'From Zero to Profit with AI: The Contemporary Guide to Online Income Generation and Accelerated Growth Helen B. Keating',
     label:
       'From Zero to Profit with AI: The Contemporary Guide to Online Income Generation and Accelerated Growth Helen B. Keating',
     expect: { kind: 'found', pages: 172, title: 'From Zero to Profit with AI' },
@@ -77,8 +75,7 @@ export const RECALL_CORPUS: readonly RecallCase[] = [
       'Helen B Keating, 9798198476684, 172 pages.',
   },
   {
-    term:
-      'The Creative Brain in the Age of Artificial Intelligence: How to Use AI Without Losing Yourself Maria Ian',
+    term: 'The Creative Brain in the Age of Artificial Intelligence: How to Use AI Without Losing Yourself Maria Ian',
     label:
       'The Creative Brain in the Age of Artificial Intelligence: How to Use AI Without Losing Yourself Maria Ian',
     expect: { kind: 'no-match' },

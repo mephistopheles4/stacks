@@ -41,10 +41,7 @@ function respondWith(
 }
 
 function stubFetch(response: Response | (() => Promise<Response>)): void {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(typeof response === 'function' ? response : async () => response),
-  );
+  vi.stubGlobal('fetch', vi.fn(typeof response === 'function' ? response : async () => response));
 }
 
 /** A real cover: big enough to clear the placeholder floor, and truly a JPEG. */

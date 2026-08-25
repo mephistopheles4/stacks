@@ -268,7 +268,11 @@ const DUPLICATION_FACTS = [
     (entry: DuplicationCounts): number => entry.ignoredLines,
   ],
   ['duplication-tree-total-lines', false, (entry: DuplicationCounts): number => entry.totalLines],
-] as const satisfies readonly (readonly [TrendName, boolean, (entry: DuplicationCounts) => number])[];
+] as const satisfies readonly (readonly [
+  TrendName,
+  boolean,
+  (entry: DuplicationCounts) => number,
+])[];
 
 /** The eight names this record spells for duplication. Derived, never written twice. */
 export const DUPLICATION_SERIES: readonly TrendName[] = DUPLICATION_FACTS.map(([name]) => name);
@@ -318,7 +322,9 @@ export const COGNITIVE_SERIES: readonly TrendName[] = COGNITIVE_FACTS.map(([name
  * and is emitted. `cognitiveCountsFrom` owns that distinction; this function
  * only has to not undo it.
  */
-export function cognitiveFactsOf(counted: ReadonlyMap<string, CognitiveCounts | null> | undefined): {
+export function cognitiveFactsOf(
+  counted: ReadonlyMap<string, CognitiveCounts | null> | undefined,
+): {
   cognitive?: readonly ScopeCognitive[];
   failed: readonly TrendName[];
 } {
@@ -557,7 +563,7 @@ export function unescape(text: string): string {
  * rejects — so a value small enough to reach it is fixed rather than defaulted.
  */
 function value(n: number): string {
-  return Number.isInteger(n) ? String(n) : (String(n).includes('e') ? n.toFixed(9) : String(n));
+  return Number.isInteger(n) ? String(n) : String(n).includes('e') ? n.toFixed(9) : String(n);
 }
 
 function labels(pairs: Record<string, string>): string {
@@ -768,7 +774,6 @@ export function renderMetrics(facts: RunFacts): string {
 // not three, because *refused* and *stale* are the pair ADR-0027 already paid
 // to keep apart: one is no answer at all, the other is a real answer and a red
 // one. See `./edge-probe.ts`.
-
 
 export interface EdgeFacts {
   /** Unix seconds — the moment of the sync, not of a CI run. */

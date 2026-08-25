@@ -27,7 +27,9 @@ import { RECALL_CORPUS, stripKey } from '../gates/recall-corpus.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 const cacheFlag = process.argv.indexOf('--cache');
-const cacheDir = resolve(cacheFlag < 0 ? join(REPO_ROOT, '.cache') : (process.argv[cacheFlag + 1] ?? ''));
+const cacheDir = resolve(
+  cacheFlag < 0 ? join(REPO_ROOT, '.cache') : (process.argv[cacheFlag + 1] ?? ''),
+);
 
 // The same loader the CLI and the deploy use. Without it this script read only
 // a real environment variable, so the invocation in its own header — with the
@@ -80,6 +82,10 @@ function prune(value: unknown): unknown {
 
 const out = join(REPO_ROOT, 'fixtures', 'api');
 mkdirSync(out, { recursive: true });
-writeFileSync(join(out, 'lookup-recall.json'), `${JSON.stringify(prune(recorded), null, 1)}\n`, 'utf8');
+writeFileSync(
+  join(out, 'lookup-recall.json'),
+  `${JSON.stringify(prune(recorded), null, 1)}\n`,
+  'utf8',
+);
 
 console.log(`${Object.keys(recorded).length} responses from ${RECALL_CORPUS.length} lookups`);

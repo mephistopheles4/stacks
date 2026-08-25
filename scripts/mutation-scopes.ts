@@ -101,7 +101,8 @@ console.log(
     cell('excl', 4),
   ].join('  '),
 );
-for (const row of rows) console.log(line(row.scope.name, row.tally, String(row.scope.exclusions.length)));
+for (const row of rows)
+  console.log(line(row.scope.name, row.tally, String(row.scope.exclusions.length)));
 
 const all = totalOf(run);
 console.log(line('all declared', all, String(run.declaredExclusions)));
@@ -126,7 +127,9 @@ if (all.pending > 0) {
 // catches in the reports that are not.
 if (run.live.size > 0) {
   console.log('');
-  console.log(`excluded but present in this report — ${run.live.size} of ${run.declaredExclusions}:`);
+  console.log(
+    `excluded but present in this report — ${run.live.size} of ${run.declaredExclusions}:`,
+  );
   for (const [file, mutants] of run.live) console.log(`  ${file}  (${mutants})`);
 }
 

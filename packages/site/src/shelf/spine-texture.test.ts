@@ -127,7 +127,11 @@ describe('the title, which is what makes spines differ', () => {
   it('moves monotonically from large and heavy to small and light', () => {
     // The bands are a range, not three unrelated treatments — which is the
     // difference between one publisher's imprint and noise.
-    const [short, medium, long] = [bandFor('Nexus'), bandFor('The Tidal Engine'), bandFor('a'.repeat(40))];
+    const [short, medium, long] = [
+      bandFor('Nexus'),
+      bandFor('The Tidal Engine'),
+      bandFor('a'.repeat(40)),
+    ];
 
     expect(short.size).toBeGreaterThan(medium.size);
     expect(medium.size).toBeGreaterThan(long.size);

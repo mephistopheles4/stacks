@@ -140,7 +140,6 @@ function encodePng(width: number, height: number, pixel: (x: number, y: number) 
 const outDir = join(REPO_ROOT, 'fixtures', 'vault', 'Library', 'covers');
 mkdirSync(outDir, { recursive: true });
 
-
 const WHITE: Rgb = [255, 255, 255];
 const MARGIN_X = Math.round(WIDTH * 0.25);
 const MARGIN_Y = Math.round(HEIGHT * 0.25);
