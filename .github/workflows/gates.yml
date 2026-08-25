@@ -137,10 +137,48 @@ jobs:
       - name: pnpm audit
         run: pnpm audit --audit-level=high
 
+  # Lint, format and Markdown verdicts — one job, not three.
+  #
+  # Its own job rather than steps in the `suite` matrix, for the reason the
+  # `audit` job above states: the answer does not depend on which Node version
+  # is running, and running it twice would report the same verdict twice. A
+  # format verdict, a lint verdict and a Markdown verdict are all
+  # Node-independent.
+  #
+  # **One job, one row per tool.** A row records what is protected; a job
+  # records where it runs, and the two need not be one-to-one. This job grows a
+  # step per tool as the static-analysis rollout lands
+  # (docs/spec/static-analysis-and-style.md §4).
+  #
+  # ⚠️ Accepted cost: a red names `style` rather than the tool. The remedy is
+  # that each step is one documented command that runs alone and prints its own
+  # fix line — `pnpm format` for this one — so the job's output is the tool's
+  # output.
+  style:
+    name: style
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Reports; never writes. `pnpm format` is the remedy and it is named in
+      # the failure, which is what lets a style rule onto this aggregator at
+      # all — the person who hits the red can clear it without knowing this
+      # repository.
+      - name: format:check
+        run: pnpm format:check
+
   # The required status check. Named `gates` and nothing else.
   gates:
     name: gates
-    needs: [suite, audit]
+    needs: [suite, audit, style]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -153,5 +191,7 @@ jobs:
         run: |
           echo "suite: ${{ needs.suite.result }}"
           echo "audit: ${{ needs.audit.result }}"
+          echo "style: ${{ needs.style.result }}"
           test "${{ needs.suite.result }}" = "success"
           test "${{ needs.audit.result }}" = "success"
+          test "${{ needs.style.result }}" = "success"

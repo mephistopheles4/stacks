@@ -16,6 +16,20 @@ Those four are the contract. If they are green, the project is where
 [`docs/progress.md`](docs/progress.md) says it is. CI runs all four on Node 22
 and 24 as a single required check called `gates`; `main` takes no direct pushes.
 
+`gates` also runs a `style` job, and if it fails the whole remedy is one
+command:
+
+```bash
+pnpm format
+```
+
+**One-time setup, so `git blame` skips the reformat commit** — GitHub already
+does this from the default branch, and a local clone needs telling once:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 ## Read these first
 
 | | |
