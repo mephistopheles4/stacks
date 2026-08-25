@@ -34,7 +34,7 @@ import {
 } from './lib/metrics-record.ts';
 import { UNKNOWN_WINDOW, subjectsBetween, windowFrom } from './lib/pr-window.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
-import { configHashOf, fixtureHashOf } from './lib/floors.ts';
+import { configHashOf, duplicationHashOf, fixtureHashOf } from './lib/floors.ts';
 // The config Stryker actually runs, imported rather than described. The hash
 // below is a fact about the configuration this run loaded, and a flag carrying
 // it would let the stamp disagree with what was actually scored.
@@ -46,11 +46,26 @@ import {
   scoreRun,
   type ScoredRun,
 } from './lib/mutation-score.ts';
-import { counterInputs, countPopulation, type Counts } from './lib/complexity.ts';
+import {
+  counterInputs,
+  countPopulation,
+  populationOf,
+  type Counts,
+} from './lib/complexity.ts';
+import {
+  TREE_POPULATION,
+  countAllPopulations,
+  duplicationInputs,
+  permalinkFor,
+  sweepIgnoreBlocks,
+  treePopulationOf,
+  type DuplicationCounts,
+} from './lib/duplication.ts';
 import { sourceFiles } from './lib/scope-check.ts';
 import {
   TREND_SERIES,
   complexityFactsOf,
+  duplicationFactsOf,
   renderMetrics,
   type RunFacts,
   type ScopeScore,
@@ -270,6 +285,57 @@ async function complexityFacts(): Promise<ReturnType<typeof complexityFactsOf>> 
 }
 
 /**
+ * The four counts over each of the two duplication populations, or the eight
+ * names failed.
+ *
+ * ⚠️ **Ten jscpd runs, and each one is there for a reason the others cannot
+ * cover.** One over the **union** of the eight populations, because a clone is
+ * a relation between two places and eight separate runs are structurally blind
+ * to a clone spanning two scopes — that run is where every scope's clone count
+ * and duplicated-line count comes from, attributed by glob. Eight more, one per
+ * scope, because jscpd publishes no per-file line count and **its denominator
+ * must not be reimplemented**: a hand-rolled one disagreed with jscpd on three
+ * of ninety-five files, once by twenty-seven lines. And one over the whole tree.
+ *
+ * **The decision itself is not here.** `duplicationFactsOf` owns it, in
+ * `lib/metrics.ts`, for the reason `complexityFacts` gives one function down:
+ * this file is excluded from the `scripts` mutation scope and imported by no
+ * spec, so a rule written at this level would be a rule nothing holds.
+ */
+async function duplicationFacts(): Promise<ReturnType<typeof duplicationFactsOf>> {
+  try {
+    const files = sourceFiles();
+    const counted = countAllPopulations(readScopes(), (scope) => populationOf(scope, files));
+
+    for (const [scope, counts] of counted.scopes) console.log(describeCounts(scope, counts));
+    console.log(describeCounts(TREE_POPULATION, counted.tree));
+
+    // Generated here, printed, and stored nowhere — see `ignoreBlocksIn`. A
+    // link pinned into the record stays valid while it stops describing a block
+    // that moved, and it must never be a metrics label.
+    for (const block of sweepIgnoreBlocks(treePopulationOf())) {
+      console.log(`  suppression: ${permalinkFor(block, commit)}`);
+    }
+
+    return duplicationFactsOf(counted);
+  } catch (error) {
+    // Not fatal here, for `complexityFacts`' reason: the run's other series are
+    // real measurements and dropping them would lose what did compute.
+    console.error(`could not count duplication: ${String(error)}`);
+    return duplicationFactsOf(undefined);
+  }
+}
+
+/** One population's line in the run log. */
+function describeCounts(population: string, counts: DuplicationCounts | null): string {
+  return counts === null
+    ? `duplication ${population}: no counts`
+    : `duplication ${population}: ${String(counts.clones)} clones, ${String(
+        counts.duplicatedLines,
+      )} duplicated of ${String(counts.totalLines)} lines, ${String(counts.ignoredLines)} ignored`;
+}
+
+/**
  * The counting rule this run counted under, or nothing.
  *
  * ⚠️ **Stamped from the config ESLint actually resolved, never from a literal
@@ -293,7 +359,26 @@ async function countingStamp(): Promise<string | undefined> {
 }
 
 const complexity = await complexityFacts();
+const duplication = await duplicationFacts();
 const fixtureHash = await countingStamp();
+
+/**
+ * The duplication counting rule this run counted under, or nothing.
+ *
+ * `countingStamp`'s twin, and absent on the same terms: a run whose counter
+ * could not start has no rule to declare, and an absent stamp reads as *a
+ * record from before the stamp existed* rather than as a wrong one.
+ */
+function duplicationStamp(): string | undefined {
+  try {
+    return duplicationHashOf(duplicationInputs());
+  } catch (error) {
+    console.error(`could not stamp the duplication rule: ${String(error)}`);
+    return undefined;
+  }
+}
+
+const duplicationHash = duplicationStamp();
 
 const facts: RunFacts = {
   timestamp,
@@ -301,6 +386,7 @@ const facts: RunFacts = {
   event: flags.get('event') ?? 'unknown',
   configHash: configHashOf(strykerConfig),
   ...(fixtureHash === undefined ? {} : { fixtureHash }),
+  ...(duplicationHash === undefined ? {} : { duplicationHash }),
   runUrl: flags.get('run-url') ?? 'unknown',
   prWindow: windowSincePreviousRun(),
   expected: expected(),
@@ -308,14 +394,19 @@ const facts: RunFacts = {
   // a series whose step failed is dropped rather than published: the number is
   // not a measurement of what the series measures.
   //
-  // ⚠️ **The complexity names join it from in here**, which is the one series
-  // group whose failure this process can see for itself: the counter runs in
-  // this file rather than in a workflow step, so there is no exit code for the
-  // caller to pass down.
-  failed: [...trendNames(flags.get('failed'), '--failed'), ...complexity.failed],
+  // ⚠️ **The complexity and duplication names join it from in here**, which are
+  // the two series groups whose failure this process can see for itself: both
+  // counters run in this file rather than in a workflow step, so there is no
+  // exit code for the caller to pass down.
+  failed: [
+    ...trendNames(flags.get('failed'), '--failed'),
+    ...complexity.failed,
+    ...duplication.failed,
+  ],
   gateSuiteRuntime: seconds(flags.get('suite-seconds'), '--suite-seconds'),
   mutationRunRuntime: seconds(flags.get('mutation-seconds'), '--mutation-seconds'),
   complexity: complexity.complexity,
+  duplication: duplication.duplication,
   ...scoresFrom(flags.get('report')),
 };
 

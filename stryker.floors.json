@@ -89,11 +89,19 @@
     "Once a scope IS armed the same edit is a re-derivation and costs a justification like",
     "any other lowering.",
     "",
+    "⚠️ REFRESHED 2026-08-23 BY #254, WHICH ADDED A SCOPE EXCLUSION. `stryker.config.mjs`",
+    "derives its `mutate` array from stryker.scopes.json, so excluding scripts/duplication-report.ts",
+    "changed the hashed configuration. NO FLOOR IS LOWERED AND NO `notes` ENTRY IS OWED: every floor",
+    "here is `unarmed`, so there is no derived floor to re-derive, which is exactly the case the",
+    "paragraph above describes. Recorded because the drift is caught by NOTHING — no gate, no test and",
+    "no CI check compares this stamp, so it reaches `main` green and is found by whoever next tries to",
+    "publish. It was found here by reading a rendered record, not by a check. That hole is #224.",
+    "",
     "There is no override flag for any refusal this file produces, and that is the design",
     "rather than an omission. See docs/adr/0061-the-mutation-floor-refuses-deploy.md and",
     "docs/adr/0068-the-complexity-cap-only-falls.md."
   ],
-  "configHash": "sha256:5c94b749e9d95484e8864f86038d171d6b83f396c1e321d77dd3efc85fc0baaf",
+  "configHash": "sha256:cb1d60c7a05c978d12d4d49feb413bd2e5b8b76bb85c72fe9260c859dd05ee7b",
   "fixtureHash": "sha256:26f7066cc66d2bbbf50bac77ca83f3dcbe5302e5c1f973e1a3758909d8f2b146",
   "scopes": {
     "packages/core/src": {

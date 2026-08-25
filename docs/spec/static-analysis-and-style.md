@@ -295,9 +295,30 @@ This is a real code constraint, not a caution. `scripts/lib/floors.ts`'s
 `countedIn` filters to rows where **every** member of `CAPPED_SERIES` has
 samples — keyed on the whole set on purpose, so that probing one member cannot
 single it out. Add a name at adoption and every existing record on the `metrics`
-branch fails that filter at once, zeroing both cyclomatic calibration windows.
+branch fails that filter at once, so `countedIn` returns nothing.
 **Waiting costs nothing**, because `countedIn` reads what a record carries
 rather than what a type declares.
+
+⚠️ **The consequence named above is wrong, and the real one is worse —
+corrected at implementation against the code, not re-decided.** This paragraph
+said the collapse *zeroes both cyclomatic calibration windows*. It does not
+touch them: `capCalibration` takes its window from `streakOf`, which reads
+`row.ok` and the fixture hash and **never** `row.counts`, so the window is
+roster-independent. What collapses is the **reading** — `scripts/deploy.ts`'s
+`newestCount` goes `undefined`, so **every cap line prints `null`**, and
+`countedElsewhere` needs a `countedRun` it no longer has, so the counting-rule
+refusal **switches itself off**. Blind caps and a disarmed guard, with nothing
+red.
+
+⚠️ **The false version was not merely inaccurate, it was reassuring in the
+wrong direction**, which is why it is struck rather than softened: *a delayed
+calibration window* sounds survivable, and *a silently disarmed refusal* does
+not. Anyone who weighed an early roster add against the old sentence weighed it
+against the lesser harm. Found by
+[#258](https://github.com/mephistopheles4/stacks/issues/258) and verified in the
+code by [#254](https://github.com/mephistopheles4/stacks/issues/254) and
+[#255](https://github.com/mephistopheles4/stacks/issues/255); it strengthens the
+rule rather than weakening it.
 
 ### Suppression is allowed and it is counted
 
@@ -308,6 +329,17 @@ G43's directive shape at once. So the ignored lines are a declared per-populatio
 counter, swept from source by a gate at merge. **That is G43 (`ignored-mutants`)
 applied to a second tool**, and it is what dissolves the only surviving objection
 to capping the counts.
+
+⚠️ **That measurement is real and it is the special case — corrected at
+implementation, not re-decided.** jscpd honours a suppression block **only when
+no code follows it**: with the block ending the file it removes the block, with
+a blank line or a comment after it the trailing line too, and **with one line of
+code after it it removes nothing at all, silently**. Every earlier measurement
+here, [#237](https://github.com/mephistopheles4/stacks/issues/237)'s included,
+put the block at the end of a file. The counter is unchanged — it records the
+lines the source *declares*, which is what this section asks for — but
+*total-lines + ignored-lines* is an approximation rather than an identity. See
+[the log](../log/2026-08-23-the-suppression-that-suppresses-nothing.md).
 
 ⚠️ **`--ignore-pattern` reads like region suppression and is not.** Do not reach
 for it.

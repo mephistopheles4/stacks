@@ -5053,3 +5053,68 @@ deleting the justification, which is the cheapest way to look compliant. ⚠️
 **Explicitly *not* a check that the entry's reasoning is sound**, which is
 outside any gate here, and not a check that the advisory is still unfixed, which
 would need the network G21 forbids.
+
+### G47 — `ignored-clones`
+
+**Gate:** [`gates/ignored-clones.test.ts`](../gates/ignored-clones.test.ts)
+**Date:** 2026-08-23
+**Triaged at landing**, per this rollout's standing rule and now enforced by G41
+rather than remembered.
+
+⚠️ **The number was taken against a re-fetched `origin/main` immediately before
+pushing, not when this entry was drafted** — four sibling tickets on the same map
+each add a numbered row concurrently, and G19's gapless walk makes a stale claim
+a red merge for whoever lands second. Recorded because the alternative reads as
+carelessness rather than as a race.
+
+**Observed-red**, twice, and the second time it was the gate that was wrong. A
+suppression block was planted into `packages/cli/src/env.ts` and the row went red
+naming both populations that file belongs to — `packages/cli/src` and
+`whole-tree`, six lines each. ⚠️ **The plant then disagreed with jscpd**, which
+removed nothing: the mechanical insertion had landed the closing directive
+*inside the file's header comment*, where jscpd does not see it and the sweep
+did. The sweep gained block-comment awareness, and the second plant — at a real
+code location — agreed.
+
+- **Weakening** — **clean; no allowlist and no exemption.** Nine populations are
+  swept and all nine compared, in both directions, plus a correspondence check so
+  a population measured but undeclared is named rather than skipped. What it
+  deliberately does not assert is the `notes` line beside the counter: **any
+  string satisfies it**, so it would catch the honest omission and not the
+  adversary — G43's declined check, declined again here for its reason.
+  `accepted`.
+- **Satisfying the letter** — **exposed, and it is the intended path.** Adding a
+  suppression block *and* its declared line count in one commit passes cleanly,
+  which is exactly what the row asks for: it makes the withdrawal **recorded**,
+  never impossible. Both directions are held, so pre-raising a counter so a later
+  block lands green is red on arrival. Disposition `accepted`.
+- **Routing around** — **exposed, and named rather than closed.** The whole row
+  reads only source text, so a suppression written in a form the sweep's
+  `DETECT` pattern misses is invisible to it. That is why detection deliberately
+  over-matches every comment form jscpd honours and *refuses* three of the four,
+  rather than counting them: a refused form is a red build, a missed one is
+  silence. ⚠️ **The residual is real and measured**: `commentStateAfter` is not
+  a lexer, so a string literal containing a block-comment opener could hide a
+  directive from the sweep while jscpd still honoured it. It takes that string
+  *and* a directive in one file to reach. Disposition `accepted`.
+- **Vacuous green** — **gated, with three floors rather than one.** The row
+  would pass over nothing if the declaration file were emptied, if the declared
+  scopes were emptied, or if the tree walk returned nothing — and the third is
+  the one whose absence was a real hole in G43, so all three are written out
+  here instead of inherited. Disposition `gated`.
+- **Decay** — **repaired in part, and the remainder is named.** The counting
+  rule this file records is compared to the jscpd actually installed, so a
+  threshold edit or a tool upgrade that changes what every count *means* is red
+  at merge instead of being discovered at a deploy. ⚠️ **That does nothing for
+  `stryker.floors.json`**, whose own comment records that no gate, test or CI
+  check compares its two stamps — [#224](https://github.com/mephistopheles4/stacks/issues/224)
+  owns that, and reading this row as cover for it would be wrong. Disposition
+  `repaired`.
+
+⚠️ **The residual worth carrying forward is not in any of the five.** The counter
+records what the source **declares**, and jscpd honours a block only when no code
+follows it — measured. So the declared count and the lines jscpd actually removed
+are different numbers, and `total-lines + ignored-lines` is an approximation
+rather than an identity. Two cases in `scripts/lib/duplication.test.ts` pin the
+behaviour, so a jscpd that fixes it goes red here rather than moving eight series
+at once with nothing to point at.

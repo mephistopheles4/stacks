@@ -47,13 +47,19 @@
 # evaluation. Built in bash instead, and echoed, so the value is inspectable in
 # the log rather than inferred from what it did.
 #
-# ⚠️ The four complexity names are on both `--expect` lists and on neither
-# `--failed` list, and that asymmetry is the design rather than an omission. The
-# counter runs *inside* `pnpm metrics:emit` rather than as a step of its own, so
-# there is no exit code here for the usual `[ status = 0 ] || add` line to read.
-# The emitter sees its own failure and names the four itself — which is also why
-# a population that yields no function fails all four together: a partial record
-# would read `run_ok 1` with a scope silently gone.
+# ⚠️ The four complexity names and the eight duplication names are on both
+# `--expect` lists and on neither `--failed` list, and that asymmetry is the
+# design rather than an omission. Both counters run *inside* `pnpm metrics:emit`
+# rather than as steps of their own, so there is no exit code here for the usual
+# `[ status = 0 ] || add` line to read. The emitter sees its own failure and
+# names them itself — which is also why a population that yields nothing fails
+# its whole group together: a partial record would read `run_ok 1` with a
+# population silently gone.
+#
+# ⚠️ The duplication names are on the MERGE list too, and jscpd is the reason
+# it is affordable: the ten runs it needs take seconds, against the Stryker run's
+# hour. Duplication is also the measure a per-pull-request reading is worth most
+# for — a clone arrives in one diff.
 #
 # ⚠️ There is no `continue-on-error` here, deliberately, and the repo still has
 # zero. Both jobs need a failing step to keep going — a crashed run writes
@@ -147,7 +153,7 @@ jobs:
           [ "${{ steps.suite.outputs.status }}" = "0" ] || FAILED="gate-suite-runtime"
           echo "series whose step failed: [$FAILED]"
           pnpm metrics:emit \
-            --expect gate-suite-runtime,complexity-functions,complexity-mass,complexity-mass-over-10,complexity-max \
+            --expect gate-suite-runtime,complexity-functions,complexity-mass,complexity-mass-over-10,complexity-max,duplication-clones,duplication-lines,duplication-ignored-lines,duplication-total-lines,duplication-tree-clones,duplication-tree-lines,duplication-tree-ignored-lines,duplication-tree-total-lines \
             --failed "$FAILED" \
             --suite-seconds "${{ steps.suite.outputs.seconds }}" \
             --commit "${{ github.sha }}" \
@@ -229,7 +235,7 @@ jobs:
           [ "${{ steps.mutation.outputs.status }}" = "0" ] || add "mutation-score,mutation-run-runtime,live-exclusions"
           echo "series whose step failed: [$FAILED]"
           pnpm metrics:emit \
-            --expect mutation-score,gate-suite-runtime,mutation-run-runtime,live-exclusions,complexity-functions,complexity-mass,complexity-mass-over-10,complexity-max \
+            --expect mutation-score,gate-suite-runtime,mutation-run-runtime,live-exclusions,complexity-functions,complexity-mass,complexity-mass-over-10,complexity-max,duplication-clones,duplication-lines,duplication-ignored-lines,duplication-total-lines,duplication-tree-clones,duplication-tree-lines,duplication-tree-ignored-lines,duplication-tree-total-lines \
             --failed "$FAILED" \
             --report artifacts/stryker/current/mutation.json \
             --suite-seconds "${{ steps.suite.outputs.seconds }}" \

@@ -24,6 +24,10 @@ import { join } from 'node:path';
 // floor — including the deploy, which computes no count and only compares two
 // strings.
 import type { CounterInputs } from './complexity.ts';
+// Type-only for `complexity.ts`'s reason one line up: `duplication.ts` spawns a
+// subprocess and walks the tree, and a value import here would drag both into
+// the deploy, which computes no count and only compares two strings.
+import type { DuplicationInputs } from './duplication.ts';
 import { METRIC_PREFIXES, type TrendName } from './metrics.ts';
 import {
   MERGE_EVENT,
@@ -434,6 +438,33 @@ export function fixtureHashOf(inputs: CounterInputs): string {
     canonical(inputs.ruleOptions),
     canonical(inputs.inventory),
   ]);
+}
+
+/**
+ * What the duplication counts *mean*, as one string.
+ *
+ * `fixtureHashOf`'s job for the second tool, and it lives beside it for the
+ * reason `digest` gives one function up: this module now stamps **three**
+ * things, and a digest written three times is free to drift in whichever copy
+ * nobody re-reads.
+ *
+ * ⚠️ **A third hash rather than an ingredient in the second, and the cost of
+ * folding them is measured in both directions.** jscpd reads no ESLint version,
+ * no parser version, no `complexity` rule options and no inventory; ESLint
+ * reads no token threshold. One hash over both would make an ESLint upgrade
+ * refuse every duplication record and a jscpd upgrade refuse every complexity
+ * record — in each case over a number that did not move, which is the exact
+ * false refusal `SCORE_NEUTRAL_OPTIONS` exists to keep out of the other two.
+ *
+ * **The version and its three thresholds, in that order**, positional in an
+ * array so the order is structural rather than a promise in a comment.
+ * [#232](https://github.com/mephistopheles4/stacks/issues/232) measured **12
+ * clones at 50/5 and 82 at 20/3 over the identical tree**, so a threshold is
+ * not a setting around the number — it *is* the number, and a record stamped
+ * under another one is refused rather than compared.
+ */
+export function duplicationHashOf(inputs: DuplicationInputs): string {
+  return digest([inputs.jscpdVersion, inputs.minTokens, inputs.minLines, inputs.mode]);
 }
 
 /**
