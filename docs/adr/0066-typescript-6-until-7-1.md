@@ -56,6 +56,11 @@ spike:
   its premise stopped being true**: the pin is not being paid for one tool.
   0003's mitigation — no logic in `.astro` files — is untouched here, and whether
   `astro check` becomes a gate row is a separate scoreboard conversation.
+  ✅ **Held on 2026-08-23**: that conversation reached a row, **G50**
+  (`astro-types`), and *"one real pre-existing type error"* is the TS2717 in
+  `boot.ts` that [#250](https://github.com/mephistopheles4/stacks/issues/250)
+  fixed. 0003's mitigation still stands, on a warrant this record's own debt
+  paragraph below now discharges.
 
 ## What ships with it, and what deliberately does not
 
@@ -114,7 +119,9 @@ and is kept as fog on
   [`docs/gates.md`](../gates.md) — G7's failure-mode column said `astro check`
   *cannot run under TS 7*, and that is the scoreboard's stated warrant for the
   row, not history; it now says the tool runs and is not wired in, which is a
-  choice. [`docs/spec/mutation-scoring.md`](../spec/mutation-scoring.md) — §1 on
+  choice. ⚠️ **That sentence lasted eight days**: at G50 the tool *is* wired in,
+  and G7's column was rewritten again — this time replacing the warrant rather
+  than narrowing it. [`docs/spec/mutation-scoring.md`](../spec/mutation-scoring.md) — §1 on
   the dead checker and §8's requirement that `stryker.config.*` carry *"the
   `tsconfigFile` workaround with its comment"*, both footnoted as superseded
   rather than rewritten, per that folder's own rule for a locked spec.
@@ -132,6 +139,30 @@ and is kept as fog on
   constitution ahead of a decision about whether `astro check` becomes a gate row
   is how a red build happens in this repo. It moves with that decision. Until
   then this record is what a reader finds first, from `docs/adr/`.
+
+  > ✅ **Debt discharged 2026-08-23, by G50 (`astro-types`).** The decision this
+  > paragraph waited on was made: `astro check` runs inside `pnpm build` and
+  > takes a row. `AGENTS.md`'s note moved in that commit, along with the root
+  > `tsconfig.json` comment, G7's own docblock and failure message, and the
+  > three site-module comments carrying the same sentence — swept as a class
+  > rather than fixed where a reviewer pointed. ⚠️ **No total is given here on
+  > purpose**: the sweep was counted twice before the landing and was short both
+  > times, and a third figure written down would be the fourth confident number
+  > in a paragraph about claims that go stale. The grep is the artifact —
+  > `git grep -n -iE "astro check|@astrojs/check|not typechecked|cannot run
+  > under"`. **The
+  > constitution's rule did not change**; only its reason did, from *`.astro` is
+  > untypechecked* to *`.astro` is counted by nothing*.
+  >
+  > ⚠️ **And the pin gained a dependent it did not have when this record was
+  > written.** The paragraph above says the tools under the pin are wanted *"for
+  > what they compute"*; one of them is now load-bearing in `pnpm build`.
+  > `@astrojs/check@0.9.10` declares `peerDependencies: { typescript: '^5.0.0 ||
+  > ^6.0.0' }`, so **this record's own revisit condition — TypeScript 7.1 —
+  > un-runs G50 unless the checker has widened by then.** That is asserted
+  > rather than written down: `gates/astro-types.test.ts` reads the pin and goes
+  > red if it leaves the supported range, so the revisit meets the coupling as a
+  > failing test rather than as a paragraph somebody has to remember.
 
 ## What was rejected
 

@@ -157,8 +157,12 @@ it with no provenance at all.
   `@stacks/core/shelf-order` — that imports nothing.
 - **Site code layout: no logic in `.astro` files.** They hold markup, styles, and
   a `<script>` that imports and calls a `.ts` module — nothing more. `.astro`
-  files are NOT typechecked (`astro check` cannot run under TypeScript 7 yet),
-  so anything with a type lives in a `.ts` file, where `pnpm build` checks it.
+  frontmatter **is** typechecked, by `astro check` inside `pnpm build` (G50,
+  `astro-types`); the rule stands on a different footing. **Logic in an `.astro`
+  file is counted by nothing**: all eight globs in `stryker.scopes.json` end
+  `*.ts` and the complexity populations are those same globs, so a function
+  there earns no mutation score and no complexity series. Anything with a type
+  or a branch lives in a `.ts` file, where the counters can see it.
 - Metadata: **four providers, in this order** — Open Library first, Google Books as the fallback (needs `GOOGLE_BOOKS_API_KEY`; unauthenticated requests share one exhausted quota and 429 every time), O'Reilly last and only when neither of those actually found the book, and Apple Books consulted *only* for cover art, because its artwork is ~800x1200 against Google's ~128px. Cache all API responses in `.cache/` so tests and rebuilds don't re-hit APIs.
 - **O'Reilly** — unauthenticated, one search endpoint serving both title and ISBN lookups (`query=<isbn>&field=isbn`), and the sole source for its own early releases, covers included: Open Library answers their ISBNs with a 43-byte placeholder and Apple has never heard of them. Cover URLs are built from the response's `ourn`, at 1200w to match Apple — the endpoint serves up to 2000, but `MAX_COVER_EDGE` resizes every published cover to 512, so anything larger costs vault bytes and reaches no shelf. **Its library URLs end in an internal `archive_id`, never the ISBN** — for one book that id is `0642572352530`, which passes an ISBN-13 check digit while starting `064`; for another it is a well-formed 979 ISBN that is still *seven off* the book's real one, so a check-digit test does not catch it. Take the ISBN from the response body. See [ADR-0038](docs/adr/0038-oreilly-is-a-fourth-provider.md).
 - **Which provider answered and which provider's bytes you kept are different questions.** The metadata layer completes one provider's record from another's, so a book's `source` need not be where its cover came from. `cover_source` is derived from the URL actually downloaded.
@@ -208,7 +212,7 @@ pnpm lint                # G46: the tuned type-checked rule set over every .ts
 pnpm test                # vitest: packages/**/src and gates/
 pnpm format              # Prettier over code — Markdown and fixtures/ excluded
 pnpm format:check        # the same check, reporting instead of writing (.astro reaches neither)
-pnpm build               # typecheck, then astro build
+pnpm build               # typecheck, then astro check (G50), then astro build
 pnpm dev                 # site dev server
 pnpm dev:watch           # site + rebuild on every vault change
 pnpm lint:md             # the Markdown gate: the narrow rule set over tracked docs

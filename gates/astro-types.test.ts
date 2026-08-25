@@ -1,0 +1,197 @@
+/**
+ * G50 — `astro check` runs inside `pnpm build`, so `.astro` frontmatter is
+ * typechecked by something.
+ *
+ * ## The gap this closes
+ *
+ * G7 (`astro-no-logic`) reads the `<script>` blocks of an `.astro` file as
+ * text. The compiler does not read `.astro` files at all, and the reason is the
+ * root tsconfig's **include** list, which names only `.ts` sources. ⚠️ **Not
+ * its `**\/.astro` exclusion, which is a different thing entirely**: that is a
+ * full-path glob whose last segment must be exactly `.astro`, so it excludes
+ * the *generated types directory* `packages/site/.astro/` and never matches a
+ * file called `index.astro`. Said precisely because the sibling comment in
+ * `packages/site/tsconfig.json` turns on the same distinction. So the
+ * **frontmatter** —
+ * the fenced block at the top of every page, which is real TypeScript that
+ * really runs at build time — was read by no gate and typechecked by nothing.
+ *
+ * Measured, not supposed. `absoluteUrl(42, Astro.site)` planted in
+ * `packages/site/src/pages/index.astro` passed `pnpm typecheck`, passed G7 five
+ * of five, passed `pnpm build`, and shipped `<meta property="og:image"
+ * content="42">` **and** `<meta name="twitter:image" content="42">` into
+ * `dist/index.html`. A broken share card through every gate this repository
+ * has. See docs/log/2026-08-23-the-terrain-for-astro-check.md.
+ *
+ * ## What this file asserts, and what runs the actual check
+ *
+ * ⚠️ **The gate is `astro check`; this file is the pin that keeps it wired.**
+ * The check itself runs as the first half of `packages/site`'s `build` script,
+ * inside `pnpm build`, which the `suite` matrix already runs — verified, not
+ * quoted: `.github/workflows/gates.yml:81-82` is a `build` step running
+ * `pnpm build`, on every Node version in the matrix. So a type error in an
+ * `.astro` page fails CI at the build, not here.
+ *
+ * That leaves the wiring, and a gate living only as a substring of one npm
+ * script is exactly G45's finding: `--skip-gates` skipped the whole four-gate
+ * contract and lived for nineteen of its twenty-one days in two lines of one
+ * file, both the implementation. So **four clauses**, one per `it()` below, and
+ * each is separately sufficient to un-wire the check:
+ *
+ * 1. `packages/site`'s `build` script runs `astro check` **before** `astro
+ *    build`. Order matters: after it, a red type error still ships a `dist/`.
+ * 2. The root `build` script still delegates to it, so `pnpm build` reaches
+ *    the check at all.
+ * 3. `@astrojs/check` is a dependency of that package, pinned exact. Without
+ *    it `astro check` is not a command and the script fails for the wrong
+ *    reason on a fresh checkout.
+ * 4. `typescript` stays inside the range that checker supports — the coupling
+ *    the next paragraph but one explains.
+ *
+ * ⚠️ **It proves the wiring, never the checker's verdict** — G40's stated
+ * limit and G44's, reached again. Nothing offline can make this file observe
+ * `astro check` finding a real error; that observation is the perturbation
+ * recorded on this row in `docs/gate-register.md`, and it is why the register
+ * requires an Observed-red line rather than trusting a green suite.
+ *
+ * ⚠️ **`typescript` is pinned to 6.x and that is load-bearing here.**
+ * `@astrojs/check@0.9.10` declares `peerDependencies: { typescript: '^5.0.0 ||
+ * ^6.0.0' }`, so it does not support TypeScript 7. ADR-0066's revisit
+ * condition is TypeScript 7.1, and moving that pin un-runs this gate unless
+ * `@astrojs/check` has widened by then. Asserted below so the coupling cannot
+ * be discovered by a red build in a branch about something else.
+ *
+ * See docs/gates.md, row G50 (astro-types).
+ */
+
+import { describe, expect, it } from 'vitest';
+import { readRepoFile } from './repo.ts';
+
+const SITE_MANIFEST = 'packages/site/package.json';
+const ROOT_MANIFEST = 'package.json';
+
+interface Manifest {
+  readonly scripts?: Record<string, string>;
+  readonly dependencies?: Record<string, string>;
+  readonly devDependencies?: Record<string, string>;
+}
+
+function manifest(path: string): Manifest {
+  return JSON.parse(readRepoFile(path)) as Manifest;
+}
+
+/**
+ * One npm script split into the commands `&&` actually sequences.
+ *
+ * ⚠️ **Substring matching is not enough here, and review caught it.** An
+ * `indexOf('astro check')` is satisfied by `astro check; astro build`, where a
+ * failed check does **not** stop the build — the exact defect the ordering
+ * clause exists for, passing the clause written to catch it. It is also
+ * satisfied by `echo "astro check" && astro build`, which runs no checker at
+ * all. Both are *satisfying the letter*, which is the verdict this row's own
+ * register entry carries.
+ *
+ * Splitting on `&&` alone is what makes the difference: `;` and `|` never
+ * produce a segment that *begins* with the command, so a segment test rejects
+ * them by construction rather than by enumerating them.
+ */
+function commands(script: string): string[] {
+  return script
+    .split('&&')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
+/** The index of the first command that is `name`, run as a command. */
+function indexOfCommand(script: string, name: string): number {
+  return commands(script).findIndex((command) =>
+    new RegExp(`^${name.replace(/ /g, '\\s+')}(\\s|$)`).test(command),
+  );
+}
+
+describe('G50 — the check is wired into the build', () => {
+  it('runs `astro check` in the site build script, before `astro build`', () => {
+    const script = manifest(SITE_MANIFEST).scripts?.build ?? '';
+    const check = indexOfCommand(script, 'astro check');
+    const build = indexOfCommand(script, 'astro build');
+
+    expect(
+      check,
+      `${SITE_MANIFEST}'s \`build\` script must run \`astro check\` as a command in an ` +
+        '`&&` chain. Without it .astro frontmatter is typechecked by nothing, and a ' +
+        'wrong-typed value reaches dist/ through a green build. ⚠️ `astro check; astro ' +
+        'build` does not count — `;` runs the build whatever the check said — and ' +
+        `neither does the string appearing inside another command. Script is: ${script}`,
+    ).toBeGreaterThanOrEqual(0);
+
+    // Order, not merely presence. `astro build && astro check` still reports the
+    // error, and still writes the dist/ that carries it — which is the failure
+    // this row exists for rather than a tidier arrangement of the same one.
+    expect(
+      build,
+      `${SITE_MANIFEST}'s \`build\` script must still run \`astro build\`: ${script}`,
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      check,
+      '`astro check` must run BEFORE `astro build`. Ordered the other way the check ' +
+        'still reports the error and the build has already written the output carrying ' +
+        `it: ${script}`,
+    ).toBeLessThan(build);
+  });
+
+  it('reaches the site build from `pnpm build`', () => {
+    // The clause above is a fact about a script nothing calls unless this holds.
+    const script = manifest(ROOT_MANIFEST).scripts?.build ?? '';
+
+    // Same shape as the clause above, and for the same reason: a regex over the
+    // whole string matches `echo "--filter @stacks/site run build"`, which
+    // delegates to nothing. The delegation has to be a command.
+    expect(
+      indexOfCommand(script, 'pnpm --filter @stacks/site run build'),
+      "the root `build` script must delegate to @stacks/site's build as a command in an " +
+        '`&&` chain, or `pnpm build` never reaches `astro check` and the clause above ' +
+        `pins an orphan: ${script}`,
+    ).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('G50 — the checker is installed, and installable', () => {
+  it('declares `@astrojs/check` on the site package, pinned exact', () => {
+    const site = manifest(SITE_MANIFEST);
+    const version =
+      site.devDependencies?.['@astrojs/check'] ?? site.dependencies?.['@astrojs/check'];
+
+    expect(
+      version,
+      `\`astro check\` is not a command without @astrojs/check. ${SITE_MANIFEST} must ` +
+        'declare it, or the build script above fails on a fresh checkout for a reason ' +
+        'that looks nothing like the one it exists for.',
+    ).toBeDefined();
+
+    // Exact, per docs/spec/static-analysis-and-style.md §9: a tool upgrade that
+    // adds rules reddens an unchanged tree, and every tool this rollout adopts
+    // is pinned so that arrives as a diff somebody chose.
+    expect(
+      version,
+      `@astrojs/check must be pinned exact, not "${version}". A range lets a minor bump ` +
+        'redden a tree nobody touched, which is how a gate gets weakened to make it pass.',
+    ).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  it('keeps `typescript` inside the range @astrojs/check supports', () => {
+    // The coupling ADR-0066 does not carry yet. Its revisit condition is
+    // TypeScript 7.1; @astrojs/check@0.9.10's peer range is `^5 || ^6`, so the
+    // pin moving to 7 un-runs this gate. Asserted here rather than left for a
+    // branch about the compiler to discover.
+    const version = manifest(ROOT_MANIFEST).devDependencies?.typescript ?? '';
+
+    expect(
+      version,
+      'the root `typescript` pin must stay on 5.x or 6.x while @astrojs/check is the ' +
+        `checker: its peerDependencies are \`^5.0.0 || ^6.0.0\`, so "${version}" leaves ` +
+        'this gate running against an unsupported compiler or not running at all. ' +
+        'Moving the pin (ADR-0066 revisits at TypeScript 7.1) means checking that ' +
+        '@astrojs/check has widened first.',
+    ).toMatch(/^[\^~]?[56]\./);
+  });
+});

@@ -11,7 +11,12 @@ import { bookLimit, readSettings, soloBook } from './shelf-url.ts';
  * Wires the page up: load the library, mount the shelf, show a card on click.
  *
  * All of this lives in a .ts module rather than in the .astro file because
- * .astro files are not typechecked (see "Site code layout" in CLAUDE.md).
+ * logic in an .astro file is counted by nothing: every mutation scope and every
+ * complexity population globs `*.ts`. See "Site code layout" in AGENTS.md.
+ *
+ * It is no longer true that .astro is untypechecked -- G50 (`astro-types`) runs
+ * `astro check` inside `pnpm build` -- and that is exactly why the rule now
+ * rests on coverage rather than on the compiler.
  */
 
 declare global {

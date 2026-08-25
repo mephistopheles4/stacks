@@ -4,8 +4,12 @@ import { boot } from './boot.ts';
  * The page's one entry point: find the elements, hand them to `boot`.
  *
  * This lives in a `.ts` module rather than in `Shelf.astro`'s `<script>` because
- * `.astro` files are not typechecked — `astro check` cannot run under TypeScript
- * 7 — so anything with a type belongs here, where `pnpm build` checks it. G7
+ * logic in an `.astro` file is counted by nothing — every mutation scope and
+ * every complexity population globs `*.ts` — so anything with a type belongs
+ * here, where the counters can see it. ⚠️ **It is typechecked either way now**:
+ * G50 (`astro-types`) runs `astro check` inside `pnpm build`, so the reason this
+ * paragraph used to give — *`astro check` cannot run under TypeScript 7* — is
+ * no longer the reason, and coverage is. G7
  * caps a script block at a handful of bootstrap statements for that reason, and
  * the card's five elements put it over: the guard that was two `instanceof`
  * checks is now five, which is exactly the point where a bootstrap turns into a

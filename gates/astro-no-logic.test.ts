@@ -1,13 +1,27 @@
 /**
  * G7 — no logic in `.astro` files.
  *
- * `.astro` files are not typechecked. `@astrojs/check` cannot run under
- * TypeScript 7 — TS 7's native compiler does not expose the programmatic API
- * the Astro language server needs — and pinning the repo back to TS 6 to
- * satisfy one tool costs more than it returns. So the mitigation is a rule
- * instead of a compiler: markup, styles, and a `<script>` that imports a `.ts`
- * module and calls it. Nothing else. `tsc --noEmit` covers every `.ts` in the
- * repo, so anything with a type must live where tsc can see it.
+ * ⚠️ **This row's warrant was replaced, not narrowed, when G50 (`astro-types`)
+ * landed.** It opened: *"`.astro` files are not typechecked. `@astrojs/check`
+ * cannot run under TypeScript 7 … So the mitigation is a rule instead of a
+ * compiler."* Both halves are now false. `@astrojs/check@0.9.10` runs against
+ * the 6.x pin ADR-0066 chose, and `astro check` runs inside `pnpm build`, so a
+ * compiler reads these files. The old sentence was the entire reason this row
+ * existed, which is why the register dispositioned its decay `gated` against a
+ * remedy nobody built; landing the checker closed it the other way instead.
+ *
+ * **What holds now is coverage, not typechecking.** `.astro` sits outside
+ * **one** scope list, which both counters read: all eight globs in
+ * `stryker.scopes.json` end `*.ts`, and `scripts/lib/complexity.ts`'s
+ * `populationOf` takes its population from those same globs minus
+ * `*.test.ts`. So a function in an `.astro` file is typechecked and still
+ * earns no mutation score and no complexity series — counted by nothing. The
+ * rule is what stands in for that: markup, styles, and a `<script>` that
+ * imports a `.ts` module and calls it. Nothing else.
+ *
+ * ⚠️ **And the two gates read different halves of the file, which is why both
+ * exist.** This one reads `<script>` blocks as text; `astro check` typechecks
+ * the frontmatter. Neither sees what the other sees.
  *
  * A rule with nothing enforcing it is a comment, which is what docs/gates.md
  * was written to stop. This is the enforcement.
@@ -161,9 +175,11 @@ describe('G7 — no logic in .astro files', () => {
       for (const { token, pattern } of BANNED) {
         expect(
           pattern.test(stripComments(block.body)),
-          `${block.file}: \`${token}\` in a <script> block. .astro is not typechecked ` +
-            '(astro check cannot run under TS 7), so logic here is logic no compiler reads. ' +
-            'Move it into packages/site/src/shelf/*.ts and call it from here.',
+          `${block.file}: \`${token}\` in a <script> block. .astro is typechecked ` +
+            '(G50 runs astro check inside pnpm build) and counted by nothing — every ' +
+            'mutation scope and every complexity population globs *.ts — so logic here ' +
+            'is logic no counter reads. Move it into packages/site/src/shelf/*.ts and ' +
+            'call it from here.',
         ).toBe(false);
       }
     }

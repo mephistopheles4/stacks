@@ -1,0 +1,536 @@
+# The terrain for `astro check`, measured while the gate is still blocked
+
+[#257](https://github.com/mephistopheles4/stacks/issues/257) is hard-blocked by
+[#250](https://github.com/mephistopheles4/stacks/issues/250): `astro check`
+reports one error today, so a gate that runs it lands red. **Nothing about the
+gate is built here.** What this session did instead is the half that does not
+need the block cleared — take the measurements, prove the gate red-capable, and
+survey the addresses that go stale when it lands — so the landing session is a
+wiring change and a set of document edits rather than a fresh investigation.
+
+Written up rather than left in a transcript because two of the four findings
+below contradict a document in this tree, and one of them contradicts
+[`docs/spec/supply-chain.md`](../spec/supply-chain.md).
+
+> ✅ **The block cleared the same evening, and the gate landed in this branch.**
+> [#259](https://github.com/mephistopheles4/stacks/pull/259) merged at
+> `bc59bf9`, and **G50** (`astro-types`) followed —
+> [ADR-0077](../adr/0077-astro-check-is-the-checker-for-astro-files.md).
+> **Everything below is left as written**, because a terrain survey read after
+> the fact is worth more as a record of what was and was not known in advance
+> than as a tidy retrospective. Read the present tense as *"at `2f672b1`,
+> before the landing"* — that includes "still blocked", "#259 is already
+> rewriting", and the whole of "The landing kit", which is a plan that was then
+> executed. Three things in it turned out wrong or short, and each is corrected
+> in place below rather than quietly:
+>
+> - **The sweep undercounts.** Eighteen was not the population either; the
+>   landing swept `docs/adr/0066` (four addresses), `docs/spec/README.md`,
+>   `docs/spec/static-analysis-and-style.md` and
+>   `docs/spec/complexity-on-the-trend-layer.md:203` as well. **Two successive
+>   counts, both confident, both short** — the lesson is not "count again", it
+>   is that a table of hits is a snapshot and the grep is the artifact.
+> - **The gate grew a spec file the kit did not plan.** `gates/astro-types.test.ts`
+>   pins the wiring in four clauses. The kit assumed the register's recorded
+>   perturbation was the whole of criterion 2; a check living only as a
+>   substring of one npm script is [#152](https://github.com/mephistopheles4/stacks/issues/152)'s
+>   finding exactly, and the ordering clause below is the one that would not
+>   have existed without it.
+> - **The ordering was not in the kit and is the sharpest part of the row.**
+>   `astro build && astro check` still reports the error *and has already
+>   written the `dist/` carrying it*. Planted and observed red.
+
+## What was measured, at `2f672b1`
+
+`@astrojs/check@0.9.10` installed into `packages/site` as a dev dependency,
+every measurement taken, then **reverted** — the tree this log commits against
+carries no manifest or lockfile change. The reason is
+[the spec's §7](../spec/static-analysis-and-style.md#7-contract-edits): a
+document edit lands in the same commit as the code it describes, never before
+it, and a dependency nothing runs is the same shape. The secondary reason is
+mechanical — four sibling tickets ([#251](https://github.com/mephistopheles4/stacks/issues/251),
+[#253](https://github.com/mephistopheles4/stacks/issues/253),
+[#254](https://github.com/mephistopheles4/stacks/issues/254),
+[#256](https://github.com/mephistopheles4/stacks/issues/256)) are each adding a
+tool right now, and `pnpm-lock.yaml` is the highest-conflict file in the
+repository this week.
+
+The one command that restores this state:
+
+```sh
+pnpm --filter @stacks/site add -D --save-exact "@astrojs/check@0.9.10"
+```
+
+### 1. The baseline is exactly what the spec predicted
+
+```text
+src/shelf/boot.ts:27:14 - error ts(2717): Subsequent property declarations must
+have the same type.  Property 'env' must be of type 'ImportMetaEnv', but here
+has type '{ readonly DEV: boolean; }'.
+
+Result (44 files):
+- 1 error
+- 0 warnings
+- 0 hints
+```
+
+One error, at the address
+[§4](../spec/static-analysis-and-style.md#s4-runs-inside-pnpm-build) names, over
+the 44 files [ADR-0066](../adr/0066-typescript-6-until-7-1.md) counted. **The
+spec's claim about the block holds at this tip** — worth stating, because it was
+measured on a throwaway branch a week ago and nothing has held it since.
+
+### 2. The gate is red-capable, and the demonstration is banked
+
+[#238](https://github.com/mephistopheles4/stacks/issues/238)'s plant, re-run
+here so the register entry has an Observed-red line gathered under this ticket
+rather than quoted from another. `absoluteUrl('/og.png', Astro.site)` in
+`packages/site/src/pages/index.astro` became `absoluteUrl(42, Astro.site)`.
+
+| Check | Verdict with the plant present |
+| --- | --- |
+| `pnpm typecheck` | **green**, exit 0 |
+| G7 (`astro-no-logic`) | **green**, 5 of 5 |
+| `pnpm build` | **green**, exit 0, 2 pages built |
+| `astro check` | **red** — `src/pages/index.astro:14:29 - error ts(2345): Argument of type 'number' is not assignable to parameter of type 'string'.` |
+
+Plant, run and revert were three separate commands, and the revert is
+byte-clean: `git hash-object` returns `595ac11714af0e8614309c80808238f6ec3e234e`
+on both sides.
+
+⚠️ **The defect ships to two meta tags, not one.** #238 recorded
+`<meta property="og:image" content="42">`; `dist/index.html` also carries
+`<meta name="twitter:image" content="42">`, because both read the same `ogImage`
+binding. The blast radius of the one gap is one line larger than the ticket that
+found it says.
+
+### 3. `.astro` is outside the mutation and complexity scopes **by one list, not two**
+
+The ticket's wording — *"both of which glob TypeScript only"* — is true and
+understates the coupling. There is **one** scope list.
+[`stryker.scopes.json`](../../stryker.scopes.json) declares eight scopes, every
+glob ending `*.ts`, and `scripts/lib/complexity.ts`'s `populationOf` takes
+`scope.glob` from that same file and subtracts `*.test.ts`. So the two measures
+do not independently happen to miss `.astro`; they miss it **once**, and no edit
+to either counter can change that without changing the other.
+
+⚠️ **And the module the plant actually corrupted is outside both as well.**
+`packages/site/src` is an *excluded directory* in `stryker.scopes.json`, on the
+recorded mechanism that its files "are imported only by `.astro` pages, which
+are not in the Vitest project". `site-meta.ts` — whose `absoluteUrl` the plant
+miscalls — therefore sits in no mutation scope and no complexity population
+either. The value crossed from an unscored `.astro` file into an unscored `.ts`
+file and out to `dist/`.
+
+⚠️ **Corrected: this is a companion to G7's replacement warrant, not the
+sharper form of it.** `site-meta.ts` is a `.ts` file G7 never looks at, so
+nothing here widens G7's reach. What the paragraph shows is that the *unscored*
+region is wider than the `.astro` files themselves — a fact about the scope
+list. G7's warrant is the paragraph above this one, and that is what the row
+now carries.
+
+### 4. The supply-chain specimen moves; it does not close
+
+[`docs/spec/supply-chain.md`](../spec/supply-chain.md) §5, under *"`SECURITY.md`'s
+unverifiable clause is extended, not tiered"*, holds G7's warrant —
+*"`@astrojs/check` cannot run under TypeScript 7"* — up as the second claim whose
+truth-maker is outside the repository, on the ground that the package **"is not a
+dependency at any version, so no run here can contradict it and none ever
+could."**
+
+⚠️ **Installing it does not settle that.** The repository is pinned to
+`typescript@6.0.3` by [ADR-0066](../adr/0066-typescript-6-until-7-1.md), so a run
+here tests the tool against TS 6 and says nothing about TS 7. The specimen
+survives, with a narrower reason: *unfalsifiable without unpinning the compiler*
+rather than *unfalsifiable because the tool is absent*. **But "not a dependency
+at any version" and "none ever could" both go flatly false the moment the
+landing commit installs it**, and they must be edited in that commit — the
+second of them is the load-bearing half, because it is a claim about every
+possible future state of this repository and one `pnpm add` disproves it.
+
+What *is* new evidence, and is obtainable offline: `@astrojs/check@0.9.10`
+declares `peerDependencies: { typescript: '^5.0.0 || ^6.0.0' }`. The package
+itself says it does not support TS 7. That is a manifest in this tree's own
+lockfile once installed — weaker than a run, stronger than prose, and the first
+in-repository evidence the sentence has ever had.
+
+⚠️ **It is also a standing coupling, not a one-off.** ADR-0066's revisit
+condition is TypeScript 7.1. That peer range excludes 7.x, so **moving the pin
+un-runs this gate** unless `@astrojs/check` has widened by then. ADR-0066 says
+the tools under the pin "are wanted for what they compute"; after this gate
+lands, one of them is load-bearing in `pnpm build`, and the revisit gets a
+dependency it does not have today.
+
+## The landing kit
+
+Apply after #250 is on `main`, all in **one commit**.
+
+### Wiring
+
+Put `astro check` in **`packages/site/package.json`**'s `build` script:
+
+```json
+"build": "astro check && astro build"
+```
+
+⚠️ **Not a new root script**, and that is a measured choice rather than taste.
+G14 (`commands`) reads `JSON.parse(readRepoFile('package.json'))` — the **root**
+manifest only, `gates/commands.test.ts:46`. A root-level `astro:check` script
+would owe an `AGENTS.md` Commands line and a `docs/commands.md` section in both
+directions; the site-level edit owes neither, keeps `astro check` inside
+`pnpm build` exactly as [§4](../spec/static-analysis-and-style.md#s4-runs-inside-pnpm-build)
+requires, and satisfies acceptance criterion 5 by having no new script to
+declare. **Say so in the commit** — a criterion discharged by "there is nothing
+to do" reads as an oversight otherwise.
+
+### The row, and why its number is not written here
+
+Slug **`astro-types`**. The highest live row is **G45**, and #251, #253, #254
+and #256 are each landing rows concurrently — so the number is **not knowable
+until the rebase**, which is `docs/spec/README.md`'s own rule and the trap
+[#231](https://github.com/mephistopheles4/stacks/issues/231) already fell into.
+Pick it against a re-fetched `main`. The same holds for the ADR number if one is
+written: §8 calls 0071 free and three sibling tickets may disagree by then.
+
+⚠️ **They did, within the hour, and the numbering turned out to be the sharpest
+thing this session learned.** Both are recorded in "What the numbers cost",
+below.
+
+**The row goes in the `## Defect gates` table** (`docs/gates.md:342`,
+`Row | Name | Rule | Gate | Status`), not the contract-seams table G7 sits in.
+**G42 (`dependency-audit`) is the precedent** and the answer to "what does the
+Gate column point at when the gate is not a vitest file": G42's cell names the
+CI job and the command it runs. This row's cell names `astro check`, the
+`packages/site` build script that runs it, and `pnpm build` above that.
+
+### G7's row rewrite (criterion 3)
+
+Today's cell opens *"`.astro` files are not typechecked, so nothing else can
+catch this"*, which stops being true in the same commit. The replacement warrant
+is finding 3 above: `.astro` sits outside the one scope list that both the
+mutation counter and the complexity counter read, so logic there is typechecked
+but **counted by nothing** — and G7's `<script>`-block text scan is what stands
+in for the coverage. Keep the ADR-0066 aside; it is still the history of how the
+warrant narrowed.
+
+### The register section
+
+Five verdict bullets in the exact G41 shape, plus `**Gate:**`, `**Date:**`, an
+`**Observed-red**` line and a `**Rank:**`. The Observed-red line is finding 2 —
+one executed plant, red on `astro check`, green on typecheck, G7 and the build.
+Do **not** write a merged verdict bullet: G41's exemption list is closed and a
+new merged bullet is a red.
+
+### The stale-claim sweep — the class, not the instance
+
+`git grep -n -iE "astro check|@astrojs/check|not typechecked|cannot run under"`
+finds the population — **run it over the whole tree**, including
+`docs/gate-register.md`, which the first sweep here excluded as noise and which
+turned out to hold six of the addresses. Twelve are listed below and six more
+are in the register, called out beneath the table. Every one must move in the
+landing commit:
+
+⚠️ **The line numbers are as of `2f672b1` and are a reading aid, not a
+contract** — [#259](https://github.com/mephistopheles4/stacks/pull/259) is
+already rewriting `packages/site/src/shelf/boot.ts` above one of them. Re-run
+the grep at the rebase and work from its output.
+
+| Address | What it says |
+| --- | --- |
+| `AGENTS.md:153` | "`.astro` files are NOT typechecked (`astro check` cannot run under TypeScript 7 yet)" |
+| `tsconfig.json:7` | "nothing does, because `astro check` cannot run under…" |
+| `gates/astro-no-logic.test.ts:4` | the docblock's opening claim — the whole warrant for the row |
+| `gates/astro-no-logic.test.ts:165` | the same, in the **failure message a human reads** |
+| `packages/site/src/shelf/boot.ts:14` | "not typechecked (see CLAUDE.md)" |
+| `packages/site/src/shelf/start.ts:7` | "`astro check` cannot run under TypeScript…" |
+| `packages/site/src/site-meta.ts:18` | the same, in the module the plant corrupts |
+| `docs/gates.md:101` | G7's row — criterion 3 |
+| `docs/progress.md:194` | the environment-findings row, "whether it becomes a gate row is open" |
+| `docs/spec/complexity-on-the-trend-layer.md:185, 203, 473, 503` | ⚠️ **four, and only `:473` says "recorded as fog"** — this row read *"recorded as fog, three times"* and was wrong twice over: `:185` is a dated before/after measurement cell, `:503` reads "(`astro check` as a gate)", and `:203` — *"`astro check` in the gates is the same: fog, not this spec"* — was missed entirely. Corrected here rather than in the table alone, because the wrong version is the one `docs/progress.md` quoted |
+| `docs/spec/enhanced-card.md:430` | "`.astro` is not typechecked, so anything with a type lives in a `.ts` file" |
+| `docs/spec/supply-chain.md:292` | finding 4 — the clause that goes false |
+
+⚠️ **`docs/adr/0003-site-import-type-only.md:11` is on the list and is handled
+differently.** It is a dated decision record, and this repo's rule is that an ADR
+carries its original reasoning verbatim. Mark it superseded; do not rewrite it.
+
+⚠️ **`docs/gate-register.md` carries six more addresses and takes the same
+treatment**, for the same reason: it records dated findings, and its own idiom
+for a claim that has moved is a *"⚠️ corrected …"* annotation in place. Line 900
+is the decay verdict table; 1869 and 1954 quote the warrant; 1969 is the
+measurement *"`@astrojs/check` is not a dependency of this repo at any version"*,
+which the landing commit falsifies outright. Line 1973's
+`git log --all -S '@astrojs/check'` finding stays true — it is a claim about the
+history as of 2026-08-15 — but it stops being an argument, and the entry should
+say which of the two it is. **The decay disposition on that entry is `gated`
+against a remedy that was never built; landing this gate closes it the other
+way, and the entry should say so rather than leaving a `gated` line pointing at
+nothing.**
+
+⚠️ **Line 1957 is stale already and not because of this ticket.** It attributes
+*"`.astro` files are NOT typechecked (`astro check` cannot run under TypeScript 7
+**yet**)"* to `CLAUDE.md`; the constitution moved to `AGENTS.md` on 2026-08-19
+and that is where the sentence lives now. Fix the attribution in the same pass —
+it is one word, and a register that misnames where a quoted claim lives is the
+failure it exists to catalogue.
+
+⚠️ **`fixtures/README.md:136` and [`docs/adr/0067-the-counters-inputs-are-pinned-exact.md:102`](../adr/0067-the-counters-inputs-are-pinned-exact.md) match the grep and are
+not in this class** — both are about the complexity fixture being untypechecked,
+which this change does not touch. Named here so the next reader does not have to
+re-establish it.
+
+The register already dispositioned G7's decay finding `gated`, on a named remedy
+that was never built: *date the claim with the versions it was established
+against*. Landing this gate is the other way to close it — the claim stops being
+load-bearing because the compiler runs.
+
+### Checklist
+
+1. Rebase onto `main` after #250 lands; re-read `docs/gates.md` for the highest
+   row **then**, not now.
+2. Install the dependency, note it in `docs/adr/` per `AGENTS.md`.
+3. Wire the site `build` script.
+4. All document edits — row, register section, G7 rewrite, the twelve addresses,
+   `docs/progress.md` — in the **same commit**.
+5. `pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render`.
+
+## Coordination
+
+#250 is live in a parallel session (worktree `mattpocock-skills-250-d1a891`),
+messaged from here with the baseline above and a request to ping on merge. **The
+assignee could not have told anyone that** — every session here authenticates as
+one account, so the tracker cannot distinguish *mine, a minute ago* from *free
+to take*, which is why the check was a session lookup matched on worktree name
+and not a `gh` query.
+
+## What the numbers cost
+
+Six sessions worked this map in parallel. **Four of them ended up holding G46**
+— `markdown` (#251), `lint` (#253), `ignored-clones` (#254) and `astro-types`
+(#257) — and four wrote an ADR numbered `0071`.
+
+⚠️ **The finding is not that numbers collided. It is that the fix for the
+collision was invented twice, independently, and was worse than the problem.**
+The #253 session proposed a reservation list — G46 to itself, G47 to #251, G48
+to #256, G49 to #257 — and propagated it to four sessions before anyone read
+`gates/constitution-scoreboard.test.ts`. Two of the four had to check it and
+send it back. Then **#254 arrived at the same scheme from scratch**, with no
+contact with #253, and told it *"next free for you is G47"*. An idea that two
+isolated sessions reach independently is not one session's lapse; it is an
+attractive wrong answer, and that is the thing worth recognising in yourself.
+Recorded with the sessions named at #253's own request — *"a write-up that says
+three sessions took the same number describes a coincidence"*.
+
+**Reserving a gate row number is worse than not reserving one, and G19 is the
+reason.** `gates/constitution-scoreboard.test.ts` asserts two things about the
+numbering: *"numbers every row uniquely"* at `:432`, and *"leaves no gap in the
+row numbering"* at `:439`, which walks `for (let n = 1; n < (numbers.at(-1) ??
+0); n += 1)` and reddens on any hole below the maximum. So a branch that takes
+G47 while G46 sits on somebody else's unmerged branch produces rows 1..45 and
+47 — a hole at 46 — and goes red. **A reservation list therefore reddens
+everyone except whoever merges first**, and the order it assumes is exactly the
+thing nobody controls.
+
+**What works is the rule the specs already state and this effort kept not
+following**: a row's number is not knowable until it lands. Several branches all
+holding G46 is the *correct* state and costs nothing. Everyone renumbers at the
+rebase immediately before their own merge, against the real tip.
+`docs/progress.md`'s "Rollout numbering" row has said so since band four —
+*"No number is reserved here"* — and this is the fifth pre-allocated number in
+this project to go stale.
+
+✅ **And it resolved exactly that way, which is the point.**
+[#261](https://github.com/mephistopheles4/stacks/pull/261) merged first, so
+**G46 is `lint`** and this row became **G47** at that rebase — read off `main`'s
+own `docs/gates.md` rather than taken from the message announcing it, which is
+the rule this page spends its length on. The renumber moved **two** files, per
+G41: the row in `docs/gates.md` and the `### G<n> — \`astro-types\`` heading in
+`docs/gate-register.md`.
+
+⚠️ **And then it moved twice more, which is the honest shape of it.** #262 took
+G47 for `ignored-clones`, #264 took G48 for `markdown`, #267 took G49 for
+`format`, and this row landed at **G50** — merging last in an agreed order, onto
+a `main` nothing would move under it again. **The number changed four times and
+cost four renumbers**, and that is the *cheap* outcome: a reservation list would
+have spent the same effort and reddened builds while doing it, because G19's
+gapless walk punishes the hole and not the duplicate. Nobody was ever blocked
+and nothing was lost.
+
+⚠️ **And then the same session got the number wrong again, on the right
+surface.** After #262 merged, this session read `main`'s `docs/gates.md`,
+reported *"no gate row, so the highest is still G46"*, and was corrected by
+#254 — whose row **G47 `ignored-clones` was right there in the file.**
+
+The rule was followed and the answer was still wrong, which is the interesting
+part. The query was:
+
+```sh
+git show origin/main:docs/gates.md \
+  | Select-String '^\| \*\*(G\d+)\*\*' | Select-Object -Last 4
+```
+
+**`docs/gates.md` holds three tables** — *Invariants → gates*, *Contract seams →
+gates*, *Defect gates* — so **file order is not numeric order**. `G47` landed in
+the *second* table at line 118; `-Last 4` returned the tail of the *third*, which
+ends at G46. A cap on a listing, and a conclusion drawn from the capped end.
+The honest query takes a maximum over every match:
+
+```sh
+... | Select-String '^\|\s*\*\*G(\d+)\*\*' -AllMatches | Measure-Object -Maximum
+```
+
+**Querying the right surface is not enough; the query has to be right too.** A
+wrong query returns a confident number with no error, which is worse than a
+stale report — a stale report at least came from a moment when it was true. This
+one was never true. The two rules pair: *prefer the queryable surface to the
+report*, and *never conclude from a listing you capped*.
+
+⚠️ **The sweep afterwards is the part worth budgeting for.** A row number is not
+one string: after renumbering the two structural files, **`G46` appeared in 22
+more places** across ADRs, specs, source comments, both tsconfigs, the gate
+docblocks and this log — and the sweep had to *distinguish* them, because
+`main` now legitimately holds a different `G46`. A blind replace would have
+renamed somebody else's row. The historical sentences on this page were left at
+G46 deliberately: they describe what was true when it happened.
+
+⚠️ **A correction to the mechanism, from #251, checked here rather than taken
+on trust — and it is the credit worth recording, ahead of anyone's concession.**
+This session first told two peers the red would be **main-only**,
+invisible on the pull request because CI sees only the branch. That is wrong for
+this workflow. `.github/workflows/gates.yml` triggers `on: pull_request` and its
+`actions/checkout` steps pass no `ref:`, so each takes the default
+`refs/pull/N/merge` — **`main` merged with the head**. The gapless walk therefore
+fails the reserving branch **in its own PR run**, and keeps failing it until a
+branch it does not control merges. **Hostage, not landmine**, and the loud
+failure is the better one: the second pull request to arrive pays, which is the
+one that should.
+
+⚠️ **Two narrower shapes do stay main-only** and are worth naming rather than
+losing to the correction: a pull request whose merge ref went stale after its
+base moved and was never re-run, and a branch numbered *below* an unmerged one
+that is **abandoned rather than merged** — which leaves the hole permanent, with
+only `main` to say so.
+
+⚠️ **And the ADR half is the opposite failure: silent.** Nothing in the suite
+reads `docs/adr/` for duplicates or holes. Contiguity is ungated, so a gap is
+free — but two sessions writing different records to the same number collide
+with nothing to catch it. This record moved from 0071 to **0075** on finding
+#251 had committed `0071-the-markdown-fix-flag-is-allowlisted.md`: not because
+0075 was reserved, but because biasing upward is free where a duplicate is
+invisible.
+
+⚠️ **Then it collided three more times, and the sequence is the finding rather
+than the count.** In order:
+
+1. **Four sessions write a `0071-*` file** — #251, #253, #255, #256, with #257
+   about to make five.
+2. **#253 and #257 both land on 0075** — each moving to avoid collision 1, at the
+   same moment, while messaging each other about that exact hazard. #253 moved on
+   to 0076.
+3. **#256 and #257 both move to file the issue about it.** #256 got there first
+   with [#263](https://github.com/mephistopheles4/stacks/issues/263) at 21:50;
+   #257 was stopped by a message from #253.
+4. **#251 and #257 are on 0075 again** — #251 had moved onto the number #253
+   vacated at the same moment #257 moved onto it. This record is now **0077**,
+   taken from above every known claim rather than adjacent to one, which is the
+   *bias high* half of the rule doing the work it exists for.
+
+**Every collision after the first was manufactured by a session correctly trying
+to avoid the previous one.** Four instances, three of them produced by the fix.
+That framing is #253's and it is stronger than any count of duplicate files.
+
+⚠️ **And collision 4 was not caused by an unpushed branch being invisible. It
+was caused by a *report* about a branch going stale faster than the branch
+did.** #251 renamed onto 0075 acting on a message from #253 saying #257 held it
+— a message that was already false about its own sender when it arrived, because
+#253 had moved to 0076 before sending and did not correct it. #253 volunteered
+this rather than letting it be inferred. **That is a worse failure than the one
+it looks like**: an unpushed branch is *invisible*, which a reader can at least
+know and discount, while a stale report is *confidently wrong*, and it
+propagates to everyone who trusts it. The remote is queryable —
+`git ls-tree --name-only <remote-branch> docs/adr/` answered this in one command
+— and a message is not.
+
+**So the rule the evening actually produced is about evidence, not numbers:
+prefer the queryable surface to the report, and treat a peer's statement about
+their own branch as true when written rather than true now.** That generalises
+past ADR numbers to every claim a session makes about state it owns.
+
+⚠️ **The four are not all one failure, and #251 drew the line.** Collisions 1
+and 2 are *the remote cannot see an unpushed branch* — invisible, but **knowably**
+invisible, which a reader can discount. Collision 4 is *a report was stale before
+it was read* — confidently wrong, and worse precisely because **acting on it
+feels like being careful**. The first is a gap in the evidence; the second is bad
+evidence. As #251 put it: **a live coordination channel has its own staleness,
+and it runs faster than the branches'.**
+
+⚠️ **Which gives the writer's half of the rule, and it is the actionable one.**
+Also #251's: *"the resolution that worked was not a better message. It was
+pushing."* No amount of care in composing a message fixes a channel whose
+staleness outruns the thing it describes. **Push, so that what you claim is
+checkable instead of reported** — and every collision here ended the moment its
+holder had a branch on the remote. The reader's rule is *query, don't trust*;
+the writer's rule is *be queryable*. Neither works alone.
+
+⚠️ **The fifth move was declined, and declining is the intervention.** After
+this record reached 0077, #253 pointed out that 0071 had fallen free — #251
+vacated it in the rename that caused collision 4 — and proposed one of the two
+take it back, leaving no hole. Declined for three reasons. **A published
+instruction is state**: this session had already told #251 *"I am at 0077 and
+staying there regardless"*, and making that false is the very failure the
+paragraph above describes. **A hole costs nothing** — contiguity is ungated, and
+"no hole" is only a benefit if you have forgotten the rule you just wrote down.
+And every move tonight manufactured a collision, so **not moving is the only
+action with no failure mode**. 0071 belongs to #251 if anyone wants it; it
+restores their own record.
+
+⚠️ **#253's reading of its own proposal is the most transferable thing here, and
+it is not about numbers at all.** Their words: *"I reached for 0071 to avoid a
+hole, ten minutes after we had both written down that contiguity is ungated and
+gaps are free. The rule did not fail — I stopped applying it the moment a tidier
+option appeared."*
+
+**That is the failure to watch for, above every collision on this page.** The
+rule was correct, freshly written, agreed by both parties, and it lost to
+tidiness on first contact. Nothing in a repository can catch that: a gate checks
+the artifact, and this is a decision made about the artifact by someone who
+knew better a paragraph earlier. It is the same shape as every *"weakening a
+gate to make it pass"* entry in `docs/gate-register.md` — the reason is never
+that the rule was wrong, it is that following it looked untidy at the moment of
+choosing.
+
+⚠️ **And it survives the objection [#263](https://github.com/mephistopheles4/stacks/issues/263)
+already writes into itself** — that a merge-time uniqueness gate would not have
+prevented any of this, since every duplicate lived on an unmerged branch.
+Correct, **and nothing else would have either**. That is the actual finding: the
+coordination channel is messages; a message goes stale against its own sender's
+branch between writing and reading; and there is no cheap surface for either
+party to check against. The gate converts a **silent landed** collision into a
+**late red**, which is worth having on its own terms, and it is not a
+coordination mechanism.
+
+**The two halves take opposite advice**, and treating them alike produced every
+collision here:
+
+| Property | Gate rows in `docs/gates.md` | ADR numbers in `docs/adr/` |
+| --- | --- | --- |
+| A gap is | **fatal** — G19's gapless walk | **free** — ungated, and tonight made several deliberately |
+| A duplicate is | **loud** — G19's uniqueness clause, and G41 reporting *"G46 has 2 entries"* | **silent** — nothing reads the directory at all |
+| So | hold the **lowest** free number, renumber late | bias **high**, re-check late |
+
+That asymmetry is why a gate over `docs/adr/` should assert **uniqueness only
+and never contiguity**, and tonight's deliberate gaps are the proof that
+asserting contiguity would be wrong.
+
+The full sequence of collisions, including the two that happened to the
+artifacts *about* the collisions, is in the ADR paragraph below rather than
+repeated here.
+
+⚠️ **One operational trap for whoever renumbers a row, from #253.** A row number
+lives in **two** files, and G41 holds them to each other in both directions:
+`gates/gate-register.test.ts:217` gives every row exactly one register entry,
+`:234` gives every entry a row, and `:248` holds the slug. So renumbering
+`docs/gates.md` without renaming the `### G<n> — \`slug\`` heading in
+`docs/gate-register.md` is as red as leaving the gap — and it reddens with a
+message about entry counts, which does not obviously read as *"you renamed half
+of a rename"*.

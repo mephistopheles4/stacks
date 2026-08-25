@@ -123,6 +123,16 @@ trap: the map's own ticket brief mislabelled `repo-root` as G22, corrected in
 [#231](https://github.com/mephistopheles4/stacks/issues/231). The highest live
 row is **G45**. **Cite slug and number together, never the number alone.**
 
+> ⚠️ **"The highest live row is G45" is historical, and this paragraph is not
+> being updated to a new number.** It was true when written; S1 landed as **G46**
+> (`lint`), S4 as **G50** (`astro-types`), and the rest are still moving. Writing
+> today's highest into a spec four branches are editing is the *reservation* this
+> very paragraph warns about — it was G45, then G46, then G47, then G50 inside one day, and
+> a branch that renumbered to match would have been wrong within the hour. **Read
+> the highest row off `docs/gates.md` on a re-fetched `main`, at your own rebase.**
+> The sentence stays as the record of what was true, on this folder's rule for a
+> locked spec.
+
 Each new gate costs a row in [`docs/gates.md`](../gates.md), which **G19**
 (`constitution-scoreboard`) enforces in both directions, and a five-cell section
 in [`docs/gate-register.md`](../gate-register.md), which **G41**
@@ -133,7 +143,7 @@ in [`docs/gate-register.md`](../gate-register.md), which **G41**
 | **S1** | `lint` — the tuned type-checked rule set over every `.ts` file | 36 findings in 20 files that no gate reads. `tsc --noEmit` passes on all of them. |
 | **S2** | `format` — Prettier's check mode over code only | Nothing normalises source shape, and G14 and G45 already punish a quote form with a red that names no quote. |
 | **S3** | `markdown` — markdownlint on the narrow rule set | Three live documentation defects exist that 45 gates miss. |
-| **S4** | `astro-types` — `astro check` inside `pnpm build` | `.astro` frontmatter is read by no gate and typechecked by no compiler. |
+| **S4** | `astro-types` — `astro check` inside `pnpm build` | `.astro` frontmatter is read by no gate and typechecked by no compiler. ✅ **Landed as G50**; this cell is the *warrant*, so it records why the row was built and is not rewritten to say the gap is closed. |
 
 ### One CI job, not three
 
@@ -182,6 +192,19 @@ consequence; see §6 step 1.
 > green**, for the reason the row states rather than this one: nothing runs
 > `astro check` yet, and `@astrojs/check` is not a dependency.
 
+> ✅ **S4 landed 2026-08-23 as G50 (`astro-types`)**, closing the footnote above
+> as well as the paragraph above that. `@astrojs/check@0.9.10` is a dev
+> dependency of `packages/site`, pinned exact, and its `build` script is
+> `astro check && astro build` — so `astro check` runs inside `pnpm build`,
+> which the `suite` matrix already runs, exactly as this section specifies.
+> `gates/astro-types.test.ts` pins the wiring in four clauses, each observed
+> red. ⚠️ **The order is load-bearing and was not in the spec**: `astro build &&
+> astro check` still reports the error and has already written the `dist/` that
+> carries it, so the clause asserts position and not merely presence.
+> ⚠️ **One coupling this section does not carry**: `@astrojs/check@0.9.10`'s
+> peer range is `^5.0.0 || ^6.0.0`, so [ADR-0066](../adr/0066-typescript-6-until-7-1.md)'s
+> revisit at TypeScript 7.1 un-runs this gate unless the checker widens first.
+
 ⚠️ **G7 (`astro-no-logic`) is not retired and its row text changes.** The two do
 not overlap: G7 reads `<script>` blocks as text, `astro check` typechecks
 frontmatter. A planted `absoluteUrl(42, Astro.site)` in `index.astro` passed
@@ -190,6 +213,24 @@ frontmatter. A planted `absoluteUrl(42, Astro.site)` in `index.astro` passed
 *stronger*: `.astro` sits outside every mutation scope and every complexity
 scope, both of which glob `**/*.ts`, so typechecked logic there is still counted
 by nothing.
+
+> ✅ **Held at landing, with two corrections measured on the way.** G7 is kept
+> and its row was rewritten — **replacing** the warrant rather than narrowing
+> it, since *"`.astro` files are not typechecked"* is false from that commit
+> and not merely weaker.
+>
+> ⚠️ **It is one scope list, not two.** All eight globs in `stryker.scopes.json`
+> end `*.ts`, and `scripts/lib/complexity.ts`'s `populationOf` takes its
+> population from **those same globs** minus `*.test.ts` — so the two counters
+> do not independently happen to miss `.astro`; they miss it once, and no edit
+> to either can change that without changing the other.
+>
+> ⚠️ **The plant reached two meta tags, not one.** `dist/index.html` carried
+> `<meta property="og:image" content="42">` *and*
+> `<meta name="twitter:image" content="42">`; both read the same `ogImage`
+> binding. And `site-meta.ts`, whose `absoluteUrl` the plant miscalls, is an
+> *excluded directory* in `stryker.scopes.json` — so the bad value crossed from
+> an unscored `.astro` file into an unscored `.ts` file and out to `dist/`.
 
 ### One gate is offered and declined
 
@@ -476,6 +517,19 @@ this table does not list, then renamed to **0075** when a sibling turned out to
 have committed 0071 on an unpushed branch. **Count `docs/adr/` at the tip you
 branch from.** A number here is a fact about landing order, and an unpushed
 branch is invisible to every query except asking the session that holds it.
+
+> ⚠️ **0071 is spent, and this line is the fifth pre-allocated number in this
+> project to go stale.** It was taken on 2026-08-23 by
+> [#251](https://github.com/mephistopheles4/stacks/issues/251) as
+> `0071-the-markdown-fix-flag-is-allowlisted.md`. **Read this cell as *"each of
+> these three earns a record"*, never as a number** — the same rule `docs/spec/README.md`
+> already states for gate rows, and `docs/progress.md`'s "Rollout numbering" row
+> states for this effort. ⚠️ **An ADR collision is worse than a row collision
+> because it is silent**: nothing in the suite reads `docs/adr/` for duplicates
+> or holes, where a duplicate row reddens G19 and G41 on the second pull request
+> to arrive. Count the files at the tip you branch from, take the next free one
+> **at the rebase before you merge**, and expect gaps — contiguity is ungated and
+> a gap costs nothing.
 
 | Proposed record | Thesis | Source |
 | --- | --- | --- |
