@@ -49,7 +49,8 @@ import { defineConfig } from 'vitest/config';
  * run executes the whole `include` list above, and that list carries every
  * `.test.ts` under `gates/`. Every gate has run in every dry run all along — the
  * claim was never true, and it read as a guarantee that a gate could not break
- * a mutation run. `gates/ignored-clones.test.ts` (G47) is the one that found
+ * a mutation run. ⚠️ **The exclusion below is the first thing ever to make it
+ * true of anything**: from here, every gate *except* the one named there runs. `gates/ignored-clones.test.ts` (G47) is the one that found
  * it, timing out at Vitest's 5s default where it takes 73ms under `pnpm test`.
  * See [#273](https://github.com/mephistopheles4/stacks/issues/273).
  *
