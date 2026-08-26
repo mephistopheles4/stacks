@@ -9,14 +9,42 @@ inside a clone.
 installed. They are not a requirement for contributing** — see
 [`CONTRIBUTING.md`](../../CONTRIBUTING.md). Nothing here gates a pull request.
 
+## Posting prose: use the helper
+
+**Every body — an issue, a pull request, a comment, a review, a reply — goes
+through [`scripts/gh-post.ts`](../../scripts/gh-post.ts).** It reflows the prose
+for GitHub's rendering, posts it, reads it back and exits non-zero if what
+arrived is not what went out.
+
+```bash
+pnpm exec tsx scripts/gh-post.ts issue --title "..." --body body.md
+pnpm exec tsx scripts/gh-post.ts issue-comment --issue 220 --body reply.md
+pnpm exec tsx scripts/gh-post.ts review-thread-reply --pr 225 --comment <id> --body reply.md
+```
+
+`--from <dir>` is the repository-relative directory the prose was written in, so
+its relative links resolve. `--dry-run` prints what would be posted and posts
+nothing. `--help` is the usage above; the surfaces are `issue`, `pull-request`,
+`issue-comment`, `pull-request-review` and `review-thread-reply`.
+
+**Six known ways to hand-roll this wrong, and three of them return HTTP 200** —
+they are enumerated on
+[#220](https://github.com/mephistopheles4/stacks/issues/220), which is why the
+helper exists. It is not a gate and nothing requires it; it is the only form
+that checks its own work.
+
 ## Conventions
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
+- **Create an issue**: the helper's `issue` surface. Never `--body` — a prose
+  body carries apostrophes and backticks that break shell quoting.
 - **Read an issue**: `gh issue view <number> --comments`.
 - **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
-- **Comment on an issue**: `gh issue comment <number> --body "..."`
+- **Comment on an issue**: the helper's `issue-comment` surface.
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
-- **Close**: `gh issue close <number> --comment "..."`
+- **Close**: `gh issue close <number>`. If the closing note is more than a few
+  words, post it with the helper first and close without a comment — `gh issue
+  close` has no `--comment-file`, so its `--comment` is the argument-passing
+  form this page has just removed everywhere else.
 - **Claim an issue**: `gh issue edit <number> --add-assignee <login>` — or
   `--add-assignee "@me"` for the account `gh` is authenticated as. **When an
   assignment happened is half of what it means, and no `gh issue` flag carries
@@ -52,9 +80,8 @@ view shows: that half comes from the timeline, a ticket at a time.
 
 - **The map** is an issue labelled `wayfinder:map`. Tickets are its **sub-issues**,
   each additionally labelled `wayfinder:research` / `prototype` / `grilling` / `task`.
-- **Create a ticket under a map**: `gh issue create --parent <map> --label "wayfinder:<type>" --title "..." --body-file <file>`.
-  Use `--body-file`, not `--body` — prose bodies contain apostrophes and
-  backticks that break shell quoting.
+- **Create a ticket under a map**: the helper's `issue` surface, which takes
+  `--parent <map>` and `--label "wayfinder:<type>"`.
 - **Blocking** uses GitHub's issue-dependencies API, which `gh` has no flag for:
 
   ```sh
