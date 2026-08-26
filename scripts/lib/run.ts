@@ -100,3 +100,46 @@ export function runExe(command: string, args: readonly string[], cwd: string): v
     throw new Error(`${command} ${args.join(' ')} exited ${String(result.status)}`);
   }
 }
+
+/**
+ * `runExe`, but the output is the answer rather than something to look at.
+ *
+ * The same no-shell rule and the same argument array — this is `runExe` with
+ * `stdio: 'inherit'` traded for a pipe, and it is here rather than in a second
+ * file because the platform knowledge above is what makes either safe. It
+ * exists for `scripts/lib/github-post.ts`, which posts a body and then has to
+ * *read it back*: a verification step whose whole job is comparing what came
+ * out of `gh` cannot let that go to the terminal.
+ *
+ * ⚠️ **`input` is a request body and never a command line.** The one caller
+ * that uses it sends `{"body": "…"}` to `gh api --input -`, which is the point:
+ * a document on stdin cannot be mistaken for a filename the way `-f body=@file`
+ * is, and cannot be coerced to a number the way `-F body=…` is. Both of those
+ * return HTTP 200 while posting the wrong thing.
+ *
+ * `maxBuffer` is raised because a body here is prose and Node's default is a
+ * megabyte; a truncated read-back would report a mismatch that never happened.
+ */
+export function runExeOutput(
+  command: string,
+  args: readonly string[],
+  cwd: string,
+  input?: string,
+): string {
+  const result = spawnSync(command, [...args], {
+    cwd,
+    encoding: 'utf8',
+    input,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+
+  if (result.error !== undefined) throw result.error;
+  if (result.status !== 0) {
+    const stderr = result.stderr.trim();
+    throw new Error(
+      `${command} ${args.join(' ')} exited ${String(result.status)}${stderr === '' ? '' : `\n${stderr}`}`,
+    );
+  }
+
+  return result.stdout;
+}

@@ -82,12 +82,16 @@ and declines per-issue replies. Answer each thread where it was raised — a
 reviewer reads the reply next to the code it is about.
 
 ```bash
-gh api repos/<owner>/<repo>/pulls/<pr>/comments/<comment-id>/replies -F body=@reply.md
+pnpm exec tsx scripts/gh-post.ts review-thread-reply --pr <pr> --comment <comment-id> --body reply.md
 ```
 
-⚠️ **`-f body=@file` posts the literal string `@file`** and still returns 200,
-so the comment lands looking fine. Use `-F`, which reads the file, or
-`--body-file` — then read the posted body back and compare it to the local one.
+⚠️ **Do not hand-roll `gh api … -f body=@reply.md`.** It posts the literal
+string `@reply.md`, returns 200, and the comment lands looking fine. That is one
+of six known ways to get this wrong, three of which return 200 — all of them
+enumerated on [#220](https://github.com/mephistopheles4/stacks/issues/220). The
+helper above reflows the prose for GitHub's rendering, posts it, reads the body
+back and exits non-zero if what arrived is not what went out. See
+[`docs/agents/issue-tracker.md`](../../docs/agents/issue-tracker.md).
 
 Reply to every thread acted on, **including the ones declined** — a finding you
 disagreed with needs its reasoning recorded more than one you simply fixed.

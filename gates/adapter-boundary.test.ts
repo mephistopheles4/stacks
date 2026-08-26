@@ -91,6 +91,12 @@ const ALLOWED = [
   // find a vault: the only paths it handles are the ones `git diff --cached`
   // named, which are repository files by construction.
   'scripts/crap.ts',
+  // Reads the prose file it was handed on the command line and writes the
+  // transformed body into a fresh directory under the OS temp folder, so `gh
+  // --body-file` has something to read. It has never heard of a vault: its
+  // inputs are an argv path and a GitHub surface, and the two modules it calls
+  // are pure text.
+  'scripts/gh-post.ts',
   // Reads the built `dist/` back to pre-flight it before uploading. Its `fs`
   // use is entirely on that folder: the real vault it shells out to the CLI
   // for, and the fixture vault it reads through `ObsidianAdapter` — which is

@@ -175,6 +175,10 @@
           "mechanism": "No spec imports it; its only caller is `trend-sync.ts`, excluded below. Every line of it spawns `docker`, which no in-process oracle reaches - `lib/git.ts`'s exclusion, for the same reason."
         },
         {
+          "path": "scripts/gh-post.ts",
+          "mechanism": "No spec imports it — run by `tsx` by hand, never from a pnpm script and never a Vitest spec. It parses an argument list, writes a scratch file and sets an exit code; every rule it applies lives in `lib/github-body.ts` and `lib/github-post.ts`, NEITHER of which is excluded — both are reached in-process by their own specs, with `gh` injected as a seam so no test spawns anything."
+        },
+        {
           "path": "scripts/dev-watch.ts",
           "mechanism": "No spec imports it — run by `tsx` from `pnpm dev:watch`."
         },
