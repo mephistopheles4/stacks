@@ -62,6 +62,40 @@ describe('bodyForGitHub — reflowing prose onto one line per paragraph', () => 
     expect(bodyForGitHub(source.join('\n'))).toBe(source.join('\n'));
   });
 
+  it('does not close a fence on a delimiter carrying trailing content', () => {
+    // CommonMark: a *closing* fence takes no info string, only whitespace. The
+    // first version compared character and length alone, so a line inside a
+    // block that happened to start with backticks ended it — and everything
+    // after was reflowed and had its links rewritten. An opening fence's info
+    // string still opens, which is the half that must not move.
+    const source = ['```text', '``` not a closer', '[a link](docs/gates.md)', '```'];
+
+    expect(bodyForGitHub(source.join('\n'))).toBe(source.join('\n'));
+  });
+
+  it('protects a fenced block written inside a blockquote', () => {
+    // ⚠️ The quoted fence is not matched by the fence check, which anchors at
+    // the start of the line, so the whole block used to fold into the quote run
+    // — one line, links rewritten — against this file's own promise that fenced
+    // code comes out byte for byte.
+    const source = ['> ```md', '> [a link](docs/gates.md)', '> still', '> ```'];
+
+    expect(bodyForGitHub(source.join('\n'))).toBe(source.join('\n'));
+  });
+
+  it('keeps an explicit hard break rather than folding it into a space', () => {
+    // Two trailing spaces and a trailing backslash are Markdown's two ways of
+    // asking for a break on purpose. The reflow exists to remove *accidental*
+    // wrapping; folding these removes something the author wrote deliberately,
+    // and the backslash then survives as visible text.
+    expect(bodyForGitHub('first line.  \nsecond line.')).toBe('first line.  \nsecond line.');
+    expect(bodyForGitHub('first line.\\\nsecond line.')).toBe('first line.\\\nsecond line.');
+  });
+
+  it('still folds an ordinary wrap that merely precedes a hard break', () => {
+    expect(bodyForGitHub('one\ntwo.  \nthree')).toBe('one two.  \nthree');
+  });
+
   it('joins a wrapped list item onto its own line and keeps the marker', () => {
     const source = ['- **Create an issue**: pass the body as a file,', '  never as an argument.'];
 
@@ -211,6 +245,29 @@ describe('bodyForGitHub — repository-relative links become absolute', () => {
 
   it('rewrites a reference definition too', () => {
     expect(bodyForGitHub('[gates]: docs/gates.md')).toBe(
+      `[gates]: ${REPO_WEB_ROOT}/blob/main/docs/gates.md`,
+    );
+  });
+
+  it('keeps the angle wrapper on a destination that needs one', () => {
+    // `<…>` is how Markdown carries a destination containing a space. Stripping
+    // the brackets produced a URL with a raw space in it, which is not a link
+    // at all; keeping them is what makes the rewritten one valid.
+    expect(bodyForGitHub('[file](<docs/a b.md>)')).toBe(
+      `[file](<${REPO_WEB_ROOT}/blob/main/docs/a b.md>)`,
+    );
+  });
+
+  it('drops an angle wrapper the rewritten target does not need', () => {
+    expect(bodyForGitHub('[file](<docs/gates.md>)')).toBe(
+      `[file](${REPO_WEB_ROOT}/blob/main/docs/gates.md)`,
+    );
+  });
+
+  it('reads an angle-wrapped reference definition as a path, not as a filename', () => {
+    // The reference form passed the brackets through to the resolver, which
+    // treated `<docs/a.md>` as a path segment and produced `blob/main/<docs/a.md>`.
+    expect(bodyForGitHub('[gates]: <docs/gates.md>')).toBe(
       `[gates]: ${REPO_WEB_ROOT}/blob/main/docs/gates.md`,
     );
   });

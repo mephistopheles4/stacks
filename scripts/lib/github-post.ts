@@ -77,6 +77,68 @@ export const SURFACES = [
   'review-thread-reply',
 ] as const satisfies readonly Surface['kind'][];
 
+/** The options every surface takes. */
+export const COMMON_OPTIONS = ['body', 'from', 'dry-run'] as const;
+
+/** The one option that is a flag, and takes no value. */
+export const VALUELESS_OPTIONS = ['dry-run'] as const;
+
+/** What each surface accepts on top of `COMMON_OPTIONS`. */
+export const SURFACE_OPTIONS: Record<Surface['kind'], readonly string[]> = {
+  issue: ['title', 'label', 'parent'],
+  'pull-request': ['title', 'base', 'head'],
+  'issue-comment': ['issue'],
+  'pull-request-review': ['pr'],
+  'review-thread-reply': ['pr', 'comment'],
+};
+
+/**
+ * Everything wrong with an option list, or an empty array.
+ *
+ * ⚠️ **A misspelled option used to post successfully.** `--lable bug` reached a
+ * command that only reads `--label`, so the issue was created unlabelled; and
+ * `--base --body body.md` gave `--base` an empty value, so the pull request went
+ * at the default branch. **The read-back then reported success in both cases**,
+ * because the body really did arrive — the body was never what was wrong. That
+ * is a silent failure inside the tool built to remove silent failures, and it is
+ * why this refuses rather than ignores. Found by CodeRabbit on
+ * [#277](https://github.com/mephistopheles4/stacks/pull/277).
+ *
+ * `scope-check.ts`'s `declarationFaults` shape: the rule is pure and testable,
+ * and the command is the thin caller that turns a fault into an exit code.
+ */
+export function optionFaults(
+  kind: string,
+  options: ReadonlyMap<string, readonly string[]>,
+): string[] {
+  const known = SURFACE_OPTIONS[kind as Surface['kind']] as readonly string[] | undefined;
+  if (known === undefined) {
+    return [`unknown surface: ${kind}. One of: ${SURFACES.join(', ')}`];
+  }
+
+  const allowed = new Set([...COMMON_OPTIONS, ...known]);
+  const valueless = new Set<string>(VALUELESS_OPTIONS);
+  const faults: string[] = [];
+
+  for (const [name, values] of options) {
+    if (!allowed.has(name)) {
+      const spelled = [...allowed].map((option) => `--${option}`).join(', ');
+      faults.push(`unknown option --${name} for ${kind}. It takes: ${spelled}`);
+      continue;
+    }
+    if (valueless.has(name) && values.some((value) => value !== '')) {
+      faults.push(`--${name} takes no value`);
+    }
+    if (!valueless.has(name) && values.some((value) => value === '')) {
+      // The shape that produced the default-base bug: the next token started
+      // with `--`, so the parser read no value and the surface silently fell
+      // back rather than complaining.
+      faults.push(`--${name} needs a value`);
+    }
+  }
+  return faults;
+}
+
 /**
  * What to read back, once the post has said where it landed.
  *

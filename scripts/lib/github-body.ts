@@ -55,14 +55,50 @@ const TABLE_ROW = /^ {0,3}\|/;
 const LIST_ITEM = /^(\s*)([-*+]|\d+[.)])\s+/;
 const BLOCKQUOTE = /^ {0,3}>/;
 const THEMATIC_BREAK = /^ {0,3}([-*_])(\s*\1){2,}\s*$/;
-/** An opening or closing fence, and the run of characters that has to close it. */
-const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+/** An opening fence: the delimiter, and whatever info string follows it. */
+const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
+/**
+ * A closing fence: the delimiter and **nothing else**.
+ *
+ * ⚠️ **Separate from `FENCE_OPEN`, and the difference is the whole point.**
+ * CommonMark lets an opening fence carry an info string and forbids one on the
+ * close, so a single pattern for both makes any line inside a block that starts
+ * with backticks end it — after which the rest of the block is reflowed and its
+ * links are rewritten. Found by CodeRabbit on
+ * [#277](https://github.com/mephistopheles4/stacks/pull/277); a document
+ * *about* fenced blocks is exactly where it fires.
+ */
+const FENCE_CLOSE = /^ {0,3}(`{3,}|~{3,})[ \t]*$/;
+/**
+ * A run of blockquote markers at the head of a line, and what follows them.
+ *
+ * Fences are recognised **after** this is stripped, so a fenced block written
+ * inside a blockquote is protected like any other. It was not: the quoted
+ * opening fence anchored at `>` rather than at a delimiter, so the whole block
+ * folded into one quote line with its links rewritten — against this file's own
+ * promise that fenced code comes out byte for byte.
+ */
+const QUOTE_PREFIX = /^((?: {0,3}>[ \t]?)*)(.*)$/;
+/**
+ * Markdown's two ways of asking for a line break **on purpose**: two or more
+ * trailing spaces, or a trailing backslash.
+ *
+ * The reflow exists to remove *accidental* wrapping. Folding one of these
+ * removes something the author wrote deliberately, and a backslash then
+ * survives into the body as visible text.
+ */
+const HARD_BREAK = /(?:\S[ \t]{2,}|(?:^|[^\\])\\)$/;
 /** A run of backticks, and everything up to the matching run: one code span. */
 const CODE_SPAN = /(`+)(?:[^`]|(?!\1)`)*\1/g;
 /** `[text](target)` or `![alt](target)`, with an optional `"title"`. */
 const INLINE_LINK = /(!?)(\[[^\]]*\])\(\s*(<[^>]*>|[^)\s]+)(\s+"[^"]*")?\s*\)/g;
-/** `[label]: target` at the head of a line — a reference definition. */
-const LINK_DEFINITION = /^(\s*\[[^\]]+\]:\s*)(\S+)/;
+/**
+ * `[label]: target` at the head of a line — a reference definition.
+ *
+ * The angle form is matched first, so a destination carrying a space is one
+ * target rather than a `\S+` that stops at the space.
+ */
+const LINK_DEFINITION = /^(\s*\[[^\]]+\]:\s*)(<[^>]*>|\S+)/;
 /** A scheme (`https:`, `mailto:`) or a protocol-relative URL. Already absolute. */
 const ABSOLUTE = /^([a-z][a-z0-9+.-]*:|\/\/)/i;
 /** The shape a repository file produces when it links out by hand, and 404s. */
@@ -103,7 +139,7 @@ export function bodyForGitHub(markdown: string, options: TransformOptions = {}):
 
   const out: string[] = [];
   let run: Run | undefined;
-  let fence: string | undefined;
+  let fence: { delimiter: string; quote: string } | undefined;
 
   const flush = (): void => {
     closeRun(out, run);
@@ -111,23 +147,29 @@ export function bodyForGitHub(markdown: string, options: TransformOptions = {}):
   };
 
   for (const line of lines) {
+    const { quote, content } = withoutQuote(line);
+
     // Inside a fence nothing is prose, nothing is a link, and nothing moves.
-    // The closing run has to be at least as long as the opening one, which is
-    // what stops a ``` inside a ~~~ block ending it.
+    // Three things have to agree for it to close: the same quoting, the same
+    // delimiter character, and at least as long a run — and nothing after it.
     if (fence !== undefined) {
       out.push(line);
-      const closing = FENCE.exec(line);
-      if (closing !== null && closing[1] !== undefined && closesFence(closing[1], fence)) {
+      const closing = FENCE_CLOSE.exec(content);
+      if (
+        closing?.[1] !== undefined &&
+        quote === fence.quote &&
+        closesFence(closing[1], fence.delimiter)
+      ) {
         fence = undefined;
       }
       continue;
     }
 
-    const opening = FENCE.exec(line);
-    if (opening !== null && opening[1] !== undefined) {
+    const opening = FENCE_OPEN.exec(content);
+    if (opening?.[1] !== undefined) {
       flush();
       out.push(line);
-      fence = opening[1];
+      fence = { delimiter: opening[1], quote };
       continue;
     }
 
@@ -136,6 +178,22 @@ export function bodyForGitHub(markdown: string, options: TransformOptions = {}):
 
   flush();
   return out.join('\n');
+}
+
+/**
+ * A line's blockquote markers, reduced to the `>` characters alone, and the
+ * rest of it.
+ *
+ * Normalised so that `>`, `> ` and `  > ` are one quoting level: the indentation
+ * and the space after a marker are presentation, and a fence must not fail to
+ * close because its closer was written with one space instead of two.
+ */
+function withoutQuote(line: string): { quote: string; content: string } {
+  const found = QUOTE_PREFIX.exec(line);
+  return {
+    quote: (found?.[1] ?? '').replace(/[^>]/g, ''),
+    content: found?.[2] ?? line,
+  };
 }
 
 /** A fence closes only on its own character, and never on a shorter run. */
@@ -178,8 +236,16 @@ function absorb(out: string[], run: Run | undefined, line: string, from: string)
     return start(out, run, 'quote', text.trim());
   }
 
+  // A break the author asked for, rather than one the 80-column habit produced.
+  // The line still joins whatever run is open — a wrap *before* it is still an
+  // accident — and then closes it, so the break survives into the body.
+  const deliberate = HARD_BREAK.test(line);
+
   const item = LIST_ITEM.exec(line);
-  if (item !== null) return start(out, run, 'list', absolutiseLine(line, from).trimEnd());
+  if (item !== null) {
+    const opened = start(out, run, 'list', trimmedFirst(absolutiseLine(line, from), deliberate));
+    return deliberate ? closed(out, opened) : opened;
+  }
 
   // Four spaces with nothing open is an indented code block; four spaces under
   // an open list item is that item, wrapped. The open run is what tells them
@@ -188,14 +254,29 @@ function absorb(out: string[], run: Run | undefined, line: string, from: string)
 
   const text = absolutiseLine(line, from);
   if (run !== undefined) {
-    run.parts.push(text.trim());
-    return run;
+    run.parts.push(deliberate ? text.trimStart() : text.trim());
+    return deliberate ? closed(out, run) : run;
   }
   // ⚠️ **The first line of a run keeps its leading whitespace**, which is what
   // holds a continuation paragraph inside the list item it belongs to. A fenced
   // block ends the run, so the paragraph after one starts a fresh run — and
   // trimming it there quietly promotes it to a top-level paragraph.
-  return start(out, run, 'prose', text.trimEnd());
+  const opened = start(out, run, 'prose', trimmedFirst(text, deliberate));
+  return deliberate ? closed(out, opened) : opened;
+}
+
+/**
+ * The first line of a run: trailing whitespace gone, unless that whitespace
+ * *is* the hard break.
+ */
+function trimmedFirst(text: string, deliberate: boolean): string {
+  return deliberate ? text : text.trimEnd();
+}
+
+/** Emits a run and reports that nothing is open — the hard-break tail. */
+function closed(out: string[], run: Run): undefined {
+  closeRun(out, run);
+  return undefined;
 }
 
 /** Closes whatever run is open and opens a new one. */
@@ -247,7 +328,7 @@ function absolutiseLine(line: string, from: string): string {
     !inCode(definition[1].length)
   ) {
     return (
-      definition[1] + absolutise(definition[2], from, false) + line.slice(definition[0].length)
+      definition[1] + destinationOf(definition[2], from, false) + line.slice(definition[0].length)
     );
   }
 
@@ -266,12 +347,33 @@ function absolutiseLine(line: string, from: string): string {
       const at = offset + whole.indexOf('(', bang.length + label.length) + 1;
       if (inCode(at)) return whole;
 
-      const bare = target.startsWith('<') ? target.slice(1, -1) : target;
-      const rewritten = absolutise(bare, from, bang === '!');
-      if (rewritten === bare) return whole;
+      const rewritten = destinationOf(target, from, bang === '!');
+      if (rewritten === target) return whole;
       return `${bang}${label}(${rewritten}${title ?? ''})`;
     },
   );
+}
+
+/**
+ * One link destination, angle wrapper and all.
+ *
+ * ⚠️ **The wrapper is unwrapped before resolving and put back only if the
+ * result needs it**, which the two call sites used to get wrong in opposite
+ * directions: the inline path stripped `<…>` and emitted a URL with a raw space
+ * in it, and the reference path passed the brackets through to the resolver and
+ * produced `blob/main/<docs/a.md>`. Both are invalid links, and both were found
+ * by CodeRabbit on [#277](https://github.com/mephistopheles4/stacks/pull/277).
+ * `<…>` is how Markdown carries a destination containing a space, so it is
+ * retained exactly when the rewritten destination has one.
+ */
+function destinationOf(target: string, from: string, isImage: boolean): string {
+  const wrapped = target.startsWith('<') && target.endsWith('>');
+  const bare = wrapped ? target.slice(1, -1) : target;
+
+  const rewritten = absolutise(bare, from, isImage);
+  if (rewritten === bare) return target;
+
+  return /\s/.test(rewritten) ? `<${rewritten}>` : rewritten;
 }
 
 /** Where every inline code span in a line begins and ends. */

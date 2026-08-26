@@ -14,11 +14,14 @@ import { describe, expect, it } from 'vitest';
 import {
   differenceOf,
   normaliseReadBack,
+  optionFaults,
   postAndVerify,
   postPlan,
   READ_BACK_NORMALISATIONS,
   readPlan,
   refFrom,
+  SURFACE_OPTIONS,
+  SURFACES,
   type GhCall,
   type Surface,
 } from './github-post.ts';
@@ -129,6 +132,71 @@ describe('postPlan — the one path per surface', () => {
     ]);
     expect(plan.args.join(' ')).not.toContain('@');
     expect(plan.input).toBe(JSON.stringify({ body: 'A body.' }));
+  });
+});
+
+describe('optionFaults — a misspelled option refuses instead of posting', () => {
+  const at = (options: Record<string, string[]>): Map<string, readonly string[]> =>
+    new Map(Object.entries(options));
+
+  it('accepts a correct option list', () => {
+    expect(
+      optionFaults('issue', at({ title: ['A title'], body: ['b.md'], label: ['bug'] })),
+    ).toEqual([]);
+  });
+
+  it('refuses a misspelled option rather than creating an unlabelled issue', () => {
+    // ⚠️ **`--lable bug` used to post successfully.** The command reads only
+    // `--label`, so the issue was created with no label — and the read-back
+    // reported success, because the body really did arrive. The body was never
+    // what was wrong.
+    const faults = optionFaults(
+      'issue',
+      at({ title: ['A title'], body: ['b.md'], lable: ['bug'] }),
+    );
+
+    expect(faults).toHaveLength(1);
+    expect(faults[0]).toContain('--lable');
+    expect(faults[0]).toContain('--label');
+  });
+
+  it('refuses an option whose value was swallowed by the next flag', () => {
+    // `--base --body body.md`: the parser sees no value for `--base`, and the
+    // pull request silently went at the default branch.
+    const faults = optionFaults('pull-request', at({ title: ['t'], base: [''], body: ['b.md'] }));
+
+    expect(faults).toEqual(['--base needs a value']);
+  });
+
+  it('refuses an option the surface does not take, however real elsewhere', () => {
+    // `--label` is real on `issue` and meaningless on `issue-comment`. A
+    // per-surface list is what makes the second case a refusal.
+    expect(
+      optionFaults('issue-comment', at({ issue: ['220'], body: ['b.md'], label: ['bug'] })),
+    ).toHaveLength(1);
+  });
+
+  it('lets the one flag be valueless, and only that one', () => {
+    expect(optionFaults('issue', at({ title: ['t'], body: ['b.md'], 'dry-run': [''] }))).toEqual(
+      [],
+    );
+    expect(optionFaults('issue', at({ title: ['t'], body: ['b.md'], 'dry-run': ['yes'] }))).toEqual(
+      ['--dry-run takes no value'],
+    );
+  });
+
+  it('refuses an unknown surface by name, and lists the real ones', () => {
+    const faults = optionFaults('issue-body', at({ body: ['b.md'] }));
+
+    expect(faults[0]).toContain('unknown surface');
+    for (const surface of SURFACES) expect(faults[0]).toContain(surface);
+  });
+
+  it('lists every surface exactly once, so a new one cannot be forgotten', () => {
+    // The record is keyed by `Surface['kind']`, so the compiler refuses a
+    // missing entry — this asserts the other direction, that the roster the
+    // command prints and the roster the check reads are the same list.
+    expect(Object.keys(SURFACE_OPTIONS).sort()).toEqual([...SURFACES].sort());
   });
 });
 

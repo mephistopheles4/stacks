@@ -28,6 +28,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { bodyForGitHub } from './lib/github-body.ts';
 import {
+  optionFaults,
   postAndVerify,
   postPlan,
   SURFACES,
@@ -135,6 +136,15 @@ function surfaceFrom(kind: string, options: Map<string, string[]>): Surface {
 }
 
 const { surface: kind, options } = parse(process.argv.slice(2));
+
+// ⚠️ **Before anything is posted.** A misspelled option used to reach a command
+// that ignored it — `--lable bug` created an unlabelled issue, `--base --body b.md`
+// went at the default branch — and the read-back said *verified* both times,
+// because the body really did arrive. The rule is in `lib/github-post.ts`, where
+// a spec can reach it; this is the exit code.
+const faults = optionFaults(kind, options);
+if (faults.length > 0) fail(`${USAGE}\n${faults.join('\n')}`);
+
 const surface = surfaceFrom(kind, options);
 const bodyFile = required(options, 'body', kind);
 const markdown = readFileSync(bodyFile, 'utf8');
