@@ -23,8 +23,8 @@
  * explains the relative-link rule, turning "`../blob/main/x` is broken, use the
  * full URL" into "the full URL is broken, use the full URL". A transform that
  * silently edits prose *about* the thing it fixes is its own silent failure
- * mode, so fenced blocks and inline code spans come out byte for byte — the
- * first fixture in `github-body.test.ts` is that document surviving this file.
+ * mode, so fenced blocks and inline code spans come out byte for byte — and the
+ * fixture #220 required first is that document surviving this file.
  *
  * **Pure, and deliberately so.** Text in, text out, no `gh`, no network, no
  * disk — which is what lets G21 (`no-live-network`) be satisfied here with no
@@ -106,11 +106,8 @@ export function bodyForGitHub(markdown: string, options: TransformOptions = {}):
   let fence: string | undefined;
 
   const flush = (): void => {
-    if (run !== undefined) {
-      const joined = run.parts.join(' ');
-      out.push(run.kind === 'quote' ? `> ${joined}` : joined);
-      run = undefined;
-    }
+    closeRun(out, run);
+    run = undefined;
   };
 
   for (const line of lines) {
@@ -155,9 +152,7 @@ function closesFence(candidate: string, opened: string): boolean {
  */
 function absorb(out: string[], run: Run | undefined, line: string, from: string): Run | undefined {
   const emit = (text: string): undefined => {
-    if (run !== undefined) {
-      out.push(run.kind === 'quote' ? `> ${run.parts.join(' ')}` : run.parts.join(' '));
-    }
+    closeRun(out, run);
     out.push(text);
     return undefined;
   };
@@ -205,10 +200,24 @@ function absorb(out: string[], run: Run | undefined, line: string, from: string)
 
 /** Closes whatever run is open and opens a new one. */
 function start(out: string[], run: Run | undefined, kind: RunKind, first: string): Run {
-  if (run !== undefined) {
-    out.push(run.kind === 'quote' ? `> ${run.parts.join(' ')}` : run.parts.join(' '));
-  }
+  closeRun(out, run);
   return { kind, parts: [first] };
+}
+
+/**
+ * Emits an open run, if there is one — the single spelling of *what a run looks
+ * like once it is closed*.
+ *
+ * The three callers each had a byte-identical copy of this line, under a
+ * docstring one screen up arguing that three copies of one question is the
+ * drift this repository gates elsewhere. Caught in review, which is the only
+ * thing that was ever going to catch it.
+ */
+function closeRun(out: string[], run: Run | undefined): void {
+  if (run === undefined) return;
+
+  const joined = run.parts.join(' ');
+  out.push(run.kind === 'quote' ? `> ${joined}` : joined);
 }
 
 /**
