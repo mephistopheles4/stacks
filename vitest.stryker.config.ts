@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
 /**
- * The repo's `vitest.config.ts` with the two specs that cannot run inside
+ * The repo's `vitest.config.ts` with the three specs that cannot run inside
  * Stryker's sandbox removed. Nothing else is changed.
  *
  * ⚠️ **`scripts/lib/complexity-tree.test.ts` is the second, and it is the
@@ -34,19 +34,42 @@ import { defineConfig } from 'vitest/config';
  *
  * ⚠️ **A spec under `scripts/` must not touch the filesystem**, for the same
  * reason as the paragraph below. `scripts/lib/repo-root.ts` resolves from
- * `process.cwd()`, and inside the sandbox that is not the repository — so a spec
- * that reads a real file passes under `pnpm test` and fails here, which reads as
- * a mutation-run fault rather than as a spec that made an assumption.
+ * `import.meta.dirname` — **not `process.cwd()`, as this said until
+ * [#273](https://github.com/mephistopheles4/stacks/issues/273)**; same
+ * conclusion, and a reader sent after a `cwd` fix finds nothing. Inside the
+ * sandbox that directory is not the repository — so a spec that reads a real
+ * file passes under `pnpm test` and fails here, which reads as a mutation-run
+ * fault rather than as a spec that made an assumption.
  * `scripts/lib/mutation-score.test.ts` passes its scopes and reports in as data
  * for exactly that reason.
  *
- * ⚠️ **`gates/` is out of the mutation scope for a related reason**, recorded
- * here because this is where a future session will come looking. `gates/repo.ts`
- * resolves `REPO_ROOT` from `process.cwd()`, and **Stryker's sandbox is not the
- * repository** — four repo-shape gates shell out to git into a directory that is
- * not a checkout. They are not excluded below because nothing under `gates/` is
- * mutated, so Vitest's related-file filter never pulls them in. Mutate anything
- * there and they come back, along with the dry-run failure.
+ * ⚠️ **`gates/` runs in the dry run, and this paragraph used to say it does
+ * not.** It read: *nothing under `gates/` is mutated, so Vitest's related-file
+ * filter never pulls them in*. That filter governs **mutant** runs; the **dry**
+ * run executes the whole `include` list above, and that list carries every
+ * `.test.ts` under `gates/`. Every gate has run in every dry run all along — the
+ * claim was never true, and it read as a guarantee that a gate could not break
+ * a mutation run. `gates/ignored-clones.test.ts` (G47) is the one that found
+ * it, timing out at Vitest's 5s default where it takes 73ms under `pnpm test`.
+ * See [#273](https://github.com/mephistopheles4/stacks/issues/273).
+ *
+ * ⚠️ **A gate that reads the real tree therefore cannot run here at all**, and
+ * the timeout is the symptom rather than the fault: the sandbox is a copy with
+ * every mutant site rewritten, so G47 would be asserting `jscpd.floors.json`'s
+ * counters against instrumented files. It passes today only because the ignored
+ * line counts happen to match, and would break silently the day a suppression
+ * block lands inside a mutated file — `complexity-tree.test.ts`'s failure,
+ * one tool over. **The oracle survives**: `scripts/lib/duplication.test.ts`
+ * plants both directions against synthetic inputs and stays in, so excluding
+ * the gate costs `scripts/lib/duplication.ts` no coverage that a mutant could
+ * be caught by, and it needs no exclusion in `stryker.scopes.json`.
+ *
+ * ⚠️ **The four repo-shape gates that shell out to git are fine, and the reason
+ * is not the one recorded here before.** `tempDirName` puts the sandbox at
+ * `.stryker-tmp/` **inside** the repository, so git walks up and resolves the
+ * real checkout — measured from a sandbox-shaped directory, which reports the
+ * repository root and a working `git status`. They are not excluded because
+ * they pass, not because they never run.
  *
  * ⚠️ **`reporters` is declared here to keep Vitest's `github-actions` reporter
  * out of the mutation run, and it is load-bearing rather than cosmetic.** Vitest
@@ -78,6 +101,7 @@ export default defineConfig({
       '**/dist/**',
       'packages/cli/src/env.test.ts',
       'scripts/lib/complexity-tree.test.ts',
+      'gates/ignored-clones.test.ts',
     ],
     environment: 'node',
     setupFiles: ['./gates/no-live-network.setup.ts'],
