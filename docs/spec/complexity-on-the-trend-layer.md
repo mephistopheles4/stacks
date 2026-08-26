@@ -527,8 +527,9 @@ effort.
 **Not yet specified** — **on the map, and nowhere else now.** This list carried
 five items. They became tickets on
 [#228](https://github.com/mephistopheles4/stacks/issues/228), whose Notes say
-this section is emptied when the first of them resolves; ten of that map's
-tickets have since closed. Three of the five are among them —
+this section is emptied when the first of them resolves; **all eleven of that
+map's tickets have since closed, and the map itself closed with them on
+2026-08-26.** Three of the five are among them —
 [#237](https://github.com/mephistopheles4/stacks/issues/237) (a
 duplication series), [#238](https://github.com/mephistopheles4/stacks/issues/238)
 (`astro check` as a gate) and
@@ -552,7 +553,8 @@ than either total — and **exactly one series a cap may ever reach**,
 `cognitive-max`. ⚠️ **No cognitive series is capped today**: `CAPPED_SERIES`
 holds `complexity-max` and `complexity-mass-over-10` and nothing else, and
 `cognitive-max` joins it only once twenty records carry the families
-([#258](https://github.com/mephistopheles4/stacks/issues/258)).
+([#269](https://github.com/mephistopheles4/stacks/issues/269), which supersedes the
+closed [#258](https://github.com/mephistopheles4/stacks/issues/258)).
 `cognitive-mass-over-15` may never join it at all. The bar this file set —
 *kept as fog until the split signature proves
 common* — was met by
@@ -565,7 +567,11 @@ and [`static-analysis-and-style.md`](static-analysis-and-style.md) §5.
 ⚠️ **Nothing replaces this section.** Per
 [#228](https://github.com/mephistopheles4/stacks/issues/228)'s Notes, the fog
 lives on the map's *Decisions so far* and its *Not yet specified*, and a
-question in two places goes stale in one of them. Read it there.
+question in two places goes stale in one of them. Read it there — the map is
+**closed**, and a closed issue stays readable, which is why this still points at
+one rather than copying it back. ⚠️ **Its three remaining fog patches were
+released rather than carried on closing**: nothing was minted for them, and a
+future effort that wants one charts a fresh map.
 
 **Research and spikes, kept on their branches**, each linked from its ticket:
 `research/complexity-tooling-for-typescript`,
