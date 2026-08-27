@@ -32,6 +32,23 @@ anisotropic surface reflection is exactly and only what three implements.
 second reason, not the first. Even granting a free material swap, the effect
 would not appear.
 
+## The species question, as it stands on #279
+
+#286 says the curly-or-plain question "has been asked on #279 and the answer
+belongs in this ticket." **It was asked and it is unanswered.** The question
+went to the reporter at 21:36 UTC on 2026-08-26 — *"curly or plain? they're
+different problems"* — and no reply has arrived as of this writing. So this
+note deliberately answers for **both** branches, and the sections below say
+which findings apply to which.
+
+**The reporter did add a second requirement in the same breath**, and it is
+worth carrying here because §1 arrives at it independently: *"since this wood
+is so unique per tree, I'd expect a slight variation per plank as we can't make
+sure all planks comes from same tree."* That is
+[#287](https://github.com/mephistopheles4/stacks/issues/287)'s subject, not
+this ticket's — but the grading evidence in §1 supports it on koa specifically,
+harder than it would for a uniform species.
+
 ## 1. Koa as an optical subject
 
 **Colour.** The Wood Database gives the heartwood as *"medium golden or reddish
@@ -213,9 +230,15 @@ That gives a hard ceiling. The maximum achievable elongation is
 
 Values from `shelf-settings.ts:429–430`. **At the wood's shipped roughness,
 driving `anisotropy` to its maximum legal value buys a 1.49:1 lobe** — and
-does so by blurring, on a dielectric whose F0 is `vec3( 0.04 )`
-(`lights_physical_fragment.glsl.js`, the `#else` branch taken when no `IOR`/
-`USE_SPECULAR` is set), under an ambient-plus-two-directionals rig.
+does so by blurring, on a dielectric whose F0 is 0.04, under an
+ambient-plus-two-directionals rig. **That 4% holds either way**: today's
+`MeshStandardMaterial` takes the `#else` branch in
+`lights_physical_fragment.glsl.js` and gets a literal `vec3( 0.04 )`, while a
+`MeshPhysicalMaterial` takes the `#ifdef IOR` branch unconditionally —
+`meshphysical.glsl.js:66` is a bare `#define IOR` — and with `ior = 1.5`
+(`MeshPhysicalMaterial.js:146`) computes
+`pow2( ( 1.5 - 1.0 ) / ( 1.5 + 1.0 ) )`, which is 0.04 exactly. Swapping the
+material class does not buy a brighter lobe.
 
 ⚠️ **The knob that would make anisotropy visible is the knob that makes the
 wood look plastic.** To get a brushed-metal-like ratio you must drop
