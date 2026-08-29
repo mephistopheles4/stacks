@@ -51,6 +51,7 @@
  */
 import * as THREE from 'three';
 import { hashUnit } from './hash.ts';
+import { fibreNormalMap } from './prototype-wood-detail.ts';
 
 /** Which arm is mounted. `off` is today's shelf. */
 export type WoodArm =
@@ -210,6 +211,11 @@ export interface WoodArmConfig {
   readonly species: Species;
   /** The map edge in texels. See `RESOLUTIONS`. */
   readonly resolution: number;
+  /**
+   * World units one tile of the **procedural fibre** covers, or 0 for the
+   * sheet's own normal map. See `prototype-wood-detail.ts`.
+   */
+  readonly detail: number;
 }
 
 /** Reads `?wood=`, `?woodTile=`, `?woodNormal=`, `?woodVary=` and `?woodJoint=`. */
@@ -231,6 +237,7 @@ export function readWoodArm(search: string): WoodArmConfig {
     resolution:
       RESOLUTIONS.find((edge) => edge === Number(params.get('woodRes'))) ??
       (arm === 'pigment2k' ? 2048 : 512),
+    detail: number('woodDetail', 0),
     normalScale: number('woodNormal', arm === 'wire' ? 4 : 1),
     vary: Number.isFinite(varyRaw) && varyRaw >= 0 ? Math.min(varyRaw, 1) : 1,
     joint: params.get('woodJoint') === 'flush' ? 'flush' : 'inset',
@@ -446,7 +453,25 @@ export function applyWoodArm(
     material.color.setHex(0xffffff);
   }
   if (wantsRelief) {
-    material.normalMap = load(`${sheet.prefix}-nor-${size}.jpg`, false);
+    if (config.detail > 0) {
+      /**
+       * The detail layer takes the slot instead of the sheet's own normal, and
+       * that is the whole trick: the arms measured the sheet's normal at
+       * **0.000% above the threshold at every rung**, so the slot was holding a
+       * texture and doing nothing. The `repeat` converts world-space UVs
+       * already divided by `unitsPerTile` into the fibre's own, much tighter,
+       * period — so the figure stays laid huge and the fibre is laid fine, out
+       * of one set of UVs and with no second file.
+       */
+      const fibre = fibreNormalMap();
+      if (fibre !== undefined) {
+        const period = config.unitsPerTile / config.detail;
+        fibre.repeat.set(period, period);
+        material.normalMap = fibre;
+      }
+    } else {
+      material.normalMap = load(`${sheet.prefix}-nor-${size}.jpg`, false);
+    }
     material.normalScale = new THREE.Vector2(config.normalScale, config.normalScale);
   }
   // ⚠️ Only sapele ships a roughness map. Asking for `?wood=rough` on a sheet
