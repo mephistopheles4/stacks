@@ -149,6 +149,41 @@ nothing" — that side is `keyIfPresent`, and G23 holds it — but here it means
 writes to somebody's vault.
 *Avoid*: unset, clear, blank, null.
 
+### The bookcase
+
+**Bookcase**:
+The furniture the shelf renders: its **planks**, its **uprights** and its
+**backboard**. Narrower than the English word — it covers the wooden members,
+and not the dimensions, the row count, or the books standing in it.
+*Avoid*: case (that is a hardback's binding case — see **Square**), unit,
+woodwork. **Older records call it the case**, and that name outlives any
+rename: several records under `docs/adr/` use it, and each keeps its original
+wording by design.
+
+**Plank**:
+One horizontal board of the bookcase. A book's **contact** is where it meets
+one.
+*Avoid*: shelf (that is the whole bookcase, or one **row** of it), board (that
+is a hardback's cover), slab.
+
+**Upright**:
+One of the two vertical sides of the bookcase.
+*Avoid*: side, panel, post, stile.
+
+**Backboard**:
+The panel behind the books. The one member with a material of its own, and the
+surface the painted backboard shades are drawn over.
+*Avoid*: back, backing (that is its material, not the member), backdrop.
+
+**Row**:
+One level of the bookcase: the space between two **planks**, and the books
+standing on the lower one. A **run** is a group of books inside one; the row is
+the level itself.
+*Avoid*: shelf. The code spends that word three ways — `rowsForCase` keeps one
+empty shelf ahead (a row), `SHELF` names the furniture, and
+`packages/site/src/shelf/` is the whole renderer. Say **row** or **bookcase**
+where the difference matters.
+
 ### Building and publishing
 
 **Public build**:
