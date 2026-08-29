@@ -38,7 +38,7 @@
     "@types/node": "^26.2.0",
     "@typescript-eslint/parser": "8.67.0",
     "@vitest/coverage-v8": "4.1.11",
-    "eslint": "10.9.0",
+    "eslint": "10.9.1",
     "eslint-plugin-sonarjs": "4.2.0",
     "jscpd": "5.0.16",
     "markdownlint-cli2": "0.23.2",
