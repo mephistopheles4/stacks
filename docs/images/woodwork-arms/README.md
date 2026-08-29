@@ -113,20 +113,71 @@ Downloaded at 2k and resized to **512** on the long edge, #281's number:
 
 ## The files
 
+Every arm is **rosewood at 1024, laid at its true 7.68 units**, on the empty
+bookcase, at the four rungs of #54's level ladder.
+
 | Prefix | What it is |
 | --- | --- |
 | `off-*` | **The baseline.** Today's flat `0x6b4f3a`, no map in any slot. |
-| `flat-*` | The **mean-matched twin**: `0xc68159`, the diffuse map's own average, no map bound. Difference a pigment arm against *this* and what is left is the grain alone. |
-| `pigment-*` | The sapele diffuse in `map`. |
-| `both-*` | Diffuse **and** normal, at the normal map's own strength. |
-| `both-n3-*`, `both-n5-*` | The same, with `normalScale` at 3 and 5. |
-| `relief-loud-orbit` | The relief channel's **own canary** — `normalScale 8`, no colour map. Not a candidate; it exists to prove a zero. |
-| `rough-*` | The fourth slot, on the record. |
+| `flat-*` | The **mean-matched twin**: `0x6e3412`, the figure map's own average, no map bound. Difference a pigment arm against *this* and what is left is the grain alone. |
+| `pigment-*` | Rosewood's figure in `map`. |
+| `relief-*` | The sheet's **own** normal map. A measured near-zero, again. |
+| `fibre-*` | The **drawn** fibre normal, no colour map — the only relief that moves a pixel. |
+| `candidate-*` | Figure **and** drawn fibre: the standing candidate. |
+| `cand-n2-orbit` | The same at `normalScale 2`, for the strength sweep. |
 | `wire-*` | The wiring check: every channel driven past plausible. |
-| `pigment-near` / `pigment2k-near` | 512 against 2048 at `minDistance`, the one rung where the difference is not a rounding error. |
+| `pigment-near` / `pigment512-near` | 1024 against 512 at `minDistance`. |
 | `books-*` | The populated case, for the painted-shadow question an empty one cannot answer. |
 
-⚠️ **`relief-*` at the map's own strength is not here as a picture**, because at
-that strength it is byte-identical to the baseline to within the differ's
-threshold — which is the finding, and a screenshot of it would only show today's
-shelf.
+## What the second run measured
+
+⚠️ **These replace the first run's numbers rather than updating them.** That run
+was *sapele at 512*, on the geometry that still carried 46 depth-buffer ties.
+Nothing of its figures survives a change of sheet.
+
+**The colour confound mostly dissolved, which was the point of changing sheet.**
+Sapele's mean is far lighter than today's `0x6b4f3a` and rosewood's is not, so
+at zoom 10:
+
+| | colour + grain | grain alone | grain's share |
+| --- | --- | --- | --- |
+| sapele @512 | 20.53% | 1.32% | 6% |
+| **rosewood @1024** | **15.60%** | **2.72%** | **17%** |
+
+Twice the grain for less colour shift — nearly three times better on the ratio
+[#68](https://github.com/mephistopheles4/stacks/issues/68) was struck by.
+
+**The sheet's own normal map is a near-zero on a second sheet**: 0.166% at
+zoom 10, and `both` differs from `pigment` by **0.000% above the threshold at
+every rung, level and orbited**. Two veneers, one answer.
+
+**The drawn fibre is the only relief that does anything.** Against pigment it
+adds **0.742% level and 1.481% orbited**, where the sheet's normal adds 0.000%
+— and it ships no bytes at all.
+
+**512 against 1024 is 0.299% at zoom 10, worst delta 25.** Small, real, and the
+eye is what decides it, per #282.
+
+**ADR-0034's threshold is not crossed by anything**, the wiring arm included:
+the brightest pixel any arm reaches is 0.444 against 0.85. Rosewood is *darker*
+than today's shelf in places.
+
+**Cost, measured**: pigment is +1 texture, +1 shader program, +0 draw calls; the
+candidate is +2 textures and still +0 draw calls, the second being the drawn
+fibre's canvas.
+
+**The painted shadows read through it.** On a populated case the candidate
+differs from pigment by 0.585% — the grain is under the shadows, not fighting
+them.
+
+⚠️ **One row of the first run is not re-measurable here.** Poly Haven publishes
+no roughness map for `rosewood_veneer1`, so the fourth slot cannot be tested on
+this sheet. Sapele's number stands as sapele's: **1.029% at zoom 10**, which
+beat relief and inverted this ticket's own prior.
+
+⚠️ **A false zero was caught and is worth knowing about.** The resolution
+control first reported **0.000% at every rung, worst delta 0** — byte-identical
+frames. The arm matrix builds each URL as a fixed base plus a per-arm tail, so
+512 arrived as `woodRes=1024&woodRes=512`, and `URLSearchParams.get` returns the
+*first*. The arm meant to render 512 rendered 1024. Every shot now reads back
+what the page actually resolved, and the report prints it above the numbers.

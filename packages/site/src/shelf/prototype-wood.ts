@@ -117,8 +117,22 @@ export const SAPELE_MEAN = 0xc68159;
  * involved and the rosewood arms will not.
  */
 const SPECIES = {
-  sapele: { prefix: 'sapele', unitsPerTile: 1.6, mean: SAPELE_MEAN, rough: true },
-  rosewood: { prefix: 'rosewood', unitsPerTile: 7.68, mean: 0x6e3311, rough: false },
+  sapele: {
+    prefix: 'sapele',
+    unitsPerTile: 1.6,
+    // ⚠️ Per resolution, because a resize is a blur and a blur moves an
+    // average. Sapele's happens not to move; rosewood's does, by one step in
+    // two channels — small, and the twin has to match the arm it partners or it
+    // is measuring the wrong thing.
+    mean: { 512: SAPELE_MEAN, 1024: 0xc68159, 2048: 0xc68159 },
+    rough: true,
+  },
+  rosewood: {
+    prefix: 'rosewood',
+    unitsPerTile: 7.68,
+    mean: { 512: 0x6e3311, 1024: 0x6e3412, 2048: 0x6f3412 },
+    rough: false,
+  },
 } as const;
 
 export type Species = keyof typeof SPECIES;
@@ -229,26 +243,41 @@ export interface WoodArmConfig {
 /** Reads `?wood=`, `?woodTile=`, `?woodNormal=`, `?woodVary=` and `?woodJoint=`. */
 export function readWoodArm(search: string): WoodArmConfig {
   const params = new URLSearchParams(search);
-  const raw = params.get('wood');
+  /**
+   * The **last** occurrence wins, not the first.
+   *
+   * ⚠️ **`URLSearchParams.get` returns the first, and that produced a false
+   * zero rather than an error.** The arm matrix builds every URL as a fixed
+   * base plus a per-arm tail, so the resolution control arrived as
+   * `woodRes=1024&woodRes=512` — and `get` handed back 1024, so the arm meant
+   * to render 512 rendered 1024 and the two differenced to **0.000% at every
+   * rung, worst delta 0**. A perfect zero from an instrument nobody had proved,
+   * which is exactly what a resolution control is supposed to expose.
+   *
+   * Last-wins is also what a hand-driven URL expects: appending `&woodRes=2048`
+   * to something should change it.
+   */
+  const last = (key: string): string | null => params.getAll(key).at(-1) ?? null;
+  const raw = last('wood');
   const arm = ARMS.find((candidate) => candidate === raw) ?? 'off';
   const number = (key: string, fallback: number): number => {
-    const value = Number(params.get(key));
-    return Number.isFinite(value) && value > 0 ? value : fallback;
+    const value = Number(last(key));
+    return last(key) !== null && Number.isFinite(value) && value > 0 ? value : fallback;
   };
-  const varyRaw = Number(params.get('woodVary'));
-  const speciesRaw = params.get('woodSpecies');
+  const varyRaw = Number(last('woodVary'));
+  const speciesRaw = last('woodSpecies');
   const species = SPECIES_NAMES.find((name) => name === speciesRaw) ?? 'sapele';
   return {
     species,
     arm,
     unitsPerTile: number('woodTile', SPECIES[species].unitsPerTile),
     resolution:
-      RESOLUTIONS.find((edge) => edge === Number(params.get('woodRes'))) ??
+      RESOLUTIONS.find((edge) => edge === Number(last('woodRes'))) ??
       (arm === 'pigment2k' ? 2048 : 512),
     detail: number('woodDetail', 0),
     normalScale: number('woodNormal', arm === 'wire' ? 4 : 1),
     vary: Number.isFinite(varyRaw) && varyRaw >= 0 ? Math.min(varyRaw, 1) : 1,
-    joint: params.get('woodJoint') === 'flush' ? 'flush' : 'inset',
+    joint: last('woodJoint') === 'flush' ? 'flush' : 'inset',
   };
 }
 
@@ -435,6 +464,17 @@ export function applyWoodArm(
   material: THREE.MeshStandardMaterial,
   config: WoodArmConfig,
 ): void {
+  /**
+   * What was *actually* resolved, published for the render script to read back.
+   *
+   * ⚠️ **This exists because a resolution control silently rendered the wrong
+   * resolution and reported a perfect zero.** A query string is an assumption
+   * until something states what came out of it, and a diff of two identical
+   * frames looks exactly like a channel that does not matter. Every shot now
+   * records this next to its number.
+   */
+  (window as unknown as { __woodArm?: WoodArmConfig }).__woodArm = config;
+
   // Every mesh wearing this material gets a colour attribute in `varyMember`,
   // so the flag is safe to raise for the whole material at once.
   if (config.vary > 0) material.vertexColors = true;
@@ -452,7 +492,7 @@ export function applyWoodArm(
   const sheet = SPECIES[config.species];
 
   if (config.arm === 'flat') {
-    material.color.setHex(sheet.mean);
+    material.color.setHex(sheet.mean[config.resolution as 512 | 1024 | 2048]);
     done();
     return;
   }

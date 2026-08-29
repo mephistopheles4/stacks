@@ -109,12 +109,14 @@ async function main(): Promise<void> {
 
   console.log('');
   console.log('mean-matched flat twins, one per species — computed in linear light:');
-  for (const file of readdirSync(WOOD_DIR).filter((name) => name.endsWith('-diff-512.jpg'))) {
+  for (const file of readdirSync(WOOD_DIR)
+    .filter((name) => /-diff-(512|1024|2048)\.jpg$/.test(name))
+    .sort()) {
     const path = join(WOOD_DIR, file);
     const linear = await meanColour(path);
     const naive = await naiveMeanColour(path);
     console.log(
-      `  ${file.replace('-diff-512.jpg', '').padEnd(10)} ${linear.hex}  ` +
+      `  ${file.replace('.jpg', '').padEnd(20)} ${linear.hex}  ` +
         `rgb(${linear.rgb.join(', ')})   naive sRGB average ${naive} ← not this one`,
     );
   }

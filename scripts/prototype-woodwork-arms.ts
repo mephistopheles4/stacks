@@ -164,9 +164,12 @@ const MEASURE = `(async () => {
     if (luma > brightest) brightest = luma;
   }
   const s = window.__shelf.stats();
+  const a = window.__woodArm || {};
   return {
     overBloom, brightest, total: w * h,
     textures: s.textures, programs: s.programs, calls: s.calls, triangles: s.triangles,
+    resolved: [a.species, a.arm, a.resolution, 'tile ' + a.unitsPerTile,
+               'normal ' + a.normalScale, 'detail ' + a.detail].join(' / '),
   };
 })()`;
 
@@ -178,6 +181,8 @@ interface Measurement {
   programs: number;
   calls: number;
   triangles: number;
+  /** What `prototype-wood.ts` actually resolved, read back off the page. */
+  resolved: string;
 }
 
 interface Shot {
@@ -199,7 +204,7 @@ async function shoot(browser: Browser, origin: string, shot: Shot): Promise<Meas
   const page: Page = await browser.newPage();
   await page.setViewport(VIEWPORT);
   if (shot.populated !== true) await page.evaluateOnNewDocument('window.__empty = true;');
-  const query = `?wood=${shot.arm}${shot.query ?? ''}`;
+  const query = `?wood=${shot.arm}&${BASE}${shot.query ?? ''}`;
   await page.goto(`${origin}/${query}`, { waitUntil: 'networkidle0', timeout: 30_000 });
   await page.waitForFunction('window.__shelf?.ready === true', { timeout: 20_000 });
   // ⚠️ Load-bearing, and the reason it is a signal rather than a sleep: an arm
@@ -275,28 +280,81 @@ const LADDER = [
   { tag: 'near', wheelSteps: 60, label: 'minDistance' },
 ] as const;
 
+/**
+ * What every arm holds fixed, so the roster varies one thing at a time.
+ *
+ * ⚠️ **Rosewood at 1024, laid at its true 7.68 units** — the standing candidate,
+ * and it is not the sheet the first run of this matrix used. Everything below
+ * is therefore a *fresh* set of numbers rather than an update: the first run was
+ * sapele at 512 on the geometry that still had 46 depth-buffer ties in it, and
+ * none of its figures survive the change of sheet.
+ *
+ * ⚠️ **`woodTile` is deliberately absent, and that is a finding rather than a
+ * default.** Laying the sheet smaller buys texels for free and brings the
+ * repeat back; the repeat is what the owner rejected, twice, at `woodTile=2`.
+ * The sheets tile near-seamlessly (measured: wrap difference 5.72 against a
+ * local 3.64) so what was visible was repetition and not a seam. At true scale
+ * one tile is wider than the whole bookcase and there is nothing to recur.
+ */
+const BASE = 'woodSpecies=rosewood&woodRes=1024';
+
 interface Arm {
   readonly tag: string;
   readonly label: string;
+  /** Extra query on top of `BASE`. */
+  readonly query?: string;
   /** The reference whose difference is *grain alone*, when it is not the baseline. */
   readonly twin?: string;
   /** Relief banks on top faces, which a level camera never shows. */
   readonly orbit?: boolean;
 }
 
+/**
+ * ⚠️ **`rough` is gone and its absence is on the record.** Poly Haven publishes
+ * no roughness map for `rosewood_veneer1`, so the arm cannot be built on this
+ * sheet at all. What the first run measured — sapele's roughness at 1.029%
+ * above the threshold at zoom 10, which beat relief and inverted #284's own
+ * prior — stands as sapele's number and is not re-measurable here.
+ *
+ * **`fibre` is new**, and it is the arm nobody planned: the drawn fibre normal
+ * from `prototype-wood-detail.ts`, in place of the sheet's own. It exists
+ * because the sheet's normal measured a flat zero and the slot was being spent
+ * on nothing.
+ */
 const ARMS: readonly Arm[] = [
   { tag: 'off', label: 'baseline — today’s flat 0x6b4f3a' },
-  { tag: 'flat', label: 'flat, mean-matched (0xc68159), no map' },
-  { tag: 'pigment', label: 'pigment — sapele diffuse @512', twin: 'flat', orbit: true },
-  { tag: 'relief', label: 'relief — sapele normal @512', orbit: true },
-  { tag: 'both', label: 'both — diffuse + normal @512', twin: 'flat', orbit: true },
-  { tag: 'rough', label: 'roughness — the fourth slot, on the record' },
-  { tag: 'pigment2k', label: 'pigment @2048 — the resolution control', twin: 'flat' },
+  { tag: 'flat', label: 'flat, mean-matched (0x6e3412), no map' },
+  { tag: 'pigment', label: 'pigment — rosewood figure @1024', twin: 'flat', orbit: true },
+  { tag: 'relief', label: 'relief — rosewood’s own normal @1024', orbit: true },
+  {
+    tag: 'fibre',
+    label: 'relief — the drawn fibre, 0 bytes',
+    query: '&woodDetail=0.5&woodNormal=0.5',
+    orbit: true,
+  },
+  { tag: 'both', label: 'both — figure + the sheet’s normal', twin: 'flat', orbit: true },
+  {
+    tag: 'candidate',
+    label: 'the standing candidate — figure + drawn fibre',
+    query: '&woodDetail=0.5&woodNormal=0.5',
+    twin: 'flat',
+    orbit: true,
+  },
+  {
+    tag: 'pigment512',
+    label: 'pigment @512 — the resolution control',
+    query: '&woodRes=512',
+    twin: 'flat',
+  },
   { tag: 'wire', label: 'wiring check — every channel past plausible' },
 ];
 
+/** The arm tag is not always the `?wood=` value: two arms differ only by query. */
+const woodValue = (tag: string): string =>
+  tag === 'fibre' ? 'relief' : tag === 'candidate' ? 'both' : tag === 'pigment512' ? 'pigment' : tag;
+
 function mapBytes(): string {
-  return ['sapele-diff-512.jpg', 'sapele-nor-512.jpg', 'sapele-rough-512.jpg', 'sapele-diff-2k.jpg']
+  return ['rosewood-diff-1024.jpg', 'rosewood-nor-1024.jpg', 'rosewood-diff-512.jpg']
     .filter((file) => existsSync(join(WOOD_DIR, file)))
     .map((file) => `${file} ${(statSync(join(WOOD_DIR, file)).size / 1024).toFixed(1)} KB`)
     .join('   ');
@@ -321,7 +379,8 @@ async function main(): Promise<void> {
             `${arm.tag}-${rung.tag}`,
             await shoot(browser, origin, {
               file: `${arm.tag}-${rung.tag}.png`,
-              arm: arm.tag,
+              arm: woodValue(arm.tag),
+              ...(arm.query === undefined ? {} : { query: arm.query }),
               wheelSteps: rung.wheelSteps,
             }),
           );
@@ -331,7 +390,8 @@ async function main(): Promise<void> {
             `${arm.tag}-orbit`,
             await shoot(browser, origin, {
               file: `${arm.tag}-orbit.png`,
-              arm: arm.tag,
+              arm: woodValue(arm.tag),
+              ...(arm.query === undefined ? {} : { query: arm.query }),
               wheelSteps: 10,
               dragY: 50,
             }),
@@ -356,10 +416,12 @@ async function main(): Promise<void> {
       // The painted-shadow question, and the one thing an empty case cannot
       // show: contact shadows and the recess shade are drawn as planes *over*
       // the wood, and an empty case casts none of the first kind.
-      for (const tag of ['off', 'pigment', 'both']) {
+      for (const tag of ['off', 'pigment', 'candidate']) {
+        const arm = ARMS.find((candidate) => candidate.tag === tag);
         await shoot(browser, origin, {
           file: `books-${tag}-zoom10.png`,
-          arm: tag,
+          arm: woodValue(tag),
+          ...(arm?.query === undefined ? {} : { query: arm.query }),
           wheelSteps: 10,
           populated: true,
         });
@@ -369,6 +431,16 @@ async function main(): Promise<void> {
       // agree, or every zero below is an instrument reading rather than a
       // finding.
       await shoot(browser, origin, { file: 'pigment-shelf-rerun.png', arm: 'pigment', wheelSteps: 0 });
+      // Determinism has to be re-proved on the arm that carries a *hash* —
+      // runout, the per-member scales and the tint all come off `hashUnit`, and
+      // a rebuild that reshuffled the boards would be a defect nobody would see
+      // in one frame.
+      await shoot(browser, origin, {
+        file: 'candidate-shelf-rerun.png',
+        arm: 'both',
+        query: '&woodDetail=0.5&woodNormal=0.5',
+        wheelSteps: 0,
+      });
 
       /**
        * The relief channel's **own** canary, and it is not the `wire` arm.
@@ -409,32 +481,33 @@ async function main(): Promise<void> {
        * **zero extra bytes** over the arm already rendered, which is why this
        * is a sweep rather than a proposal.
        */
-      for (const scale of [2, 3, 5, 8]) {
+      for (const scale of [0.25, 1, 2, 4]) {
         for (const [suffix, wheelSteps, dragY] of [
           ['zoom10', 10, undefined],
           ['orbit', 10, 50],
         ] as const) {
           await shoot(browser, origin, {
-            file: `both-n${String(scale)}-${suffix}.png`,
+            file: `cand-n${String(scale)}-${suffix}.png`,
             arm: 'both',
-            query: `&woodNormal=${String(scale)}`,
+            query: `&woodDetail=0.5&woodNormal=${String(scale)}`,
             wheelSteps,
             ...(dragY === undefined ? {} : { dragY }),
           });
         }
       }
-      await shoot(browser, origin, {
-        file: 'books-both-n3-zoom10.png',
-        arm: 'both',
-        query: '&woodNormal=3',
-        wheelSteps: 10,
-        populated: true,
-      });
 
       /* --- the report ---------------------------------------------------- */
 
       console.log('');
       console.log(`maps on disk   ${mapBytes()}`);
+      console.log('');
+      console.log('what each arm actually resolved to, read back off the page:');
+      for (const arm of ARMS) {
+        const m = measured.get(`${arm.tag}-zoom10`);
+        if (m === undefined) continue;
+        console.log(`  ${arm.tag.padEnd(11)} ${m.resolved}`);
+      }
+
       console.log('');
       console.log('cost, from renderer.info at zoom 10 — measured, not predicted:');
       const base = measured.get('off-zoom10');
@@ -467,6 +540,12 @@ async function main(): Promise<void> {
       console.log('controls — what the differ says when the answer is already known:');
       console.log(row('pigment rendered twice (expect ~0)', await diff('pigment-shelf.png', 'pigment-shelf-rerun.png')));
       console.log(
+        row(
+          'the candidate twice — the hash is stable',
+          await diff('candidate-shelf.png', 'candidate-shelf-rerun.png'),
+        ),
+      );
+      console.log(
         row('normalScale 8, level (the relief canary)', await diff('off-zoom10.png', 'relief-loud-zoom10.png')),
       );
       console.log(
@@ -498,48 +577,48 @@ async function main(): Promise<void> {
       }
 
       console.log('');
-      console.log("does relief add anything to pigment — the question 'both' exists to answer:");
+      console.log('does either relief add anything to pigment — the question this ticket asks:');
       for (const rung of LADDER) {
-        console.log(row(`${rung.label}, both vs pigment`, await diff(`pigment-${rung.tag}.png`, `both-${rung.tag}.png`)));
-      }
-      console.log(row('orbited ~20°, both vs pigment', await diff('pigment-orbit.png', 'both-orbit.png')));
-
-      console.log('');
-      console.log('does 512 resolve the grain — 2048 against 512, same arm:');
-      for (const rung of LADDER) {
-        console.log(row(`${rung.label}`, await diff(`pigment-${rung.tag}.png`, `pigment2k-${rung.tag}.png`)));
-      }
-
-      console.log('');
-      console.log("relief's strength sweep — what `normalScale` buys over pigment, for +0 bytes:");
-      for (const scale of [1, 2, 3, 5, 8]) {
-        const tag = scale === 1 ? 'both' : `both-n${String(scale)}`;
         console.log(
-          row(
-            `normalScale ${String(scale)}, level, vs pigment`,
-            await diff('pigment-zoom10.png', `${tag}-zoom10.png`),
-          ),
+          row(`${rung.label}, the sheet’s normal`, await diff(`pigment-${rung.tag}.png`, `both-${rung.tag}.png`)),
+        );
+        console.log(
+          row(`${rung.label}, the drawn fibre`, await diff(`pigment-${rung.tag}.png`, `candidate-${rung.tag}.png`)),
         );
       }
-      for (const scale of [1, 2, 3, 5, 8]) {
-        const tag = scale === 1 ? 'both' : `both-n${String(scale)}`;
-        console.log(
-          row(
-            `normalScale ${String(scale)}, orbited, vs pigment`,
-            await diff('pigment-orbit.png', `${tag}-orbit.png`),
-          ),
-        );
+      console.log(row('orbited ~20°, the sheet’s normal', await diff('pigment-orbit.png', 'both-orbit.png')));
+      console.log(row('orbited ~20°, the drawn fibre', await diff('pigment-orbit.png', 'candidate-orbit.png')));
+
+      console.log('');
+      console.log('does 512 resolve this sheet — 512 against the shipped 1024:');
+      for (const rung of LADDER) {
+        console.log(row(`${rung.label}`, await diff(`pigment-${rung.tag}.png`, `pigment512-${rung.tag}.png`)));
+      }
+
+      console.log('');
+      console.log('the drawn fibre’s strength sweep — what `normalScale` buys, for +0 bytes:');
+      for (const suffix of ['zoom10', 'orbit'] as const) {
+        const where = suffix === 'zoom10' ? 'level' : 'orbited';
+        for (const scale of [0.25, 0.5, 1, 2, 4]) {
+          const file =
+            scale === 0.5 ? `candidate-${suffix}.png` : `cand-n${String(scale)}-${suffix}.png`;
+          console.log(
+            row(
+              `normalScale ${String(scale)}, ${where}, vs pigment`,
+              await diff(`pigment-${suffix}.png`, file),
+            ),
+          );
+        }
       }
 
       console.log('');
       console.log('the painted shadows, on a populated case at zoom 10:');
       console.log(row('pigment vs baseline, books in', await diff('books-off-zoom10.png', 'books-pigment-zoom10.png')));
-      console.log(row('both vs baseline, books in', await diff('books-off-zoom10.png', 'books-both-zoom10.png')));
       console.log(
-        row('both @normalScale 3 vs baseline, books in', await diff('books-off-zoom10.png', 'books-both-n3-zoom10.png')),
+        row('the candidate vs baseline, books in', await diff('books-off-zoom10.png', 'books-candidate-zoom10.png')),
       );
       console.log(
-        row('both @normalScale 3 vs pigment, books in', await diff('books-pigment-zoom10.png', 'books-both-n3-zoom10.png')),
+        row('the candidate vs pigment, books in', await diff('books-pigment-zoom10.png', 'books-candidate-zoom10.png')),
       );
 
       console.log(`\nimages ${OUT_DIR}`);
