@@ -50,6 +50,7 @@
  *    textures.
  */
 import * as THREE from 'three';
+import { hashUnit } from './hash.ts';
 
 /** Which arm is mounted. `off` is today's shelf. */
 export type WoodArm =
@@ -104,13 +105,47 @@ const UNITS_PER_TILE = 1.6;
 /** `page-edges.ts`'s number, and for its reason: these faces graze the key light. */
 const ANISOTROPY = 16;
 
+/**
+ * How far each plank's end is pulled back from the upright's outer face.
+ *
+ * ⚠️ **This is a fix for a defect that predates every arm here, and the arms
+ * are what made it visible.** A plank is `BoxGeometry(outerWidth, ...)` and an
+ * upright stands at `±(width + sideThickness) / 2`, so the plank's end face and
+ * the upright's outer face both land at **x = ±1.7900**, exactly coplanar, over
+ * the plank's whole thickness and depth. The camera's near and far are 0.1 and
+ * 100 — a thousand to one — so the depth buffer cannot separate them, and the
+ * two faces trade places frame by frame while the camera moves and settle into
+ * whichever won when it stops. That is precisely what the owner reported.
+ *
+ * It is invisible on `main` because both faces carry the same flat colour, so
+ * the fight resolves to the same pixel either way. Give them different UVs and
+ * the tie becomes a flicker. **A texture did not cause this; it revealed it.**
+ *
+ * 0.004 units is about 1.2 mm at this scene's scale, and the upright is 0.09
+ * thick — so the shortened end sits well inside the upright's volume, where
+ * nothing can see it, and the outer face at ±1.79 belongs to the upright alone.
+ * The silhouette does not move.
+ */
+export const PLANK_INSET = 0.004;
+
+/** How much of the tile's own range one member's offset may wander. */
+const OFFSET_SPREAD = 1;
+/** Half-range of the per-member scale jitter, as a fraction. */
+const SCALE_SPREAD = 0.09;
+/** Half-range of the per-member tint, as a linear multiplier. */
+const TINT_SPREAD = 0.1;
+
 export interface WoodArmConfig {
   readonly arm: WoodArm;
   readonly unitsPerTile: number;
   readonly normalScale: number;
+  /** 0 turns every per-member difference off; 1 is the full spread above. */
+  readonly vary: number;
+  /** `inset` shortens the planks off the uprights' outer face; `flush` is today's geometry. */
+  readonly joint: 'inset' | 'flush';
 }
 
-/** Reads `?wood=`, `?woodTile=` and `?woodNormal=` off the current URL. */
+/** Reads `?wood=`, `?woodTile=`, `?woodNormal=`, `?woodVary=` and `?woodJoint=`. */
 export function readWoodArm(search: string): WoodArmConfig {
   const params = new URLSearchParams(search);
   const raw = params.get('wood');
@@ -119,10 +154,13 @@ export function readWoodArm(search: string): WoodArmConfig {
     const value = Number(params.get(key));
     return Number.isFinite(value) && value > 0 ? value : fallback;
   };
+  const varyRaw = Number(params.get('woodVary'));
   return {
     arm,
     unitsPerTile: number('woodTile', UNITS_PER_TILE),
     normalScale: number('woodNormal', arm === 'wire' ? 4 : 1),
+    vary: Number.isFinite(varyRaw) && varyRaw >= 0 ? Math.min(varyRaw, 1) : 1,
+    joint: params.get('woodJoint') === 'flush' ? 'flush' : 'inset',
   };
 }
 
@@ -176,6 +214,75 @@ export function worldSpaceUvs(
   uv.needsUpdate = true;
 }
 
+/**
+ * Make one member's boards differ from its neighbours', for **+0 textures, +0
+ * materials and +0 draw calls**.
+ *
+ * The owner's report was that the case reads uniform, and it has two causes
+ * that want separating because only one of them is about the asset:
+ *
+ * 1. **The sheet itself is plain.** `sapele_veneer` is a flat-sliced veneer with
+ *    fine, low-contrast stripe and no figure. Nothing done per member fixes
+ *    that; it wants a different sheet, or a procedure.
+ * 2. **Every member shows the same sheet at the same phase.** Six boards
+ *    carrying one map at one offset is one board photocopied six times, which
+ *    the eye reads instantly. That is this function's half, and it is free.
+ *
+ * Four differences, none of which is a second texture:
+ *
+ * - **Offset** — where in the sheet this member's board was cut from.
+ * - **Mirror** — veneers are book-matched in life, and a flipped sheet is the
+ *   cheapest way to stop a tiling seam repeating identically down the case.
+ * - **Scale** — ±9%, so the grain's period is not the same on two boards.
+ * - **Tint** — ±10%, through a **vertex colour**, which is the one that needs
+ *   saying: a per-member `THREE.Color` would need a per-member *material*, and
+ *   that is +1 draw call each. A colour attribute rides the geometry every
+ *   member already has its own copy of, so one material still draws them all.
+ *   `scene.ts`'s per-book page-block drift is the same trick.
+ *
+ * ⚠️ **The seed is the member's distance from the *bottom*, and that choice is
+ * [#287](https://github.com/mephistopheles4/stacks/issues/287)'s to make, not
+ * this file's.** `rowsForCase` keeps one empty shelf ahead, so the case grows
+ * upward as the library does — seeding from a top-down index would repaint
+ * every plank in the case the day a book is added, which is exactly the trap
+ * that ticket exists to spring safely. Bottom-up is stable under growth. It is
+ * still only *a* answer: it says a plank's identity is its height off the
+ * floor, and a plank that is genuinely the same board would keep its figure if
+ * the case were rebuilt taller — which this does, and which nothing here proves
+ * is what anybody wants.
+ */
+export function varyMember(
+  geometry: THREE.BoxGeometry,
+  seed: string,
+  strength: number,
+): void {
+  const uv = geometry.attributes['uv'];
+  const position = geometry.attributes['position'];
+  if (uv === undefined || position === undefined) return;
+
+  // Three draws off one hash, decorrelated by prefix — the same shape
+  // `books.ts` uses for a book's height and its spine colour.
+  const offsetU = hashUnit(`${seed}-u`);
+  const offsetV = hashUnit(`${seed}-v`);
+  const mirror = hashUnit(`${seed}-mirror`) < 0.5 ? -1 : 1;
+  const scale = 1 + (hashUnit(`${seed}-scale`) - 0.5) * 2 * SCALE_SPREAD * strength;
+  const tint = 1 + (hashUnit(`${seed}-tint`) - 0.5) * 2 * TINT_SPREAD * strength;
+
+  for (let index = 0; index < uv.count; index += 1) {
+    const u = uv.getX(index) * scale * mirror + offsetU * OFFSET_SPREAD * strength;
+    const v = uv.getY(index) * scale + offsetV * OFFSET_SPREAD * strength;
+    uv.setXY(index, u, v);
+  }
+  uv.needsUpdate = true;
+
+  // ⚠️ A colour attribute is read as **linear**, unlike `material.color`, which
+  // three.js decodes from sRGB. A multiplier near 1 is the same number in
+  // either space, which is why this is a multiplier and not a colour.
+  const colours = new Float32Array(position.count * 3);
+  colours.fill(tint);
+  geometry.setAttribute('color', new THREE.BufferAttribute(colours, 3));
+}
+
 function configure(texture: THREE.Texture, colour: boolean): THREE.Texture {
   texture.colorSpace = colour ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   texture.wrapS = THREE.RepeatWrapping;
@@ -200,6 +307,10 @@ export function applyWoodArm(
   material: THREE.MeshStandardMaterial,
   config: WoodArmConfig,
 ): void {
+  // Every mesh wearing this material gets a colour attribute in `varyMember`,
+  // so the flag is safe to raise for the whole material at once.
+  if (config.vary > 0) material.vertexColors = true;
+
   const done = (): void => {
     material.needsUpdate = true;
     (window as unknown as { __woodReady?: boolean }).__woodReady = true;

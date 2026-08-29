@@ -29,7 +29,13 @@ import { pageStriationMap } from './page-edges.ts';
 import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture } from './spine-texture.ts';
 // PROTOTYPE ONLY — wayfinder ticket #284. Never merged to `main`.
-import { applyWoodArm, readWoodArm, worldSpaceUvs } from './prototype-wood.ts';
+import {
+  applyWoodArm,
+  PLANK_INSET,
+  readWoodArm,
+  varyMember,
+  worldSpaceUvs,
+} from './prototype-wood.ts';
 
 /**
  * The shelf.
@@ -1624,6 +1630,11 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
         woodArm.unitsPerTile,
         false,
       );
+      // Seeded by which side it is, which is as stable as an identity gets: an
+      // upright is never added or removed, only made taller.
+      if (woodArm.vary > 0) {
+        varyMember(geometry, `upright-${side < 0 ? 'left' : 'right'}`, woodArm.vary);
+      }
     }
     const upright = new THREE.Mesh(geometry, wood);
     upright.position.set((side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0);
@@ -1633,17 +1644,30 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   }
 
   for (let row = 0; row <= rowCount; row += 1) {
-    const geometry = new THREE.BoxGeometry(outerWidth, SHELF.plankThickness, SHELF.depth);
+    /**
+     * PROTOTYPE (#284). The z-fight fix, and it is geometry rather than
+     * shading. A full-width plank's end face is exactly coplanar with the
+     * upright's outer face at x = ±1.79; shortened by twice `PLANK_INSET` the
+     * end sits inside the upright, where nothing sees it. `?woodJoint=flush`
+     * restores the coplanar pair so the two can be compared.
+     */
+    const plankWidth =
+      woodArm.arm !== 'off' && woodArm.joint === 'inset' ? outerWidth - PLANK_INSET * 2 : outerWidth;
+    const geometry = new THREE.BoxGeometry(plankWidth, SHELF.plankThickness, SHELF.depth);
     // PROTOTYPE (#284). A plank's long axis is `x`, which lands on the
     // texture's `u` on the top face and on the front edge — so both are swapped
     // to put the grain along the board rather than across it.
     if (woodArm.arm !== 'off') {
       worldSpaceUvs(
         geometry,
-        { x: outerWidth, y: SHELF.plankThickness, z: SHELF.depth },
+        { x: plankWidth, y: SHELF.plankThickness, z: SHELF.depth },
         woodArm.unitsPerTile,
         true,
       );
+      // ⚠️ Seeded **bottom-up**, which is #287's question answered provisionally
+      // — `rowsForCase` grows the case upward, so a top-down index would
+      // repaint every plank the day a book is added.
+      if (woodArm.vary > 0) varyMember(geometry, `plank-${String(row)}`, woodArm.vary);
     }
     const plank = new THREE.Mesh(geometry, wood);
     plank.position.set(0, row * SHELF.rowHeight, 0);
