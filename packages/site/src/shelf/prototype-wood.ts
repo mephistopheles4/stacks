@@ -124,6 +124,35 @@ export type Species = keyof typeof SPECIES;
 
 const SPECIES_NAMES = Object.keys(SPECIES) as readonly Species[];
 
+/**
+ * The sizes each sheet is written at, and the number that actually decides.
+ *
+ * ⚠️ **Texels per world unit, not texels, is what the eye reads** — and it is
+ * `resolution / unitsPerTile`, so the same 512 is sharp on one sheet and soft
+ * on the other:
+ *
+ * | | 512 | 1024 | 2048 |
+ * | --- | --- | --- | --- |
+ * | sapele, 1.6 units/tile | 320 | 640 | 1280 |
+ * | rosewood, 7.68 units/tile | **67** | 133 | 267 |
+ *
+ * That 67 is what reads as low resolution close up, and it is not a defect in
+ * the sheet: rosewood's tile is wider than the whole bookcase, which is exactly
+ * what buys away the repetition. **The two cannot both be had from one file** —
+ * a bigger sheet at a fixed size is a coarser sheet.
+ *
+ * ⚠️ **`?woodTile=` is the other half of the lever and costs no bytes at all.**
+ * Laying rosewood at 3.84 units rather than its true 7.68 doubles the texel
+ * density and makes the tile repeat once across the case; on figure this busy
+ * a repeat is far harder to see than it is on a stripe. That trade is free and
+ * the resolution one is not, so it is worth walking first.
+ *
+ * The cost that matters is **decode**, not download: `edge² × 4` bytes of RGBA,
+ * so 1.0 MB at 512, 4.0 MB at 1024 and 16.0 MB at 2048 — per map, per species
+ * held. G15 counts cover bytes and would see none of it.
+ */
+const RESOLUTIONS = [512, 1024, 2048] as const;
+
 /** `page-edges.ts`'s number, and for its reason: these faces graze the key light. */
 const ANISOTROPY = 16;
 
@@ -179,6 +208,8 @@ export interface WoodArmConfig {
   /** `inset` shortens the planks off the uprights' outer face; `flush` is today's geometry. */
   readonly joint: 'inset' | 'flush';
   readonly species: Species;
+  /** The map edge in texels. See `RESOLUTIONS`. */
+  readonly resolution: number;
 }
 
 /** Reads `?wood=`, `?woodTile=`, `?woodNormal=`, `?woodVary=` and `?woodJoint=`. */
@@ -197,6 +228,9 @@ export function readWoodArm(search: string): WoodArmConfig {
     species,
     arm,
     unitsPerTile: number('woodTile', SPECIES[species].unitsPerTile),
+    resolution:
+      RESOLUTIONS.find((edge) => edge === Number(params.get('woodRes'))) ??
+      (arm === 'pigment2k' ? 2048 : 512),
     normalScale: number('woodNormal', arm === 'wire' ? 4 : 1),
     vary: Number.isFinite(varyRaw) && varyRaw >= 0 ? Math.min(varyRaw, 1) : 1,
     joint: params.get('woodJoint') === 'flush' ? 'flush' : 'inset',
@@ -369,7 +403,7 @@ export function applyWoodArm(
   }
 
   const loader = new THREE.TextureLoader();
-  const size = config.arm === 'pigment2k' ? '2k' : '512';
+  const size = String(config.resolution);
   const pending: Promise<unknown>[] = [];
 
   // `TextureLoader.load` returns the `Texture` immediately and fills its image
@@ -412,14 +446,14 @@ export function applyWoodArm(
     material.color.setHex(0xffffff);
   }
   if (wantsRelief) {
-    material.normalMap = load(`${sheet.prefix}-nor-512.jpg`, false);
+    material.normalMap = load(`${sheet.prefix}-nor-${size}.jpg`, false);
     material.normalScale = new THREE.Vector2(config.normalScale, config.normalScale);
   }
   // ⚠️ Only sapele ships a roughness map. Asking for `?wood=rough` on a sheet
   // that has none would 404 and read as an arm that did nothing — the exact
   // ambiguity the wiring check exists to remove — so it is refused out loud.
   if (wantsRough) {
-    if (sheet.rough) material.roughnessMap = load(`${sheet.prefix}-rough-512.jpg`, false);
+    if (sheet.rough) material.roughnessMap = load(`${sheet.prefix}-rough-${size}.jpg`, false);
     else console.warn(`[prototype-wood] ${config.species} ships no roughness map`);
   }
 

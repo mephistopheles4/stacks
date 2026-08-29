@@ -31,7 +31,20 @@ import { REPO_ROOT } from './lib/repo-root.ts';
 const WOOD_DIR = join(REPO_ROOT, 'packages', 'site', 'public', 'wood');
 
 /** #281's number, from `MAX_COVER_EDGE`'s precedent. */
-const SHIPPING_EDGE = 512;
+const EDGES = [512, 1024, 2048] as const;
+
+/**
+ * What a size costs once the browser has decoded it, which is not its file size.
+ *
+ * ⚠️ **512 is [#281](https://github.com/mephistopheles4/stacks/issues/281)'s
+ * number and it was borrowed from covers — the assumption this ladder tests.**
+ * `MAX_COVER_EDGE` holds a cover to 512 because a cover is a few hundred pixels
+ * tall on a shelf. A bookcase upright at `minDistance` fills the frame, so the
+ * precedent's *reason* does not transfer even though its *arithmetic* does: an
+ * RGBA decode is still `edge² × 4` bytes, and that is the number the mobile
+ * risk hangs on. G15 counts cover bytes and would not see any of this.
+ */
+const decodedMb = (edge: number): string => ((edge * edge * 4) / 1024 / 1024).toFixed(1);
 
 const srgbToLinear = (channel: number): number =>
   channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
@@ -82,17 +95,16 @@ async function main(): Promise<void> {
 
   for (const source of sources) {
     const from = join(WOOD_DIR, source);
-    const to = join(WOOD_DIR, source.replace('-2k.jpg', '-512.jpg'));
-    await sharp(from)
-      .resize(SHIPPING_EDGE, SHIPPING_EDGE, { fit: 'inside' })
-      .jpeg({ quality: 88 })
-      .toFile(to);
-    const meta = await sharp(to).metadata();
-    console.log(
-      `${source.padEnd(22)} ${String(statSync(from).size).padStart(8)} B  →  ` +
-        `${to.split(/[\\/]/).pop()?.padEnd(22) ?? ''} ${String(statSync(to).size).padStart(7)} B  ` +
-        `${String(meta.width)}x${String(meta.height)}`,
-    );
+    for (const edge of EDGES) {
+      const to = join(WOOD_DIR, source.replace('-2k.jpg', `-${String(edge)}.jpg`));
+      await sharp(from).resize(edge, edge, { fit: 'inside' }).jpeg({ quality: 88 }).toFile(to);
+      const meta = await sharp(to).metadata();
+      console.log(
+        `${(to.split(/[\\/]/).pop() ?? '').padEnd(24)} ` +
+          `${String(statSync(to).size).padStart(8)} B on the wire   ` +
+          `${decodedMb(meta.width ?? edge).padStart(5)} MB decoded`,
+      );
+    }
   }
 
   console.log('');
