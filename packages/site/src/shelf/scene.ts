@@ -1610,8 +1610,20 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   const unitHeight = rowCount * SHELF.rowHeight;
   const outerWidth = SHELF.width + SHELF.sideThickness * 2;
 
+  /**
+   * PROTOTYPE (#284). The backboard's half of the z-fight fix — its sides tuck
+   * inside the uprights and its top and bottom clear theirs. **This one
+   * flickers on `main` already**, because the backboard is a second material,
+   * so the tie has always resolved to two different colours.
+   */
+  // ⚠️ **Twice the plank's inset, and that is not tidiness.** Shrunk by the
+  // same amount the backboard's sides and the plank ends land on one new
+  // shared plane — a tie the uprights happen to hide, which is a worse thing to
+  // rely on than not creating it.
+  const backInset =
+    woodArm.arm !== 'off' && woodArm.joint === 'inset' ? PLANK_INSET * 4 : 0;
   const back = new THREE.Mesh(
-    new THREE.BoxGeometry(outerWidth, unitHeight, SHELF.backThickness),
+    new THREE.BoxGeometry(outerWidth - backInset, unitHeight - backInset, SHELF.backThickness),
     backing,
   );
   back.position.set(0, unitHeight / 2, -SHELF.depth / 2);
@@ -1651,16 +1663,22 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
      * end sits inside the upright, where nothing sees it. `?woodJoint=flush`
      * restores the coplanar pair so the two can be compared.
      */
-    const plankWidth =
-      woodArm.arm !== 'off' && woodArm.joint === 'inset' ? outerWidth - PLANK_INSET * 2 : outerWidth;
-    const geometry = new THREE.BoxGeometry(plankWidth, SHELF.plankThickness, SHELF.depth);
+    const plankInset =
+      woodArm.arm !== 'off' && woodArm.joint === 'inset' ? PLANK_INSET * 2 : 0;
+    const plankWidth = outerWidth - plankInset;
+    // ⚠️ The depth matters as much as the width and the first pass missed it:
+    // a plank and an upright both span `z = ±depth / 2`, and once the plank's
+    // end sits *inside* the upright the two share an overlapping band on the
+    // front face as well as the back.
+    const plankDepth = SHELF.depth - plankInset;
+    const geometry = new THREE.BoxGeometry(plankWidth, SHELF.plankThickness, plankDepth);
     // PROTOTYPE (#284). A plank's long axis is `x`, which lands on the
     // texture's `u` on the top face and on the front edge — so both are swapped
     // to put the grain along the board rather than across it.
     if (woodArm.arm !== 'off') {
       worldSpaceUvs(
         geometry,
-        { x: plankWidth, y: SHELF.plankThickness, z: SHELF.depth },
+        { x: plankWidth, y: SHELF.plankThickness, z: plankDepth },
         woodArm.unitsPerTile,
         true,
       );

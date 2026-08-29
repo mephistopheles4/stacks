@@ -95,13 +95,18 @@ async function main(): Promise<void> {
     );
   }
 
-  const diffuse512 = join(WOOD_DIR, 'sapele-diff-512.jpg');
-  const linear = await meanColour(diffuse512);
-  const naive = await naiveMeanColour(diffuse512);
   console.log('');
-  console.log(`mean-matched flat twin   ${linear.hex}   rgb(${linear.rgb.join(', ')})`);
-  console.log(`the naive sRGB average   ${naive}   ← not this one; see the header`);
-  console.log(`today's flat wood        0x6b4f3a`);
+  console.log('mean-matched flat twins, one per species — computed in linear light:');
+  for (const file of readdirSync(WOOD_DIR).filter((name) => name.endsWith('-diff-512.jpg'))) {
+    const path = join(WOOD_DIR, file);
+    const linear = await meanColour(path);
+    const naive = await naiveMeanColour(path);
+    console.log(
+      `  ${file.replace('-diff-512.jpg', '').padEnd(10)} ${linear.hex}  ` +
+        `rgb(${linear.rgb.join(', ')})   naive sRGB average ${naive} ← not this one`,
+    );
+  }
+  console.log(`  ${'today'.padEnd(10)} 0x6b4f3a  the flat wood on main`);
 }
 
 await main();

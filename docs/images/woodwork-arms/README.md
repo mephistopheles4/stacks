@@ -38,8 +38,22 @@ pnpm dev
 ```
 
 then `?wood=pigment`, `?wood=relief`, `?wood=both`, `?wood=flat`,
-`?wood=rough`, `?wood=wire`, `?wood=pigment2k`, with `&woodNormal=<n>` and
-`&woodTile=<units>` open to a live hand.
+`?wood=rough`, `?wood=wire`, `?wood=pigment2k`, with these open to a live hand:
+
+| Knob | What it does |
+| --- | --- |
+| `&woodSpecies=sapele\|rosewood` | which sheet. Default `sapele`. |
+| `&woodNormal=<n>` | `normalScale`. Default 1, which for a flat-sliced veneer is a measured zero. |
+| `&woodTile=<units>` | world units per tile. Defaults to the sheet's own published size. |
+| `&woodVary=<0..1>` | per-member offset, mirror, scale and tint. Default 1; `0` makes every board identical again. |
+| `&woodJoint=flush` | restores the coplanar geometry, so the z-fight can be seen rather than argued about. |
+
+Two contact sheets of what Poly Haven publishes, served by the dev server —
+`/wood-grid.html` is all 135 of its woods, `/wood-short.html` is the twelve
+worth a second look. Both pull thumbnails from `cdn.polyhaven.com`, so they work
+under `pnpm dev` and would be blocked by the production CSP, which is
+[#281](https://github.com/mephistopheles4/stacks/issues/281)'s whole point about
+`img-src 'self'`.
 
 ## The source
 
