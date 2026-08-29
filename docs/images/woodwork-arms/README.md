@@ -55,6 +55,20 @@ under `pnpm dev` and would be blocked by the production CSP, which is
 [#281](https://github.com/mephistopheles4/stacks/issues/281)'s whole point about
 `img-src 'self'`.
 
+## The standing candidate
+
+The owner's own setting, reached on a live build, which is how
+[#282](https://github.com/mephistopheles4/stacks/issues/282) said this would be
+decided:
+
+```text
+?wood=both&woodSpecies=rosewood&woodDetail=0.5&woodNormal=0.5&woodTile=2
+```
+
+Rosewood's figure in `map`, the **drawn** fibre in `normalMap` at half strength,
+the sheet laid at 2 world units rather than its true 7.68 — and per-member
+runout, so no two boards' grain runs parallel. It ships **one 62.6 KB file**.
+
 ## The source
 
 **Poly Haven's `sapele_veneer`**, CC0, by Jenelle van Heerden — the species

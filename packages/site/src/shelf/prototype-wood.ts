@@ -199,6 +199,14 @@ const OFFSET_SPREAD = 1;
 const SCALE_SPREAD = 0.09;
 /** Half-range of the per-member tint, as a linear multiplier. */
 const TINT_SPREAD = 0.1;
+/**
+ * Half-range of the per-member **runout**, in radians — about 3.4 degrees.
+ *
+ * A sawn board's grain almost never runs true to its own edge, because neither
+ * the tree nor the saw is straight. Kept small: past about five degrees it stops
+ * reading as a board cut slightly off and starts reading as a crooked decal.
+ */
+const RUNOUT_SPREAD = 0.06;
 
 export interface WoodArmConfig {
   readonly arm: WoodArm;
@@ -340,18 +348,58 @@ export function varyMember(
   const position = geometry.attributes['position'];
   if (uv === undefined || position === undefined) return;
 
-  // Three draws off one hash, decorrelated by prefix — the same shape
-  // `books.ts` uses for a book's height and its spine colour.
+  // Draws off one hash, decorrelated by prefix — the same shape `books.ts` uses
+  // for a book's height and its spine colour.
   const offsetU = hashUnit(`${seed}-u`);
   const offsetV = hashUnit(`${seed}-v`);
   const mirror = hashUnit(`${seed}-mirror`) < 0.5 ? -1 : 1;
-  const scale = 1 + (hashUnit(`${seed}-scale`) - 0.5) * 2 * SCALE_SPREAD * strength;
   const tint = 1 + (hashUnit(`${seed}-tint`) - 0.5) * 2 * TINT_SPREAD * strength;
 
+  /**
+   * **Runout**: the board's grain tilts a few degrees off its own edge.
+   *
+   * The owner's report was that the vertical lines are too perfectly aligned,
+   * and this is the reason rather than a trick. A tree does not grow exactly
+   * straight and a saw does not follow it exactly, so a sawn board's grain
+   * almost never runs true to the edge — the woodworker's word is *runout*, and
+   * on a real bookcase it is the thing that stops two boards reading as one
+   * printed sheet.
+   *
+   * ⚠️ **Small on purpose.** Beyond about five degrees it stops reading as a
+   * board that was cut slightly off and starts reading as a texture that was
+   * pasted on crooked, which is the failure it exists to fix.
+   *
+   * It also does something the offset could not: rotating breaks the *column*.
+   * A tile repeating up a 4.5-unit upright puts identical features directly
+   * above each other, and the eye finds a vertical column of them instantly;
+   * tilted, the same features drift sideways as they climb and stop lining up.
+   */
+  const runout = (hashUnit(`${seed}-runout`) - 0.5) * 2 * RUNOUT_SPREAD * strength;
+  const cos = Math.cos(runout);
+  const sin = Math.sin(runout);
+
+  /**
+   * Independent per axis, and that is the point rather than an oversight.
+   *
+   * One shared scale changes how big the pattern is and leaves its *lattice*
+   * square, so two members still repeat in step. Scaling `u` and `v` by
+   * different amounts gives every member its own period on each axis, so no two
+   * of them line up anywhere.
+   */
+  const scaleU = 1 + (hashUnit(`${seed}-scale-u`) - 0.5) * 2 * SCALE_SPREAD * strength;
+  const scaleV = 1 + (hashUnit(`${seed}-scale-v`) - 0.5) * 2 * SCALE_SPREAD * strength;
+
   for (let index = 0; index < uv.count; index += 1) {
-    const u = uv.getX(index) * scale * mirror + offsetU * OFFSET_SPREAD * strength;
-    const v = uv.getY(index) * scale + offsetV * OFFSET_SPREAD * strength;
-    uv.setXY(index, u, v);
+    const u = uv.getX(index) * scaleU * mirror;
+    const v = uv.getY(index) * scaleV;
+    // Rotate about the UV origin. Wrapping is `RepeatWrapping`, so the
+    // translation a rotation about the origin drags along is free — it lands as
+    // one more offset, which is a thing this already wanted.
+    uv.setXY(
+      index,
+      u * cos - v * sin + offsetU * OFFSET_SPREAD * strength,
+      u * sin + v * cos + offsetV * OFFSET_SPREAD * strength,
+    );
   }
   uv.needsUpdate = true;
 
