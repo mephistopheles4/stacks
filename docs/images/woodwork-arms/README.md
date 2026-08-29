@@ -57,17 +57,42 @@ under `pnpm dev` and would be blocked by the production CSP, which is
 
 ## The standing candidate
 
-The owner's own setting, reached on a live build, which is how
+Reached on a live build, which is how
 [#282](https://github.com/mephistopheles4/stacks/issues/282) said this would be
 decided:
 
 ```text
-?wood=both&woodSpecies=rosewood&woodDetail=0.5&woodNormal=0.5&woodTile=2
+?wood=both&woodSpecies=rosewood&woodDetail=0.5&woodNormal=0.5&woodRes=1024
 ```
 
-Rosewood's figure in `map`, the **drawn** fibre in `normalMap` at half strength,
-the sheet laid at 2 world units rather than its true 7.68 — and per-member
-runout, so no two boards' grain runs parallel. It ships **one 62.6 KB file**.
+Rosewood's figure in `map` at **1024, laid at its true 7.68 units**, and the
+**drawn** fibre in `normalMap` at half strength. One tile is wider than the whole
+bookcase, so the figure never repeats; the fibre carries the close-up detail the
+figure map no longer has to.
+
+⚠️ **`woodTile` is struck for this sheet, and it was this file's own
+suggestion.** Laying the sheet smaller buys texels for free and brings the
+repeat back — and the repeat is what the owner's eye rejected twice, at
+`woodTile=2`, pointing at motifs recurring up an upright. The sheets do tile
+near-seamlessly, measured (wrap difference 5.72 against a local 3.64), so what
+was visible was **repetition and not a seam**: the fix is not a better seam, it
+is not repeating. Anything that both tiles small *and* hides the repetition
+needs stochastic tiling in a shader, which is a different ticket.
+
+**What it costs**, and the honest comparison:
+
+| | wire | decoded | figure repeats up an upright |
+| --- | --- | --- | --- |
+| 512 @ true scale | 62.6 KB | 1.0 MB | never — but soft close up |
+| **1024 @ true scale** | **266.5 KB** | **4.0 MB** | **never** |
+| 2048 @ true scale | 1051.8 KB | 16.0 MB | never |
+| 512 @ 2 units | 62.6 KB | 1.0 MB | 2.24 times — rejected |
+
+The fibre normal is drawn in code, so it adds **nothing** to either column.
+⚠️ 266.5 KB is four times what
+[#281](https://github.com/mephistopheles4/stacks/issues/281) had in mind when it
+settled 512 on `MAX_COVER_EDGE`'s precedent — and that precedent was about
+covers, which are a few hundred pixels tall on a shelf.
 
 ## The source
 
