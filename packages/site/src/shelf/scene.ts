@@ -28,6 +28,8 @@ import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
 import { pageStriationMap } from './page-edges.ts';
 import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture } from './spine-texture.ts';
+// PROTOTYPE ONLY — wayfinder ticket #284. Never merged to `main`.
+import { applyWoodArm, readWoodArm, worldSpaceUvs } from './prototype-wood.ts';
 
 /**
  * The shelf.
@@ -1588,6 +1590,17 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
     backing.emissive.setHex(0x00ff00);
   }
 
+  /**
+   * PROTOTYPE ONLY — wayfinder ticket #284. Never merged to `main`.
+   *
+   * The arm, read off `?wood=`. `off` is today's shelf and touches nothing, so
+   * a build with no query string renders byte-identically to the #282 baseline
+   * every arm is differenced against — which is the whole reason the arms hang
+   * off a parameter rather than off an edit.
+   */
+  const woodArm = readWoodArm(window.location.search);
+  applyWoodArm(wood, woodArm);
+
   const unitHeight = rowCount * SHELF.rowHeight;
   const outerWidth = SHELF.width + SHELF.sideThickness * 2;
 
@@ -1600,10 +1613,19 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   group.add(back);
 
   for (const side of [-1, 1]) {
-    const upright = new THREE.Mesh(
-      new THREE.BoxGeometry(SHELF.sideThickness, unitHeight, SHELF.depth),
-      wood,
-    );
+    const geometry = new THREE.BoxGeometry(SHELF.sideThickness, unitHeight, SHELF.depth);
+    // PROTOTYPE (#284). An upright's long axis is `y`, which is already the
+    // texture's `v` on the two faces that show, so no swap. See
+    // `prototype-wood.ts`, decision 2.
+    if (woodArm.arm !== 'off') {
+      worldSpaceUvs(
+        geometry,
+        { x: SHELF.sideThickness, y: unitHeight, z: SHELF.depth },
+        woodArm.unitsPerTile,
+        false,
+      );
+    }
+    const upright = new THREE.Mesh(geometry, wood);
     upright.position.set((side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0);
     upright.castShadow = castShadows;
     upright.receiveShadow = true;
@@ -1611,10 +1633,19 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   }
 
   for (let row = 0; row <= rowCount; row += 1) {
-    const plank = new THREE.Mesh(
-      new THREE.BoxGeometry(outerWidth, SHELF.plankThickness, SHELF.depth),
-      wood,
-    );
+    const geometry = new THREE.BoxGeometry(outerWidth, SHELF.plankThickness, SHELF.depth);
+    // PROTOTYPE (#284). A plank's long axis is `x`, which lands on the
+    // texture's `u` on the top face and on the front edge — so both are swapped
+    // to put the grain along the board rather than across it.
+    if (woodArm.arm !== 'off') {
+      worldSpaceUvs(
+        geometry,
+        { x: outerWidth, y: SHELF.plankThickness, z: SHELF.depth },
+        woodArm.unitsPerTile,
+        true,
+      );
+    }
+    const plank = new THREE.Mesh(geometry, wood);
     plank.position.set(0, row * SHELF.rowHeight, 0);
     plank.castShadow = castShadows;
     plank.receiveShadow = true;
