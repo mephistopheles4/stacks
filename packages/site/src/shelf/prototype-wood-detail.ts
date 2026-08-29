@@ -51,12 +51,39 @@ const EDGE = 256;
 /**
  * How hard the fibre pushes the normal, before `normalScale`.
  *
- * Deliberately gentle. The point is a surface that stops looking like a
- * photograph pinned to a board when the camera is close, not a carved one — and
- * the arms already showed that `normalScale` is where strength gets dialled,
- * for free, live.
+ * ⚠️ **The first draft multiplied the slope by `EDGE` and this is what that
+ * looked like: hard vertical bars, in blocks, with visible steps across.** Two
+ * mistakes, and both are worth naming because either alone produces something
+ * that still reads as "a texture" from far away.
+ *
+ * 1. **The noise was never interpolated.** `noise(x, y >> 5)` is a fresh random
+ *    value per texel, held constant in 32-row bands — white noise with a step
+ *    function on top. A normal map is the *derivative* of its height field, and
+ *    the derivative of white noise is white noise at full amplitude, so every
+ *    texel pointed somewhere unrelated to its neighbour. The bands were the
+ *    integer shift showing through as horizontal breaks.
+ * 2. **The gain was 256 times too large.** Slope was `(right - left) × EDGE ×
+ *    0.35`, which on a height field in `0..1` reaches about 90 — so
+ *    `normalize` drove nearly every texel to the edge of the hemisphere and the
+ *    map became two colours. That is what turned noise into bars.
+ *
+ * Now the height field is proper value noise, smoothly interpolated and summed
+ * over three octaves, and the slope is a plain central difference times this
+ * gain. Gentle on purpose: the point is a board that stops reading as a
+ * photograph pinned to a plank, not a carved one, and `normalScale` is where
+ * strength gets dialled live.
  */
-const RELIEF = 0.35;
+const RELIEF = 1.6;
+
+/**
+ * The fibre's shape, in texels: how far apart the lattice points are.
+ *
+ * Wildly anisotropic, because that is what a fibre *is* — a few texels across
+ * the grain against most of the tile along it. Three octaves, each half the
+ * spacing of the last.
+ */
+const LATTICE = { across: 24, along: 192 } as const;
+const OCTAVES = 3;
 
 let shared: THREE.CanvasTexture | undefined;
 let built = false;
@@ -82,6 +109,54 @@ function noise(x: number, y: number): number {
   return (hash >>> 8) / 0x1000000;
 }
 
+/** Hermite ease, so the lattice's corners do not show as creases. */
+const smooth = (t: number): number => t * t * (3 - 2 * t);
+
+/**
+ * Value noise on a lattice, wrapping, with the two axes on different spacings.
+ *
+ * ⚠️ **The wrap is on the *lattice*, not on the texel grid**, which is the only
+ * way the map tiles seamlessly — and it has to, because this one is laid to
+ * repeat many times across a single plank rather than once across a case.
+ */
+function valueNoise(x: number, y: number, across: number, along: number): number {
+  const gx = x / across;
+  const gy = y / along;
+  const x0 = Math.floor(gx);
+  const y0 = Math.floor(gy);
+  const fx = smooth(gx - x0);
+  const fy = smooth(gy - y0);
+
+  // How many lattice cells fit the tile, so `% cells` closes the loop.
+  const cellsX = Math.max(1, Math.round(EDGE / across));
+  const cellsY = Math.max(1, Math.round(EDGE / along));
+  const at = (ix: number, iy: number): number =>
+    noise(((ix % cellsX) + cellsX) % cellsX, ((iy % cellsY) + cellsY) % cellsY);
+
+  const top = at(x0, y0) * (1 - fx) + at(x0 + 1, y0) * fx;
+  const bottom = at(x0, y0 + 1) * (1 - fx) + at(x0 + 1, y0 + 1) * fx;
+  return top * (1 - fy) + bottom * fy;
+}
+
+/** Three octaves of it, each half the spacing and half the weight. */
+function fibreHeight(x: number, y: number): number {
+  let total = 0;
+  let weight = 0;
+  for (let octave = 0; octave < OCTAVES; octave += 1) {
+    const scale = 2 ** octave;
+    const amplitude = 1 / scale;
+    total +=
+      valueNoise(
+        x,
+        y,
+        Math.max(2, LATTICE.across / scale),
+        Math.max(2, LATTICE.along / scale),
+      ) * amplitude;
+    weight += amplitude;
+  }
+  return total / weight;
+}
+
 function bake(): THREE.CanvasTexture | undefined {
   const canvas = document.createElement('canvas');
   canvas.width = EDGE;
@@ -89,46 +164,34 @@ function bake(): THREE.CanvasTexture | undefined {
   const context = canvas.getContext('2d');
   if (context === null) return undefined;
 
-  /**
-   * A height field, then its slope — the same two steps `page-edges.ts` takes.
-   *
-   * Wood fibre runs *along* the grain, so the height varies fast across `u` and
-   * slowly along `v`. Two octaves across, one slow wander along, so the fibre
-   * drifts rather than ruling straight lines: a ruled line reads as corduroy,
-   * which is the failure this shape avoids.
-   */
   const height = new Float32Array(EDGE * EDGE);
   for (let y = 0; y < EDGE; y += 1) {
     for (let x = 0; x < EDGE; x += 1) {
-      const fine = noise(x, y >> 5);
-      const coarse = noise(x >> 2, y >> 6);
-      const wander = Math.sin((y / EDGE) * Math.PI * 2 + coarse * 6) * 1.5;
-      const shifted = noise(Math.round(x + wander) & (EDGE - 1), y >> 5);
-      height[y * EDGE + x] = fine * 0.35 + coarse * 0.35 + shifted * 0.3;
+      height[y * EDGE + x] = fibreHeight(x, y);
     }
   }
 
   const image = context.createImageData(EDGE, EDGE);
   for (let y = 0; y < EDGE; y += 1) {
     for (let x = 0; x < EDGE; x += 1) {
-      // Central difference, wrapping, so the map tiles without a seam — which
-      // matters far more here than it does for a sheet, because this one is
-      // laid to repeat many times across a single plank.
+      // Central difference, wrapping. ⚠️ **No `EDGE` factor** — the slope is
+      // per texel, and scaling it by the texture's own size is what turned the
+      // first draft into two colours.
       const left = height[y * EDGE + ((x - 1 + EDGE) % EDGE)] ?? 0;
       const right = height[y * EDGE + ((x + 1) % EDGE)] ?? 0;
       const up = height[((y - 1 + EDGE) % EDGE) * EDGE + x] ?? 0;
       const down = height[((y + 1) % EDGE) * EDGE + x] ?? 0;
 
-      const nx = -(right - left) * EDGE * RELIEF;
-      // A tenth across the grain: fibre is long, so its slope along `v` is
-      // nearly nothing, and encoding it at full strength would read as noise.
-      const ny = -(down - up) * EDGE * RELIEF * 0.1;
+      const nx = -((right - left) / 2) * RELIEF * EDGE * 0.05;
+      // A fifth across the grain: a fibre is long, so its slope along `v` is
+      // genuinely small, and encoding it level would read as noise not grain.
+      const ny = -((down - up) / 2) * RELIEF * EDGE * 0.01;
       const length = Math.hypot(nx, ny, 1);
 
       const offset = (y * EDGE + x) * 4;
       image.data[offset] = Math.round(((nx / length) * 0.5 + 0.5) * 255);
       image.data[offset + 1] = Math.round(((ny / length) * 0.5 + 0.5) * 255);
-      image.data[offset + 2] = Math.round((1 / length) * 255);
+      image.data[offset + 2] = Math.round(((1 / length) * 0.5 + 0.5) * 255);
       image.data[offset + 3] = 255;
     }
   }
