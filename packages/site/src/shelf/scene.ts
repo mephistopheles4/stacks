@@ -384,7 +384,33 @@ export function mountShelf(
   const lookup: BookLookup = new Map();
   // The seam: all of the arithmetic happens first, in a module with no Three.js
   // in it, and the scene graph is built from what it returned.
+  /**
+   * PROTOTYPE ONLY — wayfinder ticket #282, "Render the empty bookcase as the
+   * woodwork baseline". Never merged to `main`.
+   *
+   * `window.__empty` empties the bookcase **without shrinking it**. The row
+   * count is computed above, from the real book list, so the case keeps the
+   * height and the framing it has when it is full; only the books, their
+   * painted shadows and their contact shadows go. That is the whole point: an
+   * empty render and its populated twin then differ by exactly the books, at
+   * one camera, so #284's report on whether a grain reads through the painted
+   * shadows has a baseline half to difference against.
+   *
+   * A 0-book *vault* would have been simpler and answers a different question —
+   * `rowsForCase(0)` is 2 rows against the fixture's 4, `frameCamera` derives
+   * from `unitHeight`, and the pair stops being comparable.
+   *
+   * ⚠️ **The rows are emptied, not removed**, and the first draft removed them.
+   * `buildBooks` computes its *own* `rowsForCase(placements.length)` for the
+   * recess shading, so handing it `[]` shaded the bottom two compartments of a
+   * four-row case and left the top two bare — visible in the render, and it
+   * would have been baked into the baseline every treatment is differenced
+   * against. Keeping the row count and emptying each row leaves the case
+   * shaded exactly as the populated one is.
+   */
+  const emptied = (window as unknown as { __empty?: boolean }).__empty === true;
   const placements = placeShelf(rows);
+  if (emptied) for (const row of placements) row.length = 0;
   const { placed, painters } = buildBooks(scene, placements, textures, lookup, settings);
 
   const picker = new Picker(
@@ -1540,6 +1566,27 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
     color: settings.materials.woodDark,
     roughness: settings.materials.backingRoughness,
   });
+
+  /**
+   * PROTOTYPE ONLY — wayfinder ticket #282. Never merged to `main`.
+   *
+   * `window.__clownCase` splits the bookcase into its two materials so a frame
+   * can be counted rather than eyeballed: the **woodwork** (planks and
+   * uprights, the surface every treatment on #284 is about) magenta, the
+   * **backboard** (`woodDark`, a second material and an open question on #285)
+   * green.
+   *
+   * `emissive` rather than a `MeshBasicMaterial` swap, so nothing downstream —
+   * `applyLive`, `dispose`, `stopSamplingShadows` — meets a type it was not
+   * written for. Emissive is added after lighting, tone mapping is `none` and
+   * exposure is 1, so the two colours arrive at the framebuffer exactly.
+   */
+  if ((window as unknown as { __clownCase?: boolean }).__clownCase === true) {
+    wood.color.setHex(0x000000);
+    wood.emissive.setHex(0xff00ff);
+    backing.color.setHex(0x000000);
+    backing.emissive.setHex(0x00ff00);
+  }
 
   const unitHeight = rowCount * SHELF.rowHeight;
   const outerWidth = SHELF.width + SHELF.sideThickness * 2;
