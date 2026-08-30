@@ -33,9 +33,11 @@
  * add, measured on their prototype branches rather than guessed: sapele's 1024
  * diffuse at 170.8 KB ([#306](https://github.com/mephistopheles4/stacks/issues/306))
  * and `dark_wood`'s 512 at 54.5 KB
- * ([#304](https://github.com/mephistopheles4/stacks/issues/304)). So a later
- * ticket does not have to relitigate this number to land its own sheet, and
- * a 2048 is refused whichever ticket brings it.
+ * ([#304](https://github.com/mephistopheles4/stacks/issues/304)). ⚠️ **That
+ * second one has since landed, and it landed under both caps without either
+ * moving** — 512 on the edge and 53.2 KB committed, which is the whole point of
+ * setting a cap against a sheet nobody had committed yet. A 2048 is refused
+ * whichever ticket brings it.
  *
  * ## The vacuous green, and what closes it
  *
@@ -44,19 +46,24 @@
  * malformed identifier reads as no findings*. Three things close it: the sweep
  * is floored, **every entry must be an image this gate can actually measure**
  * (a file `sharp` cannot open is a red naming it, never a silent skip), and the
- * URL `woodwork.ts` resolves must name a file that is really there — which is
- * also what makes the caps apply to the sheet that ships rather than to whatever
- * happens to be lying beside it.
+ * URLs `woodwork.ts` resolves must each name a file that is really there —
+ * which is also what makes the caps apply to the sheets that ship rather than to
+ * whatever happens to be lying beside them.
  *
- * See docs/gates.md, row G52 (sheet-size), and
- * [#302](https://github.com/mephistopheles4/stacks/issues/302).
+ * See docs/gates.md, row G52 (sheet-size),
+ * [#302](https://github.com/mephistopheles4/stacks/issues/302) and
+ * [#304](https://github.com/mephistopheles4/stacks/issues/304).
  */
 
 import { describe, expect, it } from 'vitest';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { measureCover } from '../packages/core/src/covers/cover-budget.ts';
-import { WOODWORK_SHEET } from '../packages/site/src/shelf/woodwork.ts';
+import {
+  BACKBOARD_SHEET,
+  SHIPPED_SHEETS,
+  WOODWORK_SHEET,
+} from '../packages/site/src/shelf/woodwork.ts';
 import { REPO_ROOT, expectFound } from './repo.ts';
 
 /** Where a committed sheet lives. The URL path is this directory, served. */
@@ -131,20 +138,39 @@ describe('G52 — the woodwork directory is read, and the read is not empty', ()
     ).toEqual([]);
   });
 
-  it('serves the sheet `woodwork.ts` actually asks for', async () => {
+  it('serves every sheet `woodwork.ts` actually asks for', async () => {
     // What binds the caps to the shipped configuration rather than to whatever
     // is lying beside it — and, in the other direction, the only thing here that
     // would notice the module pointing at a file that is not committed. The URL
     // is compared, never fetched: G21 records any request the suite makes.
-    const names = (await sheets()).map((sheet) => sheet.name);
-    const served = names.map((name) => `/wood/${name}`);
+    //
+    // ⚠️ **Every sheet, not the woodwork's.** A default page fetches two —
+    // #304 gave the backboard `dark_wood`, a constant with no menu behind it —
+    // and a clause naming one of them leaves the other uncapped in practice,
+    // since the caps are the *only* other thing pointing at these files.
+    expectFound(SHIPPED_SHEETS, 'shipped sheet URL(s)');
+    const served = (await sheets()).map((sheet) => `/wood/${sheet.name}`);
+
+    const missing = SHIPPED_SHEETS.map((sheet) => sheet.url).filter((url) => !served.includes(url));
 
     expect(
-      served,
-      `\`WOODWORK_SHEET.url\` is ${WOODWORK_SHEET.url}, and nothing under ${WOOD_DIR} is ` +
-        'served at that path. On a live build that is a 404 and a bookcase left at its ' +
-        'fallback colour, which looks like a texture nobody bound',
-    ).toContain(WOODWORK_SHEET.url);
+      missing,
+      `sheet URLs \`woodwork.ts\` resolves that nothing under ${WOOD_DIR} is served at. On a ` +
+        'live build each is a 404 and a surface left at its fallback colour, which looks ' +
+        `exactly like a texture nobody bound: ${missing.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  it('ships the two sheets a default page fetches, and no more', async () => {
+    // ⚠️ **The count is the assertion, not the list.** #304's budget was
+    // *exactly one* new image, and #306's species menu must lazy-load rather
+    // than ship — so a third constant here is a cost every visitor pays that
+    // nobody decided. A menu entry loaded on selection is not in this array.
+    expect(
+      SHIPPED_SHEETS.map((sheet) => sheet.url),
+      'sheets a default page fetches. The woodwork’s and the backboard’s, and the second ' +
+        'is a constant rather than a menu — see #297',
+    ).toEqual([WOODWORK_SHEET.url, BACKBOARD_SHEET.url]);
   });
 });
 
