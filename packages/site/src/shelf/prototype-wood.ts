@@ -323,22 +323,24 @@ export function readWoodArm(search: string): WoodArmConfig {
    * request — that difference is presumably how the hand-rolled parse, and the
    * bug, got here.
    *
-   * Measured after the fix, rather than reasoned about:
+   * ⚠️ **An empty `?woodVary=` is treated as absent, and that is the second
+   * half of the same bug.** `Number('')` is `0`, so a value that *drops out of
+   * a query* resolved to 0 and silently turned the variation off — which is
+   * exactly the failure this ticket spent a session finding, reachable by a
+   * typo rather than by a default. `|| null` folds empty into absent, the same
+   * expression `seed` uses below and for the same reason: a knob that fell out
+   * of a URL must not answer as though somebody chose its most dangerous value.
+   *
+   * Measured, rather than reasoned about:
    *
    * | Passed | Resolves to |
    * | --- | --- |
-   * | absent | 1 — the documented default |
+   * | absent, or empty | 1 — the documented default |
    * | `0` | 0 — off, the case the helper could not serve |
    * | `0.5` | 0.5 |
    * | `2`, `-1`, `abc` | 1 |
-   *
-   * ⚠️ **An empty `?woodVary=` resolves to 0, where an empty `?woodSeed=` draws
-   * fresh.** `Number('')` is 0 and passes the guard. The two are inconsistent
-   * and only the seed's behaviour was chosen — this row is stated because it is
-   * the sort of thing that reads as deliberate once it is in the file, and a
-   * garbled value silently meaning *off* is the same shape as the bug above.
    */
-  const varyText = last('woodVary');
+  const varyText = last('woodVary') || null;
   const varyRaw = Number(varyText);
   const speciesRaw = last('woodSpecies');
   const species = SPECIES_NAMES.find((name) => name === speciesRaw) ?? 'sapele';
