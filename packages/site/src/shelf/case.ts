@@ -85,10 +85,15 @@ export const SHELF = {
  * `?wood=` query parameter, which was right for an arm switch and wrong for a
  * bookcase whose backboard flickers with no texture at all — the backboard is a
  * second material in a second colour, so its ties resolve to two different
- * pixels and were visible on `main`. The other 36 were invisible only because
- * every woodwork face carries the identical flat one, and anything that gives
- * the woodwork a texture makes all 46 visible at once. A texture did not cause
- * this; it revealed it.
+ * pixels — so the **16** pairs it takes part in were visible on `main`. The
+ * other **30** were invisible only because every woodwork face carries the
+ * identical flat one, and anything that gives the woodwork a texture makes all
+ * 46 visible at once. A texture did not cause this; it revealed it.
+ *
+ * ⚠️ **16 and 30, not 36.** The 36 is `46 - 10`: what #284's x-only first pass
+ * left behind, which is a different quantity from what was ever *visible*. Both
+ * numbers are in #296 and #301 and it is easy to carry the wrong one across —
+ * this comment was written with 36 in it and CodeRabbit caught it on #308.
  *
  * Held by G51 (`coplanar-faces`), which enumerates the class from these
  * constants rather than from a copy of them. See #296 and #301.

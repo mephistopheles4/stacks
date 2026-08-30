@@ -12,10 +12,15 @@
  * the day the case was built. Almost all of them resolved to the same pixel
  * either way, because the planks and the uprights share one material in one flat
  * colour — a tie between two identical colours is not a defect anybody can see.
- * ⚠️ **The backboard's were the exception and flickered**: it is a second
- * material in `woodDark`, so its ties resolve to two different colours.
- * Anything that gives the woodwork a texture makes all 46 visible at once. See
+ * ⚠️ **The 16 pairs the backboard takes part in were the exception and
+ * flickered**: it is a second material in `woodDark`, so its ties resolve to two
+ * different colours. The other 30 did not. Anything that gives the woodwork a
+ * texture makes all 46 visible at once. See
  * [#296](https://github.com/mephistopheles4/stacks/issues/296).
+ *
+ * ⚠️ **16 and 30, not 36** — 36 is `46 - 10`, what #284's x-only first pass left
+ * behind, and both numbers appear in #296 and #301. This docblock carried the
+ * wrong one until CodeRabbit caught it on #308.
  *
  * ## Why this is enumerated rather than eyeballed
  *
@@ -42,9 +47,17 @@
  * A gate that built the real Three.js scene would need a WebGL context, and the
  * condition being asserted is geometric rather than visual — no render decides
  * it. So the third clause below binds the mirror to the renderer the only way a
- * text gate can: every `BoxGeometry` call in `buildShelf` must carry the inset
- * this file assumes it carries. That is G40's and G44's stated limit reached
- * again — **the condition is proven, the pixels are not.**
+ * text gate can: each `BoxGeometry` call in `buildShelf` must carry the inset
+ * this file assumes it carries, **on the axes it assumes and on no others** —
+ * uprights none, planks `x` and `z`, backboard `x` and `y`. That is G40's and
+ * G44's stated limit reached again — **the condition is proven, the pixels are
+ * not.**
+ *
+ * ⚠️ **The axis half of that clause is not decoration.** It first read *does
+ * this call mention the constant*, which passes a plank inset in **height**:
+ * the wrong axis, ends still on the uprights' planes, and indistinguishable
+ * from a fix to anything that only greps. That is #284's first pass — cleared
+ * `x`, left `z` — arriving inside the gate written to prevent it.
  *
  * See docs/gates.md, row G51 (coplanar-faces), and
  * [#301](https://github.com/mephistopheles4/stacks/issues/301).
@@ -258,16 +271,73 @@ describe('G51 — the renderer carries the inset this gate assumes', () => {
 
     expectFound(boxes, 'BoxGeometry calls in buildShelf', 3);
 
-    const withPlank = boxes.filter((args) => args.includes('PLANK_INSET')).length;
-    const withBackboard = boxes.filter((args) => args.includes('BACKBOARD_INSET')).length;
+    // ⚠️ **Which argument carries the inset *is* the axis, so presence alone is
+    // not enough.** `BoxGeometry(width, height, depth)` is `(x, y, z)`, and a
+    // clause asking only *does this call mention PLANK_INSET* passes a plank
+    // inset in **height** — the wrong axis, ends still on the uprights' planes.
+    // That is #284's first pass exactly, which cleared `x` and left `z`, one
+    // file over. Raised by CodeRabbit on #308 against the weaker version.
+    //
+    // Members are identified by their own thickness constant rather than by
+    // position in the list, so reordering `buildShelf` cannot make this clause
+    // grade one member against another's rule.
+    // The trailing comma Prettier writes after the last argument would otherwise
+    // make every call read as four arguments, so the empty tail is dropped. No
+    // argument here contains a comma of its own — the three are arithmetic on
+    // single identifiers — and the length check below is what notices if that
+    // ever stops being true rather than letting a mis-split pass quietly.
+    const axesOf = (args: string): string[] =>
+      args
+        .split(',')
+        .map((arg) => arg.trim())
+        .filter((arg) => arg !== '');
+
+    const EXPECTED: readonly { member: string; marker: string; inset: string; on: number[] }[] = [
+      // The backboard: `x` and `y` inside the uprights, `z` untouched — it is
+      // the one member whose depth nothing shares a plane with.
+      { member: 'backboard', marker: 'SHELF.backThickness', inset: 'BACKBOARD_INSET', on: [0, 1] },
+      // The uprights keep every plane they own, so they carry no inset at all.
+      { member: 'upright', marker: 'SHELF.sideThickness', inset: '', on: [] },
+      // The planks: `x` and `z`. The `z` half is the one that was missed.
+      { member: 'plank', marker: 'SHELF.plankThickness', inset: 'PLANK_INSET', on: [0, 2] },
+    ];
+
+    const wrong: string[] = [];
+
+    for (const { member, marker, inset, on } of EXPECTED) {
+      const found = boxes.filter((args) => args.includes(marker));
+      if (found.length !== 1) {
+        wrong.push(`${member}: ${String(found.length)} calls name \`${marker}\`, expected 1`);
+        continue;
+      }
+
+      const args = axesOf(found[0] ?? '');
+      if (args.length !== 3) {
+        wrong.push(`${member}: ${String(args.length)} arguments, expected width, height, depth`);
+        continue;
+      }
+
+      for (const [axis, name] of ['x', 'y', 'z'].entries()) {
+        const carries = inset !== '' && (args[axis] ?? '').includes(inset);
+        const should = on.includes(axis);
+        if (carries === should) continue;
+        wrong.push(
+          should
+            ? `${member} must be inset in ${name} and is not`
+            : `${member} must not be inset in ${name} and is`,
+        );
+      }
+    }
 
     expect(
-      { plank: withPlank, backboard: withBackboard, total: boxes.length },
-      'buildShelf must size exactly one member off `PLANK_INSET` (the planks) and exactly ' +
-        'one off `BACKBOARD_INSET` (the backboard), leaving the uprights — which keep ' +
-        'every plane they own — sized off neither. A call carrying no inset where one ' +
-        'belongs is a member back on a shared plane, and the arithmetic above would not ' +
-        'notice, because it reads `case.ts` and never this file',
-    ).toEqual({ plank: 1, backboard: 1, total: 3 });
+      wrong,
+      'members of `buildShelf` sized off the wrong axis. The uprights keep every plane ' +
+        'they own and carry no inset; the planks come off `x` and `z`; the backboard off ' +
+        '`x` and `y`, at twice the amount. An inset on the wrong axis leaves a face on a ' +
+        'shared plane while looking, to any check that only greps for the constant, exactly ' +
+        `like a fix: ${wrong.join('; ')}`,
+    ).toEqual([]);
+
+    expect(boxes.length, 'buildShelf builds exactly three members').toBe(3);
   });
 });

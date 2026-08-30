@@ -20,12 +20,20 @@ The arithmetic is not subtle. A plank is `SHELF.width + SHELF.sideThickness * 2`
 wide, an upright stands at `±(SHELF.width + SHELF.sideThickness) / 2` with a
 half-thickness of `SHELF.sideThickness / 2`, and both land on `±1.79` exactly.
 
-⚠️ **Almost all of it had been invisible since the case was built**, because the
+⚠️ **30 of the 46 had been invisible since the case was built**, because the
 planks and the uprights share one material in one flat colour and a tie between
-two identical colours resolves to the same pixel either way. The backboard's
-pairs were the exception and flickered on `main`: it is a second material in
-`woodDark`, so its ties resolve to two different colours. It was reported by the
-owner as a pre-existing artefact while looking at something else.
+two identical colours resolves to the same pixel either way. The **16** the
+backboard takes part in were the exception and flickered on `main`: it is a
+second material in `woodDark`, so its ties resolve to two different colours. It
+was reported by the owner as a pre-existing artefact while looking at something
+else.
+
+⚠️ **The split is 16 and 30, and the number to not reach for is 36.** 36 is
+`46 - 10` — what #284's x-only first pass left behind — and it is a count of
+*unfixed* pairs, not of *invisible* ones. Both live in #296 and #301 a paragraph
+apart. Three files here were written with 36 in the visibility sentence and
+CodeRabbit caught it on [#308](https://github.com/mephistopheles4/stacks/pull/308);
+none of five parallel review agents did.
 
 ## What was done
 
