@@ -28,6 +28,14 @@ import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
 import { pageStriationMap } from './page-edges.ts';
 import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture } from './spine-texture.ts';
+import {
+  WOODWORK_SHEET,
+  bindWoodSheet,
+  woodColour,
+  worldSpaceUvs,
+  type Axis,
+  type SheetBinding,
+} from './woodwork.ts';
 
 /**
  * The shelf.
@@ -1526,16 +1534,37 @@ interface Woodwork {
   readonly group: THREE.Group;
   readonly wood: THREE.MeshStandardMaterial;
   readonly backing: THREE.MeshStandardMaterial;
+  /** The veneer, so `applySettings` can tell a fallback colour from a live one. */
+  readonly sheet: SheetBinding;
+}
+
+/**
+ * A member's box, with its UVs rewritten to the sheet's world-space period and
+ * its grain running along `grain`.
+ *
+ * Wrapped rather than written as three statements per member so the
+ * `BoxGeometry` call — where a member's size is decided, and where G51 reads it
+ * — stays one expression carrying its own inset arithmetic. `worldSpaceUvs`
+ * takes the size back off `geometry.parameters`, so there is no second copy of
+ * that arithmetic to drift from this one.
+ */
+function veneered(geometry: THREE.BoxGeometry, grain: Axis): THREE.BoxGeometry {
+  worldSpaceUvs(geometry, WOODWORK_SHEET.unitsPerTile, grain);
+  return geometry;
 }
 
 function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   const group = new THREE.Group();
   const castShadows = settings.shadows.casters;
 
+  // `materials.wood` is what the woodwork shows *before* the sheet decodes, and
+  // if it never does — a diffuse map multiplies `color`, so `bindWoodSheet`
+  // switches this to white inside the load callback. See `woodColour`.
   const wood = new THREE.MeshStandardMaterial({
     color: settings.materials.wood,
     roughness: settings.materials.woodRoughness,
   });
+  const sheet = bindWoodSheet(wood);
   const backing = new THREE.MeshStandardMaterial({
     color: settings.materials.woodDark,
     roughness: settings.materials.backingRoughness,
@@ -1561,9 +1590,14 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   back.receiveShadow = true;
   group.add(back);
 
+  // The grain runs up an upright and along a plank — each member along its own
+  // long axis, which is #285's verdict and is **stated rather than measured**:
+  // `rowsForCase` grows an upright with the library while a plank's length never
+  // moves, so a rule that took the longest side would rotate the figure the day
+  // a book was added.
   for (const side of [-1, 1]) {
     const upright = new THREE.Mesh(
-      new THREE.BoxGeometry(SHELF.sideThickness, unitHeight, SHELF.depth),
+      veneered(new THREE.BoxGeometry(SHELF.sideThickness, unitHeight, SHELF.depth), 'y'),
       wood,
     );
     upright.position.set((side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0);
@@ -1574,10 +1608,13 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
 
   for (let row = 0; row <= rowCount; row += 1) {
     const plank = new THREE.Mesh(
-      new THREE.BoxGeometry(
-        outerWidth - PLANK_INSET * 2,
-        SHELF.plankThickness,
-        SHELF.depth - PLANK_INSET * 2,
+      veneered(
+        new THREE.BoxGeometry(
+          outerWidth - PLANK_INSET * 2,
+          SHELF.plankThickness,
+          SHELF.depth - PLANK_INSET * 2,
+        ),
+        'x',
       ),
       wood,
     );
@@ -1587,7 +1624,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
     group.add(plank);
   }
 
-  return { group, wood, backing };
+  return { group, wood, backing, sheet };
 }
 
 /**
@@ -1959,8 +1996,23 @@ function applyLive(
   /* --- materials ---------------------------------------------------------- */
 
   if (current.materials.wood !== next.materials.wood) {
-    woodwork.wood.color.setHex(next.materials.wood);
-    applied.push(`wood: ${hex(current.materials.wood)} → ${hex(next.materials.wood)}`);
+    /**
+     * Routed through `woodColour`, and that is not decoration.
+     *
+     * A diffuse map **multiplies** `color`, so `bindWoodSheet` sets the material
+     * white once the sheet decodes. Repainting it here with the knob's own value
+     * — one tick of the debug panel, one `?tune=` — would put a dark colour back
+     * under a live sheet and darken the whole bookcase at a third of the
+     * brightness somebody judged. Once the sheet is bound the knob is the
+     * fallback and nothing else, and the report says so rather than claiming a
+     * change the eye cannot find: **a control must not lie**.
+     */
+    const shown = woodColour(next.materials.wood, woodwork.sheet.bound());
+    woodwork.wood.color.setHex(shown);
+    applied.push(
+      `wood: ${hex(current.materials.wood)} → ${hex(next.materials.wood)}` +
+        (shown === next.materials.wood ? '' : ' (fallback only — the sheet has decoded)'),
+    );
   }
   if (current.materials.woodDark !== next.materials.woodDark) {
     woodwork.backing.color.setHex(next.materials.woodDark);

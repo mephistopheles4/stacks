@@ -196,7 +196,25 @@ export interface SpineProfile {
 export const BINDINGS: readonly Binding[] = ['hardback', 'paperback'];
 
 export interface MaterialSettings {
+  /**
+   * The planks and uprights' colour **before the veneer decodes, and if it never
+   * does** — not the colour they render.
+   *
+   * ⚠️ **It changed meaning when the sheet landed, and the default moved with
+   * it.** A diffuse map *multiplies* `color`, so the old `0x6b4f3a` would render
+   * `rosewood_veneer1` at a third of its brightness; `woodwork.ts` switches the
+   * material to white inside the texture's load callback. Starting white instead
+   * would make a failed load a **white bookcase**, so this starts at the sheet's
+   * mean-matched hex and a visitor whose sheet never arrives gets
+   * [#284](https://github.com/mephistopheles4/stacks/issues/284)'s
+   * rendered-and-accepted flat arm.
+   *
+   * ⚠️ **Setting it once the sheet is bound changes nothing visible**, and
+   * `applySettings` says so in its report rather than claiming a change. See
+   * `woodColour` in `woodwork.ts`.
+   */
   readonly wood: number;
+  /** The backboard's, and it still is the colour that renders — see #304. */
   readonly woodDark: number;
   readonly woodRoughness: number;
   readonly backingRoughness: number;
@@ -424,7 +442,16 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     fog: { enabled: true, near: 14, far: 30 },
   },
   materials: {
-    wood: 0x6b4f3a,
+    // `rosewood_veneer1`'s mean-matched flat twin, computed in **linear light**
+    // from the 1024 map that ships. Not `0x6b4f3a`: see `MaterialSettings.wood`.
+    //
+    // ⚠️ Written out rather than imported from `woodwork.ts`, because this
+    // module has **no runtime import at all** and `woodwork.ts` pulls in three —
+    // `shelf-url.ts` and its specs hang off this file. The copy is held to
+    // `WOODWORK_SHEET.mean` by a spec in `woodwork.test.ts`, which is the same
+    // trade this repo makes everywhere a value would otherwise couple two
+    // layers: one definition, one assertion, no import edge.
+    wood: 0x6e3412,
     woodDark: 0x4a3527,
     woodRoughness: 0.82,
     backingRoughness: 0.95,

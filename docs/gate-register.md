@@ -5559,3 +5559,65 @@ enumerating a class rather than reading one.
   reddens on. ⚠️ **What is not held here is the pixel**: this gate proves a
   geometric condition and says nothing about what the renderer draws, G40's and
   G44's stated limit reached a fourth time.
+
+### G52 — `sheet-size`
+
+**Gate:** `gates/sheet-size.test.ts`, in the `suite` matrix under `pnpm test`
+**Date:** 2026-08-30
+**Observed-red line:** `rosewood-diff-2048.jpg` restored into `packages/site/public/wood/` from `prototype/284-woodwork-channels` — both cap clauses fail, naming **2048x2048 (16.0 MB decoded)** and **1027.1 KB**, against 5 of 5 passing immediately before and after (perturbation, with a control through the identical invocation on both sides). The three vacuous-green clauses were reddened separately and on their own terms: a `README.md` dropped into the directory reddens *holds nothing it cannot measure*, naming the file, and renaming the shipped sheet to `rosewood-diff-1023.jpg` reddens *serves the sheet `woodwork.ts` actually asks for*, naming both the URL and what is there instead.
+**Triaged at landing**, per G41.
+
+⚠️ **This row exists because a whole asset class sat outside every counter.**
+G15 (`cover-budget`) stages the fixture vault through `publish()` and measures
+what lands in `covers/`; a file committed straight into
+`packages/site/public/` passes through none of that. So from the moment the
+bookcase stopped being flat colour, the largest images the shelf uploads were
+the ones nothing measured — on exactly the axis whose arithmetic G15's own row
+records reaching the live site and killing a phone.
+
+- **Weakening** — **two named constants, and the honest answer is that moving
+  either is a code change somebody reads.** `MAX_SHEET_EDGE` and
+  `MAX_SHEET_BYTES` sit in the gate file with their derivations beside them;
+  raising the edge cap to admit a 2048 is the perturbation above, run in
+  reverse. ⚠️ **Neither is derived from the directory's current contents**,
+  which would be a floor equal to a population — the shape
+  [`docs/spec/supply-chain.md`](spec/supply-chain.md) records going wrong. Both
+  are set against sheets that do not exist here yet, measured on the prototype
+  branches that hold them, so the next ticket lands its own sheet without
+  needing to touch this row. There is no allowlist and no skip flag.
+- **Satisfying the letter** — ⚠️ **exposed, and the exposure is that bytes and
+  texels are not the picture.** A sheet inside both caps can still be the wrong
+  image, the wrong colour, or laid at the wrong size, and nothing here would
+  know: this row asks *how much does it cost to decode*, never *is it right*.
+  What bounds it is the screenshot on the pull request and the owner's eye,
+  which is what settled the sheet in the first place. **Named as a limit rather
+  than claimed as closed.**
+- **Routing around** — **the route is to put a sheet somewhere this gate does
+  not sweep, and two things narrow it.** `woodwork.ts` resolves one URL and a
+  clause requires that URL to name a file the sweep actually found, so the
+  shipped sheet cannot sit outside the directory; and G13
+  (`no-third-party-material`) allowlists committed binaries **by filename**, so
+  a second image appearing anywhere under `packages/site/public/` is already
+  red there. ⚠️ **What is genuinely open is a sheet fetched at runtime rather
+  than committed** — no cap in this repository reaches a URL, deliberately,
+  because G21 (`no-live-network`) refuses any request the suite makes.
+- **Vacuous green** — ⚠️ **exposed in the way every directory sweep is, and
+  answered three ways.** An empty directory, a renamed one or a misspelled path
+  reads as *no oversized files*, which is indistinguishable from a pass — the
+  failure this file catalogues as a malformed identifier reading like no
+  findings. So the sweep is floored through `expectFound`; **a file `sharp`
+  cannot open is a red naming it**, never a skip, because a cap on a decoded
+  image does not apply to a file that will not decode; and the module's own URL
+  must be served by something the sweep found, which fails both on a renamed
+  directory and on a module pointed at a file nobody committed.
+- **Decay** — **it decays into a red on the two changes that matter and into
+  silence on one.** A sheet added, replaced or re-encoded is measured on the
+  next run, because the sweep reads the directory rather than a list; a sheet
+  moved out is caught by the URL clause. ⚠️ **What rots quietly is the
+  derivation of the caps**: they are stated against the two sheets
+  [#304](https://github.com/mephistopheles4/stacks/issues/304) and
+  [#306](https://github.com/mephistopheles4/stacks/issues/306) will bring, and
+  if either arrives at a size nobody re-measured, the number in the docblock
+  stops describing the number in the code. The docblock is the only thing
+  holding those together, and nothing can go red on prose — recorded rather
+  than solved.

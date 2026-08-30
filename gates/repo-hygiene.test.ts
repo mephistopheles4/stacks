@@ -114,6 +114,36 @@ const BRAND_BINARY_FILES = [
   'packages/site/public/poweredby-google.png',
 ];
 
+/**
+ * The woodwork's sheets — somebody else's photographs, allowed on a **licence**
+ * rather than on authorship.
+ *
+ * Poly Haven publishes its whole library under **CC0**, which places the files
+ * in the public domain: no attribution owed, no notice to carry, and
+ * redistribution explicitly permitted. That is a different claim from every
+ * entry above — `poweredby-google.png` is committed because a ToS clause
+ * *requires* it displayed, and the brand art is committed because this project
+ * drew it — and it is the only claim under which a third party's image may be
+ * committed here at all. [#281](https://github.com/mephistopheles4/stacks/issues/281)
+ * settled that the bookcase takes a committed CC0 file rather than a browser
+ * bake, and the choice of sheet is
+ * [#284](https://github.com/mephistopheles4/stacks/issues/284)'s.
+ *
+ * ⚠️ **Filenames, and never the directory**, for the reason the brand list
+ * gives one paragraph up: a prefix entry under `packages/site/public/` would
+ * grant a standing permission in exactly the folder `stacks build --public`
+ * stages a real vault's covers into. Two more sheets arrive with
+ * [#304](https://github.com/mephistopheles4/stacks/issues/304) and
+ * [#306](https://github.com/mephistopheles4/stacks/issues/306), and each one is
+ * a line here — which is a licence somebody re-checked rather than a directory
+ * nobody revisits.
+ *
+ * ⚠️ **This list says nothing about size.** G52 (`sheet-size`) caps the long
+ * edge and the bytes of everything in that directory; the two rows meet on the
+ * same files and ask different questions.
+ */
+const CC0_BINARY_FILES = ['packages/site/public/wood/rosewood-diff-1024.jpg'];
+
 describe('G5 — library.json is a build artifact', () => {
   it('is not tracked by git', () => {
     const tracked = trackedFiles();
@@ -148,7 +178,7 @@ describe('G5 — library.json is a build artifact', () => {
 
 describe('G13 — no third-party material is committed', () => {
   it('tracks no binary outside the generated fixture covers and the brand art', () => {
-    const allowedFiles = new Set(BRAND_BINARY_FILES);
+    const allowedFiles = new Set([...BRAND_BINARY_FILES, ...CC0_BINARY_FILES]);
     const offenders = trackedFiles().filter(
       (path) =>
         BINARY.test(path) &&
@@ -196,6 +226,23 @@ describe('G13 — no third-party material is committed', () => {
       missing,
       'allowlisted as brand art but not tracked — the page links every one of these, ' +
         `so a missing file is a 404 on every visit: ${missing.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  it('tracks every allowlisted CC0 sheet', () => {
+    // The reverse assertion the brand list already carries, for the same
+    // reason and with a sharper failure: a sheet the shelf still asks for and
+    // nobody committed is a 404 that leaves the bookcase at its fallback
+    // colour, which looks exactly like a texture that was never bound. The
+    // permission outliving the file is the other half — an allowlist entry
+    // nobody revisits is what this whole row exists to refuse.
+    const tracked = new Set(trackedFiles());
+    const missing = CC0_BINARY_FILES.filter((path) => !tracked.has(path));
+
+    expect(
+      missing,
+      'allowlisted as CC0 woodwork sheets but not tracked — the shelf fetches every one ' +
+        `of these: ${missing.join(', ')}`,
     ).toEqual([]);
   });
 
