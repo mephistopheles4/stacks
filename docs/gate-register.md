@@ -5502,3 +5502,60 @@ would have frozen the trap under a formatter that made it invisible.
   how the repository absorbs a rule-set change at every upgrade — which is
   [#227](https://github.com/mephistopheles4/stacks/issues/227) and is out of
   this row's scope by the spec's own §9.
+
+### G51 — `coplanar-faces`
+
+**Gate:** `gates/coplanar-faces.test.ts`, in the `suite` matrix under `pnpm test`
+**Date:** 2026-08-30
+**Observed-red line:** `PLANK_INSET` set to `0` in `packages/site/src/shelf/case.ts` — the second and third clauses fail, naming **246** surviving pairs across the five row counts and **46** on the four-row case, against 4 of 4 passing on the shipped value immediately before and after (perturbation, with a control through the identical invocation on both sides). The same edit, rebuilt and rendered, is the *before* half of this row's pull-request screenshot.
+**Triaged at landing**, per G41.
+
+⚠️ **This row exists because a defect was fixed twice at the address somebody
+pointed at.** On [#284](https://github.com/mephistopheles4/stacks/issues/284) the
+owner reported a shimmering plank end; the first pass shortened the planks in
+`x`, cleared 10 pairs, and left every backboard pair *and* the plank front and
+back faces at `z = ±0.36`. The second report arrived minutes later. Nobody had
+pointed at those and nobody had looked for them — which is the whole argument for
+enumerating a class rather than reading one.
+
+- **Weakening** — **the surface is two constants, and both are asserted rather
+  than trusted.** `PLANK_INSET` could be set to `0` and `BACKBOARD_INSET` could
+  be flattened to equal it; the first is the observed-red perturbation above and
+  the second has its own clause, which re-creates the 10 pairs at `±1.786` that
+  an equal inset would make. There is no allowlist, no exemption and no skip
+  flag, because the gate takes no input but the case's own dimensions.
+- **Satisfying the letter** — ⚠️ **exposed, and the exposure is that the ties
+  are counted rather than seen.** A change that cleared every pair by moving a
+  member somewhere absurd — a backboard behind the room, a plank half the width
+  — would satisfy this gate exactly. What bounds it is that nothing else would:
+  G16's placement residual, G28's board clearance and `smoke:render`'s own
+  `caseOverflow` all read the same geometry from other directions, and the
+  screenshot is reviewed by eye. **Named as a limit rather than claimed as
+  closed.**
+- **Routing around** — **the route is to size a member somewhere this gate does
+  not read, and the last clause is what shuts it.** Everything above is
+  arithmetic on `case.ts` and would stay green if `buildShelf` never imported
+  either constant. So the three `BoxGeometry` calls are read: exactly one off
+  `PLANK_INSET`, exactly one off `BACKBOARD_INSET`, three in total. ⚠️ **A
+  fourth member added to `buildShelf` reddens that clause and is not otherwise
+  enumerated** — deliberately, because the honest answer to a new member is to
+  add it to the mirror, and a gate that stayed green would not ask.
+- **Vacuous green** — ⚠️ **exposed in the way this whole class of gate is, and
+  answered with a positive control.** An enumeration that stopped matching would
+  report zero ties on a geometry riddled with them, and *zero* is the pass. So
+  the un-inset count is asserted first, at five row counts, against
+  `8 × (rows + 1) + 6` — 46 at four rows, which is
+  [#296](https://github.com/mephistopheles4/stacks/issues/296)'s number.
+  ⚠️ **#296's own pair table sums to 48**: it gives *backboard side / upright
+  outer face* as 4 where the enumeration finds 2, one per upright. The 46 is
+  what the arithmetic produces and the table's fourth row is what is wrong;
+  corrected here rather than on the issue, because an issue records what was
+  believed when it was written and only this can go red.
+- **Decay** — **it decays into a red, not into silence, and that is a property
+  of deriving the count.** A dimension change moves both sides together, because
+  both read `SHELF`; a *row-count* change is already covered, because five of
+  them are checked. What would rot is the formula if the case gained a member
+  and nobody re-derived it — and that is exactly the case the third clause
+  reddens on. ⚠️ **What is not held here is the pixel**: this gate proves a
+  geometric condition and says nothing about what the renderer draws, G40's and
+  G44's stated limit reached a fourth time.

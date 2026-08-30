@@ -11,7 +11,7 @@ import {
   type CaseLight,
   type Contact,
 } from './contact-shadow.ts';
-import { rowsForCase, SHELF } from './case.ts';
+import { BACKBOARD_INSET, PLANK_INSET, rowsForCase, SHELF } from './case.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import {
@@ -1544,8 +1544,17 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   const unitHeight = rowCount * SHELF.rowHeight;
   const outerWidth = SHELF.width + SHELF.sideThickness * 2;
 
+  // The uprights keep every plane they own, and every other member is shrunk off
+  // those planes — see `PLANK_INSET`. The backboard takes twice the plank's, in
+  // `x` and in `y`, so its sides do not land on the plank ends' new plane. Every
+  // member stays centred where it was: the inset comes off both faces, so the
+  // silhouette does not move. Held by G51 (`coplanar-faces`).
   const back = new THREE.Mesh(
-    new THREE.BoxGeometry(outerWidth, unitHeight, SHELF.backThickness),
+    new THREE.BoxGeometry(
+      outerWidth - BACKBOARD_INSET * 2,
+      unitHeight - BACKBOARD_INSET * 2,
+      SHELF.backThickness,
+    ),
     backing,
   );
   back.position.set(0, unitHeight / 2, -SHELF.depth / 2);
@@ -1565,7 +1574,11 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
 
   for (let row = 0; row <= rowCount; row += 1) {
     const plank = new THREE.Mesh(
-      new THREE.BoxGeometry(outerWidth, SHELF.plankThickness, SHELF.depth),
+      new THREE.BoxGeometry(
+        outerWidth - PLANK_INSET * 2,
+        SHELF.plankThickness,
+        SHELF.depth - PLANK_INSET * 2,
+      ),
       wood,
     );
     plank.position.set(0, row * SHELF.rowHeight, 0);
