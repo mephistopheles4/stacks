@@ -145,10 +145,22 @@ export function readBackArm(search: string): BackArmConfig {
     const value = Number(last(key));
     return last(key) !== null && Number.isFinite(value) && value > 0 ? value : fallback;
   };
-  // ⚠️ `Number(null)` is `0`, not `NaN` — see `readWoodArm`, where the same
-  // three lines made the documented default of 1 resolve to 0 on every URL that
-  // did not say otherwise.
-  const varyRaw = last('backVary') === null ? 1 : Number(last('backVary'));
+  /**
+   * ⚠️ `Number(null)` is `0`, not `NaN` — see `readWoodArm`, where the same
+   * three lines made the documented default of 1 resolve to 0 on every URL that
+   * did not say otherwise.
+   *
+   * ⚠️ **`|| null` folds an *empty* value into an absent one**, and that half is
+   * [#298](https://github.com/mephistopheles4/stacks/issues/298)'s. `Number('')`
+   * is also 0, so `?backVary=` — a typo, a dropped value, a template that
+   * rendered nothing — turned the variation off exactly as a missing key did.
+   * The rule that session wrote it under: **a knob that falls out of a URL must
+   * not answer as though somebody chose its most dangerous value.** #298's
+   * `?woodSeed=` already worked this way, deliberately, so that two shots whose
+   * seed dropped out could not silently agree.
+   */
+  const varyText = last('backVary') || null;
+  const varyRaw = varyText === null ? 1 : Number(varyText);
   const roughRaw = Number(last('backRough'));
 
   return {
