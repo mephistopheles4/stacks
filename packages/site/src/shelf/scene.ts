@@ -30,6 +30,7 @@ import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture } from './spine-texture.ts';
 import {
   WOODWORK_SHEET,
+  applyWoodFibre,
   bindWoodSheet,
   woodColour,
   worldSpaceUvs,
@@ -1565,6 +1566,10 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
     roughness: settings.materials.woodRoughness,
   });
   const sheet = bindWoodSheet(wood);
+  // The relief half, and the slot the sheet's own normal map was wasting: drawn
+  // rather than photographed, tiled far tighter than the figure, and zero bytes
+  // on the wire. `0` binds nothing at all — see `applyWoodFibre`.
+  applyWoodFibre(wood, settings.materials.woodFibre);
   const backing = new THREE.MeshStandardMaterial({
     color: settings.materials.woodDark,
     roughness: settings.materials.backingRoughness,
@@ -2027,6 +2032,28 @@ function applyLive(
   );
   woodwork.wood.roughness = next.materials.woodRoughness;
   woodwork.backing.roughness = next.materials.backingRoughness;
+
+  /**
+   * Live, unlike its twin on the books, and for one reason: there is a handle.
+   *
+   * `pageStriation` is a standing rebuild because the books' materials are made
+   * per book inside `buildBook` and nothing can reach them. The woodwork's one
+   * material is held right here, so binding the fibre, unbinding it and moving
+   * its scale are all a `normalScale` and a recompile away.
+   *
+   * ⚠️ **Reported as what took effect, not as what was asked for.** A browser
+   * that will not give a 2D context has no map to bind, and `applyWoodFibre`
+   * says so by returning the scale in force — a slider that moved while the
+   * bookcase did not is the exact failure `ApplyReport` exists to prevent.
+   */
+  if (current.materials.woodFibre !== next.materials.woodFibre) {
+    const inForce = applyWoodFibre(woodwork.wood, next.materials.woodFibre);
+    if (inForce === next.materials.woodFibre) {
+      applied.push(`wood fibre: ${String(current.materials.woodFibre)} → ${String(inForce)}`);
+    } else {
+      refused.push('wood fibre: there is no canvas to draw it on, so the woodwork stays smooth');
+    }
+  }
 
   // The books' own materials are made per book inside `buildBook`, so there is no
   // handle to reach them through. Honest rather than silent.

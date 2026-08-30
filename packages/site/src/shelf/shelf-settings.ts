@@ -217,6 +217,27 @@ export interface MaterialSettings {
   /** The backboard's, and it still is the colour that renders — see #304. */
   readonly woodDark: number;
   readonly woodRoughness: number;
+  /**
+   * How strongly the woodwork reads as grain rather than as a photograph pinned
+   * to a plank, as a normal-map scale. `0` is the flat sheet, which is what it
+   * was.
+   *
+   * **`pageStriation`'s twin, and named as one**: same channel, same procedural
+   * provenance, and the same reason for living in `materials` rather than in
+   * `books` — it is a *surface*, so nothing moves and no silhouette changes. See
+   * ADR-0035 for the line.
+   *
+   * ⚠️ **Zero binds no normal map at all**, rather than a map scaled by zero.
+   * Off must cost nothing; see `applyWoodFibre` in `woodwork.ts`.
+   *
+   * ⚠️ **It is the fibre's strength and not its size.** The period is a constant
+   * at 0.5 world units, because
+   * [#284](https://github.com/mephistopheles4/stacks/issues/284)'s note that 0.3
+   * would be pixel-sharp at the camera's clamp is recorded there as *"a lead
+   * rather than a recommendation"* and was never rendered. The panel's slider
+   * runs to 3, `pageStriation`'s range, so the strength stays explorable.
+   */
+  readonly woodFibre: number;
   readonly backingRoughness: number;
   /**
    * The cover face only — not the spine, which is `0.62` and left alone.
@@ -454,6 +475,10 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     wood: 0x6e3412,
     woodDark: 0x4a3527,
     woodRoughness: 0.82,
+    // #284's rendered-and-accepted strength for the drawn fibre. It is the
+    // relief that measured 0.742% of frame against the sheet's own normal map's
+    // 0.000%, so this is the number the treatment was judged at.
+    woodFibre: 0.5,
     backingRoughness: 0.95,
     coverRoughness: 0.55,
     coverMetalness: 0,
