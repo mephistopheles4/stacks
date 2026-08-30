@@ -54,6 +54,7 @@ on top of whatever `?wood=` the woodwork is wearing:
 | `&backNormal=<n>` | `normalScale`. Default 1. |
 | `&backDetail=<n>` | the drawn fibre's period, in tiles; `0` uses the sheet's own normal. |
 | `&backTile=<units>` | world units per tile. Defaults to the sheet's own published size. |
+| `&backFibreTurn=0` | forces the drawn fibre back to **crossing** the figure — see below. |
 | `&backVary=<0..1>` | #287's per-member difference. Default 1; `0` makes it identical again. |
 | `&backRough=<n>` | overrides `backingRoughness`, which ships at 0.95. |
 
@@ -114,7 +115,9 @@ of #54's level ladder, with #284's standing candidate on the woodwork.
 | `off-*` | **The baseline.** Today's flat `woodDark`, planks already treated. |
 | `flat-zoom25` | The **mean-matched twin**: `0x5f2c19`, the sheet's own average, no map. |
 | `pigment-zoom10` | `dark_wood`'s figure in `map` @512. |
-| `candidate-*` | Figure **and** drawn fibre — the standing candidate. |
+| `candidate-*` | Figure **and** drawn fibre, turned to run with it — the standing candidate. |
+| `crossed-zoom25` | The same with the fibre left crossing the figure. |
+| `relief-crop-2` | 3× nearest crop of bare backboard: pigment, turned, crossed. |
 | `rosewood-*` | **The separation control**: the woodwork's own sheet on the backboard. |
 | `books-*` | The same arms with the books back in, at identical cameras. |
 | `vary-zoom10`, `books-vary-zoom10` | **The shipping frame** — #287's variation on, both materials. |
@@ -170,6 +173,38 @@ The candidate arm, which adds the drawn fibre, sits at 8.892% against 22.907%
 — **39%** — and the difference between the two rows is the fibre, not the sheet.
 The reason either is so high is the sheet: `dark_wood`'s mean is 4.6 luma
 *below* `woodDark`, so almost nothing moves before the grain does.
+
+### The drawn fibre crossed the figure, and a whole-frame number never said so
+
+⚠️ **The first run bound the fibre at 90 degrees to the grain, and every number
+it produced was in the normal range.** `prototype-wood-detail.ts` draws its
+fibre long on the texture's `v` axis, which is the axis *rosewood's* grain runs
+down — so on the woodwork the two agree and nothing had to think about it.
+`dark_wood`'s grain runs along `u`. A UV swap turns both maps together, so it
+cannot separate them: wherever both are bound on this sheet, the fibre crosses
+the figure.
+
+**It took a 3× nearest-neighbour crop of bare backboard to see it** —
+`relief-crop-2.png`, pigment against turned against crossed — where it reads as
+ruled horizontal lines over a vertical grain. The differ's own numbers agree
+once you know what to difference:
+
+| | >JND |
+| --- | --- |
+| the fibre's whole contribution over pigment, zoom 10 | 0.704% |
+| **turning the fibre, zoom 10** | **2.098%** |
+| turning the fibre, zoom 25 | 4.477% |
+| turning the fibre, `minDistance` | 4.308% |
+
+**The fibre's direction moves three to six times what the fibre's presence
+does.** The fix is `texture.rotation` on the clone — a texture matrix, +0 bytes
+and +0 textures — and `&backFibreTurn=0` keeps the crossed version reachable so
+the two are differenced rather than argued.
+
+⚠️ **This is a third entry in this map's ledger of things a whole-frame >JND
+count cannot see**, after #68's constant and #284's false zero. All three were
+found by looking rather than by measuring, and the measurement was right there
+once someone knew which pair to difference.
 
 ### The sheet's own normal map is a zero on a third sheet
 

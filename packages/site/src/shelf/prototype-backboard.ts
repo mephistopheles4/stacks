@@ -120,6 +120,12 @@ export interface BackArmConfig {
   readonly vary: number;
   /** `undefined` leaves `backingRoughness` alone — see the header's point 3. */
   readonly roughness: number | undefined;
+  /**
+   * Whether the drawn fibre is turned a quarter turn to run with the figure
+   * rather than across it. Defaults to whatever this sheet needs; `0` forces
+   * the crossed version back, so the two can be differenced rather than argued.
+   */
+  readonly fibreTurn: boolean;
 }
 
 /**
@@ -157,6 +163,10 @@ export function readBackArm(search: string): BackArmConfig {
       last('backRough') !== null && Number.isFinite(roughRaw) && roughRaw >= 0
         ? Math.min(roughRaw, 1)
         : undefined,
+    fibreTurn:
+      last('backFibreTurn') === null
+        ? SHEETS[species].grain === 'u'
+        : last('backFibreTurn') !== '0',
   };
 }
 
@@ -284,6 +294,26 @@ export function applyBackArm(
         own.needsUpdate = true;
         const period = config.unitsPerTile / config.detail;
         own.repeat.set(period, period);
+        /**
+         * ⚠️ **The fibre and the figure are perpendicular in the map, and on
+         * this sheet that showed.**
+         *
+         * `prototype-wood-detail.ts` draws its fibre long on the texture's `v`
+         * axis — `LATTICE.along` — which is the axis *rosewood's* grain runs
+         * down, so on the woodwork the two happen to agree and nothing had to
+         * think about it. `dark_wood`'s grain runs along `u`. A UV swap turns
+         * both maps together, so it cannot separate them: wherever both are
+         * bound on this sheet the fibre crosses the figure at 90 degrees, and a
+         * 3x crop of the bare backboard shows it as ruled horizontal lines over
+         * a vertical figure.
+         *
+         * Rotating the fibre's **own** matrix is the separation, and it costs
+         * nothing — a texture matrix, not a second canvas.
+         */
+        if (config.fibreTurn) {
+          own.center.set(0.5, 0.5);
+          own.rotation = Math.PI / 2;
+        }
         material.normalMap = own;
       }
     } else {

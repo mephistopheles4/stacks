@@ -159,7 +159,7 @@ const MEASURE = `(async () => {
     resolved: [b.species, b.arm, b.resolution, 'tile ' + (b.unitsPerTile || 0).toFixed(2),
                'normal ' + b.normalScale, 'detail ' + b.detail,
                'rough ' + (b.roughness === undefined ? 'default' : b.roughness),
-               'vary ' + b.vary].join(' / '),
+               'vary ' + b.vary, 'fibre ' + (b.fibreTurn ? 'turned' : 'crossed')].join(' / '),
     wood: [a.species, a.arm, a.resolution, 'detail ' + a.detail, 'vary ' + a.vary].join(' / '),
   };
 })()`;
@@ -394,6 +394,21 @@ const ARMS: readonly Arm[] = [
     twin: 'flat',
     orbit: true,
     populated: true,
+  },
+  {
+    /**
+     * The candidate with the fibre left **crossing** the figure — what the
+     * first run rendered before a 3x crop of the bare backboard showed ruled
+     * horizontal lines over a vertical grain. It stays on the roster as the
+     * comparison: the fibre's own direction is a decision, and a decision needs
+     * both sides rendered.
+     */
+    tag: 'crossed',
+    label: 'the candidate with the fibre crossing the figure',
+    back: 'both',
+    query: '&backDetail=0.5&backNormal=0.5&backFibreTurn=0',
+    twin: 'flat',
+    orbit: true,
   },
   {
     tag: 'rosewood',
@@ -704,6 +719,13 @@ async function main(): Promise<void> {
       for (const rung of LADDER) {
         console.log(row(rung.label, await diff(`pigment-${rung.tag}.png`, `pigment1024-${rung.tag}.png`)));
       }
+
+      console.log('');
+      console.log('the fibre turned to run with the figure, against it crossing:');
+      for (const rung of LADDER) {
+        console.log(row(rung.label, await diff(`crossed-${rung.tag}.png`, `candidate-${rung.tag}.png`)));
+      }
+      console.log(row('orbited ~20°', await diff('crossed-orbit.png', 'candidate-orbit.png')));
 
       console.log('');
       console.log("#287's variation, back on — the shipping frame against the measured one:");
