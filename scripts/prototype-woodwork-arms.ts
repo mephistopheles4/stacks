@@ -169,7 +169,8 @@ const MEASURE = `(async () => {
     overBloom, brightest, total: w * h,
     textures: s.textures, programs: s.programs, calls: s.calls, triangles: s.triangles,
     resolved: [a.species, a.arm, a.resolution, 'tile ' + a.unitsPerTile,
-               'normal ' + a.normalScale, 'detail ' + a.detail].join(' / '),
+               'normal ' + a.normalScale, 'detail ' + a.detail,
+               'vary ' + a.vary, 'seed ' + a.seed].join(' / '),
   };
 })()`;
 
@@ -296,7 +297,26 @@ const LADDER = [
  * local 3.64) so what was visible was repetition and not a seam. At true scale
  * one tile is wider than the whole bookcase and there is nothing to recur.
  */
-const BASE = 'woodSpecies=rosewood&woodRes=1024';
+/**
+ * The seed every shot is pinned to, and the reason this harness has one at all.
+ *
+ * [#287](https://github.com/mephistopheles4/stacks/issues/287) draws a member's
+ * figure fresh on every page load, which disarms the only instrument this map
+ * has: [#282](https://github.com/mephistopheles4/stacks/issues/282)'s differ
+ * compares two renders of the same scene, so two arms would differ by the dice
+ * as well as by the treatment.
+ * [#298](https://github.com/mephistopheles4/stacks/issues/298) is that ticket,
+ * and this constant is its harness half.
+ *
+ * ⚠️ **Stated, never defaulted.** `prototype-wood.ts` has no fallback seed on
+ * purpose — a page with no `?woodSeed=` throws fresh dice, exactly as the
+ * shipped shelf will. So the *harness* is what refuses to render an unpinned
+ * frame, and every shot reads its seed back next to its number, the rule #284's
+ * false zero bought.
+ */
+const HARNESS_SEED = 'wayfinder298';
+
+const BASE = `woodSpecies=rosewood&woodRes=1024&woodSeed=${HARNESS_SEED}`;
 
 interface Arm {
   readonly tag: string;
@@ -443,6 +463,45 @@ async function main(): Promise<void> {
       });
 
       /**
+       * **The seed control needs two shots, and only the second one has teeth.**
+       *
+       * A forced seed is checked by re-rendering it and reading a zero — and a
+       * zero is what an *ignored* `?woodSeed=` reads too, because the code this
+       * branch forked from seeded off the member key alone and was already
+       * deterministic. That is #284's false zero exactly: a control nobody had
+       * proved, reporting the number that means "working".
+       *
+       * So the pair is stated together and read together:
+       *
+       * - `seedA` against `candidate-shelf-rerun` — **must be 0.000%**. The
+       *   forced seed reproduces.
+       * - `seedB` against `seedA` — **must be nonzero**. The seed is *reaching*
+       *   the dice; a zero here says the parameter is being dropped and the
+       *   zero above meant nothing.
+       *
+       * Both go through `shoot`, not a side script, so they share every timing
+       * signal and every camera the arms use.
+       *
+       * ⚠️ **`woodVary=1` is stated rather than defaulted, and the first run is
+       * why.** It read 0.000% on *both* shots — and the fault was not the
+       * seed's: `?woodVary=` absent resolved to 0, so the variation had been
+       * off in every render this branch ever took and two different seeds had
+       * no dice to change. A canary that leans on a default is a canary that
+       * can be silenced by one.
+       */
+      for (const [file, seed] of [
+        ['seed-a-shelf.png', HARNESS_SEED],
+        ['seed-b-shelf.png', 'wayfinder298-b'],
+      ] as const) {
+        await shoot(browser, origin, {
+          file,
+          arm: 'both',
+          query: `&woodDetail=0.5&woodNormal=0.5&woodVary=1&woodSeed=${seed}`,
+          wheelSteps: 0,
+        });
+      }
+
+      /**
        * The relief channel's **own** canary, and it is not the `wire` arm.
        *
        * `wire` drives colour, normal and roughness at once, so it proves *the
@@ -550,6 +609,15 @@ async function main(): Promise<void> {
       );
       console.log(
         row('normalScale 8, orbited (same canary)', await diff('off-orbit.png', 'relief-loud-orbit.png')),
+      );
+      // #298's pair. The first is the claim; the second is what stops the first
+      // from being a false zero, because an *ignored* `?woodSeed=` reads zero
+      // too. Read them together or neither means anything.
+      console.log(
+        row('the same forced seed twice (expect 0)', await diff('candidate-shelf-rerun.png', 'seed-a-shelf.png')),
+      );
+      console.log(
+        row('a different seed (expect NONZERO)', await diff('seed-a-shelf.png', 'seed-b-shelf.png')),
       );
 
       for (const arm of ARMS) {

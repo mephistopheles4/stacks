@@ -1642,10 +1642,14 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
         woodArm.unitsPerTile,
         false,
       );
-      // Seeded by which side it is, which is as stable as an identity gets: an
-      // upright is never added or removed, only made taller.
+      // The key separates the two uprights from each other; the root in front
+      // of it is what moves the whole set on the next load. See #287 and #298.
       if (woodArm.vary > 0) {
-        varyMember(geometry, `upright-${side < 0 ? 'left' : 'right'}`, woodArm.vary);
+        varyMember(
+          geometry,
+          `${woodArm.seed}:upright-${side < 0 ? 'left' : 'right'}`,
+          woodArm.vary,
+        );
       }
     }
     const upright = new THREE.Mesh(geometry, wood);
@@ -1682,10 +1686,12 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
         woodArm.unitsPerTile,
         true,
       );
-      // ⚠️ Seeded **bottom-up**, which is #287's question answered provisionally
-      // — `rowsForCase` grows the case upward, so a top-down index would
-      // repaint every plank the day a book is added.
-      if (woodArm.vary > 0) varyMember(geometry, `plank-${String(row)}`, woodArm.vary);
+      // ⚠️ The bottom-up ordinal is **no longer an identity**, and #287 is why:
+      // a plank keeps nothing across a load, so the row index survives only to
+      // stop two planks of the *same* load agreeing. The root does the rest.
+      if (woodArm.vary > 0) {
+        varyMember(geometry, `${woodArm.seed}:plank-${String(row)}`, woodArm.vary);
+      }
     }
     const plank = new THREE.Mesh(geometry, wood);
     plank.position.set(0, row * SHELF.rowHeight, 0);

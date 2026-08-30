@@ -47,6 +47,7 @@ then `?wood=pigment`, `?wood=relief`, `?wood=both`, `?wood=flat`,
 | `&woodTile=<units>` | world units per tile. Defaults to the sheet's own published size. |
 | `&woodVary=<0..1>` | per-member offset, mirror, scale and tint. Default 1; `0` makes every board identical again. |
 | `&woodJoint=flush` | restores the coplanar geometry, so the z-fight can be seen rather than argued about. |
+| `&woodSeed=<token>` | the root every member's dice are drawn off. **Absent, it is fresh on every load** — which is [#287](https://github.com/mephistopheles4/stacks/issues/287)'s decision and not an oversight. Pass one to hold a shelf still. |
 
 Two contact sheets of what Poly Haven publishes, served by the dev server —
 `/wood-grid.html` is all 135 of its woods, `/wood-short.html` is the twelve
@@ -128,12 +129,25 @@ bookcase, at the four rungs of #54's level ladder.
 | `wire-*` | The wiring check: every channel driven past plausible. |
 | `pigment-near` / `pigment512-near` | 1024 against 512 at `minDistance`. |
 | `books-*` | The populated case, for the painted-shadow question an empty one cannot answer. |
+| `seed-a-*` / `seed-b-*` | [#298](https://github.com/mephistopheles4/stacks/issues/298)'s pair: one forced seed reproduced, and a *different* seed against it. Read together — see below. |
 
 ## What the second run measured
 
 ⚠️ **These replace the first run's numbers rather than updating them.** That run
 was *sapele at 512*, on the geometry that still carried 46 depth-buffer ties.
 Nothing of its figures survives a change of sheet.
+
+⚠️ **Every number in this section was measured with the per-member variation
+OFF**, and nobody knew. `?woodVary=` absent resolved to **0** rather than to the
+1 this file's own knob table promises — `last()` answers `null`, `Number(null)`
+is `0`, and `0 >= 0` passed the guard. So the boards in every shot below are
+identical to one another. [#298](https://github.com/mephistopheles4/stacks/issues/298)'s
+seed canary found it and it is fixed on
+[`prototype/298-wood-seed`](https://github.com/mephistopheles4/stacks/tree/prototype/298-wood-seed);
+the run that found it reproduced these figures near-exactly first, which is what
+says the section is internally honest rather than merely old. **The channel
+verdicts do not rest on variation** — they are differences between arms, and
+every arm was equally unvaried.
 
 **The colour confound mostly dissolved, which was the point of changing sheet.**
 Sapele's mean is far lighter than today's `0x6b4f3a` and rosewood's is not, so
@@ -174,6 +188,37 @@ them.
 no roughness map for `rosewood_veneer1`, so the fourth slot cannot be tested on
 this sheet. Sapele's number stands as sapele's: **1.029% at zoom 10**, which
 beat relief and inverted this ticket's own prior.
+
+## The forced seed, and what its canary caught
+
+[#298](https://github.com/mephistopheles4/stacks/issues/298)'s half, on
+[`prototype/298-wood-seed`](https://github.com/mephistopheles4/stacks/tree/prototype/298-wood-seed).
+`?woodSeed=<token>` pins the root every member's dice are drawn off, so two arms
+differ by the treatment and not by the dice. There is **no default** — a page
+with no seed throws fresh dice, exactly as the shipped shelf will — so the
+harness is what refuses to render an unpinned frame, and every shot now prints
+`vary` and `seed` beside its resolution.
+
+Two controls, read together, because the first one alone cannot tell a working
+seed from an ignored one:
+
+| Control | Reads | What it proves |
+| --- | --- | --- |
+| the same forced seed twice | **0.000%, worst Δ 0** | byte identical — the seed reproduces |
+| a **different** seed | **1.986%, mean Δ 0.494, worst Δ 95** | the seed reaches the dice |
+
+⚠️ **The pair fired on its first run, and the fault was not the seed's.** Both
+read 0.000%: `?woodVary=` absent resolved to 0, so there were no dice for a seed
+to change and the whole variation had been off in every render this branch had
+taken. Third of the false-zero family below, and the first one an instrument
+found rather than a person.
+
+**What variation being on changes, now that it is:** the candidate's grain alone
+at zoom 10 goes **2.721% → 4.028%**, and its difference from the baseline nearly
+doubles in mean (3.233 → 6.867) because the ±10% per-member tint moves the
+average as well as the grain. The channel *verdicts* are unchanged — the sheet's
+own normal is still 0.000% above the threshold at every rung, and the drawn
+fibre still the only relief that moves a pixel.
 
 ⚠️ **A false zero was caught and is worth knowing about.** The resolution
 control first reported **0.000% at every rung, worst delta 0** — byte-identical

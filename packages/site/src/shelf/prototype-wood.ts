@@ -238,9 +238,44 @@ export interface WoodArmConfig {
    * sheet's own normal map. See `prototype-wood-detail.ts`.
    */
   readonly detail: number;
+  /**
+   * The **root** every member's dice are drawn off.
+   *
+   * [#287](https://github.com/mephistopheles4/stacks/issues/287) settled that a
+   * member has no identity: the figure is drawn fresh on every page load, and
+   * the promise is one page load only. That is what this root is — absent, it
+   * is a fresh random value, so two loads of the shipped shelf differ.
+   *
+   * ⚠️ **`?woodSeed=` exists so an *instrument* can hold it still**, which is
+   * [#298](https://github.com/mephistopheles4/stacks/issues/298)'s whole
+   * subject. [#282](https://github.com/mephistopheles4/stacks/issues/282)'s
+   * differ compares two renders of the same scene, so with a per-load draw two
+   * arms differ by the dice as well as by the treatment and a JND count stops
+   * meaning anything. Forced, the dice are equal and the difference is the arm.
+   *
+   * **There is deliberately no fixed default.** A default would make every
+   * render reproducible and quietly make it easy to forget the shipped shelf is
+   * not — this map's own rule that a control must not lie, applied to the one
+   * control whose lie would be invisible. The refusal lives in the harness,
+   * which passes a seed on every shot and reads back what resolved.
+   */
+  readonly seed: string;
 }
 
-/** Reads `?wood=`, `?woodTile=`, `?woodNormal=`, `?woodVary=` and `?woodJoint=`. */
+/**
+ * A fresh root for one page load.
+ *
+ * ⚠️ **`Math.random` and not a hash of anything**, which is the point rather
+ * than laziness: any derived value — the row count, the vault, the clock at
+ * second resolution — is something two loads could share, and #287 asked for a
+ * shelf that is different every time you open it. Rendered to base 36 so it
+ * reads as a token in a URL a person may want to paste back.
+ */
+function freshSeed(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+/** Reads `?wood=`, `?woodTile=`, `?woodNormal=`, `?woodVary=`, `?woodJoint=` and `?woodSeed=`. */
 export function readWoodArm(search: string): WoodArmConfig {
   const params = new URLSearchParams(search);
   /**
@@ -264,7 +299,32 @@ export function readWoodArm(search: string): WoodArmConfig {
     const value = Number(last(key));
     return last(key) !== null && Number.isFinite(value) && value > 0 ? value : fallback;
   };
-  const varyRaw = Number(last('woodVary'));
+  /**
+   * ⚠️ **This read the parameter's *absence* as `0` and turned the whole
+   * variation off, in every render this branch has ever taken.**
+   *
+   * `last` answers `null` when the key is missing, `Number(null)` is `0`, and
+   * `0 >= 0` passes the guard — so an absent `?woodVary=` resolved to 0 rather
+   * than to the 1 both this file's own field doc and the arms README promise.
+   * Nothing said so: two members with identical geometry are a *plausible*
+   * shelf, so a reader saw a case that looked uniform and read it as the
+   * sheet's fault.
+   *
+   * [#298](https://github.com/mephistopheles4/stacks/issues/298)'s seed canary
+   * caught it on its first firing — two *different* seeds rendered byte
+   * identically, which is impossible unless the dice never reached the
+   * geometry. Third of the [#284](https://github.com/mephistopheles4/stacks/issues/284)
+   * false-zero family, and the first one an instrument found rather than a
+   * person.
+   *
+   * The `number()` helper above already guards `last(key) !== null`, which is
+   * the fix. `vary` cannot simply *use* that helper, because the helper
+   * requires `value > 0` and an explicit `?woodVary=0` is a legitimate
+   * request — that difference is presumably how the hand-rolled parse, and the
+   * bug, got here.
+   */
+  const varyText = last('woodVary');
+  const varyRaw = Number(varyText);
   const speciesRaw = last('woodSpecies');
   const species = SPECIES_NAMES.find((name) => name === speciesRaw) ?? 'sapele';
   return {
@@ -272,12 +332,22 @@ export function readWoodArm(search: string): WoodArmConfig {
     arm,
     unitsPerTile: number('woodTile', SPECIES[species].unitsPerTile),
     resolution:
+      // Bare `Number(last(...))` like the one above it — and safe, by accident
+      // rather than by care: `Number(null)` is 0, 0 matches no entry in
+      // `RESOLUTIONS`, and the miss falls to the same default an absent key
+      // wanted. Stated because the identical expression *was* the bug in
+      // `vary`, and the next reader deserves to know which of the two is which.
       RESOLUTIONS.find((edge) => edge === Number(last('woodRes'))) ??
       (arm === 'pigment2k' ? 2048 : 512),
     detail: number('woodDetail', 0),
     normalScale: number('woodNormal', arm === 'wire' ? 4 : 1),
-    vary: Number.isFinite(varyRaw) && varyRaw >= 0 ? Math.min(varyRaw, 1) : 1,
+    vary: varyText !== null && Number.isFinite(varyRaw) && varyRaw >= 0 ? Math.min(varyRaw, 1) : 1,
     joint: last('woodJoint') === 'flush' ? 'flush' : 'inset',
+    // ⚠️ An **empty** `?woodSeed=` falls through to a fresh draw rather than
+    // seeding on the empty string — a shot whose seed dropped out of the query
+    // must not silently agree with another shot whose seed also dropped out.
+    // That is #284's false zero wearing a different hat.
+    seed: last('woodSeed') || freshSeed(),
   };
 }
 
@@ -357,16 +427,20 @@ export function worldSpaceUvs(
  *   member already has its own copy of, so one material still draws them all.
  *   `scene.ts`'s per-book page-block drift is the same trick.
  *
- * ⚠️ **The seed is the member's distance from the *bottom*, and that choice is
- * [#287](https://github.com/mephistopheles4/stacks/issues/287)'s to make, not
- * this file's.** `rowsForCase` keeps one empty shelf ahead, so the case grows
- * upward as the library does — seeding from a top-down index would repaint
- * every plank in the case the day a book is added, which is exactly the trap
- * that ticket exists to spring safely. Bottom-up is stable under growth. It is
- * still only *a* answer: it says a plank's identity is its height off the
- * floor, and a plank that is genuinely the same board would keep its figure if
- * the case were rebuilt taller — which this does, and which nothing here proves
- * is what anybody wants.
+ * ⚠️ **The seed carries a per-load root, and the member key is only what
+ * decorrelates one board from its neighbour.** This file used to seed off the
+ * member's distance from the *bottom* alone, and said so at length —
+ * [#287](https://github.com/mephistopheles4/stacks/issues/287) declined it. The
+ * reasoning was sound and what it rested on was never established: that a plank
+ * *should* keep its figure when the case is rebuilt taller. Put as its own
+ * decision, the owner answered no. A member has no identity, the dice are
+ * thrown once per page load, and the promise is that one load.
+ *
+ * So callers pass `` `${root}:${key}` ``, where the root is `WoodArmConfig.seed`
+ * — fresh per load, or forced by `?woodSeed=` for
+ * [#298](https://github.com/mephistopheles4/stacks/issues/298)'s instrument.
+ * The key stays what it was, because two members of one load must still differ
+ * from each other; what changed is that the whole set moves together next time.
  */
 export function varyMember(
   geometry: THREE.BoxGeometry,
