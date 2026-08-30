@@ -693,6 +693,18 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     (s) => s.materials.woodRoughness,
     (s, v) => resolveSettings({ materials: { woodRoughness: v } }, s),
   );
+  // Red at zero, and truthfully: no map is bound at all, so the woodwork is the
+  // flat photograph it was. `page edges`' range, because it is that knob's twin.
+  slider(
+    'wood fibre',
+    'live',
+    0,
+    3,
+    0.05,
+    (s) => s.materials.woodFibre,
+    (s, v) => resolveSettings({ materials: { woodFibre: v } }, s),
+    (s) => s.materials.woodFibre > 0,
+  );
   toggleRow(
     'fog',
     'live',

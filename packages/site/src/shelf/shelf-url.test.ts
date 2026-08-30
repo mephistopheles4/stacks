@@ -146,6 +146,22 @@ describe('?tune', () => {
     expect(settings.materials.pageStriation).toBe(DEFAULT_SETTINGS.materials.pageStriation);
   });
 
+  it('carries the wood fibre, which has no historic spelling of its own', () => {
+    // `materials.woodFibre` is the map's second knob and it rides `?tune=` like
+    // the rest of `materials` — there is no `?woodFibre=`, deliberately, because
+    // the ten flat probes exist for things typed on a phone against a crash. A
+    // key `readTune` had not been taught would render the shipped shelf with
+    // nothing saying so, which is this file's own header complaint.
+    const query = `tune=${encodeURIComponent(JSON.stringify({ materials: { woodFibre: 0 } }))}`;
+    const settings = read(query);
+
+    expect(settings.materials.woodFibre).toBe(0);
+    // And it does not take its neighbours with it: the sheet's fallback colour
+    // and the page striation are untouched.
+    expect(settings.materials.wood).toBe(DEFAULT_SETTINGS.materials.wood);
+    expect(settings.materials.pageStriation).toBe(DEFAULT_SETTINGS.materials.pageStriation);
+  });
+
   it('does not let a tune blob override a probe typed by hand', () => {
     // The two vocabularies never overlap, so a legacy probe is always the last
     // word on the nine settings it owns. Someone appending `&shadows=1` to a
