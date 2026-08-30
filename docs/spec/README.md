@@ -1,9 +1,14 @@
 # `docs/spec/` — the locked specs
 
-**Four efforts have produced a locked spec in this folder.** Each is decided end to
+**Five efforts have produced a locked spec in this folder.** Each is decided end to
 end, and **each carries its own build order and its own gate roster** — they do not
-share one. **The third and fourth are waiting for an implementation session**; the
-first two have been built and are kept as written.
+share one. **The third and fifth are waiting for an implementation session**; the
+first two have been built and are kept as written, and the fourth is built except
+its last step.
+
+⚠️ **The fifth is the first whose finish line is not a document.** Its map carried
+execution as a deliberate override of wayfinder's plan-don't-do default, so it is
+done when a rendered bookcase is on `main` — not when this folder is complete.
 
 | Spec | Index | State |
 | --- | --- | --- |
@@ -11,6 +16,8 @@ first two have been built and are kept as written.
 | What comes after the scoreboard — mutation scoring, the trend layer, the gaming analysis | [`after-the-scoreboard.md`](after-the-scoreboard.md) | **built**; kept as written. All seven rows landed. ⚠️ **Built is not armed** — the ratchet ships with every scope `unarmed`, and arming one is a human judgement per scope after its calibration window fills. [#154](https://github.com/mephistopheles4/stacks/issues/154) is the live answer |
 | Complexity on the trend layer — four counts, a cap that only falls, and CRAP kept local | [`complexity-on-the-trend-layer.md`](complexity-on-the-trend-layer.md) | **waiting for an implementation session**. Four series, a deploy-side cap mirroring the ratchet, TypeScript pinned to 6.0.3 until 7.1, coverage admitted as an ingredient for a pre-commit CRAP print — and **no gate row**. Twelve tickets; [the map](https://github.com/mephistopheles4/stacks/issues/186) carries the trail and the override list |
 | Static analysis and style — one routing rule, a verdict per candidate | [`static-analysis-and-style.md`](static-analysis-and-style.md) | **built, except its last step.** All four gate rows landed — **G46** (`lint`), **G48** (`markdown`), **G49** (`format`), and **G50** (`astro-types`) inside `pnpm build` — three of them in one `style` job beside `audit`, and all twelve trend rows **this rollout adds** emit: eight duplication and four cognitive. ⚠️ **Twelve is this spec's count, not the nightly's** — `metrics.yml`'s `--expect` list carries sixteen trend series, the other four being the `complexity-*` rows [`complexity-on-the-trend-layer.md`](complexity-on-the-trend-layer.md) landed. Three refusals recorded. What is left is §6 step 9, **arming**: `cognitive-max` joins `CAPPED_SERIES` and the six duplication caps land in `jscpd.floors.json`, which waits on twenty qualifying nightlies rather than on effort — [#269](https://github.com/mephistopheles4/stacks/issues/269), and ⚠️ **a nightly that fails breaks the streak rather than pausing it**. ⚠️ **Deliberately thin** — eleven tickets hold the reasoning and the file links rather than retells, per [ADR-0026](../adr/0026-constitution-is-gated-not-duplicated.md). [The map](https://github.com/mephistopheles4/stacks/issues/228) is **closed as of 2026-08-26** and carries the trail, and the eleven verdicts were also read as one configuration in a morphological box that is deliberately not in this checkout |
+
+| The woodwork reads as wood — rosewood, a drawn fibre, and per-member variation | [`the-woodwork-reads-as-wood.md`](the-woodwork-reads-as-wood.md) | **waiting for an implementation session**. Nine closed decision tickets, six implementation tickets in **a linear chain that must not be run in parallel** — every slice edits the same module — and four gate rows. ⚠️ **The prose spec is on the tracker**, [#300](https://github.com/mephistopheles4/stacks/issues/300); this file is the index that survives when a branch does not. ⚠️ **Ticket one fixes something broken on `main` today** and shares no file with the rest. [The map](https://github.com/mephistopheles4/stacks/issues/280) carries the trail |
 
 ⚠️ **Gate numbers are per-rollout and never reusable.** The first spec landed
 **G30–G35**; the second landed **G36 and G38–G43**, derived from its own landing
