@@ -50,7 +50,7 @@ mobile crash risk is gated by nothing.
 
 | Verdict | Ticket |
 | --- | --- |
-| **No framing judges the woodwork** — the owner drives a live build. The baseline is the empty bookcase at four level rungs, its populated twin at identical cameras, and a differ | [#282](https://github.com/mephistopheles4/stacks/issues/282) |
+| **No framing judges the woodwork** — the owner drives a live build. The baseline is the empty bookcase at four level rungs, its populated twin at identical cameras, and the differ every arm was measured with | [#282](https://github.com/mephistopheles4/stacks/issues/282) |
 | **Koa's colour is reachable by pigment and its figure is not reachable at all** — anisotropic specular struck on the physics, not deferred | [#286](https://github.com/mephistopheles4/stacks/issues/286) |
 | **The furniture is a bookcase**; its members are the plank, the upright and the backboard, and one level of it is a row | [#283](https://github.com/mephistopheles4/stacks/issues/283) |
 | **A committed CC0 file, not a browser bake**, behind a species menu with a flat mean-matched entry. **An ADR is owed when the treatment lands** | [#281](https://github.com/mephistopheles4/stacks/issues/281) |
@@ -64,10 +64,13 @@ mobile crash risk is gated by nothing.
 
 ## 3. Build order
 
-Six tickets, a linear chain. **Only one is takeable at a time from ticket 2 on**
-— they are one feature in one module, and every slice edits `buildShelf`, the
-`materials` block and the woodwork module. This is not a fan-out and must not be
-run as one.
+**Six implementation tickets**, a linear chain — and then the map's own
+destination ticket, which is why the table below has seven rows.
+
+Each ticket blocks the next, so **exactly one is takeable at a time**. That is
+not an accident of the wiring: tickets 2–6 are one feature in one module, and
+every one of them edits `buildShelf`, the `materials` block and the woodwork
+module. This is not a fan-out and must not be run as one.
 
 | | Ticket | Blocked by |
 | --- | --- | --- |
@@ -102,7 +105,7 @@ corrections from a rollout that pre-allocated and was overtaken.
 | --- | --- | --- |
 | **coplanar faces** | The bookcase has no coplanar overlapping face pair, computed from the case's own constants: 46 before the inset, 0 after | ticket 1 |
 | **sheet size** | No file under the site's public wood directory exceeds its long-edge and byte caps | ticket 2 |
-| **one sheet by default** | Default settings resolve to exactly one sheet URL | ticket 6 |
+| **one sheet by default** | Default settings resolve to exactly one **woodwork** sheet URL — the species menu's other entries load only on selection | ticket 6 |
 | **resolved configuration** | The configuration `applySettings` reports is the one it resolved, and an unrecognised species is refused rather than silently defaulted | ticket 6 |
 
 **Why the last row exists, in one line each.** #284's resolution control built
@@ -121,6 +124,13 @@ for the harness is a separate effort.
 
 ⚠️ **The "one sheet by default" row has teeth only because the species menu
 ships.** With a single hard-coded sheet it would assert nothing.
+
+⚠️ **It counts the woodwork's sheet, not the shelf's, and the difference is a
+way to write the gate wrong.** A default page loads **two** images — the
+woodwork's and the backboard's — because §5 makes the backboard's a constant
+that is always fetched, so a row counting every wood asset would read 2 and go
+red on a correct page. What is being asserted is that the *menu* costs a visitor
+nothing: one species sheet, not four.
 
 ---
 
@@ -203,7 +213,10 @@ new evidence.
   and 297's backboard seed key omits the root that every other member's key
   carries.
 - **A permanent read-back convention for the render harness** — worth having,
-  asserts against branch code that never merges, so it is its own ticket.
+  and it asserts against branch code that never merges, so it sits **outside
+  this map**. ⚠️ **Not yet raised**, so there is no number to cite here, and
+  §4's rule against citing an identifier that does not exist applies to a
+  follow-up exactly as it applies to a gate row.
 - **The mobile risk is gated by nothing**, and this rollout does not close that.
   The first wall is decoded texture memory, which `cover-budget.ts` already
   documents at somewhere north of eighty books.
