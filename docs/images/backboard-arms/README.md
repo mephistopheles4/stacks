@@ -70,8 +70,16 @@ at half strength, the shape #284 landed on for the woodwork.
 **What it costs, measured off `renderer.info`**: **+1 texture, +0 draw calls,
 and −1 shader program.** The last one is not a typo and it is not free money: a
 backing material carrying `map` *and* `normalMap` compiles to the same program
-the woodwork already uses, so the two merge. `darkwood-diff-512.jpg` is
-**53.2 KB** on the wire and 1.0 MB decoded.
+the woodwork already uses, so the two merge. ⚠️ **Reproduced across two full
+runs of the matrix** — the rerun control proves pixel determinism and says
+nothing about `renderer.info`, so the program count is quoted from two
+independent runs rather than from one. `darkwood-diff-512.jpg` is **53.2 KB** on
+the wire and 1.0 MB decoded.
+
+⚠️ **The drawn fibre is +0 textures, and that is measured too.** It is a clone
+of the woodwork's own canvas, so the two share one GPU upload through three.js's
+`Source` — the sentence `prototype-backboard.ts` writes down, and the reason the
+cost table is read off the page rather than reasoned about.
 
 ## The source
 
@@ -146,13 +154,22 @@ today's shelf:
 | zoom 25 | 17.523% | 1.420% |
 | `minDistance` | 16.244% | 1.835% |
 
-**And the colour confound is the smallest this map has measured.** At zoom 10 on
-the empty case, the candidate moves 22.907% of the frame against today's flat
-backboard and 8.892% against its own mean — so the **grain is 39% of the whole
-effect**, where #284's rosewood on the woodwork was 17% and
-[#68](https://github.com/mephistopheles4/stacks/issues/68)'s spine grain was
-**6%**. The reason is the sheet: `dark_wood`'s mean is 4.6 luma *below*
-`woodDark`, so almost nothing moves before the grain does.
+**And the colour confound is the smallest this map has measured.** Like for
+like — the **pigment** arm at zoom 10 on the empty case, which is the arm #284
+and #68 both quote — it moves **4.755%** of the frame against today's flat
+backboard and **2.257%** against its own mean, so the **grain is 47% of the
+whole effect**:
+
+| | colour + grain | grain alone | grain's share |
+| --- | --- | --- | --- |
+| #68, spine grain | 17.836% | 0.000% | **6%** |
+| #284, rosewood on the woodwork | 15.60% | 2.72% | **17%** |
+| **#297, `dark_wood` on the backboard** | **4.755%** | **2.257%** | **47%** |
+
+The candidate arm, which adds the drawn fibre, sits at 8.892% against 22.907%
+— **39%** — and the difference between the two rows is the fibre, not the sheet.
+The reason either is so high is the sheet: `dark_wood`'s mean is 4.6 luma
+*below* `woodDark`, so almost nothing moves before the grain does.
 
 ### The sheet's own normal map is a zero on a third sheet
 
