@@ -58,6 +58,61 @@ export const SHELF = {
 } as const;
 
 /**
+ * How far every member except the uprights is shrunk off the planes they share.
+ *
+ * **Every member of the bookcase is a box, and 46 pairs of their faces shared a
+ * plane while overlapping in the other two axes** — a plank is
+ * `SHELF.width + SHELF.sideThickness * 2` wide and an upright stands at
+ * `±(SHELF.width + SHELF.sideThickness) / 2` with a half-thickness of
+ * `SHELF.sideThickness / 2`, so both land on `±1.79` exactly. That is the
+ * condition for two fragments to arrive at the same depth and let floating-point
+ * precision decide which wins, and the camera's near and far of 0.1 and 100
+ * leave the depth buffer nothing to separate them with.
+ *
+ * **The uprights keep every plane they own; each other member is shrunk off
+ * them.** Planks shrink in `x` and in `z` — ends inside the uprights, front and
+ * back faces just behind the uprights'. ⚠️ **The depth matters as much as the
+ * width**: once a plank's end sits inside an upright the two still share an
+ * overlapping band at `z = ±0.36`, which is 20 of the 46 pairs and is what a
+ * first pass on [#284](https://github.com/mephistopheles4/stacks/issues/284)
+ * left behind after clearing 10.
+ *
+ * **0.004 world units** is about 1.2 mm at this scene's scale against an upright
+ * 0.09 thick, so every shortened face sits well inside a neighbour's volume
+ * where nothing can see it. The silhouette does not move.
+ *
+ * ⚠️ **Unconditional, and that is the point.** The prototype armed it off a
+ * `?wood=` query parameter, which was right for an arm switch and wrong for a
+ * bookcase whose backboard flickers with no texture at all — the backboard is a
+ * second material in a second colour, so its ties resolve to two different
+ * pixels — so the **16** pairs it takes part in were visible on `main`. The
+ * other **30** were invisible only because every woodwork face carries the
+ * identical flat one, and anything that gives the woodwork a texture makes all
+ * 46 visible at once. A texture did not cause this; it revealed it.
+ *
+ * ⚠️ **16 and 30, not 36.** The 36 is `46 - 10`: what #284's x-only first pass
+ * left behind, which is a different quantity from what was ever *visible*. Both
+ * numbers are in #296 and #301 and it is easy to carry the wrong one across —
+ * this comment was written with 36 in it and CodeRabbit caught it on #308.
+ *
+ * Held by G51 (`coplanar-faces`), which enumerates the class from these
+ * constants rather than from a copy of them. See #296 and #301.
+ */
+export const PLANK_INSET = 0.004;
+
+/**
+ * The backboard's share, which is **twice** the plank's and not tidiness.
+ *
+ * Shrunk by the same amount as the planks, the backboard's sides and the plank
+ * ends land on one *new* shared plane — a tie the uprights happen to hide,
+ * which is a worse thing to rely on than not creating. Doubling separates them.
+ *
+ * It is applied in `x` and in `y`: sides inside the uprights, top and bottom
+ * clear of theirs.
+ */
+export const BACKBOARD_INSET = PLANK_INSET * 2;
+
+/**
  * How much of a shelf books may actually occupy.
  *
  * **The one answer to "how wide is a shelf".** `toRows` packs into this; the
