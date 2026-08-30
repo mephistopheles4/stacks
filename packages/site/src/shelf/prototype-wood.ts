@@ -322,6 +322,21 @@ export function readWoodArm(search: string): WoodArmConfig {
    * requires `value > 0` and an explicit `?woodVary=0` is a legitimate
    * request — that difference is presumably how the hand-rolled parse, and the
    * bug, got here.
+   *
+   * Measured after the fix, rather than reasoned about:
+   *
+   * | Passed | Resolves to |
+   * | --- | --- |
+   * | absent | 1 — the documented default |
+   * | `0` | 0 — off, the case the helper could not serve |
+   * | `0.5` | 0.5 |
+   * | `2`, `-1`, `abc` | 1 |
+   *
+   * ⚠️ **An empty `?woodVary=` resolves to 0, where an empty `?woodSeed=` draws
+   * fresh.** `Number('')` is 0 and passes the guard. The two are inconsistent
+   * and only the seed's behaviour was chosen — this row is stated because it is
+   * the sort of thing that reads as deliberate once it is in the file, and a
+   * garbled value silently meaning *off* is the same shape as the bug above.
    */
   const varyText = last('woodVary');
   const varyRaw = Number(varyText);
