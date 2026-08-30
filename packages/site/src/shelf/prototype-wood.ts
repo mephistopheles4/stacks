@@ -264,7 +264,23 @@ export function readWoodArm(search: string): WoodArmConfig {
     const value = Number(last(key));
     return last(key) !== null && Number.isFinite(value) && value > 0 ? value : fallback;
   };
-  const varyRaw = Number(last('woodVary'));
+  /**
+   * ⚠️ **`Number(null)` is `0`, not `NaN`, and that silently turned this
+   * default inside out.** `last` returns `null` when the key is absent, so the
+   * finite-and-non-negative check passed on a *missing* parameter and every URL
+   * without an explicit `&woodVary=` resolved to **0** — every member identical
+   * — while this file and `docs/images/woodwork-arms/README.md` both said the
+   * default was 1.
+   *
+   * Found on [#297](https://github.com/mephistopheles4/stacks/issues/297), by
+   * the backboard's own copy of this code printing `vary 0` in a read-back line
+   * that #284's matrix did not have. ⚠️ **Every arm #284 rendered was
+   * unvaried**, which does not change that ticket's channel verdict — the
+   * variation is UV phase and vertex tint, not a channel — but it does mean
+   * #287's five differences have been judged on a live build and never in the
+   * matrix.
+   */
+  const varyRaw = last('woodVary') === null ? 1 : Number(last('woodVary'));
   const speciesRaw = last('woodSpecies');
   const species = SPECIES_NAMES.find((name) => name === speciesRaw) ?? 'sapele';
   return {

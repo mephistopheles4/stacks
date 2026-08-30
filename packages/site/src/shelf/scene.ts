@@ -30,6 +30,11 @@ import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture } from './spine-texture.ts';
 // PROTOTYPE ONLY — wayfinder ticket #284. Never merged to `main`.
 import {
+  applyBackArm,
+  backboardSwapsAxes,
+  readBackArm,
+} from './prototype-backboard.ts';
+import {
   applyWoodArm,
   PLANK_INSET,
   readWoodArm,
@@ -1607,6 +1612,17 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   const woodArm = readWoodArm(window.location.search);
   applyWoodArm(wood, woodArm);
 
+  /**
+   * PROTOTYPE ONLY — wayfinder ticket #297. Never merged to `main`.
+   *
+   * The backboard's own arm, read off `?back=`, and **independent of `?wood=`
+   * on purpose**: #297 asks what the backboard looks like behind #284's
+   * standing candidate, not next to today's flat planks, so every arm is
+   * rendered with the woodwork already treated.
+   */
+  const backArm = readBackArm(window.location.search);
+  applyBackArm(backing, backArm);
+
   const unitHeight = rowCount * SHELF.rowHeight;
   const outerWidth = SHELF.width + SHELF.sideThickness * 2;
 
@@ -1620,12 +1636,37 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   // same amount the backboard's sides and the plank ends land on one new
   // shared plane — a tie the uprights happen to hide, which is a worse thing to
   // rely on than not creating it.
+  // ⚠️ **`?back=` arms the inset too, and #284's version did not.** The tie is
+  // between the backboard and the uprights, so a textured backboard over flat
+  // planks flickers exactly as a textured plank over a flat backboard does.
   const backInset =
-    woodArm.arm !== 'off' && woodArm.joint === 'inset' ? PLANK_INSET * 4 : 0;
-  const back = new THREE.Mesh(
-    new THREE.BoxGeometry(outerWidth - backInset, unitHeight - backInset, SHELF.backThickness),
-    backing,
-  );
+    (woodArm.arm !== 'off' || backArm.arm !== 'off') && woodArm.joint === 'inset'
+      ? PLANK_INSET * 4
+      : 0;
+  const backWidth = outerWidth - backInset;
+  const backHeight = unitHeight - backInset;
+  const backGeometry = new THREE.BoxGeometry(backWidth, backHeight, SHELF.backThickness);
+  /**
+   * PROTOTYPE (#297). The backboard's UVs, and the one decision they carry.
+   *
+   * `backboardSwapsAxes` reads the **measured** grain direction of the sheet
+   * being bound, so the grain lands vertical — #285's stated direction — on a
+   * sheet whose stripe runs across `u` and on one whose stripe runs down `v`
+   * alike. The woodwork's sheet and this one run opposite ways, measured, so a
+   * copied constant would have laid one of them sideways.
+   */
+  if (backArm.arm !== 'off') {
+    worldSpaceUvs(
+      backGeometry,
+      { x: backWidth, y: backHeight, z: SHELF.backThickness },
+      backArm.unitsPerTile,
+      backboardSwapsAxes(backArm.species),
+    );
+    // #287 put the backboard alongside the planks and uprights in carrying the
+    // per-member differences. One seed, because there is one backboard.
+    if (backArm.vary > 0) varyMember(backGeometry, 'backboard', backArm.vary);
+  }
+  const back = new THREE.Mesh(backGeometry, backing);
   back.position.set(0, unitHeight / 2, -SHELF.depth / 2);
   back.receiveShadow = true;
   group.add(back);
