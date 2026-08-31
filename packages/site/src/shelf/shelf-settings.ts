@@ -41,6 +41,13 @@
 // sharp and the metadata layer, and a value import of it drags `node:fs` into
 // the browser bundle. Types are erased at compile time and so are safe.
 import type { Binding } from '@stacks/core';
+// The same rule reaching inside the package: `woodwork.ts` pulls in three
+// runtime imports and this module has none, which is what lets `shelf-url.ts`
+// and every spec here load without a GPU. `WoodSpecies` is a union of string
+// literals and erases entirely, so the roster is defined once beside the table
+// it keys rather than copied here and held by an assertion — there is no value
+// to drift.
+import type { RequestedSpecies } from './woodwork.ts';
 
 /**
  * A light's height, which depends on how tall the case grew.
@@ -196,6 +203,51 @@ export interface SpineProfile {
 export const BINDINGS: readonly Binding[] = ['hardback', 'paperback'];
 
 export interface MaterialSettings {
+  /**
+   * Which sheet the **woodwork** wears — the planks and the uprights, and not
+   * the backboard.
+   *
+   * The roster is every sheet that has actually been rendered and measured, plus
+   * the flat comparison entry: `rosewood`, `sapele`, `flat`. See `WOOD_SPECIES`
+   * in `woodwork.ts` for what each one is and why there are three where
+   * [#281](https://github.com/mephistopheles4/stacks/issues/281) settled four.
+   *
+   * ⚠️ **It cannot move the backboard**, whose sheet is a constant —
+   * [#297](https://github.com/mephistopheles4/stacks/issues/297) measured all 41
+   * veneers Poly Haven publishes and the darkness constraint leaves exactly one.
+   * The panel's control is labelled *woodwork sheet* for that reason.
+   *
+   * ⚠️ **Species and resolution are coupled, which is why there is no resolution
+   * knob beside this one.** What the eye reads is `resolution / unitsPerTile`,
+   * and each roster entry carries its own pair: rosewood at 1024 over 7.68 units
+   * is 133 texels per world unit, sapele at 512 over 1.6 is 320. A resolution
+   * knob would let a visitor make a choice whose meaning changed under the menu
+   * beside it.
+   *
+   * ⚠️ **Rebuild-class, and structurally so.** `worldSpaceUvs` multiplies every
+   * member's UVs by that sheet's world size *in place*, so re-laying for a
+   * different `unitsPerTile` means new geometry — there is no live re-bind, and
+   * `applySettings` says `needsRebuild` rather than moving a menu over an
+   * unchanged bookcase. That is also what makes the menu **lazy**: a sheet is
+   * fetched where the material is made, so an entry nobody selects costs a
+   * visitor nothing.
+   *
+   * ⚠️ **An unrecognised name is refused and reported, never silently
+   * defaulted.** `?tune=` carries arbitrary JSON, so this key can arrive holding
+   * a typo; `resolveWoodwork` falls back to `rosewood` and hands
+   * `applySettings` a refusal to name. A dropped value looks exactly like a
+   * value that was applied, and the standing rule is that a control must not
+   * lie.
+   */
+  /**
+   * ⚠️ **`RequestedSpecies` and not `WoodSpecies`, because this is what was
+   * *asked for* rather than what is in force.** `readTune` passes `materials`
+   * through as an opaque record, so a `?tune=` can genuinely put `walnut` here
+   * — and it must be able to, since an unrecognised species is refused *and
+   * reported*, and a refusal can only name what was asked for if the value
+   * survived. `resolveWoodwork` is the one place it becomes a `WoodSpecies`.
+   */
+  readonly woodSpecies: RequestedSpecies;
   /**
    * The planks and uprights' colour **before the veneer decodes, and if it never
    * does** — not the colour they render.
@@ -472,6 +524,12 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     fog: { enabled: true, near: 14, far: 30 },
   },
   materials: {
+    // Rosewood, which is what #284 and #302 rendered and the owner accepted. The
+    // literal rather than `DEFAULT_SPECIES`, for this file's standing reason: no
+    // runtime import. A union of string literals erases, so the *type* is
+    // imported and the value is written — and `woodwork.test.ts` holds this one
+    // to the roster, the same trade the two hexes below make.
+    woodSpecies: 'rosewood',
     // `rosewood_veneer1`'s mean-matched flat twin, computed in **linear light**
     // from the 1024 map that ships. Not `0x6b4f3a`: see `MaterialSettings.wood`.
     //

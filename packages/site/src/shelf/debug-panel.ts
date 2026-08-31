@@ -8,6 +8,10 @@ import {
   type ShelfSettings,
 } from './shelf-settings.ts';
 import { writeSettings } from './shelf-url.ts';
+// The roster, from the module that owns the sheet table — so the menu cannot
+// offer an entry nothing resolves, and a fourth sheet reaches the panel by being
+// added once rather than twice.
+import { WOOD_SPECIES, speciesPending, type WoodSpecies } from './woodwork.ts';
 
 /**
  * The tuning panel: every setting the shelf has, live, behind `?debug`.
@@ -127,15 +131,26 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    *
    * `active` is what separates off from inert. It defaults to "yes, this is
    * doing something", and the controls that can be superseded pass their own.
+   *
+   * ⚠️ **`stale` exists because a raw inequality is not always the right
+   * question.** The default — the set value differs from the mounted one — is
+   * right for every control whose value *is* what takes effect. It is wrong for
+   * one whose value is **resolved** before it does: two different woodwork
+   * sheet requests can name the same sheet, so comparing the requests lights
+   * this lamp amber over a bookcase that is already showing what was asked for.
+   * A control lying about being stale is the same failure as one lying about
+   * being applied. See `speciesPending`.
    */
   const lampFor = <T>(
     klass: Klass,
     get: (s: ShelfSettings) => T,
     active: (s: ShelfSettings) => boolean,
+    stale: (built: ShelfSettings, now: ShelfSettings) => boolean = (built, now) =>
+      get(built) !== get(now),
   ): { slot: HTMLElement } => {
     const lamp = makeLamp();
     const relight = (): void => {
-      const pending = klass !== 'live' && get(settings) !== get(handle.mountedWith);
+      const pending = klass !== 'live' && stale(handle.mountedWith, settings);
       lamp.set(pending ? 'pending' : active(settings) ? 'on' : 'off', klass);
     };
     lamps.push(relight);
@@ -275,6 +290,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     get: (s: ShelfSettings) => T,
     set: (s: ShelfSettings, value: T) => ShelfSettings,
     active?: (s: ShelfSettings) => boolean,
+    stale?: (built: ShelfSettings, now: ShelfSettings) => boolean,
   ): void => {
     const select = document.createElement('select');
     applyInputStyle(select);
@@ -284,13 +300,56 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
       node.textContent = option;
       select.append(node);
     }
-    select.value = get(settings);
+    /**
+     * Show a value that is not on the list, rather than showing nothing.
+     *
+     * ⚠️ **A `<select>` whose value matches no option renders blank**, and blank
+     * is a *third* state that reads as a bug: an empty box is what a visitor
+     * sees when a menu failed to populate. The case is real —
+     * `?tune={"materials":{"woodSpecies":"walnut"}}` reaches the panel with
+     * `walnut` genuinely in the settings, because `readTune` validates
+     * `toneMapping` against its name list and checks `exposure` is finite but
+     * passes `materials` through as an opaque record. So the settings object can
+     * hold a string no option offers, and it must: #300 requires an
+     * unrecognised species be *"refused and reported rather than silently
+     * defaulted"*, which means the bad value has to survive far enough to be
+     * reported and cannot be dropped at parse.
+     *
+     * Selecting the default instead would be the control claiming a setting the
+     * object does not hold — the standing rule is that **a control must not
+     * lie**. So the off-list value gets a **disabled** option of its own,
+     * carrying its own name: it states what is set, cannot be chosen, and turns
+     * an empty box into a sentence that agrees with the refusal line above it.
+     */
+    const stray = document.createElement('option');
+    stray.disabled = true;
+    const show = (): void => {
+      const current: string = get(settings);
+      if (options_.some((option) => option === current)) {
+        stray.remove();
+      } else {
+        stray.value = current;
+        stray.textContent = `${current} — not on the list`;
+        select.append(stray);
+      }
+      select.value = current;
+    };
+
+    show();
     select.addEventListener('change', () => {
       apply(set(settings, select.value as T));
+      // ⚠️ **`apply` does not run `resync`**, deliberately — a control that just
+      // changed does not need resyncing from itself, and `resync` is for a bulk
+      // settings load. But the stray option below is the one part of this
+      // control that is *not* about the value that just changed: without this
+      // call, picking a real species off a typo'd `?tune=` leaves `walnut` in
+      // the list for the life of the page, naming a setting nothing holds any
+      // more. Cosmetic, and still a control saying something untrue.
+      show();
     });
-    resync.push(() => (select.value = get(settings)));
+    resync.push(show);
     const line = row(label, klass, select);
-    line.prepend(lampFor(klass, get, active ?? (() => true)).slot);
+    line.prepend(lampFor(klass, get, active ?? (() => true), stale).slot);
     body.append(line);
   };
 
@@ -672,6 +731,37 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     (s) => s.scene.background,
     (s, v) => resolveSettings({ scene: { background: v } }, s),
   );
+  /**
+   * ⚠️ **Labelled *woodwork sheet* and not *wood species*, deliberately.**
+   * It governs the planks and the uprights and **cannot move the backboard**,
+   * whose sheet is a constant — #297 measured all 41 veneers Poly Haven
+   * publishes and the darkness constraint left exactly one candidate, with the
+   * third-nearest 24.8 luma away. A control named for the material rather than
+   * for the surface would read as governing both, and the standing rule here is
+   * that a control must not lie.
+   *
+   * **Rebuild-class**, because `worldSpaceUvs` writes each member's world-space
+   * period into its UVs in place: a sheet laid at a different world size needs
+   * new geometry, not a new texture. That is also what keeps the menu lazy — the
+   * fetch happens inside `buildShelf`, so an entry nobody picks costs nothing.
+   *
+   * `flat` is not a third sheet: it binds no map at all and shows the `wood`
+   * colour below, which defaults to rosewood's mean-matched twin. It is the
+   * control that separates a sheet that moved the *grain* from one that moved
+   * the *average colour* — sapele's 20.53% of frame was only 1.32% grain.
+   */
+  choice(
+    'woodwork sheet',
+    'rebuild',
+    WOOD_SPECIES,
+    (s) => s.materials.woodSpecies as WoodSpecies,
+    (s, v) => resolveSettings({ materials: { woodSpecies: v } }, s),
+    undefined,
+    // ⚠️ **Resolved, not raw.** `walnut` and `rosewood` are one bookcase, so
+    // comparing the requests would light this amber over a shelf that already
+    // shows what was asked for.
+    (built, now) => speciesPending(built.materials.woodSpecies, now.materials.woodSpecies),
+  );
   colour(
     'wood',
     'live',
@@ -984,6 +1074,12 @@ function showReport(status: HTMLElement, report: ApplyReport, canRebuild: boolea
     );
   }
   if (report.applied.length > 0) lines.push(`✓ ${report.applied.join(', ')}`);
+
+  // Last, and always — the shelf's own read-back of what it resolved, which is
+  // a *state* rather than any of the four transitions above. It is here because
+  // three separate defects on map #280 were configurations that never changed:
+  // wrong from the first frame, with nothing in a diff-shaped report to say so.
+  if (report.resolved.length > 0) lines.push(`= ${report.resolved.join(', ')}`);
 
   status.textContent = lines.join('\n');
 }

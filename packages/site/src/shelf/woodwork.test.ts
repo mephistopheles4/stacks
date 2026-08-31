@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
+  ALL_SHEETS,
   BACKBOARD_SHEET,
+  DEFAULT_SPECIES,
+  SAPELE_SHEET,
+  SHIPPED_SHEETS,
+  WOOD_SPECIES,
   FIBRE_PERIOD,
   FIBRE_TILES,
   SHEET_TINT,
@@ -14,15 +19,20 @@ import {
   fibreTiles,
   SEED_LENGTH,
   fibreTurn,
+  describeWoodwork,
   freshWoodSeed,
   layFibre,
+  resolveWoodwork,
+  speciesPending,
   varyMember,
   woodColour,
   woodKeys,
+  woodworkSheetUrls,
   worldSpaceUvs,
   type Axis,
   type SheetLoader,
   type WoodKeys,
+  type WoodworkReadBack,
 } from './woodwork.ts';
 import { BACKBOARD_INSET, PLANK_INSET, SHELF } from './case.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
@@ -1150,5 +1160,324 @@ describe('freshWoodSeed', () => {
   it('draws a root of one width, whatever the draw', () => {
     const widths = new Set(Array.from({ length: 400 }, () => freshWoodSeed().length));
     expect([...widths]).toEqual([SEED_LENGTH]);
+  });
+});
+
+describe('the species menu — lazy, and honest about what it resolved', () => {
+  it('offers exactly the sheets somebody has actually rendered, plus the flat twin', () => {
+    // ⚠️ **Three, where #281 settled four.** Only two species were ever
+    // downloaded and rendered; a third or fourth entry would commit a sheet
+    // nobody has looked at, which is the shape of decision this map refused four
+    // times. Going back to four is a download and a render, not a code change —
+    // so this clause is what makes adding one deliberate.
+    expect(WOOD_SPECIES).toEqual(['rosewood', 'sapele', 'flat']);
+  });
+
+  it('defaults to rosewood, which is what was rendered and accepted', () => {
+    // The one place `shelf-settings.ts`'s written-out literal is held to the
+    // roster here. That file has no runtime import at all, so the value is
+    // spelled rather than imported — the same trade the two mean hexes make.
+    expect(DEFAULT_SETTINGS.materials.woodSpecies).toBe(DEFAULT_SPECIES);
+    expect(DEFAULT_SPECIES).toBe('rosewood');
+    expect(WOOD_SPECIES).toContain(DEFAULT_SETTINGS.materials.woodSpecies);
+  });
+
+  it('resolves a default page to exactly one woodwork sheet', () => {
+    // **The first of this ticket's two gate rows, asserted on the pure
+    // resolution function and never on the network** — G21 records any request
+    // the suite makes, so what is checked is the resolved URL.
+    //
+    // It has teeth *because the menu ships*: with a single hard-coded sheet this
+    // would assert nothing, and with a menu a fifth entry could quietly cost
+    // every visitor a download.
+    const urls = woodworkSheetUrls(DEFAULT_SETTINGS.materials.woodSpecies);
+
+    expect(urls).toEqual([WOODWORK_SHEET.url]);
+  });
+
+  it('never resolves more than one sheet, whatever is asked for', () => {
+    // The laziness claim as arithmetic rather than as a sentence: the roster can
+    // grow without a page fetching more, because a page fetches what it resolved
+    // to and nothing else. The unrecognised names are here because a fallback
+    // must not fetch two — its own and the one it fell back to.
+    for (const requested of [...WOOD_SPECIES, 'walnut', '', '__proto__', 'toString']) {
+      expect(woodworkSheetUrls(requested).length, requested).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('fetches sapele’s sheet only when sapele is asked for', () => {
+    expect(woodworkSheetUrls('sapele')).toEqual([SAPELE_SHEET.url]);
+
+    // And it is not in what a default page fetches, which is the whole of the
+    // menu costing an ordinary visitor nothing.
+    expect(SHIPPED_SHEETS.map((sheet) => sheet.url)).not.toContain(SAPELE_SHEET.url);
+  });
+
+  it('binds no map at all for `flat`', () => {
+    const { sheet, refused } = resolveWoodwork('flat');
+
+    expect(sheet).toBeUndefined();
+    expect(woodworkSheetUrls('flat')).toEqual([]);
+    // A roster entry, not a failure: there is nothing here to refuse.
+    expect(refused).toBeUndefined();
+  });
+
+  it('shows the mean-matched hex under `flat`, through the knob rather than beside it', () => {
+    // `flat` is the *fallback arm made permanent*: nothing is bound, so
+    // `woodColour` returns the knob, which defaults to rosewood-at-1024's
+    // mean-matched twin. A second hex here would be a copy of that value, and a
+    // copy that drifted is a control that lies.
+    expect(woodColour(DEFAULT_SETTINGS.materials.wood, false)).toBe(WOODWORK_SHEET.mean);
+  });
+
+  it('lays `flat` by the default sheet, so it differs from rosewood in one thing only', () => {
+    // ⚠️ **This is what makes it a control rather than a fourth look.** Its job
+    // is to separate a sheet that moved the *grain* from one that moved the
+    // *average colour* — sapele's 20.53% of frame was only 1.32% grain — and it
+    // can only do that with everything except the diffuse map held constant.
+    expect(resolveWoodwork('flat').lay).toBe(WOODWORK_SHEET);
+  });
+
+  it('lays each species by its own world size, which the fibre rides too', () => {
+    // ⚠️ **Coupled, and neither may move alone.** Rosewood's 1024 over 7.68
+    // units is 133 texels per world unit; sapele's 512 over 1.6 is 320. A single
+    // lay constant would tile sapele's fibre 4.8× wrong with every whole-frame
+    // number still in range — #297's defect, one surface over.
+    expect(resolveWoodwork('rosewood').lay.unitsPerTile).toBe(7.68);
+    expect(resolveWoodwork('sapele').lay.unitsPerTile).toBe(1.6);
+    expect(fibreTiles(SAPELE_SHEET)).toBe(SAPELE_SHEET.unitsPerTile / FIBRE_PERIOD);
+    expect(fibreTiles(SAPELE_SHEET)).not.toBe(FIBRE_TILES);
+  });
+
+  it('refuses an unrecognised species out loud, and still renders something', () => {
+    // **The second gate row's own clause.** An unrecognised name falls back —
+    // there is no bookcase with no colour on it — but it must not fall back
+    // *quietly*: a dropped value looks exactly like a value that was applied,
+    // which is the failure `ApplyReport` exists to prevent.
+    const walnut = resolveWoodwork('walnut');
+
+    expect(walnut.species).toBe(DEFAULT_SPECIES);
+    expect(walnut.sheet).toBe(WOODWORK_SHEET);
+    expect(walnut.refused).toBeDefined();
+    // It names what was asked for and what the roster holds, so the report is
+    // actionable rather than merely negative.
+    expect(walnut.refused).toContain('walnut');
+    for (const name of WOOD_SPECIES) expect(walnut.refused).toContain(name);
+  });
+
+  it('refuses an inherited key, which an `in` check would have accepted', () => {
+    // A `find` over the roster rather than `requested in SHEETS`: an object
+    // lookup answers `true` for `toString`, `constructor` and every other
+    // inherited key, which is a guard that passes on a value nobody wrote.
+    for (const key of ['toString', 'constructor', '__proto__', 'hasOwnProperty']) {
+      const resolved = resolveWoodwork(key);
+      expect(resolved.refused, key).toBeDefined();
+      expect(resolved.species, key).toBe(DEFAULT_SPECIES);
+    }
+  });
+
+  it('says nothing about a species it did resolve', () => {
+    // The other direction, so the refusal cannot become a thing the report
+    // always says — a refusal that is always present is a refusal nobody reads.
+    for (const name of WOOD_SPECIES) expect(resolveWoodwork(name).refused, name).toBeUndefined();
+  });
+
+  it('commits every sheet the menu can name, and fetches only two of them', () => {
+    // The two sets are deliberately different, and conflating them is how a
+    // committed file stops being pointed at by anything. `ALL_SHEETS` is what
+    // G52 holds to the directory; `SHIPPED_SHEETS` is what a default page costs.
+    expect(ALL_SHEETS).toContain(SAPELE_SHEET);
+    expect(ALL_SHEETS.length).toBeGreaterThan(SHIPPED_SHEETS.length);
+
+    // Every roster entry that binds a sheet resolves to one `ALL_SHEETS` holds,
+    // so a menu entry can never point at a file no gate checks the existence of.
+    for (const name of WOOD_SPECIES) {
+      const { sheet } = resolveWoodwork(name);
+      if (sheet !== undefined) expect(ALL_SHEETS, name).toContain(sheet);
+    }
+  });
+
+  it('gives sapele its own measured lay, mean and figure', () => {
+    // Taken from `prototype/284-woodwork-channels` rather than recomputed: the
+    // mean is this exact 512 map's, in linear light, and a twin that matches a
+    // different map matches nothing. The naive sRGB-byte average is `0xc68059`.
+    expect(SAPELE_SHEET.mean).toBe(0xc68159);
+    expect(SAPELE_SHEET.mean).not.toBe(0xc68059);
+    expect(SAPELE_SHEET.unitsPerTile).toBe(1.6);
+    // #297's survey reads sapele at 2.67 — a stripe running down `v`, the same
+    // way as rosewood's figure and the opposite way from `dark_wood`'s.
+    expect(SAPELE_SHEET.figure).toBe('v');
+    expect(SAPELE_SHEET.figure).not.toBe(BACKBOARD_SHEET.figure);
+    // Its 512 map, and not the 1024 that also exists on the prototype branch:
+    // resolution is a property of the sheet, and the pair is what was measured.
+    expect(SAPELE_SHEET.url).toBe('/wood/sapele-diff-512.jpg');
+  });
+
+  it('turns the fibre for a sheet by that sheet’s own figure, sapele included', () => {
+    // Both woodwork sheets are `v`-figured, so neither is turned; the backboard
+    // is `u` and is. Asserted on sapele too, because the turn is read off the
+    // sheet being laid rather than off which surface it is — that is the whole
+    // reason #297's crossed fibre cannot recur through the menu.
+    expect(fibreTurn(SAPELE_SHEET)).toBe(0);
+    expect(fibreTurn(WOODWORK_SHEET)).toBe(0);
+    expect(fibreTurn(BACKBOARD_SHEET)).toBe(Math.PI / 2);
+  });
+
+  it('lays a sapele member’s UVs by sapele’s size, not by the woodwork default', () => {
+    // The end-to-end of the coupling, on real geometry: the same plank laid by
+    // two sheets gets two different world-space periods, and the ratio is
+    // exactly the ratio of the sheets. A single lay constant passes every other
+    // clause here and fails this one.
+    const rosewood = box(PLANK);
+    const sapele = box(PLANK);
+    worldSpaceUvs(rosewood, WOODWORK_SHEET, 'x');
+    worldSpaceUvs(sapele, SAPELE_SHEET, 'x');
+
+    const top = faceSpan(rosewood, FACE.py).v;
+    const topSapele = faceSpan(sapele, FACE.py).v;
+
+    expectNear(
+      topSapele / top,
+      WOODWORK_SHEET.unitsPerTile / SAPELE_SHEET.unitsPerTile,
+      'sapele tiles 4.8× tighter than rosewood',
+    );
+  });
+});
+
+describe('the read-back — the resolved configuration is the reported one', () => {
+  /** The ordinary case: a default page, nothing waiting, the fibre as asked. */
+  const plain = (species = DEFAULT_SETTINGS.materials.woodSpecies, fibre = 0.5): WoodworkReadBack =>
+    describeWoodwork(resolveWoodwork(species), resolveWoodwork(species).species, fibre, fibre);
+
+  it('names the species on every apply, not only when it changed', () => {
+    // ⚠️ **The whole of this row.** All four of the report's older categories
+    // are transitions, and a transition cannot describe a configuration that was
+    // wrong from the first frame — which is what all three defects this row was
+    // earned for actually were. Nothing has changed in this call and it still
+    // says what is running.
+    const { resolved } = plain();
+
+    // ⚠️ **Anchored to the slot the code writes it in.** A bare
+    // `toContain('rosewood')` is satisfied by the sheet URL beside it and would
+    // hold with the species dropped from the line entirely — measured, not
+    // supposed. The gate row carries the same anchoring for the same reason.
+    expect(resolved.join(' ')).toContain('woodwork sheet: rosewood (');
+    expect(resolved.join(' ')).toContain(WOODWORK_SHEET.url);
+  });
+
+  it('names the fibre scale on every apply too', () => {
+    expect(plain('rosewood', 0.5).resolved.join(' ')).toContain('wood fibre: 0.5');
+    // Including at zero, which is the value #298's absent-parameter guard
+    // resolved to for a whole branch's worth of renders with nothing saying so.
+    expect(plain('rosewood', 0).resolved.join(' ')).toContain('wood fibre: 0');
+  });
+
+  it('reports the fibre in force, never the fibre asked for', () => {
+    // A browser that will not give a 2D context has no map to bind, so
+    // `applyWoodFibre` returns the scale that really took. A report echoing the
+    // request would be a slider that moved while the bookcase did not.
+    const { resolved } = describeWoodwork(resolveWoodwork('rosewood'), 'rosewood', 0, 1.5);
+
+    expect(resolved.join(' ')).toContain('wood fibre: 0');
+    expect(resolved.join(' ')).toContain('asked for 1.5');
+  });
+
+  it('says nothing about a mismatch when there is none', () => {
+    // The other direction, so `asked for` cannot become noise on every apply.
+    expect(plain('rosewood', 1.5).resolved.join(' ')).not.toContain('asked for');
+  });
+
+  it('names the world size it laid, which is the half no whole-frame number sees', () => {
+    // #297's fibre was crossed at 90° and every whole-frame count it produced
+    // sat in the normal range; the lay is the same class of fact, and 4.8× wrong
+    // looks entirely plausible. Stating it is what makes it checkable at a
+    // glance rather than on a 3× crop.
+    expect(plain('rosewood').resolved.join(' ')).toContain('7.68');
+    expect(plain('sapele').resolved.join(' ')).toContain('1.6');
+  });
+
+  it('says `flat` binds no map, rather than naming a file it did not fetch', () => {
+    const { resolved } = plain('flat');
+
+    // `flat` is the worst of the three unanchored: its own description reads
+    // *the mean-matched flat twin*, so the word survives the species being
+    // deleted.
+    expect(resolved.join(' ')).toContain('woodwork sheet: flat (');
+    expect(resolved.join(' ')).toContain('no map');
+    expect(resolved.join(' ')).not.toContain('.jpg');
+  });
+
+  it('refuses an unrecognised species in the report, rather than defaulting in silence', () => {
+    // **The row's second half.** A dropped value looks exactly like a value that
+    // was applied; the fallback still has to render something, so the refusal is
+    // what stops it being silent.
+    const { refused, resolved } = describeWoodwork(resolveWoodwork('walnut'), 'rosewood', 0.5, 0.5);
+
+    expect(refused).toHaveLength(1);
+    expect(refused[0]).toContain('walnut');
+    // And the read-back names what is *actually* showing, so the two halves of
+    // the report agree with each other. Anchored: the fallback's URL carries the
+    // word too.
+    expect(resolved.join(' ')).toContain('woodwork sheet: rosewood (');
+  });
+
+  it('refuses nothing when the species resolved', () => {
+    for (const name of WOOD_SPECIES)
+      expect(describeWoodwork(resolveWoodwork(name), name, 0.5, 0.5).refused, name).toEqual([]);
+  });
+
+  it('says a species change is waiting for a rebuild, naming both halves', () => {
+    // Between setting the menu and pressing rebuild the shelf is running one
+    // species and configured for another. Naming only one of them would be the
+    // report agreeing with whichever half the reader guessed — `worldSpaceUvs`
+    // writes the world-space period into each member's UVs in place, so a new
+    // sheet is new geometry and there is no live path to take.
+    const { resolved } = describeWoodwork(resolveWoodwork('sapele'), 'rosewood', 0.5, 0.5);
+
+    expect(resolved.join(' ')).toContain('woodwork sheet: sapele (');
+    expect(resolved.join(' ')).toContain('built with rosewood');
+    expect(resolved.join(' ')).toContain('rebuild');
+  });
+
+  it('says nothing about rebuilding when the built species is the wanted one', () => {
+    for (const name of WOOD_SPECIES) {
+      expect(plain(name).resolved.join(' '), name).not.toContain('rebuild');
+    }
+  });
+
+  it('states both knobs and no more, so the read-back cannot quietly go partial', () => {
+    // ⚠️ **A partial report is precisely what let `woodVary` hide.** Two lines,
+    // counted rather than searched for: a knob dropped from this list is a knob
+    // nothing states, which is the condition all three defects rendered under.
+    expect(plain().resolved).toHaveLength(2);
+  });
+});
+
+describe('a species change is pending only when the sheet would actually move', () => {
+  it('is not pending when two different requests resolve to the same sheet', () => {
+    // ⚠️ **The defect this exists for.** `resolveWoodwork` maps anything
+    // off-roster to the default, so `walnut` and `rosewood` are *the same
+    // shelf* — but the raw strings differ. Comparing the requests offers a
+    // rebuild button for a change a rebuild cannot make, and lights the panel's
+    // lamp amber over a bookcase that is already showing what was asked for.
+    // A control must not lie, and that includes lying about being stale.
+    expect(speciesPending('walnut', DEFAULT_SPECIES)).toBe(false);
+    expect(speciesPending(DEFAULT_SPECIES, 'walnut')).toBe(false);
+    expect(speciesPending('walnut', 'koa')).toBe(false);
+  });
+
+  it('is pending when the resolved sheet really does change', () => {
+    // The positive control. Every clause above is satisfied by a function that
+    // always returns `false`, which would be a menu that never offers a rebuild
+    // — the same defect wearing the opposite sign.
+    expect(speciesPending('rosewood', 'sapele')).toBe(true);
+    expect(speciesPending('rosewood', 'flat')).toBe(true);
+    expect(speciesPending('sapele', 'flat')).toBe(true);
+    // And an off-roster request against a genuinely different sheet still moves.
+    expect(speciesPending('walnut', 'sapele')).toBe(true);
+  });
+
+  it('is never pending against itself, for any entry on the roster', () => {
+    for (const name of WOOD_SPECIES) expect(speciesPending(name, name), name).toBe(false);
   });
 });

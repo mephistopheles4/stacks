@@ -147,6 +147,16 @@ const CC0_BINARY_FILES = [
   // Poly Haven `dark_wood`, CC0, the backboard's own sheet — #304. A second
   // licence re-checked, by filename, rather than a directory nobody revisits.
   'packages/site/public/wood/darkwood-diff-512.jpg',
+  // Poly Haven `sapele_veneer`, CC0, the species menu's second entry — #306. A
+  // third licence re-checked the same way.
+  //
+  // ⚠️ **The one file here a default page never fetches.** The menu is lazy, so
+  // this is committed and served only when somebody selects it — which is why
+  // G52's existence clause had to widen from `SHIPPED_SHEETS` to `ALL_SHEETS`
+  // in the same commit, and why G53 (`one-sheet`) exists to keep it out of what
+  // every visitor downloads. Committed and unfetched is a state this list did
+  // not have before, and it is the state a licence is easiest to forget in.
+  'packages/site/public/wood/sapele-diff-512.jpg',
 ];
 
 describe('G5 — library.json is a build artifact', () => {

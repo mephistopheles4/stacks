@@ -13,6 +13,24 @@ import { hashUnit } from './hash.ts';
  * [#280](https://github.com/mephistopheles4/stacks/issues/280) and locked in
  * [`docs/spec/the-woodwork-reads-as-wood.md`](../../../../docs/spec/the-woodwork-reads-as-wood.md).
  *
+ * ## The two decisions behind this file
+ *
+ * - [ADR-0080](../../../../docs/adr/0080-the-woodwork-is-rosewood-and-its-relief-is-drawn.md)
+ *   — **what the woodwork is.** Why rosewood when the request was koa and the
+ *   choice was sapele, that species and resolution are one choice, that a
+ *   photographed veneer's normal map is a measured zero while a drawn fibre is
+ *   not, and that anisotropic specular is struck on the physics.
+ * - [ADR-0081](../../../../docs/adr/0081-the-woodwork-sheet-is-a-menu-and-the-shelf-says-what-it-resolved.md)
+ *   — **whether that choice stays revisitable**, which 0080 deliberately does
+ *   not decide. The roster, the laziness, the rebuild class and the read-back.
+ *
+ * ⚠️ **The rule the two share, because it is the one most easily lost:** a
+ * control may be exposed when its meaning is independent of the controls beside
+ * it, and not otherwise. That is why the species is a knob and the resolution
+ * never can be — `resolution / unitsPerTile` means something different under
+ * each entry of the menu beside it, where a species carries its own resolution
+ * with it.
+ *
  * ## Why this module exists rather than living in `scene.ts`
  *
  * `buildShelf` needs a WebGL context and is not a test seam — `scene.ts` sits
@@ -157,15 +175,390 @@ export const BACKBOARD_SHEET = {
 } as const satisfies Sheet;
 
 /**
- * Every sheet a default page fetches, so a gate can hold the caps to what
+ * The other sheet that has actually been rendered and measured — the menu's
+ * second entry, and the one that earned the flat entry beside it.
+ *
+ * **Poly Haven `sapele_veneer`, CC0**, diffuse only, at 512.
+ * [#281](https://github.com/mephistopheles4/stacks/issues/281) chose it on sound
+ * reasoning and [#284](https://github.com/mephistopheles4/stacks/issues/284)'s
+ * render disagreed: against today's flat shelf it moves **20.53% of frame**, of
+ * which only **1.32% is grain** — 94% of what it does is its average colour
+ * being a different colour. It is kept in the roster because *that* is worth
+ * being able to see again, not because the choice is reopened.
+ *
+ * ⚠️ **512 here against rosewood's 1024, and the pair is the point.** What the
+ * eye reads is `resolution / unitsPerTile`: this sheet's published 500 mm is
+ * **1.6** world units, so 512 over 1.6 gives **320** texels per world unit where
+ * rosewood's 1024 over 7.68 gives **133**. Species and resolution are coupled
+ * and neither may be moved alone — which is why there is no resolution knob
+ * beside the species one, and why each entry on this roster carries its own.
+ *
+ * ⚠️ **The price of those texels is repetition**, which is the complaint this
+ * whole map started from: one tile of this sheet is 1.6 units against a 3.58
+ * unit plank, so it repeats about 2.2 times along one board, where rosewood's
+ * tile is wider than the whole bookcase and never repeats at all.
+ *
+ * ⚠️ **`figure: 'v'` is a strong measurement here**, unlike rosewood's.
+ * #297's survey reads sapele at **2.67** — a flat-sliced veneer with a fine,
+ * low-contrast stripe running top to bottom — where `dark_wood` reads 0.08 the
+ * other way. `mean` is its 512 map's mean-matched twin, computed in linear light
+ * by `scripts/prototype-wood-maps.ts` on `prototype/284-woodwork-channels`; the
+ * naive sRGB-byte average lands `0xc68059`, one step off in green.
+ *
+ * ⚠️ **Its roughness map is not bound and does not ship.** Sapele is the only
+ * sheet of the three that publishes one, and binding a channel on one roster
+ * entry and not the others would make the menu compare two things at once. It
+ * measured 1.029% and inverted the prior — a finding with no home.
+ */
+export const SAPELE_SHEET = {
+  url: '/wood/sapele-diff-512.jpg',
+  unitsPerTile: 1.6,
+  mean: 0xc68159,
+  figure: 'v',
+} as const satisfies Sheet;
+
+/**
+ * The woodwork sheet menu, as a named choice — every sheet that has actually
+ * been **rendered and measured**, plus the comparison entry.
+ *
+ * ⚠️ **Three, where [#281](https://github.com/mephistopheles4/stacks/issues/281)
+ * settled four.** Only two species were ever downloaded and rendered, and a
+ * third or fourth would mean committing a sheet nobody has looked at — the shape
+ * of decision this map refused four times. Going back to four is a download and
+ * a render, **not a code change**.
+ *
+ * ⚠️ **It governs the woodwork only.** The backboard's sheet is a constant:
+ * [#297](https://github.com/mephistopheles4/stacks/issues/297) measured all 41
+ * veneers in Poly Haven's `Wood/Veneer/` branch and the darkness constraint
+ * leaves exactly one candidate, with the third-nearest 24.8 luma away. So the
+ * panel's control is labelled *woodwork sheet* rather than *wood species*, so it
+ * does not read as governing a surface it cannot move.
+ */
+export type WoodSpecies = 'rosewood' | 'sapele' | 'flat';
+
+/**
+ * A species as **requested**, which is not the same type as a species that
+ * resolved — and the distinction is load-bearing rather than pedantic.
+ *
+ * ⚠️ **`ShelfSettings` can genuinely hold a string off this roster.**
+ * `readTune` validates `toneMapping` against `TONE_MAPPING_NAMES` and checks
+ * `exposure` is finite, but passes `materials` through as an opaque record —
+ * `isRecord(tune.materials) ? tune.materials : {}` and nothing more — so
+ * `?tune={"materials":{"woodSpecies":"walnut"}}` arrives with `walnut` in the
+ * settings object. Typing the field as the roster alone would be **the type
+ * asserting something the runtime does not guarantee**, which is a control
+ * lying in the one place nothing can go red.
+ *
+ * The value has to survive that far, too: #300 requires an unrecognised species
+ * be *"refused and reported rather than silently defaulted"*, so it cannot be
+ * dropped at parse — and a refusal can only name what was asked for if what was
+ * asked for is still there to name.
+ *
+ * ⚠️ **The union is kept beside the widening on purpose.** `WoodSpecies | (string & {})`
+ * still offers the three names to anything *writing* the field — the panel's
+ * menu, `DEFAULT_SETTINGS`, a spec — while telling everything *reading* it that
+ * the value is untrusted and belongs in `resolveWoodwork`. Widening it to bare
+ * `string` would lose the roster at every write site, which is where the
+ * autocomplete is worth having.
+ */
+export type RequestedSpecies = WoodSpecies | (string & {});
+
+/**
+ * The roster, in menu order, so the panel and the specs walk one list.
+ *
+ * `flat` last, because it is the control rather than a species: it is what
+ * separates *a sheet that moved the grain* from *a sheet that moved the average
+ * colour*, which is the distinction sapele's 20.53% needed and no whole-frame
+ * number supplies on its own.
+ */
+export const WOOD_SPECIES: readonly WoodSpecies[] = ['rosewood', 'sapele', 'flat'];
+
+/**
+ * Which image each roster entry binds — and `undefined` for the one that binds
+ * none.
+ *
+ * ⚠️ **`flat` is an absent sheet and not a third image.** It binds no map at
+ * all, so the surface shows `materials.wood`, which `woodColour` already returns
+ * whenever nothing is bound: the flat entry is the *fallback arm made
+ * permanent*, out of machinery that already had to exist for a sheet that never
+ * arrives. Giving it its own hex here would be a second copy of the knob, and
+ * the copy that drifted would make the control lie.
+ *
+ * ## ⚠️ Where this diverges from #306, stated rather than glossed
+ *
+ * [#306](https://github.com/mephistopheles4/stacks/issues/306) asks for *"no map
+ * at all, at the **selected sheet's** mean-matched hex"*. **On the prototype,
+ * `flat` was an arm orthogonal to the species** — `?woodSpecies=sapele&wood=flat`
+ * was a reachable pair, so "the selected sheet" named a sheet that was still
+ * selected. Shipped, the ticket's own roster makes `flat` a **peer** of the two
+ * species rather than a modifier of them, and a peer has no selected sheet to
+ * take a hex from: the phrase has no referent once the shape it was written for
+ * is gone.
+ *
+ * So this resolves `flat` to the **default** sheet's twin, at the default's
+ * resolution, and the consequence is worth naming: **the isolation that caught
+ * sapele is not reachable from the shipped menu.** Comparing `flat` against
+ * `rosewood` isolates rosewood's grain, which is the comparison the shipped
+ * treatment is judged on. Comparing `flat` against `sapele` moves the average
+ * colour *and* the grain together, which is the confound the entry exists to
+ * remove — and separating those two for sapele needs `?woodSpecies=sapele`
+ * beside a `flat` *toggle*, which is the prototype's two-control shape and not
+ * the roster this ticket specified.
+ *
+ * ⚠️ **`SAPELE_SHEET.mean` is therefore recorded and not read at runtime.** It
+ * is kept because it is a measurement of a committed file — the twin for *that*
+ * map, in linear light — and because restoring the prototype's pairing is a
+ * control change rather than a re-measurement if anybody wants it back.
+ */
+const WOODWORK_SHEETS: Readonly<Record<WoodSpecies, Sheet | undefined>> = {
+  rosewood: WOODWORK_SHEET,
+  sapele: SAPELE_SHEET,
+  flat: undefined,
+};
+
+/** What the roster falls back to, and what a page with no opinion resolves to. */
+export const DEFAULT_SPECIES: WoodSpecies = 'rosewood';
+
+/**
+ * Every sheet a **default** page fetches, so a gate can hold the caps to what
  * actually ships rather than to whatever is lying in the directory.
  *
- * ⚠️ **Two, and the second is not the species menu's.**
+ * ⚠️ **Two, and neither is the menu's.**
  * [#306](https://github.com/mephistopheles4/stacks/issues/306)'s other species
- * load only on selection; the backboard's is a constant and is always fetched,
- * so a row counting *woodwork* sheets must not count this one.
+ * load only on selection, so sapele is committed and **not in this list**; the
+ * backboard's is a constant and is always fetched, so a row counting *woodwork*
+ * sheets must not count that one. `ALL_SHEETS` is the other question — what is
+ * committed — and the two are deliberately different sets.
  */
 export const SHIPPED_SHEETS: readonly Sheet[] = [WOODWORK_SHEET, BACKBOARD_SHEET];
+
+/**
+ * Every sheet any resolution can name, whether or not a default page fetches it.
+ *
+ * ⚠️ **The menu is exactly the way a committed file stops being pointed at.**
+ * G52's directory sweep caps what is *in* the directory and one of its clauses
+ * checks the other direction — that every URL this module resolves names a file
+ * that is really there. Against `SHIPPED_SHEETS` alone that clause would stop
+ * covering sapele the moment it landed: a file in the directory, capped, and
+ * reachable through a menu entry nothing asserted the existence of. On a live
+ * build a missing one is a 404 and a surface left at its fallback colour, which
+ * looks exactly like a texture nobody bound.
+ */
+export const ALL_SHEETS: readonly Sheet[] = [WOODWORK_SHEET, SAPELE_SHEET, BACKBOARD_SHEET];
+
+/**
+ * What a requested species actually resolves to — the sheet, and the refusal if
+ * there is one.
+ *
+ * ## Why this is a function and not a lookup at the call site
+ *
+ * It is the seam the two gate rows this ticket owes both assert on.
+ *
+ * **A default page fetches exactly one woodwork sheet**, asserted here rather
+ * than on the network — G21 (`no-live-network`) records any request the suite
+ * makes, so what is checked is the resolved URL and never the bytes. That row
+ * has teeth **because the menu ships**: with a single hard-coded sheet it would
+ * assert nothing, and with a menu a fifth entry could quietly cost every visitor
+ * a download.
+ *
+ * **The resolved configuration is the reported configuration.** `applySettings`
+ * names what came out of here, and this returns the refusal for it to name.
+ *
+ * ⚠️ **This map earned that second row three times, and all three were the same
+ * failure.** #284's resolution control built each URL as a fixed base plus a
+ * per-arm tail, so `woodRes=1024&woodRes=512` arrived and `URLSearchParams.get`
+ * returns the **first** — the arm meant to render 512 rendered 1024 and reported
+ * a perfect zero at every rung. #298's `woodVary` resolved an *absent* parameter
+ * to `0` against its own documented default of `1`, because `Number(null)` is
+ * `0` rather than `NaN`, disarming the variation in every render its branch
+ * took. #297's fibre was bound at 90° to its figure and every whole-frame number
+ * sat in the normal range. **A query string is an assumption until something
+ * states what came out of it.**
+ *
+ * ## Refused, and not silently defaulted
+ *
+ * An unrecognised name still has to render *something* — there is no bookcase
+ * with no colour on it — so it falls back to the default. What it must not do is
+ * fall back **quietly**: `refused` is the string `applySettings` puts in
+ * `ApplyReport.refused`, so a `?tune=` carrying a typo shows the default shelf
+ * and *says* it is showing the default shelf. A silent fallback is the shape of
+ * every defect in the paragraph above.
+ *
+ * ⚠️ **Refused at resolution rather than dropped at parse.** `cover_source`'s
+ * rule in the frontmatter contract drops an unrecognised value, and that is
+ * right for a note nobody is watching; a control somebody just moved is the
+ * opposite case, because the whole standing rule here is that **a control must
+ * not lie** and a dropped value looks like a value that was applied.
+ *
+ * ⚠️ **And nothing upstream would catch it, which is why the refusal has to be
+ * here.** `readTune` validates `toneMapping` against `TONE_MAPPING_NAMES` and
+ * checks `exposure` is a finite number, but passes `materials` through as an
+ * opaque record — `isRecord(tune.materials) ? tune.materials : {}` and nothing
+ * more. Every other `materials` key is a number or a nested object of numbers,
+ * so `woodSpecies` is the **first string-valued key in there and the first one
+ * where an invalid value can mean something**. That asymmetry is why
+ * `?tune={"materials":{"woodSpecies":"walnut"}}` arrives here intact while
+ * `?tune={"toneMapping":"walnut"}` never would, and the next string-valued
+ * `materials` key will meet it too.
+ */
+export interface ResolvedWoodwork {
+  /** The species actually in force — the request, or the default it fell back to. */
+  readonly species: WoodSpecies;
+  /** The sheet to bind, or `undefined` for `flat`, which binds no map at all. */
+  readonly sheet: Sheet | undefined;
+  /**
+   * What the UVs and the fibre are laid by — **always a sheet**, even when none
+   * is bound.
+   *
+   * ⚠️ **`flat` is laid by the default sheet, and that is what makes it a
+   * control rather than a fourth look.** Its whole job is to separate *a sheet
+   * that moved the grain* from *a sheet that moved the average colour*, which it
+   * can only do if everything except the diffuse map is held constant: the same
+   * world-space period on every face, the same fibre at the same tiling. Laid by
+   * anything else it would differ from rosewood in two ways at once, and the
+   * comparison that caught sapele's 94% would answer nothing.
+   *
+   * It is also what stops the fibre being laid wrong under a species change.
+   * `worldSpaceUvs` divides every face's UVs by this sheet's world size and
+   * `fibreTiles` multiplies them back up by it — 7.68 against sapele's 1.6, so
+   * one constant would lay sapele's fibre **4.8× wrong** while every whole-frame
+   * number stayed in range. That is #297's defect exactly, one surface over.
+   */
+  readonly lay: SheetLay;
+  /** Why the request could not be honoured, in the report's own voice. */
+  readonly refused: string | undefined;
+}
+
+export function resolveWoodwork(requested: string): ResolvedWoodwork {
+  // A `find` over the roster rather than `requested in WOODWORK_SHEETS`, because
+  // an object lookup answers `true` for `toString` and every other inherited
+  // key — the shape of a guard that passes on a value nobody wrote.
+  const species = WOOD_SPECIES.find((name) => name === requested);
+
+  if (species === undefined) {
+    return {
+      species: DEFAULT_SPECIES,
+      sheet: WOODWORK_SHEETS[DEFAULT_SPECIES],
+      lay: WOODWORK_SHEET,
+      refused:
+        `woodwork sheet: "${requested}" is not a sheet anybody has rendered, so the ` +
+        `woodwork is showing ${DEFAULT_SPECIES}. The roster is ${WOOD_SPECIES.join(', ')}`,
+    };
+  }
+
+  const sheet = WOODWORK_SHEETS[species];
+  return { species, sheet, lay: sheet ?? WOODWORK_SHEET, refused: undefined };
+}
+
+/**
+ * Every woodwork sheet URL a page asking for `requested` fetches — one, or none.
+ *
+ * The lazy claim, stated as arithmetic so a gate can hold it: **a page fetches
+ * the sheet it resolved to and no other**, so the roster can grow without
+ * costing a visitor who never opens the panel a byte. Selecting sapele fetches
+ * sapele's sheet *at that moment*, because the sheet is bound where the material
+ * is made and a species change is a rebuild — see `applySettings`.
+ */
+export function woodworkSheetUrls(requested: string): readonly string[] {
+  const { sheet } = resolveWoodwork(requested);
+  return sheet === undefined ? [] : [sheet.url];
+}
+
+/**
+ * Whether moving from one requested species to another would actually change
+ * the shelf — **compared after resolution, never as raw strings.**
+ *
+ * ⚠️ **Two different requests can be the same bookcase.** Everything off the
+ * roster resolves to `DEFAULT_SPECIES`, so `walnut` and `rosewood` name one
+ * shelf. Comparing the requests offers a rebuild button for a change a rebuild
+ * cannot make, and lights the panel's lamp amber over a bookcase already
+ * showing what was asked for — **a control lying about being stale**, which is
+ * the same rule as a control lying about being applied.
+ *
+ * Named once because `applySettings` and the debug panel's lamp both ask it,
+ * and two copies of this comparison are two chances to compare the wrong pair —
+ * the shape G10 and G23 both caught.
+ */
+export function speciesPending(built: string, wanted: string): boolean {
+  return resolveWoodwork(built).species !== resolveWoodwork(wanted).species;
+}
+
+/** The two lists `describeWoodwork` fills, in `ApplyReport`'s own vocabulary. */
+export interface WoodworkReadBack {
+  /** What the shelf **is running**, stated on every apply whether or not it moved. */
+  readonly resolved: readonly string[];
+  /** What could not be honoured as asked, and why. */
+  readonly refused: readonly string[];
+}
+
+/**
+ * The read-back: what the woodwork actually resolved to, in words, every time.
+ *
+ * ## Why this is here rather than inline in `applySettings`
+ *
+ * `scene.ts` needs a WebGL context and is not a test seam — it sits outside
+ * every mutation scope for that reason, and its own comment states the pattern:
+ * *all of the arithmetic happens first, in a module with no Three.js in it*. The
+ * strings below are that arithmetic, and the gate row this ticket owes asserts
+ * on **this function** while a text clause holds `applyLive` to calling it.
+ *
+ * ## What it states, and why stating beats diffing
+ *
+ * ⚠️ **Every one of the four `ApplyReport` categories that existed before this
+ * is a *transition*, and a transition cannot describe a configuration that was
+ * wrong from the first frame.** This map earned that lesson three times, and not
+ * one of the three was a change anybody made:
+ *
+ * - #284's resolution control built each URL as a fixed base plus a per-arm
+ *   tail, so `woodRes=1024&woodRes=512` arrived and `URLSearchParams.get`
+ *   returns the **first** — the arm meant to render 512 rendered 1024 and
+ *   differenced to a perfect **0.000% at every rung, worst delta 0**.
+ * - #298's `woodVary` resolved an *absent* parameter to `0` against its own
+ *   documented default of `1`, because `Number(null)` is `0` rather than `NaN`.
+ *   Every render that branch ever took was unvaried.
+ * - #297's fibre was bound at 90° to its own figure, and every whole-frame
+ *   number it produced sat in the normal range. It took a 3× crop to see.
+ *
+ * **A query string is an assumption until something states what came out of
+ * it.** Unlike the look — which #282 settled is the owner's verdict on a live
+ * build and never a number — this is machine-checkable.
+ *
+ * ## The two things it is careful about
+ *
+ * ⚠️ **The fibre is reported *in force*, never as asked for.** A browser that
+ * will not give a 2D context has no map to bind, so `applyWoodFibre` returns the
+ * scale that really took, and a report echoing the request would be a slider
+ * that moved while the bookcase did not.
+ *
+ * ⚠️ **A species waiting on a rebuild says so.** `worldSpaceUvs` writes the
+ * world-space period into each member's UVs in place, so a new sheet needs new
+ * geometry; between setting the menu and pressing rebuild the shelf is running
+ * one species and configured for another, and naming only one of them would be
+ * the report agreeing with whichever half the reader guessed.
+ */
+export function describeWoodwork(
+  wanted: ResolvedWoodwork,
+  built: WoodSpecies,
+  fibreInForce: number,
+  fibreAsked: number,
+): WoodworkReadBack {
+  const sheet =
+    wanted.sheet === undefined
+      ? 'no map — the mean-matched flat twin'
+      : `${wanted.sheet.url}, laid at ${String(wanted.lay.unitsPerTile)} world units`;
+  const waiting = wanted.species === built ? '' : ` — built with ${built}, rebuild to change it`;
+
+  const resolved = [
+    `woodwork sheet: ${wanted.species} (${sheet})${waiting}`,
+    `wood fibre: ${String(fibreInForce)}` +
+      (fibreInForce === fibreAsked ? '' : ` (asked for ${String(fibreAsked)})`),
+  ];
+
+  // Refused *and* reported, never silently defaulted. `?tune=` carries arbitrary
+  // JSON, so this key can arrive holding a typo; dropping it would look exactly
+  // like a value that was applied.
+  return { resolved, refused: wanted.refused === undefined ? [] : [wanted.refused] };
+}
 
 /**
  * What `material.color` must hold once the sheet is bound.
@@ -740,12 +1133,12 @@ export function woodFibreMap(): THREE.CanvasTexture | undefined {
 }
 
 /**
- * The same fibre, laid for the backboard: its own period, and turned to run with
- * `dark_wood`'s grain.
+ * The same fibre, laid for a sheet that is not the woodwork's default: its own
+ * period, and its own turn.
  *
  * ⚠️ **A clone, because `repeat` and `rotation` live on the texture and the
  * woodwork is already wearing this one.** Setting them on the shared instance
- * would silently re-lay the *planks'* fibre at the backboard's period and turn
+ * would silently re-lay the *planks'* fibre at another surface's period and turn
  * it off their grain — the treatment #302 and #303 were judged at, changed by a
  * surface that has nothing to do with them.
  *
@@ -753,22 +1146,45 @@ export function woodFibreMap(): THREE.CanvasTexture | undefined {
  * through the `Source` and the two are one GPU upload. #297 measured that off
  * `renderer.info.memory.textures` rather than trusting the sentence.
  *
- * Cached like the bake it clones, for the bake's reason: one page, one of these.
+ * ⚠️ **Keyed by the lay and not by the surface**, which is what the species menu
+ * makes necessary. `bakeFibre` lays the base for `WOODWORK_SHEET`, so a shelf
+ * showing sapele — 1.6 world units against rosewood's 7.68 — would wear a fibre
+ * tiled **4.8× wrong** if it took the base unchanged, and no whole-frame number
+ * would say so. Two sheets that lay the same share one entry, which is the
+ * cache doing the arithmetic rather than a list of surfaces doing it.
+ *
+ * Cached like the bake it clones, for the bake's reason: one page, one of these
+ * per distinct lay.
  */
-let laidBackingFibre: THREE.CanvasTexture | undefined;
-let laidBackingFibreBuilt = false;
+const laidFibres = new Map<string, THREE.CanvasTexture>();
 
+export function fibreMapFor(sheet: SheetLay): THREE.CanvasTexture | undefined {
+  const base = woodFibreMap();
+  // The base is already laid for the woodwork's default, so an identical lay
+  // wants the instance itself: a clone here would be a second texture object for
+  // no reason, and #303's "one bake, one upload" claim reads better if the
+  // common path is literally the same object.
+  if (base === undefined || sameLay(sheet, WOODWORK_SHEET)) return base;
+
+  const key = `${String(sheet.unitsPerTile)}:${sheet.figure}`;
+  const cached = laidFibres.get(key);
+  if (cached !== undefined) return cached;
+
+  const own = base.clone();
+  own.needsUpdate = true;
+  const laid = layFibre(own, sheet);
+  laidFibres.set(key, laid);
+  return laid;
+}
+
+/** Two sheets lay the same when they tile the same and turn the same. */
+function sameLay(a: SheetLay, b: SheetLay): boolean {
+  return a.unitsPerTile === b.unitsPerTile && a.figure === b.figure;
+}
+
+/** The backboard's, named because `scene.ts` passes it in two places. */
 export function backingFibreMap(): THREE.CanvasTexture | undefined {
-  if (!laidBackingFibreBuilt) {
-    laidBackingFibreBuilt = true;
-    const base = woodFibreMap();
-    if (base !== undefined) {
-      const own = base.clone();
-      own.needsUpdate = true;
-      laidBackingFibre = layFibre(own, BACKBOARD_SHEET);
-    }
-  }
-  return laidBackingFibre;
+  return fibreMapFor(BACKBOARD_SHEET);
 }
 
 function bakeFibre(): THREE.CanvasTexture | undefined {

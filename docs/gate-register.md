@@ -5616,6 +5616,16 @@ records reaching the live site and killing a phone.
   the same vacuous green one level down. A second clause pins the count at two,
   so [#306](https://github.com/mephistopheles4/stacks/issues/306)'s species
   menu cannot become a cost every visitor pays without going red here first.
+  ⚠️ **That menu has since landed, and it split the question the URL clause was
+  asking.** `SHIPPED_SHEETS` is what a *default page fetches* and `ALL_SHEETS`
+  is what the *module can name*, and sapele's sheet is committed, capped and in
+  only the second — so the clause now walks `ALL_SHEETS`, because against the
+  first it would have stopped covering a committed file the moment that file
+  arrived. ⚠️ **A menu is exactly the way a committed file stops being pointed
+  at**, and a sheet nothing points at is a 404 on the first visitor who selects
+  it, showing a surface at its fallback colour that looks like a texture nobody
+  bound. The count clause keeps its own job and now names G53 (`one-sheet`) as
+  the row that asks it properly.
 - **Decay** — **it decays into a red on the two changes that matter and into
   silence on one.** A sheet added, replaced or re-encoded is measured on the
   next run, because the sweep reads the directory rather than a list; a sheet
@@ -5624,9 +5634,147 @@ records reaching the live site and killing a phone.
   [#304](https://github.com/mephistopheles4/stacks/issues/304) and
   [#306](https://github.com/mephistopheles4/stacks/issues/306) will bring, and
   if either arrives at a size nobody re-measured, the number in the docblock
-  stops describing the number in the code. ⚠️ **The first of those has landed
-  and neither cap moved** — `dark_wood` at 512 is 53.2 KB committed, against a
-  320 KB cap and a 1024 edge — which is the shape this derivation was for, and
-  it says nothing about the second. The docblock is the only thing
+  stops describing the number in the code. ⚠️ **Both of those have now landed and neither cap
+  moved** — `dark_wood` at 512 is 53.2 KB committed and sapele's 512 is 34.5 KB,
+  against a 320 KB cap and a 1024 edge — which is the whole shape this derivation
+  was for: two sheets committed by two later tickets, neither of which had to
+  relitigate a number. ⚠️ **Sapele arrived at 512 and not the 1024 this docblock
+  named**, because [#306](https://github.com/mephistopheles4/stacks/issues/306)
+  ships the resolution each species was *measured* at rather than a common one,
+  and species and resolution are coupled; so the cap was derived against a file
+  four times the size of the one that came, which is slack in the safe
+  direction and is recorded rather than tightened. The docblock is the only thing
   holding those together, and nothing can go red on prose — recorded rather
   than solved.
+
+### G53 — `one-sheet`
+
+**Gate:** `gates/one-sheet.test.ts`, in the `suite` matrix under `pnpm test`
+**Date:** 2026-08-30
+**Observed-red line:** `SAPELE_SHEET` added to `SHIPPED_SHEETS` in `packages/site/src/shelf/woodwork.ts` — the menu's second entry wired eagerly instead of lazily, which is the exact change this row exists to refuse. Two clauses fail, *keeps every non-default species out of what a default page fetches* and *counts exactly one woodwork sheet among the two a default page fetches*, and G52's own count clause falls with them; 14 of 14 pass immediately before and after, a control through the identical invocation on both sides. Measured separately on a live dev server rather than inferred: a default page requests `rosewood-diff-1024.jpg` and `darkwood-diff-512.jpg` and **not** sapele's, selecting sapele in the `?debug` panel requests nothing until rebuild is pressed and then requests only sapele's, and `flat` requests **zero** woodwork sheets.
+**Triaged at landing**, per G41.
+
+⚠️ **This row would have asserted nothing a day earlier, and that is the point
+of it landing with the menu rather than before it.** While the woodwork wore one
+hard-coded sheet there was structurally one download and no second sheet to have
+— the guarantee was a tautology, and a tautology in this table is worse than an
+absence because it reads as cover. What makes it a real claim is that
+[#306](https://github.com/mephistopheles4/stacks/issues/306) put a roster behind
+the sheet, so *how many does a default page fetch* became a question with more
+than one possible answer.
+
+⚠️ **What it protects is decode, not download.** A sheet is a few hundred
+kilobytes on the wire and `edge² × 4` bytes of RGBA once it reaches the GPU —
+1.0 MB at 512, 4.0 MB at 1024, **per sheet held**, uploaded before the first
+frame beside every cover. G15's row records what that arithmetic did the last
+time nobody was doing it: 8.4 MB of covers decoded to 314 MB, a renderer killed
+on a phone, and a reload that hit a browser which then refused a context at all.
+
+- **Weakening** — **there is no constant to move and no allowlist to widen**,
+  which is unusual here and worth naming as the reason this row is cheap to
+  keep. The assertion is a shape — *at most one, and exactly one at the default*
+  — computed from the roster itself rather than from a number somebody chose, so
+  the roster may grow to [#281](https://github.com/mephistopheles4/stacks/issues/281)'s
+  four species without touching this file. ⚠️ **The one real weakening is
+  editing `SHIPPED_SHEETS` to describe what a page does rather than what it
+  should do**, which is the perturbation above run in reverse and is a code
+  change somebody reads.
+- **Satisfying the letter** — ⚠️ **exposed, and the exposure is that this
+  counts sheets and not bytes.** One 2048 sheet satisfies every clause here and
+  costs four times what two 1024s would; that is G52's question and this row
+  does not ask it. The two are complementary and neither subsumes the other,
+  which is why they are separate rows over the same directory. **Named as a
+  limit rather than claimed as closed.**
+- **Routing around** — **the route is to fetch a sheet somewhere the resolution
+  function is not**, and one thing narrows it: `buildShelf` binds the sheet
+  `resolveWoodwork` handed it and there is no second `bindSheet` call for the
+  woodwork, so a second woodwork download means a second call site, which G52's
+  existence clause would then need a committed file for. ⚠️ **What is genuinely
+  open is a sheet fetched from outside the repository** — no gate here reaches a
+  URL, deliberately, because G21 refuses any request the suite makes; what
+  bounds that is G20's `default-src 'none'` CSP, which makes an external texture
+  host unreachable without changing a different gate first.
+- **Vacuous green** — ⚠️ **every clause is satisfied by an empty roster**, which
+  is this file's own *a malformed identifier reads as no findings*, and three
+  things close it. The roster is floored through `expectFound`. The default
+  species must be a **member** of the roster rather than a string that reads
+  like one, because a default off the roster takes the refusal path on every
+  page load — rendering correctly and reporting a refusal into a place nobody
+  reads. And the default must resolve to a **sheet** rather than to none:
+  `toEqual([WOODWORK_SHEET.url])` is exact, but the surrounding *at most one*
+  clauses are all perfectly satisfied by a shelf that ships the mean-matched
+  flat arm by accident, which is an arm and not the treatment #284 chose.
+- **Decay** — **it decays into a red on the change that matters and into
+  silence on one.** A species added to the roster is walked on the next run,
+  because the clauses iterate `WOOD_SPECIES` rather than a list written here, so
+  a fifth entry wired eagerly is red without anybody remembering this row exists.
+  ⚠️ **What rots quietly is the link between the resolution function and the
+  page**: this asserts what `resolveWoodwork` returns, and the claim that a page
+  fetches exactly what it resolved is carried by `buildShelf` having one
+  `bindSheet` call for the woodwork and by nothing else. A second call added
+  beside it would leave every clause here green. That was measured by hand on a
+  live server at landing — recorded rather than solved, because closing it means
+  a gate that makes requests and G21 refuses those.
+
+### G54 — `woodwork-readback`
+
+**Gate:** `gates/woodwork-readback.test.ts`, in the `suite` matrix under `pnpm test`
+**Date:** 2026-08-30
+**Observed-red line:** `resolved.push(...readBack.resolved)` in `applyLive` replaced with a hard-coded `resolved.push('woodwork sheet: rosewood')` — a report that states a plausible constant instead of what it resolved, which is the whole failure mode in one line. *calls `describeWoodwork` in `applyLive` and pushes both of its lists* fails, 11 of 12 passing around it, a control through the identical invocation on both sides. Measured on a live dev server as well as in the suite: with `?tune={"materials":{"woodSpecies":"walnut"}}` the panel renders `✗ woodwork sheet: "walnut" is not a sheet anybody has rendered, so the woodwork is showing rosewood. The roster is rosewood, sapele, flat` above `= woodwork sheet: rosewood (/wood/rosewood-diff-1024.jpg, laid at 7.68 world units), wood fibre: 0.5`.
+**Triaged at landing**, per G41.
+
+⚠️ **Three defects on one map, by three different mechanisms, each producing a
+confident number about a configuration that was never in force.** #284's
+duplicated `woodRes` where `URLSearchParams.get` returns the first, and the arm
+meant to render 512 differenced against itself at **0.000% every rung**. #298's
+`woodVary`, where `Number(null)` is `0` and not `NaN`, so an absent parameter
+passed a finiteness guard and resolved to off — against a default the same file
+documented as `1`. #297's fibre, bound at 90° to its own figure, passing every
+whole-frame count until somebody took a 3× crop. **They are one failure:** a
+query string is an assumption until something states what came out of it.
+
+- **Weakening** — **the honest weakening is deleting a line from
+  `describeWoodwork`'s output**, and the count clause is what stops that being
+  invisible: the assertion is *two lines*, not *contains these two strings*, so
+  a knob dropped from the read-back is red rather than merely unmentioned. ⚠️
+  **A third knob arriving unstated is the case this does not catch** — the
+  clause pins the count at what ships today, so a *new* setting nobody added to
+  the read-back leaves the count at two and passes. That is the same class of
+  omission the row exists for, one level up, and it is closed by nothing.
+  **Named rather than claimed closed.**
+- **Satisfying the letter** — ⚠️ **exposed, and the exposure is that a report
+  can be true and useless.** Every clause here asks whether the resolved values
+  reach the report; none asks whether the *resolution* was right. A species
+  table with sapele's world size wrong by a factor of five would be reported
+  faithfully and read as fine, and what catches that is the render and the
+  owner's eye, which is what #282 settled the aesthetic verdict on. What the row
+  buys is that the number on the screen is the number in force, so a render that
+  looks wrong can be traced instead of guessed at.
+- **Routing around** — **the route is to report somewhere the panel does not
+  render**, and two clauses narrow it: `ApplyReport` must carry `resolved` and
+  the panel must read `report.resolved`, both asserted as text. ⚠️ **What is
+  open is a report the panel renders into a hidden element** — this reads source
+  and never a DOM, G40's and G44's stated limit reached again, and a rendered
+  report nobody can see is a distinction no text gate makes.
+- **Vacuous green** — ⚠️ **the specific vacuous green here is a pure function
+  nothing calls**, which is what lifting the strings out of `scene.ts` bought and
+  also what it risked. Everything above `the shelf actually consumes the
+  read-back` is arithmetic on a module with no Three.js in it and would stay
+  green if `applyLive` never called it — so the last two clauses read `applyLive`
+  and the panel as text and refuse a body that does not call `describeWoodwork`
+  and spread **both** lists. That is G51's closing move on the same file, for
+  the same reason: `case.ts` correct and nothing consuming it. ⚠️ **A second
+  vacuous green is a function that refuses everything**, which satisfies every
+  refusal clause while reporting a broken shelf on every load; the positive
+  control is a clause asserting that no roster species is refused.
+- **Decay** — **it decays into a red on a renamed function and into silence on a
+  restructured one.** The text clauses match `describeWoodwork(` and
+  `resolved.push(...`, so renaming either is red immediately, which is the
+  intended behaviour: this row is about a call actually happening. ⚠️ **What
+  rots quietly is `applyLive` being split**, since the regex bounds at the first
+  `\n}` and a woodwork block moved into a helper would take the call out of the
+  matched body and go red — recoverable, and noisy in the right direction — while
+  a helper *named* `applyLive` wrapping a body that does nothing would pass.
+  ⚠️ **And the fifth report category is held by nothing to being read by a
+  human**: the panel renders it, and whether anybody looks is outside every gate
+  in this repository.
