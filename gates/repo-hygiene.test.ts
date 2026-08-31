@@ -132,17 +132,22 @@ const BRAND_BINARY_FILES = [
  * ⚠️ **Filenames, and never the directory**, for the reason the brand list
  * gives one paragraph up: a prefix entry under `packages/site/public/` would
  * grant a standing permission in exactly the folder `stacks build --public`
- * stages a real vault's covers into. Two more sheets arrive with
- * [#304](https://github.com/mephistopheles4/stacks/issues/304) and
- * [#306](https://github.com/mephistopheles4/stacks/issues/306), and each one is
- * a line here — which is a licence somebody re-checked rather than a directory
- * nobody revisits.
+ * stages a real vault's covers into. The backboard's arrived with
+ * [#304](https://github.com/mephistopheles4/stacks/issues/304) and a species
+ * menu's will with [#306](https://github.com/mephistopheles4/stacks/issues/306),
+ * and each one is a line here — which is a licence somebody re-checked rather
+ * than a directory nobody revisits.
  *
  * ⚠️ **This list says nothing about size.** G52 (`sheet-size`) caps the long
  * edge and the bytes of everything in that directory; the two rows meet on the
  * same files and ask different questions.
  */
-const CC0_BINARY_FILES = ['packages/site/public/wood/rosewood-diff-1024.jpg'];
+const CC0_BINARY_FILES = [
+  'packages/site/public/wood/rosewood-diff-1024.jpg',
+  // Poly Haven `dark_wood`, CC0, the backboard's own sheet — #304. A second
+  // licence re-checked, by filename, rather than a directory nobody revisits.
+  'packages/site/public/wood/darkwood-diff-512.jpg',
+];
 
 describe('G5 — library.json is a build artifact', () => {
   it('is not tracked by git', () => {

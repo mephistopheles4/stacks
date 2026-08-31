@@ -33,14 +33,43 @@ import * as THREE from 'three';
  * ⚠️ **`roughnessMap` is struck.** Poly Haven publishes none for this sheet.
  * Sapele's measured 1.029% and inverted the prior — a finding with no home.
  *
- * ⚠️ **The backboard is not this module's surface.** It keeps `materials.woodDark`
- * flat until [#304](https://github.com/mephistopheles4/stacks/issues/304) gives
- * it a sheet of its own, because the darkness constraint left one candidate of
- * 41 and it is a different image.
+ * ⚠️ **The backboard is a second sheet and not this one.**
+ * [#304](https://github.com/mephistopheles4/stacks/issues/304) gives it
+ * `dark_wood` at 512, because the darkness constraint left one candidate of 41.
+ * Everything below that takes a sheet takes it as an argument for that reason:
+ * two surfaces, two sheets, and **the axis swap is read from the sheet being
+ * bound** rather than copied from the woodwork's.
  */
 
 /**
- * The one sheet, and the two numbers that are properties of it rather than
+ * Which of a sheet's *own* texture axes its figure's stripe runs along.
+ *
+ * ⚠️ **Measured, never assumed.** `scripts/prototype-backboard-survey.ts` on
+ * [`prototype/297-backboard-sheet`](https://github.com/mephistopheles4/stacks/tree/prototype/297-backboard-sheet)
+ * downloaded all 41 veneers in Poly Haven's `Wood/Veneer/` branch and reported
+ * each one's column-mean spread over its row-mean spread: above 1 the stripe
+ * runs down `v`, below 1 across `u`. Sapele reads **2.67** and `dark_wood`
+ * **0.08** — the other way round. Copying one sheet's answer onto another lays
+ * it sideways, and #297's own numbers all sat in the normal range while it did.
+ */
+export type Figure = 'u' | 'v';
+
+/** What laying a sheet on a member needs to know about it. */
+export interface SheetLay {
+  /** World units one tile of the sheet covers, at its true published size. */
+  readonly unitsPerTile: number;
+  readonly figure: Figure;
+}
+
+/** A committed sheet: where it is served from, how it lays, and its flat twin. */
+export interface Sheet extends SheetLay {
+  readonly url: string;
+  /** The mean-matched flat twin, computed in linear light, for this resolution. */
+  readonly mean: number;
+}
+
+/**
+ * The woodwork's sheet, and the numbers that are properties of it rather than
  * dials.
  *
  * **Poly Haven `rosewood_veneer1`, CC0**, diffuse only, at 1024. Its published
@@ -72,7 +101,70 @@ export const WOODWORK_SHEET = {
   url: '/wood/rosewood-diff-1024.jpg',
   unitsPerTile: 7.68,
   mean: 0x6e3412,
-} as const;
+  /**
+   * ⚠️ **The one `figure` on this table that is not a strong measurement.**
+   * #297's survey reads rosewood at **0.69**, where sapele is 2.67 and
+   * `dark_wood` 0.08: it is a book-matched *figured* sheet rather than a striped
+   * one, so it has no dominant axis for that ratio to find. `v` is the lay the
+   * renders under #284 and #302 were judged at, which is a stronger warrant than
+   * a ratio near 1 — and it is recorded as a fact about this image so that the
+   * sheet beside it can disagree.
+   */
+  figure: 'v',
+} as const satisfies Sheet;
+
+/**
+ * The backboard's sheet — a different image, chosen against a constraint the
+ * woodwork's did not have.
+ *
+ * **Poly Haven `dark_wood`, CC0**, diffuse only, at 512.
+ * [#297](https://github.com/mephistopheles4/stacks/issues/297) downloaded all 41
+ * veneers Poly Haven publishes and measured each mean in linear light: against
+ * `woodDark`'s luma of 56.5 exactly **two** land within 5 — this sheet at −4.6,
+ * and `rosewood_veneer1` at +3.9, which is the woodwork's own. **The
+ * third-nearest is +24.8 away**, about half the distance from the backboard to
+ * the planks. So there was no menu to build here, and
+ * [#281](https://github.com/mephistopheles4/stacks/issues/281)'s four-species
+ * shape does not transfer to a surface the books have to read against.
+ *
+ * ⚠️ **512 resolves it, and that is measured rather than economised.** 512
+ * against 1024 is 0.368% of frame at zoom 10 and 0.527% at `minDistance` — for
+ * four times the bytes, against the drawn fibre's 0.704% for none. Its tile is
+ * wider than the whole bookcase either way, so it never repeats on this case.
+ *
+ * ⚠️ **`figure: 'u'` is the opposite of the woodwork's, and that is the whole
+ * point of the field.** #285 states the backboard's grain runs **vertically**;
+ * a sheet whose stripe runs along `u` therefore needs the swap an upright does
+ * *not* need on rosewood. Hard-coding the woodwork's constant here would have
+ * laid this sheet sideways and looked like a verdict about the sheet.
+ *
+ * ⚠️ **The direction cannot be derived from the board's long axis** — it is
+ * wider than tall at 2 and 3 rows and taller than wide from 4 on, so that rule
+ * would turn the grain 90° the day the library fills its third row.
+ */
+export const BACKBOARD_SHEET = {
+  url: '/wood/darkwood-diff-512.jpg',
+  /**
+   * `dark_wood`'s published sheet is 2000 mm. #297's arms lay it at **6.37**
+   * world units, taking 314 mm per unit — the midpoint of the two figures
+   * `prototype-wood.ts` implies by hand, whose 1% spread is well under anything
+   * a render can see. This is the size the rendered-and-accepted arm used.
+   */
+  unitsPerTile: 6.37,
+  mean: 0x5f2c19,
+  figure: 'u',
+} as const satisfies Sheet;
+
+/**
+ * Every sheet a default page fetches, so a gate can hold the caps to what
+ * actually ships rather than to whatever is lying in the directory.
+ *
+ * ⚠️ **Two, and the second is not the species menu's.**
+ * [#306](https://github.com/mephistopheles4/stacks/issues/306)'s other species
+ * load only on selection; the backboard's is a constant and is always fetched,
+ * so a row counting *woodwork* sheets must not count this one.
+ */
+export const SHIPPED_SHEETS: readonly Sheet[] = [WOODWORK_SHEET, BACKBOARD_SHEET];
 
 /**
  * What `material.color` must hold once the sheet is bound.
@@ -125,15 +217,22 @@ const CORNERS = 4;
  * world-space scale: one tile is `unitsPerTile` units wide on every face of
  * every member.
  *
- * ## The swap, and why it is derived rather than passed
+ * ## The swap, and why it is read off the sheet
  *
- * **The sheet's figure runs along its own `v` axis**, which is a fact about the
- * downloaded image rather than a convention. So a face whose *long* axis lands
- * on `u` has to exchange its two axes before scaling, and a face whose long axis
- * is already on `v` must not. Naming the member's grain axis and letting each
- * face decide is what puts the figure along a plank's length **and** up an
- * upright's height out of one call — a plank (`x`) swaps its top and front
- * faces and leaves its end caps alone; an upright (`y`) swaps nothing.
+ * A face swaps when the axis the member's grain runs along does not already
+ * land on the axis **this sheet's** figure runs down. Naming the member's grain
+ * axis and letting each face decide is what puts the figure along a plank's
+ * length **and** up an upright's height out of one call — on rosewood (`v`) a
+ * plank (`x`) swaps its top and front faces and leaves its end caps alone, and
+ * an upright (`y`) swaps nothing.
+ *
+ * ⚠️ **`sheet.figure` is a fact about the downloaded image and the two sheets
+ * disagree.** `dark_wood`'s stripe runs along `u`, so the backboard — grain `y`,
+ * whose front face spans world `y` on `v` — takes the **opposite** swap from an
+ * upright on rosewood, out of these same six lines. Copying the woodwork's
+ * answer would have laid it sideways, which is what
+ * [#297](https://github.com/mephistopheles4/stacks/issues/297) shipped for a
+ * whole matrix while every number it produced sat in the normal range.
  *
  * ⚠️ **The direction is stated by the caller, never inferred from the size.**
  * `rowsForCase` grows the case with the library, so an upright's height changes
@@ -154,22 +253,19 @@ const CORNERS = 4;
  * subtly wrong on every member with nothing to notice. Reading it back off the
  * geometry cannot drift.
  */
-export function worldSpaceUvs(
-  geometry: THREE.BoxGeometry,
-  unitsPerTile: number,
-  grain: Axis,
-): void {
+export function worldSpaceUvs(geometry: THREE.BoxGeometry, sheet: SheetLay, grain: Axis): void {
   const uv = geometry.attributes['uv'];
   if (uv === undefined) return;
 
+  const { unitsPerTile } = sheet;
   const { width, height, depth } = geometry.parameters;
   const extent: Record<Axis, number> = { x: width, y: height, z: depth };
 
   for (const [face, axes] of FACE_AXES.entries()) {
     const [uAxis, vAxis] = axes;
-    // The face's long axis is on `u`, so its two axes exchange before scaling
-    // and the grain ends up on the texture's `v`.
-    const swap = uAxis === grain;
+    // The grain axis is not already on the axis this sheet's figure runs down,
+    // so the face's two axes exchange before scaling.
+    const swap = sheet.figure === 'v' ? uAxis === grain : vAxis === grain;
     const [spanU, spanV] = swap ? [extent[vAxis], extent[uAxis]] : [extent[uAxis], extent[vAxis]];
 
     for (let corner = 0; corner < CORNERS; corner += 1) {
@@ -210,7 +306,7 @@ export function woodColour(fallback: number, bound: boolean): number {
 }
 
 /**
- * How `bindWoodSheet` fetches — a seam, so a spec can assert the resolved URL
+ * How `bindSheet` fetches — a seam, so a spec can assert the resolved URL
  * without a request.
  *
  * ⚠️ **G21 (`no-live-network`) records any request the suite makes and fails the
@@ -266,7 +362,12 @@ function configureSheet(texture: THREE.Texture): THREE.Texture {
 }
 
 /**
- * Bind the sheet to the woodwork material, and switch its colour when it lands.
+ * Bind a sheet to a material, and switch its colour when it lands.
+ *
+ * ⚠️ **The sheet is an argument and not this module's constant**, which is what
+ * lets the backboard have its own. Both surfaces take the identical treatment —
+ * mean-matched hex up front, white and the map inside the callback, the flat
+ * twin on failure — out of one function rather than two that drift.
  *
  * ⚠️ **The map is assigned inside the load callback rather than on the way
  * out**, which is the one place this differs from the prototype and it is the
@@ -282,14 +383,15 @@ function configureSheet(texture: THREE.Texture): THREE.Texture {
  * return value would fetch the file twice, and the +1 texture this ticket
  * reports would be a lie.
  */
-export function bindWoodSheet(
+export function bindSheet(
   material: THREE.MeshStandardMaterial,
+  sheet: Sheet,
   load: SheetLoader = textureLoader(),
 ): SheetBinding {
   let bound = false;
 
   const texture = load(
-    WOODWORK_SHEET.url,
+    sheet.url,
     () => {
       bound = true;
       material.map = configureSheet(texture);
@@ -299,13 +401,11 @@ export function bindWoodSheet(
     () => {
       // Said out loud, because a sheet that never arrives looks like a sheet
       // that was never bound — the ambiguity #68 records under another name.
-      console.warn(
-        `[woodwork] ${WOODWORK_SHEET.url} did not load; the bookcase keeps its flat colour`,
-      );
+      console.warn(`[woodwork] ${sheet.url} did not load; the surface keeps its flat colour`);
     },
   );
 
-  return { url: WOODWORK_SHEET.url, bound: () => bound };
+  return { url: sheet.url, bound: () => bound };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -366,15 +466,62 @@ export function bindWoodSheet(
 export const FIBRE_PERIOD = 0.5;
 
 /**
- * How many fibre tiles fit one tile of the sheet.
+ * How many fibre tiles fit one tile of a given sheet.
  *
- * `worldSpaceUvs` has already divided every face's UVs by `unitsPerTile`, so
- * this `repeat` converts them into the fibre's own, much tighter period out of
- * **one set of UVs and with no second file** — the figure stays laid huge and
- * the fibre is laid fine. Derived rather than written down, because the sheet's
- * world size is a property of the sheet.
+ * `worldSpaceUvs` has already divided every face's UVs by that sheet's
+ * `unitsPerTile`, so this `repeat` converts them into the fibre's own, much
+ * tighter period out of **one set of UVs and with no second file** — the figure
+ * stays laid huge and the fibre is laid fine. Derived rather than written down,
+ * because the sheet's world size is a property of the sheet — and it is
+ * per-sheet because the two sheets are not the same size: 7.68 units against
+ * 6.37, so one constant would lay the backboard's fibre 20% wrong.
  */
-export const FIBRE_TILES = WOODWORK_SHEET.unitsPerTile / FIBRE_PERIOD;
+export function fibreTiles(sheet: SheetLay): number {
+  return sheet.unitsPerTile / FIBRE_PERIOD;
+}
+
+/** The woodwork's, named because two specs and `bakeFibre` all want it. */
+export const FIBRE_TILES = fibreTiles(WOODWORK_SHEET);
+
+/**
+ * The quarter turn the drawn fibre needs to run **with** a sheet's figure rather
+ * than across it.
+ *
+ * The fibre is drawn long on the texture's own `v` (`LATTICE.along`), and
+ * `worldSpaceUvs` puts the member's grain on `v` for a `v`-figured sheet and on
+ * `u` for a `u`-figured one. So the turn is exactly `figure === 'u'`, read off
+ * the same field the swap is — one fact about the image, deciding both.
+ *
+ * ⚠️ **A UV swap turns the figure and the fibre together, so it cannot separate
+ * them.** That is why this is a rotation on the fibre's *own* texture matrix and
+ * not another axis exchange, and it is why
+ * [#297](https://github.com/mephistopheles4/stacks/issues/297) shipped a whole
+ * arm matrix with the two crossed at 90° and no number said so: it took a 3×
+ * crop of bare backboard to see it as ruled lines over a vertical grain. Turning
+ * it is worth **2.098% of frame at zoom 10** against the fibre's whole presence
+ * at 0.704% — three to six times its own existence.
+ *
+ * A rotation costs no bytes and no texture: a 90° turn about the tile's centre
+ * maps the unit lattice onto itself, so a map that tiled still tiles.
+ */
+export function fibreTurn(sheet: SheetLay): number {
+  return sheet.figure === 'u' ? Math.PI / 2 : 0;
+}
+
+/**
+ * Lay one fibre texture for one sheet: its period, and its turn.
+ *
+ * Separated from the bake so a spec can drive it with a bare `THREE.Texture` —
+ * `bakeFibre` needs a 2D canvas and this Vitest project has no DOM, which is
+ * `applyWoodFibre`'s reason for taking its map as a parameter too.
+ */
+export function layFibre<T extends THREE.Texture>(texture: T, sheet: SheetLay): T {
+  const tiles = fibreTiles(sheet);
+  texture.repeat.set(tiles, tiles);
+  texture.center.set(0.5, 0.5);
+  texture.rotation = fibreTurn(sheet);
+  return texture;
+}
 
 /** Square, and small: the fibre is high-frequency, so it needs period, not extent. */
 const FIBRE_EDGE = 256;
@@ -415,10 +562,12 @@ const RELIEF_ALONG = 0.01;
  * the grain against most of the tile along it. Three octaves, each half the
  * spacing of the last.
  *
- * ⚠️ **Across is `u` and along is `v`, and that pairing is load-bearing.**
- * `worldSpaceUvs` puts every member's grain on the texture's `v`, so a fibre
- * laid the other way is bound at 90° to the figure it sits on — which is what
- * [#297](https://github.com/mephistopheles4/stacks/issues/297) shipped, and
+ * ⚠️ **Across is `u` and along is `v`, and that pairing is load-bearing.** It is
+ * what makes `fibreTurn` the sheet's own `figure === 'u'` and nothing else: on a
+ * `v`-figured sheet `worldSpaceUvs` puts the member's grain on `v` and the fibre
+ * already agrees, and on a `u`-figured one it does not and the map is turned.
+ * A fibre laid the other way is bound at 90° to the figure it sits on — which is
+ * what [#297](https://github.com/mephistopheles4/stacks/issues/297) shipped, and
  * every whole-frame number it measured sat in the normal range.
  */
 const LATTICE = { across: 24, along: 192 } as const;
@@ -589,6 +738,38 @@ export function woodFibreMap(): THREE.CanvasTexture | undefined {
   return fibre;
 }
 
+/**
+ * The same fibre, laid for the backboard: its own period, and turned to run with
+ * `dark_wood`'s grain.
+ *
+ * ⚠️ **A clone, because `repeat` and `rotation` live on the texture and the
+ * woodwork is already wearing this one.** Setting them on the shared instance
+ * would silently re-lay the *planks'* fibre at the backboard's period and turn
+ * it off their grain — the treatment #302 and #303 were judged at, changed by a
+ * surface that has nothing to do with them.
+ *
+ * ⚠️ **A clone is +0 textures**, because three.js clones share the canvas
+ * through the `Source` and the two are one GPU upload. #297 measured that off
+ * `renderer.info.memory.textures` rather than trusting the sentence.
+ *
+ * Cached like the bake it clones, for the bake's reason: one page, one of these.
+ */
+let laidBackingFibre: THREE.CanvasTexture | undefined;
+let laidBackingFibreBuilt = false;
+
+export function backingFibreMap(): THREE.CanvasTexture | undefined {
+  if (!laidBackingFibreBuilt) {
+    laidBackingFibreBuilt = true;
+    const base = woodFibreMap();
+    if (base !== undefined) {
+      const own = base.clone();
+      own.needsUpdate = true;
+      laidBackingFibre = layFibre(own, BACKBOARD_SHEET);
+    }
+  }
+  return laidBackingFibre;
+}
+
 function bakeFibre(): THREE.CanvasTexture | undefined {
   const canvas = document.createElement('canvas');
   canvas.width = FIBRE_EDGE;
@@ -618,8 +799,7 @@ function bakeFibre(): THREE.CanvasTexture | undefined {
   texture.generateMipmaps = true;
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.anisotropy = ANISOTROPY;
-  texture.repeat.set(FIBRE_TILES, FIBRE_TILES);
-  return texture;
+  return layFibre(texture, WOODWORK_SHEET);
 }
 
 /**
@@ -636,7 +816,7 @@ function bakeFibre(): THREE.CanvasTexture | undefined {
  * *asked* for would be `applySettings` claiming a change the eye cannot find —
  * the map's standing rule that **a control must not lie**.
  *
- * The map is a parameter with a real default for `bindWoodSheet`'s reason: G21
+ * The map is a parameter with a real default for `bindSheet`'s reason: G21
  * (`no-live-network`) and a Vitest project with no DOM, so a spec drives this
  * with a texture it made itself.
  *

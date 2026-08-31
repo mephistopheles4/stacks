@@ -214,7 +214,16 @@ export interface MaterialSettings {
    * `woodColour` in `woodwork.ts`.
    */
   readonly wood: number;
-  /** The backboard's, and it still is the colour that renders — see #304. */
+  /**
+   * The backboard's, on exactly the terms above — it takes `dark_wood` at 512,
+   * its own sheet, and this is what shows before that decodes and if it never
+   * does.
+   *
+   * ⚠️ **A different image, not the woodwork's laid darker.** The books read
+   * against this surface, and #297 measured all 41 veneers Poly Haven publishes
+   * to find the one that stays dark enough: the third-nearest candidate is 24.8
+   * luma away, about half the distance from the backboard to the planks.
+   */
   readonly woodDark: number;
   readonly woodRoughness: number;
   /**
@@ -473,7 +482,12 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     // trade this repo makes everywhere a value would otherwise couple two
     // layers: one definition, one assertion, no import edge.
     wood: 0x6e3412,
-    woodDark: 0x4a3527,
+    // `dark_wood`'s, from its 512 map, on the same terms and held by the same
+    // spec. ⚠️ Not `0x4a3527`, and it is not the same hue either: today's
+    // backboard was a near-neutral brown and every dark veneer that exists is a
+    // saturated red-brown — red minus blue 35 against 70. The backboard cannot
+    // both take a real veneer and keep that hue; #297 rendered the choice.
+    woodDark: 0x5f2c19,
     woodRoughness: 0.82,
     // #284's rendered-and-accepted strength for the drawn fibre. It is the
     // relief that measured 0.742% of frame against the sheet's own normal map's

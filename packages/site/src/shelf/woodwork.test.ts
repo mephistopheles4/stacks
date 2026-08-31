@@ -1,15 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
+  BACKBOARD_SHEET,
   FIBRE_PERIOD,
   FIBRE_TILES,
   SHEET_TINT,
   WOODWORK_SHEET,
   applyWoodFibre,
-  bindWoodSheet,
+  bindSheet,
   fibreHeight,
   fibreHeightField,
   fibreNormals,
+  fibreTiles,
+  fibreTurn,
+  layFibre,
   woodColour,
   worldSpaceUvs,
   type SheetLoader,
@@ -21,7 +25,7 @@ import { DEFAULT_SETTINGS } from './shelf-settings.ts';
  * ⚠️ **Not one of these fetches anything.** G21 (`no-live-network`) records any
  * request the suite makes and fails the test that made it, so the sheet's bytes
  * are never the subject: what is asserted is the **resolved URL**, through the
- * loader seam `bindWoodSheet` takes.
+ * loader seam `bindSheet` takes.
  */
 
 const ROWS = 4;
@@ -100,7 +104,7 @@ describe('worldSpaceUvs — one map, one world-space period', () => {
     // both faces `0..1` although the top is 3.58 x 0.71 and the front edge is
     // 3.58 x 0.07, so any shared `repeat` smears the grain on one of them.
     const plank = box(PLANK);
-    worldSpaceUvs(plank, WOODWORK_SHEET.unitsPerTile, 'x');
+    worldSpaceUvs(plank, WOODWORK_SHEET, 'x');
 
     const top = faceSpan(plank, FACE.py);
     const front = faceSpan(plank, FACE.pz);
@@ -144,7 +148,7 @@ describe('worldSpaceUvs — one map, one world-space period', () => {
     const wrong: string[] = [];
     for (const { name, size, grain } of members) {
       const geometry = box(size);
-      worldSpaceUvs(geometry, WOODWORK_SHEET.unitsPerTile, grain);
+      worldSpaceUvs(geometry, WOODWORK_SHEET, grain);
 
       for (const [face, [alongU, alongV]] of spans(size).entries()) {
         const seen = faceSpan(geometry, face);
@@ -172,7 +176,7 @@ describe('worldSpaceUvs — one map, one world-space period', () => {
     // plank" is the claim that the plank's *width* is what `v` measures — on
     // the top face and on the front edge, which are the two a visitor sees.
     const plank = box(PLANK);
-    worldSpaceUvs(plank, WOODWORK_SHEET.unitsPerTile, 'x');
+    worldSpaceUvs(plank, WOODWORK_SHEET, 'x');
 
     for (const face of [FACE.py, FACE.ny, FACE.pz, FACE.nz]) {
       const { v } = faceSpan(plank, face);
@@ -182,7 +186,7 @@ describe('worldSpaceUvs — one map, one world-space period', () => {
 
   it("runs the grain up an upright's height, on the faces that show", () => {
     const upright = box(UPRIGHT);
-    worldSpaceUvs(upright, WOODWORK_SHEET.unitsPerTile, 'y');
+    worldSpaceUvs(upright, WOODWORK_SHEET, 'y');
 
     // The inner face (`±X`) and the front edge (`±Z`) are what a visitor sees
     // of an upright; both must measure its height on `v`.
@@ -198,7 +202,7 @@ describe('worldSpaceUvs — one map, one world-space period', () => {
     // *thickness* on `v` — 0.07 against 3.58 — which is the smeared front edge
     // #284 named, reproduced deliberately.
     const plank = box(PLANK);
-    worldSpaceUvs(plank, WOODWORK_SHEET.unitsPerTile, 'y');
+    worldSpaceUvs(plank, WOODWORK_SHEET, 'y');
 
     const { v } = faceSpan(plank, FACE.pz);
     expectNear(v * WOODWORK_SHEET.unitsPerTile, PLANK.height, 'front edge, grain crossed');
@@ -210,7 +214,7 @@ describe('worldSpaceUvs — one map, one world-space period', () => {
     if (!(uv instanceof THREE.BufferAttribute)) throw new Error('uv is not a BufferAttribute');
 
     const before = uv.version;
-    worldSpaceUvs(plank, WOODWORK_SHEET.unitsPerTile, 'x');
+    worldSpaceUvs(plank, WOODWORK_SHEET, 'x');
 
     expect(plank.attributes['uv']).toBe(uv);
     // `needsUpdate` is write-only on a `BufferAttribute` — it bumps `version`,
@@ -228,8 +232,8 @@ describe('worldSpaceUvs — one map, one world-space period', () => {
     // a plausible texture at the wrong scale, which nothing else here catches.
     const wide = box(PLANK);
     const tight = box(PLANK);
-    worldSpaceUvs(wide, WOODWORK_SHEET.unitsPerTile, 'x');
-    worldSpaceUvs(tight, WOODWORK_SHEET.unitsPerTile / 2, 'x');
+    worldSpaceUvs(wide, WOODWORK_SHEET, 'x');
+    worldSpaceUvs(tight, { ...WOODWORK_SHEET, unitsPerTile: WOODWORK_SHEET.unitsPerTile / 2 }, 'x');
 
     expectNear(faceSpan(tight, FACE.py).v, faceSpan(wide, FACE.py).v * 2, 'half the sheet size');
   });
@@ -238,7 +242,7 @@ describe('worldSpaceUvs — one map, one world-space period', () => {
     const bare = new THREE.BoxGeometry(1, 1, 1);
     bare.deleteAttribute('uv');
     expect(() => {
-      worldSpaceUvs(bare, WOODWORK_SHEET.unitsPerTile, 'x');
+      worldSpaceUvs(bare, WOODWORK_SHEET, 'x');
     }).not.toThrow();
   });
 });
@@ -271,9 +275,191 @@ describe('woodColour — the knob is a fallback once the sheet is bound', () => 
     // a third of the brightness that was judged.
     expect(DEFAULT_SETTINGS.materials.wood).not.toBe(0x6b4f3a);
   });
+
+  it("defaults `materials.woodDark` to the backboard sheet's mean-matched hex", () => {
+    // The same trade, on the same terms, for the second sheet — and the only
+    // thing holding the copy in `shelf-settings.ts` to this definition.
+    expect(DEFAULT_SETTINGS.materials.woodDark).toBe(BACKBOARD_SHEET.mean);
+
+    // Not the near-neutral brown it was: `dark_wood` is a saturated red-brown
+    // and the backboard cannot both take a real veneer and keep the old hue.
+    expect(DEFAULT_SETTINGS.materials.woodDark).not.toBe(0x4a3527);
+  });
+
+  it('leaves `backingRoughness` where it was', () => {
+    // ⚠️ **Explicitly out of #304's scope, and out of #297's before it.** This
+    // knob is what kills relief on this surface — the fibre reads 0.264% at
+    // 0.95, 0.612% at 0.82 and 3.246% at 0.60 — so it is the value most likely
+    // to be moved by somebody chasing a number that a sheet did not fix. The
+    // painted shades and the whole case's read hang off it.
+    expect(DEFAULT_SETTINGS.materials.backingRoughness).toBe(0.95);
+  });
 });
 
-describe('bindWoodSheet — the resolved URL, and the two ends of a load', () => {
+describe('the backboard takes its own sheet', () => {
+  it('is a different image from the woodwork’s, served from the same directory', () => {
+    expect(BACKBOARD_SHEET.url).not.toBe(WOODWORK_SHEET.url);
+    expect(BACKBOARD_SHEET.url.startsWith('/wood/')).toBe(true);
+    expect(BACKBOARD_SHEET.url.endsWith('.jpg')).toBe(true);
+  });
+
+  it('lays its own world size rather than the woodwork’s', () => {
+    // `dark_wood`'s published sheet is 2000 mm against rosewood's 2430, so one
+    // shared constant would lay this figure — and its fibre — 20% wrong.
+    expect(BACKBOARD_SHEET.unitsPerTile).not.toBe(WOODWORK_SHEET.unitsPerTile);
+    expect(BACKBOARD_SHEET.unitsPerTile).toBeCloseTo(6.37, 2);
+  });
+
+  it('records a figure direction that disagrees with the woodwork’s', () => {
+    // The measurement, not a convention: #297's survey read `dark_wood` at 0.08
+    // and sapele at 2.67. If these two ever agree, one of them was copied.
+    expect(BACKBOARD_SHEET.figure).toBe('u');
+    expect(WOODWORK_SHEET.figure).toBe('v');
+  });
+
+  it('runs the grain vertically on the face that shows', () => {
+    // The acceptance criterion. The backboard's front face spans world `x` on
+    // `u` and world `y` on `v`; with `dark_wood`'s figure on `u`, the swap has
+    // to put the board's **height** on the texture's `u` for the figure to
+    // stand up. A tile of this sheet is wider than the board, so the span is
+    // read as a fraction rather than as a whole number of tiles.
+    const board = box(BACKBOARD);
+    worldSpaceUvs(board, BACKBOARD_SHEET, 'y');
+
+    const span = faceSpan(board, FACE.pz);
+    expectNear(span.u * BACKBOARD_SHEET.unitsPerTile, BACKBOARD.height, 'front face, u');
+    expectNear(span.v * BACKBOARD_SHEET.unitsPerTile, BACKBOARD.width, 'front face, v');
+  });
+
+  it('lands the grain vertical from either direction a sheet could measure', () => {
+    // ⚠️ **The criterion that a hard-coded swap would also pass.** A sheet whose
+    // stripe ran the other way must still stand up on this board, out of the
+    // same call — which is only true while the swap is read from the sheet. The
+    // two sheets are laid at one size here so the *only* difference is `figure`.
+    for (const figure of ['u', 'v'] as const) {
+      const board = box(BACKBOARD);
+      worldSpaceUvs(board, { unitsPerTile: BACKBOARD_SHEET.unitsPerTile, figure }, 'y');
+
+      // Whichever texture axis this sheet's figure runs down is the one the
+      // board's height must land on.
+      const span = faceSpan(board, FACE.pz);
+      const alongFigure = figure === 'u' ? span.u : span.v;
+      expectNear(
+        alongFigure * BACKBOARD_SHEET.unitsPerTile,
+        BACKBOARD.height,
+        `front face, figure on ${figure}`,
+      );
+    }
+  });
+
+  it('crosses the grain when the sheet’s direction is copied from the woodwork', () => {
+    // The control for the spec above, and the failure it is really watching:
+    // #297 shipped a whole arm matrix with the two maps at 90° and every
+    // whole-frame number it produced sat in the normal range.
+    const board = box(BACKBOARD);
+    worldSpaceUvs(board, { ...BACKBOARD_SHEET, figure: WOODWORK_SHEET.figure }, 'y');
+
+    const span = faceSpan(board, FACE.pz);
+    expectNear(span.u * BACKBOARD_SHEET.unitsPerTile, BACKBOARD.width, 'front face, grain crossed');
+  });
+
+  it('binds its own URL and its own fallback, through the same loader seam', () => {
+    const requested: string[] = [];
+    const load: SheetLoader = (url) => {
+      requested.push(url);
+      return new THREE.Texture();
+    };
+    const backing = new THREE.MeshStandardMaterial({ color: BACKBOARD_SHEET.mean });
+    const bound = bindSheet(backing, BACKBOARD_SHEET, load);
+
+    expect(requested).toEqual([BACKBOARD_SHEET.url]);
+    expect(bound.url).toBe(BACKBOARD_SHEET.url);
+    // Nothing has decoded, so the board is still its mean-matched flat twin.
+    expect(bound.bound()).toBe(false);
+    expect(backing.map).toBeNull();
+    expect(backing.color.getHex()).toBe(new THREE.Color(BACKBOARD_SHEET.mean).getHex());
+  });
+
+  it('leaves the backboard at its flat twin when the sheet never arrives', () => {
+    // The acceptance criterion for a failed load, on the surface that is 90.38%
+    // of the near frame when the shelf is empty.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    let fail: () => void = () => undefined;
+    const load: SheetLoader = (_url, _onLoad, onError) => {
+      fail = onError;
+      return new THREE.Texture();
+    };
+    const backing = new THREE.MeshStandardMaterial({ color: BACKBOARD_SHEET.mean });
+    const bound = bindSheet(backing, BACKBOARD_SHEET, load);
+
+    fail();
+
+    expect(bound.bound()).toBe(false);
+    expect(backing.map).toBeNull();
+    expect(backing.color.getHex()).toBe(new THREE.Color(BACKBOARD_SHEET.mean).getHex());
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining(BACKBOARD_SHEET.url));
+    warn.mockRestore();
+  });
+});
+
+describe('the fibre turns to run with the sheet it sits on', () => {
+  it('turns a quarter turn for a sheet whose figure runs along `u`', () => {
+    // `worldSpaceUvs` puts that sheet's grain on the texture's `u`, and the
+    // fibre is drawn long on `v` — so it crosses unless the map is turned.
+    expect(fibreTurn(BACKBOARD_SHEET)).toBeCloseTo(Math.PI / 2, 12);
+  });
+
+  it('leaves a sheet whose figure runs along `v` alone', () => {
+    expect(fibreTurn(WOODWORK_SHEET)).toBe(0);
+  });
+
+  it('reads the turn off the sheet and not off which surface it is', () => {
+    // ⚠️ The same criterion the swap has: a backboard sheet that measured `v`
+    // must **not** be turned. Turning on the surface rather than on the sheet
+    // is exactly the shape that hard-codes #297's defect back in.
+    expect(fibreTurn({ ...BACKBOARD_SHEET, figure: 'v' })).toBe(0);
+    expect(fibreTurn({ ...WOODWORK_SHEET, figure: 'u' })).toBeCloseTo(Math.PI / 2, 12);
+  });
+
+  it('turns about the tile’s centre, so a map that tiled still tiles', () => {
+    // A 90° turn about (0.5, 0.5) maps the unit lattice onto itself. About a
+    // corner it does not, and the seam would come back on every boundary — the
+    // wrap defect this fibre's own lattice fix exists to avoid.
+    const laid = layFibre(new THREE.Texture(), BACKBOARD_SHEET);
+
+    expect(laid.center.x).toBe(0.5);
+    expect(laid.center.y).toBe(0.5);
+    expect(laid.rotation).toBeCloseTo(Math.PI / 2, 12);
+  });
+
+  it('lays the fibre at half a world unit on the backboard too', () => {
+    // The period is a constant in **world** units, so the repeat is per sheet:
+    // `worldSpaceUvs` has already divided by that sheet's own size.
+    const laid = layFibre(new THREE.Texture(), BACKBOARD_SHEET);
+    const tiles = BACKBOARD_SHEET.unitsPerTile / FIBRE_PERIOD;
+
+    expect(laid.repeat.x).toBeCloseTo(tiles, 12);
+    expect(laid.repeat.y).toBeCloseTo(tiles, 12);
+    expect(fibreTiles(BACKBOARD_SHEET)).toBeCloseTo(tiles, 12);
+    // And it is genuinely a different lay from the woodwork's, which is why the
+    // backboard wears a clone rather than the shared instance.
+    expect(fibreTiles(BACKBOARD_SHEET)).not.toBe(FIBRE_TILES);
+  });
+
+  it('puts one fibre tile every half world unit on the backboard’s front face', () => {
+    // End to end, through both divisions: the UV rewrite by the sheet's size,
+    // then the repeat back up by the fibre's. What the eye reads is this.
+    const board = box(BACKBOARD);
+    worldSpaceUvs(board, BACKBOARD_SHEET, 'y');
+
+    const span = faceSpan(board, FACE.pz);
+    const tiles = fibreTiles(BACKBOARD_SHEET);
+    expectNear((span.u * tiles * FIBRE_PERIOD) / BACKBOARD.height, 1, 'fibre tiles per unit, u');
+    expectNear((span.v * tiles * FIBRE_PERIOD) / BACKBOARD.width, 1, 'fibre tiles per unit, v');
+  });
+});
+
+describe('bindSheet — the resolved URL, and the two ends of a load', () => {
   const material = (): THREE.MeshStandardMaterial =>
     new THREE.MeshStandardMaterial({ color: WOODWORK_SHEET.mean });
 
@@ -307,7 +493,7 @@ describe('bindWoodSheet — the resolved URL, and the two ends of a load', () =>
 
   it('asks for the one sheet, once', () => {
     const loader = fakeLoader();
-    bindWoodSheet(material(), loader.load);
+    bindSheet(material(), WOODWORK_SHEET, loader.load);
 
     expect(loader.urls).toEqual([WOODWORK_SHEET.url]);
   });
@@ -323,7 +509,7 @@ describe('bindWoodSheet — the resolved URL, and the two ends of a load', () =>
   it('binds no map and keeps the flat colour until the sheet decodes', () => {
     const wood = material();
     const loader = fakeLoader();
-    const sheet = bindWoodSheet(wood, loader.load);
+    const sheet = bindSheet(wood, WOODWORK_SHEET, loader.load);
 
     expect(sheet.bound()).toBe(false);
     expect(wood.map).toBeNull();
@@ -333,7 +519,7 @@ describe('bindWoodSheet — the resolved URL, and the two ends of a load', () =>
   it('binds the map and switches to white when it decodes', () => {
     const wood = material();
     const loader = fakeLoader();
-    const sheet = bindWoodSheet(wood, loader.load);
+    const sheet = bindSheet(wood, WOODWORK_SHEET, loader.load);
 
     loader.settle();
 
@@ -353,7 +539,7 @@ describe('bindWoodSheet — the resolved URL, and the two ends of a load', () =>
     // darker than the `mean` that stands in for it.
     const wood = material();
     const loader = fakeLoader();
-    bindWoodSheet(wood, loader.load);
+    bindSheet(wood, WOODWORK_SHEET, loader.load);
     loader.settle();
 
     expect(wood.map?.wrapS).toBe(THREE.RepeatWrapping);
@@ -371,7 +557,7 @@ describe('bindWoodSheet — the resolved URL, and the two ends of a load', () =>
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const wood = material();
     const loader = fakeLoader();
-    const sheet = bindWoodSheet(wood, loader.load);
+    const sheet = bindSheet(wood, WOODWORK_SHEET, loader.load);
 
     loader.fail();
 
@@ -390,7 +576,7 @@ describe('bindWoodSheet — the resolved URL, and the two ends of a load', () =>
     // the sheet contributes nothing to the `normalMap` slot in either direction.
     const wood = material();
     const loader = fakeLoader();
-    bindWoodSheet(wood, loader.load);
+    bindSheet(wood, WOODWORK_SHEET, loader.load);
     loader.settle();
 
     expect(wood.normalMap).toBeNull();
@@ -703,7 +889,7 @@ describe('the fibre period — a constant, laid over the sheet', () => {
 
     for (const { name, size, grain } of members) {
       const geometry = box(size);
-      worldSpaceUvs(geometry, WOODWORK_SHEET.unitsPerTile, grain);
+      worldSpaceUvs(geometry, WOODWORK_SHEET, grain);
 
       // The face a visitor sees most of: a plank's top, an upright's front edge.
       const span = faceSpan(geometry, grain === 'x' ? FACE.py : FACE.pz);

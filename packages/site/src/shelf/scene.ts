@@ -29,12 +29,15 @@ import { pageStriationMap } from './page-edges.ts';
 import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture } from './spine-texture.ts';
 import {
+  BACKBOARD_SHEET,
   WOODWORK_SHEET,
   applyWoodFibre,
-  bindWoodSheet,
+  backingFibreMap,
+  bindSheet,
   woodColour,
   worldSpaceUvs,
   type Axis,
+  type Sheet,
   type SheetBinding,
 } from './woodwork.ts';
 
@@ -1537,43 +1540,70 @@ interface Woodwork {
   readonly backing: THREE.MeshStandardMaterial;
   /** The veneer, so `applySettings` can tell a fallback colour from a live one. */
   readonly sheet: SheetBinding;
+  /** The backboard's own, for the same reason — it is a different image. */
+  readonly backSheet: SheetBinding;
 }
 
 /**
- * A member's box, with its UVs rewritten to the sheet's world-space period and
- * its grain running along `grain`.
+ * A member's box, with its UVs rewritten to **its own sheet's** world-space
+ * period and its grain running along `grain`.
  *
  * Wrapped rather than written as three statements per member so the
  * `BoxGeometry` call — where a member's size is decided, and where G51 reads it
  * — stays one expression carrying its own inset arithmetic. `worldSpaceUvs`
  * takes the size back off `geometry.parameters`, so there is no second copy of
  * that arithmetic to drift from this one.
+ *
+ * ⚠️ **The sheet is a parameter and not this file's constant.** The backboard
+ * carries a different image at a different size whose figure runs the *other*
+ * way, so the axis swap is read from the sheet being bound — see
+ * `worldSpaceUvs`, and [#297](https://github.com/mephistopheles4/stacks/issues/297).
  */
-function veneered(geometry: THREE.BoxGeometry, grain: Axis): THREE.BoxGeometry {
-  worldSpaceUvs(geometry, WOODWORK_SHEET.unitsPerTile, grain);
+function veneered(geometry: THREE.BoxGeometry, sheet: Sheet, grain: Axis): THREE.BoxGeometry {
+  worldSpaceUvs(geometry, sheet, grain);
   return geometry;
 }
+
+/**
+ * Which map the backboard's fibre is, for `applyWoodFibre`.
+ *
+ * ⚠️ **A thunk, and that is `applyWoodFibre`'s own rule rather than style**: a
+ * default argument is evaluated whenever it is omitted, so naming the texture
+ * here would clone — and therefore bake — the fibre on every page that has it
+ * turned off. Named once because `buildShelf` and `applySettings` both pass it,
+ * and two lambdas would be two chances to hand the backboard the planks' map.
+ */
+const backingFibre = (): THREE.Texture | null => backingFibreMap() ?? null;
 
 function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   const group = new THREE.Group();
   const castShadows = settings.shadows.casters;
 
   // `materials.wood` is what the woodwork shows *before* the sheet decodes, and
-  // if it never does — a diffuse map multiplies `color`, so `bindWoodSheet`
+  // if it never does — a diffuse map multiplies `color`, so `bindSheet`
   // switches this to white inside the load callback. See `woodColour`.
   const wood = new THREE.MeshStandardMaterial({
     color: settings.materials.wood,
     roughness: settings.materials.woodRoughness,
   });
-  const sheet = bindWoodSheet(wood);
+  const sheet = bindSheet(wood, WOODWORK_SHEET);
   // The relief half, and the slot the sheet's own normal map was wasting: drawn
   // rather than photographed, tiled far tighter than the figure, and zero bytes
   // on the wire. `0` binds nothing at all — see `applyWoodFibre`.
   applyWoodFibre(wood, settings.materials.woodFibre);
+  // `materials.woodDark` takes `materials.wood`'s treatment, for its reason: it
+  // is the colour the backboard shows before `dark_wood` decodes and if it never
+  // does, and `bindSheet` switches it to white in the load callback.
   const backing = new THREE.MeshStandardMaterial({
     color: settings.materials.woodDark,
     roughness: settings.materials.backingRoughness,
   });
+  const backSheet = bindSheet(backing, BACKBOARD_SHEET);
+  // The same drawn fibre, turned a quarter turn to run *with* this sheet's
+  // grain rather than across it — a clone's texture matrix, so +0 textures and
+  // +0 bytes. #297 measured the turn at three to six times the fibre's own
+  // presence, and found it on a 3x crop after no whole-frame number had.
+  applyWoodFibre(backing, settings.materials.woodFibre, backingFibre);
 
   const unitHeight = rowCount * SHELF.rowHeight;
   const outerWidth = SHELF.width + SHELF.sideThickness * 2;
@@ -1583,11 +1613,21 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   // `x` and in `y`, so its sides do not land on the plank ends' new plane. Every
   // member stays centred where it was: the inset comes off both faces, so the
   // silhouette does not move. Held by G51 (`coplanar-faces`).
+  //
+  // Its grain runs **vertically**, which #285 states and does not derive: the
+  // board is wider than tall at 2 and 3 rows and taller than wide from 4 on, so
+  // a long-axis rule would turn the figure 90° the day the library fills its
+  // third row. `dark_wood`'s own stripe runs the opposite way from rosewood's,
+  // so `veneered` reads the swap off `BACKBOARD_SHEET.figure`.
   const back = new THREE.Mesh(
-    new THREE.BoxGeometry(
-      outerWidth - BACKBOARD_INSET * 2,
-      unitHeight - BACKBOARD_INSET * 2,
-      SHELF.backThickness,
+    veneered(
+      new THREE.BoxGeometry(
+        outerWidth - BACKBOARD_INSET * 2,
+        unitHeight - BACKBOARD_INSET * 2,
+        SHELF.backThickness,
+      ),
+      BACKBOARD_SHEET,
+      'y',
     ),
     backing,
   );
@@ -1602,7 +1642,11 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   // a book was added.
   for (const side of [-1, 1]) {
     const upright = new THREE.Mesh(
-      veneered(new THREE.BoxGeometry(SHELF.sideThickness, unitHeight, SHELF.depth), 'y'),
+      veneered(
+        new THREE.BoxGeometry(SHELF.sideThickness, unitHeight, SHELF.depth),
+        WOODWORK_SHEET,
+        'y',
+      ),
       wood,
     );
     upright.position.set((side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0);
@@ -1619,6 +1663,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
           SHELF.plankThickness,
           SHELF.depth - PLANK_INSET * 2,
         ),
+        WOODWORK_SHEET,
         'x',
       ),
       wood,
@@ -1629,7 +1674,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
     group.add(plank);
   }
 
-  return { group, wood, backing, sheet };
+  return { group, wood, backing, sheet, backSheet };
 }
 
 /**
@@ -2004,7 +2049,7 @@ function applyLive(
     /**
      * Routed through `woodColour`, and that is not decoration.
      *
-     * A diffuse map **multiplies** `color`, so `bindWoodSheet` sets the material
+     * A diffuse map **multiplies** `color`, so `bindSheet` sets the material
      * white once the sheet decodes. Repainting it here with the knob's own value
      * — one tick of the debug panel, one `?tune=` — would put a dark colour back
      * under a live sheet and darken the whole bookcase at a third of the
@@ -2020,8 +2065,15 @@ function applyLive(
     );
   }
   if (current.materials.woodDark !== next.materials.woodDark) {
-    woodwork.backing.color.setHex(next.materials.woodDark);
-    applied.push(`backing: ${hex(current.materials.woodDark)} → ${hex(next.materials.woodDark)}`);
+    // The same routing, for the same reason, on the surface that is 90% of the
+    // near frame when the shelf is empty: unrouted, one panel tick puts a dark
+    // colour back under a decoded `dark_wood`. See the block above.
+    const shown = woodColour(next.materials.woodDark, woodwork.backSheet.bound());
+    woodwork.backing.color.setHex(shown);
+    applied.push(
+      `backing: ${hex(current.materials.woodDark)} → ${hex(next.materials.woodDark)}` +
+        (shown === next.materials.woodDark ? '' : ' (fallback only — the sheet has decoded)'),
+    );
   }
   note(applied, 'wood roughness', current.materials.woodRoughness, next.materials.woodRoughness);
   note(
@@ -2047,7 +2099,11 @@ function applyLive(
    * bookcase did not is the exact failure `ApplyReport` exists to prevent.
    */
   if (current.materials.woodFibre !== next.materials.woodFibre) {
+    // Both surfaces, because it is one fibre: the backboard wears a clone of the
+    // same bake, turned to run with its own grain. Reported once, because the
+    // one thing that can refuse it — no 2D context — refuses it for both.
     const inForce = applyWoodFibre(woodwork.wood, next.materials.woodFibre);
+    applyWoodFibre(woodwork.backing, next.materials.woodFibre, backingFibre);
     if (inForce === next.materials.woodFibre) {
       applied.push(`wood fibre: ${String(current.materials.woodFibre)} → ${String(inForce)}`);
     } else {
