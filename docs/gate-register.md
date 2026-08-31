@@ -5616,6 +5616,16 @@ records reaching the live site and killing a phone.
   the same vacuous green one level down. A second clause pins the count at two,
   so [#306](https://github.com/mephistopheles4/stacks/issues/306)'s species
   menu cannot become a cost every visitor pays without going red here first.
+  ⚠️ **That menu has since landed, and it split the question the URL clause was
+  asking.** `SHIPPED_SHEETS` is what a *default page fetches* and `ALL_SHEETS`
+  is what the *module can name*, and sapele's sheet is committed, capped and in
+  only the second — so the clause now walks `ALL_SHEETS`, because against the
+  first it would have stopped covering a committed file the moment that file
+  arrived. ⚠️ **A menu is exactly the way a committed file stops being pointed
+  at**, and a sheet nothing points at is a 404 on the first visitor who selects
+  it, showing a surface at its fallback colour that looks like a texture nobody
+  bound. The count clause keeps its own job and now names G53 (`one-sheet`) as
+  the row that asks it properly.
 - **Decay** — **it decays into a red on the two changes that matter and into
   silence on one.** A sheet added, replaced or re-encoded is measured on the
   next run, because the sweep reads the directory rather than a list; a sheet
@@ -5624,9 +5634,15 @@ records reaching the live site and killing a phone.
   [#304](https://github.com/mephistopheles4/stacks/issues/304) and
   [#306](https://github.com/mephistopheles4/stacks/issues/306) will bring, and
   if either arrives at a size nobody re-measured, the number in the docblock
-  stops describing the number in the code. ⚠️ **The first of those has landed
-  and neither cap moved** — `dark_wood` at 512 is 53.2 KB committed, against a
-  320 KB cap and a 1024 edge — which is the shape this derivation was for, and
-  it says nothing about the second. The docblock is the only thing
+  stops describing the number in the code. ⚠️ **Both of those have now landed and neither cap
+  moved** — `dark_wood` at 512 is 53.2 KB committed and sapele's 512 is 34.5 KB,
+  against a 320 KB cap and a 1024 edge — which is the whole shape this derivation
+  was for: two sheets committed by two later tickets, neither of which had to
+  relitigate a number. ⚠️ **Sapele arrived at 512 and not the 1024 this docblock
+  named**, because [#306](https://github.com/mephistopheles4/stacks/issues/306)
+  ships the resolution each species was *measured* at rather than a common one,
+  and species and resolution are coupled; so the cap was derived against a file
+  four times the size of the one that came, which is slack in the safe
+  direction and is recorded rather than tightened. The docblock is the only thing
   holding those together, and nothing can go red on prose — recorded rather
   than solved.

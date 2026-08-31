@@ -60,6 +60,7 @@ import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { measureCover } from '../packages/core/src/covers/cover-budget.ts';
 import {
+  ALL_SHEETS,
   BACKBOARD_SHEET,
   SHIPPED_SHEETS,
   WOODWORK_SHEET,
@@ -144,14 +145,19 @@ describe('G52 — the woodwork directory is read, and the read is not empty', ()
     // would notice the module pointing at a file that is not committed. The URL
     // is compared, never fetched: G21 records any request the suite makes.
     //
-    // ⚠️ **Every sheet, not the woodwork's.** A default page fetches two —
-    // #304 gave the backboard `dark_wood`, a constant with no menu behind it —
-    // and a clause naming one of them leaves the other uncapped in practice,
-    // since the caps are the *only* other thing pointing at these files.
-    expectFound(SHIPPED_SHEETS, 'shipped sheet URL(s)');
+    // ⚠️ **Every sheet the module can name, not the two a default page
+    // fetches.** #304 gave the backboard `dark_wood`, a constant with no menu
+    // behind it, and [#306](https://github.com/mephistopheles4/stacks/issues/306)
+    // gave the woodwork a menu whose other entry is committed and **lazily
+    // loaded** — so `SHIPPED_SHEETS` no longer names everything under this
+    // directory. Asserted against `ALL_SHEETS` for that reason: the menu is
+    // exactly the way a committed file stops being pointed at, and a sheet
+    // nobody points at is a 404 on the first visitor who picks it, showing a
+    // surface at its fallback colour that looks like a texture nobody bound.
+    expectFound(ALL_SHEETS, 'resolvable sheet URL(s)');
     const served = (await sheets()).map((sheet) => `/wood/${sheet.name}`);
 
-    const missing = SHIPPED_SHEETS.map((sheet) => sheet.url).filter((url) => !served.includes(url));
+    const missing = ALL_SHEETS.map((sheet) => sheet.url).filter((url) => !served.includes(url));
 
     expect(
       missing,
@@ -163,9 +169,10 @@ describe('G52 — the woodwork directory is read, and the read is not empty', ()
 
   it('ships the two sheets a default page fetches, and no more', async () => {
     // ⚠️ **The count is the assertion, not the list.** #304's budget was
-    // *exactly one* new image, and #306's species menu must lazy-load rather
-    // than ship — so a third constant here is a cost every visitor pays that
-    // nobody decided. A menu entry loaded on selection is not in this array.
+    // *exactly one* new image, and #306's species menu lazy-loads rather than
+    // ships — so a third constant here is a cost every visitor pays that nobody
+    // decided. A menu entry loaded on selection is not in this array, which is
+    // the clause sapele has to stay out of and `ALL_SHEETS` is where it lives.
     expect(
       SHIPPED_SHEETS.map((sheet) => sheet.url),
       'sheets a default page fetches. The woodwork’s and the backboard’s, and the second ' +

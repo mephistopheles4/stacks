@@ -31,18 +31,21 @@ import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture } from './spine-texture.ts';
 import {
   BACKBOARD_SHEET,
-  WOODWORK_SHEET,
   applyWoodFibre,
   backingFibreMap,
   bindSheet,
+  describeWoodwork,
+  fibreMapFor,
   freshWoodSeed,
+  resolveWoodwork,
   varyMember,
   woodColour,
   woodKeys,
   worldSpaceUvs,
   type Axis,
-  type Sheet,
+  type ResolvedWoodwork,
   type SheetBinding,
+  type SheetLay,
 } from './woodwork.ts';
 
 /**
@@ -163,6 +166,34 @@ export interface ApplyReport {
    * to pick an operator, not to rebuild anything.
    */
   readonly refused: readonly string[];
+  /**
+   * What the shelf **is running**, stated rather than diffed — the woodwork's
+   * resolved sheet and the fibre scale actually in force, on every apply,
+   * whether or not either moved.
+   *
+   * ⚠️ **A fifth category because the other four are all transitions**, and a
+   * transition cannot describe a configuration that was wrong from the first
+   * frame. This map earned this field three times over, all three the same
+   * failure and none of them a change anybody made:
+   *
+   * - #284's resolution control built each URL as a fixed base plus a per-arm
+   *   tail, so `woodRes=1024&woodRes=512` arrived and `URLSearchParams.get`
+   *   returns the **first**. The arm meant to render 512 rendered 1024 and
+   *   differenced to a perfect **0.000% at every rung**.
+   * - #298's `woodVary` resolved an *absent* parameter to `0` against its own
+   *   documented default of `1` — `Number(null)` is `0`, not `NaN` — disarming
+   *   the variation in every render that branch ever took.
+   * - #297's fibre was bound at 90° to its figure, and every whole-frame number
+   *   it produced sat in the normal range.
+   *
+   * **A query string is an assumption until something states what came out of
+   * it.** Unlike the look, that is machine-checkable, and it is.
+   *
+   * ⚠️ **It is not `applied`.** Nothing here changed; putting an unchanging
+   * statement under a heading that means *changed on the live scene* would be
+   * its own small lie, which is the failure this whole type exists to prevent.
+   */
+  readonly resolved: readonly string[];
 }
 
 export interface ShelfHandle {
@@ -1542,10 +1573,27 @@ interface Woodwork {
   readonly group: THREE.Group;
   readonly wood: THREE.MeshStandardMaterial;
   readonly backing: THREE.MeshStandardMaterial;
-  /** The veneer, so `applySettings` can tell a fallback colour from a live one. */
-  readonly sheet: SheetBinding;
+  /**
+   * The veneer, so `applySettings` can tell a fallback colour from a live one.
+   *
+   * ⚠️ **`undefined` under `flat`, which binds no map at all.** The colour is
+   * then the knob's, permanently, rather than the knob's until a sheet decodes —
+   * so `woodColour` is asked `bound()` and gets a truthful `false`.
+   */
+  readonly sheet: SheetBinding | undefined;
   /** The backboard's own, for the same reason — it is a different image. */
   readonly backSheet: SheetBinding;
+  /**
+   * What the species knob actually resolved to when this shelf was built,
+   * carried so `applySettings` can **name it** rather than diff it.
+   *
+   * ⚠️ **Named on every apply, not only when it changes**, which is the whole of
+   * the read-back row. A diff reports the *transition* and says nothing about
+   * the state, and every one of the three defects this map earned that row for
+   * was a configuration that never transitioned — it was simply wrong from the
+   * first frame and no report ever mentioned it.
+   */
+  readonly resolved: ResolvedWoodwork;
 }
 
 /**
@@ -1565,7 +1613,11 @@ interface Woodwork {
  */
 function veneered(
   geometry: THREE.BoxGeometry,
-  sheet: Sheet,
+  // ⚠️ `SheetLay` and not `Sheet`, since #306: `flat` binds no sheet at all and
+  // is laid by the default's geometry, so what this needs is the lay rather than
+  // an image. Widening it here is what lets the flat entry take the identical
+  // treatment instead of a branch.
+  sheet: SheetLay,
   grain: Axis,
   key: string,
 ): THREE.BoxGeometry {
@@ -1618,9 +1670,18 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   // and only misreports. See `woodKeys`.
   const keys = woodKeys(woodRoot(), rowCount);
 
+  // Which sheet the woodwork wears, and the refusal if the request named one
+  // nobody has rendered. Resolved **once, here**, because this is where the
+  // fetch happens: an entry nobody selects is never asked for, which is the
+  // whole of the menu's laziness — see `woodworkSheetUrls`.
+  const resolved = resolveWoodwork(settings.materials.woodSpecies);
   // `materials.wood` is what the woodwork shows *before* the sheet decodes, and
   // if it never does — a diffuse map multiplies `color`, so `bindSheet`
   // switches this to white inside the load callback. See `woodColour`.
+  //
+  // Under `flat` nothing is ever bound, so this colour is not a fallback but the
+  // arm itself: #284's mean-matched twin, which is the control that separates a
+  // sheet's grain from its average colour.
   const wood = new THREE.MeshStandardMaterial({
     color: settings.materials.wood,
     roughness: settings.materials.woodRoughness,
@@ -1629,11 +1690,17 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
     // and a material each is +1 draw call each.
     vertexColors: true,
   });
-  const sheet = bindSheet(wood, WOODWORK_SHEET);
+  const sheet = resolved.sheet === undefined ? undefined : bindSheet(wood, resolved.sheet);
   // The relief half, and the slot the sheet's own normal map was wasting: drawn
   // rather than photographed, tiled far tighter than the figure, and zero bytes
   // on the wire. `0` binds nothing at all — see `applyWoodFibre`.
-  applyWoodFibre(wood, settings.materials.woodFibre);
+  //
+  // ⚠️ **Laid by the resolved sheet, never by the module's default.** The fibre
+  // rides the same UVs the figure does, so a sheet laid at 1.6 world units wears
+  // a fibre tiled for 1.6 — take rosewood's 7.68 onto sapele and it is 4.8×
+  // wrong with every whole-frame number still in range, which is #297's defect
+  // one surface over.
+  applyWoodFibre(wood, settings.materials.woodFibre, () => fibreMapFor(resolved.lay) ?? null);
   // `materials.woodDark` takes `materials.wood`'s treatment, for its reason: it
   // is the colour the backboard shows before `dark_wood` decodes and if it never
   // does, and `bindSheet` switches it to white in the load callback.
@@ -1690,7 +1757,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
     const upright = new THREE.Mesh(
       veneered(
         new THREE.BoxGeometry(SHELF.sideThickness, unitHeight, SHELF.depth),
-        WOODWORK_SHEET,
+        resolved.lay,
         'y',
         side < 0 ? keys.uprightLeft : keys.uprightRight,
       ),
@@ -1715,7 +1782,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
           SHELF.plankThickness,
           SHELF.depth - PLANK_INSET * 2,
         ),
-        WOODWORK_SHEET,
+        resolved.lay,
         'x',
         key,
       ),
@@ -1727,7 +1794,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
     group.add(plank);
   }
 
-  return { group, wood, backing, sheet, backSheet };
+  return { group, wood, backing, sheet, backSheet, resolved };
 }
 
 /**
@@ -1946,6 +2013,7 @@ function applyLive(
   const needsRebuild: string[] = [];
   const needsReload: string[] = [];
   const refused: string[] = [];
+  const resolved: string[] = [];
 
   /**
    * A *transition*: what changed since the last apply. Used for the live work,
@@ -2110,7 +2178,7 @@ function applyLive(
      * fallback and nothing else, and the report says so rather than claiming a
      * change the eye cannot find: **a control must not lie**.
      */
-    const shown = woodColour(next.materials.wood, woodwork.sheet.bound());
+    const shown = woodColour(next.materials.wood, woodwork.sheet?.bound() ?? false);
     woodwork.wood.color.setHex(shown);
     applied.push(
       `wood: ${hex(current.materials.wood)} → ${hex(next.materials.wood)}` +
@@ -2151,18 +2219,83 @@ function applyLive(
    * says so by returning the scale in force — a slider that moved while the
    * bookcase did not is the exact failure `ApplyReport` exists to prevent.
    */
+  // Declared outside the branch, because the read-back below states the scale
+  // in force on **every** apply and not only on the applies that moved it. A
+  // knob whose absent value silently resolves to "off" is exactly what #298
+  // shipped for a whole branch's worth of renders. No initialiser: both arms
+  // assign, and a default here would be a third answer nothing ever reads.
+  let fibreInForce: number;
+
   if (current.materials.woodFibre !== next.materials.woodFibre) {
     // Both surfaces, because it is one fibre: the backboard wears a clone of the
     // same bake, turned to run with its own grain. Reported once, because the
     // one thing that can refuse it — no 2D context — refuses it for both.
-    const inForce = applyWoodFibre(woodwork.wood, next.materials.woodFibre);
+    //
+    // ⚠️ **The woodwork's is laid by the sheet the shelf was built with**, not
+    // by the module's default: under sapele the fibre tiles for 1.6 world units
+    // and under rosewood for 7.68, and taking the wrong one is 4.8× off with
+    // every whole-frame number still in range.
+    fibreInForce = applyWoodFibre(
+      woodwork.wood,
+      next.materials.woodFibre,
+      () => fibreMapFor(woodwork.resolved.lay) ?? null,
+    );
     applyWoodFibre(woodwork.backing, next.materials.woodFibre, backingFibre);
-    if (inForce === next.materials.woodFibre) {
-      applied.push(`wood fibre: ${String(current.materials.woodFibre)} → ${String(inForce)}`);
+    if (fibreInForce === next.materials.woodFibre) {
+      applied.push(`wood fibre: ${String(current.materials.woodFibre)} → ${String(fibreInForce)}`);
     } else {
       refused.push('wood fibre: there is no canvas to draw it on, so the woodwork stays smooth');
     }
+  } else {
+    // Not applied and not asked for — but still *reported*, so a fibre that
+    // never bound because there was no canvas says so on the apply after the one
+    // that discovered it, rather than only on that one.
+    fibreInForce = woodwork.wood.normalMap === null ? 0 : woodwork.wood.normalScale.x;
   }
+
+  /* --- the woodwork's sheet, and the read-back ----------------------------- */
+
+  /**
+   * Rebuild-class, and structurally rather than by choice.
+   *
+   * `worldSpaceUvs` multiplies every member's UVs by the sheet's world size **in
+   * place**, so the original `0..1` values are gone and re-laying for a
+   * different `unitsPerTile` — rosewood's 7.68 against sapele's 1.6 — means new
+   * geometry. There is nothing to move live, so the report offers a rebuild
+   * rather than showing a moved menu over an unchanged bookcase.
+   *
+   * ⚠️ **That is also what makes the menu lazy.** A sheet is fetched inside
+   * `buildShelf`, where the material is made, so an entry nobody selects is
+   * never requested and a roster of any size costs a default page one sheet.
+   */
+  standing(
+    needsRebuild,
+    'woodwork sheet',
+    mountedWith.materials.woodSpecies,
+    next.materials.woodSpecies,
+  );
+
+  /**
+   * What the shelf is actually running, said out loud on every apply.
+   *
+   * ⚠️ **Resolved from `next`, not read off `woodwork.resolved`.** The two
+   * differ exactly when a species change is waiting for a rebuild, and the
+   * refusal has to reach the report *when the value is set* rather than one
+   * rebuild later — a typo in a `?tune=` would otherwise show the default shelf
+   * and say nothing at all until somebody happened to press rebuild.
+   *
+   * The words themselves are `describeWoodwork`'s, in a module with no Three.js
+   * in it, because this function needs a WebGL context and the gate row that
+   * asserts on this read-back must not.
+   */
+  const readBack = describeWoodwork(
+    resolveWoodwork(next.materials.woodSpecies),
+    woodwork.resolved.species,
+    fibreInForce,
+    next.materials.woodFibre,
+  );
+  resolved.push(...readBack.resolved);
+  refused.push(...readBack.refused);
 
   // The books' own materials are made per book inside `buildBook`, so there is no
   // handle to reach them through. Honest rather than silent.
@@ -2265,7 +2398,7 @@ function applyLive(
     applied.push('painted shadows repainted for the new light');
   }
 
-  return { applied, needsRebuild, needsReload, refused };
+  return { applied, needsRebuild, needsReload, refused, resolved };
 }
 
 /**

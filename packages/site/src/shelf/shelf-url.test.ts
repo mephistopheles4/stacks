@@ -162,6 +162,41 @@ describe('?tune', () => {
     expect(settings.materials.pageStriation).toBe(DEFAULT_SETTINGS.materials.pageStriation);
   });
 
+  it('carries the woodwork sheet, and merges it without disturbing its neighbours', () => {
+    // `materials.woodSpecies` rides `?tune=` like the rest of `materials`. There
+    // is no `?woodSpecies=` flat spelling: the ten flat probes exist for things
+    // typed on a phone against a crash, and a sheet menu is not one of those.
+    const query = `tune=${encodeURIComponent(JSON.stringify({ materials: { woodSpecies: 'sapele' } }))}`;
+    const settings = read(query);
+
+    expect(settings.materials.woodSpecies).toBe('sapele');
+    // The fallback colour is a separate key and stays put — `woodSpecies` moves
+    // which sheet is bound, never what shows before it decodes.
+    expect(settings.materials.wood).toBe(DEFAULT_SETTINGS.materials.wood);
+    expect(settings.materials.woodFibre).toBe(DEFAULT_SETTINGS.materials.woodFibre);
+  });
+
+  it('lets a `?tune=` carry a species nobody has rendered, so the shelf can refuse it', () => {
+    // ⚠️ **Not dropped at parse.** `resolveSettings` merges whatever arrives;
+    // the refusal belongs to `resolveWoodwork`, which names it in the report.
+    // Dropping it here would silently render the default and look exactly like a
+    // value that was applied — the failure `ApplyReport` exists to prevent, and
+    // the reason `cover_source`'s drop-on-mismatch rule does *not* transfer to a
+    // control somebody just moved.
+    const query = `tune=${encodeURIComponent(JSON.stringify({ materials: { woodSpecies: 'walnut' } }))}`;
+
+    expect(read(query).materials.woodSpecies).toBe('walnut');
+  });
+
+  it('resolves to the default species when no tune blob says otherwise', () => {
+    // The absent case, stated rather than assumed — #298's `woodVary` resolved
+    // an *absent* parameter to `0` against its own documented default of `1`,
+    // because `Number(null)` is `0` and not `NaN`, and every render that branch
+    // took was unvaried with nothing saying so.
+    expect(read('').materials.woodSpecies).toBe(DEFAULT_SETTINGS.materials.woodSpecies);
+    expect(read('solo=1').materials.woodSpecies).toBe('rosewood');
+  });
+
   it('does not let a tune blob override a probe typed by hand', () => {
     // The two vocabularies never overlap, so a legacy probe is always the last
     // word on the nine settings it owns. Someone appending `&shadows=1` to a
