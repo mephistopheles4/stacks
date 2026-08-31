@@ -12,6 +12,7 @@ import {
   type Contact,
 } from './contact-shadow.ts';
 import { BACKBOARD_INSET, PLANK_INSET, rowsForCase, SHELF } from './case.ts';
+import { woodSeed } from './shelf-url.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import {
@@ -34,7 +35,10 @@ import {
   applyWoodFibre,
   backingFibreMap,
   bindSheet,
+  freshWoodSeed,
+  varyMember,
   woodColour,
+  woodKeys,
   worldSpaceUvs,
   type Axis,
   type Sheet,
@@ -1559,8 +1563,18 @@ interface Woodwork {
  * way, so the axis swap is read from the sheet being bound — see
  * `worldSpaceUvs`, and [#297](https://github.com/mephistopheles4/stacks/issues/297).
  */
-function veneered(geometry: THREE.BoxGeometry, sheet: Sheet, grain: Axis): THREE.BoxGeometry {
+function veneered(
+  geometry: THREE.BoxGeometry,
+  sheet: Sheet,
+  grain: Axis,
+  key: string,
+): THREE.BoxGeometry {
   worldSpaceUvs(geometry, sheet, grain);
+  // ⚠️ **After the rewrite, never before.** `varyMember` transforms the UVs
+  // `worldSpaceUvs` just wrote; run first, every one of its dice would be
+  // overwritten and the case would come out uniform — which is a *plausible*
+  // shelf, so nothing would look wrong.
+  varyMember(geometry, key);
   return geometry;
 }
 
@@ -1575,9 +1589,34 @@ function veneered(geometry: THREE.BoxGeometry, sheet: Sheet, grain: Axis): THREE
  */
 const backingFibre = (): THREE.Texture | null => backingFibreMap() ?? null;
 
+/**
+ * The root every member's dice are drawn off, for the life of this page.
+ *
+ * ⚠️ **Module level, so the panel rebuilding the shelf does not reshuffle the
+ * furniture.** [#287](https://github.com/mephistopheles4/stacks/issues/287)'s
+ * promise is *one page load*, and `mountShelf` runs again on every settings
+ * change — a per-mount draw would re-saw every board the moment somebody moved
+ * a slider, which is a control changing something nobody asked it to.
+ *
+ * `?woodSeed=` forces it, and there is **no default**: absent, the page throws
+ * fresh dice exactly as the shipped shelf does. See `woodSeed`.
+ */
+let pageWoodSeed: string | undefined;
+
+function woodRoot(): string {
+  pageWoodSeed ??= woodSeed(new URLSearchParams(window.location.search)) ?? freshWoodSeed();
+  return pageWoodSeed;
+}
+
 function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   const group = new THREE.Group();
   const castShadows = settings.shadows.casters;
+  // No two members cut from the same place on the same board — offset, mirror,
+  // per-axis scale, a ±10% tint and a few degrees of runout, for +0 textures, +0
+  // materials and +0 draw calls. Built in one place so the backboard's key
+  // cannot lose the root, which is the one defect here that renders correctly
+  // and only misreports. See `woodKeys`.
+  const keys = woodKeys(woodRoot(), rowCount);
 
   // `materials.wood` is what the woodwork shows *before* the sheet decodes, and
   // if it never does — a diffuse map multiplies `color`, so `bindSheet`
@@ -1585,6 +1624,10 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   const wood = new THREE.MeshStandardMaterial({
     color: settings.materials.wood,
     roughness: settings.materials.woodRoughness,
+    // Every member wearing this material carries a tint attribute from
+    // `varyMember`, so the ±10% drift costs one flag rather than a material —
+    // and a material each is +1 draw call each.
+    vertexColors: true,
   });
   const sheet = bindSheet(wood, WOODWORK_SHEET);
   // The relief half, and the slot the sheet's own normal map was wasting: drawn
@@ -1597,6 +1640,8 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   const backing = new THREE.MeshStandardMaterial({
     color: settings.materials.woodDark,
     roughness: settings.materials.backingRoughness,
+    // The backboard takes the variation too, so it takes the flag too.
+    vertexColors: true,
   });
   const backSheet = bindSheet(backing, BACKBOARD_SHEET);
   // The same drawn fibre, turned a quarter turn to run *with* this sheet's
@@ -1628,6 +1673,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
       ),
       BACKBOARD_SHEET,
       'y',
+      keys.backboard,
     ),
     backing,
   );
@@ -1646,6 +1692,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
         new THREE.BoxGeometry(SHELF.sideThickness, unitHeight, SHELF.depth),
         WOODWORK_SHEET,
         'y',
+        side < 0 ? keys.uprightLeft : keys.uprightRight,
       ),
       wood,
     );
@@ -1665,6 +1712,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
         ),
         WOODWORK_SHEET,
         'x',
+        keys.planks[row] ?? `${woodRoot()}:plank-${String(row)}`,
       ),
       wood,
     );

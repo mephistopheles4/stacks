@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveSettings, DEFAULT_SETTINGS } from './shelf-settings.ts';
-import { bookLimit, readSettings } from './shelf-url.ts';
+import { bookLimit, readSettings, woodSeed } from './shelf-url.ts';
 
 /**
  * The reading half only.
@@ -171,5 +171,63 @@ describe('?tune', () => {
 
     expect(settings.shadows.enabled).toBe(true);
     expect(settings.lighting.key.intensity).toBe(4.5);
+  });
+});
+
+describe('woodSeed', () => {
+  it('is absent when nothing asked', () => {
+    // ⚠️ **No default, and the guard is `raw === null` rather than a number
+    // check.** `params.get` answers `null` for a missing key and `Number(null)`
+    // is `0` — not `NaN` — so a guard shaped `Number.isFinite(raw) && raw >= 0`
+    // *passes* on an absent parameter. That is exactly what #298's `?woodVary=`
+    // did: it resolved a missing key to `0`, against its own documented default
+    // of `1`, and silently disarmed the variation in every render that branch
+    // ever took. A seed is a token and never goes near `Number`, and the two
+    // numeric readers in this file (`positive`, `wholePositive`) are safe only
+    // because `0 > 0` is false — which is luck, so it is asserted below.
+    expect(woodSeed(new URLSearchParams(''))).toBeUndefined();
+  });
+
+  it('pins the root the harness passes', () => {
+    expect(woodSeed(new URLSearchParams('woodSeed=k3f9'))).toBe('k3f9');
+  });
+
+  it('treats an empty seed as absent, not as the empty string', () => {
+    // A seed that dropped out of a query must not silently agree with another
+    // shot whose seed also dropped out — two frames that differ by nothing look
+    // exactly like a treatment that changes nothing.
+    expect(woodSeed(new URLSearchParams('woodSeed='))).toBeUndefined();
+  });
+
+  it('takes the last of a repeated seed, not the first', () => {
+    // The harness builds every URL as a fixed base plus a per-shot tail, so a
+    // duplicated key is the normal case rather than a typo. `get` returns the
+    // *first*, which is how #284's resolution control rendered 1024 for the arm
+    // that asked for 512 and differenced to a perfect 0.000%.
+    expect(woodSeed(new URLSearchParams('woodSeed=one&woodSeed=two'))).toBe('two');
+  });
+
+  it('is not a setting, so it can never reach ?tune=', () => {
+    // The instrument/setting line: a `?tune=` link that froze the dice would be
+    // a control that lies about a shelf which is supposed to be alive.
+    expect(readSettings(new URLSearchParams('woodSeed=k3f9'))).toEqual(
+      readSettings(new URLSearchParams('')),
+    );
+  });
+
+  it('has nowhere in ShelfSettings to hide', () => {
+    // `tuneDiff` writes whatever `ShelfSettings` holds, so the structural half
+    // of the promise is that the seed is not in there at any depth. This is what
+    // would go red the day somebody added `materials.woodSeed`.
+    expect(JSON.stringify(DEFAULT_SETTINGS).toLowerCase()).not.toContain('seed');
+  });
+
+  it('leaves the numeric readers safe on an absent key', () => {
+    // The `Number(null) === 0` case, run rather than reasoned about: `?dpr=` and
+    // `?shadowmap=` both read through a bare `Number(params.get(...))`, and both
+    // survive only because `0` fails their `> 0` test.
+    const absent = resolveSettings(readSettings(new URLSearchParams('')));
+    expect(absent.renderer.maxPixelRatio).toBe(DEFAULT_SETTINGS.renderer.maxPixelRatio);
+    expect(absent.shadows.mapSize).toBe(DEFAULT_SETTINGS.shadows.mapSize);
   });
 });

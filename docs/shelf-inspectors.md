@@ -1,7 +1,7 @@
-# The shelf's two inspectors — `?solo` and `?debug`
+# The shelf's inspectors — `?solo`, `?debug` and `?woodSeed`
 
-Both are query-string instruments on the ordinary page, and neither exists for a
-visitor who does not ask for it. They lived in [`AGENTS.md`](../AGENTS.md) until
+All three are query-string instruments on the ordinary page, and none exists for
+a visitor who does not ask for it. They lived in [`AGENTS.md`](../AGENTS.md) until
 that file's size became [#174](https://github.com/mephistopheles4/stacks/issues/174);
 nothing here changed but where it sits, and `AGENTS.md` points at this file.
 
@@ -47,6 +47,46 @@ with the seam plainly in it. What had actually happened is that the claim was
 made from a render the writer had already decided was clean. **Anything you want
 to dismiss on visibility grounds gets a shelf render at `minDistance` first, and
 somebody other than the person who wants it dismissed should look at it.**
+
+## The dice, held still — `?woodSeed`
+
+`?woodSeed=<token>` pins the root every member of the bookcase draws its figure
+off, so two renders differ by the arm under test and not by the dice.
+
+**A member of the bookcase has no identity.** The root is drawn fresh on every
+page load and the promise is *one page load only* — two loads give two different
+bookcases, which is
+[#287](https://github.com/mephistopheles4/stacks/issues/287)'s decision and not
+an accident. A book-derived seed was declined on arithmetic as well as on taste:
+the plank loop runs `row <= rowCount`, so the top plank is a lid that never holds
+a book, `rowsForCase` keeps one empty row ahead, and an empty vault gives three
+planks and no books at all.
+
+That is exactly what defeats a differ. [#282](https://github.com/mephistopheles4/stacks/issues/282)'s
+harness compares two renders of one scene, so with a per-load draw the two frames
+differ by the dice as well as by the treatment and a count of just-noticeable
+pixels stops meaning anything. Forced, the dice are equal and the difference is
+the arm. Two shots at one seed are **byte identical**; two seeds measured
+**1.986% of frame, worst Δ 95**.
+
+⚠️ **No default, and never in `?tune=`.** A default would quietly make every
+render reproducible while the shipped shelf was not, so the refusal lives in the
+harness rather than in the page. And a shareable settings link that froze the
+dice would be a control that lies about a shelf which is supposed to be alive —
+so the seed is a **flat spelling** beside `?solo` and `?debug`, and is not a
+member of `ShelfSettings` at any depth.
+
+⚠️ **Absent and empty both fall through to a fresh draw**, and the last of a
+repeated key wins. Three of this shelf's measured false zeros came from a query
+string nobody had proved: `URLSearchParams.get` returning the *first* of a
+duplicated key, so an arm asking for 512 rendered 1024 and differenced to a
+perfect 0.000%; and `Number(null)` being `0` rather than `NaN`, so an absent
+`?woodVary=` passed a `>= 0` guard and disarmed the whole variation. A seed that
+dropped out of a query must not silently agree with another shot whose seed also
+dropped out.
+
+Read in `shelf-url.ts`; the keys are built in `woodwork.ts`'s `woodKeys`, which
+is where the backboard's is held to carrying the root.
 
 ## The debug panel — `?debug`
 

@@ -293,11 +293,12 @@ order     show the shelf order, or renumber it with gaps   (--renumber)
 import    import a library export into the vault   (audible)
 ```
 
-## The shelf's inspectors — `?solo` and `?debug`
+## The shelf's inspectors — `?solo`, `?debug` and `?woodSeed`
 
-Two query-string instruments, neither of which exists for a visitor who does not
-ask: `?solo` mounts one book on an unclamped turntable, and `?debug` loads the
-black box and the tuning panel. **Read
+Three query-string instruments, none of which exists for a visitor who does not
+ask: `?solo` mounts one book on an unclamped turntable, `?debug` loads the black
+box and the tuning panel, and `?woodSeed=<token>` pins the root the bookcase's
+per-member figure is drawn off — no default, and never in `?tune=`. **Read
 [`docs/shelf-inspectors.md`](docs/shelf-inspectors.md) before changing the
 renderer, the debug panel, or `shelf-settings.ts`** — it carries why each exists,
 what only they can see, and the rule that a control must not lie.

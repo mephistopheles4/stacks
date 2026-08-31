@@ -82,6 +82,48 @@ export function soloBook(params: URLSearchParams): number | undefined {
 }
 
 /**
+ * `?woodSeed=<token>` — the root every member's dice are drawn off.
+ *
+ * A flat spelling, beside `?solo` and `?debug` rather than inside `?tune=`, for
+ * their reason and one of its own: a seed is an **instrument**, not a setting.
+ * [#287](https://github.com/mephistopheles4/stacks/issues/287) settled that a
+ * member of the bookcase has no identity — the dice are thrown fresh on every
+ * page load and the promise is one page load only — and a shareable `?tune=`
+ * link that froze them would be a control that lies about a shelf which is
+ * supposed to be alive. `?woodSeed=` exists so the render harness can hold the
+ * dice still and have two frames differ by the arm under test.
+ *
+ * ⚠️ **There is deliberately no default.** Absent, the page throws fresh dice
+ * exactly as the shipped shelf does, so the refusal lives in the harness rather
+ * than in a page-level default that would quietly reverse #287's promise and
+ * make every render reproducible while the shipped shelf was not.
+ *
+ * ⚠️ **The guard is `raw === null`, and that shape is not incidental.**
+ * `Number(null)` is `0` rather than `NaN`, so a guard written as
+ * `Number.isFinite(value) && value >= 0` *passes* on a missing key — which is
+ * how [#298](https://github.com/mephistopheles4/stacks/issues/298)'s
+ * `?woodVary=` resolved an absent parameter to `0` against its own documented
+ * default of `1`, disarming the variation in every render that branch took.
+ * A seed is a token and never meets `Number` at all.
+ *
+ * ⚠️ **The last occurrence wins, unlike `?books=` and `?solo=` above.** The
+ * harness builds every URL as a fixed base plus a per-shot tail, so a repeated
+ * key is its normal case rather than a typo — and `URLSearchParams.get` returns
+ * the *first*, which is how #284's resolution control rendered 1024 for the arm
+ * that asked for 512 and differenced to a perfect 0.000%. The two probes above
+ * are hand-typed and keep `get`.
+ *
+ * An **empty** `?woodSeed=` falls through to a fresh draw rather than seeding on
+ * the empty string: a shot whose seed dropped out of the query must not silently
+ * agree with another shot whose seed also dropped out.
+ */
+export function woodSeed(params: URLSearchParams): string | undefined {
+  const raw = params.getAll('woodSeed').at(-1);
+  if (raw === undefined || raw === '') return undefined;
+  return raw;
+}
+
+/**
  * Everything the URL asks for, as a partial.
  *
  * Partial, not total: absent means "no opinion", which is not the same as "asked

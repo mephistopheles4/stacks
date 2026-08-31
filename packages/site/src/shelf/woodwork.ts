@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { hashUnit } from './hash.ts';
 
 /**
  * The bookcase's veneer — one sheet, laid at its true size, with the grain
@@ -843,4 +844,176 @@ export function applyWoodFibre(
   material.normalScale.set(inForce, inForce);
 
   return inForce;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  the per-member variation                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * How far into the sheet a member's board may have been cut from, in tiles.
+ *
+ * A whole tile, because `RepeatWrapping` makes every offset equivalent to one
+ * inside `0..1` and there is no reason to reach less of the sheet than all of
+ * it.
+ */
+const OFFSET_SPREAD = 1;
+
+/**
+ * How far a member's own period may drift from the sheet's, per axis.
+ *
+ * ±9%, and **independent on `u` and `v`**, which is the point rather than an
+ * oversight: one shared scale changes how big the pattern is and leaves its
+ * lattice square, so two members still repeat in step. Two scales give every
+ * member its own period on each axis, so no two of them line up anywhere.
+ */
+const SCALE_SPREAD = 0.09;
+
+/**
+ * How far a member's colour may drift, as a multiplier.
+ *
+ * ±10%, [#287](https://github.com/mephistopheles4/stacks/issues/287)'s number,
+ * and it rides a **vertex-colour attribute** rather than a per-member
+ * `THREE.Color`. That is the whole reason the variation is free: a per-member
+ * colour needs a per-member *material*, which is +1 draw call each. A colour
+ * attribute rides geometry every member already has its own copy of, so one
+ * material still draws them all — `scene.ts`'s per-book page-block drift is the
+ * same trick.
+ */
+const TINT_SPREAD = 0.1;
+
+/**
+ * **Runout**: how far a member's grain may tilt off its own edge, in radians.
+ *
+ * 0.06 rad is about **3.4°**, and small on purpose. A tree does not grow exactly
+ * straight and a saw does not follow it exactly, so a sawn board's grain almost
+ * never runs true to the edge — the woodworker's word is *runout*, and on a real
+ * bookcase it is what stops two boards reading as one printed sheet. Beyond
+ * about five degrees it stops reading as a board cut slightly off and starts
+ * reading as a texture pasted on crooked, which is the failure it exists to fix.
+ *
+ * It also does something no offset could: rotating breaks the **column**. A tile
+ * repeating up a 4.5-unit upright puts identical features directly above each
+ * other and the eye finds that instantly; tilted, they drift sideways as they
+ * climb and stop lining up.
+ */
+const RUNOUT_SPREAD = 0.06;
+
+/**
+ * Make one member's board unlike its neighbours', for **+0 textures, +0
+ * materials and +0 draw calls**.
+ *
+ * Six boards carrying one map at one offset is one board photocopied six times,
+ * which the eye reads instantly. Five differences answer it — offset, mirror,
+ * per-axis scale, a ±10% tint through a vertex-colour attribute, and runout —
+ * and every one of them is arithmetic on attributes the member already owns.
+ *
+ * ⚠️ **Call it after `worldSpaceUvs`, never before.** It transforms the UVs that
+ * function wrote, so running it first would have the world-space rewrite
+ * overwrite every one of the dice.
+ *
+ * ⚠️ **`key` carries the page's root and the member's name, and both halves are
+ * load-bearing.** The root moves the whole set on the next load; the name
+ * separates members within one load. A key that dropped the root would leave one
+ * member fixed while the rest moved — the defect
+ * [#298](https://github.com/mephistopheles4/stacks/issues/298)'s prototype
+ * shipped on the backboard, which **renders correctly and only misreports**: a
+ * differ comparing two seeds under-counts by one member, and the backboard is
+ * 90.38% of the near frame. Build keys with `woodKeys`, which is where that is
+ * asserted.
+ *
+ * ⚠️ **A member has no identity, and that is
+ * [#287](https://github.com/mephistopheles4/stacks/issues/287)'s decision rather
+ * than this file's.** The root is drawn fresh on every page load and the promise
+ * is one page load only. The bottom-up ordinal and the distance-off-the-floor
+ * seed were both declined, and a book-derived seed dies on arithmetic: the plank
+ * loop runs `row <= rowCount`, so the top plank is a **lid** that never holds a
+ * book, `rowsForCase` keeps one empty row ahead, and an empty vault gives three
+ * planks and no books at all.
+ */
+export function varyMember(geometry: THREE.BoxGeometry, key: string): void {
+  const uv = geometry.attributes['uv'];
+  const position = geometry.attributes['position'];
+  if (uv === undefined || position === undefined) return;
+
+  // Draws off one hash, decorrelated by suffix — the shape `books.ts` uses for a
+  // book's height and its fallback spine colour.
+  const draw = (of: string): number => hashUnit(`${key}-${of}`);
+
+  const offsetU = draw('u') * OFFSET_SPREAD;
+  const offsetV = draw('v') * OFFSET_SPREAD;
+  // Veneers are book-matched in life, and a flipped sheet is the cheapest way to
+  // stop a tiling seam repeating identically down the case.
+  const mirror = draw('mirror') < 0.5 ? -1 : 1;
+  const scaleU = 1 + (draw('scale-u') - 0.5) * 2 * SCALE_SPREAD;
+  const scaleV = 1 + (draw('scale-v') - 0.5) * 2 * SCALE_SPREAD;
+  const runout = (draw('runout') - 0.5) * 2 * RUNOUT_SPREAD;
+  const tint = 1 + (draw('tint') - 0.5) * 2 * TINT_SPREAD;
+
+  const cos = Math.cos(runout);
+  const sin = Math.sin(runout);
+
+  for (let index = 0; index < uv.count; index += 1) {
+    const u = uv.getX(index) * scaleU * mirror;
+    const v = uv.getY(index) * scaleV;
+    // Rotated about the UV origin. Wrapping is `RepeatWrapping`, so the
+    // translation a rotation about the origin drags along is free — it lands as
+    // one more offset, which is a thing this already wanted.
+    uv.setXY(index, u * cos - v * sin + offsetU, u * sin + v * cos + offsetV);
+  }
+  uv.needsUpdate = true;
+
+  // ⚠️ A colour attribute is read as **linear**, unlike `material.color`, which
+  // three.js decodes from sRGB. A multiplier near 1 is the same number in either
+  // space, which is why this is a multiplier and not a colour.
+  const colours = new Float32Array(position.count * 3);
+  colours.fill(tint);
+  geometry.setAttribute('color', new THREE.BufferAttribute(colours, 3));
+}
+
+/**
+ * A fresh root for one page load.
+ *
+ * ⚠️ **`Math.random` and not a hash of anything**, which is the point rather
+ * than laziness: any derived value — the row count, the vault, the clock at
+ * second resolution — is something two loads could share, and
+ * [#287](https://github.com/mephistopheles4/stacks/issues/287) asked for a case
+ * that is different every time you open it. Rendered to base 36 so it reads as a
+ * token in a URL somebody may want to paste back.
+ */
+export function freshWoodSeed(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+/** Every member of the case, by the key its dice are drawn off. */
+export interface WoodKeys {
+  readonly backboard: string;
+  readonly uprightLeft: string;
+  readonly uprightRight: string;
+  /** One per shelf, **plus the lid** — `buildShelf` runs `row <= rowCount`. */
+  readonly planks: readonly string[];
+}
+
+/**
+ * Every member's key for one page load, built in one place.
+ *
+ * ⚠️ **This exists so the backboard's root can be asserted, and that is
+ * structural rather than tidy.** Assembled at the call sites, the keys would
+ * live in `scene.ts` — which needs a WebGL context, sits outside every mutation
+ * scope, and is exactly where the prototype's `varyMember(backGeometry,
+ * 'backboard', …)` dropped the root and nothing noticed. A defect that *renders
+ * correctly and only misreports* needs an assertion, and an assertion needs a
+ * seam.
+ *
+ * `${root}:${member}` — the root moves the whole set on the next load, the
+ * member's name separates members within one load.
+ */
+export function woodKeys(root: string, rowCount: number): WoodKeys {
+  const member = (name: string): string => `${root}:${name}`;
+  return {
+    backboard: member('backboard'),
+    uprightLeft: member('upright-left'),
+    uprightRight: member('upright-right'),
+    planks: Array.from({ length: rowCount + 1 }, (_, row) => member(`plank-${String(row)}`)),
+  };
 }

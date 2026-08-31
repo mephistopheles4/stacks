@@ -13,10 +13,15 @@ import {
   fibreNormals,
   fibreTiles,
   fibreTurn,
+  freshWoodSeed,
   layFibre,
+  varyMember,
   woodColour,
+  woodKeys,
   worldSpaceUvs,
+  type Axis,
   type SheetLoader,
+  type WoodKeys,
 } from './woodwork.ts';
 import { BACKBOARD_INSET, PLANK_INSET, SHELF } from './case.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
@@ -905,5 +910,220 @@ describe('the fibre period — a constant, laid over the sheet', () => {
     // a literal 15.36 here would be two copies of one fact.
     expect(FIBRE_PERIOD).toBe(0.5);
     expect(FIBRE_TILES).toBe(WOODWORK_SHEET.unitsPerTile / FIBRE_PERIOD);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/*  the per-member variation                                                   */
+/* -------------------------------------------------------------------------- */
+
+/** Every UV and every colour a member ended up with, as plain numbers. */
+function snapshot(geometry: THREE.BoxGeometry): { uv: number[]; colour: number[] } {
+  const uv = geometry.attributes['uv'];
+  const colour = geometry.attributes['color'];
+  return {
+    uv: uv === undefined ? [] : Array.from(uv.array as ArrayLike<number>),
+    colour: colour === undefined ? [] : Array.from(colour.array as ArrayLike<number>),
+  };
+}
+
+/** A varied plank, laid the way `buildShelf` lays one. */
+function varied(key: string, size: Size = PLANK, grain: Axis = 'x'): THREE.BoxGeometry {
+  const geometry = box(size);
+  worldSpaceUvs(geometry, WOODWORK_SHEET, grain);
+  varyMember(geometry, key);
+  return geometry;
+}
+
+describe('varyMember', () => {
+  it('gives the same key the same board twice', () => {
+    // The seed is the harness's whole instrument: two frames must differ by the
+    // arm under test and not by the dice. #298's canary is this assertion.
+    expect(snapshot(varied('seed:plank-2'))).toEqual(snapshot(varied('seed:plank-2')));
+  });
+
+  it('gives two members of one case different boards', () => {
+    expect(snapshot(varied('seed:plank-2'))).not.toEqual(snapshot(varied('seed:plank-3')));
+  });
+
+  it('moves the whole set when the root moves', () => {
+    expect(snapshot(varied('one:plank-2'))).not.toEqual(snapshot(varied('two:plank-2')));
+  });
+});
+
+/**
+ * The five dice, read back off the geometry rather than off the module.
+ *
+ * ⚠️ **Recovered, not recomputed.** `varyMember` writes an affine map of the
+ * UVs, and an affine map in two dimensions is fixed by where it sends three
+ * non-collinear points — so the four corners of one face, before and after,
+ * determine it exactly. Decoding it that way is an independent source of truth:
+ * it can disagree with the code, which an assertion that re-ran the same
+ * arithmetic could not.
+ *
+ * `A = R(runout) · diag(scaleU · mirror, scaleV)`, so its second column is
+ * `scaleV · (−sin, cos)` — the turn falls straight out of it with no sign
+ * ambiguity, and the mirror then falls out of the first.
+ */
+function readDice(before: THREE.BoxGeometry, after: THREE.BoxGeometry) {
+  const from = before.attributes['uv'];
+  const to = after.attributes['uv'];
+  if (from === undefined || to === undefined) throw new Error('no uvs');
+
+  // Face +Z, whose four corners span the member's own width and height.
+  const corner = (n: number) => ({
+    p: [from.getX(FACE.pz * 4 + n), from.getY(FACE.pz * 4 + n)] as const,
+    q: [to.getX(FACE.pz * 4 + n), to.getY(FACE.pz * 4 + n)] as const,
+  });
+  const o = corner(0);
+  const a = corner(1);
+  const b = corner(2);
+
+  // Two independent displacements, and the 2x2 they pin down.
+  const d1 = [a.p[0] - o.p[0], a.p[1] - o.p[1]] as const;
+  const d2 = [b.p[0] - o.p[0], b.p[1] - o.p[1]] as const;
+  const e1 = [a.q[0] - o.q[0], a.q[1] - o.q[1]] as const;
+  const e2 = [b.q[0] - o.q[0], b.q[1] - o.q[1]] as const;
+  const det = d1[0] * d2[1] - d1[1] * d2[0];
+  const solve = (y1: number, y2: number) => [
+    (y1 * d2[1] - y2 * d1[1]) / det,
+    (d1[0] * y2 - d2[0] * y1) / det,
+  ];
+  const [a00, a01] = solve(e1[0], e2[0]) as [number, number];
+  const [a10, a11] = solve(e1[1], e2[1]) as [number, number];
+
+  const runout = Math.atan2(-a01, a11);
+  return {
+    runout,
+    mirror: Math.sign(a00 * Math.cos(runout) + a10 * Math.sin(runout)),
+    scaleU: Math.hypot(a00, a10),
+    scaleV: Math.hypot(a01, a11),
+    offset: [o.q[0] - (a00 * o.p[0] + a01 * o.p[1]), o.q[1] - (a10 * o.p[0] + a11 * o.p[1])],
+  };
+}
+
+function diceFor(key: string) {
+  const before = box(PLANK);
+  worldSpaceUvs(before, WOODWORK_SHEET, 'x');
+  return readDice(before, varied(key));
+}
+
+/** The tint every vertex of a member carries. */
+function tintOf(geometry: THREE.BoxGeometry): number[] {
+  const colour = geometry.attributes['color'];
+  if (colour === undefined) throw new Error('no colour attribute');
+  return Array.from(colour.array as ArrayLike<number>);
+}
+
+/** Enough members to see both faces of a coin land. */
+const KEYS = Array.from({ length: 40 }, (_, n) => `spread:plank-${String(n)}`);
+
+describe('the five dice', () => {
+  it('keeps every tint inside ±10%', () => {
+    for (const key of KEYS) {
+      for (const value of tintOf(varied(key))) {
+        expect(value).toBeGreaterThanOrEqual(0.9);
+        expect(value).toBeLessThanOrEqual(1.1);
+      }
+    }
+  });
+
+  it('tints a member evenly, so no board has a gradient across it', () => {
+    const tints = new Set(tintOf(varied('spread:plank-1')));
+    expect(tints.size).toBe(1);
+  });
+
+  it('reaches both sides of the tint', () => {
+    const tints = KEYS.map((key) => tintOf(varied(key))[0] ?? 1);
+    expect(tints.some((value) => value < 1)).toBe(true);
+    expect(tints.some((value) => value > 1)).toBe(true);
+  });
+
+  it('keeps every runout inside about 3.4°', () => {
+    for (const key of KEYS) {
+      // 0.06 rad. A board cut slightly off true; beyond about five degrees it
+      // reads as a texture pasted on crooked, which is what it exists to fix.
+      expect(Math.abs(diceFor(key).runout)).toBeLessThanOrEqual(0.06);
+    }
+  });
+
+  it('saws some boards each way off true', () => {
+    const runouts = KEYS.map((key) => diceFor(key).runout);
+    expect(runouts.some((value) => value < 0)).toBe(true);
+    expect(runouts.some((value) => value > 0)).toBe(true);
+  });
+
+  it('reaches a mirrored board and an unmirrored one', () => {
+    const mirrors = KEYS.map((key) => diceFor(key).mirror);
+    expect(mirrors).toContain(-1);
+    expect(mirrors).toContain(1);
+  });
+
+  it('scales the two axes independently, so no two members repeat in step', () => {
+    for (const key of KEYS) {
+      const { scaleU, scaleV } = diceFor(key);
+      expect(scaleU).toBeGreaterThanOrEqual(0.91);
+      expect(scaleU).toBeLessThanOrEqual(1.09);
+      expect(scaleV).toBeGreaterThanOrEqual(0.91);
+      expect(scaleV).toBeLessThanOrEqual(1.09);
+    }
+    // A shared scale would leave the lattice square and two members still
+    // repeating in step; these are two draws, so they part.
+    const { scaleU, scaleV } = diceFor('spread:plank-1');
+    expect(scaleU).not.toBeCloseTo(scaleV, 6);
+  });
+
+  it('cuts each board from somewhere else in the sheet', () => {
+    const offsets = KEYS.slice(0, 8).map((key) => String(diceFor(key).offset));
+    expect(new Set(offsets).size).toBe(8);
+  });
+});
+
+describe('woodKeys', () => {
+  it('carries the root on the backboard', () => {
+    // ⚠️ Asserted **directly**, and it is the one assertion here that exists
+    // because of a defect that renders correctly. The prototype's backboard key
+    // was the bare word, so a forced seed moved every plank and upright and left
+    // the backboard fixed — and the backboard is 90.38% of the near frame, so a
+    // differ comparing two seeds under-reported by one member and nothing looked
+    // wrong.
+    expect(woodKeys('abc', 4).backboard).toBe('abc:backboard');
+  });
+
+  it('carries the root on every member', () => {
+    for (const key of allKeys(woodKeys('abc', 4))) expect(key.startsWith('abc:')).toBe(true);
+  });
+
+  it('names one plank per shelf plus the lid', () => {
+    // `buildShelf` runs `row <= rowCount`, so the top plank is a lid that never
+    // holds a book. Five planks for four rows.
+    expect(woodKeys('abc', 4).planks).toHaveLength(5);
+  });
+
+  it('gives every member of one case its own key', () => {
+    const keys = allKeys(woodKeys('abc', 4));
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('moves every one of them when the root moves', () => {
+    const before = allKeys(woodKeys('one', 4));
+    const after = allKeys(woodKeys('two', 4));
+    for (const [n, key] of before.entries()) expect(after[n]).not.toBe(key);
+  });
+});
+
+function allKeys(keys: WoodKeys): string[] {
+  return [keys.backboard, keys.uprightLeft, keys.uprightRight, ...keys.planks];
+}
+
+describe('freshWoodSeed', () => {
+  it('draws a different root every time, because a member has no identity', () => {
+    // #287's promise is one page load only, so two loads of the shipped shelf
+    // differ. Not a length assertion: base 36 drops trailing zeros.
+    expect(freshWoodSeed()).not.toBe(freshWoodSeed());
+  });
+
+  it('never draws an empty root', () => {
+    for (let n = 0; n < 200; n += 1) expect(freshWoodSeed()).not.toBe('');
   });
 });
