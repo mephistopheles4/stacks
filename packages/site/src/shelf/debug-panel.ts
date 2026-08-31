@@ -326,6 +326,14 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     show();
     select.addEventListener('change', () => {
       apply(set(settings, select.value as T));
+      // ⚠️ **`apply` does not run `resync`**, deliberately — a control that just
+      // changed does not need resyncing from itself, and `resync` is for a bulk
+      // settings load. But the stray option below is the one part of this
+      // control that is *not* about the value that just changed: without this
+      // call, picking a real species off a typo'd `?tune=` leaves `walnut` in
+      // the list for the life of the page, naming a setting nothing holds any
+      // more. Cosmetic, and still a control saying something untrue.
+      show();
     });
     resync.push(show);
     const line = row(label, klass, select);
