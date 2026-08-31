@@ -237,6 +237,33 @@ export const SAPELE_SHEET = {
 export type WoodSpecies = 'rosewood' | 'sapele' | 'flat';
 
 /**
+ * A species as **requested**, which is not the same type as a species that
+ * resolved — and the distinction is load-bearing rather than pedantic.
+ *
+ * ⚠️ **`ShelfSettings` can genuinely hold a string off this roster.**
+ * `readTune` validates `toneMapping` against `TONE_MAPPING_NAMES` and checks
+ * `exposure` is finite, but passes `materials` through as an opaque record —
+ * `isRecord(tune.materials) ? tune.materials : {}` and nothing more — so
+ * `?tune={"materials":{"woodSpecies":"walnut"}}` arrives with `walnut` in the
+ * settings object. Typing the field as the roster alone would be **the type
+ * asserting something the runtime does not guarantee**, which is a control
+ * lying in the one place nothing can go red.
+ *
+ * The value has to survive that far, too: #300 requires an unrecognised species
+ * be *"refused and reported rather than silently defaulted"*, so it cannot be
+ * dropped at parse — and a refusal can only name what was asked for if what was
+ * asked for is still there to name.
+ *
+ * ⚠️ **The union is kept beside the widening on purpose.** `WoodSpecies | (string & {})`
+ * still offers the three names to anything *writing* the field — the panel's
+ * menu, `DEFAULT_SETTINGS`, a spec — while telling everything *reading* it that
+ * the value is untrusted and belongs in `resolveWoodwork`. Widening it to bare
+ * `string` would lose the roster at every write site, which is where the
+ * autocomplete is worth having.
+ */
+export type RequestedSpecies = WoodSpecies | (string & {});
+
+/**
  * The roster, in menu order, so the panel and the specs walk one list.
  *
  * `flat` last, because it is the control rather than a species: it is what
@@ -435,6 +462,25 @@ export function resolveWoodwork(requested: string): ResolvedWoodwork {
 export function woodworkSheetUrls(requested: string): readonly string[] {
   const { sheet } = resolveWoodwork(requested);
   return sheet === undefined ? [] : [sheet.url];
+}
+
+/**
+ * Whether moving from one requested species to another would actually change
+ * the shelf — **compared after resolution, never as raw strings.**
+ *
+ * ⚠️ **Two different requests can be the same bookcase.** Everything off the
+ * roster resolves to `DEFAULT_SPECIES`, so `walnut` and `rosewood` name one
+ * shelf. Comparing the requests offers a rebuild button for a change a rebuild
+ * cannot make, and lights the panel's lamp amber over a bookcase already
+ * showing what was asked for — **a control lying about being stale**, which is
+ * the same rule as a control lying about being applied.
+ *
+ * Named once because `applySettings` and the debug panel's lamp both ask it,
+ * and two copies of this comparison are two chances to compare the wrong pair —
+ * the shape G10 and G23 both caught.
+ */
+export function speciesPending(built: string, wanted: string): boolean {
+  return resolveWoodwork(built).species !== resolveWoodwork(wanted).species;
 }
 
 /** The two lists `describeWoodwork` fills, in `ApplyReport`'s own vocabulary. */

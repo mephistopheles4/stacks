@@ -11,7 +11,7 @@ import { writeSettings } from './shelf-url.ts';
 // The roster, from the module that owns the sheet table — so the menu cannot
 // offer an entry nothing resolves, and a fourth sheet reaches the panel by being
 // added once rather than twice.
-import { WOOD_SPECIES } from './woodwork.ts';
+import { WOOD_SPECIES, speciesPending, type WoodSpecies } from './woodwork.ts';
 
 /**
  * The tuning panel: every setting the shelf has, live, behind `?debug`.
@@ -131,15 +131,26 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
    *
    * `active` is what separates off from inert. It defaults to "yes, this is
    * doing something", and the controls that can be superseded pass their own.
+   *
+   * ⚠️ **`stale` exists because a raw inequality is not always the right
+   * question.** The default — the set value differs from the mounted one — is
+   * right for every control whose value *is* what takes effect. It is wrong for
+   * one whose value is **resolved** before it does: two different woodwork
+   * sheet requests can name the same sheet, so comparing the requests lights
+   * this lamp amber over a bookcase that is already showing what was asked for.
+   * A control lying about being stale is the same failure as one lying about
+   * being applied. See `speciesPending`.
    */
   const lampFor = <T>(
     klass: Klass,
     get: (s: ShelfSettings) => T,
     active: (s: ShelfSettings) => boolean,
+    stale: (built: ShelfSettings, now: ShelfSettings) => boolean = (built, now) =>
+      get(built) !== get(now),
   ): { slot: HTMLElement } => {
     const lamp = makeLamp();
     const relight = (): void => {
-      const pending = klass !== 'live' && get(settings) !== get(handle.mountedWith);
+      const pending = klass !== 'live' && stale(handle.mountedWith, settings);
       lamp.set(pending ? 'pending' : active(settings) ? 'on' : 'off', klass);
     };
     lamps.push(relight);
@@ -279,6 +290,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     get: (s: ShelfSettings) => T,
     set: (s: ShelfSettings, value: T) => ShelfSettings,
     active?: (s: ShelfSettings) => boolean,
+    stale?: (built: ShelfSettings, now: ShelfSettings) => boolean,
   ): void => {
     const select = document.createElement('select');
     applyInputStyle(select);
@@ -337,7 +349,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     });
     resync.push(show);
     const line = row(label, klass, select);
-    line.prepend(lampFor(klass, get, active ?? (() => true)).slot);
+    line.prepend(lampFor(klass, get, active ?? (() => true), stale).slot);
     body.append(line);
   };
 
@@ -742,8 +754,13 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     'woodwork sheet',
     'rebuild',
     WOOD_SPECIES,
-    (s) => s.materials.woodSpecies,
+    (s) => s.materials.woodSpecies as WoodSpecies,
     (s, v) => resolveSettings({ materials: { woodSpecies: v } }, s),
+    undefined,
+    // ⚠️ **Resolved, not raw.** `walnut` and `rosewood` are one bookcase, so
+    // comparing the requests would light this amber over a shelf that already
+    // shows what was asked for.
+    (built, now) => speciesPending(built.materials.woodSpecies, now.materials.woodSpecies),
   );
   colour(
     'wood',

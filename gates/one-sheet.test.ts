@@ -115,15 +115,37 @@ describe('G53 — a default page resolves to exactly one woodwork sheet', () => 
     ).toEqual([]);
   });
 
-  it('never resolves more than one for a name that is not on the roster either', () => {
-    // The fallback must not fetch two — its own and the one it fell back to.
-    // `?tune=` carries arbitrary JSON, so this is a real arrival and not a
-    // hypothetical.
-    const greedy = OFF_ROSTER.filter((name) => woodworkSheetUrls(name).length > 1);
+  it('resolves every off-roster name to the default sheet, and says so', () => {
+    // ⚠️ **Cardinality alone is not the assertion, and asserting only that was
+    // this clause's own defect.** A resolver that accepted `__proto__` and
+    // handed back *one* unintended sheet satisfies "no more than one"
+    // perfectly — the count is right and the sheet is wrong. So each off-roster
+    // name is held to all three: the species it fell back to, the sheet that
+    // implies, and a refusal that is actually present.
+    //
+    // The refusal is the half that cannot be inferred from the other two. A
+    // silent fallback resolves to exactly this species and exactly this sheet,
+    // and is the failure `ApplyReport` exists to prevent.
+    const wrong = OFF_ROSTER.map((name) => ({ name, got: resolveWoodwork(name) })).filter(
+      ({ got }) =>
+        got.species !== DEFAULT_SPECIES ||
+        got.sheet !== WOODWORK_SHEET ||
+        got.refused === undefined,
+    );
 
     expect(
+      wrong.map(({ name, got }) => `${name} → ${got.species}, refused=${String(got.refused)}`),
+      'off-roster names that did not fall back to the default *and say so*. `?tune=` carries ' +
+        'arbitrary JSON so these are real arrivals, and `__proto__` and `toString` are here ' +
+        'because an `in` check would have accepted them as species and resolved to something',
+    ).toEqual([]);
+
+    // And the cardinality, still — a fallback must not fetch two, its own and
+    // the one it fell back to.
+    const greedy = OFF_ROSTER.filter((name) => woodworkSheetUrls(name).length !== 1);
+    expect(
       greedy,
-      `off-roster names that resolve to more than one sheet: ${greedy.join(', ')}`,
+      `off-roster names not resolving to exactly one sheet: ${greedy.join(', ')}`,
     ).toEqual([]);
   });
 

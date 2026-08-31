@@ -38,6 +38,7 @@ import {
   fibreMapFor,
   freshWoodSeed,
   resolveWoodwork,
+  speciesPending,
   varyMember,
   woodColour,
   woodKeys,
@@ -2268,12 +2269,17 @@ function applyLive(
    * `buildShelf`, where the material is made, so an entry nobody selects is
    * never requested and a roster of any size costs a default page one sheet.
    */
-  standing(
-    needsRebuild,
-    'woodwork sheet',
-    mountedWith.materials.woodSpecies,
-    next.materials.woodSpecies,
-  );
+  //
+  // ⚠️ **Compared after resolution, never as raw strings.** Everything
+  // off-roster resolves to the default, so `walnut` and `rosewood` are one
+  // bookcase — and comparing the requests would offer a rebuild for a change a
+  // rebuild cannot make. See `speciesPending`.
+  if (speciesPending(mountedWith.materials.woodSpecies, next.materials.woodSpecies)) {
+    needsRebuild.push(
+      `woodwork sheet: ${resolveWoodwork(mountedWith.materials.woodSpecies).species} → ` +
+        `${resolveWoodwork(next.materials.woodSpecies).species}`,
+    );
+  }
 
   /**
    * What the shelf is actually running, said out loud on every apply.

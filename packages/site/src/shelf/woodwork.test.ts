@@ -23,6 +23,7 @@ import {
   freshWoodSeed,
   layFibre,
   resolveWoodwork,
+  speciesPending,
   varyMember,
   woodColour,
   woodKeys,
@@ -1449,5 +1450,34 @@ describe('the read-back — the resolved configuration is the reported one', () 
     // counted rather than searched for: a knob dropped from this list is a knob
     // nothing states, which is the condition all three defects rendered under.
     expect(plain().resolved).toHaveLength(2);
+  });
+});
+
+describe('a species change is pending only when the sheet would actually move', () => {
+  it('is not pending when two different requests resolve to the same sheet', () => {
+    // ⚠️ **The defect this exists for.** `resolveWoodwork` maps anything
+    // off-roster to the default, so `walnut` and `rosewood` are *the same
+    // shelf* — but the raw strings differ. Comparing the requests offers a
+    // rebuild button for a change a rebuild cannot make, and lights the panel's
+    // lamp amber over a bookcase that is already showing what was asked for.
+    // A control must not lie, and that includes lying about being stale.
+    expect(speciesPending('walnut', DEFAULT_SPECIES)).toBe(false);
+    expect(speciesPending(DEFAULT_SPECIES, 'walnut')).toBe(false);
+    expect(speciesPending('walnut', 'koa')).toBe(false);
+  });
+
+  it('is pending when the resolved sheet really does change', () => {
+    // The positive control. Every clause above is satisfied by a function that
+    // always returns `false`, which would be a menu that never offers a rebuild
+    // — the same defect wearing the opposite sign.
+    expect(speciesPending('rosewood', 'sapele')).toBe(true);
+    expect(speciesPending('rosewood', 'flat')).toBe(true);
+    expect(speciesPending('sapele', 'flat')).toBe(true);
+    // And an off-roster request against a genuinely different sheet still moves.
+    expect(speciesPending('walnut', 'sapele')).toBe(true);
+  });
+
+  it('is never pending against itself, for any entry on the roster', () => {
+    for (const name of WOOD_SPECIES) expect(speciesPending(name, name), name).toBe(false);
   });
 });

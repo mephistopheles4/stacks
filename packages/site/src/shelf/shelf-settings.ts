@@ -47,7 +47,7 @@ import type { Binding } from '@stacks/core';
 // literals and erases entirely, so the roster is defined once beside the table
 // it keys rather than copied here and held by an assertion — there is no value
 // to drift.
-import type { WoodSpecies } from './woodwork.ts';
+import type { RequestedSpecies } from './woodwork.ts';
 
 /**
  * A light's height, which depends on how tall the case grew.
@@ -239,7 +239,15 @@ export interface MaterialSettings {
    * value that was applied, and the standing rule is that a control must not
    * lie.
    */
-  readonly woodSpecies: WoodSpecies;
+  /**
+   * ⚠️ **`RequestedSpecies` and not `WoodSpecies`, because this is what was
+   * *asked for* rather than what is in force.** `readTune` passes `materials`
+   * through as an opaque record, so a `?tune=` can genuinely put `walnut` here
+   * — and it must be able to, since an unrecognised species is refused *and
+   * reported*, and a refusal can only name what was asked for if the value
+   * survived. `resolveWoodwork` is the one place it becomes a `WoodSpecies`.
+   */
+  readonly woodSpecies: RequestedSpecies;
   /**
    * The planks and uprights' colour **before the veneer decodes, and if it never
    * does** — not the colour they render.
