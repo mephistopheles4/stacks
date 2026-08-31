@@ -13,6 +13,24 @@ import { hashUnit } from './hash.ts';
  * [#280](https://github.com/mephistopheles4/stacks/issues/280) and locked in
  * [`docs/spec/the-woodwork-reads-as-wood.md`](../../../../docs/spec/the-woodwork-reads-as-wood.md).
  *
+ * ## The two decisions behind this file
+ *
+ * - [ADR-0080](../../../../docs/adr/0080-the-woodwork-is-rosewood-and-its-relief-is-drawn.md)
+ *   — **what the woodwork is.** Why rosewood when the request was koa and the
+ *   choice was sapele, that species and resolution are one choice, that a
+ *   photographed veneer's normal map is a measured zero while a drawn fibre is
+ *   not, and that anisotropic specular is struck on the physics.
+ * - [ADR-0081](../../../../docs/adr/0081-the-woodwork-sheet-is-a-menu-and-the-shelf-says-what-it-resolved.md)
+ *   — **whether that choice stays revisitable**, which 0080 deliberately does
+ *   not decide. The roster, the laziness, the rebuild class and the read-back.
+ *
+ * ⚠️ **The rule the two share, because it is the one most easily lost:** a
+ * control may be exposed when its meaning is independent of the controls beside
+ * it, and not otherwise. That is why the species is a knob and the resolution
+ * never can be — `resolution / unitsPerTile` means something different under
+ * each entry of the menu beside it, where a species carries its own resolution
+ * with it.
+ *
  * ## Why this module exists rather than living in `scene.ts`
  *
  * `buildShelf` needs a WebGL context and is not a test seam — `scene.ts` sits
