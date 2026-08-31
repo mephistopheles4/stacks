@@ -102,3 +102,4 @@ Two other files hold what these deliberately do not:
 | [0077](./0077-astro-check-is-the-checker-for-astro-files.md) | `astro check` is the checker for `.astro`, and it runs inside `pnpm build` |
 | [0078](./0078-a-tool-rewrites-prose-before-it-reaches-github.md) | A tool rewrites prose before it reaches GitHub, because the two conventions are opposite |
 | [0079](./0079-the-floors-stamp-is-compared-at-merge.md) | The floors stamp is compared at merge, and the hash stays one hash over the whole configuration |
+| [0080](./0080-the-woodwork-is-rosewood-and-its-relief-is-drawn.md) | The woodwork is rosewood, its relief is drawn rather than photographed, and species and resolution are one choice |
