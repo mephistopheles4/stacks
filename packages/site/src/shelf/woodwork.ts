@@ -306,7 +306,7 @@ export function woodColour(fallback: number, bound: boolean): number {
 }
 
 /**
- * How `bindWoodSheet` fetches — a seam, so a spec can assert the resolved URL
+ * How `bindSheet` fetches — a seam, so a spec can assert the resolved URL
  * without a request.
  *
  * ⚠️ **G21 (`no-live-network`) records any request the suite makes and fails the
@@ -754,20 +754,20 @@ export function woodFibreMap(): THREE.CanvasTexture | undefined {
  *
  * Cached like the bake it clones, for the bake's reason: one page, one of these.
  */
-let backingFibre: THREE.CanvasTexture | undefined;
-let backingFibreBuilt = false;
+let laidBackingFibre: THREE.CanvasTexture | undefined;
+let laidBackingFibreBuilt = false;
 
 export function backingFibreMap(): THREE.CanvasTexture | undefined {
-  if (!backingFibreBuilt) {
-    backingFibreBuilt = true;
+  if (!laidBackingFibreBuilt) {
+    laidBackingFibreBuilt = true;
     const base = woodFibreMap();
     if (base !== undefined) {
       const own = base.clone();
       own.needsUpdate = true;
-      backingFibre = layFibre(own, BACKBOARD_SHEET);
+      laidBackingFibre = layFibre(own, BACKBOARD_SHEET);
     }
   }
-  return backingFibre;
+  return laidBackingFibre;
 }
 
 function bakeFibre(): THREE.CanvasTexture | undefined {
@@ -816,7 +816,7 @@ function bakeFibre(): THREE.CanvasTexture | undefined {
  * *asked* for would be `applySettings` claiming a change the eye cannot find —
  * the map's standing rule that **a control must not lie**.
  *
- * The map is a parameter with a real default for `bindWoodSheet`'s reason: G21
+ * The map is a parameter with a real default for `bindSheet`'s reason: G21
  * (`no-live-network`) and a Vitest project with no DOM, so a spec drives this
  * with a texture it made itself.
  *

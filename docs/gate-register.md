@@ -5607,9 +5607,15 @@ records reaching the live site and killing a phone.
   failure this file catalogues as a malformed identifier reading like no
   findings. So the sweep is floored through `expectFound`; **a file `sharp`
   cannot open is a red naming it**, never a skip, because a cap on a decoded
-  image does not apply to a file that will not decode; and the module's own URL
-  must be served by something the sweep found, which fails both on a renamed
-  directory and on a module pointed at a file nobody committed.
+  image does not apply to a file that will not decode; and **every URL the module
+  resolves** must be served by something the sweep found, which fails both on a
+  renamed directory and on a module pointed at a file nobody committed. ⚠️ **The
+  plural is load-bearing, and it was singular until [#304](https://github.com/mephistopheles4/stacks/issues/304)**:
+  a default page fetches two sheets now that the backboard's is a constant, and
+  a clause naming one of them leaves the other with nothing pointing at it —
+  the same vacuous green one level down. A second clause pins the count at two,
+  so [#306](https://github.com/mephistopheles4/stacks/issues/306)'s species
+  menu cannot become a cost every visitor pays without going red here first.
 - **Decay** — **it decays into a red on the two changes that matter and into
   silence on one.** A sheet added, replaced or re-encoded is measured on the
   next run, because the sweep reads the directory rather than a list; a sheet
@@ -5618,6 +5624,9 @@ records reaching the live site and killing a phone.
   [#304](https://github.com/mephistopheles4/stacks/issues/304) and
   [#306](https://github.com/mephistopheles4/stacks/issues/306) will bring, and
   if either arrives at a size nobody re-measured, the number in the docblock
-  stops describing the number in the code. The docblock is the only thing
+  stops describing the number in the code. ⚠️ **The first of those has landed
+  and neither cap moved** — `dark_wood` at 512 is 53.2 KB committed, against a
+  320 KB cap and a 1024 edge — which is the shape this derivation was for, and
+  it says nothing about the second. The docblock is the only thing
   holding those together, and nothing can go red on prose — recorded rather
   than solved.

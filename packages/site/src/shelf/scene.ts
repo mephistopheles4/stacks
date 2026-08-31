@@ -1580,7 +1580,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
   const castShadows = settings.shadows.casters;
 
   // `materials.wood` is what the woodwork shows *before* the sheet decodes, and
-  // if it never does — a diffuse map multiplies `color`, so `bindWoodSheet`
+  // if it never does — a diffuse map multiplies `color`, so `bindSheet`
   // switches this to white inside the load callback. See `woodColour`.
   const wood = new THREE.MeshStandardMaterial({
     color: settings.materials.wood,
@@ -2049,7 +2049,7 @@ function applyLive(
     /**
      * Routed through `woodColour`, and that is not decoration.
      *
-     * A diffuse map **multiplies** `color`, so `bindWoodSheet` sets the material
+     * A diffuse map **multiplies** `color`, so `bindSheet` sets the material
      * white once the sheet decodes. Repainting it here with the knob's own value
      * — one tick of the debug panel, one `?tune=` — would put a dark colour back
      * under a live sheet and darken the whole bookcase at a third of the
