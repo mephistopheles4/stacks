@@ -22,7 +22,9 @@ why:
 - **`roughnessMap`**, on availability.
 
 And one thing is recorded as a **coupling** rather than a value: the map's
-resolution is not a choice independent of the species, so neither is a knob.
+resolution is not a choice independent of the species, **so the resolution
+cannot be a knob**. ⚠️ The *species* is a different question and this record does
+not answer it — see below.
 
 ## Context
 
@@ -93,11 +95,11 @@ sweep for *figured* wood of any species returns exactly one.
 **The species choice moved the headline number further than the channel choice
 did**, which is not what the roster expected.
 
-⚠️ **The twin is the reason this was catchable at all**, and it is why the
-`flat` entry survives into the shipped species roster rather than being an
-instrument that was thrown away. A sheet that moves the average colour and calls
-it grain is indistinguishable from a sheet that moves the grain, on every number
-except that one.
+⚠️ **The twin is the reason this was catchable at all**, which is the argument
+for keeping it reachable rather than throwing it away with the harness. A sheet
+that moves the average colour and calls it grain is indistinguishable from a
+sheet that moves the grain, on every number except that one — so whatever ships
+a species choice should ship its flat twin beside it.
 
 ## Species and resolution are one choice, not two
 
@@ -119,9 +121,11 @@ the figure never recurs on this case at all — **and it is exactly what costs t
 texels. A bigger sheet at a fixed file size is a coarser sheet, and the two
 cannot both come out of one file.**
 
-So a resolution knob would let a visitor make a choice whose meaning changes
-under the species menu beside it. There is no such knob, and the resolutions are
-constants on the sheet table: 1024 for the woodwork, 512 for the backboard.
+So a resolution knob would let a visitor make a choice whose meaning changed
+under whatever species control sat beside it — and would be meaningless without
+one, since a resolution alone says nothing about texel density. There is no such
+knob, and the resolutions are constants on the sheet table: 1024 for the
+woodwork, 512 for the backboard.
 
 ⚠️ **512 came from a precedent that does not transfer.** `MAX_COVER_EDGE` holds
 a cover to 512 because a cover is a few hundred pixels tall on a shelf. **A
@@ -224,6 +228,23 @@ statistic differences two frames from the same camera. **A real win and a no-op
 produce identical output.** Anything future that depends on view-dependence
 needs an instrument that does not exist yet.
 
+## What this record does not decide
+
+⚠️ **Whether the species is a knob is [#306](https://github.com/mephistopheles4/stacks/issues/306)'s
+decision, not this one**, and the distinction is easy to lose because the
+coupling above rules the *resolution* out. It does not rule the species out. The
+two are asymmetric for a reason worth stating: a resolution control would mean
+something different under each species beside it, where a species control means
+one thing and simply carries its own resolution with it.
+
+So this record fixes **what the woodwork is** — rosewood at 1024, `dark_wood` at
+512, the drawn fibre — and is silent on **whether that choice stays revisitable
+from a menu**, what belongs in such a menu, how it is fetched, and what it
+reports. That ticket owns those, and owes whatever record they need.
+
+⚠️ **This is written to be true whichever of the two lands first.** Nothing above
+asserts that a species menu exists, and nothing above forbids one.
+
 ## What the case growing has not been measured against
 
 Every render on map #280 was of a **four-row** case, and the case grows with the
@@ -284,8 +305,8 @@ shows more of one tile, and one tile is already wider than the whole bookcase.
   does well.
 - **`woodTile`, laying a sheet smaller than life.** This map's own proposal,
   struck by eye twice with the arithmetic recorded above.
-- **A resolution knob.** Struck by the coupling; its meaning would change under
-  the species menu beside it.
+- **A resolution knob.** Struck by the coupling; what it meant would depend on
+  whichever species control sat beside it.
 - **The fibre's period as a knob.** 0.3 is recorded on #284 as *"a lead rather
   than a recommendation"* and was never rendered after the noise fix. **A number
   nobody has looked at does not become a control.**

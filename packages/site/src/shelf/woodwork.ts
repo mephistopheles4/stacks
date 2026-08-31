@@ -926,10 +926,10 @@ const RUNOUT_SPREAD = 0.06;
  * [#287](https://github.com/mephistopheles4/stacks/issues/287)'s decision rather
  * than this file's.** The root is drawn fresh on every page load and the promise
  * is one page load only. The bottom-up ordinal and the distance-off-the-floor
- * seed were both declined, and a book-derived seed dies on arithmetic: the plank
- * loop runs `row <= rowCount`, so the top plank is a **lid** that never holds a
- * book, `rowsForCase` keeps one empty row ahead, and an empty vault gives three
- * planks and no books at all.
+ * seed were both declined, and a book-derived seed dies on arithmetic: `woodKeys`
+ * names one plank per shelf **plus a lid**, and the lid never holds a book;
+ * `rowsForCase` keeps one empty row ahead; and an empty vault gives three planks
+ * and no books at all.
  */
 export function varyMember(geometry: THREE.BoxGeometry, key: string): void {
   const uv = geometry.attributes['uv'];
@@ -980,9 +980,27 @@ export function varyMember(geometry: THREE.BoxGeometry, key: string): void {
  * [#287](https://github.com/mephistopheles4/stacks/issues/287) asked for a case
  * that is different every time you open it. Rendered to base 36 so it reads as a
  * token in a URL somebody may want to paste back.
+ *
+ * ⚠️ **The draw is scaled to an integer and padded, rather than sliced out of
+ * the fraction's own digits.** `Math.random().toString(36).slice(2, 10)` is the
+ * obvious spelling and it does not hold this function's one promise: the
+ * fraction's base-36 expansion is as long as it happens to be, so `0.5` yields
+ * the single character `i`, and `0` — which is in `Math.random`'s range —
+ * yields the **empty string**. An empty root gives keys like `:backboard`,
+ * which still render, so nothing would look wrong; and at probability 2^-53 no
+ * loop of samples ever finds it, so a spec asserting non-emptiness by sampling
+ * passes by luck rather than by construction. Scaling to a whole number in a
+ * fixed range and padding to a fixed width makes the promise structural.
  */
+export const SEED_LENGTH = 8;
+
+/** `36 ** SEED_LENGTH`, the count of tokens this draws from. */
+const SEED_SPACE = 36 ** SEED_LENGTH;
+
 export function freshWoodSeed(): string {
-  return Math.random().toString(36).slice(2, 10);
+  return Math.floor(Math.random() * SEED_SPACE)
+    .toString(36)
+    .padStart(SEED_LENGTH, '0');
 }
 
 /** Every member of the case, by the key its dice are drawn off. */
@@ -990,7 +1008,11 @@ export interface WoodKeys {
   readonly backboard: string;
   readonly uprightLeft: string;
   readonly uprightRight: string;
-  /** One per shelf, **plus the lid** — `buildShelf` runs `row <= rowCount`. */
+  /**
+   * One per shelf, **plus the lid** — `rowCount + 1` of them, and `buildShelf`
+   * iterates this array rather than counting to `rowCount` itself. The count is
+   * stated here and nowhere else.
+   */
   readonly planks: readonly string[];
 }
 

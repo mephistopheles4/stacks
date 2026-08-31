@@ -12,6 +12,7 @@ import {
   fibreHeightField,
   fibreNormals,
   fibreTiles,
+  SEED_LENGTH,
   fibreTurn,
   freshWoodSeed,
   layFibre,
@@ -1095,8 +1096,9 @@ describe('woodKeys', () => {
   });
 
   it('names one plank per shelf plus the lid', () => {
-    // `buildShelf` runs `row <= rowCount`, so the top plank is a lid that never
-    // holds a book. Five planks for four rows.
+    // One per shelf plus a lid, and the lid never holds a book — which is why a
+    // book-derived seed could not have worked. Five planks for four rows, and
+    // `buildShelf` iterates these rather than counting to `rowCount` itself.
     expect(woodKeys('abc', 4).planks).toHaveLength(5);
   });
 
@@ -1123,7 +1125,30 @@ describe('freshWoodSeed', () => {
     expect(freshWoodSeed()).not.toBe(freshWoodSeed());
   });
 
-  it('never draws an empty root', () => {
-    for (let n = 0; n < 200; n += 1) expect(freshWoodSeed()).not.toBe('');
+  it('never draws an empty root, at the two draws that would produce one', () => {
+    // ⚠️ **Driven rather than sampled, because sampling here passes by luck.**
+    // `Math.random()` is `[0, 1)`, and `(0).toString(36).slice(2, 10)` is the
+    // empty string — a root of `''` gives keys like `:backboard`, which still
+    // render but make two such loads agree. At probability 2^-53 a loop of any
+    // length never sees it, so the loop this replaces asserted something the
+    // code did not guarantee and went green on both.
+    //
+    // `0.5` is the second case and the commoner one: `(0.5).toString(36)` is
+    // `0.i`, so the same slice gave a **one-character** root. Not a bug on its
+    // own, and a tell that the token's width was never anybody's decision.
+    for (const draw of [0, 0.5, 0.25, 1 - Number.EPSILON]) {
+      const random = vi.spyOn(Math, 'random').mockReturnValue(draw);
+      try {
+        expect(freshWoodSeed()).not.toBe('');
+        expect(freshWoodSeed().length).toBe(SEED_LENGTH);
+      } finally {
+        random.mockRestore();
+      }
+    }
+  });
+
+  it('draws a root of one width, whatever the draw', () => {
+    const widths = new Set(Array.from({ length: 400 }, () => freshWoodSeed().length));
+    expect([...widths]).toEqual([SEED_LENGTH]);
   });
 });

@@ -220,6 +220,18 @@ describe('woodSeed', () => {
     expect(woodSeed(new URLSearchParams('woodSeed=one&woodSeed=two'))).toBe('two');
   });
 
+  it('draws fresh when the last of a repeat is empty, rather than reaching back', () => {
+    // ⚠️ **The two rules compose in this order on purpose.** The tail is what a
+    // shot intends, so a tail whose seed dropped out is a shot that meant to
+    // force something and lost it. Reaching back for `fixed` would make it
+    // silently agree with the shot before it — a false zero, which is exactly
+    // what this parameter exists to instrument and is the one failure it cannot
+    // detect in itself. Absent is visible; a wrong agreement is not.
+    expect(woodSeed(new URLSearchParams('woodSeed=fixed&woodSeed='))).toBeUndefined();
+    // The other order still resolves, because there the tail carries a seed.
+    expect(woodSeed(new URLSearchParams('woodSeed=&woodSeed=fixed'))).toBe('fixed');
+  });
+
   it('is not a setting, so it can never reach ?tune=', () => {
     // The instrument/setting line: a `?tune=` link that froze the dice would be
     // a control that lies about a shelf which is supposed to be alive.

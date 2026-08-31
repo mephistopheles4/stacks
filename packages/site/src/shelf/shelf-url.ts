@@ -123,6 +123,16 @@ export function soloBook(params: URLSearchParams): number | undefined {
  * An **empty** `?woodSeed=` falls through to a fresh draw rather than seeding on
  * the empty string: a shot whose seed dropped out of the query must not silently
  * agree with another shot whose seed also dropped out.
+ *
+ * ⚠️ **Empty-means-absent applies *after* last-wins, and the order is the whole
+ * behaviour on `?woodSeed=fixed&woodSeed=`.** That reads as absent and draws
+ * fresh; it does not fall back to `fixed`. Deliberate, and the safer of the two:
+ * the tail is what a shot intends, so a tail whose seed dropped out is a shot
+ * that meant to force something and lost it. Reaching back for the base's seed
+ * would make that shot **silently agree** with the base's — a false zero, which
+ * is the failure this parameter exists to instrument and cannot itself detect.
+ * Drawing fresh produces a visible disagreement instead, and a disagreement is
+ * something somebody investigates.
  */
 export function woodSeed(params: URLSearchParams): string | undefined {
   const raw = params.getAll('woodSeed').at(-1);
