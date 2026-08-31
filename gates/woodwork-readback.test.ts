@@ -92,9 +92,29 @@ describe('G54 — the report names the whole resolved configuration, every time'
   });
 
   it('names the species it resolved, for every entry on the roster', () => {
-    const silent = WOOD_SPECIES.filter((name) => !stated(name).includes(name));
+    // ⚠️ **Anchored to the position the code writes it in, never searched for
+    // anywhere in the line** — and that distinction is the whole clause. A bare
+    // `includes(name)` passes for a reason that is not the guarantee: `rosewood`
+    // and `sapele` both appear inside their own sheet **URL**, and `flat` appears
+    // inside `flat`'s own description, *the mean-matched flat twin*. Measured
+    // rather than reasoned: with `${wanted.species}` deleted from the line
+    // entirely, all twelve clauses in this file stayed green.
+    //
+    // That is #312's `freshWoodSeed` defect in another shape — a spec asserting
+    // a property the code does not guarantee and passing on something else — and
+    // it is the same family as the three read-back defects this row exists for.
+    // Anchoring is what makes the assertion about the species rather than about
+    // the string happening to contain those letters somewhere.
+    const silent = WOOD_SPECIES.filter(
+      (name) => !stated(name).startsWith(`woodwork sheet: ${name} (`),
+    );
 
-    expect(silent, `species the read-back does not name: ${silent.join(', ')}`).toEqual([]);
+    expect(
+      silent,
+      'species the read-back does not name in its own slot. The name must lead the line, ' +
+        'because every sheet URL already contains its own species name and `flat`’s ' +
+        `description contains the word flat: ${silent.join(', ')}`,
+    ).toEqual([]);
   });
 
   it('names the sheet it resolved, or says plainly that it bound none', () => {
@@ -151,8 +171,11 @@ describe('G54 — the report names the whole resolved configuration, every time'
       ' | ',
     );
 
-    expect(line).toContain('sapele');
-    expect(line).toContain('rosewood');
+    // Both anchored, for the clause above's reason: a bare `toContain('sapele')`
+    // is satisfied by the sheet URL and would hold with the wanted species
+    // dropped, and `rosewood` has to be the *built* one rather than any mention.
+    expect(line).toContain('woodwork sheet: sapele (');
+    expect(line).toContain('built with rosewood');
     expect(line).toContain('rebuild');
   });
 });
