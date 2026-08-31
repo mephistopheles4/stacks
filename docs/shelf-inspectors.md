@@ -66,8 +66,17 @@ That is exactly what defeats a differ. [#282](https://github.com/mephistopheles4
 harness compares two renders of one scene, so with a per-load draw the two frames
 differ by the dice as well as by the treatment and a count of just-noticeable
 pixels stops meaning anything. Forced, the dice are equal and the difference is
-the arm. Two shots at one seed are **byte identical**; two seeds measured
-**1.986% of frame, worst Δ 95**.
+the arm.
+
+⚠️ **Byte identical is a property of the renderer as well as of the seed.**
+Two shots at one seed are byte identical under **SwiftShader**, which is what
+`pnpm smoke:render` selects when `CI=true` — 0 of 3,888,000 samples, worst Δ 0.
+On the same machine's **GPU** path the identical pair differs on **6 samples of
+207,000 at worst Δ 1**, and tripling the settle does not shrink it. That residual
+is rasterisation, not the dice: it is measured with the dice held fixed, and
+against it two seeds move 507,396 samples at worst Δ 99. A harness asserting
+byte identity has to say which renderer it means, or it will read a GPU's noise
+floor as a seed that did not hold.
 
 ⚠️ **No default, and never in `?tune=`.** A default would quietly make every
 render reproducible while the shipped shelf was not, so the refusal lives in the

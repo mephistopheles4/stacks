@@ -1702,7 +1702,12 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
     group.add(upright);
   }
 
-  for (let row = 0; row <= rowCount; row += 1) {
+  // Over the keys rather than `row <= rowCount`, which is the same count said
+  // once instead of twice — `woodKeys` already names one plank per shelf plus
+  // the lid. Indexing a key out of the set here would need a fallback, and a
+  // fallback would be this call site hand-rolling the very template `woodKeys`
+  // exists to keep in one place.
+  for (const [row, key] of keys.planks.entries()) {
     const plank = new THREE.Mesh(
       veneered(
         new THREE.BoxGeometry(
@@ -1712,7 +1717,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
         ),
         WOODWORK_SHEET,
         'x',
-        keys.planks[row] ?? `${woodRoot()}:plank-${String(row)}`,
+        key,
       ),
       wood,
     );

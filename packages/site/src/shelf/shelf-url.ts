@@ -98,13 +98,20 @@ export function soloBook(params: URLSearchParams): number | undefined {
  * than in a page-level default that would quietly reverse #287's promise and
  * make every render reproducible while the shipped shelf was not.
  *
- * ⚠️ **The guard is `raw === null`, and that shape is not incidental.**
- * `Number(null)` is `0` rather than `NaN`, so a guard written as
+ * ⚠️ **The guard tests for the absent value itself, and that shape is not
+ * incidental.** `Number(null)` is `0` rather than `NaN`, so a guard written as
  * `Number.isFinite(value) && value >= 0` *passes* on a missing key — which is
  * how [#298](https://github.com/mephistopheles4/stacks/issues/298)'s
  * `?woodVary=` resolved an absent parameter to `0` against its own documented
  * default of `1`, disarming the variation in every render that branch took.
  * A seed is a token and never meets `Number` at all.
+ *
+ * ⚠️ **The absent value here is `undefined`, not the `null` its neighbours
+ * see.** `getAll(...).at(-1)` answers `undefined` on a missing key where `get`
+ * answers `null`, so `bookLimit`'s `raw === null` would never fire in this
+ * function and would read as a guard while guarding nothing. Two spellings of
+ * absence in one file is a small thing to get wrong and a silent one — which is
+ * the whole failure mode this parameter exists to instrument.
  *
  * ⚠️ **The last occurrence wins, unlike `?books=` and `?solo=` above.** The
  * harness builds every URL as a fixed base plus a per-shot tail, so a repeated

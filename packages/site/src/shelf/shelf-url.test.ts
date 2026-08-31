@@ -176,9 +176,10 @@ describe('?tune', () => {
 
 describe('woodSeed', () => {
   it('is absent when nothing asked', () => {
-    // ⚠️ **No default, and the guard is `raw === null` rather than a number
-    // check.** `params.get` answers `null` for a missing key and `Number(null)`
-    // is `0` — not `NaN` — so a guard shaped `Number.isFinite(raw) && raw >= 0`
+    // ⚠️ **No default, and the guard tests for the absent value rather than
+    // running a number check.** A missing key reads back as `undefined` here
+    // (`getAll(...).at(-1)`) and as `null` through `get` — and `Number(null)` is
+    // `0`, not `NaN`, so a guard shaped `Number.isFinite(raw) && raw >= 0`
     // *passes* on an absent parameter. That is exactly what #298's `?woodVary=`
     // did: it resolved a missing key to `0`, against its own documented default
     // of `1`, and silently disarmed the variation in every render that branch
@@ -186,6 +187,18 @@ describe('woodSeed', () => {
     // numeric readers in this file (`positive`, `wholePositive`) are safe only
     // because `0 > 0` is false — which is luck, so it is asserted below.
     expect(woodSeed(new URLSearchParams(''))).toBeUndefined();
+  });
+
+  it('reads absence as undefined, which is not the null its neighbours see', () => {
+    // The two spellings, side by side. `getAll(...).at(-1)` answers `undefined`
+    // on a missing key and `get` answers `null`, so a guard copied from
+    // `bookLimit` would never fire here — it would read as a guard while
+    // guarding nothing. Pinned because a doc comment claiming the wrong one of
+    // these is exactly the drift this parameter exists to instrument.
+    const empty = new URLSearchParams('');
+    expect(empty.getAll('woodSeed').at(-1)).toBeUndefined();
+    expect(empty.get('woodSeed')).toBeNull();
+    expect(woodSeed(empty)).toBeUndefined();
   });
 
   it('pins the root the harness passes', () => {
