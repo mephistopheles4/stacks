@@ -80,9 +80,52 @@ verifyDepsBeforeRun: warn
 # `typed-rest-client>qs`. There is exactly one today, and the bare form keeps a
 # second arrival from landing on the vulnerable line unnoticed — the failure the
 # nanoid entry describes, where a pin was correct and the tree moved anyway.
+
+# GHSA-jqff-g426-hqxp, GHSA-f65p-4m7j-42xc, GHSA-fph4-wmhf-6fwf and
+# GHSA-5jgf-p345-68v8, all high: `fast-uri` below 3.1.6 normalises malformed
+# IPv6 literals, percent-decodes a hostname repeatedly, and normalises a
+# percent-encoded scheme — three ways for a parsed URI to name a host the caller
+# did not mean, which is server-side request forgery in anything that fetches
+# what it parsed. Four advisories, one package, one fix.
+#
+# It arrives five ways and is **always under `ajv`**: `@stryker-mutator/core`,
+# `@stryker-mutator/vitest-runner` through it, and `@astrojs/check` >
+# `@astrojs/language-server` > `volar-service-yaml` > `yaml-language-server`.
+# Nothing here depends on it directly, and no first-party code calls it — it is
+# the JSON-schema validator inside the mutation runner and the Astro type
+# checker. That bounds the blast radius; it does not answer the gate, which reads
+# the tree rather than the call graph.
+#
+# ⚠️ **`ajv` asks for `^3.0.1` and its newest release still does** — 8.20.0, the
+# latest on the 8 line, carries the same floor as the 8.18.0 the tree resolves.
+# So nothing in the dependency graph states that 3.1.6 is required, and a fresh
+# resolution is free to land anywhere in the vulnerable range. This override is
+# the floor, and it is the only one there is. Remove it when `ajv` raises its own
+# to `^3.1.6` and the lockfile carries a fixed line unaided.
+#
+# `^3.1.6` rather than `3.1.6`, for the reason the nanoid block above it learned
+# the hard way: an advisory's range is not a stable statement of scope, and a pin
+# written to satisfy one exactly is one amendment from being insufficient. It
+# resolves to **3.1.7**, published 2026-09-02.
+#
+# ⚠️ **pnpm's seven-day `minimumReleaseAge` quarantine is not in play here, and
+# it was checked rather than assumed** — that is the trap the nanoid block
+# records, where `pnpm update` reported success and left the tree vulnerable.
+# 3.1.6 shipped 2026-08-23, so the fix was outside the window before this was
+# written.
+#
+# ⚠️ **A plain update reaches the fixed line today, and this override still is
+# not redundant** — measured, not guessed: `pnpm update fast-uri --recursive`
+# lands 3.1.7 on its own. What it does not do is leave anything saying why, so
+# the next resolution against `^3.0.1` has nothing to hold it above 3.1.5. A
+# lockfile is a record of what was picked; this is the statement of what may be.
+# Bare rather than the scoped `ajv>fast-uri`, for the qs block's reason: there is
+# one arrival today, and the bare form keeps a second from landing on the
+# vulnerable line unnoticed.
 overrides:
   nanoid: '^3.3.18'
   qs: '^6.15.2'
+  fast-uri: '^3.1.6'
 
 # CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
 #
