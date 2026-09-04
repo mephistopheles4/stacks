@@ -82,7 +82,7 @@ type Axis = (typeof AXES)[number];
  * Row counts to check.
  *
  * More than one, because *"46 on a four-row case"* is a fact about the fixture
- * and the defect is a fact about the case. `rowsForBookcase` grows the unit
+ * and the defect is a fact about the bookcase. `rowsForBookcase` grows the unit
  * with the library, so a real vault reaches every one of these.
  */
 const ROW_COUNTS = [2, 3, 4, 5, 8] as const;

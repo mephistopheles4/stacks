@@ -629,7 +629,7 @@ const CORNERS = 4;
  * whole matrix while every number it produced sat in the normal range.
  *
  * ⚠️ **The direction is stated by the caller, never inferred from the size.**
- * `rowsForBookcase` grows the case with the library, so an upright's height
+ * `rowsForBookcase` grows the bookcase with the library, so an upright's height
  * changes while a plank's length does not, and the backboard is wider than tall
  * at two rows and taller than wide from four on. A rule that took the longest
  * axis would turn the backboard's grain sideways the day a book was added —
