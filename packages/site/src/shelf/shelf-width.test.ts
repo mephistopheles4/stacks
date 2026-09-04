@@ -9,7 +9,7 @@ import {
   type ShelfBook,
   type ShelfRow,
 } from './books.ts';
-import { SHELF, USABLE_WIDTH } from './case.ts';
+import { SHELF, USABLE_WIDTH } from './bookcase.ts';
 import {
   leansInPlace,
   MAX_LEAN,

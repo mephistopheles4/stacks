@@ -3,10 +3,11 @@
  *
  * The shelf's look was spread across five vocabularies: `COLOURS` and three
  * light intensities written inline in `scene.ts`, the case's dimensions in
- * `case.ts`, nine probe switches in `RendererOverrides`, and a dozen alphas in
- * `contact-shadow.ts`. Nothing could ask "what is the shelf running", and so
- * nothing could answer it — which is fine for a constant and useless for a
- * panel whose whole purpose is to hand you a configuration you can keep.
+ * `bookcase.ts`, nine probe switches in `RendererOverrides`, and a dozen
+ * alphas in `contact-shadow.ts`. Nothing could ask "what is the shelf
+ * running", and so nothing could answer it — which is fine for a constant and
+ * useless for a panel whose whole purpose is to hand you a configuration you
+ * can keep.
  *
  * Two types, deliberately, because they mean different things:
  *
@@ -23,11 +24,11 @@
  *
  * Two things are deliberately NOT here:
  *
- * - **The case's geometry.** `SHELF` stays in `case.ts`. It is not an aesthetic
- *   knob — `placement.ts` packs against `USABLE_WIDTH`, and G25 exists because
- *   that number had five live answers which disagreed by 0.162 across a row.
- *   Putting it in a hand-editable blob re-creates that defect with a slider on
- *   it.
+ * - **The case's geometry.** `SHELF` stays in `bookcase.ts`. It is not an
+ *   aesthetic knob — `placement.ts` packs against `USABLE_WIDTH`, and G25
+ *   exists because that number had five live answers which disagreed by 0.162
+ *   across a row. Putting it in a hand-editable blob re-creates that defect
+ *   with a slider on it.
  * - **Anything derived.** `caseLight()` computes the two ratios the painted
  *   shadows are drawn from, out of the key light's position. Derived values are
  *   functions of what is here and are never stored, or a hand-edited blob could

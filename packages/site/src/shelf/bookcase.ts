@@ -1,11 +1,11 @@
 /**
  * The bookcase itself — its dimensions, and how many shelves it has.
  *
- * Its own module, with no Three.js in it, so that the placement arithmetic and
- * the scene graph read the *same* case. `placeShelf` deliberately does not take
- * the geometry as an argument: a test that supplies its own shelf is asserting
- * about a shelf that does not ship, and the numbers here are load-bearing — the
- * residual G16 measures is 0.0012, which is exactly `SKIN`. See
+ * Its own module, with no Three.js in it, so that the placement arithmetic
+ * and the scene graph read the *same* bookcase. `placeShelf` deliberately
+ * does not take the geometry as an argument: a test that supplies its own
+ * shelf is asserting about a shelf that does not ship, and the numbers here
+ * are load-bearing — the residual G16 measures is 0.0012, which is exactly
  * `docs/adr/0029-placement-imports-the-case.md`.
  */
 
@@ -123,15 +123,16 @@ export const BACKBOARD_INSET = PLANK_INSET * 2;
 export const USABLE_WIDTH = SHELF.width - SHELF.endReserve;
 
 /**
- * The case grows with the library, always keeping one empty shelf ahead.
+ * The bookcase grows with the library, always keeping one empty shelf ahead.
  *
- * A fixed four-shelf unit means a small library sits in a mostly empty case and
- * the camera has to back off far enough to frame all that empty wood, which
- * leaves the spines too small to read. Sizing to content keeps the books large
- * and the shelf honest — there is always somewhere for the next book to go.
+ * A fixed four-shelf unit means a small library sits in a mostly empty
+ * bookcase and the camera has to back off far enough to frame all that empty
+ * wood, which leaves the spines too small to read. Sizing to content keeps the
+ * books large and the shelf honest — there is always somewhere for the next
+ * book to go.
  */
 const MIN_ROWS = 2;
 
-export function rowsForCase(usedRows: number): number {
+export function rowsForBookcase(usedRows: number): number {
   return Math.max(usedRows + 1, MIN_ROWS);
 }
