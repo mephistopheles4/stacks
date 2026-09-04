@@ -25,7 +25,20 @@
 name: gates
 
 on:
+  # ⚠️ **All four events are named because naming any of them replaces the
+  # default list rather than extending it.** A bare `pull_request:` takes
+  # `opened`, `synchronize` and `reopened`; `edited` is the one G55
+  # (`pr-conventions`) needs, since a title is editable in one click and the
+  # remedy for its red is exactly that edit. It fires for a body change too,
+  # which the body half of that gate needs.
+  #
+  # ⚠️ **The cost is accepted rather than optimised away.** An `edited` event
+  # re-runs the whole workflow, matrix included, because the `gates` aggregator
+  # fails on a skipped dependency on purpose — path- or event-filtering the
+  # heavy jobs would turn the required check red on every title edit and block
+  # every merge.
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
 
@@ -151,6 +164,32 @@ jobs:
       - name: pnpm audit
         run: pnpm audit --audit-level=high
 
+      # The workflows themselves, which `pnpm audit` cannot see: it reads the
+      # dependency tree and a workflow has none.
+      #
+      # ⚠️ **This is here because of G55.** A pull request title is
+      # attacker-controlled text, this workflow runs on fork pull requests by
+      # design, and a `${{ }}` expression in a `run:` step is substituted *before
+      # the shell starts* — so a hostile title would run as code. `zizmor`'s
+      # `template-injection` audit is the rule that catches it, and it catches
+      # it in every workflow added later rather than only in the one whose
+      # review noticed. Measured on a probe: the hazard reports as **error /
+      # high confidence**, and the `env:` form this file uses reports nothing.
+      #
+      # ⚠️ **`--min-severity=low` drops 16 informational findings, all of them
+      # `steps.*.outputs.*` in `metrics.yml`** — values that workflow produces
+      # itself, in a job nothing external triggers. Raising the floor is a
+      # judgement about those 16 and about nothing else: every finding of `low`
+      # and above is still a red, and the two that exist today carry a written
+      # `zizmor: ignore` beside them in `metrics.yml`.
+      #
+      # ⚠️ **Pinned exact, for ADR-0067's reason**: a release that adds an audit
+      # turns an unchanged tree red on whichever unrelated pull request runs
+      # after the bump. `pipx` ships on the runner image, so this needs no
+      # action pin and no new entry in the npm tree. See ADR-0082.
+      - name: zizmor
+        run: pipx run zizmor==1.30.0 --no-online-audits --min-severity=low .github/workflows/
+
   # The static analysis and style verdicts.
   #
   # Its own job rather than steps in the matrix, for the reason the `audit` job
@@ -215,10 +254,60 @@ jobs:
       - name: format:check
         run: pnpm format:check
 
+  # G55 — the strings a squash-merge actually lands.
+  #
+  # This repository squash-merges with `squash_merge_commit_title: PR_TITLE` and
+  # `squash_merge_commit_message: PR_BODY`, so the pull request title *is* the
+  # commit subject on `main` and its body is that commit's message. The local
+  # subject a `commit-msg` hook would lint is the string the squash throws away,
+  # which is why this is a job and not a hook.
+  #
+  # ⚠️ **Every string arrives through `env:`, never through `${{ }}` in the
+  # `run:` line.** A title is attacker-controlled text and this workflow runs on
+  # fork pull requests; an expression in a script is substituted before the
+  # shell starts, so a hostile title would run as code. `gates/pr-conventions.test.ts`
+  # refuses any `run:` step here that interpolates event data, and the `zizmor`
+  # step in the `audit` job generalises it to every workflow added later.
+  #
+  # ⚠️ **No job-level `if:`, on purpose.** The workflow also runs on `push` to
+  # main, where there is no pull request to read — and the `gates` aggregator
+  # fails on a *skipped* dependency by design, so a conditional job would redden
+  # the required check on every push to main. The script reads
+  # `GITHUB_EVENT_NAME` and exits 0 with a line saying so, and the job still
+  # reports.
+  #
+  # Its own job rather than a step in the matrix, for the reason `audit` and
+  # `style` already state: the answer does not depend on which Node version is
+  # running, and running it twice would report the same fault twice.
+  conventions:
+    name: conventions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # `persist-credentials: false` because nothing in this job speaks to git,
+      # on the `style` job's stated reasoning.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: conventions
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: pnpm exec tsx scripts/check-pr.ts
+
   # The required status check. Named `gates` and nothing else.
   gates:
     name: gates
-    needs: [suite, audit, style]
+    needs: [suite, audit, style, conventions]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -232,6 +321,8 @@ jobs:
           echo "suite: ${{ needs.suite.result }}"
           echo "audit: ${{ needs.audit.result }}"
           echo "style: ${{ needs.style.result }}"
+          echo "conventions: ${{ needs.conventions.result }}"
           test "${{ needs.suite.result }}" = "success"
           test "${{ needs.audit.result }}" = "success"
           test "${{ needs.style.result }}" = "success"
+          test "${{ needs.conventions.result }}" = "success"

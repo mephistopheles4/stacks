@@ -1,4 +1,4 @@
-# The pull request title is the commit subject, so the convention lands there — and nothing gates it
+# The pull request title is the commit subject, so the convention lands there
 
 Three things, decided together because they land on one artifact:
 
@@ -12,9 +12,17 @@ Three things, decided together because they land on one artifact:
   Same type vocabulary, plus three kinds that never become a commit on `main`
   and so carry no issue number: `research/`, `prototype/`, `experiment/`.
 
-**None of it is gated**, and the reason lives in
-[`gates.md`](../gates.md#not-gated-deliberately) under *Not gated, deliberately*
-rather than being restated here — that row is the canonical text.
+⚠️ **This record shipped saying none of it was gated, and half of that is no
+longer true.** Since 2026-09-03 the **pull request title and body** are read on
+every `pull_request` event by G55 (`pr-conventions`) — the canonical text is now
+that row in [`gates.md`](../gates.md), and it carries the rebuttal that moved it.
+The **branch name** and the **local commit subject** are still gated by nothing,
+and their row stays under *[Not gated,
+deliberately](../gates.md#not-gated-deliberately)*: a local subject is the string
+the squash discards, and a branch is disqualified on coverage rather than
+visibility. **Everything below this line is the 2026-08-19 record and is left as
+written**, including its closing entry about a title gate that was drafted and
+dropped — which is the reasoning G55 overturned, and worth reading beside it.
 
 ## The repository setting is the whole argument
 
@@ -100,11 +108,23 @@ makes. A `/` in the name is already flattened to `-` there
 
 ## Why this is not gated — the short form
 
-The full reason is the *Not gated, deliberately* row in
-[`gates.md`](../gates.md#not-gated-deliberately) and is not repeated here.
-In one line: **a commit-lint red is a rename for the maintainer and a tax on a
+⚠️ **Superseded 2026-09-03. Kept because the reasoning it states is the
+reasoning G55 overturned, and deleting it would leave the overturning
+unexplained.** As written: *the full reason is the* Not gated, deliberately *row
+in [`gates.md`](../gates.md#not-gated-deliberately) and is not repeated here. In
+one line: **a commit-lint red is a rename for the maintainer and a tax on a
 stranger whose change has no defect in it**, which is Clause A of
-[`gate-or-trend.md`](../spec/gate-or-trend.md) failing for the person who hit it.
+[`gate-or-trend.md`](../spec/gate-or-trend.md) failing for the person who hit
+it.*
+
+**What was wrong with it:** Clause A asks whether the remedy is *reachable*, not
+who typed the fault. Anybody with write access can edit any pull request title or
+body — including on a pull request from a fork, in one click, with no push from
+its author — so nobody is stranded by this red. The dead pipe `trend-layer.md` §4
+disposed of was a red a contributor **could not clear at all**, which is a
+different case; the precedent was cited accurately and applied to something it
+did not fit. The surface half of the old row was right and G55 is built on it:
+the title on `pull_request`, never `commit-msg`.
 
 ## What this does not buy
 

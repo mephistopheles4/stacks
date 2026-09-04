@@ -5778,3 +5778,73 @@ query string is an assumption until something states what came out of it.
   ⚠️ **And the fifth report category is held by nothing to being read by a
   human**: the panel renders it, and whether anybody looks is outside every gate
   in this repository.
+
+### G55 — `pr-conventions`
+
+**Gate:** `gates/pr-conventions.test.ts` (the disk) and `scripts/lib/pr-conventions.test.ts` (the judgement), both in the `suite` matrix under `pnpm test`; the `conventions` job in `.github/workflows/gates.yml` is where the check itself runs
+**Date:** 2026-09-03
+**Observed-red line:** `${{ github.event.pull_request.title }}` appended to the `run:` of this workflow's own `conventions` step — the exact hazard the row exists for. *interpolates no event data into any `run:` step in the workflow* fails naming the step and the expression, 13 of 14 passing around it, a control through the identical invocation on both sides. **The first version of that clause passed against the same plant**, which is why it is a hand-written scan rather than a regular expression; see the vacuous-green verdict below. Six further plants, each red and each reverted: the type list widened by one word in `AGENTS.md`, the scope list narrowed by one, `edited` dropped from the trigger list, `conventions` dropped from the aggregator's `needs:`, zizmor's `==1.30.0` removed, and a third question heading added to the pull request template. And zizmor's own control: the same plant, run through `pipx run zizmor==1.30.0 --no-online-audits --min-severity=low`, reports `error[template-injection] … audit confidence → High`.
+**Triaged at landing**, per G41.
+
+⚠️ **The convention was correct 58 of 58 times and read by nothing.** This
+repository squash-merges with `squash_merge_commit_title: PR_TITLE`, so the pull
+request title *is* the commit subject on `main` — a configured fact, from
+`gh api repos/mephistopheles4/stacks`, not an inference about a button. Measured
+2026-08-26 and again 2026-09-03: no workflow step, no `commitlint`, no `husky`,
+no title check of any kind. The one string that lands was the unchecked one.
+
+⚠️ **The instrument almost chosen would have made it worse.** This arrived as
+*"add husky for lint, formatting and conventional commits"*, and the third of
+those inverts: a `commit-msg` hook validates the subject the squash **throws
+away**. It would leave the landed subject unchecked while making the convention
+feel enforced — a layer that reads as coverage and is not, which is the failure
+worth avoiding rather than the gap it replaces.
+
+- **Weakening** — **the honest weakening is widening a list**, and both lists are
+  parsed out of `AGENTS.md` in both directions rather than declared here, so a
+  type added to the checker and not to the prose is red, and a type added to the
+  prose and not to the checker is red. Floored on both sides, because `toEqual`
+  over two empty sets is a perfect pass. ⚠️ **What is genuinely open is widening
+  them *in agreement*** — an edit to both in one commit passes, by design, since
+  that is what changing the convention looks like. The check is that the change
+  is visible in `AGENTS.md`, not that it is forbidden.
+- **Satisfying the letter** — ⚠️ **exposed, and this row is unusually honest
+  about it.** `feat(site): asdf` passes. The body rule reads headings and the
+  presence of text and never prose, which the brief settled explicitly: judging
+  whether the summary paragraph is any good is out of scope and would be a gate
+  reading writing. What the row buys is that the shape of the string on `main` is
+  the shape `AGENTS.md` states, and nothing more. ⚠️ **A second letter-satisfying
+  route is an answer typed inside the template's `<!-- -->` comment**, which
+  measures as empty and is refused — but an answer of `.` is not.
+- **Routing around** — **the route is the job not running.** Three clauses close
+  it: the job exists and runs the script, the aggregator lists it in `needs:` and
+  compares its result against `success`, and all four `pull_request` event types
+  are named. ⚠️ **A fourth route is a job-level `if:`**, which is refused
+  explicitly and for a non-obvious reason: the aggregator fails on a *skipped*
+  dependency on purpose, so a conditional job would redden the required check on
+  every push to `main` rather than quietly passing — the failure mode is a broken
+  merge queue, not a hole. ⚠️ **The route nothing closes is GitHub's honouring of
+  the trigger list**, which is G40's, G44's and G50's stated limit reached again:
+  a `types:` key is a claim about a platform and no local test runs one.
+- **Vacuous green** — ⚠️ **it happened, in the clause that matters most, and it
+  is the reason this entry is worth reading.** The `run:`-step sweep was written
+  as one regular expression anchoring the key at six spaces with an optional
+  `- name:` line before it — which matches *neither* shape this file uses
+  (`      - run:` puts the key after a dash; a named step puts it at eight spaces,
+  often with an `env:` block between). It found eight *somethings*, cleared its
+  own floor of eight, and **reported zero findings against the hazard planted in
+  the very step the row is about.** A floor is not a positive control: it proves
+  the matcher found things, never that it found *these* things. The repair is a
+  hand-written scan keyed on indentation, and the floor moved to 12.
+- **Decay** — **it decays into a red on almost everything and into silence on
+  one thing.** The `AGENTS.md` sentence is matched literally, so rewording the
+  lead-in is red rather than a silently widened search; a renamed job, a dropped
+  `needs:` entry, an unpinned zizmor and a reworded template question are each
+  red. ⚠️ **What rots quietly is the pull request template's two questions
+  drifting in *meaning* rather than in wording** — the rule protects the headings
+  that end in a question mark, and a question reworded to ask something else
+  passes as long as the count stays at two and the checker's expected pair is
+  updated with it. ⚠️ **And the `dependabot[bot]` body exemption is a standing
+  permission**: it is closed to one login and reverse-asserted against a bot body
+  in the unit tests, but nothing notices the day Dependabot starts writing a
+  conforming body and the exemption stops earning its place.
