@@ -44,8 +44,9 @@
  * asserted is that the key is present and names all four — because a bare
  * `pull_request:` takes the default list and *adding* a `types:` key replaces
  * that default rather than extending it, so a partial list silently drops
- * events. That the `edited` event really re-runs the check has to be observed on
- * a live pull request; the runs are named in the register entry.
+ * events. That the `edited` event really re-runs the check was observed on a
+ * live pull request — the same commit red then green with no push between — and
+ * the two runs are named in the register entry.
  *
  * ⚠️ **It does not read prose.** Whether the body's summary paragraph is any
  * good is outside this and outside every gate here. The rule reads headings and
