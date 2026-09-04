@@ -82,6 +82,14 @@ export const SCOPES = ['core', 'cli', 'site', 'gates', 'docs', 'ci'] as const;
  * — the remedy exists (edit the body) but it recurs forever and teaches you to
  * click through a red. So the exemption is named here rather than left to be
  * discovered as a permanently red required check.
+ *
+ * ⚠️ **The brief did not ask for this and the owner has not ruled on it.** #289
+ * says flatly *"A body missing either protected question fails"*, with no
+ * exception, and never mentions Dependabot — this list is the implementer's
+ * judgement about a case the brief did not reach, flagged so it can be struck
+ * rather than inherited. **Deleting the array is the whole of striking it**: the
+ * bot's own pull requests then go red weekly on their bodies, which is exactly
+ * the behaviour the brief's sentence describes.
  */
 export const BODY_EXEMPT_AUTHORS = ['dependabot[bot]'] as const;
 

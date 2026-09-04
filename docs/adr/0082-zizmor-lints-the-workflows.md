@@ -87,8 +87,10 @@ and zizmor inherits it in offline mode.
 ⚠️ **Nothing holds the rule set.** The `--min-severity` flag and the two
 suppression comments are three places the analysis can be narrowed later, and
 `gates/pr-conventions.test.ts` asserts only that zizmor runs and is pinned. That
-is the same open edge G46's row records for `eslint.lint.config.mjs`, and it is
-[recorded, not solved](../gates.md#not-gated-deliberately).
+is the same open edge G46's row already records for `eslint.lint.config.mjs`, and
+it is [recorded, not solved](../gates.md#not-gated-deliberately) — in that row
+rather than in a new one, because it is one rule about two linters and a second
+row would be the duplication this repository spends its gates refusing.
 
 ## How this was decided
 

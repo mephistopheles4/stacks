@@ -63,7 +63,14 @@
 
 import { describe, expect, it } from 'vitest';
 import { SCOPES, TYPES, protectedQuestions } from '../scripts/lib/pr-conventions.ts';
-import { AGENTS_DOC, expectFound, jobsOf, markdownSection, readRepoFile } from './repo.ts';
+import {
+  AGENTS_DOC,
+  aggregatorResultTests,
+  expectFound,
+  jobsOf,
+  markdownSection,
+  readRepoFile,
+} from './repo.ts';
 
 const WORKFLOW = '.github/workflows/gates.yml';
 const TEMPLATE = '.github/pull_request_template.md';
@@ -88,17 +95,24 @@ const jobs = (): Map<string, string> => jobsOf(readRepoFile(WORKFLOW), WORKFLOW)
  * The rule is indentation, which is the only thing YAML guarantees here: a
  * block scalar's body is every following line indented further than its key, and
  * blank lines belong to it.
+ *
+ * ⚠️ **The `- ` counts toward the key's column.** In `      - run: x` the `run:`
+ * key sits at column 8, not 6, and its sibling keys sit at 8 with it. Measuring
+ * the indent as the leading whitespace alone would sweep a following `env:`
+ * block into the script — turning the *safe* form, written as a dashed step,
+ * into a false red. It does not bite in this file today, which is exactly why it
+ * is worth two characters now.
  */
-function runSteps(source: string): string[] {
+export function runSteps(source: string): string[] {
   const lines = source.replace(/\r\n/g, '\n').split('\n');
   const steps: string[] = [];
 
   for (const [at, line] of lines.entries()) {
-    const key = /^(\s*)(?:- )?run:(.*)$/.exec(line);
+    const key = /^(\s*)(- )?run:(.*)$/.exec(line);
     if (key === null) continue;
 
-    const indent = (key[1] ?? '').length;
-    const block = [key[2] ?? ''];
+    const indent = (key[1] ?? '').length + (key[2] ?? '').length;
+    const block = [key[3] ?? ''];
 
     for (const following of lines.slice(at + 1)) {
       const width = /^\s*/.exec(following)?.[0].length ?? 0;
@@ -111,6 +125,47 @@ function runSteps(source: string): string[] {
 
   return steps;
 }
+
+/**
+ * Whether a `run:` script interpolates a workflow context that a `${{ }}`
+ * expression would substitute *before the shell starts*.
+ *
+ * ⚠️ **`github.` and not `github.event.`, and the wider form is the honest
+ * one.** The docblocks around this clause say *event data*, and
+ * `github.head_ref`, `github.actor` and `github.ref_name` are all event data
+ * carried at the top level — a pattern keyed on `github.event` would have read
+ * narrower than its own prose, which is the defect this file's `runSteps` docblock
+ * is already about. `${{ github.sha }}` is harmless and still refused: one `env:`
+ * line is a cheap price for a rule with no exceptions to remember, and `needs.*`
+ * — the aggregator's own idiom, and a value no pull request can reach — is left
+ * alone deliberately.
+ */
+function interpolatesContext(script: string): boolean {
+  return /\$\{\{\s*(github|inputs|env)\./.test(script);
+}
+
+/**
+ * A workflow carrying the hazard, for the clause above to find.
+ *
+ * ⚠️ **The positive control, and it is code rather than a paragraph.** The first
+ * version of the injection sweep reported a confident zero against this exact
+ * shape while clearing its own floor; the observation that caught it lived in a
+ * commit message and in `docs/gate-register.md`, where nothing re-runs it. Both
+ * step shapes are here, because the matcher's bug was that it recognised
+ * neither.
+ */
+const HOSTILE_WORKFLOW = [
+  'jobs:',
+  '  bad:',
+  '    steps:',
+  '      - run: node check.js "${{ github.event.pull_request.title }}"',
+  '      - name: also bad',
+  '        env:',
+  '          SAFE: ${{ github.event.pull_request.body }}',
+  '        run: |',
+  '          echo "${{ github.head_ref }}"',
+  '',
+].join('\n');
 
 /**
  * The one sentence in `AGENTS.md` that states both lists, and the two code spans
@@ -206,6 +261,32 @@ describe('G55 — the two protected questions come out of the template', () => {
     ).toEqual(['Which invariant does this touch?', 'Which gate would catch this breaking again?']);
   });
 
+  it('keeps the type and scope lists out of the template', () => {
+    // ⚠️ **This clause exists because the change that landed this row put them
+    // there.** A list of eleven types in the template comment is a third copy of
+    // a rule `AGENTS.md` states and `scripts/lib/pr-conventions.ts` implements —
+    // held to neither, in the file the body rule reads, inside the change whose
+    // whole argument is that a rule with an unwatched second copy drifts. Caught
+    // in review. The checker's failure message spells both lists, so the red
+    // build is where a contributor reads them.
+    // ⚠️ **The shape, not the words.** A first version asked whether each
+    // vocabulary word appeared beside a comma anywhere, and matched `docs` twice
+    // in ordinary prose — a gate red about somebody's writing rather than about
+    // a list. What a restated list actually looks like is a comma-separated run
+    // of three or more tokens, every one of them drawn from the vocabulary.
+    const vocabulary = new Set<string>([...TYPES, ...SCOPES]);
+    const restated = [...readRepoFile(TEMPLATE).matchAll(/\b[a-z]+(?:, [a-z]+){2,}\b/g)]
+      .map((match) => match[0])
+      .filter((run) => run.split(', ').every((word) => vocabulary.has(word)));
+
+    expect(
+      restated,
+      `${TEMPLATE} restates the type or scope list. It is a copy nothing holds to ` +
+        `${AGENTS_DOC}, in the file this gate reads for something else — point at ` +
+        `AGENTS.md instead, and let the failure message spell the list: ${restated.join('; ')}`,
+    ).toEqual([]);
+  });
+
   it('keeps the template saying the two may not be deleted', () => {
     expect(
       readRepoFile(TEMPLATE),
@@ -289,9 +370,10 @@ describe('G55 — the check runs on every pull request, and on edits', () => {
         'is a job that blocks nothing',
     ).toBe(true);
 
-    const tested = [...aggregator.matchAll(/needs\.([\w-]+)\.result\s*\}\}"\s*=\s*"success"/g)].map(
-      (match) => match[1],
-    );
+    // `aggregatorResultTests` is in `repo.ts` because three gates ask this same
+    // question of the same aggregator — it was written out three times until a
+    // review named it.
+    const tested = aggregatorResultTests(aggregator);
 
     expect(
       tested,
@@ -302,6 +384,34 @@ describe('G55 — the check runs on every pull request, and on edits', () => {
 });
 
 describe('G55 — the title reaches the checker as data, never as code', () => {
+  it('finds the hazard in a workflow that carries it, in both step shapes', () => {
+    // ⚠️ **The positive control, and the reason it is a clause and not a
+    // sentence.** The sweep below is satisfied by a matcher that finds nothing,
+    // and its first version was exactly that: it cleared a floor of eight while
+    // reporting zero findings against a planted `${{ github.event… }}` in the
+    // step this row is about. A floor proves a matcher found things; only a
+    // known-bad input proves it found *these* things.
+    const steps = runSteps(HOSTILE_WORKFLOW);
+
+    expect(steps.length, 'both step shapes must be read: `- run:` and a named step').toBe(2);
+    expect(
+      steps.filter(interpolatesContext).length,
+      'the sweep must find the hazard in both shapes of the control workflow. If this ' +
+        'passes at 0 or 1, the matcher has stopped reading a step shape and the clause ' +
+        'below is a true statement about nothing',
+    ).toBe(2);
+  });
+
+  it('leaves the aggregator`s own `needs.*` idiom alone', () => {
+    // The negative half of the control. A pattern that also flagged `needs.*`
+    // would be red on the `gates` job — which no pull request can reach — and
+    // the honest response to that red would be to weaken the rule.
+    expect(
+      interpolatesContext('test "${{ needs.suite.result }}" = "success"'),
+      '`needs.*` carries job results, not user text',
+    ).toBe(false);
+  });
+
   it('passes every pull request string through `env:`', () => {
     const conventions = jobs().get('conventions') ?? '';
 
@@ -328,14 +438,14 @@ describe('G55 — the title reaches the checker as data, never as code', () => {
     // half, and it fails without a Python toolchain.
     const runs = runSteps(readRepoFile(WORKFLOW));
 
-    // The floor is the vacuous-green guard, and on its own it is not enough:
+    // The floor is the vacuous-green guard, and **on its own it is not enough**:
     // the first version of this clause cleared a floor of eight while matching
-    // the wrong eight things. The positive control is in the register entry —
-    // the hazard planted in this file's own `conventions` step, through the
-    // identical invocation.
+    // the wrong eight things. `HOSTILE_WORKFLOW` below is the positive control,
+    // asserted rather than described — a floor proves the matcher found things,
+    // never that it found *these* things.
     expectFound(runs, `\`run:\` steps in ${WORKFLOW}`, 12);
 
-    const injecting = runs.filter((block) => /\$\{\{\s*(github\.event|inputs)\b/.test(block));
+    const injecting = runs.filter(interpolatesContext);
 
     expect(
       injecting,

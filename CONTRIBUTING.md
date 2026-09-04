@@ -95,8 +95,11 @@ are in [ADR-0057](docs/adr/0057-the-pull-request-title-is-the-commit-subject.md)
 or a body that has dropped either of the two questions the template says may not
 be deleted. The failure names which fault it is. **You do not need to force-push
 to clear it** — edit the pull request, and the check re-runs. Anybody with write
-access can make that edit, including on a pull request from a fork, which is why
-this one is a gate and the branch-name half is not.
+access can make that edit, including on a pull request from a fork, which is what
+makes this red's remedy reachable for whoever hits it. **The branch name is not
+checked**, and its reason is a different one: `github.head_ref` exists only on a
+pull request, so a branch that never opens one would never be read, and a check
+firing on some branches while reading as covering all of them is worse than none.
 
 **If a gate defeats three distinct approaches, stop.** Write up what you tried in
 `docs/blockers.md` and end the session. Thrashing against a red gate is how a

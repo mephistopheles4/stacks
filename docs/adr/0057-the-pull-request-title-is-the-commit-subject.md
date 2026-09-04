@@ -14,15 +14,20 @@ Three things, decided together because they land on one artifact:
 
 ⚠️ **This record shipped saying none of it was gated, and half of that is no
 longer true.** Since 2026-09-03 the **pull request title and body** are read on
-every `pull_request` event by G55 (`pr-conventions`) — the canonical text is now
-that row in [`gates.md`](../gates.md), and it carries the rebuttal that moved it.
+every `pull_request` event by G55 (`pr-conventions`) in [`gates.md`](../gates.md),
+which is what that row scores. **The argument that changed is in the *other*
+row** — *[A branch name follows the
+convention](../gates.md#not-gated-deliberately)*, which is where the old refusal
+was written and where its rebuttal now sits beside it: Clause A asks whether a
+red's remedy is *reachable*, not who typed the fault. Read that row for the why
+and the G55 row for the what.
+
 The **branch name** and the **local commit subject** are still gated by nothing,
-and their row stays under *[Not gated,
-deliberately](../gates.md#not-gated-deliberately)*: a local subject is the string
-the squash discards, and a branch is disqualified on coverage rather than
-visibility. **Everything below this line is the 2026-08-19 record and is left as
-written**, including its closing entry about a title gate that was drafted and
-dropped — which is the reasoning G55 overturned, and worth reading beside it.
+and that same row keeps them: a local subject is the string the squash discards,
+and a branch is disqualified on coverage rather than visibility. **Everything
+below this line is the 2026-08-19 record and is left as written**, including its
+closing entry about a title gate that was drafted and dropped — which is the
+reasoning G55 overturned, and worth reading beside it.
 
 ## The repository setting is the whole argument
 
@@ -106,7 +111,7 @@ makes. A `/` in the name is already flattened to `-` there
 (`scripts/worktree.ts:205`), so `docs/167-conventional-commits` becomes
 `../stacks-docs-167-conventional-commits`.
 
-## Why this is not gated — the short form
+## Why this was not gated — the short form, superseded
 
 ⚠️ **Superseded 2026-09-03. Kept because the reasoning it states is the
 reasoning G55 overturned, and deleting it would leave the overturning
