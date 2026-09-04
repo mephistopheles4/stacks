@@ -179,9 +179,44 @@ export function titleFault(title: string): Fault | undefined {
   return undefined;
 }
 
-/** An `<!-- … -->` block carries instructions, not an answer. */
+/**
+ * The text with every `<!-- … -->` block taken out: a comment carries the
+ * template's instructions, never an answer.
+ *
+ * ⚠️ **A scanner rather than `replace(/<!--[\s\S]*?-->/g, '')`, and the reason
+ * is a behaviour change rather than the alert that prompted it.** CodeQL raised
+ * `js/incomplete-multi-character-sanitization` at **high** on the regular
+ * expression — a false positive as a *security* finding, since nothing here
+ * renders HTML and the output of this function is only ever asked whether it is
+ * blank. Working `docs/gates.md`'s third triage question found the real one: an
+ * **unterminated** `<!--` is left entirely in place by that regex, so a section
+ * whose author opened a comment and typed the answer inside it reads as
+ * answered. GitHub renders that answer as nothing at all — the reviewer sees an
+ * empty section — and the check that exists to catch an empty section passed it.
+ *
+ * The scanner takes the renderer's reading: an unclosed comment swallows the
+ * rest of the section, so the section is empty here exactly when it is empty on
+ * the page. **The tempting half-fix was tweaking the regex until the alert
+ * cleared**, which that triage section names as the worst outcome available.
+ */
 function withoutComments(markdown: string): string {
-  return markdown.replace(/<!--[\s\S]*?-->/g, '');
+  let kept = '';
+  let at = 0;
+
+  while (at < markdown.length) {
+    const opens = markdown.indexOf('<!--', at);
+    if (opens < 0) return kept + markdown.slice(at);
+
+    kept += markdown.slice(at, opens);
+
+    const closes = markdown.indexOf('-->', opens + 4);
+    // Unterminated: the renderer eats the remainder, so this does too.
+    if (closes < 0) return kept;
+
+    at = closes + 3;
+  }
+
+  return kept;
 }
 
 /**

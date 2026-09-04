@@ -183,6 +183,26 @@ describe('bodyFaults — headings and the presence of text', () => {
     expect(faults[0]?.message).toContain('empty');
   });
 
+  it('fails an answer typed inside an unterminated comment', () => {
+    // ⚠️ **Red against the regex this replaced.** `replace(/<!--[\s\S]*?-->/g)`
+    // leaves an unclosed comment entirely in place, so this section measured as
+    // answered — while GitHub renders it as nothing and the reviewer sees an
+    // empty heading. Found by working the third of `docs/gates.md`'s CodeQL
+    // triage questions on a `js/incomplete-multi-character-sanitization` alert
+    // that was a false positive as a security finding.
+    const swallowed = GOOD_BODY.replace('None.', '<!-- Name it from AGENTS.md\n\nInvariant 2.');
+    const faults = bodyFaults(swallowed, questions);
+
+    expect(faults.length, 'an unclosed comment hides everything after it').toBe(1);
+    expect(faults[0]?.message).toContain('empty');
+  });
+
+  it('keeps an answer that follows a closed comment', () => {
+    // The other direction, and the one the template actually produces: every
+    // section ships with an instruction comment above the space for the answer.
+    expect(bodyFaults(GOOD_BODY.replace('None.', '<!-- hint -->\n\nNone.'), questions)).toEqual([]);
+  });
+
   it('fails an empty body with one fault per question', () => {
     expect(bodyFaults('', questions).length).toBe(questions.length);
   });

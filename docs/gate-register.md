@@ -5816,7 +5816,15 @@ worth avoiding rather than the gap it replaces.
   reading writing. What the row buys is that the shape of the string on `main` is
   the shape `AGENTS.md` states, and nothing more. ⚠️ **A second letter-satisfying
   route is an answer typed inside the template's `<!-- -->` comment**, which
-  measures as empty and is refused — but an answer of `.` is not.
+  measures as empty and is refused — but an answer of `.` is not. ⚠️ **That
+  refusal was itself satisfiable by a typo until CodeQL pointed near it**: an
+  *unterminated* `<!--` was left in place by the regex that stripped comments,
+  so a section whose author opened a comment and typed the answer inside it
+  measured as answered while GitHub rendered it as nothing. The alert was
+  `js/incomplete-multi-character-sanitization` at **high**, a false positive as
+  a security finding — nothing here renders HTML — and the third of this file's
+  own triage questions is what turned it into a real one. Replaced by a scanner
+  that takes the renderer's reading, with a test red against the regex.
 - **Routing around** — **the route is the job not running.** Three clauses close
   it: the job exists and runs the script, the aggregator lists it in `needs:` and
   compares its result against `success`, and all four `pull_request` event types
