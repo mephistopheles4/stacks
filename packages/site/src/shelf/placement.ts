@@ -1,5 +1,5 @@
 import type { ShelfBook, ShelfRow } from './books.ts';
-import { SHELF, rowsForCase } from './case.ts';
+import { SHELF, rowsForBookcase } from './bookcase.ts';
 import type { Contact } from './contact-shadow.ts';
 import { hashUnit } from './hash.ts';
 
@@ -62,7 +62,7 @@ export interface Placement {
  * assert about a shelf that does not ship. See ADR-0029.
  */
 export function placeShelf(rows: readonly ShelfRow[]): Placement[][] {
-  const rowCount = rowsForCase(rows.length);
+  const rowCount = rowsForBookcase(rows.length);
 
   return rows.map((row, rowIndex) =>
     // Drawn top-down: the newest books sit on the top shelf.

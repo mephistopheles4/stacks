@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
 import { MAX_HEIGHT, MIN_HEIGHT, toRows, type ShelfRow } from './books.ts';
-import { SHELF, USABLE_WIDTH } from './case.ts';
+import { SHELF, USABLE_WIDTH } from './bookcase.ts';
 import { rowExtent } from './placement.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
 

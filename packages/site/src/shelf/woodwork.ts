@@ -629,7 +629,7 @@ const CORNERS = 4;
  * whole matrix while every number it produced sat in the normal range.
  *
  * ⚠️ **The direction is stated by the caller, never inferred from the size.**
- * `rowsForCase` grows the case with the library, so an upright's height changes
+ * `rowsForBookcase` grows the case with the library, so an upright's height changes
  * while a plank's length does not, and the backboard is wider than tall at two
  * rows and taller than wide from four on. A rule that took the longest axis
  * would turn the backboard's grain sideways the day a book was added — which is
@@ -1344,7 +1344,7 @@ const RUNOUT_SPREAD = 0.06;
  * is one page load only. The bottom-up ordinal and the distance-off-the-floor
  * seed were both declined, and a book-derived seed dies on arithmetic: `woodKeys`
  * names one plank per shelf **plus a lid**, and the lid never holds a book;
- * `rowsForCase` keeps one empty row ahead; and an empty vault gives three planks
+ * `rowsForBookcase` keeps one empty row ahead; and an empty vault gives three planks
  * and no books at all.
  */
 export function varyMember(geometry: THREE.BoxGeometry, key: string): void {

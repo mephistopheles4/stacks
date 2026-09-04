@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { LibraryBook } from '@stacks/core';
 import { toRows, YEAR_GAP, type ShelfRow } from './books.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
-import { SHELF } from './case.ts';
+import { SHELF } from './bookcase.ts';
 import {
   MAX_LEAN,
   MAX_PROP_LEAN,

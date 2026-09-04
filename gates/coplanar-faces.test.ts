@@ -64,7 +64,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { BACKBOARD_INSET, PLANK_INSET, SHELF } from '../packages/site/src/shelf/case.ts';
+import { BACKBOARD_INSET, PLANK_INSET, SHELF } from '../packages/site/src/shelf/bookcase.ts';
 import { codeOf, expectFound } from './repo.ts';
 
 /** One box of the bookcase, as the half-open interval it occupies on each axis. */
@@ -82,7 +82,7 @@ type Axis = (typeof AXES)[number];
  * Row counts to check.
  *
  * More than one, because *"46 on a four-row case"* is a fact about the fixture
- * and the defect is a fact about the case. `rowsForCase` grows the unit with the
+ * and the defect is a fact about the case. `rowsForBookcase` grows the unit with the
  * library, so a real vault reaches every one of these.
  */
 const ROW_COUNTS = [2, 3, 4, 5, 8] as const;

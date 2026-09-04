@@ -4,7 +4,7 @@ import type { Binding, LibraryBook } from '@stacks/core';
 // and sharp into the browser bundle and the shelf never boots. Types are erased
 // at compile time and so are safe from the root; values are not.
 import { compareShelfPosition, SHELVED_STATUSES } from '@stacks/core/shelf-order';
-import { SHELF, USABLE_WIDTH } from './case.ts';
+import { SHELF, USABLE_WIDTH } from './bookcase.ts';
 import { hashUnit } from './hash.ts';
 import type { BooksSettings } from './shelf-settings.ts';
 // The packer depends on the placer, which reads oddly until you see why: a row's

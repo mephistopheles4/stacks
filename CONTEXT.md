@@ -179,8 +179,8 @@ surface the painted backboard shades are drawn over.
 One level of the bookcase: the space between two **planks**, and the books
 standing on the lower one. A **run** is a group of books inside one; the row is
 the level itself.
-*Avoid*: shelf. The code spends that word three ways — `rowsForCase` keeps one
-empty shelf ahead (a row), `SHELF` names the furniture, and
+*Avoid*: shelf. The code spends that word three ways — `rowsForBookcase` keeps
+one empty shelf ahead (a row), `SHELF` names the furniture, and
 `packages/site/src/shelf/` is the whole renderer. Say **row** or **bookcase**
 where the difference matters.
 

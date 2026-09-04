@@ -132,6 +132,6 @@ export const USABLE_WIDTH = SHELF.width - SHELF.endReserve;
  */
 const MIN_ROWS = 2;
 
-export function rowsForCase(usedRows: number): number {
+export function rowsForBookcase(usedRows: number): number {
   return Math.max(usedRows + 1, MIN_ROWS);
 }

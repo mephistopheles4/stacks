@@ -11,7 +11,7 @@ import {
   type CaseLight,
   type Contact,
 } from './contact-shadow.ts';
-import { BACKBOARD_INSET, PLANK_INSET, rowsForCase, SHELF } from './case.ts';
+import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
 import { woodSeed } from './shelf-url.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
@@ -370,7 +370,7 @@ export function mountShelf(
   scene.fog = settings.scene.fog.enabled ? fog : null;
 
   const rows = toRows(books, settings.books);
-  const rowCount = rowsForCase(rows.length);
+  const rowCount = rowsForBookcase(rows.length);
   const unitHeight = rowCount * SHELF.rowHeight;
 
   const fov = 40;
@@ -978,7 +978,7 @@ function buildBooks(
   /** Contacts per row of *books*, indexed as `placements` is — top shelf first. */
   const byRow: Contact[][] = [];
 
-  const rowCount = rowsForCase(placements.length);
+  const rowCount = rowsForBookcase(placements.length);
 
   placements.forEach((row, rowIndex) => {
     row.forEach((placement, index) => {
@@ -1751,7 +1751,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
 
   // The grain runs up an upright and along a plank — each member along its own
   // long axis, which is #285's verdict and is **stated rather than measured**:
-  // `rowsForCase` grows an upright with the library while a plank's length never
+  // `rowsForBookcase` grows an upright with the library while a plank's length never
   // moves, so a rule that took the longest side would rotate the figure the day
   // a book was added.
   for (const side of [-1, 1]) {

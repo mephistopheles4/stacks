@@ -59,8 +59,8 @@ bookcases, which is
 [#287](https://github.com/mephistopheles4/stacks/issues/287)'s decision and not
 an accident. A book-derived seed was declined on arithmetic as well as on taste:
 `woodKeys` names one plank per shelf **plus a lid** — the top plank never holds
-a book — `rowsForCase` keeps one empty row ahead, and an empty vault gives three
-planks and no books at all.
+a book — `rowsForBookcase` keeps one empty row ahead, and an empty vault gives
+three planks and no books at all.
 
 That is exactly what defeats a differ. [#282](https://github.com/mephistopheles4/stacks/issues/282)'s
 harness compares two renders of one scene, so with a per-load draw the two frames

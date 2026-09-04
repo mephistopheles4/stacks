@@ -34,7 +34,7 @@ import {
   type WoodKeys,
   type WoodworkReadBack,
 } from './woodwork.ts';
-import { BACKBOARD_INSET, PLANK_INSET, SHELF } from './case.ts';
+import { BACKBOARD_INSET, PLANK_INSET, SHELF } from './bookcase.ts';
 import { DEFAULT_SETTINGS } from './shelf-settings.ts';
 
 /**
