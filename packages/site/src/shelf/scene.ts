@@ -1751,9 +1751,9 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
 
   // The grain runs up an upright and along a plank — each member along its own
   // long axis, which is #285's verdict and is **stated rather than measured**:
-  // `rowsForBookcase` grows an upright with the library while a plank's length never
-  // moves, so a rule that took the longest side would rotate the figure the day
-  // a book was added.
+  // `rowsForBookcase` grows an upright with the library while a plank's length
+  // never moves, so a rule that took the longest side would rotate the figure
+  // the day a book was added.
   for (const side of [-1, 1]) {
     const upright = new THREE.Mesh(
       veneered(

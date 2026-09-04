@@ -82,8 +82,8 @@ type Axis = (typeof AXES)[number];
  * Row counts to check.
  *
  * More than one, because *"46 on a four-row case"* is a fact about the fixture
- * and the defect is a fact about the case. `rowsForBookcase` grows the unit with the
- * library, so a real vault reaches every one of these.
+ * and the defect is a fact about the case. `rowsForBookcase` grows the unit
+ * with the library, so a real vault reaches every one of these.
  */
 const ROW_COUNTS = [2, 3, 4, 5, 8] as const;
 
@@ -256,7 +256,7 @@ describe('G51 — the shipped case has no tie at all', () => {
 describe('G51 — the renderer carries the inset this gate assumes', () => {
   it('insets the planks and the backboard, and leaves the uprights alone', () => {
     // The mirror bound to the thing it mirrors. Everything above is arithmetic
-    // on `case.ts` and would stay green if `buildShelf` never read either
+    // on `bookcase.ts` and would stay green if `buildShelf` never read either
     // constant — which is the vacuous green this clause closes. It reads the
     // three `BoxGeometry` calls rather than the whole function, because that is
     // where a member's size is decided and nowhere else.
