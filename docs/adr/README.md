@@ -104,3 +104,4 @@ Two other files hold what these deliberately do not:
 | [0079](./0079-the-floors-stamp-is-compared-at-merge.md) | The floors stamp is compared at merge, and the hash stays one hash over the whole configuration |
 | [0080](./0080-the-woodwork-is-rosewood-and-its-relief-is-drawn.md) | The woodwork is rosewood, its relief is drawn rather than photographed, and species and resolution are one choice |
 | [0081](./0081-the-woodwork-sheet-is-a-menu-and-the-shelf-says-what-it-resolved.md) | The woodwork sheet is a menu, and the shelf states the configuration it resolved |
+| [0082](./0082-zizmor-lints-the-workflows.md) | zizmor lints the workflows, run by pipx and pinned exact |

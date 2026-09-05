@@ -13,10 +13,23 @@ what changed, what protects it, and what you decided along the way.
 Delete any section that genuinely does not apply — an empty heading is worse
 than no heading. Do not delete the two questions.
 
-Title: `<type>(<scope>): <subject>` — scope from core, cli, site, gates, docs,
-ci. This repo squash-merges, so the title you write here becomes the commit
-subject on main and this body becomes its message. Nothing checks either; see
+Title: `<type>(<scope>): <subject>`. This repo squash-merges, so the title you
+write here becomes the commit subject on main and this body becomes its message.
+
+Both are checked: G55 (pr-conventions) refuses a title that does not conform and
+a body that has dropped either of the two questions below. The remedy is an edit
+to this pull request — no push — and editing it re-runs the check. See
 docs/adr/0057-the-pull-request-title-is-the-commit-subject.md.
+
+The type and scope lists are NOT repeated here on purpose. They live in one
+sentence in AGENTS.md, which gates/pr-conventions.test.ts holds the checker to;
+a copy in this file would be a third copy nothing watches, which is the drift
+ADR-0026 is about. The failure spells both lists out, so the red build is where
+you read them.
+
+The two questions are read out of THIS file, as the headings ending in a
+question mark. Rewording one here changes what the checker looks for; deleting
+one turns the gate that reads this file red.
 -->
 
 ## What changed, and why
