@@ -67,7 +67,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { expectFound, jobsOf, readRepoFile, trackedFiles } from './repo.ts';
+import { aggregatorResultTests, expectFound, jobsOf, readRepoFile, trackedFiles } from './repo.ts';
 
 /**
  * The workflow that defines the required check.
@@ -328,17 +328,10 @@ describe('G42 — the `audit` job exists, runs, and is required', () => {
     // nothing when it is skipped, which is the shape a required check that
     // never reports has already cost this repo once.
     expect(
-      gatesResultTests(jobs().get('gates') ?? ''),
+      aggregatorResultTests(jobs().get('gates') ?? ''),
       `the \`gates\` aggregator in ${GATES_WORKFLOW} does not compare ` +
         "`needs.audit.result` against 'success'. Comparing against 'failure' instead " +
         'would let a skipped or cancelled audit through',
     ).toContain('audit');
   });
 });
-
-/** The job names whose `result` the aggregator compares against `'success'`. */
-function gatesResultTests(gates: string): string[] {
-  return [...gates.matchAll(/needs\.([\w-]+)\.result\s*\}\}"\s*=\s*"success"/g)].map(
-    (match) => match[1] ?? '',
-  );
-}

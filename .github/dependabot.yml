@@ -16,6 +16,18 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # G55 reads the pull request title, which is the commit subject a squash
+    # lands on `main`, and Dependabot's default npm title — `Bump astro from
+    # 7.2.3 to 7.2.7` — is not conventional. Every merged bump here since #142
+    # already reads `ci: …`; this makes that true by construction rather than by
+    # somebody renaming a bot's pull request every week.
+    #
+    # ⚠️ **The *body* is exempted instead, in `scripts/lib/pr-conventions.ts`.**
+    # A Dependabot body is a changelog and has never carried the template's two
+    # questions, because the bot does not read the template — and a weekly red
+    # whose remedy is hand-writing a bot's body is the tax half of Clause A.
+    commit-message:
+      prefix: 'ci'
     # One PR per week at most. This is a personal project with one maintainer
     # and a review budget to match; a flood of dependency PRs is how a merge
     # gate becomes something you click through without reading.

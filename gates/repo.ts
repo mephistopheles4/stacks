@@ -234,6 +234,29 @@ export function jobsOf(source: string, where: string): Map<string, string> {
 }
 
 /**
+ * The job names whose `result` an aggregator job compares against `'success'`.
+ *
+ * A `needs:` entry with no `result` test is a dependency that reports nothing
+ * when it is skipped — and a required check that never reports blocks a pull
+ * request forever, which is a shape this repository has already paid for once.
+ * So three gates ask this same question about `gates.yml`'s aggregator: G40/G42
+ * (`action-pins`) about `audit`, G48 (`markdown`) about `style`, and G55
+ * (`pr-conventions`) about `conventions`.
+ *
+ * **Here rather than in one of them, because it was written out three times.**
+ * `action-pins` had it as a named helper and the other two inlined a
+ * byte-identical regular expression — two implementations of one question agree
+ * until the file changes, and then the wrong one is the one nobody re-read.
+ * That is what G10, G22, G23, G24 and G25 all exist to refuse, and it is the
+ * move `codeOf`, `trackedFiles`, `sectionsOf` and `jobsOf` each made before it.
+ */
+export function aggregatorResultTests(aggregator: string): string[] {
+  return [...aggregator.matchAll(/needs\.([\w-]+)\.result\s*\}\}"\s*=\s*"success"/g)].map(
+    (match) => match[1] ?? '',
+  );
+}
+
+/**
  * Guards the green-washing case above: a gate that extracts nothing must fail
  * loudly, not pass vacuously.
  */
