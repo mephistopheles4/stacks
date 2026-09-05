@@ -33,7 +33,21 @@ const EXAMPLE_DECLARATION = /^[ \t]*#?[ \t]*([A-Z][A-Z0-9_]*)[ \t]*=/m;
  * message pretending to name a commit. Both are absent locally, which is why
  * the script falls back to `local` and `manual` rather than to `undefined`.
  */
-const PROVIDED_BY_PLATFORM = new Set(['CI', 'NODE_ENV', 'GITHUB_SHA', 'GITHUB_EVENT_NAME']);
+const PROVIDED_BY_PLATFORM = new Set([
+  'CI',
+  'NODE_ENV',
+  'GITHUB_SHA',
+  'GITHUB_EVENT_NAME',
+  // `PR_TITLE`, `PR_BODY` and `PR_AUTHOR` join them for G55 (`pr-conventions`),
+  // on the same argument and one step further out: they are the `conventions`
+  // job's own `env:` block, carrying `github.event.pull_request.*` into
+  // `scripts/check-pr.ts` as **data rather than as shell**, which is the whole
+  // point of that job. There is no value a contributor could put in `.env` that
+  // would be anything but a fiction about somebody's pull request.
+  'PR_TITLE',
+  'PR_BODY',
+  'PR_AUTHOR',
+]);
 
 function keysReadInCode(): string[] {
   const sources = [...filesUnder('packages', ['.ts']), ...filesUnder('scripts', ['.ts'])].filter(

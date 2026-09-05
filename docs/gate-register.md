@@ -5778,3 +5778,105 @@ query string is an assumption until something states what came out of it.
   ⚠️ **And the fifth report category is held by nothing to being read by a
   human**: the panel renders it, and whether anybody looks is outside every gate
   in this repository.
+
+### G55 — `pr-conventions`
+
+**Gate:** `gates/pr-conventions.test.ts` (the disk) and `scripts/lib/pr-conventions.test.ts` (the judgement), both in the `suite` matrix under `pnpm test`; the `conventions` job in `.github/workflows/gates.yml` is where the check itself runs
+**Date:** 2026-09-03
+**Observed-red line:** `${{ github.event.pull_request.title }}` appended to the `run:` of this workflow's own `conventions` step — the exact hazard the row exists for. *interpolates no event data into any `run:` step in the workflow* fails naming the step and the expression, 13 of 14 passing around it, a control through the identical invocation on both sides. **The first version of that clause passed against the same plant**, which is why it is a hand-written scan rather than a regular expression; see the vacuous-green verdict below. Six further plants, each red and each reverted: the type list widened by one word in `AGENTS.md`, the scope list narrowed by one, `edited` dropped from the trigger list, `conventions` dropped from the aggregator's `needs:`, zizmor's `==1.30.0` removed, and a third question heading added to the pull request template. ⚠️ **An eighth arrived from review rather than from planting** — a body carrying both protected questions *inside a single `<!-- … -->`*, and a second with both inside a fenced block, each of which passed. Red now, with a control body missing the questions outright through the identical invocation; see the comment route below. And zizmor's own control: the same plant, run through `pipx run zizmor==1.30.0 --no-online-audits --min-severity=low`, reports `error[template-injection] … audit confidence → High`.
+**Live-run evidence:** [run 33826310962](https://github.com/mephistopheles4/stacks/actions/runs/33826310962) red, [run 33827282551](https://github.com/mephistopheles4/stacks/actions/runs/33827282551) green, both on [#320](https://github.com/mephistopheles4/stacks/pull/320) at `9f707ab` — **the same commit, twice, with no push between them.** The `edited` trigger is a claim about GitHub and no local test runs one, so the title was edited to `wip: deliberately non-conforming, to observe the edited trigger`: the workflow re-ran, `conventions` failed with *`wip` is not a commit type*, and `gates` went red with it. Editing the title back re-ran it green. ⚠️ **The edit cancelled the run already in flight** — `concurrency.cancel-in-progress` is `true` — so a title edited during a run leaves a `cancelled` row beside the two that completed, and the aggregator's skipped-is-a-failure rule means that cancelled run reports red until the new one lands. Expected, and worth knowing before it looks like a defect.
+**Triaged at landing**, per G41.
+
+⚠️ **The convention was correct 58 of 58 times and read by nothing.** This
+repository squash-merges with `squash_merge_commit_title: PR_TITLE`, so the pull
+request title *is* the commit subject on `main` — a configured fact, from
+`gh api repos/mephistopheles4/stacks`, not an inference about a button. Measured
+2026-08-26 and again 2026-09-03: no workflow step, no `commitlint`, no `husky`,
+no title check of any kind. The one string that lands was the unchecked one.
+
+⚠️ **The instrument almost chosen would have made it worse.** This arrived as
+*"add husky for lint, formatting and conventional commits"*, and the third of
+those inverts: a `commit-msg` hook validates the subject the squash **throws
+away**. It would leave the landed subject unchecked while making the convention
+feel enforced — a layer that reads as coverage and is not, which is the failure
+worth avoiding rather than the gap it replaces.
+
+- **Weakening** — **the honest weakening is widening a list**, and both lists are
+  parsed out of `AGENTS.md` in both directions rather than declared here, so a
+  type added to the checker and not to the prose is red, and a type added to the
+  prose and not to the checker is red. Floored on both sides, because `toEqual`
+  over two empty sets is a perfect pass. ⚠️ **What is genuinely open is widening
+  them *in agreement*** — an edit to both in one commit passes, by design, since
+  that is what changing the convention looks like. The check is that the change
+  is visible in `AGENTS.md`, not that it is forbidden. ⚠️ **The same sentence
+  generalises to the checker, which CodeRabbit raised on
+  [#320](https://github.com/mephistopheles4/stacks/pull/320) and this row now
+  records rather than answers**: the `conventions` job runs the pull request's
+  own copy of `scripts/check-pr.ts`, so a pull request can neuter its own gate
+  in the diff a reviewer is reading. That is what `pull_request` CI *is* — every
+  job in that workflow runs the branch's code, and `pnpm test` goes green by
+  deleting tests. The proposed remedy, moving G55 to `pull_request_target`, was
+  **declined**: it hands a fork pull request a read/write token and secrets to
+  defend a convention, which is the trigger choice `.github/workflows/gates.yml`
+  already refuses in its own header, and a separate workflow could not be a
+  `needs:` of the `gates` aggregator.
+- **Satisfying the letter** — ⚠️ **exposed, and this row is unusually honest
+  about it.** `feat(site): asdf` passes. The body rule reads headings and the
+  presence of text and never prose, which the brief settled explicitly: judging
+  whether the summary paragraph is any good is out of scope and would be a gate
+  reading writing. What the row buys is that the shape of the string on `main` is
+  the shape `AGENTS.md` states, and nothing more. ⚠️ **A second letter-satisfying
+  route is an answer typed inside the template's `<!-- -->` comment**, which
+  measures as empty and is refused — but an answer of `.` is not. ⚠️ **That
+  refusal was itself satisfiable by a typo until CodeQL pointed near it**: an
+  *unterminated* `<!--` was left in place by the regex that stripped comments,
+  so a section whose author opened a comment and typed the answer inside it
+  measured as answered while GitHub rendered it as nothing. The alert was
+  `js/incomplete-multi-character-sanitization` at **high**, a false positive as
+  a security finding — nothing here renders HTML — and the third of this file's
+  own triage questions is what turned it into a real one. Replaced by a scanner
+  that takes the renderer's reading, with a test red against the regex.
+  ⚠️ **That refusal was only half of one, and this line said otherwise until
+  CodeRabbit measured it on [#320](https://github.com/mephistopheles4/stacks/pull/320).**
+  *Refused* held while the **heading** stayed outside the comment; a body with
+  the question and its answer both inside one `<!-- … -->` had its heading found
+  in the raw text, its contents measured non-empty, and passed — the section
+  rendering as nothing at all, so a reviewer saw no heading to notice was
+  unanswered. A fenced `## x` did the same, more mildly. The stripping now runs
+  **before** the heading is looked for rather than only over a section's
+  contents, and a fence is *unheaded* rather than deleted so a section answered
+  with a code block stays answered. The finding's own remedy — strip fences
+  outright — is the one that would have introduced that false red, and there is
+  a test standing on it.
+- **Routing around** — **the route is the job not running.** Three clauses close
+  it: the job exists and runs the script, the aggregator lists it in `needs:` and
+  compares its result against `success`, and all four `pull_request` event types
+  are named. ⚠️ **A fourth route is a job-level `if:`**, which is refused
+  explicitly and for a non-obvious reason: the aggregator fails on a *skipped*
+  dependency on purpose, so a conditional job would redden the required check on
+  every push to `main` rather than quietly passing — the failure mode is a broken
+  merge queue, not a hole. ⚠️ **The route nothing closes is GitHub's honouring of
+  the trigger list**, which is G40's, G44's and G50's stated limit reached again:
+  a `types:` key is a claim about a platform and no local test runs one.
+- **Vacuous green** — ⚠️ **it happened, in the clause that matters most, and it
+  is the reason this entry is worth reading.** The `run:`-step sweep was written
+  as one regular expression anchoring the key at six spaces with an optional
+  `- name:` line before it — which matches *neither* shape this file uses
+  (`      - run:` puts the key after a dash; a named step puts it at eight spaces,
+  often with an `env:` block between). It found eight *somethings*, cleared its
+  own floor of eight, and **reported zero findings against the hazard planted in
+  the very step the row is about.** A floor is not a positive control: it proves
+  the matcher found things, never that it found *these* things. The repair is a
+  hand-written scan keyed on indentation, and the floor moved to 12.
+- **Decay** — **it decays into a red on almost everything and into silence on
+  one thing.** The `AGENTS.md` sentence is matched literally, so rewording the
+  lead-in is red rather than a silently widened search; a renamed job, a dropped
+  `needs:` entry, an unpinned zizmor and a reworded template question are each
+  red. ⚠️ **What rots quietly is the pull request template's two questions
+  drifting in *meaning* rather than in wording** — the rule protects the headings
+  that end in a question mark, and a question reworded to ask something else
+  passes as long as the count stays at two and the checker's expected pair is
+  updated with it. ⚠️ **And the `dependabot[bot]` body exemption is a standing
+  permission**: it is closed to one login and reverse-asserted against a bot body
+  in the unit tests, but nothing notices the day Dependabot starts writing a
+  conforming body and the exemption stops earning its place.

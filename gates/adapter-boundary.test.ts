@@ -86,6 +86,12 @@ const ALLOWED = [
   // about are a hardcoded list in `gates/recall-corpus.ts`, not notes it read.
   'scripts/capture-lookup-recall.ts',
   'scripts/check-public-build.ts',
+  // Reads exactly one file — `.github/pull_request_template.md`, a repository
+  // file whose path is a constant in the script — to derive the two questions a
+  // pull request body may not drop. It opens nothing else and takes no path from
+  // anywhere: the pull request's own strings arrive through the environment, as
+  // data. It could not reach a vault if it tried. G55 (`pr-conventions`).
+  'scripts/check-pr.ts',
   // Deletes and reads one gitignored coverage report — `.coverage/`, written by
   // the Vitest run it just spawned. It never opens a note, and it could not
   // find a vault: the only paths it handles are the ones `git diff --cached`

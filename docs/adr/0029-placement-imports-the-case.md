@@ -1,7 +1,7 @@
 # The placement arithmetic imports the case, rather than being handed one
 
 `placeShelf(rows)` takes the rows and nothing else. The bookcase's dimensions
-live in [`packages/site/src/shelf/case.ts`](../../packages/site/src/shelf/bookcase.ts)
+live in [`packages/site/src/shelf/bookcase.ts`](../../packages/site/src/shelf/bookcase.ts)
 and both halves of the shelf — the arithmetic in `placement.ts` and the scene
 graph in `scene.ts` — import the same `SHELF`.
 

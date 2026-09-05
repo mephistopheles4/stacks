@@ -115,6 +115,10 @@ jobs:
       contents: write
 
     steps:
+      # The credential is *used*: this job runs `pnpm metrics:commit`, which pushes
+      # the run's record to the orphan `metrics` branch under `contents: write`.
+      # `persist-credentials: false` — right on every checkout in `gates.yml`, none of
+      # which pushes — would break the write half of the trend layer here.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The whole history, because the emitter derives the PR window —
@@ -123,7 +127,7 @@ jobs:
           # *no answer* and the window renders `unknown`, which is honest and
           # useless. Panel 1 is built around this value; a permanently unknown
           # one is a dead column nobody would think to blame the checkout for.
-          fetch-depth: 0
+          fetch-depth: 0 # zizmor: ignore[artipacked]
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -188,6 +192,10 @@ jobs:
       contents: write
 
     steps:
+      # The credential is *used*: this job runs `pnpm metrics:commit`, which pushes
+      # the run's record to the orphan `metrics` branch under `contents: write`.
+      # `persist-credentials: false` — right on every checkout in `gates.yml`, none of
+      # which pushes — would break the write half of the trend layer here.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The whole history, because the emitter derives the PR window —
@@ -196,7 +204,7 @@ jobs:
           # *no answer* and the window renders `unknown`, which is honest and
           # useless. Panel 1 is built around this value; a permanently unknown
           # one is a dead column nobody would think to blame the checkout for.
-          fetch-depth: 0
+          fetch-depth: 0 # zizmor: ignore[artipacked]
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:

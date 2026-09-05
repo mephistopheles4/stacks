@@ -76,7 +76,13 @@ import {
   silentProbes,
   unmeasuredFindings,
 } from '../scripts/lib/markdown-lint.ts';
-import { AGENTS_DOC, jobsOf, markdownSection, readRepoFile } from './repo.ts';
+import {
+  AGENTS_DOC,
+  aggregatorResultTests,
+  jobsOf,
+  markdownSection,
+  readRepoFile,
+} from './repo.ts';
 
 const WORKFLOW = '.github/workflows/gates.yml';
 
@@ -137,9 +143,8 @@ describe('G48 — the Markdown check runs on every pull request', () => {
     // A `needs:` entry with no `result` test is a dependency that reports and
     // cannot refuse: skipped and cancelled both have to fail the gate rather
     // than pass it by omission, which is why this compares against 'success'.
-    const tested = [...aggregator.matchAll(/needs\.([\w-]+)\.result\s*\}\}"\s*=\s*"success"/g)].map(
-      (match) => match[1],
-    );
+    // `aggregatorResultTests` is in `repo.ts` because three gates ask it.
+    const tested = aggregatorResultTests(aggregator);
 
     expect(
       tested,
