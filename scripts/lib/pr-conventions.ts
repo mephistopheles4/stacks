@@ -220,6 +220,73 @@ function withoutComments(markdown: string): string {
 }
 
 /**
+ * The same text with a fenced code block's lines no longer able to look like a
+ * heading: the leading `#` run goes, the rest of the line stays.
+ *
+ * ⚠️ **Unheaded rather than deleted, and the difference is a false red.** A code
+ * block is content a reader sees, so a section whose whole answer is one has
+ * been answered — dropping fences outright would redden it. Only the syntax
+ * that would make a line parse as a heading is taken away.
+ *
+ * An unclosed fence runs to the end, which is again the renderer's reading.
+ */
+function unheadedFences(markdown: string): string {
+  let open: { readonly marker: string; readonly length: number } | undefined;
+
+  return markdown
+    .split('\n')
+    .map((line) => {
+      const delimiter = /^ {0,3}(`{3,}|~{3,})\s*/.exec(line);
+
+      if (open === undefined) {
+        const run = delimiter?.[1];
+        if (run !== undefined) open = { marker: run[0] ?? '', length: run.length };
+        return line;
+      }
+
+      const run = delimiter?.[1];
+      // A fence closes on its own character, at its own length or longer, and
+      // an opening ```` ```ts ```` never closes anything — hence the `\s*$`.
+      if (
+        run !== undefined &&
+        run[0] === open.marker &&
+        run.length >= open.length &&
+        /^ {0,3}(?:`{3,}|~{3,})\s*$/.test(line)
+      ) {
+        open = undefined;
+        return line;
+      }
+
+      return line.replace(/^#{1,6}(?=\s|$)/, '');
+    })
+    .join('\n');
+}
+
+/**
+ * The Markdown as the page shows it, and the only text headings are read out of.
+ *
+ * ⚠️ **Comments first, then fences, and the order is load-bearing.** CommonMark
+ * would let a fence opened before a `<!--` win, so this deviates for the one
+ * case where both are in play — and it deviates *closed*: a `<!--` inside a
+ * fence swallows the rest here, which loses a heading and reddens the body
+ * rather than passing one that was never on the page. Wrongly red is an edit;
+ * wrongly green is a question nobody answered landing on `main`.
+ *
+ * ⚠️ **Applied before the heading is looked for, which is the whole fix.**
+ * Stripping comments only from a section's *contents* left the heading itself
+ * discoverable inside one, so a body with both questions written inside a single
+ * `<!-- … -->` was found, measured non-empty and passed — while GitHub rendered
+ * the block as nothing and the reviewer saw no sections at all. Raised by
+ * CodeRabbit on [#320](https://github.com/mephistopheles4/stacks/pull/320) and
+ * recorded on G55's register entry.
+ */
+function visible(markdown: string): string {
+  // Windows and the GitHub API both hand back `\r\n`; a `$` anchor would
+  // otherwise never match a heading line, and a fence line would never close.
+  return unheadedFences(withoutComments(markdown.replace(/\r\n/g, '\n')));
+}
+
+/**
  * The headings a body may not drop, read out of the pull request template.
  *
  * **Derived, never copied.** `.github/pull_request_template.md` tells an author
@@ -229,13 +296,12 @@ function withoutComments(markdown: string): string {
  * exactly the headings that **are** questions, which is a property of the file
  * rather than a second list to maintain.
  *
- * Comments are stripped first: the template's own prose discusses the sections
- * and would otherwise be mined for question marks.
+ * Read from the visible text: the template's own prose discusses the sections
+ * and would otherwise be mined for question marks, and a question shown inside
+ * one of its fenced examples is an example rather than a section.
  */
 export function protectedQuestions(template: string): string[] {
-  return [...withoutComments(template).matchAll(/^#{1,6}\s+(.*\?)\s*$/gm)].map(
-    (match) => match[1] ?? '',
-  );
+  return [...visible(template).matchAll(/^#{1,6}\s+(.*\?)\s*$/gm)].map((match) => match[1] ?? '');
 }
 
 /**
@@ -248,16 +314,15 @@ export function protectedQuestions(template: string): string[] {
  * section would run to whatever followed. The last section here has to run to
  * end of input, and `$` under `m` matches the end of *every* line.
  */
-function sectionUnder(body: string, heading: string): string | undefined {
+function sectionUnder(shown: string, heading: string): string | undefined {
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // Windows and the GitHub API both hand back `\r\n`; a `$` anchor would
-  // otherwise never match a heading line.
-  const normalised = body.replace(/\r\n/g, '\n');
-  const found = new RegExp(`^#{1,6}\\s+${escaped}\\s*$`, 'm').exec(normalised);
+  // `shown` has already been through `visible()`, which is what normalises the
+  // line endings and takes away every heading that is not one.
+  const found = new RegExp(`^#{1,6}\\s+${escaped}\\s*$`, 'm').exec(shown);
 
   if (found === null) return undefined;
 
-  const rest = normalised.slice(found.index + found[0].length);
+  const rest = shown.slice(found.index + found[0].length);
   const next = /^#{1,6}\s/m.exec(rest);
 
   return next === null ? rest : rest.slice(0, next.index);
@@ -273,8 +338,10 @@ function sectionUnder(body: string, heading: string): string | undefined {
  * the answer is any good is outside this and outside every gate here.
  */
 export function bodyFaults(body: string, questions: readonly string[]): Fault[] {
+  const shown = visible(body);
+
   return questions.flatMap((question) => {
-    const section = sectionUnder(body, question);
+    const section = sectionUnder(shown, question);
 
     if (section === undefined) {
       return [
@@ -288,7 +355,9 @@ export function bodyFaults(body: string, questions: readonly string[]): Fault[] 
       ];
     }
 
-    if (withoutComments(section).trim().length === 0) {
+    // No stripping here: `shown` carried it out before the heading was looked
+    // for, which is the ordering the comment on `visible()` is about.
+    if (section.trim().length === 0) {
       return [
         {
           kind: 'body' as const,

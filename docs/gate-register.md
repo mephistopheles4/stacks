@@ -5783,7 +5783,7 @@ query string is an assumption until something states what came out of it.
 
 **Gate:** `gates/pr-conventions.test.ts` (the disk) and `scripts/lib/pr-conventions.test.ts` (the judgement), both in the `suite` matrix under `pnpm test`; the `conventions` job in `.github/workflows/gates.yml` is where the check itself runs
 **Date:** 2026-09-03
-**Observed-red line:** `${{ github.event.pull_request.title }}` appended to the `run:` of this workflow's own `conventions` step — the exact hazard the row exists for. *interpolates no event data into any `run:` step in the workflow* fails naming the step and the expression, 13 of 14 passing around it, a control through the identical invocation on both sides. **The first version of that clause passed against the same plant**, which is why it is a hand-written scan rather than a regular expression; see the vacuous-green verdict below. Six further plants, each red and each reverted: the type list widened by one word in `AGENTS.md`, the scope list narrowed by one, `edited` dropped from the trigger list, `conventions` dropped from the aggregator's `needs:`, zizmor's `==1.30.0` removed, and a third question heading added to the pull request template. And zizmor's own control: the same plant, run through `pipx run zizmor==1.30.0 --no-online-audits --min-severity=low`, reports `error[template-injection] … audit confidence → High`.
+**Observed-red line:** `${{ github.event.pull_request.title }}` appended to the `run:` of this workflow's own `conventions` step — the exact hazard the row exists for. *interpolates no event data into any `run:` step in the workflow* fails naming the step and the expression, 13 of 14 passing around it, a control through the identical invocation on both sides. **The first version of that clause passed against the same plant**, which is why it is a hand-written scan rather than a regular expression; see the vacuous-green verdict below. Six further plants, each red and each reverted: the type list widened by one word in `AGENTS.md`, the scope list narrowed by one, `edited` dropped from the trigger list, `conventions` dropped from the aggregator's `needs:`, zizmor's `==1.30.0` removed, and a third question heading added to the pull request template. ⚠️ **An eighth arrived from review rather than from planting** — a body carrying both protected questions *inside a single `<!-- … -->`*, and a second with both inside a fenced block, each of which passed. Red now, with a control body missing the questions outright through the identical invocation; see the comment route below. And zizmor's own control: the same plant, run through `pipx run zizmor==1.30.0 --no-online-audits --min-severity=low`, reports `error[template-injection] … audit confidence → High`.
 **Live-run evidence:** [run 33826310962](https://github.com/mephistopheles4/stacks/actions/runs/33826310962) red, [run 33827282551](https://github.com/mephistopheles4/stacks/actions/runs/33827282551) green, both on [#320](https://github.com/mephistopheles4/stacks/pull/320) at `9f707ab` — **the same commit, twice, with no push between them.** The `edited` trigger is a claim about GitHub and no local test runs one, so the title was edited to `wip: deliberately non-conforming, to observe the edited trigger`: the workflow re-ran, `conventions` failed with *`wip` is not a commit type*, and `gates` went red with it. Editing the title back re-ran it green. ⚠️ **The edit cancelled the run already in flight** — `concurrency.cancel-in-progress` is `true` — so a title edited during a run leaves a `cancelled` row beside the two that completed, and the aggregator's skipped-is-a-failure rule means that cancelled run reports red until the new one lands. Expected, and worth knowing before it looks like a defect.
 **Triaged at landing**, per G41.
 
@@ -5808,7 +5808,18 @@ worth avoiding rather than the gap it replaces.
   over two empty sets is a perfect pass. ⚠️ **What is genuinely open is widening
   them *in agreement*** — an edit to both in one commit passes, by design, since
   that is what changing the convention looks like. The check is that the change
-  is visible in `AGENTS.md`, not that it is forbidden.
+  is visible in `AGENTS.md`, not that it is forbidden. ⚠️ **The same sentence
+  generalises to the checker, which CodeRabbit raised on
+  [#320](https://github.com/mephistopheles4/stacks/pull/320) and this row now
+  records rather than answers**: the `conventions` job runs the pull request's
+  own copy of `scripts/check-pr.ts`, so a pull request can neuter its own gate
+  in the diff a reviewer is reading. That is what `pull_request` CI *is* — every
+  job in that workflow runs the branch's code, and `pnpm test` goes green by
+  deleting tests. The proposed remedy, moving G55 to `pull_request_target`, was
+  **declined**: it hands a fork pull request a read/write token and secrets to
+  defend a convention, which is the trigger choice `.github/workflows/gates.yml`
+  already refuses in its own header, and a separate workflow could not be a
+  `needs:` of the `gates` aggregator.
 - **Satisfying the letter** — ⚠️ **exposed, and this row is unusually honest
   about it.** `feat(site): asdf` passes. The body rule reads headings and the
   presence of text and never prose, which the brief settled explicitly: judging
@@ -5825,6 +5836,18 @@ worth avoiding rather than the gap it replaces.
   a security finding — nothing here renders HTML — and the third of this file's
   own triage questions is what turned it into a real one. Replaced by a scanner
   that takes the renderer's reading, with a test red against the regex.
+  ⚠️ **That refusal was only half of one, and this line said otherwise until
+  CodeRabbit measured it on [#320](https://github.com/mephistopheles4/stacks/pull/320).**
+  *Refused* held while the **heading** stayed outside the comment; a body with
+  the question and its answer both inside one `<!-- … -->` had its heading found
+  in the raw text, its contents measured non-empty, and passed — the section
+  rendering as nothing at all, so a reviewer saw no heading to notice was
+  unanswered. A fenced `## x` did the same, more mildly. The stripping now runs
+  **before** the heading is looked for rather than only over a section's
+  contents, and a fence is *unheaded* rather than deleted so a section answered
+  with a code block stays answered. The finding's own remedy — strip fences
+  outright — is the one that would have introduced that false red, and there is
+  a test standing on it.
 - **Routing around** — **the route is the job not running.** Three clauses close
   it: the job exists and runs the script, the aggregator lists it in `needs:` and
   compares its result against `success`, and all four `pull_request` event types

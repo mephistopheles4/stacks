@@ -190,11 +190,19 @@ describe('bodyFaults — headings and the presence of text', () => {
     // empty heading. Found by working the third of `docs/gates.md`'s CodeQL
     // triage questions on a `js/incomplete-multi-character-sanitization` alert
     // that was a false positive as a security finding.
+    //
+    // ⚠️ **This asserted one fault until `visible()` moved the stripping ahead
+    // of the heading search**, and the second fault is the truer answer rather
+    // than a regression: the unclosed comment eats the *second* question's
+    // heading too, exactly as the page does. The old count was the same bug
+    // seen from the other side — comments were taken out of a section's
+    // contents, so a heading downstream of one stayed discoverable.
     const swallowed = GOOD_BODY.replace('None.', '<!-- Name it from AGENTS.md\n\nInvariant 2.');
     const faults = bodyFaults(swallowed, questions);
 
-    expect(faults.length, 'an unclosed comment hides everything after it').toBe(1);
+    expect(faults.length, 'an unclosed comment hides everything after it').toBe(2);
     expect(faults[0]?.message).toContain('empty');
+    expect(faults[1]?.message).toContain('no `## Which gate would catch this breaking again?`');
   });
 
   it('keeps an answer that follows a closed comment', () => {
@@ -215,6 +223,74 @@ describe('bodyFaults — headings and the presence of text', () => {
 
   it('reads the answer under a heading written at another level', () => {
     expect(bodyFaults(GOOD_BODY.replace(/^## /gm, '### '), questions)).toEqual([]);
+  });
+
+  it('fails a body whose questions exist only inside a comment', () => {
+    // ⚠️ **The route the register used to call closed.** *An answer typed
+    // inside the template's `<!-- -->` comment measures as empty and is
+    // refused* was true only while the **heading** stayed outside it. Put the
+    // heading in there too and the section was found, its content measured
+    // non-empty, and the body passed — while GitHub renders the whole block as
+    // nothing, so the reviewer sees no sections at all.
+    //
+    // Headings are no longer discovered in the raw body; `visible()` runs
+    // first. Raised by CodeRabbit on #320.
+    const hidden = [
+      '## What changed, and why',
+      '',
+      'A paragraph.',
+      '',
+      '<!--',
+      '## Which invariant does this touch?',
+      '',
+      'None.',
+      '',
+      '## Which gate would catch this breaking again?',
+      '',
+      'G55.',
+      '-->',
+      '',
+    ].join('\n');
+
+    expect(bodyFaults(hidden, questions).length).toBe(questions.length);
+  });
+
+  it('fails a body whose questions exist only inside a fence', () => {
+    // A fenced `## x` is code and not a heading. It is the milder half of the
+    // same fault — the text is at least on the page — but a section that does
+    // not exist must not read as one.
+    const fenced = [
+      '## What changed, and why',
+      '',
+      'A paragraph.',
+      '',
+      '```markdown',
+      '## Which invariant does this touch?',
+      '',
+      'None.',
+      '',
+      '## Which gate would catch this breaking again?',
+      '',
+      'G55.',
+      '```',
+      '',
+    ].join('\n');
+
+    expect(bodyFaults(fenced, questions).length).toBe(questions.length);
+  });
+
+  it('keeps a section whose whole answer is a fenced code block', () => {
+    // The reason a fence is *unheaded* rather than deleted, and this is the
+    // regression the tempting fix would cause. A code block is content a reader
+    // sees, so a section whose whole answer is one must stay non-empty —
+    // stripping fences outright, which is what the finding asked for, would
+    // redden it. Green before the change and green after, which is the point.
+    const withCode = GOOD_BODY.replace(
+      'None.',
+      ['```sh', '# none of the five', 'pnpm test', '```'].join('\n'),
+    );
+
+    expect(bodyFaults(withCode, questions)).toEqual([]);
   });
 });
 
