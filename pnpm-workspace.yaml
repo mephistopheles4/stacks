@@ -57,7 +57,8 @@ verifyDepsBeforeRun: warn
 # It arrives one way — `@stryker-mutator/core` > `typed-rest-client` — and that
 # package pins `qs` at exactly `6.15.1`, so there is no update path at Stryker 9
 # and no `pnpm update` that reaches it. Stryker 10 is the version whose
-# `typed-rest-client` 3.x carries `qs` 6.15.3 on its own; taking a major bump of
+# `typed-rest-client` 3.x carries `qs` 6.15.3 on its own — which two later
+# advisories have since made insufficient, see below; taking a major bump of
 # the mutation runner to answer a moderate advisory is the larger risk, and G38
 # scores every scope it would move.
 #
@@ -68,13 +69,31 @@ verifyDepsBeforeRun: warn
 # instrument reading a different threshold, and the two disagreeing is the
 # normal case rather than a fault.
 #
-# `^6.15.2` rather than `6.15.2`, for the reason the nanoid block above learned
-# the hard way: the fix is *first* in 6.15.2 and an advisory's range is not a
-# stable statement of scope, so a caret admits the next patch without a second
-# red build. It resolves to 6.15.3, which is what `typed-rest-client` 3.1.0 ships
-# with — so the version this pins is one its own consumer already runs, rather
-# than a combination nobody has tried. Remove this when Stryker's
+# ⚠️ **That warning came true, and this block was raised from `^6.15.2` to
+# `^6.16.0` because of it.** GHSA-x5fp-wj9c-mxmx names 6.15.3 vulnerable and
+# GHSA-4mjr-xmp4-gh2g covers everything below 6.16.0 — so the caret admitted a
+# fix and there was none published above it, exactly the shape the sentence
+# above predicts. Both are moderate, so `pnpm audit --audit-level=high` was
+# green throughout. [#318](https://github.com/mephistopheles4/stacks/issues/318).
+#
+# ⚠️ **The old escape route no longer works, and it is corrected rather than
+# deleted.** This block used to say: remove the override when Stryker's
 # `typed-rest-client` reaches 3.x and the lockfile carries a fixed `qs` unaided.
+# `typed-rest-client` 3.1.0 pins `qs` at **6.15.3**, which the first advisory
+# above names as vulnerable, so that bump now fixes nothing. **There is no
+# version of `typed-rest-client` that resolves this** — 2.3.1 pins `6.15.1` and
+# 3.1.0 pins `6.15.3`, both exact, so no release above either pin is ever
+# declared-compatible and an override is the only mechanism there is.
+#
+# ⚠️ **Which means this forces a combination the package does not declare, and
+# that was measured rather than hoped.** `typed-rest-client` touches `qs` at one
+# line — `Util.js`, `qs.stringify(params, buildParamsStringifyOptions(...))` —
+# and 6.15.3 and 6.16.0 produce byte-identical output across all three option
+# sets that function can build and eight parameter shapes (arrays, nesting,
+# dots, spaces, unicode, empties, mixed), with a deliberately mismatched control
+# proving the comparison could see a difference. `pnpm test` and a full
+# `pnpm mutation:run` both pass on 6.16.0. The tree was already forcing 6.15.3
+# onto a package pinning 6.15.1; this is the same act, one line further.
 #
 # This deliberately reaches every `qs` in the tree rather than the scoped
 # `typed-rest-client>qs`. There is exactly one today, and the bare form keeps a
@@ -124,7 +143,7 @@ verifyDepsBeforeRun: warn
 # vulnerable line unnoticed.
 overrides:
   nanoid: '^3.3.18'
-  qs: '^6.15.2'
+  qs: '^6.16.0'
   fast-uri: '^3.1.6'
 
 # CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
