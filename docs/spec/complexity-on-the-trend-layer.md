@@ -369,6 +369,15 @@ it previews; the record is CI's.
 - **Zero-dep**: `git config core.hooksPath .githooks`, a checked-in script,
   **opt-in per clone** — a contributor with no agent skills installed never
   meets it, and nothing in `pnpm install` wires it.
+  ⚠️ **Half of this went stale on 2026-09-08** and is annotated rather than
+  rewritten, because the section records what was specified.
+  [#288](https://github.com/mephistopheles4/stacks/issues/288) adopted husky,
+  which claims the one `core.hooksPath` slot on `pnpm install`, so the print
+  moved into `.husky/pre-commit` behind
+  `git config --bool stacks.hooks.crap true`. **Still opt-in and still
+  zero-teeth; no longer zero-dep, and no longer unwired by `pnpm install`** —
+  the hook framework around it now arrives for everyone.
+  [ADR-0083](../adr/0083-hooks-arrive-with-pnpm-install.md).
 - **Per changed file**: `vitest related <file> --coverage --run` with the JSON
   reporter into a gitignored directory; ESLint's `complexity` rule over the same
   file; **per-function coverage derived** by intersecting `statementMap` against

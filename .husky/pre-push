@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# The linter, before the push. This one refuses.
+#
+# ⚠️ **Here rather than pre-commit, and the reason is measured.**
+# `eslint.lint.config.mjs` sets `projectService: true`, so the parser loads the
+# whole TypeScript program: the type-aware run costs about 7.3 seconds, of which
+# 5.1 is that one option, and **a staged subset does not make it cheaper** —
+# the program is loaded either way. Seven seconds on every commit is how a hook
+# becomes the thing everyone clears with `--no-verify`. A push is rarer and
+# already slow, so the same seconds buy something there.
+#
+# ⚠️ **The gates are still the contract.** The `style` job in
+# `.github/workflows/gates.yml` runs this same command and is what actually
+# blocks a merge; this only saves the round trip. A contributor whose hook is
+# broken, skipped or absent passes every gate. `--no-verify` skips this, and
+# that is not a defect — see docs/adr/0083-hooks-arrive-with-pnpm-install.md.
+
+if ! pnpm lint; then
+  printf '\n'
+  printf 'lint: the findings above would fail the `style` job in CI.\n'
+  printf '\n'
+  printf '  Fix them:      pnpm lint --fix   (repairs about a quarter; the rest are by hand)\n'
+  printf '  See them all:  pnpm lint\n'
+  printf '  Push anyway:   git push --no-verify   (CI will still refuse the merge)\n'
+  printf '\n'
+  exit 1
+fi

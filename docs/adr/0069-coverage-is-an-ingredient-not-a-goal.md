@@ -131,6 +131,12 @@ function's complexity is a fact about the code whatever runs it.
 - The print is **opt-in per clone** (`git config core.hooksPath .githooks`) and
   never blocks a commit. `CONTRIBUTING.md`'s promise that a contributor with no
   agent skills installed passes every gate is untouched: this is not a gate.
+  ⚠️ **The opt-in moved on 2026-09-08**, to
+  `git config --bool stacks.hooks.crap true`, when husky took the one
+  `core.hooksPath` slot — [ADR-0083](./0083-hooks-arrive-with-pnpm-install.md).
+  **The print is still opt-in and still blocks nothing**, so this bullet's
+  conclusion is unchanged; only the incantation is. Annotated rather than
+  rewritten, because the sentence records what was decided on the day.
 
 **Revisit condition.** If anything ever proposes reading this number outside the
 hook — a floor, a badge, a series, a threshold, a pull-request comment — that is

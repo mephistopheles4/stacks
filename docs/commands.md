@@ -51,9 +51,9 @@ not remove one of those reasons without removing the option it justifies**: no
 gate reads this config, and the comment is what stands in for one.
 
 **It takes about 7.5 seconds**, against `pnpm typecheck`'s 2.2, because it builds
-a TypeScript program before any rule runs. The same call is in
-`.githooks/pre-commit`, where it prints and never blocks — so opting that hook in
-now costs the Vitest coverage pass *and* this.
+a TypeScript program before any rule runs. That cost is why the same call sits in
+`.husky/pre-push` and **not** in `.husky/pre-commit` — a staged subset does not
+make it cheaper, since the program is loaded either way.
 
 ## `pnpm format` and `pnpm format:check` — and the quarter of the site they never open
 
@@ -577,47 +577,72 @@ once a workflow runs one, so there is no rule set to negotiate; but its docs nam
 `0.23.1` and it floats, and this repo can pin only its own copy. That residual is
 tolerable because the review half is advisory.
 
-## The pre-commit hook — opting in, and reading the CRAP table
+## The hooks — what arrives with `pnpm install`, and reading the CRAP table
 
-**Not a command, and not a gate.** It is a checked-in git hook that nobody has
-until they ask for it:
+**Not commands, and not gates.** Two hook scripts live in
+[`.husky/`](../.husky), and unlike everything else optional in this repository
+they **arrive on their own**: `husky` is a devDependency and `prepare` is a
+lifecycle script, so `pnpm install` wires them for every contributor without
+anybody asking. That is a real posture change and it earns its own record —
+[ADR-0083](adr/0083-hooks-arrive-with-pnpm-install.md).
+
+⚠️ **The gates are still the whole contract.** Every check in either hook
+already refuses in CI, so this layer buys **latency and no new coverage**: a
+formatting slip found in three seconds locally instead of three minutes in CI.
+A contributor whose hook is broken, skipped or absent passes every gate, and
+`--no-verify` skips both hooks — that is not a defect, because nothing here is
+a guarantee.
+
+| Hook | Runs | Refuses? |
+| --- | --- | --- |
+| `pre-commit` | `lint-staged` → `prettier --write` over the staged files | **yes**, and it is the only step here that can |
+| `pre-commit` | `pnpm mutation:stamp --check` | no — warns, and G56 refuses the merge |
+| `pre-commit` | the CRAP print, opt-in per clone | no — it exits 0 whatever happens |
+| `pre-push` | `pnpm lint` | **yes** |
+
+⚠️ **`pnpm lint` is on the push and not the commit, and the reason is
+measured.** `eslint.lint.config.mjs` sets `projectService: true`, so the run
+costs about 7.3 seconds whatever subset of files it gets — **a staged subset
+does not make it cheaper**, because the parser loads the whole TypeScript
+program either way. Seven seconds on every commit is how a hook becomes the
+thing everyone clears with `--no-verify`.
+
+⚠️ **`lint-staged` names extensions rather than `*`, and that is load-bearing
+twice.** Prettier errors on a `.astro` file named explicitly (see above), so
+`*` would fail every commit touching the site; and `.prettierignore` keeps
+Markdown and `fixtures/` out, which was **verified with a positive control**
+rather than assumed — identical malformed content is exit 0 under `fixtures/`
+and exit 1 at a path that is not ignored.
+
+### `.githooks/pre-commit` is retired, and why it could not simply stay
+
+**Git has exactly one `core.hooksPath`.** The old hook was opt-in per clone via
+`git config core.hooksPath .githooks`; husky claims that same slot on
+`pnpm install`. Its own header predicted the collision — *"a husky or lefthook
+install among the possibilities … Nothing here needs that slot badly enough to
+take somebody's hook manager off them."* Two things cannot own one slot, so the
+CRAP print moved into `.husky/pre-commit` rather than competing with it, and its
+`pnpm lint` line is superseded by the pre-push hook.
+
+**The print stayed opt-in** — it is a ranking whose exponents nobody calibrated,
+and making it everybody's would be the refusing hook
+[`docs/spec/complexity-on-the-trend-layer.md`](spec/complexity-on-the-trend-layer.md)
+§4 turned down:
 
 ```sh
-git config --get core.hooksPath   # keep whatever this prints
-git config core.hooksPath .githooks
+git config --bool stacks.hooks.crap true    # opt in
+git config --unset stacks.hooks.crap        # opt out
 ```
 
-That is the whole install. Nothing in `pnpm install` wires it, no gate runs it,
-and CI never sees it. A contributor who never opts in never meets it — the same
-promise `CONTRIBUTING.md` makes about every optional thing in this repository.
-
-⚠️ **Read the first line before running the second.** Git has exactly one
-`core.hooksPath`, so opting in **overwrites** whatever was in it, and a husky or
-lefthook install is exactly what would be in it. `git config --unset
-core.hooksPath` empties the slot rather than restoring the old value, so opting
-out of this is only reversible if you kept what the first line printed —
-`git config core.hooksPath <what it printed>` puts it back. Nothing here is
-worth taking somebody's hook manager off them.
-
-**It runs two things, and neither can block a commit.** The CRAP print described
-below, and then `pnpm lint` — G46 shifted left, so a finding is seen before the
-round trip through CI rather than after it. Each is called with `|| printf …`
-and the script ends in an unconditional `exit 0`, so a failure of either costs
-the print and nothing else. The `style` job in `gates.yml` is what actually
-refuses.
-
-⚠️ **Both halves are slow, and the lint half is type-aware.** The CRAP print runs
-a Vitest coverage pass and `pnpm lint` builds a TypeScript program — about 7.5
-seconds on its own. This hook was already the slow part of a commit and is now
-slower; `--no-verify` skips both.
+⚠️ **A clone that had opted the old hook in keeps pointing at a file that is
+gone until its next `pnpm install`**, which repoints `core.hooksPath` at husky.
+Nothing breaks in between: git runs no hook it cannot find.
 
 **It prints and it never refuses.** Every failure — no dependencies installed,
 a Vitest run that died, a file ESLint could not parse — costs you the print and
-nothing else; the hook exits 0 unconditionally. `--no-verify` skips it, and for
-a print that is fine. If it ever grew a refusal it would be the pre-commit hook
-[`docs/spec/complexity-on-the-trend-layer.md`](spec/complexity-on-the-trend-layer.md)
-§4 turned down; the only teeth in this rollout are the per-scope cap at
-`deploy:site`.
+nothing else; the step is called with `|| printf …` and the hook ends in an
+unconditional `exit 0`. The only teeth in this rollout remain the per-scope cap
+at `deploy:site`.
 
 ### What it does, on every commit
 

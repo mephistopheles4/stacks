@@ -24,14 +24,19 @@
  * re-deriving it needs the counter to run; the gate deliberately does not watch
  * it either, for the reason ADR-0079 records.
  *
- * ⚠️ **There is no `--check`, and one was written and removed.** *Is the stamp
- * stale* is a question G56 already answers, in the place a stranger meets it,
- * and a second answer here would be a flag with no reader — the objection
- * `stryker.config.d.mts` states about its own fields: *a field arrives here
- * with its reader, never in anticipation of one*.
+ * ⚠️ **`--check` was written, removed, and is back with its reader**, which is
+ * the rule working rather than a reversal of it. It was cut on
+ * [#329](https://github.com/mephistopheles4/stacks/pull/329) as a flag nothing
+ * called — *a field arrives here with its reader, never in anticipation of
+ * one*, `stryker.config.d.mts`'s objection about its own fields. The reader
+ * arrived one ticket later: `.husky/pre-commit` warns on a stale stamp and must
+ * **never write**, because a hook that edits an unstaged file mid-commit
+ * changes what is about to be committed. `pnpm mutation:stamp` alone can only
+ * write, so the warning needs a way to ask.
  *
  * ```sh
- * pnpm mutation:stamp
+ * pnpm mutation:stamp             # write the stamp
+ * pnpm mutation:stamp --check     # ask whether it is stale; write nothing
  * ```
  */
 
@@ -42,6 +47,7 @@ import { configHashOf, FLOORS_FILE, restampConfigHash } from './lib/floors.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 function main(): void {
+  const check = process.argv.includes('--check');
   const path = join(REPO_ROOT, FLOORS_FILE);
   const source = readFileSync(path, 'utf8');
   const hash = configHashOf(strykerConfig);
@@ -49,6 +55,19 @@ function main(): void {
 
   if (rewritten === source) {
     console.log(`${FLOORS_FILE} already records ${hash}`);
+    return;
+  }
+
+  if (check) {
+    console.log(
+      `${FLOORS_FILE} is stale: it records a different hash from the configuration beside ` +
+        `it, which is ${hash}. Run \`pnpm mutation:stamp\` to write it.`,
+    );
+    // ⚠️ **The answer goes in the exit status, not only in the line above.**
+    // The caller is a hook deciding whether to warn, and a `--check` that
+    // printed the answer and exited 0 would make stale and fresh identical to
+    // everything except a human reading the output.
+    process.exitCode = 1;
     return;
   }
 

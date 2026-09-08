@@ -8,6 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "prepare": "husky",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint --config eslint.lint.config.mjs .",
     "build": "pnpm run typecheck && pnpm --filter @stacks/site run build",
@@ -32,6 +33,9 @@
     "trend:sync": "tsx scripts/trend-sync.ts",
     "deploy:site": "tsx scripts/deploy.ts"
   },
+  "lint-staged": {
+    "*.{ts,mts,mjs,json,jsonc,yml,yaml}": "prettier --write"
+  },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@stryker-mutator/core": "9.6.1",
@@ -41,7 +45,9 @@
     "@vitest/coverage-v8": "4.1.11",
     "eslint": "10.9.1",
     "eslint-plugin-sonarjs": "4.2.0",
+    "husky": "9.1.7",
     "jscpd": "5.1.1",
+    "lint-staged": "17.5.0",
     "markdownlint-cli2": "0.23.2",
     "prettier": "3.9.6",
     "puppeteer-core": "^25.9.0",

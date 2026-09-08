@@ -28,6 +28,30 @@ pnpm lint && pnpm format:check
 `pnpm lint --fix` repairs about a quarter of what the first reports and the
 rest is read. Both are documented in [`docs/commands.md`](docs/commands.md).
 
+## Git hooks arrive with `pnpm install`
+
+⚠️ **This is the one thing in this repository you do not opt into.** `husky` is
+a dependency and `prepare` is a lifecycle script, so `pnpm install` installs two
+git hooks for you without asking:
+
+- **on commit** — Prettier over your staged files, which rewrites them in place;
+  plus a warning if `stryker.floors.json`'s stamp has gone stale.
+- **on push** — `pnpm lint`, which refuses.
+
+**They buy speed and nothing else.** Every one of those checks already refuses in
+CI, so the hooks find a slip in three seconds instead of three minutes. They add
+no coverage whatsoever.
+
+**The four commands above remain the only contract.** A hook is not a gate and no
+hook is a required check. If yours is broken, if you skip it with `--no-verify`,
+or if it never installed, **you still pass every gate** — that promise is
+unchanged, and `--no-verify` is a supported way to work rather than a loophole.
+
+[ADR-0083](docs/adr/0083-hooks-arrive-with-pnpm-install.md) records why this was
+worth breaking the *everything else is optional* posture for, and
+[`docs/commands.md`](docs/commands.md) covers both hooks, the opt-in CRAP print,
+and the retired `.githooks/pre-commit` that husky replaces.
+
 **One-time setup, so `git blame` skips the reformat commit** — GitHub already
 does this from the default branch, and a local clone needs telling once:
 

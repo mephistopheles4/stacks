@@ -587,6 +587,19 @@ struck and owes nothing.** It called for an ADR on a hook framework;
 `.githooks/pre-commit` already exists, tracked and opt-in, so no framework and no
 dependency is added.
 
+> ⚠️ **Reversed on 2026-09-08, deliberately, and the debt was owed after all.**
+> [#288](https://github.com/mephistopheles4/stacks/issues/288) adopts `husky`
+> and `lint-staged`, and `.githooks/pre-commit` is retired because git has one
+> `core.hooksPath` and husky claims it. **The strike above was right on its own
+> terms and rested on a premise that stopped holding**: it argued that an
+> existing opt-in hook made a framework unnecessary, which is true only while
+> nobody wants a hook that *arrives on its own*. The ADR this strike cancelled
+> is the one that had to be written to reverse it —
+> [ADR-0083](../adr/0083-hooks-arrive-with-pnpm-install.md) — and it argues the
+> posture change rather than the convenience. Annotated rather than rewritten:
+> the paragraph records what was decided on the day, and #288's own body never
+> mentioned this file, which is worth knowing about how the reversal happened.
+
 Everything else here is mechanical — rule lists, series names, thresholds — or
 already carries its reasoning on its ticket.
 
