@@ -1176,7 +1176,7 @@ export function renderFloorLines(input: PrintInput): string[] {
  * The first eight hex digits of a stamp, which is how this repo's prose spells
  * one when it is naming rather than comparing — `sha256:d63e1214…`.
  */
-export function abbreviated(hash: string): string {
+function abbreviated(hash: string): string {
   const digits = hash.replace(/^sha256:/, '');
   return digits.length > 8 ? `sha256:${digits.slice(0, 8)}…` : hash;
 }

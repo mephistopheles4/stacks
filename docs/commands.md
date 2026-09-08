@@ -302,9 +302,9 @@ same diff as whatever moved the configuration — `docs/spec/the-ratchet.md` §4
 route table has always asked for both halves, and G56 is what makes forgetting
 the second half a red pull request rather than an ambush at the next deploy.
 
-`--check` prints what it *would* write and changes nothing, **exiting non-zero
-when the stamp is stale**: the answer belongs in the status, or a caller asking
-whether the stamp is fresh cannot tell the two cases apart.
+⚠️ **There is no `--check` flag, and one was written and removed.** *Is the
+stamp stale* is the question G56 already answers, in the place a stranger meets
+it; a second answer here would be a flag with no reader.
 
 ⚠️ **It re-derives and re-scores nothing.** Running it makes the file
 self-consistent, not correct — every floor in it is still a number measured

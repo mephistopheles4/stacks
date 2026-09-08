@@ -227,7 +227,7 @@ pnpm deploy:site         # gates, then build from the real vault, then publish
 pnpm duplication:report  # jscpd over the eight scopes and the whole tree, as a table
 pnpm mutation:run        # Stryker over the eight declared scopes — minutes, not seconds
 pnpm mutation:score      # that run's report, scored per declared scope
-pnpm mutation:stamp      # re-derive `stryker.floors.json`'s configHash — G56's remedy   (--check)
+pnpm mutation:stamp      # re-derive `stryker.floors.json`'s configHash — G56's remedy
 pnpm metrics:emit        # one run's trend series, as the OpenMetrics text CI commits
 pnpm metrics:commit      # put that record on the orphan `metrics` branch
 pnpm trend:sync          # pull that record into the local store, put the page up, and ask the live site what it serves

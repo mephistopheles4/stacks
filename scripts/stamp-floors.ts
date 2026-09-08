@@ -24,9 +24,14 @@
  * re-deriving it needs the counter to run; the gate deliberately does not watch
  * it either, for the reason ADR-0079 records.
  *
+ * ⚠️ **There is no `--check`, and one was written and removed.** *Is the stamp
+ * stale* is a question G56 already answers, in the place a stranger meets it,
+ * and a second answer here would be a flag with no reader — the objection
+ * `stryker.config.d.mts` states about its own fields: *a field arrives here
+ * with its reader, never in anticipation of one*.
+ *
  * ```sh
- * pnpm mutation:stamp             # write the stamp
- * pnpm mutation:stamp --check     # print what it would write, change nothing
+ * pnpm mutation:stamp
  * ```
  */
 
@@ -37,7 +42,6 @@ import { configHashOf, FLOORS_FILE, restampConfigHash } from './lib/floors.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 function main(): void {
-  const check = process.argv.includes('--check');
   const path = join(REPO_ROOT, FLOORS_FILE);
   const source = readFileSync(path, 'utf8');
   const hash = configHashOf(strykerConfig);
@@ -45,17 +49,6 @@ function main(): void {
 
   if (rewritten === source) {
     console.log(`${FLOORS_FILE} already records ${hash}`);
-    return;
-  }
-
-  if (check) {
-    console.log(`${FLOORS_FILE} would be restamped to ${hash} — run without --check to write it`);
-    // ⚠️ **A non-zero exit, because `--check` is a question with a wrong
-    // answer.** A caller that runs this to find out whether the stamp is stale
-    // gets the answer in the status; printing it and exiting 0 would make the
-    // stale case indistinguishable from the fresh one to everything but a human
-    // reading the line.
-    process.exitCode = 1;
     return;
   }
 

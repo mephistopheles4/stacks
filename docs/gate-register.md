@@ -5431,10 +5431,13 @@ code location — agreed.
   rule this file records is compared to the jscpd actually installed, so a
   threshold edit or a tool upgrade that changes what every count *means* is red
   at merge instead of being discovered at a deploy. ⚠️ **That does nothing for
-  `stryker.floors.json`**, whose own comment records that no gate, test or CI
-  check compares its two stamps — [#224](https://github.com/mephistopheles4/stacks/issues/224)
-  owns that, and reading this row as cover for it would be wrong. Disposition
-  `repaired`.
+  `stryker.floors.json`**, and reading this row as cover for it would be wrong.
+  This bullet said until [#224](https://github.com/mephistopheles4/stacks/issues/224)
+  landed that *no gate, test or CI check compares its two stamps*; **G56
+  (`config-hash`) compares one of them** — `configHash` — and `fixtureHash` is
+  still compared by nothing at merge, declined in
+  [ADR-0079](adr/0079-the-floors-stamp-is-compared-at-merge.md) because a gate
+  over it goes red on every dependency bump. Disposition `repaired`.
 
 ⚠️ **The residual worth carrying forward is not in any of the five.** The counter
 records what the source **declares**, and jscpd honours a block only when no code
