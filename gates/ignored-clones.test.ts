@@ -24,16 +24,19 @@
  * beside them.
  *
  * ⚠️ **It also compares the recorded counting rule to the installed one, which
- * G43 does not do for its own file — and the asymmetry is deliberate.**
- * `stryker.floors.json`'s own comment records that nothing catches a stale
- * `configHash` before a deploy: *"no gate, no test and no CI check compares
- * this stamp"*, so the drift reaches `main` green and is found by whoever next
- * tries to publish. That hole is [#224](https://github.com/mephistopheles4/stacks/issues/224)'s
- * to close for the existing stamps. What this row declines to do is **ship a
- * second copy of it**: a hash that may silently disagree with the tool
- * installed beside it is not pinning anything. **It does nothing for
- * `stryker.floors.json`**, and reading it as cover for that file would be
- * wrong.
+ * G43 does not do for its own file — and the asymmetry is deliberate.** This
+ * paragraph recorded, until [#224](https://github.com/mephistopheles4/stacks/issues/224)
+ * closed, that *nothing* caught a stale `configHash` before a deploy, quoting
+ * `stryker.floors.json`'s own comment saying so. **G56 (`config-hash`) is that
+ * hole closed** for the stamp that names a file in the tree; the other half of
+ * the asymmetry survives untouched, because `fixtureHash` pins the *installed*
+ * eslint and parser versions and a gate over it would go red on every
+ * dependency bump — declined in
+ * [ADR-0079](../docs/adr/0079-the-floors-stamp-is-compared-at-merge.md). What
+ * this row still declines to do is **ship a second copy of either**: a hash
+ * that may silently disagree with the tool installed beside it is not pinning
+ * anything. **It does nothing for `stryker.floors.json`**, and reading it as
+ * cover for that file would be wrong.
  *
  * ⚠️ **The judgement this file asserts is not tested by this file.** It reads
  * the real tree and the real declaration file and expects them to agree, which
@@ -154,7 +157,8 @@ describe('G47 — the recorded counting rule is the installed one', () => {
         'under. A threshold change or a jscpd upgrade makes every duplication count mean ' +
         'something else — #232 measured 12 clones at 50/5 and 82 at 20/3 over the identical ' +
         'tree — so the stamp is refreshed in the same diff as whatever moved it. This says ' +
-        'nothing about stryker.floors.json, whose stamps are still unwatched until #224',
+        'nothing about stryker.floors.json: its configHash is G56 (config-hash), and its ' +
+        'fixtureHash is watched by nothing, deliberately',
     ).toBe(duplicationHashOf(duplicationInputs()));
   });
 });

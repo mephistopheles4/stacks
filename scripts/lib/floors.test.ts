@@ -44,6 +44,7 @@ import {
   renderFloorLines,
   readFloors,
   readMutatedSource,
+  restampConfigHash,
   runRowsFrom,
   scoredIn,
   type CapCalibration,
@@ -216,6 +217,96 @@ describe('configHashOf', () => {
   // loud re-derivation, and the cost of the other guess is silent.
   it('moves for an option nobody has classified', () => {
     expect(configHashOf({ ...CONFIG, ignoreStatic: true })).not.toBe(configHashOf(CONFIG));
+  });
+});
+
+describe('restampConfigHash', () => {
+  // The file this rewrites is hand-written JSON with a 90-line `$comment` array
+  // and collapsed one-line cap objects. `JSON.parse` then `stringify` would
+  // expand every one of them and land a 200-line diff on a one-field edit — so
+  // the rewrite is a line-level replacement, `updateBook`'s promise applied to
+  // the one file in the root that is edited by hand as often as it is read.
+  const FILE = [
+    '{',
+    '  "$comment": [',
+    '    "`configHash` is the score-affecting Stryker configuration these FLOORS were derived",',
+    '    "under. See scripts/lib/floors.ts."',
+    '  ],',
+    '  "configHash": "sha256:0000000000000000",',
+    '  "fixtureHash": "sha256:fedcba9876543210",',
+    '  "scopes": {}',
+    '}',
+    '',
+  ].join('\n');
+
+  it('replaces the value and leaves every other byte alone', () => {
+    const rewritten = restampConfigHash(FILE, 'sha256:1111111111111111');
+
+    expect(rewritten).toBe(FILE.replace('sha256:0000000000000000', 'sha256:1111111111111111'));
+  });
+
+  it('is a no-op when the stamp is already right', () => {
+    expect(restampConfigHash(FILE, 'sha256:0000000000000000')).toBe(FILE);
+  });
+
+  // ⚠️ **The prose above the field names the key too, and a rewrite that read
+  // it would corrupt a comment.** The `$comment` array carries "`configHash` is
+  // the score-affecting…" in a string of its own, which is why the pattern is
+  // anchored to the field's own line shape rather than to the word.
+  it('does not touch the key where the comment merely names it', () => {
+    const rewritten = restampConfigHash(FILE, 'sha256:1111111111111111');
+
+    expect(rewritten).toContain(
+      '"`configHash` is the score-affecting Stryker configuration these FLOORS were derived",',
+    );
+  });
+
+  // ⚠️ **A rewrite that silently matched nothing would report success and write
+  // the file back unchanged**, which is the remedy that looks like it worked —
+  // the exact failure shape the gate this clears exists to catch one level up.
+  it('refuses a file with no `configHash` field rather than returning it unchanged', () => {
+    expect(() => restampConfigHash('{\n  "fixtureHash": "sha256:ab"\n}\n', 'sha256:cd')).toThrow(
+      /configHash/,
+    );
+  });
+
+  // ⚠️ **The pattern is anchored to a line, and a line has any indent.** A
+  // nested `configHash` — inside a scope entry, say — sits at a deeper indent
+  // and matches exactly as well as the root one does. With the root field
+  // *absent* that is a single match, so the count check below is satisfied, the
+  // nested value is rewritten and the command reports success: the remedy that
+  // looks like it worked, on a field nothing was asking about. Found by review
+  // ([#329](https://github.com/mephistopheles4/stacks/pull/329)), and closed by
+  // asking the parsed document who owns the field rather than by tightening the
+  // indent — the file's shape is a formatting choice and would not stay one.
+  it('refuses a file whose only `configHash` is nested, rather than rewriting it', () => {
+    const nested = [
+      '{',
+      '  "fixtureHash": "sha256:fedcba9876543210",',
+      '  "scopes": {',
+      '    "packages/core/src": {',
+      '      "configHash": "sha256:0000000000000000"',
+      '    }',
+      '  }',
+      '}',
+      '',
+    ].join('\n');
+
+    expect(() => restampConfigHash(nested, 'sha256:1111111111111111')).toThrow(/configHash/);
+  });
+
+  it('refuses a file that is not a JSON object at all', () => {
+    // The parse guard's own vacuity: an array parses fine and owns no field.
+    expect(() => restampConfigHash('[]\n', 'sha256:cd')).toThrow(/configHash/);
+  });
+
+  it('refuses a file carrying the field twice', () => {
+    const twice = FILE.replace(
+      '  "fixtureHash": "sha256:fedcba9876543210",',
+      '  "configHash": "sha256:2222222222222222",',
+    );
+
+    expect(() => restampConfigHash(twice, 'sha256:cd')).toThrow(/twice|2 /);
   });
 });
 
@@ -588,9 +679,51 @@ describe('renderFloorLines', () => {
       today: '2026-08-19',
     });
 
-    expect(lines[0]).toContain('no nightly in the record yet');
+    // Above the table, asserted as *above the first scope line* rather than as
+    // index 0 — the stamp header sits there now, and an index would have made
+    // this clause a fact about a neighbour rather than about the note.
+    const note = lines.findIndex((line) => line.includes('no nightly in the record yet'));
+    const firstScope = lines.findIndex((line) => line.startsWith('packages/'));
+    expect(note).toBeGreaterThanOrEqual(0);
+    expect(note).toBeLessThan(firstScope);
     // One note, not one per scope: the window is a fact about the record.
     expect(lines.filter((line) => line.includes('no nightly'))).toHaveLength(1);
+  });
+
+  // ADR-0079: a restarted window and a young one both read `0 of 20`, and the
+  // stamp beside the count is the only thing that separates them for a reader
+  // who remembers the previous one. It cannot say *why* the stamp moved — that
+  // is #227's renovation marker, and this deliberately does not pre-empt it.
+  it('names the stamp the window is counted under, once, above the table', () => {
+    const lines = renderFloorLines({
+      floors: FLOORS,
+      readings: [{ scope: 'scripts', score: null }],
+      window: { runs: 12, candidates: 12, full: false, days: 41, lowest: new Map() },
+      today: '2026-08-19',
+    });
+
+    const stamped = lines.filter((line) => line.includes('counting under'));
+    expect(stamped, 'one stamp line for the block, not one per scope').toHaveLength(1);
+    // Abbreviated, and asserted as an abbreviation: the full 71-character hash
+    // above a table is a line nobody reads past, and printing it whole would be
+    // a header that hides the note under it.
+    expect(lines[0]).toContain('sha256:01234567…');
+    expect(lines[0]).not.toContain('0123456789abcdef');
+  });
+
+  // ⚠️ **The stamp prints whether or not anything has counted.** Its whole job
+  // is the `0 of 20` case — a header that appeared only once a window had
+  // started would be absent in the one state it exists to disambiguate.
+  it('names the stamp even when nothing in the record counts', () => {
+    const lines = renderFloorLines({
+      floors: FLOORS,
+      readings: [{ scope: 'scripts', score: null }],
+      window: { runs: 0, candidates: 4, full: false, days: 0, lowest: new Map() },
+      today: '2026-08-19',
+    });
+
+    expect(lines[0]).toContain('counting under');
+    expect(lines[1]).toContain('no window has started');
   });
 
   it('says how long an entry has sat unarmed', () => {

@@ -387,6 +387,82 @@ export function configHashOf(config: Record<string, unknown>): string {
 }
 
 /**
+ * A `configHash` field's own line, and nothing that merely mentions the key.
+ *
+ * Anchored to the field shape — start of line, the quoted key, a colon, a
+ * quoted value — because `stryker.floors.json`'s `$comment` array names
+ * `configHash` in prose several times, in strings of its own. A pattern
+ * matching the word would rewrite a sentence.
+ *
+ * ⚠️ **It says nothing about nesting**, and the leading `\s*` is why: a line
+ * has whatever indent it has, so a `configHash` inside a scope entry matches
+ * exactly as well as the root one. `ownsConfigHash` below is what makes the
+ * rewrite a rewrite of the *root* field; tightening this pattern to one indent
+ * would put a JSON document's meaning in its formatting, which survives until
+ * the first person who reflows the file.
+ */
+const CONFIG_HASH_FIELD = /^(\s*"configHash":\s*")([^"]*)(")/gm;
+
+/** Whether the parsed document's own root object carries a `configHash` string. */
+function ownsConfigHash(source: string): boolean {
+  const parsed: unknown = JSON.parse(source);
+  return (
+    typeof parsed === 'object' &&
+    parsed !== null &&
+    !Array.isArray(parsed) &&
+    typeof (parsed as Record<string, unknown>).configHash === 'string'
+  );
+}
+
+/**
+ * `stryker.floors.json`'s text with its `configHash` set to `hash`.
+ *
+ * **A line-level replacement, and never `JSON.parse` then `stringify`.** That
+ * file is hand-written: a 90-line `$comment` array carrying the whole doctrine,
+ * and per-scope cap objects collapsed onto one line each. Re-serialising it
+ * would expand every collapsed object and drop every comment, landing a
+ * whole-file diff on a one-field edit — `updateBook`'s objection to
+ * re-serialising YAML, one format over, about the file this repository's owner
+ * edits by hand more than any other in the root.
+ *
+ * ⚠️ **A miss throws rather than returning the text unchanged.** The caller
+ * writes what comes back, so a silent no-match is a remedy that reports success
+ * and changes nothing — which leaves the gate that sent somebody here red with
+ * no remaining explanation. Two fields throw for the same reason: a file
+ * carrying the stamp twice has a half this would not update.
+ *
+ * ⚠️ **And a *nested* `configHash` throws rather than being rewritten**, which
+ * is the same failure wearing a worse disguise. With the root field absent, one
+ * nested field is a single match: the count check passes, the wrong value is
+ * rewritten, and the command reports success on a field nobody asked about.
+ * Found in review on [#329](https://github.com/mephistopheles4/stacks/pull/329).
+ * The document is asked who owns the field rather than the pattern being
+ * tightened to one indent — a JSON document's meaning does not live in its
+ * whitespace, and an indent rule would hold only until somebody reflows the
+ * file.
+ */
+export function restampConfigHash(source: string, hash: string): string {
+  if (!ownsConfigHash(source)) {
+    throw new Error(
+      `${FLOORS_FILE} has no \`configHash\` on its root object. Expected a single ` +
+        '`"configHash": "sha256:…"` field at the top level, beside `fixtureHash` — a ' +
+        'nested one is a different field and is not rewritten.',
+    );
+  }
+
+  const found = [...source.matchAll(CONFIG_HASH_FIELD)];
+
+  if (found.length !== 1) {
+    throw new Error(
+      `${FLOORS_FILE} carries ${String(found.length)} \`configHash\` lines, not one. ` +
+        'Expected a single `"configHash": "sha256:…"` line, at the top level beside ' +
+        '`fixtureHash`; a nested one makes the root field ambiguous to rewrite.',
+    );
+  }
+  return source.replace(CONFIG_HASH_FIELD, `$1${hash}$3`);
+}
+
+/**
  * The one spelling of a hash in this file, for the reason ADR-0028 gives about
  * two parsers of one format: this module now stamps **two** things, and a
  * digest written twice is free to drift in the half nobody re-reads.
@@ -1127,9 +1203,41 @@ export function renderFloorLines(input: PrintInput): string[] {
   // Every scope's window starts together and fills together, so a reason that
   // nothing has counted yet belongs above the table once rather than repeated
   // on every line — where eight identical sentences would read as eight
-  // separate findings.
+  // separate findings. The stamp is the same kind of fact, and sits above it.
   const note = emptyWindowNote(input.window);
-  return note === undefined ? rows : [note, ...rows];
+  return [stampLine(input.floors.configHash), ...(note === undefined ? [] : [note]), ...rows];
+}
+
+/**
+ * The first eight hex digits of a stamp, which is how this repo's prose spells
+ * one when it is naming rather than comparing — `sha256:d63e1214…`.
+ */
+function abbreviated(hash: string): string {
+  const digits = hash.replace(/^sha256:/, '');
+  return digits.length > 8 ? `sha256:${digits.slice(0, 8)}…` : hash;
+}
+
+/**
+ * Which configuration the window below is counting under.
+ *
+ * ⚠️ **`0 of 20` has two meanings and this is the only thing that separates
+ * them.** `calibration()` counts only runs stamped with the floors file's hash,
+ * so a window restarted by a scoring-config change reads exactly like one that
+ * has never filled — and the deploy print was the surface where that ambiguity
+ * cost two days ([#292](https://github.com/mephistopheles4/stacks/issues/292)).
+ * A reader who remembers the previous stamp can tell the two apart from this
+ * line. ADR-0079.
+ *
+ * ⚠️ **It cannot say *why* the stamp moved**, and does not try. That is
+ * [#227](https://github.com/mephistopheles4/stacks/issues/227)'s renovation
+ * marker, deliberately not pre-empted here.
+ *
+ * ⚠️ **The floor block only.** `renderCapLines`' window counts under
+ * `fixtureHash`, a different stamp with a different mechanism, and ADR-0079
+ * asks for this one. Named rather than left as an asymmetry to rediscover.
+ */
+function stampLine(configHash: string): string {
+  return `counting under ${abbreviated(configHash)} — a run counts toward these windows only if it carries this stamp`;
 }
 
 function armedState(floor: number, reading: PrintReading | undefined): string {
