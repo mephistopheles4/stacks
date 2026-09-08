@@ -34,7 +34,7 @@
     "deploy:site": "tsx scripts/deploy.ts"
   },
   "lint-staged": {
-    "*.{ts,mts,mjs,json,jsonc,yml,yaml}": "prettier --write"
+    "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs,json,jsonc,yml,yaml}": "prettier --write"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -614,6 +614,16 @@ Markdown and `fixtures/` out, which was **verified with a positive control**
 rather than assumed — identical malformed content is exit 0 under `fixtures/`
 and exit 1 at a path that is not ignored.
 
+**The list is wider than the tree**, deliberately: it carries `js`, `jsx`,
+`tsx`, `cjs` and `cts`, of which this repository holds **zero**. A glob that
+matches nothing costs nothing, and each of those was checked to parse rather
+than error the way `.astro` does — so the only asymmetry left is the safe one.
+⚠️ **It is not a policy instrument**: listing `tsx` is not a plan to adopt
+React, which the tech decisions rule out and which a formatter glob is the wrong
+place to enforce. ⚠️ **And the hook missing a file would not have been a hole
+anyway** — `pnpm format:check` sweeps the whole tree and refuses a badly
+formatted `.js` (measured), so CI is the backstop this layer never replaces.
+
 ### `.githooks/pre-commit` is retired, and why it could not simply stay
 
 **Git has exactly one `core.hooksPath`.** The old hook was opt-in per clone via
