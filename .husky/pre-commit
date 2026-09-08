@@ -1,0 +1,65 @@
+#!/bin/sh
+#
+# Prettier over the staged files, a stale-stamp warning, and an opt-in CRAP
+# print. Three steps, and ONLY THE FIRST MAY FAIL THE COMMIT.
+#
+# ⚠️ **The gates are the contract and this hook is not one of them.** Every
+# check here already refuses in CI — `pnpm format:check` in the `style` job, G56
+# at merge — so this buys latency and no new coverage: a slip found in three
+# seconds locally instead of three minutes in CI. That is worth having, and a
+# contributor whose hook is broken, skipped or absent still passes every gate.
+# See CONTRIBUTING.md and docs/adr/0083-hooks-arrive-with-pnpm-install.md.
+#
+# ⚠️ `--no-verify` skips all of it, and that is not a defect. Nothing here is a
+# guarantee, so nothing here needs to be unskippable.
+#
+# ⚠️ **`pnpm lint` is deliberately NOT here.** `eslint.lint.config.mjs` sets
+# `projectService: true`, so the parser loads the whole TypeScript program and
+# the run costs about 7.3 seconds whatever subset of files it is given — a
+# staged subset does not make it cheaper. Seven seconds on every commit is how a
+# hook becomes the thing everyone clears with `--no-verify`. It runs pre-push
+# instead, where it blocks.
+
+# ── 1. Prettier over the staged files. The one step that may refuse. ────────
+#
+# ⚠️ The globs in package.json's `lint-staged` block name extensions rather than
+# `*`, and that is load-bearing twice over. Prettier has no parser for `.astro`
+# and ERRORS on one named explicitly — a directory sweep skips it silently, so
+# `*` would fail every commit touching the site. And `.prettierignore` excludes
+# Markdown and `fixtures/`, each for a measured reason recorded in that file;
+# both exclusions were verified to hold for explicitly-named paths, with a
+# positive control, rather than assumed from the file existing.
+pnpm exec lint-staged || exit 1
+
+# ── 2. The floors stamp. Warns, never refuses. ──────────────────────────────
+#
+# ⚠️ **`--check`, never a write.** A hook that rewrote `stryker.floors.json`
+# here would change what is about to be committed, behind the author's back and
+# outside the staged set.
+#
+# ⚠️ **This is a courtesy and NOT the guarantee.** G56 (`config-hash`) refuses
+# the merge, and it has to stay the thing that does: Dependabot commits through
+# the GitHub API with no working tree, so no git hook ever runs on a bot pull
+# request, and any author clears this with `--no-verify`.
+pnpm mutation:stamp --check >/dev/null 2>&1 || printf '\nstamp: stryker.floors.json disagrees with stryker.config.mjs. `pnpm mutation:stamp` writes it.\n       Not blocking this commit — G56 will refuse the pull request.\n'
+
+# ── 3. The CRAP print. Opt-in per clone, advisory, never blocks. ────────────
+#
+# ⚠️ **This used to live in `.githooks/pre-commit`, which is retired**, because
+# `core.hooksPath` is ONE SLOT and husky claims it for every contributor on
+# `pnpm install`. That file's own header predicted this collision — *"a husky or
+# lefthook install among the possibilities"* — and opting it in after this
+# landed would take the slot back and lose steps 1 and 2. So the print moved in
+# here rather than competing, and stayed opt-in rather than becoming everyone's.
+#
+# Opt in with:  git config --bool stacks.hooks.crap true
+# Opt out with: git config --unset stacks.hooks.crap
+#
+# It prints a ranking whose exponents nobody ever calibrated; blocking a commit
+# on one would be the refusing hook the spec turned down. Every failure — no
+# install, no tsx, a Vitest run that died — costs the print and nothing else.
+if [ "$(git config --bool stacks.hooks.crap)" = "true" ]; then
+  pnpm exec tsx scripts/crap.ts || printf '\nCRAP: no print this commit — the step could not run.\n'
+fi
+
+exit 0

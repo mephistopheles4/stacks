@@ -2,10 +2,16 @@
  * The pre-commit CRAP print: what a commit's own functions look like, to the
  * one person who can still change them.
  *
- * **Opt-in per clone** — `git config core.hooksPath .githooks` and nothing
- * else. Nothing in `pnpm install` wires it, no gate runs it, and a contributor
- * who never opts in never meets it. See `docs/commands.md` and
- * `docs/spec/complexity-on-the-trend-layer.md` §5.
+ * **Opt-in per clone** — `git config --bool stacks.hooks.crap true` and nothing
+ * else. No gate runs it, and a contributor who never opts in never meets it.
+ * See `docs/commands.md` and `docs/spec/complexity-on-the-trend-layer.md` §5.
+ *
+ * ⚠️ **The opt-in used to be `core.hooksPath .githooks` and could not stay.**
+ * Git has one `core.hooksPath`, husky claims it on `pnpm install`, and the old
+ * hook's own header called that collision before it happened. So the print
+ * moved into `.husky/pre-commit` behind the config flag above rather than
+ * competing for the slot — **still opt-in, and now inside a hook everybody
+ * has**, which is the part worth noticing. [ADR-0083](../docs/adr/0083-hooks-arrive-with-pnpm-install.md).
  *
  * ⚠️ **It prints and it never refuses.** Every failure below — git, Vitest,
  * ESLint, a missing report — lands as a diagnostic and an exit of 0, because a
