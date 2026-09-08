@@ -5880,3 +5880,90 @@ worth avoiding rather than the gap it replaces.
   permission**: it is closed to one login and reverse-asserted against a bot body
   in the unit tests, but nothing notices the day Dependabot starts writing a
   conforming body and the exemption stops earning its place.
+
+### G56 — `config-hash`
+
+**Gate:** [`gates/config-hash.test.ts`](../gates/config-hash.test.ts)
+**Date:** 2026-09-08
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number was taken against a re-fetched `origin/main` immediately
+before pushing.** G19's gapless walk makes a stale claim a red merge for whoever
+lands second, and G55 had been the top row for five days when this was drafted.
+
+**Observed-red**, three ways, each perturbation run and reverted rather than
+reasoned about.
+
+1. **The comparison.** `timeoutMS` moved from `120000` to `15000` in
+   `stryker.config.mjs` — one file, no `stryker.scopes.json` side effects — and
+   the row went red naming both hashes: expected
+   `sha256:2ff91001b8de7847423040e4f14ed42d80dd3dc73edbecf81bd129620ece06c7`,
+   received `sha256:d63e1214…`. ⚠️ **The remedy was then exercised against that
+   same red rather than merely printed**, which is the half a gate observed
+   failing does not cover: `pnpm mutation:stamp --check` reported the new hash
+   and exited 1, `pnpm mutation:stamp` wrote a **one-line** diff, and the row
+   went green. A remedy named and never run is the same defect as a gate never
+   observed failing.
+2. **The vacuity floor.** `scopes` emptied in `stryker.floors.json` left the
+   equality clause **green** — neither hash reads that field — and the floor is
+   the only thing that caught it. That is why the floor is there and not a
+   decoration.
+3. **The remedy clause.** The `mutation:stamp` line deleted from
+   `package.json` reddened the clause naming it, with the message listing the 22
+   scripts that do exist.
+
+- **Weakening** — **clean; no allowlist, no exemption and no threshold.** The
+  assertion is one string equal to another, so there is no knob to turn down.
+  ⚠️ **What could be weakened is the population the hash is taken over**, and
+  that is `SCORE_NEUTRAL_OPTIONS` rather than anything in this row: adding an
+  option to that list stops the hash moving when the option does. It fails
+  closed — an unclassified option is hashed — and its own doctrine is planted in
+  `scripts/lib/floors.test.ts`. Disposition `accepted`, and named because
+  reading this row as protection against it would be wrong.
+- **Satisfying the letter** — **exposed, and it is the intended path.** Running
+  `pnpm mutation:stamp` in the same commit as the configuration change passes
+  cleanly, which is exactly what the row asks for: it makes the refresh
+  **recorded**, never impossible. ⚠️ **And the letter is genuinely less than the
+  spirit here**: restamping makes the file self-consistent and leaves every
+  floor beside it a number measured under the old configuration. While every
+  floor is `unarmed` that costs nothing; the day a scope is armed, the same
+  green covers a re-derivation that owes a `notes` entry, and neither this gate
+  nor the command can tell the two apart. Disposition `accepted`, stated in the
+  gate's header rather than left for somebody to find.
+- **Routing around** — **exposed and narrow.** The route is to change scoring
+  configuration somewhere this hash does not read. `configHashOf` hashes the
+  whole config object minus the neutral list, and `mutate` is derived from
+  `stryker.scopes.json`, so both files are covered transitively. ⚠️ **The
+  measured residual is the compiler**: the resolved `typescript` version is not
+  in the object and cannot be, so a bump moves every score with nothing here
+  saying so — which is precisely why `checkers` stays `[]`
+  ([ADR-0070](adr/0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md)).
+  ⚠️ **The second residual is `fixtureHash`, and it is declined rather than
+  missed**: a gate over it goes red on every Dependabot bump and a bot cannot
+  re-derive a stamp. Disposition `declined`, in
+  [ADR-0079](adr/0079-the-floors-stamp-is-compared-at-merge.md), and the gate's
+  header says so rather than covering one stamp quietly.
+- **Vacuous green** — **gated, with four floors, and one of them was earned in
+  the writing.** Two `undefined`s compare equal and `configHashOf({})` is a
+  perfectly good hash of nothing, so both sides are shape-checked against
+  `sha256:` plus 64 hex digits before the equality is asserted, and both
+  populations are floored: eight globs in `mutate`, eight scopes in the floors
+  file. ⚠️ **The scopes floor is the one that is not obviously load-bearing and
+  is** — emptying `scopes` leaves the equality clause green, as perturbation 2
+  above measured, because neither hash reads that field. ⚠️ **A first pass at
+  perturbation 2 was itself a false green**: a `node -e` one-liner rewrote
+  nothing, printed nothing, and the gate passed — a probe that measured its own
+  harness rather than the file. Caught by reading the file back rather than the
+  exit code.
+- **Decay** — **it decays into a red on the thing that matters and into silence
+  on one thing that does not yet exist.** A moved `configHashOf`, a renamed
+  field, a deleted stamp and a deleted `mutation:stamp` script are each red
+  here. ⚠️ **What rots quietly is the header's dry-run claim**: this row runs
+  inside Stryker's dry run because both files it reads are matched by no
+  `mutate` glob — all eight end `*.ts` — and the day a glob stops ending `*.ts`
+  that reasoning changes with nothing pointing here. G38 (`mutation-scope`)
+  reads the glob list and would go red on the scope change itself, which is the
+  closest thing to cover and is not cover. ⚠️ **And the failure message names
+  three facts about arming that no test reads** — that restamping re-scores
+  nothing, that an armed scope owes a `notes` entry, that the calibration window
+  restarts. Only the command name in it is asserted.

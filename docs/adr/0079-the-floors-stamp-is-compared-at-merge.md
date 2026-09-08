@@ -51,7 +51,11 @@ renovation marker, and this record does not pre-empt it.
 with, and its own comment states that it deliberately does nothing for
 `stryker.floors.json`, *"whose stamps are still unwatched until #224"*. The
 repository therefore already accepted this gate's one real cost — a legitimate
-two-step edit shows red in between — for the sibling file.
+two-step edit shows red in between — for the sibling file. ⚠️ **That quotation
+is of G47 as it read on the day of this record**; the sentence was rewritten
+when G56 landed, and it now names G56 for `configHash` and says `fixtureHash` is
+watched by nothing. Kept verbatim here, because a record quoting a file is
+quoting the day it was written.
 [`docs/spec/the-ratchet.md`](../spec/the-ratchet.md) §4's table already names
 the diff as `stryker.config.*` **and** the floors file's hash.
 
@@ -113,7 +117,13 @@ record says so**. The pin changes who might notice, not what is recorded.
   steps. That is the accepted cost, and it is the same one G47 already charges.
 - The gate needs a small script that writes the stamp, because none exists: no
   `pnpm` command re-derives it today, so the current remedy is a hand-copied
-  hash that nothing checks until the next run.
+  hash that nothing checks until the next run. **Built as `pnpm mutation:stamp`
+  when the gate landed**, with `--check` printing what it would write and
+  exiting non-zero, and the rewrite kept line-level rather than a
+  `JSON.parse`/`stringify` round trip — that file is hand-written, and
+  re-serialising it would expand every collapsed cap object and drop a 90-line
+  `$comment` on a one-field edit. G56 asserts the command exists, so the
+  message cannot outlive it.
 - `gates/ignored-clones.test.ts` and `stryker.floors.json`'s own `$comment` both
   assert that nothing compares this stamp. Both become false when the gate lands
   and are corrected in the same diff.

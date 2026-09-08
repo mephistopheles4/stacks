@@ -25,6 +25,7 @@
     "gate:public": "tsx scripts/check-public-build.ts",
     "mutation:run": "stryker run",
     "mutation:score": "tsx scripts/mutation-scopes.ts",
+    "mutation:stamp": "tsx scripts/stamp-floors.ts",
     "duplication:report": "tsx scripts/duplication-report.ts",
     "metrics:emit": "tsx scripts/emit-metrics.ts",
     "metrics:commit": "tsx scripts/commit-metrics.ts",

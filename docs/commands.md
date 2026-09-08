@@ -293,6 +293,32 @@ it is not excluded. `covers/measure.ts` has no spec and stays in the denominator
 anyway, because "nothing tests it" is a gap and not a mechanism. See
 [ADR-0053](adr/0053-stryker-measures-eight-declared-scopes.md).
 
+## `pnpm mutation:stamp`
+
+**The remedy G56 (`config-hash`) prints, and the only thing in the repository
+that writes a stamp.** It re-derives `stryker.floors.json`'s `configHash` from
+the Stryker configuration beside it and writes the one line back. Run it in the
+same diff as whatever moved the configuration — `docs/spec/the-ratchet.md` §4's
+route table has always asked for both halves, and G56 is what makes forgetting
+the second half a red pull request rather than an ambush at the next deploy.
+
+`--check` prints what it *would* write and changes nothing, **exiting non-zero
+when the stamp is stale**: the answer belongs in the status, or a caller asking
+whether the stamp is fresh cannot tell the two cases apart.
+
+⚠️ **It re-derives and re-scores nothing.** Running it makes the file
+self-consistent, not correct — every floor in it is still a number measured
+under the configuration that has just changed. While every floor is `unarmed`
+that costs nothing and owes no `notes` entry, which is the case the floors
+file's own comment describes. **Once a scope is armed, running this is a
+re-derivation and owes a justification like any other lowering**, and neither
+this command nor the gate can tell the two apart.
+
+⚠️ **It does not touch `fixtureHash`**, which pins the *installed* eslint and
+parser versions rather than a file in the tree. G56 does not watch that stamp
+either, deliberately — a gate over it would go red on every Dependabot bump, and
+a bot cannot re-derive one. [ADR-0079](adr/0079-the-floors-stamp-is-compared-at-merge.md).
+
 ## `pnpm duplication:report`
 
 The duplication counts, printed rather than recorded. **The same counter CI
