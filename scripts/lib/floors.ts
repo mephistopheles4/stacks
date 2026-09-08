@@ -387,14 +387,32 @@ export function configHashOf(config: Record<string, unknown>): string {
 }
 
 /**
- * The `configHash` field's own line, and nothing that merely mentions the key.
+ * A `configHash` field's own line, and nothing that merely mentions the key.
  *
  * Anchored to the field shape — start of line, the quoted key, a colon, a
  * quoted value — because `stryker.floors.json`'s `$comment` array names
  * `configHash` in prose several times, in strings of its own. A pattern
  * matching the word would rewrite a sentence.
+ *
+ * ⚠️ **It says nothing about nesting**, and the leading `\s*` is why: a line
+ * has whatever indent it has, so a `configHash` inside a scope entry matches
+ * exactly as well as the root one. `ownsConfigHash` below is what makes the
+ * rewrite a rewrite of the *root* field; tightening this pattern to one indent
+ * would put a JSON document's meaning in its formatting, which survives until
+ * the first person who reflows the file.
  */
 const CONFIG_HASH_FIELD = /^(\s*"configHash":\s*")([^"]*)(")/gm;
+
+/** Whether the parsed document's own root object carries a `configHash` string. */
+function ownsConfigHash(source: string): boolean {
+  const parsed: unknown = JSON.parse(source);
+  return (
+    typeof parsed === 'object' &&
+    parsed !== null &&
+    !Array.isArray(parsed) &&
+    typeof (parsed as Record<string, unknown>).configHash === 'string'
+  );
+}
 
 /**
  * `stryker.floors.json`'s text with its `configHash` set to `hash`.
@@ -412,15 +430,33 @@ const CONFIG_HASH_FIELD = /^(\s*"configHash":\s*")([^"]*)(")/gm;
  * and changes nothing — which leaves the gate that sent somebody here red with
  * no remaining explanation. Two fields throw for the same reason: a file
  * carrying the stamp twice has a half this would not update.
+ *
+ * ⚠️ **And a *nested* `configHash` throws rather than being rewritten**, which
+ * is the same failure wearing a worse disguise. With the root field absent, one
+ * nested field is a single match: the count check passes, the wrong value is
+ * rewritten, and the command reports success on a field nobody asked about.
+ * Found in review on [#329](https://github.com/mephistopheles4/stacks/pull/329).
+ * The document is asked who owns the field rather than the pattern being
+ * tightened to one indent — a JSON document's meaning does not live in its
+ * whitespace, and an indent rule would hold only until somebody reflows the
+ * file.
  */
 export function restampConfigHash(source: string, hash: string): string {
+  if (!ownsConfigHash(source)) {
+    throw new Error(
+      `${FLOORS_FILE} has no \`configHash\` on its root object. Expected a single ` +
+        '`"configHash": "sha256:…"` field at the top level, beside `fixtureHash` — a ' +
+        'nested one is a different field and is not rewritten.',
+    );
+  }
+
   const found = [...source.matchAll(CONFIG_HASH_FIELD)];
 
   if (found.length !== 1) {
     throw new Error(
-      `${FLOORS_FILE} carries ${String(found.length)} \`configHash\` fields, not one. ` +
+      `${FLOORS_FILE} carries ${String(found.length)} \`configHash\` lines, not one. ` +
         'Expected a single `"configHash": "sha256:…"` line, at the top level beside ' +
-        '`fixtureHash`.',
+        '`fixtureHash`; a nested one makes the root field ambiguous to rewrite.',
     );
   }
   return source.replace(CONFIG_HASH_FIELD, `$1${hash}$3`);

@@ -270,6 +270,36 @@ describe('restampConfigHash', () => {
     );
   });
 
+  // ⚠️ **The pattern is anchored to a line, and a line has any indent.** A
+  // nested `configHash` — inside a scope entry, say — sits at a deeper indent
+  // and matches exactly as well as the root one does. With the root field
+  // *absent* that is a single match, so the count check below is satisfied, the
+  // nested value is rewritten and the command reports success: the remedy that
+  // looks like it worked, on a field nothing was asking about. Found by review
+  // ([#329](https://github.com/mephistopheles4/stacks/pull/329)), and closed by
+  // asking the parsed document who owns the field rather than by tightening the
+  // indent — the file's shape is a formatting choice and would not stay one.
+  it('refuses a file whose only `configHash` is nested, rather than rewriting it', () => {
+    const nested = [
+      '{',
+      '  "fixtureHash": "sha256:fedcba9876543210",',
+      '  "scopes": {',
+      '    "packages/core/src": {',
+      '      "configHash": "sha256:0000000000000000"',
+      '    }',
+      '  }',
+      '}',
+      '',
+    ].join('\n');
+
+    expect(() => restampConfigHash(nested, 'sha256:1111111111111111')).toThrow(/configHash/);
+  });
+
+  it('refuses a file that is not a JSON object at all', () => {
+    // The parse guard's own vacuity: an array parses fine and owns no field.
+    expect(() => restampConfigHash('[]\n', 'sha256:cd')).toThrow(/configHash/);
+  });
+
   it('refuses a file carrying the field twice', () => {
     const twice = FILE.replace(
       '  "fixtureHash": "sha256:fedcba9876543210",',
