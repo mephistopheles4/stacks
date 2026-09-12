@@ -48,6 +48,7 @@
  * cost is that Docker is required; see `docs/commands.md`.
  */
 
+import { createHash } from 'node:crypto';
 import {
   existsSync,
   mkdirSync,
@@ -68,7 +69,8 @@ import {
   type CoverAnswer,
   type EdgeAnswer,
 } from './lib/edge-probe.ts';
-import { joinRecords, renderEdgeCheck } from './lib/metrics.ts';
+import { joinRecords, renderEdgeCheck, renderRenovations } from './lib/metrics.ts';
+import { readRenovations } from './lib/renovations.ts';
 import {
   METRICS_BRANCH,
   fetchRecords,
@@ -185,6 +187,19 @@ interface StoreState {
   tip?: string;
   /** Every record filename already in the store — branch and local alike. */
   imported: string[];
+  /**
+   * The renovation document this store already holds, as a digest of its bytes.
+   *
+   * ⚠️ **A fingerprint rather than a filename, because this one document is
+   * rewritten rather than appended to.** Every record is immutable and is
+   * therefore tracked by name; `renovations.json` renders afresh each sync, and
+   * re-importing an unchanged one writes blocks that overlap the ones already
+   * there — the hazard `readState` refuses elsewhere, arriving by a door that
+   * opens on every single run.
+   *
+   * Absent on a store written before markers existed, which re-imports once.
+   */
+  renovations?: string;
 }
 
 /**
@@ -717,10 +732,22 @@ async function main(): Promise<number> {
   const inStore = readdirSync(LOCAL).filter((name) => name.endsWith('.prom'));
   const wanted = selectNewRecords([...onBranch, ...inStore], state.imported);
 
+  // The markers, and whether this store already holds these ones. Rendered from
+  // the committed file rather than from any record: a renovation is a repository
+  // fact, so CI never emits one and no `.prom` on the branch carries it.
+  const renovations = renderRenovations(readRenovations());
+  const renovationsDigest = createHash('sha256').update(renovations).digest('hex');
+  const renovationsChanged = state.renovations !== renovationsDigest;
+
   // Reachable when D skipped — when D probed, the row it just wrote is itself
   // something to import, which is the point of D: the import is idempotent and
   // the probe is not.
-  if (wanted.length === 0) {
+  //
+  // ⚠️ **The marker document has to be able to reopen this path.** A renovation
+  // appended on a day no nightly ran leaves `wanted` empty, and taking the early
+  // return would leave the trend page with no line at the moment the counting
+  // rule changed — which is the one thing #227 exists to put there.
+  if (wanted.length === 0 && !renovationsChanged) {
     console.log(
       `\nnothing new to import — the store already holds all ${String(state.imported.length)} record(s)`,
     );
@@ -751,10 +778,17 @@ async function main(): Promise<number> {
     return bytes;
   });
 
-  writeFileSync(INCOMING, joinRecords(documents), 'utf8');
+  writeFileSync(
+    INCOMING,
+    joinRecords(renovationsChanged ? [...documents, renovations] : documents),
+    'utf8',
+  );
   console.log(
     `\nimporting ${String(wanted.length)} record(s): ${wanted[0] ?? ''} … ${wanted.at(-1) ?? ''}`,
   );
+  if (renovationsChanged) {
+    console.log(`importing the renovation markers: ${String(readRenovations().length)} entry(s)`);
+  }
 
   requireDocker();
   writeConfigIfAbsent();
@@ -782,7 +816,14 @@ async function main(): Promise<number> {
   // would import the same records again over the blocks that hold them. A
   // dashboard that failed to start is a nuisance; a store that holds records it
   // does not admit to is the overlap hazard this file refuses elsewhere.
-  writeState({ tip: fetched?.tip ?? state.tip, imported: [...state.imported, ...wanted] });
+  writeState({
+    tip: fetched?.tip ?? state.tip,
+    imported: [...state.imported, ...wanted],
+    // Written only when the document actually went in. A digest recorded for
+    // markers that were never ingested would leave the store missing a line
+    // nothing would ever import again.
+    renovations: renovationsChanged ? renovationsDigest : state.renovations,
+  });
   rmSync(INCOMING, { force: true });
   startStore();
   startDashboard();
