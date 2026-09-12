@@ -161,6 +161,11 @@ const ALLOWED = [
   // scope declaration rather than from anything a book carries, and it writes
   // nothing: arming a floor is a hand edit, by rule.
   'scripts/lib/floors.ts',
+  // Reads `renovations.json` — one fixed filename at the repo root, no path
+  // derived from anything, and it writes nothing. The file records why a
+  // counting stamp moved; appending to it is a hand edit, the way arming a floor
+  // is. It does not know what a book is.
+  'scripts/lib/renovations.ts',
   // Reads `stryker.floors.json` and writes one line of it back — G56's remedy,
   // and the only writer of that file there has ever been. One fixed filename at
   // the repo root, no path derived from anything, and nothing below the field
