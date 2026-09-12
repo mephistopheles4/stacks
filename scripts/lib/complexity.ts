@@ -403,6 +403,20 @@ export const INVENTORY = {
  * an input to the number.
  */
 export interface CounterInputs {
+  /**
+   * ⚠️ **NOT HASHED, since [#341](https://github.com/mephistopheles4/stacks/issues/341).**
+   * These two and `CognitiveInputs.sonarjsVersion` were inputs to
+   * `fixtureHashOf` until then, which restarted every window on a Dependabot
+   * bump that moved no number — measured, one such release every 6.8 days
+   * against a window that fills in about eighteen. `fixtureHashOf` carries the
+   * reasoning and the measurement.
+   *
+   * They are kept, and the reason is narrow: they are **provenance**, read back
+   * off the installed package rather than off `package.json`, so a person
+   * reading a record can ask what it ran under. They are not an input to the
+   * number and nothing downstream may treat them as one. The `inventory` below
+   * is what now stands for behaviour.
+   */
   eslintVersion: string;
   parserVersion: string;
   /**

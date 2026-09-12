@@ -424,6 +424,13 @@ export interface CognitiveInputs {
    * upgrade the plugin ever ships, which is the single failure this stamp
    * exists to prevent.
    */
+  /**
+   * ⚠️ **NOT HASHED, since [#341](https://github.com/mephistopheles4/stacks/issues/341).**
+   * Provenance, exactly like `CounterInputs.eslintVersion` and `.parserVersion`,
+   * whose comment carries the reasoning. A plugin upgrade that really counts
+   * differently reddens the inventory assertion in this file's spec, and
+   * correcting that fixture is what moves the stamp.
+   */
   sonarjsVersion: string;
   /**
    * The resolved rule's **options**, severity dropped: `[0]`.

@@ -256,9 +256,13 @@ since for these the bad direction is up:
 > only, by hand**. Raising is the lowering of this file, and costs a `notes`
 > entry like any other.
 
+⚠️ **The window moved on [#341](https://github.com/mephistopheles4/stacks/issues/341)**,
+and it still inherits verbatim: **ten samples, one per distinct commit**, not twenty
+runs. The cap and the mutation floor are walked by one `streakOf`, so neither can drift
+from the other. [ADR-0084](../adr/0084-the-counting-stamp-is-behaviour-not-a-version.md).
 Everything else is inherited verbatim from [`the-ratchet.md`](the-ratchet.md):
 every entry ships `unarmed`; arming is a human judgement per scope after that
-scope's twenty-run window fills; `pnpm deploy:site` prints how far each window
+scope's ten-tree window fills; `pnpm deploy:site` prints how far each window
 has filled and refuses, with no override flag, when an armed scope exceeds its
 cap; the three routes around a refusal all land in the one file with a visible
 diff.
@@ -605,7 +609,7 @@ needs from the one before it.
    lists, the print block, the panels. G36 green in both directions at every
    commit; the first merge record is the G39 observed-red under `--dry-run`.
 4. **The cap, disarmed**: floors-file entries, the refusal, the countdown, the
-   fixture hash, and the ADR. Lands early so the twenty-run countdown is visible
+   fixture hash, and the ADR. Lands early so the countdown is visible
    for the whole window, as the ratchet's did.
 5. **Coverage and the hook**: `@vitest/coverage-v8` exact-peer, `include`, the
    `.githooks/pre-commit` script, `docs/commands.md`, and the ADR. Last, because

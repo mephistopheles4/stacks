@@ -378,11 +378,14 @@ describe('calibration', () => {
 
     expect(window.runs).toBe(20);
     expect(window.full).toBe(true);
-    expect(window.days).toBe(19);
+    // Nine, not nineteen: `runs` counts every distinct tree in the streak, and
+    // `days` spans only the window — the newest ten of them since #341.
+    expect(window.days).toBe(9);
   });
 
-  it('is not full one run short', () => {
-    expect(calibration(nightlies(19), ['packages/core/src'], HASH).full).toBe(false);
+  it('is not full one sample short', () => {
+    expect(calibration(nightlies(9), ['packages/core/src'], HASH).full).toBe(false);
+    expect(calibration(nightlies(10), ['packages/core/src'], HASH).full).toBe(true);
   });
 
   // §12's plant, and §10's warning: a crashed run writes `run_ok 0` **plus a
@@ -413,6 +416,57 @@ describe('calibration', () => {
     for (const row of rows.slice(0, 10)) row.timestamp -= 4 * DAY;
 
     expect(calibration(rows, ['packages/core/src'], HASH).runs).toBe(10);
+  });
+
+  // ── Each distinct tree is one sample, #341 ────────────────────────────────
+  //
+  // The window wants the extremum across many *states of the code*, and counted
+  // builds instead. Measured over the whole record: 24 nightlies across 23.2
+  // days covered 13 distinct commits, so `main` stands still for days and a run
+  // count overstates the evidence by 1.85 times.
+
+  it('counts one sample for several nightlies that measured the same commit', () => {
+    const rows = nightlies(4);
+    for (const row of rows) row.commit = 'aaaaaaaa';
+
+    expect(calibration(rows, ['packages/core/src'], HASH).runs).toBe(1);
+  });
+
+  it('counts one sample per distinct commit, not per build', () => {
+    const rows = nightlies(6);
+    // Three trees, measured twice each — the shape the record actually has.
+    rows.forEach((row, index) => (row.commit = ['a', 'a', 'b', 'b', 'c', 'c'][index]));
+
+    expect(calibration(rows, ['packages/core/src'], HASH).runs).toBe(3);
+  });
+
+  // ⚠️ **The gap clause reads run timestamps and never sample timestamps.** It
+  // asks whether CI kept running, which is a different question from whether
+  // the code moved. A branch that sits still for a week is a filling window and
+  // not a broken one, so collapsing first would read an idle repository as an
+  // outage.
+  it('measures the three-day gap between runs, not between distinct commits', () => {
+    const rows = nightlies(6);
+    for (const row of rows) row.commit = 'aaaaaaaa';
+
+    // Six consecutive nightlies on one tree: one sample, streak unbroken.
+    expect(calibration(rows, ['packages/core/src'], HASH).runs).toBe(1);
+
+    // Push the older half back so a four-day hole opens mid-streak. The commit
+    // never changes, so only the run cadence can end this streak.
+    const older = rows.slice(0, 3);
+    for (const row of older) row.timestamp -= 4 * DAY;
+
+    expect(calibration(rows, ['packages/core/src'], HASH).runs).toBe(1);
+    expect(calibration(rows, ['packages/core/src'], HASH).days).toBe(2);
+  });
+
+  // ⚠️ Every row written before #341 carries no commit, and a record is not
+  // rewritten. An unknown tree cannot be proved equal to another unknown tree,
+  // so each such row stays its own sample — the reading that cannot silently
+  // shrink a historical window to one.
+  it('treats a row with no commit as its own sample', () => {
+    expect(calibration(nightlies(4), ['packages/core/src'], HASH).runs).toBe(4);
   });
 
   // ⚠️ A row scored under a different configuration is not a row about this
@@ -476,7 +530,7 @@ describe('calibration', () => {
   });
 
   it('takes each scope its lowest score across the window', () => {
-    const rows = nightlies(20);
+    const rows = nightlies(10);
     const dip = rows[7];
     if (dip !== undefined) dip.scores = new Map([['packages/core/src', 66.12]]);
 
@@ -488,7 +542,7 @@ describe('calibration', () => {
   // A hole is not a low. A scope with no sample in one window row has no
   // observed history across that window, so it has nothing to derive from.
   it('gives no lowest to a scope missing a sample anywhere in the window', () => {
-    const rows = nightlies(20);
+    const rows = nightlies(10);
     const hole = rows[3];
     if (hole !== undefined) hole.scores = new Map();
 
@@ -634,7 +688,7 @@ describe('renderFloorLines', () => {
     );
 
     expect(line).toContain('unarmed');
-    expect(line).toContain('window full (20 runs)');
+    expect(line).toContain('window full (10 trees)');
     expect(line).toContain('lowest 44.12');
     expect(line).toContain('armable');
     // ⚠️ The date is §7's only guard on somebody typing `unarmed` to make a
@@ -653,8 +707,8 @@ describe('renderFloorLines', () => {
         floors: FLOORS,
         readings: [{ scope: 'scripts', score: null }],
         window: {
-          runs: 12,
-          candidates: 12,
+          runs: 7,
+          candidates: 7,
           full: false,
           days: 41,
           lowest: new Map([['scripts', null]]),
@@ -663,7 +717,7 @@ describe('renderFloorLines', () => {
       }),
     );
 
-    expect(line).toContain('12/20 runs');
+    expect(line).toContain('7/10 trees');
     expect(line).toContain('41 days');
     expect(line).not.toContain('armable');
   });
@@ -1295,21 +1349,34 @@ describe('fixtureHashOf', () => {
     expect(hash(inputs({ ruleOptions: [{ variant: 'classic', max: 0 }] }))).toBe(hash());
   });
 
-  it('changes when any of the three installed versions changes', () => {
-    // ⚠️ Three, not two. The plugin version is an input because the cognitive
-    // counts are its rule's output — and it is folded into *this* hash rather
-    // than a second one, per #234 §2, which is what makes a plugin upgrade
-    // refuse the cyclomatic caps as well.
-    expect(hash(inputs({ eslintVersion: '10.9.1' }))).not.toBe(hash());
-    expect(hash(inputs({ parserVersion: '8.68.0' }))).not.toBe(hash());
-    expect(hash(inputs(), cognitive({ sonarjsVersion: '4.3.0' }))).not.toBe(hash());
+  // ⚠️ **This assertion is inverted from what it said until #341, and the
+  // inversion is the decision.** All three versions used to be hashed, so every
+  // Dependabot bump restarted a window that needs ten samples — measured, one
+  // stamp-moving release every 6.8 days against a window that fills in about
+  // eighteen, which is why no cap was ever armed. A version string is not a
+  // behaviour: the same tree counted under parser 8.67.0 with eslint 10.9.1 and
+  // under 8.70.0 with 10.10.0 returned all 64 rows identical.
+  it('ignores all three installed versions, because a version is not a behaviour', () => {
+    expect(hash(inputs({ eslintVersion: '10.9.1' }))).toBe(hash());
+    expect(hash(inputs({ parserVersion: '8.68.0' }))).toBe(hash());
+    expect(hash(inputs(), cognitive({ sonarjsVersion: '4.3.0' }))).toBe(hash());
   });
 
-  // ⚠️ The versions are hashed at fixed positions rather than into one bag.
-  // Swapping their values is the cheapest proof of that: a hash over a set would
-  // not notice, and `8.67.0` of ESLint is not `10.9.0` of ESLint.
-  it('hashes the versions positionally, not as a set', () => {
-    expect(hash(inputs({ eslintVersion: '8.67.0', parserVersion: '10.9.0' }))).not.toBe(hash());
+  // ⚠️ **What replaces them is the inventory, and it is not a weaker guard.**
+  // An upgrade that really does count differently turns `complexity.test.ts` and
+  // `cognitive.test.ts` red at merge, because both assert the fixture against
+  // what the rule actually says. Updating the fixture is what moves this hash.
+  // So the chain is: behaviour moves, a gate goes red, the fixture is corrected,
+  // the window restarts — and an upgrade that changes nothing restarts nothing.
+  it('changes when the inventory the rules are held to changes', () => {
+    const moved = { ...INVENTORY, counts: { ...INVENTORY.counts, functions: 999 } };
+    expect(hash(inputs({ inventory: moved }))).not.toBe(hash());
+
+    const cognitiveMoved = {
+      ...COGNITIVE_INVENTORY,
+      counts: { ...COGNITIVE_INVENTORY.counts, functions: 999 },
+    };
+    expect(hash(inputs(), cognitive({ inventory: cognitiveMoved }))).not.toBe(hash());
   });
 
   it('changes when either rule is configured differently', () => {
@@ -1626,9 +1693,9 @@ describe('capCalibration', () => {
     ).toBe(17);
   });
 
-  it('is full at twenty consecutive healthy runs and not at nineteen', () => {
-    expect(capCalibration(runs(19), ['scripts'], HASH).full).toBe(false);
-    expect(capCalibration(runs(20), ['scripts'], HASH).full).toBe(true);
+  it('is full at ten distinct trees and not at nine', () => {
+    expect(capCalibration(runs(9), ['scripts'], HASH).full).toBe(false);
+    expect(capCalibration(runs(10), ['scripts'], HASH).full).toBe(true);
   });
 
   // ⚠️ **Nightlies only, exactly like the floor's window — and a draft had this
@@ -1686,7 +1753,7 @@ describe('capCalibration', () => {
   // A scope the window cannot see all the way across has no derived cap — the
   // same hole `calibration` reports as `null` rather than inventing a lowest.
   it('reports a hole rather than a number where a scope is missing from a run', () => {
-    const rows = runs(20);
+    const rows = runs(10);
     rows[5] = { ...row(1_760_000_000 + 5 * 86_400, 10), counts: new Map() };
 
     expect(
@@ -1951,13 +2018,13 @@ describe('renderCapLines', () => {
     const lines = renderCapLines({
       floors: FLOORS,
       readings: [],
-      window: window(14),
+      window: window(7),
       today: '2026-08-25',
     });
 
     const line = lineFor('complexity-mass-over-10', lines);
     expect(line).toContain('unarmed');
-    expect(line).toContain('14/20 runs');
+    expect(line).toContain('7/10 trees');
   });
 
   // ⚠️ **The date stays on the line where the temptation is.** A full window is
@@ -1972,7 +2039,7 @@ describe('renderCapLines', () => {
     });
 
     const line = lineFor('complexity-mass-over-10', lines);
-    expect(line).toContain('window full (20 runs)');
+    expect(line).toContain('window full (10 trees)');
     expect(line).toContain('highest 17 - armable');
     expect(line).toContain('106 days');
   });
