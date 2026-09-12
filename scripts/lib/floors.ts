@@ -1063,13 +1063,19 @@ function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): S
 }
 
 /**
- * The stamp values whose runs count toward this window.
+ * The predicate deciding whether a run counts toward one stamp's window.
  *
- * The file's own stamp always counts. Anything else comes from
+ * The floors file's own stamp always counts. Anything else comes from
  * `acceptedValues` in `./renovations.ts`, which walks back through the
  * renovations that declared `preserves` — so a tool change measured to move no
  * count carries its window across instead of restarting it
  * ([#227](https://github.com/mephistopheles4/stacks/issues/227), ADR-0085).
+ *
+ * ⚠️ **Named for what it decides rather than for what it holds**, because
+ * `acceptedValues` next door does a different job under a nearly identical
+ * name: that one walks the chain, this one turns a chain into a test. The two
+ * are called on adjacent lines in `deploy.ts`, which is exactly where a reader
+ * has to be able to tell them apart.
  *
  * ⚠️ **An empty list reads as *no preservation*, never as *accept anything*.**
  * A stamp no renovation names yields `[]`, and the dangerous reading of that is
@@ -1080,10 +1086,16 @@ function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): S
  * ⚠️ **It never accepts an *unstamped* row.** A row from before the stamp
  * existed carries `undefined`, and `''` stands in for it here precisely so it
  * cannot match a real value — the same guard `calibration` had when it compared
- * with `===`.
+ * with `===`. **Written once and used by both twins**, so the floor and the cap
+ * cannot drift apart on the one rule they now share.
  */
-function acceptedStamps(own: string, accepted: readonly string[]): Set<string> {
-  return new Set([own, ...accepted].filter((value) => value !== ''));
+function countsTowardWindow(
+  own: string,
+  accepted: readonly string[],
+  stampOf: (row: RunRow) => string | undefined,
+): (row: RunRow) => boolean {
+  const wanted = new Set([own, ...accepted].filter((value) => value !== ''));
+  return (row) => wanted.has(stampOf(row) ?? '');
 }
 
 /**
@@ -1120,9 +1132,9 @@ export function calibration(
   configHash: string,
   accepted: readonly string[] = [],
 ): Calibration {
-  const wanted = acceptedStamps(configHash, accepted);
-  const { samples, window, candidates, days } = streakOf(rows, (row) =>
-    wanted.has(row.configHash ?? ''),
+  const { samples, window, candidates, days } = streakOf(
+    rows,
+    countsTowardWindow(configHash, accepted, (row) => row.configHash),
   );
 
   const lowest = new Map<string, number | null>();
@@ -1195,9 +1207,9 @@ export function capCalibration(
   fixtureHash: string,
   accepted: readonly string[] = [],
 ): CapCalibration {
-  const wanted = acceptedStamps(fixtureHash, accepted);
-  const { samples, window, candidates, days } = streakOf(rows, (row) =>
-    wanted.has(row.fixtureHash ?? ''),
+  const { samples, window, candidates, days } = streakOf(
+    rows,
+    countsTowardWindow(fixtureHash, accepted, (row) => row.fixtureHash),
   );
 
   const highest = new Map<CappedSeries, Map<string, number | null>>();

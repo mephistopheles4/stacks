@@ -43,6 +43,23 @@
  * ⚠️ **And this row says nothing about whether the reason is any good.** It
  * asserts that one exists and that it names the value actually in the file — the
  * same relationship G41 has to the quality of a register entry.
+ *
+ * ## Two asymmetries between the three stamps, stated rather than discovered
+ *
+ * ⚠️ **`duplicationHash` moves on a Dependabot bump and the other two do not.**
+ * `duplicationHashOf` digests the jscpd version **as installed**, because a clone
+ * detector's own version decides what a clone is; `fixtureHash` stopped digesting
+ * installed versions on [#342](https://github.com/mephistopheles4/stacks/pull/342).
+ * So a jscpd bump reddens **G47 and this row together**, and a bot can re-derive
+ * neither stamp. Accepted rather than answered: G47 already reddened that build,
+ * so a person was already required.
+ *
+ * ⚠️ **`preserves` is read for two of the three.** There is no duplication
+ * calibration window — the six duplication caps are
+ * [#269](https://github.com/mephistopheles4/stacks/issues/269)'s and unbuilt — so
+ * the field is required on a `duplicationHash` entry and read by nothing. This
+ * row does not check it either way, and nothing reddens when #269 lands to say
+ * it now has a window to wire.
  */
 
 import { describe, expect, it } from 'vitest';

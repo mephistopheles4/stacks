@@ -50,25 +50,45 @@ export type StampName = (typeof STAMP_NAMES)[number];
 /** `"none"` is a free entry: a renovation that moved no stamp. */
 export type EntryStamp = StampName | 'none';
 
-export interface Renovation {
+interface CommonRenovation {
   /** The day it landed, `YYYY-MM-DD`. Read by the trend page, never by a gate. */
   date: string;
-  stamp: EntryStamp;
-  /** The stamp's new value. Present on a stamp entry, absent on a free one. */
-  value?: string;
   reason: string;
   /** The pull request that carried it. */
   pr: number;
+}
+
+/** A change that moved a stamp, and is therefore checkable by G57. */
+export interface StampRenovation extends CommonRenovation {
+  stamp: StampName;
+  /** The value that stamp took. */
+  value: string;
   /**
    * Whether the calibration window survives this change.
    *
-   * ⚠️ **Required on a stamp entry and never defaulted.** A default would let
-   * *nobody decided* read as *the window restarts*, and this flag is the whole
-   * decision the marker exists to record. `false` is the conservative answer and
-   * it is still an answer somebody gave.
+   * ⚠️ **Required and never defaulted.** A default would let *nobody decided*
+   * read as *the window restarts*, and this flag is the whole decision the
+   * marker exists to record. `false` is the conservative answer and it is still
+   * an answer somebody gave.
    */
-  preserves?: boolean;
+  preserves: boolean;
 }
+
+/** A change no stamp records — a formatter adoption, a Node upgrade. */
+export interface FreeRenovation extends CommonRenovation {
+  stamp: 'none';
+}
+
+/**
+ * One entry, in the only two shapes it may take.
+ *
+ * ⚠️ **A union rather than one interface with optional fields**, so the
+ * compiler holds what `parseEntry` holds. The optional-field version said
+ * *required on a stamp entry* in a comment and `value?: string` in the type, and
+ * the cost was a guard in `acceptedValues` for a case the parser had already
+ * made impossible — a dead branch that reads as a live one.
+ */
+export type Renovation = StampRenovation | FreeRenovation;
 
 /** `sha256:` and 64 hex digits — the shape both floors files write. */
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
@@ -159,8 +179,16 @@ export function readRenovations(root: string = REPO_ROOT): Renovation[] {
 export function newestFor(
   renovations: readonly Renovation[],
   stamp: StampName,
-): Renovation | undefined {
-  return renovations.filter((entry) => entry.stamp === stamp).at(-1);
+): StampRenovation | undefined {
+  return stampEntries(renovations, stamp).at(-1);
+}
+
+/** Every entry naming one stamp, in file order. Narrowed, so `value` is a string. */
+function stampEntries(
+  renovations: readonly Renovation[],
+  stamp: StampName,
+): readonly StampRenovation[] {
+  return renovations.filter((entry): entry is StampRenovation => entry.stamp === stamp);
 }
 
 /**
@@ -177,15 +205,24 @@ export function newestFor(
 export function acceptedValues(
   renovations: readonly Renovation[],
   stamp: StampName,
+  onDisk: string,
 ): readonly string[] {
-  const forStamp = renovations.filter((entry) => entry.stamp === stamp);
+  const forStamp = stampEntries(renovations, stamp);
+
+  // ⚠️ **The chain is trusted only while it describes the file in front of us.**
+  // Without this, a head entry naming a superseded value would widen the window
+  // with a rule nobody declared comparable to the current one — the route the
+  // stamp exists to close, reopened by a stale marker. G57 makes that state a
+  // red pull request, so this is the second lock rather than the only one, and
+  // `deploy:site` runs where G57 does not.
+  if (forStamp.at(-1)?.value !== onDisk) return [];
 
   const accepted: string[] = [];
   for (let i = forStamp.length - 1; i >= 0; i -= 1) {
     const entry = forStamp[i];
-    if (entry?.value === undefined) break;
+    if (entry === undefined) break;
     accepted.push(entry.value);
-    if (entry.preserves !== true) break;
+    if (!entry.preserves) break;
   }
   return accepted;
 }

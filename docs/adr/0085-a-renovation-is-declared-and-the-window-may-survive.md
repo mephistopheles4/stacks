@@ -39,12 +39,27 @@ about three weeks. Every one was individually justified, and
 summed them, and dated prose marks the **file** rather than the series.
 
 **What triggers a renovation changed under this ticket's feet, and the issue body
-is now wrong about it.** #227's table says a version upgrade *"shifts, and
+is now partly wrong about it.** #227's table says a version upgrade *"shifts, and
 refuses"*. Since [#342](https://github.com/mephistopheles4/stacks/pull/342) a
-version bump moves no stamp at all. The same table already measured that extra
-ESLint rules, markdownlint and Prettier move no count. So **every remaining
-trigger is human-caused and has an author** — which is the argument for demanding
-the reason at the moment somebody restamps, rather than reconstructing it later.
+version bump moves **`fixtureHash`** no longer — the three installed versions left
+that digest. The same table already measured that extra ESLint rules, markdownlint
+and Prettier move no count.
+
+⚠️ **That is true of two stamps and false of the third, and an earlier draft of
+this record over-generalised it.** `duplicationHashOf` digests
+`inputs.jscpdVersion` — the version **as installed** — because a clone detector's
+own version decides what a clone is, which is a different claim from a linter's
+version deciding what a branch is. So a jscpd bump still moves `duplicationHash`,
+and the seeded entry for [#339](https://github.com/mephistopheles4/stacks/pull/339)
+is exactly that. Two of the three triggers are human-caused; the third is a bot.
+
+**The consequence is stated rather than discovered.** A jscpd Dependabot pull
+request now reddens **G47 and G57 together**, and a bot can re-derive neither — so
+ADR-0079's *"a bot cannot re-derive a stamp"* objection is alive for this one
+stamp. It is accepted rather than answered, on a measurement: **G47 already
+reddened that pull request**, so the human was already required and this adds a
+second red to a build that was not going to merge itself. #328 and #339 are both
+that case, and both were handled by a person in minutes.
 
 ## Why a merge gate, and not the deploy
 
@@ -163,3 +178,15 @@ mechanism applies forward.**
 - **`preserves` is built and unused.** Every seeded entry says `false`, so no
   window is joined today. The first `true` will be a deliberate act with a
   measurement behind it.
+- ⚠️ **Preservation reaches two of the three stamps, because the third has no
+  window yet.** `calibration` and `capCalibration` consume `configHash` and
+  `fixtureHash`; there is no duplication calibration window anywhere, since the
+  six duplication caps are [#269](https://github.com/mephistopheles4/stacks/issues/269)'s
+  and unbuilt. So `preserves` on a `duplicationHash` entry is **required by the
+  parser and read by nothing**, and a future `true` there would do nothing at
+  all. Uniformity was chosen over a special case: a field required on two stamps
+  and forbidden on the third is a rule nobody remembers, and the entry is still
+  the honest record of a decision somebody made. **Whoever lands #269 wires
+  `acceptedValues(…, 'duplicationHash', …)` into the duplication window**, and
+  this bullet plus the note in `renovations.json` are what say so — nothing
+  reddens to remind them, which is the cost.

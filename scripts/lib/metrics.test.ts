@@ -197,7 +197,7 @@ describe('renderEdgeCheck — surface D, with nothing invented', () => {
   });
 });
 
-describe('the three metric prefixes name three things', () => {
+describe('the four metric prefixes name four things', () => {
   it('makes no prefix a prefix of another', () => {
     // `trendNamesIn` strips a prefix to recover a name. If one prefix were a
     // prefix of another, every sample under the longer one would parse as a

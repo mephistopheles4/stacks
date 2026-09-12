@@ -170,18 +170,31 @@ describe('newestFor — the entry a gate compares against', () => {
 describe('acceptedValues — the preservation chain', () => {
   const v = (n: string): string => `sha256:${n.repeat(64)}`;
 
+  // ⚠️ The chain is trusted only while its head describes the file in front of
+  // us. A head naming a superseded value would otherwise widen the window with a
+  // rule nobody declared comparable to the current one — the route the stamp
+  // exists to close, reopened by a stale marker. G57 reddens that state at
+  // merge; this is the lock for `deploy:site`, which runs where G57 does not.
+  it('accepts nothing when the newest entry does not name the stamp on disk', () => {
+    const parsed = parseRenovations(
+      doc(stamp({ value: v('1'), preserves: false }), stamp({ value: v('2'), preserves: true })),
+    );
+
+    expect(acceptedValues(parsed, 'fixtureHash', v('9'))).toEqual([]);
+  });
+
   it('accepts the newest value alone when nothing preserves', () => {
     const parsed = parseRenovations(
       doc(stamp({ value: v('1'), preserves: false }), stamp({ value: v('2'), preserves: false })),
     );
-    expect(acceptedValues(parsed, 'fixtureHash')).toEqual([v('2')]);
+    expect(acceptedValues(parsed, 'fixtureHash', v('2'))).toEqual([v('2')]);
   });
 
   it('accepts the predecessor when the newest entry preserves', () => {
     const parsed = parseRenovations(
       doc(stamp({ value: v('1'), preserves: false }), stamp({ value: v('2'), preserves: true })),
     );
-    expect(acceptedValues(parsed, 'fixtureHash')).toEqual([v('2'), v('1')]);
+    expect(acceptedValues(parsed, 'fixtureHash', v('2'))).toEqual([v('2'), v('1')]);
   });
 
   it('walks back through a run of preserving entries', () => {
@@ -192,7 +205,7 @@ describe('acceptedValues — the preservation chain', () => {
         stamp({ value: v('3'), preserves: true }),
       ),
     );
-    expect(acceptedValues(parsed, 'fixtureHash')).toEqual([v('3'), v('2'), v('1')]);
+    expect(acceptedValues(parsed, 'fixtureHash', v('3'))).toEqual([v('3'), v('2'), v('1')]);
   });
 
   // The chain stops at the entry that restarted the window, and the value of
@@ -205,7 +218,7 @@ describe('acceptedValues — the preservation chain', () => {
         stamp({ value: v('3'), preserves: true }),
       ),
     );
-    expect(acceptedValues(parsed, 'fixtureHash')).toEqual([v('3'), v('2')]);
+    expect(acceptedValues(parsed, 'fixtureHash', v('3'))).toEqual([v('3'), v('2')]);
   });
 
   it('reads only the named stamp, so one tool cannot lengthen another chain', () => {
@@ -216,17 +229,17 @@ describe('acceptedValues — the preservation chain', () => {
         stamp({ value: v('2'), preserves: true }),
       ),
     );
-    expect(acceptedValues(parsed, 'fixtureHash')).toEqual([v('2'), v('1')]);
+    expect(acceptedValues(parsed, 'fixtureHash', v('2'))).toEqual([v('2'), v('1')]);
   });
 
   it('returns nothing for a stamp no entry names', () => {
-    expect(acceptedValues(parseRenovations(doc(stamp())), 'duplicationHash')).toEqual([]);
+    expect(acceptedValues(parseRenovations(doc(stamp())), 'duplicationHash', v('9'))).toEqual([]);
   });
 
   it('accepts the oldest value when the whole chain preserves', () => {
     const parsed = parseRenovations(
       doc(stamp({ value: v('1'), preserves: true }), stamp({ value: v('2'), preserves: true })),
     );
-    expect(acceptedValues(parsed, 'fixtureHash')).toEqual([v('2'), v('1')]);
+    expect(acceptedValues(parsed, 'fixtureHash', v('2'))).toEqual([v('2'), v('1')]);
   });
 });

@@ -711,7 +711,12 @@ function reportFloors(): void {
     // The renovations that declared they preserve the window widen what counts
     // toward it, back to the last change that restarted it. `[]` when nothing
     // declares one, which is every stamp today — ADR-0085.
-    window: calibration(rows, names, floors.configHash, acceptedValues(renovations, 'configHash')),
+    window: calibration(
+      rows,
+      names,
+      floors.configHash,
+      acceptedValues(renovations, 'configHash', floors.configHash),
+    ),
     today: localToday(),
   });
   for (const line of lines) console.log(`  ${line}`);
@@ -754,7 +759,7 @@ function reportFloors(): void {
       rows,
       names,
       floors.fixtureHash,
-      acceptedValues(renovations, 'fixtureHash'),
+      acceptedValues(renovations, 'fixtureHash', floors.fixtureHash),
     ),
     today: localToday(),
   });

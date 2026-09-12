@@ -923,16 +923,20 @@ export function renderEdgeCheck(facts: EdgeFacts): string {
  * reader would otherwise have no record of at all.
  */
 export function renderRenovations(renovations: readonly Renovation[]): string {
-  const samples = [...renovations]
+  // ⚠️ **`at` is required here and optional on `Family`**, which is what keeps
+  // the family timestamp below from being a trap. Every sample carries its own
+  // moment, so the family's is unreachable — and a future sample that forgot one
+  // is a compile error rather than a line silently rendered at epoch 0.
+  const samples: { labels: Record<string, string>; value: number; at: number }[] = [...renovations]
     .sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
     .map((entry) => ({
       labels: {
         stamp: entry.stamp,
         reason: entry.reason,
         pr: String(entry.pr),
-        // Rendered as a string on purpose: a free entry has no answer here, and
-        // `""` reads as *this question was not asked* rather than as `false`.
-        preserves: entry.preserves === undefined ? '' : String(entry.preserves),
+        // A string on purpose: a free entry has no answer here, and `""` reads
+        // as *this question was not asked* rather than as `false`.
+        preserves: entry.stamp === 'none' ? '' : String(entry.preserves),
         date: entry.date,
       },
       value: 1,
