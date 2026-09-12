@@ -2233,3 +2233,80 @@ describe('floorRefusals — the two runs are two fields', () => {
     expect(refusals).toEqual([]);
   });
 });
+
+describe('calibration — a declared renovation may carry the window across', () => {
+  const DAY = 86_400;
+  const NEW = 'sha256:1111111111111111';
+  const OLD = 'sha256:2222222222222222';
+  const OTHER = 'sha256:3333333333333333';
+
+  /** `count` nightlies one day apart, newest last, all healthy, all one stamp. */
+  function under(stamp: string, count: number, from = 1_760_000_000): RunRow[] {
+    return [...Array(count).keys()].map((index) => ({
+      timestamp: from + index * DAY,
+      ok: true,
+      event: 'schedule',
+      configHash: stamp,
+      scores: new Map([['packages/core/src', 70]]),
+      counts: new Map(),
+    }));
+  }
+
+  it('counts only the current stamp when nothing is preserved', () => {
+    const rows = [...under(OLD, 6), ...under(NEW, 3, 1_760_000_000 + 6 * DAY)];
+
+    expect(calibration(rows, ['packages/core/src'], NEW).runs).toBe(3);
+  });
+
+  it('counts the previous stamp too when the renovation preserves', () => {
+    const rows = [...under(OLD, 6), ...under(NEW, 3, 1_760_000_000 + 6 * DAY)];
+
+    expect(calibration(rows, ['packages/core/src'], NEW, [NEW, OLD]).runs).toBe(9);
+  });
+
+  it('fills a window across the boundary that would not fill on one side', () => {
+    const rows = [...under(OLD, 7), ...under(NEW, 3, 1_760_000_000 + 7 * DAY)];
+
+    expect(calibration(rows, ['packages/core/src'], NEW).full).toBe(false);
+    expect(calibration(rows, ['packages/core/src'], NEW, [NEW, OLD]).full).toBe(true);
+  });
+
+  // ⚠️ The gap clause is not weakened by preservation. It asks whether CI kept
+  // running, which is a different question from which rule it counted under —
+  // so a preserved stamp on the far side of a four-day hole is still unreachable.
+  it('still breaks the streak on a gap that spans the boundary', () => {
+    const rows = [...under(OLD, 6), ...under(NEW, 3, 1_760_000_000 + 6 * DAY + 4 * DAY)];
+
+    expect(calibration(rows, ['packages/core/src'], NEW, [NEW, OLD]).runs).toBe(3);
+  });
+
+  it('breaks on a stamp the chain does not name, between two it does', () => {
+    const rows = [
+      ...under(OLD, 4),
+      ...under(OTHER, 1, 1_760_000_000 + 4 * DAY),
+      ...under(NEW, 2, 1_760_000_000 + 5 * DAY),
+    ];
+
+    expect(calibration(rows, ['packages/core/src'], NEW, [NEW, OLD]).runs).toBe(2);
+  });
+
+  it('takes the lowest across the whole preserved window, not just the newest stamp', () => {
+    const rows = [
+      ...under(OLD, 3).map((row) => ({ ...row, scores: new Map([['packages/core/src', 44]]) })),
+      ...under(NEW, 2, 1_760_000_000 + 3 * DAY),
+    ];
+
+    expect(
+      calibration(rows, ['packages/core/src'], NEW, [NEW, OLD]).lowest.get('packages/core/src'),
+    ).toBe(44);
+    expect(calibration(rows, ['packages/core/src'], NEW).lowest.get('packages/core/src')).toBe(70);
+  });
+
+  it('reads an empty accepted list as the current stamp alone', () => {
+    // A stamp no renovation names yields `acceptedValues` of `[]`, and that must
+    // read as *no preservation* rather than as *accept everything*.
+    const rows = [...under(OLD, 6), ...under(NEW, 3, 1_760_000_000 + 6 * DAY)];
+
+    expect(calibration(rows, ['packages/core/src'], NEW, []).runs).toBe(3);
+  });
+});

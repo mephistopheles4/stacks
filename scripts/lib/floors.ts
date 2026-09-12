@@ -1063,6 +1063,30 @@ function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): S
 }
 
 /**
+ * The stamp values whose runs count toward this window.
+ *
+ * The file's own stamp always counts. Anything else comes from
+ * `acceptedValues` in `./renovations.ts`, which walks back through the
+ * renovations that declared `preserves` — so a tool change measured to move no
+ * count carries its window across instead of restarting it
+ * ([#227](https://github.com/mephistopheles4/stacks/issues/227), ADR-0085).
+ *
+ * ⚠️ **An empty list reads as *no preservation*, never as *accept anything*.**
+ * A stamp no renovation names yields `[]`, and the dangerous reading of that is
+ * the permissive one: it would derive a floor from runs counted under a rule
+ * nobody declared comparable, which is the whole route the stamp exists to
+ * close. Fail-closed, like `private:`.
+ *
+ * ⚠️ **It never accepts an *unstamped* row.** A row from before the stamp
+ * existed carries `undefined`, and `''` stands in for it here precisely so it
+ * cannot match a real value — the same guard `calibration` had when it compared
+ * with `===`.
+ */
+function acceptedStamps(own: string, accepted: readonly string[]): Set<string> {
+  return new Set([own, ...accepted].filter((value) => value !== ''));
+}
+
+/**
  * How far a window has filled, and what it would arm each scope at.
  *
  * > **Floor for a scope = the lowest score observed for that scope across the
@@ -1094,10 +1118,11 @@ export function calibration(
   rows: readonly RunRow[],
   scopes: readonly string[],
   configHash: string,
+  accepted: readonly string[] = [],
 ): Calibration {
-  const { samples, window, candidates, days } = streakOf(
-    rows,
-    (row) => row.configHash === configHash,
+  const wanted = acceptedStamps(configHash, accepted);
+  const { samples, window, candidates, days } = streakOf(rows, (row) =>
+    wanted.has(row.configHash ?? ''),
   );
 
   const lowest = new Map<string, number | null>();
@@ -1168,10 +1193,11 @@ export function capCalibration(
   rows: readonly RunRow[],
   scopes: readonly string[],
   fixtureHash: string,
+  accepted: readonly string[] = [],
 ): CapCalibration {
-  const { samples, window, candidates, days } = streakOf(
-    rows,
-    (row) => row.fixtureHash === fixtureHash,
+  const wanted = acceptedStamps(fixtureHash, accepted);
+  const { samples, window, candidates, days } = streakOf(rows, (row) =>
+    wanted.has(row.fixtureHash ?? ''),
   );
 
   const highest = new Map<CappedSeries, Map<string, number | null>>();

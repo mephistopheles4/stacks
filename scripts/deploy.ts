@@ -60,6 +60,7 @@ import {
   renderFloorLines,
   runRowsFrom,
 } from './lib/floors.ts';
+import { acceptedValues, readRenovations } from './lib/renovations.ts';
 import { gitOutput } from './lib/git.ts';
 import {
   GATED_SERIES,
@@ -703,10 +704,14 @@ function reportFloors(): void {
   console.log(
     'mutation floors — one line per declared scope; arming is a human judgement, per scope, after its own window fills',
   );
+  const renovations = readRenovations();
   const lines = renderFloorLines({
     floors,
     readings,
-    window: calibration(rows, names, floors.configHash),
+    // The renovations that declared they preserve the window widen what counts
+    // toward it, back to the last change that restarted it. `[]` when nothing
+    // declares one, which is every stamp today — ADR-0085.
+    window: calibration(rows, names, floors.configHash, acceptedValues(renovations, 'configHash')),
     today: localToday(),
   });
   for (const line of lines) console.log(`  ${line}`);
@@ -745,7 +750,12 @@ function reportFloors(): void {
   const capLines = renderCapLines({
     floors,
     readings: capReadings,
-    window: capCalibration(rows, names, floors.fixtureHash),
+    window: capCalibration(
+      rows,
+      names,
+      floors.fixtureHash,
+      acceptedValues(renovations, 'fixtureHash'),
+    ),
     today: localToday(),
   });
   for (const line of capLines) console.log(`  ${line}`);
