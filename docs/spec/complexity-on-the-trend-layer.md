@@ -273,12 +273,22 @@ compared, because an ESLint upgrade that counts one more construct would
 otherwise breach every cap at once and read as a regression. Its contract,
 stated so two implementations agree:
 
-- **Canonical inputs**: the exact `eslint`, `@typescript-eslint/parser` and
-  `eslint-plugin-sonarjs` versions as installed, **both** counting rules'
-  options objects, and **both** fixtures' expected totals — hashed in that
-  order, the way `configHashOf()` in `scripts/lib/floors.ts` hashes the
-  score-affecting Stryker options and nothing else. Changing any of them is
-  changing what the number means.
+- **Canonical inputs**: **both** counting rules' options objects and **both**
+  fixtures' expected totals — hashed in that order, the way `configHashOf()` in
+  `scripts/lib/floors.ts` hashes the score-affecting Stryker options and nothing
+  else. Changing any of them is changing what the number means.
+
+  ⚠️ **The three installed versions are NOT inputs, since
+  [#341](https://github.com/mephistopheles4/stacks/issues/341)**, and this is
+  contract rather than implementation: a second implementation that hashed
+  `eslint`, `@typescript-eslint/parser` or `eslint-plugin-sonarjs` would produce
+  a different stamp and refuse valid records. A version string asserts nothing
+  about behaviour — measured, the same tree under two parser and eslint pairs
+  returns all 64 rows identical — and hashing them restarted every window on a
+  bump that moved no number. The inventories carry behaviour instead: an upgrade
+  that really counts differently reddens `complexity.test.ts` or
+  `cognitive.test.ts` at merge, and correcting that fixture moves the stamp.
+  [ADR-0084](../adr/0084-the-counting-stamp-is-behaviour-not-a-version.md).
 
   ⚠️ **This list widened from three inputs to six when the cognitive counter
   landed** ([#255](https://github.com/mephistopheles4/stacks/issues/255)), and

@@ -418,18 +418,17 @@ export interface CognitiveInputs {
   /**
    * The plugin version, **as installed**.
    *
-   * ⚠️ **Read from its `package.json`, never from `sonarjs.meta.version`**,
-   * which self-reports `0.0.0-SNAPSHOT` — a build placeholder rather than a
-   * version. A hash over that string would be byte-identical across every
-   * upgrade the plugin ever ships, which is the single failure this stamp
-   * exists to prevent.
-   */
-  /**
    * ⚠️ **NOT HASHED, since [#341](https://github.com/mephistopheles4/stacks/issues/341).**
    * Provenance, exactly like `CounterInputs.eslintVersion` and `.parserVersion`,
    * whose comment carries the reasoning. A plugin upgrade that really counts
    * differently reddens the inventory assertion in this file's spec, and
-   * correcting that fixture is what moves the stamp.
+   * correcting that fixture is what moves the stamp — so nothing here may treat
+   * this string as an input to a number.
+   *
+   * ⚠️ **Still read from its `package.json`, never from `sonarjs.meta.version`**,
+   * which self-reports `0.0.0-SNAPSHOT` — a build placeholder rather than a
+   * version. That requirement outlives the hash: a provenance field that reads
+   * `0.0.0-SNAPSHOT` on every release records nothing at all.
    */
   sonarjsVersion: string;
   /**

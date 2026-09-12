@@ -1977,7 +1977,7 @@ describe('renderCapLines', () => {
     return {
       runs,
       candidates: runs,
-      full: runs >= 20,
+      full: runs >= 10,
       days: runs,
       highest: new Map([
         ['complexity-max', new Map([['scripts', highest]])],
@@ -2055,7 +2055,7 @@ describe('renderCapLines', () => {
     const lines = renderCapLines({
       floors: FLOORS,
       readings: [],
-      window: window(20),
+      window: window(10),
       today: '2026-08-25',
     });
 
@@ -2069,7 +2069,7 @@ describe('renderCapLines', () => {
     const lines = renderCapLines({
       floors: FLOORS,
       readings: [],
-      window: window(20, null),
+      window: window(10, null),
       today: '2026-08-25',
     });
 

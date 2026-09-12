@@ -179,9 +179,11 @@ floors live in `stryker.floors.json`, beside the Stryker config the hash below
 ties them to, and the block prints at every deploy: each scope's state, how far
 its calibration window has filled, and how long it has sat unarmed.
 
-**Arming is a human judgement, per scope, after that scope's window fills** — 20
-consecutive healthy nightlies, no gap over three days, all scored under the same
-configuration. The floor is then the lowest score observed across that window,
+**Arming is a human judgement, per scope, after that scope's window fills** —
+consecutive healthy nightlies covering **ten distinct trees**, no gap over three
+days, all scored under the same configuration. Ten *trees*, not ten runs: several
+nightlies re-measure one commit while `main` stands still, so a run count named
+more evidence than it held ([ADR-0084](adr/0084-the-counting-stamp-is-behaviour-not-a-version.md)). The floor is then the lowest score observed across that window,
 applied **once, at arming**. It is not a standing function: after arming a floor
 moves up only, by hand, and **re-deriving is lowering**. There is no single
 moment at which the ratchet becomes armed, and nothing in the tooling arms

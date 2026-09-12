@@ -490,8 +490,8 @@ construction. **Not a pull-request count** — uncorrelated with what the window
 measures.
 
 **Arming is per scope, and the windows start together.** Once the spine ships every
-scope gets a row per nightly, `scripts/` included, so all reach run 20 on the same
-day. **There is no single "the ratchet is armed now" moment and the spec must not
+scope gets a row per nightly, `scripts/` included, so every scope's ten-tree window
+fills on the same day. **There is no single "the ratchet is armed now" moment and the spec must not
 imply one**; a scope added later starts its own window under §7's rule, unchanged.
 
 **Nothing ships warn-only, because nothing would be red.** `unarmed` is strictly
