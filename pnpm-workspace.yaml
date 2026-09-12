@@ -141,10 +141,49 @@ verifyDepsBeforeRun: warn
 # Bare rather than the scoped `ajv>fast-uri`, for the qs block's reason: there is
 # one arrival today, and the bare form keeps a second from landing on the
 # vulnerable line unnoticed.
+
+# GHSA-7w5x-hrqm-74c2, high: `smol-toml` at or below 1.7.0 takes quadratic time
+# on a malformed TOML document, which is a denial of service for anything
+# parsing untrusted TOML. It arrives one way — `markdownlint-cli2` > `smol-toml`
+# — and **nothing in this repository parses TOML at all**: the rule set lives in
+# `.markdownlint.jsonc`, the tree carries no `.toml` file, and `smol-toml` is
+# the branch markdownlint-cli2 takes for a config format nobody here uses. That
+# bounds the blast radius to nothing; it does not answer the gate, which reads
+# the tree rather than the call graph.
+#
+# ⚠️ **`markdownlint-cli2` pins `smol-toml` at exactly `1.7.0`, and 0.23.2 is
+# its newest release** — so there is no version of the parent that resolves
+# this, and no `pnpm update` that reaches it. Measured rather than assumed, the
+# fast-uri block's test run the other way: with this entry removed,
+# `pnpm update smol-toml --recursive` reports success and moves the lockfile by
+# zero lines. An override is the only mechanism there is, which is the qs
+# block's situation exactly.
+#
+# ⚠️ **Which means this forces a combination the package does not declare.**
+# `^1.7.1` resolves to **1.8.0**, one minor above the pin — and that is the
+# version `astro` already resolves in this same tree, so the lockfile carries
+# one `smol-toml` afterwards where it carried two. `pnpm lint:md` is green on
+# it across all 163 tracked files, which is the whole of what markdownlint-cli2
+# does here.
+#
+# ⚠️ **pnpm's seven-day `minimumReleaseAge` quarantine is not in play, and it
+# was checked rather than assumed** — the trap the nanoid block records. 1.7.1
+# shipped 2026-07-26 and 1.8.0 on 2026-08-11, both long outside the window; the
+# advisory is what is new, published 2026-09-09. That date is the whole reason
+# this landed as a separate change: `main` was last green on 2026-09-09 at
+# 00:33 UTC, and every pull request opened after it went red on an `audit` job
+# no diff of theirs had touched.
+#
+# `^1.7.1` rather than `1.7.2`, for the nanoid block's reason: an advisory's
+# range is not a stable statement of scope. Bare rather than the scoped
+# `markdownlint-cli2>smol-toml`, for the qs block's. Remove this when
+# markdownlint-cli2 raises its own pin above 1.7.0 and the lockfile carries a
+# fixed line unaided.
 overrides:
   nanoid: '^3.3.18'
   qs: '^6.16.0'
   fast-uri: '^3.1.6'
+  smol-toml: '^1.7.1'
 
 # CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
 #
