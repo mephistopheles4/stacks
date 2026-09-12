@@ -35,9 +35,22 @@ updates:
     groups:
       # Patch and minor bumps for the toolchain travel together — they either
       # all pass the gates or the group is worth looking at as a whole.
+      #
+      # ⚠️ **`typescript-eslint` and `@typescript-eslint/*` are here because
+      # leaving them out produced a broken pull request rather than a noisy
+      # one.** The root manifest pins `@typescript-eslint/parser` *and* the
+      # `typescript-eslint` meta-package, both exact and both at the same
+      # version — `eslint.config.mjs` imports the parser directly to count
+      # complexity, `eslint.lint.config.mjs` takes its rules from the meta
+      # package. Ungrouped, Dependabot raised the parser alone (#334): 14 new
+      # 8.70.0 keys, **zero** 8.67.0 keys removed, and a tree carrying two
+      # parsers where one counting rule ran under each. Upstream releases the
+      # whole family in lockstep, which is the case this group is for.
       dev-tooling:
         patterns:
           - 'typescript'
+          - 'typescript-eslint'
+          - '@typescript-eslint/*'
           - 'vitest'
           - 'tsx'
           - '@types/*'
