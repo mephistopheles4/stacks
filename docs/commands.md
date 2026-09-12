@@ -423,6 +423,19 @@ holds by filename, so a merge and a nightly landing in the same second both
 survive. The probe is deliberately not idempotent: each run asks the origin
 again, so the only record a second run adds is surface D's own.
 
+**It also imports the renovation markers**, which are the orange vertical lines
+on the page. They are rendered from `renovations.json` in the repository rather
+than read off the branch — a renovation is a repository fact, so CI emits none —
+and the store remembers them **by a digest of the document** rather than by
+filename, because that one document is rewritten where a record is immutable.
+So an unchanged file re-imports nothing, and an appended entry re-imports the
+whole set once. ⚠️ **An entry appended on a day no nightly ran still syncs**: it
+is the one thing that can make an otherwise empty import worth doing, and taking
+the *nothing new* path would leave the page with no line at the moment the
+counting rule changed. `--rebuild` re-imports them with everything else.
+See [#227](https://github.com/mephistopheles4/stacks/issues/227) and
+[ADR-0085](adr/0085-a-renovation-is-declared-and-the-window-may-survive.md).
+
 **No laptop cron and no daemon.** A second scheduled thing that can silently stop
 is the failure class this design spends its budget containing, and this one would
 leave no Actions history to inspect afterwards. The cost is stated rather than

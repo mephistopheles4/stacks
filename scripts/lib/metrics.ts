@@ -34,15 +34,16 @@ import type { CognitiveCounts } from './cognitive.ts';
 import type { Counts } from './complexity.ts';
 import type { AllCounts, DuplicationCounts } from './duplication.ts';
 import type { EdgeAnswer } from './edge-probe.ts';
+import type { Renovation } from './renovations.ts';
 
 /**
- * The three metric-name prefixes, and the whole of the separation between them.
+ * The four metric-name prefixes, and the whole of the separation between them.
  *
  * No one of them may be a prefix of another: `trendNamesIn` strips `trend` to
  * recover a name, and if `run` were a prefix of it every run-health sample
  * would parse as a trend with a mangled name rather than being skipped.
  * Asserted by G36 and by `metrics.test.ts` rather than left as a property of
- * three strings that look obviously different.
+ * four strings that look obviously different.
  *
  * ⚠️ **`edge` is written by the machine, never by CI**, and that is what the
  * prefix buys. Surface D's row is produced by `pnpm trend:sync` into the local
@@ -50,11 +51,20 @@ import type { EdgeAnswer } from './edge-probe.ts';
  * row would make G36's reverse direction red against every CI run, which emits
  * no such series. Structural, rather than an exception list a gate has to
  * maintain. See `docs/spec/trend-layer.md` §5.
+ *
+ * ⚠️ **`renovation` is there for the same structural reason and a different
+ * one.** It is written by the sync out of `renovations.json` rather than by CI,
+ * so it owes no `## Trends` row on `edge`'s argument exactly. The second reason
+ * is that **it is not a measurement at all**: every other family here is a
+ * number somebody's tooling produced, and this one is a dated sentence a person
+ * wrote about why a counting rule changed. A name under `trend` would put it on
+ * the same footing as a score. See [#227](https://github.com/mephistopheles4/stacks/issues/227).
  */
 export const METRIC_PREFIXES = {
   run: 'stacks_run_',
   trend: 'stacks_trend_',
   edge: 'stacks_edge_',
+  renovation: 'stacks_renovation_',
 } as const;
 
 /** The eight series, and the whole of what this record carries as a trend. */
@@ -575,7 +585,22 @@ function labels(pairs: Record<string, string>): string {
 interface Family {
   metric: string;
   help: string;
-  samples: { labels: Record<string, string>; value: number }[];
+  samples: {
+    labels: Record<string, string>;
+    value: number;
+    /**
+     * This sample's own moment, when it has one that is not the document's.
+     *
+     * ⚠️ **One family, many moments — which only a *record of past events* needs.**
+     * Every CI series is a measurement of the run writing it, so the run's
+     * timestamp is right for all of them. `renderRenovations` renders a
+     * committed file of dated entries instead, and each entry belongs at its own
+     * date. Splitting it into one family per date is not the alternative: a
+     * second `# TYPE` line for the same metric name makes the whole document
+     * *"duplicate metric family"* and nothing ingests.
+     */
+    at?: number;
+  }[];
 }
 
 function render(family: Family, timestamp: number): string[] {
@@ -583,7 +608,9 @@ function render(family: Family, timestamp: number): string[] {
   // family metadata. Every series here is a gauge: each one can go down.
   const lines = [`# TYPE ${family.metric} gauge`, `# HELP ${family.metric} ${escape(family.help)}`];
   for (const sample of family.samples) {
-    lines.push(`${family.metric}${labels(sample.labels)} ${value(sample.value)} ${timestamp}`);
+    lines.push(
+      `${family.metric}${labels(sample.labels)} ${value(sample.value)} ${sample.at ?? timestamp}`,
+    );
   }
   return lines;
 }
@@ -870,6 +897,60 @@ export function renderEdgeCheck(facts: EdgeFacts): string {
   }
 
   const lines = families.flatMap((family) => render(family, facts.timestamp));
+  return `${lines.join('\n')}\n# EOF\n`;
+}
+
+/**
+ * `renovations.json` as one OpenMetrics document, each entry at its own date.
+ *
+ * This is what puts a renovation on the trend page: the dashboard's annotation
+ * query reads this family and draws a line across every panel at the moment the
+ * counting rule changed, with the reason in the tooltip. Before it, a reader met
+ * a step change and supplied their own story — [#227](https://github.com/mephistopheles4/stacks/issues/227).
+ *
+ * ⚠️ **Written by `pnpm trend:sync` and never by CI.** The file is a repository
+ * fact, not a run measurement, so emitting it per run would re-send every
+ * renovation on every nightly. `METRIC_PREFIXES.renovation` says the same thing
+ * in the name.
+ *
+ * ⚠️ **Sorted ascending by date, and that is not cosmetic.** The block builder
+ * ingests a document in order, and a file that is append-only by convention is
+ * only *usually* in date order — an entry corrected in place, or two landed out
+ * of sequence, would otherwise reach the store as a sample going backwards.
+ *
+ * **A free entry is rendered like any other**, with `stamp="none"`. It moved no
+ * stamp, so nothing forced it to exist, and it is exactly the renovation a
+ * reader would otherwise have no record of at all.
+ */
+export function renderRenovations(renovations: readonly Renovation[]): string {
+  // ⚠️ **`at` is required here and optional on `Family`**, which is what keeps
+  // the family timestamp below from being a trap. Every sample carries its own
+  // moment, so the family's is unreachable — and a future sample that forgot one
+  // is a compile error rather than a line silently rendered at epoch 0.
+  const samples: { labels: Record<string, string>; value: number; at: number }[] = [...renovations]
+    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
+    .map((entry) => ({
+      labels: {
+        stamp: entry.stamp,
+        reason: entry.reason,
+        pr: String(entry.pr),
+        // A string on purpose: a free entry has no answer here, and `""` reads
+        // as *this question was not asked* rather than as `false`.
+        preserves: entry.stamp === 'none' ? '' : String(entry.preserves),
+        date: entry.date,
+      },
+      value: 1,
+      at: Math.floor(Date.parse(entry.date) / 1000),
+    }));
+
+  const lines = render(
+    {
+      metric: `${METRIC_PREFIXES.renovation}info`,
+      help: 'A declared change to a counting rule, at the date it landed. Drawn as an annotation.',
+      samples,
+    },
+    0,
+  );
   return `${lines.join('\n')}\n# EOF\n`;
 }
 

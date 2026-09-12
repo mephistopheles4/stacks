@@ -26,10 +26,12 @@ import {
   joinRecords,
   renderEdgeCheck,
   renderMetrics,
+  renderRenovations,
   trendNamesIn,
   type EdgeFacts,
   type RunFacts,
 } from './metrics.ts';
+import type { Renovation } from './renovations.ts';
 
 const AT = 1_787_183_835;
 
@@ -195,7 +197,7 @@ describe('renderEdgeCheck — surface D, with nothing invented', () => {
   });
 });
 
-describe('the three metric prefixes name three things', () => {
+describe('the four metric prefixes name four things', () => {
   it('makes no prefix a prefix of another', () => {
     // `trendNamesIn` strips a prefix to recover a name. If one prefix were a
     // prefix of another, every sample under the longer one would parse as a
@@ -538,5 +540,75 @@ describe('the complexity families, as rendered', () => {
 
     expect(trendNamesIn(document)).not.toContain('complexity-max');
     expect(trendNamesIn(document)).toContain('complexity-mass');
+  });
+});
+
+describe('renderRenovations — the marker as a series', () => {
+  const entry = (over: Partial<Renovation> = {}): Renovation => ({
+    date: '2026-09-12',
+    stamp: 'fixtureHash',
+    value: `sha256:${'a'.repeat(64)}`,
+    reason: 'the counting stamp stopped digesting three installed versions',
+    pr: 342,
+    preserves: false,
+    ...over,
+  });
+
+  it('renders one family, terminated, whatever the entry count', () => {
+    const document = renderRenovations([entry(), entry({ date: '2026-08-01', pr: 292 })]);
+
+    // ⚠️ One `# TYPE` line and never one per date: a second for the same metric
+    // name is "duplicate metric family" and the whole document is rejected.
+    expect(document.match(/^# TYPE /gm)).toHaveLength(1);
+    expect(document).toContain('# TYPE stacks_renovation_info gauge');
+    expect(document.endsWith('\n# EOF\n')).toBe(true);
+  });
+
+  it('puts each entry at its own date, in unix seconds', () => {
+    const document = renderRenovations([entry({ date: '2026-09-12' })]);
+    expect(document).toContain(` 1 ${String(Date.parse('2026-09-12') / 1000)}`);
+  });
+
+  it('sorts ascending by date, because the block builder ingests in order', () => {
+    const document = renderRenovations([
+      entry({ date: '2026-09-12', pr: 342 }),
+      entry({ date: '2026-08-01', pr: 292 }),
+    ]);
+    const stamps = [...document.matchAll(/ 1 (\d+)$/gm)].map((match) => Number(match[1]));
+
+    expect(stamps).toEqual([...stamps].sort((a, b) => a - b));
+  });
+
+  it('carries the reason, the stamp and the pull request as labels', () => {
+    const document = renderRenovations([entry()]);
+
+    expect(document).toContain('stamp="fixtureHash"');
+    expect(document).toContain('pr="342"');
+    expect(document).toContain('reason="the counting stamp stopped digesting three installed');
+  });
+
+  // A free entry is the class no gate can force, and the one a reader would
+  // otherwise have no record of. It reaches the page like any other.
+  it('renders a free entry with an empty `preserves`, not a false one', () => {
+    const document = renderRenovations([
+      { date: '2026-09-12', stamp: 'none', reason: 'Prettier formats every file', pr: 300 },
+    ]);
+
+    expect(document).toContain('stamp="none"');
+    expect(document).toContain('preserves=""');
+    expect(document).not.toContain('preserves="false"');
+  });
+
+  it('escapes a reason that would otherwise end the label', () => {
+    const document = renderRenovations([entry({ reason: 'the "counting" rule\nmoved' })]);
+
+    expect(document).toContain('reason="the \\"counting\\" rule\\nmoved"');
+    expect(
+      document.split('\n').filter((line) => line.startsWith('stacks_renovation_info')),
+    ).toHaveLength(1);
+  });
+
+  it('stays out of the trend namespace, so it owes no `## Trends` row', () => {
+    expect(trendNamesIn(renderRenovations([entry()]))).toEqual([]);
   });
 });

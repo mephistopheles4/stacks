@@ -48,6 +48,7 @@
  * cost is that Docker is required; see `docs/commands.md`.
  */
 
+import { createHash } from 'node:crypto';
 import {
   existsSync,
   mkdirSync,
@@ -68,7 +69,8 @@ import {
   type CoverAnswer,
   type EdgeAnswer,
 } from './lib/edge-probe.ts';
-import { joinRecords, renderEdgeCheck } from './lib/metrics.ts';
+import { joinRecords, renderEdgeCheck, renderRenovations } from './lib/metrics.ts';
+import { readRenovations } from './lib/renovations.ts';
 import {
   METRICS_BRANCH,
   fetchRecords,
@@ -105,7 +107,7 @@ const PORT = 9090;
  *
  * Pinned for the same reason the store is: a dashboard that changes under you is
  * not a reading of anything, and the calibration window the ratchet's floors
- * depend on is twenty runs long.
+ * depend on covers ten distinct trees, which is about eighteen days here.
  */
 const GRAFANA_IMAGE = 'grafana/grafana:11.6.6';
 const GRAFANA_CONTAINER = 'stacks-grafana';
@@ -185,6 +187,28 @@ interface StoreState {
   tip?: string;
   /** Every record filename already in the store — branch and local alike. */
   imported: string[];
+  /**
+   * One digest per renovation already in the store, in file order.
+   *
+   * ⚠️ **Per entry rather than per document, and the difference is what makes
+   * an append cheap and a rewrite loud.** `renovations.json` is one file that is
+   * appended to, where every record is a separate immutable file — so a
+   * single whole-document digest could only say *something changed*, and the
+   * honest response to that is to re-import every marker, which writes blocks
+   * overlapping the ones already there. A list says **what** changed: if this
+   * is a prefix of the file as it now stands, the difference is an append and
+   * only the new entries are imported.
+   *
+   * ⚠️ **When it is not a prefix, the sync refuses.** An edited entry is a new
+   * series — Prometheus identifies a series by its whole label set, and `reason`
+   * is a label — so the old one stays in the store and the page draws both. A
+   * deleted entry leaves its series with nothing to supersede it. Neither is
+   * something `backfill()` can undo, because it only ever adds blocks.
+   * `--rebuild` is the measured recovery and the refusal names it.
+   *
+   * Absent on a store written before markers existed, which imports them once.
+   */
+  renovations?: string[];
 }
 
 /**
@@ -717,10 +741,45 @@ async function main(): Promise<number> {
   const inStore = readdirSync(LOCAL).filter((name) => name.endsWith('.prom'));
   const wanted = selectNewRecords([...onBranch, ...inStore], state.imported);
 
+  // The markers, and which of them this store has not seen. Read from the
+  // committed file rather than from any record: a renovation is a repository
+  // fact, so CI never emits one and no `.prom` on the branch carries it.
+  const renovations = readRenovations();
+  const renovationDigests = renovations.map((entry) =>
+    createHash('sha256').update(JSON.stringify(entry)).digest('hex'),
+  );
+  const heldRenovations = state.renovations ?? [];
+
+  // A prefix means the file was appended to, which is the only shape that can be
+  // imported incrementally. Anything else rewrote history, and no amount of
+  // adding blocks repairs it — see `StoreState.renovations`.
+  if (!heldRenovations.every((digest, index) => renovationDigests[index] === digest)) {
+    fail(
+      'a renovation already in the store was edited or removed.\n' +
+        `  the store holds ${String(heldRenovations.length)} marker(s); renovations.json now carries ${String(renovationDigests.length)}.\n` +
+        '  An edited entry is a NEW series, because `reason` is one of its labels — so the old\n' +
+        '  one stays and the trend page draws both, at the same date, with different tooltips.\n' +
+        '  A deleted entry leaves its series behind with nothing to supersede it. `backfill()`\n' +
+        '  only adds blocks, so neither is something the next sync can undo.\n' +
+        '    - `pnpm trend:sync --rebuild` drops the local blocks and rebuilds from the branch\n' +
+        '      plus every local surface-D row, which is the measured recovery.\n' +
+        '    - renovations.json is append-only by convention. Correcting the newest entry before\n' +
+        '      it has ever synced is fine; correcting one the store already holds costs a rebuild.',
+    );
+  }
+
+  const freshRenovations = renovations.slice(heldRenovations.length);
+  const renovationsChanged = freshRenovations.length > 0;
+
   // Reachable when D skipped — when D probed, the row it just wrote is itself
   // something to import, which is the point of D: the import is idempotent and
   // the probe is not.
-  if (wanted.length === 0) {
+  //
+  // ⚠️ **The marker document has to be able to reopen this path.** A renovation
+  // appended on a day no nightly ran leaves `wanted` empty, and taking the early
+  // return would leave the trend page with no line at the moment the counting
+  // rule changed — which is the one thing #227 exists to put there.
+  if (wanted.length === 0 && !renovationsChanged) {
     console.log(
       `\nnothing new to import — the store already holds all ${String(state.imported.length)} record(s)`,
     );
@@ -751,10 +810,19 @@ async function main(): Promise<number> {
     return bytes;
   });
 
-  writeFileSync(INCOMING, joinRecords(documents), 'utf8');
+  writeFileSync(
+    INCOMING,
+    joinRecords(
+      renovationsChanged ? [...documents, renderRenovations(freshRenovations)] : documents,
+    ),
+    'utf8',
+  );
   console.log(
     `\nimporting ${String(wanted.length)} record(s): ${wanted[0] ?? ''} … ${wanted.at(-1) ?? ''}`,
   );
+  if (renovationsChanged) {
+    console.log(`importing ${String(freshRenovations.length)} new renovation marker(s)`);
+  }
 
   requireDocker();
   writeConfigIfAbsent();
@@ -782,7 +850,14 @@ async function main(): Promise<number> {
   // would import the same records again over the blocks that hold them. A
   // dashboard that failed to start is a nuisance; a store that holds records it
   // does not admit to is the overlap hazard this file refuses elsewhere.
-  writeState({ tip: fetched?.tip ?? state.tip, imported: [...state.imported, ...wanted] });
+  writeState({
+    tip: fetched?.tip ?? state.tip,
+    imported: [...state.imported, ...wanted],
+    // Written only when the new entries actually went in. Digests recorded for
+    // markers that were never ingested would leave the store missing lines
+    // nothing would ever import again.
+    renovations: renovationsChanged ? renovationDigests : state.renovations,
+  });
   rmSync(INCOMING, { force: true });
   startStore();
   startDashboard();
