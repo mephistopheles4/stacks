@@ -544,12 +544,30 @@ function digest(value: unknown): string {
  * in `CAPPED_SERIES` and none ever will be** — `cognitive-mass-over-15` may
  * never be capped, which is the condition on accepting a cut nobody derived.
  * The `CAPPED_SERIES` spelling would be vacuous there.
+ *
+ * ⚠️ **THE THREE INSTALLED VERSIONS ARE DELIBERATELY ABSENT SINCE
+ * [#341](https://github.com/mephistopheles4/stacks/issues/341), AND THEIR
+ * ABSENCE IS THE POINT.** They were hashed until then, so every Dependabot bump
+ * restarted the window with no number moved. Measured: a stamp-moving release
+ * lands every 6.8 days against a twenty-run window needing about twenty, and no
+ * cap was ever armed in three attempts — the best reached 14 of 20. Measured the other way:
+ * the same tree counted under parser 8.67.0 with eslint 10.9.1, then under
+ * 8.70.0 with 10.10.0, returned **all 64 rows identical**, with a planted
+ * one-row change proving the comparison could see a difference.
+ *
+ * ⚠️ **The inventories replace them, and the guard is stronger rather than
+ * weaker.** A version string asserts nothing about behaviour; an inventory is
+ * what each rule is held to say about every counted construct, total and not
+ * sampled. An upgrade that really counts differently turns `complexity.test.ts`
+ * or `cognitive.test.ts` red **at merge**, and correcting the fixture is what
+ * moves this hash. So a behaviour change still restarts every window, through a
+ * gate rather than through a string, and an upgrade that changes nothing
+ * restarts nothing. What is lost is an upgrade that changes counting on a
+ * construct no fixture exercises: a real gap, bounded by how total the
+ * inventories are, and smaller than a window that never fills at all.
  */
 export function fixtureHashOf(inputs: CounterInputs, cognitive: CognitiveInputs): string {
   return digest([
-    inputs.eslintVersion,
-    inputs.parserVersion,
-    cognitive.sonarjsVersion,
     canonical(inputs.ruleOptions),
     canonical(cognitive.ruleOptions),
     canonical(inputs.inventory),
@@ -726,6 +744,27 @@ export interface RunRow {
   event: string;
   /** The score-affecting configuration it ran under, absent on older rows. */
   configHash?: string;
+  /**
+   * The commit this run measured.
+   *
+   * ⚠️ **This is what one sample is.** The window wants the extremum across
+   * many states of the code, and counted builds until #341 — but `main` stands
+   * still for days on a repository with one maintainer, so several nightlies
+   * re-measure one tree. Measured: 24 nightlies across 23.2 days covered 13
+   * distinct commits, so a run count overstated the evidence by 1.85 times.
+   *
+   * ⚠️ **The field is not new and only this reader is.** `stacks_run_info` has
+   * carried `commit` since #169, which is why the measurement above could be
+   * taken over records written long before #341 — `runRowsFrom` simply never
+   * read it. So the optionality here is about what a *row* can prove, not about
+   * an era of the record.
+   *
+   * ⚠️ **Unprovable is its own sample, never a match.** A row that cannot say
+   * which tree it measured is not evidence that it measured the same one as
+   * another, and treating two of them as equal would silently shrink a window
+   * to one. `treeOf` decides this, and `unknown` is the case that matters.
+   */
+  commit?: string;
   /** The counting rule it ran under, absent on rows from before that stamp. */
   fixtureHash?: string;
   scores: Map<string, number>;
@@ -746,7 +785,7 @@ export interface RunRow {
 }
 
 /** How many consecutive healthy runs a window is, and how far apart they may sit. */
-export const WINDOW_RUNS = 20;
+export const WINDOW_RUNS = 10;
 export const MAX_GAP_DAYS = 3;
 
 /**
@@ -855,7 +894,7 @@ export function countedIn(rows: readonly RunRow[]): RunRow[] {
 const DAY_SECONDS = 86_400;
 
 export interface Calibration {
-  /** Consecutive qualifying runs, counting back from the newest. */
+  /** Distinct trees among the consecutive qualifying runs, newest back. Renders as `trees`. */
   runs: number;
   /**
    * Nightlies in the record at all, qualifying or not.
@@ -867,7 +906,7 @@ export interface Calibration {
    */
   candidates: number;
   full: boolean;
-  /** Days spanned by those runs — `41 days` beside `12/20 runs` says the nightly skipped. */
+  /** Days the window spans. Beside the tree count it is the only hint that `main` sat still. */
   days: number;
   /** Lowest score observed per scope across the window, or `null` where the scope has a hole. */
   lowest: Map<string, number | null>;
@@ -875,9 +914,15 @@ export interface Calibration {
 
 /** The consecutive healthy nightlies at the newest end of a record, and their span. */
 interface Streak {
-  /** Every qualifying run, newest first — the countdown's numerator. */
-  streak: RunRow[];
-  /** The newest `WINDOW_RUNS` of them: the window a value is derived from. */
+  /**
+   * Distinct trees among them — the countdown's numerator since #341.
+   *
+   * ⚠️ **Trees, not runs.** `RunRow.commit` carries the measurement that forced
+   * this: several nightlies re-measure one tree while `main` stands still, so
+   * `streak.length` counted evidence the record does not hold.
+   */
+  samples: number;
+  /** The newest rows covering `WINDOW_RUNS` distinct trees. */
   window: RunRow[];
   /** Nightlies in the record at all, qualifying or not. */
   candidates: number;
@@ -896,17 +941,24 @@ interface Streak {
  * once in this file too. The only thing a caller varies is **which stamp a row
  * must carry**; everything else about *what counts as a streak* is one rule.
  *
- * **Nightlies only**, for both. `the-ratchet.md` is explicit — *"CI nightlies
- * only, 20 consecutive `run_ok 1` runs, no gap over 3 days. Counted in **runs**,
- * not days"* — and a draft of the cap counted merges as well, on the reasoning
- * that more samples could only raise a derived cap. ⚠️ **That reasoning is
- * false for a run-bounded window, and it is worth keeping the correction
- * visible.** `slice(0, WINDOW_RUNS)` takes the newest twenty *runs*, so counting
- * merges does not add samples over a fixed period — it makes twenty runs span
- * two days instead of three weeks. The extremum is then taken over a strictly
- * *narrower* slice of history, and the derived cap comes out **lower and
- * tighter**, which is the opposite of what was claimed. Only a *time*-bounded
- * window would have behaved the way that draft assumed.
+ * **Nightlies only**, for both, and **ten distinct trees** since
+ * [#341](https://github.com/mephistopheles4/stacks/issues/341). A draft of the
+ * cap counted merges as well, on the reasoning that more samples could only
+ * raise a derived cap. ⚠️ **That reasoning is false for a run-bounded window,
+ * and it is worth keeping the correction visible.** Taking the newest N *runs*
+ * means counting merges does not add samples over a fixed period — it makes
+ * twenty runs span two days instead of three weeks, the extremum is taken over
+ * a strictly *narrower* slice of history, and the derived cap comes out lower
+ * and tighter, which is the opposite of what was claimed.
+ *
+ * ⚠️ **ADR-0068 IS NARROWER THAN IT READS, AND #341 IS WHERE THAT WAS FOUND.**
+ * The paragraph above is an argument about **calendar time**, and it only bites
+ * while *each build* is a sample. This window now counts distinct trees, and
+ * twenty merges are twenty distinct trees — more code variety, not less. The
+ * rejection stands for counting builds and says nothing about counting trees,
+ * so merges are no longer excluded *for that reason*. They stay excluded here
+ * because nothing has decided otherwise, which is a different sentence and the
+ * honest one. ADR-0068 is not amended: its reasoning is correct as written.
  *
  * **Three things end a streak, and all three end it rather than being skipped
  * over.** A run that failed, because it writes `run_ok 0` plus a partial result
@@ -917,6 +969,59 @@ interface Streak {
  * stamp, so the countdown starts when the stamp lands rather than counting rows
  * nothing can prove were measured the same way.
  */
+/**
+ * The tree a row can **prove** it measured, or `undefined` when it proves
+ * nothing.
+ *
+ * ⚠️ **`unknown` is a missing commit wearing a string.** `emit-metrics.ts`
+ * writes `flags.get('commit') ?? 'unknown'`, so a run whose workflow passed no
+ * commit records the literal word rather than nothing at all. A plain equality
+ * check would then read every such run as the same tree and collapse them into
+ * one sample — the exact failure the unprovable-row rule exists to prevent, and
+ * in the unsafe direction. `emit-metrics.ts` already filters this sentinel where
+ * it reads a commit back; this is that rule, one reader further on.
+ */
+function treeOf(row: RunRow): string | undefined {
+  return row.commit === undefined || row.commit === 'unknown' ? undefined : row.commit;
+}
+
+/**
+ * One sample per distinct tree, counted incrementally.
+ *
+ * ⚠️ **Both readers of the sampling rule share this, and that is the point.**
+ * The fullness count and the window loop need the same answer to *what is a new
+ * sample* — one totals a set, the other decides row by row where to stop. Two
+ * copies of the rule would mean a change to `treeOf` landing in one of them,
+ * which is how a correction reaches half the code it was written for.
+ */
+function tally(): {
+  opens: (row: RunRow) => boolean;
+  add: (row: RunRow) => void;
+  size: () => number;
+} {
+  const seen = new Set<string>();
+  let unprovable = 0;
+  return {
+    opens: (row) => {
+      const tree = treeOf(row);
+      return tree === undefined || !seen.has(tree);
+    },
+    add: (row) => {
+      const tree = treeOf(row);
+      if (tree === undefined) unprovable += 1;
+      else seen.add(tree);
+    },
+    size: () => seen.size + unprovable,
+  };
+}
+
+/** Distinct trees among a set of runs, which is what one sample is since #341. */
+function samplesIn(rows: readonly RunRow[]): number {
+  const counted = tally();
+  for (const row of rows) counted.add(row);
+  return counted.size();
+}
+
 function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): Streak {
   const ordered = nightliesIn(rows).sort((one, other) => one.timestamp - other.timestamp);
 
@@ -931,12 +1036,23 @@ function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): S
     streak.push(row);
   }
 
-  const window = streak.slice(0, WINDOW_RUNS);
+  // The newest rows covering `WINDOW_RUNS` distinct trees. A row that would
+  // open a sample beyond the limit ends the window; a row repeating a tree
+  // already inside it is kept, because the extremum should see every
+  // measurement of the trees it covers even though fullness counts trees.
+  const window: RunRow[] = [];
+  const counted = tally();
+  for (const row of streak) {
+    if (counted.opens(row) && counted.size() >= WINDOW_RUNS) break;
+    counted.add(row);
+    window.push(row);
+  }
+
   const oldest = window.at(-1);
   const newest = window.at(0);
 
   return {
-    streak,
+    samples: samplesIn(streak),
     window,
     candidates: ordered.length,
     days:
@@ -979,7 +1095,7 @@ export function calibration(
   scopes: readonly string[],
   configHash: string,
 ): Calibration {
-  const { streak, window, candidates, days } = streakOf(
+  const { samples, window, candidates, days } = streakOf(
     rows,
     (row) => row.configHash === configHash,
   );
@@ -996,9 +1112,9 @@ export function calibration(
   }
 
   return {
-    runs: streak.length,
+    runs: samples,
     candidates,
-    full: streak.length >= WINDOW_RUNS,
+    full: samples >= WINDOW_RUNS,
     days,
     lowest,
   };
@@ -1006,7 +1122,7 @@ export function calibration(
 
 /** How far the cap window has filled, and what it would arm each pair at. */
 export interface CapCalibration {
-  /** Consecutive qualifying runs, counting back from the newest. */
+  /** Distinct trees among the consecutive qualifying runs, newest back. Renders as `trees`. */
   runs: number;
   /** Runs in the record at all, qualifying or not. */
   candidates: number;
@@ -1053,7 +1169,7 @@ export function capCalibration(
   scopes: readonly string[],
   fixtureHash: string,
 ): CapCalibration {
-  const { streak, window, candidates, days } = streakOf(
+  const { samples, window, candidates, days } = streakOf(
     rows,
     (row) => row.fixtureHash === fixtureHash,
   );
@@ -1074,9 +1190,9 @@ export function capCalibration(
   }
 
   return {
-    runs: streak.length,
+    runs: samples,
     candidates,
-    full: streak.length >= WINDOW_RUNS,
+    full: samples >= WINDOW_RUNS,
     days,
     highest,
   };
@@ -1163,8 +1279,8 @@ function padded(text: string, width: number): string {
  *
  * ```
  * packages/core/src   armed 71.55   current 71.70  (+0.15)   1 mutant = 0.08
- * packages/cli/src    unarmed       window full (20 runs), lowest 44.12 - armable
- * scripts             unarmed       12/20 runs, 100 days
+ * packages/cli/src    unarmed       window full (10 trees), lowest 44.12 - armable
+ * scripts             unarmed       7/10 trees, 100 days
  * ```
  *
  * ⚠️ **The shape is the spec's and every number in the spec's version of this
@@ -1300,7 +1416,7 @@ function unarmedState(name: string, entry: ScopeFloor, input: PrintInput): strin
     // exactly when somebody is deciding what to type into `floor`, and the date
     // is §7's only guard on typing `unarmed` instead. An earlier draft dropped
     // it here, which put the guard everywhere except where the temptation is.
-    return `${state}window full (${String(WINDOW_RUNS)} runs), ${derived}   ${sat}`;
+    return `${state}window full (${String(WINDOW_RUNS)} trees), ${derived}   ${sat}`;
   }
 
   // ⚠️ **Two different day counts, and the spec uses both.** The one beside the
@@ -1311,8 +1427,8 @@ function unarmedState(name: string, entry: ScopeFloor, input: PrintInput): strin
   // the first would drop the guard; carrying only the second would drop the
   // skipping signal.
   return input.window.runs > 0
-    ? `${state}${String(input.window.runs)}/${String(WINDOW_RUNS)} runs, ${String(input.window.days)} days   ${sat}`
-    : `${state}0/${String(WINDOW_RUNS)} runs   ${sat}`;
+    ? `${state}${String(input.window.runs)}/${String(WINDOW_RUNS)} trees, ${String(input.window.days)} days   ${sat}`
+    : `${state}0/${String(WINDOW_RUNS)} trees   ${sat}`;
 }
 
 /** A scope-and-series pair's newest count, plus the one before it, for the print. */
@@ -1454,12 +1570,12 @@ function capUnarmedState(
       highest === null || highest === undefined
         ? 'no complete history for this scope'
         : `highest ${String(highest)} - armable`;
-    return `${state}window full (${String(WINDOW_RUNS)} runs), ${derived}   ${sat}`;
+    return `${state}window full (${String(WINDOW_RUNS)} trees), ${derived}   ${sat}`;
   }
 
   return input.window.runs > 0
-    ? `${state}${String(input.window.runs)}/${String(WINDOW_RUNS)} runs, ${String(input.window.days)} days   ${sat}`
-    : `${state}0/${String(WINDOW_RUNS)} runs   ${sat}`;
+    ? `${state}${String(input.window.runs)}/${String(WINDOW_RUNS)} trees, ${String(input.window.days)} days   ${sat}`
+    : `${state}0/${String(WINDOW_RUNS)} trees   ${sat}`;
 }
 
 export interface RefusalInput {
@@ -1777,10 +1893,12 @@ export function runRowsFrom(records: readonly ParsedRecord[]): RunRow[] {
     const info = runInfoOf(record);
     const configHash = info?.['config_hash'];
     const fixtureHash = info?.['fixture_hash'];
+    const commit = info?.['commit'];
     rows.push({
       timestamp,
       ok: health.value === 1,
       event: info?.['event'] ?? 'unknown',
+      ...(commit === undefined || commit === '' ? {} : { commit }),
       ...(configHash === undefined || configHash === '' ? {} : { configHash }),
       ...(fixtureHash === undefined || fixtureHash === '' ? {} : { fixtureHash }),
       scores,

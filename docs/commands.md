@@ -179,9 +179,11 @@ floors live in `stryker.floors.json`, beside the Stryker config the hash below
 ties them to, and the block prints at every deploy: each scope's state, how far
 its calibration window has filled, and how long it has sat unarmed.
 
-**Arming is a human judgement, per scope, after that scope's window fills** — 20
-consecutive healthy nightlies, no gap over three days, all scored under the same
-configuration. The floor is then the lowest score observed across that window,
+**Arming is a human judgement, per scope, after that scope's window fills** —
+consecutive healthy nightlies covering **ten distinct trees**, no gap over three
+days, all scored under the same configuration. Ten *trees*, not ten runs: several
+nightlies re-measure one commit while `main` stands still, so a run count named
+more evidence than it held ([ADR-0084](adr/0084-the-counting-stamp-is-behaviour-not-a-version.md)). The floor is then the lowest score observed across that window,
 applied **once, at arming**. It is not a standing function: after arming a floor
 moves up only, by hand, and **re-deriving is lowering**. There is no single
 moment at which the ratchet becomes armed, and nothing in the tooling arms
@@ -314,10 +316,18 @@ file's own comment describes. **Once a scope is armed, running this is a
 re-derivation and owes a justification like any other lowering**, and neither
 this command nor the gate can tell the two apart.
 
-⚠️ **It does not touch `fixtureHash`**, which pins the *installed* eslint and
-parser versions rather than a file in the tree. G56 does not watch that stamp
-either, deliberately — a gate over it would go red on every Dependabot bump, and
-a bot cannot re-derive one. [ADR-0079](adr/0079-the-floors-stamp-is-compared-at-merge.md).
+⚠️ **It does not touch `fixtureHash`**, which since
+[#341](https://github.com/mephistopheles4/stacks/issues/341) digests the two rule
+option sets and the two counter **inventories** — what each rule is held to say
+about every counted construct — and no longer the installed tool versions. G56
+does not watch that stamp either, deliberately.
+[ADR-0079](adr/0079-the-floors-stamp-is-compared-at-merge.md) declined the gate
+because a stamp over an *installed version* reddens on every Dependabot bump and
+a bot cannot re-derive one; that reasoning held for the stamp as it then was, and
+[ADR-0084](adr/0084-the-counting-stamp-is-behaviour-not-a-version.md) removed the
+versions rather than the refusal. A behaviour change now reddens
+`complexity.test.ts` or `cognitive.test.ts` at merge instead, and correcting that
+fixture is what moves the stamp.
 
 ## `pnpm duplication:report`
 

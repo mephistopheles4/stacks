@@ -413,8 +413,23 @@ Full order in
 [`after-the-scoreboard.md`](after-the-scoreboard.md#the-build-order). This piece's
 own constraints:
 
-**The calibration window: CI nightlies only, 20 consecutive `run_ok 1` runs, no gap
-over 3 days.** Counted in **runs**, not days.
+**The calibration window: CI nightlies only, consecutive `run_ok 1` runs covering
+10 distinct commits, no gap over 3 days.** Counted in **distinct trees**, not runs
+and not days.
+
+⚠️ **A full window may hold more than ten rows.** Fullness counts trees, and a row
+repeating a tree already inside the window is kept rather than dropped — the
+extremum should see every measurement of the trees it covers. So *ten samples* is
+never *ten rows*, and `full` is computed from the distinct count.
+
+⚠️ **Both numbers moved on [#341](https://github.com/mephistopheles4/stacks/issues/341),
+and the unit moved with them.** This read *20 consecutive runs, counted in runs* until
+then. Measured over the whole record: **24 nightlies across 23.2 days covered 13
+distinct commits**, because `main` stands still for days on a repository with one
+maintainer. So twenty runs delivered about eleven trees and the number named more
+evidence than it held. Asking for twenty actual trees instead takes about 36 days, which
+is why the size fell to ten as the unit was corrected — ten trees is about 18 days here.
+[ADR-0084](../adr/0084-the-counting-stamp-is-behaviour-not-a-version.md).
 
 - **CI only; no local seeding.** Backfilling from a laptop would be faster, which is
   exactly why it is refused: **a floor derived on one machine and compared against
@@ -426,10 +441,16 @@ over 3 days.** Counted in **runs**, not days.
   *lowest observed* is the rule one bad row destroys forever. A single crash that
   measured three files before dying would slacken every floor derived from that
   window.
-- **Why 20.** Long enough that ordinary churn lands inside it, which is the quantity
-  §2 says nobody has measured; enough runs that a CI variance band is computed rather
-  than assumed; short enough that arming is a prospect rather than a horizon. **The
-  3-day gap clause is what makes "consecutive" mean something on a nightly cadence.**
+- **Why 10, and why trees.** Long enough that ordinary churn lands inside it, which is
+  the quantity §2 says nobody has measured; enough samples that a CI variance band is
+  computed rather than assumed; short enough that arming is a prospect rather than a
+  horizon. **The 3-day gap clause is what makes "consecutive" mean something on a nightly
+  cadence** — and it reads *run* timestamps, never sample timestamps, because it asks
+  whether CI kept running rather than whether the code moved. A branch that sits still
+  for a week is a filling window, not a broken one.
+- ⚠️ **A row carrying no commit is its own sample.** Every record written before #341
+  lacks one, and two unknown trees cannot be proved equal. Records are not rewritten, so
+  this is permanent rather than transitional.
 - ⚠️ **The window is also the missing measurement** — the 0.01 band and the
   sufficiency of `timeoutMS: 120000` are 16-core facts, and nobody has run Stryker on
   a runner.
@@ -438,8 +459,8 @@ over 3 days.** Counted in **runs**, not days.
 
 ```text
 packages/core/src   armed 71.55   current 71.70  (+0.15)   1 mutant = 0.08
-packages/cli/src    unarmed       window full (20 runs), lowest 44.12 - armable
-scripts/            unarmed       12/20 runs, 41 days
+packages/cli/src    unarmed       window full (10 trees), lowest 44.12 - armable
+scripts/            unarmed       7/10 trees, 41 days
 ```
 
 ⚠️ **Every number in that block is illustrative and none is measured.** #122's
@@ -454,17 +475,23 @@ the shape from here and the numbers from the record.**
 The middle line appears at every deploy, **escalates never, files nothing** — so it
 stays inside the standing constraint — and it converts *indefinite* from a silence
 into **a dated question asked repeatedly of the one person who can answer it.**
-`12/20 runs` beside the day count is deliberate: **41 days and 12 runs says the
-nightly has been skipping**, which is the 60-day scheduled-workflow rule showing
-itself before it bites.
+`7/10 trees` beside the day count is deliberate, and since
+[#341](https://github.com/mephistopheles4/stacks/issues/341) it reads differently
+from the way it did: **41 days and 7 trees no longer says the nightly has been
+skipping**, because the same pair is what a branch that sat still produces — the
+nightly ran every night and measured one tree for a week. The day count is still
+worth printing beside the tree count, as the gap between the two is the only place
+a stalled `main` and a stalled workflow are distinguishable at all, and neither
+number separates them alone. The 60-day scheduled-workflow rule is what actually
+bites, and nothing here detects it.
 
 **Not a date** — a date in a spec is a load-bearing claim that decays by
 construction. **Not a pull-request count** — uncorrelated with what the window
 measures.
 
 **Arming is per scope, and the windows start together.** Once the spine ships every
-scope gets a row per nightly, `scripts/` included, so all reach run 20 on the same
-day. **There is no single "the ratchet is armed now" moment and the spec must not
+scope gets a row per nightly, `scripts/` included, so every scope's ten-tree window
+fills on the same day. **There is no single "the ratchet is armed now" moment and the spec must not
 imply one**; a scope added later starts its own window under §7's rule, unchanged.
 
 **Nothing ships warn-only, because nothing would be red.** `unarmed` is strictly
