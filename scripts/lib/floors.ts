@@ -1295,9 +1295,15 @@ function padded(text: string, width: number): string {
  * period: it converts *indefinite* from a silence into a dated question asked
  * repeatedly of the one person who can answer it.
  *
- * `12/20 runs` sits beside the day count deliberately — **100 days and 12 runs
- * says the nightly has been skipping**, which is GitHub's 60-day
- * scheduled-workflow disablement showing itself before it bites.
+ * `7/10 trees` sits beside the day count deliberately — the day count is the
+ * window's own span, so the pair says how much calendar the evidence covers.
+ *
+ * ⚠️ **It stopped being a skipping-nightly diagnostic when the unit became
+ * trees** ([#341](https://github.com/mephistopheles4/stacks/issues/341)). While
+ * each build was a sample, `100 days and 12 runs` could only mean the nightly
+ * had not run. Counting trees, a branch that stands still produces the same
+ * pair with the nightly running every night. The 3-day gap clause is what still
+ * reads *did CI keep running*, and it reads run timestamps to do it.
  */
 export function renderFloorLines(input: PrintInput): string[] {
   const scores = new Map(input.readings.map((reading) => [reading.scope, reading]));
@@ -1336,7 +1342,7 @@ function abbreviated(hash: string): string {
 /**
  * Which configuration the window below is counting under.
  *
- * ⚠️ **`0 of 20` has two meanings and this is the only thing that separates
+ * ⚠️ **`0 of 10` has two meanings and this is the only thing that separates
  * them.** `calibration()` counts only runs stamped with the floors file's hash,
  * so a window restarted by a scoring-config change reads exactly like one that
  * has never filled — and the deploy print was the surface where that ambiguity
@@ -1420,8 +1426,8 @@ function unarmedState(name: string, entry: ScopeFloor, input: PrintInput): strin
   }
 
   // ⚠️ **Two different day counts, and the spec uses both.** The one beside the
-  // run count is the **window's own span**: `12/20 runs, 41 days` says the
-  // nightly has been skipping, which is the diagnostic that count exists for.
+  // tree count is the **window's own span**: `7/10 trees, 41 days` says how much
+  // calendar this evidence covers, which is what that count exists for.
   // `sat`, above, is **how long this entry has sat unarmed**, and it is the only
   // guard on somebody typing `unarmed` to make a refusal go away. Carrying only
   // the first would drop the guard; carrying only the second would drop the
@@ -1450,7 +1456,7 @@ export interface CapPrintInput {
  *
  * ```
  * scripts  complexity-max            armed 12   current 11  (-2)
- * scripts  complexity-mass-over-10   unarmed    14/20 runs, 14 days   (unarmed for 106 days)
+ * scripts  complexity-mass-over-10   unarmed    7/10 trees, 14 days   (unarmed for 106 days)
  * ```
  *
  * **`renderFloorLines`' twin, and it prints beside it rather than inside it.**

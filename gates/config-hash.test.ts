@@ -135,8 +135,8 @@ describe('G56 — the stamp records the configuration that is really there', () 
         '`notes` entry. Once a scope is armed, the same edit is a re-derivation and owes ' +
         "a justification like any other lowering — see the floors file's own comment.\n\n" +
         `  ⚠️ It also restarts every calibration window: \`calibration()\` counts only ` +
-        'runs stamped with this hash, so every scope reads `0 of 20` from the commit that ' +
-        'moves it. That is the cost of closing the configuration route, and it is why ' +
+        'runs stamped with this hash, so every scope reads `0 of 10 trees` from the commit ' +
+        'that moves it. That is the cost of closing the configuration route, and it is why ' +
         '`pnpm deploy:site` now prints the stamp it is counting under beside the count.',
     ).toBe(derived);
   });

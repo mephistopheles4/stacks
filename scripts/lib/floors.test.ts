@@ -689,7 +689,7 @@ describe('renderFloorLines', () => {
     expect(line).toContain('1 mutant = 0.08');
   });
 
-  // "window full (20 runs), lowest 44.12 - armable" — the print is the whole
+  // "window full (10 trees), lowest 44.12 - armable" — the print is the whole
   // mechanism that ends the disarmed period, so a full window has to say so.
   it('tells an unarmed scope with a full window what it would arm at', () => {
     const line = lineFor(
@@ -718,10 +718,12 @@ describe('renderFloorLines', () => {
     expect(line).toContain('unarmed for');
   });
 
-  // `12/20 runs` beside the day count is deliberate: 41 days and 12 runs says
-  // the nightly has been skipping, which is the 60-day scheduled-workflow rule
-  // showing itself before it bites.
-  it('counts the window in runs, with the day count beside it', () => {
+  // `7/10 trees` beside the day count is deliberate: the day count is the
+  // window's own span, so the pair says how much calendar the evidence covers.
+  // ⚠️ It stopped reading as a skipping-nightly diagnostic when the unit became
+  // trees (#341) — a branch that stands still produces the same pair with the
+  // nightly running nightly. The 3-day gap clause is what still reads that.
+  it('counts the window in trees, with the day count beside it', () => {
     const line = lineFor(
       'scripts',
       renderFloorLines({
@@ -765,7 +767,7 @@ describe('renderFloorLines', () => {
     expect(lines.filter((line) => line.includes('no nightly'))).toHaveLength(1);
   });
 
-  // ADR-0079: a restarted window and a young one both read `0 of 20`, and the
+  // ADR-0079: a restarted window and a young one both read `0 of 10`, and the
   // stamp beside the count is the only thing that separates them for a reader
   // who remembers the previous one. It cannot say *why* the stamp moved — that
   // is #227's renovation marker, and this deliberately does not pre-empt it.
@@ -787,7 +789,7 @@ describe('renderFloorLines', () => {
   });
 
   // ⚠️ **The stamp prints whether or not anything has counted.** Its whole job
-  // is the `0 of 20` case — a header that appeared only once a window had
+  // is the `0 of 10` case — a header that appeared only once a window had
   // started would be absent in the one state it exists to disambiguate.
   it('names the stamp even when nothing in the record counts', () => {
     const lines = renderFloorLines({
@@ -1720,13 +1722,18 @@ describe('capCalibration', () => {
   });
 
   // ⚠️ **Nightlies only, exactly like the floor's window — and a draft had this
-  // the other way round.** `the-ratchet.md`: *"CI nightlies only, 20 consecutive
-  // run_ok 1 runs, no gap over 3 days. Counted in **runs**, not days."* The
-  // draft counted merges too, reasoning that more samples could only raise a
-  // derived cap. That is false for a run-bounded window: `slice(0, 20)` takes
-  // the newest twenty *runs*, so counting merges makes twenty runs span two days
-  // instead of three weeks, the maximum is taken over a narrower slice of
-  // history, and the cap comes out **tighter**. This asserts the corrected rule.
+  // the other way round.** `the-ratchet.md`: *"CI nightlies only, consecutive
+  // run_ok 1 runs covering 10 distinct commits, no gap over 3 days. Counted in
+  // distinct trees, not runs."* The draft counted merges too, reasoning that
+  // more samples could only raise a derived cap. That was false while the window
+  // was bounded in *runs*: counting merges made twenty runs span two days
+  // instead of three weeks, so the maximum came from a narrower slice of history
+  // and the cap came out **tighter**.
+  //
+  // ⚠️ **That argument is about calendar time and #341 narrowed it**: counting
+  // trees, twenty merges are twenty distinct trees, which is more variety rather
+  // than less. Merges stay excluded because nothing has decided otherwise, which
+  // is a different sentence — ADR-0084. This asserts the rule, not the argument.
   it('counts no merge run, matching the mutation floor window exactly', () => {
     const merges = runs(20).map((entry) => ({ ...entry, event: 'push' }));
 

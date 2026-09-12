@@ -105,7 +105,7 @@ const PORT = 9090;
  *
  * Pinned for the same reason the store is: a dashboard that changes under you is
  * not a reading of anything, and the calibration window the ratchet's floors
- * depend on is twenty runs long.
+ * depend on covers ten distinct trees, which is about eighteen days here.
  */
 const GRAFANA_IMAGE = 'grafana/grafana:11.6.6';
 const GRAFANA_CONTAINER = 'stacks-grafana';
