@@ -408,7 +408,7 @@ export interface CounterInputs {
    * These two and `CognitiveInputs.sonarjsVersion` were inputs to
    * `fixtureHashOf` until then, which restarted every window on a Dependabot
    * bump that moved no number — measured, one such release every 6.8 days
-   * against a window that fills in about eighteen. `fixtureHashOf` carries the
+   * against a twenty-run window needing about twenty. `fixtureHashOf` carries the
    * reasoning and the measurement.
    *
    * They are kept, and the reason is narrow: they are **provenance**, read back

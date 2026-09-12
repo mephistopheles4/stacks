@@ -24,6 +24,17 @@ an input to a number.
 
 **Not decided here**: whether merges join the window. See *Consequences*.
 
+⚠️ **The triage's fourth row — *old counts are kept, with a marker naming the
+upgrade* — is only half built, and the half that is missing is the marker.**
+*Kept* needs no code and never did: nothing deletes a record, and the rows a
+restart steps over stay on the `metrics` branch. *Marked* means a reader of the
+trend page can tell a step change from a regression, and that is
+[#227](https://github.com/mephistopheles4/stacks/issues/227)'s renovation markers,
+which this record does not implement. What lands instead is the dated paragraph in
+`stryker.floors.json` — the same practice the four refreshes before it used, now
+written only when a genuine counting change moves the stamp. Calling that "the
+marker" would overstate it: it marks the *file*, not the series.
+
 ## Context
 
 A complexity cap and a mutation floor are both derived from a calibration
@@ -84,6 +95,25 @@ restarts nothing. That replaces a string nobody checked with an assertion CI run
 on a construct no fixture exercises, and the stamp would not move. The guarantee
 is bounded by how total the inventories are. That is a real gap and it is smaller
 than the failure it replaces: a window that never filled at all.
+
+## What this does to ADR-0079, which is not amended
+
+[ADR-0079](./0079-the-floors-stamp-is-compared-at-merge.md) decided that a gate
+watches `configHash` **only**, and left `fixtureHash` unwatched at merge with a
+reason this record must answer: *a gate over an installed version goes red on
+every Dependabot bump, and a bot cannot re-derive a stamp.* Its Consequences also
+state *"the window stays at **20 runs, counted in runs**"*.
+
+Both sentences were correct about the stamp as it then was. This record removes
+their premise rather than their conclusion: the stamp no longer holds an installed
+version, so the objection that kept it ungated no longer describes it — and the
+refusal still lives in `pnpm deploy:site` rather than in a gate, because nothing
+here decided to move it. Whether `fixtureHash` should now be watched at merge is a
+question ADR-0079's reasoning no longer settles, and it is **not decided here**.
+
+ADR-0079 is left exactly as written: this repository's records carry their
+original reasoning verbatim, and a decision that was right about the world it was
+made in is not corrected by a later change to that world.
 
 ## Alternatives considered
 

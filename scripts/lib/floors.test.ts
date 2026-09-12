@@ -461,12 +461,33 @@ describe('calibration', () => {
     expect(calibration(rows, ['packages/core/src'], HASH).days).toBe(2);
   });
 
-  // ⚠️ Every row written before #341 carries no commit, and a record is not
-  // rewritten. An unknown tree cannot be proved equal to another unknown tree,
-  // so each such row stays its own sample — the reading that cannot silently
-  // shrink a historical window to one.
+  // ⚠️ **An unprovable tree is its own sample, never a match.** Two rows that
+  // cannot say which tree they measured are not evidence that they measured the
+  // same one, and treating them as equal would silently shrink a window to one —
+  // the failure this rule exists to prevent, and the opposite of the safe
+  // direction.
   it('treats a row with no commit as its own sample', () => {
     expect(calibration(nightlies(4), ['packages/core/src'], HASH).runs).toBe(4);
+  });
+
+  // ⚠️ **`unknown` is that same case wearing a string.** `emit-metrics.ts`
+  // writes `flags.get('commit') ?? 'unknown'`, so a run whose workflow passed no
+  // commit records the literal word — and a plain equality check would read
+  // every one of them as the same tree. `emit-metrics.ts` already filters this
+  // sentinel where it reads a commit back; this is the same rule, one reader on.
+  it('treats the literal commit "unknown" as unprovable, not as a shared tree', () => {
+    const rows = nightlies(4);
+    for (const row of rows) row.commit = 'unknown';
+
+    expect(calibration(rows, ['packages/core/src'], HASH).runs).toBe(4);
+  });
+
+  it('does not let an unprovable row merge into a real tree', () => {
+    const rows = nightlies(4);
+    rows.forEach((row, index) => (row.commit = ['aaaa', 'unknown', 'aaaa', 'unknown'][index]));
+
+    // One real tree, plus two rows that prove nothing.
+    expect(calibration(rows, ['packages/core/src'], HASH).runs).toBe(3);
   });
 
   // ⚠️ A row scored under a different configuration is not a row about this
@@ -1351,9 +1372,9 @@ describe('fixtureHashOf', () => {
 
   // ⚠️ **This assertion is inverted from what it said until #341, and the
   // inversion is the decision.** All three versions used to be hashed, so every
-  // Dependabot bump restarted a window that needs ten samples — measured, one
-  // stamp-moving release every 6.8 days against a window that fills in about
-  // eighteen, which is why no cap was ever armed. A version string is not a
+  // Dependabot bump restarted the window — measured, one stamp-moving release
+  // every 6.8 days against a twenty-run window needing about twenty, which is
+  // why no cap was ever armed. A version string is not a
   // behaviour: the same tree counted under parser 8.67.0 with eslint 10.9.1 and
   // under 8.70.0 with 10.10.0 returned all 64 rows identical.
   it('ignores all three installed versions, because a version is not a behaviour', () => {

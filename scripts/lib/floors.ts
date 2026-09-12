@@ -549,8 +549,8 @@ function digest(value: unknown): string {
  * [#341](https://github.com/mephistopheles4/stacks/issues/341), AND THEIR
  * ABSENCE IS THE POINT.** They were hashed until then, so every Dependabot bump
  * restarted the window with no number moved. Measured: a stamp-moving release
- * lands every 6.8 days, a window fills in about eighteen, and no cap was ever
- * armed in three attempts — the best reached 14 of 20. Measured the other way:
+ * lands every 6.8 days against a twenty-run window needing about twenty, and no
+ * cap was ever armed in three attempts — the best reached 14 of 20. Measured the other way:
  * the same tree counted under parser 8.67.0 with eslint 10.9.1, then under
  * 8.70.0 with 10.10.0, returned **all 64 rows identical**, with a planted
  * one-row change proving the comparison could see a difference.
@@ -745,7 +745,7 @@ export interface RunRow {
   /** The score-affecting configuration it ran under, absent on older rows. */
   configHash?: string;
   /**
-   * The commit this run measured, absent on rows written before #341.
+   * The commit this run measured.
    *
    * ⚠️ **This is what one sample is.** The window wants the extremum across
    * many states of the code, and counted builds until #341 — but `main` stands
@@ -753,11 +753,16 @@ export interface RunRow {
    * re-measure one tree. Measured: 24 nightlies across 23.2 days covered 13
    * distinct commits, so a run count overstated the evidence by 1.85 times.
    *
-   * ⚠️ **Absent is its own sample, never a match.** A row from before this
-   * stamp cannot be proved to have measured the same tree as any other, and
-   * treating two unknowns as equal would silently shrink a historical window to
-   * one. Records are not rewritten, so this case is permanent rather than
-   * transitional.
+   * ⚠️ **The field is not new and only this reader is.** `stacks_run_info` has
+   * carried `commit` since #169, which is why the measurement above could be
+   * taken over records written long before #341 — `runRowsFrom` simply never
+   * read it. So the optionality here is about what a *row* can prove, not about
+   * an era of the record.
+   *
+   * ⚠️ **Unprovable is its own sample, never a match.** A row that cannot say
+   * which tree it measured is not evidence that it measured the same one as
+   * another, and treating two of them as equal would silently shrink a window
+   * to one. `treeOf` decides this, and `unknown` is the case that matters.
    */
   commit?: string;
   /** The counting rule it ran under, absent on rows from before that stamp. */
@@ -889,7 +894,7 @@ export function countedIn(rows: readonly RunRow[]): RunRow[] {
 const DAY_SECONDS = 86_400;
 
 export interface Calibration {
-  /** Consecutive qualifying runs, counting back from the newest. */
+  /** Distinct trees among the consecutive qualifying runs, newest back. Renders as `trees`. */
   runs: number;
   /**
    * Nightlies in the record at all, qualifying or not.
@@ -901,7 +906,7 @@ export interface Calibration {
    */
   candidates: number;
   full: boolean;
-  /** Days spanned by those runs — `41 days` beside `7/10 trees` says the nightly skipped. */
+  /** Days the window spans. Beside the tree count it is the only hint that `main` sat still. */
   days: number;
   /** Lowest score observed per scope across the window, or `null` where the scope has a hole. */
   lowest: Map<string, number | null>;
@@ -965,20 +970,56 @@ interface Streak {
  * nothing can prove were measured the same way.
  */
 /**
- * Distinct trees among a set of runs, which is what one sample is since #341.
+ * The tree a row can **prove** it measured, or `undefined` when it proves
+ * nothing.
  *
- * A row carrying no commit counts as its own sample rather than matching
- * another: `RunRow.commit` says why, and it is the reading that cannot shrink a
- * historical window to one.
+ * ⚠️ **`unknown` is a missing commit wearing a string.** `emit-metrics.ts`
+ * writes `flags.get('commit') ?? 'unknown'`, so a run whose workflow passed no
+ * commit records the literal word rather than nothing at all. A plain equality
+ * check would then read every such run as the same tree and collapse them into
+ * one sample — the exact failure the unprovable-row rule exists to prevent, and
+ * in the unsafe direction. `emit-metrics.ts` already filters this sentinel where
+ * it reads a commit back; this is that rule, one reader further on.
  */
-function samplesIn(rows: readonly RunRow[]): number {
+function treeOf(row: RunRow): string | undefined {
+  return row.commit === undefined || row.commit === 'unknown' ? undefined : row.commit;
+}
+
+/**
+ * One sample per distinct tree, counted incrementally.
+ *
+ * ⚠️ **Both readers of the sampling rule share this, and that is the point.**
+ * The fullness count and the window loop need the same answer to *what is a new
+ * sample* — one totals a set, the other decides row by row where to stop. Two
+ * copies of the rule would mean a change to `treeOf` landing in one of them,
+ * which is how a correction reaches half the code it was written for.
+ */
+function tally(): {
+  opens: (row: RunRow) => boolean;
+  add: (row: RunRow) => void;
+  size: () => number;
+} {
   const seen = new Set<string>();
-  let unknown = 0;
-  for (const row of rows) {
-    if (row.commit === undefined) unknown += 1;
-    else seen.add(row.commit);
-  }
-  return seen.size + unknown;
+  let unprovable = 0;
+  return {
+    opens: (row) => {
+      const tree = treeOf(row);
+      return tree === undefined || !seen.has(tree);
+    },
+    add: (row) => {
+      const tree = treeOf(row);
+      if (tree === undefined) unprovable += 1;
+      else seen.add(tree);
+    },
+    size: () => seen.size + unprovable,
+  };
+}
+
+/** Distinct trees among a set of runs, which is what one sample is since #341. */
+function samplesIn(rows: readonly RunRow[]): number {
+  const counted = tally();
+  for (const row of rows) counted.add(row);
+  return counted.size();
 }
 
 function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): Streak {
@@ -1000,13 +1041,10 @@ function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): S
   // already inside it is kept, because the extremum should see every
   // measurement of the trees it covers even though fullness counts trees.
   const window: RunRow[] = [];
-  const seen = new Set<string>();
-  let unknown = 0;
+  const counted = tally();
   for (const row of streak) {
-    const opensASample = row.commit === undefined || !seen.has(row.commit);
-    if (opensASample && seen.size + unknown >= WINDOW_RUNS) break;
-    if (row.commit === undefined) unknown += 1;
-    else seen.add(row.commit);
+    if (counted.opens(row) && counted.size() >= WINDOW_RUNS) break;
+    counted.add(row);
     window.push(row);
   }
 
@@ -1084,7 +1122,7 @@ export function calibration(
 
 /** How far the cap window has filled, and what it would arm each pair at. */
 export interface CapCalibration {
-  /** Consecutive qualifying runs, counting back from the newest. */
+  /** Distinct trees among the consecutive qualifying runs, newest back. Renders as `trees`. */
   runs: number;
   /** Runs in the record at all, qualifying or not. */
   candidates: number;

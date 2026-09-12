@@ -105,7 +105,7 @@ decided**, flagged as such so they can be pushed back on:
 **Spine → (supply-chain gates + the register gate) → the ratchet, disarmed.**
 
 **Decided on lead time**, and that is the only reason it holds: everything else in
-this spec is *work*, and the 20-run calibration window is *waiting*. **Waiting
+this spec is *work*, and the calibration window is *waiting*. **Waiting
 overlaps with work only if it starts first.**
 
 **1 — The spine.** Stryker and its ADR, `stryker.config`, `metrics.yml`, the orphan
@@ -135,7 +135,7 @@ supply-chain triage obligation, and the observed-red rule below.
 
 **3 — The ratchet, disarmed.** The floors JSON all `unarmed`, the refusal wired, the
 print live, and **G42 `ignored-mutants`**. It lands **early** in the window rather
-than at the end: the `12/20 runs` countdown is part of this piece, so landing it late
+than at the end: the `7/10 trees` countdown is part of this piece, so landing it late
 makes the countdown invisible for exactly the period it exists to make legible.
 
 > **Every gate landing before `gate-register` writes its observed-red line at

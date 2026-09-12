@@ -413,9 +413,14 @@ Full order in
 [`after-the-scoreboard.md`](after-the-scoreboard.md#the-build-order). This piece's
 own constraints:
 
-**The calibration window: CI nightlies only, 10 consecutive `run_ok 1` runs covering
+**The calibration window: CI nightlies only, consecutive `run_ok 1` runs covering
 10 distinct commits, no gap over 3 days.** Counted in **distinct trees**, not runs
 and not days.
+
+⚠️ **A full window may hold more than ten rows.** Fullness counts trees, and a row
+repeating a tree already inside the window is kept rather than dropped — the
+extremum should see every measurement of the trees it covers. So *ten samples* is
+never *ten rows*, and `full` is computed from the distinct count.
 
 ⚠️ **Both numbers moved on [#341](https://github.com/mephistopheles4/stacks/issues/341),
 and the unit moved with them.** This read *20 consecutive runs, counted in runs* until
@@ -470,9 +475,15 @@ the shape from here and the numbers from the record.**
 The middle line appears at every deploy, **escalates never, files nothing** — so it
 stays inside the standing constraint — and it converts *indefinite* from a silence
 into **a dated question asked repeatedly of the one person who can answer it.**
-`7/10 trees` beside the day count is deliberate: **41 days and 7 trees says the
-nightly has been skipping**, which is the 60-day scheduled-workflow rule showing
-itself before it bites.
+`7/10 trees` beside the day count is deliberate, and since
+[#341](https://github.com/mephistopheles4/stacks/issues/341) it reads differently
+from the way it did: **41 days and 7 trees no longer says the nightly has been
+skipping**, because the same pair is what a branch that sat still produces — the
+nightly ran every night and measured one tree for a week. The day count is still
+worth printing beside the tree count, as the gap between the two is the only place
+a stalled `main` and a stalled workflow are distinguishable at all, and neither
+number separates them alone. The 60-day scheduled-workflow rule is what actually
+bites, and nothing here detects it.
 
 **Not a date** — a date in a spec is a load-bearing claim that decays by
 construction. **Not a pull-request count** — uncorrelated with what the window
