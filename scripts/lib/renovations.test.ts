@@ -125,6 +125,30 @@ describe('parseRenovations — every entry carries a date, a reason and a pull r
     );
   });
 
+  // ⚠️ **Shape is not enough, and the failure is not local to one sample.**
+  // `renderRenovations` hands the value to `Date.parse`: `2026-02-31` becomes
+  // March 3 and puts the annotation on the wrong day, while `2026-13-01` is
+  // `NaN` — and a NaN timestamp is *"invalid timestamp NaN"* to
+  // `promtool tsdb create-blocks-from openmetrics`, which then writes **zero
+  // blocks for the whole document**. The sync joins the markers with every real
+  // record, so one bad date here loses the entire import. Measured on #227.
+  it('refuses a day that does not exist in its month', () => {
+    expect(() => parseRenovations(doc(stamp({ date: '2026-02-31' })))).toThrow(/not a real date/);
+  });
+
+  it('refuses a month that does not exist', () => {
+    expect(() => parseRenovations(doc(stamp({ date: '2026-13-01' })))).toThrow(/not a real date/);
+  });
+
+  it('refuses a date that parses to nothing at all', () => {
+    expect(() => parseRenovations(doc(stamp({ date: '2026-99-99' })))).toThrow(/not a real date/);
+  });
+
+  it('accepts a leap day in a leap year and refuses one that is not', () => {
+    expect(parseRenovations(doc(stamp({ date: '2024-02-29' })))[0]?.date).toBe('2024-02-29');
+    expect(() => parseRenovations(doc(stamp({ date: '2026-02-29' })))).toThrow(/not a real date/);
+  });
+
   it('refuses an empty reason, because an entry with no reason marks nothing', () => {
     expect(() => parseRenovations(doc(stamp({ reason: '   ' })))).toThrow(/carries no reason/);
   });

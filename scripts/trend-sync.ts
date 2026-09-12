@@ -188,18 +188,27 @@ interface StoreState {
   /** Every record filename already in the store — branch and local alike. */
   imported: string[];
   /**
-   * The renovation document this store already holds, as a digest of its bytes.
+   * One digest per renovation already in the store, in file order.
    *
-   * ⚠️ **A fingerprint rather than a filename, because this one document is
-   * rewritten rather than appended to.** Every record is immutable and is
-   * therefore tracked by name; `renovations.json` renders afresh each sync, and
-   * re-importing an unchanged one writes blocks that overlap the ones already
-   * there — the hazard `readState` refuses elsewhere, arriving by a door that
-   * opens on every single run.
+   * ⚠️ **Per entry rather than per document, and the difference is what makes
+   * an append cheap and a rewrite loud.** `renovations.json` is one file that is
+   * appended to, where every record is a separate immutable file — so a
+   * single whole-document digest could only say *something changed*, and the
+   * honest response to that is to re-import every marker, which writes blocks
+   * overlapping the ones already there. A list says **what** changed: if this
+   * is a prefix of the file as it now stands, the difference is an append and
+   * only the new entries are imported.
    *
-   * Absent on a store written before markers existed, which re-imports once.
+   * ⚠️ **When it is not a prefix, the sync refuses.** An edited entry is a new
+   * series — Prometheus identifies a series by its whole label set, and `reason`
+   * is a label — so the old one stays in the store and the page draws both. A
+   * deleted entry leaves its series with nothing to supersede it. Neither is
+   * something `backfill()` can undo, because it only ever adds blocks.
+   * `--rebuild` is the measured recovery and the refusal names it.
+   *
+   * Absent on a store written before markers existed, which imports them once.
    */
-  renovations?: string;
+  renovations?: string[];
 }
 
 /**
@@ -732,12 +741,35 @@ async function main(): Promise<number> {
   const inStore = readdirSync(LOCAL).filter((name) => name.endsWith('.prom'));
   const wanted = selectNewRecords([...onBranch, ...inStore], state.imported);
 
-  // The markers, and whether this store already holds these ones. Rendered from
-  // the committed file rather than from any record: a renovation is a repository
+  // The markers, and which of them this store has not seen. Read from the
+  // committed file rather than from any record: a renovation is a repository
   // fact, so CI never emits one and no `.prom` on the branch carries it.
-  const renovations = renderRenovations(readRenovations());
-  const renovationsDigest = createHash('sha256').update(renovations).digest('hex');
-  const renovationsChanged = state.renovations !== renovationsDigest;
+  const renovations = readRenovations();
+  const renovationDigests = renovations.map((entry) =>
+    createHash('sha256').update(JSON.stringify(entry)).digest('hex'),
+  );
+  const heldRenovations = state.renovations ?? [];
+
+  // A prefix means the file was appended to, which is the only shape that can be
+  // imported incrementally. Anything else rewrote history, and no amount of
+  // adding blocks repairs it — see `StoreState.renovations`.
+  if (!heldRenovations.every((digest, index) => renovationDigests[index] === digest)) {
+    fail(
+      'a renovation already in the store was edited or removed.\n' +
+        `  the store holds ${String(heldRenovations.length)} marker(s); renovations.json now carries ${String(renovationDigests.length)}.\n` +
+        '  An edited entry is a NEW series, because `reason` is one of its labels — so the old\n' +
+        '  one stays and the trend page draws both, at the same date, with different tooltips.\n' +
+        '  A deleted entry leaves its series behind with nothing to supersede it. `backfill()`\n' +
+        '  only adds blocks, so neither is something the next sync can undo.\n' +
+        '    - `pnpm trend:sync --rebuild` drops the local blocks and rebuilds from the branch\n' +
+        '      plus every local surface-D row, which is the measured recovery.\n' +
+        '    - renovations.json is append-only by convention. Correcting the newest entry before\n' +
+        '      it has ever synced is fine; correcting one the store already holds costs a rebuild.',
+    );
+  }
+
+  const freshRenovations = renovations.slice(heldRenovations.length);
+  const renovationsChanged = freshRenovations.length > 0;
 
   // Reachable when D skipped — when D probed, the row it just wrote is itself
   // something to import, which is the point of D: the import is idempotent and
@@ -780,14 +812,16 @@ async function main(): Promise<number> {
 
   writeFileSync(
     INCOMING,
-    joinRecords(renovationsChanged ? [...documents, renovations] : documents),
+    joinRecords(
+      renovationsChanged ? [...documents, renderRenovations(freshRenovations)] : documents,
+    ),
     'utf8',
   );
   console.log(
     `\nimporting ${String(wanted.length)} record(s): ${wanted[0] ?? ''} … ${wanted.at(-1) ?? ''}`,
   );
   if (renovationsChanged) {
-    console.log(`importing the renovation markers: ${String(readRenovations().length)} entry(s)`);
+    console.log(`importing ${String(freshRenovations.length)} new renovation marker(s)`);
   }
 
   requireDocker();
@@ -819,10 +853,10 @@ async function main(): Promise<number> {
   writeState({
     tip: fetched?.tip ?? state.tip,
     imported: [...state.imported, ...wanted],
-    // Written only when the document actually went in. A digest recorded for
-    // markers that were never ingested would leave the store missing a line
+    // Written only when the new entries actually went in. Digests recorded for
+    // markers that were never ingested would leave the store missing lines
     // nothing would ever import again.
-    renovations: renovationsChanged ? renovationsDigest : state.renovations,
+    renovations: renovationsChanged ? renovationDigests : state.renovations,
   });
   rmSync(INCOMING, { force: true });
   startStore();

@@ -427,9 +427,11 @@ never *ten rows*, and `full` is computed from the distinct count.
 declares `preserves` widens what counts toward that stamp's window to include the
 runs under its predecessor — back to the last change that did not. So a tool
 upgrade *measured* to move no count carries about eighteen days of evidence
-across instead of throwing it away. **`preserves` is required on every entry and
-has no default**, because the conservative answer must still be one somebody
-gave; every entry says `false` today. An empty chain reads as *no preservation*
+across instead of throwing it away. **`preserves` is required on every *stamp*
+entry and has no default**, because the conservative answer must still be one
+somebody gave; every entry says `false` today. It is **forbidden** on a free
+entry — one that moves no stamp restarts no window, so it has none to preserve,
+and the parser rejects the field rather than ignoring it. An empty chain reads as *no preservation*
 and never as *accept anything*: a floor derived from runs nobody declared
 comparable is the route the stamp exists to close.
 [#227](https://github.com/mephistopheles4/stacks/issues/227),

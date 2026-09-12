@@ -95,6 +95,28 @@ const DIGEST = /^sha256:[0-9a-f]{64}$/;
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * A date that is both the right shape **and** a day that exists.
+ *
+ * ⚠️ **The shape check alone is not enough, and what it lets through is not a
+ * local failure.** `renderRenovations` hands this value to `Date.parse`:
+ * `2026-02-31` resolves to March 3 and puts the annotation on the wrong day,
+ * and `2026-13-01` resolves to `NaN`. A NaN timestamp is *"invalid timestamp
+ * NaN"* to `promtool tsdb create-blocks-from openmetrics`, which then writes
+ * **zero blocks for the whole document** — and `pnpm trend:sync` joins the
+ * markers with every real record before backfilling, so one bad date here loses
+ * the entire import rather than one annotation. Measured through the real block
+ * builder on [#227](https://github.com/mephistopheles4/stacks/issues/227).
+ *
+ * The round trip is the check: a day the calendar does not have comes back as a
+ * different day, or as nothing.
+ */
+function isRealDay(date: string): boolean {
+  if (!ISO_DAY.test(date)) return false;
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(date);
+}
+
 function isStampName(value: unknown): value is StampName {
   return STAMP_NAMES.includes(value as StampName);
 }
@@ -122,6 +144,13 @@ function parseEntry(entry: unknown, index: number): Renovation {
 
   if (typeof date !== 'string' || !ISO_DAY.test(date)) {
     throw new Error(`${at} carries a date that is not an ISO date: ${String(date)}`);
+  }
+  if (!isRealDay(date)) {
+    throw new Error(
+      `${at} carries a date that is the right shape and not a real date: ${date}. ` +
+        'A day the calendar does not have renders as the wrong day or as NaN, and a NaN ' +
+        'timestamp makes promtool reject the whole backfill document.',
+    );
   }
   if (typeof reason !== 'string' || reason.trim() === '') {
     throw new Error(`${at} carries no reason, so it marks nothing`);
