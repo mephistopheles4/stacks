@@ -5970,3 +5970,97 @@ reasoned about.
   three facts about arming that no test reads** — that restamping re-scores
   nothing, that an armed scope owes a `notes` entry, that the calibration window
   restarts. Only the command name in it is asserted.
+
+### G57 — `renovation-markers`
+
+**Gate:** [`gates/renovation-markers.test.ts`](../gates/renovation-markers.test.ts)
+**Date:** 2026-09-12
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number was taken against a re-fetched `origin/main` immediately
+before pushing**, and against every remote branch and every open pull request —
+G19's gapless walk makes a stale claim a red merge for whoever lands second, and
+an ADR number was claimed twice on this repository once already because git
+cannot see an unpushed branch.
+
+**Observed-red**, three ways, each perturbation written to disk, run, read back
+and reverted rather than reasoned about.
+
+1. **The comparison.** `fixtureHash` in `stryker.floors.json` replaced with 64
+   zeroes — the row went red naming the file, the stamp and both values, and the
+   other eight clauses stayed green, which is what makes it a comparison rather
+   than a smoke alarm.
+2. **The missing entry.** The `duplicationHash` entry deleted from
+   `renovations.json` reddened **three** clauses: the one naming that stamp, the
+   one comparing it, and the population floor — `expectFound` at three, which is
+   the clause that stops an emptied file passing vacuously.
+3. **The typo.** `"duplicationHash"` changed to `"duplicationhash"` failed the
+   whole **suite** rather than one clause, because an unrecognised stamp name is
+   a parse error in `parseRenovations` rather than a value. That is `parseCaps`'
+   rule and the reason for it: a typo must not read as something weaker, and
+   without it `"fixturehash"` lands as a free entry, leaves the real stamp
+   unmarked, and passes.
+
+⚠️ **The third probe's first attempt was a false negative in the probe, not the
+gate**, and it is recorded because the shape recurs. The guard
+`if ($bad -eq $raw) { "did not apply" }` compared a case-only substitution with
+PowerShell's `-eq`, which is case-insensitive for strings — so a replacement
+that had applied reported that it had not. Caught by reading the file back
+instead of trusting the guard, and `-ceq` is the fix.
+
+- **Weakening** — **clean; no allowlist, no exemption and no threshold.** The
+  assertion is one string equal to another, three times over, so there is no
+  knob to turn down. ⚠️ **What could be weakened is `preserves`**, which is not
+  this row's business and is named because reading this row as protection
+  against it would be wrong: a renovation entry claiming `true` carries the
+  calibration window across a stamp change, and nothing here reads that field.
+  G57 asserts that a reason exists and names the value actually on disk. Whether
+  the reason is true, and whether the window really should survive, is a claim
+  no gate can check. Disposition `accepted`, stated in the gate's header rather
+  than left for somebody to find.
+- **Satisfying the letter** — **exposed, and it is the intended path.** Appending
+  an entry that says `"reason": "bump"` passes cleanly, which is exactly what the
+  row asks for: it makes the reason **recorded**, never good. ⚠️ **And the letter
+  is genuinely less than the spirit here**: the entry is prose, read by a person
+  on the trend page and by nothing else, so the whole value of this row rests on
+  somebody writing a sentence worth reading. That is the same relationship G41
+  has to the quality of these very entries. Disposition `accepted`.
+- **Routing around** — **exposed, and one route is open by construction.** The
+  route is to change what a number means somewhere no stamp reads.
+  ⚠️ **The measured residual is the whole free-entry class**: a formatter
+  adoption, a Node upgrade, a widened rule set. `renovations.json` accepts an
+  entry for each and **nothing can force one**, because forcing means a
+  comparison and there is no stamp to compare against. That is a property of the
+  class rather than a gap here — the same shape as the compiler residual G56
+  carries. #227's own table measured that Prettier, markdownlint and extra
+  ESLint rules move no count, and [#342](https://github.com/mephistopheles4/stacks/pull/342)
+  removed the last version trigger, so the class is smaller than it was and is
+  not empty. Disposition `accepted`, in
+  [ADR-0085](adr/0085-a-renovation-is-declared-and-the-window-may-survive.md).
+  ⚠️ **The second residual is the compiler**, inherited from G56 and unchanged:
+  the resolved `typescript` version is in no stamp, so a bump moves every score
+  with nothing here saying so, which is why `checkers` stays `[]`
+  ([ADR-0070](adr/0070-the-type-checker-stays-off-until-the-compiler-is-hashed.md)).
+  Disposition `declined`.
+- **Vacuous green** — **gated, with two floors, and the second was earned in the
+  writing.** Two `undefined`s compare equal, so all three stamps are shape-checked
+  against `sha256:` plus 64 hex digits before any equality is asserted.
+  ⚠️ **The entry-count floor is the one that is not obviously load-bearing and
+  is**: an empty `renovations.json` satisfies *no entry contradicts a stamp*
+  perfectly, so `expectFound` requires at least as many entries as there are
+  stamps — perturbation 2 above reddened it, which is how it is known to bite.
+  ⚠️ **A third floor reverse-asserts the stamp list itself** against
+  `STAMP_NAMES`, so a fourth stamp cannot arrive with this row silently covering
+  three. That one is the lesson of #341, where a correction landed on the
+  instance somebody pointed at seven times and the siblings survived each time.
+- **Decay** — **it decays into a red on the thing that matters and into silence
+  on two things that do not yet exist.** A moved stamp, a renamed field, a
+  deleted entry, a deleted file and a malformed one are each red here, and the
+  parse error is louder than the assertion because it takes the suite down.
+  ⚠️ **What rots quietly is the free-entry half**: nobody is obliged to write one,
+  so the class this row cannot cover decays into an empty section of the file
+  with no red anywhere, and the only signal is a reader of the trend page meeting
+  a step change the record does not explain. ⚠️ **And the gate's header names
+  three facts no test reads** — that the deploy was rejected as the enforcement
+  point, that ADR-0079's `fixtureHash` objection lost its premise on #342, and
+  that `preserves` defaults to nothing. Only the stamp names in it are asserted.

@@ -422,6 +422,29 @@ repeating a tree already inside the window is kept rather than dropped — the
 extremum should see every measurement of the trees it covers. So *ten samples* is
 never *ten rows*, and `full` is computed from the distinct count.
 
+⚠️ **A stamp change restarts the window unless a renovation says otherwise.**
+`renovations.json` carries one dated entry per stamp change, and an entry that
+declares `preserves` widens what counts toward that stamp's window to include the
+runs under its predecessor — back to the last change that did not. So a tool
+upgrade *measured* to move no count carries about eighteen days of evidence
+across instead of throwing it away. **`preserves` is required on every *stamp*
+entry and has no default**, because the conservative answer must still be one
+somebody gave; every entry says `false` today. It is **forbidden** on a free
+entry — one that moves no stamp restarts no window, so it has none to preserve,
+and the parser rejects the field rather than ignoring it. An empty chain reads as *no preservation*
+and never as *accept anything*: a floor derived from runs nobody declared
+comparable is the route the stamp exists to close.
+[#227](https://github.com/mephistopheles4/stacks/issues/227),
+[ADR-0085](../adr/0085-a-renovation-is-declared-and-the-window-may-survive.md).
+
+⚠️ **Preservation does not touch the gap clause.** *Did CI keep running* and
+*which rule did it count under* are different questions, so a preserved stamp on
+the far side of a four-day hole is still unreachable. Measured on #227: planting
+a preserving chain back to the stamp the nightlies carry moved the cap window
+from `0/10 trees` to `5/10 trees, 10 days`, and a chain pointing at a stamp only
+`push` records carry moved nothing at all — the window is nightlies-only, and
+that is the honest zero it produces.
+
 ⚠️ **Both numbers moved on [#341](https://github.com/mephistopheles4/stacks/issues/341),
 and the unit moved with them.** This read *20 consecutive runs, counted in runs* until
 then. Measured over the whole record: **24 nightlies across 23.2 days covered 13
