@@ -27,8 +27,9 @@
  * them moved off it: the tree has held records up to 0085 with **0071 missing**
  * ever since. That hole is correct and stays. Gate rows in `docs/gates.md` are
  * gapless because retiring one means marking it; an ADR number abandoned on a
- * dead branch has no row to mark and must not be reused, so a gap here is not
- * merely legitimate but sometimes unavoidable, with only `main` able to say so.
+ * dead branch has no row to mark, and filling it later lets a reference written
+ * on that branch name a different decision — so a gap here is not merely
+ * legitimate but sometimes unavoidable, with only `main` able to say so.
  * **The two errors are not equally costly**: a gap is free, and a duplicate is
  * silent. This gate makes the duplicate loud and leaves the gap alone.
  *
@@ -98,11 +99,16 @@ function rowsOf(index: string): { rows: Row[]; strays: string[] } {
   return { rows, strays };
 }
 
+/** How many times each value occurs — counted, because membership was G41's hole. */
+function countsOf(values: readonly string[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return counts;
+}
+
 /** The numbers that occur more than once, each named with how many times. */
 function duplicated(numbers: readonly string[]): string[] {
-  const counts = new Map<string, number>();
-  for (const number of numbers) counts.set(number, (counts.get(number) ?? 0) + 1);
-  return [...counts]
+  return [...countsOf(numbers)]
     .filter(([, count]) => count > 1)
     .map(([number, count]) => `${number} × ${count}`);
 }
@@ -118,8 +124,7 @@ function problems(names: readonly string[], index: string) {
   const files = records.filter((name) => RECORD_FILE.test(name));
   const { rows, strays } = rowsOf(index);
 
-  const rowCounts = new Map<string, number>();
-  for (const { target } of rows) rowCounts.set(target, (rowCounts.get(target) ?? 0) + 1);
+  const rowCounts = countsOf(rows.map(({ target }) => target));
 
   return {
     files,
