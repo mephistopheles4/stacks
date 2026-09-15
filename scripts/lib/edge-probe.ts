@@ -98,43 +98,45 @@ export async function probeBuild(
   const attempts = options.attempts ?? PROPAGATION_ATTEMPTS;
   const waitMs = options.waitMs ?? PROPAGATION_WAIT_MS;
 
-  let serving: string | undefined;
-
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    let response: Response;
-    try {
-      // `no-store` so this measures the origin and not whatever this machine
-      // fetched a minute ago. It says nothing about a visitor's cache, and
-      // cannot: that is what the `_headers` revalidation is for.
-      response = await fetch(`${origin}/`, { cache: 'no-store' });
-    } catch {
-      return { kind: 'unreachable' };
-    }
+    const answer = await askOnce(origin, expected, attempt === attempts);
+    if (answer.kind !== 'retry') return answer;
 
-    // Read the status before reading the body: a challenge page parses like
-    // any other page and carries no stamp.
-    if (!response.ok) {
-      if (attempt === attempts) return { kind: 'refused', status: response.status };
-
-      options.onRetry?.(`origin answered HTTP ${String(response.status)}`, attempt, attempts);
-      await sleep(waitMs);
-      continue;
-    }
-
-    serving = stampOf(await response.text());
-    if (serving === expected) return { kind: 'current', serving };
-
-    if (attempt === attempts) return { kind: 'stale', serving };
-
-    options.onRetry?.(
-      `serving ${serving ?? 'an unstamped build'}, want ${expected}`,
-      attempt,
-      attempts,
-    );
+    options.onRetry?.(answer.message, attempt, attempts);
     await sleep(waitMs);
   }
 
-  return { kind: 'stale', serving };
+  // Reached only when no attempt was allowed at all, so nothing was served.
+  return { kind: 'stale', serving: undefined };
+}
+
+/** One request's verdict, or the reason it is worth asking again. */
+type Attempt = EdgeAnswer | { kind: 'retry'; message: string };
+
+/** One request to the origin. `last` turns what would be a retry into the answer. */
+async function askOnce(origin: string, expected: string, last: boolean): Promise<Attempt> {
+  let response: Response;
+  try {
+    // `no-store` so this measures the origin and not whatever this machine
+    // fetched a minute ago. It says nothing about a visitor's cache, and
+    // cannot: that is what the `_headers` revalidation is for.
+    response = await fetch(`${origin}/`, { cache: 'no-store' });
+  } catch {
+    return { kind: 'unreachable' };
+  }
+
+  // Read the status before reading the body: a challenge page parses like
+  // any other page and carries no stamp.
+  if (!response.ok) {
+    if (last) return { kind: 'refused', status: response.status };
+    return { kind: 'retry', message: `origin answered HTTP ${String(response.status)}` };
+  }
+
+  const serving = stampOf(await response.text());
+  if (serving === expected) return { kind: 'current', serving };
+  if (last) return { kind: 'stale', serving };
+
+  return { kind: 'retry', message: `serving ${serving ?? 'an unstamped build'}, want ${expected}` };
 }
 
 export interface StaleCover {

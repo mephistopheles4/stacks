@@ -154,14 +154,7 @@ export function bodyForGitHub(markdown: string, options: TransformOptions = {}):
     // delimiter character, and at least as long a run — and nothing after it.
     if (fence !== undefined) {
       out.push(line);
-      const closing = FENCE_CLOSE.exec(content);
-      if (
-        closing?.[1] !== undefined &&
-        quote === fence.quote &&
-        closesFence(closing[1], fence.delimiter)
-      ) {
-        fence = undefined;
-      }
+      if (closesOpenFence(content, quote, fence)) fence = undefined;
       continue;
     }
 
@@ -196,6 +189,21 @@ function withoutQuote(line: string): { quote: string; content: string } {
   };
 }
 
+/**
+ * Whether this line closes the open fence: the same quoting, a closer and
+ * nothing after it, and that closer passing `closesFence`.
+ */
+function closesOpenFence(
+  content: string,
+  quote: string,
+  fence: { delimiter: string; quote: string },
+): boolean {
+  const closing = FENCE_CLOSE.exec(content);
+  return (
+    closing?.[1] !== undefined && quote === fence.quote && closesFence(closing[1], fence.delimiter)
+  );
+}
+
 /** A fence closes only on its own character, and never on a shorter run. */
 function closesFence(candidate: string, opened: string): boolean {
   return candidate[0] === opened[0] && candidate.length >= opened.length;
@@ -209,11 +217,7 @@ function closesFence(candidate: string, opened: string): boolean {
  * a paragraph* is a single list rather than a condition repeated per caller.
  */
 function absorb(out: string[], run: Run | undefined, line: string, from: string): Run | undefined {
-  const emit = (text: string): undefined => {
-    closeRun(out, run);
-    out.push(text);
-    return undefined;
-  };
+  const emit = (text: string): undefined => emitAlone(out, run, text);
 
   // Blank, and every structure whose line *is* its meaning. A table joined into
   // one line stops being a table; a heading joined onto the paragraph above it
@@ -221,30 +225,16 @@ function absorb(out: string[], run: Run | undefined, line: string, from: string)
   if (line.trim() === '' || THEMATIC_BREAK.test(line)) return emit(line);
   if (HEADING.test(line) || TABLE_ROW.test(line)) return emit(absolutiseLine(line, from));
 
-  if (BLOCKQUOTE.test(line)) {
-    const inner = line.replace(/^ {0,3}>\s?/, '');
-    // `>` alone separates two quoted paragraphs, and joining across it would
-    // merge them. Anything that is a block in its own right ends the run too.
-    if (inner.trim() === '' || HEADING.test(inner) || TABLE_ROW.test(inner)) {
-      return emit(absolutiseLine(line, from));
-    }
-    const text = absolutiseLine(inner, from);
-    if (run?.kind === 'quote') {
-      run.parts.push(text.trim());
-      return run;
-    }
-    return start(out, run, 'quote', text.trim());
-  }
+  if (BLOCKQUOTE.test(line)) return absorbQuoted(out, run, line, from);
 
   // A break the author asked for, rather than one the 80-column habit produced.
   // The line still joins whatever run is open — a wrap *before* it is still an
   // accident — and then closes it, so the break survives into the body.
   const deliberate = HARD_BREAK.test(line);
 
-  const item = LIST_ITEM.exec(line);
-  if (item !== null) {
+  if (LIST_ITEM.test(line)) {
     const opened = start(out, run, 'list', trimmedFirst(absolutiseLine(line, from), deliberate));
-    return deliberate ? closed(out, opened) : opened;
+    return closedOnHardBreak(out, opened, deliberate);
   }
 
   // Four spaces with nothing open is an indented code block; four spaces under
@@ -252,17 +242,65 @@ function absorb(out: string[], run: Run | undefined, line: string, from: string)
   // apart, and there is no other signal available line by line.
   if (run === undefined && /^ {4,}\S/.test(line)) return emit(line);
 
-  const text = absolutiseLine(line, from);
+  return absorbProse(out, run, absolutiseLine(line, from), deliberate);
+}
+
+/**
+ * A blockquote line: folded into an open quote run, or ending the run when it
+ * is a block in its own right.
+ */
+function absorbQuoted(
+  out: string[],
+  run: Run | undefined,
+  line: string,
+  from: string,
+): Run | undefined {
+  const inner = line.replace(/^ {0,3}>\s?/, '');
+  // `>` alone separates two quoted paragraphs, and joining across it would
+  // merge them. Anything that is a block in its own right ends the run too.
+  if (inner.trim() === '' || HEADING.test(inner) || TABLE_ROW.test(inner)) {
+    return emitAlone(out, run, absolutiseLine(line, from));
+  }
+  const text = absolutiseLine(inner, from).trim();
+  if (run?.kind === 'quote') {
+    run.parts.push(text);
+    return run;
+  }
+  return start(out, run, 'quote', text);
+}
+
+/** A plain line, already absolutised: a continuation of the open run, or the first of a new one. */
+function absorbProse(
+  out: string[],
+  run: Run | undefined,
+  text: string,
+  deliberate: boolean,
+): Run | undefined {
   if (run !== undefined) {
     run.parts.push(deliberate ? text.trimStart() : text.trim());
-    return deliberate ? closed(out, run) : run;
+    return closedOnHardBreak(out, run, deliberate);
   }
   // ⚠️ **The first line of a run keeps its leading whitespace**, which is what
   // holds a continuation paragraph inside the list item it belongs to. A fenced
   // block ends the run, so the paragraph after one starts a fresh run — and
   // trimming it there quietly promotes it to a top-level paragraph.
-  const opened = start(out, run, 'prose', trimmedFirst(text, deliberate));
-  return deliberate ? closed(out, opened) : opened;
+  return closedOnHardBreak(
+    out,
+    start(out, run, 'prose', trimmedFirst(text, deliberate)),
+    deliberate,
+  );
+}
+
+/** Closes whatever run is open, then emits one line on its own. Nothing is left open. */
+function emitAlone(out: string[], run: Run | undefined, text: string): undefined {
+  closeRun(out, run);
+  out.push(text);
+  return undefined;
+}
+
+/** The run still open, or emitted and gone when the line ended in a hard break. */
+function closedOnHardBreak(out: string[], run: Run, deliberate: boolean): Run | undefined {
+  return deliberate ? closed(out, run) : run;
 }
 
 /**
@@ -402,9 +440,7 @@ function codeSpanRanges(line: string): { start: number; end: number }[] {
 function absolutise(target: string, from: string, isImage: boolean): string {
   if (target === '' || ABSOLUTE.test(target) || target.startsWith('#')) return target;
 
-  const hash = target.indexOf('#');
-  const path = hash === -1 ? target : target.slice(0, hash);
-  const anchor = hash === -1 ? '' : target.slice(hash);
+  const { path, anchor } = splitAnchor(target);
   if (path === '') return target;
 
   // A path that already carries `blob/main` is the shape a repository file
@@ -414,8 +450,21 @@ function absolutise(target: string, from: string, isImage: boolean): string {
   const resolved = web?.[2] ?? resolve(from, path);
   if (resolved === undefined) return target;
 
-  const kind = isImage ? 'raw' : resolved.endsWith('/') ? 'tree' : 'blob';
-  return `${REPO_WEB_ROOT}/${kind}/main/${resolved}${anchor}`;
+  return `${REPO_WEB_ROOT}/${webKind(resolved, isImage)}/main/${resolved}${anchor}`;
+}
+
+/** A link target split at its first `#`, the anchor keeping the `#`. */
+function splitAnchor(target: string): { path: string; anchor: string } {
+  const hash = target.indexOf('#');
+  return hash === -1
+    ? { path: target, anchor: '' }
+    : { path: target.slice(0, hash), anchor: target.slice(hash) };
+}
+
+/** Which GitHub view serves this path: the bytes, a directory, or a page. */
+function webKind(resolved: string, isImage: boolean): 'raw' | 'tree' | 'blob' {
+  if (isImage) return 'raw';
+  return resolved.endsWith('/') ? 'tree' : 'blob';
 }
 
 /**
