@@ -3,6 +3,7 @@
  *
  *     pnpm mutation:run          # produces artifacts/stryker/current/mutation.json
  *     pnpm mutation:score        # this file: turns that into eight numbers
+ *     pnpm mutation:score --markdown   # the nightly's job summary, as Markdown
  *
  * Stryker reports **one** score for whatever `mutate` matched, and `mutate` is a
  * flat glob list — so the run cannot tell you which of the eight declared scopes
@@ -22,32 +23,70 @@
  */
 
 import { join } from 'node:path';
+import { parseArgs } from 'node:util';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import {
-  fraction,
+  parseReport,
+  renderSummary,
+  terminalTable,
+  type ReportState,
+} from './lib/mutation-report.ts';
+import {
   readReport,
+  readReportText,
   readScopes,
   scoreRun,
-  total,
   totalOf,
   type MutationReport,
-  type Tally,
 } from './lib/mutation-score.ts';
 
+/**
+ * `--markdown` prints the nightly's job summary instead of the terminal table,
+ * and nothing else, so the workflow can append stdout to `$GITHUB_STEP_SUMMARY`.
+ * It runs this file through `pnpm exec tsx` rather than `pnpm mutation:score`,
+ * because `pnpm run` prints its own banner to stdout. The other three flags only
+ * feed that summary.
+ */
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    markdown: { type: 'boolean', default: false },
+    'mutation-status': { type: 'string', default: '' },
+    'artifact-url': { type: 'string', default: '' },
+    commit: { type: 'string', default: '' },
+  },
+});
+
 const REPORT =
-  process.argv[2] ?? join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
+  positionals[0] ?? join(REPO_ROOT, 'artifacts', 'stryker', 'current', 'mutation.json');
 
 /**
- * ⚠️ **What a zero-mutant scope prints is a decision, not an accident.**
- * `n/a` rather than `100`, because `100` is what an empty denominator produces
- * arithmetically and it is indistinguishable from a scope that is genuinely
- * perfect — which is exactly what Stryker's own summary line does with one, and
- * why the residual check later in this rollout cannot be written against that
- * line. A declared scope that matched no mutants is a broken declaration.
+ * ⚠️ **Markdown mode exits 0 on every path, a missing report included.** The
+ * summary step must never fail the job: a night with no report already failed
+ * for a reason, and a second red step would bury it.
  */
-function score(tally: Tally): string {
-  const value = fraction(tally);
-  return value === null ? 'n/a' : `${(100 * value).toFixed(2)}%`;
+if (values.markdown) {
+  let state: ReportState;
+  const text = readReportText(REPORT);
+  if (text === undefined) {
+    state = { kind: 'missing', path: REPORT };
+  } else {
+    try {
+      state = { kind: 'parsed', report: parseReport(text) };
+    } catch (error) {
+      state = { kind: 'unparseable', path: REPORT, reason: String(error) };
+    }
+  }
+  const summary = renderSummary({
+    state,
+    scopes: readScopes(),
+    date: new Date().toISOString().slice(0, 10),
+    commit: values.commit,
+    mutationStatus: values['mutation-status'],
+    artifactUrl: values['artifact-url'],
+  });
+  console.log(summary);
+  process.exit(0);
 }
 
 function reportOrExit(path: string): MutationReport {
@@ -63,49 +102,13 @@ function reportOrExit(path: string): MutationReport {
 const scopes = readScopes();
 const run = scoreRun(reportOrExit(REPORT), scopes);
 
-const rows = scopes.map((scope) => {
-  const tally = run.perScope.get(scope.name);
-  if (tally === undefined) throw new Error(`no tally for scope ${scope.name}`);
-  return { scope, tally };
-});
-
-const nameWidth = Math.max(...rows.map((row) => row.scope.name.length), 'all declared'.length);
-const cell = (text: string, width: number): string => text.padStart(width);
-
-function line(name: string, tally: Tally, exclusions: string): string {
-  return [
-    cell(name, nameWidth),
-    cell(String(total(tally)), 7),
-    cell(score(tally), 7),
-    cell(String(tally.killed), 6),
-    cell(String(tally.timeout), 7),
-    cell(String(tally.survived), 8),
-    cell(String(tally.noCoverage), 6),
-    cell(String(tally.statics), 6),
-    cell(exclusions, 4),
-  ].join('  ');
-}
-
 console.log(`Report: ${REPORT}`);
 console.log('');
-console.log(
-  [
-    cell('scope', nameWidth),
-    cell('mutants', 7),
-    cell('score', 7),
-    cell('killed', 6),
-    cell('timeout', 7),
-    cell('survived', 8),
-    cell('no cov', 6),
-    cell('static', 6),
-    cell('excl', 4),
-  ].join('  '),
-);
-for (const row of rows)
-  console.log(line(row.scope.name, row.tally, String(row.scope.exclusions.length)));
+// The table's cells, widths and `n/a` rule live in `lib/mutation-report.ts`,
+// shared with the job summary so the two surfaces print one set of numbers.
+for (const line of terminalTable(run)) console.log(line);
 
 const all = totalOf(run);
-console.log(line('all declared', all, String(run.declaredExclusions)));
 
 if (all.errors > 0 || all.ignored > 0) {
   console.log('');

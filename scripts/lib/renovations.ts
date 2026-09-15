@@ -140,7 +140,17 @@ function parseEntry(entry: unknown, index: number): Renovation {
   if (typeof entry !== 'object' || entry === null) {
     throw new Error(`${at} is not an object`);
   }
-  const { date, stamp, value, reason, pr, preserves } = entry as Record<string, unknown>;
+  const fields = entry as Record<string, unknown>;
+  const common = parseCommon(fields, at);
+
+  return fields['stamp'] === 'none'
+    ? parseFree(fields, common, at)
+    : parseStamped(fields, common, at);
+}
+
+/** The three fields every entry carries, whichever shape it takes. */
+function parseCommon(fields: Record<string, unknown>, at: string): CommonRenovation {
+  const { date, reason, pr } = fields;
 
   if (typeof date !== 'string' || !ISO_DAY.test(date)) {
     throw new Error(`${at} carries a date that is not an ISO date: ${String(date)}`);
@@ -159,18 +169,35 @@ function parseEntry(entry: unknown, index: number): Renovation {
     throw new Error(`${at} carries a value that is not a pull request number: ${String(pr)}`);
   }
 
-  if (stamp === 'none') {
-    if (value !== undefined) {
-      // `JSON.stringify` rather than `String`: the field is whatever the file
-      // held, and an object stringifies to `[object Object]`, which names
-      // nothing to somebody reading the red.
-      throw new Error(`${at} names no stamp and carries a value: ${JSON.stringify(value)}`);
-    }
-    if (preserves !== undefined) {
-      throw new Error(`${at} names no stamp, so it preserves nothing`);
-    }
-    return { date, stamp: 'none', reason, pr };
+  return { date, reason, pr };
+}
+
+/** An entry naming no stamp, which must then carry neither a value nor `preserves`. */
+function parseFree(
+  fields: Record<string, unknown>,
+  common: CommonRenovation,
+  at: string,
+): FreeRenovation {
+  const { value, preserves } = fields;
+  if (value !== undefined) {
+    // `JSON.stringify` rather than `String`: the field is whatever the file
+    // held, and an object stringifies to `[object Object]`, which names
+    // nothing to somebody reading the red.
+    throw new Error(`${at} names no stamp and carries a value: ${JSON.stringify(value)}`);
   }
+  if (preserves !== undefined) {
+    throw new Error(`${at} names no stamp, so it preserves nothing`);
+  }
+  return { date: common.date, stamp: 'none', reason: common.reason, pr: common.pr };
+}
+
+/** An entry naming a stamp: a known name, a digest, and the `preserves` decision. */
+function parseStamped(
+  fields: Record<string, unknown>,
+  common: CommonRenovation,
+  at: string,
+): StampRenovation {
+  const { stamp, value, preserves } = fields;
 
   if (!isStampName(stamp)) {
     throw new Error(
@@ -190,7 +217,7 @@ function parseEntry(entry: unknown, index: number): Renovation {
     );
   }
 
-  return { date, stamp, value, reason, pr, preserves };
+  return { date: common.date, stamp, value, reason: common.reason, pr: common.pr, preserves };
 }
 
 /** `renovations.json`, from the disk. */

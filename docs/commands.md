@@ -15,7 +15,9 @@ restated here, because a rule with two homes is a rule that drifts
 
 **G46.** The type-checked recommended set from `typescript-eslint`, plus
 `eslint:recommended`, plus `switch-exhaustiveness-check`, over every `.ts` file
-in the repository — **tests included, no split, no allowlist**. It exits
+in the repository — **tests included, no split, no allowlist**. Over the site
+package alone it adds `no-restricted-imports` and `no-import-type-side-effects`,
+the pair that checks G6's rule a second way; see G6's row in `docs/gates.md`. It exits
 non-zero on a single finding, and the `style` job in `gates.yml` runs it on every
 pull request.
 
@@ -294,6 +296,21 @@ mechanism* — a file is out of reach because something specific puts it there, 
 it is not excluded. `covers/measure.ts` has no spec and stays in the denominator
 anyway, because "nothing tests it" is a gap and not a mechanism. See
 [ADR-0053](adr/0053-stryker-measures-eight-declared-scopes.md).
+
+**`--markdown` prints the nightly's job summary** instead of the terminal
+table: the same score table, then per scope the five files with the most
+surviving and uncovered mutants, each with its mutants in a collapsed block,
+capped at 50 per file. `.github/workflows/metrics.yml` appends it to
+`$GITHUB_STEP_SUMMARY`, passing `--mutation-status`, `--artifact-url` and
+`--commit`, and uploads both report files as a 30-day artifact the summary links
+to. It exits 0 on every path, a missing or truncated report included — the
+summary says which instead. ⚠️ The workflow calls it through `pnpm exec tsx`,
+because `pnpm run` prints its own banner to stdout.
+
+⚠️ **It is a flag and not a new script because of a hash.** A new `scripts/*.ts`
+run by `tsx` would need an exclusion in `stryker.scopes.json`, which moves
+`configHash`; the rendering lives in `scripts/lib/mutation-report.ts`, inside the
+`scripts` scope, where its spec reaches it.
 
 ## `pnpm mutation:stamp`
 

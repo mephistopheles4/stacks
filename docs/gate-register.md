@@ -4961,7 +4961,10 @@ it at all.
 - **Weakening** — ⚠️ **exposed, and it is the whole of this row's exposure.**
   Four rule options are tuned so that four documented repository idioms stop
   being reported, and each one is a place the rule can later be widened, or the
-  rule switched off, in a diff that reads as configuration. **No gate here reads
+  rule switched off, in a diff that reads as configuration. ⚠️ *Added
+  2026-09-14 by [#245](https://github.com/mephistopheles4/stacks/issues/245):*
+  G6's two opt-in rules over the site package are two more such places, and
+  their `files` glob a third. **No gate here reads
   a lint config**, and the honest reason none is built is that a gate over a rule
   set needs a second copy of the rule set to hold the first against — which is
   the duplication [ADR-0026](adr/0026-constitution-is-gated-not-duplicated.md)
