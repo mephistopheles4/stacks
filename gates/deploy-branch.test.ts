@@ -333,5 +333,30 @@ describe('G17 — deploy publishes main', () => {
       expect(output, 'on main, the guard must let the run reach step 0b').toContain(PAST_THE_STEP);
       expect(output, 'the branch guard must not be what stopped it').not.toContain('not main');
     } else expect(output).toContain(branch);
-  });
+    // ⚠️ **The timeout is this test's alone, and it is headroom, not an
+    // estimate.** Off `main` the run stops at the branch guard and is cheap. On
+    // `main` it is the most expensive spawn in the file — a cold `tsx` start
+    // that runs past the guard to step 0b — and it is reached **only on the
+    // push run after a merge**, so no pull request ever measures it. At
+    // Vitest's default 5000ms it reddened `main` once on `27248ab` and went
+    // green re-run unchanged (#270).
+    //
+    // ⚠️ **#270 blamed the trend record growing from 8 series to 20, and on CI
+    // that cannot be the cost.** Step 0b reads the mirrored ref, not `.trend/`,
+    // and a CI checkout has no mirror — so it prints `no record yet` and
+    // renders no series at all. What the budget covers is the spawn itself on
+    // a loaded runner.
+    //
+    // 30s is against the whole file's worst observed CI run — eight tests in
+    // 8951ms on node 22, 6714ms on node 24 — so this one test could take the
+    // entire file's worst case three times over. Trimming it back towards the
+    // default re-arms a flake that only ever fires between merges.
+    //
+    // ⚠️ **And nothing designed keeps this under that number.** The run ends
+    // just after step 0b only because an `actions/checkout` has no
+    // `refs/remotes/origin/metrics` mirror, so G39 (`metrics-freshness`)
+    // refuses immediately. That is the absence of a ref, not a stop anybody
+    // built: a workflow that ever fetches that ref lets the run continue past
+    // step 0b, and the timeout question returns with it.
+  }, 30_000);
 });
