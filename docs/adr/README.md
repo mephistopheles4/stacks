@@ -12,8 +12,20 @@ wrong. Where an entry corrects an earlier one, both are kept.
 hard to reverse, it would be surprising to a reader without the context, and it
 was a real trade-off with alternatives. If any is missing, it probably belongs
 in a commit message, or in [`gates.md`](../gates.md) if it is about a gate.
-Number it one past the highest here, and append rather than editing an old one —
-a decision that turned out wrong earns a new record that says so.
+Append rather than editing an old one — a decision that turned out wrong earns a
+new record that says so.
+
+**Numbering it.** Take a number no record here and no branch you can see
+already holds, and **leave room rather than taking the lowest free one**: other
+sessions are writing records on branches nobody has pushed yet, and they are
+reaching for the same number you are. The two ways to get this wrong do not
+cost the same. **A gap is free** — 0071 is missing, on purpose, and stays
+missing. **A duplicate is silent** until G58 (`adr-index`) turns it red at
+merge, and then it means renaming your file and every reference to it. So bias
+away from the duplicate, and **check the number again immediately before the
+branch merges**, not only when the record is written: the last moment is the
+cheapest one to rename at. Add the record's row to the table below in the same
+change — a record with no row is invisible here, and is red too.
 
 Two other files hold what these deliberately do not:
 
@@ -105,3 +117,6 @@ Two other files hold what these deliberately do not:
 | [0080](./0080-the-woodwork-is-rosewood-and-its-relief-is-drawn.md) | The woodwork is rosewood, its relief is drawn rather than photographed, and species and resolution are one choice |
 | [0081](./0081-the-woodwork-sheet-is-a-menu-and-the-shelf-says-what-it-resolved.md) | The woodwork sheet is a menu, and the shelf states the configuration it resolved |
 | [0082](./0082-zizmor-lints-the-workflows.md) | zizmor lints the workflows, run by pipx and pinned exact |
+| [0083](./0083-hooks-arrive-with-pnpm-install.md) | Hooks arrive with `pnpm install`, and the gates stay the only contract |
+| [0084](./0084-the-counting-stamp-is-behaviour-not-a-version.md) | The counting stamp is behaviour, not a version, and a sample is a tree |
+| [0085](./0085-a-renovation-is-declared-and-the-window-may-survive.md) | A renovation is declared, it is due at merge, and the window may survive it |
