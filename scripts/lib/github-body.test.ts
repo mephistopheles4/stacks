@@ -126,6 +126,36 @@ describe('bodyForGitHub — reflowing prose onto one line per paragraph', () => 
     );
   });
 
+  it('keeps an explicit hard break inside a blockquote', () => {
+    // Prose kept both forms and the quote path kept neither: the two lines
+    // folded into one, and a backslash break posted as a visible `\`.
+    // Found by CodeRabbit on #345.
+    expect(bodyForGitHub('> first line.  \n> second line.')).toBe(
+      '> first line.  \n> second line.',
+    );
+    expect(bodyForGitHub('> first line.\\\n> second line.')).toBe(
+      '> first line.\\\n> second line.',
+    );
+  });
+
+  it('still folds an ordinary quoted wrap that merely precedes a hard break', () => {
+    expect(bodyForGitHub('> one\n> two.  \n> three')).toBe('> one two.  \n> three');
+  });
+
+  it('drops the leading whitespace of a quoted line, hard break or not', () => {
+    // The quote run is emitted behind its own `> `, so whitespace after the
+    // marker is not indentation the way it is for a list continuation. Keeping
+    // the break must not start keeping this too.
+    expect(bodyForGitHub('>   spaced\n>   wrapped')).toBe('> spaced wrapped');
+    expect(bodyForGitHub('>   spaced.  \n> next')).toBe('> spaced.  \n> next');
+  });
+
+  it('is idempotent over a quoted hard break', () => {
+    const once = bodyForGitHub('> one\n> two.  \n> three\\\n> four');
+
+    expect(bodyForGitHub(once)).toBe(once);
+  });
+
   it('keeps two blockquote paragraphs apart', () => {
     const source = ['> The first quoted line.', '>', '> The second.'];
 

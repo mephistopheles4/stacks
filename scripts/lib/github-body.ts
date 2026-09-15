@@ -261,12 +261,18 @@ function absorbQuoted(
   if (inner.trim() === '' || HEADING.test(inner) || TABLE_ROW.test(inner)) {
     return emitAlone(out, run, absolutiseLine(line, from));
   }
-  const text = absolutiseLine(inner, from).trim();
+  // A hard break closes the quote run the way it closes a prose run, so the
+  // next quoted line starts a line of its own. Unlike prose, the first line of
+  // a quote run drops its leading whitespace too: it is emitted behind `> `,
+  // where that whitespace is not indentation anything depends on.
+  const deliberate = HARD_BREAK.test(inner);
+  const raw = absolutiseLine(inner, from);
+  const text = deliberate ? raw.trimStart() : raw.trim();
   if (run?.kind === 'quote') {
     run.parts.push(text);
-    return run;
+    return closedOnHardBreak(out, run, deliberate);
   }
-  return start(out, run, 'quote', text);
+  return closedOnHardBreak(out, start(out, run, 'quote', text), deliberate);
 }
 
 /** A plain line, already absolutised: a continuation of the open run, or the first of a new one. */
