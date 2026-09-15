@@ -335,13 +335,17 @@ describe('G17 — deploy publishes main', () => {
     } else expect(output).toContain(branch);
     // ⚠️ **The timeout is this test's alone, and it is headroom, not an
     // estimate.** Off `main` the run stops at the branch guard and is cheap. On
-    // `main` it is the most expensive spawn in the file — a cold `tsx` start,
-    // past the guard, to step 0b printing every series of a trend record from a
-    // `.trend/` store the CI runner does not have — and it is reached **only on
-    // the push run after a merge**, so no pull request ever measures it. At
+    // `main` it is the most expensive spawn in the file — a cold `tsx` start
+    // that runs past the guard to step 0b — and it is reached **only on the
+    // push run after a merge**, so no pull request ever measures it. At
     // Vitest's default 5000ms it reddened `main` once on `27248ab` and went
-    // green re-run unchanged (#270): the series count had gone 8 → 20 in the
-    // two merges before, and nothing announced the margin shrinking.
+    // green re-run unchanged (#270).
+    //
+    // ⚠️ **#270 blamed the trend record growing from 8 series to 20, and on CI
+    // that cannot be the cost.** Step 0b reads the mirrored ref, not `.trend/`,
+    // and a CI checkout has no mirror — so it prints `no record yet` and
+    // renders no series at all. What the budget covers is the spawn itself on
+    // a loaded runner.
     //
     // 30s is against the whole file's worst observed CI run — eight tests in
     // 8951ms on node 22, 6714ms on node 24 — so this one test could take the
