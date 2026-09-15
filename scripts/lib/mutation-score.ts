@@ -51,9 +51,24 @@ export interface Scope {
   exclusions: Exclusion[];
 }
 
-/** Only the fields this module reads; a Stryker report carries more. */
+/**
+ * One mutant, as the `mutation-testing-elements` schema carries it.
+ *
+ * Only the fields this module reads; a Stryker report carries more. Everything
+ * past `status` is optional, for the reason `status` is a `string`: the file
+ * arrives from a tool this code does not control, and the job summary that reads
+ * the detail must render a mutant missing it rather than throw on one.
+ */
+export interface ReportedMutant {
+  status: string;
+  static?: boolean;
+  mutatorName?: string;
+  replacement?: string;
+  location?: { start: { line: number; column?: number } };
+}
+
 export interface MutationReport {
-  files: Record<string, { mutants: { status: string; static?: boolean }[] }>;
+  files: Record<string, { mutants: ReportedMutant[] }>;
 }
 
 export interface Tally {
@@ -205,6 +220,18 @@ export function fraction(tally: Tally): number | null {
   return total(tally) === 0 ? null : detected(tally) / total(tally);
 }
 
+/**
+ * A score as every surface prints it — the terminal table and the job summary.
+ *
+ * ⚠️ **What a zero-mutant scope prints is a decision, not an accident.** `n/a`
+ * rather than `100%`, for `fraction`'s reason. It lives here rather than in
+ * either printer so the two cannot disagree about it.
+ */
+export function scoreLabel(tally: Tally): string {
+  const value = fraction(tally);
+  return value === null ? 'n/a' : `${(100 * value).toFixed(2)}%`;
+}
+
 export interface ScoredRun {
   scopes: Scope[];
   perScope: Map<string, Tally>;
@@ -235,12 +262,42 @@ export function readReport(path: string): MutationReport {
   return JSON.parse(readFileSync(path, 'utf8')) as MutationReport;
 }
 
-/** Tally one report against the declared scopes. */
-export function scoreRun(report: MutationReport, scopes: Scope[]): ScoredRun {
+/**
+ * A report's text, or `undefined` if there is no file to read.
+ *
+ * Here rather than in the printer because G1 (`adapter-boundary`) keeps direct
+ * filesystem access to an allowlist, and this module is already on it.
+ */
+export function readReportText(path: string): string | undefined {
+  try {
+    return readFileSync(path, 'utf8');
+  } catch {
+    return undefined;
+  }
+}
+
+/** Where each file in a report belongs: a scope, an exclusion, or nowhere. */
+export interface Assignment {
+  /** Scope name → the files it claims, in report order. */
+  byScope: Map<string, [file: string, mutants: ReportedMutant[]][]>;
+  live: Map<string, number>;
+  unclaimed: Map<string, number>;
+}
+
+/**
+ * The one answer to *which scope owns this file*.
+ *
+ * `scoreRun` and `survivorsOf` both read it, because the job summary's file
+ * lists have to add up to the score table above them — and two matchers would
+ * agree only until the day one of them changed.
+ */
+export function assignFiles(report: MutationReport, scopes: Scope[]): Assignment {
   const excluded = new Set(scopes.flatMap((scope) => scope.exclusions.map((entry) => entry.path)));
   const matchers = scopes.map((scope) => ({ scope, match: globToRegExp(scope.glob) }));
 
-  const perScope = new Map<string, Tally>(scopes.map((scope) => [scope.name, empty()]));
+  const byScope = new Map<string, [string, ReportedMutant[]][]>(
+    scopes.map((scope) => [scope.name, []]),
+  );
   const unclaimed = new Map<string, number>();
 
   /**
@@ -285,13 +342,97 @@ export function scoreRun(report: MutationReport, scopes: Scope[]): ScoredRun {
       unclaimed.set(file, entry.mutants.length);
       continue;
     }
-    const tally = perScope.get(owner.scope.name);
-    if (tally === undefined) throw new Error(`no tally for scope ${owner.scope.name}`);
-    for (const mutant of entry.mutants) count(tally, mutant.status, mutant.static === true);
+    const files = byScope.get(owner.scope.name);
+    if (files === undefined) throw new Error(`no file list for scope ${owner.scope.name}`);
+    files.push([file, entry.mutants]);
+  }
+
+  return { byScope, live, unclaimed };
+}
+
+/** Tally one report against the declared scopes. */
+export function scoreRun(report: MutationReport, scopes: Scope[]): ScoredRun {
+  const { byScope, live, unclaimed } = assignFiles(report, scopes);
+
+  const perScope = new Map<string, Tally>();
+  for (const [name, files] of byScope) {
+    const tally = empty();
+    for (const [, mutants] of files) {
+      for (const mutant of mutants) count(tally, mutant.status, mutant.static === true);
+    }
+    perScope.set(name, tally);
   }
 
   const declaredExclusions = scopes.reduce((sum, scope) => sum + scope.exclusions.length, 0);
   return { scopes, perScope, live, unclaimed, declaredExclusions };
+}
+
+export interface SurvivingMutant {
+  line: number | null;
+  status: 'Survived' | 'NoCoverage';
+  mutatorName: string | null;
+  replacement: string | null;
+}
+
+export interface FileSurvivors {
+  file: string;
+  survived: number;
+  noCoverage: number;
+  mutants: SurvivingMutant[];
+}
+
+function surviving(mutant: ReportedMutant): SurvivingMutant | null {
+  if (mutant.status !== 'Survived' && mutant.status !== 'NoCoverage') return null;
+  return {
+    line: mutant.location?.start.line ?? null,
+    status: mutant.status,
+    mutatorName: mutant.mutatorName ?? null,
+    replacement: mutant.replacement ?? null,
+  };
+}
+
+/** Line order, with a mutant carrying no location last. */
+function byLine(a: SurvivingMutant, b: SurvivingMutant): number {
+  return (a.line ?? Number.POSITIVE_INFINITY) - (b.line ?? Number.POSITIVE_INFINITY);
+}
+
+/**
+ * Per scope, the files where the survivors are — the half a score cannot say.
+ *
+ * A score says a scope is weak; this says *where*. Files are ranked by
+ * `survived + noCoverage`, ties broken by path so two renders of one report are
+ * identical, and cut at `limit`. A file with neither is not listed, and a scope
+ * with no such file maps to an empty list rather than going missing.
+ *
+ * **Grouping lives here, not in the printer**, because this module is inside
+ * the mutation denominator and the printers are not.
+ */
+export function survivorsOf(
+  report: MutationReport,
+  scopes: Scope[],
+  limit = 5,
+): Map<string, FileSurvivors[]> {
+  const result = new Map<string, FileSurvivors[]>();
+  for (const [name, files] of assignFiles(report, scopes).byScope) {
+    const ranked = files
+      .map(([file, mutants]): FileSurvivors => {
+        const kept = mutants.map(surviving).filter((mutant) => mutant !== null);
+        return {
+          file,
+          survived: kept.filter((mutant) => mutant.status === 'Survived').length,
+          noCoverage: kept.filter((mutant) => mutant.status === 'NoCoverage').length,
+          mutants: kept.sort(byLine),
+        };
+      })
+      .filter((entry) => entry.mutants.length > 0)
+      .sort(
+        (a, b) =>
+          b.survived + b.noCoverage - (a.survived + a.noCoverage) ||
+          (a.file < b.file ? -1 : a.file > b.file ? 1 : 0),
+      );
+    result.set(name, ranked.slice(0, limit));
+  }
+  return result;
 }
 
 /** The tally of a run, summed across every declared scope. */
