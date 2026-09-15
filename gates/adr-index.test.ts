@@ -88,9 +88,13 @@ function rowsOf(index: string): { rows: Row[]; strays: string[] } {
   const strays: string[] = [];
 
   for (const line of index.split('\n')) {
-    if (!line.startsWith('|')) continue;
+    // A row may omit its leading pipe — legal Markdown, and MD055 is off here —
+    // so a line is a row candidate when it starts with one *or* pairs a pipe
+    // with a record link. Not every line with a pipe: a code span in prose
+    // would then be refused as a stray row.
+    if (!line.startsWith('|') && !(line.includes('|') && line.includes('](./'))) continue;
     const first = tableCells(line)[0] ?? '';
-    if (first === '#' || /^-+$/.test(first)) continue;
+    if (first === '#' || /^:?-+:?$/.test(first)) continue;
 
     const match = ROW_CELL.exec(first);
     if (match) rows.push({ number: match[1] ?? '', target: match[2] ?? '' });
@@ -195,6 +199,27 @@ describe('G58 — the clauses, against planted failures', () => {
 
     expect(found.duplicateRowNumbers).toEqual(['0075 × 2']);
     expect(found.filesWithoutOneRow).toEqual(['0075-a.md has 2 rows']);
+  });
+
+  it('reads a row written without its leading pipe', () => {
+    // Legal Markdown, rendered as the same table row, and MD055 is off here —
+    // so a duplicate in this form must not slip past the row sweep.
+    const found = problems(
+      ['0075-a.md'],
+      `${HEADER + row('0075', '0075-a.md')}[0075](./0075-a.md) | A decision |\n`,
+    );
+
+    expect(found.duplicateRowNumbers).toEqual(['0075 × 2']);
+    expect(found.filesWithoutOneRow).toEqual(['0075-a.md has 2 rows']);
+  });
+
+  it('leaves a pipe in prose alone', () => {
+    const found = problems(
+      ['0001-a.md'],
+      `Split on \`a | b\` in prose.\n${HEADER}${row('0001', '0001-a.md')}`,
+    );
+
+    expect(found.strayRows).toEqual([]);
   });
 
   it('refuses a row whose number is not its link’s', () => {
