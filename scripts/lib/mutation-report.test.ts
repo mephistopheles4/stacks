@@ -279,4 +279,10 @@ describe('parseReport', () => {
     expect(() => parseReport('[]')).toThrow(/files/);
     expect(() => parseReport('{"files":null}')).toThrow(/files/);
   });
+
+  it('throws on a file entry with no mutants array, which scoring would crash on', () => {
+    expect(() => parseReport('{"files":{"a.ts":{}}}')).toThrow(/a\.ts/);
+    expect(() => parseReport('{"files":{"a.ts":null}}')).toThrow(/a\.ts/);
+    expect(() => parseReport('{"files":{"a.ts":{"mutants":{}}}}')).toThrow(/a\.ts/);
+  });
 });

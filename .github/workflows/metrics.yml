@@ -169,57 +169,6 @@ jobs:
         run: pnpm metrics:commit
 
       # Last, so the row is on the branch before anything is allowed to fail.
-      # The per-mutant detail behind the eight scores. The runner is torn down at
-      # the end of the job and `artifacts/` goes with it, so without this a night's
-      # survivors exist only as eight numbers. Uploaded as-is, a truncated report
-      # included: whatever reached disk is the evidence.
-      #
-      # ⚠️ After `commit the record`, not before `emit`. `emit` and the commit
-      # carry no `always()`, so an upload that errored ahead of them — the
-      # artifact service down, which `if-no-files-found` does not cover — would
-      # skip the night's record, and a gap reads as a dead pipe.
-      - name: upload the mutation report
-        id: report
-        # `always()`: a failed or partial night is exactly when "why did this
-        # move" matters most, and a later step failing must not skip the upload.
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          # The run id, so two nights' downloads never collide on disk.
-          name: mutation-report-${{ github.run_id }}
-          path: |
-            artifacts/stryker/current/mutation.json
-            artifacts/stryker/current/mutation.html
-          # Explicit rather than the repository default, so the window is a
-          # decision on the page and not a setting somewhere else.
-          retention-days: 30
-          # `warn`, not `error`, for the shelf-screenshot upload's reason in
-          # gates.yml: a run that died early has no report by definition, and a
-          # second failure for the same cause would bury the real one.
-          if-no-files-found: warn
-
-      # The first read: the score table and where the survivors are, on the run
-      # page, with a link to the artifact above for the drill-down. It never
-      # fails the job — a score is a trend, and the final step below is what
-      # fails a bad night. The values travel through `env:` rather than being
-      # templated into the script, which is zizmor's template-injection rule.
-      - name: write the mutation report to the job summary
-        if: always()
-        env:
-          MUTATION_STATUS: ${{ steps.mutation.outputs.status }}
-          ARTIFACT_URL: ${{ steps.report.outputs.artifact-url }}
-          COMMIT: ${{ github.sha }}
-        # `pnpm exec tsx` and not `pnpm mutation:score`: `pnpm run` prints its
-        # own banner to stdout, and stdout is what lands in the summary.
-        run: |
-          pnpm exec tsx scripts/mutation-scopes.ts artifacts/stryker/current/mutation.json \
-            --markdown \
-            --mutation-status "$MUTATION_STATUS" \
-            --artifact-url "$ARTIFACT_URL" \
-            --commit "$COMMIT" \
-            >> "$GITHUB_STEP_SUMMARY" \
-            || echo "The mutation report could not be rendered; see this step's log." >> "$GITHUB_STEP_SUMMARY"
-
       - name: fail if the run did not compute what it declared
         run: |
           echo "suite: ${{ steps.suite.outputs.status }}   emit: ${{ steps.emit.outputs.status }}"
@@ -306,6 +255,57 @@ jobs:
 
       - name: commit the record
         run: pnpm metrics:commit
+
+      # The per-mutant detail behind the eight scores. The runner is torn down at
+      # the end of the job and `artifacts/` goes with it, so without this a night's
+      # survivors exist only as eight numbers. Uploaded as-is, a truncated report
+      # included: whatever reached disk is the evidence.
+      #
+      # ⚠️ After `commit the record`, not before `emit`. `emit` and the commit
+      # carry no `always()`, so an upload that errored ahead of them — the
+      # artifact service down, which `if-no-files-found` does not cover — would
+      # skip the night's record, and a gap reads as a dead pipe.
+      - name: upload the mutation report
+        id: report
+        # `always()`: a failed or partial night is exactly when "why did this
+        # move" matters most, and a later step failing must not skip the upload.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          # The run id, so two nights' downloads never collide on disk.
+          name: mutation-report-${{ github.run_id }}
+          path: |
+            artifacts/stryker/current/mutation.json
+            artifacts/stryker/current/mutation.html
+          # Explicit rather than the repository default, so the window is a
+          # decision on the page and not a setting somewhere else.
+          retention-days: 30
+          # `warn`, not `error`, for the shelf-screenshot upload's reason in
+          # gates.yml: a run that died early has no report by definition, and a
+          # second failure for the same cause would bury the real one.
+          if-no-files-found: warn
+
+      # The first read: the score table and where the survivors are, on the run
+      # page, with a link to the artifact above for the drill-down. It never
+      # fails the job — a score is a trend, and the final step below is what
+      # fails a bad night. The values travel through `env:` rather than being
+      # templated into the script, which is zizmor's template-injection rule.
+      - name: write the mutation report to the job summary
+        if: always()
+        env:
+          MUTATION_STATUS: ${{ steps.mutation.outputs.status }}
+          ARTIFACT_URL: ${{ steps.report.outputs.artifact-url }}
+          COMMIT: ${{ github.sha }}
+        # `pnpm exec tsx` and not `pnpm mutation:score`: `pnpm run` prints its
+        # own banner to stdout, and stdout is what lands in the summary.
+        run: |
+          pnpm exec tsx scripts/mutation-scopes.ts artifacts/stryker/current/mutation.json \
+            --markdown \
+            --mutation-status "$MUTATION_STATUS" \
+            --artifact-url "$ARTIFACT_URL" \
+            --commit "$COMMIT" \
+            >> "$GITHUB_STEP_SUMMARY" \
+            || echo "The mutation report could not be rendered; see this step's log." >> "$GITHUB_STEP_SUMMARY"
 
       - name: fail if the run did not compute what it declared
         run: |

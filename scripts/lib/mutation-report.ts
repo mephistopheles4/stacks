@@ -85,7 +85,8 @@ export function terminalTable(run: ScoredRun): string[] {
 /**
  * A report's text, parsed — or a throw naming what is wrong with it.
  *
- * Checks only the one thing every reader needs, that `files` is an object. An
+ * Checks only the shape every reader needs — `files` is an object and each
+ * entry carries a `mutants` array — and nothing about a mutant's fields. An
  * interrupted run can leave a truncated file, and the summary has to say *that*
  * rather than crash on the first property access.
  */
@@ -97,6 +98,16 @@ export function parseReport(text: string): MutationReport {
       : undefined;
   if (typeof files !== 'object' || files === null || Array.isArray(files)) {
     throw new Error('the report carries no `files` object');
+  }
+  // Each entry too: scoring iterates `mutants` and would throw on a missing
+  // array, past the point where the caller can turn it into a warning.
+  for (const [file, entry] of Object.entries(files)) {
+    const mutants: unknown =
+      typeof entry === 'object' && entry !== null
+        ? (entry as { mutants?: unknown }).mutants
+        : undefined;
+    if (!Array.isArray(mutants))
+      throw new Error(`the report's entry for ${file} has no \`mutants\` array`);
   }
   return parsed as MutationReport;
 }
