@@ -131,10 +131,6 @@ export function placeRow(
   const placements: Placement[] = [];
 
   for (const entry of books) {
-    // Depth carries the cover's real aspect on a face-out book, which is
-    // turned side-on, and the shelf depth on a shelved one.
-    const depth = entry.faceOut ? entry.coverWidth : SHELF.bookDepth;
-
     const gap = entry.gapBefore ?? 0;
     cursor += gap;
 
@@ -160,7 +156,7 @@ export function placeRow(
     // row, and a shelf where everything past the first gap has fallen over is
     // not what propping one book was meant to buy.
     const props = propsAcrossGap(entry);
-    if (props || (left.faceOut && !entry.faceOut)) {
+    if (opensRun(entry, left, props)) {
       runLean = props
         ? propLeanFor(cursor - left.right, entry.height, left)
         : leanFor(rowIndex, index, entry.book.id);
@@ -170,55 +166,7 @@ export function placeRow(
     const lean = entry.faceOut ? 0 : runLean;
     const sway = swayOf(entry.height, lean);
 
-    if (props) {
-      // Propped books pivot on their bottom-left corner, not their centre.
-      //
-      // Everything else here is placed by its footprint and tilted about its
-      // middle, which swings the top-left corner out by `sway` and the
-      // bottom-right corner in by the same — symmetric, so closing a gap `g` at
-      // the top would need `sin θ = 2g/h` and would open `2g` at the bottom.
-      // The gap would not close; it would double and move down.
-      //
-      // Pinning the base instead is what "leaning on it" means: the top swings
-      // the whole gap, the bottom stays where it was, and what is left is a
-      // wedge of air at the plank rather than a slab of it at eye level. The
-      // render still rotates about the centre, so this is the centre that puts
-      // that corner where it belongs.
-      cursor -= propShiftOf(entry.thickness, entry.height, lean);
-    } else if (lean !== left.lean) {
-      // Clearance wherever the angle changes, and only there.
-      //
-      // Rotating a book about its centre swings its top-left and bottom-right
-      // corners out past its own footprint by `sway`. Two neighbours at the
-      // same angle stay parallel and never notice, which is why a run packs
-      // flush — but where the angle changes, that swing lands inside whatever
-      // is beside it. Both reported collisions are this: a leaning book's
-      // bottom corner driven into the face-out book on its right, and the first
-      // book of a row driven into the case's own side.
-      //
-      // A propped book pays no clearance because it has already been *given*
-      // one, a whole `YEAR_GAP` wide, and the shift above spends exactly the
-      // part of it the swing needs.
-      cursor += Math.max(sway, left.sway);
-    } else {
-      // **Parallel is not the same as flush**, which is what "a run packs
-      // flush, and neighbours at the same angle never notice" quietly assumed
-      // for as long as there were runs.
-      //
-      // A book tilted about its middle has its base swung right by its own
-      // `sway`, and `sway` is half its *height* times the angle — so a tall
-      // book's base sits further right than a short one's, at the same angle,
-      // from the same footprint. A tall book followed by a short one therefore
-      // has its low corner inside its neighbour: 2.3mm on the live shelf, at an
-      // ordinary 3.2° slump, and four times that at a propped angle.
-      //
-      // **Signed, and applied in both directions.** The mirror case is a short
-      // book followed by a taller one, which opens 7mm of daylight instead of
-      // closing 7mm too much — the same error, and the one that clamping at
-      // zero left in place while calling the collision fixed. There is a right
-      // answer here and it is not "no worse than before" in one direction.
-      cursor += parallelPushOf(entry, left);
-    }
+    cursor += clearanceBefore(entry, left, props, lean, sway);
     left = {
       lean,
       sway,
@@ -254,7 +202,9 @@ export function placeRow(
         // a dark smudge standing in front of a book, thrown by a light that is
         // in front of it.
         contact: { x, width: entry.coverWidth, z, depth: entry.thickness },
-        frontZ: depth / 2,
+        // Depth carries the cover's real aspect on a face-out book, which is
+        // turned side-on.
+        frontZ: entry.coverWidth / 2,
       });
 
       left = { ...left, right: cursor + entry.coverWidth };
@@ -288,7 +238,8 @@ export function placeRow(
         // it. Worth 2cm on an ordinary slump and 5cm on a propped book, which
         // is half a spine of daylight between a book and its own shadow.
         contact: { x: x + sway, width: entry.thickness, z, depth: SHELF.bookDepth },
-        frontZ: depth / 2,
+        // A shelved book's depth is the shelf's own.
+        frontZ: SHELF.bookDepth / 2,
       });
 
       // Touching, not spaced. Books in a run share an angle, so they stay
@@ -302,6 +253,76 @@ export function placeRow(
   }
 
   return placements;
+}
+
+/**
+ * Whether this book starts a new run with its own lean: it props across a
+ * year gap, or it is the first shelved book after a face-out one.
+ */
+function opensRun(entry: ShelfBook, left: Neighbour, props: boolean): boolean {
+  return props || (left.faceOut && !entry.faceOut);
+}
+
+/**
+ * How far the cursor moves before a book is placed, given the angle it stands
+ * at and what is on its left. Negative for a propped book.
+ */
+function clearanceBefore(
+  entry: ShelfBook,
+  left: Neighbour,
+  props: boolean,
+  lean: number,
+  sway: number,
+): number {
+  if (props) {
+    // Propped books pivot on their bottom-left corner, not their centre.
+    //
+    // Everything else here is placed by its footprint and tilted about its
+    // middle, which swings the top-left corner out by `sway` and the
+    // bottom-right corner in by the same — symmetric, so closing a gap `g` at
+    // the top would need `sin θ = 2g/h` and would open `2g` at the bottom.
+    // The gap would not close; it would double and move down.
+    //
+    // Pinning the base instead is what "leaning on it" means: the top swings
+    // the whole gap, the bottom stays where it was, and what is left is a
+    // wedge of air at the plank rather than a slab of it at eye level. The
+    // render still rotates about the centre, so this is the centre that puts
+    // that corner where it belongs.
+    return -propShiftOf(entry.thickness, entry.height, lean);
+  }
+  if (lean !== left.lean) {
+    // Clearance wherever the angle changes, and only there.
+    //
+    // Rotating a book about its centre swings its top-left and bottom-right
+    // corners out past its own footprint by `sway`. Two neighbours at the
+    // same angle stay parallel and never notice, which is why a run packs
+    // flush — but where the angle changes, that swing lands inside whatever
+    // is beside it. Both reported collisions are this: a leaning book's
+    // bottom corner driven into the face-out book on its right, and the first
+    // book of a row driven into the case's own side.
+    //
+    // A propped book pays no clearance because it has already been *given*
+    // one, a whole `YEAR_GAP` wide, and the shift above spends exactly the
+    // part of it the swing needs.
+    return Math.max(sway, left.sway);
+  }
+  // **Parallel is not the same as flush**, which is what "a run packs
+  // flush, and neighbours at the same angle never notice" quietly assumed
+  // for as long as there were runs.
+  //
+  // A book tilted about its middle has its base swung right by its own
+  // `sway`, and `sway` is half its *height* times the angle — so a tall
+  // book's base sits further right than a short one's, at the same angle,
+  // from the same footprint. A tall book followed by a short one therefore
+  // has its low corner inside its neighbour: 2.3mm on the live shelf, at an
+  // ordinary 3.2° slump, and four times that at a propped angle.
+  //
+  // **Signed, and applied in both directions.** The mirror case is a short
+  // book followed by a taller one, which opens 7mm of daylight instead of
+  // closing 7mm too much — the same error, and the one that clamping at
+  // zero left in place while calling the collision fixed. There is a right
+  // answer here and it is not "no worse than before" in one direction.
+  return parallelPushOf(entry, left);
 }
 
 /**
