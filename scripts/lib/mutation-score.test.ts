@@ -33,7 +33,9 @@ import {
   detected,
   fraction,
   globToRegExp,
+  scoreLabel,
   scoreRun,
+  survivorsOf,
   total,
   totalOf,
   type MutationReport,
@@ -216,6 +218,131 @@ describe('scoreRun — a report against the declared scopes', () => {
     expect(tally.errors).toBe(1);
     expect(total(tally)).toBe(1);
     expect(fraction(tally)).toBe(1);
+  });
+});
+
+describe('survivorsOf — where the survivors are', () => {
+  const scopes = [
+    scope('packages/core/src', 'packages/core/src/*.ts'),
+    scope('scripts', 'scripts/**/*.ts', [
+      { path: 'scripts/deploy.ts', mechanism: 'driven as a child process' },
+    ]),
+  ];
+
+  it('ranks files by survived plus no-coverage, ties by path', () => {
+    const scoped = survivorsOf(
+      report({
+        'packages/core/src/b.ts': ['Survived', 'Killed'],
+        'packages/core/src/a.ts': ['NoCoverage'],
+        'packages/core/src/c.ts': ['Survived', 'NoCoverage', 'NoCoverage'],
+      }),
+      scopes,
+      5,
+    );
+
+    const files = scoped.get('packages/core/src') ?? [];
+    expect(files.map((file) => file.file)).toEqual([
+      'packages/core/src/c.ts',
+      'packages/core/src/a.ts',
+      'packages/core/src/b.ts',
+    ]);
+    expect(files[0]).toMatchObject({ survived: 1, noCoverage: 2 });
+  });
+
+  it('keeps the top five files and no more', () => {
+    const files = Object.fromEntries(
+      ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((name) => [`scripts/${name}.ts`, ['Survived']]),
+    );
+
+    const listed = survivorsOf(report(files), scopes, 5).get('scripts') ?? [];
+    expect(listed.map((file) => file.file)).toEqual([
+      'scripts/a.ts',
+      'scripts/b.ts',
+      'scripts/c.ts',
+      'scripts/d.ts',
+      'scripts/e.ts',
+    ]);
+  });
+
+  it('omits a file with no survivors, and a scope with none is an empty list', () => {
+    const scoped = survivorsOf(
+      report({
+        'packages/core/src/a.ts': ['Killed', 'Timeout', 'CompileError', 'Ignored'],
+        'scripts/lib/x.ts': ['Survived'],
+      }),
+      scopes,
+      5,
+    );
+
+    expect(scoped.get('packages/core/src')).toEqual([]);
+    expect(scoped.get('scripts')?.map((file) => file.file)).toEqual(['scripts/lib/x.ts']);
+  });
+
+  it('assigns files to scopes exactly as scoreRun does', () => {
+    // First match wins, excluded files are set aside, unclaimed files are in no
+    // scope — the same three rules, because both read one assignment.
+    const overlapping = [
+      scope('non-recursive', 'packages/core/src/*.ts'),
+      scope('recursive', 'packages/core/src/**/*.ts', [
+        { path: 'packages/core/src/deep/skip.ts', mechanism: 'excluded' },
+      ]),
+    ];
+    const planted = report({
+      'packages/core/src/top.ts': ['Survived'],
+      'packages/core/src/deep/kept.ts': ['NoCoverage'],
+      'packages/core/src/deep/skip.ts': ['Survived'],
+      'elsewhere/x.ts': ['Survived'],
+    });
+
+    const scoped = survivorsOf(planted, overlapping, 5);
+    const run = scoreRun(planted, overlapping);
+
+    for (const { name } of overlapping) {
+      const tally = run.perScope.get(name) ?? empty();
+      const listed = scoped.get(name) ?? [];
+      expect(listed.reduce((sum, file) => sum + file.survived, 0)).toBe(tally.survived);
+      expect(listed.reduce((sum, file) => sum + file.noCoverage, 0)).toBe(tally.noCoverage);
+    }
+    expect(scoped.get('non-recursive')?.map((file) => file.file)).toEqual([
+      'packages/core/src/top.ts',
+    ]);
+    expect(scoped.get('recursive')?.map((file) => file.file)).toEqual([
+      'packages/core/src/deep/kept.ts',
+    ]);
+  });
+
+  it('carries each surviving mutant in line order, and tolerates missing detail', () => {
+    const planted: MutationReport = {
+      files: {
+        'scripts/lib/x.ts': {
+          mutants: [
+            {
+              status: 'Survived',
+              mutatorName: 'ConditionalExpression',
+              replacement: 'true',
+              location: { start: { line: 9, column: 3 } },
+            },
+            { status: 'Killed', location: { start: { line: 1, column: 1 } } },
+            { status: 'NoCoverage', location: { start: { line: 2, column: 5 } } },
+            { status: 'Survived' },
+          ],
+        },
+      },
+    };
+
+    const [file] = survivorsOf(planted, scopes, 5).get('scripts') ?? [];
+    expect(file?.mutants).toEqual([
+      { line: 2, status: 'NoCoverage', mutatorName: null, replacement: null },
+      { line: 9, status: 'Survived', mutatorName: 'ConditionalExpression', replacement: 'true' },
+      { line: null, status: 'Survived', mutatorName: null, replacement: null },
+    ]);
+  });
+});
+
+describe('scoreLabel — one formatter for every surface', () => {
+  it('prints two decimals, and n/a rather than 100% for an empty scope', () => {
+    expect(scoreLabel({ ...empty(), killed: 2, survived: 1 })).toBe('66.67%');
+    expect(scoreLabel(empty())).toBe('n/a');
   });
 });
 

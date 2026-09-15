@@ -295,6 +295,21 @@ it is not excluded. `covers/measure.ts` has no spec and stays in the denominator
 anyway, because "nothing tests it" is a gap and not a mechanism. See
 [ADR-0053](adr/0053-stryker-measures-eight-declared-scopes.md).
 
+**`--markdown` prints the nightly's job summary** instead of the terminal
+table: the same score table, then per scope the five files with the most
+surviving and uncovered mutants, each with its mutants in a collapsed block,
+capped at 50 per file. `.github/workflows/metrics.yml` appends it to
+`$GITHUB_STEP_SUMMARY`, passing `--mutation-status`, `--artifact-url` and
+`--commit`, and uploads both report files as a 30-day artifact the summary links
+to. It exits 0 on every path, a missing or truncated report included — the
+summary says which instead. ⚠️ The workflow calls it through `pnpm exec tsx`,
+because `pnpm run` prints its own banner to stdout.
+
+⚠️ **It is a flag and not a new script because of a hash.** A new `scripts/*.ts`
+run by `tsx` would need an exclusion in `stryker.scopes.json`, which moves
+`configHash`; the rendering lives in `scripts/lib/mutation-report.ts`, inside the
+`scripts` scope, where its spec reaches it.
+
 ## `pnpm mutation:stamp`
 
 **The remedy G56 (`config-hash`) prints, and the only thing in the repository
