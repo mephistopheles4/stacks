@@ -144,9 +144,10 @@ export default tseslint.config(
   },
   {
     /*
-     * The two rules turned *on*, and the only ones. **Every entry above loosens
-     * a rule; these are opt-ins no preset carries**, so they sit in an object of
-     * their own rather than under a comment that counts four tunings.
+     * Two opt-ins, beside `switch-exhaustiveness-check` above — **neither is in
+     * any of the five presets**, and unlike that one they do not apply to every
+     * file, so they sit in an object of their own rather than under a comment
+     * that counts four tunings.
      *
      * They protect the rule G6 (`site-core-imports`) holds: the site may only
      * `import type` from `@stacks/core`. A *value* import drags `node:fs` and
