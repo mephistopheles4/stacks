@@ -142,4 +142,56 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    /*
+     * The two rules turned *on*, and the only ones. **Every entry above loosens
+     * a rule; these are opt-ins no preset carries**, so they sit in an object of
+     * their own rather than under a comment that counts four tunings.
+     *
+     * They protect the rule G6 (`site-core-imports`) holds: the site may only
+     * `import type` from `@stacks/core`. A *value* import drags `node:fs` and
+     * sharp into the browser bundle and **the shelf silently never boots** — no
+     * build error, a blank page that compiled cleanly.
+     *
+     * ⚠️ **Both or neither.** `no-restricted-imports` with `allowTypeImports`
+     * *admits* `import { type Library } from '@stacks/core'`, which is the very
+     * case G6 exists for: the inline modifier erases the bindings and leaves the
+     * statement standing, so the module is still pulled in for its side effects.
+     * `no-import-type-side-effects` is what catches it, with a `--fix`. Measured
+     * on #245 against the current tree, one probe file per documented case.
+     *
+     * ⚠️ **Scoped to the site, both of them.** The restriction must be: the CLI
+     * value-imports `@stacks/core` at runtime, correctly, and a tree-wide rule
+     * reddens it. The side-effects rule found nothing anywhere on #245 and could
+     * run tree-wide green, but the hazard it guards only exists where a bundler
+     * builds for a browser — elsewhere it is a style opinion, and adopting one is
+     * a different decision.
+     *
+     * ⚠️ **G6 is kept, and this is not a replacement for it.** The owner decided
+     * *keep both* on #245: the two fail independently. G6 survives an edit to
+     * this file, which nothing gates; this pair survives a regex a Prettier run
+     * breaks. G6 also reaches what these do not — a dynamic `import()`, and
+     * whether a subpath is actually pure, which `paths` matches by name only.
+     */
+    files: ['packages/site/**/*.ts'],
+
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@stacks/core',
+              allowTypeImports: true,
+              message:
+                'The package root drags node:fs and sharp into the browser bundle and the shelf ' +
+                'silently never boots. Use a statement-level `import type`, or import the value ' +
+                'from a subpath that imports nothing, such as @stacks/core/shelf-order. See G6.',
+            },
+          ],
+        },
+      ],
+      '@typescript-eslint/no-import-type-side-effects': 'error',
+    },
+  },
 );
