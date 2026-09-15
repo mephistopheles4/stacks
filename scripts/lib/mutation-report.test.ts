@@ -178,6 +178,16 @@ describe('renderSummary — warnings come first', () => {
     expect(summary).not.toContain('| scope |');
   });
 
+  it('puts the missing report ahead of the exit status that explains it', () => {
+    const summary = renderSummary(
+      input({ state: { kind: 'missing', path: 'm.json' }, mutationStatus: '1' }),
+    );
+
+    expect(summary.indexOf('No mutation report')).toBeLessThan(
+      summary.indexOf('exited with status 1'),
+    );
+  });
+
   it('says the report did not parse, and stops there too', () => {
     const summary = renderSummary(
       input({ state: { kind: 'unparseable', path: 'm.json', reason: 'Unexpected end of JSON' } }),

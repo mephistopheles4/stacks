@@ -237,6 +237,7 @@ describe('survivorsOf — where the survivors are', () => {
         'packages/core/src/c.ts': ['Survived', 'NoCoverage', 'NoCoverage'],
       }),
       scopes,
+      5,
     );
 
     const files = scoped.get('packages/core/src') ?? [];
@@ -253,7 +254,7 @@ describe('survivorsOf — where the survivors are', () => {
       ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((name) => [`scripts/${name}.ts`, ['Survived']]),
     );
 
-    const listed = survivorsOf(report(files), scopes).get('scripts') ?? [];
+    const listed = survivorsOf(report(files), scopes, 5).get('scripts') ?? [];
     expect(listed.map((file) => file.file)).toEqual([
       'scripts/a.ts',
       'scripts/b.ts',
@@ -270,6 +271,7 @@ describe('survivorsOf — where the survivors are', () => {
         'scripts/lib/x.ts': ['Survived'],
       }),
       scopes,
+      5,
     );
 
     expect(scoped.get('packages/core/src')).toEqual([]);
@@ -292,7 +294,7 @@ describe('survivorsOf — where the survivors are', () => {
       'elsewhere/x.ts': ['Survived'],
     });
 
-    const scoped = survivorsOf(planted, overlapping);
+    const scoped = survivorsOf(planted, overlapping, 5);
     const run = scoreRun(planted, overlapping);
 
     for (const { name } of overlapping) {
@@ -328,7 +330,7 @@ describe('survivorsOf — where the survivors are', () => {
       },
     };
 
-    const [file] = survivorsOf(planted, scopes).get('scripts') ?? [];
+    const [file] = survivorsOf(planted, scopes, 5).get('scripts') ?? [];
     expect(file?.mutants).toEqual([
       { line: 2, status: 'NoCoverage', mutatorName: null, replacement: null },
       { line: 9, status: 'Survived', mutatorName: 'ConditionalExpression', replacement: 'true' },

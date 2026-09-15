@@ -404,13 +404,13 @@ function byLine(a: SurvivingMutant, b: SurvivingMutant): number {
  * identical, and cut at `limit`. A file with neither is not listed, and a scope
  * with no such file maps to an empty list rather than going missing.
  *
- * **Grouping lives here, not in the printer**, because this module is inside
- * the mutation denominator and the printers are not.
+ * **Grouping lives here, not in the renderer**, so the file lists read the same
+ * assignment `scoreRun` does and cannot drift from the score table above them.
  */
 export function survivorsOf(
   report: MutationReport,
   scopes: Scope[],
-  limit = 5,
+  limit: number,
 ): Map<string, FileSurvivors[]> {
   const result = new Map<string, FileSurvivors[]>();
   for (const [name, files] of assignFiles(report, scopes).byScope) {

@@ -295,23 +295,15 @@ function render(input: SummaryInput, report: MutationReport, cap: number): strin
  */
 export function renderSummary(input: SummaryInput, options: SummaryOptions = {}): string {
   const { state } = input;
-  if (state.kind === 'missing') {
+  if (state.kind !== 'parsed') {
+    const unreadable =
+      state.kind === 'missing'
+        ? `No mutation report at ${code(state.path)} — the run stopped before Stryker wrote one, so there is nothing to score.`
+        : `The mutation report at ${code(state.path)} did not parse, so nothing below it is scored: ${escape(state.reason)}`;
     return [
       heading(input),
+      warning(unreadable),
       ...statusWarning(input.mutationStatus),
-      warning(
-        `No mutation report at ${code(state.path)} — the run stopped before Stryker wrote one, so there is nothing to score.`,
-      ),
-      artifactLine(input.artifactUrl),
-    ].join('\n\n');
-  }
-  if (state.kind === 'unparseable') {
-    return [
-      heading(input),
-      ...statusWarning(input.mutationStatus),
-      warning(
-        `The mutation report at ${code(state.path)} did not parse, so nothing below it is scored: ${escape(state.reason)}`,
-      ),
       artifactLine(input.artifactUrl),
     ].join('\n\n');
   }
