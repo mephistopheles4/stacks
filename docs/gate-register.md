@@ -6064,3 +6064,64 @@ instead of trusting the guard, and `-ceq` is the fix.
   three facts no test reads** — that the deploy was rejected as the enforcement
   point, that ADR-0079's `fixtureHash` objection lost its premise on #342, and
   that `preserves` defaults to nothing. Only the stamp names in it are asserted.
+
+### G58 — `adr-index`
+
+**Gate:** [`gates/adr-index.test.ts`](../gates/adr-index.test.ts)
+**Date:** 2026-09-14
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number was taken against a re-fetched `origin/main` and every open
+pull request immediately before pushing.** This row exists because a number was
+claimed twice when git could not see an unpushed branch, and it would be a poor
+place to repeat that.
+
+**Observed-red**, four ways. The first was not planted; the other three were
+each written to disk, run, read back and reverted as separate steps.
+
+1. **The tree as it stood.** `main` at `5971b65` went red on its first run:
+   `0083-hooks-arrive-with-pnpm-install.md has 0 rows`, and the same for 0084 and
+   0085 — three records merged since the index was last touched, invisible to its
+   reader. Only the one-row clause failed. The rows are added in this change.
+2. **A duplicate-numbered file, indexed.** `0085-plant-duplicate.md` with a
+   second `[0085]` row reddened **both** uniqueness clauses with `0085 × 2`, and
+   nothing else.
+3. **A record with no row.** `0086-plant-unindexed.md` reddened the one-row
+   clause alone: `0086-plant-unindexed.md has 0 rows`.
+4. **Two rows for one number over one file.** A second `[0082]` row reddened the
+   row-uniqueness clause with `0082 × 2` and the one-row clause with
+   `0082-zizmor-lints-the-workflows.md has 2 rows`.
+
+**The control is the one that decides the design**: the tree with its three rows
+added is green with **0071 missing**, which is what proves no contiguity clause
+was written. All four shapes, the gap and the unreadable-shape refusals are also
+kept as synthetic cases in the gate file, so the plants are asserted on every run
+rather than observed once.
+
+- **Weakening** — **clean; no allowlist, no exemption and no threshold beyond
+  the floors.** Every clause is a list that must be empty. The floors sit at 80
+  against 84 records present, safe only under append-never-edit, and stated in
+  the header on that condition. Disposition `gated`.
+- **Satisfying the letter** — **exposed, in one place.** A row whose decision
+  text says nothing, or misdescribes its record, passes: the table is checked
+  for its number column and its link and never for its prose. That is the same
+  relationship G41 has to the quality of these entries. Disposition `accepted`.
+- **Routing around** — **exposed, and the route is the one the header states.**
+  Two branches can each hold the same number, and the gate sees only whichever
+  merges second; the first lands green. It is not coordination and does not
+  claim to be. The other route — a record written outside `docs/adr/`, or in a
+  filename or row shape the sweep does not read — is closed: a stray filename or
+  table row is refused rather than skipped, G41's near-miss rule. Disposition
+  `accepted`.
+- **Vacuous green** — **gated.** An emptied directory or a reshaped table would
+  pass every uniqueness clause over nothing, so `expectFound` holds both sides at
+  80. And the **row** sweep keys on the first cell's shape, so a table rewritten
+  to a form it cannot parse lands as strays, which are red, rather than as zero
+  rows. Disposition `gated`.
+- **Decay** — **it decays into a red on a new record and into silence on a
+  renumber.** A record added without its row is red, which is the ordinary path
+  and the one that had already decayed three times. ⚠️ **What rots quietly is
+  inbound references**: renaming a record to clear a duplicate leaves every
+  `ADR-0075` mention in prose pointing at whichever decision now holds the
+  number. G29 (`doc-links`) resolves a Markdown link and reads no bare mention,
+  so a stale citation is invisible to both. Disposition `accepted`.
