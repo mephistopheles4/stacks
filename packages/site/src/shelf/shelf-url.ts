@@ -317,16 +317,26 @@ function readTune(params: URLSearchParams): SettingsPatch {
   const raw = params.get('tune');
   if (raw === null) return {};
 
+  const tune = tuneObject(raw);
+  if (tune === undefined) return {};
+
+  return { renderer: tuneRenderer(tune), ...tuneSections(tune) };
+}
+
+/** `?tune=`'s value as an object, or `undefined` when it is not JSON or not an object. */
+function tuneObject(raw: string): Tune | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return {};
+    return undefined;
   }
-  if (typeof parsed !== 'object' || parsed === null) return {};
+  return typeof parsed !== 'object' || parsed === null ? undefined : parsed;
+}
 
-  const tune = parsed as Tune;
-  const renderer: Partial<ShelfSettings['renderer']> = {
+/** The two renderer keys, each kept only when it is a value the renderer accepts. */
+function tuneRenderer(tune: Tune): Partial<ShelfSettings['renderer']> {
+  return {
     ...(tune.toneMapping !== undefined && TONE_MAPPING_NAMES.includes(tune.toneMapping)
       ? { toneMapping: tune.toneMapping }
       : {}),
@@ -334,9 +344,11 @@ function readTune(params: URLSearchParams): SettingsPatch {
       ? { exposure: tune.exposure }
       : {}),
   };
+}
 
+/** The five sections, each kept only when it is an object. */
+function tuneSections(tune: Tune): Omit<SettingsPatch, 'renderer'> {
   return {
-    renderer,
     ...(isRecord(tune.lighting) ? { lighting: tune.lighting as SettingsPatch['lighting'] } : {}),
     ...(isRecord(tune.scene) ? { scene: tune.scene as SettingsPatch['scene'] } : {}),
     ...(isRecord(tune.materials)

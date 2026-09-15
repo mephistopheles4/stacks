@@ -235,18 +235,10 @@ interface BodyAt {
  */
 export function postPlan(surface: Surface, body: BodyAt): GhCall {
   switch (surface.kind) {
-    case 'issue': {
-      const args = ['issue', 'create', '--title', surface.title];
-      for (const label of surface.labels ?? []) args.push('--label', label);
-      if (surface.parent !== undefined) args.push('--parent', String(surface.parent));
-      return { args: [...args, '--body-file', body.file] };
-    }
-    case 'pull-request': {
-      const args = ['pr', 'create', '--title', surface.title];
-      if (surface.base !== undefined) args.push('--base', surface.base);
-      if (surface.head !== undefined) args.push('--head', surface.head);
-      return { args: [...args, '--body-file', body.file] };
-    }
+    case 'issue':
+      return { args: [...issueCreateArgs(surface), '--body-file', body.file] };
+    case 'pull-request':
+      return { args: [...pullRequestCreateArgs(surface), '--body-file', body.file] };
     case 'issue-comment':
       return { args: ['issue', 'comment', String(surface.issue), '--body-file', body.file] };
     case 'pull-request-review':
@@ -266,6 +258,22 @@ export function postPlan(surface: Surface, body: BodyAt): GhCall {
         input: JSON.stringify({ body: body.text }),
       };
   }
+}
+
+/** `gh issue create` up to its body: the title, each label, and the parent. */
+function issueCreateArgs(surface: Extract<Surface, { kind: 'issue' }>): string[] {
+  const args = ['issue', 'create', '--title', surface.title];
+  for (const label of surface.labels ?? []) args.push('--label', label);
+  if (surface.parent !== undefined) args.push('--parent', String(surface.parent));
+  return args;
+}
+
+/** `gh pr create` up to its body: the title, and the two optional refs. */
+function pullRequestCreateArgs(surface: Extract<Surface, { kind: 'pull-request' }>): string[] {
+  const args = ['pr', 'create', '--title', surface.title];
+  if (surface.base !== undefined) args.push('--base', surface.base);
+  if (surface.head !== undefined) args.push('--head', surface.head);
+  return args;
 }
 
 /**

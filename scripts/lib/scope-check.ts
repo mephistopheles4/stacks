@@ -153,7 +153,6 @@ export interface Fault {
  */
 export function declarationFaults(declarations: Declarations, files: readonly string[]): Fault[] {
   const { scopes, excludedDirectories } = declarations;
-  const faults: Fault[] = [];
 
   /**
    * ⚠️ **Two sets, because the two lists are recursive in opposite ways.**
@@ -176,18 +175,41 @@ export function declarationFaults(declarations: Declarations, files: readonly st
    * declared scope today happens to hold at least one file directly.
    */
   const directories = new Set(files.map(directoryOf));
+  const ancestors = ancestorsOf(directories);
+  const excludedDirs = new Set(excludedDirectories.map((entry) => entry.path));
+
+  return [
+    // A scope's name is a directory, and the glob is only its definition. Both
+    // are checked: a name pointing at nothing is a rename nobody finished, and a
+    // glob matching nothing is the same rename seen from the other side.
+    ...scopeNameFaults(scopes, ancestors, excludedDirs),
+    ...emptyGlobFaults(scopes, files),
+    ...claimFaults(scopes, files, excludedDirs),
+    // Both lists, both directions: a mechanism is a sentence somebody has to
+    // write, and the entry has to still name something real.
+    ...exclusionFaults(scopes, files),
+    ...excludedDirectoryFaults(excludedDirectories, directories),
+  ];
+}
+
+/** Every directory holding a source file, and every directory above one. */
+function ancestorsOf(directories: ReadonlySet<string>): Set<string> {
   const ancestors = new Set<string>();
   for (const directory of directories) {
     for (let current = directory; current.length > 0; current = directoryOf(current)) {
       ancestors.add(current);
     }
   }
+  return ancestors;
+}
 
-  const excludedDirs = new Set(excludedDirectories.map((entry) => entry.path));
-
-  // A scope's name is a directory, and the glob is only its definition. Both
-  // are checked: a name pointing at nothing is a rename nobody finished, and a
-  // glob matching nothing is the same rename seen from the other side.
+/** A scope named for no directory on disk, or for one that is also excluded. */
+function scopeNameFaults(
+  scopes: Declarations['scopes'],
+  ancestors: ReadonlySet<string>,
+  excludedDirs: ReadonlySet<string>,
+): Fault[] {
+  const faults: Fault[] = [];
   for (const scope of scopes) {
     if (!ancestors.has(scope.name)) {
       faults.push({
@@ -205,9 +227,12 @@ export function declarationFaults(declarations: Declarations, files: readonly st
       });
     }
   }
+  return faults;
+}
 
-  const matchers = scopes.map((scope) => ({ scope, match: globToRegExp(scope.glob) }));
-
+/** A scope whose glob matches no source file. */
+function emptyGlobFaults(scopes: Declarations['scopes'], files: readonly string[]): Fault[] {
+  const faults: Fault[] = [];
   for (const scope of scopes) {
     if (!matchesAnyFile(scope.glob, files)) {
       faults.push({
@@ -219,9 +244,20 @@ export function declarationFaults(declarations: Declarations, files: readonly st
       });
     }
   }
+  return faults;
+}
 
-  // No third state. Every source file is claimed by a scope, or sits directly
-  // in a directory declared out with a mechanism.
+/**
+ * No third state. Every source file is claimed by a scope, or sits directly
+ * in a directory declared out with a mechanism.
+ */
+function claimFaults(
+  scopes: Declarations['scopes'],
+  files: readonly string[],
+  excludedDirs: ReadonlySet<string>,
+): Fault[] {
+  const faults: Fault[] = [];
+  const matchers = scopes.map((scope) => ({ scope, match: globToRegExp(scope.glob) }));
   for (const file of files) {
     const claims = matchers.filter((candidate) => candidate.match.test(file));
     if (claims.length > 1) {
@@ -240,9 +276,12 @@ export function declarationFaults(declarations: Declarations, files: readonly st
       });
     }
   }
+  return faults;
+}
 
-  // Both lists, both directions: a mechanism is a sentence somebody has to
-  // write, and the entry has to still name something real.
+/** A file exclusion with no mechanism, or naming no file on disk. */
+function exclusionFaults(scopes: Declarations['scopes'], files: readonly string[]): Fault[] {
+  const faults: Fault[] = [];
   for (const scope of scopes) {
     for (const exclusion of scope.exclusions) {
       if (exclusion.mechanism.trim().length === 0) {
@@ -259,7 +298,15 @@ export function declarationFaults(declarations: Declarations, files: readonly st
       }
     }
   }
+  return faults;
+}
 
+/** An excluded directory with no mechanism, or holding no source file directly. */
+function excludedDirectoryFaults(
+  excludedDirectories: Declarations['excludedDirectories'],
+  directories: ReadonlySet<string>,
+): Fault[] {
+  const faults: Fault[] = [];
   for (const entry of excludedDirectories) {
     if (entry.mechanism.trim().length === 0) {
       faults.push({

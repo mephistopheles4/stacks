@@ -656,37 +656,44 @@ export function resolveSettings(
     renderer: { ...base.renderer, ...patch.renderer },
     effects: { bloom: { ...base.effects.bloom, ...patch.effects?.bloom } },
     shadows: { ...base.shadows, ...patch.shadows },
-    scene: {
-      ...base.scene,
-      ...patch.scene,
-      fog: { ...base.scene.fog, ...patch.scene?.fog },
-    },
-    materials: {
-      ...base.materials,
-      ...patch.materials,
-      spineProfile: mergeProfiles(base.materials.spineProfile, patch.materials?.spineProfile),
-      spineRoughness: { ...base.materials.spineRoughness, ...patch.materials?.spineRoughness },
-    },
+    scene: mergeScene(base.scene, patch.scene),
+    materials: mergeMaterials(base.materials, patch.materials),
     books: { ...base.books, ...patch.books },
-    lighting: {
-      ambient: { ...base.lighting.ambient, ...patch.lighting?.ambient },
-      key: {
-        ...base.lighting.key,
-        ...patch.lighting?.key,
-        position: mergePosition(base.lighting.key.position, patch.lighting?.key?.position),
-      },
-      fill: {
-        ...base.lighting.fill,
-        ...patch.lighting?.fill,
-        position: mergePosition(base.lighting.fill.position, patch.lighting?.fill?.position),
-      },
-      lamp: {
-        ...base.lighting.lamp,
-        ...patch.lighting?.lamp,
-        position: mergePosition(base.lighting.lamp.position, patch.lighting?.lamp?.position),
-      },
-    },
+    lighting: mergeLighting(base.lighting, patch.lighting),
   };
+}
+
+function mergeScene(base: SceneSettings, patch: SettingsPatch['scene']): SceneSettings {
+  return { ...base, ...patch, fog: { ...base.fog, ...patch?.fog } };
+}
+
+function mergeMaterials(
+  base: MaterialSettings,
+  patch: SettingsPatch['materials'],
+): MaterialSettings {
+  return {
+    ...base,
+    ...patch,
+    spineProfile: mergeProfiles(base.spineProfile, patch?.spineProfile),
+    spineRoughness: { ...base.spineRoughness, ...patch?.spineRoughness },
+  };
+}
+
+function mergeLighting(base: LightingSettings, patch: SettingsPatch['lighting']): LightingSettings {
+  return {
+    ambient: { ...base.ambient, ...patch?.ambient },
+    key: mergeLight(base.key, patch?.key),
+    fill: mergeLight(base.fill, patch?.fill),
+    lamp: mergeLight(base.lamp, patch?.lamp),
+  };
+}
+
+/** One positioned light: its own keys, then its position folded a level deeper. */
+function mergeLight<Light extends { readonly position: LightPosition }>(
+  base: Light,
+  patch: (Partial<Omit<Light, 'position'>> & { readonly position?: PositionPatch }) | undefined,
+): Light {
+  return { ...base, ...patch, position: mergePosition(base.position, patch?.position) };
 }
 
 function mergePosition(base: LightPosition, patch: PositionPatch | undefined): LightPosition {
