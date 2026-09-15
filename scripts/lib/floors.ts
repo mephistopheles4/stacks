@@ -161,14 +161,24 @@ function parseEntry(name: string, entry: unknown): ScopeFloor {
   if (typeof armed !== 'string' || armed === '') {
     throw new Error(`the floors entry for ${name} carries no date`);
   }
-  if (typeof ignored !== 'number' || !Number.isInteger(ignored) || ignored < 0) {
+  if (!isCount(ignored)) {
     throw new Error(`the ignored counter for ${name} is not a count: ${String(ignored)}`);
   }
-  if (!Array.isArray(notes) || notes.some((note) => typeof note !== 'string')) {
+  if (!isLines(notes)) {
     throw new Error(`the notes for ${name} are not a list of lines`);
   }
 
-  return { floor, armed, ignored, notes: notes as string[], caps: parseCaps(name, caps) };
+  return { floor, armed, ignored, notes, caps: parseCaps(name, caps) };
+}
+
+/** A whole number of things, zero included. */
+function isCount(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+}
+
+/** A list whose every entry is a line of text — the shape `notes` takes everywhere. */
+function isLines(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((line) => typeof line === 'string');
 }
 
 /**
@@ -213,11 +223,11 @@ function parseCap(what: string, entry: unknown): ScopeCap {
   if (typeof armed !== 'string' || armed === '') {
     throw new Error(`the cap for ${what} carries no date`);
   }
-  if (!Array.isArray(notes) || notes.some((note) => typeof note !== 'string')) {
+  if (!isLines(notes)) {
     throw new Error(`the notes for ${what} are not a list of lines`);
   }
 
-  return { cap, armed, notes: notes as string[] };
+  return { cap, armed, notes };
 }
 
 /** Scopes one side names and the other does not. Both directions, always. */
@@ -1024,7 +1034,23 @@ function samplesIn(rows: readonly RunRow[]): number {
 
 function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): Streak {
   const ordered = nightliesIn(rows).sort((one, other) => one.timestamp - other.timestamp);
+  const streak = streakBack(ordered, stamped);
+  const window = newestTrees(streak);
 
+  return {
+    samples: samplesIn(streak),
+    window,
+    candidates: ordered.length,
+    days: daysSpanned(window),
+  };
+}
+
+/**
+ * The consecutive qualifying rows, newest first, walking back from the newest
+ * until a failed run, a gap over `MAX_GAP_DAYS`, or a row `stamped` rejects
+ * ends the streak — the three the streak walk's docstring explains.
+ */
+function streakBack(ordered: readonly RunRow[], stamped: (row: RunRow) => boolean): RunRow[] {
   const streak: RunRow[] = [];
   for (let index = ordered.length - 1; index >= 0; index -= 1) {
     const row = ordered[index];
@@ -1035,11 +1061,16 @@ function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): S
     if (newer !== undefined && newer.timestamp - row.timestamp > MAX_GAP_DAYS * DAY_SECONDS) break;
     streak.push(row);
   }
+  return streak;
+}
 
-  // The newest rows covering `WINDOW_RUNS` distinct trees. A row that would
-  // open a sample beyond the limit ends the window; a row repeating a tree
-  // already inside it is kept, because the extremum should see every
-  // measurement of the trees it covers even though fullness counts trees.
+/**
+ * The newest rows covering `WINDOW_RUNS` distinct trees. A row that would
+ * open a sample beyond the limit ends the window; a row repeating a tree
+ * already inside it is kept, because the extremum should see every
+ * measurement of the trees it covers even though fullness counts trees.
+ */
+function newestTrees(streak: readonly RunRow[]): RunRow[] {
   const window: RunRow[] = [];
   const counted = tally();
   for (const row of streak) {
@@ -1047,19 +1078,16 @@ function streakOf(rows: readonly RunRow[], stamped: (row: RunRow) => boolean): S
     counted.add(row);
     window.push(row);
   }
+  return window;
+}
 
+/** Whole days between the newest and oldest row of a newest-first window. */
+function daysSpanned(window: readonly RunRow[]): number {
   const oldest = window.at(-1);
   const newest = window.at(0);
-
-  return {
-    samples: samplesIn(streak),
-    window,
-    candidates: ordered.length,
-    days:
-      newest === undefined || oldest === undefined
-        ? 0
-        : Math.round((newest.timestamp - oldest.timestamp) / DAY_SECONDS),
-  };
+  return newest === undefined || oldest === undefined
+    ? 0
+    : Math.round((newest.timestamp - oldest.timestamp) / DAY_SECONDS);
 }
 
 /**
@@ -1716,6 +1744,19 @@ export function capsUnaccounted(declared: readonly string[], floors: Floors): Ca
  * comparison it has just said it cannot make.
  */
 export function floorRefusals(input: RefusalInput): string[] {
+  const refusals = accountingRefusals(input);
+
+  const mismatch = configurationRefusal(input) ?? countingRuleRefusal(input);
+  if (mismatch !== undefined) return [...refusals, mismatch];
+
+  return [...refusals, ...breachRefusals(input)];
+}
+
+/**
+ * The file and the declarations disagreeing about which scopes exist, and
+ * which of them carry caps. Reported beside any other refusal.
+ */
+function accountingRefusals(input: RefusalInput): string[] {
   const refusals: string[] = [];
   const { unaccounted, orphans } = correspondence(input.declared, input.floors);
 
@@ -1757,7 +1798,15 @@ export function floorRefusals(input: RefusalInput): string[] {
         noFlag(),
     );
   }
+  return refusals;
+}
 
+/**
+ * The run scored under another Stryker configuration, as a refusal — or
+ * `undefined` when the stamps agree. It refuses alone, as the caller's
+ * docstring says.
+ */
+function configurationRefusal(input: RefusalInput): string | undefined {
   // ⚠️ **A different hash and a missing hash are different findings, and only
   // one of them is evidence.**
   //
@@ -1781,23 +1830,27 @@ export function floorRefusals(input: RefusalInput): string[] {
     input.run !== undefined &&
     (stamped === undefined ? armed : stamped !== input.floors.configHash);
 
-  if (mismatched) {
-    refusals.push(
-      'these floors were derived under a different configuration; re-derive them\n\n' +
-        `  floors:  ${input.floors.configHash}\n` +
-        `  the run: ${stamped ?? 'no hash — a record from before the stamp existed'}\n\n` +
-        '  Lowering timeoutMS raises the score with no test touched, because a timeout\n' +
-        '  counts as detected — so a score computed under one configuration is not a\n' +
-        '  number about a floor derived under another. Nothing else is compared until\n' +
-        '  these agree.\n' +
-        '    - If the configuration change was deliberate, the floors have to be derived\n' +
-        '      again from runs made under it, and re-deriving is lowering: it costs a\n' +
-        `      notes line in ${FLOORS_FILE} like any other lowering.\n\n` +
-        noFlag(),
-    );
-    return refusals;
-  }
+  if (!mismatched) return undefined;
+  return (
+    'these floors were derived under a different configuration; re-derive them\n\n' +
+    `  floors:  ${input.floors.configHash}\n` +
+    `  the run: ${stamped ?? 'no hash — a record from before the stamp existed'}\n\n` +
+    '  Lowering timeoutMS raises the score with no test touched, because a timeout\n' +
+    '  counts as detected — so a score computed under one configuration is not a\n' +
+    '  number about a floor derived under another. Nothing else is compared until\n' +
+    '  these agree.\n' +
+    '    - If the configuration change was deliberate, the floors have to be derived\n' +
+    '      again from runs made under it, and re-deriving is lowering: it costs a\n' +
+    `      notes line in ${FLOORS_FILE} like any other lowering.\n\n` +
+    noFlag()
+  );
+}
 
+/**
+ * The counts produced under another counting rule, as a refusal — or
+ * `undefined` when the stamps agree. Asked only once the configuration agrees.
+ */
+function countingRuleRefusal(input: RefusalInput): string | undefined {
   // ⚠️ **The counting rule's own mismatch, and the same three judgements.** A
   // *different* fixture hash is evidence that somebody changed what a count
   // means without re-deriving; **no** hash is a record from before the stamp,
@@ -1812,23 +1865,25 @@ export function floorRefusals(input: RefusalInput): string[] {
     input.countedRun !== undefined &&
     (counted === undefined ? capArmed : counted !== input.floors.fixtureHash);
 
-  if (countedElsewhere) {
-    refusals.push(
-      'these caps were derived under a different counting rule; re-derive them\n\n' +
-        `  floors:  ${input.floors.fixtureHash}\n` +
-        `  the run: ${counted ?? 'no hash — a record from before the stamp existed'}\n\n` +
-        '  An ESLint upgrade that counts one more construct raises every count with no\n' +
-        '  branch written, so a count produced under one rule is not a number about a cap\n' +
-        '  derived under another — it would breach every cap at once and read as a\n' +
-        '  regression nobody caused. Nothing else is compared until these agree.\n' +
-        '    - If the counter change was deliberate, the caps have to be derived again\n' +
-        '      from runs counted under it, and re-deriving is raising: it costs a notes\n' +
-        `      line in ${FLOORS_FILE} like any other.\n\n` +
-        noFlag(),
-    );
-    return refusals;
-  }
+  if (!countedElsewhere) return undefined;
+  return (
+    'these caps were derived under a different counting rule; re-derive them\n\n' +
+    `  floors:  ${input.floors.fixtureHash}\n` +
+    `  the run: ${counted ?? 'no hash — a record from before the stamp existed'}\n\n` +
+    '  An ESLint upgrade that counts one more construct raises every count with no\n' +
+    '  branch written, so a count produced under one rule is not a number about a cap\n' +
+    '  derived under another — it would breach every cap at once and read as a\n' +
+    '  regression nobody caused. Nothing else is compared until these agree.\n' +
+    '    - If the counter change was deliberate, the caps have to be derived again\n' +
+    '      from runs counted under it, and re-deriving is raising: it costs a notes\n' +
+    `      line in ${FLOORS_FILE} like any other.\n\n` +
+    noFlag()
+  );
+}
 
+/** One refusal per scope under its floor, then one per series over its cap. */
+function breachRefusals(input: RefusalInput): string[] {
+  const refusals: string[] = [];
   for (const breach of breaches(input.readings, input.floors)) {
     refusals.push(
       `${breach.scope} scored ${breach.score.toFixed(2)}, under its floor of ` +
@@ -1907,10 +1962,7 @@ export function runRowsFrom(records: readonly ParsedRecord[]): RunRow[] {
   const rows: RunRow[] = [];
 
   for (const record of records) {
-    const health = record.samples.find(
-      (sample) =>
-        sample.metric === `${METRIC_PREFIXES.run}ok` && sample.labels['surface'] === undefined,
-    );
+    const health = ciHealthOf(record);
     if (health === undefined) continue;
 
     // The record stores a fraction; every floor, print and refusal downstream is
@@ -1935,21 +1987,43 @@ export function runRowsFrom(records: readonly ParsedRecord[]): RunRow[] {
     for (const series of CAPPED_SERIES) counts.set(series, samplesOf(record, series));
 
     const info = runInfoOf(record);
-    const configHash = info?.['config_hash'];
-    const fixtureHash = info?.['fixture_hash'];
-    const commit = info?.['commit'];
     rows.push({
       timestamp,
       ok: health.value === 1,
       event: info?.['event'] ?? 'unknown',
-      ...(commit === undefined || commit === '' ? {} : { commit }),
-      ...(configHash === undefined || configHash === '' ? {} : { configHash }),
-      ...(fixtureHash === undefined || fixtureHash === '' ? {} : { fixtureHash }),
+      ...provenanceOf(info),
       scores,
       counts,
     });
   }
   return rows.sort((one, other) => one.timestamp - other.timestamp);
+}
+
+/** The record's `run_ok` sample from CI — never a local probe's, which carries `surface`. */
+function ciHealthOf(record: ParsedRecord): ParsedRecord['samples'][number] | undefined {
+  return record.samples.find(
+    (sample) =>
+      sample.metric === `${METRIC_PREFIXES.run}ok` && sample.labels['surface'] === undefined,
+  );
+}
+
+/** The label each provenance field is read from in `run_info`. */
+const PROVENANCE_LABELS = [
+  ['commit', 'commit'],
+  ['configHash', 'config_hash'],
+  ['fixtureHash', 'fixture_hash'],
+] as const;
+
+/** The run's commit and stamps, each present only when the record carried a non-empty value. */
+function provenanceOf(
+  info: Record<string, string> | undefined,
+): Pick<RunRow, 'commit' | 'configHash' | 'fixtureHash'> {
+  const provenance: Pick<RunRow, 'commit' | 'configHash' | 'fixtureHash'> = {};
+  for (const [field, label] of PROVENANCE_LABELS) {
+    const value = info?.[label];
+    if (value !== undefined && value !== '') provenance[field] = value;
+  }
+  return provenance;
 }
 // ── The disk, kept at the edge ──────────────────────────────────────────────
 //

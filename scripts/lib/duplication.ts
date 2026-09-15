@@ -729,22 +729,25 @@ export function parseDeclarations(document: unknown): Declarations {
 
   const parsed = new Map<string, PopulationDeclaration>();
   for (const [name, entry] of Object.entries(populations as Record<string, unknown>)) {
-    if (typeof entry !== 'object' || entry === null) {
-      throw new Error(`the declaration for ${name} is not an object`);
-    }
-    const { ignoredLines, notes } = entry as Record<string, unknown>;
-
-    if (typeof ignoredLines !== 'number' || !Number.isInteger(ignoredLines) || ignoredLines < 0) {
-      throw new Error(
-        `the ignoredLines counter for ${name} is not a count: ${String(ignoredLines)}`,
-      );
-    }
-    if (!Array.isArray(notes) || notes.some((note) => typeof note !== 'string')) {
-      throw new Error(`the notes for ${name} are not a list of lines`);
-    }
-    parsed.set(name, { ignoredLines, notes: notes as string[] });
+    parsed.set(name, parsePopulation(name, entry));
   }
   return { duplicationHash, populations: parsed };
+}
+
+/** One population's entry, or a throw naming it. */
+function parsePopulation(name: string, entry: unknown): PopulationDeclaration {
+  if (typeof entry !== 'object' || entry === null) {
+    throw new Error(`the declaration for ${name} is not an object`);
+  }
+  const { ignoredLines, notes } = entry as Record<string, unknown>;
+
+  if (typeof ignoredLines !== 'number' || !Number.isInteger(ignoredLines) || ignoredLines < 0) {
+    throw new Error(`the ignoredLines counter for ${name} is not a count: ${String(ignoredLines)}`);
+  }
+  if (!Array.isArray(notes) || notes.some((note) => typeof note !== 'string')) {
+    throw new Error(`the notes for ${name} are not a list of lines`);
+  }
+  return { ignoredLines, notes: notes as string[] };
 }
 
 /** `jscpd.floors.json`, from the disk. */
