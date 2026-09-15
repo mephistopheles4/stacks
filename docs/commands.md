@@ -15,7 +15,9 @@ restated here, because a rule with two homes is a rule that drifts
 
 **G46.** The type-checked recommended set from `typescript-eslint`, plus
 `eslint:recommended`, plus `switch-exhaustiveness-check`, over every `.ts` file
-in the repository — **tests included, no split, no allowlist**. It exits
+in the repository — **tests included, no split, no allowlist**. Over the site
+package alone it adds `no-restricted-imports` and `no-import-type-side-effects`,
+the pair that checks G6's rule a second way; see G6's row in `docs/gates.md`. It exits
 non-zero on a single finding, and the `style` job in `gates.yml` runs it on every
 pull request.
 
