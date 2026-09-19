@@ -1,6 +1,10 @@
 ---
 // The page-level attribution surface. Markup and styles only; it has no logic
 // to put anywhere else. See docs/spec/attribution-surface.md.
+
+// Inlined `?raw`, as the header's own mark is: a 16px glyph is not worth a
+// second request, and `currentColor` only reaches an SVG that is in the DOM.
+import githubMarkSvg from '../assets/github-mark.svg?raw';
 ---
 
 <!--
@@ -53,6 +57,18 @@
     anchor has to opt back out.
   -->
   <a class="pattr-link" href="/attribution">Attribution</a>
+  <!--
+    The source, in the same row rather than a corner of its own: the other three
+    are spoken for, as the comment at the top says. A plain navigation, not a
+    request — the page still makes zero third-party requests until it is clicked.
+  -->
+  <!--
+    The mark is decorative — the text already says GitHub — so the SVG carries
+    aria-hidden itself and a screen reader reads the link once.
+  -->
+  <a class="pattr-link pattr-source" href="https://github.com/mephistopheles4/stacks"
+    ><span class="pattr-icon" set:html={githubMarkSvg} />View on GitHub</a
+  >
 </div>
 
 <style>
@@ -133,5 +149,27 @@
   .pattr-link:hover,
   .pattr-link:focus-visible {
     color: #c9b8a4;
+  }
+
+  .pattr-source {
+    gap: 0.35rem;
+  }
+
+  /*
+    Sized to the text rather than to the file's 16px, so it tracks the row's
+    0.75rem. `fill="currentColor"` on the artwork means it follows the link's
+    colour, hover included, with no rule of its own.
+  */
+  .pattr-icon {
+    display: block;
+    flex: none;
+    width: 1.1em;
+    height: 1.1em;
+  }
+
+  .pattr-icon :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 </style>
