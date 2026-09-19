@@ -1,6 +1,12 @@
 ---
-// The page-level attribution surface. Markup and styles only; it has no logic
-// to put anywhere else. See docs/spec/attribution-surface.md.
+// The page-level attribution surface. Markup, styles and one asset import; no
+// logic — nothing here has a type or a branch, which is what the no-logic rule
+// in AGENTS.md counts. See docs/spec/attribution-surface.md.
+
+// Inlined `?raw`, as the header's own mark is: one copy of the artwork, in
+// src/assets/, rather than a second pasted into this template to drift. A 16px
+// glyph is not worth a request, and `currentColor` only reaches an inline SVG.
+import githubMarkSvg from '../assets/github-mark.svg?raw';
 ---
 
 <!--
@@ -53,6 +59,18 @@
     anchor has to opt back out.
   -->
   <a class="pattr-link" href="/attribution">Attribution</a>
+  <!--
+    The source, in the same row rather than a corner of its own: the other three
+    are spoken for, as the comment at the top says. A plain navigation, not a
+    request — the page still makes zero third-party requests until it is clicked.
+  -->
+  <!--
+    The mark is decorative — the text already says GitHub — so the SVG carries
+    aria-hidden itself and a screen reader reads the link once.
+  -->
+  <a class="pattr-link pattr-source" href="https://github.com/mephistopheles4/stacks"
+    ><span class="pattr-icon" set:html={githubMarkSvg} />View on GitHub</a
+  >
 </div>
 
 <style>
@@ -133,5 +151,40 @@
   .pattr-link:hover,
   .pattr-link:focus-visible {
     color: #c9b8a4;
+  }
+
+  .pattr-source {
+    gap: 0.35rem;
+  }
+
+  /*
+    Sized to the text rather than to the file's 16px, so it tracks the row's
+    0.75rem.
+
+    ⚠️ **Neutral grey, not the link's warm colour.** GitHub's logo guidelines
+    say the Invertocat "should only appear in white, black, or in few cases grey
+    or green", and a taupe mark would be a recolour. So the mark takes its own
+    `color`, which its `fill="currentColor"` follows: #767676 and #bababa are
+    the greys with the same relative luminance as the link's #857361 and hover
+    #c9b8a4, so the pair still reads as one link at one weight.
+    https://brand.github.com/foundations/logo
+  */
+  .pattr-icon {
+    display: block;
+    flex: none;
+    width: 1.1em;
+    height: 1.1em;
+    color: #767676;
+  }
+
+  .pattr-source:hover .pattr-icon,
+  .pattr-source:focus-visible .pattr-icon {
+    color: #bababa;
+  }
+
+  .pattr-icon :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 </style>
