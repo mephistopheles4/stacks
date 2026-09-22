@@ -31,6 +31,7 @@
  * mutation scope and is re-run for every mutant in `cognitive.ts`.
  */
 
+import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   COGNITIVE_CUT,
@@ -50,6 +51,16 @@ import { sourceFiles } from './scope-check.ts';
 
 /** A function hidden from the counter by one comment; see its header. */
 const SUPPRESSED = 'fixtures/complexity/suppressed.ts';
+
+/**
+ * The line `hidden` sits on, read from the copy ESLint is about to lint — never
+ * a literal, because Stryker's sandbox inserts `// @ts-nocheck` into this
+ * fixture and moves it. `complexity.test.ts` carries the whole story.
+ */
+const HIDDEN_LINE =
+  readFileSync(SUPPRESSED, 'utf8')
+    .split(/\r?\n/)
+    .findIndex((line) => line.startsWith('export function hidden')) + 1;
 
 /** A synthetic population member, for the arithmetic that should not need a tree. */
 function fn(complexity: number, line: number, file = 'a.ts'): PerFunction {
@@ -184,8 +195,11 @@ describe('the counter refuses to under-count', () => {
     // `suppressedMessages`, so the function drops out of `scored` and lands in
     // the population as a legitimate zero — the one absence this counter reads
     // as a measurement. A throw, never counts, for `complexityOf`'s reason.
+    expect(HIDDEN_LINE).toBeGreaterThan(0);
     await expect(cognitiveOf([SUPPRESSED])).rejects.toThrow(
-      /disable directive.*fixtures\/complexity\/suppressed\.ts:21\b/,
+      new RegExp(
+        `disable directive.*fixtures/complexity/suppressed\\.ts:${String(HIDDEN_LINE)}\\b`,
+      ),
     );
   });
 });

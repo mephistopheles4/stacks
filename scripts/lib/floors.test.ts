@@ -218,6 +218,16 @@ describe('configHashOf', () => {
   it('moves for an option nobody has classified', () => {
     expect(configHashOf({ ...CONFIG, ignoreStatic: true })).not.toBe(configHashOf(CONFIG));
   });
+
+  // ⚠️ Listed as neutral until #347 measured it: a reused verdict disagreed
+  // with a full run on the identical tree. Written into the config, it must move
+  // the stamp so G56 refuses it rather than letting two meanings share a hash.
+  it('moves for incremental mode, which carries verdicts forward', () => {
+    expect(configHashOf({ ...CONFIG, incremental: true })).not.toBe(configHashOf(CONFIG));
+    expect(
+      configHashOf({ ...CONFIG, incrementalFile: 'artifacts/stryker/incremental.json' }),
+    ).not.toBe(configHashOf(CONFIG));
+  });
 });
 
 describe('restampConfigHash', () => {

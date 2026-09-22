@@ -376,6 +376,19 @@ export function countDisableDirectives(
  *
  * Every entry here is output, logging or scratch: none of them can change which
  * mutants are generated or what verdict one gets.
+ *
+ * ⚠️ **`incremental` and `incrementalFile` were listed here and are not,
+ * measured.** Incremental mode carries a verdict forward whenever a mutant's own
+ * text and its covering tests look unchanged, and a fixture edit changes
+ * neither — so a reused verdict can disagree with a full run on the identical
+ * tree. The measurements are in
+ * `docs/log/2026-09-22-incremental-is-not-score-neutral.md` (#347). Unlisted,
+ * writing either into `stryker.config.mjs` moves `configHash` and G56 refuses it.
+ *
+ * **This list cannot see a command-line flag.** `configHashOf` reads the object
+ * `stryker.config.mjs` exports and nothing else, so `stryker run --incremental`
+ * is stamped exactly like a full run. What keeps reuse out of the trend store is
+ * the nightly's fresh checkout — see `docs/gates.md`, *Not gated, deliberately*.
  */
 export const SCORE_NEUTRAL_OPTIONS: readonly string[] = [
   '$schema',
@@ -389,8 +402,6 @@ export const SCORE_NEUTRAL_OPTIONS: readonly string[] = [
   'allowConsoleColors',
   'tempDirName',
   'cleanTempDir',
-  'incremental',
-  'incrementalFile',
 ];
 
 /** JSON with object keys in a fixed order, so a re-ordered file hashes the same. */
