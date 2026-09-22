@@ -140,7 +140,7 @@ describe('the counter refuses to under-count', () => {
     // series — mass-over-10 went 13 → 0 and max 13 → 7 — and nothing threw.
     // Asserted as a throw and never as counts: counts are what failed to notice.
     await expect(complexityOf([SUPPRESSED])).rejects.toThrow(
-      /disable directive.*fixtures\/complexity\/suppressed\.ts:17\b/,
+      /disable directive.*fixtures\/complexity\/suppressed\.ts:21\b/,
     );
   });
 

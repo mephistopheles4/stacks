@@ -185,7 +185,7 @@ describe('the counter refuses to under-count', () => {
     // the population as a legitimate zero — the one absence this counter reads
     // as a measurement. A throw, never counts, for `complexityOf`'s reason.
     await expect(cognitiveOf([SUPPRESSED])).rejects.toThrow(
-      /disable directive.*fixtures\/complexity\/suppressed\.ts:17\b/,
+      /disable directive.*fixtures\/complexity\/suppressed\.ts:21\b/,
     );
   });
 });
