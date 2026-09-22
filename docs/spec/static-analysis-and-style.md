@@ -523,9 +523,12 @@ rather than inside one.
    > comment](https://github.com/mephistopheles4/stacks/issues/269#issuecomment-5534565892)
    > re-anchored it — twenty nightlies under the stamp the floors file carries
    > now — it was not: 9 nightlies carry `fixtureHash` `2af72f80…` and 9 carry
-   > `duplicationHash` `fffde866…`. The add went ahead on the first reading, on
-   > the grounds that every cap is disarmed and the window gates *arming*, which
-   > is still a human judgement per series and has not happened. ⚠️ **Nothing yet prints or refuses on the duplication caps** — no
+   > `duplicationHash` `fffde866…`. **The owner settled it on 2026-09-22: the
+   > window gates arming only, not the disarmed entries.** Since #341 that window
+   > is ten distinct trees, not twenty nightlies, and it read 3 of 10 under
+   > `fixtureHash` at merge. Adding the name moved no stamp and left it at 3, so
+   > nothing restarted. Arming is still a human judgement per series and has not
+   > happened. ⚠️ **Nothing yet prints or refuses on the duplication caps** — no
    > window under `duplicationHash` exists in `deploy.ts` — so arming one first
    > needs that wiring.
 
