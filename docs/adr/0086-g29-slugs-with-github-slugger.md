@@ -40,6 +40,9 @@ declare.
 - **The version is Astro's today and ours from now on.** If Astro moves to a
   new major, two versions can sit in the tree until this pin follows it. That is
   a visible lockfile entry, not a silent failure.
-- **`github-slugger` is the library that defines GitHub's anchors, not GitHub
-  itself.** If github.com diverges from it, G29 follows the library. That is the
-  best reference available without a network call, which G21 forbids.
+- **`github-slugger` is G29's offline reference, not GitHub itself.** It
+  reimplements GitHub's anchors from the outside and GitHub does not ship it.
+  If github.com diverges from it, G29 follows the library. That is the best
+  reference available without a network call, which G21 forbids. On
+  2026-09-22 the three anchors this change fixed were read off GitHub's
+  rendered pages and matched the library.

@@ -59,9 +59,38 @@ function withoutCode(source: string): string {
  * Fenced blocks blanked and inline code left alone — the half of `withoutCode`
  * that heading extraction needs. A `# comment` inside a shell fence is not a
  * heading, but a heading's own code span is part of its anchor.
+ *
+ * A fence is CommonMark's, not a regex's: three or more backticks or tildes,
+ * indented or not, closed only by a run of the same character at least as
+ * long with nothing after it. So `~~~` fences, and a ```` fence quoting a
+ * shorter one, and a ```` ```text ```` line inside a block are all read the way
+ * GitHub reads them. An unclosed fence runs to the end of the document.
  */
 function withoutFences(source: string): string {
-  return source.replace(/^```[\s\S]*?^```/gm, (match) => match.replace(/[^\n]/g, ' '));
+  let open: { char: string; length: number } | undefined;
+
+  return source
+    .split('\n')
+    .map((line) => {
+      const fence = /^\s*(`{3,}|~{3,})(.*)$/.exec(line);
+      const run = fence?.[1] ?? '';
+      const rest = fence?.[2] ?? '';
+
+      if (open === undefined) {
+        // A backtick opener's info string may not contain a backtick.
+        if (fence && !(run.startsWith('`') && rest.includes('`'))) {
+          open = { char: run.charAt(0), length: run.length };
+          return ' '.repeat(line.length);
+        }
+        return line;
+      }
+
+      if (fence && run.startsWith(open.char) && run.length >= open.length && rest.trim() === '') {
+        open = undefined;
+      }
+      return ' '.repeat(line.length);
+    })
+    .join('\n');
 }
 
 /**
@@ -139,10 +168,21 @@ describe('G29 — a heading slugs the way GitHub slugs it', () => {
     ['## What outranks `shelf_order`', 'what-outranks-shelf_order'],
     // ⚠ is dropped, but its variation selector U+FE0F is a mark and survives,
     // so the anchor opens with it and then the hyphen the space became.
-    ['## ⚠️ The word is *durable*', '️-the-word-is-durable'],
+    ['## ⚠️ The word is *durable*', '\uFE0F-the-word-is-durable'],
     ['## Invariants → [gates](docs/gates.md)', 'invariants--gates'],
   ])('%s → #%s', (heading, anchor) => {
     expect([...anchorsOf(heading)]).toEqual([anchor]);
+  });
+
+  // A heading GitHub renders as code is not an anchor. Each block below hides a
+  // `## Hidden` that the column-0 backtick-only fence match read as a heading.
+  it.each([
+    ['a tilde fence', '~~~\n## Hidden\n~~~'],
+    ['a longer fence around a shorter run', '````md\n```\n## Hidden\n```\n````'],
+    ['an info string, which never closes', '```\n```text\n## Hidden\n```'],
+    ['an unclosed fence, which runs to the end', '```\n## Hidden'],
+  ])('ignores a heading inside %s', (_, source) => {
+    expect(anchorsOf(`## Shown\n\n${source}`)).toEqual(['shown']);
   });
 
   it('suffixes a repeated heading the way GitHub does', () => {

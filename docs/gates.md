@@ -314,8 +314,9 @@ carrying a number again. The fragment half is now
 exercised by a real corpus as well as by mutation, and its size is asserted by
 its own vacuity floor in `gates/doc-links.test.ts` rather than counted here: an
 exact number in this paragraph is precisely what the paragraph above rules
-against. **The slug is `github-slugger`'s, the library that defines GitHub's
-anchors, and no longer an imitation of it.** This sentence used to say the
+against. **The slug is `github-slugger`'s — the offline reimplementation of
+GitHub's anchors that G29 follows — and no longer a hand-kept imitation of
+it.** This sentence used to say the
 imitation erred *in the safe direction*, producing a false red and never a false
 green. A slug that disagrees with GitHub has no direction: the author of the red
 link writes the anchor the gate accepts, and that anchor is dead on GitHub. See
