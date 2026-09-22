@@ -513,13 +513,19 @@ rather than inside one.
    > entries in `stryker.floors.json`, and the six duplication caps landed
    > disarmed in `jscpd.floors.json` as 27 entries — the scoped three per declared
    > scope, the tree three under `whole-tree` — read by a second parser exactly
-   > as hostile as `parseCaps`, which still rejects all six names. ⚠️ **What
-   > gated the add was the roster, not the window.** Measured against 128
-   > records: 28 nightlies carried `cognitive-max`, `countedIn` went 98 → 79
-   > rather than to zero, the calibration window stayed at 3 trees either side,
-   > and `highest` resolved all eight scopes on every capped series. The window
-   > gates *arming*, which is still a human judgement per series and has not
-   > happened. ⚠️ **Nothing yet prints or refuses on the duplication caps** — no
+   > as hostile as `parseCaps`, which still rejects all six names. Measured
+   > against 128 records: 28 nightlies carried `cognitive-max`, `countedIn` went
+   > 98 → 79 rather than to zero, the calibration window stayed at 3 trees either
+   > side, and `highest` resolved all eight scopes on every capped series.
+   > ⚠️ **Two readings of the wait, and only one was met.** Read as §5 states it
+   > — *twenty records carry its samples* — it was: the roster hazard did not
+   > fire. Read as [#269's triage
+   > comment](https://github.com/mephistopheles4/stacks/issues/269#issuecomment-5534565892)
+   > re-anchored it — twenty nightlies under the stamp the floors file carries
+   > now — it was not: 9 nightlies carry `fixtureHash` `2af72f80…` and 9 carry
+   > `duplicationHash` `fffde866…`. The add went ahead on the first reading, on
+   > the grounds that every cap is disarmed and the window gates *arming*, which
+   > is still a human judgement per series and has not happened. ⚠️ **Nothing yet prints or refuses on the duplication caps** — no
    > window under `duplicationHash` exists in `deploy.ts` — so arming one first
    > needs that wiring.
 

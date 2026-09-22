@@ -1587,8 +1587,8 @@ describe('parseFloors, the cap half', () => {
 describe('CAPPED_SERIES', () => {
   it('caps the three series the spec caps here, and none of the five it does not', () => {
     // `complexity-functions` and `complexity-mass` grow with the tree
-    // legitimately. `cognitive-max` joined once twenty nightlies carried its
-    // family (#269), and it is the only cognitive series that ever will:
+    // legitimately. `cognitive-max` joined in #269, once 28 nightlies carried
+    // its family, and it is the only cognitive series that ever will:
     // `cognitive-mass-over-15` may never be capped, because nothing may refuse
     // on a cut nobody derived. The six duplication caps are not here and never
     // will be — they live in `jscpd.floors.json` under `duplicationHash`.

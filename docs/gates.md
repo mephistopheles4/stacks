@@ -1581,7 +1581,8 @@ measure.
 
 ✅ **`cognitive-max` joined `CAPPED_SERIES` on 2026-09-21**
 ([#269](https://github.com/mephistopheles4/stacks/issues/269)), disarmed in all
-eight scopes, once 28 nightlies carried the family: `countedIn` went 98 → 79
+eight scopes, once 28 nightlies carried the family (across three
+`fixtureHash` stamps; 9 under the current one): `countedIn` went 98 → 79
 records rather than to zero, and the newest counted run did not change. The six
 duplication caps landed disarmed in `jscpd.floors.json` under `duplicationHash`,
 and `parseCaps` still rejects every one of their names. The paragraph below is

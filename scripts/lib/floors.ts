@@ -67,7 +67,8 @@ export const UNARMED = 'unarmed';
  * ⚠️ **A name joins only once the records carry its samples.** `countedIn`
  * requires every member here, so a name no record carries empties it — and
  * with it every cap reading and the counting-rule refusal. `cognitive-max`
- * joined with 80 of 128 records carrying it, and `countedIn` went 98 → 79.
+ * joined when 80 of 128 records carried it — 28 of them nightlies, across three
+ * `fixtureHash` stamps, 9 under the current one — and `countedIn` went 98 → 79.
  */
 export const CAPPED_SERIES = [
   'complexity-max',
