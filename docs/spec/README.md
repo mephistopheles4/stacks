@@ -282,18 +282,18 @@ rediscovered as a surprise. Detail is in the file named.
 
 | Residual | Where |
 | --- | --- |
-| Vendoring three provider SVGs plus the Google graphic is an open **redistribution** question, accepted as ordinary risk | [card §12](enhanced-card.md#12-residuals-carried-not-smoothed), [attribution §5](attribution-surface.md#5-the-asset-vendored-not-hotlinked) |
+| Vendoring three provider SVGs plus the Google graphic is an open **redistribution** question, accepted as ordinary risk | [card §12](enhanced-card.md#12-residuals--carried-not-smoothed), [attribution §5](attribution-surface.md#5-the-asset-vendored-not-hotlinked) |
 | `apple_track_id` is **title-matched on all 41 books** — Apple has no ISBN endpoint. A wrong id is invisible until a visitor clicks it and hits a hard-404 | [provenance §9](provider-provenance.md#9-residuals) |
 | Parse-time shape checks are a **typo guard, not a correctness guarantee** | [provenance §4](provider-provenance.md#4-unrecognised-values-are-dropped-at-parse-per-provider) |
-| `trackId` stability across an edition change is **inference, not measurement** | [card §12](enhanced-card.md#12-residuals-carried-not-smoothed) |
+| `trackId` stability across an edition change is **inference, not measurement** | [card §12](enhanced-card.md#12-residuals--carried-not-smoothed) |
 | The precedence table **goes stale silently** when a provider's data quality changes | [merge §8](metadata-merge.md#8-residuals) |
 | `publisher` is **mixed-provenance from day one** — 17 hand values, 24 provider values, indistinguishable | [merge §5](metadata-merge.md#5-absent-only-holds-unconditionally) |
 | A book already carrying a **wrong value keeps it forever**; correcting it stays a hand edit | [merge §5](metadata-merge.md#5-absent-only-holds-unconditionally) |
 | `enrich`'s run one **undercounts by design**; "run it twice" is the instruction | [merge §6](metadata-merge.md#6-the-pass) |
 | A provider that cannot supply an id leaves a **permanent gap**, re-asked forever | [merge §6](metadata-merge.md#6-the-pass) |
-| `'★'.repeat(rating)` has **never been rendered by anything** — 0 of 41 books carry a rating | [card §12](enhanced-card.md#12-residuals-carried-not-smoothed) |
-| Apple's icon is **unlabelled for a sighted touch user**; `title` never fires on touch | [card §8](enhanced-card.md#naming-title-and-no-aria-label) |
-| `title`-as-accessible-name is the **weakest mechanism** in the accname computation | [card §8](enhanced-card.md#naming-title-and-no-aria-label) |
+| `'★'.repeat(rating)` has **never been rendered by anything** — 0 of 41 books carry a rating | [card §12](enhanced-card.md#12-residuals--carried-not-smoothed) |
+| Apple's icon is **unlabelled for a sighted touch user**; `title` never fires on touch | [card §8](enhanced-card.md#naming--title-and-no-aria-label) |
+| `title`-as-accessible-name is the **weakest mechanism** in the accname computation | [card §8](enhanced-card.md#naming--title-and-no-aria-label) |
 | The landscape phone sheet **overflows the cap by 103px** | [card §4](enhanced-card.md#4-layout) |
 | The **slide-down on dismiss exists in no code** — the defaulted number is also the unimplemented one | [card §6](enhanced-card.md#6-dismissal-drag-and-motion) |
 | While a phone card is open, **no Google graphic is on screen** | [attribution §4](attribution-surface.md#4-placement-measured-and-the-phone-occlusion-accepted) |
@@ -301,7 +301,7 @@ rediscovered as a surprise. Detail is in the file named.
 | The Google graphic's footprint is **assumed 144×26**, unmeasured | [attribution §5](attribution-surface.md#5-the-asset-vendored-not-hotlinked) |
 | **No gate protects the graphic being served** — declined deliberately | [attribution §5](attribution-surface.md#5-the-asset-vendored-not-hotlinked) |
 | Google's "no competing search services" clause is **read narrowly** — a judgement | [attribution §5](attribution-surface.md#5-the-asset-vendored-not-hotlinked) |
-| The **`## About` insert is the riskiest write this project would own**; gate P2 is the only check that reaches it | [merge §4](metadata-merge.md#about-why-the-body-and-what-it-costs) |
+| The **`## About` insert is the riskiest write this project would own**; gate P2 is the only check that reaches it | [merge §4](metadata-merge.md#-about-why-the-body-and-what-it-costs) |
 
 ---
 

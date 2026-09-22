@@ -314,10 +314,12 @@ carrying a number again. The fragment half is now
 exercised by a real corpus as well as by mutation, and its size is asserted by
 its own vacuity floor in `gates/doc-links.test.ts` rather than counted here: an
 exact number in this paragraph is precisely what the paragraph above rules
-against. The slug rule approximates GitHub's, and it approximates it
-in the safe direction — this repo's headings carry backticks, arrows and inline
-links, so a heading it slugifies differently produces a *false red*, never a
-false green.
+against. **The slug is `github-slugger`'s, the library that defines GitHub's
+anchors, and no longer an imitation of it.** This sentence used to say the
+imitation erred *in the safe direction*, producing a false red and never a false
+green. A slug that disagrees with GitHub has no direction: the author of the red
+link writes the anchor the gate accepts, and that anchor is dead on GitHub. See
+the 2026-09-22 entry below.
 
 ## Defect gates
 
@@ -1814,6 +1816,8 @@ oldest failure in this file.
 Carried over from the Decision Log when the decisions themselves moved to
 [`docs/adr/`](./adr/). These are not decisions — they are what went wrong while
 writing the things above, which is the part most likely to go wrong again.
+
+- **2026-09-22** — **G29's heading slug disagreed with GitHub on 228 of the repo's 1241 headings, and its own comment said that could only ever cause a false red.** The hand-kept slug collapsed a run of spaces into one hyphen, trimmed, and stripped `_` as emphasis; `github-slugger` does none of those, so `### Incremental runs — fast, and not a score` is `#incremental-runs--fast-and-not-a-score` on GitHub and G29 accepted only the single-hyphen form. The comment's reasoning held for one link and failed for the next one: a red link is fixed by writing the anchor the gate accepts, so every divergence was a false green one edit later, and the red was what steered the author there. Six links in `docs/spec/README.md` had already made that trip — green under G29, dead on GitHub. [#361](https://github.com/mephistopheles4/stacks/issues/361) replaced the imitation with the library itself ([ADR-0086](adr/0086-g29-slugs-with-github-slugger.md)) and planted the em-dash, underscore, emoji, arrow and repeated-heading cases as permanent tests, each watched red against the old slug first. **An approximation of someone else's algorithm has no safe direction when the approximation's output is what the author types next.**
 
 - **2026-09-03** — **A rename whose ticket stated that no gate reads the module name was reddened by G29, through a link inside a decision record nothing was allowed to edit.** [#294](https://github.com/mephistopheles4/stacks/issues/294) renamed `packages/site/src/shelf/case.ts` to `bookcase.ts` and said in the same breath that four decision records naming the old file are not edited and that **no gate reads the module name**, so nothing goes red on its own. **G29 (`doc-links`) reads it.** `withoutCode` blanks inline code spans and *then* extracts `](target)`, so ADR-0029's ``[`packages/site/src/shelf/case.ts`](../../packages/site/src/shelf/case.ts)`` is still a link once its text has been blanked out — and its target had moved. The ticket's two halves then contradicted each other, naming the same file as one that must not change and as one a green build depends on. Resolved by retargeting **the href alone** and leaving the rendered text byte for byte: a route is not reasoning, so `AGENTS.md`'s verbatim rule survives, and a moved file is precisely the failure G29's own docstring says it exists for. ⚠️ **The general shape is a gate that reads a *path* where a ticket was reasoning about a *name*.** Any rename can redden a document nobody meant to touch, and the place it surfaces is the ticket's own list of files that must not change.
 
