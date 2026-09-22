@@ -123,9 +123,13 @@ replacement. The report's mutant `id` is only unique within one report, so it
 was never used. Each plant was reverted with `git checkout -- <file>` after
 `git status` showed only that file.
 
-**Two plants ran narrowed with `--mutate`**, on both sides identically. The
-dry run still executes all 1,407 tests, and reuse is decided per mutant, so the
-verdicts inside the scope are unaffected. The file list for the config plant was derived
+**Two plants ran narrowed with `--mutate`**, on both sides identically.
+⚠️ **This said the dry run still executes all 1,407 tests, and it does not**:
+the Vitest runner narrows the dry run to specs related to the mutated files —
+239 tests for a `--mutate packages/core/src/key-if-present.ts` run on
+2026-09-22. The comparison holds anyway, because both sides ran the identical
+narrowed dry run, reuse is decided per mutant, and a spec unrelated to the
+mutated files cannot cover a mutant in them. The file list for the config plant was derived
 from the baseline's coverage rather than guessed: every file holding a mutant
 any test in the excluded spec covers, 17 of them.
 
