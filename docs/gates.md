@@ -280,6 +280,21 @@ now are too. The fragment half went red on a one-character typo planted in
 `docs/plan.md`'s link to `agents/issue-tracker.md#wayfinding-operations`, then
 reverted.
 
+**A same-document link — `[x](#heading)` — is checked against its own file's
+headings, and was skipped outright until
+[#365](https://github.com/mephistopheles4/stacks/issues/365).** The skip was the
+right call while the slug was hand-kept: checked against a slug that disagreed
+with GitHub, a red in-page link steers its author to an anchor that is dead on
+the site (#361). Once `anchorsOf` became `github-slugger`, the skip was the only
+thing between a renamed heading and every in-page link to it. It has its own
+floor, just under the real count, apart from the cross-file fragment floor — a
+single combined floor would let either population fall to zero while the other
+held it up. **The first run, on 2026-09-22, rejected nothing**: every
+same-document link the tree held that day was live, and the current count lives
+in the floor. That zero was not taken on trust. A dead link planted in
+`docs/plan.md` went red through the same test, and restoring `#` to the skip
+turned both new tests red — the planted unit case and the floor.
+
 **What the blanking costs was measured, not assumed.** Blanking inline code can
 in principle hide a *real* link — a line with mismatched backticks pairs the
 wrong two and swallows whatever sits between them, which would be a false green

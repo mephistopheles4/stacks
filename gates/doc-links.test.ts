@@ -101,24 +101,65 @@ function withoutFences(source: string): string {
  * there are no reference-style definitions and no autolinks to local files.
  * The honest limit is that a form nobody writes here is a form this does not
  * see, which is why the count is asserted below.
+ *
+ * A bare `#fragment` is not here: it names no file, so it is
+ * `sameDocumentLinks`'s, and the two halves below never see each other's.
  */
 function docLinks(): DocLink[] {
+  return trackedMarkdown().flatMap(({ path, source }) =>
+    linksIn(path, source).filter((link) => !link.target.startsWith('#')),
+  );
+}
+
+/**
+ * Every `[text](#fragment)` in the tracked `.md` files — a link to a heading
+ * in the file it is written in.
+ *
+ * These were skipped outright for as long as `anchorsOf` disagreed with GitHub
+ * (#361): checked against a wrong slug, a red link steers its author to an
+ * anchor that is dead on the site. Once the slug was GitHub's own, the skip was
+ * the only thing between a renamed heading and its dead in-page links (#365).
+ */
+function sameDocumentLinks(): DocLink[] {
+  return trackedMarkdown().flatMap(({ path, source }) =>
+    linksIn(path, source).filter((link) => link.target.startsWith('#')),
+  );
+}
+
+function trackedMarkdown(): { path: string; source: string }[] {
+  return trackedFiles()
+    .filter((file) => file.endsWith('.md'))
+    .map((path) => ({ path, source: readRepoFile(path) }));
+}
+
+/** Every non-network `](target)` in one document, code blanked first. */
+function linksIn(from: string, source: string): DocLink[] {
   const found: DocLink[] = [];
 
-  for (const path of trackedFiles().filter((file) => file.endsWith('.md'))) {
-    const lines = withoutCode(readRepoFile(path)).split('\n');
-
-    lines.forEach((text, index) => {
+  withoutCode(source)
+    .split('\n')
+    .forEach((text, index) => {
       for (const match of text.matchAll(/\]\(([^)\s]+)\)/g)) {
         const target = match[1];
         if (target === undefined) continue;
-        if (/^(https?:|mailto:|#)/.test(target)) continue;
-        found.push({ from: path, target, line: index + 1 });
+        if (/^(https?:|mailto:)/.test(target)) continue;
+        found.push({ from, target, line: index + 1 });
       }
     });
-  }
 
   return found;
+}
+
+/** Whether a fragment names one of `source`'s headings. */
+function hasAnchor(source: string, fragment: string): boolean {
+  return anchorsOf(source).includes(decodeURIComponent(fragment).toLowerCase());
+}
+
+/** The same-document links in `source` whose fragment names none of its own headings. */
+function deadSameDocumentLinks(from: string, source: string): DocLink[] {
+  return linksIn(from, source).filter(
+    (link) => link.target.startsWith('#') && !hasAnchor(source, link.target.slice(1)),
+  );
 }
 
 /** The repo-relative path a link resolves to, fragment stripped. */
@@ -245,14 +286,53 @@ describe('G29 — every documented link resolves', () => {
       .filter((link) => {
         const target = resolveTarget(link);
         if (!target.endsWith('.md') || !existsSync(target)) return false;
-        const fragment = decodeURIComponent(link.target.split('#')[1] ?? '');
-        return !anchorsOf(readFileSync(target, 'utf8')).includes(fragment.toLowerCase());
+        return !hasAnchor(readFileSync(target, 'utf8'), link.target.split('#')[1] ?? '');
       })
       .map((link) => `${link.from}:${link.line} → ${link.target}`);
 
     expect(
       broken,
       `links whose #fragment names no heading in the target:\n  ${broken.join('\n  ')}`,
+    ).toEqual([]);
+  });
+
+  it('refuses a same-document fragment that names none of its own headings', () => {
+    // The planted red, kept. Each dead link here is one the corpus half below
+    // would have to reject; each live one is one it must not. A fence is not a
+    // heading, so its `#` line is no anchor to link to.
+    const source = [
+      '# Title',
+      '## What outranks `shelf_order`',
+      '```sh',
+      '# not-a-heading',
+      '```',
+      '[live](#title) [live](#what-outranks-shelf_order) [live](#Title)',
+      '[dead](#what-outranks-shelforder) [dead](#not-a-heading) [dead](#)',
+      '[elsewhere](other.md#nowhere) `[code](#nowhere)`',
+    ].join('\n');
+
+    expect(deadSameDocumentLinks('x.md', source).map((link) => link.target)).toEqual([
+      '#what-outranks-shelforder',
+      '#not-a-heading',
+      '#',
+    ]);
+  });
+
+  it('points every same-document fragment at a heading in its own file', () => {
+    // Its own floor, for the reason the cross-file fragment half has one: a
+    // corpus of zero same-document links is trivially all-live, and so is an
+    // extraction that stopped seeing them. Just under the real count, and it
+    // only ever moves up.
+    expectFound(sameDocumentLinks(), 'same-document fragment links', 40);
+
+    const broken = trackedMarkdown()
+      .flatMap(({ path, source }) => deadSameDocumentLinks(path, source))
+      .map((link) => `${link.from}:${link.line} → ${link.target}`);
+
+    expect(
+      broken,
+      'same-document links whose #fragment names no heading in their own file. ' +
+        `Each is dead on GitHub:\n  ${broken.join('\n  ')}`,
     ).toEqual([]);
   });
 });
