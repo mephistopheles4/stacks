@@ -8,6 +8,9 @@
  * The directive names both counting rules, so one file serves both counters:
  * each config enables one of the two, and sees the other half as an unused
  * directive — which reports with `ruleId: null` and is skipped, as it should be.
+ *
+ * ⚠️ **`hidden` sits on line 17, and both counters' tests assert that line.**
+ * Growing this comment moves it; update the two regexes in the same edit.
  */
 
 // eslint-disable-next-line complexity, sonarjs/cognitive-complexity
