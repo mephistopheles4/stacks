@@ -5,7 +5,7 @@ mirrors the real layout: notes in `Library/`, covers cached in `Library/covers/`
 so a note's `cover:` value stays relative to the note itself.
 
 **One thing here is not a vault.** [`complexity/`](#the-complexity-inventory) is
-a single TypeScript file that exists to be *counted* rather than read as notes.
+two TypeScript files that exist to be *counted* rather than read as notes.
 Everything else on this page is about the vault.
 
 ## Everything here is invented
@@ -139,3 +139,11 @@ is **not typechecked**; keep it valid TypeScript by hand. See
 **Adding a construct** means adding it here *and* to `INVENTORY` in
 `scripts/lib/complexity.ts`, in the same commit. Sampling defeats the point: the
 un-sampled construct is exactly the silent change the file exists to catch.
+
+`complexity/suppressed.ts` is the other file, and it exists to be **refused**
+rather than counted. One `eslint-disable-next-line` directive hides its only
+function from both counting rules, and both counters must throw on it — a
+suppressed function leaves the series without a trace, which is how one comment
+could clear a cap breach
+([#244](https://github.com/mephistopheles4/stacks/issues/244)). It is not in
+`INVENTORY` and must never be, since no declared number describes it.
