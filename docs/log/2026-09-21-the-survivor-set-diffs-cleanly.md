@@ -102,6 +102,12 @@ this measurement from `mutants[i]` gets a confident, wrong answer.
 "Identity" is file + mutator + replacement + start and end line and column. It
 has **zero** collisions within a run, so it is a true identity on one tree.
 
+**Both directions are checked.** Every report holds 10,644 ids, none is
+missing from the later report, and none exists only in it. A one-way check
+from A's ids would have read as complete even with extra mutants in the later
+report; review caught that the first version of `id-align.mts` made only that
+one-way check.
+
 **Every pair, not only pairs with A.** Comparing the survivor sets by identity
 across all 21 pairs of the seven reports, the symmetric difference is 0 for 10
 pairs, 1 for 10 and **2** for one: B against `35430813371`, since B lacks the
@@ -525,7 +531,9 @@ reports.slice(1).forEach((r, i) => {
       flipped.push(`${file}:${m.location.start.line}:${m.location.start.column} ${m.mutatorName} ${JSON.stringify(m.replacement)} ${t}`);
     }
   }
-  out[`${paths[0]} vs ${paths[i + 1]}`] = { ids: base.size, sameIdentity, differentIdentity, missing, statusFlips: Object.fromEntries(flips), flipped };
+  // the reverse direction: ids only the later report carries
+  const extra = [...other.keys()].filter((id) => !base.has(id)).length;
+  out[`${paths[0]} vs ${paths[i + 1]}`] = { ids: base.size, otherIds: other.size, sameIdentity, differentIdentity, missing, extra, statusFlips: Object.fromEntries(flips), flipped };
 });
 console.log(JSON.stringify(out, null, 2));
 ```
