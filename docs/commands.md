@@ -312,6 +312,44 @@ run by `tsx` would need an exclusion in `stryker.scopes.json`, which moves
 `configHash`; the rendering lives in `scripts/lib/mutation-report.ts`, inside the
 `scripts` scope, where its spec reaches it.
 
+### Incremental runs are fast, and they are not a score
+
+**While you work, reuse the last run's verdicts**, and pass every flag on the
+command line — never in `stryker.config.mjs`:
+
+```sh
+pnpm exec stryker run --incremental --incrementalFile artifacts/stryker/incremental.json
+```
+
+The first run is a full one and writes the results file. After that, a run
+takes about a minute where a full one takes 13–18, and it answers *which
+mutants moved in the code I just touched*. Keep the file under `artifacts/`:
+Stryker's default is `reports/stryker-incremental.json`, and `reports/` is not
+ignored.
+
+⚠️ **It is not score-neutral, measured.** A verdict is carried forward when the
+mutant's own text and its covering tests look unchanged, and some edits change
+neither. On [#347](https://github.com/mephistopheles4/stacks/issues/347),
+removing `"Books"` from `fixtures/api/apple-search-hit.json` left three
+`apple-books.ts` mutants `Killed` where a full run on the same tree said
+`Survived` — and so did a redundant filter one line away from them in the same
+file. What it cannot see:
+
+- **A fixture, a helper outside the mutant's span, or `vitest.stryker.config.ts`.**
+- **A lost test.** A surviving mutant is re-run only when a test is *added*, so
+  a mutant whose only tests went away stays `Survived` instead of `NoCoverage`.
+
+A spec edit is the opposite case: the Vitest runner reports no test positions,
+so one changed line re-runs every mutant any test in that file covers — too
+much, never too little. The measurements are in
+[`docs/log/2026-09-22-incremental-is-not-score-neutral.md`](log/2026-09-22-incremental-is-not-score-neutral.md).
+
+⚠️ **It overwrites `artifacts/stryker/current/mutation.json`**, the report
+`deploy:site`'s resolution line reads and `pnpm mutation:score` scores by
+default — so either then reports reused verdicts as if they were fresh. **Before
+quoting a scope's score, or deploying, run plain `pnpm mutation:run`.** Pass
+`--force` to re-run everything while keeping the file.
+
 ## `pnpm mutation:stamp`
 
 **The remedy G56 (`config-hash`) prints, and the only thing in the repository
