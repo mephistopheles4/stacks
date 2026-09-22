@@ -321,9 +321,19 @@ same diff as whatever moved the configuration — `docs/spec/the-ratchet.md` §4
 route table has always asked for both halves, and G56 is what makes forgetting
 the second half a red pull request rather than an ambush at the next deploy.
 
-⚠️ **There is no `--check` flag, and one was written and removed.** *Is the
-stamp stale* is the question G56 already answers, in the place a stranger meets
-it; a second answer here would be a flag with no reader.
+⚠️ **`--check` asks and writes nothing, and its reader is `.husky/pre-commit`.**
+It exits 1 on a stale stamp and 0 on a current one, and **the exit status is the
+answer**: the hook discards the output and prints its own warning, so a `--check`
+that only printed would make stale and fresh look the same to it. The hook must
+never write — rewriting `stryker.floors.json` mid-commit would change what is
+about to be committed, outside the staged set — so it needs a way to ask, which
+the bare command cannot give. It warns and never refuses; G56 stays the
+guarantee, because Dependabot commits with no working tree and `--no-verify`
+skips the hook. The flag was cut on
+[#329](https://github.com/mephistopheles4/stacks/pull/329) as one nothing called
+and came back on [#330](https://github.com/mephistopheles4/stacks/pull/330) with
+the hook that calls it — *a field arrives with its reader* working, not
+reversed. See [the hooks](#the-hooks--what-arrives-with-pnpm-install-and-reading-the-crap-table).
 
 ⚠️ **It re-derives and re-scores nothing.** Running it makes the file
 self-consistent, not correct — every floor in it is still a number measured
