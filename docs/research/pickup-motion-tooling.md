@@ -33,7 +33,11 @@ Bundlephobia's measured minified+gzipped size for the package's main entry
 point (`bundlephobia.com/api/size?package=<pkg>@<version>`), which is what a
 bundler would actually ship — not npm's unpacked size, which counts every
 file in the published tarball (source maps, multiple build targets, docs)
-and overstates real bundle cost by 5-40x. Sources in §7.
+and overstates real bundle cost by an inconsistent amount: about 3x for
+`tweakpane` (447 KB unpacked vs 148 KB min), about 17x for
+`@tweenjs/tween.js` (224 KB vs 12.8 KB min), and about 89x for `gsap`
+(6.26 MB vs 70.6 KB min, because the unpacked figure counts every bundled
+plugin the main entry point doesn't import). Sources in §7.
 
 | Option | Tuning capability | Visual editor? | Dev-only achievable? | Runtime bytes to visitors (min+gzip) | Direct deps | Licence | Last release | Advisories |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -163,7 +167,7 @@ bundler tree-shaking.
 
 ### Hand-rolled timeline
 
-As in the prior Theatre.js-only pass: a plain array of
+A plain array of
 `{ tMs, values: Partial<PickupPose> }` keyframes, a `lerp`, and 2-4
 hardcoded cubic-bezier constants (ease-in-out, ease-out — the same handful
 any animation needs), estimated at 100-200 lines inside
