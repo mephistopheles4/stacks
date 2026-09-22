@@ -175,6 +175,18 @@ describe('the cognitive inventory fixture', () => {
   });
 });
 
+describe('the counter refuses to under-count', () => {
+  it('raises on a used disable directive, naming the file and the line', async () => {
+    // ⚠️ #244, the cognitive half. A suppressed message leaves `messages` for
+    // `suppressedMessages`, so the function drops out of `scored` and lands in
+    // the population as a legitimate zero — the one absence this counter reads
+    // as a measurement. A throw, never counts, for `complexityOf`'s reason.
+    await expect(cognitiveOf(['fixtures/complexity/suppressed.ts'])).rejects.toThrow(
+      /fixtures\/complexity\/suppressed\.ts:14\b/,
+    );
+  });
+});
+
 describe('the population rule', () => {
   it('drops exactly the kinds the rule never visits, and nothing else', () => {
     const every: PerFunction[] = [

@@ -200,10 +200,11 @@ export function cognitivePopulationOf(functions: readonly PerFunction[]): PerFun
  * no messages is entirely normal — a file of flat functions reports nothing at
  * all. So the silence cannot be checked, and every other way of losing a file
  * has to be raised instead: a file that did not parse, a file ESLint declined
- * to lint, and a message whose number will not read.
+ * to lint, a message whose number will not read, and a used `eslint-disable`
+ * directive for this rule (#244).
  *
  * **What it does not throw on is a diagnostic about code it was not asked
- * about** — an unused `eslint-disable` directive reports with `ruleId: null`
+ * about** — an *unused* `eslint-disable` directive reports with `ruleId: null`
  * and means the file *was* linted, so it is skipped rather than raised.
  * `complexityOf`'s distinction, for `complexityOf`'s reason.
  */
@@ -237,6 +238,23 @@ export async function cognitiveOf(files: readonly string[]): Promise<CognitiveSc
 
   for (const result of results) {
     const file = relativeTo(REPO_ROOT, result.filePath);
+
+    /**
+     * ⚠️ **A used disable directive, `complexityOf`'s fourth refusal, and
+     * quieter here.** The population is derived from the cyclomatic report, so
+     * a suppressed cognitive message does not shrink it: the function stays in
+     * the denominator and reads as a legitimate zero, which is the one absence
+     * this counter treats as a measurement. #244.
+     */
+    const suppressed = result.suppressedMessages.find((entry) => entry.ruleId === RULE);
+    if (suppressed !== undefined) {
+      throw new Error(
+        `a disable directive suppresses the cognitive score on ${file}:${String(suppressed.line)}. ` +
+          'A suppressed function stays in the population and counts as zero, which is ' +
+          'indistinguishable from a flat function. Remove the directive; the score is not a ' +
+          'lint finding to be waived.',
+      );
+    }
 
     for (const message of result.messages) {
       if (message.fatal === true) {

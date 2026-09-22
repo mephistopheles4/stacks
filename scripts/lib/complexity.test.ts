@@ -34,6 +34,9 @@ import {
 import { readDeclarations, type Scope } from './mutation-score.ts';
 import { sourceFiles } from './scope-check.ts';
 
+/** A function hidden from the counter by one comment; see its header. */
+const SUPPRESSED = 'fixtures/complexity/suppressed.ts';
+
 /** A synthetic function, for the arithmetic that should not need a tree. */
 function fn(complexity: number, file = 'a.ts'): PerFunction {
   return { file, line: 1, column: 1, label: 'Function', kind: 'function', complexity };
@@ -129,6 +132,16 @@ describe('the counter refuses to under-count', () => {
     // for an `ignores` entry someone adds later — the population would shrink
     // and a series would move with no diff to point at.
     await expect(complexityOf(['node_modules/pretend/thing.ts'])).rejects.toThrow(/ignore/);
+  });
+
+  it('raises on a used disable directive, naming the file and the line', async () => {
+    // ⚠️ #244. ESLint moves a suppressed message out of `messages` and into
+    // `suppressedMessages`, so one comment took `overTheCut` out of all four
+    // series — mass-over-10 went 13 → 0 and max 13 → 7 — and nothing threw.
+    // Asserted as a throw and never as counts: counts are what failed to notice.
+    await expect(complexityOf([SUPPRESSED])).rejects.toThrow(
+      /fixtures\/complexity\/suppressed\.ts:14\b/,
+    );
   });
 
   it('counts nothing for an empty file list without calling ESLint', async () => {
