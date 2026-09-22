@@ -508,6 +508,21 @@ rather than inside one.
    the observed cadence that is **about three weeks of wall clock**, not twenty
    merges, and any change to the governing hash restarts it from zero.
 
+   > ✅ **Done — [#269](https://github.com/mephistopheles4/stacks/issues/269),
+   > 2026-09-21.** `cognitive-max` joined `CAPPED_SERIES` with eight disarmed
+   > entries in `stryker.floors.json`, and the six duplication caps landed
+   > disarmed in `jscpd.floors.json` as 27 entries — the scoped three per declared
+   > scope, the tree three under `whole-tree` — read by a second parser exactly
+   > as hostile as `parseCaps`, which still rejects all six names. ⚠️ **What
+   > gated the add was the roster, not the window.** Measured against 128
+   > records: 28 nightlies carried `cognitive-max`, `countedIn` went 98 → 79
+   > rather than to zero, the calibration window stayed at 3 trees either side,
+   > and `highest` resolved all eight scopes on every capped series. The window
+   > gates *arming*, which is still a human judgement per series and has not
+   > happened. ⚠️ **Nothing yet prints or refuses on the duplication caps** — no
+   > window under `duplicationHash` exists in `deploy.ts` — so arming one first
+   > needs that wiring.
+
 Steps 2 through 4 are a chain. Steps 5, 7 and 8 are independent of each other
 once step 1 is done.
 

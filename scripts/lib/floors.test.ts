@@ -819,12 +819,13 @@ describe('renderFloorLines', () => {
 });
 
 describe('floorRefusals', () => {
-  // Both capped series, unarmed — the state the whole rollout ships in, and the
+  // Every capped series, unarmed — the state the whole rollout ships in, and the
   // one that leaves these floor-side clauses readable on their own. Without it
   // every case below would refuse for a cap reason before reaching its subject.
   const CAPS = {
     'complexity-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
     'complexity-mass-over-10': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+    'cognitive-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
   };
 
   const FLOORS = parseFloors({
@@ -1528,6 +1529,42 @@ describe('parseFloors, the cap half', () => {
     );
   });
 
+  // ⚠️ **The second mechanism exists so this one does not have to weaken**
+  // (#269). The six duplication caps live in `jscpd.floors.json`, keyed on
+  // `duplicationHash`; admitting one here would calibrate it under the wrong
+  // hash, and loosening the parser to do so would drop the typo guard for
+  // every complexity cap with it. Planted, because this is the rejection a
+  // later session will be most tempted to undo.
+  it('throws on a duplication cap, which belongs to the other file', () => {
+    for (const series of [
+      'duplication-clones',
+      'duplication-lines',
+      'duplication-ignored-lines',
+      'duplication-tree-clones',
+      'duplication-tree-lines',
+      'duplication-tree-ignored-lines',
+    ]) {
+      expect(() => parseFloors(document({ [series]: BOTH['complexity-max'] })), series).toThrow(
+        new RegExp(`${series}, which is not a capped series`),
+      );
+    }
+  });
+
+  // Uncapped by decision, and a parse error rather than an ignored key for
+  // `complexity-mass`'s reason: nothing may ever refuse on a cut nobody derived.
+  it('throws on every cognitive series but cognitive-max', () => {
+    for (const series of ['cognitive-functions', 'cognitive-mass', 'cognitive-mass-over-15']) {
+      expect(() => parseFloors(document({ [series]: BOTH['complexity-max'] })), series).toThrow(
+        new RegExp(series),
+      );
+    }
+    expect(
+      parseFloors(document({ 'cognitive-max': BOTH['complexity-max'] }))
+        .scopes.get('scripts')
+        ?.caps.get('cognitive-max')?.cap,
+    ).toBe('unarmed');
+  });
+
   it('throws on a cap that is neither a number nor unarmed', () => {
     expect(() =>
       parseFloors(document({ 'complexity-max': { cap: 'later', armed: '2026-08-22', notes: [] } })),
@@ -1548,14 +1585,18 @@ describe('parseFloors, the cap half', () => {
 });
 
 describe('CAPPED_SERIES', () => {
-  it('caps the two series the spec caps, and none of the six it does not', () => {
-    // ⚠️ Six uncapped now, not two: `complexity-functions` and
-    // `complexity-mass` grow with the tree legitimately, and **all four
-    // cognitive series** are uncapped at adoption — `cognitive-max` joins this
-    // array only once twenty records carry its family (#258), and
-    // `cognitive-mass-over-15` may never join it at all, because nothing may
-    // refuse on a cut nobody derived.
-    expect([...CAPPED_SERIES]).toEqual(['complexity-max', 'complexity-mass-over-10']);
+  it('caps the three series the spec caps here, and none of the five it does not', () => {
+    // `complexity-functions` and `complexity-mass` grow with the tree
+    // legitimately. `cognitive-max` joined once twenty nightlies carried its
+    // family (#269), and it is the only cognitive series that ever will:
+    // `cognitive-mass-over-15` may never be capped, because nothing may refuse
+    // on a cut nobody derived. The six duplication caps are not here and never
+    // will be — they live in `jscpd.floors.json` under `duplicationHash`.
+    expect([...CAPPED_SERIES]).toEqual([
+      'complexity-max',
+      'complexity-mass-over-10',
+      'cognitive-max',
+    ]);
   });
 
   // ⚠️ **The one input to a count that the fixture hash cannot see.** Move
@@ -1791,11 +1832,12 @@ describe('capCalibration', () => {
 });
 
 describe('floorRefusals, the cap half', () => {
-  /** Both capped series, unarmed, for one scope. */
+  /** Every capped series, unarmed, for one scope. */
   function unarmedCaps(): Record<string, unknown> {
     return {
       'complexity-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
       'complexity-mass-over-10': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+      'cognitive-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
     };
   }
 
@@ -1811,6 +1853,7 @@ describe('floorRefusals, the cap half', () => {
         caps: {
           'complexity-max': { cap: 12, armed: '2026-08-22', notes: [] },
           'complexity-mass-over-10': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+          'cognitive-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
         },
       },
       'packages/cli/src': {
@@ -2145,6 +2188,7 @@ describe('countedIn', () => {
     return new Map([
       ['complexity-max', new Map([['scripts', max]])],
       ['complexity-mass-over-10', new Map([['scripts', massOver10]])],
+      ['cognitive-max', new Map([['scripts', max]])],
     ]);
   }
 
@@ -2197,6 +2241,7 @@ describe('floorRefusals — the two runs are two fields', () => {
         caps: {
           'complexity-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
           'complexity-mass-over-10': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
+          'cognitive-max': { cap: 'unarmed', armed: '2026-08-22', notes: [] },
         },
       },
     },

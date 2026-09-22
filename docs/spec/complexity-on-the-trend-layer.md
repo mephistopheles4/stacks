@@ -573,9 +573,9 @@ was the fifth, and it is **adopted**: four series beside the cyclomatic four,
 never a replacement, with **its own denominator** — smaller than the cyclomatic
 one by the nine nodes the rule never visits, which is the durable figure rather
 than either total — and **exactly one series a cap may ever reach**,
-`cognitive-max`. ⚠️ **No cognitive series is capped today**: `CAPPED_SERIES`
-holds `complexity-max` and `complexity-mass-over-10` and nothing else, and
-`cognitive-max` joins it only once twenty records carry the families
+`cognitive-max`. ⚠️ **`cognitive-max` is capped, disarmed**: `CAPPED_SERIES`
+holds `complexity-max`, `complexity-mass-over-10` and `cognitive-max`, the last
+joining on 2026-09-21 once 28 nightlies carried the family
 ([#269](https://github.com/mephistopheles4/stacks/issues/269), which supersedes the
 closed [#258](https://github.com/mephistopheles4/stacks/issues/258)).
 `cognitive-mass-over-15` may never join it at all. The bar this file set —

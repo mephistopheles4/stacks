@@ -1579,8 +1579,16 @@ series a cap may ever reach. A mirrored cap is unreachable: it needs a mass-over
 count, which needs a cut, and McCabe's 10 is *worse* — a bound about a different
 measure.
 
-⚠️ **No cognitive name is in `CAPPED_SERIES` yet, and that is a code constraint
-rather than a caution.** `countedIn` filters to rows where **every** member of
+✅ **`cognitive-max` joined `CAPPED_SERIES` on 2026-09-21**
+([#269](https://github.com/mephistopheles4/stacks/issues/269)), disarmed in all
+eight scopes, once 28 nightlies carried the family: `countedIn` went 98 → 79
+records rather than to zero, and the newest counted run did not change. The six
+duplication caps landed disarmed in `jscpd.floors.json` under `duplicationHash`,
+and `parseCaps` still rejects every one of their names. The paragraph below is
+the constraint that wait honoured, and it still binds the next name anyone adds.
+
+⚠️ **No cognitive name was in `CAPPED_SERIES` until then, and that was a code
+constraint rather than a caution.** `countedIn` filters to rows where **every** member of
 that set has samples, so adding `cognitive-max` before records carry that family
 makes it return nothing at all. **What that breaks is the *reading*, not the
 window.** `capCalibration` takes its window from `streakOf`, which filters on

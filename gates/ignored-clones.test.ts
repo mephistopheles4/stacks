@@ -20,8 +20,9 @@
  * ⚠️ **The slug names what is counted, not the document.** `duplication-floors`
  * was the alternative and is rejected on G43's precedent: this asserts the
  * `ignoredLines` field and the population list, and says nothing about the caps
- * that [#258](https://github.com/mephistopheles4/stacks/issues/258) will add
- * beside them.
+ * that [#269](https://github.com/mephistopheles4/stacks/issues/269) added beside
+ * them — their shape is `parseDuplicationCaps`' and their completeness is
+ * planted in `scripts/lib/duplication.test.ts`.
  *
  * ⚠️ **It also compares the recorded counting rule to the installed one, which
  * G43 does not do for its own file — and the asymmetry is deliberate.** This

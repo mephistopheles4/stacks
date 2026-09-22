@@ -42,17 +42,37 @@ export type FloorValue = number | 'unarmed';
 export const UNARMED = 'unarmed';
 
 /**
- * The two series that get a cap, and the whole of what may be capped.
+ * The three series that get a cap in `stryker.floors.json`, and the whole of
+ * what may be capped there.
  *
  * ⚠️ **`complexity-functions` and `complexity-mass` are deliberately absent.**
  * They grow with the codebase legitimately, and a cap on either would refuse a
  * feature — a check that punishes the work rather than the decay. Naming one of
  * them in the floors file is therefore the same fault as misspelling a capped
  * series, and the reader treats it as one.
+ *
+ * **`cognitive-max` is the only cognitive member and always will be**
+ * ([#269](https://github.com/mephistopheles4/stacks/issues/269)). It is
+ * per-scope and an ESLint-rule measure, so `fixtureHash` already covers its
+ * counting rule. `cognitive-mass-over-15` may never join: nothing may refuse on
+ * a cut nobody derived.
+ *
+ * ⚠️ **The six duplication caps are not here and must never be added.** They
+ * live in `jscpd.floors.json`, calibrated under `duplicationHash` — see
+ * `DUPLICATION_CAPPED` in `duplication.ts`. A duplication name here would be
+ * calibrated under the wrong hash, and loosening `parseCaps` to admit one would
+ * remove the typo guard for every complexity cap too. The second mechanism
+ * exists so this one does not have to weaken.
+ *
+ * ⚠️ **A name joins only once the records carry its samples.** `countedIn`
+ * requires every member here, so a name no record carries empties it — and
+ * with it every cap reading and the counting-rule refusal. `cognitive-max`
+ * joined with 80 of 128 records carrying it, and `countedIn` went 98 → 79.
  */
 export const CAPPED_SERIES = [
   'complexity-max',
   'complexity-mass-over-10',
+  'cognitive-max',
 ] as const satisfies readonly TrendName[];
 
 /** A series a cap may name. */
@@ -203,7 +223,7 @@ function parseCaps(name: string, caps: unknown): Map<CappedSeries, ScopeCap> {
     if (!cappable.has(series)) {
       throw new Error(
         `${name} caps ${series}, which is not a capped series. ` +
-          `The capped series are ${CAPPED_SERIES.join(' and ')}.`,
+          `The capped series are ${CAPPED_SERIES.join(', ')}.`,
       );
     }
     parsed.set(series as CappedSeries, parseCap(`${name} ${series}`, entry));
@@ -211,7 +231,14 @@ function parseCaps(name: string, caps: unknown): Map<CappedSeries, ScopeCap> {
   return parsed;
 }
 
-function parseCap(what: string, entry: unknown): ScopeCap {
+/**
+ * One cap entry, or a throw naming it.
+ *
+ * Exported for `jscpd.floors.json`'s cap mechanism, which shares this entry
+ * shape and none of this file's roster — `parseCaps` above stays the only
+ * reader that decides which names `stryker.floors.json` may carry.
+ */
+export function parseCap(what: string, entry: unknown): ScopeCap {
   if (typeof entry !== 'object' || entry === null) {
     throw new Error(`the cap for ${what} is not an object`);
   }
@@ -550,10 +577,11 @@ function digest(value: unknown): string {
  * ⚠️ **The two assertions anchor on different arrays, and the difference is
  * not cosmetic.** `floors.test.ts` closes `MCCABE_CUT` against `CAPPED_SERIES`,
  * which works because `complexity-mass-over-10` is in it. `cognitive.test.ts`
- * closes `COGNITIVE_CUT` against `TREND_SERIES`, because **no cognitive name is
- * in `CAPPED_SERIES` and none ever will be** — `cognitive-mass-over-15` may
- * never be capped, which is the condition on accepting a cut nobody derived.
- * The `CAPPED_SERIES` spelling would be vacuous there.
+ * closes `COGNITIVE_CUT` against `TREND_SERIES`, because **the cut's series is
+ * not in `CAPPED_SERIES` and never will be** — `cognitive-max` joined in #269,
+ * but `cognitive-mass-over-15` may never be capped, which is the condition on
+ * accepting a cut nobody derived. The `CAPPED_SERIES` spelling would be
+ * vacuous there.
  *
  * ⚠️ **THE THREE INSTALLED VERSIONS ARE DELIBERATELY ABSENT SINCE
  * [#341](https://github.com/mephistopheles4/stacks/issues/341), AND THEIR

@@ -10,8 +10,8 @@
     "     the DECLARED MUTATION SCOPES, in both directions, and refuses the deploy on a",
     "     mismatch. The whole-tree population is not a mutation scope and never will be, so a",
     "     key for it in that file is a refusal on every deploy from the day it lands.",
-    "  2. `parseCaps()` treats any cap name that is not `complexity-max` or",
-    "     `complexity-mass-over-10` as a PARSE ERROR, on purpose — a typo must not read as",
+    "  2. `parseCaps()` treats any cap name that is not `complexity-max`,",
+    "     `complexity-mass-over-10` or `cognitive-max` as a PARSE ERROR, on purpose — a typo must not read as",
     "     protection. That parser is therefore hostile to every duplication entry by design,",
     "     and loosening it to admit these would remove the guard for the complexity caps too.",
     "",
@@ -93,9 +93,39 @@
     "clones at 50/5 and 82 at 20/3 OVER THE IDENTICAL TREE. A threshold is not a setting",
     "around the number; it is the number.",
     "",
-    "── no caps, and that is this ticket's instruction rather than an omission ─────────",
+    "── the caps ───────────────────────────────────────────────────────────────────────",
     "",
-    "NO CAP LIVES HERE YET AND NO NAME JOINS `CAPPED_SERIES`. Six of the eight duplication",
+    "SIX SERIES, TWENTY-SEVEN ENTRIES, EVERY ONE `unarmed`. Added 2026-09-21 by #269. Each",
+    "declared scope carries `duplication-clones`, `duplication-lines` and",
+    "`duplication-ignored-lines`; `whole-tree` carries the three `duplication-tree-*` twins.",
+    "A TREE CAP UNDER A SCOPE KEY IS A PARSE ERROR, because the tree series carry no",
+    "`scope=` label and such an entry could never resolve a value — the 24 unarmable",
+    "entries §5 refused `CAPPED_SERIES` for, and this file must not rebuild them. The two",
+    "denominators, `duplication-total-lines` and `duplication-tree-total-lines`, are NOT",
+    "capped: they grow with the tree legitimately. Naming one is a parse error too.",
+    "",
+    "`cap`     a number this population may not exceed for that series, or `unarmed`.",
+    "`armed`   the date the entry was added, or the date it was armed.",
+    "`notes`   APPEND-ONLY, one line per raising. RAISING A CAP IS THE LOWERING OF THIS",
+    "          FILE, stryker.floors.json's rule and its reason.",
+    "",
+    "THESE CAPS CALIBRATE UNDER `duplicationHash`, NOT `fixtureHash`. Two mechanisms means",
+    "two clocks, and they are not synchronised: a jscpd version or threshold change restarts",
+    "this window and leaves the cognitive one alone. ARMING IS A LATER HUMAN JUDGEMENT PER",
+    "SERIES, after its window fills — and nothing yet prints that window or refuses on these",
+    "numbers, so an armed value here would be a claim nothing reads. Wire the print and the",
+    "refusal before arming the first one.",
+    "",
+    "⚠️ `parseCaps` IN scripts/lib/floors.ts STILL REJECTS EVERY ONE OF THESE NAMES, AND MUST.",
+    "Its rejection is deliberate — a typo must not read as protection — and loosening it to",
+    "admit a duplication entry would remove that guard for the complexity caps too. This file",
+    "has its own reader, `parseDuplicationCaps` in scripts/lib/duplication.ts, which is exactly",
+    "as hostile. This is the thing a later session will be most tempted to undo.",
+    "",
+    "── the wait these caps sat out, kept as history ───────────────────────────────────",
+    "",
+    "The block below said NO CAP LIVES HERE YET when it was written, which was true then.",
+    "Six of the eight duplication",
     "series are to be capped — the spec's §5 says which — but `countedIn` in",
     "scripts/lib/floors.ts filters to records where EVERY member of `CAPPED_SERIES` has",
     "samples, keyed on the whole set on purpose. Adding a name before twenty records carry its",
@@ -116,14 +146,86 @@
   ],
   "duplicationHash": "sha256:fffde866a12cd43bd2b7cec736cb8262c81671dc8c54f92e77e6c56725787e60",
   "populations": {
-    "packages/core/src": { "ignoredLines": 0, "notes": [] },
-    "packages/core/src/adapters": { "ignoredLines": 0, "notes": [] },
-    "packages/core/src/covers": { "ignoredLines": 0, "notes": [] },
-    "packages/core/src/import": { "ignoredLines": 0, "notes": [] },
-    "packages/core/src/metadata": { "ignoredLines": 0, "notes": [] },
-    "packages/site/src/shelf": { "ignoredLines": 0, "notes": [] },
-    "packages/cli/src": { "ignoredLines": 0, "notes": [] },
-    "scripts": { "ignoredLines": 0, "notes": [] },
-    "whole-tree": { "ignoredLines": 0, "notes": [] }
+    "packages/core/src": {
+      "ignoredLines": 0,
+      "notes": [],
+      "caps": {
+        "duplication-clones": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-ignored-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
+      }
+    },
+    "packages/core/src/adapters": {
+      "ignoredLines": 0,
+      "notes": [],
+      "caps": {
+        "duplication-clones": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-ignored-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
+      }
+    },
+    "packages/core/src/covers": {
+      "ignoredLines": 0,
+      "notes": [],
+      "caps": {
+        "duplication-clones": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-ignored-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
+      }
+    },
+    "packages/core/src/import": {
+      "ignoredLines": 0,
+      "notes": [],
+      "caps": {
+        "duplication-clones": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-ignored-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
+      }
+    },
+    "packages/core/src/metadata": {
+      "ignoredLines": 0,
+      "notes": [],
+      "caps": {
+        "duplication-clones": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-ignored-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
+      }
+    },
+    "packages/site/src/shelf": {
+      "ignoredLines": 0,
+      "notes": [],
+      "caps": {
+        "duplication-clones": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-ignored-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
+      }
+    },
+    "packages/cli/src": {
+      "ignoredLines": 0,
+      "notes": [],
+      "caps": {
+        "duplication-clones": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-ignored-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
+      }
+    },
+    "scripts": {
+      "ignoredLines": 0,
+      "notes": [],
+      "caps": {
+        "duplication-clones": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-ignored-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
+      }
+    },
+    "whole-tree": {
+      "ignoredLines": 0,
+      "notes": [],
+      "caps": {
+        "duplication-tree-clones": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-tree-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] },
+        "duplication-tree-ignored-lines": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
+      }
+    }
   }
 }

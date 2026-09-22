@@ -24,16 +24,21 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  DUPLICATION_CAPPED,
   THRESHOLDS,
+  TREE_POPULATION,
   attributeClones,
+  cappableIn,
   countsOf,
   declarationCorrespondence,
+  duplicationCapsUnaccounted,
   duplicationInputs,
   ignoreBlocksIn,
   ignoredLinesIn,
   ignoredMismatches,
   parseDeclarations,
   permalinkFor,
+  readDeclarations,
   repoRelative,
   runJscpd,
   scopedPopulationOf,
@@ -353,7 +358,11 @@ describe('parseDeclarations — a malformed declaration file is never a partial 
   it('reads the hash and every population', () => {
     const parsed = parseDeclarations(good);
     expect(parsed.duplicationHash).toBe('sha256:abc');
-    expect(parsed.populations.get('scripts')).toEqual({ ignoredLines: 0, notes: [] });
+    expect(parsed.populations.get('scripts')).toEqual({
+      ignoredLines: 0,
+      notes: [],
+      caps: new Map(),
+    });
   });
 
   it('throws rather than defaulting a missing hash', () => {
@@ -380,6 +389,144 @@ describe('parseDeclarations — a malformed declaration file is never a partial 
         populations: { scripts: { ignoredLines: 0, notes: 'none' } },
       }),
     ).toThrow(/not a list of lines/);
+  });
+});
+
+describe('parseDeclarations, the cap half — the second mechanism, as hostile as the first', () => {
+  const UNARMED_CAP = { cap: 'unarmed', armed: '2026-09-21', notes: [] };
+
+  function withCaps(population: string, caps: unknown): unknown {
+    return {
+      duplicationHash: 'sha256:abc',
+      populations: { [population]: { ignoredLines: 0, notes: [], caps } },
+    };
+  }
+
+  it('routes the three scoped caps to a scope and the three tree caps to the tree', () => {
+    expect([...DUPLICATION_CAPPED.scope]).toEqual([
+      'duplication-clones',
+      'duplication-lines',
+      'duplication-ignored-lines',
+    ]);
+    expect([...DUPLICATION_CAPPED.tree]).toEqual([
+      'duplication-tree-clones',
+      'duplication-tree-lines',
+      'duplication-tree-ignored-lines',
+    ]);
+    expect(cappableIn('scripts')).toEqual(DUPLICATION_CAPPED.scope);
+    expect(cappableIn(TREE_POPULATION)).toEqual(DUPLICATION_CAPPED.tree);
+  });
+
+  it('reads a cap, keeping `unarmed` distinct from every number', () => {
+    const caps = parseDeclarations(
+      withCaps('scripts', {
+        'duplication-clones': UNARMED_CAP,
+        'duplication-lines': { cap: 40, armed: '2026-09-21', notes: ['raised once'] },
+      }),
+    ).populations.get('scripts')?.caps;
+
+    expect(caps?.get('duplication-clones')?.cap).toBe('unarmed');
+    expect(caps?.get('duplication-lines')).toEqual({
+      cap: 40,
+      armed: '2026-09-21',
+      notes: ['raised once'],
+    });
+  });
+
+  // `stryker.floors.json`'s split: shape is the parser's question, completeness
+  // is `duplicationCapsUnaccounted`'s.
+  it('treats a missing caps object as no caps rather than as a fault', () => {
+    expect(
+      parseDeclarations(withCaps('scripts', undefined)).populations.get('scripts')?.caps.size,
+    ).toBe(0);
+  });
+
+  // ⚠️ The denominators grow with the tree legitimately, `complexity-functions`'
+  // reason, so naming one is the same fault as a typo.
+  it('throws on a denominator, a complexity name, or a typo', () => {
+    for (const series of [
+      'duplication-total-lines',
+      'complexity-max',
+      'cognitive-max',
+      'duplication-clone',
+    ]) {
+      expect(
+        () => parseDeclarations(withCaps('scripts', { [series]: UNARMED_CAP })),
+        series,
+      ).toThrow(new RegExp(`${series}, which is not a capped series`));
+    }
+  });
+
+  // ⚠️ **A tree cap on a scope can never resolve a value** — the tree series carry
+  // no `scope=` label — which is the "24 entries that can never be armed" §5
+  // refused `CAPPED_SERIES` for. Accepting one here would rebuild it in this file.
+  it('throws on a tree cap under a scope, and a scoped cap under the tree', () => {
+    expect(() =>
+      parseDeclarations(withCaps('scripts', { 'duplication-tree-clones': UNARMED_CAP })),
+    ).toThrow(/scripts caps duplication-tree-clones, which is not a capped series/);
+    expect(() =>
+      parseDeclarations(withCaps(TREE_POPULATION, { 'duplication-clones': UNARMED_CAP })),
+    ).toThrow(/whole-tree caps duplication-clones, which is not a capped series/);
+  });
+
+  it('throws on a cap that is neither a number nor unarmed, or carries no date', () => {
+    expect(() =>
+      parseDeclarations(
+        withCaps('scripts', { 'duplication-clones': { cap: 'later', armed: 'x', notes: [] } }),
+      ),
+    ).toThrow(/neither a number nor unarmed/);
+    expect(() =>
+      parseDeclarations(withCaps('scripts', { 'duplication-clones': { cap: 3, notes: [] } })),
+    ).toThrow(/date/);
+  });
+
+  it('throws on caps that are not an object', () => {
+    expect(() => parseDeclarations(withCaps('scripts', 'none'))).toThrow(/not an object/);
+  });
+});
+
+describe('duplicationCapsUnaccounted — a population capped by nothing is found', () => {
+  const UNARMED_CAP = { cap: 'unarmed', armed: '2026-09-21', notes: [] };
+  const everyScoped = Object.fromEntries(DUPLICATION_CAPPED.scope.map((s) => [s, UNARMED_CAP]));
+  const everyTree = Object.fromEntries(DUPLICATION_CAPPED.tree.map((s) => [s, UNARMED_CAP]));
+
+  it('is silent when every population carries each cap it can take', () => {
+    const declared = parseDeclarations({
+      duplicationHash: 'sha256:abc',
+      populations: {
+        scripts: { ignoredLines: 0, notes: [], caps: everyScoped },
+        [TREE_POPULATION]: { ignoredLines: 0, notes: [], caps: everyTree },
+      },
+    });
+    expect(duplicationCapsUnaccounted(declared)).toEqual([]);
+  });
+
+  it('names each missing pair, the tree included', () => {
+    const { 'duplication-lines': _dropped, ...twoOfThree } = everyScoped;
+    const declared = parseDeclarations({
+      duplicationHash: 'sha256:abc',
+      populations: {
+        scripts: { ignoredLines: 0, notes: [], caps: twoOfThree },
+        [TREE_POPULATION]: { ignoredLines: 0, notes: [] },
+      },
+    });
+    expect(duplicationCapsUnaccounted(declared)).toEqual([
+      { population: 'scripts', series: 'duplication-lines' },
+      ...DUPLICATION_CAPPED.tree.map((series) => ({ population: TREE_POPULATION, series })),
+    ]);
+  });
+
+  // The real file, because the completeness this function judges is only worth
+  // anything if the file it ships beside passes it. Every cap ships `unarmed`
+  // (#269): arming is a later human judgement per series, after its window fills
+  // under `duplicationHash`.
+  it('finds jscpd.floors.json complete, and every cap in it unarmed', () => {
+    const declared = readDeclarations();
+    expect(duplicationCapsUnaccounted(declared)).toEqual([]);
+
+    const caps = [...declared.populations.values()].flatMap((entry) => [...entry.caps.values()]);
+    expect(caps).toHaveLength(8 * 3 + 3);
+    expect(caps.every((entry) => entry.cap === 'unarmed')).toBe(true);
   });
 });
 
