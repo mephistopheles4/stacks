@@ -12,6 +12,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  conventionFaults,
   differenceOf,
   normaliseReadBack,
   optionFaults,
@@ -197,6 +198,62 @@ describe('optionFaults — a misspelled option refuses instead of posting', () =
     // missing entry — this asserts the other direction, that the roster the
     // command prints and the roster the check reads are the same list.
     expect(Object.keys(SURFACE_OPTIONS).sort()).toEqual([...SURFACES].sort());
+  });
+});
+
+describe('conventionFaults — what G55 would refuse, asked before the pull request exists', () => {
+  // A synthetic template: this spec is in the `scripts` mutation scope and must
+  // not read the real file (see `vitest.stryker.config.ts`). The two headings
+  // ending in `?` are the protected questions, exactly as G55 reads them.
+  const TEMPLATE = [
+    '## What changed, and why',
+    '',
+    '## Which invariant does this touch?',
+    '',
+    '## Which gate would catch this breaking again?',
+    '',
+    '## Decisions',
+  ].join('\n');
+  const PULL: Surface = { kind: 'pull-request', title: 'fix(gates): a thing' };
+  const ANSWERED = [
+    '## What changed, and why',
+    '',
+    'A paragraph.',
+    '',
+    '## Which invariant does this touch?',
+    '',
+    'None.',
+    '',
+    '## Which gate would catch this breaking again?',
+    '',
+    'G55.',
+  ].join('\n');
+
+  it('passes a pull request whose title conforms and whose body answers both questions', () => {
+    expect(conventionFaults(PULL, ANSWERED, TEMPLATE)).toEqual([]);
+  });
+
+  it('refuses a body that dropped both questions, naming each', () => {
+    // ⚠️ #357, #358 and #359 were opened this way inside fifteen minutes on
+    // 2026-09-22: `gh pr create --body-file` never applies the template, so each
+    // session wrote a body from memory, and each went red in CI instead of here.
+    const faults = conventionFaults(PULL, '## What changed, and why\n\nA paragraph.', TEMPLATE);
+
+    expect(faults.map((fault) => fault.kind)).toEqual(['body', 'body']);
+    expect(faults[0]?.message).toContain('Which invariant does this touch?');
+    expect(faults[1]?.message).toContain('Which gate would catch this breaking again?');
+  });
+
+  it('refuses a title that would not reach main as a conventional subject', () => {
+    const faults = conventionFaults({ ...PULL, title: 'Fix a thing' }, ANSWERED, TEMPLATE);
+
+    expect(faults).toHaveLength(1);
+    expect(faults[0]?.kind).not.toBe('body');
+  });
+
+  it('asks nothing of any other surface, whose body no template governs', () => {
+    expect(conventionFaults(ISSUE, 'A body with no headings.', TEMPLATE)).toEqual([]);
+    expect(conventionFaults(REVIEW_REPLY, 'A reply.', TEMPLATE)).toEqual([]);
   });
 });
 

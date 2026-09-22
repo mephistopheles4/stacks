@@ -28,6 +28,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { bodyForGitHub } from './lib/github-body.ts';
 import {
+  conventionFaults,
   optionFaults,
   postAndVerify,
   postPlan,
@@ -38,6 +39,9 @@ import {
 } from './lib/github-post.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runExeOutput } from './lib/run.ts';
+
+/** What G55 reads the protected questions out of, and so does this. */
+const TEMPLATE = join(REPO_ROOT, '.github', 'pull_request_template.md');
 
 const USAGE = `usage: tsx scripts/gh-post.ts <surface> --body <file> [options]
 
@@ -164,8 +168,23 @@ const gh: PostDeps['gh'] = (call: GhCall) => {
   return runExeOutput('gh', call.args, REPO_ROOT, call.input);
 };
 
+// ⚠️ **Before anything is posted, and before a dry run prints a plan.** A pull
+// request body is checked against the template's questions exactly as G55
+// will check it, on the text that will actually go out — the dry run is where
+// an author looks first, so it refuses there too rather than printing a plan
+// CI would turn red.
+const posted = bodyForGitHub(markdown, { from });
+const conventions = conventionFaults(surface, posted, readFileSync(TEMPLATE, 'utf8'));
+if (conventions.length > 0) {
+  fail(
+    `G55 would refuse this pull request (${String(conventions.length)}):\n\n` +
+      conventions.map((fault) => `  [${fault.kind}] ${fault.message}`).join('\n\n') +
+      '\n\nStart the body from .github/pull_request_template.md; GitHub applies it only in ' +
+      'the web form, never to a body posted from here.',
+  );
+}
+
 if (options.has('dry-run')) {
-  const posted = bodyForGitHub(markdown, { from });
   const plan = postPlan(surface, { file: writeBody(posted), text: posted });
   console.log(posted);
   console.log(`\n$ gh ${plan.args.join(' ')}`);

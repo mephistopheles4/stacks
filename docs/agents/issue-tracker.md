@@ -40,6 +40,12 @@ that checks its own work.
 - **Read an issue**: `gh issue view <number> --comments`.
 - **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
 - **Comment on an issue**: the helper's `issue-comment` surface.
+- **Open a pull request**: the helper's `pull-request` surface, with the body
+  started from [`.github/pull_request_template.md`](../../.github/pull_request_template.md).
+  ⚠️ **GitHub applies the template only in the web form**, never to a body posted
+  from here, so the helper checks the title and the template's two questions
+  exactly as G55 (`pr-conventions`) will, and refuses — `--dry-run` included —
+  before anything exists.
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number>`. If the closing note is more than a few
   words, post it with the helper first and close without a comment — `gh issue
