@@ -13,8 +13,10 @@
  * pass for a count: each counter reads only its own rule. Registering the
  * plugin to quieten it would edit a hashed counting config (#244, #357).
  *
- * ⚠️ **`hidden` sits on line 21, and both counters' tests assert that line.**
- * Growing this comment moves it; update the two regexes in the same edit.
+ * ⚠️ **Both counters' tests assert the line `hidden` sits on, and read it from
+ * this file rather than pinning a number.** Stryker's sandbox inserts
+ * `// @ts-nocheck` into its copy and moves the function, so a literal passed
+ * `pnpm test` and failed the 2026-09-22 nightly's dry run.
  */
 
 // eslint-disable-next-line complexity, sonarjs/cognitive-complexity
