@@ -21,6 +21,7 @@
  * mutant in `complexity.ts`.
  */
 
+import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   complexityOf,
@@ -36,6 +37,19 @@ import { sourceFiles } from './scope-check.ts';
 
 /** A function hidden from the counter by one comment; see its header. */
 const SUPPRESSED = 'fixtures/complexity/suppressed.ts';
+
+/**
+ * The line `hidden` sits on, read from the copy ESLint is about to lint.
+ *
+ * ⚠️ **Never a literal.** Stryker's sandbox inserts `// @ts-nocheck` and a
+ * blank line into its copy of this fixture, which moves `hidden` two lines
+ * down: a hardcoded `21` passed `pnpm test` and failed the 2026-09-22
+ * nightly's dry run, taking every mutation series with it.
+ */
+const HIDDEN_LINE =
+  readFileSync(SUPPRESSED, 'utf8')
+    .split(/\r?\n/)
+    .findIndex((line) => line.startsWith('export function hidden')) + 1;
 
 /** A synthetic function, for the arithmetic that should not need a tree. */
 function fn(complexity: number, file = 'a.ts'): PerFunction {
@@ -139,8 +153,11 @@ describe('the counter refuses to under-count', () => {
     // `suppressedMessages`, so one comment took `overTheCut` out of all four
     // series — mass-over-10 went 13 → 0 and max 13 → 7 — and nothing threw.
     // Asserted as a throw and never as counts: counts are what failed to notice.
+    expect(HIDDEN_LINE).toBeGreaterThan(0);
     await expect(complexityOf([SUPPRESSED])).rejects.toThrow(
-      /disable directive.*fixtures\/complexity\/suppressed\.ts:21\b/,
+      new RegExp(
+        `disable directive.*fixtures/complexity/suppressed\\.ts:${String(HIDDEN_LINE)}\\b`,
+      ),
     );
   });
 
