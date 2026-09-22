@@ -40,6 +40,7 @@
  */
 
 import { bodyForGitHub } from './github-body.ts';
+import { pullRequestFaults, type Fault } from './pr-conventions.ts';
 
 /** One `gh` invocation: its arguments, and anything it takes on stdin. */
 export interface GhCall {
@@ -137,6 +138,28 @@ export function optionFaults(
     }
   }
   return faults;
+}
+
+/**
+ * What G55 (`pr-conventions`) would refuse about a pull request, asked before it
+ * is opened rather than after.
+ *
+ * ⚠️ **`gh pr create --body-file` never applies the template.** GitHub fills it
+ * in only in the web form, so a body posted from here starts blank and is
+ * written from memory — and #357, #358 and #359 were each opened on 2026-09-22
+ * without the template's two questions, and each went red in CI instead. The
+ * remedy then was an edit and a re-run; here it is a refusal before anything
+ * exists.
+ *
+ * **One rule, not two.** This calls `pullRequestFaults`, the function G55 runs,
+ * on the text that will actually be posted — after `bodyForGitHub` has rewritten
+ * it — so the helper cannot pass a body the gate would refuse, or refuse one it
+ * would pass. The author is left empty: the only exemption is Dependabot's, and
+ * Dependabot does not run this.
+ */
+export function conventionFaults(surface: Surface, posted: string, template: string): Fault[] {
+  if (surface.kind !== 'pull-request') return [];
+  return pullRequestFaults({ title: surface.title, body: posted, author: '', template });
 }
 
 /**
