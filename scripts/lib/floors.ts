@@ -374,28 +374,21 @@ export function countDisableDirectives(
  * not mean the same thing and nothing that says so — which is the exact hole
  * the hash exists to close.
  *
- * Every entry here but the last two is output, logging or scratch: none of them
- * can change which mutants are generated or what verdict one gets.
+ * Every entry here is output, logging or scratch: none of them can change which
+ * mutants are generated or what verdict one gets.
  *
- * ⚠️ **`incremental` and `incrementalFile` are not score-neutral, measured, and
- * stay listed anyway.** Incremental mode carries a verdict forward from the
- * previous run whenever the mutant's own text and its covering tests look
- * unchanged — and a fixture edit, or a source edit one line outside the mutant,
- * changes neither. Measured on #347: three mutants kept `Killed` where a full run
- * on the identical tree said `Survived`, and 32 kept `Survived` where it said
- * `NoCoverage`. See `docs/log/2026-09-22-incremental-is-not-score-neutral.md`.
+ * ⚠️ **`incremental` and `incrementalFile` were listed here and are not,
+ * measured.** Incremental mode carries a verdict forward whenever a mutant's own
+ * text and its covering tests look unchanged, and a fixture edit changes
+ * neither — so a reused verdict can disagree with a full run on the identical
+ * tree. The measurements are in
+ * `docs/log/2026-09-22-incremental-is-not-score-neutral.md` (#347). Unlisted,
+ * writing either into `stryker.config.mjs` moves `configHash` and G56 refuses it.
  *
- * **Removing them would stamp nothing differently**, which is why they stay:
- * `configHashOf` reads the object `stryker.config.mjs` exports and nothing
- * else, so `stryker run --incremental` on the command line never reaches the
- * hash whatever this list says. The list only matters if `incremental` is ever
- * written into that file — and doing so is the change to refuse.
- *
- * **What keeps reuse out of the trend store is the nightly's fresh checkout**,
- * not this list: `metrics.yml` runs plain `pnpm mutation:run` on a new runner
- * that caches only the pnpm store, so no results file exists to reuse. A change
- * to CI caching that carried one between runs would break that guarantee with
- * every gate still green.
+ * **This list cannot see a command-line flag.** `configHashOf` reads the object
+ * `stryker.config.mjs` exports and nothing else, so `stryker run --incremental`
+ * is stamped exactly like a full run. What keeps reuse out of the trend store is
+ * the nightly's fresh checkout — see `docs/gates.md`, *Not gated, deliberately*.
  */
 export const SCORE_NEUTRAL_OPTIONS: readonly string[] = [
   '$schema',
@@ -409,8 +402,6 @@ export const SCORE_NEUTRAL_OPTIONS: readonly string[] = [
   'allowConsoleColors',
   'tempDirName',
   'cleanTempDir',
-  'incremental',
-  'incrementalFile',
 ];
 
 /** JSON with object keys in a fixed order, so a re-ordered file hashes the same. */

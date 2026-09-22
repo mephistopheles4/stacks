@@ -332,8 +332,8 @@ mutant's own text and its covering tests look unchanged, and some edits change
 neither. On [#347](https://github.com/mephistopheles4/stacks/issues/347),
 removing `"Books"` from `fixtures/api/apple-search-hit.json` left three
 `apple-books.ts` mutants `Killed` where a full run on the same tree said
-`Survived` — and so did a redundant filter one line away from them in the same
-file. What it cannot see:
+`Survived` — and so did a one-line redundant filter elsewhere in the same file.
+What it cannot see:
 
 - **A fixture, a helper outside the mutant's span, or `vitest.stryker.config.ts`.**
 - **A lost test.** A surviving mutant is re-run only when a test is *added*, so
