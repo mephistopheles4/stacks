@@ -16,9 +16,11 @@ itself is posted on the issue, as a choice for the maintainer.
   The pair the triage addendum named sits on two commits that change **no
   mutated file**. It is a third identical-tree control, not a cross-tree one.
 - **An identical tree does not give an identical survivor set.** Across seven
-  nightly reports of one mutated tree, the set moved by at most **one mutant per
-  pair**, always a `Survived`↔`Timeout` flip on a loop decrement in
-  `packages/site/src/shelf/head-cap.ts`. A diff reader must expect that noise.
+  nightly reports of one mutated tree, two nights each carry **one** survivor
+  the other five do not agree on, so two reports differ by **at most two**
+  across all 21 pairs. Every such mutant is a `Survived`↔`Timeout` flip on a
+  loop decrement in `packages/site/src/shelf/head-cap.ts`. A diff reader must
+  expect that noise.
 - **16.9% of survivors share their key with another survivor** in the same run.
   Under multiset matching the counts stay exact. What a collision costs is
   *attribution*: which of two identical `'cover'` literals is the survivor.
@@ -34,7 +36,7 @@ Every report is the `mutation-report-<run id>` artifact of a scheduled
 | **B** | `35074303919` | 2026-09-16 | `34385b52` | 3,712 |
 | | `35200581455` | 2026-09-17 | `34385b52` | 3,713 |
 | | `35323165911` | 2026-09-18 | `34385b52` | 3,713 |
-| | `35430813371` | 2026-09-19 | `34385b52` | 3,713 |
+| | `35430813371` | 2026-09-19 | `34385b52` | 3,714 |
 | **C** | `35499820231` | 2026-09-20 | `c52cc9f0` | 3,713 |
 | | `35580168633` | 2026-09-21 | `c52cc9f0` | 3,713 |
 
@@ -100,6 +102,13 @@ this measurement from `mutants[i]` gets a confident, wrong answer.
 "Identity" is file + mutator + replacement + start and end line and column. It
 has **zero** collisions within a run, so it is a true identity on one tree.
 
+**Every pair, not only pairs with A.** Comparing the survivor sets by identity
+across all 21 pairs of the seven reports, the symmetric difference is 0 for 10
+pairs, 1 for 10 and **2** for one: B against `35430813371`, since B lacks the
+`:128` survivor and `35430813371` carries an extra one at `:247`. So the noise
+is per night, not per pair: B and `35430813371` each disagree with the other
+five by one mutant.
+
 **Matched by content key**, as a multiset:
 
 | Pair | Older | Newer | Matched | Older only | Newer only |
@@ -110,8 +119,13 @@ has **zero** collisions within a run, so it is a true identity on one tree.
 
 The one unmatched survivor in A vs B is the `head-cap.ts:128` status flip that
 id alignment found independently. It is a real status difference, not a key
-failure. **Every survivor present in both runs was matched**, which is the 100%
-the brief asks for before any cross-tree number is read.
+failure. **Every survivor present in both runs was matched.**
+
+⚠️ **That is a reading of the brief's 100%, stated as one.** The brief says a
+content key *"must match 100% of survivors"* on an identical tree, which
+assumes an identical tree has one survivor set. It does not. Read literally, A
+vs B scores 3,712 of 3,713. The pair that meets the brief's words with no
+reading at all is A vs `35200581455`, at 3,713 of 3,713.
 
 **Changed-file versus unchanged-file split.** The brief asks for unmatched
 survivors split by whether their file changed. Here the split is degenerate:
@@ -221,11 +235,17 @@ paired with a `c52cc9f0` report.
 ## Commands
 
 Run from the repository root in PowerShell. `$d` is a scratch directory outside
-the repository. The two scripts are reproduced in full below; they import the
-repository's own `assignFiles` and `survivorsOf` from
-`scripts/lib/mutation-score.ts` rather than re-deriving them, and the script
-asserts its survivor count against `survivorsOf`'s (3,713 / 3,712 / 3,713 on
-both sides).
+the repository. The three scripts are reproduced in full below.
+`survivor-key.mts` takes its scope assignment from the repository's own
+`assignFiles` in `scripts/lib/mutation-score.ts`. The survivor predicate there
+is not exported, so the script restates it and asserts its count against
+`survivorsOf`'s: 3,713 / 3,712 / 3,713 on both sides. The other two scripts
+import nothing from the repository.
+
+⚠️ **The two extra keys in the collision table are not extra refinements.**
+The brief allows *"at most one refinement"*, and there is one: the enclosing
+lines. The whitespace-collapsed key is the multi-line check, and the location
+key is a contrast for the line-move canary.
 
 ```powershell
 gh run list --workflow metrics.yml --limit 15 --json databaseId,headSha,createdAt,conclusion,event
@@ -238,7 +258,12 @@ pnpm exec tsx "$d\survivor-key.mts" "$d\r34947998738\mutation.json" "$d\r3507430
 pnpm exec tsx "$d\survivor-key.mts" "$d\r34947998738\mutation.json" "$d\r35200581455\mutation.json" "$d\r35499820231\mutation.json"
 $all = '34947998738','35074303919','35200581455','35323165911','35430813371','35499820231','35580168633' | ForEach-Object { "$d\r$_\mutation.json" }
 pnpm exec tsx "$d\id-align.mts" @all
+pnpm exec tsx "$d\all-pairs.mts" @all
+pnpm mutation:stamp --check
 ```
+
+The last prints `stryker.floors.json already records sha256:2d2a34f1…`, with
+nothing tracked changed outside `docs/`.
 
 ⚠️ **`survivor-key.mts`'s `positional*` output is the trap described above.**
 It is kept in the script so the 997 can be reproduced. It is not a result.
@@ -265,7 +290,7 @@ interface Mutant {
 interface Report { files: Record<string, { source: string; mutants: Mutant[] }>; testFiles?: Record<string, { source?: string }> }
 
 const [pathA, pathB, pathC] = process.argv.slice(2);
-if (pathC === undefined) throw new Error('usage: survivor-key.ts A.json B.json C.json');
+if (pathC === undefined) throw new Error('usage: survivor-key.mts A.json B.json C.json');
 const load = (p: string): Report => JSON.parse(readFileSync(p, 'utf8')) as Report;
 const A = load(pathA), B = load(pathB), C = load(pathC);
 const scopes = lib.readScopes();
@@ -307,7 +332,7 @@ function survivors(r: Report): Survivor[] {
 }
 
 type KeyFn = (s: Survivor) => string;
-const SEP = ' ';
+const SEP = String.fromCharCode(0);
 const keys: Record<string, KeyFn> = {
   base: (s) => [s.file, s.mutant.mutatorName, s.original, s.mutant.replacement ?? ''].join(SEP),
   baseWsNormalised: (s) => [s.file, s.mutant.mutatorName, s.original.replace(/\s+/g, ' '), (s.mutant.replacement ?? '').replace(/\s+/g, ' ')].join(SEP),
@@ -423,7 +448,6 @@ out.diffs = Object.fromEntries(Object.entries(keys).map(([name, k]) => [name, { 
   }])) };
   const sS = survivors(shifted);
   out.canaryLineMove = Object.fromEntries(['base', 'refinedEnclosingLines', 'location'].map((n) => [n, diff(sA, sS, keys[n])]));
-  // synthetic real change: edit the original text of one survivor's first char region -> must be unmatched
 }
 
 // ---- 5. sizes
@@ -463,7 +487,7 @@ const paths = process.argv.slice(2);
 const reports = paths.map(load);
 
 const identity = (f: string, m: Mutant) =>
-  [f, m.mutatorName, m.replacement ?? '', m.location.start.line, m.location.start.column, m.location.end.line, m.location.end.column].join(' ');
+  [f, m.mutatorName, m.replacement ?? '', m.location.start.line, m.location.start.column, m.location.end.line, m.location.end.column].join(String.fromCharCode(0));
 
 function byId(r: Report) {
   const map = new Map<string, { file: string; m: Mutant }>();
@@ -504,4 +528,39 @@ reports.slice(1).forEach((r, i) => {
   out[`${paths[0]} vs ${paths[i + 1]}`] = { ids: base.size, sameIdentity, differentIdentity, missing, statusFlips: Object.fromEntries(flips), flipped };
 });
 console.log(JSON.stringify(out, null, 2));
+```
+
+### `all-pairs.mts`
+
+```ts
+// #344, part three: survivor count per report, and the survivor-set difference
+// for every pair, by exact identity. Usage: tsx all-pairs.mts A.json B.json ...
+import { readFileSync } from 'node:fs';
+
+interface Loc { line: number; column: number }
+interface Mutant { mutatorName: string; replacement?: string; status: string; location: { start: Loc; end: Loc } }
+interface Report { files: Record<string, { mutants: Mutant[] }> }
+
+const SEP = String.fromCharCode(0);
+const identity = (f: string, m: Mutant) =>
+  [f, m.mutatorName, m.replacement ?? '', m.location.start.line, m.location.start.column, m.location.end.line, m.location.end.column].join(SEP);
+
+const paths = process.argv.slice(2);
+const sets = paths.map((p) => {
+  const r = JSON.parse(readFileSync(p, 'utf8')) as Report;
+  const s = new Set<string>();
+  for (const [f, e] of Object.entries(r.files)) for (const m of e.mutants) {
+    if (m.status === 'Survived' || m.status === 'NoCoverage') s.add(identity(f, m));
+  }
+  return s;
+});
+const name = (p: string) => /r(\d+)[\\/]/.exec(p)?.[1] ?? p;
+paths.forEach((p, i) => console.log(`${name(p)} survivors ${sets[i].size}`));
+let worst = 0;
+for (let i = 0; i < sets.length; i++) for (let j = i + 1; j < sets.length; j++) {
+  const d = [...sets[i]].filter((k) => !sets[j].has(k)).length + [...sets[j]].filter((k) => !sets[i].has(k)).length;
+  worst = Math.max(worst, d);
+  console.log(`${name(paths[i])} vs ${name(paths[j])}: ${d}`);
+}
+console.log(`largest symmetric difference over ${(sets.length * (sets.length - 1)) / 2} pairs: ${worst}`);
 ```
