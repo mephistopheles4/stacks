@@ -113,8 +113,10 @@ function resolveTarget(link: DocLink): string {
  *
  * What stays ours is the step before the slug — turning Markdown into the text
  * GitHub renders: a link keeps its text, and a code span loses its backticks
- * but keeps its content, underscores included. Emphasis markers need no step;
- * the slugger drops `*` and `~` with the rest of the punctuation.
+ * but keeps its content, underscores included. Emphasis markers need no step:
+ * the slugger drops `*` with the rest of the punctuation, and keeps `_` — which
+ * is safe only because MD049 and MD050 (`pnpm lint:md`) forbid `_` as emphasis
+ * here. `## The _floor_ word` is `#the-floor-word` on GitHub and not here.
  */
 function anchorsOf(source: string): string[] {
   const slugger = new GithubSlugger();
@@ -135,6 +137,8 @@ describe('G29 — a heading slugs the way GitHub slugs it', () => {
   it.each([
     ['### Incremental runs — fast, and not a score', 'incremental-runs--fast-and-not-a-score'],
     ['## What outranks `shelf_order`', 'what-outranks-shelf_order'],
+    // ⚠ is dropped, but its variation selector U+FE0F is a mark and survives,
+    // so the anchor opens with it and then the hyphen the space became.
     ['## ⚠️ The word is *durable*', '️-the-word-is-durable'],
     ['## Invariants → [gates](docs/gates.md)', 'invariants--gates'],
   ])('%s → #%s', (heading, anchor) => {

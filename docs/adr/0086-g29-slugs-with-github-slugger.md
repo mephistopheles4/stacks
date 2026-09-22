@@ -24,9 +24,11 @@ Markdown, it disagreed with `github-slugger` on **228 of 1241**. Six links in
 **The character class cannot be copied by hand.** `github-slugger` drops
 characters by a generated regular expression over Unicode categories. The
 nearest hand-written class, `[^\p{L}\p{M}\p{Nd}\p{Pc} -]`, still disagrees with
-it on 254 code points — code points newer than the library's Unicode table. None
-occurs in this repository, but a copy that is exact today is exact only until
-somebody writes the next heading.
+it on 254 code points in the Basic Multilingual Plane. Some are newer than the
+library's Unicode table, such as Arabic Extended-B at U+0870. Others are old:
+Roman numerals at U+2160 and circled letters at U+24B6, which the library keeps
+and that class drops. None occurs in a heading here today, but a copy that is
+exact today is exact only until somebody writes the next heading.
 
 **It adds no new code to the install.** Astro already resolves
 `github-slugger@2.0.0`, so declaring it adds three lockfile lines and no tarball.
