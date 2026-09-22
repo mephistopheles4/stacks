@@ -142,7 +142,7 @@ function linksIn(from: string, source: string): DocLink[] {
       for (const match of text.matchAll(/\]\(([^)\s]+)\)/g)) {
         const target = match[1];
         if (target === undefined) continue;
-        if (/^(https?:|mailto:)/.test(target)) continue;
+        if (/^(https?:|mailto:)/i.test(target)) continue; // schemes are case-insensitive
         found.push({ from, target, line: index + 1 });
       }
     });
@@ -150,9 +150,23 @@ function linksIn(from: string, source: string): DocLink[] {
   return found;
 }
 
+/**
+ * `decodeURIComponent`, except a malformed escape such as `%zz` comes back
+ * undecoded instead of throwing. Thrown, it aborts the whole assertion and the
+ * report of every other broken link with it; returned raw, it names no heading
+ * and no file, so it lands in the report like any other dead link.
+ */
+function decoded(text: string): string {
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return text;
+  }
+}
+
 /** Whether a fragment names one of `source`'s headings. */
 function hasAnchor(source: string, fragment: string): boolean {
-  return anchorsOf(source).includes(decodeURIComponent(fragment).toLowerCase());
+  return anchorsOf(source).includes(decoded(fragment).toLowerCase());
 }
 
 /** The same-document links in `source` whose fragment names none of its own headings. */
@@ -165,9 +179,8 @@ function deadSameDocumentLinks(from: string, source: string): DocLink[] {
 /** The repo-relative path a link resolves to, fragment stripped. */
 function resolveTarget(link: DocLink): string {
   const [pathPart = ''] = link.target.split('#');
-  const decoded = decodeURIComponent(pathPart);
   const base = dirname(join(REPO_ROOT, link.from));
-  return resolve(base, decoded);
+  return resolve(base, decoded(pathPart));
 }
 
 /**
@@ -307,15 +320,20 @@ describe('G29 — every documented link resolves', () => {
       '# not-a-heading',
       '```',
       '[live](#title) [live](#what-outranks-shelf_order) [live](#Title)',
-      '[dead](#what-outranks-shelforder) [dead](#not-a-heading) [dead](#)',
-      '[elsewhere](other.md#nowhere) `[code](#nowhere)`',
+      '[dead](#what-outranks-shelforder) [dead](#not-a-heading) [dead](#) [dead](#bad%zz)',
+      '[elsewhere](other.md#nowhere) `[code](#nowhere)` [web](HTTPS://example.com/#nowhere)',
     ].join('\n');
 
     expect(deadSameDocumentLinks('x.md', source).map((link) => link.target)).toEqual([
       '#what-outranks-shelforder',
       '#not-a-heading',
       '#',
+      '#bad%zz',
     ]);
+    // A network scheme in any case is skipped, never read as a repo path.
+    expect(linksIn('x.md', source).map((link) => link.target)).not.toContain(
+      'HTTPS://example.com/#nowhere',
+    );
   });
 
   it('points every same-document fragment at a heading in its own file', () => {
