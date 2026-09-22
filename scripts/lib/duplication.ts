@@ -36,6 +36,8 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
+import { parseCap, type ScopeCap } from './floors.ts';
+import type { TrendName } from './metrics.ts';
 import { globToRegExp, type Scope } from './mutation-score.ts';
 import { REPO_ROOT } from './repo-root.ts';
 import { walkSource } from './walk.ts';
@@ -688,12 +690,50 @@ export interface DuplicationInputs {
  */
 export const TREE_POPULATION = 'whole-tree';
 
-/** One population's declared suppression, as `jscpd.floors.json` carries it. */
+/**
+ * The six duplication series that take a cap, by the population they resolve in.
+ *
+ * **The second cap mechanism**, and it exists so the first does not have to
+ * weaken ([#269](https://github.com/mephistopheles4/stacks/issues/269), spec
+ * §5). `CAPPED_SERIES` in `floors.ts` is calibrated under `fixtureHash` and
+ * keyed on the eight declared mutation scopes; a duplication number is produced
+ * under `duplicationHash`, and three of these six carry no `scope=` label at
+ * all. So they are capped here, keyed on this file's nine populations, and
+ * `parseCaps` in `floors.ts` keeps rejecting every one of them.
+ *
+ * **Split by population, not listed once**, because a tree series under a scope
+ * key can never resolve a value — the 24 entries that could never be armed are
+ * the reason §5 refused `CAPPED_SERIES` for these, and one flat list here would
+ * rebuild them in this file. The two denominators, `duplication-total-lines`
+ * and `duplication-tree-total-lines`, are absent by decision: they grow with the
+ * tree legitimately, `complexity-functions`' reason.
+ */
+export const DUPLICATION_CAPPED = {
+  scope: ['duplication-clones', 'duplication-lines', 'duplication-ignored-lines'],
+  tree: ['duplication-tree-clones', 'duplication-tree-lines', 'duplication-tree-ignored-lines'],
+} as const satisfies Record<'scope' | 'tree', readonly TrendName[]>;
+
+/** A series a `jscpd.floors.json` cap may name. */
+export type DuplicationCappedSeries =
+  (typeof DUPLICATION_CAPPED.scope)[number] | (typeof DUPLICATION_CAPPED.tree)[number];
+
+/** The caps one population may carry: the tree's three for the tree, the scoped three otherwise. */
+export function cappableIn(population: string): readonly DuplicationCappedSeries[] {
+  return population === TREE_POPULATION ? DUPLICATION_CAPPED.tree : DUPLICATION_CAPPED.scope;
+}
+
+/** One population's declared suppression and caps, as `jscpd.floors.json` carries them. */
 export interface PopulationDeclaration {
   /** Lines inside a suppression block, both directive lines included. */
   ignoredLines: number;
   /** Append-only, one line per block added, never cleared. */
   notes: string[];
+  /**
+   * This population's caps, by series. ⚠️ **Empty is a legal shape and an
+   * incomplete state** — `stryker.floors.json`'s split: the parser answers shape,
+   * `duplicationCapsUnaccounted` answers completeness.
+   */
+  caps: Map<DuplicationCappedSeries, ScopeCap>;
 }
 
 export interface Declarations {
@@ -739,7 +779,7 @@ function parsePopulation(name: string, entry: unknown): PopulationDeclaration {
   if (typeof entry !== 'object' || entry === null) {
     throw new Error(`the declaration for ${name} is not an object`);
   }
-  const { ignoredLines, notes } = entry as Record<string, unknown>;
+  const { ignoredLines, notes, caps } = entry as Record<string, unknown>;
 
   if (typeof ignoredLines !== 'number' || !Number.isInteger(ignoredLines) || ignoredLines < 0) {
     throw new Error(`the ignoredLines counter for ${name} is not a count: ${String(ignoredLines)}`);
@@ -747,7 +787,63 @@ function parsePopulation(name: string, entry: unknown): PopulationDeclaration {
   if (!Array.isArray(notes) || notes.some((note) => typeof note !== 'string')) {
     throw new Error(`the notes for ${name} are not a list of lines`);
   }
-  return { ignoredLines, notes: notes as string[] };
+  return { ignoredLines, notes: notes as string[], caps: parseDuplicationCaps(name, caps) };
+}
+
+/**
+ * One population's caps, or a throw.
+ *
+ * ⚠️ **As hostile as `parseCaps` in `floors.ts`, and for its reason**: a name
+ * that parsed without being capped would leave the series it meant to cap
+ * refusing nothing, behind a line that reads as protection. That covers a typo,
+ * a denominator, a complexity name, and a tree series under a scope key alike.
+ */
+function parseDuplicationCaps(
+  population: string,
+  caps: unknown,
+): Map<DuplicationCappedSeries, ScopeCap> {
+  const parsed = new Map<DuplicationCappedSeries, ScopeCap>();
+  if (caps === undefined) return parsed;
+
+  if (typeof caps !== 'object' || caps === null) {
+    throw new Error(`the caps for ${population} are not an object`);
+  }
+
+  const cappable: readonly string[] = cappableIn(population);
+  for (const [series, entry] of Object.entries(caps as Record<string, unknown>)) {
+    if (!cappable.includes(series)) {
+      throw new Error(
+        `${population} caps ${series}, which is not a capped series for that population. ` +
+          `Its capped series are ${cappable.join(', ')}.`,
+      );
+    }
+    parsed.set(series as DuplicationCappedSeries, parseCap(`${population} ${series}`, entry));
+  }
+  return parsed;
+}
+
+/** A population with no entry for a series it can be capped on. */
+export interface DuplicationCapGap {
+  population: string;
+  series: DuplicationCappedSeries;
+}
+
+/**
+ * Every population missing a cap it can take — `capsUnaccounted`'s question,
+ * asked of this file.
+ *
+ * **No reverse direction**, for that function's reason: an entry naming a series
+ * the population cannot take does not survive `parseDuplicationCaps`, and a
+ * population nothing measures is `declarationCorrespondence`'s `orphaned`.
+ */
+export function duplicationCapsUnaccounted(declared: Declarations): DuplicationCapGap[] {
+  const missing: DuplicationCapGap[] = [];
+  for (const [population, entry] of declared.populations) {
+    for (const series of cappableIn(population)) {
+      if (!entry.caps.has(series)) missing.push({ population, series });
+    }
+  }
+  return missing;
 }
 
 /** `jscpd.floors.json`, from the disk. */

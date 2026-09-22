@@ -495,7 +495,9 @@ rather than inside one.
 9. **Arming, twenty records later.** **`cognitive-max` alone joins
    `CAPPED_SERIES`**, and the six duplication series §5 lists are capped in
    `jscpd.floors.json` under `duplicationHash` — two mechanisms, for the reasons
-   §5 gives. Both wait until the records carry their families. Steps 7 and 8 may
+   §5 gives. Both wait until the records carry their families, and then land
+   **disarmed**; setting a number on any cap waits on that series' calibration
+   window and is a human judgement per series. Steps 7 and 8 may
    land in either order; **this step may not be folded into either of them.**
 
    ⚠️ **This step said *"Seven names join `CAPPED_SERIES`"* until 2026-08-23.**
@@ -507,6 +509,30 @@ rather than inside one.
    `nightliesIn` is `row.event !== "push"` — so merges do not count toward it. At
    the observed cadence that is **about three weeks of wall clock**, not twenty
    merges, and any change to the governing hash restarts it from zero.
+
+   > ✅ **Done — [#269](https://github.com/mephistopheles4/stacks/issues/269),
+   > 2026-09-21.** `cognitive-max` joined `CAPPED_SERIES` with eight disarmed
+   > entries in `stryker.floors.json`, and the six duplication caps landed
+   > disarmed in `jscpd.floors.json` as 27 entries — the scoped three per declared
+   > scope, the tree three under `whole-tree` — read by a second parser exactly
+   > as hostile as `parseCaps`, which still rejects all six names. Measured
+   > against 128 records: 28 nightlies carried `cognitive-max`, `countedIn` went
+   > 98 → 79 rather than to zero, the calibration window stayed at 3 trees either
+   > side, and `highest` resolved all eight scopes on every capped series.
+   > ⚠️ **Two readings of the wait, and only one was met.** Read as §5 states it
+   > — *twenty records carry its samples* — it was: the roster hazard did not
+   > fire. Read as [#269's triage
+   > comment](https://github.com/mephistopheles4/stacks/issues/269#issuecomment-5534565892)
+   > re-anchored it — twenty nightlies under the stamp the floors file carries
+   > now — it was not: 9 nightlies carry `fixtureHash` `2af72f80…` and 9 carry
+   > `duplicationHash` `fffde866…`. **The owner settled it on 2026-09-22: the
+   > window gates arming only, not the disarmed entries.** Since #341 that window
+   > is ten distinct trees, not twenty nightlies, and it read 3 of 10 under
+   > `fixtureHash` at merge. Adding the name moved no stamp and left it at 3, so
+   > nothing restarted. Arming is still a human judgement per series and has not
+   > happened. ⚠️ **Nothing yet prints or refuses on the duplication caps** — no
+   > window under `duplicationHash` exists in `deploy.ts` — so arming one first
+   > needs that wiring.
 
 Steps 2 through 4 are a chain. Steps 5, 7 and 8 are independent of each other
 once step 1 is done.

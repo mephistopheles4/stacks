@@ -37,16 +37,24 @@
     "",
     "── the cap ────────────────────────────────────────────────────────────────────────",
     "",
-    "THE RATCHET, MIRRORED, because for these two series the bad direction is UP. A cap is",
+    "THE RATCHET, MIRRORED, because for these three series the bad direction is UP. A cap is",
     "the HIGHEST value a scope reached across its calibration window, applied once, at",
     "arming. After arming it moves DOWN only, by hand. RAISING A CAP IS THE LOWERING OF",
     "THIS FILE and costs a `notes` entry exactly like one.",
     "",
-    "`caps`    per series, and only `complexity-max` and `complexity-mass-over-10` may",
-    "          appear. `complexity-functions` and `complexity-mass` are NOT capped, by",
-    "          decision: they grow with the codebase legitimately, and a cap on either",
-    "          would refuse a feature. Naming one of them here is a parse error, not a",
-    "          silently ignored key — a typo must not read as protection.",
+    "`caps`    per series, and only `complexity-max`, `complexity-mass-over-10` and",
+    "          `cognitive-max` may appear. `complexity-functions` and `complexity-mass` are",
+    "          NOT capped, by decision: they grow with the codebase legitimately, and a cap",
+    "          on either would refuse a feature. Naming one of them here is a parse error,",
+    "          not a silently ignored key — a typo must not read as protection.",
+    "          `cognitive-max` joined on 2026-09-21 by #269, once 28 nightlies carried it",
+    "          (across three stamps; 9 under the fixtureHash below);",
+    "          it is the only cognitive series that takes a cap, and it is calibrated",
+    "          under `fixtureHash` like the other two because that stamp covers its rule.",
+    "          ⚠️ THE SIX DUPLICATION CAPS DO NOT BELONG HERE AND NAMING ONE IS A PARSE",
+    "          ERROR, ON PURPOSE. They live in jscpd.floors.json under `duplicationHash`.",
+    "          Loosening the parser to admit them would drop the typo guard for these three",
+    "          as well; the second file exists so this one does not have to weaken.",
     "`cap`     a number this scope may not exceed for that series, or `unarmed`.",
     "`armed`   as above, and it guards the same temptation.",
     "`notes`   APPEND-ONLY, one line per raising.",
@@ -224,7 +232,8 @@
       "notes": [],
       "caps": {
         "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
-        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "cognitive-max": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
       }
     },
     "packages/core/src/adapters": {
@@ -234,7 +243,8 @@
       "notes": [],
       "caps": {
         "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
-        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "cognitive-max": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
       }
     },
     "packages/core/src/covers": {
@@ -244,7 +254,8 @@
       "notes": [],
       "caps": {
         "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
-        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "cognitive-max": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
       }
     },
     "packages/core/src/import": {
@@ -254,7 +265,8 @@
       "notes": [],
       "caps": {
         "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
-        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "cognitive-max": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
       }
     },
     "packages/core/src/metadata": {
@@ -264,7 +276,8 @@
       "notes": [],
       "caps": {
         "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
-        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "cognitive-max": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
       }
     },
     "packages/site/src/shelf": {
@@ -274,7 +287,8 @@
       "notes": [],
       "caps": {
         "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
-        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "cognitive-max": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
       }
     },
     "packages/cli/src": {
@@ -284,7 +298,8 @@
       "notes": [],
       "caps": {
         "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
-        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "cognitive-max": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
       }
     },
     "scripts": {
@@ -294,7 +309,8 @@
       "notes": [],
       "caps": {
         "complexity-max": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
-        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] }
+        "complexity-mass-over-10": { "cap": "unarmed", "armed": "2026-08-22", "notes": [] },
+        "cognitive-max": { "cap": "unarmed", "armed": "2026-09-21", "notes": [] }
       }
     }
   }
