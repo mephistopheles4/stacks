@@ -265,7 +265,12 @@ every entry ships `unarmed`; arming is a human judgement per scope after that
 scope's ten-tree window fills; `pnpm deploy:site` prints how far each window
 has filled and refuses, with no override flag, when an armed scope exceeds its
 cap; the three routes around a refusal all land in the one file with a visible
-diff.
+diff. ⚠️ **There was a fourth, and it landed in no such file**: a
+`// eslint-disable-next-line complexity` on the breaching function took it out
+of all four series, zeroing `complexity-mass-over-10` and lowering
+`complexity-max` with nothing thrown. Both counters now refuse a used
+directive for their rule, so that route ends in a failed run rather than a
+cleared cap ([#244](https://github.com/mephistopheles4/stacks/issues/244)).
 
 **The fixture hash plays `configHash`'s role, through the same three places.**
 A record stamped under a different counting rule is refused rather than
