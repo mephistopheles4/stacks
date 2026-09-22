@@ -495,7 +495,9 @@ rather than inside one.
 9. **Arming, twenty records later.** **`cognitive-max` alone joins
    `CAPPED_SERIES`**, and the six duplication series §5 lists are capped in
    `jscpd.floors.json` under `duplicationHash` — two mechanisms, for the reasons
-   §5 gives. Both wait until the records carry their families. Steps 7 and 8 may
+   §5 gives. Both wait until the records carry their families, and then land
+   **disarmed**; setting a number on any cap waits on that series' calibration
+   window and is a human judgement per series. Steps 7 and 8 may
    land in either order; **this step may not be folded into either of them.**
 
    ⚠️ **This step said *"Seven names join `CAPPED_SERIES`"* until 2026-08-23.**
