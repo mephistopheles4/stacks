@@ -202,20 +202,22 @@ export function populationOf(scope: Scope, files: readonly string[]): string[] {
  * pre-commit hook can hand it the files a commit touches and get the same
  * numbers the series are built from — one counter, one config, two callers.
  *
- * ⚠️ **Throws rather than under-counting, and there are three ways to
+ * ⚠️ **Throws rather than under-counting, and there are four ways to
  * under-count.** A file that did not parse, a file ESLint declined to lint, and
  * a `complexity` message whose number will not read all produce the same thing:
  * a file contributing no functions, which is byte for byte what a file holding
- * no functions looks like. None of the three is detectable after the fact, so
- * each is raised where it happens. A count that silently became zero is worse
- * than a run that stopped.
+ * no functions looks like. The fourth is a *used* `eslint-disable` directive,
+ * which takes one function out rather than a file (#244). None of the four is
+ * detectable after the fact, so each is raised where it happens. A count that
+ * silently became zero is worse than a run that stopped.
  *
  * **What it does not throw on is a diagnostic about code it was not asked
- * about** — an unused `eslint-disable` directive reports with `ruleId: null` and
- * means the file *was* linted, so it is skipped rather than raised. There are no
- * such comments in this repo today; the distinction is kept because turning one
- * into a hard failure of the whole metrics run would be a worse bug than the one
- * being guarded.
+ * about** — an *unused* `eslint-disable` directive reports with `ruleId: null`
+ * and means the file *was* linted, so it is skipped rather than raised. The
+ * used case is the opposite: it arrives in `suppressedMessages` carrying
+ * `ruleId: 'complexity'`, and it is the fourth refusal above. The unused case
+ * stays a skip because turning one into a hard failure of the whole metrics run
+ * would be a worse bug than the one being guarded.
  *
  * The caller decides what a broken step means; for the emitter that is
  * `RunFacts.failed`, and for the pre-commit print a diagnostic and exit 0.
@@ -257,6 +259,27 @@ export async function complexityOf(files: readonly string[]): Promise<PerFunctio
 
   for (const result of results) {
     const file = relativeTo(REPO_ROOT, result.filePath);
+
+    /**
+     * ⚠️ **A used disable directive, which is the fourth way to under-count and
+     * the only one that moves the numerator and the denominator together.**
+     * ESLint moves a suppressed message out of `messages` into
+     * `suppressedMessages`, so the loop below never sees the function: it leaves
+     * all four series, every derived share stays plausible, and one comment on
+     * the function breaching a cap clears the breach. Measured on #244 —
+     * `complexity-mass-over-10` 13 → 0 and `complexity-max` 13 → 7 on the
+     * inventory fixture, with nothing thrown. `ruleId` is read rather than the
+     * directive's text, so a bare `eslint-disable` is caught too.
+     */
+    const suppressed = result.suppressedMessages.find((entry) => entry.ruleId === 'complexity');
+    if (suppressed !== undefined) {
+      throw new Error(
+        `a disable directive suppresses the complexity count on ${file}:${suppressed.line}. ` +
+          'A suppressed function leaves the population entirely — numerator and denominator ' +
+          'together — so every series stays plausible while no longer counting it. Remove the ' +
+          'directive; the count is not a lint finding to be waived.',
+      );
+    }
 
     for (const message of result.messages) {
       if (message.fatal === true) {

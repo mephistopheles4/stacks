@@ -48,6 +48,9 @@ import { TREND_SERIES } from './metrics.ts';
 import { readDeclarations, type Scope } from './mutation-score.ts';
 import { sourceFiles } from './scope-check.ts';
 
+/** A function hidden from the counter by one comment; see its header. */
+const SUPPRESSED = 'fixtures/complexity/suppressed.ts';
+
 /** A synthetic population member, for the arithmetic that should not need a tree. */
 function fn(complexity: number, line: number, file = 'a.ts'): PerFunction {
   return { file, line, column: 1, label: 'Function', kind: 'function', complexity };
@@ -172,6 +175,18 @@ describe('the cognitive inventory fixture', () => {
       expect(entry.endLine).toBeDefined();
       expect(entry.endColumn).toBeDefined();
     }
+  });
+});
+
+describe('the counter refuses to under-count', () => {
+  it('raises on a used disable directive, naming the file and the line', async () => {
+    // ⚠️ #244, the cognitive half. A suppressed message leaves `messages` for
+    // `suppressedMessages`, so the function drops out of `scored` and lands in
+    // the population as a legitimate zero — the one absence this counter reads
+    // as a measurement. A throw, never counts, for `complexityOf`'s reason.
+    await expect(cognitiveOf([SUPPRESSED])).rejects.toThrow(
+      /disable directive.*fixtures\/complexity\/suppressed\.ts:21\b/,
+    );
   });
 });
 
