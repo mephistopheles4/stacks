@@ -24,6 +24,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import GithubSlugger from 'github-slugger';
 import { expectFound, readRepoFile, REPO_ROOT, trackedFiles } from './repo.ts';
 
 /** One `[text](target)` occurrence, with enough context to name it in a failure. */
@@ -51,9 +52,45 @@ interface DocLink {
  * reason `codeOf` in `gates/repo.ts` blanks rather than deletes.
  */
 function withoutCode(source: string): string {
+  return withoutFences(source).replace(/(`+)[^\n]*?\1/g, (match) => match.replace(/[^\n]/g, ' '));
+}
+
+/**
+ * Fenced blocks blanked and inline code left alone — the half of `withoutCode`
+ * that heading extraction needs. A `# comment` inside a shell fence is not a
+ * heading, but a heading's own code span is part of its anchor.
+ *
+ * A fence is CommonMark's, not a regex's: three or more backticks or tildes,
+ * indented or not, closed only by a run of the same character at least as
+ * long with nothing after it. So `~~~` fences, and a ```` fence quoting a
+ * shorter one, and a ```` ```text ```` line inside a block are all read the way
+ * GitHub reads them. An unclosed fence runs to the end of the document.
+ */
+function withoutFences(source: string): string {
+  let open: { char: string; length: number } | undefined;
+
   return source
-    .replace(/^```[\s\S]*?^```/gm, (match) => match.replace(/[^\n]/g, ' '))
-    .replace(/(`+)[^\n]*?\1/g, (match) => match.replace(/[^\n]/g, ' '));
+    .split('\n')
+    .map((line) => {
+      const fence = /^\s*(`{3,}|~{3,})(.*)$/.exec(line);
+      const run = fence?.[1] ?? '';
+      const rest = fence?.[2] ?? '';
+
+      if (open === undefined) {
+        // A backtick opener's info string may not contain a backtick.
+        if (fence && !(run.startsWith('`') && rest.includes('`'))) {
+          open = { char: run.charAt(0), length: run.length };
+          return ' '.repeat(line.length);
+        }
+        return line;
+      }
+
+      if (fence && run.startsWith(open.char) && run.length >= open.length && rest.trim() === '') {
+        open = undefined;
+      }
+      return ' '.repeat(line.length);
+    })
+    .join('\n');
 }
 
 /**
@@ -93,36 +130,69 @@ function resolveTarget(link: DocLink): string {
 }
 
 /**
- * A heading's GitHub anchor: lowercased, Markdown stripped, punctuation
- * dropped, spaces to hyphens.
+ * Every heading's GitHub anchor, in document order, repeats suffixed `-1`, `-2`.
  *
- * Approximate by construction, and safe in the direction that matters — this
- * repo's headings carry backticks, arrows and inline links (`## Invariants →
- * gates`, `## The probes became a tuning panel — map [#39](…)`), and any of
- * those getting slugified slightly differently would produce a *false red*
- * rather than a false green. That is the correct way round for a gate, and it
- * is why the fragment check is scoped to fragments somebody actually wrote.
+ * The slug is `github-slugger`'s, not an imitation of it. The hand-kept version
+ * this replaced collapsed runs of spaces, trimmed, and stripped `_` as if it
+ * were emphasis, and disagreed with GitHub on 228 of the repo's 1241 headings
+ * (#361). It carried a comment saying a disagreement could only ever be a
+ * *false red*. **A disagreement has no direction**: the author of a red link
+ * writes the anchor this gate accepts, and that anchor is dead on GitHub. So
+ * every divergence was a false green one edit later, steered there by the red.
+ *
+ * What stays ours is the step before the slug — turning Markdown into the text
+ * GitHub renders: a link keeps its text, and a code span loses its backticks
+ * but keeps its content, underscores included. Emphasis markers need no step:
+ * the slugger drops `*` with the rest of the punctuation, and keeps `_` — which
+ * is safe only because MD049 and MD050 (`pnpm lint:md`) forbid `_` as emphasis
+ * here. `## The _floor_ word` is `#the-floor-word` on GitHub and not here.
  */
-function anchorsOf(source: string): Set<string> {
-  const anchors = new Set<string>();
+function anchorsOf(source: string): string[] {
+  const slugger = new GithubSlugger();
 
-  for (const match of source.matchAll(/^#{1,6} +(.+?)\s*$/gm)) {
-    const heading = (match[1] ?? '')
-      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // links keep their text
-      .replace(/[`*_~]/g, '')
-      .trim();
-
-    anchors.add(
-      heading
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N} _-]/gu, '')
-        .trim()
-        .replace(/ +/g, '-'),
-    );
-  }
-
-  return anchors;
+  return [...withoutFences(source).matchAll(/^#{1,6} +(.+?)\s*$/gm)].map((match) =>
+    slugger.slug(
+      (match[1] ?? '')
+        .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // links keep their text
+        .replace(/`/g, ''),
+    ),
+  );
 }
+
+describe('G29 — a heading slugs the way GitHub slugs it', () => {
+  // Each case was a false green before #361: the gate accepted the anchor on
+  // the right, GitHub renders the one on the left, and a link written to turn
+  // this gate green was a dead link on the site it is read on.
+  it.each([
+    ['### Incremental runs — fast, and not a score', 'incremental-runs--fast-and-not-a-score'],
+    ['## What outranks `shelf_order`', 'what-outranks-shelf_order'],
+    // ⚠ is dropped, but its variation selector U+FE0F is a mark and survives,
+    // so the anchor opens with it and then the hyphen the space became.
+    ['## ⚠️ The word is *durable*', '\uFE0F-the-word-is-durable'],
+    ['## Invariants → [gates](docs/gates.md)', 'invariants--gates'],
+  ])('%s → #%s', (heading, anchor) => {
+    expect([...anchorsOf(heading)]).toEqual([anchor]);
+  });
+
+  // A heading GitHub renders as code is not an anchor. Each block below hides a
+  // `## Hidden` that the column-0 backtick-only fence match read as a heading.
+  it.each([
+    ['a tilde fence', '~~~\n## Hidden\n~~~'],
+    ['a longer fence around a shorter run', '````md\n```\n## Hidden\n```\n````'],
+    ['an info string, which never closes', '```\n```text\n## Hidden\n```'],
+    ['an unclosed fence, which runs to the end', '```\n## Hidden'],
+  ])('ignores a heading inside %s', (_, source) => {
+    expect(anchorsOf(`## Shown\n\n${source}`)).toEqual(['shown']);
+  });
+
+  it('suffixes a repeated heading the way GitHub does', () => {
+    expect([...anchorsOf('## Notes\n\n## Notes\n\n## Notes')]).toEqual([
+      'notes',
+      'notes-1',
+      'notes-2',
+    ]);
+  });
+});
 
 describe('G29 — every documented link resolves', () => {
   it('finds enough links to be checking anything', () => {
@@ -176,7 +246,7 @@ describe('G29 — every documented link resolves', () => {
         const target = resolveTarget(link);
         if (!target.endsWith('.md') || !existsSync(target)) return false;
         const fragment = decodeURIComponent(link.target.split('#')[1] ?? '');
-        return !anchorsOf(readFileSync(target, 'utf8')).has(fragment.toLowerCase());
+        return !anchorsOf(readFileSync(target, 'utf8')).includes(fragment.toLowerCase());
       })
       .map((link) => `${link.from}:${link.line} → ${link.target}`);
 
