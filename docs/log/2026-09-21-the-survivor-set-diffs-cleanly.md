@@ -229,6 +229,10 @@ JSON would be about 323 MiB.
 
 ## What is still unmeasured, and its deadline
 
+**Measured since, in [the next entry](./2026-09-22-the-content-key-holds-across-a-real-edit.md):**
+zero unmatched survivors in unchanged files across a real edit. The paragraph
+below is kept as it was written.
+
 **The cross-tree numbers** — matched, older only, newer only, split by changed
 and unchanged files — for the base key and the refinement. They need the
 nightly after the first merge to `main` that changes a mutated `.ts` file,
