@@ -2,8 +2,9 @@
 
 **2026-09-22** — [#344](https://github.com/mephistopheles4/stacks/issues/344),
 the half [the previous entry](./2026-09-21-the-survivor-set-diffs-cleanly.md)
-left owed: diff the survivor sets of two nightly reports whose trees differ in
-mutated files, and count what the content key gets wrong.
+left owed. The ticket's Agent Brief — *the brief* below — asks for the survivor
+sets of two nightly reports whose trees differ in mutated files to be diffed,
+and for what the content key gets wrong to be counted.
 
 ## The answer first
 
@@ -56,7 +57,8 @@ all in the `scripts` scope:
 | `scripts/lib/floors.ts` | 58 | 319 → 295 |
 | `scripts/lib/github-post.ts` | 23 | 41 → 42 |
 
-Seven test files also changed, adding 431 lines. The only dependency change is
+Seven test files also changed, adding 431 lines: 329 in the five files' own
+specs, and 102 in `gates/doc-links.test.ts` and `gates/ignored-clones.test.ts`. The only dependency change is
 `github-slugger` 2.0.0, a new dev dependency used by a gate. `stryker.config.mjs`,
 `stryker.scopes.json`, the Vitest configs, Stryker and Vitest did not change.
 
@@ -97,14 +99,14 @@ older copy, `35499820231`, gives **identical numbers** on every line.
 | --- | --- | --- | --- |
 | **Base**: file + mutator + original + replacement | **3,682** | 31 (31 / **0**) | 17 (17 / **0**) |
 | **Refinement**: base + enclosing line(s) | 3,682 | 31 (31 / 0) | 17 (17 / 0) |
-| Position (contrast) | 3,155 | 558 (558 / 0) | 544 (544 / 0) |
+| Position (contrast): file + mutator + replacement + start and end | 3,155 | 558 (558 / 0) | 544 (544 / 0) |
 
 **Unmatched in an unchanged file: zero, for both keys.** That is the number the
 brief called a key failure.
 
 The head-cap noise from the previous entry did not appear. Its one or two
-`Survived`↔`Timeout` flips on `head-cap.ts` are absent from this pair, so a
-future pair can show them again.
+`Survived`↔`Timeout` flips on `head-cap.ts` are absent from this pair, but
+that does not rule them out on a future one.
 
 ### Why each unmatched survivor is unmatched
 
@@ -165,8 +167,9 @@ from the previous entry, *keep the original verbatim*, cost nothing here.
 | `mutation.json` | 6,317,400 | 938,479 |
 | `mutation.html` | 6,553,296 | 1,013,036 |
 
-Both are within 1.2% of the older report's, so the storage estimates in the
-previous entry stand.
+Both are within 1.2% of the sizes the previous entry measured on `34947998738`,
+whose mutated tree is byte-identical to `c52cc9f0`'s, so its storage estimates
+stand.
 
 ## What this changes
 
@@ -201,13 +204,16 @@ foreach ($r in '35499820231','35580168633','34947998738','35797533269') { gh run
 git diff --name-only 34385b52 c52cc9f0 | Set-Content "$d\changed-control.txt"
 git diff --name-only c52cc9f0 60ba2696 | Set-Content "$d\changed-cross.txt"
 git diff -U0 c52cc9f0 60ba2696 -- scripts/lib/cognitive.ts scripts/lib/complexity.ts scripts/lib/duplication.ts scripts/lib/floors.ts scripts/lib/github-post.ts | Set-Content "$d\cross-U0.diff"
-pnpm exec tsx "$d\cross-tree.mts" "$d\r35499820231\mutation.json" "$d\r35580168633\mutation.json" "$d\changed-control.txt"
+pnpm exec tsx "$d\cross-tree.mts" "$d\r35499820231\mutation.json" "$d\r35580168633\mutation.json"
 pnpm exec tsx "$d\cross-tree.mts" "$d\r34947998738\mutation.json" "$d\r35580168633\mutation.json" "$d\changed-control.txt"
 pnpm exec tsx "$d\plant.mts" "$d\r35580168633\mutation.json" "$d\planted\mutation.json"
 pnpm exec tsx "$d\cross-tree.mts" "$d\r35499820231\mutation.json" "$d\planted\mutation.json"
 pnpm exec tsx "$d\cross-tree.mts" "$d\r35580168633\mutation.json" "$d\r35797533269\mutation.json" "$d\changed-cross.txt"
 pnpm exec tsx "$d\cross-tree.mts" "$d\r35499820231\mutation.json" "$d\r35797533269\mutation.json" "$d\changed-cross.txt"
 pnpm exec tsx "$d\classify.mts" "$d\r35580168633\mutation.json" "$d\r35797533269\mutation.json" "$d\cross-U0.diff"
+git diff --numstat c52cc9f0 60ba2696
+git diff c52cc9f0 60ba2696 -- package.json 'packages/*/package.json' stryker.config.mjs stryker.scopes.json vitest.config.ts vitest.stryker.config.ts
+node -e "const z=require('zlib'),f=require('fs');for(const p of process.argv.slice(1)){const b=f.readFileSync(p);console.log(p,b.length,z.gzipSync(b).length)}" "$d\r35797533269\mutation.json" "$d\r35797533269\mutation.html"
 pnpm mutation:stamp --check
 ```
 
@@ -218,6 +224,14 @@ The two collision rows were read by hand from both reports, listing every
 `cross-tree.mts` takes its scope assignment and its survivor count check from
 `assignFiles` and `survivorsOf` in `scripts/lib/mutation-score.ts`. Its slicing
 and key functions are `survivor-key.mts`'s from the previous entry, unchanged.
+
+⚠️ **The position key is the previous entry's `location` key with the end
+position added**, named `identity` in the script. It is a contrast, not the
+brief's one refinement.
+
+⚠️ **`classify.mts` walks every file in the report**, where `cross-tree.mts`
+walks only files `assignFiles` places in a scope. They agree here, 31 and 17,
+because every mutated file belongs to a scope.
 
 ⚠️ **`classify.mts`'s "status now Killed" is read per key.** When a key collides,
 it means *at least one mutant with this text is killed on the other side*, which
@@ -440,8 +454,9 @@ for (const l of readFileSync(diffP, 'utf8').split(/\r?\n/)) {
   const h = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(l);
   if (h && cur) {
     const oc = h[2] === undefined ? 1 : Number(h[2]), nc = h[4] === undefined ? 1 : Number(h[4]);
-    hunks.get(cur)!.old.push([Number(h[1]), Number(h[1]) + Math.max(oc, 1) - 1]);
-    hunks.get(cur)!.new.push([Number(h[3]), Number(h[3]) + Math.max(nc, 1) - 1]);
+    // a zero count is a pure insertion or deletion: an empty range on that side
+    hunks.get(cur)!.old.push([Number(h[1]), Number(h[1]) + oc - 1]);
+    hunks.get(cur)!.new.push([Number(h[3]), Number(h[3]) + nc - 1]);
   }
 }
 const touches = (ranges: [number, number][] | undefined, s: number, e: number) => (ranges ?? []).some(([a, b]) => s <= b && e >= a);
