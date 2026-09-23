@@ -8,7 +8,7 @@ import {
   makeContactShadow,
   makeNeighbourShadow,
   makeRecessShade,
-  type CaseLight,
+  type BookcaseLight,
   type Contact,
 } from './contact-shadow.ts';
 import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
@@ -230,16 +230,16 @@ export interface ShelfHandle {
    */
   applySettings(next: ShelfSettings): ApplyReport;
   /**
-   * How far the worst-placed book sticks out through the side of the case, in
+   * How far the worst-placed book sticks out through the side of the bookcase, in
    * world units. Zero means every book is inside its shelf.
    *
    * Measured from real world bounds rather than from the layout arithmetic, so
    * it catches a rotation the arithmetic forgot — which is exactly how it went
    * wrong: a leaning book's corners swing out past the footprint the cursor
-   * advanced by, and both the case side and the book beside it were being
+   * advanced by, and both the bookcase side and the book beside it were being
    * driven through.
    */
-  readonly caseOverflow: number;
+  readonly bookcaseOverflow: number;
   /**
    * What the driver said about any program that would not link. Empty is the
    * normal case, and the shelf is halted whenever it is not.
@@ -384,32 +384,32 @@ export function mountShelf(
   controls.target.set(0, unitHeight * 0.48, 0);
 
   /**
-   * Backs the camera off far enough for the whole case to fit — checked against
+   * Backs the camera off far enough for the whole bookcase to fit — checked against
    * *both* axes and the real viewport aspect.
    *
-   * A short wide case is width-constrained and a tall narrow one is
+   * A short wide bookcase is width-constrained and a tall narrow one is
    * height-constrained, so fitting only the height clips the sides of a small
    * library. Runs once, on the first real layout, and then leaves the camera
    * alone so it never fights the user's orbiting.
    */
-  const caseWidth = SHELF.width + SHELF.sideThickness * 2;
+  const bookcaseWidth = SHELF.width + SHELF.sideThickness * 2;
   let framed = false;
 
   const frameCamera = (aspect: number): void => {
     const half = Math.tan((fov / 2) * (Math.PI / 180));
     const forHeight = unitHeight / (2 * half);
-    const forWidth = caseWidth / (2 * half * aspect);
+    const forWidth = bookcaseWidth / (2 * half * aspect);
     const distance = Math.max(forHeight, forWidth) * 1.35 + SHELF.depth;
 
-    camera.position.set(caseWidth * 0.16, unitHeight * 0.52, distance);
+    camera.position.set(bookcaseWidth * 0.16, unitHeight * 0.52, distance);
     controls.maxDistance = distance * 2.4;
     controls.update();
   };
 
   frameCamera(16 / 9);
 
-  const woodwork = buildShelf(rowCount, settings);
-  scene.add(woodwork.group);
+  const bookcase = buildShelf(rowCount, settings);
+  scene.add(bookcase.group);
   const lights = addLighting(scene, unitHeight, settings);
 
   /**
@@ -630,7 +630,7 @@ export function mountShelf(
   return {
     bookCount: placed.length,
     gpu: describeGpu(renderer),
-    caseOverflow: measureCaseOverflow(scene, placed),
+    bookcaseOverflow: measureBookcaseOverflow(scene, placed),
     shaderErrors,
 
     /**
@@ -674,7 +674,7 @@ export function mountShelf(
         background,
         fog,
         lights,
-        woodwork,
+        bookcase,
         painters,
         post,
         next,
@@ -924,7 +924,7 @@ function describeGpu(renderer: THREE.WebGLRenderer): string | undefined {
 }
 
 /**
- * The worst amount by which any book breaches the inside of the case.
+ * The worst amount by which any book breaches the inside of the bookcase.
  *
  * `Box3.setFromObject` walks the real geometry through the real world matrices,
  * so a lean, a rotation, or a part positioned by hand all count. That is the
@@ -932,7 +932,7 @@ function describeGpu(renderer: THREE.WebGLRenderer): string | undefined {
  * about its centre is wider than that — measuring the arithmetic again would
  * only repeat its assumption.
  */
-function measureCaseOverflow(scene: THREE.Scene, placed: readonly PlacedBook[]): number {
+function measureBookcaseOverflow(scene: THREE.Scene, placed: readonly PlacedBook[]): number {
   scene.updateMatrixWorld(true);
 
   const inner = SHELF.width / 2;
@@ -1019,9 +1019,9 @@ function buildBooks(
   });
 
   // Every shelf, not only the ones holding books: the overlays also carry the
-  // shading the case throws on itself, and an empty shelf has a backboard and a
+  // shading the bookcase throws on itself, and an empty shelf has a backboard and a
   // corner just as a full one does. Skipping them would leave the bottom of a
-  // growing case looking like a different piece of furniture from the top.
+  // growing bookcase looking like a different piece of furniture from the top.
   if (!painted) return { placed, painters: undefined };
 
   const painters = new Painters(scene, byRow, rowCount);
@@ -1079,7 +1079,7 @@ class Painters {
   paint(settings: ShelfSettings): void {
     this.dispose();
 
-    const light = caseLight(this.#rowCount * SHELF.rowHeight, settings);
+    const light = bookcaseLight(this.#rowCount * SHELF.rowHeight, settings);
     const openHeight = SHELF.rowHeight - SHELF.plankThickness;
 
     for (let row = 0; row < this.#rowCount; row += 1) {
@@ -1804,7 +1804,7 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
  * High and to the right — moved right of where it was, but not far. A
  * directional light does not fall off with distance, only with angle, so
  * swinging it out to the side takes light straight off the spines and covers,
- * which all face the room. Pushed hard right the case lost most of its
+ * which all face the room. Pushed hard right the bookcase lost most of its
  * modelling. This is the compromise: enough of a sideways component for the
  * shadows to read as thrown from the top right, with the intensity lifted to
  * pay for the light the spines lose at that angle.
@@ -1821,13 +1821,13 @@ function keyLightTarget(unitHeight: number, settings: ShelfSettings): THREE.Vect
   return new THREE.Vector3(0, unitHeight * settings.lighting.key.aimHeight, 0);
 }
 
-/** Resolves a settings position against a case of a given height. */
+/** Resolves a settings position against a bookcase of a given height. */
 function positionOf(position: LightPosition, unitHeight: number): THREE.Vector3 {
   return new THREE.Vector3(position.x, heightOf(position.y, unitHeight), position.z);
 }
 
-/** The key light as the painters need it. See `CaseLight`. */
-function caseLight(unitHeight: number, settings: ShelfSettings): CaseLight {
+/** The key light as the painters need it. See `BookcaseLight`. */
+function bookcaseLight(unitHeight: number, settings: ShelfSettings): BookcaseLight {
   const toTarget = keyLightTarget(unitHeight, settings).sub(keyLightPosition(unitHeight, settings));
   return {
     xPerZ: Math.abs(toTarget.x / toTarget.z),
@@ -1836,7 +1836,7 @@ function caseLight(unitHeight: number, settings: ShelfSettings): CaseLight {
 }
 
 /**
- * How far the backboard stands behind the front of the case — the depth a ray
+ * How far the backboard stands behind the front of the bookcase — the depth a ray
  * leaving the back wall has to cross before it escapes into the room, and so
  * the whole reason the back of a shelf is dark and the front of it is not.
  */
@@ -1859,7 +1859,7 @@ const BOOK_FRONT_Z = SHELF.depth / 2 - 0.02;
  *
  * Enough to clear `SKIN` — the hair by which a printed face floats above its
  * board — with room to spare, and far short of the planks, whose own front
- * faces stand at the front of the case and must not be darkened.
+ * faces stand at the front of the bookcase and must not be darkened.
  */
 const RECESS_CLEARANCE = 0.008;
 
@@ -1897,13 +1897,13 @@ export function addLighting(
   key.shadow.mapSize.set(settings.shadows.mapSize, settings.shadows.mapSize);
 
   /**
-   * The shadow camera is fitted to the case, which it never was.
+   * The shadow camera is fitted to the bookcase, which it never was.
    *
    * A `DirectionalLight` aims at the origin through a fixed ±5 orthographic box.
-   * The case stands *on* the origin and grows upward, so it was half outside its
-   * own shadow frustum — a five-row unit is 5.6 tall against a 10-unit box
+   * The bookcase stands *on* the origin and grows upward, so it was half outside its
+   * own shadow frustum — a five-row bookcase is 5.6 tall against a 10-unit box
    * centred at y=0, and the top of a tall shelf simply fell out of it. Aiming at
-   * the middle of the case and sizing the box to a sphere that bounds it fixes
+   * the middle of the bookcase and sizing the box to a sphere that bounds it fixes
    * that, and pays for itself twice: the same 2048² map now covers ~7 units
    * instead of 10, so every texel is doing about twice the work it was.
    */
@@ -1924,7 +1924,7 @@ export function addLighting(
   scene.add(fill);
 
   // A warm lamp close to the shelf, so spines nearest the viewer read clearly
-  // and the case has a centre of light rather than flat exposure.
+  // and the bookcase has a centre of light rather than flat exposure.
   const lamp = new THREE.PointLight(
     settings.lighting.lamp.colour,
     settings.lighting.lamp.intensity,
@@ -1938,7 +1938,7 @@ export function addLighting(
 }
 
 /**
- * Sizes the shadow frustum to the case, and to where the light actually is.
+ * Sizes the shadow frustum to the bookcase, and to where the light actually is.
  *
  * Extracted so it can run again. `far` is measured from the light to its target,
  * so it is only correct for the position the light held when it was computed —
@@ -2142,7 +2142,7 @@ function applyLive(
 
   if (current.scene.background !== next.scene.background) {
     background.setHex(next.scene.background);
-    // The fog is the background colour by design — it is the case receding into
+    // The fog is the background colour by design — it is the bookcase receding into
     // the room, not a coloured haze — so changing one and not the other leaves a
     // visible ring around the shelf.
     fog.color.setHex(next.scene.background);

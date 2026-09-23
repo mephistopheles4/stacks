@@ -15,7 +15,7 @@ import { hashUnit } from './hash.ts';
  * screenshot and one float.
  *
  * **This does not replace G16.** `smoke:render` measures `Box3.setFromObject`
- * against the case's real inner faces, and it exists precisely because the
+ * against the bookcase's real inner faces, and it exists precisely because the
  * arithmetic was wrong in a way that re-checking the arithmetic could not catch:
  * the cursor advances by a book's *thickness*, and a book rotated about its
  * centre is wider than that. Everything below can only assert what the
@@ -58,7 +58,7 @@ export interface Placement {
  * `scene.ts`, where it always has. Flattening for anything that wants every book
  * costs one `.flat()`.
  *
- * Takes no case geometry: it imports `SHELF` directly, so a test can never
+ * Takes no bookcase geometry: it imports `SHELF` directly, so a test can never
  * assert about a shelf that does not ship. See ADR-0029.
  */
 export function placeShelf(rows: readonly ShelfRow[]): Placement[][] {
@@ -95,7 +95,7 @@ export function placeRow(
   //
   // Flush, with no padding: a book that leans left and starts a finger's width
   // clear of the side is leaning on nothing, which is the tell that made the
-  // whole row look wrong. The case itself is what the first book rests on.
+  // whole row look wrong. The bookcase itself is what the first book rests on.
   let cursor = -SHELF.width / 2;
   let index = 0;
 
@@ -116,7 +116,7 @@ export function placeRow(
    * Six separate `left*` locals reassigned in a block is six chances to update
    * five of them, and every one of them is read by the same two decisions.
    *
-   * The case's own side starts it off: vertical, swinging not at all, taller
+   * The bookcase's own side starts it off: vertical, swinging not at all, taller
    * than any book, and standing exactly where the cursor does.
    */
   let left: Neighbour = {
@@ -299,7 +299,7 @@ function clearanceBefore(
     // flush — but where the angle changes, that swing lands inside whatever
     // is beside it. Both reported collisions are this: a leaning book's
     // bottom corner driven into the face-out book on its right, and the first
-    // book of a row driven into the case's own side.
+    // book of a row driven into the bookcase's own side.
     //
     // A propped book pays no clearance because it has already been *given*
     // one, a whole `YEAR_GAP` wide, and the shift above spends exactly the
@@ -390,7 +390,7 @@ export const MAX_PROP_LEAN = 0.25;
  *
  * A face-out book is a vertical slab: it carries `lean: 0` and `thickness: 0`,
  * because its 0.06 tilt is about Z *after* a quarter turn about Y and so swings
- * it in Y and Z rather than along the row. The case's own side is the same shape
+ * it in Y and Z rather than along the row. The bookcase's own side is the same shape
  * with an infinite height.
  */
 export interface Neighbour {

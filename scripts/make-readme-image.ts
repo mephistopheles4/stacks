@@ -17,7 +17,7 @@
  *
  * The crop keeps the title overlay on the left, so the image reads as the
  * running app rather than as a product shot of a bookcase. The numbers are the
- * gate's 1440x900 viewport, trimmed to the case plus that text; they are here
+ * gate's 1440x900 viewport, trimmed to the bookcase plus that text; they are here
  * rather than in a comment somewhere because re-deriving them by eye is the
  * annoying part.
  */
@@ -30,7 +30,7 @@ import { REPO_ROOT } from './lib/repo-root.ts';
 const SOURCE = join(REPO_ROOT, 'artifacts', 'shelf.png');
 const TARGET = join(REPO_ROOT, 'docs', 'images', 'shelf.png');
 
-/** Left edge to just past the case; top of the title to just under the plinth. */
+/** Left edge to just past the bookcase; top of the title to just under the plinth. */
 const CROP = { left: 0, top: 15, width: 1050, height: 810 } as const;
 
 async function main(): Promise<void> {

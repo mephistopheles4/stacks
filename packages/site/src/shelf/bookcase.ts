@@ -125,7 +125,7 @@ export const USABLE_WIDTH = SHELF.width - SHELF.endReserve;
 /**
  * The bookcase grows with the library, always keeping one empty shelf ahead.
  *
- * A fixed four-shelf unit means a small library sits in a mostly empty
+ * A fixed four-row bookcase means a small library sits in a mostly empty
  * bookcase and the camera has to back off far enough to frame all that empty
  * wood, which leaves the spines too small to read. Sizing to content keeps the
  * books large and the shelf honest — there is always somewhere for the next

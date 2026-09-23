@@ -20,7 +20,7 @@ describe('bookLimit', () => {
     expect(bookLimit(new URLSearchParams(''))).toBeUndefined();
   });
 
-  it('allows zero — an empty case still pays the whole fixed cost', () => {
+  it('allows zero — an empty bookcase still pays the whole fixed cost', () => {
     expect(bookLimit(new URLSearchParams('books=0'))).toBe(0);
   });
 

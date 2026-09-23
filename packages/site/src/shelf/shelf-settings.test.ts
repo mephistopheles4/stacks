@@ -9,21 +9,21 @@ import {
 } from './shelf-settings.ts';
 
 describe('heightOf', () => {
-  it('places the key light a fixed distance above the top of the case', () => {
-    // `ofHeight: 1, plus: 3.4` — the whole case, then 3.4 more.
+  it('places the key light a fixed distance above the top of the bookcase', () => {
+    // `ofHeight: 1, plus: 3.4` — the whole bookcase, then 3.4 more.
     expect(heightOf(DEFAULT_SETTINGS.lighting.key.position.y, 5.6)).toBeCloseTo(9);
   });
 
-  it('places the fill light at a fraction of the case height', () => {
-    // `ofHeight: 0.6, plus: 0` — scales with the case rather than clearing it.
+  it('places the fill light at a fraction of the bookcase height', () => {
+    // `ofHeight: 0.6, plus: 0` — scales with the bookcase rather than clearing it.
     expect(heightOf(DEFAULT_SETTINGS.lighting.fill.position.y, 5.6)).toBeCloseTo(3.36);
   });
 
-  it('grows the key light with the case but keeps the fill proportional', () => {
+  it('grows the key light with the bookcase but keeps the fill proportional', () => {
     const key = DEFAULT_SETTINGS.lighting.key.position.y;
     const fill = DEFAULT_SETTINGS.lighting.fill.position.y;
 
-    // Doubling the case moves the key by exactly the case's height, and the fill
+    // Doubling the bookcase moves the key by exactly the bookcase's height, and the fill
     // by a proportion of it. If both forms collapsed into one, this would fail.
     expect(heightOf(key, 10) - heightOf(key, 5)).toBeCloseTo(5);
     expect(heightOf(fill, 10) / heightOf(fill, 5)).toBeCloseTo(2);

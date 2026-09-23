@@ -12,14 +12,14 @@ import type { ShelfSettings } from './shelf-settings.ts';
  * ## Why this exists
  *
  * Every defect the books have had was found by squinting at a crowded shelf, and
- * the shelf is the worst place to look: books occlude each other, the case
+ * the shelf is the worst place to look: books occlude each other, the bookcase
  * occludes the row, the camera cannot go below 3.6° or much above, and a fault
  * that shows on one binding is hidden by whichever neighbour is taller. The head
  * cap shipped ~6× too narrow and was caught from a screenshot — after two
  * reviews, a full suite, and a cost line that reports every counter it moved. It
  * moved none of them.
  *
- * So: no case, no neighbours, no clamp. One book at the origin and an orbit that
+ * So: no bookcase, no neighbours, no clamp. One book at the origin and an orbit that
  * goes over the head and under the tail.
  *
  * ## It builds the book the shipped way, and that is the whole point
@@ -29,7 +29,7 @@ import type { ShelfSettings } from './shelf-settings.ts';
  * inspector with its own copy of the geometry would be a second thing to keep
  * true, and would agree with the shelf right up until the moment it mattered.
  *
- * What is deliberately *not* shared is the case, the painted shading and the
+ * What is deliberately *not* shared is the bookcase, the painted shading and the
  * placement transform. Those are the shelf, not the book.
  *
  * ⚠️ **The orbit is unclamped, and the shipped shelf's is not.** `maxPolarAngle`
@@ -123,10 +123,10 @@ export function mountBookInspector(
   scene.add(book);
 
   /**
-   * Lit as the shelf lights it, against a case of this book's height.
+   * Lit as the shelf lights it, against a bookcase of this book's height.
    *
-   * The lights are positioned relative to the case, so handing `addLighting` the
-   * book's own height puts the key where it would be for a one-shelf unit —
+   * The lights are positioned relative to the bookcase, so handing `addLighting` the
+   * book's own height puts the key where it would be for a one-row bookcase —
    * high, right, and in front. A book lit from somewhere else is a book whose
    * highlights are not the ones that ship.
    */

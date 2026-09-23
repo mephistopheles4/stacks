@@ -384,7 +384,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     (s, v) => resolveSettings({ lighting: { key: { position: { x: v } } } }, s),
   );
   slider(
-    'y  (above case)',
+    'y  (above bookcase)',
     'live',
     -4,
     14,
@@ -724,7 +724,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
 
   /* --- scene -------------------------------------------------------------- */
 
-  group('case & room');
+  group('bookcase & room');
   colour(
     'background',
     'live',

@@ -307,7 +307,7 @@ describe('woodColour — the knob is a fallback once the sheet is bound', () => 
     // knob is what kills relief on this surface — the fibre reads 0.264% at
     // 0.95, 0.612% at 0.82 and 3.246% at 0.60 — so it is the value most likely
     // to be moved by somebody chasing a number that a sheet did not fix. The
-    // painted shades and the whole case's read hang off it.
+    // painted shades and the whole bookcase's read hang off it.
     expect(DEFAULT_SETTINGS.materials.backingRoughness).toBe(0.95);
   });
 });
@@ -811,7 +811,7 @@ describe('applyWoodFibre — the knob, and what off costs', () => {
   it('binds no normal map at all at zero', () => {
     // Asserted rather than assumed, `spine-profile.test.ts`'s rule: off has to
     // short-circuit to *no map*, not to a map scaled by zero. A flat map is a
-    // texture unit and a `#define` on every member of the case, all to say
+    // texture unit and a `#define` on every member of the bookcase, all to say
     // nothing.
     const wood = material();
 
@@ -953,7 +953,7 @@ describe('varyMember', () => {
     expect(snapshot(varied('seed:plank-2'))).toEqual(snapshot(varied('seed:plank-2')));
   });
 
-  it('gives two members of one case different boards', () => {
+  it('gives two members of one bookcase different boards', () => {
     expect(snapshot(varied('seed:plank-2'))).not.toEqual(snapshot(varied('seed:plank-3')));
   });
 
@@ -1112,7 +1112,7 @@ describe('woodKeys', () => {
     expect(woodKeys('abc', 4).planks).toHaveLength(5);
   });
 
-  it('gives every member of one case its own key', () => {
+  it('gives every member of one bookcase its own key', () => {
     const keys = allKeys(woodKeys('abc', 4));
     expect(new Set(keys).size).toBe(keys.length);
   });
