@@ -285,10 +285,10 @@ export function makeNeighbourShadow(width: number, height: number): THREE.Mesh |
  * This is the piece the shelf was missing, and the one a viewer reads as "the
  * shelf casts a shadow over the books" — the books themselves barely take a
  * cast shadow at all, because their fronts sit within a couple of centimetres
- * of the bookcase's front plane and a ray leaving them escapes almost at once. The
- * backboard is the opposite case: it is the full depth of the bookcase back, so a
- * ray leaving it has to cross all of that before it gets out, and mostly does
- * not. So the dark band across the top of a shelf is the *wall* behind the
+ * of the bookcase's front plane and a ray leaving them escapes almost at once.
+ * The backboard is the opposite case: it stands the full depth of the bookcase
+ * behind them, so a ray leaving it has to cross all of that before it gets
+ * out, and mostly does not. So the dark band across the top of a shelf is the *wall* behind the
  * books, not the books.
  *
  * Two occluders, unioned rather than added so the corner where they meet does

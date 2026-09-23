@@ -1562,7 +1562,7 @@ export function buildBook(
 }
 
 /**
- * The case, plus handles on the two materials it is made of.
+ * The bookcase, plus handles on the two materials it is made of.
  *
  * The materials are returned rather than left buried in the group because the
  * panel dials them. Finding them again by walking the scene would mean matching
@@ -1570,7 +1570,7 @@ export function buildBook(
  * `MeshStandardMaterial` there freed the spines and left every shadow texture
  * behind. Holding the reference is cheaper and cannot mis-identify.
  */
-interface Woodwork {
+interface Bookcase {
   readonly group: THREE.Group;
   readonly wood: THREE.MeshStandardMaterial;
   readonly backing: THREE.MeshStandardMaterial;
@@ -1625,7 +1625,7 @@ function veneered(
   worldSpaceUvs(geometry, sheet, grain);
   // ⚠️ **After the rewrite, never before.** `varyMember` transforms the UVs
   // `worldSpaceUvs` just wrote; run first, every one of its dice would be
-  // overwritten and the case would come out uniform — which is a *plausible*
+  // overwritten and the bookcase would come out uniform — which is a *plausible*
   // shelf, so nothing would look wrong.
   varyMember(geometry, key);
   return geometry;
@@ -1661,7 +1661,7 @@ function woodRoot(): string {
   return pageWoodSeed;
 }
 
-function buildShelf(rowCount: number, settings: ShelfSettings): Woodwork {
+function buildShelf(rowCount: number, settings: ShelfSettings): Bookcase {
   const group = new THREE.Group();
   const castShadows = settings.shadows.casters;
   // No two members cut from the same place on the same board — offset, mirror,
@@ -2002,7 +2002,7 @@ function applyLive(
   background: THREE.Color,
   fog: THREE.Fog,
   lights: Lights,
-  woodwork: Woodwork,
+  bookcase: Bookcase,
   painters: Painters | undefined,
   post: Post | undefined,
   next: ShelfSettings,
@@ -2179,8 +2179,8 @@ function applyLive(
      * fallback and nothing else, and the report says so rather than claiming a
      * change the eye cannot find: **a control must not lie**.
      */
-    const shown = woodColour(next.materials.wood, woodwork.sheet?.bound() ?? false);
-    woodwork.wood.color.setHex(shown);
+    const shown = woodColour(next.materials.wood, bookcase.sheet?.bound() ?? false);
+    bookcase.wood.color.setHex(shown);
     applied.push(
       `wood: ${hex(current.materials.wood)} → ${hex(next.materials.wood)}` +
         (shown === next.materials.wood ? '' : ' (fallback only — the sheet has decoded)'),
@@ -2190,8 +2190,8 @@ function applyLive(
     // The same routing, for the same reason, on the surface that is 90% of the
     // near frame when the shelf is empty: unrouted, one panel tick puts a dark
     // colour back under a decoded `dark_wood`. See the block above.
-    const shown = woodColour(next.materials.woodDark, woodwork.backSheet.bound());
-    woodwork.backing.color.setHex(shown);
+    const shown = woodColour(next.materials.woodDark, bookcase.backSheet.bound());
+    bookcase.backing.color.setHex(shown);
     applied.push(
       `backing: ${hex(current.materials.woodDark)} → ${hex(next.materials.woodDark)}` +
         (shown === next.materials.woodDark ? '' : ' (fallback only — the sheet has decoded)'),
@@ -2204,8 +2204,8 @@ function applyLive(
     current.materials.backingRoughness,
     next.materials.backingRoughness,
   );
-  woodwork.wood.roughness = next.materials.woodRoughness;
-  woodwork.backing.roughness = next.materials.backingRoughness;
+  bookcase.wood.roughness = next.materials.woodRoughness;
+  bookcase.backing.roughness = next.materials.backingRoughness;
 
   /**
    * Live, unlike its twin on the books, and for one reason: there is a handle.
@@ -2237,11 +2237,11 @@ function applyLive(
     // and under rosewood for 7.68, and taking the wrong one is 4.8× off with
     // every whole-frame number still in range.
     fibreInForce = applyWoodFibre(
-      woodwork.wood,
+      bookcase.wood,
       next.materials.woodFibre,
-      () => fibreMapFor(woodwork.resolved.lay) ?? null,
+      () => fibreMapFor(bookcase.resolved.lay) ?? null,
     );
-    applyWoodFibre(woodwork.backing, next.materials.woodFibre, backingFibre);
+    applyWoodFibre(bookcase.backing, next.materials.woodFibre, backingFibre);
     if (fibreInForce === next.materials.woodFibre) {
       applied.push(`wood fibre: ${String(current.materials.woodFibre)} → ${String(fibreInForce)}`);
     } else {
@@ -2251,7 +2251,7 @@ function applyLive(
     // Not applied and not asked for — but still *reported*, so a fibre that
     // never bound because there was no canvas says so on the apply after the one
     // that discovered it, rather than only on that one.
-    fibreInForce = woodwork.wood.normalMap === null ? 0 : woodwork.wood.normalScale.x;
+    fibreInForce = bookcase.wood.normalMap === null ? 0 : bookcase.wood.normalScale.x;
   }
 
   /* --- the woodwork's sheet, and the read-back ----------------------------- */
@@ -2284,7 +2284,7 @@ function applyLive(
   /**
    * What the shelf is actually running, said out loud on every apply.
    *
-   * ⚠️ **Resolved from `next`, not read off `woodwork.resolved`.** The two
+   * ⚠️ **Resolved from `next`, not read off `bookcase.resolved`.** The two
    * differ exactly when a species change is waiting for a rebuild, and the
    * refusal has to reach the report *when the value is set* rather than one
    * rebuild later — a typo in a `?tune=` would otherwise show the default shelf
@@ -2296,7 +2296,7 @@ function applyLive(
    */
   const readBack = describeWoodwork(
     resolveWoodwork(next.materials.woodSpecies),
-    woodwork.resolved.species,
+    bookcase.resolved.species,
     fibreInForce,
     next.materials.woodFibre,
   );
