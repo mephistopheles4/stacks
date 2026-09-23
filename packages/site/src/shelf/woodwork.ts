@@ -100,7 +100,7 @@ export interface Sheet extends SheetLay {
  * reads is `resolution / unitsPerTile`, so rosewood's 1024 over 7.68 units is
  * about 133 texels per world unit where sapele's would be 640. A bigger sheet
  * buys away the repetition — one tile of this one is wider than the whole
- * bookcase, so it never repeats on this case at all — and pays for it in texels.
+ * bookcase, so it never repeats across it at all — and pays for it in texels.
  * That trade was walked on #284 and settled; laying the sheet *smaller* than
  * life to buy texel density back was rejected by eye, twice, because it brings
  * the repetition with it and repetition is the complaint.
@@ -149,7 +149,7 @@ export const WOODWORK_SHEET = {
  * ⚠️ **512 resolves it, and that is measured rather than economised.** 512
  * against 1024 is 0.368% of frame at zoom 10 and 0.527% at `minDistance` — for
  * four times the bytes, against the drawn fibre's 0.704% for none. Its tile is
- * wider than the whole bookcase either way, so it never repeats on this case.
+ * wider than the whole bookcase either way, so it never repeats across it.
  *
  * ⚠️ **`figure: 'u'` is the opposite of the woodwork's, and that is the whole
  * point of the field.** #285 states the backboard's grain runs **vertically**;
@@ -1225,7 +1225,7 @@ function bakeFibre(): THREE.CanvasTexture | undefined {
  *
  * ⚠️ **Zero short-circuits to no map bound at all**, not to a map scaled by
  * zero: off must cost nothing, rather than a texture unit and a `#define` on
- * every member of the case to say nothing. That is the rule `spine-profile.ts`
+ * every member of the bookcase to say nothing. That is the rule `spine-profile.ts`
  * and `page-edges.ts` both follow, and it is what makes "off" honest.
  *
  * The return value is the other half of that honesty. A browser that will not
@@ -1359,7 +1359,7 @@ export function varyMember(geometry: THREE.BoxGeometry, key: string): void {
   const offsetU = draw('u') * OFFSET_SPREAD;
   const offsetV = draw('v') * OFFSET_SPREAD;
   // Veneers are book-matched in life, and a flipped sheet is the cheapest way to
-  // stop a tiling seam repeating identically down the case.
+  // stop a tiling seam repeating identically down the bookcase.
   const mirror = draw('mirror') < 0.5 ? -1 : 1;
   const scaleU = 1 + (draw('scale-u') - 0.5) * 2 * SCALE_SPREAD;
   const scaleV = 1 + (draw('scale-v') - 0.5) * 2 * SCALE_SPREAD;
@@ -1393,7 +1393,7 @@ export function varyMember(geometry: THREE.BoxGeometry, key: string): void {
  * ⚠️ **`Math.random` and not a hash of anything**, which is the point rather
  * than laziness: any derived value — the row count, the vault, the clock at
  * second resolution — is something two loads could share, and
- * [#287](https://github.com/mephistopheles4/stacks/issues/287) asked for a case
+ * [#287](https://github.com/mephistopheles4/stacks/issues/287) asked for a bookcase
  * that is different every time you open it. Rendered to base 36 so it reads as a
  * token in a URL somebody may want to paste back.
  *
@@ -1419,7 +1419,7 @@ export function freshWoodSeed(): string {
     .padStart(SEED_LENGTH, '0');
 }
 
-/** Every member of the case, by the key its dice are drawn off. */
+/** Every member of the bookcase, by the key its dice are drawn off. */
 export interface WoodKeys {
   readonly backboard: string;
   readonly uprightLeft: string;

@@ -52,8 +52,8 @@ declare global {
     __shelf?: {
       bookCount: number;
       ready: boolean;
-      /** Worst breach of the case's sides, in world units. See `smoke:render`. */
-      caseOverflow: number;
+      /** Worst breach of the bookcase's sides, in world units. See `smoke:render`. */
+      bookcaseOverflow: number;
       shaderErrors: readonly string[];
       projectBook(index: number): { x: number; y: number } | undefined;
       /**
@@ -251,7 +251,7 @@ function publish(handle: ShelfHandle): void {
   window.__shelf = {
     bookCount: handle.bookCount,
     ready: true,
-    caseOverflow: handle.caseOverflow,
+    bookcaseOverflow: handle.bookcaseOverflow,
     shaderErrors: handle.shaderErrors,
     projectBook: (index) => handle.projectBook(index),
     stats: () => handle.stats(),

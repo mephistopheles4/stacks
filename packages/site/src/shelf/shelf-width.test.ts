@@ -98,7 +98,7 @@ function book(id: string, over: Partial<LibraryBook> = {}): LibraryBook {
  *
  * A row's charge and its consumption only diverge where the angle changes, so a
  * fixture of plain shelved books in one year exercises exactly one change — the
- * first book against the case's own side — and would pass against almost any
+ * first book against the bookcase's own side — and would pass against almost any
  * arithmetic.
  */
 const LIBRARIES: Record<string, LibraryBook[]> = {
@@ -167,7 +167,7 @@ const LIBRARIES: Record<string, LibraryBook[]> = {
  * lesson and the reason `THICKEST_SPINE` below is a restated literal; this
  * function now sits beside it, as the same kind of thing.
  *
- * `previous` is `undefined` for the first book of a row, where the case's own
+ * `previous` is `undefined` for the first book of a row, where the bookcase's own
  * side stands in — vertical, and swinging not at all.
  *
  * **It is an upper bound, not the exact spend.** The swing is charged at
@@ -259,7 +259,7 @@ function charged(row: ShelfRow): number {
  * spend against a model the cursor cannot move, and
  * `leaves a row no slack a book could have used`, which is the one assertion
  * here with a cursor-free number on one side. Beyond all of them is G16: only
- * `pnpm smoke:render` measures a rendered scene against the case's real inner
+ * `pnpm smoke:render` measures a rendered scene against the bookcase's real inner
  * faces, which is why ADR-0042 names it as the backstop rather than this file.
  */
 const ROW_END = -SHELF.width / 2 + USABLE_WIDTH;
@@ -322,7 +322,7 @@ function clearanceBound(row: ShelfRow): number {
   let changes = 0;
   let gaps = 0;
   let pairs = 0;
-  // The case's own side is vertical, so a leaning first book is already a change.
+  // The bookcase's own side is vertical, so a leaning first book is already a change.
   let leftLeans = false;
   let previous: ShelfBook | undefined;
   for (const entry of row.books) {
@@ -422,7 +422,7 @@ describe('the cursor spends no more than the geometry allows', () => {
   );
 
   it('is exact on a row that changes angle nowhere', () => {
-    // One face-out book alone: it stands square, the case side is vertical, so
+    // One face-out book alone: it stands square, the bookcase side is vertical, so
     // no angle changes anywhere and the two numbers must agree to the bit.
     const rows = rowsOf([book('solo', { faceOut: true })]);
     const [row] = rows;
@@ -596,7 +596,7 @@ describe('where a row starts and where it stops', () => {
       if (first === undefined) continue;
 
       // The cursor starts at -width/2 and the first book immediately pays its own
-      // swing, because the case's side is vertical and its lean is not. Flush is
+      // swing, because the bookcase's side is vertical and its lean is not. Flush is
       // therefore the *footprint* landing one sway in, which is what puts the
       // leaning corner on the wood — a book that starts a finger's width clear of
       // the side is leaning on nothing.

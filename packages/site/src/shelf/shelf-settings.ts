@@ -2,7 +2,7 @@
  * Everything about the shelf you can dial, in one place.
  *
  * The shelf's look was spread across five vocabularies: `COLOURS` and three
- * light intensities written inline in `scene.ts`, the case's dimensions in
+ * light intensities written inline in `scene.ts`, the bookcase's dimensions in
  * `bookcase.ts`, nine probe switches in `RendererOverrides`, and a dozen
  * alphas in `contact-shadow.ts`. Nothing could ask "what is the shelf
  * running", and so nothing could answer it — which is fine for a constant and
@@ -24,12 +24,12 @@
  *
  * Two things are deliberately NOT here:
  *
- * - **The case's geometry.** `SHELF` stays in `bookcase.ts`. It is not an
+ * - **The bookcase's geometry.** `SHELF` stays in `bookcase.ts`. It is not an
  *   aesthetic knob — `placement.ts` packs against `USABLE_WIDTH`, and G25
  *   exists because that number had five live answers which disagreed by 0.162
  *   across a row. Putting it in a hand-editable blob re-creates that defect
  *   with a slider on it.
- * - **Anything derived.** `caseLight()` computes the two ratios the painted
+ * - **Anything derived.** `bookcaseLight()` computes the two ratios the painted
  *   shadows are drawn from, out of the key light's position. Derived values are
  *   functions of what is here and are never stored, or a hand-edited blob could
  *   describe a light that does not exist.
@@ -51,11 +51,11 @@ import type { Binding } from '@stacks/core';
 import type { RequestedSpecies } from './woodwork.ts';
 
 /**
- * A light's height, which depends on how tall the case grew.
+ * A light's height, which depends on how tall the bookcase grew.
  *
  * `y = unitHeight * ofHeight + plus`. Both terms are needed because the three
  * lights genuinely differ: the key stands a fixed distance *above* the top of
- * the case (`ofHeight: 1, plus: 3.4`), while the fill and the lamp sit at a
+ * the bookcase (`ofHeight: 1, plus: 3.4`), while the fill and the lamp sit at a
  * *fraction* of its height (`ofHeight: 0.6, plus: 0`). Writing one form that
  * covers both beats two shapes that have to be told apart at every call.
  */
@@ -64,7 +64,7 @@ export interface Height {
   readonly plus: number;
 }
 
-/** Where a light stands. `x` and `z` are world units; `y` scales with the case. */
+/** Where a light stands. `x` and `z` are world units; `y` scales with the bookcase. */
 export interface LightPosition {
   readonly x: number;
   readonly y: Height;
@@ -80,12 +80,12 @@ export interface DirectionalLightSettings {
 
 export interface KeyLightSettings extends DirectionalLightSettings {
   /**
-   * What the key light aims at, as a fraction of the case's height.
+   * What the key light aims at, as a fraction of the bookcase's height.
    *
-   * A `DirectionalLight` aims at the origin unless told otherwise, and the case
+   * A `DirectionalLight` aims at the origin unless told otherwise, and the bookcase
    * stands *on* the origin and grows upward — so aiming at the default put half
-   * a five-row unit outside its own shadow frustum. `0.5` is the middle of the
-   * case, which is what fixed it.
+   * a five-row bookcase outside its own shadow frustum. `0.5` is the middle of the
+   * bookcase, which is what fixed it.
    */
   readonly aimHeight: number;
 }
@@ -465,7 +465,7 @@ export interface ShelfSettings {
  *
  * Every number here was the literal that used to sit at the call site, so this
  * commit changes no pixels. `pnpm smoke:render` is the check: same book count,
- * same case overflow, and a distinct-colour count inside the ~40-pixel noise
+ * same bookcase overflow, and a distinct-colour count inside the ~40-pixel noise
  * floor `docs/progress.md` measured for `artifacts/shelf.png`.
  *
  * **This is the paste target.** The debug panel's export button copies JSON, and
@@ -478,7 +478,7 @@ export interface ShelfSettings {
 export const DEFAULT_SETTINGS: ShelfSettings = {
   effects: {
     // Thresholded well above the wood so only genuinely bright things bloom —
-    // a cover's highlight and the lamp's pool, not the whole case.
+    // a cover's highlight and the lamp's pool, not the whole bookcase.
     bloom: { enabled: false, strength: 0.45, radius: 0.5, threshold: 0.85 },
   },
   renderer: {
@@ -572,7 +572,7 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
 };
 
 /**
- * Resolves the height of a light against a case of a given height.
+ * Resolves the height of a light against a bookcase of a given height.
  *
  * One function so the arithmetic is stated once. `scene.ts` and the panel both
  * need it, and a second copy is the shape of defect G10 and G23 both caught.

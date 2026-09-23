@@ -8,8 +8,8 @@
  * moves, and settle into whichever won when it stops. The camera's near and far
  * are 0.1 and 100, which leaves the depth buffer nothing to separate them with.
  *
- * On a four-row case there were **46** such pairs, and they were on `main` from
- * the day the case was built. Almost all of them resolved to the same pixel
+ * On a four-row bookcase there were **46** such pairs, and they were on `main` from
+ * the day the bookcase was built. Almost all of them resolved to the same pixel
  * either way, because the planks and the uprights share one material in one flat
  * colour — a tie between two identical colours is not a defect anybody can see.
  * ⚠️ **The 16 pairs the backboard takes part in were the exception and
@@ -29,7 +29,7 @@
  * a first pass shortened the planks in `x`, cleared 10, and left every backboard
  * pair *and* the plank front and back faces at `z = ±0.36` — which nobody had
  * pointed at and nobody had looked for. The second report arrived a few minutes
- * later. So this gate asserts about the **class**, from the case's own
+ * later. So this gate asserts about the **class**, from the bookcase's own
  * constants, and the count it checks is derived from the row count rather than
  * written down.
  *
@@ -81,14 +81,14 @@ type Axis = (typeof AXES)[number];
 /**
  * Row counts to check.
  *
- * More than one, because *"46 on a four-row case"* is a fact about the fixture
- * and the defect is a fact about the bookcase. `rowsForBookcase` grows the unit
+ * More than one, because *"46 on a four-row bookcase"* is a fact about the fixture
+ * and the defect is a fact about the bookcase. `rowsForBookcase` grows the bookcase
  * with the library, so a real vault reaches every one of these.
  */
 const ROW_COUNTS = [2, 3, 4, 5, 8] as const;
 
 /**
- * How many ties a case of `rows` rows has with no inset at all.
+ * How many ties a bookcase of `rows` rows has with no inset at all.
  *
  * Derived rather than written down. Per row boundary there are `rows + 1`
  * planks, and each contributes 8 ties — one `x` plane against each upright, two
@@ -192,7 +192,7 @@ function ties(members: readonly Member[]): string[] {
 }
 
 describe('G51 — the enumeration finds the defect it exists to clear', () => {
-  it('counts the ties the un-inset case has, at every row count', () => {
+  it('counts the ties the un-inset bookcase has, at every row count', () => {
     // The positive control, and it is the reason the clause below means
     // anything: an enumerator that has stopped matching reports zero ties on a
     // geometry riddled with them, and a gate asserting only "zero" would call
@@ -219,7 +219,7 @@ describe('G51 — the enumeration finds the defect it exists to clear', () => {
   });
 });
 
-describe('G51 — the shipped case has no tie at all', () => {
+describe('G51 — the shipped bookcase has no tie at all', () => {
   it('clears every pair at every row count', () => {
     const remaining = ROW_COUNTS.flatMap((rows) =>
       ties(bookcase(rows, PLANK_INSET, BACKBOARD_INSET)).map((tie) => `${rows} rows — ${tie}`),

@@ -29,15 +29,15 @@ import * as THREE from 'three';
  * The key light, reduced to the two ratios a painter needs.
  *
  * `xPerZ` and `yPerZ` are how far a shadow travels sideways and how far it
- * falls, per unit of depth into the case. Both are magnitudes: the light stands
+ * falls, per unit of depth into the bookcase. Both are magnitudes: the light stands
  * high and to the right, so every shadow here runs left and down, and saying so
  * once in prose beats carrying two signs through the arithmetic.
  *
  * Derived from the light's real position rather than tuned by eye (see
- * `caseLight` in `scene.ts`), so moving the light cannot leave the painted
+ * `bookcaseLight` in `scene.ts`), so moving the light cannot leave the painted
  * shadows describing where it used to be.
  */
-export interface CaseLight {
+export interface BookcaseLight {
   readonly xPerZ: number;
   readonly yPerZ: number;
 }
@@ -105,7 +105,7 @@ const BACKBOARD_ALPHA = 0.22;
  *
  * The one effect here that is *not* a cast shadow. A shadow needs the light to
  * be blocked, and almost nothing blocks it from a book's face: every book on
- * the shelf stands its front within two centimetres of the case's front plane,
+ * the shelf stands its front within two centimetres of the bookcase's front plane,
  * so a ray leaving one escapes into the room almost at once. What darkens the
  * top of a book is the recess it stands in — a plank directly overhead, a
  * backboard behind, and only a narrow wedge of room left to catch light from.
@@ -140,7 +140,7 @@ export function makeContactShadowTexture(
   contacts: readonly Contact[],
   shelfWidth: number,
   shelfDepth: number,
-  light: CaseLight,
+  light: BookcaseLight,
 ): THREE.CanvasTexture | undefined {
   const height = Math.max(64, Math.round((TEXTURE_WIDTH * shelfDepth) / shelfWidth));
 
@@ -175,12 +175,12 @@ export function makeContactShadowTexture(
   // front edge.
   //
   // That shape is the whole of it: a ray leaving the wood at the back of the
-  // shelf has the case's entire depth to cross before it escapes past the front,
+  // shelf has the bookcase's entire depth to cross before it escapes past the front,
   // and travels `xPerZ` sideways doing it, so anything within that distance of
   // the upright is behind it. A ray leaving the front edge escapes immediately
   // and is behind nothing at all. The left upright never appears here, for the
   // same reason and in reverse: the light is to the right, so its shadow falls
-  // out of the case rather than into it.
+  // out of the bookcase rather than into it.
   const softPx = Math.max(1, (PENUMBRA / shelfWidth) * TEXTURE_WIDTH);
   for (let row = 0; row < height; row += 1) {
     const z = ((row + 0.5) / height) * shelfDepth - shelfDepth / 2;
@@ -280,22 +280,22 @@ export function makeNeighbourShadow(width: number, height: number): THREE.Mesh |
 }
 
 /**
- * The shadow the case throws on its own backboard.
+ * The shadow the bookcase throws on its own backboard.
  *
  * This is the piece the shelf was missing, and the one a viewer reads as "the
  * shelf casts a shadow over the books" — the books themselves barely take a
  * cast shadow at all, because their fronts sit within a couple of centimetres
- * of the case's front plane and a ray leaving them escapes almost at once. The
- * backboard is the opposite case: it is the full depth of the case back, so a
- * ray leaving it has to cross all of that before it gets out, and mostly does
- * not. So the dark band across the top of a shelf is the *wall* behind the
+ * of the bookcase's front plane and a ray leaving them escapes almost at once.
+ * The backboard is the opposite case: it stands the full depth of the bookcase
+ * behind them, so a ray leaving it has to cross all of that before it gets
+ * out, and mostly does not. So the dark band across the top of a shelf is the *wall* behind the
  * books, not the books.
  *
  * Two occluders, unioned rather than added so the corner where they meet does
  * not go twice as dark as either:
  *
  *  - the plank above, whose shadow falls `depth × yPerZ` down the wall — on a
- *    five-row case that is about three quarters of the open height, which is
+ *    five-row bookcase that is about three quarters of the open height, which is
  *    why only a strip along the bottom of each shelf stays lit;
  *  - the right-hand upright, whose shadow reaches `depth × xPerZ` in from the
  *    side, full height.
@@ -309,7 +309,7 @@ export function makeBackboardShade(
   width: number,
   openHeight: number,
   depth: number,
-  light: CaseLight,
+  light: BookcaseLight,
 ): THREE.Mesh | undefined {
   const fall = depth * light.yPerZ;
   const reach = depth * light.xPerZ;
@@ -448,7 +448,7 @@ export function makeContactShadow(
   shelfWidth: number,
   shelfDepth: number,
   y: number,
-  light: CaseLight,
+  light: BookcaseLight,
 ): THREE.Mesh | undefined {
   const texture = makeContactShadowTexture(contacts, shelfWidth, shelfDepth, light);
   if (texture === undefined) return undefined;

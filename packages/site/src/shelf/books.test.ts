@@ -12,7 +12,7 @@ import { DEFAULT_SETTINGS } from './shelf-settings.ts';
  * **These used to hand `toRows` a shelf.** A capacity of 0.5 wrapped after four
  * books and one of 10 never wrapped at all, which made the wrap cases cheap to
  * write and made every one of them a statement about furniture that does not
- * exist. `toRows` imports the case now — ADR-0029's argument, applied to the
+ * exist. `toRows` imports the bookcase now — ADR-0029's argument, applied to the
  * packer by ADR-0031 — so a wrap has to be provoked by feeding it books, and
  * "wide enough not to wrap" is a book count rather than a number. That is the
  * cost ADR-0029 said it was paying, arriving.
@@ -83,7 +83,7 @@ describe('toRows', () => {
 
   it('opens a gap where the year changes, and counts it against the capacity', () => {
     // Leaving the gap out of the packing let twenty books smuggle in 0.16 of
-    // unaccounted width and pushed the last one through the side of the case.
+    // unaccounted width and pushed the last one through the side of the bookcase.
     const rows = rowsOf([
       book('a', { finished: '2025-06-01' }),
       book('b', { finished: '2024-06-01' }),
@@ -94,7 +94,7 @@ describe('toRows', () => {
     expect(row?.books.map((entry) => entry.gapBefore)).toEqual([undefined, 0.09, undefined]);
   });
 
-  it('opens no gap for the first book of a row, which has the case beside it', () => {
+  it('opens no gap for the first book of a row, which has the bookcase beside it', () => {
     // Every book a different year, newest first, so the sort leaves them in this
     // order and *every* book is a year change — which is the only way a row
     // actually starts on one. A fixture where years repeat quietly never
@@ -256,7 +256,7 @@ describe('binding', () => {
   it('biases the height band without widening it', () => {
     // `MAX_HEIGHT` bounds the worst swing a lean can produce, which is what
     // `SHELF.endReserve` covers (G25). A band that reached outside it would make
-    // the packer's reserve wrong and walk books out through the side of the case.
+    // the packer's reserve wrong and walk books out through the side of the bookcase.
     const entries = toRows(LIBRARY, { ...DEFAULT_SETTINGS.books, paperbackRatio: 0.6 }).flatMap(
       (row) => row.books,
     );

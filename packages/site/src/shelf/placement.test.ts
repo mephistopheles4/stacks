@@ -16,7 +16,7 @@ import {
  * What `placeShelf` claims, asserted without a GPU.
  *
  * Deliberately **not** a replacement for G16. That gate measures
- * `Box3.setFromObject` against the case's real inner faces on a rendered scene,
+ * `Box3.setFromObject` against the bookcase's real inner faces on a rendered scene,
  * because the arithmetic was wrong in a way re-checking the arithmetic could not
  * catch. Everything here can only check that the placements say what they mean
  * to say; only `pnpm smoke:render` confirms the scene agrees with them.
@@ -41,7 +41,7 @@ function book(id: string, over: Partial<LibraryBook> = {}): LibraryBook {
  * that made rows "wrap where they really wrap" — a promise it could not keep,
  * being a fourth copy of a formula that already had three disagreeing versions,
  * sitting in the one place that is supposed to be watching. `toRows` imports the
- * case now, for ADR-0029's reason and by ADR-0031.
+ * bookcase now, for ADR-0029's reason and by ADR-0031.
  */
 function rowsOf(books: readonly LibraryBook[]): ShelfRow[] {
   return toRows(books, DEFAULT_SETTINGS.books);
@@ -225,7 +225,7 @@ describe('placeShelf', () => {
     const placed = row ?? [];
     const leans = placed.map((placement) => placement.rotationZ);
     expect(leans.length).toBe(4);
-    // The row's first book is *not* a break — the case's own side holds it.
+    // The row's first book is *not* a break — the bookcase's own side holds it.
     expect(leans[0]).toBeGreaterThan(0);
     expect(leans[1]).toBe(leans[0]);
     // Steeper than the ordinary slump, because it has a gap to cross, and never
@@ -335,7 +335,7 @@ describe('placeShelf', () => {
     expect(placement.contact.depth).toBe(SHELF.bookDepth);
   });
 
-  it('keeps every book of a fifty-book shelf inside the case, leans included', () => {
+  it('keeps every book of a fifty-book shelf inside the bookcase, leans included', () => {
     const many = Array.from({ length: 50 }, (_, index) =>
       book(`book-${String(index)}`, {
         pages: 120 + ((index * 37) % 680),
@@ -355,7 +355,7 @@ describe('placeShelf', () => {
      * that same swing taken off again, so the left edge is a number that has been
      * through two floating-point operations to land back on an exact bound. It
      * lands on `-1.7000000000000002` for some heights and on `-1.7` for others,
-     * which is a fact about doubles rather than about the case — 2e-16 of a unit
+     * which is a fact about doubles rather than about the bookcase — 2e-16 of a unit
      * is 5e-14 mm on a shelf 41cm wide. G16 measures the real containment off the
      * rendered scene; this asserts the arithmetic, and has to admit that the
      * arithmetic is inexact.
@@ -386,7 +386,7 @@ describe('placeShelf', () => {
      * It caught what the arithmetic and the render gate both missed: the propped
      * lean measured its reach to the neighbour's *footprint* rather than to the
      * neighbour's corners, and over-leaned by 8–18mm. G16 says nothing about it —
-     * it measures the case's inner faces, and two books can intersect each other
+     * it measures the bookcase's inner faces, and two books can intersect each other
      * happily inside those.
      */
     const many = Array.from({ length: 90 }, (_, index) =>
@@ -412,7 +412,7 @@ describe('placeShelf', () => {
 
         const gap = boardGap(left, right);
         const where = `${String(i - 1)} → ${String(i)} of a row`;
-        // Zero, near enough — the same double's-worth of slack the case-bounds
+        // Zero, near enough — the same double's-worth of slack the bookcase-bounds
         // check above admits, and for the same reason. Not a tolerance for being
         // approximately right: a propped book is *meant* to land on its
         // neighbour and stops `TOUCHING` short of doing so, and every other pair

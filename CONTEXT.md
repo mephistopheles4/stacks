@@ -155,10 +155,11 @@ writes to somebody's vault.
 The furniture the shelf renders: its **planks**, its **uprights** and its
 **backboard**. Narrower than the English word — it covers the wooden members,
 and not the dimensions, the row count, or the books standing in it.
-*Avoid*: case (that is a hardback's binding case — see **Square**), unit,
-woodwork. **Older records call it the case**, and that name outlives any
-rename: several records under `docs/adr/` use it, and each keeps its original
-wording by design.
+*Avoid*: case (that is a hardback's binding case — see **Square**), unit.
+**Older records call it the case**, and that name outlives any rename: several
+records under `docs/adr/` use it, and each keeps its original wording by
+design. **A live comment is not a record** — it describes the code as it is
+now, so it follows this glossary.
 
 **Plank**:
 One horizontal board of the bookcase. A book's **contact** is where it meets
@@ -174,6 +175,12 @@ One of the two vertical sides of the bookcase.
 The panel behind the books. The one member with a material of its own, and the
 surface the painted backboard shades are drawn over.
 *Avoid*: back, backing (that is its material, not the member), backdrop.
+
+**Woodwork**:
+The planks and uprights together — every member of the **bookcase** except the
+**backboard**. Its veneer is the *woodwork sheet*; the backboard's is a constant
+of its own.
+*Avoid*: using it for the whole bookcase.
 
 **Row**:
 One level of the bookcase: the space between two **planks**, and the books

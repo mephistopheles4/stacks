@@ -46,8 +46,8 @@ import {
  * that crashes.
  *
  * Ignored unless it parses to a whole number, so a typo shows the whole shelf
- * rather than an empty case that looks like a different bug. `?books=0` is
- * meaningful and allowed: an empty case still pays the entire fixed cost — the
+ * rather than an empty bookcase that looks like a different bug. `?books=0` is
+ * meaningful and allowed: an empty bookcase still pays the entire fixed cost — the
  * framebuffer, the shadow map, the pixel ratio — so if *that* loses the context,
  * nothing about the books is involved at all.
  */
@@ -61,7 +61,7 @@ export function bookLimit(params: URLSearchParams): number | undefined {
 }
 
 /**
- * `?solo=N` — one book, alone, with no case and an unclamped orbit.
+ * `?solo=N` — one book, alone, with no bookcase and an unclamped orbit.
  *
  * A flat spelling, joining the ten historic probes rather than riding in
  * `?tune=`, for their reason: it is typed by hand while you are looking at

@@ -103,7 +103,7 @@ const FALLBACK_COLOURS = [
  * paper and badly in three dimensions: with a dozen books a year, every shelf
  * trails off into two-thirds empty wood. Chronological order is preserved
  * (newest first) and a year change opens a small gap where a bookend would sit,
- * so the grouping is still legible without leaving the case looking abandoned.
+ * so the grouping is still legible without leaving the bookcase looking abandoned.
  */
 export function toRows(books: readonly LibraryBook[], settings: BooksSettings): ShelfRow[] {
   const shelved = books.filter((book) => SHELVED_STATUSES.has(book.status));
@@ -123,7 +123,7 @@ export function toRows(books: readonly LibraryBook[], settings: BooksSettings): 
     // Offered to the row it would join, because what a book costs depends on
     // where it lands. A year change mid-row opens a gap and props the book
     // against its neighbour across it; the same book at the head of a row opens
-    // nothing and leans against the case. So the two cases are placed separately
+    // nothing and leans against the bookcase. So the two cases are placed separately
     // rather than one being assumed — an earlier version charged the gap either
     // way, and charged it to a book that never got one.
     let candidate = isYearChange && current.length > 0 ? { ...entry, gapBefore: YEAR_GAP } : entry;
@@ -281,7 +281,7 @@ function bindingFor(book: LibraryBook, paperbackRatio: number): Binding {
  * Both bands stay inside `MIN_HEIGHT`..`MAX_HEIGHT`. That is not tidiness —
  * `MAX_HEIGHT` is exported because it bounds the worst swing a lean can produce,
  * which is what `SHELF.endReserve` has to cover (G25). Widening the range here
- * would make the packer's reserve wrong and walk books out through the case.
+ * would make the packer's reserve wrong and walk books out through the bookcase.
  */
 function heightFor(id: string, binding: Binding): number {
   const [low, high] = HEIGHT_BAND[binding];

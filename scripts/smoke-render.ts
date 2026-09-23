@@ -124,7 +124,7 @@ async function main(): Promise<void> {
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       const bookCount = await page.evaluate('window.__shelf.bookCount');
-      const caseOverflow = await page.evaluate('window.__shelf.caseOverflow');
+      const bookcaseOverflow = await page.evaluate('window.__shelf.bookcaseOverflow');
       const stats = (await page.evaluate(readCanvasStats)) as Stats;
       const cost = (await page.evaluate('window.__shelf.stats()')) as ShelfCost;
 
@@ -136,7 +136,7 @@ async function main(): Promise<void> {
 
       report({
         bookCount: Number(bookCount),
-        caseOverflow: Number(caseOverflow),
+        bookcaseOverflow: Number(bookcaseOverflow),
         stats,
         cost,
         errors,
@@ -573,7 +573,7 @@ function cardFailures(card: CardContents): string[] {
 
 function report(result: {
   bookCount: number;
-  caseOverflow: number;
+  bookcaseOverflow: number;
   stats: Stats;
   cost: ShelfCost;
   errors: string[];
@@ -581,14 +581,14 @@ function report(result: {
   viewer: CoverViewerChecked | undefined;
   sheet: SheetChecked | undefined;
 }): void {
-  const { bookCount, caseOverflow, stats, cost, errors, cardOpened, viewer, sheet } = result;
+  const { bookCount, bookcaseOverflow, stats, cost, errors, cardOpened, viewer, sheet } = result;
   const failures: string[] = [];
 
   const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
 
   console.log(`canvas            ${stats.size}`);
   console.log(`books rendered    ${bookCount}`);
-  console.log(`case overflow     ${caseOverflow.toFixed(4)}`);
+  console.log(`bookcase overflow ${bookcaseOverflow.toFixed(4)}`);
   console.log(`distinct colours  ${stats.distinctColours}`);
   console.log(`non-background    ${stats.nonBackgroundPct.toFixed(1)}%`);
   console.log(
@@ -686,11 +686,11 @@ function report(result: {
     }
   }
 
-  // Books inside their own case.
+  // Books inside their own bookcase.
   //
   // The owner found this twice by eye on a phone: a leaning book's bottom corner
   // driven into the face-out book beside it, and a row's first book driven into
-  // the case's own side. The layout cursor advances by a book's *thickness*, and
+  // the bookcase's own side. The layout cursor advances by a book's *thickness*, and
   // a book rotated about its centre is wider than that, so nothing in the
   // arithmetic could notice. This measures the real world bounds instead.
   //
@@ -700,11 +700,11 @@ function report(result: {
   // and not a collision. The bar sits above that and far below a real breach:
   // removing the lean clearance was measured at 0.0203, and the theoretical
   // worst is 0.03, a whole thin book.
-  if (caseOverflow > 0.005) {
+  if (bookcaseOverflow > 0.005) {
     failures.push(
-      `a book breaks out through the side of the case by ${caseOverflow.toFixed(4)} ` +
+      `a book breaks out through the side of the bookcase by ${bookcaseOverflow.toFixed(4)} ` +
         '(about ' +
-        (caseOverflow * 24).toFixed(1) +
+        (bookcaseOverflow * 24).toFixed(1) +
         'cm at shelf scale)',
     );
   }
