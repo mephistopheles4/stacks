@@ -180,7 +180,9 @@ cached fixtures with **no live calls in tests**.
   `spine_color` on the spine; width from page count with a fixed fallback.
 - Shelf rows grouped by year finished.
 - InstancedMesh for the boxes; **measure before optimizing** textures (atlas vs
-  lazy per-book planes) — AGENTS.md says don't optimize blind.
+  lazy per-book planes) — AGENTS.md says don't optimize blind. *(Not built: each
+  book is one group of meshes, per
+  [ADR-0008](adr/0008-book-geometry.md) and the decision below.)*
 - Damped orbit/pan. Click → detail card as a **DOM overlay** positioned from
   raycaster hits, not in-canvas UI.
 - Generated fallback spine with title text when a book has no cover.
