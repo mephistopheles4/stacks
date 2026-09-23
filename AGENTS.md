@@ -148,7 +148,8 @@ it with no provenance at all.
 
 ## Tech decisions (made — don't relitigate)
 
-- **Vanilla Three.js, not react-three-fiber.** Plain Astro island, no React on the page. Use InstancedMesh for book boxes, per-instance cover textures via a texture atlas or lazy per-book planes — measure first, don't optimize blind.
+- **Vanilla Three.js, not react-three-fiber.** Plain Astro island, no React on the page.
+- **One `THREE.Group` per book, not `InstancedMesh`.** `buildBook` in `packages/site/src/shelf/scene.ts` builds each book as a case of single-material parts round a page block, and nothing on the shelf is instanced. Instancing was rejected because per-book covers would force a texture atlas, and 49 books rendered fine; the parts kept that rejection for the same reason ([ADR-0008](docs/adr/0008-book-geometry.md)). ⚠️ **The measurement it deferred has never been taken** — the ADR puts the brief's 200-book target at ~1200 objects rather than ~200, and parts have been added since, so measure first and don't optimize blind. The one recorded live lead for instancing is the head cap, per-instance colour collapsing its ~20 draws to 1, and it is written up beside that mesh in `scene.ts`.
 - Book detail card = plain DOM overlay positioned from raycaster hits, not in-canvas UI.
 - **The site may only `import type` from `@stacks/core`.** The package root
   re-exports the adapter, sharp and the metadata layer, so a *value* import
