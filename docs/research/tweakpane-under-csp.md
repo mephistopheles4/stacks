@@ -280,7 +280,8 @@ not DOM, so it never touches CSS at all. *(inferred)*
   `@tweakpane/core` as a direct dev dependency, or a local type. *(measured;
   remedy inferred)*
 - **Layout.** The default wrapper is absolutely positioned top-right, exactly
-  where the `?debug` black box sits. Pass `container` to place it. *(measured)*
+  where the existing tuning panel's readout (`debug-panel.ts`) sits, and the two
+  overlap. Pass `container` to place it. *(measured)*
 - **Not run.** `pnpm lint` was not run on the probe. *(unverified)*
 - **Process.** A new dependency needs an ADR under `docs/adr/` (AGENTS.md).
 
