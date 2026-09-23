@@ -98,6 +98,13 @@ export async function boot(
    * It publishes `window.__solo` instead — the turntable, drivable by number, so
    * that a before-and-after is the same picture twice. See `book-inspector.ts`.
    */
+  // PROTOTYPE #369 — throwaway, never merges.
+  if (params.has('held')) {
+    const { mountHeldPrototype } = await import('./prototype-369-held-book.ts');
+    mountHeldPrototype(canvas, all, params, resolveSettings(readSettings(params)));
+    return undefined;
+  }
+
   const solo = soloBook(params);
   if (solo !== undefined) {
     const { mountBookInspector } = await import('./book-inspector.ts');
