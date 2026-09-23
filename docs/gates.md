@@ -280,6 +280,21 @@ now are too. The fragment half went red on a one-character typo planted in
 `docs/plan.md`'s link to `agents/issue-tracker.md#wayfinding-operations`, then
 reverted.
 
+**A same-document link — `[x](#heading)` — is checked against its own file's
+headings, and was skipped outright until
+[#365](https://github.com/mephistopheles4/stacks/issues/365).** The skip was the
+right call while the slug was hand-kept: checked against a slug that disagreed
+with GitHub, a red in-page link steers its author to an anchor that is dead on
+the site (#361). Once `anchorsOf` became `github-slugger`, the skip was the only
+thing between a renamed heading and every in-page link to it. It has its own
+floor, just under the real count, apart from the cross-file fragment floor — a
+single combined floor would let either population fall to zero while the other
+held it up. **The first run, on 2026-09-22, rejected nothing**: every
+same-document link the tree held that day was live, and the current count lives
+in the floor. That zero was not taken on trust. A dead link planted in
+`docs/plan.md` went red through the same test, and restoring `#` to the skip
+turned both new tests red — the planted unit case and the floor.
+
 **What the blanking costs was measured, not assumed.** Blanking inline code can
 in principle hide a *real* link — a line with mismatched backticks pairs the
 wrong two and swallows whatever sits between them, which would be a false green
@@ -314,10 +329,13 @@ carrying a number again. The fragment half is now
 exercised by a real corpus as well as by mutation, and its size is asserted by
 its own vacuity floor in `gates/doc-links.test.ts` rather than counted here: an
 exact number in this paragraph is precisely what the paragraph above rules
-against. The slug rule approximates GitHub's, and it approximates it
-in the safe direction — this repo's headings carry backticks, arrows and inline
-links, so a heading it slugifies differently produces a *false red*, never a
-false green.
+against. **The slug is `github-slugger`'s — the offline reimplementation of
+GitHub's anchors that G29 follows — and no longer a hand-kept imitation of
+it.** This sentence used to say the
+imitation erred *in the safe direction*, producing a false red and never a false
+green. A slug that disagrees with GitHub has no direction: the author of the red
+link writes the anchor the gate accepts, and that anchor is dead on GitHub. See
+the 2026-09-22 entry below.
 
 ## Defect gates
 
@@ -1815,6 +1833,8 @@ oldest failure in this file.
 Carried over from the Decision Log when the decisions themselves moved to
 [`docs/adr/`](./adr/). These are not decisions — they are what went wrong while
 writing the things above, which is the part most likely to go wrong again.
+
+- **2026-09-22** — **G29's heading slug disagreed with GitHub on 228 of the repo's 1241 headings, and its own comment said that could only ever cause a false red.** The hand-kept slug collapsed a run of spaces into one hyphen, trimmed, and stripped `_` as emphasis; `github-slugger` does none of those, so `### Incremental runs — fast, and not a score` is `#incremental-runs--fast-and-not-a-score` on GitHub and G29 accepted only the single-hyphen form. The comment's reasoning held for one link and failed for the next one: a red link is fixed by writing the anchor the gate accepts, so every divergence was a false green one edit later, and the red was what steered the author there. Six links in `docs/spec/README.md` had already made that trip — green under G29, dead on GitHub. [#361](https://github.com/mephistopheles4/stacks/issues/361) replaced the imitation with the library itself ([ADR-0086](adr/0086-g29-slugs-with-github-slugger.md)) and planted the em-dash, underscore, emoji, arrow and repeated-heading cases as permanent tests, each watched red against the old slug first. **An approximation of someone else's algorithm has no safe direction when the approximation's output is what the author types next.**
 
 - **2026-09-22** — **A test pinned a fixture's line number, passed `pnpm test` and every pull-request check, and took down the next nightly's mutation run.** [#357](https://github.com/mephistopheles4/stacks/issues/357)'s two specs asserted the refusal names `fixtures/complexity/suppressed.ts:21`. Stryker's sandbox inserts `// @ts-nocheck` and a blank line into its copy of that fixture, so ESLint reported line 23 there, the dry run failed, and Stryker aborted before testing a mutant — no report, so every mutation series went missing from that night's record. Both specs now read the line from the file ESLint lints. ⚠️ **Pull-request CI never runs Stryker**, so the first place a spec meets the sandbox is the nightly; `pnpm exec stryker run --dryRunOnly` is the minute-long check that would have caught it. It is the same trap `vitest.stryker.config.ts` already records for specs that read the real tree: **the sandbox is not the checkout, and a spec that reads a file reads the sandbox's copy.**
 

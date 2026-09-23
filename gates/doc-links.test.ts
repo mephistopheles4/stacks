@@ -24,6 +24,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import GithubSlugger from 'github-slugger';
 import { expectFound, readRepoFile, REPO_ROOT, trackedFiles } from './repo.ts';
 
 /** One `[text](target)` occurrence, with enough context to name it in a failure. */
@@ -51,9 +52,45 @@ interface DocLink {
  * reason `codeOf` in `gates/repo.ts` blanks rather than deletes.
  */
 function withoutCode(source: string): string {
+  return withoutFences(source).replace(/(`+)[^\n]*?\1/g, (match) => match.replace(/[^\n]/g, ' '));
+}
+
+/**
+ * Fenced blocks blanked and inline code left alone — the half of `withoutCode`
+ * that heading extraction needs. A `# comment` inside a shell fence is not a
+ * heading, but a heading's own code span is part of its anchor.
+ *
+ * A fence is CommonMark's, not a regex's: three or more backticks or tildes,
+ * indented or not, closed only by a run of the same character at least as
+ * long with nothing after it. So `~~~` fences, and a ```` fence quoting a
+ * shorter one, and a ```` ```text ```` line inside a block are all read the way
+ * GitHub reads them. An unclosed fence runs to the end of the document.
+ */
+function withoutFences(source: string): string {
+  let open: { char: string; length: number } | undefined;
+
   return source
-    .replace(/^```[\s\S]*?^```/gm, (match) => match.replace(/[^\n]/g, ' '))
-    .replace(/(`+)[^\n]*?\1/g, (match) => match.replace(/[^\n]/g, ' '));
+    .split('\n')
+    .map((line) => {
+      const fence = /^\s*(`{3,}|~{3,})(.*)$/.exec(line);
+      const run = fence?.[1] ?? '';
+      const rest = fence?.[2] ?? '';
+
+      if (open === undefined) {
+        // A backtick opener's info string may not contain a backtick.
+        if (fence && !(run.startsWith('`') && rest.includes('`'))) {
+          open = { char: run.charAt(0), length: run.length };
+          return ' '.repeat(line.length);
+        }
+        return line;
+      }
+
+      if (fence && run.startsWith(open.char) && run.length >= open.length && rest.trim() === '') {
+        open = undefined;
+      }
+      return ' '.repeat(line.length);
+    })
+    .join('\n');
 }
 
 /**
@@ -64,65 +101,152 @@ function withoutCode(source: string): string {
  * there are no reference-style definitions and no autolinks to local files.
  * The honest limit is that a form nobody writes here is a form this does not
  * see, which is why the count is asserted below.
+ *
+ * A bare `#fragment` is not here: it names no file, so it is
+ * `sameDocumentLinks`'s, and the two halves below never see each other's.
  */
 function docLinks(): DocLink[] {
+  return trackedMarkdown().flatMap(({ path, source }) =>
+    linksIn(path, source).filter((link) => !link.target.startsWith('#')),
+  );
+}
+
+/**
+ * Every `[text](#fragment)` in the tracked `.md` files — a link to a heading
+ * in the file it is written in.
+ *
+ * These were skipped outright for as long as `anchorsOf` disagreed with GitHub
+ * (#361): checked against a wrong slug, a red link steers its author to an
+ * anchor that is dead on the site. Once the slug was GitHub's own, the skip was
+ * the only thing between a renamed heading and its dead in-page links (#365).
+ */
+function sameDocumentLinks(): DocLink[] {
+  return trackedMarkdown().flatMap(({ path, source }) =>
+    linksIn(path, source).filter((link) => link.target.startsWith('#')),
+  );
+}
+
+function trackedMarkdown(): { path: string; source: string }[] {
+  return trackedFiles()
+    .filter((file) => file.endsWith('.md'))
+    .map((path) => ({ path, source: readRepoFile(path) }));
+}
+
+/** Every non-network `](target)` in one document, code blanked first. */
+function linksIn(from: string, source: string): DocLink[] {
   const found: DocLink[] = [];
 
-  for (const path of trackedFiles().filter((file) => file.endsWith('.md'))) {
-    const lines = withoutCode(readRepoFile(path)).split('\n');
-
-    lines.forEach((text, index) => {
+  withoutCode(source)
+    .split('\n')
+    .forEach((text, index) => {
       for (const match of text.matchAll(/\]\(([^)\s]+)\)/g)) {
         const target = match[1];
         if (target === undefined) continue;
-        if (/^(https?:|mailto:|#)/.test(target)) continue;
-        found.push({ from: path, target, line: index + 1 });
+        if (/^(https?:|mailto:)/i.test(target)) continue; // schemes are case-insensitive
+        found.push({ from, target, line: index + 1 });
       }
     });
-  }
 
   return found;
+}
+
+/**
+ * `decodeURIComponent`, except a malformed escape such as `%zz` comes back
+ * undecoded instead of throwing. Thrown, it aborts the whole assertion and the
+ * report of every other broken link with it; returned raw, it names no heading
+ * and no file, so it lands in the report like any other dead link.
+ */
+function decoded(text: string): string {
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return text;
+  }
+}
+
+/** Whether a fragment names one of `source`'s headings. */
+function hasAnchor(source: string, fragment: string): boolean {
+  return anchorsOf(source).includes(decoded(fragment).toLowerCase());
+}
+
+/** The same-document links in `source` whose fragment names none of its own headings. */
+function deadSameDocumentLinks(from: string, source: string): DocLink[] {
+  return linksIn(from, source).filter(
+    (link) => link.target.startsWith('#') && !hasAnchor(source, link.target.slice(1)),
+  );
 }
 
 /** The repo-relative path a link resolves to, fragment stripped. */
 function resolveTarget(link: DocLink): string {
   const [pathPart = ''] = link.target.split('#');
-  const decoded = decodeURIComponent(pathPart);
   const base = dirname(join(REPO_ROOT, link.from));
-  return resolve(base, decoded);
+  return resolve(base, decoded(pathPart));
 }
 
 /**
- * A heading's GitHub anchor: lowercased, Markdown stripped, punctuation
- * dropped, spaces to hyphens.
+ * Every heading's GitHub anchor, in document order, repeats suffixed `-1`, `-2`.
  *
- * Approximate by construction, and safe in the direction that matters — this
- * repo's headings carry backticks, arrows and inline links (`## Invariants →
- * gates`, `## The probes became a tuning panel — map [#39](…)`), and any of
- * those getting slugified slightly differently would produce a *false red*
- * rather than a false green. That is the correct way round for a gate, and it
- * is why the fragment check is scoped to fragments somebody actually wrote.
+ * The slug is `github-slugger`'s, not an imitation of it. The hand-kept version
+ * this replaced collapsed runs of spaces, trimmed, and stripped `_` as if it
+ * were emphasis, and disagreed with GitHub on 228 of the repo's 1241 headings
+ * (#361). It carried a comment saying a disagreement could only ever be a
+ * *false red*. **A disagreement has no direction**: the author of a red link
+ * writes the anchor this gate accepts, and that anchor is dead on GitHub. So
+ * every divergence was a false green one edit later, steered there by the red.
+ *
+ * What stays ours is the step before the slug — turning Markdown into the text
+ * GitHub renders: a link keeps its text, and a code span loses its backticks
+ * but keeps its content, underscores included. Emphasis markers need no step:
+ * the slugger drops `*` with the rest of the punctuation, and keeps `_` — which
+ * is safe only because MD049 and MD050 (`pnpm lint:md`) forbid `_` as emphasis
+ * here. `## The _floor_ word` is `#the-floor-word` on GitHub and not here.
  */
-function anchorsOf(source: string): Set<string> {
-  const anchors = new Set<string>();
+function anchorsOf(source: string): string[] {
+  const slugger = new GithubSlugger();
 
-  for (const match of source.matchAll(/^#{1,6} +(.+?)\s*$/gm)) {
-    const heading = (match[1] ?? '')
-      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // links keep their text
-      .replace(/[`*_~]/g, '')
-      .trim();
-
-    anchors.add(
-      heading
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N} _-]/gu, '')
-        .trim()
-        .replace(/ +/g, '-'),
-    );
-  }
-
-  return anchors;
+  return [...withoutFences(source).matchAll(/^#{1,6} +(.+?)\s*$/gm)].map((match) =>
+    slugger.slug(
+      (match[1] ?? '')
+        .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // links keep their text
+        .replace(/`/g, ''),
+    ),
+  );
 }
+
+describe('G29 — a heading slugs the way GitHub slugs it', () => {
+  // Each case was a false green before #361: the gate accepted the anchor on
+  // the right, GitHub renders the one on the left, and a link written to turn
+  // this gate green was a dead link on the site it is read on.
+  it.each([
+    ['### Incremental runs — fast, and not a score', 'incremental-runs--fast-and-not-a-score'],
+    ['## What outranks `shelf_order`', 'what-outranks-shelf_order'],
+    // ⚠ is dropped, but its variation selector U+FE0F is a mark and survives,
+    // so the anchor opens with it and then the hyphen the space became.
+    ['## ⚠️ The word is *durable*', '\uFE0F-the-word-is-durable'],
+    ['## Invariants → [gates](docs/gates.md)', 'invariants--gates'],
+  ])('%s → #%s', (heading, anchor) => {
+    expect([...anchorsOf(heading)]).toEqual([anchor]);
+  });
+
+  // A heading GitHub renders as code is not an anchor. Each block below hides a
+  // `## Hidden` that the column-0 backtick-only fence match read as a heading.
+  it.each([
+    ['a tilde fence', '~~~\n## Hidden\n~~~'],
+    ['a longer fence around a shorter run', '````md\n```\n## Hidden\n```\n````'],
+    ['an info string, which never closes', '```\n```text\n## Hidden\n```'],
+    ['an unclosed fence, which runs to the end', '```\n## Hidden'],
+  ])('ignores a heading inside %s', (_, source) => {
+    expect(anchorsOf(`## Shown\n\n${source}`)).toEqual(['shown']);
+  });
+
+  it('suffixes a repeated heading the way GitHub does', () => {
+    expect([...anchorsOf('## Notes\n\n## Notes\n\n## Notes')]).toEqual([
+      'notes',
+      'notes-1',
+      'notes-2',
+    ]);
+  });
+});
 
 describe('G29 — every documented link resolves', () => {
   it('finds enough links to be checking anything', () => {
@@ -175,14 +299,58 @@ describe('G29 — every documented link resolves', () => {
       .filter((link) => {
         const target = resolveTarget(link);
         if (!target.endsWith('.md') || !existsSync(target)) return false;
-        const fragment = decodeURIComponent(link.target.split('#')[1] ?? '');
-        return !anchorsOf(readFileSync(target, 'utf8')).has(fragment.toLowerCase());
+        return !hasAnchor(readFileSync(target, 'utf8'), link.target.split('#')[1] ?? '');
       })
       .map((link) => `${link.from}:${link.line} → ${link.target}`);
 
     expect(
       broken,
       `links whose #fragment names no heading in the target:\n  ${broken.join('\n  ')}`,
+    ).toEqual([]);
+  });
+
+  it('refuses a same-document fragment that names none of its own headings', () => {
+    // The planted red, kept. Each dead link here is one the corpus half below
+    // would have to reject; each live one is one it must not. A fence is not a
+    // heading, so its `#` line is no anchor to link to.
+    const source = [
+      '# Title',
+      '## What outranks `shelf_order`',
+      '```sh',
+      '# not-a-heading',
+      '```',
+      '[live](#title) [live](#what-outranks-shelf_order) [live](#Title)',
+      '[dead](#what-outranks-shelforder) [dead](#not-a-heading) [dead](#) [dead](#bad%zz)',
+      '[elsewhere](other.md#nowhere) `[code](#nowhere)` [web](HTTPS://example.com/#nowhere)',
+    ].join('\n');
+
+    expect(deadSameDocumentLinks('x.md', source).map((link) => link.target)).toEqual([
+      '#what-outranks-shelforder',
+      '#not-a-heading',
+      '#',
+      '#bad%zz',
+    ]);
+    // A network scheme in any case is skipped, never read as a repo path.
+    expect(linksIn('x.md', source).map((link) => link.target)).not.toContain(
+      'HTTPS://example.com/#nowhere',
+    );
+  });
+
+  it('points every same-document fragment at a heading in its own file', () => {
+    // Its own floor, for the reason the cross-file fragment half has one: a
+    // corpus of zero same-document links is trivially all-live, and so is an
+    // extraction that stopped seeing them. Just under the real count, and it
+    // only ever moves up.
+    expectFound(sameDocumentLinks(), 'same-document fragment links', 40);
+
+    const broken = trackedMarkdown()
+      .flatMap(({ path, source }) => deadSameDocumentLinks(path, source))
+      .map((link) => `${link.from}:${link.line} → ${link.target}`);
+
+    expect(
+      broken,
+      'same-document links whose #fragment names no heading in their own file. ' +
+        `Each is dead on GitHub:\n  ${broken.join('\n  ')}`,
     ).toEqual([]);
   });
 });
