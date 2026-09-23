@@ -235,8 +235,16 @@ because every mutated file belongs to a scope.
 
 ⚠️ **`classify.mts`'s "status now Killed" is read per key.** When a key collides,
 it means *at least one mutant with this text is killed on the other side*, which
-is how the `github-post.ts` row first read as a status change. Both collided
-rows were checked by hand, above.
+is how the `github-post.ts` row still reads as a status change. The `floors.ts`
+row, where every mutant with the key survives, labels itself *one more survivor
+of a key the other side also survives*. Both collided rows were checked by hand,
+above.
+
+⚠️ **`plant.mts` picks both canary files from those `assignFiles` places in a
+scope**, the same set `cross-tree.mts` compares, so a planted change cannot
+land where the diff never looks. **No mutant in any of the four reports lacks a
+`location`** (0 of 42,642), which is why the scripts dereference it without a
+guard; a report that did would throw rather than miscount.
 
 ### `cross-tree.mts`
 
@@ -411,6 +419,12 @@ console.log(JSON.stringify(out, null, 2));
 // older-only survivor in an unchanged file.
 // Usage: tsx plant.mts in.json out.json
 import { readFileSync, writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+import { join } from 'node:path';
+
+// cross-tree.mts compares only files assignFiles places in a scope, so both planted
+// changes must land in such a file or the canary could pass by never being read.
+const lib = await import(pathToFileURL(join(process.cwd(), 'scripts/lib/mutation-score.ts')).href);
 
 interface Loc { line: number; column: number }
 interface Mutant { status: string; location: { start: Loc; end: Loc } }
@@ -418,7 +432,8 @@ interface Report { files: Record<string, { source: string; mutants: Mutant[] }> 
 
 const [inPath, outPath] = process.argv.slice(2);
 const r = JSON.parse(readFileSync(inPath, 'utf8')) as Report;
-const files = Object.keys(r.files).sort();
+const assigned = lib.assignFiles(r as unknown as Parameters<typeof lib.assignFiles>[0], lib.readScopes());
+const files = [...assigned.byScope.values()].flatMap((list: Iterable<[string, unknown]>) => [...list].map(([f]) => f)).sort();
 const moved = files.find((f) => r.files[f].mutants.some((m) => m.status === 'Survived'))!;
 const flippedIn = files.find((f) => f !== moved && r.files[f].mutants.some((m) => m.status === 'Survived'))!;
 const e = r.files[moved];
@@ -488,8 +503,11 @@ function classify(list: typeof aO, other: typeof aO, side: 'old' | 'new') {
   for (const x of other) { const v = byKey.get(x.key) ?? []; v.push(x.m.status); byKey.set(x.key, v); }
   const tally = new Map<string, number>();
   const rows = list.map((x) => {
-    const st = byKey.get(x.key)?.filter((s) => s !== 'Survived' && s !== 'NoCoverage');
-    const why = st && st.length > 0 ? `status now ${st.join('/')}` : 'text absent on other side';
+    const statuses = byKey.get(x.key);
+    const st = statuses?.filter((s) => s !== 'Survived' && s !== 'NoCoverage') ?? [];
+    const why = statuses === undefined ? 'text absent on other side'
+      : st.length > 0 ? `status now ${st.join('/')}`
+      : 'one more survivor of a key the other side also survives';
     const inHunk = touches(hunks.get(x.file)?.[side], x.m.location.start.line, x.m.location.end.line);
     const t = `${why} | ${inHunk ? 'in a diff hunk' : 'outside every hunk'}`;
     tally.set(t, (tally.get(t) ?? 0) + 1);
