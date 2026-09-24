@@ -113,6 +113,17 @@ out. `--dry-run` and `--check-only` are exempt: neither uploads, and a dry run
 from a feature branch is how you would check this path before merging it.
 Pinned by `gates/deploy-branch.test.ts`.
 
+**`--stop-after-record` runs as far as the trend record, and stops.** It exits
+0 once the record has printed and before anything judges it, so no stale or
+absent record decides where the run ends, and nothing is built or published. It
+clears nothing: the branch guard runs before it and still refuses — unless
+`--dry-run` or `--check-only` skipped the guard, in which case reaching the stop
+proves nothing about the branch. It exists so G17's test can drive the real
+checkout past the guard on a pull request, where the checkout is never `main`,
+without being able to deploy
+([#321](https://github.com/mephistopheles4/stacks/issues/321)). Typed by hand it
+is a harmless look at the branch guard, `SITE_URL` and the trend record.
+
 ## `pnpm deploy:site` — what it checks after the upload
 
 **After the upload it asks the live site which build it is serving**, and then
@@ -168,7 +179,8 @@ mirror, or a second `deploy:site` would clear the refusal by being run twice —
 
 **No flag clears it**, and `--check-only` reports instead of refusing: it uploads
 nothing, and a mode whose job is asking a live origin what it is serving must not
-be blocked by the age of a local record. Gated by **G39**
+be blocked by the age of a local record. `--stop-after-record` never reaches the
+verdict, and publishes nothing either. Gated by **G39**
 (`metrics-freshness`) in [`docs/gates.md`](gates.md).
 
 ⚠️ **Honest cost: if you go a long time without deploying, you go that long

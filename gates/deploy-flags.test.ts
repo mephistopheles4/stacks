@@ -69,7 +69,7 @@ const COMMANDS_DOC = 'docs/commands.md';
  * flag read with double quotes emptied the roster *and* broke the count clause
  * below — two reds, neither naming a quote or a line, on the gate whose whole
  * subject is a remedy nobody can reach. Widened rather than flipped, and both
- * forms are planted below: the three live reads are single-quoted, so a flip
+ * forms are planted below: the four live reads are single-quoted, so a flip
  * would be as green here as a widen and blind to all of them.
  */
 const ARGV_FLAG = /process\.argv\.includes\(\s*['"](--[a-z][a-z-]*)['"]\s*\)/;
@@ -88,7 +88,7 @@ function flagsRead(): string[] {
  * The prose of every `## \`pnpm deploy:site\` — …` section, concatenated.
  *
  * Scoped to those sections rather than swept from the whole file, which today
- * would give the same three and would not tomorrow: `pnpm stacks build` takes
+ * would give the same four and would not tomorrow: `pnpm stacks build` takes
  * `--public`, `covers` takes `--backfill`, and a section here explaining either
  * would make this gate demand that the deploy script read them.
  *
@@ -124,7 +124,7 @@ describe('G45 — the deploy flag roster', () => {
 
   it('extracts a flag read in either quote form', () => {
     // Planted, because the repair is otherwise invisible in a script whose
-    // three live reads are all single-quoted. Until #252 the regex above
+    // four live reads are all single-quoted. Until #252 the regex above
     // hardcoded one quote character, so a flag read as
     // `process.argv.includes("--fast")` produced "extraction found 0 flags" —
     // and then, one clause down, a count mismatch — neither of which names a

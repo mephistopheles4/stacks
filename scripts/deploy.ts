@@ -147,6 +147,28 @@ const dryRun = process.argv.includes('--dry-run');
 const checkOnly = process.argv.includes('--check-only');
 
 /**
+ * `--stop-after-record`: run as far as the step-0b line, and stop.
+ *
+ * A designed stop, for a test that must drive this script past the branch guard
+ * on any checkout without being able to deploy (#321). It exits after the trend
+ * record prints and **before anything judges it**, so neither a stale record, an
+ * absent one, nor the network probe a refusal spends can decide where the run
+ * ends — the one thing the tests reading it need to be true on every machine.
+ *
+ * It clears nothing. The branch guard still runs before it and still refuses,
+ * which is what lets its line prove the guard allowed the run — **except under
+ * `--dry-run` or `--check-only`, which skip the guard**, so beside either of
+ * those its line proves nothing about the branch. It builds and uploads nothing,
+ * so typed by hand it is a harmless look at the branch guard, `SITE_URL` and the
+ * trend record.
+ *
+ * ⚠️ **Before it, this script ended early under test only by accident**: an
+ * `actions/checkout` has no `refs/remotes/origin/metrics` mirror, so G39
+ * refused. A workflow that ever fetched that ref would have let the run go on.
+ */
+const stopAfterRecord = process.argv.includes('--stop-after-record');
+
+/**
  * Every refusal in this file, and which flags clear it.
  *
  * ⚠️ **The convention: a refusal says which flags clear it, right where it is
@@ -157,7 +179,7 @@ const checkOnly = process.argv.includes('--check-only');
  * step-1 gate commands, and **the flag is gone** — deleted for the reason
  * [ADR-0064](../docs/adr/0064-no-flag-skips-the-deploy-gates.md) records.
  *
- * **The convention outlived it**, because it was never about one flag. Three
+ * **The convention outlived it**, because it was never about one flag. Four
  * remain, every refusal below says which of them clear it, and the roster itself
  * is now held to `docs/commands.md` in both directions by G45 (`deploy-flags`)
  * — so the *next* undocumented flag is red the day it lands rather than the day
@@ -227,7 +249,12 @@ if (!checkOnly && !dryRun) assertPublishableBranch();
  */
 function assertPublishableBranch(): void {
   if (process.argv.includes('--any-branch')) {
-    console.log('--any-branch: publishing a branch other than main, deliberately');
+    // A control must not lie: beside the stop, this run publishes nothing.
+    console.log(
+      stopAfterRecord
+        ? '--any-branch: past the branch guard; --stop-after-record ends this run before it publishes'
+        : '--any-branch: publishing a branch other than main, deliberately',
+    );
     return;
   }
 
@@ -479,7 +506,8 @@ function disambiguate(store: FetchedRecord | undefined): Disambiguation {
  * nothing, and `--check-only` warns instead of refusing — the rule step 0c already
  * applies to the empty-scope residual, and for the same reason: that mode
  * exists to ask a live origin what it is serving, and the age of a local record
- * says nothing about that.
+ * says nothing about that. `--stop-after-record` never reaches the verdict at
+ * all: it ends the run after the print, having published nothing.
  */
 function reportTrendRecord(): void {
   const now = Math.floor(Date.now() / 1000);
@@ -504,6 +532,20 @@ function reportTrendRecord(): void {
     })) {
       console.log(line);
     }
+  }
+
+  // ⚠️ **Here, between the print and the verdict, and not a line later.** Past
+  // this point a record this machine happens to hold decides whether the run
+  // goes on, which is exactly what the stop exists to take out of the question.
+  //
+  // Reached by `--stop-after-record` on every mode: past the branch guard
+  // normally, and with the guard skipped under `--dry-run` or `--check-only`.
+  if (stopAfterRecord) {
+    console.log(
+      '\n--stop-after-record: stopping after the trend record, before it is judged.\n' +
+        '  Nothing was built and nothing was published.',
+    );
+    process.exit(0);
   }
 
   if (verdict.kind === 'fresh') return;

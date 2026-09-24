@@ -246,7 +246,8 @@ build it is serving.
 
 **Every run prints the trend record first, and refuses a stale one** — per
 series, at 3 days, gated by G39 (`metrics-freshness`). No flag clears that;
-`--check-only` reports it instead of refusing, because it publishes nothing. The
+`--check-only` reports it instead of refusing, because it publishes nothing, and
+`--stop-after-record` ends the run before the verdict, publishing nothing. The
 same is true of the zero-mutant residual G38 (`mutation-scope`) checks, so
 neither flag reaches a refusal on any path that publishes.
 
