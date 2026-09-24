@@ -344,6 +344,8 @@ describe('G17 — deploy publishes main', () => {
     // A control must not lie (docs/shelf-inspectors.md): the override's usual
     // line claims a publish, and this run publishes nothing.
     expect(output).not.toContain('publishing a branch other than main');
+    // The same cold spawn as the test below, so the same budget, for the reason
+    // given there. Trim one and not the other and the twin stops being a twin.
   }, 30_000);
 
   it('reads the checkout it is actually in, not a fixture', () => {
