@@ -217,10 +217,16 @@ const PAST_THE_GUARD = 'STACKS_VAULT points at nothing';
  * Step 0b prints this before it judges anything, so it appears whether the
  * record is fresh, stale or absent; and the guard's `fail()` never returns, so
  * seeing it at all means the guard allowed the run. That makes it the sentinel
- * for the one test here that reads the real checkout, where `PAST_THE_GUARD`
+ * for the two tests here that read the real checkout, where `PAST_THE_GUARD`
  * lies past a check the environment decides.
  */
 const PAST_THE_STEP = 'trend record —';
+
+/**
+ * The designed stop's own line — printed only when `--stop-after-record` ends
+ * the run, straight after the step-0b line and before anything judges it.
+ */
+const STOPPED_ON_PURPOSE = '--stop-after-record:';
 
 describe('G17 — deploy publishes main', () => {
   it('reaches the branch decision at all', () => {
@@ -304,13 +310,52 @@ describe('G17 — deploy publishes main', () => {
     ).toBe('tsx scripts/deploy.ts');
   });
 
+  it('does not take --stop-after-record as an override', () => {
+    // The stop's line is evidence only because the guard runs before it. A
+    // stop that also cleared the guard would print its line from any branch,
+    // and every assertion reading that line would pass for the wrong reason.
+    const { status, output } = deploy({ repo: OFF_MAIN, args: ['--stop-after-record'] });
+
+    expect(status).toBe(1);
+    expect(output).toContain('not main');
+    expect(output).not.toContain(STOPPED_ON_PURPOSE);
+  });
+
+  it('runs the real checkout to step 0b on any branch, and stops there by design', () => {
+    // ⚠️ **The pull-request twin of the test below, and the reason it exists
+    // (#321).** That one's assertion executes only on `main`, and a pull
+    // request is never on `main` — so it went red twice on the push run after
+    // a merge, by two unrelated mechanisms, with every pull request green. This
+    // runs the same checkout, with no planted record and no `GIT_DIR`, down
+    // the same path, on every pull request: the state behind the first
+    // incident (a checkout with no metrics mirror) and the cold spawn behind
+    // the second.
+    //
+    // ⚠️ **What it does not prove.** `--any-branch` returns before git is read,
+    // so this never runs `branch === 'main'` against the real checkout. The
+    // scratch repositories above prove that decision; the test below remains
+    // the only evidence of it on the real one, which is why it stays.
+    const { status, output } = deploy({ args: ['--any-branch', '--stop-after-record'] });
+
+    expect(output, 'the run must reach the step-0b line').toContain(PAST_THE_STEP);
+    expect(output, 'and end at the designed stop').toContain(STOPPED_ON_PURPOSE);
+    expect(output, 'before the vault check, which lies past it').not.toContain(PAST_THE_GUARD);
+    expect(status, 'a stop that was asked for is not a failure').toBe(0);
+    // A control must not lie (docs/shelf-inspectors.md): the override's usual
+    // line claims a publish, and this run publishes nothing.
+    expect(output).not.toContain('publishing a branch other than main');
+  }, 30_000);
+
   it('reads the checkout it is actually in, not a fixture', () => {
     // Every test above redirects git at a scratch repository, which is what
     // makes both directions testable at all. This one does not, so it is the
     // only evidence that the guard is wired to the real thing. It asserts
     // whichever answer is correct here rather than skipping when inconvenient.
     const branch = currentBranch();
-    const { output } = deploy();
+    // The stop ends the run at the line below by design rather than by the
+    // accident this test used to lean on (#321). It clears nothing: off `main`
+    // the guard still refuses before it, which is what the `else` asserts.
+    const { output } = deploy({ args: ['--stop-after-record'] });
 
     // ⚠️ **Not `PAST_THE_GUARD`, and the difference is the whole bug this
     // line was written for.** The vault refusal sits past G39's freshness
@@ -328,7 +373,9 @@ describe('G17 — deploy publishes main', () => {
     // `pull_request` is never on `main`, so no pull request can run this
     // branch of it. The old sentinel also held only while the owner's local
     // mirror was fresh, and would have failed on their machine after four
-    // quiet days.
+    // quiet days. **The test above is this branch's pull-request twin** — the
+    // same checkout and the same path, through `--any-branch` — and the one
+    // thing it cannot carry is the `main` decision itself, which stays here.
     if (branch === 'main') {
       expect(output, 'on main, the guard must let the run reach step 0b').toContain(PAST_THE_STEP);
       expect(output, 'the branch guard must not be what stopped it').not.toContain('not main');
@@ -337,9 +384,10 @@ describe('G17 — deploy publishes main', () => {
     // estimate.** Off `main` the run stops at the branch guard and is cheap. On
     // `main` it is the most expensive spawn in the file — a cold `tsx` start
     // that runs past the guard to step 0b — and it is reached **only on the
-    // push run after a merge**, so no pull request ever measures it. At
-    // Vitest's default 5000ms it reddened `main` once on `27248ab` and went
-    // green re-run unchanged (#270).
+    // push run after a merge**. At Vitest's default 5000ms it reddened `main`
+    // once on `27248ab` and went green re-run unchanged (#270). The twin above
+    // makes the same spawn on every pull request and carries the same budget,
+    // so a cost that grows is now red before a merge rather than after one.
     //
     // ⚠️ **#270 blamed the trend record growing from 8 series to 20, and on CI
     // that cannot be the cost.** Step 0b reads the mirrored ref, not `.trend/`,
@@ -352,11 +400,11 @@ describe('G17 — deploy publishes main', () => {
     // entire file's worst case three times over. Trimming it back towards the
     // default re-arms a flake that only ever fires between merges.
     //
-    // ⚠️ **And nothing designed keeps this under that number.** The run ends
-    // just after step 0b only because an `actions/checkout` has no
-    // `refs/remotes/origin/metrics` mirror, so G39 (`metrics-freshness`)
-    // refuses immediately. That is the absence of a ref, not a stop anybody
-    // built: a workflow that ever fetches that ref lets the run continue past
-    // step 0b, and the timeout question returns with it.
+    // **`--stop-after-record` is what keeps it under that number.** Until
+    // #321 the run ended just after step 0b only because an `actions/checkout`
+    // has no `refs/remotes/origin/metrics` mirror, so G39 (`metrics-freshness`)
+    // refused — the absence of a ref, not a stop anybody built, and a workflow
+    // that fetched the ref would have let the run go on. The stop sits before
+    // G39's verdict, so where this run ends no longer depends on that ref.
   }, 30_000);
 });
