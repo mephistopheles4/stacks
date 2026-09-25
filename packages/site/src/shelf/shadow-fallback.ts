@@ -182,11 +182,17 @@ export function gpuChanged(record: FallbackRecord, gpu: string | undefined): boo
  * Whether a shelf running these settings reads the shadow map.
  *
  * Read off the **live** settings, because the panel turns shadows on and off
- * without a rebuild. A loss while this is false says nothing about shadows, so
+ * without a rebuild. A loss while this is false says nothing about sampling, so
  * it writes no record.
+ *
+ * ⚠️ **`?shadowfetch=0` draws the map and does not read it.** The shelf stops
+ * every material sampling it after the first frame (`stopSamplingShadows` in
+ * `scene.ts`), which is the whole point of that probe: it separates holding a
+ * depth attachment from sampling one. A loss there is the probe's answer, not
+ * the failure the record exists for, and must not paint the device for weeks.
  */
 export function samplesShadowMap(running: ShelfSettings): boolean {
-  return running.shadows.enabled;
+  return running.shadows.enabled && running.shadows.fetch;
 }
 
 /**

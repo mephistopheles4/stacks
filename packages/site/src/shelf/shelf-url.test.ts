@@ -355,6 +355,20 @@ describe('writeSettings against the base the page started from', () => {
     expect(written(realTime, PAINTED_BASE)).toBe('?debug&shadows=1');
   });
 
+  it('keeps a ?shadows=0 the visitor typed, even where it equals the base', () => {
+    // On a remembered device painted is the base, so a typed `?shadows=0` is no
+    // difference from it — and dropping it would make the copied link open
+    // real-time on every other device.
+    expect(written(painted, PAINTED_BASE, '?debug&shadows=0')).toBe('?debug&shadows=0');
+  });
+
+  it('still drops a probe once its setting has moved off what was typed', () => {
+    // Shadows turned on over a record and then off again: the address bar holds
+    // the panel's own `?shadows=1`, and painted is the base, so nothing is left
+    // to write — the remembered device stays out of the URL.
+    expect(written(painted, PAINTED_BASE, '?debug&shadows=1')).toBe('?debug');
+  });
+
   it('writes the difference from whatever base it is given', () => {
     // The control: the same painted settings against a real-time base are a
     // difference, and are written. Without the base argument this is what a

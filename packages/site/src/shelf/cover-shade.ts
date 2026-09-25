@@ -613,10 +613,18 @@ export function coverShadeMesh(
  *
  * Whenever there is painted shading and the books do not read the shadow map —
  * which is the default, real-time or not, and the painted shading a lost
- * context falls back to. Under `receivers: 'all'` the books receive the real
- * shadow and painting it too would darken every cover twice; that is also what
- * keeps `?receivers=all` the unchanged reference this is tuned against.
+ * context falls back to. Under real-time shadows with `receivers: 'all'` the
+ * books receive the real shadow and painting it too would darken every cover
+ * twice; that is also what keeps `?receivers=all` the unchanged reference this
+ * is tuned against.
+ *
+ * ⚠️ **`receivers` is inert while shadows are off, and so it is here.** The
+ * painted fallback keeps every dial of the shelf it replaces (`paintedOf` in
+ * `boot.ts`), `receivers` included, so a `?receivers=all` page that loses its
+ * context, or one opened on a device carrying a lost-context record, is painted
+ * with `receivers: 'all'` still set. No book reads a map there, and a test of
+ * `receivers` alone would leave it with neither the real band nor this one.
  */
 export function paintsCoverShade(shadows: ShadowSettings): boolean {
-  return shadows.painted && shadows.receivers !== 'all';
+  return shadows.painted && !(shadows.enabled && shadows.receivers === 'all');
 }

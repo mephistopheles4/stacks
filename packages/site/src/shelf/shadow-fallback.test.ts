@@ -275,6 +275,15 @@ describe('samplesShadowMap', () => {
     expect(samplesShadowMap(resolveSettings({ shadows: { enabled: true } }))).toBe(true);
     expect(samplesShadowMap(resolveSettings({ shadows: { enabled: false } }))).toBe(false);
   });
+
+  it('is false under ?shadowfetch=0, which draws the map and stops reading it', () => {
+    expect(samplesShadowMap(resolveSettings({ shadows: { enabled: true, fetch: false } }))).toBe(
+      false,
+    );
+    expect(samplesShadowMap(resolveSettings({ shadows: { enabled: true, fetch: true } }))).toBe(
+      true,
+    );
+  });
 });
 
 describe('describeFallback', () => {

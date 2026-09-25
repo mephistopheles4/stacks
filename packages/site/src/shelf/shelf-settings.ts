@@ -175,8 +175,9 @@ export interface ShadowSettings {
    * it that holds on the Pixel 10 Pro XL, and only under `pcf`. It is what every
    * visitor gets, since real-time shadows are the default. `all` is what
    * `?shadows=1` drew until September 2026, kept so the crash can be re-tested
-   * after a driver update, and as G60's control. Inert while `enabled` is off.
-   * See `shadow-receivers.ts`.
+   * after a driver update — as `?shadows=1&receivers=all`, because a device
+   * with a lost-context record starts painted — and as G60's control. Inert
+   * while `enabled` is off. See `shadow-receivers.ts`.
    */
   readonly receivers: ShadowReceiverName;
   /** Whether materials *read* the shadow map. See `RendererOverrides.shadowFetch`. */

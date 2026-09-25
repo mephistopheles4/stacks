@@ -730,6 +730,17 @@ describe('when it is drawn', () => {
       false,
     );
     expect(paintsCoverShade({ ...shadows, painted: false, receivers: 'bookcase' })).toBe(false);
+    expect(paintsCoverShade({ ...shadows, painted: false, receivers: 'all', enabled: false })).toBe(
+      false,
+    );
+  });
+
+  it('is drawn on the painted fallback of a ?receivers=all page, where no book reads a map', () => {
+    // The fallback flips `enabled` and keeps every other dial, `receivers`
+    // included. Reading `receivers` alone left that page with no band at all.
+    expect(paintsCoverShade({ ...shadows, painted: true, receivers: 'all', enabled: false })).toBe(
+      true,
+    );
   });
 });
 

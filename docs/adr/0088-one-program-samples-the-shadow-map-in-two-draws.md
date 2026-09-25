@@ -40,8 +40,10 @@ nothing reading a shadow map survives on the Pixel 10 Pro
    upright, and every book to the right, taken as its page block. The strength
    is one `opacity`, fitted against `?receivers=all`. It is drawn whenever there
    is painted shading and the books do not read the map, which is the real-time
-   default and the painted fallback alike. It is not drawn under
-   `?receivers=all`, which stays the reference. See
+   default and the painted fallback alike. It is not drawn while the books
+   read the real shadow — real-time shadows under `?receivers=all` — which
+   stays the reference; with shadows off `receivers` is inert, so the painted
+   fallback of such a page draws it. See
    [`cover-shade.ts`](../../packages/site/src/shelf/cover-shade.ts).
 
 Together, the real-time path — `?shadows=1` when this was written, the default

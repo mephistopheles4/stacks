@@ -217,6 +217,10 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
    * drew before the default became `bookcase`. It loses the context on the
    * Pixel 10 Pro XL at frame 8; kept as the upstream reproduction, so that can
    * be re-tested after a driver update, and as G60's control — not as a look.
+   * ⚠️ **Re-test with `?shadows=1&receivers=all`, never `?receivers=all`
+   * alone.** It is inert while shadows are off, and the device most likely to
+   * be re-tested is the one carrying a lost-context record, which starts
+   * painted: the page then reads no map, survives, and reads as a fixed driver.
    * See `shadow-receivers.ts`.
    *
    * `?shadowfetch=0` — draws the map once, then stops *reading* it. Separates
@@ -267,6 +271,14 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
  * gets pasted into an issue and opened on every other device. A difference
  * from the base is what this visitor dialled; the base itself is not theirs to
  * share.
+ *
+ * ⚠️ **A probe the address bar already carries, at the value the setting still
+ * has, stays.** Otherwise a `?shadows=0` typed on that same device equals the
+ * base and the panel's first change deletes it — and the copied link opens
+ * real-time everywhere else, the same leak run the other way. What this keeps
+ * is only ever something the visitor put there: the panel writes nothing that
+ * equals the base. Compared as the string the panel writes, so a typed
+ * `?shadows=off` that equals the base is still dropped, as it always was.
  */
 export function writeSettings(
   settings: ShelfSettings,
@@ -276,7 +288,7 @@ export function writeSettings(
   const d = base;
 
   const probe = (name: string, differs: boolean, value: string): void => {
-    if (differs) params.set(name, value);
+    if (differs || params.get(name) === value) params.set(name, value);
     else params.delete(name);
   };
 

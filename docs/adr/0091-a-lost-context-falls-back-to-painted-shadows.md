@@ -38,7 +38,9 @@
    may dispose the shelf, and a disposed shelf never draws again: both
    `handleContextRestored` and `renderLoop` check `disposed`.
 7. **The debug panel writes the URL as a difference from the page's base.** A
-   remembered device's `?shadows=0` never reaches a link somebody shares.
+   remembered device's `?shadows=0` never reaches a link somebody shares. A
+   probe the visitor typed is kept at the value they typed, so a `?shadows=0`
+   put there by hand on that device is not dropped for equalling the base.
 8. **`?debug` shows it and can undo it.** The black box gains a `fallback` line
    and a `forget` button, shown only while a record exists.
 
