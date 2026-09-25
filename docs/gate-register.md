@@ -6238,7 +6238,8 @@ the page white, and the sixth with the `probe loss` case, after review:
    the change, which asks storage on every sampling loss, went red in all three
    of its probe cases.
 
-The control is the same run with the plants reverted: six cases green, one
+The control is the same run with the plants reverted: six cases green then (`redraw
+halts` and `link failure` came after it, with M04 and M06), one
 loop a frame in each of the three that count them — `restore`, `no restore`
 and `painted loss`.
 

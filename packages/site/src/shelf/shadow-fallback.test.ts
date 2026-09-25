@@ -332,7 +332,7 @@ describe('describeFallback', () => {
     [
       { kind: 'remembered', at: NOW },
       'painted',
-      'painted — remembered from a lost context on 2026-09-24, retries after 2026-10-24',
+      'painted — remembered from a failure on 2026-09-24, retries after 2026-10-24',
     ],
     [
       { kind: 'probe-override', at: NOW },
@@ -430,7 +430,7 @@ describe('describeFallback', () => {
     // A browser that refused the first context, on a device with a record: the
     // page draws nothing, and `painted` would name a picture that is not there.
     expect(describeFallback({ kind: 'remembered', at: NOW }, 'no shelf')).toBe(
-      'no shelf — remembered from a lost context on 2026-09-24, retries after 2026-10-24',
+      'no shelf — remembered from a failure on 2026-09-24, retries after 2026-10-24',
     );
     expect(describeFallback({ kind: 'none' }, 'no shelf')).toBe('no shelf');
   });

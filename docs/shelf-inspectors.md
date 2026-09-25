@@ -155,7 +155,7 @@ same way and writes nothing** — `?shadows=1&receivers=all` above all, so
 re-running the reproduction does not paint the phone's plain page for 30 days.
 
 - **The `fallback` line** says where that stands: `real-time`, `painted`, or
-  `no shelf`, then why — `remembered from a lost context on …, retries after …`,
+  `no shelf`, then why — `remembered from a failure on …, retries after …` (a lost context or a program that would not link; the record does not say which),
   `?shadows=1 overrides a record from …`, `record … retired, GPU string
   changed`, or how a loss in this session settled: `restored in 1.1s, redrawn
   painted`, `no restore in 2.5s, redrawn on a new canvas`, or `lost — no restore

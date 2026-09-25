@@ -908,8 +908,12 @@ async function checkContextLossFallback(
     } finally {
       await context.close();
     }
+    // Whole string for three's refusal, as the register states; by prefix only for the
+    // link failure, whose message carries the driver's log after its colon.
+    const isExpected = (error: string): boolean =>
+      expected === LINK_FAILED ? error.startsWith(expected) : error === expected;
     const unexpected =
-      expected === undefined ? errors : errors.filter((error) => !error.startsWith(expected));
+      expected === undefined ? errors : errors.filter((error) => !isExpected(error));
     if (expected !== undefined && unexpected.length === errors.length) {
       failures.push(
         `context loss, ${name}: three never logged "${expected}", so the page was not refused ` +
@@ -1523,6 +1527,13 @@ async function measureSampling(
     await page.bringToFront();
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+    // The woodwork's sheets arrive after `ready`, and the bookcase changes program when
+    // they do, so a verdict taken before the network settles can catch the one frame
+    // where the old program and the new one both draw. `networkidle0` inside `goto`
+    // is what once waited for that, and it stalled on this machine's GPU for a reason
+    // never isolated; as its own step it only bounds the wait, and a page that never
+    // idles is judged on the frames the settle below still requires.
+    await page.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => undefined);
     try {
       await page.waitForFunction(
         `(window.__samplingHook?.settledFor() ?? 0) >= ${String(MIN_STEADY_FRAMES)}`,

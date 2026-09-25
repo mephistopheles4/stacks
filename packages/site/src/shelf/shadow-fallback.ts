@@ -352,7 +352,7 @@ export function describeFallback(
       return mode;
     case 'remembered':
       return (
-        `${mode} — remembered from a lost context on ${day(state.at)}, ` +
+        `${mode} — remembered from a failure on ${day(state.at)}, ` +
         `retries after ${day(state.at + FALLBACK_TTL_MS)}`
       );
     case 'probe-override':
