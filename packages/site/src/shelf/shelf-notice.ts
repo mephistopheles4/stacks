@@ -35,6 +35,9 @@
  * spec can hand in a fake with no DOM shim. See `shelf-notice.test.ts`.
  */
 
+import type { Notice } from './context-recovery.ts';
+import type { FallbackState } from './shadow-fallback.ts';
+
 /** The class `Shelf.astro` styles, through `:global`, since this builds the element. */
 export const NOTICE_CLASS = 'shelf-notice';
 
@@ -62,4 +65,88 @@ export function clearNotice(canvas: HTMLCanvasElement): void {
   // decides again. A shallow clone of a hidden canvas carries this style with
   // it, and this is what shows the fallback's new canvas once it is drawn.
   canvas.style.removeProperty('visibility');
+}
+
+/**
+ * What the live shelf leaves on screen once it has been mounted, or resumed.
+ *
+ * A shelf that draws takes the notice down and shows its canvas. A shelf that
+ * **halted** on a program that would not link never draws again (`halted` in
+ * `scene.ts`), so clearing for it would remove the one sentence that says why
+ * and show a frozen canvas — it gets `SHADER_MESSAGE` instead, whatever was up.
+ * No shelf at all leaves whatever is up alone.
+ *
+ * ⚠️ **Every place `boot.ts` used to clear goes through here**: a panel rebuild
+ * adopted, a fallback's redraw settled, a restore resumed in place. Each of them
+ * can meet a halted shelf — the new shelf's first frame is drawn inside
+ * `mountShelf`, so its link failure has already put the sentence up by the time
+ * the caller clears — and each of them used to clear regardless.
+ *
+ * Halted is read off `shaderErrors`, which is empty exactly while the shelf
+ * runs (`ShelfHandle.shaderErrors`), so there is no second flag to fall out of
+ * step with it.
+ */
+export function settleNotice(
+  canvas: HTMLCanvasElement,
+  shelf: { readonly shaderErrors: readonly string[] } | undefined,
+): void {
+  if (shelf === undefined) return;
+  if (shelf.shaderErrors.length > 0) showNotice(canvas, SHADER_MESSAGE);
+  else clearNotice(canvas);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Saying so, rather than showing an empty room.
+ *
+ * The sentences, one per way the shelf can fail to be there. Each is shown by
+ * `showNotice`, which hides the canvas while it is up — every one of these means
+ * that canvas has no live context, or holds a shelf that will never draw again.
+ *
+ * Here rather than in `boot.ts`, which wires them up, so a spec can read which
+ * sentence a state gets: `boot.ts` is reached only through the browser.
+ */
+
+// Says what happened, not why. `webglcontextlost` carries no reason, and the
+// first wording asserted one — "ran out of graphics memory" — that the evidence
+// then contradicted: the page survived the loss and exited cleanly, so nothing
+// was killed for running out of anything it could name.
+export const LOST_MESSAGE = 'The browser reset the shelf’s 3D canvas. Reload to bring it back.';
+
+// Says what happened and where to look, because the whole point of stopping is
+// that somebody reads the panel. Without `?debug` there is no panel, so the
+// sentence has to be able to stand alone.
+export const SHADER_MESSAGE =
+  'This device would not compile the shelf’s shaders, so drawing has stopped. Reload with ?debug to see what the driver said.';
+
+export const UNAVAILABLE_MESSAGE =
+  "This browser wouldn't give the page a 3D canvas, so the shelf can't be drawn. Reloading usually fixes it.";
+
+// The fallback's three. They say what the page is doing about it, and still not
+// why: nothing the page can observe names a cause. `LOST_MESSAGE` stays for a
+// loss the fallback does not own, and for a second loss after it.
+const REDRAWING_MESSAGE =
+  'The browser reset the shelf’s 3D canvas. Redrawing it with painted shadows…';
+
+const FAILED_MESSAGE =
+  'The browser reset the shelf’s 3D canvas and would not give it another. Reload to bring it back.';
+
+// Only when the record was written: a promise about the next load that storage
+// refusing would make false.
+const FAILED_REMEMBERED_MESSAGE =
+  'The browser reset the shelf’s 3D canvas and would not give it another. Reload to bring it back — it will come back with painted shadows.';
+
+/** The sentence for one of the fallback's notices. `clear` is not a sentence. */
+export function noticeFor(notice: Exclude<Notice, 'clear'>, state: FallbackState): string {
+  switch (notice) {
+    case 'lost':
+      return LOST_MESSAGE;
+    case 'redrawing':
+      return REDRAWING_MESSAGE;
+    case 'failed':
+      return 'remembered' in state && state.remembered === 'yes'
+        ? FAILED_REMEMBERED_MESSAGE
+        : FAILED_MESSAGE;
+  }
 }

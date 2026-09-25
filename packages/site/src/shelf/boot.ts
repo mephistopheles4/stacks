@@ -20,7 +20,14 @@ import {
   type FallbackKind,
   type FallbackState,
 } from './shadow-fallback.ts';
-import { clearNotice, showNotice } from './shelf-notice.ts';
+import {
+  LOST_MESSAGE,
+  noticeFor,
+  settleNotice,
+  SHADER_MESSAGE,
+  showNotice,
+  UNAVAILABLE_MESSAGE,
+} from './shelf-notice.ts';
 import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
 import { bookLimit, readSettings, soloBook } from './shelf-url.ts';
 
@@ -200,8 +207,10 @@ export async function boot(
         onContextRestored: () => {
           // `handled`: this shelf was just replaced by a painted one, inside this
           // call, and the notice is the recovery's to clear. Otherwise the shelf
-          // resumes in place, which is only ever safe — see `Recovery.restored`.
-          if (recovery?.restored() !== 'handled') clearNotice(surface);
+          // resumes in place — safe as far as the shadow map goes (see
+          // `Recovery.restored`), and no resume at all for a shelf that halted
+          // on a program that would not link, which keeps its sentence.
+          if (recovery?.restored() !== 'handled') settleNotice(surface, handle);
         },
         onShaderFailure: () => {
           shaderFailed = true;
@@ -226,10 +235,13 @@ export async function boot(
    * It clears the notice, and with it shows the canvas again: a notice hides the
    * canvas it stands in for (`shelf-notice.ts`), so a panel rebuild that draws
    * after one that could not would otherwise be a live shelf nobody can see.
+   * ⚠️ **Unless the new shelf halted**: its first frame is drawn inside
+   * `mountShelf`, so a program that would not link has stopped it before this
+   * runs, and `settleNotice` keeps the shader's sentence up over it.
    */
   const adopt = (next: ShelfHandle): void => {
     handle = next;
-    clearNotice(surface);
+    settleNotice(surface, next);
     publish(next, () => fallback().kind);
     showPanel?.(next);
   };
@@ -289,7 +301,9 @@ export async function boot(
   };
 
   const tell = (notice: Notice, state: FallbackState): void => {
-    if (notice === 'clear') clearNotice(surface);
+    // A redraw the recovery counts as drawn can still have halted on its first
+    // frame; `settleNotice` reads the live shelf rather than trusting the word.
+    if (notice === 'clear') settleNotice(surface, handle);
     else showNotice(surface, noticeFor(notice, state));
   };
 
@@ -455,58 +469,6 @@ function publish(handle: ShelfHandle, fallback: () => FallbackKind): void {
 /** One key flipped, every dial kept: the shelf the visitor had, painted. */
 function paintedOf(settings: ShelfSettings): ShelfSettings {
   return resolveSettings({ shadows: { enabled: false } }, settings);
-}
-
-/* -------------------------------------------------------------------------- */
-
-/**
- * Saying so, rather than showing an empty room.
- *
- * The sentences, one per way the shelf can fail to be there. Each is shown by
- * `showNotice`, which hides the canvas while it is up — every one of these means
- * that canvas has no live context. See `shelf-notice.ts`.
- */
-
-// Says what happened, not why. `webglcontextlost` carries no reason, and the
-// first wording asserted one — "ran out of graphics memory" — that the evidence
-// then contradicted: the page survived the loss and exited cleanly, so nothing
-// was killed for running out of anything it could name.
-const LOST_MESSAGE = 'The browser reset the shelf’s 3D canvas. Reload to bring it back.';
-
-// Says what happened and where to look, because the whole point of stopping is
-// that somebody reads the panel. Without `?debug` there is no panel, so the
-// sentence has to be able to stand alone.
-const SHADER_MESSAGE =
-  'This device would not compile the shelf’s shaders, so drawing has stopped. Reload with ?debug to see what the driver said.';
-
-const UNAVAILABLE_MESSAGE =
-  "This browser wouldn't give the page a 3D canvas, so the shelf can't be drawn. Reloading usually fixes it.";
-
-// The fallback's three. They say what the page is doing about it, and still not
-// why: nothing the page can observe names a cause. `LOST_MESSAGE` stays for a
-// loss the fallback does not own, and for a second loss after it.
-const REDRAWING_MESSAGE =
-  'The browser reset the shelf’s 3D canvas. Redrawing it with painted shadows…';
-
-const FAILED_MESSAGE =
-  'The browser reset the shelf’s 3D canvas and would not give it another. Reload to bring it back.';
-
-// Only when the record was written: a promise about the next load that storage
-// refusing would make false.
-const FAILED_REMEMBERED_MESSAGE =
-  'The browser reset the shelf’s 3D canvas and would not give it another. Reload to bring it back — it will come back with painted shadows.';
-
-function noticeFor(notice: Exclude<Notice, 'clear'>, state: FallbackState): string {
-  switch (notice) {
-    case 'lost':
-      return LOST_MESSAGE;
-    case 'redrawing':
-      return REDRAWING_MESSAGE;
-    case 'failed':
-      return 'remembered' in state && state.remembered === 'yes'
-        ? FAILED_REMEMBERED_MESSAGE
-        : FAILED_MESSAGE;
-  }
 }
 
 /** How often the dev page checks whether the vault was rebuilt. */

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { clearNotice, NOTICE_CLASS, showNotice } from './shelf-notice.ts';
+import {
+  clearNotice,
+  NOTICE_CLASS,
+  settleNotice,
+  SHADER_MESSAGE,
+  showNotice,
+} from './shelf-notice.ts';
 
 /**
  * The notice and the canvas it stands in for, on a hand-built page.
@@ -138,5 +144,51 @@ describe('a notice replaces the canvas', () => {
       showNotice(p.canvas, 'lost');
     }).not.toThrow();
     expect(p.notices).toHaveLength(0);
+  });
+});
+
+describe('settling the notice for the live shelf', () => {
+  const DRAWING = { shaderErrors: [] };
+  const HALTED = { shaderErrors: ['link log:  staged'] };
+
+  it('clears it and shows the canvas for a shelf that draws', () => {
+    const p = page();
+    showNotice(p.canvas, 'redrawing');
+    settleNotice(p.canvas, DRAWING);
+
+    expect(p.notices).toHaveLength(0);
+    expect(p.visibility()).toBe('');
+  });
+
+  it('keeps the shader sentence, and the canvas hidden, for a shelf that halted', () => {
+    // A panel rebuild whose program would not link: the sentence goes up inside
+    // `mountShelf`, and adopting the shelf used to take it straight down again —
+    // a frozen, half-drawn canvas with nothing saying why.
+    const p = page();
+    showNotice(p.canvas, SHADER_MESSAGE);
+    settleNotice(p.canvas, HALTED);
+
+    expect(p.notices.map((notice) => notice.textContent)).toEqual([SHADER_MESSAGE]);
+    expect(p.visibility()).toBe('hidden');
+  });
+
+  it('puts the shader sentence up over any other for a shelf that halted', () => {
+    // The fallback's redraw that also would not link: the recovery counts it
+    // drawn and settles, and what the page shows is the shelf's, not the word's.
+    const p = page();
+    showNotice(p.canvas, 'redrawing');
+    settleNotice(p.canvas, HALTED);
+
+    expect(p.notices.map((notice) => notice.textContent)).toEqual([SHADER_MESSAGE]);
+    expect(p.visibility()).toBe('hidden');
+  });
+
+  it('leaves the notice alone when there is no shelf at all', () => {
+    const p = page();
+    showNotice(p.canvas, 'would not give it another');
+    settleNotice(p.canvas, undefined);
+
+    expect(p.notices.map((notice) => notice.textContent)).toEqual(['would not give it another']);
+    expect(p.visibility()).toBe('hidden');
   });
 });

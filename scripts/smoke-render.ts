@@ -724,6 +724,10 @@ async function clickAnyBook(page: Page): Promise<boolean> {
  * dies on the Pixel where the shipped shelf survives, falls back the same way
  * and writes nothing, so that device's plain page stays real-time.
  *
+ * The `redraw halts` case breaks every program the painted redraw compiles, by
+ * appending a compile error to its source (`BREAK_PROGRAMS`), and holds the page
+ * to keeping the shader's sentence up over a shelf that will never draw.
+ *
  * Each case runs in a browser context of its own, so a record one writes
  * cannot leak into the next — or into the page every check above measured.
  */
@@ -793,6 +797,34 @@ const REFUSE_NEW_CONTEXTS = `(() => {
  */
 const REFUSED_BY_THREE = 'THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.';
 
+/**
+ * Breaks programs the way a driver that will not link them does, installed
+ * before any page script runs. `window.__breakPrograms` says which: `'shadow'`
+ * breaks every program three compiles with the shadow map on — its prefix
+ * carries `#define USE_SHADOWMAP` exactly then, and a painted page's never
+ * does — and `'all'` breaks every one.
+ *
+ * A real compile error appended to the source rather than a faked
+ * `LINK_STATUS`, so the driver refuses the program and three calls
+ * `onShaderError` from the same place it does on the phone. What it does not
+ * stage is the phone's cause, which is not known.
+ */
+const BREAK_PROGRAMS = `(() => {
+  const shaderSource = WebGL2RenderingContext.prototype.shaderSource;
+  WebGL2RenderingContext.prototype.shaderSource = function (shader, source) {
+    const mode = window.__breakPrograms;
+    const broken = mode === 'all' || (mode === 'shadow' && source.includes('#define USE_SHADOWMAP'));
+    return shaderSource.call(this, shader, broken ? source + '\\n#error staged by G60\\n' : source);
+  };
+})()`;
+
+/**
+ * How `scene.ts` begins the console line for a program that would not link —
+ * one line per program, and the rest of it names the material and the driver's
+ * limits, so the cases that break programs on purpose match it as a prefix.
+ */
+const LINK_FAILED = 'THREE program would not link:';
+
 /** The most render-loop callbacks any one frame ran, over a second of frames. */
 const LOOPS_PER_FRAME = `(async () => {
   window.__callbacksPerFrame.clear();
@@ -837,8 +869,9 @@ async function checkContextLossFallback(
   const lines: string[] = [];
   const failures: string[] = [];
 
-  // The third field is the one console error a case causes on purpose. It is
-  // taken out of that case's errors only, and the case fails if it never came.
+  // The third field begins the one kind of console error a case causes on
+  // purpose. It is taken out of that case's errors only, and the case fails if
+  // it never came.
   const cases: readonly (readonly [string, FallbackCase, string?])[] = [
     ['restore', restoreThenReload],
     ['no restore', noRestore],
@@ -846,6 +879,7 @@ async function checkContextLossFallback(
     ['painted loss', paintedLoss],
     ['refused', refusedRedraw, REFUSED_BY_THREE],
     ['probe loss', probeLoss],
+    ['redraw halts', redrawHalts, LINK_FAILED],
   ];
 
   for (const [name, run, expected] of cases) {
@@ -870,7 +904,8 @@ async function checkContextLossFallback(
     } finally {
       await context.close();
     }
-    const unexpected = errors.filter((error) => error !== expected);
+    const unexpected =
+      expected === undefined ? errors : errors.filter((error) => !error.startsWith(expected));
     if (expected !== undefined && unexpected.length === errors.length) {
       failures.push(
         `context loss, ${name}: three never logged "${expected}", so the page was not refused ` +
@@ -1137,6 +1172,40 @@ async function probeLoss(page: Page, origin: string): Promise<string> {
   );
 
   return 'restored painted, no record, the plain page shipped';
+}
+
+/**
+ * (I) a painted redraw that will not link keeps the shader's sentence, and its
+ * canvas hidden.
+ *
+ * The new shelf's first frame is drawn inside `mountShelf`, so its link failure
+ * has put the sentence up before the page adopts it — and adopting used to
+ * clear every notice, which left a frozen, half-drawn shelf with nothing saying
+ * why. The recovery still counts the redraw `fresh-canvas`; what this holds is
+ * what the page shows.
+ */
+async function redrawHalts(page: Page, origin: string): Promise<string> {
+  await page.evaluateOnNewDocument(BREAK_PROGRAMS);
+  await visit(page, origin, REAL_TIME_PATH);
+  await mustSample(page);
+
+  // In the same task as the loss, so the lost shelf compiles nothing under it.
+  await page.evaluate(`window.__breakPrograms = 'all'; ${LOSE}`);
+  await waitForState(
+    page,
+    `window.__shelf.fallback() === 'fresh-canvas'`,
+    RESTORE_WAIT_MS + 3000,
+    'painted redraw on a new canvas',
+  );
+
+  const state = await readState(page);
+  must(
+    state.notice.includes('would not compile'),
+    `the halted redraw lost the shader's sentence: "${state.notice}"`,
+  );
+  must(!state.canvasShown, "the halted redraw's frozen canvas is shown");
+
+  return 'redraw halted, shader sentence kept, canvas hidden';
 }
 
 async function visit(page: Page, origin: string, path: string): Promise<void> {
