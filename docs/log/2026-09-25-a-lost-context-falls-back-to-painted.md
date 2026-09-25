@@ -162,8 +162,9 @@ vanished against it. None of G59's four cases reached that state, so no gate
 could see it.
 
 **What a visitor sees after a real loss on the Pixel**, from those runs, with
-what the fix changes marked. The fix has not been on the phone; what it
-changes was seen on a desktop, in the refused state G59 stages:
+what the fix changes marked. What it changes was first seen on a desktop, in
+the refused state G59 stages, and then on the phone — see *The fix on the
+phone* below:
 
 1. **At about 1.5 s** the sentence *"…Redrawing it with painted shadows…"*, and
    the record is already written.
@@ -203,9 +204,14 @@ is positioned against the shelf, not the canvas, so it stays centred.
 every canvas except the lost one, loses the context, and waits for `refused`.
 Then it requires the record, the failure sentence and a canvas that
 `checkVisibility` says is not rendered. The case requires three's `Error
-creating WebGL context.`, and no other case allows it. `restore`, `no restore`
-and `painted loss` now also read the canvas: hidden while their notice is up,
-shown once the shelf draws again.
+creating WebGL context.`, and no other case allows it. The other cases read the
+canvas unevenly, and the difference matters: `painted loss` requires it hidden
+while its notice is up **and** shown once the shelf draws again, while
+`restore` and `no restore` require only the second half. ⚠️ **So the hide on
+the *"Redrawing…"* notice is held by `shelf-notice.test.ts` alone** — no page
+case reads the canvas in that waiting state — and `painted loss`'s hidden
+clause is the only page-level check of the hide on the resume path. Neither is
+redundant.
 
 ```text
 context loss (G59), each case in a browser context of its own
@@ -232,4 +238,18 @@ before the old notice is cleared, which the clear then undoes.
 ⚠️ **The white itself is never seen on a desktop.** A staged loss is never
 blocked, so the case proves that the page hides the canvas, not what Chrome
 would have painted on it. The phone is still the only place the white can be
-seen, and this change has not been back on it.
+seen.
+
+**The fix on the phone.** One run of each, on a local build of the fix with the
+live 51-book library, 2026-09-25:
+
+| run | what happened | page brightness (mean R,G,B) |
+| --- | --- | --- |
+| `?shadows=1&receivers=all`, a real driver loss at 1.3 s | *"Redrawing…"* with the canvas already hidden at 2 s, `refused` at 3.9 s, hidden at every poll to +36 s | 27,23,20 at +10 s and +30 s |
+| a fresh load about 38 s later, inside Chrome's block | refused at load, *"This browser wouldn't give the page a 3D canvas…"*, canvas hidden to +30 s | 27,23,20 |
+| the old build, the same loss (control) | the white page | 235,235,234 |
+| the default page, 60 s | survived: one program reading the map, two draws a frame, 60 fps | — |
+
+The notice reads at 6.3:1 against the page, where it read at 2.4:1 on the white
+canvas, and the wordmark at 14.9:1, up from 1.0:1. The reload was a new page
+load, not Chrome's reload button, and each run was done once.
