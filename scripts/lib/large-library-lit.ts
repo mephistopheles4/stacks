@@ -11,7 +11,8 @@
  * So this reads the picture. `smoke-render.ts` renders three pages over one build
  * and hands their pixels here:
  *
- * - **the control** — the 50-book shelf the owner signs off on;
+ * - **the control** — the shelf `smoke:render` already signs off on: the 50-book
+ *   fixture, of which 41 books survive the public build;
  * - **the large library** — the page being judged;
  * - **the plant** — the large library with the fog pulled over the bookcase
  *   through `?tune=`, which is the defect itself, on every run.
@@ -49,15 +50,16 @@ export interface Lighting {
 
 /**
  * The large library must stand at least this fraction as far above the room as
- * the 50-book shelf does.
+ * the control shelf does.
  *
  * **A judgement, and a loose one on purpose.** It is not derived from what the
  * large page measures today — a floor set against its own population only says
  * the page has not changed. Half is "still plainly a bookcase": it lets a tall
  * bookcase be dimmer than a short one, which it legitimately is — the lamp is a
  * point light, and seventeen shelves reach past it — and it goes red long
- * before black. The fogged page this exists for stood at **0.00** of the
- * control, and 240 books, which the owner called very dark, at 0.16.
+ * before black. Measured at the gate's own viewport: the fogged 273-book page
+ * stood at **0.00** of the control, 240 books — which the owner called very
+ * dark — at 0.15, and the same 273 books with the fog fixed at 0.70.
  */
 export const LIT_FLOOR = 0.5;
 
@@ -66,7 +68,7 @@ export const LIT_FLOOR = 0.5;
  *
  * Below this the control is dark too, and a ratio against it would pass a black
  * large library whenever the whole shelf went dark together. Set well under the
- * 50-book shelf's contrast and well over zero.
+ * control's 68 and well over zero.
  */
 export const MIN_CONTROL_CONTRAST = 20;
 
@@ -146,12 +148,13 @@ export function litFailures(pages: LitPages): string[] {
   const large = contrast(pages.large);
   const planted = contrast(pages.planted);
   const floor = control * LIT_FLOOR;
-  const fixed = (value: number): string => value.toFixed(1);
+  // A contrast of -0.004 is none at all, and printing it as `-0.0` reads as a sign.
+  const fixed = (value: number): string => (Math.abs(value) < 0.05 ? 0 : value).toFixed(1);
 
   // The control first: every other verdict is a ratio against it.
   if (control < MIN_CONTROL_CONTRAST) {
     return [
-      `the 50-book control page is itself dark — its bookcase stands ${fixed(control)} above ` +
+      `the control page is itself dark — its bookcase stands ${fixed(control)} above ` +
         `the room, under ${String(MIN_CONTROL_CONTRAST)} — so there is nothing to measure the ` +
         'large library against',
     ];
@@ -170,7 +173,7 @@ export function litFailures(pages: LitPages): string[] {
   if (large < floor) {
     failures.push(
       `the large library renders dark: its bookcase stands ${fixed(large)} above the room, ` +
-        `against ${fixed(control)} for the 50-book shelf — under ${String(LIT_FLOOR)} of it. ` +
+        `against ${fixed(control)} for the control shelf — under ${String(LIT_FLOOR)} of it. ` +
         'The fog range, the lights and the camera framing are the places to look (#383)',
     );
   }

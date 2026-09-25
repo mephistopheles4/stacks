@@ -222,7 +222,7 @@ pnpm lint:md             # the Markdown gate: the narrow rule set over tracked d
 pnpm lint:md:fix         # the same, applying the seven fixes measured safe here
 pnpm stacks <cmd>        # run the CLI from source
 pnpm worktree <branch>   # a second checkout, cut from origin/main and installed
-pnpm fixtures:50         # regenerate the 50-book fixture vault
+pnpm fixtures:50         # regenerate the 50-book fixture vault   (--books N for vault-N)
 pnpm smoke:render        # phase 2 gate: headless shelf screenshot
 pnpm gate:public         # phase 3 gate: the public build leaks nothing
 pnpm deploy:site         # gates, then build from the real vault, then publish

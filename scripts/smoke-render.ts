@@ -801,8 +801,12 @@ function report(result: {
           }`
     }`,
   );
-  const above = (page: Lighting): string =>
-    `${(page.bookcase - page.room).toFixed(1)} above the room (${page.bookcase.toFixed(1)} on ${page.room.toFixed(1)})`;
+  const above = (page: Lighting): string => {
+    const standing = page.bookcase - page.room;
+    // -0.004 is no contrast at all; `-0.0` would read as a sign.
+    const shown = (Math.abs(standing) < 0.05 ? 0 : standing).toFixed(1);
+    return `${shown} above the room (${page.bookcase.toFixed(1)} on ${page.room.toFixed(1)})`;
+  };
   const books = (count: number): string => `${String(count)} books`.padEnd(10);
   console.log(`lit (G59)         control   ${books(lit.controlBooks)} ${above(lit.control)}`);
   console.log(`                  large     ${books(lit.largeBooks)} ${above(lit.large)}`);
