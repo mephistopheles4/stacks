@@ -22,8 +22,9 @@ import type { ShelfHandle } from './scene.ts';
  * ⚠️ **That is a promise about this file, not about the page.** Since the
  * lost-context fallback, the shelf itself writes one small functional record —
  * `{ v, at, gpu }` under `stacks.shadows.fallback.v1` — after it has *observed*
- * its WebGL context being lost while it sampled the shadow map, so the next
- * load starts painted. Nothing else, and only then. This panel shows that
+ * its WebGL context being lost, or one of its programs failing to link, while
+ * it sampled the shadow map, so the next load starts painted. Nothing else, and
+ * only then. This panel shows that
  * record's state on its `fallback` line and offers `forget`, the one way off it
  * without devtools. See `shadow-fallback.ts` and ADR-0091.
  */

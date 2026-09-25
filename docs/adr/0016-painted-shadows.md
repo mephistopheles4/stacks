@@ -13,8 +13,10 @@ entries below no longer hold as written: *"nothing that reads a shadow map
 survives on this device"* — one program in a handful of draws does, measured in
 September on driver `25.3` — and the empty case dying, which no longer
 reproduces there. *"Deliberately not a fallback"* was about a shader that will
-not link, and still holds for one; a lost context is different, and ADR-0090
-says why. Beside the shipped map, the painted pieces the map casts now step
+not link, and now holds only on a painted shelf: one that will not link while
+the shelf samples the map falls back painted and remembers, as a lost context
+does ([ADR-0091](0091-a-lost-context-falls-back-to-painted-shadows.md) item 9).
+ADR-0090 says why a lost context was different in the first place. Beside the shipped map, the painted pieces the map casts now step
 aside rather than darken the wood twice — [ADR-0090](0090-real-time-shadows-are-the-default.md#the-painted-pieces-the-map-casts-step-aside).
 
 The shelf computes its shading once, from the same layout the books were placed with, and draws it to a canvas as one textured plane per shelf. There is no shadow pass, no depth target and no per-fragment lookup. `?shadows=1` keeps the real-time path for hardware that can hold it.

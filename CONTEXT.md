@@ -76,6 +76,9 @@ sampling the shadow map, so later loads start with painted shadows until it
 expires (`FALLBACK_TTL_MS`). It records a failure this device showed, never a guess about the device, and a
 `?shadows=` in the URL goes around it
 ([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
+A program that will not link while the shelf samples the map writes the same
+record (item 9), and the record does not say which of the two it was; the name
+keeps the common case.
 *Avoid*: blocklist, device flag (nothing is decided by device), crash record
 (that is the black box's), fallback on its own (that is what the page does
 after a loss, in the page).

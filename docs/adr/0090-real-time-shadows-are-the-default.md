@@ -99,7 +99,11 @@ be observed failing on the hardware that mattered. Neither holds for a **lost
 context**. It is an event the page sees; the fallback says what it did on the
 black box's `fallback` line and in the shelf's profile; and G60
 (`context-loss-fallback`) drives it in a browser on every run. A link failure
-keeps its halt and its sentence, as ADR-0091 leaves it.
+on a painted shelf keeps its halt and its sentence. One while the shelf samples
+the map has fallen back painted and remembered since review, for the reason
+[ADR-0091](0091-a-lost-context-falls-back-to-painted-shadows.md) item 9 gives:
+halting there wrote nothing, so a driver that will not link the one shipped
+program died on every load.
 
 ## Why a gate, and why this one
 

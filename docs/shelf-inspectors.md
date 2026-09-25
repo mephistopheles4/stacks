@@ -145,12 +145,13 @@ Decisions: [ADR-0032](adr/0032-shelf-settings-are-one-object.md),
 
 ### The lost-context record, on the black box
 
-When the shelf loses its WebGL context while it samples the shadow map, it
-writes one record — `{ v, at, gpu }` under `stacks.shadows.fallback.v1` in
-`localStorage` — redraws painted, and starts painted on later loads for 30 days
-([ADR-0091](adr/0091-a-lost-context-falls-back-to-painted-shadows.md)). It is
-the one thing the shelf writes to a visitor's device without being asked, and
-only after it has seen the loss. ⚠️ **A page running a shadow probe redraws the
+When the shelf loses its WebGL context while it samples the shadow map, or one
+of its programs will not link there, it writes one record — `{ v, at, gpu }`
+under `stacks.shadows.fallback.v1` in `localStorage` — redraws painted, and
+starts painted on later loads for 30 days
+([ADR-0091](adr/0091-a-lost-context-falls-back-to-painted-shadows.md), items 1
+and 9). It is the one thing the shelf writes to a visitor's device without being
+asked, and only after it has seen the failure. ⚠️ **A page running a shadow probe redraws the
 same way and writes nothing** — `?shadows=1&receivers=all` above all, so
 re-running the reproduction does not paint the phone's plain page for 30 days.
 
