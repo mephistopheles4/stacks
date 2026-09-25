@@ -6174,7 +6174,8 @@ the page white, and the sixth with the `probe loss` case, after review:
    of its probe cases.
 
 The control is the same run with the plants reverted: six cases green, one
-loop a frame in each of the four that count them.
+loop a frame in each of the three that count them — `restore`, `no restore`
+and `painted loss`.
 
 - **Weakening** — **exposed, in one constant, required rather than allowed.** The
   non-blank floor is the main render's (40 colours, 10% not background), the
