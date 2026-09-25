@@ -6140,10 +6140,10 @@ branch and every remote one, with no pull request open.** Rows are gapless, so
 this took G59 rather than the G60 the design proposed; the ticket's
 sampling-program gate, #381's sixth item, takes the next one.
 
-**Observed-red**, five ways, each planted in the source, run through `pnpm
+**Observed-red**, six ways, each planted in the source, run through `pnpm
 smoke:render`, and reverted with the file hash checked against its backup. The
-last two were added with the `refused` case, after the phone check found the
-page white:
+fourth and fifth were added with the `refused` case, after the phone check found
+the page white, and the sixth with the `probe loss` case, after review:
 
 1. **Both `disposed` guards removed** from `scene.ts` — the restored handler's
    and `renderLoop`'s. The restore case went red: `2 render-loop callbacks in
@@ -6165,9 +6165,16 @@ page white:
    line removed. Three cases went red: `restore`, `no restore` and `painted
    loss`, each on a shelf drawn again on a canvas still hidden. `refused`
    stayed green, as it should: nothing there is ever shown again.
+6. **A shadow probe's loss taken as the shipped shelf's** — `boot.ts` handing
+   the recovery `probe: false` whatever the page ran. `probe loss` alone went
+   red, on the record a `?receivers=all` loss wrote; the other five stayed
+   green. Run under `CI=true`, as the `suite` job runs it. Its unit half was
+   planted too: `context-recovery.test.ts` run against the recovery from before
+   the change, which asks storage on every sampling loss, went red in all three
+   of its probe cases.
 
-The control is the same run with the plants reverted: five cases green, one
-loop a frame in each of the four that draw.
+The control is the same run with the plants reverted: six cases green, one
+loop a frame in each of the four that count them.
 
 - **Weakening** — **exposed, in one constant, required rather than allowed.** The
   non-blank floor is the main render's (40 colours, 10% not background), the
@@ -6202,8 +6209,13 @@ loop a frame in each of the four that draw.
   a context, by making `getContext` answer `null`; it holds the page to hiding
   the dead canvas and cannot see what Chrome paints on one, which on the phone
   was opaque white. A reload inside the block, which never gets a context at
-  all, is not driven. `?solo` has no fallback and is not driven. Disposition
-  `accepted`.
+  all, is not driven. `?solo` has no fallback and is not driven. ⚠️ **Every
+  one of those real losses was under `?shadows=1&receivers=all`, which writes
+  no record now**, so the record that worked there has not been seen written
+  by a real loss on the shipped shelf. The `probe loss` case drives
+  `?receivers=all` alone; the other shadow probes are held by
+  `shadow-fallback.test.ts`, against the predicate rather than a page.
+  Disposition `accepted`.
 - **Vacuous green** — **gated.** A case refuses to start on a page that does
   not sample the map or is not visible, since a loss there is not the
   fallback's by design and every assertion after it would pass over nothing.

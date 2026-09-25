@@ -1,4 +1,9 @@
-import { DEFAULT_SETTINGS, resolveSettings, type ShelfSettings } from './shelf-settings.ts';
+import {
+  DEFAULT_SETTINGS,
+  resolveSettings,
+  type ShadowSettings,
+  type ShelfSettings,
+} from './shelf-settings.ts';
 
 /**
  * The lost-context record: what a device remembers after real-time shadows
@@ -9,7 +14,8 @@ import { DEFAULT_SETTINGS, resolveSettings, type ShelfSettings } from './shelf-s
  * the one configuration measured to survive there, but a driver that loses it
  * anyway must not lose it on every page load. So when a context is lost while the shelf samples the map,
  * the page redraws with painted shadows and writes **one small record**, and
- * later loads read it and start painted.
+ * later loads read it and start painted. A page running a shadow probe redraws
+ * the same way and writes nothing (`runsShippedShadows`).
  *
  * It reacts to a failure this device showed, never to a guess about the device:
  * no user agent, GPU name or memory figure decides anything here. The GPU string
@@ -183,24 +189,74 @@ export function gpuChanged(record: FallbackRecord, gpu: string | undefined): boo
  *
  * Read off the **live** settings, because the panel turns shadows on and off
  * without a rebuild. A loss while this is false says nothing about sampling, so
- * it writes no record.
+ * the fallback does not take it: no record, **no painted rebuild**, and a
+ * restore resumes in place (`context-recovery.ts`). Whether a loss is written
+ * down is a separate question, `runsShippedShadows`'s.
  *
  * ⚠️ **`?shadowfetch=0` draws the map and does not read it.** The shelf stops
  * every material sampling it after the first frame (`stopSamplingShadows` in
  * `scene.ts`), which is the whole point of that probe: it separates holding a
- * depth attachment from sampling one. A loss there is the probe's answer, not
- * the failure the record exists for, and must not paint the device for weeks.
+ * depth attachment from sampling one. So resuming it in place resumes nothing
+ * that reads the map.
+ *
+ * ⚠️ **`receivers` is not a factor, and must not become one.** `?receivers=all`
+ * reads the map from every book, which is what died on the Pixel; false here
+ * would route its loss to the in-place resume, and three relinks the same
+ * programs on a restore — the path that died again 3,088 and 3,474 draws later.
  */
 export function samplesShadowMap(running: ShelfSettings): boolean {
   return running.shadows.enabled && running.shadows.fetch;
 }
 
 /**
+ * Whether every shadow setting but the on/off switch is the one that ships.
+ *
+ * A lost context writes the record only when this holds. The record's one
+ * effect is to turn the **shipped** real-time shadows off on later loads, and
+ * what kills a context is not known (ADR-0088), so only a loss of that
+ * configuration says anything about it. A loss under a shadow probe —
+ * `?receivers=all`, the upstream reproduction, which dies on the Pixel where the
+ * shipped shelf survives, or `?shadowtype=`, `?shadowmap=`, `?casters=`,
+ * `?shadowfetch=`, `?painted=` — is that probe's answer. The page still redraws
+ * painted; it just does not paint the device for 30 days.
+ *
+ * Not writing is the cheap mistake: a device whose shipped shelf fails too
+ * loses one more context on its next plain load, and that loss writes. Writing
+ * wrongly takes real-time shadows from a device that can run them, for weeks.
+ *
+ * The switch is left out because the panel and `?shadows=1` both turn the
+ * shipped shadows on over a record, and a loss there is the re-test the record
+ * expects. Every other key is compared, so a shadow setting added later is a
+ * probe with no line of its own. ⚠️ **By value**, which holds while every shadow
+ * setting is a scalar; one that is not would make every loss a probe's, and
+ * G59's `restore` case, which requires the record, would go red.
+ */
+export function runsShippedShadows(running: ShelfSettings): boolean {
+  const shipped = DEFAULT_SETTINGS.shadows;
+  return (Object.keys(shipped) as (keyof ShadowSettings)[]).every(
+    (key) => key === 'enabled' || running.shadows[key] === shipped[key],
+  );
+}
+
+/**
+ * Whether a loss was written down, and if not, why.
+ *
+ * - `yes` — the record is in storage, and the next plain load starts painted.
+ * - `refused` — storage would not take it, so the next load will not know.
+ * - `probe` — the page was running a shadow probe (`runsShippedShadows`), so
+ *   nothing was asked of storage, and the next plain load starts wherever it
+ *   would have: real-time, or painted from a record an earlier loss wrote.
+ *
+ * Three values rather than a boolean because the two ways of not writing lead
+ * the black box to say different things, and one of them is a fault.
+ */
+export type Remembered = 'yes' | 'refused' | 'probe';
+
+/**
  * Where one page stands, from its first mount to however a loss settled.
  *
  * The first four are decided at load. The last four happen to one page after a
- * loss, and each says whether the record was written — `remembered: false`
- * means storage refused it, so the next load will not know.
+ * loss, and each says whether the record was written — see `Remembered`.
  *
  * `lostAt` and `restoredAfter` are milliseconds since the page started, as
  * `performance.now()` reads them.
@@ -210,25 +266,25 @@ export type FallbackState =
   | { readonly kind: 'remembered'; readonly at: number }
   | { readonly kind: 'probe-override'; readonly at: number }
   | { readonly kind: 'retired'; readonly at: number }
-  | { readonly kind: 'waiting'; readonly lostAt: number; readonly remembered: boolean }
+  | { readonly kind: 'waiting'; readonly lostAt: number; readonly remembered: Remembered }
   | {
       readonly kind: 'restored';
       readonly lostAt: number;
       readonly restoredAfter: number;
-      readonly remembered: boolean;
+      readonly remembered: Remembered;
     }
   | {
       readonly kind: 'fresh-canvas';
       readonly lostAt: number;
       readonly waited: number;
-      readonly remembered: boolean;
+      readonly remembered: Remembered;
     }
   | {
       readonly kind: 'refused';
       /** Which rebuild the browser would not give a context to. */
       readonly via: 'same' | 'fresh';
       readonly lostAt: number;
-      readonly remembered: boolean;
+      readonly remembered: Remembered;
     };
 
 export type FallbackKind = FallbackState['kind'];
@@ -296,7 +352,7 @@ export function describeFallback(state: FallbackState, mode: DrawMode): string {
     case 'refused':
       return (
         `lost — ${state.via === 'fresh' ? 'no restore and no new canvas' : 'restored, and the redraw failed'}; ` +
-        `${state.remembered ? 'reload comes back painted' : 'reload to retry'}${unremembered(state)}`
+        `${state.remembered === 'yes' ? 'reload comes back painted' : 'reload to retry'}${unremembered(state)}`
       );
   }
 }
@@ -309,6 +365,13 @@ function seconds(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function unremembered(state: { readonly remembered: boolean }): string {
-  return state.remembered ? '' : '; storage refused, not remembered';
+function unremembered(state: { readonly remembered: Remembered }): string {
+  switch (state.remembered) {
+    case 'yes':
+      return '';
+    case 'refused':
+      return '; storage refused, not remembered';
+    case 'probe':
+      return '; a shadow probe, not remembered';
+  }
 }

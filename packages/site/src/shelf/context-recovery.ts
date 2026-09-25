@@ -1,4 +1,4 @@
-import type { FallbackState } from './shadow-fallback.ts';
+import type { FallbackState, Remembered } from './shadow-fallback.ts';
 
 /**
  * What one page does when its WebGL context is lost while it samples the
@@ -27,6 +27,15 @@ import type { FallbackState } from './shadow-fallback.ts';
  *
  * Chrome blocks an origin from WebGL after repeated losses, so the budget is one
  * loss. Once a fallback has started, any further loss only says so.
+ *
+ * ## A probe redraws and does not remember
+ *
+ * Redrawing painted and writing the record are two decisions. A loss under a
+ * shadow probe — `?shadows=1&receivers=all` above all, the reproduction that
+ * dies on the Pixel where the shipped shelf survives — still takes the whole
+ * fallback above, because a restore would otherwise resume every book reading
+ * the map. It only skips the write, so the probe does not paint the device's
+ * plain page for 30 days.
  */
 
 export type Notice = 'lost' | 'redrawing' | 'clear' | 'failed';
@@ -42,6 +51,12 @@ export interface Loss {
   readonly visible: boolean;
   /** A program that would not link stops the shelf and takes the context with it. */
   readonly shaderFailed: boolean;
+  /**
+   * The live settings are a shadow probe rather than the shipped shadows
+   * (`runsShippedShadows`), so the loss is that probe's answer: the page falls
+   * back as it would, and the record is not written.
+   */
+  readonly probe: boolean;
 }
 
 export interface RecoveryOptions {
@@ -128,8 +143,13 @@ export function createRecovery(options: RecoveryOptions): Recovery {
 
       // ⚠️ **The record first, synchronously, before anything else.** On the
       // Pixel the whole GPU process exits with the context, and whatever the
-      // page does next may not get to run.
-      const remembered = attempt(() => options.remember(), false);
+      // page does next may not get to run. A probe's loss asks nothing of
+      // storage, and falls back all the same.
+      const remembered: Remembered = loss.probe
+        ? 'probe'
+        : attempt(() => options.remember(), false)
+          ? 'yes'
+          : 'refused';
       state = { kind: 'waiting', lostAt: options.now(), remembered };
       options.notify('redrawing', state);
       timer = options.setTimer(timedOut, options.waitMs);

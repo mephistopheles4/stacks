@@ -563,6 +563,11 @@ async function clickAnyBook(page: Page): Promise<boolean> {
  * The white itself never appears here, because a staged loss is not blocked, so
  * the case reads whether the canvas is shown and not what colour it is.
  *
+ * The `probe loss` case holds the one line that decides whether a loss is
+ * written down at all: a page running `?receivers=all`, the reproduction that
+ * dies on the Pixel where the shipped shelf survives, falls back the same way
+ * and writes nothing, so that device's plain page stays real-time.
+ *
  * Each case runs in a browser context of its own, so a record one writes
  * cannot leak into the next — or into the page every check above measured.
  */
@@ -684,6 +689,7 @@ async function checkContextLossFallback(
     ['storage refused', storageRefused],
     ['painted loss', paintedLoss],
     ['refused', refusedRedraw, REFUSED_BY_THREE],
+    ['probe loss', probeLoss],
   ];
 
   for (const [name, run, expected] of cases) {
@@ -920,6 +926,61 @@ async function refusedRedraw(page: Page, origin: string): Promise<string> {
   );
 
   return 'refused, failure sentence, record written, lost canvas hidden';
+}
+
+/**
+ * (H) a shadow probe's loss falls back the same way and writes nothing.
+ *
+ * `?receivers=all` is the probe that matters: the upstream reproduction, re-run
+ * by hand on the phone after a driver update, which loses its context there
+ * while the shipped shelf does not. Written down, that loss would start the
+ * device's plain page painted for 30 days.
+ */
+async function probeLoss(page: Page, origin: string): Promise<string> {
+  const joiner = REAL_TIME_PATH.includes('?') ? '&' : '?';
+  await visit(page, origin, `${REAL_TIME_PATH}${joiner}receivers=all&debug`);
+  await mustSample(page);
+
+  await page.evaluate(LOSE);
+  await waitForState(
+    page,
+    `window.__shelf.fallback() === 'waiting'`,
+    5000,
+    "the probe's loss taken as the fallback's",
+  );
+  await page.evaluate(RESTORE);
+  await waitForState(
+    page,
+    `window.__shelf.fallback() === 'restored'`,
+    5000,
+    'painted rebuild on restore',
+  );
+
+  const restored = await readState(page);
+  must(
+    restored.record === null,
+    `a probe's loss wrote a record, so the plain page would start painted: ${String(restored.record)}`,
+  );
+  must(
+    restored.profile.includes('shadows=off'),
+    `the restored probe still samples the map: ${restored.profile}`,
+  );
+  await waitForState(
+    page,
+    `document.querySelector('.shelf-diagnostics')?.textContent.includes('a shadow probe, not remembered') === true`,
+    3000,
+    "black-box line saying the probe's loss is not remembered",
+  );
+
+  await visit(page, origin, '/');
+  const plain = await readState(page);
+  must(
+    plain.fallback === 'none' &&
+      plain.profile.includes('shadows=off') !== DEFAULT_SETTINGS.shadows.enabled,
+    `the plain page after a probe's loss is not the shipped one: ${JSON.stringify(plain)}`,
+  );
+
+  return 'restored painted, no record, the plain page shipped';
 }
 
 async function visit(page: Page, origin: string, path: string): Promise<void> {

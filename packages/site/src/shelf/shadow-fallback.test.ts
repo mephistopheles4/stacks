@@ -9,6 +9,7 @@ import {
   initialState,
   PAINTED_BASE,
   readRecord,
+  runsShippedShadows,
   samplesShadowMap,
   startingBase,
   writeRecord,
@@ -286,6 +287,44 @@ describe('samplesShadowMap', () => {
   });
 });
 
+describe('runsShippedShadows', () => {
+  const at = (query: string) => resolveSettings(readSettings(new URLSearchParams(query)));
+
+  it('is true on the plain page, on a painted one, and under ?shadows=1', () => {
+    expect(runsShippedShadows(DEFAULT_SETTINGS)).toBe(true);
+    expect(runsShippedShadows(PAINTED_BASE)).toBe(true);
+    expect(runsShippedShadows(at('shadows=1'))).toBe(true);
+    expect(runsShippedShadows(at('shadows=0'))).toBe(true);
+  });
+
+  // `?shadows=1&receivers=all` is the one that matters: the upstream
+  // reproduction, re-run by hand after a driver update, which dies on the Pixel
+  // where the shipped shelf survives. Its loss must not paint the plain page.
+  it.each([
+    'shadows=1&receivers=all',
+    'receivers=all',
+    'shadowtype=basic',
+    'shadowtype=vsm',
+    'shadowtype=soft',
+    'shadowmap=1024',
+    'casters=0',
+    'shadowfetch=0',
+    'painted=0',
+  ])('is false under ?%s, a shadow probe', (query) => {
+    expect(runsShippedShadows(at(query))).toBe(false);
+  });
+
+  it('ignores every setting outside the shadows', () => {
+    expect(runsShippedShadows(at('aa=0&dpr=1.5&guard=1&books=5'))).toBe(true);
+  });
+
+  it('is a separate question from sampling: a probe still samples the map', () => {
+    const repro = at('shadows=1&receivers=all');
+    expect(samplesShadowMap(repro)).toBe(true);
+    expect(runsShippedShadows(repro)).toBe(false);
+  });
+});
+
 describe('describeFallback', () => {
   const cases: readonly [FallbackState, DrawMode, string][] = [
     [{ kind: 'none' }, 'real-time', 'real-time'],
@@ -306,34 +345,44 @@ describe('describeFallback', () => {
       'painted — record from 2026-09-24 retired, GPU string changed',
     ],
     [
-      { kind: 'waiting', lostAt: 12_000, remembered: true },
+      { kind: 'waiting', lostAt: 12_000, remembered: 'yes' },
       'real-time',
       'lost at 12.0s, waiting for a restore',
     ],
     [
-      { kind: 'restored', lostAt: 12_000, restoredAfter: 1147, remembered: true },
+      { kind: 'restored', lostAt: 12_000, restoredAfter: 1147, remembered: 'yes' },
       'painted',
       'painted — lost at 12.0s, restored in 1.1s, redrawn painted',
     ],
     [
-      { kind: 'fresh-canvas', lostAt: 12_000, waited: 2500, remembered: true },
+      { kind: 'fresh-canvas', lostAt: 12_000, waited: 2500, remembered: 'yes' },
       'painted',
       'painted — lost at 12.0s, no restore in 2.5s, redrawn on a new canvas',
     ],
     [
-      { kind: 'refused', via: 'fresh', lostAt: 12_000, remembered: true },
+      { kind: 'refused', via: 'fresh', lostAt: 12_000, remembered: 'yes' },
       'painted',
       'lost — no restore and no new canvas; reload comes back painted',
     ],
     [
-      { kind: 'refused', via: 'same', lostAt: 12_000, remembered: false },
+      { kind: 'refused', via: 'same', lostAt: 12_000, remembered: 'refused' },
       'painted',
       'lost — restored, and the redraw failed; reload to retry; storage refused, not remembered',
     ],
     [
-      { kind: 'fresh-canvas', lostAt: 12_000, waited: 2500, remembered: false },
+      { kind: 'fresh-canvas', lostAt: 12_000, waited: 2500, remembered: 'refused' },
       'painted',
       'painted — lost at 12.0s, no restore in 2.5s, redrawn on a new canvas; storage refused, not remembered',
+    ],
+    [
+      { kind: 'restored', lostAt: 12_000, restoredAfter: 1147, remembered: 'probe' },
+      'painted',
+      'painted — lost at 12.0s, restored in 1.1s, redrawn painted; a shadow probe, not remembered',
+    ],
+    [
+      { kind: 'refused', via: 'fresh', lostAt: 12_000, remembered: 'probe' },
+      'painted',
+      'lost — no restore and no new canvas; reload to retry; a shadow probe, not remembered',
     ],
   ];
 

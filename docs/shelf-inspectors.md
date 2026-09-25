@@ -150,7 +150,9 @@ writes one record — `{ v, at, gpu }` under `stacks.shadows.fallback.v1` in
 `localStorage` — redraws painted, and starts painted on later loads for 30 days
 ([ADR-0091](adr/0091-a-lost-context-falls-back-to-painted-shadows.md)). It is
 the one thing the shelf writes to a visitor's device without being asked, and
-only after it has seen the loss.
+only after it has seen the loss. ⚠️ **A page running a shadow probe redraws the
+same way and writes nothing** — `?shadows=1&receivers=all` above all, so
+re-running the reproduction does not paint the phone's plain page for 30 days.
 
 - **The `fallback` line** says where that stands: `real-time`, `painted`, or
   `no shelf`, then why — `remembered from a lost context on …, retries after …`,
@@ -158,7 +160,8 @@ only after it has seen the loss.
   changed`, or how a loss in this session settled: `restored in 1.1s, redrawn
   painted`, `no restore in 2.5s, redrawn on a new canvas`, or `lost — no restore
   and no new canvas`. `storage refused, not remembered` is added when the write
-  failed. The black box keeps the line, so a dead session's record carries it.
+  failed, and `a shadow probe, not remembered` when the page was running one.
+  The black box keeps the line, so a dead session's record carries it.
 - **`forget`**, beside `copy`, shows only while a record exists. It removes the
   record and says to reload. It is the only way off the record without
   devtools; `?shadows=1` goes around it for one load without removing it.
@@ -181,4 +184,6 @@ smoke:render` runs both paths this way as G59 (`context-loss-fallback`), and a
 third: the new canvas refused a context, staged by making `getContext` answer
 `null` before the loss. That is where every real loss on the Pixel ended, and
 the page must show the failure sentence on its own background with the lost
-canvas hidden — left shown, Chrome painted it white over the whole page.
+canvas hidden — left shown, Chrome painted it white over the whole page. And a
+fourth: the same restore under `?receivers=all`, which must write nothing and
+leave the plain page as shipped.

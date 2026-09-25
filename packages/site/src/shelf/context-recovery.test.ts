@@ -19,7 +19,7 @@ import type { FallbackState } from './shadow-fallback.ts';
  */
 
 const WAIT = 2500;
-const SAMPLING: Loss = { sampling: true, visible: true, shaderFailed: false };
+const SAMPLING: Loss = { sampling: true, visible: true, shaderFailed: false, probe: false };
 
 interface Harness {
   readonly recovery: Recovery;
@@ -98,7 +98,7 @@ describe('a loss while the shelf samples the shadow map', () => {
     h.recovery.lost(SAMPLING);
 
     expect(h.calls).toEqual(['remember', 'notify redrawing (waiting)', `setTimer ${String(WAIT)}`]);
-    expect(h.recovery.state()).toEqual({ kind: 'waiting', lostAt: 10_000, remembered: true });
+    expect(h.recovery.state()).toEqual({ kind: 'waiting', lostAt: 10_000, remembered: 'yes' });
   });
 
   it('rebuilds on the same canvas once, when the browser restores within the wait', () => {
@@ -112,7 +112,7 @@ describe('a loss while the shelf samples the shadow map', () => {
       kind: 'restored',
       lostAt: 10_000,
       restoredAfter: 1150,
-      remembered: true,
+      remembered: 'yes',
     });
     expect(h.pendingTimers()).toBe(0);
 
@@ -135,7 +135,7 @@ describe('a loss while the shelf samples the shadow map', () => {
       kind: 'fresh-canvas',
       lostAt: 10_000,
       waited: WAIT,
-      remembered: true,
+      remembered: 'yes',
     });
 
     // A restore after the swap: the painted shelf is what is running now, so
@@ -154,7 +154,7 @@ describe('a loss while the shelf samples the shadow map', () => {
       kind: 'refused',
       via: 'fresh',
       lostAt: 10_000,
-      remembered: true,
+      remembered: 'yes',
     });
 
     h.recovery.lost(SAMPLING);
@@ -186,13 +186,64 @@ describe('a loss while the shelf samples the shadow map', () => {
     h.advance(WAIT);
 
     expect(remounts(h.calls)).toEqual(['remount fresh']);
-    expect(h.recovery.state()).toMatchObject({ kind: 'fresh-canvas', remembered: false });
+    expect(h.recovery.state()).toMatchObject({ kind: 'fresh-canvas', remembered: 'refused' });
   });
 
   it('carries a refused write the same way', () => {
     const h = harness({ remember: () => false });
     h.recovery.lost(SAMPLING);
-    expect(h.recovery.state()).toMatchObject({ kind: 'waiting', remembered: false });
+    expect(h.recovery.state()).toMatchObject({ kind: 'waiting', remembered: 'refused' });
+  });
+});
+
+describe('a loss under a shadow probe', () => {
+  // `?shadows=1&receivers=all`, the upstream reproduction, dies on the Pixel
+  // where the shipped shelf survives. Its loss is the probe's answer: the page
+  // falls back exactly as it would, and the device's plain page is not painted
+  // for 30 days on the strength of it.
+  const PROBE: Loss = { ...SAMPLING, probe: true };
+
+  it('says so and waits, and never asks storage', () => {
+    const h = harness();
+    h.recovery.lost(PROBE);
+
+    expect(h.calls).toEqual(['notify redrawing (waiting)', `setTimer ${String(WAIT)}`]);
+    expect(h.recovery.state()).toEqual({ kind: 'waiting', lostAt: 10_000, remembered: 'probe' });
+  });
+
+  it('still rebuilds painted on a restore, rather than resuming every book reading the map', () => {
+    const h = harness();
+    h.recovery.lost(PROBE);
+    h.tick(1150);
+
+    expect(h.recovery.restored()).toBe('handled');
+    expect(remounts(h.calls)).toEqual(['remount same']);
+    expect(h.recovery.state()).toEqual({
+      kind: 'restored',
+      lostAt: 10_000,
+      restoredAfter: 1150,
+      remembered: 'probe',
+    });
+  });
+
+  it('keeps the one attempt when the new canvas is refused', () => {
+    const h = harness({ remount: () => false });
+    h.recovery.lost(PROBE);
+    h.advance(WAIT);
+
+    expect(h.recovery.state()).toEqual({
+      kind: 'refused',
+      via: 'fresh',
+      lostAt: 10_000,
+      remembered: 'probe',
+    });
+
+    h.recovery.lost(PROBE);
+    expect(h.recovery.restored()).toBe('resume');
+    h.advance(WAIT * 2);
+    expect(remounts(h.calls)).toEqual(['remount fresh']);
+    expect(h.calls).not.toContain('remember');
+    expect(h.calls.at(-1)).toBe('notify lost (refused)');
   });
 });
 

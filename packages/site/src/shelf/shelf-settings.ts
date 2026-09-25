@@ -177,7 +177,9 @@ export interface ShadowSettings {
    * `?shadows=1` drew until September 2026, kept so the crash can be re-tested
    * after a driver update — as `?shadows=1&receivers=all`, because a device
    * with a lost-context record starts painted — and as G60's control. Inert
-   * while `enabled` is off. See `shadow-receivers.ts`.
+   * while `enabled` is off. A loss under `all` redraws painted and writes no
+   * record, being a probe's answer (`runsShippedShadows`). See
+   * `shadow-receivers.ts`.
    */
   readonly receivers: ShadowReceiverName;
   /** Whether materials *read* the shadow map. See `RendererOverrides.shadowFetch`. */

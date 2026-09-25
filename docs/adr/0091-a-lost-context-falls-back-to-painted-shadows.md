@@ -8,11 +8,11 @@
 ## Decision
 
 1. **A context lost while the shelf samples the shadow map ends real-time
-   shadows for that page.** The page writes one small record first, then
-   redraws the shelf painted: on the same canvas if the browser restores the
-   context within 2.5 s, on a new `<canvas>` if it does not, and with a
-   sentence if neither is given a context. One attempt a page; a second loss
-   only says so. See
+   shadows for that page.** The page writes one small record first, unless
+   item 4 says it may not, then redraws the shelf painted: on the same canvas
+   if the browser restores the context within 2.5 s, on a new `<canvas>` if it
+   does not, and with a sentence if neither is given a context. One attempt a
+   page; a second loss only says so. See
    [`context-recovery.ts`](../../packages/site/src/shelf/context-recovery.ts).
    **A sentence replaces the canvas; it never sits over it.** While any notice
    is up the canvas behind it is hidden, and the page shows its own background:
@@ -34,7 +34,15 @@
    live settings sample the map, the page is visible and no program failed to
    link. A painted page, a hidden page and a shader-link failure write nothing
    and keep the behaviour a loss had before this record: a notice, and a resume
-   in place, or the link failure's halt.
+   in place, or the link failure's halt. **And only a loss of the shipped
+   shadows writes.** A page running a shadow probe — any shadow setting but the
+   on/off switch away from what ships, `?shadows=1&receivers=all` among them —
+   still redraws painted, once, and writes nothing: the record's one effect is
+   to turn the shipped shadows off, and a probe's loss says nothing about them.
+   That probe is the upstream reproduction, which dies on the Pixel where the
+   shipped shelf survives, so writing its loss down would paint that device's
+   plain page for 30 days for re-running it. See `runsShippedShadows` in
+   [`shadow-fallback.ts`](../../packages/site/src/shelf/shadow-fallback.ts).
 5. **Nothing decides by device.** No user agent, GPU name, memory figure or
    platform check chooses a path. The GPU string is compared only with itself,
    to retire a record on the same device.
@@ -86,7 +94,11 @@ the runs: [a lost context falls back to painted](../log/2026-09-25-a-lost-contex
 - **The record is what worked.** A reload came back remembered, painted and at
   60 fps: at about 17 s and 73 s after the loss. At about 9 s it was refused,
   and the page said so. That is two points either side of the edge, and no
-  claim about where the edge is.
+  claim about where the edge is. ⚠️ **Those losses were all under
+  `?shadows=1&receivers=all`, which has written no record since item 4 was
+  narrowed in review.** The record path was seen on the phone under the rule it
+  had then. Under this one a real loss writes only on a device whose shipped
+  shelf dies, and none has been seen.
 - **Both rebuilds work on the device when a context is handed out.** A
   synthetic loss restored after 0.5 s rebuilt painted on the same canvas; one
   left unrestored rebuilt on a new canvas at 2.5 s. Both then ran at 60 fps.
@@ -111,6 +123,10 @@ the runs: [a lost context falls back to painted](../log/2026-09-25-a-lost-contex
 - **Storage that refuses still falls back, and remembers nothing.** A
   still-broken device then loses one context a load. There is no second store
   to fall back to.
+- **A probe's loss is not remembered either.** A device whose shipped shelf
+  fails too loses one more context on its next plain load, and that loss
+  writes. It is the cheaper of the two mistakes: the other takes real-time
+  shadows from a device that runs them, for 30 days.
 - **A shader-link failure is not covered.** It keeps its halt and its own
   sentence and writes nothing. Whether it should also fall back is open.
 - **The black box's promise narrows.** `diagnostics.ts` said nothing is written

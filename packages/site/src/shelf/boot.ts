@@ -13,6 +13,7 @@ import {
   PAINTED_BASE,
   readRecord,
   RESTORE_WAIT_MS,
+  runsShippedShadows,
   samplesShadowMap,
   startingBase,
   writeRecord,
@@ -188,6 +189,10 @@ export async function boot(
             // hardware where this happens, and the generic message would land
             // on top of the specific one and bury the only useful sentence.
             shaderFailed,
+            // `?shadows=1&receivers=all` and the other shadow probes still fall
+            // back, and write no record: their loss says nothing about the
+            // shelf the record would turn off. See `runsShippedShadows`.
+            probe: !runsShippedShadows(running),
           };
           if (recovery !== undefined) recovery.lost(loss);
           else if (!shaderFailed) showNotice(surface, LOST_MESSAGE);
@@ -498,7 +503,9 @@ function noticeFor(notice: Exclude<Notice, 'clear'>, state: FallbackState): stri
     case 'redrawing':
       return REDRAWING_MESSAGE;
     case 'failed':
-      return 'remembered' in state && state.remembered ? FAILED_REMEMBERED_MESSAGE : FAILED_MESSAGE;
+      return 'remembered' in state && state.remembered === 'yes'
+        ? FAILED_REMEMBERED_MESSAGE
+        : FAILED_MESSAGE;
   }
 }
 

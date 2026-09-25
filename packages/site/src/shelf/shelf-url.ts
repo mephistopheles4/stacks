@@ -195,8 +195,8 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
    * It means *books cast, the bookcase receives* — see `?receivers` below.
    *
    * **The URL beats the lost-context record, in both directions.** A device
-   * that lost a context while sampling the map remembers it and starts painted
-   * (`shadow-fallback.ts`); `?shadows=1` turns real-time shadows back on over
+   * that lost a context while sampling the map, with every other shadow
+   * setting as shipped, remembers it and starts painted (`shadow-fallback.ts`); `?shadows=1` turns real-time shadows back on over
    * that record for one load — the way to re-test a device after a driver
    * update — and `?shadows=0` forces painted with or without one. Nothing here
    * reads the record: `boot.ts` folds this partial onto a base, and the record
@@ -221,7 +221,10 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
    * alone.** It is inert while shadows are off, and the device most likely to
    * be re-tested is the one carrying a lost-context record, which starts
    * painted: the page then reads no map, survives, and reads as a fixed driver.
-   * See `shadow-receivers.ts`.
+   * See `shadow-receivers.ts`. **A loss under it writes no record**, like a
+   * loss under every other shadow probe here: the page still redraws painted,
+   * and the device's plain page is not painted for 30 days by a re-test of a
+   * configuration it never ships (`runsShippedShadows`).
    *
    * `?shadowfetch=0` — draws the map once, then stops *reading* it. Separates
    * holding a depth attachment from sampling one.

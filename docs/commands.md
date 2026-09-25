@@ -816,7 +816,7 @@ floor, no threshold, no series, no badge. See
 **The Phase 2 gate, grown.** It builds the 50-book fixture into the site,
 serves `dist/` from its own process on a port the operating system picks, and
 drives system Chrome headless: a screenshot at `artifacts/shelf.png`, the card,
-the cover viewer and the sheet (G16, G35), five staged context losses (G59),
+the cover viewer and the sheet (G16, G35), six staged context losses (G59),
 and three pages counted for G60 (`one-shadow-reader`). On a workstation it asks
 Chrome for the real GPU; with `CI=true` it renders under SwiftShader, Chrome's
 software rasteriser, as the `suite` job does.
