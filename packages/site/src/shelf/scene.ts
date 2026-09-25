@@ -39,6 +39,7 @@ import { hashUnit } from './hash.ts';
 import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
 import { pageStriationMap } from './page-edges.ts';
 import { receiveShadows } from './shadow-receivers.ts';
+import { ContextRefused } from './shelf-notice.ts';
 import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture } from './spine-texture.ts';
 import {
@@ -318,10 +319,70 @@ export interface MountOptions {
   readonly onShaderFailure?: (report: readonly string[]) => void;
 }
 
+/** Anything a mount makes that outlives a throw unless it is let go of. */
+interface Releasable {
+  dispose(): void;
+}
+
+/**
+ * Builds the shelf on `canvas` — or throws, having let go of whatever it made.
+ *
+ * ⚠️ **A throw halfway through leaves nothing behind.** The renderer comes
+ * first, and the woodwork join, the cover atlas and the first frame all come
+ * after it and can throw: the join refuses rather than fall back, and the atlas
+ * refuses past 1,800 face-out covers. Without this the renderer, its controls
+ * and its picker stayed listening on the canvas — the picker still answering
+ * clicks for a scene nobody could see — and on the fallback's new canvas a live
+ * context was left on an element nobody would ever show. So each part is
+ * registered as it is made, and a throw releases them newest first and rethrows
+ * the original.
+ *
+ * The one throw that is the browser's and not the site's is tagged:
+ * `ContextRefused`, so the page can say which it was.
+ */
 export function mountShelf(
   canvas: HTMLCanvasElement,
   books: readonly LibraryBook[] = [],
   options: MountOptions = {},
+): ShelfHandle {
+  const made: Releasable[] = [];
+  try {
+    return assembleShelf(canvas, books, options, (part) => {
+      made.push(part);
+      return part;
+    });
+  } catch (error) {
+    for (const part of made.reverse()) {
+      try {
+        part.dispose();
+      } catch {
+        // The first throw is the one worth reading; a second from the clean-up
+        // would only bury it.
+      }
+    }
+    throw error;
+  }
+}
+
+/**
+ * The renderer, or `ContextRefused` when the browser will not hand one a
+ * context — no WebGL at all, or a browser that has just killed this page's
+ * renderer and is refusing to try again. three has already logged its own
+ * line by the time this rethrows.
+ */
+function openRenderer(canvas: HTMLCanvasElement, antialias: boolean): THREE.WebGLRenderer {
+  try {
+    return new THREE.WebGLRenderer({ canvas, antialias });
+  } catch (error) {
+    throw new ContextRefused(error);
+  }
+}
+
+function assembleShelf(
+  canvas: HTMLCanvasElement,
+  books: readonly LibraryBook[],
+  options: MountOptions,
+  own: <T extends Releasable>(part: T) => T,
 ): ShelfHandle {
   /**
    * What this mount is running — and it can change.
@@ -378,7 +439,7 @@ export function mountShelf(
   const shadows = settings.shadows.enabled;
   const shadowFetch = settings.shadows.fetch;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: contextAntialias });
+  const renderer = own(openRenderer(canvas, contextAntialias));
   applyRendererSettings(renderer, settings);
 
   /**
@@ -406,7 +467,7 @@ export function mountShelf(
 
   const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
 
-  const controls = new OrbitControls(camera, renderer.domElement);
+  const controls = own(new OrbitControls(camera, renderer.domElement));
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
   controls.minDistance = 1.5;
@@ -467,13 +528,16 @@ export function mountShelf(
   // in it, and the scene graph is built from what it returned.
   const placements = placeShelf(rows);
   const { placed, painters } = buildBooks(scene, placements, textures, lookup, settings);
+  if (painters !== undefined) own(painters);
 
-  const picker = new Picker(
-    canvas,
-    camera,
-    placed.map((book) => book.group),
-    lookup,
-    options.onSelect,
+  const picker = own(
+    new Picker(
+      canvas,
+      camera,
+      placed.map((book) => book.group),
+      lookup,
+      options.onSelect,
+    ),
   );
 
   /**
@@ -501,6 +565,13 @@ export function mountShelf(
   let disposed = false;
 
   let frame = 0;
+  // A first frame that throws has already asked for the next one.
+  own({
+    dispose: () => {
+      disposed = true;
+      cancelAnimationFrame(frame);
+    },
+  });
   let drawn = 0;
 
   /**
@@ -649,6 +720,12 @@ export function mountShelf(
 
   canvas.addEventListener('webglcontextlost', handleContextLost);
   canvas.addEventListener('webglcontextrestored', handleContextRestored);
+  own({
+    dispose: () => {
+      canvas.removeEventListener('webglcontextlost', handleContextLost);
+      canvas.removeEventListener('webglcontextrestored', handleContextRestored);
+    },
+  });
 
   if (composed) {
     void import('./post.ts').then(({ makePost }) => {
@@ -661,6 +738,11 @@ export function mountShelf(
   }
 
   const observer = new ResizeObserver(resize);
+  own({
+    dispose: () => {
+      observer.disconnect();
+    },
+  });
   observer.observe(canvas);
   resize();
   renderLoop();

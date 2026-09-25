@@ -1,10 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+  BROKEN_MESSAGE,
   clearNotice,
+  ContextRefused,
+  mountFailed,
   NOTICE_CLASS,
   settleNotice,
   SHADER_MESSAGE,
   showNotice,
+  UNAVAILABLE_MESSAGE,
 } from './shelf-notice.ts';
 
 /**
@@ -190,5 +194,40 @@ describe('settling the notice for the live shelf', () => {
 
     expect(p.notices.map((notice) => notice.textContent)).toEqual(['would not give it another']);
     expect(p.visibility()).toBe('hidden');
+  });
+});
+
+describe('a mount that threw', () => {
+  it('blames the browser only for a context it refused, and logs nothing three has not', () => {
+    const log = vi.fn();
+    const refused = new ContextRefused(
+      new Error('THREE.WebGLRenderer: Error creating WebGL context.'),
+    );
+
+    expect(mountFailed(refused, log)).toBe(UNAVAILABLE_MESSAGE);
+    // three has logged its own line already, and G60's `refused` case allows
+    // that line and no other.
+    expect(log).not.toHaveBeenCalled();
+  });
+
+  it("says the site's own code failed, and logs the original error, for any other throw", () => {
+    // The woodwork join refuses rather than fall back; the page's `catch` used
+    // to swallow it and tell every visitor their browser had refused a canvas.
+    const log = vi.fn();
+    const thrown = new Error('joinWoodwork: mergeGeometries returned null');
+    const sentence = mountFailed(thrown, log);
+
+    expect(sentence).toBe(BROKEN_MESSAGE);
+    expect(sentence).not.toContain('browser wouldn');
+    expect(log).toHaveBeenCalledOnce();
+    expect(log.mock.calls[0]).toContain(thrown);
+  });
+
+  it('keeps three’s error as the cause of a refusal', () => {
+    const three = new Error('THREE.WebGLRenderer: Error creating WebGL context.');
+    const refused = new ContextRefused(three);
+
+    expect(refused.cause).toBe(three);
+    expect(refused.name).toBe('ContextRefused');
   });
 });

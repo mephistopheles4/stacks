@@ -22,6 +22,7 @@ import {
 } from './shadow-fallback.ts';
 import {
   LOST_MESSAGE,
+  mountFailed,
   noticeFor,
   settleNotice,
   SHADER_MESSAGE,
@@ -175,6 +176,9 @@ export async function boot(
 
   const fallback = (): FallbackState => recovery?.state() ?? { kind: 'none' };
 
+  /** The sentence for the last mount that threw, read only right after one did. */
+  let failure = UNAVAILABLE_MESSAGE;
+
   const mount = (
     settings: ShelfSettings,
     target: HTMLCanvasElement = surface,
@@ -217,14 +221,17 @@ export async function boot(
           showNotice(surface, SHADER_MESSAGE);
         },
       });
-    } catch {
-      // `new WebGLRenderer` throws when the browser will not hand out a context —
-      // no WebGL at all, or, more often here, a browser that has just killed this
-      // page's renderer and is refusing to try again. The caller does nothing with
-      // the rejection (the .astro script may not, by the "no logic in .astro"
-      // rule), so an unhandled throw here is a blank page with no explanation.
-      // That is the exact thing the user saw on reload. Each caller says
-      // something different about it, so the sentence is theirs.
+    } catch (error) {
+      // `mountShelf` throws `ContextRefused` when the browser will not hand out
+      // a context — no WebGL at all, or, more often here, a browser that has
+      // just killed this page's renderer and is refusing to try again — and
+      // anything else when the site's own code failed; either way it has let go
+      // of what it made. The caller does nothing with the rejection (the .astro
+      // script may not, by the "no logic in .astro" rule), so an unhandled throw
+      // here is a blank page with no explanation. That is the exact thing the
+      // user saw on reload. `mountFailed` logs a throw of the site's and picks
+      // the sentence; a caller with no fallback of its own shows it.
+      failure = mountFailed(error);
       return undefined;
     }
   };
@@ -311,7 +318,7 @@ export async function boot(
   // record chose. `shelf-url.ts` owns the query vocabulary in both directions;
   // nothing else parses or writes it.
   handle = mount(resolveSettings(asked, base));
-  if (handle === undefined) showNotice(surface, UNAVAILABLE_MESSAGE);
+  if (handle === undefined) showNotice(surface, failure);
 
   const initial = initialState(record, asked.shadows?.enabled, handle?.gpu);
   // A record from a different GPU string is retired: this load was mounted
@@ -392,7 +399,7 @@ export async function boot(
           const next = mount(settings);
           if (next === undefined) {
             handle = undefined;
-            showNotice(surface, UNAVAILABLE_MESSAGE);
+            showNotice(surface, failure);
             return;
           }
           // Adopted so the black box's getter — and anything else holding one —

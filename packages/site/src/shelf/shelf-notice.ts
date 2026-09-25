@@ -120,8 +120,50 @@ export const LOST_MESSAGE = 'The browser reset the shelf’s 3D canvas. Reload t
 export const SHADER_MESSAGE =
   'This device would not compile the shelf’s shaders, so drawing has stopped. Reload with ?debug to see what the driver said.';
 
+// Only for a context the browser refused (`ContextRefused`): the one way a
+// mount fails that a reload can fix.
 export const UNAVAILABLE_MESSAGE =
   "This browser wouldn't give the page a 3D canvas, so the shelf can't be drawn. Reloading usually fixes it.";
+
+// Anything else that throws out of `mountShelf` is the site's own code — the
+// woodwork join refusing, the cover atlas refusing past 1,800 face-out covers —
+// and no reload fixes it, so the sentence does not send anyone to try.
+export const BROKEN_MESSAGE =
+  'The shelf couldn’t be built because of a fault in this site, not in your browser. The console says what failed.';
+
+/**
+ * The browser would not hand `mountShelf` a WebGL context.
+ *
+ * Thrown around `new THREE.WebGLRenderer` and nowhere else (`openRenderer` in
+ * `scene.ts`), so a refusal can be told from a throw in the site's own code.
+ * Here rather than in `scene.ts` so the page's choice of sentence has a spec
+ * that does not load `three`. `cause` is three's own error.
+ */
+export class ContextRefused extends Error {
+  constructor(cause: unknown) {
+    super('The browser would not give the shelf a WebGL context.', { cause });
+    this.name = 'ContextRefused';
+  }
+}
+
+/**
+ * The sentence for a mount that threw, after saying on the console what threw.
+ *
+ * ⚠️ **A refusal is not logged again**: three logs its own line before it
+ * throws, and G60's `refused` case allows that line and no other. Every other
+ * throw is logged here with the original error, stack and all, because the
+ * page's `catch` used to swallow it whole — the woodwork join's message, written
+ * to be loud, reached nobody, and `pnpm smoke:render` said *"Page errors:
+ * (none captured)"*.
+ */
+export function mountFailed(
+  error: unknown,
+  log: (...data: unknown[]) => void = console.error,
+): string {
+  if (error instanceof ContextRefused) return UNAVAILABLE_MESSAGE;
+  log('The shelf could not be built:', error);
+  return BROKEN_MESSAGE;
+}
 
 // The fallback's three. They say what the page is doing about it, and still not
 // why: nothing the page can observe names a cause. `LOST_MESSAGE` stays for a
