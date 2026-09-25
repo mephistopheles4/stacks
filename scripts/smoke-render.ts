@@ -1019,12 +1019,25 @@ async function oneLoop(page: Page, when: string): Promise<string> {
   return `${String(loops.frames)} frames, 1 loop`;
 }
 
+/**
+ * The least any state wait is given, whatever its caller asked for.
+ *
+ * Every wait here is for a state the case *requires* — a rebuild, a record, a
+ * cleared notice — never for an absence, so a longer deadline can only turn a
+ * slow pass green, never a wrong page. The callers' numbers were fitted to this
+ * machine's GPU, and the first CI run on #382 showed what that costs: on the
+ * runner's software renderer four cases reached exactly the state they waited
+ * for a moment after 5 s, and each was reported as a failure it was not.
+ */
+const STATE_WAIT_FLOOR_MS = 30_000;
+
 async function waitForState(
   page: Page,
   expression: string,
-  timeout: number,
+  asked: number,
   what: string,
 ): Promise<void> {
+  const timeout = Math.max(asked, STATE_WAIT_FLOOR_MS);
   try {
     await page.waitForFunction(expression, { timeout, polling: 50 });
   } catch {
@@ -1227,7 +1240,7 @@ async function measureSampling(
     // A hidden page gets no animation frames, and a page with no frames settles
     // into a vacuous verdict — so the page under measurement is the one in front.
     await page.bringToFront();
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 60_000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
     try {
       await page.waitForFunction(
