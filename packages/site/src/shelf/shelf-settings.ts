@@ -196,6 +196,15 @@ export interface ShadowSettings {
 
 export interface SceneSettings {
   readonly background: number;
+  /**
+   * Where the fog begins and where it is total, **in framing distances** — how
+   * far back `frameBookcase` stood the camera — and not in world units.
+   *
+   * They were world units, `14` and `30`, and a 17-shelf bookcase framed at 36
+   * sat wholly past the far edge and rendered as the background colour (#383).
+   * As multiples the fog stands the same way behind the bookcase at every size.
+   * See `fogRange` in `framing.ts` and ADR-0092.
+   */
   readonly fog: { readonly enabled: boolean; readonly near: number; readonly far: number };
 }
 
@@ -559,7 +568,10 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
   },
   scene: {
     background: 0x1a1613,
-    fog: { enabled: true, near: 14, far: 30 },
+    // The old `14` and `30` divided by 9.03, the distance today's four shelves
+    // frame at on a desktop, so that shelf looks as it did. `framing.test.ts`
+    // holds the conversion to within 0.03 of a world unit.
+    fog: { enabled: true, near: 1.55, far: 3.32 },
   },
   materials: {
     // Rosewood, which is what #284 and #302 rendered and the owner accepted. The

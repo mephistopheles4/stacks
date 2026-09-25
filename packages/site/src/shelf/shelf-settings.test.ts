@@ -80,9 +80,9 @@ describe('resolveSettings', () => {
   });
 
   it('merges fog without dropping the sibling keys', () => {
-    const settings = resolveSettings({ scene: { fog: { far: 40 } } });
+    const settings = resolveSettings({ scene: { fog: { far: 4 } } });
 
-    expect(settings.scene.fog).toEqual({ ...DEFAULT_SETTINGS.scene.fog, far: 40 });
+    expect(settings.scene.fog).toEqual({ ...DEFAULT_SETTINGS.scene.fog, far: 4 });
     expect(settings.scene.background).toBe(DEFAULT_SETTINGS.scene.background);
   });
 

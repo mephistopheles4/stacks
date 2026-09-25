@@ -6129,16 +6129,81 @@ rather than observed once.
   number. G29 (`doc-links`) resolves a Markdown link and reads no bare mention,
   so a stale citation is invisible to both. Disposition `accepted`.
 
+### G59 — `large-library-lit`
+
+**Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts), judged by [`scripts/lib/large-library-lit.ts`](../scripts/lib/large-library-lit.ts)
+**Date:** 2026-09-25
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number collides with an open pull request, knowingly.**
+[#382](https://github.com/mephistopheles4/stacks/pull/382) carries its own G59
+and G60, and G19's gapless clause makes G59 the only number this row can hold on
+`main` as it stands. Whichever merges second renumbers, and every
+``G59 (`large-library-lit`)`` citation moves with it — slug and number together,
+so a stale one is a red G19 rather than a silent wrong pointer. **Resolved
+2026-09-25:** this merged first, and #382 took G60 and G61.
+
+**Observed-red**, three ways. The first is the defect itself, not a plant.
+
+1. **The unfixed fog.** With `scene.ts`, `shelf-settings.ts` and
+   `debug-panel.ts` put back to `7d572c8` and this gate's scripts left as they
+   are, `pnpm smoke:render` failed with exit 1: *the large library renders dark:
+   its bookcase stands -0.0 above the room, against 68.1 for the 50-book shelf*.
+   The large page and the plant both measured 22.6 on a room of 22.6. That was
+   the message's wording at the time; it now names *the control shelf*. The
+   restored source is green at 47.6 against 68.1.
+2. **The verdicts, in-process.** `large-library-lit.test.ts` plants the black
+   page, a page 0.1 under the floor and one exactly on it, a plant that does not
+   read black, and a control that is itself dark. Each reddens its own clause and
+   no other.
+3. **The arithmetic.** `framing.test.ts` feeds the old world-unit range through
+   the same clearance check that holds the shipped one, and 17 shelves fail it.
+
+**It travels to a runner.** The numbers above came from Windows Chrome on a real
+GPU. CI renders through SwiftShader, and its first run on
+[#384](https://github.com/mephistopheles4/stacks/pull/384) read the control at
+67.6, the large library at 47.6 and the plant at 0.0: a ratio of 0.70, the same
+as the GPU's. The floor is a ratio against a control drawn by the same
+rasteriser in the same run, and that is why it could be expected to travel.
+
+- **Weakening** — **exposed, in three constants.** `LIT_FLOOR`,
+  `MIN_CONTROL_CONTRAST` and `MIN_LARGE_ROWS` each make the gate vacuous at
+  zero. Each is a one-line diff with its reasoning beside it, and nothing
+  asserts their values. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The verdict is a mean over the
+  rectangle the books project into, so a bright patch inside it can carry a
+  page whose books are dark. A bookcase lit only at one end would pass. The
+  failure it exists for paints the whole rectangle one colour, which a mean
+  cannot miss. Disposition `accepted`.
+- **Routing around** — **exposed, on aspect.** The browser renders one upright
+  480×640 viewport, so a defect at another aspect passes here.
+  `framing.test.ts` covers the fog's share of that at seven aspects, from an
+  upright phone to an ultrawide, and nothing covers the rest. Disposition
+  `accepted`.
+- **Vacuous green** — **gated, four ways.** A large library too short for the
+  old fog to have blacked it out fails on `MIN_LARGE_ROWS`. A large page that
+  rendered fewer books than its library fails on the count. A dark control
+  fails before any ratio is taken. A plant that does not read black fails on
+  the instrument before the large page is judged. Disposition `gated`.
+- **Decay** — **it decays toward a red, not toward silence.** A lamp moved, a
+  light dimmed or a camera re-framed moves the large page and the control
+  together when it is uniform, and apart when it is not, and only the second is
+  what this is for. The fixture can grow without touching the gate: the rows
+  check reads the staged library. What rots quietly is the floor's reasoning,
+  pinned to three measured ratios that later changes will move. Disposition
+  `accepted`.
+
 ### G60 — `context-loss-fallback`
 
 **Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts) — `checkContextLossFallback`
 **Date:** 2026-09-25
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
-⚠️ **The row number was taken against a re-fetched `origin/main`, every local
-branch and every remote one, with no pull request open.** Rows are gapless, so
-this took G60 rather than the G61 the design proposed; the ticket's
-sampling-program gate, #381's sixth item, takes the next one.
+⚠️ **The row number moved once.** It was taken as G59 against a re-fetched
+`origin/main` with no pull request open, and renumbered to G60 when
+[#384](https://github.com/mephistopheles4/stacks/pull/384) merged first with its
+own G59; rows are gapless. The ticket's sampling-program gate, #381's sixth
+item, takes the next one.
 
 **Observed-red**, six ways, each planted in the source, run through `pnpm
 smoke:render`, and reverted with the file hash checked against its backup. The
@@ -6238,9 +6303,10 @@ and `painted loss`.
 **Date:** 2026-09-25
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
-⚠️ **The row number was taken against `origin`'s 45 branches and every pull
-request, with none open.** G60 was already this branch's; rows are gapless, so
-this is G61.
+⚠️ **The row number moved once.** It was taken as G60 against `origin`'s 45
+branches and every pull request, with none open, and renumbered to G61 when
+[#384](https://github.com/mephistopheles4/stacks/pull/384) merged first with its
+own G59.
 
 **Observed-red**, six ways. Each was planted in the source, run through
 `pnpm smoke:render`, and reverted with the file's hash checked against a

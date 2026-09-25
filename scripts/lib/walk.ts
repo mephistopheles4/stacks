@@ -5,8 +5,7 @@
  * vault looking for the canary, and `public-build.ts` walks a built folder
  * looking for what shipped. Different questions, one traversal — and leaving a
  * second copy in a change whose whole argument is that duplicated rules drift
- * would have been a poor advertisement for it. `serve-dist.ts` is a third
- * caller: it indexes the folders it serves with this, once, at start.
+ * would have been a poor advertisement for it.
  *
  * A directory that is not there has no files, rather than throwing. Both
  * callers check for the folder they care about themselves, with a message that

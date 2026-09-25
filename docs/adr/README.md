@@ -124,3 +124,4 @@ Two other files hold what these deliberately do not:
 | [0088](./0088-one-program-samples-the-shadow-map-in-two-draws.md) | One program samples the shadow map, in two draws |
 | [0090](./0090-real-time-shadows-are-the-default.md) | Real-time shadows are the default, and painted is the fallback |
 | [0091](./0091-a-lost-context-falls-back-to-painted-shadows.md) | A lost context falls back to painted shadows, and the device remembers |
+| [0092](./0092-the-fog-range-is-measured-in-framing-distances.md) | The fog range is measured in framing distances, not world units |

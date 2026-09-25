@@ -15,6 +15,9 @@ import { spawn } from 'node:child_process';
 // `import type`, so nothing of three's reaches this node script — the whole
 // point is that the shape cannot drift from the handle it is read off.
 import type { ShelfStats } from '../packages/site/src/shelf/scene.ts';
+import type { LibraryBook } from '../packages/core/src/library.ts';
+import { rowsForBookcase } from '../packages/site/src/shelf/bookcase.ts';
+import { toRows } from '../packages/site/src/shelf/books.ts';
 // Value imports, and safe ones: both modules are pure data and arithmetic with
 // no `three` and no DOM at module scope, so the gate reads the same key, wait
 // and default the page does rather than a copy that could drift from them.
@@ -23,6 +26,7 @@ import { DEFAULT_SETTINGS } from '../packages/site/src/shelf/shelf-settings.ts';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
+import { lightingOf, litFailures, type Frame, type Lighting } from './lib/large-library-lit.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { shellCommand } from './lib/run.ts';
 import { samplingHookSource } from './lib/sampling-hook.ts';
@@ -43,7 +47,7 @@ const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
 const LIBRARY = join(REPO_ROOT, 'packages', 'site', 'public', 'library.json');
 
 /**
- * G61's large library: generated at gate time, staged into `artifacts/` and
+ * G59's and G61's large library: generated at gate time, staged into `artifacts/` and
  * served over the same build. Never into `packages/site/public/` — see
  * `serve-dist.ts`.
  */
@@ -160,7 +164,8 @@ async function main(): Promise<void> {
       const cardOpened = await clickABook(page);
       const viewer = await checkCoverViewer(page);
       const sheet = await checkSheet(page);
-      // Last, and in browser contexts of its own, so the record it writes can
+      const lit = await checkLargeLibraryLit(browser, origin, large.origin);
+      // Last, and in browser contexts of their own, so the record G60 writes can
       // never reach the page every check above measured.
       const fallback = await checkContextLossFallback(browser, origin);
       const sampling = await checkShadowReaders(browser, origin, large.origin);
@@ -174,6 +179,7 @@ async function main(): Promise<void> {
         cardOpened,
         viewer,
         sheet,
+        lit,
         fallback,
         sampling,
       });
@@ -185,6 +191,156 @@ async function main(): Promise<void> {
     large.server.close();
   }
 }
+
+/**
+ * G59 (`large-library-lit`) — the three pages `large-library-lit.ts` judges.
+ *
+ * One small viewport at a device pixel ratio of 1, so the large page is cheap on
+ * a runner with no GPU and the three frames are the same size. Upright, because
+ * that is how the owner was holding the phone that showed the black page.
+ */
+const LIT_VIEWPORT = { width: 480, height: 640, deviceScaleFactor: 1 };
+
+/**
+ * The page must be tall enough that the defect would have blacked it out.
+ *
+ * 15 shelves frame at 31.9, past the old fog's world-unit far edge of 30, so
+ * the pre-#383 range would have painted every one of its books the room
+ * colour. A smaller large library would pass under the old defect too, and this
+ * check would be asserting nothing.
+ */
+const MIN_LARGE_ROWS = 15;
+
+/** Pinned, so every run compares the same bookcase. See `?woodSeed=` in `shelf-url.ts`. */
+const LIT_SEED = 'large-library-lit';
+
+/**
+ * The defect, planted: the fog pulled over the bookcase, which is what the old
+ * world-unit range did to a tall one. In framing distances — `SceneSettings.fog`.
+ */
+const FOG_OVER_THE_BOOKCASE = { scene: { fog: { near: 0.1, far: 0.5 } } };
+
+interface LitChecked {
+  readonly control: Lighting;
+  readonly large: Lighting;
+  readonly planted: Lighting;
+  readonly controlBooks: number;
+  readonly largeBooks: number;
+  readonly failures: readonly string[];
+}
+
+async function checkLargeLibraryLit(
+  browser: Browser,
+  main: string,
+  large: string,
+): Promise<LitChecked> {
+  const failures: string[] = [];
+  const seed = `woodSeed=${LIT_SEED}`;
+  const plant = `tune=${encodeURIComponent(JSON.stringify(FOG_OVER_THE_BOOKCASE))}`;
+
+  const control = await grabFrame(browser, `${main}/?${seed}`, failures);
+  const largePage = await grabFrame(browser, `${large}/?${seed}`, failures);
+  const planted = await grabFrame(browser, `${large}/?${seed}&${plant}`, failures);
+
+  const library = JSON.parse(readFileSync(LARGE_LIBRARY, 'utf8')) as { books: LibraryBook[] };
+  const rows = rowsForBookcase(toRows(library.books, DEFAULT_SETTINGS.books).length);
+  const expected = library.books.filter((book) => book.status !== 'wishlist').length;
+  if (rows < MIN_LARGE_ROWS) {
+    failures.push(
+      `the large library stands on ${String(rows)} shelves, under ${String(MIN_LARGE_ROWS)} — ` +
+        'too short for the old fog to have blacked it out, so this check would assert nothing',
+    );
+  }
+  if (largePage.books !== expected) {
+    failures.push(
+      `the large page rendered ${String(largePage.books)} books, not ${String(expected)}`,
+    );
+  }
+
+  const pages = {
+    control: lightingOf(control.frame),
+    large: lightingOf(largePage.frame),
+    planted: lightingOf(planted.frame),
+  };
+  return {
+    ...pages,
+    controlBooks: control.books,
+    largeBooks: largePage.books,
+    failures: [...failures, ...litFailures(pages)],
+  };
+}
+
+/**
+ * One page's pixels, and where its books are on them.
+ *
+ * The rectangle comes from the page's own projection of every book, converted
+ * to buffer pixels, so the bookcase is measured where it actually is rather
+ * than where a layout assumption puts it.
+ */
+async function grabFrame(
+  browser: Browser,
+  url: string,
+  failures: string[],
+): Promise<{ frame: Frame; books: number }> {
+  const page = await browser.newPage();
+  try {
+    await page.setViewport(LIT_VIEWPORT);
+    page.on('pageerror', (error: unknown) => {
+      failures.push(
+        `G59 page error at ${url}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+    await page.goto(url, { waitUntil: 'load', timeout: 60_000 });
+    await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+    // The same settle the main shot takes: textures land, the damped camera stops.
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    const grabbed = (await page.evaluate(readFrame)) as {
+      width: number;
+      height: number;
+      pixels: string;
+      box: [number, number, number, number];
+      books: number;
+    };
+    return {
+      frame: {
+        width: grabbed.width,
+        height: grabbed.height,
+        pixels: new Uint8Array(Buffer.from(grabbed.pixels, 'base64')),
+        box: grabbed.box,
+      },
+      books: grabbed.books,
+    };
+  } finally {
+    await page.close();
+  }
+}
+
+/** `readCanvasStats`'s read, handed back whole, plus the books' rectangle. */
+const readFrame = `(async () => {
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const canvas = document.getElementById('shelf-canvas');
+  const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+  const width = gl.drawingBufferWidth, height = gl.drawingBufferHeight;
+  const px = new Uint8Array(width * height * 4);
+  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, px);
+
+  const rect = canvas.getBoundingClientRect();
+  const sx = width / rect.width, sy = height / rect.height;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const books = window.__shelf.bookCount;
+  for (let i = 0; i < books; i += 1) {
+    const p = window.__shelf.projectBook(i);
+    if (!p) continue;
+    x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x);
+    y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y);
+  }
+  const box = [(x0 - rect.left) * sx, (y0 - rect.top) * sy, (x1 - rect.left) * sx, (y1 - rect.top) * sy];
+
+  let binary = '';
+  for (let i = 0; i < px.length; i += 8192) binary += String.fromCharCode(...px.subarray(i, i + 8192));
+  return { width, height, pixels: btoa(binary), box, books };
+})()`;
 
 /**
  * Reads the WebGL buffer directly — a screenshot can be blank for other reasons.
@@ -1098,7 +1254,7 @@ const PAGE_COLUMN = 34;
  * A tall enough case: the unjoined bookcase drew `rows + 4` — 12 at 8 rows,
  * the most one program sampling alone was seen to hold on the phone.
  */
-const MIN_LARGE_ROWS = 8;
+const MIN_SAMPLING_ROWS = 8;
 
 interface SamplingPage {
   readonly name: string;
@@ -1123,7 +1279,7 @@ const SAMPLING_PAGES: readonly SamplingPage[] = [
     url: (_main, large) => `${large}/`,
     role: 'gate',
     library: LARGE_LIBRARY,
-    minRows: MIN_LARGE_ROWS,
+    minRows: MIN_SAMPLING_ROWS,
   },
   {
     // The permanent planted defect: every book reads the map again, through
@@ -1333,6 +1489,7 @@ function report(result: {
   cardOpened: CardOpened | undefined;
   viewer: CoverViewerChecked | undefined;
   sheet: SheetChecked | undefined;
+  lit: LitChecked;
   fallback: FallbackChecked;
   sampling: SamplingChecked;
 }): void {
@@ -1345,6 +1502,7 @@ function report(result: {
     cardOpened,
     viewer,
     sheet,
+    lit,
     fallback,
     sampling,
   } = result;
@@ -1394,6 +1552,18 @@ function report(result: {
             sheet.survivedShortDrag ? 'snaps back' : 'DISMISSES'
           }`
     }`,
+  );
+  const above = (page: Lighting): string => {
+    const standing = page.bookcase - page.room;
+    // -0.004 is no contrast at all; `-0.0` would read as a sign.
+    const shown = (Math.abs(standing) < 0.05 ? 0 : standing).toFixed(1);
+    return `${shown} above the room (${page.bookcase.toFixed(1)} on ${page.room.toFixed(1)})`;
+  };
+  const books = (count: number): string => `${String(count)} books`.padEnd(10);
+  console.log(`lit (G59)         control   ${books(lit.controlBooks)} ${above(lit.control)}`);
+  console.log(`                  large     ${books(lit.largeBooks)} ${above(lit.large)}`);
+  console.log(
+    `                  planted   ${books(lit.largeBooks)} ${above(lit.planted)}   (the fog pulled over it)`,
   );
   console.log(`context loss (G60), each case in a browser context of its own`);
   for (const line of fallback.lines) console.log(`  ${line}`);
@@ -1492,6 +1662,8 @@ function report(result: {
   if (stats.distinctColours < 40) {
     failures.push(`only ${stats.distinctColours} distinct colours — the shelf looks blank`);
   }
+  // G59 (`large-library-lit`). See `lib/large-library-lit.ts`.
+  failures.push(...lit.failures.map((failure) => `G59: ${failure}`));
   if (errors.length > 0) {
     failures.push(`page errors:\n  ${errors.join('\n  ')}`);
   }
@@ -1543,7 +1715,7 @@ async function buildSite(): Promise<void> {
     '--assets',
     'packages/site/public',
   ]);
-  // G61's large library, staged beside the build rather than into it.
+  // G59's and G61's large library, staged beside the build rather than into it.
   await run('pnpm', ['fixtures:50', '--books', String(LARGE_BOOKS)]);
   await run('pnpm', [
     'stacks',

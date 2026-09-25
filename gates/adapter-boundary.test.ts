@@ -119,12 +119,11 @@ const ALLOWED = [
   // knows nothing about vaults, notes or builds, and the callers own what they
   // point it at.
   'scripts/lib/walk.ts',
-  // Serves a *built* folder — `dist/`, and for G61 a staged library's
-  // `library.json` and `covers/` over it — to a browser. It walks the two
-  // folders its caller names once, at start, and reads only files that walk
-  // found: a request selects one by name and never becomes a path. It writes
-  // nothing. The library it may serve was published from a fixture vault by
-  // the CLI; it never opens a note.
+  // Serves a *built* folder — `dist/`, and for G59 and G61 a staged library's
+  // `library.json` and `covers/` over it — to a browser. It reads only paths
+  // under the two folders its caller names, refuses any segment that could
+  // climb out of them, and writes nothing. The library it may serve was
+  // published from a fixture vault by the CLI; it never opens a note.
   'scripts/lib/serve-dist.ts',
   // Writes one probe document per Markdown rule into a fresh temp directory and
   // deletes it again, to measure what the installed markdownlint can actually
