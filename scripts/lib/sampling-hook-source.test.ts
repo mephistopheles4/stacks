@@ -58,7 +58,7 @@ describe('samplingHookSource — the string a page runs', () => {
       .WebGL2RenderingContext;
     new Gl().drawArrays();
 
-    expect(hook.read().version).toBe(1);
+    expect(hook.read().version).toBe(2);
     expect(hook.read().frames.at(-1)?.calls).toBe(1);
     // Nothing leaks into the page's globals but the hook itself.
     expect('__name' in globalThis).toBe(before);
