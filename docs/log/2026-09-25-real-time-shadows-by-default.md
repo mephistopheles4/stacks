@@ -74,7 +74,9 @@ this is the thread through them.
 - `DEFAULT_SETTINGS.shadows.enabled` is `true`. `receivers` stays `bookcase`,
   `painted` stays on, so the painted shading and the map both shade what they
   agree about — ADR-0016 recorded the double darkening in August, and ADR-0090
-  accepts it for now.
+  accepts it for now. **Decided otherwise before merge**: under the shipped
+  configuration the painted pieces the map casts step aside (option B, in
+  ADR-0090's dated section of 2026-09-25).
 - The probe docs say what the flip changed: `?shadows=0` is the painted
   fallback, `?shadows=1` is the default and overrides a remembered fallback for
   one load, and `?receivers=all` is the reproduction and G61's control. One test

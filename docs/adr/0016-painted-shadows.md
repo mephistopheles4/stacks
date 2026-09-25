@@ -14,7 +14,8 @@ survives on this device"* — one program in a handful of draws does, measured i
 September on driver `25.3` — and the empty case dying, which no longer
 reproduces there. *"Deliberately not a fallback"* was about a shader that will
 not link, and still holds for one; a lost context is different, and ADR-0090
-says why.
+says why. Beside the shipped map, the painted pieces the map casts now step
+aside rather than darken the wood twice — [ADR-0090](0090-real-time-shadows-are-the-default.md#the-painted-pieces-the-map-casts-step-aside).
 
 The shelf computes its shading once, from the same layout the books were placed with, and draws it to a canvas as one textured plane per shelf. There is no shadow pass, no depth target and no per-fragment lookup. `?shadows=1` keeps the real-time path for hardware that can hold it.
 

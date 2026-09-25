@@ -17,9 +17,9 @@ import {
   COVER_LIFT,
   coverQuads,
   lightRatios,
-  paintsCoverShade,
   type CoverQuad,
 } from './cover-shade.ts';
+import { changedPieces, livePieces, paintedPieces } from './painted-pieces.ts';
 import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
 import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
@@ -31,6 +31,7 @@ import {
   DEFAULT_SETTINGS,
   heightOf,
   type LightPosition,
+  type ShadowSettings,
   type ShadowTypeName,
   type ShelfSettings,
   type ToneMappingName,
@@ -1102,9 +1103,10 @@ export type BookLookup = Map<THREE.Object3D, LibraryBook>;
  *
  * Everything about *where* a book goes was decided by `placeShelf` before this
  * ran. What is left is Three.js — geometry, materials, the click lookup, and the
- * painted overlays: beside the real-time shadow map they add the contact
- * shadows and the cover shade, and without one, after a lost context, they are
- * the whole of the shading.
+ * painted overlays: beside the real-time shadow map they add what the map does
+ * not draw — the contact roots, the recess and the bands on the covers — and
+ * without one, after a lost context, they are the whole of the shading. Which
+ * pieces draw is `paintedPieces`'s.
  */
 function buildBooks(
   scene: THREE.Scene,
@@ -1116,7 +1118,7 @@ function buildBooks(
   // Was a separate parameter until the settings object existed, which let a
   // caller pass a `painted` that disagreed with the one the painters would later
   // read. One source, no way to disagree.
-  const painted = settings.shadows.painted;
+  const pieces = paintedPieces(settings.shadows);
 
   const placed: PlacedBook[] = [];
 
@@ -1134,7 +1136,7 @@ function buildBooks(
       // anyway put a hard band down the edge of a book standing on its own.
       const next = row[index + 1]?.entry;
       const shadedFromRight =
-        painted &&
+        pieces.neighbourShadow &&
         entry.faceOut &&
         next !== undefined &&
         !next.faceOut &&
@@ -1160,18 +1162,20 @@ function buildBooks(
   // shading the bookcase throws on itself, and an empty shelf has a backboard and a
   // corner just as a full one does. Skipping them would leave the bottom of a
   // growing bookcase looking like a different piece of furniture from the top.
-  if (!painted) return { placed, painters: undefined };
+  if (!settings.shadows.painted) return { placed, painters: undefined };
 
   // `settings` here is what the shelf is being built with, which is what the
-  // painters must decide the cover shade from — see `Painters`.
+  // painters must decide every rebuild-class key from — see `Painters`.
   const painters = new Painters(scene, placements, rowCount, settings);
   painters.paint(settings);
 
   // The corner a shelf makes with its backboard is dark on both sides whatever
   // the light does, so it is not derived from the light and never repainted —
-  // painted once, here, and left alone. See `makeRecessShade`.
+  // painted once, here, and left alone. See `makeRecessShade`. Nor does the
+  // shadow map draw it, so it stays beside the map as well.
   const openHeight = SHELF.rowHeight - SHELF.plankThickness;
-  for (let row = 0; row < rowCount; row += 1) {
+  const recessRows = pieces.recess ? rowCount : 0;
+  for (let row = 0; row < recessRows; row += 1) {
     const recess = makeRecessShade(SHELF.width, openHeight);
     if (recess !== undefined) {
       const shelfY = row * SHELF.rowHeight + SHELF.plankThickness / 2;
@@ -1206,25 +1210,28 @@ function buildBooks(
  * actually put.
  *
  * **Three painted shadows are cast now, not two**: the cover shade across every
- * face-out cover follows the light as well. Whether it is drawn at all is
- * decided once, here, from the settings the shelf was *built* with, because
- * `shadows.receivers` is rebuild-class: a pending switch to `all` has not yet
- * given the books their shadow sampler, and a repaint that read it would take
- * the band off covers that do not yet receive the real one.
+ * face-out cover follows the light as well.
  *
- * ⚠️ **`shadows.enabled` is in that decision too, and it is live.** Under
- * `receivers: 'all'` the band is drawn only while shadows are off, so behind
- * `?debug` a live toggle on a `?receivers=all` shelf is stale until a rebuild:
- * turned on over a painted mount, the covers darken twice; turned off over a
- * real-time one, they lose the band. `applySettings` does not report it. Both
- * need the panel and a probe nobody ships.
+ * **Which pieces draw is decided on every paint, by `livePieces`**: every
+ * shadow key as the shelf was *built*, and `enabled` as it is now. The
+ * rebuild-class keys come from the mount because a pending change has not
+ * reached the scene — a pending switch to `receivers: 'all'` has not yet given
+ * the books their shadow sampler, and a repaint that read it would take the
+ * band off covers that do not yet receive the real one. `enabled` comes from
+ * now because it is live: behind `?debug`, turning real-time shadows on steps
+ * the backboard shade, the upright's wedge and the contact bodies aside, and
+ * turning them off draws them back, so the panel never shows both darkenings
+ * or neither. It also keeps the cover shade right on a `?receivers=all` shelf,
+ * which a decision taken once at mount left stale until a rebuild.
  */
 class Painters {
   readonly #scene: THREE.Scene;
   /** Contacts per row of *books*, indexed as the placements are — top shelf first. */
   readonly #byRow: readonly (readonly Contact[])[];
   readonly #rowCount: number;
-  /** Every face-out cover, or none when the cover shade is not drawn. */
+  /** The shadow settings the shelf was built with. See `livePieces`. */
+  readonly #mounted: ShadowSettings;
+  /** Every face-out cover, whether or not the cover shade draws now. */
   readonly #covers: readonly CoverQuad[];
   #meshes: THREE.Mesh[] = [];
 
@@ -1239,30 +1246,35 @@ class Painters {
     // placed at, so the two cannot drift apart.
     this.#byRow = placements.map((row) => row.map((placement) => placement.contact));
     this.#rowCount = rowCount;
-    this.#covers = paintsCoverShade(mountedWith.shadows)
-      ? coverQuads(placements, mountedWith.books.headCap)
-      : [];
+    this.#mounted = mountedWith.shadows;
+    this.#covers = coverQuads(placements, mountedWith.books.headCap);
   }
 
   paint(settings: ShelfSettings): void {
     this.dispose();
 
+    const pieces = livePieces(this.#mounted, settings.shadows);
     const light = bookcaseLight(this.#rowCount * SHELF.rowHeight, settings);
     const openHeight = SHELF.rowHeight - SHELF.plankThickness;
 
     for (let row = 0; row < this.#rowCount; row += 1) {
       const shelfY = row * SHELF.rowHeight + SHELF.plankThickness / 2;
 
+      // Beside the shipped map this carries the root and the corner alone.
       const shadow = makeContactShadow(
         this.#byRow[this.#rowCount - 1 - row] ?? [],
         SHELF.width,
         SHELF.depth,
         shelfY,
         light,
+        pieces,
       );
       if (shadow !== undefined) this.#add(shadow);
 
-      const shade = makeBackboardShade(SHELF.width, openHeight, INTERIOR_DEPTH, light);
+      // The map casts the plank and the upright on the back wall itself.
+      const shade = pieces.backboardShade
+        ? makeBackboardShade(SHELF.width, openHeight, INTERIOR_DEPTH, light)
+        : undefined;
       if (shade !== undefined) {
         shade.position.set(
           0,
@@ -1275,7 +1287,7 @@ class Painters {
 
     // One mesh for every cover on the shelf, or none: +1 draw and +1 texture
     // whatever the library's size, and no program of its own.
-    const covers = makeCoverShade(this.#covers, light);
+    const covers = pieces.coverShade ? makeCoverShade(this.#covers, light) : undefined;
     if (covers !== undefined) this.#add(covers);
   }
 
@@ -2567,14 +2579,23 @@ function applyLive(
    * would have caused it. Repainting is cheap: they are 2D canvas fills, and the
    * books have not moved, so nothing else in the scene needs touching. See
    * `Painters` for why this is not a remount.
+   *
+   * And they follow the shadow toggle: the pieces the map casts step aside
+   * while it is on and are drawn back while it is off (`livePieces`), so a live
+   * toggle shows what a reload with the same URL would.
    */
-  if (
-    painters !== undefined &&
-    (!samePosition(current.lighting.key.position, next.lighting.key.position) ||
-      current.lighting.key.aimHeight !== next.lighting.key.aimHeight)
-  ) {
+  const lightMoved =
+    !samePosition(current.lighting.key.position, next.lighting.key.position) ||
+    current.lighting.key.aimHeight !== next.lighting.key.aimHeight;
+  const drawnNow = livePieces(mountedWith.shadows, next.shadows);
+  const moved = changedPieces(livePieces(mountedWith.shadows, current.shadows), drawnNow);
+  if (painters !== undefined && (lightMoved || moved.length > 0)) {
     painters.paint(next);
-    applied.push('painted shadows repainted for the new light');
+    if (lightMoved) applied.push('painted shadows repainted for the new light');
+    const aside = moved.filter((piece) => !drawnNow[piece]);
+    const back = moved.filter((piece) => drawnNow[piece]);
+    if (aside.length > 0) applied.push(`painted, stepped aside for the map: ${aside.join(', ')}`);
+    if (back.length > 0) applied.push(`painted, drawn back: ${back.join(', ')}`);
   }
 
   return { applied, needsRebuild, needsReload, refused, resolved };

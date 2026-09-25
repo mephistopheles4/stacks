@@ -35,7 +35,9 @@ records its pieces: any one of them alone would have been the wrong change.
    the contact shadows, the recess and the cover shade. Where it and the shadow
    map shade the same surface they darken it twice — ADR-0016 recorded that in
    August, and every look measured since was painted plus real. Accepted for
-   now, and routed to the owner's screenshot review.
+   now, and routed to the owner's screenshot review. **The owner has judged
+   it**: the painted pieces the map casts step aside beside it — see
+   [The painted pieces the map casts step aside](#the-painted-pieces-the-map-casts-step-aside).
 6. **No browser flag is ever part of a fix.** A setting on a visitor's browser
    is not something this site can ship, and the one flag examined — ANGLE's
    Vulkan backend on Android — was prepared on the phone and never run.
@@ -128,8 +130,10 @@ is to find which program started sampling, and then to run
   the number; no budget moves.
 - **One more program and one shadow pass.** At the 50-book fixture the default
   page goes from 7 programs and 67 textures to 8 and 69; draws a frame stay at
-  315, because the map is drawn once, at first paint.
-- **The double darkening of item 5**, until the owner has judged it.
+  315, because the map is drawn once, at first paint. Option B, below, then
+  takes one texture and one draw a shelf back off: 65 and 311 there.
+- **The double darkening of item 5** — judged by the owner, and resolved by
+  option B below.
 - **PCF only.** `?shadowtype=basic` with only the bookcase reading the map still
   died, at frame 11; `vsm` was never run.
 - **One device measured.** Another GPU could have a lower edge, and nothing here
@@ -139,6 +143,59 @@ is to find which program started sampling, and then to run
   record expires and real-time is tried again (ADR-0091).
 - **The README's image still shows the painted look.** Regenerating it is the
   owner's call, against a screenshot.
+
+## The painted pieces the map casts step aside
+
+**Date:** 2026-09-25 — the owner's decision on
+[#381](https://github.com/mephistopheles4/stacks/issues/381), option B, taken
+against the four-state screenshots of item 5.
+
+Beside the shipped map, the painted shading darkened the same wood twice. So
+when the shelf runs the shipped real-time configuration — shadows on, casters
+on, fetch on, `receivers: 'bookcase'` — the painted pieces that imitate a shadow
+the map now draws step aside, and the pieces the map does not draw stay.
+
+| piece | beside the shipped map | why |
+| --- | --- | --- |
+| backboard shade | dropped | the map casts the plank and the upright on the back wall |
+| upright wedge across each plank | dropped | the map casts the upright |
+| soft body of each contact shadow | dropped | books cast into the map, and the planks read it |
+| contact root | kept | the tight line where a book meets the wood, which the map does not draw |
+| plank corner and recess | kept | ambient darkening, which a directional shadow does not model |
+| cover shade and neighbour band | kept | books read no map, so these are the only bands on a cover |
+
+Everywhere else the full painted set draws exactly as before: with shadows off —
+`?shadows=0` and the painted fallback of ADR-0091 — under `?casters=0` and
+`?shadowfetch=0`, where no real shadow reaches the bookcase, and under
+`?receivers=all`, the upstream reproduction. The owner named three keys;
+`casters` joined them because stepping aside over an empty map would leave the
+bookcase with no cast shadow at all. Map size and filter are not in the test: a
+512 map, or a `basic` one, still draws the shadow. The decision is one pure,
+specced function, `paintedPieces` in `painted-pieces.ts`, and a live shadow
+toggle behind `?debug` repaints from it, so the panel shows what a reload would.
+No strength was retuned.
+
+Measured on the 50-book fixture at `?woodSeed=review`, in headless Chrome, as
+mean luma (0–255) over two fixed rectangles: the empty bottom shelf, and the
+band of backboard under that shelf's plank.
+
+| state | desktop empty shelf | desktop backboard | phone empty shelf | phone backboard |
+| --- | --- | --- | --- | --- |
+| no shading (`?shadows=0&painted=0`) | 55.3 | 54.2 | — | — |
+| painted only (`?shadows=0`) | 49.2 | 36.3 | 47.5 | 36.1 |
+| real only (`?painted=0`) | 47.9 | 33.3 | 44.9 | 33.5 |
+| **default, option B** | **46.2** | **28.6** | **43.7** | **28.5** |
+| default before B (both) | 43.6 | 22.3 | 40.5 | 22.3 |
+
+The desktop is 1440×900; the phone is 527×1003 at a pixel ratio of 2.55 with
+an Android user agent. B still sits below real only on the backboard, because
+the recess it keeps lies over the top of every shelf. Against the build before
+B, `?shadows=0`, `?casters=0` and `?shadows=1&receivers=all` rendered the same
+image: at most one level apart on at most 115 pixels, the order of the headless
+renderer's own run-to-run noise, which was 8 and 89 pixels between two loads of
+one build. A live toggle off and back on matched a fresh load of each state to
+the same level. The default page drops one texture and one draw a shelf: 69 →
+65 textures and 315 → 311 draws at four shelves.
 
 ## Alternatives
 

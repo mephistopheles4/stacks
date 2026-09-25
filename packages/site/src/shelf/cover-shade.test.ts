@@ -22,7 +22,6 @@ import {
   inShadow,
   lightRatios,
   MAX_ATLAS_SIZE,
-  paintsCoverShade,
   TILE_GUTTER,
   TILE_HEIGHT,
   TILE_WIDTH,
@@ -31,6 +30,7 @@ import {
   type CoverOccluders,
   type CoverQuad,
 } from './cover-shade.ts';
+import { paintedPieces } from './painted-pieces.ts';
 import { placeShelf, type Placement } from './placement.ts';
 import { DEFAULT_SETTINGS, type KeyLightSettings } from './shelf-settings.ts';
 
@@ -715,6 +715,7 @@ describe('the material and the mesh', () => {
 
 describe('when it is drawn', () => {
   const shadows = DEFAULT_SETTINGS.shadows;
+  const paintsCoverShade = (s: typeof shadows): boolean => paintedPieces(s).coverShade;
 
   it('is drawn over painted shading whenever the books do not read the map', () => {
     expect(

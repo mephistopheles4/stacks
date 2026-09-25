@@ -187,9 +187,10 @@ export interface ShadowSettings {
   /**
    * The painted shading. On by default, under the real-time path as well as
    * without it: it is the whole of the shading when the map is off, and beside
-   * a map it adds the contact shadows, the recess and the cover shade. Where
-   * both shade one surface they darken it twice, which ADR-0016 recorded and
-   * ADR-0090 accepts for now.
+   * the shipped map it adds only what the map does not draw — the contact
+   * roots, the corners, the recess and the bands on the covers. The pieces the
+   * map casts step aside there rather than darken the wood twice
+   * (`paintedPieces`, ADR-0090). Off leaves out every piece.
    */
   readonly painted: boolean;
 }
