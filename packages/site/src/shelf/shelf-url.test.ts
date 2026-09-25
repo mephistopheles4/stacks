@@ -33,7 +33,7 @@ describe('bookLimit', () => {
   });
 });
 
-describe('the ten probes', () => {
+describe('the probes', () => {
   it('leaves everything at the defaults for a bare ?debug', () => {
     expect(read('debug')).toEqual(DEFAULT_SETTINGS);
   });
@@ -50,7 +50,7 @@ describe('the ten probes', () => {
 
   it('maps every probe to its setting', () => {
     const settings = read(
-      'aa=0&dpr=1&guard=1&shadows=1&shadowmap=512&shadowtype=vsm&casters=0&shadowfetch=0&painted=0',
+      'aa=0&dpr=1&guard=1&shadows=1&shadowmap=512&shadowtype=vsm&casters=0&receivers=all&shadowfetch=0&painted=0',
     );
 
     expect(settings.renderer).toMatchObject({
@@ -63,6 +63,7 @@ describe('the ten probes', () => {
       mapSize: 512,
       type: 'vsm',
       casters: false,
+      receivers: 'all',
       fetch: false,
       painted: false,
     });
@@ -72,6 +73,18 @@ describe('the ten probes', () => {
     // The hazard: `SHADOW_TYPES[type]` would resolve `undefined` and hand it to
     // three without complaint, so a typo would silently change the filter.
     expect(read('shadowtype=fancy').shadows.type).toBe(DEFAULT_SETTINGS.shadows.type);
+  });
+
+  it('refuses a receiver set it does not know', () => {
+    // `?receivers=books` is not a configuration anybody measured. Falling back
+    // to the default keeps a typo from quietly re-arming the one that crashes.
+    expect(read('receivers=books').shadows.receivers).toBe('bookcase');
+    expect(read('receivers=').shadows.receivers).toBe('bookcase');
+  });
+
+  it('keeps ?shadows=1 to the bookcase unless ?receivers=all asks for more', () => {
+    expect(read('shadows=1').shadows.receivers).toBe('bookcase');
+    expect(read('shadows=1&receivers=all').shadows.receivers).toBe('all');
   });
 
   it('refuses a nonsense pixel ratio or map size', () => {

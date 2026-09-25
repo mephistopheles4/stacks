@@ -131,6 +131,11 @@ export type ShadowTypeName = 'basic' | 'pcf' | 'soft' | 'vsm';
 
 export const SHADOW_TYPE_NAMES: readonly ShadowTypeName[] = ['basic', 'pcf', 'soft', 'vsm'];
 
+/** What reads the real-time shadow map. See `ShadowSettings.receivers`. */
+export type ShadowReceiverName = 'bookcase' | 'all';
+
+export const SHADOW_RECEIVER_NAMES: readonly ShadowReceiverName[] = ['bookcase', 'all'];
+
 export interface RendererSettings {
   /**
    * A **context-creation attribute**. `getContext` took it once and will not
@@ -152,6 +157,17 @@ export interface ShadowSettings {
   readonly type: ShadowTypeName;
   /** Whether anything is drawn *into* the shadow map. */
   readonly casters: boolean;
+  /**
+   * Which surfaces *read* the shadow map: the bookcase alone, or the bookcase
+   * and every book.
+   *
+   * `bookcase` compiles each book's programs with no shadow sampler, so a book
+   * casts and does not receive — the one real-time configuration with books in
+   * it that holds on the Pixel 10 Pro XL, and only under `pcf`. `all` is what
+   * `?shadows=1` drew until September 2026, kept so the crash can be re-tested
+   * after a driver update. See `shadow-receivers.ts`.
+   */
+  readonly receivers: ShadowReceiverName;
   /** Whether materials *read* the shadow map. See `RendererOverrides.shadowFetch`. */
   readonly fetch: boolean;
   /** The painted shading that stands in for a shadow pass. On by default. */
@@ -493,6 +509,7 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     mapSize: 2048,
     type: 'pcf',
     casters: true,
+    receivers: 'bookcase',
     fetch: true,
     painted: true,
   },

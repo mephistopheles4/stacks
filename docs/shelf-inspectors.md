@@ -113,6 +113,9 @@ Everything the shelf looks like is one object — `ShelfSettings` in
 `DEFAULT_SETTINGS`. `shelf-url.ts` owns the query string in both directions: the
 ten historic probes keep their flat spellings because `docs/progress.md`
 documents them with measured results, and everything else rides in `?tune=`.
+`?receivers=all` joined them as an eleventh, for their reason: it is how
+`?shadows=1` still reaches what it drew before the books stopped reading the map
+([ADR-0088](adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)).
 
 **A control must not lie, and that is the whole design.** `applySettings`
 returns an `ApplyReport` — `applied`, `needsRebuild`, `needsReload`, `refused` —

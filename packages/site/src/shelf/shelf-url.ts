@@ -1,5 +1,6 @@
 import {
   DEFAULT_SETTINGS,
+  SHADOW_RECEIVER_NAMES,
   SHADOW_TYPE_NAMES,
   TONE_MAPPING_NAMES,
   type SettingsPatch,
@@ -21,11 +22,13 @@ import {
  *
  * ## Two vocabularies, deliberately
  *
- * **The ten probes keep their own flat spellings** — `?aa=0`, `?shadows=1`,
+ * **The probes keep their own flat spellings** — `?aa=0`, `?shadows=1`,
  * `?shadowtype=vsm`, `?books=5`. They are documented in `docs/progress.md` with
  * measured results attached, they are typed by hand on a phone, and every one of
  * them has to keep meaning what it meant. They are the reason this is not simply
- * a blob.
+ * a blob. The original ten gained an eleventh, `?receivers=all`, for exactly
+ * that rule: it is how `?shadows=1` still reaches what it drew before the books
+ * stopped reading the map.
  *
  * **Everything else rides in `?tune=`**, a URI-encoded JSON *diff from the
  * defaults*. Lights, colours, fog, tone mapping and materials have no historic
@@ -182,20 +185,26 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
   };
 
   /**
-   * `?shadows=0` — turns off the shadow map and the light that casts it. The
-   * shadow pass is what loses the context on a Pixel 10 Pro; it stays on by
-   * default anyway, because shadows are most of what makes the shelf read as
-   * furniture and the owner's call is that losing them is not the price.
+   * `?shadows=1` — turns on the real-time shadow map and the light that casts
+   * it. Off by default: the shelf paints its shading instead (ADR-0016). Since
+   * September 2026 it means *books cast, the bookcase receives* — see
+   * `?receivers` below.
    *
    * `?shadowmap=1024` — edge of the depth target; the default is 2048 (16 MB).
    *
    * `?shadowtype=basic|pcf|soft|vsm` — `soft` is `pcf` since three 0.185
-   * deprecated `PCFSoftShadowMap`. `vsm` is the only one that reads the map with
-   * a plain `sampler2D` rather than a hardware depth comparison, which is why it
-   * was the last hope and why its death settled the investigation.
+   * deprecated `PCFSoftShadowMap`. Only `pcf` reads the map through a hardware
+   * depth comparison (`sampler2DShadow`); `basic` and `vsm` both read it with a
+   * plain `sampler2D` — this line used to say `vsm` alone did, which three 0.185
+   * contradicts in `shadowmap_pars_fragment`.
    *
    * `?casters=0` — nothing casts, but the map is still allocated and the pass
    * still runs. The one switch that *discriminates* rather than just reducing.
+   *
+   * `?receivers=all` — every book reads the map too, which is what `?shadows=1`
+   * drew before the default became `bookcase`. It loses the context on the
+   * Pixel 10 Pro XL at frame 8; kept so that can be re-tested after a driver
+   * update, not as a look. See `shadow-receivers.ts`.
    *
    * `?shadowfetch=0` — draws the map once, then stops *reading* it. Separates
    * holding a depth attachment from sampling one.
@@ -207,6 +216,7 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
   const mapSize = wholePositive(params, 'shadowmap');
   const type = oneOf(params, 'shadowtype', SHADOW_TYPE_NAMES);
   const casters = flag(params, 'casters');
+  const receivers = oneOf(params, 'receivers', SHADOW_RECEIVER_NAMES);
   const fetch = flag(params, 'shadowfetch');
   const painted = flag(params, 'painted');
   const shadows: Partial<ShelfSettings['shadows']> = {
@@ -215,6 +225,7 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
     ...(mapSize === undefined ? {} : { mapSize }),
     ...(type === undefined ? {} : { type }),
     ...(casters === undefined ? {} : { casters }),
+    ...(receivers === undefined ? {} : { receivers }),
     ...(fetch === undefined ? {} : { fetch }),
     ...(painted === undefined ? {} : { painted }),
   };
@@ -254,6 +265,7 @@ export function writeSettings(settings: ShelfSettings): void {
   probe('shadowmap', s.mapSize !== d.shadows.mapSize, String(s.mapSize));
   probe('shadowtype', s.type !== d.shadows.type, s.type);
   probe('casters', s.casters !== d.shadows.casters, s.casters ? '1' : '0');
+  probe('receivers', s.receivers !== d.shadows.receivers, s.receivers);
   probe('shadowfetch', s.fetch !== d.shadows.fetch, s.fetch ? '1' : '0');
   probe('painted', s.painted !== d.shadows.painted, s.painted ? '1' : '0');
 

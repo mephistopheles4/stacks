@@ -27,6 +27,7 @@ import {
 import { hashUnit } from './hash.ts';
 import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
 import { pageStriationMap } from './page-edges.ts';
+import { receiveShadows } from './shadow-receivers.ts';
 import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture } from './spine-texture.ts';
 import {
@@ -653,7 +654,8 @@ export function mountShelf(
         `aa=${composed ? 'smaa' : antialias ? 'on' : 'off'} dpr<=${String(r.maxPixelRatio)} ` +
         `bloom=${settings.effects.bloom.enabled ? settings.effects.bloom.strength.toFixed(2) : 'off'} ` +
         `shadows=${s.enabled ? `${s.type}@${String(s.mapSize)}` : 'off'} ` +
-        `casters=${s.casters ? 'on' : 'off'} guard=${r.guardResize ? 'on' : 'off'} ` +
+        `casters=${s.casters ? 'on' : 'off'} receivers=${s.receivers} ` +
+        `guard=${r.guardResize ? 'on' : 'off'} ` +
         `painted=${s.painted ? 'on' : 'off'} fetch=${s.fetch ? 'on' : 'off'} ` +
         `tone=${r.toneMapping}@${r.exposure.toFixed(2)}`
       );
@@ -1312,8 +1314,8 @@ export function buildBook(
   const square = paperback ? 0 : Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
 
   /**
-   * Parts receive shadow but do not cast it — the page block below casts for the
-   * whole book.
+   * Parts do not cast — the page block below casts for the whole book. Whether
+   * they *receive* is decided once, for every part, at the end of this function.
    *
    * Four casters per book meant ~124 shadow draws for 31 books, to describe 31
    * silhouettes. A book is a solid object: its shadow is its outline, and the
@@ -1325,7 +1327,6 @@ export function buildBook(
   const solid = (material: THREE.Material): THREE.Mesh => {
     const mesh = new THREE.Mesh(UNIT_BOX, material);
     mesh.castShadow = false;
-    mesh.receiveShadow = true;
     group.add(mesh);
     return mesh;
   };
@@ -1466,7 +1467,6 @@ export function buildBook(
     material.polygonOffsetFactor = -1;
     material.polygonOffsetUnits = -2;
     const mesh = new THREE.Mesh(UNIT_PLANE, material);
-    mesh.receiveShadow = true;
     group.add(mesh);
     return mesh;
   };
@@ -1526,7 +1526,6 @@ export function buildBook(
     if (arc !== undefined) {
       const head = new THREE.Mesh(arc, covering);
       head.castShadow = false;
-      head.receiveShadow = true;
       /**
        * Uniformly, and by **thickness** — not by the roll.
        *
@@ -1559,6 +1558,20 @@ export function buildBook(
       group.add(neighbour);
     }
   }
+
+  /**
+   * Whether this book **reads** the real-time shadow map — decided in its
+   * programs, not by `receiveShadow`, and last, so no part above can be missed.
+   *
+   * Under the default `bookcase`, a book casts and does not receive: its
+   * programs compile with no shadow sampler, which is what keeps `?shadows=1`
+   * alive on the Pixel 10 Pro XL. It costs a visible band — the plank's shadow
+   * across the top of every face-out cover, and the wedge one book throws on the
+   * next. `all` is the old configuration, kept so it can be re-tested. Inert
+   * with no shadow map, which is the painted default and `?solo`. See
+   * `shadow-receivers.ts`.
+   */
+  receiveShadows(group, settings.shadows.receivers === 'all');
 
   return group;
 }
@@ -2126,10 +2139,11 @@ function applyLive(
     renderer.shadowMap.needsUpdate = true;
   }
 
-  // All four are decided while the scene is built, so they are measured against
+  // All five are decided while the scene is built, so they are measured against
   // what it was built with and stay outstanding until it is built again.
   standing(needsRebuild, 'shadow map size', mountedWith.shadows.mapSize, next.shadows.mapSize);
   standing(needsRebuild, 'shadow casters', mountedWith.shadows.casters, next.shadows.casters);
+  standing(needsRebuild, 'shadow receivers', mountedWith.shadows.receivers, next.shadows.receivers);
   standing(needsRebuild, 'shadow fetch', mountedWith.shadows.fetch, next.shadows.fetch);
   standing(needsRebuild, 'painted shading', mountedWith.shadows.painted, next.shadows.painted);
 

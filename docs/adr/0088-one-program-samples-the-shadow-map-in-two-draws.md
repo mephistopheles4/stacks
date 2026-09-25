@@ -3,6 +3,8 @@
 **Date:** 2026-09-24
 **Status:** proposed
 **Ticket:** [#381](https://github.com/mephistopheles4/stacks/issues/381)
+**Supersedes, in part:** [ADR-0016](./0016-painted-shadows.md)'s finding that
+nothing reading a shadow map survives on the Pixel 10 Pro
 
 ## Decision
 
@@ -16,12 +18,45 @@
    list, or members that disagree about their attributes, is an error. A
    fallback would render correctly on every desktop and quietly bring back the
    draw count this record exists to remove.
+3. **Under the real-time path, a book casts and does not receive.** Every lit
+   part of a book is compiled with no shadow sampler: its material's
+   `onBeforeCompile` puts `#undef USE_SHADOWMAP` at the top of the fragment
+   body, under a constant `customProgramCacheKey`. The page block still draws
+   into the map. The bookcase's program is the only one that reads it. See
+   [`shadow-receivers.ts`](../../packages/site/src/shelf/shadow-receivers.ts).
+4. **It is a setting, `shadows.receivers`, and not a constant.** `bookcase` is
+   the default. `all` is what `?shadows=1` drew until today, reached by the flat
+   probe `?receivers=all`. It is rebuild-class, like `casters`.
+5. **The default page does not change here.** `shadows.enabled` stays `false`
+   in this change, so a visitor still gets the painted shading and no shadow
+   map. The owner has decided that real-time shadows become the default
+   (#381); that lands separately, with the fallback for a lost context.
+
+Together, `?shadows=1` samples the map in **2 draws from 1 program** under the
+default species, at every library size. Under `flat`, or before a sheet
+decodes, it is 2 programs at 1 draw each.
 
 ## Context
 
 Real-time shadows (`?shadows=1`) lose the WebGL context on the Pixel 10 Pro XL
 (PowerVR DXT-48-1536, driver 25.3@6908880, Chrome 153, ANGLE on GLES), and the
-owner wants them on by default. Measured on the phone:
+owner wants them on by default. It dies at frame 8 ± 1, after about 3,474 draws
+that sample the map. It counts draws, not time: throttled to 1.9 fps, it died at
+the same frame with the same count. Flushing after every draw did not move it.
+
+What separates the survivors from the deaths is how many **programs** sample the
+map. The site had five that did: spines, pages and head caps, boards, covers,
+and the bookcase's one wood-and-backing program. Hooks that edited the shaders
+on the live site, 120 s a run:
+
+| what samples the map | result |
+| --- | --- |
+| the bookcase's program only | survived 3/3, then 300 s, then 120 s of orbiting |
+| the four book programs only | lost 2/2, frame 8 |
+| all five, with `receiveShadow` sent as `0` | lost 2/2, frames 8 and 9 |
+| nothing, map still drawn | survived 2/2 |
+
+And the one surviving program has a ceiling:
 
 - **One program that samples the shadow map survives 12 sampling draws a
   frame and dies at 13.** At 12 the page ran 120 s twice and 300 s once; at 13
@@ -32,8 +67,10 @@ owner wants them on by default. Measured on the phone:
   library, reached 13 at about 66 books, and would be about 27 at the brief's
   200-book target.
 
-So even with every other program kept off the map, the bookcase alone would
-have crossed the line as the library filled.
+So taking the books off the map was not enough on its own: the bookcase alone
+would have crossed the line as the library filled. The mechanism below the
+driver is not known and nothing here claims one. What is known is which
+configuration holds.
 
 ## Why the backboard stays a second draw
 
@@ -47,8 +84,19 @@ have crossed the line as the library filled.
   one sheet would be resampled.
 - **Under the default species both still compile to one program** once both
   sheets have decoded, because three keys a program on its defines rather than
-  on its material. Under `flat`, or before a sheet decodes, it is two programs
-  at one draw each.
+  on its material.
+
+## Why `receiveShadow = false` is not the fix
+
+It is the obvious change, and ADR-0016 already ruled it out in August, for the
+right reason. three keys `USE_SHADOWMAP` on the renderer alone
+(`WebGLPrograms.js:359`) and sends `receiveShadow` only as a uniform
+(`WebGLRenderer.js:2690`). The program still declares the sampler, still binds
+the map, and the ternary around the fetch is a decision the driver's compiler
+gets to make. The third row of the table is exactly that configuration, and it
+died like the unmodified page. `receiveShadows` does set the flag, so the scene
+graph says what the programs do, but the flag is the label and the `#undef` is
+the mechanism.
 
 ## What it costs
 
@@ -56,23 +104,43 @@ have crossed the line as the library filled.
   raycasts books only, the shadow camera is fitted from constants, and
   `Bookcase` hands out materials, not meshes. The woodwork now draws whenever
   any of it is in view.
-- **The pixels are not identical.** The join itself moves at most 4 pixels,
-  all at one junction. Baking each member's position into its vertices is what
-  moves the rest: it changes the arithmetic the GPU does to place them. On faces seen at a grazing angle, that moves up to
-  348 pixels by up to 26 levels, against a pass criterion of none over 1 set
-  before the run. The measurements, the controls that isolate the cause, and
-  why no join can meet that criterion are in
-  [the log](../log/2026-09-24-the-woodwork-is-one-mesh.md).
+- **The join's pixels are not identical.** The join itself moves at most 4
+  pixels, all at one junction. Baking each member's position into its vertices
+  is what moves the rest: it changes the arithmetic the GPU does to place them.
+  On faces seen at a grazing angle, that moves up to 348 pixels by up to 26
+  levels, against a pass criterion of none over 1 set before the run. The
+  measurements, the controls that isolate the cause, and why no join can meet
+  that criterion are in [the log](../log/2026-09-24-the-woodwork-is-one-mesh.md).
+- **Books lose the shadows they received, and that is visible.** The plank
+  throws a band across the top of every face-out cover, and a taller book
+  throws a wedge on its neighbour; under `bookcase` both are gone. On the
+  50-book fixture that moves 1.6% of a desktop frame by more than 1 level,
+  worst 71; on the live library, 5.4% of the page moved by more than 8 levels.
+  The bookcase keeps its real shadows.
+- **PCF only.** `?shadowtype=basic` with only the bookcase receiving still died,
+  at frame 11 after 132 sampling draws, which is a trigger of its own. `vsm` was
+  not run. Under it, this change also takes the books' non-casting parts out of
+  the map, since three draws every VSM receiver into it
+  (`WebGLShadowMap.js:515`).
+- **It rests on three's prefix and body split.** `shadow-receivers.test.ts` pins
+  the half a unit test can reach: that the sampler is declared in the body the
+  hook edits. The prefix half needs a context, and nothing pins it yet.
 
-⚠️ **Whether that shortfall is acceptable is the owner's decision, and this
-record does not make it.** It stays `proposed` until it is made.
+⚠️ **Two trades here are the owner's to accept, and this record does not accept
+them**: the join's pixel shortfall, and the band the books lose. The band is
+meant to be painted back, reading no shadow map, in a later change of #381. The
+record stays `proposed` until both are settled.
+
+`?receivers=all` is the old `?shadows=1`, byte for byte under SwiftShader, so
+every earlier measurement and the painted shading's differenced strengths keep
+a reference.
 
 ## Splitting the woodwork again
 
 Splitting the woodwork again reopens the ceiling: every member that gets its
 own mesh adds one sampling draw a frame, and one mesh per plank grows with the
-library. A change that needs a member to be separate should say where its
-draw comes from.
+library. A change that needs a member to be separate should say where its draw
+comes from. The same goes for any new surface that reads the map.
 
 ## Alternatives
 
@@ -84,3 +152,15 @@ draw comes from.
   rule.
 - **Leaving the members separate and capping the rows.** This is a ceiling on
   the library, not a fix.
+- **`material.defines`** cannot undo the flag. Custom defines are emitted
+  *before* the prefix's `#define USE_SHADOWMAP` (`WebGLProgram.js:679` against
+  `:752`).
+- **Toggling `shadowMap.enabled` around the books' draws.** three recompiles
+  nothing on that toggle, which is why `stopSamplingShadows` has to dirty every
+  material. Per frame, it would be global renderer state flipped mid-render.
+- **`gl.flush()` after every sampling draw** was measured and refuted on the
+  device: frames 7–8 like everything else, at 240 → 35 fps on desktop.
+- **`WebGPURenderer`** keys its render objects on `receiveShadow`
+  (`RenderObject.js:843`), so there the flag *may* be enough. That was read off
+  the cache key, not the shader it builds, and is unverified. Either way it is
+  a renderer migration, not a fix.

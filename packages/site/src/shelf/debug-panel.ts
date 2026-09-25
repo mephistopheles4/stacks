@@ -3,6 +3,7 @@ import {
   BINDINGS,
   DEFAULT_SETTINGS,
   resolveSettings,
+  SHADOW_RECEIVER_NAMES,
   SHADOW_TYPE_NAMES,
   TONE_MAPPING_NAMES,
   type ShelfSettings,
@@ -710,6 +711,17 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     (s) => s.shadows.casters,
     (s, v) => resolveSettings({ shadows: { casters: v } }, s),
     (s) => s.shadows.casters && s.shadows.enabled,
+  );
+  // Which surfaces read the map. `all` is the configuration that loses the
+  // context on the Pixel 10 Pro XL, offered so it can be re-tested rather than
+  // as a look — see `shadow-receivers.ts`. Inert with no map, like the filter.
+  choice(
+    'receivers',
+    'rebuild',
+    SHADOW_RECEIVER_NAMES,
+    (s) => s.shadows.receivers,
+    (s, v) => resolveSettings({ shadows: { receivers: v } }, s),
+    (s) => s.shadows.enabled,
   );
   // The isolator from the crash investigation: draw the map once, then stop
   // *reading* it. It was in the URL vocabulary and had no control, which made

@@ -147,6 +147,10 @@ describe('the defaults', () => {
         mapSize: 2048,
         type: 'pcf',
         casters: true,
+        // Not what every visitor sees: it takes effect only under `?shadows=1`,
+        // and there it is the difference between a shelf and a lost context on
+        // the Pixel 10 Pro XL. See `shadow-receivers.ts`.
+        receivers: 'bookcase',
         fetch: true,
         painted: true,
       },
