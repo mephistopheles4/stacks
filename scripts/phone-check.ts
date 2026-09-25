@@ -42,6 +42,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 // Pure: no three and no DOM at module scope, the way smoke-render reads it.
 import { FALLBACK_KEY } from '../packages/site/src/shelf/shadow-fallback.ts';
+import { replies } from './lib/cdp-replies.ts';
 import {
   formatRows,
   interestingLogcat,
@@ -170,7 +171,8 @@ async function newTarget(
 
 async function connect(url: string): Promise<Cdp> {
   const socket = new WebSocket(url);
-  const pending = new Map<number, (message: Message) => void>();
+  // Matched by comparing ids, never by looking one up — see `cdp-replies.ts`.
+  const pending = replies<Message>();
   const events: Message[] = [];
   let next = 0;
 
@@ -179,8 +181,7 @@ async function connect(url: string): Promise<Cdp> {
     if (!isRecord(parsed)) return;
     const message = parsed as Message;
     if (typeof message.id === 'number') {
-      pending.get(message.id)?.(message);
-      pending.delete(message.id);
+      pending.settle(message);
     } else if (typeof message.method === 'string') {
       events.push(message);
     }
@@ -202,10 +203,10 @@ async function connect(url: string): Promise<Cdp> {
     new Promise((answered) => {
       next += 1;
       const id = next;
-      pending.set(id, answered);
+      pending.track(id, answered);
       socket.send(JSON.stringify({ id, method, params }));
       setTimeout(() => {
-        if (pending.delete(id)) answered({ id, error: { message: `timed out: ${method}` } });
+        if (pending.abandon(id)) answered({ id, error: { message: `timed out: ${method}` } });
       }, 10_000);
     });
 
