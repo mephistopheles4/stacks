@@ -1121,6 +1121,13 @@ function buildBooks(
  * `shadows.receivers` is rebuild-class: a pending switch to `all` has not yet
  * given the books their shadow sampler, and a repaint that read it would take
  * the band off covers that do not yet receive the real one.
+ *
+ * ⚠️ **`shadows.enabled` is in that decision too, and it is live.** Under
+ * `receivers: 'all'` the band is drawn only while shadows are off, so behind
+ * `?debug` a live toggle on a `?receivers=all` shelf is stale until a rebuild:
+ * turned on over a painted mount, the covers darken twice; turned off over a
+ * real-time one, they lose the band. `applySettings` does not report it. Both
+ * need the panel and a probe nobody ships.
  */
 class Painters {
   readonly #scene: THREE.Scene;
