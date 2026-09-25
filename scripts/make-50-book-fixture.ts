@@ -1,13 +1,22 @@
 /**
- * Generates a 50-book vault for the Phase 2 render gate.
+ * Generates a 50-book vault for the Phase 2 render gate — or N books.
  *
  * Not committed — it is derived from the same shapes as `fixtures/vault`, and
  * committing 50 generated notes plus 50 covers would bloat the repo for
  * something a script can rebuild in a second.
  *
- *     pnpm tsx scripts/make-50-book-fixture.ts
+ *     pnpm fixtures:50                 → fixtures/vault-50/
+ *     pnpm fixtures:50 --books 300     → fixtures/vault-300/
  *
- * Output: fixtures/vault-50/ (gitignored)
+ * Output: fixtures/vault-N/ (gitignored). Every title, author and cover is
+ * invented; the only images are the generated ones in `fixtures/vault/`.
+ *
+ * **Past the first 50, a book has no cover.** The same seed and loop, so the
+ * first 50 books of any size are the 50-book vault exactly. The books after
+ * them exist to make the bookcase tall — G61 (`large-library-lit`) renders one
+ * to prove it is still visible — and a cover each would be about 1.1 MB of
+ * decoded texture apiece (`cover-budget.ts`), past G15's budget, which the
+ * 200-book target is documented as not meant to fit.
  */
 import { mkdirSync, rmSync, writeFileSync, copyFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -16,12 +25,25 @@ import { join } from 'node:path';
 import { spineColour } from '../packages/core/src/covers/dominant-colour.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
+/** `--books N`: a whole number of at least 1. Anything else is refused, not defaulted. */
+function bookCount(argv: readonly string[]): number {
+  const at = argv.indexOf('--books');
+  if (at === -1) return 50;
+  const requested = Number(argv[at + 1]);
+  if (!Number.isInteger(requested) || requested < 1) {
+    throw new Error(`--books needs a whole number of books, not "${String(argv[at + 1])}"`);
+  }
+  return requested;
+}
+
+const BOOK_COUNT = bookCount(process.argv.slice(2));
+/** Books with a chance of a cover; every one after these is coverless. */
+const COVERED = 50;
+
 const SOURCE_COVERS = join(REPO_ROOT, 'fixtures', 'vault', 'Library', 'covers');
-const OUT = join(REPO_ROOT, 'fixtures', 'vault-50');
+const OUT = join(REPO_ROOT, 'fixtures', `vault-${String(BOOK_COUNT)}`);
 const OUT_LIBRARY = join(OUT, 'Library');
 const OUT_COVERS = join(OUT_LIBRARY, 'covers');
-
-const BOOK_COUNT = 50;
 
 /** Deterministic — the render gate must produce the same shelf every run. */
 function makeRandom(seed: number): () => number {
@@ -160,8 +182,11 @@ for (let i = 0; written < BOOK_COUNT; i += 1) {
   const month = String(1 + Math.floor(random() * 12)).padStart(2, '0');
   const day = String(1 + Math.floor(random() * 28)).padStart(2, '0');
 
-  // ~15% have no cover, exercising the generated fallback spine at scale.
-  const cover = random() < 0.15 ? undefined : pick(covers);
+  // ~15% have no cover, exercising the generated fallback spine at scale. The
+  // dice are still thrown past the first 50, so no draw moves for the books
+  // before them; the cover is dropped after the throw.
+  const thrown = random() < 0.15 ? undefined : pick(covers);
+  const cover = written < COVERED ? thrown : undefined;
 
   const lines = [
     '---',

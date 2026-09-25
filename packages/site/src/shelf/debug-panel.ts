@@ -801,21 +801,24 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     (s) => s.scene.fog.enabled,
     (s, v) => resolveSettings({ scene: { fog: { enabled: v } } }, s),
   );
+  // In framing distances, not world units — see `SceneSettings.fog`. The labels
+  // say so because a bare `1.55` beside a slider that used to read `14` is the
+  // control lying by omission.
   slider(
-    'fog near',
+    'fog near ×framing',
     'live',
-    1,
-    40,
     0.5,
+    5,
+    0.05,
     (s) => s.scene.fog.near,
     (s, v) => resolveSettings({ scene: { fog: { near: v } } }, s),
   );
   slider(
-    'fog far',
+    'fog far ×framing',
     'live',
-    2,
-    80,
-    0.5,
+    1,
+    10,
+    0.05,
     (s) => s.scene.fog.far,
     (s, v) => resolveSettings({ scene: { fog: { far: v } } }, s),
   );
