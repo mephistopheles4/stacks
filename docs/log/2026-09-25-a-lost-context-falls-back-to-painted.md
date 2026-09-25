@@ -162,14 +162,17 @@ vanished against it. None of G59's four cases reached that state, so no gate
 could see it.
 
 **What a visitor sees after a real loss on the Pixel**, from those runs, with
-the fix in place:
+what the fix changes marked. The fix has not been on the phone; what it
+changes was seen on a desktop, in the refused state G59 stages:
 
 1. **At about 1.5 s** the sentence *"…Redrawing it with painted shadows…"*, and
    the record is already written.
 2. **At about 3.9 s** Chrome refuses the new canvas, and the sentence becomes
    *"…would not give it another. Reload to bring it back — it will come back
-   with painted shadows."* — now on the page's own dark background, the dead
-   canvas hidden.
+   with painted shadows."* **Changed:** on the page's own dark background, the
+   dead canvas hidden, where the phone showed white. A desktop screenshot of
+   the staged state, at 412×915 and at 1440×900, shows the sentence centred on
+   the dark page with the wordmark and the attribution row intact.
 3. **A reload inside Chrome's block** reads *"This browser wouldn't give the
    page a 3D canvas…"*. The phone showed that page dark already; its canvas
    was never given a context, and only a lost one was seen painted white. It
@@ -213,15 +216,16 @@ context loss (G59), each case in a browser context of its own
   refused         refused, failure sentence, record written, lost canvas hidden
 ```
 
-**Observed red**, each planted in `shelf-notice.ts`, run through `pnpm
-smoke:render` and reverted, with the file hash checked against its backup:
+**Observed red**, each planted, run through `pnpm smoke:render` and reverted,
+with the file hash checked against its backup:
 
 | plant | result |
 | --- | --- |
 | the `visibility = 'hidden'` line removed | red in `refused` and `painted loss`: the lost canvas still shown |
 | the `removeProperty` line removed | red in `restore`, `no restore` and `painted loss`: redrawn on a canvas still hidden |
+| `REFUSED_BY_THREE`, in `smoke-render.ts`, set to a string three never logs | red in `refused` twice: the message never arrived, and three's real one was a page error |
 
-The same two plants redden `shelf-notice.test.ts`, which drives the two
+The first two plants redden `shelf-notice.test.ts` too, which drives the two
 functions against a hand-built page with no DOM shim. So does hiding the canvas
 before the old notice is cleared, which the clear then undoes.
 

@@ -6169,7 +6169,7 @@ page white:
 The control is the same run with the plants reverted: five cases green, one
 loop a frame in each of the four that draw.
 
-- **Weakening** — **one tolerance, required rather than allowed.** The
+- **Weakening** — **exposed, in one constant, required rather than allowed.** The
   non-blank floor is the main render's (40 colours, 10% not background), the
   waits are ceilings a passing run clears in well under a second, and the
   wait for a new canvas is `RESTORE_WAIT_MS` plus a margin, imported rather
@@ -6180,7 +6180,10 @@ loop a frame in each of the four that draw.
   context.` when it is refused one, which is the state under test. It is
   matched as the whole string, in that case only, and the case fails if it
   never arrives — so a page refused for some other reason is not green here.
-  Disposition `gated`.
+  Planted: `REFUSED_BY_THREE` set to a string three never logs turned the case
+  red twice, once for the message never arriving and once for three's real one
+  as a page error. Widening it to a pattern is one edit that reads as tidying,
+  which is why the row does not claim it is closed. Disposition `accepted`.
 - **Satisfying the letter** — **exposed, in one place.** *Painted* is read off
   the live shelf's `profile`, which is its settings, and not off the programs
   it compiled. A rebuild that mounted painted settings and still sampled the
