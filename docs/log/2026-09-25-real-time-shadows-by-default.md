@@ -2,7 +2,7 @@
 
 **2026-09-25** — [#381](https://github.com/mephistopheles4/stacks/issues/381)'s
 fifth change and its last: real-time shadows are on for every visitor, and a
-new gate, G60 (`one-shadow-reader`), counts on the default page the programs
+new gate, G61 (`one-shadow-reader`), counts on the default page the programs
 that read the shadow map and the draws they make. The decision is
 [ADR-0090](../adr/0090-real-time-shadows-are-the-default.md). The four changes
 before it made this safe, in order: [the woodwork is one mesh](./2026-09-24-the-woodwork-is-one-mesh.md),
@@ -15,7 +15,7 @@ before it made this safe, in order: [the woodwork is one mesh](./2026-09-24-the-
 - **A bare URL now gets the shadow map**, with only the bookcase reading it, in
   2 draws from 1 program at every library size. `?shadows=0` shows the painted
   path, which is what a device falls back to after a lost context.
-- **G60 is green at both sizes and its control is red.** One program and 2
+- **G61 is green at both sizes and its control is red.** One program and 2
   sampling draws a steady frame at the 50-book fixture and at a generated
   300-book one, 17 shelves tall; `?receivers=all` reads 5 programs and 302 draws
   and fails, as it must. The same on a local GPU and under SwiftShader.
@@ -23,7 +23,7 @@ before it made this safe, in order: [the woodwork is one mesh](./2026-09-24-the-
   gate's own hook before it could ship: frame 0, where the shadow pass lives,
   was dropped from a long page's record.
 - **On the phone, the default page held 120 s four times out of four**, and
-  G60's own counts, taken on the device, were green there too: 1 program, 2
+  G61's own counts, taken on the device, were green there too: 1 program, 2
   sampling draws a frame. `?receivers=all` lost its context 1.2 s in, through
   the same script, as it did in the investigation.
 
@@ -77,7 +77,7 @@ this is the thread through them.
   accepts it for now.
 - The probe docs say what the flip changed: `?shadows=0` is the painted
   fallback, `?shadows=1` is the default and overrides a remembered fallback for
-  one load, and `?receivers=all` is the reproduction and G60's control. One test
+  one load, and `?receivers=all` is the reproduction and G61's control. One test
   had gone vacuous — a tune blob plus `&shadows=1` expected shadows on, which a
   bare page now gives anyway — and asks for `&shadows=0` instead.
 - **`?solo` never enables a shadow map.** `book-inspector.ts` builds a renderer
@@ -88,7 +88,7 @@ this is the thread through them.
 
 ## The gate
 
-G60 runs inside `pnpm smoke:render`. Three pages, each in a browser context of
+G61 runs inside `pnpm smoke:render`. Three pages, each in a browser context of
 its own at 480×640, each with a counting hook installed before any page script:
 
 | page | steady frames | sampling programs | sampling draws a frame | casting draws | verdict |
@@ -149,7 +149,7 @@ spec of its own that Stryker's Vitest config leaves out; the dry run then ran
 ## The phone check
 
 `scripts/phone-check.ts` is the phone investigation's harness made permanent:
-the same adb and DevTools route, the counting hook G60 uses, and a verdict that
+the same adb and DevTools route, the counting hook G61 uses, and a verdict that
 refuses a run proving nothing — a page hidden for a poll, or one that started
 painted from a lost-context record, which the script now clears before every
 run. It is not a `pnpm` script; [`docs/commands.md`](../commands.md) says why
@@ -178,7 +178,7 @@ the one run allowed to fail was the one that did.
 - **The profile** was `shadows=pcf@2048 receivers=bookcase painted=on` — the
   default page as every visitor now gets it.
 - **Its counts are the desktop's.** The phone's hook read the same 1 program,
-  2 draws and 42 casting draws that G60 reads under SwiftShader.
+  2 draws and 42 casting draws that G61 reads under SwiftShader.
 - **The loss path was observed, not only planted.** The script's own spec plants
   a loss; the reproduction is the first real one it read, and it read it from
   the context-loss event, since a shelf that lost its context stops drawing.
@@ -202,7 +202,7 @@ the phone check's hook, 120 s a run.
 | as above, `receiveShadow` forced to 1, so the fetch runs | 2 | 53 | survived, 7,165 frames |
 
 **The last two rows are the falsifier, and the rule did not survive it.** ADR-0088,
-ADR-0090 and G60's budget stated that one program holds 12 sampling draws a
+ADR-0090 and G61's budget stated that one program holds 12 sampling draws a
 frame and dies at 13, and that a second program lowers that line; both rows
 should have died, and neither did. The 12 and the 13 were measured on the
 books' boards, sampling alone as a stand-in for the bookcase's wood, and are
@@ -218,11 +218,11 @@ Seen in the same session, recorded and not chased:
 
 - **One steady-looking run had 2 sampling programs in frame 4**, one draw each:
   the bookcase's program relinking as its wood sheet arrived. "Exactly one" holds
-  per steady frame, which is what G60 judges.
+  per steady frame, which is what G61 judges.
 - **A real loss again got no redraw.** Both context requests, at about 3.9 s,
   were refused as blocked, and the page ended white — mean brightness 235 of 255,
   Chrome's broken-page icon showing, the dead canvas still visible. Fixed after
-  this: a notice now hides the canvas, and G59 holds the refused state; see
+  this: a notice now hides the canvas, and G60 holds the refused state; see
   [the white page after a refusal](./2026-09-25-a-lost-context-falls-back-to-painted.md#the-white-page-after-a-refusal).
 - **The 273-book page is dark on the phone**: mean 27, 23, 19 against 58, 43, 35
   for the live library. Fog was not re-tested as the cause.
@@ -237,7 +237,7 @@ Seen in the same session, recorded and not chased:
 - **This phone's edge, and what it is made of.** The rule that stood for it was
   refuted above; the shipped default is a point measured to survive, and nothing
   here knows how far it sits from a death.
-- **Any other GPU's edge.** G60 pins the configuration that survived on one
+- **Any other GPU's edge.** G61 pins the configuration that survived on one
   driver, not survival. The Galaxy S25 and the iOS simulator held the old
   `?shadows=1`, with five programs reading the map; neither has run this build.
 - **The look.** Painted plus real shading, the band the cover shade paints back

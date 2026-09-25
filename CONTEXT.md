@@ -82,7 +82,7 @@ after a loss, in the page).
 
 **Shadow reader**:
 A compiled program that samples the real-time shadow map. How many the default
-page may have is G60's (`one-shadow-reader`) to hold
+page may have is G61's (`one-shadow-reader`) to hold
 ([ADR-0090](docs/adr/0090-real-time-shadows-are-the-default.md)). Decided when
 the program is compiled, never by a mesh's flag.
 *Avoid*: receiver on its own (`receiveShadow` is a uniform that leaves the

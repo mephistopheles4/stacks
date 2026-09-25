@@ -48,7 +48,7 @@ import * as THREE from 'three';
  *
  * This is what every visitor runs: real-time shadows are the default since
  * [ADR-0090](../../../../docs/adr/0090-real-time-shadows-are-the-default.md),
- * and G60 (`one-shadow-reader`) counts, on the default page, the programs that
+ * and G61 (`one-shadow-reader`) counts, on the default page, the programs that
  * read the map and the draws they make — a book program that starts reading it
  * again is red there on a desktop.
  */
@@ -104,7 +104,7 @@ export const NO_SHADOW_FETCH_LINE = '#undef USE_SHADOWMAP';
  * chain onto them.** No material in the site sets either today. One that later
  * gets a hook of its own loses it silently if this runs after, and loses the
  * shield if the hook is assigned after this — the fetch compiles back in, and a
- * desktop shows nothing until G60 counts it. A material that needs both has to
+ * desktop shows nothing until G61 counts it. A material that needs both has to
  * fold this line into its own hook, under a key that says both.
  */
 export function withoutShadowFetch<M extends THREE.Material>(material: M): M {

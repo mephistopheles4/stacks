@@ -1,6 +1,6 @@
 /**
  * The check only a phone can run: a page on a USB-attached Android phone's own
- * Chrome, and whether its WebGL context held — with G60's counts of what read
+ * Chrome, and whether its WebGL context held — with G61's counts of what read
  * the shadow map while it did.
  *
  *     pnpm exec tsx scripts/phone-check.ts                  the default page, 120 s
@@ -241,7 +241,7 @@ const POLL = `JSON.stringify({
   fallback: window.__shelf?.fallback?.() ?? null,
 })`;
 
-/** Everything G60 reads, in one evaluate so the frame and three's counter agree. */
+/** Everything G61 reads, in one evaluate so the frame and three's counter agree. */
 const READ = `JSON.stringify({
   snapshot: window.__samplingHook?.read() ?? null,
   threeCalls: (() => { try { return window.__shelf?.stats().calls ?? null; } catch { return null; } })(),

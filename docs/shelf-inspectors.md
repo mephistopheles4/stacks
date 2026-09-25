@@ -116,7 +116,7 @@ documents them with measured results, and everything else rides in `?tune=`.
 `?receivers=all` joined them as an eleventh, for their reason: it is how
 `?shadows=1` still reaches what it drew before the books stopped reading the map
 ([ADR-0088](adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)), and
-it is G60's control. ⚠️ **To re-test the crash by hand, open
+it is G61's control. ⚠️ **To re-test the crash by hand, open
 `?shadows=1&receivers=all`, never `?receivers=all` alone**: it is inert while
 shadows are off, and a device carrying a lost-context record starts painted, so
 the page reads no map, survives, and looks like a fixed driver.
@@ -180,7 +180,7 @@ Then `window.__lc.restoreContext()` inside 2.5 s for the restore path, or
 nothing for the new-canvas path. ⚠️ **A staged loss is not a driver's.** It never
 restores on its own, never takes the GPU process down and never gets the page
 blocked, which on the Pixel 10 Pro XL is what a real one does. `pnpm
-smoke:render` runs both paths this way as G59 (`context-loss-fallback`), and a
+smoke:render` runs both paths this way as G60 (`context-loss-fallback`), and a
 third: the new canvas refused a context, staged by making `getContext` answer
 `null` before the loss. That is where every real loss on the Pixel ended, and
 the page must show the failure sentence on its own background with the lost

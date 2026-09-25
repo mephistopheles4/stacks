@@ -51,7 +51,7 @@ page since ADR-0090 — samples the map in **2 draws from 1 program** under the
 default species, at every library size. Under `flat`, or before a sheet
 decodes, it is 2 programs at 1 draw each — and for the whole session when a
 sheet's request fails, because `bindSheet` then leaves that material flat, with
-no map, for good. G60 (`one-shadow-reader`) holds the default page to it, and
+no map, for good. G61 (`one-shadow-reader`) holds the default page to it, and
 cannot see the failed load: its fixtures always decode. That shape was never
 run on the phone as such; splits of 10 + 1 and 3 + 1 survived there, and so did
 2 programs at 53 draws (below), so it is expected to hold — an inference, not a
@@ -168,10 +168,10 @@ the mechanism.
   (`WebGLShadowMap.js:515`).
 - **It rests on three's prefix and body split.** `shadow-receivers.test.ts` pins
   the half a unit test can reach: that the sampler is declared in the body the
-  hook edits. The prefix half needs a context: since ADR-0090, G60 reads what
+  hook edits. The prefix half needs a context: since ADR-0090, G61 reads what
   three actually handed GL on the default page. A three upgrade that tested
   `USE_SHADOWMAP` in the prefix, ahead of the `#undef`, would compile the fetch
-  back into every book, and G60 would see an active shadow sampler in a program
+  back into every book, and G61 would see an active shadow sampler in a program
   whose source says the map is undefined — red on two clauses.
 
 ⚠️ **Two trades here are the owner's to accept, and this record does not accept

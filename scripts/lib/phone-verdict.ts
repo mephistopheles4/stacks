@@ -227,7 +227,7 @@ export interface PhoneRow {
   readonly elapsedS: number;
   /** `describeSampling`'s line, or why there is none. */
   readonly sampling: string;
-  /** G60's judgement of the same run: `ok`, or how many clauses failed. */
+  /** G61's judgement of the same run: `ok`, or how many clauses failed. */
   readonly g60: string;
 }
 
@@ -235,7 +235,7 @@ export function formatRows(header: string, rows: readonly PhoneRow[]): string[] 
   const width = Math.max(5, ...rows.map((row) => row.label.length)) + 2;
   return [
     header,
-    `${'run'.padEnd(width)}${'verdict'.padEnd(18)}${'time'.padStart(7)}   G60`,
+    `${'run'.padEnd(width)}${'verdict'.padEnd(18)}${'time'.padStart(7)}   G61`,
     ...rows.map(
       (row) =>
         `${row.label.padEnd(width)}${row.verdict.kind.padEnd(18)}` +

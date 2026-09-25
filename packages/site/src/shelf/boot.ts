@@ -68,7 +68,7 @@ declare global {
     /** Read by `pnpm smoke:render` to assert the shelf really drew books. */
     __shelf?: {
       bookCount: number;
-      /** Shelves in the bookcase. G60 reads it to know its large page is tall. */
+      /** Shelves in the bookcase. G61 reads it to know its large page is tall. */
       rowCount: number;
       ready: boolean;
       /** Worst breach of the bookcase's sides, in world units. See `smoke:render`. */

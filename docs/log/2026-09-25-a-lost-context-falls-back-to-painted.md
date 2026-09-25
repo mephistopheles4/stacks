@@ -26,7 +26,7 @@ and was not to ship before it.
   map. It is the first time the site-side change ran on the phone.
 - **The GPU string carries no driver build**, so a driver update alone retires
   no record. The 30-day expiry is the retry.
-- **A new gate, G59 (`context-loss-fallback`),** drives four losses through a
+- **A new gate, G60 (`context-loss-fallback`),** drives four losses through a
   real browser in `pnpm smoke:render`, and a fifth since: the refused redraw,
   which left the page white until
   [the fix below](#the-white-page-after-a-refusal).
@@ -66,7 +66,7 @@ context of its own, against `?shadows=1` while the default is painted and
 against the plain page once it is not:
 
 ```text
-context loss (G59), each case in a browser context of its own
+context loss (G60), each case in a browser context of its own
   restore         restored painted (176 frames, 1 loop), reload remembered, ?shadows=1 probe-override
   no restore      new canvas after 2708ms, 1440x900, 1616 colours, 173 frames, 1 loop, card opens
   storage refused restored painted, not remembered, no page errors
@@ -158,12 +158,12 @@ canvas was refused, and `remountOnFreshCanvas` kept the old one on purpose, so
 the failure sentence had somewhere to go. Nothing hid it, and Chrome paints a
 lost canvas it will not restore opaque white, with a small sad-face icon. The
 whole page read white — mean brightness 235 of 255 — and the wordmark nearly
-vanished against it. None of G59's four cases reached that state, so no gate
+vanished against it. None of G60's four cases reached that state, so no gate
 could see it.
 
 **What a visitor sees after a real loss on the Pixel**, from those runs, with
 what the fix changes marked. What it changes was first seen on a desktop, in
-the refused state G59 stages, and then on the phone — see *The fix on the
+the refused state G60 stages, and then on the phone — see *The fix on the
 phone* below:
 
 1. **At about 1.5 s** the sentence *"…Redrawing it with painted shadows…"*, and
@@ -200,7 +200,7 @@ can see.
 keeps the box that the `ResizeObserver` and `projectBook` measure. The notice
 is positioned against the shelf, not the canvas, so it stays centred.
 
-**G59 gains a fifth case, `refused`.** It makes `getContext` answer `null` for
+**G60 gains a fifth case, `refused`.** It makes `getContext` answer `null` for
 every canvas except the lost one, loses the context, and waits for `refused`.
 Then it requires the record, the failure sentence and a canvas that
 `checkVisibility` says is not rendered. The case requires three's `Error
@@ -214,7 +214,7 @@ clause is the only page-level check of the hide on the resume path. Neither is
 redundant.
 
 ```text
-context loss (G59), each case in a browser context of its own
+context loss (G60), each case in a browser context of its own
   restore         restored painted (174 frames, 1 loop), reload remembered, ?shadows=1 probe-override
   no restore      new canvas after 2700ms, 1440x900, 1602 colours, 174 frames, 1 loop, card opens
   storage refused restored painted, not remembered, no page errors

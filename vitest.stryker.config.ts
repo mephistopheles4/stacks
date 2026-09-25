@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config';
  * fourth arrived: a count in prose goes stale in the file that holds the list.)
  *
  * ⚠️ **`scripts/lib/sampling-hook-source.test.ts` is the fourth, and it is
- * `tsx`'s `__name` again, from a second tool.** G60's page hook is a function
+ * `tsx`'s `__name` again, from a second tool.** G61's page hook is a function
  * serialised with `toString()` and run in a page, and Stryker rewrites every
  * mutant site in its body into a call to a module-level `stryMutAct_*` helper
  * the serialised string cannot reach — measured, the dry run failed on

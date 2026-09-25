@@ -1,5 +1,5 @@
 /**
- * The page half of G60 (`one-shadow-reader`): a WebGL counting hook, installed
+ * The page half of G61 (`one-shadow-reader`): a WebGL counting hook, installed
  * before any page script runs.
  *
  * It wraps the WebGL prototypes and `requestAnimationFrame` and counts, per
@@ -28,7 +28,7 @@
  * it and the page has none: `__name is not defined`, measured under tsx 4.23.13.
  * `samplingHookSource()` defines it for the body's scope alone, as an identity.
  * If the helper is ever renamed, the hook throws before it reports itself, and
- * G60's first clause goes red saying the hook never reported.
+ * G61's first clause goes red saying the hook never reported.
  *
  * ⚠️ **Stryker rewrites the body too**, into calls to module-level
  * `stryMutAct_*` helpers no shim can name. So `sampling-hook.test.ts` specs the

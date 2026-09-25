@@ -7,7 +7,7 @@ import { clearNotice, NOTICE_CLASS, showNotice } from './shelf-notice.ts';
  * Three members of the DOM and no shim: the host's `querySelector` and
  * `append`, the document's `createElement`, and the canvas's inline style. What
  * none of this can show is Chrome painting a lost canvas white — that is the
- * phone's, and G59's refused case holds the page's half of it in a browser.
+ * phone's, and G60's refused case holds the page's half of it in a browser.
  */
 
 interface FakeNotice {

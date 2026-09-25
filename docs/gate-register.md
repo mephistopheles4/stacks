@@ -6129,7 +6129,7 @@ rather than observed once.
   number. G29 (`doc-links`) resolves a Markdown link and reads no bare mention,
   so a stale citation is invisible to both. Disposition `accepted`.
 
-### G59 — `context-loss-fallback`
+### G60 — `context-loss-fallback`
 
 **Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts) — `checkContextLossFallback`
 **Date:** 2026-09-25
@@ -6137,7 +6137,7 @@ rather than observed once.
 
 ⚠️ **The row number was taken against a re-fetched `origin/main`, every local
 branch and every remote one, with no pull request open.** Rows are gapless, so
-this took G59 rather than the G60 the design proposed; the ticket's
+this took G60 rather than the G61 the design proposed; the ticket's
 sampling-program gate, #381's sixth item, takes the next one.
 
 **Observed-red**, six ways, each planted in the source, run through `pnpm
@@ -6195,7 +6195,7 @@ and `painted loss`.
 - **Satisfying the letter** — **exposed, in one place.** *Painted* is read off
   the live shelf's `profile`, which is its settings, and not off the programs
   it compiled. A rebuild that mounted painted settings and still sampled the
-  map would pass here. ⚠️ **G60 (`one-shadow-reader`), the ticket's
+  map would pass here. ⚠️ **G61 (`one-shadow-reader`), the ticket's
   sampling-program gate, did not close this, and this line said it would**: it
   reads what the renderer compiled on the default page, and never on a page a
   fallback rebuilt. Pointing its hook at these cases is the way to close it.
@@ -6232,15 +6232,15 @@ and `painted loss`.
   restoring, or stops blocking, changes what a visitor sees and moves nothing
   here. Disposition `accepted`.
 
-### G60 — `one-shadow-reader`
+### G61 — `one-shadow-reader`
 
 **Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts) — `checkShadowReaders`, over [`scripts/lib/shadow-sampling.ts`](../scripts/lib/shadow-sampling.ts) and [`scripts/lib/sampling-hook.ts`](../scripts/lib/sampling-hook.ts)
 **Date:** 2026-09-25
 **Triaged at landing**, per this rollout's standing rule and enforced by G41.
 
 ⚠️ **The row number was taken against `origin`'s 45 branches and every pull
-request, with none open.** G59 was already this branch's; rows are gapless, so
-this is G60.
+request, with none open.** G60 was already this branch's; rows are gapless, so
+this is G61.
 
 **Observed-red**, six ways. Each was planted in the source, run through
 `pnpm smoke:render`, and reverted with the file's hash checked against a
@@ -6291,7 +6291,7 @@ judge's spec, so the plants are asserted on every run and not observed once.
 - **Routing around** — **exposed.** Only default settings are measured: a
   non-default wood species, `?shadowtype`, `?shadowmap` or a panel setting is
   not run, and `flat` is two sampling programs. A fallback's rebuilt page is not
-  run either, which is G59's residual rather than this row's. Disposition
+  run either, which is G60's residual rather than this row's. Disposition
   `accepted`.
 - **Vacuous green** — **gated.** No hook, no frames, no settle, no shadow pass
   and a blind classifier would each pass every "at most" clause; clauses 1, 2,

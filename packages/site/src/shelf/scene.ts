@@ -215,7 +215,7 @@ export interface ShelfHandle {
   /** Books currently on the shelf, in draw order. Used by the smoke gate. */
   readonly bookCount: number;
   /**
-   * Shelves in the bookcase, the empty one ahead included. G60 reads it to know
+   * Shelves in the bookcase, the empty one ahead included. G61 reads it to know
    * its large page is large: an unjoined bookcase drew `rowCount + 4` times from
    * the program that reads the shadow map, so a gate that never saw a tall case
    * could not tell a join from a short library.
@@ -1614,7 +1614,7 @@ export function buildBook(
    * map (`cover-shade.ts`). `all` is the old configuration, kept so it can be
    * re-tested, and the reference the cover shade is fitted against. Inert with
    * no shadow map, which is the painted fallback, `?shadows=0` and `?solo`. See
-   * `shadow-receivers.ts`; G60 counts, on the default page, what this leaves
+   * `shadow-receivers.ts`; G61 counts, on the default page, what this leaves
    * reading the map.
    */
   receiveShadows(group, settings.shadows.receivers === 'all');

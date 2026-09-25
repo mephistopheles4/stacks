@@ -151,7 +151,7 @@ describe('the defaults', () => {
         casters: true,
         // What every visitor sees, and the difference between a shelf and a
         // lost context on the Pixel 10 Pro XL: only the bookcase reads the map.
-        // See `shadow-receivers.ts`, and G60, which holds it on the page.
+        // See `shadow-receivers.ts`, and G61, which holds it on the page.
         receivers: 'bookcase',
         fetch: true,
         painted: true,

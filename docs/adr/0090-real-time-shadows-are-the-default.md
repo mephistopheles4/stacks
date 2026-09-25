@@ -39,7 +39,7 @@ records its pieces: any one of them alone would have been the wrong change.
 6. **No browser flag is ever part of a fix.** A setting on a visitor's browser
    is not something this site can ship, and the one flag examined — ANGLE's
    Vulkan backend on Android — was prepared on the phone and never run.
-7. **G60 (`one-shadow-reader`) holds items 1 and 2 on the default page.**
+7. **G61 (`one-shadow-reader`) holds items 1 and 2 on the default page.**
    Exactly one program reads the map there, in at most 4 draws a frame, at the
    50-book fixture and at a generated 300-book one; `?receivers=all` is its
    control and must come back red.
@@ -70,7 +70,7 @@ record claims for it.
 ADR-0088 built the configuration that survived, ADR-0091 built what a device
 does when it does not, and on the phone `?shadows=1` on that build held 120 s
 at 60 fps with no loss. On this build the default page itself held 120 s in
-four runs of four, measured by `scripts/phone-check.ts`, with G60's counts taken
+four runs of four, measured by `scripts/phone-check.ts`, with G61's counts taken
 on the device green there too: 1 program, 2 sampling draws a frame — while
 `?receivers=all` lost its context 1.2 s in, through the same script. A Galaxy
 S25 (Adreno) and the iOS simulator held `?shadows=1` fine even before any of
@@ -95,7 +95,7 @@ about a **shader that will not link**: swapping silently to painted would have
 turned a clean failure into one you had to dig for, and the recovery could not
 be observed failing on the hardware that mattered. Neither holds for a **lost
 context**. It is an event the page sees; the fallback says what it did on the
-black box's `fallback` line and in the shelf's profile; and G59
+black box's `fallback` line and in the shelf's profile; and G60
 (`context-loss-fallback`) drives it in a browser on every run. A link failure
 keeps its halt and its sentence, as ADR-0091 leaves it.
 
@@ -104,12 +104,12 @@ keeps its halt and its sentence, as ADR-0091 leaves it.
 No gate read what the renderer compiles, so a change that put the books back
 on the map — five programs, 302 sampling draws a frame on the 50-book fixture —
 would have been green everywhere and lost the context on the phone at frame 8.
-G60 counts it on a desktop, because **three assembles every program in
+G61 counts it on a desktop, because **three assembles every program in
 JavaScript**: the prefix, the chunks, the defines and which materials share a
 program are decided before the GPU sees a line, so headless desktop Chrome
 compiles the programs the phone compiles. Measured: the phone's counts equalled
 the desktop's in all 24 runs of the ceiling round. The one thing a driver
-decides is whether a declared sampler is *active*, which is why G60 classifies
+decides is whether a declared sampler is *active*, which is why G61 classifies
 every program twice — by GL and by its source — and fails when they disagree.
 
 **The budget is 4 sampling draws a frame.** The bookcase makes 2, the shape
@@ -133,7 +133,7 @@ is to find which program started sampling, and then to run
 - **PCF only.** `?shadowtype=basic` with only the bookcase reading the map still
   died, at frame 11; `vsm` was never run.
 - **One device measured.** Another GPU could have a lower edge, and nothing here
-  would go red: G60 pins the configuration that survived, not survival. The
+  would go red: G61 pins the configuration that survived, not survival. The
   Galaxy S25 and the iOS simulator have not been run on this build.
 - **A still-broken driver loses one context a device every 30 days**, when the
   record expires and real-time is tried again (ADR-0091).

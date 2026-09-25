@@ -1,5 +1,5 @@
 /**
- * The page hook G60 installs, run in Node against a fake WebGL prototype.
+ * The page hook G61 installs, run in Node against a fake WebGL prototype.
  *
  * An ordinary unit test, not a gate — it takes no `docs/gates.md` row, for the
  * reason `vitest.config.ts` records about `scripts/`.

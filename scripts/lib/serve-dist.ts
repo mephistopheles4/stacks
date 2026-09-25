@@ -9,7 +9,7 @@
  *
  * **An overlay** replaces the two paths a library lives at — `/library.json`
  * and `/covers/` — with another folder's, and serves everything else from the
- * build. That is how G60 (`one-shadow-reader`) puts a 300-book library under
+ * build. That is how G61 (`one-shadow-reader`) puts a 300-book library under
  * the same bundle without a second `astro build`, and without staging a fixture
  * into `packages/site/public/`, which `pnpm deploy:site` assumes only the gates
  * write, in a fixed order.

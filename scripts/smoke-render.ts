@@ -43,7 +43,7 @@ const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
 const LIBRARY = join(REPO_ROOT, 'packages', 'site', 'public', 'library.json');
 
 /**
- * G60's large library: generated at gate time, staged into `artifacts/` and
+ * G61's large library: generated at gate time, staged into `artifacts/` and
  * served over the same build. Never into `packages/site/public/` — see
  * `serve-dist.ts`.
  */
@@ -540,7 +540,7 @@ async function clickAnyBook(page: Page): Promise<boolean> {
 /* -------------------------------------------------------------------------- */
 
 /**
- * G59 — a lost context falls back to painted shadows, once, and remembers it.
+ * G60 — a lost context falls back to painted shadows, once, and remembers it.
  *
  * On the Pixel 10 Pro XL a context lost while the shelf samples the shadow map
  * came back after about 1.15 s and died again after the same count of sampling
@@ -1054,7 +1054,7 @@ function must(condition: boolean, message: string): asserts condition {
 /* -------------------------------------------------------------------------- */
 
 /**
- * G60 — exactly one program reads the real-time shadow map on the default
+ * G61 — exactly one program reads the real-time shadow map on the default
  * page, in a constant number of draws a frame at any library size.
  *
  * On the Pixel 10 Pro XL five programs sampling the shadow map lost the WebGL
@@ -1209,7 +1209,7 @@ async function checkShadowReaders(
         `${programs.padStart(10)}${String(s?.mostSteadyDraws ?? 0).padStart(13)}   ${verdict}`,
     );
     lines.push(`${''.padEnd(PAGE_COLUMN)}${describeSampling(run)}`);
-    failures.push(...found.map((failure) => `G60, ${page.name}: ${failure}`));
+    failures.push(...found.map((failure) => `G61, ${page.name}: ${failure}`));
   }
 
   return { lines, failures };
@@ -1395,10 +1395,10 @@ function report(result: {
           }`
     }`,
   );
-  console.log(`context loss (G59), each case in a browser context of its own`);
+  console.log(`context loss (G60), each case in a browser context of its own`);
   for (const line of fallback.lines) console.log(`  ${line}`);
   console.log(
-    `shadow-map readers (G60), budget ${String(BUDGET)} sampling draws a frame, each page in a ` +
+    `shadow-map readers (G61), budget ${String(BUDGET)} sampling draws a frame, each page in a ` +
       'browser context of its own',
   );
   for (const line of sampling.lines) console.log(`  ${line}`);
@@ -1543,7 +1543,7 @@ async function buildSite(): Promise<void> {
     '--assets',
     'packages/site/public',
   ]);
-  // G60's large library, staged beside the build rather than into it.
+  // G61's large library, staged beside the build rather than into it.
   await run('pnpm', ['fixtures:50', '--books', String(LARGE_BOOKS)]);
   await run('pnpm', [
     'stacks',

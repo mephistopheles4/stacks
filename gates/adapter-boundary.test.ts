@@ -119,7 +119,7 @@ const ALLOWED = [
   // knows nothing about vaults, notes or builds, and the callers own what they
   // point it at.
   'scripts/lib/walk.ts',
-  // Serves a *built* folder — `dist/`, and for G60 a staged library's
+  // Serves a *built* folder — `dist/`, and for G61 a staged library's
   // `library.json` and `covers/` over it — to a browser. It walks the two
   // folders its caller names once, at start, and reads only files that walk
   // found: a request selects one by name and never becomes a path. It writes

@@ -154,7 +154,7 @@ export interface ShadowSettings {
   /**
    * The real-time path. **On by default since ADR-0090**, for every visitor:
    * the bookcase reads the shadow map in 2 draws from 1 program and no book
-   * reads it (ADR-0088), which is what holds on the Pixel 10 Pro XL — and G60
+   * reads it (ADR-0088), which is what holds on the Pixel 10 Pro XL — and G61
    * (`one-shadow-reader`) is what holds that.
    *
    * Off is the painted path, which a device falls back to after it loses a
@@ -176,7 +176,7 @@ export interface ShadowSettings {
    * visitor gets, since real-time shadows are the default. `all` is what
    * `?shadows=1` drew until September 2026, kept so the crash can be re-tested
    * after a driver update — as `?shadows=1&receivers=all`, because a device
-   * with a lost-context record starts painted — and as G60's control. Inert
+   * with a lost-context record starts painted — and as G61's control. Inert
    * while `enabled` is off. A loss under `all` redraws painted and writes no
    * record, being a probe's answer (`runsShippedShadows`). See
    * `shadow-receivers.ts`.

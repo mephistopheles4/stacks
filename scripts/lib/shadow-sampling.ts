@@ -1,5 +1,5 @@
 /**
- * The judge for G60 (`one-shadow-reader`): how many programs read the real-time
+ * The judge for G61 (`one-shadow-reader`): how many programs read the real-time
  * shadow map, and in how many draws a frame.
  *
  * Pure. The page half is `sampling-hook.ts`, which counts what WebGL was asked
@@ -198,7 +198,7 @@ export function summarise(snapshot: SamplingSnapshot): SamplingSummary {
 }
 
 /**
- * Every reason this page fails G60, or none.
+ * Every reason this page fails G61, or none.
  *
  * The clauses are numbered as `docs/gates.md` numbers them, so a red names the
  * clause a reader will look up.

@@ -216,7 +216,7 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
    * `?receivers=all` — every book reads the map too, which is what `?shadows=1`
    * drew before the default became `bookcase`. It loses the context on the
    * Pixel 10 Pro XL at frame 8; kept as the upstream reproduction, so that can
-   * be re-tested after a driver update, and as G60's control — not as a look.
+   * be re-tested after a driver update, and as G61's control — not as a look.
    * ⚠️ **Re-test with `?shadows=1&receivers=all`, never `?receivers=all`
    * alone.** It is inert while shadows are off, and the device most likely to
    * be re-tested is the one carrying a lost-context record, which starts

@@ -1,5 +1,5 @@
 /**
- * The judge behind G60 (`one-shadow-reader`), over hand-built snapshots.
+ * The judge behind G61 (`one-shadow-reader`), over hand-built snapshots.
  *
  * An ordinary unit test, not a gate — it takes no `docs/gates.md` row, for the
  * reason `vitest.config.ts` records about `scripts/`. The gate itself runs in

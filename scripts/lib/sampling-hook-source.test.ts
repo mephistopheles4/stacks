@@ -15,7 +15,7 @@
  * defined` and took the whole mutation run with it. It is `tsx`'s `__name`
  * again, from a second tool. ⚠️ **Nor can it prove the `tsx` half** — Vitest's
  * transform need not inject `__name` — which the CI run of `pnpm smoke:render`
- * proves: a hook that throws never reports itself, and G60's first clause says
+ * proves: a hook that throws never reports itself, and G61's first clause says
  * so.
  */
 

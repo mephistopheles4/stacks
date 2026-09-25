@@ -816,12 +816,12 @@ floor, no threshold, no series, no badge. See
 **The Phase 2 gate, grown.** It builds the 50-book fixture into the site,
 serves `dist/` from its own process on a port the operating system picks, and
 drives system Chrome headless: a screenshot at `artifacts/shelf.png`, the card,
-the cover viewer and the sheet (G16, G35), six staged context losses (G59),
-and three pages counted for G60 (`one-shadow-reader`). On a workstation it asks
+the cover viewer and the sheet (G16, G35), six staged context losses (G60),
+and three pages counted for G61 (`one-shadow-reader`). On a workstation it asks
 Chrome for the real GPU; with `CI=true` it renders under SwiftShader, Chrome's
 software rasteriser, as the `suite` job does.
 
-**G60's three pages**, each in a browser context of its own at 480×640, each
+**G61's three pages**, each in a browser context of its own at 480×640, each
 with a WebGL counting hook installed before any page script:
 
 | page | what it must show |
@@ -843,19 +843,19 @@ control came back green, so the hook cannot see a book program and no green
 above it means anything. **Do not raise the budget to clear it** — it is the
 shape the phone survived plus room for one member, nobody knows where the edge
 is, and why it is 4 is in `scripts/lib/shadow-sampling.ts` and in
-`docs/gates.md` under G60's own section.
+`docs/gates.md` under G61's own section.
 The check that settles a doubt is a phone, below.
 
-It adds about 20 s to the gate on a workstation: 42 s before G60, 63 s with it
+It adds about 20 s to the gate on a workstation: 42 s before G61, 63 s with it
 on a local GPU, 78 s under SwiftShader. `pnpm deploy:site` runs it, so a deploy
 pays the same.
 
 ## `scripts/phone-check.ts` — the check only a phone can run
 
-G60 pins what survived on one phone; it cannot say a phone survives. This does:
+G61 pins what survived on one phone; it cannot say a phone survives. This does:
 it serves a build to a USB-attached Android phone's own Chrome, loads a page,
 watches it for two minutes, and says whether the WebGL context held — with
-G60's own counts of what read the shadow map, taken on the phone, from the same
+G61's own counts of what read the shadow map, taken on the phone, from the same
 hook and judge the gate uses.
 
 ```sh
@@ -887,7 +887,7 @@ second so the screen stays on. It changes no setting and touches no flag —
 a browser flag is never part of a fix here ([ADR-0090](adr/0090-real-time-shadows-are-the-default.md)).
 
 **When to run it:** before merging anything that touches shadows, materials,
-lights, the bookcase's geometry, or three itself — the changes G60 can see the
+lights, the bookcase's geometry, or three itself — the changes G61 can see the
 shape of and not the outcome.
 
 **What a result means.** One of six verdicts, most specific first:
@@ -910,7 +910,7 @@ script exits non-zero when any other run did not survive.
 
 **What it writes**, to `artifacts/phone/`, which is ignored: one JSON per run —
 the device, Chrome's version, the GPU string as the page sees it, the verdict,
-G60's counts and any clause they failed, the console — beside the run's whole
+G61's counts and any clause they failed, the console — beside the run's whole
 logcat and, with `--shot`, a screenshot. The page's GPU string carries no driver
 build on Chrome 153, so a result is tied to a driver by `--gpuinfo`, which reads
 it off `chrome://gpu`. ⚠️ **A logcat can carry personal data**:

@@ -200,7 +200,7 @@ describe('formatRows', () => {
       },
     ]);
     expect(lines[0]).toBe('PowerVR D-Series DXT-48-1536 · Chrome/153');
-    expect(lines[1]).toBe(`${'run'.padEnd(11)}${'verdict'.padEnd(18)}${'time'.padStart(7)}   G60`);
+    expect(lines[1]).toBe(`${'run'.padEnd(11)}${'verdict'.padEnd(18)}${'time'.padStart(7)}   G61`);
     expect(lines[2]).toBe(
       `${'default-1'.padEnd(11)}${'survived'.padEnd(18)}${'120 s'.padStart(7)}   ok\n` +
         `${''.padEnd(11)}held\n${''.padEnd(11)}30 steady frames`,

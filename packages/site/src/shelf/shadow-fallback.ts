@@ -229,7 +229,7 @@ export function samplesShadowMap(running: ShelfSettings): boolean {
  * expects. Every other key is compared, so a shadow setting added later is a
  * probe with no line of its own. ⚠️ **By value**, which holds while every shadow
  * setting is a scalar; one that is not would make every loss a probe's, and
- * G59's `restore` case, which requires the record, would go red.
+ * G60's `restore` case, which requires the record, would go red.
  */
 export function runsShippedShadows(running: ShelfSettings): boolean {
   const shipped = DEFAULT_SETTINGS.shadows;
