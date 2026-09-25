@@ -25,12 +25,32 @@ import { join } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { shellCommand } from './lib/run.ts';
+import { samplingHookSource } from './lib/sampling-hook.ts';
 import { serveDist } from './lib/serve-dist.ts';
+import {
+  BUDGET,
+  describeSampling,
+  judgeControl,
+  judgeSampling,
+  MIN_STEADY_FRAMES,
+  summarise,
+  type SamplingSnapshot,
+} from './lib/shadow-sampling.ts';
 
 const ARTIFACTS = join(REPO_ROOT, 'artifacts');
 const OUTPUT = join(ARTIFACTS, 'shelf.png');
 const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
 const LIBRARY = join(REPO_ROOT, 'packages', 'site', 'public', 'library.json');
+
+/**
+ * G60's large library: generated at gate time, staged into `artifacts/` and
+ * served over the same build. Never into `packages/site/public/` — see
+ * `serve-dist.ts`.
+ */
+const LARGE_BOOKS = 300;
+/** Relative to the repo root, as the CLI's `--assets` takes it. */
+const LARGE_ASSETS = `artifacts/vault-${String(LARGE_BOOKS)}-public`;
+const LARGE_LIBRARY = join(REPO_ROOT, LARGE_ASSETS, 'library.json');
 
 const VIEWPORT = { width: 1440, height: 900 };
 
@@ -85,6 +105,7 @@ async function main(): Promise<void> {
 
   await buildSite();
   const { server, origin } = await serveDist({ root: DIST });
+  const large = await serveDist({ root: DIST, overlay: join(REPO_ROOT, LARGE_ASSETS) });
   try {
     const browser = await puppeteer.launch({
       executablePath: findChrome(),
@@ -142,6 +163,7 @@ async function main(): Promise<void> {
       // Last, and in browser contexts of its own, so the record it writes can
       // never reach the page every check above measured.
       const fallback = await checkContextLossFallback(browser, origin);
+      const sampling = await checkShadowReaders(browser, origin, large.origin);
 
       report({
         bookCount: Number(bookCount),
@@ -153,12 +175,14 @@ async function main(): Promise<void> {
         viewer,
         sheet,
         fallback,
+        sampling,
       });
     } finally {
       await browser.close();
     }
   } finally {
     server.close();
+    large.server.close();
   }
 }
 
@@ -541,9 +565,10 @@ interface FallbackChecked {
 }
 
 /**
- * A page that samples the shadow map: the plain page once real-time shadows are
- * the default, and `?shadows=1` until then. Read off the same constant the page
- * reads, so the case cannot keep testing a painted page after the flip.
+ * A page that samples the shadow map: the plain page, since real-time shadows
+ * are the default (ADR-0090), and `?shadows=1` were that ever reversed. Read
+ * off the same constant the page reads, so a case cannot quietly go on testing
+ * a painted page.
  */
 const REAL_TIME_PATH = DEFAULT_SETTINGS.shadows.enabled ? '/' : '/?shadows=1';
 
@@ -863,6 +888,205 @@ function must(condition: boolean, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+/* -------------------------------------------------------------------------- */
+
+/**
+ * G60 — exactly one program reads the real-time shadow map on the default
+ * page, in a constant number of draws a frame at any library size.
+ *
+ * On the Pixel 10 Pro XL the WebGL context is lost in a count of draws whose
+ * program samples the shadow map: five sampling programs died at frame 8, and
+ * one survives up to 12 sampling draws a frame and dies at 13. So the books
+ * compile no shadow fetch and the bookcase reads the map in 2 draws
+ * (ADR-0088), and this is what holds that: a book program that starts reading
+ * the map again, or a bookcase that splits back into a draw per member, is red
+ * here on a desktop, before a phone ever loads it. The numbers and the judge
+ * are `lib/shadow-sampling.ts`; the counting is `lib/sampling-hook.ts`.
+ *
+ * ⚠️ **Why a desktop sees the phone's programs.** three assembles every
+ * program's source in JavaScript — prefix, chunks, defines, which materials
+ * share a program — so the GPU only compiles what it is handed. The one fact a
+ * driver decides is whether a declared sampler is *active*, which is why every
+ * program is classified by GL and by its source and the two must agree.
+ *
+ * ⚠️ **It pins the configuration that survived, not survival.** The budget is
+ * one phone's measurement on one driver; another GPU could have a lower edge,
+ * and nothing here would go red. `scripts/phone-check.ts` is the check a phone
+ * runs.
+ */
+interface SamplingChecked {
+  readonly lines: readonly string[];
+  readonly failures: readonly string[];
+}
+
+/** Small, so SwiftShader is cheap: the counts do not depend on the viewport. */
+const SAMPLING_VIEWPORT = { width: 480, height: 640, deviceScaleFactor: 1 };
+
+/** How long a page gets to stop linking programs before it is judged unsettled. */
+const SETTLE_TIMEOUT_MS = 30_000;
+
+/** A tall enough case: the unjoined bookcase drew `rows + 4` — 12 at 8 rows, the phone's edge. */
+
+/** Wide enough for the longest page name and its shelf count. */
+const PAGE_COLUMN = 34;
+const MIN_LARGE_ROWS = 8;
+
+interface SamplingPage {
+  readonly name: string;
+  readonly url: (main: string, large: string) => string;
+  /** `gate` must pass; `control` must fail, and for the right reason. */
+  readonly role: 'gate' | 'control';
+  /** The library it serves, whose shelved books the page must report. */
+  readonly library: string;
+  readonly minRows: number;
+}
+
+const SAMPLING_PAGES: readonly SamplingPage[] = [
+  {
+    name: 'default, 50 books',
+    url: (main) => `${main}/`,
+    role: 'gate',
+    library: LIBRARY,
+    minRows: 0,
+  },
+  {
+    name: `default, ${String(LARGE_BOOKS)} books`,
+    url: (_main, large) => `${large}/`,
+    role: 'gate',
+    library: LARGE_LIBRARY,
+    minRows: MIN_LARGE_ROWS,
+  },
+  {
+    // The permanent planted defect: every book reads the map again, through
+    // the product's own switch. It measured 5 programs and 302 sampling draws
+    // a frame on the 50-book fixture when this gate was written.
+    name: '?receivers=all (control)',
+    url: (main) => `${main}/?receivers=all`,
+    role: 'control',
+    library: LIBRARY,
+    minRows: 0,
+  },
+];
+
+interface SamplingRead {
+  readonly snapshot: SamplingSnapshot | null;
+  readonly threeCalls: number | null;
+  readonly bookCount: number;
+  readonly rowCount: number;
+}
+
+/** One evaluate, so the hook's last frame and three's counter are the same frame. */
+const READ_SAMPLING = `(() => ({
+  snapshot: window.__samplingHook?.read() ?? null,
+  threeCalls: window.__shelf?.stats().calls ?? null,
+  bookCount: window.__shelf?.bookCount ?? 0,
+  rowCount: window.__shelf?.rowCount ?? 0,
+}))()`;
+
+async function checkShadowReaders(
+  browser: Browser,
+  main: string,
+  large: string,
+): Promise<SamplingChecked> {
+  const lines = [
+    `${'page'.padEnd(PAGE_COLUMN)}${'steady'.padStart(7)}${'programs'.padStart(10)}` +
+      `${'draws/frame'.padStart(13)}   verdict`,
+  ];
+  const failures: string[] = [];
+
+  for (const page of SAMPLING_PAGES) {
+    const { read, errors } = await measureSampling(browser, page.url(main, large));
+    const run = {
+      snapshot: read.snapshot ?? undefined,
+      bookCount: read.bookCount,
+      threeCalls: read.threeCalls ?? undefined,
+    };
+    const found: string[] =
+      page.role === 'gate' ? judgeSampling(run) : [...judgeControl(run), ...errors];
+    if (page.role === 'gate') {
+      found.push(...errors);
+      const expected = expectedBookCount(page.library);
+      if (read.bookCount !== expected) {
+        found.push(
+          `(7) ${String(read.bookCount)} books on the shelf, where the library has ${String(expected)}`,
+        );
+      }
+      if (read.rowCount < page.minRows) {
+        found.push(
+          `(7) ${String(read.rowCount)} shelves, fewer than the ${String(page.minRows)} that make ` +
+            'this page large enough to tell a joined bookcase from a short library',
+        );
+      }
+    }
+
+    const s = run.snapshot === undefined ? undefined : summarise(run.snapshot);
+    const programs =
+      s === undefined
+        ? '—'
+        : s.fewestPrograms === s.mostPrograms
+          ? String(s.mostPrograms)
+          : `${String(s.fewestPrograms)}–${String(s.mostPrograms)}`;
+    const verdict =
+      page.role === 'control'
+        ? found.length === 0
+          ? 'red, as it must be'
+          : 'FAILED'
+        : found.length === 0
+          ? 'ok'
+          : 'FAILED';
+    const rows = page.minRows > 0 ? ` (${String(read.rowCount)} shelves)` : '';
+    lines.push(
+      `${`${page.name}${rows}`.padEnd(PAGE_COLUMN)}${String(s?.steady ?? 0).padStart(7)}` +
+        `${programs.padStart(10)}${String(s?.mostSteadyDraws ?? 0).padStart(13)}   ${verdict}`,
+    );
+    lines.push(`${''.padEnd(PAGE_COLUMN)}${describeSampling(run)}`);
+    failures.push(...found.map((failure) => `G60, ${page.name}: ${failure}`));
+  }
+
+  return { lines, failures };
+}
+
+async function measureSampling(
+  browser: Browser,
+  url: string,
+): Promise<{ read: SamplingRead; errors: string[] }> {
+  const context = await browser.createBrowserContext();
+  const errors: string[] = [];
+  try {
+    const page = await context.newPage();
+    await page.setViewport(SAMPLING_VIEWPORT);
+    page.on('pageerror', (error: unknown) => {
+      errors.push(`page error: ${error instanceof Error ? error.message : String(error)}`);
+    });
+    page.on('console', (message) => {
+      if (message.type() === 'error') errors.push(`console error: ${message.text()}`);
+    });
+    page.on('response', (response) => {
+      if (response.status() >= 400) {
+        errors.push(`HTTP ${String(response.status())}: ${response.url()}`);
+      }
+    });
+    // A string, never the function: see `lib/sampling-hook.ts` on `__name`.
+    await page.evaluateOnNewDocument(samplingHookSource());
+    // A hidden page gets no animation frames, and a page with no frames settles
+    // into a vacuous verdict — so the page under measurement is the one in front.
+    await page.bringToFront();
+    await page.goto(url, { waitUntil: 'networkidle0', timeout: 60_000 });
+    await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+    try {
+      await page.waitForFunction(
+        `(window.__samplingHook?.settledFor() ?? 0) >= ${String(MIN_STEADY_FRAMES)}`,
+        { timeout: SETTLE_TIMEOUT_MS, polling: 100 },
+      );
+    } catch {
+      // Judged below: clause 2 says the program set never settled, with numbers.
+    }
+    return { read: (await page.evaluate(READ_SAMPLING)) as SamplingRead, errors };
+  } finally {
+    await context.close();
+  }
+}
+
 /**
  * G35 — the enhanced card, against `docs/spec/enhanced-card.md` §11.
  *
@@ -941,10 +1165,21 @@ function report(result: {
   viewer: CoverViewerChecked | undefined;
   sheet: SheetChecked | undefined;
   fallback: FallbackChecked;
+  sampling: SamplingChecked;
 }): void {
-  const { bookCount, bookcaseOverflow, stats, cost, errors, cardOpened, viewer, sheet, fallback } =
-    result;
-  const failures: string[] = [...fallback.failures];
+  const {
+    bookCount,
+    bookcaseOverflow,
+    stats,
+    cost,
+    errors,
+    cardOpened,
+    viewer,
+    sheet,
+    fallback,
+    sampling,
+  } = result;
+  const failures: string[] = [...fallback.failures, ...sampling.failures];
 
   const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
 
@@ -993,6 +1228,11 @@ function report(result: {
   );
   console.log(`context loss (G59), each case in a browser context of its own`);
   for (const line of fallback.lines) console.log(`  ${line}`);
+  console.log(
+    `shadow-map readers (G60), budget ${String(BUDGET)} sampling draws a frame, each page in a ` +
+      'browser context of its own',
+  );
+  for (const line of sampling.lines) console.log(`  ${line}`);
   console.log(`screenshot        ${OUTPUT}`);
 
   if (viewer === undefined) {
@@ -1133,6 +1373,17 @@ async function buildSite(): Promise<void> {
     'fixtures/vault-50',
     '--assets',
     'packages/site/public',
+  ]);
+  // G60's large library, staged beside the build rather than into it.
+  await run('pnpm', ['fixtures:50', '--books', String(LARGE_BOOKS)]);
+  await run('pnpm', [
+    'stacks',
+    'build',
+    '--public',
+    '--vault',
+    `fixtures/vault-${String(LARGE_BOOKS)}`,
+    '--assets',
+    LARGE_ASSETS,
   ]);
   await run('pnpm', ['--filter', '@stacks/site', 'run', 'build']);
 }

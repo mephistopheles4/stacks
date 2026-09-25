@@ -51,7 +51,7 @@ Two other files hold what these deliberately do not:
 | [0013](./0013-cover-provenance-and-rehosting.md) | Cover provenance comes from the bytes, and all of it is re-hosted knowingly |
 | [0014](./0014-invariant-2-splits.md) | Invariant 2 splits: a public build may ship one allowlisted section |
 | [0015](./0015-cover-texture-budget.md) | Covers are resized to 512px, under a per-cover cap and a total budget |
-| [0016](./0016-painted-shadows.md) | Shadows are painted, not rasterised |
+| [0016](./0016-painted-shadows.md) | Shadows are painted, not rasterised (the fallback since 0090) |
 | [0017](./0017-books-stay-in-case.md) | Every book stays inside its own case |
 | [0018](./0018-bounded-cover-downloads.md) | Bounded cover downloads: the magic-byte allowlist matters more than the size cap |
 | [0019](./0019-deploying-is-local.md) | Deploying is a local operation, and `deploy:site` publishes `main` |
@@ -122,4 +122,5 @@ Two other files hold what these deliberately do not:
 | [0085](./0085-a-renovation-is-declared-and-the-window-may-survive.md) | A renovation is declared, it is due at merge, and the window may survive it |
 | [0086](./0086-g29-slugs-with-github-slugger.md) | G29 slugs headings with `github-slugger`, not an imitation of it |
 | [0088](./0088-one-program-samples-the-shadow-map-in-two-draws.md) | One program samples the shadow map, in two draws |
+| [0090](./0090-real-time-shadows-are-the-default.md) | Real-time shadows are the default, and painted is the fallback |
 | [0091](./0091-a-lost-context-falls-back-to-painted-shadows.md) | A lost context falls back to painted shadows, and the device remembers |

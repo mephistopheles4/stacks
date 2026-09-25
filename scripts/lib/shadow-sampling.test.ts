@@ -69,6 +69,7 @@ function snapshot(over: Partial<SamplingSnapshot> = {}, steady = 40): SamplingSn
     maxSamplingDraws: 0,
     programs: roster(),
     readyFrame: 1,
+    lastLinkFrame: 0,
     linkFailures: 0,
     contextLost: false,
     contexts: 1,
@@ -283,6 +284,31 @@ describe('steadyFrames', () => {
 
   it('is empty for a page that was never ready', () => {
     expect(steadyFrames(snapshot({ readyFrame: null }))).toEqual([]);
+  });
+
+  it('starts after a link the hook recorded in a frame it has since dropped', () => {
+    // Frames 1–10 kept from the start, the link in a dropped frame 20, and the
+    // kept tail from 30: only the tail is steady, though no kept frame linked.
+    const base = snapshot();
+    const frames = base.frames.filter((bucket) => bucket.frame <= 10 || bucket.frame >= 30);
+    const steady = steadyFrames({ ...base, frames, lastLinkFrame: 20, dropped: 19 });
+    expect(steady.map((bucket) => bucket.frame)).toEqual([
+      30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+    ]);
+  });
+});
+
+describe('judgeSampling — the shadow pass has to be readable', () => {
+  it('fails a snapshot that lost frame 0, rather than reading it as no casting', () => {
+    const base = snapshot();
+    const failures = judgeSampling({
+      snapshot: { ...base, frames: base.frames.slice(1) },
+      bookCount: BOOKS,
+      threeCalls: CALLS,
+    });
+    expect(failures).toContain(
+      '(1) frame 0 is missing from the snapshot, so the shadow pass cannot be read',
+    );
   });
 });
 

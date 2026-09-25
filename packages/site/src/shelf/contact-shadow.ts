@@ -33,7 +33,13 @@ export type { BookcaseLight } from './cover-shade.ts';
  * read none, and what is painted here is drawn either way: the contact shadows
  * under the books, the recess they stand in, the shade on the backboard, and
  * on each face-out cover the band the plank above throws (`cover-shade.ts`).
- * Without a shadow map it is the whole of the shading.
+ *
+ * The real-time path is the default since ADR-0090, so painting is now the
+ * **fallback**: a device that loses its context while sampling the map starts
+ * painted from then on (`shadow-fallback.ts`), and there this file is the whole
+ * of the shading. The argument it began with still stands — nothing here moves,
+ * so a shadow computed once is the right tool for a static scene — and it is
+ * why the fallback costs a visitor so little.
  */
 
 /**

@@ -6169,8 +6169,11 @@ loop a frame in each.
 - **Satisfying the letter** — **exposed, in one place.** *Painted* is read off
   the live shelf's `profile`, which is its settings, and not off the programs
   it compiled. A rebuild that mounted painted settings and still sampled the
-  map would pass here. The ticket's sampling-program gate reads what the
-  renderer compiled, and closes this. Disposition `accepted`.
+  map would pass here. ⚠️ **G60 (`one-shadow-reader`), the ticket's
+  sampling-program gate, did not close this, and this line said it would**: it
+  reads what the renderer compiled on the default page, and never on a page a
+  fallback rebuilt. Pointing its hook at these cases is the way to close it.
+  Disposition `accepted`.
 - **Routing around** — **exposed, and the route is the one the row states.**
   A staged `WEBGL_lose_context` loss never restores on its own, never exits
   the GPU process and never gets the page blocked. On the Pixel 10 Pro XL a
@@ -6192,3 +6195,74 @@ loop a frame in each.
   driver build are one dated measurement on one phone. A Chrome that starts
   restoring, or stops blocking, changes what a visitor sees and moves nothing
   here. Disposition `accepted`.
+
+### G60 — `one-shadow-reader`
+
+**Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts) — `checkShadowReaders`, over [`scripts/lib/shadow-sampling.ts`](../scripts/lib/shadow-sampling.ts) and [`scripts/lib/sampling-hook.ts`](../scripts/lib/sampling-hook.ts)
+**Date:** 2026-09-25
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number was taken against `origin`'s 45 branches and every pull
+request, with none open.** G59 was already this branch's; rows are gapless, so
+this is G60.
+
+**Observed-red**, six ways. Each was planted in the source, run through
+`pnpm smoke:render`, and reverted with the file's hash checked against a
+backup:
+
+1. **Every book reading the map again** — `receiveShadows` removed from
+   `buildBook`. Clause 3 and 4 on both default pages: 5 programs, and 302
+   sampling draws a frame at 50 books, 1,979 at 300. ⚠️ **It also went red on
+   clause 1 for the wrong reason, and that was a defect in the gate**: the
+   300-book page ran past the hook's 4,000-frame cap, frames were dropped from
+   the front, and frame 0 — the shadow pass — with them, so the page read as
+   books that had stopped casting. Fixed before landing: the hook keeps its
+   first ten frames and records the last link frame outright, and a spec pins
+   both over 4,100 frames. The rerun of plant 2 read 274 casting draws at
+   3,997 steady frames.
+2. **A mesh per plank again** — one extra woodwork mesh per shelf, the shape the
+   join removed. Clause 4 alone: 1 program, 7 sampling draws a frame at 50
+   books and 20 at 300, growing with the library.
+3. **Real-time shadows off by default** — the tree before the flip. Clause 3 on
+   both default pages, 0 programs; and the control failed the gate for reading
+   none.
+4. **A blind classifier** — the hook reporting no program as a reader. Clause 3
+   on both default pages, and the control failed the gate on programs and on
+   draws.
+5. **A source reading that ignored the `#undef`.** Clause 5 on both default
+   pages, GL and the source disagreeing about six programs — while the control
+   still came back red, which is what that clause is for.
+6. **A verdict before the settle** — the settle wait cut to 1 ms, under
+   SwiftShader. Clause 2: 12 and 19 steady frames against 30, and the control
+   refused as unsettled.
+
+The control is the same run unplanted: both default pages 1 program and 2
+sampling draws a frame, `?receivers=all` 5 and 302, on a local GPU and under
+SwiftShader. Every clause is also planted as a hand-built snapshot in the
+judge's spec, so the plants are asserted on every run and not observed once.
+
+- **Weakening** — **exposed, in one constant.** `BUDGET` is 4, a third of the
+  one measured edge, and raising it is one edit that reads as tuning. Its
+  comment carries the measurements and the rule that a raised budget is a
+  comment, and the settle's 30 frames sit beside it. Disposition `accepted`.
+- **Satisfying the letter** — **gated.** Instancing or a multi-draw call would
+  read as one call and put any number of sampling draws in it; the hook weighs
+  an instanced call by its instances and a `WEBGL_multi_draw` call by its
+  sub-draws, both planted in its spec. The two drawing extensions three does not
+  use are not wrapped, and the gates.md section says so. Disposition `gated`.
+- **Routing around** — **exposed.** Only default settings are measured: a
+  non-default wood species, `?shadowtype`, `?shadowmap` or a panel setting is
+  not run, and `flat` is two sampling programs. A fallback's rebuilt page is not
+  run either, which is G59's residual rather than this row's. Disposition
+  `accepted`.
+- **Vacuous green** — **gated.** No hook, no frames, no settle, no shadow pass
+  and a blind classifier would each pass every "at most" clause; clauses 1, 2,
+  5 and 6 refuse each, and the control, measured through the identical hook and
+  judge, fails the gate unless it is red on programs and on draws. Observed
+  above as plants 3, 4 and 6. Disposition `gated`.
+- **Decay** — **loud on three, silent on a GPU.** A three upgrade that tests
+  `USE_SHADOWMAP` ahead of the books' `#undef` compiles the fetch back in and is
+  red on clauses 3 and 5, which is the decay this row exists to catch. ⚠️ **The
+  budget's premise is one phone and one driver**: another GPU with a lower edge
+  moves nothing here, and a driver update that raised this one's would not
+  either. Disposition `accepted`.

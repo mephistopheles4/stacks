@@ -29,7 +29,8 @@
 4. **Only an observed failure writes.** A loss writes a record only when the
    live settings sample the map, the page is visible and no program failed to
    link. A painted page, a hidden page and a shader-link failure write nothing
-   and keep today's behaviour.
+   and keep the behaviour a loss had before this record: a notice, and a resume
+   in place, or the link failure's halt.
 5. **Nothing decides by device.** No user agent, GPU name, memory figure or
    platform check chooses a path. The GPU string is compared only with itself,
    to retire a record on the same device.

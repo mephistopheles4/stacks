@@ -80,6 +80,15 @@ It records a failure this device showed, never a guess about the device, and a
 (that is the black box's), fallback on its own (that is what the page does
 after a loss, in the page).
 
+**Shadow reader**:
+A compiled program that samples the real-time shadow map. The default page has
+exactly one, the bookcase's, and G60 (`one-shadow-reader`) counts it
+([ADR-0090](docs/adr/0090-real-time-shadows-are-the-default.md)). Decided when
+the program is compiled, never by a mesh's flag.
+*Avoid*: receiver on its own (`receiveShadow` is a uniform that leaves the
+sampler compiled in; the `shadows.receivers` setting chooses readers, and does
+it by compiling), caster (the other direction — every book still casts).
+
 **Run**:
 A group of touching books sharing one slump angle, because they are resting on
 each other rather than each leaning independently. Broken by a year gap or by a

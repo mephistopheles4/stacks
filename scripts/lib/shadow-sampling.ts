@@ -95,15 +95,21 @@ export interface ProgramVerdict {
 /** What the page hook hands back. See `sampling-hook.ts`. */
 export interface SamplingSnapshot {
   readonly version: number;
-  /** Closed frames, oldest first. The last is the frame the page was read in. */
+  /**
+   * Closed frames, oldest first. The last is the frame the page was read in.
+   * The first few are never dropped, since frame 0 holds the shadow pass; past
+   * the hook's cap, frames after them are.
+   */
   readonly frames: readonly FrameBucket[];
-  /** Frames dropped from the front of `frames` once the hook's cap was reached. */
+  /** Frames dropped once the hook's cap was reached. */
   readonly dropped: number;
   /** The most sampling draws in any frame since the hook was installed, dropped or not. */
   readonly maxSamplingDraws: number;
   readonly programs: readonly ProgramVerdict[];
   /** The first frame to start after `window.__shelf.ready` was true. */
   readonly readyFrame: number | null;
+  /** The last frame anything linked in, whether or not that frame was dropped. */
+  readonly lastLinkFrame: number | null;
   readonly linkFailures: number;
   readonly contextLost: boolean;
   /** WebGL contexts that drew or linked anything. */
@@ -139,11 +145,12 @@ export const DEFAULT_JUDGE: JudgeOptions = { budget: BUDGET, minSteadyFrames: MI
 export function steadyFrames(snapshot: SamplingSnapshot): readonly FrameBucket[] {
   if (snapshot.readyFrame === null) return [];
   const ready = snapshot.readyFrame;
+  // The hook's own record first, because the frame a link happened in may have
+  // been dropped; the frames themselves as well, in case it is ever missing.
   const lastLink = snapshot.frames.reduce(
     (latest, bucket) => (bucket.links > 0 ? Math.max(latest, bucket.frame) : latest),
-    -1,
+    snapshot.lastLinkFrame ?? -1,
   );
-  // A link in a frame the hook already dropped is older than every frame kept.
   return snapshot.frames.filter((bucket) => bucket.frame >= ready && bucket.frame > lastLink);
 }
 
@@ -212,7 +219,9 @@ export function judgeSampling(run: SamplingRun, options: JudgeOptions = DEFAULT_
   if (snapshot.linkFailures > 0) {
     failures.push(`(1) ${String(snapshot.linkFailures)} program(s) failed to link`);
   }
-  if (summary.depthDraws < run.bookCount) {
+  if (snapshot.frames[0]?.frame !== 0) {
+    failures.push('(1) frame 0 is missing from the snapshot, so the shadow pass cannot be read');
+  } else if (summary.depthDraws < run.bookCount) {
     failures.push(
       `(1) the shadow pass drew ${String(summary.depthDraws)} time(s) in the first ` +
         `${String(CAST_WITHIN)} frames for ${String(run.bookCount)} books — every book casts ` +

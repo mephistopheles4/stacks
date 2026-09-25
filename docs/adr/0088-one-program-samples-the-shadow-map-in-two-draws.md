@@ -27,23 +27,28 @@ nothing reading a shadow map survives on the Pixel 10 Pro
 4. **It is a setting, `shadows.receivers`, and not a constant.** `bookcase` is
    the default. `all` is what `?shadows=1` drew until today, reached by the flat
    probe `?receivers=all`. It is rebuild-class, like `casters`.
-5. **The default page does not change here.** `shadows.enabled` stays `false`
-   in this change, so a visitor still gets the painted shading and no shadow
-   map. The owner has decided that real-time shadows become the default
-   (#381); that lands separately, after the fallback for a lost context
-   ([ADR-0091](./0091-a-lost-context-falls-back-to-painted-shadows.md)).
+5. **The default page did not change in this change.** `shadows.enabled`
+   stayed `false` here, so the four changes that made real-time shadows safe
+   landed before any visitor got them. The default flipped last, after the
+   fallback for a lost context
+   ([ADR-0091](./0091-a-lost-context-falls-back-to-painted-shadows.md)), in
+   [ADR-0090](./0090-real-time-shadows-are-the-default.md) — so everything this
+   record describes is now what every visitor's shelf runs.
 6. **What the books stopped receiving is painted back as the cover shade.** One
    mesh lays a quad on every face-out cover and samples one atlas of masks. A
    mask is the union of three cast shadows: the plank above, the right-hand
    upright, and every book to the right, taken as its page block. The strength
    is one `opacity`, fitted against `?receivers=all`. It is drawn whenever there
-   is painted shading and the books do not read the map, which includes today's
-   painted default. It is not drawn under `?receivers=all`, which stays the
-   reference. See [`cover-shade.ts`](../../packages/site/src/shelf/cover-shade.ts).
+   is painted shading and the books do not read the map, which is the real-time
+   default and the painted fallback alike. It is not drawn under
+   `?receivers=all`, which stays the reference. See
+   [`cover-shade.ts`](../../packages/site/src/shelf/cover-shade.ts).
 
-Together, `?shadows=1` samples the map in **2 draws from 1 program** under the
+Together, the real-time path — `?shadows=1` when this was written, the default
+page since ADR-0090 — samples the map in **2 draws from 1 program** under the
 default species, at every library size. Under `flat`, or before a sheet
-decodes, it is 2 programs at 1 draw each.
+decodes, it is 2 programs at 1 draw each. G60 (`one-shadow-reader`) holds the
+default page to it.
 
 ## Context
 
@@ -134,11 +139,17 @@ the mechanism.
   (`WebGLShadowMap.js:515`).
 - **It rests on three's prefix and body split.** `shadow-receivers.test.ts` pins
   the half a unit test can reach: that the sampler is declared in the body the
-  hook edits. The prefix half needs a context, and nothing pins it yet.
+  hook edits. The prefix half needs a context: since ADR-0090, G60 reads what
+  three actually handed GL on the default page. A three upgrade that tested
+  `USE_SHADOWMAP` in the prefix, ahead of the `#undef`, would compile the fetch
+  back into every book, and G60 would see an active shadow sampler in a program
+  whose source says the map is undefined — red on two clauses.
 
 ⚠️ **Two trades here are the owner's to accept, and this record does not accept
 them**: the join's pixel shortfall, and what the cover shade does not give back
-of the band the books lose. The record stays `proposed` until both are settled.
+of the band the books lose. Both are on every visitor's shelf since ADR-0090
+made real-time shadows the default. The record stays `proposed` until both are
+settled.
 
 `?receivers=all` is the old `?shadows=1`, byte for byte under SwiftShader, so
 every earlier measurement and the painted shading's differenced strengths keep

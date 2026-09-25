@@ -2,9 +2,9 @@
 
 The command lists themselves live in [`AGENTS.md`](../AGENTS.md), where
 `gates/commands.test.ts` (G14) holds them to `package.json` and the CLI in both
-directions. This file carries the *why* behind five of them — the parts a
+directions. This file carries the *why* behind some of them — the parts a
 session needs only when it is linting, formatting the tree, deploying, cutting
-a worktree, or reading a mutation score.
+a worktree, reading a mutation score, or changing what reads the shadow map.
 
 ⚠️ **`deploy:site`'s gate-ordering rule stayed in `AGENTS.md` on purpose** — it
 is compaction-fragile safety, not reference, and no code catches it. It is not
@@ -810,3 +810,41 @@ safe to print and unsafe to store. Nothing here stores them.
 Coverage exists in this repository for this print and for nothing else — no
 floor, no threshold, no series, no badge. See
 [ADR-0069](adr/0069-coverage-is-an-ingredient-not-a-goal.md).
+
+## `pnpm smoke:render` — the render gate, and the one program that reads the shadow map
+
+**The Phase 2 gate, grown.** It builds the 50-book fixture into the site,
+serves `dist/` from its own process on a port the operating system picks, and
+drives system Chrome headless: a screenshot at `artifacts/shelf.png`, the card,
+the cover viewer and the sheet (G16, G35), four staged context losses (G59),
+and three pages counted for G60 (`one-shadow-reader`). On a workstation it asks
+Chrome for the real GPU; with `CI=true` it renders under SwiftShader, Chrome's
+software rasteriser, as the `suite` job does.
+
+**G60's three pages**, each in a browser context of its own at 480×640, each
+with a WebGL counting hook installed before any page script:
+
+| page | what it must show |
+| --- | --- |
+| the default page, 50 books | exactly one program reads the shadow map, in at most 4 draws a frame |
+| the default page, 300 books | the same, on a bookcase at least 8 shelves tall |
+| `?receivers=all`, 50 books | red — more than one program and more than 4 draws — or the instrument is blind |
+
+The 300-book library is generated at gate time — `pnpm fixtures:50 --books 300`,
+invented titles and the six generated covers, every book past the first 50
+coverless — and staged into `artifacts/vault-300-public/`, **never** into
+`packages/site/public/`: a second server serves its `library.json` and
+`covers/` over the same build. Nothing about it is committed.
+
+**Reading a red.** Each line names its clause. `(3)` or `(4)` on a default page
+means a program started reading the shadow map, or the bookcase started drawing
+more than it did: find which, before anything else. A red on `(8)` means the
+control came back green, so the hook cannot see a book program and no green
+above it means anything. **Do not raise the budget to clear it** — it is a
+third of the one edge ever measured, and why it is 4 is in
+`scripts/lib/shadow-sampling.ts` and in `docs/gates.md` under G60's own section.
+The check that settles a doubt is a phone.
+
+It adds about 20 s to the gate on a workstation: 42 s before G60, 63 s with it
+on a local GPU, 78 s under SwiftShader. `pnpm deploy:site` runs it, so a deploy
+pays the same.

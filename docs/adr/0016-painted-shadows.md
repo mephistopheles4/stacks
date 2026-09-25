@@ -1,5 +1,19 @@
 # Shadows are painted, not rasterised
 
+**Status:** accepted, and **superseded as the default by
+[ADR-0090](0090-real-time-shadows-are-the-default.md) — painting is the
+fallback now.** The title and the log below record what was decided in August
+and are left standing: a device that loses its context while sampling the map
+starts painted ([ADR-0091](0091-a-lost-context-falls-back-to-painted-shadows.md)),
+and every visitor else gets the real-time path with only the bookcase reading
+it ([ADR-0088](0088-one-program-samples-the-shadow-map-in-two-draws.md)). Two
+entries below no longer hold as written: *"nothing that reads a shadow map
+survives on this device"* — one program in a handful of draws does, measured in
+September on driver `25.3` — and the empty case dying, which no longer
+reproduces there. *"Deliberately not a fallback"* was about a shader that will
+not link, and still holds for one; a lost context is different, and ADR-0090
+says why.
+
 The shelf computes its shading once, from the same layout the books were placed with, and draws it to a canvas as one textured plane per shelf. There is no shadow pass, no depth target and no per-fragment lookup. `?shadows=1` keeps the real-time path for hardware that can hold it.
 
 Nothing in this scene moves — books are placed at mount, the light never moves, and a shadow does not depend on the camera, the only thing that does. Real-time shadow mapping is a technique for scenes that change. It is also the only configuration that survives on the hardware below, and the investigation that established that is the substance of this ADR.

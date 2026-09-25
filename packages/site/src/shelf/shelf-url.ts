@@ -185,17 +185,22 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
   };
 
   /**
-   * `?shadows=1` — turns on the real-time shadow map and the light that casts
-   * it. Still off by default in this build: the shelf paints its shading
-   * instead (ADR-0016). Since September 2026 it means *books cast, the bookcase
-   * receives* — see `?receivers` below.
+   * `?shadows=0` — the painted path: no shadow map, the shading drawn once from
+   * the layout (ADR-0016). It is what a device shows after it has lost a
+   * context while sampling the map, so this is how to see a fallen-back shelf
+   * on purpose.
+   *
+   * `?shadows=1` — the real-time shadow map and the light that casts it, which
+   * is **the default since ADR-0090**, so on a fresh device it changes nothing.
+   * It means *books cast, the bookcase receives* — see `?receivers` below.
    *
    * **The URL beats the lost-context record, in both directions.** A device
    * that lost a context while sampling the map remembers it and starts painted
-   * (`shadow-fallback.ts`); `?shadows=1` still turns real-time shadows on over
-   * that record, and `?shadows=0` forces painted with or without one. Nothing
-   * here reads the record: `boot.ts` folds this partial onto a base, and the
-   * record only chooses the base.
+   * (`shadow-fallback.ts`); `?shadows=1` turns real-time shadows back on over
+   * that record for one load — the way to re-test a device after a driver
+   * update — and `?shadows=0` forces painted with or without one. Nothing here
+   * reads the record: `boot.ts` folds this partial onto a base, and the record
+   * only chooses the base.
    *
    * `?shadowmap=1024` — edge of the depth target; the default is 2048 (16 MB).
    *
@@ -210,8 +215,9 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
    *
    * `?receivers=all` — every book reads the map too, which is what `?shadows=1`
    * drew before the default became `bookcase`. It loses the context on the
-   * Pixel 10 Pro XL at frame 8; kept so that can be re-tested after a driver
-   * update, not as a look. See `shadow-receivers.ts`.
+   * Pixel 10 Pro XL at frame 8; kept as the upstream reproduction, so that can
+   * be re-tested after a driver update, and as G60's control — not as a look.
+   * See `shadow-receivers.ts`.
    *
    * `?shadowfetch=0` — draws the map once, then stops *reading* it. Separates
    * holding a depth attachment from sampling one.

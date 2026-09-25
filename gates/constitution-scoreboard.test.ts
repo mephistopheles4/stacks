@@ -309,10 +309,10 @@ describe('G19 — every row has a name, and the name means something', () => {
     // It applies only where a row names exactly one `gates/*.test.ts` AND no
     // other row names that same stem, which self-exempts the rows where
     // derivation is impossible rather than needing an allowlist: G5 and G13
-    // share `repo-hygiene`, and G16, G18, G25, G28, G35 and G42 name no
-    // `gates/` spec at all — G35's gate is `scripts/smoke-render.ts` and G42's
-    // is a workflow job. Those declare their slug; every other row is forced to
-    // move with its file.
+    // share `repo-hygiene`, and G16, G18, G25, G28, G35, G42, G59 and G60
+    // name no `gates/` spec at all — G35's, G59's and G60's gate is
+    // `scripts/smoke-render.ts` and G42's is a workflow job. Those declare their
+    // slug; every other row is forced to move with its file.
     //
     // ⚠️ **The count is gone rather than corrected, on this file's own
     // advice.** It read "the six rows" and "the other 23", and both were wrong:

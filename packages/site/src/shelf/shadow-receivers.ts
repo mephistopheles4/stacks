@@ -38,6 +38,12 @@ import * as THREE from 'three';
  * draws at every library size. Anything new that reads the map adds a program,
  * a draw, or both. See
  * [ADR-0088](../../../../docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md).
+ *
+ * This is what every visitor runs: real-time shadows are the default since
+ * [ADR-0090](../../../../docs/adr/0090-real-time-shadows-are-the-default.md),
+ * and G60 (`one-shadow-reader`) counts, on the default page, the programs that
+ * read the map and the draws they make — a book program that starts reading it
+ * again is red there on a desktop.
  */
 
 /**
@@ -79,8 +85,9 @@ export const NO_SHADOW_FETCH_LINE = '#undef USE_SHADOWMAP';
  * `ShaderLib` for every new program, so a material recompiled for a loaded
  * cover, a live shadow toggle or a restored context is shielded once, not once
  * per compile. And inert without a shadow map — `#undef` of a macro nobody
- * defined is legal, so the painted default and `?solo` compile the shader they
- * always did, under a different key.
+ * defined is legal, so the painted fallback, `?shadows=0` and `?solo` (whose
+ * renderer never enables a shadow map) compile the shader they always did,
+ * under a different key.
  *
  * Does not touch casting. The shadow pass draws through three's own
  * `MeshDepthMaterial`, or an object's `customDepthMaterial`, and never reads

@@ -90,6 +90,16 @@ describe('the probes', () => {
     expect(read('shadows=1&receivers=all').shadows.receivers).toBe('all');
   });
 
+  it('gives a bare page real-time shadows with only the bookcase reading them', () => {
+    // ADR-0090: the default for every visitor, with no probe typed at all.
+    expect(read('').shadows).toMatchObject({ enabled: true, receivers: 'bookcase' });
+  });
+
+  it('turns real-time shadows off for ?shadows=0, which is the painted fallback', () => {
+    expect(read('shadows=0').shadows.enabled).toBe(false);
+    expect(read('shadows=0').shadows.painted).toBe(true);
+  });
+
   it('refuses a nonsense pixel ratio or map size', () => {
     expect(read('dpr=0').renderer.maxPixelRatio).toBe(DEFAULT_SETTINGS.renderer.maxPixelRatio);
     expect(read('dpr=x').renderer.maxPixelRatio).toBe(DEFAULT_SETTINGS.renderer.maxPixelRatio);
@@ -215,12 +225,14 @@ describe('?tune', () => {
 
   it('does not let a tune blob override a probe typed by hand', () => {
     // The two vocabularies never overlap, so a legacy probe is always the last
-    // word on the nine settings it owns. Someone appending `&shadows=1` to a
-    // dialled URL on a phone must get shadows.
+    // word on the nine settings it owns. Someone appending `&shadows=0` to a
+    // dialled URL on a phone must get the painted shelf. ⚠️ It appended
+    // `&shadows=1` until real-time shadows became the default, and then passed
+    // with the probe deleted: a probe that asks for the default proves nothing.
     const tune = encodeURIComponent(JSON.stringify({ lighting: { key: { intensity: 4.5 } } }));
-    const settings = read(`tune=${tune}&shadows=1`);
+    const settings = read(`tune=${tune}&shadows=0`);
 
-    expect(settings.shadows.enabled).toBe(true);
+    expect(settings.shadows.enabled).toBe(false);
     expect(settings.lighting.key.intensity).toBe(4.5);
   });
 });
@@ -352,5 +364,11 @@ describe('writeSettings against the base the page started from', () => {
 
   it('diffs against the shipped defaults when no base is given', () => {
     expect(written(DEFAULT_SETTINGS)).toBe('?debug');
+  });
+
+  it('writes nothing for real-time shadows and ?shadows=0 for painted, now real-time is shipped', () => {
+    // ADR-0090 moved which of the two is the difference.
+    expect(written(realTime)).toBe('?debug');
+    expect(written(painted)).toBe('?debug&shadows=0');
   });
 });

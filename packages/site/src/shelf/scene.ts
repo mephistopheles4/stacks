@@ -214,6 +214,13 @@ export interface ShelfHandle {
   dispose(): void;
   /** Books currently on the shelf, in draw order. Used by the smoke gate. */
   readonly bookCount: number;
+  /**
+   * Shelves in the bookcase, the empty one ahead included. G60 reads it to know
+   * its large page is large: an unjoined bookcase drew `rowCount + 4` times from
+   * the program that reads the shadow map, so a gate that never saw a tall case
+   * could not tell a join from a short library.
+   */
+  readonly rowCount: number;
   /** The GPU, when the browser is willing to name it. */
   readonly gpu: string | undefined;
   /**
@@ -672,6 +679,7 @@ export function mountShelf(
 
   return {
     bookCount: placed.length,
+    rowCount,
     gpu: describeGpu(renderer),
     bookcaseOverflow: measureBookcaseOverflow(scene, placed),
     shaderErrors,
@@ -1004,7 +1012,9 @@ export type BookLookup = Map<THREE.Object3D, LibraryBook>;
  *
  * Everything about *where* a book goes was decided by `placeShelf` before this
  * ran. What is left is Three.js — geometry, materials, the click lookup, and the
- * painted overlays that stand in for a real-time shadow pass.
+ * painted overlays: beside the real-time shadow map they add the contact
+ * shadows and the cover shade, and without one, after a lost context, they are
+ * the whole of the shading.
  */
 function buildBooks(
   scene: THREE.Scene,
@@ -1596,8 +1606,9 @@ export function buildBook(
    * throws on it — is painted back by the cover shade, which reads no shadow
    * map (`cover-shade.ts`). `all` is the old configuration, kept so it can be
    * re-tested, and the reference the cover shade is fitted against. Inert with
-   * no shadow map, which is the painted default and `?solo`. See
-   * `shadow-receivers.ts`.
+   * no shadow map, which is the painted fallback, `?shadows=0` and `?solo`. See
+   * `shadow-receivers.ts`; G60 counts, on the default page, what this leaves
+   * reading the map.
    */
   receiveShadows(group, settings.shadows.receivers === 'all');
 

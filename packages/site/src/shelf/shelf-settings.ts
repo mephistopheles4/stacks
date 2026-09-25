@@ -151,7 +151,16 @@ export interface RendererSettings {
 }
 
 export interface ShadowSettings {
-  /** The real-time path. Off by default — see `contact-shadow.ts` for why. */
+  /**
+   * The real-time path. **On by default since ADR-0090**, for every visitor:
+   * the bookcase reads the shadow map in 2 draws from 1 program and no book
+   * reads it (ADR-0088), which is what holds on the Pixel 10 Pro XL — and G60
+   * (`one-shadow-reader`) is what holds that.
+   *
+   * Off is the painted path, which a device falls back to after it loses a
+   * context while sampling the map, and remembers (`shadow-fallback.ts`,
+   * ADR-0091); `?shadows=0` shows it on purpose. See `contact-shadow.ts`.
+   */
   readonly enabled: boolean;
   readonly mapSize: number;
   readonly type: ShadowTypeName;
@@ -163,14 +172,22 @@ export interface ShadowSettings {
    *
    * `bookcase` compiles each book's programs with no shadow sampler, so a book
    * casts and does not receive — the one real-time configuration with books in
-   * it that holds on the Pixel 10 Pro XL, and only under `pcf`. `all` is what
+   * it that holds on the Pixel 10 Pro XL, and only under `pcf`. It is what every
+   * visitor gets, since real-time shadows are the default. `all` is what
    * `?shadows=1` drew until September 2026, kept so the crash can be re-tested
-   * after a driver update. See `shadow-receivers.ts`.
+   * after a driver update, and as G60's control. Inert while `enabled` is off.
+   * See `shadow-receivers.ts`.
    */
   readonly receivers: ShadowReceiverName;
   /** Whether materials *read* the shadow map. See `RendererOverrides.shadowFetch`. */
   readonly fetch: boolean;
-  /** The painted shading that stands in for a shadow pass. On by default. */
+  /**
+   * The painted shading. On by default, under the real-time path as well as
+   * without it: it is the whole of the shading when the map is off, and beside
+   * a map it adds the contact shadows, the recess and the cover shade. Where
+   * both shade one surface they darken it twice, which ADR-0016 recorded and
+   * ADR-0090 accepts for now.
+   */
   readonly painted: boolean;
 }
 
@@ -505,7 +522,7 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     exposure: 1,
   },
   shadows: {
-    enabled: false,
+    enabled: true,
     mapSize: 2048,
     type: 'pcf',
     casters: true,

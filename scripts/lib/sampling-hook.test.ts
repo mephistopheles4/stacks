@@ -339,6 +339,26 @@ describe('the page hook — frames', () => {
     expect(hook.settledFor()).toBe(2);
   });
 
+  it('keeps frame 0 and the settle count past its cap, where it drops the middle', () => {
+    // A headless desktop with a GPU runs far past 60 fps and filled the cap
+    // before a 300-book page was read. Dropping from the front took frame 0 —
+    // the shadow pass — with it, and read as books that stopped casting.
+    const hook = install();
+    const gl = new Gl();
+    use(gl, depth());
+    gl.drawElements();
+    loop(gl, (context) => context.drawArrays());
+
+    for (let time = 1; time <= 4100; time += 1) clock.run(time);
+
+    const snapshot = hook.read();
+    expect(snapshot.frames[0]).toMatchObject({ frame: 0, depthDraws: 1, links: 1 });
+    expect(snapshot.dropped).toBe(100);
+    expect(snapshot.frames).toHaveLength(4001);
+    expect(snapshot.lastLinkFrame).toBe(0);
+    expect(hook.settledFor()).toBe(4099);
+  });
+
   it('stops counting on a lost context, and says it was lost', () => {
     const hook = install();
     const gl = new Gl();

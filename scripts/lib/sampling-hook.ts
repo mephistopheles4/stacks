@@ -41,6 +41,13 @@ export function samplingHook(): void {
   const VERSION = 1;
   /** Frames kept; older ones are dropped, and `maxSamplingDraws` still covers them. */
   const MAX_FRAMES = 4000;
+  /**
+   * The first frames are never dropped: frame 0 holds the first render and the
+   * one shadow pass, which is where the judge reads that the books cast. A
+   * headless desktop with a GPU runs far past 60 fps and filled the cap before
+   * a 300-book page was read, which dropped frame 0 and read as no casting.
+   */
+  const KEPT_FROM_START = 10;
 
   // WebGL enums, as the specification fixes them. Read as literals rather than
   // off a context so a hook installed before any context exists can use them.
@@ -127,6 +134,8 @@ export function samplingHook(): void {
     dropped: 0,
     maxSamplingDraws: 0,
     readyFrame: null as number | null,
+    /** The last frame anything linked in, kept even when that frame is dropped. */
+    lastLinkFrame: null as number | null,
     linkFailures: 0,
     contextLost: false,
     contexts: 0,
@@ -360,6 +369,7 @@ export function samplingHook(): void {
               const verdict = classify(this, program);
               verdicts.push(verdict);
               open.links += 1;
+              state.lastLinkFrame = open.frame;
               // A failed relink leaves the old executable in place, so the old
               // verdict still describes what a draw with it runs.
               if (verdict.linked || !programs.has(program)) programs.set(program, verdict);
@@ -402,7 +412,7 @@ export function samplingHook(): void {
     closed.push(frozen);
     state.maxSamplingDraws = Math.max(state.maxSamplingDraws, frozen.samplingDraws);
     if (closed.length > MAX_FRAMES) {
-      closed.shift();
+      closed.splice(KEPT_FROM_START, 1);
       state.dropped += 1;
     }
     open = bucket(open.frame + 1);
@@ -438,16 +448,15 @@ export function samplingHook(): void {
 
   root['__samplingHook'] = {
     version: VERSION,
-    /** Frames since the program set last changed, counted from the ready frame. */
+    /**
+     * Closed frames since the program set last changed, counted from the ready
+     * frame. Frames are numbered without gaps, so this is arithmetic on frame
+     * numbers and holds whether or not the frames themselves were dropped.
+     */
     settledFor: (): number => {
       if (state.readyFrame === null) return 0;
-      let frames = 0;
-      for (let index = closed.length - 1; index >= 0; index -= 1) {
-        const frame = closed[index];
-        if (frame === undefined || frame.links > 0 || frame.frame < state.readyFrame) break;
-        frames += 1;
-      }
-      return frames;
+      const from = Math.max(state.readyFrame, (state.lastLinkFrame ?? -1) + 1);
+      return Math.max(0, open.frame - from);
     },
     /** Everything, as plain data; the open frame last, since a read never lands mid-frame. */
     read: () => {
@@ -466,6 +475,7 @@ export function samplingHook(): void {
           samplers: verdict.samplers,
         })),
         readyFrame: state.readyFrame,
+        lastLinkFrame: state.lastLinkFrame,
         linkFailures: state.linkFailures,
         contextLost: state.contextLost,
         contexts: state.contexts,

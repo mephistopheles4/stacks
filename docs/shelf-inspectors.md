@@ -115,7 +115,13 @@ ten historic probes keep their flat spellings because `docs/progress.md`
 documents them with measured results, and everything else rides in `?tune=`.
 `?receivers=all` joined them as an eleventh, for their reason: it is how
 `?shadows=1` still reaches what it drew before the books stopped reading the map
-([ADR-0088](adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)).
+([ADR-0088](adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)), and
+it is G60's control. **Two old probes mean what they always meant against a
+different default** since real-time shadows became every visitor's
+([ADR-0090](adr/0090-real-time-shadows-are-the-default.md)): `?shadows=1` asks
+for what a fresh device gets anyway, and overrides a remembered fallback for
+one load; `?shadows=0` is the painted shelf, which is what a device that lost
+its context shows.
 
 **A control must not lie, and that is the whole design.** `applySettings`
 returns an `ApplyReport` — `applied`, `needsRebuild`, `needsReload`, `refused` —

@@ -6,8 +6,9 @@ shadow map, the page writes one record, redraws the shelf painted, and later
 loads start painted. The decision is
 [ADR-0091](../adr/0091-a-lost-context-falls-back-to-painted-shadows.md); the
 change before this one is [the cover shade](./2026-09-24-the-cover-shade.md).
-Real-time shadows are still off by default in this change: the default flips
-after it, and must not ship before it.
+Real-time shadows were still off by default in this change: the default flipped
+after it, in [real-time shadows by default](./2026-09-25-real-time-shadows-by-default.md),
+and was not to ship before it.
 
 ## The answer first
 
