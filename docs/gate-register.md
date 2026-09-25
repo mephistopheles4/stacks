@@ -6158,11 +6158,12 @@ so a stale one is a red G19 rather than a silent wrong pointer.
 3. **The arithmetic.** `framing.test.ts` feeds the old world-unit range through
    the same clearance check that holds the shipped one, and 17 shelves fail it.
 
-⚠️ **Not yet observed on a runner.** Every number above came from Windows Chrome
-on a real GPU. CI renders through SwiftShader, and the gate's first CI run is
-its first software-rasterised reading. The floor is a ratio against a control
-rendered by the same rasteriser in the same run, which is the reason to expect
-it to travel. That is an expectation, not a measurement.
+**It travels to a runner.** The numbers above came from Windows Chrome on a real
+GPU. CI renders through SwiftShader, and its first run on
+[#384](https://github.com/mephistopheles4/stacks/pull/384) read the control at
+67.6, the large library at 47.6 and the plant at 0.0: a ratio of 0.70, the same
+as the GPU's. The floor is a ratio against a control drawn by the same
+rasteriser in the same run, and that is why it could be expected to travel.
 
 - **Weakening** — **exposed, in three constants.** `LIT_FLOOR`,
   `MIN_CONTROL_CONTRAST` and `MIN_LARGE_ROWS` each make the gate vacuous at
