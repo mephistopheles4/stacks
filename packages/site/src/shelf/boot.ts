@@ -307,11 +307,20 @@ export async function boot(
     return true;
   };
 
+  /**
+   * Whether the address a reload would load asks for real-time shadows, which
+   * beats the record (ADR-0091 item 3) — so no sentence may promise that the
+   * reload comes back painted. Read at the moment of asking, not at boot: the
+   * panel rewrites the address as it is dialled.
+   */
+  const addressAsksForShadows = (): boolean =>
+    readSettings(new URLSearchParams(window.location.search)).shadows?.enabled === true;
+
   const tell = (notice: Notice, state: FallbackState): void => {
     // A redraw the recovery counts as drawn can still have halted on its first
     // frame; `settleNotice` reads the live shelf rather than trusting the word.
     if (notice === 'clear') settleNotice(surface, handle);
-    else showNotice(surface, noticeFor(notice, state));
+    else showNotice(surface, noticeFor(notice, state, addressAsksForShadows()));
   };
 
   // URL (partial) → the total object the shelf runs, folded onto the base the
@@ -363,6 +372,7 @@ export async function boot(
             : handle.settings.shadows.enabled
               ? 'real-time'
               : 'painted',
+          addressAsksForShadows(),
         ),
       record: {
         exists: () => readRecord(store, Date.now()) !== undefined,

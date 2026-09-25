@@ -390,6 +390,27 @@ describe('describeFallback', () => {
     expect(describeFallback(state, mode)).toBe(line);
   });
 
+  it('promises no painted reload to an address whose ?shadows=1 beats the record', () => {
+    // The record chooses only the base (ADR-0091 item 3), so a tester re-running
+    // `?shadows=1` who reloads as told samples the map again, and loses one more
+    // context towards Chrome's block on the origin.
+    const refused: FallbackState = {
+      kind: 'refused',
+      via: 'fresh',
+      lostAt: 12_000,
+      remembered: 'yes',
+    };
+
+    const line = describeFallback(refused, 'painted', true);
+    expect(line).not.toContain('reload comes back painted');
+    expect(line).toBe(
+      'lost — no restore and no new canvas; remembered, but ?shadows=1 beats the record: ' +
+        'reload without it for painted',
+    );
+    // An address that does not ask keeps the promise.
+    expect(describeFallback(refused, 'painted', false)).toContain('reload comes back painted');
+  });
+
   it('says there is no shelf rather than naming a mode nothing is drawn in', () => {
     // A browser that refused the first context, on a device with a record: the
     // page draws nothing, and `painted` would name a picture that is not there.

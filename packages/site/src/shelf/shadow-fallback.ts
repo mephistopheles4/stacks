@@ -323,8 +323,18 @@ export type DrawMode = 'real-time' | 'painted' | 'no shelf';
  * `mode` is read off the live shelf rather than the state, so the line never
  * names a mode the page is not in — the panel can turn shadows on over a
  * remembered record, and the line then says so.
+ *
+ * `addressAsksForShadows` is whether the address a reload would load carries
+ * `?shadows=1`. The record chooses only the base and the URL is folded on top
+ * (ADR-0091 item 3), so such a reload samples the map whatever was remembered,
+ * and "reload comes back painted" would send a tester straight back into the
+ * configuration that just lost its context.
  */
-export function describeFallback(state: FallbackState, mode: DrawMode): string {
+export function describeFallback(
+  state: FallbackState,
+  mode: DrawMode,
+  addressAsksForShadows = false,
+): string {
   switch (state.kind) {
     case 'none':
       return mode;
@@ -352,9 +362,17 @@ export function describeFallback(state: FallbackState, mode: DrawMode): string {
     case 'refused':
       return (
         `lost — ${state.via === 'fresh' ? 'no restore and no new canvas' : 'restored, and the redraw failed'}; ` +
-        `${state.remembered === 'yes' ? 'reload comes back painted' : 'reload to retry'}${unremembered(state)}`
+        `${reloadAfter(state.remembered, addressAsksForShadows)}${unremembered(state)}`
       );
   }
+}
+
+/** What a reload does after a refused redraw — see `describeFallback`. */
+function reloadAfter(remembered: Remembered, addressAsksForShadows: boolean): string {
+  if (remembered !== 'yes') return 'reload to retry';
+  return addressAsksForShadows
+    ? 'remembered, but ?shadows=1 beats the record: reload without it for painted'
+    : 'reload comes back painted';
 }
 
 function day(epochMs: number): string {

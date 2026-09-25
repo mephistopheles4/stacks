@@ -179,16 +179,32 @@ const FAILED_MESSAGE =
 const FAILED_REMEMBERED_MESSAGE =
   'The browser reset the shelf’s 3D canvas and would not give it another. Reload to bring it back — it will come back with painted shadows.';
 
-/** The sentence for one of the fallback's notices. `clear` is not a sentence. */
-export function noticeFor(notice: Exclude<Notice, 'clear'>, state: FallbackState): string {
+// The record was written, and the address beats it: `?shadows=1` is folded on
+// top of the base the record chose (ADR-0091 item 3), so the promise above would
+// be false for exactly the tester re-running the reproduction.
+const FAILED_ADDRESS_BEATS_RECORD_MESSAGE =
+  'The browser reset the shelf’s 3D canvas and would not give it another. Reload without ?shadows=1 to bring it back with painted shadows.';
+
+/**
+ * The sentence for one of the fallback's notices. `clear` is not a sentence.
+ *
+ * `addressAsksForShadows` is whether the address a reload would load carries
+ * `?shadows=1` — read when the sentence is shown, since the panel rewrites it.
+ */
+export function noticeFor(
+  notice: Exclude<Notice, 'clear'>,
+  state: FallbackState,
+  addressAsksForShadows = false,
+): string {
   switch (notice) {
     case 'lost':
       return LOST_MESSAGE;
     case 'redrawing':
       return REDRAWING_MESSAGE;
     case 'failed':
-      return 'remembered' in state && state.remembered === 'yes'
-        ? FAILED_REMEMBERED_MESSAGE
-        : FAILED_MESSAGE;
+      if (!('remembered' in state) || state.remembered !== 'yes') return FAILED_MESSAGE;
+      return addressAsksForShadows
+        ? FAILED_ADDRESS_BEATS_RECORD_MESSAGE
+        : FAILED_REMEMBERED_MESSAGE;
   }
 }

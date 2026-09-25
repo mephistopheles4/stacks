@@ -5,11 +5,13 @@ import {
   ContextRefused,
   mountFailed,
   NOTICE_CLASS,
+  noticeFor,
   settleNotice,
   SHADER_MESSAGE,
   showNotice,
   UNAVAILABLE_MESSAGE,
 } from './shelf-notice.ts';
+import type { FallbackState } from './shadow-fallback.ts';
 
 /**
  * The notice and the canvas it stands in for, on a hand-built page.
@@ -194,6 +196,41 @@ describe('settling the notice for the live shelf', () => {
 
     expect(p.notices.map((notice) => notice.textContent)).toEqual(['would not give it another']);
     expect(p.visibility()).toBe('hidden');
+  });
+});
+
+describe('the refused redraw’s sentence', () => {
+  const REFUSED: FallbackState = {
+    kind: 'refused',
+    via: 'fresh',
+    lostAt: 12_000,
+    remembered: 'yes',
+  };
+
+  it('promises a painted reload when the record was written and the address does not beat it', () => {
+    expect(noticeFor('failed', REFUSED, false)).toContain('it will come back with painted shadows');
+  });
+
+  it('tells an address carrying ?shadows=1 to reload without it, and promises nothing else', () => {
+    // `?shadows=1` beats the record on the next load (ADR-0091 item 3), so the
+    // promise would send a tester straight back into the configuration that
+    // just lost its context.
+    const sentence = noticeFor('failed', REFUSED, true);
+
+    expect(sentence).not.toContain('it will come back with painted shadows');
+    expect(sentence).toBe(
+      'The browser reset the shelf’s 3D canvas and would not give it another. ' +
+        'Reload without ?shadows=1 to bring it back with painted shadows.',
+    );
+  });
+
+  it('promises nothing when nothing was remembered, whatever the address', () => {
+    const probe: FallbackState = { ...REFUSED, remembered: 'probe' };
+
+    expect(noticeFor('failed', probe, true)).toBe(
+      'The browser reset the shelf’s 3D canvas and would not give it another. Reload to bring it back.',
+    );
+    expect(noticeFor('failed', probe, false)).toBe(noticeFor('failed', probe, true));
   });
 });
 

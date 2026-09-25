@@ -29,7 +29,9 @@
    real-time shadows on over a record, `?shadows=0` forces painted with or
    without one, and a URL that says nothing follows the record. The precedence,
    highest first: the URL's `?shadows=`, then the record, then
-   `DEFAULT_SETTINGS`.
+   `DEFAULT_SETTINGS`. So nothing the page says about the next load may promise
+   painted to an address carrying `?shadows=1`: after a refused redraw that
+   page is told to reload without it, in the notice and in the black box.
 4. **Only an observed failure writes.** A loss writes a record only when the
    live settings sample the map, the page is visible and no program failed to
    link. A painted page, a hidden page and a shader-link failure write nothing
