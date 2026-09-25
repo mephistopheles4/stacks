@@ -36,6 +36,16 @@ import type { FallbackState, Remembered } from './shadow-fallback.ts';
  * fallback above, because a restore would otherwise resume every book reading
  * the map. It only skips the write, so the probe does not paint the device's
  * plain page for 30 days.
+ *
+ * ## A program that will not link falls back the same way
+ *
+ * The default page links the bookcase's PCF program, and on 1 August a painted
+ * plane on the Pixel "compiles clean and will not link" under `?shadows=1`. A
+ * shelf that samples the map and halts on a link failure is taken exactly like
+ * a loss — the record first, unless a probe, then a painted redraw, once — but
+ * **at once and on the same canvas**, because nothing was lost: the context is
+ * there to draw on, and a restore will never come. A link failure on a painted
+ * shelf keeps its halt and its sentence, as does one after a fallback has run.
  */
 
 export type Notice = 'lost' | 'redrawing' | 'clear' | 'failed';
@@ -49,7 +59,11 @@ export interface Loss {
   readonly sampling: boolean;
   /** A hidden tab makes no draws, so the sampling fault cannot have caused it. */
   readonly visible: boolean;
-  /** A program that would not link stops the shelf and takes the context with it. */
+  /**
+   * The lost shelf had halted on a program that would not link, which on some
+   * hardware takes the context with it a moment later. `shaderFailed` has
+   * already decided that failure, so the loss says nothing of its own.
+   */
   readonly shaderFailed: boolean;
   /**
    * The live settings are a shadow probe rather than the shipped shadows
@@ -58,6 +72,9 @@ export interface Loss {
    */
   readonly probe: boolean;
 }
+
+/** What the page knew when a program would not link: the same two facts a loss carries. */
+export type ShaderFailure = Pick<Loss, 'sampling' | 'probe'>;
 
 export interface RecoveryOptions {
   readonly waitMs: number;
@@ -85,14 +102,26 @@ export interface Recovery {
    * is safe: nothing about this page's loss involved the shadow map.
    */
   restored(): 'handled' | 'resume';
+  /**
+   * A program would not link, and the shelf has halted.
+   *
+   * ⚠️ **Never from inside three's render**: the redraw disposes the halted
+   * renderer, and the failure is reported while that renderer is still walking
+   * its render list. `boot.ts` calls this from a microtask.
+   */
+  shaderFailed(failure: ShaderFailure): void;
   state(): FallbackState;
 }
 
-/** The states a fallback has already started from. A loss in any of them is not a second chance. */
+/**
+ * The states a fallback has already started from. A loss or a link failure in
+ * any of them is not a second chance.
+ */
 const ATTEMPTED: ReadonlySet<FallbackState['kind']> = new Set([
   'waiting',
   'restored',
   'fresh-canvas',
+  'link-failed',
   'refused',
 ]);
 
@@ -113,6 +142,12 @@ export function createRecovery(options: RecoveryOptions): Recovery {
     options.notify(drawn ? 'clear' : 'failed', state);
   };
 
+  // ⚠️ **The record first, synchronously, before anything else.** On the Pixel
+  // the whole GPU process exits with the context, and whatever the page does
+  // next may not get to run. A probe asks nothing of storage.
+  const rememberUnless = (probe: boolean): Remembered =>
+    probe ? 'probe' : attempt(() => options.remember(), false) ? 'yes' : 'refused';
+
   const timedOut = (): void => {
     if (state.kind !== 'waiting') return;
     const { lostAt, remembered } = state;
@@ -127,6 +162,12 @@ export function createRecovery(options: RecoveryOptions): Recovery {
 
   return {
     lost(loss: Loss): void {
+      // A halted shelf's loss follows its link failure, which `shaderFailed`
+      // has already decided — and whatever sentence that left up, the more
+      // specific one, is not buried under the generic loss. Before the loop
+      // guard, because a painted redraw can halt too.
+      if (loss.shaderFailed) return;
+
       // The loop guard. A page gets one fallback: a second loss after it, or a
       // loss of the painted shelf it drew, only says so.
       if (ATTEMPTED.has(state.kind)) {
@@ -134,22 +175,14 @@ export function createRecovery(options: RecoveryOptions): Recovery {
         return;
       }
 
-      // Not this fault. Today's behaviour: a notice and nothing written. A shader
-      // failure keeps its own, more specific, sentence.
-      if (!loss.sampling || !loss.visible || loss.shaderFailed) {
-        if (!loss.shaderFailed) options.notify('lost', state);
+      // Not this fault. Today's behaviour: a notice and nothing written.
+      if (!loss.sampling || !loss.visible) {
+        options.notify('lost', state);
         return;
       }
 
-      // ⚠️ **The record first, synchronously, before anything else.** On the
-      // Pixel the whole GPU process exits with the context, and whatever the
-      // page does next may not get to run. A probe's loss asks nothing of
-      // storage, and falls back all the same.
-      const remembered: Remembered = loss.probe
-        ? 'probe'
-        : attempt(() => options.remember(), false)
-          ? 'yes'
-          : 'refused';
+      // A probe's loss falls back all the same.
+      const remembered = rememberUnless(loss.probe);
       state = { kind: 'waiting', lostAt: options.now(), remembered };
       options.notify('redrawing', state);
       timer = options.setTimer(timedOut, options.waitMs);
@@ -169,6 +202,24 @@ export function createRecovery(options: RecoveryOptions): Recovery {
         drawn,
       );
       return 'handled';
+    },
+
+    shaderFailed(failure: ShaderFailure): void {
+      // One attempt a page, and a painted shelf's link failure is not this
+      // fault: both keep the halt and the shader's sentence.
+      if (ATTEMPTED.has(state.kind) || !failure.sampling) return;
+
+      const remembered = rememberUnless(failure.probe);
+      const failedAt = options.now();
+      // The same canvas, now: the context was not lost, so there is nothing to
+      // wait for and no reason to ask the browser for another.
+      const drawn = attempt(() => options.remount('same'), false);
+      settle(
+        drawn
+          ? { kind: 'link-failed', failedAt, remembered }
+          : { kind: 'refused', via: 'link-failed', lostAt: failedAt, remembered },
+        drawn,
+      );
     },
 
     state(): FallbackState {

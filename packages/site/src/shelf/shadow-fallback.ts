@@ -13,7 +13,7 @@ import {
  * shadow map, and what kills it is not known (ADR-0088). The shelf now ships
  * the one configuration measured to survive there, but a driver that loses it
  * anyway must not lose it on every page load. So when a context is lost while the shelf samples the map,
- * the page redraws with painted shadows and writes **one small record**, and
+ * or a program will not link there, the page redraws with painted shadows and writes **one small record**, and
  * later loads read it and start painted. A page running a shadow probe redraws
  * the same way and writes nothing (`runsShippedShadows`).
  *
@@ -255,11 +255,14 @@ export type Remembered = 'yes' | 'refused' | 'probe';
 /**
  * Where one page stands, from its first mount to however a loss settled.
  *
- * The first four are decided at load. The last four happen to one page after a
- * loss, and each says whether the record was written — see `Remembered`.
+ * The first four are decided at load. The last five happen to one page after a
+ * loss, or after a program that would not link while the shelf sampled the map
+ * (`link-failed`, and `refused` by way of it), and each says whether the record
+ * was written — see `Remembered`.
  *
- * `lostAt` and `restoredAfter` are milliseconds since the page started, as
- * `performance.now()` reads them.
+ * `lostAt`, `failedAt` and `restoredAfter` are milliseconds since the page
+ * started, as `performance.now()` reads them. A `refused` state's `lostAt` is
+ * when the fallback began, which for `via: 'link-failed'` is the link failure.
  */
 export type FallbackState =
   | { readonly kind: 'none' }
@@ -280,9 +283,18 @@ export type FallbackState =
       readonly remembered: Remembered;
     }
   | {
+      /** Redrawn painted on the same canvas, at once: nothing was lost. */
+      readonly kind: 'link-failed';
+      readonly failedAt: number;
+      readonly remembered: Remembered;
+    }
+  | {
       readonly kind: 'refused';
-      /** Which rebuild the browser would not give a context to. */
-      readonly via: 'same' | 'fresh';
+      /**
+       * Which redraw got no shelf: on the restored canvas, on a new one, or on
+       * the same canvas after a link failure.
+       */
+      readonly via: 'same' | 'fresh' | 'link-failed';
       readonly lostAt: number;
       readonly remembered: Remembered;
     };
@@ -359,11 +371,28 @@ export function describeFallback(
         `${mode} — lost at ${seconds(state.lostAt)}, no restore in ${seconds(state.waited)}, ` +
         `redrawn on a new canvas${unremembered(state)}`
       );
+    case 'link-failed':
+      return (
+        `${mode} — a program would not link at ${seconds(state.failedAt)}, ` +
+        `redrawn painted${unremembered(state)}`
+      );
     case 'refused':
       return (
-        `lost — ${state.via === 'fresh' ? 'no restore and no new canvas' : 'restored, and the redraw failed'}; ` +
+        `${refusedVia(state.via)}; ` +
         `${reloadAfter(state.remembered, addressAsksForShadows)}${unremembered(state)}`
       );
+  }
+}
+
+function refusedVia(via: 'same' | 'fresh' | 'link-failed'): string {
+  switch (via) {
+    case 'fresh':
+      return 'lost — no restore and no new canvas';
+    case 'same':
+      return 'lost — restored, and the redraw failed';
+    case 'link-failed':
+      // Nothing was lost; saying so would name a failure that did not happen.
+      return 'stopped — a program would not link, and the painted redraw failed';
   }
 }
 

@@ -34,9 +34,10 @@
    page is told to reload without it, in the notice and in the black box.
 4. **Only an observed failure writes.** A loss writes a record only when the
    live settings sample the map, the page is visible and no program failed to
-   link. A painted page, a hidden page and a shader-link failure write nothing
-   and keep the behaviour a loss had before this record: a notice, and a resume
-   in place, or the link failure's halt. **And only a loss of the shipped
+   link. A painted page and a hidden page write nothing and keep the behaviour
+   a loss had before this record: a notice, and a resume in place. A loss of a
+   shelf that had halted on a link failure writes nothing either, because
+   item 9 has already decided that failure. **And only a loss of the shipped
    shadows writes.** A page running a shadow probe — any shadow setting but the
    on/off switch away from what ships, `?shadows=1&receivers=all` among them —
    still redraws painted, once, and writes nothing: the record's one effect is
@@ -57,6 +58,15 @@
    put there by hand on that device is not dropped for equalling the base.
 8. **`?debug` shows it and can undo it.** The black box gains a `fallback` line
    and a `forget` button, shown only while a record exists.
+9. **A program that will not link while the shelf samples the map falls back
+   the same way.** The record first, under item 4's probe rule, then a painted
+   redraw, once — but **at once and on the same canvas**, since nothing was
+   lost and no restore will come. The fallback starts from a microtask,
+   because three reports the failure from inside its own render, inside
+   `mountShelf` on the first frame, and the redraw disposes that renderer. A
+   link failure on a painted shelf, or after a fallback has run, keeps its halt
+   and its own sentence, and nothing clears that sentence while the live shelf
+   is halted.
 
 ## Context
 
@@ -129,8 +139,16 @@ the runs: [a lost context falls back to painted](../log/2026-09-25-a-lost-contex
   fails too loses one more context on its next plain load, and that loss
   writes. It is the cheaper of the two mistakes: the other takes real-time
   shadows from a device that runs them, for 30 days.
-- **A shader-link failure is not covered.** It keeps its halt and its own
-  sentence and writes nothing. Whether it should also fall back is open.
+- **A link failure on the shipped shelf paints the device for 30 days**, as a
+  loss does (item 9). Before real-time shadows shipped, the default page
+  compiled no program that samples the map, so a driver that will not link one
+  still drew painted; halting there wrote nothing, and every load died the same
+  way. The device evidence is thin — on 1 August a painted plane on the Pixel
+  *"compiles clean and will not link"* under `?shadows=1`, and this change's
+  own phone runs of the default page did not reproduce it — so the cost is
+  paid only by a device that shows the failure. G60's `link failure` case
+  stages it on a desktop by appending a compile error to every program three
+  compiles with the shadow map on; the phone's cause is not staged.
 - **The black box's promise narrows.** `diagnostics.ts` said nothing is written
   to a visitor's device unless they ask. That stays true of the black box; the
   shelf now writes this one record, after an observed failure, and says so

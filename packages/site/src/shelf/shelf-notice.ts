@@ -165,25 +165,29 @@ export function mountFailed(
   return BROKEN_MESSAGE;
 }
 
-// The fallback's three. They say what the page is doing about it, and still not
-// why: nothing the page can observe names a cause. `LOST_MESSAGE` stays for a
-// loss the fallback does not own, and for a second loss after it.
+// The fallback's. They say what the page is doing about it, and still not why:
+// nothing the page can observe names a cause. `LOST_MESSAGE` stays for a loss
+// the fallback does not own, and for a second loss after it.
 const REDRAWING_MESSAGE =
   'The browser reset the shelf’s 3D canvas. Redrawing it with painted shadows…';
 
-const FAILED_MESSAGE =
-  'The browser reset the shelf’s 3D canvas and would not give it another. Reload to bring it back.';
+// A failure notice is what happened, then what a reload does. What happened
+// depends on how the fallback began: a link failure lost nothing, so "the
+// browser reset the shelf’s 3D canvas" would be false there.
+const LOST_AND_REFUSED = 'The browser reset the shelf’s 3D canvas and would not give it another.';
+const UNLINKED_AND_REFUSED =
+  'This device would not compile the shelf’s shaders, and the painted redraw failed too.';
+
+const RELOAD = 'Reload to bring it back.';
 
 // Only when the record was written: a promise about the next load that storage
 // refusing would make false.
-const FAILED_REMEMBERED_MESSAGE =
-  'The browser reset the shelf’s 3D canvas and would not give it another. Reload to bring it back — it will come back with painted shadows.';
+const RELOAD_PAINTED = 'Reload to bring it back — it will come back with painted shadows.';
 
 // The record was written, and the address beats it: `?shadows=1` is folded on
 // top of the base the record chose (ADR-0091 item 3), so the promise above would
 // be false for exactly the tester re-running the reproduction.
-const FAILED_ADDRESS_BEATS_RECORD_MESSAGE =
-  'The browser reset the shelf’s 3D canvas and would not give it another. Reload without ?shadows=1 to bring it back with painted shadows.';
+const RELOAD_WITHOUT_PROBE = 'Reload without ?shadows=1 to bring it back with painted shadows.';
 
 /**
  * The sentence for one of the fallback's notices. `clear` is not a sentence.
@@ -201,10 +205,15 @@ export function noticeFor(
       return LOST_MESSAGE;
     case 'redrawing':
       return REDRAWING_MESSAGE;
-    case 'failed':
-      if (!('remembered' in state) || state.remembered !== 'yes') return FAILED_MESSAGE;
-      return addressAsksForShadows
-        ? FAILED_ADDRESS_BEATS_RECORD_MESSAGE
-        : FAILED_REMEMBERED_MESSAGE;
+    case 'failed': {
+      const happened =
+        'via' in state && state.via === 'link-failed' ? UNLINKED_AND_REFUSED : LOST_AND_REFUSED;
+      return `${happened} ${reloadSentence(state, addressAsksForShadows)}`;
+    }
   }
+}
+
+function reloadSentence(state: FallbackState, addressAsksForShadows: boolean): string {
+  if (!('remembered' in state) || state.remembered !== 'yes') return RELOAD;
+  return addressAsksForShadows ? RELOAD_WITHOUT_PROBE : RELOAD_PAINTED;
 }

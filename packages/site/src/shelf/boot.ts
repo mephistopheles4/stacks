@@ -216,9 +216,28 @@ export async function boot(
           // on a program that would not link, which keeps its sentence.
           if (recovery?.restored() !== 'handled') settleNotice(surface, handle);
         },
-        onShaderFailure: () => {
+        onShaderFailure: (_report, running) => {
+          // One frame can fail several programs, and each one reports.
+          if (shaderFailed) return;
           shaderFailed = true;
           showNotice(surface, SHADER_MESSAGE);
+
+          // A shelf sampling the map falls back painted, as a loss does. Read
+          // off the settings running now, since the panel turns shadows on and
+          // off live; a probe's failure writes nothing (`runsShippedShadows`).
+          const unlinked = {
+            sampling: samplesShadowMap(running),
+            probe: !runsShippedShadows(running),
+          };
+          // ⚠️ **A microtask, not a call.** This runs inside three's render —
+          // inside `mountShelf` itself when the first frame fails — and the
+          // redraw disposes that renderer mid-walk. The microtask runs once the
+          // stack has unwound: after the render returns, or on the first mount,
+          // after `createRecovery` below, since nothing between here and there
+          // awaits. That is also why `recovery` is read in it and not here.
+          queueMicrotask(() => {
+            recovery?.shaderFailed(unlinked);
+          });
         },
       });
     } catch (error) {

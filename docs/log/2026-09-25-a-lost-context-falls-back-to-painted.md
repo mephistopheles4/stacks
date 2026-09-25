@@ -30,7 +30,11 @@ and was not to ship before it.
   real browser in `pnpm smoke:render`, and two more since: a shadow probe's
   loss, which must write no record, and the refused redraw,
   which left the page white until
-  [the fix below](#the-white-page-after-a-refusal).
+  [the fix below](#the-white-page-after-a-refusal). Review added two cases
+  that break programs rather than lose a context: a painted redraw that will
+  not link keeps the shader's sentence, and a link failure on the shipped
+  shelf redraws painted and writes the record (ADR-0091 item 9). The runs
+  below predate both.
 
 ## What was built
 

@@ -234,6 +234,27 @@ describe('the refused redraw’s sentence', () => {
   });
 });
 
+describe('the sentence after a program would not link', () => {
+  it('names the shader rather than a reset canvas when the painted redraw fails', () => {
+    // Nothing was lost: "The browser reset the shelf’s 3D canvas" would be false.
+    const state: FallbackState = {
+      kind: 'refused',
+      via: 'link-failed',
+      lostAt: 400,
+      remembered: 'yes',
+    };
+
+    expect(noticeFor('failed', state, false)).toBe(
+      'This device would not compile the shelf’s shaders, and the painted redraw failed too. ' +
+        'Reload to bring it back — it will come back with painted shadows.',
+    );
+    expect(noticeFor('failed', { ...state, remembered: 'probe' }, false)).toBe(
+      'This device would not compile the shelf’s shaders, and the painted redraw failed too. ' +
+        'Reload to bring it back.',
+    );
+  });
+});
+
 describe('a mount that threw', () => {
   it('blames the browser only for a context it refused, and logs nothing three has not', () => {
     const log = vi.fn();

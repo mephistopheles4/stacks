@@ -384,6 +384,21 @@ describe('describeFallback', () => {
       'painted',
       'lost — no restore and no new canvas; reload to retry; a shadow probe, not remembered',
     ],
+    [
+      { kind: 'link-failed', failedAt: 400, remembered: 'yes' },
+      'painted',
+      'painted — a program would not link at 0.4s, redrawn painted',
+    ],
+    [
+      { kind: 'link-failed', failedAt: 400, remembered: 'probe' },
+      'painted',
+      'painted — a program would not link at 0.4s, redrawn painted; a shadow probe, not remembered',
+    ],
+    [
+      { kind: 'refused', via: 'link-failed', lostAt: 400, remembered: 'yes' },
+      'no shelf',
+      'stopped — a program would not link, and the painted redraw failed; reload comes back painted',
+    ],
   ];
 
   it.each(cases)('describes %j', (state, mode, line) => {

@@ -726,7 +726,10 @@ async function clickAnyBook(page: Page): Promise<boolean> {
  *
  * The `redraw halts` case breaks every program the painted redraw compiles, by
  * appending a compile error to its source (`BREAK_PROGRAMS`), and holds the page
- * to keeping the shader's sentence up over a shelf that will never draw.
+ * to keeping the shader's sentence up over a shelf that will never draw. The
+ * `link failure` case breaks only the programs compiled with the shadow map on,
+ * from the first frame, and holds the page to falling back painted and writing
+ * the record — a link failure on the shipped shelf is taken as a loss is.
  *
  * Each case runs in a browser context of its own, so a record one writes
  * cannot leak into the next — or into the page every check above measured.
@@ -880,6 +883,7 @@ async function checkContextLossFallback(
     ['refused', refusedRedraw, REFUSED_BY_THREE],
     ['probe loss', probeLoss],
     ['redraw halts', redrawHalts, LINK_FAILED],
+    ['link failure', linkFailure, LINK_FAILED],
   ];
 
   for (const [name, run, expected] of cases) {
@@ -1206,6 +1210,58 @@ async function redrawHalts(page: Page, origin: string): Promise<string> {
   must(!state.canvasShown, "the halted redraw's frozen canvas is shown");
 
   return 'redraw halted, shader sentence kept, canvas hidden';
+}
+
+/**
+ * (J) a program that will not link while the shelf samples the map falls back
+ * painted at once, on the same canvas, and remembers.
+ *
+ * The default page links the bookcase's PCF program, and on 1 August a painted
+ * plane on the Pixel "compiles clean and will not link" under `?shadows=1`.
+ * Halting there wrote nothing, so a device whose driver will not link the
+ * shadow program got a dead shelf on every load. The break is on from the first
+ * frame, so the page this case reaches is the redraw: that the real-time shelf
+ * sampled is read off the fallback's own state, which only a sampling shelf's
+ * failure can reach.
+ */
+async function linkFailure(page: Page, origin: string): Promise<string> {
+  await page.evaluateOnNewDocument(`window.__breakPrograms = 'shadow';`);
+  await page.evaluateOnNewDocument(BREAK_PROGRAMS);
+  await visit(page, origin, REAL_TIME_PATH);
+  await waitForState(
+    page,
+    `window.__shelf.fallback() === 'link-failed'`,
+    5000,
+    'painted redraw after the link failure',
+  );
+
+  const state = await readState(page);
+  must(
+    state.record !== null,
+    'a link failure on the shipped shelf wrote no record, so every load halts the same way',
+  );
+  must(state.profile.includes('shadows=off'), `the redraw samples the map: ${state.profile}`);
+  must(state.canvases === 1, `${String(state.canvases)} canvases after the redraw, not 1`);
+  must(state.notice === '', `a notice stayed over the redrawn shelf: "${state.notice}"`);
+  must(state.canvasShown, 'the shelf was redrawn on a canvas that is still hidden');
+  must(
+    (await page.evaluate('window.__shelf.shaderErrors.length')) === 0,
+    'the painted redraw failed to link too',
+  );
+  const loops = await oneLoop(page, 'after the painted redraw');
+
+  await visit(page, origin, '/');
+  const reloaded = await readState(page);
+  must(
+    reloaded.fallback === 'remembered' && reloaded.profile.includes('shadows=off'),
+    `a reload did not start painted from the record: ${JSON.stringify(reloaded)}`,
+  );
+  must(
+    (await page.evaluate('window.__shelf.shaderErrors.length')) === 0,
+    'the remembered load failed to link',
+  );
+
+  return `redrawn painted in place (${loops}), record written, reload remembered`;
 }
 
 async function visit(page: Page, origin: string, path: string): Promise<void> {

@@ -315,8 +315,14 @@ export interface MountOptions {
   /**
    * A shader program would not link, and the shelf has stopped rather than
    * spend the context arguing about it.
+   *
+   * Handed the settings running **at the moment of the failure**, as
+   * `onContextLost` is: whether the shelf was sampling the shadow map decides
+   * whether the page falls back painted. ⚠️ **Called from inside `render()`** —
+   * inside `mountShelf` itself when the first frame fails — so nothing here may
+   * dispose this shelf synchronously. See `context-recovery.ts`.
    */
-  readonly onShaderFailure?: (report: readonly string[]) => void;
+  readonly onShaderFailure?: (report: readonly string[], running: ShelfSettings) => void;
 }
 
 /** Anything a mount makes that outlives a throw unless it is let go of. */
@@ -657,7 +663,7 @@ function assembleShelf(
 
     halted = true;
     cancelAnimationFrame(frame);
-    options.onShaderFailure?.(shaderErrors);
+    options.onShaderFailure?.(shaderErrors, settings);
   };
 
   let sizedTo = { width: 0, height: 0 };

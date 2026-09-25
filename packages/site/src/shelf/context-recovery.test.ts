@@ -4,6 +4,7 @@ import {
   type Loss,
   type Notice,
   type Recovery,
+  type ShaderFailure,
   type Surface,
 } from './context-recovery.ts';
 import type { FallbackState } from './shadow-fallback.ts';
@@ -275,6 +276,91 @@ describe('one attempt a page', () => {
     expect(remounts(h.calls)).toEqual(['remount fresh']);
     expect(h.calls.filter((call) => call === 'remember')).toHaveLength(1);
     expect(h.calls.at(-1)).toBe('notify lost (fresh-canvas)');
+  });
+});
+
+describe('a program that will not link while the shelf samples the map', () => {
+  // The default page links the bookcase's PCF program, and on 1 August a
+  // painted plane on the Pixel "compiles clean and will not link" under
+  // `?shadows=1`. Halting there wrote nothing, so every load died the same way.
+  const SHIPPED: ShaderFailure = { sampling: true, probe: false };
+
+  it('remembers first, then redraws painted on the same canvas at once', () => {
+    // The context is alive: nothing was lost, so there is no restore to wait for.
+    const h = harness();
+    h.recovery.shaderFailed(SHIPPED);
+
+    expect(h.calls).toEqual(['remember', 'remount same', 'notify clear (link-failed)']);
+    expect(h.recovery.state()).toEqual({
+      kind: 'link-failed',
+      failedAt: 10_000,
+      remembered: 'yes',
+    });
+    expect(h.pendingTimers()).toBe(0);
+  });
+
+  it('redraws a probe painted too, and asks nothing of storage', () => {
+    const h = harness();
+    h.recovery.shaderFailed({ ...SHIPPED, probe: true });
+
+    expect(h.calls).toEqual(['remount same', 'notify clear (link-failed)']);
+    expect(h.recovery.state()).toMatchObject({ kind: 'link-failed', remembered: 'probe' });
+  });
+
+  it('says it failed when the painted redraw gets no shelf, and never tries again', () => {
+    const h = harness({ remount: () => false });
+    h.recovery.shaderFailed(SHIPPED);
+
+    expect(h.calls.at(-1)).toBe('notify failed (refused)');
+    expect(h.recovery.state()).toEqual({
+      kind: 'refused',
+      via: 'link-failed',
+      lostAt: 10_000,
+      remembered: 'yes',
+    });
+
+    h.recovery.shaderFailed(SHIPPED);
+    expect(remounts(h.calls)).toEqual(['remount same']);
+  });
+
+  it('keeps the halt and its sentence for a painted shelf: no record, no redraw', () => {
+    const h = harness();
+    h.recovery.shaderFailed({ ...SHIPPED, sampling: false });
+
+    expect(h.calls).toEqual([]);
+    expect(h.recovery.state()).toEqual({ kind: 'none' });
+  });
+
+  it('keeps the halt after a fallback has run: one attempt a page', () => {
+    const h = harness();
+    h.recovery.lost(SAMPLING);
+    h.recovery.restored();
+    const before = h.calls.length;
+
+    h.recovery.shaderFailed(SHIPPED);
+    expect(h.calls.slice(before)).toEqual([]);
+  });
+
+  it('meets a loss of the painted redraw with a notice and nothing else', () => {
+    const h = harness();
+    h.recovery.shaderFailed(SHIPPED);
+    const before = h.calls.length;
+
+    h.recovery.lost({ ...SAMPLING, sampling: false });
+    expect(h.calls.slice(before)).toEqual(['notify lost (link-failed)']);
+    expect(h.recovery.restored()).toBe('resume');
+  });
+
+  it('lets a halted shelf’s loss keep the shader’s sentence, even after a fallback', () => {
+    // The painted redraw halting too, then taking its context with it: the
+    // generic loss sentence would bury the only useful one.
+    const h = harness();
+    h.recovery.lost(SAMPLING);
+    h.recovery.restored();
+    const before = h.calls.length;
+
+    h.recovery.lost({ ...SAMPLING, sampling: false, shaderFailed: true });
+    expect(h.calls.slice(before)).toEqual([]);
   });
 });
 
