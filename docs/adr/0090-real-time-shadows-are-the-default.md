@@ -62,9 +62,13 @@ and not time. **It is a count of draws whose program samples the shadow map**:
   and a second sampling program lowers the ceiling.
 
 ADR-0088 built the configuration that survived, ADR-0091 built what a device
-does when it does not, and on the phone the default page as it now ships —
-`?shadows=1` on that build — held 120 s at 60 fps with no loss. A Galaxy S25
-(Adreno) and the iOS simulator held `?shadows=1` fine even before any of this.
+does when it does not, and on the phone `?shadows=1` on that build held 120 s
+at 60 fps with no loss. On this build the default page itself held 120 s in
+four runs of four, measured by `scripts/phone-check.ts`, with G60's counts taken
+on the device green there too: 1 program, 2 sampling draws a frame — while
+`?receivers=all` lost its context 1.2 s in, through the same script. A Galaxy
+S25 (Adreno) and the iOS simulator held `?shadows=1` fine even before any of
+this.
 The narrative, including what did not work, is in
 [the log](../log/2026-09-25-real-time-shadows-by-default.md).
 

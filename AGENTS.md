@@ -279,11 +279,13 @@ page says at the top; there is no confidence figure on it and there will not be
 one ([ADR-0062](docs/adr/0062-the-dashboard-is-provisioned-from-the-repo.md)).
 
 **The rest is in [`docs/commands.md`](docs/commands.md)** — read it before you
-deploy, cut a worktree, read a mutation score, sync the trend store, or widen a
-lint rule. It carries `deploy:site`'s `main`-only branch guard and what it
-verifies after upload, `worktree`'s three cases and the one shared `.env`, why a
-mutation score is a trend and not a gate, what `trend:sync` refuses, and why
-`lint` loads a config file of its own rather than the counter's.
+deploy, cut a worktree, read a mutation score, sync the trend store, widen a
+lint rule, or change shadows, a material, the bookcase's geometry or three. It
+carries `deploy:site`'s `main`-only branch guard and what it verifies after
+upload, `worktree`'s three cases and the one shared `.env`, why a mutation score
+is a trend and not a gate, what `trend:sync` refuses, why `lint` loads a config
+file of its own rather than the counter's, and `scripts/phone-check.ts` — the
+check only a phone can run, and not a `pnpm` script.
 
 CLI commands — `pnpm stacks <cmd>`:
 

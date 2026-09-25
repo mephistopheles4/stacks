@@ -19,12 +19,13 @@ before it made this safe, in order: [the woodwork is one mesh](./2026-09-24-the-
   sampling draws a steady frame at the 50-book fixture and at a generated
   300-book one, 17 shelves tall; `?receivers=all` reads 5 programs and 302 draws
   and fails, as it must. The same on a local GPU and under SwiftShader.
-- **Five plants each turned it red**, and the first one found a defect in the
+- **Six plants each turned it red**, and the first one found a defect in the
   gate's own hook before it could ship: frame 0, where the shadow pass lives,
   was dropped from a long page's record.
-- **The phone was not run on this build.** Its default page is the
-  configuration `?shadows=1` ran on the previous build, which held 120 s at
-  60 fps.
+- **On the phone, the default page held 120 s four times out of four**, and
+  G60's own counts, taken on the device, were green there too: 1 program, 2
+  sampling draws a frame. `?receivers=all` lost its context 1.2 s in, through
+  the same script, as it did in the investigation.
 
 ## The device, and what it measured
 
@@ -136,12 +137,48 @@ every named function inside the hook's body into a call to a module-level
 none: measured, the bare body throws `__name is not defined`. The source the
 page gets defines the helper in a block of its own.
 
+## The phone check
+
+`scripts/phone-check.ts` is the phone investigation's harness made permanent:
+the same adb and DevTools route, the counting hook G60 uses, and a verdict that
+refuses a run proving nothing — a page hidden for a poll, or one that started
+painted from a lost-context record, which the script now clears before every
+run. It is not a `pnpm` script; [`docs/commands.md`](../commands.md) says why
+and what it does to the phone.
+
+Its first runs, 2026-09-25, on the Pixel 10 Pro XL over USB, against this build
+serving the 50-book fixture — one run of the default page, then `--matrix`:
+
+| run | verdict | time | sampling programs | sampling draws a frame | casting draws |
+| --- | --- | --- | --- | --- | --- |
+| default page | survived, in front for 102 of 102 polls | 120 s | 1 | 2 | 42 |
+| default page ×3 (`--matrix`) | survived, 102 of 102 polls each | 120 s each | 1 | 2 | 42 |
+| `?shadows=0` | survived, 102 of 102 polls | 120 s | 0 | 0 | 0 |
+| `?receivers=all` | **lost**, 1.2 s after navigation | 5 s | 5–6 | 302 | 42 |
+
+The reproduction died the way the investigation recorded: `Restarting GPU
+process due to unrecoverable error. Context was lost`, `GPU process exited
+unexpectedly: exit_code=0`, and the page's attempt at a new context refused
+with `Web page caused context loss and was blocked`. The script exited 0, since
+the one run allowed to fail was the one that did.
+
+- **The GPU as the page sees it** was `ANGLE (Imagination Technologies,
+  PowerVR D-Series DXT-48-1536, OpenGL ES 3.2)`, and `--gpuinfo` read the driver
+  build it leaves out, `25.3@6908880`, on the GLES backend with no user flags.
+  Chrome `153.0.8010.53`.
+- **The profile** was `shadows=pcf@2048 receivers=bookcase painted=on` — the
+  default page as every visitor now gets it.
+- **Its counts are the desktop's.** The phone's hook read the same 1 program,
+  2 draws and 42 casting draws that G60 reads under SwiftShader.
+- **The loss path was observed, not only planted.** The script's own spec plants
+  a loss; the reproduction is the first real one it read, and it read it from
+  the context-loss event, since a shelf that lost its context stops drawing.
+- **It leaves the phone carrying a lost-context record** for the served origin,
+  and that origin blocked until Chrome is next force-stopped — which the next
+  run does first, and clears the record too.
+
 ## What is still not known
 
-- **Whether the phone holds the default page.** It resolves to the same
-  settings `?shadows=1` did on the build the phone held for 120 s, so it
-  compiles the same programs — an argument, not a run. `scripts/phone-check.ts`
-  is the check.
 - **Any other GPU's edge.** G60 pins the configuration that survived on one
   driver, not survival. The Galaxy S25 and the iOS simulator held the old
   `?shadows=1`, with five programs reading the map; neither has run this build.

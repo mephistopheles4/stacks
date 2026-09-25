@@ -142,7 +142,17 @@ function frames(): {
 interface Hook {
   read(): SamplingSnapshot;
   settledFor(): number;
+  status(): {
+    frame: number;
+    contextLost: boolean;
+    lostAt: number | null;
+    linkFailures: number;
+    contexts: number;
+  };
 }
+
+/** What the hook listens for on the window, so a test can fire it. */
+let listeners: Map<string, () => void>;
 
 let clock: ReturnType<typeof frames>;
 /** A fresh subclass per test, so each install wraps a prototype nobody wrapped before. */
@@ -179,6 +189,10 @@ beforeEach(() => {
   vi.stubGlobal('WebGLRenderingContext', undefined);
   vi.stubGlobal('__shelf', shelf);
   vi.stubGlobal('requestAnimationFrame', clock.request);
+  listeners = new Map();
+  vi.stubGlobal('addEventListener', (type: string, listener: () => void) => {
+    listeners.set(type, listener);
+  });
 });
 
 afterEach(() => {
@@ -357,6 +371,35 @@ describe('the page hook — frames', () => {
     expect(snapshot.frames).toHaveLength(4001);
     expect(snapshot.lastLinkFrame).toBe(0);
     expect(hook.settledFor()).toBe(4099);
+  });
+
+  it('hears a loss the page never draws after, from the event', () => {
+    // The shelf stops its loop on a loss, so no draw would ever notice; a phone
+    // run needs the moment it died.
+    const hook = install();
+    expect(hook.status()).toMatchObject({ contextLost: false, lostAt: null });
+
+    listeners.get('webglcontextlost')?.();
+
+    expect(hook.status().contextLost).toBe(true);
+    expect(hook.status().lostAt).toBeTypeOf('number');
+    expect(hook.read().contextLost).toBe(true);
+  });
+
+  it('reports a few numbers cheaply, for a phone to poll', () => {
+    const hook = install();
+    const gl = new Gl();
+    use(gl, program(LIT, [], false));
+    loop(gl, (context) => context.drawArrays());
+    clock.run(16);
+
+    expect(hook.status()).toEqual({
+      frame: 1,
+      contextLost: false,
+      lostAt: null,
+      linkFailures: 1,
+      contexts: 1,
+    });
   });
 
   it('stops counting on a lost context, and says it was lost', () => {

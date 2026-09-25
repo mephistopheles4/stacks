@@ -121,7 +121,10 @@ different default** since real-time shadows became every visitor's
 ([ADR-0090](adr/0090-real-time-shadows-are-the-default.md)): `?shadows=1` asks
 for what a fresh device gets anyway, and overrides a remembered fallback for
 one load; `?shadows=0` is the painted shelf, which is what a device that lost
-its context shows.
+its context shows. To run any of them on a phone and get a verdict rather than a
+look, use `scripts/phone-check.ts` —
+[`docs/commands.md`](commands.md#scriptsphone-checkts--the-check-only-a-phone-can-run)
+says what it does to the phone first.
 
 **A control must not lie, and that is the whole design.** `applySettings`
 returns an `ApplyReport` — `applied`, `needsRebuild`, `needsReload`, `refused` —

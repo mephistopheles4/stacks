@@ -134,6 +134,11 @@ const ALLOWED = [
   'scripts/lib/markdown-lint.ts',
   'scripts/make-50-book-fixture.ts',
   'scripts/make-fixture-covers.ts',
+  // Writes one run's result, screenshot and logcat into `artifacts/phone/`, and
+  // checks a build exists before serving it. The page it loads reads whatever
+  // library the last build staged, through `lib/serve-dist.ts`; it never opens
+  // a note and could not name a vault.
+  'scripts/phone-check.ts',
   // Rasterises the committed brand SVGs into the icon PNGs. Its inputs are two
   // files it names literally and its output is `packages/site/public/` — it
   // takes no path from anywhere and has no way to reach a vault.

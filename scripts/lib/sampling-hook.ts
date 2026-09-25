@@ -138,6 +138,8 @@ export function samplingHook(): void {
     lastLinkFrame: null as number | null,
     linkFailures: 0,
     contextLost: false,
+    /** `performance.now()` when a loss was first seen, by event or by a draw. */
+    lostAt: null as number | null,
     contexts: 0,
     nextId: 0,
     openTs: undefined as number | undefined,
@@ -170,15 +172,28 @@ export function samplingHook(): void {
     state.contexts += 1;
   };
 
+  const markLost = (): void => {
+    state.contextLost = true;
+    state.lostAt ??= performance.now();
+  };
+
   const lost = (gl: object): boolean => {
     try {
       const answer = (gl as Gl).isContextLost();
-      if (answer) state.contextLost = true;
+      if (answer) markLost();
       return answer;
     } catch {
       return false;
     }
   };
+
+  // A lost context may never be drawn to again — the shelf stops its loop —
+  // so the event is what tells a phone run when it died. Captured on the
+  // window, since the event does not bubble up from the canvas.
+  const listen = root['addEventListener'];
+  if (typeof listen === 'function') {
+    Reflect.apply(listen, globalThis, ['webglcontextlost', markLost, true]);
+  }
 
   const classify = (gl: Gl, program: WebGLProgram): Program => {
     const samplers: string[] = [];
@@ -458,6 +473,14 @@ export function samplingHook(): void {
       const from = Math.max(state.readyFrame, (state.lastLinkFrame ?? -1) + 1);
       return Math.max(0, open.frame - from);
     },
+    /** A few numbers, cheap enough to poll once a second from a phone. */
+    status: () => ({
+      frame: open.frame,
+      contextLost: state.contextLost,
+      lostAt: state.lostAt,
+      linkFailures: state.linkFailures,
+      contexts: state.contexts,
+    }),
     /** Everything, as plain data; the open frame last, since a read never lands mid-frame. */
     read: () => {
       const frames = [...closed, freeze(open)];
