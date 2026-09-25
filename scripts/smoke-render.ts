@@ -15,10 +15,15 @@ import { spawn } from 'node:child_process';
 // `import type`, so nothing of three's reaches this node script — the whole
 // point is that the shape cannot drift from the handle it is read off.
 import type { ShelfStats } from '../packages/site/src/shelf/scene.ts';
+// Value imports, and safe ones: both modules are pure data and arithmetic with
+// no `three` and no DOM at module scope, so the gate reads the same key, wait
+// and default the page does rather than a copy that could drift from them.
+import { FALLBACK_KEY, RESTORE_WAIT_MS } from '../packages/site/src/shelf/shadow-fallback.ts';
+import { DEFAULT_SETTINGS } from '../packages/site/src/shelf/shelf-settings.ts';
 import { createServer, type Server } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import puppeteer, { type Page } from 'puppeteer-core';
+import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { shellCommand } from './lib/run.ts';
 
@@ -133,6 +138,9 @@ async function main(): Promise<void> {
       const cardOpened = await clickABook(page);
       const viewer = await checkCoverViewer(page);
       const sheet = await checkSheet(page);
+      // Last, and in browser contexts of its own, so the record it writes can
+      // never reach the page every check above measured.
+      const fallback = await checkContextLossFallback(browser, origin);
 
       report({
         bookCount: Number(bookCount),
@@ -143,6 +151,7 @@ async function main(): Promise<void> {
         cardOpened,
         viewer,
         sheet,
+        fallback,
       });
     } finally {
       await browser.close();
@@ -503,6 +512,356 @@ async function clickAnyBook(page: Page): Promise<boolean> {
   return false;
 }
 
+/* -------------------------------------------------------------------------- */
+
+/**
+ * G59 — a lost context falls back to painted shadows, once, and remembers it.
+ *
+ * On the Pixel 10 Pro XL a context lost while the shelf samples the shadow map
+ * came back after about 1.15 s and died again after the same count of sampling
+ * draws, because the old restore path resumed the same programs. So a loss now
+ * rebuilds the shelf painted — on the restored canvas, or on a new one when no
+ * restore arrives — and writes a record the next load starts painted from.
+ * Every one of those is a line whose removal still draws a shelf on a desktop,
+ * which is why a browser has to drive them.
+ *
+ * ⚠️ **A synthetic loss is not the phone's loss.** `WEBGL_lose_context` never
+ * restores on its own, never takes the GPU process down and never gets an
+ * origin blocked, so this proves the page's side and nothing about what Chrome
+ * does after a real driver loss. That half is the phone's, recorded in the log.
+ *
+ * Each case runs in a browser context of its own, so a record one writes
+ * cannot leak into the next — or into the page every check above measured.
+ */
+interface FallbackChecked {
+  /** One line per case, printed whether or not it passed. */
+  readonly lines: readonly string[];
+  readonly failures: readonly string[];
+}
+
+/**
+ * A page that samples the shadow map: the plain page once real-time shadows are
+ * the default, and `?shadows=1` until then. Read off the same constant the page
+ * reads, so the case cannot keep testing a painted page after the flip.
+ */
+const REAL_TIME_PATH = DEFAULT_SETTINGS.shadows.enabled ? '/' : '/?shadows=1';
+
+/**
+ * Counts `requestAnimationFrame` callbacks per frame, installed before any page
+ * script runs. Callbacks that run in one frame share its timestamp, so a
+ * disposed shelf's render loop still running beside the new one shows as 2.
+ */
+const COUNT_FRAMES = `(() => {
+  const original = window.requestAnimationFrame.bind(window);
+  const perFrame = new Map();
+  window.__callbacksPerFrame = perFrame;
+  window.requestAnimationFrame = (callback) =>
+    original((time) => {
+      perFrame.set(time, (perFrame.get(time) ?? 0) + 1);
+      callback(time);
+    });
+})()`;
+
+/** Every `setItem` refuses, the way it does with site data blocked or the quota full. */
+const REFUSE_STORAGE = `Storage.prototype.setItem = function () {
+  throw new DOMException('refused by the gate', 'QuotaExceededError');
+};`;
+
+/** The console one-liner the inspectors doc gives, word for word. */
+const LOSE = `(() => {
+  const gl = document.getElementById('shelf-canvas').getContext('webgl2');
+  window.__lc = gl.getExtension('WEBGL_lose_context');
+  window.__lc.loseContext();
+})()`;
+
+const RESTORE = 'window.__lc.restoreContext()';
+
+/** The most render-loop callbacks any one frame ran, over a second of frames. */
+const LOOPS_PER_FRAME = `(async () => {
+  window.__callbacksPerFrame.clear();
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  const counts = [...window.__callbacksPerFrame.values()];
+  return { frames: counts.length, most: counts.length === 0 ? 0 : Math.max(...counts) };
+})()`;
+
+interface PageState {
+  readonly fallback: string | undefined;
+  readonly profile: string;
+  readonly canvases: number;
+  readonly record: string | null;
+  readonly notice: string;
+  readonly visibility: string;
+}
+
+const READ_STATE = `(() => ({
+  fallback: window.__shelf?.fallback(),
+  profile: window.__shelf?.profile ?? '',
+  canvases: document.querySelectorAll('canvas').length,
+  record: localStorage.getItem(${JSON.stringify(FALLBACK_KEY)}),
+  notice: document.querySelector('.shelf-notice')?.textContent ?? '',
+  visibility: document.visibilityState,
+}))()`;
+
+async function checkContextLossFallback(
+  browser: Browser,
+  origin: string,
+): Promise<FallbackChecked> {
+  const lines: string[] = [];
+  const failures: string[] = [];
+
+  const cases: readonly [string, FallbackCase][] = [
+    ['restore', restoreThenReload],
+    ['no restore', noRestore],
+    ['storage refused', storageRefused],
+    ['painted loss', paintedLoss],
+  ];
+
+  for (const [name, run] of cases) {
+    const context = await browser.createBrowserContext();
+    const errors: string[] = [];
+    try {
+      const page = await context.newPage();
+      await page.setViewport(VIEWPORT);
+      page.on('pageerror', (error: unknown) => {
+        errors.push(error instanceof Error ? error.message : String(error));
+      });
+      page.on('console', (message) => {
+        if (message.type() === 'error') errors.push(message.text());
+      });
+      await page.evaluateOnNewDocument(COUNT_FRAMES);
+      lines.push(`${name.padEnd(16)}${await run(page, origin)}`);
+    } catch (error) {
+      lines.push(`${name.padEnd(16)}FAILED`);
+      failures.push(
+        `context loss, ${name}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      await context.close();
+    }
+    if (errors.length > 0) {
+      failures.push(`context loss, ${name}: page errors:\n    ${errors.join('\n    ')}`);
+    }
+  }
+
+  return { lines, failures };
+}
+
+type FallbackCase = (page: Page, origin: string) => Promise<string>;
+
+/**
+ * (A) a restore rebuilds painted on the same canvas, with one render loop;
+ * (B) a reload starts painted from the record; (C) `?shadows=1` still wins.
+ */
+async function restoreThenReload(page: Page, origin: string): Promise<string> {
+  await visit(page, origin, REAL_TIME_PATH);
+  await mustSample(page);
+
+  await page.evaluate(LOSE);
+  await waitForState(
+    page,
+    `localStorage.getItem(${JSON.stringify(FALLBACK_KEY)}) !== null`,
+    5000,
+    'record written by the lost handler',
+  );
+  await page.evaluate(RESTORE);
+  await waitForState(
+    page,
+    `window.__shelf.fallback() === 'restored'`,
+    5000,
+    'painted rebuild on restore',
+  );
+
+  const restored = await readState(page);
+  must(
+    restored.profile.includes('shadows=off'),
+    `the restored shelf still samples the map: ${restored.profile}`,
+  );
+  must(restored.canvases === 1, `${String(restored.canvases)} canvases after a restore, not 1`);
+  must(restored.notice === '', `a notice stayed over the redrawn shelf: "${restored.notice}"`);
+  const loops = await oneLoop(page, 'after the restore');
+
+  await visit(page, origin, '/');
+  const reloaded = await readState(page);
+  must(
+    reloaded.fallback === 'remembered' && reloaded.profile.includes('shadows=off'),
+    `a reload did not start painted from the record: ${JSON.stringify(reloaded)}`,
+  );
+
+  await visit(page, origin, '/?shadows=1');
+  const probed = await readState(page);
+  must(
+    probed.fallback === 'probe-override' && !probed.profile.includes('shadows=off'),
+    `?shadows=1 did not beat the record: ${JSON.stringify(probed)}`,
+  );
+
+  return `restored painted (${loops}), reload remembered, ?shadows=1 probe-override`;
+}
+
+/** (D) no restore: a new canvas, drawn, clickable, and the old one gone. */
+async function noRestore(page: Page, origin: string): Promise<string> {
+  await visit(page, origin, REAL_TIME_PATH);
+  await mustSample(page);
+  await page.evaluate(`window.__oldCanvas = document.getElementById('shelf-canvas')`);
+
+  const lostAt = Date.now();
+  await page.evaluate(LOSE);
+  await waitForState(
+    page,
+    `window.__shelf.fallback() === 'fresh-canvas'`,
+    RESTORE_WAIT_MS + 3000,
+    'painted rebuild on a new canvas',
+  );
+  const waited = Date.now() - lostAt;
+
+  const state = await readState(page);
+  must(state.canvases === 1, `${String(state.canvases)} canvases after the swap, not 1`);
+  must(
+    (await page.evaluate(`document.getElementById('shelf-canvas') !== window.__oldCanvas`)) ===
+      true,
+    'the shelf is still on the lost canvas',
+  );
+  must(state.profile.includes('shadows=off'), `the new shelf samples the map: ${state.profile}`);
+  must(state.notice === '', `a notice stayed over the redrawn shelf: "${state.notice}"`);
+
+  // Textures land and the ResizeObserver sizes the new element.
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  const stats = (await page.evaluate(readCanvasStats)) as Stats;
+  must(
+    stats.distinctColours >= 40 && stats.nonBackgroundPct >= 10,
+    `the new canvas looks blank: ${String(stats.distinctColours)} colours, ` +
+      `${stats.nonBackgroundPct.toFixed(1)}% not background`,
+  );
+  const loops = await oneLoop(page, 'on the new canvas');
+  must(await clickAnyBook(page), 'no book on the new canvas opens the card');
+
+  return (
+    `new canvas after ${String(waited)}ms, ${stats.size}, ${String(stats.distinctColours)} ` +
+    `colours, ${loops}, card opens`
+  );
+}
+
+/** (E) storage refusing every write still falls back, says so, and throws nothing. */
+async function storageRefused(page: Page, origin: string): Promise<string> {
+  await page.evaluateOnNewDocument(REFUSE_STORAGE);
+  await visit(page, origin, `${REAL_TIME_PATH}${REAL_TIME_PATH.includes('?') ? '&' : '?'}debug`);
+  await mustSample(page);
+
+  await page.evaluate(LOSE);
+  await waitForState(
+    page,
+    `window.__shelf.fallback() === 'waiting'`,
+    5000,
+    "loss taken as the fallback's",
+  );
+  await page.evaluate(RESTORE);
+  await waitForState(
+    page,
+    `window.__shelf.fallback() === 'restored'`,
+    5000,
+    'painted rebuild on restore',
+  );
+
+  const state = await readState(page);
+  must(
+    state.record === null,
+    `a record reached storage that refuses writes: ${String(state.record)}`,
+  );
+  must(
+    state.profile.includes('shadows=off'),
+    `the restored shelf samples the map: ${state.profile}`,
+  );
+  await waitForState(
+    page,
+    `document.querySelector('.shelf-diagnostics')?.textContent.includes('not remembered') === true`,
+    3000,
+    'black-box line saying the fallback is not remembered',
+  );
+
+  return 'restored painted, not remembered, no page errors';
+}
+
+/** (F) a painted shelf's loss writes nothing, rebuilds nothing, and resumes in place. */
+async function paintedLoss(page: Page, origin: string): Promise<string> {
+  await visit(page, origin, '/?shadows=0');
+
+  await page.evaluate(LOSE);
+  await waitForState(page, `document.querySelector('.shelf-notice') !== null`, 5000, 'lost notice');
+  // Past the wait, so a rebuild that should not happen has had its chance to.
+  await new Promise((resolve) => setTimeout(resolve, RESTORE_WAIT_MS + 500));
+
+  const lost = await readState(page);
+  must(
+    lost.record === null && lost.fallback === 'none' && lost.canvases === 1,
+    `a painted loss was taken as the fallback's: ${JSON.stringify(lost)}`,
+  );
+
+  await page.evaluate(RESTORE);
+  await waitForState(
+    page,
+    `document.querySelector('.shelf-notice') === null`,
+    5000,
+    'cleared notice after the resume',
+  );
+  const loops = await oneLoop(page, 'after an in-place resume');
+
+  return `notice, no record, no rebuild, resumed in place (${loops})`;
+}
+
+async function visit(page: Page, origin: string, path: string): Promise<void> {
+  await page.goto(`${origin}${path}`, { waitUntil: 'networkidle0', timeout: 30_000 });
+  await page.waitForFunction('window.__shelf?.ready === true', { timeout: 20_000 });
+  // A hidden page's loss is not the fallback's, by design — so make sure the
+  // one under test is the one in front.
+  await page.bringToFront();
+}
+
+async function readState(page: Page): Promise<PageState> {
+  return (await page.evaluate(READ_STATE)) as PageState;
+}
+
+/** Refuses to test the fallback on a page that is not sampling the map, or cannot be seen. */
+async function mustSample(page: Page): Promise<void> {
+  const state = await readState(page);
+  must(
+    !state.profile.includes('shadows=off'),
+    `${REAL_TIME_PATH} does not sample the shadow map, so nothing here tests the fallback: ${state.profile}`,
+  );
+  must(
+    state.visibility === 'visible',
+    `the page is ${state.visibility}, and a hidden page's loss is deliberately not the fallback's`,
+  );
+}
+
+async function oneLoop(page: Page, when: string): Promise<string> {
+  const loops = (await page.evaluate(LOOPS_PER_FRAME)) as { frames: number; most: number };
+  must(loops.frames > 0, `no frame was drawn in a second ${when}`);
+  must(
+    loops.most === 1,
+    `${String(loops.most)} render-loop callbacks in one frame ${when} — a disposed shelf's loop ` +
+      'is still running beside the live one',
+  );
+  return `${String(loops.frames)} frames, 1 loop`;
+}
+
+async function waitForState(
+  page: Page,
+  expression: string,
+  timeout: number,
+  what: string,
+): Promise<void> {
+  try {
+    await page.waitForFunction(expression, { timeout, polling: 50 });
+  } catch {
+    throw new Error(
+      `no ${what} within ${String(timeout)}ms. The page reads ${JSON.stringify(await readState(page))}`,
+    );
+  }
+}
+
+function must(condition: boolean, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
+
 /**
  * G35 — the enhanced card, against `docs/spec/enhanced-card.md` §11.
  *
@@ -580,9 +939,11 @@ function report(result: {
   cardOpened: CardOpened | undefined;
   viewer: CoverViewerChecked | undefined;
   sheet: SheetChecked | undefined;
+  fallback: FallbackChecked;
 }): void {
-  const { bookCount, bookcaseOverflow, stats, cost, errors, cardOpened, viewer, sheet } = result;
-  const failures: string[] = [];
+  const { bookCount, bookcaseOverflow, stats, cost, errors, cardOpened, viewer, sheet, fallback } =
+    result;
+  const failures: string[] = [...fallback.failures];
 
   const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
 
@@ -629,6 +990,8 @@ function report(result: {
           }`
     }`,
   );
+  console.log(`context loss (G59), each case in a browser context of its own`);
+  for (const line of fallback.lines) console.log(`  ${line}`);
   console.log(`screenshot        ${OUTPUT}`);
 
   if (viewer === undefined) {

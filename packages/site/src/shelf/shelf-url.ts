@@ -186,9 +186,16 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
 
   /**
    * `?shadows=1` — turns on the real-time shadow map and the light that casts
-   * it. Off by default: the shelf paints its shading instead (ADR-0016). Since
-   * September 2026 it means *books cast, the bookcase receives* — see
-   * `?receivers` below.
+   * it. Still off by default in this build: the shelf paints its shading
+   * instead (ADR-0016). Since September 2026 it means *books cast, the bookcase
+   * receives* — see `?receivers` below.
+   *
+   * **The URL beats the lost-context record, in both directions.** A device
+   * that lost a context while sampling the map remembers it and starts painted
+   * (`shadow-fallback.ts`); `?shadows=1` still turns real-time shadows on over
+   * that record, and `?shadows=0` forces painted with or without one. Nothing
+   * here reads the record: `boot.ts` folds this partial onto a base, and the
+   * record only chooses the base.
    *
    * `?shadowmap=1024` — edge of the depth target; the default is 2048 (16 MB).
    *
@@ -246,10 +253,21 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
  * Only differences from the shipped defaults are written, so a shelf running
  * defaults has a clean address and a dialled one has a URL you can read, paste
  * into an issue, or send to a phone.
+ *
+ * ⚠️ **The probes diff against `base`, the settings this page started from**,
+ * which is `PAINTED_BASE` on a device carrying a lost-context record. Diffing
+ * against the shipped defaults there would write `?shadows=0` into the address
+ * bar of a page that never asked for it — one device's fallback in a URL that
+ * gets pasted into an issue and opened on every other device. A difference
+ * from the base is what this visitor dialled; the base itself is not theirs to
+ * share.
  */
-export function writeSettings(settings: ShelfSettings): void {
+export function writeSettings(
+  settings: ShelfSettings,
+  base: ShelfSettings = DEFAULT_SETTINGS,
+): void {
   const params = new URLSearchParams(window.location.search);
-  const d = DEFAULT_SETTINGS;
+  const d = base;
 
   const probe = (name: string, differs: boolean, value: string): void => {
     if (differs) params.set(name, value);

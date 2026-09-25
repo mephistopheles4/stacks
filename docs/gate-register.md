@@ -6128,3 +6128,67 @@ rather than observed once.
   `ADR-0075` mention in prose pointing at whichever decision now holds the
   number. G29 (`doc-links`) resolves a Markdown link and reads no bare mention,
   so a stale citation is invisible to both. Disposition `accepted`.
+
+### G59 — `context-loss-fallback`
+
+**Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts) — `checkContextLossFallback`
+**Date:** 2026-09-25
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number was taken against a re-fetched `origin/main`, every local
+branch and every remote one, with no pull request open.** Rows are gapless, so
+this took G59 rather than the G60 the design proposed; the ticket's
+sampling-program gate, #381's sixth item, takes the next one.
+
+**Observed-red**, three ways, each planted in the source, run through `pnpm
+smoke:render`, and reverted with the file hash checked against its backup:
+
+1. **Both `disposed` guards removed** from `scene.ts` — the restored handler's
+   and `renderLoop`'s. The restore case went red: `2 render-loop callbacks in
+   one frame after the restore — a disposed shelf's loop is still running
+   beside the live one`. Removing **either one alone stayed green**, because
+   each stops the disposed loop on its own. That redundancy is deliberate and
+   stated on the row.
+2. **`remember` claiming a write it never made.** The restore case went red
+   waiting for the record, and the storage case went red because the black box
+   no longer said *not remembered*.
+3. **The new shelf mounted on the lost canvas instead of a new one.** Both
+   loss cases went red: the browser handed the lost canvas no context, and the
+   state read `refused`.
+
+The control is the same run with the plants reverted: four cases green, one
+loop a frame in each.
+
+- **Weakening** — **clean; no allowlist and no tolerance of its own.** The
+  non-blank floor is the main render's (40 colours, 10% not background), the
+  waits are ceilings a passing run clears in well under a second, and the
+  wait for a new canvas is `RESTORE_WAIT_MS` plus a margin, imported rather
+  than copied. Page errors are console `error`s and exceptions only, which is
+  the main render's rule too: the `INVALID_OPERATION` warnings a same-canvas
+  rebuild logs on the phone do not count. Disposition `gated`.
+- **Satisfying the letter** — **exposed, in one place.** *Painted* is read off
+  the live shelf's `profile`, which is its settings, and not off the programs
+  it compiled. A rebuild that mounted painted settings and still sampled the
+  map would pass here. The ticket's sampling-program gate reads what the
+  renderer compiled, and closes this. Disposition `accepted`.
+- **Routing around** — **exposed, and the route is the one the row states.**
+  A staged `WEBGL_lose_context` loss never restores on its own, never exits
+  the GPU process and never gets the page blocked. On the Pixel 10 Pro XL a
+  real loss did all of that but restore, in 4 of 4 runs, so the in-page
+  rebuild this gate proves never happened there; what worked was the record,
+  on the next load. That is recorded in the log, and no gate here can run it.
+  `?solo` has no fallback and is not driven. Disposition `accepted`.
+- **Vacuous green** — **gated.** A case refuses to start on a page that does
+  not sample the map or is not visible, since a loss there is not the
+  fallback's by design and every assertion after it would pass over nothing.
+  The loop count needs at least one frame, and the painted case waits past
+  the 2.5 s before it reads, so a rebuild that should not happen has had its
+  chance. The page it loses is read off `DEFAULT_SETTINGS`, so flipping the
+  default does not leave the cases testing a painted page. Disposition `gated`.
+- **Decay** — **it decays into a red on the hooks and into silence on the
+  browser.** Renaming `__shelf.fallback`, `profile` or the record key is red,
+  because the cases evaluate them or import them. ⚠️ **What rots quietly is
+  Chrome's side**: the block, the missing restore and the GPU string without a
+  driver build are one dated measurement on one phone. A Chrome that starts
+  restoring, or stops blocking, changes what a visitor sees and moves nothing
+  here. Disposition `accepted`.

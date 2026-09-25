@@ -287,9 +287,21 @@ export interface MountOptions {
    * enough, or when the driver resets. Without a handler the canvas simply stops
    * updating and the shelf becomes a frozen or blank rectangle with nothing
    * saying why, which is precisely how this failed in the wild.
+   *
+   * Handed the settings the shelf is running **at the moment of the loss**,
+   * not the ones it was mounted with: the panel turns shadows on and off live,
+   * and whether the lost shelf was sampling the shadow map is what decides
+   * whether the page falls back. See `context-recovery.ts`.
    */
-  readonly onContextLost?: () => void;
-  /** The GPU gave it back. Only ever fires if the loss was prevented-default. */
+  readonly onContextLost?: (running: ShelfSettings) => void;
+  /**
+   * The GPU gave it back. Only ever fires if the loss was prevented-default.
+   *
+   * ⚠️ **This callback may dispose the shelf**, and then the shelf stays down:
+   * nothing resumes and no frame is drawn on the disposed renderer. That is how
+   * the page replaces a shelf that was sampling the shadow map with a painted
+   * one, rather than resuming the configuration that lost the context.
+   */
   readonly onContextRestored?: () => void;
   /**
    * A shader program would not link, and the shelf has stopped rather than
@@ -468,6 +480,18 @@ export function mountShelf(
    */
   let halted = false;
 
+  /**
+   * Set once, by `dispose()`, and read by everything that could draw again.
+   *
+   * ⚠️ **Two places can start a frame after a dispose, and both check it.** The
+   * restored handler calls back into the page before it resumes, and the page
+   * may dispose this shelf right there; without the guard the handler would
+   * then resume a render loop on a disposed renderer, beside the new shelf's —
+   * two loops. `renderLoop` checks it too, so no path into it can revive a
+   * disposed shelf.
+   */
+  let disposed = false;
+
   let frame = 0;
   let drawn = 0;
 
@@ -509,7 +533,7 @@ export function mountShelf(
   renderer.info.autoReset = false;
 
   const renderLoop = (): void => {
-    if (halted) return;
+    if (halted || disposed) return;
     frame = requestAnimationFrame(renderLoop);
     controls.update();
     renderer.info.reset();
@@ -591,15 +615,23 @@ export function mountShelf(
    * good and `webglcontextrestored` never fires. Calling `preventDefault` is the
    * whole of what makes a restore possible — without it there is nothing to hand
    * back, whatever the driver does next.
+   *
+   * ⚠️ **three already does it.** `WebGLRenderer` registers its own listeners in
+   * its constructor, before this one, and its handler calls `preventDefault`
+   * itself (`WebGLRenderer.js:387-389` and `:1101-1108`). This call is redundant
+   * today and kept on purpose: the restore this page depends on should not rest
+   * on a line in somebody else's handler.
    */
   const handleContextLost = (event: Event): void => {
     event.preventDefault();
     cancelAnimationFrame(frame);
-    options.onContextLost?.();
+    options.onContextLost?.(settings);
   };
 
   const handleContextRestored = (): void => {
     options.onContextRestored?.();
+    // The page may have replaced this shelf inside that callback. See `disposed`.
+    if (disposed) return;
     // The one-shot shadow map died with the old context, and `autoUpdate` is off,
     // so without this the restored shelf renders with no shadows at all — and
     // silently, since nothing else would report it.
@@ -619,8 +651,6 @@ export function mountShelf(
       renderFrame = () => post?.render();
     });
   }
-
-  let disposed = false;
 
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);

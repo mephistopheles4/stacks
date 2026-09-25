@@ -1,9 +1,24 @@
 import type { Library, LibraryBook } from '@stacks/core';
 import { hideCard, showCard, type CardElements } from './card.ts';
 import { mountSheet } from './card-sheet.ts';
+import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
 import { mountCoverViewer, type CoverViewerElements } from './cover-viewer.ts';
 import { mountDiagnostics } from './diagnostics.ts';
 import { mountShelf, type ShelfHandle, type ShelfStats } from './scene.ts';
+import {
+  browserStore,
+  describeFallback,
+  forgetRecord,
+  initialState,
+  PAINTED_BASE,
+  readRecord,
+  RESTORE_WAIT_MS,
+  samplesShadowMap,
+  startingBase,
+  writeRecord,
+  type FallbackKind,
+  type FallbackState,
+} from './shadow-fallback.ts';
 import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
 import { bookLimit, readSettings, soloBook } from './shelf-url.ts';
 
@@ -55,6 +70,10 @@ declare global {
       /** Worst breach of the bookcase's sides, in world units. See `smoke:render`. */
       bookcaseOverflow: number;
       shaderErrors: readonly string[];
+      /** The live shelf's `profile`, so the gate can read what a fallback drew. */
+      readonly profile: string;
+      /** Where the lost-context fallback stands. See `shadow-fallback.ts`. */
+      fallback(): FallbackKind;
       projectBook(index: number): { x: number; y: number } | undefined;
       /**
        * What the renderer is holding, so the gate can report what a change cost.
@@ -88,6 +107,20 @@ export async function boot(
   const debug = params.has('debug');
 
   /**
+   * The lost-context record, read before anything is drawn.
+   *
+   * A device that lost a context while sampling the shadow map starts from
+   * `PAINTED_BASE` rather than the shipped defaults, and the URL is folded on
+   * top — so `?shadows=1` still turns real-time shadows on over the record and
+   * `?shadows=0` still forces painted, with no code of their own. The record
+   * chooses the base and nothing else. See `shadow-fallback.ts`.
+   */
+  const store = browserStore();
+  const record = readRecord(store, Date.now());
+  const asked = readSettings(params);
+  let base = startingBase(record);
+
+  /**
    * `?solo=N` — one book on a turntable instead of the shelf.
    *
    * Returns before anything else is built: there is no card to open, no panel to
@@ -97,39 +130,74 @@ export async function boot(
    *
    * It publishes `window.__solo` instead — the turntable, drivable by number, so
    * that a before-and-after is the same picture twice. See `book-inspector.ts`.
+   * It starts from the same base as the shelf, so a remembered device does not
+   * sample the map here either; it has no fallback of its own.
    */
   const solo = soloBook(params);
   if (solo !== undefined) {
     const { mountBookInspector } = await import('./book-inspector.ts');
-    mountBookInspector(canvas, all, solo, resolveSettings(readSettings(params)));
+    mountBookInspector(canvas, all, solo, resolveSettings(asked, base));
     return undefined;
   }
 
+  /**
+   * The canvas the shelf is drawn on **now**.
+   *
+   * A lost context that is never restored leaves a canvas that hands back the
+   * same dead context for ever, so the fallback may swap a new element in.
+   * ⚠️ **Every closure below reads this, never the `canvas` parameter**: once
+   * the old element is replaced it has no parent, and a notice shown against it
+   * is shown nowhere — a blank rectangle with no sentence.
+   */
+  let surface = canvas;
   let handle: ShelfHandle | undefined;
-  let shaderFailed = false;
   /** Torn down and remade when the panel rebuilds the shelf. */
   let unmountPanel: (() => void) | undefined;
+  /** Set once the panel's chunk has loaded, and only behind `?debug`. */
+  let showPanel: ((current: ShelfHandle) => void) | undefined;
+  /**
+   * Set right after the first mount, because the GPU string it needs comes from
+   * that mount. A context event is dispatched as a task of its own and cannot
+   * arrive before then; `onContextLost` still says so if it ever did.
+   */
+  let recovery: Recovery | undefined = undefined;
 
-  const mount = (settings: ShelfSettings): ShelfHandle | undefined => {
+  const fallback = (): FallbackState => recovery?.state() ?? { kind: 'none' };
+
+  const mount = (
+    settings: ShelfSettings,
+    target: HTMLCanvasElement = surface,
+  ): ShelfHandle | undefined => {
+    // Per mount: a rebuilt shelf has not failed to link anything yet.
+    let shaderFailed = false;
     try {
-      return mountShelf(canvas, books, {
+      return mountShelf(target, books, {
         settings,
         onSelect: (book) => {
           if (book === undefined) hideCard(card);
           else showCard(card, book);
         },
-        onContextLost: () => {
-          // A shader failure takes the context with it a moment later on the
-          // hardware where this happens, and the generic message would land on
-          // top of the specific one and bury the only useful sentence.
-          if (!shaderFailed) showNotice(canvas, LOST_MESSAGE);
+        onContextLost: (running) => {
+          const loss = {
+            sampling: samplesShadowMap(running),
+            visible: document.visibilityState === 'visible',
+            // A shader failure takes the context with it a moment later on the
+            // hardware where this happens, and the generic message would land
+            // on top of the specific one and bury the only useful sentence.
+            shaderFailed,
+          };
+          if (recovery !== undefined) recovery.lost(loss);
+          else if (!shaderFailed) showNotice(surface, LOST_MESSAGE);
         },
         onContextRestored: () => {
-          clearNotice(canvas);
+          // `handled`: this shelf was just replaced by a painted one, inside this
+          // call, and the notice is the recovery's to clear. Otherwise the shelf
+          // resumes in place, which is only ever safe — see `Recovery.restored`.
+          if (recovery?.restored() !== 'handled') clearNotice(surface);
         },
         onShaderFailure: () => {
           shaderFailed = true;
-          showNotice(canvas, SHADER_MESSAGE);
+          showNotice(surface, SHADER_MESSAGE);
         },
       });
     } catch {
@@ -138,15 +206,101 @@ export async function boot(
       // page's renderer and is refusing to try again. The caller does nothing with
       // the rejection (the .astro script may not, by the "no logic in .astro"
       // rule), so an unhandled throw here is a blank page with no explanation.
-      // That is the exact thing the user saw on reload.
-      showNotice(canvas, UNAVAILABLE_MESSAGE);
+      // That is the exact thing the user saw on reload. Each caller says
+      // something different about it, so the sentence is theirs.
       return undefined;
     }
   };
 
-  // URL (partial) → the total object the shelf runs. `shelf-url.ts` owns the
-  // query vocabulary in both directions; nothing else parses or writes it.
-  handle = mount(resolveSettings(readSettings(params)));
+  /** The one way a new shelf becomes the live one. */
+  const adopt = (next: ShelfHandle): void => {
+    handle = next;
+    publish(next, () => fallback().kind);
+    showPanel?.(next);
+  };
+
+  /**
+   * Disposes the lost shelf and draws it again, painted.
+   *
+   * `paintedOf` flips one key and keeps every dial, so the visitor gets the
+   * shelf they had with its shadows painted — not the shipped defaults. The
+   * base moves too: from here this is a painted page, and a URL the panel
+   * writes is a difference from that (`writeSettings`).
+   */
+  const remount = (where: Surface): boolean => {
+    const old = handle;
+    const painted = paintedOf(old?.settings ?? resolveSettings(asked, base));
+    old?.dispose();
+    handle = undefined;
+    base = PAINTED_BASE;
+    return where === 'same' ? remountInPlace(painted) : remountOnFreshCanvas(painted);
+  };
+
+  const remountInPlace = (settings: ShelfSettings): boolean => {
+    const next = mount(settings, surface);
+    if (next === undefined) return false;
+    adopt(next);
+    return true;
+  };
+
+  /**
+   * A new `<canvas>`, because the old one's context is gone for good.
+   *
+   * A shallow clone keeps `id`, `tabindex` and Astro's scoped `data-astro-cid-*`
+   * attribute, so `Shelf.astro`'s `canvas {}` rule still reaches it. It is
+   * mounted while detached — `resize()` returns while the size is 0, and the
+   * shelf's `ResizeObserver` sizes it once it is in the page — and it replaces
+   * the old element only if a context was actually handed out. On failure the
+   * old element stays, so the notice has somewhere to go.
+   */
+  const remountOnFreshCanvas = (settings: ShelfSettings): boolean => {
+    const old = surface;
+    const fresh = old.cloneNode(false);
+    if (!(fresh instanceof HTMLCanvasElement)) return false;
+
+    const next = mount(settings, fresh);
+    if (next === undefined) return false;
+
+    // A restore that still arrives for the old context would reallocate its
+    // buffer at full size, for an element nobody can see.
+    old.width = 1;
+    old.height = 1;
+    old.replaceWith(fresh);
+    surface = fresh;
+    adopt(next);
+    return true;
+  };
+
+  const tell = (notice: Notice, state: FallbackState): void => {
+    if (notice === 'clear') clearNotice(surface);
+    else showNotice(surface, noticeFor(notice, state));
+  };
+
+  // URL (partial) → the total object the shelf runs, folded onto the base the
+  // record chose. `shelf-url.ts` owns the query vocabulary in both directions;
+  // nothing else parses or writes it.
+  handle = mount(resolveSettings(asked, base));
+  if (handle === undefined) showNotice(surface, UNAVAILABLE_MESSAGE);
+
+  const initial = initialState(record, asked.shadows?.enabled, handle?.gpu);
+  // A record from a different GPU string is retired: this load was mounted
+  // painted and stays so, and the next load tries real-time shadows again.
+  if (initial.kind === 'retired') forgetRecord(store);
+
+  recovery = createRecovery({
+    waitMs: RESTORE_WAIT_MS,
+    now: () => performance.now(),
+    setTimer: (run, ms) => window.setTimeout(run, ms),
+    clearTimer: (timer) => {
+      window.clearTimeout(timer);
+    },
+    // The GPU string of the shelf that was lost, which is the one the record
+    // is compared with on the next load.
+    remember: () => writeRecord(store, Date.now(), handle?.gpu),
+    remount,
+    notify: tell,
+    initial,
+  });
 
   // Mounted whether or not the shelf came up: a browser that refused a context
   // is exactly the state worth having a record of, and the record is the only
@@ -157,18 +311,31 @@ export async function boot(
   // on exactly the device and connection where the first seconds of a crash
   // record are the ones worth having. The panel can afford that latency; this
   // cannot.
-  if (debug && canvas.parentElement !== null) {
-    mountDiagnostics(canvas.parentElement, {
+  if (debug && surface.parentElement !== null) {
+    mountDiagnostics(surface.parentElement, {
       books: books.length,
       // A getter, so a rebuild does not leave the black box reading a shelf that
       // was disposed. See `DiagnosticsOptions.handle`.
       handle: () => handle,
+      fallback: () =>
+        describeFallback(
+          fallback(),
+          handle === undefined
+            ? 'no shelf'
+            : handle.settings.shadows.enabled
+              ? 'real-time'
+              : 'painted',
+        ),
+      record: {
+        exists: () => readRecord(store, Date.now()) !== undefined,
+        forget: () => forgetRecord(store),
+      },
     });
   }
 
   if (handle === undefined) return undefined;
 
-  publish(handle);
+  publish(handle, () => fallback().kind);
 
   /**
    * The panel, loaded only if asked for.
@@ -178,30 +345,35 @@ export async function boot(
    * moment postprocessing joins the graph — see #42, which measured a bloom
    * chain at +4.7 KB gzip and adding ambient occlusion at +12.5 KB.
    */
-  if (debug && canvas.parentElement !== null) {
-    const host = canvas.parentElement;
+  if (debug && surface.parentElement !== null) {
+    const host = surface.parentElement;
     const { mountPanel } = await import('./debug-panel.ts');
 
-    const showPanel = (current: ShelfHandle): void => {
+    showPanel = (current: ShelfHandle): void => {
       unmountPanel?.();
       unmountPanel = mountPanel(host, {
         handle: current,
+        base: () => base,
         onRebuild: (settings) => {
           // Dispose before mounting: two live renderers on one canvas is two
           // contexts, and the browser hands out a limited number of those.
           current.dispose();
           const next = mount(settings);
-          if (next === undefined) return;
-          // Reassigned so the black box's getter — and anything else holding one
-          // — follows the live shelf rather than the disposed one.
-          handle = next;
-          publish(next);
-          showPanel(next);
+          if (next === undefined) {
+            handle = undefined;
+            showNotice(surface, UNAVAILABLE_MESSAGE);
+            return;
+          }
+          // Adopted so the black box's getter — and anything else holding one —
+          // follows the live shelf rather than the disposed one.
+          adopt(next);
         },
       });
     };
 
-    showPanel(handle);
+    // Read again after the import: a fallback while the chunk was in flight has
+    // already replaced the shelf, or left none.
+    if (handle !== undefined) showPanel(handle);
   }
 
   /**
@@ -219,7 +391,7 @@ export async function boot(
   const dismiss = (): void => {
     const focusWasInside = card.card.contains(document.activeElement);
     hideCard(card);
-    if (focusWasInside) canvas.focus();
+    if (focusWasInside) surface.focus();
   };
 
   mountSheet({ card: card.card, control: card.dismiss, onDismiss: dismiss });
@@ -247,15 +419,24 @@ export async function boot(
  * handle. A rebuild makes a new one, so without this the gate would be asking a
  * disposed shelf how many books it has.
  */
-function publish(handle: ShelfHandle): void {
+function publish(handle: ShelfHandle, fallback: () => FallbackKind): void {
   window.__shelf = {
     bookCount: handle.bookCount,
     ready: true,
     bookcaseOverflow: handle.bookcaseOverflow,
     shaderErrors: handle.shaderErrors,
+    get profile(): string {
+      return handle.profile;
+    },
+    fallback,
     projectBook: (index) => handle.projectBook(index),
     stats: () => handle.stats(),
   };
+}
+
+/** One key flipped, every dial kept: the shelf the visitor had, painted. */
+function paintedOf(settings: ShelfSettings): ShelfSettings {
+  return resolveSettings({ shadows: { enabled: false } }, settings);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -284,6 +465,31 @@ const SHADER_MESSAGE =
 
 const UNAVAILABLE_MESSAGE =
   "This browser wouldn't give the page a 3D canvas, so the shelf can't be drawn. Reloading usually fixes it.";
+
+// The fallback's three. They say what the page is doing about it, and still not
+// why: nothing the page can observe names a cause. `LOST_MESSAGE` stays for a
+// loss the fallback does not own, and for a second loss after it.
+const REDRAWING_MESSAGE =
+  'The browser reset the shelf’s 3D canvas. Redrawing it with painted shadows…';
+
+const FAILED_MESSAGE =
+  'The browser reset the shelf’s 3D canvas and would not give it another. Reload to bring it back.';
+
+// Only when the record was written: a promise about the next load that storage
+// refusing would make false.
+const FAILED_REMEMBERED_MESSAGE =
+  'The browser reset the shelf’s 3D canvas and would not give it another. Reload to bring it back — it will come back with painted shadows.';
+
+function noticeFor(notice: Exclude<Notice, 'clear'>, state: FallbackState): string {
+  switch (notice) {
+    case 'lost':
+      return LOST_MESSAGE;
+    case 'redrawing':
+      return REDRAWING_MESSAGE;
+    case 'failed':
+      return 'remembered' in state && state.remembered ? FAILED_REMEMBERED_MESSAGE : FAILED_MESSAGE;
+  }
+}
 
 function showNotice(canvas: HTMLCanvasElement, message: string): void {
   const host = canvas.parentElement;

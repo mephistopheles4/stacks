@@ -30,7 +30,8 @@ nothing reading a shadow map survives on the Pixel 10 Pro
 5. **The default page does not change here.** `shadows.enabled` stays `false`
    in this change, so a visitor still gets the painted shading and no shadow
    map. The owner has decided that real-time shadows become the default
-   (#381); that lands separately, with the fallback for a lost context.
+   (#381); that lands separately, after the fallback for a lost context
+   ([ADR-0091](./0091-a-lost-context-falls-back-to-painted-shadows.md)).
 6. **What the books stopped receiving is painted back as the cover shade.** One
    mesh lays a quad on every face-out cover and samples one atlas of masks. A
    mask is the union of three cast shadows: the plank above, the right-hand

@@ -1,16 +1,19 @@
-import { describe, expect, it } from 'vitest';
-import { resolveSettings, DEFAULT_SETTINGS } from './shelf-settings.ts';
-import { bookLimit, readSettings, woodSeed } from './shelf-url.ts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PAINTED_BASE } from './shadow-fallback.ts';
+import { resolveSettings, DEFAULT_SETTINGS, type ShelfSettings } from './shelf-settings.ts';
+import { bookLimit, readSettings, woodSeed, writeSettings } from './shelf-url.ts';
 
 /**
- * The reading half only.
+ * Mostly the reading half.
  *
  * `writeSettings` touches `window.history`, and these run under vitest's node
  * environment. The round trip through a real browser is exercised by hand and
  * recorded in the commit; what is worth pinning here is the *parsing*, because
  * that is where a hand-typed or chat-mangled URL meets the shelf — and every
  * failure mode below is one where the shelf would otherwise look deliberately
- * configured when it had actually mis-read something.
+ * configured when it had actually mis-read something. The one writing rule
+ * pinned, against a stubbed `window`, is that a device's lost-context record
+ * never reaches a URL.
  */
 
 const read = (query: string) => resolveSettings(readSettings(new URLSearchParams(query)));
@@ -302,5 +305,52 @@ describe('woodSeed', () => {
     const absent = resolveSettings(readSettings(new URLSearchParams('')));
     expect(absent.renderer.maxPixelRatio).toBe(DEFAULT_SETTINGS.renderer.maxPixelRatio);
     expect(absent.shadows.mapSize).toBe(DEFAULT_SETTINGS.shadows.mapSize);
+  });
+});
+
+describe('writeSettings against the base the page started from', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** The query `writeSettings` would put in the address bar, starting from `search`. */
+  const written = (settings: ShelfSettings, base?: ShelfSettings, search = '?debug'): string => {
+    let url = '';
+    vi.stubGlobal('window', {
+      location: { search, pathname: '/' },
+      history: {
+        replaceState: (_: unknown, __: string, next: string) => {
+          url = next;
+        },
+      },
+    });
+    writeSettings(settings, base);
+    return url;
+  };
+
+  const realTime = resolveSettings({ shadows: { enabled: true } });
+  const painted = resolveSettings({ shadows: { enabled: false } });
+
+  it('keeps a remembered device out of the URL', () => {
+    // A page that started painted from a lost-context record, still painted:
+    // nothing the visitor dialled, so nothing to write — not `?shadows=0`.
+    expect(written(painted, PAINTED_BASE)).toBe('?debug');
+  });
+
+  it('writes ?shadows=1 when the visitor turns shadows on over a record', () => {
+    // Which is also what reproduces the page: on this device, a URL without it
+    // starts painted.
+    expect(written(realTime, PAINTED_BASE)).toBe('?debug&shadows=1');
+  });
+
+  it('writes the difference from whatever base it is given', () => {
+    // The control: the same painted settings against a real-time base are a
+    // difference, and are written. Without the base argument this is what a
+    // remembered device would have leaked.
+    expect(written(painted, realTime)).toBe('?debug&shadows=0');
+  });
+
+  it('diffs against the shipped defaults when no base is given', () => {
+    expect(written(DEFAULT_SETTINGS)).toBe('?debug');
   });
 });

@@ -70,6 +70,16 @@ lost the shadow sampler
 cast by nothing), band on its own (the backboard has one too), neighbour shadow
 (the older plane down a cover's right-hand edge, which it does not replace).
 
+**Lost-context record**:
+The one small entry a device keeps after the shelf lost its WebGL context while
+sampling the shadow map, so later loads start with painted shadows for 30 days.
+It records a failure this device showed, never a guess about the device, and a
+`?shadows=` in the URL goes around it
+([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
+*Avoid*: blocklist, device flag (nothing is decided by device), crash record
+(that is the black box's), fallback on its own (that is what the page does
+after a loss, in the page).
+
 **Run**:
 A group of touching books sharing one slump angle, because they are resting on
 each other rather than each leaning independently. Broken by a year gap or by a

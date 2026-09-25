@@ -128,3 +128,39 @@ Decisions: [ADR-0032](adr/0032-shelf-settings-are-one-object.md),
 [ADR-0033](adr/0033-painters-follow-the-light.md),
 [ADR-0034](adr/0034-bloom-behind-a-composer.md). Research behind them is in
 [`docs/research/`](research/).
+
+### The lost-context record, on the black box
+
+When the shelf loses its WebGL context while it samples the shadow map, it
+writes one record — `{ v, at, gpu }` under `stacks.shadows.fallback.v1` in
+`localStorage` — redraws painted, and starts painted on later loads for 30 days
+([ADR-0091](adr/0091-a-lost-context-falls-back-to-painted-shadows.md)). It is
+the one thing the shelf writes to a visitor's device without being asked, and
+only after it has seen the loss.
+
+- **The `fallback` line** says where that stands: `real-time`, `painted`, or
+  `no shelf`, then why — `remembered from a lost context on …, retries after …`,
+  `?shadows=1 overrides a record from …`, `record … retired, GPU string
+  changed`, or how a loss in this session settled: `restored in 1.1s, redrawn
+  painted`, `no restore in 2.5s, redrawn on a new canvas`, or `lost — no restore
+  and no new canvas`. `storage refused, not remembered` is added when the write
+  failed. The black box keeps the line, so a dead session's record carries it.
+- **`forget`**, beside `copy`, shows only while a record exists. It removes the
+  record and says to reload. It is the only way off the record without
+  devtools; `?shadows=1` goes around it for one load without removing it.
+
+To stage a loss by hand, in the console of a page that samples the map:
+
+```js
+(() => {
+  const gl = document.getElementById('shelf-canvas').getContext('webgl2');
+  window.__lc = gl.getExtension('WEBGL_lose_context');
+  window.__lc.loseContext();
+})()
+```
+
+Then `window.__lc.restoreContext()` inside 2.5 s for the restore path, or
+nothing for the new-canvas path. ⚠️ **A staged loss is not a driver's.** It never
+restores on its own, never takes the GPU process down and never gets the page
+blocked, which on the Pixel 10 Pro XL is what a real one does. `pnpm
+smoke:render` runs both paths this way as G59 (`context-loss-fallback`).

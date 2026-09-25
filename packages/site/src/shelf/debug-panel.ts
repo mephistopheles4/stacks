@@ -53,6 +53,14 @@ export interface PanelOptions {
    * panel says "reload" instead of offering a button that would do nothing.
    */
   readonly onRebuild?: (settings: ShelfSettings) => void;
+  /**
+   * The settings this page started from, which the URL is written as a diff
+   * of. Painted on a device carrying a lost-context record, so a remembered
+   * fallback never becomes `?shadows=0` in a link somebody shares; see
+   * `writeSettings`. A getter, because a fallback during the session changes
+   * it. Absent means the shipped defaults.
+   */
+  readonly base?: () => ShelfSettings;
 }
 
 export function mountPanel(host: HTMLElement, options: PanelOptions): () => void {
@@ -162,7 +170,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   const apply = (next: ShelfSettings): void => {
     const report = handle.applySettings(next);
     settings = next;
-    writeSettings(next);
+    writeSettings(next, options.base?.());
     for (const hook of afterApply) hook();
     for (const relight of lamps) relight();
     showReport(status, report, options.onRebuild !== undefined);
