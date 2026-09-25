@@ -1467,17 +1467,21 @@ export interface PlacedMember {
  * The woodwork — both uprights and every plank — as **one geometry**, so the
  * bookcase draws in two calls at every library size rather than one per member.
  *
- * ## Why the draw count is the thing that matters
+ * ## Why the draw count is held at two
  *
- * Under real-time shadows the woodwork's program samples the shadow map, and the
- * Pixel 10 Pro XL (PowerVR DXT-48-1536, driver 25.3) loses the WebGL context
- * once one sampling program makes **13** draws a frame; it held at 12
+ * Under real-time shadows the woodwork's program samples the shadow map, and on
+ * the Pixel 10 Pro XL (PowerVR DXT-48-1536, driver 25.3) one program sampling
+ * alone — the books' boards, standing in for the wood — lost the WebGL context
+ * at **13** draws a frame and held at 12
  * ([#381](https://github.com/mephistopheles4/stacks/issues/381)). One mesh per
- * member made that `rowCount + 4` — a plank per shelf, the lid, two uprights
- * and the backboard — so the bookcase alone crossed the line at about 66 books,
- * and a library filling up is exactly what nobody would test on that phone.
+ * member made the woodwork's count `rowCount + 4` — a plank per shelf, the
+ * lid, two uprights and the backboard — which reached 13 at about 66 books, and
+ * a library filling up is exactly what nobody would test on that phone.
  * Joined, the woodwork is one draw and the backboard the other, whatever the
- * library holds.
+ * library holds. ⚠️ **The 13 is not a rule**: a later re-check held 2 programs
+ * at 53 draws a frame, so what kills the context is not known, and the two
+ * draws are the shape measured to survive rather than a margin under an edge
+ * (ADR-0088).
  *
  * ## Why the picture does not change
  *

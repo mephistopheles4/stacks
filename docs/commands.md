@@ -840,9 +840,10 @@ coverless — and staged into `artifacts/vault-300-public/`, **never** into
 means a program started reading the shadow map, or the bookcase started drawing
 more than it did: find which, before anything else. A red on `(8)` means the
 control came back green, so the hook cannot see a book program and no green
-above it means anything. **Do not raise the budget to clear it** — it is a
-third of the one edge ever measured, and why it is 4 is in
-`scripts/lib/shadow-sampling.ts` and in `docs/gates.md` under G60's own section.
+above it means anything. **Do not raise the budget to clear it** — it is the
+shape the phone survived plus room for one member, nobody knows where the edge
+is, and why it is 4 is in `scripts/lib/shadow-sampling.ts` and in
+`docs/gates.md` under G60's own section.
 The check that settles a doubt is a phone, below.
 
 It adds about 20 s to the gate on a workstation: 42 s before G60, 63 s with it

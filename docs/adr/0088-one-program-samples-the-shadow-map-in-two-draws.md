@@ -49,8 +49,13 @@ nothing reading a shadow map survives on the Pixel 10 Pro
 Together, the real-time path — `?shadows=1` when this was written, the default
 page since ADR-0090 — samples the map in **2 draws from 1 program** under the
 default species, at every library size. Under `flat`, or before a sheet
-decodes, it is 2 programs at 1 draw each. G60 (`one-shadow-reader`) holds the
-default page to it.
+decodes, it is 2 programs at 1 draw each — and for the whole session when a
+sheet's request fails, because `bindSheet` then leaves that material flat, with
+no map, for good. G60 (`one-shadow-reader`) holds the default page to it, and
+cannot see the failed load: its fixtures always decode. That shape was never
+run on the phone as such; splits of 10 + 1 and 3 + 1 survived there, and so did
+2 programs at 53 draws (below), so it is expected to hold — an inference, not a
+measurement.
 
 ## Context
 
@@ -60,10 +65,11 @@ owner wants them on by default. It dies at frame 8 ± 1, after about 3,474 draws
 that sample the map. It counts draws, not time: throttled to 1.9 fps, it died at
 the same frame with the same count. Flushing after every draw did not move it.
 
-What separates the survivors from the deaths is how many **programs** sample the
-map. The site had five that did: spines, pages and head caps, boards, covers,
-and the bookcase's one wood-and-backing program. Hooks that edited the shaders
-on the live site, 120 s a run:
+In these runs, what separated the survivors from the deaths was how many
+**programs** sample the map — which a later run refuted as a rule; see the
+correction after the ceiling below. The site had five that did: spines, pages
+and head caps, boards, covers, and the bookcase's one wood-and-backing program.
+Hooks that edited the shaders on the live site, 120 s a run:
 
 | what samples the map | result |
 | --- | --- |
@@ -87,6 +93,27 @@ So taking the books off the map was not enough on its own: the bookcase alone
 would have crossed the line as the library filled. The mechanism below the
 driver is not known and nothing here claims one. What is known is which
 configuration holds.
+
+⚠️ **2026-09-25 — the ceiling above does not generalise, and none of this is a
+model.** The 12 and the 13 were measured on one program: the books' boards,
+sampling alone as a stand-in for the bookcase's wood, which could not make more
+than 11 draws on the live site and held at 11 in every run. They stay true of
+the boards. The bookcase's own edge was assumed from them, never measured, and
+the library-size limit above rests on that assumption. A re-check built to
+falsify the rule ran on the shipped build — the woodwork joined, the books
+shielded — and compiled the shadow fetch back into the spines' program only: 2
+programs sampling the map, 53 sampling draws a frame. It held 120 s at 60 fps
+with that program's
+`receiveShadow` uniform left at 0, and again with it forced to 1, so the fetch
+ran for every visible spine. On the same build and in the same session the
+default page (1 program, 2 draws) held, and `?receivers=all` (5 programs, 377
+sampling draws in its last frame) died 1.3 s in. So neither the number of
+programs nor the number of sampling draws separates survival from death on this
+driver, and *a second sampling program lowers the ceiling* does not hold as a
+rule. What is known is the table, and one point more: the shape this record
+builds survived, and the old one died. Where the edge between them lies, and
+what it is made of, is not known. The runs are in
+[the log](../log/2026-09-25-real-time-shadows-by-default.md).
 
 ## Why the backboard stays a second draw
 
@@ -153,9 +180,13 @@ of the band the books lose. Both are on every visitor's shelf since ADR-0090
 made real-time shadows the default. The record stays `proposed` until both are
 settled.
 
-`?receivers=all` is the old `?shadows=1`, byte for byte under SwiftShader, so
-every earlier measurement and the painted shading's differenced strengths keep
-a reference.
+`?receivers=all` compiles the old `?shadows=1`'s programs — byte for byte under
+SwiftShader against a build whose woodwork was already joined — so every
+earlier measurement and the painted shading's differenced strengths keep a
+reference. It does not reproduce the old draw count: the bookcase draws twice
+where it drew `rowCount + 4`, and its pixels moved by the join's shortfall
+above. As a crash reproduction that is enough, since it still loses the context
+on the phone.
 
 ## The cover shade
 
@@ -200,9 +231,11 @@ The measurements are in
 
 ## Splitting the woodwork again
 
-Splitting the woodwork again reopens the ceiling: every member that gets its
-own mesh adds one sampling draw a frame, and one mesh per plank grows with the
-library. A change that needs a member to be separate should say where its draw
+Splitting the woodwork again goes back towards the one shape measured to die:
+every member that gets its own mesh adds one sampling draw a frame, and one mesh
+per plank grows with the library. Since the edge is not known, the answer to
+where such a change stands is a phone run (`scripts/phone-check.ts`), not a
+count. A change that needs a member to be separate should say where its draw
 comes from. The same goes for any new surface that reads the map.
 
 ## Alternatives

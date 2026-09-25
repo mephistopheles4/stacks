@@ -72,8 +72,8 @@ cast by nothing), band on its own (the backboard has one too), neighbour shadow
 
 **Lost-context record**:
 The one small entry a device keeps after the shelf lost its WebGL context while
-sampling the shadow map, so later loads start with painted shadows for 30 days.
-It records a failure this device showed, never a guess about the device, and a
+sampling the shadow map, so later loads start with painted shadows until it
+expires (`FALLBACK_TTL_MS`). It records a failure this device showed, never a guess about the device, and a
 `?shadows=` in the URL goes around it
 ([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
 *Avoid*: blocklist, device flag (nothing is decided by device), crash record
@@ -81,8 +81,8 @@ It records a failure this device showed, never a guess about the device, and a
 after a loss, in the page).
 
 **Shadow reader**:
-A compiled program that samples the real-time shadow map. The default page has
-exactly one, the bookcase's, and G60 (`one-shadow-reader`) counts it
+A compiled program that samples the real-time shadow map. How many the default
+page may have is G60's (`one-shadow-reader`) to hold
 ([ADR-0090](docs/adr/0090-real-time-shadows-are-the-default.md)). Decided when
 the program is compiled, never by a mesh's flag.
 *Avoid*: receiver on its own (`receiveShadow` is a uniform that leaves the

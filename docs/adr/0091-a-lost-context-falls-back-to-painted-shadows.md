@@ -47,9 +47,10 @@
 ## Context
 
 Real-time shadows become the default for every visitor (#381). On the Pixel 10
-Pro XL a context is lost in a count of draws that sample the shadow map, and
-ADR-0088 keeps that count far below the ceiling measured on the device. A driver
-that loses a context anyway must not lose it on every load, and the owner ruled
+Pro XL a context is lost when too much of the scene samples the shadow map, and
+ADR-0088 ships the one configuration measured to survive there — what kills the
+context is not known, so there is no margin to point to. A driver that loses a
+context anyway must not lose it on every load, and the owner ruled
 out deciding by device in August: *"mobile" is not detectable in any way that
 stays true*
 ([the mobile crash](../log/2026-08-01-the-mobile-crash-g15.md)). So the page
@@ -132,5 +133,6 @@ the runs: [a lost context falls back to painted](../log/2026-09-25-a-lost-contex
 - **Refreshing `at` on every painted load.** It would make the record
   permanent, and a fixed driver would never be tried again.
 - **Clearing the record once real-time shadows have survived a while.** The
-  fault is a count of draws, not a time, so a long survival proves nothing
+  fault is not a matter of time — throttled to 1.9 fps the page died at the
+  same frame — and its cause is not known, so a long survival proves nothing
   about the next frame.

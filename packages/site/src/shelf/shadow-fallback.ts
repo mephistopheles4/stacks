@@ -4,10 +4,10 @@ import { DEFAULT_SETTINGS, resolveSettings, type ShelfSettings } from './shelf-s
  * The lost-context record: what a device remembers after real-time shadows
  * lost its WebGL context once.
  *
- * The Pixel 10 Pro XL loses the context in a count of draws that sample the
- * shadow map, not in time (ADR-0088). The shelf now keeps that count far below
- * the measured ceiling, but a driver that loses it anyway must not lose it on
- * every page load. So when a context is lost while the shelf samples the map,
+ * The Pixel 10 Pro XL loses the context when too much of the scene samples the
+ * shadow map, and what kills it is not known (ADR-0088). The shelf now ships
+ * the one configuration measured to survive there, but a driver that loses it
+ * anyway must not lose it on every page load. So when a context is lost while the shelf samples the map,
  * the page redraws with painted shadows and writes **one small record**, and
  * later loads read it and start painted.
  *

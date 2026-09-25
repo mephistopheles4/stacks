@@ -6241,8 +6241,10 @@ sampling draws a frame, `?receivers=all` 5 and 302, on a local GPU and under
 SwiftShader. Every clause is also planted as a hand-built snapshot in the
 judge's spec, so the plants are asserted on every run and not observed once.
 
-- **Weakening** — **exposed, in one constant.** `BUDGET` is 4, a third of the
-  one measured edge, and raising it is one edit that reads as tuning. Its
+- **Weakening** — **exposed, in one constant.** `BUDGET` is 4, the 2 draws
+  measured to survive plus room for one member — no fraction of an edge, since
+  where the edge lies is not known — and raising it is one edit that reads as
+  tuning. Its
   comment carries the measurements and the rule that a raised budget is a
   comment, and the settle's 30 frames sit beside it. Disposition `accepted`.
 - **Satisfying the letter** — **gated.** Instancing or a multi-draw call would

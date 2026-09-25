@@ -894,14 +894,16 @@ function must(condition: boolean, message: string): asserts condition {
  * G60 — exactly one program reads the real-time shadow map on the default
  * page, in a constant number of draws a frame at any library size.
  *
- * On the Pixel 10 Pro XL the WebGL context is lost in a count of draws whose
- * program samples the shadow map: five sampling programs died at frame 8, and
- * one survives up to 12 sampling draws a frame and dies at 13. So the books
- * compile no shadow fetch and the bookcase reads the map in 2 draws
- * (ADR-0088), and this is what holds that: a book program that starts reading
- * the map again, or a bookcase that splits back into a draw per member, is red
- * here on a desktop, before a phone ever loads it. The numbers and the judge
- * are `lib/shadow-sampling.ts`; the counting is `lib/sampling-hook.ts`.
+ * On the Pixel 10 Pro XL five programs sampling the shadow map lost the WebGL
+ * context at frame 8, and the bookcase's alone, in 2 draws, survives. What
+ * kills it is not known: a count of sampling draws was the model, and a
+ * re-check with 2 programs at 53 draws a frame that survived refuted it
+ * (ADR-0088). So the books compile no shadow fetch and the bookcase reads the
+ * map in 2 draws, and this is what holds that: a book program that starts
+ * reading the map again, or a bookcase that splits back into a draw per
+ * member, is red here on a desktop, before a phone ever loads it. The numbers
+ * and the judge are `lib/shadow-sampling.ts`; the counting is
+ * `lib/sampling-hook.ts`.
  *
  * ⚠️ **Why a desktop sees the phone's programs.** three assembles every
  * program's source in JavaScript — prefix, chunks, defines, which materials
@@ -910,9 +912,10 @@ function must(condition: boolean, message: string): asserts condition {
  * program is classified by GL and by its source and the two must agree.
  *
  * ⚠️ **It pins the configuration that survived, not survival.** The budget is
- * one phone's measurement on one driver; another GPU could have a lower edge,
- * and nothing here would go red. `scripts/phone-check.ts` is the check a phone
- * runs.
+ * the shape one phone survived on one driver, with room for one more member;
+ * where that phone's edge lies is not known, another GPU could have a lower
+ * one, and nothing here would go red. `scripts/phone-check.ts` is the check a
+ * phone runs.
  */
 interface SamplingChecked {
   readonly lines: readonly string[];
@@ -925,10 +928,13 @@ const SAMPLING_VIEWPORT = { width: 480, height: 640, deviceScaleFactor: 1 };
 /** How long a page gets to stop linking programs before it is judged unsettled. */
 const SETTLE_TIMEOUT_MS = 30_000;
 
-/** A tall enough case: the unjoined bookcase drew `rows + 4` — 12 at 8 rows, the phone's edge. */
-
 /** Wide enough for the longest page name and its shelf count. */
 const PAGE_COLUMN = 34;
+
+/**
+ * A tall enough case: the unjoined bookcase drew `rows + 4` — 12 at 8 rows,
+ * the most one program sampling alone was seen to hold on the phone.
+ */
 const MIN_LARGE_ROWS = 8;
 
 interface SamplingPage {

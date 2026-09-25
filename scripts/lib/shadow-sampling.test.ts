@@ -139,12 +139,13 @@ describe('judgeSampling — what the phone measured dying', () => {
   });
 
   it('fails the unmerged bookcase alone, at 11 draws, on the budget', () => {
-    // One program, as the phone needs — and eleven draws, which survived on the
-    // phone and is still nearly three times the budget. The budget is the margin.
+    // One program — and eleven draws, which survived on the phone and is still
+    // nearly three times the budget. The budget pins the shape that survived,
+    // not a margin under an edge: where the edge lies is not known.
     expect(clauses(judgeSampling(everyFrame({ samplingDraws: 11 })))).toEqual(['(4)']);
   });
 
-  it.each([12, 13])('fails %i draws a frame, either side of the measured edge', (draws) => {
+  it.each([12, 13])('fails %i draws a frame, where one program held and died', (draws) => {
     expect(clauses(judgeSampling(everyFrame({ samplingDraws: draws })))).toEqual(['(4)']);
   });
 
@@ -173,7 +174,7 @@ describe('judgeSampling — what the phone measured dying', () => {
     expect(clauses(judgeSampling(run({ maxSamplingDraws: 13, dropped: 100 })))).toEqual(['(4)']);
   });
 
-  it('fails two programs in a steady frame, which lowered the ceiling on the phone', () => {
+  it('fails two programs in a steady frame, which is not the shape that survived', () => {
     const failures = judgeSampling(everyFrame({ samplingPrograms: [WOOD, 8] }));
     expect(clauses(failures)).toEqual(['(3)']);
     expect(failures[0]).toContain('only one may read it');

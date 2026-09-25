@@ -14,22 +14,31 @@
  * D-Series DXT-48-1536, driver `25.3@6908880`, Chrome 153, ANGLE on GLES
  * ([#381](https://github.com/mephistopheles4/stacks/issues/381)).
  *
- * - **The context is lost in a count of draws whose program samples the shadow
- *   map**, not in time and not in memory. The live site, with five programs
- *   reading the map, died at frame 8 ± 1 after about 3,474 such draws, and at
- *   the same frame when throttled to 1.9 fps.
- * - **One sampling program has a sharp ceiling.** 11 sampling draws a frame
- *   survived every run, 12 survived three of three (one of them 300 s), and 13
- *   died two of two at frame 134. Above that it dies sooner: 14 at frame 113,
- *   30 at frame 58, 60 at frame 30.
- * - **The edge is not a margin.** A run capped at 12 by skipping draws died
+ * - **Five programs reading the map lose the context; the bookcase's alone
+ *   does not.** The live site, with five, died at frame 8 ± 1 after about
+ *   3,474 sampling draws, and at the same frame when throttled to 1.9 fps — so
+ *   not time, and not memory.
+ * - **One program sampling alone had a sharp ceiling** — the books' boards,
+ *   standing in for the bookcase's wood, which could not go past 11 on the live
+ *   site and held at 11 in every run. 11 sampling draws a frame survived every
+ *   run, 12 survived three of three (one of them 300 s), and 13 died two of two
+ *   at frame 134. Above that it died sooner: 14 at frame 113, 30 at frame 58,
+ *   60 at frame 30.
+ * - **That edge was not a margin.** A run capped at 12 by skipping draws died
  *   twice where an uncapped 12 lived, with the same draw stream after frame 3.
- * - **A second sampling program lowers the ceiling.** A split of 6 and 5 died at
- *   frame 292; the one split that survived had the smaller program at one draw.
+ * - **A split of 6 and 5 died** at frame 292; the one split that survived had
+ *   the smaller program at one draw.
+ * - ⚠️ **None of that generalises, so none of it is a model.** On 2026-09-25,
+ *   with the woodwork joined, a spine program compiled to read the map beside
+ *   the bookcase's — 2 programs, 53 sampling draws a frame — held 120 s with
+ *   its fetch run and without, while `?receivers=all` died on the same build. A
+ *   count of sampling draws predicted a death there. What kills the context is
+ *   not known (ADR-0088).
  *
- * So `BUDGET` is 4, a third of the measured edge: the bookcase reads the map in
- * 2 draws (ADR-0088), which leaves 2 for a future member. G15's rule applies —
- * a budget that gets raised whenever it fails is a comment. A red here is
+ * So `BUDGET` is 4: the bookcase reads the map in 2 draws (ADR-0088), the shape
+ * measured to survive, which leaves 2 for a future member. It is not a fraction
+ * of an edge, because nobody knows where the edge is. G15's rule applies — a
+ * budget that gets raised whenever it fails is a comment. A red here is
  * answered by finding which program started sampling, and then by running
  * `scripts/phone-check.ts` on a phone.
  */

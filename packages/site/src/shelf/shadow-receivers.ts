@@ -32,11 +32,18 @@ import * as THREE from 'three';
  * lost the context, at frame 11 after 132 sampling draws, so `basic` has a
  * trigger of its own; `vsm` was never run this way.
  *
- * ⚠️ **One program is not enough on its own: it also has to draw little.** The
- * surviving program held at 12 sampling draws a frame and died at 13, which is
- * why the woodwork is one mesh (`joinWoodwork`) and the bookcase samples in two
- * draws at every library size. Anything new that reads the map adds a program,
- * a draw, or both. See
+ * ⚠️ **What kills the context is not known, and a count of draws does not
+ * explain it.** One program sampling alone — the books' boards, standing in for
+ * the bookcase's wood — held at 12 sampling draws a frame and died at 13, which
+ * is why the woodwork is one mesh (`joinWoodwork`) and the bookcase samples in
+ * two draws at every library size. That edge did not generalise: with the
+ * woodwork joined, a spine program compiled to read the map beside it — 2
+ * programs, 53 sampling draws a frame — held 120 s with its fetch run and
+ * without, while `?receivers=all` died on the same build. So this pins the one
+ * configuration measured to survive, not a margin under a known edge. Anything
+ * new that reads the map adds a program, a draw, or both, and is answered on a
+ * phone
+ * (`scripts/phone-check.ts`), not by arithmetic. See
  * [ADR-0088](../../../../docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md).
  *
  * This is what every visitor runs: real-time shadows are the default since
@@ -92,6 +99,13 @@ export const NO_SHADOW_FETCH_LINE = '#undef USE_SHADOWMAP';
  * Does not touch casting. The shadow pass draws through three's own
  * `MeshDepthMaterial`, or an object's `customDepthMaterial`, and never reads
  * this material's `onBeforeCompile` (`WebGLShadowMap.js:418`).
+ *
+ * ⚠️ **It replaces `onBeforeCompile` and `customProgramCacheKey`; it does not
+ * chain onto them.** No material in the site sets either today. One that later
+ * gets a hook of its own loses it silently if this runs after, and loses the
+ * shield if the hook is assigned after this — the fetch compiles back in, and a
+ * desktop shows nothing until G60 counts it. A material that needs both has to
+ * fold this line into its own hook, under a key that says both.
  */
 export function withoutShadowFetch<M extends THREE.Material>(material: M): M {
   material.onBeforeCompile = shieldFragment;

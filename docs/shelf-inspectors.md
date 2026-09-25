@@ -116,7 +116,12 @@ documents them with measured results, and everything else rides in `?tune=`.
 `?receivers=all` joined them as an eleventh, for their reason: it is how
 `?shadows=1` still reaches what it drew before the books stopped reading the map
 ([ADR-0088](adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)), and
-it is G60's control. **Two old probes mean what they always meant against a
+it is G60's control. ⚠️ **To re-test the crash by hand, open
+`?shadows=1&receivers=all`, never `?receivers=all` alone**: it is inert while
+shadows are off, and a device carrying a lost-context record starts painted, so
+the page reads no map, survives, and looks like a fixed driver.
+`scripts/phone-check.ts` clears the record first, and a hand re-test does not.
+**Two old probes mean what they always meant against a
 different default** since real-time shadows became every visitor's
 ([ADR-0090](adr/0090-real-time-shadows-are-the-default.md)): `?shadows=1` asks
 for what a fresh device gets anyway, and overrides a remembered fallback for

@@ -52,14 +52,20 @@ the shelf painted its shadows instead (ADR-0016). The owner wants real-time
 shadows for everyone, so #381 measured the failure again on a Pixel 10 Pro XL
 (PowerVR D-Series DXT-48-1536, driver `25.3@6908880`, Chrome 153, ANGLE on
 GLES), over about 230 runs with shader hooks on the live site. It is not memory
-and not time. **It is a count of draws whose program samples the shadow map**:
+and not time, and it depends on what reads the shadow map:
 
 - five programs read it on the live site, and the page died at frame 8 ± 1
   after about 3,474 such draws, and at the same frame throttled to 1.9 fps;
 - with only the bookcase's program reading it, the page survived every run, up
   to 300 s;
-- that one program survives **12** sampling draws a frame and dies at **13**,
-  and a second sampling program lowers the ceiling.
+- one program sampling alone survived **12** sampling draws a frame and died
+  at **13**, which was written down as the rule.
+
+⚠️ **The rule did not survive its falsifier.** On this build, 2 programs at 53
+sampling draws a frame held 120 s where the rule predicted a death, so what
+kills the context is not known; ADR-0088 has the correction and the runs. The
+shipped default is a configuration measured to survive, and that is all this
+record claims for it.
 
 ADR-0088 built the configuration that survived, ADR-0091 built what a device
 does when it does not, and on the phone `?shadows=1` on that build held 120 s
@@ -106,10 +112,13 @@ the desktop's in all 24 runs of the ceiling round. The one thing a driver
 decides is whether a declared sampler is *active*, which is why G60 classifies
 every program twice — by GL and by its source — and fails when they disagree.
 
-**The budget is 4 sampling draws a frame, a third of the measured edge.** The
-bookcase makes 2, which leaves 2 for a member that one day needs its own mesh.
-A budget raised whenever it fails is a comment; the answer to a red is to find
-which program started sampling, and then to run `scripts/phone-check.ts`.
+**The budget is 4 sampling draws a frame.** The bookcase makes 2, the shape
+measured to survive, which leaves 2 for a member that one day needs its own
+mesh. It was written as a third of the measured edge; since that edge did not
+generalise (ADR-0088), it is a pin on what survived and not a margin under
+anything. A budget raised whenever it fails is a comment; the answer to a red
+is to find which program started sampling, and then to run
+`scripts/phone-check.ts`.
 
 ## What it costs
 

@@ -186,8 +186,55 @@ the one run allowed to fail was the one that did.
   and that origin blocked until Chrome is next force-stopped — which the next
   run does first, and clears the record too.
 
+## The re-check, and the rule it refuted
+
+Run after review, on a build whose code was byte-identical to the branch's, by
+a session whose job was to break the claims above rather than repeat them.
+Every run started with no lost-context record and real-time shadows on, through
+the phone check's hook, 120 s a run.
+
+| page | sampling programs | sampling draws a frame | result |
+| --- | --- | --- | --- |
+| default, live library (51 books), two runs | 1 | 2 | survived, 60 fps median |
+| default, 273 books | 1 | 2 | survived |
+| `?receivers=all`, live library | 5 | 377 in its last frame | lost at 1.3 s, frame 9 |
+| default, the spines' program compiled to read the map, `receiveShadow` left at 0 | 2 | 53 | survived, 7,180 frames |
+| as above, `receiveShadow` forced to 1, so the fetch runs | 2 | 53 | survived, 7,165 frames |
+
+**The last two rows are the falsifier, and the rule did not survive it.** ADR-0088,
+ADR-0090 and G60's budget stated that one program holds 12 sampling draws a
+frame and dies at 13, and that a second program lowers that line; both rows
+should have died, and neither did. The 12 and the 13 were measured on the
+books' boards, sampling alone as a stand-in for the bookcase's wood, and are
+true of that program. They were never a rule about counts. The change still
+holds on the evidence that matters — the default page survived and
+`?receivers=all` died, on one build in one session — but the margin the budget
+claimed does not exist as stated: where this phone's edge lies, between 53 and
+377 draws or somewhere else entirely, is not known. Every current statement of
+the rule now says so and points at ADR-0088's correction; dated entries, this
+log's earlier sections among them, keep what was believed when they were written.
+
+Seen in the same session, recorded and not chased:
+
+- **One steady-looking run had 2 sampling programs in frame 4**, one draw each:
+  the bookcase's program relinking as its wood sheet arrived. "Exactly one" holds
+  per steady frame, which is what G60 judges.
+- **A real loss again got no redraw.** Both context requests, at about 3.9 s,
+  were refused as blocked, and the page ended white — mean brightness 235 of 255,
+  Chrome's broken-page icon showing, the dead canvas still visible.
+- **The 273-book page is dark on the phone**: mean 27, 23, 19 against 58, 43, 35
+  for the live library. Fog was not re-tested as the cause.
+- **The 273-book page slows over a run**: the page's own fps figure fell from
+  about 41 to 21 over 120 s. Not tested further.
+- **`/favicon.ico` returned 404** in every run.
+- **A force-stop of Chrome did not clear the record**: the next clearing run
+  still found the one a `?receivers=all` loss had written.
+
 ## What is still not known
 
+- **This phone's edge, and what it is made of.** The rule that stood for it was
+  refuted above; the shipped default is a point measured to survive, and nothing
+  here knows how far it sits from a death.
 - **Any other GPU's edge.** G60 pins the configuration that survived on one
   driver, not survival. The Galaxy S25 and the iOS simulator held the old
   `?shadows=1`, with five programs reading the map; neither has run this build.

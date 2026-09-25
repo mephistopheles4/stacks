@@ -1811,9 +1811,11 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Bookcase {
   // The woodwork — both uprights and every plank — is **one mesh**, and each
   // member below is only laid at the origin and told where it stands. Two draws
   // for the whole bookcase, this and the backboard, at every library size: under
-  // real-time shadows every draw here samples the map, and the Pixel 10 Pro XL
-  // loses the context at 13 of those a frame (#381). One mesh per member was
-  // `rowCount + 4`. See `joinWoodwork`, which throws rather than fall back.
+  // real-time shadows every draw here samples the map, and on the Pixel 10 Pro
+  // XL one program sampling alone lost the context at 13 of those a frame
+  // (#381). Two draws is the shape measured to survive there, and what kills it
+  // is not known (ADR-0088). One mesh per member was `rowCount + 4`. See
+  // `joinWoodwork`, which throws rather than fall back.
   //
   // ⚠️ **Each `BoxGeometry` stays inline as `veneered`'s first argument.** G51
   // reads a member's size off exactly that call, inside this function.

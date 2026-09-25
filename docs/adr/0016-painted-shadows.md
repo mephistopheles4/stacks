@@ -2,7 +2,9 @@
 
 **Status:** accepted, and **superseded as the default by
 [ADR-0090](0090-real-time-shadows-are-the-default.md) — painting is the
-fallback now.** The title and the log below record what was decided in August
+fallback now.** ADR-0090 is itself `proposed`: the default is the owner's
+decision on #381 and ships with it, and what stays open there is the owner
+accepting its costs. The title and the log below record what was decided in August
 and are left standing: a device that loses its context while sampling the map
 starts painted ([ADR-0091](0091-a-lost-context-falls-back-to-painted-shadows.md)),
 and every visitor else gets the real-time path with only the bookcase reading
