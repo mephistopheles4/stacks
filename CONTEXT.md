@@ -59,6 +59,17 @@ what it puts on the wood is the same slab as any other book, seen end-on. The
 painted shadow is drawn from these.
 *Avoid*: footprint (the scalar), shadow (that is what is drawn from it), base.
 
+**Cover shade**:
+The painted shadow across a face-out cover: the band the plank above throws
+across its top, the strip the right-hand upright throws down its side, and the
+wedge a taller book beside it throws. One mesh over every cover, reading no
+shadow map. It stands in for what a book stopped receiving when its programs
+lost the shadow sampler
+([ADR-0088](docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)).
+*Avoid*: recess shade (that is the ambient darkening across a whole **row**,
+cast by nothing), band on its own (the backboard has one too), neighbour shadow
+(the older plane down a cover's right-hand edge, which it does not replace).
+
 **Run**:
 A group of touching books sharing one slump angle, because they are resting on
 each other rather than each leaning independently. Broken by a year gap or by a

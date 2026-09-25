@@ -6,12 +6,22 @@ import {
   LIFT,
   makeBackboardShade,
   makeContactShadow,
+  makeCoverShade,
   makeNeighbourShadow,
   makeRecessShade,
   type BookcaseLight,
   type Contact,
 } from './contact-shadow.ts';
+import {
+  applyPlacement,
+  COVER_LIFT,
+  coverQuads,
+  lightRatios,
+  paintsCoverShade,
+  type CoverQuad,
+} from './cover-shade.ts';
 import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
+import { bookCase, pageBlock } from './binding-case.ts';
 import { woodSeed } from './shelf-url.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
@@ -979,12 +989,10 @@ function buildBooks(
   const painted = settings.shadows.painted;
 
   const placed: PlacedBook[] = [];
-  /** Contacts per row of *books*, indexed as `placements` is — top shelf first. */
-  const byRow: Contact[][] = [];
 
   const rowCount = rowsForBookcase(placements.length);
 
-  placements.forEach((row, rowIndex) => {
+  placements.forEach((row) => {
     row.forEach((placement, index) => {
       const { entry } = placement;
 
@@ -1006,9 +1014,9 @@ function buildBooks(
       // depth to build at — exactly, since halving and doubling a double is.
       const book = buildBook(entry, placement.frontZ * 2, textures, shadedFromRight, settings);
 
-      book.rotation.y = placement.rotationY;
-      book.rotation.z = placement.rotationZ;
-      book.position.set(placement.position.x, placement.position.y, placement.position.z);
+      // The cover shade places its quads through the same call, so the band
+      // cannot be registered against a book put somewhere else.
+      applyPlacement(book, placement);
 
       scene.add(book);
       placed.push({ group: book, frontZ: placement.frontZ });
@@ -1016,10 +1024,6 @@ function buildBooks(
       // pages or a board opens the same card as a click on the spine.
       for (const part of book.children) lookup.set(part, entry.book);
     });
-
-    // The painted shadow is drawn from exactly the contacts the books were
-    // placed at, so the two cannot drift apart.
-    byRow[rowIndex] = row.map((placement) => placement.contact);
   });
 
   // Every shelf, not only the ones holding books: the overlays also carry the
@@ -1028,7 +1032,9 @@ function buildBooks(
   // growing bookcase looking like a different piece of furniture from the top.
   if (!painted) return { placed, painters: undefined };
 
-  const painters = new Painters(scene, byRow, rowCount);
+  // `settings` here is what the shelf is being built with, which is what the
+  // painters must decide the cover shade from — see `Painters`.
+  const painters = new Painters(scene, placements, rowCount, settings);
   painters.paint(settings);
 
   // The corner a shelf makes with its backboard is dark on both sides whatever
@@ -1064,20 +1070,41 @@ function buildBooks(
  * shadow that is a handful of 2D canvas fills. Nothing about a book changes when
  * the light moves.
  *
- * The contacts are held rather than recomputed because they are a function of
- * the *layout*, not of the light — the books have not moved, and re-deriving
- * them would be a second chance to disagree with where they were actually put.
+ * The contacts and the covers are held rather than recomputed because they are
+ * a function of the *layout*, not of the light — the books have not moved, and
+ * re-deriving them would be a second chance to disagree with where they were
+ * actually put.
+ *
+ * **Three painted shadows are cast now, not two**: the cover shade across every
+ * face-out cover follows the light as well. Whether it is drawn at all is
+ * decided once, here, from the settings the shelf was *built* with, because
+ * `shadows.receivers` is rebuild-class: a pending switch to `all` has not yet
+ * given the books their shadow sampler, and a repaint that read it would take
+ * the band off covers that do not yet receive the real one.
  */
 class Painters {
   readonly #scene: THREE.Scene;
+  /** Contacts per row of *books*, indexed as the placements are — top shelf first. */
   readonly #byRow: readonly (readonly Contact[])[];
   readonly #rowCount: number;
+  /** Every face-out cover, or none when the cover shade is not drawn. */
+  readonly #covers: readonly CoverQuad[];
   #meshes: THREE.Mesh[] = [];
 
-  constructor(scene: THREE.Scene, byRow: readonly (readonly Contact[])[], rowCount: number) {
+  constructor(
+    scene: THREE.Scene,
+    placements: readonly (readonly Placement[])[],
+    rowCount: number,
+    mountedWith: ShelfSettings,
+  ) {
     this.#scene = scene;
-    this.#byRow = byRow;
+    // The painted shadow is drawn from exactly the contacts the books were
+    // placed at, so the two cannot drift apart.
+    this.#byRow = placements.map((row) => row.map((placement) => placement.contact));
     this.#rowCount = rowCount;
+    this.#covers = paintsCoverShade(mountedWith.shadows)
+      ? coverQuads(placements, mountedWith.books.headCap)
+      : [];
   }
 
   paint(settings: ShelfSettings): void {
@@ -1108,6 +1135,11 @@ class Painters {
         this.#add(shade);
       }
     }
+
+    // One mesh for every cover on the shelf, or none: +1 draw and +1 texture
+    // whatever the library's size, and no program of its own.
+    const covers = makeCoverShade(this.#covers, light);
+    if (covers !== undefined) this.#add(covers);
   }
 
   /**
@@ -1140,32 +1172,6 @@ class Painters {
 /** Shared by every book: sizing is per-mesh scale, so one of each is enough. */
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 const UNIT_PLANE = new THREE.PlaneGeometry(1, 1);
-
-/**
- * A hardback case, in the same world units as the shelf (1 unit ≈ 24cm).
- *
- * `BOARD` is the thickness of a cover board — about 2.5mm on a real book — and
- * `SQUARE` is the *square*: the few millimetres by which the boards overhang the
- * page block at head, tail and fore-edge. They are why the top of a real book is
- * mostly paper with only a thin rim of cover showing, and why the cover stands
- * proud of the pages instead of being flush with them.
- */
-const BOARD = 0.011;
-const SQUARE = 0.013;
-
-/**
- * A paperback's cover, in the same units — one sheet of card at about 0.3mm,
- * against the hardback's 2.6mm board.
- *
- * It is not zero. A paperback still has a cover with a visible edge where it
- * meets the page block, and collapsing it to nothing makes the book one solid
- * slab of paper with a printed face. Thin enough to read as card, thick enough to
- * still be there.
- */
-const PAPER_COVER = 0.0013;
-
-/** How far the printed faces float above the boards they are printed on. */
-const SKIN = 0.0012;
 
 /**
  * One book, built at its true size.
@@ -1297,21 +1303,11 @@ export function buildBook(
 
   const thickness = entry.thickness;
   const height = entry.height;
-  // Both are fixed in the world rather than fractions of the book — a thin book
-  // and a fat one are bound in the same card. Each is capped against the
-  // dimension it eats so that a small enough book still has paper in it: `depth`
-  // is the measured cover aspect on a face-out book, which is vault data, and a
-  // page block scaled negative turns inside out rather than failing.
-  //
-  // Binding chooses between the two cases, and it chooses *both* numbers at
-  // once. A paperback is not a hardback with the overhang taken off: the square
-  // going without the board leaves a case still 2.6mm thick that has mysteriously
-  // lost its rim, which reads as a modelling error rather than as a second
-  // format. A paperback's cover is glued flush to the block, so there is no
-  // square at all, and the card it is cut from is a fifth of a board.
-  const paperback = entry.binding === 'paperback';
-  const board = Math.min(paperback ? PAPER_COVER : BOARD, thickness * 0.3);
-  const square = paperback ? 0 : Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
+  // Board, cap and the depth of the covering at the joint, from the one place
+  // that says what a case is — the cover shade reads the same answer to find
+  // the page block, which is the part that casts. See `binding-case.ts` for why
+  // binding decides the board and the square together.
+  const { board, cap, frontDepth } = bookCase(entry, depth, settings.books.headCap);
 
   /**
    * Parts do not cast — the page block below casts for the whole book. Whether
@@ -1332,9 +1328,8 @@ export function buildBook(
   };
 
   /**
-   * How much height the head cap takes off the covering below it.
-   *
-   * Proportional to **thickness**, never to height — which is the whole reason
+   * `cap` is how much height the head cap takes off the covering below it —
+   * proportional to **thickness**, never to height, which is the whole reason
    * one shared cap is the right shape on every book. Hardbacks only: a
    * perfect-bound paperback has no covering to roll, its card being cut flush
    * with the block at head and tail.
@@ -1358,7 +1353,6 @@ export function buildBook(
    * anything. See `closeTheEnds`.
    */
   const capScale = thickness;
-  const cap = entry.binding === 'hardback' ? settings.books.headCap * capScale : 0;
 
   /**
    * The case, and the one thing to understand about it: **the covering rolls over
@@ -1399,10 +1393,9 @@ export function buildBook(
    * on a hardback and nothing on a paperback, which is what it is worth.
    *
    * A paperback rolls nothing, so `cap` is 0, there is no board top at all, and
-   * every number here is what it always was.
+   * every number here is what it always was. `frontDepth` is the covering's
+   * depth at the joint: the cap where there is one, else a board.
    */
-  const frontDepth = cap > 0 ? cap : board;
-
   for (const side of [1, -1]) {
     const x = (side * (thickness - board)) / 2;
 
@@ -1430,9 +1423,12 @@ export function buildBook(
 
   // The page block, recessed inside the case at head, tail and fore-edge — and
   // the one part of a book that casts, standing in for all of it.
+  // From `pageBlock`, which the cover shade throws its painted wedge from, so
+  // the painted and the real shadow have one caster between them.
   const block = solid(pages);
-  block.scale.set(thickness - board * 2, height - square * 2, depth - frontDepth - square);
-  block.position.set(0, 0, (square - frontDepth) / 2);
+  const blockBox = pageBlock(entry, depth, settings.books.headCap);
+  block.scale.set(...blockBox.scale);
+  block.position.set(...blockBox.position);
   block.castShadow = castShadows;
 
   /**
@@ -1554,7 +1550,7 @@ export function buildBook(
     const neighbour = makeNeighbourShadow(depth, height);
     if (neighbour !== undefined) {
       neighbour.rotation.y = Math.PI / 2;
-      neighbour.position.set(thickness / 2 + SKIN * 2, 0, 0);
+      neighbour.position.set(thickness / 2 + COVER_LIFT, 0, 0);
       group.add(neighbour);
     }
   }
@@ -1565,10 +1561,12 @@ export function buildBook(
    *
    * Under the default `bookcase`, a book casts and does not receive: its
    * programs compile with no shadow sampler, which is what keeps `?shadows=1`
-   * alive on the Pixel 10 Pro XL. It costs a visible band — the plank's shadow
-   * across the top of every face-out cover, and the wedge one book throws on the
-   * next. `all` is the old configuration, kept so it can be re-tested. Inert
-   * with no shadow map, which is the painted default and `?solo`. See
+   * alive on the Pixel 10 Pro XL. What that takes off a book — the plank's
+   * shadow across the top of every face-out cover, and the wedge a neighbour
+   * throws on it — is painted back by the cover shade, which reads no shadow
+   * map (`cover-shade.ts`). `all` is the old configuration, kept so it can be
+   * re-tested, and the reference the cover shade is fitted against. Inert with
+   * no shadow map, which is the painted default and `?solo`. See
    * `shadow-receivers.ts`.
    */
   receiveShadows(group, settings.shadows.receivers === 'all');
@@ -1854,13 +1852,14 @@ function positionOf(position: LightPosition, unitHeight: number): THREE.Vector3 
   return new THREE.Vector3(position.x, heightOf(position.y, unitHeight), position.z);
 }
 
-/** The key light as the painters need it. See `BookcaseLight`. */
+/**
+ * The key light as the painters need it. See `BookcaseLight`.
+ *
+ * `lightRatios` does the arithmetic, in a module a test can reach; it reads the
+ * same two settings `keyLightPosition` and `keyLightTarget` do.
+ */
 function bookcaseLight(unitHeight: number, settings: ShelfSettings): BookcaseLight {
-  const toTarget = keyLightTarget(unitHeight, settings).sub(keyLightPosition(unitHeight, settings));
-  return {
-    xPerZ: Math.abs(toTarget.x / toTarget.z),
-    yPerZ: Math.abs(toTarget.y / toTarget.z),
-  };
+  return lightRatios(settings.lighting.key, unitHeight);
 }
 
 /**
@@ -1885,9 +1884,9 @@ const BOOK_FRONT_Z = SHELF.depth / 2 - 0.02;
 /**
  * How far the recess shading floats in front of the books.
  *
- * Enough to clear `SKIN` — the hair by which a printed face floats above its
- * board — with room to spare, and far short of the planks, whose own front
- * faces stand at the front of the bookcase and must not be darkened.
+ * Enough to clear the front of every spine with room to spare, and far short
+ * of the planks, whose own front faces stand at the front of the bookcase and
+ * must not be darkened.
  */
 const RECESS_CLEARANCE = 0.008;
 
