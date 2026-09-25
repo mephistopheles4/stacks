@@ -12,6 +12,7 @@ import {
   type Contact,
 } from './contact-shadow.ts';
 import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
+import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed } from './shelf-url.ts';
 import type { Post } from './post.ts';
 import { placeShelf, type Placement } from './placement.ts';
@@ -362,48 +363,48 @@ export function mountShelf(
   scene.background = background;
   // Kept as a field rather than read off `scene.fog` later: turning fog off sets
   // `scene.fog` to null, and turning it back on needs the object it used to be.
-  const fog = new THREE.Fog(
-    settings.scene.background,
-    settings.scene.fog.near,
-    settings.scene.fog.far,
-  );
+  // Its range is set by `frameCamera`, because it is measured in framing
+  // distances and there is no framing yet.
+  const fog = new THREE.Fog(settings.scene.background);
   scene.fog = settings.scene.fog.enabled ? fog : null;
 
   const rows = toRows(books, settings.books);
   const rowCount = rowsForBookcase(rows.length);
   const unitHeight = rowCount * SHELF.rowHeight;
 
-  const fov = 40;
-  const camera = new THREE.PerspectiveCamera(fov, 1, 0.1, 100);
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
   controls.minDistance = 1.5;
   controls.maxPolarAngle = Math.PI * 0.52;
-  controls.target.set(0, unitHeight * 0.48, 0);
 
   /**
-   * Backs the camera off far enough for the whole bookcase to fit — checked against
-   * *both* axes and the real viewport aspect.
+   * Stands the camera where `frameBookcase` says, and the fog behind it.
    *
-   * A short wide bookcase is width-constrained and a tall narrow one is
-   * height-constrained, so fitting only the height clips the sides of a small
-   * library. Runs once, on the first real layout, and then leaves the camera
-   * alone so it never fights the user's orbiting.
+   * Runs once at mount and once more on the first real layout, and then leaves
+   * the camera alone so it never fights the user's orbiting. **The fog is set
+   * here and not at construction**, for the reason in `framing.ts`: its range is
+   * a multiple of this distance, and the second run is the one with the real
+   * aspect — an upright phone frames four shelves at 15.5, not at 9.0.
    */
-  const bookcaseWidth = SHELF.width + SHELF.sideThickness * 2;
   let framed = false;
+  let framedAt = 0;
 
   const frameCamera = (aspect: number): void => {
-    const half = Math.tan((fov / 2) * (Math.PI / 180));
-    const forHeight = unitHeight / (2 * half);
-    const forWidth = bookcaseWidth / (2 * half * aspect);
-    const distance = Math.max(forHeight, forWidth) * 1.35 + SHELF.depth;
+    const framing = frameBookcase(rowCount, aspect);
+    framedAt = framing.distance;
 
-    camera.position.set(bookcaseWidth * 0.16, unitHeight * 0.52, distance);
-    controls.maxDistance = distance * 2.4;
+    const { position, target } = framing;
+    camera.position.set(position.x, position.y, position.z);
+    controls.target.set(target.x, target.y, target.z);
+    controls.maxDistance = framing.maxDistance;
     controls.update();
+
+    const range = fogRange(settings.scene.fog, framedAt);
+    fog.near = range.near;
+    fog.far = range.far;
   };
 
   frameCamera(16 / 9);
@@ -681,6 +682,7 @@ export function mountShelf(
         settings,
         mountedWith,
         unitHeight,
+        framedAt,
       );
       settings = next;
 
@@ -2009,6 +2011,7 @@ function applyLive(
   current: ShelfSettings,
   mountedWith: ShelfSettings,
   unitHeight: number,
+  framedAt: number,
 ): ApplyReport {
   const applied: string[] = [];
   const needsRebuild: string[] = [];
@@ -2156,8 +2159,12 @@ function applyLive(
   // the scene, even to an identical value, because presence of fog is in the
   // program cache key. Doing it unconditionally would have made every tick of
   // every slider in the panel a full recompile.
-  fog.near = next.scene.fog.near;
-  fog.far = next.scene.fog.far;
+  //
+  // Scaled by the framing, as `frameCamera` scales it: the panel moves the
+  // multiple, and the multiple is what the setting is.
+  const range = fogRange(next.scene.fog, framedAt);
+  fog.near = range.near;
+  fog.far = range.far;
   if (current.scene.fog.enabled !== next.scene.fog.enabled) {
     scene.fog = next.scene.fog.enabled ? fog : null;
     applied.push(
