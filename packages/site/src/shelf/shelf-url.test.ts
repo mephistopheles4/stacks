@@ -1,16 +1,19 @@
-import { describe, expect, it } from 'vitest';
-import { resolveSettings, DEFAULT_SETTINGS } from './shelf-settings.ts';
-import { bookLimit, readSettings, woodSeed } from './shelf-url.ts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PAINTED_BASE } from './shadow-fallback.ts';
+import { resolveSettings, DEFAULT_SETTINGS, type ShelfSettings } from './shelf-settings.ts';
+import { bookLimit, readSettings, woodSeed, writeSettings } from './shelf-url.ts';
 
 /**
- * The reading half only.
+ * Mostly the reading half.
  *
  * `writeSettings` touches `window.history`, and these run under vitest's node
  * environment. The round trip through a real browser is exercised by hand and
  * recorded in the commit; what is worth pinning here is the *parsing*, because
  * that is where a hand-typed or chat-mangled URL meets the shelf — and every
  * failure mode below is one where the shelf would otherwise look deliberately
- * configured when it had actually mis-read something.
+ * configured when it had actually mis-read something. The one writing rule
+ * pinned, against a stubbed `window`, is that a device's lost-context record
+ * never reaches a URL.
  */
 
 const read = (query: string) => resolveSettings(readSettings(new URLSearchParams(query)));
@@ -33,7 +36,7 @@ describe('bookLimit', () => {
   });
 });
 
-describe('the ten probes', () => {
+describe('the probes', () => {
   it('leaves everything at the defaults for a bare ?debug', () => {
     expect(read('debug')).toEqual(DEFAULT_SETTINGS);
   });
@@ -50,7 +53,7 @@ describe('the ten probes', () => {
 
   it('maps every probe to its setting', () => {
     const settings = read(
-      'aa=0&dpr=1&guard=1&shadows=1&shadowmap=512&shadowtype=vsm&casters=0&shadowfetch=0&painted=0',
+      'aa=0&dpr=1&guard=1&shadows=1&shadowmap=512&shadowtype=vsm&casters=0&receivers=all&shadowfetch=0&painted=0',
     );
 
     expect(settings.renderer).toMatchObject({
@@ -63,6 +66,7 @@ describe('the ten probes', () => {
       mapSize: 512,
       type: 'vsm',
       casters: false,
+      receivers: 'all',
       fetch: false,
       painted: false,
     });
@@ -72,6 +76,28 @@ describe('the ten probes', () => {
     // The hazard: `SHADOW_TYPES[type]` would resolve `undefined` and hand it to
     // three without complaint, so a typo would silently change the filter.
     expect(read('shadowtype=fancy').shadows.type).toBe(DEFAULT_SETTINGS.shadows.type);
+  });
+
+  it('refuses a receiver set it does not know', () => {
+    // `?receivers=books` is not a configuration anybody measured. Falling back
+    // to the default keeps a typo from quietly re-arming the one that crashes.
+    expect(read('receivers=books').shadows.receivers).toBe('bookcase');
+    expect(read('receivers=').shadows.receivers).toBe('bookcase');
+  });
+
+  it('keeps ?shadows=1 to the bookcase unless ?receivers=all asks for more', () => {
+    expect(read('shadows=1').shadows.receivers).toBe('bookcase');
+    expect(read('shadows=1&receivers=all').shadows.receivers).toBe('all');
+  });
+
+  it('gives a bare page real-time shadows with only the bookcase reading them', () => {
+    // ADR-0090: the default for every visitor, with no probe typed at all.
+    expect(read('').shadows).toMatchObject({ enabled: true, receivers: 'bookcase' });
+  });
+
+  it('turns real-time shadows off for ?shadows=0, which is the painted fallback', () => {
+    expect(read('shadows=0').shadows.enabled).toBe(false);
+    expect(read('shadows=0').shadows.painted).toBe(true);
   });
 
   it('refuses a nonsense pixel ratio or map size', () => {
@@ -199,12 +225,14 @@ describe('?tune', () => {
 
   it('does not let a tune blob override a probe typed by hand', () => {
     // The two vocabularies never overlap, so a legacy probe is always the last
-    // word on the nine settings it owns. Someone appending `&shadows=1` to a
-    // dialled URL on a phone must get shadows.
+    // word on the nine settings it owns. Someone appending `&shadows=0` to a
+    // dialled URL on a phone must get the painted shelf. ⚠️ It appended
+    // `&shadows=1` until real-time shadows became the default, and then passed
+    // with the probe deleted: a probe that asks for the default proves nothing.
     const tune = encodeURIComponent(JSON.stringify({ lighting: { key: { intensity: 4.5 } } }));
-    const settings = read(`tune=${tune}&shadows=1`);
+    const settings = read(`tune=${tune}&shadows=0`);
 
-    expect(settings.shadows.enabled).toBe(true);
+    expect(settings.shadows.enabled).toBe(false);
     expect(settings.lighting.key.intensity).toBe(4.5);
   });
 });
@@ -289,5 +317,72 @@ describe('woodSeed', () => {
     const absent = resolveSettings(readSettings(new URLSearchParams('')));
     expect(absent.renderer.maxPixelRatio).toBe(DEFAULT_SETTINGS.renderer.maxPixelRatio);
     expect(absent.shadows.mapSize).toBe(DEFAULT_SETTINGS.shadows.mapSize);
+  });
+});
+
+describe('writeSettings against the base the page started from', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** The query `writeSettings` would put in the address bar, starting from `search`. */
+  const written = (settings: ShelfSettings, base?: ShelfSettings, search = '?debug'): string => {
+    let url = '';
+    vi.stubGlobal('window', {
+      location: { search, pathname: '/' },
+      history: {
+        replaceState: (_: unknown, __: string, next: string) => {
+          url = next;
+        },
+      },
+    });
+    writeSettings(settings, base);
+    return url;
+  };
+
+  const realTime = resolveSettings({ shadows: { enabled: true } });
+  const painted = resolveSettings({ shadows: { enabled: false } });
+
+  it('keeps a remembered device out of the URL', () => {
+    // A page that started painted from a lost-context record, still painted:
+    // nothing the visitor dialled, so nothing to write — not `?shadows=0`.
+    expect(written(painted, PAINTED_BASE)).toBe('?debug');
+  });
+
+  it('writes ?shadows=1 when the visitor turns shadows on over a record', () => {
+    // Which is also what reproduces the page: on this device, a URL without it
+    // starts painted.
+    expect(written(realTime, PAINTED_BASE)).toBe('?debug&shadows=1');
+  });
+
+  it('keeps a ?shadows=0 the visitor typed, even where it equals the base', () => {
+    // On a remembered device painted is the base, so a typed `?shadows=0` is no
+    // difference from it — and dropping it would make the copied link open
+    // real-time on every other device.
+    expect(written(painted, PAINTED_BASE, '?debug&shadows=0')).toBe('?debug&shadows=0');
+  });
+
+  it('still drops a probe once its setting has moved off what was typed', () => {
+    // Shadows turned on over a record and then off again: the address bar holds
+    // the panel's own `?shadows=1`, and painted is the base, so nothing is left
+    // to write — the remembered device stays out of the URL.
+    expect(written(painted, PAINTED_BASE, '?debug&shadows=1')).toBe('?debug');
+  });
+
+  it('writes the difference from whatever base it is given', () => {
+    // The control: the same painted settings against a real-time base are a
+    // difference, and are written. Without the base argument this is what a
+    // remembered device would have leaked.
+    expect(written(painted, realTime)).toBe('?debug&shadows=0');
+  });
+
+  it('diffs against the shipped defaults when no base is given', () => {
+    expect(written(DEFAULT_SETTINGS)).toBe('?debug');
+  });
+
+  it('writes nothing for real-time shadows and ?shadows=0 for painted, now real-time is shipped', () => {
+    // ADR-0090 moved which of the two is the difference.
+    expect(written(realTime)).toBe('?debug');
+    expect(written(painted)).toBe('?debug&shadows=0');
   });
 });

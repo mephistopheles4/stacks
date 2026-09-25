@@ -113,6 +113,23 @@ Everything the shelf looks like is one object — `ShelfSettings` in
 `DEFAULT_SETTINGS`. `shelf-url.ts` owns the query string in both directions: the
 ten historic probes keep their flat spellings because `docs/progress.md`
 documents them with measured results, and everything else rides in `?tune=`.
+`?receivers=all` joined them as an eleventh, for their reason: it is how
+`?shadows=1` still reaches what it drew before the books stopped reading the map
+([ADR-0088](adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)), and
+it is G61's control. ⚠️ **To re-test the crash by hand, open
+`?shadows=1&receivers=all`, never `?receivers=all` alone**: it is inert while
+shadows are off, and a device carrying a lost-context record starts painted, so
+the page reads no map, survives, and looks like a fixed driver.
+`scripts/phone-check.ts` clears the record first, and a hand re-test does not.
+**Two old probes mean what they always meant against a
+different default** since real-time shadows became every visitor's
+([ADR-0090](adr/0090-real-time-shadows-are-the-default.md)): `?shadows=1` asks
+for what a fresh device gets anyway, and overrides a remembered fallback for
+one load; `?shadows=0` is the painted shelf, which is what a device that lost
+its context shows. To run any of them on a phone and get a verdict rather than a
+look, use `scripts/phone-check.ts` —
+[`docs/commands.md`](commands.md#scriptsphone-checkts--the-check-only-a-phone-can-run)
+says what it does to the phone first.
 
 **A control must not lie, and that is the whole design.** `applySettings`
 returns an `ApplyReport` — `applied`, `needsRebuild`, `needsReload`, `refused` —
@@ -125,3 +142,49 @@ Decisions: [ADR-0032](adr/0032-shelf-settings-are-one-object.md),
 [ADR-0033](adr/0033-painters-follow-the-light.md),
 [ADR-0034](adr/0034-bloom-behind-a-composer.md). Research behind them is in
 [`docs/research/`](research/).
+
+### The lost-context record, on the black box
+
+When the shelf loses its WebGL context while it samples the shadow map, or one
+of its programs will not link there, it writes one record — `{ v, at, gpu }`
+under `stacks.shadows.fallback.v1` in `localStorage` — redraws painted, and
+starts painted on later loads for 30 days
+([ADR-0091](adr/0091-a-lost-context-falls-back-to-painted-shadows.md), items 1
+and 9). It is the one thing the shelf writes to a visitor's device without being
+asked, and only after it has seen the failure. ⚠️ **A page running a shadow probe redraws the
+same way and writes nothing** — `?shadows=1&receivers=all` above all, so
+re-running the reproduction does not paint the phone's plain page for 30 days.
+
+- **The `fallback` line** says where that stands: `real-time`, `painted`, or
+  `no shelf`, then why — `remembered from a failure on …, retries after …` (a lost context or a program that would not link; the record does not say which),
+  `?shadows=1 overrides a record from …`, `record … retired, GPU string
+  changed`, or how a loss in this session settled: `restored in 1.1s, redrawn
+  painted`, `no restore in 2.5s, redrawn on a new canvas`, or `lost — no restore
+  and no new canvas`. `storage refused, not remembered` is added when the write
+  failed, and `a shadow probe, not remembered` when the page was running one.
+  The black box keeps the line, so a dead session's record carries it.
+- **`forget`**, beside `copy`, shows only while a record exists. It removes the
+  record and says to reload. It is the only way off the record without
+  devtools; `?shadows=1` goes around it for one load without removing it.
+
+To stage a loss by hand, in the console of a page that samples the map:
+
+```js
+(() => {
+  const gl = document.getElementById('shelf-canvas').getContext('webgl2');
+  window.__lc = gl.getExtension('WEBGL_lose_context');
+  window.__lc.loseContext();
+})()
+```
+
+Then `window.__lc.restoreContext()` inside 2.5 s for the restore path, or
+nothing for the new-canvas path. ⚠️ **A staged loss is not a driver's.** It never
+restores on its own, never takes the GPU process down and never gets the page
+blocked, which on the Pixel 10 Pro XL is what a real one does. `pnpm
+smoke:render` runs both paths this way as G60 (`context-loss-fallback`), and a
+third: the new canvas refused a context, staged by making `getContext` answer
+`null` before the loss. That is where every real loss on the Pixel ended, and
+the page must show the failure sentence on its own background with the lost
+canvas hidden — left shown, Chrome painted it white over the whole page. And a
+fourth: the same restore under `?receivers=all`, which must write nothing and
+leave the plain page as shipped.

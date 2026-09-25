@@ -1,46 +1,51 @@
 import * as THREE from 'three';
 
+import {
+  atlasLayout,
+  coverShadeGeometry,
+  coverShadeMask,
+  coverShadeMaterial,
+  coverShadeMesh,
+  inShadow,
+  type BookcaseLight,
+  type CoverQuad,
+} from './cover-shade.ts';
+import type { PaintedPieces } from './painted-pieces.ts';
+
+export type { BookcaseLight } from './cover-shade.ts';
+
 /**
  * Shadows, painted rather than rasterised.
  *
  * Three's shadows are *shadow mapping*: render the whole scene from the light
- * into a depth texture, then have every fragment in the main pass sample that
- * texture to ask whether it is lit. It is a technique for scenes that change,
- * and it is the wrong tool here — nothing on this shelf moves. Books are placed
- * once, the light never moves, and a shadow does not depend on the camera, which
- * is the only thing that does. The scene was paying a fully dynamic solution for
- * a completely static problem.
+ * into a depth texture, then have fragments in the main pass sample that
+ * texture to ask whether they are lit. Nothing on this shelf moves — books are
+ * placed once and the light stays put — so every shadow in this file is
+ * computed once, from the layout, and drawn into a texture: no depth target
+ * and no per-fragment lookup.
  *
- * So the shading is computed once, from the layout, and drawn into a texture.
- * There is no shadow pass, no depth target, and no per-fragment lookup: the
- * darkness is simply part of the picture.
+ * It began as the whole of the shelf's shading, because every real-time
+ * configuration tried on the owner's phone — a Pixel 10 Pro, whose Tensor G5
+ * carries Imagination's PowerVR D-Series — lost the WebGL context within a
+ * minute. That turned out to be narrower than it looked: the context holds
+ * when **one** program samples the map, in a handful of draws a frame
+ * ([ADR-0088](../../../../docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)).
+ * So under the real-time path the bookcase reads a shadow map and the books
+ * read none.
  *
- * That was the better design before any of this came up. It also happens to be
- * the only one that runs on the owner's phone — a Pixel 10 Pro, whose Tensor G5
- * carries Imagination's PowerVR D-Series. Every real-time configuration lost the
- * WebGL context within a minute: soft filtering and basic, 2048 and 512, and
- * with the casters removed entirely so nothing was drawn into the map at all.
- * Only the absence of a depth target survived. That is a driver fault rather
- * than a budget — 195 draws and 1,720 triangles is not a load — and nothing here
- * can fix it. Not depending on it is the fix.
+ * The real-time path is the default since ADR-0090, so painting is now the
+ * **fallback**: a device that loses its context while sampling the map starts
+ * painted from then on (`shadow-fallback.ts`), and there this file is the whole
+ * of the shading. The argument it began with still stands — nothing here moves,
+ * so a shadow computed once is the right tool for a static scene — and it is
+ * why the fallback costs a visitor so little.
+ *
+ * Beside the shipped map, only what the map does not draw is painted: the
+ * tight root under each book, the corner and the recess, and the bands on the
+ * covers. The backboard shade, the upright's wedge and the soft body of each
+ * contact shadow step aside, because the map casts them and painting them too
+ * darkened the same wood twice. `paintedPieces` decides which, and why.
  */
-
-/**
- * The key light, reduced to the two ratios a painter needs.
- *
- * `xPerZ` and `yPerZ` are how far a shadow travels sideways and how far it
- * falls, per unit of depth into the bookcase. Both are magnitudes: the light stands
- * high and to the right, so every shadow here runs left and down, and saying so
- * once in prose beats carrying two signs through the arithmetic.
- *
- * Derived from the light's real position rather than tuned by eye (see
- * `bookcaseLight` in `scene.ts`), so moving the light cannot leave the painted
- * shadows describing where it used to be.
- */
-export interface BookcaseLight {
-  readonly xPerZ: number;
-  readonly yPerZ: number;
-}
 
 /**
  * Where one book meets the plank it stands on, in world units.
@@ -104,13 +109,17 @@ const BACKBOARD_ALPHA = 0.22;
  * How dark the recess under a plank goes, and how far down it reaches.
  *
  * The one effect here that is *not* a cast shadow. A shadow needs the light to
- * be blocked, and almost nothing blocks it from a book's face: every book on
- * the shelf stands its front within two centimetres of the bookcase's front plane,
- * so a ray leaving one escapes into the room almost at once. What darkens the
- * top of a book is the recess it stands in — a plank directly overhead, a
+ * be blocked, and almost nothing blocks it from a spine: every shelved book
+ * stands its fore-edge within two centimetres of the bookcase's front plane, so
+ * a ray leaving one escapes into the room almost at once. What darkens the top
+ * of a spine is the recess it stands in — a plank directly overhead, a
  * backboard behind, and only a narrow wedge of room left to catch light from.
  * That is ambient occlusion, and it is why this reaches down from the plank by
  * a fixed distance rather than following any book's own height.
+ *
+ * A face-out cover is the exception, and a large one: turned to show its cover
+ * it stands a quarter of a unit further back, deep enough under the plank to
+ * take a hard cast band across its top. That is `cover-shade.ts`, not this.
  */
 const RECESS_ALPHA = 0.34;
 const RECESS_REACH = 0.62;
@@ -136,11 +145,22 @@ const SIDE_SHADE_REACH = 0.28;
  */
 const PENUMBRA = 0.05;
 
+/**
+ * The pieces of `PaintedPieces` one plank's texture carries. The texture is
+ * drawn whenever any is, so the root can stand alone on a plank whose cast
+ * shadow the map draws.
+ */
+export type PlankPieces = Pick<
+  PaintedPieces,
+  'plankCorner' | 'uprightWedge' | 'contactBody' | 'contactRoot'
+>;
+
 export function makeContactShadowTexture(
   contacts: readonly Contact[],
   shelfWidth: number,
   shelfDepth: number,
   light: BookcaseLight,
+  pieces: PlankPieces,
 ): THREE.CanvasTexture | undefined {
   const height = Math.max(64, Math.round((TEXTURE_WIDTH * shelfDepth) / shelfWidth));
 
@@ -164,11 +184,13 @@ export function makeContactShadowTexture(
   // is ambient occlusion rather than a cast shadow, so it does not belong to any
   // book, and drawing it here means an empty shelf still has depth instead of
   // reading as a flat plank.
-  const ao = ctx.createLinearGradient(0, 0, 0, height * 0.45);
-  ao.addColorStop(0, 'rgba(0, 0, 0, 0.42)');
-  ao.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = ao;
-  ctx.fillRect(0, 0, TEXTURE_WIDTH, height * 0.45);
+  if (pieces.plankCorner) {
+    const ao = ctx.createLinearGradient(0, 0, 0, height * 0.45);
+    ao.addColorStop(0, 'rgba(0, 0, 0, 0.42)');
+    ao.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = ao;
+    ctx.fillRect(0, 0, TEXTURE_WIDTH, height * 0.45);
+  }
 
   // The right-hand upright stands between the shelf and the light, so it throws
   // a wedge across the plank — widest at the back, narrowing to nothing at the
@@ -181,22 +203,9 @@ export function makeContactShadowTexture(
   // and is behind nothing at all. The left upright never appears here, for the
   // same reason and in reverse: the light is to the right, so its shadow falls
   // out of the bookcase rather than into it.
-  const softPx = Math.max(1, (PENUMBRA / shelfWidth) * TEXTURE_WIDTH);
-  for (let row = 0; row < height; row += 1) {
-    const z = ((row + 0.5) / height) * shelfDepth - shelfDepth / 2;
-    const reach = (shelfDepth / 2 - z) * light.xPerZ * scaleX;
-    if (reach <= 0) continue;
-
-    const start = TEXTURE_WIDTH - reach;
-    const penumbra = ctx.createLinearGradient(start, 0, start + softPx, 0);
-    penumbra.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    penumbra.addColorStop(1, `rgba(0, 0, 0, ${String(SIDE_ALPHA)})`);
-    ctx.fillStyle = penumbra;
-    ctx.fillRect(start, row, softPx, 1);
-
-    ctx.fillStyle = `rgba(0, 0, 0, ${String(SIDE_ALPHA)})`;
-    ctx.fillRect(start + softPx, row, TEXTURE_WIDTH - start - softPx, 1);
-  }
+  //
+  // The map casts this wedge itself, so beside it the painted one steps aside.
+  if (pieces.uprightWedge) paintUprightWedge(ctx, height, shelfWidth, shelfDepth, light);
 
   // Softness is the whole effect, and `ctx.filter` is what provides it. Where it
   // is missing the same code would paint hard black rectangles under every book,
@@ -214,10 +223,15 @@ export function makeContactShadowTexture(
   // pass is the shape thrown onto the plank; the tight pass is the line where
   // the book actually meets the wood, and it is the one that makes a book look
   // like it is standing on something rather than hovering a millimetre above it.
-  for (const [blur, alpha, offset] of [
-    [10, CONTACT_ALPHA * 0.55, 1],
-    [2.5, CONTACT_ALPHA, 0.25],
+  //
+  // Beside the shipped shadow map the body steps aside — the books cast into
+  // the map and the plank reads it — and the root stays: the map draws a book's
+  // shadow, and not the tight dark line where it meets the wood.
+  for (const [blur, alpha, offset, drawn] of [
+    [10, CONTACT_ALPHA * 0.55, 1, pieces.contactBody],
+    [2.5, CONTACT_ALPHA, 0.25, pieces.contactRoot],
   ] as const) {
+    if (!drawn) continue;
     ctx.filter = `blur(${String(blur)}px)`;
     ctx.globalAlpha = alpha;
 
@@ -232,6 +246,36 @@ export function makeContactShadowTexture(
   ctx.globalAlpha = 1;
 
   return finish(canvas);
+}
+
+/**
+ * The right-hand upright's wedge across one plank's texture, a row at a time,
+ * `TEXTURE_WIDTH` wide and `height` deep. See `makeContactShadowTexture`.
+ */
+function paintUprightWedge(
+  ctx: CanvasRenderingContext2D,
+  height: number,
+  shelfWidth: number,
+  shelfDepth: number,
+  light: BookcaseLight,
+): void {
+  const scaleX = TEXTURE_WIDTH / shelfWidth;
+  const softPx = Math.max(1, (PENUMBRA / shelfWidth) * TEXTURE_WIDTH);
+  for (let row = 0; row < height; row += 1) {
+    const z = ((row + 0.5) / height) * shelfDepth - shelfDepth / 2;
+    const reach = (shelfDepth / 2 - z) * light.xPerZ * scaleX;
+    if (reach <= 0) continue;
+
+    const start = TEXTURE_WIDTH - reach;
+    const penumbra = ctx.createLinearGradient(start, 0, start + softPx, 0);
+    penumbra.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    penumbra.addColorStop(1, `rgba(0, 0, 0, ${String(SIDE_ALPHA)})`);
+    ctx.fillStyle = penumbra;
+    ctx.fillRect(start, row, softPx, 1);
+
+    ctx.fillStyle = `rgba(0, 0, 0, ${String(SIDE_ALPHA)})`;
+    ctx.fillRect(start + softPx, row, TEXTURE_WIDTH - start - softPx, 1);
+  }
 }
 
 /**
@@ -259,8 +303,11 @@ export function makeNeighbourShadow(width: number, height: number): THREE.Mesh |
   // Reaches half way across and goes a little deeper than it did. The real
   // shadow map is darker still on every face-out cover it was measured against,
   // and shaped — the occluder is a *taller* neighbour, so its top corner throws
-  // a diagonal rather than a straight band. That part is not reproduced here: it
-  // would need each book to know how tall the one beside it is.
+  // a diagonal rather than a straight band. That part is `cover-shade.ts`'s,
+  // which knows how tall the book beside is. This plane predates it and stays:
+  // the old `?shadows=1` drew both, so the cover shade was fitted with this in
+  // place. Whether it still earns its place beside the cover shade is not
+  // measured — neither fixture stands a spine flush against a face-out cover.
   gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
   gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0)');
   gradient.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
@@ -283,13 +330,14 @@ export function makeNeighbourShadow(width: number, height: number): THREE.Mesh |
  * The shadow the bookcase throws on its own backboard.
  *
  * This is the piece the shelf was missing, and the one a viewer reads as "the
- * shelf casts a shadow over the books" — the books themselves barely take a
- * cast shadow at all, because their fronts sit within a couple of centimetres
- * of the bookcase's front plane and a ray leaving them escapes almost at once.
- * The backboard is the opposite case: it stands the full depth of the bookcase
+ * shelf casts a shadow over the books" — a spine barely takes a cast shadow at
+ * all, because its fore-edge sits within a couple of centimetres of the
+ * bookcase's front plane and a ray leaving it escapes almost at once. The
+ * backboard is the opposite case: it stands the full depth of the bookcase
  * behind them, so a ray leaving it has to cross all of that before it gets
- * out, and mostly does not. So the dark band across the top of a shelf is the *wall* behind the
- * books, not the books.
+ * out, and mostly does not. So the dark band across the top of a shelf of
+ * spines is the *wall* behind the books, not the books. A face-out cover,
+ * standing half way back, takes a band of its own; see `cover-shade.ts`.
  *
  * Two occluders, unioned rather than added so the corner where they meet does
  * not go twice as dark as either:
@@ -317,7 +365,9 @@ export function makeBackboardShade(
   return shadePlane(
     width,
     openHeight,
-    (inward, below) => BACKBOARD_ALPHA * Math.max(inShadow(fall - below), inShadow(reach - inward)),
+    (inward, below) =>
+      BACKBOARD_ALPHA *
+      Math.max(inShadow(fall - below, PENUMBRA), inShadow(reach - inward, PENUMBRA)),
   );
 }
 
@@ -370,28 +420,12 @@ function shadePlane(
 ): THREE.Mesh | undefined {
   const rows = Math.max(32, Math.round((SHADE_TEXTURE_WIDTH * height) / width));
 
-  const canvas = document.createElement('canvas');
-  canvas.width = SHADE_TEXTURE_WIDTH;
-  canvas.height = rows;
-
-  const ctx = canvas.getContext('2d');
-  if (ctx === null) return undefined;
-
-  const image = ctx.createImageData(canvas.width, rows);
-  // Only the alpha channel is written. The rest stays zero, so the mask is
-  // black and the wood's own colour shows through it.
-  for (let row = 0; row < rows; row += 1) {
-    // Row 0 is the top of the texture and, with `flipY` on, the top of the
-    // plane — so this counts downward from the underside of the plank above.
-    const below = ((row + 0.5) / rows) * height;
-
-    for (let column = 0; column < canvas.width; column += 1) {
-      const inward = (1 - (column + 0.5) / canvas.width) * width;
-      const alpha = alphaAt(inward, below);
-      image.data[(row * canvas.width + column) * 4 + 3] = Math.round(255 * alpha);
-    }
-  }
-  ctx.putImageData(image, 0, 0);
+  // Row 0 is the top of the texture and, with `flipY` on, the top of the plane
+  // — so `below` counts downward from the underside of the plank above.
+  const canvas = alphaCanvas(SHADE_TEXTURE_WIDTH, rows, (column, row) =>
+    alphaAt((1 - (column + 0.5) / SHADE_TEXTURE_WIDTH) * width, ((row + 0.5) / rows) * height),
+  );
+  if (canvas === undefined) return undefined;
 
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(width, height),
@@ -402,16 +436,57 @@ function shadePlane(
 }
 
 /**
- * How much of the shadow reaches a point that is `inside` world units past its
- * edge — 1 well inside, 0 well outside, smooth across the penumbra.
+ * A canvas carrying a mask in its alpha channel alone, written a pixel at a
+ * time — `alphaAt` answers 0 to 1 for each texel, row 0 at the top.
  *
- * For a cast shadow, which has a definite edge.
+ * The rest stays zero, so the mask is black and whatever it lies on shows
+ * through it. Shared by every painter that works per pixel, so there is one
+ * place that knows how an `ImageData` is laid out.
  */
-function inShadow(inside: number): number {
-  const t = inside / PENUMBRA + 0.5;
-  if (t <= 0) return 0;
-  if (t >= 1) return 1;
-  return t * t * (3 - 2 * t);
+function alphaCanvas(
+  width: number,
+  height: number,
+  alphaAt: (column: number, row: number) => number,
+): HTMLCanvasElement | undefined {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d');
+  if (ctx === null) return undefined;
+
+  const image = ctx.createImageData(width, height);
+  for (let row = 0; row < height; row += 1) {
+    for (let column = 0; column < width; column += 1) {
+      image.data[(row * width + column) * 4 + 3] = Math.round(255 * alphaAt(column, row));
+    }
+  }
+  ctx.putImageData(image, 0, 0);
+  return canvas;
+}
+
+/**
+ * The shadow the plank above, the right-hand upright and the books beside it
+ * throw across every face-out cover — one mesh and one atlas for the whole
+ * shelf. The mask, the quads and the material are all `cover-shade.ts`; this
+ * only puts the mask on a canvas.
+ */
+export function makeCoverShade(
+  covers: readonly CoverQuad[],
+  light: BookcaseLight,
+): THREE.Mesh | undefined {
+  const layout = atlasLayout(covers.length);
+  if (layout === undefined) return undefined;
+
+  const mask = coverShadeMask(covers, layout, light);
+  const canvas = alphaCanvas(
+    layout.width,
+    layout.height,
+    (column, row) => mask[row * layout.width + column] ?? 0,
+  );
+  if (canvas === undefined) return undefined;
+
+  return coverShadeMesh(coverShadeGeometry(covers, layout), coverShadeMaterial(finish(canvas)));
 }
 
 /**
@@ -449,8 +524,9 @@ export function makeContactShadow(
   shelfDepth: number,
   y: number,
   light: BookcaseLight,
+  pieces: PlankPieces,
 ): THREE.Mesh | undefined {
-  const texture = makeContactShadowTexture(contacts, shelfWidth, shelfDepth, light);
+  const texture = makeContactShadowTexture(contacts, shelfWidth, shelfDepth, light, pieces);
   if (texture === undefined) return undefined;
 
   const mesh = new THREE.Mesh(

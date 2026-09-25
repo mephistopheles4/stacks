@@ -6,12 +6,22 @@ import {
   LIFT,
   makeBackboardShade,
   makeContactShadow,
+  makeCoverShade,
   makeNeighbourShadow,
   makeRecessShade,
   type BookcaseLight,
   type Contact,
 } from './contact-shadow.ts';
+import {
+  applyPlacement,
+  COVER_LIFT,
+  coverQuads,
+  lightRatios,
+  type CoverQuad,
+} from './cover-shade.ts';
+import { changedPieces, livePieces, paintedPieces } from './painted-pieces.ts';
 import { BACKBOARD_INSET, PLANK_INSET, rowsForBookcase, SHELF } from './bookcase.ts';
+import { bookCase, pageBlock } from './binding-case.ts';
 import { fogRange, FOV, frameBookcase } from './framing.ts';
 import { woodSeed } from './shelf-url.ts';
 import type { Post } from './post.ts';
@@ -21,6 +31,7 @@ import {
   DEFAULT_SETTINGS,
   heightOf,
   type LightPosition,
+  type ShadowSettings,
   type ShadowTypeName,
   type ShelfSettings,
   type ToneMappingName,
@@ -28,6 +39,8 @@ import {
 import { hashUnit } from './hash.ts';
 import { headCapGeometry, isHeadCapGeometry } from './head-cap.ts';
 import { pageStriationMap } from './page-edges.ts';
+import { receiveShadows } from './shadow-receivers.ts';
+import { ContextRefused } from './shelf-notice.ts';
 import { spineNormalMap } from './spine-profile.ts';
 import { makeSpineTexture } from './spine-texture.ts';
 import {
@@ -38,6 +51,7 @@ import {
   describeWoodwork,
   fibreMapFor,
   freshWoodSeed,
+  joinWoodwork,
   resolveWoodwork,
   speciesPending,
   varyMember,
@@ -45,6 +59,7 @@ import {
   woodKeys,
   worldSpaceUvs,
   type Axis,
+  type PlacedMember,
   type ResolvedWoodwork,
   type SheetBinding,
   type SheetLay,
@@ -202,6 +217,13 @@ export interface ShelfHandle {
   dispose(): void;
   /** Books currently on the shelf, in draw order. Used by the smoke gate. */
   readonly bookCount: number;
+  /**
+   * Shelves in the bookcase, the empty one ahead included. G61 reads it to know
+   * its large page is large: an unjoined bookcase drew `rowCount + 4` times from
+   * the program that reads the shadow map, so a gate that never saw a tall case
+   * could not tell a join from a short library.
+   */
+  readonly rowCount: number;
   /** The GPU, when the browser is willing to name it. */
   readonly gpu: string | undefined;
   /**
@@ -275,21 +297,99 @@ export interface MountOptions {
    * enough, or when the driver resets. Without a handler the canvas simply stops
    * updating and the shelf becomes a frozen or blank rectangle with nothing
    * saying why, which is precisely how this failed in the wild.
+   *
+   * Handed the settings the shelf is running **at the moment of the loss**,
+   * not the ones it was mounted with: the panel turns shadows on and off live,
+   * and whether the lost shelf was sampling the shadow map is what decides
+   * whether the page falls back. See `context-recovery.ts`.
    */
-  readonly onContextLost?: () => void;
-  /** The GPU gave it back. Only ever fires if the loss was prevented-default. */
+  readonly onContextLost?: (running: ShelfSettings) => void;
+  /**
+   * The GPU gave it back. Only ever fires if the loss was prevented-default.
+   *
+   * ⚠️ **This callback may dispose the shelf**, and then the shelf stays down:
+   * nothing resumes and no frame is drawn on the disposed renderer. That is how
+   * the page replaces a shelf that was sampling the shadow map with a painted
+   * one, rather than resuming the configuration that lost the context.
+   */
   readonly onContextRestored?: () => void;
   /**
    * A shader program would not link, and the shelf has stopped rather than
    * spend the context arguing about it.
+   *
+   * Handed the settings running **at the moment of the failure**, as
+   * `onContextLost` is: whether the shelf was sampling the shadow map decides
+   * whether the page falls back painted. ⚠️ **Called from inside `render()`** —
+   * inside `mountShelf` itself when the first frame fails — so nothing here may
+   * dispose this shelf synchronously. See `context-recovery.ts`.
    */
-  readonly onShaderFailure?: (report: readonly string[]) => void;
+  readonly onShaderFailure?: (report: readonly string[], running: ShelfSettings) => void;
 }
 
+/** Anything a mount makes that outlives a throw unless it is let go of. */
+interface Releasable {
+  dispose(): void;
+}
+
+/**
+ * Builds the shelf on `canvas` — or throws, having let go of whatever it made.
+ *
+ * ⚠️ **A throw halfway through leaves nothing behind.** The renderer comes
+ * first, and the woodwork join, the cover atlas and the first frame all come
+ * after it and can throw: the join refuses rather than fall back, and the atlas
+ * refuses past 1,800 face-out covers. Without this the renderer, its controls
+ * and its picker stayed listening on the canvas — the picker still answering
+ * clicks for a scene nobody could see — and on the fallback's new canvas a live
+ * context was left on an element nobody would ever show. So each part is
+ * registered as it is made, and a throw releases them newest first and rethrows
+ * the original.
+ *
+ * The one throw that is the browser's and not the site's is tagged:
+ * `ContextRefused`, so the page can say which it was.
+ */
 export function mountShelf(
   canvas: HTMLCanvasElement,
   books: readonly LibraryBook[] = [],
   options: MountOptions = {},
+): ShelfHandle {
+  const made: Releasable[] = [];
+  try {
+    return assembleShelf(canvas, books, options, (part) => {
+      made.push(part);
+      return part;
+    });
+  } catch (error) {
+    for (const part of made.reverse()) {
+      try {
+        part.dispose();
+      } catch {
+        // The first throw is the one worth reading; a second from the clean-up
+        // would only bury it.
+      }
+    }
+    throw error;
+  }
+}
+
+/**
+ * The renderer, or `ContextRefused` when the browser will not hand one a
+ * context — no WebGL at all, or a browser that has just killed this page's
+ * renderer and is refusing to try again. three has already logged its own
+ * line by the time this rethrows.
+ */
+function openRenderer(canvas: HTMLCanvasElement, antialias: boolean): THREE.WebGLRenderer {
+  try {
+    return new THREE.WebGLRenderer({ canvas, antialias });
+  } catch (error) {
+    throw new ContextRefused(error);
+  }
+}
+
+function assembleShelf(
+  canvas: HTMLCanvasElement,
+  books: readonly LibraryBook[],
+  options: MountOptions,
+  own: <T extends Releasable>(part: T) => T,
 ): ShelfHandle {
   /**
    * What this mount is running — and it can change.
@@ -346,7 +446,7 @@ export function mountShelf(
   const shadows = settings.shadows.enabled;
   const shadowFetch = settings.shadows.fetch;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: contextAntialias });
+  const renderer = own(openRenderer(canvas, contextAntialias));
   applyRendererSettings(renderer, settings);
 
   /**
@@ -374,7 +474,7 @@ export function mountShelf(
 
   const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
 
-  const controls = new OrbitControls(camera, renderer.domElement);
+  const controls = own(new OrbitControls(camera, renderer.domElement));
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
   controls.minDistance = 1.5;
@@ -435,13 +535,16 @@ export function mountShelf(
   // in it, and the scene graph is built from what it returned.
   const placements = placeShelf(rows);
   const { placed, painters } = buildBooks(scene, placements, textures, lookup, settings);
+  if (painters !== undefined) own(painters);
 
-  const picker = new Picker(
-    canvas,
-    camera,
-    placed.map((book) => book.group),
-    lookup,
-    options.onSelect,
+  const picker = own(
+    new Picker(
+      canvas,
+      camera,
+      placed.map((book) => book.group),
+      lookup,
+      options.onSelect,
+    ),
   );
 
   /**
@@ -456,7 +559,26 @@ export function mountShelf(
    */
   let halted = false;
 
+  /**
+   * Set once, by `dispose()`, and read by everything that could draw again.
+   *
+   * ⚠️ **Two places can start a frame after a dispose, and both check it.** The
+   * restored handler calls back into the page before it resumes, and the page
+   * may dispose this shelf right there; without the guard the handler would
+   * then resume a render loop on a disposed renderer, beside the new shelf's —
+   * two loops. `renderLoop` checks it too, so no path into it can revive a
+   * disposed shelf.
+   */
+  let disposed = false;
+
   let frame = 0;
+  // A first frame that throws has already asked for the next one.
+  own({
+    dispose: () => {
+      disposed = true;
+      cancelAnimationFrame(frame);
+    },
+  });
   let drawn = 0;
 
   /**
@@ -497,7 +619,7 @@ export function mountShelf(
   renderer.info.autoReset = false;
 
   const renderLoop = (): void => {
-    if (halted) return;
+    if (halted || disposed) return;
     frame = requestAnimationFrame(renderLoop);
     controls.update();
     renderer.info.reset();
@@ -542,7 +664,7 @@ export function mountShelf(
 
     halted = true;
     cancelAnimationFrame(frame);
-    options.onShaderFailure?.(shaderErrors);
+    options.onShaderFailure?.(shaderErrors, settings);
   };
 
   let sizedTo = { width: 0, height: 0 };
@@ -579,15 +701,23 @@ export function mountShelf(
    * good and `webglcontextrestored` never fires. Calling `preventDefault` is the
    * whole of what makes a restore possible — without it there is nothing to hand
    * back, whatever the driver does next.
+   *
+   * ⚠️ **three already does it.** `WebGLRenderer` registers its own listeners in
+   * its constructor, before this one, and its handler calls `preventDefault`
+   * itself (`WebGLRenderer.js:387-389` and `:1101-1108`). This call is redundant
+   * today and kept on purpose: the restore this page depends on should not rest
+   * on a line in somebody else's handler.
    */
   const handleContextLost = (event: Event): void => {
     event.preventDefault();
     cancelAnimationFrame(frame);
-    options.onContextLost?.();
+    options.onContextLost?.(settings);
   };
 
   const handleContextRestored = (): void => {
     options.onContextRestored?.();
+    // The page may have replaced this shelf inside that callback. See `disposed`.
+    if (disposed) return;
     // The one-shot shadow map died with the old context, and `autoUpdate` is off,
     // so without this the restored shelf renders with no shadows at all — and
     // silently, since nothing else would report it.
@@ -597,6 +727,12 @@ export function mountShelf(
 
   canvas.addEventListener('webglcontextlost', handleContextLost);
   canvas.addEventListener('webglcontextrestored', handleContextRestored);
+  own({
+    dispose: () => {
+      canvas.removeEventListener('webglcontextlost', handleContextLost);
+      canvas.removeEventListener('webglcontextrestored', handleContextRestored);
+    },
+  });
 
   if (composed) {
     void import('./post.ts').then(({ makePost }) => {
@@ -608,9 +744,12 @@ export function mountShelf(
     });
   }
 
-  let disposed = false;
-
   const observer = new ResizeObserver(resize);
+  own({
+    dispose: () => {
+      observer.disconnect();
+    },
+  });
   observer.observe(canvas);
   resize();
   renderLoop();
@@ -630,6 +769,7 @@ export function mountShelf(
 
   return {
     bookCount: placed.length,
+    rowCount,
     gpu: describeGpu(renderer),
     bookcaseOverflow: measureBookcaseOverflow(scene, placed),
     shaderErrors,
@@ -652,7 +792,8 @@ export function mountShelf(
         `aa=${composed ? 'smaa' : antialias ? 'on' : 'off'} dpr<=${String(r.maxPixelRatio)} ` +
         `bloom=${settings.effects.bloom.enabled ? settings.effects.bloom.strength.toFixed(2) : 'off'} ` +
         `shadows=${s.enabled ? `${s.type}@${String(s.mapSize)}` : 'off'} ` +
-        `casters=${s.casters ? 'on' : 'off'} guard=${r.guardResize ? 'on' : 'off'} ` +
+        `casters=${s.casters ? 'on' : 'off'} receivers=${s.receivers} ` +
+        `guard=${r.guardResize ? 'on' : 'off'} ` +
         `painted=${s.painted ? 'on' : 'off'} fetch=${s.fetch ? 'on' : 'off'} ` +
         `tone=${r.toneMapping}@${r.exposure.toFixed(2)}`
       );
@@ -962,7 +1103,10 @@ export type BookLookup = Map<THREE.Object3D, LibraryBook>;
  *
  * Everything about *where* a book goes was decided by `placeShelf` before this
  * ran. What is left is Three.js — geometry, materials, the click lookup, and the
- * painted overlays that stand in for a real-time shadow pass.
+ * painted overlays: beside the real-time shadow map they add what the map does
+ * not draw — the contact roots, the recess and the bands on the covers — and
+ * without one, after a lost context, they are the whole of the shading. Which
+ * pieces draw is `paintedPieces`'s.
  */
 function buildBooks(
   scene: THREE.Scene,
@@ -974,15 +1118,13 @@ function buildBooks(
   // Was a separate parameter until the settings object existed, which let a
   // caller pass a `painted` that disagreed with the one the painters would later
   // read. One source, no way to disagree.
-  const painted = settings.shadows.painted;
+  const pieces = paintedPieces(settings.shadows);
 
   const placed: PlacedBook[] = [];
-  /** Contacts per row of *books*, indexed as `placements` is — top shelf first. */
-  const byRow: Contact[][] = [];
 
   const rowCount = rowsForBookcase(placements.length);
 
-  placements.forEach((row, rowIndex) => {
+  placements.forEach((row) => {
     row.forEach((placement, index) => {
       const { entry } = placement;
 
@@ -994,7 +1136,7 @@ function buildBooks(
       // anyway put a hard band down the edge of a book standing on its own.
       const next = row[index + 1]?.entry;
       const shadedFromRight =
-        painted &&
+        pieces.neighbourShadow &&
         entry.faceOut &&
         next !== undefined &&
         !next.faceOut &&
@@ -1004,9 +1146,9 @@ function buildBooks(
       // depth to build at — exactly, since halving and doubling a double is.
       const book = buildBook(entry, placement.frontZ * 2, textures, shadedFromRight, settings);
 
-      book.rotation.y = placement.rotationY;
-      book.rotation.z = placement.rotationZ;
-      book.position.set(placement.position.x, placement.position.y, placement.position.z);
+      // The cover shade places its quads through the same call, so the band
+      // cannot be registered against a book put somewhere else.
+      applyPlacement(book, placement);
 
       scene.add(book);
       placed.push({ group: book, frontZ: placement.frontZ });
@@ -1014,26 +1156,26 @@ function buildBooks(
       // pages or a board opens the same card as a click on the spine.
       for (const part of book.children) lookup.set(part, entry.book);
     });
-
-    // The painted shadow is drawn from exactly the contacts the books were
-    // placed at, so the two cannot drift apart.
-    byRow[rowIndex] = row.map((placement) => placement.contact);
   });
 
   // Every shelf, not only the ones holding books: the overlays also carry the
   // shading the bookcase throws on itself, and an empty shelf has a backboard and a
   // corner just as a full one does. Skipping them would leave the bottom of a
   // growing bookcase looking like a different piece of furniture from the top.
-  if (!painted) return { placed, painters: undefined };
+  if (!settings.shadows.painted) return { placed, painters: undefined };
 
-  const painters = new Painters(scene, byRow, rowCount);
+  // `settings` here is what the shelf is being built with, which is what the
+  // painters must decide every rebuild-class key from — see `Painters`.
+  const painters = new Painters(scene, placements, rowCount, settings);
   painters.paint(settings);
 
   // The corner a shelf makes with its backboard is dark on both sides whatever
   // the light does, so it is not derived from the light and never repainted —
-  // painted once, here, and left alone. See `makeRecessShade`.
+  // painted once, here, and left alone. See `makeRecessShade`. Nor does the
+  // shadow map draw it, so it stays beside the map as well.
   const openHeight = SHELF.rowHeight - SHELF.plankThickness;
-  for (let row = 0; row < rowCount; row += 1) {
+  const recessRows = pieces.recess ? rowCount : 0;
+  for (let row = 0; row < recessRows; row += 1) {
     const recess = makeRecessShade(SHELF.width, openHeight);
     if (recess !== undefined) {
       const shelfY = row * SHELF.rowHeight + SHELF.plankThickness / 2;
@@ -1062,41 +1204,77 @@ function buildBooks(
  * shadow that is a handful of 2D canvas fills. Nothing about a book changes when
  * the light moves.
  *
- * The contacts are held rather than recomputed because they are a function of
- * the *layout*, not of the light — the books have not moved, and re-deriving
- * them would be a second chance to disagree with where they were actually put.
+ * The contacts and the covers are held rather than recomputed because they are
+ * a function of the *layout*, not of the light — the books have not moved, and
+ * re-deriving them would be a second chance to disagree with where they were
+ * actually put.
+ *
+ * **Three painted shadows are cast now, not two**: the cover shade across every
+ * face-out cover follows the light as well.
+ *
+ * **Which pieces draw is decided on every paint, by `livePieces`**: every
+ * shadow key as the shelf was *built*, and `enabled` as it is now. The
+ * rebuild-class keys come from the mount because a pending change has not
+ * reached the scene — a pending switch to `receivers: 'all'` has not yet given
+ * the books their shadow sampler, and a repaint that read it would take the
+ * band off covers that do not yet receive the real one. `enabled` comes from
+ * now because it is live: behind `?debug`, turning real-time shadows on steps
+ * the backboard shade, the upright's wedge and the contact bodies aside, and
+ * turning them off draws them back, so the panel never shows both darkenings
+ * or neither. It also keeps the cover shade right on a `?receivers=all` shelf,
+ * which a decision taken once at mount left stale until a rebuild.
  */
 class Painters {
   readonly #scene: THREE.Scene;
+  /** Contacts per row of *books*, indexed as the placements are — top shelf first. */
   readonly #byRow: readonly (readonly Contact[])[];
   readonly #rowCount: number;
+  /** The shadow settings the shelf was built with. See `livePieces`. */
+  readonly #mounted: ShadowSettings;
+  /** Every face-out cover, whether or not the cover shade draws now. */
+  readonly #covers: readonly CoverQuad[];
   #meshes: THREE.Mesh[] = [];
 
-  constructor(scene: THREE.Scene, byRow: readonly (readonly Contact[])[], rowCount: number) {
+  constructor(
+    scene: THREE.Scene,
+    placements: readonly (readonly Placement[])[],
+    rowCount: number,
+    mountedWith: ShelfSettings,
+  ) {
     this.#scene = scene;
-    this.#byRow = byRow;
+    // The painted shadow is drawn from exactly the contacts the books were
+    // placed at, so the two cannot drift apart.
+    this.#byRow = placements.map((row) => row.map((placement) => placement.contact));
     this.#rowCount = rowCount;
+    this.#mounted = mountedWith.shadows;
+    this.#covers = coverQuads(placements, mountedWith.books.headCap);
   }
 
   paint(settings: ShelfSettings): void {
     this.dispose();
 
+    const pieces = livePieces(this.#mounted, settings.shadows);
     const light = bookcaseLight(this.#rowCount * SHELF.rowHeight, settings);
     const openHeight = SHELF.rowHeight - SHELF.plankThickness;
 
     for (let row = 0; row < this.#rowCount; row += 1) {
       const shelfY = row * SHELF.rowHeight + SHELF.plankThickness / 2;
 
+      // Beside the shipped map this carries the root and the corner alone.
       const shadow = makeContactShadow(
         this.#byRow[this.#rowCount - 1 - row] ?? [],
         SHELF.width,
         SHELF.depth,
         shelfY,
         light,
+        pieces,
       );
       if (shadow !== undefined) this.#add(shadow);
 
-      const shade = makeBackboardShade(SHELF.width, openHeight, INTERIOR_DEPTH, light);
+      // The map casts the plank and the upright on the back wall itself.
+      const shade = pieces.backboardShade
+        ? makeBackboardShade(SHELF.width, openHeight, INTERIOR_DEPTH, light)
+        : undefined;
       if (shade !== undefined) {
         shade.position.set(
           0,
@@ -1106,6 +1284,11 @@ class Painters {
         this.#add(shade);
       }
     }
+
+    // One mesh for every cover on the shelf, or none: +1 draw and +1 texture
+    // whatever the library's size, and no program of its own.
+    const covers = pieces.coverShade ? makeCoverShade(this.#covers, light) : undefined;
+    if (covers !== undefined) this.#add(covers);
   }
 
   /**
@@ -1138,32 +1321,6 @@ class Painters {
 /** Shared by every book: sizing is per-mesh scale, so one of each is enough. */
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 const UNIT_PLANE = new THREE.PlaneGeometry(1, 1);
-
-/**
- * A hardback case, in the same world units as the shelf (1 unit ≈ 24cm).
- *
- * `BOARD` is the thickness of a cover board — about 2.5mm on a real book — and
- * `SQUARE` is the *square*: the few millimetres by which the boards overhang the
- * page block at head, tail and fore-edge. They are why the top of a real book is
- * mostly paper with only a thin rim of cover showing, and why the cover stands
- * proud of the pages instead of being flush with them.
- */
-const BOARD = 0.011;
-const SQUARE = 0.013;
-
-/**
- * A paperback's cover, in the same units — one sheet of card at about 0.3mm,
- * against the hardback's 2.6mm board.
- *
- * It is not zero. A paperback still has a cover with a visible edge where it
- * meets the page block, and collapsing it to nothing makes the book one solid
- * slab of paper with a printed face. Thin enough to read as card, thick enough to
- * still be there.
- */
-const PAPER_COVER = 0.0013;
-
-/** How far the printed faces float above the boards they are printed on. */
-const SKIN = 0.0012;
 
 /**
  * One book, built at its true size.
@@ -1295,25 +1452,15 @@ export function buildBook(
 
   const thickness = entry.thickness;
   const height = entry.height;
-  // Both are fixed in the world rather than fractions of the book — a thin book
-  // and a fat one are bound in the same card. Each is capped against the
-  // dimension it eats so that a small enough book still has paper in it: `depth`
-  // is the measured cover aspect on a face-out book, which is vault data, and a
-  // page block scaled negative turns inside out rather than failing.
-  //
-  // Binding chooses between the two cases, and it chooses *both* numbers at
-  // once. A paperback is not a hardback with the overhang taken off: the square
-  // going without the board leaves a case still 2.6mm thick that has mysteriously
-  // lost its rim, which reads as a modelling error rather than as a second
-  // format. A paperback's cover is glued flush to the block, so there is no
-  // square at all, and the card it is cut from is a fifth of a board.
-  const paperback = entry.binding === 'paperback';
-  const board = Math.min(paperback ? PAPER_COVER : BOARD, thickness * 0.3);
-  const square = paperback ? 0 : Math.min(SQUARE, height * 0.05, (depth - board) * 0.2);
+  // Board, cap and the depth of the covering at the joint, from the one place
+  // that says what a case is — the cover shade reads the same answer to find
+  // the page block, which is the part that casts. See `binding-case.ts` for why
+  // binding decides the board and the square together.
+  const { board, cap, frontDepth } = bookCase(entry, depth, settings.books.headCap);
 
   /**
-   * Parts receive shadow but do not cast it — the page block below casts for the
-   * whole book.
+   * Parts do not cast — the page block below casts for the whole book. Whether
+   * they *receive* is decided once, for every part, at the end of this function.
    *
    * Four casters per book meant ~124 shadow draws for 31 books, to describe 31
    * silhouettes. A book is a solid object: its shadow is its outline, and the
@@ -1325,15 +1472,13 @@ export function buildBook(
   const solid = (material: THREE.Material): THREE.Mesh => {
     const mesh = new THREE.Mesh(UNIT_BOX, material);
     mesh.castShadow = false;
-    mesh.receiveShadow = true;
     group.add(mesh);
     return mesh;
   };
 
   /**
-   * How much height the head cap takes off the covering below it.
-   *
-   * Proportional to **thickness**, never to height — which is the whole reason
+   * `cap` is how much height the head cap takes off the covering below it —
+   * proportional to **thickness**, never to height, which is the whole reason
    * one shared cap is the right shape on every book. Hardbacks only: a
    * perfect-bound paperback has no covering to roll, its card being cut flush
    * with the block at head and tail.
@@ -1357,7 +1502,6 @@ export function buildBook(
    * anything. See `closeTheEnds`.
    */
   const capScale = thickness;
-  const cap = entry.binding === 'hardback' ? settings.books.headCap * capScale : 0;
 
   /**
    * The case, and the one thing to understand about it: **the covering rolls over
@@ -1398,10 +1542,9 @@ export function buildBook(
    * on a hardback and nothing on a paperback, which is what it is worth.
    *
    * A paperback rolls nothing, so `cap` is 0, there is no board top at all, and
-   * every number here is what it always was.
+   * every number here is what it always was. `frontDepth` is the covering's
+   * depth at the joint: the cap where there is one, else a board.
    */
-  const frontDepth = cap > 0 ? cap : board;
-
   for (const side of [1, -1]) {
     const x = (side * (thickness - board)) / 2;
 
@@ -1429,9 +1572,12 @@ export function buildBook(
 
   // The page block, recessed inside the case at head, tail and fore-edge — and
   // the one part of a book that casts, standing in for all of it.
+  // From `pageBlock`, which the cover shade throws its painted wedge from, so
+  // the painted and the real shadow have one caster between them.
   const block = solid(pages);
-  block.scale.set(thickness - board * 2, height - square * 2, depth - frontDepth - square);
-  block.position.set(0, 0, (square - frontDepth) / 2);
+  const blockBox = pageBlock(entry, depth, settings.books.headCap);
+  block.scale.set(...blockBox.scale);
+  block.position.set(...blockBox.position);
   block.castShadow = castShadows;
 
   /**
@@ -1466,7 +1612,6 @@ export function buildBook(
     material.polygonOffsetFactor = -1;
     material.polygonOffsetUnits = -2;
     const mesh = new THREE.Mesh(UNIT_PLANE, material);
-    mesh.receiveShadow = true;
     group.add(mesh);
     return mesh;
   };
@@ -1526,7 +1671,6 @@ export function buildBook(
     if (arc !== undefined) {
       const head = new THREE.Mesh(arc, covering);
       head.castShadow = false;
-      head.receiveShadow = true;
       /**
        * Uniformly, and by **thickness** — not by the roll.
        *
@@ -1555,16 +1699,38 @@ export function buildBook(
     const neighbour = makeNeighbourShadow(depth, height);
     if (neighbour !== undefined) {
       neighbour.rotation.y = Math.PI / 2;
-      neighbour.position.set(thickness / 2 + SKIN * 2, 0, 0);
+      neighbour.position.set(thickness / 2 + COVER_LIFT, 0, 0);
       group.add(neighbour);
     }
   }
+
+  /**
+   * Whether this book **reads** the real-time shadow map — decided in its
+   * programs, not by `receiveShadow`, and last, so no part above can be missed.
+   *
+   * Under the default `bookcase`, a book casts and does not receive: its
+   * programs compile with no shadow sampler, which is what keeps `?shadows=1`
+   * alive on the Pixel 10 Pro XL. What that takes off a book — the plank's
+   * shadow across the top of every face-out cover, and the wedge a neighbour
+   * throws on it — is painted back by the cover shade, which reads no shadow
+   * map (`cover-shade.ts`). `all` is the old configuration, kept so it can be
+   * re-tested, and the reference the cover shade is fitted against. Inert with
+   * no shadow map, which is the painted fallback, `?shadows=0` and `?solo`. See
+   * `shadow-receivers.ts`; G61 counts, on the default page, what this leaves
+   * reading the map.
+   */
+  receiveShadows(group, settings.shadows.receivers === 'all');
 
   return group;
 }
 
 /**
  * The bookcase, plus handles on the two materials it is made of.
+ *
+ * The group holds **two meshes and no more**: the backboard, and the woodwork
+ * joined into one by `joinWoodwork`. No member has a mesh of its own to find,
+ * and nothing here hands one out — the draw count is the reason, see
+ * `buildShelf`.
  *
  * The materials are returned rather than left buried in the group because the
  * panel dials them. Finding them again by walking the scene would mean matching
@@ -1751,25 +1917,34 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Bookcase {
   back.receiveShadow = true;
   group.add(back);
 
+  // The woodwork — both uprights and every plank — is **one mesh**, and each
+  // member below is only laid at the origin and told where it stands. Two draws
+  // for the whole bookcase, this and the backboard, at every library size: under
+  // real-time shadows every draw here samples the map, and on the Pixel 10 Pro
+  // XL one program sampling alone lost the context at 13 of those a frame
+  // (#381). Two draws is the shape measured to survive there, and what kills it
+  // is not known (ADR-0088). One mesh per member was `rowCount + 4`. See
+  // `joinWoodwork`, which throws rather than fall back.
+  //
+  // ⚠️ **Each `BoxGeometry` stays inline as `veneered`'s first argument.** G51
+  // reads a member's size off exactly that call, inside this function.
+  const members: PlacedMember[] = [];
+
   // The grain runs up an upright and along a plank — each member along its own
   // long axis, which is #285's verdict and is **stated rather than measured**:
   // `rowsForBookcase` grows an upright with the library while a plank's length
   // never moves, so a rule that took the longest side would rotate the figure
   // the day a book was added.
   for (const side of [-1, 1]) {
-    const upright = new THREE.Mesh(
-      veneered(
+    members.push({
+      geometry: veneered(
         new THREE.BoxGeometry(SHELF.sideThickness, unitHeight, SHELF.depth),
         resolved.lay,
         'y',
         side < 0 ? keys.uprightLeft : keys.uprightRight,
       ),
-      wood,
-    );
-    upright.position.set((side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0);
-    upright.castShadow = castShadows;
-    upright.receiveShadow = true;
-    group.add(upright);
+      at: [(side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0],
+    });
   }
 
   // Over the keys rather than counting to `rowCount` here, which is the same
@@ -1778,8 +1953,8 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Bookcase {
   // a fallback would be this call site hand-rolling the very template `woodKeys`
   // exists to keep in one place.
   for (const [row, key] of keys.planks.entries()) {
-    const plank = new THREE.Mesh(
-      veneered(
+    members.push({
+      geometry: veneered(
         new THREE.BoxGeometry(
           outerWidth - PLANK_INSET * 2,
           SHELF.plankThickness,
@@ -1789,13 +1964,14 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Bookcase {
         'x',
         key,
       ),
-      wood,
-    );
-    plank.position.set(0, row * SHELF.rowHeight, 0);
-    plank.castShadow = castShadows;
-    plank.receiveShadow = true;
-    group.add(plank);
+      at: [0, row * SHELF.rowHeight, 0],
+    });
   }
+
+  const woodwork = new THREE.Mesh(joinWoodwork(members), wood);
+  woodwork.castShadow = castShadows;
+  woodwork.receiveShadow = true;
+  group.add(woodwork);
 
   return { group, wood, backing, sheet, backSheet, resolved };
 }
@@ -1828,13 +2004,14 @@ function positionOf(position: LightPosition, unitHeight: number): THREE.Vector3 
   return new THREE.Vector3(position.x, heightOf(position.y, unitHeight), position.z);
 }
 
-/** The key light as the painters need it. See `BookcaseLight`. */
+/**
+ * The key light as the painters need it. See `BookcaseLight`.
+ *
+ * `lightRatios` does the arithmetic, in a module a test can reach; it reads the
+ * same two settings `keyLightPosition` and `keyLightTarget` do.
+ */
 function bookcaseLight(unitHeight: number, settings: ShelfSettings): BookcaseLight {
-  const toTarget = keyLightTarget(unitHeight, settings).sub(keyLightPosition(unitHeight, settings));
-  return {
-    xPerZ: Math.abs(toTarget.x / toTarget.z),
-    yPerZ: Math.abs(toTarget.y / toTarget.z),
-  };
+  return lightRatios(settings.lighting.key, unitHeight);
 }
 
 /**
@@ -1859,9 +2036,9 @@ const BOOK_FRONT_Z = SHELF.depth / 2 - 0.02;
 /**
  * How far the recess shading floats in front of the books.
  *
- * Enough to clear `SKIN` — the hair by which a printed face floats above its
- * board — with room to spare, and far short of the planks, whose own front
- * faces stand at the front of the bookcase and must not be darkened.
+ * Enough to clear the front of every spine with room to spare, and far short
+ * of the planks, whose own front faces stand at the front of the bookcase and
+ * must not be darkened.
  */
 const RECESS_CLEARANCE = 0.008;
 
@@ -2114,10 +2291,11 @@ function applyLive(
     renderer.shadowMap.needsUpdate = true;
   }
 
-  // All four are decided while the scene is built, so they are measured against
+  // All five are decided while the scene is built, so they are measured against
   // what it was built with and stay outstanding until it is built again.
   standing(needsRebuild, 'shadow map size', mountedWith.shadows.mapSize, next.shadows.mapSize);
   standing(needsRebuild, 'shadow casters', mountedWith.shadows.casters, next.shadows.casters);
+  standing(needsRebuild, 'shadow receivers', mountedWith.shadows.receivers, next.shadows.receivers);
   standing(needsRebuild, 'shadow fetch', mountedWith.shadows.fetch, next.shadows.fetch);
   standing(needsRebuild, 'painted shading', mountedWith.shadows.painted, next.shadows.painted);
 
@@ -2401,14 +2579,23 @@ function applyLive(
    * would have caused it. Repainting is cheap: they are 2D canvas fills, and the
    * books have not moved, so nothing else in the scene needs touching. See
    * `Painters` for why this is not a remount.
+   *
+   * And they follow the shadow toggle: the pieces the map casts step aside
+   * while it is on and are drawn back while it is off (`livePieces`), so a live
+   * toggle shows what a reload with the same URL would.
    */
-  if (
-    painters !== undefined &&
-    (!samePosition(current.lighting.key.position, next.lighting.key.position) ||
-      current.lighting.key.aimHeight !== next.lighting.key.aimHeight)
-  ) {
+  const lightMoved =
+    !samePosition(current.lighting.key.position, next.lighting.key.position) ||
+    current.lighting.key.aimHeight !== next.lighting.key.aimHeight;
+  const drawnNow = livePieces(mountedWith.shadows, next.shadows);
+  const moved = changedPieces(livePieces(mountedWith.shadows, current.shadows), drawnNow);
+  if (painters !== undefined && (lightMoved || moved.length > 0)) {
     painters.paint(next);
-    applied.push('painted shadows repainted for the new light');
+    if (lightMoved) applied.push('painted shadows repainted for the new light');
+    const aside = moved.filter((piece) => !drawnNow[piece]);
+    const back = moved.filter((piece) => drawnNow[piece]);
+    if (aside.length > 0) applied.push(`painted, stepped aside for the map: ${aside.join(', ')}`);
+    if (back.length > 0) applied.push(`painted, drawn back: ${back.join(', ')}`);
   }
 
   return { applied, needsRebuild, needsReload, refused, resolved };

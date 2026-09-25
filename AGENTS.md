@@ -150,6 +150,7 @@ it with no provenance at all.
 
 - **Vanilla Three.js, not react-three-fiber.** Plain Astro island, no React on the page.
 - **One `THREE.Group` per book, not `InstancedMesh`.** `buildBook` in `packages/site/src/shelf/scene.ts` builds each book as a case of single-material parts round a page block, and nothing on the shelf is instanced. Instancing was rejected because per-book covers would force a texture atlas, and 49 books rendered fine; the parts kept that rejection for the same reason ([ADR-0008](docs/adr/0008-book-geometry.md)). ⚠️ **The measurement it deferred has never been taken** — the ADR puts the brief's 200-book target at ~1200 objects rather than ~200, and parts have been added since, so measure first and don't optimize blind. The one recorded live lead for instancing is the head cap, per-instance colour collapsing its ~20 draws to 1, and it is written up beside that mesh in `scene.ts`.
+- **Real-time shadows are the default, and one program reads the map: the bookcase's, in 2 draws at every library size.** Every book part compiles with no shadow fetch (`withoutShadowFetch` in `packages/site/src/shelf/shadow-receivers.ts`) and the woodwork is one mesh. On the Pixel 10 Pro XL every book reading the map loses the WebGL context and this shape survives, and **what kills it is not known** — a count of sampling draws was the model until a re-check refuted it — so a book that reads the map again, or a bookcase member with a mesh of its own, leaves the one configuration measured to survive and is answered on a phone, not by arithmetic ([ADR-0088](docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md), [ADR-0090](docs/adr/0090-real-time-shadows-are-the-default.md)). G61 (`one-shadow-reader`) counts it on the default page. Painted shading is the fallback a device takes after a lost context ([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
 - Book detail card = plain DOM overlay positioned from raycaster hits, not in-canvas UI.
 - **The site may only `import type` from `@stacks/core`.** The package root
   re-exports the adapter, sharp and the metadata layer, so a *value* import
@@ -278,11 +279,13 @@ page says at the top; there is no confidence figure on it and there will not be
 one ([ADR-0062](docs/adr/0062-the-dashboard-is-provisioned-from-the-repo.md)).
 
 **The rest is in [`docs/commands.md`](docs/commands.md)** — read it before you
-deploy, cut a worktree, read a mutation score, sync the trend store, or widen a
-lint rule. It carries `deploy:site`'s `main`-only branch guard and what it
-verifies after upload, `worktree`'s three cases and the one shared `.env`, why a
-mutation score is a trend and not a gate, what `trend:sync` refuses, and why
-`lint` loads a config file of its own rather than the counter's.
+deploy, cut a worktree, read a mutation score, sync the trend store, widen a
+lint rule, or change shadows, a material, the bookcase's geometry or three. It
+carries `deploy:site`'s `main`-only branch guard and what it verifies after
+upload, `worktree`'s three cases and the one shared `.env`, why a mutation score
+is a trend and not a gate, what `trend:sync` refuses, why `lint` loads a config
+file of its own rather than the counter's, and `scripts/phone-check.ts` — the
+check only a phone can run, and not a `pnpm` script.
 
 CLI commands — `pnpm stacks <cmd>`:
 

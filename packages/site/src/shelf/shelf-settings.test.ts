@@ -143,10 +143,16 @@ describe('the defaults', () => {
         exposure: 1,
       },
       shadows: {
-        enabled: false,
+        // Real-time shadows for every visitor, since ADR-0090. Painted is what a
+        // device falls back to after a lost context, not what it starts with.
+        enabled: true,
         mapSize: 2048,
         type: 'pcf',
         casters: true,
+        // What every visitor sees, and the difference between a shelf and a
+        // lost context on the Pixel 10 Pro XL: only the bookcase reads the map.
+        // See `shadow-receivers.ts`, and G61, which holds it on the page.
+        receivers: 'bookcase',
         fetch: true,
         painted: true,
       },

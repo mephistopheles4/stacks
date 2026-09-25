@@ -16,8 +16,17 @@ import type { ShelfHandle } from './scene.ts';
  * a record without `clean: true` is a record of a crash — and its numbers are
  * the last thing the page knew.
  *
- * Only ever active behind `?debug`. Nothing is written to a visitor's device
- * unless they ask for it by hand.
+ * Only ever active behind `?debug`. The black box writes nothing to a visitor's
+ * device unless they ask for it by hand.
+ *
+ * ⚠️ **That is a promise about this file, not about the page.** Since the
+ * lost-context fallback, the shelf itself writes one small functional record —
+ * `{ v, at, gpu }` under `stacks.shadows.fallback.v1` — after it has *observed*
+ * its WebGL context being lost, or one of its programs failing to link, while
+ * it sampled the shadow map, so the next load starts painted. Nothing else, and
+ * only then. This panel shows that
+ * record's state on its `fallback` line and offers `forget`, the one way off it
+ * without devtools. See `shadow-fallback.ts` and ADR-0091.
  */
 
 declare global {
@@ -59,6 +68,14 @@ interface Snapshot {
   books: number;
   /** Which renderer settings this run used — the bisect is meaningless without it. */
   profile: string;
+  /**
+   * Where the lost-context fallback stood: real-time, painted from a record, or
+   * how a loss in this session settled.
+   *
+   * Optional, so a record written before it existed reads as saying nothing
+   * about it rather than being mis-read — which is why this is not a v3.
+   */
+  fallback?: string;
   textures: number;
   geometries: number;
   programs: number;
@@ -117,6 +134,21 @@ export interface DiagnosticsOptions {
    * state worth having a record of.
    */
   readonly handle?: () => ShelfHandle | undefined;
+  /**
+   * The `fallback` line — `describeFallback` over the page's live state. A
+   * getter for `handle`'s reason: a loss changes it mid-session, and a dead
+   * session's last word on it is the one worth keeping.
+   */
+  readonly fallback?: () => string;
+  /**
+   * The lost-context record, as two calls rather than a storage key, so this
+   * file never learns where the record lives. `forget` shows only while
+   * `exists` says there is one.
+   */
+  readonly record?: {
+    exists(): boolean;
+    forget(): boolean;
+  };
 }
 
 /**
@@ -141,8 +173,23 @@ export function mountDiagnostics(host: HTMLElement, options: DiagnosticsOptions)
   copy.textContent = 'copy';
   applyButtonStyle(copy);
 
+  /**
+   * The one way off a lost-context record without devtools.
+   *
+   * Shown only while there is a record to forget, and it stays up after a
+   * press so the sentence telling you to reload is still there to read.
+   */
+  const forget = document.createElement('button');
+  forget.textContent = 'forget';
+  applyButtonStyle(forget);
+  let forgotten = false;
+  const showForget = (): void => {
+    forget.hidden = !(forgotten || options.record?.exists() === true);
+  };
+  showForget();
+
   const body = document.createElement('span');
-  panel.append(copy, body);
+  panel.append(copy, forget, body);
   host.append(panel);
 
   const sample = (): Snapshot => {
@@ -154,6 +201,7 @@ export function mountDiagnostics(host: HTMLElement, options: DiagnosticsOptions)
       seconds: Math.round((Date.now() - started) / 1000),
       books: options.books,
       profile: shelf?.profile ?? 'no shelf',
+      ...(options.fallback === undefined ? {} : { fallback: options.fallback() }),
       textures: stats?.textures ?? 0,
       geometries: stats?.geometries ?? 0,
       programs: stats?.programs ?? 0,
@@ -186,6 +234,7 @@ export function mountDiagnostics(host: HTMLElement, options: DiagnosticsOptions)
     const current = sample();
     write(current);
     body.textContent = render(current, previous);
+    showForget();
   };
 
   const recordError = (message: string): void => {
@@ -213,10 +262,19 @@ export function mountDiagnostics(host: HTMLElement, options: DiagnosticsOptions)
     copy.textContent = 'copied';
   };
 
+  const onForget = (): void => {
+    forgotten = true;
+    forget.textContent =
+      options.record?.forget() === true
+        ? 'forgotten — reload to try real-time shadows again'
+        : 'storage refused — nothing forgotten';
+  };
+
   window.addEventListener('error', onError);
   window.addEventListener('unhandledrejection', onRejection);
   window.addEventListener('pagehide', onPageHide);
   copy.addEventListener('click', onCopy);
+  forget.addEventListener('click', onForget);
 
   tick();
   const timer = window.setInterval(tick, SAMPLE_MS);
@@ -227,6 +285,7 @@ export function mountDiagnostics(host: HTMLElement, options: DiagnosticsOptions)
     window.removeEventListener('unhandledrejection', onRejection);
     window.removeEventListener('pagehide', onPageHide);
     copy.removeEventListener('click', onCopy);
+    forget.removeEventListener('click', onForget);
     panel.remove();
   };
 }
@@ -237,6 +296,7 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
   const lines = [
     `books    ${String(current.books)}`,
     `profile  ${current.profile}`,
+    ...(current.fallback === undefined ? [] : [`fallback ${current.fallback}`]),
     `textures ${String(current.textures)}  geom ${String(current.geometries)}  prog ${String(current.programs)}`,
     `draws    ${String(current.calls)}  tris ${String(current.triangles)}`,
     `buffer   ${current.buffer}  dpr ${current.pixelRatio.toFixed(2)}`,
@@ -275,6 +335,7 @@ function render(current: Snapshot, previous: Snapshot | undefined): string {
         : '— PREVIOUS SESSION DIED (no clean exit) —',
       `  after ${String(previous.seconds)}s with ${String(previous.books)} books`,
       `  profile ${previous.profile ?? 'unknown'}`,
+      ...(previous.fallback === undefined ? [] : [`  fallback ${previous.fallback}`]),
       `  textures ${String(previous.textures)}  draws ${String(previous.calls)}`,
       `  buffer ${previous.buffer}  dpr ${previous.pixelRatio.toFixed(2)}`,
       previous.heapMb === undefined ? '  heap n/a' : `  heap ${String(previous.heapMb)} MB`,

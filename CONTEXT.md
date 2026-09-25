@@ -59,6 +59,39 @@ what it puts on the wood is the same slab as any other book, seen end-on. The
 painted shadow is drawn from these.
 *Avoid*: footprint (the scalar), shadow (that is what is drawn from it), base.
 
+**Cover shade**:
+The painted shadow across a face-out cover: the band the plank above throws
+across its top, the strip the right-hand upright throws down its side, and the
+wedge a taller book beside it throws. One mesh over every cover, reading no
+shadow map. It stands in for what a book stopped receiving when its programs
+lost the shadow sampler
+([ADR-0088](docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)).
+*Avoid*: recess shade (that is the ambient darkening across a whole **row**,
+cast by nothing), band on its own (the backboard has one too), neighbour shadow
+(the older plane down a cover's right-hand edge, which it does not replace).
+
+**Lost-context record**:
+The one small entry a device keeps after the shelf lost its WebGL context while
+sampling the shadow map, so later loads start with painted shadows until it
+expires (`FALLBACK_TTL_MS`). It records a failure this device showed, never a guess about the device, and a
+`?shadows=` in the URL goes around it
+([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
+A program that will not link while the shelf samples the map writes the same
+record (item 9), and the record does not say which of the two it was; the name
+keeps the common case.
+*Avoid*: blocklist, device flag (nothing is decided by device), crash record
+(that is the black box's), fallback on its own (that is what the page does
+after a loss, in the page).
+
+**Shadow reader**:
+A compiled program that samples the real-time shadow map. How many the default
+page may have is G61's (`one-shadow-reader`) to hold
+([ADR-0090](docs/adr/0090-real-time-shadows-are-the-default.md)). Decided when
+the program is compiled, never by a mesh's flag.
+*Avoid*: receiver on its own (`receiveShadow` is a uniform that leaves the
+sampler compiled in; the `shadows.receivers` setting chooses readers, and does
+it by compiling), caster (the other direction — every book still casts).
+
 **Run**:
 A group of touching books sharing one slump angle, because they are resting on
 each other rather than each leaning independently. Broken by a year gap or by a
@@ -179,7 +212,8 @@ surface the painted backboard shades are drawn over.
 **Woodwork**:
 The planks and uprights together — every member of the **bookcase** except the
 **backboard**. Its veneer is the *woodwork sheet*; the backboard's is a constant
-of its own.
+of its own. It is drawn as one mesh, so a member has no mesh of its own to find
+([ADR-0088](docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)).
 *Avoid*: using it for the whole bookcase.
 
 **Row**:

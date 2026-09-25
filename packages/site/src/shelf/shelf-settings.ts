@@ -131,6 +131,11 @@ export type ShadowTypeName = 'basic' | 'pcf' | 'soft' | 'vsm';
 
 export const SHADOW_TYPE_NAMES: readonly ShadowTypeName[] = ['basic', 'pcf', 'soft', 'vsm'];
 
+/** What reads the real-time shadow map. See `ShadowSettings.receivers`. */
+export type ShadowReceiverName = 'bookcase' | 'all';
+
+export const SHADOW_RECEIVER_NAMES: readonly ShadowReceiverName[] = ['bookcase', 'all'];
+
 export interface RendererSettings {
   /**
    * A **context-creation attribute**. `getContext` took it once and will not
@@ -146,15 +151,47 @@ export interface RendererSettings {
 }
 
 export interface ShadowSettings {
-  /** The real-time path. Off by default — see `contact-shadow.ts` for why. */
+  /**
+   * The real-time path. **On by default since ADR-0090**, for every visitor:
+   * the bookcase reads the shadow map in 2 draws from 1 program and no book
+   * reads it (ADR-0088), which is what holds on the Pixel 10 Pro XL — and G61
+   * (`one-shadow-reader`) is what holds that.
+   *
+   * Off is the painted path, which a device falls back to after it loses a
+   * context while sampling the map, and remembers (`shadow-fallback.ts`,
+   * ADR-0091); `?shadows=0` shows it on purpose. See `contact-shadow.ts`.
+   */
   readonly enabled: boolean;
   readonly mapSize: number;
   readonly type: ShadowTypeName;
   /** Whether anything is drawn *into* the shadow map. */
   readonly casters: boolean;
+  /**
+   * Which surfaces *read* the shadow map: the bookcase alone, or the bookcase
+   * and every book.
+   *
+   * `bookcase` compiles each book's programs with no shadow sampler, so a book
+   * casts and does not receive — the one real-time configuration with books in
+   * it that holds on the Pixel 10 Pro XL, and only under `pcf`. It is what every
+   * visitor gets, since real-time shadows are the default. `all` is what
+   * `?shadows=1` drew until September 2026, kept so the crash can be re-tested
+   * after a driver update — as `?shadows=1&receivers=all`, because a device
+   * with a lost-context record starts painted — and as G61's control. Inert
+   * while `enabled` is off. A loss under `all` redraws painted and writes no
+   * record, being a probe's answer (`runsShippedShadows`). See
+   * `shadow-receivers.ts`.
+   */
+  readonly receivers: ShadowReceiverName;
   /** Whether materials *read* the shadow map. See `RendererOverrides.shadowFetch`. */
   readonly fetch: boolean;
-  /** The painted shading that stands in for a shadow pass. On by default. */
+  /**
+   * The painted shading. On by default, under the real-time path as well as
+   * without it: it is the whole of the shading when the map is off, and beside
+   * the shipped map it adds only what the map does not draw — the contact
+   * roots, the corners, the recess and the bands on the covers. The pieces the
+   * map casts step aside there rather than darken the wood twice
+   * (`paintedPieces`, ADR-0090). Off leaves out every piece.
+   */
   readonly painted: boolean;
 }
 
@@ -498,10 +535,11 @@ export const DEFAULT_SETTINGS: ShelfSettings = {
     exposure: 1,
   },
   shadows: {
-    enabled: false,
+    enabled: true,
     mapSize: 2048,
     type: 'pcf',
     casters: true,
+    receivers: 'bookcase',
     fetch: true,
     painted: true,
   },

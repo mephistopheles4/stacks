@@ -1,5 +1,6 @@
 import {
   DEFAULT_SETTINGS,
+  SHADOW_RECEIVER_NAMES,
   SHADOW_TYPE_NAMES,
   TONE_MAPPING_NAMES,
   type SettingsPatch,
@@ -21,11 +22,13 @@ import {
  *
  * ## Two vocabularies, deliberately
  *
- * **The ten probes keep their own flat spellings** — `?aa=0`, `?shadows=1`,
+ * **The probes keep their own flat spellings** — `?aa=0`, `?shadows=1`,
  * `?shadowtype=vsm`, `?books=5`. They are documented in `docs/progress.md` with
  * measured results attached, they are typed by hand on a phone, and every one of
  * them has to keep meaning what it meant. They are the reason this is not simply
- * a blob.
+ * a blob. The original ten gained an eleventh, `?receivers=all`, for exactly
+ * that rule: it is how `?shadows=1` still reaches what it drew before the books
+ * stopped reading the map.
  *
  * **Everything else rides in `?tune=`**, a URI-encoded JSON *diff from the
  * defaults*. Lights, colours, fog, tone mapping and materials have no historic
@@ -182,20 +185,46 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
   };
 
   /**
-   * `?shadows=0` — turns off the shadow map and the light that casts it. The
-   * shadow pass is what loses the context on a Pixel 10 Pro; it stays on by
-   * default anyway, because shadows are most of what makes the shelf read as
-   * furniture and the owner's call is that losing them is not the price.
+   * `?shadows=0` — the painted path: no shadow map, the shading drawn once from
+   * the layout (ADR-0016). It is what a device shows after it has lost a
+   * context while sampling the map, so this is how to see a fallen-back shelf
+   * on purpose.
+   *
+   * `?shadows=1` — the real-time shadow map and the light that casts it, which
+   * is **the default since ADR-0090**, so on a fresh device it changes nothing.
+   * It means *books cast, the bookcase receives* — see `?receivers` below.
+   *
+   * **The URL beats the lost-context record, in both directions.** A device
+   * that lost a context while sampling the map, with every other shadow
+   * setting as shipped, remembers it and starts painted (`shadow-fallback.ts`); `?shadows=1` turns real-time shadows back on over
+   * that record for one load — the way to re-test a device after a driver
+   * update — and `?shadows=0` forces painted with or without one. Nothing here
+   * reads the record: `boot.ts` folds this partial onto a base, and the record
+   * only chooses the base.
    *
    * `?shadowmap=1024` — edge of the depth target; the default is 2048 (16 MB).
    *
    * `?shadowtype=basic|pcf|soft|vsm` — `soft` is `pcf` since three 0.185
-   * deprecated `PCFSoftShadowMap`. `vsm` is the only one that reads the map with
-   * a plain `sampler2D` rather than a hardware depth comparison, which is why it
-   * was the last hope and why its death settled the investigation.
+   * deprecated `PCFSoftShadowMap`. Only `pcf` reads the map through a hardware
+   * depth comparison (`sampler2DShadow`); `basic` and `vsm` both read it with a
+   * plain `sampler2D` — this line used to say `vsm` alone did, which three 0.185
+   * contradicts in `shadowmap_pars_fragment`.
    *
    * `?casters=0` — nothing casts, but the map is still allocated and the pass
    * still runs. The one switch that *discriminates* rather than just reducing.
+   *
+   * `?receivers=all` — every book reads the map too, which is what `?shadows=1`
+   * drew before the default became `bookcase`. It loses the context on the
+   * Pixel 10 Pro XL at frame 8; kept as the upstream reproduction, so that can
+   * be re-tested after a driver update, and as G61's control — not as a look.
+   * ⚠️ **Re-test with `?shadows=1&receivers=all`, never `?receivers=all`
+   * alone.** It is inert while shadows are off, and the device most likely to
+   * be re-tested is the one carrying a lost-context record, which starts
+   * painted: the page then reads no map, survives, and reads as a fixed driver.
+   * See `shadow-receivers.ts`. **A loss under it writes no record**, like a
+   * loss under every other shadow probe here: the page still redraws painted,
+   * and the device's plain page is not painted for 30 days by a re-test of a
+   * configuration it never ships (`runsShippedShadows`).
    *
    * `?shadowfetch=0` — draws the map once, then stops *reading* it. Separates
    * holding a depth attachment from sampling one.
@@ -207,6 +236,7 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
   const mapSize = wholePositive(params, 'shadowmap');
   const type = oneOf(params, 'shadowtype', SHADOW_TYPE_NAMES);
   const casters = flag(params, 'casters');
+  const receivers = oneOf(params, 'receivers', SHADOW_RECEIVER_NAMES);
   const fetch = flag(params, 'shadowfetch');
   const painted = flag(params, 'painted');
   const shadows: Partial<ShelfSettings['shadows']> = {
@@ -215,6 +245,7 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
     ...(mapSize === undefined ? {} : { mapSize }),
     ...(type === undefined ? {} : { type }),
     ...(casters === undefined ? {} : { casters }),
+    ...(receivers === undefined ? {} : { receivers }),
     ...(fetch === undefined ? {} : { fetch }),
     ...(painted === undefined ? {} : { painted }),
   };
@@ -235,13 +266,32 @@ export function readSettings(params: URLSearchParams): SettingsPatch {
  * Only differences from the shipped defaults are written, so a shelf running
  * defaults has a clean address and a dialled one has a URL you can read, paste
  * into an issue, or send to a phone.
+ *
+ * ⚠️ **The probes diff against `base`, the settings this page started from**,
+ * which is `PAINTED_BASE` on a device carrying a lost-context record. Diffing
+ * against the shipped defaults there would write `?shadows=0` into the address
+ * bar of a page that never asked for it — one device's fallback in a URL that
+ * gets pasted into an issue and opened on every other device. A difference
+ * from the base is what this visitor dialled; the base itself is not theirs to
+ * share.
+ *
+ * ⚠️ **A probe the address bar already carries, at the value the setting still
+ * has, stays.** Otherwise a `?shadows=0` typed on that same device equals the
+ * base and the panel's first change deletes it — and the copied link opens
+ * real-time everywhere else, the same leak run the other way. What this keeps
+ * is only ever something the visitor put there: the panel writes nothing that
+ * equals the base. Compared as the string the panel writes, so a typed
+ * `?shadows=off` that equals the base is still dropped, as it always was.
  */
-export function writeSettings(settings: ShelfSettings): void {
+export function writeSettings(
+  settings: ShelfSettings,
+  base: ShelfSettings = DEFAULT_SETTINGS,
+): void {
   const params = new URLSearchParams(window.location.search);
-  const d = DEFAULT_SETTINGS;
+  const d = base;
 
   const probe = (name: string, differs: boolean, value: string): void => {
-    if (differs) params.set(name, value);
+    if (differs || params.get(name) === value) params.set(name, value);
     else params.delete(name);
   };
 
@@ -254,6 +304,7 @@ export function writeSettings(settings: ShelfSettings): void {
   probe('shadowmap', s.mapSize !== d.shadows.mapSize, String(s.mapSize));
   probe('shadowtype', s.type !== d.shadows.type, s.type);
   probe('casters', s.casters !== d.shadows.casters, s.casters ? '1' : '0');
+  probe('receivers', s.receivers !== d.shadows.receivers, s.receivers);
   probe('shadowfetch', s.fetch !== d.shadows.fetch, s.fetch ? '1' : '0');
   probe('painted', s.painted !== d.shadows.painted, s.painted ? '1' : '0');
 

@@ -6140,7 +6140,8 @@ rather than observed once.
 and G60, and G19's gapless clause makes G59 the only number this row can hold on
 `main` as it stands. Whichever merges second renumbers, and every
 ``G59 (`large-library-lit`)`` citation moves with it — slug and number together,
-so a stale one is a red G19 rather than a silent wrong pointer.
+so a stale one is a red G19 rather than a silent wrong pointer. **Resolved
+2026-09-25:** this merged first, and #382 took G60 and G61.
 
 **Observed-red**, three ways. The first is the defect itself, not a plant.
 
@@ -6191,3 +6192,182 @@ rasteriser in the same run, and that is why it could be expected to travel.
   check reads the staged library. What rots quietly is the floor's reasoning,
   pinned to three measured ratios that later changes will move. Disposition
   `accepted`.
+
+### G60 — `context-loss-fallback`
+
+**Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts) — `checkContextLossFallback`
+**Date:** 2026-09-25
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number moved once.** It was taken as G59 against a re-fetched
+`origin/main` with no pull request open, and renumbered to G60 when
+[#384](https://github.com/mephistopheles4/stacks/pull/384) merged first with its
+own G59; rows are gapless. The ticket's sampling-program gate, #381's sixth
+item, takes the next one.
+
+**Observed-red**, six ways, each planted in the source, run through `pnpm
+smoke:render`, and reverted with the file hash checked against its backup. The
+fourth and fifth were added with the `refused` case, after the phone check found
+the page white, and the sixth with the `probe loss` case, after review:
+
+1. **Both `disposed` guards removed** from `scene.ts` — the restored handler's
+   and `renderLoop`'s. The restore case went red: `2 render-loop callbacks in
+   one frame after the restore — a disposed shelf's loop is still running
+   beside the live one`. Removing **either one alone stayed green**, because
+   each stops the disposed loop on its own. That redundancy is deliberate and
+   stated on the row.
+2. **`remember` claiming a write it never made.** The restore case went red
+   waiting for the record, and the storage case went red because the black box
+   no longer said *not remembered*.
+3. **The new shelf mounted on the lost canvas instead of a new one.** Both
+   loss cases went red: the browser handed the lost canvas no context, and the
+   state read `refused`.
+4. **The notice no longer hiding the canvas** — the one `visibility` line in
+   `shelf-notice.ts` removed. Two cases went red: `refused` on *the lost canvas
+   is still shown*, and `painted loss` on the same, while its notice was up.
+   The same plant reddens two specs in `shelf-notice.test.ts`.
+5. **Clearing the notice no longer showing the canvas** — the `removeProperty`
+   line removed. Three cases went red: `restore`, `no restore` and `painted
+   loss`, each on a shelf drawn again on a canvas still hidden. `refused`
+   stayed green, as it should: nothing there is ever shown again.
+6. **A shadow probe's loss taken as the shipped shelf's** — `boot.ts` handing
+   the recovery `probe: false` whatever the page ran. `probe loss` alone went
+   red, on the record a `?receivers=all` loss wrote; the other five stayed
+   green. Run under `CI=true`, as the `suite` job runs it. Its unit half was
+   planted too: `context-recovery.test.ts` run against the recovery from before
+   the change, which asks storage on every sampling loss, went red in all three
+   of its probe cases.
+
+The control is the same run with the plants reverted: six cases green then (`redraw
+halts` and `link failure` came after it, with M04 and M06), one
+loop a frame in each of the three that count them — `restore`, `no restore`
+and `painted loss`.
+
+- **Weakening** — **exposed, in one constant, required rather than allowed.** The
+  non-blank floor is the main render's (40 colours, 10% not background), the
+  waits are ceilings a passing run clears in well under a second, and the
+  wait for a new canvas is `RESTORE_WAIT_MS` plus a margin, imported rather
+  than copied. Page errors are console `error`s and exceptions only, which is
+  the main render's rule too: the `INVALID_OPERATION` warnings a same-canvas
+  rebuild logs on the phone do not count. ⚠️ **The `refused` case takes one
+  console error out of its own list**: three logs `Error creating WebGL
+  context.` when it is refused one, which is the state under test. It is
+  matched as the whole string, in that case only, and the case fails if it
+  never arrives — so a page refused for some other reason is not green here.
+  Planted: `REFUSED_BY_THREE` set to a string three never logs turned the case
+  red twice, once for the message never arriving and once for three's real one
+  as a page error. Widening it to a pattern is one edit that reads as tidying,
+  which is why the row does not claim it is closed. Disposition `accepted`.
+- **Satisfying the letter** — **exposed, in one place.** *Painted* is read off
+  the live shelf's `profile`, which is its settings, and not off the programs
+  it compiled. A rebuild that mounted painted settings and still sampled the
+  map would pass here. ⚠️ **G61 (`one-shadow-reader`), the ticket's
+  sampling-program gate, did not close this, and this line said it would**: it
+  reads what the renderer compiled on the default page, and never on a page a
+  fallback rebuilt. Pointing its hook at these cases is the way to close it.
+  Disposition `accepted`.
+- **Routing around** — **exposed, and the route is the one the row states.**
+  A staged `WEBGL_lose_context` loss never restores on its own, never exits
+  the GPU process and never gets the page blocked. On the Pixel 10 Pro XL a
+  real loss did all of that but restore, in 4 of 4 runs, so the in-page
+  rebuild this gate proves never happened there; what worked was the record,
+  on the next load. That is recorded in the log, and no gate here can run it.
+  The `refused` case stages the one half a page can meet, a new canvas denied
+  a context, by making `getContext` answer `null`; it holds the page to hiding
+  the dead canvas and cannot see what Chrome paints on one, which on the phone
+  was opaque white. A reload inside the block, which never gets a context at
+  all, is not driven. `?solo` has no fallback and is not driven. ⚠️ **Every
+  one of those real losses was under `?shadows=1&receivers=all`, which writes
+  no record now**, so the record that worked there has not been seen written
+  by a real loss on the shipped shelf. The `probe loss` case drives
+  `?receivers=all` alone; the other shadow probes are held by
+  `shadow-fallback.test.ts`, against the predicate rather than a page.
+  Disposition `accepted`.
+- **Vacuous green** — **gated.** A case refuses to start on a page that does
+  not sample the map or is not visible, since a loss there is not the
+  fallback's by design and every assertion after it would pass over nothing.
+  The loop count needs at least one frame, and the painted case waits past
+  the 2.5 s before it reads, so a rebuild that should not happen has had its
+  chance. The page it loses is read off `DEFAULT_SETTINGS`, so flipping the
+  default does not leave the cases testing a painted page. Disposition `gated`.
+- **Decay** — **it decays into a red on the hooks and into silence on the
+  browser.** Renaming `__shelf.fallback`, `profile` or the record key is red,
+  because the cases evaluate them or import them. ⚠️ **What rots quietly is
+  Chrome's side**: the block, the missing restore and the GPU string without a
+  driver build are one dated measurement on one phone. A Chrome that starts
+  restoring, or stops blocking, changes what a visitor sees and moves nothing
+  here. Disposition `accepted`.
+
+### G61 — `one-shadow-reader`
+
+**Gate:** [`scripts/smoke-render.ts`](../scripts/smoke-render.ts) — `checkShadowReaders`, over [`scripts/lib/shadow-sampling.ts`](../scripts/lib/shadow-sampling.ts) and [`scripts/lib/sampling-hook.ts`](../scripts/lib/sampling-hook.ts)
+**Date:** 2026-09-25
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number moved once.** It was taken as G60 against `origin`'s 45
+branches and every pull request, with none open, and renumbered to G61 when
+[#384](https://github.com/mephistopheles4/stacks/pull/384) merged first with its
+own G59.
+
+**Observed-red**, six ways. Each was planted in the source, run through
+`pnpm smoke:render`, and reverted with the file's hash checked against a
+backup:
+
+1. **Every book reading the map again** — `receiveShadows` removed from
+   `buildBook`. Clause 3 and 4 on both default pages: 5 programs, and 302
+   sampling draws a frame at 50 books, 1,979 at 300. ⚠️ **It also went red on
+   clause 1 for the wrong reason, and that was a defect in the gate**: the
+   300-book page ran past the hook's 4,000-frame cap, frames were dropped from
+   the front, and frame 0 — the shadow pass — with them, so the page read as
+   books that had stopped casting. Fixed before landing: the hook keeps its
+   first ten frames and records the last link frame outright, and a spec pins
+   both over 4,100 frames. The rerun of plant 2 read 274 casting draws at
+   3,997 steady frames.
+2. **A mesh per plank again** — one extra woodwork mesh per shelf, the shape the
+   join removed. Clause 4 alone: 1 program, 7 sampling draws a frame at 50
+   books and 20 at 300, growing with the library.
+3. **Real-time shadows off by default** — the tree before the flip. Clause 3 on
+   both default pages, 0 programs; and the control failed the gate for reading
+   none.
+4. **A blind classifier** — the hook reporting no program as a reader. Clause 3
+   on both default pages, and the control failed the gate on programs and on
+   draws.
+5. **A source reading that ignored the `#undef`.** Clause 5 on both default
+   pages, GL and the source disagreeing about six programs — while the control
+   still came back red, which is what that clause is for.
+6. **A verdict before the settle** — the settle wait cut to 1 ms, under
+   SwiftShader. Clause 2: 12 and 19 steady frames against 30, and the control
+   refused as unsettled.
+
+The control is the same run unplanted: both default pages 1 program and 2
+sampling draws a frame, `?receivers=all` 5 and 302, on a local GPU and under
+SwiftShader. Every clause is also planted as a hand-built snapshot in the
+judge's spec, so the plants are asserted on every run and not observed once.
+
+- **Weakening** — **exposed, in one constant.** `BUDGET` is 4, the 2 draws
+  measured to survive plus room for one member — no fraction of an edge, since
+  where the edge lies is not known — and raising it is one edit that reads as
+  tuning. Its
+  comment carries the measurements and the rule that a raised budget is a
+  comment, and the settle's 30 frames sit beside it. Disposition `accepted`.
+- **Satisfying the letter** — **gated.** Instancing or a multi-draw call would
+  read as one call and put any number of sampling draws in it; the hook weighs
+  an instanced call by its instances and a `WEBGL_multi_draw` call by its
+  sub-draws, both planted in its spec. The two drawing extensions three does not
+  use are not wrapped, and the gates.md section says so. Disposition `gated`.
+- **Routing around** — **exposed.** Only default settings are measured: a
+  non-default wood species, `?shadowtype`, `?shadowmap` or a panel setting is
+  not run, and `flat` is two sampling programs. A fallback's rebuilt page is not
+  run either, which is G60's residual rather than this row's. Disposition
+  `accepted`.
+- **Vacuous green** — **gated.** No hook, no frames, no settle, no shadow pass
+  and a blind classifier would each pass every "at most" clause; clauses 1, 2,
+  5 and 6 refuse each, and the control, measured through the identical hook and
+  judge, fails the gate unless it is red on programs and on draws. Observed
+  above as plants 3, 4 and 6. Disposition `gated`.
+- **Decay** — **loud on three, silent on a GPU.** A three upgrade that tests
+  `USE_SHADOWMAP` ahead of the books' `#undef` compiles the fetch back in and is
+  red on clauses 3 and 5, which is the decay this row exists to catch. ⚠️ **The
+  budget's premise is one phone and one driver**: another GPU with a lower edge
+  moves nothing here, and a driver update that raised this one's would not
+  either. Disposition `accepted`.

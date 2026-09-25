@@ -2,9 +2,9 @@
 
 The command lists themselves live in [`AGENTS.md`](../AGENTS.md), where
 `gates/commands.test.ts` (G14) holds them to `package.json` and the CLI in both
-directions. This file carries the *why* behind five of them — the parts a
+directions. This file carries the *why* behind some of them — the parts a
 session needs only when it is linting, formatting the tree, deploying, cutting
-a worktree, or reading a mutation score.
+a worktree, reading a mutation score, or changing what reads the shadow map.
 
 ⚠️ **`deploy:site`'s gate-ordering rule stayed in `AGENTS.md` on purpose** — it
 is compaction-fragile safety, not reference, and no code catches it. It is not
@@ -810,3 +810,109 @@ safe to print and unsafe to store. Nothing here stores them.
 Coverage exists in this repository for this print and for nothing else — no
 floor, no threshold, no series, no badge. See
 [ADR-0069](adr/0069-coverage-is-an-ingredient-not-a-goal.md).
+
+## `pnpm smoke:render` — the render gate, and the one program that reads the shadow map
+
+**The Phase 2 gate, grown.** It builds the 50-book fixture into the site,
+serves `dist/` from its own process on a port the operating system picks, and
+drives system Chrome headless: a screenshot at `artifacts/shelf.png`, the card,
+the cover viewer and the sheet (G16, G35), six staged context losses (G60),
+and three pages counted for G61 (`one-shadow-reader`). On a workstation it asks
+Chrome for the real GPU; with `CI=true` it renders under SwiftShader, Chrome's
+software rasteriser, as the `suite` job does.
+
+**G61's three pages**, each in a browser context of its own at 480×640, each
+with a WebGL counting hook installed before any page script:
+
+| page | what it must show |
+| --- | --- |
+| the default page, 50 books | exactly one program reads the shadow map, in at most 4 draws a frame |
+| the default page, 300 books | the same, on a bookcase at least 8 shelves tall |
+| `?receivers=all`, 50 books | red — more than one program and more than 4 draws — or the instrument is blind |
+
+The 300-book library is generated at gate time — `pnpm fixtures:50 --books 300`,
+invented titles and the six generated covers, every book past the first 50
+coverless — and staged into `artifacts/vault-300-public/`, **never** into
+`packages/site/public/`: a second server serves its `library.json` and
+`covers/` over the same build. Nothing about it is committed.
+
+**Reading a red.** Each line names its clause. `(3)` or `(4)` on a default page
+means a program started reading the shadow map, or the bookcase started drawing
+more than it did: find which, before anything else. A red on `(8)` means the
+control came back green, so the hook cannot see a book program and no green
+above it means anything. **Do not raise the budget to clear it** — it is the
+shape the phone survived plus room for one member, nobody knows where the edge
+is, and why it is 4 is in `scripts/lib/shadow-sampling.ts` and in
+`docs/gates.md` under G61's own section.
+The check that settles a doubt is a phone, below.
+
+It adds about 20 s to the gate on a workstation: 42 s before G61, 63 s with it
+on a local GPU, 78 s under SwiftShader. `pnpm deploy:site` runs it, so a deploy
+pays the same.
+
+## `scripts/phone-check.ts` — the check only a phone can run
+
+G61 pins what survived on one phone; it cannot say a phone survives. This does:
+it serves a build to a USB-attached Android phone's own Chrome, loads a page,
+watches it for two minutes, and says whether the WebGL context held — with
+G61's own counts of what read the shadow map, taken on the phone, from the same
+hook and judge the gate uses.
+
+```sh
+pnpm exec tsx scripts/phone-check.ts                  # the default page, 120 s
+pnpm exec tsx scripts/phone-check.ts --matrix         # default ×3, ?shadows=0, ?receivers=all
+pnpm exec tsx scripts/phone-check.ts --gpuinfo        # chrome://gpu, in a tab of its own
+```
+
+**Not a `pnpm` script, and that is deliberate.** It needs adb and a phone with
+USB debugging on, which no CI runner has and [`CONTRIBUTING.md`](../CONTRIBUTING.md)
+cannot ask a contributor for — and a `pnpm` script is one G14 would pin in
+`AGENTS.md` while nothing ever ran it. `scripts/gh-post.ts` set the precedent.
+
+**Before it runs:** adb on the `PATH`, or `--adb <path>`; the phone plugged in
+with USB debugging on and the computer authorised; Chrome on the phone; and a
+build to serve. It serves `packages/site/dist/` as it stands, so the library is
+whichever one the last build staged — after `pnpm smoke:render`, the 50-book
+fixture. `--serve <dir>` points it elsewhere, and `--url https://…` loads a page
+it does not serve at all. With two devices attached it refuses to choose:
+`--serial <id>`, from `adb devices`.
+
+**What it does to the phone**, every run: wakes the screen and dismisses a
+keyguard that has no PIN; **force-stops Chrome**, which is the only thing that
+clears the block Chrome puts on a page after a real context loss; clears the
+logcat and reads it back; opens a tab of its own and closes it after; **removes
+the shelf's lost-context record** for the served origin, since a record left by
+an earlier run would start the page painted; and injects a Shift key once a
+second so the screen stays on. It changes no setting and touches no flag —
+a browser flag is never part of a fix here ([ADR-0090](adr/0090-real-time-shadows-are-the-default.md)).
+
+**When to run it:** before merging anything that touches shadows, materials,
+lights, the bookcase's geometry, or three itself — the changes G61 can see the
+shape of and not the outcome.
+
+**What a result means.** One of six verdicts, most specific first:
+
+| verdict | meaning |
+| --- | --- |
+| `lost` | the context was lost, and when |
+| `link-fail` | a program would not link, which halts the shelf |
+| `no-context` | the page never drew — refused a context, or failed first |
+| `invalid-hidden` | the page was behind another for at least one poll, and a hidden page draws nothing |
+| `invalid-fallback` | the shelf's fallback did not read `none`, so it may have run painted |
+| `survived` | held for the whole wait, in front throughout |
+
+Only `survived` says the shelf held, and **the default page surviving three runs
+of 120 s is what "the default holds on this device" means.** `--matrix` does
+that, then `?shadows=0`, then `?receivers=all` last: on the Pixel 10 Pro XL it
+measured, the reproduction loses its context, and the script expects it to. **If
+it survives, the driver has changed** — write the run down in the log. The
+script exits non-zero when any other run did not survive.
+
+**What it writes**, to `artifacts/phone/`, which is ignored: one JSON per run —
+the device, Chrome's version, the GPU string as the page sees it, the verdict,
+G61's counts and any clause they failed, the console — beside the run's whole
+logcat and, with `--shot`, a screenshot. The page's GPU string carries no driver
+build on Chrome 153, so a result is tied to a driver by `--gpuinfo`, which reads
+it off `chrome://gpu`. ⚠️ **A logcat can carry personal data**:
+notifications, account names, other apps. The JSON quotes a filtered slice; the
+whole file stays in `artifacts/` and is never attached anywhere raw.

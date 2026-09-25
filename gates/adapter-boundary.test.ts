@@ -119,7 +119,7 @@ const ALLOWED = [
   // knows nothing about vaults, notes or builds, and the callers own what they
   // point it at.
   'scripts/lib/walk.ts',
-  // Serves a *built* folder — `dist/`, and for G59 a staged library's
+  // Serves a *built* folder — `dist/`, and for G59 and G61 a staged library's
   // `library.json` and `covers/` over it — to a browser. It reads only paths
   // under the two folders its caller names, refuses any segment that could
   // climb out of them, and writes nothing. The library it may serve was
@@ -134,6 +134,11 @@ const ALLOWED = [
   'scripts/lib/markdown-lint.ts',
   'scripts/make-50-book-fixture.ts',
   'scripts/make-fixture-covers.ts',
+  // Writes one run's result, screenshot and logcat into `artifacts/phone/`, and
+  // checks a build exists before serving it. The page it loads reads whatever
+  // library the last build staged, through `lib/serve-dist.ts`; it never opens
+  // a note and could not name a vault.
+  'scripts/phone-check.ts',
   // Rasterises the committed brand SVGs into the icon PNGs. Its inputs are two
   // files it names literally and its output is `packages/site/public/` — it
   // takes no path from anywhere and has no way to reach a vault.

@@ -39,10 +39,26 @@ bookcase**, not by a document.
 **320 KB** on the wire — rosewood's figure at 1024 is 266.5 KB, `dark_wood`'s at
 512 is 53.2 KB, and both fibres are procedural and free.
 
-⚠️ **No frame-time measurement exists for any of it.** Every figure across the
-map is a *count*, and none is a demonstration that anything is slow. Nothing was
-rendered on a phone, and [`docs/gates.md`](../gates.md) is explicit that the
-mobile crash risk is gated by nothing.
+**Since [#381](https://github.com/mephistopheles4/stacks/issues/381) the
+woodwork is one mesh**, so the whole bookcase is 2 draw calls at every library
+size rather than `rowCount + 4`. Nothing in this spec's look moved to pay for
+it: every per-member difference already rode the geometry. The pixels are not
+byte identical, though, and
+[ADR-0088](../adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)
+says by how much.
+
+⚠️ **No frame-time measurement exists for the woodwork's share of any of it.**
+Every figure across the map is a *count*, and none is a demonstration that
+anything is slow. The shelf carrying the woodwork has run on a phone since
+[#381](https://github.com/mephistopheles4/stacks/issues/381) — the Pixel 10 Pro
+XL runs in
+[real-time shadows by default](../log/2026-09-25-real-time-shadows-by-default.md),
+120 s a run, the page's own fps figure at a 60 fps median on the live library —
+but those runs asked whether the WebGL context held and counted what read the
+shadow map. None judged how the wood looks on a phone, and none isolates what
+it costs there.
+[`docs/gates.md`](../gates.md) is explicit that survival on real hardware is
+gated by nothing.
 
 ---
 

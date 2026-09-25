@@ -14,9 +14,11 @@
  * **Past the first 50, a book has no cover.** The same seed and loop, so the
  * first 50 books of any size are the 50-book vault exactly. The books after
  * them exist to make the bookcase tall — G59 (`large-library-lit`) renders one
- * to prove it is still visible — and a cover each would be about 1.1 MB of
+ * to prove it is still visible, and G61 (`one-shadow-reader`) holds its draws
+ * constant at any library size — and a cover each would be about 1.1 MB of
  * decoded texture apiece (`cover-budget.ts`), past G15's budget, which the
- * 200-book target is documented as not meant to fit.
+ * 200-book target is documented as not meant to fit. The 50-book page is where
+ * covers are drawn.
  */
 import { mkdirSync, rmSync, writeFileSync, copyFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';

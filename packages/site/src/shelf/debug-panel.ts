@@ -3,6 +3,7 @@ import {
   BINDINGS,
   DEFAULT_SETTINGS,
   resolveSettings,
+  SHADOW_RECEIVER_NAMES,
   SHADOW_TYPE_NAMES,
   TONE_MAPPING_NAMES,
   type ShelfSettings,
@@ -52,6 +53,14 @@ export interface PanelOptions {
    * panel says "reload" instead of offering a button that would do nothing.
    */
   readonly onRebuild?: (settings: ShelfSettings) => void;
+  /**
+   * The settings this page started from, which the URL is written as a diff
+   * of. Painted on a device carrying a lost-context record, so a remembered
+   * fallback never becomes `?shadows=0` in a link somebody shares; see
+   * `writeSettings`. A getter, because a fallback during the session changes
+   * it. Absent means the shipped defaults.
+   */
+  readonly base?: () => ShelfSettings;
 }
 
 export function mountPanel(host: HTMLElement, options: PanelOptions): () => void {
@@ -161,7 +170,7 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
   const apply = (next: ShelfSettings): void => {
     const report = handle.applySettings(next);
     settings = next;
-    writeSettings(next);
+    writeSettings(next, options.base?.());
     for (const hook of afterApply) hook();
     for (const relight of lamps) relight();
     showReport(status, report, options.onRebuild !== undefined);
@@ -710,6 +719,17 @@ export function mountPanel(host: HTMLElement, options: PanelOptions): () => void
     (s) => s.shadows.casters,
     (s, v) => resolveSettings({ shadows: { casters: v } }, s),
     (s) => s.shadows.casters && s.shadows.enabled,
+  );
+  // Which surfaces read the map. `all` is the configuration that loses the
+  // context on the Pixel 10 Pro XL, offered so it can be re-tested rather than
+  // as a look — see `shadow-receivers.ts`. Inert with no map, like the filter.
+  choice(
+    'receivers',
+    'rebuild',
+    SHADOW_RECEIVER_NAMES,
+    (s) => s.shadows.receivers,
+    (s, v) => resolveSettings({ shadows: { receivers: v } }, s),
+    (s) => s.shadows.enabled,
   );
   // The isolator from the crash investigation: draw the map once, then stop
   // *reading* it. It was in the URL vocabulary and had no control, which made

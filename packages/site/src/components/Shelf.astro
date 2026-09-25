@@ -125,9 +125,10 @@
   }
 
   /*
-   * Shown when there is no shelf to show — see showNotice in ../shelf/boot.ts.
-   * `:global` because boot.ts creates it, and Astro only stamps its scoping
-   * attribute on elements that were in this template.
+   * Shown when there is no shelf to show, with the canvas hidden behind it —
+   * see showNotice in ../shelf/shelf-notice.ts. `:global` because that module
+   * creates it, and Astro only stamps its scoping attribute on elements that
+   * were in this template.
    */
   .shelf :global(.shelf-notice) {
     position: absolute;
