@@ -1,8 +1,9 @@
 /**
  * One static server for a built `dist/`, for every script that renders one.
  *
- * ⚠️ **Written on #382's branch and copied here byte for byte but for its
- * comments**, so that the two branches merge on prose and not on a server.
+ * ⚠️ **Written on #382's branch and copied here**, so that the two branches
+ * share one server. The differences are comments and `fileWithin`, which #384
+ * added after CodeQL flagged the copy; #382 carries the same three alerts.
  *
  * Deliberately not the dev server: waiting for a subprocess to announce itself
  * on stdout is a race that hangs rather than fails, and a gate that can hang is
@@ -18,7 +19,7 @@
  */
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
-import { join } from 'node:path';
+import { resolve, sep } from 'node:path';
 
 /** The paths a staged library occupies. Everything else is the build's. */
 export const LIBRARY_PATHS: readonly string[] = ['library.json', 'covers'];
@@ -75,6 +76,27 @@ export function resolveServedPath(
   return { from, segments };
 }
 
+/**
+ * The file `segments` names under `base`, or `undefined` if it is not under it.
+ *
+ * **Structural, where `safe` is a list.** `safe` refuses the segments known to
+ * climb — a denylist, and a denylist is only as good as its author's memory of
+ * a platform's path rules. This resolves the path and asks whether it is still
+ * inside the folder, which holds whatever the list forgot. Both stay: the
+ * list refuses a bad request early and says why, and this is what makes the
+ * promise *"never serve outside the folder"* true rather than likely.
+ *
+ * The server this replaced in `smoke-render.ts` held that promise with a
+ * `startsWith(root)` on the joined path. The segment list took its place, and
+ * CodeQL's `js/path-injection` then found no barrier between the URL and
+ * `readFileSync` — three high alerts, on this pull request and on #382.
+ */
+export function fileWithin(base: string, segments: readonly string[]): string | undefined {
+  const folder = resolve(base);
+  const file = resolve(folder, ...segments);
+  return file.startsWith(folder + sep) ? file : undefined;
+}
+
 function safe(segment: string): boolean {
   return (
     segment !== '' &&
@@ -127,7 +149,7 @@ export function serveDist(options: ServeOptions): Promise<Served> {
     const served = resolveServedPath(url, options.overlay === undefined ? [] : LIBRARY_PATHS);
     const base = served?.from === 'overlay' ? options.overlay : options.root;
     const file =
-      served === undefined || base === undefined ? undefined : join(base, ...served.segments);
+      served === undefined || base === undefined ? undefined : fileWithin(base, served.segments);
     if (file === undefined || !existsSync(file) || !statSync(file).isFile()) {
       response.writeHead(404).end('not found');
       return;

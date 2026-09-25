@@ -13,7 +13,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { LIBRARY_PATHS, resolveServedPath } from './serve-dist.ts';
+import { resolve, sep } from 'node:path';
+import { fileWithin, LIBRARY_PATHS, resolveServedPath } from './serve-dist.ts';
 
 describe('resolveServedPath — what the build serves', () => {
   it('serves the index for the site root', () => {
@@ -79,5 +80,31 @@ describe('resolveServedPath — what it refuses', () => {
     ['a path that is not absolute', 'index.html'],
   ])('refuses %s', (_name, url) => {
     expect(resolveServedPath(url)).toBeUndefined();
+  });
+});
+
+/**
+ * The structural half: whatever `resolveServedPath` lets through, nothing is
+ * read from outside the folder.
+ *
+ * Every refusal below goes red against the `join(base, ...segments)` this
+ * replaced, which answered all of them with a path. The expectations are
+ * `undefined` or a prefix built by `resolve` on the same host — never a literal
+ * joined path, whose separator the host would pick.
+ */
+describe('fileWithin — never outside the folder', () => {
+  const base = resolve('served-root');
+
+  it('names a file under the folder', () => {
+    expect(fileWithin(base, ['covers', 'a.png'])?.startsWith(base + sep)).toBe(true);
+  });
+
+  it.each([
+    ['a parent segment', ['..', 'package.json']],
+    ['a climb past the folder from inside it', ['covers', '..', '..', '.env']],
+    ['a sibling whose name starts with the folder', ['..', 'served-root-evil', 'x']],
+    ['the folder itself', []],
+  ])('refuses %s', (_name, segments) => {
+    expect(fileWithin(base, segments)).toBeUndefined();
   });
 });
