@@ -1269,8 +1269,13 @@ async function linkFailure(page: Page, origin: string): Promise<string> {
 }
 
 async function visit(page: Page, origin: string, path: string): Promise<void> {
-  await page.goto(`${origin}${path}`, { waitUntil: 'networkidle0', timeout: 30_000 });
-  await page.waitForFunction('window.__shelf?.ready === true', { timeout: 20_000 });
+  // Ready is the state every case needs; a quiet network is only a courtesy. On
+  // the runner's software renderer `networkidle0` inside 30 s failed one case of
+  // eight on one Node version of two, with the shelf itself fine — so the wait
+  // for quiet is bounded and never fatal, as G61's is.
+  await page.goto(`${origin}${path}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+  await page.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => undefined);
   // A hidden page's loss is not the fallback's, by design — so make sure the
   // one under test is the one in front.
   await page.bringToFront();
