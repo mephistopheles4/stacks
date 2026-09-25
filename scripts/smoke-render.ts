@@ -555,6 +555,14 @@ async function clickAnyBook(page: Page): Promise<boolean> {
  * origin blocked, so this proves the page's side and nothing about what Chrome
  * does after a real driver loss. That half is the phone's, recorded in the log.
  *
+ * The one part of it a page can be made to meet is the refusal: after every
+ * real loss on the Pixel the new canvas was denied a context, and the page ended
+ * on its failure sentence. The `refused` case stages that by making `getContext`
+ * answer `null` for any canvas but the lost one, and holds the page to hiding
+ * the dead canvas, which Chrome on the phone painted white over the whole page.
+ * The white itself never appears here, because a staged loss is not blocked, so
+ * the case reads whether the canvas is shown and not what colour it is.
+ *
  * Each case runs in a browser context of its own, so a record one writes
  * cannot leak into the next — or into the page every check above measured.
  */
@@ -602,6 +610,28 @@ const LOSE = `(() => {
 
 const RESTORE = 'window.__lc.restoreContext()';
 
+/**
+ * Every canvas but the one on the page is refused a WebGL context — the page's
+ * side of Chrome's `Web page caused context loss and was blocked`. Installed
+ * after the shelf has its context, so the only canvas that meets it is the new
+ * one the fallback asks for.
+ */
+const REFUSE_NEW_CONTEXTS = `(() => {
+  const live = document.getElementById('shelf-canvas');
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+    if (this !== live && String(type).startsWith('webgl')) return null;
+    return getContext.call(this, type, ...rest);
+  };
+})()`;
+
+/**
+ * What three logs when it is refused a context, the one console error the
+ * `refused` case causes on purpose. Consumed there and required there, so the
+ * case cannot go green refused for some other reason.
+ */
+const REFUSED_BY_THREE = 'THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.';
+
 /** The most render-loop callbacks any one frame ran, over a second of frames. */
 const LOOPS_PER_FRAME = `(async () => {
   window.__callbacksPerFrame.clear();
@@ -617,6 +647,13 @@ interface PageState {
   readonly record: string | null;
   readonly notice: string;
   readonly visibility: string;
+  /**
+   * Whether the shelf's canvas is rendered at all: not `display: none`, not
+   * `visibility: hidden`, not transparent, on it or on any ancestor. A lost
+   * canvas must not be — Chrome paints one it will not restore white — and a
+   * live one must be.
+   */
+  readonly canvasShown: boolean;
 }
 
 const READ_STATE = `(() => ({
@@ -626,6 +663,10 @@ const READ_STATE = `(() => ({
   record: localStorage.getItem(${JSON.stringify(FALLBACK_KEY)}),
   notice: document.querySelector('.shelf-notice')?.textContent ?? '',
   visibility: document.visibilityState,
+  canvasShown:
+    document
+      .getElementById('shelf-canvas')
+      ?.checkVisibility({ visibilityProperty: true, opacityProperty: true }) ?? false,
 }))()`;
 
 async function checkContextLossFallback(
@@ -635,14 +676,17 @@ async function checkContextLossFallback(
   const lines: string[] = [];
   const failures: string[] = [];
 
-  const cases: readonly [string, FallbackCase][] = [
+  // The third field is the one console error a case causes on purpose. It is
+  // taken out of that case's errors only, and the case fails if it never came.
+  const cases: readonly (readonly [string, FallbackCase, string?])[] = [
     ['restore', restoreThenReload],
     ['no restore', noRestore],
     ['storage refused', storageRefused],
     ['painted loss', paintedLoss],
+    ['refused', refusedRedraw, REFUSED_BY_THREE],
   ];
 
-  for (const [name, run] of cases) {
+  for (const [name, run, expected] of cases) {
     const context = await browser.createBrowserContext();
     const errors: string[] = [];
     try {
@@ -664,8 +708,15 @@ async function checkContextLossFallback(
     } finally {
       await context.close();
     }
-    if (errors.length > 0) {
-      failures.push(`context loss, ${name}: page errors:\n    ${errors.join('\n    ')}`);
+    const unexpected = errors.filter((error) => error !== expected);
+    if (expected !== undefined && unexpected.length === errors.length) {
+      failures.push(
+        `context loss, ${name}: three never logged "${expected}", so the page was not refused ` +
+          'the way this case stages it',
+      );
+    }
+    if (unexpected.length > 0) {
+      failures.push(`context loss, ${name}: page errors:\n    ${unexpected.join('\n    ')}`);
     }
   }
 
@@ -704,6 +755,7 @@ async function restoreThenReload(page: Page, origin: string): Promise<string> {
   );
   must(restored.canvases === 1, `${String(restored.canvases)} canvases after a restore, not 1`);
   must(restored.notice === '', `a notice stayed over the redrawn shelf: "${restored.notice}"`);
+  must(restored.canvasShown, 'the shelf was redrawn on a canvas that is still hidden');
   const loops = await oneLoop(page, 'after the restore');
 
   await visit(page, origin, '/');
@@ -748,6 +800,8 @@ async function noRestore(page: Page, origin: string): Promise<string> {
   );
   must(state.profile.includes('shadows=off'), `the new shelf samples the map: ${state.profile}`);
   must(state.notice === '', `a notice stayed over the redrawn shelf: "${state.notice}"`);
+  // The new element is a clone of one hidden while the notice was up.
+  must(state.canvasShown, 'the new canvas is drawn and still hidden');
 
   // Textures land and the ResizeObserver sizes the new element.
   await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -820,6 +874,7 @@ async function paintedLoss(page: Page, origin: string): Promise<string> {
     lost.record === null && lost.fallback === 'none' && lost.canvases === 1,
     `a painted loss was taken as the fallback's: ${JSON.stringify(lost)}`,
   );
+  must(!lost.canvasShown, 'the lost canvas is still shown under the notice');
 
   await page.evaluate(RESTORE);
   await waitForState(
@@ -828,9 +883,43 @@ async function paintedLoss(page: Page, origin: string): Promise<string> {
     5000,
     'cleared notice after the resume',
   );
+  must((await readState(page)).canvasShown, 'the shelf resumed on a canvas that is still hidden');
   const loops = await oneLoop(page, 'after an in-place resume');
 
-  return `notice, no record, no rebuild, resumed in place (${loops})`;
+  return `notice, canvas hidden, no record, no rebuild, resumed in place and shown (${loops})`;
+}
+
+/**
+ * (G) no restore, and the new canvas refused a context — every real loss on the
+ * Pixel. The failure sentence, the record written, and the lost canvas hidden:
+ * left shown, Chrome painted it white over the whole page.
+ */
+async function refusedRedraw(page: Page, origin: string): Promise<string> {
+  await visit(page, origin, REAL_TIME_PATH);
+  await mustSample(page);
+  await page.evaluate(REFUSE_NEW_CONTEXTS);
+
+  await page.evaluate(LOSE);
+  await waitForState(
+    page,
+    `window.__shelf.fallback() === 'refused'`,
+    RESTORE_WAIT_MS + 3000,
+    'refused redraw',
+  );
+
+  const state = await readState(page);
+  must(state.canvases === 1, `${String(state.canvases)} canvases after a refusal, not 1`);
+  must(state.record !== null, 'a refused redraw wrote no record, so the next load samples again');
+  must(
+    state.notice.includes('would not give it another'),
+    `the page does not say it was refused: "${state.notice}"`,
+  );
+  must(
+    !state.canvasShown,
+    'the lost canvas is still shown — on the phone Chrome paints it white over the whole page',
+  );
+
+  return 'refused, failure sentence, record written, lost canvas hidden';
 }
 
 async function visit(page: Page, origin: string, path: string): Promise<void> {

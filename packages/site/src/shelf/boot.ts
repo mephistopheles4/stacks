@@ -19,6 +19,7 @@ import {
   type FallbackKind,
   type FallbackState,
 } from './shadow-fallback.ts';
+import { clearNotice, showNotice } from './shelf-notice.ts';
 import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
 import { bookLimit, readSettings, soloBook } from './shelf-url.ts';
 
@@ -214,9 +215,16 @@ export async function boot(
     }
   };
 
-  /** The one way a new shelf becomes the live one. */
+  /**
+   * The one way a new shelf becomes the live one.
+   *
+   * It clears the notice, and with it shows the canvas again: a notice hides the
+   * canvas it stands in for (`shelf-notice.ts`), so a panel rebuild that draws
+   * after one that could not would otherwise be a live shelf nobody can see.
+   */
   const adopt = (next: ShelfHandle): void => {
     handle = next;
+    clearNotice(surface);
     publish(next, () => fallback().kind);
     showPanel?.(next);
   };
@@ -253,7 +261,9 @@ export async function boot(
    * mounted while detached — `resize()` returns while the size is 0, and the
    * shelf's `ResizeObserver` sizes it once it is in the page — and it replaces
    * the old element only if a context was actually handed out. On failure the
-   * old element stays, so the notice has somewhere to go.
+   * old element stays, so the notice has somewhere to go, and the notice hides
+   * it: Chrome paints a lost canvas it will not restore opaque white, and on the
+   * Pixel that was the whole page. See `shelf-notice.ts`.
    */
   const remountOnFreshCanvas = (settings: ShelfSettings): boolean => {
     const old = surface;
@@ -447,12 +457,10 @@ function paintedOf(settings: ShelfSettings): ShelfSettings {
 /**
  * Saying so, rather than showing an empty room.
  *
- * A 3D page that fails renders as nothing at all: no error, no broken image, no
- * clue that anything was ever meant to be there. Both of these replace that with
- * a sentence, because a visitor who knows the shelf is missing can reload, and a
- * visitor looking at a black rectangle cannot tell it apart from the design.
+ * The sentences, one per way the shelf can fail to be there. Each is shown by
+ * `showNotice`, which hides the canvas while it is up — every one of these means
+ * that canvas has no live context. See `shelf-notice.ts`.
  */
-const NOTICE_CLASS = 'shelf-notice';
 
 // Says what happened, not why. `webglcontextlost` carries no reason, and the
 // first wording asserted one — "ran out of graphics memory" — that the evidence
@@ -492,25 +500,6 @@ function noticeFor(notice: Exclude<Notice, 'clear'>, state: FallbackState): stri
     case 'failed':
       return 'remembered' in state && state.remembered ? FAILED_REMEMBERED_MESSAGE : FAILED_MESSAGE;
   }
-}
-
-function showNotice(canvas: HTMLCanvasElement, message: string): void {
-  const host = canvas.parentElement;
-  if (host === null) return;
-
-  clearNotice(canvas);
-
-  const notice = document.createElement('p');
-  notice.className = NOTICE_CLASS;
-  // textContent, not innerHTML — same rule as the card, and these strings are
-  // fixed anyway.
-  notice.textContent = message;
-  notice.setAttribute('role', 'status');
-  host.append(notice);
-}
-
-function clearNotice(canvas: HTMLCanvasElement): void {
-  canvas.parentElement?.querySelector(`.${NOTICE_CLASS}`)?.remove();
 }
 
 /** How often the dev page checks whether the vault was rebuilt. */

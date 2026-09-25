@@ -6140,8 +6140,10 @@ branch and every remote one, with no pull request open.** Rows are gapless, so
 this took G59 rather than the G60 the design proposed; the ticket's
 sampling-program gate, #381's sixth item, takes the next one.
 
-**Observed-red**, three ways, each planted in the source, run through `pnpm
-smoke:render`, and reverted with the file hash checked against its backup:
+**Observed-red**, five ways, each planted in the source, run through `pnpm
+smoke:render`, and reverted with the file hash checked against its backup. The
+last two were added with the `refused` case, after the phone check found the
+page white:
 
 1. **Both `disposed` guards removed** from `scene.ts` — the restored handler's
    and `renderLoop`'s. The restore case went red: `2 render-loop callbacks in
@@ -6155,17 +6157,30 @@ smoke:render`, and reverted with the file hash checked against its backup:
 3. **The new shelf mounted on the lost canvas instead of a new one.** Both
    loss cases went red: the browser handed the lost canvas no context, and the
    state read `refused`.
+4. **The notice no longer hiding the canvas** — the one `visibility` line in
+   `shelf-notice.ts` removed. Two cases went red: `refused` on *the lost canvas
+   is still shown*, and `painted loss` on the same, while its notice was up.
+   The same plant reddens two specs in `shelf-notice.test.ts`.
+5. **Clearing the notice no longer showing the canvas** — the `removeProperty`
+   line removed. Three cases went red: `restore`, `no restore` and `painted
+   loss`, each on a shelf drawn again on a canvas still hidden. `refused`
+   stayed green, as it should: nothing there is ever shown again.
 
-The control is the same run with the plants reverted: four cases green, one
-loop a frame in each.
+The control is the same run with the plants reverted: five cases green, one
+loop a frame in each of the four that draw.
 
-- **Weakening** — **clean; no allowlist and no tolerance of its own.** The
+- **Weakening** — **one tolerance, required rather than allowed.** The
   non-blank floor is the main render's (40 colours, 10% not background), the
   waits are ceilings a passing run clears in well under a second, and the
   wait for a new canvas is `RESTORE_WAIT_MS` plus a margin, imported rather
   than copied. Page errors are console `error`s and exceptions only, which is
   the main render's rule too: the `INVALID_OPERATION` warnings a same-canvas
-  rebuild logs on the phone do not count. Disposition `gated`.
+  rebuild logs on the phone do not count. ⚠️ **The `refused` case takes one
+  console error out of its own list**: three logs `Error creating WebGL
+  context.` when it is refused one, which is the state under test. It is
+  matched as the whole string, in that case only, and the case fails if it
+  never arrives — so a page refused for some other reason is not green here.
+  Disposition `gated`.
 - **Satisfying the letter** — **exposed, in one place.** *Painted* is read off
   the live shelf's `profile`, which is its settings, and not off the programs
   it compiled. A rebuild that mounted painted settings and still sampled the
@@ -6180,7 +6195,12 @@ loop a frame in each.
   real loss did all of that but restore, in 4 of 4 runs, so the in-page
   rebuild this gate proves never happened there; what worked was the record,
   on the next load. That is recorded in the log, and no gate here can run it.
-  `?solo` has no fallback and is not driven. Disposition `accepted`.
+  The `refused` case stages the one half a page can meet, a new canvas denied
+  a context, by making `getContext` answer `null`; it holds the page to hiding
+  the dead canvas and cannot see what Chrome paints on one, which on the phone
+  was opaque white. A reload inside the block, which never gets a context at
+  all, is not driven. `?solo` has no fallback and is not driven. Disposition
+  `accepted`.
 - **Vacuous green** — **gated.** A case refuses to start on a page that does
   not sample the map or is not visible, since a loss there is not the
   fallback's by design and every assertion after it would pass over nothing.

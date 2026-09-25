@@ -221,7 +221,9 @@ Seen in the same session, recorded and not chased:
   per steady frame, which is what G60 judges.
 - **A real loss again got no redraw.** Both context requests, at about 3.9 s,
   were refused as blocked, and the page ended white — mean brightness 235 of 255,
-  Chrome's broken-page icon showing, the dead canvas still visible.
+  Chrome's broken-page icon showing, the dead canvas still visible. Fixed after
+  this: a notice now hides the canvas, and G59 holds the refused state; see
+  [the white page after a refusal](./2026-09-25-a-lost-context-falls-back-to-painted.md#the-white-page-after-a-refusal).
 - **The 273-book page is dark on the phone**: mean 27, 23, 19 against 58, 43, 35
   for the live library. Fog was not re-tested as the cause.
 - **The 273-book page slows over a run**: the page's own fps figure fell from

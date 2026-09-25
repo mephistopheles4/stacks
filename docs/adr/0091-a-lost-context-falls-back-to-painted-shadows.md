@@ -14,6 +14,10 @@
    sentence if neither is given a context. One attempt a page; a second loss
    only says so. See
    [`context-recovery.ts`](../../packages/site/src/shelf/context-recovery.ts).
+   **A sentence replaces the canvas; it never sits over it.** While any notice
+   is up the canvas behind it is hidden, and the page shows its own background:
+   Chrome paints a lost canvas it will not restore opaque white. See
+   [`shelf-notice.ts`](../../packages/site/src/shelf/shelf-notice.ts).
 2. **Later loads read the record and start painted.** The record is
    `{ v: 1, at, gpu? }` under `stacks.shadows.fallback.v1` in `localStorage`,
    and nothing else. It holds for 30 days from the loss and is never refreshed
@@ -74,7 +78,11 @@ the runs: [a lost context falls back to painted](../log/2026-09-25-a-lost-contex
   new canvas at 2.5 s was refused with `Web page caused context loss and was
   blocked`. A probe asking for a context every 4 s in the same page was
   refused to +24 s. The page ended on the failure sentence, with the record
-  written.
+  written. ⚠️ **And, a later run found, on a white page**: the lost canvas
+  stayed in the page for the sentence, and Chrome painted it opaque white with
+  a sad-face icon — mean brightness 235 of 255, the wordmark nearly gone. The
+  notice now hides the canvas; see the log's
+  [white page after a refusal](../log/2026-09-25-a-lost-context-falls-back-to-painted.md#the-white-page-after-a-refusal).
 - **The record is what worked.** A reload came back remembered, painted and at
   60 fps: at about 17 s and 73 s after the loss. At about 9 s it was refused,
   and the page said so. That is two points either side of the edge, and no

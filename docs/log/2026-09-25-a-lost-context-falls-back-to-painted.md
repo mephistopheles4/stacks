@@ -27,7 +27,9 @@ and was not to ship before it.
 - **The GPU string carries no driver build**, so a driver update alone retires
   no record. The 30-day expiry is the retry.
 - **A new gate, G59 (`context-loss-fallback`),** drives four losses through a
-  real browser in `pnpm smoke:render`.
+  real browser in `pnpm smoke:render`, and a fifth since: the refused redraw,
+  which left the page white until
+  [the fix below](#the-white-page-after-a-refusal).
 
 ## What was built
 
@@ -139,9 +141,91 @@ errors; the page ran on at 60 fps. The new-canvas rebuild logs none.
 
 - **On this phone the in-page rebuild never happens after a real loss.** The
   visitor reads *"…would not give it another. Reload to bring it back — it will
-  come back with painted shadows."* A reload within about 9 s then reads
+  come back with painted shadows."*, on the page's own dark background — until
+  the fix below, on a white one. A reload within about 9 s then reads
   *"…Reloading usually fixes it."*, and the next one works. The two sentences
   chain, but the first reload can fail. Whether to change the wording is open.
 - **A shader-link failure still halts** and writes nothing.
 - **Not run:** a Galaxy S25 and the iOS simulator. The second device on USB was
   not a Galaxy. Real-time shadows were not the default in any run here.
+
+## The white page after a refusal
+
+Found by the phone check of
+[real-time shadows by default](./2026-09-25-real-time-shadows-by-default.md),
+and confirmed by its re-check: after a real loss the page went white. The new
+canvas was refused, and `remountOnFreshCanvas` kept the old one on purpose, so
+the failure sentence had somewhere to go. Nothing hid it, and Chrome paints a
+lost canvas it will not restore opaque white, with a small sad-face icon. The
+whole page read white — mean brightness 235 of 255 — and the wordmark nearly
+vanished against it. None of G59's four cases reached that state, so no gate
+could see it.
+
+**What a visitor sees after a real loss on the Pixel**, from those runs, with
+the fix in place:
+
+1. **At about 1.5 s** the sentence *"…Redrawing it with painted shadows…"*, and
+   the record is already written.
+2. **At about 3.9 s** Chrome refuses the new canvas, and the sentence becomes
+   *"…would not give it another. Reload to bring it back — it will come back
+   with painted shadows."* — now on the page's own dark background, the dead
+   canvas hidden.
+3. **A reload inside Chrome's block** reads *"This browser wouldn't give the
+   page a 3D canvas…"*. The phone showed that page dark already; its canvas
+   was never given a context, and only a lost one was seen painted white. It
+   is hidden now all the same, because every notice hides the canvas.
+4. **A later load** starts painted from the record.
+
+How long the block lasts is not known. This round refused reloads at +46, +61,
++73 and +118 s and granted them at +160 and +162 s, where the first round
+granted +17 and +73 s. Those disagree, so there is no claim about an edge.
+
+**The fix: a notice replaces the canvas, and never sits over it.**
+[`shelf-notice.ts`](../../packages/site/src/shelf/shelf-notice.ts) now holds
+`showNotice` and `clearNotice`, moved out of `boot.ts`, which Stryker excludes
+because only a browser reaches it. Showing a notice sets the canvas's inline
+`visibility` to `hidden`, and clearing one removes it. Every notice the page
+shows means the canvas has no live context: lost and waiting, lost for good,
+never given one, or stopped by a shader. `adopt` clears the notice too, so a
+panel rebuild that draws after one that could not is not a live shelf nobody
+can see.
+
+`visibility` and not the `hidden` attribute, because `Shelf.astro`'s
+`canvas { display: block }` is an author rule and beats the user agent's
+`[hidden] { display: none }`. And not `display: none`, because `visibility`
+keeps the box that the `ResizeObserver` and `projectBook` measure. The notice
+is positioned against the shelf, not the canvas, so it stays centred.
+
+**G59 gains a fifth case, `refused`.** It makes `getContext` answer `null` for
+every canvas except the lost one, loses the context, and waits for `refused`.
+Then it requires the record, the failure sentence and a canvas that
+`checkVisibility` says is not rendered. The case requires three's `Error
+creating WebGL context.`, and no other case allows it. `restore`, `no restore`
+and `painted loss` now also read the canvas: hidden while their notice is up,
+shown once the shelf draws again.
+
+```text
+context loss (G59), each case in a browser context of its own
+  restore         restored painted (174 frames, 1 loop), reload remembered, ?shadows=1 probe-override
+  no restore      new canvas after 2700ms, 1440x900, 1602 colours, 174 frames, 1 loop, card opens
+  storage refused restored painted, not remembered, no page errors
+  painted loss    notice, canvas hidden, no record, no rebuild, resumed in place and shown (172 frames, 1 loop)
+  refused         refused, failure sentence, record written, lost canvas hidden
+```
+
+**Observed red**, each planted in `shelf-notice.ts`, run through `pnpm
+smoke:render` and reverted, with the file hash checked against its backup:
+
+| plant | result |
+| --- | --- |
+| the `visibility = 'hidden'` line removed | red in `refused` and `painted loss`: the lost canvas still shown |
+| the `removeProperty` line removed | red in `restore`, `no restore` and `painted loss`: redrawn on a canvas still hidden |
+
+The same two plants redden `shelf-notice.test.ts`, which drives the two
+functions against a hand-built page with no DOM shim. So does hiding the canvas
+before the old notice is cleared, which the clear then undoes.
+
+⚠️ **The white itself is never seen on a desktop.** A staged loss is never
+blocked, so the case proves that the page hides the canvas, not what Chrome
+would have painted on it. The phone is still the only place the white can be
+seen, and this change has not been back on it.

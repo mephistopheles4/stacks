@@ -177,4 +177,8 @@ Then `window.__lc.restoreContext()` inside 2.5 s for the restore path, or
 nothing for the new-canvas path. ⚠️ **A staged loss is not a driver's.** It never
 restores on its own, never takes the GPU process down and never gets the page
 blocked, which on the Pixel 10 Pro XL is what a real one does. `pnpm
-smoke:render` runs both paths this way as G59 (`context-loss-fallback`).
+smoke:render` runs both paths this way as G59 (`context-loss-fallback`), and a
+third: the new canvas refused a context, staged by making `getContext` answer
+`null` before the loss. That is where every real loss on the Pixel ended, and
+the page must show the failure sentence on its own background with the lost
+canvas hidden — left shown, Chrome painted it white over the whole page.
