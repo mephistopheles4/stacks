@@ -137,6 +137,15 @@ every named function inside the hook's body into a call to a module-level
 none: measured, the bare body throws `__name is not defined`. The source the
 page gets defines the helper in a block of its own.
 
+**Stryker rewrites it too, and that was found before pushing, not by a gate.**
+`pnpm exec stryker run --dryRunOnly` failed on `stryMutAct_9fa48 is not
+defined`: the spec ran the serialised string, and Stryker's instrumentation
+had turned the body into calls to its own module-level helpers. Pull requests
+never run Stryker, so the first to see it would have been the nightly. The
+hook's behaviour is now specced by calling the function, and the string by a
+spec of its own that Stryker's Vitest config leaves out; the dry run then ran
+1,665 tests green.
+
 ## The phone check
 
 `scripts/phone-check.ts` is the phone investigation's harness made permanent:

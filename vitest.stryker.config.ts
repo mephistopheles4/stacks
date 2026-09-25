@@ -1,8 +1,21 @@
 import { defineConfig } from 'vitest/config';
 
 /**
- * The repo's `vitest.config.ts` with the three specs that cannot run inside
- * Stryker's sandbox removed. Nothing else is changed.
+ * The repo's `vitest.config.ts` with the specs that cannot run inside Stryker's
+ * sandbox removed. Nothing else is changed. (It said *the three specs* until a
+ * fourth arrived: a count in prose goes stale in the file that holds the list.)
+ *
+ * ⚠️ **`scripts/lib/sampling-hook-source.test.ts` is the fourth, and it is
+ * `tsx`'s `__name` again, from a second tool.** G60's page hook is a function
+ * serialised with `toString()` and run in a page, and Stryker rewrites every
+ * mutant site in its body into a call to a module-level `stryMutAct_*` helper
+ * the serialised string cannot reach — measured, the dry run failed on
+ * `stryMutAct_9fa48 is not defined` and took the whole mutation run with it.
+ * **The oracle survives**: `scripts/lib/sampling-hook.test.ts` calls the
+ * function in-process and stays in, so `scripts/lib/sampling-hook.ts` needs
+ * **no** exclusion in `stryker.scopes.json`. What leaves is only the proof
+ * that the string still runs on its own, which `pnpm smoke:render` also makes
+ * on every CI run.
  *
  * ⚠️ **`scripts/lib/complexity-tree.test.ts` is the second, and it is the
  * filesystem warning further down made concrete.** It asserts the complexity of
@@ -103,6 +116,7 @@ export default defineConfig({
       'packages/cli/src/env.test.ts',
       'scripts/lib/complexity-tree.test.ts',
       'gates/ignored-clones.test.ts',
+      'scripts/lib/sampling-hook-source.test.ts',
     ],
     environment: 'node',
     setupFiles: ['./gates/no-live-network.setup.ts'],

@@ -4,18 +4,16 @@
  * An ordinary unit test, not a gate — it takes no `docs/gates.md` row, for the
  * reason `vitest.config.ts` records about `scripts/`.
  *
- * ⚠️ **It runs the serialised source, not the function.** The page gets a
- * string, so the string is what is under test: `samplingHookSource()` is run
- * as a script with `node:vm`, the way a page runs it, in a scope that has none
- * of this module's imports. ⚠️ **What this cannot prove is the `tsx` half** — Vitest's transform
- * need not inject the `__name` helper that `tsx`'s `keepNames` does, so a stale
- * shim can pass here. The CI run of `pnpm smoke:render` proves that half: a hook
- * that throws never reports itself, and G60's first clause says so.
+ * ⚠️ **It calls the function, not the string a page gets**, and that is so
+ * Stryker can mutate it. Stryker rewrites the hook's body into calls to
+ * module-level helpers; a serialised copy cannot reach them, and running the
+ * string here failed the mutation run's dry run outright. The string has its
+ * own, smaller spec, `sampling-hook-source.test.ts`, which Stryker's Vitest
+ * config leaves out.
  */
 
-import { runInThisContext } from 'node:vm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { samplingHookSource } from './sampling-hook.ts';
+import { samplingHook } from './sampling-hook.ts';
 import type { SamplingSnapshot } from './shadow-sampling.ts';
 
 const SAMPLER_2D = 0x8b5e;
@@ -160,9 +158,7 @@ let Gl: typeof FakeGl;
 const shelf = { ready: true };
 
 function install(): Hook {
-  // The string the page gets, run as a script — as `evaluateOnNewDocument`
-  // runs it — where none of this file's scope reaches it.
-  runInThisContext(samplingHookSource());
+  samplingHook();
   return (globalThis as unknown as { __samplingHook: Hook }).__samplingHook;
 }
 
@@ -462,15 +458,5 @@ describe('the page hook — installing', () => {
     gl.drawElements();
 
     expect(hook.read().frames[0]?.calls).toBe(1);
-  });
-
-  it('defines the helper tsx makes the body call, in a scope of its own', () => {
-    const before = '__name' in globalThis;
-    expect(samplingHookSource().startsWith('{ const __name = (target) => target;')).toBe(true);
-
-    install();
-
-    // Nothing leaks into the page's globals but the hook itself.
-    expect('__name' in globalThis).toBe(before);
   });
 });

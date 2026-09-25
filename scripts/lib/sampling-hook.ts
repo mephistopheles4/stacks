@@ -29,6 +29,12 @@
  * `samplingHookSource()` defines it for the body's scope alone, as an identity.
  * If the helper is ever renamed, the hook throws before it reports itself, and
  * G60's first clause goes red saying the hook never reported.
+ *
+ * ⚠️ **Stryker rewrites the body too**, into calls to module-level
+ * `stryMutAct_*` helpers no shim can name. So `sampling-hook.test.ts` specs the
+ * behaviour by calling `samplingHook()`, which Stryker can mutate, and
+ * `sampling-hook-source.test.ts` specs the string — and is left out of the
+ * mutation run by `vitest.stryker.config.ts`, since it cannot pass in there.
  */
 
 /**
