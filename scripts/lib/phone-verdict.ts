@@ -228,7 +228,7 @@ export interface PhoneRow {
   /** `describeSampling`'s line, or why there is none. */
   readonly sampling: string;
   /** G61's judgement of the same run: `ok`, or how many clauses failed. */
-  readonly g60: string;
+  readonly judged: string;
 }
 
 export function formatRows(header: string, rows: readonly PhoneRow[]): string[] {
@@ -239,7 +239,7 @@ export function formatRows(header: string, rows: readonly PhoneRow[]): string[] 
     ...rows.map(
       (row) =>
         `${row.label.padEnd(width)}${row.verdict.kind.padEnd(18)}` +
-        `${`${row.elapsedS.toFixed(0)} s`.padStart(7)}   ${row.g60}\n` +
+        `${`${row.elapsedS.toFixed(0)} s`.padStart(7)}   ${row.judged}\n` +
         `${''.padEnd(width)}${row.verdict.reason}\n${''.padEnd(width)}${row.sampling}`,
     ),
   ];

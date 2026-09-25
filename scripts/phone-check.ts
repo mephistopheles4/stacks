@@ -374,7 +374,7 @@ async function runOne(
       verdict,
       elapsedS,
       sampling: describeSampling(sampled),
-      g60: failures.length === 0 ? 'ok' : `red: ${failures.map((f) => f.slice(0, 3)).join(' ')}`,
+      judged: failures.length === 0 ? 'ok' : `red: ${failures.map((f) => f.slice(0, 3)).join(' ')}`,
     };
 
     writeFileSync(
@@ -391,7 +391,7 @@ async function runOne(
           observation,
           elapsedS,
           profile: read?.profile ?? null,
-          sampling: { line: row.sampling, g60: failures },
+          sampling: { line: row.sampling, failures },
           console: consoleLines(cdp.events).slice(-60),
           logcat: interestingLogcat(logcat),
           logcatFile: `${base}.logcat.txt`,

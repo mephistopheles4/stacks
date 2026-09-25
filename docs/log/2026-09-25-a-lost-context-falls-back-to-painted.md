@@ -27,7 +27,8 @@ and was not to ship before it.
 - **The GPU string carries no driver build**, so a driver update alone retires
   no record. The 30-day expiry is the retry.
 - **A new gate, G60 (`context-loss-fallback`),** drives four losses through a
-  real browser in `pnpm smoke:render`, and a fifth since: the refused redraw,
+  real browser in `pnpm smoke:render`, and two more since: a shadow probe's
+  loss, which must write no record, and the refused redraw,
   which left the page white until
   [the fix below](#the-white-page-after-a-refusal).
 
@@ -220,6 +221,7 @@ context loss (G60), each case in a browser context of its own
   storage refused restored painted, not remembered, no page errors
   painted loss    notice, canvas hidden, no record, no rebuild, resumed in place and shown (172 frames, 1 loop)
   refused         refused, failure sentence, record written, lost canvas hidden
+  probe loss      restored painted, no record, the plain page shipped
 ```
 
 **Observed red**, each planted, run through `pnpm smoke:render` and reverted,

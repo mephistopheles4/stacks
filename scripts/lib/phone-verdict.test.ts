@@ -196,7 +196,7 @@ describe('formatRows', () => {
         verdict: { kind: 'survived', reason: 'held' },
         elapsedS: 120.4,
         sampling: '30 steady frames',
-        g60: 'ok',
+        judged: 'ok',
       },
     ]);
     expect(lines[0]).toBe('PowerVR D-Series DXT-48-1536 · Chrome/153');
