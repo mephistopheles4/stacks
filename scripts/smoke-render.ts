@@ -1532,12 +1532,14 @@ async function measureSampling(
     await page.bringToFront();
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
-    // The woodwork's sheets arrive after `ready`, and the bookcase changes program when
-    // they do, so a verdict taken before the network settles can catch the one frame
-    // where the old program and the new one both draw. `networkidle0` inside `goto`
-    // is what once waited for that, and it stalled on this machine's GPU for a reason
-    // never isolated; as its own step it only bounds the wait, and a page that never
-    // idles is judged on the frames the settle below still requires.
+    // The woodwork's sheets arrive after `ready`, and the bookcase changes program as
+    // each one lands. The settle below counts from the last change it has seen, so it
+    // cannot wait out a sheet still in flight: until the second one lands, the old
+    // program and the new one both draw, and a verdict read then is red (#385).
+    // `networkidle0` inside `goto` is what once waited for that, and it stalled on
+    // this machine's GPU for a reason never isolated; as its own step it only bounds
+    // the wait, and a page that never idles is judged on the frames the settle below
+    // still requires.
     await page.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => undefined);
     try {
       await page.waitForFunction(

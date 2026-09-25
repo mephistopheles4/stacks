@@ -349,6 +349,64 @@ describe('the page hook — frames', () => {
     expect(hook.settledFor()).toBe(2);
   });
 
+  it('records the frame the readers changed in, though nothing linked, and settles from it', () => {
+    // #385: a second sheet switches its material to a program the first sheet
+    // already linked. Nothing links, and the set of readers still changes.
+    const hook = install();
+    const gl = new Gl();
+    const noMap = sampling();
+    const mapped = sampling();
+    use(gl, noMap);
+    use(gl, mapped);
+    let drawn = [noMap];
+    loop(gl, (context) => {
+      for (const target of drawn) {
+        context.useProgram(target);
+        context.drawElements();
+      }
+    });
+
+    clock.run(16);
+    clock.run(32);
+    drawn = [noMap, mapped];
+    clock.run(48);
+    clock.run(64);
+    drawn = [mapped];
+    clock.run(80);
+    clock.run(96);
+    clock.run(112);
+
+    // Frames 1–2 draw one, 3–4 both, 5–7 the other; frame 7 is still open.
+    const snapshot = hook.read();
+    expect(snapshot.lastLinkFrame).toBe(0);
+    expect(snapshot.lastSetChangeFrame).toBe(5);
+    expect(hook.settledFor()).toBe(2);
+  });
+
+  it('keeps a change of readers past its cap, when the frame it happened in is dropped', () => {
+    const hook = install();
+    const gl = new Gl();
+    const first = sampling();
+    const second = sampling();
+    use(gl, first);
+    use(gl, second);
+    let drawn = first;
+    loop(gl, (context) => {
+      context.useProgram(drawn);
+      context.drawElements();
+    });
+
+    for (let time = 1; time <= 4100; time += 1) {
+      if (time === 50) drawn = second;
+      clock.run(time);
+    }
+
+    const snapshot = hook.read();
+    expect(snapshot.frames.some((bucket) => bucket.frame === 50)).toBe(false);
+    expect(snapshot.lastSetChangeFrame).toBe(50);
+    expect(hook.settledFor()).toBe(4050);
+  });
+
   it('keeps frame 0 and the settle count past its cap, where it drops the middle', () => {
     // A headless desktop with a GPU runs far past 60 fps and filled the cap
     // before a 300-book page was read. Dropping from the front took frame 0 —
@@ -447,7 +505,7 @@ describe('the page hook — what one call weighs', () => {
 
 describe('the page hook — installing', () => {
   it('reports itself, as the gate reads it', () => {
-    expect(install().read().version).toBe(1);
+    expect(install().read().version).toBe(2);
   });
 
   it('installs once, so a second install does not count every draw twice', () => {

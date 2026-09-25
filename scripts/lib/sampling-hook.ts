@@ -44,7 +44,8 @@
  * in Node against a fake GL; in a page the two are the same object.
  */
 export function samplingHook(): void {
-  const VERSION = 1;
+  /** 2 since `lastSetChangeFrame` (#385). */
+  const VERSION = 2;
   /** Frames kept; older ones are dropped, and `maxSamplingDraws` still covers them. */
   const MAX_FRAMES = 4000;
   /**
@@ -142,6 +143,14 @@ export function samplingHook(): void {
     readyFrame: null as number | null,
     /** The last frame anything linked in, kept even when that frame is dropped. */
     lastLinkFrame: null as number | null,
+    /**
+     * The last frame whose sampling programs differ from the frame before it,
+     * kept the same way. A material can switch to a program another material
+     * already linked, so a change of readers need not link at all (#385).
+     */
+    lastSetChangeFrame: null as number | null,
+    /** The previous closed frame's sampling programs, as a key. */
+    lastSet: null as string | null,
     linkFailures: 0,
     contextLost: false,
     /** `performance.now()` when a loss was first seen, by event or by a draw. */
@@ -432,6 +441,9 @@ export function samplingHook(): void {
     const frozen = freeze(open);
     closed.push(frozen);
     state.maxSamplingDraws = Math.max(state.maxSamplingDraws, frozen.samplingDraws);
+    const set = frozen.samplingPrograms.join(',');
+    if (state.lastSet !== null && set !== state.lastSet) state.lastSetChangeFrame = frozen.frame;
+    state.lastSet = set;
     if (closed.length > MAX_FRAMES) {
       closed.splice(KEPT_FROM_START, 1);
       state.dropped += 1;
@@ -471,12 +483,20 @@ export function samplingHook(): void {
     version: VERSION,
     /**
      * Closed frames since the program set last changed, counted from the ready
-     * frame. Frames are numbered without gaps, so this is arithmetic on frame
-     * numbers and holds whether or not the frames themselves were dropped.
+     * frame: after the last link, and from the last change of readers, which is
+     * the first frame of the set that stayed. Frames are numbered without gaps,
+     * so this is arithmetic on frame numbers and holds whether or not the frames
+     * themselves were dropped. `steadyFrames` in `shadow-sampling.ts` is the
+     * same rule over a snapshot, and the two must move together: the gate waits
+     * on this one and judges by that one.
      */
     settledFor: (): number => {
       if (state.readyFrame === null) return 0;
-      const from = Math.max(state.readyFrame, (state.lastLinkFrame ?? -1) + 1);
+      const from = Math.max(
+        state.readyFrame,
+        (state.lastLinkFrame ?? -1) + 1,
+        state.lastSetChangeFrame ?? -1,
+      );
       return Math.max(0, open.frame - from);
     },
     /** A few numbers, cheap enough to poll once a second from a phone. */
@@ -505,6 +525,7 @@ export function samplingHook(): void {
         })),
         readyFrame: state.readyFrame,
         lastLinkFrame: state.lastLinkFrame,
+        lastSetChangeFrame: state.lastSetChangeFrame,
         linkFailures: state.linkFailures,
         contextLost: state.contextLost,
         contexts: state.contexts,

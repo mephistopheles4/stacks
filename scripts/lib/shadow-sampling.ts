@@ -46,7 +46,10 @@
 /** The most draws a frame the one sampling program may make. See the header. */
 export const BUDGET = 4;
 
-/** Frames with no program linked, after the page said it was ready, before a verdict. */
+/**
+ * Frames with no program linked and no change in which programs read the map,
+ * after the page said it was ready, before a verdict.
+ */
 export const MIN_STEADY_FRAMES = 30;
 
 /** How many frames from the first the shadow pass has to appear in. */
@@ -119,6 +122,12 @@ export interface SamplingSnapshot {
   readonly readyFrame: number | null;
   /** The last frame anything linked in, whether or not that frame was dropped. */
   readonly lastLinkFrame: number | null;
+  /**
+   * The last frame whose sampling programs differ from the frame before it,
+   * whether or not that frame was dropped. See `steadyFrames` for why a link
+   * is not enough.
+   */
+  readonly lastSetChangeFrame: number | null;
   readonly linkFailures: number;
   readonly contextLost: boolean;
   /** WebGL contexts that drew or linked anything. */
@@ -143,24 +152,53 @@ export interface JudgeOptions {
 export const DEFAULT_JUDGE: JudgeOptions = { budget: BUDGET, minSteadyFrames: MIN_STEADY_FRAMES };
 
 /**
- * The frames after the program set settled: from the page's ready frame, and
- * after the last frame in which anything linked.
+ * The frames after the program set settled: from the page's ready frame, after
+ * the last frame in which anything linked, and from the last frame in which the
+ * programs reading the map changed.
  *
- * ⚠️ **Not from frame 0**, which is the point: while a woodwork sheet or a
- * cover decodes, the bookcase's no-map twin and its mapped program both draw,
- * so two programs sample the map for a frame or two. That is onset, and the
- * budget still applies to it; "exactly one" applies once it is over.
+ * ⚠️ **Not from frame 0**, which is the point: until both woodwork sheets have
+ * decoded, the bookcase's no-map program and its mapped one both draw, so two
+ * programs sample the map. That is onset, and the budget still applies to it;
+ * "exactly one" applies once it is over.
+ *
+ * ⚠️ **A link does not mark the end of it**, and this once assumed it did. The
+ * woodwork and the backboard compile to the same program, so the first sheet to
+ * decode links the mapped one and the second switches to it with nothing linked.
+ * The two programs draw together for the whole gap between the decodes, which is
+ * as long as the network makes it — 120 frames with one sheet held back 600 ms
+ * (#385) — and every one of those frames read as steady and red. So a change in
+ * which programs sample ends onset too. A standing second reader still fails:
+ * its set stops changing at two. One that comes and goes never settles, and
+ * clause 2 says so.
+ *
+ * The change frame itself is steady — it is the first frame of the set that
+ * stayed, since a material takes a new program between frames. A link frame is
+ * not, because a link can land between two draws of the same frame.
  */
 export function steadyFrames(snapshot: SamplingSnapshot): readonly FrameBucket[] {
   if (snapshot.readyFrame === null) return [];
   const ready = snapshot.readyFrame;
-  // The hook's own record first, because the frame a link happened in may have
-  // been dropped; the frames themselves as well, in case it is ever missing.
+  // The hook's own records first, because the frame a link or a change happened
+  // in may have been dropped; the frames themselves as well, in case a record is
+  // ever missing. Across a dropped gap this can only name the first frame after
+  // it, and every frame before that is gone anyway.
   const lastLink = snapshot.frames.reduce(
     (latest, bucket) => (bucket.links > 0 ? Math.max(latest, bucket.frame) : latest),
     snapshot.lastLinkFrame ?? -1,
   );
-  return snapshot.frames.filter((bucket) => bucket.frame >= ready && bucket.frame > lastLink);
+  const lastChange = snapshot.frames.reduce((latest, bucket, index) => {
+    const before = snapshot.frames[index - 1];
+    return before !== undefined && !sameReaders(before, bucket)
+      ? Math.max(latest, bucket.frame)
+      : latest;
+  }, snapshot.lastSetChangeFrame ?? -1);
+  return snapshot.frames.filter(
+    (bucket) => bucket.frame >= ready && bucket.frame > lastLink && bucket.frame >= lastChange,
+  );
+}
+
+function sameReaders(a: FrameBucket, b: FrameBucket): boolean {
+  return a.samplingPrograms.join(',') === b.samplingPrograms.join(',');
 }
 
 /** The numbers a report prints, and the ones the control is held to. */
@@ -245,7 +283,7 @@ export function judgeSampling(run: SamplingRun, options: JudgeOptions = DEFAULT_
   } else if (steady.length < options.minSteadyFrames) {
     failures.push(
       `(2) the program set never settled: ${String(steady.length)} frame(s) after the last ` +
-        `link, where ${String(options.minSteadyFrames)} are needed for a verdict`,
+        `link or change of readers, where ${String(options.minSteadyFrames)} are needed for a verdict`,
     );
   }
 

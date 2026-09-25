@@ -6309,9 +6309,9 @@ branches and every pull request, with none open, and renumbered to G61 when
 [#384](https://github.com/mephistopheles4/stacks/pull/384) merged first with its
 own G59.
 
-**Observed-red**, six ways. Each was planted in the source, run through
+**Observed-red**, seven ways. Each was planted in the source, run through
 `pnpm smoke:render`, and reverted with the file's hash checked against a
-backup:
+backup — the seventh against the committed tree, with `git status` clean after:
 
 1. **Every book reading the map again** — `receiveShadows` removed from
    `buildBook`. Clause 3 and 4 on both default pages: 5 programs, and 302
@@ -6338,6 +6338,25 @@ backup:
 6. **A verdict before the settle** — the settle wait cut to 1 ms, under
    SwiftShader. Clause 2: 12 and 19 steady frames against 30, and the control
    refused as unsettled.
+7. **A second reader that stands** — the backboard's material compiled apart
+   from the woodwork's (`vertexColors` off), added with
+   [#385](https://github.com/mephistopheles4/stacks/issues/385)'s settle to
+   show the settle does not excuse it. Clause 3 on both default pages: 126 of
+   126 and 81 of 81 steady frames with 2 programs, #8 and #9. The set changed
+   once, when the sheets landed, and then held two.
+
+⚠️ **The settle was a flake before it was fixed, and a plant says which.**
+[#385](https://github.com/mephistopheles4/stacks/issues/385): on `main` at
+4ca101c, G61 was red once in a day of green runs — *1 of 126 steady frame(s)
+… from up to 2 programs*, the woodwork's no-map program and its mapped one.
+The second sheet to decode switches to a program the first already linked, so
+nothing links and the frames between the decodes read as steady. Planted by
+holding the backboard's sheet back 600 ms inside `measureSampling`: **red** on
+the settle as it was — clause 3, 136 of 259 steady frames at 50 books and 78 of
+152 at 300 — and **green** on the settle that also ends at a change of readers,
+with the control still red at 5 programs and 302 draws. Not a permanent plant:
+it proves the settle is not the flake, and it lives in the judge's spec as a
+snapshot instead.
 
 The control is the same run unplanted: both default pages 1 program and 2
 sampling draws a frame, `?receivers=all` 5 and 302, on a local GPU and under
@@ -6349,7 +6368,10 @@ judge's spec, so the plants are asserted on every run and not observed once.
   where the edge lies is not known — and raising it is one edit that reads as
   tuning. Its
   comment carries the measurements and the rule that a raised budget is a
-  comment, and the settle's 30 frames sit beside it. Disposition `accepted`.
+  comment, and the settle's 30 frames sit beside it. ⚠️ **Since #385 the settle
+  excuses any window of two readers that ends in a change**, however long, as
+  onset; `steadyFrames` states the rule and plant 7 shows a standing reader is
+  not excused. Disposition `accepted`.
 - **Satisfying the letter** — **gated.** Instancing or a multi-draw call would
   read as one call and put any number of sampling draws in it; the hook weighs
   an instanced call by its instances and a `WEBGL_multi_draw` call by its

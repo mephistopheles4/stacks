@@ -63,13 +63,14 @@ function snapshot(over: Partial<SamplingSnapshot> = {}, steady = 40): SamplingSn
     ...Array.from({ length: steady }, (_, index) => frame(index + 1)),
   ];
   return {
-    version: 1,
+    version: 2,
     frames,
     dropped: 0,
     maxSamplingDraws: 0,
     programs: roster(),
     readyFrame: 1,
     lastLinkFrame: 0,
+    lastSetChangeFrame: null,
     linkFailures: 0,
     contextLost: false,
     contexts: 1,
@@ -121,6 +122,25 @@ describe('judgeSampling — the configuration that survived', () => {
     ];
     expect(
       judgeSampling({ snapshot: { ...base, frames: onset }, bookCount: BOOKS, threeCalls: CALLS }),
+    ).toEqual([]);
+  });
+
+  it('passes a second sheet that lands late, though nothing links when it does', () => {
+    // #385, as measured with one sheet held back 600 ms. The first sheet links
+    // the mapped program and both draw until the second sheet lands; that one
+    // switches to the program that already exists, so nothing links, and a
+    // cutoff on links alone judged every frame in between as steady.
+    const base = snapshot();
+    const frames = [
+      ...base.frames.slice(0, 2),
+      frame(2, { samplingPrograms: [WOOD, 8], links: 1 }),
+      ...Array.from({ length: 120 }, (_, index) =>
+        frame(index + 3, { samplingPrograms: [WOOD, 8] }),
+      ),
+      ...Array.from({ length: MIN_STEADY_FRAMES }, (_, index) => frame(index + 123)),
+    ];
+    expect(
+      judgeSampling({ snapshot: { ...base, frames }, bookCount: BOOKS, threeCalls: CALLS }),
     ).toEqual([]);
   });
 });
@@ -178,6 +198,42 @@ describe('judgeSampling — what the phone measured dying', () => {
     const failures = judgeSampling(everyFrame({ samplingPrograms: [WOOD, 8] }));
     expect(clauses(failures)).toEqual(['(3)']);
     expect(failures[0]).toContain('only one may read it');
+  });
+
+  it('fails a second member that reads the map from a program of its own, once the sheets land', () => {
+    // The standing defect the settle must not excuse: the set changes when the
+    // sheets land, as it does on every page, and then holds two programs.
+    const base = snapshot();
+    const frames = [
+      ...base.frames.slice(0, 2),
+      frame(2, { samplingPrograms: [8, 9], links: 1 }),
+      ...Array.from({ length: 40 }, (_, index) =>
+        frame(index + 3, { samplingPrograms: [WOOD, 9] }),
+      ),
+    ];
+    const failures = judgeSampling({
+      snapshot: { ...base, frames },
+      bookCount: BOOKS,
+      threeCalls: CALLS,
+    });
+    expect(clauses(failures)).toEqual(['(3)']);
+    expect(failures[0]).toContain('40 of 40 steady frame(s)');
+  });
+
+  it('fails a set of readers that never stops changing, as unsettled', () => {
+    // A book program that reads the map every other frame never settles, so it
+    // is red on the settle rather than excused as onset.
+    const base = snapshot();
+    const frames = base.frames.map((bucket) =>
+      bucket.frame % 2 === 1 && bucket.frame < 40
+        ? { ...bucket, samplingPrograms: [WOOD, 8] }
+        : bucket,
+    );
+    expect(
+      clauses(
+        judgeSampling({ snapshot: { ...base, frames }, bookCount: BOOKS, threeCalls: CALLS }),
+      ),
+    ).toEqual(['(2)']);
   });
 });
 
@@ -287,6 +343,25 @@ describe('steadyFrames', () => {
     expect(steadyFrames(snapshot({ readyFrame: null }))).toEqual([]);
   });
 
+  it('starts at the last frame whose readers changed, though nothing linked in it', () => {
+    // That frame is the first of the set that stayed, so it is steady itself;
+    // a link frame is not, because the link may have happened between draws.
+    const base = snapshot({}, 10);
+    const frames = base.frames.map((bucket) =>
+      bucket.frame >= 2 && bucket.frame <= 5 ? { ...bucket, samplingPrograms: [WOOD, 8] } : bucket,
+    );
+    expect(steadyFrames({ ...base, frames }).map((bucket) => bucket.frame)).toEqual([
+      6, 7, 8, 9, 10,
+    ]);
+  });
+
+  it('starts at a change of readers the hook recorded in a frame it has since dropped', () => {
+    const base = snapshot();
+    const frames = base.frames.filter((bucket) => bucket.frame <= 10 || bucket.frame >= 30);
+    const steady = steadyFrames({ ...base, frames, lastSetChangeFrame: 33, dropped: 19 });
+    expect(steady.map((bucket) => bucket.frame)).toEqual([33, 34, 35, 36, 37, 38, 39, 40]);
+  });
+
   it('starts after a link the hook recorded in a frame it has since dropped', () => {
     // Frames 1–10 kept from the start, the link in a dropped frame 20, and the
     // kept tail from 30: only the tail is steady, though no kept frame linked.
@@ -361,14 +436,18 @@ describe('describeSampling', () => {
     );
   });
 
-  it('prints a range of programs when steady frames disagree', () => {
+  it('prints one count of programs, since a change of readers ends the steady window', () => {
+    // Steady frames disagreed once — 1–2 programs — and that was the #385 flake:
+    // the frames before a late sheet landed. A change now restarts the window,
+    // so a settled page holds one set; a range needs a snapshot whose change
+    // record was lost, and the hook no longer produces one.
     const base = snapshot();
     const frames = base.frames.map((bucket) =>
       bucket.frame === 5 ? { ...bucket, samplingPrograms: [WOOD, 8] } : bucket,
     );
     expect(
       describeSampling({ snapshot: { ...base, frames }, bookCount: BOOKS, threeCalls: CALLS }),
-    ).toContain('1–2 sampling program(s)');
+    ).toContain('35 steady frames, 1 sampling program(s)');
   });
 
   it('says there was no hook', () => {
