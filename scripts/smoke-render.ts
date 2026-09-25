@@ -20,15 +20,17 @@ import type { ShelfStats } from '../packages/site/src/shelf/scene.ts';
 // and default the page does rather than a copy that could drift from them.
 import { FALLBACK_KEY, RESTORE_WAIT_MS } from '../packages/site/src/shelf/shadow-fallback.ts';
 import { DEFAULT_SETTINGS } from '../packages/site/src/shelf/shelf-settings.ts';
-import { createServer, type Server } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { shellCommand } from './lib/run.ts';
+import { serveDist } from './lib/serve-dist.ts';
 
 const ARTIFACTS = join(REPO_ROOT, 'artifacts');
 const OUTPUT = join(ARTIFACTS, 'shelf.png');
+const DIST = join(REPO_ROOT, 'packages', 'site', 'dist');
+const LIBRARY = join(REPO_ROOT, 'packages', 'site', 'public', 'library.json');
 
 const VIEWPORT = { width: 1440, height: 900 };
 
@@ -37,8 +39,7 @@ const VIEWPORT = { width: 1440, height: 900 };
  * the right thing when the fixture generator changes. Wishlist books are not
  * shelved — you do not own them yet.
  */
-function expectedBookCount(): number {
-  const path = join(REPO_ROOT, 'packages', 'site', 'public', 'library.json');
+function expectedBookCount(path: string): number {
   const library = JSON.parse(readFileSync(path, 'utf8')) as {
     books: { status: string }[];
   };
@@ -83,7 +84,7 @@ async function main(): Promise<void> {
   mkdirSync(ARTIFACTS, { recursive: true });
 
   await buildSite();
-  const { server, origin } = await serveDist();
+  const { server, origin } = await serveDist({ root: DIST });
   try {
     const browser = await puppeteer.launch({
       executablePath: findChrome(),
@@ -1072,7 +1073,7 @@ function report(result: {
     );
   }
 
-  const expected = expectedBookCount();
+  const expected = expectedBookCount(LIBRARY);
   if (bookCount !== expected) {
     failures.push(`expected ${expected} books on the shelf, got ${bookCount}`);
   }
@@ -1094,12 +1095,8 @@ function report(result: {
 }
 
 /**
- * Builds the site, then serves `dist/` from this process.
- *
- * Deliberately not the dev server: waiting for a subprocess to announce itself
- * on stdout is a race that hangs rather than fails, and a gate that can hang is
- * worse than one that can fail. Building first also means the gate screenshots
- * what actually ships.
+ * Builds the site; `serveDist` then serves `dist/` from this process, so the
+ * gate screenshots what actually ships.
  */
 function run(command: string, args: readonly string[]): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -1138,68 +1135,6 @@ async function buildSite(): Promise<void> {
     'packages/site/public',
   ]);
   await run('pnpm', ['--filter', '@stacks/site', 'run', 'build']);
-}
-
-const CONTENT_TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
-};
-
-/**
- * Serves `dist/` on a port the operating system picks.
- *
- * It used to be 4331, which was fine while one checkout existed. Worktrees make
- * two gates racing normal, and a fixed port turns that into one of two bad
- * outcomes: `EADDRINUSE` and a gate that fails for a reason unconnected to the
- * shelf, or — if the other server is still up and serving *its* `dist/` — a
- * screenshot of the wrong branch, scored and reported as this one's. The second
- * is the dangerous one, and it is not hypothetical: a stray server on a fixed
- * port outlived its session in this project already.
- *
- * Nothing outside this file needs the number, so nothing outside this file has
- * to agree on it.
- */
-function serveDist(): Promise<{ server: Server; origin: string }> {
-  const root = join(REPO_ROOT, 'packages', 'site', 'dist');
-
-  const server = createServer((request, response) => {
-    const path = decodeURIComponent((request.url ?? '/').split('?')[0] ?? '/');
-    const file = join(root, path === '/' ? 'index.html' : path);
-
-    // Never serve outside dist/, even for a gate.
-    if (!file.startsWith(root) || !existsSync(file)) {
-      response.writeHead(404).end('not found');
-      return;
-    }
-
-    const extension = file.slice(file.lastIndexOf('.'));
-    response.writeHead(200, {
-      'Content-Type': CONTENT_TYPES[extension] ?? 'application/octet-stream',
-    });
-    response.end(readFileSync(file));
-  });
-
-  return new Promise((resolve, reject) => {
-    // Port 0 asks the OS for a free one; `address()` is only meaningful once
-    // listening has actually happened, which is why the origin is built here
-    // rather than at module scope.
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      if (address === null || typeof address === 'string') {
-        reject(new Error('the gate server is listening on a pipe, not a port'));
-        return;
-      }
-      resolve({ server, origin: `http://127.0.0.1:${String(address.port)}` });
-    });
-    server.on('error', reject);
-  });
 }
 
 function findChrome(): string {
