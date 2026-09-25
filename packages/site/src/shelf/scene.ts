@@ -37,6 +37,7 @@ import {
   describeWoodwork,
   fibreMapFor,
   freshWoodSeed,
+  joinWoodwork,
   resolveWoodwork,
   speciesPending,
   varyMember,
@@ -44,6 +45,7 @@ import {
   woodKeys,
   worldSpaceUvs,
   type Axis,
+  type PlacedMember,
   type ResolvedWoodwork,
   type SheetBinding,
   type SheetLay,
@@ -1564,6 +1566,11 @@ export function buildBook(
 /**
  * The bookcase, plus handles on the two materials it is made of.
  *
+ * The group holds **two meshes and no more**: the backboard, and the woodwork
+ * joined into one by `joinWoodwork`. No member has a mesh of its own to find,
+ * and nothing here hands one out — the draw count is the reason, see
+ * `buildShelf`.
+ *
  * The materials are returned rather than left buried in the group because the
  * panel dials them. Finding them again by walking the scene would mean matching
  * on type, and `dispose()` already records what that costs: checking only for
@@ -1749,25 +1756,32 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Bookcase {
   back.receiveShadow = true;
   group.add(back);
 
+  // The woodwork — both uprights and every plank — is **one mesh**, and each
+  // member below is only laid at the origin and told where it stands. Two draws
+  // for the whole bookcase, this and the backboard, at every library size: under
+  // real-time shadows every draw here samples the map, and the Pixel 10 Pro XL
+  // loses the context at 13 of those a frame (#381). One mesh per member was
+  // `rowCount + 4`. See `joinWoodwork`, which throws rather than fall back.
+  //
+  // ⚠️ **Each `BoxGeometry` stays inline as `veneered`'s first argument.** G51
+  // reads a member's size off exactly that call, inside this function.
+  const members: PlacedMember[] = [];
+
   // The grain runs up an upright and along a plank — each member along its own
   // long axis, which is #285's verdict and is **stated rather than measured**:
   // `rowsForBookcase` grows an upright with the library while a plank's length
   // never moves, so a rule that took the longest side would rotate the figure
   // the day a book was added.
   for (const side of [-1, 1]) {
-    const upright = new THREE.Mesh(
-      veneered(
+    members.push({
+      geometry: veneered(
         new THREE.BoxGeometry(SHELF.sideThickness, unitHeight, SHELF.depth),
         resolved.lay,
         'y',
         side < 0 ? keys.uprightLeft : keys.uprightRight,
       ),
-      wood,
-    );
-    upright.position.set((side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0);
-    upright.castShadow = castShadows;
-    upright.receiveShadow = true;
-    group.add(upright);
+      at: [(side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0],
+    });
   }
 
   // Over the keys rather than counting to `rowCount` here, which is the same
@@ -1776,8 +1790,8 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Bookcase {
   // a fallback would be this call site hand-rolling the very template `woodKeys`
   // exists to keep in one place.
   for (const [row, key] of keys.planks.entries()) {
-    const plank = new THREE.Mesh(
-      veneered(
+    members.push({
+      geometry: veneered(
         new THREE.BoxGeometry(
           outerWidth - PLANK_INSET * 2,
           SHELF.plankThickness,
@@ -1787,13 +1801,14 @@ function buildShelf(rowCount: number, settings: ShelfSettings): Bookcase {
         'x',
         key,
       ),
-      wood,
-    );
-    plank.position.set(0, row * SHELF.rowHeight, 0);
-    plank.castShadow = castShadows;
-    plank.receiveShadow = true;
-    group.add(plank);
+      at: [0, row * SHELF.rowHeight, 0],
+    });
   }
+
+  const woodwork = new THREE.Mesh(joinWoodwork(members), wood);
+  woodwork.castShadow = castShadows;
+  woodwork.receiveShadow = true;
+  group.add(woodwork);
 
   return { group, wood, backing, sheet, backSheet, resolved };
 }

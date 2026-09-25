@@ -39,6 +39,14 @@ bookcase**, not by a document.
 **320 KB** on the wire — rosewood's figure at 1024 is 266.5 KB, `dark_wood`'s at
 512 is 53.2 KB, and both fibres are procedural and free.
 
+**Since [#381](https://github.com/mephistopheles4/stacks/issues/381) the
+woodwork is one mesh**, so the whole bookcase is 2 draw calls at every library
+size rather than `rowCount + 4`. Nothing in this spec's look moved to pay for
+it: every per-member difference already rode the geometry. The pixels are not
+byte identical, though, and
+[ADR-0088](../adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)
+says by how much.
+
 ⚠️ **No frame-time measurement exists for any of it.** Every figure across the
 map is a *count*, and none is a demonstration that anything is slow. Nothing was
 rendered on a phone, and [`docs/gates.md`](../gates.md) is explicit that the

@@ -121,3 +121,4 @@ Two other files hold what these deliberately do not:
 | [0084](./0084-the-counting-stamp-is-behaviour-not-a-version.md) | The counting stamp is behaviour, not a version, and a sample is a tree |
 | [0085](./0085-a-renovation-is-declared-and-the-window-may-survive.md) | A renovation is declared, it is due at merge, and the window may survive it |
 | [0086](./0086-g29-slugs-with-github-slugger.md) | G29 slugs headings with `github-slugger`, not an imitation of it |
+| [0088](./0088-one-program-samples-the-shadow-map-in-two-draws.md) | One program samples the shadow map, in two draws |

@@ -21,6 +21,7 @@ import {
   fibreTurn,
   describeWoodwork,
   freshWoodSeed,
+  joinWoodwork,
   layFibre,
   resolveWoodwork,
   speciesPending,
@@ -30,6 +31,7 @@ import {
   woodworkSheetUrls,
   worldSpaceUvs,
   type Axis,
+  type PlacedMember,
   type SheetLoader,
   type WoodKeys,
   type WoodworkReadBack,
@@ -1127,6 +1129,175 @@ describe('woodKeys', () => {
 function allKeys(keys: WoodKeys): string[] {
   return [keys.backboard, keys.uprightLeft, keys.uprightRight, ...keys.planks];
 }
+
+/* -------------------------------------------------------------------------- */
+/*  the woodwork, joined                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The woodwork as `buildShelf` lays it at `rows` rows — two uprights, then a
+ * plank per shelf plus the lid — each veneered at the origin and paired with
+ * where it stands.
+ */
+function woodwork(rows: number): PlacedMember[] {
+  const keys = woodKeys('join', rows);
+  const unitHeight = rows * SHELF.rowHeight;
+  const upright: Size = { width: SHELF.sideThickness, height: unitHeight, depth: SHELF.depth };
+  return [
+    ...([-1, 1] as const).map((side): PlacedMember => ({
+      geometry: varied(side < 0 ? keys.uprightLeft : keys.uprightRight, upright, 'y'),
+      at: [(side * (SHELF.width + SHELF.sideThickness)) / 2, unitHeight / 2, 0],
+    })),
+    ...keys.planks.map((key, row): PlacedMember => ({
+      geometry: varied(key, PLANK, 'x'),
+      at: [0, row * SHELF.rowHeight, 0],
+    })),
+  ];
+}
+
+/** Every number one attribute holds, as plain numbers. */
+function numbers(geometry: THREE.BufferGeometry, name: string): number[] {
+  const attribute = geometry.attributes[name];
+  if (attribute === undefined) throw new Error(`geometry has no ${name} attribute`);
+  return Array.from(attribute.array as ArrayLike<number>);
+}
+
+function indices(geometry: THREE.BufferGeometry): number[] {
+  if (geometry.index === null) throw new Error('geometry is not indexed');
+  return Array.from(geometry.index.array as ArrayLike<number>);
+}
+
+/** `BoxGeometry` at one segment per axis: six faces of four corners, two triangles each. */
+const BOX_CORNERS = 24;
+const BOX_INDICES = 36;
+
+/**
+ * The woodwork at `rows` rows, joined — with every member's attributes copied
+ * out **first**, because `joinWoodwork` moves its members in place.
+ */
+function joinAt(rows: number) {
+  const members = woodwork(rows);
+  const before = members.map(({ geometry, at }) => ({
+    at,
+    position: numbers(geometry, 'position'),
+    normal: numbers(geometry, 'normal'),
+    uv: numbers(geometry, 'uv'),
+    color: numbers(geometry, 'color'),
+    index: indices(geometry),
+  }));
+  return { before, joined: joinWoodwork(members) };
+}
+
+describe('joinWoodwork — the woodwork in one draw', () => {
+  // Two row counts, because the point is that the draw count does not grow with
+  // the library: a join that only held for the fixture's size would be the
+  // defect this exists to prevent, measured at the one size nobody worries about.
+  for (const rows of [2, 8]) {
+    describe(`at ${String(rows)} rows`, () => {
+      it('is one geometry holding every member, with no groups', () => {
+        const { before, joined } = joinAt(rows);
+        expect(before).toHaveLength(rows + 3);
+        expect(numbers(joined, 'position')).toHaveLength(before.length * BOX_CORNERS * 3);
+        expect(indices(joined)).toHaveLength(before.length * BOX_INDICES);
+        // A group per member would make three split the draw again.
+        expect(joined.groups).toEqual([]);
+      });
+
+      it("carries each member's figure and tint across untouched", () => {
+        // `uv` and `color` are where every one of the five dice lives, so this is
+        // the assertion that the bookcase still looks like the one it replaced.
+        const { before, joined } = joinAt(rows);
+        const uv = numbers(joined, 'uv');
+        const color = numbers(joined, 'color');
+        for (const [k, member] of before.entries()) {
+          expect(uv.slice(k * BOX_CORNERS * 2, (k + 1) * BOX_CORNERS * 2)).toEqual(member.uv);
+          expect(color.slice(k * BOX_CORNERS * 3, (k + 1) * BOX_CORNERS * 3)).toEqual(member.color);
+        }
+      });
+
+      it('moves each member to where it stands, and turns none of them', () => {
+        const { before, joined } = joinAt(rows);
+        const position = numbers(joined, 'position');
+        const normal = numbers(joined, 'normal');
+        for (const [k, member] of before.entries()) {
+          const slice = position.slice(k * BOX_CORNERS * 3, (k + 1) * BOX_CORNERS * 3);
+          for (const [n, got] of slice.entries()) {
+            const want = (member.position[n] ?? Number.NaN) + (member.at[n % 3] ?? Number.NaN);
+            // float32 on the way back out: an upright's top sits near 4.5, where
+            // one step is ~4.8e-7.
+            expect(Math.abs(got - want), `member ${String(k)}, number ${String(n)}`).toBeLessThan(
+              1e-6,
+            );
+          }
+          expect(normal.slice(k * BOX_CORNERS * 3, (k + 1) * BOX_CORNERS * 3)).toEqual(
+            member.normal,
+          );
+        }
+      });
+
+      it("keeps each member's triangles on its own corners", () => {
+        // An index offset off by one member would stitch a plank's faces to the
+        // next plank's corners — still one draw, still plausible wood, and
+        // wrong.
+        const { before, joined } = joinAt(rows);
+        const index = indices(joined);
+        for (const [k, member] of before.entries()) {
+          const slice = index.slice(k * BOX_INDICES, (k + 1) * BOX_INDICES);
+          expect(slice).toEqual(member.index.map((i) => i + k * BOX_CORNERS));
+          for (const i of slice) {
+            expect(i).toBeGreaterThanOrEqual(k * BOX_CORNERS);
+            expect(i).toBeLessThan((k + 1) * BOX_CORNERS);
+          }
+        }
+      });
+    });
+  }
+
+  it('moves a member along all three axes, not only the two the bookcase uses', () => {
+    // Every real member stands at `z = 0`, so without this a join that dropped
+    // the depth would pass every assertion above.
+    const geometry = varied('axes:plank-0');
+    const before = numbers(geometry, 'position');
+    const at = [0.25, 0.5, -0.75] as const;
+    const after = numbers(joinWoodwork([{ geometry, at }]), 'position');
+    for (const [n, got] of after.entries()) {
+      expect(got).toBeCloseTo((before[n] ?? Number.NaN) + (at[n % 3] ?? Number.NaN), 6);
+    }
+  });
+
+  it('disposes every member it consumed', () => {
+    const members = woodwork(2);
+    let disposed = 0;
+    for (const { geometry } of members) {
+      geometry.addEventListener('dispose', () => {
+        disposed += 1;
+      });
+    }
+    joinWoodwork(members);
+    expect(disposed).toBe(members.length);
+  });
+
+  it('refuses an empty woodwork rather than handing three nothing to read', () => {
+    expect(() => joinWoodwork([])).toThrow(/no members to join/);
+  });
+
+  it('refuses a member without its tint, first or later, rather than falling back', () => {
+    // three answers a mismatch with `null` and a console line, and a caller that
+    // fell back to one mesh per member would bring back the phone's draw count
+    // with every desktop frame still right.
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      for (const which of [0, 1]) {
+        const members = woodwork(2);
+        members[which]?.geometry.deleteAttribute('color');
+        expect(() => joinWoodwork(members)).toThrow(/do not share one attribute set/);
+      }
+      expect(quiet).toHaveBeenCalledTimes(2);
+    } finally {
+      quiet.mockRestore();
+    }
+  });
+});
 
 describe('freshWoodSeed', () => {
   it('draws a different root every time, because a member has no identity', () => {

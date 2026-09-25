@@ -179,7 +179,8 @@ surface the painted backboard shades are drawn over.
 **Woodwork**:
 The planks and uprights together — every member of the **bookcase** except the
 **backboard**. Its veneer is the *woodwork sheet*; the backboard's is a constant
-of its own.
+of its own. It is drawn as one mesh, so a member has no mesh of its own to find
+([ADR-0088](docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md)).
 *Avoid*: using it for the whole bookcase.
 
 **Row**:

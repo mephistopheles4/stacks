@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { hashUnit } from './hash.ts';
 
 /**
@@ -1454,4 +1455,71 @@ export function woodKeys(root: string, rowCount: number): WoodKeys {
     uprightRight: member('upright-right'),
     planks: Array.from({ length: rowCount + 1 }, (_, row) => member(`plank-${String(row)}`)),
   };
+}
+
+/** One member of the woodwork, built at the origin, and where it stands. */
+export interface PlacedMember {
+  readonly geometry: THREE.BufferGeometry;
+  readonly at: readonly [x: number, y: number, z: number];
+}
+
+/**
+ * The woodwork — both uprights and every plank — as **one geometry**, so the
+ * bookcase draws in two calls at every library size rather than one per member.
+ *
+ * ## Why the draw count is the thing that matters
+ *
+ * Under real-time shadows the woodwork's program samples the shadow map, and the
+ * Pixel 10 Pro XL (PowerVR DXT-48-1536, driver 25.3) loses the WebGL context
+ * once one sampling program makes **13** draws a frame; it held at 12
+ * ([#381](https://github.com/mephistopheles4/stacks/issues/381)). One mesh per
+ * member made that `rowCount + 4` — a plank per shelf, the lid, two uprights
+ * and the backboard — so the bookcase alone crossed the line at about 66 books,
+ * and a library filling up is exactly what nobody would test on that phone.
+ * Joined, the woodwork is one draw and the backboard the other, whatever the
+ * library holds.
+ *
+ * ## Why the picture does not change
+ *
+ * Everything that makes one member unlike the next already rides its geometry:
+ * `worldSpaceUvs` and `varyMember` write the figure's period, offset, mirror,
+ * scale and runout into `uv`, and the tint into `color`. The members share one
+ * material, so joining copies those attributes across untouched and loses
+ * nothing a material or a uniform carried. A member only moves, it never turns,
+ * so its normals are unchanged too.
+ *
+ * ⚠️ **Placed here, not by `mesh.position`.** Each member is translated into
+ * place before the join, so the joined mesh stands at the origin. That rounds a
+ * vertex's world position to float32 once on the CPU instead of in the shader,
+ * which can move an edge by a fraction of a sample and no more.
+ *
+ * ⚠️ **It throws; it never falls back to one mesh per member.** A fallback would
+ * render correctly on every desktop and bring back, silently, the draw count
+ * that kills the phone. three's `mergeGeometries` reads `geometries[0]` without
+ * checking for it, and answers members that disagree about their attributes —
+ * one with no tint, say — with `null` and a console line rather than an error,
+ * so both are turned into errors here.
+ *
+ * The members are consumed: each is moved in place and disposed once its
+ * attributes have been copied. They were never uploaded, so disposing them
+ * frees nothing on the GPU and only says they are finished with.
+ */
+export function joinWoodwork(members: readonly PlacedMember[]): THREE.BufferGeometry {
+  if (members.length === 0) {
+    throw new Error('joinWoodwork: no members to join — the woodwork always has two uprights');
+  }
+
+  const geometries = members.map(({ geometry, at: [x, y, z] }) => geometry.translate(x, y, z));
+  // `@types/three` declares the result non-null, and three returns `null` on a
+  // mismatch — so the declared type here is three's, not the typings'.
+  const joined: THREE.BufferGeometry | null = mergeGeometries(geometries, false);
+  if (joined === null) {
+    throw new Error(
+      'joinWoodwork: the members do not share one attribute set — every member must carry ' +
+        'the uv and the color attribute `varyMember` writes',
+    );
+  }
+
+  for (const geometry of geometries) geometry.dispose();
+  return joined;
 }
