@@ -5,6 +5,7 @@ import { COVER_SOURCES, coverSourceFor } from '../covers/cover-source.ts';
 import { CAPTURED_ISBN, fixtureHttpGet, isHost, readApiFixture } from '../test-support.ts';
 import type { HttpGet } from './http.ts';
 import { lookup, lookupByIsbn, searchByTitle } from './index.ts';
+import { lookupByIsbn as openLibraryIsbn } from './open-library.ts';
 
 /**
  * Every response here is a **real** captured one (`fixtures/api/`, refreshed by
@@ -47,6 +48,26 @@ describe('ISBN hit', () => {
   it('accepts a hyphenated ISBN', async () => {
     const result = await lookupByIsbn('978-1-60358-055-7', openLibraryHit);
     expect(result?.isbn).toBe(CAPTURED_ISBN);
+  });
+
+  /**
+   * The URL, pinned as a literal. The fixture readers above match on the
+   * substring `/api/books`, which the bare path Open Library now answers 404 to
+   * contains as well — so nothing else in this suite could tell the two apart,
+   * and every lookup silently fell through to Google. See ADR-0093.
+   */
+  it('asks the /api/books.json path, not the bare one that answers 404', async () => {
+    const asked: string[] = [];
+    const recording: HttpGet = async (url) => {
+      asked.push(url);
+      return openLibraryHit(url);
+    };
+
+    await openLibraryIsbn('978-1-60358-055-7', recording);
+
+    expect(asked).toEqual([
+      'https://openlibrary.org/api/books.json?bibkeys=ISBN:9781603580557&jscmd=data',
+    ]);
   });
 });
 
