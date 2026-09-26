@@ -16,7 +16,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
-import { SEARCH_FIELDS } from '../packages/core/src/metadata/open-library.ts';
+import { SEARCH_FIELDS, isbnLookupUrl } from '../packages/core/src/metadata/open-library.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 const OUT_DIR = join(REPO_ROOT, 'fixtures', 'api');
@@ -50,12 +50,14 @@ function openLibrarySearch(query: string, limit: number): string {
 
 const CAPTURES: readonly { readonly name: string; readonly url: string }[] = [
   {
+    // Built from the code's own URL, like the searches: the bare `/api/books`
+    // path these were once captured from answers 404 now. See ADR-0093.
     name: 'open-library-isbn-hit.json',
-    url: 'https://openlibrary.org/api/books?bibkeys=ISBN:9781603580557&format=json&jscmd=data',
+    url: isbnLookupUrl('9781603580557'),
   },
   {
     name: 'open-library-isbn-miss.json',
-    url: 'https://openlibrary.org/api/books?bibkeys=ISBN:9790000000001&format=json&jscmd=data',
+    url: isbnLookupUrl('9790000000001'),
   },
   {
     name: 'open-library-search-hit.json',

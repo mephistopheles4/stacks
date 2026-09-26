@@ -8,14 +8,31 @@ import { keyIfPresent } from '../key-if-present.ts';
  *
  * Two response shapes, both captured for real in `fixtures/api/`:
  *
- * - `/api/books` returns `{ "ISBN:<isbn>": { … } }`, and — importantly — an
- *   **empty object `{}` for a miss, not a 404**. Anything keying off HTTP
+ * - `/api/books.json` returns `{ "ISBN:<isbn>": { … } }`, and — importantly —
+ *   an **empty object `{}` for a miss, not a 404**. Anything keying off HTTP
  *   status would treat a miss as a success and hand back nothing.
  * - `/search.json` returns `{ numFound, docs: [ … ] }`.
  */
 
-const API_BOOKS = 'https://openlibrary.org/api/books';
+/**
+ * ⚠️ **`.json` is load-bearing.** Open Library's own docs still show
+ * `/api/books?…&format=json`, and on 2026-09-26 that path answered **404 for
+ * every ISBN** while this one answered 200 with the identical body. The 404 was
+ * silent: `HttpGet` returns `undefined` for it exactly as for a miss, so every
+ * ISBN lookup fell through to Google's fuzzy `q=isbn:`. See ADR-0093.
+ */
+const API_BOOKS = 'https://openlibrary.org/api/books.json';
 const SEARCH = 'https://openlibrary.org/search.json';
+
+/**
+ * The URL `lookupByIsbn` asks. **Exported because the URL is the cache key**,
+ * for `SEARCH_FIELDS`' reason: `scripts/capture-api-fixtures.ts` builds its
+ * ISBN captures from this rather than retyping it, and a test pins it — the
+ * fixture readers match on a substring the broken path also contained.
+ */
+export function isbnLookupUrl(normalisedIsbn: string): string {
+  return `${API_BOOKS}?bibkeys=ISBN:${normalisedIsbn}&jscmd=data`;
+}
 
 /**
  * What the search asks for. **Exported because it is part of a URL, and the URL
@@ -40,7 +57,7 @@ export async function lookupByIsbn(isbn: string, get: HttpGet): Promise<BookMeta
   if (normalised.length === 0) return undefined;
 
   const key = `ISBN:${normalised}`;
-  const body = asRecord(await get(`${API_BOOKS}?bibkeys=${key}&format=json&jscmd=data`));
+  const body = asRecord(await get(isbnLookupUrl(normalised)));
   const entry = asRecord(body?.[key]);
   if (entry === undefined) return undefined; // includes the `{}` miss
 
