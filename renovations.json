@@ -88,6 +88,14 @@
       "reason": "The counting stamp stopped digesting the three installed versions and now holds the two rule-option sets and the two inventories. Measured: the same tree counted identically under two parser and eslint pairs, all 64 rows. This is the last version-driven refresh by construction — no dependency bump can move this stamp again.",
       "pr": 342,
       "preserves": false
+    },
+    {
+      "date": "2026-09-26",
+      "stamp": "duplicationHash",
+      "value": "sha256:c624c341047359d3772d884202bf2cb5d3b45c34e91e7b9e56d1e28eaecc0d94",
+      "reason": "jscpd moved to 5.3.2. Unlike 5.2.0, this bump moves a count: over the identical tree the whole-tree population goes from 53 clones and 558 duplicated lines to 55 and 619, while all eight declared scopes are unchanged. No source changed; the detector draws clone boundaries differently. Two existing test-file clones were re-segmented (update-book.test.ts against insert-body-section.test.ts, and a pair inside floors.test.ts), and two pairs are newly reported, update-book.test.ts against gates/hand-edited-notes.test.ts and a second pair inside floors.test.ts. All six spans are test files.",
+      "pr": 389,
+      "preserves": false
     }
   ]
 }
