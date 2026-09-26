@@ -2,6 +2,7 @@
 
 **Date:** 2026-09-26
 **Status:** accepted
+**Ticket:** [#391](https://github.com/mephistopheles4/stacks/issues/391)
 
 ## Decision
 
