@@ -258,6 +258,13 @@ Each new gate costs a row in [`docs/gates.md`](../gates.md), which **G19**
    costs an extra request. ⚠️ **But the HTTP cache is keyed by URL, so widening
    `fields=` invalidates every cached Open Library search fixture**, and G21
    forbids live calls in tests. Re-capturing them is part of the cost.
+
+   ⚠️ **Superseded for the search path by [ADR-0094](../adr/0094-a-title-search-takes-one-edition-in-the-reading-language.md).**
+   `edition_key[0]` is an arbitrary edition, in any language — it carried a
+   Turkish OLID onto an English book. The search now asks for `key` and
+   `editions` too, and the OLID is the `key` of the **one edition** the search
+   projects, taken only when that edition is in the reading language.
+   `edition_key` is still asked for and deliberately not read.
 3. **Apple's slug-less URL form** — discharged, see §3.
 
 ---

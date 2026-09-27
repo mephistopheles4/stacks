@@ -74,7 +74,9 @@ const OWNER_SPEC = 'packages/core/src/key-if-present.test.ts';
  * commit. If it is still here and no longer calling, that is the defect.
  */
 const EXPECTED_CALLERS: readonly string[] = [
-  'packages/cli/src/index.ts',
+  // Was `index.ts`, whose three reads of the Google key moved here with the
+  // reading language (ADR-0094) — the call moved, it did not go.
+  'packages/cli/src/metadata-options.ts',
   'packages/core/src/add-book.ts',
   'packages/core/src/frontmatter.ts',
   'packages/core/src/import/audible.ts',

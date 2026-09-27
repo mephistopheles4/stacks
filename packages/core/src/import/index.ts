@@ -1,7 +1,8 @@
 import { cacheCover } from '../covers/cache-cover.ts';
 import { coverKeys } from '../covers/cover-keys.ts';
-import { coverUrls, lookup } from '../metadata/index.ts';
+import { coverUrls, lookup, type MetadataOptions } from '../metadata/index.ts';
 import type { HttpGet } from '../metadata/http.ts';
+import { checkedReadingLanguage } from '../metadata/language.ts';
 import { isProbablySameBook, normaliseIsbn } from '../identity.ts';
 import type { BookInput } from '../types.ts';
 import type { VaultAdapter } from '../adapters/vault-adapter.ts';
@@ -23,7 +24,8 @@ export interface ImportableBook {
   readonly coverUrl?: string;
 }
 
-export interface ImportOptions {
+/** Extends `MetadataOptions` for `AddBookOptions`' reason: nothing can drop the language. */
+export interface ImportOptions extends MetadataOptions {
   /** Report what would happen without touching the vault. */
   readonly dryRun?: boolean;
   /** Skip cover downloads — much faster, and offline. */
@@ -38,7 +40,6 @@ export interface ImportOptions {
    * edition actually owned.
    */
   readonly get?: HttpGet;
-  readonly googleBooksKey?: string;
 }
 
 export type ImportOutcome =
@@ -59,6 +60,13 @@ export async function importBooks(
   vault: VaultAdapter,
   options: ImportOptions = {},
 ): Promise<ImportResult> {
+  // Checked here, before the vault is read and outside every `catch`, because
+  // `coverCandidates` swallows each lookup error to keep the export's cover —
+  // so a bad language thrown from inside `lookup` would import every book
+  // anyway. A bad option is a programming error whatever the flags, so a dry
+  // run and `skipCovers` refuse it too.
+  if (options.language !== undefined) checkedReadingLanguage(options.language);
+
   const outcomes: ImportOutcome[] = [];
 
   // Read the vault once, then track additions in memory — otherwise importing

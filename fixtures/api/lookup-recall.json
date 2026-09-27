@@ -1,11 +1,11 @@
 {
- "https://openlibrary.org/search.json?q=Beyond%20Vibe%20Coding%3A%20From%20Coder%20to%20AI-Era%20Developer%20Addy%20Osmani&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject": {
+ "https://openlibrary.org/search.json?q=Beyond%20Vibe%20Coding%3A%20From%20Coder%20to%20AI-Era%20Developer%20Addy%20Osmani%20language%3Aeng&limit=5&fields=key,title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject,language,editions": {
   "numFound": 0,
   "start": 0,
   "numFoundExact": true,
   "num_found": 0,
   "documentation_url": "https://openlibrary.org/dev/docs/api/search",
-  "q": "Beyond Vibe Coding: From Coder to AI-Era Developer Addy Osmani",
+  "q": "Beyond Vibe Coding: From Coder to AI-Era Developer Addy Osmani language:eng",
   "offset": null,
   "docs": []
  },
@@ -341,13 +341,13 @@
    }
   ]
  },
- "https://openlibrary.org/search.json?q=The%20New%20Emotional%20Intelligence%20Travis%20Bradberry&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject": {
+ "https://openlibrary.org/search.json?q=The%20New%20Emotional%20Intelligence%20Travis%20Bradberry%20language%3Aeng&limit=5&fields=key,title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject,language,editions": {
   "numFound": 0,
   "start": 0,
   "numFoundExact": true,
   "num_found": 0,
   "documentation_url": "https://openlibrary.org/dev/docs/api/search",
-  "q": "The New Emotional Intelligence Travis Bradberry",
+  "q": "The New Emotional Intelligence Travis Bradberry language:eng",
   "offset": null,
   "docs": []
  },
@@ -870,13 +870,13 @@
    }
   ]
  },
- "https://openlibrary.org/search.json?q=The%20Subtle%20Art%20of%20Not%20Giving%20a%20F*ck%3A%20A%20Counterintuitive%20Approach%20to%20Living%20a%20Good%20Life%20Mark%20Manson&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject": {
+ "https://openlibrary.org/search.json?q=The%20Subtle%20Art%20of%20Not%20Giving%20a%20F*ck%3A%20A%20Counterintuitive%20Approach%20to%20Living%20a%20Good%20Life%20Mark%20Manson%20language%3Aeng&limit=5&fields=key,title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject,language,editions": {
   "numFound": 0,
   "start": 0,
   "numFoundExact": true,
   "num_found": 0,
   "documentation_url": "https://openlibrary.org/dev/docs/api/search",
-  "q": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life Mark Manson",
+  "q": "The Subtle Art of Not Giving a F*ck: A Counterintuitive Approach to Living a Good Life Mark Manson language:eng",
   "offset": null,
   "docs": []
  },
@@ -1330,13 +1330,13 @@
    }
   ]
  },
- "https://openlibrary.org/search.json?q=From%20Zero%20to%20Profit%20with%20AI%3A%20The%20Contemporary%20Guide%20to%20Online%20Income%20Generation%20and%20Accelerated%20Growth%20Helen%20B.%20Keating&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject": {
+ "https://openlibrary.org/search.json?q=From%20Zero%20to%20Profit%20with%20AI%3A%20The%20Contemporary%20Guide%20to%20Online%20Income%20Generation%20and%20Accelerated%20Growth%20Helen%20B.%20Keating%20language%3Aeng&limit=5&fields=key,title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject,language,editions": {
   "numFound": 0,
   "start": 0,
   "numFoundExact": true,
   "num_found": 0,
   "documentation_url": "https://openlibrary.org/dev/docs/api/search",
-  "q": "From Zero to Profit with AI: The Contemporary Guide to Online Income Generation and Accelerated Growth Helen B. Keating",
+  "q": "From Zero to Profit with AI: The Contemporary Guide to Online Income Generation and Accelerated Growth Helen B. Keating language:eng",
   "offset": null,
   "docs": []
  },
@@ -1638,13 +1638,13 @@
    }
   ]
  },
- "https://openlibrary.org/search.json?q=The%20Creative%20Brain%20in%20the%20Age%20of%20Artificial%20Intelligence%3A%20How%20to%20Use%20AI%20Without%20Losing%20Yourself%20Maria%20Ian&limit=5&fields=title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject": {
+ "https://openlibrary.org/search.json?q=The%20Creative%20Brain%20in%20the%20Age%20of%20Artificial%20Intelligence%3A%20How%20to%20Use%20AI%20Without%20Losing%20Yourself%20Maria%20Ian%20language%3Aeng&limit=5&fields=key,title,author_name,isbn,number_of_pages_median,cover_i,edition_key,publisher,publish_date,subject,language,editions": {
   "numFound": 0,
   "start": 0,
   "numFoundExact": true,
   "num_found": 0,
   "documentation_url": "https://openlibrary.org/dev/docs/api/search",
-  "q": "The Creative Brain in the Age of Artificial Intelligence: How to Use AI Without Losing Yourself Maria Ian",
+  "q": "The Creative Brain in the Age of Artificial Intelligence: How to Use AI Without Losing Yourself Maria Ian language:eng",
   "offset": null,
   "docs": []
  },

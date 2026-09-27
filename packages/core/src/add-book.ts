@@ -7,18 +7,27 @@ import {
   normaliseTitleAuthor,
 } from './identity.ts';
 import { ABOUT_HEADING } from './enrich.ts';
-import { coverUrls, lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
+import {
+  coverUrls,
+  lookup,
+  type BookMetadata,
+  type HttpGet,
+  type MetadataOptions,
+} from './metadata/index.ts';
 import { formatSubjects } from './subjects.ts';
 import type { BookInput, BookRecord, BookStatus } from './types.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
 import { keyIfPresent } from './key-if-present.ts';
 
-export interface AddBookOptions {
+/**
+ * Extends `MetadataOptions` rather than redeclaring its fields, so the Google
+ * key and the reading language travel to `lookup` together — a command that
+ * carried one and dropped the other would search in English, silently.
+ */
+export interface AddBookOptions extends MetadataOptions {
   readonly status?: BookStatus;
   /** Skip the duplicate check. */
   readonly force?: boolean;
-  /** Passed to the metadata providers; see MetadataOptions. */
-  readonly googleBooksKey?: string;
 }
 
 export type AddBookResult =

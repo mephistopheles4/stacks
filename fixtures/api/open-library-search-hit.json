@@ -1,10 +1,10 @@
 {
-  "numFound": 542,
+  "numFound": 1273,
   "start": 0,
   "numFoundExact": true,
-  "num_found": 542,
+  "num_found": 1273,
   "documentation_url": "https://openlibrary.org/dev/docs/api/search",
-  "q": "thinking in systems",
+  "q": "thinking in systems language:eng",
   "offset": null,
   "docs": [
     {
@@ -27,47 +27,52 @@
         "OL17052666M"
       ],
       "isbn": [
-        "9781849773386",
-        "902591019X",
-        "6555644524",
-        "1844077268",
-        "184407725X",
         "1603580557",
-        "1136551395",
-        "1136551409",
-        "9781136551352",
-        "9781603581486",
-        "9786555644524",
-        "1136551352",
-        "9781603580557",
-        "1849773386",
         "9781136551390",
-        "9781844077250",
-        "1603588477",
-        "1603581480",
-        "9781844077267",
-        "9781603588478",
+        "9781603581486",
         "9789025910198",
-        "9781136551406"
+        "1136551409",
+        "1603581480",
+        "184407725X",
+        "9781136551352",
+        "9781136551406",
+        "1136551395",
+        "9786555644524",
+        "9781603588478",
+        "9781844077250",
+        "1136551352",
+        "1844077268",
+        "9781603580557",
+        "1603588477",
+        "9781844077267",
+        "1849773386",
+        "6555644524",
+        "9781849773386",
+        "902591019X"
+      ],
+      "key": "/works/OL3737036W",
+      "language": [
+        "eng",
+        "por"
       ],
       "number_of_pages_median": 240,
       "publish_date": [
-        "2022",
         "2012",
-        "13 setembro 2022",
-        "2009",
         "2008",
-        "July 19, 2018"
+        "2009",
+        "2022",
+        "July 19, 2018",
+        "13 setembro 2022"
       ],
       "publisher": [
+        "Chelsea Green Publishing",
         "Chelsea Green Pub.",
-        "A Primer",
+        "Ten Have",
         "Taylor & Francis Group",
         "Editora Sextante",
+        "A Primer",
         "Earthscan",
-        "Chelsea",
-        "Ten Have",
-        "Chelsea Green Publishing"
+        "Chelsea"
       ],
       "title": "Thinking in systems",
       "subject": [
@@ -105,29 +110,32 @@
         "Physical & earth sciences -> physics -> general",
         "Business & economics -> management -> principles of management",
         "Be"
-      ]
-    },
-    {
-      "author_name": [
-        "Steven Schuster"
       ],
-      "cover_i": 11326296,
-      "edition_key": [
-        "OL32701484M"
-      ],
-      "isbn": [
-        "1983847542",
-        "9781983847547"
-      ],
-      "number_of_pages_median": 180,
-      "publish_date": [
-        "Jan 14, 2018"
-      ],
-      "publisher": [
-        "CreateSpace Independent Publishing Platform",
-        "Createspace Independent Publishing Platform"
-      ],
-      "title": "The Art Of Thinking In Systems"
+      "editions": {
+        "numFound": 6,
+        "start": 0,
+        "numFoundExact": true,
+        "docs": [
+          {
+            "key": "/books/OL17052666M",
+            "title": "Thinking in systems",
+            "cover_i": 15208489,
+            "language": [
+              "eng"
+            ],
+            "publisher": [
+              "Chelsea Green Pub."
+            ],
+            "publish_date": [
+              "2008"
+            ],
+            "isbn": [
+              "9781603580557",
+              "1603580557"
+            ]
+          }
+        ]
+      }
     },
     {
       "author_name": [
@@ -135,24 +143,170 @@
       ],
       "cover_i": 10653716,
       "edition_key": [
-        "OL42177368M",
-        "OL31977524M"
+        "OL31977524M",
+        "OL42177368M"
       ],
       "isbn": [
-        "9781914040030",
         "9798675152810",
-        "1914040031"
+        "1914040031",
+        "9781914040030"
+      ],
+      "key": "/works/OL24207749W",
+      "language": [
+        "eng"
       ],
       "number_of_pages_median": 284,
       "publish_date": [
-        "2020",
-        "Oct 25, 2020"
+        "Oct 25, 2020",
+        "2020"
       ],
       "publisher": [
         "Independently Published",
         "Marcus P. Dawson"
       ],
-      "title": "Thinking in Systems and Mental Models"
+      "title": "Thinking in Systems and Mental Models",
+      "editions": {
+        "numFound": 1,
+        "start": 0,
+        "numFoundExact": true,
+        "docs": [
+          {
+            "key": "/books/OL42177368M",
+            "title": "Thinking in Systems and Mental Models",
+            "language": [
+              "eng"
+            ],
+            "publisher": [
+              "Independently Published"
+            ],
+            "publish_date": [
+              "2020"
+            ],
+            "isbn": [
+              "9798675152810"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "author_name": [
+        "Barbara Minto"
+      ],
+      "cover_i": 2346771,
+      "edition_key": [
+        "OL61565903M",
+        "OL34775309M",
+        "OL28259284M",
+        "OL28259280M",
+        "OL23646465M",
+        "OL18185521M",
+        "OL3792759M",
+        "OL22330457M",
+        "OL4746160M",
+        "OL10285311M",
+        "OL22325316M",
+        "OL9411660M",
+        "OL10287871M"
+      ],
+      "isbn": [
+        "0960191011",
+        "1405822147",
+        "9353943639",
+        "0273710516",
+        "0273659030",
+        "027303345X",
+        "9780273617105",
+        "9780960191024",
+        "9781405822145",
+        "096019102X",
+        "9780273033455",
+        "9789353943639",
+        "9780273659037",
+        "9781292763255",
+        "1292372265",
+        "9780960191017",
+        "0273617109",
+        "9781292372266",
+        "9780273710516",
+        "1292763256"
+      ],
+      "key": "/works/OL3012477W",
+      "language": [
+        "eng"
+      ],
+      "number_of_pages_median": 177,
+      "publish_date": [
+        "Jun 16, 2005",
+        "June 1987",
+        "September 1995",
+        "1978",
+        "2026",
+        "2021",
+        "2009",
+        "1991",
+        "2002",
+        "1981"
+      ],
+      "publisher": [
+        "Pearson Education Ltd.",
+        "BCA",
+        "Financial Times/ Prentice Hall",
+        "Trans-Atlantic Publications",
+        "Minto International",
+        "Pearson Education, Limited",
+        "Financial Times Prentice Hall",
+        "Pitman Publishing",
+        "Pitman",
+        "Pearson"
+      ],
+      "title": "The pyramid principle",
+      "subject": [
+        "English language",
+        "Business English",
+        "Business writing",
+        "Rhetoric",
+        "Thought and thinking",
+        "Writing",
+        "Problem solving",
+        "Language and logic",
+        "English language, business english",
+        "Industrial management, great britain",
+        "Logic",
+        "English language, rhetoric",
+        "Wirtschaftssprache",
+        "Kommunikation",
+        "Schreiben",
+        "English language--business english",
+        "Pe1115 .m54 2008",
+        "Pe1115 .m54 2009",
+        "808/.066651021"
+      ],
+      "editions": {
+        "numFound": 11,
+        "start": 0,
+        "numFoundExact": true,
+        "docs": [
+          {
+            "key": "/books/OL3792759M",
+            "title": "The pyramid principle",
+            "cover_i": 15115596,
+            "language": [
+              "eng"
+            ],
+            "publisher": [
+              "Minto International"
+            ],
+            "publish_date": [
+              "1981"
+            ],
+            "isbn": [
+              "096019102X",
+              "9780960191024"
+            ]
+          }
+        ]
+      }
     }
   ]
 }

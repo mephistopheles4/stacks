@@ -4,7 +4,7 @@ import { COVER_SOURCES, coverSourceFor } from '../covers/cover-source.ts';
 // their own copy, which is the shape a helper is supposed to prevent.
 import { CAPTURED_ISBN, fixtureHttpGet, isHost, readApiFixture } from '../test-support.ts';
 import type { HttpGet } from './http.ts';
-import { lookup, lookupByIsbn, searchByTitle } from './index.ts';
+import { lookup, lookupByIsbn, searchByTitle, type BookMetadata } from './index.ts';
 import { lookupByIsbn as openLibraryIsbn } from './open-library.ts';
 
 /**
@@ -80,9 +80,17 @@ describe('fuzzy title search', () => {
     expect(results[0]?.author).toBe('Donella H. Meadows');
   });
 
-  it('prefers a 13-digit ISBN out of the pile of editions search returns', async () => {
+  /**
+   * **This used to read "prefers a 13-digit ISBN out of the pile"**, and the
+   * pile was the bug: a work's `isbn` list jumbles every edition in every
+   * language, and its first 13-digit entry was a Turkish one for *Thinking, Fast
+   * and Slow*. The ISBN now comes from the one edition the search projects, and
+   * the 13-digit preference survives only *within* that edition, where the 10
+   * and the 13 name the same book. See ADR-0094.
+   */
+  it('takes the ISBN of the one edition the search projects, 13 digits first', async () => {
     const results = await searchByTitle('thinking in systems', openLibraryHit);
-    expect(results[0]?.isbn).toHaveLength(13);
+    expect(results[0]?.isbn).toBe(CAPTURED_ISBN);
   });
 
   it('routes a non-ISBN term to search rather than ISBN lookup', async () => {
@@ -324,8 +332,11 @@ describe('API miss', () => {
               {
                 title: 'AI Snake Oil',
                 author_name: ['Arvind Narayanan'],
-                isbn: ['9780691249148'],
                 number_of_pages_median: 384,
+                // The ISBN lives on the one projected edition now, in the
+                // reading language — a work-level `isbn` is never read (ADR-0094).
+                // Without it there is no ISBN, so no guessed cover to replace.
+                editions: { docs: [{ language: ['eng'], isbn: ['9780691249148'] }] },
               },
             ],
           };
@@ -340,7 +351,14 @@ describe('API miss', () => {
       isHost(url, GOOGLE_BOOKS)
         ? { items: [] }
         : {
-            docs: [{ title: 'Obscure Book', author_name: ['A N Other'], isbn: ['9781000000016'] }],
+            docs: [
+              {
+                title: 'Obscure Book',
+                author_name: ['A N Other'],
+                // On the projected edition, for the reason given in the test above.
+                editions: { docs: [{ language: ['eng'], isbn: ['9781000000016'] }] },
+              },
+            ],
           };
 
     const [result] = await lookup('obscure book', get);
@@ -408,5 +426,201 @@ describe('API miss', () => {
     const broken = async (): Promise<undefined> => undefined;
     expect(await lookupByIsbn(CAPTURED_ISBN, broken)).toBeUndefined();
     expect(await searchByTitle('anything', broken)).toEqual([]);
+  });
+});
+
+/**
+ * A title search takes **one** edition's ISBN, in the reading language.
+ *
+ * `lookup('Thinking, Fast and Slow')` returned `9789754345315` — Varlık
+ * Yayınları, Turkish — because Open Library's search answers with a *work*, and
+ * a work's `isbn` list jumbles 36 editions in 8 languages. Its first 13-digit
+ * entry was Turkish, and so were the `publisher`, `published`, cover and OLID
+ * read beside it, each from a different edition. See ADR-0094.
+ */
+describe('a title search takes one edition, in the reading language', () => {
+  const KAHNEMAN = 'Thinking, Fast and Slow';
+  const TURKISH_ISBN = '9789754345315';
+
+  interface SearchBody {
+    readonly docs: readonly Record<string, unknown>[];
+  }
+
+  /** The captured Kahneman response, its first work changed by `edit`. */
+  function openLibraryAnswering(
+    edit: (work: Record<string, unknown>) => Record<string, unknown> = (work) => work,
+  ): HttpGet {
+    const body = readApiFixture('open-library-search-language.json') as SearchBody;
+    const [first = {}, ...rest] = body.docs;
+    const edited = { ...body, docs: [edit({ ...first }), ...rest] };
+    return async (url) => (url.includes('/search.json') ? edited : undefined);
+  }
+
+  it('takes the ISBN, OLID, publisher, date and cover of the English edition', async () => {
+    const [best] = await searchByTitle(KAHNEMAN, openLibraryAnswering());
+
+    expect(best?.title).toBe('Thinking, fast and slow');
+    expect(best?.isbn).not.toBe(TURKISH_ISBN);
+    expect(best?.isbn).toBe('9780385676519');
+    expect(best?.openLibraryOlid).toBe('OL36689110M');
+    expect(best?.publisher).toBe('Doubleday Canada');
+    expect(best?.published).toBe('2011');
+    expect(best?.coverUrl).toBe('https://covers.openlibrary.org/b/id/15129456-L.jpg');
+  });
+
+  it('keeps the work-level facts no edition carries', async () => {
+    // The projection has no author, no page count and no subjects, so those
+    // still come from the work — and so does the title every ranking reads.
+    const [best] = await searchByTitle(KAHNEMAN, openLibraryAnswering());
+
+    expect(best?.author).toBe('Daniel Kahneman');
+    expect(best?.pages).toBe(528);
+    expect(best?.subjects).toContain('Intuition');
+  });
+
+  /** What a work with no usable edition must come back without. */
+  function expectNoEditionFields(best: BookMetadata | undefined): void {
+    expect(best?.title).toBe('Thinking, fast and slow');
+    expect(best?.isbn).toBeUndefined();
+    expect(best?.openLibraryOlid).toBeUndefined();
+    expect(best?.publisher).toBeUndefined();
+    expect(best?.published).toBeUndefined();
+    // Not the work's `cover_i` either — that is some edition's art, in some
+    // language — and no by-ISBN guess, since there is no ISBN to guess from.
+    expect(best?.coverUrl).toBeUndefined();
+  }
+
+  it('takes no ISBN at all when the work carries no edition', async () => {
+    // Falling back to the work's list would reinstate the bug on this path.
+    const [best] = await searchByTitle(
+      KAHNEMAN,
+      openLibraryAnswering(({ editions: _dropped, ...work }) => work),
+    );
+    expectNoEditionFields(best);
+  });
+
+  it('takes no ISBN when the edition that came back is in another language', async () => {
+    // The query clause is the filter and this is the check: anything that gets
+    // past the clause — an unbalanced quote turns it into literal text — fails
+    // closed here instead of being trusted.
+    const [best] = await searchByTitle(
+      KAHNEMAN,
+      openLibraryAnswering((work) => ({
+        ...work,
+        editions: { docs: [{ ...editionOf(work), language: ['pol'] }] },
+      })),
+    );
+    expectNoEditionFields(best);
+  });
+
+  function editionOf(work: Record<string, unknown>): Record<string, unknown> {
+    const editions = work['editions'] as { docs: Record<string, unknown>[] };
+    return editions.docs[0] ?? {};
+  }
+
+  it('asks Open Library for editions in the reading language', async () => {
+    const asked: string[] = [];
+    await searchByTitle(KAHNEMAN, async (url) => {
+      asked.push(url);
+      return undefined;
+    });
+
+    const url = new URL(asked.find((each) => isHost(each, 'openlibrary.org')) ?? 'about:blank');
+    expect(url.searchParams.get('q')).toBe('Thinking, Fast and Slow language:eng');
+    expect(url.searchParams.get('fields')?.split(',')).toEqual(
+      expect.arrayContaining(['key', 'language', 'editions']),
+    );
+  });
+
+  it('lowercases a bare OR, AND or NOT, which Open Library answers with a 500', async () => {
+    // Measured: `Sapiens OR Homo language:eng` is HTTP 500, twice, and a 500
+    // is retried three times and never cached — so every run would re-ask.
+    const asked: string[] = [];
+    const recording: HttpGet = async (url) => {
+      asked.push(url);
+      return undefined;
+    };
+
+    await searchByTitle('Sapiens OR Homo AND Deus NOT ORACLE', recording);
+
+    const url = new URL(asked.find((each) => isHost(each, 'openlibrary.org')) ?? 'about:blank');
+    expect(url.searchParams.get('q')).toBe('Sapiens or Homo and Deus not ORACLE language:eng');
+  });
+});
+
+/**
+ * Google's title search, on the same rule.
+ *
+ * Its volumes carry a `language`, and a volume in another language keeps
+ * everything except its ISBN — so ranking, matching and G26 are untouched, and
+ * no foreign ISBN can become the one a note records. `langRestrict` would have
+ * done it in the URL and moved every cached response with it. See ADR-0094.
+ */
+describe("Google's title search drops the ISBN of a volume in another language", () => {
+  interface VolumesBody {
+    readonly items: readonly { readonly volumeInfo: Record<string, unknown> }[];
+  }
+
+  /** *Hızlı ve Yavaş Düşünme*, as captured, with its `language` set to `language`. */
+  function googleAnswering(language: string | undefined): HttpGet {
+    const body = readApiFixture('google-books-volume-foreign.json') as VolumesBody;
+    const [volume] = body.items;
+    const { language: _captured, ...info } = volume?.volumeInfo ?? {};
+    const answer = {
+      ...body,
+      items: [{ ...volume, volumeInfo: language === undefined ? info : { ...info, language } }],
+    };
+
+    // Open Library knows nothing, so Google's title search is the primary.
+    const primary = fixtureHttpGet({
+      '/search.json': 'open-library-search-miss.json',
+      'learning.oreilly.com': 'oreilly-search-miss.json',
+      'itunes.apple.com': '',
+    });
+    return async (url) => (isHost(url, GOOGLE_BOOKS) ? answer : await primary(url));
+  }
+
+  const TURKISH_ISBN = '9789754345315';
+
+  it('keeps the volume and drops its ISBN when it is not in the reading language', async () => {
+    const [best] = await lookup('Thinking, Fast and Slow', googleAnswering('tr'));
+
+    expect(best?.source).toBe('google-books');
+    expect(best?.volumeId).toBe('rAUFswEACAAJ');
+    expect(best?.isbn).toBeUndefined();
+  });
+
+  it('keeps the ISBN of a volume in the reading language', async () => {
+    const [best] = await lookup('Thinking, Fast and Slow', googleAnswering('en'));
+    expect(best?.isbn).toBe(TURKISH_ISBN);
+  });
+
+  it('compares the primary subtag only', async () => {
+    const [best] = await lookup('Thinking, Fast and Slow', googleAnswering('EN-GB'));
+    expect(best?.isbn).toBe(TURKISH_ISBN);
+  });
+
+  it('keeps the ISBN of a volume that reports no language', async () => {
+    // Unknown is not a mismatch, and dropping it would cost dedup on every
+    // such volume.
+    const [best] = await lookup('Thinking, Fast and Slow', googleAnswering(undefined));
+    expect(best?.isbn).toBe(TURKISH_ISBN);
+  });
+
+  describe('with a reading language other than English', () => {
+    it('keeps the ISBN of a volume in that language', async () => {
+      const [best] = await lookup('Hızlı ve Yavaş Düşünme', googleAnswering('tr'), {
+        language: 'tr',
+      });
+      expect(best?.isbn).toBe(TURKISH_ISBN);
+    });
+
+    it('drops the ISBN of an English volume', async () => {
+      const [best] = await lookup('Hızlı ve Yavaş Düşünme', googleAnswering('en'), {
+        language: 'tr',
+      });
+      expect(best?.volumeId).toBe('rAUFswEACAAJ');
+      expect(best?.isbn).toBeUndefined();
+    });
   });
 });

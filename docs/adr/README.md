@@ -126,3 +126,4 @@ Two other files hold what these deliberately do not:
 | [0091](./0091-a-lost-context-falls-back-to-painted-shadows.md) | A lost context falls back to painted shadows, and the device remembers |
 | [0092](./0092-the-fog-range-is-measured-in-framing-distances.md) | The fog range is measured in framing distances, not world units |
 | [0093](./0093-open-library-isbn-lookups-ask-api-books-json.md) | Open Library ISBN lookups ask `/api/books.json` |
+| [0094](./0094-a-title-search-takes-one-edition-in-the-reading-language.md) | A title search takes one edition, in the reading language |
