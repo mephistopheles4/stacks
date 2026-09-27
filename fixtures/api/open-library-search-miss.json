@@ -4,7 +4,7 @@
   "numFoundExact": true,
   "num_found": 0,
   "documentation_url": "https://openlibrary.org/dev/docs/api/search",
-  "q": "zzzqqqxx no such book anywhere",
+  "q": "zzzqqqxx no such book anywhere language:eng",
   "offset": null,
   "docs": []
 }

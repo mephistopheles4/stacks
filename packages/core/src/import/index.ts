@@ -1,6 +1,6 @@
 import { cacheCover } from '../covers/cache-cover.ts';
 import { coverKeys } from '../covers/cover-keys.ts';
-import { coverUrls, lookup } from '../metadata/index.ts';
+import { coverUrls, lookup, type MetadataOptions } from '../metadata/index.ts';
 import type { HttpGet } from '../metadata/http.ts';
 import { isProbablySameBook, normaliseIsbn } from '../identity.ts';
 import type { BookInput } from '../types.ts';
@@ -23,7 +23,8 @@ export interface ImportableBook {
   readonly coverUrl?: string;
 }
 
-export interface ImportOptions {
+/** Extends `MetadataOptions` for `AddBookOptions`' reason: nothing can drop the language. */
+export interface ImportOptions extends MetadataOptions {
   /** Report what would happen without touching the vault. */
   readonly dryRun?: boolean;
   /** Skip cover downloads — much faster, and offline. */
@@ -38,7 +39,6 @@ export interface ImportOptions {
    * edition actually owned.
    */
   readonly get?: HttpGet;
-  readonly googleBooksKey?: string;
 }
 
 export type ImportOutcome =

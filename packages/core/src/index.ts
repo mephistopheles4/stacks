@@ -38,13 +38,17 @@ export { dominantColour, spineColour, type Region } from './covers/dominant-colo
 
 export {
   createCachedHttpGet,
+  DEFAULT_READING_LANGUAGE,
+  isReadingLanguage,
   lookup,
   lookupByIsbn,
+  READING_LANGUAGES,
   searchByTitle,
   type BookMetadata,
   type HttpGet,
   type MetadataOptions,
   type MetadataSource,
+  type ReadingLanguage,
 } from './metadata/index.ts';
 
 export { addBook, type AddBookOptions, type AddBookResult } from './add-book.ts';

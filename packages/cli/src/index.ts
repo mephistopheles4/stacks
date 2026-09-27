@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { Command } from 'commander';
 import { loadEnv } from './env.ts';
 import { enrichReport, enrichSummary, reportEntry, type EnrichEntry } from './enrich-report.ts';
+import { metadataOptionsFromEnv } from './metadata-options.ts';
 import {
   ObsidianAdapter,
   addBook,
@@ -14,7 +15,6 @@ import {
   createCachedHttpGet,
   enrichBook,
   importBooks,
-  keyIfPresent,
   missingFields,
   isBookStatus,
   parseAudibleExport,
@@ -22,6 +22,7 @@ import {
   watchVault,
   BOOK_STATUSES,
   SHELVED_STATUSES,
+  type MetadataOptions,
 } from '@stacks/core';
 
 // Before anything reads process.env — a real variable still wins over the file.
@@ -58,11 +59,11 @@ program
       fail(`--status must be one of: ${BOOK_STATUSES.join(', ')}`);
     }
 
-    const googleBooksKey = process.env['GOOGLE_BOOKS_API_KEY'];
+    const lookupOptions = metadataOptions();
     const result = await addBook(term, vault, get, {
+      ...lookupOptions,
       status: options.status,
       ...(options.force === true ? { force: true } : {}),
-      ...keyIfPresent('googleBooksKey', googleBooksKey),
     });
 
     switch (result.kind) {
@@ -182,7 +183,7 @@ program
   .option('--dry-run', 'report what would be filled, without writing')
   .action(async (title: string | undefined, options: { dryRun?: boolean }) => {
     const { vault, get } = context();
-    const googleBooksKey = process.env['GOOGLE_BOOKS_API_KEY'];
+    const lookupOptions = metadataOptions();
 
     const needle = title?.toLowerCase();
     const books = (await vault.listBooks()).filter(
@@ -207,8 +208,8 @@ program
     for (const book of candidates) {
       const gaps = missingFields(book).join(', ');
       const outcome = await enrichBook(book, vault, get, {
+        ...lookupOptions,
         ...(options.dryRun === true ? { dryRun: true } : {}),
-        ...keyIfPresent('googleBooksKey', googleBooksKey),
       });
       const entry = { outcome, gaps };
       entries.push(entry);
@@ -364,11 +365,11 @@ program
 
       console.log(`${books.length} book(s) in the export`);
 
-      const gbKey = process.env['GOOGLE_BOOKS_API_KEY'];
+      const lookupOptions = metadataOptions();
       const result = await importBooks(books, vault, {
+        ...lookupOptions,
         ...(options.dryRun === true ? { dryRun: true } : {}),
         ...(options.skipCovers === true ? { skipCovers: true } : { get }),
-        ...keyIfPresent('googleBooksKey', gbKey),
       });
 
       for (const outcome of result.outcomes) {
@@ -414,6 +415,18 @@ function context(): {
     vaultPath: resolve(vaultPath),
     get: createCachedHttpGet(resolve(options.cache ?? DEFAULT_CACHE)),
   };
+}
+
+/**
+ * The Google key and the reading language, with a refused `STACKS_LANGUAGE`
+ * turned into this command's own failure. Called before any vault write.
+ */
+function metadataOptions(): MetadataOptions {
+  try {
+    return metadataOptionsFromEnv();
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
 }
 
 /**

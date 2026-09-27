@@ -16,7 +16,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadEnv } from '../packages/cli/src/env.ts';
-import { SEARCH_FIELDS, isbnLookupUrl } from '../packages/core/src/metadata/open-library.ts';
+import { DEFAULT_READING_LANGUAGE } from '../packages/core/src/metadata/language.ts';
+import { isbnLookupUrl, searchUrl } from '../packages/core/src/metadata/open-library.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 
 const OUT_DIR = join(REPO_ROOT, 'fixtures', 'api');
@@ -42,13 +43,35 @@ if (GOOGLE_KEY === '') {
  * mapped", which reads like a missing capture rather than a drifted one.
  */
 function openLibrarySearch(query: string, limit: number): string {
-  return (
-    `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}` +
-    `&limit=${String(limit)}&fields=${SEARCH_FIELDS}`
+  // The default reading language, because that is what `lookup` asks with
+  // unless `STACKS_LANGUAGE` says otherwise — and what every test replays.
+  return searchUrl(query, DEFAULT_READING_LANGUAGE, limit);
+}
+
+interface Capture {
+  readonly name: string;
+  readonly url: string;
+  /**
+   * Keys removed wherever they occur before the response is written.
+   *
+   * For a fixture that must stay bibliographic: a Google volume carries its
+   * publisher's `description` and a `searchInfo.textSnippet`, both prose, and
+   * neither belongs in this repository.
+   */
+  readonly omit?: readonly string[];
+}
+
+function without(value: unknown, keys: ReadonlySet<string>): unknown {
+  if (Array.isArray(value)) return value.map((item) => without(item, keys));
+  if (typeof value !== 'object' || value === null) return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([name]) => !keys.has(name))
+      .map(([name, child]) => [name, without(child, keys)]),
   );
 }
 
-const CAPTURES: readonly { readonly name: string; readonly url: string }[] = [
+const CAPTURES: readonly Capture[] = [
   {
     // Built from the code's own URL, like the searches: the bare `/api/books`
     // path these were once captured from answers 404 now. See ADR-0093.
@@ -102,8 +125,30 @@ const CAPTURES: readonly { readonly name: string; readonly url: string }[] = [
     // Two records of one book in one response: the first carries Jordan B.
     // Peterson and 480 pages, the second carries neither. Ranking used to prefer
     // the empty one *because* it was empty. See `rankingScore` in identity.ts.
+    //
+    // ⚠️ **Do not re-capture this one.** The committed body predates
+    // 2026-09-26, and a fresh capture that day no longer held the authorless
+    // twin — both `12 Rules for Life` records came back authored — so a re-run
+    // silently vacates the regression it exists for. It is replayed by a
+    // substring route, so the URL moving under it (ADR-0094) costs nothing.
     name: 'open-library-search-sparse-sibling.json',
     url: openLibrarySearch('12 Rules for Life', 5),
+  },
+  {
+    // The foreign-ISBN regression. The *work* for this title spans 36 editions
+    // in 8 languages, and its jumbled `isbn` list leads with a Turkish one; the
+    // one edition the search projects under `editions` is English. See
+    // ADR-0094.
+    name: 'open-library-search-language.json',
+    url: openLibrarySearch('Thinking, Fast and Slow', 5),
+  },
+  {
+    // *Hızlı ve Yavaş Düşünme* — the Turkish volume that Turkish ISBN reached,
+    // `language: tr`. Kept as the shape of a foreign volume a Google *title*
+    // search can answer with. Bibliographic fields only: the prose is omitted.
+    name: 'google-books-volume-foreign.json',
+    url: `https://www.googleapis.com/books/v1/volumes?q=isbn:9789754345315&maxResults=1&key=${encodeURIComponent(GOOGLE_KEY)}`,
+    omit: ['description', 'searchInfo', 'accessInfo', 'saleInfo', 'layerInfo'],
   },
   {
     // A book none of the other three providers holds — an O'Reilly early
@@ -133,7 +178,7 @@ for (const capture of CAPTURES) {
   const response = await fetch(capture.url, {
     headers: { 'User-Agent': 'stacks/0.0 (fixture capture; personal project)' },
   });
-  const body: unknown = await response.json();
+  const body = without(await response.json(), new Set(capture.omit ?? []));
   writeFileSync(join(OUT_DIR, capture.name), `${JSON.stringify(body, null, 2)}\n`, 'utf8');
   console.log(`${capture.name} <- ${response.status}`);
 }

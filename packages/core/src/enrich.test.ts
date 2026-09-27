@@ -15,8 +15,11 @@ const knowsTheBook: HttpGet = async (url) =>
           {
             title: 'Thinking in Systems',
             author_name: ['Donella H. Meadows'],
-            isbn: ['9781603580557'],
             number_of_pages_median: 240,
+            // A title search takes its ISBN from the one edition it projects, in
+            // the reading language, and never from the work (ADR-0094) — so the
+            // ISBN this file fills lives here.
+            editions: { docs: [{ language: ['eng'], isbn: ['9781603580557'] }] },
           },
         ],
       }

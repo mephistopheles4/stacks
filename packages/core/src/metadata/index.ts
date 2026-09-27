@@ -5,9 +5,20 @@ import * as openLibrary from './open-library.ts';
 import * as oreilly from './oreilly.ts';
 import { mergeFields, type Contributors } from './precedence.ts';
 import type { HttpGet } from './http.ts';
+import {
+  checkedReadingLanguage,
+  DEFAULT_READING_LANGUAGE,
+  type ReadingLanguage,
+} from './language.ts';
 import type { BookMetadata } from './types.ts';
 
 export { createCachedHttpGet, type HttpGet } from './http.ts';
+export {
+  DEFAULT_READING_LANGUAGE,
+  isReadingLanguage,
+  READING_LANGUAGES,
+  type ReadingLanguage,
+} from './language.ts';
 export { coverUrls } from './types.ts';
 export type { BookMetadata, MetadataSource } from './types.ts';
 export { DEFAULT_ORDER, FIELD_ORDER, MERGED_FIELDS, type MergedField } from './precedence.ts';
@@ -28,6 +39,29 @@ export interface MetadataOptions {
    * exhausted quota and 429 every time.
    */
   readonly googleBooksKey?: string;
+  /**
+   * The reading language, ISO 639-1, from `STACKS_LANGUAGE`: which language's
+   * edition a title search takes its ISBN from. English when absent — applied
+   * once, by `readingLanguage` below, and by nothing beneath it.
+   *
+   * Every command's options extend this interface rather than redeclaring its
+   * fields, so a command cannot carry the key and quietly drop the language.
+   * See ADR-0094.
+   */
+  readonly language?: ReadingLanguage;
+}
+
+/**
+ * The reading language a lookup runs at: the option, or English.
+ *
+ * **The one place the default lives.** The providers take the language as a
+ * required parameter, so nothing beneath this can supply a default of its own.
+ * Re-checked against the table rather than trusted, because the option's type is
+ * bypassed by an `as`-cast or a script — and it throws on a miss, which is a
+ * programming error rather than an API having a bad afternoon.
+ */
+function readingLanguage(options: MetadataOptions): ReadingLanguage {
+  return checkedReadingLanguage(options.language ?? DEFAULT_READING_LANGUAGE);
 }
 
 export async function lookupByIsbn(
@@ -65,10 +99,20 @@ export async function searchByTitle(
   get: HttpGet,
   options: MetadataOptions = {},
 ): Promise<BookMetadata[]> {
-  const primary = await openLibrary.searchByTitle(query, get);
+  return await searchAll(query, get, options, readingLanguage(options));
+}
+
+/** `searchByTitle`, at a reading language already resolved by the caller. */
+async function searchAll(
+  query: string,
+  get: HttpGet,
+  options: MetadataOptions,
+  language: ReadingLanguage,
+): Promise<BookMetadata[]> {
+  const primary = await openLibrary.searchByTitle(query, get, language);
   if (primary.some((book) => matchesQuery(query, book))) return primary;
 
-  const fallback = await googleBooks.searchByTitle(query, get, options.googleBooksKey);
+  const fallback = await googleBooks.searchByTitle(query, get, language, options.googleBooksKey);
   // Primary results are kept rather than replaced. They did not match the query
   // well, but neither may Google's, and dropping them would leave a caller that
   // wants *any* candidate with fewer than it had before.
@@ -158,19 +202,22 @@ export async function lookup(
   get: HttpGet,
   options: MetadataOptions = {},
 ): Promise<BookMetadata[]> {
+  // Resolved before any request, so a bad value refuses rather than half-runs.
+  const language = readingLanguage(options);
+
   if (isValidIsbn(term)) {
     const hit = await lookupByIsbn(term, get, options);
-    if (hit !== undefined) return [await complete(hit, get, options)];
+    if (hit !== undefined) return [await complete(hit, get, options, language)];
   }
 
-  const results = rankAgainst(term, await searchByTitle(term, get, options));
+  const results = rankAgainst(term, await searchAll(term, get, options, language));
   const best = results[0];
   if (best === undefined) return results;
 
   // Only the result that will actually be used is enriched. Filling every
   // candidate would cost one request per search hit to answer a question nobody
   // asked.
-  const filled = await complete(await completePages(best, get, options), get, options);
+  const filled = await complete(await completePages(best, get, options), get, options, language);
   return [filled, ...results.slice(1)];
 }
 
@@ -191,9 +238,10 @@ async function complete(
   primary: BookMetadata,
   get: HttpGet,
   options: MetadataOptions,
+  language: ReadingLanguage,
 ): Promise<BookMetadata> {
   const contributors: Contributors = new Map([[primary.source, primary]]);
-  const withGaps = await fillGaps(primary, get, options, contributors);
+  const withGaps = await fillGaps(primary, get, options, language, contributors);
   const withArtwork = await askApple(withGaps, get, contributors);
   return mergeFields(withArtwork, contributors);
 }
@@ -275,6 +323,7 @@ async function fillGaps(
   primary: BookMetadata,
   get: HttpGet,
   options: MetadataOptions,
+  language: ReadingLanguage,
   contributors: Contributors,
 ): Promise<BookMetadata> {
   // A speculative cover counts as missing: it is a URL we invented from an
@@ -299,6 +348,7 @@ async function fillGaps(
           await googleBooks.searchByTitle(
             `${primary.title} ${primary.author ?? ''}`.trim(),
             get,
+            language,
             options.googleBooksKey,
           )
         )[0]

@@ -1,5 +1,6 @@
 import { looksDerivative, normaliseIsbn } from '../identity.ts';
 import type { HttpGet } from './http.ts';
+import type { ReadingLanguage } from './language.ts';
 import { asPositiveInt, asRecord, firstString, toPlainText, type BookMetadata } from './types.ts';
 import { keyIfPresent } from '../key-if-present.ts';
 
@@ -45,9 +46,23 @@ export async function lookupByIsbn(
   );
 }
 
+/**
+ * Title search, in Google's own order.
+ *
+ * **A volume in another language keeps everything except its ISBN.** A
+ * same-titled translation passes every matcher here, and a Google title result
+ * can become the book a note records — so its ISBN would be written into the
+ * note as this book's. Dropping only the ISBN leaves ranking, matching and G26
+ * exactly as they were. `langRestrict` would have done this in the URL and moved
+ * every cached response and every G26 key with it. See ADR-0094.
+ *
+ * `language` is required for the reason Open Library's is: a call site that
+ * forgot it is a type error, not a silent English.
+ */
 export async function searchByTitle(
   query: string,
   get: HttpGet,
+  language: ReadingLanguage,
   apiKey?: string,
 ): Promise<BookMetadata[]> {
   const url = withKey(`${VOLUMES}?q=${encodeURIComponent(query)}&maxResults=5`, apiKey);
@@ -58,13 +73,34 @@ export async function searchByTitle(
   const items = Array.isArray(body['items']) ? body['items'] : [];
   return (
     items
-      .map((item) =>
-        toMetadata(asRecord(asRecord(item)?.['volumeInfo']), firstString(asRecord(item)?.['id'])),
-      )
+      .map((item) => {
+        const info = asRecord(asRecord(item)?.['volumeInfo']);
+        const metadata = toMetadata(info, firstString(asRecord(item)?.['id']));
+        return metadata === undefined || isIn(info, language) ? metadata : withoutIsbn(metadata);
+      })
       .filter((item): item is BookMetadata => item !== undefined)
       // Same trap as Open Library: summaries rank alongside the real book.
       .filter((item) => wantsDerivative || !looksDerivative(item.title))
   );
+}
+
+/**
+ * Whether a volume is in the reading language, by the primary subtag of its
+ * `language` — so `zh-CN` compares as `zh`. Subtags are unmeasured: every
+ * `language` in `fixtures/api/` is a bare `en`.
+ *
+ * **A volume that reports no language counts as in it.** Unknown is not a
+ * mismatch, and dropping the ISBN of every such volume would cost dedup on all
+ * of them.
+ */
+function isIn(info: Record<string, unknown> | undefined, language: ReadingLanguage): boolean {
+  const reported = firstString(info?.['language']);
+  return reported === undefined || reported.split('-')[0]?.toLowerCase() === language;
+}
+
+function withoutIsbn(metadata: BookMetadata): BookMetadata {
+  const { isbn: _foreign, ...rest } = metadata;
+  return rest;
 }
 
 /**

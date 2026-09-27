@@ -3,7 +3,13 @@ import { resolveCoverPath } from './covers/cover-path.ts';
 import { spineColour } from './covers/dominant-colour.ts';
 import { isProbablySameBook, normaliseIsbn } from './identity.ts';
 import { formatSubjects } from './subjects.ts';
-import { coverUrls, lookup, type BookMetadata, type HttpGet } from './metadata/index.ts';
+import {
+  coverUrls,
+  lookup,
+  type BookMetadata,
+  type HttpGet,
+  type MetadataOptions,
+} from './metadata/index.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
 import type { BookRecord } from './types.ts';
 
@@ -94,9 +100,9 @@ const SIMPLE_FILLS = [
 /** The heading a provider's description is written under, and never published. */
 export const ABOUT_HEADING = '## About';
 
-export interface EnrichOptions {
+/** Extends `MetadataOptions` for `AddBookOptions`' reason: nothing can drop the language. */
+export interface EnrichOptions extends MetadataOptions {
   readonly dryRun?: boolean;
-  readonly googleBooksKey?: string;
 }
 
 /**

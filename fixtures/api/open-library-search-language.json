@@ -1,0 +1,474 @@
+{
+  "numFound": 79,
+  "start": 0,
+  "numFoundExact": true,
+  "num_found": 79,
+  "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+  "q": "Thinking, Fast and Slow language:eng",
+  "offset": null,
+  "docs": [
+    {
+      "author_name": [
+        "Daniel Kahneman"
+      ],
+      "cover_i": 13290711,
+      "edition_key": [
+        "OL62456765M",
+        "OL56034889M",
+        "OL27740089M",
+        "OL39216579M",
+        "OL27962257M",
+        "OL45318702M",
+        "OL47152347M",
+        "OL46899948M",
+        "OL32724738M",
+        "OL26405310M",
+        "OL37061785M",
+        "OL32066930M",
+        "OL38025478M",
+        "OL38090969M",
+        "OL38715031M",
+        "OL26452282M",
+        "OL26452281M",
+        "OL35605099M",
+        "OL37795641M",
+        "OL28170486M",
+        "OL28170487M",
+        "OL25663290M",
+        "OL25439870M",
+        "OL36689110M",
+        "OL32745509M",
+        "OL31949087M",
+        "OL28227306M",
+        "OL28418340M",
+        "OL27153953M",
+        "OL27086468M",
+        "OL27922570M",
+        "OL27665373M",
+        "OL26208390M",
+        "OL24896701M",
+        "OL25416865M",
+        "OL25426844M"
+      ],
+      "isbn": [
+        "0606275649",
+        "9789754345315",
+        "9788483068618",
+        "9780374533557",
+        "9788934956150",
+        "9788372786777",
+        "9789588613680",
+        "2081307820",
+        "9780385676533",
+        "9781846146060",
+        "7508633555",
+        "9047013042",
+        "9781804220375",
+        "180422037X",
+        "9754345317",
+        "9780374275631",
+        "9788490322505",
+        "9863200611",
+        "9780385676519",
+        "8483068613",
+        "9781535535830",
+        "0141918926",
+        "8490322503",
+        "1535535830",
+        "9780739357989",
+        "8934956151",
+        "9780141918921",
+        "1846140552",
+        "0374533555",
+        "9783328100348",
+        "9787508633558",
+        "9780141033570",
+        "9788804671954",
+        "9789863200611",
+        "8372786771",
+        "9780307989703",
+        "0385676514",
+        "8804671955",
+        "8466357874",
+        "958861368X",
+        "0739357980",
+        "9047007662",
+        "146416617X",
+        "9789047013044",
+        "9780606275644",
+        "9789047007661",
+        "9789585433564",
+        "9782081307827",
+        "3328100342",
+        "9781846140556",
+        "0141033576",
+        "9585433567",
+        "9788466357876",
+        "9783886808861",
+        "0307989704",
+        "1846146062",
+        "3886808866",
+        "0385676530",
+        "9781464166174",
+        "0374275637"
+      ],
+      "key": "/works/OL15992072W",
+      "language": [
+        "fre",
+        "pol",
+        "tur",
+        "dut",
+        "kor",
+        "ger",
+        "chi",
+        "eng"
+      ],
+      "number_of_pages_median": 528,
+      "publish_date": [
+        "2011",
+        "Feb 24, 2016",
+        "30 Mar 2012",
+        "April 2, 2013",
+        "2018",
+        "Sep 17, 2019",
+        "Nov 14, 2017",
+        "Feb 22, 2017",
+        "Feb 10, 2011",
+        "Nov 14, 2016",
+        "Sep 09, 2021",
+        "Jan 01, 2012",
+        "2013",
+        "2017",
+        "Jul 29, 2011",
+        "2016",
+        "2014",
+        "Apr 02, 2013",
+        "02 04 2022",
+        "2012"
+      ],
+      "publisher": [
+        "CreateSpace Independent Publishing Platform",
+        "Flammarion",
+        "Varlık Yayınları",
+        "Random House Audio",
+        "W H Freeman & Co",
+        "Kimyoungsa/Tsai Fong Books",
+        "Penguin Verlag",
+        "Doubleday Canada",
+        "Siedler",
+        "Allen Lane",
+        "Mondadori",
+        "Anchor Canada",
+        "Macmillan ",
+        "Business Contact",
+        "Penguin Books, Limited",
+        "Penguin",
+        "Worth Publishers, Incorporated",
+        "中信出版社",
+        "Uitgeverij Business Contact",
+        "DEBATE",
+        "Farrar, Straus and Giroux",
+        "Turtleback",
+        "Debolsillo",
+        "Debate",
+        "Bilmem ",
+        "Farrar Straus Giroux",
+        "Farrar, Straus & Giroux",
+        "Tian xia yuan jian chu ban gu fen you xian gong si",
+        "Penguin Group",
+        "Media Rodzina"
+      ],
+      "title": "Thinking, fast and slow",
+      "subject": [
+        "Intuition",
+        "Thought and thinking",
+        "Reasoning",
+        "Decision making",
+        "New York Times bestseller",
+        "Long Now Manual for Civilization",
+        "Thinking",
+        "Kognition",
+        "77.32 intelligence, creativity",
+        "New York Times reviewed",
+        "Reason",
+        "Cognition",
+        "Self-actualization (Psychology)",
+        "Cognitive psychology",
+        "Psychology",
+        "Schlussfolgern",
+        "Entscheidungsfindung",
+        "Priming",
+        "Spiegel-Bestseller",
+        "Verhaltensökonomie",
+        "Zwei Systeme",
+        "2970: Taschenbuch / Sachbücher/Politik, Gesellschaft, Wirtschaft",
+        "Bf441 .k238 2011",
+        "2012 a-186",
+        "Bf 441",
+        "Bf 441 k12 2011",
+        "153.4/2",
+        "Nyt:hardcover_business_books=2012-02-25",
+        "Tankande",
+        "Beslutsfattande",
+        "Besliskunde",
+        "Resonerande",
+        "Psykologiska aspekter",
+        "Emotions and cognition",
+        "Tänkande",
+        "Pensée",
+        "Prise de décision",
+        "Raison",
+        "Émotions et cognition"
+      ],
+      "editions": {
+        "numFound": 10,
+        "start": 0,
+        "numFoundExact": true,
+        "docs": [
+          {
+            "key": "/books/OL36689110M",
+            "title": "Thinking, fast and slow",
+            "cover_i": 15129456,
+            "language": [
+              "eng"
+            ],
+            "publisher": [
+              "Doubleday Canada"
+            ],
+            "publish_date": [
+              "2011"
+            ],
+            "isbn": [
+              "9780385676519",
+              "0385676514"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "author_name": [
+        "Jacqueline Allan"
+      ],
+      "cover_i": 13214974,
+      "edition_key": [
+        "OL34634497M",
+        "OL34636478M"
+      ],
+      "isbn": [
+        "1912453991",
+        "9781912453993",
+        "9781912453054",
+        "1912453053"
+      ],
+      "key": "/works/OL25742643W",
+      "language": [
+        "eng"
+      ],
+      "publish_date": [
+        "2018"
+      ],
+      "publisher": [
+        "Taylor & Francis Group"
+      ],
+      "title": "A Macat Analysis of Daniel Kahneman's Thinking, Fast and Slow",
+      "subject": [
+        "Psychology"
+      ],
+      "editions": {
+        "numFound": 2,
+        "start": 0,
+        "numFoundExact": true,
+        "docs": [
+          {
+            "key": "/books/OL34634497M",
+            "title": "A Macat Analysis of Daniel Kahneman's Thinking, Fast and Slow",
+            "cover_i": 13214974,
+            "language": [
+              "eng"
+            ],
+            "publisher": [
+              "Taylor & Francis Group"
+            ],
+            "publish_date": [
+              "2018"
+            ],
+            "isbn": [
+              "9781912453054",
+              "1912453053"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "author_name": [
+        "Hanno Sauer"
+      ],
+      "edition_key": [
+        "OL34694369M",
+        "OL35537693M",
+        "OL28904678M",
+        "OL35521263M",
+        "OL54022176M",
+        "OL53976606M"
+      ],
+      "isbn": [
+        "1315467496",
+        "9780367733469",
+        "131546747X",
+        "1138205141",
+        "0367733463",
+        "9781315467481",
+        "9781315467474",
+        "9781315467498",
+        "1315467461",
+        "9781138205147",
+        "9781315467467",
+        "1315467488"
+      ],
+      "key": "/works/OL21340677W",
+      "language": [
+        "eng"
+      ],
+      "number_of_pages_median": 108,
+      "publish_date": [
+        "2020",
+        "2018"
+      ],
+      "publisher": [
+        "Taylor & Francis Group"
+      ],
+      "title": "Moral Thinking Fast and Slow",
+      "subject": [
+        "Judgment (ethics)",
+        "Ethics",
+        "Cognition",
+        "Jugement (Morale)",
+        "Morale",
+        "Ethics (philosophy)",
+        "Erkenntnis",
+        "Ethik",
+        "Moralisches Urteil"
+      ],
+      "editions": {
+        "numFound": 6,
+        "start": 0,
+        "numFoundExact": true,
+        "docs": [
+          {
+            "key": "/books/OL34694369M",
+            "title": "Moral Thinking Fast and Slow",
+            "language": [
+              "eng"
+            ],
+            "publisher": [
+              "Taylor & Francis Group"
+            ],
+            "publish_date": [
+              "2020"
+            ],
+            "isbn": [
+              "9780367733469",
+              "0367733463"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "author_name": [
+        "Gloria J. Russell"
+      ],
+      "cover_i": 15174454,
+      "edition_key": [
+        "OL38414746M"
+      ],
+      "isbn": [
+        "9798809159685"
+      ],
+      "key": "/works/OL28067455W",
+      "language": [
+        "eng"
+      ],
+      "publish_date": [
+        "2022"
+      ],
+      "publisher": [
+        "Independently Published"
+      ],
+      "title": "Thinking Fast and Slow by Daniel Kahneman",
+      "editions": {
+        "numFound": 1,
+        "start": 0,
+        "numFoundExact": true,
+        "docs": [
+          {
+            "key": "/books/OL38414746M",
+            "title": "Thinking Fast and Slow by Daniel Kahneman",
+            "cover_i": 15174454,
+            "language": [
+              "eng"
+            ],
+            "publisher": [
+              "Independently Published"
+            ],
+            "publish_date": [
+              "2022"
+            ],
+            "isbn": [
+              "9798809159685"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "author_name": [
+        "Book Tigers"
+      ],
+      "edition_key": [
+        "OL49172727M"
+      ],
+      "isbn": [
+        "9781447727361",
+        "1447727363"
+      ],
+      "key": "/works/OL36392250W",
+      "language": [
+        "eng"
+      ],
+      "publish_date": [
+        "2023"
+      ],
+      "publisher": [
+        "Lulu Press, Inc."
+      ],
+      "title": "WORKBOOK for Thinking, Fast and Slow by Daniel Kahneman",
+      "editions": {
+        "numFound": 1,
+        "start": 0,
+        "numFoundExact": true,
+        "docs": [
+          {
+            "key": "/books/OL49172727M",
+            "title": "WORKBOOK for Thinking, Fast and Slow by Daniel Kahneman",
+            "language": [
+              "eng"
+            ],
+            "publisher": [
+              "Lulu Press, Inc."
+            ],
+            "publish_date": [
+              "2023"
+            ],
+            "isbn": [
+              "9781447727361",
+              "1447727363"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
