@@ -59,6 +59,12 @@ interface Capture {
    * neither belongs in this repository.
    */
   readonly omit?: readonly string[];
+  /**
+   * Listed for its URL and never re-fetched: the committed body is a regression
+   * input a fresh response no longer reproduces, so a re-run would overwrite
+   * the one thing it exists to hold.
+   */
+  readonly frozen?: true;
 }
 
 function without(value: unknown, keys: ReadonlySet<string>): unknown {
@@ -126,13 +132,14 @@ const CAPTURES: readonly Capture[] = [
     // Peterson and 480 pages, the second carries neither. Ranking used to prefer
     // the empty one *because* it was empty. See `rankingScore` in identity.ts.
     //
-    // ⚠️ **Do not re-capture this one.** The committed body predates
+    // ⚠️ **Frozen, so a re-run skips it.** The committed body predates
     // 2026-09-26, and a fresh capture that day no longer held the authorless
     // twin — both `12 Rules for Life` records came back authored — so a re-run
-    // silently vacates the regression it exists for. It is replayed by a
+    // would silently vacate the regression it exists for. It is replayed by a
     // substring route, so the URL moving under it (ADR-0094) costs nothing.
     name: 'open-library-search-sparse-sibling.json',
     url: openLibrarySearch('12 Rules for Life', 5),
+    frozen: true,
   },
   {
     // The foreign-ISBN regression. The *work* for this title spans 36 editions
@@ -175,6 +182,10 @@ const CAPTURES: readonly Capture[] = [
 mkdirSync(OUT_DIR, { recursive: true });
 
 for (const capture of CAPTURES) {
+  if (capture.frozen === true) {
+    console.log(`${capture.name} -- frozen, kept as committed`);
+    continue;
+  }
   const response = await fetch(capture.url, {
     headers: { 'User-Agent': 'stacks/0.0 (fixture capture; personal project)' },
   });
@@ -183,4 +194,5 @@ for (const capture of CAPTURES) {
   console.log(`${capture.name} <- ${response.status}`);
 }
 
-console.log(`\n${CAPTURES.length} fixtures written to ${OUT_DIR}`);
+const written = CAPTURES.filter((capture) => capture.frozen !== true).length;
+console.log(`\n${written} fixtures written to ${OUT_DIR}`);
