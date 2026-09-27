@@ -1,7 +1,10 @@
 # A title lookup carries a different-language edition's ISBN — plan
 
-Status: **plan, revision 3, awaiting owner decision.** Nothing implemented.
-Revisions 1 and 2 were reviewed ([plan review](2026-09-26-title-lookup-foreign-isbn-plan-review.md),
+Status: **implemented in 954096b; result check CONFIRMED**
+([result check](2026-09-26-title-lookup-foreign-isbn-result-check.md)). The
+ADR is [0094](../adr/0094-a-title-search-takes-one-edition-in-the-reading-language.md),
+not 0093 as written below — #392 took 0093 first. The plan below is revision 3
+as approved, kept unedited. Revisions 1 and 2 were reviewed ([plan review](2026-09-26-title-lookup-foreign-isbn-plan-review.md),
 [security review](2026-09-26-title-lookup-foreign-isbn-security-review.md)).
 The owner chose option B plus an environment override, fix (a) for the first
 review's finding, and accepted all four security findings as recommended.
