@@ -1,8 +1,9 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ObsidianAdapter } from '../adapters/obsidian-adapter.ts';
+import type { HttpGet } from '../metadata/http.ts';
 import { parseAudibleExport } from './audible.ts';
 import { importBooks } from './index.ts';
 import { readApiFixture, spyOnWarn, type WarnSpy } from '../test-support.ts';
@@ -138,5 +139,49 @@ describe('importBooks', () => {
     expect(result.added).toBe(3);
     expect(result.duplicates).toBe(3);
     expect(await vault.listBooks()).toHaveLength(0);
+  });
+
+  describe('given a reading language the table does not hold', () => {
+    // Hand-built, with no `coverUrl`, and a `get` that answers nothing: the
+    // export's own cover is exactly what the old code fell back to, and
+    // downloading it would be a live request.
+    const BOOK = { input: { title: 'The Tidal Engine', author: 'Marisol Vane' } };
+    const get: HttpGet = async () => undefined;
+
+    it.each(['xx', 'constructor'])(
+      'refuses %j before reading or writing the vault',
+      async (language) => {
+        const vault = new ObsidianAdapter(dir);
+        const listBooks = vi.spyOn(vault, 'listBooks');
+        const writeBook = vi.spyOn(vault, 'writeBook');
+
+        // The cast is the bypass under test: a direct core caller, not the CLI.
+        await expect(
+          importBooks([BOOK], vault, { language: language as never, get }),
+        ).rejects.toThrow(/unknown reading language/);
+
+        expect(listBooks).not.toHaveBeenCalled();
+        expect(writeBook).not.toHaveBeenCalled();
+        expect(await readdir(dir)).toEqual([]);
+      },
+    );
+
+    it('refuses it on a dry run too, where no lookup ever happens', async () => {
+      const vault = new ObsidianAdapter(dir);
+
+      await expect(
+        importBooks([BOOK], vault, { language: 'xx' as never, dryRun: true }),
+      ).rejects.toThrow(/unknown reading language/);
+    });
+
+    it('still imports at a language the table holds', async () => {
+      const vault = new ObsidianAdapter(dir);
+
+      const result = await importBooks([BOOK], vault, { language: 'tr', get });
+
+      expect(result.added).toBe(1);
+      expect(result.failed).toBe(0);
+      expect(await vault.listBooks()).toHaveLength(1);
+    });
   });
 });

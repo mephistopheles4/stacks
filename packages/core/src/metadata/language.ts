@@ -93,10 +93,11 @@ export function checkedReadingLanguage(code: string): ReadingLanguage {
  * `STACKS_LANGUAGE` before any command runs — and not the "an API had a bad
  * afternoon" case the metadata layer degrades on, so it is loud.
  *
- * ⚠️ **On the `import` path it is silent anyway**: the importer catches every
- * lookup error and falls back to the export's cover. The CLI's refusal is the
- * check that stops a bad value there, and the edition-language check in
- * `open-library.ts` is the backstop.
+ * ⚠️ **On the `import` path a throw from here would be silent**: the importer
+ * catches every lookup error and falls back to the export's cover. So
+ * `importBooks` runs `checkedReadingLanguage` up front, before the vault is read
+ * and outside that `catch`, and the edition-language check in `open-library.ts`
+ * stays the backstop.
  */
 export function openLibraryLanguage(code: string): string {
   const mapped = TABLE.get(code);

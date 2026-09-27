@@ -23,8 +23,10 @@ import {
  * `loadEnv` keeps inline comments: `STACKS_LANGUAGE=en # English` arrives as
  * `en # English`, and the owner has to be able to see why it was refused.
  *
- * ⚠️ **This is the check that stops a bad value on `import`.** Core re-checks
- * and throws, but the importer catches every lookup error. See ADR-0094.
+ * **Core refuses a bad value too**, `importBooks` included — it checks up front,
+ * outside the `catch` that keeps an export's cover when a lookup fails. This
+ * refusal still comes first, and is the one that names `STACKS_LANGUAGE`. See
+ * ADR-0094.
  */
 export function metadataOptionsFromEnv(): MetadataOptions {
   return {

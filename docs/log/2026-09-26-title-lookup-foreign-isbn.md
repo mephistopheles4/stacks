@@ -95,10 +95,11 @@ out.
   interpolates the table's **constant** 639-2/B value, never the input string,
   so injection is structurally impossible. `MetadataOptions.language` is typed
   as the table's key union, but the type is not relied on: `as`-casts and
-  scripts bypass it. ⚠️ `import` catches every lookup error
-  (`import/index.ts:139-141`), so a core throw is silent there — the CLI refusal
-  is the check that stops a bad value on that path, and the response check in
-  step 2 is the backstop.
+  scripts bypass it. ⚠️ `import` catches every lookup error (in
+  `coverCandidates`), so a core throw from inside the lookup would be silent
+  there — `importBooks` therefore checks the language up front, before it reads
+  the vault and outside that catch, and the response check in step 2 is the
+  backstop.
 - **The option cannot be dropped silently** (plan review P2, security
   finding 3). `AddBookOptions`, `EnrichOptions` and `ImportOptions`
   (`add-book.ts:21`, `enrich.ts:99`, `import/index.ts:41`) stop redeclaring
@@ -248,7 +249,7 @@ Verdict there: design sound, nothing Medium or higher.
 | # | Severity | Finding | Disposition | Where it landed |
 | --- | ---------- | --------- | ------------- | ----------------- |
 | 1 | Low | The language clause shares `q` with the user's title, so title syntax can disable it or break the request | Accepted: response-side language check, bare `OR`/`AND`/`NOT` lowercased | The change, steps 1–3; tests; costs |
-| 2 | Low | Core's table lookup must be own-property only; a core-side throw is swallowed on the import path | Accepted: `Map`, core re-checks and throws; CLI refusal is the stop on `import` | The language setting |
+| 2 | Low | Core's table lookup must be own-property only; a core-side throw is swallowed on the import path | Accepted: `Map`, core re-checks and throws; CLI refusal is the stop on `import` | The language setting; `importBooks` now validates the language up front, outside its lookup `catch` (PR #393 review follow-up) |
 | 3 | Low | Three options interfaces redeclare `googleBooksKey`, so a dropped `language` silently becomes English | Accepted: interfaces extend `MetadataOptions`; per-command tests | The language setting; tests |
 | 4 | Info | `loadEnv` keeps inline comments, so the refusal message should echo the value it received | Accepted: refusal quotes the value | The language setting; tests |
 
