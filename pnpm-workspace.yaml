@@ -182,7 +182,14 @@ verifyDepsBeforeRun: warn
 overrides:
   nanoid: '^3.3.18'
   qs: '^6.16.0'
-  fast-uri: '^3.1.6'
+  fast-uri: '^3.1.8'
+  # 2026-10-02: brace-expansion GHSA-q2hr-2g5m-vwhr, -qhr7-859c-m2p7, -6j4f-fj2g-mc7p;
+  # fast-uri GHSA-hrr3-gc8f-f4qj; markdown-it GHSA-253c-mchw-3w2r;
+  # js-yaml GHSA-r3ph-w7gj-g6xm (5.x only, so 4.x is left alone). Remove each when
+  # the lockfile carries a fixed line unaided.
+  brace-expansion: '^5.0.12'
+  markdown-it: '^14.3.1'
+  'js-yaml@5': '^5.4.1'
   smol-toml: '^1.7.1'
 
 # CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
