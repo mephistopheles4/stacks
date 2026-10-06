@@ -91,6 +91,7 @@ const ALLOWED = [
   // pull request body may not drop. It opens nothing else and takes no path from
   // anywhere: the pull request's own strings arrive through the environment, as
   // data. It could not reach a vault if it tried. G55 (`pr-conventions`).
+  'scripts/check-ignored-advisories.ts',
   'scripts/check-pr.ts',
   // Deletes and reads one gitignored coverage report — `.coverage/`, written by
   // the Vitest run it just spawned. It never opens a note, and it could not

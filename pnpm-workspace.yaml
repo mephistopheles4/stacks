@@ -198,6 +198,16 @@ overrides:
 # the entry the moment a fix ships; a permanent ignore is a decision nobody
 # revisits.
 #
+# ⚠️ **The date is read by a gate, so it is not free text.** It must be the
+# first token after `#`, as YYYY-MM-DD followed by a comma. An entry expires
+# 30 days after that date (G62, `gates/ignored-advisories.test.ts`): renew it
+# with a new date and a fresh reason, or remove it. An entry with no readable
+# date fails; so does a flow-style list or a quoted id. And a stable version of
+# the package published outside the advisory's affected range turns the
+# `audit` job red (G63, `scripts/check-ignored-advisories.ts`), so the upgrade
+# replaces the ignore. ADR-0095. Never `pnpm audit --ignore-unfixable`: it
+# ignored nothing and wrote `auditConfig: {}` here on 2026-10-06.
+#
 # auditConfig:
 #   ignoreGhsas:
 #     - GHSA-xxxx-xxxx-xxxx  # 2026-01-01, <why it cannot reach us>, fix pending

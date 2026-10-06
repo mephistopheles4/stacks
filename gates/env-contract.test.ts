@@ -47,6 +47,11 @@ const PROVIDED_BY_PLATFORM = new Set([
   'PR_TITLE',
   'PR_BODY',
   'PR_AUTHOR',
+  // `GITHUB_TOKEN` is the `audit` job's `env:` block carrying `github.token` into
+  // `scripts/check-ignored-advisories.ts` (G63). A token in `.env` would be a
+  // credential in the file a contributor copies and fills in; the script
+  // runs without one locally, at GitHub's 60-requests-an-hour anonymous limit.
+  'GITHUB_TOKEN',
 ]);
 
 function keysReadInCode(): string[] {
