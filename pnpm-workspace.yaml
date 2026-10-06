@@ -180,13 +180,65 @@ verifyDepsBeforeRun: warn
 # today. A second 5.x arrival is still held by this entry; an older line
 # arriving vulnerable is caught by `audit` instead, which is the louder failure.
 #
-# The `smol-toml` override that stood here is gone: `markdownlint-cli2` 0.23.3
-# pins 1.8.0, which is the removal condition that block wrote for itself.
+# GHSA-68fv-2mgg-jv7q, high: `source-map-js` 1.0.0 to below 1.2.2 lets an
+# indexed source map's section offsets stall the event loop. It arrives fifteen
+# ways — vitest, Stryker and astro, all through `postcss` or `magicast` — and is
+# a build-time tool in every one: nothing first-party calls it, and the maps it
+# reads are the ones this repository's own toolchain emits. That bounds the blast
+# radius; it does not answer the gate, which reads the tree rather than the call
+# graph.
+#
+# ⚠️ **The advisory landed after `main`'s last `gates` run**, so every pull
+# request opened since goes red on `audit` with no diff of its own. The fix,
+# 1.2.2, shipped 2026-09-30 and is outside the seven-day window. The consumers
+# in the tree ask for lower floors — `magicast` 0.5.5 and the `css-tree` pair
+# for `^1.2.1`, which admits the vulnerable line — and the newest `postcss`
+# already asks for `^1.2.2` while the tree resolves an older one. Nothing in the
+# graph states that 1.2.2 is required, so this is the floor. Remove it when
+# every consumer's own floor is `^1.2.2` and the lockfile carries a fixed line
+# unaided. Caret for the nanoid block's reason; bare, for the qs block's.
+
+# GHSA-ch52-4w7c-c8xp, high: `http-cache-semantics` up to 4.2.0 can disclose a
+# cached response to a different user through its `max-stale` handling. It
+# arrives one way, `astro`, which declares `^4.2.0`. It is a build-time
+# dependency of the site's toolchain and ships to no visitor, and no first-party
+# code calls it — that bounds the blast radius; it does not answer the gate.
+#
+# ⚠️ **There is no 4.2.1.** The advisory's patched range reads `>=4.2.1`, and the
+# only fix published is 4.3.0, a minor released 2026-10-04. That is **inside the
+# seven-day `minimumReleaseAge` window**, so resolution would decline it. It is
+# taken anyway, on the nanoid block's precedent: a security fix is named
+# explicitly rather than waited out, and an override is honoured where
+# auto-resolution is not. 4.3.0 sits within astro's own declared `^4.2.0`, so
+# this does not force a combination the package does not declare. Remove it when
+# `astro` raises its floor to `^4.3.0`.
+
+# GHSA-r4xh-jqrq-34v2, moderate: `smol-toml` 1.8.0 and below parses quadratically,
+# rescanning to the end of the document on each key line. It arrives one way,
+# `markdownlint-cli2`, which pins **exactly** `1.8.0` — so, as with `qs`, no
+# release above the pin is declared-compatible and an override is the only
+# mechanism there is. It is moderate, so `--audit-level=high` is green with or
+# without this; it is taken because the entry here was removed on the grounds
+# that 0.23.3 had fixed it, and it had not.
+#
+# ⚠️ **That earlier note was wrong, and it is corrected rather than deleted.**
+# This block used to be gone, with a line saying `markdownlint-cli2` 0.23.3 pins
+# 1.8.0 and that was its removal condition met. 1.8.0 is itself vulnerable; the
+# condition was the pin moving *past* 1.8.0, and it never did.
+#
+# ⚠️ **Crossing the exact pin is a combination the package does not declare, and
+# it was measured.** `pnpm lint:md` over the tracked tree reports the same
+# findings before and after (0 issues in 0 files, 186 files), and a planted
+# violation is still reported under the override, so the check can fail. Remove
+# this when `markdownlint-cli2` pins `smol-toml` at 1.9.0 or later.
 overrides:
   nanoid: '^3.3.18'
   qs: '^6.16.0'
   fast-uri: '^3.1.8'
   'brace-expansion@5': '^5.0.12'
+  source-map-js: '^1.2.2'
+  http-cache-semantics: '^4.3.0'
+  smol-toml: '^1.9.0'
 
 # CI fails on a `high` or `critical` advisory (`pnpm audit --audit-level=high`).
 #
@@ -201,3 +253,29 @@ overrides:
 # auditConfig:
 #   ignoreGhsas:
 #     - GHSA-xxxx-xxxx-xxxx  # 2026-01-01, <why it cannot reach us>, fix pending
+#
+# The one live entry, and the repository's first:
+#
+# GHSA-vfj7-8cjw-p6xm, high, added 2026-10-06: `braces` up to 3.0.3 exhausts the
+# stack on deeply nested brace patterns. Path:
+# `markdownlint-cli2` > `globby` > `fast-glob` > `micromatch` > `braces`, and
+# two shorter routes through the same two packages.
+#
+# **It cannot reach this project.** Every glob that arrives at `braces` here is
+# `markdownlint-cli2`'s own, over tracked docs, written in this repository — no
+# untrusted input reaches the pattern. That bounds the blast radius; it does not
+# answer the gate, and **nothing published fixes it**: the advisory names
+# `>=3.0.4`, but 3.0.3 is `latest` and the newest version on npm. No override can
+# name a version that does not exist.
+#
+# ⚠️ **Do not run `pnpm audit --ignore-unfixable`.** On 2026-10-06 it wrote
+# `auditConfig: {}` into this file and exited 0, and it did not treat braces as
+# unfixable — pnpm reads the advisory's declared `>=3.0.4` as a fix.
+#
+# **Remove this when braces 3.0.4 or later is published and reachable.** The
+# guards that fail on that, and expire an entry after 30 days, are
+# [#405](https://github.com/mephistopheles4/stacks/issues/405); until it lands
+# nothing catches this entry outliving its reason.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm
