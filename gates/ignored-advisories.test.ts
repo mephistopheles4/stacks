@@ -24,7 +24,7 @@
  * carry the proof; the register records a 31-day-old entry planted in the real
  * file going red.
  *
- * See docs/gates.md, rows G62 and G63, and ADR-0095.
+ * See docs/gates.md, rows G62 (ignore-expiry) and G63 (ignore-fix-published), and ADR-0095.
  */
 
 import { readFileSync } from 'node:fs';
@@ -121,9 +121,9 @@ describe('G62 — an entry expires after 30 days, and no date means expired', ()
   });
 
   it('fails a date that is not a calendar date', () => {
-    const problems = problemsOf(workspace(entryLine('2026-02-30')));
+    const problems = problemsOf(workspace(entryLine('2026-09-31')));
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('2026-02-30');
+    expect(problems[0]).toContain('2026-09-31');
   });
 
   it('judges every entry, not the first', () => {
@@ -178,6 +178,21 @@ describe('G62 — an entry expires after 30 days, and no date means expired', ()
     expect(problemsOf(level)).toHaveLength(1);
   });
 
+  it('keeps reading past a blank line and a comment line inside the list', () => {
+    const text = [
+      'auditConfig:',
+      '  ignoreGhsas:',
+      `    - ${entryLine(daysAgo(1), 'GHSA-aaaa-bbbb-cccc')}`,
+      '',
+      '    # a note between entries',
+      `    - ${entryLine(daysAgo(40))}`,
+      '',
+    ].join('\n');
+    const problems = problemsOf(text);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain(BRACES);
+  });
+
   it('does not read past the block into a later list', () => {
     const text = `${workspace(entryLine(daysAgo(1)))}\noverrides:\n  nanoid: '^3.3.18'\nother:\n  - not-a-ghsa\n`;
     expect(problemsOf(text)).toEqual([]);
@@ -190,6 +205,10 @@ describe('G62 — an entry expires after 30 days, and no date means expired', ()
       'an item that is not an advisory id': `auditConfig:\n  ignoreGhsas:\n    - braces  # ${daysAgo(0)}, why\n`,
       'a second auditConfig key': `auditConfig:\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\nauditConfig:\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0), NANOID)}\n`,
       'a second ignoreGhsas key': `auditConfig:\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0), NANOID)}\n`,
+      'a space before the colon': `auditConfig:\n  ignoreGhsas :\n    - ${entryLine(daysAgo(0))}\n`,
+      'a flow-style map on the auditConfig line': `auditConfig: { ignoreGhsas: [${BRACES}] }\n`,
+      'a quoted auditConfig key': `"auditConfig":\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n`,
+      'a quoted ignoreGhsas key': `auditConfig:\n  'ignoreGhsas':\n    - ${entryLine(daysAgo(0))}\n`,
       'a block-style key with a value on the same line': `auditConfig:\n  ignoreGhsas: ${BRACES}\n`,
     };
     for (const [name, text] of Object.entries(shapes)) {
@@ -270,7 +289,37 @@ describe('G63 — a published fix is read from npm, not from the advisory', () =
   });
 
   it('fails closed when an affected version is missing from the version list', () => {
-    expect(judgeFixPublished(BRACES, [lookup('braces', ['3.0.1'], ['3.0.3'])])).toHaveLength(1);
+    const problems = judgeFixPublished(BRACES, [lookup('braces', ['3.0.1'], ['3.0.3'])]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('missing');
+    // An empty full list with an affected version would read as "no fix" without the guard.
+    const empty = judgeFixPublished(BRACES, [lookup('braces', [], ['3.0.3'])]);
+    expect(empty).toHaveLength(1);
+    expect(empty[0]).toContain('missing');
+  });
+
+  it('counts a fix only above the newest vulnerable version, not below the range', () => {
+    // A range like `>= 2.0.0, < 2.1.0` leaves 1.x below it: stable, outside, and not a fix.
+    expect(
+      judgeFixPublished(BRACES, [
+        lookup(
+          'braces',
+          ['1.0.0', '1.9.0', '2.0.0', '2.0.5'],
+          ['2.0.0', '2.0.5'],
+          '>= 2.0.0, < 2.1.0',
+        ),
+      ]),
+    ).toEqual([]);
+    expect(
+      judgeFixPublished(BRACES, [
+        lookup(
+          'braces',
+          ['1.9.0', '2.0.0', '2.0.5', '2.1.0'],
+          ['2.0.0', '2.0.5'],
+          '>= 2.0.0, < 2.1.0',
+        ),
+      ])[0],
+    ).toContain('2.1.0');
   });
 
   it('fails when any of several entries has a fix, and says which', () => {
@@ -308,6 +357,20 @@ describe('G63 — a published fix is read from npm, not from the advisory', () =
     );
   });
 
+  it('refuses a name or range that could reach a shell or read as an option', () => {
+    const entry = (name: unknown, range: string): unknown =>
+      advisory({ package: { ecosystem: 'npm', name }, vulnerable_version_range: range });
+    for (const name of ['braces"&calc', '%PATH%', '-rf', 'a b', '', undefined]) {
+      expect(() => npmEntriesOf(entry(name, '<= 1.0.0')), String(name)).toThrow();
+    }
+    for (const range of ['<= 1 "& calc', '<= %USERNAME%', '--prefix x', '<= 1; ls', '!1']) {
+      expect(() => npmEntriesOf(entry('braces', range)), range).toThrow(/unexpected characters/);
+    }
+    expect(
+      npmEntriesOf(entry('@scope/pkg-x.y', '>= 4.0.0, < 4.1.0 || >= 5.0.0-rc.1')),
+    ).toHaveLength(1);
+  });
+
   it('converts GitHub ranges, which separate comparators with commas, to npm ranges', () => {
     expect(npmRange('>= 4.0.0, < 4.1.0')).toBe('>= 4.0.0 < 4.1.0');
     expect(npmRange('<= 3.0.3')).toBe('<= 3.0.3');
@@ -319,18 +382,35 @@ describe('G63 — the step is wired into the `audit` job', () => {
   const workflow = readFileSync(join(REPO_ROOT, '.github/workflows/gates.yml'), 'utf8');
   const auditJob = workflow.split(/^ {2}audit:\s*$/m)[1]?.split(/^ {2}[a-z][\w-]*:\s*$/m)[0] ?? '';
 
-  it('runs the script after `pnpm audit`', () => {
-    const audit = auditJob.indexOf('pnpm audit --audit-level=high');
-    const guard = auditJob.indexOf('pnpm exec tsx scripts/check-ignored-advisories.ts');
+  /** The guard step's lines, comments dropped so a commented-out `run:` is not read as one. */
+  const stepLines = (): string[] => {
+    const from = auditJob.indexOf('- name: ignoreGhsas guard');
+    const block = from === -1 ? '' : (auditJob.slice(from).split(/\n {6}- /)[0] ?? '');
+    return block.split('\n').filter((line) => !line.trim().startsWith('#'));
+  };
+
+  it('runs the script after `pnpm audit`, as a live `run:` key', () => {
+    const live = auditJob
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('#'))
+      .join('\n');
+    const audit = live.search(/^\s+run: pnpm audit --audit-level=high\s*$/m);
+    const guard = live.search(/^\s+run: pnpm exec tsx scripts\/check-ignored-advisories\.ts\s*$/m);
     expect(audit, '`pnpm audit` is not in the audit job').toBeGreaterThan(-1);
     expect(guard, 'the ignoreGhsas guard step is not in the audit job').toBeGreaterThan(audit);
   });
 
-  it('takes the workflow token through `env:`, never through a `${{ }}` in `run:`', () => {
-    const step = auditJob.slice(auditJob.indexOf('- name: ignoreGhsas guard'));
-    const stepBlock = step.split(/\n {6}- /)[0] ?? '';
-    expect(stepBlock).toMatch(/env:\s*\n\s+GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
-    const run = stepBlock.split('\n').find((line) => line.trim().startsWith('run:')) ?? '';
-    expect(run).not.toContain('${{');
+  it('cannot be switched off: no `if:` and no `continue-on-error:` on the step', () => {
+    const lines = stepLines();
+    expect(lines.length, 'the ignoreGhsas guard step is not in the audit job').toBeGreaterThan(0);
+    expect(lines.filter((line) => /^\s*(?:- )?(?:if|continue-on-error):/.test(line))).toEqual([]);
+  });
+
+  it('takes the workflow token through `env:`, with no other `${{ }}` in the step', () => {
+    const lines = stepLines();
+    expect(lines.join('\n')).toMatch(/env:\s*\n\s+GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
+    const expressions = lines.filter((line) => line.includes('${{'));
+    expect(expressions).toHaveLength(1);
+    expect(expressions[0]).toContain('GITHUB_TOKEN:');
   });
 });

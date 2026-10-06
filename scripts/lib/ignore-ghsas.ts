@@ -17,7 +17,7 @@
  * — fetches the advisory and the version lists and hands them in, so the gate
  * test stays offline and G21 (`no-live-network`) is untouched.
  *
- * See docs/gates.md, rows G62 and G63, and ADR-0095.
+ * See docs/gates.md, rows G62 (ignore-expiry) and G63 (ignore-fix-published), and ADR-0095.
  */
 
 /** Days after its date that an entry stops passing. Day 30 passes; day 31 fails. */
@@ -57,6 +57,21 @@ export function readIgnoreEntries(text: string): ReadResult {
   const lines = text.split(/\r?\n/);
   const entries: IgnoreEntry[] = [];
   const problems: string[] = [];
+
+  const quoted = lines.flatMap((line, index) =>
+    /^\s*(?:["'](?:auditConfig|ignoreGhsas)["']\s*|(?:auditConfig|ignoreGhsas)\s+):/.test(line)
+      ? [index + 1]
+      : [],
+  );
+  if (quoted.length > 0) {
+    return {
+      entries,
+      problems: [
+        `line ${quoted.join(', ')}: \`auditConfig\` or \`ignoreGhsas\` is written as a quoted key, ` +
+          'which this reader does not read; write it unquoted',
+      ],
+    };
+  }
 
   const configs = lines.flatMap((line, index) => (/^auditConfig:/.test(line) ? [index] : []));
   if (configs.length === 0) return { entries, problems };
@@ -201,6 +216,16 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
 /**
+ * What a name and a range from the advisory record may look like before either
+ * reaches a command line. The step spawns npm, through a shell on Windows, and
+ * both strings come from outside (ADR-0030): a `"` or `%` in one would reach
+ * that shell, and a leading `-` would read as an option. A value outside these
+ * shapes is a lookup failure, so it fails closed.
+ */
+const NPM_NAME = /^(?:@[a-z0-9~][a-z0-9._~-]*\/)?[a-z0-9~][a-z0-9._~-]*$/;
+const NPM_RANGE = /^[0-9A-Za-z.+*^~<>=| ][0-9A-Za-z.+*^~<>=| -]*$/;
+
+/**
  * The npm packages in a GitHub advisory record (`GET /advisories/<id>`).
  *
  * Throws on a record it cannot read — the step turns that into a red, because
@@ -221,6 +246,13 @@ export function npmEntriesOf(advisory: unknown): NpmEntry[] {
       throw new Error('an npm entry has no package name');
     if (typeof range !== 'string' || range.trim() === '') {
       throw new Error(`the npm entry for ${name} has no vulnerable_version_range`);
+    }
+    if (!NPM_NAME.test(name))
+      throw new Error(`the npm entry's package name is not a valid npm name: ${name}`);
+    if (!NPM_RANGE.test(npmRange(range))) {
+      throw new Error(
+        `the npm entry for ${name} has a vulnerable_version_range with unexpected characters`,
+      );
     }
     found.push({ name, range });
   }

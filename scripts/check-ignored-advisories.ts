@@ -16,7 +16,7 @@
  * wrote `auditConfig: {}` into `pnpm-workspace.yaml`.
  */
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -27,6 +27,7 @@ import {
   type FixLookup,
 } from './lib/ignore-ghsas.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
+import { shellCommand } from './lib/run.ts';
 
 const WORKSPACE = join(REPO_ROOT, 'pnpm-workspace.yaml');
 
@@ -38,16 +39,22 @@ const WORKSPACE = join(REPO_ROOT, 'pnpm-workspace.yaml');
  * read also has, which is why the judgement fails closed on an empty list.
  *
  * On Windows `npm` is a `.cmd` shim and needs a shell, under which a range such
- * as `<= 3.0.3` is a redirection and a word split; each argument is quoted
- * there so the invocation means the same thing it means in CI, which uses none.
+ * as `<= 3.0.3` is a redirection and a word split; the spec is quoted there so
+ * the invocation means the same thing it means in CI, which uses none. The line
+ * is one string, as `shellCommand` requires (ADR-0030). `spec` came from outside,
+ * so `npmEntriesOf` has already checked the name and range against strict
+ * patterns: nothing in it can reach the shell as anything but a comparator.
  */
 function npmView(spec: string, field: 'version' | 'versions'): string[] {
-  const windows = process.platform === 'win32';
-  const out = execFileSync('npm', ['view', windows ? `"${spec}"` : spec, field, '--json'], {
+  const options: { encoding: 'utf8'; stdio: ['ignore', 'pipe', 'pipe'] } = {
     encoding: 'utf8',
-    shell: windows,
     stdio: ['ignore', 'pipe', 'pipe'],
-  }).trim();
+  };
+  const out = (
+    process.platform === 'win32'
+      ? execSync(shellCommand('npm', ['view', `"${spec}"`, field, '--json']), options)
+      : execFileSync('npm', ['view', spec, field, '--json'], options)
+  ).trim();
   if (out === '') return [];
   const parsed: unknown = JSON.parse(out);
   const list = Array.isArray(parsed) ? parsed : [parsed];
