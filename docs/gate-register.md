@@ -6393,3 +6393,106 @@ judge's spec, so the plants are asserted on every run and not observed once.
   budget's premise is one phone and one driver**: another GPU with a lower edge
   moves nothing here, and a driver update that raised this one's would not
   either. Disposition `accepted`.
+
+### G62 — `ignore-expiry`
+
+**Gate:** [`gates/ignored-advisories.test.ts`](../gates/ignored-advisories.test.ts), over [`scripts/lib/ignore-ghsas.ts`](../scripts/lib/ignore-ghsas.ts)
+**Date:** 2026-10-06
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number was taken against a re-fetched `origin/main` and every open
+pull request immediately before pushing**, for G58's reason.
+
+**Observed-red**, two ways. Each was written to disk, run, read back and
+reverted as separate steps, with the file's hash or `git diff` checked after.
+
+1. **A 31-day-old entry planted in the real `pnpm-workspace.yaml`.** The live
+   assertion went red alone: `line 208: GHSA-vfj7-8cjw-p6xm was dated
+   2026-09-05, 31 days ago (limit 30)`. It is the only way to see the live
+   assertion fail, because the tree holds no entry and it passes over nothing.
+2. **Every rule as a synthetic case** — day 0 and day 30 pass, day 31, a
+   future date, no comment, no date, a time glued on, `2026-09-31` (impossible and inside the window, so only the calendar check can refuse it), a blank and a comment line inside the list, a flow-style
+   list, a quoted id and a second key all fail — kept in the gate file, so they
+   run every time rather than once.
+
+- **Weakening** — **exposed, in two places.** The window is the constant
+  `MAX_AGE_DAYS` and nothing pins it to 30 but this file's own test; raising it
+  and the test together is one commit. And **a renewal is a one-line edit of a
+  date**, which nothing checks the reason beside. That is the design: the
+  re-decision is the diff. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** A fresh date on an unchanged reason
+  renews an entry without anyone re-deciding it. G62 makes the decision
+  visible in history and does not make it honest. Disposition `accepted`.
+- **Routing around** — **gated for the shapes it knows.** An entry written
+  where the reader does not look — a flow-style list, a quoted id, a second
+  `auditConfig` key, a quoted `'ignoreGhsas':` or `auditConfig` key, a space before the
+  colon, a flow map on the `auditConfig` line, any other line inside the
+  `auditConfig` block, a top-level `audit:` key (which pnpm 11.16+ prefers), a lone
+  carriage return, and any unconsumed line naming either key or an advisory id,
+  tested on the raw line — is a red, not a skip. ⚠️ **Not covered**: the same ids
+  ignored another way, such as `pnpm audit --ignore` in a script. **The
+  guards are against drift, not against a deliberate edit to a reviewed file**
+  (ADR-0095): a determined edit of `gates.yml` or the reader's own rules is one
+  reviewed diff, and a security review found further spellings each time it was
+  run, which is why the scope is stated and not chased. Disposition `accepted`.
+- **Vacuous green** — **gated, with a residual.** An absent or empty block
+  passes by design, so the live assertion is vacuous while no entry exists; the
+  synthetic cases and plant 1 carry the proof. A reader that stops matching the
+  block would pass over nothing, and `reads every entry in the real
+  pnpm-workspace.yaml` cannot tell, which is why the synthetic cases read the
+  same shape through the same function. Disposition `gated`.
+- **Decay** — **it decays on the calendar, loudly, on purpose.** The live
+  assertion goes red every 30 days an entry is not renewed. ⚠️ **What rots
+  quietly is the format**: if pnpm starts writing the list differently, or
+  Prettier reformats the comment, the reader fails closed on the live file
+  rather than reading wrongly. Disposition `gated`.
+
+### G63 — `ignore-fix-published`
+
+**Gate:** the `ignoreGhsas guard` step of the `audit` job in [`.github/workflows/gates.yml`](../.github/workflows/gates.yml) — [`scripts/check-ignored-advisories.ts`](../scripts/check-ignored-advisories.ts), judged by [`scripts/lib/ignore-ghsas.ts`](../scripts/lib/ignore-ghsas.ts) and asserted by [`gates/ignored-advisories.test.ts`](../gates/ignored-advisories.test.ts)
+**Date:** 2026-10-06
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, three ways.
+
+1. **The step against a real advisory whose fix is published.** GHSA-2v37-7h3g-55p8
+   (nanoid) and GHSA-vfj7-8cjw-p6xm (braces) were both planted in the real
+   workspace file and run through the identical invocation CI uses. Nanoid went
+   red twice, once per npm entry: `nanoid@5.1.6 is published and outside the
+   affected range` and `nanoid@3.3.18 is published and outside the affected
+   range`. **Braces came back green**, reading 37 affected versions and none
+   fixed. Exit 1. The file was then restored and `git status` checked.
+2. **The step renamed in the workflow**, against the first version of the wiring
+   test. It went red on the `env:` token assertion alone, and the assertion that
+   the step runs after `pnpm audit` stayed green, because it keyed on the
+   script path and not the step name. The integrity lens also showed that test
+   passing with `continue-on-error: true` or `if: false` on the step, or with
+   the run line commented out. The wiring tests now read live lines only, require
+   a `run:` key after `pnpm audit`, refuse `if:` and `continue-on-error:` on
+   the step, and allow exactly one `${{ }}` in it, the token. A rename now
+   reddens the token test and the step-exists tests together.
+3. **Every rule as a synthetic case** — the braces shape green, 3.0.4
+   published red, a pre-release above the range green, an affected range
+   matching nothing red, two entries with one fixed red, no npm entry red.
+
+- **Weakening** — **exposed.** Deleting the step and the two assertions that
+  name it together is one commit that removes the guard, and G42's section says
+  the same of the `audit` job. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The step is run, and a run that
+  reads a registry mirror serving a stale version list would pass. The
+  canary, an affected range that matches nothing, catches an empty read and not
+  a stale one. Disposition `accepted`.
+- **Routing around** — **exposed, and G62 is the answer to it.** A fix
+  reachable only through a parent package's release, or an advisory amended so
+  its range changes, is invisible to this step; the 30-day expiry is the
+  backstop. Disposition `accepted`.
+- **Vacuous green** — **gated.** An empty entry list passes by design and
+  prints `no ignoreGhsas entries`, so a green log line is not evidence the step
+  looked at anything; the lookups fail closed on an empty version list, on a
+  non-200 from GitHub and on an advisory with no npm entry. Plant 1 is the
+  control, through the identical invocation. Disposition `gated`.
+- **Decay** — **loud.** GitHub's advisory record, npm's `view` output shape or
+  the runner's npm can change; each is a parse failure and so a red, never an
+  empty list. ⚠️ **It reads two services CI already depends on**: an outage
+  reddens the `audit` job, as it already would for `pnpm audit`. Disposition
+  `accepted`.

@@ -164,6 +164,20 @@ jobs:
       - name: pnpm audit
         run: pnpm audit --audit-level=high
 
+      # An `auditConfig.ignoreGhsas` entry is a decision nobody revisits, so a
+      # published fix ends it: this reads each ignored advisory from GitHub and
+      # its package's versions from npm, and goes red when a stable version
+      # outside the affected range is out there (G63). The 30-day expiry (G62)
+      # is a test in `pnpm test`, not here. ADR-0095.
+      #
+      # The token arrives through `env:`, never a `${{ }}` in `run:`, which
+      # zizmor audits. It lifts the advisory API from 60 requests an hour per
+      # runner IP; `permissions: contents: read` is all it carries.
+      - name: ignoreGhsas guard
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm exec tsx scripts/check-ignored-advisories.ts
+
       # The workflows themselves, which `pnpm audit` cannot see: it reads the
       # dependency tree and a workflow has none.
       #

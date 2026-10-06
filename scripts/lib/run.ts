@@ -23,6 +23,12 @@
  * Every argument at every `shellCommand` call site is a literal, a path this
  * repo computed, or a path out of the owner's own `.env` — never an argv, a
  * vault note or a branch name. Anything from outside belongs in `runExe`.
+ * **One exception, validated:** `scripts/check-ignored-advisories.ts` puts a
+ * package name and version range read from a GitHub advisory on a Windows
+ * `npm view` line, because `npm` is a `.cmd` shim that needs the shell.
+ * `npmEntriesOf` checks both against strict patterns that admit no quote, `%`,
+ * `!` or backslash, and `npmView` checks again at the call. A new caller does
+ * not inherit that: it needs its own check.
  *
  * **Safe from injection is not the same as correct, and quoting is the
  * caller's.** `shellCommand` joins with spaces and quotes nothing, so any

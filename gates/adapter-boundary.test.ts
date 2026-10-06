@@ -92,6 +92,12 @@ const ALLOWED = [
   // anywhere: the pull request's own strings arrive through the environment, as
   // data. It could not reach a vault if it tried. G55 (`pr-conventions`).
   'scripts/check-pr.ts',
+  // Reads exactly one file — `pnpm-workspace.yaml`, at a path derived from
+  // `REPO_ROOT` — to list the `ignoreGhsas` ids it must look up. It opens nothing
+  // else and takes no path from anywhere; the advisory and npm answers arrive
+  // over the network. It could not reach a vault if it tried. G63
+  // (`ignore-fix-published`).
+  'scripts/check-ignored-advisories.ts',
   // Deletes and reads one gitignored coverage report — `.coverage/`, written by
   // the Vitest run it just spawned. It never opens a note, and it could not
   // find a vault: the only paths it handles are the ones `git diff --cached`
