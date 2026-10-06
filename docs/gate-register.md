@@ -6411,7 +6411,7 @@ reverted as separate steps, with the file's hash or `git diff` checked after.
    2026-09-05, 31 days ago (limit 30)`. It is the only way to see the live
    assertion fail, because the tree holds no entry and it passes over nothing.
 2. **Every rule as a synthetic case** — day 0 and day 30 pass, day 31, a
-   future date, no comment, no date, a time glued on, `2026-02-30`, a flow-style
+   future date, no comment, no date, a time glued on, `2026-09-31` (impossible and inside the window, so only the calendar check can refuse it), a blank and a comment line inside the list, a flow-style
    list, a quoted id and a second key all fail — kept in the gate file, so they
    run every time rather than once.
 
@@ -6425,7 +6425,8 @@ reverted as separate steps, with the file's hash or `git diff` checked after.
   visible in history and does not make it honest. Disposition `accepted`.
 - **Routing around** — **gated for the shapes it knows.** An entry written
   where the reader does not look — a flow-style list, a quoted id, a second
-  `auditConfig` key — is a red, not a skip. ⚠️ **Not covered**: the same ids
+  `auditConfig` key, a quoted `'ignoreGhsas':` or `auditConfig` key, a space before the
+  colon, a flow map on the `auditConfig` line — is a red, not a skip. ⚠️ **Not covered**: the same ids
   ignored another way, such as `pnpm audit --ignore` in a script or an
   `ignoreCves` entry, which is a different list and is not read. Disposition
   `accepted`.
@@ -6456,10 +6457,15 @@ reverted as separate steps, with the file's hash or `git diff` checked after.
    affected range` and `nanoid@3.3.18 is published and outside the affected
    range`. **Braces came back green**, reading 37 affected versions and none
    fixed. Exit 1. The file was then restored and `git status` checked.
-2. **The step renamed in the workflow.** The gate file went red on the `env:`
-   token assertion. ⚠️ **The "runs after `pnpm audit`" assertion stayed green**,
-   because it keys on the script path and not the step name; deleting the line
-   that runs the script reddens it, and renaming the step reddens the other.
+2. **The step renamed in the workflow**, against the first version of the wiring
+   test. It went red on the `env:` token assertion alone, and the assertion that
+   the step runs after `pnpm audit` stayed green, because it keyed on the
+   script path and not the step name. The integrity lens also showed that test
+   passing with `continue-on-error: true` or `if: false` on the step, or with
+   the run line commented out. The wiring tests now read live lines only, require
+   a `run:` key after `pnpm audit`, refuse `if:` and `continue-on-error:` on
+   the step, and allow exactly one `${{ }}` in it, the token. A rename now
+   reddens the token test and the step-exists tests together.
 3. **Every rule as a synthetic case** — the braces shape green, 3.0.4
    published red, a pre-release above the range green, an affected range
    matching nothing red, two entries with one fixed red, no npm entry red.

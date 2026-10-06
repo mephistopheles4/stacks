@@ -64,5 +64,10 @@ package's release.
   the gate test drives, and the step's I/O is verified by planting.
 - A fix inside pnpm's 7-day quarantine still turns the step red. That is
   correct: an explicit `overrides` entry is honoured inside the window.
+- The package name and range read from the advisory are checked against strict
+  patterns before they reach an `npm view` command line, which on Windows runs
+  through a shell: that data comes from outside, which ADR-0030 says belongs
+  nowhere near one. A value outside the patterns is a lookup failure, so it fails
+  closed. A quoted or space-before-colon `auditConfig`/`ignoreGhsas` key is a red too, not an empty list.
 - `pnpm audit --ignore-unfixable` is never the answer here. It ignored nothing
   on 2026-10-06 and wrote `auditConfig: {}` into the workspace file.
