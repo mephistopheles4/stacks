@@ -205,6 +205,12 @@ describe('G62 — an entry expires after 30 days, and no date means expired', ()
       'an item that is not an advisory id': `auditConfig:\n  ignoreGhsas:\n    - braces  # ${daysAgo(0)}, why\n`,
       'a second auditConfig key': `auditConfig:\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\nauditConfig:\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0), NANOID)}\n`,
       'a second ignoreGhsas key': `auditConfig:\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0), NANOID)}\n`,
+      'a tagged key': `auditConfig:\n  !!str ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n`,
+      'an anchored key': `&k auditConfig:\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n`,
+      'an explicit key': `? auditConfig\n:\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n`,
+      'an escaped key': `"audit\\x43onfig":\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n`,
+      'a merge key': `auditConfig:\n  <<: *base\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n`,
+      'an advisory id outside the block': `${workspace(entryLine(daysAgo(0)))}other:\n  - GHSA-aaaa-bbbb-cccc\n`,
       'a space before the colon': `auditConfig:\n  ignoreGhsas :\n    - ${entryLine(daysAgo(0))}\n`,
       'a flow-style map on the auditConfig line': `auditConfig: { ignoreGhsas: [${BRACES}] }\n`,
       'a quoted auditConfig key': `"auditConfig":\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n`,
@@ -389,7 +395,7 @@ describe('G63 — the step is wired into the `audit` job', () => {
     return block.split('\n').filter((line) => !line.trim().startsWith('#'));
   };
 
-  it('runs the script after `pnpm audit`, as a live `run:` key', () => {
+  it('runs the script after `pnpm audit`, as a live `run:` key inside its own step', () => {
     const live = auditJob
       .split('\n')
       .filter((line) => !line.trim().startsWith('#'))
@@ -398,14 +404,24 @@ describe('G63 — the step is wired into the `audit` job', () => {
     const guard = live.search(/^\s+run: pnpm exec tsx scripts\/check-ignored-advisories\.ts\s*$/m);
     expect(audit, '`pnpm audit` is not in the audit job').toBeGreaterThan(-1);
     expect(guard, 'the ignoreGhsas guard step is not in the audit job').toBeGreaterThan(audit);
+    expect(stepLines().join('\n')).toMatch(
+      /^\s+run: pnpm exec tsx scripts\/check-ignored-advisories\.ts\s*$/m,
+    );
   });
 
-  it('cannot be switched off: no `if:` and no `continue-on-error:` on the step', () => {
+  it('cannot be switched off: the step has only name, env and run, and the job has no `if` or `continue-on-error`', () => {
     const lines = stepLines();
     expect(lines.length, 'the ignoreGhsas guard step is not in the audit job').toBeGreaterThan(0);
-    expect(lines.filter((line) => /^\s*(?:- )?(?:if|continue-on-error):/.test(line))).toEqual([]);
+    const keys = lines
+      .filter((line) => /^\s*(?:- )?[^\s:#][^:]*:/.test(line))
+      .map((line) => line.replace(/^\s*(?:- )?/, '').split(':')[0]);
+    expect(keys).toEqual(['name', 'env', 'GITHUB_TOKEN', 'run']);
+    const header = auditJob.split(/^ {4}steps:/m)[0] ?? '';
+    expect(
+      header.split('\n').filter((line) => /^\s{4}(?:'?if'?|'?continue-on-error'?)\s*:/.test(line)),
+    ).toEqual([]);
+    expect(header).toContain('name: audit');
   });
-
   it('takes the workflow token through `env:`, with no other `${{ }}` in the step', () => {
     const lines = stepLines();
     expect(lines.join('\n')).toMatch(/env:\s*\n\s+GITHUB_TOKEN: \$\{\{ github\.token \}\}/);

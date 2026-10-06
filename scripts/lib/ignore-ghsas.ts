@@ -53,7 +53,7 @@ const isBlankOrComment = (line: string): boolean => /^\s*(#.*)?$/.test(line);
  * `auditConfig:` is read, so the template at the foot of the file — every line
  * of it a comment — is never an entry. An absent or empty block passes.
  */
-export function readIgnoreEntries(text: string): ReadResult {
+function readBlock(text: string): ReadResult {
   const lines = text.split(/\r?\n/);
   const entries: IgnoreEntry[] = [];
   const problems: string[] = [];
@@ -159,6 +159,41 @@ export function readIgnoreEntries(text: string): ReadResult {
   return { entries, problems };
 }
 
+const PLAIN_KEY_LINE = /^(?:auditConfig:\s*(?:\{\})?|\s+ignoreGhsas:\s*(?:\[\])?)\s*(?:#.*)?$/;
+
+/**
+ * {@link readBlock} plus a backstop over the whole file.
+ *
+ * **YAML has more ways to spell a key than a reader can list**: a tag, an
+ * anchor, an explicit `?` key, an escape inside a double-quoted key. Each is the
+ * same key to pnpm and an empty list to a reader that matches one spelling, so
+ * patching them one at a time is a denylist that always leaves the next open.
+ * Instead: any line that is not a comment and names either key or an advisory id
+ * must be a line the reader actually consumed (a plain key line or an entry),
+ * and a backslash outside a comment — the only way to spell a key without
+ * writing it — is refused. A file this reader cannot account for is a red.
+ */
+export function readIgnoreEntries(text: string): ReadResult {
+  const read = readBlock(text);
+  if (read.problems.length > 0) return read;
+  const consumed = new Set(read.entries.map((entry) => entry.line));
+  const stray = text.split(/\r?\n/).flatMap((line, index) => {
+    if (line.trim().startsWith('#')) return [];
+    const content = line.replace(/\s+#.*$/, '');
+    const suspect =
+      /auditConfig|ignoreGhsas|GHSA-|^\s*<<\s*:/i.test(content) || content.includes('\\');
+    return suspect && !consumed.has(index + 1) && !PLAIN_KEY_LINE.test(line) ? [index + 1] : [];
+  });
+  if (stray.length === 0) return read;
+  return {
+    entries: read.entries,
+    problems: [
+      `line ${stray.join(', ')}: names \`auditConfig\`, \`ignoreGhsas\` or an advisory id (or holds a ` +
+        'backslash) in a form this reader does not consume; write the plain block ' +
+        '`auditConfig:` / `ignoreGhsas:` / `- GHSA-… # date, why`',
+    ],
+  };
+}
 /** Midnight UTC of a `YYYY-MM-DD` that is a real calendar date, else `null`. */
 function utcDay(date: string): number | null {
   const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
@@ -245,13 +280,15 @@ export function npmEntriesOf(advisory: unknown): NpmEntry[] {
     if (typeof name !== 'string' || name === '')
       throw new Error('an npm entry has no package name');
     if (typeof range !== 'string' || range.trim() === '') {
-      throw new Error(`the npm entry for ${name} has no vulnerable_version_range`);
+      throw new Error(`the npm entry for ${JSON.stringify(name)} has no vulnerable_version_range`);
     }
     if (!NPM_NAME.test(name))
-      throw new Error(`the npm entry's package name is not a valid npm name: ${name}`);
+      throw new Error(
+        `the npm entry's package name is not a valid npm name: ${JSON.stringify(name)}`,
+      );
     if (!NPM_RANGE.test(npmRange(range))) {
       throw new Error(
-        `the npm entry for ${name} has a vulnerable_version_range with unexpected characters`,
+        `the npm entry for ${JSON.stringify(name)} has a vulnerable_version_range with unexpected characters`,
       );
     }
     found.push({ name, range });

@@ -46,6 +46,11 @@ const WORKSPACE = join(REPO_ROOT, 'pnpm-workspace.yaml');
  * patterns: nothing in it can reach the shell as anything but a comparator.
  */
 function npmView(spec: string, field: 'version' | 'versions'): string[] {
+  // The sink re-checks what its callers were meant to guarantee: nothing outside
+  // these characters can be a comparator, and none of them is special inside quotes.
+  if (!/^[A-Za-z0-9@/._~<>=|^*+ -]+$/.test(spec) || spec.startsWith('-')) {
+    throw new Error(`refusing to run npm view on an unexpected spec: ${JSON.stringify(spec)}`);
+  }
   const options: { encoding: 'utf8'; stdio: ['ignore', 'pipe', 'pipe'] } = {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
