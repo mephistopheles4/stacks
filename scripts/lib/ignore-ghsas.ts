@@ -106,7 +106,7 @@ function readBlock(text: string): ReadResult {
   const block = lines.slice(start + 1, end);
 
   const keys = block.flatMap((line, index) => (/^\s+ignoreGhsas:/.test(line) ? [index] : []));
-  if (keys.length === 0) return { entries, problems };
+  if (keys.length === 0) return { entries, problems: strangers(block, start, new Set()) };
   if (keys.length > 1) {
     return { entries, problems: ['`auditConfig` has more than one `ignoreGhsas:` key'] };
   }
@@ -115,11 +115,12 @@ function readBlock(text: string): ReadResult {
   const keyLine = block[keyIndex] ?? '';
   const keyIndent = indentOf(keyLine);
   const keyLineNumber = start + 1 + keyIndex + 1;
+  const taken = new Set([keyIndex]);
   const after = keyLine
     .replace(/^\s+ignoreGhsas:/, '')
     .replace(/\s+#.*$/, '')
     .trim();
-  if (after === '[]') return { entries, problems };
+  if (after === '[]') return { entries, problems: strangers(block, start, new Set([keyIndex])) };
   if (after !== '') {
     return {
       entries,
@@ -135,6 +136,7 @@ function readBlock(text: string): ReadResult {
     if (isBlankOrComment(line)) continue;
     const item = /^\s*- (.*)$/.exec(line);
     if (indentOf(line) < keyIndent || (indentOf(line) === keyIndent && item === null)) break;
+    taken.add(offset);
     const lineNumber = start + 1 + offset + 1;
     if (item === null) {
       problems.push(`line ${lineNumber}: not a list item under \`ignoreGhsas\``);
@@ -156,7 +158,25 @@ function readBlock(text: string): ReadResult {
     entries.push({ id: id[1] ?? '', date: dated[1] ?? '', line: lineNumber });
   }
 
-  return { entries, problems };
+  return { entries, problems: [...problems, ...strangers(block, start, taken)] };
+}
+
+/**
+ * Every line of the uditConfig block that is not blank, not a comment and not
+ * the ignoreGhsas key or one of its items — which the reader therefore did not
+ * read. ignoreCves, a nested map, a flow node on its own line: pnpm may honour
+ * any of them, so each is a problem and not a skipped line.
+ */
+function strangers(block: readonly string[], start: number, taken: ReadonlySet<number>): string[] {
+  const lines = block.flatMap((line, offset) =>
+    isBlankOrComment(line) || taken.has(offset) ? [] : [start + 1 + offset + 1],
+  );
+  return lines.length === 0
+    ? []
+    : [
+        `line ${lines.join(', ')}: inside \`auditConfig\` but not \`ignoreGhsas\` or one of its ` +
+          'entries, so this reader did not read it; only `ignoreGhsas` is allowed there',
+      ];
 }
 
 const PLAIN_KEY_LINE = /^(?:auditConfig:\s*(?:\{\})?|\s+ignoreGhsas:\s*(?:\[\])?)\s*(?:#.*)?$/;
@@ -174,14 +194,33 @@ const PLAIN_KEY_LINE = /^(?:auditConfig:\s*(?:\{\})?|\s+ignoreGhsas:\s*(?:\[\])?
  * writing it — is refused. A file this reader cannot account for is a red.
  */
 export function readIgnoreEntries(text: string): ReadResult {
+  if (/\r(?!\n)/.test(text)) {
+    return {
+      entries: [],
+      problems: [
+        'pnpm-workspace.yaml holds a carriage return that is not part of a CRLF line ending',
+      ],
+    };
+  }
+  const audit = text
+    .split(/\r?\n/)
+    .flatMap((line, index) => (/^["']?audit["']?\s*:/.test(line) ? [index + 1] : []));
+  if (audit.length > 0) {
+    return {
+      entries: [],
+      problems: [
+        `line ${audit.join(', ')}: a top-level \`audit:\` key; pnpm 11.16+ prefers it over ` +
+          '`auditConfig`, and this reader reads neither its `ignore` list nor anything under it, ' +
+          'so it is refused',
+      ],
+    };
+  }
   const read = readBlock(text);
   if (read.problems.length > 0) return read;
   const consumed = new Set(read.entries.map((entry) => entry.line));
   const stray = text.split(/\r?\n/).flatMap((line, index) => {
     if (line.trim().startsWith('#')) return [];
-    const content = line.replace(/\s+#.*$/, '');
-    const suspect =
-      /auditConfig|ignoreGhsas|GHSA-|^\s*<<\s*:/i.test(content) || content.includes('\\');
+    const suspect = /auditConfig|ignoreGhsas|GHSA-|^\s*<<\s*:/i.test(line) || line.includes('\\');
     return suspect && !consumed.has(index + 1) && !PLAIN_KEY_LINE.test(line) ? [index + 1] : [];
   });
   if (stray.length === 0) return read;

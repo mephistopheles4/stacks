@@ -51,6 +51,29 @@ backstop for what G63 cannot see: an advisory amended so its range changes, a
 registry the step cannot read, or a fix reachable only through a parent
 package's release.
 
+## Scope: drift, not a deliberate edit
+
+These guards stop an exception from **outliving its reason by neglect**. They do
+not stop someone who edits `pnpm-workspace.yaml`, `gates.yml` or the reader's own
+rules on purpose: that is one reviewed diff, and the same person could delete the
+guard. Three security reviews each found another way to spell an ignore, or to
+disable the CI step, that the guards did not see. The reader therefore fails
+closed on what it does not consume, rather than listing spellings:
+
+- any non-comment line naming `auditConfig`, `ignoreGhsas` or an advisory id that
+  it did not read, tested on the raw line, because a comment marker inside quotes
+  is not a comment;
+- any other line inside the `auditConfig` block, such as `ignoreCves`;
+- a top-level `audit:` key, which pnpm 11.16+ prefers over `auditConfig`, so an
+  ignore there would have been read by nothing;
+- a carriage return that is not half of a CRLF, which can hide a block.
+
+The wiring test of the CI step (G63) is likewise a check against accident. It can
+be fooled by a visible edit to the workflow, such as a continuation line, a key
+after `steps:` or a `defaults.run.shell` override. Parsing the job with a YAML
+library would close most of that, and the owner chose not to: it needs a root
+`yaml` import and the residue is a reviewed diff either way. **Accepted.**
+
 ## Consequences
 
 - G62 is a test whose answer changes with the calendar, on purpose. A contributor

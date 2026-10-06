@@ -6426,10 +6426,15 @@ reverted as separate steps, with the file's hash or `git diff` checked after.
 - **Routing around** — **gated for the shapes it knows.** An entry written
   where the reader does not look — a flow-style list, a quoted id, a second
   `auditConfig` key, a quoted `'ignoreGhsas':` or `auditConfig` key, a space before the
-  colon, a flow map on the `auditConfig` line — is a red, not a skip. ⚠️ **Not covered**: the same ids
-  ignored another way, such as `pnpm audit --ignore` in a script or an
-  `ignoreCves` entry, which is a different list and is not read. Disposition
-  `accepted`.
+  colon, a flow map on the `auditConfig` line, any other line inside the
+  `auditConfig` block, a top-level `audit:` key (which pnpm 11.16+ prefers), a lone
+  carriage return, and any unconsumed line naming either key or an advisory id,
+  tested on the raw line — is a red, not a skip. ⚠️ **Not covered**: the same ids
+  ignored another way, such as `pnpm audit --ignore` in a script. **The
+  guards are against drift, not against a deliberate edit to a reviewed file**
+  (ADR-0095): a determined edit of `gates.yml` or the reader's own rules is one
+  reviewed diff, and a security review found further spellings each time it was
+  run, which is why the scope is stated and not chased. Disposition `accepted`.
 - **Vacuous green** — **gated, with a residual.** An absent or empty block
   passes by design, so the live assertion is vacuous while no entry exists; the
   synthetic cases and plant 1 carry the proof. A reader that stops matching the

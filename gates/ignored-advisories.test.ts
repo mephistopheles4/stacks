@@ -164,7 +164,6 @@ describe('G62 — an entry expires after 30 days, and no date means expired', ()
     expect(problemsOf('auditConfig:\n  ignoreGhsas:\n')).toEqual([]);
     expect(problemsOf('auditConfig: {}\n')).toEqual([]);
     expect(problemsOf('auditConfig:\n  ignoreGhsas: []\n')).toEqual([]);
-    expect(problemsOf('auditConfig:\n  ignoreCves:\n    - CVE-2026-0001\n')).toEqual([]);
   });
 
   it('reads CRLF line endings, as this checkout may carry on Windows', () => {
@@ -176,6 +175,14 @@ describe('G62 — an entry expires after 30 days, and no date means expired', ()
   it('accepts a list indented level with its key, which YAML allows', () => {
     const level = `auditConfig:\n  ignoreGhsas:\n  - ${entryLine(daysAgo(31))}\n`;
     expect(problemsOf(level)).toHaveLength(1);
+  });
+
+  it('refuses a carriage return that is not half of CRLF', () => {
+    const hidden = `# note\raudit:\r  ignore:\r    - ${BRACES}\n`;
+    const problems = problemsOf(hidden);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('carriage return');
+    expect(problemsOf(workspace(entryLine(daysAgo(1))).replaceAll('\n', '\r\n'))).toEqual([]);
   });
 
   it('keeps reading past a blank line and a comment line inside the list', () => {
@@ -211,6 +218,16 @@ describe('G62 — an entry expires after 30 days, and no date means expired', ()
       'an escaped key': `"audit\\x43onfig":\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n`,
       'a merge key': `auditConfig:\n  <<: *base\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n`,
       'an advisory id outside the block': `${workspace(entryLine(daysAgo(0)))}other:\n  - GHSA-aaaa-bbbb-cccc\n`,
+      'a sibling key inside auditConfig': `auditConfig:\n  ignoreCves:\n    - CVE-2026-0001\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n`,
+      'a sibling key and no ignoreGhsas': 'auditConfig:\n  ignoreCves:\n    - CVE-2026-0001\n',
+      'a flow node on its own line in the block': `auditConfig:\n  { ignoreCves: [" #"], ignoreGhsas: [${BRACES}] }\n`,
+      'a top-level audit key, plain list': `audit:\n  ignore:\n    - ${BRACES}\n`,
+      'a top-level audit key, one line, quoted hash': `audit: { ignore: ["x #", ${BRACES}] }\n`,
+      'a top-level audit key, block flow with quoted hash': `audit:\n  ignore: ["x #", ${BRACES}]\n`,
+      'a quoted top-level audit key': `"audit":\n  ignore: []\n`,
+      'an ignore list behind a comment marker inside quotes': `other: "x #"\nauditConfig:\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\nmore: "a #", ${BRACES}\n`,
+      'an advisory id in a trailing comment of another line': `other: 1 # see GHSA-aaaa-bbbb-cccc\n`,
+      'a no-break space before the hash': `x: a${String.fromCharCode(0xa0)}# GHSA-aaaa-bbbb-cccc\n`,
       'a space before the colon': `auditConfig:\n  ignoreGhsas :\n    - ${entryLine(daysAgo(0))}\n`,
       'a flow-style map on the auditConfig line': `auditConfig: { ignoreGhsas: [${BRACES}] }\n`,
       'a quoted auditConfig key': `"auditConfig":\n  ignoreGhsas:\n    - ${entryLine(daysAgo(0))}\n`,
