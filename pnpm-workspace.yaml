@@ -204,12 +204,12 @@ verifyDepsBeforeRun: warn
 # dependency of the site's toolchain and ships to no visitor, and no first-party
 # code calls it — that bounds the blast radius; it does not answer the gate.
 #
-# ⚠️ **There is no 4.2.1.** The advisory's patched range reads `>=4.2.1`, and the
-# only fix published is 4.3.0, a minor released 2026-10-04. That is **inside the
-# seven-day `minimumReleaseAge` window**, so resolution would decline it. It is
+# ⚠️ **There is no 4.2.1.** `pnpm audit` reports the patched range as `>=4.2.1`,
+# and the only fix published is 4.3.0, a minor released 2026-10-04. That is
+# **inside the seven-day window this repository applies by hand** — nothing here
+# sets `minimumReleaseAge` — so waiting it out would leave `main` red. It is
 # taken anyway, on the nanoid block's precedent: a security fix is named
-# explicitly rather than waited out, and an override is honoured where
-# auto-resolution is not. 4.3.0 sits within astro's own declared `^4.2.0`, so
+# explicitly rather than waited out. 4.3.0 sits within astro's own declared `^4.2.0`, so
 # this does not force a combination the package does not declare. Remove it when
 # `astro` raises its floor to `^4.3.0`.
 
@@ -227,10 +227,14 @@ verifyDepsBeforeRun: warn
 # condition was the pin moving *past* 1.8.0, and it never did.
 #
 # ⚠️ **Crossing the exact pin is a combination the package does not declare, and
-# it was measured.** `pnpm lint:md` over the tracked tree reports the same
-# findings before and after (0 issues in 0 files, 186 files), and a planted
-# violation is still reported under the override, so the check can fail. Remove
-# this when `markdownlint-cli2` pins `smol-toml` at 1.9.0 or later.
+# what was shown is narrower than "it works".** `pnpm lint:md` over the tracked
+# tree reports the same findings before and after (0 issues in 0 files, 186
+# files), and a planted violation is still reported under the override — so
+# 1.9.0 loads under `markdownlint-cli2` and the linter is unaffected. **Parse
+# behaviour was not exercised**: `markdownlint-cli2` calls `smol-toml` only for a
+# `.toml` config file or an inline configure-file comment, and this repository
+# has neither. If one is ever added, check it parses. Remove this when
+# `markdownlint-cli2` pins `smol-toml` at 1.9.0 or later.
 overrides:
   nanoid: '^3.3.18'
   qs: '^6.16.0'
@@ -264,13 +268,14 @@ overrides:
 # **It cannot reach this project.** Every glob that arrives at `braces` here is
 # `markdownlint-cli2`'s own, over tracked docs, written in this repository — no
 # untrusted input reaches the pattern. That bounds the blast radius; it does not
-# answer the gate, and **nothing published fixes it**: the advisory names
-# `>=3.0.4`, but 3.0.3 is `latest` and the newest version on npm. No override can
-# name a version that does not exist.
+# answer the gate, and **nothing published fixes it**: 3.0.3 is `latest` and the
+# newest version on npm. GitHub's record has the range `<= 3.0.3` and no patched
+# version; the `>=3.0.4` that `pnpm audit` prints is a range pnpm derives, not
+# one the advisory states. No override can name a version that does not exist.
 #
 # ⚠️ **Do not run `pnpm audit --ignore-unfixable`.** On 2026-10-06 it wrote
 # `auditConfig: {}` into this file and exited 0, and it did not treat braces as
-# unfixable — pnpm reads the advisory's declared `>=3.0.4` as a fix.
+# unfixable — pnpm took its derived `>=3.0.4` as a fix.
 #
 # **Remove this when braces 3.0.4 or later is published and reachable.** The
 # guards that fail on that, and expire an entry after 30 days, are
@@ -278,4 +283,4 @@ overrides:
 # nothing catches this entry outliving its reason.
 auditConfig:
   ignoreGhsas:
-    - GHSA-vfj7-8cjw-p6xm
+    - GHSA-vfj7-8cjw-p6xm # 2026-10-06, markdownlint-cli2's own globs only, fix pending
