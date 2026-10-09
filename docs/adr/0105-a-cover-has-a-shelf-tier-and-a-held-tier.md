@@ -20,7 +20,16 @@ ADR-0015's 512 px cap is the **shelf tier**, not a permanent policy. A second,
 | How the page knows | `cover` | `heldCover`, absent when there is none |
 
 - **The held copy comes from the vault file only.** A build never fetches a
-  cover (invariant 1). A cover already inside 1200 px is copied byte for byte.
+  cover (invariant 1).
+- **Every held copy is re-encoded through sharp**, even one already inside
+  1200 px. #377 had that case copied byte for byte; the spec's security review
+  replaced it, because a cover the owner photographed can carry camera metadata,
+  location included, and sharp drops it by default. `gate:public` refuses a held
+  file that carries EXIF or XMP.
+- **The inspector holds `heldCover` as it holds `cover`**: same-origin, one
+  segment under `held-covers/`, and no file there that no book names. A
+  revalidating `_headers` block keeps a cover taken down from lingering in
+  browsers.
 - **No held copy is made for a cover of 512 px or less**: `stageCover`'s rule,
   never enlarge a small cover.
 - **The shelf texture shows until the held copy has decoded**, then swaps in.

@@ -88,14 +88,40 @@ carries a recommendation the owner confirms at sign-off (§8).
   `library.json`), no title (that is `library.json`'s).
 - **`<id>` is the book's `LibraryBook.id`**, the slug-and-hash `idFor` already
   derives. It is never a vault path.
-- **A withheld section emits no file**, exactly as a book with no section does:
-  an embed, a `%%`, a `<!--`, a duplicate `## Thoughts`, or past the cap. The
-  page therefore never shows part of a section; it shows the book without
-  Thoughts. The warning names the note, so the owner finds out locally.
+- **A withheld section emits no file**, exactly as a book with no section does.
+  The page therefore never shows part of a section; it shows the book without
+  Thoughts. The warning names the note and **never quotes the section**, so the
+  owner finds out locally and the terminal holds no Thoughts text.
 - **A named-keys inspector rule holds it**, in the published folder: a file
-  under `notes/` must parse as exactly this shape and stay under a byte cap
-  (§5, `notes-shape`). #367 deferred this rule until the schema existed; it now
-  does.
+  under `notes/` must parse as exactly this shape, stay under a byte cap, and
+  contain no URL scheme (§5, `notes-shape`). #367 deferred this rule until the
+  schema existed; it now does.
+- **The folder is pruned on every build** to exactly the files this build
+  wrote, under `pruneCovers`'s rule: files only, and only where a previous
+  `library.json` marks the folder as one this tool stages into. Without it, a
+  section the owner deleted or that became withheld would ship again from the
+  last build: `idFor` is stable, so the stale file still names a listed book and
+  passes `orphan-note`. `publish.ts` records the same leak, for covers, above
+  `copyCovers`.
+
+**The boundary and the withhold list, as the security review tightened them.**
+#368's rules and the map's boundary stand; these close the shapes they did not
+name. Each withholds the whole section, with the warning above, and each gets
+an extractor unit test with the canary placed where it would leak.
+
+| Shape | Why it withholds |
+| --- | --- |
+| a code fence opened in the section and not closed before the next heading or the end of the file | an unclosed fence makes every later `## Notes` read as fenced, and the section runs into the private remainder |
+| a setext heading (a line of only `=` or `-` under a non-blank line) | Obsidian renders it as a heading the boundary does not know |
+| a `%%` or `<!--` comment still open where `## Thoughts` starts, or a `-->` inside the section | comment state is computed **from the start of the body**, as fence state is; a heading inside an open comment is no heading |
+| any HTML tag-shaped sequence | raw HTML can hide text in reading view; this **replaces #368's rule 5** (strip tags, keep the text) with withholding, at no cost today: #368 counted no HTML in the real vault |
+| a link reference definition line | Obsidian hides it, and it carries a URL |
+| any URL scheme left after links flatten (`://`, `file:`, `obsidian:`, `mailto:`) | a bare address or an autolink is not a link the flattening sees; `file:` and `obsidian:` carry a user or vault name |
+
+**A heading is recognised as broadly as CommonMark's ATX rule allows**: 0 to 3
+spaces of indent, a space or tab after the hashes, optional closing hashes. The
+scan starts below the frontmatter block. Matching wider can only end the
+section earlier, which publishes less.
 
 ### 3.2 Which books get a notes file
 
@@ -135,8 +161,20 @@ A larger copy of a cover a local shelf already shows exposes nothing new.
 - **The file name is `coverFileName`'s**, the basename rule G10
   (`cover-path`) already holds, so a vault path never decides where a held
   copy lands.
-- **`unknown-key`** learns `heldCover`; **`orphan-cover`'s twin**,
-  `orphan-held`, fails on a file under `held-covers/` that no book names.
+- **Every held copy is re-encoded through sharp, never copied byte for byte.**
+  This **replaces #377's "copied byte for byte when already inside" the cap**.
+  A cover the owner photographed can carry camera metadata, location included,
+  and sharp drops it by default; a byte copy would ship it. The held-tier check
+  in `gate:public` adds: no held file carries EXIF or XMP.
+- **The inspector learns `heldCover` four ways:** `unknown-key` admits it;
+  `foreign-cover` holds it to a one-segment same-origin `held-covers/<name>`
+  shape, as it holds `cover`; `orphan-held`, `orphan-cover`'s twin, fails on a
+  file under `held-covers/` that no book names; and the `headers` rule requires
+  a `/held-covers/*` block in `_headers` that revalidates, so a cover taken down
+  does not linger in browsers for the image cache's four hours. `_headers` is
+  the fifth reader of the covers path, after the four above.
+- **`notes/` gets the same revalidating `_headers` block**, for the same
+  reason: a withdrawn section must not live on in a browser cache.
 
 ### 3.4 What replaces the card
 
@@ -231,6 +269,14 @@ Escape and an empty-space click go through `history.back()` (#371). The `?debug`
 panel's `replaceState(null, …)` changes to pass the current `history.state`
 through, so it rewrites the URL without erasing a held book's entry.
 
+**The pushed entry keeps the current URL**: no path, query or hash names the
+book. The edge injects a Cloudflare analytics beacon on every page, and
+[ADR-0065](../adr/0065-the-csp-is-generated-not-written.md) admits it only as
+carrying nothing derived from the shelf's reading; a book id in the address
+would hand it which books visitors open. The pickup gate asserts `location.href`
+is unchanged after a pickup. The book id lives in `history.state`, and is looked
+up in `library.json`, never used to build a fetch path.
+
 ### 3.10 The painted pieces
 
 **Repaint without the held book**, at the same two moments the shadow map is
@@ -243,7 +289,10 @@ a per-piece list.
 
 - **Deep link** (`/#<book-id>` opening a held book). Deferred: nice, not needed
   to reach the destination (the map). **Trigger:** the owner wants to share one
-  book. The history entry of §3.9 is where it would attach.
+  book. The history entry of §3.9 is where it would attach, and the work starts
+  by re-reading ADR-0065, because a book in the address is the flow §3.9 keeps
+  away from the beacon. An id read from the address is looked up in
+  `library.json`, never used to build a fetch path.
 - **Touch turn** (dragging a held book, `?solo`-style). Deferred: a tap picks
   up and the scripted turn plays. **Trigger:** the phone check in §8 finds the
   scripted turn unsatisfying on a touch screen.
@@ -263,9 +312,9 @@ extractor and the motion, because the motion swaps its texture in.
 | | Step | Route | Blocked by |
 | --- | --- | --- | --- |
 | 1 | **The split gate.** The **ship phrase** (#367's must-ship marker: a literal planted inside a fixture's `## Thoughts` that a check requires to be present, the canary's opposite) as a constant beside `NOTE_BODY_CANARY`; `## Thoughts` sections added to existing fixtures; G2's vacuity guard and absence assertions armed; G2's presence assertions as `test.fails`, public and local; the `orphan-note` and `notes-shape` inspector rules with their G20 plants | security | — |
-| 2 | **The extractor.** The adapter method; the hand strip; `notes/<id>.json` staged by both builds under §3.2's predicate; `stacks add` writing `## Thoughts` above `## Notes`; G2's `test.fails` flipped to `test`; `gate:public`'s presence and vacuity checks; G2's row text rewritten to the split | security | 1 |
-| 3 | **The held tier.** `gate:public` extended first and proven red: no held file for a private or wishlist book, none above 1200 px, `orphan-held`, `heldCover` in `unknown-key`. Then the staging: the held stage, its prune, `heldCover` in `library.json`, the card's cover viewer reading it | security | 2 |
-| 4 | **The motion.** Pickup replacing the card (§3.4); GSAP stepped from the render loop; the CSS3D page; the held texture's off-thread decode and swap; the three-pass dim; the painted repaint; the pickup tuner on Tweakpane with its CSS route; the Phase 2 click gate and G35 moved (§3.5); G61 extended; the open spread (§3.6) | security | 3 |
+| 2 | **The extractor.** The adapter method, with §3.1's boundary and withhold list; the hand strip; `notes/<id>.json` staged by both builds under §3.2's predicate, and the folder's prune; `stacks add` writing `## Thoughts` above `## Notes`; the `## About` writer disarming heading-shaped lines (below); `packages/site/public/notes/` in `.gitignore` and in G5's build-output assertion; the `/notes/*` revalidate block; G2's `test.fails` flipped to `test`; `gate:public`'s presence and vacuity checks; G2's row text rewritten to the split | security | 1 |
+| 3 | **The held tier.** `gate:public` extended first and proven red: no held file for a private or wishlist book, none above 1200 px, none carrying EXIF or XMP, `orphan-held`, `heldCover` in `unknown-key` and `foreign-cover`, the `/held-covers/*` block required by `headers`. Then the staging: the held stage re-encoding through sharp, its prune, `heldCover` in `library.json`, `packages/site/public/held-covers/` in `.gitignore` and G5, the card's cover viewer reading it | security | 2 |
+| 4 | **The motion.** Pickup replacing the card (§3.4); GSAP stepped from the render loop; the CSS3D page; the held texture's off-thread decode and swap; the three-pass dim; the painted repaint; the pickup tuner on Tweakpane with its CSS route, the CSS extracted by reading the package file **as text**, never importing or evaluating it, and failing when the expected CSS is absent; the Phase 2 click gate and G35 moved (§3.5), with `location.href` unchanged after a pickup; G61 extended; the open spread (§3.6); the phone loop as a hook (below) | security | 3 |
 
 **Step 4 is the largest**, and the tuner gates the motion only (the map). If
 step 4 is cut into tickets, cut the tuner's two gates and its CSS route first,
@@ -281,6 +330,24 @@ must ship none of `## About`. `insertBodySection` places `## About` above
 the test proves it, because invariant 2's warning says no allowlist may ever
 pick `## About` up.
 
+**The `## About` text is a provider's, and it must not be able to open a
+section of its own.** `toPlainText` keeps a description's line breaks and
+`insertBodySection` writes it verbatim, so a listing line reading `## Thoughts`
+would land at column 0. On a note with no Thoughts it would ship a stranger's
+words as the owner's; on one with Thoughts the duplicate would withhold the
+owner's real section; followed by an unclosed fence it would carry `## Notes`
+out. So step 2 makes the `## About` write path **disarm every heading-shaped
+line and every fence opener** in provider text (an escaping prefix, so it can
+read as neither), and the test above gains a description carrying a
+`## Thoughts` line and an unclosed fence: it must ship nothing. The `## About`
+sections already in the vault were written before this rule; step 2 searches
+them once for heading-shaped lines before the first real public build (§8).
+
+**The phone loop is a hook, not an address switch.** #371's prototype looped
+pickups with `?autoplay=5`. The build gives `scripts/phone-check.ts` a function
+on `window.__shelf` to call instead, so no link a visitor is sent can start a
+loop on their device.
+
 ---
 
 ## 5. The gate roster
@@ -292,12 +359,13 @@ until then.
 
 | Label | What it asserts | Lands with | Row |
 | --- | --- | --- | --- |
-| **split** | The Thoughts text is present in its book's `notes/<id>.json` and the canary is present nowhere, in public and local builds; a private book, a wishlist book and an embed emit no file | steps 1–2 | G2 (`public-build`), extended |
+| **split** | The Thoughts text is present in its book's `notes/<id>.json` and the canary is present nowhere, in public and local builds; a private book, a wishlist book, an embed and **an unclosed fence with the canary in `## Notes` below it** emit no file; **a build after the section is withheld, and again after it is removed, leaves no file for that book** | steps 1–2 | G2 (`public-build`), extended |
 | **orphan-note** | Every `notes/<id>.json` names a book in the `library.json` beside it | step 1 | an inspector rule, planted red under G20 (`public-build-artifact`) |
-| **notes-shape** | Every file under `notes/` is exactly `{ "paragraphs": string[] }`, non-empty, and under a byte cap | step 1 | an inspector rule, planted red under G20 |
+| **notes-shape** | Every file under `notes/` is exactly `{ "paragraphs": string[] }`, non-empty, under a byte cap, and free of any URL scheme | step 1 | an inspector rule, planted red under G20 |
 | **presence in `dist/`** | `gate:public` finds the ship phrase in `dist/notes/` and refuses to run without its fixture | step 2 | `gate:public`, extended |
-| **held tier** | No held file for a private or wishlist book; none above 1200 px on its long edge; no file in `held-covers/` that no book names | step 3, **before** the staging | `gate:public` and inspector rules under G20 |
-| **pickup** | Clicking a book reaches the held state with its page; the moved G35 checks; the open spread of §3.6 | step 4 | G35 (`enhanced-card`), reworded |
+| **build output out of git** | `packages/site/public/notes/` and `held-covers/` are ignored | steps 2–3 | G5 (`vault-is-truth`), extended |
+| **held tier** | No held file for a private or wishlist book; none above 1200 px on its long edge; none carrying EXIF or XMP; no file in `held-covers/` that no book names; `heldCover` same-origin and one segment; a revalidating `/held-covers/*` block | step 3, **before** the staging | `gate:public` and inspector rules under G20 |
+| **pickup** | Clicking a book reaches the held state with its page, and `location.href` is unchanged; the moved G35 checks; the open spread of §3.6 | step 4 | G35 (`enhanced-card`), reworded |
 | **held reader** | With a book held, one program reads the shadow map in at most `BUDGET` draws | step 4 | G61 (`one-shadow-reader`), extended to a second page |
 | **tuner split** | A page without `?debug` loads zero tuner bytes, JS or CSS | step 4 | a new row |
 | **styled pane** | Under the built site's CSP, a `?debug` page's pane is styled, with zero violations and the empty-string hash in `style-src` | step 4 | a new row |
@@ -307,7 +375,8 @@ a row, and the inspector rules ride G20's existing plants. The two tuner rows
 are new because nothing watches a lazy split or a CSS route today: #376
 measured both failures as silent.
 
-**Existing gates that move or must be honoured:** G1 (`adapter-boundary`), since
+**Existing gates that move or must be honoured:** G5 (`vault-is-truth`), whose
+build-output assertion learns the two folders; G1 (`adapter-boundary`), since
 the new method lives under `adapters/`; G8 (`frontmatter-contract`) is
 untouched, because the section is a body heading, not a key; G10 (`cover-path`)
 holds the held file's name; G15 (`cover-budget`) must not see the held folder;
@@ -332,7 +401,15 @@ G8 already shows why: a contract edited ahead of the parser is a red build.
   **the only method that reads below the frontmatter**, as `insertBodySection` is
   the only one that writes there, and it returns paragraphs, never the body.
   The block's `insertBodySection` line says `Promise<void>`; the code says
-  `Promise<boolean>`, and the edit fixes that too. Step 2.
+  `Promise<boolean>`, and the edit fixes that too. Its paragraph gains that the
+  text it writes has every heading-shaped line and fence opener disarmed
+  (§4). Step 2.
+- **`.gitignore`.** `packages/site/public/notes/` (step 2) and
+  `packages/site/public/held-covers/` (step 3), beside the `covers/` and
+  `library.json` lines already there. A broad add after a real build would
+  otherwise put the owner's Thoughts into public history, beyond retraction.
+- **`_headers`.** Revalidating `/notes/*` (step 2) and `/held-covers/*` (step 3)
+  blocks, with the `headers` inspector rule requiring both.
 - **`AGENTS.md`, Phase 2 gate.** "Clicking a book … opens the card" becomes
   "picks it up" (§3.5). Step 4.
 - **`AGENTS.md`, tech decisions.** "Book detail card = plain DOM overlay
@@ -376,9 +453,10 @@ unit-tested.
 
 | What | When | How |
 | --- | --- | --- |
-| Confirm §3's decisions: the schema, which books get notes, the held path, what replaces the card, the G35 fates, the open-spread criterion, the type slices, history, the repaint, and the four deferrals | **at sign-off** | the owner reads §3 and says proceed, fix or kill on the whole spec |
+| Confirm §3's decisions: the schema, which books get notes, the held path, what replaces the card, the G35 fates, the open-spread criterion, the type slices, history, the repaint, and the four deferrals. **Two of them replace a ticket's rule**, from the security review: any HTML tag withholds the section (#368's rule 5 stripped tags and kept the text), and every held copy is re-encoded (#377 copied one already inside the cap byte for byte) | **at sign-off** | the owner reads §3 and says proceed, fix or kill on the whole spec |
 | The open spread of §3.6 looks right | **during the build**, step 4 | the session posts desktop screenshots at rest on the step's ticket (never committed, G13); the owner judges. The numbers in §3.6 are necessary, not sufficient |
-| **The Pixel check**, deferred from #371 and #375 | **during the build**, step 4, while polishing | the owner connects the Pixel 10 Pro XL; the session drives it through `scripts/phone-check.ts`, with `/?autoplay=5` picking up and putting back books on a loop (no `&` in the address) |
+| **The Pixel check**, deferred from #371 and #375 | **during the build**, step 4, while polishing | the owner connects the Pixel 10 Pro XL; the session drives it through `scripts/phone-check.ts`, which calls the shelf's loop hook to pick up and put back books (§4); there is no address switch for it |
+| **The existing `## About` sections**, searched once for heading-shaped lines and fence openers | **during the build**, step 2, before the first real public build | the session runs the search against the owner's vault and reports counts only; the owner decides what to do with any hit, because those notes are the owner's to edit |
 | **The swap frame on a phone**, from #377 | **during the build**, step 4, in the same phone session | the held texture's `initTexture` upload is timed on the device; nobody has measured it |
 | The tuner's layout | **during the build**, step 4 | shaped by the owner in use (#375); the spec locks only the floor |
 | Accept each step | **at the end of each step** | move 4 of the owner's playbook; the security pair on steps 1–3 |
@@ -391,6 +469,12 @@ unit-tested.
   owner included (§3.2). Accepted for a check that reads the same in both
   builds.
 - **The type slices of §3.8 can drift from the libraries silently.**
+- **Shelf-tier covers of 512 px or less are still copied byte for byte**, so
+  they keep any camera metadata. That predates this map; the held tier no longer
+  shares it (§3.3). Worth a follow-up that sends them through sharp too.
+- **A withdrawn section can outlive the prune** in third-party caches and web
+  archives. The prune and the revalidate block cover this site and browsers,
+  nothing beyond.
 - **GSAP's licence is not OSI open source** and can be terminated by Webflow for
   non-compliance (#370). Accepted; it does not bite a personal shelf.
 - **The swap frame's cost on a phone is unmeasured** (#377); §8 measures it.

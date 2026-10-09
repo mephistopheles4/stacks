@@ -16,13 +16,24 @@ dependency and no HTML at any stage. The page sets every string through
 section holds anything Obsidian hides or the extractor cannot vouch for:**
 
 - an embed, `![[…]]`;
-- a `%%` or a `<!--` anywhere, fenced or not, closed or not;
+- a `%%` or a `<!--` anywhere, fenced or not, closed or not, or a comment
+  already open where the section starts;
 - a second `## Thoughts` heading in the note;
-- more than about 8,000 characters.
+- more than about 8,000 characters;
+- any HTML tag-shaped sequence, or a link reference definition line;
+- any URL scheme left after links flatten to their display text.
 
-Links flatten to their display text and no URL ships. The full rule list, and
-the unit test each rule gets, is on
-[#368](https://github.com/mephistopheles4/stacks/issues/368).
+The full rule list, and the unit test each rule gets, is on
+[#368](https://github.com/mephistopheles4/stacks/issues/368), with the
+additions the spec's security review made in
+[§3.1](../spec/picking-a-book-up.md#31-the-notesidjson-schema). **One of them
+replaces a #368 rule:** #368 stripped HTML tags and kept the text between them;
+raw HTML can hide text in reading view, so a tag now withholds. #368 counted no
+HTML in the real vault, so this costs nothing today.
+
+**A withheld section's earlier file does not survive.** The publisher prunes
+`notes/` to exactly the files each build wrote, so withdrawing or withholding a
+section takes it off the site at the next deploy.
 
 ## Why withhold rather than strip
 

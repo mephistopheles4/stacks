@@ -24,6 +24,12 @@ only one that writes there.
 - **The section boundary fails closed.** Exact, case-sensitive `## Thoughts`;
   it ends at the next `#` or `##` heading or the end of the file; a `#` inside a
   code fence is not a heading; two `## Thoughts` headings ship nothing.
+  Headings are recognised as broadly as CommonMark's ATX rule allows, and fence
+  and comment state are computed from the start of the body, so matching wide
+  can only end a section early. A fence still open at the section's end, a
+  setext heading, or a comment open across the heading withholds the section:
+  each is a shape where the boundary could otherwise run on into the private
+  remainder.
 
 ## Why in the adapter
 

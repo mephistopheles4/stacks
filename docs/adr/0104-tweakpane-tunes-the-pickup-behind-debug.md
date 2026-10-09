@@ -18,7 +18,10 @@ plain constants to paste back into `shelf-settings.ts`.
   Tweakpane skips its own `<style>` injection, which the hash-pinned
   `style-src` refuses;
 - the CSS loads lazily as a `<link>`, through Vite `?url`, from a file a build
-  step extracts from the packages' JS, since neither ships a `.css` file;
+  step extracts from the packages' JS, since neither ships a `.css` file. The
+  step **reads the package file as text** and never imports or evaluates it, so
+  a compromised release cannot run code on the machine that deploys; it fails
+  when the expected CSS is not found;
 - the empty-string hash those placeholders need is in `style-src` on purpose,
   because Astro hashes the placeholders, and a gate asserts it.
 
