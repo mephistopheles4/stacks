@@ -86,6 +86,17 @@ feel (continuous fill at real proportions, not one sparse row per year),
 wishlist books stay off, and spine colour sampled from the cover's binding edge
 so it matches the real spine. See [`docs/adr/`](./adr/) for each.
 
+**2026-10-09 — the pickup tuner, split and styled**
+([#413](https://github.com/mephistopheles4/stacks/issues/413)): G64
+(`tuner-split`) and G65 (`styled-pane`), two new rows in `pnpm smoke:render`,
+each observed red before it passed — G64 by a static import planted in
+`boot.ts`, G65 on its first run, against a placeholder named `default` where
+Tweakpane looks for `plugin-default`, and again with both placeholders removed.
+The tuner is Tweakpane with essentials, lazy behind `?debug`, its CSS extracted
+from the packages' text at build time and loaded by `<link>`. ⚠️ The empty
+string's hash stayed in `style-src` with no placeholder on the page, so Astro
+writes it for a reason of its own and G65 is what pins it.
+
 ### Phase 3 evidence
 
 `pnpm gate:public` green: builds for real, then greps every text file that

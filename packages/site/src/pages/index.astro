@@ -58,6 +58,20 @@ const pageUrl = absoluteUrl('/', Astro.site);
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content={ogImage} />
+    <!--
+      The pickup tuner's two placeholders, empty on purpose. Tweakpane injects a
+      runtime <style> per bundle unless one carrying its id is already here, and
+      the CSP refuses an injected one, so pre-seating them is what keeps the pane
+      styled behind ?debug (#376, ADR-0104). The CSS itself arrives as a file
+      through a lazy <link>. Being empty, each needs only the empty string's
+      hash in style-src, and the styled-pane gate asserts it is there. Astro
+      writes that hash for a reason of its own: it was in the policy before
+      these were added, and stays with both removed, so the gate is what pins it.
+      Both ids carry `plugin-`, the core's own included: it registers its
+      stylesheet as a plugin does. `is:inline` keeps Astro from treating them
+      as component styles.
+    --><style is:inline data-tp-style="plugin-default"></style>
+    <style is:inline data-tp-style="plugin-essentials"></style>
   </head>
   <body>
     <Shelf />

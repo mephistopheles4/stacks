@@ -169,6 +169,7 @@ async function main(): Promise<void> {
       // never reach the page every check above measured.
       const fallback = await checkContextLossFallback(browser, origin);
       const sampling = await checkShadowReaders(browser, origin, large.origin);
+      const tuner = await checkTuner(browser, origin);
 
       report({
         bookCount: Number(bookCount),
@@ -182,6 +183,7 @@ async function main(): Promise<void> {
         lit,
         fallback,
         sampling,
+        tuner,
       });
     } finally {
       await browser.close();
@@ -1665,6 +1667,177 @@ function cardFailures(card: CardContents): string[] {
   return failures;
 }
 
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The pickup tuner's two rows: **tuner split** and **styled pane**.
+ *
+ * Both failures were measured silent on #376. A plain CSS import in the lazy
+ * module was hoisted onto every page, 5.2 KB gzip for every visitor, and a pane
+ * whose injected `<style>` the CSP refused drew unstyled and threw nothing. So
+ * each is read off a real page of the built site, under the CSP it ships with:
+ *
+ * - **split**: a page without `?debug` fetches no script and no stylesheet that
+ *   carries the tuner's root rule, and the same page with `?debug` fetches both
+ *   — the control, without which "nothing found" could mean a detector that sees
+ *   nothing.
+ * - **styled**: on the `?debug` page the root pane is drawn with Tweakpane's own
+ *   background, not a browser default; no `securitypolicyviolation` fired; and
+ *   `style-src` carries the empty string's hash, which the two placeholders in
+ *   `index.astro` depend on (spec §3.7).
+ */
+interface TunerChecked {
+  readonly lines: readonly string[];
+  readonly failures: readonly string[];
+}
+
+/**
+ * Tweakpane's root-pane class. It is in the library's JavaScript, as part of
+ * the stylesheet literal it carries, and in the stylesheet extracted from it,
+ * so one string finds both halves of the tuner.
+ */
+const TUNER_MARKER = '.tp-rotv';
+
+/** SHA-256 of the empty string, the hash the empty placeholders need. */
+const EMPTY_STRING_HASH = "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='";
+
+/** Recorded from before the page's first script, so no violation is missed. */
+const RECORD_VIOLATIONS = `(() => {
+  window.__cspViolations = [];
+  document.addEventListener('securitypolicyviolation', (event) => {
+    window.__cspViolations.push(event.violatedDirective + ' ' + (event.blockedURI || 'inline'));
+  });
+})()`;
+
+interface Fetched {
+  readonly url: string;
+  readonly kind: 'script' | 'stylesheet';
+  readonly tuner: boolean;
+}
+
+async function checkTuner(browser: Browser, origin: string): Promise<TunerChecked> {
+  const lines: string[] = [];
+  const failures: string[] = [];
+
+  const plain = await visitForTuner(browser, `${origin}/`);
+  const debug = await visitForTuner(browser, `${origin}/?debug`);
+
+  const tunerOn = (page: TunerVisit, kind: Fetched['kind']): number =>
+    page.fetched.filter((asset) => asset.kind === kind && asset.tuner).length;
+
+  // Split: the plain page carries none of it.
+  const leaked = plain.fetched.filter((asset) => asset.tuner);
+  lines.push(
+    `tuner split    / fetched ${String(plain.fetched.length)} scripts and stylesheets, ` +
+      `${String(leaked.length)} carrying the tuner   ?debug fetched the tuner in ` +
+      `${String(tunerOn(debug, 'script'))} script(s) and ${String(tunerOn(debug, 'stylesheet'))} stylesheet(s)`,
+  );
+  if (plain.fetched.length === 0) {
+    failures.push('tuner split: the plain page fetched no scripts or stylesheets at all');
+  }
+  for (const asset of leaked) {
+    failures.push(
+      `tuner split: a page without ?debug fetched tuner bytes, ${asset.kind} ${asset.url}`,
+    );
+  }
+  if (tunerOn(debug, 'script') === 0 || tunerOn(debug, 'stylesheet') === 0) {
+    failures.push(
+      'tuner split (control): the ?debug page did not fetch the tuner as both a script and a ' +
+        'stylesheet, so "none on the plain page" proves nothing',
+    );
+  }
+
+  // Styled: the ?debug page's pane, under the shipped CSP.
+  const styled = debug.styled;
+  lines.push(
+    `styled pane    pane ${styled.found ? `background ${styled.background}` : 'NOT FOUND'}   ` +
+      `violations ${String(styled.violations.length)}   empty-string hash ${
+        styled.emptyHash ? 'in style-src' : 'MISSING'
+      }`,
+  );
+  if (!styled.found) failures.push('styled pane: no pane rendered on the ?debug page');
+  else if (styled.background === 'rgba(0, 0, 0, 0)') {
+    failures.push('styled pane: the pane has a browser-default background, so it drew unstyled');
+  }
+  for (const violation of styled.violations) {
+    failures.push(`styled pane: the ?debug page broke its CSP, ${violation}`);
+  }
+  if (!styled.emptyHash) {
+    failures.push(
+      "styled pane: the built style-src lacks the empty string's hash, which the two " +
+        'empty placeholders need',
+    );
+  }
+  for (const error of [...plain.errors, ...debug.errors]) failures.push(`tuner: ${error}`);
+
+  return { lines, failures };
+}
+
+interface TunerVisit {
+  readonly fetched: readonly Fetched[];
+  readonly styled: {
+    readonly found: boolean;
+    readonly background: string;
+    readonly violations: readonly string[];
+    readonly emptyHash: boolean;
+  };
+  readonly errors: readonly string[];
+}
+
+async function visitForTuner(browser: Browser, url: string): Promise<TunerVisit> {
+  const context = await browser.createBrowserContext();
+  const errors: string[] = [];
+  const reads: Promise<Fetched | undefined>[] = [];
+  try {
+    const page = await context.newPage();
+    await page.setViewport(VIEWPORT);
+    page.on('pageerror', (error: unknown) => {
+      errors.push(
+        `page error at ${url}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+    page.on('response', (response) => {
+      const kind = response.request().resourceType();
+      if (kind !== 'script' && kind !== 'stylesheet') return;
+      reads.push(
+        response.text().then(
+          (body) => ({ url: response.url(), kind, tuner: body.includes(TUNER_MARKER) }),
+          () => undefined,
+        ),
+      );
+    });
+    await page.evaluateOnNewDocument(RECORD_VIOLATIONS);
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+    await page.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => undefined);
+    // The pane exists only behind ?debug; on the plain page this times out by design.
+    await page
+      .waitForFunction(
+        `(() => { const pane = document.querySelector('${TUNER_MARKER}');
+          return pane !== null && getComputedStyle(pane).backgroundColor !== 'rgba(0, 0, 0, 0)'; })()`,
+        { timeout: url.includes('debug') ? 15_000 : 1 },
+      )
+      .catch(() => undefined);
+
+    const styled = (await page.evaluate(`(() => {
+      const pane = document.querySelector('${TUNER_MARKER}');
+      const meta = document.querySelector('meta[http-equiv="content-security-policy" i]');
+      const styleSrc = (meta?.getAttribute('content') ?? '').split(';').find((d) => d.trim().startsWith('style-src')) ?? '';
+      return {
+        found: pane !== null,
+        background: pane === null ? '' : getComputedStyle(pane).backgroundColor,
+        violations: window.__cspViolations ?? [],
+        emptyHash: styleSrc.includes(${JSON.stringify(EMPTY_STRING_HASH)}),
+      };
+    })()`)) as TunerVisit['styled'];
+
+    const fetched = (await Promise.all(reads)).filter((asset) => asset !== undefined);
+    return { fetched, styled, errors };
+  } finally {
+    await context.close();
+  }
+}
+
 function report(result: {
   bookCount: number;
   bookcaseOverflow: number;
@@ -1677,6 +1850,7 @@ function report(result: {
   lit: LitChecked;
   fallback: FallbackChecked;
   sampling: SamplingChecked;
+  tuner: TunerChecked;
 }): void {
   const {
     bookCount,
@@ -1690,8 +1864,9 @@ function report(result: {
     lit,
     fallback,
     sampling,
+    tuner,
   } = result;
-  const failures: string[] = [...fallback.failures, ...sampling.failures];
+  const failures: string[] = [...fallback.failures, ...sampling.failures, ...tuner.failures];
 
   const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
 
@@ -1765,6 +1940,8 @@ function report(result: {
       'browser context of its own',
   );
   for (const line of sampling.lines) console.log(`  ${line}`);
+  console.log('pickup tuner, each page in a browser context of its own');
+  for (const line of tuner.lines) console.log(`  ${line}`);
   console.log(`screenshot        ${OUTPUT}`);
 
   if (viewer === undefined) {

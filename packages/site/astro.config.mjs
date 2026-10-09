@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import { tunerCssPlugin } from '../../scripts/lib/tuner-css-plugin.ts';
 
 // Static output only. The `--public` build has to be a plain deployable folder
 // (GitHub Pages / Cloudflare Pages), so there is no adapter and no SSR here.
@@ -10,6 +11,11 @@ export default defineConfig({
   site: process.env.SITE_URL,
   output: 'static',
   devToolbar: { enabled: false },
+
+  // The pickup tuner's stylesheet, extracted from Tweakpane's JavaScript as
+  // text and written where `pickup-tuner.ts` imports it with `?url`. Neither
+  // package ships a `.css` file; see `scripts/lib/tuner-css-plugin.ts`.
+  vite: { plugins: [tunerCssPlugin()] },
 
   // The shelf's outbound record, stated so it can stop being true by accident.
   //
