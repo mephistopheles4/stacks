@@ -251,6 +251,34 @@ describe('G20 — a clean build', () => {
     expect(inspect().problems).toEqual([]);
   });
 
+  it('passes a notes file of exactly the byte cap', async () => {
+    // The boundary: the cap is the most a file may weigh, so 40,000 bytes is
+    // inside it and one more is the plant below.
+    const wrapper = JSON.stringify({ paragraphs: [''] });
+    const contents = JSON.stringify({ paragraphs: ['a'.repeat(40_000 - wrapper.length)] });
+    expect(Buffer.byteLength(contents)).toBe(40_000);
+
+    await writeNotes(`${CLEAN_ID}.json`, contents);
+    expect(inspect().problems).toEqual([]);
+  });
+
+  it('says it read the notes files only when there were some and both rules held', async () => {
+    // A rule that is silent when it passes cannot be told apart from one that
+    // never ran, so the clean path counts what it read — and says nothing over
+    // a build with no `notes/`, or over one where either rule fired.
+    const said = (): boolean =>
+      inspect().observations.some((line) => line.startsWith('1 notes file(s)'));
+
+    expect(said(), 'a clean notes file').toBe(true);
+    await writeNotes(`${CLEAN_ID}.json`, { paragraphs: [] });
+    expect(said(), 'a misshapen notes file').toBe(false);
+    await rm(join(dist, 'notes'), { recursive: true, force: true });
+    expect(
+      inspect().observations.some((line) => line.includes('notes file(s)')),
+      'no notes folder at all',
+    ).toBe(false);
+  });
+
   it('reports what it looked at', () => {
     // Observations are the module's only output besides problems, and the
     // callers print them. An inspection that says nothing when it passes is one
@@ -368,6 +396,7 @@ describe('G20 — every rule goes red', () => {
     // own file, so `orphan-note` stays quiet and the shape is the only defect.
     const plants: readonly (readonly [string, unknown])[] = [
       ['not JSON', '{"paragraphs": ["truncated'],
+      ['JSON null', 'null'],
       ['an array, not an object', ['A paragraph.']],
       ['no paragraphs key', {}],
       ['a second key', { paragraphs: ['A paragraph.'], title: 'A Book' }],
@@ -402,7 +431,11 @@ describe('G20 — every rule goes red', () => {
       'opened from obsidian://open?vault=Private',
       'write to MAILTO:someone@example.invalid',
     ]) {
-      await writeNotes(`${CLEAN_ID}.json`, { paragraphs: [`A paragraph, ${address}.`] });
+      // Second of two paragraphs, so a check that read only the first, or
+      // required every paragraph to carry one, would pass it.
+      await writeNotes(`${CLEAN_ID}.json`, {
+        paragraphs: ['A clean paragraph.', `A paragraph, ${address}.`],
+      });
       const fired = new Set(inspect().problems.map((problem) => problem.rule));
       expect([...fired], `planted ${address}`).toEqual(['notes-shape']);
     }
