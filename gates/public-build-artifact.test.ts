@@ -512,6 +512,24 @@ describe('G20 — every rule goes red', () => {
     }
   });
 
+  it('notes-shape: a notes file carrying a comment marker', async () => {
+    // The extractor withholds any section holding one, so a correct build never
+    // ships a marker and this refuses nothing real. It is the byte cap's
+    // reasoning applied to hidden text: a bug that bypassed the extractor's
+    // check would otherwise publish an aside the owner never saw on screen.
+    // Owner decision on #411, from #410's review.
+    for (const marker of ['%% an aside %%', '<!-- an aside', 'an aside -->', 'an aside --!>']) {
+      await writeNotes(`${CLEAN_ID}.json`, {
+        paragraphs: ['A clean paragraph.', `A paragraph with ${marker} in it.`],
+      });
+      const problems = inspect().problems;
+      expect([...new Set(problems.map((problem) => problem.rule))], `planted ${marker}`).toEqual([
+        'notes-shape',
+      ]);
+      expect(problems.map((problem) => problem.message).join('\n')).not.toContain('an aside');
+    }
+  });
+
   it('share-image-origin: a relative og:image', async () => {
     await expectOnly('share-image-origin', async () => {
       // Relative for the whole of the project's life. Every preview scraper

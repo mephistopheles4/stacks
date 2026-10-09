@@ -1519,6 +1519,12 @@ own changes follow the list below.
   key.
 - **`headers` requires a revalidating `/notes/*` block**, beside `/covers/*`,
   planted under G20 both absent and stale.
+- **`notes-shape` refuses a comment marker** — `%%`, `<!--`, `-->` or `--!>` —
+  by the owner's decision on #411, from #410's review. The extractor withholds
+  any section holding one, so this refuses nothing a correct build ships; it is
+  the byte cap's reasoning applied to hidden text. G20 plants all four, and the
+  message never quotes what it found. Bare home paths and "File:" prose were left
+  as the spec has them, since either would move the extractor too.
 - **The private duplicate** — same title, same ISBN, so the same id — is a
   `publish()` unit test in both builds: only a book `isPublishable` admits is
   ever read, and an id two publishable books share gets no file at all.
