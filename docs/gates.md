@@ -1744,6 +1744,14 @@ on its cover button, and the enlarged-cover viewer shows it.
 - `gate:public` passed against the real build once the stage landed, with the
   same output that was red before it.
 
+**The filter, observed red.** The public-build absence held vacuously before the
+stage existed, so it was reddened on purpose: staging from every book rather
+than `shelved` failed the private-and-wishlist test and a prune test, and failed
+`gate:public` at its inspection step, where `orphan-held` named both held-back
+covers before the step-5 filter check could run. A held folder nested inside
+`covers/` failed G15's sibling check, and a viewer reading the thumbnail failed
+G35's with *held copy NOT SHOWN*. Each mutation was reverted.
+
 **To undo it**, empty the stage's `wanted` set and keep the prune and the
 `/held-covers/*` block (spec §4): the next build empties the folder and the next
 deploy takes every copy off the site.
