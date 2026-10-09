@@ -666,7 +666,7 @@ describe('G20 — every rule goes red', () => {
       await writeNotes(`${CLEAN_ID}.json`, {
         paragraphs: ['A clean paragraph.', `A paragraph with ${marker} in it.`],
       });
-      const problems = inspect().problems;
+      const problems = (await inspect()).problems;
       expect([...new Set(problems.map((problem) => problem.rule))], `planted ${marker}`).toEqual([
         'notes-shape',
       ]);
@@ -679,7 +679,7 @@ describe('G20 — every rule goes red', () => {
     // file holding one is a bug that got past it.
     for (const tag of ['<span hidden>an aside</span>', '</b> an aside', '<div', '<a href=x>']) {
       await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A clean paragraph.', `Seen ${tag}.`] });
-      const problems = inspect().problems;
+      const problems = (await inspect()).problems;
       expect([...new Set(problems.map((problem) => problem.rule))], `planted ${tag}`).toEqual([
         'notes-shape',
       ]);
@@ -888,7 +888,7 @@ describe('G20 — every rule goes red', () => {
       `${CLEAN_ID}.json`,
       `${JSON.stringify({ paragraphs: ['A paragraph the owner chose to share.'] })}\n`,
     );
-    expect(inspect().problems).toEqual([]);
+    expect((await inspect()).problems).toEqual([]);
   });
 
   it('notes-shape: a notes file in some other JSON layout', async () => {
@@ -1131,7 +1131,7 @@ describe('G20 — every rule goes red', () => {
       '/notes/*\n  X-Content-Type-Options: nosniff\n  Cache-Control: public, max-age=0, must-revalidate\n',
     );
     await writeFile(join(dist, '_headers'), headers);
-    expect(inspect().problems).toEqual([]);
+    expect((await inspect()).problems).toEqual([]);
   });
 
   it('headers: no /notes/* block at all', async () => {
