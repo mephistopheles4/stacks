@@ -42,6 +42,14 @@ export interface LibraryBook {
    * the square ones. Derived, so it lives here rather than in the frontmatter.
    */
   readonly coverAspect?: number;
+  /**
+   * The held copy, `held-covers/<name>`: the larger cover a picked-up book and
+   * the enlarged-cover viewer show. Present only when the build staged one,
+   * which needs a vault cover over the shelf's 512px; absent means the shelf's
+   * copy is all there is ([ADR-0105](../../../docs/adr/0105-a-cover-has-a-shelf-tier-and-a-held-tier.md)).
+   * A path, never text, and derived at build time like `coverAspect`.
+   */
+  readonly heldCover?: string;
   readonly tags: readonly string[];
 
   readonly publisher?: string;

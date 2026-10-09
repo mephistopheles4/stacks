@@ -262,6 +262,14 @@ since the writer parses the note three times.
 going once more"; fixes as spec D17 to D19 and N80 to N85, gates as
 `docs/gates.md`'s round-6 bullet.
 
+**2026-10-09 — the held tier, gated first**
+([#412](https://github.com/mephistopheles4/stacks/issues/412)): `orphan-held`,
+`held-oversize` and `held-metadata` under G20, `heldCover` in `foreign-cover`
+and `unknown-key`, `headers` requiring `/held-covers/*`, and `gate:public`'s
+held-tier vacuity, presence and filter checks, all observed red before any
+staging code; G5's ignore line armed as `it.fails` — see
+[*The held tier, gated before it is staged*](./gates.md#the-held-tier-gated-before-it-is-staged).
+
 ### Phase 4 evidence
 
 `stacks import audible <export>` against a real Libation export: 22 records, 17

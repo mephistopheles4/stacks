@@ -79,9 +79,13 @@ const NOT_PUBLIC: readonly (keyof BookRecord)[] = ['sourcePath'];
  * across rebuilds; `coverAspect` is measured from the cover file at build time,
  * because books are not one shape and a square audiobook cover forced onto a
  * print face is squashed; `thoughts` is `true` when the build wrote the book's
- * `notes/<id>.json`, a flag the notes stage sets and never text (spec §3.1).
+ * `notes/<id>.json`, a flag the notes stage sets and never text (spec §3.1);
+ * `heldCover` is the path of the held copy the held stage staged,
+ * `held-covers/<name>`, a path and never text (spec §3.3). Like `coverAspect`,
+ * `publish()` adds it after `buildLibrary`, so the trace below never sees it
+ * produced; it is named here for the parity the next paragraph asks for.
  *
- * ⚠️ **`scripts/lib/public-build.ts` holds the same three names, deliberately.**
+ * ⚠️ **`scripts/lib/public-build.ts` holds the same four names, deliberately.**
  * Its `unknown-key` rule runs this trace over the bytes in `dist/`, and the
  * duplication is what makes the dangerous edit expensive: adding a key that
  * should never ship is a one-line diff that reads like documentation, and with
@@ -93,7 +97,12 @@ const NOT_PUBLIC: readonly (keyof BookRecord)[] = ['sourcePath'];
  * the half of the drift a reader cannot see: a renamed field leaves a stale
  * name here that still *looks* like an exclusion.
  */
-const DERIVED = ['id', 'coverAspect', 'thoughts'] as const satisfies readonly (keyof LibraryBook)[];
+const DERIVED = [
+  'id',
+  'coverAspect',
+  'thoughts',
+  'heldCover',
+] as const satisfies readonly (keyof LibraryBook)[];
 
 function keysOf(book: LibraryBook): readonly string[] {
   return Object.keys(book);

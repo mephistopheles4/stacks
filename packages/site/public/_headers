@@ -86,3 +86,11 @@
 # `scripts/lib/public-build.ts` requires this block (spec §3.3).
 /notes/*
   Cache-Control: public, max-age=0, must-revalidate
+
+# A book's held copy, the 1200px cover a picked-up book shows, one
+# `held-covers/<name>` each. Images, so Pages' four-hour default would apply
+# exactly as it did to `covers/`: a cover taken down, or a book made private,
+# would linger in browsers that long after the prune removed the file. The
+# `headers` rule in `scripts/lib/public-build.ts` requires this block (spec §3.3).
+/held-covers/*
+  Cache-Control: public, max-age=0, must-revalidate

@@ -28,6 +28,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import sharp from 'sharp';
 import {
   inspectPublicBuild,
   NOTE_BODY_CANARY,
@@ -53,6 +54,8 @@ interface ShippedBook {
   readonly id?: string;
   readonly title: string;
   readonly cover?: string;
+  /** `held-covers/<name>` when the build staged a held copy; typed wide to plant anything else. */
+  readonly heldCover?: unknown;
   readonly status?: string;
   readonly private?: boolean;
   readonly sourcePath?: string;
@@ -76,6 +79,7 @@ const CLEAN_BOOK: ShippedBook = {
   id: CLEAN_ID,
   title: 'A Book',
   cover: 'covers/a.jpg',
+  heldCover: 'held-covers/a.png',
   status: 'read',
   thoughts: true,
 };
@@ -94,6 +98,7 @@ async function writeCleanBuild(): Promise<void> {
   await mkdir(join(dist, 'covers'), { recursive: true });
   await writeFile(join(dist, 'covers', 'a.jpg'), 'pretend jpeg');
   await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A paragraph the owner chose to share.'] });
+  await writeHeld('a.png', await image(600, 900));
   await writeFile(join(dist, 'og.png'), 'x'.repeat(4096));
   await writeFile(join(dist, '_headers'), headersFile());
   await writeFile(join(dist, 'robots.txt'), 'User-agent: *\nAllow: /\n');
@@ -111,6 +116,7 @@ function headersFile(
   options: {
     coversCacheControl?: boolean;
     notes?: 'revalidate' | 'stale' | 'absent';
+    held?: 'revalidate' | 'stale' | 'absent';
     frameOptions?: boolean;
     frameAncestors?: boolean;
   } = {},
@@ -136,6 +142,13 @@ function headersFile(
       : [
           '/notes/*',
           options.notes === 'stale' ? '  X-Content-Type-Options: nosniff' : revalidate,
+          '',
+        ]),
+    ...(options.held === 'absent'
+      ? []
+      : [
+          '/held-covers/*',
+          options.held === 'stale' ? '  X-Content-Type-Options: nosniff' : revalidate,
           '',
         ]),
   ].join('\n');
@@ -223,6 +236,37 @@ async function writeNotes(path: string, contents: unknown): Promise<void> {
   await writeFile(file, typeof contents === 'string' ? contents : JSON.stringify(contents));
 }
 
+/**
+ * A real image, because the held rules read pixels and metadata through sharp
+ * and a placeholder string is what `held-metadata`'s unreadable clause is for.
+ */
+async function image(
+  width: number,
+  height: number,
+  options: { format?: 'png' | 'jpeg'; exif?: boolean; xmp?: boolean } = {},
+): Promise<Buffer> {
+  let pipeline = sharp({
+    create: { width, height, channels: 3, background: { r: 47, g: 109, b: 122 } },
+  });
+  if (options.exif === true) {
+    pipeline = pipeline.withExif({ IFD0: { ImageDescription: 'Invented planted camera' } });
+  }
+  if (options.xmp === true) {
+    pipeline = pipeline.withXmp(
+      '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF ' +
+        'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/></x:xmpmeta>',
+    );
+  }
+  return options.format === 'jpeg' ? pipeline.jpeg().toBuffer() : pipeline.png().toBuffer();
+}
+
+/** One file under `held-covers/`, at a path relative to that folder. */
+async function writeHeld(path: string, contents: Buffer | string): Promise<void> {
+  const file = join(dist, 'held-covers', path);
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, contents);
+}
+
 function inspect(): ReturnType<typeof inspectPublicBuild> {
   return inspectPublicBuild(dist, { origin: ORIGIN });
 }
@@ -239,14 +283,14 @@ const exercised = new Set<PublicBuildRule>();
  */
 async function expectOnly(rule: PublicBuildRule, plant: () => Promise<void>): Promise<void> {
   await plant();
-  const fired = new Set(inspect().problems.map((problem) => problem.rule));
+  const fired = new Set((await inspect()).problems.map((problem) => problem.rule));
   expect([...fired].sort(), `planted a ${rule} defect`).toEqual([rule]);
   exercised.add(rule);
 }
 
 describe('G20 — a clean build', () => {
-  it('reports no problems at all', () => {
-    const report = inspect();
+  it('reports no problems at all', async () => {
+    const report = await inspect();
     expect(
       report.problems.map((problem) => `${problem.rule}: ${problem.message}`),
       'the synthetic clean build must satisfy every rule, or nothing below is attributable',
@@ -263,7 +307,7 @@ describe('G20 — a clean build', () => {
         'My profile: unchanged, and a file, too.',
       ],
     });
-    expect(inspect().problems).toEqual([]);
+    expect((await inspect()).problems).toEqual([]);
   });
 
   it('passes a notes file of exactly the byte cap', async () => {
@@ -274,31 +318,31 @@ describe('G20 — a clean build', () => {
     expect(Buffer.byteLength(contents)).toBe(40_000);
 
     await writeNotes(`${CLEAN_ID}.json`, contents);
-    expect(inspect().problems).toEqual([]);
+    expect((await inspect()).problems).toEqual([]);
   });
 
   it('says it read the notes files only when there were some and both rules held', async () => {
     // A rule that is silent when it passes cannot be told apart from one that
     // never ran, so the clean path counts what it read — and says nothing over
     // a build with no `notes/`, or over one where either rule fired.
-    const said = (): boolean =>
-      inspect().observations.some((line) => line.startsWith('1 notes file(s)'));
+    const said = async (): Promise<boolean> =>
+      (await inspect()).observations.some((line) => line.startsWith('1 notes file(s)'));
 
-    expect(said(), 'a clean notes file').toBe(true);
+    expect(await said(), 'a clean notes file').toBe(true);
     await writeNotes(`${CLEAN_ID}.json`, { paragraphs: [] });
-    expect(said(), 'a misshapen notes file').toBe(false);
+    expect(await said(), 'a misshapen notes file').toBe(false);
     await rm(join(dist, 'notes'), { recursive: true, force: true });
     expect(
-      inspect().observations.some((line) => line.includes('notes file(s)')),
+      (await inspect()).observations.some((line) => line.includes('notes file(s)')),
       'no notes folder at all',
     ).toBe(false);
   });
 
-  it('reports what it looked at', () => {
+  it('reports what it looked at', async () => {
     // Observations are the module's only output besides problems, and the
     // callers print them. An inspection that says nothing when it passes is one
     // nobody can tell apart from an inspection that did not run.
-    expect(inspect().observations.length).toBeGreaterThan(0);
+    expect((await inspect()).observations.length).toBeGreaterThan(0);
   });
 });
 
@@ -332,6 +376,7 @@ describe('G20 — every rule goes red', () => {
       // empty index rather than about what that implies.
       await rm(join(dist, 'covers'), { recursive: true, force: true });
       await rm(join(dist, 'notes'), { recursive: true, force: true });
+      await rm(join(dist, 'held-covers'), { recursive: true, force: true });
     });
   });
 
@@ -340,6 +385,7 @@ describe('G20 — every rule goes red', () => {
       await rm(join(dist, 'library.json'), { force: true });
       await rm(join(dist, 'covers'), { recursive: true, force: true });
       await rm(join(dist, 'notes'), { recursive: true, force: true });
+      await rm(join(dist, 'held-covers'), { recursive: true, force: true });
     });
   });
 
@@ -351,6 +397,7 @@ describe('G20 — every rule goes red', () => {
       await writeFile(join(dist, 'library.json'), '{"books": [ truncated');
       await rm(join(dist, 'covers'), { recursive: true, force: true });
       await rm(join(dist, 'notes'), { recursive: true, force: true });
+      await rm(join(dist, 'held-covers'), { recursive: true, force: true });
     });
   });
 
@@ -376,6 +423,91 @@ describe('G20 — every rule goes red', () => {
       // whatever host the note named.
       await writeLibrary([{ ...CLEAN_BOOK, cover: 'https://elsewhere.example/a.jpg' }]);
       await rm(join(dist, 'covers'), { recursive: true, force: true });
+    });
+  });
+
+  it('foreign-cover: a held cover outside its one same-origin segment', async () => {
+    // The held copy reaches an <img src> and a texture loader as `cover` does,
+    // so every way out of `held-covers/<name>` is a plant: another host, the
+    // shelf's folder, a parent step, a nested path, and a value that is not a
+    // path at all. The staged file is removed each time, so `orphan-held`
+    // stays quiet and the path is the only defect.
+    const plants: readonly unknown[] = [
+      'https://elsewhere.example/a.png',
+      '//elsewhere.example/a.png',
+      'covers/a.png',
+      'held-covers/..',
+      'held-covers/sub/a.png',
+      'held-covers\\a.png',
+      42,
+    ];
+    await rm(join(dist, 'held-covers'), { recursive: true, force: true });
+    for (const heldCover of plants) {
+      await writeLibrary([{ ...CLEAN_BOOK, heldCover }]);
+      const fired = new Set((await inspect()).problems.map((problem) => problem.rule));
+      expect([...fired], `planted ${JSON.stringify(heldCover)}`).toEqual(['foreign-cover']);
+    }
+  });
+
+  it('orphan-held: a held cover no shipped book names', async () => {
+    await expectOnly('orphan-held', async () => {
+      // `orphan-cover`'s twin. A private or wishlist book's held copy, or one a
+      // build of another vault left behind, is named for a title.
+      await writeHeld('a-real-book-you-actually-read.png', await image(600, 900));
+    });
+  });
+
+  it('orphan-held: a held cover named for a listed book, one folder down', async () => {
+    await expectOnly('orphan-held', async () => {
+      await writeHeld('stale/a.png', await image(600, 900));
+    });
+  });
+
+  it('orphan-held: a held cover left after its book stopped naming it', async () => {
+    await expectOnly('orphan-held', async () => {
+      // The stale file the prune exists for: the cover shrank below the shelf
+      // cap, or the book went private, and the last build's copy stayed.
+      await writeLibrary([{ ...CLEAN_BOOK, heldCover: undefined }]);
+    });
+  });
+
+  it('held-oversize: a held cover over the held cap on its long edge', async () => {
+    await expectOnly('held-oversize', async () => {
+      // Landscape, so a check that read only the height would pass it.
+      await writeHeld('a.png', await image(1201, 800));
+    });
+  });
+
+  it('held-oversize: a held cover of exactly the cap passes', async () => {
+    // The boundary, held clean: the cap is the most an edge may measure.
+    await writeHeld('a.png', await image(800, 1200));
+    expect((await inspect()).problems).toEqual([]);
+  });
+
+  it('held-metadata: a held cover carrying EXIF or XMP', async () => {
+    // One plant per kind and per format: a PNG and a JPEG with EXIF, a PNG
+    // with XMP. Each source is first shown to carry what it plants, through the
+    // reader the rule uses, so a plant sharp silently dropped cannot pass as a
+    // rule that works.
+    const plants = [
+      ['EXIF in a PNG', await image(600, 900, { exif: true })],
+      ['EXIF in a JPEG', await image(600, 900, { format: 'jpeg', exif: true })],
+      ['XMP in a PNG', await image(600, 900, { xmp: true })],
+    ] as const;
+    for (const [what, bytes] of plants) {
+      const planted = await sharp(bytes).metadata();
+      expect(planted.exif ?? planted.xmp, `${what}: the plant carries it`).toBeDefined();
+
+      await writeHeld('a.png', bytes);
+      const fired = new Set((await inspect()).problems.map((problem) => problem.rule));
+      expect([...fired], `planted ${what}`).toEqual(['held-metadata']);
+    }
+    exercised.add('held-metadata');
+  });
+
+  it('held-metadata: a held cover that is not an image', async () => {
+    await expectOnly('held-metadata', async () => {
+      await writeHeld('a.png', 'pretend png');
     });
   });
 
@@ -446,7 +578,7 @@ describe('G20 — every rule goes red', () => {
     const prose = 'A sentence of Thoughts a broken writer put in the mark';
     await writeLibrary([{ ...CLEAN_BOOK, thoughts: prose }]);
     await rm(join(dist, 'notes', `${CLEAN_ID}.json`));
-    const problems = inspect().problems;
+    const problems = (await inspect()).problems;
 
     expect([...new Set(problems.map((problem) => problem.rule))]).toEqual(['orphan-note']);
     expect(problems.map((problem) => problem.message).join('\n')).not.toContain(prose);
@@ -468,7 +600,7 @@ describe('G20 — every rule goes red', () => {
     ];
     for (const [what, contents] of plants) {
       await writeNotes(`${CLEAN_ID}.json`, contents);
-      const fired = new Set(inspect().problems.map((problem) => problem.rule));
+      const fired = new Set((await inspect()).problems.map((problem) => problem.rule));
       expect([...fired], `planted ${what}`).toEqual(['notes-shape']);
     }
     exercised.add('notes-shape');
@@ -480,7 +612,7 @@ describe('G20 — every rule goes red', () => {
     // Not the canary, which `note-body` would rightly refuse and quote too.
     const prose = 'A sentence of Thoughts a broken writer used as a key';
     await writeNotes(`${CLEAN_ID}.json`, { [prose]: ['A paragraph.'] });
-    const problems = inspect().problems;
+    const problems = (await inspect()).problems;
 
     expect(problems.map((problem) => problem.rule)).toEqual(['notes-shape']);
     expect(problems.map((problem) => problem.message).join('\n')).not.toContain(prose);
@@ -510,7 +642,7 @@ describe('G20 — every rule goes red', () => {
       await writeNotes(`${CLEAN_ID}.json`, {
         paragraphs: ['A clean paragraph.', `A paragraph, ${address}.`],
       });
-      const fired = new Set(inspect().problems.map((problem) => problem.rule));
+      const fired = new Set((await inspect()).problems.map((problem) => problem.rule));
       expect([...fired], `planted ${address}`).toEqual(['notes-shape']);
     }
   });
@@ -1005,6 +1137,20 @@ describe('G20 — every rule goes red', () => {
   it('headers: no /notes/* block at all', async () => {
     await expectOnly('headers', async () => {
       await writeFile(join(dist, '_headers'), headersFile({ notes: 'absent' }));
+    });
+  });
+
+  it('headers: held covers that do not revalidate', async () => {
+    await expectOnly('headers', async () => {
+      // Images, so Pages' four-hour default applies: a cover taken down would
+      // linger in browsers that long after the prune (spec §3.3).
+      await writeFile(join(dist, '_headers'), headersFile({ held: 'stale' }));
+    });
+  });
+
+  it('headers: no /held-covers/* block at all', async () => {
+    await expectOnly('headers', async () => {
+      await writeFile(join(dist, '_headers'), headersFile({ held: 'absent' }));
     });
   });
 

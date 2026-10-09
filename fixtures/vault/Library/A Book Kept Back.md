@@ -5,6 +5,7 @@ author: Wren Abelard
 status: read
 finished: 2026-02-14
 private: true
+cover: covers/a-book-kept-back.png
 tags:
   - fiction
 ---
@@ -16,8 +17,10 @@ A gate that checks a property no fixture exhibits passes no matter what the
 code does — the same trap `gate:public` avoids by failing when its canary is
 missing from the vault.
 
-Deliberately has no `cover:`, so adding it moves the book count and nothing
-else. Deliberately has a body, so it is also carrying the canary.
+Its cover is larger than the shelf's 512px, so a public build that staged a
+held copy for it would have one to stage: the "no held copy for a private book"
+assertion is not vacuous either. Deliberately has a body, so it is also
+carrying the canary.
 
 ## Thoughts
 

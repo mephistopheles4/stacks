@@ -30,9 +30,9 @@ vault, which is gitignored.
 | `Compilers for the Impatient.md` | hand-set `spine_color` must beat the auto-extracted one |
 | `Signal and Sediment.md` | `abandoned` + `started` with **no `finished`** — year grouping must cope |
 | `Nine Ways of Seeing a Warehouse.md` | 9 authors; no `isbn`, identified by an extra `asin` key; an [unclosed fence](#the-thoughts-split) in its Thoughts |
-| `The Quiet Protocol.md` | minimum viable note — only `type` + `title` + a couple of extras; [wishlist Thoughts](#the-thoughts-split) |
+| `The Quiet Protocol.md` | minimum viable note — only `type` + `title` + a couple of extras; [wishlist Thoughts](#the-thoughts-split); a [held-size cover](#the-held-tier) it must never ship |
 | `Lantern Work.md` | **reordered keys**; no cover; `status: reading` (fallback spine, face-out); an [embed](#the-thoughts-split) in its Thoughts |
-| `A Book Kept Back.md` | `private: true` — must never reach a public build. No cover, so adding it moved the book count and nothing else; [private Thoughts](#the-thoughts-split) |
+| `A Book Kept Back.md` | `private: true` — must never reach a public build; [private Thoughts](#the-thoughts-split); a [held-size cover](#the-held-tier) it must never ship |
 | `The Salt Road Ledger.md` | print edition; started 2025, finished 2026 (crosses a year boundary) |
 | `The Salt Road Ledger (Audiobook).md` | same title+author, different identifier; extra `narrator`/`duration` keys |
 | `The Undelivered Manuscript.md` | **unparseable YAML** → warn naming the file, skip, keep going |
@@ -78,14 +78,16 @@ Each cover's **expected** dominant colour, which the Phase 1 extractor must land
 | --- | --- |
 | `the-tidal-engine.png` | `#2f6d7a` |
 | `compilers-for-the-impatient.png` | `#8a3b2e` (overridden to `#1f2933` in the note) |
-| `signal-and-sediment.png` | `#4a6b5a` |
+| `signal-and-sediment.png` | `#4a6b5a` — 800x1200, with planted EXIF and XMP ([the held tier](#the-held-tier)) |
 | `nine-ways-of-seeing-a-warehouse.png` | `#6a5a8c` |
 | `the-salt-road-ledger.png` | `#b08442` |
 | `the-salt-road-ledger-audio.png` | `#3a4a6b` |
 | `white-bordered.png` | `#7a3f5d` — **not** white, despite a 44% white margin |
 | `all-white.png` | `#ffffff` |
+| `a-book-kept-back.png` | `#5c4b3a` — 1400x2100, on the private book |
+| `the-quiet-protocol.png` | `#34495e` — 1400x2100, on the wishlist book |
 
-The last two belong to no book; they exist only for the extractor's tests.
+`white-bordered.png` and `all-white.png` belong to no book; they exist only for the extractor's tests.
 `white-bordered.png` is a regression fixture: the first real `stacks add`
 returned `spine_color: "#fefffe"`, because real covers are printed on and
 photographed against white, so white was genuinely the commonest colour.
@@ -133,6 +135,25 @@ presence check reading a deleted fixture passes by construction.
 
 ⚠️ **The Thoughts text is invented, every word**, like the rest of this vault.
 Never paste a real note's Thoughts in to make a case.
+
+## The held tier
+
+A public build stages a 1200px **held copy** of every published cover over the
+shelf's 512px, in `held-covers/` beside `covers/`
+([`docs/spec/picking-a-book-up.md`](../docs/spec/picking-a-book-up.md) §3.3).
+`pnpm gate:public` refuses to run unless all four cases below are planted,
+because a check over a property no fixture exhibits passes by construction.
+
+| Cover | Case | What a build must do |
+| --- | --- | --- |
+| `the-tidal-engine.png`, 1400x2100 | published, over the held cap | stage a copy resized to 1200px |
+| `signal-and-sediment.png`, 800x1200, EXIF + XMP | published, between the two caps | stage a copy at native size, **re-encoded**, carrying neither |
+| `a-book-kept-back.png`, 1400x2100 | the private book | no held copy in a public build |
+| `the-quiet-protocol.png`, 1400x2100 | the wishlist book | no held copy in a public build |
+
+The EXIF and XMP are invented — an `ImageDescription` and a `dc:creator` that
+name no real camera or person — and planted by the cover script, so
+regenerating the covers keeps them.
 
 ## The 50-book fixture
 

@@ -1663,6 +1663,58 @@ moved; the gates above hold the new extractor as they held the old one.
   before them, and the `About` writer's five refusals each assert their own
   warning words.
 
+### The held tier, gated before it is staged
+
+Step 3 of [`docs/spec/picking-a-book-up.md`](./spec/picking-a-book-up.md)
+([#412](https://github.com/mephistopheles4/stacks/issues/412)) stages a 1200px
+copy of every published cover over the shelf's 512px into `held-covers/`, named
+by `heldCover` in `library.json`. A second, larger published file per book is
+"anything published", so the checks landed first and were watched red before a
+line of staging existed. No new row: the inspector rules ride G20, the rest
+extends `gate:public` and G5.
+
+- **Three rules join the shared inspector, planted under G20.** `orphan-held`,
+  `orphan-cover`'s twin: every file under `held-covers/` is named by a shipped
+  book's `heldCover` — a private book's copy, a wishlist book's, or one a build
+  of another vault left, is named for a title. `held-oversize`: no file over
+  1200px on its long edge. `held-metadata`: no file carrying EXIF or XMP, and
+  none sharp cannot read. ⚠️ **No direction from book to file**, unlike
+  `orphan-note`: a `heldCover` with no file costs a 404 and the shelf's copy
+  stays, so it leaks nothing.
+- **The inspector is async now**, for those two: sharp reads pixels and
+  metadata and has no synchronous API. They had to stay in the one inspector
+  rather than a helper only the gate calls, because the owner's photographed
+  covers exist only in a real build, and `deploy:site` is the only caller that
+  reads one ([ADR-0028](./adr/0028-one-inspector-for-the-public-build.md)).
+- **`foreign-cover` learns `heldCover`**: one same-origin segment under
+  `held-covers/`, and stricter than `cover` by one clause — a segment of only
+  dots is refused, since `held-covers/..` is one segment that resolves to the
+  root. **`unknown-key` learns the key**, and G30 names it beside the other
+  three. **`headers` requires a revalidating `/held-covers/*` block**: images
+  take Pages' four-hour default, so a cover taken down would linger that long.
+- **`gate:public` refuses to run** unless the fixture vault holds a published
+  cover over 1200px, a published cover over 512px carrying EXIF and XMP, and a
+  cover over 512px on the private book and on the wishlist book — read through
+  the adapter. After the build it requires a held copy, named by its book, for
+  every published cover over 512px, and none for the two held back.
+- **G5** holds `packages/site/public/held-covers/` ignored, as `it.fails` until
+  the stage lands with its `.gitignore` line.
+
+**The fixtures moved for it.** `signal-and-sediment.png` is now 800x1200 with
+an invented EXIF and XMP chunk planted by `scripts/make-fixture-covers.ts`: over
+the shelf cap and inside the held one, which is the size #377 would have copied
+byte for byte, so it is the one case that tells a re-encode from a copy. The
+private and wishlist fixtures each gained a 1400x2100 cover. The book count does
+not move.
+
+Observed red before any staging code: `gate:public` failed with *no held copy
+staged and named* for both published covers over 512px; G20's clean build went
+red on `headers` before the `/held-covers/*` block existed, and red on
+`unknown-key` with `heldCover` out of `DERIVED_KEYS`; `held-covers/..` passed
+`foreign-cover` until the dot-segment clause. Each `held-metadata` plant is
+first shown to carry EXIF or XMP through the reader the rule uses, so a plant
+sharp silently dropped cannot pass as a rule that works.
+
 ## Where cover art may go
 
 | Surface | Rule |

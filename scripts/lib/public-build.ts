@@ -56,6 +56,13 @@ export const PUBLIC_BUILD_RULES = [
   'orphan-cover',
   'orphan-note',
   'notes-shape',
+  // The held tier: one larger cover per book, in `held-covers/` (spec §3.3).
+  // Size and metadata are two rules because they fail for different reasons and
+  // send you to different fixes — a resize that did not happen, or a copy that
+  // was not re-encoded.
+  'orphan-held',
+  'held-oversize',
+  'held-metadata',
   'unknown-key',
   // Two rules rather than one, because `deploy:site --check-only` has to excuse
   // exactly one of them: it asserts the built page against the *current*
@@ -204,6 +211,22 @@ const SHARE_TAG = /<meta\s+(?:property|name)="((?:og|twitter):[a-z]+)"\s+content
 const SAME_ORIGIN_COVER = /^covers\/[^/\\]+$/;
 
 /**
+ * Where a build stages a book's held copy, as `held-covers/<name>`: a sibling of
+ * `covers/`, never a folder inside it, so G15 (`cover-budget`), the covers
+ * prune and `orphan-cover` never see it (spec §3.3).
+ */
+const HELD_DIR = 'held-covers';
+
+/**
+ * A held copy this build serves itself: one path segment, under `held-covers/`.
+ *
+ * Stricter than `SAME_ORIGIN_COVER` by one clause: a segment of only dots is
+ * refused, because `held-covers/..` is one segment that resolves to the site
+ * root. The stage only ever writes a `coverFileName`, which never is one.
+ */
+const SAME_ORIGIN_HELD = /^held-covers\/(?!\.+$)[^/\\]+$/;
+
+/**
  * Where a build stages a book's published Thoughts, as `notes/<id>.json`.
  *
  * `publish()`'s notes stage writes here, through the adapter's
@@ -311,6 +334,9 @@ const COVERS_PATTERN = '/covers/*';
 
 /** The `_headers` block that governs published Thoughts. Matched exactly, like the covers one. */
 const NOTES_PATTERN = '/notes/*';
+
+/** The `_headers` block that governs held copies. Matched exactly, like the covers one. */
+const HELD_COVERS_PATTERN = '/held-covers/*';
 
 /** The `_headers` block that governs every response, security headers included. */
 const EVERY_PATH_PATTERN = '/*';
@@ -448,13 +474,16 @@ const RECORD_KEYS = [
  * because a square audiobook cover forced onto a print face is squashed;
  * `thoughts` is `true` when the build wrote the book's `notes/<id>.json`, so the
  * page knows to fetch it (spec §3.1) — a flag set by the notes stage, never
- * text, and `orphan-note` refuses any value but `true`. All three are
- * `library.json`'s own, and G30 names the same three.
+ * text, and `orphan-note` refuses any value but `true`; `heldCover` is the path
+ * of the held copy the build staged, `held-covers/<name>` (spec §3.3) — a path
+ * and never text, held to that one-segment shape by `foreign-cover` and to a
+ * staged file by `orphan-held`. All four are `library.json`'s own, and G30
+ * names the same four.
  *
  * ⚠️ **This list is the most dangerous line in this file.** A key that should
  * never have shipped is made to ship by adding its name here — red turns green
  * in a one-line diff that reads like documentation, with no rule deleted and no
- * assertion weakened. So: three entries, and anything joining them owes a
+ * assertion weakened. So: four entries, and anything joining them owes a
  * sentence saying what derives it and why it is not a record field.
  *
  * **Which is why `gates/library-seam.test.ts` keeps its own copy and this does
@@ -470,6 +499,7 @@ const DERIVED_KEYS = [
   'id',
   'coverAspect',
   'thoughts',
+  'heldCover',
 ] as const satisfies readonly (keyof LibraryBook)[];
 
 /** The whole vocabulary a shipped book may spell. */
@@ -479,6 +509,8 @@ interface ShippedBook {
   readonly id?: string;
   readonly title?: string;
   readonly cover?: string;
+  /** Read as `unknown`, because a held path that is not a string is itself a defect. */
+  readonly heldCover?: unknown;
   readonly status?: string;
   readonly private?: boolean;
   readonly sourcePath?: string;
@@ -486,7 +518,16 @@ interface ShippedBook {
   readonly thoughts?: unknown;
 }
 
-export function inspectPublicBuild(dir: string, options: InspectOptions): PublicBuildReport {
+/**
+ * Async for one reason: a held copy's size and metadata are read with sharp,
+ * which has no synchronous API, and those two rules must run on a real deploy
+ * as well as on the gate's fixture build — the owner's photographed covers
+ * exist only in the real one (spec §3.3, ADR-0028).
+ */
+export async function inspectPublicBuild(
+  dir: string,
+  options: InspectOptions,
+): Promise<PublicBuildReport> {
   const problems: BuildProblem[] = [];
   const observations: string[] = [];
   const origin = options.origin.replace(/\/$/, '');
@@ -572,6 +613,17 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
     if (book.cover !== undefined && !SAME_ORIGIN_COVER.test(book.cover)) {
       fail('foreign-cover', `cover is not same-origin: ${name} → ${book.cover}`);
     }
+    // The held copy reaches an <img> src and a texture loader the same way, so
+    // it is held to the same shape, in its own folder.
+    if (
+      book.heldCover !== undefined &&
+      !(typeof book.heldCover === 'string' && SAME_ORIGIN_HELD.test(book.heldCover))
+    ) {
+      fail(
+        'foreign-cover',
+        `held cover is not same-origin: ${name} → ${JSON.stringify(book.heldCover)}`,
+      );
+    }
   }
 
   if (unnamed.size > 0) {
@@ -623,6 +675,11 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
   const notesProblems = inspectNotes(dir, books ?? []);
   problems.push(...notesProblems.problems);
   observations.push(...notesProblems.observations);
+
+  // ── Held copies ───────────────────────────────────────────────────────────
+  const heldProblems = await inspectHeld(dir, books ?? []);
+  problems.push(...heldProblems.problems);
+  observations.push(...heldProblems.observations);
 
   // ── The page a scraper fetches ────────────────────────────────────────────
   //
@@ -833,6 +890,13 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
         "notes would rest on Pages' default, which this repo does not control",
         'a section the owner withdrew could outlive its prune in a browser cache',
       ],
+      // Images, so Pages' four-hour default applies here exactly as it does to
+      // `covers/`: a cover the owner takes down would linger that long.
+      [
+        HELD_COVERS_PATTERN,
+        "held copies would keep Pages' four-hour image default",
+        'a cover taken down could linger in browsers for four hours after the prune',
+      ],
     ];
     for (const [pattern, ifAbsent, ifStale] of revalidating) {
       const block = blocks.get(pattern);
@@ -974,6 +1038,109 @@ function inspectNotes(dir: string, books: readonly ShippedBook[]): PublicBuildRe
       ? [
           `${String(staged.length)} notes file(s), one for each book marked thoughts: true, ` +
             'each shaped { paragraphs }',
+        ]
+      : [];
+  return { problems, observations };
+}
+
+/**
+ * The `held-covers/` folder: `orphan-held`, `held-oversize` and `held-metadata`.
+ *
+ * A held copy is a second published file per book, larger than the shelf's,
+ * so it is held three ways on the bytes rather than trusted of the stage (spec
+ * §3.3, #377). `orphan-held` is `orphan-cover`'s twin: every filename is a slug
+ * of a title, so a file no shipped book names — a private book's, a wishlist
+ * book's, or one left by a build of another vault — is a leak by its name
+ * alone. `held-oversize` holds each to `HELD_COVER_EDGE` on its long edge.
+ * `held-metadata` refuses EXIF and XMP: a cover the owner photographed carries
+ * camera metadata, location included, and only a re-encode drops it.
+ *
+ * ⚠️ **No direction from book to file.** A `heldCover` naming a file that is
+ * not there costs a 404 and the shelf's copy stays, so it leaks nothing — unlike
+ * a notes mark, which the page would show as missing Thoughts. The shape of the
+ * path is `foreign-cover`'s, read with the books above.
+ *
+ * A file sharp cannot read fails `held-metadata`: nothing can vouch for what it
+ * carries, and an unreadable file at an image URL is not one the stage wrote.
+ */
+async function inspectHeld(dir: string, books: readonly ShippedBook[]): Promise<PublicBuildReport> {
+  const heldDir = join(dir, HELD_DIR);
+  if (!existsSync(heldDir)) return { problems: [], observations: [] };
+
+  // Loaded here, never at the top of the module: sharp is native and slow to
+  // load, and `deploy.ts` imports this file on every run, including the many
+  // G17 and G39 spawn only to watch it refuse before any inspection. A static
+  // import pushed G17's five spawns past vitest's five-second timeout.
+  // `cover-budget.ts` imports sharp too, so its constant comes the same way.
+  const [{ default: sharp }, { HELD_COVER_EDGE }] = await Promise.all([
+    import('sharp'),
+    import('../../packages/core/src/covers/cover-budget.ts'),
+  ]);
+
+  const problems: BuildProblem[] = [];
+  const named = new Set(
+    books
+      .map((book) => book.heldCover)
+      .filter((held): held is string => typeof held === 'string')
+      .map((held) => held.replace(/^held-covers\//, '')),
+  );
+  const staged = walk(heldDir).map((file) => ({ file, name: posix(relative(heldDir, file)) }));
+
+  const orphans = staged.filter(({ name }) => !named.has(name));
+  if (orphans.length > 0) {
+    problems.push({
+      rule: 'orphan-held',
+      message:
+        `${String(orphans.length)} held cover(s) that no book in library.json names — ` +
+        `each filename is a book title: ${orphans
+          .slice(0, 5)
+          .map(({ name }) => name)
+          .join(', ')}`,
+    });
+  }
+
+  for (const { file, name } of staged) {
+    let metadata;
+    try {
+      metadata = await sharp(file).metadata();
+    } catch {
+      problems.push({
+        rule: 'held-metadata',
+        message: `held-covers/${name} cannot be read as an image, so nothing can vouch for what it carries`,
+      });
+      continue;
+    }
+
+    const edge = Math.max(metadata.width, metadata.height);
+    if (edge > HELD_COVER_EDGE) {
+      problems.push({
+        rule: 'held-oversize',
+        message:
+          `held-covers/${name} is ${String(metadata.width)}x${String(metadata.height)}, over the ` +
+          `${String(HELD_COVER_EDGE)}px held cap on its long edge`,
+      });
+    }
+
+    const carried = [
+      metadata.exif === undefined ? undefined : 'EXIF',
+      metadata.xmp === undefined ? undefined : 'XMP',
+    ].filter((kind): kind is string => kind !== undefined);
+    if (carried.length > 0) {
+      problems.push({
+        rule: 'held-metadata',
+        message:
+          `held-covers/${name} carries ${carried.join(' and ')} — camera metadata, location ` +
+          'included, ships with it unless the copy is re-encoded',
+      });
+    }
+  }
+
+  // Counted, not assumed: said only when all three rules held over every file.
+  const observations =
+    problems.length === 0
+      ? [
+          `${String(staged.length)} held cover(s), all named, within ${String(HELD_COVER_EDGE)}px, ` +
+            'none carrying EXIF or XMP',
         ]
       : [];
   return { problems, observations };
