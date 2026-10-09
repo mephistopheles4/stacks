@@ -11,8 +11,11 @@ reaches every visitor, at about 19.6 KB gzip (measured with Vite on #370).
 `CustomEase` is added only if the tuned curves need it.
 
 - **GSAP is stepped by the shelf's own frame**, not its own ticker:
-  `gsap.ticker.remove(gsap.updateRoot)`, then `gsap.updateRoot(now)` inside the
-  render loop. The pose, the WebGL render and the CSS3D page then come from one
+  `gsap.ticker.remove(gsap.updateRoot)`, then `gsap.updateRoot(seconds)` inside
+  the render loop. `seconds` is **seconds**, GSAP's root-timeline unit, counted
+  from one origin the loop fixes; never a raw `requestAnimationFrame` timestamp,
+  which is milliseconds and would throw the timeline a thousand times too far.
+  The pose, the WebGL render and the CSS3D page then come from one
   instant, which is what keeps #369's text registration at 0.3 px.
 - **`reverse()` with a `timeScale` puts a book back**, and `kill()` or an
   overwrite handles a click on another book mid-move.

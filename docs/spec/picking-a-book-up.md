@@ -376,12 +376,17 @@ notes in step 1, and the provider description planted in step 2's `## About`
 test, are written for this repo. Never a cached provider response, and never
 copyrighted prose ([ADR-0004](../adr/0004-fixtures-invented.md)).
 
-**Undoing a step.** Each step lands as its own pull request, so a revert is
-one. Reverting step 2 stops the notes stage; the next build's prune empties
-`notes/`, and the next deploy takes every file off the site, while the
-revalidate block stops browsers serving a cached copy. Reverting step 3 does the
-same for `held-covers/`. Reverting step 4 restores the card. Third-party caches
-and archives are beyond any of these (§9).
+**Undoing a step.** Each step lands as its own pull request. **Steps 2 and 3
+are undone by switching the stage off, never by a bare revert**, because a bare
+revert removes the prune along with the stage. `deploy:site` stages into
+`packages/site/public/`, which persists between runs, so the files the last
+build staged would stay there, reach `dist/` and deploy again. So the undo of
+step 2 keeps the `notes/` prune and the `/notes/*` revalidate block and stops
+writing files; the prune then empties the folder at the next build, and the
+next deploy takes every file off the site. Undoing step 3 does the same for
+`held-covers/`. If a bare revert happens anyway, delete both folders from
+`packages/site/public/` before the next deploy. Reverting step 4 restores the
+card. Third-party caches and archives are beyond any of these (§9).
 
 **When a step stops.** A build session stops and brings it to the owner when a
 gate in §5 cannot be observed red, when the canary or anything from a private
