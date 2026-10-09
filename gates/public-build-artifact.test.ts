@@ -383,6 +383,14 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
+  it('orphan-note: a file named for a listed book, with another ending', async () => {
+    await expectOnly('orphan-note', async () => {
+      // Five characters, like `.json`, so a rule that cut the ending off by
+      // length without checking it would read this as the clean book's file.
+      await writeNotes(`${CLEAN_ID}.text`, { paragraphs: ['A paragraph under the wrong name.'] });
+    });
+  });
+
   it('orphan-note: a notes file below a subfolder', async () => {
     await expectOnly('orphan-note', async () => {
       // Named for a listed book, but one folder down. A notes file is
@@ -413,6 +421,18 @@ describe('G20 — every rule goes red', () => {
     exercised.add('notes-shape');
   });
 
+  it('notes-shape: a misshapen file is named in the message, never quoted', async () => {
+    // A writer that keyed the file by its prose would otherwise print the
+    // owner's Thoughts to the terminal through the very message refusing it.
+    // Not the canary, which `note-body` would rightly refuse and quote too.
+    const prose = 'A sentence of Thoughts a broken writer used as a key';
+    await writeNotes(`${CLEAN_ID}.json`, { [prose]: ['A paragraph.'] });
+    const problems = inspect().problems;
+
+    expect(problems.map((problem) => problem.rule)).toEqual(['notes-shape']);
+    expect(problems.map((problem) => problem.message).join('\n')).not.toContain(prose);
+  });
+
   it('notes-shape: a notes file over the byte cap, counted in bytes', async () => {
     await expectOnly('notes-shape', async () => {
       // 20,001 two-byte characters: 40,002 bytes in UTF-8, though the string's
@@ -427,8 +447,9 @@ describe('G20 — every rule goes red', () => {
     // address the flattening never saw.
     for (const address of [
       'see https://elsewhere.example/a',
-      'saved at file:///Users/someone/notes.md',
-      'opened from obsidian://open?vault=Private',
+      // Without the slashes, so `://` cannot answer for these two.
+      'saved at file:C:/Users/someone/notes.md',
+      'opened from obsidian:open?vault=Private',
       'write to MAILTO:someone@example.invalid',
     ]) {
       // Second of two paragraphs, so a check that read only the first, or

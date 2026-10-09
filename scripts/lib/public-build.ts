@@ -773,8 +773,11 @@ function readBooks(dir: string): ShippedBook[] | undefined {
  * so a file can carry paragraphs and nothing else. Messages name the file and
  * never quote it: what is inside is the owner's prose.
  *
- * ⚠️ **One direction only, file to book.** The other, a file for every book
- * marked as having one, arrives with the extractor and the mark.
+ * ⚠️ **One direction only today: every file names a listed book.** Step 2
+ * adds the `thoughts: true` key a book carries in `library.json` when its file
+ * was written, and with it both directions of spec §3.1: every file names a
+ * book carrying `thoughts: true`, which is what refuses a stale file for a
+ * book that is still listed, and every such book has a file.
  *
  * A build with no `notes/` folder passes both, as every build does until the
  * extractor exists, and says nothing about it: there was nothing to look at.
@@ -842,9 +845,14 @@ function notesShapeProblem(text: string): string | undefined {
     return 'is not a JSON object';
   }
 
+  // Counted, never named: a writer that keyed the file by its prose would put
+  // the owner's Thoughts in the terminal through a message that listed keys.
   const keys = Object.keys(parsed);
   if (keys.length !== 1 || keys[0] !== 'paragraphs') {
-    return `has the key(s) ${keys.join(', ') || '(none)'} — exactly one, \`paragraphs\`, is allowed`;
+    return (
+      `has ${String(keys.length)} key(s), ${keys.includes('paragraphs') ? '' : 'none of them `paragraphs`, '}` +
+      'where exactly one, `paragraphs`, is allowed'
+    );
   }
 
   const { paragraphs } = parsed as { paragraphs: unknown };

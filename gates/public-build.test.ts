@@ -140,6 +140,10 @@ const PLANTED = {
 /** A fence opener or closer, as CommonMark allows it indented. */
 const FENCE = /^ {0,3}(?:```|~~~)/;
 
+// Read straight off disk rather than through the adapter, because the adapter
+// carries no body text at all: these are the fixtures as test data, read to
+// prove each still plants its case. G1 (`adapter-boundary`) does not scan
+// `gates/`, whose tests read and write vault files on purpose.
 async function readFixture(name: string): Promise<string> {
   return readFile(join(FIXTURE_VAULT, 'Library', name), 'utf8');
 }
@@ -233,6 +237,23 @@ describe('G2 — the Thoughts split is planted before anything is asserted about
     expect(thoughtsOf(note)).toBeUndefined();
     expect(note).toContain(CANARY);
   });
+
+  it('would publish every book whose case is about the section, not the book', async () => {
+    // The embed, the unclosed fence and the no-Thoughts book must each be a
+    // book a public build ships. Made private or wishlist, any of them would
+    // emit no file for the book's sake, and its case would test nothing.
+    const vault = new ObsidianAdapter(FIXTURE_VAULT);
+    const result = await publish(await vault.listBooks(), vault, assets, { isPublic: true });
+    const shipped = new Set(result.library.books.map((book) => book.id));
+    const ids = await fixtureIds();
+
+    for (const name of [PLANTED.split, PLANTED.embed, PLANTED.unclosedFence, PLANTED.noThoughts]) {
+      expect(
+        shipped.has(ids.get(name) ?? name),
+        `${name} must be a book a public build ships`,
+      ).toBe(true);
+    }
+  });
 });
 
 describe.each([
@@ -273,9 +294,23 @@ describe.each([
 
   it('carries no Thoughts text into library.json', async () => {
     // Invariant 2's absolute half: whatever ships as a notes file, the index
-    // never carries body text, in any build.
+    // never carries body text, in any build. Every planted section's sentences
+    // are looked for, not only the ship phrase, so prose that carries neither
+    // marker is held too — a sentence rather than a line, because one leaked
+    // sentence is a leak. Short ones are skipped: a fence or an embed alone is
+    // not prose, and a title could share a few words with one.
     const { json } = await publishSplit();
     expect(json).not.toContain(SHIP_PHRASE);
+
+    for (const name of Object.values(PLANTED)) {
+      const sentences = (thoughtsOf(await readFixture(name))?.section ?? '')
+        .split(/\n|(?<=[.:!?])\s+/)
+        .map((sentence) => sentence.trim())
+        .filter((sentence) => sentence.length >= 24);
+      for (const sentence of sentences) {
+        expect(json, `Thoughts from ${name}`).not.toContain(sentence);
+      }
+    }
   });
 
   it('stages no notes file for any book but the split one', async () => {
@@ -299,12 +334,17 @@ describe.each([
   /**
    * ⚠️ **Expected to fail until the extractor exists, and it arms itself.**
    *
-   * The presence half of the split, as a vitest `test.fails` (#367, decision
-   * 2): it runs on every CI run and is recorded as an expected failure. The
-   * pull request that adds the extractor makes it pass, which turns this red by
-   * itself, so that pull request must flip it to `it`. Nothing relies on
-   * somebody remembering to arm it. The armed precondition above is what keeps
-   * it from failing for the wrong reason.
+   * The presence half of the split, as `it.fails` — vitest's alias for the
+   * `test.fails` the spec and #367 name (decision 2). It runs on every CI run
+   * and is recorded as an expected failure. The pull request that adds the
+   * extractor makes it pass, which turns this red by itself, so that pull
+   * request flips `it.fails` to `it`. Nothing relies on somebody remembering
+   * to arm it.
+   *
+   * ⚠️ **Flip it whether or not it went red.** Any failure satisfies it, so an
+   * extractor that wrote the wrong shape or the wrong folder would leave it
+   * quiet. The armed precondition above rules out only a missing book or id;
+   * `it` is what makes the rest strict.
    */
   it.fails("ships the Thoughts in the split book's notes file", async () => {
     const { ids } = await publishSplit();

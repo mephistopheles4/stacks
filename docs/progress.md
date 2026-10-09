@@ -187,15 +187,9 @@ overriding a zone setting for no privacy gain, and the dashboard is where that
 belongs. Pinned as a set so a second third-party origin cannot arrive unnoticed.
 
 **2026-10-09 — the Thoughts split, armed before the extractor**
-([#410](https://github.com/mephistopheles4/stacks/issues/410), step 1 of
-[`docs/spec/picking-a-book-up.md`](./spec/picking-a-book-up.md)). G2 gains the
-split's presence half as a `test.fails` in a public and a local build, which
-the extractor will turn red by itself; its absence half, a precondition and a
-five-test vacuity guard are armed now. Six existing fixture notes plant the
-cases, so the book count does not move. The shared inspector gains
-`orphan-note` and `notes-shape`, each planted red under G20. No new row; G2's
-row text changes with the extractor. Every assertion observed red by a plant,
-recorded under *G2 in full* in [`gates.md`](./gates.md).
+([#410](https://github.com/mephistopheles4/stacks/issues/410)): G2 extended and
+two inspector rules under G20, no new row — see
+[*The Thoughts split, armed before the extractor exists*](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
 
 ### Phase 4 evidence
 
