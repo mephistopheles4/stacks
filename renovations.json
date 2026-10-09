@@ -96,6 +96,14 @@
       "reason": "jscpd moved to 5.3.2. Unlike 5.2.0, this bump moves a count: over the identical tree the whole-tree population goes from 53 clones and 558 duplicated lines to 55 and 619, while all eight declared scopes are unchanged. No source changed; the detector draws clone boundaries differently. Two existing test-file clones were re-segmented (update-book.test.ts against insert-body-section.test.ts, and a pair inside floors.test.ts), and two pairs are newly reported, update-book.test.ts against gates/hand-edited-notes.test.ts and a second pair inside floors.test.ts. All six spans are test files.",
       "pr": 389,
       "preserves": false
+    },
+    {
+      "date": "2026-10-09",
+      "stamp": "configHash",
+      "value": "sha256:f95bdaecc2017579715350fb0e2ca40fe80152726fc32fa6b9d8ea449f1aba6c",
+      "reason": "packages/site/src/shelf/pickup-tuner.ts joins the shelf scope's zero-mutant residuals beside debug-panel.ts: the pickup tuner is imported only by boot.ts behind ?debug and imports its stylesheet with Vite's ?url, which only a Vite build resolves, so no Vitest spec can load it. No declared scope's glob changed.",
+      "pr": 417,
+      "preserves": false
     }
   ]
 }

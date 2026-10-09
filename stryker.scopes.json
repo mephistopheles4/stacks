@@ -110,6 +110,10 @@
           "mechanism": "The `?debug` panel, lazily imported by `boot.ts`. Same browser-only chain."
         },
         {
+          "path": "packages/site/src/shelf/pickup-tuner.ts",
+          "mechanism": "The pickup tuner, lazily imported by `boot.ts` behind `?debug`. Same browser-only chain, and it imports its stylesheet with Vite's `?url`, which only a Vite build resolves."
+        },
+        {
           "path": "packages/site/src/shelf/diagnostics.ts",
           "mechanism": "The black box, statically imported by `boot.ts`. Same browser-only chain."
         },
