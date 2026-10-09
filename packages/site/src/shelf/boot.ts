@@ -153,9 +153,10 @@ export async function boot(
   }
 
   // PROTOTYPE #371 — throwaway, never merges. `?pickup` swaps the card for a pickup.
-  const pickup = params.has('pickup')
-    ? (await import('./prototype-371-pickup.ts')).installPickup(params)
-    : undefined;
+  const pickup =
+    params.has('pickup') || params.has('autoplay')
+      ? (await import('./prototype-371-pickup.ts')).installPickup(params)
+      : undefined;
 
   /**
    * The canvas the shelf is drawn on **now**.
