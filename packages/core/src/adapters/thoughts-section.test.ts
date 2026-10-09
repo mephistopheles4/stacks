@@ -235,6 +235,7 @@ describe('hidden text withholds the whole section', () => {
     ['an unclosed `%%`', `Seen %% ${CANARY}`],
     ['an HTML comment', `Seen <!-- ${CANARY} --> seen.`],
     ['a stray `-->`', 'Seen --> seen.'],
+    ['a stray `--!>`, which closes a comment too', 'Seen --!> seen.'],
   ])('%s', (_, line) => {
     const source = note('## Thoughts', '', line, '', '## Notes');
     expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
@@ -259,6 +260,8 @@ describe('hidden text withholds the whole section', () => {
     // marker above the section withholds rather than guess which.
     const source = note('<!-- a -->', '', '## Thoughts', '', 'Kept?');
     expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
+    const closer = note('a --!> b', '', '## Thoughts', '', 'Kept?');
+    expect(extractThoughts(closer)).toMatchObject({ kind: 'withheld' });
   });
 
   it('ships when the only comment is below the section', () => {

@@ -104,6 +104,13 @@ function closesFence(line: string, open: FenceOpener): boolean {
 const SETEXT_UNDERLINE = /^ {0,3}(?:=+|-+)[ \t]*$/;
 
 /**
+ * A comment marker: `%%`, an HTML comment's opener, or either of its closers.
+ * HTML ends a comment at `--!>` as well as `-->`, so both close one, and a
+ * marker list that knew only `-->` would miss a comment the browser closed.
+ */
+const COMMENT_MARKER = /%%|<!--|--!?>/;
+
+/**
  * Anything Obsidian hides, or that names a file, anywhere in the section.
  *
  * Read on the raw section, fenced lines included: a `%%` inside a fence is
@@ -111,7 +118,7 @@ const SETEXT_UNDERLINE = /^ {0,3}(?:=+|-+)[ \t]*$/;
  * one answer right under both readings (#368, rule 4).
  */
 const HIDDEN: readonly { readonly reason: string; readonly pattern: RegExp }[] = [
-  { reason: 'it holds a comment marker (%%, <!-- or -->)', pattern: /%%|<!--|-->/ },
+  { reason: 'it holds a comment marker (%%, <!--, --> or --!>)', pattern: COMMENT_MARKER },
   { reason: 'it embeds a file or an image', pattern: /!\[\[|!\[[^\]\n]*\]\(/ },
   { reason: 'it holds an HTML tag', pattern: /<\/?[A-Za-z][^>\n]*>/ },
   {
@@ -149,7 +156,7 @@ export function extractThoughts(source: string): ThoughtsResult {
   // A comment open where the section starts makes its heading no heading, and a
   // marker inside a fence above it is read differently by Obsidian than by a
   // scan. Rather than guess which, any marker above the section withholds it.
-  if (/%%|<!--|-->/.test(lines.slice(0, first).join('\n'))) {
+  if (COMMENT_MARKER.test(lines.slice(0, first).join('\n'))) {
     return withheld('a comment marker sits above the section');
   }
 
