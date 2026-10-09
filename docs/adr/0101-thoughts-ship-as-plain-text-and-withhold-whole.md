@@ -19,7 +19,8 @@ section holds anything Obsidian hides or the extractor cannot vouch for:**
 - a `%%` or a `<!--` anywhere, fenced or not, closed or not, or a comment
   already open where the section starts;
 - a second `## Thoughts` heading in the note;
-- more than about 8,000 characters;
+- more than 8,000 Unicode code points of raw section text (#368 said "about
+  8,000"; the spec pins it, and the published file's own cap at 40,000 bytes);
 - any HTML tag-shaped sequence, or a link reference definition line;
 - any URL scheme left after links flatten to their display text.
 

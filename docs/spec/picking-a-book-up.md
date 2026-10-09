@@ -92,10 +92,28 @@ carries a recommendation the owner confirms at sign-off (§8).
   The page therefore never shows part of a section; it shows the book without
   Thoughts. The warning names the note and **never quotes the section**, so the
   owner finds out locally and the terminal holds no Thoughts text.
+- **The two caps are numbers, not estimates.** The extractor withholds a
+  section of more than **8,000** Unicode code points, counted on the raw
+  section text before stripping (#368's "about 8,000"). The inspector refuses a
+  notes file over **40,000** bytes: 8,000 code points at four bytes each in
+  UTF-8, plus room for the JSON around them. The second cap exists so a bug that
+  bypassed the first still fails the build.
 - **A named-keys inspector rule holds it**, in the published folder: a file
-  under `notes/` must parse as exactly this shape, stay under a byte cap, and
+  under `notes/` must parse as exactly this shape, stay under the byte cap, and
   contain no URL scheme (§5, `notes-shape`). #367 deferred this rule until the
   schema existed; it now does.
+- **`library.json` says which books have a file**: `thoughts: true` on a book
+  whose `notes/<id>.json` was written, absent otherwise. A path is not note-body
+  text, and neither is this flag. It saves a 404 on most pickups and lets the
+  page lay out the right-hand page before the fetch returns. `orphan-note`
+  holds the two in both directions: every flagged book has a file, and every
+  file a flagged book. `unknown-key` learns the key.
+- **What the page shows while the fetch is out.** The fetch starts on the click.
+  The right-hand page lays out the card's lines (§3.4) at once; Thoughts that
+  arrive before the text fades in take their place above them. Thoughts that
+  arrive later fade in at rest. A fetch that fails leaves the card's lines, with
+  no error shown; the shelf degrades to what it shows today, as the map
+  promised.
 - **The folder is pruned on every build** to exactly the files this build
   wrote, under `pruneCovers`'s rule: files only, and only where a previous
   `library.json` marks the folder as one this tool stages into. Without it, a
@@ -194,6 +212,19 @@ of the card goes.
 Long Thoughts scroll only at rest (#369). Every text node is set through
 `textContent`; nothing on the page is built from HTML (#368, rule 8).
 
+**A screen reader reaches what a sighted reader does.** The page's text and the
+put-back control are ordinary DOM in reading order, the control a real
+`<button>` with an accessible name. Until the text fades in it is hidden from
+the accessibility tree as well as from sight (`visibility`, not opacity alone),
+so nothing is read out that is not yet on screen. G35's moved checks include
+one for each.
+
+**A lost WebGL context while a book is held puts it back as a hard cut.** The
+recovery of [ADR-0091](../adr/0091-a-lost-context-falls-back-to-painted-shadows.md)
+rebuilds the shelf, painted, with nothing held, and the history entry is
+dropped with `history.back()`. Nothing tries to resume a pickup across a
+rebuild.
+
 ### 3.5 The Phase 2 click gate, and G35
 
 The Phase 2 gate in `AGENTS.md` says "clicking a book … opens the card". It
@@ -265,9 +296,10 @@ calls are few, and the split and styled-pane gates run the real code.
 ### 3.9 Who owns `history.state`
 
 **Pickup owns its history entry.** It pushes one entry with its own state;
-Escape and an empty-space click go through `history.back()` (#371). The `?debug`
-panel's `replaceState(null, …)` changes to pass the current `history.state`
-through, so it rewrites the URL without erasing a held book's entry.
+Escape and an empty-space click go through `history.back()` (#371). The
+`replaceState(null, …)` in `writeSettings` (`shelf-url.ts`), which the `?debug`
+panel calls, changes to pass the current `history.state` through, so it
+rewrites the URL without erasing a held book's entry.
 
 **The pushed entry keeps the current URL**: no path, query or hash names the
 book. The edge injects a Cloudflare analytics beacon on every page, and
@@ -299,7 +331,10 @@ a per-piece list.
 - **The rest of the `?debug` page to Tweakpane.** A later ticket (#375).
   **Trigger:** tuning the motion is done.
 - **Releasing the other covers on pickup.** **Trigger:** G15 (`cover-budget`)
-  goes red (#377).
+  goes red (#377), or the held-state memory figure the phone session takes (§8)
+  shows the held texture pushing the phone where the shelf alone does not.
+  G15 cannot see the held tier, by design (§3.3), so the second trigger is the
+  only one that can.
 
 ---
 
@@ -315,6 +350,35 @@ extractor and the motion, because the motion swaps its texture in.
 | 2 | **The extractor.** The adapter method, with §3.1's boundary and withhold list; the hand strip; `notes/<id>.json` staged by both builds under §3.2's predicate, and the folder's prune; `stacks add` writing `## Thoughts` above `## Notes`; the `## About` writer disarming heading-shaped lines (below); `packages/site/public/notes/` in `.gitignore` and in G5's build-output assertion; the `/notes/*` revalidate block; G2's `test.fails` flipped to `test`; `gate:public`'s presence and vacuity checks; G2's row text rewritten to the split | security | 1 |
 | 3 | **The held tier.** `gate:public` extended first and proven red: no held file for a private or wishlist book, none above 1200 px, none carrying EXIF or XMP, `orphan-held`, `heldCover` in `unknown-key` and `foreign-cover`, the `/held-covers/*` block required by `headers`. Then the staging: the held stage re-encoding through sharp, its prune, `heldCover` in `library.json`, `packages/site/public/held-covers/` in `.gitignore` and G5, the card's cover viewer reading it | security | 2 |
 | 4 | **The motion.** Pickup replacing the card (§3.4); GSAP stepped from the render loop; the CSS3D page; the held texture's off-thread decode and swap; the three-pass dim; the painted repaint; the pickup tuner on Tweakpane with its CSS route, the CSS extracted by reading the package file **as text**, never importing or evaluating it, and failing when the expected CSS is absent; the Phase 2 click gate and G35 moved (§3.5), with `location.href` unchanged after a pickup; G61 extended; the open spread (§3.6); the phone loop as a hook (below) | security | 3 |
+
+**Where it runs.** The published site is static, on Cloudflare Pages, behind
+`_headers` and the page's generated CSP, with the edge's analytics beacon
+injected ([ADR-0065](../adr/0065-the-csp-is-generated-not-written.md)). It is
+read on desktop browsers and on the Pixel 10 Pro XL. Every check in §5 runs
+against a built site under that CSP, never against `pnpm dev`, which emits no
+CSP at all (#376).
+
+**Each step is done when** `pnpm test`, `pnpm lint` and `pnpm build` are green,
+its rows in §5 have been observed red and then green, and the security pair has
+read its diff. Step 4 is done only after the owner's first deploy of it (§8)
+picks one book up on the live site with zero CSP violations in the console.
+
+**Fixtures are invented, every word.** The Thoughts added to existing fixture
+notes in step 1, and the provider description planted in step 2's `## About`
+test, are written for this repo. Never a cached provider response, and never
+copyrighted prose ([ADR-0004](../adr/0004-fixtures-invented.md)).
+
+**Undoing a step.** Each step lands as its own pull request, so a revert is
+one. Reverting step 2 stops the notes stage; the next build's prune empties
+`notes/`, and the next deploy takes every file off the site, while the
+revalidate block stops browsers serving a cached copy. Reverting step 3 does the
+same for `held-covers/`. Reverting step 4 restores the card. Third-party caches
+and archives are beyond any of these (§9).
+
+**When a step stops.** A build session stops and brings it to the owner when a
+gate in §5 cannot be observed red, when the canary or anything from a private
+remainder reaches a staged or built file, or when a gate cannot pass after
+three distinct approaches (AGENTS.md: write it up in `docs/blockers.md`).
 
 **Step 4 is the largest**, and the tuner gates the motion only (the map). If
 step 4 is cut into tickets, cut the tuner's two gates and its CSS route first,
@@ -360,7 +424,7 @@ until then.
 | Label | What it asserts | Lands with | Row |
 | --- | --- | --- | --- |
 | **split** | The Thoughts text is present in its book's `notes/<id>.json` and the canary is present nowhere, in public and local builds; a private book, a wishlist book, an embed and **an unclosed fence with the canary in `## Notes` below it** emit no file; **a build after the section is withheld, and again after it is removed, leaves no file for that book** | steps 1–2 | G2 (`public-build`), extended |
-| **orphan-note** | Every `notes/<id>.json` names a book in the `library.json` beside it | step 1 | an inspector rule, planted red under G20 (`public-build-artifact`) |
+| **orphan-note** | Every `notes/<id>.json` names a book in the `library.json` beside it, and from step 2, in both directions: a file exactly for each book carrying `thoughts: true` | step 1, widened in step 2 | an inspector rule, planted red under G20 (`public-build-artifact`) |
 | **notes-shape** | Every file under `notes/` is exactly `{ "paragraphs": string[] }`, non-empty, under a byte cap, and free of any URL scheme | step 1 | an inspector rule, planted red under G20 |
 | **presence in `dist/`** | `gate:public` finds the ship phrase in `dist/notes/` and refuses to run without its fixture | step 2 | `gate:public`, extended |
 | **build output out of git** | `packages/site/public/notes/` and `held-covers/` are ignored | steps 2–3 | G5 (`vault-is-truth`), extended |
@@ -418,9 +482,15 @@ G8 already shows why: a contract edited ahead of the parser is a red build.
 - **`docs/gates.md`.** Two new rows (§5), and the rewording of G2, G35 and G61.
   G19 holds the rows.
 - **`docs/progress.md`**, in the same commit as each gate.
-- **`debug-panel.ts`, lines 25–29.** The rationale comment: "no React" is moot
-  and "makes the lazy-load boundary pointless" is disproved; only "removable in
-  one file" stands (#375). Step 4.
+- **`debug-panel.ts`, the rationale comment** that opens "Vanilla DOM,
+  `createElement` and inline styles": "no React" is moot and "makes the
+  lazy-load boundary pointless" is disproved; only "removable in one file"
+  stands (#375). Step 4.
+- **`docs/shelf-inspectors.md`.** The `?debug` section gains the pickup tuner,
+  and its "a control must not lie" rule gains the tuner's floor (ADR-0104).
+  Step 4.
+- **`docs/commands.md`.** `scripts/phone-check.ts`'s section gains the shelf's
+  loop hook (§4). Step 4.
 - **`stryker.scopes.json`.** If a new module joins a declared scope, or
   `debug-panel.ts` is renamed or split, run `pnpm mutation:stamp` (G56,
   `config-hash`).
@@ -453,13 +523,15 @@ unit-tested.
 
 | What | When | How |
 | --- | --- | --- |
-| Confirm §3's decisions: the schema, which books get notes, the held path, what replaces the card, the G35 fates, the open-spread criterion, the type slices, history, the repaint, and the four deferrals. **Two of them replace a ticket's rule**, from the security review: any HTML tag withholds the section (#368's rule 5 stripped tags and kept the text), and every held copy is re-encoded (#377 copied one already inside the cap byte for byte) | **at sign-off** | the owner reads §3 and says proceed, fix or kill on the whole spec |
+| Confirm §3's decisions: the schema and its two caps (8,000 code points, 40,000 bytes), the `thoughts` flag, which books get notes, the held path, what replaces the card, the G35 fates, the open-spread criterion, the type slices, history, the repaint, and the four deferrals. **Two of them replace a ticket's rule**, from the security review: any HTML tag withholds the section (#368's rule 5 stripped tags and kept the text), and every held copy is re-encoded (#377 copied one already inside the cap byte for byte) | **at sign-off** | the owner reads §3 and says proceed, fix or kill on the whole spec |
 | The open spread of §3.6 looks right | **during the build**, step 4 | the session posts desktop screenshots at rest on the step's ticket (never committed, G13); the owner judges. The numbers in §3.6 are necessary, not sufficient |
 | **The Pixel check**, deferred from #371 and #375 | **during the build**, step 4, while polishing | the owner connects the Pixel 10 Pro XL; the session drives it through `scripts/phone-check.ts`, which calls the shelf's loop hook to pick up and put back books (§4); there is no address switch for it |
 | **The existing `## About` sections**, searched once for heading-shaped lines and fence openers | **during the build**, step 2, before the first real public build | the session runs the search against the owner's vault and reports counts only; the owner decides what to do with any hit, because those notes are the owner's to edit |
-| **The swap frame on a phone**, from #377 | **during the build**, step 4, in the same phone session | the held texture's `initTexture` upload is timed on the device; nobody has measured it |
+| **The swap frame on a phone**, from #377 | **during the build**, step 4, in the same phone session | the held texture's `initTexture` upload is timed on the device, and the GPU memory with a book held is read from the renderer's counters; nobody has measured either. The session reports both figures and what the swap looks like; **the owner judges** whether it stalls the motion. If it does, the swap moves to the moment the book comes to rest |
+| **Installing GSAP, Tweakpane and `@tweakpane/plugin-essentials`** | **during the build**, step 4, before the install | the session names the exact versions it will pin, and their release dates against the seven-day quarantine; the owner approves the install. GSAP's licence trade is ADR-0103's |
+| **The first deploy that publishes real Thoughts or held copies** | **after the build**, once steps 2 and 3 are on `main` | `pnpm deploy:site` is the owner's to run. Before it, the session reports the `## About` search's counts and how many real books would ship a notes file and a held copy; the owner approves the deploy. Published text cannot be taken back from a crawler |
 | The tuner's layout | **during the build**, step 4 | shaped by the owner in use (#375); the spec locks only the floor |
-| Accept each step | **at the end of each step** | move 4 of the owner's playbook; the security pair on steps 1–3 |
+| Accept each step | **at the end of each step** | move 4 of the owner's playbook, with the security pair on the diff of every step, 1 to 4 |
 
 ---
 
@@ -478,6 +550,9 @@ unit-tested.
 - **GSAP's licence is not OSI open source** and can be terminated by Webflow for
   non-compliance (#370). Accepted; it does not bite a personal shelf.
 - **The swap frame's cost on a phone is unmeasured** (#377); §8 measures it.
+- **No gate counts the held texture's memory.** G15 counts the shelf tier only,
+  and the held folder is kept out of its sight on purpose. One phone figure
+  (§8) is the only reading, and nothing re-takes it.
 - **One G61 flake is unexplained**: the `rest=none` page failed clause 1 once,
   at load, before any pickup, then passed twice (#371).
 - **The `dist/` size the held tier adds is an estimate**, about 10 MB, not
