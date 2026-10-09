@@ -182,8 +182,9 @@ lands the page (§4, step 4).
 
 ### 3.6 The open spread at rest
 
-**A done-criterion, from the owner, after playing with
-[#371](https://github.com/mephistopheles4/stacks/issues/371)'s prototype.** At
+**A done-criterion the owner set after playing with
+[#371](https://github.com/mephistopheles4/stacks/issues/371)'s prototype**,
+relayed to this spec by the map's lead session and confirmed at sign-off. At
 rest, both pages of the open spread lie in one plane square to the camera, with
 matching page heights, and the hinge meets the spine. In the prototype the
 cover rested near 165°, drawn in perspective, while the Thoughts page was flat,
@@ -375,7 +376,7 @@ unit-tested.
 
 | What | When | How |
 | --- | --- | --- |
-| Confirm §3's decisions: the schema, which books get notes, the held path, what replaces the card, the G35 fates, the type slices, history, the repaint, and the four deferrals | **at sign-off** | the owner reads §3 and says proceed, fix or kill on the whole spec |
+| Confirm §3's decisions: the schema, which books get notes, the held path, what replaces the card, the G35 fates, the open-spread criterion, the type slices, history, the repaint, and the four deferrals | **at sign-off** | the owner reads §3 and says proceed, fix or kill on the whole spec |
 | The open spread of §3.6 looks right | **during the build**, step 4 | the session posts desktop screenshots at rest on the step's ticket (never committed, G13); the owner judges. The numbers in §3.6 are necessary, not sufficient |
 | **The Pixel check**, deferred from #371 and #375 | **during the build**, step 4, while polishing | the owner connects the Pixel 10 Pro XL; the session drives it through `scripts/phone-check.ts`, with `/?autoplay=5` picking up and putting back books on a loop (no `&` in the address) |
 | **The swap frame on a phone**, from #377 | **during the build**, step 4, in the same phone session | the held texture's `initTexture` upload is timed on the device; nobody has measured it |
