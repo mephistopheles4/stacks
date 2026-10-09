@@ -5,6 +5,7 @@ import { coverFileName } from '../covers/cover-path.ts';
 import { FRONTMATTER_BLOCK, parseNote } from '../frontmatter.ts';
 import { isProbablySameBook, normaliseTitleAuthor, toObsidianTag } from '../identity.ts';
 import type { BookInput, BookRecord } from '../types.ts';
+import { disarmBodyText, extractThoughts } from './thoughts-section.ts';
 import type { FrontmatterChanges, VaultAdapter } from './vault-adapter.ts';
 
 /** Where notes and cached covers live inside the vault. */
@@ -141,8 +142,12 @@ export class ObsidianAdapter implements VaultAdapter {
 
     if (hasHeading(source, heading)) return false;
 
+    // Disarmed before it lands: provider prose keeps its line breaks, so a
+    // listing line reading `## Thoughts` or an unclosed fence would otherwise
+    // open a published section, or carry `## Notes` out of one (spec §4).
     const eol = source.includes('\r\n') ? '\r\n' : '\n';
-    const section = `${heading}${eol}${eol}${body.split(/\r?\n/).join(eol)}${eol}`;
+    const lines = disarmBodyText(body.replace(/\r\n/g, '\n')).split('\n');
+    const section = `${heading}${eol}${eol}${lines.join(eol)}${eol}`;
 
     const notes = new RegExp(`^##+ +Notes[ \\t]*$`, 'm').exec(source);
     const updated =
@@ -152,6 +157,28 @@ export class ObsidianAdapter implements VaultAdapter {
 
     await writeFile(path, updated, 'utf8');
     return true;
+  }
+
+  /**
+   * The `## Thoughts` section of one note, stripped to plain paragraphs.
+   *
+   * The only read below the frontmatter, and it hands back the section alone:
+   * the rest of the body is read here, scanned in `thoughts-section.ts`, and
+   * dropped. A withheld section warns naming the note and the shape that
+   * withheld it, never a word of the text, so the terminal holds none of it.
+   */
+  async readPublicSection(sourcePath: string): Promise<readonly string[] | undefined> {
+    const path = resolve(this.#vaultPath, ...sourcePath.split('/'));
+    const inside = relative(this.#vaultPath, path);
+    if (inside === '' || inside.startsWith('..') || isAbsolute(inside)) {
+      throw new Error(`${sourcePath} is outside the vault, so it is not a note to read`);
+    }
+
+    const result = extractThoughts(await readFile(path, 'utf8'));
+    if (result.kind === 'withheld') {
+      console.warn(`stacks: withheld the Thoughts in ${sourcePath} — ${result.reason}`);
+    }
+    return result.kind === 'shipped' ? result.paragraphs : undefined;
   }
 
   /** ISBN first, then normalised title+author — the two dedupe paths. */
@@ -213,7 +240,7 @@ export class ObsidianAdapter implements VaultAdapter {
 }
 
 /**
- * Frontmatter plus an empty notes heading — never a body.
+ * Frontmatter plus two empty headings, Thoughts and Notes — never a body.
  *
  * Keys use the frontmatter contract's names (`spine_color`, not `spineColor`)
  * because the file has to stay readable and editable in Obsidian.
@@ -261,14 +288,18 @@ function renderNote(book: BookInput): string {
   // wikilink embed resolves by filename anywhere in the vault, which is what
   // makes it survive the file being moved.
   //
-  // This lives in the body, and the body is never parsed back (invariant 2) —
-  // the embed is for the human reading the note, not for the build.
-  // Same filename rule as the builder uses, from the same place: a `cover:`
+  // This lives in the body, above `## Thoughts`, so it is never inside the one
+  // section a build reads (invariant 2) — the embed is for the human reading
+  // the note, not for the build, and an embed inside the section would withhold
+  // it. Same filename rule as the builder uses, from the same place: a `cover:`
   // written with backslashes would otherwise embed as `![[covers\a.png]]` and
   // resolve to nothing.
   const embed = book.cover === undefined ? '' : `![[${coverFileName(book.cover)}]]\n\n`;
 
-  return `---\n${yaml}\n---\n\n${embed}## Notes\n\n`;
+  // `## Thoughts` above `## Notes`, empty, for the owner to fill: the one
+  // section a build publishes, written where `insertBodySection` puts
+  // `## About` below it, so a provider's description never lands inside it.
+  return `---\n${yaml}\n---\n\n${embed}## Thoughts\n\n## Notes\n\n`;
 }
 
 /**

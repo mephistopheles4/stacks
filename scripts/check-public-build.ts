@@ -20,7 +20,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
-import { inspectPublicBuild, NOTE_BODY_CANARY } from './lib/public-build.ts';
+import { inspectPublicBuild, NOTE_BODY_CANARY, THOUGHTS_SHIP_PHRASE } from './lib/public-build.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
 import { walk } from './lib/walk.ts';
@@ -46,6 +46,37 @@ if (!vaultText.includes(NOTE_BODY_CANARY)) {
   process.exit(1);
 }
 console.log(`canary present in fixture vault: ${NOTE_BODY_CANARY}`);
+
+// 1b. The split's vacuity guard: a fixture note must carry the ship phrase
+// inside `## Thoughts`, with the canary below the section, or the presence
+// check in step 4 proves nothing about the split (#367, decision 9). Deliberately
+// crude — a line scan, not the extractor — because it reads fixtures to prove a
+// case is planted, not to judge a boundary.
+const planted = walk(VAULT)
+  .filter((file) => extname(file) === '.md')
+  .some((file) => {
+    const lines = readFileSync(file, 'utf8').split(/\r?\n/);
+    const start = lines.findIndex((line) => line.trimEnd() === '## Thoughts');
+    if (start === -1) return false;
+    const rest = lines.slice(start + 1);
+    const end = rest.findIndex((line) => /^#{1,2}\s/.test(line));
+    if (end === -1) return false;
+    return (
+      rest.slice(0, end).join('\n').includes(THOUGHTS_SHIP_PHRASE) &&
+      !rest.slice(0, end).join('\n').includes(NOTE_BODY_CANARY) &&
+      rest.slice(end).join('\n').includes(NOTE_BODY_CANARY)
+    );
+  });
+
+if (!planted) {
+  console.error(
+    `FAILED: no fixture note carries "${THOUGHTS_SHIP_PHRASE}" inside \`## Thoughts\` with the ` +
+      'canary below the section.\nWithout it the presence check would pass no matter what the ' +
+      'extractor shipped.',
+  );
+  process.exit(1);
+}
+console.log(`ship phrase planted in a fixture's Thoughts: ${THOUGHTS_SHIP_PHRASE}`);
 
 // 2. Build for real, as a deploy would — with an origin.
 //
@@ -89,4 +120,27 @@ if (report.problems.length > 0) {
   process.exit(1);
 }
 
-console.log('\nOK — public build carries no note bodies, no vault paths');
+// 4. The split's presence half, on the folder Astro assembled. G2 proves
+// `publish()` writes the section; this proves `notes/` survives into `dist/`
+// (#367, decision 4). Here and not in the inspector, which also reads real
+// deploys, where no fixture phrase exists (ADR-0028).
+const notesDir = join(DIST, 'notes');
+const shipped = existsSync(notesDir)
+  ? walk(notesDir).filter((file) => readFileSync(file, 'utf8').includes(THOUGHTS_SHIP_PHRASE))
+  : [];
+
+if (shipped.length === 0) {
+  console.error(
+    `\nFAILED: the ship phrase "${THOUGHTS_SHIP_PHRASE}" reached no file under ` +
+      `${relative(REPO_ROOT, notesDir).split('\\').join('/')} — the split shipped nothing, or ` +
+      'Astro dropped the notes folder',
+  );
+  process.exit(1);
+}
+console.log(
+  `ship phrase present in ${relative(DIST, shipped[0] ?? '')
+    .split('\\')
+    .join('/')}`,
+);
+
+console.log('\nOK — public build carries no note bodies beyond the Thoughts split, no vault paths');

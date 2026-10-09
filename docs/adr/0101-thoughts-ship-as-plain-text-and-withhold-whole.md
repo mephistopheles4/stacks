@@ -1,7 +1,7 @@
 # ADR-0101 — Thoughts ship as plain paragraphs stripped by hand, and anything hidden withholds the whole section
 
 **Date:** 2026-10-09
-**Status:** accepted, not built — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
+**Status:** accepted, built in [#411](https://github.com/mephistopheles4/stacks/issues/411) — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
 **Issue:** [#368](https://github.com/mephistopheles4/stacks/issues/368)
 
 ## Decision

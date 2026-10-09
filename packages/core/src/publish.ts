@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import sharp, { type Sharp } from 'sharp';
 import { MAX_COVER_EDGE, measureCover } from './covers/cover-budget.ts';
 import { coverFileName, resolveCoverPath } from './covers/cover-path.ts';
-import { buildLibrary, type Library } from './library.ts';
+import { buildLibrary, idFor, type Library } from './library.ts';
 import { SHELVED_STATUSES } from './shelf-order.ts';
 import type { BookRecord } from './types.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
@@ -15,9 +15,15 @@ import type { VaultAdapter } from './adapters/vault-adapter.ts';
  * into `dist/`. Keeping the two steps separate means the CLI never has to know
  * how the site is built, and the site never has to know where the vault is.
  *
- * Nothing below a note's frontmatter is ever staged, because nothing below it
- * was ever parsed — `BookRecord` has no body field to leak.
+ * One part of a note's body is staged, and only one: its `## Thoughts`
+ * section, as `notes/<id>.json`, read through the adapter's
+ * `readPublicSection`, which never hands back the rest. `library.json` still
+ * carries no body text in any build — `BookRecord` has no body field to leak
+ * (invariant 2).
  */
+
+/** Where each book's published Thoughts are staged, as `notes/<id>.json`. */
+const NOTES_DIR = 'notes';
 
 export interface PublishOptions {
   readonly isPublic: boolean;
@@ -53,12 +59,15 @@ export async function publish(
   // Filtered here rather than in `buildLibrary`, so a local index still shows
   // you everything on your own machine. Private means "not published", not
   // "hidden from you".
-  const shelved = options.isPublic
-    ? books.filter((book) => SHELVED_STATUSES.has(book.status) && book.private !== true)
-    : books;
+  const shelved = options.isPublic ? books.filter(isPublishable) : books;
+
+  // Before `library.json` is written, because the prune's signal that the
+  // folder is ours is the previous build's `library.json`.
+  const thoughts = await stageNotes(books, vault, assetsDir);
 
   const built = buildLibrary(shelved, {
     isPublic: options.isPublic,
+    thoughts,
     ...(options.now === undefined ? {} : { now: options.now }),
   });
 
@@ -87,6 +96,75 @@ export async function publish(
 }
 
 /**
+ * Whether a public build publishes this book: one you own, not marked private.
+ *
+ * One predicate, two callers: the public shelf filter, and the notes stage,
+ * which asks it **whatever the build mode** (spec §3.2). So a local build
+ * stands a private book on the shelf and picks it up to its card's lines, never
+ * its Thoughts — you see what a visitor sees.
+ */
+function isPublishable(book: BookRecord): boolean {
+  return SHELVED_STATUSES.has(book.status) && book.private !== true;
+}
+
+/**
+ * Writes `notes/<id>.json` for every publishable book whose note carries a
+ * `## Thoughts` section, and returns the `sourcePath` of each book it wrote for.
+ *
+ * The one stage that ships note-body text (invariant 2). It reads through
+ * `readPublicSection`, which hands back the section and never the body, and
+ * asks `isPublishable` in both builds, so a private or wishlist book's
+ * Thoughts are never read for a build at all.
+ *
+ * ⚠️ **An id two publishable books share gets no file.** `idFor` hashes the
+ * ISBN, so two notes with one title and one ISBN collide, and one file would
+ * carry whichever was read last under the other's name. A private duplicate is
+ * never a candidate, so it cannot reach a public book's file this way.
+ */
+async function stageNotes(
+  books: readonly BookRecord[],
+  vault: VaultAdapter,
+  assetsDir: string,
+): Promise<ReadonlySet<string>> {
+  const byId = new Map<string, BookRecord[]>();
+  for (const book of books.filter(isPublishable)) {
+    const id = idFor(book);
+    byId.set(id, [...(byId.get(id) ?? []), book]);
+  }
+
+  const files = new Map<string, readonly string[]>();
+  const written = new Set<string>();
+  for (const [id, records] of byId) {
+    const [record, ...others] = records;
+    if (record === undefined) continue;
+    if (others.length > 0) {
+      console.warn(
+        `stacks: wrote no Thoughts for ${records.map((book) => book.sourcePath).join(', ')} — ` +
+          'they share one book id, so one file could carry another note’s text',
+      );
+      continue;
+    }
+
+    const paragraphs = await vault.readPublicSection(record.sourcePath);
+    if (paragraphs === undefined) continue;
+    files.set(`${id}.json`, paragraphs);
+    written.add(record.sourcePath);
+  }
+
+  // Pruned to exactly this build's files. `idFor` is stable, so a file left
+  // from the last build still names a listed book: without this, a section the
+  // owner deleted or that became withheld would ship again (spec §3.1).
+  const outDir = join(assetsDir, NOTES_DIR);
+  await pruneStaged(assetsDir, outDir, new Set(files.keys()), 'notes');
+  if (files.size > 0) await mkdir(outDir, { recursive: true });
+  for (const [name, paragraphs] of files) {
+    await writeFile(join(outDir, name), `${JSON.stringify({ paragraphs })}\n`, 'utf8');
+  }
+
+  return written;
+}
+
+/**
  * Stamps each book with the true proportions of the cover that shipped.
  *
  * Measured here rather than at parse time because it describes the *image*, not
@@ -111,13 +189,14 @@ async function withCoverAspects(library: Library, assetsDir: string): Promise<Li
 }
 
 /**
- * Deletes staged covers this build does not reference.
+ * Deletes staged files this build did not write: covers, and notes.
  *
  * This is the only thing in the build that removes data, so it is deliberate
- * about *where* as well as *what*. `wanted` holds bare filenames from
- * `coverFileName`, so no note can steer a deletion out of the folder — but the
- * folder itself comes from `--assets`, which is a user-supplied flag, and
- * `stacks build --public --assets ~/Pictures` must not empty `~/Pictures/covers`.
+ * about *where* as well as *what*. `wanted` holds bare filenames — from
+ * `coverFileName`, or a book id — so no note can steer a deletion out of the
+ * folder. But the folder itself comes from `--assets`, which is a user-supplied
+ * flag, and `stacks build --public --assets ~/Pictures` must not empty
+ * `~/Pictures/covers`.
  *
  * The signal that a directory is a staging area this tool owns is that a
  * previous run left its `library.json` in the parent. A folder without one is
@@ -125,10 +204,11 @@ async function withCoverAspects(library: Library, assetsDir: string): Promise<Li
  * nothing to prune — or it is somebody else's, and is left alone with a warning.
  * Files only, never directories.
  */
-async function pruneCovers(
+async function pruneStaged(
   assetsDir: string,
   outDir: string,
   wanted: ReadonlySet<string>,
+  what: 'covers' | 'notes',
 ): Promise<void> {
   let entries;
   try {
@@ -145,7 +225,7 @@ async function pruneCovers(
     console.warn(
       `warning: ${outDir} holds ${String(files.length)} file(s) but ${assetsDir} has no ` +
         'library.json from a previous build, so it does not look like a folder stacks stages ' +
-        'into. Leaving it alone — covers from this build were still written.',
+        `into. Leaving it alone — ${what} from this build were still written.`,
     );
     return;
   }
@@ -225,7 +305,7 @@ async function copyCovers(
 
   const outDir = join(assetsDir, 'covers');
   await mkdir(outDir, { recursive: true });
-  await pruneCovers(assetsDir, outDir, wanted);
+  await pruneStaged(assetsDir, outDir, wanted, 'covers');
 
   if (wanted.size === 0) return { copied: 0, missing: [] };
 

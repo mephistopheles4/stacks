@@ -67,6 +67,16 @@ export interface LibraryBook {
   readonly openLibraryOlid?: string;
   readonly oreillyOurn?: string;
 
+  /**
+   * `true` when this build wrote the book's `notes/<id>.json`; absent otherwise.
+   *
+   * A flag and never the text, so `library.json` still carries no body
+   * (invariant 2). It saves the page a 404 on most pickups, and the inspector's
+   * `orphan-note` holds file and flag to each other in both directions (spec
+   * §3.1). Derived, so it lives here rather than in the frontmatter.
+   */
+  readonly thoughts?: true;
+
   /** Present in local builds only — stripped when `isPublic` is set. */
   readonly sourcePath?: string;
 }
@@ -83,6 +93,12 @@ export interface BuildLibraryOptions {
   readonly isPublic?: boolean;
   /** Injected so builds are reproducible in tests. */
   readonly now?: Date;
+  /**
+   * The `sourcePath` of every book whose notes file this build wrote, marked
+   * `thoughts: true`. Keyed by record rather than by id, because two notes can
+   * share an id and only the one whose file was written may be marked.
+   */
+  readonly thoughts?: ReadonlySet<string>;
 }
 
 export function buildLibrary(
@@ -90,7 +106,10 @@ export function buildLibrary(
   options: BuildLibraryOptions = {},
 ): Library {
   const isPublic = options.isPublic ?? false;
-  const books = records.map((record) => toLibraryBook(record, isPublic));
+  const thoughts = options.thoughts ?? new Set<string>();
+  const books = records.map((record) =>
+    toLibraryBook(record, isPublic, thoughts.has(record.sourcePath)),
+  );
 
   return {
     version: 1,
@@ -100,7 +119,7 @@ export function buildLibrary(
   };
 }
 
-function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
+function toLibraryBook(record: BookRecord, isPublic: boolean, thoughts: boolean): LibraryBook {
   const book: LibraryBook = {
     id: idFor(record),
     title: record.title,
@@ -129,6 +148,7 @@ function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
     ...keyIfPresent('appleTrackId', record.appleTrackId),
     ...keyIfPresent('openLibraryOlid', record.openLibraryOlid),
     ...keyIfPresent('oreillyOurn', record.oreillyOurn),
+    ...(thoughts ? { thoughts: true as const } : {}),
   };
 
   // A public build must expose no vault paths (brief, "share build").
@@ -138,8 +158,12 @@ function toLibraryBook(record: BookRecord, isPublic: boolean): LibraryBook {
 /**
  * Stable across rebuilds and independent of ordering, so the shelf can keep a
  * book selected while the vault changes underneath it.
+ *
+ * Exported for the notes stage, which names each `notes/<id>.json` after it.
+ * ⚠️ **Not unique**: two notes with one title and one ISBN share an id, which
+ * is why the stage writes no file for an id two published books share.
  */
-function idFor(record: BookRecord): string {
+export function idFor(record: BookRecord): string {
   const slug = record.title
     .toLowerCase()
     .normalize('NFKD')

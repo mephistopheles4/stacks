@@ -56,6 +56,8 @@ interface ShippedBook {
   readonly status?: string;
   readonly private?: boolean;
   readonly sourcePath?: string;
+  /** `true` when the build wrote this book's notes file; typed wide to plant anything else. */
+  readonly thoughts?: unknown;
   /**
    * Deliberately not a contract key.
    *
@@ -68,13 +70,14 @@ interface ShippedBook {
   readonly subjects?: string;
 }
 
-/** The clean build's one book, and the id its notes file is named for. */
+/** The clean build's one book, the id its notes file is named for, and its mark. */
 const CLEAN_ID = 'a-book-1x2y3z';
 const CLEAN_BOOK: ShippedBook = {
   id: CLEAN_ID,
   title: 'A Book',
   cover: 'covers/a.jpg',
   status: 'read',
+  thoughts: true,
 };
 
 /**
@@ -105,7 +108,12 @@ async function writeCleanBuild(): Promise<void> {
  * searches past the end of a block, because there is nothing past it to find.
  */
 function headersFile(
-  options: { coversCacheControl?: boolean; frameOptions?: boolean; frameAncestors?: boolean } = {},
+  options: {
+    coversCacheControl?: boolean;
+    notes?: 'revalidate' | 'stale' | 'absent';
+    frameOptions?: boolean;
+    frameAncestors?: boolean;
+  } = {},
 ): string {
   const revalidate = '  Cache-Control: public, max-age=0, must-revalidate';
   return [
@@ -123,6 +131,13 @@ function headersFile(
     '/og.png',
     revalidate,
     '',
+    ...(options.notes === 'absent'
+      ? []
+      : [
+          '/notes/*',
+          options.notes === 'stale' ? '  X-Content-Type-Options: nosniff' : revalidate,
+          '',
+        ]),
   ].join('\n');
 }
 
@@ -399,6 +414,41 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
+  it('orphan-note: a file named for a listed book that does not carry the mark', async () => {
+    await expectOnly('orphan-note', async () => {
+      // The stale file the prune exists for: `idFor` is stable, so a section
+      // the owner withdrew leaves a file still named for a listed book. Only
+      // the mark tells the two apart (spec §3.1).
+      await writeLibrary([{ ...CLEAN_BOOK, thoughts: undefined }]);
+    });
+  });
+
+  it('orphan-note: a marked book whose file is missing', async () => {
+    await expectOnly('orphan-note', async () => {
+      await rm(join(dist, 'notes', `${CLEAN_ID}.json`));
+    });
+  });
+
+  it('orphan-note: a marked book and no notes folder at all', async () => {
+    // A rule that returned early on a missing folder would read this as a
+    // build with nothing to inspect, and pass the mark it never checked.
+    await expectOnly('orphan-note', async () => {
+      await rm(join(dist, 'notes'), { recursive: true, force: true });
+    });
+  });
+
+  it('orphan-note: a mark that is anything but `true`, never quoted', async () => {
+    // The key trace reads names, never values, so text under a named key
+    // passes `unknown-key`. The mark is a flag; anything else is refused, and
+    // the message does not repeat what it found.
+    const prose = 'A sentence of Thoughts a broken writer put in the mark';
+    await writeLibrary([{ ...CLEAN_BOOK, thoughts: prose }]);
+    const problems = inspect().problems;
+
+    expect([...new Set(problems.map((problem) => problem.rule))]).toEqual(['orphan-note']);
+    expect(problems.map((problem) => problem.message).join('\n')).not.toContain(prose);
+  });
+
   it('notes-shape: a notes file that is not the shape the page reads', async () => {
     // One plant per clause of the schema (spec §3.1), each in the clean book's
     // own file, so `orphan-note` stays quiet and the shape is the only defect.
@@ -669,6 +719,19 @@ describe('G20 — every rule goes red', () => {
       // `max-age=0`, which the `/og.png` block below satisfies on its own, so
       // it went green over a covers block that no longer said anything.
       await writeFile(join(dist, '_headers'), headersFile({ coversCacheControl: false }));
+    });
+  });
+
+  it('headers: notes that do not revalidate', async () => {
+    await expectOnly('headers', async () => {
+      // A withdrawn section must not live on in a browser cache (spec §3.3).
+      await writeFile(join(dist, '_headers'), headersFile({ notes: 'stale' }));
+    });
+  });
+
+  it('headers: no /notes/* block at all', async () => {
+    await expectOnly('headers', async () => {
+      await writeFile(join(dist, '_headers'), headersFile({ notes: 'absent' }));
     });
   });
 

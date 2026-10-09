@@ -179,6 +179,9 @@ describe('G5 — library.json is a build artifact', () => {
 
   it('keeps the rest of the build output out too', () => {
     expect(isIgnored('packages/site/public/covers/anything.jpg')).toBe(true);
+    // The owner's published Thoughts: a broad add after a real build would put
+    // them into public history, beyond retraction (spec §6).
+    expect(isIgnored('packages/site/public/notes/a-book-1x2y3z.json')).toBe(true);
     expect(isIgnored('artifacts/shelf.png')).toBe(true);
 
     // `og.png` sits in that same folder and is deliberately *not* ignored: it

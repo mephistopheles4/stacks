@@ -77,3 +77,12 @@
 
 /og.png
   Cache-Control: public, max-age=0, must-revalidate
+
+# A book's published Thoughts, one `notes/<id>.json` each, revalidated for the
+# covers' reason and one of their own: a section the owner withdraws is pruned
+# from the next build, and must not live on in a browser cache after it.
+# Pages already serves JSON with `max-age=0`; this says so rather than leaning
+# on a default nobody here controls. The `headers` rule in
+# `scripts/lib/public-build.ts` requires this block (spec §3.3).
+/notes/*
+  Cache-Control: public, max-age=0, must-revalidate

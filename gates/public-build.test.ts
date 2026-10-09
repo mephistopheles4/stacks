@@ -19,7 +19,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, relative } from 'node:path';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
@@ -332,26 +333,69 @@ describe.each([
   });
 
   /**
-   * ⚠️ **Expected to fail until the extractor exists, and it arms itself.**
+   * The presence half of the split, armed.
    *
-   * The presence half of the split, as `it.fails` — vitest's alias for the
-   * `test.fails` the spec and #367 name (decision 2). It runs on every CI run
-   * and is recorded as an expected failure. The pull request that adds the
-   * extractor makes it pass, which turns this red by itself, so that pull
-   * request flips `it.fails` to `it`. Nothing relies on somebody remembering
-   * to arm it.
-   *
-   * ⚠️ **Flip it whether or not it went red.** Any failure satisfies it, so an
-   * extractor that wrote the wrong shape or the wrong folder would leave it
-   * quiet. The armed precondition above rules out only a missing book or id;
-   * `it` is what makes the rest strict.
+   * It landed as `it.fails` (#367, decision 2) before the extractor existed,
+   * recorded as an expected failure. The extractor made it pass, which turned
+   * it red with *Expect test to fail* in both builds, and that is when it was
+   * flipped to `it`. The file must be exactly `{ paragraphs }`, so a wrong
+   * shape fails here and not only in the inspector.
    */
-  it.fails("ships the Thoughts in the split book's notes file", async () => {
+  it("ships the Thoughts in the split book's notes file", async () => {
     const { ids } = await publishSplit();
     const file = join(assets, 'notes', `${ids.get(PLANTED.split) ?? PLANTED.split}.json`);
     const notes = JSON.parse(await readFile(file, 'utf8')) as { paragraphs: string[] };
 
+    expect(Object.keys(notes)).toEqual(['paragraphs']);
     expect(notes.paragraphs.join('\n')).toContain(SHIP_PHRASE);
+  });
+
+  it('takes the file away when the section is withheld, and again when it is removed', async () => {
+    // The rest of spec §5's `split` row. `idFor` is stable, so a stale file
+    // still names a listed book: without the prune, a section the owner
+    // withdrew would ship again from the last build. Built in a copy of the
+    // fixture vault, because the case edits the split note between builds.
+    const copy = await mkdtemp(join(tmpdir(), 'stacks-split-vault-'));
+    try {
+      await cp(FIXTURE_VAULT, copy, { recursive: true });
+      const notePath = join(copy, 'Library', PLANTED.split);
+      const original = await readFile(notePath, 'utf8');
+      const vault = new ObsidianAdapter(copy);
+      const build = async () => publish(await vault.listBooks(), vault, assets, { isPublic });
+      const file = join(assets, 'notes', `${(await fixtureIds()).get(PLANTED.split) ?? ''}.json`);
+
+      await build();
+      expect(existsSync(file), 'the first build writes the split book’s file').toBe(true);
+
+      await writeFile(notePath, original.replace(SHIP_PHRASE, `${SHIP_PHRASE} %% an aside %%`));
+      const withheld = await build();
+      expect(existsSync(file), 'a withheld section leaves no file').toBe(false);
+
+      await writeFile(notePath, original);
+      await build();
+      expect(existsSync(file), 'restored, the section ships again').toBe(true);
+
+      await writeFile(notePath, original.replace(/^## Thoughts$/m, ''));
+      const removed = await build();
+      expect(existsSync(file), 'a removed section leaves no file').toBe(false);
+
+      for (const result of [withheld, removed]) {
+        expect(result.library.books.filter((book) => book.thoughts === true)).toEqual([]);
+      }
+    } finally {
+      await rm(copy, { recursive: true, force: true });
+    }
+  });
+
+  it('marks the split book, and only it, as carrying Thoughts', async () => {
+    // orphan-note holds file and mark to each other on a real build; this
+    // holds `publish()` to writing the mark at all.
+    const { json, ids } = await publishSplit();
+    const shipped = JSON.parse(json) as { books: { id: string; thoughts?: unknown }[] };
+
+    expect(shipped.books.filter((book) => book.thoughts !== undefined)).toEqual([
+      expect.objectContaining({ id: ids.get(PLANTED.split), thoughts: true }),
+    ]);
   });
 });
 

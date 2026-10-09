@@ -147,10 +147,12 @@ const TEXTUAL = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt'
  * the `sourcePath` field, do fire on real bytes.
  *
  * **What actually protects invariant 2 on a real build is structural** — no
- * `BookRecord` field carries a body, so no build can — and the `unknown-key`
- * rule below is that structure asserted on the artifact rather than assumed of
- * it. ⚠️ **Neither checks contents.** Body text stuffed into `subjects` — a
- * named field, correctly wired — passes every assertion in this file. See
+ * `BookRecord` field carries a body, so `library.json` cannot — and the
+ * `unknown-key` rule below is that structure asserted on the artifact rather
+ * than assumed of it. The one body section that does ship, `## Thoughts`, goes
+ * to `notes/` alone, where `orphan-note` and `notes-shape` hold it. ⚠️
+ * **Neither checks contents.** Body text stuffed into `subjects` — a named
+ * field, correctly wired — passes every assertion in this file. See
  * `docs/spec/trend-layer.md` §5, responses (i) and (iii).
  */
 const FORBIDDEN: readonly {
@@ -172,10 +174,12 @@ const SAME_ORIGIN_COVER = /^covers\/[^/\\]+$/;
 /**
  * Where a build stages a book's published Thoughts, as `notes/<id>.json`.
  *
- * Nothing writes here yet: the extractor is step 2 of
- * [`docs/spec/picking-a-book-up.md`](../../docs/spec/picking-a-book-up.md).
- * The two rules that read it land first, so they are watched going red before
- * the first real file exists ([#367](https://github.com/mephistopheles4/stacks/issues/367)).
+ * `publish()`'s notes stage writes here, through the adapter's
+ * `readPublicSection`
+ * ([`docs/spec/picking-a-book-up.md`](../../docs/spec/picking-a-book-up.md),
+ * step 2). The two rules that read it landed first, so they were watched going
+ * red before the first real file existed
+ * ([#367](https://github.com/mephistopheles4/stacks/issues/367)).
  */
 const NOTES_DIR = 'notes';
 
@@ -209,6 +213,9 @@ const SHARE_IMAGE_FILE = 'og.png';
 
 /** The `_headers` block that governs covers. Matched exactly, not searched for. */
 const COVERS_PATTERN = '/covers/*';
+
+/** The `_headers` block that governs published Thoughts. Matched exactly, like the covers one. */
+const NOTES_PATTERN = '/notes/*';
 
 /** The `_headers` block that governs every response, security headers included. */
 const EVERY_PATH_PATTERN = '/*';
@@ -343,13 +350,16 @@ const RECORD_KEYS = [
  *
  * `id` is derived from title and ISBN so the shelf can keep a book selected
  * across rebuilds; `coverAspect` is measured from the cover file at build time,
- * because a square audiobook cover forced onto a print face is squashed. Both
- * are `library.json`'s own, and G30 names the same two.
+ * because a square audiobook cover forced onto a print face is squashed;
+ * `thoughts` is `true` when the build wrote the book's `notes/<id>.json`, so the
+ * page knows to fetch it (spec §3.1) — a flag set by the notes stage, never
+ * text, and `orphan-note` refuses any value but `true`. All three are
+ * `library.json`'s own, and G30 names the same three.
  *
  * ⚠️ **This list is the most dangerous line in this file.** A key that should
  * never have shipped is made to ship by adding its name here — red turns green
  * in a one-line diff that reads like documentation, with no rule deleted and no
- * assertion weakened. So: two entries, and anything joining them owes a
+ * assertion weakened. So: three entries, and anything joining them owes a
  * sentence saying what derives it and why it is not a record field.
  *
  * **Which is why `gates/library-seam.test.ts` keeps its own copy and this does
@@ -361,7 +371,11 @@ const RECORD_KEYS = [
  * They answer different questions anyway: G30 asks what `toLibraryBook`
  * produces, this asks what a folder may carry. Move one and move the other.
  */
-const DERIVED_KEYS = ['id', 'coverAspect'] as const satisfies readonly (keyof LibraryBook)[];
+const DERIVED_KEYS = [
+  'id',
+  'coverAspect',
+  'thoughts',
+] as const satisfies readonly (keyof LibraryBook)[];
 
 /** The whole vocabulary a shipped book may spell. */
 const SHIPPABLE_KEYS: ReadonlySet<string> = new Set<string>([...RECORD_KEYS, ...DERIVED_KEYS]);
@@ -373,6 +387,8 @@ interface ShippedBook {
   readonly status?: string;
   readonly private?: boolean;
   readonly sourcePath?: string;
+  /** Read as `unknown`, because a mark that is not `true` is itself a defect. */
+  readonly thoughts?: unknown;
 }
 
 export function inspectPublicBuild(dir: string, options: InspectOptions): PublicBuildReport {
@@ -708,18 +724,32 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
       );
     }
 
-    const covers = blocks.get(COVERS_PATTERN);
-    if (covers === undefined) {
-      fail(
-        'headers',
-        `_headers has no ${COVERS_PATTERN} block — covers would keep Pages' four-hour image default`,
-      );
-    } else if (!covers.some((header) => /^Cache-Control:.*\bmax-age=0\b/i.test(header))) {
-      fail(
-        'headers',
-        `${COVERS_PATTERN} does not revalidate — library.json and the covers it describes would ` +
-          `expire on different schedules. Headers in that block: ${covers.join(' · ') || '(none)'}`,
-      );
+    const revalidating: readonly (readonly [string, string, string])[] = [
+      [
+        COVERS_PATTERN,
+        "covers would keep Pages' four-hour image default",
+        'library.json and the covers it describes would expire on different schedules',
+      ],
+      // JSON already gets max-age=0 by default; the block says so on purpose,
+      // so a withdrawn section cannot outlive the deploy that pruned it in a
+      // browser cache if that default ever changes (spec §3.3).
+      [
+        NOTES_PATTERN,
+        "notes would rest on Pages' default, which this repo does not control",
+        'a section the owner withdrew could outlive its prune in a browser cache',
+      ],
+    ];
+    for (const [pattern, ifAbsent, ifStale] of revalidating) {
+      const block = blocks.get(pattern);
+      if (block === undefined) {
+        fail('headers', `_headers has no ${pattern} block — ${ifAbsent}`);
+      } else if (!block.some((header) => /^Cache-Control:.*\bmax-age=0\b/i.test(header))) {
+        fail(
+          'headers',
+          `${pattern} does not revalidate — ${ifStale}. Headers in that block: ` +
+            `${block.join(' · ') || '(none)'}`,
+        );
+      }
     }
   }
 
@@ -773,36 +803,63 @@ function readBooks(dir: string): ShippedBook[] | undefined {
  * so a file can carry paragraphs and nothing else. Messages name the file and
  * never quote it: what is inside is the owner's prose.
  *
- * ⚠️ **One direction only today: every file names a listed book.** Step 2
- * adds the `thoughts: true` key a book carries in `library.json` when its file
- * was written, and with it both directions of spec §3.1: every file names a
- * book carrying `thoughts: true`, which is what refuses a stale file for a
- * book that is still listed, and every such book has a file.
+ * **Both directions of spec §3.1**, held through the `thoughts: true` mark a
+ * book carries in `library.json` when its file was written: every file is
+ * named for a marked book, which is what refuses a stale file for a book that
+ * is still listed, and every marked book has its file. A mark that is anything
+ * but `true` is refused too, because the key trace reads names and never
+ * values, so text under the mark would otherwise pass it.
  *
- * A build with no `notes/` folder passes both, as every build does until the
- * extractor exists, and says nothing about it: there was nothing to look at.
+ * Read whether or not a `notes/` folder exists: a build with marked books and
+ * no folder is missing every file, and a rule that returned early there would
+ * pass the mark it never checked.
  */
 function inspectNotes(dir: string, books: readonly ShippedBook[]): PublicBuildReport {
   const notesDir = join(dir, NOTES_DIR);
-  if (!existsSync(notesDir)) return { problems: [], observations: [] };
-
   const problems: BuildProblem[] = [];
-  const ids = new Set(books.map((book) => book.id));
-  const staged = walk(notesDir).map((file) => ({ file, name: posix(relative(notesDir, file)) }));
+
+  const badMarks = books.filter((book) => book.thoughts !== undefined && book.thoughts !== true);
+  if (badMarks.length > 0) {
+    problems.push({
+      rule: 'orphan-note',
+      message:
+        `${String(badMarks.length)} book(s) whose \`thoughts\` mark is not \`true\` — it is a flag, ` +
+        `never text: ${badMarks
+          .slice(0, 5)
+          .map((book) => book.id ?? '(no id)')
+          .join(', ')}`,
+    });
+  }
+
+  const marked = new Set(books.filter((book) => book.thoughts === true).map((book) => book.id));
+  const staged = existsSync(notesDir)
+    ? walk(notesDir).map((file) => ({ file, name: posix(relative(notesDir, file)) }))
+    : [];
+  const stagedNames = new Set(staged.map(({ name }) => name));
 
   const orphans = staged.filter(
-    ({ name }) => !(name.endsWith('.json') && ids.has(name.slice(0, -'.json'.length))),
+    ({ name }) => !(name.endsWith('.json') && marked.has(name.slice(0, -'.json'.length))),
   );
   if (orphans.length > 0) {
     problems.push({
       rule: 'orphan-note',
       message:
-        `${String(orphans.length)} notes file(s) that no book in library.json is named for — ` +
-        `each filename is a book id, and an id is a slug of a title: ` +
+        `${String(orphans.length)} notes file(s) that no book marked \`thoughts: true\` in ` +
+        `library.json is named for — each filename is a book id, and an id is a slug of a title: ` +
         orphans
           .slice(0, 5)
           .map(({ name }) => name)
           .join(', '),
+    });
+  }
+
+  const missing = [...marked].filter((id) => !stagedNames.has(`${String(id)}.json`));
+  if (missing.length > 0) {
+    problems.push({
+      rule: 'orphan-note',
+      message:
+        `${String(missing.length)} book(s) marked \`thoughts: true\` with no notes file — the page ` +
+        `would fetch a file this build never shipped: ${missing.slice(0, 5).map(String).join(', ')}`,
     });
   }
 
@@ -820,7 +877,8 @@ function inspectNotes(dir: string, books: readonly ShippedBook[]): PublicBuildRe
   const observations =
     problems.length === 0
       ? [
-          `${String(staged.length)} notes file(s), each named for a listed book and shaped { paragraphs }`,
+          `${String(staged.length)} notes file(s), one for each book marked thoughts: true, ` +
+            'each shaped { paragraphs }',
         ]
       : [];
   return { problems, observations };

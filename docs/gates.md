@@ -83,10 +83,10 @@ absent row is not. This file is only useful if it is as easy to find what is
 | Row | Name | Rule | Source | Gate | Status |
 | --- | --- | --- | --- | --- | --- |
 | **G1** | `adapter-boundary` | All vault access goes through the adapter | invariant 4 | `gates/adapter-boundary.test.ts` — an allowlist, each entry justified, each reverse-asserted | ✅ |
-| **G2** | `public-build` | Note bodies are private; a public build is coherent | invariant 2 | `gates/public-build.test.ts` — asserted against `publish()`'s output, see below | ✅ |
+| **G2** | `public-build` | Note bodies are private except the `## Thoughts` split, which ships as `notes/<id>.json` and carries nothing else; a public build is coherent | invariant 2 | `gates/public-build.test.ts` — asserted against `publish()`'s output in both build modes, see below | ✅ |
 | **G3** | `bad-note` | Never crash on a bad note | invariant 3 | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind | ✅ |
 | **G4** | `hand-edited-notes` | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
-| **G5** | `vault-is-truth` | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored | ✅ |
+| **G5** | `vault-is-truth` | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored, and the staged `covers/` and `notes/` with it | ✅ |
 | **G13** | `no-third-party-material` | No third-party material is committed, ever | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside two generated directories and four named brand files | ✅ |
 | **G14** | `commands` | The documented commands are the commands that exist | AGENTS.md "Commands" | `gates/commands.test.ts` — CLI subcommands and pnpm scripts, both directions. The subcommand pattern reads either quote form, planted both ways ([#252](https://github.com/mephistopheles4/stacks/issues/252)) — it read one until then, which made a hand-written `.command("add")` a red naming no quote and no line | ✅ |
 
@@ -1463,10 +1463,11 @@ in a permitted field passes by construction, and a filename is never read at all
 Step 1 of [`docs/spec/picking-a-book-up.md`](spec/picking-a-book-up.md)
 ([#410](https://github.com/mephistopheles4/stacks/issues/410)), on
 [#367](https://github.com/mephistopheles4/stacks/issues/367)'s decisions. A
-note's `## Thoughts` will ship as `notes/<id>.json`, and **this lands first**, so
-the extractor is written against a gate rather than the other way round. G2's
-row text is unchanged until the extractor arms the presence half (step 2); no
-row is added.
+note's `## Thoughts` ships as `notes/<id>.json`, and **this landed first**, so
+the extractor was written against a gate rather than the other way round. Step 2
+([#411](https://github.com/mephistopheles4/stacks/issues/411)) armed the
+presence half and rewrote G2's row text to the split; no row is added. Step 2's
+own changes follow the list below.
 
 - **The presence half is `it.fails`**, vitest's alias for the `test.fails` the
   spec names, in a public and a local build. It reads the split book's
@@ -1500,21 +1501,37 @@ row is added.
   `obsidian:`, `mailto:`, in any case — because a rule that refuses "Note: …"
   gets switched off; G20 holds that near miss clean.
 
-**Owed by step 2**, which the spec's step-2 cell does not all spell out:
+**Step 2, the extractor**, paid what step 1 said it owed:
 
-- flip `it.fails` to `it` **whether or not it went red** — an extractor that
-  wrote the wrong shape or folder would leave it quiet, and only `it` is strict;
-- the rest of the `split` row in spec §5: a build after the section is withheld,
-  and again after it is removed, leaves no file for that book;
-- `orphan-note`'s second half: the `thoughts: true` key a book carries in
-  `library.json` once its file is written, with every file naming a book that
-  carries it (which refuses a stale file for a book still listed) and every
-  such book having a file;
-- an extractor test with a private duplicate of a public note — same title,
-  same ISBN, so the same id — whose Thoughts must not reach the public book's
-  file, since `orphan-note` cannot tell two books with one id apart.
+- **`it.fails` is `it`**, in both builds, and the file must be exactly
+  `{ paragraphs }`. Wiring the notes stage turned both red with *Expect test to
+  fail* before the flip, which is the arming.
+- **The rest of the `split` row.** In a copy of the fixture vault, a build after
+  the section is withheld, and again after it is removed, leaves no file for the
+  book and no `thoughts` mark. Observed red with the stage wired and no prune:
+  the stale file stayed, named for a book still listed.
+- **`orphan-note` reads both directions** through `thoughts: true`: every file
+  is named for a marked book, every marked book has its file — read even when
+  there is no `notes/` folder at all — and a mark that is anything but `true` is
+  refused unquoted, since the key trace reads names and never values. G20
+  plants all four; the clean synthetic build gained a marked book and a
+  `/notes/*` block, and every G20 case went red until the inspector learned the
+  key.
+- **`headers` requires a revalidating `/notes/*` block**, beside `/covers/*`,
+  planted under G20 both absent and stale.
+- **The private duplicate** — same title, same ISBN, so the same id — is a
+  `publish()` unit test in both builds: only a book `isPublishable` admits is
+  ever read, and an id two publishable books share gets no file at all.
+- **`gate:public`** refuses to run unless a fixture note carries the ship
+  phrase inside `## Thoughts` with the canary below the section, and fails
+  unless the phrase reaches a file under `dist/notes/`. Observed red twice: the
+  split fixture's heading renamed, and the stage made to write nothing.
+- **G5** holds `packages/site/public/notes/` ignored; observed red before the
+  `.gitignore` line. **G11** names `thoughts` as a documented difference: the
+  plain local index stages nothing, so it marks nothing. **G30** traces the key
+  with the stage's mark set, so it cannot pass by the key never appearing.
 
-Observed red, each by a plant reverted before commit. Writing a valid notes file
+Observed red, in step 1, each by a plant reverted before commit. Writing a valid notes file
 for the split book turned both `it.fails` red with *Expect test to fail*, which
 is the arming. A notes file for the private book reddened the allowlist in both
 builds; a canary written into a staged file reddened the absence check; the ship

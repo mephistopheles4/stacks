@@ -124,6 +124,170 @@ describe('publish', () => {
 });
 
 /**
+ * The notes stage: `notes/<id>.json` for every book a public build would
+ * publish, in both builds (spec §3.1, §3.2).
+ *
+ * G2 holds the split against the fixture vault; this holds the stage's own
+ * rules against vaults built for each case, every word invented (ADR-0004).
+ */
+describe('publish — the notes stage', () => {
+  const PRIVATE_THOUGHTS = 'PRIVATE_DUPLICATE_thoughts';
+
+  let vaultPath: string;
+  let assets: string;
+  let warn: WarnSpy;
+
+  const note = async (file: string, frontmatter: string[], ...body: string[]): Promise<void> => {
+    await mkdir(join(vaultPath, 'Library'), { recursive: true });
+    const contents = ['---', 'type: book', ...frontmatter, '---', '', ...body, ''].join('\n');
+    await writeFile(join(vaultPath, 'Library', file), contents, 'utf8');
+  };
+
+  const build = async (isPublic: boolean) => {
+    const vault = new ObsidianAdapter(vaultPath);
+    return publish(await vault.listBooks(), vault, assets, { isPublic });
+  };
+
+  const notesFiles = async (): Promise<string[]> => {
+    try {
+      return (await readdir(join(assets, 'notes'))).sort();
+    } catch {
+      return [];
+    }
+  };
+
+  beforeEach(async () => {
+    vaultPath = await mkdtemp(join(tmpdir(), 'stacks-notes-vault-'));
+    assets = await mkdtemp(join(tmpdir(), 'stacks-notes-assets-'));
+    warn = spyOnWarn();
+  });
+
+  afterEach(async () => {
+    warn.restore();
+    await rm(vaultPath, { recursive: true, force: true });
+    await rm(assets, { recursive: true, force: true });
+  });
+
+  describe.each([
+    { mode: 'public', isPublic: true },
+    { mode: 'local', isPublic: false },
+  ])('in a $mode build', ({ isPublic }) => {
+    it('writes { paragraphs } named for the book, and marks the book', async () => {
+      await note(
+        'Kept.md',
+        ['title: Kept'],
+        '## Thoughts',
+        '',
+        'One.',
+        '',
+        'Two.',
+        '## Notes',
+        'x',
+      );
+
+      const result = await build(isPublic);
+      const book = result.library.books.find((b) => b.title === 'Kept');
+      const file = join(assets, 'notes', `${book?.id ?? ''}.json`);
+
+      expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ paragraphs: ['One.', 'Two.'] });
+      expect(book?.thoughts).toBe(true);
+    });
+
+    it('marks no book whose note has no file', async () => {
+      await note('Bare.md', ['title: Bare'], '## Notes', 'x');
+      await note('Withheld.md', ['title: Withheld'], '## Thoughts', '', '%% hidden %%');
+
+      const result = await build(isPublic);
+
+      expect(await notesFiles()).toEqual([]);
+      expect(result.library.books.filter((b) => b.thoughts !== undefined)).toEqual([]);
+    });
+
+    it('writes nothing for a private or a wishlist book', async () => {
+      await note('P.md', ['title: P', 'private: true'], '## Thoughts', '', 'Held back.');
+      await note('W.md', ['title: W', 'status: wishlist'], '## Thoughts', '', 'Not owned.');
+
+      const result = await build(isPublic);
+
+      expect(await notesFiles()).toEqual([]);
+      expect(result.library.books.filter((b) => b.thoughts !== undefined)).toEqual([]);
+    });
+
+    it('never puts a private duplicate’s Thoughts in the public book’s file', async () => {
+      // Same title, same ISBN, so the same id: the one case `orphan-note`
+      // cannot tell apart, since the file names a book that is listed.
+      const isbn = 'isbn: "9780000000002"';
+      await note('Twin.md', ['title: Twin', isbn], '## Thoughts', '', 'Public words.');
+      await note(
+        'Twin (2).md',
+        ['title: Twin', isbn, 'private: true'],
+        '## Thoughts',
+        '',
+        PRIVATE_THOUGHTS,
+      );
+
+      const result = await build(isPublic);
+      const files = await notesFiles();
+      const text = await Promise.all(files.map((f) => readFile(join(assets, 'notes', f), 'utf8')));
+
+      expect(files).toHaveLength(1);
+      expect(text.join('')).toContain('Public words.');
+      expect(text.join('')).not.toContain(PRIVATE_THOUGHTS);
+      // Locally both are listed, under one id, and only the public one is marked.
+      const marked = result.library.books.filter((b) => b.thoughts === true);
+      expect(marked.map((b) => b.private)).toEqual([undefined]);
+    });
+
+    it('writes no file for an id two published books share, and says so', async () => {
+      const isbn = 'isbn: "9780000000019"';
+      await note('One.md', ['title: Same', isbn], '## Thoughts', '', 'First words.');
+      await note('Two.md', ['title: Same', isbn], '## Thoughts', '', 'Second words.');
+
+      const result = await build(isPublic);
+
+      expect(await notesFiles()).toEqual([]);
+      expect(result.library.books.filter((b) => b.thoughts !== undefined)).toEqual([]);
+      expect(warn.lines.join('\n')).toMatch(/share one book id/);
+      expect(warn.lines.join('\n')).not.toMatch(/First words|Second words/);
+    });
+  });
+
+  it('prunes a file the next build did not write', async () => {
+    await note('Gone.md', ['title: Gone'], '## Thoughts', '', 'Soon withdrawn.');
+    await build(true);
+    expect(await notesFiles()).toHaveLength(1);
+
+    await note('Gone.md', ['title: Gone'], '## Notes', 'withdrawn');
+    await build(true);
+
+    expect(await notesFiles()).toEqual([]);
+  });
+
+  it('leaves a notes folder alone when no library.json says this tool stages there', async () => {
+    // `pruneCovers`'s rule: `--assets` is a user-supplied flag, and a folder
+    // with no previous `library.json` beside it may be somebody else's.
+    await mkdir(join(assets, 'notes'), { recursive: true });
+    await writeFile(join(assets, 'notes', 'theirs.json'), '{}', 'utf8');
+    await note('Bare.md', ['title: Bare'], '## Notes', 'x');
+
+    await build(true);
+
+    expect(await notesFiles()).toEqual(['theirs.json']);
+    expect(warn.lines.join('\n')).toMatch(/notes/);
+  });
+
+  it('prunes files only, never a folder', async () => {
+    await note('Bare.md', ['title: Bare'], '## Notes', 'x');
+    await build(true);
+    await mkdir(join(assets, 'notes', 'kept-dir'), { recursive: true });
+
+    await build(true);
+
+    expect(await notesFiles()).toEqual(['kept-dir']);
+  });
+});
+
+/**
  * What a re-encode is allowed to cost.
  *
  * The resize is not optional — see cover-budget.ts — but the *encoder settings*

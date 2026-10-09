@@ -16,7 +16,8 @@ A local-first reading tracker where the notes vault IS the database. A CLI (`sta
 4. `docs/gates.md` — the invariant scoreboard: which rule each gate protects, and
    which rules are still protected by nothing.
 5. `docs/notes-on-the-shelf.md` — the design for public/private notes and for
-   picking a book up. Nothing there is built; read it before changing invariant 2,
+   picking a book up. Its public/private split is built — the `## Thoughts`
+   extractor — and picking a book up is not; read it before changing invariant 2,
    the publisher, or the cover cap.
 6. `docs/spec/` — locked specs waiting for an implementation session. Everything
    in there is decided: read it *instead of* re-deciding, and read
@@ -43,7 +44,7 @@ holds these two documents to each other — so adding an article here without
 scoring it there is a red build, in both directions.
 
 1. **The vault is the source of truth.** No parallel database. `library.json` is a build artifact, always regenerable, never hand-edited, gitignored.
-2. **Note bodies are private.** `library.json` never carries body text, in any build — that part is absolute. A public build may ship body text from *one explicitly allowlisted section* of a note, extracted in the adapter and sanitised, as its own per-book file; see `docs/notes-on-the-shelf.md`. **Nothing implements that yet**, and the gate lands before the publishing code does, so today the rule is what it has always been: nothing below the frontmatter block is parsed or shipped at all. An allowlist and never a denylist, for the same reason `private:` fails closed.
+2. **Note bodies are private.** `library.json` never carries body text, in any build — that part is absolute. A build ships body text from *one explicitly allowlisted section* of a note, `## Thoughts`, and nothing else: the adapter's `readPublicSection` reads that section alone, strips it to plain paragraphs and withholds the whole of it on any shape it cannot vouch for, and the publisher writes it as `notes/<id>.json`, one file per book a public build would publish, in both builds. Nothing else below the frontmatter block is parsed or shipped; see `docs/spec/picking-a-book-up.md` and [ADR-0100](docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md). An allowlist and never a denylist, for the same reason `private:` fails closed.
 
    ⚠️ **That allowlist must never name `## About`.** The merge *writes* a note body now — a provider's description, through `insertBodySection` — while still never reading one. Writing and publishing are different halves, and the body was chosen over a frontmatter property precisely so that "never published" is structural: a body section is not a `BookRecord` field, so no build can carry it. An allowlist that later picked this section up would publish third-party marketing prose under the owner's name.
 3. **Never crash on a bad note.** Malformed frontmatter → skip with a console warning listing the file. One bad file must not break `stacks build`.
@@ -70,7 +71,8 @@ interface VaultAdapter {
   listBooks(): Promise<BookRecord[]>;          // parse all type:book notes
   writeBook(book: BookInput): Promise<string>; // create note, return path
   updateBook(sourcePath: string, changes: FrontmatterChanges): Promise<void>;
-  insertBodySection(sourcePath: string, heading: string, text: string): Promise<void>;
+  insertBodySection(sourcePath: string, heading: string, text: string): Promise<boolean>;
+  readPublicSection(sourcePath: string): Promise<readonly string[] | undefined>;
   bookExists(isbn: string, titleAuthor: string): Promise<boolean>;
   coverDir(): string;                          // where covers are cached
 }
@@ -78,7 +80,8 @@ interface VaultAdapter {
 
 - `writeBook` **creates**; it never overwrites. A colliding filename gains a numeric suffix.
 - `updateBook` sets frontmatter keys on an existing note by rewriting individual lines — key order, quoting, comments and the note body all survive byte for byte. Scalars only; a key whose value is a list is left alone. Re-serialising the YAML would reformat files the owner edits by hand.
-- `insertBodySection` is **the only method that writes below the frontmatter**, and it exists for one thing: the provider description the merge stores under `## About`. It writes **only when the heading is absent** — absent-only applied to a section, which is also what makes a whole `enrich` pass idempotent — placing it above `## Notes` so a provider's prose never lands under the owner's own. Everything else in the file survives byte for byte, `updateBook`'s promise extended to the half it never touched. It takes the vault-relative path a `BookRecord` carries or the absolute one `writeBook` returns.
+- `insertBodySection` is **the only method that writes below the frontmatter**, and it exists for one thing: the provider description the merge stores under `## About`. It writes **only when the heading is absent** — absent-only applied to a section, which is also what makes a whole `enrich` pass idempotent — placing it above `## Notes` so a provider's prose never lands under the owner's own. Everything else in the file survives byte for byte, `updateBook`'s promise extended to the half it never touched. **The text it writes is disarmed**: every line that would read as a heading or open a code fence gains a backslash first, so a provider's prose can never open a `## Thoughts` section of its own or carry `## Notes` out of one. It returns whether it wrote, and takes the vault-relative path a `BookRecord` carries or the absolute one `writeBook` returns.
+- `readPublicSection` is **the only method that reads below the frontmatter**, as `insertBodySection` is the only one that writes there. It returns a note's `## Thoughts` section as plain-text paragraphs, or `undefined` when there is none or it is withheld — never the body — and the publisher is its only caller. A withheld section warns naming the note and never quoting it. See [ADR-0100](docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md) and [ADR-0101](docs/adr/0101-thoughts-ship-as-plain-text-and-withhold-whole.md).
 - v1 ships `ObsidianAdapter` only (YAML frontmatter, `[[wikilinks]]`, `Library/` folder).
 - Do NOT build a second adapter. Do NOT add adapter config plumbing beyond a single constructor arg (vault path). The interface exists so a Logseq/Anytype adapter is possible later, not to be a framework.
 

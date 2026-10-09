@@ -78,9 +78,10 @@ const NOT_PUBLIC: readonly (keyof BookRecord)[] = ['sourcePath'];
  * `id` is derived from title and ISBN so the shelf can keep a book selected
  * across rebuilds; `coverAspect` is measured from the cover file at build time,
  * because books are not one shape and a square audiobook cover forced onto a
- * print face is squashed.
+ * print face is squashed; `thoughts` is `true` when the build wrote the book's
+ * `notes/<id>.json`, a flag the notes stage sets and never text (spec §3.1).
  *
- * ⚠️ **`scripts/lib/public-build.ts` holds the same two names, deliberately.**
+ * ⚠️ **`scripts/lib/public-build.ts` holds the same three names, deliberately.**
  * Its `unknown-key` rule runs this trace over the bytes in `dist/`, and the
  * duplication is what makes the dangerous edit expensive: adding a key that
  * should never ship is a one-line diff that reads like documentation, and with
@@ -92,7 +93,7 @@ const NOT_PUBLIC: readonly (keyof BookRecord)[] = ['sourcePath'];
  * the half of the drift a reader cannot see: a renamed field leaves a stale
  * name here that still *looks* like an exclusion.
  */
-const DERIVED = ['id', 'coverAspect'] as const satisfies readonly (keyof LibraryBook)[];
+const DERIVED = ['id', 'coverAspect', 'thoughts'] as const satisfies readonly (keyof LibraryBook)[];
 
 function keysOf(book: LibraryBook): readonly string[] {
   return Object.keys(book);
@@ -129,7 +130,9 @@ describe('G30 — the BookRecord → library.json seam, both directions', () => 
   });
 
   it('traces every shipped key back to a record field or a named derived one', () => {
-    const [book] = buildLibrary([FULL]).books;
+    // Built with the notes stage's mark set, so a derived key only that stage
+    // adds is traced too rather than never appearing.
+    const [book] = buildLibrary([FULL], { thoughts: new Set([FULL.sourcePath]) }).books;
     const fields = new Set<string>(Object.keys(FULL));
 
     const derived: readonly string[] = DERIVED;
