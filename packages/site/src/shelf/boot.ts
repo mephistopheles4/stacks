@@ -1,9 +1,15 @@
 import type { Library, LibraryBook } from '@stacks/core';
-import { hideCard, showCard, type CardElements } from './card.ts';
-import { mountSheet } from './card-sheet.ts';
 import { createRecovery, type Notice, type Recovery, type Surface } from './context-recovery.ts';
 import { mountCoverViewer, type CoverViewerElements } from './cover-viewer.ts';
 import { mountDiagnostics } from './diagnostics.ts';
+import {
+  createPickup,
+  loopPickups,
+  type HeldReading,
+  type Pickup,
+  type SpreadReading,
+  type SwapReading,
+} from './pickup.ts';
 import { mountShelf, type ShelfHandle, type ShelfStats } from './scene.ts';
 import {
   browserStore,
@@ -33,7 +39,7 @@ import { resolveSettings, type ShelfSettings } from './shelf-settings.ts';
 import { bookLimit, readSettings, soloBook } from './shelf-url.ts';
 
 /**
- * Wires the page up: load the library, mount the shelf, show a card on click.
+ * Wires the page up: load the library, mount the shelf, pick a book up on click.
  *
  * All of this lives in a .ts module rather than in the .astro file because
  * logic in an .astro file is counted by nothing: every mutation scope and every
@@ -96,21 +102,42 @@ declare global {
        * getter, not a snapshot: the counters are reset at the top of every frame.
        */
       stats(): ShelfStats;
+      /**
+       * The book in your hand, read back — what the pickup gate and the phone
+       * read. Nothing while the hand is empty.
+       */
+      held(): HeldReading | undefined;
+      /** Picks up the book at this index, as a click on it would. */
+      pickUp(index: number): void;
+      putBack(): void;
+      /** §3.6's numbers for the open spread at rest, desktop only. */
+      spread(): SpreadReading | undefined;
+      /**
+       * The phone loop: picks up and puts back `rounds` books in turn, and
+       * resolves with how many it held. A function, not an address switch, so no
+       * link a visitor is sent can start it on their device (spec §4).
+       */
+      pickupLoop(rounds: number): Promise<number>;
+      /** Each held cover's upload time and the texture count after it (spec §8). */
+      swaps(): readonly SwapReading[];
     };
   }
 }
 
-/** The card's elements, handed over by the template that owns the markup. */
-export interface CardHandles extends CardElements {
-  /** The one dismiss control: a grabber pill below the breakpoint, an `×` above. */
-  readonly dismiss: HTMLElement;
+/** The page's own pieces, handed over by the template that owns the markup. */
+export interface PageHandles {
+  /**
+   * A permanently present, visually hidden `role="status"`: «Title» by
+   * «Author» on pickup, changed on a second book, empty after put-back.
+   */
+  readonly status: HTMLElement;
   /** The enlarged-cover dialog. See `cover-viewer.ts`. */
   readonly coverViewer: CoverViewerElements;
 }
 
 export async function boot(
   canvas: HTMLCanvasElement,
-  card: CardHandles,
+  page: PageHandles,
 ): Promise<ShelfHandle | undefined> {
   const params = new URLSearchParams(window.location.search);
   const limit = bookLimit(params);
@@ -135,7 +162,7 @@ export async function boot(
   /**
    * `?solo=N` — one book on a turntable instead of the shelf.
    *
-   * Returns before anything else is built: there is no card to open, no panel to
+   * Returns before anything else is built: there is no book to pick up, no panel to
    * dial and no `window.__shelf` to publish, because this is an inspection mode
    * and not a shelf. Everything the shelf would have done is skipped rather than
    * suppressed, which is why it cannot half-apply.
@@ -163,6 +190,8 @@ export async function boot(
    */
   let surface = canvas;
   let handle: ShelfHandle | undefined;
+  /** Made once, after the first shelf comes up, and moved onto every later one. */
+  const held: { pickup?: Pickup } = {};
   /** Torn down and remade when the panel rebuilds the shelf. */
   let unmountPanel: (() => void) | undefined;
   /** Set once the panel's chunk has loaded, and only behind `?debug`. */
@@ -189,10 +218,13 @@ export async function boot(
       return mountShelf(target, books, {
         settings,
         onSelect: (book) => {
-          if (book === undefined) hideCard(card);
-          else showCard(card, book);
+          held.pickup?.select(book);
         },
         onContextLost: (running) => {
+          // A held book goes back as a hard cut: the recovery rebuilds the
+          // shelf with nothing held, and nothing resumes a pickup across it
+          // (spec §3.4).
+          held.pickup?.drop();
           const loss = {
             sampling: samplesShadowMap(running),
             visible: document.visibilityState === 'visible',
@@ -268,7 +300,8 @@ export async function boot(
   const adopt = (next: ShelfHandle): void => {
     handle = next;
     settleNotice(surface, next);
-    publish(next, () => fallback().kind);
+    held.pickup?.attach(next.stage);
+    publish(next, () => fallback().kind, held.pickup);
     showPanel?.(next);
   };
 
@@ -402,7 +435,15 @@ export async function boot(
 
   if (handle === undefined) return undefined;
 
-  publish(handle, () => fallback().kind);
+  const host = surface.parentElement ?? document.body;
+  const coverViewer = mountCoverViewer(page.coverViewer, host);
+  const live = createPickup(handle.stage, {
+    status: page.status,
+    host,
+    coverViewerOpen: () => coverViewer.isOpen(),
+  });
+  held.pickup = live;
+  publish(handle, () => fallback().kind, live);
 
   /**
    * The panel, loaded only if asked for.
@@ -412,8 +453,7 @@ export async function boot(
    * moment postprocessing joins the graph — see #42, which measured a bloom
    * chain at +4.7 KB gzip and adding ambient occlusion at +12.5 KB.
    */
-  if (debug && surface.parentElement !== null) {
-    const host = surface.parentElement;
+  if (debug) {
     const { mountPanel } = await import('./debug-panel.ts');
 
     showPanel = (current: ShelfHandle): void => {
@@ -449,40 +489,8 @@ export async function boot(
      * measured a plain CSS import hoisted onto every page as silent.
      */
     const { mountPickupTuner } = await import('./pickup-tuner.ts');
-    mountPickupTuner(host, undefined);
+    mountPickupTuner(host, live.tunable);
   }
-
-  /**
-   * On any dismissal, move focus to the canvas — **only if focus is inside the
-   * card**. Otherwise leave it alone.
-   *
-   * One conditional rule covering all four dismissals. Activating the close
-   * control removes the focused element from the tree, so focus would fall to
-   * `<body>` and the next Tab would restart at the top of the document; catching
-   * it on the canvas keeps the user's place, on the element that conceptually
-   * owns the shelf. And moving focus *unconditionally* on Escape would yank it
-   * from wherever the user actually was — the debug panel, say — which is the
-   * same "do not steal focus" principle applied at the other end.
-   */
-  const dismiss = (): void => {
-    const focusWasInside = card.card.contains(document.activeElement);
-    hideCard(card);
-    if (focusWasInside) surface.focus();
-  };
-
-  mountSheet({ card: card.card, control: card.dismiss, onDismiss: dismiss });
-
-  const coverViewer = mountCoverViewer(card.coverViewer, card.body);
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
-    // The enlarged cover is a modal `<dialog>`, so the platform closes it on
-    // Escape and the keydown still reaches here. Without this guard one press
-    // would take the viewer *and* the card underneath it — the user having
-    // asked to leave one surface and been returned two levels.
-    if (coverViewer.isOpen()) return;
-    dismiss();
-  });
 
   watchForRebuilds();
   return handle;
@@ -495,7 +503,7 @@ export async function boot(
  * handle. A rebuild makes a new one, so without this the gate would be asking a
  * disposed shelf how many books it has.
  */
-function publish(handle: ShelfHandle, fallback: () => FallbackKind): void {
+function publish(handle: ShelfHandle, fallback: () => FallbackKind, pickup?: Pickup): void {
   window.__shelf = {
     bookCount: handle.bookCount,
     rowCount: handle.rowCount,
@@ -508,6 +516,17 @@ function publish(handle: ShelfHandle, fallback: () => FallbackKind): void {
     fallback,
     projectBook: (index) => handle.projectBook(index),
     stats: () => handle.stats(),
+    held: () => pickup?.held(),
+    pickUp: (index) => {
+      pickup?.pickUp(index);
+    },
+    putBack: () => {
+      pickup?.putBack();
+    },
+    spread: () => pickup?.measureSpread(),
+    swaps: () => pickup?.swaps() ?? [],
+    pickupLoop: (rounds) =>
+      pickup === undefined ? Promise.resolve(0) : loopPickups(pickup, handle.bookCount, rounds),
   };
 }
 

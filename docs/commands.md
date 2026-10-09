@@ -936,7 +936,17 @@ hook and judge the gate uses.
 pnpm exec tsx scripts/phone-check.ts                  # the default page, 120 s
 pnpm exec tsx scripts/phone-check.ts --matrix         # default ×3, ?shadows=0, ?receivers=all
 pnpm exec tsx scripts/phone-check.ts --gpuinfo        # chrome://gpu, in a tab of its own
+pnpm exec tsx scripts/phone-check.ts --pickups 5      # the default page, picking up five books
 ```
+
+**`--pickups <n>` drives the shelf's loop hook**, `window.__shelf.pickupLoop(n)`:
+once the page is ready it picks up a book, holds it, puts it back and moves on,
+`n` times, while the run watches the context. The result reports how many books
+reached the held state and, for each held cover, `renderer.initTexture`'s time
+on the device and the texture count after it — the swap-frame figures the
+picking-a-book-up spec's §8 asks the owner to judge. ⚠️ **A function, never an
+address switch**: #371's prototype looped on `?autoplay=5`, which any link could
+carry to a visitor's phone, and nothing in a URL can start this.
 
 **Not a `pnpm` script, and that is deliberate.** It needs adb and a phone with
 USB debugging on, which no CI runner has and [`CONTRIBUTING.md`](../CONTRIBUTING.md)
@@ -961,8 +971,8 @@ second so the screen stays on. It changes no setting and touches no flag —
 a browser flag is never part of a fix here ([ADR-0090](adr/0090-real-time-shadows-are-the-default.md)).
 
 **When to run it:** before merging anything that touches shadows, materials,
-lights, the bookcase's geometry, or three itself — the changes G61 can see the
-shape of and not the outcome.
+lights, the bookcase's geometry, picking a book up, or three itself — the
+changes G61 can see the shape of and not the outcome.
 
 **What a result means.** One of six verdicts, most specific first:
 

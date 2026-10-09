@@ -110,6 +110,10 @@
           "mechanism": "The `?debug` panel, lazily imported by `boot.ts`. Same browser-only chain."
         },
         {
+          "path": "packages/site/src/shelf/pickup.ts",
+          "mechanism": "Picking a book up: the drawing half, reached only through `boot.ts`. Same browser-only chain. Its rules are tested where they live, in `pickup-state.ts`, `pickup-motion.ts`, `open-spread.ts`, `held-page.ts` and `notes.ts`."
+        },
+        {
           "path": "packages/site/src/shelf/pickup-tuner.ts",
           "mechanism": "The pickup tuner, lazily imported by `boot.ts` behind `?debug`. Same browser-only chain, and it imports its stylesheet with Vite's `?url`, which only a Vite build resolves."
         },

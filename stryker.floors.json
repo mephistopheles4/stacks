@@ -222,7 +222,7 @@
     "rather than an omission. See docs/adr/0061-the-mutation-floor-refuses-deploy.md and",
     "docs/adr/0068-the-complexity-cap-only-falls.md."
   ],
-  "configHash": "sha256:f95bdaecc2017579715350fb0e2ca40fe80152726fc32fa6b9d8ea449f1aba6c",
+  "configHash": "sha256:f1e545a1b0aa12197c00cbd0b38a4c8a9eea5d9d10315728b1827ea202bb73f1",
   "fixtureHash": "sha256:2af72f80e58a4aed4c9725b7bd4f8c035e2659ed5843e819befc253218691c6a",
   "scopes": {
     "packages/core/src": {

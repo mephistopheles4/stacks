@@ -1,7 +1,7 @@
 # ADR-0104 — Tweakpane with essentials tunes the pickup, behind `?debug`, styled through placeholders and a lazy link
 
 **Date:** 2026-10-09
-**Status:** accepted, not built — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
+**Status:** accepted; built in [#413](https://github.com/mephistopheles4/stacks/issues/413) — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
 **Issue:** [#370](https://github.com/mephistopheles4/stacks/issues/370), [#375](https://github.com/mephistopheles4/stacks/issues/375), [#376](https://github.com/mephistopheles4/stacks/issues/376)
 
 ## Decision

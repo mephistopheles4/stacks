@@ -3436,6 +3436,8 @@ size** — 20s a plant is twenty times the 6.5s suite and still nowhere near a c
 centre. What the row actually cost was reading time, the same as every other row
 in the band.
 
+**2026-10-09 — reworded for picking a book up** ([#413](https://github.com/mephistopheles4/stacks/issues/413)). The card retired, and the row's checks moved onto the held page under spec §3.5's fates, with `location.href` unchanged and §3.6's open spread added; `checkSheet` retired with the sheet. The judging moved into `scripts/lib/pickup-gate.ts`, so every clause is planted in its spec rather than once by hand. **Observed red in the browser** with four faults planted at once and reverted after: the address carrying the book (`location.href changed on pickup`), the pages shown before the fade (`the pages were not hidden by visibility before the cover opened`), and the board resting at 165°, which reddened every one of the six measured spreads on its angle, its tilt to the camera and the left page's projected size. ⚠️ **The second pickup goes through the shelf's hook, not a click**: with a book held, the open spread covers most books' aim points, and the first run's aimed click failed for that reason alone. The click path is the first pickup's. Disposition of the rewording: `gated`.
+
 ---
 
 ## Defect gates
@@ -6393,6 +6395,8 @@ judge's spec, so the plants are asserted on every run and not observed once.
   budget's premise is one phone and one driver**: another GPU with a lower edge
   moves nothing here, and a driver update that raised this one's would not
   either. Disposition `accepted`.
+
+**2026-10-09 — extended to a page with a book held** ([#413](https://github.com/mephistopheles4/stacks/issues/413), spec §5's "held reader"). A fourth page picks a book up through the shelf's hook and waits for it to rest before counting. **Observed red** by building the held book's paper sheets without `withoutShadowFetch`: `275 of 275 steady frame(s) sample the shadow map from up to 2 programs`, 4 draws a frame, the page red alone while the other three stayed as they were. Green, it measures what #371 measured on the prototype: 1 program, 2 draws a frame. Disposition `gated`.
 
 ### G62 — `ignore-expiry`
 

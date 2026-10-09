@@ -11,9 +11,9 @@ import { boot } from './boot.ts';
  * paragraph used to give — *`astro check` cannot run under TypeScript 7* — is
  * no longer the reason, and coverage is. G7
  * caps a script block at a handful of bootstrap statements for that reason, and
- * the card's five elements put it over: the guard that was two `instanceof`
- * checks is now five, which is exactly the point where a bootstrap turns into a
- * program.
+ * the card's five elements once put it over: the guard that was two
+ * `instanceof` checks grew to seven, which is exactly the point where a
+ * bootstrap turns into a program. Picking a book up took the card's three away.
  *
  * The element ids are the seam between the markup and the code. They are looked
  * up rather than passed in because the template owns the markup and this owns
@@ -21,19 +21,13 @@ import { boot } from './boot.ts';
  */
 export function start(): void {
   const canvas = document.getElementById('shelf-canvas');
-  const card = document.getElementById('book-card');
-  const body = document.getElementById('book-card-body');
-  const status = document.getElementById('book-card-status');
-  const dismiss = document.getElementById('book-card-dismiss');
+  const status = document.getElementById('pickup-status');
   const viewer = document.getElementById('cover-viewer');
   const viewerImage = document.getElementById('cover-viewer-image');
 
   if (
     !(canvas instanceof HTMLCanvasElement) ||
-    !(card instanceof HTMLElement) ||
-    !(body instanceof HTMLElement) ||
     !(status instanceof HTMLElement) ||
-    !(dismiss instanceof HTMLElement) ||
     !(viewer instanceof HTMLDialogElement) ||
     !(viewerImage instanceof HTMLImageElement)
   ) {
@@ -45,10 +39,7 @@ export function start(): void {
   }
 
   void boot(canvas, {
-    card,
-    body,
     status,
-    dismiss,
     coverViewer: { dialog: viewer, image: viewerImage },
   });
 }

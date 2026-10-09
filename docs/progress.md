@@ -97,6 +97,19 @@ from the packages' text at build time and loaded by `<link>`. ⚠️ The empty
 string's hash stayed in `style-src` with no placeholder on the page, so Astro
 writes it for a reason of its own and G65 is what pins it.
 
+**2026-10-09 — picking a book up**
+([#413](https://github.com/mephistopheles4/stacks/issues/413)): a click picks a
+book up and the card overlay retired. The Phase 2 click gate now reads "picks it
+up". G35 (`enhanced-card`) is reworded to the held page, its judging moved into
+`scripts/lib/pickup-gate.ts`, and it gains the open spread of the spec's §3.6,
+read from the scene at 1280×800: six books measured at 180.00°, left page within
+0.2 px of the block face, gutter 0.00 px. G61 (`one-shadow-reader`) gains a page
+with a book held: 1 program, 2 draws a frame, as #371 measured. Both observed red
+with four faults planted at once — the address carrying the book, the pages shown
+before the fade, the board resting at 165°, and the paper sheets built without
+`withoutShadowFetch`. Every third book of the 50-book fixture now carries
+invented Thoughts, so the render gate opens a page of them.
+
 ### Phase 3 evidence
 
 `pnpm gate:public` green: builds for real, then greps every text file that

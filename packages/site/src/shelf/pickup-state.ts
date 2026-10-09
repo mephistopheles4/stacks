@@ -36,10 +36,10 @@ export interface Track {
 
 /** What a track reports back as it reaches either end of its run. */
 export interface TrackEvents {
-  /** It reached open, playing forward. */
-  landed(): void;
+  /** It reached open, playing forward. Properties, so a track may hand them on unbound. */
+  readonly landed: () => void;
   /** It reached the shelf, playing backward. */
-  returned(): void;
+  readonly returned: () => void;
 }
 
 /** The pickup's one history entry, as this module needs to see it. */
@@ -133,10 +133,11 @@ export function createPickupState<B>(
     });
 
   const pick = (book: B): void => {
+    // Out of its slot first: the track is built from the book as lifted.
+    effects.left(book);
     const entry: Active<B> = { book, phase: 'lifting', track: undefined as unknown as Track };
     entry.track = wire(entry);
     active.push(entry);
-    effects.left(book);
     remember(book);
     effects.announce(book);
     if (effects.reduced()) {

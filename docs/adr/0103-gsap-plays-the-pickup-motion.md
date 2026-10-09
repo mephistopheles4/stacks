@@ -1,7 +1,7 @@
 # ADR-0103 — GSAP plays the pickup motion, for fluency over a zero-byte option
 
 **Date:** 2026-10-09
-**Status:** accepted, not built — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
+**Status:** accepted; built in [#413](https://github.com/mephistopheles4/stacks/issues/413) — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
 **Issue:** [#370](https://github.com/mephistopheles4/stacks/issues/370), [#371](https://github.com/mephistopheles4/stacks/issues/371)
 
 ## Decision

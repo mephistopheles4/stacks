@@ -17,6 +17,8 @@
  *     --serial <id>      which device, when more than one is attached
  *     --keep             do not force-stop Chrome first
  *     --shot             save a screenshot beside the result
+ *     --pickups <n>      once the page is ready, pick up and put back n books through
+ *                        the shelf's loop hook, and report each held cover's upload
  *
  * **Not a `pnpm` script, deliberately**: it needs adb and a phone with USB
  * debugging on, which no CI runner and few contributors have, and a documented
@@ -247,7 +249,21 @@ const READ = `JSON.stringify({
   threeCalls: (() => { try { return window.__shelf?.stats().calls ?? null; } catch { return null; } })(),
   bookCount: window.__shelf?.bookCount ?? 0,
   profile: window.__shelf?.profile ?? null,
+  pickups: window.__pickups ?? null,
+  swaps: (() => { try { return window.__shelf?.swaps?.() ?? null; } catch { return null; } })(),
 })`;
+
+/**
+ * Starts the shelf's pickup loop once the page is ready, without waiting for it:
+ * the run watches the context while books are picked up. A function on
+ * `window.__shelf`, not an address switch, so no link can start it (spec §4).
+ */
+function startPickups(rounds: number): string {
+  return `(async () => {
+    while (window.__shelf?.ready !== true) await new Promise((r) => setTimeout(r, 200));
+    window.__pickups = { asked: ${String(rounds)}, held: await window.__shelf.pickupLoop(${String(rounds)}) };
+  })()`;
+}
 
 /** The GPU as the page is told it, read on the blank page before the run. */
 const RENDERER = `(() => {
@@ -273,6 +289,8 @@ interface Read {
   readonly threeCalls: number | null;
   readonly bookCount: number;
   readonly profile: string | null;
+  readonly pickups: { readonly asked: number; readonly held: number } | null;
+  readonly swaps: readonly unknown[] | null;
 }
 
 function parse<T>(value: unknown): T | undefined {
@@ -345,6 +363,7 @@ async function runOne(
 
     const started = Date.now();
     await cdp.send('Page.navigate', { url });
+    if (options.pickups !== undefined) await cdp.evaluate(startPickups(options.pickups));
     const observation = await watch(adb, cdp, run.waitS, started);
     const read = parse<Read>(await cdp.evaluate(READ));
     const elapsedS = (Date.now() - started) / 1000;
@@ -391,6 +410,8 @@ async function runOne(
           observation,
           elapsedS,
           profile: read?.profile ?? null,
+          pickups: read?.pickups ?? null,
+          swaps: read?.swaps ?? null,
           sampling: { line: row.sampling, failures },
           console: consoleLines(cdp.events).slice(-60),
           logcat: interestingLogcat(logcat),
@@ -403,6 +424,13 @@ async function runOne(
     console.log(
       `${run.label}: ${verdict.kind} — ${verdict.reason}\n  ${row.sampling}\n  ${base}.json`,
     );
+    const pickups = read?.pickups;
+    if (pickups !== null && pickups !== undefined) {
+      console.log(
+        `  pickups: ${String(pickups.held)} of ${String(pickups.asked)} reached the held state; ` +
+          `held cover uploads: ${JSON.stringify(read?.swaps ?? [])}`,
+      );
+    }
     return { row, chrome };
   } finally {
     cdp.close();

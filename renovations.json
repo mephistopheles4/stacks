@@ -100,8 +100,8 @@
     {
       "date": "2026-10-09",
       "stamp": "configHash",
-      "value": "sha256:f95bdaecc2017579715350fb0e2ca40fe80152726fc32fa6b9d8ea449f1aba6c",
-      "reason": "packages/site/src/shelf/pickup-tuner.ts joins the shelf scope's zero-mutant residuals beside debug-panel.ts: the pickup tuner is imported only by boot.ts behind ?debug and imports its stylesheet with Vite's ?url, which only a Vite build resolves, so no Vitest spec can load it. No declared scope's glob changed.",
+      "value": "sha256:f1e545a1b0aa12197c00cbd0b38a4c8a9eea5d9d10315728b1827ea202bb73f1",
+      "reason": "Two files join the shelf scope's zero-mutant residuals beside debug-panel.ts, both reached only through boot.ts: pickup-tuner.ts, the pickup tuner behind ?debug, which imports its stylesheet with Vite's ?url that only a Vite build resolves; and pickup.ts, the drawing half of picking a book up, whose rules are tested in the pure modules it calls. card-sheet.ts was deleted with the sheet and was never a residual. No declared scope's glob changed.",
       "pr": 417,
       "preserves": false
     }
