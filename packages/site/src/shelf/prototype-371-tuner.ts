@@ -104,7 +104,7 @@ export function mountTuner(pickup: Pickup): void {
   for (const key of Object.keys(CHOICES) as (keyof typeof CHOICES)[]) {
     const options = Object.fromEntries(CHOICES[key].map((v) => [v, v]));
     choices.addBinding(pickup.choices, key, { options }).on('change', (ev) => {
-      pickup.setChoice(key, ev.value as never);
+      pickup.setChoice(key, ev.value);
       writeChoice(key === 'mover' ? 'pickup' : key, String(ev.value));
     });
   }
@@ -151,7 +151,7 @@ export function mountTuner(pickup: Pickup): void {
       expanded: true,
       label: key.slice(4).toLowerCase(),
       picker: 'inline',
-    }) as unknown as BezierBlade;
+    }) as BezierBlade;
     blade.on('change', (ev) => {
       (motion as { [K in typeof key]: Bezier })[key] = ev.value.toObject();
       pickup.retime();

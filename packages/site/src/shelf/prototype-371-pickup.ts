@@ -61,7 +61,25 @@ interface Progress {
 }
 
 type Phase = 'lifting' | 'held' | 'returning';
-type Timeline = ReturnType<typeof gsap.timeline>;
+/**
+ * The slice of a GSAP timeline used here. Declared, because the lint's type
+ * service cannot resolve the type `gsap/gsap-core` returns, and every call on
+ * it then reads as unsafe; tsc resolves it, and the cast is at one place.
+ */
+interface Timeline {
+  to(target: object, vars: Record<string, unknown>, position?: number): Timeline;
+  eventCallback(type: 'onComplete' | 'onReverseComplete', callback: () => void): Timeline;
+  progress(): number;
+  progress(value: number): Timeline;
+  play(): Timeline;
+  pause(): Timeline;
+  reverse(): Timeline;
+  reversed(): boolean;
+  paused(): boolean;
+  timeScale(value: number): Timeline;
+  duration(): number;
+  kill(): void;
+}
 
 interface Prepared {
   readonly pivot: THREE.Group;
@@ -500,7 +518,7 @@ export function installPickup(params: URLSearchParams): Pickup {
     (choices.motion === 'system' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   const timeline = (p: Progress): Timeline => {
-    const tl = gsap.timeline({ paused: true });
+    const tl = gsap.timeline({ paused: true }) as unknown as Timeline;
     const turnAt = Math.max(0, motion.slide - Math.min(motion.overlapSlideTurn, motion.slide));
     const openAt = Math.max(
       0,
