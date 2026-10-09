@@ -54,6 +54,8 @@ export const PUBLIC_BUILD_RULES = [
   'wishlist-book',
   'foreign-cover',
   'orphan-cover',
+  'orphan-note',
+  'notes-shape',
   'unknown-key',
   // Two rules rather than one, because `deploy:site --check-only` has to excuse
   // exactly one of them: it asserts the built page against the *current*
@@ -110,6 +112,26 @@ export interface InspectOptions {
  */
 export const NOTE_BODY_CANARY = 'NOTE_BODY_CANARY_do_not_ship';
 
+/**
+ * The canary's opposite: planted inside a fixture's `## Thoughts`, and required
+ * to be **present** in that book's `notes/<id>.json`.
+ *
+ * Owned beside the canary for the canary's reason — a phrase that drifts between
+ * where it is planted and where it is looked for leaves both halves passing.
+ *
+ * ⚠️ **Plain words only.** The section ships stripped of Markdown by hand, so an
+ * underscore, an asterisk or a backtick in here could be eaten on the way and
+ * the presence check would fail for a reason unconnected to the split. And it
+ * must never contain the canary, which `note-body` searches for as a pattern.
+ *
+ * ⚠️ **Never a rule in this module.** A fixture phrase required by the shared
+ * inspector would fail every real deploy, which carries no fixture
+ * ([ADR-0028](../../docs/adr/0028-one-inspector-for-the-public-build.md)). G2
+ * asserts it against `publish()`; `gate:public` learns it with the extractor.
+ * See [#367](https://github.com/mephistopheles4/stacks/issues/367).
+ */
+export const THOUGHTS_SHIP_PHRASE = 'THOUGHTS SHIP PHRASE must reach the page';
+
 /** Binary assets are covers and the OG image; no text to leak. */
 const TEXTUAL = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt', '.map', '.xml']);
 
@@ -146,6 +168,41 @@ const SHARE_TAG = /<meta\s+(?:property|name)="((?:og|twitter):[a-z]+)"\s+content
 
 /** A cover this build serves itself: one path segment, under `covers/`. */
 const SAME_ORIGIN_COVER = /^covers\/[^/\\]+$/;
+
+/**
+ * Where a build stages a book's published Thoughts, as `notes/<id>.json`.
+ *
+ * Nothing writes here yet: the extractor is step 2 of
+ * [`docs/spec/picking-a-book-up.md`](../../docs/spec/picking-a-book-up.md).
+ * The two rules that read it land first, so they are watched going red before
+ * the first real file exists ([#367](https://github.com/mephistopheles4/stacks/issues/367)).
+ */
+const NOTES_DIR = 'notes';
+
+/**
+ * The most a notes file may weigh, in bytes.
+ *
+ * The extractor withholds a section over 8,000 code points; at four bytes each
+ * in UTF-8, plus room for the JSON around them, nothing it emits can reach this.
+ * It exists so a bug that bypassed the first cap still fails the build (spec
+ * §3.1). Counted in bytes, never in `.length`, which counts UTF-16 units.
+ */
+const MAX_NOTES_FILE_BYTES = 40_000;
+
+/**
+ * A URL scheme in a notes file: the four the spec names, in any case.
+ *
+ * Links are flattened to their text before a section ships, so a scheme left
+ * over is an address the flattening never saw — a bare URL or an autolink.
+ * `file:` and `obsidian:` carry a user or a vault name.
+ *
+ * ⚠️ **Four named schemes, not any `word:`.** A generic scheme pattern refuses
+ * ordinary prose ("Note: …"), and a rule that fires on prose gets switched off.
+ * `://` covers every hierarchical scheme. `javascript:` and `data:` are not
+ * named because nothing on the page can follow one: the text is set through
+ * `textContent` and never lands in an `href` (spec §3.4).
+ */
+const URL_SCHEME = /:\/\/|\b(?:file|obsidian|mailto):/i;
 
 /** The committed share card, and the only image a page may point at. */
 const SHARE_IMAGE_FILE = 'og.png';
@@ -310,6 +367,7 @@ const DERIVED_KEYS = ['id', 'coverAspect'] as const satisfies readonly (keyof Li
 const SHIPPABLE_KEYS: ReadonlySet<string> = new Set<string>([...RECORD_KEYS, ...DERIVED_KEYS]);
 
 interface ShippedBook {
+  readonly id?: string;
   readonly title?: string;
   readonly cover?: string;
   readonly status?: string;
@@ -449,6 +507,11 @@ export function inspectPublicBuild(dir: string, options: InspectOptions): Public
       observations.push(`${String(staged.length)} cover(s), all referenced`);
     }
   }
+
+  // ── Published Thoughts ────────────────────────────────────────────────────
+  const notesProblems = inspectNotes(dir, books ?? []);
+  problems.push(...notesProblems.problems);
+  observations.push(...notesProblems.observations);
 
   // ── The page a scraper fetches ────────────────────────────────────────────
   //
@@ -698,6 +761,111 @@ function readBooks(dir: string): ShippedBook[] | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * The `notes/` folder: `orphan-note` and `notes-shape`.
+ *
+ * The one place a note's body may ship (invariant 2), so both rules read the
+ * bytes rather than trust the extractor. `orphan-note` is `orphan-cover` for
+ * notes: an id is a slug of a title, so a file no listed book is named for is a
+ * leak by its name alone. `notes-shape` holds every file to spec §3.1's schema,
+ * so a file can carry paragraphs and nothing else. Messages name the file and
+ * never quote it: what is inside is the owner's prose.
+ *
+ * ⚠️ **One direction only today: every file names a listed book.** Step 2
+ * adds the `thoughts: true` key a book carries in `library.json` when its file
+ * was written, and with it both directions of spec §3.1: every file names a
+ * book carrying `thoughts: true`, which is what refuses a stale file for a
+ * book that is still listed, and every such book has a file.
+ *
+ * A build with no `notes/` folder passes both, as every build does until the
+ * extractor exists, and says nothing about it: there was nothing to look at.
+ */
+function inspectNotes(dir: string, books: readonly ShippedBook[]): PublicBuildReport {
+  const notesDir = join(dir, NOTES_DIR);
+  if (!existsSync(notesDir)) return { problems: [], observations: [] };
+
+  const problems: BuildProblem[] = [];
+  const ids = new Set(books.map((book) => book.id));
+  const staged = walk(notesDir).map((file) => ({ file, name: posix(relative(notesDir, file)) }));
+
+  const orphans = staged.filter(
+    ({ name }) => !(name.endsWith('.json') && ids.has(name.slice(0, -'.json'.length))),
+  );
+  if (orphans.length > 0) {
+    problems.push({
+      rule: 'orphan-note',
+      message:
+        `${String(orphans.length)} notes file(s) that no book in library.json is named for — ` +
+        `each filename is a book id, and an id is a slug of a title: ` +
+        orphans
+          .slice(0, 5)
+          .map(({ name }) => name)
+          .join(', '),
+    });
+  }
+
+  for (const { file, name } of staged) {
+    const bytes = statSync(file).size;
+    const problem =
+      bytes > MAX_NOTES_FILE_BYTES
+        ? `is ${String(bytes)} bytes, over the ${String(MAX_NOTES_FILE_BYTES)}-byte cap`
+        : notesShapeProblem(readFileSync(file, 'utf8'));
+    if (problem !== undefined)
+      problems.push({ rule: 'notes-shape', message: `notes/${name} ${problem}` });
+  }
+
+  // Counted, not assumed: said only when both rules held over every file.
+  const observations =
+    problems.length === 0
+      ? [
+          `${String(staged.length)} notes file(s), each named for a listed book and shaped { paragraphs }`,
+        ]
+      : [];
+  return { problems, observations };
+}
+
+/**
+ * What is wrong with a notes file's contents, or `undefined` when it is exactly
+ * `{ "paragraphs": string[] }`, non-empty, every string non-empty, and free of
+ * any URL scheme (spec §3.1).
+ *
+ * Named keys rather than a schema library, for `unknown-key`'s reason: an
+ * allowlist of one, which adding a second key cannot pass by accident.
+ */
+function notesShapeProblem(text: string): string | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return 'is not valid JSON';
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return 'is not a JSON object';
+  }
+
+  // Counted, never named: a writer that keyed the file by its prose would put
+  // the owner's Thoughts in the terminal through a message that listed keys.
+  const keys = Object.keys(parsed);
+  if (keys.length !== 1 || keys[0] !== 'paragraphs') {
+    return (
+      `has ${String(keys.length)} key(s), ${keys.includes('paragraphs') ? '' : 'none of them `paragraphs`, '}` +
+      'where exactly one, `paragraphs`, is allowed'
+    );
+  }
+
+  const { paragraphs } = parsed as { paragraphs: unknown };
+  if (!Array.isArray(paragraphs) || paragraphs.length === 0) {
+    return 'has no paragraphs — `paragraphs` must be a non-empty list';
+  }
+  if (!paragraphs.every((paragraph) => typeof paragraph === 'string' && paragraph !== '')) {
+    return 'has a paragraph that is not a non-empty string';
+  }
+  if (paragraphs.some((paragraph) => URL_SCHEME.test(paragraph as string))) {
+    return 'carries a URL scheme — a link must reach the page as its text alone';
+  }
+  return undefined;
 }
 
 /** Empty string for a file that is not there, so callers can just pattern-match. */

@@ -11,7 +11,9 @@ the observations a caller may print. The rules: `note-body`, `vault-path`,
 `empty-library`, `private-book`, `wishlist-book`, `foreign-cover`,
 `orphan-cover`, `share-image-missing`, `share-image-origin`, `robots`,
 `headers`, `og-image`, and — added later, by
-[#127](https://github.com/mephistopheles4/stacks/issues/127) — `csp`.
+[#127](https://github.com/mephistopheles4/stacks/issues/127) — `csp`, and, by
+[#410](https://github.com/mephistopheles4/stacks/issues/410), `orphan-note` and
+`notes-shape`.
 `PUBLIC_BUILD_RULES` is the list; the type is derived from it, and G20 asserts
 every member has been watched going red. That last clause is what lets a rule
 join without a new gate row, and it is the mechanism #127 was written to use.

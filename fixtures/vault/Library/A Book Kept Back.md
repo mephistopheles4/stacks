@@ -18,3 +18,10 @@ missing from the vault.
 
 Deliberately has no `cover:`, so adding it moves the book count and nothing
 else. Deliberately has a body, so it is also carrying the canary.
+
+## Thoughts
+
+NOTE_BODY_CANARY_do_not_ship
+
+A private book's Thoughts reach no notes file, in a public build or a local one,
+so the canary sits inside the section itself rather than below it.

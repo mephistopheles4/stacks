@@ -7,6 +7,13 @@ status: wishlist
 tags: [fiction]
 ---
 
+## Thoughts
+
+NOTE_BODY_CANARY_do_not_ship
+
+A wishlist book is one the owner does not have yet, so its Thoughts reach no
+notes file in either build. The canary sits inside the section for that reason.
+
 ## Notes
 
 Not read yet. No cover, no dates, no rating, no page count — the minimum viable

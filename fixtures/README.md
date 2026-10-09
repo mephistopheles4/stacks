@@ -26,13 +26,13 @@ vault, which is gitignored.
 
 | File | Exercises |
 | --- | --- |
-| `The Tidal Engine.md` | the happy path — every optional key present |
+| `The Tidal Engine.md` | the happy path — every optional key present; the Thoughts split's [ship phrase](#the-thoughts-split) |
 | `Compilers for the Impatient.md` | hand-set `spine_color` must beat the auto-extracted one |
 | `Signal and Sediment.md` | `abandoned` + `started` with **no `finished`** — year grouping must cope |
-| `Nine Ways of Seeing a Warehouse.md` | 9 authors; no `isbn`, identified by an extra `asin` key |
-| `The Quiet Protocol.md` | minimum viable note — only `type` + `title` + a couple of extras |
-| `Lantern Work.md` | **reordered keys**; no cover; `status: reading` (fallback spine, face-out) |
-| `A Book Kept Back.md` | `private: true` — must never reach a public build. No cover, so adding it moved the book count and nothing else |
+| `Nine Ways of Seeing a Warehouse.md` | 9 authors; no `isbn`, identified by an extra `asin` key; an [unclosed fence](#the-thoughts-split) in its Thoughts |
+| `The Quiet Protocol.md` | minimum viable note — only `type` + `title` + a couple of extras; [wishlist Thoughts](#the-thoughts-split) |
+| `Lantern Work.md` | **reordered keys**; no cover; `status: reading` (fallback spine, face-out); an [embed](#the-thoughts-split) in its Thoughts |
+| `A Book Kept Back.md` | `private: true` — must never reach a public build. No cover, so adding it moved the book count and nothing else; [private Thoughts](#the-thoughts-split) |
 | `The Salt Road Ledger.md` | print edition; started 2025, finished 2026 (crosses a year boundary) |
 | `The Salt Road Ledger (Audiobook).md` | same title+author, different identifier; extra `narrator`/`duration` keys |
 | `The Undelivered Manuscript.md` | **unparseable YAML** → warn naming the file, skip, keep going |
@@ -107,6 +107,32 @@ NOTE_BODY_CANARY_do_not_ship
 Phase 3's gate greps the `--public` build for exactly this string and fails on any
 hit. It is planted in `The Undelivered Manuscript.md` too — the note that gets
 *skipped* — so the gate cannot pass merely because that book was dropped.
+
+## The Thoughts split
+
+A note's `## Thoughts` section is the one part of a body a build may ship, as
+`notes/<id>.json` (invariant 2; [`docs/spec/picking-a-book-up.md`](../docs/spec/picking-a-book-up.md)).
+Six existing notes plant the cases G2 (`public-build`) holds the split to, chosen
+on [#367](https://github.com/mephistopheles4/stacks/issues/367). Existing notes
+rather than new ones, so the book count above does not move.
+
+| Note | Planted case | What a build must do |
+| --- | --- | --- |
+| `The Tidal Engine.md` | the **ship phrase** in `## Thoughts`, the canary below it under `## Notes` | ship the phrase in its notes file, and the canary nowhere |
+| `A Book Kept Back.md` | `private: true`, the canary inside its Thoughts | no notes file, in a public build or a local one |
+| `The Quiet Protocol.md` | `status: wishlist`, the canary inside its Thoughts | no notes file, in either build |
+| `Lantern Work.md` | an embed in its Thoughts, the canary beside it | withhold the whole section: no notes file |
+| `Nine Ways of Seeing a Warehouse.md` | a fence opened in its Thoughts and never closed, the canary under `## Notes` below it | withhold the whole section: no notes file |
+| `Compilers for the Impatient.md` | no Thoughts, the canary under `## Notes` | no notes file |
+
+The ship phrase is `THOUGHTS_SHIP_PHRASE` in `scripts/lib/public-build.ts`,
+beside `NOTE_BODY_CANARY`. It is plain words on purpose: the section ships with
+its Markdown stripped, and an underscore could be stripped with it. G2 refuses to
+run its split assertions unless every case above is still planted, because a
+presence check reading a deleted fixture passes by construction.
+
+⚠️ **The Thoughts text is invented, every word**, like the rest of this vault.
+Never paste a real note's Thoughts in to make a case.
 
 ## The 50-book fixture
 

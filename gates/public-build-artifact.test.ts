@@ -27,7 +27,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
   inspectPublicBuild,
   NOTE_BODY_CANARY,
@@ -49,6 +49,8 @@ afterEach(async () => {
 });
 
 interface ShippedBook {
+  /** What a book's `notes/<id>.json` is named for. */
+  readonly id?: string;
   readonly title: string;
   readonly cover?: string;
   readonly status?: string;
@@ -66,6 +68,15 @@ interface ShippedBook {
   readonly subjects?: string;
 }
 
+/** The clean build's one book, and the id its notes file is named for. */
+const CLEAN_ID = 'a-book-1x2y3z';
+const CLEAN_BOOK: ShippedBook = {
+  id: CLEAN_ID,
+  title: 'A Book',
+  cover: 'covers/a.jpg',
+  status: 'read',
+};
+
 /**
  * The smallest folder that passes every rule.
  *
@@ -75,10 +86,11 @@ interface ShippedBook {
  * `pnpm gate:public`'s job.
  */
 async function writeCleanBuild(): Promise<void> {
-  await writeLibrary([{ title: 'A Book', cover: 'covers/a.jpg', status: 'read' }]);
+  await writeLibrary([CLEAN_BOOK]);
   await writeIndex(indexHtml());
   await mkdir(join(dist, 'covers'), { recursive: true });
   await writeFile(join(dist, 'covers', 'a.jpg'), 'pretend jpeg');
+  await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A paragraph the owner chose to share.'] });
   await writeFile(join(dist, 'og.png'), 'x'.repeat(4096));
   await writeFile(join(dist, '_headers'), headersFile());
   await writeFile(join(dist, 'robots.txt'), 'User-agent: *\nAllow: /\n');
@@ -184,6 +196,18 @@ async function writeLibrary(books: readonly ShippedBook[]): Promise<void> {
   await writeFile(join(dist, 'library.json'), JSON.stringify({ books }, null, 2));
 }
 
+/**
+ * One file under `notes/`, at a path relative to that folder.
+ *
+ * Takes a value to serialise or a raw string, because half the `notes-shape`
+ * plants are files that are not the JSON they claim to be.
+ */
+async function writeNotes(path: string, contents: unknown): Promise<void> {
+  const file = join(dist, 'notes', path);
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, typeof contents === 'string' ? contents : JSON.stringify(contents));
+}
+
 function inspect(): ReturnType<typeof inspectPublicBuild> {
   return inspectPublicBuild(dist, { origin: ORIGIN });
 }
@@ -214,6 +238,47 @@ describe('G20 — a clean build', () => {
     ).toEqual([]);
   });
 
+  it('passes prose that only looks like a URL scheme', async () => {
+    // The control for `notes-shape`'s scheme clause. A rule that fired on any
+    // `word:` would refuse ordinary Thoughts, and a rule that refuses prose gets
+    // switched off, so the near misses are held clean here.
+    await writeNotes(`${CLEAN_ID}.json`, {
+      paragraphs: [
+        'Note: a colon after a word is prose.',
+        'My profile: unchanged, and a file, too.',
+      ],
+    });
+    expect(inspect().problems).toEqual([]);
+  });
+
+  it('passes a notes file of exactly the byte cap', async () => {
+    // The boundary: the cap is the most a file may weigh, so 40,000 bytes is
+    // inside it and one more is the plant below.
+    const wrapper = JSON.stringify({ paragraphs: [''] });
+    const contents = JSON.stringify({ paragraphs: ['a'.repeat(40_000 - wrapper.length)] });
+    expect(Buffer.byteLength(contents)).toBe(40_000);
+
+    await writeNotes(`${CLEAN_ID}.json`, contents);
+    expect(inspect().problems).toEqual([]);
+  });
+
+  it('says it read the notes files only when there were some and both rules held', async () => {
+    // A rule that is silent when it passes cannot be told apart from one that
+    // never ran, so the clean path counts what it read — and says nothing over
+    // a build with no `notes/`, or over one where either rule fired.
+    const said = (): boolean =>
+      inspect().observations.some((line) => line.startsWith('1 notes file(s)'));
+
+    expect(said(), 'a clean notes file').toBe(true);
+    await writeNotes(`${CLEAN_ID}.json`, { paragraphs: [] });
+    expect(said(), 'a misshapen notes file').toBe(false);
+    await rm(join(dist, 'notes'), { recursive: true, force: true });
+    expect(
+      inspect().observations.some((line) => line.includes('notes file(s)')),
+      'no notes folder at all',
+    ).toBe(false);
+  });
+
   it('reports what it looked at', () => {
     // Observations are the module's only output besides problems, and the
     // callers print them. An inspection that says nothing when it passes is one
@@ -241,9 +306,7 @@ describe('G20 — every rule goes red', () => {
 
   it('vault-path: a sourcePath field on a shipped book', async () => {
     await expectOnly('vault-path', async () => {
-      await writeLibrary([
-        { title: 'A Book', cover: 'covers/a.jpg', status: 'read', sourcePath: 'Library/note.md' },
-      ]);
+      await writeLibrary([{ ...CLEAN_BOOK, sourcePath: 'Library/note.md' }]);
     });
   });
 
@@ -253,6 +316,7 @@ describe('G20 — every rule goes red', () => {
       // The lone cover would otherwise be an orphan, and this test is about the
       // empty index rather than about what that implies.
       await rm(join(dist, 'covers'), { recursive: true, force: true });
+      await rm(join(dist, 'notes'), { recursive: true, force: true });
     });
   });
 
@@ -260,6 +324,7 @@ describe('G20 — every rule goes red', () => {
     await expectOnly('empty-library', async () => {
       await rm(join(dist, 'library.json'), { force: true });
       await rm(join(dist, 'covers'), { recursive: true, force: true });
+      await rm(join(dist, 'notes'), { recursive: true, force: true });
     });
   });
 
@@ -270,13 +335,14 @@ describe('G20 — every rule goes red', () => {
       // which of the two happened.
       await writeFile(join(dist, 'library.json'), '{"books": [ truncated');
       await rm(join(dist, 'covers'), { recursive: true, force: true });
+      await rm(join(dist, 'notes'), { recursive: true, force: true });
     });
   });
 
   it('private-book: a book the owner held back', async () => {
     await expectOnly('private-book', async () => {
       await writeLibrary([
-        { title: 'A Book', cover: 'covers/a.jpg', status: 'read' },
+        { ...CLEAN_BOOK },
         { title: 'A Book Kept Back', status: 'read', private: true },
       ]);
     });
@@ -284,10 +350,7 @@ describe('G20 — every rule goes red', () => {
 
   it('wishlist-book: a book the owner does not own', async () => {
     await expectOnly('wishlist-book', async () => {
-      await writeLibrary([
-        { title: 'A Book', cover: 'covers/a.jpg', status: 'read' },
-        { title: 'One Day', status: 'wishlist' },
-      ]);
+      await writeLibrary([{ ...CLEAN_BOOK }, { title: 'One Day', status: 'wishlist' }]);
     });
   });
 
@@ -296,9 +359,7 @@ describe('G20 — every rule goes red', () => {
       // A hand-edited or imported note can carry an absolute URL, and the shelf
       // passes `cover` straight to an <img src> — which leaks a visitor's IP to
       // whatever host the note named.
-      await writeLibrary([
-        { title: 'A Book', cover: 'https://elsewhere.example/a.jpg', status: 'read' },
-      ]);
+      await writeLibrary([{ ...CLEAN_BOOK, cover: 'https://elsewhere.example/a.jpg' }]);
       await rm(join(dist, 'covers'), { recursive: true, force: true });
     });
   });
@@ -309,6 +370,96 @@ describe('G20 — every rule goes red', () => {
       // the leak, and a grep of text files opens no JPEG to find it.
       await writeFile(join(dist, 'covers', 'a-real-book-you-actually-read.jpg'), 'pretend jpeg');
     });
+  });
+
+  it('orphan-note: a notes file no shipped book is named for', async () => {
+    await expectOnly('orphan-note', async () => {
+      // `orphan-cover`'s shape (#367, decision 8), and it fires on real bytes,
+      // where the canary cannot. An id is a slug of a title, so the filename is
+      // the leak before anything inside it is read.
+      await writeNotes('a-real-book-you-actually-read-4k5j6h.json', {
+        paragraphs: ['Thoughts on a book this build does not list.'],
+      });
+    });
+  });
+
+  it('orphan-note: a file named for a listed book, with another ending', async () => {
+    await expectOnly('orphan-note', async () => {
+      // Five characters, like `.json`, so a rule that cut the ending off by
+      // length without checking it would read this as the clean book's file.
+      await writeNotes(`${CLEAN_ID}.text`, { paragraphs: ['A paragraph under the wrong name.'] });
+    });
+  });
+
+  it('orphan-note: a notes file below a subfolder', async () => {
+    await expectOnly('orphan-note', async () => {
+      // Named for a listed book, but one folder down. A notes file is
+      // `notes/<id>.json` and nothing else, so a nested one names no book.
+      await writeNotes(`stale/${CLEAN_ID}.json`, { paragraphs: ['A copy one folder down.'] });
+    });
+  });
+
+  it('notes-shape: a notes file that is not the shape the page reads', async () => {
+    // One plant per clause of the schema (spec §3.1), each in the clean book's
+    // own file, so `orphan-note` stays quiet and the shape is the only defect.
+    const plants: readonly (readonly [string, unknown])[] = [
+      ['not JSON', '{"paragraphs": ["truncated'],
+      ['JSON null', 'null'],
+      ['an array, not an object', ['A paragraph.']],
+      ['no paragraphs key', {}],
+      ['a second key', { paragraphs: ['A paragraph.'], title: 'A Book' }],
+      ['paragraphs not an array', { paragraphs: 'A paragraph.' }],
+      ['an empty list', { paragraphs: [] }],
+      ['a paragraph that is not a string', { paragraphs: ['A paragraph.', 3] }],
+      ['an empty paragraph', { paragraphs: ['A paragraph.', ''] }],
+    ];
+    for (const [what, contents] of plants) {
+      await writeNotes(`${CLEAN_ID}.json`, contents);
+      const fired = new Set(inspect().problems.map((problem) => problem.rule));
+      expect([...fired], `planted ${what}`).toEqual(['notes-shape']);
+    }
+    exercised.add('notes-shape');
+  });
+
+  it('notes-shape: a misshapen file is named in the message, never quoted', async () => {
+    // A writer that keyed the file by its prose would otherwise print the
+    // owner's Thoughts to the terminal through the very message refusing it.
+    // Not the canary, which `note-body` would rightly refuse and quote too.
+    const prose = 'A sentence of Thoughts a broken writer used as a key';
+    await writeNotes(`${CLEAN_ID}.json`, { [prose]: ['A paragraph.'] });
+    const problems = inspect().problems;
+
+    expect(problems.map((problem) => problem.rule)).toEqual(['notes-shape']);
+    expect(problems.map((problem) => problem.message).join('\n')).not.toContain(prose);
+  });
+
+  it('notes-shape: a notes file over the byte cap, counted in bytes', async () => {
+    await expectOnly('notes-shape', async () => {
+      // 20,001 two-byte characters: 40,002 bytes in UTF-8, though the string's
+      // `.length` is half that. A cap counted in characters would pass it.
+      await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['é'.repeat(20_001)] });
+    });
+  });
+
+  it('notes-shape: a notes file carrying a URL scheme', async () => {
+    // The four the spec names, in the case a vault might write them. A link is
+    // flattened to its text before anything ships, so a scheme left over is an
+    // address the flattening never saw.
+    for (const address of [
+      'see https://elsewhere.example/a',
+      // Without the slashes, so `://` cannot answer for these two.
+      'saved at file:C:/Users/someone/notes.md',
+      'opened from obsidian:open?vault=Private',
+      'write to MAILTO:someone@example.invalid',
+    ]) {
+      // Second of two paragraphs, so a check that read only the first, or
+      // required every paragraph to carry one, would pass it.
+      await writeNotes(`${CLEAN_ID}.json`, {
+        paragraphs: ['A clean paragraph.', `A paragraph, ${address}.`],
+      });
+      const fired = new Set(inspect().problems.map((problem) => problem.rule));
+      expect([...fired], `planted ${address}`).toEqual(['notes-shape']);
+    }
   });
 
   it('share-image-origin: a relative og:image', async () => {
@@ -542,9 +693,7 @@ describe('G20 — every rule goes red', () => {
      * between an extra key and `library.json`.
      */
     await expectOnly('unknown-key', async () => {
-      await writeLibrary([
-        { title: 'A Book', cover: 'covers/a.jpg', status: 'read', narrator: 'A Narrator' },
-      ]);
+      await writeLibrary([{ ...CLEAN_BOOK, narrator: 'A Narrator' }]);
     });
   });
 
@@ -563,9 +712,7 @@ describe('G20 — every rule goes red', () => {
      * deploy does not, and neither check is the one people assume.
      */
     await expectOnly('note-body', async () => {
-      await writeLibrary([
-        { title: 'A Book', cover: 'covers/a.jpg', status: 'read', subjects: NOTE_BODY_CANARY },
-      ]);
+      await writeLibrary([{ ...CLEAN_BOOK, subjects: NOTE_BODY_CANARY }]);
     });
   });
 
