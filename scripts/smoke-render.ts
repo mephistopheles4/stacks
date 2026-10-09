@@ -453,12 +453,36 @@ async function clickToPickUp(
   return undefined;
 }
 
-/** Both pages present and hidden by `visibility`, as they must be before the fade. */
-const PAGES_HIDDEN = `(() => {
-  const pages = [...document.querySelectorAll('.held-page')];
-  return pages.length === 2 && pages.every((page) => page.style.visibility === 'hidden');
+/**
+ * Watches every held page from the moment it is added: each must arrive hidden
+ * by `visibility`, and no page may ever be visible while its opacity is still 0,
+ * which is what text showing through the closing cover looks like in the DOM.
+ * Watched rather than sampled once after the click, because on a slow runner the
+ * one sample could land after the fade and prove nothing.
+ */
+const WATCH_PAGES = `(() => {
+  const seen = [];
+  window.__pageVisibility = seen;
+  const record = (page, event) => seen.push({ event, visibility: page.style.visibility, opacity: page.style.opacity });
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node instanceof HTMLElement && node.classList.contains('held-page')) record(node, 'added');
+      }
+      const target = mutation.target;
+      if (mutation.type === 'attributes' && target instanceof HTMLElement && target.classList.contains('held-page')) record(target, 'style');
+    }
+  });
+  observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] });
 })()`;
 
+const PAGES_HIDDEN = `(() => {
+  const seen = window.__pageVisibility ?? [];
+  const added = seen.filter((entry) => entry.event === 'added');
+  return added.length >= 2 &&
+    added.every((entry) => entry.visibility === 'hidden') &&
+    !seen.some((entry) => entry.visibility === 'visible' && Number(entry.opacity) === 0);
+})()`;
 const READ_PAGE = `(() => {
   const right = document.querySelector('.held-page-right');
   const left = document.querySelector('.held-page-left');
@@ -484,10 +508,11 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   const href = (await page.evaluate('location.href')) as string;
   const sameHref = async (): Promise<boolean> => (await page.evaluate('location.href')) === href;
 
+  await page.evaluate(WATCH_PAGES);
   const first = await clickToPickUp(page, 'window.__shelf.held() !== undefined');
   if (first === undefined) return undefined;
-  const hiddenBeforeFade = (await page.evaluate(PAGES_HIDDEN)) === true;
   if (!(await until(page, HELD))) return undefined;
+  const hiddenBeforeFade = (await page.evaluate(PAGES_HIDDEN)) === true;
   // The Thoughts fetch, when the book has some, lands after the click.
   await new Promise((resolve) => setTimeout(resolve, 300));
   const read = (await page.evaluate(READ_PAGE)) as Omit<
@@ -632,7 +657,12 @@ async function putBackAndSettle(page: Page): Promise<void> {
  */
 async function checkPhone(page: Page): Promise<PhoneRead | undefined> {
   await page.setViewport({ width: 375, height: 812 });
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  // The pickup frames for the camera it finds, so wait until the shelf has
+  // resized to the upright viewport: a slow runner had not after a fixed 400 ms.
+  await until(
+    page,
+    '(() => { const s = window.__shelf.stats(); return s.bufferWidth < s.bufferHeight * 0.9; })()',
+  );
   await page.evaluate('window.__shelf.pickUp(0)');
   if (!(await until(page, HELD))) return undefined;
   const read = (await page.evaluate(`(() => {

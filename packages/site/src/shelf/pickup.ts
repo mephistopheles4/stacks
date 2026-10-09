@@ -71,7 +71,7 @@ interface Timeline {
 }
 interface Engine {
   timeline(vars: { readonly paused: boolean }): Timeline;
-  readonly ticker: { remove(callback: unknown): void };
+  readonly ticker: { remove(callback: unknown): void; sleep(): void };
   /** A property, not a method: it is handed to the ticker unbound. */
   readonly updateRoot: (seconds: number) => void;
 }
@@ -590,6 +590,12 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     holdsCamera: (): boolean => lifted.size > 0,
     draw: (drawShelf: () => void): void => {
       engine.updateRoot(performance.now() / 1000);
+      // GSAP wakes its own ticker on import and whenever a timeline is made,
+      // and that ticker runs a requestAnimationFrame loop of its own until it
+      // auto-sleeps 120 of its frames later. Stepped from here, it needs none:
+      // a second loop beside the shelf's is what G60 reads as a disposed shelf
+      // still drawing, and on a slow runner it was still awake when counted.
+      engine.ticker.sleep();
       pose();
       const rest = Math.max(0, ...[...lifted.values()].map((entry) => entry.p.u));
       if (lifted.size === 0 || rest === 0) {

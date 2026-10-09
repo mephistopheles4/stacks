@@ -33,7 +33,7 @@ export interface PickupRead {
   readonly announced: string;
   /** The put-back control: a real `<button>`, with an accessible name. */
   readonly putBack: { readonly tag: string; readonly name: string } | undefined;
-  /** Both pages hidden by `visibility` just after the click, before the fade. */
+  /** Both pages added hidden by `visibility`, and never visible while their opacity is 0. */
   readonly hiddenBeforeFade: boolean;
   /** Both pages visible once at rest. */
   readonly visibleAtRest: boolean;
