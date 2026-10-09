@@ -334,7 +334,10 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     current.repaint(new Set(lifted.keys()));
 
     void loadThoughts(book).then((paragraphs) => {
-      if (paragraphs !== undefined && !entry.released) pages.showThoughts(paragraphs);
+      if (paragraphs === undefined || entry.released) return;
+      // Already showing: fade them in at rest, never pop (spec §3.1).
+      const showing = pages.right.style.visibility === 'visible';
+      pages.showThoughts(paragraphs, showing && !reduced());
     });
     void swapInHeldCover(entry);
   };

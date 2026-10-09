@@ -30,10 +30,11 @@ describe('the right-hand page', () => {
     ]);
   });
 
-  it("puts the Thoughts first, then a rule, then the card's lines, so the links stay reachable", () => {
+  it("puts the Thoughts first, then the card's lines, so the links stay reachable", () => {
+    // The rule below the Thoughts is part of their slot, so a fetch that fails or
+    // has not landed leaves no rule standing over nothing (spec §3.1).
     expect(rightPageBlocks(book(), { narrow: false, thoughts: true })).toEqual([
       'thoughts',
-      'rule',
       'reading',
       'links',
       'put-back',
@@ -45,7 +46,6 @@ describe('the right-hand page', () => {
       'title',
       'author',
       'thoughts',
-      'rule',
       'reading',
       'links',
       'put-back',

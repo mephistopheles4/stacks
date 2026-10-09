@@ -34,6 +34,8 @@ const good: PickupRead = {
     pages: 2,
   },
   afterPutBack: { held: false, announced: '', historyHeld: false, hrefUnchanged: true, pages: 0 },
+  afterEscape: { held: false, announced: '', historyHeld: false, hrefUnchanged: true, pages: 0 },
+  afterBack: { held: false, announced: '', historyHeld: false, hrefUnchanged: true, pages: 0 },
 };
 
 describe('pickupFailures', () => {
@@ -76,7 +78,7 @@ describe('pickupFailures', () => {
     ['a put-back that left it held', { held: true }, /left the book held/],
     ['a stale announcement', { announced: 'Paper Ledger' }, /still says/],
     ['a stale history entry', { historyHeld: true }, /history entry in place/],
-    ['an address changed on put-back', { hrefUnchanged: false }, /changed on put-back/],
+    ['an address changed on put-back', { hrefUnchanged: false }, /changed on the put-back control/],
     ['pages left behind', { pages: 2 }, /left in the layer/],
   ])('fails on %s', (_name, patch, message) => {
     expect(
@@ -179,5 +181,20 @@ describe('spreadFailures — the open spread of §3.6', () => {
     expect(spreadFailures(undefined, 'a book')).toEqual([
       'a book: no open spread at rest to measure',
     ]);
+  });
+});
+
+describe('the other two ways down', () => {
+  it.each<['afterEscape' | 'afterBack', RegExp]>([
+    ['afterEscape', /^Escape left the book held$/m],
+    ['afterBack', /^the back button left the book held$/m],
+  ])('fails %s that left the book in hand', (key, message) => {
+    const read = { ...good, [key]: { ...good[key], held: true } };
+    expect(pickupFailures(read).join('\n')).toMatch(message);
+  });
+
+  it('fails a back button that left the pickup entry in place', () => {
+    const read = { ...good, afterBack: { ...good.afterBack, historyHeld: true } };
+    expect(pickupFailures(read).join('\n')).toMatch(/back button left the pickup's history entry/);
   });
 });

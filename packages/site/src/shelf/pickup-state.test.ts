@@ -109,7 +109,20 @@ function harness(options: { reduced?: boolean } = {}) {
     index -= 1;
     state.popped();
   };
-  return { state, tracks, track, log, pressBack, entries: () => entries.slice(0, index + 1) };
+  /** The browser's forward button: onto the next entry, then popstate. */
+  const pressForward = (): void => {
+    index += 1;
+    state.popped();
+  };
+  return {
+    state,
+    tracks,
+    track,
+    log,
+    pressBack,
+    pressForward,
+    entries: () => entries.slice(0, index + 1),
+  };
 }
 
 describe('picking a book up', () => {
@@ -200,6 +213,22 @@ describe('putting it back', () => {
     expect(h.state.holding()).toEqual({ book: 'a', phase: 'lifting' });
     expect(h.entries()).toEqual([null, 'a']);
     expect(h.log.at(-1)).toBe('announce a');
+  });
+
+  it('leaves history alone on a lost context with nothing in hand', () => {
+    const h = harness();
+    // A stale pickup entry, as the forward button can leave current, with no
+    // book moving: a rebuild must not send the visitor back off it.
+    h.state.select('a');
+    h.track('a').land();
+    h.pressBack();
+    h.track('a').returnHome();
+    h.pressForward();
+    const before = h.entries();
+    expect(before).toEqual([null, 'a']);
+    h.state.drop();
+
+    expect(h.entries()).toEqual(before);
   });
 
   it('puts every book in flight back when the context is lost, at once', () => {

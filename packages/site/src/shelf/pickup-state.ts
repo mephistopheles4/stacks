@@ -223,7 +223,11 @@ export function createPickupState<B>(
         entry.track.dispose();
         effects.settled(entry.book);
       }
-      if (lost.length > 0) effects.announce(undefined);
+      if (lost.length === 0) return;
+      effects.announce(undefined);
+      // Only an entry this drop emptied is stepped off. A stale pickup entry,
+      // reached by the forward button with nothing in hand, stays: stepping back
+      // from it on a rebuild could take the visitor off the site.
       if (effects.history.held()) effects.history.back();
     },
 

@@ -16,9 +16,9 @@ A local-first reading tracker where the notes vault IS the database. A CLI (`sta
 4. `docs/gates.md` — the invariant scoreboard: which rule each gate protects, and
    which rules are still protected by nothing.
 5. `docs/notes-on-the-shelf.md` — the design for public/private notes and for
-   picking a book up. Its public/private split is built — the `## Thoughts`
-   extractor — and picking a book up is not; read it before changing invariant 2,
-   the publisher, or the cover cap.
+   picking a book up. Both halves are built — the `## Thoughts` extractor, and
+   picking a book up in place of the card ([#413](https://github.com/mephistopheles4/stacks/issues/413));
+   read it before changing invariant 2, the publisher, or the cover cap.
 6. `docs/spec/` — locked specs waiting for an implementation session. Everything
    in there is decided: read it *instead of* re-deciding, and read
    `docs/spec/README.md` first for the build order and the gate roster.

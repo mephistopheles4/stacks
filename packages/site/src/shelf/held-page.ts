@@ -7,8 +7,9 @@ import { COVER_BUTTON_CLASS, offerCover } from './cover-viewer.ts';
  *
  * The card's content moves onto the open book. The left-hand page carries the
  * title and author, as #371 prototyped. The right-hand page carries the Thoughts
- * when the book has them, then a rule, then the card's own lines, so the links
- * stay reachable for every book; a book with none shows the card's lines alone
+ * when the book has them, closed by a rule, then the card's own lines, so the
+ * links stay reachable for every book. The rule belongs to the Thoughts' slot, so
+ * a fetch that fails or has not landed leaves no rule over nothing; a book with none shows the card's lines alone
  * (#369's C). On a phone, which frames the right-hand page alone, the title and
  * author lead that page too. The enlarged cover is opened from a control among
  * the lines, and a put-back control ends the page: a phone fills the screen with
@@ -27,7 +28,6 @@ export type RightBlock =
   | 'title'
   | 'author'
   | 'thoughts'
-  | 'rule'
   | 'reading'
   | 'tags'
   | 'object'
@@ -53,7 +53,6 @@ export function rightPageBlocks(book: LibraryBook, options: RightPageOptions): R
     options.narrow && 'title',
     options.narrow && book.author !== undefined && 'author',
     options.thoughts && 'thoughts',
-    options.thoughts && 'rule',
     'reading',
     model.tags !== undefined && 'tags',
     model.object !== undefined && 'object',
@@ -65,6 +64,9 @@ export function rightPageBlocks(book: LibraryBook, options: RightPageOptions): R
   return blocks.filter((block): block is RightBlock => block !== false);
 }
 
+/** How long Thoughts that arrive after the page has shown take to fade in. */
+const THOUGHTS_FADE_MS = 400;
+
 /** The width a page is laid out at, in CSS pixels, before `CSS3DRenderer` scales it. */
 export const PAGE_PX = 460;
 
@@ -73,8 +75,12 @@ export interface HeldPages {
   readonly right: HTMLElement;
   /** The put-back control: a real `<button>`, named for what it does. */
   readonly putBack: HTMLButtonElement;
-  /** Fills the Thoughts slot, when they arrive. Plain text, one `<p>` each. */
-  showThoughts(paragraphs: readonly string[]): void;
+  /**
+   * Fills the Thoughts slot, when they arrive: plain text, one `<p>` each, and
+   * the rule below them. `fade` for Thoughts that land once the page is
+   * already showing, which fade in at rest rather than pop in (spec §3.1).
+   */
+  showThoughts(paragraphs: readonly string[], fade: boolean): void;
   /** Long Thoughts scroll at rest only (#369): on while held, off in motion. */
   setScrollable(scrollable: boolean): void;
 }
@@ -117,12 +123,19 @@ export function buildPages(
     left,
     right,
     putBack,
-    showThoughts(paragraphs) {
+    showThoughts(paragraphs, fade) {
       const label = text('p', 'Thoughts', 'held-label');
-      thoughts.replaceChildren(label, ...paragraphs.map((paragraph) => text('p', paragraph)));
+      thoughts.replaceChildren(
+        label,
+        ...paragraphs.map((paragraph) => text('p', paragraph)),
+        document.createElement('hr'),
+      );
       // A book whose flag promised Thoughts and whose fetch then failed keeps
       // the slot empty; one that delivered shows them above the rule.
       thoughts.hidden = false;
+      // The Web Animations API rather than a CSS transition: a script-driven
+      // animation is not a `style` the CSP has to admit.
+      if (fade) thoughts.animate([{ opacity: 0 }, { opacity: 1 }], { duration: THOUGHTS_FADE_MS });
     },
     setScrollable(scrollable) {
       right.style.overflowY = scrollable ? 'auto' : 'hidden';
@@ -146,8 +159,6 @@ function rightBlock(
       // it is: an empty labelled region would be read out as nothing.
       thoughts.hidden = true;
       return thoughts;
-    case 'rule':
-      return document.createElement('hr');
     case 'reading':
       return text('p', model.reading, 'reading');
     case 'tags':

@@ -51,13 +51,19 @@ export interface PickupRead {
     readonly pages: number;
   };
   /** After the put-back control was pressed. */
-  readonly afterPutBack: {
-    readonly held: boolean;
-    readonly announced: string;
-    readonly historyHeld: boolean;
-    readonly hrefUnchanged: boolean;
-    readonly pages: number;
-  };
+  readonly afterPutBack: PutDown;
+  /** After Escape, and after the back button, each on a fresh pickup (spec §3.9). */
+  readonly afterEscape: PutDown;
+  readonly afterBack: PutDown;
+}
+
+/** The page after a book was put down, by whichever of the three ways. */
+export interface PutDown {
+  readonly held: boolean;
+  readonly announced: string;
+  readonly historyHeld: boolean;
+  readonly hrefUnchanged: boolean;
+  readonly pages: number;
 }
 
 export function pickupFailures(read: PickupRead): string[] {
@@ -127,15 +133,26 @@ export function pickupFailures(read: PickupRead): string[] {
     );
   }
 
-  const after = read.afterPutBack;
-  if (after.held) failures.push('the put-back control left the book held');
+  failures.push(
+    ...putDownFailures(read.afterPutBack, 'the put-back control'),
+    ...putDownFailures(read.afterEscape, 'Escape'),
+    ...putDownFailures(read.afterBack, 'the back button'),
+  );
+  return failures;
+}
+
+/** All three ways down leave the page as it was before the pickup (spec §3.9). */
+function putDownFailures(after: PutDown, how: string): string[] {
+  const failures: string[] = [];
+  if (after.held) failures.push(`${how} left the book held`);
   if (after.announced.length > 0) {
-    failures.push(`the announcer still says "${after.announced}" after put-back`);
+    failures.push(`the announcer still says "${after.announced}" after ${how}`);
   }
-  if (after.historyHeld) failures.push("put-back left the pickup's history entry in place");
-  if (!after.hrefUnchanged) failures.push('location.href changed on put-back');
-  if (after.pages !== 0)
-    failures.push(`${String(after.pages)} pages left in the layer after put-back`);
+  if (after.historyHeld) failures.push(`${how} left the pickup's history entry in place`);
+  if (!after.hrefUnchanged) failures.push(`location.href changed on ${how}`);
+  if (after.pages !== 0) {
+    failures.push(`${String(after.pages)} pages left in the layer after ${how}`);
+  }
   return failures;
 }
 

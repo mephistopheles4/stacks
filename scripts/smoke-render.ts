@@ -34,6 +34,7 @@ import {
   viewerFailures,
   type PhoneRead,
   type PickupRead,
+  type PutDown,
   type SpreadRead,
   type ViewerRead,
 } from './lib/pickup-gate.ts';
@@ -509,23 +510,33 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   }))()`)) as PickupRead['second'];
 
   await page.click('.held-page-right .held-put-back');
+  const afterPutBack = await putDown(page, sameHref);
+
+  // The other two ways down, each on a fresh pickup through the shelf's hook.
+  await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
+  await until(page, HELD);
+  await page.keyboard.press('Escape');
+  const afterEscape = await putDown(page, sameHref);
+
+  await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
+  await until(page, HELD);
+  await page.evaluate('history.back()');
+  const afterBack = await putDown(page, sameHref);
+
+  return { ...read, hiddenBeforeFade, hrefUnchanged, second, afterPutBack, afterEscape, afterBack };
+}
+
+/** Waits for the book to be back in its slot, then reads what the page says. */
+async function putDown(page: Page, sameHref: () => Promise<boolean>): Promise<PutDown> {
   await until(page, NOTHING_HELD);
-  const afterPutBack = (await page.evaluate(`(() => ({
+  const read = (await page.evaluate(`(() => ({
     held: window.__shelf.held() !== undefined,
     announced: document.getElementById('pickup-status')?.textContent ?? '',
     historyHeld: Boolean(history.state && history.state.pickup),
     pages: document.querySelectorAll('.held-page').length,
-  }))()`)) as Omit<PickupRead['afterPutBack'], 'hrefUnchanged'>;
-
-  return {
-    ...read,
-    hiddenBeforeFade,
-    hrefUnchanged,
-    second,
-    afterPutBack: { ...afterPutBack, hrefUnchanged: await sameHref() },
-  };
+  }))()`)) as Omit<PutDown, 'hrefUnchanged'>;
+  return { ...read, hrefUnchanged: await sameHref() };
 }
-
 /**
  * The enlarged cover, opened from the held page — that it opens, that it is a
  * closer look, that it shows the held copy, and that leaving it leaves *only*
