@@ -128,3 +128,9 @@ Two other files hold what these deliberately do not:
 | [0093](./0093-open-library-isbn-lookups-ask-api-books-json.md) | Open Library ISBN lookups ask `/api/books.json` |
 | [0094](./0094-a-title-search-takes-one-edition-in-the-reading-language.md) | A title search takes one edition, in the reading language |
 | [0095](./0095-a-comment-carries-the-date-and-an-ignore-expires-in-30-days.md) | A comment carries the date, and an ignore expires in 30 days |
+| [0100](./0100-the-thoughts-section-is-read-by-one-adapter-method.md) | The Thoughts section is read by one adapter method, and both builds ship the same notes |
+| [0101](./0101-thoughts-ship-as-plain-text-and-withhold-whole.md) | Thoughts ship as plain paragraphs stripped by hand, and anything hidden withholds the whole section |
+| [0102](./0102-pickup-replaces-the-card.md) | Pickup replaces the card for every book (supersedes 0049 in part) |
+| [0103](./0103-gsap-plays-the-pickup-motion.md) | GSAP plays the pickup motion, for fluency over a zero-byte option |
+| [0104](./0104-tweakpane-tunes-the-pickup-behind-debug.md) | Tweakpane with essentials tunes the pickup, behind `?debug`, styled through placeholders and a lazy link |
+| [0105](./0105-a-cover-has-a-shelf-tier-and-a-held-tier.md) | A cover has a shelf tier and a held tier (amends 0015) |

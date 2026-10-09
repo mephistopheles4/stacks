@@ -225,6 +225,54 @@ one empty shelf ahead (a row), `SHELF` names the furniture, and
 `packages/site/src/shelf/` is the whole renderer. Say **row** or **bookcase**
 where the difference matters.
 
+### Picking a book up
+
+**Pick up**:
+What a click on a book does: it slides out of its **row**, comes to the camera,
+turns and opens. It replaces the card for every book
+([ADR-0102](docs/adr/0102-pickup-replaces-the-card.md)). The verb names the whole
+motion, not its first stage.
+*Avoid*: select (that is the raycaster's callback, which fires for empty space
+too), open (that is the last stage), zoom, focus.
+
+**Held**:
+The state of the one book that has been **picked up** and is at rest, square to
+the camera, open to its pages. A book on its way there or back is moving, not
+held.
+*Avoid*: selected, active, open (on its own), focused.
+
+**Put back**:
+The return of a **held** book to its slot, on the same path reversed. Escape, a
+click on empty space, the back button and the page's put-back control all do
+it.
+*Avoid*: close, dismiss (those were the card's), drop.
+
+**Shelf tier**:
+The cover copy every book uploads before the first frame, capped at
+`MAX_COVER_EDGE`, 512 px
+([ADR-0105](docs/adr/0105-a-cover-has-a-shelf-tier-and-a-held-tier.md)).
+*Avoid*: thumbnail, small cover, low-res.
+
+**Held tier**:
+The larger cover copy one **held** book loads on pickup, capped at 1200 px, and
+frees on **put back**.
+*Avoid*: full-size, original (the vault keeps the original; this is a capped
+copy), high-res.
+
+**Held copy**:
+The staged file of the **held tier**, in `held-covers/`. It exists only for a
+book whose vault cover is larger than 512 px.
+*Avoid*: full cover, large cover.
+
+**Pickup tuner**:
+The Tweakpane panel behind `?debug` that scrubs the pickup motion and shapes its
+eases ([ADR-0104](docs/adr/0104-tweakpane-tunes-the-pickup-behind-debug.md)). It
+edits `PICKUP_MOTION` live and exports it; it is never where the values live.
+The rest of the `?debug` page is the *debug panel*, or *tuning panel*; either
+name is fine for that one.
+*Avoid*: panel on its own (the glossary gives that word to the backboard),
+timeline editor.
+
 ### Building and publishing
 
 **Public build**:
@@ -254,6 +302,31 @@ relative share-image URL renders as nothing in every preview scraper.
 A phrase planted in fixture note bodies so that a check for note-body leakage can
 distinguish "found nothing" from "looked nowhere".
 *Avoid*: sentinel, marker, test string.
+
+**Ship phrase**:
+The canary's opposite: a phrase planted inside a fixture's **Thoughts section**
+that a check requires to be *present* in the built notes, so "the split held"
+cannot pass on a build that shipped no Thoughts at all. Named *must-ship marker*
+on [#367](https://github.com/mephistopheles4/stacks/issues/367); renamed because
+*marker* is on the canary's *Avoid* list.
+*Avoid*: marker, presence canary (a canary is what must be absent).
+
+**Thoughts section**:
+The part of a note body under the heading `## Thoughts`, and the only body text
+any build ships, as `notes/<id>.json`. Everything else in the body is the
+**private remainder**, which never leaves the adapter. Locked as a heading by
+[map #366](https://github.com/mephistopheles4/stacks/issues/366); the boundary
+rules are in [`docs/spec/picking-a-book-up.md`](docs/spec/picking-a-book-up.md).
+*Avoid*: public notes, public section (both suggest a key or a flag), notes
+(that is `## Notes`, the heading under it).
+
+**Withheld**:
+Said of a **Thoughts section** the extractor refused to ship whole, because it
+holds an embed, a hidden comment, a second heading, or too much text. A withheld
+section emits no file, so the page shows the book as if it had none; only the
+build's warning says otherwise.
+*Avoid*: skipped (that is a bad note, by invariant 3), stripped (that is what
+happens to Markdown marks), redacted (nothing is partly shipped).
 
 ### Checking
 
