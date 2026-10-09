@@ -122,6 +122,26 @@ interface PlacedBook {
   readonly frontZ: number;
 }
 
+/** PROTOTYPE #371 — throwaway, never merges. What the pickup prototype reaches into. */
+export interface Proto371Shelf {
+  readonly scene: THREE.Scene;
+  readonly camera: THREE.PerspectiveCamera;
+  readonly renderer: THREE.WebGLRenderer;
+  readonly controls: OrbitControls;
+  readonly canvas: HTMLCanvasElement;
+  readonly placed: readonly PlacedBook[];
+  readonly lookup: BookLookup;
+  readonly fog: THREE.Fog;
+}
+
+/** PROTOTYPE #371 — throwaway, never merges. Hooks the render loop calls. */
+export const PROTO_371: {
+  mounted?: (shelf: Proto371Shelf) => void;
+  render?: (draw: () => void) => void;
+  after?: () => void;
+  holdCamera: boolean;
+} = { holdCamera: false };
+
 /**
  * What the renderer is actually holding, read live.
  *
@@ -621,9 +641,13 @@ function assembleShelf(
   const renderLoop = (): void => {
     if (halted || disposed) return;
     frame = requestAnimationFrame(renderLoop);
-    controls.update();
+    // PROTOTYPE #371 — a held book owns the camera; the orbit must not fight it.
+    if (!PROTO_371.holdCamera) controls.update();
     renderer.info.reset();
-    renderFrame();
+    if (PROTO_371.render === undefined) renderFrame();
+    else PROTO_371.render(renderFrame);
+    // PROTOTYPE #371 — the DOM page is placed in the same frame as the render.
+    PROTO_371.after?.();
     drawn += 1;
 
     framesInWindow += 1;
@@ -766,6 +790,9 @@ function assembleShelf(
    */
   const changes: string[] = [];
   const MAX_CHANGES = 24;
+
+  // PROTOTYPE #371 — hand the live shelf to the pickup prototype.
+  PROTO_371.mounted?.({ scene, camera, renderer, controls, canvas, placed, lookup, fog });
 
   return {
     bookCount: placed.length,

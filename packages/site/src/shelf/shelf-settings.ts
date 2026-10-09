@@ -760,3 +760,66 @@ function mergeProfiles(
     paperback: { ...base.paperback, ...patch?.paperback },
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/* PROTOTYPE #371 — throwaway, never merges.                                   */
+/* -------------------------------------------------------------------------- */
+
+/** A cubic-bezier ease, `[x1, y1, x2, y2]`, as Tweakpane's curve editor gives it. */
+export type Bezier = readonly [number, number, number, number];
+
+/**
+ * How a picked-up book moves. Plain constants, as the map settled: the pickup
+ * tuner edits these live and exports them, and never becomes where they live.
+ * Durations are seconds; distances are world units (a book is about 0.23 tall).
+ */
+export interface PickupMotion {
+  /** Out of the shelf, straight towards the room. */
+  slide: number;
+  /** From slid out to held, turning cover-on. */
+  turn: number;
+  /** The front board swinging open. */
+  open: number;
+  /** How long before the slide ends the turn starts. 0 is sequential. */
+  overlapSlideTurn: number;
+  /** How long before the turn ends the cover starts to open. 0 is sequential. */
+  overlapTurnOpen: number;
+  /** How far the book slides out before it turns. */
+  slideOut: number;
+  /** How far it rises as it slides. */
+  lift: number;
+  /** How far the cover opens, in degrees. */
+  openDegrees: number;
+  /** Framing margin around the held book or page: 1 is edge to edge. */
+  margin: number;
+  /** How dark the rest of the shelf goes under `rest: dim`, 0..1. */
+  dim: number;
+  /** Put-back speed against pickup: 1 is the same speed, 2 twice as fast. */
+  returnSpeed: number;
+  /** The cover angle the text starts to fade in at (#369: past ~95°). */
+  textFadeFrom: number;
+  /** How far in front of the shelf the book is held, camera-to-book only. */
+  pullOut: number;
+  easeSlide: Bezier;
+  easeTurn: Bezier;
+  easeOpen: Bezier;
+}
+
+export const PICKUP_MOTION: PickupMotion = {
+  slide: 0.35,
+  turn: 0.7,
+  open: 0.6,
+  overlapSlideTurn: 0.12,
+  overlapTurnOpen: 0.2,
+  slideOut: 0.12,
+  lift: 0.01,
+  openDegrees: 165,
+  margin: 1.25,
+  dim: 0.55,
+  returnSpeed: 1.6,
+  textFadeFrom: 95,
+  pullOut: 0.25,
+  easeSlide: [0.3, 0, 0.2, 1],
+  easeTurn: [0.45, 0, 0.2, 1],
+  easeOpen: [0.4, 0, 0.15, 1],
+};

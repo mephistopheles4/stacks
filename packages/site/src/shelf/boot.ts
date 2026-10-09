@@ -152,6 +152,11 @@ export async function boot(
     return undefined;
   }
 
+  // PROTOTYPE #371 — throwaway, never merges. `?pickup` swaps the card for a pickup.
+  const pickup = params.has('pickup')
+    ? (await import('./prototype-371-pickup.ts')).installPickup(params)
+    : undefined;
+
   /**
    * The canvas the shelf is drawn on **now**.
    *
@@ -189,7 +194,8 @@ export async function boot(
       return mountShelf(target, books, {
         settings,
         onSelect: (book) => {
-          if (book === undefined) hideCard(card);
+          if (pickup !== undefined) pickup.select(book);
+          else if (book === undefined) hideCard(card);
           else showCard(card, book);
         },
         onContextLost: (running) => {
@@ -403,6 +409,12 @@ export async function boot(
   if (handle === undefined) return undefined;
 
   publish(handle, () => fallback().kind);
+
+  // PROTOTYPE #371 — the pickup tuner, lazily, behind `?debug` as #375 decided.
+  if (pickup !== undefined && debug) {
+    const { mountTuner } = await import('./prototype-371-tuner.ts');
+    mountTuner(pickup);
+  }
 
   /**
    * The panel, loaded only if asked for.
