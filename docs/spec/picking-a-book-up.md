@@ -263,11 +263,19 @@ so the two did not line up. #371 named three causes; each becomes a check:
 | --- | --- |
 | The cover rests at about 165° and leans toward the camera | the front board lies at **180°** to the page block, ±0.5° |
 | The left page is drawn at 97% of the cover's height; the right page is the inset page block | the left page is a sheet the **page block's** height and width, ±1 px projected |
-| The cover hinges at the spine's outside corner, so spine and head cap show between the pages | the left page's inner edge and the right page's inner edge meet at the gutter: **no gap wider than 1 px** projected, and no spine or head-cap pixel between them |
+| The cover hinges at the spine's outside corner, so spine and head cap show between the pages | the left page's inner edge and the right page's inner edge meet at the gutter: **no gap wider than 1 px** projected |
 
-Measured with #369's projected-corner sweep, at the 1280×800 desktop viewport.
-**Desktop only**: a phone frames the right page alone, so there is no spread to
-align there. Part of the pickup row (§5).
+**A standing check computed from the scene, never from pixels.** Owner
+decision, from chat, 2026-10-09, settling the spec pair's disagreement on S9.
+The pickup check in `scripts/smoke-render.ts` reads the held book's parts at
+rest through `window.__shelf`: the board's angle to the page block, the two
+pages' world sizes, and their inner edges projected through the camera at the
+1280×800 desktop viewport. Step 4 builds it there; #369's prototype sweep is
+the pattern, and it never merged. It is deterministic, so it adds no flake to a
+page family that already has one, and a later geometry change goes red. It does
+not judge the look: no pixel test, and the owner's screenshots at step 4 (§8)
+do that. **Desktop only**: a phone frames the right page alone, so there is no
+spread to align there. Part of the pickup row (§5).
 
 ### 3.7 The empty-string hash, pinned on purpose
 
