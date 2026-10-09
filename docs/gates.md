@@ -1458,6 +1458,53 @@ in a permitted field passes by construction, and a filename is never read at all
    the brief's success metric, so the gate now builds with an origin and checks
    what a scraper would fetch. Observed red by restoring the relative URL.
 
+### The Thoughts split, armed before the extractor exists
+
+Step 1 of [`docs/spec/picking-a-book-up.md`](spec/picking-a-book-up.md)
+([#410](https://github.com/mephistopheles4/stacks/issues/410)), on
+[#367](https://github.com/mephistopheles4/stacks/issues/367)'s decisions. A
+note's `## Thoughts` will ship as `notes/<id>.json`, and **this lands first**, so
+the extractor is written against a gate rather than the other way round. G2's
+row text is unchanged until the extractor arms the presence half (step 2); no
+row is added.
+
+- **The presence half is a vitest `test.fails`**, in a public and a local build.
+  It reads the split book's `notes/<id>.json` and requires the ship phrase in
+  it. Today there is no file, so it is recorded as an expected failure on every
+  run. The extractor makes it pass, which turns it red by itself, so the pull
+  request that adds the extractor must flip it to `it`. Nothing relies on
+  somebody remembering to arm it.
+- **`test.fails` passes on any failure**, so two armed tests stand beside it: the
+  split book ships with an id in both builds, and **the vacuity guard**, five
+  tests that each fail naming a planted case the fixtures lost. Measured on
+  #367: a `test.fails` reading a deleted fixture reports an expected failure.
+- **The absence half is armed now**, in both builds: the canary is in no staged
+  file at all, not only `library.json`; `library.json` carries no Thoughts text;
+  and `notes/` holds nothing but the split book's file. That last one is a single
+  allowlist for five cases — private, wishlist, an embed, an unclosed fence, no
+  Thoughts — because a filtered book has no id in a public `library.json` to
+  look a file up by. It holds trivially until the extractor writes files.
+- **Two rules join the shared inspector, planted under G20.** `orphan-note`: a
+  file under `notes/` must be named `<id>.json` for a book in the `library.json`
+  beside it — `orphan-cover`'s shape, firing on real bytes where the canary
+  cannot. One direction until the extractor adds the `thoughts` mark.
+  `notes-shape`: every file is exactly `{ "paragraphs": string[] }`, non-empty,
+  every string non-empty, at most 40,000 bytes counted in bytes, and free of a
+  URL scheme. ⚠️ **The scheme check names four schemes, not any `word:`** —
+  `://`, `file:`, `obsidian:`, `mailto:`, in any case — because a rule that
+  refuses "Note: …" gets switched off; G20 holds that near miss clean.
+
+Observed red, each by a plant reverted before commit. Writing a valid notes file
+for the split book turned both `test.fails` red with *Expect test to fail*, which
+is the arming. A notes file for the private book reddened the allowlist in both
+builds; a canary written into a staged file reddened the absence check; Thoughts
+text appended to `library.json` reddened its check; an empty `library.json`
+reddened the precondition. Each of the five guards went red on its own fixture
+plant: the ship phrase removed, the private book's canary removed, the embed
+removed, the fence closed, a Thoughts section added to the no-Thoughts note. In
+G20 the five new plants were red before the rules existed, and the
+completeness assertion now holds both rules to a plant.
+
 ## Where cover art may go
 
 | Surface | Rule |

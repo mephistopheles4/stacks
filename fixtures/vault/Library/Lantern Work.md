@@ -9,13 +9,23 @@ author: "Tomás Iglesias"
 pages: 196
 ---
 
+## Thoughts
+
+![[lantern-sketch.png]]
+
+NOTE_BODY_CANARY_do_not_ship
+
+An embed hides what it shows from anyone reading the text, so it withholds the
+whole section: nothing here may reach a notes file, the canary included.
+
 ## Notes
 
 NOTE_BODY_CANARY_do_not_ship
 
-Two things this fixture is for:
+Three things this fixture is for:
 
 1. **Reordered keys.** `type` is fourth, `title` is second. A parser that
    assumes key order will fail here (invariant 5).
 2. **No cover, currently reading.** So it needs a generated fallback spine, and
    on the shelf it should sit face-out or leaning rather than filed away.
+3. **An embed in its Thoughts.** The section above must be withheld whole.
