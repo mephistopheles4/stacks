@@ -7,6 +7,15 @@ Nothing here is implemented. It exists so that the decisions being made now, in
 the renderer and in the publisher, don't quietly foreclose it, and so that the
 reasoning survives the session it was worked out in.
 
+> **Specified.** [Map #366](https://github.com/mephistopheles4/stacks/issues/366)
+> finished this design, and the result is a locked spec:
+> [`docs/spec/picking-a-book-up.md`](spec/picking-a-book-up.md). Build from that
+> file, not from this one. This one is kept as written, because it is the
+> reasoning the spec rests on; where the two differ, the spec is the later
+> word. Three places differ: the heading is now locked (below), the held tier is
+> capped at 1200 px rather than the vault original, and releasing the other
+> covers on pickup is deferred (§2).
+
 Two separable pieces:
 
 1. **Public and private notes** — a note body splits into a part that may be
@@ -151,12 +160,20 @@ alongside the capped one, fetched only on pickup.
 Usefully, this helps rather than hurts the memory problem that caused the mobile
 crash: picking one book up is the natural moment to release every other cover.
 
+> **Since superseded on both points.** The held tier is capped at 1200 px, and
+> releasing the other covers waits for G15 (`cover-budget`) to go red: the crash
+> was not cover memory
+> ([ADR-0105](adr/0105-a-cover-has-a-shelf-tier-and-a-held-tier.md),
+> [#377](https://github.com/mephistopheles4/stacks/issues/377)).
+
 ---
 
 ## Deliberately not decided
 
-- **The heading name.** `## Thoughts` is a placeholder that reads well; nothing
-  above depends on the word.
+- ~~**The heading name.** `## Thoughts` is a placeholder that reads well; nothing
+  above depends on the word.~~ **Decided:** `## Thoughts`, exact and
+  case-sensitive, locked by map #366 and carried in
+  [the spec](spec/picking-a-book-up.md).
 - **Highlights as distinct from thoughts.** The brief lists Readwise-style
   highlight import separately. Imported highlights are someone else's text —
   quoted from the book — and whether they may be republished is a different
