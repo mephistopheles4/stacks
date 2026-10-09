@@ -621,7 +621,7 @@ export async function inspectPublicBuild(
     ) {
       fail(
         'foreign-cover',
-        `held cover is not same-origin: ${name} → ${JSON.stringify(book.heldCover)}`,
+        `held copy is not same-origin: ${name} → ${JSON.stringify(book.heldCover)}`,
       );
     }
   }
@@ -1091,7 +1091,7 @@ async function inspectHeld(dir: string, books: readonly ShippedBook[]): Promise<
     problems.push({
       rule: 'orphan-held',
       message:
-        `${String(orphans.length)} held cover(s) that no book in library.json names — ` +
+        `${String(orphans.length)} held copy file(s) that no book in library.json names — ` +
         `each filename is a book title: ${orphans
           .slice(0, 5)
           .map(({ name }) => name)
@@ -1139,7 +1139,7 @@ async function inspectHeld(dir: string, books: readonly ShippedBook[]): Promise<
   const observations =
     problems.length === 0
       ? [
-          `${String(staged.length)} held cover(s), all named, within ${String(HELD_COVER_EDGE)}px, ` +
+          `${String(staged.length)} held copy file(s), all named, within ${String(HELD_COVER_EDGE)}px, ` +
             'none carrying EXIF or XMP',
         ]
       : [];

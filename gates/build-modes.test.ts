@@ -4,8 +4,9 @@
  * `stacks build` and `stacks build --public` produce the same `library.json`
  * shape by different routes, and the difference between them is deliberate:
  * a public build strips `sourcePath`, stamps `coverAspect` measured off the
- * covers it just staged, and marks `thoughts` on each book whose notes file it
- * staged, while a local build "is just the index" and does none of them.
+ * covers it just staged, marks `thoughts` on each book whose notes file it
+ * staged, and names `heldCover` on each book whose held copy it staged, while a
+ * local build "is just the index" and does none of them.
  *
  * That difference was never written down anywhere and never checked, which made
  * it impossible to tell a design decision from an oversight — a review of this
@@ -38,6 +39,8 @@ const INTENDED_DIFFERENCES = {
   coverAspect: 'measured off the staged covers, which only a public build has',
   thoughts:
     "set by publish()'s notes stage; the plain local index stages nothing, so it marks nothing",
+  heldCover:
+    "set by publish()'s held stage; the plain local index stages no held copy, so it names none",
   cover: 'rewritten to covers/<filename> so a public build is always same-origin',
 } as const;
 

@@ -60,6 +60,15 @@ describe('what collapses', () => {
     expect(cardModel(book()).cover).toBeUndefined();
   });
 
+  it('offers the held copy to the enlarged view only when the build staged one', () => {
+    // A cover the vault holds only at 512px or less gets no held copy, and the
+    // enlarged view then shows the card's own file (spec §3.4, #377).
+    expect(cardModel(book({ cover: 'covers/a.png' })).heldCover).toBeUndefined();
+    expect(
+      cardModel(book({ cover: 'covers/a.png', heldCover: 'held-covers/a.png' })).heldCover,
+    ).toBe('held-covers/a.png');
+  });
+
   it('drops the object line whole when all five facts are absent', () => {
     const model = cardModel(book());
 

@@ -15,13 +15,14 @@
  * claiming modality it does not have would be the same mismatch from the other
  * side. The two surfaces differ in behaviour, so they differ in role.
  *
- * ⚠️ **It shows the same file the card does.** `MAX_COVER_EDGE` is 512, so the
- * enlarged view is at most 512px on its long edge — about 7× the thumbnail, and
- * bounded by what a build stages rather than by anything here. It is never
- * scaled *past* native size: a blurry big cover is a worse answer than an honest
- * small one. Going beyond that needs a second, larger staged copy — which the
- * texture budget would not notice, since a DOM image is not a GPU texture — and
- * that is a publish decision, not a card one.
+ * **It shows the held copy when the build staged one**, up to 1200px on its
+ * long edge, and the card's own 512px file otherwise (`held-covers/`, spec
+ * §3.3, #377). The card carries the held path on the cover button as
+ * `data-held`; the thumbnail never loads it, so the larger file is fetched only
+ * when someone opens this view. A DOM image costs no GPU memory, so the texture
+ * budget is not a reason to hold it back. It is never scaled *past* native
+ * size: a blurry big cover is a worse answer than an honest small one, which is
+ * why a cover the vault holds only at 512px or less gets no held copy at all.
  */
 
 /** The markup this drives, owned by the template and looked up in `start.ts`. */
@@ -68,9 +69,10 @@ export function mountCoverViewer(
     const thumbnail = button?.querySelector('img');
     if (!(thumbnail instanceof HTMLImageElement)) return;
 
-    // Read off the thumbnail rather than passed in: one element holds the src
-    // and the alt text, so the enlarged view cannot drift from what it enlarges.
-    image.src = thumbnail.src;
+    // Read off the button rather than passed in: one element holds the src,
+    // the held copy and the alt text, so the enlarged view cannot drift from
+    // what it enlarges.
+    image.src = button?.getAttribute('data-held') ?? thumbnail.src;
     image.alt = thumbnail.alt;
     // Named for the book, not "Book cover". `showModal` puts focus on the close
     // button, so the dialog's own name is the only thing announced on arrival —

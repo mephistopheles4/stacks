@@ -1,7 +1,7 @@
 import { copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp, { type Sharp } from 'sharp';
-import { MAX_COVER_EDGE, measureCover } from './covers/cover-budget.ts';
+import { HELD_COVER_EDGE, MAX_COVER_EDGE, measureCover } from './covers/cover-budget.ts';
 import { coverFileName, resolveCoverPath } from './covers/cover-path.ts';
 import { buildLibrary, idFor, type Library } from './library.ts';
 import { SHELVED_STATUSES } from './shelf-order.ts';
@@ -42,6 +42,14 @@ const NOTES_DIR = 'notes';
  * Exported for them, never for another stage. See `docs/commands.md`.
  */
 export const PUBLISH_THOUGHTS = true;
+
+/**
+ * Where each held copy is staged, as `held-covers/<name>`: a **sibling** of
+ * `covers/`, never a folder inside it. G15 (`cover-budget`), the covers prune,
+ * `withLocalCovers` and `orphan-cover` all read `covers/`, and a subfolder would
+ * have had to be taught to each (spec §3.3).
+ */
+const HELD_DIR = 'held-covers';
 
 export interface PublishOptions {
   readonly isPublic: boolean;
@@ -104,8 +112,13 @@ export async function publish(
 
   const { copied, missing } = await copyCovers(shelved, vault, assetsDir);
 
+  // Through the shelf stage's own filter, `shelved`, and never the notes
+  // stage's: held copies follow the shelf covers, so a local build stages one
+  // for every book it shelves (spec §3.2, #377).
+  const held = await stageHeldCovers(shelved, vault, assetsDir);
+
   // Measured after copying, from the files that actually shipped.
-  const measured = await withCoverAspects(built, assetsDir);
+  const measured = withHeldCovers(await withCoverAspects(built, assetsDir), held);
 
   // Every `cover:` in a public build points at the copy beside it and nowhere
   // else. A hand-edited or imported note may carry `//elsewhere.example/x.png`
@@ -262,7 +275,7 @@ async function pruneStaged(
   assetsDir: string,
   outDir: string,
   wanted: ReadonlySet<string>,
-  what: 'covers' | 'notes',
+  what: 'covers' | 'notes' | 'held copies',
 ): Promise<void> {
   let entries;
   try {
@@ -416,6 +429,109 @@ async function stageCover(from: string, to: string): Promise<void> {
   });
 
   await encoded(resized, (await sharp(from).metadata()).format).toFile(to);
+}
+
+/**
+ * Stages a held copy of every shelved cover over the shelf cap, and prunes
+ * every other file in `held-covers/`. Returns the filenames it staged.
+ *
+ * The held tier (spec §3.3, #377, ADR-0105): the one larger cover a picked-up
+ * book loads, and the one the enlarged-cover viewer shows. Only from the vault
+ * file — a build never fetches a cover — and only for a cover larger than the
+ * shelf's copy, since a held copy no larger than the shelf's is the same
+ * picture twice.
+ *
+ * ⚠️ **To switch the stage off, empty `wanted` and keep the prune.** A bare
+ * revert removes the prune with the stage, and `deploy:site` stages into a
+ * folder that persists between runs, so the last build's copies would ship
+ * again (spec §4, "Undoing a step"). With nothing wanted, the prune empties the
+ * folder at the next build and the next deploy takes every copy off the site.
+ */
+async function stageHeldCovers(
+  books: readonly BookRecord[],
+  vault: VaultAdapter,
+  assetsDir: string,
+): Promise<ReadonlySet<string>> {
+  // `coverFileName`, as for the shelf: no vault path decides where a copy lands.
+  const candidates = new Set(
+    books
+      .map((book) => (book.cover === undefined ? '' : coverFileName(book.cover)))
+      .filter((filename) => filename !== ''),
+  );
+
+  const wanted = new Set<string>();
+  const sizes = new Map<string, number>();
+  for (const filename of candidates) {
+    const size = await measureCover(join(vault.coverDir(), filename));
+    if (size === undefined) continue;
+    const edge = Math.max(size.width, size.height);
+    if (edge <= MAX_COVER_EDGE) continue;
+    wanted.add(filename);
+    sizes.set(filename, edge);
+  }
+
+  const outDir = join(assetsDir, HELD_DIR);
+  await pruneStaged(assetsDir, outDir, wanted, 'held copies');
+  if (wanted.size === 0) return wanted;
+
+  await mkdir(outDir, { recursive: true });
+  const staged = new Set<string>();
+  for (const filename of wanted) {
+    try {
+      await stageHeldCover(join(vault.coverDir(), filename), join(outDir, filename));
+      staged.add(filename);
+    } catch {
+      // Measured and then unwritable is a cover the shelf still has: the book
+      // keeps its shelf texture, as it would with no held copy at all.
+      await rm(join(outDir, filename), { force: true });
+    }
+  }
+  return staged;
+}
+
+/**
+ * Writes one held copy: oriented upright, at most `HELD_COVER_EDGE` on its long
+ * edge, and **always re-encoded, never copied byte for byte**.
+ *
+ * That replaces #377's "copied byte for byte when already inside" the cap
+ * (spec §3.3). A cover the owner photographed can carry camera metadata,
+ * location included, and sharp writes none of it unless asked; a byte copy
+ * would ship every tag. `gate:public` holds the result: no held file carries
+ * EXIF or XMP.
+ *
+ * `rotate()` with no angle applies the EXIF orientation before it is dropped.
+ * A phone stores a portrait photo landscape and tags it "rotate 90°"; dropping
+ * the tag without applying it would ship the cover on its side, and the held
+ * copy is shown in an `<img>`, which would honour a tag the file no longer has.
+ */
+async function stageHeldCover(from: string, to: string): Promise<void> {
+  const format = (await sharp(from).metadata()).format;
+  const resized = sharp(from).rotate().resize({
+    width: HELD_COVER_EDGE,
+    height: HELD_COVER_EDGE,
+    fit: 'inside',
+    withoutEnlargement: true,
+  });
+  await encoded(resized, format).toFile(to);
+}
+
+/**
+ * Names each book's held copy, `held-covers/<name>`, where the stage wrote one.
+ *
+ * Keyed by the cover's filename, which is also what the stage and the shelf
+ * key on, so a book whose copy was not written carries no `heldCover` and the
+ * page keeps the shelf texture (#377).
+ */
+function withHeldCovers(library: Library, staged: ReadonlySet<string>): Library {
+  if (staged.size === 0) return library;
+  return {
+    ...library,
+    books: library.books.map((book) => {
+      if (book.cover === undefined) return book;
+      const filename = coverFileName(book.cover);
+      return staged.has(filename) ? { ...book, heldCover: `${HELD_DIR}/${filename}` } : book;
+    }),
+  };
 }
 
 /**

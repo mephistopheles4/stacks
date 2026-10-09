@@ -269,6 +269,9 @@ and `unknown-key`, `headers` requiring `/held-covers/*`, and `gate:public`'s
 held-tier vacuity, presence and filter checks, all observed red before any
 staging code; G5's ignore line armed as `it.fails` — see
 [*The held tier, gated before it is staged*](./gates.md#the-held-tier-gated-before-it-is-staged).
+Then the stage: a re-encoded, upright copy of every shelved cover over 512px,
+at most 1200px, named by `heldCover`, pruned per build; the enlarged-cover
+viewer shows it; G5 armed, G15 and G35's viewer check extended — same section.
 
 ### Phase 4 evidence
 

@@ -137,6 +137,19 @@ describe('G15 — staged covers fit in graphics memory', () => {
     expect(Math.abs(before - after)).toBeLessThan(0.01);
   });
 
+  it('never sees the held copies, which sit beside covers/ and not inside it', async () => {
+    // A held copy is 1200px and one texture at a time, freed on put-down, so
+    // the budget above must not count it (spec §3.3). The folder is a sibling
+    // so that nothing reading `covers/` meets it. Checked against a build that
+    // really staged held copies, or a missing folder would pass this.
+    await stagedCovers();
+    const held = await readdir(join(assets, 'held-covers'));
+    expectFound(held, 'held copies in the fixture build');
+
+    const inside = await readdir(join(assets, 'covers'), { withFileTypes: true });
+    expect(inside.filter((entry) => !entry.isFile()).map((entry) => entry.name)).toEqual([]);
+  });
+
   it('leaves a cover that is already small alone, byte for byte', async () => {
     // Re-encoding an image that did not need it is a quiet quality loss, and the
     // fixture vault is mostly 200x300 thumbnails. Compared as bytes rather than

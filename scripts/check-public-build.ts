@@ -244,7 +244,7 @@ if (heldFailures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `${String(wantHeld.length)} held cover(s) staged and named; none for the ` +
+  `${String(wantHeld.length)} held copy file(s) staged and named; none for the ` +
     `${String(mustNotHold.length)} held back`,
 );
 

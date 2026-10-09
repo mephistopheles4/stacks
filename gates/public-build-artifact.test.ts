@@ -426,7 +426,7 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
-  it('foreign-cover: a held cover outside its one same-origin segment', async () => {
+  it('foreign-cover: a held copy outside its one same-origin segment', async () => {
     // The held copy reaches an <img src> and a texture loader as `cover` does,
     // so every way out of `held-covers/<name>` is a plant: another host, the
     // shelf's folder, a parent step, a nested path, and a value that is not a
@@ -449,7 +449,7 @@ describe('G20 — every rule goes red', () => {
     }
   });
 
-  it('orphan-held: a held cover no shipped book names', async () => {
+  it('orphan-held: a held copy no shipped book names', async () => {
     await expectOnly('orphan-held', async () => {
       // `orphan-cover`'s twin. A private or wishlist book's held copy, or one a
       // build of another vault left behind, is named for a title.
@@ -457,13 +457,13 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
-  it('orphan-held: a held cover named for a listed book, one folder down', async () => {
+  it('orphan-held: a held copy named for a listed book, one folder down', async () => {
     await expectOnly('orphan-held', async () => {
       await writeHeld('stale/a.png', await image(600, 900));
     });
   });
 
-  it('orphan-held: a held cover left after its book stopped naming it', async () => {
+  it('orphan-held: a held copy left after its book stopped naming it', async () => {
     await expectOnly('orphan-held', async () => {
       // The stale file the prune exists for: the cover shrank below the shelf
       // cap, or the book went private, and the last build's copy stayed.
@@ -471,20 +471,20 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
-  it('held-oversize: a held cover over the held cap on its long edge', async () => {
+  it('held-oversize: a held copy over the held cap on its long edge', async () => {
     await expectOnly('held-oversize', async () => {
       // Landscape, so a check that read only the height would pass it.
       await writeHeld('a.png', await image(1201, 800));
     });
   });
 
-  it('held-oversize: a held cover of exactly the cap passes', async () => {
+  it('held-oversize: a held copy of exactly the cap passes', async () => {
     // The boundary, held clean: the cap is the most an edge may measure.
     await writeHeld('a.png', await image(800, 1200));
     expect((await inspect()).problems).toEqual([]);
   });
 
-  it('held-metadata: a held cover carrying EXIF or XMP', async () => {
+  it('held-metadata: a held copy carrying EXIF or XMP', async () => {
     // One plant per kind and per format: a PNG and a JPEG with EXIF, a PNG
     // with XMP. Each source is first shown to carry what it plants, through the
     // reader the rule uses, so a plant sharp silently dropped cannot pass as a
@@ -505,7 +505,7 @@ describe('G20 — every rule goes red', () => {
     exercised.add('held-metadata');
   });
 
-  it('held-metadata: a held cover that is not an image', async () => {
+  it('held-metadata: a held copy that is not an image', async () => {
     await expectOnly('held-metadata', async () => {
       await writeHeld('a.png', 'pretend png');
     });
@@ -1140,7 +1140,7 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
-  it('headers: held covers that do not revalidate', async () => {
+  it('headers: held copies that do not revalidate', async () => {
     await expectOnly('headers', async () => {
       // Images, so Pages' four-hour default applies: a cover taken down would
       // linger in browsers that long after the prune (spec §3.3).

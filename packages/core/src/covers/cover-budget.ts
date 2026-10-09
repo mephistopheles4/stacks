@@ -39,7 +39,7 @@ export const MAX_COVER_EDGE = 512;
  * Longest edge of a **held copy**, in pixels: the one larger cover a book loads
  * when it is picked up, staged beside the shelf's copy in `held-covers/`.
  *
- * 1200 because #369 measured that a held cover on a phone is drawn about 1192
+ * 1200 because #369 measured that a held copy on a phone is drawn about 1192
  * device pixels tall at the renderer's pixel-ratio cap of 2, so this draws 1:1
  * there and anything larger is bytes no screen samples. It is one texture at a
  * time, freed on put-down, so `TEXTURE_BUDGET_BYTES` does not count it and G15

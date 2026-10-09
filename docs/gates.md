@@ -86,7 +86,7 @@ absent row is not. This file is only useful if it is as easy to find what is
 | **G2** | `public-build` | Note bodies are private except the `## Thoughts` split, which ships as `notes/<id>.json` and carries nothing else; a public build is coherent | invariant 2 | `gates/public-build.test.ts` — asserted against `publish()`'s output in both build modes, see below | ✅ |
 | **G3** | `bad-note` | Never crash on a bad note | invariant 3 | `gates/bad-note.test.ts` — 9 hostile inputs, each with a stated expected kind | ✅ |
 | **G4** | `hand-edited-notes` | Hand-edited notes are first-class | invariant 5 | `gates/hand-edited-notes.test.ts` | ✅ |
-| **G5** | `vault-is-truth` | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored, and the staged `covers/` and `notes/` with it | ✅ |
+| **G5** | `vault-is-truth` | The vault is the source of truth | invariant 1 | `gates/repo-hygiene.test.ts` — `library.json` untracked and gitignored, and the staged `covers/`, `notes/` and `held-covers/` with it | ✅ |
 | **G13** | `no-third-party-material` | No third-party material is committed, ever | `fixtures/README.md`, `plan.md` §1 | `gates/repo-hygiene.test.ts` — no tracked binary outside two generated directories and four named brand files | ✅ |
 | **G14** | `commands` | The documented commands are the commands that exist | AGENTS.md "Commands" | `gates/commands.test.ts` — CLI subcommands and pnpm scripts, both directions. The subcommand pattern reads either quote form, planted both ways ([#252](https://github.com/mephistopheles4/stacks/issues/252)) — it read one until then, which made a hand-written `.command("add")` a red naming no quote and no line | ✅ |
 
@@ -1697,8 +1697,9 @@ extends `gate:public` and G5.
   cover over 512px on the private book and on the wishlist book — read through
   the adapter. After the build it requires a held copy, named by its book, for
   every published cover over 512px, and none for the two held back.
-- **G5** holds `packages/site/public/held-covers/` ignored, as `it.fails` until
-  the stage lands with its `.gitignore` line.
+- **G5** holds `packages/site/public/held-covers/` ignored. It landed as
+  `it.fails` and went red with *Expect test to fail* when the `.gitignore` line
+  arrived with the stage, which is the arming; it is `it` now.
 
 **The fixtures moved for it.** `signal-and-sediment.png` is now 800x1200 with
 an invented EXIF and XMP chunk planted by `scripts/make-fixture-covers.ts`: over
@@ -1714,6 +1715,38 @@ red on `headers` before the `/held-covers/*` block existed, and red on
 `foreign-cover` until the dot-segment clause. Each `held-metadata` plant is
 first shown to carry EXIF or XMP through the reader the rule uses, so a plant
 sharp silently dropped cannot pass as a rule that works.
+
+**Then the stage.** `publish()` stages a held copy through the shelf stage's
+own `shelved` list — so a local build stages one for every book it shelves,
+private and wishlist included, and a public build for none of them — of each
+cover whose vault file is over 512px. Every copy is **re-encoded, never copied**,
+turned upright first: a phone stores a portrait photo landscape and tags it, and
+dropping the tag without applying it would ship the cover on its side.
+`heldCover` names each copy in `library.json`, and `held-covers/` is pruned to
+exactly this build's copies under the covers' rule. The card puts the held path
+on its cover button, and the enlarged-cover viewer shows it.
+
+- **`publish()` unit tests**, in both builds: the cap with proportions kept, a
+  cover between the two caps re-encoded at its own size with EXIF and XMP gone,
+  the orientation applied, nothing for a cover inside 512px or one missing or
+  unreadable, and a climbing path landed as its basename. Public builds stage
+  nothing for the private or wishlist book; local builds stage both. Two prunes —
+  the book made private, the cover shrunk — and the not-ours and files-only
+  guards. All red before the stage existed, except the absences, which held
+  vacuously; removing `rotate()` reddens the orientation case.
+- **G11** names `heldCover` as a documented difference, as it does `thoughts`:
+  the plain local index stages no held copy, so it names none. Observed red
+  first, naming the key on the stage's first fixture run.
+- **G15** asserts it never sees the held copies: a fixture build that really
+  staged some leaves no folder inside `covers/`.
+- **G35's viewer check** walks the 50-book shelf for a card offering a held copy,
+  and fails if none does or the enlarged view shows anything else.
+- `gate:public` passed against the real build once the stage landed, with the
+  same output that was red before it.
+
+**To undo it**, empty the stage's `wanted` set and keep the prune and the
+`/held-covers/*` block (spec §4): the next build empties the folder and the next
+deploy takes every copy off the site.
 
 ## Where cover art may go
 

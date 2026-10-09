@@ -478,11 +478,21 @@ interface CoverViewerChecked {
   readonly escapeClosedViewer: boolean;
   /** ⚠️ The card must survive that same Escape. */
   readonly cardSurvivedEscape: boolean;
+  /**
+   * The held copy the card offered, or `undefined` for a book with none, and
+   * whether the enlarged view showed it rather than the 512px thumbnail (spec
+   * §3.4, #377).
+   */
+  readonly held: string | undefined;
+  readonly showedHeld: boolean;
 }
 
 async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefined> {
   // Walks the shelf for a book with a cover, since only some fixture books have
-  // one and the card left open by the swap above may not be one of them.
+  // one and the card left open by the swap above may not be one of them. A book
+  // with a held copy is preferred, since only the full-size fixture covers get
+  // one; the first cover without is kept as the fallback.
+  let fallback: CoverViewerChecked | undefined;
   for (let index = 0; index < 60; index += 1) {
     const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
       { x: number; y: number } | undefined;
@@ -495,8 +505,8 @@ async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefi
       const button = document.querySelector('#book-card-body .card-cover');
       if (!button) return undefined;
       const box = button.getBoundingClientRect();
-      return { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2), width: box.width };
-    })()`)) as { x: number; y: number; width: number } | undefined;
+      return { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2), width: box.width, held: button.getAttribute('data-held') ?? undefined };
+    })()`)) as { x: number; y: number; width: number; held?: string } | undefined;
     if (thumbnail === undefined) continue;
 
     await page.mouse.click(thumbnail.x, thumbnail.y);
@@ -505,8 +515,8 @@ async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefi
     const open = (await page.evaluate(`(() => {
       const dialog = document.getElementById('cover-viewer');
       const image = document.getElementById('cover-viewer-image');
-      return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0 };
-    })()`)) as { open: boolean; width: number };
+      return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0, src: image?.getAttribute('src') ?? '' };
+    })()`)) as { open: boolean; width: number; src: string };
 
     await page.keyboard.press('Escape');
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -517,14 +527,18 @@ async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefi
       return { viewerOpen: Boolean(dialog?.open), cardOpen: Boolean(card) && !card.hidden };
     })()`)) as { viewerOpen: boolean; cardOpen: boolean };
 
-    return {
+    const checked: CoverViewerChecked = {
       opened: open.open,
       enlargedBy: thumbnail.width === 0 ? 0 : open.width / thumbnail.width,
       escapeClosedViewer: !after.viewerOpen,
       cardSurvivedEscape: after.cardOpen,
+      held: thumbnail.held,
+      showedHeld: thumbnail.held !== undefined && open.src === thumbnail.held,
     };
+    if (checked.held !== undefined) return checked;
+    fallback ??= checked;
   }
-  return undefined;
+  return fallback;
 }
 
 async function clickABook(page: Page): Promise<CardOpened | undefined> {
@@ -1682,6 +1696,8 @@ function report(result: {
             1,
           )}x thumbnail   escape ${viewer.escapeClosedViewer ? 'closes it' : 'DOES NOT CLOSE IT'}${
             viewer.cardSurvivedEscape ? '' : '   AND TOOK THE CARD'
+          }   held copy ${
+            viewer.held === undefined ? 'none offered' : viewer.showedHeld ? 'shown' : 'NOT SHOWN'
           }`
     }`,
   );
@@ -1740,6 +1756,17 @@ function report(result: {
         'Escape closed the enlarged cover *and* the card underneath it. Both listen on the ' +
           'document, so leaving one surface must not return the user two levels',
       );
+    }
+    // The held copy is the reason the enlarged view can be sharper than the
+    // thumbnail (spec §3.4, #377). The 50-book fixture's full-size covers get
+    // one, so a walk that found none means the stage or the card lost it.
+    if (viewer.held === undefined) {
+      failures.push(
+        'no card offered a held copy to the enlarged view — the fixture shelf has full-size ' +
+          'covers, so the held stage or the card dropped it',
+      );
+    } else if (!viewer.showedHeld) {
+      failures.push(`the enlarged view did not show the held copy ${viewer.held}`);
     }
   }
 
