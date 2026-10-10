@@ -35,7 +35,7 @@ import {
   notesPresence,
   THOUGHTS_SHIP_PHRASE,
 } from './lib/public-build.ts';
-import { PUBLISH_THOUGHTS } from '../packages/core/src/publish.ts';
+import { PUBLISH_HELD_COVERS, PUBLISH_THOUGHTS } from '../packages/core/src/publish.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
 import { walk } from './lib/walk.ts';
@@ -208,6 +208,7 @@ const staged = (existsSync(notesDir) ? walk(notesDir) : []).map((file) => ({
 
 // Switched off (spec §4's undo), the stage must ship nothing, and this check
 // follows it so the takedown deploy passes its own gate.
+// No early exit when it is off: the held tier's checks below must still run.
 const presence = notesPresence(staged, PUBLISH_THOUGHTS);
 if (presence.problem !== undefined) {
   console.error(`\nFAILED: ${presence.problem}`);
@@ -226,26 +227,40 @@ const shippedBooks = (
     books: { title: string; heldCover?: unknown }[];
   }
 ).books;
-const heldFailures = [
-  ...wantHeld
-    .filter(
-      (cover) =>
-        !existsSync(join(heldDir, cover.name)) ||
-        shippedBooks.find((book) => book.title === cover.title)?.heldCover !==
-          `held-covers/${cover.name}`,
-    )
-    .map((cover) => `no held copy staged and named for "${cover.title}" (${cover.name})`),
-  ...mustNotHold
-    .filter((cover) => existsSync(join(heldDir, cover.name)))
-    .map((cover) => `a held copy shipped for a book held back: ${cover.name}`),
-];
+// Switched off (spec §4's undo), the stage must ship no copy and name none,
+// and this follows it so the takedown deploy passes its own gate.
+const heldFailures = PUBLISH_HELD_COVERS
+  ? [
+      ...wantHeld
+        .filter(
+          (cover) =>
+            !existsSync(join(heldDir, cover.name)) ||
+            shippedBooks.find((book) => book.title === cover.title)?.heldCover !==
+              `held-covers/${cover.name}`,
+        )
+        .map((cover) => `no held copy staged and named for "${cover.title}" (${cover.name})`),
+      ...mustNotHold
+        .filter((cover) => existsSync(join(heldDir, cover.name)))
+        .map((cover) => `a held copy shipped for a book held back: ${cover.name}`),
+    ]
+  : [
+      ...(existsSync(heldDir) ? walk(heldDir) : []).map(
+        (file) =>
+          `the held stage is switched off, yet ${relative(DIST, file).split('\\').join('/')} shipped`,
+      ),
+      ...shippedBooks
+        .filter((book) => book.heldCover !== undefined)
+        .map((book) => `the held stage is switched off, yet "${book.title}" names a held copy`),
+    ];
 if (heldFailures.length > 0) {
   console.error(`\nFAILED: the held tier\n- ${heldFailures.join('\n- ')}`);
   process.exit(1);
 }
 console.log(
-  `${String(wantHeld.length)} held copy file(s) staged and named; none for the ` +
-    `${String(mustNotHold.length)} held back`,
+  PUBLISH_HELD_COVERS
+    ? `${String(wantHeld.length)} held copy file(s) staged and named; none for the ` +
+        `${String(mustNotHold.length)} held back`
+    : 'held stage switched off: dist/held-covers/ holds no file and no book names one',
 );
 
 console.log(

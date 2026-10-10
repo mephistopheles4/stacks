@@ -548,6 +548,25 @@ describe('publish — the held stage', () => {
     expect(await heldFiles()).toEqual([]);
   });
 
+  it('switched off, stages no copy and names none, and prunes what an earlier build left', async () => {
+    // Spec §4's undo, driven through the option so it runs whatever
+    // `PUBLISH_HELD_COVERS` says: this build, then a deploy, takes every held
+    // copy off the site.
+    await cover('big.png', await image(1400, 2100));
+    await note('Big', 'cover: covers/big.png');
+    await build(true);
+    expect(await heldFiles()).toEqual(['big.png']);
+
+    const vault = new ObsidianAdapter(vaultPath);
+    const result = await publish(await vault.listBooks(), vault, assets, {
+      isPublic: true,
+      heldCovers: false,
+    });
+
+    expect(await heldFiles()).toEqual([]);
+    expect(result.library.books.filter((b) => b.heldCover !== undefined)).toEqual([]);
+  });
+
   it('leaves a held folder alone when no library.json says this tool stages there', async () => {
     await mkdir(join(assets, 'held-covers'), { recursive: true });
     await writeFile(join(assets, 'held-covers', 'theirs.png'), 'x');

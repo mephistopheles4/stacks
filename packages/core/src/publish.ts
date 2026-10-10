@@ -44,6 +44,20 @@ const NOTES_DIR = 'notes';
 export const PUBLISH_THOUGHTS = true;
 
 /**
+ * The held stage's switch, and the only sanctioned way to undo it, on
+ * `PUBLISH_THOUGHTS`'s pattern (spec §4).
+ *
+ * `false` stages no held copy and names none, but still prunes `held-covers/`,
+ * so the next build empties the folder and the next deploy takes every copy off
+ * the site. Never a bare revert: that removes the prune with the stage, and the
+ * copies the last build staged into `packages/site/public/` would deploy again.
+ * Keep the `/held-covers/*` block in `_headers` too. `gate:public`'s held-tier
+ * checks read this constant, and switched off they assert that no copy and no
+ * `heldCover` ships. Exported for them, never for another stage.
+ */
+export const PUBLISH_HELD_COVERS = true;
+
+/**
  * Where each held copy is staged, as `held-covers/<name>`: a **sibling** of
  * `covers/`, never a folder inside it. G15 (`cover-budget`), the covers prune,
  * `withLocalCovers` and `orphan-cover` all read `covers/`, and a subfolder would
@@ -61,6 +75,12 @@ export interface PublishOptions {
    * never takes. Not the `thoughts` mark a book carries in `library.json`.
    */
   readonly publishThoughts?: boolean;
+  /**
+   * Whether the held stage stages copies; `PUBLISH_HELD_COVERS` when unset.
+   * Off, it still prunes `held-covers/`. An option for `publishThoughts`'s
+   * reason.
+   */
+  readonly heldCovers?: boolean;
 }
 
 export interface PublishResult {
@@ -115,7 +135,11 @@ export async function publish(
   // Through the shelf stage's own filter, `shelved`, and never the notes
   // stage's: held copies follow the shelf covers, so a local build stages one
   // for every book it shelves (spec §3.2, #377).
-  const held = await stageHeldCovers(shelved, vault, assetsDir);
+  const held = await stageHeldCovers(
+    (options.heldCovers ?? PUBLISH_HELD_COVERS) ? shelved : [],
+    vault,
+    assetsDir,
+  );
 
   // Measured after copying, from the files that actually shipped.
   const measured = withHeldCovers(await withCoverAspects(built, assetsDir), held);
@@ -441,11 +465,9 @@ async function stageCover(from: string, to: string): Promise<void> {
  * shelf's copy, since a held copy no larger than the shelf's is the same
  * picture twice.
  *
- * ⚠️ **To switch the stage off, empty `wanted` and keep the prune.** A bare
- * revert removes the prune with the stage, and `deploy:site` stages into a
- * folder that persists between runs, so the last build's copies would ship
- * again (spec §4, "Undoing a step"). With nothing wanted, the prune empties the
- * folder at the next build and the next deploy takes every copy off the site.
+ * ⚠️ **Switched off, it is handed no books and still prunes** — see
+ * `PUBLISH_HELD_COVERS`. With nothing wanted, the prune empties the folder at
+ * the next build and the next deploy takes every copy off the site.
  */
 async function stageHeldCovers(
   books: readonly BookRecord[],

@@ -1752,9 +1752,15 @@ covers before the step-5 filter check could run. A held folder nested inside
 `covers/` failed G15's sibling check, and a viewer reading the thumbnail failed
 G35's with *held copy NOT SHOWN*. Each mutation was reverted.
 
-**To undo it**, empty the stage's `wanted` set and keep the prune and the
-`/held-covers/*` block (spec §4): the next build empties the folder and the next
-deploy takes every copy off the site.
+**The held stage has a switch**, `PUBLISH_HELD_COVERS` in `publish.ts`, on the
+notes stage's pattern: `false` stages no copy and names none but still prunes,
+so the next build empties `held-covers/` and the next deploy takes every copy off
+the site (spec §4). `gate:public`'s held checks follow it, and switched off they
+require that no copy and no `heldCover` ships, so the takedown deploy passes its
+own gate. A `publish()` test drives the off path through an option, red before
+the switch existed; `gate:public` was run with each switch off and passed. ⚠️
+**Wiring the two switches together found a hole**: with `PUBLISH_THOUGHTS` off,
+`gate:public` exited before its held checks ran. It no longer exits early.
 
 ## Where cover art may go
 
