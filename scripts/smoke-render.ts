@@ -104,10 +104,30 @@ const CHROME_CANDIDATES = [
   '/usr/bin/google-chrome',
 ];
 
+// #427 experiment: elapsed time per step, printed as each one ends.
+let lapStart = performance.now();
+function lap(label: string): void {
+  const now = performance.now();
+  console.log(`[time] ${label.padEnd(40)} ${((now - lapStart) / 1000).toFixed(2)}s`);
+  lapStart = now;
+}
+async function timed<T>(label: string, run: () => Promise<T>): Promise<T> {
+  const started = performance.now();
+  try {
+    return await run();
+  } finally {
+    console.log(
+      `[time] ${label.padEnd(40)} ${((performance.now() - started) / 1000).toFixed(2)}s (sub)`,
+    );
+  }
+}
+
 async function main(): Promise<void> {
   mkdirSync(ARTIFACTS, { recursive: true });
 
+  lapStart = performance.now();
   await buildSite();
+  lap('buildSite (fixtures + astro)');
   const { server, origin } = await serveDist({ root: DIST });
   const large = await serveDist({ root: DIST, overlay: join(REPO_ROOT, LARGE_ASSETS) });
   try {
@@ -160,15 +180,22 @@ async function main(): Promise<void> {
       const cost = (await page.evaluate('window.__shelf.stats()')) as ShelfCost;
 
       writeFileSync(OUTPUT, await page.screenshot({ type: 'png' }));
+      lap('boot + settle + screenshot');
 
       const cardOpened = await clickABook(page);
+      lap('clickABook');
       const viewer = await checkCoverViewer(page);
+      lap('checkCoverViewer');
       const sheet = await checkSheet(page);
+      lap('checkSheet');
       const lit = await checkLargeLibraryLit(browser, origin, large.origin);
+      lap('checkLargeLibraryLit');
       // Last, and in browser contexts of their own, so the record G60 writes can
       // never reach the page every check above measured.
       const fallback = await checkContextLossFallback(browser, origin);
+      lap('checkContextLossFallback');
       const sampling = await checkShadowReaders(browser, origin, large.origin);
+      lap('checkShadowReaders');
 
       report({
         bookCount: Number(bookCount),
@@ -238,9 +265,15 @@ async function checkLargeLibraryLit(
   const seed = `woodSeed=${LIT_SEED}`;
   const plant = `tune=${encodeURIComponent(JSON.stringify(FOG_OVER_THE_BOOKCASE))}`;
 
-  const control = await grabFrame(browser, `${main}/?${seed}`, failures);
-  const largePage = await grabFrame(browser, `${large}/?${seed}`, failures);
-  const planted = await grabFrame(browser, `${large}/?${seed}&${plant}`, failures);
+  const control = await timed('  G59 control', () =>
+    grabFrame(browser, `${main}/?${seed}`, failures),
+  );
+  const largePage = await timed('  G59 large', () =>
+    grabFrame(browser, `${large}/?${seed}`, failures),
+  );
+  const planted = await timed('  G59 planted', () =>
+    grabFrame(browser, `${large}/?${seed}&${plant}`, failures),
+  );
 
   const library = JSON.parse(readFileSync(LARGE_LIBRARY, 'utf8')) as { books: LibraryBook[] };
   const rows = rowsForBookcase(toRows(library.books, DEFAULT_SETTINGS.books).length);
@@ -941,7 +974,7 @@ async function checkContextLossFallback(
         if (message.type() === 'error') errors.push(message.text());
       });
       await page.evaluateOnNewDocument(COUNT_FRAMES);
-      lines.push(`${name.padEnd(16)}${await run(page, origin)}`);
+      lines.push(`${name.padEnd(16)}${await timed(`  G60 ${name}`, () => run(page, origin))}`);
     } catch (error) {
       lines.push(`${name.padEnd(16)}FAILED`);
       failures.push(
@@ -1496,7 +1529,9 @@ async function checkShadowReaders(
   const failures: string[] = [];
 
   for (const page of SAMPLING_PAGES) {
-    const { read, errors } = await measureSampling(browser, page.url(main, large));
+    const { read, errors } = await timed(`  G61 ${page.name}`, () =>
+      measureSampling(browser, page.url(main, large)),
+    );
     const run = {
       snapshot: read.snapshot ?? undefined,
       bookCount: read.bookCount,
