@@ -269,7 +269,7 @@ describe('readPublicSection', () => {
     const OVER_BODY = 'the note would be over 20000 characters';
 
     it.each([
-      // Each stays under the write cap once disarmed, so the body cap answers.
+      // Each stays under the write cap as it lands, so the body cap answers.
       ['dollar signs', `${CANARY} ${'$'.repeat(1_500)}`],
       ['runs of three backticks', `${CANARY} ${'``` '.repeat(450)}`],
     ])('is not written when it is dense in %s, and the Thoughts keep shipping', async (_, text) => {
@@ -393,7 +393,7 @@ describe('readPublicSection', () => {
     });
 
     it('writes into a note whose own Thoughts withhold for another reason (D18’s cost removed)', async () => {
-      const path = await note('N81b', '## Thoughts', '', 'From $1 to $2.', '', '## Notes', '');
+      const path = await note('N93b', '## Thoughts', '', 'From $1 to $2.', '', '## Notes', '');
 
       expect(await vault.insertBodySection(path, '## About', 'A blurb.')).toBe(true);
       expect(warned()).toBe('');

@@ -50,7 +50,7 @@ export interface VaultAdapter {
    * because a body section **is not a `BookRecord` field**, so "never published"
    * becomes structural rather than a discipline. No build can carry it.
    *
-   * Four rules:
+   * Five rules:
    *
    * - **Written only when `heading` is absent.** That is the absent-only rule
    *   applied to a section, and it is what makes a re-run idempotent — no second
@@ -59,21 +59,25 @@ export interface VaultAdapter {
    *   extended to the half of the file it never touched.
    * - **The text it writes is disarmed**: every line ending becomes LF, `<`,
    *   `>` and `%%` are written as entities, every run of three or more
-   *   backticks or tildes, every `$` and every `[^` become character
-   *   references, a `[` that opens a line becomes one too, and every line
-   *   that would read as a heading, behind list markers too, and every setext
-   *   underline, gains a backslash first; each line rule reads a line at any
-   *   indent. So a provider's prose can never open a `## Thoughts` section of
-   *   its own, carry `## Notes` out of one, trip a guard that withholds the
-   *   owner's, or land a live comment or HTML block (spec §3.1.1, §4).
-   * - **Five writes are refused**, each with a warning naming the note and
-   *   never quoting the text: a text over 8,000 code points once disarmed; any
-   *   write into a note whose Thoughts are already withheld; a text that,
-   *   parsed as written, holds a heading, a definition, HTML or code; one that
-   *   would leave the note body over the extractor's 20,000-code-point cap; and
-   *   one that would change what the note's Thoughts ship, or why they are
-   *   withheld. A parse that throws refuses the write the same way, so it costs
-   *   only that book.
+   *   backticks or tildes, every `$`, every `[^` and the `[` of every `![`
+   *   become character references, a `[` that opens a line becomes one too,
+   *   and every line that would read as a heading, behind list markers too,
+   *   and every setext underline, gains a backslash first; each line rule
+   *   reads a line at any indent. So a provider's prose can never open a
+   *   `## Thoughts` section of its own, carry `## Notes` out of one, trip a
+   *   guard that withholds the owner's, embed an image, or land a live comment
+   *   or HTML block (spec §3.1.1, §4).
+   * - **It is written as a block quote**, every line behind `> `, so a
+   *   description whose heading is demoted or deleted withholds the owner's
+   *   Thoughts rather than shipping in them (spec §3.1.3, D20).
+   * - **Four writes are refused**, each with a warning naming the note and
+   *   never quoting the text: a note holding a line ending other than LF or
+   *   CRLF, tested before any parse; a text over 8,000 code points as it
+   *   lands, disarmed, quoted and joined with the note's line ending; one that
+   *   would leave the note body over the extractor's 20,000-code-point cap;
+   *   and one whose parse fails — `micromark`'s development build, or a parse
+   *   that disagrees with the text on where `## Notes` is — so it costs only
+   *   that book.
    *
    * ⚠️ **Any allowlist of published sections must never name `## About`**: the
    * whole point of storing a description here was that it stays local
@@ -91,10 +95,9 @@ export interface VaultAdapter {
    * when it has none or it is withheld.
    *
    * The seventh method, and **the only one that returns text from below the
-   * frontmatter**, as `insertBodySection` is the only one that writes there;
-   * the writer reads the note's Thoughts too, before and after a write, and
-   * keeps only whether the two reads agree. It returns the
-   * section and never the body, so no code outside the adapter ever holds the
+   * frontmatter**, as `insertBodySection` is the only one that writes there,
+   * and the only reader of a note's Thoughts. It returns the section and
+   * never the body, so no code outside the adapter ever holds the
    * private remainder, and it is never a `BookRecord` field, so `library.json`
    * has nowhere to put the text
    * ([ADR-0100](../../../../docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md)).

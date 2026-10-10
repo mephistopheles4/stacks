@@ -1,5 +1,10 @@
 # A provider's description lives in the note body, not in frontmatter
 
+> **Amended on 2026-10-10 by #424 (spec D20):** the description is now written
+> as a block quote, every line behind `> `, so a `## About` heading the owner
+> demotes or deletes withholds the Thoughts rather than shipping the
+> description in them. The decision below is unchanged.
+
 `stacks add` and `stacks enrich` write a provider's description into the note
 under a `## About` heading, above `## Notes`. The `VaultAdapter` gained a
 **sixth method** to do it — `insertBodySection` — and it is the only method in
