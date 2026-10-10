@@ -734,7 +734,7 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
   // back; a title two books share is skipped rather than guessed at.
   const library = (await page.evaluate(
     `fetch('/library.json').then((response) => response.json())`,
-  )) as { books: LibraryBook[] };
+  )) as { books: { title: string; cover?: string; heldCover?: string }[] };
   const titles = new Map<string, number>();
   for (const book of library.books) titles.set(book.title, (titles.get(book.title) ?? 0) + 1);
   const coverFor = new Map(
@@ -758,92 +758,53 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
   let withoutHeld: Opened | undefined;
   let fellBack = false;
   let pathInPage = false;
-  // Only books `library.json` gives a cover are tried, in shelf order and by
-  // index, until both kinds are seen: a walk of the whole shelf took a pickup for
-  // every book before them, covered or not. A candidate whose page offers no
-  // cover control is skipped as before. Motion is not what this judges, so it
-  // runs under reduced motion.
-  const ordered = shelfOrder(library.books);
-  const candidates = ordered.flatMap((book, index) => (coverFor.has(book.title) ? [index] : []));
-  // Why each candidate was passed over, printed when a kind is missing, so a red
-  // run names the book and the reason rather than only "not found".
-  const tried: string[] = [];
-  await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
-  try {
-    for (const index of candidates) {
-      if (withHeld !== undefined && withoutHeld !== undefined) break;
-      // A kind already seen needs no second pickup.
-      const kind = coverFor.get(ordered[index]?.title ?? '');
-      if (kind?.held === undefined ? withoutHeld !== undefined : withHeld !== undefined) continue;
-      await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
-      if (!(await until(page, HELD))) {
-        tried.push(`${String(index)} ${ordered[index]?.title ?? ''}: never came to rest`);
-        continue;
-      }
-      const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
-      // Fails closed when the index did not name the book it was computed for.
-      if (title !== ordered[index]?.title) {
-        tried.push(`${String(index)} ${ordered[index]?.title ?? ''}: held ${title ?? 'nothing'}`);
-        await putBackAndSettle(page);
-        continue;
-      }
-      const expected = title === undefined ? undefined : coverFor.get(title);
-      const hasControl = (await page.evaluate(
-        `document.querySelector('.held-page-right .card-cover') !== null`,
-      )) as boolean;
-      if (!hasControl) tried.push(`${String(index)} ${title}: no cover control on its page`);
-      const wanted =
-        expected !== undefined &&
-        (expected.held === undefined ? withoutHeld === undefined : withHeld === undefined);
-      if (hasControl && wanted) {
-        // No attribute anywhere on the pages may carry a cover path (#416).
-        pathInPage ||=
-          (await page.evaluate(`[...document.querySelectorAll('.held-page, .held-page *')]
+  const books = Number(await page.evaluate('window.__shelf.bookCount'));
+  for (let index = 0; index < books; index += 1) {
+    if (withHeld !== undefined && withoutHeld !== undefined) break;
+    await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
+    if (!(await until(page, HELD))) continue;
+    const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
+    const expected = title === undefined ? undefined : coverFor.get(title);
+    const hasControl = (await page.evaluate(
+      `document.querySelector('.held-page-right .card-cover') !== null`,
+    )) as boolean;
+    const wanted =
+      expected !== undefined &&
+      (expected.held === undefined ? withoutHeld === undefined : withHeld === undefined);
+    if (hasControl && wanted) {
+      // No attribute anywhere on the pages may carry a cover path (#416).
+      pathInPage ||=
+        (await page.evaluate(`[...document.querySelectorAll('.held-page, .held-page *')]
         .some((node) => [...node.attributes].some((attribute) => /covers\\//.test(attribute.value)))`)) as boolean;
-        if (expected.held !== undefined) fellBack = await opensOwnWhenHeldFails(page, expected.own);
-        await page.click('.held-page-right .card-cover');
-        await until(page, `document.getElementById('cover-viewer')?.open === true`, 3000);
-        await until(page, `document.getElementById('cover-viewer-image')?.complete === true`, 3000);
-        const open = (await page.evaluate(`(() => {
+      if (expected.held !== undefined) fellBack = await opensOwnWhenHeldFails(page, expected.own);
+      await page.click('.held-page-right .card-cover');
+      await until(page, `document.getElementById('cover-viewer')?.open === true`, 3000);
+      await until(page, `document.getElementById('cover-viewer-image')?.complete === true`, 3000);
+      const open = (await page.evaluate(`(() => {
         const dialog = document.getElementById('cover-viewer');
         const image = document.getElementById('cover-viewer-image');
         return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0, src: image && image.src ? new URL(image.src).pathname : '' };
       })()`)) as { open: boolean; width: number; src: string };
-        await page.keyboard.press('Escape');
-        await until(page, "!document.getElementById('cover-viewer')?.open", 1000);
-        const after = (await page.evaluate(`(() => ({
+      await page.keyboard.press('Escape');
+      await until(page, "!document.getElementById('cover-viewer')?.open", 1000);
+      const after = (await page.evaluate(`(() => ({
         viewerOpen: Boolean(document.getElementById('cover-viewer')?.open),
         held: window.__shelf.held() !== undefined,
       }))()`)) as { viewerOpen: boolean; held: boolean };
-        const held = expected.held;
-        const checked: Opened = {
-          opened: open.open,
-          width: open.width,
-          escapeClosedViewer: !after.viewerOpen,
-          heldAfterEscape: after.held,
-          held,
-          showedHeld: held !== undefined && open.src === held,
-          withoutHeld: held === undefined ? { showedOwn: open.src === expected.own } : undefined,
-        };
-        if (held === undefined) withoutHeld = checked;
-        else withHeld = checked;
-      }
-      await putBackAndSettle(page);
+      const held = expected.held;
+      const checked: Opened = {
+        opened: open.open,
+        width: open.width,
+        escapeClosedViewer: !after.viewerOpen,
+        heldAfterEscape: after.held,
+        held,
+        showedHeld: held !== undefined && open.src === held,
+        withoutHeld: held === undefined ? { showedOwn: open.src === expected.own } : undefined,
+      };
+      if (held === undefined) withoutHeld = checked;
+      else withHeld = checked;
     }
-  } finally {
-    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
-  }
-  if (withHeld === undefined || withoutHeld === undefined) {
-    const withCopy = candidates.filter(
-      (index) => coverFor.get(ordered[index]?.title ?? '')?.held !== undefined,
-    ).length;
-    console.log(
-      `cover viewer walk: ${String(candidates.length)} covered books on a shelf of ` +
-        `${String(ordered.length)} (${String(withCopy)} with a held copy, ` +
-        `${String(library.books.filter((b) => b.cover !== undefined).length)} of ` +
-        `${String(library.books.length)} in the library have a cover), passed over:`,
-    );
-    for (const line of tried) console.log(`  ${line}`);
+    await putBackAndSettle(page);
   }
   const primary = withHeld ?? withoutHeld;
   return primary === undefined
