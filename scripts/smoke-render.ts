@@ -530,6 +530,7 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
     | 'hiddenBeforeFade'
     | 'hrefUnchanged'
     | 'focusUnmoved'
+    | 'focusCaught'
     | 'thoughtsShown'
     | 'second'
     | 'afterPutBack'
@@ -578,8 +579,14 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   const focusUnmoved = (await page.evaluate(
     'document.activeElement === window.__focusBefore',
   )) as boolean;
+  // Then focus a link on the page, as a keyboard reader would, and leave by
+  // Escape: the page hides under it, so focus must be caught on the canvas.
+  await page.evaluate(`document.querySelector('.held-page-right .card-links a')?.focus()`);
   await page.keyboard.press('Escape');
   const afterEscape = await putDown(page, sameHref);
+  const focusCaught = (await page.evaluate(
+    `document.activeElement === document.getElementById('shelf-canvas')`,
+  )) as boolean;
 
   await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
   await until(page, HELD);
@@ -593,6 +600,7 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
     hiddenBeforeFade,
     hrefUnchanged,
     focusUnmoved,
+    focusCaught,
     thoughtsShown,
     second,
     afterPutBack,

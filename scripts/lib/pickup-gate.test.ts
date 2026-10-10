@@ -28,6 +28,7 @@ const good: PickupRead = {
   hrefUnchanged: true,
   historyHeld: true,
   focusUnmoved: true,
+  focusCaught: true,
   pagesInView: true,
   thoughtsShown: true,
   second: {
@@ -62,6 +63,7 @@ describe('pickupFailures', () => {
       /unsafely/,
     ],
     ['focus moved by the pickup', { focusUnmoved: false }, /focus moved/],
+    ['focus dropped by Escape', { focusCaught: false }, /dropped focus/],
     ['pages off the desktop viewport', { pagesInView: false }, /run off the desktop viewport/],
     ['Thoughts missing from a flagged book', { thoughtsShown: false }, /opened without them/],
     ['no flagged book picked up', { thoughtsShown: undefined }, /no book flagged with Thoughts/],

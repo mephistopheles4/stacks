@@ -162,7 +162,10 @@ export function mountPickupTuner(
     shape.addBinding(motion, 'lift', { min: 0, max: 0.1, step: 0.002 });
     shape.addBinding(motion, 'margin', { min: 1, max: 1.6, step: 0.01 });
     shape.addBinding(motion, 'dim', { min: 0, max: 0.95, step: 0.01 });
-    shape.addBinding(motion, 'textFadeFrom', { min: 60, max: 170, step: 1 });
+    // At most 140°: the fade takes 40° (`pickup-motion.ts`), so a later start
+    // would leave the page part-faded at rest, open at 180° — a setting the tuner
+    // must not be able to export (ADR-0104's floor).
+    shape.addBinding(motion, 'textFadeFrom', { min: 60, max: 140, step: 1 });
 
     const eases = pane.addFolder({ title: 'Eases', expanded: false });
     for (const key of ['easeSlide', 'easeTurn', 'easeOpen'] as const) {

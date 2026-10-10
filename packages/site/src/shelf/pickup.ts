@@ -268,6 +268,8 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       },
       announce: (book) => {
         elements.status.textContent = book === undefined ? '' : announcement(book);
+        // The hand emptied, by whichever way down: the pages are about to hide.
+        if (book === undefined) catchFocus();
       },
       reduced,
       returnSpeed: () => motion.returnSpeed,
@@ -302,11 +304,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     );
     const pageObjects = placePages(rig, pages);
     pages.putBack.addEventListener('click', () => {
-      const inside = layer.contains(document.activeElement);
       state.putBack();
-      // Focus never moves on pickup (ADR-0049's reason); on put-back it is
-      // caught on the canvas only if the control that held it is going away.
-      if (inside) current.canvas.focus();
     });
 
     const entry: Lifted = {
@@ -343,10 +341,20 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     void swapInHeldCover(entry);
   };
 
+  /**
+   * Focus never moves on pickup (ADR-0049's reason). When the pages that hold
+   * it hide or go, it is caught on the canvas rather than dropped to `<body>`
+   * — the put-back control, Escape, the back button and a lost context alike.
+   */
+  const catchFocus = (): void => {
+    if (layer.contains(document.activeElement)) current.canvas.focus();
+  };
+
   /** Back in its slot: every change `lift` made, undone. */
   const settle = (book: LibraryBook): void => {
     const entry = lifted.get(book.id);
     if (entry === undefined) return;
+    catchFocus();
     lifted.delete(book.id);
     entry.released = true;
     entry.track?.kill();
@@ -649,6 +657,16 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     css.setSize(box.width, box.height);
   };
   const observer = new ResizeObserver(sizeLayer);
+
+  // A reload keeps `history.state`, so a page loaded on a pickup's entry would
+  // treat it as this document's own: the first pickup would replace it rather
+  // than push, and its put-back's `history.back()` would leave the document.
+  // Nothing is held on load, so the key is cleared and anything else kept.
+  const loaded = history.state as Record<string, unknown> | null;
+  if (loaded !== null && typeof loaded === 'object' && 'pickup' in loaded) {
+    const { pickup: _stale, ...rest } = loaded;
+    history.replaceState(Object.keys(rest).length === 0 ? null : rest, '');
+  }
 
   install(stage);
 

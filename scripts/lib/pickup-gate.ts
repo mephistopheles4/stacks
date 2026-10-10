@@ -44,6 +44,12 @@ export interface PickupRead {
   /** Focus stayed where it was: there is still no keyboard path to the shelf (spec §3.4, ADR-0049). */
   readonly focusUnmoved: boolean;
   /**
+   * With focus on a link of the held page, Escape put the book down and focus
+   * landed on the canvas rather than dropping to `<body>`, where the next Tab
+   * starts the page over.
+   */
+  readonly focusCaught: boolean;
+  /**
    * Both pages inside the desktop viewport at rest, within a pixel — the
    * desktop half of the card's old overflow check, which the phone check keeps
    * for the right-hand page at 375×812.
@@ -98,6 +104,11 @@ export function pickupFailures(read: PickupRead): string[] {
   if (!read.visibleAtRest) failures.push('the pages are not visible with the book at rest');
   if (!read.focusUnmoved) {
     failures.push('focus moved on pickup — it must stay put, with no keyboard path to the shelf');
+  }
+  if (!read.focusCaught) {
+    failures.push(
+      'Escape from a focused page link dropped focus instead of catching it on the canvas',
+    );
   }
   if (!read.pagesInView) {
     failures.push('the held pages run off the desktop viewport at rest');

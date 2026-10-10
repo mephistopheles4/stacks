@@ -261,7 +261,9 @@ const READ = `JSON.stringify({
  * `window.__shelf`, not an address switch, so no link can start it (spec §4).
  */
 function startPickups(rounds: number): string {
-  return `(async () => {
+  // `void`, so the evaluate that sends this resolves at once rather than
+  // awaiting the whole loop: the evaluate awaits a returned promise.
+  return `void (async () => {
     while (window.__shelf?.ready !== true) await new Promise((r) => setTimeout(r, 200));
     window.__pickups = { asked: ${String(rounds)}, held: await window.__shelf.pickupLoop(${String(rounds)}) };
   })()`;
