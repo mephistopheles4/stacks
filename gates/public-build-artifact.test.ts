@@ -745,7 +745,7 @@ describe('G20 — every rule goes red', () => {
     ],
   ] as const)('N60 notes-shape: a notes file carrying %s', async (_, mark, words) => {
     await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A clean paragraph.', mark] });
-    const problems = inspect().problems;
+    const problems = (await inspect()).problems;
     expect([...new Set(problems.map((problem) => problem.rule))]).toEqual(['notes-shape']);
     const said = problems.map((problem) => problem.message).join('\n');
     // The mark named in words, so a blanked description fails (round 4, integrity F12).
@@ -780,7 +780,7 @@ describe('G20 — every rule goes red', () => {
         `So---${String.fromCodePoint(0xa0)}said`,
       ],
     });
-    expect(inspect().problems).toEqual([]);
+    expect((await inspect()).problems).toEqual([]);
   });
 
   it.each([
@@ -862,9 +862,7 @@ describe('G20 — every rule goes red', () => {
     // Round 3's integrity F11: every message here could be emptied with every
     // test green, and an empty message passes "never quoted" trivially.
     await plant();
-    const said = inspect()
-      .problems.map((problem) => problem.message)
-      .join('\n');
+    const said = (await inspect()).problems.map((problem) => problem.message).join('\n');
     expect(said).toMatch(message);
     if (/notes-shape/.test(label)) expect(said).toContain(`notes/${CLEAN_ID}.json`);
   });
