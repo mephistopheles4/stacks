@@ -16,9 +16,9 @@ A local-first reading tracker where the notes vault IS the database. A CLI (`sta
 4. `docs/gates.md` — the invariant scoreboard: which rule each gate protects, and
    which rules are still protected by nothing.
 5. `docs/notes-on-the-shelf.md` — the design for public/private notes and for
-   picking a book up. Its public/private split is built — the `## Thoughts`
-   extractor — and picking a book up is not; read it before changing invariant 2,
-   the publisher, or the cover cap.
+   picking a book up. Both halves are built — the `## Thoughts` extractor, and
+   picking a book up in place of the card ([#413](https://github.com/mephistopheles4/stacks/issues/413));
+   read it before changing invariant 2, the publisher, or the cover cap.
 6. `docs/spec/` — locked specs waiting for an implementation session. Everything
    in there is decided: read it *instead of* re-deciding, and read
    `docs/spec/README.md` first for the build order and the gate roster.
@@ -153,8 +153,8 @@ it with no provenance at all.
 
 - **Vanilla Three.js, not react-three-fiber.** Plain Astro island, no React on the page.
 - **One `THREE.Group` per book, not `InstancedMesh`.** `buildBook` in `packages/site/src/shelf/scene.ts` builds each book as a case of single-material parts round a page block, and nothing on the shelf is instanced. Instancing was rejected because per-book covers would force a texture atlas, and 49 books rendered fine; the parts kept that rejection for the same reason ([ADR-0008](docs/adr/0008-book-geometry.md)). ⚠️ **The measurement it deferred has never been taken** — the ADR puts the brief's 200-book target at ~1200 objects rather than ~200, and parts have been added since, so measure first and don't optimize blind. The one recorded live lead for instancing is the head cap, per-instance colour collapsing its ~20 draws to 1, and it is written up beside that mesh in `scene.ts`.
-- **Real-time shadows are the default, and one program reads the map: the bookcase's, in 2 draws at every library size.** Every book part compiles with no shadow fetch (`withoutShadowFetch` in `packages/site/src/shelf/shadow-receivers.ts`) and the woodwork is one mesh. On the Pixel 10 Pro XL every book reading the map loses the WebGL context and this shape survives, and **what kills it is not known** — a count of sampling draws was the model until a re-check refuted it — so a book that reads the map again, or a bookcase member with a mesh of its own, leaves the one configuration measured to survive and is answered on a phone, not by arithmetic ([ADR-0088](docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md), [ADR-0090](docs/adr/0090-real-time-shadows-are-the-default.md)). G61 (`one-shadow-reader`) counts it on the default page. Painted shading is the fallback a device takes after a lost context ([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
-- Book detail card = plain DOM overlay positioned from raycaster hits, not in-canvas UI.
+- **Real-time shadows are the default, and one program reads the map: the bookcase's, in 2 draws at every library size.** Every book part compiles with no shadow fetch (`withoutShadowFetch` in `packages/site/src/shelf/shadow-receivers.ts`) and the woodwork is one mesh. On the Pixel 10 Pro XL every book reading the map loses the WebGL context and this shape survives, and **what kills it is not known** — a count of sampling draws was the model until a re-check refuted it — so a book that reads the map again, or a bookcase member with a mesh of its own, leaves the one configuration measured to survive and is answered on a phone, not by arithmetic ([ADR-0088](docs/adr/0088-one-program-samples-the-shadow-map-in-two-draws.md), [ADR-0090](docs/adr/0090-real-time-shadows-are-the-default.md)). G61 (`one-shadow-reader`) counts it on the default page, and with a book held. Painted shading is the fallback a device takes after a lost context ([ADR-0091](docs/adr/0091-a-lost-context-falls-back-to-painted-shadows.md)).
+- **A click picks the book up, and the card overlay retired** ([ADR-0102](docs/adr/0102-pickup-replaces-the-card.md)). The card's lines moved onto the held book's pages, which are plain DOM placed in the scene by three's `CSS3DRenderer` and updated in the same frame as the render — never in-canvas UI, and never markup: every text node goes through `textContent`. GSAP (`gsap/gsap-core`) plays the motion, stepped from the shelf's own frame ([ADR-0103](docs/adr/0103-gsap-plays-the-pickup-motion.md)).
 - **The site may only `import type` from `@stacks/core`.** The package root
   re-exports the adapter, sharp and the metadata layer, so a *value* import
   drags `node:fs` and sharp into the browser bundle and the shelf silently never
@@ -190,7 +190,7 @@ Every phase: `pnpm test && pnpm build` green, plus:
 - **Phase 1 (data layer):** `pnpm stacks build` on fixtures produces valid library.json with exactly the well-formed books; malformed fixture logged + skipped; tests cover ISBN hit / fuzzy title / API miss / malformed frontmatter (use cached API fixtures, no live calls in tests — gated by G21 (`no-live-network`), which records
   any request the suite makes and fails the test that made it; `vi.stubGlobal`
   is the escape hatch).
-- **Phase 2 (shelf):** `pnpm smoke:render` (headless puppeteer screenshot of the shelf) produces a non-blank PNG at `artifacts/shelf.png`; 50-book fixture renders; clicking a book (integration test via puppeteer) opens the card.
+- **Phase 2 (shelf):** `pnpm smoke:render` (headless puppeteer screenshot of the shelf) produces a non-blank PNG at `artifacts/shelf.png`; 50-book fixture renders; clicking a book (integration test via puppeteer) picks it up: the shelf reports the held state for the clicked book, the page layer carries that book's title, and `location.href` is unchanged.
 - **Phase 3 (public build):** `pnpm stacks build --public` output contains no note-body text outside `notes/` (grep gate against a canary planted in fixture note bodies, below and beside `## Thoughts`), and `notes/` carries the ship phrase planted inside one while the notes stage is on (`PUBLISH_THOUGHTS`) — switched off, `notes/` must hold no file; the committed share card reaches `dist/` intact.
 - **Phase 4 (Audiobookshelf import):** import against mock ABS API dedupes by ISBN then normalized title+author; re-running import is idempotent.
 
@@ -307,7 +307,7 @@ import    import a library export into the vault   (audible)
 
 Three query-string instruments, none of which exists for a visitor who does not
 ask: `?solo` mounts one book on an unclamped turntable, `?debug` loads the black
-box and the tuning panel, and `?woodSeed=<token>` pins the root the bookcase's
+box, the tuning panel and the pickup tuner, and `?woodSeed=<token>` pins the root the bookcase's
 per-member figure is drawn off — no default, and never in `?tune=`. **Read
 [`docs/shelf-inspectors.md`](docs/shelf-inspectors.md) before changing the
 renderer, the debug panel, or `shelf-settings.ts`** — it carries why each exists,

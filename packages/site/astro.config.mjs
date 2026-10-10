@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import { tunerCssPlugin } from '../../scripts/lib/tuner-css-plugin.ts';
 
 // Static output only. The `--public` build has to be a plain deployable folder
 // (GitHub Pages / Cloudflare Pages), so there is no adapter and no SSR here.
@@ -11,11 +12,19 @@ export default defineConfig({
   output: 'static',
   devToolbar: { enabled: false },
 
+  // The pickup tuner's stylesheet, extracted from Tweakpane's JavaScript as
+  // text and written where `pickup-tuner.ts` imports it with `?url`. Neither
+  // package ships a `.css` file; see `scripts/lib/tuner-css-plugin.ts`.
+  vite: { plugins: [tunerCssPlugin()] },
+
   // The shelf's outbound record, stated so it can stop being true by accident.
   //
-  // `connect-src 'self'` is the directive carrying the argument: the only
-  // request this site makes is `fetch('/library.json')` in boot.ts, and that was
-  // a property measured once by grep rather than one anything preserved. The
+  // `connect-src 'self'` is the directive carrying the argument: the requests
+  // this site makes are `fetch('/library.json')` in boot.ts, and since #413 a
+  // held book's Thoughts, `/notes/<id>.json`, fetched in notes.ts, and its held
+  // cover copy, `/held-covers/<name>`, fetched by `ImageBitmapLoader` in
+  // pickup.ts — all three same-origin. That was once a property measured by grep
+  // rather than one anything preserved. The
   // rest of the policy is decided here in one pass rather than in two.
   //
   // **Astro emits this as a `<meta http-equiv>`, not in `_headers`**, and that

@@ -386,3 +386,26 @@ describe('writeSettings against the base the page started from', () => {
     expect(written(painted)).toBe('?debug&shadows=0');
   });
 });
+
+describe('writeSettings and the pickup', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("passes the held book's history state through, so dialling never erases it (spec §3.9)", () => {
+    const held = { pickup: 'the-quiet-orchard-1k2j3h' };
+    let kept: unknown = 'not written';
+    vi.stubGlobal('window', {
+      location: { search: '?debug', pathname: '/' },
+      history: {
+        state: held,
+        replaceState: (state: unknown) => {
+          kept = state;
+        },
+      },
+    });
+
+    writeSettings(DEFAULT_SETTINGS);
+    expect(kept).toBe(held);
+  });
+});

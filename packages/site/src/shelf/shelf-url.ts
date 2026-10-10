@@ -320,7 +320,11 @@ export function writeSettings(
    * The parameter is a switch, not a value, and the URL should say so.
    */
   const query = params.toString().replace(/(^|&)debug=(&|$)/, '$1debug$2');
-  window.history.replaceState(null, '', query === '' ? window.location.pathname : `?${query}`);
+  // The current entry's state passes through untouched: a held book owns it
+  // (`pickup-state.ts`), and a `null` here would erase the entry the back
+  // button puts the book down with (spec §3.9).
+  const state: unknown = window.history.state;
+  window.history.replaceState(state, '', query === '' ? window.location.pathname : `?${query}`);
 }
 
 /* -------------------------------------------------------------------------- */

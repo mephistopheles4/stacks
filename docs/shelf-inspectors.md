@@ -99,14 +99,24 @@ is where the backboard's is held to carrying the root.
 
 ## The debug panel — `?debug`
 
-Loads a **black box** and a **tuning panel** onto the ordinary page. Neither
-exists for a visitor who does not ask.
+Loads a **black box**, a **tuning panel** and the **pickup tuner** onto the
+ordinary page. None of them exists for a visitor who does not ask.
 
 - **The black box** (`diagnostics.ts`) records a crash that leaves no error
   behind, and is a **static** import: it has to be running before the thing it
   measures fails. See [The mobile crash](log/2026-08-01-the-mobile-crash-g15.md).
 - **The panel** (`debug-panel.ts`) is every setting the shelf has, live, and is
   **lazy**: its 8.8 KB is paid only by a page that asked for it.
+- **The pickup tuner** (`pickup-tuner.ts`) is Tweakpane with its essentials
+  plugin, **lazy** the same way: it scrubs the held book's timeline, shapes the
+  eases with the curve editor, and exports `PICKUP_MOTION` as the constant to
+  paste back into `shelf-settings.ts`, which is where the values live
+  ([ADR-0104](adr/0104-tweakpane-tunes-the-pickup-behind-debug.md)). Its layout
+  is the owner's to shape in use. It is styled under the page's CSP through two
+  empty `<style data-tp-style>` placeholders and a lazy `<link>`, with the CSS
+  extracted from the packages' text at build time (`tuner-css.ts`). Two gates
+  hold that: one asserts no tuner byte reaches a page without `?debug`, and one
+  that the pane is styled with zero violations.
 
 Everything the shelf looks like is one object — `ShelfSettings` in
 `shelf-settings.ts` — and the panel exports it as JSON you paste back into
@@ -137,6 +147,17 @@ and the panel renders what the shelf reported rather than what it was asked for.
 This is [`docs/progress.md`](progress.md)'s oldest rule about instruments,
 *"a probe that silently did nothing would be worse than no probe"*, applied to a
 slider. It caught seven real faults; they are listed there.
+
+**The pickup tuner keeps the same floor, through Tweakpane's own API.** A
+Tweakpane binding redraws from the object it is bound to, so a control there
+shows what was asked unless something writes back what was applied. The tuner
+writes back: every 100 ms it sets the scrub from the held book's timeline
+progress and the status line from the pickup's own phase, then calls
+`pane.refresh()`, so the scrub moves when the book moves and a value the
+timeline did not take is not shown as taken. An edit to a timing or an ease
+rebuilds the timeline from the live copy and keeps its place. Public API and
+custom plugins only; nothing patches Tweakpane's DOM, which a release would
+break without warning (ADR-0104).
 
 Decisions: [ADR-0032](adr/0032-shelf-settings-are-one-object.md),
 [ADR-0033](adr/0033-painters-follow-the-light.md),

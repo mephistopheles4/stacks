@@ -247,6 +247,19 @@ click on empty space, the back button and the page's put-back control all do
 it.
 *Avoid*: close, dismiss (those were the card's), drop.
 
+**Drop**:
+Every book the pickup is moving, back in its slot at once with no motion, when
+the WebGL context is lost and the shelf is rebuilt. It is not a **put back**:
+nothing plays, which is why the code names it apart (`drop()`).
+*Avoid*: put back (for this case), reset.
+
+**Open spread**:
+A **held** book's two pages at rest: the front board flat at 180° to the page
+block, both pages in one plane square to the camera, meeting at the gutter. The
+code shortens it to `spread` (`window.__shelf.spread()`, `SpreadReading`), and
+there it never means a **spread**.
+*Avoid*: spread (on its own, in prose), layout.
+
 **Shelf tier**:
 The cover copy every book uploads before the first frame, capped at
 `MAX_COVER_EDGE`, 512 px

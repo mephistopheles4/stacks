@@ -187,6 +187,11 @@ const ALLOWED = [
   // counting stamp moved; appending to it is a hand edit, the way arming a floor
   // is. It does not know what a book is.
   'scripts/lib/renovations.ts',
+  // Reads two files out of `node_modules` — Tweakpane's and its essentials
+  // plugin's entry points, resolved by package name, never by a path from
+  // anything a book carries — as text, and writes one gitignored stylesheet
+  // under `packages/site/src/generated/`. It does not know what a book is.
+  'scripts/lib/tuner-css-plugin.ts',
   // Reads `stryker.floors.json` and writes one line of it back — G56's remedy,
   // and the only writer of that file there has ever been. One fixed filename at
   // the repo root, no path derived from anything, and nothing below the field

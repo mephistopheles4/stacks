@@ -42,7 +42,7 @@ phone was rendering when it died — are measurements and stay exactly as they a
 | **Rollout numbering** | ⚠️ **Every row number pre-allocated by the after-the-scoreboard tickets is one low**, because `agents-import` took G37 out-of-band. **No number is reserved here** — `docs/gates.md` says why, two tables down: *"The number goes in when the row does."* Count the rows in that file at the tip you branch from, and cite slug and number together, never the number alone |
 | **Trend layer** | **live, and now twenty series** — the eight duplication series landed too. The cognitive four — `cognitive-functions`, `cognitive-mass`, `cognitive-mass-over-15`, `cognitive-max` — landed beside the cyclomatic four on the same cadence, with **its own denominator** ([#255](https://github.com/mephistopheles4/stacks/issues/255), [ADR-0073](./adr/0073-cognitive-complexity-is-published-beside-cyclomatic.md), which carries the measurements). ⚠️ **`fixtureHash` changed once at adoption** — one hash over both counting rules — so both cyclomatic calibration windows restarted. Nothing armed, nothing refused. ⚠️ **`cognitive-max` joined `CAPPED_SERIES` on 2026-09-21** and the six duplication caps landed in `jscpd.floors.json` under `duplicationHash`, every one disarmed ([#269](https://github.com/mephistopheles4/stacks/issues/269)); arming is a later human judgement per series. `.github/workflows/metrics.yml` writes one `.prom` per run to the orphan **`metrics`** branch — `git fetch origin metrics` to read it. Its first nightly found a scope 6.45 points down on a false comment in the PR that built it; see [the log](./log/2026-08-19-the-first-nightly-caught-its-own-author.md). `pnpm trend:sync` is the reading half and is **built** — it replays the branch into a local Prometheus, folds surface D in, and brings up the page you read at <http://localhost:3000/d/stacks-trend-layer>, provisioned from [`grafana/`](../grafana); needs Docker, see [`commands.md`](./commands.md). The nightly also keeps its Stryker report now — both files as a 30-day workflow artifact, and the per-scope table plus where the survivors are in the run's job summary ([#243](https://github.com/mephistopheles4/stacks/issues/243)); whether survivor sets become a durable record is [#344](https://github.com/mephistopheles4/stacks/issues/344) |
 | **G6 has a second check** | G46 (`lint`) now overlaps G6 (`site-core-imports`) by decision: [#245](https://github.com/mephistopheles4/stacks/issues/245) enabled two lint rules over the site package and kept G6. No new row; the reasoning is on G6's row in [`gates.md`](./gates.md) |
-| **Now working on** | Map [#366](https://github.com/mephistopheles4/stacks/issues/366), picking a book up, built in four steps from [`docs/spec/picking-a-book-up.md`](./spec/picking-a-book-up.md). Step 1, the split gate ([#410](https://github.com/mephistopheles4/stacks/issues/410)), armed G2's Thoughts split before any extractor existed; step 2, the extractor ([#411](https://github.com/mephistopheles4/stacks/issues/411)), ships `## Thoughts` as `notes/<id>.json`; see Phase 3 evidence below. [#88](https://github.com/mephistopheles4/stacks/issues/88), [#78](https://github.com/mephistopheles4/stacks/issues/78) and [#50](https://github.com/mephistopheles4/stacks/issues/50) before it are closed and built. `gh issue list` is the only current answer to what is open |
+| **Now working on** | Map [#366](https://github.com/mephistopheles4/stacks/issues/366), picking a book up, built in four steps from [`docs/spec/picking-a-book-up.md`](./spec/picking-a-book-up.md). Step 1, the split gate ([#410](https://github.com/mephistopheles4/stacks/issues/410)), armed G2's Thoughts split before any extractor existed; step 2, the extractor ([#411](https://github.com/mephistopheles4/stacks/issues/411)), ships `## Thoughts` as `notes/<id>.json`; step 3, the held tier ([#412](https://github.com/mephistopheles4/stacks/issues/412)), stages a 1200px copy of each cover; see Phase 3 evidence below. Step 4, the motion ([#413](https://github.com/mephistopheles4/stacks/issues/413)), picks a book up in place of the card; see Phase 2 evidence. All four are built; what remains is step 4's first deploy and the owner's acceptance, on #413's first-deploy checklist. [#88](https://github.com/mephistopheles4/stacks/issues/88), [#78](https://github.com/mephistopheles4/stacks/issues/78) and [#50](https://github.com/mephistopheles4/stacks/issues/50) before it are closed and built. `gh issue list` is the only current answer to what is open |
 | **Queued** | whatever the closed maps left in fog — ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s and [#88](https://github.com/mephistopheles4/stacks/issues/88)'s *Not yet specified*; [#78](https://github.com/mephistopheles4/stacks/issues/78)'s is empty by construction. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates` + CodeQL, no bypass |
@@ -85,6 +85,42 @@ Aesthetics review came back with three directions, all applied: real bookcase
 feel (continuous fill at real proportions, not one sparse row per year),
 wishlist books stay off, and spine colour sampled from the cover's binding edge
 so it matches the real spine. See [`docs/adr/`](./adr/) for each.
+
+**2026-10-09 — the pickup tuner, split and styled**
+([#413](https://github.com/mephistopheles4/stacks/issues/413)): G64
+(`tuner-split`) and G65 (`styled-pane`), two new rows in `pnpm smoke:render`,
+each observed red before it passed — G64 by a static import planted in
+`boot.ts`, G65 on its first run, against a placeholder named `default` where
+Tweakpane looks for `plugin-default`, and again with both placeholders removed.
+The tuner is Tweakpane with essentials, lazy behind `?debug`, its CSS extracted
+from the packages' text at build time and loaded by `<link>`. ⚠️ The empty
+string's hash stayed in `style-src` with no placeholder on the page, so Astro
+writes it for a reason of its own and G65 is what pins it.
+
+**2026-10-09 — picking a book up**
+([#413](https://github.com/mephistopheles4/stacks/issues/413)): a click picks a
+book up and the card overlay retired. The Phase 2 click gate now reads "picks it
+up". G35 (`enhanced-card`) is reworded to the held page, its judging moved into
+`scripts/lib/pickup-gate.ts`, and it gains the open spread of the spec's §3.6,
+read from the scene at 1280×800: six books measured at 180.00°, left page within
+0.2 px of the block face, gutter 0.00 px. G61 (`one-shadow-reader`) gains a page
+with a book held: 1 program, 2 draws a frame, as #371 measured. Both observed red
+with four faults planted at once — the address carrying the book, the pages shown
+before the fade, the board resting at 165°, and the paper sheets built without
+`withoutShadowFetch`. Every third book of the 50-book fixture now carries
+invented Thoughts, so the render gate opens a page of them.
+
+**2026-10-10 — the pickup's move-4 review answered**
+([#413](https://github.com/mephistopheles4/stacks/issues/413)): a double
+put-back delivered before its popstate stepped back twice and off the site; one
+put-back now waits for its own step. G35 (`enhanced-card`) gains five clauses —
+focus unmoved by a pickup, both pages inside the desktop viewport, a book
+flagged with Thoughts opening to them, the enlarged cover falling back to the
+shelf copy when the held copy fails, and no cover path in the page's attributes
+— each planted red in `pickup-gate.test.ts`. The default page's script is
+190.3 KB gzipped against 163.6 KB on `main` at `d3916cd`, so GSAP's core,
+`CSS3DRenderer` and the pickup add 26.8 KB (+16%) for every visitor; the
+stylesheet fell from 1.9 KB to 1.8 KB with the card's rules.
 
 ### Phase 3 evidence
 

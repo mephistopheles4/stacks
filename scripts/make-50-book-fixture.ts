@@ -125,6 +125,28 @@ const GIVEN = [
 ];
 const TAGS = ['nonfiction', 'fiction', 'essays', 'history', 'programming', 'ecology', 'craft'];
 
+/**
+ * Invented Thoughts, written for this repo (ADR-0004). Each is paragraphs
+ * separated by a blank line, the shape the extractor ships.
+ */
+const THOUGHTS: readonly (readonly string[])[] = [
+  [
+    'Came for the method and stayed for the asides. The chapter on keeping a ledger of small repairs is the one I keep returning to.',
+    '',
+    'It argues that a habit is a place you visit, not a rule you keep. I am not sure that is true, but it is a better way to fail at one.',
+  ],
+  [
+    'Read across a wet week, a chapter a night. The middle sags, and the last forty pages pay for it twice over.',
+  ],
+  [
+    'Lent it out and bought a second copy before the first came back. That says enough.',
+    '',
+    'The diagrams are better than the prose, which is the right way round for a book like this.',
+    '',
+    'Would start with chapter four next time.',
+  ],
+];
+
 const random = makeRandom(20260731);
 const pick = <T>(items: readonly T[]): T => items[Math.floor(random() * items.length)] as T;
 
@@ -238,7 +260,15 @@ for (let i = 0; written < BOOK_COUNT; i += 1) {
     lines.push(`subjects: "${pick(TAGS)}; ${pick(TAGS)}"`);
   }
 
-  lines.push('---', '', '## Notes', '', 'NOTE_BODY_CANARY_do_not_ship', '');
+  lines.push('---', '');
+  // Every third book has Thoughts, so the render gate opens a held book to a
+  // page of them. Picked by position, never by `random()`, so every other
+  // field of every book is what it was before this section existed. Invented
+  // text, every word (ADR-0004), with the canary below it in `## Notes`.
+  if (written % 3 === 0) {
+    lines.push('## Thoughts', '', ...(THOUGHTS[(written / 3) % THOUGHTS.length] ?? []), '');
+  }
+  lines.push('## Notes', '', 'NOTE_BODY_CANARY_do_not_ship', '');
 
   const filename = title.replace(/[\\/:*?"<>|]/g, '') + '.md';
   writeFileSync(join(OUT_LIBRARY, filename), lines.join('\n'), 'utf8');

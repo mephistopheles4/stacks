@@ -40,9 +40,24 @@ export interface PhoneOptions {
   readonly shot: boolean;
   /** Read `chrome://gpu` in a tab of its own, and run nothing. */
   readonly gpuinfo: boolean;
+  /**
+   * Books to pick up and put back in turn once the page is ready, through the
+   * shelf's loop hook (spec §4) — the Pixel check of picking a book up, with the
+   * held cover's upload timed on the device (§8). Undefined runs no pickups.
+   */
+  readonly pickups: number | undefined;
 }
 
-const FLAGS_WITH_VALUES = ['url', 'serve', 'wait', 'label', 'serial', 'adb', 'port'] as const;
+const FLAGS_WITH_VALUES = [
+  'url',
+  'serve',
+  'wait',
+  'label',
+  'serial',
+  'adb',
+  'port',
+  'pickups',
+] as const;
 const SWITCHES = ['keep', 'shot', 'gpuinfo', 'matrix'] as const;
 
 /** The default page three times, the painted path once, and the reproduction last. */
@@ -104,6 +119,7 @@ export function parsePhoneArgs(argv: readonly string[]): PhoneOptions {
     keep: switches.has('keep'),
     shot: switches.has('shot'),
     gpuinfo: switches.has('gpuinfo'),
+    pickups: values.has('pickups') ? number(values.get('pickups') ?? '', '--pickups') : undefined,
   };
 }
 

@@ -760,3 +760,66 @@ function mergeProfiles(
     paperback: { ...base.paperback, ...patch?.paperback },
   };
 }
+
+/* -------------------------------------------------------------------------- */
+
+/** A cubic-bezier ease, `[x1, y1, x2, y2]`, as the tuner's curve editor gives it. */
+export type Bezier = readonly [number, number, number, number];
+
+/**
+ * How a picked-up book moves (#371, ADR-0103).
+ *
+ * **Plain constants, and this is where they live.** The pickup tuner edits a
+ * live copy and exports it as this object to paste back; it never becomes where
+ * the values are kept (#375). Not part of `ShelfSettings` and not in the URL:
+ * the motion is tuned once and shipped, not dialled per visit.
+ *
+ * Durations are seconds; distances are world units (a book is about 0.23 tall).
+ * The open angle is not here: the spread rests at 180° by construction, a
+ * done-criterion of the spec's §3.6, so nothing may tune it away.
+ */
+export interface PickupMotion {
+  /** Out of the shelf, straight towards the room. */
+  readonly slide: number;
+  /** From slid out to held, turning cover-on. */
+  readonly turn: number;
+  /** The front board swinging open. */
+  readonly open: number;
+  /** How long before the slide ends the turn starts. 0 is sequential. */
+  readonly overlapSlideTurn: number;
+  /** How long before the turn ends the cover starts to open. 0 is sequential. */
+  readonly overlapTurnOpen: number;
+  /** How far the book slides out before it turns. */
+  readonly slideOut: number;
+  /** How far it rises as it slides. */
+  readonly lift: number;
+  /** Framing margin around the held book or page: 1 is edge to edge. */
+  readonly margin: number;
+  /** How dark the veil over the rest of the shelf goes, 0..1. */
+  readonly dim: number;
+  /** Put-back speed against pickup: 1 is the same speed, 2 twice as fast. */
+  readonly returnSpeed: number;
+  /** The cover angle, in degrees, the text starts to fade in at (#369: past ~95°). */
+  readonly textFadeFrom: number;
+  readonly easeSlide: Bezier;
+  readonly easeTurn: Bezier;
+  readonly easeOpen: Bezier;
+}
+
+/** As the owner accepted it on #371's prototype, 2026-10-09. */
+export const PICKUP_MOTION: PickupMotion = {
+  slide: 0.35,
+  turn: 0.7,
+  open: 0.6,
+  overlapSlideTurn: 0.12,
+  overlapTurnOpen: 0.2,
+  slideOut: 0.12,
+  lift: 0.01,
+  margin: 1.25,
+  dim: 0.55,
+  returnSpeed: 1.6,
+  textFadeFrom: 95,
+  easeSlide: [0.3, 0, 0.2, 1],
+  easeTurn: [0.45, 0, 0.2, 1],
+  easeOpen: [0.4, 0, 0.15, 1],
+};

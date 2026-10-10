@@ -1,7 +1,7 @@
 # ADR-0102 — Pickup replaces the card for every book
 
 **Date:** 2026-10-09
-**Status:** accepted, not built — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
+**Status:** accepted; built in [#413](https://github.com/mephistopheles4/stacks/issues/413) — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
 **Issue:** [#366](https://github.com/mephistopheles4/stacks/issues/366), [#369](https://github.com/mephistopheles4/stacks/issues/369), [#371](https://github.com/mephistopheles4/stacks/issues/371)
 **Supersedes in part:** [ADR-0049](0049-the-card-is-a-non-modal-bottom-sheet.md)
 

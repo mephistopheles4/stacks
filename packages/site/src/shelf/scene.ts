@@ -120,7 +120,72 @@ const TONE_MAPPINGS: Record<ToneMappingName, THREE.ToneMapping> = {
 interface PlacedBook {
   readonly group: THREE.Group;
   readonly frontZ: number;
+  /** What it was built from, so a pickup can derive its open spread. */
+  readonly entry: ShelfBook;
 }
+
+/**
+ * A book on the shelf, as a pickup sees it: its group, what it was built from,
+ * and the depth it was built at. See `ShelfStage`.
+ */
+export interface StagedBook {
+  readonly group: THREE.Group;
+  readonly entry: ShelfBook;
+  readonly depth: number;
+}
+
+/**
+ * Called by the render loop each frame while a pickup is installed.
+ *
+ * The pose, the WebGL render and the page placed over it all come from one
+ * instant this way, which is what holds #369's 0.3 px registration: one step
+ * late, the page slid 17 px.
+ */
+export interface FrameHooks {
+  /** While true, the orbit is not updated: a held book owns the camera (#371). */
+  holdsCamera(): boolean;
+  /** Draws the frame, given the shelf's own draw. */
+  draw(drawShelf: () => void): void;
+  /** After the frame is drawn: the DOM page is placed here. */
+  after(): void;
+}
+
+/**
+ * The live shelf, as picking a book up needs to reach into it.
+ *
+ * Typed and narrow on purpose: the pickup animates the shelf's own book groups
+ * (#369), so it needs the scene, the camera and the renderer, and three things
+ * the shelf does on its behalf: repaint without a book, redraw the one-shot
+ * shadow map, and step a frame through hooks.
+ */
+export interface ShelfStage {
+  readonly scene: THREE.Scene;
+  readonly camera: THREE.PerspectiveCamera;
+  readonly renderer: THREE.WebGLRenderer;
+  readonly controls: OrbitControls;
+  readonly canvas: HTMLCanvasElement;
+  readonly books: readonly StagedBook[];
+  /** Every part that answers for a book, so a new part can join the click lookup. */
+  readonly lookup: BookLookup;
+  /** The head cap the books were built with, which their case depends on. */
+  readonly headCap: number;
+  /**
+   * Paints the painted pieces again without these books' contact roots and
+   * cover-shade bands (spec §3.10). Empty puts every book back. A no-op on a
+   * shelf with no painted pieces.
+   */
+  repaint(without: ReadonlySet<string>): void;
+  /** Asks for the one-shot shadow map to be drawn once more, on the next frame. */
+  redrawShadows(): void;
+  /** Installs the frame hooks, or removes them with `undefined`. */
+  setFrame(hooks: FrameHooks | undefined): void;
+}
+
+/** The names `buildBook` gives the parts that swing open with the front board. */
+export const FRONT_PARTS = ['front-board', 'front-board-top', 'cover'] as const;
+
+/** The name of the page block, the one part that casts. */
+export const PAGE_BLOCK = 'page-block';
 
 /**
  * What the renderer is actually holding, read live.
@@ -278,6 +343,8 @@ export interface ShelfHandle {
    * the layout changes.
    */
   projectBook(index: number): { x: number; y: number } | undefined;
+  /** What picking a book up reaches into. See `pickup.ts`. */
+  readonly stage: ShelfStage;
 }
 
 export interface MountOptions {
@@ -618,12 +685,18 @@ function assembleShelf(
    */
   renderer.info.autoReset = false;
 
+  /** A pickup's hooks, when one is installed. See `FrameHooks`. */
+  let hooks: FrameHooks | undefined;
+
   const renderLoop = (): void => {
     if (halted || disposed) return;
     frame = requestAnimationFrame(renderLoop);
-    controls.update();
+    // A held book owns the camera; the orbit's damping would fight it.
+    if (hooks?.holdsCamera() !== true) controls.update();
     renderer.info.reset();
-    renderFrame();
+    if (hooks === undefined) renderFrame();
+    else hooks.draw(renderFrame);
+    hooks?.after();
     drawn += 1;
 
     framesInWindow += 1;
@@ -767,7 +840,28 @@ function assembleShelf(
   const changes: string[] = [];
   const MAX_CHANGES = 24;
 
+  const stage: ShelfStage = {
+    scene,
+    camera,
+    renderer,
+    controls,
+    canvas,
+    books: placed.map(({ group, entry, frontZ }) => ({ group, entry, depth: frontZ * 2 })),
+    lookup,
+    headCap: mountedWith.books.headCap,
+    repaint: (without) => {
+      painters?.paint(settings, without);
+    },
+    redrawShadows: () => {
+      renderer.shadowMap.needsUpdate = true;
+    },
+    setFrame: (next) => {
+      hooks = next;
+    },
+  };
+
   return {
+    stage,
     bookCount: placed.length,
     rowCount,
     gpu: describeGpu(renderer),
@@ -1151,9 +1245,9 @@ function buildBooks(
       applyPlacement(book, placement);
 
       scene.add(book);
-      placed.push({ group: book, frontZ: placement.frontZ });
+      placed.push({ group: book, frontZ: placement.frontZ, entry });
       // Every part of a book answers for the whole book, so a click on the
-      // pages or a board opens the same card as a click on the spine.
+      // pages or a board picks up the same book as a click on the spine.
       for (const part of book.children) lookup.set(part, entry.book);
     });
   });
@@ -1227,13 +1321,15 @@ function buildBooks(
 class Painters {
   readonly #scene: THREE.Scene;
   /** Contacts per row of *books*, indexed as the placements are — top shelf first. */
-  readonly #byRow: readonly (readonly Contact[])[];
+  readonly #byRow: readonly (readonly { readonly id: string; readonly contact: Contact }[])[];
   readonly #rowCount: number;
   /** The shadow settings the shelf was built with. See `livePieces`. */
   readonly #mounted: ShadowSettings;
   /** Every face-out cover, whether or not the cover shade draws now. */
   readonly #covers: readonly CoverQuad[];
   #meshes: THREE.Mesh[] = [];
+  /** The books the last paint left out. See paint. */
+  #without: ReadonlySet<string> = new Set();
 
   constructor(
     scene: THREE.Scene,
@@ -1244,13 +1340,24 @@ class Painters {
     this.#scene = scene;
     // The painted shadow is drawn from exactly the contacts the books were
     // placed at, so the two cannot drift apart.
-    this.#byRow = placements.map((row) => row.map((placement) => placement.contact));
+    this.#byRow = placements.map((row) =>
+      row.map((placement) => ({ id: placement.entry.book.id, contact: placement.contact })),
+    );
     this.#rowCount = rowCount;
     this.#mounted = mountedWith.shadows;
     this.#covers = coverQuads(placements, mountedWith.books.headCap);
   }
 
-  paint(settings: ShelfSettings): void {
+  /**
+   * `without` names books lifted off the shelf: their contact roots and their
+   * cover-shade bands are left out, so a picked-up book leaves no painted trace
+   * in its slot (spec §3.10). One rule for every painted piece, rather than a
+   * per-piece list of parts to hide.
+   */
+  paint(settings: ShelfSettings, without: ReadonlySet<string> = this.#without): void {
+    // Remembered, so a light dialled in the panel while a book is held does not
+    // paint its contact back into the empty slot.
+    this.#without = without;
     this.dispose();
 
     const pieces = livePieces(this.#mounted, settings.shadows);
@@ -1262,7 +1369,9 @@ class Painters {
 
       // Beside the shipped map this carries the root and the corner alone.
       const shadow = makeContactShadow(
-        this.#byRow[this.#rowCount - 1 - row] ?? [],
+        (this.#byRow[this.#rowCount - 1 - row] ?? [])
+          .filter(({ id }) => !without.has(id))
+          .map(({ contact }) => contact),
         SHELF.width,
         SHELF.depth,
         shelfY,
@@ -1287,7 +1396,8 @@ class Painters {
 
     // One mesh for every cover on the shelf, or none: +1 draw and +1 texture
     // whatever the library's size, and no program of its own.
-    const covers = pieces.coverShade ? makeCoverShade(this.#covers, light) : undefined;
+    const shown = this.#covers.filter(({ placement }) => !without.has(placement.entry.book.id));
+    const covers = pieces.coverShade ? makeCoverShade(shown, light) : undefined;
     if (covers !== undefined) this.#add(covers);
   }
 
@@ -1551,11 +1661,14 @@ export function buildBook(
     const main = solid(boards);
     main.scale.set(board, height - cap, depth);
     main.position.set(x, -cap / 2, 0);
+    // The front board, on the cover side, is what swings open in the hand.
+    if (side === 1) main.name = 'front-board';
 
     if (cap > 0) {
       const top = solid(boards);
       top.scale.set(board, cap, depth - cap);
       top.position.set(x, (height - cap) / 2, -cap / 2);
+      if (side === 1) top.name = 'front-board-top';
     }
   }
 
@@ -1579,6 +1692,7 @@ export function buildBook(
   block.scale.set(...blockBox.scale);
   block.position.set(...blockBox.position);
   block.castShadow = castShadows;
+  block.name = PAGE_BLOCK;
 
   /**
    * The printed faces, laid **exactly on** their boards and biased in depth.
@@ -1630,6 +1744,7 @@ export function buildBook(
   coverFace.scale.set(depth, height - cap, 1);
   coverFace.rotation.y = Math.PI / 2;
   coverFace.position.set(thickness / 2, -cap / 2, 0);
+  coverFace.name = 'cover';
 
   const spineFace = printed(spine);
   spineFace.scale.set(thickness, height - cap, 1);

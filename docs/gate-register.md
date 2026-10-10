@@ -3305,7 +3305,8 @@ repo-wide. The row had no observed-red line before this pass; it has one now.
 - **Weakening** — clean; no `EXEMPT`/allowlist construct found in
   `scripts/smoke-render.ts`'s card checks.
 - **Satisfying the letter** — exposed, and the row's own Failure-mode cell in
-  `docs/gates.md` says so directly: "*'the card opened'* was the whole
+  `docs/gates.md` said so directly, in its wording of this date (reworded for
+  the pickup on 2026-10-09; see that entry below): "*'the card opened'* was the whole
   assertion, and it stays true through a card with no reading line, links with
   no accessible name, an announcer that never changes, a sheet that dismisses
   on every short drag, and one Escape that closes the enlarged cover **and**
@@ -3435,6 +3436,8 @@ in total.** ⚠️ **The prediction was right about the row and wrong about the
 size** — 20s a plant is twenty times the 6.5s suite and still nowhere near a cost
 centre. What the row actually cost was reading time, the same as every other row
 in the band.
+
+**2026-10-09 — reworded for picking a book up** ([#413](https://github.com/mephistopheles4/stacks/issues/413)). The card retired, and the row's checks moved onto the held page under spec §3.5's fates, with `location.href` unchanged and §3.6's open spread added; `checkSheet` retired with the sheet. The judging moved into `scripts/lib/pickup-gate.ts`, so every clause is planted in its spec rather than once by hand. **Observed red in the browser** with four faults planted at once and reverted after: the address carrying the book (`location.href changed on pickup`), the pages shown before the fade (`the pages were not hidden by visibility before the cover opened`), and the board resting at 165°, which reddened every one of the six measured spreads on its angle, its tilt to the camera and the left page's projected size. ⚠️ **The second pickup goes through the shelf's hook, not a click**: with a book held, the open spread covers most books' aim points, and the first run's aimed click failed for that reason alone. The click path is the first pickup's. Disposition of the rewording: `gated`.
 
 ---
 
@@ -6394,6 +6397,8 @@ judge's spec, so the plants are asserted on every run and not observed once.
   moves nothing here, and a driver update that raised this one's would not
   either. Disposition `accepted`.
 
+**2026-10-09 — extended to a page with a book held** ([#413](https://github.com/mephistopheles4/stacks/issues/413), spec §5's "held reader"). A fourth page picks a book up through the shelf's hook and waits for it to rest before counting. **Observed red** by building the held book's paper sheets without `withoutShadowFetch`: `275 of 275 steady frame(s) sample the shadow map from up to 2 programs`, 4 draws a frame, the page red alone while the other three stayed as they were. Green, it measures what #371 measured on the prototype: 1 program, 2 draws a frame. Disposition `gated`.
+
 ### G62 — `ignore-expiry`
 
 **Gate:** [`gates/ignored-advisories.test.ts`](../gates/ignored-advisories.test.ts), over [`scripts/lib/ignore-ghsas.ts`](../scripts/lib/ignore-ghsas.ts)
@@ -6496,3 +6501,81 @@ reverted as separate steps, with the file's hash or `git diff` checked after.
   empty list. ⚠️ **It reads two services CI already depends on**: an outage
   reddens the `audit` job, as it already would for `pnpm audit`. Disposition
   `accepted`.
+
+### G64 — `tuner-split`
+
+**Gate:** `checkTuner` in [`scripts/smoke-render.ts`](../scripts/smoke-render.ts), run by `pnpm smoke:render`
+**Date:** 2026-10-09
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+⚠️ **The row number was taken against a re-fetched `origin/main` and every open
+pull request immediately before committing**, for G58's reason.
+
+**Observed-red** by planting a static `import './pickup-tuner.ts'` at the top of
+`boot.ts`, which Vite answered with an `INEFFECTIVE_DYNAMIC_IMPORT` warning and
+nothing else. The row went red alone on the plain page: `a page without ?debug
+fetched tuner bytes, script …/_astro/Shelf.astro_astro_type_script_index_0_lang.BuMubKcJ.js`.
+The plant was written, run and reverted as separate steps, with `git status`
+read after.
+
+- **Weakening** — **exposed.** The marker is one string, `.tp-rotv`, and
+  narrowing what is read (only `script`, say) or what counts as a hit is one
+  edit to this function. Disposition `accepted`.
+- **Satisfying the letter** — **exposed.** The marker is Tweakpane's root rule,
+  so a tuner rebuilt on another library would pass with its bytes on every
+  page. The row is about this tuner, and a library change is an ADR that
+  re-reads it. Disposition `accepted`.
+- **Routing around** — **gated for what a page fetches.** A script or a
+  stylesheet of any name carrying the marker is a red, so renaming the chunk
+  or inlining the CSS into the main stylesheet is caught. ⚠️ **Not covered**:
+  bytes that reach a page by a request type other than `script` or
+  `stylesheet`, such as a `fetch`. Disposition `accepted`.
+- **Vacuous green** — **gated.** The plain page must fetch at least one script
+  or stylesheet, and the `?debug` page must fetch the tuner as both a script
+  and a stylesheet through the same detector, so a detector that sees nothing
+  is a red, not a pass. Disposition `gated`.
+- **Decay** — **gated on a version bump.** If Tweakpane renames its root class,
+  the control goes red, because the `?debug` page no longer matches either.
+  Disposition `gated`.
+
+### G65 — `styled-pane`
+
+**Gate:** `checkTuner` in [`scripts/smoke-render.ts`](../scripts/smoke-render.ts), run by `pnpm smoke:render`; the extractor's anchors and the page's placeholders in [`packages/site/src/shelf/tuner-css.test.ts`](../packages/site/src/shelf/tuner-css.test.ts)
+**Date:** 2026-10-09
+**Triaged at landing**, per this rollout's standing rule and enforced by G41.
+
+**Observed-red**, twice.
+
+1. **On its first run, unplanned.** The core placeholder was named `default`,
+   and Tweakpane looks for `plugin-default`. The pane drew styled, from the
+   `<link>`, and still injected its 24 KB stylesheet, which the CSP refused:
+   `the ?debug page broke its CSP, style-src-elem inline`. That is the failure
+   #376 warned is invisible to a screenshot, caught here because the row counts
+   violations rather than judging the look. The same injection reddened two G60
+   cases, which open `?debug`.
+2. **Planted**: both placeholders removed from `index.astro`. Two violations,
+   one per bundle, and the row red. ⚠️ **The empty-string hash stayed in
+   `style-src`** with no placeholder on the page, so Astro writes it for a
+   reason of its own; the spec's "by construction" did not hold, and this row
+   is what pins the hash.
+
+- **Weakening** — **exposed.** "Styled" is one computed property, the root
+  pane's background, read against the browser's transparent default. A check
+  of a property Tweakpane does not set would pass unstyled. Disposition
+  `accepted`.
+- **Satisfying the letter** — **exposed.** A pane styled by something other
+  than the extracted stylesheet passes, so long as nothing violates the CSP.
+  That is the outcome the row protects, so it is not a gap. Disposition
+  `accepted`.
+- **Routing around** — **gated.** `'unsafe-inline'` is inert while any hash is
+  present, and Tweakpane's own content hashes would pass this row but break on
+  the next version bump. Both were rejected on #376; the row would not catch the
+  second. The extractor test refuses a moved literal, a renamed bundle, a
+  missing placeholder check and an escape, and holds the page's placeholders to
+  the two ids. Disposition `gated`.
+- **Vacuous green** — **gated.** No pane on the `?debug` page is a red, and the
+  violation count is recorded from before the page's first script, so a missed
+  listener cannot read as zero. Disposition `gated`.
+- **Decay** — **gated on a version bump, through the build.** A Tweakpane
+  release that moves its stylesheet or its placeholder rule fails the build at
+  extraction, before this row runs. Disposition `gated`.

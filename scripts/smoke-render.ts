@@ -25,8 +25,19 @@ import { FALLBACK_KEY, RESTORE_WAIT_MS } from '../packages/site/src/shelf/shadow
 import { DEFAULT_SETTINGS } from '../packages/site/src/shelf/shelf-settings.ts';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import puppeteer, { type Browser, type Page } from 'puppeteer-core';
+import puppeteer, { type Browser, type HTTPRequest, type Page } from 'puppeteer-core';
 import { lightingOf, litFailures, type Frame, type Lighting } from './lib/large-library-lit.ts';
+import {
+  phoneFailures,
+  pickupFailures,
+  spreadFailures,
+  viewerFailures,
+  type PhoneRead,
+  type PickupRead,
+  type PutDown,
+  type SpreadRead,
+  type ViewerRead,
+} from './lib/pickup-gate.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { shellCommand } from './lib/run.ts';
 import { samplingHookSource } from './lib/sampling-hook.ts';
@@ -126,10 +137,16 @@ async function main(): Promise<void> {
         errors.push(error instanceof Error ? error.message : String(error));
       });
       page.on('console', (message) => {
-        if (message.type() === 'error') errors.push(message.text());
+        // The viewer's fallback probe refuses held copies on purpose; only
+        // those, by URL, are not page errors.
+        if (message.type() !== 'error') return;
+        if (REFUSED.has(message.location().url ?? '')) return;
+        errors.push(message.text());
       });
       // A bare "404" from the console says nothing useful; name the URL.
-      page.on('requestfailed', (request) => errors.push(`request failed: ${request.url()}`));
+      page.on('requestfailed', (request) => {
+        if (!REFUSED.has(request.url())) errors.push(`request failed: ${request.url()}`);
+      });
       page.on('response', (response) => {
         if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
       });
@@ -161,14 +178,16 @@ async function main(): Promise<void> {
 
       writeFileSync(OUTPUT, await page.screenshot({ type: 'png' }));
 
-      const cardOpened = await clickABook(page);
-      const viewer = await checkCoverViewer(page);
-      const sheet = await checkSheet(page);
+      const pickup = await checkPickup(page);
+      const viewer = await checkViewer(page);
+      const phone = await checkPhone(page);
+      const spread = await checkSpread(browser, origin);
       const lit = await checkLargeLibraryLit(browser, origin, large.origin);
       // Last, and in browser contexts of their own, so the record G60 writes can
       // never reach the page every check above measured.
       const fallback = await checkContextLossFallback(browser, origin);
       const sampling = await checkShadowReaders(browser, origin, large.origin);
+      const tuner = await checkTuner(browser, origin);
 
       report({
         bookCount: Number(bookCount),
@@ -176,12 +195,14 @@ async function main(): Promise<void> {
         stats,
         cost,
         errors,
-        cardOpened,
+        pickup,
         viewer,
-        sheet,
+        phone,
+        spread,
         lit,
         fallback,
         sampling,
+        tuner,
       });
     } finally {
       await browser.close();
@@ -388,351 +409,479 @@ interface Stats {
 type ShelfCost = Pick<ShelfStats, 'textures' | 'geometries' | 'programs' | 'calls' | 'triangles'>;
 
 /**
- * Clicks a real book and checks the detail card opens with its title.
+ * G35 (`enhanced-card`), reworded for picking a book up — the browser half.
  *
- * Aims via the page's own projection of a book rather than a fixed coordinate,
- * so the test keeps hitting a book when the shelf layout changes. Tries several
- * books because any one of them may be occluded from the current angle.
+ * Clicks a real book through its projected point, as a reader would, and
+ * reads what the page did: the held state and the book's pages, the
+ * announcer, the history entry, and `location.href`, which must not move
+ * (spec §3.9). Then a second book, then the put-back control. Every judgement
+ * is `lib/pickup-gate.ts`'s, planted red in its own spec. Polls the shelf's
+ * own read-back rather than sleeping: a pickup takes about 1.3 s, and a put
+ * back then a pickup about 2 s.
  */
-interface CardOpened {
-  readonly title: string;
-  readonly hasImage: boolean;
-  /** Pixels by which the card escapes the viewport, and the image its card. */
-  readonly overflow: { readonly card: number; readonly image: number };
-  /**
-   * G35 — what the enhanced card actually put on the page.
-   *
-   * *"The card opened"* was the whole assertion for the life of this gate, and
-   * it stayed true through a card that renders no reading line, links with no
-   * accessible name and an announcer that never changes. Every field below is
-   * one of the eight acceptance assertions in
-   * `docs/spec/enhanced-card.md` §11, checked against the DOM a browser
-   * actually built rather than against a model in a unit test.
-   */
-  readonly card: CardContents;
-}
+const HELD = `window.__shelf.held()?.phase === 'held'`;
+const NOTHING_HELD = `window.__shelf.held() === undefined && document.querySelectorAll('.held-page').length === 0`;
 
-interface CardContents {
-  /** Renders on every card, and leads with the status word — even for `read`. */
-  readonly reading: string;
-  /** Absent on the 5-of-41 books with none of the five object facts. */
-  readonly hasObjectLine: boolean;
-  /** Never absent: every book has a title, so every book has a search link. */
-  readonly linkCount: number;
-  /** Every `<a>` in the row, as `target|rel|name`. */
-  readonly links: readonly string[];
-  /**
-   * How many of those links drew an actual mark.
-   *
-   * ⚠️ Until the fixture books were given contributor ids, this was **always
-   * zero** and nothing noticed: every fixture book fell back to the one text
-   * search link, so the row's normal state — three provider marks — had never
-   * been rendered by a browser in this project's life. The artwork can now
-   * regress to nothing and be caught.
-   */
-  readonly markCount: number;
-  /** `«Title» by «Author»`, from the live region outside the card. */
-  readonly announced: string;
-  /**
-   * Whether the close control survived a tap-to-swap.
-   *
-   * The one assertion the spec calls *"the one nothing else would notice"*: a
-   * control inside the replaced subtree is destroyed and recreated on every
-   * swap, dropping focus to `<body>` mid-browse.
-   */
-  readonly closeSurvivedSwap: boolean;
-  /** The announcement after swapping to a second book — must have changed. */
-  readonly announcedAfterSwap: string;
+async function until(page: Page, condition: string, timeout = 8000): Promise<boolean> {
+  try {
+    await page.waitForFunction(condition, { timeout, polling: 50 });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * §11's *"Two viewports, not one"*.
+ * Clicks book after book by its projected point until `picked` holds.
  *
- * The sheet and the corner card are one element with two presentations, and the
- * breakpoint is a fact two languages hold — so a gate that only ever runs at
- * 1440×900 proves nothing about the half of the spec that exists below 700px,
- * on the device the interaction model was designed for.
+ * A point the held book's page covers is skipped: the click would land on the
+ * page, not the shelf, and report a missing pickup as a failure of the pickup.
  */
-interface SheetChecked {
-  readonly fullBleed: boolean;
-  readonly withinCap: boolean;
-  readonly grabberVisible: boolean;
-  /** A drag shorter than the dismiss threshold must snap back, not dismiss. */
-  readonly survivedShortDrag: boolean;
+async function clickToPickUp(
+  page: Page,
+  picked: string,
+  skip?: number,
+): Promise<number | undefined> {
+  for (let index = 0; index < 60; index += 1) {
+    if (index === skip) continue;
+    const point = (await page.evaluate(`window.__shelf.projectBook(${String(index)})`)) as
+      { x: number; y: number } | undefined;
+    if (point === undefined) continue;
+    const x = Math.round(point.x);
+    const y = Math.round(point.y);
+    const open = await page.evaluate(
+      `document.elementFromPoint(${String(x)}, ${String(y)}) === document.getElementById('shelf-canvas')`,
+    );
+    if (open !== true) continue;
+    await page.mouse.click(x, y);
+    if (await until(page, picked, 4000)) return index;
+  }
+  return undefined;
 }
 
 /**
- * The enlarged cover — that it opens, that it is actually bigger, and that
- * leaving it leaves *only* it.
- *
- * The last one is the reason this is a browser check rather than a unit test.
- * The viewer is a modal `<dialog>`, so Escape is the platform's, and the page's
- * own Escape handler — which dismisses the card — is still listening on the
- * document. One keystroke closing both surfaces is invisible to every other
- * kind of test and immediately obvious here.
+ * Watches every held page from the moment it is added: each must arrive hidden
+ * by `visibility`, and no page may ever be visible while its opacity is still 0,
+ * which is what text showing through the closing cover looks like in the DOM.
+ * Watched rather than sampled once after the click, because on a slow runner the
+ * one sample could land after the fade and prove nothing.
  */
-interface CoverViewerChecked {
-  readonly opened: boolean;
-  /** Enlarged width ÷ thumbnail width. Under 2 is not "seeing it closer". */
-  readonly enlargedBy: number;
-  readonly escapeClosedViewer: boolean;
-  /** ⚠️ The card must survive that same Escape. */
-  readonly cardSurvivedEscape: boolean;
-  /**
-   * The held copy `library.json` names for this book's cover, or `undefined`
-   * for a book with none, and whether the enlarged view showed it (spec §3.4,
-   * #377). Read from `library.json` rather than from the card, so a card that
-   * offered the wrong file cannot vouch for itself (round 1, integrity F6).
-   */
-  readonly held: string | undefined;
-  readonly showedHeld: boolean;
-  /**
-   * A book with no held copy, walked to as well, and whether its enlarged view
-   * showed the card's own file — the viewer's other path, which a walk that
-   * stopped at the first held copy would never reach (round 1, integrity F8).
-   */
-  readonly withoutHeld: { readonly showedOwn: boolean } | undefined;
+const WATCH_PAGES = `(() => {
+  const seen = [];
+  window.__pageVisibility = seen;
+  const record = (page, event) => seen.push({ event, visibility: page.style.visibility, opacity: page.style.opacity });
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node instanceof HTMLElement && node.classList.contains('held-page')) record(node, 'added');
+      }
+      const target = mutation.target;
+      if (mutation.type === 'attributes' && target instanceof HTMLElement && target.classList.contains('held-page')) record(target, 'style');
+    }
+  });
+  observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] });
+})()`;
+
+const PAGES_HIDDEN = `(() => {
+  const seen = window.__pageVisibility ?? [];
+  const added = seen.filter((entry) => entry.event === 'added');
+  return added.length >= 2 &&
+    added.every((entry) => entry.visibility === 'hidden') &&
+    !seen.some((entry) => entry.visibility === 'visible' && Number(entry.opacity) === 0);
+})()`;
+const READ_PAGE = `(() => {
+  const right = document.querySelector('.held-page-right');
+  const left = document.querySelector('.held-page-left');
+  const pages = [...document.querySelectorAll('.held-page')];
+  const links = right ? [...right.querySelectorAll('.card-links a')] : [];
+  const putBack = right?.querySelector('.held-put-back');
+  return {
+    held: window.__shelf.held()?.title ?? '',
+    pageTitle: left?.querySelector('.held-title')?.textContent ?? '',
+    reading: right?.querySelector('.reading')?.textContent ?? '',
+    hasObjectLine: Boolean(right?.querySelector('.object')),
+    linkCount: links.length,
+    links: links.map((a) => [a.target, a.rel, a.title || a.textContent || ''].join('|')),
+    markCount: links.filter((a) => a.querySelector('svg path')).length,
+    announced: document.getElementById('pickup-status')?.textContent ?? '',
+    putBack: putBack ? { tag: putBack.tagName, name: (putBack.getAttribute('aria-label') || putBack.textContent || '').trim() } : undefined,
+    visibleAtRest: pages.length === 2 && pages.every((page) => page.style.visibility === 'visible'),
+    historyHeld: Boolean(history.state && history.state.pickup),
+    pagesInView: pages.length === 2 && pages.every((page) => {
+      const box = page.getBoundingClientRect();
+      return box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1;
+    }),
+  };
+})()`;
+
+async function checkPickup(page: Page): Promise<PickupRead | undefined> {
+  const href = (await page.evaluate('location.href')) as string;
+  const sameHref = async (): Promise<boolean> => (await page.evaluate('location.href')) === href;
+
+  await page.evaluate(WATCH_PAGES);
+  const first = await clickToPickUp(page, 'window.__shelf.held() !== undefined');
+  if (first === undefined) return undefined;
+  if (!(await until(page, HELD))) return undefined;
+  const hiddenBeforeFade = (await page.evaluate(PAGES_HIDDEN)) === true;
+  // The Thoughts fetch, when the book has some, lands after the click.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const read = (await page.evaluate(READ_PAGE)) as Omit<
+    PickupRead,
+    | 'hiddenBeforeFade'
+    | 'hrefUnchanged'
+    | 'focusUnmoved'
+    | 'focusCaught'
+    | 'thoughtsShown'
+    | 'second'
+    | 'afterPutBack'
+    | 'afterEscape'
+    | 'afterBack'
+  >;
+  const hrefUnchanged = await sameHref();
+
+  // The second book by the shelf's hook rather than by aiming: with a book held,
+  // the open spread covers most books' aim points, and a click on the held book
+  // is rightly no pickup. The click path is the first pickup's, above.
+  await page.evaluate(`window.__shelf.pickUp(${String(first === 0 ? 1 : 0)})`);
+  // The first title goes in as an argument, never spliced into the page's source.
+  await page
+    .waitForFunction(
+      (firstTitle: string) => {
+        const shelf = (
+          window as unknown as {
+            __shelf: { held(): { phase: string; title: string } | undefined };
+          }
+        ).__shelf;
+        const held = shelf.held();
+        return held?.phase === 'held' && held.title !== firstTitle;
+      },
+      { timeout: 8000, polling: 50 },
+      read.held,
+    )
+    .catch(() => undefined);
+  const second = (await page.evaluate(`(() => ({
+    held: window.__shelf.held()?.title ?? '',
+    announced: document.getElementById('pickup-status')?.textContent ?? '',
+    putBack: Boolean(document.querySelector('.held-page-right .held-put-back')),
+    pages: document.querySelectorAll('.held-page').length,
+  }))()`)) as PickupRead['second'];
+
+  await page.click('.held-page-right .held-put-back');
+  const afterPutBack = await putDown(page, sameHref);
+
+  // The other two ways down, each on a fresh pickup through the shelf's hook.
+  // The hook, not a click, so focus is read across the pickup alone: a click on
+  // the canvas moves focus by the browser's own rule, and that is not the
+  // pickup's doing (spec §3.4).
+  await page.evaluate('window.__focusBefore = document.activeElement');
+  await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
+  await until(page, HELD);
+  const focusUnmoved = (await page.evaluate(
+    'document.activeElement === window.__focusBefore',
+  )) as boolean;
+  // Then focus a link on the page, as a keyboard reader would, and leave by
+  // Escape: the page hides under it, so focus must be caught on the canvas.
+  await page.evaluate(`document.querySelector('.held-page-right .card-links a')?.focus()`);
+  await page.keyboard.press('Escape');
+  const afterEscape = await putDown(page, sameHref);
+  const focusCaught = (await page.evaluate(
+    `document.activeElement === document.getElementById('shelf-canvas')`,
+  )) as boolean;
+
+  await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
+  await until(page, HELD);
+  await page.evaluate('history.back()');
+  const afterBack = await putDown(page, sameHref);
+
+  const thoughtsShown = await checkThoughtsShown(page);
+
+  return {
+    ...read,
+    hiddenBeforeFade,
+    hrefUnchanged,
+    focusUnmoved,
+    focusCaught,
+    thoughtsShown,
+    second,
+    afterPutBack,
+    afterEscape,
+    afterBack,
+  };
 }
 
-async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefined> {
-  // Walks the shelf for books with a cover, since only some fixture books have
-  // one and the card left open by the swap above may not be one of them. It
-  // wants two: one whose cover has a held copy, which only covers over 512px
-  // get, and one whose cover has none, so both of the viewer's paths are seen.
-  // Keyed by each book's `cover`, so the card's own image must be the shelf
-  // copy for the walk to find its book at all: a card loading its held copy
-  // instead finds none, and fails as "no book on the shelf has a held copy".
+/**
+ * Picks up a book `library.json` flags with Thoughts and reads whether its page
+ * showed them: the slot unhidden, holding at least one paragraph after its
+ * label. `undefined` when the walk found no flagged book to pick up. Matched by
+ * title, and a title two books share is skipped rather than guessed at.
+ */
+async function checkThoughtsShown(page: Page): Promise<boolean | undefined> {
   const library = (await page.evaluate(
     `fetch('/library.json').then((response) => response.json())`,
-  )) as { books: { cover?: string; heldCover?: string }[] };
-  const heldFor = new Map(
+  )) as { books: { title: string; thoughts?: boolean }[] };
+  const count = new Map<string, number>();
+  for (const book of library.books) count.set(book.title, (count.get(book.title) ?? 0) + 1);
+  const flagged = new Set(
+    library.books
+      .filter((b) => b.thoughts === true && count.get(b.title) === 1)
+      .map((b) => b.title),
+  );
+
+  const books = Number(await page.evaluate('window.__shelf.bookCount'));
+  for (let index = 0; index < books; index += 1) {
+    await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
+    if (!(await until(page, HELD))) continue;
+    const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
+    if (title === undefined || !flagged.has(title)) {
+      await putBackAndSettle(page);
+      continue;
+    }
+    const shown = await until(
+      page,
+      `(() => { const slot = document.querySelector('.held-page-right .held-thoughts'); return Boolean(slot) && !slot.hidden && slot.querySelectorAll('p').length >= 2; })()`,
+      3000,
+    );
+    await putBackAndSettle(page);
+    return shown;
+  }
+  return undefined;
+}
+
+/** Waits for the book to be back in its slot, then reads what the page says. */
+async function putDown(page: Page, sameHref: () => Promise<boolean>): Promise<PutDown> {
+  await until(page, NOTHING_HELD);
+  const read = (await page.evaluate(`(() => ({
+    held: window.__shelf.held() !== undefined,
+    announced: document.getElementById('pickup-status')?.textContent ?? '',
+    historyHeld: Boolean(history.state && history.state.pickup),
+    pages: document.querySelectorAll('.held-page').length,
+  }))()`)) as Omit<PutDown, 'hrefUnchanged'>;
+  return { ...read, hrefUnchanged: await sameHref() };
+}
+/**
+ * The enlarged cover, opened from the held page — that it opens, that it is a
+ * closer look, that it shows the held copy, and that leaving it leaves *only*
+ * it: one Escape closes the viewer and the book stays in hand (§3.5, check 9).
+ * Books are picked up through the shelf's hook here; the click path is
+ * `checkPickup`'s.
+ */
+async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
+  // It wants two books: one whose cover has a held copy, which only covers over
+  // 512px get, and one whose cover has none, so both of the viewer's paths are
+  // seen. What each should show is read from `library.json` by the held book's
+  // title, never from the page, which offers the viewer nothing it can read
+  // back; a title two books share is skipped rather than guessed at.
+  const library = (await page.evaluate(
+    `fetch('/library.json').then((response) => response.json())`,
+  )) as { books: { title: string; cover?: string; heldCover?: string }[] };
+  const titles = new Map<string, number>();
+  for (const book of library.books) titles.set(book.title, (titles.get(book.title) ?? 0) + 1);
+  const coverFor = new Map(
     library.books.flatMap((book) =>
-      book.cover === undefined
+      book.cover === undefined || titles.get(book.title) !== 1
         ? []
-        : [[`/${book.cover}`, book.heldCover === undefined ? undefined : `/${book.heldCover}`]],
+        : [
+            [
+              book.title,
+              {
+                own: `/${book.cover}`,
+                held: book.heldCover === undefined ? undefined : `/${book.heldCover}`,
+              },
+            ],
+          ],
     ),
   );
 
-  let withHeld: CoverViewerChecked | undefined;
-  let withoutHeld: CoverViewerChecked | undefined;
-  for (let index = 0; index < 60; index += 1) {
+  type Opened = Omit<ViewerRead, 'fellBack' | 'pathInPage'>;
+  let withHeld: Opened | undefined;
+  let withoutHeld: Opened | undefined;
+  let fellBack = false;
+  let pathInPage = false;
+  const books = Number(await page.evaluate('window.__shelf.bookCount'));
+  for (let index = 0; index < books; index += 1) {
     if (withHeld !== undefined && withoutHeld !== undefined) break;
-    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
-      { x: number; y: number } | undefined;
-    if (point === undefined) continue;
-
-    await page.mouse.click(Math.round(point.x), Math.round(point.y));
-    await new Promise((resolve) => setTimeout(resolve, 120));
-
-    const thumbnail = (await page.evaluate(`(() => {
-      const button = document.querySelector('#book-card-body .card-cover');
-      const image = button?.querySelector('img');
-      if (!button || !image) return undefined;
-      const box = button.getBoundingClientRect();
-      return { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2), width: box.width, src: image.getAttribute('src') ?? '' };
-    })()`)) as { x: number; y: number; width: number; src: string } | undefined;
-    if (thumbnail === undefined) continue;
-    const held = heldFor.get(thumbnail.src);
-    if (held === undefined ? withoutHeld !== undefined : withHeld !== undefined) continue;
-
-    await page.mouse.click(thumbnail.x, thumbnail.y);
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
-    const open = (await page.evaluate(`(() => {
-      const dialog = document.getElementById('cover-viewer');
-      const image = document.getElementById('cover-viewer-image');
-      return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0, src: image && image.src ? new URL(image.src).pathname : '' };
-    })()`)) as { open: boolean; width: number; src: string };
-
-    await page.keyboard.press('Escape');
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
-    const after = (await page.evaluate(`(() => {
-      const dialog = document.getElementById('cover-viewer');
-      const card = document.getElementById('book-card');
-      return { viewerOpen: Boolean(dialog?.open), cardOpen: Boolean(card) && !card.hidden };
-    })()`)) as { viewerOpen: boolean; cardOpen: boolean };
-
-    const checked: CoverViewerChecked = {
-      opened: open.open,
-      enlargedBy: thumbnail.width === 0 ? 0 : open.width / thumbnail.width,
-      escapeClosedViewer: !after.viewerOpen,
-      cardSurvivedEscape: after.cardOpen,
-      held,
-      showedHeld: held !== undefined && open.src === held,
-      withoutHeld: held === undefined ? { showedOwn: open.src === thumbnail.src } : undefined,
-    };
-    if (held === undefined) withoutHeld = checked;
-    else withHeld = checked;
+    await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
+    if (!(await until(page, HELD))) continue;
+    const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
+    const expected = title === undefined ? undefined : coverFor.get(title);
+    const hasControl = (await page.evaluate(
+      `document.querySelector('.held-page-right .card-cover') !== null`,
+    )) as boolean;
+    const wanted =
+      expected !== undefined &&
+      (expected.held === undefined ? withoutHeld === undefined : withHeld === undefined);
+    if (hasControl && wanted) {
+      // No attribute anywhere on the pages may carry a cover path (#416).
+      pathInPage ||=
+        (await page.evaluate(`[...document.querySelectorAll('.held-page, .held-page *')]
+        .some((node) => [...node.attributes].some((attribute) => /covers\\//.test(attribute.value)))`)) as boolean;
+      if (expected.held !== undefined) fellBack = await opensOwnWhenHeldFails(page, expected.own);
+      await page.click('.held-page-right .card-cover');
+      await until(page, `document.getElementById('cover-viewer')?.open === true`, 3000);
+      await until(page, `document.getElementById('cover-viewer-image')?.complete === true`, 3000);
+      const open = (await page.evaluate(`(() => {
+        const dialog = document.getElementById('cover-viewer');
+        const image = document.getElementById('cover-viewer-image');
+        return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0, src: image && image.src ? new URL(image.src).pathname : '' };
+      })()`)) as { open: boolean; width: number; src: string };
+      await page.keyboard.press('Escape');
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      const after = (await page.evaluate(`(() => ({
+        viewerOpen: Boolean(document.getElementById('cover-viewer')?.open),
+        held: window.__shelf.held() !== undefined,
+      }))()`)) as { viewerOpen: boolean; held: boolean };
+      const held = expected.held;
+      const checked: Opened = {
+        opened: open.open,
+        width: open.width,
+        escapeClosedViewer: !after.viewerOpen,
+        heldAfterEscape: after.held,
+        held,
+        showedHeld: held !== undefined && open.src === held,
+        withoutHeld: held === undefined ? { showedOwn: open.src === expected.own } : undefined,
+      };
+      if (held === undefined) withoutHeld = checked;
+      else withHeld = checked;
+    }
+    await putBackAndSettle(page);
   }
   const primary = withHeld ?? withoutHeld;
-  return primary === undefined ? undefined : { ...primary, withoutHeld: withoutHeld?.withoutHeld };
+  return primary === undefined
+    ? undefined
+    : { ...primary, withoutHeld: withoutHeld?.withoutHeld, fellBack, pathInPage };
 }
 
-async function clickABook(page: Page): Promise<CardOpened | undefined> {
-  // Keep looking until a card with a *cover* turns up. Some fixture books have
-  // none, and a card with no image cannot exercise the image-overflow check —
-  // which is the check that would have caught the cover spilling across the
-  // viewport in the first place.
-  let fallback: CardOpened | undefined;
+/** Held-copy URLs the fallback probe refused on purpose, kept out of the page errors. */
+const REFUSED = new Set<string>();
 
-  // Covers are assigned to fixture books at random and only some are
-  // full-resolution, so this walks the whole shelf rather than the first few.
-  for (let index = 0; index < 60; index += 1) {
-    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
-      { x: number; y: number } | undefined;
-    if (point === undefined) continue;
-
-    await page.mouse.click(Math.round(point.x), Math.round(point.y));
-    await new Promise((resolve) => setTimeout(resolve, 120));
-
-    const opened = (await page.evaluate(`(() => {
-      const card = document.getElementById('book-card');
-      if (!card || card.hidden) return undefined;
-      const box = card.getBoundingClientRect();
-      const img = card.querySelector('img');
-      const imgBox = img ? img.getBoundingClientRect() : null;
-      const status = document.getElementById('book-card-status');
-      const dismiss = document.getElementById('book-card-dismiss');
-      const links = [...card.querySelectorAll('.card-links a')];
-      return {
-        title: card.querySelector('h2')?.textContent ?? '',
-        // A thumbnail-sized cover fits the card even completely unstyled, so
-        // only a full-resolution one actually exercises the overflow check.
-        hasImage: Boolean(img) && img.naturalWidth >= 800,
-        overflow: {
-          card: Math.round(Math.max(0, box.right - innerWidth, box.bottom - innerHeight, -box.left, -box.top)),
-          image: imgBox ? Math.round(Math.max(0, imgBox.right - box.right, imgBox.bottom - box.bottom)) : 0,
+/**
+ * Opens the enlarged cover with every request for a held copy refused, and
+ * reads whether it fell back to the shelf copy. Request interception turns the
+ * page's cache off, so the copy the pickup already loaded cannot answer in its
+ * place; it is switched back off before the ordinary open that follows.
+ */
+async function opensOwnWhenHeldFails(page: Page, own: string): Promise<boolean> {
+  const refuse = (request: HTTPRequest): void => {
+    if (new URL(request.url()).pathname.startsWith('/held-covers/')) {
+      REFUSED.add(request.url());
+      void request.abort();
+    } else {
+      void request.continue();
+    }
+  };
+  await page.setRequestInterception(true);
+  page.on('request', refuse);
+  try {
+    await page.click('.held-page-right .card-cover');
+    // The path goes in as an argument, never spliced into the page's source.
+    const shown = await page
+      .waitForFunction(
+        (path: string) => {
+          const image = document.getElementById('cover-viewer-image');
+          return (
+            image instanceof HTMLImageElement &&
+            image.complete &&
+            image.naturalWidth > 0 &&
+            new URL(image.src).pathname === path
+          );
         },
-        card: {
-          reading: card.querySelector('.reading')?.textContent ?? '',
-          hasObjectLine: Boolean(card.querySelector('.object')),
-          linkCount: links.length,
-          links: links.map((a) => [a.target, a.rel, a.title || a.textContent || ''].join('|')),
-          markCount: links.filter((a) => a.querySelector('svg path')).length,
-          announced: status ? status.textContent : '',
-          // Filled in by the swap below; the shape has to exist here so one
-          // evaluate can build the whole record.
-          closeSurvivedSwap: Boolean(dismiss) && !document.getElementById('book-card-body').contains(dismiss),
-          announcedAfterSwap: '',
-        },
-      };
-    })()`)) as CardOpened | undefined;
-
-    if (opened === undefined || opened.title.length === 0) continue;
-    const withSwap = { ...opened, card: { ...opened.card, ...(await swapToAnother(page, index)) } };
-    if (withSwap.hasImage) return withSwap;
-    fallback ??= withSwap;
+        { timeout: 3000, polling: 50 },
+        own,
+      )
+      .then(
+        () => true,
+        () => false,
+      );
+    await page.keyboard.press('Escape');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    return shown;
+  } finally {
+    page.off('request', refuse);
+    await page.setRequestInterception(false);
   }
-  return fallback;
+}
+
+async function putBackAndSettle(page: Page): Promise<void> {
+  await page.evaluate('window.__shelf.putBack()');
+  await until(page, NOTHING_HELD);
 }
 
 /**
- * Taps a *different* book and reports what survived.
- *
- * Two of §11's assertions only exist across a swap, which is the primary mobile
- * browse gesture and the one nothing else exercises: the announcement must
- * change, and the close control must still be the same element — it lives
- * outside the subtree `showCard` replaces precisely so that focus is not dropped
- * to `<body>` mid-browse.
+ * The held page at 375×812, the presentation a phone sees: the right-hand page
+ * alone, with the title leading it and the put-back control on screen, since
+ * the page fills the screen and leaves no empty space to tap.
  */
-async function swapToAnother(
-  page: Page,
-  openedIndex: number,
-): Promise<Pick<CardContents, 'closeSurvivedSwap' | 'announcedAfterSwap'>> {
-  await page.evaluate(`window.__smokeCloseControl = document.getElementById('book-card-dismiss')`);
-
-  for (let index = 0; index < 60; index += 1) {
-    if (index === openedIndex) continue;
-    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
-      { x: number; y: number } | undefined;
-    if (point === undefined) continue;
-
-    await page.mouse.click(Math.round(point.x), Math.round(point.y));
-    await new Promise((resolve) => setTimeout(resolve, 120));
-
-    const result = (await page.evaluate(`(() => {
-      const card = document.getElementById('book-card');
-      if (!card || card.hidden) return undefined;
-      const dismiss = document.getElementById('book-card-dismiss');
-      return {
-        closeSurvivedSwap: dismiss !== null && dismiss === window.__smokeCloseControl,
-        announcedAfterSwap: document.getElementById('book-card-status')?.textContent ?? '',
-      };
-    })()`)) as Pick<CardContents, 'closeSurvivedSwap' | 'announcedAfterSwap'> | undefined;
-
-    if (result !== undefined) return result;
-  }
-
-  // No second book was reachable from this angle. Reported as unswapped rather
-  // than as a pass: the assertions above have not run.
-  return { closeSurvivedSwap: false, announcedAfterSwap: '' };
-}
-
-/**
- * The same card at 375×812, which is the presentation the interaction model was
- * designed for.
- *
- * Runs after the desktop pass so the screenshot and every renderer counter above
- * still describe the shelf at its documented size. The card is opened by calling
- * the page's own handler rather than by aiming at a book: the shelf re-lays out
- * at this width and a raycast that misses would report a missing sheet as a
- * failure of the sheet.
- */
-async function checkSheet(page: Page): Promise<SheetChecked | undefined> {
+async function checkPhone(page: Page): Promise<PhoneRead | undefined> {
   await page.setViewport({ width: 375, height: 812 });
-  await new Promise((resolve) => setTimeout(resolve, 400));
-
-  const opened = await clickAnyBook(page);
-  if (!opened) return undefined;
-
-  return (await page.evaluate(`(() => {
-    const card = document.getElementById('book-card');
-    const grab = document.querySelector('.card-grabber');
-    const box = card.getBoundingClientRect();
-    const threshold = Math.min(box.height * 0.3, 80);
-
-    /**
-     * A drag shorter than the threshold must snap back.
-     *
-     * This is the assertion that would have caught the sheet dismissing on every
-     * short drag: \`pointerup\` correctly declined, then reset the distance, and
-     * the synthesised \`click\` read that as a tap and dismissed anyway. A tap
-     * was unaffected, so nothing else noticed.
-     */
-    const control = document.getElementById('book-card-dismiss');
-    const at = (type, y) => control.dispatchEvent(new PointerEvent(type, {
-      clientY: y, bubbles: true, pointerId: 7, isPrimary: true, button: 0,
-    }));
-    const short = Math.max(2, Math.round(threshold / 3));
-    at('pointerdown', 100);
-    at('pointermove', 100 + short);
-    at('pointerup', 100 + short);
-    control.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
+  // The pickup frames for the camera it finds, so wait until the shelf has
+  // resized to the upright viewport: a slow runner had not after a fixed 400 ms.
+  await until(
+    page,
+    '(() => { const s = window.__shelf.stats(); return s.bufferWidth < s.bufferHeight * 0.9; })()',
+  );
+  await page.evaluate('window.__shelf.pickUp(0)');
+  if (!(await until(page, HELD))) return undefined;
+  const read = (await page.evaluate(`(() => {
+    const right = document.querySelector('.held-page-right');
+    const control = right?.querySelector('.held-put-back');
+    const inView = (box) => box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1;
     return {
-      fullBleed: Math.round(box.left) === 0 && Math.round(box.width) === innerWidth,
-      withinCap: box.height <= innerHeight * 0.4 + 1,
-      grabberVisible: Boolean(grab) && getComputedStyle(grab).display !== 'none',
-      survivedShortDrag: !card.hidden,
+      pageInView: right ? inView(right.getBoundingClientRect()) : false,
+      titleLeads: right?.firstElementChild?.classList.contains('held-title') ?? false,
+      putBackInView: control ? inView(control.getBoundingClientRect()) : false,
     };
-  })()`)) as SheetChecked;
+  })()`)) as PhoneRead;
+  await putBackAndSettle(page);
+  return read;
 }
 
-/** Opens whichever book this viewport can actually hit. */
-async function clickAnyBook(page: Page): Promise<boolean> {
-  for (let index = 0; index < 60; index += 1) {
-    const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
-      { x: number; y: number } | undefined;
-    if (point === undefined) continue;
+/**
+ * §3.6, the open spread at rest — computed from the scene through
+ * `window.__shelf.spread()`, never from pixels, at the 1280×800 desktop
+ * viewport (owner decision, from chat, 2026-10-09). Several books, so a
+ * hardback's case and a paperback's card are both measured.
+ */
+const SPREAD_VIEWPORT = { width: 1280, height: 800 };
+const SPREAD_BOOKS = [0, 6, 12, 18, 24, 30];
 
-    await page.mouse.click(Math.round(point.x), Math.round(point.y));
-    await new Promise((resolve) => setTimeout(resolve, 120));
+interface SpreadChecked {
+  readonly lines: readonly string[];
+  readonly failures: readonly string[];
+}
 
-    const open = await page.evaluate(`!document.getElementById('book-card').hidden`);
-    if (open === true) return true;
+async function checkSpread(browser: Browser, origin: string): Promise<SpreadChecked> {
+  const context = await browser.createBrowserContext();
+  const lines: string[] = [];
+  const failures: string[] = [];
+  try {
+    const page = await context.newPage();
+    await page.setViewport(SPREAD_VIEWPORT);
+    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+    for (const index of SPREAD_BOOKS) {
+      await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
+      if (!(await until(page, HELD))) {
+        failures.push(`open spread: book ${String(index)} never came to rest`);
+        continue;
+      }
+      const title = (await page.evaluate('window.__shelf.held().title')) as string;
+      const read = (await page.evaluate('window.__shelf.spread() ?? null')) as SpreadRead | null;
+      const found = spreadFailures(read ?? undefined, title);
+      failures.push(...found.map((failure) => `open spread: ${failure}`));
+      lines.push(
+        read === null
+          ? `${title.padEnd(34)} NOT MEASURED`
+          : `${title.slice(0, 33).padEnd(34)} board ${read.boardAngle.toFixed(2)}°  left ` +
+              `${read.left.width.toFixed(1)}×${read.left.height.toFixed(1)} against ` +
+              `${read.block.width.toFixed(1)}×${read.block.height.toFixed(1)}  gutter ` +
+              `${read.gutterGap.toFixed(2)}px  ${found.length === 0 ? 'ok' : 'FAILED'}`,
+      );
+      await putBackAndSettle(page);
+    }
+  } finally {
+    await context.close();
   }
-  return false;
+  return { lines, failures };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1059,11 +1208,14 @@ async function noRestore(page: Page, origin: string): Promise<string> {
       `${stats.nonBackgroundPct.toFixed(1)}% not background`,
   );
   const loops = await oneLoop(page, 'on the new canvas');
-  must(await clickAnyBook(page), 'no book on the new canvas opens the card');
+  must(
+    (await clickToPickUp(page, 'window.__shelf.held() !== undefined')) !== undefined,
+    'no book on the new canvas can be picked up',
+  );
 
   return (
     `new canvas after ${String(waited)}ms, ${stats.size}, ${String(stats.distinctColours)} ` +
-    `colours, ${loops}, card opens`
+    `colours, ${loops}, a book picks up`
   );
 }
 
@@ -1440,6 +1592,12 @@ interface SamplingPage {
   /** The library it serves, whose shelved books the page must report. */
   readonly library: string;
   readonly minRows: number;
+  /**
+   * Picks a book up and holds it before the count: the held book's new parts
+   * are lit materials, and every one must compile with no shadow fetch (spec §5,
+   * "held reader"). #371 measured 1 program and 2 draws a frame with a book held.
+   */
+  readonly hold?: boolean;
 }
 
 const SAMPLING_PAGES: readonly SamplingPage[] = [
@@ -1456,6 +1614,14 @@ const SAMPLING_PAGES: readonly SamplingPage[] = [
     role: 'gate',
     library: LARGE_LIBRARY,
     minRows: MIN_SAMPLING_ROWS,
+  },
+  {
+    name: 'a book held, 50 books',
+    url: (main) => `${main}/`,
+    role: 'gate',
+    library: LIBRARY,
+    minRows: 0,
+    hold: true,
   },
   {
     // The permanent planted defect: every book reads the map again, through
@@ -1496,7 +1662,7 @@ async function checkShadowReaders(
   const failures: string[] = [];
 
   for (const page of SAMPLING_PAGES) {
-    const { read, errors } = await measureSampling(browser, page.url(main, large));
+    const { read, errors } = await measureSampling(browser, page.url(main, large), page.hold);
     const run = {
       snapshot: read.snapshot ?? undefined,
       bookCount: read.bookCount,
@@ -1550,6 +1716,7 @@ async function checkShadowReaders(
 async function measureSampling(
   browser: Browser,
   url: string,
+  hold = false,
 ): Promise<{ read: SamplingRead; errors: string[] }> {
   const context = await browser.createBrowserContext();
   const errors: string[] = [];
@@ -1583,6 +1750,10 @@ async function measureSampling(
     // the wait, and a page that never idles is judged on the frames the settle below
     // still requires.
     await page.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => undefined);
+    if (hold) {
+      await page.evaluate('window.__shelf.pickUp(3)');
+      if (!(await until(page, HELD))) errors.push('the book held for this page never came to rest');
+    }
     try {
       await page.waitForFunction(
         `(window.__samplingHook?.settledFor() ?? 0) >= ${String(MIN_STEADY_FRAMES)}`,
@@ -1597,72 +1768,175 @@ async function measureSampling(
   }
 }
 
+/* -------------------------------------------------------------------------- */
+
 /**
- * G35 — the enhanced card, against `docs/spec/enhanced-card.md` §11.
+ * The pickup tuner's two rows: **tuner split** and **styled pane**.
  *
- * Six of the eight acceptance assertions live here because they need a real
- * browser: the other two (`published` rendering, the collapse rules) are pure
- * functions and are asserted in `packages/site/src/shelf/card.test.ts`, where
- * they cost nothing.
+ * Both failures were measured silent on #376. A plain CSS import in the lazy
+ * module was hoisted onto every page, 5.2 KB gzip for every visitor, and a pane
+ * whose injected `<style>` the CSP refused drew unstyled and threw nothing. So
+ * each is read off a real page of the built site, under the CSP it ships with:
  *
- * See docs/gates.md, row G35 (enhanced-card).
+ * - **split**: a page without `?debug` fetches no script and no stylesheet that
+ *   carries the tuner's root rule, and the same page with `?debug` fetches both
+ *   — the control, without which "nothing found" could mean a detector that sees
+ *   nothing.
+ * - **styled**: on the `?debug` page the root pane is drawn with Tweakpane's own
+ *   background, not a browser default; no `securitypolicyviolation` fired; and
+ *   `style-src` carries the empty string's hash, which the two placeholders in
+ *   `index.astro` depend on (spec §3.7).
  */
-function cardFailures(card: CardContents): string[] {
+interface TunerChecked {
+  readonly lines: readonly string[];
+  readonly failures: readonly string[];
+}
+
+/**
+ * Tweakpane's root-pane class. It is in the library's JavaScript, as part of
+ * the stylesheet literal it carries, and in the stylesheet extracted from it,
+ * so one string finds both halves of the tuner.
+ */
+const TUNER_MARKER = '.tp-rotv';
+
+/** SHA-256 of the empty string, the hash the empty placeholders need. */
+const EMPTY_STRING_HASH = "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='";
+
+/** Recorded from before the page's first script, so no violation is missed. */
+const RECORD_VIOLATIONS = `(() => {
+  window.__cspViolations = [];
+  document.addEventListener('securitypolicyviolation', (event) => {
+    window.__cspViolations.push(event.violatedDirective + ' ' + (event.blockedURI || 'inline'));
+  });
+})()`;
+
+interface Fetched {
+  readonly url: string;
+  readonly kind: 'script' | 'stylesheet';
+  readonly tuner: boolean;
+}
+
+async function checkTuner(browser: Browser, origin: string): Promise<TunerChecked> {
+  const lines: string[] = [];
   const failures: string[] = [];
 
-  // §11.1 and §11.2. Every book renders this line, and `read` is no longer
-  // suppressed as the default — 19 of 41 real books are read with no dates and
-  // no rating, and would otherwise render an empty group.
-  if (card.reading.length === 0) {
-    failures.push('the card renders no reading line — it must render on every book');
-  }
+  const plain = await visitForTuner(browser, `${origin}/`);
+  const debug = await visitForTuner(browser, `${origin}/?debug`);
 
-  // §11.3 and the fallback in §11.4: the row never vanishes, because every book
-  // has a title and therefore at least a search link.
-  if (card.linkCount === 0) {
-    failures.push('the card renders no provider links at all — the row always renders');
-  }
+  const tunerOn = (page: TunerVisit, kind: Fetched['kind']): number =>
+    page.fetched.filter((asset) => asset.kind === kind && asset.tuner).length;
 
-  // §11.5. Named, and safe to open.
-  for (const link of card.links) {
-    const [target, rel, name] = link.split('|');
-    if (target !== '_blank' || rel !== 'noopener noreferrer') {
-      failures.push(`a card link opens unsafely: target="${target ?? ''}" rel="${rel ?? ''}"`);
-    }
-    if ((name ?? '').length === 0) {
-      failures.push('a card link has no accessible name — an icon-only link with none is unusable');
-    }
+  // Split: the plain page carries none of it.
+  const leaked = plain.fetched.filter((asset) => asset.tuner);
+  lines.push(
+    `tuner split    / fetched ${String(plain.fetched.length)} scripts and stylesheets, ` +
+      `${String(leaked.length)} carrying the tuner   ?debug fetched the tuner in ` +
+      `${String(tunerOn(debug, 'script'))} script(s) and ${String(tunerOn(debug, 'stylesheet'))} stylesheet(s)`,
+  );
+  if (plain.fetched.length === 0) {
+    failures.push('tuner split: the plain page fetched no scripts or stylesheets at all');
   }
-
-  // The row's normal state. A book with identifiers renders marks, and a mark
-  // that fails to draw leaves an icon-only link with nothing in it.
-  if (card.linkCount > 1 && card.markCount === 0) {
+  for (const asset of leaked) {
     failures.push(
-      `${String(card.linkCount)} provider links and not one drew a mark — the artwork is ` +
-        'missing or failed to parse, which leaves an icon-only link with no icon',
+      `tuner split: a page without ?debug fetched tuner bytes, ${asset.kind} ${asset.url}`,
+    );
+  }
+  if (tunerOn(debug, 'script') === 0 || tunerOn(debug, 'stylesheet') === 0) {
+    failures.push(
+      'tuner split (control): the ?debug page did not fetch the tuner as both a script and a ' +
+        'stylesheet, so "none on the plain page" proves nothing',
     );
   }
 
-  // §11.6. The announcer is the *only* way a touch screen-reader user learns
-  // which book they hit, since the canvas has no accessible children.
-  if (card.announced.length === 0) {
-    failures.push('the live region announced nothing when the card opened');
+  // Styled: the ?debug page's pane, under the shipped CSP.
+  const styled = debug.styled;
+  lines.push(
+    `styled pane    pane ${styled.found ? `background ${styled.background}` : 'NOT FOUND'}   ` +
+      `violations ${String(styled.violations.length)}   empty-string hash ${
+        styled.emptyHash ? 'in style-src' : 'MISSING'
+      }`,
+  );
+  if (!styled.found) failures.push('styled pane: no pane rendered on the ?debug page');
+  else if (styled.background === 'rgba(0, 0, 0, 0)') {
+    failures.push('styled pane: the pane has a browser-default background, so it drew unstyled');
   }
-  if (card.announcedAfterSwap.length === 0) {
-    failures.push('tapping another book announced nothing — a swap must re-announce');
-  } else if (card.announcedAfterSwap === card.announced) {
-    failures.push(`the announcement did not change on swap (still "${card.announced}")`);
+  for (const violation of styled.violations) {
+    failures.push(`styled pane: the ?debug page broke its CSP, ${violation}`);
   }
-
-  // §11.7 — "the one nothing else would notice".
-  if (!card.closeSurvivedSwap) {
+  if (!styled.emptyHash) {
     failures.push(
-      'the close control did not survive a tap-to-swap. It must sit outside the subtree ' +
-        '`showCard` replaces, or focus drops to <body> mid-browse on the primary mobile gesture',
+      "styled pane: the built style-src lacks the empty string's hash, which the two " +
+        'empty placeholders need',
     );
   }
+  for (const error of [...plain.errors, ...debug.errors]) failures.push(`tuner: ${error}`);
 
-  return failures;
+  return { lines, failures };
+}
+
+interface TunerVisit {
+  readonly fetched: readonly Fetched[];
+  readonly styled: {
+    readonly found: boolean;
+    readonly background: string;
+    readonly violations: readonly string[];
+    readonly emptyHash: boolean;
+  };
+  readonly errors: readonly string[];
+}
+
+async function visitForTuner(browser: Browser, url: string): Promise<TunerVisit> {
+  const context = await browser.createBrowserContext();
+  const errors: string[] = [];
+  const reads: Promise<Fetched | undefined>[] = [];
+  try {
+    const page = await context.newPage();
+    await page.setViewport(VIEWPORT);
+    page.on('pageerror', (error: unknown) => {
+      errors.push(
+        `page error at ${url}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+    page.on('response', (response) => {
+      const kind = response.request().resourceType();
+      if (kind !== 'script' && kind !== 'stylesheet') return;
+      reads.push(
+        response.text().then(
+          (body) => ({ url: response.url(), kind, tuner: body.includes(TUNER_MARKER) }),
+          () => undefined,
+        ),
+      );
+    });
+    await page.evaluateOnNewDocument(RECORD_VIOLATIONS);
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForFunction('window.__shelf?.ready === true', { timeout: 60_000 });
+    await page.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => undefined);
+    // The pane exists only behind ?debug; on the plain page this times out by design.
+    await page
+      .waitForFunction(
+        `(() => { const pane = document.querySelector('${TUNER_MARKER}');
+          return pane !== null && getComputedStyle(pane).backgroundColor !== 'rgba(0, 0, 0, 0)'; })()`,
+        { timeout: url.includes('debug') ? 15_000 : 1 },
+      )
+      .catch(() => undefined);
+
+    const styled = (await page.evaluate(`(() => {
+      const pane = document.querySelector('${TUNER_MARKER}');
+      const meta = document.querySelector('meta[http-equiv="content-security-policy" i]');
+      const styleSrc = (meta?.getAttribute('content') ?? '').split(';').find((d) => d.trim().startsWith('style-src')) ?? '';
+      return {
+        found: pane !== null,
+        background: pane === null ? '' : getComputedStyle(pane).backgroundColor,
+        violations: window.__cspViolations ?? [],
+        emptyHash: styleSrc.includes(${JSON.stringify(EMPTY_STRING_HASH)}),
+      };
+    })()`)) as TunerVisit['styled'];
+
+    const fetched = (await Promise.all(reads)).filter((asset) => asset !== undefined);
+    return { fetched, styled, errors };
+  } finally {
+    await context.close();
+  }
 }
 
 function report(result: {
@@ -1671,12 +1945,14 @@ function report(result: {
   stats: Stats;
   cost: ShelfCost;
   errors: string[];
-  cardOpened: CardOpened | undefined;
-  viewer: CoverViewerChecked | undefined;
-  sheet: SheetChecked | undefined;
+  pickup: PickupRead | undefined;
+  viewer: ViewerRead | undefined;
+  phone: PhoneRead | undefined;
+  spread: SpreadChecked;
   lit: LitChecked;
   fallback: FallbackChecked;
   sampling: SamplingChecked;
+  tuner: TunerChecked;
 }): void {
   const {
     bookCount,
@@ -1684,14 +1960,16 @@ function report(result: {
     stats,
     cost,
     errors,
-    cardOpened,
+    pickup,
     viewer,
-    sheet,
+    phone,
+    spread,
     lit,
     fallback,
     sampling,
+    tuner,
   } = result;
-  const failures: string[] = [...fallback.failures, ...sampling.failures];
+  const failures: string[] = [...fallback.failures, ...sampling.failures, ...tuner.failures];
 
   const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
 
@@ -1704,27 +1982,28 @@ function report(result: {
     `textures          ${cost.textures}   geometries ${cost.geometries}   programs ${cost.programs}`,
   );
   console.log(`draws             ${cost.calls} (${per(cost.calls)}/book)   tris ${cost.triangles}`);
-  console.log(`click opens card  ${cardOpened?.title ?? 'NO'}`);
-  if (cardOpened !== undefined) {
-    const c = cardOpened.card;
-    console.log(`card reading line ${c.reading || 'NONE'}`);
+  console.log(`book picked up    ${pickup?.held ?? 'NO'}`);
+  if (pickup !== undefined) {
+    console.log(`page reading line ${pickup.reading || 'NONE'}`);
     console.log(
-      `card links        ${String(c.linkCount)} (${String(c.markCount)} marks)   object line ${
-        c.hasObjectLine ? 'yes' : 'no'
+      `page links        ${String(pickup.linkCount)} (${String(pickup.markCount)} marks)   object line ${
+        pickup.hasObjectLine ? 'yes' : 'no'
       }`,
     );
-    console.log(`card announced    ${c.announced || 'NOTHING'}`);
-    console.log(`card after swap   ${c.announcedAfterSwap || 'NOTHING'}`);
+    console.log(`page announced    ${pickup.announced || 'NOTHING'}`);
+    console.log(`second book       ${pickup.second.announced || 'NOTHING'}`);
+    console.log(
+      `address           ${pickup.hrefUnchanged && pickup.afterPutBack.hrefUnchanged ? 'unchanged' : 'CHANGED'}   ` +
+        `put back ${pickup.afterPutBack.held ? 'LEFT IT HELD' : 'yes'}`,
+    );
   }
   console.log(
     `cover viewer      ${
       viewer === undefined
         ? 'NOT CHECKED'
-        : `${viewer.opened ? 'opens' : 'DOES NOT OPEN'}   ${viewer.enlargedBy.toFixed(
-            1,
-          )}x thumbnail   escape ${viewer.escapeClosedViewer ? 'closes it' : 'DOES NOT CLOSE IT'}${
-            viewer.cardSurvivedEscape ? '' : '   AND TOOK THE CARD'
-          }   held copy ${
+        : `${viewer.opened ? 'opens' : 'DOES NOT OPEN'}   ${viewer.width.toFixed(0)}px wide   escape ${
+            viewer.escapeClosedViewer ? 'closes it' : 'DOES NOT CLOSE IT'
+          }${viewer.heldAfterEscape ? ', book still held' : '   AND PUT THE BOOK BACK'}   held copy ${
             viewer.held === undefined ? 'none named' : viewer.showedHeld ? 'shown' : 'NOT SHOWN'
           }   without one ${
             viewer.withoutHeld === undefined
@@ -1732,20 +2011,22 @@ function report(result: {
               : viewer.withoutHeld.showedOwn
                 ? 'shows its own'
                 : 'DOES NOT SHOW ITS OWN'
+          }   failed copy ${viewer.fellBack ? 'falls back' : 'DOES NOT FALL BACK'}   paths ${
+            viewer.pathInPage ? 'WRITTEN INTO THE PAGE' : 'kept off the page'
           }`
     }`,
   );
   console.log(
-    `sheet at 375x812  ${
-      sheet === undefined
+    `page at 375x812   ${
+      phone === undefined
         ? 'NOT CHECKED'
-        : `full-bleed ${sheet.fullBleed ? 'yes' : 'NO'}   within cap ${
-            sheet.withinCap ? 'yes' : 'NO'
-          }   grabber ${sheet.grabberVisible ? 'yes' : 'NO'}   short drag ${
-            sheet.survivedShortDrag ? 'snaps back' : 'DISMISSES'
-          }`
+        : `in view ${phone.pageInView ? 'yes' : 'NO'}   title leads ${
+            phone.titleLeads ? 'yes' : 'NO'
+          }   put-back on screen ${phone.putBackInView ? 'yes' : 'NO'}`
     }`,
   );
+  console.log('open spread at rest, 1280x800 (§3.6)');
+  for (const line of spread.lines) console.log(`  ${line}`);
   const above = (page: Lighting): string => {
     const standing = page.bookcase - page.room;
     // -0.004 is no contrast at all; `-0.0` would read as a sign.
@@ -1765,83 +2046,17 @@ function report(result: {
       'browser context of its own',
   );
   for (const line of sampling.lines) console.log(`  ${line}`);
+  console.log('pickup tuner, each page in a browser context of its own');
+  for (const line of tuner.lines) console.log(`  ${line}`);
   console.log(`screenshot        ${OUTPUT}`);
 
-  if (viewer === undefined) {
-    failures.push('no card with a cover could be opened, so the enlarged view was never checked');
+  // G35 (`enhanced-card`), reworded: see `lib/pickup-gate.ts`.
+  if (pickup === undefined) {
+    failures.push('clicking a book did not pick it up');
   } else {
-    if (!viewer.opened) {
-      failures.push('clicking the card cover did not open the enlarged view');
-    }
-    // The card renders the cover at 4.5rem. Anything under 2x is not the
-    // "see it closer" this exists for — and it is what a viewer that opened
-    // but failed to load or size its image would measure.
-    if (viewer.enlargedBy < 2) {
-      failures.push(
-        `the enlarged cover is only ${viewer.enlargedBy.toFixed(1)}x the thumbnail — it must ` +
-          'actually be bigger than the picture it was opened from',
-      );
-    }
-    if (!viewer.escapeClosedViewer) {
-      failures.push('Escape did not close the enlarged cover');
-    }
-    if (!viewer.cardSurvivedEscape) {
-      failures.push(
-        'Escape closed the enlarged cover *and* the card underneath it. Both listen on the ' +
-          'document, so leaving one surface must not return the user two levels',
-      );
-    }
-    // The held copy is the reason the enlarged view can be sharper than the
-    // card's (spec §3.4, #377). The 50-book fixture's covers over 512px get
-    // one, so a walk that found none means the stage lost it.
-    if (viewer.held === undefined) {
-      failures.push(
-        'no book on the shelf has a held copy in library.json — the fixture shelf has covers ' +
-          'over 512px, so the held stage dropped them',
-      );
-    } else if (!viewer.showedHeld) {
-      failures.push(`the enlarged view did not show the held copy ${viewer.held}`);
-    }
-    if (viewer.withoutHeld === undefined) {
-      failures.push(
-        'no book without a held copy was opened, so the viewer’s other path went unseen',
-      );
-    } else if (!viewer.withoutHeld.showedOwn) {
-      failures.push(
-        'for a book with no held copy, the enlarged view did not show the card’s own file',
-      );
-    }
+    failures.push(...pickupFailures(pickup));
   }
-
-  if (sheet === undefined) {
-    failures.push('no book could be opened at 375x812, so the sheet was never checked');
-  } else {
-    if (!sheet.fullBleed) failures.push('the sheet is not full-bleed at 375x812');
-    if (!sheet.withinCap) failures.push('the sheet exceeds its 40vh cap at 375x812');
-    if (!sheet.grabberVisible) failures.push('the grabber pill is not shown below the breakpoint');
-    if (!sheet.survivedShortDrag) {
-      failures.push(
-        'a drag shorter than the dismiss threshold closed the sheet. Below the threshold it ' +
-          'must snap back — otherwise every hesitant touch of the pill dismisses the card',
-      );
-    }
-  }
-
-  if (cardOpened === undefined) {
-    failures.push('clicking a book did not open the detail card');
-  } else {
-    failures.push(...cardFailures(cardOpened.card));
-    // "The card opened" is not the same as "the card is usable". A cover
-    // rendering at its natural size opened a perfectly valid card that spilled
-    // across the whole viewport, and this gate happily passed it.
-    if (cardOpened.overflow.card > 2) {
-      failures.push(`the detail card escapes the viewport by ${cardOpened.overflow.card}px`);
-    }
-    if (cardOpened.overflow.image > 2) {
-      failures.push(`the cover image overflows its card by ${cardOpened.overflow.image}px`);
-    }
-  }
-
+  failures.push(...viewerFailures(viewer), ...phoneFailures(phone), ...spread.failures);
   // Books inside their own bookcase.
   //
   // The owner found this twice by eye on a phone: a leaning book's bottom corner

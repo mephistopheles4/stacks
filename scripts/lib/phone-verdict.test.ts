@@ -88,7 +88,14 @@ describe('parsePhoneArgs', () => {
       keep: false,
       shot: false,
       gpuinfo: false,
+      pickups: undefined,
     });
+  });
+
+  it('takes --pickups as a count of books for the loop hook on the shelf to pick up and put back', () => {
+    expect(parsePhoneArgs(['--pickups', '5']).pickups).toBe(5);
+    expect(() => parsePhoneArgs(['--pickups', '0'])).toThrow(/--pickups needs a whole number/);
+    expect(() => parsePhoneArgs(['--pickups'])).toThrow(/--pickups needs a value/);
   });
 
   it('takes every flag it documents', () => {

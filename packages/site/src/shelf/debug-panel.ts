@@ -23,11 +23,14 @@ import { WOOD_SPECIES, speciesPending, type WoodSpecies } from './woodwork.ts';
  * else, which is why they load differently — the black box eagerly because it is
  * evidence, this lazily because ordinary visitors should not download it.
  *
- * Vanilla DOM, `createElement` and inline styles, following `diagnostics.ts`
- * rather than reaching for lil-gui or tweakpane. Three reasons, in order:
- * no React on the page is a decided constraint; a debug surface that pulls a UI
- * library into the graph makes the lazy-load boundary pointless; and both
- * instruments being removable in one file each is worth keeping.
+ * Vanilla DOM, `createElement` and CSSOM styles, following `diagnostics.ts`.
+ * **One reason still stands**: each instrument is removable in one file. Two
+ * that used to sit beside it do not. "No React on the page" was never what a
+ * panel library would have brought, and "a UI library makes the lazy-load
+ * boundary pointless" was disproved by measurement: the library's cost moves
+ * into the lazy chunk with it (#375). The pickup tuner beside this panel is
+ * Tweakpane for that reason (`pickup-tuner.ts`, ADR-0104), and moving the rest
+ * of this page to it is a later ticket, due once tuning the motion is done.
  *
  * ## The one rule this file exists to keep
  *
