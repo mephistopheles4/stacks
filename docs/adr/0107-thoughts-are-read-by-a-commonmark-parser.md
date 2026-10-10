@@ -22,10 +22,16 @@ named case each rule gets, is in
 | `micromark` | 4.0.2 | 2025-02-27 |
 | `micromark-extension-gfm-table` | 2.1.1 | 2025-01-20 |
 | `micromark-extension-gfm-footnote` | 2.1.0 | 2024-07-05 |
+| `micromark-util-types`, type-only | 2.0.2 | 2025-02-27 |
+
+The fourth names the event and token types the extractor reads, since
+`micromark`'s own types re-export none of them.
 
 The extractor calls `parse`, `preprocess` and `postprocess` and reads the
-event stream. **It never compiles to HTML**: it imports neither `micromark()`
-nor any HTML extension.
+event stream. **It never compiles to HTML**: no named import of `micromark`
+or `compile`, and no extension whose name ends `Html`. The package's entry
+loads its compiler module whatever is imported, so the rule is about what the
+extractor calls.
 
 **Hand rules stay where no CommonMark parser can see.** They cover `%%`
 comments, embeds, inline footnotes, Dataview fields, odd line endings,
@@ -44,7 +50,9 @@ with no call ever made to it. A hand rule does the same job with no package:
 two `$` anywhere in the section withhold it, whatever escapes them, and `$$`
 anywhere from the start of the body to the section's end withholds it. That
 is the round-3 escape-parity leak closed by ignoring escapes, rather than by
-counting backslashes.
+counting backslashes. **Those two guards stay whichever way the owner
+decides**: they exist because Obsidian may end a block where the parser does
+not, and that holds for the extension's math too.
 
 ## Why a parser
 
@@ -69,7 +77,9 @@ Swapped into the whole suite, the parser passed every public-build gate. Its
 spec §3.1.3.
 
 **The size is the same, and the growth is not.** The prototype's extraction
-code was about as long as the hand module. A new Markdown shape, though, is
+code was about as long as the hand module. The amended design carries about
+22 flat hand patterns, against the prototype's 11 and the hand module's 30 or
+so, and none of the 22 reads structure. A new Markdown shape, though, is
 an unknown token to the parser. So it withholds by default, and nobody has to
 write a rule for it first. That is invariant 2's "an allowlist and never a
 denylist", applied to Markdown structure instead of to lines.
@@ -80,7 +90,7 @@ ADR-0101 chose hand code partly because the owner prefers fewer dependencies,
 for a smaller security surface. This record keeps that preference as far as a
 parser allows:
 
-- **No new package version enters the lockfile.** The three packages and
+- **No new package version enters the lockfile.** The four packages and
   their whole runtime closure are already in `pnpm-lock.yaml`, through
   `markdownlint` as a dev dependency. That is 32 packages, 4 of them
   type-only. What changes is where the code runs: at build time, in the CLI
@@ -108,19 +118,32 @@ parser allows:
 - **Not the newest versions, on purpose.** `micromark` 4.0.3 (2026-09-26) and
   `micromark-extension-gfm-table` 2.1.2 (2026-09-11) are out. The prototype
   measured the versions pinned here, and the lockfile already holds them.
-- **A bump is its own change, on the security route.** The named cases in
-  spec §3.1.4 and G2 (`public-build`) must pass. The new version must be at
-  least seven days old, checked by hand until #399 lands.
+- **A bump of any package in the closure is its own change, on the security
+  route**, not only a bump of a pin. The CommonMark rules live in
+  `micromark-core-commonmark` and its siblings, which `micromark` reaches by
+  caret ranges shared with `markdownlint`, so a lockfile refresh could move
+  them with no pin changing. A unit test in `core` compares every closure
+  package's resolved version with a committed list, so any move is red. The
+  named cases in spec §3.1.4 and G2 (`public-build`) must pass, and the new
+  version must be at least seven days old, checked by hand until #399 lands.
+- **Dependabot is kept off the family**: `.github/dependabot.yml` ignores
+  `micromark` and `micromark-*`, as it already ignores `three`. Its alerts
+  still report an advisory.
 - **Licences:** all MIT.
 
 **Two builds of one package.** `micromark` ships a `development` build,
-which carries `debug` traces and assertions, and a default build. Node and
-tsx load the default build: the CLI, `gate:public` and `deploy:site` all
-run that way. A test runner that resolves the `development` condition loads
-the other. The build session records which build vitest loads. `gate:public`
-runs the default build end to end in either case. The development build
-writes its parse to stderr when `DEBUG` names `micromark`. That would put
-section text in a terminal, and the CLI never loads that build.
+which carries `debug` traces and assertions, and a default build. The
+development build writes its parse to stderr when `DEBUG` names `micromark`,
+and the parse is the **whole note body**, private remainder included. Node
+and tsx load the default build unless a `development` condition is set, for
+example through an inherited `NODE_OPTIONS`, and the deploy's build child
+inherits the deploy's environment. So nothing rests on that assumption:
+
+- the adapter checks at load that `micromark` resolved to its default entry,
+  and withholds every section otherwise;
+- vitest's resolve conditions are set to match the CLI's, so the tests run
+  the build that publishes;
+- the build session records both in `docs/progress.md`.
 
 ## Alternatives rejected
 
