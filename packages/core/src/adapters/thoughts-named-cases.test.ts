@@ -95,7 +95,7 @@ const R = {
   afterComment: 'after the strip, it holds a comment marker',
   afterTag: 'after the strip, it holds a tag start',
   linkTag: 'it holds a tag start in a link address or title',
-  referenceLink: 'it holds a link whose address is defined elsewhere in the note',
+  about: 'it holds an `About` heading or line, perhaps a provider description’s',
 } as const;
 
 describe('the boundary and the start', () => {
@@ -537,9 +537,9 @@ describe('inline in the section', () => {
     expect(ships(note('## Thoughts', '', `See ${link} now.`))).toEqual([`See ${label} now.`]);
   });
 
-  it('N51: withholds a reference link whose definition sits under `## Notes` (D13)', () => {
-    // Shipping its label would tell a reader the private part holds a
-    // definition by that name; withheld, it tells nothing (round 5 of #411).
+  it('N51: ships the label of a reference link whose definition sits under `## Notes` (D24)', () => {
+    // D13 withheld it, to hide whether the private part defines the name; D24
+    // dropped that, since unmatched words ship in their brackets anyway (#424).
     const source = note(
       '## Thoughts',
       '',
@@ -549,7 +549,7 @@ describe('inline in the section', () => {
       '',
       `[ref]: ${CANARY}`,
     );
-    expectWithheld(source, R.referenceLink);
+    expect(ships(source)).toEqual(['See the label.']);
   });
 
   it.each([
@@ -803,11 +803,12 @@ describe('added by round 5 of move 4 on #415', () => {
   });
 
   it.each([
-    ['a full reference', 'See [the label][ref] now.', '[ref]: x.md'],
-    ['a collapsed one', 'See [ref][] now.', '[ref]: x.md'],
-    ['a shortcut one', 'See [ref] now.', '[ref]: x.md'],
-  ])('N79: withholds %s whose definition sits under `## Notes` (D13)', (_, line, definition) => {
-    expectWithheld(note('## Thoughts', '', line, '', '## Notes', '', definition), R.referenceLink);
+    ['a full reference', 'See [the label][ref] now.', 'See the label now.'],
+    ['a collapsed one', 'See [ref][] now.', 'See ref now.'],
+    ['a shortcut one', 'See [ref] now.', 'See ref now.'],
+  ])('N79: ships the label of %s whose definition sits under `## Notes` (D24)', (_, line, text) => {
+    const source = note('## Thoughts', '', line, '', '## Notes', '', `[ref]: ${CANARY}.md`);
+    expect(ships(source)).toEqual([text]);
   });
 
   it('N79: ships bracketed words that match no definition, brackets and all', () => {
@@ -876,5 +877,106 @@ describe('added by round 6 of move 4 on #415', () => {
     // Its brackets sit outside the address text, so only the whole address
     // shows the tag start (round 6, data F2).
     expectWithheld(note('## Thoughts', '', line), R.linkTag);
+  });
+});
+
+describe('added by #424: an `## About` that loses its heading', () => {
+  const BLURB = `A provider blurb. ${CANARY}`;
+
+  it.each(['###', '####', '#####', '######'])(
+    'N88: withholds an unquoted `## About` demoted to `%s About`',
+    (hashes) => {
+      const source = note('## Thoughts', '', `${hashes} About`, '', BLURB, '', '## Notes');
+      expectWithheld(source, R.about);
+    },
+  );
+
+  it.each([
+    ['plain', 'About'],
+    ['bold', '**About**'],
+    ['bold with underscores', '__About__'],
+    ['italic', '*About*'],
+    ['italic with underscores', '_About_'],
+  ])('N88: withholds an unquoted `## About` turned into a lone %s line', (_, line) => {
+    expectWithheld(note('## Thoughts', '', line, '', BLURB, '', '## Notes'), R.about);
+  });
+
+  it('N88: ships a `### About me` heading, and a paragraph that only begins with the word', () => {
+    const source = note('## Thoughts', '', '### About me', '', 'About the ending: it is slow.');
+    expect(ships(source)).toEqual(['About me', 'About the ending: it is slow.']);
+  });
+
+  /**
+   * The probe of the spec's §2, rerun after the change (#424, criterion 1).
+   * Two rows moved or stayed on purpose: a demoted plain heading now withholds
+   * (N88), and a deleted plain heading line still ships the blurb, the accepted
+   * residual of §10, which only a quote written by the writer closes.
+   */
+  describe('the probe of §2', () => {
+    const PLAIN = 'A plain blurb.';
+    const QUOTED = ['> A quoted blurb.', '>', `> ${CANARY}`];
+
+    it('control: ships the owner’s prose with `## About` after it', () => {
+      const source = note('## Thoughts', '', 'Mine.', '', '## About', '', PLAIN, '', '## Notes');
+      expect(ships(source)).toEqual(['Mine.']);
+    });
+
+    it('a plain blurb under a demoted heading: withheld, no longer shipped (N88)', () => {
+      const source = note('## Thoughts', '', '### About', '', BLURB, '', '## Notes');
+      expectWithheld(source, R.about);
+    });
+
+    it('a plain blurb whose heading line is deleted: still ships, the residual of §10', () => {
+      expect(ships(note('## Thoughts', '', '', PLAIN, '', '## Notes'))).toEqual([PLAIN]);
+    });
+
+    it('a quoted blurb, heading intact, empty Thoughts: absent', () => {
+      expectAbsent(note('## Thoughts', '', '## About', '', ...QUOTED, '', '## Notes'));
+    });
+
+    it('a quoted blurb, heading intact, owner prose: ships the owner’s prose only', () => {
+      const source = note(
+        '## Thoughts',
+        '',
+        'Mine.',
+        '',
+        '## About',
+        '',
+        ...QUOTED,
+        '',
+        '## Notes',
+      );
+      expect(ships(source)).toEqual(['Mine.']);
+    });
+
+    it.each([
+      ['demoted', ['### About', '']],
+      ['deleted', []],
+    ])('a quoted blurb whose heading is %s: withheld as a quote', (_, heading) => {
+      const source = note('## Thoughts', '', ...heading, ...QUOTED, '', '## Notes');
+      expectWithheld(source, R.quote);
+    });
+
+    it('a quoted blurb holding a `## Thoughts` line, on a note with none: absent', () => {
+      const quoted = ['> A blurb.', '> ## Thoughts', `> ${CANARY}`];
+      expectAbsent(note('## About', '', ...quoted, '', '## Notes', '', 'Private.'));
+    });
+
+    it('a quoted blurb above the owner’s `## Thoughts`: ships the owner’s prose only', () => {
+      const source = note(
+        '## Notes',
+        '',
+        'Private.',
+        '',
+        '## About',
+        '',
+        ...QUOTED,
+        '',
+        '## Thoughts',
+        '',
+        'Mine.',
+      );
+      expect(ships(source)).toEqual(['Mine.']);
+    });
   });
 });

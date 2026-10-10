@@ -523,10 +523,14 @@ function readSection(body: string): ThoughtsResult {
   }
   for (const guard of SECTION_GUARDS) if (guard.test(raw)) throw new Withhold(guard.reason);
 
-  // 8. The token allowlist; 9. Obsidian's marks; 10. the output check.
-  const paragraphs = blocks
-    .slice(start.index + 1, end)
-    .map(blockText)
+  // 8. The token allowlist, then an `About` heading or line; 9. Obsidian's
+  // marks; 10. the output check.
+  const section = blocks.slice(start.index + 1, end);
+  const texts = section.map(blockText);
+  if (section.some((block, index) => isAbout(block, texts[index]))) {
+    throw new Withhold('it holds an `About` heading or line, perhaps a provider description’s');
+  }
+  const paragraphs = texts
     .filter((text): text is string => text !== undefined)
     .map(obsidianMarks)
     .filter((text) => text !== '');
@@ -548,6 +552,19 @@ function blockText(block: Block): string | undefined {
     return text === undefined ? '' : inlineText(text);
   }
   throw new Withhold(BLOCK_REASONS[type] ?? `it holds a shape outside the allowlist (${type})`);
+}
+
+/**
+ * Whether a root block in the section is an `## About` that lost its heading:
+ * a `###` to `######` heading, or a paragraph, whose shown text reads exactly
+ * `About`, emphasis marks dropped. That is what a demoted heading, or one
+ * Obsidian turned back into a paragraph, leaves above a provider description
+ * written before #424 quoted them (spec §3.1.3, D20). Checked after the
+ * allowlist, so a quoted description withholds as a quote.
+ */
+function isAbout(block: Block, text: string | undefined): boolean {
+  const type: string = block.token.type;
+  return (type === 'atxHeading' || type === 'content') && text?.trim() === 'About';
 }
 
 /** The events strictly inside the first `type` token in `events`, or `undefined`. */
@@ -612,10 +629,10 @@ function listText(block: Block): string {
  * `[target|alias]`, the target reading view hides behind the alias, and step
  * 9's flatten would never see the `[[` (round 4 of #411's review).
  *
- * ⚠️ **So does a link with no address of its own**, a full, collapsed or
- * shortcut reference: its definition sits outside the section, since one
- * inside withholds, so whether its label ships bare or in brackets would tell a
- * reader whether the private part defines that name (round 5, D13).
+ * A full, collapsed or shortcut reference link ships its label, as a link
+ * with its own address does: whether the private part defines that name shows
+ * either way, since words no definition matches ship in their brackets
+ * (D24, which dropped round 5's D13).
  *
  * ⚠️ **And a tag start in a link's address or title.** Those parts are
  * skipped for shipping and read only for a tag start, since neither the output
@@ -627,8 +644,6 @@ function inlineText(events: readonly Event[]): string {
   /** Where each link that opened just after a `[` ended in `text`. */
   const bracketedLinkEnds: number[] = [];
   let linkAfterBracket = false;
-  let linkHasAddress = false;
-  let referenceLink = false;
   for (const [kind, token, context] of events) {
     if (skipping !== undefined) {
       if (kind === 'exit' && token === skipping) skipping = undefined;
@@ -641,15 +656,10 @@ function inlineText(events: readonly Event[]): string {
     }
     if (kind === 'exit') {
       if (token.type === 'link' && linkAfterBracket) bracketedLinkEnds.push(text.length);
-      if (token.type === 'link' && !linkHasAddress) referenceLink = true;
       continue;
     }
     const type: string = token.type;
-    if (type === 'link') {
-      linkAfterBracket = text.endsWith('[');
-      linkHasAddress = false;
-    }
-    if (type === 'resource') linkHasAddress = true;
+    if (type === 'link') linkAfterBracket = text.endsWith('[');
     if (SKIPPED.has(type)) skipping = token;
     else if (SHOWN.has(type)) text += context.sliceSerialize(token);
     else if (type === 'lineEnding') text += '\n';
@@ -661,9 +671,6 @@ function inlineText(events: readonly Event[]): string {
   }
   if (bracketedLinkEnds.some((end) => text[end] === ']')) {
     throw new Withhold('a wikilink did not flatten');
-  }
-  if (referenceLink) {
-    throw new Withhold('it holds a link whose address is defined elsewhere in the note');
   }
   return text;
 }
