@@ -541,9 +541,23 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   // The second book by the shelf's hook rather than by aiming: with a book held,
   // the open spread covers most books' aim points, and a click on the held book
   // is rightly no pickup. The click path is the first pickup's, above.
-  const title = JSON.stringify(read.held);
   await page.evaluate(`window.__shelf.pickUp(${String(first === 0 ? 1 : 0)})`);
-  await until(page, `${HELD} && window.__shelf.held().title !== ${title}`);
+  // The first title goes in as an argument, never spliced into the page's source.
+  await page
+    .waitForFunction(
+      (firstTitle: string) => {
+        const shelf = (
+          window as unknown as {
+            __shelf: { held(): { phase: string; title: string } | undefined };
+          }
+        ).__shelf;
+        const held = shelf.held();
+        return held?.phase === 'held' && held.title !== firstTitle;
+      },
+      { timeout: 8000, polling: 50 },
+      read.held,
+    )
+    .catch(() => undefined);
   const second = (await page.evaluate(`(() => ({
     held: window.__shelf.held()?.title ?? '',
     announced: document.getElementById('pickup-status')?.textContent ?? '',
@@ -751,11 +765,25 @@ async function opensOwnWhenHeldFails(page: Page, own: string): Promise<boolean> 
   page.on('request', refuse);
   try {
     await page.click('.held-page-right .card-cover');
-    const shown = await until(
-      page,
-      `(() => { const image = document.getElementById('cover-viewer-image'); return Boolean(image) && image.complete && image.naturalWidth > 0 && new URL(image.src).pathname === ${JSON.stringify(own)}; })()`,
-      3000,
-    );
+    // The path goes in as an argument, never spliced into the page's source.
+    const shown = await page
+      .waitForFunction(
+        (path: string) => {
+          const image = document.getElementById('cover-viewer-image');
+          return (
+            image instanceof HTMLImageElement &&
+            image.complete &&
+            image.naturalWidth > 0 &&
+            new URL(image.src).pathname === path
+          );
+        },
+        { timeout: 3000, polling: 50 },
+        own,
+      )
+      .then(
+        () => true,
+        () => false,
+      );
     await page.keyboard.press('Escape');
     await new Promise((resolve) => setTimeout(resolve, 200));
     return shown;
