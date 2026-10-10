@@ -560,29 +560,69 @@ describe('G20 — every rule goes red', () => {
   // extractor regression the deploy must still refuse. Built from code points
   // where the mark is invisible. One row each, so each is seen red alone.
   it.each([
-    ['two dollar signs', '$5 and $6 an aside'],
-    ['an image or embed opener', '![an aside'],
-    ['an inline footnote opener', '^[an aside'],
-    ['a Dataview field', 'mood:: an aside'],
-    ['a control character', `an${String.fromCodePoint(0x01)}aside`],
-    ['a C1 control character', `an${String.fromCodePoint(0x85)}aside`],
-    ['Unicode tag characters', `an aside${String.fromCodePoint(0xe0068, 0xe0069)}`],
-    ['a near-miss heading, no-break space', `##${String.fromCodePoint(0xa0)}an aside`],
-    ['a near-miss heading, zero-width space', `${String.fromCodePoint(0x200b)}## an aside`],
-    ['a near-miss heading on a later line', `First line.\n# an aside`],
-  ] as const)('N60 notes-shape: a notes file carrying %s', async (_, mark) => {
+    ['two dollar signs', '$5 and $6 an aside', 'two dollar signs, which may be math'],
+    ['an image or embed opener', '![an aside', 'an image or embed opener'],
+    ['an inline footnote opener', '^[an aside', 'an inline footnote opener'],
+    ['a Dataview field', 'mood:: an aside', 'a Dataview field marker'],
+    ['a control character', `an${String.fromCodePoint(0x01)}aside`, 'a control character'],
+    ['DEL', `an${String.fromCodePoint(0x7f)}aside`, 'a control character'],
+    ['a C1 control character', `an${String.fromCodePoint(0x85)}aside`, 'a control character'],
+    [
+      'Unicode tag characters',
+      `an aside${String.fromCodePoint(0xe0068, 0xe0069)}`,
+      'Unicode tag characters',
+    ],
+    [
+      'a near-miss heading, no-break space',
+      `##${String.fromCodePoint(0xa0)}an aside`,
+      'a line that may read as a heading',
+    ],
+    [
+      'a near-miss heading, zero-width space',
+      `${String.fromCodePoint(0x200b)}## an aside`,
+      'a line that may read as a heading',
+    ],
+    [
+      'a near-miss heading on a later line',
+      `First line.\n# an aside`,
+      'a line that may read as a heading',
+    ],
+    [
+      'bare hashes behind a zero-width space',
+      `an aside\n${String.fromCodePoint(0x200b)}##`,
+      'a line that may read as a heading',
+    ],
+    [
+      'a setext underline carrying a no-break space',
+      `an aside\n---${String.fromCodePoint(0xa0)}`,
+      'a line that may read as a heading',
+    ],
+  ] as const)('N60 notes-shape: a notes file carrying %s', async (_, mark, words) => {
     await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A clean paragraph.', mark] });
     const problems = inspect().problems;
     expect([...new Set(problems.map((problem) => problem.rule))]).toEqual(['notes-shape']);
-    expect(problems.map((problem) => problem.message).join('\n')).not.toContain('an aside');
+    const said = problems.map((problem) => problem.message).join('\n');
+    // The mark named in words, so a blanked description fails (round 4, integrity F12).
+    expect(said).toContain(`carries ${words}`);
+    expect(said).not.toContain('an aside');
     exercised.add('notes-shape');
   });
 
   it('N60 notes-shape: passes the near misses of those marks', async () => {
-    // One dollar sign, a `#tag`, a `###`'s text and a lone colon ship from a
-    // correct build, so the twin must not refuse them.
+    // One dollar sign, a `#tag`, a `###`'s text, a lone colon, a thematic break,
+    // and a paragraph with line breaks, a tab and accented letters ship from a
+    // correct build, so the twin must not refuse them — a twin that read a line
+    // break, a tab or any letter past ASCII as a control would refuse every
+    // real deploy (round 4, integrity F11).
     await writeNotes(`${CLEAN_ID}.json`, {
-      paragraphs: ['It cost $20.', '#reread', '### is not shipped, but this is', 'Time: an hour.'],
+      paragraphs: [
+        'It cost $20.',
+        '#reread',
+        '### is not shipped, but this is',
+        'Time: an hour.',
+        '---',
+        'First line,\nsecond line\twith a tab, café and naïve.',
+      ],
     });
     expect(inspect().problems).toEqual([]);
   });
@@ -662,7 +702,7 @@ describe('G20 — every rule goes red', () => {
       () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['a'.repeat(40_001)] }),
       /is \d+ bytes, over the 40000-byte cap/,
     ],
-  ] as const)('says in words what it found: %s', async (_, plant, message) => {
+  ] as const)('says in words what it found: %s', async (label, plant, message) => {
     // Round 3's integrity F11: every message here could be emptied with every
     // test green, and an empty message passes "never quoted" trivially.
     await plant();
@@ -670,7 +710,7 @@ describe('G20 — every rule goes red', () => {
       .problems.map((problem) => problem.message)
       .join('\n');
     expect(said).toMatch(message);
-    if (/notes-shape/.test(_)) expect(said).toContain(`notes/${CLEAN_ID}.json`);
+    if (/notes-shape/.test(label)) expect(said).toContain(`notes/${CLEAN_ID}.json`);
   });
 
   it('notes-shape: a notes file that repeats its key', async () => {

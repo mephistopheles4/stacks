@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { spyOnWarn, type WarnSpy } from '../test-support.ts';
-import { ObsidianAdapter } from './obsidian-adapter.ts';
+import { MAX_DESCRIPTION_CODE_POINTS, ObsidianAdapter } from './obsidian-adapter.ts';
 
 /**
  * The adapter's seventh method: the only one that reads below the frontmatter.
@@ -236,6 +236,49 @@ describe('readPublicSection', () => {
 
       expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
     });
+  });
+
+  describe('N72: a description over the write cap', () => {
+    it('is not written, and says so naming the note, never quoting it', async () => {
+      const path = await note('N72', '## Thoughts', '', 'Mine.', '', '## Notes', '', 'Private.');
+      const before = await readFile(join(dir, path), 'utf8');
+      const long = `${CANARY} ${'*_'.repeat(MAX_DESCRIPTION_CODE_POINTS / 2)}`;
+
+      expect(await vault.insertBodySection(path, '## About', long)).toBe(false);
+      expect(await readFile(join(dir, path), 'utf8')).toBe(before);
+      expect(warned()).toContain('Library/N72.md');
+      expect(warned()).not.toContain(CANARY);
+      expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
+    });
+
+    it('is written at exactly the cap, counted in code points', async () => {
+      const path = await note('N72b', '## Notes', '', 'Private.');
+      const exact = '\u{1F4DA}'.repeat(MAX_DESCRIPTION_CODE_POINTS);
+
+      expect(await vault.insertBodySection(path, '## About', exact)).toBe(true);
+      expect(warned()).toBe('');
+    });
+  });
+
+  it('N73: a description that opens with a link definition changes nothing the owner ships', async () => {
+    const path = await note(
+      'N73',
+      '## Notes',
+      '',
+      'Private.',
+      '',
+      '## Thoughts',
+      '',
+      'See [[target|alias]] and [label] here.',
+    );
+    const description = [
+      '[target|alias]: https://example.invalid',
+      '[label]: x.md',
+      'A blurb.',
+    ].join('\n');
+    await vault.insertBodySection(path, '## About', description);
+
+    expect(await vault.readPublicSection(path)).toEqual(['See alias and [label] here.']);
   });
 
   it('N66: leaves the owner’s Thoughts shipping below a description that would trip a raw guard', async () => {

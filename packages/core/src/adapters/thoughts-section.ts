@@ -20,14 +20,17 @@ import { FRONTMATTER_BLOCK } from '../frontmatter.ts';
  * the allowlist withholds
  * ([ADR-0107](../../../../docs/adr/0107-thoughts-are-read-by-a-commonmark-parser.md),
  * spec §3.1.1). It is never compiled to HTML: `parse`, `preprocess` and
- * `postprocess` are the only calls. Hand rules stay only where Obsidian departs
- * from CommonMark — comments, embeds, inline footnotes, Dataview fields, odd
- * line endings, wikilinks and block ids — or may draw a block's extent
- * differently, and an output check reads what ships after every strip.
+ * `postprocess` are the only calls. Hand rules stay where Obsidian departs from
+ * CommonMark — comments, embeds, inline footnotes, Dataview fields, odd line
+ * endings, wikilinks and block ids — or may draw a block's extent differently,
+ * and for characters that draw as nothing or as something else: controls, tag
+ * characters and near-miss headings. An output check reads what ships after
+ * every strip.
  *
  * The rest of the module serves the `## About` writer in `obsidian-adapter.ts`:
  * `notesHeadingAt` finds `## Notes` through the same parse, so the writer and
- * the extractor cannot read a heading differently, and `disarmBodyText`
+ * the extractor cannot read `## Notes` differently — its check for an existing
+ * `## About` is a separate, file-wide test in the adapter — and `disarmBodyText`
  * disarms what it writes, by hand predicates that read wider than CommonMark —
  * the safe direction for text being written.
  *
@@ -140,10 +143,16 @@ const URL_SCHEME = /:\/\/|\b(?:file|obsidian|mailto):/i;
  * The most body a note may have for its section to be read, in code points.
  *
  * Checked **before** the parse, so no note — and no provider description
- * written into one — can stall a build in the tokenizer. About 70 times the
- * longest real note body #368 counted (spec §3.1.1, step 2).
+ * written into one — can stall a build in the tokenizer (spec §3.1.1, step 2).
+ * Seven times the longest real note body, 2,768 code points, measured on #411.
+ *
+ * ⚠️ **It was 200,000, and that did not stop a stall.** The tokenizer's cost
+ * grows with the square of some shapes — a run of `*_` emphasis marks took 0.9 s
+ * at 20,000 code points, 3.9 s at 40,000 and minutes near 200,000, while plain
+ * prose takes milliseconds at any size. Round 4 of #411's review found it; the
+ * owner chose this number. Raise it only with a timing of those shapes.
  */
-export const MAX_BODY_CODE_POINTS = 200_000;
+export const MAX_BODY_CODE_POINTS = 20_000;
 
 /**
  * Whether `entry`, the URL `micromark` resolved to, is its default build.
@@ -171,12 +180,22 @@ const TAG_CHARACTER = /[\u{E0000}-\u{E007F}]/u;
 /**
  * A line that may read as a heading although CommonMark reads text: one or
  * two `#` after any whitespace or invisible format characters, then
- * whitespace or a format character — a no-break space after the hashes, or a
- * zero-width space or byte-order mark before them (spec §3.1.1, step 7). A
- * real `##` never reaches it, because it ends the section, and neither a
- * `#tag` nor a `###` matches.
+ * whitespace, a format character or the line's end — a no-break space after
+ * the hashes, or a zero-width space or byte-order mark before them (spec
+ * §3.1.1, step 7). A real `##` never reaches it, because it ends the section,
+ * and neither a `#tag` nor a `###` matches.
  */
-const NEAR_MISS_HEADING = /^[\t\p{Zs}\p{Cf}]*#{1,2}[\t\p{Zs}\p{Cf}]/mu;
+const NEAR_MISS_HEADING = /^[\t\p{Zs}\p{Cf}]*#{1,2}(?:[\t\p{Zs}\p{Cf}]|$)/mu;
+
+/**
+ * A setext underline carrying an invisible character: a line of only `-` or
+ * only `=`, among whitespace and format characters, holding at least one that
+ * is neither a plain space nor a tab. CommonMark reads it as text, and Obsidian
+ * might draw the line above it as a heading (round 4 of #411's review). A plain
+ * `---` thematic break does not match.
+ */
+const NEAR_MISS_SETEXT =
+  /^(?=[^\n]*[\p{Cf}   -   　])[\t\p{Zs}\p{Cf}]*(?:-[-\t\p{Zs}\p{Cf}]*|=[=\t\p{Zs}\p{Cf}]*)$/mu;
 
 /**
  * Step 7's patterns but the cap, each with its reason: read on the section, and
@@ -193,7 +212,10 @@ const SECTION_GUARDS: readonly {
   { reason: 'it holds `::`, a Dataview field', test: (t) => t.includes('::') },
   { reason: 'it holds a control character', test: hasControlCharacter },
   { reason: 'it holds Unicode tag characters', test: (t) => TAG_CHARACTER.test(t) },
-  { reason: 'it holds a line that may read as a heading', test: (t) => NEAR_MISS_HEADING.test(t) },
+  {
+    reason: 'it holds a line that may read as a heading',
+    test: (t) => NEAR_MISS_HEADING.test(t) || NEAR_MISS_SETEXT.test(t),
+  },
 ];
 
 /** A C0 control other than tab and line feed, DEL, or a C1 control. */
@@ -206,7 +228,16 @@ function hasControlCharacter(text: string): boolean {
   return false;
 }
 
-/** Why a block in the section withholds it, by its token type. */
+/**
+ * Why a block in the section withholds it, by its token type.
+ *
+ * ⚠️ **Four of these, and `image` below, are backstops no input reaches
+ * today.** Step 6 catches every fence run first, step 4 every setext heading
+ * (each is level 1 or 2), `listText` a nested list with its own words, and
+ * step 7 every image by its `![`. They stay so a shape that ever slips past
+ * an earlier step still withholds by name; editing their words changes no
+ * current warning.
+ */
 const BLOCK_REASONS: Readonly<Record<string, string>> = {
   blockQuote: 'it holds a quote or a callout',
   codeFenced: 'it holds a code fence',
@@ -323,7 +354,7 @@ function headingOf(block: Block): { level: number; text: string; setext: boolean
  * Where `## Notes` starts in a note's body, at the start of its line, or
  * `undefined` when the body has none: the first root-level level-2 ATX heading
  * reading `Notes`, read through the same parse as the extractor's, so the
- * `## About` writer and the extractor cannot read a heading differently. It
+ * `## About` writer and the extractor cannot read `## Notes` differently. It
  * excludes the frontmatter (the caller passes the body), fenced lines,
  * subheadings, and headings inside a list item or a quote.
  *
@@ -355,7 +386,9 @@ export function extractThoughts(source: string): ThoughtsResult {
   const frontmatter = FRONTMATTER_BLOCK.exec(source);
   if (frontmatter === null) return { kind: 'absent' };
   if (!LOADED_DEFAULT_BUILD) {
-    return withheld('micromark loaded its development build, so no section is read');
+    return withheld(
+      'micromark loaded its development build, so no section is read — run without a `development` condition (check NODE_OPTIONS)',
+    );
   }
 
   // 2. Line endings and size, on raw text. The whole source, frontmatter
@@ -390,7 +423,11 @@ function readSection(body: string): ThoughtsResult {
   });
   const start = thoughts.find(({ heading }) => !heading.setext);
   if (start === undefined) return { kind: 'absent' };
-  if (thoughts.length > 1) throw new Withhold('the note has two `## Thoughts` headings');
+  if (thoughts.length > 1) {
+    throw new Withhold(
+      'the note has two `Thoughts` headings, one of them perhaps underlined with `---`',
+    );
+  }
   const heading = blocks[start.index] as Block;
 
   // 4. The end: the next root-level heading of level 1 or 2, or the end of the body.
@@ -444,6 +481,12 @@ function readSection(body: string): ThoughtsResult {
   const raw = body.slice(sectionStart, sectionEnd).replace(/\r\n/g, '\n').replace(/^\n/, '');
   if ([...raw.trimEnd()].length > MAX_SECTION_CODE_POINTS) {
     throw new Withhold(`it is over ${String(MAX_SECTION_CODE_POINTS)} characters`);
+  }
+  // An HTML comment marker anywhere in the section, link addresses and titles
+  // included: those are skipped whole by the allowlist, so the output check
+  // never reads them, and Obsidian might pair two of them round shipped words.
+  if (COMMENT_MARKER.test(raw)) {
+    throw new Withhold('it holds an HTML comment marker, perhaps in a link address or title');
   }
   for (const guard of SECTION_GUARDS) if (guard.test(raw)) throw new Withhold(guard.reason);
 
@@ -527,17 +570,32 @@ function listText(block: Block): string {
   return lines.join('\n');
 }
 
-/** The shown text of an inline run: text, escapes, and a link's label only. */
+/**
+ * The shown text of an inline run: text, escapes, and a link's label only.
+ *
+ * ⚠️ **A link wrapped in a further pair of brackets withholds.** That is a
+ * wikilink the parser read as a reference link, because a definition with the
+ * same label sits somewhere in the note: `[[target|alias]]` would then ship
+ * `[target|alias]`, the target reading view hides behind the alias, and step
+ * 9's flatten would never see the `[[` (round 4 of #411's review).
+ */
 function inlineText(events: readonly Event[]): string {
   let text = '';
   let skipping: Token | undefined;
+  /** Where each link that opened just after a `[` ended in `text`. */
+  const bracketedLinkEnds: number[] = [];
+  let linkAfterBracket = false;
   for (const [kind, token, context] of events) {
     if (skipping !== undefined) {
       if (kind === 'exit' && token === skipping) skipping = undefined;
       continue;
     }
-    if (kind === 'exit') continue;
+    if (kind === 'exit') {
+      if (token.type === 'link' && linkAfterBracket) bracketedLinkEnds.push(text.length);
+      continue;
+    }
     const type: string = token.type;
+    if (type === 'link') linkAfterBracket = text.endsWith('[');
     if (SKIPPED.has(type)) skipping = token;
     else if (SHOWN.has(type)) text += context.sliceSerialize(token);
     else if (type === 'lineEnding') text += '\n';
@@ -546,6 +604,9 @@ function inlineText(events: readonly Event[]): string {
         INLINE_REASONS[type] ?? `it holds a shape outside the allowlist (${type})`,
       );
     }
+  }
+  if (bracketedLinkEnds.some((end) => text[end] === ']')) {
+    throw new Withhold('a wikilink did not flatten');
   }
   return text;
 }
@@ -610,8 +671,10 @@ function outputCheck(paragraph: string): void {
  *   section, and a provider's `[^x]:` would turn the owner's `[^x]` into a
  *   footnote call (spec §3.1.1, D9). Encoding the run is also what disarms a
  *   fence opener.
- * - **Every line `atxHeading` reads as a heading, and every setext underline,
- *   gains a backslash** before its first mark, so it reads as neither.
+ * - **Every line `atxHeading` reads as a heading, behind list markers too, and
+ *   every setext underline gains a backslash** before its first mark, so it
+ *   reads as neither, and **a `[` that opens a line becomes a character
+ *   reference**, so no line reads as a link definition (`disarmLine`).
  *
  * A description's line breaks survive `toPlainText`, so a listing line reading
  * `## Thoughts` would otherwise land at column 0 — shipping a stranger's words
@@ -629,12 +692,36 @@ export function disarmBodyText(text: string): string {
     .replace(/\$/g, '&#36;')
     .replace(/\[\^/g, '&#91;^')
     .split('\n')
-    .map((line) =>
-      atxHeading(line) === undefined && !SETEXT_UNDERLINE.test(line)
-        ? line
-        : line.replace(/^( *)/, '$1\\'),
-    )
+    .map(disarmLine)
     .join('\n');
+}
+
+/** Up to three spaces of indent, then any run of list markers, each with its space. */
+const LINE_LEAD = /^ {0,3}(?:(?:[-*+]|\d{1,9}[.)])[ \t]+)*/;
+
+/**
+ * One line of provider text, disarmed after its indent and any list markers.
+ *
+ * - **A `[` that opens the line becomes a character reference**, so no line
+ *   reads as a link definition. A definition applies to the whole note,
+ *   wherever it sits, so one in a description could turn the owner's bracketed
+ *   words into links, or read a wikilink's inner brackets as one (round 4 of
+ *   #411's review).
+ * - **A heading gains a backslash**, behind list markers too, so none parses
+ *   even inside a list item.
+ * - **A setext underline at the margin gains a backslash.**
+ */
+function disarmLine(line: string): string {
+  const lead = LINE_LEAD.exec(line)?.[0] ?? '';
+  const rest = line.slice(lead.length);
+  if (rest.startsWith('[')) return `${lead}&#91;${rest.slice(1)}`;
+  // At the margin, `atxHeading` reads the indent itself, so four spaces stay
+  // code; behind a list marker, the marker's own space is already consumed.
+  const atMargin = lead.trim() === '';
+  if (atMargin ? atxHeading(line) !== undefined : atxHeading(rest) !== undefined) {
+    return atMargin ? line.replace(/^( *)/, '$1\\') : `${lead}\\${rest}`;
+  }
+  return SETEXT_UNDERLINE.test(line) ? line.replace(/^( *)/, '$1\\') : line;
 }
 
 /**

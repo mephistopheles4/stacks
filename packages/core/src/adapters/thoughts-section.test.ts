@@ -1,6 +1,7 @@
 import { parse, postprocess, preprocess } from 'micromark';
 import { describe, expect, it } from 'vitest';
 import {
+  MAX_BODY_CODE_POINTS,
   MAX_SECTION_CODE_POINTS,
   atxHeading,
   disarmBodyText,
@@ -24,6 +25,16 @@ const CANARY = 'PRIVATE_REMAINDER_canary';
 
 /** Step 6's reason, which every fence and backtick run now gives (spec §3.1.3). */
 const FENCE_RUN = 'a run of three backticks or tildes sits in or above the section';
+
+/** Every token type the parser reads in `text`, at any depth. */
+function tokenTypes(text: string): Set<string> {
+  const events = postprocess(
+    parse()
+      .document()
+      .write(preprocess()(text, undefined, true)),
+  );
+  return new Set(events.map(([, token]) => token.type as string));
+}
 
 /** A note: frontmatter, then the body lines given. */
 function note(...body: string[]): string {
@@ -668,16 +679,6 @@ describe('a provider description beside the Thoughts', () => {
   });
 
   describe('N59: disarmed text, parsed, holds no heading, code fence or HTML token', () => {
-    /** Every token type the parser reads in `text`, at any depth. */
-    function tokenTypes(text: string): Set<string> {
-      const events = postprocess(
-        parse()
-          .document()
-          .write(preprocess()(text, undefined, true)),
-      );
-      return new Set(events.map(([, token]) => token.type as string));
-    }
-
     const description = [
       `A blurb.${String.fromCharCode(13)}## Thoughts`,
       'Thoughts',
@@ -716,6 +717,32 @@ describe('a provider description beside the Thoughts', () => {
     it('leaves a run of two, and a lone backtick, alone', () => {
       expect(disarmBodyText('a `` b ~~ c ` d')).toBe('a `` b ~~ c ` d');
     });
+
+    it('escapes a bare hash line, and leaves prose that merely ends in dashes or equals', () => {
+      // Round 4, integrity F9 and F10: both edges of the two line predicates.
+      expect(disarmBodyText(['##', '#', 'a line --', 'x = y ==', '=== z'].join('\n'))).toBe(
+        ['\\##', '\\#', 'a line --', 'x = y ==', '=== z'].join('\n'),
+      );
+    });
+
+    it('N74: escapes a heading behind list markers, so none parses even inside an item', () => {
+      const disarmed = disarmBodyText(['- ## Thoughts', '1. # Notes', '* - ### deep'].join('\n'));
+      expect(disarmed.split('\n')).toEqual(['- \\## Thoughts', '1. \\# Notes', '* - \\### deep']);
+      expect(tokenTypes(disarmed).has('atxHeading')).toBe(false);
+    });
+
+    it('N73: encodes a `[` that opens a line, behind list markers too, so no definition lands', () => {
+      const disarmed = disarmBodyText(
+        ['[target]: x.md', '   [b]: y', '- [c]: z', 'mid [d] line'].join('\n'),
+      );
+      expect(disarmed.split('\n')).toEqual([
+        '&#91;target]: x.md',
+        '   &#91;b]: y',
+        '- &#91;c]: z',
+        'mid [d] line',
+      ]);
+      expect(tokenTypes(disarmed).has('definition')).toBe(false);
+    });
   });
 });
 
@@ -749,6 +776,13 @@ describe('N58: the `## Notes` the `## About` writer lands above', () => {
     ['a near-miss with a no-break space', [`##${String.fromCodePoint(0xa0)}Notes`]],
   ])('never chooses %s', (_, lines) => {
     expect(notesHeadingAt(lines.join('\n'))).toBeUndefined();
+  });
+
+  it('finds none in a body over the cap, which is never parsed', () => {
+    // Round 4, integrity F5: the writer then appends, as on a hand-made note.
+    const body = `## Notes\n\n${'x'.repeat(MAX_BODY_CODE_POINTS)}`;
+    expect(notesHeadingAt(body)).toBeUndefined();
+    expect(notesHeadingAt(body.slice(0, MAX_BODY_CODE_POINTS))).toBe(0);
   });
 
   it('skips a fenced one that comes first, and finds the real one', () => {

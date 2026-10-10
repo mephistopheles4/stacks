@@ -227,6 +227,24 @@ Two environment findings, both measured:
   fresh Node under `--conditions=development` and sees every section
   withheld; the default build is the only one that publishes.
 
+**2026-10-10 — round 4 of move 4 on #415, and the owner's caps.** The
+tokenizer's cost grows with the square of some shapes: a run of `*_` emphasis
+marks took 0.26 s at 10,000 code points, 0.9 s at 20,000 and 3.9 s at 40,000,
+and `behaviour-lens` measured minutes near the old 200,000 cap. Plain prose
+takes milliseconds at any size. The longest real note body is 2,768 code
+points and the longest `## About` 2,605. **Owner decision, from chat: the body
+cap is 20,000, and no description over 8,000 is written** (spec §3.1.3, D12).
+The round's other fixes withhold more, never less, and `notes-shape`'s twin
+moved with them — same section of
+[`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
+Three earlier commits on the branch changed a gate with `docs/gates.md` and not
+this file; their lines are the round-3 entry above and this one, since a
+pushed commit with two branches stacked on it is not rewritten. Measured
+read-only against the real vault, counts only: all 54 notes parse in 28 ms in
+total, the slowest in 3.5 ms, and every one reads as absent — the one note
+with a `## Thoughts` heading holds nothing that ships — so a deploy today would
+publish no notes file.
+
 ### Phase 4 evidence
 
 `stacks import audible <export>` against a real Libation export: 22 records, 17

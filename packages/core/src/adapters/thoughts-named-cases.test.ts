@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_SECTION_CODE_POINTS, extractThoughts as extract } from './thoughts-section.ts';
+import {
+  MAX_BODY_CODE_POINTS,
+  MAX_SECTION_CODE_POINTS,
+  extractThoughts as extract,
+} from './thoughts-section.ts';
 
 /**
  * Spec §3.1.4's named cases, one test or one table row per id.
@@ -58,8 +62,9 @@ function expectAbsent(source: string): void {
 // The reasons, written out: a reason that changes moves its test.
 const R = {
   lineEnding: 'the note holds a line ending other than a newline',
-  bodyCap: 'the note body is over 200000 characters, so it was not read',
-  twoHeadings: 'the note has two `## Thoughts` headings',
+  bodyCap: `the note body is over ${String(MAX_BODY_CODE_POINTS)} characters, so it was not read`,
+  twoHeadings: 'the note has two `Thoughts` headings, one of them perhaps underlined with `---`',
+  commentInSection: 'it holds an HTML comment marker, perhaps in a link address or title',
   setextEnd: 'a setext heading ends the section',
   htmlAbove: 'HTML sits above the section',
   comment: 'a `%%` comment marker sits in or above the section',
@@ -549,12 +554,28 @@ describe('inline in the section', () => {
     ['`--\\>`', 'An escaped --\\> here.', R.afterComment],
     // A raw `%%` is in the source, so step 6 answers before the output check.
     ['`\\%%`', 'An escaped \\%% here.', R.comment],
+    // The output check's step-7 half: each mark is escaped in the source, so
+    // only the re-read after the strip sees it (round 4, integrity F1).
+    ['`!\\[`', 'An escaped !\\[x] here.', `after the strip, ${R.embed}`],
+    ['`^\\[`', 'An escaped ^\\[x] here.', `after the strip, ${R.inlineFootnote}`],
+    ['`:\\:`', 'mood:\\: an escaped field', `after the strip, ${R.dataview}`],
+    ['`\\$` twice', 'From \\$1 to \\$2.', R.dollars],
+    ['`\\##` at a line start', '\\## An escaped heading', `after the strip, ${R.nearMiss}`],
   ])('N52: withholds an escaped mark the strip restores: %s', (_, line, reason) => {
     expectWithheld(note('## Thoughts', '', line), reason);
   });
 
-  it('N53: withholds a control character', () => {
-    expectWithheld(note('## Thoughts', '', `A${SOH}B`), R.control);
+  it.each([
+    ['U+0001', SOH],
+    ['DEL', String.fromCodePoint(0x7f)],
+    ['a C1 control, U+0085', String.fromCodePoint(0x85)],
+    ['a C1 control, U+009F', String.fromCodePoint(0x9f)],
+  ])('N53: withholds a control character: %s', (_, char) => {
+    expectWithheld(note('## Thoughts', '', `A${char}B`), R.control);
+  });
+
+  it('N53: ships a tab, which is no control', () => {
+    expect(ships(note('## Thoughts', '', 'A\tB'))).toEqual(['A\tB']);
   });
 
   describe('N54: the cap, in code points, across line breaks', () => {
@@ -584,10 +605,11 @@ describe('inline in the section', () => {
       expectWithheld(note('## Thoughts', `${text}x`), R.cap);
     });
 
-    it('counts a CRLF break as one', () => {
+    it('counts a CRLF break as one, from both sides', () => {
       const text = `${'a'.repeat(half - 1)}\n${'b'.repeat(half)}`;
-      const source = note('## Thoughts', text).replace(/\n/g, '\r\n');
-      expect(ships(source)).toEqual([text]);
+      expect(ships(note('## Thoughts', text).replace(/\n/g, '\r\n'))).toEqual([text]);
+      const over = note('## Thoughts', `${'a'.repeat(half)}\n${'b'.repeat(half)}`);
+      expectWithheld(over.replace(/\n/g, '\r\n'), R.cap);
     });
   });
 });
@@ -686,8 +708,79 @@ describe('added by the amendment’s own review', () => {
     expectWithheld(note('a <b with no end', '', '## Thoughts', '', CANARY), R.htmlAbove);
   });
 
-  it('N64: withholds a body over 200,000 code points before it is parsed', () => {
-    const source = note('## Thoughts', '', 'Kept.', '', '## Notes', 'x'.repeat(200_001));
-    expectWithheld(source, R.bodyCap);
+  describe('N64: the body cap, before the parse', () => {
+    /** A note whose body, everything below the frontmatter, is exactly `size` code points. */
+    function noteOfBody(size: number): string {
+      const head = '\n## Thoughts\n\nKept.\n\n## Notes\n\n';
+      const tail = '\n';
+      return `---\ntype: book\ntitle: A Book\n---\n${head}${'x'.repeat(size - head.length - tail.length)}${tail}`;
+    }
+
+    it('reads a body of exactly the cap', () => {
+      expect(ships(noteOfBody(MAX_BODY_CODE_POINTS))).toEqual(['Kept.']);
+    });
+
+    it('withholds one over, before it is parsed', () => {
+      expectWithheld(noteOfBody(MAX_BODY_CODE_POINTS + 1), R.bodyCap);
+    });
+
+    it('is 20,000, the owner’s choice on round 4', () => {
+      // Seven times the longest real note body, 2,768 code points, measured on
+      // #411. The parse grows with the square of some shapes: 0.9 s here, 3.9 s
+      // at twice it, minutes at the 200,000 it was before.
+      expect(MAX_BODY_CODE_POINTS).toBe(20_000);
+    });
+  });
+});
+
+describe('added by round 4 of move 4 on #415', () => {
+  it.each([
+    ['a shortcut-reference definition', ['See [[target]] here.'], '[target]: x.md'],
+    ['an aliased one', ['See [[target|alias]] here.'], '[target|alias]: x.md'],
+  ])('N68: withholds a wikilink whose label %s matches', (_, lines, definition) => {
+    // The parser reads the inner brackets as a reference link, so the flatten
+    // never sees `[[`, and the target behind an alias would ship.
+    const source = note('## Thoughts', '', ...lines, '', '## Notes', '', definition);
+    expectWithheld(source, R.wikilink);
+  });
+
+  it.each([
+    ['in a link title', `[a](x "<!--") ${CANARY} [b](y "-->")`],
+    ['in a link address', `[a](<x<!--y>) ${CANARY} [b](<z-->w>)`],
+  ])('N69: withholds an HTML comment marker %s', (_, line) => {
+    expectWithheld(note('## Thoughts', '', line), R.commentInSection);
+  });
+
+  it.each([
+    ['bare hashes behind a no-break space', `${NBSP}##`],
+    ['bare hashes behind a zero-width space', `${ZWSP}#`],
+    ['a setext underline carrying a no-break space', `---${NBSP}`],
+    ['a setext underline behind a zero-width space', `${ZWSP}===`],
+  ])('N70: withholds a near-miss heading: %s', (_, line) => {
+    expectWithheld(note('## Thoughts', '', 'Kept.', line, '', CANARY), R.nearMiss);
+  });
+
+  it('N70: still ships a plain thematic break and dashes inside a line', () => {
+    expect(ships(note('## Thoughts', '', 'One --', '', '---', '', 'Two.'))).toEqual([
+      'One --',
+      '---',
+      'Two.',
+    ]);
+  });
+
+  it('a level-1 setext `Thoughts` is no second heading', () => {
+    // Only level 2 counts (round 4, integrity F6).
+    const source = note('Thoughts', '===', '', '## Thoughts', '', 'Kept.', '', '## Notes', CANARY);
+    expect(ships(source)).toEqual(['Kept.']);
+  });
+
+  it('ships a backslash hard break as a line break', () => {
+    expect(ships(note('## Thoughts', '', 'line one\\', 'line two'))).toEqual([
+      'line one\nline two',
+    ]);
+  });
+
+  it('keeps a caret word that is not at the end of a line', () => {
+    expect(ships(note('## Thoughts', '', 'a ^word here'))).toEqual(['a ^word here']);
   });
 });

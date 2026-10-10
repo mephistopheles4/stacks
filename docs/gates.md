@@ -1599,7 +1599,7 @@ view — reaching a staged file, and found query blocks nested in callouts.
   `PUBLISH_THOUGHTS`, and their switched-off twins assert that nothing ships.
   Observed: with the constant set to `false`, `pnpm test`'s publish gates and
   `pnpm gate:public` passed. A G2 case drives the off path through
-  `publish()`'s `thoughts` option whatever the constant says.
+  `publish()`'s `publishThoughts` option whatever the constant says.
 - **`notes-shape` refuses any tag start** beside the comment markers, and a file
   that is not byte for byte what the writer emits, which a repeated key would
   otherwise hide behind. Three G20 plants went red against the round-2
@@ -1637,6 +1637,14 @@ moved; the gates above hold the new extractor as they held the old one.
   removed. G20 asserts every Thoughts rule's message in words, since an empty
   message passed "never quoted" trivially; red with two messages emptied. The
   shared-id warning's test requires both note paths, red with them dropped.
+- **Round 4 of move 4 on #415.** The twin gains bare near-miss hashes and a
+  setext underline carrying an invisible character, beside the extractor's
+  N70; two G20 plants went red before it did. Every N60 plant now asserts its
+  mark in words, red with one description blanked, and the clean control holds
+  line breaks, a tab and accented letters, red under a twin that read any of
+  them as a control. New extractor and writer cases N68 to N74, and the
+  boundary rows integrity-lens asked for, were each seen red: the new rules
+  against the code before them, the rest by planting the defect each guards.
 
 ## Where cover art may go
 

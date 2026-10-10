@@ -172,7 +172,10 @@ a footnote, a Dataview field, a character reference such as `&amp;`, a web
 address, or **two `$` anywhere in the section, escaped or not**, since they may
 be math — write one price as words. A `%%` comment, a code fence, a `$$` or
 HTML anywhere **above** the section withholds it too, because Obsidian may draw
-those blocks differently from the parser. To publish a withheld section,
+those blocks differently from the parser. A note body over 20,000 characters
+withholds its section too, unread, since the parser slows sharply on some
+shapes past that; and `stacks enrich` writes no provider description over
+8,000 characters, warning which note it skipped. To publish a withheld section,
 rewrite the shape the warning names. The list and its reasons are
 [ADR-0106](adr/0106-thoughts-ship-only-plain-prose.md) and
 [ADR-0107](adr/0107-thoughts-are-read-by-a-commonmark-parser.md); spec §3.1.1

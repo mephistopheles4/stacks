@@ -8,6 +8,15 @@ import type { BookInput, BookRecord } from '../types.ts';
 import { disarmBodyText, extractThoughts, notesHeadingAt } from './thoughts-section.ts';
 import type { FrontmatterChanges, VaultAdapter } from './vault-adapter.ts';
 
+/**
+ * The most text `insertBodySection` writes, in code points: three times the
+ * longest real `## About`, 2,605 code points, measured on #411. A description
+ * over it is not written, because provider text lands in the body the
+ * extractor parses, under its `MAX_BODY_CODE_POINTS` (round 4 of #411's
+ * review; the owner's choice).
+ */
+export const MAX_DESCRIPTION_CODE_POINTS = 8_000;
+
 /** Where notes and cached covers live inside the vault. */
 const LIBRARY_DIR = 'Library';
 const COVERS_DIR = 'covers';
@@ -141,6 +150,18 @@ export class ObsidianAdapter implements VaultAdapter {
     }
 
     if (hasHeading(source, heading)) return false;
+
+    // Over the cap, nothing is written: a long provider text could push the
+    // note past the extractor's body cap and withhold the owner's Thoughts on
+    // every build after, or carry a shape the tokenizer is slow on. Warned by
+    // the note's path, never a word of the text.
+    if ([...body].length > MAX_DESCRIPTION_CODE_POINTS) {
+      console.warn(
+        `stacks: did not write ${heading} in ${sourcePath} — the text is over ` +
+          `${String(MAX_DESCRIPTION_CODE_POINTS)} characters`,
+      );
+      return false;
+    }
 
     // Disarmed before it lands: provider prose keeps its line breaks, so a
     // listing line reading `## Thoughts` or an unclosed fence would otherwise

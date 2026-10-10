@@ -64,7 +64,11 @@ export interface VaultAdapter {
    *   setext underline, gains a backslash first, so a provider's prose can
    *   never open a `## Thoughts` section of its own, carry `## Notes` out of
    *   one, trip a guard that withholds the owner's, or land a live comment or
-   *   HTML block (spec §3.1.1, §4).
+   *   HTML block (spec §3.1.1, §4). A `[` that opens a line becomes a character
+   *   reference too, and a heading behind list markers is escaped.
+   * - **A text over 8,000 code points is not written**, with a warning naming
+   *   the note, so provider prose cannot carry the note past the extractor's
+   *   body cap.
    *
    * ⚠️ **Any allowlist of published sections must never name `## About`**: the
    * whole point of storing a description here was that it stays local

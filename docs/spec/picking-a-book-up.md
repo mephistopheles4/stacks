@@ -161,9 +161,13 @@ with a warning that names the note and the shape and never quotes the text.
 2. **Line endings and size.** A lone CR, a U+2028 or a U+2029 anywhere in the
    source, frontmatter included, withholds. This is a hand rule: CommonMark
    ends a line at a lone CR, and Obsidian may not. A body of more than
-   **200,000** code points withholds **before it is parsed**, so no note, and
+   **20,000** code points withholds **before it is parsed**, so no note, and
    no provider description written into one, can stall the build. That is
-   about 70 times the longest real note body #368 counted.
+   seven times the longest real note body, 2,768 code points. **It was 200,000
+   until round 4 of move 4 on #415 measured the tokenizer**: its cost grows with
+   the square of some shapes, so a run of `*_` emphasis marks took 0.9 s at
+   20,000 code points, 3.9 s at 40,000 and minutes near 200,000. The owner chose
+   this number (D12).
 3. **The start.** Only **root-level** headings count, never one inside a list
    item, a quote or a callout. The section starts at a root-level ATX heading
    of level 2 whose text, trimmed, is exactly `Thoughts`. With none, the
@@ -204,6 +208,14 @@ with a warning that names the note and the shape and never quotes the text.
      byte-order mark before them, would otherwise let the section run on into
      the private remainder. A real `##` heading never reaches this check,
      because it ends the section, and a `#tag` or a `###` does not match.
+     **Bare hashes** behind such a character count too, and so does **a setext
+     underline carrying one**: a line of only `-` or only `=` among
+     whitespace and format characters, at least one of them neither a plain
+     space nor a tab (round 4);
+   - **an HTML comment marker**, `<!--`, `-->` or `--!>`, anywhere in the
+     section's raw text, link addresses and titles included. The allowlist
+     skips those whole, so step 10 never reads them, and Obsidian might pair
+     two of them round words that ship (round 4).
 8. **The token allowlist, inside the section.**
    - **Blocks that ship:** a paragraph; an ATX heading of level 3 to 6, whose
      text ships as its own paragraph; a thematic break, which ships as `---`;
@@ -251,7 +263,7 @@ literal text when they open no code span and no definition.
 **The `## About` writer reads through the same parse.** `insertBodySection`
 finds `## Notes` as the first root-level level-2 ATX heading in the body that
 reads `Notes`. That excludes the frontmatter, fenced lines and subheadings, so
-the writer and the extractor cannot read a heading differently.
+the writer and the extractor cannot read `## Notes` differently.
 `disarmBodyText` keeps its own hand predicates, which read wider than
 CommonMark: for text being written, matching wider is the safe direction. It
 gains three, so that provider text can neither open a section nor trip a
@@ -266,6 +278,17 @@ guard that would withhold the owner's:
   line-start fence opener leaves the run in the raw text, where step 6 reads
   it on a note whose `## About` sits above its Thoughts; a provider's `[^x]:`
   would turn an owner's `[^x]` into a footnote call.
+- **A `[` that opens a line**, after its indent and any list markers,
+  becomes a character reference, so no description line reads as a link
+  definition. A definition applies to the whole note, so one could turn the
+  owner's bracketed words into links, or read a wikilink's inner brackets as
+  one (round 4).
+- **A heading behind list markers** is escaped too, so disarmed text parses
+  to no heading even inside a list item (round 4).
+- **A description over 8,000 code points is not written**, with a warning
+  naming the note: three times the longest real `## About`, 2,605 code
+  points, so provider text cannot carry a note past step 2's cap or bring a
+  shape the tokenizer is slow on (round 4, D12).
 - The one-off `## About` search of §8 counts these shapes too.
 
 #### 3.1.2 The dependency
@@ -336,6 +359,8 @@ recommendation each. **The owner confirms or overrides them at sign-off**
 | D8 | The math extension, which the prototype used | **leave it out** (§3.1.2). The hand rules of steps 6 and 7 withhold the same sections, and KaTeX stays out of the runtime. Taking it instead pins `micromark-extension-math` 3.1.0, which brings `katex` 0.16.47 and `commander` 8.3.0, and makes math a token, which withholds. **The `$$` and two-`$` guards stay either way**: they exist because Obsidian may end a block where the parser does not, and that holds for the extension's math too |
 | D9 | Whether the `## About` writer's `## Notes` lookup uses the parser too | **yes** (§3.1.1), with setext underlines added to the disarm |
 | D10 | What carries over from round 3 | the inspector twin of step 10 (adversarial F7); integrity's gaps F4 and F10 to F12 as done-criteria; and every finding in round 3's [standards pair report](https://github.com/mephistopheles4/stacks/issues/411#issuecomment-6092778405) and [`unstated-lens` report](https://github.com/mephistopheles4/stacks/issues/411#issuecomment-6092745849), each fixed or given a disposition in round 3's Lens dispositions |
+| D11 | A comment closer, `-->` or `--!>`, above the section with no opener: the hand version withheld; step 5 lets it through. Missed by the prototype's count, because the test holding it failed first on D6 | **ship it**: owner decision, from chat, on #411 (2026-10-10). An opener of any form above the section still withholds, and a lone closer hides nothing |
+| D12 | Round 4 of move 4 measured the parse growing with the square of some shapes, under step 2's 200,000 | **owner decision, from chat (2026-10-10): option A** — the body cap is 20,000 code points, and `insertBodySection` writes no description over 8,000. A note body over 20,000 never ships its Thoughts; none does today |
 
 #### 3.1.4 The named cases
 
@@ -459,10 +484,22 @@ the prototype.
 | N61 | `## Notes` with a no-break space after the hashes, and with a zero-width space or a byte-order mark before them, the canary below | withheld (step 7, near-miss heading); a `#tag` line and a `###` still ship | adversarial F1, data F1 |
 | N62 | A run of Unicode tag characters in a paragraph | withheld (step 7) | data F4 |
 | N63 | An incomplete tag, such as `a <b` with no `>`, above the heading | withheld (step 5's raw guard) | adversarial F7 |
-| N64 | A body over 200,000 code points | withheld before it is parsed | adversarial F6 |
+| N64 | A body over the cap, 20,000 code points since D12 | withheld before it is parsed | adversarial F6 |
 | N65 | `micromark` resolved to its `dev/` entry | every section withheld | adversarial F8, data F3 |
 | N66 | A description holding a mid-line backtick run, `$$`, a `[^x]:` definition, and an indented setext underline under `Thoughts`, written onto a note whose `## About` sits above its Thoughts | the owner's section still ships | adversarial F5; unstated F2 |
 | N67 | A package of `micromark`'s closure at a version other than the committed list's | the closure test is red | adversarial F3 |
+
+**Added by round 4 of move 4 on #415**
+
+| Id | Shape | Expected | Source |
+| --- | --- | --- | --- |
+| N68 | A wikilink whose label a reference definition elsewhere in the note matches, with an alias and without | withheld (a wikilink did not flatten): neither the brackets nor the target behind the alias ship | behaviour F2, adversarial F1 |
+| N69 | An HTML comment marker in a link title or address, a pair round shipped words | withheld (step 7) | data F1 |
+| N70 | Bare hashes behind a no-break or zero-width space; a setext underline carrying a no-break space, or behind a zero-width one | withheld (step 7, near-miss heading); a plain thematic break and dashes inside a line still ship | behaviour F4, adversarial F3 |
+| N71 | A body of exactly 20,000 code points, and one more | the first is read, the second withheld before it is parsed | integrity F4; D12 |
+| N72 | A description over 8,000 code points, and one of exactly 8,000 | the first is not written, with a warning naming the note and never quoting it, and the owner's Thoughts still ship; the second is written | adversarial F2, behaviour F1; D12 |
+| N73 | A description whose lines open with link definitions, behind list markers too | written with each `[` as a character reference; the owner's wikilink and bracketed words ship unchanged | adversarial F1 |
+| N74 | A description holding a heading behind list markers | the hashes escaped; parsed, it holds no heading token | behaviour F3 |
 
 **The non-extractor gaps carry over as done-criteria of step 2:**
 
@@ -784,8 +821,8 @@ would land at column 0. On a note with no Thoughts it would ship a stranger's
 words as the owner's; on one with Thoughts the duplicate would withhold the
 owner's real section; followed by an unclosed fence it would carry `## Notes`
 out. So step 2 makes the `## About` write path **disarm every heading-shaped
-line and every fence opener** in provider text (an escaping prefix, so it can
-read as neither), and the test above gains a description carrying a
+line and every fence opener** in provider text (a backslash before a heading,
+and character references for a fence run, §3.1.1), and the test above gains a description carrying a
 `## Thoughts` line and an unclosed fence: it must ship nothing. The `## About`
 sections already in the vault were written before this rule; step 2 searches
 them once for heading-shaped lines before the first real public build (§8).
@@ -956,8 +993,9 @@ unit-tested.
   covers the shapes known to be in question, and it is taken once. A later
   Obsidian release that renders a shape differently is seen by nothing here.
 - **The parse runs over the whole note body**, provider descriptions
-  included, up to step 2's 200,000 code points. Below that, a pathological
-  note slows the owner's own build and reaches nobody else.
+  included, up to step 2's 20,000 code points. Below that, the worst shape
+  measured costs under a second per note, in the owner's own build, and
+  reaches nobody else.
 - **Two builds of `micromark`** (ADR-0107): the `development` one traces the
   whole body, private remainder included, when `DEBUG` names `micromark`. The
   adapter's load check withholds every section if it is ever the one loaded.

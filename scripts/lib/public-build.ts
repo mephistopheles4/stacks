@@ -292,8 +292,14 @@ const OUTPUT_MARKS: readonly { readonly what: string; readonly test: (text: stri
     },
     { what: 'Unicode tag characters', test: (text) => /[\u{E0000}-\u{E007F}]/u.test(text) },
     {
+      // Hashes behind or before an invisible character, bare ones included, and
+      // a setext underline carrying one (round 4 of #411's review).
       what: 'a line that may read as a heading',
-      test: (text) => /^[\t\p{Zs}\p{Cf}]*#{1,2}[\t\p{Zs}\p{Cf}]/mu.test(text),
+      test: (text) =>
+        /^[\t\p{Zs}\p{Cf}]*#{1,2}(?:[\t\p{Zs}\p{Cf}]|$)/mu.test(text) ||
+        /^(?=[^\n]*[\p{Cf}   -   　])[\t\p{Zs}\p{Cf}]*(?:-[-\t\p{Zs}\p{Cf}]*|=[=\t\p{Zs}\p{Cf}]*)$/mu.test(
+          text,
+        ),
     },
   ];
 

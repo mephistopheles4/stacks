@@ -64,7 +64,8 @@ describe('N65: the build that loads', () => {
     expect(parseIn(['--conditions=development'])).toEqual({
       extract: {
         kind: 'withheld',
-        reason: 'micromark loaded its development build, so no section is read',
+        reason:
+          'micromark loaded its development build, so no section is read — run without a `development` condition (check NODE_OPTIONS)',
       },
       notesAt: null,
     });
