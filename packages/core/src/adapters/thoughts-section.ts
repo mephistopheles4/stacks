@@ -1,3 +1,7 @@
+import { parse, postprocess, preprocess } from 'micromark';
+import { gfmFootnote } from 'micromark-extension-gfm-footnote';
+import { gfmTable } from 'micromark-extension-gfm-table';
+import type { Event, Token, TokenizeContext } from 'micromark-util-types';
 import { FRONTMATTER_BLOCK } from '../frontmatter.ts';
 
 /**
@@ -9,18 +13,30 @@ import { FRONTMATTER_BLOCK } from '../frontmatter.ts';
  * strips it, and `ObsidianAdapter.readPublicSection` is its only caller, so the
  * rest of the body never leaves `adapters/`
  * ([ADR-0100](../../../../docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md)).
+ *
+ * **The body is read by `micromark`'s tokenizer**, and ADR-0106's allowlist
+ * applies to its tokens: where the section starts and ends, and which blocks
+ * and inline shapes it holds, are the parser's answers, and any token outside
+ * the allowlist withholds
+ * ([ADR-0107](../../../../docs/adr/0107-thoughts-are-read-by-a-commonmark-parser.md),
+ * spec §3.1.1). It is never compiled to HTML: `parse`, `preprocess` and
+ * `postprocess` are the only calls. Hand rules stay only where Obsidian departs
+ * from CommonMark — comments, embeds, inline footnotes, Dataview fields, odd
+ * line endings, wikilinks and block ids — or may draw a block's extent
+ * differently, and an output check reads what ships after every strip.
+ *
  * The rest of the module serves the `## About` writer in `obsidian-adapter.ts`:
- * `disarmBodyText` disarms what it writes, and `atxHeading`, `fenceOpener`
- * and `closesFence` are the predicates its `## Notes` finder shares with the
- * scan here, so the two cannot read a heading or a fence differently.
+ * `notesHeadingAt` finds `## Notes` through the same parse, so the writer and
+ * the extractor cannot read a heading differently, and `disarmBodyText`
+ * disarms what it writes, by hand predicates that read wider than CommonMark —
+ * the safe direction for text being written.
  *
  * **Every rule fails closed.** A shape the extractor cannot vouch for withholds
  * the whole section rather than shipping what a strip got wrong: a section that
  * does not appear is a gap the owner sees in a warning, and a section that
  * appears with a private aside in it is on a URL that may already be shared
  * ([ADR-0101](../../../../docs/adr/0101-thoughts-ship-as-plain-text-and-withhold-whole.md),
- * spec §3.1). Where this file reads wider than CommonMark, it can only end a
- * section earlier or withhold one, never publish more.
+ * spec §3.1).
  *
  * ⚠️ **A withhold reason never quotes the section.** It reaches the terminal,
  * and the terminal must hold no Thoughts text (spec §3.1).
@@ -60,11 +76,11 @@ export interface AtxHeading {
 /**
  * A line read as an ATX heading, as broadly as CommonMark allows: 0 to 3
  * spaces of indent, one to six hashes, then a space, a tab or the end of the
- * line, with optional closing hashes. Matching wide can only end a section
- * early (spec §3.1).
+ * line, with optional closing hashes.
  *
- * Shared with `disarmBodyText`, so the line the extractor would read as a
- * heading and the line the `## About` writer disarms cannot drift apart.
+ * `disarmBodyText`'s predicate. The extractor reads headings through the
+ * parse; this reads wider than it does, so a line the writer leaves alone is
+ * never one the parse would read as a heading.
  */
 export function atxHeading(line: string): AtxHeading | undefined {
   const match = /^ {0,3}(#{1,6})(?=[ \t]|$)(.*)$/.exec(line);
@@ -77,39 +93,6 @@ export function atxHeading(line: string): AtxHeading | undefined {
   return { level: hashes.length, text };
 }
 
-export interface FenceOpener {
-  readonly char: '`' | '~';
-  readonly length: number;
-}
-
-/**
- * A line that opens a code fence under CommonMark: 0 to 3 spaces of indent and
- * three or more backticks or tildes, where a backtick fence's info string may
- * not itself hold a backtick. Shared with `disarmBodyText` for
- * `atxHeading`'s reason.
- */
-export function fenceOpener(line: string): FenceOpener | undefined {
-  const match = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
-  if (match === null) return undefined;
-  const run = match[1] ?? '';
-  const char = run.startsWith('`') ? '`' : '~';
-  if (char === '`' && (match[2] ?? '').includes('`')) return undefined;
-  return { char, length: run.length };
-}
-
-/** Whether `line` closes the fence `open` opened: the same character, at least as long, nothing after. */
-export function closesFence(line: string, open: FenceOpener): boolean {
-  const match = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(line);
-  const run = match?.[1];
-  return run !== undefined && run.startsWith(open.char) && run.length >= open.length;
-}
-
-/** A setext underline: a line of only `=` or only `-`, indented at most three spaces. */
-const SETEXT_UNDERLINE = /^ {0,3}(?:=+|-+)[ \t]*$/;
-
-/** A GFM table's delimiter row: cells of dashes, optional colons, split by pipes. */
-const TABLE_DELIMITER = /^\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)+\|?[ \t]*$/;
-
 /**
  * A comment marker: `%%`, an HTML comment's opener, or either of its closers.
  * HTML ends a comment at `--!>` as well as `-->`, so both close one, and a
@@ -119,7 +102,8 @@ const TABLE_DELIMITER = /^\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)+\|?[ \t]
  * The inspector's backstop in `scripts/lib/public-build.ts`, `HIDDEN_MARKER`,
  * matches what this constant and `HTML_START` below match together, so its
  * pattern is wider than this one on purpose: `<!` and `<?` are `HTML_START`'s
- * here. A shared import would let a one-line weakening clear the extractor and
+ * here. Its `OUTPUT_MARKS` are the twin of `SECTION_GUARDS` below, the same
+ * way. A shared import would let a one-line weakening clear the extractor and
  * the deploy check at once, `DERIVED_KEYS`'s reason.
  */
 const COMMENT_MARKER = /%%|<!--|--!?>/;
@@ -137,36 +121,13 @@ const HTML_START = /<[A-Za-z/!?]/;
  * A line ending other than LF or CRLF: a lone CR, or a Unicode line or
  * paragraph separator.
  *
- * CommonMark ends a line at a lone CR, and a U+2028 inside a heading line
- * defeats `atxHeading`'s `.`; either way the scan would miss the heading that
- * starts the private remainder and run on into it. Any one in the body
- * withholds the section rather than teach every pattern here a second line
- * ending (#411's review reproduced the leak through a public build).
+ * CommonMark ends a line at a lone CR, and Obsidian may not, so the two could
+ * disagree on where the heading that starts the private remainder is. Any one
+ * in the note withholds the section — a hand rule, since no parser can say
+ * what Obsidian does (#411's review reproduced the leak through a public
+ * build).
  */
 const ODD_LINE_ENDING = /\r(?!\n)|[\u2028\u2029]/;
-
-/**
- * Anything Obsidian hides, renders rather than shows, or that names a file,
- * anywhere in the section's raw text. Each withholds the whole section.
- *
- * Matched anywhere, never at a line start only: a shape behind a quote or list
- * marker is the shape that line-start matching missed twice in #411's review
- * (ADR-0106).
- */
-const HIDDEN: readonly { readonly reason: string; readonly pattern: RegExp }[] = [
-  { reason: 'it holds a comment marker (%%, <!--, --> or --!>)', pattern: COMMENT_MARKER },
-  // Any `![`: inline, reference-style or shortcut, an image is an embed.
-  { reason: 'it embeds a file or an image', pattern: /!\[/ },
-  { reason: 'it holds HTML', pattern: HTML_START },
-  // `]:` anywhere: a link reference or footnote definition, which reading view
-  // hides, in any container and with a label over any number of lines.
-  { reason: 'it holds a link reference or footnote definition', pattern: /\]:/ },
-  // Any backtick: a fence, inline code, or an inline query (Dataview's `= …`),
-  // which reading view renders as its result while the source would ship.
-  { reason: 'it holds code', pattern: /`/ },
-  // Two unescaped `$`: inline or block math, which can hide a `%` comment.
-  { reason: 'it may hold math', pattern: /(?<!\\)\$[\s\S]*?(?<!\\)\$/ },
-];
 
 /**
  * A URL scheme left in the text after links flatten: an address the
@@ -176,53 +137,458 @@ const HIDDEN: readonly { readonly reason: string; readonly pattern: RegExp }[] =
 const URL_SCHEME = /:\/\/|\b(?:file|obsidian|mailto):/i;
 
 /**
- * Finds and strips a note's `## Thoughts` section.
+ * The most body a note may have for its section to be read, in code points.
  *
- * The scan starts below the frontmatter block and computes fence state from the
- * start of the body, so a `## Thoughts` inside an open fence is no heading. A
- * section ends at the next `#` or `##` heading outside a fence, or at the end
- * of the file; `###` stays inside.
+ * Checked **before** the parse, so no note — and no provider description
+ * written into one — can stall a build in the tokenizer. About 70 times the
+ * longest real note body #368 counted (spec §3.1.1, step 2).
+ */
+export const MAX_BODY_CODE_POINTS = 200_000;
+
+/**
+ * Whether `entry`, the URL `micromark` resolved to, is its default build.
+ *
+ * `micromark` ships a `development` build beside it that traces its whole
+ * parse to stderr when `DEBUG` names it — the whole note body, private
+ * remainder included. Node loads it when a `development` condition is set,
+ * through an inherited `NODE_OPTIONS` for one, so nothing rests on that never
+ * happening: anything but the default entry withholds every section
+ * (ADR-0107, spec §3.1.1).
+ */
+export function isDefaultBuild(entry: string): boolean {
+  return /\/node_modules\/micromark\/index\.js$/.test(entry);
+}
+
+/** Read once, at load: the build every parse in this process uses. */
+const LOADED_DEFAULT_BUILD = isDefaultBuild(import.meta.resolve('micromark'));
+
+/** A shape that withholds the whole section, carrying the reason, never the text. */
+class Withhold extends Error {}
+
+/** Every Unicode tag character, which draws as nothing and reads as letters. */
+const TAG_CHARACTER = /[\u{E0000}-\u{E007F}]/u;
+
+/**
+ * A line that may read as a heading although CommonMark reads text: one or
+ * two `#` after any whitespace or invisible format characters, then
+ * whitespace or a format character — a no-break space after the hashes, or a
+ * zero-width space or byte-order mark before them (spec §3.1.1, step 7). A
+ * real `##` never reaches it, because it ends the section, and neither a
+ * `#tag` nor a `###` matches.
+ */
+const NEAR_MISS_HEADING = /^[\t\p{Zs}\p{Cf}]*#{1,2}[\t\p{Zs}\p{Cf}]/mu;
+
+/**
+ * Step 7's patterns but the cap, each with its reason: read on the section, and
+ * again on what ships. ⚠️ Twinned, never shared, by `OUTPUT_MARKS` in
+ * `scripts/lib/public-build.ts`; move one and move the other.
+ */
+const SECTION_GUARDS: readonly {
+  readonly reason: string;
+  readonly test: (text: string) => boolean;
+}[] = [
+  { reason: 'it holds two dollar signs, which may be math', test: (t) => /\$[\s\S]*\$/.test(t) },
+  { reason: 'it holds `![`, an image or an embed', test: (t) => t.includes('![') },
+  { reason: 'it holds `^[`, an inline footnote', test: (t) => t.includes('^[') },
+  { reason: 'it holds `::`, a Dataview field', test: (t) => t.includes('::') },
+  { reason: 'it holds a control character', test: hasControlCharacter },
+  { reason: 'it holds Unicode tag characters', test: (t) => TAG_CHARACTER.test(t) },
+  { reason: 'it holds a line that may read as a heading', test: (t) => NEAR_MISS_HEADING.test(t) },
+];
+
+/** A C0 control other than tab and line feed, DEL, or a C1 control. */
+function hasControlCharacter(text: string): boolean {
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0;
+    if ((code < 0x20 && code !== 0x09 && code !== 0x0a) || (code >= 0x7f && code <= 0x9f))
+      return true;
+  }
+  return false;
+}
+
+/** Why a block in the section withholds it, by its token type. */
+const BLOCK_REASONS: Readonly<Record<string, string>> = {
+  blockQuote: 'it holds a quote or a callout',
+  codeFenced: 'it holds a code fence',
+  codeIndented: 'it holds indented code',
+  htmlFlow: 'it holds HTML',
+  setextHeading: 'it holds a setext heading',
+  table: 'it holds a table',
+  definition: 'it holds a link definition',
+  gfmFootnoteDefinition: 'it holds a footnote definition',
+  listOrdered: 'it holds a nested list',
+  listUnordered: 'it holds a nested list',
+};
+
+/** Why an inline token in the section withholds it, by its token type. */
+const INLINE_REASONS: Readonly<Record<string, string>> = {
+  codeText: 'it holds code',
+  htmlText: 'it holds HTML',
+  image: 'it holds an image',
+  autolink: 'it holds an autolink',
+  characterReference: 'it holds a character reference',
+  gfmFootnoteCall: 'it holds a footnote call',
+};
+
+/** Inline tokens whose text a reader sees, and ships. */
+const SHOWN = new Set(['data', 'characterEscapeValue']);
+/** Inline tokens that are marks or layout: walked through, never shipped, never a reason to withhold. */
+const PASSED = new Set([
+  'emphasis',
+  'emphasisSequence',
+  'emphasisText',
+  'strong',
+  'strongSequence',
+  'strongText',
+  'characterEscape',
+  'escapeMarker',
+  'link',
+  'label',
+  'labelMarker',
+  'labelText',
+  'hardBreakEscape',
+  'hardBreakTrailing',
+  'lineSuffix',
+  'linePrefix',
+  'listItemIndent',
+  'whitespace',
+]);
+/** A link's destination, title and reference: skipped whole, never shipped. */
+const SKIPPED = new Set(['resource', 'reference']);
+/** Layout between blocks and inside a list: passed, never shipped. */
+const LAYOUT = new Set([
+  'lineEnding',
+  'lineEndingBlank',
+  'linePrefix',
+  'whitespace',
+  'listItemIndent',
+  'blankLineEnding',
+]);
+
+/** One root-level block: its token, its context, and the events strictly inside it. */
+interface Block {
+  readonly token: Token;
+  readonly context: TokenizeContext;
+  readonly inner: readonly Event[];
+}
+
+/** The body's events, read by `micromark`'s tokenizer with tables and footnotes. Never compiled. */
+function parseBody(body: string): Event[] {
+  const chunks = preprocess()(body, undefined, true);
+  return postprocess(
+    parse({ extensions: [gfmTable(), gfmFootnote()] })
+      .document()
+      .write(chunks),
+  );
+}
+
+function rootBlocks(events: readonly Event[]): Block[] {
+  const blocks: Block[] = [];
+  let depth = 0;
+  let current: { token: Token; context: TokenizeContext; inner: Event[] } | undefined;
+  for (const event of events) {
+    const [kind, token, context] = event;
+    if (kind === 'enter') {
+      if (depth === 0) current = { token, context, inner: [] };
+      else current?.inner.push(event);
+      depth++;
+    } else {
+      depth--;
+      if (depth === 0 && current !== undefined) blocks.push(current);
+      else current?.inner.push(event);
+    }
+  }
+  return blocks;
+}
+
+/** The heading a root block is, if it is one: its level, its trimmed text, and whether it is setext. */
+function headingOf(block: Block): { level: number; text: string; setext: boolean } | undefined {
+  const find = (type: string): Event | undefined =>
+    block.inner.find(([kind, token]) => kind === 'enter' && (token.type as string) === type);
+  const slice = (event: Event | undefined): string =>
+    event === undefined ? '' : event[2].sliceSerialize(event[1]);
+
+  if (block.token.type === 'atxHeading') {
+    const level = slice(find('atxHeadingSequence')).length;
+    return { level, text: slice(find('atxHeadingText')).trim(), setext: false };
+  }
+  if (block.token.type === 'setextHeading') {
+    const level = slice(find('setextHeadingLineSequence')).startsWith('=') ? 1 : 2;
+    return { level, text: slice(find('setextHeadingText')).trim(), setext: true };
+  }
+  return undefined;
+}
+
+/**
+ * Where `## Notes` starts in a note's body, at the start of its line, or
+ * `undefined` when the body has none: the first root-level level-2 ATX heading
+ * reading `Notes`, read through the same parse as the extractor's, so the
+ * `## About` writer and the extractor cannot read a heading differently. It
+ * excludes the frontmatter (the caller passes the body), fenced lines,
+ * subheadings, and headings inside a list item or a quote.
+ *
+ * A body over `MAX_BODY_CODE_POINTS` is not parsed, and reads as having none:
+ * the writer then appends, which is what it does on a hand-made note.
+ */
+export function notesHeadingAt(body: string): number | undefined {
+  if ([...body].length > MAX_BODY_CODE_POINTS) return undefined;
+  const notes = rootBlocks(parseBody(body)).find((block) => {
+    const heading = headingOf(block);
+    return heading?.setext === false && heading.level === 2 && heading.text === 'Notes';
+  });
+  if (notes === undefined) return undefined;
+  const at = notes.token.start.offset;
+  return at === 0 ? 0 : body.lastIndexOf('\n', at - 1) + 1;
+}
+
+/**
+ * Finds and strips a note's `## Thoughts` section, reading the body with a
+ * CommonMark parser and the allowlist of spec §3.1.1 over its tokens.
+ *
+ * The steps run in the spec's order, and each one that fails withholds the
+ * whole section with a reason naming the shape, never the text.
  */
 export function extractThoughts(source: string): ThoughtsResult {
+  // 1. No frontmatter block: no note, so no section.
   const frontmatter = FRONTMATTER_BLOCK.exec(source);
   if (frontmatter === null) return { kind: 'absent' };
+  if (!LOADED_DEFAULT_BUILD) {
+    return withheld('micromark loaded its development build, so no section is read');
+  }
 
-  const body = source.slice(frontmatter.index + frontmatter[0].length);
-  const lines = body.split(/\r?\n/);
-  const starts = sectionStarts(lines);
-
-  const first = starts[0];
-  if (first === undefined) return { kind: 'absent' };
-  // The whole source, frontmatter included: if Obsidian drew the properties
-  // block's edge differently, a stray ending there would be body to it.
+  // 2. Line endings and size, on raw text. The whole source, frontmatter
+  // included: if Obsidian drew the properties block's edge differently, a stray
+  // ending there would be body to it.
   if (ODD_LINE_ENDING.test(source))
     return withheld('the note holds a line ending other than a newline');
-  if (starts.length > 1) return withheld('the note has two `## Thoughts` headings');
-
-  // A comment or an HTML block open where the section starts can make its
-  // heading no heading, or hide the section in reading view, and a marker
-  // inside a fence above it is read differently by Obsidian than by a scan.
-  // Rather than guess which, any such marker above the section withholds it.
-  const above = lines.slice(0, first).join('\n');
-  if (COMMENT_MARKER.test(above)) return withheld('a comment marker sits above the section');
-  if (HTML_START.test(above)) return withheld('HTML sits above the section');
-
-  const bounded = sectionLines(lines, first + 1);
-  if (typeof bounded === 'string') return withheld(bounded);
-
-  const raw = bounded.join('\n');
-  if ([...raw].length > MAX_SECTION_CODE_POINTS) {
-    return withheld(`it is over ${String(MAX_SECTION_CODE_POINTS)} characters`);
-  }
-  for (const { reason, pattern } of HIDDEN) {
-    if (pattern.test(raw)) return withheld(reason);
+  const body = source.slice(frontmatter.index + frontmatter[0].length);
+  if ([...body].length > MAX_BODY_CODE_POINTS) {
+    return withheld(
+      `the note body is over ${String(MAX_BODY_CODE_POINTS)} characters, so it was not read`,
+    );
   }
 
-  const paragraphs = toParagraphs(bounded);
-  if (paragraphs.some((paragraph) => URL_SCHEME.test(paragraph))) {
-    return withheld('it holds a web address or a file link');
+  try {
+    return readSection(body);
+  } catch (error) {
+    if (error instanceof Withhold) return withheld(error.message);
+    throw error;
   }
+}
+
+function readSection(body: string): ThoughtsResult {
+  const events = parseBody(body);
+  const blocks = rootBlocks(events);
+
+  // 3. The start: a root-level ATX `## Thoughts`. A second root-level level-2
+  // `Thoughts`, ATX or setext, withholds.
+  const thoughts = blocks.flatMap((block, index) => {
+    const heading = headingOf(block);
+    return heading?.level === 2 && heading.text === THOUGHTS ? [{ index, heading }] : [];
+  });
+  const start = thoughts.find(({ heading }) => !heading.setext);
+  if (start === undefined) return { kind: 'absent' };
+  if (thoughts.length > 1) throw new Withhold('the note has two `## Thoughts` headings');
+  const heading = blocks[start.index] as Block;
+
+  // 4. The end: the next root-level heading of level 1 or 2, or the end of the body.
+  let end = blocks.length;
+  for (let index = start.index + 1; index < blocks.length; index++) {
+    const next = headingOf(blocks[index] as Block);
+    if (next !== undefined && next.level <= 2) {
+      if (next.setext) throw new Withhold('a setext heading ends the section');
+      end = index;
+      break;
+    }
+  }
+  const sectionStart = heading.token.end.offset;
+  const sectionEnd = end < blocks.length ? (blocks[end] as Block).token.start.offset : body.length;
+  for (const block of [heading, blocks[end]]) {
+    // The raw guards below read the body by the parser's offsets; if the two
+    // ever disagree, the guards would read the wrong text.
+    if (
+      block !== undefined &&
+      body.slice(block.token.start.offset, block.token.end.offset) !==
+        block.context.sliceSerialize(block.token)
+    ) {
+      throw new Withhold('the parse and the text disagree on where the section is');
+    }
+  }
+
+  // 5. HTML above the section: any HTML token, and the raw tag start.
+  const headingAt = heading.token.start.offset;
+  const htmlAbove = events.some(
+    ([kind, token]) =>
+      kind === 'enter' &&
+      (token.type === 'htmlFlow' || token.type === 'htmlText') &&
+      token.start.offset < headingAt,
+  );
+  if (htmlAbove || HTML_START.test(body.slice(0, headingAt))) {
+    throw new Withhold('HTML sits above the section');
+  }
+
+  // 6. Raw guards from the start of the body to the section's end, where
+  // Obsidian may draw a block's extent differently from CommonMark.
+  const upToEnd = body.slice(0, sectionEnd);
+  if (upToEnd.includes('%%'))
+    throw new Withhold('a `%%` comment marker sits in or above the section');
+  if (/`{3,}|~{3,}/.test(upToEnd)) {
+    throw new Withhold('a run of three backticks or tildes sits in or above the section');
+  }
+  if (upToEnd.includes('$$')) throw new Withhold('a `$$` sits in or above the section');
+
+  // 7. Raw guards in the section. The heading's own line ending is the
+  // heading's; a CRLF counts as one break; trailing whitespace does not count.
+  const raw = body.slice(sectionStart, sectionEnd).replace(/\r\n/g, '\n').replace(/^\n/, '');
+  if ([...raw.trimEnd()].length > MAX_SECTION_CODE_POINTS) {
+    throw new Withhold(`it is over ${String(MAX_SECTION_CODE_POINTS)} characters`);
+  }
+  for (const guard of SECTION_GUARDS) if (guard.test(raw)) throw new Withhold(guard.reason);
+
+  // 8. The token allowlist; 9. Obsidian's marks; 10. the output check.
+  const paragraphs = blocks
+    .slice(start.index + 1, end)
+    .map(blockText)
+    .filter((text): text is string => text !== undefined)
+    .map(obsidianMarks)
+    .filter((text) => text !== '');
+  paragraphs.forEach(outputCheck);
+
+  // 11. Nothing left: no section.
   return paragraphs.length === 0 ? { kind: 'absent' } : { kind: 'shipped', paragraphs };
+}
+
+/** A root block's shipped text, `undefined` for layout, or a withhold for a block outside the allowlist. */
+function blockText(block: Block): string | undefined {
+  const type: string = block.token.type;
+  if (LAYOUT.has(type)) return undefined;
+  if (type === 'content') return contentText(block.inner);
+  if (type === 'thematicBreak') return '---';
+  if (type === 'listUnordered' || type === 'listOrdered') return listText(block);
+  if (type === 'atxHeading') {
+    const text = innerOf(block.inner, 'atxHeadingText');
+    return text === undefined ? '' : inlineText(text);
+  }
+  throw new Withhold(BLOCK_REASONS[type] ?? `it holds a shape outside the allowlist (${type})`);
+}
+
+/** The events strictly inside the first `type` token in `events`, or `undefined`. */
+function innerOf(events: readonly Event[], type: string): Event[] | undefined {
+  const at = events.findIndex(
+    ([kind, token]) => kind === 'enter' && (token.type as string) === type,
+  );
+  if (at === -1) return undefined;
+  const token = (events[at] as Event)[1];
+  const close = events.findIndex(
+    ([kind, t], index) => index > at && kind === 'exit' && t === token,
+  );
+  return events.slice(at + 1, close);
+}
+
+/** A `content` block's paragraph text; a definition in it withholds. */
+function contentText(inner: readonly Event[]): string {
+  for (const [kind, token] of inner) {
+    if (kind === 'enter' && token.type === 'definition') {
+      throw new Withhold('it holds a link definition');
+    }
+  }
+  return inlineText(inner.filter(([, token]) => token.type !== 'paragraph'));
+}
+
+/**
+ * A list one level deep, each item holding paragraphs only, as one string:
+ * a line per paragraph, the item's mark kept before its first.
+ */
+function listText(block: Block): string {
+  const lines: string[] = [];
+  let mark = '';
+  let index = 0;
+  const { inner } = block;
+  while (index < inner.length) {
+    const [kind, token, context] = inner[index] as Event;
+    const type: string = token.type;
+    const close = inner.findIndex(([k, t], at) => at > index && k === 'exit' && t === token);
+    if (kind === 'exit' || LAYOUT.has(type)) {
+      index++;
+      continue;
+    }
+    if (type === 'listItemPrefix') mark = context.sliceSerialize(token).trim();
+    else if (type === 'content') {
+      const text = contentText(inner.slice(index + 1, close));
+      lines.push(mark === '' ? text : `${mark} ${text}`);
+      mark = '';
+    } else if (type === 'listOrdered' || type === 'listUnordered') {
+      throw new Withhold('it holds a nested list');
+    } else throw new Withhold('a list item holds more than a paragraph');
+    index = close + 1;
+  }
+  return lines.join('\n');
+}
+
+/** The shown text of an inline run: text, escapes, and a link's label only. */
+function inlineText(events: readonly Event[]): string {
+  let text = '';
+  let skipping: Token | undefined;
+  for (const [kind, token, context] of events) {
+    if (skipping !== undefined) {
+      if (kind === 'exit' && token === skipping) skipping = undefined;
+      continue;
+    }
+    if (kind === 'exit') continue;
+    const type: string = token.type;
+    if (SKIPPED.has(type)) skipping = token;
+    else if (SHOWN.has(type)) text += context.sliceSerialize(token);
+    else if (type === 'lineEnding') text += '\n';
+    else if (!PASSED.has(type)) {
+      throw new Withhold(
+        INLINE_REASONS[type] ?? `it holds a shape outside the allowlist (${type})`,
+      );
+    }
+  }
+  return text;
+}
+
+/**
+ * A wikilink: its target, any `#heading` or `^block` part, and an alias. The
+ * alias ships, else the target without the part, which names a place in the
+ * vault.
+ */
+const WIKILINK = /\[\[([^[\]|]*)(?:\|([^[\]]*))?\]\]/g;
+/** A block id at the end of a line, which names a place in the vault. */
+const BLOCK_ID = /(?:^|[ \t]+)\^[A-Za-z0-9-]+[ \t]*$/;
+
+/** Step 9: Obsidian's marks, which no CommonMark parser knows, on text that ships. */
+function obsidianMarks(text: string): string {
+  const flattened = text.replace(WIKILINK, (_, target: string, alias?: string) =>
+    (alias ?? target.split(/[#^]/)[0] ?? '').trim(),
+  );
+  if (/\[\[|\]\]/.test(flattened)) throw new Withhold('a wikilink did not flatten');
+  return flattened
+    .split('\n')
+    .map((line) =>
+      line
+        .replace(BLOCK_ID, '')
+        .replace(/==(?=\S)(.*?\S)==/g, '$1')
+        .replace(/~~(?=\S)(.*?\S)~~/g, '$1')
+        .trimEnd(),
+    )
+    .join('\n')
+    .trim();
+}
+
+/**
+ * Step 10, on each paragraph that ships, after every strip and escape: an
+ * escaped mark the strip restored withholds here, so it never reaches the
+ * inspector's twin and fails the deploy.
+ */
+function outputCheck(paragraph: string): void {
+  if (COMMENT_MARKER.test(paragraph))
+    throw new Withhold('after the strip, it holds a comment marker');
+  if (HTML_START.test(paragraph)) throw new Withhold('after the strip, it holds a tag start');
+  if (URL_SCHEME.test(paragraph)) throw new Withhold('it holds a web address or a file link');
+  for (const guard of SECTION_GUARDS) {
+    if (guard.test(paragraph)) throw new Withhold(`after the strip, ${guard.reason}`);
+  }
 }
 
 /**
@@ -230,13 +596,20 @@ export function extractThoughts(source: string): ThoughtsResult {
  *
  * - **Every line ending becomes LF** — CRLF, a lone CR, U+2028 and U+2029 — so
  *   a line the extractor reads is the line this disarms.
- * - **Every line `atxHeading` or `fenceOpener` would recognise gains a
- *   backslash** before its first mark, so it reads as neither.
  * - **`<`, `>` and `%%` become entities**, so a description cannot carry a live
  *   comment or HTML block. `toPlainText` decodes `&lt;` after stripping tags,
  *   so escaped markup in a listing would otherwise arrive live, and on a note
  *   whose `## Notes` sits above its Thoughts it would land above the section
  *   and withhold it, or hide it in reading view.
+ * - **Every run of three or more backticks or tildes, anywhere in a line,
+ *   every `$` and every `[^` become character references.** On a note whose
+ *   `## About` sits above its Thoughts, the extractor's raw guards read the
+ *   description, so a mid-line run or a `$$` would withhold the owner's
+ *   section, and a provider's `[^x]:` would turn the owner's `[^x]` into a
+ *   footnote call (spec §3.1.1, D9). Encoding the run is also what disarms a
+ *   fence opener.
+ * - **Every line `atxHeading` reads as a heading, and every setext underline,
+ *   gains a backslash** before its first mark, so it reads as neither.
  *
  * A description's line breaks survive `toPlainText`, so a listing line reading
  * `## Thoughts` would otherwise land at column 0 — shipping a stranger's words
@@ -250,166 +623,26 @@ export function disarmBodyText(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/%%/g, '%&#37;')
+    .replace(/`{3,}|~{3,}/g, (run) => run.replace(/`/g, '&#96;').replace(/~/g, '&#126;'))
+    .replace(/\$/g, '&#36;')
+    .replace(/\[\^/g, '&#91;^')
     .split('\n')
     .map((line) =>
-      atxHeading(line) === undefined && fenceOpener(line) === undefined
+      atxHeading(line) === undefined && !SETEXT_UNDERLINE.test(line)
         ? line
         : line.replace(/^( *)/, '$1\\'),
     )
     .join('\n');
 }
 
+/**
+ * A setext underline in CommonMark's shape: up to three spaces of indent, only
+ * `=` or only `-`, trailing whitespace allowed. Under a line reading
+ * `Thoughts`, a provider's dashes would make a second `Thoughts` heading and
+ * withhold the owner's real section (spec §3.1.1).
+ */
+const SETEXT_UNDERLINE = /^ {0,3}(?:=+|-+)[ \t]*$/;
+
 function withheld(reason: string): ThoughtsResult {
   return { kind: 'withheld', reason };
-}
-
-/** The index of every `## Thoughts` heading outside a fence. */
-function sectionStarts(lines: readonly string[]): number[] {
-  const starts: number[] = [];
-  let open: FenceOpener | undefined;
-
-  lines.forEach((line, index) => {
-    if (open !== undefined) {
-      if (closesFence(line, open)) open = undefined;
-      return;
-    }
-    open = fenceOpener(line);
-    if (open !== undefined) return;
-
-    const heading = atxHeading(line);
-    if (heading?.level === 2 && heading.text === THOUGHTS) starts.push(index);
-  });
-
-  return starts;
-}
-
-/**
- * The section's lines, from `from` to the next `#` or `##` heading or the end,
- * or the reason it must be withheld.
- *
- * **An allowlist of line shapes** ([ADR-0106](../../../../docs/adr/0106-thoughts-ship-only-plain-prose.md)).
- * A section ships only plain prose: paragraphs, one level of list at the
- * margin, `###` and deeper subheadings, and inline marks `stripLine` knows.
- * Any other block shape withholds the whole section, because each one is a
- * container in which CommonMark builds structure this line scan cannot see —
- * #411's review found a new such shape in each of two rounds while the rules
- * were a list of shapes to refuse.
- */
-function sectionLines(lines: readonly string[], from: number): string[] | string {
-  const section: string[] = [];
-
-  for (const line of lines.slice(from)) {
-    const heading = atxHeading(line);
-    if (heading !== undefined && heading.level <= 2) return section;
-
-    const problem = lineShapeProblem(line, section.at(-1));
-    if (problem !== undefined) return problem;
-    section.push(line);
-  }
-
-  return section;
-}
-
-/**
- * Why `line` is not a plain-prose line, or `undefined` when it is. `previous`
- * is the section line before it, which decides whether `---` is a setext
- * underline or a thematic break.
- */
-function lineShapeProblem(line: string, previous: string | undefined): string | undefined {
-  if (line.trim() === '') return undefined;
-  if (/^[ \t]/.test(line)) {
-    return 'it holds an indented line (a nested list, a continuation or indented code)';
-  }
-  if (line.startsWith('>')) return 'it holds a quote or a callout';
-  if (fenceOpener(line) !== undefined) return 'it holds a code fence';
-  if (TABLE_DELIMITER.test(line)) return 'it holds a table';
-  if (SETEXT_UNDERLINE.test(line) && isParagraphLine(previous)) return 'it holds a setext heading';
-  return undefined;
-}
-
-/** Whether a line can carry a setext underline: text, not a heading or a fence. */
-function isParagraphLine(line: string | undefined): boolean {
-  return (
-    line !== undefined &&
-    line.trim() !== '' &&
-    atxHeading(line) === undefined &&
-    fenceOpener(line) === undefined
-  );
-}
-
-/**
- * The section as plain-text paragraphs: split on blank lines, single line
- * breaks kept, Markdown stripped by hand the way `remove-markdown` does (#368).
- * Every line has already passed `lineShapeProblem`, so none is fenced.
- */
-function toParagraphs(section: readonly string[]): string[] {
-  const paragraphs: string[] = [];
-  let current: string[] = [];
-
-  const flush = (): void => {
-    if (current.length > 0) paragraphs.push(current.join('\n'));
-    current = [];
-  };
-
-  for (const line of section) {
-    const text = stripLine(line);
-    if (text === '') flush();
-    else current.push(text);
-  }
-  flush();
-
-  return paragraphs.filter((paragraph) => paragraph.trim() !== '');
-}
-
-/**
- * Private-use characters, U+E000 and U+E001, standing in for escaped ones while
- * marks are stripped. Built from code points so neither is invisible here.
- */
-const ESCAPE_OPEN = String.fromCodePoint(0xe000);
-const ESCAPE_CLOSE = String.fromCodePoint(0xe001);
-
-/** One line, its block marks and inline marks removed, its words kept. */
-function stripLine(line: string): string {
-  const escapes: string[] = [];
-  let text = line.replace(/\\([!-/:-@[-`{-~])/g, (_, char: string) => {
-    escapes.push(char);
-    return `${ESCAPE_OPEN}${String(escapes.length - 1)}${ESCAPE_CLOSE}`;
-  });
-
-  // Block marks: quote markers, nested ones too; a callout's `[!type]` and fold
-  // mark, keeping its title; a heading's hashes, keeping its text.
-  text = text.replace(/^[ \t]*(?:>[ \t]?)+/, '').replace(/^\[![^\]\n]*\][+-]?[ \t]*/, '');
-  const heading = atxHeading(text);
-  if (heading !== undefined) text = heading.text;
-
-  // A block id names a place in the vault, for the wikilink rule's reason.
-  text = text.replace(/(?:^|[ \t]+)\^[A-Za-z0-9-]+[ \t]*$/, '');
-
-  // Links flatten to the text a reader sees. A wikilink's heading or block
-  // part names a place in the vault and is dropped with it.
-  text = text
-    .replace(
-      /\[\[([^\]|#^]*)(?:[#^][^\]|]*)?(?:\|([^\]]*))?\]\]/g,
-      (_, target: string, alias?: string) => (alias ?? target).trim(),
-    )
-    .replace(/\[([^\]\n]*)\]\([^)\n]*\)/g, '$1')
-    .replace(/\[([^\]\n]*)\]\[[^\]\n]*\]/g, '$1');
-
-  // Emphasis and code marks go; the words stay. An underscore inside a word is
-  // part of the word.
-  text = text
-    .replace(/(`+)([^`]+?)\1/g, '$2')
-    .replace(/\*\*(?=\S)([^\n]*?\S)\*\*/g, '$1')
-    .replace(/(?<!\w)__(?=\S)([^\n]*?\S)__(?!\w)/g, '$1')
-    .replace(/\*(?=\S)([^\n*]*?\S)\*/g, '$1')
-    .replace(/(?<!\w)_(?=\S)([^\n_]*?\S)_(?!\w)/g, '$1')
-    .replace(/~~(?=\S)([^\n]*?\S)~~/g, '$1')
-    .replace(/==(?=\S)([^\n]*?\S)==/g, '$1');
-
-  return text
-    .replace(
-      new RegExp(`${ESCAPE_OPEN}(\\d+)${ESCAPE_CLOSE}`, 'g'),
-      (_, index: string) => escapes[Number(index)] ?? '',
-    )
-    .trimEnd();
 }

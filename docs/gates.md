@@ -1606,6 +1606,30 @@ view — reaching a staged file, and found query blocks nested in callouts.
   inspector; two more pin the revalidate rule against the two mutants round 2
   left alive, each observed killing its mutant.
 
+**Step 2, rebuilt on a CommonMark parser.** Round 3 found 13 more leaks in the
+allowlist's own reading of lines, and the owner adopted a parser
+([ADR-0107](adr/0107-thoughts-are-read-by-a-commonmark-parser.md)). No row
+moved; the gates above hold the new extractor as they held the old one.
+
+- **Spec §3.1.4's named cases**, N1 to N67, are extractor unit tests (with N17,
+  N58 and N66 through the adapter, N60 under G20, N65 and N67 beside the
+  parser). Each extractor case was observed red against a stub that threw,
+  before the parser-backed version replaced the hand one.
+- **`notes-shape` mirrors the extractor's output check** (N60): two `$`, `![`,
+  `^[`, `::`, a control character, Unicode tag characters and a near-miss
+  heading, in its own list beside `HIDDEN_MARKER`, never a shared import. Ten
+  G20 plants went red before the list existed, and a near-miss control holds a
+  single `$`, a `#tag` and a lone colon clean.
+- **An escaped mark the strip restores** (`\<div`, `<\!--`, `--\>`) withholds
+  at extraction, so a build of such a note writes no file for the inspector to
+  refuse (N52); G2 builds each, and each went red with the output check
+  removed.
+- **Two tests hold the parser itself.** One runs the extractor in a fresh Node
+  under `--conditions=development` and sees every section withheld, red with
+  the load check disabled. The other resolves the 32 packages of `micromark`'s
+  closure from `core` and compares each version with a committed list, red
+  with one version moved.
+
 ## Where cover art may go
 
 | Surface | Rule |

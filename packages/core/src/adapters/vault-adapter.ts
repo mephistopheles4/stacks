@@ -58,10 +58,13 @@ export interface VaultAdapter {
    * - **Everything else survives byte for byte**, `updateBook`'s promise
    *   extended to the half of the file it never touched.
    * - **The text it writes is disarmed**: every line ending becomes LF, `<`,
-   *   `>` and `%%` are written as entities, and every line that would read as a
-   *   heading or open a code fence gains a backslash first, so a provider's
-   *   prose can never open a `## Thoughts` section of its own, carry `## Notes`
-   *   out of one, or land a live comment or HTML block (spec §4).
+   *   `>` and `%%` are written as entities, every run of three or more
+   *   backticks or tildes, every `$` and every `[^` become character
+   *   references, and every line that would read as a heading, and every
+   *   setext underline, gains a backslash first, so a provider's prose can
+   *   never open a `## Thoughts` section of its own, carry `## Notes` out of
+   *   one, trip a guard that withholds the owner's, or land a live comment or
+   *   HTML block (spec §3.1.1, §4).
    *
    * ⚠️ **Any allowlist of published sections must never name `## About`**: the
    * whole point of storing a description here was that it stays local
@@ -84,7 +87,9 @@ export interface VaultAdapter {
    * private remainder, and it is never a `BookRecord` field, so `library.json`
    * has nowhere to put the text
    * ([ADR-0100](../../../../docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md)).
-   * **The publisher is its only caller.**
+   * **The publisher is its only caller.** The body is read through a
+   * CommonMark parser, and any shape but plain prose withholds the section
+   * ([ADR-0107](../../../../docs/adr/0107-thoughts-are-read-by-a-commonmark-parser.md)).
    *
    * A withheld section warns naming the note and never quoting it (spec §3.1).
    * `sourcePath` is the vault-relative path a `BookRecord` carries.

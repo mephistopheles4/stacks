@@ -393,6 +393,35 @@ describe.each([
     }
   });
 
+  it.each([['\\<div'], ['<\\!--'], ['--\\>']])(
+    'N52: a section holding the escaped mark %s writes no file for the inspector to refuse',
+    async (mark) => {
+      // The strip restores an escaped mark to the real one, and the extractor's
+      // output check withholds it there, so the deploy check never sees it
+      // (#411's round 3, adversarial F6).
+      const copy = await mkdtemp(join(tmpdir(), 'stacks-escaped-vault-'));
+      try {
+        await cp(FIXTURE_VAULT, copy, { recursive: true });
+        const notePath = join(copy, 'Library', PLANTED.split);
+        const original = await readFile(notePath, 'utf8');
+        await writeFile(
+          notePath,
+          original.replace(SHIP_PHRASE, `${SHIP_PHRASE} An escaped ${mark} mark.`),
+        );
+        const vault = new ObsidianAdapter(copy);
+        const result = await publish(await vault.listBooks(), vault, assets, {
+          isPublic,
+          thoughts: true,
+        });
+
+        expect(walk(join(assets, 'notes'))).toEqual([]);
+        expect(result.notesWritten).toBe(0);
+      } finally {
+        await rm(copy, { recursive: true, force: true });
+      }
+    },
+  );
+
   it.runIf(PUBLISH_THOUGHTS)(
     'marks the split book, and only it, as carrying Thoughts',
     async () => {

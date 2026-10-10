@@ -202,8 +202,56 @@ describe('readPublicSection', () => {
       const written = await readFile(join(dir, path), 'utf8');
 
       expect(written).toContain('\\## Thoughts');
-      expect(written).toContain('\\```');
+      expect(written).toContain('&#96;&#96;&#96;');
       expect(written).not.toMatch(/^## Thoughts/m);
     });
+  });
+
+  describe('N17: a description holding a `## Thoughts` line, a `Thoughts` setext pair and an unclosed fence', () => {
+    const description = [
+      'A provider blurb.',
+      '## Thoughts',
+      `${CANARY} in a stranger's words.`,
+      '',
+      'Thoughts',
+      '---',
+      `${CANARY} under a setext pair.`,
+      '```',
+      'and a fence it never closes',
+    ].join('\n');
+
+    it('ships none of it on a note with no Thoughts of its own', async () => {
+      const path = await note('N17a', '## Notes', '', CANARY);
+      await vault.insertBodySection(path, '## About', description);
+
+      expect(await vault.readPublicSection(path)).toBeUndefined();
+      expect(warned()).not.toContain(CANARY);
+    });
+
+    it('leaves the owner’s Thoughts shipping, and none of the description', async () => {
+      const path = await note('N17b', '## Thoughts', '', 'Mine.', '', '## Notes', '', CANARY);
+      await vault.insertBodySection(path, '## About', description);
+
+      expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
+    });
+  });
+
+  it('N66: leaves the owner’s Thoughts shipping below a description that would trip a raw guard', async () => {
+    // `## About` lands above `## Notes`, which sits above the Thoughts here, so
+    // every raw guard that reads above the section reads the description.
+    const description = [
+      'A blurb with a mid-line ``` run in it.',
+      'It says $$ twice.',
+      'Thoughts',
+      '   ---',
+      'And a [^x] call.',
+      '',
+      '[^x]: a definition of its own',
+    ].join('\n');
+    const path = await note('N66', '## Notes', '', 'Private.', '', '## Thoughts', '', 'Mine [^x].');
+    await vault.insertBodySection(path, '## About', description);
+
+    expect(await vault.readPublicSection(path)).toEqual(['Mine [^x].']);
+    expect(warned()).toBe('');
   });
 });

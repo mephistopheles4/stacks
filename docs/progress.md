@@ -202,6 +202,27 @@ found; both in that section. After a second round found another shape, the owner
 ([ADR-0106](./adr/0106-thoughts-ship-only-plain-prose.md)): only plain prose ships, and the gates follow
 the stage's off switch so a takedown deploy can run.
 
+**2026-10-10 — the Thoughts extractor, rebuilt on a CommonMark parser**
+([#411](https://github.com/mephistopheles4/stacks/issues/411),
+[ADR-0107](./adr/0107-thoughts-are-read-by-a-commonmark-parser.md)): the section
+is read through `micromark`'s tokenizer and ADR-0106's allowlist applies to its
+tokens. Spec §3.1.4's named cases were each observed red against a stub first.
+`notes-shape` gains the twin of the extractor's output check under G20 — same
+section of [`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
+Two environment findings, both measured:
+
+- **Vitest loaded `micromark`'s `development` build.** Vite adds a
+  `development` condition and Vitest passes it to every worker as
+  `--conditions`; inside a test, `import.meta.resolve('micromark')` answered
+  `dev/index.js`. Setting `ssr.resolve.conditions` did not remove it, because
+  Vitest merges its defaults into the list, so `vitest.config.ts` filters the
+  resolved list in a `configResolved` plugin. A test now asserts the suite
+  runs the default build, as the CLI does.
+- **The adapter checks at load which build resolved**, and withholds every
+  section when it is not the default one. A test runs the extractor in a
+  fresh Node under `--conditions=development` and sees every section
+  withheld; the default build is the only one that publishes.
+
 ### Phase 4 evidence
 
 `stacks import audible <export>` against a real Libation export: 22 records, 17

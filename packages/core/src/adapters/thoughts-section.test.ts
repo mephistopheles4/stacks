@@ -1,10 +1,11 @@
+import { parse, postprocess, preprocess } from 'micromark';
 import { describe, expect, it } from 'vitest';
 import {
   MAX_SECTION_CODE_POINTS,
   atxHeading,
   disarmBodyText,
   extractThoughts,
-  fenceOpener,
+  notesHeadingAt,
 } from './thoughts-section.ts';
 
 /**
@@ -20,6 +21,9 @@ import {
  */
 
 const CANARY = 'PRIVATE_REMAINDER_canary';
+
+/** Step 6's reason, which every fence and backtick run now gives (spec §3.1.3). */
+const FENCE_RUN = 'a run of three backticks or tildes sits in or above the section';
 
 /** A note: frontmatter, then the body lines given. */
 function note(...body: string[]): string {
@@ -103,7 +107,9 @@ describe('the section boundary', () => {
     expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
   });
 
-  it('does not count a fenced `## Thoughts` as a heading', () => {
+  it('does not count a fenced `## Thoughts` as a heading, and the fence above withholds the real one', () => {
+    // Since #411's parser amendment, any fence run above the section withholds
+    // it (spec §3.1.1, step 6): Obsidian may draw a block's extent differently.
     const source = note(
       '## Notes',
       '',
@@ -116,7 +122,10 @@ describe('the section boundary', () => {
       '',
       'Kept.',
     );
-    expect(shipped(source)).toEqual(['Kept.']);
+    expect(extractThoughts(source)).toEqual({
+      kind: 'withheld',
+      reason: 'a run of three backticks or tildes sits in or above the section',
+    });
   });
 
   it('finds no section when a fence opened above it is never closed', () => {
@@ -167,7 +176,7 @@ describe('the allowlist: only plain prose ships (ADR-0106)', () => {
     ['a longer tilde fence with an info string', ['~~~~ x', CANARY, '~~~~']],
   ])('withholds %s, closed or not', (_, lines) => {
     const source = note('## Thoughts', '', 'Before.', '', ...lines, '', 'After.');
-    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason: 'it holds a code fence' });
+    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason: FENCE_RUN });
     expectNoCanary(source);
   });
 
@@ -178,61 +187,66 @@ describe('the allowlist: only plain prose ships (ADR-0106)', () => {
   });
 
   it.each([
-    ['inline code', `Some \`${CANARY}\` here.`],
-    ['an inline query', `Read \`= [[${CANARY}]].rating\` times.`],
-    ['a backtick run that is no fence', `\`\`\`a\`b ${CANARY}`],
-  ])('withholds %s: any backtick', (_, line) => {
+    ['inline code', `Some \`${CANARY}\` here.`, 'it holds code'],
+    ['an inline query', `Read \`= [[${CANARY}]].rating\` times.`, 'it holds code'],
+    ['a backtick run that is no fence', `\`\`\`a\`b ${CANARY}`, FENCE_RUN],
+  ])('withholds %s', (_, line, reason) => {
     const source = note('## Thoughts', '', line, '', '## Notes');
-    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason: 'it holds code' });
+    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason });
     expectNoCanary(source);
   });
 
   it.each([
-    ['a quote', ['> ' + CANARY]],
-    ['a callout', ['> [!note] A title', `> ${CANARY}`]],
-    ['a heading inside a quote', ['> ## Notes', `> ${CANARY}`]],
-    ['a query fence inside a callout', ['> [!note]', '> ```dataview', `> ${CANARY}`, '> ```']],
-  ])('withholds %s', (_, lines) => {
+    ['a quote', ['> ' + CANARY], 'it holds a quote or a callout'],
+    ['a callout', ['> [!note] A title', `> ${CANARY}`], 'it holds a quote or a callout'],
+    ['a heading inside a quote', ['> ## Notes', `> ${CANARY}`], 'it holds a quote or a callout'],
+    [
+      'a query fence inside a callout',
+      ['> [!note]', '> ```dataview', `> ${CANARY}`, '> ```'],
+      FENCE_RUN,
+    ],
+  ])('withholds %s', (_, lines, reason) => {
     const source = note('## Thoughts', '', 'Kept?', '', ...lines);
-    expect(extractThoughts(source)).toEqual({
-      kind: 'withheld',
-      reason: 'it holds a quote or a callout',
-    });
+    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason });
     expectNoCanary(source);
   });
 
   it.each([
-    ['a nested list', ['- an item', `  - ${CANARY}`]],
-    ['a list continuation', ['- an item', '', `    ${CANARY}`]],
-    ['indented code', [`    ${CANARY}`]],
-    ['an indented subheading', [`   ### ${CANARY}`]],
-  ])('withholds %s: any indented line', (_, lines) => {
+    ['a nested list', ['- an item', `  - ${CANARY}`], 'it holds a nested list'],
+    ['indented code', [`    ${CANARY}`], 'it holds indented code'],
+  ])('withholds %s', (_, lines, reason) => {
     const source = note('## Thoughts', '', 'Kept?', '', ...lines);
-    expect(extractThoughts(source)).toEqual({
-      kind: 'withheld',
-      reason: 'it holds an indented line (a nested list, a continuation or indented code)',
-    });
+    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason });
     expectNoCanary(source);
   });
 
-  it('ends the section at a heading indented under a list item, so nothing below it ships', () => {
-    // Wider than CommonMark, which keeps the heading inside the item: ending
-    // early can only publish less.
+  it('ships a list continuation as part of its item, as reading view shows it (D4)', () => {
+    const source = note('## Thoughts', '', 'Kept.', '', '- an item', '', '    more of it');
+    expect(shipped(source)).toEqual(['Kept.', '- an item\nmore of it']);
+  });
+
+  it('ships an indented subheading’s text, as reading view shows it (D5)', () => {
+    expect(shipped(note('## Thoughts', '', 'Kept.', '', '   ### Part'))).toEqual(['Kept.', 'Part']);
+  });
+
+  it('withholds a heading indented under a list item, since CommonMark keeps it in the item (D1)', () => {
+    // The indented `##` line is a near-miss heading to step 7's raw guard,
+    // which reads before step 8 would find the heading inside the item.
     const source = note('## Thoughts', '', '- an item', '  ## Notes', CANARY);
-    expect(shipped(source)).toEqual(['- an item']);
+    expect(extractThoughts(source)).toEqual({
+      kind: 'withheld',
+      reason: 'it holds a line that may read as a heading',
+    });
     expectNoCanary(source);
   });
 
   it.each([
-    ['in a list item', [`- [x]: vault/path "${CANARY}"`]],
-    ['with a label over two lines', ['[a', `b]: ${CANARY}`]],
-    ['for a footnote', [`[^1]: ${CANARY}`]],
-  ])('withholds a definition %s: `]:` anywhere', (_, lines) => {
+    ['in a list item', [`- [x]: vault/path "${CANARY}"`], 'it holds a link definition'],
+    ['with a label over two lines', ['[a', `b]: ${CANARY}`], 'it holds a link definition'],
+    ['for a footnote', [`[^1]: ${CANARY}`], 'it holds a footnote definition'],
+  ])('withholds a definition %s', (_, lines, reason) => {
     const source = note('## Thoughts', '', 'Kept?', '', ...lines);
-    expect(extractThoughts(source)).toEqual({
-      kind: 'withheld',
-      reason: 'it holds a link reference or footnote definition',
-    });
+    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason });
     expectNoCanary(source);
   });
 
@@ -242,23 +256,33 @@ describe('the allowlist: only plain prose ships (ADR-0106)', () => {
   });
 
   it.each([
-    ['inline math', [`A value $x % ${CANARY}$ here.`]],
-    ['block math', ['$$', `% ${CANARY}`, '$$']],
-  ])('withholds %s: two unescaped dollar signs', (_, lines) => {
+    [
+      'inline math',
+      [`A value $x % ${CANARY}$ here.`],
+      'it holds two dollar signs, which may be math',
+    ],
+    ['block math', ['$$', `% ${CANARY}`, '$$'], 'a `$$` sits in or above the section'],
+  ])('withholds %s', (_, lines, reason) => {
     const source = note('## Thoughts', '', ...lines);
-    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason: 'it may hold math' });
+    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason });
     expectNoCanary(source);
   });
 
-  it('ships a single dollar sign, and escaped ones', () => {
-    expect(shipped(note('## Thoughts', '', 'It cost $20, or \\$5 and \\$6.'))).toEqual([
-      'It cost $20, or $5 and $6.',
-    ]);
+  it('ships a single dollar sign, and withholds two whatever escapes them (D2)', () => {
+    expect(shipped(note('## Thoughts', '', 'It cost $20.'))).toEqual(['It cost $20.']);
+    expect(extractThoughts(note('## Thoughts', '', 'It cost $20, or \\$5 and \\$6.'))).toEqual({
+      kind: 'withheld',
+      reason: 'it holds two dollar signs, which may be math',
+    });
   });
 
-  it('ships one level of list at the margin, with its marks', () => {
+  it('ships one level of list at the margin, with its marks, a list per marker', () => {
+    // CommonMark starts a new list when the bullet character changes.
     expect(shipped(note('## Thoughts', '', '- one', '* two', '+ three', '1. four'))).toEqual([
-      '- one\n* two\n+ three\n1. four',
+      '- one',
+      '* two',
+      '+ three',
+      '1. four',
     ]);
   });
 });
@@ -310,16 +334,17 @@ describe('setext headings', () => {
 
   it('ships a thematic break under a subheading', () => {
     const source = note('## Thoughts', '', '### Part', '---', 'More.');
-    expect(shipped(source)).toEqual(['Part\n---\nMore.']);
+    expect(shipped(source)).toEqual(['Part', '---', 'More.']);
   });
 
   it('withholds an underline straight under the heading’s first line', () => {
     // No blank line after the heading, so the paragraph the underline belongs to
-    // is the section's first line: the look-back must read the line before.
+    // is the section's first line. A setext heading is level 1 or 2, so it ends
+    // the section, and step 4 withholds.
     const source = note('## Thoughts', 'Private heading', '===', CANARY);
     expect(extractThoughts(source)).toEqual({
       kind: 'withheld',
-      reason: 'it holds a setext heading',
+      reason: 'a setext heading ends the section',
     });
     expectNoCanary(source);
   });
@@ -379,9 +404,13 @@ describe('hidden text withholds the whole section', () => {
       expectNoCanary(source);
     });
 
-    it('finds no section, and ships nothing, when the heading itself is lost in lone CRs', () => {
+    it('withholds, and ships nothing, when the heading itself is lost in lone CRs', () => {
+      // Line endings are read before the heading is looked for (spec §3.1.1, step 2).
       const source = note(['## Thoughts', 'Kept.', '## Notes', CANARY].join(CR));
-      expect(extractThoughts(source)).toEqual({ kind: 'absent' });
+      expect(extractThoughts(source)).toEqual({
+        kind: 'withheld',
+        reason: 'the note holds a line ending other than a newline',
+      });
     });
 
     it('still reads CRLF as an ordinary newline', () => {
@@ -404,14 +433,11 @@ describe('hidden text withholds the whole section', () => {
     expectNoCanary(source);
   });
 
-  it('withholds when raw HTML sits directly above the section', () => {
-    // An HTML block opened above the heading can swallow it and hide the
-    // section in reading view while the scan still reads the heading.
+  it('finds no section when an HTML block directly above swallows the heading', () => {
+    // The parser reads the heading as part of the HTML block, as reading view
+    // does, so there is no section to withhold.
     const source = note('<div hidden>', '## Thoughts', '', CANARY);
-    expect(extractThoughts(source)).toEqual({
-      kind: 'withheld',
-      reason: 'HTML sits above the section',
-    });
+    expect(extractThoughts(source)).toEqual({ kind: 'absent' });
   });
 
   it.each([
@@ -435,14 +461,18 @@ describe('hidden text withholds the whole section', () => {
     expectNoCanary(source);
   });
 
-  it('withholds when any comment marker sits above the section, closed or not', () => {
-    // Comment state is computed from the start of the body, and a marker inside
-    // a fence there is read by Obsidian differently from one outside it. Any
-    // marker above the section withholds rather than guess which.
+  it('withholds when a closed HTML comment sits above the section (D6)', () => {
     const source = note('<!-- a -->', '', '## Thoughts', '', 'Kept?');
-    expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
-    const closer = note('a --!> b', '', '## Thoughts', '', 'Kept?');
-    expect(extractThoughts(closer)).toMatchObject({ kind: 'withheld' });
+    expect(extractThoughts(source)).toEqual({
+      kind: 'withheld',
+      reason: 'HTML sits above the section',
+    });
+  });
+
+  it('ships past a comment closer above the section that closes nothing', () => {
+    // Step 5 reads HTML tokens and a raw `<` tag start, and an opener of any
+    // form is one. A closer with no opener hides nothing in reading view.
+    expect(shipped(note('a --!> b', '', '## Thoughts', '', 'Kept.'))).toEqual(['Kept.']);
   });
 
   it('ships when the only comment is below the section', () => {
@@ -541,7 +571,8 @@ describe('the strip', () => {
 
   it('keeps list marks as visible characters', () => {
     expect(shipped(note('## Thoughts', '', '- one', '- two', '1. three'))).toEqual([
-      '- one\n- two\n1. three',
+      '- one\n- two',
+      '1. three',
     ]);
   });
 
@@ -593,17 +624,18 @@ describe('a provider description beside the Thoughts', () => {
     );
     const disarmed = disarmBodyText(description).split('\n');
 
+    // A fence opener's run becomes character references (D9), so it opens nothing.
     expect(disarmed).toEqual([
       'A blurb.',
       '\\## Thoughts',
       '  \\# loud',
-      '\\```',
+      '&#96;&#96;&#96;',
       'fenced',
-      '\\~~~~ x',
+      '&#126;&#126;&#126;&#126; x',
     ]);
     for (const line of disarmed) {
       expect(atxHeading(line), line).toBeUndefined();
-      expect(fenceOpener(line), line).toBeUndefined();
+      expect(line, line).not.toMatch(/^ {0,3}(?:`{3}|~{3})/);
     }
   });
 
@@ -621,7 +653,7 @@ describe('a provider description beside the Thoughts', () => {
     expect(disarmed).toEqual([
       'A blurb.',
       '\\## Thoughts',
-      '\\```',
+      '&#96;&#96;&#96;',
       'fenced',
       '\\# loud',
       '\\## Thoughts',
@@ -633,5 +665,94 @@ describe('a provider description beside the Thoughts', () => {
     expect(disarmed).toBe('A &lt;!-- note --&gt; and &lt;script&gt; and %&#37;aside%&#37;.');
     // Every angle bracket is gone, so no comment opener or closer of any form survives.
     expect(disarmed).not.toMatch(/[<>]|%%/);
+  });
+
+  describe('N59: disarmed text, parsed, holds no heading, code fence or HTML token', () => {
+    /** Every token type the parser reads in `text`, at any depth. */
+    function tokenTypes(text: string): Set<string> {
+      const events = postprocess(
+        parse()
+          .document()
+          .write(preprocess()(text, undefined, true)),
+      );
+      return new Set(events.map(([, token]) => token.type as string));
+    }
+
+    const description = [
+      `A blurb.${String.fromCharCode(13)}## Thoughts`,
+      'Thoughts',
+      '---',
+      '   ===',
+      'a mid-line ``` run and ~~~ another',
+      '```',
+      '~~~~ x',
+      '<!-- hidden --> <div>',
+      'It cost $20, or $$5.',
+      'A call [^x] and a definition:',
+      '[^x]: a note',
+    ].join('\n');
+    const disarmed = disarmBodyText(description);
+
+    it('reads as no heading, fence, HTML or math-shaped text', () => {
+      const types = tokenTypes(disarmed);
+      for (const type of ['atxHeading', 'setextHeading', 'codeFenced', 'htmlFlow', 'htmlText']) {
+        expect(types.has(type), type).toBe(false);
+      }
+      expect(disarmed).not.toMatch(/`{3}|~{3}|\$|\[\^|[<>]|\r/);
+    });
+
+    it('escapes a setext underline, indented or not, and every heading line', () => {
+      expect(disarmed.split('\n')).toEqual(
+        expect.arrayContaining(['A blurb.', '\\## Thoughts', 'Thoughts', '\\---', '   \\===']),
+      );
+    });
+
+    it('turns runs of three, `$` and `[^` into character references', () => {
+      expect(disarmBodyText('a ``` b ~~~ c $ d [^e]')).toBe(
+        'a &#96;&#96;&#96; b &#126;&#126;&#126; c &#36; d &#91;^e]',
+      );
+    });
+
+    it('leaves a run of two, and a lone backtick, alone', () => {
+      expect(disarmBodyText('a `` b ~~ c ` d')).toBe('a `` b ~~ c ` d');
+    });
+  });
+});
+
+describe('N58: the `## Notes` the `## About` writer lands above', () => {
+  it.each([
+    [
+      'the first root-level `## Notes`',
+      ['## Thoughts', '', 'Mine.', '', '## Notes', '', 'Private.'],
+      4,
+    ],
+    ['one indented up to three spaces', ['Intro.', '', '   ## Notes', 'Private.'], 2],
+    ['with closing hashes', ['Intro.', '', '## Notes ##'], 2],
+  ])('finds %s', (_, lines, line) => {
+    const body = lines.join('\n');
+    const at = notesHeadingAt(body);
+    expect(at).toBe(body.split('\n').slice(0, line).join('\n').length + 1);
+  });
+
+  it('finds it in a CRLF body, at the start of its line', () => {
+    const body = ['Intro.', '', '## Notes', 'Private.'].join('\r\n');
+    expect(notesHeadingAt(body)).toBe(body.indexOf('## Notes'));
+  });
+
+  it.each([
+    ['a fenced one', ['```', '## Notes', '```']],
+    ['a `###`', ['## Thoughts', '', '### Notes']],
+    ['one in a list item', ['- ## Notes']],
+    ['one in a quote', ['> ## Notes']],
+    ['a setext one', ['Notes', '---']],
+    ['`## Notes and more`', ['## Notes and more']],
+    ['a near-miss with a no-break space', [`##${String.fromCodePoint(0xa0)}Notes`]],
+  ])('never chooses %s', (_, lines) => {
+    expect(notesHeadingAt(lines.join('\n'))).toBeUndefined();
+  });
+
+  it('skips a fenced one that comes first, and finds the real one', () => {
+    const body = ['```', '## Notes', '```', '', '## Notes', 'Private.'].join('\n');
+    expect(notesHeadingAt(body)).toBe(body.lastIndexOf('## Notes'));
   });
 });

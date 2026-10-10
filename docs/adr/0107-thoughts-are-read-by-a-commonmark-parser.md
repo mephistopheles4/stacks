@@ -1,7 +1,7 @@
 # ADR-0107 — The Thoughts section is read by a CommonMark parser, and the allowlist applies to its tokens
 
 **Date:** 2026-10-10
-**Status:** accepted at the owner's sign-off on [#411](https://github.com/mephistopheles4/stacks/issues/411), 2026-10-10; not built yet, to be built in [#415](https://github.com/mephistopheles4/stacks/pull/415)
+**Status:** accepted at the owner's sign-off on [#411](https://github.com/mephistopheles4/stacks/issues/411), 2026-10-10; built in [#415](https://github.com/mephistopheles4/stacks/pull/415)
 **Issue:** [#411](https://github.com/mephistopheles4/stacks/issues/411)
 **Amends:** [ADR-0101](0101-thoughts-ship-as-plain-text-and-withhold-whole.md), [ADR-0106](0106-thoughts-ship-only-plain-prose.md)
 

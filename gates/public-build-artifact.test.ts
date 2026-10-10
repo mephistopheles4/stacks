@@ -555,6 +555,41 @@ describe('G20 — every rule goes red', () => {
     }
   });
 
+  it('N60 notes-shape: a notes file carrying a mark the extractor’s output check refuses', async () => {
+    // The twin of the extractor's step 10, beyond the comment and tag marks
+    // above (spec §3.1.1): a correct build never writes one, so each plant is an
+    // extractor regression the deploy must still refuse. Built from code points
+    // where the mark is invisible.
+    for (const [what, mark] of [
+      ['two dollar signs', '$5 and $6 an aside'],
+      ['an image or embed opener', '![an aside'],
+      ['an inline footnote opener', '^[an aside'],
+      ['a Dataview field', 'mood:: an aside'],
+      ['a control character', `an${String.fromCodePoint(0x01)}aside`],
+      ['a C1 control character', `an${String.fromCodePoint(0x85)}aside`],
+      ['Unicode tag characters', `an aside${String.fromCodePoint(0xe0068, 0xe0069)}`],
+      ['a near-miss heading, no-break space', `##${String.fromCodePoint(0xa0)}an aside`],
+      ['a near-miss heading, zero-width space', `${String.fromCodePoint(0x200b)}## an aside`],
+      ['a near-miss heading on a later line', `First line.\n# an aside`],
+    ] as const) {
+      await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A clean paragraph.', mark] });
+      const problems = inspect().problems;
+      expect([...new Set(problems.map((problem) => problem.rule))], `planted ${what}`).toEqual([
+        'notes-shape',
+      ]);
+      expect(problems.map((problem) => problem.message).join('\n')).not.toContain('an aside');
+    }
+  });
+
+  it('N60 notes-shape: passes the near misses of those marks', async () => {
+    // One dollar sign, a `#tag`, a `###`'s text and a lone colon ship from a
+    // correct build, so the twin must not refuse them.
+    await writeNotes(`${CLEAN_ID}.json`, {
+      paragraphs: ['It cost $20.', '#reread', '### is not shipped, but this is', 'Time: an hour.'],
+    });
+    expect(inspect().problems).toEqual([]);
+  });
+
   it('notes-shape: a notes file that repeats its key', async () => {
     await expectOnly('notes-shape', async () => {
       // JSON.parse keeps the last copy, so the first array would be checked by

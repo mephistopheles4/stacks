@@ -17,6 +17,37 @@ const { scopes } = JSON.parse(
 ) as { scopes: { glob: string }[] };
 
 export default defineConfig({
+  /**
+   * The resolve conditions the CLI runs with: Node's own, and no `development`.
+   *
+   * ⚠️ **Vite adds `development` by default, and Vitest passes it to every
+   * worker as `--conditions`**, so without this line the suite loads
+   * `micromark`'s `dev/` build while `stacks build` loads its default one. The
+   * two differ in what they can print — the development build traces its whole
+   * parse, private remainder included, when `DEBUG` names it — so the tests
+   * would vouch for a build that never publishes. Measured on #411: before this
+   * line, `import.meta.resolve('micromark')` inside a test answered `dev/index.js`
+   * ([ADR-0107](docs/adr/0107-thoughts-are-read-by-a-commonmark-parser.md), spec §3.1.1).
+   *
+   * ⚠️ **Removed after resolution, because it cannot be configured away.**
+   * Vitest merges its own default conditions into `ssr.resolve.conditions`,
+   * and a merge concatenates arrays, so a list set here still carried
+   * `development|production` into the workers' `execArgv`. Filtering the
+   * resolved list is the one place the value Vitest reads can be changed.
+   */
+  plugins: [
+    {
+      name: 'stacks:cli-resolve-conditions',
+      configResolved(config) {
+        for (const resolve of [config.ssr.resolve, config.environments.ssr?.resolve]) {
+          if (resolve?.conditions === undefined) continue;
+          resolve.conditions = resolve.conditions.filter(
+            (condition) => !/^development(?:\|production)?$/.test(condition),
+          );
+        }
+      },
+    },
+  ],
   test: {
     // `gates/` holds the repo-level gates: rules about the shape of the whole
     // tree (which files may import what, which documented keys must exist)

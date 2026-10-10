@@ -230,6 +230,41 @@ const URL_SCHEME = /:\/\/|\b(?:file|obsidian|mailto):/i;
  */
 const HIDDEN_MARKER = /%%|<[A-Za-z/!?]|--!?>/;
 
+/**
+ * The rest of the extractor's output check, as this rule's own list: every
+ * pattern of spec §3.1.1's step 7 but the cap, which the extractor reads on the
+ * section and again on each paragraph that ships (step 10). A correct build
+ * never writes a file holding one, so each refuses only an extractor regression
+ * (#411's round 3, adversarial F7).
+ *
+ * ⚠️ **A twin, never a shared import**, for `HIDDEN_MARKER`'s reason: one
+ * weakening must not clear the extractor and the deploy check at once. Move one
+ * and move the other — `SECTION_GUARDS` in
+ * `packages/core/src/adapters/thoughts-section.ts`. A lone backtick, a single
+ * `$` and `]:` in running text are not here, because the parser ships them as
+ * literal text when they open nothing.
+ */
+const OUTPUT_MARKS: readonly { readonly what: string; readonly test: (text: string) => boolean }[] =
+  [
+    { what: 'two dollar signs, which may be math', test: (text) => /\$[\s\S]*\$/.test(text) },
+    { what: 'an image or embed opener', test: (text) => text.includes('![') },
+    { what: 'an inline footnote opener', test: (text) => text.includes('^[') },
+    { what: 'a Dataview field marker', test: (text) => text.includes('::') },
+    {
+      what: 'a control character',
+      test: (text) =>
+        [...text].some((char) => {
+          const code = char.codePointAt(0) ?? 0;
+          return (code < 0x20 && code !== 0x09 && code !== 0x0a) || (code >= 0x7f && code <= 0x9f);
+        }),
+    },
+    { what: 'Unicode tag characters', test: (text) => /[\u{E0000}-\u{E007F}]/u.test(text) },
+    {
+      what: 'a line that may read as a heading',
+      test: (text) => /^[\t\p{Zs}\p{Cf}]*#{1,2}[\t\p{Zs}\p{Cf}]/mu.test(text),
+    },
+  ];
+
 /** The committed share card, and the only image a page may point at. */
 const SHARE_IMAGE_FILE = 'og.png';
 
@@ -956,6 +991,12 @@ function notesShapeProblem(text: string): string | undefined {
   }
   if (paragraphs.some((paragraph) => HIDDEN_MARKER.test(paragraph as string))) {
     return 'carries a hidden-text marker (a comment, a tag or a declaration) — text Obsidian hides must never reach the page';
+  }
+  const mark = OUTPUT_MARKS.find(({ test }) =>
+    paragraphs.some((paragraph) => test(paragraph as string)),
+  );
+  if (mark !== undefined) {
+    return `carries ${mark.what} — the extractor withholds any section holding one, so this file is an extractor regression`;
   }
   return undefined;
 }

@@ -64,3 +64,10 @@ updates:
       # is not what a dependency PR is for.
       - dependency-name: 'three'
         update-types: ['version-update:semver-minor']
+      # The Thoughts extractor's parser reads the owner's whole note body, so a
+      # bump of any package in its closure is its own change, on the security
+      # route, with the closure list in `micromark-build.test.ts` moved in the
+      # same commit (ADR-0107). Every update type; alerts still report an
+      # advisory, which is the instrument for this family.
+      - dependency-name: 'micromark'
+      - dependency-name: 'micromark-*'

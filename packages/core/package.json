@@ -9,7 +9,13 @@
     "./subjects": "./src/subjects.ts"
   },
   "dependencies": {
+    "micromark": "4.0.2",
+    "micromark-extension-gfm-footnote": "2.1.0",
+    "micromark-extension-gfm-table": "2.1.1",
     "sharp": "^0.35.5",
     "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "micromark-util-types": "2.0.2"
   }
 }
