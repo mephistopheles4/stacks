@@ -2042,6 +2042,12 @@ function report(result: {
     tuner,
   } = result;
   const failures: string[] = [...fallback.failures, ...sampling.failures, ...tuner.failures];
+  // Fails closed: a run that skipped nothing must have run both, so a flagless
+  // run that left them out cannot print `OK` on the strength of empty results.
+  if (skipped === undefined) {
+    if (fallback.lines.length === 0) failures.push('G60 ran no cases');
+    if (sampling.lines.length === 0) failures.push('G61 ran no pages');
+  }
 
   const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
 
