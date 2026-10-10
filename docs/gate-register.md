@@ -3305,7 +3305,8 @@ repo-wide. The row had no observed-red line before this pass; it has one now.
 - **Weakening** — clean; no `EXEMPT`/allowlist construct found in
   `scripts/smoke-render.ts`'s card checks.
 - **Satisfying the letter** — exposed, and the row's own Failure-mode cell in
-  `docs/gates.md` says so directly: "*'the card opened'* was the whole
+  `docs/gates.md` said so directly, in its wording of this date (reworded for
+  the pickup on 2026-10-09; see that entry below): "*'the card opened'* was the whole
   assertion, and it stays true through a card with no reading line, links with
   no accessible name, an announcer that never changes, a sheet that dismisses
   on every short drag, and one Escape that closes the enlarged cover **and**

@@ -41,6 +41,20 @@ export interface PickupRead {
   readonly hrefUnchanged: boolean;
   /** The pickup pushed its own history entry. */
   readonly historyHeld: boolean;
+  /** Focus stayed where it was: there is still no keyboard path to the shelf (spec §3.4, ADR-0049). */
+  readonly focusUnmoved: boolean;
+  /**
+   * Both pages inside the desktop viewport at rest, within a pixel — the
+   * desktop half of the card's old overflow check, which the phone check keeps
+   * for the right-hand page at 375×812.
+   */
+  readonly pagesInView: boolean;
+  /**
+   * A book `library.json` flags with Thoughts, picked up: whether its page showed
+   * them, or `undefined` when no such book was found to pick up. Opening to the
+   * Thoughts is the point of the pickup (spec §3.4).
+   */
+  readonly thoughtsShown: boolean | undefined;
   /** After a second book was picked up in its place. */
   readonly second: {
     readonly held: string;
@@ -82,8 +96,23 @@ export function pickupFailures(read: PickupRead): string[] {
     );
   }
   if (!read.visibleAtRest) failures.push('the pages are not visible with the book at rest');
+  if (!read.focusUnmoved) {
+    failures.push('focus moved on pickup — it must stay put, with no keyboard path to the shelf');
+  }
+  if (!read.pagesInView) {
+    failures.push('the held pages run off the desktop viewport at rest');
+  }
+  if (read.thoughtsShown === undefined) {
+    failures.push(
+      'no book flagged with Thoughts was picked up — the fixture shelf has them, so the ' +
+        'notes stage or the flag dropped them',
+    );
+  } else if (!read.thoughtsShown) {
+    failures.push('a book flagged with Thoughts opened without them on its page');
+  }
 
-  // Moved from the card, §11.1–§11.5.
+  // Moved from the card: §3.5's checks 1 to 5 (every block, `read`, the
+  // collapse rules, the fallback link, link shape and names).
   if (read.reading.length === 0) {
     failures.push('the page renders no reading line — it must render on every book');
   }
@@ -106,7 +135,7 @@ export function pickupFailures(read: PickupRead): string[] {
     );
   }
 
-  // §11.6, with put-back as the dismissal.
+  // §3.5's check 6, the announcer, with put-back as the dismissal.
   if (read.announced.length === 0) failures.push('the live region announced nothing on pickup');
   if (read.second.announced.length === 0) {
     failures.push('picking up a second book announced nothing');
@@ -115,7 +144,7 @@ export function pickupFailures(read: PickupRead): string[] {
   }
   if (read.second.held === read.held) failures.push('the second pickup left the first book held');
 
-  // §11.7, become the put-back control.
+  // §3.5's check 7: the close control, become the put-back control.
   if (read.putBack === undefined) {
     failures.push('the held page has no put-back control');
   } else {
@@ -179,6 +208,18 @@ export interface ViewerRead {
    * integrity F8).
    */
   readonly withoutHeld: { readonly showedOwn: boolean } | undefined;
+  /**
+   * With every request for the held copy refused, whether the enlarged view
+   * fell back to the shelf copy rather than a broken image — a browser holding a
+   * `library.json` from before a copy was taken down (#416).
+   */
+  readonly fellBack: boolean;
+  /**
+   * Whether any element of the held pages carried a cover path in an attribute.
+   * The paths are handed to the viewer in memory and never written into the
+   * page (#416, CodeQL's `js/xss-through-dom`).
+   */
+  readonly pathInPage: boolean;
 }
 
 /** The page shows no thumbnail, so "bigger" is against the card's old 4.5rem one, doubled. */
@@ -213,6 +254,14 @@ export function viewerFailures(read: ViewerRead | undefined): string[] {
     failures.push('no book without a held copy was opened, so the viewer’s other path went unseen');
   } else if (!read.withoutHeld.showedOwn) {
     failures.push('for a book with no held copy, the enlarged view did not show the shelf copy');
+  }
+  if (!read.fellBack) {
+    failures.push('a held copy that failed to load left the enlarged view without the shelf copy');
+  }
+  if (read.pathInPage) {
+    failures.push(
+      'a cover path was written into the held page — the viewer must be handed it in memory',
+    );
   }
   return failures;
 }

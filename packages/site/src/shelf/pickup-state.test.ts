@@ -6,7 +6,7 @@ import {
   type TrackEvents,
 } from './pickup-state.ts';
 
-/** A track whose clock the test drives: `land()` and `return()` end a run. */
+/** A track whose clock the test drives: `land()` and `returnHome()` end a run. */
 interface FakeTrack extends Track {
   readonly book: string;
   readonly events: TrackEvents;
@@ -18,12 +18,15 @@ interface FakeTrack extends Track {
   returnHome(): void;
 }
 
-function harness(options: { reduced?: boolean } = {}) {
+function harness(options: { reduced?: boolean; deferPop?: boolean } = {}) {
   const tracks: FakeTrack[] = [];
   const log: string[] = [];
   /** The history stack, as the page would see it: one state per entry. */
   const entries: (string | null)[] = [null];
   let index = 0;
+  /** Steps back taken, and pops a browser has yet to deliver (`deferPop`). */
+  let backs = 0;
+  let pending = 0;
 
   const effects: PickupEffects<string> = {
     track(book, events) {
@@ -91,8 +94,15 @@ function harness(options: { reduced?: boolean } = {}) {
         entries[index] = book;
       },
       back() {
+        backs += 1;
+        // The browser moves the entry and fires popstate as a task, after the
+        // caller returns: `deferPop` holds both until `deliverPops`, the window
+        // a double click lands in.
+        if (options.deferPop === true) {
+          pending += 1;
+          return;
+        }
         index -= 1;
-        // The browser fires popstate as a task, after the caller returns.
         state.popped();
       },
     },
@@ -114,6 +124,17 @@ function harness(options: { reduced?: boolean } = {}) {
     index += 1;
     state.popped();
   };
+  /** Each step back the page asked for lands, one popstate apiece. */
+  const deliverPops = (): void => {
+    for (; pending > 0; pending -= 1) {
+      index -= 1;
+      state.popped();
+    }
+  };
+  /** Another script replaced the current entry: the pickup's is no longer current. */
+  const replaceEntry = (): void => {
+    entries[index] = null;
+  };
   return {
     state,
     tracks,
@@ -121,6 +142,9 @@ function harness(options: { reduced?: boolean } = {}) {
     log,
     pressBack,
     pressForward,
+    deliverPops,
+    replaceEntry,
+    backs: () => backs,
     entries: () => entries.slice(0, index + 1),
   };
 }
@@ -144,10 +168,14 @@ describe('picking a book up', () => {
     const h = harness();
     h.state.select('a');
     h.track('a').land();
+    const logged = h.log.length;
     h.state.select('a');
 
     expect(h.tracks).toHaveLength(1);
     expect(h.entries()).toEqual([null, 'a']);
+    expect(h.state.holding()).toEqual({ book: 'a', phase: 'held' });
+    expect(h.track('a').playing).toBe('stopped');
+    expect(h.log).toHaveLength(logged);
   });
 
   it('cuts straight to open under reduced motion, and straight back', () => {
@@ -240,6 +268,47 @@ describe('putting it back', () => {
     expect(h.state.holding()).toBeUndefined();
     expect(h.track('a').disposed).toBe(true);
     expect(h.entries()).toEqual([null]);
+    // A hard cut: rewound to the shelf, never played back.
+    expect(h.track('a').at).toBe(0);
+    expect(h.track('a').playing).toBe('stopped');
+    expect(h.log.slice(-2)).toEqual(['settled a', 'announce -']);
+  });
+
+  it('steps back once for a double put-back, however fast the second arrives', () => {
+    const h = harness({ deferPop: true });
+    h.state.select('a');
+    h.track('a').land();
+    h.state.putBack();
+    h.state.putBack();
+    h.deliverPops();
+
+    expect(h.backs()).toBe(1);
+    expect(h.entries()).toEqual([null]);
+    expect(h.track('a').playing).toBe('reverse');
+  });
+
+  it('puts back without stepping back when the pickup entry is no longer current', () => {
+    const h = harness();
+    h.state.select('a');
+    h.track('a').land();
+    h.replaceEntry();
+    h.state.putBack();
+
+    expect(h.backs()).toBe(0);
+    expect(h.entries()).toEqual([null, null]);
+    expect(h.track('a').playing).toBe('reverse');
+  });
+
+  it('drops without stepping back when the pickup entry is no longer current', () => {
+    const h = harness();
+    h.state.select('a');
+    h.track('a').land();
+    h.replaceEntry();
+    h.state.drop();
+
+    expect(h.backs()).toBe(0);
+    expect(h.entries()).toEqual([null, null]);
+    expect(h.state.holding()).toBeUndefined();
   });
 });
 
@@ -257,6 +326,13 @@ describe('another book', () => {
     expect(h.track('b').playing).toBe('forward');
     expect(h.state.holding()).toEqual({ book: 'b', phase: 'lifting' });
     expect(h.entries()).toEqual([null, 'b']);
+    // Cleared as the first goes back, which a live region reads as nothing, then
+    // the second: a swap is announced once, by the book it ends on.
+    expect(h.log.filter((line) => line.startsWith('announce'))).toEqual([
+      'announce a',
+      'announce -',
+      'announce b',
+    ]);
   });
 
   it('takes the latest click when several land while the first goes back', () => {

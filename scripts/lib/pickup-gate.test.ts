@@ -27,6 +27,9 @@ const good: PickupRead = {
   visibleAtRest: true,
   hrefUnchanged: true,
   historyHeld: true,
+  focusUnmoved: true,
+  pagesInView: true,
+  thoughtsShown: true,
   second: {
     held: 'Paper Ledger',
     announced: 'Paper Ledger by Greta Whitlock',
@@ -52,6 +55,16 @@ describe('pickupFailures', () => {
     ['no reading line', { reading: '' }, /reading line/],
     ['no links', { linkCount: 0, links: [], markCount: 0 }, /row always renders/],
     ['an unsafe link', { links: ['_self||Open Library'] }, /unsafely/],
+    ['a new tab with no rel', { links: ['_blank||Open Library'] }, /unsafely/],
+    [
+      'a rel on a link that stays in the tab',
+      { links: ['_self|noopener noreferrer|Open Library'] },
+      /unsafely/,
+    ],
+    ['focus moved by the pickup', { focusUnmoved: false }, /focus moved/],
+    ['pages off the desktop viewport', { pagesInView: false }, /run off the desktop viewport/],
+    ['Thoughts missing from a flagged book', { thoughtsShown: false }, /opened without them/],
+    ['no flagged book picked up', { thoughtsShown: undefined }, /no book flagged with Thoughts/],
     ['an unnamed link', { links: ['_blank|noopener noreferrer|'] }, /accessible name/],
     ['marks that never drew', { markCount: 0 }, /not one drew a mark/],
     ['a silent announcer', { announced: '' }, /announced nothing on pickup/],
@@ -96,6 +109,8 @@ describe('viewerFailures', () => {
     held: '/held-covers/a.jpg',
     showedHeld: true,
     withoutHeld: { showedOwn: true },
+    fellBack: true,
+    pathInPage: false,
   };
 
   it('passes a viewer that opens the held copy and leaves the book held on Escape', () => {
@@ -115,6 +130,8 @@ describe('viewerFailures', () => {
       { withoutHeld: { showedOwn: false } },
       /did not show the shelf copy/,
     ],
+    ['no fallback when the held copy fails', { fellBack: false }, /failed to load/],
+    ['a cover path written into the page', { pathInPage: true }, /written into the held page/],
   ])('fails on %s', (_name, patch, message) => {
     expect(viewerFailures({ ...viewer, ...patch }).join('\n')).toMatch(message);
   });
@@ -175,6 +192,16 @@ describe('spreadFailures — the open spread of §3.6', () => {
     expect(spreadFailures({ ...flat, boardAngle: 179.4 }, 'x')).toHaveLength(1);
     expect(spreadFailures({ ...flat, gutterGap: 1.1 }, 'x')).toHaveLength(1);
     expect(spreadFailures({ ...flat, left: { width: 426.3, height: 640 } }, 'x')).toHaveLength(1);
+    // The other three at their edges: a tilt of half a degree, a left page a
+    // pixel off the block either way.
+    const block = { width: 425, height: 640 };
+    const edge = { width: 426, height: 641 };
+    expect(
+      spreadFailures({ ...flat, leftTilt: 0.5, rightTilt: 0.5, block, left: edge }, 'x'),
+    ).toEqual([]);
+    expect(spreadFailures({ ...flat, leftTilt: 0.51 }, 'x')).toHaveLength(1);
+    expect(spreadFailures({ ...flat, rightTilt: 0.51 }, 'x')).toHaveLength(1);
+    expect(spreadFailures({ ...flat, left: { width: 425.2, height: 641.1 } }, 'x')).toHaveLength(1);
   });
 
   it('fails when there is no spread at rest to measure', () => {

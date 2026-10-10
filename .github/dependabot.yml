@@ -71,3 +71,10 @@ updates:
       # advisory, which is the instrument for this family.
       - dependency-name: 'micromark'
       - dependency-name: 'micromark-*'
+      # GSAP runs on every visitor's page and Tweakpane on every `?debug` one,
+      # so a bump of either is its own change on the security route, never a
+      # routine dependency PR (#413). Every update type; alerts still report an
+      # advisory.
+      - dependency-name: 'gsap'
+      - dependency-name: 'tweakpane'
+      - dependency-name: '@tweakpane/plugin-essentials'

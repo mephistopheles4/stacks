@@ -1247,7 +1247,7 @@ function buildBooks(
       scene.add(book);
       placed.push({ group: book, frontZ: placement.frontZ, entry });
       // Every part of a book answers for the whole book, so a click on the
-      // pages or a board opens the same card as a click on the spine.
+      // pages or a board picks up the same book as a click on the spine.
       for (const part of book.children) lookup.set(part, entry.book);
     });
   });

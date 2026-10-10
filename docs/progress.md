@@ -110,6 +110,18 @@ before the fade, the board resting at 165°, and the paper sheets built without
 `withoutShadowFetch`. Every third book of the 50-book fixture now carries
 invented Thoughts, so the render gate opens a page of them.
 
+**2026-10-10 — the pickup's move-4 review answered**
+([#413](https://github.com/mephistopheles4/stacks/issues/413)): a double
+put-back delivered before its popstate stepped back twice and off the site; one
+put-back now waits for its own step. G35 (`enhanced-card`) gains five clauses —
+focus unmoved by a pickup, both pages inside the desktop viewport, a book
+flagged with Thoughts opening to them, the enlarged cover falling back to the
+shelf copy when the held copy fails, and no cover path in the page's attributes
+— each planted red in `pickup-gate.test.ts`. The default page's script is
+190.3 KB gzipped against 163.6 KB on `main` at `d3916cd`, so GSAP's core,
+`CSS3DRenderer` and the pickup add 26.8 KB (+16%) for every visitor; the
+stylesheet fell from 1.9 KB to 1.8 KB with the card's rules.
+
 ### Phase 3 evidence
 
 `pnpm gate:public` green: builds for real, then greps every text file that

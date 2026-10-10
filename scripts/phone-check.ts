@@ -250,7 +250,9 @@ const READ = `JSON.stringify({
   bookCount: window.__shelf?.bookCount ?? 0,
   profile: window.__shelf?.profile ?? null,
   pickups: window.__pickups ?? null,
-  swaps: (() => { try { return window.__shelf?.swaps?.() ?? null; } catch { return null; } })(),
+  // Sizes and times only: the figures go on a public ticket, and a local build
+  // serves private books, so no title leaves the page (#413, data-lens F2).
+  swaps: (() => { try { return window.__shelf?.swaps?.()?.map(({ title, ...figures }) => figures) ?? null; } catch { return null; } })(),
 })`;
 
 /**

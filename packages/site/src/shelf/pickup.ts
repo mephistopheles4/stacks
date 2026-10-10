@@ -22,8 +22,9 @@
  *   the accessibility tree alike (`visibility`, not opacity alone, §3.4).
  * - **The held cover** decodes off the main thread and uploads before it is
  *   swapped in; it is freed on put-down (#377, ADR-0105).
- * - **The shadow map is redrawn and the painted pieces repainted** when a book
- *   leaves its slot, when it comes to rest and when it is back (§3.10).
+ * - **The shadow map is redrawn** when a book leaves its slot, when it comes
+ *   to rest and when it is back, and **the painted pieces repainted** when it
+ *   leaves and when it is back (§3.10).
  *
  * Every new lit part goes through `withoutShadowFetch`: a book that reads the
  * shadow map again is the one configuration the Pixel cannot hold (ADR-0088).
@@ -34,12 +35,12 @@ import { gsap } from 'gsap/gsap-core';
 import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
 import type { LibraryBook } from '@stacks/core';
 import { announcement } from './card.ts';
-import { buildPages, PAGE_PX, type HeldPages } from './held-page.ts';
+import { buildPages, PAGE_PX, rooted, type HeldPages } from './held-page.ts';
 import { loadThoughts } from './notes.ts';
 import { openSpread, type OpenSpread } from './open-spread.ts';
 import { bezier, openAngle, schedule, textOpacity } from './pickup-motion.ts';
 import { createPickupState, type PickupState, type Track } from './pickup-state.ts';
-import type { PickupState as TunerState, TunablePickup } from './pickup-tuner.ts';
+import type { TunablePickup, TunerReading } from './pickup-tuner.ts';
 import { FRONT_PARTS, PAGE_BLOCK, type ShelfStage, type StagedBook } from './scene.ts';
 import { withoutShadowFetch } from './shadow-receivers.ts';
 import { PICKUP_MOTION, type PickupMotion } from './shelf-settings.ts';
@@ -380,7 +381,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     try {
       const loader = new THREE.ImageBitmapLoader();
       loader.setOptions({ imageOrientation: 'flipY' });
-      const bitmap = await loader.loadAsync(path.startsWith('/') ? path : `/${path}`);
+      const bitmap = await loader.loadAsync(rooted(path));
       if (entry.released) {
         bitmap.close();
         return;
@@ -668,7 +669,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     retime: () => {
       state.retime();
     },
-    state: (): TunerState | undefined => {
+    state: (): TunerReading | undefined => {
       const moving = state.current();
       if (moving === undefined) return undefined;
       return {
@@ -731,7 +732,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
 
 /**
  * The mesh this object is, with three's generic defaults back on it — see
- * sMesh in scene.ts for why instanceof alone gives a weaker type.
+ * `asMesh` in scene.ts for why instanceof alone gives a weaker type.
  */
 function asMesh(object: THREE.Object3D | undefined): THREE.Mesh | undefined {
   return object instanceof THREE.Mesh ? object : undefined;

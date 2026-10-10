@@ -16,7 +16,7 @@
  * side. The two surfaces differ in behaviour, so they differ in role.
  *
  * **It shows the held copy when the build staged one**, up to 1200px on its
- * long edge, and the card's own 512px file otherwise (`held-covers/`, spec
+ * long edge, and the 512px shelf copy otherwise (`held-covers/`, spec
  * §3.3, #377). The held page hands both paths and the alt text over with
  * `offerCover`, keyed by its control and never written into the page, so the
  * larger file is fetched only when someone opens this view. A DOM image costs

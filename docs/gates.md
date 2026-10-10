@@ -1924,7 +1924,7 @@ GHSA. An `ignoreGhsas` entry there would have suppressed a solvable problem for
 seven days and outlived its reason, which is exactly what the rule above warns
 about.
 
-**An entry that is there at all is held by G62 and G63.** An ignore used to be ended by a comment asking someone to remove it. Now each entry's trailing comment carries a date that a test reads (it expires after 30 days), and the udit job fails once npm publishes a stable version outside the advisory's affected range. Both exist because pnpm audit reads the tree, and a stale ignore is a config line it has been told to skip. See [ADR-0095](adr/0095-a-comment-carries-the-date-and-an-ignore-expires-in-30-days.md).
+**An entry that is there at all is held by G62 and G63.** An ignore used to be ended by a comment asking someone to remove it. Now each entry's trailing comment carries a date that a test reads (it expires after 30 days), and the `audit` job fails once npm publishes a stable version outside the advisory's affected range. Both exist because pnpm audit reads the tree, and a stale ignore is a config line it has been told to skip. See [ADR-0095](adr/0095-a-comment-carries-the-date-and-an-ignore-expires-in-30-days.md).
 
 Separately, and not a gate: **Dependabot alerts** and **security updates** are
 enabled on the repository, so a vulnerable dependency also arrives as a pull

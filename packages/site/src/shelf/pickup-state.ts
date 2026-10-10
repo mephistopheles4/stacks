@@ -112,6 +112,13 @@ export function createPickupState<B>(
   let active: Active<B>[] = [];
   /** A book clicked while another went back, picked up once the hand is empty. */
   let queued: B | undefined;
+  /**
+   * A put-back asked the browser to step back and its popstate has not come yet.
+   * The entry stays current until it does, so a second put-back in that window —
+   * a double click, or taps a busy phone delivers together — would step back
+   * again, off the site.
+   */
+  let stepping = false;
 
   const find = (book: B): Active<B> | undefined => active.find((a) => id(a.book) === id(book));
   const holding = (): Active<B> | undefined => active.findLast((a) => a.phase !== 'returning');
@@ -204,12 +211,17 @@ export function createPickupState<B>(
     },
 
     putBack() {
-      if (holding() === undefined) return;
-      if (effects.history.held()) effects.history.back();
-      else putBackAll();
+      if (holding() === undefined || stepping) return;
+      if (effects.history.held()) {
+        stepping = true;
+        effects.history.back();
+      } else {
+        putBackAll();
+      }
     },
 
     popped() {
+      stepping = false;
       queued = undefined;
       putBackAll();
     },

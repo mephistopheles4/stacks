@@ -70,4 +70,20 @@ describe('extractTunerCss', () => {
 
     expect(() => extractTunerCss({ ...sources, essentials: escaped })).toThrow(/escape/);
   });
+
+  it('refuses when Tweakpane stops naming a plugin stylesheet `plugin-<id>`', () => {
+    const sources = packageSources();
+    const renamed = sources.tweakpane.replace('`plugin-${bundle.id}`', '`ext-${bundle.id}`');
+
+    expect(renamed).not.toBe(sources.tweakpane);
+    expect(() => extractTunerCss({ ...sources, tweakpane: renamed })).toThrow(/plugin-<id>/);
+  });
+
+  it('refuses a literal found in place that does not read as a stylesheet', () => {
+    const sources = packageSources();
+    const other = sources.essentials.replace("const css = '.tp-", "const css = 'tp-");
+
+    expect(other).not.toBe(sources.essentials);
+    expect(() => extractTunerCss({ ...sources, essentials: other })).toThrow(/does not read as/);
+  });
 });

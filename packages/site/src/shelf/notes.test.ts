@@ -46,6 +46,12 @@ describe('loadThoughts', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it('fetches nothing for a flagged book whose id is not the shape the build writes', async () => {
+    const fetch = vi.fn();
+    expect(await loadThoughts({ id: '../library', thoughts: true }, fetch)).toBeUndefined();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('returns the paragraphs of a good response', async () => {
     const fetch = vi.fn(() =>
       Promise.resolve(new Response(JSON.stringify({ paragraphs: ['One.'] }), { status: 200 })),
@@ -56,6 +62,10 @@ describe('loadThoughts', () => {
 
   it.each([
     ['a 404', () => Promise.resolve(new Response('', { status: 404 }))],
+    [
+      'a 404 whose body is the right shape',
+      () => Promise.resolve(new Response('{"paragraphs":["Stale."]}', { status: 404 })),
+    ],
     ['a failed request', () => Promise.reject(new TypeError('offline'))],
     ['a body that is not JSON', () => Promise.resolve(new Response('<html>', { status: 200 }))],
     [

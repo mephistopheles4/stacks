@@ -216,6 +216,6 @@ function element(tag: string, className: string): HTMLElement {
 }
 
 /** A same-origin path from the site root, the shape `library.json` writes without the slash. */
-function rooted(path: string): string {
+export function rooted(path: string): string {
   return path.startsWith('/') ? path : `/${path}`;
 }

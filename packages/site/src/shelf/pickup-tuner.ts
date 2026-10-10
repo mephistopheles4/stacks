@@ -8,7 +8,7 @@
  *
  * **Styled under the CSP without loosening it.** Tweakpane injects a runtime
  * `<style>` per bundle unless it finds one already carrying its id. The page
- * pre-seats both, empty (`Shelf.astro`), so nothing is injected, and the CSS
+ * pre-seats both, empty (`pages/index.astro`), so nothing is injected, and the CSS
  * arrives as a stylesheet file through the `<link>` below — extracted at build
  * time from the packages' text (`tuner-css.ts`). The styled-pane gate holds the
  * pane to being styled with zero violations.
@@ -74,7 +74,7 @@ export interface TunablePickup {
   /** Rebuild the held book's timeline from `motion`, keeping where it is. */
   retime(): void;
   /** The book in hand and its timeline, read back — or nothing held. */
-  state(): PickupState | undefined;
+  state(): TunerReading | undefined;
   /** Pause the timeline at `progress`, 0..1. */
   scrub(progress: number): void;
   /** Play the held book's timeline forward from where it is. */
@@ -82,7 +82,7 @@ export interface TunablePickup {
   putBack(): void;
 }
 
-export interface PickupState {
+export interface TunerReading {
   readonly title: string;
   readonly phase: string;
   /** The timeline's own progress, 0..1 — never the slider's. */

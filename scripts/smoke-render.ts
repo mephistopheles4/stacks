@@ -25,7 +25,7 @@ import { FALLBACK_KEY, RESTORE_WAIT_MS } from '../packages/site/src/shelf/shadow
 import { DEFAULT_SETTINGS } from '../packages/site/src/shelf/shelf-settings.ts';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import puppeteer, { type Browser, type Page } from 'puppeteer-core';
+import puppeteer, { type Browser, type HTTPRequest, type Page } from 'puppeteer-core';
 import { lightingOf, litFailures, type Frame, type Lighting } from './lib/large-library-lit.ts';
 import {
   phoneFailures,
@@ -137,10 +137,16 @@ async function main(): Promise<void> {
         errors.push(error instanceof Error ? error.message : String(error));
       });
       page.on('console', (message) => {
-        if (message.type() === 'error') errors.push(message.text());
+        // The viewer's fallback probe refuses held copies on purpose; only
+        // those, by URL, are not page errors.
+        if (message.type() !== 'error') return;
+        if (REFUSED.has(message.location().url ?? '')) return;
+        errors.push(message.text());
       });
       // A bare "404" from the console says nothing useful; name the URL.
-      page.on('requestfailed', (request) => errors.push(`request failed: ${request.url()}`));
+      page.on('requestfailed', (request) => {
+        if (!REFUSED.has(request.url())) errors.push(`request failed: ${request.url()}`);
+      });
       page.on('response', (response) => {
         if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
       });
@@ -501,6 +507,10 @@ const READ_PAGE = `(() => {
     putBack: putBack ? { tag: putBack.tagName, name: (putBack.getAttribute('aria-label') || putBack.textContent || '').trim() } : undefined,
     visibleAtRest: pages.length === 2 && pages.every((page) => page.style.visibility === 'visible'),
     historyHeld: Boolean(history.state && history.state.pickup),
+    pagesInView: pages.length === 2 && pages.every((page) => {
+      const box = page.getBoundingClientRect();
+      return box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1;
+    }),
   };
 })()`;
 
@@ -517,7 +527,14 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   await new Promise((resolve) => setTimeout(resolve, 300));
   const read = (await page.evaluate(READ_PAGE)) as Omit<
     PickupRead,
-    'hiddenBeforeFade' | 'hrefUnchanged' | 'second' | 'afterPutBack'
+    | 'hiddenBeforeFade'
+    | 'hrefUnchanged'
+    | 'focusUnmoved'
+    | 'thoughtsShown'
+    | 'second'
+    | 'afterPutBack'
+    | 'afterEscape'
+    | 'afterBack'
   >;
   const hrefUnchanged = await sameHref();
 
@@ -538,8 +555,15 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   const afterPutBack = await putDown(page, sameHref);
 
   // The other two ways down, each on a fresh pickup through the shelf's hook.
+  // The hook, not a click, so focus is read across the pickup alone: a click on
+  // the canvas moves focus by the browser's own rule, and that is not the
+  // pickup's doing (spec §3.4).
+  await page.evaluate('window.__focusBefore = document.activeElement');
   await page.evaluate(`window.__shelf.pickUp(${String(first)})`);
   await until(page, HELD);
+  const focusUnmoved = (await page.evaluate(
+    'document.activeElement === window.__focusBefore',
+  )) as boolean;
   await page.keyboard.press('Escape');
   const afterEscape = await putDown(page, sameHref);
 
@@ -548,7 +572,57 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
   await page.evaluate('history.back()');
   const afterBack = await putDown(page, sameHref);
 
-  return { ...read, hiddenBeforeFade, hrefUnchanged, second, afterPutBack, afterEscape, afterBack };
+  const thoughtsShown = await checkThoughtsShown(page);
+
+  return {
+    ...read,
+    hiddenBeforeFade,
+    hrefUnchanged,
+    focusUnmoved,
+    thoughtsShown,
+    second,
+    afterPutBack,
+    afterEscape,
+    afterBack,
+  };
+}
+
+/**
+ * Picks up a book `library.json` flags with Thoughts and reads whether its page
+ * showed them: the slot unhidden, holding at least one paragraph after its
+ * label. `undefined` when the walk found no flagged book to pick up. Matched by
+ * title, and a title two books share is skipped rather than guessed at.
+ */
+async function checkThoughtsShown(page: Page): Promise<boolean | undefined> {
+  const library = (await page.evaluate(
+    `fetch('/library.json').then((response) => response.json())`,
+  )) as { books: { title: string; thoughts?: boolean }[] };
+  const count = new Map<string, number>();
+  for (const book of library.books) count.set(book.title, (count.get(book.title) ?? 0) + 1);
+  const flagged = new Set(
+    library.books
+      .filter((b) => b.thoughts === true && count.get(b.title) === 1)
+      .map((b) => b.title),
+  );
+
+  const books = Number(await page.evaluate('window.__shelf.bookCount'));
+  for (let index = 0; index < books; index += 1) {
+    await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
+    if (!(await until(page, HELD))) continue;
+    const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
+    if (title === undefined || !flagged.has(title)) {
+      await putBackAndSettle(page);
+      continue;
+    }
+    const shown = await until(
+      page,
+      `(() => { const slot = document.querySelector('.held-page-right .held-thoughts'); return Boolean(slot) && !slot.hidden && slot.querySelectorAll('p').length >= 2; })()`,
+      3000,
+    );
+    await putBackAndSettle(page);
+    return shown;
+  }
+  return undefined;
 }
 
 /** Waits for the book to be back in its slot, then reads what the page says. */
@@ -596,8 +670,11 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
     ),
   );
 
-  let withHeld: ViewerRead | undefined;
-  let withoutHeld: ViewerRead | undefined;
+  type Opened = Omit<ViewerRead, 'fellBack' | 'pathInPage'>;
+  let withHeld: Opened | undefined;
+  let withoutHeld: Opened | undefined;
+  let fellBack = false;
+  let pathInPage = false;
   const books = Number(await page.evaluate('window.__shelf.bookCount'));
   for (let index = 0; index < books; index += 1) {
     if (withHeld !== undefined && withoutHeld !== undefined) break;
@@ -612,6 +689,11 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
       expected !== undefined &&
       (expected.held === undefined ? withoutHeld === undefined : withHeld === undefined);
     if (hasControl && wanted) {
+      // No attribute anywhere on the pages may carry a cover path (#416).
+      pathInPage ||=
+        (await page.evaluate(`[...document.querySelectorAll('.held-page, .held-page *')]
+        .some((node) => [...node.attributes].some((attribute) => /covers\\//.test(attribute.value)))`)) as boolean;
+      if (expected.held !== undefined) fellBack = await opensOwnWhenHeldFails(page, expected.own);
       await page.click('.held-page-right .card-cover');
       await until(page, `document.getElementById('cover-viewer')?.open === true`, 3000);
       await until(page, `document.getElementById('cover-viewer-image')?.complete === true`, 3000);
@@ -627,7 +709,7 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
         held: window.__shelf.held() !== undefined,
       }))()`)) as { viewerOpen: boolean; held: boolean };
       const held = expected.held;
-      const checked: ViewerRead = {
+      const checked: Opened = {
         opened: open.open,
         width: open.width,
         escapeClosedViewer: !after.viewerOpen,
@@ -642,7 +724,45 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
     await putBackAndSettle(page);
   }
   const primary = withHeld ?? withoutHeld;
-  return primary === undefined ? undefined : { ...primary, withoutHeld: withoutHeld?.withoutHeld };
+  return primary === undefined
+    ? undefined
+    : { ...primary, withoutHeld: withoutHeld?.withoutHeld, fellBack, pathInPage };
+}
+
+/** Held-copy URLs the fallback probe refused on purpose, kept out of the page errors. */
+const REFUSED = new Set<string>();
+
+/**
+ * Opens the enlarged cover with every request for a held copy refused, and
+ * reads whether it fell back to the shelf copy. Request interception turns the
+ * page's cache off, so the copy the pickup already loaded cannot answer in its
+ * place; it is switched back off before the ordinary open that follows.
+ */
+async function opensOwnWhenHeldFails(page: Page, own: string): Promise<boolean> {
+  const refuse = (request: HTTPRequest): void => {
+    if (new URL(request.url()).pathname.startsWith('/held-covers/')) {
+      REFUSED.add(request.url());
+      void request.abort();
+    } else {
+      void request.continue();
+    }
+  };
+  await page.setRequestInterception(true);
+  page.on('request', refuse);
+  try {
+    await page.click('.held-page-right .card-cover');
+    const shown = await until(
+      page,
+      `(() => { const image = document.getElementById('cover-viewer-image'); return Boolean(image) && image.complete && image.naturalWidth > 0 && new URL(image.src).pathname === ${JSON.stringify(own)}; })()`,
+      3000,
+    );
+    await page.keyboard.press('Escape');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    return shown;
+  } finally {
+    page.off('request', refuse);
+    await page.setRequestInterception(false);
+  }
 }
 
 async function putBackAndSettle(page: Page): Promise<void> {
@@ -1855,6 +1975,8 @@ function report(result: {
               : viewer.withoutHeld.showedOwn
                 ? 'shows its own'
                 : 'DOES NOT SHOW ITS OWN'
+          }   failed copy ${viewer.fellBack ? 'falls back' : 'DOES NOT FALL BACK'}   paths ${
+            viewer.pathInPage ? 'WRITTEN INTO THE PAGE' : 'kept off the page'
           }`
     }`,
   );
