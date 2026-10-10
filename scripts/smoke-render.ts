@@ -758,19 +758,20 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
   let withoutHeld: Opened | undefined;
   let fellBack = false;
   let pathInPage = false;
-  // The first book of each kind in shelf order, picked up by its index: at most
-  // two pickups, where a walk of the shelf took one for every book before them.
-  // Motion is not what this judges, so it runs under reduced motion.
+  // Only books `library.json` gives a cover are tried, in shelf order and by
+  // index, until both kinds are seen: a walk of the whole shelf took a pickup for
+  // every book before them, covered or not. A candidate whose page offers no
+  // cover control is skipped as before. Motion is not what this judges, so it
+  // runs under reduced motion.
   const ordered = shelfOrder(library.books);
-  const firstOf = (hasHeld: boolean): number =>
-    ordered.findIndex((book) => {
-      const cover = coverFor.get(book.title);
-      return cover !== undefined && (cover.held !== undefined) === hasHeld;
-    });
-  const picks = [firstOf(true), firstOf(false)].filter((index) => index !== -1);
+  const candidates = ordered.flatMap((book, index) => (coverFor.has(book.title) ? [index] : []));
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
   try {
-    for (const index of picks) {
+    for (const index of candidates) {
+      if (withHeld !== undefined && withoutHeld !== undefined) break;
+      // A kind already seen needs no second pickup.
+      const kind = coverFor.get(ordered[index]?.title ?? '');
+      if (kind?.held === undefined ? withoutHeld !== undefined : withHeld !== undefined) continue;
       await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
       if (!(await until(page, HELD))) continue;
       const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
