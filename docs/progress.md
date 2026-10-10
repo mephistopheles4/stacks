@@ -217,7 +217,11 @@ Two environment findings, both measured:
   `dev/index.js`. Setting `ssr.resolve.conditions` did not remove it, because
   Vitest merges its defaults into the list, so `vitest.config.ts` filters the
   resolved list in a `configResolved` plugin. A test now asserts the suite
-  runs the default build, as the CLI does.
+  runs the default build, as the CLI does. ⚠️ **The mutation run has its own
+  config**, `vitest.stryker.config.ts`, which first lacked the plugin: its dry
+  run loaded the development build, the load check withheld every section,
+  and G2 failed before a mutant ran. Both configs now import the plugin from
+  `vitest.cli-conditions.ts`.
 - **The adapter checks at load which build resolved**, and withholds every
   section when it is not the default one. A test runs the extractor in a
   fresh Node under `--conditions=development` and sees every section
