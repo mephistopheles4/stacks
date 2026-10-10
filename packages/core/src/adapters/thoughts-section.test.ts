@@ -637,6 +637,7 @@ describe('a provider description beside the Thoughts', () => {
   it('turns angle brackets and `%%` into entities, so no comment or HTML block lands live', () => {
     const disarmed = disarmBodyText('A <!-- note --> and <script> and %%aside%%.');
     expect(disarmed).toBe('A &lt;!-- note --&gt; and &lt;script&gt; and %&#37;aside%&#37;.');
-    expect(disarmed).not.toMatch(/<|%%|-->/);
+    // Every angle bracket is gone, so no comment opener or closer of any form survives.
+    expect(disarmed).not.toMatch(/[<>]|%%/);
   });
 });
