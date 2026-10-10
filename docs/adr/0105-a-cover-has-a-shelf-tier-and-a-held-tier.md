@@ -1,7 +1,7 @@
 # ADR-0105 — A cover has a shelf tier and a held tier
 
 **Date:** 2026-10-09
-**Status:** accepted, not built — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
+**Status:** accepted; the held stage and its gates built in [#412](https://github.com/mephistopheles4/stacks/issues/412), the pickup's swap not yet — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
 **Issue:** [#377](https://github.com/mephistopheles4/stacks/issues/377)
 **Amends:** [ADR-0015](0015-cover-texture-budget.md)
 

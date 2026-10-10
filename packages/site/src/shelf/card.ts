@@ -5,7 +5,7 @@ import type { LibraryBook } from '@stacks/core';
 // piece of code: a second copy of `;` in this file is how a genre with a comma
 // in it quietly becomes two.
 import { parseSubjects } from '@stacks/core/subjects';
-import { COVER_BUTTON_CLASS } from './cover-viewer.ts';
+import { COVER_BUTTON_CLASS, offerHeldCopy } from './cover-viewer.ts';
 import { providerLinks, type ProviderLink } from './provider-links.ts';
 import { markFor } from './provider-marks.ts';
 
@@ -84,6 +84,11 @@ export interface CardModel {
    * *value* in `@stacks/core` and therefore not importable here (G6).
    */
   readonly cover: string | undefined;
+  /**
+   * The held copy, `held-covers/<name>`: what the enlarged view shows when the
+   * build staged one, larger than the 512px shelf copy (spec §3.4, #377).
+   */
+  readonly heldCover: string | undefined;
   readonly title: string;
   readonly author: string | undefined;
   /** Always a string — the one line that renders on every card. */
@@ -98,6 +103,7 @@ export interface CardModel {
 export function cardModel(book: LibraryBook): CardModel {
   return {
     cover: book.cover,
+    heldCover: book.heldCover,
     title: book.title,
     author: book.author,
     // **Always.** 19 of 41 real books are `read` with no dates and no rating, so
@@ -114,7 +120,9 @@ function blocks(book: LibraryBook): HTMLElement[] {
   const model = cardModel(book);
 
   const header = element('div', 'card-header');
-  if (model.cover !== undefined) header.append(cover(model.cover, model.title));
+  if (model.cover !== undefined) {
+    header.append(cover(model.cover, model.heldCover, model.title));
+  }
 
   const titles = element('div', 'card-titles');
   titles.append(text('h2', model.title));
@@ -285,10 +293,15 @@ function element(tag: string, className: string): HTMLElement {
  *
  * No listener is bound here. `showCard` replaces this whole subtree on every
  * tap-to-swap, so the click is delegated from the card body one level up.
+ *
+ * The held copy is handed to the viewer with `offerHeldCopy`, keyed by this
+ * button and never written into the page: the card's own image stays the 512px
+ * shelf copy, so a card never downloads the larger file unless someone asks to
+ * see the cover closer.
  */
-function cover(src: string, title: string): HTMLElement {
+function cover(src: string, held: string | undefined, title: string): HTMLElement {
   const image = document.createElement('img');
-  image.src = src.startsWith('/') ? src : `/${src}`;
+  image.src = rooted(src);
   image.alt = `Cover of ${title}`;
   image.loading = 'lazy';
 
@@ -299,6 +312,12 @@ function cover(src: string, title: string): HTMLElement {
   // naming mechanism is what double-announces — the rule `ProviderLink.name`
   // already states for the marks row.
   button.title = 'See the cover larger';
+  if (held !== undefined) offerHeldCopy(button, rooted(held));
   button.append(image);
   return button;
+}
+
+/** A same-origin path from the site root, the shape `library.json` writes without the slash. */
+function rooted(path: string): string {
+  return path.startsWith('/') ? path : `/${path}`;
 }

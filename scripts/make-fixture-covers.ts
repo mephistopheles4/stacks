@@ -48,15 +48,42 @@ interface CoverSpec {
    * the real thing is.
    */
   readonly fullSize?: boolean;
+  /**
+   * Renders at a size between the shelf cap and the held cap: over 512px, so a
+   * held copy is staged, and inside 1200px, so it is staged at native size.
+   *
+   * That is the size a build was once allowed to copy byte for byte, and the
+   * spec replaced the rule because a byte copy carries camera metadata along
+   * (`docs/spec/picking-a-book-up.md` §3.3). A cover at this size with
+   * `cameraMetadata` is the one case that tells a re-encode from a copy.
+   */
+  readonly heldSize?: boolean;
+  /**
+   * Plants EXIF and XMP chunks, the way a cover the owner photographed carries
+   * them.
+   *
+   * Invented values, nothing from a real camera. The held tier must ship none
+   * of it, and `gate:public` needs a source that has some, or "no held file
+   * carries EXIF or XMP" passes by construction.
+   */
+  readonly cameraMetadata?: boolean;
 }
 
 const FULL_WIDTH = 1400;
 const FULL_HEIGHT = 2100;
+const HELD_WIDTH = 800;
+const HELD_HEIGHT = 1200;
 
 const COVERS: readonly CoverSpec[] = [
   { file: 'the-tidal-engine.png', base: '#2f6d7a', accent: '#e0c8a0', fullSize: true },
   { file: 'compilers-for-the-impatient.png', base: '#8a3b2e', accent: '#f0d8b8' },
-  { file: 'signal-and-sediment.png', base: '#4a6b5a', accent: '#d8e0c8' },
+  {
+    file: 'signal-and-sediment.png',
+    base: '#4a6b5a',
+    accent: '#d8e0c8',
+    heldSize: true,
+    cameraMetadata: true,
+  },
   { file: 'nine-ways-of-seeing-a-warehouse.png', base: '#6a5a8c', accent: '#e8dcf0' },
   { file: 'the-salt-road-ledger.png', base: '#b08442', accent: '#2a2018' },
   { file: 'the-salt-road-ledger-audio.png', base: '#3a4a6b', accent: '#c8d4e8' },
@@ -64,6 +91,10 @@ const COVERS: readonly CoverSpec[] = [
   // A cover that really is all paper. Setting the extremes aside must not turn
   // this one into "no colour at all".
   { file: 'all-white.png', base: '#ffffff', accent: '#ffffff' },
+  // Large enough for a held copy, on the private book and the wishlist book.
+  // Neither may ship one, and that assertion needs a cover that would.
+  { file: 'a-book-kept-back.png', base: '#5c4b3a', accent: '#e8d8c0', fullSize: true },
+  { file: 'the-quiet-protocol.png', base: '#34495e', accent: '#d0dce8', fullSize: true },
 ];
 
 type Rgb = readonly [number, number, number];
@@ -102,7 +133,47 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([length, body, crc]);
 }
 
-function encodePng(width: number, height: number, pixel: (x: number, y: number) => Rgb): Buffer {
+/**
+ * An `eXIf` chunk: a big-endian TIFF header and one IFD holding one ASCII tag,
+ * ImageDescription (0x010E). The smallest EXIF block a reader recognises.
+ */
+function exifChunk(): Buffer {
+  const text = Buffer.from('Invented fixture camera metadata\0', 'ascii');
+  const ifd = Buffer.alloc(2 + 12 + 4);
+  ifd.writeUInt16BE(1, 0); // one entry
+  ifd.writeUInt16BE(0x010e, 2); // ImageDescription
+  ifd.writeUInt16BE(2, 4); // ASCII
+  ifd.writeUInt32BE(text.length, 6);
+  ifd.writeUInt32BE(8 + ifd.length, 10); // the text follows the IFD
+  ifd.writeUInt32BE(0, 14); // no next IFD
+  const header = Buffer.from([0x4d, 0x4d, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x08]);
+  return chunk('eXIf', Buffer.concat([header, ifd, text]));
+}
+
+/** An `iTXt` chunk under the keyword XMP readers look for, uncompressed. */
+function xmpChunk(): Buffer {
+  const packet =
+    '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF ' +
+    'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' +
+    '<rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/" ' +
+    'dc:creator="Invented Fixture Photographer"/></rdf:RDF></x:xmpmeta>';
+  return chunk(
+    'iTXt',
+    Buffer.concat([
+      Buffer.from('XML:com.adobe.xmp\0', 'latin1'),
+      Buffer.from([0, 0]), // uncompressed
+      Buffer.from('\0\0', 'latin1'), // no language tag, no translated keyword
+      Buffer.from(packet, 'utf8'),
+    ]),
+  );
+}
+
+function encodePng(
+  width: number,
+  height: number,
+  pixel: (x: number, y: number) => Rgb,
+  metadata = false,
+): Buffer {
   // One filter byte (0 = none) per scanline, then RGB triples.
   const raw = Buffer.alloc(height * (1 + width * 3));
   let offset = 0;
@@ -130,6 +201,7 @@ function encodePng(width: number, height: number, pixel: (x: number, y: number) 
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk('IHDR', ihdr),
+    ...(metadata ? [exifChunk(), xmpChunk()] : []),
     chunk('IDAT', deflateSync(raw, { level: 9 })),
     chunk('IEND', Buffer.alloc(0)),
   ]);
@@ -149,25 +221,32 @@ for (const cover of COVERS) {
   const accent = hexToRgb(cover.accent);
 
   const full = cover.fullSize === true;
-  const w = full ? FULL_WIDTH : WIDTH;
-  const h = full ? FULL_HEIGHT : HEIGHT;
+  const held = cover.heldSize === true;
+  const w = full ? FULL_WIDTH : held ? HELD_WIDTH : WIDTH;
+  const h = full ? FULL_HEIGHT : held ? HELD_HEIGHT : HEIGHT;
   const top = Math.round(h * BAND_TOP);
   const bottom = Math.round(h * BAND_BOTTOM);
   const marginX = full ? Math.round(w * 0.25) : MARGIN_X;
   const marginY = full ? Math.round(h * 0.25) : MARGIN_Y;
 
-  const png = encodePng(w, h, (x, y) => {
-    if (cover.whiteBorder === true) {
-      const inside = x >= marginX && x < w - marginX && y >= marginY && y < h - marginY;
-      if (!inside) return WHITE;
-    }
-    return y >= top && y < bottom ? accent : base;
-  });
+  const png = encodePng(
+    w,
+    h,
+    (x, y) => {
+      if (cover.whiteBorder === true) {
+        const inside = x >= marginX && x < w - marginX && y >= marginY && y < h - marginY;
+        if (!inside) return WHITE;
+      }
+      return y >= top && y < bottom ? accent : base;
+    },
+    cover.cameraMetadata === true,
+  );
 
   writeFileSync(join(outDir, cover.file), png);
   const notes = [
     cover.whiteBorder === true ? 'white border' : undefined,
-    full ? `${w}x${h}` : undefined,
+    full || held ? `${w}x${h}` : undefined,
+    cover.cameraMetadata === true ? 'EXIF + XMP' : undefined,
   ].filter(Boolean);
   console.log(
     `${cover.file}  base ${cover.base}  accent ${cover.accent}` +

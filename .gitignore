@@ -4,14 +4,17 @@ dist/
 .cache/
 
 # Build artifacts — always regenerable from the vault, never hand-edited (AGENTS.md invariant 1).
-# `stacks build --public` stages all three of these into packages/site/public/.
+# `stacks build --public` stages all four of these into packages/site/public/.
 # Everything else in that folder is committed brand art — favicon.svg, the two
 # favicon PNGs, the touch icon, and og.png — and a build must never write over
 # it. `notes/` holds the owner's published Thoughts: a broad `git add` after a
 # real build would put them into public history, beyond retraction.
+# `held-covers/` holds a 1200px copy of every published cover, some of them
+# photographed by the owner, for the same reason.
 library.json
 packages/site/public/covers/
 packages/site/public/notes/
+packages/site/public/held-covers/
 
 # Screenshots are regenerable via `pnpm smoke:render`; keep binaries out of the repo
 artifacts/

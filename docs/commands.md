@@ -211,6 +211,22 @@ they assert that no notes file and no `thoughts` mark ships, so
 `pnpm deploy:site` runs the takedown through its own gates. G2's other split
 tests force the stage on, whatever the constant says.
 
+**Held copies come off the same way.** A public build also ships a 1200px
+copy of each public cover over 512px, in `held-covers/` (spec §3.3). To take
+them all down, set `PUBLISH_HELD_COVERS` in `packages/core/src/publish.ts` to
+`false`: the stage stages nothing and still prunes, and `gate:public`'s held
+checks follow the switch. Never a bare revert, and keep the `/held-covers/*`
+block. Earlier Pages deployments keep their copies until they are deleted, as
+for `notes/` above, and a held copy is the larger file, named for its book.
+**To finish a takedown, delete the earlier deployments in the Pages
+dashboard** — and the same goes for **one book**: making a book `private`, or
+replacing its cover, after a deploy removes its held copy from the next
+deployment only. This project has no access policy on its per-deployment
+addresses (the owner, on #412), so every earlier one stays public until it is
+deleted; an access policy covering them would make this step unnecessary, and
+nobody has yet checked that one does cover a production deployment's own
+address.
+
 ## `pnpm deploy:site` — the trend panel, and what a stale record refuses
 
 **Before anything else it prints the trend record**, because a trend is obliged

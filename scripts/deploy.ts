@@ -996,7 +996,7 @@ const html = existsSync(join(DIST, 'index.html'))
   ? readFileSync(join(DIST, 'index.html'), 'utf8')
   : '';
 
-const report = inspectPublicBuild(DIST, { origin: siteUrl });
+const report = await inspectPublicBuild(DIST, { origin: siteUrl });
 for (const observation of report.observations) console.log(`  ${observation}`);
 
 const problems: { rule: PublicBuildRule | 'stale-fixtures'; message: string }[] = [

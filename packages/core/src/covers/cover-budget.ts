@@ -36,6 +36,19 @@ import sharp from 'sharp';
 export const MAX_COVER_EDGE = 512;
 
 /**
+ * Longest edge of a **held copy**, in pixels: the one larger cover a book will
+ * load when it is picked up (spec §4, step 4) and the enlarged-cover viewer
+ * shows today, staged beside the shelf's copy in `held-covers/`.
+ *
+ * 1200 because #369 measured that a held copy on a phone is drawn about 1192
+ * device pixels tall at the renderer's pixel-ratio cap of 2, so this draws 1:1
+ * there and anything larger is bytes no screen samples. It is one texture at a
+ * time, freed on put back, so `TEXTURE_BUDGET_BYTES` does not count it and G15
+ * (`cover-budget`) never sees the folder ([ADR-0105](../../../../docs/adr/0105-a-cover-has-a-shelf-tier-and-a-held-tier.md)).
+ */
+export const HELD_COVER_EDGE = 1200;
+
+/**
  * Bytes a decoded texture occupies on the GPU.
  *
  * Four bytes per pixel (RGBA — the JPEG's compression is long gone by this

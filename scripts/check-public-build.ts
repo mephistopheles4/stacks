@@ -24,13 +24,18 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
+import sharp from 'sharp';
+import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
+import { HELD_COVER_EDGE, MAX_COVER_EDGE } from '../packages/core/src/covers/cover-budget.ts';
+import { coverFileName } from '../packages/core/src/covers/cover-path.ts';
+import { SHELVED_STATUSES } from '../packages/core/src/shelf-order.ts';
 import {
   inspectPublicBuild,
   NOTE_BODY_CANARY,
   notesPresence,
   THOUGHTS_SHIP_PHRASE,
 } from './lib/public-build.ts';
-import { PUBLISH_THOUGHTS } from '../packages/core/src/publish.ts';
+import { PUBLISH_HELD_COVERS, PUBLISH_THOUGHTS } from '../packages/core/src/publish.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
 import { walk } from './lib/walk.ts';
@@ -88,6 +93,67 @@ if (!planted) {
 }
 console.log(`ship phrase planted in a fixture's Thoughts: ${THOUGHTS_SHIP_PHRASE}`);
 
+// 1c. The held tier's vacuity guard (spec §3.3, §5). Each held-tier claim this
+// gate and the inspector make is about a fixture cover that would break it:
+// a published cover over the held cap (the resize), a published one carrying
+// EXIF or XMP (the re-encode), and a cover over the shelf cap on a private book
+// and on a wishlist book (the filter). Without all four, a build that staged
+// nothing, or copied everything, would pass. Read through the adapter, never
+// by parsing the notes by hand (invariant 4).
+console.log('\nreading fixture covers — any skip warnings below are the fixtures’ own, by design');
+const vault = new ObsidianAdapter(VAULT);
+const fixtureCovers = await Promise.all(
+  (await vault.listBooks()).map(async (book) => {
+    const name = book.cover === undefined ? '' : coverFileName(book.cover);
+    const metadata =
+      name === ''
+        ? undefined
+        : await sharp(join(vault.coverDir(), name))
+            .metadata()
+            .catch(() => undefined);
+    return {
+      title: book.title,
+      name,
+      published: SHELVED_STATUSES.has(book.status) && book.private !== true,
+      privateBook: book.private === true,
+      wishlist: book.status === 'wishlist',
+      edge: metadata === undefined ? 0 : Math.max(metadata.width, metadata.height),
+      carriesMetadata: metadata?.exif !== undefined || metadata?.xmp !== undefined,
+    };
+  }),
+);
+const wantHeld = fixtureCovers.filter((cover) => cover.published && cover.edge > MAX_COVER_EDGE);
+const mustNotHold = fixtureCovers.filter(
+  (cover) => !cover.published && cover.edge > MAX_COVER_EDGE,
+);
+const heldCases: readonly (readonly [string, boolean])[] = [
+  [
+    `a published cover over the ${String(HELD_COVER_EDGE)}px held cap`,
+    wantHeld.some((cover) => cover.edge > HELD_COVER_EDGE),
+  ],
+  [
+    'a published cover over the shelf cap carrying EXIF or XMP',
+    wantHeld.some((cover) => cover.carriesMetadata),
+  ],
+  [
+    'a private book with a cover over the shelf cap',
+    mustNotHold.some((cover) => cover.privateBook),
+  ],
+  ['a wishlist book with a cover over the shelf cap', mustNotHold.some((cover) => cover.wishlist)],
+];
+const unplanted = heldCases.filter(([, present]) => !present).map(([what]) => what);
+if (unplanted.length > 0) {
+  console.error(
+    `FAILED: the fixture vault holds no ${unplanted.join('; no ')}.\nWithout each one the ` +
+      'held-tier checks would pass no matter what the build staged.',
+  );
+  process.exit(1);
+}
+console.log(
+  `held-tier cases planted: ${String(wantHeld.length)} published cover(s) over ` +
+    `${String(MAX_COVER_EDGE)}px, ${String(mustNotHold.length)} held back`,
+);
+
 // 2. Build for real, as a deploy would — with an origin.
 //
 // Set here rather than left unset because the link preview is only correct when
@@ -118,7 +184,7 @@ if (!existsSync(DIST)) {
 }
 
 // 3. Every rule, against the folder that Astro actually assembled.
-const report = inspectPublicBuild(DIST, { origin: CANONICAL_ORIGIN });
+const report = await inspectPublicBuild(DIST, { origin: CANONICAL_ORIGIN });
 
 for (const observation of report.observations) console.log(observation);
 console.log(`inspected ${relative(REPO_ROOT, DIST).split('\\').join('/')}`);
@@ -142,14 +208,66 @@ const staged = (existsSync(notesDir) ? walk(notesDir) : []).map((file) => ({
 
 // Switched off (spec §4's undo), the stage must ship nothing, and this check
 // follows it so the takedown deploy passes its own gate.
+// No early exit when it is off: the held tier's checks below must still run.
 const presence = notesPresence(staged, PUBLISH_THOUGHTS);
 if (presence.problem !== undefined) {
   console.error(`\nFAILED: ${presence.problem}`);
   process.exit(1);
 }
 console.log(presence.observation);
+
+// 5. The held tier's presence half, and the filter. The inspector held every
+// file in `held-covers/` to the cap, to no metadata and to a book that names
+// it; this proves each published cover over the shelf cap got its copy, named
+// by its book, and that the private and wishlist books' covers got none.
+// Here and not in the inspector, which cannot know which vault built the folder.
+const heldDir = join(DIST, 'held-covers');
+const shippedBooks = (
+  JSON.parse(readFileSync(join(DIST, 'library.json'), 'utf8')) as {
+    books: { title: string; heldCover?: unknown }[];
+  }
+).books;
+// Switched off (spec §4's undo), the stage must ship no copy and name none,
+// and this follows it so the takedown deploy passes its own gate.
+const heldFailures = PUBLISH_HELD_COVERS
+  ? [
+      ...wantHeld
+        .filter(
+          (cover) =>
+            !existsSync(join(heldDir, cover.name)) ||
+            shippedBooks.find((book) => book.title === cover.title)?.heldCover !==
+              `held-covers/${cover.name}`,
+        )
+        .map((cover) => `no held copy staged and named for "${cover.title}" (${cover.name})`),
+      ...mustNotHold
+        .filter((cover) => existsSync(join(heldDir, cover.name)))
+        .map((cover) => `a held copy shipped for a book held back: ${cover.name}`),
+    ]
+  : [
+      ...(existsSync(heldDir) ? walk(heldDir) : []).map(
+        (file) =>
+          `the held stage is switched off, yet ${relative(DIST, file).split('\\').join('/')} shipped`,
+      ),
+      ...shippedBooks
+        .filter((book) => book.heldCover !== undefined)
+        .map((book) => `the held stage is switched off, yet "${book.title}" names a held copy`),
+    ];
+if (heldFailures.length > 0) {
+  console.error(`\nFAILED: the held tier\n- ${heldFailures.join('\n- ')}`);
+  process.exit(1);
+}
 console.log(
-  PUBLISH_THOUGHTS
-    ? '\nOK — public build carries no note bodies beyond the Thoughts split, no vault paths'
-    : '\nOK — public build carries no note bodies, no vault paths',
+  PUBLISH_HELD_COVERS
+    ? `${String(wantHeld.length)} held copy file(s) staged and named; none for the ` +
+        `${String(mustNotHold.length)} held back`
+    : 'held stage switched off: dist/held-covers/ holds no file and no book names one',
+);
+
+console.log(
+  (PUBLISH_THOUGHTS
+    ? '\nOK — public build carries no note bodies beyond the Thoughts split, no vault paths, '
+    : '\nOK — public build carries no note bodies, no vault paths, ') +
+    (PUBLISH_HELD_COVERS
+      ? `and a held copy for every published cover over ${String(MAX_COVER_EDGE)}px`
+      : 'and no held copy'),
 );

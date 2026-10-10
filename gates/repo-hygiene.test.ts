@@ -192,6 +192,12 @@ describe('G5 — library.json is a build artifact', () => {
     // is tracked.
     expect(matchesIgnoreRule('packages/site/public/og.png')).toBe(false);
   });
+
+  it('keeps the held copies out too', () => {
+    // A 1200px copy of every cover, some of them photographed by the owner: a
+    // broad add after a real build would put them into public history.
+    expect(isIgnored('packages/site/public/held-covers/a-book.jpg')).toBe(true);
+  });
 });
 
 describe('G13 — no third-party material is committed', () => {

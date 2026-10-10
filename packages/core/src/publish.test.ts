@@ -5,9 +5,15 @@ import sharp, { type Sharp } from 'sharp';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
-import { MAX_COVER_EDGE } from './covers/cover-budget.ts';
+import { HELD_COVER_EDGE, MAX_COVER_EDGE } from './covers/cover-budget.ts';
 import { publish } from './publish.ts';
-import { FIXTURE_VAULT, spyOnWarn, type WarnSpy } from './test-support.ts';
+import {
+  FIXTURE_VAULT,
+  plantedCover,
+  spyOnWarn,
+  type PlantedCoverOptions,
+  type WarnSpy,
+} from './test-support.ts';
 
 const CANARY = 'NOTE_BODY_CANARY_do_not_ship';
 const vault = new ObsidianAdapter(FIXTURE_VAULT);
@@ -39,7 +45,9 @@ describe('publish', () => {
     // card with a generated one at the same path, at the same size, silently.
     expect(staged).not.toContain('og.png');
 
-    // Six of the eight fixture books carry a cover; two deliberately do not.
+    // Six of the books a public build ships carry a cover; `Lantern Work`
+    // deliberately does not. The private and wishlist books carry one each,
+    // for the held tier, and are filtered out before anything is copied.
     expect(result.coversCopied).toBe(6);
     expect(result.coversMissing).toEqual([]);
   });
@@ -331,6 +339,302 @@ describe('publish — the notes stage', () => {
     await build(true);
 
     expect(await notesFiles()).toEqual(['kept-dir']);
+  });
+});
+
+/**
+ * The held stage: a copy of each cover over the shelf cap, at most
+ * `HELD_COVER_EDGE` on its long edge, in `held-covers/`, named by `heldCover`
+ * (spec §3.3, #377, ADR-0105).
+ *
+ * Held to vaults built for each case, every image generated here (ADR-0004).
+ * `gate:public` and G20 hold the same tier on a real build; this holds the
+ * stage's own rules, in both builds.
+ */
+describe('publish — the held stage', () => {
+  let vaultPath: string;
+  let assets: string;
+  let warn: WarnSpy;
+
+  const cover = async (file: string, bytes: Buffer): Promise<void> => {
+    await mkdir(join(vaultPath, 'Library', 'covers'), { recursive: true });
+    await writeFile(join(vaultPath, 'Library', 'covers', file), bytes);
+  };
+
+  const note = async (title: string, ...frontmatter: string[]): Promise<void> => {
+    await mkdir(join(vaultPath, 'Library'), { recursive: true });
+    const contents = ['---', 'type: book', `title: ${title}`, ...frontmatter, '---', ''].join('\n');
+    await writeFile(join(vaultPath, 'Library', `${title}.md`), contents, 'utf8');
+  };
+
+  const image = (
+    width: number,
+    height: number,
+    format: 'png' | 'jpeg' = 'png',
+    options: Omit<PlantedCoverOptions, 'format'> = {},
+  ): Promise<Buffer> => plantedCover(width, height, { ...options, format });
+
+  const build = async (isPublic: boolean) => {
+    const vault = new ObsidianAdapter(vaultPath);
+    return publish(await vault.listBooks(), vault, assets, { isPublic });
+  };
+
+  const heldFiles = async (): Promise<string[]> => {
+    try {
+      return (await readdir(join(assets, 'held-covers'))).sort();
+    } catch {
+      return [];
+    }
+  };
+
+  beforeEach(async () => {
+    vaultPath = await mkdtemp(join(tmpdir(), 'stacks-held-vault-'));
+    assets = await mkdtemp(join(tmpdir(), 'stacks-held-assets-'));
+    warn = spyOnWarn();
+  });
+
+  afterEach(async () => {
+    warn.restore();
+    await rm(vaultPath, { recursive: true, force: true });
+    await rm(assets, { recursive: true, force: true });
+  });
+
+  describe.each([
+    { mode: 'public', isPublic: true },
+    { mode: 'local', isPublic: false },
+  ])('in a $mode build', ({ isPublic }) => {
+    it('stages a cover over the held cap at the cap, proportions kept, and names it', async () => {
+      await cover('big.png', await image(1400, 2100));
+      await note('Big', 'cover: covers/big.png');
+
+      const result = await build(isPublic);
+      const held = await sharp(join(assets, 'held-covers', 'big.png')).metadata();
+      const shelf = await sharp(join(assets, 'covers', 'big.png')).metadata();
+
+      expect([held.width, held.height]).toEqual([800, HELD_COVER_EDGE]);
+      expect(held.format).toBe('png');
+      // The shelf's copy is untouched by the held stage.
+      expect(Math.max(shelf.width, shelf.height)).toBe(MAX_COVER_EDGE);
+      expect(result.library.books.find((b) => b.title === 'Big')?.heldCover).toBe(
+        'held-covers/big.png',
+      );
+    });
+
+    it('re-encodes a cover between the two caps at its own size, dropping EXIF and XMP', async () => {
+      // The size #377 would have copied byte for byte. A copy would ship the
+      // camera metadata a photographed cover carries, location included.
+      const source = await image(800, 1200, 'jpeg', { exif: true, xmp: true });
+      const planted = await sharp(source).metadata();
+      expect(planted.exif, 'the plant carries EXIF').toBeDefined();
+      expect(planted.xmp, 'the plant carries XMP').toBeDefined();
+      await cover('mid.jpg', source);
+      await note('Mid', 'cover: covers/mid.jpg');
+
+      await build(isPublic);
+      const bytes = await readFile(join(assets, 'held-covers', 'mid.jpg'));
+      const held = await sharp(bytes).metadata();
+
+      expect([held.width, held.height]).toEqual([800, 1200]);
+      expect(held.exif).toBeUndefined();
+      expect(held.xmp).toBeUndefined();
+      expect(bytes.equals(source), 'the held copy is the vault file, byte for byte').toBe(false);
+      // The shelf tier's encoder settings, for the shelf tier's reason.
+      expect(held.chromaSubsampling).toBe('4:4:4');
+    });
+
+    it('turns a photographed cover upright before its orientation tag is dropped', async () => {
+      // Stored landscape and tagged "rotate 90°", the way a phone writes a
+      // portrait photo. Dropping the tag without applying it would ship the
+      // cover on its side.
+      await cover('turned.jpg', await image(1200, 800, 'jpeg', { orientation: 6 }));
+      await note('Turned', 'cover: covers/turned.jpg');
+
+      await build(isPublic);
+      const held = await sharp(join(assets, 'held-covers', 'turned.jpg')).metadata();
+
+      expect([held.width, held.height]).toEqual([800, 1200]);
+      expect(held.orientation ?? 1).toBe(1);
+    });
+
+    it('stages nothing for a cover the shelf cap already holds', async () => {
+      await cover('small.png', await image(MAX_COVER_EDGE, MAX_COVER_EDGE));
+      await note('Small', 'cover: covers/small.png');
+
+      const result = await build(isPublic);
+
+      expect(await heldFiles()).toEqual([]);
+      expect(result.library.books.find((b) => b.title === 'Small')?.heldCover).toBeUndefined();
+    });
+
+    it('never scales a cover between the two caps up to the held cap', async () => {
+      // A blurry big cover is a worse answer than an honest small one; the held
+      // cap is a ceiling, never a target (round 1, integrity F3).
+      await cover('mid.png', await image(600, 900));
+      await note('Mid', 'cover: covers/mid.png');
+
+      await build(isPublic);
+      const held = await sharp(join(assets, 'held-covers', 'mid.png')).metadata();
+
+      expect([held.width, held.height]).toEqual([600, 900]);
+    });
+
+    it('judges a cover by its long edge, so a narrow tall one still gets a copy', async () => {
+      // Short edge inside the shelf cap, long edge past it: a stage that read
+      // the short edge would hold this one back (round 1, integrity F4).
+      await cover('narrow.png', await image(400, 700));
+      await note('Narrow', 'cover: covers/narrow.png');
+
+      const result = await build(isPublic);
+
+      expect(await heldFiles()).toEqual(['narrow.png']);
+      expect(result.library.books[0]?.heldCover).toBe('held-covers/narrow.png');
+    });
+
+    it('drops IPTC and PNG text as well as EXIF and XMP', async () => {
+      // The two kinds sharp cannot write, spliced in by hand. Each is first
+      // shown to be there through the reader the inspector uses.
+      const jpeg = await image(800, 1200, 'jpeg', { iptc: true });
+      const png = await image(800, 1200, 'png', { text: true });
+      expect((await sharp(jpeg).metadata()).iptc, 'the plant carries IPTC').toBeDefined();
+      expect((await sharp(png).metadata()).comments, 'the plant carries text').toHaveLength(1);
+      await cover('iptc.jpg', jpeg);
+      await cover('text.png', png);
+      await note('Iptc', 'cover: covers/iptc.jpg');
+      await note('Text', 'cover: covers/text.png');
+
+      await build(isPublic);
+
+      expect(
+        (await sharp(join(assets, 'held-covers', 'iptc.jpg')).metadata()).iptc,
+      ).toBeUndefined();
+      expect(
+        (await sharp(join(assets, 'held-covers', 'text.png')).metadata()).comments,
+      ).toBeUndefined();
+    });
+
+    it('names no copy, and leaves no file, for a cover it measured but could not write', async () => {
+      // The header reads, so the cover is measured over the shelf cap; the
+      // pixels stop short, so the write fails. The book keeps its shelf copy
+      // and the build carries on (round 1, integrity F5).
+      const whole = await image(1400, 2100);
+      await cover('cut.png', whole.subarray(0, 200));
+      await note('Cut', 'cover: covers/cut.png');
+
+      const result = await build(isPublic);
+
+      expect(await heldFiles()).toEqual([]);
+      expect(result.library.books[0]?.heldCover).toBeUndefined();
+    });
+
+    it('stages nothing, and fails nothing, for a cover that is missing or unreadable', async () => {
+      await cover('broken.png', Buffer.from('not an image'));
+      await note('Broken', 'cover: covers/broken.png');
+      await note('Lost', 'cover: covers/lost.png');
+
+      const result = await build(isPublic);
+
+      expect(await heldFiles()).toEqual([]);
+      expect(result.library.books.filter((b) => b.heldCover !== undefined)).toEqual([]);
+    });
+
+    it('lands a cover path that climbs out of the vault as its basename', async () => {
+      // `coverFileName`'s rule, which G10 holds: a vault path never decides
+      // where a held copy lands.
+      await cover('big.png', await image(1400, 2100));
+      await note('Climbing', 'cover: ../../covers/big.png');
+
+      const result = await build(isPublic);
+
+      expect(await heldFiles()).toEqual(['big.png']);
+      expect(result.library.books[0]?.heldCover).toBe('held-covers/big.png');
+    });
+  });
+
+  it('stages no held copy for a private or a wishlist book in a public build', async () => {
+    await cover('kept.png', await image(1400, 2100));
+    await cover('wanted.png', await image(1400, 2100));
+    await note('Kept', 'private: true', 'cover: covers/kept.png');
+    await note('Wanted', 'status: wishlist', 'cover: covers/wanted.png');
+
+    await build(true);
+
+    expect(await heldFiles()).toEqual([]);
+  });
+
+  it('stages them in a local build, which shelves every book', async () => {
+    // Held copies follow the shelf covers, not the notes (spec §3.2): a larger
+    // copy of a cover a local shelf already shows exposes nothing new.
+    await cover('kept.png', await image(1400, 2100));
+    await cover('wanted.png', await image(1400, 2100));
+    await note('Kept', 'private: true', 'cover: covers/kept.png');
+    await note('Wanted', 'status: wishlist', 'cover: covers/wanted.png');
+
+    await build(false);
+
+    expect(await heldFiles()).toEqual(['kept.png', 'wanted.png']);
+  });
+
+  it('prunes a held copy once its book stops publishing it', async () => {
+    await cover('big.png', await image(1400, 2100));
+    await note('Big', 'cover: covers/big.png');
+    await build(true);
+    expect(await heldFiles()).toEqual(['big.png']);
+
+    await note('Big', 'private: true', 'cover: covers/big.png');
+    await build(true);
+
+    expect(await heldFiles()).toEqual([]);
+  });
+
+  it('prunes a held copy once its cover shrinks inside the shelf cap', async () => {
+    await cover('big.png', await image(1400, 2100));
+    await note('Big', 'cover: covers/big.png');
+    await build(true);
+
+    await cover('big.png', await image(300, 450));
+    await build(true);
+
+    expect(await heldFiles()).toEqual([]);
+  });
+
+  it('switched off, stages no copy and names none, and prunes what an earlier build left', async () => {
+    // Spec §4's undo, driven through the option so it runs whatever
+    // `PUBLISH_HELD_COVERS` says: this build, then a deploy, takes every held
+    // copy off the site.
+    await cover('big.png', await image(1400, 2100));
+    await note('Big', 'cover: covers/big.png');
+    await build(true);
+    expect(await heldFiles()).toEqual(['big.png']);
+
+    const vault = new ObsidianAdapter(vaultPath);
+    const result = await publish(await vault.listBooks(), vault, assets, {
+      isPublic: true,
+      heldCovers: false,
+    });
+
+    expect(await heldFiles()).toEqual([]);
+    expect(result.library.books.filter((b) => b.heldCover !== undefined)).toEqual([]);
+  });
+
+  it('leaves a held folder alone when no library.json says this tool stages there', async () => {
+    await mkdir(join(assets, 'held-covers'), { recursive: true });
+    await writeFile(join(assets, 'held-covers', 'theirs.png'), 'x');
+    await note('Bare');
+
+    await build(true);
+
+    expect(await heldFiles()).toEqual(['theirs.png']);
+    expect(warn.lines.join('\n')).toMatch(/held copies/);
+  });
+
+  it('prunes files only, never a folder', async () => {
+    await note('Bare');
+    await build(true);
+    await mkdir(join(assets, 'held-covers', 'kept-dir'), { recursive: true });
+
+    await build(true);
+
+    expect(await heldFiles()).toEqual(['kept-dir']);
   });
 });
 

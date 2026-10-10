@@ -153,6 +153,10 @@ load-it / don't-load-it boolean:
 - **shelf tier** — 512px, what `MAX_COVER_EDGE` caps today;
 - **held tier** — the vault-quality original, one book at a time.
 
+  *Built since as a re-encoded copy capped at 1200px, not the original:* see
+  [ADR-0105](./adr/0105-a-cover-has-a-shelf-tier-and-a-held-tier.md) and
+  `HELD_COVER_EDGE`. The paragraph below is the reasoning as it stood before.
+
 That cuts against the 512px decision as currently written in [`docs/adr/`](./adr/0015-cover-texture-budget.md).
 The cap is not wrong; it is right for a spine on a shelf and wrong for a cover
 filling a phone screen. It is the shelf tier of two tiers, not a permanent

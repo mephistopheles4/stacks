@@ -478,12 +478,45 @@ interface CoverViewerChecked {
   readonly escapeClosedViewer: boolean;
   /** ⚠️ The card must survive that same Escape. */
   readonly cardSurvivedEscape: boolean;
+  /**
+   * The held copy `library.json` names for this book's cover, or `undefined`
+   * for a book with none, and whether the enlarged view showed it (spec §3.4,
+   * #377). Read from `library.json` rather than from the card, so a card that
+   * offered the wrong file cannot vouch for itself (round 1, integrity F6).
+   */
+  readonly held: string | undefined;
+  readonly showedHeld: boolean;
+  /**
+   * A book with no held copy, walked to as well, and whether its enlarged view
+   * showed the card's own file — the viewer's other path, which a walk that
+   * stopped at the first held copy would never reach (round 1, integrity F8).
+   */
+  readonly withoutHeld: { readonly showedOwn: boolean } | undefined;
 }
 
 async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefined> {
-  // Walks the shelf for a book with a cover, since only some fixture books have
-  // one and the card left open by the swap above may not be one of them.
+  // Walks the shelf for books with a cover, since only some fixture books have
+  // one and the card left open by the swap above may not be one of them. It
+  // wants two: one whose cover has a held copy, which only covers over 512px
+  // get, and one whose cover has none, so both of the viewer's paths are seen.
+  // Keyed by each book's `cover`, so the card's own image must be the shelf
+  // copy for the walk to find its book at all: a card loading its held copy
+  // instead finds none, and fails as "no book on the shelf has a held copy".
+  const library = (await page.evaluate(
+    `fetch('/library.json').then((response) => response.json())`,
+  )) as { books: { cover?: string; heldCover?: string }[] };
+  const heldFor = new Map(
+    library.books.flatMap((book) =>
+      book.cover === undefined
+        ? []
+        : [[`/${book.cover}`, book.heldCover === undefined ? undefined : `/${book.heldCover}`]],
+    ),
+  );
+
+  let withHeld: CoverViewerChecked | undefined;
+  let withoutHeld: CoverViewerChecked | undefined;
   for (let index = 0; index < 60; index += 1) {
+    if (withHeld !== undefined && withoutHeld !== undefined) break;
     const point = (await page.evaluate(`window.__shelf.projectBook(${index})`)) as
       { x: number; y: number } | undefined;
     if (point === undefined) continue;
@@ -493,11 +526,14 @@ async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefi
 
     const thumbnail = (await page.evaluate(`(() => {
       const button = document.querySelector('#book-card-body .card-cover');
-      if (!button) return undefined;
+      const image = button?.querySelector('img');
+      if (!button || !image) return undefined;
       const box = button.getBoundingClientRect();
-      return { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2), width: box.width };
-    })()`)) as { x: number; y: number; width: number } | undefined;
+      return { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2), width: box.width, src: image.getAttribute('src') ?? '' };
+    })()`)) as { x: number; y: number; width: number; src: string } | undefined;
     if (thumbnail === undefined) continue;
+    const held = heldFor.get(thumbnail.src);
+    if (held === undefined ? withoutHeld !== undefined : withHeld !== undefined) continue;
 
     await page.mouse.click(thumbnail.x, thumbnail.y);
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -505,8 +541,8 @@ async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefi
     const open = (await page.evaluate(`(() => {
       const dialog = document.getElementById('cover-viewer');
       const image = document.getElementById('cover-viewer-image');
-      return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0 };
-    })()`)) as { open: boolean; width: number };
+      return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0, src: image && image.src ? new URL(image.src).pathname : '' };
+    })()`)) as { open: boolean; width: number; src: string };
 
     await page.keyboard.press('Escape');
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -517,14 +553,20 @@ async function checkCoverViewer(page: Page): Promise<CoverViewerChecked | undefi
       return { viewerOpen: Boolean(dialog?.open), cardOpen: Boolean(card) && !card.hidden };
     })()`)) as { viewerOpen: boolean; cardOpen: boolean };
 
-    return {
+    const checked: CoverViewerChecked = {
       opened: open.open,
       enlargedBy: thumbnail.width === 0 ? 0 : open.width / thumbnail.width,
       escapeClosedViewer: !after.viewerOpen,
       cardSurvivedEscape: after.cardOpen,
+      held,
+      showedHeld: held !== undefined && open.src === held,
+      withoutHeld: held === undefined ? { showedOwn: open.src === thumbnail.src } : undefined,
     };
+    if (held === undefined) withoutHeld = checked;
+    else withHeld = checked;
   }
-  return undefined;
+  const primary = withHeld ?? withoutHeld;
+  return primary === undefined ? undefined : { ...primary, withoutHeld: withoutHeld?.withoutHeld };
 }
 
 async function clickABook(page: Page): Promise<CardOpened | undefined> {
@@ -1682,6 +1724,14 @@ function report(result: {
             1,
           )}x thumbnail   escape ${viewer.escapeClosedViewer ? 'closes it' : 'DOES NOT CLOSE IT'}${
             viewer.cardSurvivedEscape ? '' : '   AND TOOK THE CARD'
+          }   held copy ${
+            viewer.held === undefined ? 'none named' : viewer.showedHeld ? 'shown' : 'NOT SHOWN'
+          }   without one ${
+            viewer.withoutHeld === undefined
+              ? 'NOT FOUND'
+              : viewer.withoutHeld.showedOwn
+                ? 'shows its own'
+                : 'DOES NOT SHOW ITS OWN'
           }`
     }`,
   );
@@ -1739,6 +1789,26 @@ function report(result: {
       failures.push(
         'Escape closed the enlarged cover *and* the card underneath it. Both listen on the ' +
           'document, so leaving one surface must not return the user two levels',
+      );
+    }
+    // The held copy is the reason the enlarged view can be sharper than the
+    // card's (spec §3.4, #377). The 50-book fixture's covers over 512px get
+    // one, so a walk that found none means the stage lost it.
+    if (viewer.held === undefined) {
+      failures.push(
+        'no book on the shelf has a held copy in library.json — the fixture shelf has covers ' +
+          'over 512px, so the held stage dropped them',
+      );
+    } else if (!viewer.showedHeld) {
+      failures.push(`the enlarged view did not show the held copy ${viewer.held}`);
+    }
+    if (viewer.withoutHeld === undefined) {
+      failures.push(
+        'no book without a held copy was opened, so the viewer’s other path went unseen',
+      );
+    } else if (!viewer.withoutHeld.showedOwn) {
+      failures.push(
+        'for a book with no held copy, the enlarged view did not show the card’s own file',
       );
     }
   }

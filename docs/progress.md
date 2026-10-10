@@ -262,6 +262,36 @@ since the writer parses the note three times.
 going once more"; fixes as spec D17 to D19 and N80 to N85, gates as
 `docs/gates.md`'s round-6 bullet.
 
+**2026-10-09 — the held tier, gated first**
+([#412](https://github.com/mephistopheles4/stacks/issues/412)): `orphan-held`,
+`held-oversize` and `held-metadata` under G20, `heldCover` in `foreign-cover`
+and `unknown-key`, `headers` requiring `/held-covers/*`, and `gate:public`'s
+held-tier vacuity, presence and filter checks, all observed red before any
+staging code; G5's ignore line armed as `it.fails` — see
+[*The held tier, gated before it is staged*](./gates.md#the-held-tier-gated-before-it-is-staged).
+Then the stage: a re-encoded, upright copy of every shelved cover over 512px,
+at most 1200px, named by `heldCover`, pruned per build; the enlarged-cover
+viewer shows it; G5 armed, G15 and G35's viewer check extended — same section.
+The stage's off switch, `PUBLISH_HELD_COVERS`, changed what `gate:public`
+asserts in a commit that touched `docs/gates.md` and not this file; its line is
+this one, since a pushed commit with a branch stacked on it is not rewritten.
+
+**2026-10-10 — round 1 of move 4 on #416:** `foreign-cover` judges a held path
+decoded, `held-metadata` reads IPTC, PNG text and a Photoshop block, the held
+size check reads a cap of its own, the held rules' words are pinned, and G35's
+viewer check reads `library.json` and both viewer paths — each planted red,
+same section's round-1 bullets. CodeQL's DOM-text alert on the viewer was
+answered by handing the held path over in memory. Measured on the real vault,
+read-only, before the first real deploy: a public build stages 36 held copies,
+6.67 MB, none carrying metadata, in 6.2 s (owner decision, from chat, to post
+the counts on #412).
+
+**2026-10-10 — round 2, the security pair on the fix diff:** owner decision,
+from chat, "run sécurité pair". `isSameOriginHeld` refuses spaces and controls,
+`held-metadata`'s observation names the five kinds it reads, and the takedown
+steps cover a single book made private — same section's round-2 bullets. The
+owner reports no access policy on the per-deployment addresses.
+
 ### Phase 4 evidence
 
 `stacks import audible <export>` against a real Libation export: 22 records, 17
