@@ -106,3 +106,99 @@ export function isHost(url: string, host: string): boolean {
     return false;
   }
 }
+
+/** What a planted cover carries, each kind invented and each read back by the test that plants it. */
+export interface PlantedCoverOptions {
+  readonly format?: 'png' | 'jpeg';
+  readonly exif?: boolean;
+  readonly xmp?: boolean;
+  /** An EXIF orientation tag, applied by nothing until a re-encode turns the copy upright. */
+  readonly orientation?: number;
+  /** A PNG `tEXt` chunk, which sharp reports as `comments`. PNG only. */
+  readonly text?: boolean;
+  /** An IPTC City dataset in a Photoshop APP13 segment, which sharp reports as `iptc`. JPEG only. */
+  readonly iptc?: boolean;
+}
+
+/**
+ * A real image carrying invented camera metadata, for the held tier's tests.
+ *
+ * One builder for `publish()`'s tests and G20's plants, because the plant has
+ * to be the same file in both: a stage proven to strip what this writes, and an
+ * inspector proven to refuse it. sharp writes EXIF, XMP and the orientation tag
+ * itself; it writes neither PNG text nor IPTC, so those two are spliced in by
+ * hand. Every string is invented (ADR-0004). sharp is loaded here, never at the
+ * top of the module, so the many tests importing this file never pay for it.
+ */
+export async function plantedCover(
+  width: number,
+  height: number,
+  options: PlantedCoverOptions = {},
+): Promise<Buffer> {
+  const { default: sharp } = await import('sharp');
+  let pipeline = sharp({ create: { width, height, channels: 3, background: '#2f6d7a' } });
+  if (options.exif === true) {
+    pipeline = pipeline.withExif({ IFD0: { ImageDescription: 'Invented planted camera' } });
+  }
+  if (options.xmp === true) {
+    pipeline = pipeline.withXmp(
+      '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF ' +
+        'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/></x:xmpmeta>',
+    );
+  }
+  if (options.orientation !== undefined) {
+    pipeline = pipeline.withMetadata({ orientation: options.orientation });
+  }
+  if (options.format === 'jpeg') {
+    const jpeg = await pipeline.jpeg().toBuffer();
+    // APP13 right after the start-of-image marker.
+    return options.iptc === true
+      ? Buffer.concat([jpeg.subarray(0, 2), iptcSegment('Invented City'), jpeg.subarray(2)])
+      : jpeg;
+  }
+  const png = await pipeline.png().toBuffer();
+  // After the signature (8 bytes) and the IHDR chunk (25), where any chunk may go.
+  return options.text === true
+    ? Buffer.concat([
+        png.subarray(0, 33),
+        pngChunk('tEXt', Buffer.from('Comment\0Invented planted place', 'latin1')),
+        png.subarray(33),
+      ])
+    : png;
+}
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const body = Buffer.concat([Buffer.from(type, 'latin1'), data]);
+  let crc = 0xffffffff;
+  for (const byte of body) crc = (CRC_TABLE[(crc ^ byte) & 0xff] ?? 0) ^ (crc >>> 8);
+  const head = Buffer.alloc(4);
+  head.writeUInt32BE(data.length);
+  const tail = Buffer.alloc(4);
+  tail.writeUInt32BE((crc ^ 0xffffffff) >>> 0);
+  return Buffer.concat([head, body, tail]);
+}
+
+/** One IPTC dataset, 2:90 (City), in an 8BIM resource 0x0404 inside an APP13 segment. */
+function iptcSegment(city: string): Buffer {
+  const value = Buffer.from(city, 'latin1');
+  const dataset = Buffer.concat([Buffer.from([0x1c, 0x02, 0x5a, 0x00, value.length]), value]);
+  const size = Buffer.alloc(4);
+  size.writeUInt32BE(dataset.length);
+  const resource = Buffer.concat([
+    Buffer.from('8BIM', 'latin1'),
+    Buffer.from([0x04, 0x04, 0x00, 0x00]),
+    size,
+    dataset,
+    Buffer.alloc(dataset.length % 2),
+  ]);
+  const payload = Buffer.concat([Buffer.from('Photoshop 3.0\0', 'latin1'), resource]);
+  const length = Buffer.alloc(2);
+  length.writeUInt16BE(payload.length + 2);
+  return Buffer.concat([Buffer.from([0xff, 0xed]), length, payload]);
+}

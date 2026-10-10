@@ -78,13 +78,17 @@ const ALLOWED = [
   'packages/core/src/watch.ts',
   // Everything under scripts/ writes files for a living — fixtures, captured
   // API responses, screenshots, the public-build check. None of them parse a
-  // note; the two that need books shell out to the CLI.
+  // note; the ones that need books shell out to the CLI or ask the adapter.
   'scripts/capture-api-fixtures.ts',
   // Sibling of the above, and the same permission for the same reason: it
   // writes one file into `fixtures/api/`. It calls `lookup()`, which is the
   // metadata layer and has never known what a vault is — the books it asks
   // about are a hardcoded list in `gates/recall-corpus.ts`, not notes it read.
   'scripts/capture-lookup-recall.ts',
+  // `gate:public` builds through the CLI, and for the held tier's vacuity guard
+  // it also lists the fixture books through `ObsidianAdapter` and reads their
+  // covers' pixels from `coverDir()` — through the adapter, as `publish.ts`
+  // does, and only ever the fixture vault.
   'scripts/check-public-build.ts',
   // Reads exactly one file — `.github/pull_request_template.md`, a repository
   // file whose path is a constant in the script — to derive the two questions a

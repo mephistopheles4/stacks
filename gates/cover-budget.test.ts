@@ -138,7 +138,7 @@ describe('G15 — staged covers fit in graphics memory', () => {
   });
 
   it('never sees the held copies, which sit beside covers/ and not inside it', async () => {
-    // A held copy is 1200px and one texture at a time, freed on put-down, so
+    // A held copy is 1200px and one texture at a time, freed on put back, so
     // the budget above must not count it (spec §3.3). The folder is a sibling
     // so that nothing reading `covers/` meets it. Checked against a build that
     // really staged held copies, or a missing folder would pass this.

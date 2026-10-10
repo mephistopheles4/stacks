@@ -217,7 +217,9 @@ them all down, set `PUBLISH_HELD_COVERS` in `packages/core/src/publish.ts` to
 `false`: the stage stages nothing and still prunes, and `gate:public`'s held
 checks follow the switch. Never a bare revert, and keep the `/held-covers/*`
 block. Earlier Pages deployments keep their copies until they are deleted, as
-for `notes/` above.
+for `notes/` above, and a held copy is the larger file: **to finish a takedown,
+delete the earlier deployments in the Pages dashboard**, unless they already sit
+behind an access policy.
 
 ## `pnpm deploy:site` — the trend panel, and what a stale record refuses
 

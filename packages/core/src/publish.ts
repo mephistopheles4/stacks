@@ -133,8 +133,9 @@ export async function publish(
   const { copied, missing } = await copyCovers(shelved, vault, assetsDir);
 
   // Through the shelf stage's own filter, `shelved`, and never the notes
-  // stage's: held copies follow the shelf covers, so a local build stages one
-  // for every book it shelves (spec §3.2, #377).
+  // stage's: held copies follow the shelf covers, so `publish()`'s local mode
+  // stages one for every book it shelves (spec §3.2, #377). A plain
+  // `stacks build` never runs the publisher and stages none.
   const held = await stageHeldCovers(
     (options.heldCovers ?? PUBLISH_HELD_COVERS) ? shelved : [],
     vault,
@@ -459,8 +460,9 @@ async function stageCover(from: string, to: string): Promise<void> {
  * Stages a held copy of every shelved cover over the shelf cap, and prunes
  * every other file in `held-covers/`. Returns the filenames it staged.
  *
- * The held tier (spec §3.3, #377, ADR-0105): the one larger cover a picked-up
- * book loads, and the one the enlarged-cover viewer shows. Only from the vault
+ * The held tier (spec §3.3, #377, ADR-0105): the one larger cover the
+ * enlarged-cover viewer shows today, and a picked-up book will load once the
+ * pickup is built (spec §4, step 4). Only from the vault
  * file — a build never fetches a cover — and only for a cover larger than the
  * shelf's copy, since a held copy no larger than the shelf's is the same
  * picture twice.

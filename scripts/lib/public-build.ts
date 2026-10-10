@@ -218,13 +218,39 @@ const SAME_ORIGIN_COVER = /^covers\/[^/\\]+$/;
 const HELD_DIR = 'held-covers';
 
 /**
- * A held copy this build serves itself: one path segment, under `held-covers/`.
+ * Whether a `heldCover` is a held copy this build serves itself: one path
+ * segment under `held-covers/`, as a browser reads it.
  *
- * Stricter than `SAME_ORIGIN_COVER` by one clause: a segment of only dots is
+ * Stricter than `SAME_ORIGIN_COVER` in two ways. A segment of only dots is
  * refused, because `held-covers/..` is one segment that resolves to the site
- * root. The stage only ever writes a `coverFileName`, which never is one.
+ * root. And the segment is judged **decoded**, because a browser decodes it
+ * before it resolves it: `held-covers/%2e%2e` is the site root to `new URL`, and
+ * `%2F` is a second segment. One that does not decode is refused, since nothing
+ * can say where it points. The stage only ever writes a `coverFileName`, which
+ * is none of these.
  */
-const SAME_ORIGIN_HELD = /^held-covers\/(?!\.+$)[^/\\]+$/;
+function isSameOriginHeld(value: unknown): boolean {
+  if (typeof value !== 'string' || !value.startsWith(`${HELD_DIR}/`)) return false;
+  let segment: string;
+  try {
+    segment = decodeURIComponent(value.slice(HELD_DIR.length + 1));
+  } catch {
+    return false;
+  }
+  return segment !== '' && !/^\.+$/.test(segment) && !/[/\\]/.test(segment);
+}
+
+/**
+ * The most a held copy may measure on its long edge, written here and never
+ * imported from the stage.
+ *
+ * `HELD_COVER_EDGE` is what the stage resizes to; a check that read the same
+ * constant would rise with it, and a raised cap would ship full-size photos
+ * with every gate green. G20 asserts the two agree, so moving either is a red
+ * build and a deliberate edit to both — `notes-shape`'s twin, for the same
+ * reason.
+ */
+export const HELD_EDGE_CAP = 1200;
 
 /**
  * Where a build stages a book's published Thoughts, as `notes/<id>.json`.
@@ -615,10 +641,7 @@ export async function inspectPublicBuild(
     }
     // The held copy reaches an <img> src and a texture loader the same way, so
     // it is held to the same shape, in its own folder.
-    if (
-      book.heldCover !== undefined &&
-      !(typeof book.heldCover === 'string' && SAME_ORIGIN_HELD.test(book.heldCover))
-    ) {
+    if (book.heldCover !== undefined && !isSameOriginHeld(book.heldCover)) {
       fail(
         'foreign-cover',
         `held copy is not same-origin: ${name} → ${JSON.stringify(book.heldCover)}`,
@@ -1051,14 +1074,18 @@ function inspectNotes(dir: string, books: readonly ShippedBook[]): PublicBuildRe
  * §3.3, #377). `orphan-held` is `orphan-cover`'s twin: every filename is a slug
  * of a title, so a file no shipped book names — a private book's, a wishlist
  * book's, or one left by a build of another vault — is a leak by its name
- * alone. `held-oversize` holds each to `HELD_COVER_EDGE` on its long edge.
- * `held-metadata` refuses EXIF and XMP: a cover the owner photographed carries
- * camera metadata, location included, and only a re-encode drops it.
+ * alone. `held-oversize` holds each to `HELD_EDGE_CAP` on its long edge.
+ * `held-metadata` refuses every kind of embedded metadata sharp reports that
+ * can name a place or a person — EXIF, XMP, IPTC, PNG text and a Photoshop
+ * block: a cover the owner photographed carries camera metadata, location
+ * included, and only a re-encode drops it. ICC colour profiles are left alone;
+ * they describe colour, never a place.
  *
  * ⚠️ **No direction from book to file.** A `heldCover` naming a file that is
- * not there costs a 404 and the shelf's copy stays, so it leaks nothing — unlike
- * a notes mark, which the page would show as missing Thoughts. The shape of the
- * path is `foreign-cover`'s, read with the books above.
+ * not there leaks nothing: the enlarged view falls back to the shelf copy, and
+ * so will the pickup's texture — unlike a notes mark, which the page would show
+ * as missing Thoughts. The shape of the path is `foreign-cover`'s, read with
+ * the books above.
  *
  * A file sharp cannot read fails `held-metadata`: nothing can vouch for what it
  * carries, and an unreadable file at an image URL is not one the stage wrote.
@@ -1070,12 +1097,9 @@ async function inspectHeld(dir: string, books: readonly ShippedBook[]): Promise<
   // Loaded here, never at the top of the module: sharp is native and slow to
   // load, and `deploy.ts` imports this file on every run, including the many
   // G17 and G39 spawn only to watch it refuse before any inspection. A static
-  // import pushed G17's five spawns past vitest's five-second timeout.
-  // `cover-budget.ts` imports sharp too, so its constant comes the same way.
-  const [{ default: sharp }, { HELD_COVER_EDGE }] = await Promise.all([
-    import('sharp'),
-    import('../../packages/core/src/covers/cover-budget.ts'),
-  ]);
+  // import pushed G17's five spawns past vitest's five-second timeout
+  // (`docs/gates.md`, G17).
+  const { default: sharp } = await import('sharp');
 
   const problems: BuildProblem[] = [];
   const named = new Set(
@@ -1112,18 +1136,21 @@ async function inspectHeld(dir: string, books: readonly ShippedBook[]): Promise<
     }
 
     const edge = Math.max(metadata.width, metadata.height);
-    if (edge > HELD_COVER_EDGE) {
+    if (edge > HELD_EDGE_CAP) {
       problems.push({
         rule: 'held-oversize',
         message:
           `held-covers/${name} is ${String(metadata.width)}x${String(metadata.height)}, over the ` +
-          `${String(HELD_COVER_EDGE)}px held cap on its long edge`,
+          `${String(HELD_EDGE_CAP)}px held cap on its long edge`,
       });
     }
 
     const carried = [
       metadata.exif === undefined ? undefined : 'EXIF',
       metadata.xmp === undefined ? undefined : 'XMP',
+      metadata.iptc === undefined ? undefined : 'IPTC',
+      (metadata.comments?.length ?? 0) === 0 ? undefined : 'PNG text',
+      metadata.tifftagPhotoshop === undefined ? undefined : 'a Photoshop block',
     ].filter((kind): kind is string => kind !== undefined);
     if (carried.length > 0) {
       problems.push({
@@ -1139,8 +1166,8 @@ async function inspectHeld(dir: string, books: readonly ShippedBook[]): Promise<
   const observations =
     problems.length === 0
       ? [
-          `${String(staged.length)} held copy file(s), all named, within ${String(HELD_COVER_EDGE)}px, ` +
-            'none carrying EXIF or XMP',
+          `${String(staged.length)} held copy file(s), all named, within ${String(HELD_EDGE_CAP)}px, ` +
+            'none carrying embedded metadata',
         ]
       : [];
   return { problems, observations };

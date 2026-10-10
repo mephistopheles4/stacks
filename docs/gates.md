@@ -1676,16 +1676,22 @@ extends `gate:public` and G5.
 - **Three rules join the shared inspector, planted under G20.** `orphan-held`,
   `orphan-cover`'s twin: every file under `held-covers/` is named by a shipped
   book's `heldCover` — a private book's copy, a wishlist book's, or one a build
-  of another vault left, is named for a title. `held-oversize`: no file over
-  1200px on its long edge. `held-metadata`: no file carrying EXIF or XMP, and
-  none sharp cannot read. ⚠️ **No direction from book to file**, unlike
-  `orphan-note`: a `heldCover` with no file costs a 404 and the shelf's copy
-  stays, so it leaks nothing.
-- **The inspector is async now**, for those two: sharp reads pixels and
-  metadata and has no synchronous API. They had to stay in the one inspector
-  rather than a helper only the gate calls, because the owner's photographed
-  covers exist only in a real build, and `deploy:site` is the only caller that
-  reads one ([ADR-0028](./adr/0028-one-inspector-for-the-public-build.md)).
+  of another vault left, is named for a title, so its filename alone leaks the
+  title. `held-oversize`: no file over 1200px on its long edge. `held-metadata`:
+  no file carrying EXIF, XMP, IPTC, PNG text or a Photoshop block, and none
+  sharp cannot read. ⚠️ **No direction from book to file**, unlike
+  `orphan-note`: a `heldCover` with no file costs a 404 and the enlarged view
+  falls back to the shelf's copy, so it leaks nothing.
+- **The inspector is async now**, for `held-oversize` and `held-metadata`:
+  sharp reads pixels and metadata and has no synchronous API. They had to stay
+  in the one inspector rather than a helper only the gate calls, because the
+  owner's photographed covers exist only in a real build, and `deploy:site` is
+  the only caller that reads one
+  ([ADR-0028](./adr/0028-one-inspector-for-the-public-build.md)). ⚠️ **sharp is
+  imported inside `inspectHeld`, never at the top of the module**: `deploy.ts`
+  imports the inspector on every run, and a static import pushed G17's five
+  spawns past vitest's five-second timeout — the third such timeout G17's row
+  predicts, from the same cause.
 - **`foreign-cover` learns `heldCover`**: one same-origin segment under
   `held-covers/`, and stricter than `cover` by one clause — a segment of only
   dots is refused, since `held-covers/..` is one segment that resolves to the
@@ -1717,20 +1723,22 @@ first shown to carry EXIF or XMP through the reader the rule uses, so a plant
 sharp silently dropped cannot pass as a rule that works.
 
 **Then the stage.** `publish()` stages a held copy through the shelf stage's
-own `shelved` list — so a local build stages one for every book it shelves,
-private and wishlist included, and a public build for none of them — of each
+own `shelved` list — so `publish()`'s local mode stages one for every book it
+shelves, private and wishlist included, and a public build for none of them; a
+plain `stacks build` never runs the publisher — of each
 cover whose vault file is over 512px. Every copy is **re-encoded, never copied**,
 turned upright first: a phone stores a portrait photo landscape and tags it, and
 dropping the tag without applying it would ship the cover on its side.
 `heldCover` names each copy in `library.json`, and `held-covers/` is pruned to
-exactly this build's copies under the covers' rule. The card puts the held path
-on its cover button, and the enlarged-cover viewer shows it.
+exactly this build's copies under the covers' rule. The card hands the held
+path to the enlarged-cover viewer, which shows it.
 
 - **`publish()` unit tests**, in both builds: the cap with proportions kept, a
   cover between the two caps re-encoded at its own size with EXIF and XMP gone,
   the orientation applied, nothing for a cover inside 512px or one missing or
   unreadable, and a climbing path landed as its basename. Public builds stage
-  nothing for the private or wishlist book; local builds stage both. Two prunes —
+  nothing for the private or wishlist book; `publish()`'s local mode stages
+  both. Two prunes —
   the book made private, the cover shrunk — and the not-ours and files-only
   guards. All red before the stage existed, except the absences, which held
   vacuously; removing `rotate()` reddens the orientation case.
@@ -1739,8 +1747,9 @@ on its cover button, and the enlarged-cover viewer shows it.
   first, naming the key on the stage's first fixture run.
 - **G15** asserts it never sees the held copies: a fixture build that really
   staged some leaves no folder inside `covers/`.
-- **G35's viewer check** walks the 50-book shelf for a card offering a held copy,
-  and fails if none does or the enlarged view shows anything else.
+- **G35's viewer check** walks the 50-book shelf for a book with a held copy,
+  and fails if none has one or the enlarged view shows anything else (round 1
+  below made it read `library.json` and check both of the viewer's paths).
 - `gate:public` passed against the real build once the stage landed, with the
   same output that was red before it.
 
@@ -1761,6 +1770,52 @@ own gate. A `publish()` test drives the off path through an option, red before
 the switch existed; `gate:public` was run with each switch off and passed. ⚠️
 **Wiring the two switches together found a hole**: with `PUBLISH_THOUGHTS` off,
 `gate:public` exited before its held checks ran. It no longer exits early.
+
+**Round 1 of move 4 on #416** tightened four checks, each planted red first:
+
+- **`foreign-cover` judges the held segment decoded**, as a browser does
+  before it resolves it: `held-covers/%2e%2e` is the site root and `%2F` a
+  second segment, and a segment that does not decode is refused. The plants
+  gained a foreign host in front of a well-formed `held-covers/a.png`,
+  `javascript:alert(1)`, an empty segment, the encoded dots, slashes and
+  backslashes, a broken escape, and a list holding a good path. Each clause of
+  `isSameOriginHeld` was removed in turn and reddened them, except the type
+  check, whose absence crashes on the list rather than passing it.
+- **`held-metadata` reads IPTC, PNG text and a Photoshop block** as well as
+  EXIF and XMP: any of them can name a place or a person. A JPEG with an IPTC
+  City and a PNG with a `tEXt` chunk, spliced in by `plantedCover` in
+  `packages/core/src/test-support.ts`, each fired the rule alone and went
+  green with its kind unread. A Photoshop block is refused by reading only,
+  since nothing here can write one.
+- **`held-oversize` reads a cap of its own**, `HELD_EDGE_CAP`, rather than the
+  stage's `HELD_COVER_EDGE`: a check that imported the stage's constant would
+  rise with it. A test holds the two equal, red with either moved.
+- **Every held rule's message, and the inspector's held observation, is
+  pinned in words**, as the notes rules' are: each went red with its text
+  blanked, and the observation with its condition forced true.
+- **G35's viewer check reads `library.json`**, not the card: the held copy it
+  expects is the one `library.json` names for the card's own cover, and a
+  second book with no held copy must open on its own file. The lookup is keyed
+  by `cover`, so a card whose own image is not the shelf copy finds no book
+  with a held copy at all. Four plants went red under it: a viewer ignoring the
+  held copy, a card offering its shelf path as held, a card loading the held
+  copy as its own image (found no book), and a viewer losing its own path. A
+  separate "the card's image is under `covers/`" check was written and taken
+  out again: keyed by `cover`, it could never fail.
+- **`publish()` gained four held cases**: a 600x900 cover stays 600x900, a
+  400x700 cover gets a copy, IPTC and PNG text are dropped, and a cover that
+  measures but cannot be written leaves no file and names no copy. Each went
+  red under its defect: enlargement allowed, the short edge read, and the
+  catch rethrowing.
+
+**CodeQL's `js/xss-through-dom`** fired on the viewer reading the card's
+`data-held` attribute into an image's `src`. By the three questions below it is
+not a security boundary — the path is held to `held-covers/` by
+`foreign-cover`, the page's CSP admits images from `'self'` only, and an image
+source runs no script — but it was worth changing for the third: the card
+wrote a path into the page only so the viewer could read it back. The card now
+hands it over in memory (`offerHeldCopy`), and a held copy that fails to load
+falls back to the card's own file instead of a broken image.
 
 ## Where cover art may go
 
@@ -1799,6 +1854,11 @@ that would satisfy Apple's terms if it ever matters.
 
 What the gate still enforces regardless: no orphans, no wishlist books, and
 same-origin covers only.
+
+**The held tier re-hosts the same art larger**: up to 1200px in `held-covers/`
+beside the 512px copy in `covers/` (spec §3.3), so a takedown request covers
+both folders — `PUBLISH_HELD_COVERS` takes every held copy down at once
+([`docs/commands.md`](./commands.md)).
 
 ## G42 — the dependency audit, and the hatch to reach for second
 

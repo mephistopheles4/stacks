@@ -17,9 +17,9 @@
  *
  * **It shows the held copy when the build staged one**, up to 1200px on its
  * long edge, and the card's own 512px file otherwise (`held-covers/`, spec
- * §3.3, #377). The card carries the held path on the cover button as
- * `data-held`; the thumbnail never loads it, so the larger file is fetched only
- * when someone opens this view. A DOM image costs no GPU memory, so the texture
+ * §3.3, #377). The card hands the held path over with `offerHeldCopy`, keyed
+ * by its cover button; the card's own image never loads it, so the larger file
+ * is fetched only when someone opens this view. A DOM image costs no GPU memory, so the texture
  * budget is not a reason to hold it back. It is never scaled *past* native
  * size: a blurry big cover is a worse answer than an honest small one, which is
  * why a cover the vault holds only at 512px or less gets no held copy at all.
@@ -47,6 +47,21 @@ export interface CoverViewer {
 /** The class `card.ts` puts on the button wrapping a cover. */
 export const COVER_BUTTON_CLASS = 'card-cover';
 
+/**
+ * The held copy each cover button offers, keyed by the button itself.
+ *
+ * Held in memory, never in the DOM: an attribute the viewer read back would
+ * be page text turned into an image address, which is the shape CodeQL's
+ * DOM-text rule refuses, and nothing outside this page has a reason to see the
+ * path. Weak, so a card's buttons go with the card on every swap.
+ */
+const heldCopies = new WeakMap<Element, string>();
+
+/** Called by the card for a book whose build staged a held copy. */
+export function offerHeldCopy(button: Element, path: string): void {
+  heldCopies.set(button, path);
+}
+
 export function mountCoverViewer(
   elements: CoverViewerElements,
   /**
@@ -69,10 +84,20 @@ export function mountCoverViewer(
     const thumbnail = button?.querySelector('img');
     if (!(thumbnail instanceof HTMLImageElement)) return;
 
-    // Read off the button rather than passed in: one element holds the src,
+    // Keyed by the button rather than passed in: one element holds the src,
     // the held copy and the alt text, so the enlarged view cannot drift from
-    // what it enlarges.
-    image.src = button?.getAttribute('data-held') ?? thumbnail.src;
+    // what it enlarges. A held copy that fails to load — a browser still
+    // holding a `library.json` from before the copy was taken down — falls back
+    // to the card's own file once, rather than a broken image.
+    const held = button === null ? undefined : heldCopies.get(button);
+    image.onerror =
+      held === undefined
+        ? null
+        : () => {
+            image.onerror = null;
+            image.src = thumbnail.src;
+          };
+    image.src = held ?? thumbnail.src;
     image.alt = thumbnail.alt;
     // Named for the book, not "Book cover". `showModal` puts focus on the close
     // button, so the dialog's own name is the only thing announced on arrival —

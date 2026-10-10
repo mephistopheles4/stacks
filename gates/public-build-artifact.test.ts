@@ -29,7 +29,10 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import sharp from 'sharp';
+import { HELD_COVER_EDGE } from '../packages/core/src/covers/cover-budget.ts';
+import { plantedCover, type PlantedCoverOptions } from '../packages/core/src/test-support.ts';
 import {
+  HELD_EDGE_CAP,
   inspectPublicBuild,
   NOTE_BODY_CANARY,
   PUBLIC_BUILD_RULES,
@@ -240,24 +243,10 @@ async function writeNotes(path: string, contents: unknown): Promise<void> {
  * A real image, because the held rules read pixels and metadata through sharp
  * and a placeholder string is what `held-metadata`'s unreadable clause is for.
  */
-async function image(
-  width: number,
-  height: number,
-  options: { format?: 'png' | 'jpeg'; exif?: boolean; xmp?: boolean } = {},
-): Promise<Buffer> {
-  let pipeline = sharp({
-    create: { width, height, channels: 3, background: { r: 47, g: 109, b: 122 } },
-  });
-  if (options.exif === true) {
-    pipeline = pipeline.withExif({ IFD0: { ImageDescription: 'Invented planted camera' } });
-  }
-  if (options.xmp === true) {
-    pipeline = pipeline.withXmp(
-      '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF ' +
-        'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/></x:xmpmeta>',
-    );
-  }
-  return options.format === 'jpeg' ? pipeline.jpeg().toBuffer() : pipeline.png().toBuffer();
+function image(width: number, height: number, options: PlantedCoverOptions = {}): Promise<Buffer> {
+  // The same builder `publish()`'s tests plant with, so the stage is proven to
+  // strip exactly what this inspector is proven to refuse.
+  return plantedCover(width, height, options);
 }
 
 /** One file under `held-covers/`, at a path relative to that folder. */
@@ -431,15 +420,27 @@ describe('G20 — every rule goes red', () => {
     // so every way out of `held-covers/<name>` is a plant: another host, the
     // shelf's folder, a parent step, a nested path, and a value that is not a
     // path at all. The staged file is removed each time, so `orphan-held`
-    // stays quiet and the path is the only defect.
+    // stays quiet and the path is the only defect. Round 1 added a host in
+    // front of a well-formed tail, which an unanchored pattern passed, a list
+    // holding a good path, which `String()` would turn into one, and the
+    // encoded spellings a browser decodes before it resolves the segment.
     const plants: readonly unknown[] = [
       'https://elsewhere.example/a.png',
       '//elsewhere.example/a.png',
+      'https://elsewhere.example/held-covers/a.png',
+      'javascript:alert(1)',
       'covers/a.png',
+      'held-covers/',
       'held-covers/..',
+      'held-covers/%2e%2e',
+      'held-covers/.%2E',
+      'held-covers/a%2Fb.png',
+      'held-covers/a%5Cb.png',
+      'held-covers/%E0%A4%A',
       'held-covers/sub/a.png',
       'held-covers\\a.png',
       42,
+      ['held-covers/a.png'],
     ];
     await rm(join(dist, 'held-covers'), { recursive: true, force: true });
     for (const heldCover of plants) {
@@ -484,19 +485,27 @@ describe('G20 — every rule goes red', () => {
     expect((await inspect()).problems).toEqual([]);
   });
 
-  it('held-metadata: a held copy carrying EXIF or XMP', async () => {
+  it('held-metadata: a held copy carrying EXIF, XMP, IPTC or PNG text', async () => {
     // One plant per kind and per format: a PNG and a JPEG with EXIF, a PNG
-    // with XMP. Each source is first shown to carry what it plants, through the
-    // reader the rule uses, so a plant sharp silently dropped cannot pass as a
-    // rule that works.
+    // with XMP, a JPEG with IPTC and a PNG with a text chunk — the last two
+    // can name a place or a person as EXIF can (round 1, the security pair).
+    // Each source is first shown to carry what it plants, through the reader
+    // the rule uses, so a plant sharp silently dropped cannot pass as a rule
+    // that works. A Photoshop block is refused by reading only: nothing here
+    // can write one.
     const plants = [
       ['EXIF in a PNG', await image(600, 900, { exif: true })],
       ['EXIF in a JPEG', await image(600, 900, { format: 'jpeg', exif: true })],
       ['XMP in a PNG', await image(600, 900, { xmp: true })],
+      ['IPTC in a JPEG', await image(600, 900, { format: 'jpeg', iptc: true })],
+      ['text in a PNG', await image(600, 900, { text: true })],
     ] as const;
     for (const [what, bytes] of plants) {
       const planted = await sharp(bytes).metadata();
-      expect(planted.exif ?? planted.xmp, `${what}: the plant carries it`).toBeDefined();
+      expect(
+        planted.exif ?? planted.xmp ?? planted.iptc ?? planted.comments,
+        `${what}: the plant carries it`,
+      ).toBeDefined();
 
       await writeHeld('a.png', bytes);
       const fired = new Set((await inspect()).problems.map((problem) => problem.rule));
@@ -509,6 +518,61 @@ describe('G20 — every rule goes red', () => {
     await expectOnly('held-metadata', async () => {
       await writeHeld('a.png', 'pretend png');
     });
+  });
+
+  it('holds held copies to a cap of its own, equal to the stage’s', () => {
+    // Written apart so a raised stage cap cannot raise the check with it
+    // (round 1, adversarial F2). Moving either one alone is this red line.
+    expect(HELD_EDGE_CAP).toBe(HELD_COVER_EDGE);
+  });
+
+  it('says it read the held copies only when there were some and all three rules held', async () => {
+    // The clean build stages one held copy, so the line is owed; a defect
+    // takes it away, and so does a build with no held folder at all.
+    expect((await inspect()).observations).toContain(
+      '1 held copy file(s), all named, within 1200px, none carrying embedded metadata',
+    );
+
+    await writeHeld('a.png', await image(1201, 800));
+    expect((await inspect()).observations.join('\n')).not.toMatch(/held copy file/);
+
+    await rm(join(dist, 'held-covers'), { recursive: true, force: true });
+    await writeLibrary([{ ...CLEAN_BOOK, heldCover: undefined }]);
+    expect((await inspect()).observations.join('\n')).not.toMatch(/held copy file/);
+  });
+
+  it.each([
+    [
+      'orphan-held',
+      async () => writeHeld('a-real-book-you-actually-read.png', await image(600, 900)),
+      /1 held copy file\(s\) that no book in library\.json names — each filename is a book title: a-real-book-you-actually-read\.png/,
+    ],
+    [
+      'held-oversize',
+      async () => writeHeld('a.png', await image(1201, 800)),
+      /held-covers\/a\.png is 1201x800, over the 1200px held cap on its long edge/,
+    ],
+    [
+      'held-metadata, unreadable',
+      () => writeHeld('a.png', 'pretend png'),
+      /held-covers\/a\.png cannot be read as an image, so nothing can vouch for what it carries/,
+    ],
+    [
+      'held-metadata, every kind named',
+      async () => writeHeld('a.png', await image(600, 900, { exif: true, xmp: true, text: true })),
+      /held-covers\/a\.png carries EXIF and XMP and PNG text — camera metadata, location included/,
+    ],
+    [
+      'held-metadata, IPTC named',
+      async () => writeHeld('a.png', await image(600, 900, { format: 'jpeg', iptc: true })),
+      /held-covers\/a\.png carries IPTC — /,
+    ],
+  ] as const)('says in words what it found in the held copies: %s', async (_, plant, message) => {
+    // Round 1, integrity F9 to F11: the held rules' messages, pinned as the
+    // notes rules' are, so an emptied message is a red test.
+    await plant();
+    const said = (await inspect()).problems.map((problem) => problem.message).join('\n');
+    expect(said).toMatch(message);
   });
 
   it('orphan-cover: a cover no shipped book points at', async () => {

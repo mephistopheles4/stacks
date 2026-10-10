@@ -267,5 +267,7 @@ console.log(
   (PUBLISH_THOUGHTS
     ? '\nOK — public build carries no note bodies beyond the Thoughts split, no vault paths, '
     : '\nOK — public build carries no note bodies, no vault paths, ') +
-    'and a held copy for exactly the books it publishes',
+    (PUBLISH_HELD_COVERS
+      ? `and a held copy for every published cover over ${String(MAX_COVER_EDGE)}px`
+      : 'and no held copy'),
 );

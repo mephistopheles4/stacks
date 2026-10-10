@@ -5,7 +5,7 @@ import type { LibraryBook } from '@stacks/core';
 // piece of code: a second copy of `;` in this file is how a genre with a comma
 // in it quietly becomes two.
 import { parseSubjects } from '@stacks/core/subjects';
-import { COVER_BUTTON_CLASS } from './cover-viewer.ts';
+import { COVER_BUTTON_CLASS, offerHeldCopy } from './cover-viewer.ts';
 import { providerLinks, type ProviderLink } from './provider-links.ts';
 import { markFor } from './provider-marks.ts';
 
@@ -86,7 +86,7 @@ export interface CardModel {
   readonly cover: string | undefined;
   /**
    * The held copy, `held-covers/<name>`: what the enlarged view shows when the
-   * build staged one, larger than the 512px thumbnail (spec §3.4, #377).
+   * build staged one, larger than the 512px shelf copy (spec §3.4, #377).
    */
   readonly heldCover: string | undefined;
   readonly title: string;
@@ -294,9 +294,10 @@ function element(tag: string, className: string): HTMLElement {
  * No listener is bound here. `showCard` replaces this whole subtree on every
  * tap-to-swap, so the click is delegated from the card body one level up.
  *
- * The held copy rides on the button as `data-held`, read by the viewer when it
- * opens: the thumbnail stays the 512px shelf copy, so a card never downloads
- * the larger file unless someone asks to see the cover closer.
+ * The held copy is handed to the viewer with `offerHeldCopy`, keyed by this
+ * button and never written into the page: the card's own image stays the 512px
+ * shelf copy, so a card never downloads the larger file unless someone asks to
+ * see the cover closer.
  */
 function cover(src: string, held: string | undefined, title: string): HTMLElement {
   const image = document.createElement('img');
@@ -311,7 +312,7 @@ function cover(src: string, held: string | undefined, title: string): HTMLElemen
   // naming mechanism is what double-announces — the rule `ProviderLink.name`
   // already states for the marks row.
   button.title = 'See the cover larger';
-  if (held !== undefined) button.dataset['held'] = rooted(held);
+  if (held !== undefined) offerHeldCopy(button, rooted(held));
   button.append(image);
   return button;
 }

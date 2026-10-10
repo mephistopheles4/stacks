@@ -7,7 +7,13 @@ import { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
 import type { VaultAdapter } from './adapters/vault-adapter.ts';
 import { HELD_COVER_EDGE, MAX_COVER_EDGE } from './covers/cover-budget.ts';
 import { publish } from './publish.ts';
-import { FIXTURE_VAULT, spyOnWarn, type WarnSpy } from './test-support.ts';
+import {
+  FIXTURE_VAULT,
+  plantedCover,
+  spyOnWarn,
+  type PlantedCoverOptions,
+  type WarnSpy,
+} from './test-support.ts';
 
 const CANARY = 'NOTE_BODY_CANARY_do_not_ship';
 const vault = new ObsidianAdapter(FIXTURE_VAULT);
@@ -365,25 +371,8 @@ describe('publish — the held stage', () => {
     width: number,
     height: number,
     format: 'png' | 'jpeg' = 'png',
-    options: { exif?: boolean; xmp?: boolean; orientation?: number } = {},
-  ): Promise<Buffer> => {
-    let pipeline = sharp({
-      create: { width, height, channels: 3, background: '#2f6d7a' },
-    });
-    if (options.exif === true) {
-      pipeline = pipeline.withExif({ IFD0: { ImageDescription: 'Invented planted camera' } });
-    }
-    if (options.xmp === true) {
-      pipeline = pipeline.withXmp(
-        '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF ' +
-          'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/></x:xmpmeta>',
-      );
-    }
-    if (options.orientation !== undefined) {
-      pipeline = pipeline.withMetadata({ orientation: options.orientation });
-    }
-    return format === 'jpeg' ? pipeline.jpeg().toBuffer() : pipeline.png().toBuffer();
-  };
+    options: Omit<PlantedCoverOptions, 'format'> = {},
+  ): Promise<Buffer> => plantedCover(width, height, { ...options, format });
 
   const build = async (isPublic: boolean) => {
     const vault = new ObsidianAdapter(vaultPath);
@@ -475,6 +464,66 @@ describe('publish — the held stage', () => {
 
       expect(await heldFiles()).toEqual([]);
       expect(result.library.books.find((b) => b.title === 'Small')?.heldCover).toBeUndefined();
+    });
+
+    it('never scales a cover between the two caps up to the held cap', async () => {
+      // A blurry big cover is a worse answer than an honest small one; the held
+      // cap is a ceiling, never a target (round 1, integrity F3).
+      await cover('mid.png', await image(600, 900));
+      await note('Mid', 'cover: covers/mid.png');
+
+      await build(isPublic);
+      const held = await sharp(join(assets, 'held-covers', 'mid.png')).metadata();
+
+      expect([held.width, held.height]).toEqual([600, 900]);
+    });
+
+    it('judges a cover by its long edge, so a narrow tall one still gets a copy', async () => {
+      // Short edge inside the shelf cap, long edge past it: a stage that read
+      // the short edge would hold this one back (round 1, integrity F4).
+      await cover('narrow.png', await image(400, 700));
+      await note('Narrow', 'cover: covers/narrow.png');
+
+      const result = await build(isPublic);
+
+      expect(await heldFiles()).toEqual(['narrow.png']);
+      expect(result.library.books[0]?.heldCover).toBe('held-covers/narrow.png');
+    });
+
+    it('drops IPTC and PNG text as well as EXIF and XMP', async () => {
+      // The two kinds sharp cannot write, spliced in by hand. Each is first
+      // shown to be there through the reader the inspector uses.
+      const jpeg = await image(800, 1200, 'jpeg', { iptc: true });
+      const png = await image(800, 1200, 'png', { text: true });
+      expect((await sharp(jpeg).metadata()).iptc, 'the plant carries IPTC').toBeDefined();
+      expect((await sharp(png).metadata()).comments, 'the plant carries text').toHaveLength(1);
+      await cover('iptc.jpg', jpeg);
+      await cover('text.png', png);
+      await note('Iptc', 'cover: covers/iptc.jpg');
+      await note('Text', 'cover: covers/text.png');
+
+      await build(isPublic);
+
+      expect(
+        (await sharp(join(assets, 'held-covers', 'iptc.jpg')).metadata()).iptc,
+      ).toBeUndefined();
+      expect(
+        (await sharp(join(assets, 'held-covers', 'text.png')).metadata()).comments,
+      ).toBeUndefined();
+    });
+
+    it('names no copy, and leaves no file, for a cover it measured but could not write', async () => {
+      // The header reads, so the cover is measured over the shelf cap; the
+      // pixels stop short, so the write fails. The book keeps its shelf copy
+      // and the build carries on (round 1, integrity F5).
+      const whole = await image(1400, 2100);
+      await cover('cut.png', whole.subarray(0, 200));
+      await note('Cut', 'cover: covers/cut.png');
+
+      const result = await build(isPublic);
+
+      expect(await heldFiles()).toEqual([]);
+      expect(result.library.books[0]?.heldCover).toBeUndefined();
     });
 
     it('stages nothing, and fails nothing, for a cover that is missing or unreadable', async () => {

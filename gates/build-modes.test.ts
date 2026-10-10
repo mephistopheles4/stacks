@@ -6,7 +6,8 @@
  * a public build strips `sourcePath`, stamps `coverAspect` measured off the
  * covers it just staged, marks `thoughts` on each book whose notes file it
  * staged, and names `heldCover` on each book whose held copy it staged, while a
- * local build "is just the index" and does none of them.
+ * plain `stacks build`, which never runs the publisher, "is just the index" and
+ * does none of them.
  *
  * That difference was never written down anywhere and never checked, which made
  * it impossible to tell a design decision from an oversight — a review of this
