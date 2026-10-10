@@ -221,13 +221,17 @@ const HELD_DIR = 'held-covers';
  * Whether a `heldCover` is a held copy this build serves itself: one path
  * segment under `held-covers/`, as a browser reads it.
  *
- * Stricter than `SAME_ORIGIN_COVER` in two ways. A segment of only dots is
+ * Stricter than `SAME_ORIGIN_COVER` in three ways. A segment of only dots is
  * refused, because `held-covers/..` is one segment that resolves to the site
- * root. And the segment is judged **decoded**, because a browser decodes it
- * before it resolves it: `held-covers/%2e%2e` is the site root to `new URL`, and
- * `%2F` is a second segment. One that does not decode is refused, since nothing
- * can say where it points. The stage only ever writes a `coverFileName`, which
- * is none of these.
+ * root. The segment is judged **decoded**, which is stricter than a browser —
+ * it decodes only the dot spellings before it resolves a path, but
+ * `held-covers/%2e%2e` is the site root to `new URL` all the same — so `%2F` is
+ * a second segment here too, and one that does not decode is refused, since
+ * nothing can say where it points. And any space or control character is
+ * refused, because a URL parser drops tabs and line breaks anywhere and spaces
+ * and controls at the end, so `.` tab `.` reads as `..` by the time it
+ * resolves (round 2, adversarial F3). The stage only ever writes a
+ * `coverFileName`, which is none of these.
  */
 function isSameOriginHeld(value: unknown): boolean {
   if (typeof value !== 'string' || !value.startsWith(`${HELD_DIR}/`)) return false;
@@ -237,7 +241,17 @@ function isSameOriginHeld(value: unknown): boolean {
   } catch {
     return false;
   }
-  return segment !== '' && !/^\.+$/.test(segment) && !/[/\\]/.test(segment);
+  return (
+    segment !== '' &&
+    !/^\.+$/.test(segment) &&
+    !/[/\\]/.test(segment) &&
+    ![...segment].some((char) => isControlOrSpace(char.codePointAt(0) ?? 0))
+  );
+}
+
+/** A space, a C0 control or DEL: what a URL parser may drop before it resolves a path. */
+function isControlOrSpace(code: number): boolean {
+  return code <= 0x20 || code === 0x7f;
 }
 
 /**
@@ -1075,11 +1089,15 @@ function inspectNotes(dir: string, books: readonly ShippedBook[]): PublicBuildRe
  * of a title, so a file no shipped book names — a private book's, a wishlist
  * book's, or one left by a build of another vault — is a leak by its name
  * alone. `held-oversize` holds each to `HELD_EDGE_CAP` on its long edge.
- * `held-metadata` refuses every kind of embedded metadata sharp reports that
- * can name a place or a person — EXIF, XMP, IPTC, PNG text and a Photoshop
- * block: a cover the owner photographed carries camera metadata, location
- * included, and only a re-encode drops it. ICC colour profiles are left alone;
- * they describe colour, never a place.
+ * `held-metadata` refuses the five kinds of embedded metadata sharp reports
+ * that can name a place or a person — EXIF, XMP, IPTC, PNG text and a
+ * Photoshop block: a cover the owner photographed carries camera metadata,
+ * location included, and only a re-encode drops it. ICC colour profiles are
+ * left alone; they describe colour, never a place. ⚠️ **It reads what sharp
+ * reports and nothing else**: a JPEG comment segment, bytes after the end of
+ * the image, or an HDR gain map are not among those five, so the stage's
+ * re-encode is what keeps them off the site, and the observation below names
+ * the five rather than claiming all metadata (round 2, the security pair).
  *
  * ⚠️ **No direction from book to file.** A `heldCover` naming a file that is
  * not there leaks nothing: the enlarged view falls back to the shelf copy, and
@@ -1167,7 +1185,7 @@ async function inspectHeld(dir: string, books: readonly ShippedBook[]): Promise<
     problems.length === 0
       ? [
           `${String(staged.length)} held copy file(s), all named, within ${String(HELD_EDGE_CAP)}px, ` +
-            'none carrying embedded metadata',
+            'none carrying EXIF, XMP, IPTC, PNG text or a Photoshop block',
         ]
       : [];
   return { problems, observations };

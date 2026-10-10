@@ -286,6 +286,12 @@ read-only, before the first real deploy: a public build stages 36 held copies,
 6.67 MB, none carrying metadata, in 6.2 s (owner decision, from chat, to post
 the counts on #412).
 
+**2026-10-10 — round 2, the security pair on the fix diff:** owner decision,
+from chat, "run sécurité pair". `isSameOriginHeld` refuses spaces and controls,
+`held-metadata`'s observation names the five kinds it reads, and the takedown
+steps cover a single book made private — same section's round-2 bullets. The
+owner reports no access policy on the per-deployment addresses.
+
 ### Phase 4 evidence
 
 `stacks import audible <export>` against a real Libation export: 22 records, 17

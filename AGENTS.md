@@ -97,7 +97,7 @@ key there and not here is exactly the drift that gate exists to catch.
 
 `shelf_order` places a book by hand, lowest first. Books carrying one come before every book without one, so a few favourites can be pinned without numbering the whole shelf. Unset means the default order: newest finished first.
 
-`private: true` keeps a book out of every public build. It still appears in a local build and on your own machine — private means "not published", not "hidden from you". Wishlist books are excluded too, for a different reason: you don't own them.
+`private: true` keeps a book out of every public build. It still appears in a local build and on your own machine — private means "not published", not "hidden from you". Wishlist books are excluded too, for a different reason: you don't own them. ⚠️ **Marking a book private after it was published takes it off the next deployment only**: every earlier Pages deployment keeps its cover and held copy at its own address until it is deleted (`docs/commands.md`).
 
 **It fails closed, unlike every other key.** Anything present that is not clearly a "no" means private, because `private: yes` is a *string* under YAML 1.2 and a strict boolean check would drop it and publish the book. Wrongly private is a missing spine you notice in a second; wrongly public is someone's reading on a URL that may already have been shared or crawled. Only one of those is undoable.
 

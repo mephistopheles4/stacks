@@ -441,6 +441,14 @@ describe('G20 — every rule goes red', () => {
       'held-covers\\a.png',
       42,
       ['held-covers/a.png'],
+      // What a URL parser drops before it resolves: a tab or a line break
+      // anywhere, a space or a control at the end (round 2, adversarial F3).
+      `held-covers/.${String.fromCharCode(9)}.`,
+      `held-covers/.${String.fromCharCode(10)}.`,
+      `held-covers/..${String.fromCharCode(32)}`,
+      `held-covers/..${String.fromCharCode(31)}`,
+      `held-covers/..${String.fromCharCode(127)}`,
+      'held-covers/..%20',
     ];
     await rm(join(dist, 'held-covers'), { recursive: true, force: true });
     for (const heldCover of plants) {
@@ -530,7 +538,8 @@ describe('G20 — every rule goes red', () => {
     // The clean build stages one held copy, so the line is owed; a defect
     // takes it away, and so does a build with no held folder at all.
     expect((await inspect()).observations).toContain(
-      '1 held copy file(s), all named, within 1200px, none carrying embedded metadata',
+      '1 held copy file(s), all named, within 1200px, none carrying EXIF, XMP, IPTC, PNG text or a ' +
+        'Photoshop block',
     );
 
     await writeHeld('a.png', await image(1201, 800));

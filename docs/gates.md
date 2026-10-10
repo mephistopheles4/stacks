@@ -1808,6 +1808,22 @@ the switch existed; `gate:public` was run with each switch off and passed. ⚠�
   red under its defect: enlargement allowed, the short edge read, and the
   catch rethrowing.
 
+**Round 2, the security pair on the fix diff only**, found the fixes holding
+and three smaller gaps, each taken:
+
+- **`isSameOriginHeld` refuses a space, a C0 control or DEL** anywhere in the
+  segment: a URL parser drops tabs and line breaks anywhere and spaces and
+  controls at the end, so `.` tab `.` resolves as `..`. Six plants, literal and
+  encoded; red with the clause removed.
+- **`held-metadata` names the five kinds it reads** in its observation and its
+  comment, rather than claiming all metadata: sharp reports no JPEG comment
+  segment, no bytes after the image's end and no gain map, so the re-encode is
+  what keeps those off the site, and an allowlist of known-safe segments is
+  left to #425 with the shelf tier's own gap.
+- **The takedown steps cover one book too**: making a book private, or
+  replacing its cover, leaves its held copy on every earlier deployment, and
+  this project has no access policy on them.
+
 **CodeQL's `js/xss-through-dom`** fired on the viewer reading the card's
 `data-held` attribute into an image's `src`. By the three questions below it is
 not a security boundary — the path is held to `held-covers/` by
