@@ -29,6 +29,8 @@ function harness(options: { reduced?: boolean; deferPop?: boolean } = {}) {
   let pending = 0;
   /** Books whose cover is closed in the hand, or still easing open again. */
   const closed = new Set<string>();
+  /** How often the state asked the view to cut, closed or not. */
+  let cuts = 0;
 
   const effects: PickupEffects<string> = {
     track(book, events) {
@@ -89,6 +91,7 @@ function harness(options: { reduced?: boolean; deferPop?: boolean } = {}) {
     },
     leave: (book) => log.push(`leave ${book}`),
     cutExamining: (book) => {
+      cuts += 1;
       const was = closed.delete(book);
       if (was) log.push(`cut ${book}`);
       return was;
@@ -161,6 +164,7 @@ function harness(options: { reduced?: boolean; deferPop?: boolean } = {}) {
       closed.delete(book);
     },
     closed: () => [...closed],
+    cutCalls: () => cuts,
     backs: () => backs,
     entries: () => entries.slice(0, index + 1),
   };
@@ -540,6 +544,21 @@ describe('examining the held book (#418)', () => {
 
     expect(h.log).not.toContain('cut a');
     expect(h.track('a').playing).toBe('reverse');
+  });
+
+  it('ignores a leave with nothing in hand', () => {
+    const h = harness();
+    expect(h.state.leave()).toBe(false);
+    expect(h.state.examining()).toBe(false);
+  });
+
+  it('asks nothing of the view when a book never examined is dropped or put back', () => {
+    const h = held();
+    h.state.drop();
+    expect(h.cutCalls()).toBe(0);
+    const again = held();
+    again.state.putBack();
+    expect(again.cutCalls()).toBe(0);
   });
 
   it('calls no examine effect on a book that was never closed', () => {

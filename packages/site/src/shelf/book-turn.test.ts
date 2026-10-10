@@ -53,6 +53,21 @@ describe('a drag', () => {
     expect(dragTurn(SQUARE, 0, -100_000, 500).pitch).toBeCloseTo(-PITCH_LIMIT);
   });
 
+  it('scales pitch by the same rule as yaw', () => {
+    expect(dragTurn(SQUARE, 0, 100, 800).pitch).toBeCloseTo(Math.PI / 8);
+    expect(dragTurn(SQUARE, 100, 0, 800).yaw).toBeCloseTo(Math.PI / 8);
+  });
+
+  it('keeps half a turn on the positive side, never at -180', () => {
+    const turned = dragTurn(SQUARE, -500, 0, 500);
+    expect(turned.yaw).toBeCloseTo(Math.PI);
+    expect(turned.yaw).toBeGreaterThan(0);
+  });
+
+  it('wraps a turn past half way round to the short way', () => {
+    expect(deg(dragTurn(SQUARE, 600, 0, 500).yaw)).toBeCloseTo(-144);
+  });
+
   it('does nothing on a viewport with no short side', () => {
     expect(dragTurn(SQUARE, 50, 50, 0)).toEqual(SQUARE);
   });
@@ -88,8 +103,9 @@ describe('the keys', () => {
     expect(keyTurn(SQUARE, 'a')).toBeUndefined();
     expect(isTurnKey('a')).toBe(false);
     expect(isTurnKey('Escape')).toBe(false);
-    expect(isTurnKey('Home')).toBe(true);
-    expect(isTurnKey('ArrowUp')).toBe(true);
+    for (const key of ['Home', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']) {
+      expect(isTurnKey(key)).toBe(true);
+    }
   });
 });
 
