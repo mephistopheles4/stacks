@@ -196,87 +196,127 @@ function putDownFailures(after: PutDown, how: string): string[] {
   return failures;
 }
 
-/** The enlarged cover, opened from the held page. */
+/**
+ * Examining the held book: the page's control closes it in the hand, it turns,
+ * and leaving it leaves *only* it (#418, spec S9). Read from the page and the
+ * scene by `checkViewer`, judged here so each clause is a unit test that was
+ * planted red first.
+ */
 export interface ViewerRead {
+  /** The page's control opened the dialog. */
   readonly opened: boolean;
-  /** The image's rendered width, in CSS pixels. */
-  readonly width: number;
+  /** The open dialog's accessible name carries the held book's title. */
+  readonly namedForBook: boolean;
+  /**
+   * The front board's angle to the page block once examining is at rest, in
+   * degrees, or nothing when it never read. Closed is 0°, within
+   * `CLOSED_TOLERANCE_DEG` — read from the scene, so a dialog that opened over
+   * a book still open cannot vouch for itself.
+   */
+  readonly closedAngle: number | undefined;
   readonly escapeClosedViewer: boolean;
-  /** One Escape closes the viewer and leaves the book held (§3.5, check 9). */
+  /** One Escape leaves the view and keeps the book held (§3.5, check 9). */
   readonly heldAfterEscape: boolean;
+  /** …and the page shows again once the book has opened at rest. */
+  readonly pageVisibleAfterEscape: boolean;
   /**
    * The held copy `library.json` names for this book's cover, or nothing for a
-   * book with none, and whether the enlarged view showed it (spec §3.4, #377).
-   * Read from `library.json` rather than from the page, so a control that
-   * offered the wrong file cannot vouch for itself (#412's round 1, integrity F6).
+   * book with none. Read from `library.json` rather than from the page, so a
+   * control that offered the wrong file cannot vouch for itself (#412's round
+   * 1, integrity F6).
    */
   readonly held: string | undefined;
+  /** For a book with a held copy, the held book wore it — polled, the swap is asynchronous. */
   readonly showedHeld: boolean;
   /**
-   * A book with a cover and no held copy, walked to as well, and whether its
-   * enlarged view showed the shelf copy: the viewer's other path, which a walk
-   * that stopped at the first held copy would never reach (#412's round 1,
-   * integrity F8).
+   * A book with a cover and no held copy, walked to as well, and whether it
+   * wore the shelf copy: the other path, which a walk that stopped at the first
+   * held copy would never reach (#412's round 1, integrity F8).
    */
   readonly withoutHeld: { readonly showedOwn: boolean } | undefined;
   /**
-   * With every request for the held copy refused, whether the enlarged view
-   * fell back to the shelf copy rather than a broken image — a browser holding a
+   * With every request for the held copy refused, whether examining still opened
+   * and the book wore the shelf copy rather than nothing — a browser holding a
    * `library.json` from before a copy was taken down (#416).
    */
   readonly fellBack: boolean;
   /**
    * Whether any element of the held pages carried a cover path in an attribute.
-   * The paths are handed to the viewer in memory and never written into the
-   * page (#416, CodeQL's `js/xss-through-dom`).
+   * Nothing offers a path to the DOM any more; this keeps it that way (#416,
+   * CodeQL's `js/xss-through-dom`).
    */
   readonly pathInPage: boolean;
+  /** A pointer drag across the dialog changed the book's yaw. */
+  readonly turned: boolean;
+  /** One ArrowRight changed it by 15°. */
+  readonly keyTurned: boolean;
+  /** Focus was inside the dialog while it was open (`showModal` moves it in). */
+  readonly focusInside: boolean;
+  /** After Escape, once at rest, focus was on the page's control. */
+  readonly focusReturned: boolean;
+  /** `history.back()` while examining closed the dialog and emptied the hand. */
+  readonly emptiedCloses: boolean;
 }
 
-/** The page shows no thumbnail, so "bigger" is against the card's old 4.5rem one, doubled. */
-export const MIN_ENLARGED_PX = 144;
+/** How far from 0° the front board may lie and the book still read as closed. */
+export const CLOSED_TOLERANCE_DEG = 0.5;
 
 export function viewerFailures(read: ViewerRead | undefined): string[] {
   if (read === undefined) {
-    return ['no held book offered its cover larger, so the enlarged view was never checked'];
+    return ['no held book was examined, so the examining view was never checked'];
   }
   const failures: string[] = [];
-  if (!read.opened) failures.push("the page's cover control did not open the enlarged view");
-  if (read.width < MIN_ENLARGED_PX) {
+  if (!read.opened) failures.push("the page's control did not open the examining view");
+  if (!read.namedForBook) {
     failures.push(
-      `the enlarged cover is ${read.width.toFixed(0)}px wide — not the closer look it exists for`,
+      'the examining dialog was not named for the book: every book would announce alike',
     );
   }
-  if (!read.escapeClosedViewer) failures.push('Escape did not close the enlarged cover');
+  if (read.closedAngle === undefined) {
+    failures.push("the front board's angle never read, so the book was not seen to close");
+  } else if (Math.abs(read.closedAngle) > CLOSED_TOLERANCE_DEG) {
+    failures.push(
+      `the book is ${Math.abs(read.closedAngle).toFixed(1)}° off closed at rest ` +
+        `— examining turns a closed book, not an open one`,
+    );
+  }
+  if (!read.escapeClosedViewer) failures.push('Escape did not close the examining view');
   if (!read.heldAfterEscape) {
     failures.push(
-      'the Escape that closed the enlarged cover also put the book back — one keystroke ' +
+      'the Escape that closed the examining view also put the book back — one keystroke ' +
         'left two surfaces',
     );
   }
+  if (!read.pageVisibleAfterEscape) {
+    failures.push('after Escape the page was not visible again once the book had opened');
+  }
   if (read.held === undefined) {
-    failures.push(
-      'no held book offered a held copy, so the enlarged view of one was never checked',
-    );
+    failures.push('no held book offered a held copy, so examining one was never checked');
   } else if (!read.showedHeld) {
-    failures.push(`the enlarged view did not show the held copy ${read.held}`);
+    failures.push(`the book did not wear the held copy ${read.held}`);
   }
   if (read.withoutHeld === undefined) {
-    failures.push('no book without a held copy was opened, so the viewer’s other path went unseen');
+    failures.push('no book without a held copy was examined, so the other path went unseen');
   } else if (!read.withoutHeld.showedOwn) {
-    failures.push('for a book with no held copy, the enlarged view did not show the shelf copy');
+    failures.push('for a book with no held copy, the book did not wear the shelf copy');
   }
   if (!read.fellBack) {
-    failures.push('a held copy that failed to load left the enlarged view without the shelf copy');
+    failures.push('a held copy that failed to load left examining without the shelf copy');
   }
   if (read.pathInPage) {
-    failures.push(
-      'a cover path was written into the held page — the viewer must be handed it in memory',
-    );
+    failures.push('a cover path was written into the held page — nothing offers a path to the DOM');
+  }
+  if (!read.turned) failures.push('a drag across the view did not turn the book');
+  if (!read.keyTurned) failures.push('an arrow key did not turn the book by 15°');
+  if (!read.focusInside) failures.push('focus was not inside the dialog while it was open');
+  if (!read.focusReturned) {
+    failures.push("focus did not return to the page's control after Escape, once the page showed");
+  }
+  if (!read.emptiedCloses) {
+    failures.push('emptying the hand while examining left the view open over an empty hand');
   }
   return failures;
 }
-
 /** The held page at phone size, which frames the right-hand page alone. */
 export interface PhoneRead {
   /** The right-hand page lies inside the viewport, within a pixel. */

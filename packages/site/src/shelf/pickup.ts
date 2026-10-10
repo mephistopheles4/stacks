@@ -34,6 +34,8 @@ import * as THREE from 'three';
 import { gsap } from 'gsap/gsap-core';
 import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
 import type { LibraryBook } from '@stacks/core';
+import { SQUARE } from './book-turn.ts';
+import type { BookViewer } from './book-viewer.ts';
 import { announcement } from './card.ts';
 import { buildPages, PAGE_PX, rooted, type HeldPages } from './held-page.ts';
 import { loadThoughts } from './notes.ts';
@@ -107,8 +109,17 @@ interface Lifted {
   readonly staged: StagedBook;
   readonly rig: Rigged;
   readonly home: { readonly position: THREE.Vector3; readonly quaternion: THREE.Quaternion };
-  /** The three stages' progress, 0..1 each, tweened by the track. */
-  readonly p: { s: number; u: number; o: number };
+  /**
+   * The three stages' progress, 0..1 each, tweened by the track — and `c`, how
+   * far the book is closed in the hand for examining, tweened on its own. The
+   * track's turn and open stages overlap, so closing by seeking the shared
+   * track would un-turn the book too; the pose reads `o` as `p.o * (1 - p.c)`.
+   */
+  readonly p: { s: number; u: number; o: number; c: number };
+  /** The turn examining has put on the book, about the camera's own axes. */
+  readonly turn: { yaw: number; pitch: number };
+  /** The tween closing the book or opening it again, while one runs. */
+  ease: Timeline | undefined;
   readonly pages: HeldPages;
   readonly pageObjects: readonly CSS3DObject[];
   readonly narrow: boolean;
@@ -124,8 +135,12 @@ export interface PickupElements {
   readonly status: HTMLElement;
   /** Where the page layer goes: the shelf's container. */
   readonly host: HTMLElement;
-  /** Whether the enlarged cover is up, so one Escape leaves the book held. */
-  readonly coverViewerOpen: () => boolean;
+  /**
+   * The examining view's dialog. Its Escape and this module's both listen on
+   * the document, so `isOpen` is what keeps one Escape from leaving the view
+   * and putting the book back in the same keystroke.
+   */
+  readonly viewer: BookViewer;
 }
 
 /** What the gate and the phone read off `window.__shelf` while a book is held. */
@@ -135,6 +150,17 @@ export interface HeldReading {
   readonly progress: number;
   /** Whether the right-hand page is showing its Thoughts. */
   readonly thoughts: boolean;
+  /** Whether the book is closed in the hand, to be turned (#418). */
+  readonly examining: boolean;
+  /**
+   * Which cover the book's texture wears now: the held copy once it has been
+   * swapped in, the shelf copy for a book with none or one that failed to load.
+   */
+  readonly cover: 'held' | 'shelf';
+  /** The front board's angle to the page block, in degrees: 0 with the book closed. */
+  readonly boardAngle: number;
+  /** The turn examining has put on the book, in degrees. */
+  readonly turn: { readonly yaw: number; readonly pitch: number };
 }
 
 /** §3.6, measured from the scene at rest. See `measureSpread`. */
@@ -271,6 +297,86 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         // The hand emptied, by whichever way down: the pages are about to hide.
         if (book === undefined) catchFocus();
       },
+      examine: (book) => {
+        const entry = lifted.get(book.id);
+        if (entry === undefined) return;
+        entry.ease?.kill();
+        entry.ease = undefined;
+        setTurn(entry, SQUARE);
+        elements.viewer.open(`${book.title}, closed in your hand`);
+        if (reduced()) {
+          entry.p.c = 1;
+          return;
+        }
+        entry.ease = engine
+          .timeline({ paused: false })
+          .fromTo(
+            entry.p,
+            { c: entry.p.c },
+            { c: 1, duration: motion.open, ease: bezier(motion.easeOpen) },
+            0,
+          )
+          .eventCallback('onComplete', () => {
+            entry.ease = undefined;
+          });
+      },
+      leave: (book) => {
+        const entry = lifted.get(book.id);
+        if (entry === undefined) return;
+        entry.ease?.kill();
+        entry.ease = undefined;
+        // Closing the dialog sends focus to the control that opened it, which is
+        // still hidden: it would drop to `<body>`. Hold it on the canvas until
+        // the page is visible again (S5).
+        elements.viewer.close();
+        current.canvas.focus();
+        const done = (): void => {
+          entry.ease = undefined;
+          entry.p.c = 0;
+          setTurn(entry, SQUARE);
+          pose();
+          const at = document.activeElement;
+          if (!entry.released && (at === document.body || at === current.canvas)) {
+            entry.pages.examine.focus();
+          }
+        };
+        if (reduced()) {
+          done();
+          return;
+        }
+        // Square first, then open: the book is closed until the turn has gone.
+        const squaring = entry.turn.yaw === 0 && entry.turn.pitch === 0 ? 0 : motion.slide;
+        const tl = engine.timeline({ paused: false });
+        if (squaring > 0) {
+          tl.fromTo(
+            entry.turn,
+            { yaw: entry.turn.yaw, pitch: entry.turn.pitch },
+            { yaw: 0, pitch: 0, duration: squaring, ease: bezier(motion.easeOpen) },
+            0,
+          );
+        }
+        tl.fromTo(
+          entry.p,
+          { c: entry.p.c },
+          { c: 0, duration: motion.open, ease: bezier(motion.easeOpen) },
+          squaring,
+        ).eventCallback('onComplete', done);
+        entry.ease = tl;
+      },
+      cutExamining: (book) => {
+        const entry = lifted.get(book.id);
+        if (entry === undefined) return false;
+        const was = entry.p.c > 0 || entry.ease !== undefined || elements.viewer.isOpen();
+        entry.ease?.kill();
+        entry.ease = undefined;
+        entry.p.c = 0;
+        setTurn(entry, SQUARE);
+        if (elements.viewer.isOpen()) {
+          elements.viewer.close();
+          current.canvas.focus();
+        }
+        return was;
+      },
       reduced,
       returnSpeed: () => motion.returnSpeed,
       history: {
@@ -312,7 +418,9 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
       staged: target,
       rig,
       home: { position: group.position.clone(), quaternion: group.quaternion.clone() },
-      p: { s: 0, u: 0, o: 0 },
+      p: { s: 0, u: 0, o: 0, c: 0 },
+      turn: { yaw: 0, pitch: 0 },
+      ease: undefined,
       pages,
       pageObjects,
       narrow,
@@ -358,6 +466,7 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     lifted.delete(book.id);
     entry.released = true;
     entry.track?.kill();
+    entry.ease?.kill();
     const { group } = entry.staged;
     const { rig } = entry;
     group.position.copy(entry.home.position);
@@ -530,13 +639,20 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     up: new THREE.Vector3(),
     x: new THREE.Vector3(),
     z: new THREE.Vector3(),
+    right: new THREE.Vector3(),
     basis: new THREE.Matrix4(),
+  };
+
+  const setTurn = (entry: Lifted, turn: { readonly yaw: number; readonly pitch: number }): void => {
+    entry.turn.yaw = turn.yaw;
+    entry.turn.pitch = turn.pitch;
   };
 
   /** Where the book's origin goes, square to the camera, for an opening `o`. */
   const heldPose = (
     entry: Lifted,
     o: number,
+    turn: { readonly yaw: number; readonly pitch: number } = SQUARE,
   ): { position: THREE.Vector3; quaternion: THREE.Quaternion } => {
     const { camera } = current;
     const { spread } = entry.rig;
@@ -568,6 +684,14 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     tmp.z.crossVectors(tmp.x, tmp.up);
     tmp.basis.makeBasis(tmp.x, tmp.up, tmp.z);
     const quaternion = new THREE.Quaternion().setFromRotationMatrix(tmp.basis);
+    if (turn.yaw !== 0 || turn.pitch !== 0) {
+      // Turned about the camera's own axes, after squaring, and about the focus
+      // below, so the book turns where it hangs and stays centred in the frame.
+      tmp.right.crossVectors(tmp.up, tmp.x);
+      const pitch = new THREE.Quaternion().setFromAxisAngle(tmp.right, turn.pitch);
+      const yaw = new THREE.Quaternion().setFromAxisAngle(tmp.up, turn.yaw);
+      quaternion.premultiply(pitch).premultiply(yaw);
+    }
     const position = camera.position
       .clone()
       .addScaledVector(tmp.dir, distance)
@@ -579,14 +703,16 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
     for (const entry of lifted.values()) {
       const { p } = entry;
       const { group } = entry.staged;
-      const held = heldPose(entry, p.o);
+      // Open in the hand less however far it is closed for examining.
+      const o = p.o * (1 - p.c);
+      const held = heldPose(entry, o, entry.turn);
       const slid = entry.home.position
         .clone()
         .add(new THREE.Vector3(0, motion.lift * p.s, motion.slideOut * p.s));
       group.position.copy(slid.lerp(held.position, p.u));
       group.quaternion.copy(entry.home.quaternion).slerp(held.quaternion, p.u);
-      entry.rig.hinge.rotation.y = -THREE.MathUtils.degToRad(openAngle(p.o));
-      const shown = textOpacity(p.o, motion);
+      entry.rig.hinge.rotation.y = -THREE.MathUtils.degToRad(openAngle(o));
+      const shown = textOpacity(o, motion);
       for (const element of [entry.pages.left, entry.pages.right]) {
         element.style.opacity = String(shown);
         // Out of the accessibility tree until it is on screen (§3.4).
@@ -675,11 +801,28 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
   });
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
-    // The enlarged cover is a modal `<dialog>`: the platform closes it on
-    // Escape, and the keydown still reaches here. One Escape closes the viewer
-    // and leaves the book held (§3.5, check 9).
-    if (elements.coverViewerOpen()) return;
+    // The examining view is a modal `<dialog>`: the platform closes it on
+    // Escape, and the keydown still reaches here. One Escape leaves the view
+    // and keeps the book held (§3.5, check 9). Also while the book is still
+    // easing open again: that Escape already left the view once.
+    if (elements.viewer.isOpen() || [...lifted.values()].some((entry) => entry.p.c > 0)) return;
     state.putBack();
+  });
+
+  /** What the view's dialog asks for, bound once: the pickup answers each. */
+  elements.viewer.bind({
+    examine: () => {
+      state.examine();
+    },
+    leave: () => {
+      state.leave();
+    },
+    turn: (update) => {
+      const holding = state.holding();
+      const entry = holding === undefined ? undefined : lifted.get(holding.book.id);
+      if (entry === undefined || !state.examining()) return;
+      setTurn(entry, update(entry.turn));
+    },
   });
 
   const tunable: TunablePickup = {
@@ -735,6 +878,13 @@ export function createPickup(stage: ShelfStage, elements: PickupElements): Picku
         phase: holding.phase,
         progress: entry?.track?.progress() ?? 1,
         thoughts: entry?.pages.right.querySelector('.held-thoughts:not([hidden])') !== null,
+        examining: state.examining(),
+        cover: entry?.heldCover === undefined ? 'shelf' : 'held',
+        boardAngle: entry === undefined ? 0 : boardAngleOf(entry),
+        turn: {
+          yaw: THREE.MathUtils.radToDeg(entry?.turn.yaw ?? 0),
+          pitch: THREE.MathUtils.radToDeg(entry?.turn.pitch ?? 0),
+        },
       };
     },
     measureSpread: () => {
@@ -803,6 +953,20 @@ function inertTrack(): Track {
 }
 
 /**
+ * The front board's angle to the page block, in degrees, read off the scene:
+ * its outward normal (+X) against the block's, 0° shut and 180° flat open.
+ * Unmoved by turning the whole book, so examining reads 0 at any turn.
+ */
+function boardAngleOf(entry: Lifted): number {
+  const { rig } = entry;
+  entry.staged.group.updateMatrixWorld(true);
+  const board = rig.hinge.children.find((child) => child.name === 'front-board') ?? rig.hinge;
+  const boardNormal = new THREE.Vector3(1, 0, 0).transformDirection(board.matrixWorld);
+  const blockNormal = new THREE.Vector3(1, 0, 0).transformDirection(rig.block.matrixWorld);
+  return THREE.MathUtils.radToDeg(boardNormal.angleTo(blockNormal));
+}
+
+/**
  * §3.6, read off the scene: the board's angle to the block, the left page's
  * projected size against the block face's, and the gap at the gutter.
  */
@@ -840,11 +1004,7 @@ function measure(entry: Lifted, stage: ShelfStage): SpreadReading {
     [-0.5, 0.5],
   ].map(([z, y]) => project(new THREE.Vector3(0.5, y, z), block));
 
-  // The board's outward normal (+X) against the block's: 0° shut, 180° flat open.
-  const board = rig.hinge.children.find((child) => child.name === 'front-board') ?? rig.hinge;
-  const boardNormal = new THREE.Vector3(1, 0, 0).transformDirection(board.matrixWorld);
-  const blockNormal = new THREE.Vector3(1, 0, 0).transformDirection(block.matrixWorld);
-  const boardAngle = THREE.MathUtils.radToDeg(boardNormal.angleTo(blockNormal));
+  const boardAngle = boardAngleOf(entry);
 
   // The inner edges at the gutter. Each sheet is a plane turned about Y: the
   // right one by +90°, so its local −x points to the spine; the left one rides

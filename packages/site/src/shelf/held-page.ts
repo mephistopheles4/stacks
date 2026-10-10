@@ -1,6 +1,6 @@
 import type { LibraryBook } from '@stacks/core';
 import { cardModel, linksRow } from './card.ts';
-import { COVER_BUTTON_CLASS, offerCover } from './cover-viewer.ts';
+import { EXAMINE_BUTTON_CLASS } from './book-viewer.ts';
 
 /**
  * The held book's two pages: what replaced the card (spec §3.4, ADR-0102).
@@ -11,9 +11,10 @@ import { COVER_BUTTON_CLASS, offerCover } from './cover-viewer.ts';
  * links stay reachable for every book. The rule belongs to the Thoughts' slot, so
  * a fetch that fails or has not landed leaves no rule over nothing; a book with none shows the card's lines alone
  * (#369's C). On a phone, which frames the right-hand page alone, the title and
- * author lead that page too. The enlarged cover is opened from a control among
- * the lines, and a put-back control ends the page: a phone fills the screen with
- * the page, so there is no empty space to tap.
+ * author lead that page too. Examining the book — closing it in your hand to
+ * turn it (#418) — is opened from a control among the lines, for every book, and
+ * a put-back control ends the page: a phone fills the screen with the page, so
+ * there is no empty space to tap.
  *
  * **What goes where is a pure function** (`leftPageBlocks`, `rightPageBlocks`),
  * tested without a DOM; `buildPages` turns it into nodes and adds nothing.
@@ -33,7 +34,7 @@ export type RightBlock =
   | 'object'
   | 'subjects'
   | 'links'
-  | 'cover'
+  | 'examine'
   | 'put-back';
 
 export function leftPageBlocks(book: LibraryBook): LeftBlock[] {
@@ -58,7 +59,9 @@ export function rightPageBlocks(book: LibraryBook, options: RightPageOptions): R
     model.object !== undefined && 'object',
     model.subjects !== undefined && 'subjects',
     'links',
-    model.cover !== undefined && 'cover',
+    // Every book, covered or not: what is examined is the book, and a book
+    // with no cover still has its binding and its spine colour (#418, S7).
+    'examine',
     'put-back',
   ];
   return blocks.filter((block): block is RightBlock => block !== false);
@@ -75,6 +78,8 @@ export interface HeldPages {
   readonly right: HTMLElement;
   /** The put-back control: a real `<button>`, named for what it does. */
   readonly putBack: HTMLButtonElement;
+  /** The control that closes the book in the hand to turn it. */
+  readonly examine: HTMLButtonElement;
   /**
    * Fills the Thoughts slot, when they arrive: plain text, one `<p>` each, and
    * the rule below them. `fade` for Thoughts that land once the page is
@@ -114,15 +119,20 @@ export function buildPages(
   putBack.type = 'button';
   putBack.className = 'held-put-back';
   putBack.textContent = 'Put the book back';
+  const examine = document.createElement('button');
+  examine.type = 'button';
+  examine.className = EXAMINE_BUTTON_CLASS;
+  examine.textContent = 'Turn the book over';
 
   for (const block of rightPageBlocks(book, options)) {
-    right.append(rightBlock(block, model, thoughts, putBack));
+    right.append(rightBlock(block, model, { thoughts, examine, putBack }));
   }
 
   return {
     left,
     right,
     putBack,
+    examine,
     showThoughts(paragraphs, fade) {
       const label = text('p', 'Thoughts', 'held-label');
       thoughts.replaceChildren(
@@ -146,8 +156,11 @@ export function buildPages(
 function rightBlock(
   block: RightBlock,
   model: ReturnType<typeof cardModel>,
-  thoughts: HTMLElement,
-  putBack: HTMLButtonElement,
+  nodes: {
+    readonly thoughts: HTMLElement;
+    readonly examine: HTMLButtonElement;
+    readonly putBack: HTMLButtonElement;
+  },
 ): HTMLElement {
   switch (block) {
     case 'title':
@@ -157,8 +170,8 @@ function rightBlock(
     case 'thoughts':
       // Empty until the fetch returns, and out of the accessibility tree while
       // it is: an empty labelled region would be read out as nothing.
-      thoughts.hidden = true;
-      return thoughts;
+      nodes.thoughts.hidden = true;
+      return nodes.thoughts;
     case 'reading':
       return text('p', model.reading, 'reading');
     case 'tags':
@@ -169,30 +182,11 @@ function rightBlock(
       return text('p', model.subjects ?? '', 'subjects');
     case 'links':
       return linksRow(model.links);
-    case 'cover':
-      return coverControl(model.cover ?? '', model.heldCover, model.title);
+    case 'examine':
+      return nodes.examine;
     case 'put-back':
-      return putBack;
+      return nodes.putBack;
   }
-}
-
-/**
- * The enlarged cover's control. A text button rather than a thumbnail: the
- * page shows no picture of the cover, because the book in your hand is one.
- * The paths and the alt text are offered to the viewer in memory, keyed by the
- * button, and never written into the page (`cover-viewer.ts`).
- */
-function coverControl(cover: string, held: string | undefined, title: string): HTMLElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = COVER_BUTTON_CLASS;
-  button.textContent = 'See the cover larger';
-  offerCover(button, {
-    cover: rooted(cover),
-    held: held === undefined ? undefined : rooted(held),
-    alt: `Cover of ${title}`,
-  });
-  return button;
 }
 
 function page(className: string, heightPx: number): HTMLElement {

@@ -110,6 +110,19 @@ before the fade, the board resting at 165°, and the paper sheets built without
 `withoutShadowFetch`. Every third book of the 50-book fixture now carries
 invented Thoughts, so the render gate opens a page of them.
 
+**2026-10-10 — examining the held book**
+([#418](https://github.com/mephistopheles4/stacks/issues/418)): the page's
+control now closes the held book in your hand and lets you turn it, in place of a
+flat picture of its cover ([ADR-0109](adr/0109-the-held-book-is-examined-in-3d.md),
+superseding ADR-0052 in part). The rules are a pure module, `book-turn.ts`; the
+dialog stays a native `<dialog>`, now transparent. G35's viewer check is
+reworked: the width clause retires for the board at 0° ±0.5°, and turning, focus
+return and the emptied hand are added. Observed red with faults planted in the
+build: the Escape guard removed, no focus return, the closing tween off, a
+cut that leaves the dialog open, a static dialog name and a drag that turns
+nothing. ⚠️ The planting caught the gate itself: the turning and emptied-hand
+readings were taken from whichever book was reported first, so a book picked
+second hid a failure — they are now carried from the book that ran them.
 **2026-10-10 — the pickup's move-4 review answered**
 ([#413](https://github.com/mephistopheles4/stacks/issues/413)): a double
 put-back delivered before its popstate stepped back twice and off the site; one
