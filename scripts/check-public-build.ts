@@ -10,8 +10,12 @@
  * The rules themselves live in `scripts/lib/public-build.ts`, because
  * `deploy:site` has to apply exactly the same ones to the real build and the
  * two had already drifted apart while nobody could see it. This script owns the
- * two things that are *its own*: planting the canary in a fixture vault and
- * building from it. G20 owns watching each rule go red; this owns proving a
+ * four things that are *its own*: checking the canary is planted in the fixture
+ * vault, building from it, checking a fixture's `## Thoughts` carries the ship
+ * phrase with the canary below the section, and checking that phrase reaches
+ * `dist/notes/` — the last two being the Thoughts split's vacuity guard and
+ * presence half, which the shared inspector must never hold because a real
+ * deploy carries no fixture phrase (ADR-0028). G20 owns watching each rule go red; this owns proving a
  * real Astro build survives all of them.
  *
  * The canary is planted in several fixture note bodies *including the malformed

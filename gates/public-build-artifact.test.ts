@@ -441,8 +441,11 @@ describe('G20 — every rule goes red', () => {
     // The key trace reads names, never values, so text under a named key
     // passes `unknown-key`. The mark is a flag; anything else is refused, and
     // the message does not repeat what it found.
+    // The book's file is removed too, so the stale-file check cannot answer for
+    // this clause: the bad mark is the only defect left.
     const prose = 'A sentence of Thoughts a broken writer put in the mark';
     await writeLibrary([{ ...CLEAN_BOOK, thoughts: prose }]);
+    await rm(join(dist, 'notes', `${CLEAN_ID}.json`));
     const problems = inspect().problems;
 
     expect([...new Set(problems.map((problem) => problem.rule))]).toEqual(['orphan-note']);
@@ -518,7 +521,16 @@ describe('G20 — every rule goes red', () => {
     // reasoning applied to hidden text: a bug that bypassed the extractor's
     // check would otherwise publish an aside the owner never saw on screen.
     // Owner decision on #411, from #410's review.
-    for (const marker of ['%% an aside %%', '<!-- an aside', 'an aside -->', 'an aside --!>']) {
+    for (const marker of [
+      '%% an aside %%',
+      '<!-- an aside',
+      'an aside -->',
+      'an aside --!>',
+      // A declaration, CDATA and a processing instruction, which hide text too.
+      '<!DOCTYPE an aside>',
+      '<![CDATA[ an aside ]]>',
+      '<?x an aside ?>',
+    ]) {
       await writeNotes(`${CLEAN_ID}.json`, {
         paragraphs: ['A clean paragraph.', `A paragraph with ${marker} in it.`],
       });

@@ -25,6 +25,20 @@ import type { VaultAdapter } from './adapters/vault-adapter.ts';
 /** Where each book's published Thoughts are staged, as `notes/<id>.json`. */
 const NOTES_DIR = 'notes';
 
+/**
+ * The notes stage's switch, and **the only sanctioned way to undo it**.
+ *
+ * `false` reads no note and writes no file, but still prunes `notes/`, so the
+ * next build empties the folder and the next deploy takes every file off the
+ * site. Spec §4's undo: switch the stage off, never revert it bare — a bare
+ * revert removes the prune with the stage, and the files the last build staged
+ * into `packages/site/public/` would reach `dist/` and deploy again. Keep the
+ * `/notes/*` block in `_headers` too. ⚠️ Turning this off reddens G2's split
+ * assertions and `gate:public`'s presence check by design: they assert the
+ * stage runs. See `docs/commands.md`.
+ */
+const PUBLISH_THOUGHTS = true;
+
 export interface PublishOptions {
   readonly isPublic: boolean;
   readonly now?: Date;
@@ -35,6 +49,8 @@ export interface PublishResult {
   readonly libraryPath: string;
   readonly coversCopied: number;
   readonly coversMissing: readonly string[];
+  /** How many `notes/<id>.json` files this build wrote: a count, never a title. */
+  readonly notesWritten: number;
 }
 
 export async function publish(
@@ -63,11 +79,11 @@ export async function publish(
 
   // Before `library.json` is written, because the prune's signal that the
   // folder is ours is the previous build's `library.json`.
-  const thoughts = await stageNotes(books, vault, assetsDir);
+  const thoughtsWritten = await stageNotes(books, vault, assetsDir);
 
   const built = buildLibrary(shelved, {
     isPublic: options.isPublic,
-    thoughts,
+    thoughtsWritten,
     ...(options.now === undefined ? {} : { now: options.now }),
   });
 
@@ -92,7 +108,13 @@ export async function publish(
   // every time — silently, since both are a 1200x630 PNG at that path.
   // `gate:public` still checks it reaches `dist/` and is not a truncated file.
 
-  return { library, libraryPath, coversCopied: copied, coversMissing: missing };
+  return {
+    library,
+    libraryPath,
+    coversCopied: copied,
+    coversMissing: missing,
+    notesWritten: thoughtsWritten.size,
+  };
 }
 
 /**
@@ -116,6 +138,10 @@ function isPublishable(book: BookRecord): boolean {
  * asks `isPublishable` in both builds, so a private or wishlist book's
  * Thoughts are never read for a build at all.
  *
+ * **A note that cannot be read is skipped with a warning**, never a failed
+ * build (invariant 3): it can be deleted or locked between `listBooks` and
+ * this second read.
+ *
  * ⚠️ **An id two publishable books share gets no file.** `idFor` hashes the
  * ISBN, so two notes with one title and one ISBN collide, and one file would
  * carry whichever was read last under the other's name. A private duplicate is
@@ -127,7 +153,7 @@ async function stageNotes(
   assetsDir: string,
 ): Promise<ReadonlySet<string>> {
   const byId = new Map<string, BookRecord[]>();
-  for (const book of books.filter(isPublishable)) {
+  for (const book of PUBLISH_THOUGHTS ? books.filter(isPublishable) : []) {
     const id = idFor(book);
     byId.set(id, [...(byId.get(id) ?? []), book]);
   }
@@ -145,7 +171,17 @@ async function stageNotes(
       continue;
     }
 
-    const paragraphs = await vault.readPublicSection(record.sourcePath);
+    let paragraphs: readonly string[] | undefined;
+    try {
+      paragraphs = await vault.readPublicSection(record.sourcePath);
+    } catch {
+      // Named, never quoted, and the error itself is not printed: it could
+      // carry a path the owner did not choose to show.
+      console.warn(
+        `stacks: wrote no Thoughts for ${record.sourcePath} — the note could not be read`,
+      );
+      continue;
+    }
     if (paragraphs === undefined) continue;
     files.set(`${id}.json`, paragraphs);
     written.add(record.sourcePath);

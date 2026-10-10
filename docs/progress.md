@@ -196,6 +196,9 @@ two inspector rules under G20, no new row — see
 ships as `notes/<id>.json` in both builds; G2's presence half armed, G5, G11,
 G20 and G30 extended, `gate:public` checks presence and vacuity — same section
 of [`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
+`notes-shape` refuses comment and declaration markers (owner decision), and the
+review's leak through a lone CR or line separator is closed with the shapes it
+found; both in that section.
 
 ### Phase 4 evidence
 

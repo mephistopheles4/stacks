@@ -96,11 +96,14 @@ program
 program
   .command('build')
   .description('Parse the vault into library.json')
-  .option('--public', 'emit a shareable build: covers and metadata only, no note bodies')
+  .option(
+    '--public',
+    "emit a shareable build: covers, metadata and each public book's ## Thoughts section as plain text — no other note-body text",
+  )
   .option('-o, --out <file>', `where to write library.json (default: ${DEFAULT_OUT})`)
   .option(
     '--assets <dir>',
-    `where --public stages library.json, covers and og.png (default: ${DEFAULT_ASSETS})`,
+    `where --public stages library.json, covers/ and notes/ (default: ${DEFAULT_ASSETS})`,
   )
   .option('--watch', 'rebuild whenever the vault changes')
   .action(async (options: { public?: boolean; out?: string; assets?: string; watch?: boolean }) => {
@@ -121,6 +124,8 @@ program
           `wrote ${result.libraryPath} — ${result.library.bookCount} book(s), public build`,
         );
         console.log(`  covers    ${result.coversCopied} copied into ${assets}`);
+        // A count only: the files hold the owner's Thoughts, and the terminal must not.
+        console.log(`  notes     ${result.notesWritten} Thoughts file(s) written`);
         if (result.coversMissing.length > 0) {
           console.warn(
             `  missing   ${result.coversMissing.length} cover(s): ${result.coversMissing.join(', ')}`,

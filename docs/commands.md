@@ -153,6 +153,35 @@ standing one. **Do not make it pass by sending a browser user agent** — that w
 measured and does not work. See
 [ADR-0027](adr/0027-deploy-check-reports-refusal.md).
 
+## `pnpm deploy:site` — published Thoughts, and taking them back
+
+A public build ships each public book's `## Thoughts` section as
+`notes/<id>.json` (invariant 2), and `stacks build --public` prints how many
+files it wrote: a count, never a title. The deploy publishes them with no pause
+of its own. **Nothing publishes until a real note has a `## Thoughts` section
+with text in it**, and spec §8 asks for the owner's approval of the first
+deploy that does.
+
+**Withdrawing a section takes two moves, and the second is outside this repo.**
+
+1. **Delete or empty the section and deploy.** The build prunes `notes/` to
+   exactly the files it wrote, and the `/notes/*` block in `_headers`
+   revalidates, so the production address and browsers drop it.
+2. **Delete the earlier Cloudflare Pages deployments**, or put per-deployment
+   addresses behind Cloudflare Access. Every deployment keeps its own address
+   under the project's `pages.dev` host until it is deleted, and still serves
+   what it shipped to anyone holding that address. The prune cannot reach them.
+   Third-party caches and web archives are beyond both moves (spec §9).
+
+**To switch the stage off**, set `PUBLISH_THOUGHTS` in
+`packages/core/src/publish.ts` to `false`. It then reads no note and writes no
+file, but still prunes, so the next build empties `notes/` and the next deploy
+takes every file off the production site. **Never undo it with a bare revert**:
+a revert removes the prune with the stage, and the files the last build staged
+into `packages/site/public/` reach `dist/` and deploy again (spec §4). Keep the
+`/notes/*` block. Switched off, G2's split assertions and `gate:public`'s
+presence check go red by design, because they assert the stage runs.
+
 ## `pnpm deploy:site` — the trend panel, and what a stale record refuses
 
 **Before anything else it prints the trend record**, because a trend is obliged

@@ -2,7 +2,7 @@
 
 ## What this project is
 
-A local-first reading tracker where the notes vault IS the database. A CLI (`stacks`) writes book notes with structured frontmatter into an Obsidian vault; a static site (Astro + vanilla Three.js) renders the vault as a 3D bookshelf. Public builds expose covers + metadata only — never note bodies.
+A local-first reading tracker where the notes vault IS the database. A CLI (`stacks`) writes book notes with structured frontmatter into an Obsidian vault; a static site (Astro + vanilla Three.js) renders the vault as a 3D bookshelf. Public builds expose covers, metadata and each book's `## Thoughts` section as plain text — never the rest of a note body.
 
 ## Start here — orientation for a cold session
 
@@ -44,7 +44,7 @@ holds these two documents to each other — so adding an article here without
 scoring it there is a red build, in both directions.
 
 1. **The vault is the source of truth.** No parallel database. `library.json` is a build artifact, always regenerable, never hand-edited, gitignored.
-2. **Note bodies are private.** `library.json` never carries body text, in any build — that part is absolute. A build ships body text from *one explicitly allowlisted section* of a note, `## Thoughts`, and nothing else: the adapter's `readPublicSection` reads that section alone, strips it to plain paragraphs and withholds the whole of it on any shape it cannot vouch for, and the publisher writes it as `notes/<id>.json`, one file per book a public build would publish, in both builds. Nothing else below the frontmatter block is parsed or shipped; see `docs/spec/picking-a-book-up.md` and [ADR-0100](docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md). An allowlist and never a denylist, for the same reason `private:` fails closed.
+2. **Note bodies are private.** `library.json` never carries body text, in any build — that part is absolute. A build ships body text from *one explicitly allowlisted section* of a note, `## Thoughts`, and nothing else: the adapter's `readPublicSection` reads that section alone, strips it to plain paragraphs and withholds the whole of it on any shape it cannot vouch for, and the publisher writes it as `notes/<id>.json`, one file per book a public build would publish, in both of `publish()`'s modes, public and local. A plain `stacks build` without `--public` never runs the publisher and stages no notes. Nothing else below the frontmatter block is parsed or shipped; see `docs/spec/picking-a-book-up.md` and [ADR-0100](docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md). An allowlist and never a denylist, for the same reason `private:` fails closed.
 
    ⚠️ **That allowlist must never name `## About`.** The merge *writes* a note body now — a provider's description, through `insertBodySection` — while still never reading one. Writing and publishing are different halves, and the body was chosen over a frontmatter property precisely so that "never published" is structural: a body section is not a `BookRecord` field, so no build can carry it. An allowlist that later picked this section up would publish third-party marketing prose under the owner's name.
 3. **Never crash on a bad note.** Malformed frontmatter → skip with a console warning listing the file. One bad file must not break `stacks build`.
@@ -191,7 +191,7 @@ Every phase: `pnpm test && pnpm build` green, plus:
   any request the suite makes and fails the test that made it; `vi.stubGlobal`
   is the escape hatch).
 - **Phase 2 (shelf):** `pnpm smoke:render` (headless puppeteer screenshot of the shelf) produces a non-blank PNG at `artifacts/shelf.png`; 50-book fixture renders; clicking a book (integration test via puppeteer) opens the card.
-- **Phase 3 (public build):** `pnpm stacks build --public` output contains zero note-body text (grep gate against a known phrase planted in a fixture note body); the committed share card reaches `dist/` intact.
+- **Phase 3 (public build):** `pnpm stacks build --public` output contains no note-body text outside `notes/` (grep gate against a canary planted in fixture note bodies, below and beside `## Thoughts`), and `notes/` carries the ship phrase planted inside one; the committed share card reaches `dist/` intact.
 - **Phase 4 (Audiobookshelf import):** import against mock ABS API dedupes by ISBN then normalized title+author; re-running import is idempotent.
 
 ## Working rules for agents

@@ -5,7 +5,14 @@ import { coverFileName } from '../covers/cover-path.ts';
 import { FRONTMATTER_BLOCK, parseNote } from '../frontmatter.ts';
 import { isProbablySameBook, normaliseTitleAuthor, toObsidianTag } from '../identity.ts';
 import type { BookInput, BookRecord } from '../types.ts';
-import { disarmBodyText, extractThoughts } from './thoughts-section.ts';
+import {
+  atxHeading,
+  closesFence,
+  disarmBodyText,
+  extractThoughts,
+  fenceOpener,
+  type FenceOpener,
+} from './thoughts-section.ts';
 import type { FrontmatterChanges, VaultAdapter } from './vault-adapter.ts';
 
 /** Where notes and cached covers live inside the vault. */
@@ -146,14 +153,14 @@ export class ObsidianAdapter implements VaultAdapter {
     // listing line reading `## Thoughts` or an unclosed fence would otherwise
     // open a published section, or carry `## Notes` out of one (spec §4).
     const eol = source.includes('\r\n') ? '\r\n' : '\n';
-    const lines = disarmBodyText(body.replace(/\r\n/g, '\n')).split('\n');
+    const lines = disarmBodyText(body).split('\n');
     const section = `${heading}${eol}${eol}${lines.join(eol)}${eol}`;
 
-    const notes = new RegExp(`^##+ +Notes[ \\t]*$`, 'm').exec(source);
+    const notes = notesHeadingOffset(source, match.index + match[0].length);
     const updated =
-      notes === null
+      notes === undefined
         ? `${source.replace(/\s*$/, '')}${eol}${eol}${section}`
-        : source.slice(0, notes.index) + section + eol + source.slice(notes.index);
+        : source.slice(0, notes) + section + eol + source.slice(notes);
 
     await writeFile(path, updated, 'utf8');
     return true;
@@ -403,6 +410,35 @@ function hasHeading(source: string, heading: string): boolean {
   return new RegExp(`^##+ +${words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[ \\t]*$`, 'm').test(
     source,
   );
+}
+
+/**
+ * Where the body's `## Notes` heading starts, as an offset into `source`, or
+ * `undefined` when the body has none.
+ *
+ * Read from `bodyStart` on, a line at a time, at level 2 only and outside code
+ * fences — `atxHeading` and `fenceOpener`, the extractor's own predicates. A
+ * search of the whole file used to match a `## Notes` YAML comment in the
+ * frontmatter, which put provider lines among the properties, and a
+ * `### Notes` subheading inside the Thoughts, which put `## About` inside the
+ * published section and cut the owner's later Thoughts from it.
+ */
+function notesHeadingOffset(source: string, bodyStart: number): number | undefined {
+  let offset = bodyStart;
+  let open: FenceOpener | undefined;
+
+  for (const line of source.slice(bodyStart).split('\n')) {
+    const bare = line.replace(/\r$/, '');
+    if (open !== undefined) {
+      if (closesFence(bare, open)) open = undefined;
+    } else {
+      open = fenceOpener(bare);
+      const heading = open === undefined ? atxHeading(bare) : undefined;
+      if (heading?.level === 2 && heading.text === 'Notes') return offset;
+    }
+    offset += line.length + 1;
+  }
+  return undefined;
 }
 
 /** Quotes only what YAML would otherwise misread. */

@@ -5,10 +5,11 @@ import { FRONTMATTER_BLOCK } from '../frontmatter.ts';
  *
  * Invariant 2's split, as built. A note's body stays private except for one
  * allowlisted section, `## Thoughts`, which ships as a list of plain-text
- * paragraphs in `notes/<id>.json`. This module finds that section and strips
- * it; `ObsidianAdapter.readPublicSection` is its only caller, so the rest of
- * the body never leaves `adapters/`
+ * paragraphs in `notes/<id>.json`. `extractThoughts` finds that section and
+ * strips it, and `ObsidianAdapter.readPublicSection` is its only caller, so the
+ * rest of the body never leaves `adapters/`
  * ([ADR-0100](../../../../docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md)).
+ * `disarmBodyText` is this module's other export, for the `## About` writer.
  *
  * **Every rule fails closed.** A shape the extractor cannot vouch for withholds
  * the whole section rather than shipping what a strip got wrong: a section that
@@ -76,6 +77,8 @@ export function atxHeading(line: string): AtxHeading | undefined {
 export interface FenceOpener {
   readonly char: '`' | '~';
   readonly length: number;
+  /** The info string after the run, trimmed: `''` for a bare fence. */
+  readonly info: string;
 }
 
 /**
@@ -89,12 +92,23 @@ export function fenceOpener(line: string): FenceOpener | undefined {
   if (match === null) return undefined;
   const run = match[1] ?? '';
   const char = run.startsWith('`') ? '`' : '~';
-  if (char === '`' && (match[2] ?? '').includes('`')) return undefined;
-  return { char, length: run.length };
+  const info = match[2] ?? '';
+  if (char === '`' && info.includes('`')) return undefined;
+  return { char, length: run.length, info: info.trim() };
 }
 
+/**
+ * The info strings a fenced block may carry and still ship: none, or plain
+ * text. Anything else may be rendered rather than shown — Obsidian's `query`,
+ * Dataview, Tasks, Mermaid — so reading view shows output while the source,
+ * which can name private folders, tags or notes, would ship. Withheld rather
+ * than listed one plugin at a time, because the list of renderers is the
+ * owner's plugins, which this file cannot see.
+ */
+const PLAIN_FENCE_INFO: ReadonlySet<string> = new Set(['', 'text', 'txt', 'plain', 'plaintext']);
+
 /** Whether `line` closes the fence `open` opened: the same character, at least as long, nothing after. */
-function closesFence(line: string, open: FenceOpener): boolean {
+export function closesFence(line: string, open: FenceOpener): boolean {
   const match = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(line);
   const run = match?.[1];
   return run !== undefined && run.startsWith(open.char) && run.length >= open.length;
@@ -107,8 +121,35 @@ const SETEXT_UNDERLINE = /^ {0,3}(?:=+|-+)[ \t]*$/;
  * A comment marker: `%%`, an HTML comment's opener, or either of its closers.
  * HTML ends a comment at `--!>` as well as `-->`, so both close one, and a
  * marker list that knew only `-->` would miss a comment the browser closed.
+ *
+ * ⚠️ **Kept apart from its twin deliberately; move one and move the other.**
+ * `COMMENT_MARKER` in `scripts/lib/public-build.ts` is the inspector's copy,
+ * the backstop that refuses a published file holding one. A shared import
+ * would let a one-line weakening clear the extractor and the deploy check at
+ * once, `DERIVED_KEYS`'s reason.
  */
 const COMMENT_MARKER = /%%|<!--|--!?>/;
+
+/**
+ * The start of raw HTML: `<` followed by a letter, `/`, `!` or `?`.
+ *
+ * No closing `>` is required, because a tag's `>` can sit on a later line and
+ * the declaration, processing-instruction and CDATA forms (`<!X`, `<?`,
+ * `<![CDATA[`) hide text in reading view too. `a < b` does not match.
+ */
+const HTML_START = /<[A-Za-z/!?]/;
+
+/**
+ * A line ending other than LF or CRLF: a lone CR, or a Unicode line or
+ * paragraph separator.
+ *
+ * CommonMark ends a line at a lone CR, and a U+2028 inside a heading line
+ * defeats `atxHeading`'s `.`; either way the scan would miss the heading that
+ * starts the private remainder and run on into it. Any one in the body
+ * withholds the section rather than teach every pattern here a second line
+ * ending (#411's review reproduced the leak through a public build).
+ */
+const ODD_LINE_ENDING = /\r(?!\n)|[\u2028\u2029]/;
 
 /**
  * Anything Obsidian hides, or that names a file, anywhere in the section.
@@ -119,8 +160,9 @@ const COMMENT_MARKER = /%%|<!--|--!?>/;
  */
 const HIDDEN: readonly { readonly reason: string; readonly pattern: RegExp }[] = [
   { reason: 'it holds a comment marker (%%, <!--, --> or --!>)', pattern: COMMENT_MARKER },
-  { reason: 'it embeds a file or an image', pattern: /!\[\[|!\[[^\]\n]*\]\(/ },
-  { reason: 'it holds an HTML tag', pattern: /<\/?[A-Za-z][^>\n]*>/ },
+  // Any `![`: inline, reference-style or shortcut, an image is an embed.
+  { reason: 'it embeds a file or an image', pattern: /!\[/ },
+  { reason: 'it holds HTML', pattern: HTML_START },
   {
     reason: 'it holds a link reference or footnote definition',
     pattern: /^ {0,3}\[[^\]\n]+\]:/m,
@@ -146,19 +188,23 @@ export function extractThoughts(source: string): ThoughtsResult {
   const frontmatter = FRONTMATTER_BLOCK.exec(source);
   if (frontmatter === null) return { kind: 'absent' };
 
-  const lines = source.slice(frontmatter.index + frontmatter[0].length).split(/\r?\n/);
+  const body = source.slice(frontmatter.index + frontmatter[0].length);
+  const lines = body.split(/\r?\n/);
   const starts = sectionStarts(lines);
 
   const first = starts[0];
   if (first === undefined) return { kind: 'absent' };
+  if (ODD_LINE_ENDING.test(body))
+    return withheld('the note holds a line ending other than a newline');
   if (starts.length > 1) return withheld('the note has two `## Thoughts` headings');
 
-  // A comment open where the section starts makes its heading no heading, and a
-  // marker inside a fence above it is read differently by Obsidian than by a
-  // scan. Rather than guess which, any marker above the section withholds it.
-  if (COMMENT_MARKER.test(lines.slice(0, first).join('\n'))) {
-    return withheld('a comment marker sits above the section');
-  }
+  // A comment or an HTML block open where the section starts can make its
+  // heading no heading, or hide the section in reading view, and a marker
+  // inside a fence above it is read differently by Obsidian than by a scan.
+  // Rather than guess which, any such marker above the section withholds it.
+  const above = lines.slice(0, first).join('\n');
+  if (COMMENT_MARKER.test(above)) return withheld('a comment marker sits above the section');
+  if (HTML_START.test(above)) return withheld('HTML sits above the section');
 
   const bounded = sectionLines(lines, first + 1);
   if (typeof bounded === 'string') return withheld(bounded);
@@ -179,9 +225,17 @@ export function extractThoughts(source: string): ThoughtsResult {
 }
 
 /**
- * Disarms provider text before it is written into a note's body: every line
- * `atxHeading` or `fenceOpener` would recognise gains a backslash before its
- * first mark, so it reads as neither.
+ * Disarms provider text before it is written into a note's body.
+ *
+ * - **Every line ending becomes LF** — CRLF, a lone CR, U+2028 and U+2029 — so
+ *   a line the extractor reads is the line this disarms.
+ * - **Every line `atxHeading` or `fenceOpener` would recognise gains a
+ *   backslash** before its first mark, so it reads as neither.
+ * - **`<`, `>` and `%%` become entities**, so a description cannot carry a live
+ *   comment or HTML block. `toPlainText` decodes `&lt;` after stripping tags,
+ *   so escaped markup in a listing would otherwise arrive live, and on a note
+ *   whose `## Notes` sits above its Thoughts it would land above the section
+ *   and withhold it, or hide it in reading view.
  *
  * A description's line breaks survive `toPlainText`, so a listing line reading
  * `## Thoughts` would otherwise land at column 0 — shipping a stranger's words
@@ -191,9 +245,13 @@ export function extractThoughts(source: string): ThoughtsResult {
  */
 export function disarmBodyText(text: string): string {
   return text
+    .replace(/\r\n?|[\u2028\u2029]/g, '\n')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/%%/g, '%&#37;')
     .split('\n')
     .map((line) =>
-      atxHeading(line) === undefined && fenceOpener(line.replace(/\r$/, '')) === undefined
+      atxHeading(line) === undefined && fenceOpener(line) === undefined
         ? line
         : line.replace(/^( *)/, '$1\\'),
     )
@@ -228,14 +286,18 @@ function sectionStarts(lines: readonly string[]): number[] {
  * The section's lines, from `from` to the next `#` or `##` heading or the end,
  * or the reason it must be withheld.
  *
- * Three boundary shapes withhold, because each is a place the boundary could
- * run on into the private remainder (spec §3.1):
+ * Four boundary shapes withhold, because each is a place the boundary could
+ * run on into the private remainder, or show something other than what ships
+ * (spec §3.1):
  *
  * - a fence still open at the end of the file;
- * - a fenced line shaped like a section-ending heading — wider than "a fence
- *   open at the next heading", since a fence the section opened and the private
- *   part closed is balanced and would pass an end-of-file check;
- * - a setext heading, which Obsidian renders as a heading the scan does not know.
+ * - a fenced line shaped like a section-ending heading, or a setext underline
+ *   under a fenced line — wider than "a fence open at the next heading", since a
+ *   fence the section opened and the private part closed is balanced and would
+ *   pass an end-of-file check, and a fence opened inside a list item ends with
+ *   the item under CommonMark while this scan keeps it open;
+ * - a setext heading, which Obsidian renders as a heading the scan does not know;
+ * - a fence whose info string is not plain text (`PLAIN_FENCE_INFO`).
  */
 function sectionLines(lines: readonly string[], from: number): string[] | string {
   const section: string[] = [];
@@ -246,6 +308,8 @@ function sectionLines(lines: readonly string[], from: number): string[] | string
       if (closesFence(line, open)) {
         open = undefined;
       } else if ((atxHeading(line)?.level ?? 3) <= 2) {
+        return 'a code fence in it holds a line shaped like a heading';
+      } else if (SETEXT_UNDERLINE.test(line) && isParagraphLine(section.at(-1))) {
         return 'a code fence in it holds a line shaped like a heading';
       }
       section.push(line);
@@ -259,6 +323,9 @@ function sectionLines(lines: readonly string[], from: number): string[] | string
       return 'it holds a setext heading';
     }
     open = fenceOpener(line);
+    if (open !== undefined && !PLAIN_FENCE_INFO.has(open.info.toLowerCase())) {
+      return 'it holds a code block Obsidian may render rather than show';
+    }
     section.push(line);
   }
 
@@ -308,9 +375,12 @@ function toParagraphs(section: readonly string[]): string[] {
   return paragraphs.filter((paragraph) => paragraph.trim() !== '');
 }
 
-/** Private-use characters standing in for escaped ones while marks are stripped. */
-const ESCAPE_OPEN = '';
-const ESCAPE_CLOSE = '';
+/**
+ * Private-use characters, U+E000 and U+E001, standing in for escaped ones while
+ * marks are stripped. Built from code points so neither is invisible here.
+ */
+const ESCAPE_OPEN = String.fromCodePoint(0xe000);
+const ESCAPE_CLOSE = String.fromCodePoint(0xe001);
 
 /** One line, its block marks and inline marks removed, its words kept. */
 function stripLine(line: string): string {

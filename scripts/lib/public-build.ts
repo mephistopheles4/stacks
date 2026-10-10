@@ -209,16 +209,24 @@ const MAX_NOTES_FILE_BYTES = 40_000;
 const URL_SCHEME = /:\/\/|\b(?:file|obsidian|mailto):/i;
 
 /**
- * A comment marker in a notes file: `%%`, `<!--`, or either HTML closer.
+ * A comment or declaration marker in a notes file: `%%`, `<!` (a comment, a
+ * declaration or CDATA), `<?` (a processing instruction), or either HTML
+ * comment closer.
  *
  * The extractor withholds any section holding one, so a correct build never
  * ships a marker and this refuses nothing real. It is the byte cap's reasoning
  * applied to hidden text: a bug that bypassed the extractor's check would
  * otherwise publish an aside the owner never saw on screen. Added on #411 by
- * owner decision, from #410's review; bare home paths and "File:" prose were
- * left as the spec has them, since either would move the extractor too.
+ * owner decision, from #410's review, and widened to `<!` and `<?` by #411's
+ * own review; bare home paths and "File:" prose were left as the spec has
+ * them, since either would move the extractor too.
+ *
+ * ⚠️ **Kept apart from its twin deliberately; move one and move the other.**
+ * `COMMENT_MARKER` and `HTML_START` in
+ * `packages/core/src/adapters/thoughts-section.ts` are the extractor's rules;
+ * a shared import would let one weakening clear both, `DERIVED_KEYS`'s reason.
  */
-const COMMENT_MARKER = /%%|<!--|--!?>/;
+const COMMENT_MARKER = /%%|<[!?]|--!?>/;
 
 /** The committed share card, and the only image a page may point at. */
 const SHARE_IMAGE_FILE = 'og.png';

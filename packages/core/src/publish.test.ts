@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import sharp, { type Sharp } from 'sharp';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ObsidianAdapter } from './adapters/obsidian-adapter.ts';
+import type { VaultAdapter } from './adapters/vault-adapter.ts';
 import { MAX_COVER_EDGE } from './covers/cover-budget.ts';
 import { publish } from './publish.ts';
 import { FIXTURE_VAULT, spyOnWarn, type WarnSpy } from './test-support.ts';
@@ -273,7 +274,48 @@ describe('publish — the notes stage', () => {
     await build(true);
 
     expect(await notesFiles()).toEqual(['theirs.json']);
-    expect(warn.lines.join('\n')).toMatch(/notes/);
+    // The message's own words, not the folder path: the temp folder's name
+    // holds "notes" too, so matching that would check nothing.
+    expect(warn.lines.join('\n')).toMatch(
+      /Leaving it alone — notes from this build were still written/,
+    );
+  });
+
+  it('skips a note it cannot read, with a warning, and still writes the rest', async () => {
+    // Invariant 3: a note deleted or locked between `listBooks` and the second
+    // read must cost its own Thoughts, never the build.
+    await note('Gone.md', ['title: Gone'], '## Thoughts', '', 'Unreachable.');
+    await note('Kept.md', ['title: Kept'], '## Thoughts', '', 'Reachable.');
+    const real = new ObsidianAdapter(vaultPath);
+    const flaky: VaultAdapter = {
+      listBooks: () => real.listBooks(),
+      writeBook: (book) => real.writeBook(book),
+      updateBook: (path, changes) => real.updateBook(path, changes),
+      insertBodySection: (path, heading, text) => real.insertBodySection(path, heading, text),
+      bookExists: (isbn, titleAuthor) => real.bookExists(isbn, titleAuthor),
+      coverDir: () => real.coverDir(),
+      readPublicSection: (path) =>
+        path.endsWith('Gone.md')
+          ? Promise.reject(new Error('EBUSY'))
+          : real.readPublicSection(path),
+    };
+
+    const result = await publish(await real.listBooks(), flaky, assets, { isPublic: true });
+
+    expect(result.notesWritten).toBe(1);
+    expect(result.library.books.filter((b) => b.thoughts === true).map((b) => b.title)).toEqual([
+      'Kept',
+    ]);
+    expect(warn.lines.join('\n')).toMatch(/Library\/Gone\.md — the note could not be read/);
+    expect(warn.lines.join('\n')).not.toMatch(/EBUSY|Unreachable/);
+  });
+
+  it('counts the notes files it wrote', async () => {
+    await note('A.md', ['title: A'], '## Thoughts', '', 'One.');
+    await note('B.md', ['title: B'], '## Thoughts', '', 'Two.');
+    await note('C.md', ['title: C'], '## Notes', 'none');
+
+    expect((await build(true)).notesWritten).toBe(2);
   });
 
   it('prunes files only, never a folder', async () => {

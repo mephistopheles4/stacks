@@ -88,6 +88,71 @@ describe('readPublicSection', () => {
     expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
   });
 
+  it('puts `## About` in the body even when the frontmatter holds a `## Notes` comment', async () => {
+    await mkdir(join(dir, 'Library'), { recursive: true });
+    const path = 'Library/Y.md';
+    const contents = [
+      '---',
+      'type: book',
+      '## Notes',
+      'title: Y',
+      '---',
+      '',
+      '## Thoughts',
+      '',
+      'Mine.',
+      '',
+    ];
+    await writeFile(join(dir, path), contents.join('\n'), 'utf8');
+
+    await vault.insertBodySection(path, '## About', 'title: Not Yours');
+    const written = await readFile(join(dir, path), 'utf8');
+
+    expect(written.indexOf('## About')).toBeGreaterThan(written.lastIndexOf('---'));
+    expect((await vault.listBooks()).map((book) => book.title)).toEqual(['Y']);
+    expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
+  });
+
+  it('puts `## About` above `## Notes`, never above a `### Notes` inside the Thoughts', async () => {
+    const path = await note(
+      'Z',
+      '## Thoughts',
+      '',
+      'First.',
+      '',
+      '### Notes',
+      '',
+      'Later.',
+      '',
+      '## Notes',
+      '',
+      CANARY,
+    );
+    await vault.insertBodySection(path, '## About', 'A blurb.');
+
+    expect(await vault.readPublicSection(path)).toEqual(['First.', 'Notes', 'Later.']);
+  });
+
+  it('writes a description split by lone CRs disarmed, so it opens no section', async () => {
+    const CR = String.fromCharCode(13);
+    const path = await note('H', '## Notes', '', 'Private.');
+    await vault.insertBodySection(path, '## About', ['A blurb.', '## Thoughts', CANARY].join(CR));
+    const written = await readFile(join(dir, path), 'utf8');
+
+    expect(written).toContain('\\## Thoughts');
+    expect(written).not.toContain(CR);
+    expect(await vault.readPublicSection(path)).toBeUndefined();
+  });
+
+  it('leaves the owner’s Thoughts shipping below a description holding markup', async () => {
+    // Notes above Thoughts, the shape an older hand-made note can have, so the
+    // description lands above the section.
+    const path = await note('M', '## Notes', '', 'Private.', '', '## Thoughts', '', 'Mine.');
+    await vault.insertBodySection(path, '## About', 'A <!-- comment and <script> and %%aside%%.');
+
+    expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
+  });
+
   describe('a description carrying a `## Thoughts` line and an unclosed fence', () => {
     const description = [
       'A provider blurb.',

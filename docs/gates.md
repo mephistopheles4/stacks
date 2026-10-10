@@ -1463,43 +1463,59 @@ in a permitted field passes by construction, and a filename is never read at all
 Step 1 of [`docs/spec/picking-a-book-up.md`](spec/picking-a-book-up.md)
 ([#410](https://github.com/mephistopheles4/stacks/issues/410)), on
 [#367](https://github.com/mephistopheles4/stacks/issues/367)'s decisions. A
-note's `## Thoughts` ships as `notes/<id>.json`, and **this landed first**, so
-the extractor was written against a gate rather than the other way round. Step 2
-([#411](https://github.com/mephistopheles4/stacks/issues/411)) armed the
-presence half and rewrote G2's row text to the split; no row is added. Step 2's
-own changes follow the list below.
+note's `## Thoughts` ships as `notes/<id>.json`, and **the gate landed first**,
+so the extractor was written against a gate rather than the other way round.
+Step 2 ([#411](https://github.com/mephistopheles4/stacks/issues/411)) armed the
+presence half and rewrote G2's row text to the split; no row was added. What
+step 1 landed comes first, in the past tense, then step 2.
 
-- **The presence half is `it.fails`**, vitest's alias for the `test.fails` the
-  spec names, in a public and a local build. It reads the split book's
-  `notes/<id>.json` and requires the ship phrase in it. Today there is no file,
-  so it is recorded as an expected failure on every run. The extractor makes it
-  pass, which turns it red by itself, and the pull request that adds the
-  extractor flips `it.fails` to `it`. Nothing relies on somebody remembering to
-  arm it.
-- **`it.fails` passes on any failure**, so one armed test and a six-test
-  vacuity guard stand beside it. The test: the split book ships with an id in
+**Step 1, the gate:**
+
+- **The presence half landed as `it.fails`**, vitest's alias for the
+  `test.fails` the spec names, in a public and a local build. It read the split
+  book's `notes/<id>.json` and required the ship phrase in it. With no extractor
+  there was no file, so it was recorded as an expected failure on every run, and
+  the extractor was to turn it red by itself. Nothing relied on somebody
+  remembering to arm it.
+- **`it.fails` passes on any failure**, so one armed test and a vacuity guard
+  stood beside it, and still do. The test: the split book ships with an id in
   both builds. The guard: each planted case is still in the fixtures, and the
   books whose case is about the section — the split, the embed, the unclosed
   fence, no Thoughts — are books a public build ships, so none of them can go
   quiet by turning private. Measured on #367: a `test.fails` reading a deleted
   fixture reports an expected failure.
-- **The absence half is armed now**, in both builds: the canary is in no staged
-  file at all, not only `library.json`; `library.json` carries no sentence of
-  any planted Thoughts section; and `notes/` holds nothing but the split book's
-  file. That last one is a single allowlist for five cases — private, wishlist,
-  an embed, an unclosed fence, no Thoughts — because a filtered book has no id in
-  a public `library.json` to look a file up by. It holds trivially until the
-  extractor writes files.
-- **Two rules join the shared inspector, planted under G20.** `orphan-note`: a
-  file under `notes/` must be named `<id>.json` for a book in the `library.json`
-  beside it — `orphan-cover`'s shape, firing on real bytes where the canary
-  cannot. `notes-shape`: every file is exactly `{ "paragraphs": string[] }`,
-  non-empty, every string non-empty, at most 40,000 bytes counted in bytes, and
-  free of a URL scheme. Its messages count a file's keys and never name them, so
-  a writer that keyed a file by its prose cannot print the prose. ⚠️ **The
-  scheme check names four schemes, not any `word:`** — `://`, `file:`,
-  `obsidian:`, `mailto:`, in any case — because a rule that refuses "Note: …"
-  gets switched off; G20 holds that near miss clean.
+- **The absence half was armed from the start**, in both builds: the canary is
+  in no staged file at all, not only `library.json`; `library.json` carries no
+  sentence of any planted Thoughts section; and `notes/` holds nothing but the
+  split book's file. That last one is a single allowlist for five cases —
+  private, wishlist, an embed, an unclosed fence, no Thoughts — because a
+  filtered book has no id in a public `library.json` to look a file up by. It
+  held trivially until step 2 wrote files.
+- **Two rules joined the shared inspector, planted under G20.** `orphan-note`,
+  in step 1 reading one direction: a file under `notes/` must be named `<id>.json`
+  for a book in the `library.json` beside it — `orphan-cover`'s shape, firing on
+  real bytes where the canary cannot. `notes-shape`: every file is exactly
+  `{ "paragraphs": string[] }`, non-empty, every string non-empty, at most
+  40,000 bytes counted in bytes, and free of a URL scheme. Its messages count a
+  file's keys and never name them, so a writer that keyed a file by its prose
+  cannot print the prose. ⚠️ **The scheme check names four schemes, not any
+  `word:`** — `://`, `file:`, `obsidian:`, `mailto:`, in any case — because a
+  rule that refuses "Note: …" gets switched off; G20 holds that near miss clean.
+
+Observed red in step 1, each by a plant reverted before commit. Writing a valid
+notes file for the split book turned both `it.fails` red with *Expect test to
+fail*, which is the arming. A notes file for the private book reddened the
+allowlist in both builds; a canary written into a staged file reddened the
+absence check; the ship phrase appended to `library.json` reddened its check,
+and so did one sentence of another book's Thoughts; an empty `library.json`
+reddened the precondition. Each guard went red on its own fixture plant: the
+ship phrase removed, the private book's canary removed, the embed removed, the
+fence closed, a Thoughts section added to the no-Thoughts note, and the embed
+book marked private. In G20 the new plants were red before the rules existed,
+and the completeness assertion now holds both rules to a plant. Review then
+added three: a five-character ending other than `.json`, `file:` and
+`obsidian:` without slashes, and a key made of prose; each went red against the
+defect it names.
 
 **Step 2, the extractor**, paid what step 1 said it owed:
 
@@ -1514,17 +1530,20 @@ own changes follow the list below.
   is named for a marked book, every marked book has its file — read even when
   there is no `notes/` folder at all — and a mark that is anything but `true` is
   refused unquoted, since the key trace reads names and never values. G20
-  plants all four; the clean synthetic build gained a marked book and a
+  plants all four, the bad mark on a book with no file so no other clause can
+  answer for it; the clean synthetic build gained a marked book and a
   `/notes/*` block, and every G20 case went red until the inspector learned the
   key.
 - **`headers` requires a revalidating `/notes/*` block**, beside `/covers/*`,
   planted under G20 both absent and stale.
-- **`notes-shape` refuses a comment marker** — `%%`, `<!--`, `-->` or `--!>` —
-  by the owner's decision on #411, from #410's review. The extractor withholds
-  any section holding one, so this refuses nothing a correct build ships; it is
-  the byte cap's reasoning applied to hidden text. G20 plants all four, and the
-  message never quotes what it found. Bare home paths and "File:" prose were left
-  as the spec has them, since either would move the extractor too.
+- **`notes-shape` refuses a comment or declaration marker** — `%%`, `<!`, `<?`,
+  `-->` or `--!>` — by the owner's decision on #411, from #410's review, widened
+  to `<!` and `<?` by #411's own review. The extractor withholds any section
+  holding one, so this refuses nothing a correct build ships; it is the byte
+  cap's reasoning applied to hidden text. G20 plants seven forms, each red
+  before its clause, and the message never quotes what it found. Bare home
+  paths and "File:" prose were left as the spec has them, since either would
+  move the extractor too.
 - **The private duplicate** — same title, same ISBN, so the same id — is a
   `publish()` unit test in both builds: only a book `isPublishable` admits is
   ever read, and an id two publishable books share gets no file at all.
@@ -1534,22 +1553,36 @@ own changes follow the list below.
   split fixture's heading renamed, and the stage made to write nothing.
 - **G5** holds `packages/site/public/notes/` ignored; observed red before the
   `.gitignore` line. **G11** names `thoughts` as a documented difference: the
-  plain local index stages nothing, so it marks nothing. **G30** traces the key
-  with the stage's mark set, so it cannot pass by the key never appearing.
+  plain local index stages nothing, so it marks nothing; `orphan-note`'s
+  bad-mark clause is what watches the value. **G30** traces the key with the
+  stage's mark set, so it cannot pass by the key never appearing.
 
-Observed red, in step 1, each by a plant reverted before commit. Writing a valid notes file
-for the split book turned both `it.fails` red with *Expect test to fail*, which
-is the arming. A notes file for the private book reddened the allowlist in both
-builds; a canary written into a staged file reddened the absence check; the ship
-phrase appended to `library.json` reddened its check, and so did one sentence of
-another book's Thoughts; an empty `library.json` reddened the precondition. Each
-guard went red on its own fixture plant: the ship phrase removed, the private
-book's canary removed, the embed removed, the fence closed, a Thoughts section
-added to the no-Thoughts note, and the embed book marked private. In G20 the new
-plants were red before the rules existed, and the completeness assertion now
-holds both rules to a plant. Review then added three: a five-character ending
-other than `.json`, `file:` and `obsidian:` without slashes, and a key made of
-prose; each went red against the defect it names.
+**Step 2's review**, the move-4 lenses on #415, reproduced a leak through a
+public build: a lone CR, or a Unicode line separator on the `## Notes` line,
+hid the heading from the scan, and the private remainder shipped. The owner
+chose to keep going; the extractor's unit tests now hold each fix below, every
+one observed red against the reviewed code before it passed.
+
+- **A line ending other than LF or CRLF anywhere in the body withholds the
+  section** — a lone CR, U+2028 or U+2029 — rather than teach every pattern a
+  second line ending. The `## About` writer turns each into LF before it
+  disarms, so the line it disarms is the line the extractor reads.
+- **More shapes withhold the whole section:** raw HTML by its start alone
+  (`<` and a letter, `/`, `!` or `?`, so a tag split across lines and the
+  declaration, CDATA and processing-instruction forms count); raw HTML anywhere
+  above the section; any image (`![`), reference-style and shortcut included; a
+  fenced block whose info string is not plain text, since Obsidian's `query`,
+  Dataview, Tasks or Mermaid may render it rather than show it; and a setext
+  underline inside a fence, which a fence opened in a list item lets through.
+- **The `## About` writer** turns `<`, `>` and `%%` into entities, so a
+  description cannot land a live comment or HTML block, and finds `## Notes` in
+  the body only, at level 2, outside fences.
+- **An unreadable note costs its own Thoughts, never the build** (invariant 3),
+  with a warning naming it; `publish()` reports a count of notes files, which
+  `stacks build --public` prints.
+- **The notes stage has a switch**, `PUBLISH_THOUGHTS` in `publish.ts`, which is
+  spec §4's undo: off, it reads nothing and still prunes. See
+  [`docs/commands.md`](commands.md).
 
 ## Where cover art may go
 

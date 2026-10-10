@@ -120,7 +120,18 @@ describe('the section boundary', () => {
   });
 
   it('scans only below the frontmatter', () => {
-    const source = ['---', 'type: book', 'title: "## Thoughts"', '---', '', CANARY, ''].join('\n');
+    // A YAML comment line reading `## Thoughts` is heading-shaped, so a scan that
+    // started at the top of the file would open a section on it.
+    const source = [
+      '---',
+      'type: book',
+      '## Thoughts',
+      'title: A Book',
+      '---',
+      '',
+      CANARY,
+      '',
+    ].join('\n');
     expect(extractThoughts(source)).toEqual({ kind: 'absent' });
   });
 
@@ -192,14 +203,86 @@ describe('code fences', () => {
   it.each([['# a comment'], ['## a heading']])(
     'withholds when a fenced line is shaped like a section-ending heading: %s',
     (line) => {
-      const source = note('## Thoughts', '', '```sh', line, CANARY, '```', '', 'After.');
+      const source = note('## Thoughts', '', '```', line, CANARY, '```', '', 'After.');
       expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
     },
   );
 
-  it('is not closed by a shorter fence or the other character', () => {
-    const source = note('## Thoughts', '', '````', '```', '~~~~', '', '## Notes', CANARY);
+  it('is not closed by a shorter fence', () => {
+    // Nothing after the shorter run is heading-shaped, so only the open fence at
+    // the end of the file can withhold this.
+    const source = note('## Thoughts', '', '````', '```', '', 'After.');
+    expect(extractThoughts(source)).toEqual({
+      kind: 'withheld',
+      reason: 'a code fence in it is never closed',
+    });
+  });
+
+  it('is not closed by the other character', () => {
+    const source = note('## Thoughts', '', '```', '~~~', '', 'After.');
+    expect(extractThoughts(source)).toEqual({
+      kind: 'withheld',
+      reason: 'a code fence in it is never closed',
+    });
+  });
+
+  it('withholds a fence still open at the end of the file', () => {
+    const source = note('## Thoughts', '', 'Before.', '', '```', 'code with no heading after it');
+    expect(extractThoughts(source)).toEqual({
+      kind: 'withheld',
+      reason: 'a code fence in it is never closed',
+    });
+  });
+
+  it.each([
+    ['an info string', '```js'],
+    ['text before the run', 'see ```'],
+    ['text after the run', '``` and more'],
+  ])('is not closed by a closer-shaped line with %s', (_, closer) => {
+    // A fence under `## Notes` that this line wrongly closed would let the fenced
+    // `## Thoughts` below it open a section and ship the canary.
+    const source = note('## Notes', '', '```', closer, '## Thoughts', '', CANARY, '```');
+    expect(extractThoughts(source)).toEqual({ kind: 'absent' });
+  });
+
+  it('opens a tilde fence whose info string holds a backtick', () => {
+    // Only a backtick fence refuses a backtick in its info string.
+    const source = note('## Notes', '', '~~~ a`b', '## Thoughts', '', CANARY, '~~~');
+    expect(extractThoughts(source)).toEqual({ kind: 'absent' });
+  });
+
+  it.each([['dataview'], ['dataviewjs'], ['query'], ['tasks'], ['mermaid'], ['JS']])(
+    'withholds a fenced block tagged %s, which Obsidian may render rather than show',
+    (info) => {
+      const source = note('## Thoughts', '', 'Before.', '', '```' + info, CANARY, '```');
+      expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
+      expectNoCanary(source);
+    },
+  );
+
+  it.each([['text'], ['TXT'], ['plain'], ['plaintext']])(
+    'ships a fenced block tagged %s',
+    (info) => {
+      const source = note('## Thoughts', '', '```' + info, 'as written', '```');
+      expect(shipped(source)).toEqual(['as written']);
+    },
+  );
+
+  it('withholds a setext heading under a fence a list item opened', () => {
+    // CommonMark ends the item, and its fence, at the first unindented line, so
+    // Obsidian shows a new heading here; this scan keeps the fence open.
+    const source = note(
+      '## Thoughts',
+      '',
+      '- an item',
+      '  ```',
+      'Private heading',
+      '===',
+      CANARY,
+      '```',
+    );
     expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
+    expectNoCanary(source);
   });
 
   it('does not open on a backtick run whose info string holds a backtick', () => {
@@ -227,17 +310,107 @@ describe('setext headings', () => {
       'Two.',
     ]);
   });
+
+  it('ships a thematic break under a subheading or a closed fence', () => {
+    const source = note('## Thoughts', '', '### Part', '---', '```', 'x', '```', '---');
+    expect(shipped(source)).toEqual(['Part\n---\nx\n---']);
+  });
+
+  it('ships a line that only ends in a dash', () => {
+    expect(shipped(note('## Thoughts', '', 'One line', 'a dash at the end -'))).toEqual([
+      'One line\na dash at the end -',
+    ]);
+  });
 });
 
 describe('hidden text withholds the whole section', () => {
   it.each([
-    ['an inline `%%` comment', 'Seen %%unseen%% seen.'],
+    ['an inline `%%` comment', `Seen %%${CANARY}%% seen.`],
     ['an unclosed `%%`', `Seen %% ${CANARY}`],
     ['an HTML comment', `Seen <!-- ${CANARY} --> seen.`],
-    ['a stray `-->`', 'Seen --> seen.'],
-    ['a stray `--!>`, which closes a comment too', 'Seen --!> seen.'],
+    ['a stray `-->`', `Seen ${CANARY} --> seen.`],
+    ['a stray `--!>`, which closes a comment too', `Seen ${CANARY} --!> seen.`],
   ])('%s', (_, line) => {
     const source = note('## Thoughts', '', line, '', '## Notes');
+    expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
+    expectNoCanary(source);
+  });
+
+  describe('a line ending other than a newline', () => {
+    // Built from code points: a lone CR and U+2028 are invisible in source, and
+    // one written raw inside a regex or string literal ends the line there.
+    const CR = String.fromCharCode(13);
+    const LS = String.fromCharCode(0x2028);
+    const PS = String.fromCharCode(0x2029);
+
+    // Each `note()` line already ends in LF, so a CR at a line's end makes CRLF,
+    // an ordinary ending; the stray ones here are a CR more than that.
+    it.each([
+      [
+        'lines below the heading separated by lone CRs',
+        note('## Thoughts', ['Kept.', '## Notes', CANARY].join(CR)),
+      ],
+      [
+        'a stray CR before the CRLF on `## Notes`',
+        note('## Thoughts', '', 'Kept.', `## Notes${CR}${CR}`, CANARY),
+      ],
+      ['a line separator on `## Notes`', note('## Thoughts', '', 'Kept.', `## Notes${LS}`, CANARY)],
+      [
+        'a paragraph separator in the section',
+        note('## Thoughts', '', `Kept.${PS}`, '## Notes', CANARY),
+      ],
+      [
+        'a setext underline with a stray CR',
+        note('## Thoughts', '', 'Kept.', 'Private', `===${CR}${CR}`, CANARY),
+      ],
+    ])('withholds %s', (_, source) => {
+      expect(extractThoughts(source)).toEqual({
+        kind: 'withheld',
+        reason: 'the note holds a line ending other than a newline',
+      });
+      expectNoCanary(source);
+    });
+
+    it('finds no section, and ships nothing, when the heading itself is lost in lone CRs', () => {
+      const source = note(['## Thoughts', 'Kept.', '## Notes', CANARY].join(CR));
+      expect(extractThoughts(source)).toEqual({ kind: 'absent' });
+    });
+
+    it('still reads CRLF as an ordinary newline', () => {
+      const source = note('## Thoughts', '', 'Kept.', '', '## Notes', CANARY).replace(
+        /\n/g,
+        `${CR}\n`,
+      );
+      expect(shipped(source)).toEqual(['Kept.']);
+    });
+  });
+
+  it.each([
+    ['a tag whose `>` is on a later line', [`<div`, `hidden>${CANARY}</div>`]],
+    ['a declaration', [`<!DOCTYPE ${CANARY}>`]],
+    ['a processing instruction', [`<?x ${CANARY} ?>`]],
+    ['CDATA', [`<![CDATA[ ${CANARY} ]]>`]],
+  ])('withholds raw HTML: %s', (_, lines) => {
+    const source = note('## Thoughts', '', 'Seen.', ...lines);
+    expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
+    expectNoCanary(source);
+  });
+
+  it('withholds when raw HTML sits directly above the section', () => {
+    // An HTML block opened above the heading can swallow it and hide the
+    // section in reading view while the scan still reads the heading.
+    const source = note('<div hidden>', '## Thoughts', '', CANARY);
+    expect(extractThoughts(source)).toEqual({
+      kind: 'withheld',
+      reason: 'HTML sits above the section',
+    });
+  });
+
+  it.each([
+    ['reference-style', `Look ![${CANARY}][ref] here.`],
+    ['shortcut', `Look ![${CANARY}] here.`],
+  ])('withholds a %s image', (_, line) => {
+    const source = note('## Thoughts', '', line, '', '## Notes', '', '[ref]: x.png');
     expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
     expectNoCanary(source);
   });
@@ -346,6 +519,10 @@ describe('the strip', () => {
     expect(shipped(source)).toEqual(['Bold, also, it, it, code and gone lit.']);
   });
 
+  it('ships a line that starts with strikethrough, which is no fence', () => {
+    expect(shipped(note('## Thoughts', '', '~~struck~~ then kept'))).toEqual(['struck then kept']);
+  });
+
   it('keeps an underscore inside a word', () => {
     expect(shipped(note('## Thoughts', '', 'a snake_case_name stays'))).toEqual([
       'a snake_case_name stays',
@@ -439,5 +616,27 @@ describe('a provider description beside the Thoughts', () => {
   it('leaves text that is neither alone', () => {
     const text = 'Plain.\n#tag and `code`\n    ## indented code';
     expect(disarmBodyText(text)).toBe(text);
+  });
+
+  it('treats every line ending as a newline before it disarms', () => {
+    const CR = String.fromCharCode(13);
+    const LS = String.fromCharCode(0x2028);
+    const description = ['A blurb.', '## Thoughts', '```', 'fenced', '# loud'].join(CR);
+    const disarmed = disarmBodyText(`${description}${LS}## Thoughts`).split('\n');
+
+    expect(disarmed).toEqual([
+      'A blurb.',
+      '\\## Thoughts',
+      '\\```',
+      'fenced',
+      '\\# loud',
+      '\\## Thoughts',
+    ]);
+  });
+
+  it('turns angle brackets and `%%` into entities, so no comment or HTML block lands live', () => {
+    const disarmed = disarmBodyText('A <!-- note --> and <script> and %%aside%%.');
+    expect(disarmed).toBe('A &lt;!-- note --&gt; and &lt;script&gt; and %&#37;aside%&#37;.');
+    expect(disarmed).not.toMatch(/<|%%|-->/);
   });
 });

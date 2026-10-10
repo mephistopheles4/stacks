@@ -277,7 +277,7 @@ timeline editor.
 
 **Public build**:
 A build that assumes an audience: wishlist and private books are dropped, covers
-are re-hosted same-origin, and no note body is parsed at all. The counterpart is
+are re-hosted same-origin, and no note body ships except its Thoughts section. The counterpart is
 a **local build**, which is for you and holds everything.
 *Avoid*: production build, release, deploy (a deploy *uploads* a public build).
 
