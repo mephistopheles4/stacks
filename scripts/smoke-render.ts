@@ -834,7 +834,15 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
   }
   if (withHeld === undefined || withoutHeld === undefined) {
-    console.log(`cover viewer walk: ${String(candidates.length)} covered books, passed over:`);
+    const withCopy = candidates.filter(
+      (index) => coverFor.get(ordered[index]?.title ?? '')?.held !== undefined,
+    ).length;
+    console.log(
+      `cover viewer walk: ${String(candidates.length)} covered books on a shelf of ` +
+        `${String(ordered.length)} (${String(withCopy)} with a held copy, ` +
+        `${String(library.books.filter((b) => b.cover !== undefined).length)} of ` +
+        `${String(library.books.length)} in the library have a cover), passed over:`,
+    );
     for (const line of tried) console.log(`  ${line}`);
   }
   const primary = withHeld ?? withoutHeld;
