@@ -765,6 +765,9 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
   // runs under reduced motion.
   const ordered = shelfOrder(library.books);
   const candidates = ordered.flatMap((book, index) => (coverFor.has(book.title) ? [index] : []));
+  // Why each candidate was passed over, printed when a kind is missing, so a red
+  // run names the book and the reason rather than only "not found".
+  const tried: string[] = [];
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
   try {
     for (const index of candidates) {
@@ -773,10 +776,14 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
       const kind = coverFor.get(ordered[index]?.title ?? '');
       if (kind?.held === undefined ? withoutHeld !== undefined : withHeld !== undefined) continue;
       await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
-      if (!(await until(page, HELD))) continue;
+      if (!(await until(page, HELD))) {
+        tried.push(`${String(index)} ${ordered[index]?.title ?? ''}: never came to rest`);
+        continue;
+      }
       const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
       // Fails closed when the index did not name the book it was computed for.
       if (title !== ordered[index]?.title) {
+        tried.push(`${String(index)} ${ordered[index]?.title ?? ''}: held ${title ?? 'nothing'}`);
         await putBackAndSettle(page);
         continue;
       }
@@ -784,6 +791,7 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
       const hasControl = (await page.evaluate(
         `document.querySelector('.held-page-right .card-cover') !== null`,
       )) as boolean;
+      if (!hasControl) tried.push(`${String(index)} ${title}: no cover control on its page`);
       const wanted =
         expected !== undefined &&
         (expected.held === undefined ? withoutHeld === undefined : withHeld === undefined);
@@ -824,6 +832,10 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
     }
   } finally {
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+  }
+  if (withHeld === undefined || withoutHeld === undefined) {
+    console.log(`cover viewer walk: ${String(candidates.length)} covered books, passed over:`);
+    for (const line of tried) console.log(`  ${line}`);
   }
   const primary = withHeld ?? withoutHeld;
   return primary === undefined
