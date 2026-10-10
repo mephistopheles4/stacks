@@ -10,12 +10,9 @@ import { FRONTMATTER_BLOCK } from '../frontmatter.ts';
  * Invariant 2's split, as built. A note's body stays private except for one
  * allowlisted section, `## Thoughts`, which ships as a list of plain-text
  * paragraphs in `notes/<id>.json`. `extractThoughts` finds that section and
- * strips it. `ObsidianAdapter.readPublicSection` is the only caller that hands
- * its text on; `insertBodySection` also calls it, before and after a write, and
- * keeps only whether the two reads agree. So the rest of the body never leaves
- * `adapters/`
- * ([ADR-0100](../../../../docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md),
- * narrowed by spec §3.1.3's D16).
+ * strips it, and `ObsidianAdapter.readPublicSection` is its only caller, so
+ * the rest of the body never leaves `adapters/`
+ * ([ADR-0100](../../../../docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md)).
  *
  * **The body is read by `micromark`'s tokenizer**, and ADR-0106's allowlist
  * applies to its tokens: where the section starts and ends, and which blocks
@@ -35,8 +32,8 @@ import { FRONTMATTER_BLOCK } from '../frontmatter.ts';
  * the extractor cannot read `## Notes` differently — its check for an existing
  * `## About` is a separate, file-wide test in the adapter — `disarmBodyText`
  * disarms what it writes, by hand predicates that read wider than CommonMark —
- * the safe direction for text being written — and `plainSection` parses what
- * it would write, on its own, for anything the disarm missed.
+ * the safe direction for text being written — and `quoteBodyText` writes it
+ * as a quote, which withholds the Thoughts if it ever joins them.
  *
  * **Every rule fails closed.** A shape the extractor cannot vouch for withholds
  * the whole section rather than shipping what a strip got wrong: a section that
@@ -50,7 +47,8 @@ import { FRONTMATTER_BLOCK } from '../frontmatter.ts';
  *
  * ⚠️ **`## About` must never be the section.** The merge writes a provider's
  * description there, through `insertBodySection`, and that text goes through
- * `disarmBodyText` below so it can never open a section of its own.
+ * `disarmBodyText` and `quoteBodyText` below so it can never open a section of
+ * its own, nor ship if its heading is lost.
  */
 
 /** The heading text, matched exactly and case-sensitively, at level 2. */
@@ -135,6 +133,15 @@ const HTML_START = /<[A-Za-z/!?]/;
  * build).
  */
 const ODD_LINE_ENDING = /\r(?!\n)|[\u2028\u2029]/;
+
+/**
+ * Whether `source` holds a line ending other than LF or CRLF: step 2's test,
+ * shared with the `## About` writer, which refuses such a note, so the two
+ * cannot test differently.
+ */
+export function oddLineEnding(source: string): boolean {
+  return ODD_LINE_ENDING.test(source);
+}
 
 /**
  * A URL scheme left in the text after links flatten: an address the
@@ -372,22 +379,30 @@ function headingOf(block: Block): { level: number; text: string; setext: boolean
  * excludes the frontmatter (the caller passes the body), fenced lines,
  * subheadings, and headings inside a list item or a quote.
  *
- * A body over `MAX_BODY_CODE_POINTS` is not parsed, and neither is any body
- * when `micromark`'s development build loaded, since that build can trace the
- * whole note: either way it reads as having none. The writer never acts on
- * that answer, since it refuses a note whose Thoughts are withheld, which both
- * cases are (N75, N81); with no `## Notes` otherwise, it appends, as on a
- * hand-made note.
+ * **It throws, with a fixed message holding no note text**, when
+ * `micromark`'s development build loaded, checked before any call into it,
+ * since that build can trace the whole note, and when the parse and the text
+ * disagree on where the heading is, as a leading byte-order mark makes them.
+ * The writer refuses the write either way, rather than placing it wrong
+ * (#424, N92, N94). A body over `MAX_BODY_CODE_POINTS` is not parsed and
+ * reads as having none; the note the writer would build is over the cap too,
+ * so it refuses that write as well (N75).
  */
 export function notesHeadingAt(body: string): number | undefined {
-  if (!LOADED_DEFAULT_BUILD || bodyOverCap(body)) return undefined;
+  if (!LOADED_DEFAULT_BUILD) {
+    throw new Error('micromark loaded its development build, so `## Notes` was not looked for');
+  }
+  if (bodyOverCap(body)) return undefined;
   const notes = rootBlocks(parseBody(body)).find((block) => {
     const heading = headingOf(block);
     return heading?.setext === false && heading.level === 2 && heading.text === 'Notes';
   });
   if (notes === undefined) return undefined;
-  const at = notes.token.start.offset;
-  return at === 0 ? 0 : body.lastIndexOf('\n', at - 1) + 1;
+  const { start, end } = notes.token;
+  if (body.slice(start.offset, end.offset) !== notes.context.sliceSerialize(notes.token)) {
+    throw new Error('the parse and the text disagree on where `## Notes` is');
+  }
+  return start.offset === 0 ? 0 : body.lastIndexOf('\n', start.offset - 1) + 1;
 }
 
 /**
@@ -427,8 +442,7 @@ export function extractThoughts(source: string): ThoughtsResult {
   // 2. Line endings and size, on raw text. The whole source, frontmatter
   // included: if Obsidian drew the properties block's edge differently, a stray
   // ending there would be body to it.
-  if (ODD_LINE_ENDING.test(source))
-    return withheld('the note holds a line ending other than a newline');
+  if (oddLineEnding(source)) return withheld('the note holds a line ending other than a newline');
   const body = source.slice(frontmatter.index + frontmatter[0].length);
   if (bodyOverCap(body)) {
     return withheld(
@@ -734,7 +748,9 @@ function outputCheck(paragraph: string): void {
  *   description, so a mid-line run or a `$$` would withhold the owner's
  *   section, and a provider's `[^x]:` would turn the owner's `[^x]` into a
  *   footnote call (spec §3.1.1, D9). Encoding the run is also what disarms a
- *   fence opener.
+ *   fence opener. **So does the `[` of every `![`**, so no description
+ *   embeds a remote image that Obsidian would fetch when the note is opened
+ *   (#424, D23).
  * - **Every line `atxHeading` reads as a heading, behind list markers too, and
  *   every setext underline gains a backslash** before its first mark, so it
  *   reads as neither, and **a `[` that opens a line becomes a character
@@ -755,42 +771,23 @@ export function disarmBodyText(text: string): string {
     .replace(/`{3,}|~{3,}/g, (run) => run.replace(/`/g, '&#96;').replace(/~/g, '&#126;'))
     .replace(/\$/g, '&#36;')
     .replace(/\[\^/g, '&#91;^')
+    .replace(/!\[/g, '!&#91;')
     .split('\n')
     .map(disarmLine)
     .join('\n');
 }
 
-/** What a written section may not parse to, after its own heading. */
-const NOT_PLAIN = new Set([
-  'atxHeading',
-  'setextHeading',
-  'definition',
-  'gfmFootnoteDefinition',
-  'htmlFlow',
-  'htmlText',
-  'codeFenced',
-]);
-
 /**
- * Whether a section, as `insertBodySection` writes it — its heading, a blank
- * line and its text — parses to that heading and nothing else that could
- * open, end or change a section: no other heading, no link or footnote
- * definition, no HTML and no fenced code, anywhere, list items included.
- *
- * The writer's check on its own text, parsed alone, so it needs no list of
- * shapes and sees one that lies inert in this note until the owner adds a
- * `## Thoughts` beside it (round 6 of #411's review, N82). Under the
- * development build nothing is parsed, and nothing reads as plain.
+ * Disarmed text as one block quote: each line behind `> `, an empty one a
+ * bare `>`, so the quote never ends inside it. A quote in the Thoughts
+ * withholds them, so a description whose `## About` heading is demoted or
+ * deleted withholds rather than shipping as the owner's words (#424, D20).
  */
-export function plainSection(heading: string, text: string): boolean {
-  if (!LOADED_DEFAULT_BUILD) return false;
-  let headings = 0;
-  for (const [kind, token] of parseBody(`${heading}\n\n${text}\n`)) {
-    if (kind !== 'enter') continue;
-    if (token.type === 'atxHeading') headings++;
-    else if (NOT_PLAIN.has(token.type)) return false;
-  }
-  return headings === 1;
+export function quoteBodyText(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => (line === '' ? '>' : `> ${line}`))
+    .join('\n');
 }
 
 /**

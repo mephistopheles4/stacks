@@ -10,9 +10,9 @@ import {
   extractThoughts,
   MAX_BODY_CODE_POINTS,
   notesHeadingAt,
+  oddLineEnding,
   overBodyCap,
-  plainSection,
-  type ThoughtsResult,
+  quoteBodyText,
 } from './thoughts-section.ts';
 import type { FrontmatterChanges, VaultAdapter } from './vault-adapter.ts';
 
@@ -21,8 +21,10 @@ import type { FrontmatterChanges, VaultAdapter } from './vault-adapter.ts';
  * longest real `## About`, 2,605 code points, measured on #411. A description
  * over it is not written, because provider text lands in the body the
  * extractor parses (round 4 of #411's review; the owner's choice). It counts
- * the text as written, after the disarm, which can make it five times longer,
- * so a description never takes more than this share of the body cap (round 6).
+ * the text as it lands in the file — disarmed, which can make it five times
+ * longer, quoted, and joined with the note's own line ending — so a
+ * description never takes more than this share of the body cap (round 6; #424,
+ * D22).
  */
 export const MAX_DESCRIPTION_CODE_POINTS = 8_000;
 
@@ -167,39 +169,27 @@ export class ObsidianAdapter implements VaultAdapter {
       return false;
     };
 
-    // Disarmed before it lands: provider prose keeps its line breaks, so a
-    // listing line reading `## Thoughts` or an unclosed fence would otherwise
-    // open a published section, or carry `## Notes` out of one (spec §4).
-    const disarmed = disarmBodyText(body);
+    // 1. A lone CR, U+2028 or U+2029, before any parse: `## Notes`'s line
+    // start is found by searching back for an LF, which would land among the
+    // owner's Thoughts. The extractor withholds such a note anyway (#424).
+    if (oddLineEnding(source)) return refuse('the note holds a line ending other than LF or CRLF');
 
-    // 1. The cap, counted on the text as written: the disarm can make it five
-    // times longer, and a description that filled a fresh note to the body
-    // cap would withhold the owner's first Thoughts (round 6, D17).
-    if ([...disarmed].length > MAX_DESCRIPTION_CODE_POINTS) {
+    // Disarmed, so no line opens a section or a fence, and quoted, so it
+    // withholds the Thoughts if its heading is ever demoted or deleted (D20).
+    const eol = source.includes('\r\n') ? '\r\n' : '\n';
+    const written = quoteBodyText(disarmBodyText(body)).split('\n').join(eol);
+
+    // 2. The cap, counted on the text as it lands: the disarm can make it five
+    // times longer, and the quote and a CRLF longer again (round 6, D17; D22).
+    if ([...written].length > MAX_DESCRIPTION_CODE_POINTS) {
       return refuse(
-        `the text is over ${String(MAX_DESCRIPTION_CODE_POINTS)} characters once disarmed`,
+        `the text is over ${String(MAX_DESCRIPTION_CODE_POINTS)} characters as it would be written`,
       );
     }
 
-    const eol = source.includes('\r\n') ? '\r\n' : '\n';
-    const section = `${heading}${eol}${eol}${disarmed.split('\n').join(eol)}${eol}`;
+    const section = `${heading}${eol}${eol}${written}${eol}`;
     let updated: string;
     try {
-      // 2. A note whose Thoughts are already withheld reads the same after any
-      // write, so the last check could not see what this one adds. That
-      // covers the development build, an odd line ending and a body over the
-      // cap, where `## Notes` cannot be found (round 6, D18).
-      const before = extractThoughts(source);
-      if (before.kind === 'withheld') {
-        return refuse("the note's Thoughts are withheld, so the write could not be checked");
-      }
-
-      // 3. The section parsed alone, which sees a shape that lies inert here
-      // until the owner adds a `## Thoughts` beside it (round 6, D18).
-      if (!plainSection(heading, disarmed)) {
-        return refuse('once written it would hold a heading, a definition, HTML or code');
-      }
-
       // Found in the body only, through the extractor's own parse. A search
       // of the whole file used to match a `## Notes` YAML comment in the
       // frontmatter, which put provider lines among the properties, and a
@@ -213,21 +203,16 @@ export class ObsidianAdapter implements VaultAdapter {
           ? `${source.replace(/\s*$/, '')}${eol}${eol}${section}`
           : source.slice(0, notes) + section + eol + source.slice(notes);
 
-      // 4. The body cap, on the note as written: a body carried over it would
+      // 3. The body cap, on the note as written: a body carried over it would
       // withhold the owner's Thoughts on every build after, and absent-only
       // means nothing rewrites it (round 5, D16).
       if (overBodyCap(updated)) {
         return refuse(`the note would be over ${String(MAX_BODY_CODE_POINTS)} characters`);
       }
-      // 5. What the Thoughts ship, read before and after: a write that changes
-      // it, or why they are withheld, is refused, whatever the disarm missed.
-      if (!sameThoughts(before, extractThoughts(updated))) {
-        return refuse("it would change what the note's Thoughts ship, or why they are withheld");
-      }
     } catch {
-      // A parse that throws costs this book's description, never the rest of
-      // an `enrich` pass (round 6, D18). Only the parses are in here: a
-      // failed write still throws.
+      // 4. A parse that throws, the development build's included, costs this
+      // book's description, never the rest of an `enrich` pass (round 6, D18;
+      // #424). Only the parse is in here: a failed write still throws.
       return refuse('the parser failed on the note');
     }
 
@@ -374,8 +359,9 @@ function renderNote(book: BookInput): string {
   const embed = book.cover === undefined ? '' : `![[${coverFileName(book.cover)}]]\n\n`;
 
   // `## Thoughts` above `## Notes`, empty, for the owner to fill: the one
-  // section a build publishes, written where `insertBodySection` puts
-  // `## About` below it, so a provider's description never lands inside it.
+  // section a build publishes. `insertBodySection` puts `## About` directly
+  // below it, as a quote, so a description whose heading the owner demotes or
+  // deletes withholds the section rather than shipping in it (#424, D20).
   return `---\n${yaml}\n---\n\n${embed}## Thoughts\n\n## Notes\n\n`;
 }
 
@@ -466,11 +452,6 @@ function applyChange(
 
   if (value === undefined) return block;
   return [...lines, `${key}: ${serialise(value)}`].join(eol);
-}
-
-/** Whether two reads of one note's Thoughts agree: the same kind, paragraphs and reason. */
-function sameThoughts(before: ThoughtsResult, after: ThoughtsResult): boolean {
-  return JSON.stringify(before) === JSON.stringify(after);
 }
 
 /**
