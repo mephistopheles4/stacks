@@ -1,0 +1,161 @@
+# TYPE stacks_run_ok gauge
+# HELP stacks_run_ok One when this run computed every series it declared, zero when it did not.
+stacks_run_ok 1 1791628790
+# TYPE stacks_run_info gauge
+# HELP stacks_run_info The run that wrote this file. A score never appears without its run.
+stacks_run_info{commit="f1c252c64e1ec5e43ad2e38bbec14641bc2bd595",event="schedule",run_url="https://github.com/mephistopheles4/stacks/actions/runs/38042571060",pr_window="#409, #414",config_hash="sha256:2d2a34f1823de9d9ffc65d4ede55923da50b37dcfc1a348eac1c98ecf1c740fe",fixture_hash="sha256:2af72f80e58a4aed4c9725b7bd4f8c035e2659ed5843e819befc253218691c6a",duplication_hash="sha256:c624c341047359d3772d884202bf2cb5d3b45c34e91e7b9e56d1e28eaecc0d94"} 1 1791628790
+# TYPE stacks_run_declared_exclusions gauge
+# HELP stacks_run_declared_exclusions Exclusion entries declared in stryker.scopes.json, the denominator for live-exclusions.
+stacks_run_declared_exclusions 33 1791628790
+# TYPE stacks_trend_mutation_score gauge
+# HELP stacks_trend_mutation_score Killed plus timeout over total, per declared scope, 0..1. Stryker total score.
+stacks_trend_mutation_score{scope="packages/core/src"} 0.7147461724415793 1791628790
+stacks_trend_mutation_score{scope="packages/core/src/adapters"} 0.6693989071038251 1791628790
+stacks_trend_mutation_score{scope="packages/core/src/covers"} 0.6227180527383367 1791628790
+stacks_trend_mutation_score{scope="packages/core/src/import"} 0.694980694980695 1791628790
+stacks_trend_mutation_score{scope="packages/core/src/metadata"} 0.6643835616438356 1791628790
+stacks_trend_mutation_score{scope="packages/site/src/shelf"} 0.6543898809523809 1791628790
+stacks_trend_mutation_score{scope="packages/cli/src"} 0.5760869565217391 1791628790
+stacks_trend_mutation_score{scope="scripts"} 0.6493539721120635 1791628790
+# TYPE stacks_trend_gate_suite_runtime gauge
+# HELP stacks_trend_gate_suite_runtime Wall-clock seconds of pnpm test.
+stacks_trend_gate_suite_runtime 19 1791628790
+# TYPE stacks_trend_mutation_run_runtime gauge
+# HELP stacks_trend_mutation_run_runtime Wall-clock seconds of the Stryker run.
+stacks_trend_mutation_run_runtime 3160 1791628790
+# TYPE stacks_trend_live_exclusions gauge
+# HELP stacks_trend_live_exclusions Declared exclusions that produced at least one executed mutant. Healthy value 0.
+stacks_trend_live_exclusions 0 1791628790
+# TYPE stacks_trend_complexity_functions gauge
+# HELP stacks_trend_complexity_functions Functions counted — the denominator the other three are read against.
+stacks_trend_complexity_functions{scope="packages/core/src"} 87 1791628790
+stacks_trend_complexity_functions{scope="packages/core/src/adapters"} 23 1791628790
+stacks_trend_complexity_functions{scope="packages/core/src/covers"} 28 1791628790
+stacks_trend_complexity_functions{scope="packages/core/src/import"} 22 1791628790
+stacks_trend_complexity_functions{scope="packages/core/src/metadata"} 101 1791628790
+stacks_trend_complexity_functions{scope="packages/site/src/shelf"} 579 1791628790
+stacks_trend_complexity_functions{scope="packages/cli/src"} 29 1791628790
+stacks_trend_complexity_functions{scope="scripts"} 933 1791628790
+# TYPE stacks_trend_complexity_mass gauge
+# HELP stacks_trend_complexity_mass Σ cyclomatic complexity over those functions.
+stacks_trend_complexity_mass{scope="packages/core/src"} 312 1791628790
+stacks_trend_complexity_mass{scope="packages/core/src/adapters"} 95 1791628790
+stacks_trend_complexity_mass{scope="packages/core/src/covers"} 125 1791628790
+stacks_trend_complexity_mass{scope="packages/core/src/import"} 72 1791628790
+stacks_trend_complexity_mass{scope="packages/core/src/metadata"} 320 1791628790
+stacks_trend_complexity_mass{scope="packages/site/src/shelf"} 1343 1791628790
+stacks_trend_complexity_mass{scope="packages/cli/src"} 127 1791628790
+stacks_trend_complexity_mass{scope="scripts"} 2710 1791628790
+# TYPE stacks_trend_complexity_mass_over_10 gauge
+# HELP stacks_trend_complexity_mass_over_10 Σ complexity over functions with CC > 10. The cut is McCabe 1976, and is not a threshold.
+stacks_trend_complexity_mass_over_10{scope="packages/core/src"} 95 1791628790
+stacks_trend_complexity_mass_over_10{scope="packages/core/src/adapters"} 38 1791628790
+stacks_trend_complexity_mass_over_10{scope="packages/core/src/covers"} 38 1791628790
+stacks_trend_complexity_mass_over_10{scope="packages/core/src/import"} 27 1791628790
+stacks_trend_complexity_mass_over_10{scope="packages/core/src/metadata"} 49 1791628790
+stacks_trend_complexity_mass_over_10{scope="packages/site/src/shelf"} 148 1791628790
+stacks_trend_complexity_mass_over_10{scope="packages/cli/src"} 63 1791628790
+stacks_trend_complexity_mass_over_10{scope="scripts"} 446 1791628790
+# TYPE stacks_trend_complexity_max gauge
+# HELP stacks_trend_complexity_max The largest single function's complexity.
+stacks_trend_complexity_max{scope="packages/core/src"} 41 1791628790
+stacks_trend_complexity_max{scope="packages/core/src/adapters"} 27 1791628790
+stacks_trend_complexity_max{scope="packages/core/src/covers"} 15 1791628790
+stacks_trend_complexity_max{scope="packages/core/src/import"} 14 1791628790
+stacks_trend_complexity_max{scope="packages/core/src/metadata"} 22 1791628790
+stacks_trend_complexity_max{scope="packages/site/src/shelf"} 40 1791628790
+stacks_trend_complexity_max{scope="packages/cli/src"} 14 1791628790
+stacks_trend_complexity_max{scope="scripts"} 58 1791628790
+# TYPE stacks_trend_duplication_clones gauge
+# HELP stacks_trend_duplication_clones Clones found, over the eight declared scopes. A clone spanning two is counted by both.
+stacks_trend_duplication_clones{scope="packages/core/src"} 3 1791628790
+stacks_trend_duplication_clones{scope="packages/core/src/adapters"} 0 1791628790
+stacks_trend_duplication_clones{scope="packages/core/src/covers"} 1 1791628790
+stacks_trend_duplication_clones{scope="packages/core/src/import"} 0 1791628790
+stacks_trend_duplication_clones{scope="packages/core/src/metadata"} 0 1791628790
+stacks_trend_duplication_clones{scope="packages/site/src/shelf"} 3 1791628790
+stacks_trend_duplication_clones{scope="packages/cli/src"} 0 1791628790
+stacks_trend_duplication_clones{scope="scripts"} 10 1791628790
+# TYPE stacks_trend_duplication_lines gauge
+# HELP stacks_trend_duplication_lines Duplicated lines, over the eight declared scopes.
+stacks_trend_duplication_lines{scope="packages/core/src"} 46 1791628790
+stacks_trend_duplication_lines{scope="packages/core/src/adapters"} 0 1791628790
+stacks_trend_duplication_lines{scope="packages/core/src/covers"} 8 1791628790
+stacks_trend_duplication_lines{scope="packages/core/src/import"} 0 1791628790
+stacks_trend_duplication_lines{scope="packages/core/src/metadata"} 0 1791628790
+stacks_trend_duplication_lines{scope="packages/site/src/shelf"} 36 1791628790
+stacks_trend_duplication_lines{scope="packages/cli/src"} 0 1791628790
+stacks_trend_duplication_lines{scope="scripts"} 95 1791628790
+# TYPE stacks_trend_duplication_ignored_lines gauge
+# HELP stacks_trend_duplication_ignored_lines Lines inside a jscpd suppression block, over the eight declared scopes.
+stacks_trend_duplication_ignored_lines{scope="packages/core/src"} 0 1791628790
+stacks_trend_duplication_ignored_lines{scope="packages/core/src/adapters"} 0 1791628790
+stacks_trend_duplication_ignored_lines{scope="packages/core/src/covers"} 0 1791628790
+stacks_trend_duplication_ignored_lines{scope="packages/core/src/import"} 0 1791628790
+stacks_trend_duplication_ignored_lines{scope="packages/core/src/metadata"} 0 1791628790
+stacks_trend_duplication_ignored_lines{scope="packages/site/src/shelf"} 0 1791628790
+stacks_trend_duplication_ignored_lines{scope="packages/cli/src"} 0 1791628790
+stacks_trend_duplication_ignored_lines{scope="scripts"} 0 1791628790
+# TYPE stacks_trend_duplication_total_lines gauge
+# HELP stacks_trend_duplication_total_lines Lines scanned, over the eight declared scopes — the denominator the other three are read against.
+stacks_trend_duplication_total_lines{scope="packages/core/src"} 2438 1791628790
+stacks_trend_duplication_total_lines{scope="packages/core/src/adapters"} 477 1791628790
+stacks_trend_duplication_total_lines{scope="packages/core/src/covers"} 821 1791628790
+stacks_trend_duplication_total_lines{scope="packages/core/src/import"} 324 1791628790
+stacks_trend_duplication_total_lines{scope="packages/core/src/metadata"} 1845 1791628790
+stacks_trend_duplication_total_lines{scope="packages/site/src/shelf"} 13643 1791628790
+stacks_trend_duplication_total_lines{scope="packages/cli/src"} 755 1791628790
+stacks_trend_duplication_total_lines{scope="scripts"} 21319 1791628790
+# TYPE stacks_trend_duplication_tree_clones gauge
+# HELP stacks_trend_duplication_tree_clones Clones found, whole-tree TypeScript.
+stacks_trend_duplication_tree_clones 57 1791628790
+# TYPE stacks_trend_duplication_tree_lines gauge
+# HELP stacks_trend_duplication_tree_lines Duplicated lines, whole-tree TypeScript.
+stacks_trend_duplication_tree_lines 637 1791628790
+# TYPE stacks_trend_duplication_tree_ignored_lines gauge
+# HELP stacks_trend_duplication_tree_ignored_lines Lines inside a jscpd suppression block, whole-tree TypeScript.
+stacks_trend_duplication_tree_ignored_lines 0 1791628790
+# TYPE stacks_trend_duplication_tree_total_lines gauge
+# HELP stacks_trend_duplication_tree_total_lines Lines scanned, whole-tree TypeScript — no scope list can shrink it.
+stacks_trend_duplication_tree_total_lines 76084 1791628790
+# TYPE stacks_trend_cognitive_functions gauge
+# HELP stacks_trend_cognitive_functions Functions in the cognitive population — smaller than complexity-functions, and its own denominator.
+stacks_trend_cognitive_functions{scope="packages/core/src"} 87 1791628790
+stacks_trend_cognitive_functions{scope="packages/core/src/adapters"} 23 1791628790
+stacks_trend_cognitive_functions{scope="packages/core/src/covers"} 28 1791628790
+stacks_trend_cognitive_functions{scope="packages/core/src/import"} 22 1791628790
+stacks_trend_cognitive_functions{scope="packages/core/src/metadata"} 101 1791628790
+stacks_trend_cognitive_functions{scope="packages/site/src/shelf"} 570 1791628790
+stacks_trend_cognitive_functions{scope="packages/cli/src"} 29 1791628790
+stacks_trend_cognitive_functions{scope="scripts"} 933 1791628790
+# TYPE stacks_trend_cognitive_mass gauge
+# HELP stacks_trend_cognitive_mass Σ cognitive complexity over those functions, a function the rule was silent about counting zero.
+stacks_trend_cognitive_mass{scope="packages/core/src"} 233 1791628790
+stacks_trend_cognitive_mass{scope="packages/core/src/adapters"} 69 1791628790
+stacks_trend_cognitive_mass{scope="packages/core/src/covers"} 78 1791628790
+stacks_trend_cognitive_mass{scope="packages/core/src/import"} 44 1791628790
+stacks_trend_cognitive_mass{scope="packages/core/src/metadata"} 161 1791628790
+stacks_trend_cognitive_mass{scope="packages/site/src/shelf"} 632 1791628790
+stacks_trend_cognitive_mass{scope="packages/cli/src"} 95 1791628790
+stacks_trend_cognitive_mass{scope="scripts"} 1700 1791628790
+# TYPE stacks_trend_cognitive_mass_over_15 gauge
+# HELP stacks_trend_cognitive_mass_over_15 Σ cognitive complexity over functions scoring above 15. The cut is the supplier's default and nothing refuses on it.
+stacks_trend_cognitive_mass_over_15{scope="packages/core/src"} 75 1791628790
+stacks_trend_cognitive_mass_over_15{scope="packages/core/src/adapters"} 24 1791628790
+stacks_trend_cognitive_mass_over_15{scope="packages/core/src/covers"} 0 1791628790
+stacks_trend_cognitive_mass_over_15{scope="packages/core/src/import"} 0 1791628790
+stacks_trend_cognitive_mass_over_15{scope="packages/core/src/metadata"} 35 1791628790
+stacks_trend_cognitive_mass_over_15{scope="packages/site/src/shelf"} 82 1791628790
+stacks_trend_cognitive_mass_over_15{scope="packages/cli/src"} 19 1791628790
+stacks_trend_cognitive_mass_over_15{scope="scripts"} 351 1791628790
+# TYPE stacks_trend_cognitive_max gauge
+# HELP stacks_trend_cognitive_max The largest single function's cognitive complexity.
+stacks_trend_cognitive_max{scope="packages/core/src"} 75 1791628790
+stacks_trend_cognitive_max{scope="packages/core/src/adapters"} 24 1791628790
+stacks_trend_cognitive_max{scope="packages/core/src/covers"} 12 1791628790
+stacks_trend_cognitive_max{scope="packages/core/src/import"} 13 1791628790
+stacks_trend_cognitive_max{scope="packages/core/src/metadata"} 19 1791628790
+stacks_trend_cognitive_max{scope="packages/site/src/shelf"} 47 1791628790
+stacks_trend_cognitive_max{scope="packages/cli/src"} 19 1791628790
+stacks_trend_cognitive_max{scope="scripts"} 80 1791628790
+# EOF
