@@ -372,7 +372,7 @@ describe('readPublicSection', () => {
     });
   });
 
-  describe('N93: a note holding a line ending other than LF or CRLF (refusal 2)', () => {
+  describe('N93: a note holding a line ending other than LF or CRLF (refusal 1)', () => {
     const CR = String.fromCharCode(13);
 
     it.each([
@@ -391,13 +391,13 @@ describe('readPublicSection', () => {
       expect(warned()).toContain('Library/N93.md');
       expect(warned()).toContain('the note holds a line ending other than LF or CRLF');
     });
+  });
 
-    it('writes into a note whose own Thoughts withhold for another reason (D18’s cost removed)', async () => {
-      const path = await note('N93b', '## Thoughts', '', 'From $1 to $2.', '', '## Notes', '');
+  it('N81: writes into a note whose own Thoughts withhold for another reason (D18’s cost removed by D21)', async () => {
+    const path = await note('N81b', '## Thoughts', '', 'From $1 to $2.', '', '## Notes', '');
 
-      expect(await vault.insertBodySection(path, '## About', 'A blurb.')).toBe(true);
-      expect(warned()).toBe('');
-    });
+    expect(await vault.insertBodySection(path, '## About', 'A blurb.')).toBe(true);
+    expect(warned()).toBe('');
   });
 
   it('N94: does not write into a note whose body starts with a byte-order mark', async () => {
@@ -438,6 +438,23 @@ describe('readPublicSection', () => {
 
       expect(await vault.readPublicSection('Library/N87.md')).toBeUndefined();
       expect(warned()).toContain('Library/N87.md — it holds a quote or a callout');
+      expect(warned()).not.toContain(CANARY);
+    });
+
+    it('N87: a second run after the heading is deleted writes a second quote, and still nothing ships', async () => {
+      // The writer reads an absent heading as no section, so `enrich` writes a
+      // fresh quoted `## About` above `## Notes`; the stranded quote keeps the
+      // Thoughts withheld (move 4 on #424, unstated F2).
+      const path = await vault.writeBook({ title: 'N87b' });
+      await vault.insertBodySection(path, '## About', description);
+      await writeFile(path, (await readFile(path, 'utf8')).replace('## About\n\n', ''), 'utf8');
+
+      expect(await vault.insertBodySection(path, '## About', description)).toBe(true);
+      const written = await readFile(path, 'utf8');
+      expect(written.split('> A provider blurb.')).toHaveLength(3);
+      expect(written.indexOf('## About')).toBeLessThan(written.indexOf('## Notes'));
+      expect(await vault.readPublicSection('Library/N87b.md')).toBeUndefined();
+      expect(warned()).toContain('Library/N87b.md — it holds a quote or a callout');
       expect(warned()).not.toContain(CANARY);
     });
   });

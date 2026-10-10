@@ -170,8 +170,8 @@ export class ObsidianAdapter implements VaultAdapter {
     };
 
     // 1. A lone CR, U+2028 or U+2029, before any parse: `## Notes`'s line
-    // start is found by searching back for an LF, which would land among the
-    // owner's Thoughts. The extractor withholds such a note anyway (#424).
+    // start is found by searching back for an LF, which, in a stretch ended
+    // by lone CRs, would land among the owner's Thoughts. The extractor withholds such a note anyway (#424).
     if (oddLineEnding(source)) return refuse('the note holds a line ending other than LF or CRLF');
 
     // Disarmed, so no line opens a section or a fence, and quoted, so it

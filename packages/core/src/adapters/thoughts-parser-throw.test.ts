@@ -6,10 +6,10 @@ import { publish } from '../publish.ts';
 import { ObsidianAdapter } from './obsidian-adapter.ts';
 
 const CANARY = 'PARSER_ERROR_canary';
-/** The body text that makes the mocked tokenizer throw. */
+/** The body text that makes the mocked `preprocess` throw. */
 const TRIGGER = 'BREAK_THE_PARSER';
 
-// The tokenizer throws, carrying the canary in its message, on any body
+// `micromark`'s `preprocess` throws, carrying the canary in its message, on any body
 // holding the trigger: an error that is not a withhold, which the extractor
 // rethrows and `publish()` must catch without printing.
 vi.mock('micromark', async (importOriginal) => {
@@ -19,7 +19,7 @@ vi.mock('micromark', async (importOriginal) => {
     preprocess: () => {
       const run = actual.preprocess();
       return (...args: Parameters<typeof run>) => {
-        if (String(args[0]).includes(TRIGGER)) throw new Error(`the tokenizer broke on ${CANARY}`);
+        if (String(args[0]).includes(TRIGGER)) throw new Error(`preprocess broke on ${CANARY}`);
         return run(...args);
       };
     },

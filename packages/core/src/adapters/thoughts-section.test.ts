@@ -412,7 +412,7 @@ describe('hidden text withholds the whole section', () => {
     ])('withholds %s', (_, source) => {
       expect(extractThoughts(source)).toEqual({
         kind: 'withheld',
-        reason: 'the note holds a line ending other than a newline',
+        reason: 'the note holds a line ending other than LF or CRLF',
       });
       expectNoCanary(source);
     });
@@ -422,7 +422,7 @@ describe('hidden text withholds the whole section', () => {
       const source = note(['## Thoughts', 'Kept.', '## Notes', CANARY].join(CR));
       expect(extractThoughts(source)).toEqual({
         kind: 'withheld',
-        reason: 'the note holds a line ending other than a newline',
+        reason: 'the note holds a line ending other than LF or CRLF',
       });
     });
 

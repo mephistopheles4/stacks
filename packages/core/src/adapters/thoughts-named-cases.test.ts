@@ -61,7 +61,7 @@ function expectAbsent(source: string): void {
 
 // The reasons, written out: a reason that changes moves its test.
 const R = {
-  lineEnding: 'the note holds a line ending other than a newline',
+  lineEnding: 'the note holds a line ending other than LF or CRLF',
   bodyCap: `the note body is over ${String(MAX_BODY_CODE_POINTS)} characters, so it was not read`,
   twoHeadings: 'the note has two `Thoughts` headings, one of them perhaps underlined with `---`',
   commentInSection: 'it holds an HTML comment marker, perhaps in a link address or title',
@@ -897,6 +897,12 @@ describe('added by #424: an `## About` that loses its heading', () => {
     ['bold with underscores', '__About__'],
     ['italic', '*About*'],
     ['italic with underscores', '_About_'],
+    // Obsidian's own marks, which the strip removes after the allowlist
+    // (move 4 on #424, adversarial F1 and data F1).
+    ['highlighted', '==About=='],
+    ['struck through', '~~About~~'],
+    ['wikilinked', '[[About]]'],
+    ['block-id', 'About ^abc123'],
   ])('N88: withholds an unquoted `## About` turned into a lone %s line', (_, line) => {
     expectWithheld(note('## Thoughts', '', line, '', BLURB, '', '## Notes'), R.about);
   });

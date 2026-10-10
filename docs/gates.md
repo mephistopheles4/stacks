@@ -1672,8 +1672,10 @@ moved; the gates above hold the new extractor as they held the old one.
   tests a catch that already existed, went red with `publish()` made to print
   the error, and N92's decoded-trace check has a control that finds the canary
   in a parse's trace. The writer now
-  refuses four writes, each asserting its own warning words; N82 left with
-  the check it named.
+  refuses four writes, each asserting its own warning words; N82's shapes
+  moved under N76 as a test of the quote, where the heading rows went red with
+  the quote switched off. Move 4's first round added N88's Obsidian-mark rows,
+  each red against the code before them.
 
 ### The held tier, gated before it is staged
 

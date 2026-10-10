@@ -442,7 +442,7 @@ export function extractThoughts(source: string): ThoughtsResult {
   // 2. Line endings and size, on raw text. The whole source, frontmatter
   // included: if Obsidian drew the properties block's edge differently, a stray
   // ending there would be body to it.
-  if (oddLineEnding(source)) return withheld('the note holds a line ending other than a newline');
+  if (oddLineEnding(source)) return withheld('the note holds a line ending other than LF or CRLF');
   const body = source.slice(frontmatter.index + frontmatter[0].length);
   if (bodyOverCap(body)) {
     return withheld(
@@ -571,14 +571,17 @@ function blockText(block: Block): string | undefined {
 /**
  * Whether a root block in the section is an `## About` that lost its heading:
  * a `###` to `######` heading, or a paragraph, whose shown text reads exactly
- * `About`, emphasis marks dropped. That is what a demoted heading, or one
- * Obsidian turned back into a paragraph, leaves above a provider description
- * written before #424 quoted them (spec §3.1.3, D20). Checked after the
- * allowlist, so a quoted description withholds as a quote.
+ * `About` once emphasis and Obsidian's own marks are dropped. That is what a
+ * demoted heading, or one Obsidian turned back into a paragraph, leaves above
+ * a provider description written before #424 quoted them (spec §3.1.3, D20).
+ * Checked after the allowlist, so a quoted description withholds as a quote,
+ * and on the text step 9 would ship, so `==About==` or `[[About]]` is caught.
  */
 function isAbout(block: Block, text: string | undefined): boolean {
   const type: string = block.token.type;
-  return (type === 'atxHeading' || type === 'content') && text?.trim() === 'About';
+  return (
+    (type === 'atxHeading' || type === 'content') && obsidianMarks(text ?? '').trim() === 'About'
+  );
 }
 
 /** The events strictly inside the first `type` token in `events`, or `undefined`. */

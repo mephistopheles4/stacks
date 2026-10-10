@@ -319,6 +319,11 @@ Measured read-only against the real vault, counts only, matching the spec's
 `## Thoughts`, none quoted, none with CRLF. The writer ran end to end on this
 Windows machine on an LF and a CRLF note, and refused both under a
 `development` condition with `DEBUG` set, the canary traced nowhere (#424).
+D25's Obsidian check was not taken before move 4, so D19 stays. The gate, the
+code and the records landed in separate commits on the branch, the records
+last; the squash-merge lands them as one. Move 4's first round added the
+`About` rule's reading after Obsidian's marks, and restored the cut refusals'
+shapes as a test of the quote.
 
 **2026-10-09 — the held tier, gated first**
 ([#412](https://github.com/mephistopheles4/stacks/issues/412)): `orphan-held`,

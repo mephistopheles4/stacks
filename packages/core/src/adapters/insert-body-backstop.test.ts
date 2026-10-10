@@ -65,6 +65,29 @@ describe('the About writer, with the disarm switched off', () => {
     });
 
     it.each([
+      ['plain prose', `A blurb, ${STRANGER}.`],
+      ['a `## Thoughts` heading', `A blurb.\n\n## Thoughts\n\n${STRANGER}`],
+      ['a `Thoughts` underlined by a lone dash', `A blurb.\n\nThoughts\n- \n\n${STRANGER}`],
+      ['a link definition', `[target]: ${STRANGER}.md\n\nA blurb.`],
+      ['a footnote definition', `A blurb.\n\n[^1]: ${STRANGER}`],
+      ['an HTML block', `<div>\n${STRANGER}\n</div>`],
+      ['a fence', `\`\`\`\n${STRANGER}\n\`\`\``],
+    ])(
+      'writes %s inside the quote, below the owner’s section, which ships unchanged',
+      async (_, text) => {
+        // The shapes the cut refusals used to refuse, N82's six among them,
+        // now held by the quote alone: below the owner's section it changes
+        // nothing they ship, and warns nothing (move 4 on #424, integrity F1
+        // and F2).
+        const path = await note('N76c', '## Thoughts', '', 'Mine.', '', '## Notes', '', 'Private.');
+
+        expect(await vault.insertBodySection(path, '## About', text)).toBe(true);
+        expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
+        expect(warned()).toBe('');
+      },
+    );
+
+    it.each([
       ['a `$$`', `A blurb with $$ in it, ${STRANGER}.`],
       ['a run of three backticks', `A blurb with a \`\`\` run, ${STRANGER}.`],
     ])(

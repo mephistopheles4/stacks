@@ -95,9 +95,9 @@ export interface VaultAdapter {
    * when it has none or it is withheld.
    *
    * The seventh method, and **the only one that returns text from below the
-   * frontmatter**, as `insertBodySection` is the only one that writes there,
-   * and the only reader of a note's Thoughts. It returns the section and
-   * never the body, so no code outside the adapter ever holds the
+   * frontmatter**, as `insertBodySection` is the only one that writes there.
+   * It is also the only reader of a note's Thoughts. It returns the section
+   * and never the body, so no code outside the adapter ever holds the
    * private remainder, and it is never a `BookRecord` field, so `library.json`
    * has nowhere to put the text
    * ([ADR-0100](../../../../docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md)).

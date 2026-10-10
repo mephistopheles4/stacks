@@ -241,7 +241,8 @@ with a warning that names the note and the shape and never quotes the text.
      bracket check (N68).
    - **An `About` heading or a lone `About` line withholds**, checked after
      the rest of this step: an ATX heading of level 3 to 6, or a paragraph,
-     whose shown text reads exactly `About`, emphasis marks dropped. That is
+     whose shown text reads exactly `About` once emphasis and step 9's
+     Obsidian marks are dropped. That is
      what a demoted heading, or one turned back into a paragraph, leaves above
      a provider description (#424, D20). A heading such as `### About me`, and
      a paragraph that only begins with the word, still ship.
@@ -323,8 +324,8 @@ warning naming the note and never quoting the text or an error (#424, D21):
 1. **A note holding a line ending other than LF or CRLF**: a lone CR, U+2028
    or U+2029, tested on the whole source before any parse, by
    `oddLineEnding`, which step 2 shares. The writer finds the start of
-   `## Notes`'s line by searching back for an LF, which would land among the
-   owner's Thoughts.
+   `## Notes`'s line by searching back for an LF, which, in a stretch ended by
+   lone CRs, would land among the owner's Thoughts.
 2. **A text over 8,000 code points as it lands**: disarmed, quoted, and
    joined with the note's line ending (round 4, D12; round 6, D17; #424, D22).
    That is three times the longest real `## About`, 2,605 code points.
@@ -431,7 +432,7 @@ decisions, from chat, of 2026-10-10. Its spec is
 | D22 | The 8,000 cap counted LF line breaks, but a CRLF note gains two code points a break (round 7, adversarial F2) | **count the text as it lands**: disarmed, quoted, and joined with the note's line ending. N89 |
 | D23 | A remote image in a description loads when the note is opened in Obsidian (round 7, adversarial F3) | **disarm `![`**: its `[` becomes a character reference. N90 |
 | D24 | D13 withheld a reference link, to hide whether the private part defines a name; unmatched bracketed words ship in their brackets anyway | **drop D13**: a reference link ships its label. The accepted residual: a shipped label's brackets show whether the private part defines it. N51 and N79 flip; N68 stands |
-| D25 | D19 withholds `[x](<My Note.md>)`, an ordinary Markdown link to a note whose name has a space | **narrow it only if an Obsidian check shows reading view drawing "after" in all nine shapes** of #424's spec §3.3; otherwise D19 stays. The check's result is posted on #424 |
+| D25 | D19 withholds `[x](<My Note.md>)`, an ordinary Markdown link to a note whose name has a space | **narrow it only if an Obsidian check shows reading view drawing "after" in all nine shapes** of #424's spec §3.3; otherwise D19 stays. **Outcome: D19 stays.** The check was not taken before move 4 (#424), so N85 is unchanged and narrowing needs the check first |
 | D26 | Nothing tested a parser that throws inside the extractor (round 7, integrity F2) | **test it** in a file of its own: no notes file for that book, and the error printed nowhere. N91. Round 7's integrity F1 lapses with the cut of the section parsed alone |
 | D27 | The 49 `## About` sections already in the vault, written unquoted | **left as written** here; the `About` rule covers a demoted heading or a lone `About` line on them. Quoting them once is #432, a follow-up on the security route |
 
@@ -579,7 +580,7 @@ the prototype.
 | # | Case | Result | Round 5 finding |
 | --- | --- | --- | --- |
 | N75 | A description under 8,000 code points, dense in characters the disarm expands, onto a note it would carry past 20,000; a note body landing at exactly 20,000, and one more; a note already over 20,000 | not written, with a warning naming the note and never quoting it, and the owner's Thoughts still ship; exactly 20,000 is written | behaviour F1, adversarial F1; D16 |
-| N76 | A description the disarm missed, with the disarm switched off: one holding `## Thoughts`, and one that trips a raw guard above the owner's section | since D21, both are written: the first inside the quote, where it opens no section; the second withholds the owner's section with a warning, the accepted worst case of D21 | behaviour F1, adversarial F1; D16, D21 |
+| N76 | A description the disarm missed, with the disarm switched off: one holding `## Thoughts`; N82's six shapes and plain prose below the owner's section; and one that trips a raw guard above the owner's section | since D21, all are written. `## Thoughts` lands inside the quote, where it opens no section; below the owner's section, their Thoughts ship unchanged, with no warning; above it, a raw guard withholds their section with a warning, the accepted worst case of D21 | behaviour F1, adversarial F1; D16, D21 |
 | N77 | A description whose list item continues on lines indented four spaces or a tab, holding a definition, a heading and a setext pair | each disarmed; parsed, it holds no definition or heading token | behaviour F2; D14 |
 | N78 | A tag start in a link's quoted or parenthesised title, or in its bare address | withheld (step 8): those parts are skipped for shipping and read only for a tag start, since step 10 and the deploy's twin never see them | data F1 |
 | N79 | A full, collapsed or shortcut reference link whose definition sits under `## Notes` | its label ships, since D24; bracketed words matching no definition still ship in their brackets, and a wikilink matching one still withholds as N68 | adversarial F2; D13, D24 |
@@ -595,8 +596,8 @@ the prototype.
 | N84 | A description holding `Thoughts` over a lone `-` with its space | the dash escaped; parsed, it holds no setext heading | adversarial F2 |
 | N85 | An angle-bracket link address that opens like a tag, or names a note with a space | withheld (step 8) | data F2; D19 |
 | N86 | A description written onto a fresh note | every line quoted, an empty one as `>`; parsed, it is one block quote holding no heading; the owner's later Thoughts ship alone | #424; D20 |
-| N87 | A fresh note with a written description, its `## About` heading then demoted to `###`, and separately deleted | withheld, "it holds a quote or a callout", in both | #424; D20 |
-| N88 | An unquoted `## About` directly under `## Thoughts`, demoted to `###` to `######`, or turned into a lone `About` line, plain, bold or italic | withheld, naming an `About` heading or line; `### About me`, and a paragraph that only begins with the word, still ship | #424; D20 |
+| N87 | A fresh note with a written description, its `## About` heading then demoted to `###`, and separately deleted; then, with it deleted, a second write | withheld, "it holds a quote or a callout", in both; the second write lands a second quoted `## About` above `## Notes`, and the section stays withheld | #424; D20 |
+| N88 | An unquoted `## About` directly under `## Thoughts`, demoted to `###` to `######`, or turned into a lone `About` line, plain, bold or italic, highlighted, struck through, wikilinked or carrying a block id | withheld, naming an `About` heading or line; `### About me`, and a paragraph that only begins with the word, still ship | #424; D20 |
 | N89 | A description of many short lines, onto an LF note and onto a CRLF note, landing at exactly 8,000 and one more as written | the 8,000 is written; one more is refused, with a warning naming the note and the cap, on both line endings | #424; D22 |
 | N90 | A description holding `![x](https://example.invalid/p.png)` and `![[file.png]]` | written with the `[` after `!` as a character reference; parsed, it holds no image | #424; D23 |
 | N91 | A parser that throws inside `extractThoughts` during `publish()`, a canary in its message | no notes file for that book, the other books' written, the canary in no console line and no staged file | #424; D26 |
@@ -987,9 +988,9 @@ G8 already shows why: a contract edited ahead of the parser is a red build.
   `readPublicSection(sourcePath): Promise<readonly string[] | undefined>`. It is
   **the only method that reads below the frontmatter**, as `insertBodySection` is
   the only one that writes there, and it returns paragraphs, never the body.
-  (Since D16 the writer reads the Thoughts too, keeping only whether two reads
-  agree, so the contract says "the only method that returns text from below
-  the frontmatter".)
+  (From D16 until D21 (#424) the writer read the Thoughts too, keeping only
+  whether two reads agree, so the contract says "the only method that returns
+  text from below the frontmatter"; since D21 it is again the only reader.)
   The block's `insertBodySection` line says `Promise<void>`; the code says
   `Promise<boolean>`, and the edit fixes that too. Its paragraph gains that the
   text it writes has every heading-shaped line and fence opener disarmed

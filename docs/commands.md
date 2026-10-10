@@ -182,8 +182,9 @@ the shape the warning names. The list and its reasons are
 [ADR-0107](adr/0107-thoughts-are-read-by-a-commonmark-parser.md); spec §3.1.1
 holds every rule.
 
-**`stacks enrich` writes a provider description under `## About`, as a
-quote.** It skips a note in four cases, and warns which note it skipped:
+**`stacks add` and `stacks enrich` write a provider description under
+`## About`, as a quote.** Each skips a note in four cases, and warns which note
+it skipped:
 
 - the note holds a line ending other than LF or CRLF;
 - the description is over 8,000 characters as it would be written;
@@ -195,6 +196,8 @@ is removed. **If a description ends up in your Thoughts**, because its
 `## About` heading was demoted or deleted, the quote withholds the whole
 section. Restore the heading, or delete the quoted text. ⚠️ **Do not take the
 quote marks off instead**: that publishes the description as your own words.
+If `stacks enrich` has run since the heading went, it wrote a fresh
+`## About`: delete the stranded quote rather than restore its heading.
 
 **Withdrawing a section takes two moves, and the second is outside this repo.**
 

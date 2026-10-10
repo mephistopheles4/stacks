@@ -120,7 +120,8 @@ describe('G2 — note bodies stay private', () => {
  *
  * Existing notes rather than new ones, because two tests pin the vault's book
  * count ([#367](https://github.com/mephistopheles4/stacks/issues/367), decision
- * 10). Every case here is one #367 or the spec's §5 `split` row names; every
+ * 10). Every case here is one #367 or the spec's §5 `split` row names, or #424's
+ * D20 for the quoted description; every
  * other boundary case belongs to the extractor's unit tests.
  */
 const PLANTED = {
@@ -336,8 +337,9 @@ describe.each([
   });
 
   it('stages no notes file for any book but the split one', async () => {
-    // One assertion for five planted cases: the private and wishlist books, the
-    // embed, the unclosed fence and the book with no Thoughts. A filtered book
+    // One assertion for six planted cases: the private and wishlist books, the
+    // embed, the unclosed fence, the book with no Thoughts and the quoted
+    // description. A filtered book
     // has no id in a public `library.json` to look a file up by, so the folder
     // is held to an allowlist of one rather than searched for each case.
     const { ids } = await publishSplit();
