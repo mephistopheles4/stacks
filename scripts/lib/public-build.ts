@@ -297,7 +297,7 @@ const OUTPUT_MARKS: readonly { readonly what: string; readonly test: (text: stri
       what: 'a line that may read as a heading',
       test: (text) =>
         /^[\t\p{Zs}\p{Cf}]*#{1,2}(?:[\t\p{Zs}\p{Cf}]|$)/mu.test(text) ||
-        /^(?=[^\n]*[\p{Cf}   -   　])[\t\p{Zs}\p{Cf}]*(?:-[-\t\p{Zs}\p{Cf}]*|=[=\t\p{Zs}\p{Cf}]*)$/mu.test(
+        /^(?=[^\n]*[\p{Cf}\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000])[\t\p{Zs}\p{Cf}]*(?:-[-\t\p{Zs}\p{Cf}]*|=[=\t\p{Zs}\p{Cf}]*)$/mu.test(
           text,
         ),
     },

@@ -195,7 +195,7 @@ const NEAR_MISS_HEADING = /^[\t\p{Zs}\p{Cf}]*#{1,2}(?:[\t\p{Zs}\p{Cf}]|$)/mu;
  * `---` thematic break does not match.
  */
 const NEAR_MISS_SETEXT =
-  /^(?=[^\n]*[\p{Cf}   -   　])[\t\p{Zs}\p{Cf}]*(?:-[-\t\p{Zs}\p{Cf}]*|=[=\t\p{Zs}\p{Cf}]*)$/mu;
+  /^(?=[^\n]*[\p{Cf}\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000])[\t\p{Zs}\p{Cf}]*(?:-[-\t\p{Zs}\p{Cf}]*|=[=\t\p{Zs}\p{Cf}]*)$/mu;
 
 /**
  * Step 7's patterns but the cap, each with its reason: read on the section, and
