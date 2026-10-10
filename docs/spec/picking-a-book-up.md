@@ -15,7 +15,8 @@ the gate roster (§5), the contract edits (§6), the records (§7), what needs a
 human (§8), and the residuals (§9).
 
 ⚠️ **The risk floor holds for every build step.** Step 2 publishes note-body
-text and sanitises it by hand; step 3 publishes a larger copy of every cover.
+text and sanitises it, through a CommonMark parser and an allowlist over its
+tokens (§3.1.1); step 3 publishes a larger copy of every cover.
 Both are input validation and "anything published". Step 1 is the gate that
 guards step 2. Step 4 changes what the page's Content Security Policy admits
 and puts the published text on screen. So each runs on the **security route**:
@@ -45,6 +46,12 @@ Tweakpane with essentials only to a page that asked for `?debug` (about 63 KB
 gzip, lazy). `CSS3DRenderer` and `ImageBitmapLoader` come from three, which is
 already here.
 
+**One more runtime dependency runs at build time and reaches no visitor**:
+`micromark` with its GFM table and GFM footnote extensions, in `core`, reading
+the Thoughts section. Every package in its closure is already in the lockfile
+through `markdownlint` (§3.1.2,
+[ADR-0107](../adr/0107-thoughts-are-read-by-a-commonmark-parser.md)).
+
 ---
 
 ## 2. The verdicts, and where each lives
@@ -52,7 +59,7 @@ already here.
 | Verdict | Ticket |
 | --- | --- |
 | **The split gate lands first and arms itself**: G2 (`public-build`) gains the presence half as a vitest `test.fails`, which goes red by itself once the extractor makes it pass. No new row, no disarmed flag. A vacuity guard, an `orphan-note` inspector rule, planted cases in existing fixtures | [#367](https://github.com/mephistopheles4/stacks/issues/367) |
-| **Plain text, stripped by hand** the way `remove-markdown` does; paragraphs as a list; `%%`, `<!--` or more than about 8,000 characters withholds the whole section; no rendering, ever | [#368](https://github.com/mephistopheles4/stacks/issues/368) |
+| **Plain text, stripped by hand** the way `remove-markdown` does; paragraphs as a list; `%%`, `<!--` or more than about 8,000 characters withholds the whole section; no rendering, ever. **Amended twice on [#411](https://github.com/mephistopheles4/stacks/issues/411)**: only plain prose ships ([ADR-0106](../adr/0106-thoughts-ship-only-plain-prose.md), which replaces rules 2 and 6), and the section is read by a CommonMark parser rather than stripped line by line (§3.1.1, [ADR-0107](../adr/0107-thoughts-are-read-by-a-commonmark-parser.md)). Plain text, paragraphs, the cap and no rendering stand | [#368](https://github.com/mephistopheles4/stacks/issues/368) |
 | **Page-mapped DOM text**, same-frame updates (0.3 px against 17 px one step late), fading in past about 95° of cover swing; the book settles square to the camera; a phone frames the right-hand page alone; pickup animates the shelf's own `THREE.Group` and reuses `?solo`'s build path | [#369](https://github.com/mephistopheles4/stacks/issues/369) |
 | **GSAP plays, Tweakpane tunes, Theatre.js is out**; GSAP for the owner's fluency over a zero-byte option, with its licence a known trade | [#370](https://github.com/mephistopheles4/stacks/issues/370) |
 | **The choreography, accepted as prototyped**: book to camera, a 55% veil over the shelf, reverse at 1.6× to put back, put-back-then-pick-up on a second click, a hard cut under reduced motion, the shadow map redrawn on leave and land. The open spread's alignment was left as polish; §3.6 promotes it to a done-criterion | [#371](https://github.com/mephistopheles4/stacks/issues/371) |
@@ -122,24 +129,302 @@ carries a recommendation the owner confirms at sign-off (§8).
   passes `orphan-note`. `publish.ts` records the same leak, for covers, above
   `copyCovers`.
 
-**The boundary and the withhold list, as the security review tightened them.**
-#368's rules and the map's boundary stand; these close the shapes they did not
-name. Each withholds the whole section, with the warning above, and each gets
-an extractor unit test with the canary placed where it would leak.
+#### 3.1.1 How the section is read
 
-| Shape | Why it withholds |
-| --- | --- |
-| a code fence opened in the section and not closed before the next heading or the end of the file | an unclosed fence makes every later `## Notes` read as fenced, and the section runs into the private remainder |
-| a setext heading (a line of only `=` or `-` under a non-blank line) | Obsidian renders it as a heading the boundary does not know |
-| a `%%` or `<!--` comment still open where `## Thoughts` starts, or a `-->` inside the section | comment state is computed **from the start of the body**, as fence state is; a heading inside an open comment is no heading |
-| any HTML tag-shaped sequence | raw HTML can hide text in reading view; this **replaces #368's rule 5** (strip tags, keep the text) with withholding, at no cost today: #368 counted no HTML in the real vault |
-| a link reference definition line | Obsidian hides it, and it carries a URL |
-| any URL scheme left after links flatten (`://`, `file:`, `obsidian:`, `mailto:`) | a bare address or an autolink is not a link the flattening sees; `file:` and `obsidian:` carry a user or vault name |
+**Amended on [#411](https://github.com/mephistopheles4/stacks/issues/411),
+2026-10-10, after three rounds of review.** This replaces the line scan and
+the withhold table this section carried until then. The owner's decision, from
+chat: "Adopt the parser." The record is
+[ADR-0107](../adr/0107-thoughts-are-read-by-a-commonmark-parser.md), which
+amends ADR-0101 and ADR-0106. ADR-0106's allowlist stands; it now applies to
+the parser's tokens rather than to lines.
 
-**A heading is recognised as broadly as CommonMark's ATX rule allows**: 0 to 3
-spaces of indent, a space or tab after the hashes, optional closing hashes. The
-scan starts below the frontmatter block. Matching wider can only end the
-section earlier, which publishes less.
+**The extractor parses the note body with `micromark`'s tokenizer** and reads
+the event stream. The body is everything below the frontmatter block. The
+extractor calls `preprocess`, `parse` and `postprocess` only. **It never
+compiles to HTML**: it imports neither `micromark()` nor any HTML extension.
+
+**The steps, in order.** Each one that fails withholds the whole section,
+with a warning that names the note and the shape and never quotes the text.
+
+1. **No frontmatter block:** absent, as before.
+2. **Line endings.** A lone CR, a U+2028 or a U+2029 anywhere in the source,
+   frontmatter included, withholds. This is a hand rule: CommonMark ends a line
+   at a lone CR, and Obsidian may not.
+3. **The start.** Only **root-level** headings count, never one inside a list
+   item, a quote or a callout. The section starts at a root-level ATX heading
+   of level 2 whose text, trimmed, is exactly `Thoughts`. With none, the
+   section is absent. With two or more root-level level-2 headings reading
+   `Thoughts`, ATX or setext, the section withholds.
+4. **The end.** The section ends at the next root-level heading of level 1
+   or 2, or at the end of the body. If that heading is a setext heading, the
+   section withholds. A heading of level 3 or deeper stays inside.
+5. **HTML above the section.** Any HTML token between the start of the body
+   and the section's heading withholds: an HTML block, inline HTML or an HTML
+   comment, closed or not. Raw HTML above can hide the section in reading view
+   while it still ships.
+6. **Raw guards, from the start of the body to the section's end.** Any of
+   these withholds: `%%`; a run of three or more backticks or three or more
+   tildes, at any indent and behind any marker; `$$`. These are hand rules on
+   raw text, and they exist because Obsidian may draw a block's extent
+   differently from CommonMark. Where it does, the parse could take a heading
+   that reading view shows as code or as a comment, which is round 3's leak.
+   The cost: a code fence, a math block or a `%%` comment anywhere above the
+   Thoughts withholds them. `stacks add` writes `## Thoughts` above
+   `## Notes`, so the usual note keeps none of those above it.
+7. **Raw guards in the section.** Any of these withholds:
+   - more than **8,000** Unicode code points of section text, counted across
+     line breaks and with trailing whitespace excluded;
+   - two or more `$`, **whatever escapes them** (a single `$` ships);
+   - `![`, in any form: an image, an embed or a bracket with no definition;
+   - `^[`, an inline footnote;
+   - `::`, a Dataview field;
+   - a control character other than tab and line feed (C0, DEL or C1).
+8. **The token allowlist, inside the section.**
+   - **Blocks that ship:** a paragraph; an ATX heading of level 3 to 6, whose
+     text ships as its own paragraph; a thematic break, which ships as `---`;
+     a bullet or ordered list one level deep, whose items each hold
+     paragraphs only, with their marks kept; blank lines.
+   - **Every other block withholds.** That includes a block quote (and with
+     it every callout), fenced or indented code, HTML, a setext heading, a
+     table, and a link or footnote definition. It also includes a list nested
+     in a list, and any block other than a paragraph inside a list item, such
+     as a heading, quote or fence behind a bullet.
+   - **Inline tokens that ship:** text; a character escape, whose character
+     ships; emphasis and strong, with the marks dropped and the words kept;
+     hard breaks; line endings, kept as `\n`; and links, of which **only the
+     label ships**. A link's destination, title and reference never ship.
+   - **Every other inline token withholds:** a code span, inline HTML, an
+     image, an autolink, a character reference such as `&amp;`, and a footnote
+     call.
+9. **Obsidian's marks, on the text that ships.** These are hand rules, since
+   no CommonMark parser knows them:
+   - A wikilink flattens to its alias. With no alias, it flattens to its
+     target without the `#heading` or `^block` part.
+   - A block id at the end of a line is removed.
+   - `==highlight==` and `~~strike~~` lose their marks and keep their words.
+   - A `[[` or `]]` left after flattening withholds.
+10. **The output check, on each paragraph that ships**, after every strip and
+    every escape is applied. Each of these withholds:
+    - a comment marker: `%%`, `<!--`, `-->` or `--!>`;
+    - a tag start: `<` followed by a letter, `/`, `!` or `?`;
+    - a URL scheme: `://`, `file:`, `obsidian:` or `mailto:`, in any case;
+    - every pattern of step 7 except the cap.
+
+    So an escaped mark that the strip restores, such as `\<div` or `\%%`,
+    withholds at extraction. It can never reach the inspector and fail the
+    deploy (round 3's adversarial F6).
+11. **Nothing left:** absent.
+
+**The inspector mirrors step 10 as a twin.** `notes-shape` refuses the same
+set of marks, from its own pattern list beside `HIDDEN_MARKER`, never a shared
+import (`DERIVED_KEYS`'s reason). A correct build therefore never writes a file
+the inspector refuses, and an extractor regression on any of those marks still
+fails the build (round 3's adversarial F7). A lone backtick, a single `$` and
+`]:` in running text are **not** in it, because the parser ships them as
+literal text when they open no code span and no definition.
+
+**The `## About` writer reads through the same parse.** `insertBodySection`
+finds `## Notes` as the first root-level level-2 ATX heading in the body that
+reads `Notes`. That excludes the frontmatter, fenced lines and subheadings, so
+the writer and the extractor cannot read a heading differently.
+`disarmBodyText` keeps its own hand predicates, which read wider than
+CommonMark: for text being written, matching wider is the safe direction. It
+gains one: **a setext underline**, a line of only `=` or only `-`, is escaped
+too. Otherwise a description holding `Thoughts` over a line of dashes would
+be a second `Thoughts` heading, and it would withhold the owner's real section
+under step 3.
+
+#### 3.1.2 The dependency
+
+**Three packages, pinned exactly** in `packages/core/package.json`:
+`micromark` 4.0.2, `micromark-extension-gfm-table` 2.1.1 and
+`micromark-extension-gfm-footnote` 2.1.0. Why each earns its place, the full
+supply-chain list and the versions not taken are in
+[ADR-0107](../adr/0107-thoughts-are-read-by-a-commonmark-parser.md). In
+short:
+
+- **No new package version enters the lockfile.** All 32 packages in the
+  closure are there already, through `markdownlint`. What changes is that they
+  run at build time over the owner's vault.
+- **They reach no visitor.** The site may only `import type` from `core`.
+- **The tables extension** makes a table a token, which withholds. A table
+  pattern by hand missed the one-column table in round 3.
+- **The footnote extension** makes a call to a footnote defined elsewhere in
+  the note a token, which withholds. Without it, the label ships as text.
+- **The math extension is recommended out**, as a decision for the owner at
+  sign-off (§3.1.3). Its entry point imports KaTeX at load, with no way to
+  import the syntax alone. The `$` and `$$` rules of steps 6 and 7 withhold
+  the same sections with no package.
+- **pnpm's release-age quarantine is not a control here.** Nothing sets it
+  ([#399](https://github.com/mephistopheles4/stacks/issues/399)), and an exact
+  pin is not subject to it. Release age is checked by hand. Every version
+  pinned here is over seven months old.
+
+#### 3.1.3 Decisions the parser forces
+
+**The prototype on #411 differed from the hand extractor in 31 of the
+existing tests**, all in `thoughts-section.test.ts`. 24 differ in a way that
+publishes nothing new, so the build updates each test to the new answer:
+
+- 19 give a different reason string;
+- 3 group the same text into paragraphs differently;
+- 2 publish nothing either way, swapping absent for withheld.
+
+The other 7, and the open questions the build session left, take a
+recommendation each. **The owner confirms or overrides them at sign-off**
+(§8).
+
+| # | The difference or question | Recommendation |
+| --- | --- | --- |
+| D1 | A heading indented under a list item: the hand version shipped the item; the parser withholds | **accept**: stricter |
+| D2 | `$20, or \$5`: the hand version shipped it; the parser read math and withheld | **accept**: under step 7 any two `$` withhold, escaped or not, so the test "ships a single dollar sign, and escaped ones" flips. A single `$` still ships. The cost is a section that names two prices |
+| D3 | A backtick run that opens no fence, such as three backticks before `a` and a backtick | **keep withholding**, through step 6's raw guard. A lone backtick that opens no code span ships as a literal character, which reading view shows |
+| D4 | A list continuation, an indented line in an item's paragraph: the hand version withheld; the parser ships it as part of the item | **accept**: reading view shows it. Lazy continuation goes to the Obsidian check (§3.1.5) |
+| D5 | A heading indented one to three spaces: the hand version withheld; the parser reads a heading | **accept**: `###` ships its text, and `##` ends the section |
+| D6 | A closed HTML comment above the section: the hand version withheld; the parser ships | **keep withholding**, through step 5. Round 1 found raw HTML above hiding the section; #368 counted no HTML in the vault, so this costs nothing |
+| D7 | `![x]` with no definition: the hand version withheld; the parser ships it as text | **keep withholding**, through step 7's `![`. Obsidian's reading is unverified, and the vault holds no images in Thoughts |
+| D8 | The math extension, which the prototype used | **leave it out** (§3.1.2). The hand rules of steps 6 and 7 withhold the same sections, and KaTeX stays out of the runtime. Taking it instead drops `$$` from step 6 and the `$` rule from step 7, and pins `micromark-extension-math` 3.1.0, which brings `katex` 0.16.47 and `commander` 8.3.0 |
+| D9 | Whether the `## About` writer's `## Notes` lookup uses the parser too | **yes** (§3.1.1), with setext underlines added to the disarm |
+| D10 | What carries over from round 3 | the inspector twin of step 10 (adversarial F7); integrity's gaps F4 and F10 to F12 as done-criteria; and the standards pair's and `unstated-lens`'s wording fixes |
+
+#### 3.1.4 The named cases
+
+**Every shape the three review rounds found, the prototype's 20 shapes and 4
+controls, and #367's and #368's cases each get an extractor unit test**, named
+for its id below.
+
+- **Each test asserts the result's kind, and for a withhold its exact reason**,
+  so the rule that is meant to catch the shape is the one proven (round 3's
+  integrity F9).
+- **The canary sits where a misread would leak it.**
+- **The existing tests stay unless §3.1.3 changes them.**
+- **"Not shipped" means absent or withheld**, and the canary appears in no
+  result.
+
+Sources are `R1`, `R2` and `R3` for move 4's rounds on #415, at 2e9e40f,
+89f8f62 and 5688ea6. They are followed by the lens and finding, and `P` is
+the prototype.
+
+**The boundary and the start**
+
+| Id | Shape | Expected | Source |
+| --- | --- | --- | --- |
+| N1 | The section between `## Thoughts` and the next `##`, the canary under `## Notes` | shipped, no canary | #367 |
+| N2 | The section ends at a `#` heading | shipped, no canary | #367 |
+| N3 | A `###` inside the section | its text ships as a paragraph | #367 |
+| N4 | Trailing whitespace, and closing hashes, on the heading | found | #367 |
+| N5 | `## thoughts`, `## Thoughts#`, `### Thoughts` | absent | #367; R2 integrity F2 |
+| N6 | Two `## Thoughts` headings | withheld, neither ships | #367 |
+| N7 | A setext `Thoughts` heading beside an ATX one | withheld (step 3) | step 3 |
+| N8 | `## Thoughts` inside a fence, a quote or a list item | not a start | #367; step 3 |
+| N9 | A `## Thoughts`-shaped line in the frontmatter, as a YAML comment | not a start | R1 integrity F3 |
+| N10 | No frontmatter block | absent | — |
+| N11 | A lone CR, U+2028 or U+2029: on `## Notes`, elsewhere in the body, and in the frontmatter | withheld (step 2) | R1 behaviour F1, adversarial F1, data F1; R3 integrity F4 |
+| N12 | A CRLF note | read as LF | — |
+| N13 | A setext heading ending the section, with `===` and with `---` followed by trailing spaces | withheld (step 4) | R2 integrity F3; R3 integrity F1 |
+| N14 | `===` as the section's first line, with no paragraph above it | shipped as text, no crash | R3 integrity F2 |
+| N15 | A thematic break after a blank line, and under a subheading | shipped as `---` | R1 integrity F9 |
+| N16 | An `## About` the merge inserted after the Thoughts | none of `## About` ships | §4 |
+| N17 | A description holding a `## Thoughts` line, a `Thoughts` setext pair and an unclosed fence, written through `insertBodySection` | none of it ships | §4; step 3 |
+
+**Above the section**
+
+| Id | Shape | Expected | Source |
+| --- | --- | --- | --- |
+| N18 | A fence behind a list marker holding an indented copy of the heading, the canary below | not shipped (step 6) | R3 adversarial F1(a); P |
+| N19 | A two-space fence in a list item, then a margin fence line | not shipped (step 6) | R3 adversarial F1(b); P |
+| N20 | A `$$` block holding a copy of the heading | not shipped (step 6) | R3 adversarial F1(c); P |
+| N21 | A fence never closed | not shipped | #367 |
+| N22 | Closer-shaped lines that close nothing: a run with an info string, text before or after the run, a shorter run, a backtick run in a tilde fence and the reverse, and a tilde fence whose info string holds a backtick | not shipped | R1 integrity F4 to F7; R2 integrity F1 |
+| N23 | An HTML block with a blank line before the heading; inline HTML; an HTML comment, closed and open | withheld (step 5) | R1 data F4; D6 |
+| N24 | `%%`, open or closed, and inside a fence | withheld (step 6) | #368 rule 4 |
+| N25 | A cover embed `![[cover.jpg]]` above the heading | shipped: step 7 reads the section only | existing |
+| N26 | A comment below the section's end | shipped | P control |
+
+**Blocks in the section**
+
+| Id | Shape | Expected | Source |
+| --- | --- | --- | --- |
+| N27 | Fenced code, backtick and tilde, bare, tagged `text` and tagged `dataview`, closed and not | withheld | R1 adversarial F4, data F3 |
+| N28 | A fence swallowing `## Notes`, its closer below | withheld | existing |
+| N29 | Indented code | withheld | — |
+| N30 | A quote; a callout; a folded callout; a heading in a quote; a query fence in a callout | withheld | #368 rules 2 and 6, replaced by ADR-0106; R2 behaviour F2, data F2 |
+| N31 | Behind a bullet: a `##` heading, a `#` heading, a quote, and a folded callout with a lazy line | withheld | R3 adversarial F2, data F1, behaviour F3; P |
+| N32 | A nested list; a fence in a list item; a heading indented under a list item | withheld | R1 adversarial F3; D1 |
+| N33 | A list continuation, indented inside an item's paragraph | shipped as part of the item | D4 |
+| N34 | A `###` indented three spaces, and a `##` indented two spaces | the first ships its text; the second ends the section | D5 |
+| N35 | Link definitions: plain, in a list item, in a quote, with a label over two lines, and a footnote definition | withheld | R2 behaviour F1, adversarial F1, data F4 |
+| N36 | Tables: two columns with outer pipes, two without, one column, and alignment colons | withheld | R3 adversarial F2, data F3, behaviour F4, integrity F3 |
+| N37 | HTML: a block, an inline tag, a tag split across lines, `<!x`, `<?x` and `<![CDATA[` | withheld | R1 adversarial F2 |
+| N38 | A setext heading inside the section | withheld | — |
+
+**Inline in the section**
+
+| Id | Shape | Expected | Source |
+| --- | --- | --- | --- |
+| N39 | A code span; an inline query, a code span opening with `=` | withheld | R2 adversarial F4, data F3, unstated F3 |
+| N40 | A backtick run that opens no fence | withheld (step 6) | D3 |
+| N41 | A lone backtick | shipped as a literal character | D3 |
+| N42 | An inline image, a reference-style image, `![x]` with no definition, and an embed | withheld | R1 behaviour F3; D7 |
+| N43 | An autolink; a bare `https://` address; `file:`, `obsidian:` and `mailto:` text | withheld | §3.1 |
+| N44 | A character reference: `&lt;` and `&amp;` | withheld | step 8 |
+| N45 | A footnote call whose definition sits under `## Notes` | withheld | R3 data F4; P |
+| N46 | An inline footnote, `^[…]` | withheld | R3 adversarial F5 |
+| N47 | A Dataview field, bare, in square brackets and in round brackets | withheld | R3 adversarial F5, data F4 |
+| N48 | Math: inline with a `%` comment; a `$$` block; a doubled backslash before either `$`; `$20, or \$5` | withheld | R2 data F4; R3 adversarial F4, data F2, behaviour F2; D2 |
+| N49 | `It cost $20.` | shipped | D2 |
+| N50 | Links: inline; text over two lines; a destination with balanced brackets or parentheses; a title in quotes and in parentheses | the label ships; the canary, in the destination or title, does not | R3 adversarial F3, data F3, behaviour F1; P |
+| N51 | A reference link whose definition sits under `## Notes` | its label ships | R3 integrity F6 |
+| N52 | Escaped marks the strip restores: `\<div`, `\%%`, `<\!--` and `--\>` | withheld (step 10); a G20 build of such a note passes the inspector | R3 adversarial F6 |
+| N53 | A control character, U+0001 | withheld (step 7) | R3 adversarial F6 |
+| N54 | 8,000 code points ship and 8,001 withhold, counted across line breaks and in code points rather than UTF-16 units | as stated | #368 rule 7; R3 integrity F5 |
+
+**Wikilinks**, outside a table because their bar is a table's cell separator:
+
+- **N55** — `[[target]]` ships `target`. `[[target|alias]]` and
+  `[[target#heading|alias]]` ship `alias`. `[[target\|alias]]`, with an
+  escaped bar, ships `alias`. An alias with spaces round it is trimmed. A `[[`
+  left over withholds. Sources: R3 data F3 and integrity F8; P.
+
+**The strip, the controls and the writers**
+
+| Id | Shape | Expected | Source |
+| --- | --- | --- | --- |
+| N56 | Emphasis, strong, strike and highlight lose their marks; `snake_case` keeps its underscore; a tag stays; a block id goes; list marks stay; trailing spaces are trimmed | as stated | #368 rules 1, 2 and 6; R3 integrity F7 |
+| N57 | Plain prose; a list; a flattened link | shipped | P controls |
+| N58 | `## About` lands above `## Notes` only when that is a root-level level-2 heading in the body: never one in the frontmatter, a fenced one, or a `###` | as stated | R1 adversarial F6; R2 integrity F4 |
+| N59 | Disarmed text: lone CRs become LF; `<`, `>` and `%%` become entities; heading lines, fence openers and setext underlines are escaped. Parsed, it holds no heading, code fence or HTML token | as stated | R1 behaviour F2, data F2, adversarial F5; D9 |
+| N60 | `notes-shape` refuses each mark of step 10, with one G20 plant each, as well as a non-canonical byte form | refused | R2 adversarial F5, data F5; R3 adversarial F7 |
+
+**The non-extractor gaps carry over as done-criteria of step 2:**
+
+- **Round 3's integrity F10:** the takedown branch's refusal is observed red.
+- **Round 3's integrity F11 and F12:** inspector messages and the shared-id
+  warning are asserted by their words.
+- **The round-3 wording fixes** from the standards pair and `unstated-lens`.
+
+#### 3.1.5 What CommonMark does not settle
+
+**The parser decides structure as CommonMark does. Reading view is
+Obsidian's, and the two are not the same.** These shapes are unverified in
+Obsidian's reading view:
+
+- lazy continuation in a list item;
+- where a fence inside a list item ends;
+- whether `$20 and $30` renders as math;
+- `![x]` with no definition;
+- an escaped-bar wikilink outside a table;
+- a footnote call with no definition;
+- a heading indented one to three spaces;
+- how `[[target#heading]]` displays.
+
+**The check is the owner's** (§8). The build session writes a scratch note of
+invented text, never committed, holding each shape. The owner opens it in
+reading view and says, for each shape, what shows. If Obsidian hides text the
+parser ships, that shape becomes a withhold rule with a named case before
+#415 leaves draft. If Obsidian shows text the parser withholds, nothing
+changes: withholding more is the safe side.
 
 ### 3.2 Which books get a notes file
 
@@ -355,7 +640,7 @@ extractor and the motion, because the motion swaps its texture in.
 | | Step | Route | Blocked by |
 | --- | --- | --- | --- |
 | 1 | **The split gate.** The **ship phrase** (#367's must-ship marker: a literal planted inside a fixture's `## Thoughts` that a check requires to be present, the canary's opposite) as a constant beside `NOTE_BODY_CANARY`; `## Thoughts` sections added to existing fixtures; G2's vacuity guard and absence assertions armed; G2's presence assertions as `test.fails`, public and local; the `orphan-note` and `notes-shape` inspector rules with their G20 plants | security | — |
-| 2 | **The extractor.** The adapter method, with §3.1's boundary and withhold list; the hand strip; `notes/<id>.json` staged by both builds under §3.2's predicate, and the folder's prune; `stacks add` writing `## Thoughts` above `## Notes`; the `## About` writer disarming heading-shaped lines (below); `packages/site/public/notes/` in `.gitignore` and in G5's build-output assertion; the `/notes/*` revalidate block; G2's `test.fails` flipped to `test`; `gate:public`'s presence and vacuity checks; G2's row text rewritten to the split | security | 1 |
+| 2 | **The extractor.** The adapter method, reading the section through the parser and the allowlist of §3.1.1, with every named case of §3.1.4; the three packages pinned (§3.1.2), after the owner approves the install (§8); the `## About` writer's `## Notes` lookup through the same parse; `notes/<id>.json` staged by both builds under §3.2's predicate, and the folder's prune; `stacks add` writing `## Thoughts` above `## Notes`; the `## About` writer disarming heading-shaped lines (below); `packages/site/public/notes/` in `.gitignore` and in G5's build-output assertion; the `/notes/*` revalidate block; G2's `test.fails` flipped to `test`; `gate:public`'s presence and vacuity checks; G2's row text rewritten to the split | security | 1 |
 | 3 | **The held tier.** `gate:public` extended first and proven red: no held file for a private or wishlist book, none above 1200 px, none carrying EXIF or XMP, `orphan-held`, `heldCover` in `unknown-key` and `foreign-cover`, the `/held-covers/*` block required by `headers`. Then the staging: the held stage re-encoding through sharp, its prune, `heldCover` in `library.json`, `packages/site/public/held-covers/` in `.gitignore` and G5, the card's cover viewer reading it | security | 2 |
 | 4 | **The motion.** Pickup replacing the card (§3.4); GSAP stepped from the render loop; the CSS3D page; the held texture's off-thread decode and swap; the three-pass dim; the painted repaint; the pickup tuner on Tweakpane with its CSS route, the CSS extracted by reading the package file **as text**, never importing or evaluating it, and failing when the expected CSS is absent; the Phase 2 click gate and G35 moved (§3.5), with `location.href` unchanged after a pickup; G61 extended; the open spread (§3.6); the phone loop as a hook (below) | security | 3 |
 
@@ -400,7 +685,8 @@ since tuning the motion needs them, then the pickup itself.
 **What #367 put in steps 1 and 2 is carried as it stands.** Every other
 boundary and sanitising case is an extractor unit test, listed on
 [#367](https://github.com/mephistopheles4/stacks/issues/367) and
-[#368](https://github.com/mephistopheles4/stacks/issues/368). One more joins
+[#368](https://github.com/mephistopheles4/stacks/issues/368), and named
+since #411's amendment in §3.1.4. One more joins
 them here: **a note whose `## About` the merge inserted after the Thoughts**
 must ship none of `## About`. `insertBodySection` places `## About` above
 `## Notes`, so it lands between the two, and a `##` heading ends the section;
@@ -438,7 +724,7 @@ until then.
 | --- | --- | --- | --- |
 | **split** | The Thoughts text is present in its book's `notes/<id>.json` and the canary is present nowhere, in public and local builds; a private book, a wishlist book, an embed and **an unclosed fence with the canary in `## Notes` below it** emit no file; **a build after the section is withheld, and again after it is removed, leaves no file for that book** | steps 1–2 | G2 (`public-build`), extended |
 | **orphan-note** | Every `notes/<id>.json` names a book in the `library.json` beside it, and from step 2, in both directions: a file exactly for each book carrying `thoughts: true` | step 1, widened in step 2 | an inspector rule, planted red under G20 (`public-build-artifact`) |
-| **notes-shape** | Every file under `notes/` is exactly `{ "paragraphs": string[] }`, non-empty, under a byte cap, and free of any URL scheme | step 1 | an inspector rule, planted red under G20 |
+| **notes-shape** | Every file under `notes/` is exactly `{ "paragraphs": string[] }`, non-empty, under a byte cap, and free of any URL scheme; from step 2, free of every mark the extractor's output check refuses (§3.1.1, step 10), in its own pattern list | step 1, widened in step 2 | an inspector rule, planted red under G20 |
 | **presence in `dist/`** | `gate:public` finds the ship phrase in `dist/notes/` and refuses to run without its fixture | step 2 | `gate:public`, extended |
 | **build output out of git** | `packages/site/public/notes/` and `held-covers/` are ignored | steps 2–3 | G5 (`vault-is-truth`), extended |
 | **held tier** | No held file for a private or wishlist book; none above 1200 px on its long edge; none carrying EXIF or XMP; no file in `held-covers/` that no book names; `heldCover` same-origin and one segment; a revalidating `/held-covers/*` block | step 3, **before** the staging | `gate:public` and inspector rules under G20 |
@@ -481,6 +767,13 @@ G8 already shows why: a contract edited ahead of the parser is a red build.
   `Promise<boolean>`, and the edit fixes that too. Its paragraph gains that the
   text it writes has every heading-shaped line and fence opener disarmed
   (§4). Step 2.
+- **`AGENTS.md`, the parser**, from #411's amendment. Invariant 2 and the
+  `readPublicSection` paragraph say the section is read through a CommonMark
+  parser with an allowlist over its tokens, and link
+  [ADR-0107](../adr/0107-thoughts-are-read-by-a-commonmark-parser.md). The
+  `insertBodySection` paragraph gains setext underlines among the lines it
+  disarms. `packages/core/package.json` gains the three exact pins, and
+  ADR-0107's status line moves from proposed to built. Step 2.
 - **`.gitignore`.** `packages/site/public/notes/` (step 2) and
   `packages/site/public/held-covers/` (step 3), beside the `covers/` and
   `library.json` lines already there. A broad add after a real build would
@@ -524,6 +817,8 @@ room, per [`docs/adr/README.md`](../adr/README.md).
 | [ADR-0103](../adr/0103-gsap-plays-the-pickup-motion.md) | GSAP plays the pickup motion, for fluency over a zero-byte option |
 | [ADR-0104](../adr/0104-tweakpane-tunes-the-pickup-behind-debug.md) | Tweakpane with essentials tunes the pickup, behind `?debug`, styled through placeholders and a lazy link |
 | [ADR-0105](../adr/0105-a-cover-has-a-shelf-tier-and-a-held-tier.md) | A cover has a shelf tier and a held tier; amends ADR-0015 |
+| [ADR-0106](../adr/0106-thoughts-ship-only-plain-prose.md) | Thoughts ship only plain prose, and any other shape withholds the section; amends ADR-0101. Written during step 2's build, on #411 |
+| [ADR-0107](../adr/0107-thoughts-are-read-by-a-commonmark-parser.md) | The Thoughts section is read by a CommonMark parser, and the allowlist applies to its tokens; amends ADR-0101 and ADR-0106. Written with #411's amendment to §3.1 |
 
 No other decision on the map meets AGENTS.md's bar of hard to reverse,
 surprising and a real trade-off. The choreography's numbers live in
@@ -537,12 +832,15 @@ unit-tested.
 | What | When | How |
 | --- | --- | --- |
 | Confirm §3's decisions: the schema and its two caps (8,000 code points, 40,000 bytes), the `thoughts` flag, which books get notes, the held path, what replaces the card, the G35 fates, the open-spread criterion, the type slices, history, the repaint, and the four deferrals. **Two of them replace a ticket's rule**, from the security review: any HTML tag withholds the section (#368's rule 5 stripped tags and kept the text), and every held copy is re-encoded (#377 copied one already inside the cap byte for byte) | **at sign-off** | the owner reads §3 and says proceed, fix or kill on the whole spec |
+| **#411's amendment to §3.1**: the parser and its steps (§3.1.1), the three pins (§3.1.2), and the ten recommendations D1 to D10 (§3.1.3). D8 is the one place the amendment departs from the prototype the owner adopted: it leaves the math extension out. **ADR-0106 replaced two more of #368's rules**: a quote and a callout now withhold (rules 2 and 6) | **at sign-off** of the amendment, on #411 | the owner reads §3.1.1 to §3.1.5 and ADR-0107 with the review reports, and says proceed, fix or kill; a D-row the owner overrides is changed in §3.1 before the build starts |
+| **Installing `micromark` and its two extensions** into `core` | **during the build**, step 2, before the install | the session names the three exact versions and their release dates, and confirms the lockfile gains no new version; the owner approves the install |
+| **The Obsidian check** of §3.1.5 | **during the build**, step 2, before #415 leaves draft | the session hands the owner a scratch note of invented shapes, never committed; the owner opens it in reading view and says what shows for each; any shape hiding text the parser ships becomes a withhold rule with a named case first |
 | The open spread of §3.6 looks right | **during the build**, step 4 | the session posts desktop screenshots at rest on the step's ticket (never committed, G13); the owner judges. The numbers in §3.6 are necessary, not sufficient |
 | **The Pixel check**, deferred from #371 and #375 | **during the build**, step 4, while polishing | the owner connects the Pixel 10 Pro XL; the session drives it through `scripts/phone-check.ts`, which calls the shelf's loop hook to pick up and put back books (§4); there is no address switch for it |
 | **The existing `## About` sections**, searched once for heading-shaped lines and fence openers | **during the build**, step 2, before the first real public build | the session runs the search against the owner's vault and reports counts only; the owner decides what to do with any hit, because those notes are the owner's to edit |
 | **The swap frame on a phone**, from #377 | **during the build**, step 4, in the same phone session | the held texture's `initTexture` upload is timed on the device, and the GPU memory with a book held is read from the renderer's counters; nobody has measured either. The session reports both figures and what the swap looks like; **the owner judges** whether it stalls the motion. If it does, the swap moves to the moment the book comes to rest |
 | **Installing GSAP, Tweakpane and `@tweakpane/plugin-essentials`** | **during the build**, step 4, before the install | the session names the exact versions it will pin, and their release dates against the seven-day quarantine; the owner approves the install. GSAP's licence trade is ADR-0103's |
-| **The first deploy that publishes real Thoughts or held copies** | **after the build**, once steps 2 and 3 are on `main` | `pnpm deploy:site` is the owner's to run. Before it, the session reports the `## About` search's counts and how many real books would ship a notes file and a held copy; the owner approves the deploy. Published text cannot be taken back from a crawler |
+| **The first deploy that publishes real Thoughts or held copies** | **after the build**, once steps 2 and 3 are on `main` | `pnpm deploy:site` is the owner's to run. Before it, the session reports the `## About` search's counts and how many real books would ship a notes file and a held copy; the owner approves the deploy, and the session that heard it records it on the step's issue as an owner decision, from chat. Published text cannot be taken back from a crawler |
 | The tuner's layout | **during the build**, step 4 | shaped by the owner in use (#375); the spec locks only the floor |
 | Accept each step | **at the end of each step** | move 4 of the owner's playbook, with the security pair on the diff of every step, 1 to 4 |
 
@@ -570,6 +868,18 @@ unit-tested.
   at load, before any pickup, then passed twice (#371).
 - **The `dist/` size the held tier adds is an estimate**, about 10 MB, not
   measured (#377).
+- **The parser is CommonMark, and reading view is Obsidian's.** §3.1.5's check
+  covers the shapes known to be in question, and it is taken once. A later
+  Obsidian release that renders a shape differently is seen by nothing here.
+- **The parse runs over the whole note body**, which no cap bounds; only the
+  section is capped. A pathological note slows the owner's own build and
+  reaches nobody else.
+- **Two builds of `micromark`** (ADR-0107): the CLI loads the default, and a
+  test runner may load the `development` one, which writes its parse to stderr
+  when `DEBUG` names `micromark`. `gate:public` runs the default end to end.
+- **Bidirectional and zero-width characters ship.** They are the owner's own
+  text, shown in reading view, and hide nothing that ships; round 3 did not
+  assess them, and step 7 refuses control characters only.
 - **Follow-ups:** the 16 small covers, [#408](https://github.com/mephistopheles4/stacks/issues/408);
   realism beyond the cover (finish maps, a Blender model), a future map that
   would reopen #369's reuse of `buildBook`; the rest of the `?debug` page
