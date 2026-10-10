@@ -1664,6 +1664,18 @@ moved; the gates above hold the new extractor as they held the old one.
   surviving in that twin. New cases N80 to N85 went red against the code
   before them, and the `About` writer's five refusals each assert their own
   warning words.
+- **#424, the writer simplified.** G2 plants an invented, quoted description
+  under a demoted `### About` in an existing fixture note, the canary inside
+  the quote, with a vacuity check on the plant; unquoted, with its heading
+  deleted, the same text turned `gate:public` red on `note-body`. New cases
+  N86 to N90 and N92 to N94 went red against the code before them; N91, which
+  tests a catch that already existed, went red with `publish()` made to print
+  the error, and N92's decoded-trace check has a control that finds the canary
+  in a parse's trace. The writer now
+  refuses four writes, each asserting its own warning words; N82's shapes
+  moved under N76 as a test of the quote, where the heading rows went red with
+  the quote switched off. Move 4's first round added N88's Obsidian-mark rows,
+  each red against the code before them.
 
 ### The held tier, gated before it is staged
 

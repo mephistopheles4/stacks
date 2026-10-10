@@ -168,25 +168,36 @@ and links written with their address, `[text](address)`, of which only the
 text shows — `[[wikilinks]]` flatten to their alias or their note's name. Any
 other shape withholds the **whole** section, and the build warns naming the
 note and the shape, never quoting it: a quote or callout, code or a code fence,
-a nested list, a table, HTML, a link whose address is defined elsewhere in the
-note or written in angle brackets, `[text](<My Note.md>)`, an image or embed,
-a footnote, a Dataview field, a character reference such as `&amp;`, a web
-address, or **two `$` anywhere in the section, escaped or not**, since they may
-be math — write one price as words. A `%%` comment, a code fence, a `$$` or
-HTML anywhere **above** the section withholds it too, because Obsidian may draw
-those blocks differently from the parser. A note body over 20,000 characters
-withholds its section too, unread, since the parser slows sharply on some
-shapes past that. `stacks enrich` writes no provider description over 8,000
-characters once disarmed, none into a note whose Thoughts are already
-withheld, none that would hold a heading, a definition, HTML or code, and none
-that would carry the note past 20,000 or change what its Thoughts ship, or why
-they are withheld, warning which note it skipped; a note it skipped for
-withheld Thoughts gets its description on the next run after they ship. To
-publish a withheld section,
-rewrite the shape the warning names. The list and its reasons are
+a nested list, a table, HTML, a link whose address is written in angle
+brackets, `[text](<My Note.md>)`, an image or embed, a footnote, a Dataview
+field, a character reference such as `&amp;`, a web address, an `About`
+heading or a lone `About` line, or **two `$` anywhere in the section, escaped
+or not**, since they may be math — write one price as words. A `%%` comment, a
+code fence, a `$$` or HTML anywhere **above** the section withholds it too,
+because Obsidian may draw those blocks differently from the parser. A note body
+over 20,000 characters withholds its section too, unread, since the parser
+slows sharply on some shapes past that. To publish a withheld section, rewrite
+the shape the warning names. The list and its reasons are
 [ADR-0106](adr/0106-thoughts-ship-only-plain-prose.md) and
 [ADR-0107](adr/0107-thoughts-are-read-by-a-commonmark-parser.md); spec §3.1.1
 holds every rule.
+
+**`stacks add` and `stacks enrich` write a provider description under
+`## About`, as a quote.** Each skips a note in four cases, and warns which note
+it skipped:
+
+- the note holds a line ending other than LF or CRLF;
+- the description is over 8,000 characters as it would be written;
+- it would carry the note body past 20,000 characters;
+- the parser fails on the note.
+
+A skipped note gets its description on a later run, once the cause is fixed or
+is removed. **If a description ends up in your Thoughts**, because its
+`## About` heading was demoted or deleted, the quote withholds the whole
+section. Restore the heading, or delete the quoted text. ⚠️ **Do not take the
+quote marks off instead**: that publishes the description as your own words.
+If `stacks enrich` has run since the heading went, it wrote a fresh
+`## About`: delete the stranded quote rather than restore its heading.
 
 **Withdrawing a section takes two moves, and the second is outside this repo.**
 

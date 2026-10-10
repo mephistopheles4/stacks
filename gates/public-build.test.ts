@@ -120,7 +120,8 @@ describe('G2 — note bodies stay private', () => {
  *
  * Existing notes rather than new ones, because two tests pin the vault's book
  * count ([#367](https://github.com/mephistopheles4/stacks/issues/367), decision
- * 10). Every case here is one #367 or the spec's §5 `split` row names; every
+ * 10). Every case here is one #367 or the spec's §5 `split` row names, or #424's
+ * D20 for the quoted description; every
  * other boundary case belongs to the extractor's unit tests.
  */
 const PLANTED = {
@@ -136,6 +137,12 @@ const PLANTED = {
   unclosedFence: 'Nine Ways of Seeing a Warehouse.md',
   /** No Thoughts at all, and the canary under `## Notes`. */
   noThoughts: 'Compilers for the Impatient.md',
+  /**
+   * An empty `## Thoughts`, then a quoted description under a demoted
+   * `### About`, the canary inside the quote: the shape a description takes
+   * once its heading is lost, which the quote withholds (#424, D20).
+   */
+  quotedAbout: 'The Salt Road Ledger.md',
 } as const;
 
 /** A fence opener or closer, as CommonMark allows it indented. */
@@ -239,8 +246,17 @@ describe('G2 — the Thoughts split is planted before anything is asserted about
     expect(note).toContain(CANARY);
   });
 
+  it('has a quoted description under a demoted `### About` in `## Thoughts`, the canary in the quote', async () => {
+    const section = thoughtsOf(await readFixture(PLANTED.quotedAbout))?.section ?? '';
+    const quoted = section.split('\n').filter((line) => line.startsWith('>'));
+
+    expect(section.split('\n')).toContain('### About');
+    expect(quoted.join('\n')).toContain(CANARY);
+  });
+
   it('would publish every book whose case is about the section, not the book', async () => {
-    // The embed, the unclosed fence and the no-Thoughts book must each be a
+    // The embed, the unclosed fence, the no-Thoughts book and the quoted
+    // description must each be a
     // book a public build ships. Made private or wishlist, any of them would
     // emit no file for the book's sake, and its case would test nothing.
     const vault = new ObsidianAdapter(FIXTURE_VAULT);
@@ -248,7 +264,13 @@ describe('G2 — the Thoughts split is planted before anything is asserted about
     const shipped = new Set(result.library.books.map((book) => book.id));
     const ids = await fixtureIds();
 
-    for (const name of [PLANTED.split, PLANTED.embed, PLANTED.unclosedFence, PLANTED.noThoughts]) {
+    for (const name of [
+      PLANTED.split,
+      PLANTED.embed,
+      PLANTED.unclosedFence,
+      PLANTED.noThoughts,
+      PLANTED.quotedAbout,
+    ]) {
       expect(
         shipped.has(ids.get(name) ?? name),
         `${name} must be a book a public build ships`,
@@ -315,8 +337,9 @@ describe.each([
   });
 
   it('stages no notes file for any book but the split one', async () => {
-    // One assertion for five planted cases: the private and wishlist books, the
-    // embed, the unclosed fence and the book with no Thoughts. A filtered book
+    // One assertion for six planted cases: the private and wishlist books, the
+    // embed, the unclosed fence, the book with no Thoughts and the quoted
+    // description. A filtered book
     // has no id in a public `library.json` to look a file up by, so the folder
     // is held to an allowlist of one rather than searched for each case.
     const { ids } = await publishSplit();

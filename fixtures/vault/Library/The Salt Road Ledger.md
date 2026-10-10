@@ -12,6 +12,15 @@ pages: 288
 tags: [history, nonfiction]
 ---
 
+## Thoughts
+
+### About
+
+> An invented provider description, quoted the way the About writer writes one,
+> under a heading the owner demoted. NOTE_BODY_CANARY_do_not_ship
+>
+> The quote withholds the whole section, so none of this is published (#424).
+
 ## Notes
 
 NOTE_BODY_CANARY_do_not_ship

@@ -307,6 +307,33 @@ since the writer parses the note three times.
 going once more"; fixes as spec D17 to D19 and N80 to N85, gates as
 `docs/gates.md`'s round-6 bullet.
 
+**2026-10-10 — the About writer simplified, and F1 closed**
+([#424](https://github.com/mephistopheles4/stacks/issues/424)): spec D20 to
+D27 and N86 to N94. A description is written as a quote, and a section holding
+an `About` heading or line withholds; the writer refuses four writes, not
+five, and no longer reads the Thoughts; reference links ship their label. G2
+plants a quoted description under a demoted heading — `docs/gates.md`'s #424
+bullet. Two findings, both measured:
+
+- **`micromark`'s development build traces characters as codes**, one
+  `consume: \`80\`` line each, so a search of its stderr for a word of the note
+  finds nothing whether or not the body was traced. N92 decodes the trace,
+  and a control through the same harness finds the canary in a parse's trace.
+- **A leading byte-order mark in a note body shifts every offset by one**:
+  `notesHeadingAt` answered 8 for a `## Notes` at 20, which would have put
+  `## About` under the owner's last line. It now refuses (N94).
+
+Measured read-only against the real vault, counts only, matching the spec's
+§2: 54 notes, 49 with a `## About`, one in the F1 layout, none with text under
+`## Thoughts`, none quoted, none with CRLF. The writer ran end to end on this
+Windows machine on an LF and a CRLF note, and refused both under a
+`development` condition with `DEBUG` set, the canary traced nowhere (#424).
+D25's Obsidian check was not taken before move 4, so D19 stays. The gate, the
+code and the records landed in separate commits on the branch, the records
+last; the squash-merge lands them as one. Move 4's first round added the
+`About` rule's reading after Obsidian's marks, and restored the cut refusals'
+shapes as a test of the quote.
+
 **2026-10-09 — the held tier, gated first**
 ([#412](https://github.com/mephistopheles4/stacks/issues/412)): `orphan-held`,
 `held-oversize` and `held-metadata` under G20, `heldCover` in `foreign-cover`

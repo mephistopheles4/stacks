@@ -33,7 +33,7 @@ vault, which is gitignored.
 | `The Quiet Protocol.md` | minimum viable note — only `type` + `title` + a couple of extras; [wishlist Thoughts](#the-thoughts-split); a [held-size cover](#the-held-tier) it must never ship |
 | `Lantern Work.md` | **reordered keys**; no cover; `status: reading` (fallback spine, face-out); an [embed](#the-thoughts-split) in its Thoughts |
 | `A Book Kept Back.md` | `private: true` — must never reach a public build; [private Thoughts](#the-thoughts-split); a [held-size cover](#the-held-tier) it must never ship |
-| `The Salt Road Ledger.md` | print edition; started 2025, finished 2026 (crosses a year boundary) |
+| `The Salt Road Ledger.md` | print edition; started 2025, finished 2026 (crosses a year boundary); plants a quoted description under a demoted `### About` in its Thoughts (below) |
 | `The Salt Road Ledger (Audiobook).md` | same title+author, different identifier; extra `narrator`/`duration` keys |
 | `The Undelivered Manuscript.md` | **unparseable YAML** → warn naming the file, skip, keep going |
 | `Untitled Import.md` | valid YAML, **no `title`** → a different skip path, also warned |
@@ -114,8 +114,8 @@ hit. It is planted in `The Undelivered Manuscript.md` too — the note that gets
 
 A note's `## Thoughts` section is the one part of a body a build may ship, as
 `notes/<id>.json` (invariant 2; [`docs/spec/picking-a-book-up.md`](../docs/spec/picking-a-book-up.md)).
-Six existing notes plant the cases G2 (`public-build`) holds the split to, chosen
-on [#367](https://github.com/mephistopheles4/stacks/issues/367). Existing notes
+Seven existing notes plant the cases G2 (`public-build`) holds the split to, chosen
+on [#367](https://github.com/mephistopheles4/stacks/issues/367) and, for the last, [#424](https://github.com/mephistopheles4/stacks/issues/424). Existing notes
 rather than new ones, so the book count above does not move.
 
 | Note | Planted case | What a build must do |
@@ -126,6 +126,7 @@ rather than new ones, so the book count above does not move.
 | `Lantern Work.md` | an embed in its Thoughts, the canary beside it | withhold the whole section: no notes file |
 | `Nine Ways of Seeing a Warehouse.md` | a fence opened in its Thoughts and never closed, the canary under `## Notes` below it | withhold the whole section: no notes file |
 | `Compilers for the Impatient.md` | no Thoughts, the canary under `## Notes` | no notes file |
+| `The Salt Road Ledger.md` | an empty `## Thoughts`, then an invented description quoted the way the `## About` writer writes one, under a demoted `### About`, the canary inside the quote | withhold the whole section: no notes file |
 
 The ship phrase is `THOUGHTS_SHIP_PHRASE` in `scripts/lib/public-build.ts`,
 beside `NOTE_BODY_CANARY`. It is plain words on purpose: the section ships with

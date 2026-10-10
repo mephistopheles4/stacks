@@ -59,7 +59,7 @@ describe('insertBodySection', () => {
     await vault.insertBodySection('Library/a.md', '## About', 'A blurb.');
     const after = await read('a.md');
 
-    expect(after).toContain('## About\n\nA blurb.');
+    expect(after).toContain('## About\n\n> A blurb.');
     // Above `## Notes`, so what the owner wrote stays where they left it and
     // the provider's prose does not sit underneath their own.
     expect(after.indexOf('## About')).toBeLessThan(after.indexOf('## Notes'));
@@ -95,7 +95,7 @@ describe('insertBodySection', () => {
     await vault.insertBodySection('Library/a.md', '## About', 'A blurb.');
 
     expect(await read('a.md')).toBe(
-      '---\ntype: book\ntitle: A Book\n---\n\n## About\n\nA blurb.\n',
+      '---\ntype: book\ntitle: A Book\n---\n\n## About\n\n> A blurb.\n',
     );
   });
 
@@ -107,7 +107,7 @@ describe('insertBodySection', () => {
     await vault.insertBodySection('Library/a.md', '## About', 'A blurb.');
     const after = await read('a.md');
 
-    expect(after).toContain('\r\n## About\r\n\r\nA blurb.');
+    expect(after).toContain('\r\n## About\r\n\r\n> A blurb.\r\n\r\n## Notes');
     expect(/[^\r]\n/.test(after)).toBe(false);
   });
 

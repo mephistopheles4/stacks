@@ -1,5 +1,7 @@
 # A provider's description lives in the note body, not in frontmatter
 
+**Status:** accepted; amended by spec D20 (#424), which writes the description as a block quote.
+
 `stacks add` and `stacks enrich` write a provider's description into the note
 under a `## About` heading, above `## Notes`. The `VaultAdapter` gained a
 **sixth method** to do it — `insertBodySection` — and it is the only method in

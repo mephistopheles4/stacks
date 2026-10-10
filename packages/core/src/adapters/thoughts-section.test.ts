@@ -7,6 +7,8 @@ import {
   disarmBodyText,
   extractThoughts,
   notesHeadingAt,
+  oddLineEnding,
+  quoteBodyText,
 } from './thoughts-section.ts';
 
 /**
@@ -410,7 +412,7 @@ describe('hidden text withholds the whole section', () => {
     ])('withholds %s', (_, source) => {
       expect(extractThoughts(source)).toEqual({
         kind: 'withheld',
-        reason: 'the note holds a line ending other than a newline',
+        reason: 'the note holds a line ending other than LF or CRLF',
       });
       expectNoCanary(source);
     });
@@ -420,7 +422,7 @@ describe('hidden text withholds the whole section', () => {
       const source = note(['## Thoughts', 'Kept.', '## Notes', CANARY].join(CR));
       expect(extractThoughts(source)).toEqual({
         kind: 'withheld',
-        reason: 'the note holds a line ending other than a newline',
+        reason: 'the note holds a line ending other than LF or CRLF',
       });
     });
 
@@ -831,8 +833,8 @@ describe('N58: the `## Notes` the `## About` writer lands above', () => {
   });
 
   it('finds none in a body over the cap, which is never parsed', () => {
-    // Round 4, integrity F5. The writer never acts on this answer: such a
-    // note's Thoughts are withheld, so it refuses the write (N75, N81).
+    // Round 4, integrity F5. The writer never acts on this answer: the note
+    // it would write is over the cap too, so it refuses the write (N75).
     const body = `## Notes\n\n${'x'.repeat(MAX_BODY_CODE_POINTS)}`;
     expect(notesHeadingAt(body)).toBeUndefined();
     expect(notesHeadingAt(body.slice(0, MAX_BODY_CODE_POINTS))).toBe(0);
@@ -841,5 +843,52 @@ describe('N58: the `## Notes` the `## About` writer lands above', () => {
   it('skips a fenced one that comes first, and finds the real one', () => {
     const body = ['```', '## Notes', '```', '', '## Notes', 'Private.'].join('\n');
     expect(notesHeadingAt(body)).toBe(body.lastIndexOf('## Notes'));
+  });
+
+  it('N94: throws, quoting nothing, when the parse and the text disagree on where it is', () => {
+    // A leading byte-order mark is dropped by the parser, so every offset
+    // runs one short, and the section would land a line too early, under the
+    // owner's last line (#424, adversarial F3 on revision 3).
+    const body = `${String.fromCodePoint(0xfeff)}Intro.\n${CANARY}\n## Notes\n\nPrivate.`;
+    expect(() => notesHeadingAt(body)).toThrow(
+      new Error('the parse and the text disagree on where `## Notes` is'),
+    );
+  });
+});
+
+describe('the `## About` writer’s other helpers', () => {
+  it('quotes every line, an empty one as a bare `>`', () => {
+    expect(quoteBodyText('One.\n\nTwo.\n  indented')).toBe('> One.\n>\n> Two.\n>   indented');
+  });
+
+  it('N86: quotes a disarmed description into one block quote holding no heading', () => {
+    const quoted = quoteBodyText(disarmBodyText('A blurb.\n\n## Thoughts\n\nThoughts\n---\nMore.'));
+    const events = postprocess(
+      parse()
+        .document()
+        .write(preprocess()(quoted, undefined, true)),
+    );
+    const quotes = events.filter(
+      ([kind, token]) => kind === 'enter' && token.type === 'blockQuote',
+    );
+    expect(quotes).toHaveLength(1);
+    expect(tokenTypes(quoted).has('atxHeading')).toBe(false);
+    expect(tokenTypes(quoted).has('setextHeading')).toBe(false);
+  });
+
+  it.each([
+    ['a lone CR', `a${String.fromCharCode(13)}b`, true],
+    ['U+2028', `a${String.fromCodePoint(0x2028)}b`, true],
+    ['U+2029', `a${String.fromCodePoint(0x2029)}b`, true],
+    ['CRLF', 'a\r\nb', false],
+    ['LF', 'a\nb', false],
+  ])('reads %s as an odd line ending: %s', (_, source, odd) => {
+    expect(oddLineEnding(source)).toBe(odd);
+  });
+
+  it('N90: turns the `[` after a `!` into a character reference, so nothing embeds', () => {
+    const disarmed = disarmBodyText('See ![x](https://example.invalid/p.png) and ![[file.png]].');
+    expect(disarmed).toBe('See !&#91;x](https://example.invalid/p.png) and !&#91;[file.png]].');
+    expect(tokenTypes(disarmed).has('image')).toBe(false);
   });
 });

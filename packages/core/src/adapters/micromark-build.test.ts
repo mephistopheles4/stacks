@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -22,6 +22,8 @@ const EXTRACTOR = pathToFileURL(
 const ADAPTER = pathToFileURL(
   fileURLToPath(new URL('./obsidian-adapter.ts', import.meta.url)),
 ).href;
+/** Planted in a note's private part, where a trace of the body would carry it. */
+const CANARY = 'PRIVATE_REMAINDER_canary';
 
 describe('N65: the build that loads', () => {
   it.each([
@@ -51,7 +53,9 @@ describe('N65: the build that loads', () => {
     const code = [
       `const { extractThoughts, notesHeadingAt } = await import(${JSON.stringify(EXTRACTOR)});`,
       `const extract = extractThoughts(${JSON.stringify(note)});`,
-      `const notesAt = notesHeadingAt(${JSON.stringify(body)}) ?? null;`,
+      'let notesAt;',
+      `try { notesAt = notesHeadingAt(${JSON.stringify(body)}) ?? null; }`,
+      'catch (error) { notesAt = { threw: String(error.message) }; }',
       'process.stdout.write(JSON.stringify({ extract, notesAt }));',
     ].join('\n');
     const env = { ...process.env, NODE_OPTIONS: '' };
@@ -63,14 +67,18 @@ describe('N65: the build that loads', () => {
     return JSON.parse(out) as unknown;
   }
 
-  it('withholds every section, and finds no `## Notes`, when the development build loads', () => {
+  it('withholds every section, and throws looking for `## Notes`, when the development build loads', () => {
+    // The lookup throws a fixed message holding no note text, so the writer
+    // refuses rather than appending below the owner's notes (#424, refusal 4).
     expect(parseIn(['--conditions=development'])).toEqual({
       extract: {
         kind: 'withheld',
         reason:
           'micromark loaded its development build, so no section is read — run without a `development` condition (check NODE_OPTIONS)',
       },
-      notesAt: null,
+      notesAt: {
+        threw: 'micromark loaded its development build, so `## Notes` was not looked for',
+      },
     });
   });
 
@@ -82,11 +90,43 @@ describe('N65: the build that loads', () => {
   });
 
   /**
-   * The `## About` writer, in a fresh Node with the conditions given, on a
-   * throwaway vault: whether it wrote, whether the note is untouched, and
-   * whether it warned that the Thoughts are withheld.
+   * `code` in a fresh Node with the conditions given and `DEBUG` naming
+   * `micromark`, both streams captured: `execFileSync` would let stderr
+   * through to this process, where no assertion reads it.
    */
-  function writeIn(conditions: readonly string[]): unknown {
+  function runIn(conditions: readonly string[], code: string): { stdout: string; stderr: string } {
+    const env = { ...process.env, NODE_OPTIONS: '', DEBUG: 'micromark' };
+    const run = spawnSync(
+      process.execPath,
+      [...conditions, '--import', 'tsx', '--input-type=module', '--eval', code],
+      { cwd: CORE, env, encoding: 'utf8' },
+    );
+    expect(run.status, run.stderr).toBe(0);
+    return { stdout: run.stdout, stderr: run.stderr };
+  }
+
+  /**
+   * Stderr with the development build's trace decoded: it prints each
+   * character it consumes as a code, `consume: \`80\``, so a search of the raw
+   * text could never find a word of the note (#424's N92, found by its
+   * control).
+   */
+  function decoded(stderr: string): string {
+    const codes = [...stderr.matchAll(/consume: `(\d+)`/g)].map((match) => Number(match[1]));
+    return `${stderr}\n${String.fromCharCode(...codes.filter((code) => code >= 0))}`;
+  }
+
+  /**
+   * The `## About` writer on a throwaway vault, a canary in the note's private
+   * part: whether it wrote, whether the note is untouched, and whether it
+   * warned that the parser failed. Printed on stdout last, as JSON.
+   */
+  function writeIn(conditions: readonly string[]): {
+    result: unknown;
+    stdout: string;
+    stderr: string;
+  } {
+    const note = `---\ntype: book\ntitle: A\n---\n\n## Thoughts\n\nKept.\n\n## Notes\n\n${CANARY}\n`;
     const code = [
       `const { ObsidianAdapter } = await import(${JSON.stringify(ADAPTER)});`,
       "const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } = await import('node:fs');",
@@ -94,37 +134,43 @@ describe('N65: the build that loads', () => {
       "const { tmpdir } = await import('node:os');",
       "const dir = mkdtempSync(join(tmpdir(), 'stacks-devbuild-'));",
       "mkdirSync(join(dir, 'Library'));",
-      `const note = ${JSON.stringify('---\ntype: book\ntitle: A\n---\n\n## Thoughts\n\nKept.\n\n## Notes\n\nPrivate.\n')};`,
+      `const note = ${JSON.stringify(note)};`,
       "writeFileSync(join(dir, 'Library', 'a.md'), note);",
       'const warnings = [];',
       'console.warn = (line) => warnings.push(String(line));',
       "const wrote = await new ObsidianAdapter(dir).insertBodySection('Library/a.md', '## About', 'A blurb.');",
       "const unchanged = readFileSync(join(dir, 'Library', 'a.md'), 'utf8') === note;",
       'rmSync(dir, { recursive: true, force: true });',
-      "const warned = warnings.some((line) => line.includes('Thoughts are withheld'));",
-      'process.stdout.write(JSON.stringify({ wrote, unchanged, warned }));',
+      "const warned = warnings.some((line) => line.endsWith('Library/a.md — the parser failed on the note'));",
+      'process.stdout.write(JSON.stringify({ wrote, unchanged, warned, warnings }));',
     ].join('\n');
-    const env = { ...process.env, NODE_OPTIONS: '' };
-    const out = execFileSync(
-      process.execPath,
-      [...conditions, '--import', 'tsx', '--input-type=module', '--eval', code],
-      { cwd: CORE, env, encoding: 'utf8' },
-    );
-    return JSON.parse(out) as unknown;
+    const { stdout, stderr } = runIn(conditions, code);
+    const { warnings, ...result } = JSON.parse(stdout) as { warnings: string[] };
+    return { result, stdout: `${stdout}${warnings.join('\n')}`, stderr };
   }
 
-  it('N81: writes no description when the development build loads (D18)', () => {
-    // Round 6, unstated F1: the lookup finds no `## Notes` under it, so the
-    // writer would append below the owner's own.
-    expect(writeIn(['--conditions=development'])).toEqual({
-      wrote: false,
-      unchanged: true,
-      warned: true,
-    });
+  it('N92: writes no description, and traces no note text, when the development build loads', () => {
+    // Round 6, unstated F1: the lookup would find no `## Notes` under it, so
+    // the writer would append below the owner's own. It throws instead, before
+    // any call into the parser, which would trace the body under `DEBUG`.
+    const { result, stdout, stderr } = writeIn(['--conditions=development']);
+    expect(result).toEqual({ wrote: false, unchanged: true, warned: true });
+    expect(stdout).not.toContain(CANARY);
+    expect(decoded(stderr)).not.toContain(CANARY);
+  });
+
+  it('N92’s control: the development build does trace a parsed body to stderr under `DEBUG`', () => {
+    // Through the same harness, so the zero above is a zero of the writer and
+    // not of a stream nobody reads.
+    const code = [
+      "const { parse, postprocess, preprocess } = await import('micromark');",
+      `postprocess(parse().document().write(preprocess()(${JSON.stringify(`A ${CANARY} line.`)}, undefined, true)));`,
+    ].join('\n');
+    expect(decoded(runIn(['--conditions=development'], code).stderr)).toContain(CANARY);
   });
 
   it('writes the description under the conditions the CLI runs with', () => {
-    expect(writeIn([])).toEqual({ wrote: true, unchanged: false, warned: false });
+    expect(writeIn([]).result).toEqual({ wrote: true, unchanged: false, warned: false });
   });
 
   it('runs the default build in this suite, as the CLI does', () => {
