@@ -138,7 +138,8 @@ describe('writeBook', () => {
     expect(source).toContain('![[covered.jpg]]');
     expect(source.indexOf('![[covered.jpg]]')).toBeGreaterThan(source.lastIndexOf('---'));
 
-    // It lives in the body, and the body is never parsed back (invariant 2).
+    // It lives in the body, above `## Thoughts`, and no record field carries
+    // the body (invariant 2).
     const [book] = await writable.listBooks();
     expect(book?.cover).toBe('covers/covered.jpg');
     expect(JSON.stringify(book)).not.toContain('![[');

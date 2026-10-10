@@ -5,7 +5,26 @@ import { coverFileName } from '../covers/cover-path.ts';
 import { FRONTMATTER_BLOCK, parseNote } from '../frontmatter.ts';
 import { isProbablySameBook, normaliseTitleAuthor, toObsidianTag } from '../identity.ts';
 import type { BookInput, BookRecord } from '../types.ts';
+import {
+  disarmBodyText,
+  extractThoughts,
+  MAX_BODY_CODE_POINTS,
+  notesHeadingAt,
+  overBodyCap,
+  plainSection,
+  type ThoughtsResult,
+} from './thoughts-section.ts';
 import type { FrontmatterChanges, VaultAdapter } from './vault-adapter.ts';
+
+/**
+ * The most text `insertBodySection` writes, in code points: three times the
+ * longest real `## About`, 2,605 code points, measured on #411. A description
+ * over it is not written, because provider text lands in the body the
+ * extractor parses (round 4 of #411's review; the owner's choice). It counts
+ * the text as written, after the disarm, which can make it five times longer,
+ * so a description never takes more than this share of the body cap (round 6).
+ */
+export const MAX_DESCRIPTION_CODE_POINTS = 8_000;
 
 /** Where notes and cached covers live inside the vault. */
 const LIBRARY_DIR = 'Library';
@@ -141,17 +160,102 @@ export class ObsidianAdapter implements VaultAdapter {
 
     if (hasHeading(source, heading)) return false;
 
-    const eol = source.includes('\r\n') ? '\r\n' : '\n';
-    const section = `${heading}${eol}${eol}${body.split(/\r?\n/).join(eol)}${eol}`;
+    // Every refusal warns by the note's path and a fixed reason, never a word
+    // of the text or of an error.
+    const refuse = (reason: string): false => {
+      console.warn(`stacks: did not write ${heading} in ${sourcePath} — ${reason}`);
+      return false;
+    };
 
-    const notes = new RegExp(`^##+ +Notes[ \\t]*$`, 'm').exec(source);
-    const updated =
-      notes === null
-        ? `${source.replace(/\s*$/, '')}${eol}${eol}${section}`
-        : source.slice(0, notes.index) + section + eol + source.slice(notes.index);
+    // Disarmed before it lands: provider prose keeps its line breaks, so a
+    // listing line reading `## Thoughts` or an unclosed fence would otherwise
+    // open a published section, or carry `## Notes` out of one (spec §4).
+    const disarmed = disarmBodyText(body);
+
+    // 1. The cap, counted on the text as written: the disarm can make it five
+    // times longer, and a description that filled a fresh note to the body
+    // cap would withhold the owner's first Thoughts (round 6, D17).
+    if ([...disarmed].length > MAX_DESCRIPTION_CODE_POINTS) {
+      return refuse(
+        `the text is over ${String(MAX_DESCRIPTION_CODE_POINTS)} characters once disarmed`,
+      );
+    }
+
+    const eol = source.includes('\r\n') ? '\r\n' : '\n';
+    const section = `${heading}${eol}${eol}${disarmed.split('\n').join(eol)}${eol}`;
+    let updated: string;
+    try {
+      // 2. A note whose Thoughts are already withheld reads the same after any
+      // write, so the last check could not see what this one adds. That
+      // covers the development build, an odd line ending and a body over the
+      // cap, where `## Notes` cannot be found (round 6, D18).
+      const before = extractThoughts(source);
+      if (before.kind === 'withheld') {
+        return refuse("the note's Thoughts are withheld, so the write could not be checked");
+      }
+
+      // 3. The section parsed alone, which sees a shape that lies inert here
+      // until the owner adds a `## Thoughts` beside it (round 6, D18).
+      if (!plainSection(heading, disarmed)) {
+        return refuse('once written it would hold a heading, a definition, HTML or code');
+      }
+
+      // Found in the body only, through the extractor's own parse. A search
+      // of the whole file used to match a `## Notes` YAML comment in the
+      // frontmatter, which put provider lines among the properties, and a
+      // `### Notes` inside the Thoughts, which put `## About` inside the
+      // published section and cut the owner's later Thoughts from it.
+      const bodyStart = match.index + match[0].length;
+      const inBody = notesHeadingAt(source.slice(bodyStart));
+      const notes = inBody === undefined ? undefined : bodyStart + inBody;
+      updated =
+        notes === undefined
+          ? `${source.replace(/\s*$/, '')}${eol}${eol}${section}`
+          : source.slice(0, notes) + section + eol + source.slice(notes);
+
+      // 4. The body cap, on the note as written: a body carried over it would
+      // withhold the owner's Thoughts on every build after, and absent-only
+      // means nothing rewrites it (round 5, D16).
+      if (overBodyCap(updated)) {
+        return refuse(`the note would be over ${String(MAX_BODY_CODE_POINTS)} characters`);
+      }
+      // 5. What the Thoughts ship, read before and after: a write that changes
+      // it, or why they are withheld, is refused, whatever the disarm missed.
+      if (!sameThoughts(before, extractThoughts(updated))) {
+        return refuse("it would change what the note's Thoughts ship, or why they are withheld");
+      }
+    } catch {
+      // A parse that throws costs this book's description, never the rest of
+      // an `enrich` pass (round 6, D18). Only the parses are in here: a
+      // failed write still throws.
+      return refuse('the parser failed on the note');
+    }
 
     await writeFile(path, updated, 'utf8');
     return true;
+  }
+
+  /**
+   * The `## Thoughts` section of one note, stripped to plain paragraphs.
+   *
+   * The only read below the frontmatter that hands text on, and it hands back
+   * the section alone:
+   * the rest of the body is read here, scanned in `thoughts-section.ts`, and
+   * dropped. A withheld section warns naming the note and the shape that
+   * withheld it, never a word of the text, so the terminal holds none of it.
+   */
+  async readPublicSection(sourcePath: string): Promise<readonly string[] | undefined> {
+    const path = resolve(this.#vaultPath, ...sourcePath.split('/'));
+    const inside = relative(this.#vaultPath, path);
+    if (inside === '' || inside.startsWith('..') || isAbsolute(inside)) {
+      throw new Error(`${sourcePath} is outside the vault, so it is not a note to read`);
+    }
+
+    const result = extractThoughts(await readFile(path, 'utf8'));
+    if (result.kind === 'withheld') {
+      console.warn(`stacks: withheld the Thoughts in ${sourcePath} — ${result.reason}`);
+    }
+    return result.kind === 'shipped' ? result.paragraphs : undefined;
   }
 
   /** ISBN first, then normalised title+author — the two dedupe paths. */
@@ -213,7 +317,7 @@ export class ObsidianAdapter implements VaultAdapter {
 }
 
 /**
- * Frontmatter plus an empty notes heading — never a body.
+ * Frontmatter plus two empty headings, Thoughts and Notes — never a body.
  *
  * Keys use the frontmatter contract's names (`spine_color`, not `spineColor`)
  * because the file has to stay readable and editable in Obsidian.
@@ -261,14 +365,18 @@ function renderNote(book: BookInput): string {
   // wikilink embed resolves by filename anywhere in the vault, which is what
   // makes it survive the file being moved.
   //
-  // This lives in the body, and the body is never parsed back (invariant 2) —
-  // the embed is for the human reading the note, not for the build.
-  // Same filename rule as the builder uses, from the same place: a `cover:`
+  // This lives in the body, above `## Thoughts`, so it is never inside the one
+  // section a build reads (invariant 2) — the embed is for the human reading
+  // the note, not for the build, and an embed inside the section would withhold
+  // it. Same filename rule as the builder uses, from the same place: a `cover:`
   // written with backslashes would otherwise embed as `![[covers\a.png]]` and
   // resolve to nothing.
   const embed = book.cover === undefined ? '' : `![[${coverFileName(book.cover)}]]\n\n`;
 
-  return `---\n${yaml}\n---\n\n${embed}## Notes\n\n`;
+  // `## Thoughts` above `## Notes`, empty, for the owner to fill: the one
+  // section a build publishes, written where `insertBodySection` puts
+  // `## About` below it, so a provider's description never lands inside it.
+  return `---\n${yaml}\n---\n\n${embed}## Thoughts\n\n## Notes\n\n`;
 }
 
 /**
@@ -358,6 +466,11 @@ function applyChange(
 
   if (value === undefined) return block;
   return [...lines, `${key}: ${serialise(value)}`].join(eol);
+}
+
+/** Whether two reads of one note's Thoughts agree: the same kind, paragraphs and reason. */
+function sameThoughts(before: ThoughtsResult, after: ThoughtsResult): boolean {
+  return JSON.stringify(before) === JSON.stringify(after);
 }
 
 /**

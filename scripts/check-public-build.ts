@@ -10,8 +10,12 @@
  * The rules themselves live in `scripts/lib/public-build.ts`, because
  * `deploy:site` has to apply exactly the same ones to the real build and the
  * two had already drifted apart while nobody could see it. This script owns the
- * two things that are *its own*: planting the canary in a fixture vault and
- * building from it. G20 owns watching each rule go red; this owns proving a
+ * four things that are *its own*: checking the canary is planted in the fixture
+ * vault, building from it, checking a fixture's `## Thoughts` carries the ship
+ * phrase with the canary below the section, and checking that phrase reaches
+ * `dist/notes/` — the last two being the Thoughts split's vacuity guard and
+ * presence half, which the shared inspector must never hold because a real
+ * deploy carries no fixture phrase (ADR-0028). G20 owns watching each rule go red; this owns proving a
  * real Astro build survives all of them.
  *
  * The canary is planted in several fixture note bodies *including the malformed
@@ -20,7 +24,13 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
-import { inspectPublicBuild, NOTE_BODY_CANARY } from './lib/public-build.ts';
+import {
+  inspectPublicBuild,
+  NOTE_BODY_CANARY,
+  notesPresence,
+  THOUGHTS_SHIP_PHRASE,
+} from './lib/public-build.ts';
+import { PUBLISH_THOUGHTS } from '../packages/core/src/publish.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
 import { walk } from './lib/walk.ts';
@@ -46,6 +56,37 @@ if (!vaultText.includes(NOTE_BODY_CANARY)) {
   process.exit(1);
 }
 console.log(`canary present in fixture vault: ${NOTE_BODY_CANARY}`);
+
+// 1b. The split's vacuity guard: a fixture note must carry the ship phrase
+// inside `## Thoughts`, with the canary below the section, or the presence
+// check in step 4 proves nothing about the split (#367, decision 9). Deliberately
+// crude — a line scan, not the extractor — because it reads fixtures to prove a
+// case is planted, not to judge a boundary.
+const planted = walk(VAULT)
+  .filter((file) => extname(file) === '.md')
+  .some((file) => {
+    const lines = readFileSync(file, 'utf8').split(/\r?\n/);
+    const start = lines.findIndex((line) => line.trimEnd() === '## Thoughts');
+    if (start === -1) return false;
+    const rest = lines.slice(start + 1);
+    const end = rest.findIndex((line) => /^#{1,2}\s/.test(line));
+    if (end === -1) return false;
+    return (
+      rest.slice(0, end).join('\n').includes(THOUGHTS_SHIP_PHRASE) &&
+      !rest.slice(0, end).join('\n').includes(NOTE_BODY_CANARY) &&
+      rest.slice(end).join('\n').includes(NOTE_BODY_CANARY)
+    );
+  });
+
+if (!planted) {
+  console.error(
+    `FAILED: no fixture note carries "${THOUGHTS_SHIP_PHRASE}" inside \`## Thoughts\` with the ` +
+      'canary below the section.\nWithout it the presence check would pass no matter what the ' +
+      'extractor shipped.',
+  );
+  process.exit(1);
+}
+console.log(`ship phrase planted in a fixture's Thoughts: ${THOUGHTS_SHIP_PHRASE}`);
 
 // 2. Build for real, as a deploy would — with an origin.
 //
@@ -89,4 +130,26 @@ if (report.problems.length > 0) {
   process.exit(1);
 }
 
-console.log('\nOK — public build carries no note bodies, no vault paths');
+// 4. The split's presence half, on the folder Astro assembled. G2 proves
+// `publish()` writes the section; this proves `notes/` survives into `dist/`
+// (#367, decision 4). Here and not in the inspector, which also reads real
+// deploys, where no fixture phrase exists (ADR-0028).
+const notesDir = join(DIST, 'notes');
+const staged = (existsSync(notesDir) ? walk(notesDir) : []).map((file) => ({
+  name: relative(DIST, file).split('\\').join('/'),
+  text: readFileSync(file, 'utf8'),
+}));
+
+// Switched off (spec §4's undo), the stage must ship nothing, and this check
+// follows it so the takedown deploy passes its own gate.
+const presence = notesPresence(staged, PUBLISH_THOUGHTS);
+if (presence.problem !== undefined) {
+  console.error(`\nFAILED: ${presence.problem}`);
+  process.exit(1);
+}
+console.log(presence.observation);
+console.log(
+  PUBLISH_THOUGHTS
+    ? '\nOK — public build carries no note bodies beyond the Thoughts split, no vault paths'
+    : '\nOK — public build carries no note bodies, no vault paths',
+);

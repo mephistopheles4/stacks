@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { coverageConfigDefaults, defineConfig } from 'vitest/config';
+import { cliResolveConditions } from './vitest.cli-conditions.ts';
 
 /**
  * The eight declared scope globs, read from the file that declares them.
@@ -17,6 +18,9 @@ const { scopes } = JSON.parse(
 ) as { scopes: { glob: string }[] };
 
 export default defineConfig({
+  // The CLI's resolve conditions, so the suite runs micromark's default build:
+  // see the module for why it is a plugin and why both configs import it.
+  plugins: [cliResolveConditions()],
   test: {
     // `gates/` holds the repo-level gates: rules about the shape of the whole
     // tree (which files may import what, which documented keys must exist)

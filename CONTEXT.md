@@ -277,8 +277,17 @@ timeline editor.
 
 **Public build**:
 A build that assumes an audience: wishlist and private books are dropped, covers
-are re-hosted same-origin, and no note body is parsed at all. The counterpart is
-a **local build**, which is for you and holds everything.
+are re-hosted same-origin, and no note body ships except as [invariant 2](AGENTS.md)
+allows. The counterpart is a **local build**, which is for you, and it means
+one of two things — say which:
+
+- **a local publish**, `publish()` with `isPublic: false`: it keeps private
+  and wishlist books on the shelf, and stages covers and the same notes files
+  a public build would. No command runs it today; G2 and the publisher's tests
+  build both modes;
+- **the local index**, the plain `stacks build`, which writes `library.json`
+  and stages no files at all.
+
 *Avoid*: production build, release, deploy (a deploy *uploads* a public build).
 
 **Staging folder**:
@@ -321,8 +330,10 @@ rules are in [`docs/spec/picking-a-book-up.md`](docs/spec/picking-a-book-up.md).
 (that is `## Notes`, the heading under it).
 
 **Withheld**:
-Said of a **Thoughts section** the extractor refused to ship whole, because it
-holds an embed, a hidden comment, a second heading, or too much text. A withheld
+Said of a **Thoughts section** the extractor refused to ship whole, for its
+shape or because its note could not be read safely — [invariant 2](AGENTS.md),
+[ADR-0106](docs/adr/0106-thoughts-ship-only-plain-prose.md) and the spec's
+[§3.1.1 steps](docs/spec/picking-a-book-up.md) hold every reason. A withheld
 section emits no file, so the page shows the book as if it had none; only the
 build's warning says otherwise.
 *Avoid*: skipped (that is a bad note, by invariant 3), stripped (that is what

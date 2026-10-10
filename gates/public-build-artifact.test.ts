@@ -56,6 +56,8 @@ interface ShippedBook {
   readonly status?: string;
   readonly private?: boolean;
   readonly sourcePath?: string;
+  /** `true` when the build wrote this book's notes file; typed wide to plant anything else. */
+  readonly thoughts?: unknown;
   /**
    * Deliberately not a contract key.
    *
@@ -68,13 +70,14 @@ interface ShippedBook {
   readonly subjects?: string;
 }
 
-/** The clean build's one book, and the id its notes file is named for. */
+/** The clean build's one book, the id its notes file is named for, and its mark. */
 const CLEAN_ID = 'a-book-1x2y3z';
 const CLEAN_BOOK: ShippedBook = {
   id: CLEAN_ID,
   title: 'A Book',
   cover: 'covers/a.jpg',
   status: 'read',
+  thoughts: true,
 };
 
 /**
@@ -105,7 +108,12 @@ async function writeCleanBuild(): Promise<void> {
  * searches past the end of a block, because there is nothing past it to find.
  */
 function headersFile(
-  options: { coversCacheControl?: boolean; frameOptions?: boolean; frameAncestors?: boolean } = {},
+  options: {
+    coversCacheControl?: boolean;
+    notes?: 'revalidate' | 'stale' | 'absent';
+    frameOptions?: boolean;
+    frameAncestors?: boolean;
+  } = {},
 ): string {
   const revalidate = '  Cache-Control: public, max-age=0, must-revalidate';
   return [
@@ -123,6 +131,13 @@ function headersFile(
     '/og.png',
     revalidate,
     '',
+    ...(options.notes === 'absent'
+      ? []
+      : [
+          '/notes/*',
+          options.notes === 'stale' ? '  X-Content-Type-Options: nosniff' : revalidate,
+          '',
+        ]),
   ].join('\n');
 }
 
@@ -399,6 +414,44 @@ describe('G20 — every rule goes red', () => {
     });
   });
 
+  it('orphan-note: a file named for a listed book that does not carry the mark', async () => {
+    await expectOnly('orphan-note', async () => {
+      // The stale file the prune exists for: `idFor` is stable, so a section
+      // the owner withdrew leaves a file still named for a listed book. Only
+      // the mark tells the two apart (spec §3.1).
+      await writeLibrary([{ ...CLEAN_BOOK, thoughts: undefined }]);
+    });
+  });
+
+  it('orphan-note: a marked book whose file is missing', async () => {
+    await expectOnly('orphan-note', async () => {
+      await rm(join(dist, 'notes', `${CLEAN_ID}.json`));
+    });
+  });
+
+  it('orphan-note: a marked book and no notes folder at all', async () => {
+    // A rule that returned early on a missing folder would read this as a
+    // build with nothing to inspect, and pass the mark it never checked.
+    await expectOnly('orphan-note', async () => {
+      await rm(join(dist, 'notes'), { recursive: true, force: true });
+    });
+  });
+
+  it('orphan-note: a mark that is anything but `true`, never quoted', async () => {
+    // The key trace reads names, never values, so text under a named key
+    // passes `unknown-key`. The mark is a flag; anything else is refused, and
+    // the message does not repeat what it found.
+    // The book's file is removed too, so the stale-file check cannot answer for
+    // this clause: the bad mark is the only defect left.
+    const prose = 'A sentence of Thoughts a broken writer put in the mark';
+    await writeLibrary([{ ...CLEAN_BOOK, thoughts: prose }]);
+    await rm(join(dist, 'notes', `${CLEAN_ID}.json`));
+    const problems = inspect().problems;
+
+    expect([...new Set(problems.map((problem) => problem.rule))]).toEqual(['orphan-note']);
+    expect(problems.map((problem) => problem.message).join('\n')).not.toContain(prose);
+  });
+
   it('notes-shape: a notes file that is not the shape the page reads', async () => {
     // One plant per clause of the schema (spec §3.1), each in the clean book's
     // own file, so `orphan-note` stays quiet and the shape is the only defect.
@@ -460,6 +513,256 @@ describe('G20 — every rule goes red', () => {
       const fired = new Set(inspect().problems.map((problem) => problem.rule));
       expect([...fired], `planted ${address}`).toEqual(['notes-shape']);
     }
+  });
+
+  it('notes-shape: a notes file carrying a comment marker', async () => {
+    // The extractor withholds any section holding one, so a correct build never
+    // ships a marker and this refuses nothing real. It is the byte cap's
+    // reasoning applied to hidden text: a bug that bypassed the extractor's
+    // check would otherwise publish an aside the owner never saw on screen.
+    // Owner decision on #411, from #410's review.
+    for (const marker of [
+      '%% an aside %%',
+      '<!-- an aside',
+      'an aside -->',
+      'an aside --!>',
+      // A declaration, CDATA and a processing instruction, which hide text too.
+      '<!DOCTYPE an aside>',
+      '<![CDATA[ an aside ]]>',
+      '<?x an aside ?>',
+    ]) {
+      await writeNotes(`${CLEAN_ID}.json`, {
+        paragraphs: ['A clean paragraph.', `A paragraph with ${marker} in it.`],
+      });
+      const problems = inspect().problems;
+      expect([...new Set(problems.map((problem) => problem.rule))], `planted ${marker}`).toEqual([
+        'notes-shape',
+      ]);
+      expect(problems.map((problem) => problem.message).join('\n')).not.toContain('an aside');
+    }
+  });
+
+  it('notes-shape: a notes file carrying a raw HTML tag', async () => {
+    // A tag can hide text in reading view; the extractor withholds any, so a
+    // file holding one is a bug that got past it.
+    for (const tag of ['<span hidden>an aside</span>', '</b> an aside', '<div', '<a href=x>']) {
+      await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A clean paragraph.', `Seen ${tag}.`] });
+      const problems = inspect().problems;
+      expect([...new Set(problems.map((problem) => problem.rule))], `planted ${tag}`).toEqual([
+        'notes-shape',
+      ]);
+      expect(problems.map((problem) => problem.message).join('\n')).not.toContain('an aside');
+    }
+  });
+
+  // The twin of the extractor's step 10, beyond the comment and tag marks
+  // above (spec §3.1.1): a correct build never writes one, so each plant is an
+  // extractor regression the deploy must still refuse. Built from code points
+  // where the mark is invisible. One row each, so each is seen red alone.
+  it.each([
+    ['two dollar signs', '$5 and $6 an aside', 'two dollar signs, which may be math'],
+    ['an image or embed opener', '![an aside', 'an image or embed opener'],
+    ['an inline footnote opener', '^[an aside', 'an inline footnote opener'],
+    ['a Dataview field', 'mood:: an aside', 'a Dataview field marker'],
+    ['a control character', `an${String.fromCodePoint(0x01)}aside`, 'a control character'],
+    ['DEL', `an${String.fromCodePoint(0x7f)}aside`, 'a control character'],
+    ['a C1 control character', `an${String.fromCodePoint(0x85)}aside`, 'a control character'],
+    // The C1 range's upper edge (round 5, integrity F3).
+    ['the last C1 control, U+009F', `an${String.fromCodePoint(0x9f)}aside`, 'a control character'],
+    [
+      'Unicode tag characters',
+      `an aside${String.fromCodePoint(0xe0068, 0xe0069)}`,
+      'Unicode tag characters',
+    ],
+    [
+      'a near-miss heading, no-break space',
+      `##${String.fromCodePoint(0xa0)}an aside`,
+      'a line that may read as a heading',
+    ],
+    [
+      'a near-miss heading, zero-width space',
+      `${String.fromCodePoint(0x200b)}## an aside`,
+      'a line that may read as a heading',
+    ],
+    [
+      'a near-miss heading on a later line',
+      `First line.\n# an aside`,
+      'a line that may read as a heading',
+    ],
+    [
+      'bare hashes behind a zero-width space',
+      `an aside\n${String.fromCodePoint(0x200b)}##`,
+      'a line that may read as a heading',
+    ],
+    [
+      'a setext underline carrying a no-break space',
+      `an aside\n---${String.fromCodePoint(0xa0)}`,
+      'a line that may read as a heading',
+    ],
+    // The `=` half, behind a zero-width space and with one inside (round 5,
+    // integrity F2).
+    [
+      'an equals underline behind a zero-width space',
+      `an aside\n${String.fromCodePoint(0x200b)}===`,
+      'a line that may read as a heading',
+    ],
+    [
+      'an equals underline carrying a no-break space inside',
+      `an aside\n==${String.fromCodePoint(0xa0)}==`,
+      'a line that may read as a heading',
+    ],
+  ] as const)('N60 notes-shape: a notes file carrying %s', async (_, mark, words) => {
+    await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A clean paragraph.', mark] });
+    const problems = inspect().problems;
+    expect([...new Set(problems.map((problem) => problem.rule))]).toEqual(['notes-shape']);
+    const said = problems.map((problem) => problem.message).join('\n');
+    // The mark named in words, so a blanked description fails (round 4, integrity F12).
+    expect(said).toContain(`carries ${words}`);
+    expect(said).not.toContain('an aside');
+    exercised.add('notes-shape');
+  });
+
+  it('N60 notes-shape: passes the near misses of those marks', async () => {
+    // One dollar sign, a `#tag`, a `###`'s text, a lone colon, a thematic break,
+    // and a paragraph with line breaks, a tab and accented letters ship from a
+    // correct build, so the twin must not refuse them — a twin that read a line
+    // break, a tab or any letter past ASCII as a control would refuse every
+    // real deploy (round 4, integrity F11).
+    await writeNotes(`${CLEAN_ID}.json`, {
+      paragraphs: [
+        'It cost $20.',
+        '#reread',
+        '### is not shipped, but this is',
+        'Time: an hour.',
+        '---',
+        'First line,\nsecond line\twith a tab, café and naïve.',
+        // Prose holding a no-break space beside dashes is no underline (round 5).
+        `A${String.fromCodePoint(0xa0)}thought, and dashes --`,
+        `--${String.fromCodePoint(0xa0)}so it goes`,
+        // The extractor's own control lines, so both twins are held alike
+        // (round 6, integrity F2).
+        `One${String.fromCodePoint(0xa0)}--`,
+        `==${String.fromCodePoint(0xa0)}so it goes`,
+        `One--${String.fromCodePoint(0xa0)}`,
+        `=${String.fromCodePoint(0x200b)}word`,
+        `So---${String.fromCodePoint(0xa0)}said`,
+      ],
+    });
+    expect(inspect().problems).toEqual([]);
+  });
+
+  it.each([
+    [
+      'orphan-note, a bad mark',
+      async () => {
+        await writeLibrary([{ ...CLEAN_BOOK, thoughts: 'prose' }]);
+        await rm(join(dist, 'notes', `${CLEAN_ID}.json`));
+      },
+      /1 book\(s\) whose `thoughts` mark is not `true`/,
+    ],
+    [
+      'orphan-note, a stray file',
+      () => writeNotes('stray-book-1a2b3c.json', { paragraphs: ['A paragraph.'] }),
+      /1 notes file\(s\) that no book marked `thoughts: true`.*stray-book-1a2b3c\.json/,
+    ],
+    [
+      'orphan-note, a missing file',
+      () => rm(join(dist, 'notes', `${CLEAN_ID}.json`)),
+      new RegExp(`1 book\\(s\\) marked \`thoughts: true\` with no notes file.*${CLEAN_ID}`),
+    ],
+    [
+      'headers, no notes block',
+      () => writeFile(join(dist, '_headers'), headersFile({ notes: 'absent' })),
+      /_headers has no \/notes\/\* block — notes would rest on Pages' default/,
+    ],
+    [
+      'headers, a stale notes block',
+      () => writeFile(join(dist, '_headers'), headersFile({ notes: 'stale' })),
+      /\/notes\/\* does not revalidate — a section the owner withdrew/,
+    ],
+    ['notes-shape, not JSON', () => writeNotes(`${CLEAN_ID}.json`, '{'), /is not valid JSON/],
+    [
+      'notes-shape, not an object',
+      () => writeNotes(`${CLEAN_ID}.json`, 'null'),
+      /is not a JSON object/,
+    ],
+    [
+      'notes-shape, a second key',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A.'], title: 'B' }),
+      /has 2 key\(s\), where exactly one, `paragraphs`, is allowed/,
+    ],
+    [
+      'notes-shape, another layout',
+      () => writeNotes(`${CLEAN_ID}.json`, '{ "paragraphs": ["A."] }'),
+      /is not byte for byte the form the build writes/,
+    ],
+    [
+      'notes-shape, an empty list',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: [] }),
+      /has no paragraphs/,
+    ],
+    [
+      'notes-shape, an empty paragraph',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: [''] }),
+      /has a paragraph that is not a non-empty string/,
+    ],
+    [
+      'notes-shape, a URL scheme',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['see https://x.example'] }),
+      /carries a URL scheme/,
+    ],
+    [
+      'notes-shape, a hidden-text marker',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['%% x'] }),
+      /carries a hidden-text marker/,
+    ],
+    [
+      'notes-shape, an output-check mark',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['$1 and $2'] }),
+      /carries two dollar signs, which may be math — the extractor withholds/,
+    ],
+    [
+      'notes-shape, over the byte cap',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['a'.repeat(40_001)] }),
+      /is \d+ bytes, over the 40000-byte cap/,
+    ],
+  ] as const)('says in words what it found: %s', async (label, plant, message) => {
+    // Round 3's integrity F11: every message here could be emptied with every
+    // test green, and an empty message passes "never quoted" trivially.
+    await plant();
+    const said = inspect()
+      .problems.map((problem) => problem.message)
+      .join('\n');
+    expect(said).toMatch(message);
+    if (/notes-shape/.test(label)) expect(said).toContain(`notes/${CLEAN_ID}.json`);
+  });
+
+  it('notes-shape: a notes file that repeats its key', async () => {
+    await expectOnly('notes-shape', async () => {
+      // JSON.parse keeps the last copy, so the first array would be checked by
+      // nothing but the byte cap.
+      await writeNotes(
+        `${CLEAN_ID}.json`,
+        '{"paragraphs":["A paragraph a check never reads."],"paragraphs":["A clean paragraph."]}',
+      );
+    });
+  });
+
+  it('notes-shape: the writer’s own bytes, trailing newline and all, are clean', async () => {
+    // `publish()` writes `JSON.stringify({ paragraphs })` and a newline. The
+    // other plants here write no newline, so without this case a byte-form
+    // check that refused the writer's own output would pass every one of them.
+    await writeNotes(
+      `${CLEAN_ID}.json`,
+      `${JSON.stringify({ paragraphs: ['A paragraph the owner chose to share.'] })}\n`,
+    );
+    expect(inspect().problems).toEqual([]);
+  });
+
+  it('notes-shape: a notes file in some other JSON layout', async () => {
+    await expectOnly('notes-shape', async () => {
+      await writeNotes(`${CLEAN_ID}.json`, '{\n  "paragraphs": ["A clean paragraph."]\n}\n');
+    });
   });
 
   it('share-image-origin: a relative og:image', async () => {
@@ -669,6 +972,39 @@ describe('G20 — every rule goes red', () => {
       // `max-age=0`, which the `/og.png` block below satisfies on its own, so
       // it went green over a covers block that no longer said anything.
       await writeFile(join(dist, '_headers'), headersFile({ coversCacheControl: false }));
+    });
+  });
+
+  it('headers: notes that do not revalidate', async () => {
+    await expectOnly('headers', async () => {
+      // A withdrawn section must not live on in a browser cache (spec §3.3).
+      await writeFile(join(dist, '_headers'), headersFile({ notes: 'stale' }));
+    });
+  });
+
+  it('headers: notes whose only revalidate is inside another header', async () => {
+    await expectOnly('headers', async () => {
+      // The words, but not as the header: the rule reads a `Cache-Control:`
+      // line, never the text anywhere in one.
+      const headers = headersFile({ notes: 'absent' }).concat(
+        '/notes/*\n  X-Note: Cache-Control: public, max-age=0\n',
+      );
+      await writeFile(join(dist, '_headers'), headers);
+    });
+  });
+
+  it('headers: a notes block that revalidates beside another header is clean', async () => {
+    // One revalidating Cache-Control is enough; the block may carry others.
+    const headers = headersFile({ notes: 'absent' }).concat(
+      '/notes/*\n  X-Content-Type-Options: nosniff\n  Cache-Control: public, max-age=0, must-revalidate\n',
+    );
+    await writeFile(join(dist, '_headers'), headers);
+    expect(inspect().problems).toEqual([]);
+  });
+
+  it('headers: no /notes/* block at all', async () => {
+    await expectOnly('headers', async () => {
+      await writeFile(join(dist, '_headers'), headersFile({ notes: 'absent' }));
     });
   });
 

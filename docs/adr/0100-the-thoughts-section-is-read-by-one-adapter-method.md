@@ -1,7 +1,7 @@
 # ADR-0100 — The Thoughts section is read by one adapter method, and both builds ship the same notes
 
 **Date:** 2026-10-09
-**Status:** accepted, not built — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
+**Status:** accepted, built in [#411](https://github.com/mephistopheles4/stacks/issues/411) — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
 **Issue:** [#366](https://github.com/mephistopheles4/stacks/issues/366), [#372](https://github.com/mephistopheles4/stacks/issues/372)
 
 ## Decision

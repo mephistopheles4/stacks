@@ -16,9 +16,10 @@ the data. Delete this tool and you still have your library.
 
 ## Why it works this way
 
-- **Your notes stay yours.** A published shelf carries covers and frontmatter —
-  never note bodies. That rule is enforced by a gate that greps the built output
-  for a phrase planted in a fixture note, rather than trusted.
+- **Your notes stay yours.** A published shelf carries covers and frontmatter,
+  and of a note's body only the `## Thoughts` section you choose to write, as
+  plain text. That rule is enforced by a gate that greps the built output for a
+  phrase planted in a fixture note, rather than trusted.
 - **Hand-editing is first-class.** Open any note in Obsidian and change it. The
   parser tolerates extra keys, reordered keys and missing ones; `stacks` rewrites
   individual frontmatter lines rather than re-serialising your YAML, so your
@@ -101,10 +102,11 @@ Worth deciding on purpose, because this is the part that leaves your machine:
 
 | Published | Never published |
 | --- | --- |
-| Title, author, ISBN | Note bodies — anything you wrote |
+| Title, author, ISBN | Note bodies outside `## Thoughts` — the rest of what you wrote |
 | Reading status, start and finish dates | Vault paths and filenames |
 | Rating, tags, page count | Books marked `private: true` |
 | Cover images, re-hosted at 512px | Wishlist books — you don't own them |
+| Your `## Thoughts` section, as plain text | The Thoughts of a private or wishlist book |
 
 `private: true` **fails closed**: anything that isn't clearly a "no" keeps the
 book unpublished, because `private: yes` is a *string* in YAML and a strict

@@ -1,7 +1,7 @@
 # ADR-0101 — Thoughts ship as plain paragraphs stripped by hand, and anything hidden withholds the whole section
 
 **Date:** 2026-10-09
-**Status:** accepted, not built — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
+**Status:** accepted, built in [#411](https://github.com/mephistopheles4/stacks/issues/411); amended by [ADR-0106](0106-thoughts-ship-only-plain-prose.md) and [ADR-0107](0107-thoughts-are-read-by-a-commonmark-parser.md) — [`docs/spec/picking-a-book-up.md`](../spec/picking-a-book-up.md)
 **Issue:** [#368](https://github.com/mephistopheles4/stacks/issues/368)
 
 ## Decision

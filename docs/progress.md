@@ -42,7 +42,7 @@ phone was rendering when it died — are measurements and stay exactly as they a
 | **Rollout numbering** | ⚠️ **Every row number pre-allocated by the after-the-scoreboard tickets is one low**, because `agents-import` took G37 out-of-band. **No number is reserved here** — `docs/gates.md` says why, two tables down: *"The number goes in when the row does."* Count the rows in that file at the tip you branch from, and cite slug and number together, never the number alone |
 | **Trend layer** | **live, and now twenty series** — the eight duplication series landed too. The cognitive four — `cognitive-functions`, `cognitive-mass`, `cognitive-mass-over-15`, `cognitive-max` — landed beside the cyclomatic four on the same cadence, with **its own denominator** ([#255](https://github.com/mephistopheles4/stacks/issues/255), [ADR-0073](./adr/0073-cognitive-complexity-is-published-beside-cyclomatic.md), which carries the measurements). ⚠️ **`fixtureHash` changed once at adoption** — one hash over both counting rules — so both cyclomatic calibration windows restarted. Nothing armed, nothing refused. ⚠️ **`cognitive-max` joined `CAPPED_SERIES` on 2026-09-21** and the six duplication caps landed in `jscpd.floors.json` under `duplicationHash`, every one disarmed ([#269](https://github.com/mephistopheles4/stacks/issues/269)); arming is a later human judgement per series. `.github/workflows/metrics.yml` writes one `.prom` per run to the orphan **`metrics`** branch — `git fetch origin metrics` to read it. Its first nightly found a scope 6.45 points down on a false comment in the PR that built it; see [the log](./log/2026-08-19-the-first-nightly-caught-its-own-author.md). `pnpm trend:sync` is the reading half and is **built** — it replays the branch into a local Prometheus, folds surface D in, and brings up the page you read at <http://localhost:3000/d/stacks-trend-layer>, provisioned from [`grafana/`](../grafana); needs Docker, see [`commands.md`](./commands.md). The nightly also keeps its Stryker report now — both files as a 30-day workflow artifact, and the per-scope table plus where the survivors are in the run's job summary ([#243](https://github.com/mephistopheles4/stacks/issues/243)); whether survivor sets become a durable record is [#344](https://github.com/mephistopheles4/stacks/issues/344) |
 | **G6 has a second check** | G46 (`lint`) now overlaps G6 (`site-core-imports`) by decision: [#245](https://github.com/mephistopheles4/stacks/issues/245) enabled two lint rules over the site package and kept G6. No new row; the reasoning is on G6's row in [`gates.md`](./gates.md) |
-| **Now working on** | Map [#366](https://github.com/mephistopheles4/stacks/issues/366), picking a book up, built in four steps from [`docs/spec/picking-a-book-up.md`](./spec/picking-a-book-up.md). Step 1, the split gate ([#410](https://github.com/mephistopheles4/stacks/issues/410)), arms G2's Thoughts split before any extractor exists; see Phase 3 evidence below. [#88](https://github.com/mephistopheles4/stacks/issues/88), [#78](https://github.com/mephistopheles4/stacks/issues/78) and [#50](https://github.com/mephistopheles4/stacks/issues/50) before it are closed and built. `gh issue list` is the only current answer to what is open |
+| **Now working on** | Map [#366](https://github.com/mephistopheles4/stacks/issues/366), picking a book up, built in four steps from [`docs/spec/picking-a-book-up.md`](./spec/picking-a-book-up.md). Step 1, the split gate ([#410](https://github.com/mephistopheles4/stacks/issues/410)), armed G2's Thoughts split before any extractor existed; step 2, the extractor ([#411](https://github.com/mephistopheles4/stacks/issues/411)), ships `## Thoughts` as `notes/<id>.json`; see Phase 3 evidence below. [#88](https://github.com/mephistopheles4/stacks/issues/88), [#78](https://github.com/mephistopheles4/stacks/issues/78) and [#50](https://github.com/mephistopheles4/stacks/issues/50) before it are closed and built. `gh issue list` is the only current answer to what is open |
 | **Queued** | whatever the closed maps left in fog — ask [#50](https://github.com/mephistopheles4/stacks/issues/50)'s and [#88](https://github.com/mephistopheles4/stacks/issues/88)'s *Not yet specified*; [#78](https://github.com/mephistopheles4/stacks/issues/78)'s is empty by construction. [#62](https://github.com/mephistopheles4/stacks/issues/62) separately left the owner three `stacks enrich` commands to run |
 | **Decisions** | [`docs/adr/`](./adr/) — extracted from the old Decision Log, one file each |
 | **Repository** | [public](https://github.com/mephistopheles4/stacks); `main` protected — PR + `gates` + CodeQL, no bypass |
@@ -190,6 +190,77 @@ belongs. Pinned as a set so a second third-party origin cannot arrive unnoticed.
 ([#410](https://github.com/mephistopheles4/stacks/issues/410)): G2 extended and
 two inspector rules under G20, no new row — see
 [*The Thoughts split, armed before the extractor exists*](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
+
+**2026-10-09 — the Thoughts extractor**
+([#411](https://github.com/mephistopheles4/stacks/issues/411)): `## Thoughts`
+ships as `notes/<id>.json` in both of `publish()`'s modes; G2's presence half armed, G5, G11,
+G20 and G30 extended, `gate:public` checks presence and vacuity — same section
+of [`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
+`notes-shape` refuses comment and declaration markers (owner decision), and the
+review's leak through a lone CR or line separator is closed with the shapes it
+found; both in that section. After a second round found another shape, the owner chose an allowlist
+([ADR-0106](./adr/0106-thoughts-ship-only-plain-prose.md)): only plain prose ships, and the gates follow
+the stage's off switch so a takedown deploy can run.
+
+**2026-10-10 — the Thoughts extractor, rebuilt on a CommonMark parser**
+([#411](https://github.com/mephistopheles4/stacks/issues/411),
+[ADR-0107](./adr/0107-thoughts-are-read-by-a-commonmark-parser.md)): the section
+is read through `micromark`'s tokenizer and ADR-0106's allowlist applies to its
+tokens. Spec §3.1.4's named cases were each observed red against a stub first.
+`notes-shape` gains the twin of the extractor's output check under G20 — same
+section of [`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
+Two environment findings, both measured:
+
+- **Vitest loaded `micromark`'s `development` build.** Vite adds a
+  `development` condition and Vitest passes it to every worker as
+  `--conditions`; inside a test, `import.meta.resolve('micromark')` answered
+  `dev/index.js`. Setting `ssr.resolve.conditions` did not remove it, because
+  Vitest merges its defaults into the list, so `vitest.config.ts` filters the
+  resolved list in a `configResolved` plugin. A test now asserts the suite
+  runs the default build, as the CLI does. ⚠️ **The mutation run has its own
+  config**, `vitest.stryker.config.ts`, which first lacked the plugin: its dry
+  run loaded the development build, the load check withheld every section,
+  and G2 failed before a mutant ran. Both configs now import the plugin from
+  `vitest.cli-conditions.ts`.
+- **The adapter checks at load which build resolved**, and withholds every
+  section when it is not the default one. A test runs the extractor in a
+  fresh Node under `--conditions=development` and sees every section
+  withheld; the default build is the only one that publishes.
+
+**2026-10-10 — round 4 of move 4 on #415, and the owner's caps.** The
+tokenizer's cost grows with the square of some shapes: a run of `*_` emphasis
+marks took 0.26 s at 10,000 code points, 0.9 s at 20,000 and 3.9 s at 40,000,
+and `behaviour-lens` measured minutes near the old 200,000 cap. Plain prose
+takes milliseconds at any size. The longest real note body is 2,768 code
+points and the longest `## About` 2,605. **Owner decision, from chat: the body
+cap is 20,000, and no description over 8,000 is written** (spec §3.1.3, D12).
+The round's other fixes withhold more, never less, and `notes-shape`'s twin
+moved with them — same section of
+[`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
+Three earlier commits on the branch changed a gate with `docs/gates.md` and not
+this file; their lines are the round-3 entry above and this one, since a
+pushed commit with two branches stacked on it is not rewritten. Measured
+read-only against the real vault, counts only: all 54 notes parse in 28 ms in
+total, the slowest in 3.5 ms, and every one reads as absent — the one note
+with a `## Thoughts` heading holds nothing that ships — so a deploy today would
+publish no notes file.
+
+**2026-10-10 — round 5 of move 4 on #415:** owner decision, from chat, "keep
+going"; fixes as spec §3.1.3's D13 to D16 and N75 to N79, gates as
+[`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists)'s
+round-5 bullet. Measured at the 20,000 cap in one process, seconds: closing
+brackets 1.83, nested brackets 1.26, `*_` 0.99, wide table header 0.57, table
+body cells 0.56, text then a closing bracket 0.54, footnote calls 0.32, mixed
+emphasis 0.26; backtick runs, bracket-paren pairs, mid-line opening brackets,
+autolink and angle openers, character references, image openers, nested list
+markers, tildes and equals, and a long link label each 0.03 or less.
+`behaviour-lens` measured on its own machine, round 6: `*_` 1.70, closing
+brackets 1.27, and one About write on a near-cap closing-bracket note 4.6,
+since the writer parses the note three times.
+
+**2026-10-10 — round 6 of move 4 on #415:** owner decision, from chat, "keep
+going once more"; fixes as spec D17 to D19 and N80 to N85, gates as
+`docs/gates.md`'s round-6 bullet.
 
 ### Phase 4 evidence
 

@@ -153,6 +153,64 @@ standing one. **Do not make it pass by sending a browser user agent** — that w
 measured and does not work. See
 [ADR-0027](adr/0027-deploy-check-reports-refusal.md).
 
+## `pnpm deploy:site` — published Thoughts, and taking them back
+
+A public build ships each public book's `## Thoughts` section as
+`notes/<id>.json` (invariant 2), and `stacks build --public` prints how many
+files it wrote: a count, never a title. The deploy publishes them with no pause
+of its own. **Nothing publishes until a real note has a `## Thoughts` section
+with text in it**, and spec §8 asks for the owner's approval of the first
+deploy that does.
+
+**What a section may hold.** Plain prose ships: paragraphs, `###` and deeper
+subheadings, a thematic break, one level of bullet or numbered list, emphasis,
+and links written with their address, `[text](address)`, of which only the
+text shows — `[[wikilinks]]` flatten to their alias or their note's name. Any
+other shape withholds the **whole** section, and the build warns naming the
+note and the shape, never quoting it: a quote or callout, code or a code fence,
+a nested list, a table, HTML, a link whose address is defined elsewhere in the
+note or written in angle brackets, `[text](<My Note.md>)`, an image or embed,
+a footnote, a Dataview field, a character reference such as `&amp;`, a web
+address, or **two `$` anywhere in the section, escaped or not**, since they may
+be math — write one price as words. A `%%` comment, a code fence, a `$$` or
+HTML anywhere **above** the section withholds it too, because Obsidian may draw
+those blocks differently from the parser. A note body over 20,000 characters
+withholds its section too, unread, since the parser slows sharply on some
+shapes past that. `stacks enrich` writes no provider description over 8,000
+characters once disarmed, none into a note whose Thoughts are already
+withheld, none that would hold a heading, a definition, HTML or code, and none
+that would carry the note past 20,000 or change what its Thoughts ship, or why
+they are withheld, warning which note it skipped; a note it skipped for
+withheld Thoughts gets its description on the next run after they ship. To
+publish a withheld section,
+rewrite the shape the warning names. The list and its reasons are
+[ADR-0106](adr/0106-thoughts-ship-only-plain-prose.md) and
+[ADR-0107](adr/0107-thoughts-are-read-by-a-commonmark-parser.md); spec §3.1.1
+holds every rule.
+
+**Withdrawing a section takes two moves, and the second is outside this repo.**
+
+1. **Delete or empty the section and deploy.** The build prunes `notes/` to
+   exactly the files it wrote, and the `/notes/*` block in `_headers`
+   revalidates, so the production address and browsers drop it.
+2. **Delete the earlier Cloudflare Pages deployments**, or put per-deployment
+   addresses behind Cloudflare Access. Every deployment keeps its own address
+   under the project's `pages.dev` host until it is deleted, and still serves
+   what it shipped to anyone holding that address. The prune cannot reach them.
+   Third-party caches and web archives are beyond both moves (spec §9).
+
+**To switch the stage off**, set `PUBLISH_THOUGHTS` in
+`packages/core/src/publish.ts` to `false`. It then reads no note and writes no
+file, but still prunes, so the next build empties `notes/` and the next deploy
+takes every file off the production site. **Never undo it with a bare revert**:
+a revert removes the prune with the stage, and the files the last build staged
+into `packages/site/public/` reach `dist/` and deploy again (spec §4). Keep the
+`/notes/*` block. **The gates follow the switch**: G2's presence and mark tests
+and `gate:public`'s presence check read `PUBLISH_THOUGHTS`, and switched off
+they assert that no notes file and no `thoughts` mark ships, so
+`pnpm deploy:site` runs the takedown through its own gates. G2's other split
+tests force the stage on, whatever the constant says.
+
 ## `pnpm deploy:site` — the trend panel, and what a stale record refuses
 
 **Before anything else it prints the trend record**, because a trend is obliged

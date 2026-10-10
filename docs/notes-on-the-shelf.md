@@ -12,9 +12,11 @@ reasoning survives the session it was worked out in.
 > [`docs/spec/picking-a-book-up.md`](spec/picking-a-book-up.md). Build from that
 > file, not from this one. This one is kept as written, because it is the
 > reasoning the spec rests on; where the two differ, the spec is the later
-> word. Three places differ: the heading is now locked (below), the held tier is
-> capped at 1200 px rather than the vault original, and releasing the other
-> covers on pickup is deferred (§2).
+> word. Four places differ: the heading is now locked (below), the held tier is
+> capped at 1200 px rather than the vault original, releasing the other covers
+> on pickup is deferred (§2), and the public/private split is **built** — the
+> `## Thoughts` extractor, step 2 on [#411](https://github.com/mephistopheles4/stacks/issues/411) —
+> while picking a book up is not.
 
 Two separable pieces:
 

@@ -1,9 +1,13 @@
 import { defineConfig } from 'vitest/config';
+import { cliResolveConditions } from './vitest.cli-conditions.ts';
 
 /**
  * The repo's `vitest.config.ts` with the specs that cannot run inside Stryker's
- * sandbox removed. Nothing else is changed. (It said *the three specs* until a
- * fourth arrived: a count in prose goes stale in the file that holds the list.)
+ * sandbox removed, and the same resolve conditions, from the module both import.
+ * (It said *the three specs* until a fourth arrived: a count in prose goes stale
+ * in the file that holds the list. It said *nothing else is changed* until the
+ * conditions plugin was found missing here, by a dry run that loaded
+ * `micromark`'s development build; see `vitest.cli-conditions.ts`.)
  *
  * ⚠️ **`scripts/lib/sampling-hook-source.test.ts` is the fourth, and it is
  * `tsx`'s `__name` again, from a second tool.** G61's page hook is a function
@@ -108,6 +112,7 @@ import { defineConfig } from 'vitest/config';
  * papering over one symptom of it.
  */
 export default defineConfig({
+  plugins: [cliResolveConditions()],
   test: {
     include: ['packages/**/src/**/*.test.ts', 'gates/**/*.test.ts', 'scripts/**/*.test.ts'],
     exclude: [
