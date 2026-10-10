@@ -286,6 +286,8 @@ const PASSED = new Set([
 ]);
 /** A link's destination, title and reference: skipped whole, never shipped. */
 const SKIPPED = new Set(['resource', 'reference']);
+/** The text of a skipped address or title, read for a tag start only. */
+const ADDRESS_PARTS = new Set(['resourceDestinationString', 'resourceTitleString']);
 /** Layout between blocks and inside a list: passed, never shipped. */
 const LAYOUT = new Set([
   'lineEnding',
@@ -375,6 +377,19 @@ export function notesHeadingAt(body: string): number | undefined {
 }
 
 /**
+ * Whether a note's body, everything below its frontmatter block, is over
+ * `MAX_BODY_CODE_POINTS`: step 2's count, shared with the `## About` writer so
+ * the two cannot count a body differently. A note with no frontmatter has no
+ * body to count.
+ */
+export function overBodyCap(source: string): boolean {
+  const frontmatter = FRONTMATTER_BLOCK.exec(source);
+  if (frontmatter === null) return false;
+  const body = source.slice(frontmatter.index + frontmatter[0].length);
+  return [...body].length > MAX_BODY_CODE_POINTS;
+}
+
+/**
  * Finds and strips a note's `## Thoughts` section, reading the body with a
  * CommonMark parser and the allowlist of spec §3.1.1 over its tokens.
  *
@@ -397,7 +412,7 @@ export function extractThoughts(source: string): ThoughtsResult {
   if (ODD_LINE_ENDING.test(source))
     return withheld('the note holds a line ending other than a newline');
   const body = source.slice(frontmatter.index + frontmatter[0].length);
-  if ([...body].length > MAX_BODY_CODE_POINTS) {
+  if (overBodyCap(source)) {
     return withheld(
       `the note body is over ${String(MAX_BODY_CODE_POINTS)} characters, so it was not read`,
     );
@@ -578,6 +593,14 @@ function listText(block: Block): string {
  * same label sits somewhere in the note: `[[target|alias]]` would then ship
  * `[target|alias]`, the target reading view hides behind the alias, and step
  * 9's flatten would never see the `[[` (round 4 of #411's review).
+ *
+ * ⚠️ **So does a link with no address of its own**, a full, collapsed or
+ * shortcut reference: its definition sits outside the section, since one
+ * inside withholds, so whether its label ships bare or in brackets would tell a
+ * reader whether the private part defines that name (round 5, D13).
+ *
+ * ⚠️ **And a tag start in a link's address or title**, the parts skipped
+ * unread, which neither the output check nor the deploy's twin ever sees.
  */
 function inlineText(events: readonly Event[]): string {
   let text = '';
@@ -585,17 +608,29 @@ function inlineText(events: readonly Event[]): string {
   /** Where each link that opened just after a `[` ended in `text`. */
   const bracketedLinkEnds: number[] = [];
   let linkAfterBracket = false;
+  let linkHasAddress = false;
+  let referenceLink = false;
   for (const [kind, token, context] of events) {
     if (skipping !== undefined) {
       if (kind === 'exit' && token === skipping) skipping = undefined;
+      else if (kind === 'enter' && ADDRESS_PARTS.has(token.type)) {
+        if (HTML_START.test(context.sliceSerialize(token))) {
+          throw new Withhold('it holds a tag start in a link address or title');
+        }
+      }
       continue;
     }
     if (kind === 'exit') {
       if (token.type === 'link' && linkAfterBracket) bracketedLinkEnds.push(text.length);
+      if (token.type === 'link' && !linkHasAddress) referenceLink = true;
       continue;
     }
     const type: string = token.type;
-    if (type === 'link') linkAfterBracket = text.endsWith('[');
+    if (type === 'link') {
+      linkAfterBracket = text.endsWith('[');
+      linkHasAddress = false;
+    }
+    if (type === 'resource') linkHasAddress = true;
     if (SKIPPED.has(type)) skipping = token;
     else if (SHOWN.has(type)) text += context.sliceSerialize(token);
     else if (type === 'lineEnding') text += '\n';
@@ -607,6 +642,9 @@ function inlineText(events: readonly Event[]): string {
   }
   if (bracketedLinkEnds.some((end) => text[end] === ']')) {
     throw new Withhold('a wikilink did not flatten');
+  }
+  if (referenceLink) {
+    throw new Withhold('it holds a link whose address is defined elsewhere in the note');
   }
   return text;
 }
@@ -696,11 +734,18 @@ export function disarmBodyText(text: string): string {
     .join('\n');
 }
 
-/** Up to three spaces of indent, then any run of list markers, each with its space. */
-const LINE_LEAD = /^ {0,3}(?:(?:[-*+]|\d{1,9}[.)])[ \t]+)*/;
+/**
+ * Any indent, then any run of list markers, each with its space. Any indent,
+ * not CommonMark's three spaces: in a list item a line indented four spaces or
+ * a tab is the item's own paragraph, not code (round 5 of #411's review).
+ */
+const LINE_LEAD = /^[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+)*/;
 
 /**
  * One line of provider text, disarmed after its indent and any list markers.
+ * The disarm cannot know which block a line would sit in, so it reads every
+ * line as if it could open one; a backslash in what is in fact code shows,
+ * which costs nothing in a section that is never published.
  *
  * - **A `[` that opens the line becomes a character reference**, so no line
  *   reads as a link definition. A definition applies to the whole note,
@@ -709,28 +754,23 @@ const LINE_LEAD = /^ {0,3}(?:(?:[-*+]|\d{1,9}[.)])[ \t]+)*/;
  *   #411's review).
  * - **A heading gains a backslash**, behind list markers too, so none parses
  *   even inside a list item.
- * - **A setext underline at the margin gains a backslash.**
+ * - **A setext underline gains a backslash**, whatever its indent.
  */
 function disarmLine(line: string): string {
   const lead = LINE_LEAD.exec(line)?.[0] ?? '';
   const rest = line.slice(lead.length);
   if (rest.startsWith('[')) return `${lead}&#91;${rest.slice(1)}`;
-  // At the margin, `atxHeading` reads the indent itself, so four spaces stay
-  // code; behind a list marker, the marker's own space is already consumed.
-  const atMargin = lead.trim() === '';
-  if (atMargin ? atxHeading(line) !== undefined : atxHeading(rest) !== undefined) {
-    return atMargin ? line.replace(/^( *)/, '$1\\') : `${lead}\\${rest}`;
-  }
-  return SETEXT_UNDERLINE.test(line) ? line.replace(/^( *)/, '$1\\') : line;
+  const underline = lead.trim() === '' && SETEXT_UNDERLINE.test(rest);
+  return underline || atxHeading(rest) !== undefined ? `${lead}\\${rest}` : line;
 }
 
 /**
- * A setext underline in CommonMark's shape: up to three spaces of indent, only
- * `=` or only `-`, trailing whitespace allowed. Under a line reading
- * `Thoughts`, a provider's dashes would make a second `Thoughts` heading and
- * withhold the owner's real section (spec §3.1.1).
+ * A setext underline's marks, after its indent: only `=` or only `-`, trailing
+ * whitespace allowed. Under a line reading `Thoughts`, a provider's dashes
+ * would make a second `Thoughts` heading and withhold the owner's real section
+ * (spec §3.1.1).
  */
-const SETEXT_UNDERLINE = /^ {0,3}(?:=+|-+)[ \t]*$/;
+const SETEXT_UNDERLINE = /^(?:=+|-+)[ \t]*$/;
 
 function withheld(reason: string): ThoughtsResult {
   return { kind: 'withheld', reason };

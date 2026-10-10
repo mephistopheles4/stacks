@@ -651,8 +651,12 @@ describe('a provider description beside the Thoughts', () => {
   });
 
   it('leaves text that is neither alone', () => {
-    const text = 'Plain.\n#tag and `code`\n    ## indented code';
+    const text = 'Plain.\n#tag and `code`';
     expect(disarmBodyText(text)).toBe(text);
+  });
+
+  it('escapes a heading indented four spaces too, which is code only outside a list (D14)', () => {
+    expect(disarmBodyText('    ## indented')).toBe('    \\## indented');
   });
 
   it('treats every line ending as a newline before it disarms', () => {
@@ -726,9 +730,48 @@ describe('a provider description beside the Thoughts', () => {
     });
 
     it('N74: escapes a heading behind list markers, so none parses even inside an item', () => {
-      const disarmed = disarmBodyText(['- ## Thoughts', '1. # Notes', '* - ### deep'].join('\n'));
-      expect(disarmed.split('\n')).toEqual(['- \\## Thoughts', '1. \\# Notes', '* - \\### deep']);
+      const disarmed = disarmBodyText(
+        ['- ## Thoughts', '1. # Notes', '* - ### deep', '10. ## Thoughts'].join('\n'),
+      );
+      expect(disarmed.split('\n')).toEqual([
+        '- \\## Thoughts',
+        '1. \\# Notes',
+        '* - \\### deep',
+        '10. \\## Thoughts',
+      ]);
       expect(tokenTypes(disarmed).has('atxHeading')).toBe(false);
+    });
+
+    it('escapes an underline with trailing whitespace', () => {
+      // Round 5, integrity F7: the trailing half of the underline's shape.
+      expect(disarmBodyText(['Thoughts', '--- ', 'Notes', '===\t'].join('\n'))).toBe(
+        ['Thoughts', '\\--- ', 'Notes', '\\===\t'].join('\n'),
+      );
+    });
+
+    it('N77: disarms a list item’s continuation lines, indented four spaces or a tab', () => {
+      // Round 5, behaviour F2: in a list item, a line indented four spaces is
+      // the item's own paragraph, not code, so it can hold a definition or a
+      // heading. Every indent is disarmed, whatever block it would sit in.
+      const disarmed = disarmBodyText(
+        ['- An item.', '', '    [x]: y', '', '\t## Thoughts', '', '    Thoughts', '\t---'].join(
+          '\n',
+        ),
+      );
+      expect(disarmed.split('\n')).toEqual([
+        '- An item.',
+        '',
+        '    &#91;x]: y',
+        '',
+        '\t\\## Thoughts',
+        '',
+        '    Thoughts',
+        '\t\\---',
+      ]);
+      const types = tokenTypes(disarmed);
+      for (const type of ['definition', 'atxHeading', 'setextHeading']) {
+        expect(types.has(type), type).toBe(false);
+      }
     });
 
     it('N73: encodes a `[` that opens a line, behind list markers too, so no definition lands', () => {

@@ -5,15 +5,23 @@ import { coverFileName } from '../covers/cover-path.ts';
 import { FRONTMATTER_BLOCK, parseNote } from '../frontmatter.ts';
 import { isProbablySameBook, normaliseTitleAuthor, toObsidianTag } from '../identity.ts';
 import type { BookInput, BookRecord } from '../types.ts';
-import { disarmBodyText, extractThoughts, notesHeadingAt } from './thoughts-section.ts';
+import {
+  disarmBodyText,
+  extractThoughts,
+  MAX_BODY_CODE_POINTS,
+  notesHeadingAt,
+  overBodyCap,
+  type ThoughtsResult,
+} from './thoughts-section.ts';
 import type { FrontmatterChanges, VaultAdapter } from './vault-adapter.ts';
 
 /**
  * The most text `insertBodySection` writes, in code points: three times the
  * longest real `## About`, 2,605 code points, measured on #411. A description
  * over it is not written, because provider text lands in the body the
- * extractor parses, under its `MAX_BODY_CODE_POINTS` (round 4 of #411's
- * review; the owner's choice).
+ * extractor parses (round 4 of #411's review; the owner's choice). It counts
+ * the text as the provider sent it; the disarm can make that five times
+ * longer, so the body cap is checked again on the note as it would be written.
  */
 export const MAX_DESCRIPTION_CODE_POINTS = 8_000;
 
@@ -151,10 +159,9 @@ export class ObsidianAdapter implements VaultAdapter {
 
     if (hasHeading(source, heading)) return false;
 
-    // Over the cap, nothing is written: a long provider text could push the
-    // note past the extractor's body cap and withhold the owner's Thoughts on
-    // every build after, or carry a shape the tokenizer is slow on. Warned by
-    // the note's path, never a word of the text.
+    // Over the cap, nothing is written: a long provider text could carry a
+    // shape the tokenizer is slow on. Warned by the note's path, never a word
+    // of the text, as are the two refusals below.
     if ([...body].length > MAX_DESCRIPTION_CODE_POINTS) {
       console.warn(
         `stacks: did not write ${heading} in ${sourcePath} — the text is over ` +
@@ -182,6 +189,29 @@ export class ObsidianAdapter implements VaultAdapter {
       notes === undefined
         ? `${source.replace(/\s*$/, '')}${eol}${eol}${section}`
         : source.slice(0, notes) + section + eol + source.slice(notes);
+
+    // Measured after the disarm, which can make a text five times longer: a
+    // body carried over the extractor's cap would withhold the owner's
+    // Thoughts on every build after, and absent-only means nothing rewrites it
+    // (round 5 of #411's review). A body already over it is not parsed, so
+    // `## Notes` was never found and the text would land under the owner's.
+    if (overBodyCap(updated)) {
+      console.warn(
+        `stacks: did not write ${heading} in ${sourcePath} — the note would be over ` +
+          `${String(MAX_BODY_CODE_POINTS)} characters`,
+      );
+      return false;
+    }
+    // The last check, and the one that needs no list of shapes: a write that
+    // changes what the Thoughts ship, or why they are withheld, is refused,
+    // whatever the disarm missed.
+    if (!sameThoughts(extractThoughts(source), extractThoughts(updated))) {
+      console.warn(
+        `stacks: did not write ${heading} in ${sourcePath} — it would change what the ` +
+          `note's Thoughts ship`,
+      );
+      return false;
+    }
 
     await writeFile(path, updated, 'utf8');
     return true;
@@ -417,6 +447,11 @@ function applyChange(
 
   if (value === undefined) return block;
   return [...lines, `${key}: ${serialise(value)}`].join(eol);
+}
+
+/** Whether two reads of one note's Thoughts agree: the same kind, paragraphs and reason. */
+function sameThoughts(before: ThoughtsResult, after: ThoughtsResult): boolean {
+  return JSON.stringify(before) === JSON.stringify(after);
 }
 
 /**

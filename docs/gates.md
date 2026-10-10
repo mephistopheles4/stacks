@@ -1645,6 +1645,14 @@ moved; the gates above hold the new extractor as they held the old one.
   them as a control. New extractor and writer cases N68 to N74, and the
   boundary rows integrity-lens asked for, were each seen red: the new rules
   against the code before them, the rest by planting the defect each guards.
+- **Round 5 of move 4 on #415.** The twin's near-miss underline gains its `=`
+  half behind a zero-width space and with a no-break space inside, and its
+  control range gains U+009F; each G20 plant went red under the mutant
+  integrity-lens found surviving, and the clean control now holds prose with a
+  no-break space beside dashes. G2's switched-off build now asserts no note is
+  read. New cases N75 to N79 went red against the code before them, and the
+  extractor and disarm rows integrity-lens asked for went red with the defect
+  each guards planted, fifteen plants in all.
 
 ## Where cover art may go
 

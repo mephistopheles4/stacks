@@ -94,6 +94,8 @@ const R = {
   url: 'it holds a web address or a file link',
   afterComment: 'after the strip, it holds a comment marker',
   afterTag: 'after the strip, it holds a tag start',
+  linkTag: 'it holds a tag start in a link address or title',
+  referenceLink: 'it holds a link whose address is defined elsewhere in the note',
 } as const;
 
 describe('the boundary and the start', () => {
@@ -535,7 +537,9 @@ describe('inline in the section', () => {
     expect(ships(note('## Thoughts', '', `See ${link} now.`))).toEqual([`See ${label} now.`]);
   });
 
-  it('N51: ships the label of a reference link whose definition sits under `## Notes`', () => {
+  it('N51: withholds a reference link whose definition sits under `## Notes` (D13)', () => {
+    // Shipping its label would tell a reader the private part holds a
+    // definition by that name; withheld, it tells nothing (round 5 of #411).
     const source = note(
       '## Thoughts',
       '',
@@ -545,7 +549,7 @@ describe('inline in the section', () => {
       '',
       `[ref]: ${CANARY}`,
     );
-    expect(ships(source)).toEqual(['See the label.']);
+    expectWithheld(source, R.referenceLink);
   });
 
   it.each([
@@ -554,12 +558,14 @@ describe('inline in the section', () => {
     ['`--\\>`', 'An escaped --\\> here.', R.afterComment],
     // A raw `%%` is in the source, so step 6 answers before the output check.
     ['`\\%%`', 'An escaped \\%% here.', R.comment],
+    // Step 7 reads two `$` whatever escapes them, so it answers before the
+    // output check, and this row does not reach the re-read.
+    ['`\\$` twice', 'From \\$1 to \\$2.', R.dollars],
     // The output check's step-7 half: each mark is escaped in the source, so
     // only the re-read after the strip sees it (round 4, integrity F1).
     ['`!\\[`', 'An escaped !\\[x] here.', `after the strip, ${R.embed}`],
     ['`^\\[`', 'An escaped ^\\[x] here.', `after the strip, ${R.inlineFootnote}`],
     ['`:\\:`', 'mood:\\: an escaped field', `after the strip, ${R.dataview}`],
-    ['`\\$` twice', 'From \\$1 to \\$2.', R.dollars],
     ['`\\##` at a line start', '\\## An escaped heading', `after the strip, ${R.nearMiss}`],
   ])('N52: withholds an escaped mark the strip restores: %s', (_, line, reason) => {
     expectWithheld(note('## Thoughts', '', line), reason);
@@ -716,11 +722,11 @@ describe('added by the amendment’s own review', () => {
       return `---\ntype: book\ntitle: A Book\n---\n${head}${'x'.repeat(size - head.length - tail.length)}${tail}`;
     }
 
-    it('reads a body of exactly the cap', () => {
+    it('N71: reads a body of exactly the cap', () => {
       expect(ships(noteOfBody(MAX_BODY_CODE_POINTS))).toEqual(['Kept.']);
     });
 
-    it('withholds one over, before it is parsed', () => {
+    it('N71: withholds one over, before it is parsed', () => {
       expectWithheld(noteOfBody(MAX_BODY_CODE_POINTS + 1), R.bodyCap);
     });
 
@@ -782,5 +788,71 @@ describe('added by round 4 of move 4 on #415', () => {
 
   it('keeps a caret word that is not at the end of a line', () => {
     expect(ships(note('## Thoughts', '', 'a ^word here'))).toEqual(['a ^word here']);
+  });
+});
+
+describe('added by round 5 of move 4 on #415', () => {
+  it.each([
+    ['in a quoted title', `[a](x "<span hidden>") ${CANARY} [b](y "</span>")`],
+    ['in a parenthesised title', `[a](x (<b>)) ${CANARY}`],
+    ['in a bare address', `[a](x<b>y) ${CANARY}`],
+  ])('N78: withholds a tag start %s', (_, line) => {
+    // The allowlist skips a link's address and title whole, so neither the
+    // output check nor the deploy's twin ever reads them (round 5, data F1).
+    expectWithheld(note('## Thoughts', '', line), R.linkTag);
+  });
+
+  it.each([
+    ['a full reference', 'See [the label][ref] now.', '[ref]: x.md'],
+    ['a collapsed one', 'See [ref][] now.', '[ref]: x.md'],
+    ['a shortcut one', 'See [ref] now.', '[ref]: x.md'],
+  ])('N79: withholds %s whose definition sits under `## Notes` (D13)', (_, line, definition) => {
+    expectWithheld(note('## Thoughts', '', line, '', '## Notes', '', definition), R.referenceLink);
+  });
+
+  it('N79: ships bracketed words that match no definition, brackets and all', () => {
+    expect(ships(note('## Thoughts', '', 'See [ref] now.', '', '## Notes', '', CANARY))).toEqual([
+      'See [ref] now.',
+    ]);
+  });
+
+  it('N79: still withholds a wikilink matching a definition as a wikilink (N68)', () => {
+    const source = note('## Thoughts', '', 'See [[ref]] now.', '', '## Notes', '', '[ref]: x.md');
+    expectWithheld(source, R.wikilink);
+  });
+
+  it.each([
+    ['a link followed by a bracket', 'See [a](x.md)] now.', 'See a] now.'],
+    ['a bracket before a link it does not close', 'See [[a](x.md) now.', 'See [a now.'],
+  ])('ships %s, which is no wikilink', (_, line, text) => {
+    // Round 5, integrity F5: the bracketed-link check's edges.
+    expect(ships(note('## Thoughts', '', line))).toEqual([text]);
+  });
+
+  it('withholds a `###` holding code after its first word', () => {
+    // Round 5, integrity F4: the heading's text is read to its end.
+    expectWithheld(note('## Thoughts', '', `### A \`${CANARY}\``), R.code);
+  });
+
+  it('ships a `###` with closing hashes inside the section, without them', () => {
+    expect(ships(note('## Thoughts', '', '### Part ###', '', 'Kept.'))).toEqual(['Part', 'Kept.']);
+  });
+
+  it('withholds a nested numbered list', () => {
+    // Round 5, integrity F6: N32 nests a bullet list only.
+    expectWithheld(note('## Thoughts', '', '- an item', `  1. ${CANARY}`), R.nestedList);
+  });
+
+  it('ships prose holding a no-break space, beside dashes and equals too', () => {
+    // Round 5, integrity F1: the near-miss underline must not widen onto prose.
+    const lines = [
+      `A${NBSP}thought.`,
+      `- one${NBSP}two`,
+      `One${NBSP}--`,
+      `So---${NBSP}said`,
+      `--${NBSP}so it goes`,
+      `==${NBSP}so it goes`,
+    ];
+    expect(ships(note('## Thoughts', '', ...lines.flatMap((line) => [line, ''])))).toEqual(lines);
   });
 });

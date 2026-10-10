@@ -245,6 +245,20 @@ total, the slowest in 3.5 ms, and every one reads as absent — the one note
 with a `## Thoughts` heading holds nothing that ships — so a deploy today would
 publish no notes file.
 
+**2026-10-10 — round 5 of move 4 on #415, and the owner's "keep going".** Round
+5 was the second round without converging, and the owner chose to fix its
+findings and run move 4 once more. The blocking one: the 8,000 description cap
+counted the text before the disarm, which can make it five times longer, so a
+description under it could carry a note past the 20,000 body cap and withhold
+its Thoughts for good. `insertBodySection` now refuses a write that leaves the
+body over 20,000, measured on the note as written, and one that changes what
+the Thoughts ship (spec D16). Reference links and tag starts in a link's
+address or title now withhold (D13), and the disarm reads every indent (D14).
+Seventeen more tokenizer shapes were timed at the 20,000 cap: the slowest, a
+run of closing brackets, took 1.8 s, about twice the `*_` run's 0.99 s in the
+same process; table rows took 0.56 s and mixed emphasis 0.26 s. The gate
+change in this round lands with this entry and its `docs/gates.md` lines.
+
 ### Phase 4 evidence
 
 `stacks import audible <export>` against a real Libation export: 22 records, 17

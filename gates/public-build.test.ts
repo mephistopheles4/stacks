@@ -18,7 +18,7 @@
  * See docs/gates.md, row G2 (public-build).
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync } from 'node:fs';
 import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -454,11 +454,14 @@ describe.each([
     await publish(await vault.listBooks(), vault, assets, { isPublic, publishThoughts: true });
     expect(walk(join(assets, 'notes')), 'the earlier build staged the split file').toHaveLength(1);
 
+    // Switched off, no note's body is read at all (round 5, integrity F10).
+    const reads = vi.spyOn(vault, 'readPublicSection');
     const off = await publish(await vault.listBooks(), vault, assets, {
       isPublic,
       publishThoughts: false,
     });
 
+    expect(reads).not.toHaveBeenCalled();
     expect(walk(join(assets, 'notes'))).toEqual([]);
     expect(off.notesWritten).toBe(0);
     expect(off.library.books.filter((book) => book.thoughts !== undefined)).toEqual([]);

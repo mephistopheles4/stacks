@@ -260,6 +260,55 @@ describe('readPublicSection', () => {
     });
   });
 
+  describe('N75: a description under the write cap that the disarm carries past the body cap', () => {
+    /** The note's body as the extractor counts it: everything after the closing `---` line. */
+    const bodyOf = (source: string): string => source.slice(source.indexOf('\n---\n') + 5);
+    const privateNotes = 'x'.repeat(2_500);
+
+    it.each([
+      ['dollar signs', `${CANARY} ${'$'.repeat(3_600)}`],
+      ['runs of three backticks', `${CANARY} ${'``` '.repeat(1_200)}`],
+    ])('is not written when it is dense in %s, and the Thoughts keep shipping', async (_, text) => {
+      const path = await note('N75', '## Thoughts', '', 'Mine.', '', '## Notes', '', privateNotes);
+      const before = await readFile(join(dir, path), 'utf8');
+      expect([...text].length).toBeLessThanOrEqual(MAX_DESCRIPTION_CODE_POINTS);
+
+      expect(await vault.insertBodySection(path, '## About', text)).toBe(false);
+      expect(await readFile(join(dir, path), 'utf8')).toBe(before);
+      expect(warned()).toContain('Library/N75.md');
+      expect(warned()).not.toContain(CANARY);
+      expect(warned()).not.toContain('$$');
+      expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
+    });
+
+    it('is written when the body lands at exactly the cap, and refused one code point over', async () => {
+      // Long enough that the room left is under the write cap.
+      const longNotes = 'x'.repeat(15_000);
+      const path = await note('N75b', '## Thoughts', '', 'Mine.', '', '## Notes', '', longNotes);
+      const before = await readFile(join(dir, path), 'utf8');
+      // `## About`, a blank line, the text, its line ending and the blank line
+      // the writer leaves above `## Notes`.
+      const room = 20_000 - [...bodyOf(before)].length - '## About\n\n'.length - '\n\n'.length;
+      expect(room).toBeLessThan(MAX_DESCRIPTION_CODE_POINTS);
+
+      expect(await vault.insertBodySection(path, '## About', 'a'.repeat(room + 1))).toBe(false);
+      expect(await vault.insertBodySection(path, '## About', 'a'.repeat(room))).toBe(true);
+      expect([...bodyOf(await readFile(join(dir, path), 'utf8'))].length).toBe(20_000);
+      expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
+    });
+
+    it('is not written into a note already over the body cap', async () => {
+      // Over the cap the body is not parsed, so `## Notes` cannot be found and
+      // the text would land under the owner's own.
+      const path = await note('N75c', '## Notes', '', 'x'.repeat(20_000));
+      const before = await readFile(join(dir, path), 'utf8');
+
+      expect(await vault.insertBodySection(path, '## About', 'A blurb.')).toBe(false);
+      expect(await readFile(join(dir, path), 'utf8')).toBe(before);
+      expect(warned()).toContain('Library/N75c.md');
+    });
+  });
+
   it('N73: a description that opens with a link definition changes nothing the owner ships', async () => {
     const path = await note(
       'N73',

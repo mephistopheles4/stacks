@@ -167,7 +167,8 @@ with a warning that names the note and the shape and never quotes the text.
    until round 4 of move 4 on #415 measured the tokenizer**: its cost grows with
    the square of some shapes, so a run of `*_` emphasis marks took 0.9 s at
    20,000 code points, 3.9 s at 40,000 and minutes near 200,000. The owner chose
-   this number (D12).
+   this number (D12). Round 5 timed seventeen more shapes at the cap; the
+   slowest, a run of closing brackets, took 1.8 s.
 3. **The start.** Only **root-level** headings count, never one inside a list
    item, a quote or a callout. The section starts at a root-level ATX heading
    of level 2 whose text, trimmed, is exactly `Thoughts`. With none, the
@@ -228,11 +229,18 @@ with a warning that names the note and the shape and never quotes the text.
      as a heading, quote or fence behind a bullet.
    - **Inline tokens that ship:** text; a character escape, whose character
      ships; emphasis and strong, with the marks dropped and the words kept;
-     hard breaks; line endings, kept as `\n`; and links, of which **only the
-     label ships**. A link's destination, title and reference never ship.
+     hard breaks; line endings, kept as `\n`; and links with an address of
+     their own, of which **only the label ships**. A link's destination and
+     title never ship.
    - **Every other inline token withholds:** a code span, inline HTML, an
      image, an autolink, a character reference such as `&amp;`, and a footnote
      call.
+   - **So does a reference link**, full, collapsed or shortcut. Its
+     definition sits outside the section, since one inside withholds, so
+     shipping its label bare would tell a reader the private part defines
+     that name (round 5, D13).
+   - **So does a tag start in a link's address or title**: those are skipped
+     unread, so step 10 and the deploy's twin never see them (round 5).
 9. **Obsidian's marks, on the text that ships.** These are hand rules, since
    no CommonMark parser knows them:
    - A wikilink flattens to its alias. With no alias, it flattens to its
@@ -266,11 +274,13 @@ reads `Notes`. That excludes the frontmatter, fenced lines and subheadings, so
 the writer and the extractor cannot read `## Notes` differently.
 `disarmBodyText` keeps its own hand predicates, which read wider than
 CommonMark: for text being written, matching wider is the safe direction. It
-gains three, so that provider text can neither open a section nor trip a
-guard that would withhold the owner's:
+gains these, so that provider text can neither open a section nor trip a
+guard that would withhold the owner's. **Each reads a line at any indent**,
+since in a list item a line indented four spaces or a tab is a paragraph, not
+code (round 5, D14):
 
-- **A setext underline**, in CommonMark's shape (up to three spaces of indent,
-  only `=` or only `-`, trailing whitespace allowed), is escaped. Otherwise a
+- **A setext underline**, only `=` or only `-` with trailing whitespace
+  allowed, is escaped. Otherwise a
   description holding `Thoughts` over a line of dashes would be a second
   `Thoughts` heading, and step 3 would withhold the real section.
 - **Every run of three or more backticks or tildes, anywhere in a line, every
@@ -285,11 +295,21 @@ guard that would withhold the owner's:
   one (round 4).
 - **A heading behind list markers** is escaped too, so disarmed text parses
   to no heading even inside a list item (round 4).
-- **A description over 8,000 code points is not written**, with a warning
-  naming the note: three times the longest real `## About`, 2,605 code
-  points, so provider text cannot carry a note past step 2's cap or bring a
-  shape the tokenizer is slow on (round 4, D12).
 - The one-off `## About` search of §8 counts these shapes too.
+
+`insertBodySection` itself refuses three writes, each with a warning naming
+the note and never quoting the text:
+
+- **A description over 8,000 code points**, as the provider sent it: three
+  times the longest real `## About`, 2,605 code points, so provider text
+  cannot bring a shape the tokenizer is slow on (round 4, D12).
+- **A write that leaves the note body over step 2's 20,000**, measured on the
+  note as it would be written, after the disarm, which can make a text five
+  times longer. That is what keeps provider text from carrying a note past
+  step 2's cap (round 5, D16).
+- **A write that changes what the Thoughts ship**, or why they withhold: the
+  extractor reads the note before and after, so a shape the disarm misses
+  still changes nothing the owner publishes (round 5, D16).
 
 #### 3.1.2 The dependency
 
@@ -361,6 +381,10 @@ recommendation each. **The owner confirms or overrides them at sign-off**
 | D10 | What carries over from round 3 | the inspector twin of step 10 (adversarial F7); integrity's gaps F4 and F10 to F12 as done-criteria; and every finding in round 3's [standards pair report](https://github.com/mephistopheles4/stacks/issues/411#issuecomment-6092778405) and [`unstated-lens` report](https://github.com/mephistopheles4/stacks/issues/411#issuecomment-6092745849), each fixed or given a disposition in round 3's Lens dispositions |
 | D11 | A comment closer, `-->` or `--!>`, above the section with no opener: the hand version withheld; step 5 lets it through. Missed by the prototype's count, because the test holding it failed first on D6 | **ship it**: owner decision, from chat, on #411 (2026-10-10). An opener of any form above the section still withholds, and a lone closer hides nothing |
 | D12 | Round 4 of move 4 measured the parse growing with the square of some shapes, under step 2's 200,000 | **owner decision, from chat (2026-10-10): option A** — the body cap is 20,000 code points, and `insertBodySection` writes no description over 8,000. A note body over 20,000 never ships its Thoughts; none does today |
+| D13 | A reference link, full, collapsed or shortcut, whose definition sits outside the section: it shipped its label, and N51 said so. Round 5 found that shipping the label bare, and not in its brackets, tells a reader the private part defines that name | **withhold** (round 5, adversarial F2; the session's recommendation, taken as the default): N51 flips. A link with an address of its own still ships its label, and bracketed words matching no definition ship as written |
+| D14 | The disarm read CommonMark's three spaces of indent, so a list item's continuation, indented four spaces or a tab, kept a definition or a heading live | **disarm at any indent** (round 5, behaviour F2): a heading indented four spaces outside a list is code, and now gains a backslash that shows in the private `## About`. One test's expected value moves with it |
+| D15 | Two reason strings changed wording during the rebuild: two `Thoughts` headings now says "one of them perhaps underlined with `---`", and the development build adds "run without a `development` condition (check NODE_OPTIONS)" | **accept**: wording only, each changed with its code (round 5, integrity F11 and F12) |
+| D16 | The 8,000 cap counts a description before the disarm, which can make it five times longer, so a description under it could carry a note past 20,000 and withhold its Thoughts for good | **check the note as it would be written** (round 5, behaviour F1 and adversarial F1): `insertBodySection` refuses a write that leaves the body over 20,000, and one that changes what the Thoughts ship, or why they withhold. The 8,000 cap stays as D12 set it. A note already over 20,000 gets no `## About`, since its `## Notes` cannot be found |
 
 #### 3.1.4 The named cases
 
@@ -455,7 +479,7 @@ the prototype.
 | N48 | Math: inline with a `%` comment; a `$$` block; a doubled backslash before either `$`; `$20, or \$5` | withheld | R2 data F4; R3 adversarial F4, data F2, behaviour F2; D2 |
 | N49 | `It cost $20.` | shipped | D2 |
 | N50 | Links: inline; text over two lines; a destination with balanced brackets or parentheses; a title in quotes and in parentheses | the label ships; the canary, in the destination or title, does not | R3 adversarial F3, data F3, behaviour F1; P |
-| N51 | A reference link whose definition sits under `## Notes` | its label ships | R3 integrity F6 |
+| N51 | A reference link whose definition sits under `## Notes` | withheld since D13; its label shipped before round 5 | R3 integrity F6 |
 | N52 | Escaped marks the strip restores: `\<div`, `\%%`, `<\!--` and `--\>` | withheld (step 10); a G20 build of such a note passes the inspector | R3 adversarial F6 |
 | N53 | A control character, U+0001 | withheld (step 7) | R3 adversarial F6 |
 | N54 | 8,000 code points ship and 8,001 withhold, counted across line breaks and in code points rather than UTF-16 units | as stated | #368 rule 7; R3 integrity F5 |
@@ -500,6 +524,16 @@ the prototype.
 | N72 | A description over 8,000 code points, and one of exactly 8,000 | the first is not written, with a warning naming the note and never quoting it, and the owner's Thoughts still ship; the second is written | adversarial F2, behaviour F1; D12 |
 | N73 | A description whose lines open with link definitions, behind list markers too | written with each `[` as a character reference; the owner's wikilink and bracketed words ship unchanged | adversarial F1 |
 | N74 | A description holding a heading behind list markers | the hashes escaped; parsed, it holds no heading token | behaviour F3 |
+
+**Round 5 of move 4 added five**, each seen red before its fix:
+
+| # | Case | Result | Round 5 finding |
+| --- | --- | --- | --- |
+| N75 | A description under 8,000 code points, dense in characters the disarm expands, onto a note it would carry past 20,000; a note body landing at exactly 20,000, and one more; a note already over 20,000 | not written, with a warning naming the note and never quoting it, and the owner's Thoughts still ship; exactly 20,000 is written | behaviour F1, adversarial F1; D16 |
+| N76 | A description the disarm missed, which would open a section on a note with none or withhold the owner's | not written, with a warning naming the note; the test switches the disarm off to reach it | behaviour F1, adversarial F1; D16 |
+| N77 | A description whose list item continues on lines indented four spaces or a tab, holding a definition, a heading and a setext pair | each disarmed; parsed, it holds no definition or heading token | behaviour F2; D14 |
+| N78 | A tag start in a link's quoted or parenthesised title, or in its bare address | withheld (step 8): those parts are skipped unread, so step 10 and the deploy's twin never see them | data F1 |
+| N79 | A full, collapsed or shortcut reference link whose definition sits under `## Notes` | withheld (step 8), so no reader learns whether the private part defines that name; bracketed words matching no definition still ship, and a wikilink matching one still withholds as N68 | adversarial F2; D13 |
 
 **The non-extractor gaps carry over as done-criteria of step 2:**
 

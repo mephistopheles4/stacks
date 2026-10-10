@@ -567,6 +567,8 @@ describe('G20 — every rule goes red', () => {
     ['a control character', `an${String.fromCodePoint(0x01)}aside`, 'a control character'],
     ['DEL', `an${String.fromCodePoint(0x7f)}aside`, 'a control character'],
     ['a C1 control character', `an${String.fromCodePoint(0x85)}aside`, 'a control character'],
+    // The C1 range's upper edge (round 5, integrity F3).
+    ['the last C1 control, U+009F', `an${String.fromCodePoint(0x9f)}aside`, 'a control character'],
     [
       'Unicode tag characters',
       `an aside${String.fromCodePoint(0xe0068, 0xe0069)}`,
@@ -597,6 +599,18 @@ describe('G20 — every rule goes red', () => {
       `an aside\n---${String.fromCodePoint(0xa0)}`,
       'a line that may read as a heading',
     ],
+    // The `=` half, behind a zero-width space and with one inside (round 5,
+    // integrity F2).
+    [
+      'an equals underline behind a zero-width space',
+      `an aside\n${String.fromCodePoint(0x200b)}===`,
+      'a line that may read as a heading',
+    ],
+    [
+      'an equals underline carrying a no-break space inside',
+      `an aside\n==${String.fromCodePoint(0xa0)}==`,
+      'a line that may read as a heading',
+    ],
   ] as const)('N60 notes-shape: a notes file carrying %s', async (_, mark, words) => {
     await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A clean paragraph.', mark] });
     const problems = inspect().problems;
@@ -622,6 +636,9 @@ describe('G20 — every rule goes red', () => {
         'Time: an hour.',
         '---',
         'First line,\nsecond line\twith a tab, café and naïve.',
+        // Prose holding a no-break space beside dashes is no underline (round 5).
+        `A${String.fromCodePoint(0xa0)}thought, and dashes --`,
+        `--${String.fromCodePoint(0xa0)}so it goes`,
       ],
     });
     expect(inspect().problems).toEqual([]);

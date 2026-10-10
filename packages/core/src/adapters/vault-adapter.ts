@@ -50,7 +50,7 @@ export interface VaultAdapter {
    * because a body section **is not a `BookRecord` field**, so "never published"
    * becomes structural rather than a discipline. No build can carry it.
    *
-   * Three rules:
+   * Four rules:
    *
    * - **Written only when `heading` is absent.** That is the absent-only rule
    *   applied to a section, and it is what makes a re-run idempotent — no second
@@ -65,10 +65,13 @@ export interface VaultAdapter {
    *   never open a `## Thoughts` section of its own, carry `## Notes` out of
    *   one, trip a guard that withholds the owner's, or land a live comment or
    *   HTML block (spec §3.1.1, §4). A `[` that opens a line becomes a character
-   *   reference too, and a heading behind list markers is escaped.
-   * - **A text over 8,000 code points is not written**, with a warning naming
-   *   the note, so provider prose cannot carry the note past the extractor's
-   *   body cap.
+   *   reference too, and a heading behind list markers is escaped, at any
+   *   indent.
+   * - **Three writes are refused**, each with a warning naming the note: a
+   *   text over 8,000 code points; one that would leave the note body over the
+   *   extractor's 20,000-code-point cap, measured after the disarm; and one
+   *   that would change what the note's Thoughts ship, so a shape the disarm
+   *   misses still changes nothing published.
    *
    * ⚠️ **Any allowlist of published sections must never name `## About`**: the
    * whole point of storing a description here was that it stays local
