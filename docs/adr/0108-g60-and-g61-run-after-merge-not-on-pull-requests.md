@@ -16,9 +16,12 @@ check runs: on every push to `main`, in `deploy:site` and on a local run.
 An unknown argument exits non-zero before the build, so a typo in the workflow
 cannot run a different set and pass.
 
-The workflow's `cancel-in-progress` is `true` only for pull-request runs. A run
-on `main` is now the one place G60 and G61 run before a deploy, so two quick
-merges must not cancel the first one's.
+The workflow's `cancel-in-progress` is `true` only for pull-request runs, and a
+push to `main` gets a concurrency group keyed on its commit. A run on `main`is
+now the one place G60 and G61 run before a deploy, so a quick second merge must
+not cancel the first one's, and a third must not replace the pending second:
+GitHub cancels a pending run in a group when another arrives, whatever
+`cancel-in-progress` says.
 
 ## Why
 
@@ -41,11 +44,22 @@ failure email or the red mark on the commit.
 
 **Default response to a red `main` run: revert the merge that turned it red
 first, then fix in a new pull request.** Pull requests skip both checks, so they
-keep going green on top of a regression, and `deploy:site` refuses to run
-without naming the commit that broke it. A revert keeps later merges from
+keep going green on top of a regression. `deploy:site` then refuses, and its
+refusal does not say which commit caused it. A revert keeps later merges from
 stacking on it.
 
 ## What stays the same
 
 G59 (`large-library-lit`) and every other check still run on pull requests.
 Nothing a check asserts changed: this decides where two of them run.
+
+## How this was decided
+
+*Posted on [#427](https://github.com/mephistopheles4/stacks/issues/427) as an owner decision, from chat, 2026-10-10.*
+
+- **G60 and G61 leave the pull-request run.** They still run on every push to `main` (the run after each merge) and in `deploy:site`, as today. The owner accepts that a regression in either is caught after the merge, not before.
+- **G59 (`large-library-lit`) stays on pull requests.**
+- **Cuts taken:** A (per-check timing lines), E (direct book picks and reduced motion in #417's walks, after #417 merges and is re-measured), F (fixed sleeps become state polls).
+- **Cuts dropped:** B (G60 at the small viewport), C (a separate job), D (replaced by dropping Node 22, its own issue).
+
+Two things changed in the build, both on evidence: E was kept for `checkThoughtsShown` only, because the direct pick in `checkViewer` failed on CI on three heads and passed on one, and cost 18 s against 6 to 9 s; and F was applied to one wait, because the Escape wait in the viewer check is a negative observation that a poll returns too early to see.

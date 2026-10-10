@@ -122,6 +122,15 @@ shelf copy when the held copy fails, and no cover path in the page's attributes
 `CSS3DRenderer` and the pickup add 26.8 KB (+16%) for every visitor; the
 stylesheet fell from 1.9 KB to 1.8 KB with the card's rules.
 
+**2026-10-10 — where G60 and G61 run**
+([#427](https://github.com/mephistopheles4/stacks/issues/427)): `smoke:render` was 6 to 7
+minutes of every pull request, about four fifths of it G60 and G61 drawing in
+software on a runner with no GPU. A pull request now passes `--pull-request`,
+which skips both; they still run on every push to `main` and in `deploy:site`,
+and every `main` run finishes ([ADR-0108](adr/0108-g60-and-g61-run-after-merge-not-on-pull-requests.md)).
+The pull-request step measured 2m24s on Node 22 and 2m29s on Node 24, against
+5m42s and 6m59s. Observed red: an unknown argument exits 1 before the build.
+
 ### Phase 3 evidence
 
 `pnpm gate:public` green: builds for real, then greps every text file that

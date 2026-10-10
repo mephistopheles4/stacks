@@ -900,8 +900,9 @@ It skips G60 and G61, which were four fifths of the step on CI, and prints
 `skipped on pull requests: G60, G61 (run after merge and at deploy)` where their
 output would be. With no flag every check runs: on a push to `main`, in
 `deploy:site` and locally. Any other argument exits non-zero before the build
-([ADR-0108](adr/0108-g60-and-g61-run-after-merge-not-on-pull-requests.md)). The
-report ends with a `step times` table, one line per check.
+([ADR-0108](adr/0108-g60-and-g61-run-after-merge-not-on-pull-requests.md)). Just
+before the screenshot line and the verdict, the report prints a `step times` table,
+one line per timed step.
 
 **G61's three pages**, each in a browser context of its own at 480×640, each
 with a WebGL counting hook installed before any page script:

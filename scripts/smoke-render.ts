@@ -140,6 +140,8 @@ function readArgs(argv: readonly string[]): { pullRequest: boolean } {
 /**
  * Elapsed time per step, recorded as each one ends and printed with the report,
  * so the next regression is visible in the CI log without an experiment branch.
+ * A label carries a gate id where the check is a gate row's own; the others are
+ * named for what they drive.
  */
 const TIMINGS: { label: string; seconds: number }[] = [];
 
@@ -238,7 +240,7 @@ async function main(): Promise<void> {
         : await timed('G61 one-shadow-reader', () =>
             checkShadowReaders(browser, origin, large.origin),
           );
-      const tuner = await timed('pickup tuner', () => checkTuner(browser, origin));
+      const tuner = await timed('G64 tuner-split', () => checkTuner(browser, origin));
 
       report({
         skipped: pullRequest ? SKIPPED_ON_PULL_REQUESTS : undefined,
@@ -664,7 +666,9 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
 /**
  * Picks up a book `library.json` flags with Thoughts and reads whether its page
  * showed them: the slot unhidden, holding at least one paragraph after its
- * label. `undefined` when the walk found no flagged book to pick up. Matched by
+ * label. Picks the first flagged book in shelf order directly, by its index.
+ * `undefined` when `library.json` flags no uniquely titled book, or when the pick
+ * held a different book than the one its index was computed for. Matched by
  * title, and a title two books share is skipped rather than guessed at.
  */
 async function checkThoughtsShown(page: Page): Promise<boolean | undefined> {
@@ -786,7 +790,11 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
         return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0, src: image && image.src ? new URL(image.src).pathname : '' };
       })()`)) as { open: boolean; width: number; src: string };
       await page.keyboard.press('Escape');
-      await until(page, "!document.getElementById('cover-viewer')?.open", 1000);
+      // A fixed wait, on purpose: what is read next is that the book is *still*
+      // held, so it must be read after a put-back started by this Escape would
+      // have registered (it goes through the history, a moment later). A poll for
+      // the viewer closing returns before that and would let the defect through.
+      await new Promise((resolve) => setTimeout(resolve, 200));
       const after = (await page.evaluate(`(() => ({
         viewerOpen: Boolean(document.getElementById('cover-viewer')?.open),
         held: window.__shelf.held() !== undefined,

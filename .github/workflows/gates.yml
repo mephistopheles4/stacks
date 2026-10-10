@@ -4,7 +4,9 @@
 #
 #   1. It is never path-filtered. A required workflow that gets skipped reports
 #      nothing at all, and a required check that never reports blocks the pull
-#      request forever. Every push runs the whole thing.
+#      request forever. Every push runs every job; on a pull request the
+#      `smoke:render` step skips G60 and G61, which run after merge and at
+#      deploy (ADR-0108).
 #   2. `gates` is an aggregator over the `suite` matrix, so the required check
 #      keeps one stable name however many Node versions the matrix grows to.
 #      Requiring `suite (22)` and `suite (24)` by name would mean editing the
@@ -46,10 +48,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: gates-${{ github.workflow }}-${{ github.ref }}
-  # Only a superseded pull-request run is cancelled. A run on `main` is the one
-  # place G60 and G61 run before a deploy (#427), so two quick merges must not
-  # cancel the first one's.
+  # A pull request's runs share one group per ref, so a newer push supersedes the
+  # older run. A push to `main` gets a group of its own, keyed on the commit:
+  # a run on `main` is the one place G60 and G61 run before a deploy (#427), and
+  # even with `cancel-in-progress` off GitHub cancels a *pending* run when a
+  # third arrives in the same group, which would skip the middle commit.
+  group: gates-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
