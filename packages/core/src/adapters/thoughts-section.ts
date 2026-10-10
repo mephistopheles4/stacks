@@ -327,11 +327,13 @@ function headingOf(block: Block): { level: number; text: string; setext: boolean
  * excludes the frontmatter (the caller passes the body), fenced lines,
  * subheadings, and headings inside a list item or a quote.
  *
- * A body over `MAX_BODY_CODE_POINTS` is not parsed, and reads as having none:
- * the writer then appends, which is what it does on a hand-made note.
+ * A body over `MAX_BODY_CODE_POINTS` is not parsed, and neither is any body
+ * when `micromark`'s development build loaded, since that build can trace the
+ * whole note: either way it reads as having none, and the writer appends, which
+ * is what it does on a hand-made note.
  */
 export function notesHeadingAt(body: string): number | undefined {
-  if ([...body].length > MAX_BODY_CODE_POINTS) return undefined;
+  if (!LOADED_DEFAULT_BUILD || [...body].length > MAX_BODY_CODE_POINTS) return undefined;
   const notes = rootBlocks(parseBody(body)).find((block) => {
     const heading = headingOf(block);
     return heading?.setext === false && heading.level === 2 && heading.text === 'Notes';

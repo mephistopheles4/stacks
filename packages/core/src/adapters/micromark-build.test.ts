@@ -37,12 +37,19 @@ describe('N65: the build that loads', () => {
     expect(isDefaultBuild(entry)).toBe(expected);
   });
 
-  /** Runs the extractor in a fresh Node, with the conditions given, on a note that ships. */
-  function extractIn(conditions: readonly string[]): unknown {
+  /**
+   * Both parses, in a fresh Node with the conditions given: the extractor on a
+   * note that ships, and the `## About` writer's lookup on a body with
+   * `## Notes`. Either would trace the whole note under the development build.
+   */
+  function parseIn(conditions: readonly string[]): unknown {
     const note = '---\ntype: book\ntitle: A\n---\n\n## Thoughts\n\nKept.\n';
+    const body = 'Intro.\n\n## Notes\n\nPrivate.\n';
     const code = [
-      `const { extractThoughts } = await import(${JSON.stringify(EXTRACTOR)});`,
-      `process.stdout.write(JSON.stringify(extractThoughts(${JSON.stringify(note)})));`,
+      `const { extractThoughts, notesHeadingAt } = await import(${JSON.stringify(EXTRACTOR)});`,
+      `const extract = extractThoughts(${JSON.stringify(note)});`,
+      `const notesAt = notesHeadingAt(${JSON.stringify(body)}) ?? null;`,
+      'process.stdout.write(JSON.stringify({ extract, notesAt }));',
     ].join('\n');
     const env = { ...process.env, NODE_OPTIONS: '' };
     const out = execFileSync(
@@ -53,15 +60,21 @@ describe('N65: the build that loads', () => {
     return JSON.parse(out) as unknown;
   }
 
-  it('withholds every section when the development build loads', () => {
-    expect(extractIn(['--conditions=development'])).toEqual({
-      kind: 'withheld',
-      reason: 'micromark loaded its development build, so no section is read',
+  it('withholds every section, and finds no `## Notes`, when the development build loads', () => {
+    expect(parseIn(['--conditions=development'])).toEqual({
+      extract: {
+        kind: 'withheld',
+        reason: 'micromark loaded its development build, so no section is read',
+      },
+      notesAt: null,
     });
   });
 
-  it('ships, under the conditions the CLI runs with', () => {
-    expect(extractIn([])).toEqual({ kind: 'shipped', paragraphs: ['Kept.'] });
+  it('ships, and finds `## Notes`, under the conditions the CLI runs with', () => {
+    expect(parseIn([])).toEqual({
+      extract: { kind: 'shipped', paragraphs: ['Kept.'] },
+      notesAt: 'Intro.\n\n'.length,
+    });
   });
 
   it('runs the default build in this suite, as the CLI does', () => {

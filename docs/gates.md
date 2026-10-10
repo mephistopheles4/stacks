@@ -1618,15 +1618,17 @@ moved; the gates above hold the new extractor as they held the old one.
 - **`notes-shape` mirrors the extractor's output check** (N60): two `$`, `![`,
   `^[`, `::`, a control character, Unicode tag characters and a near-miss
   heading, in its own list beside `HIDDEN_MARKER`, never a shared import. Ten
-  G20 plants went red before the list existed, and a near-miss control holds a
-  single `$`, a `#tag` and a lone colon clean.
+  G20 plants, one test each, went red before the list existed and again with
+  it emptied, and a near-miss control holds a single `$`, a `#tag` and a lone
+  colon clean.
 - **An escaped mark the strip restores** (`\<div`, `<\!--`, `--\>`) withholds
   at extraction, so a build of such a note writes no file for the inspector to
   refuse (N52); G2 builds each, and each went red with the output check
   removed.
-- **Two tests hold the parser itself.** One runs the extractor in a fresh Node
-  under `--conditions=development` and sees every section withheld, red with
-  the load check disabled. The other resolves the 32 packages of `micromark`'s
+- **Two tests hold the parser itself.** One runs the extractor and the
+  `## About` writer's lookup in a fresh Node under `--conditions=development`
+  and sees every section withheld and no `## Notes` found, each red with its
+  load check disabled. The other resolves the 32 packages of `micromark`'s
   closure from `core` and compares each version with a committed list, red
   with one version moved.
 - **Round 3's test gaps outside the extractor.** `gate:public`'s presence

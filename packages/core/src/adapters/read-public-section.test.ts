@@ -220,12 +220,14 @@ describe('readPublicSection', () => {
       'and a fence it never closes',
     ].join('\n');
 
-    it('ships none of it on a note with no Thoughts of its own', async () => {
+    it('ships none of it on a note with no Thoughts of its own, and opens no section', async () => {
       const path = await note('N17a', '## Notes', '', CANARY);
       await vault.insertBodySection(path, '## About', description);
 
       expect(await vault.readPublicSection(path)).toBeUndefined();
-      expect(warned()).not.toContain(CANARY);
+      // No warning: the disarmed text holds no section to withhold. A section
+      // withheld only by luck, as a duplicate, would warn here.
+      expect(warned()).toBe('');
     });
 
     it('leaves the owner’s Thoughts shipping, and none of the description', async () => {
