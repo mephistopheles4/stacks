@@ -277,8 +277,9 @@ timeline editor.
 
 **Public build**:
 A build that assumes an audience: wishlist and private books are dropped, covers
-are re-hosted same-origin, and no note body ships except its Thoughts section. The counterpart is
-a **local build**, which is for you and holds everything.
+are re-hosted same-origin, and no note body ships except as [invariant 2](AGENTS.md)
+allows. The counterpart is a **local build**, which is for you: the plain
+`stacks build` index, which keeps private and wishlist books and stages no files.
 *Avoid*: production build, release, deploy (a deploy *uploads* a public build).
 
 **Staging folder**:

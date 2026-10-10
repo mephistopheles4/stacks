@@ -106,7 +106,8 @@ jobs:
       - name: build
         run: pnpm build
 
-      # Phase 3 gate: the public build carries no note bodies. Stages its own
+      # Phase 3 gate: the public build carries no note-body text outside the
+      # Thoughts split, and the split's ship phrase reaches dist/notes/. Stages its own
       # fixture vault, so it does not depend on step order.
       - name: gate:public
         run: pnpm gate:public

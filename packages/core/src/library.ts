@@ -98,7 +98,7 @@ export interface BuildLibraryOptions {
    * `thoughts: true`. Keyed by record rather than by id, because two notes can
    * share an id and only the one whose file was written may be marked.
    */
-  readonly thoughtsWritten?: ReadonlySet<string>;
+  readonly notesWrittenFor?: ReadonlySet<string>;
 }
 
 export function buildLibrary(
@@ -106,9 +106,9 @@ export function buildLibrary(
   options: BuildLibraryOptions = {},
 ): Library {
   const isPublic = options.isPublic ?? false;
-  const thoughtsWritten = options.thoughtsWritten ?? new Set<string>();
+  const notesWrittenFor = options.notesWrittenFor ?? new Set<string>();
   const books = records.map((record) =>
-    toLibraryBook(record, isPublic, thoughtsWritten.has(record.sourcePath)),
+    toLibraryBook(record, isPublic, notesWrittenFor.has(record.sourcePath)),
   );
 
   return {
@@ -119,7 +119,11 @@ export function buildLibrary(
   };
 }
 
-function toLibraryBook(record: BookRecord, isPublic: boolean, hasThoughts: boolean): LibraryBook {
+function toLibraryBook(
+  record: BookRecord,
+  isPublic: boolean,
+  notesFileWritten: boolean,
+): LibraryBook {
   const book: LibraryBook = {
     id: idFor(record),
     title: record.title,
@@ -148,7 +152,7 @@ function toLibraryBook(record: BookRecord, isPublic: boolean, hasThoughts: boole
     ...keyIfPresent('appleTrackId', record.appleTrackId),
     ...keyIfPresent('openLibraryOlid', record.openLibraryOlid),
     ...keyIfPresent('oreillyOurn', record.oreillyOurn),
-    ...(hasThoughts ? { thoughts: true as const } : {}),
+    ...(notesFileWritten ? { thoughts: true as const } : {}),
   };
 
   // A public build must expose no vault paths (brief, "share build").

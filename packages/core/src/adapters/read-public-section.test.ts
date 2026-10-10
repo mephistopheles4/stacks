@@ -133,6 +133,25 @@ describe('readPublicSection', () => {
     expect(await vault.readPublicSection(path)).toEqual(['First.', 'Notes', 'Later.']);
   });
 
+  it('puts `## About` above the real `## Notes`, never above a fenced one', async () => {
+    const path = await note('F2', '## Notes', '', '```', '## Notes', '```', '', 'Private.');
+    await vault.insertBodySection(path, '## About', 'A blurb.');
+    const written = await readFile(join(dir, path), 'utf8');
+
+    // Above the first, unfenced `## Notes` — the fenced line further down is code.
+    expect(written.indexOf('## About')).toBeLessThan(written.indexOf('## Notes'));
+    expect(written.indexOf('## About')).toBeLessThan(written.indexOf('```'));
+  });
+
+  it('skips a fenced `## Notes` that comes first, and lands above the real one', async () => {
+    const path = await note('F3', '```', '## Notes', '```', '', '## Notes', '', 'Private.');
+    await vault.insertBodySection(path, '## About', 'A blurb.');
+    const written = await readFile(join(dir, path), 'utf8');
+
+    expect(written.indexOf('## About')).toBeGreaterThan(written.lastIndexOf('```'));
+    expect(written.indexOf('## About')).toBeLessThan(written.lastIndexOf('## Notes'));
+  });
+
   it('writes a description split by lone CRs disarmed, so it opens no section', async () => {
     const CR = String.fromCharCode(13);
     const path = await note('H', '## Notes', '', 'Private.');

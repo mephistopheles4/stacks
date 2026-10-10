@@ -25,6 +25,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
 import { inspectPublicBuild, NOTE_BODY_CANARY, THOUGHTS_SHIP_PHRASE } from './lib/public-build.ts';
+import { PUBLISH_THOUGHTS } from '../packages/core/src/publish.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
 import { walk } from './lib/walk.ts';
@@ -129,9 +130,23 @@ if (report.problems.length > 0) {
 // (#367, decision 4). Here and not in the inspector, which also reads real
 // deploys, where no fixture phrase exists (ADR-0028).
 const notesDir = join(DIST, 'notes');
-const shipped = existsSync(notesDir)
-  ? walk(notesDir).filter((file) => readFileSync(file, 'utf8').includes(THOUGHTS_SHIP_PHRASE))
-  : [];
+const staged = existsSync(notesDir) ? walk(notesDir) : [];
+const shipped = staged.filter((file) => readFileSync(file, 'utf8').includes(THOUGHTS_SHIP_PHRASE));
+
+// Switched off (spec §4's undo), the stage must ship nothing, and this check
+// follows it so the takedown deploy passes its own gate.
+if (!PUBLISH_THOUGHTS) {
+  if (staged.length > 0) {
+    console.error(
+      `\nFAILED: the notes stage is switched off, yet ${String(staged.length)} file(s) sit under ` +
+        relative(REPO_ROOT, notesDir).split('\\').join('/'),
+    );
+    process.exit(1);
+  }
+  console.log('notes stage switched off: dist/notes/ holds no file');
+  console.log('\nOK — public build carries no note bodies, no vault paths');
+  process.exit(0);
+}
 
 if (shipped.length === 0) {
   console.error(

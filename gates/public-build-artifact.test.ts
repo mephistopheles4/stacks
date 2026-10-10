@@ -542,6 +542,47 @@ describe('G20 — every rule goes red', () => {
     }
   });
 
+  it('notes-shape: a notes file carrying a raw HTML tag', async () => {
+    // A tag can hide text in reading view; the extractor withholds any, so a
+    // file holding one is a bug that got past it.
+    for (const tag of ['<span hidden>an aside</span>', '</b> an aside', '<div', '<a href=x>']) {
+      await writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A clean paragraph.', `Seen ${tag}.`] });
+      const problems = inspect().problems;
+      expect([...new Set(problems.map((problem) => problem.rule))], `planted ${tag}`).toEqual([
+        'notes-shape',
+      ]);
+      expect(problems.map((problem) => problem.message).join('\n')).not.toContain('an aside');
+    }
+  });
+
+  it('notes-shape: a notes file that repeats its key', async () => {
+    await expectOnly('notes-shape', async () => {
+      // JSON.parse keeps the last copy, so the first array would be checked by
+      // nothing but the byte cap.
+      await writeNotes(
+        `${CLEAN_ID}.json`,
+        '{"paragraphs":["A paragraph a check never reads."],"paragraphs":["A clean paragraph."]}',
+      );
+    });
+  });
+
+  it('notes-shape: the writer’s own bytes, trailing newline and all, are clean', async () => {
+    // `publish()` writes `JSON.stringify({ paragraphs })` and a newline. The
+    // other plants here write no newline, so without this case a byte-form
+    // check that refused the writer's own output would pass every one of them.
+    await writeNotes(
+      `${CLEAN_ID}.json`,
+      `${JSON.stringify({ paragraphs: ['A paragraph the owner chose to share.'] })}\n`,
+    );
+    expect(inspect().problems).toEqual([]);
+  });
+
+  it('notes-shape: a notes file in some other JSON layout', async () => {
+    await expectOnly('notes-shape', async () => {
+      await writeNotes(`${CLEAN_ID}.json`, '{\n  "paragraphs": ["A clean paragraph."]\n}\n');
+    });
+  });
+
   it('share-image-origin: a relative og:image', async () => {
     await expectOnly('share-image-origin', async () => {
       // Relative for the whole of the project's life. Every preview scraper
@@ -757,6 +798,26 @@ describe('G20 — every rule goes red', () => {
       // A withdrawn section must not live on in a browser cache (spec §3.3).
       await writeFile(join(dist, '_headers'), headersFile({ notes: 'stale' }));
     });
+  });
+
+  it('headers: notes whose only revalidate is inside another header', async () => {
+    await expectOnly('headers', async () => {
+      // The words, but not as the header: the rule reads a `Cache-Control:`
+      // line, never the text anywhere in one.
+      const headers = headersFile({ notes: 'absent' }).concat(
+        '/notes/*\n  X-Note: Cache-Control: public, max-age=0\n',
+      );
+      await writeFile(join(dist, '_headers'), headers);
+    });
+  });
+
+  it('headers: a notes block that revalidates beside another header is clean', async () => {
+    // One revalidating Cache-Control is enough; the block may carry others.
+    const headers = headersFile({ notes: 'absent' }).concat(
+      '/notes/*\n  X-Content-Type-Options: nosniff\n  Cache-Control: public, max-age=0, must-revalidate\n',
+    );
+    await writeFile(join(dist, '_headers'), headers);
+    expect(inspect().problems).toEqual([]);
   });
 
   it('headers: no /notes/* block at all', async () => {

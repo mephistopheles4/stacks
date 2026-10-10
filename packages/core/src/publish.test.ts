@@ -146,7 +146,8 @@ describe('publish — the notes stage', () => {
 
   const build = async (isPublic: boolean) => {
     const vault = new ObsidianAdapter(vaultPath);
-    return publish(await vault.listBooks(), vault, assets, { isPublic });
+    // The stage on whatever `PUBLISH_THOUGHTS` says: these test the stage itself.
+    return publish(await vault.listBooks(), vault, assets, { isPublic, thoughts: true });
   };
 
   const notesFiles = async (): Promise<string[]> => {
@@ -300,7 +301,10 @@ describe('publish — the notes stage', () => {
           : real.readPublicSection(path),
     };
 
-    const result = await publish(await real.listBooks(), flaky, assets, { isPublic: true });
+    const result = await publish(await real.listBooks(), flaky, assets, {
+      isPublic: true,
+      thoughts: true,
+    });
 
     expect(result.notesWritten).toBe(1);
     expect(result.library.books.filter((b) => b.thoughts === true).map((b) => b.title)).toEqual([

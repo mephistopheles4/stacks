@@ -139,10 +139,8 @@ break by accident and the most expensive to undo, so it is also a gate: G13
 fails on any committed binary outside the generated fixture covers.
 
 **No note bodies anywhere near a build.** The vault is somebody's private
-reading notes. Nothing below the frontmatter fence is parsed, stored or shipped
-except one section, `## Thoughts`, which the adapter alone reads and strips to
-plain text (invariant 2); the parser has no field to put a body in — keep it
-that way.
+reading notes. Only what invariant 2 allows leaves the vault, and the parser
+has no field to put a body in — keep it that way.
 
 **Never weaken a gate to make it pass.** If a gate is wrong, say so in the pull
 request and change it deliberately, as its own commit, with the reasoning. The

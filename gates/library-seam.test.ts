@@ -132,7 +132,7 @@ describe('G30 — the BookRecord → library.json seam, both directions', () => 
   it('traces every shipped key back to a record field or a named derived one', () => {
     // Built with the notes stage's mark set, so a derived key only that stage
     // adds is traced too rather than never appearing.
-    const [book] = buildLibrary([FULL], { thoughtsWritten: new Set([FULL.sourcePath]) }).books;
+    const [book] = buildLibrary([FULL], { notesWrittenFor: new Set([FULL.sourcePath]) }).books;
     const fields = new Set<string>(Object.keys(FULL));
 
     const derived: readonly string[] = DERIVED;

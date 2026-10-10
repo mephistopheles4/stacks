@@ -63,13 +63,18 @@ describe('the section boundary', () => {
     expect(shipped(note('## Thoughts \t ', '', 'Kept.'))).toEqual(['Kept.']);
   });
 
-  it.each([['## thoughts'], ['## THOUGHTS'], ['### Thoughts'], ['# Thoughts'], ['##Thoughts']])(
-    'is case-sensitive and level-exact: %s is not the section',
-    (heading) => {
-      const source = note(heading, '', CANARY);
-      expect(extractThoughts(source)).toEqual({ kind: 'absent' });
-    },
-  );
+  it.each([
+    ['## thoughts'],
+    ['## THOUGHTS'],
+    ['### Thoughts'],
+    ['# Thoughts'],
+    ['##Thoughts'],
+    ['## Thoughts#'],
+    ['## Thoughts and more'],
+  ])('is case-sensitive and level-exact: %s is not the section', (heading) => {
+    const source = note(heading, '', CANARY);
+    expect(extractThoughts(source)).toEqual({ kind: 'absent' });
+  });
 
   it.each([
     ['three spaces of indent', '   ## Notes'],
@@ -153,95 +158,129 @@ describe('the section boundary', () => {
   });
 });
 
-describe('code fences', () => {
-  it('ships a closed fence’s lines without its markers', () => {
-    const source = note('## Thoughts', '', '```text', 'a line *as written*', '```', '', 'After.');
-    expect(shipped(source)).toEqual(['a line *as written*', 'After.']);
-  });
-
-  it('keeps a fenced `###` inside the section', () => {
-    const source = note(
-      '## Thoughts',
-      '',
-      '~~~',
-      '### not a heading',
-      '~~~',
-      '',
-      '## Notes',
-      CANARY,
-    );
-    expect(shipped(source)).toEqual(['### not a heading']);
-  });
-
-  it('withholds a fence that is never closed, with the canary under `## Notes` below it', () => {
-    const source = note(
-      '## Thoughts',
-      '',
-      'Before.',
-      '',
-      '```',
-      'code',
-      '',
-      '## Notes',
-      '',
-      CANARY,
-    );
-
-    expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
+describe('the allowlist: only plain prose ships (ADR-0106)', () => {
+  it.each([
+    ['a bare backtick fence', ['```', CANARY, '```']],
+    ['a bare tilde fence', ['~~~', CANARY, '~~~']],
+    ['a fence tagged text', ['```text', CANARY, '```']],
+    ['a fence tagged for a renderer', ['```dataview', `LIST FROM "${CANARY}"`, '```']],
+    ['a longer tilde fence with an info string', ['~~~~ x', CANARY, '~~~~']],
+  ])('withholds %s, closed or not', (_, lines) => {
+    const source = note('## Thoughts', '', 'Before.', '', ...lines, '', 'After.');
+    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason: 'it holds a code fence' });
     expectNoCanary(source);
   });
 
   it('withholds a fence whose closer sits below a `##` it swallowed', () => {
-    // Balanced, so an end-of-file check alone would pass it: the fence opened in
-    // the section closes inside `## Notes`, and everything between ships as code.
     const source = note('## Thoughts', '', '```', '', '## Notes', '', CANARY, '```');
-
     expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
     expectNoCanary(source);
   });
 
-  it.each([['# a comment'], ['## a heading']])(
-    'withholds when a fenced line is shaped like a section-ending heading: %s',
-    (line) => {
-      const source = note('## Thoughts', '', '```', line, CANARY, '```', '', 'After.');
-      expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
-    },
-  );
-
-  it('is not closed by a shorter fence', () => {
-    // Nothing after the shorter run is heading-shaped, so only the open fence at
-    // the end of the file can withhold this.
-    const source = note('## Thoughts', '', '````', '```', '', 'After.');
-    expect(extractThoughts(source)).toEqual({
-      kind: 'withheld',
-      reason: 'a code fence in it is never closed',
-    });
+  it.each([
+    ['inline code', `Some \`${CANARY}\` here.`],
+    ['an inline query', `Read \`= [[${CANARY}]].rating\` times.`],
+    ['a backtick run that is no fence', `\`\`\`a\`b ${CANARY}`],
+  ])('withholds %s: any backtick', (_, line) => {
+    const source = note('## Thoughts', '', line, '', '## Notes');
+    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason: 'it holds code' });
+    expectNoCanary(source);
   });
 
-  it('is not closed by the other character', () => {
-    const source = note('## Thoughts', '', '```', '~~~', '', 'After.');
+  it.each([
+    ['a quote', ['> ' + CANARY]],
+    ['a callout', ['> [!note] A title', `> ${CANARY}`]],
+    ['a heading inside a quote', ['> ## Notes', `> ${CANARY}`]],
+    ['a query fence inside a callout', ['> [!note]', '> ```dataview', `> ${CANARY}`, '> ```']],
+  ])('withholds %s', (_, lines) => {
+    const source = note('## Thoughts', '', 'Kept?', '', ...lines);
     expect(extractThoughts(source)).toEqual({
       kind: 'withheld',
-      reason: 'a code fence in it is never closed',
+      reason: 'it holds a quote or a callout',
     });
+    expectNoCanary(source);
   });
 
-  it('withholds a fence still open at the end of the file', () => {
-    const source = note('## Thoughts', '', 'Before.', '', '```', 'code with no heading after it');
+  it.each([
+    ['a nested list', ['- an item', `  - ${CANARY}`]],
+    ['a list continuation', ['- an item', '', `    ${CANARY}`]],
+    ['indented code', [`    ${CANARY}`]],
+    ['an indented subheading', [`   ### ${CANARY}`]],
+  ])('withholds %s: any indented line', (_, lines) => {
+    const source = note('## Thoughts', '', 'Kept?', '', ...lines);
     expect(extractThoughts(source)).toEqual({
       kind: 'withheld',
-      reason: 'a code fence in it is never closed',
+      reason: 'it holds an indented line (a nested list, a continuation or indented code)',
     });
+    expectNoCanary(source);
   });
 
+  it('ends the section at a heading indented under a list item, so nothing below it ships', () => {
+    // Wider than CommonMark, which keeps the heading inside the item: ending
+    // early can only publish less.
+    const source = note('## Thoughts', '', '- an item', '  ## Notes', CANARY);
+    expect(shipped(source)).toEqual(['- an item']);
+    expectNoCanary(source);
+  });
+
+  it.each([
+    ['in a list item', [`- [x]: vault/path "${CANARY}"`]],
+    ['with a label over two lines', ['[a', `b]: ${CANARY}`]],
+    ['for a footnote', [`[^1]: ${CANARY}`]],
+  ])('withholds a definition %s: `]:` anywhere', (_, lines) => {
+    const source = note('## Thoughts', '', 'Kept?', '', ...lines);
+    expect(extractThoughts(source)).toEqual({
+      kind: 'withheld',
+      reason: 'it holds a link reference or footnote definition',
+    });
+    expectNoCanary(source);
+  });
+
+  it('withholds a table', () => {
+    const source = note('## Thoughts', '', `| a | ${CANARY} |`, '| --- | --- |', '| 1 | 2 |');
+    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason: 'it holds a table' });
+  });
+
+  it.each([
+    ['inline math', [`A value $x % ${CANARY}$ here.`]],
+    ['block math', ['$$', `% ${CANARY}`, '$$']],
+  ])('withholds %s: two unescaped dollar signs', (_, lines) => {
+    const source = note('## Thoughts', '', ...lines);
+    expect(extractThoughts(source)).toEqual({ kind: 'withheld', reason: 'it may hold math' });
+    expectNoCanary(source);
+  });
+
+  it('ships a single dollar sign, and escaped ones', () => {
+    expect(shipped(note('## Thoughts', '', 'It cost $20, or \\$5 and \\$6.'))).toEqual([
+      'It cost $20, or $5 and $6.',
+    ]);
+  });
+
+  it('ships one level of list at the margin, with its marks', () => {
+    expect(shipped(note('## Thoughts', '', '- one', '* two', '+ three', '1. four'))).toEqual([
+      '- one\n* two\n+ three\n1. four',
+    ]);
+  });
+});
+
+describe('fence state above the section', () => {
   it.each([
     ['an info string', '```js'],
     ['text before the run', 'see ```'],
     ['text after the run', '``` and more'],
-  ])('is not closed by a closer-shaped line with %s', (_, closer) => {
+  ])('a fence is not closed by a closer-shaped line with %s', (_, closer) => {
     // A fence under `## Notes` that this line wrongly closed would let the fenced
     // `## Thoughts` below it open a section and ship the canary.
     const source = note('## Notes', '', '```', closer, '## Thoughts', '', CANARY, '```');
+    expect(extractThoughts(source)).toEqual({ kind: 'absent' });
+  });
+
+  it.each([
+    ['a shorter run', ['````', '```']],
+    ['a backtick run inside a tilde fence', ['~~~', '```']],
+    ['a tilde run inside a backtick fence', ['```', '~~~']],
+  ])('a fence is not closed by %s', (_, [opener, closer]) => {
+    const source = note('## Notes', '', opener ?? '', closer ?? '', '## Thoughts', '', CANARY);
     expect(extractThoughts(source)).toEqual({ kind: 'absent' });
   });
 
@@ -249,48 +288,6 @@ describe('code fences', () => {
     // Only a backtick fence refuses a backtick in its info string.
     const source = note('## Notes', '', '~~~ a`b', '## Thoughts', '', CANARY, '~~~');
     expect(extractThoughts(source)).toEqual({ kind: 'absent' });
-  });
-
-  it.each([['dataview'], ['dataviewjs'], ['query'], ['tasks'], ['mermaid'], ['JS']])(
-    'withholds a fenced block tagged %s, which Obsidian may render rather than show',
-    (info) => {
-      const source = note('## Thoughts', '', 'Before.', '', '```' + info, CANARY, '```');
-      expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
-      expectNoCanary(source);
-    },
-  );
-
-  it.each([['text'], ['TXT'], ['plain'], ['plaintext']])(
-    'ships a fenced block tagged %s',
-    (info) => {
-      const source = note('## Thoughts', '', '```' + info, 'as written', '```');
-      expect(shipped(source)).toEqual(['as written']);
-    },
-  );
-
-  it('withholds a setext heading under a fence a list item opened', () => {
-    // CommonMark ends the item, and its fence, at the first unindented line, so
-    // Obsidian shows a new heading here; this scan keeps the fence open.
-    const source = note(
-      '## Thoughts',
-      '',
-      '- an item',
-      '  ```',
-      'Private heading',
-      '===',
-      CANARY,
-      '```',
-    );
-    expect(extractThoughts(source)).toMatchObject({ kind: 'withheld' });
-    expectNoCanary(source);
-  });
-
-  it('does not open on a backtick run whose info string holds a backtick', () => {
-    // Not a fence under CommonMark, so `## Notes` below is a real heading.
-    const source = note('## Thoughts', '', '```a`b', '', '## Notes', '', CANARY);
-
-    expect(extractThoughts(source).kind).toBe('shipped');
-    expectNoCanary(source);
   });
 });
 
@@ -311,9 +308,20 @@ describe('setext headings', () => {
     ]);
   });
 
-  it('ships a thematic break under a subheading or a closed fence', () => {
-    const source = note('## Thoughts', '', '### Part', '---', '```', 'x', '```', '---');
-    expect(shipped(source)).toEqual(['Part\n---\nx\n---']);
+  it('ships a thematic break under a subheading', () => {
+    const source = note('## Thoughts', '', '### Part', '---', 'More.');
+    expect(shipped(source)).toEqual(['Part\n---\nMore.']);
+  });
+
+  it('withholds an underline straight under the heading’s first line', () => {
+    // No blank line after the heading, so the paragraph the underline belongs to
+    // is the section's first line: the look-back must read the line before.
+    const source = note('## Thoughts', 'Private heading', '===', CANARY);
+    expect(extractThoughts(source)).toEqual({
+      kind: 'withheld',
+      reason: 'it holds a setext heading',
+    });
+    expectNoCanary(source);
   });
 
   it('ships a line that only ends in a dash', () => {
@@ -510,13 +518,15 @@ describe('hidden text withholds the whole section', () => {
 });
 
 describe('the strip', () => {
-  it('removes emphasis and code marks and keeps the words', () => {
+  it('removes emphasis marks and keeps the words', () => {
     const source = note(
       '## Thoughts',
       '',
-      '**Bold**, __also__, *it*, _it_, `code` and ~~gone~~ ==lit==.',
+      '**Bold words**, __also bold__, *some words*, _a few more_, ~~gone again~~ and ==lit up==.',
     );
-    expect(shipped(source)).toEqual(['Bold, also, it, it, code and gone lit.']);
+    expect(shipped(source)).toEqual([
+      'Bold words, also bold, some words, a few more, gone again and lit up.',
+    ]);
   });
 
   it('ships a line that starts with strikethrough, which is no fence', () => {
@@ -533,22 +543,6 @@ describe('the strip', () => {
     expect(shipped(note('## Thoughts', '', '- one', '- two', '1. three'))).toEqual([
       '- one\n- two\n1. three',
     ]);
-  });
-
-  it('removes block quote marks, nested ones included', () => {
-    expect(shipped(note('## Thoughts', '', '> quoted', '> > deeper'))).toEqual(['quoted\ndeeper']);
-  });
-
-  it('ships a callout as reading view shows it', () => {
-    const source = note(
-      '## Thoughts',
-      '',
-      '> [!note] A title',
-      '> The body.',
-      '',
-      '> [!tip]- Folded',
-    );
-    expect(shipped(source)).toEqual(['A title\nThe body.', 'Folded']);
   });
 
   it('keeps a tag and removes a block id', () => {
@@ -580,7 +574,7 @@ describe('the strip', () => {
   it.each([
     ['empty', note('## Thoughts', '', '## Notes', CANARY)],
     ['blank lines only', note('## Thoughts', '', '  ', '', '## Notes', CANARY)],
-    ['marks only', note('## Thoughts', '', '###', '', '> ', '## Notes', CANARY)],
+    ['marks only', note('## Thoughts', '', '###', '', '^a1b2c3', '## Notes', CANARY)],
   ])('treats a section that strips to nothing as no section: %s', (_, source) => {
     expect(extractThoughts(source)).toEqual({ kind: 'absent' });
   });

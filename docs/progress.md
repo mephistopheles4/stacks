@@ -193,12 +193,14 @@ two inspector rules under G20, no new row — see
 
 **2026-10-09 — the Thoughts extractor**
 ([#411](https://github.com/mephistopheles4/stacks/issues/411)): `## Thoughts`
-ships as `notes/<id>.json` in both builds; G2's presence half armed, G5, G11,
+ships as `notes/<id>.json` in both of `publish()`'s modes; G2's presence half armed, G5, G11,
 G20 and G30 extended, `gate:public` checks presence and vacuity — same section
 of [`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists).
 `notes-shape` refuses comment and declaration markers (owner decision), and the
 review's leak through a lone CR or line separator is closed with the shapes it
-found; both in that section.
+found; both in that section. After a second round found another shape, the owner chose an allowlist
+([ADR-0106](./adr/0106-thoughts-ship-only-plain-prose.md)): only plain prose ships, and the gates follow
+the stage's off switch so a takedown deploy can run.
 
 ### Phase 4 evidence
 

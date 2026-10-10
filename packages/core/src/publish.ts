@@ -33,15 +33,24 @@ const NOTES_DIR = 'notes';
  * site. Spec §4's undo: switch the stage off, never revert it bare — a bare
  * revert removes the prune with the stage, and the files the last build staged
  * into `packages/site/public/` would reach `dist/` and deploy again. Keep the
- * `/notes/*` block in `_headers` too. ⚠️ Turning this off reddens G2's split
- * assertions and `gate:public`'s presence check by design: they assert the
- * stage runs. See `docs/commands.md`.
+ * `/notes/*` block in `_headers` too.
+ *
+ * **The gates follow it**, so the takedown deploy can run: G2's split
+ * assertions and `gate:public`'s presence check read this constant, and with
+ * it off they assert that no notes file and no `thoughts` mark ships instead.
+ * Exported for them, never for another stage. See `docs/commands.md`.
  */
-const PUBLISH_THOUGHTS = true;
+export const PUBLISH_THOUGHTS = true;
 
 export interface PublishOptions {
   readonly isPublic: boolean;
   readonly now?: Date;
+  /**
+   * Whether the notes stage reads and writes Thoughts; `PUBLISH_THOUGHTS` when
+   * unset. Off, it still prunes `notes/`. An option as well as a constant so a
+   * test can drive the off path the constant never takes.
+   */
+  readonly thoughts?: boolean;
 }
 
 export interface PublishResult {
@@ -79,11 +88,15 @@ export async function publish(
 
   // Before `library.json` is written, because the prune's signal that the
   // folder is ours is the previous build's `library.json`.
-  const thoughtsWritten = await stageNotes(books, vault, assetsDir);
+  const notesWrittenFor = await stageNotes(
+    (options.thoughts ?? PUBLISH_THOUGHTS) ? books.filter(isPublishable) : [],
+    vault,
+    assetsDir,
+  );
 
   const built = buildLibrary(shelved, {
     isPublic: options.isPublic,
-    thoughtsWritten,
+    notesWrittenFor,
     ...(options.now === undefined ? {} : { now: options.now }),
   });
 
@@ -113,7 +126,7 @@ export async function publish(
     libraryPath,
     coversCopied: copied,
     coversMissing: missing,
-    notesWritten: thoughtsWritten.size,
+    notesWritten: notesWrittenFor.size,
   };
 }
 
@@ -121,22 +134,25 @@ export async function publish(
  * Whether a public build publishes this book: one you own, not marked private.
  *
  * One predicate, two callers: the public shelf filter, and the notes stage,
- * which asks it **whatever the build mode** (spec §3.2). So a local build
- * stands a private book on the shelf and picks it up to its card's lines, never
- * its Thoughts — you see what a visitor sees.
+ * which asks it **in both of `publish()`'s modes** (spec §3.2). So `publish()`
+ * in its local mode stands a private book on the shelf and picks it up to its
+ * card's lines, never its Thoughts — you see what a visitor sees. (The plain
+ * `stacks build` index never runs `publish()` and stages nothing.)
  */
 function isPublishable(book: BookRecord): boolean {
   return SHELVED_STATUSES.has(book.status) && book.private !== true;
 }
 
 /**
- * Writes `notes/<id>.json` for every publishable book whose note carries a
- * `## Thoughts` section, and returns the `sourcePath` of each book it wrote for.
+ * Writes `notes/<id>.json` for every candidate whose note carries a
+ * `## Thoughts` section, prunes the folder to exactly those files, and returns
+ * the `sourcePath` of each book it wrote for.
  *
  * The one stage that ships note-body text (invariant 2). It reads through
- * `readPublicSection`, which hands back the section and never the body, and
- * asks `isPublishable` in both builds, so a private or wishlist book's
- * Thoughts are never read for a build at all.
+ * `readPublicSection`, which hands back the section and never the body.
+ * `publish()` hands it only books `isPublishable` admits, in both of its
+ * modes, so a private or wishlist book's Thoughts are never read for a build
+ * at all — and none at all when the stage is switched off, which still prunes.
  *
  * **A note that cannot be read is skipped with a warning**, never a failed
  * build (invariant 3): it can be deleted or locked between `listBooks` and
@@ -148,12 +164,12 @@ function isPublishable(book: BookRecord): boolean {
  * never a candidate, so it cannot reach a public book's file this way.
  */
 async function stageNotes(
-  books: readonly BookRecord[],
+  candidates: readonly BookRecord[],
   vault: VaultAdapter,
   assetsDir: string,
 ): Promise<ReadonlySet<string>> {
   const byId = new Map<string, BookRecord[]>();
-  for (const book of PUBLISH_THOUGHTS ? books.filter(isPublishable) : []) {
+  for (const book of candidates) {
     const id = idFor(book);
     byId.set(id, [...(byId.get(id) ?? []), book]);
   }

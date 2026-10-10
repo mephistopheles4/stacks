@@ -1517,7 +1517,7 @@ added three: a five-character ending other than `.json`, `file:` and
 `obsidian:` without slashes, and a key made of prose; each went red against the
 defect it names.
 
-**Step 2, the extractor**, paid what step 1 said it owed:
+**Step 2, the extractor**, paid what step 1 left owed on #410:
 
 - **`it.fails` is `it`**, in both builds, and the file must be exactly
   `{ paragraphs }`. Wiring the notes stage turned both red with *Expect test to
@@ -1536,8 +1536,8 @@ defect it names.
   key.
 - **`headers` requires a revalidating `/notes/*` block**, beside `/covers/*`,
   planted under G20 both absent and stale.
-- **`notes-shape` refuses a comment or declaration marker** — `%%`, `<!`, `<?`,
-  `-->` or `--!>` — by the owner's decision on #411, from #410's review, widened
+- **`notes-shape` refuses a hidden-text marker** — `%%`, `<!`, `<?`,
+  `-->` or `--!>`, and since the allowlist any tag start — by the owner's decision on #411, from #410's review, widened
   to `<!` and `<?` by #411's own review. The extractor withholds any section
   holding one, so this refuses nothing a correct build ships; it is the byte
   cap's reasoning applied to hidden text. G20 plants seven forms, each red
@@ -1583,6 +1583,28 @@ one observed red against the reviewed code before it passed.
 - **The notes stage has a switch**, `PUBLISH_THOUGHTS` in `publish.ts`, which is
   spec §4's undo: off, it reads nothing and still prunes. See
   [`docs/commands.md`](commands.md).
+
+**Step 2's second review round** found a new shape again, so the owner chose
+an allowlist ([ADR-0106](adr/0106-thoughts-ship-only-plain-prose.md)): a
+section ships only plain prose, and any other shape withholds it. Round 2
+reproduced a link definition inside a quote or list item — hidden in reading
+view — reaching a staged file, and found query blocks nested in callouts.
+
+- **The allowlist.** Any quote or callout, any indented line, any code fence or
+  backtick, `]:` anywhere, a table, or two unescaped `$` withholds the section.
+  Twenty-one extractor tests, each with the canary where a misread would leak
+  it, went red against the round-2 code.
+- **The gates follow the switch**, so the takedown deploy can run: G2's
+  presence and mark tests and `gate:public`'s presence check read
+  `PUBLISH_THOUGHTS`, and their switched-off twins assert that nothing ships.
+  Observed: with the constant set to `false`, `pnpm test`'s publish gates and
+  `pnpm gate:public` passed. A G2 case drives the off path through
+  `publish()`'s `thoughts` option whatever the constant says.
+- **`notes-shape` refuses any tag start** beside the comment markers, and a file
+  that is not byte for byte what the writer emits, which a repeated key would
+  otherwise hide behind. Three G20 plants went red against the round-2
+  inspector; two more pin the revalidate rule against the two mutants round 2
+  left alive, each observed killing its mutant.
 
 ## Where cover art may go
 

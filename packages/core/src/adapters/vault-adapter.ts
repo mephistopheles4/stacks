@@ -57,13 +57,15 @@ export interface VaultAdapter {
    *   `## About` appended, ever.
    * - **Everything else survives byte for byte**, `updateBook`'s promise
    *   extended to the half of the file it never touched.
-   * - **The text it writes is disarmed**: every line that would read as a
+   * - **The text it writes is disarmed**: every line ending becomes LF, `<`,
+   *   `>` and `%%` are written as entities, and every line that would read as a
    *   heading or open a code fence gains a backslash first, so a provider's
-   *   prose can never open a `## Thoughts` section of its own or carry
-   *   `## Notes` out of one (spec §4).
+   *   prose can never open a `## Thoughts` section of its own, carry `## Notes`
+   *   out of one, or land a live comment or HTML block (spec §4).
    *
-   * ⚠️ The published section, `## Thoughts`, **must never be `## About`**: the
-   * whole point of storing a description here was that it stays local.
+   * ⚠️ **Any allowlist of published sections must never name `## About`**: the
+   * whole point of storing a description here was that it stays local
+   * (AGENTS.md, invariant 2).
    *
    * **Returns whether it wrote.** A caller that reports what it filled has to be
    * able to tell "added the section" from "the section was already there", or

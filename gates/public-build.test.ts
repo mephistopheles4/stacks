@@ -26,7 +26,7 @@ import { basename, join, relative } from 'node:path';
 import { ObsidianAdapter } from '../packages/core/src/adapters/obsidian-adapter.ts';
 import { parseNote } from '../packages/core/src/frontmatter.ts';
 import { buildLibrary } from '../packages/core/src/library.ts';
-import { publish } from '../packages/core/src/publish.ts';
+import { publish, PUBLISH_THOUGHTS } from '../packages/core/src/publish.ts';
 import { NOTE_BODY_CANARY, THOUGHTS_SHIP_PHRASE } from '../scripts/lib/public-build.ts';
 import { walk } from '../scripts/lib/walk.ts';
 import { REPO_ROOT } from './repo.ts';
@@ -340,8 +340,12 @@ describe.each([
    * it red with *Expect test to fail* in both builds, and that is when it was
    * flipped to `it`. The file must be exactly `{ paragraphs }`, so a wrong
    * shape fails here and not only in the inspector.
+   *
+   * It and the mark test below follow `PUBLISH_THOUGHTS`: switched off, their
+   * twins assert the off state instead, so the gate a takedown deploy runs
+   * passes. Exactly one of each pair runs.
    */
-  it("ships the Thoughts in the split book's notes file", async () => {
+  it.runIf(PUBLISH_THOUGHTS)("ships the Thoughts in the split book's notes file", async () => {
     const { ids } = await publishSplit();
     const file = join(assets, 'notes', `${ids.get(PLANTED.split) ?? PLANTED.split}.json`);
     const notes = JSON.parse(await readFile(file, 'utf8')) as { paragraphs: string[] };
@@ -361,7 +365,9 @@ describe.each([
       const notePath = join(copy, 'Library', PLANTED.split);
       const original = await readFile(notePath, 'utf8');
       const vault = new ObsidianAdapter(copy);
-      const build = async () => publish(await vault.listBooks(), vault, assets, { isPublic });
+      // The stage on whatever the switch says: this case is about the prune.
+      const build = async () =>
+        publish(await vault.listBooks(), vault, assets, { isPublic, thoughts: true });
       const file = join(assets, 'notes', `${(await fixtureIds()).get(PLANTED.split) ?? ''}.json`);
 
       await build();
@@ -387,15 +393,46 @@ describe.each([
     }
   });
 
-  it('marks the split book, and only it, as carrying Thoughts', async () => {
-    // orphan-note holds file and mark to each other on a real build; this
-    // holds `publish()` to writing the mark at all.
-    const { json, ids } = await publishSplit();
-    const shipped = JSON.parse(json) as { books: { id: string; thoughts?: unknown }[] };
+  it.runIf(PUBLISH_THOUGHTS)(
+    'marks the split book, and only it, as carrying Thoughts',
+    async () => {
+      // orphan-note holds file and mark to each other on a real build; this
+      // holds `publish()` to writing the mark at all.
+      const { json, ids } = await publishSplit();
+      const shipped = JSON.parse(json) as { books: { id: string; thoughts?: unknown }[] };
 
-    expect(shipped.books.filter((book) => book.thoughts !== undefined)).toEqual([
-      expect.objectContaining({ id: ids.get(PLANTED.split), thoughts: true }),
-    ]);
+      expect(shipped.books.filter((book) => book.thoughts !== undefined)).toEqual([
+        expect.objectContaining({ id: ids.get(PLANTED.split), thoughts: true }),
+      ]);
+    },
+  );
+
+  it.runIf(!PUBLISH_THOUGHTS)(
+    'ships no notes file and no mark, the stage being switched off',
+    async () => {
+      const { json } = await publishSplit();
+      const shipped = JSON.parse(json) as { books: { thoughts?: unknown }[] };
+
+      expect(walk(join(assets, 'notes'))).toEqual([]);
+      expect(shipped.books.filter((book) => book.thoughts !== undefined)).toEqual([]);
+    },
+  );
+
+  it('switched off, stages no notes file and no mark, and prunes what an earlier build left', async () => {
+    // The off path, driven through the option so it runs whatever the
+    // constant says: spec §4's undo is this build, then a deploy.
+    const vault = new ObsidianAdapter(FIXTURE_VAULT);
+    await publish(await vault.listBooks(), vault, assets, { isPublic, thoughts: true });
+    expect(walk(join(assets, 'notes')), 'the earlier build staged the split file').toHaveLength(1);
+
+    const off = await publish(await vault.listBooks(), vault, assets, {
+      isPublic,
+      thoughts: false,
+    });
+
+    expect(walk(join(assets, 'notes'))).toEqual([]);
+    expect(off.notesWritten).toBe(0);
+    expect(off.library.books.filter((book) => book.thoughts !== undefined)).toEqual([]);
   });
 });
 

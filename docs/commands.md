@@ -179,8 +179,10 @@ file, but still prunes, so the next build empties `notes/` and the next deploy
 takes every file off the production site. **Never undo it with a bare revert**:
 a revert removes the prune with the stage, and the files the last build staged
 into `packages/site/public/` reach `dist/` and deploy again (spec §4). Keep the
-`/notes/*` block. Switched off, G2's split assertions and `gate:public`'s
-presence check go red by design, because they assert the stage runs.
+`/notes/*` block. **The gates follow the switch**: G2's split assertions and
+`gate:public`'s presence check read `PUBLISH_THOUGHTS`, and switched off they
+assert that no notes file and no `thoughts` mark ships, so `pnpm deploy:site`
+runs the takedown through its own gates.
 
 ## `pnpm deploy:site` — the trend panel, and what a stale record refuses
 

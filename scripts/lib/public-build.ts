@@ -209,24 +209,26 @@ const MAX_NOTES_FILE_BYTES = 40_000;
 const URL_SCHEME = /:\/\/|\b(?:file|obsidian|mailto):/i;
 
 /**
- * A comment or declaration marker in a notes file: `%%`, `<!` (a comment, a
- * declaration or CDATA), `<?` (a processing instruction), or either HTML
- * comment closer.
+ * A hidden-text marker in a notes file: `%%`, either HTML comment closer, or
+ * the start of raw HTML — `<` and a letter, `/`, `!` or `?`, which covers a
+ * tag, a comment, a declaration, CDATA and a processing instruction.
  *
  * The extractor withholds any section holding one, so a correct build never
  * ships a marker and this refuses nothing real. It is the byte cap's reasoning
  * applied to hidden text: a bug that bypassed the extractor's check would
  * otherwise publish an aside the owner never saw on screen. Added on #411 by
  * owner decision, from #410's review, and widened to `<!` and `<?` by #411's
- * own review; bare home paths and "File:" prose were left as the spec has
- * them, since either would move the extractor too.
+ * own review and to any tag start by its second; bare home paths and "File:"
+ * prose were left as the spec has them, since either would move the extractor
+ * too.
  *
  * ⚠️ **Kept apart from its twin deliberately; move one and move the other.**
  * `COMMENT_MARKER` and `HTML_START` in
- * `packages/core/src/adapters/thoughts-section.ts` are the extractor's rules;
- * a shared import would let one weakening clear both, `DERIVED_KEYS`'s reason.
+ * `packages/core/src/adapters/thoughts-section.ts` are the extractor's rules,
+ * and this one pattern matches what the two match together; a shared import
+ * would let one weakening clear both, `DERIVED_KEYS`'s reason.
  */
-const COMMENT_MARKER = /%%|<[!?]|--!?>/;
+const HIDDEN_MARKER = /%%|<[A-Za-z/!?]|--!?>/;
 
 /** The committed share card, and the only image a page may point at. */
 const SHARE_IMAGE_FILE = 'og.png';
@@ -907,7 +909,8 @@ function inspectNotes(dir: string, books: readonly ShippedBook[]): PublicBuildRe
 /**
  * What is wrong with a notes file's contents, or `undefined` when it is exactly
  * `{ "paragraphs": string[] }`, non-empty, every string non-empty, and free of
- * any URL scheme (spec §3.1) and of any comment marker (#411).
+ * any URL scheme (spec §3.1) and of any hidden-text marker (#411), in exactly
+ * the bytes the build writes.
  *
  * Named keys rather than a schema library, for `unknown-key`'s reason: an
  * allowlist of one, which adding a second key cannot pass by accident.
@@ -933,6 +936,14 @@ function notesShapeProblem(text: string): string | undefined {
     );
   }
 
+  // Byte for byte what the writer emits, one trailing newline allowed: a file
+  // that repeats `paragraphs` parses to its last copy, so the checks below
+  // would read one array while the page could be served another.
+  const canonical = JSON.stringify(parsed);
+  if (text !== canonical && text !== `${canonical}\n`) {
+    return 'is not byte for byte the form the build writes — a repeated key or extra text could hide from these checks';
+  }
+
   const { paragraphs } = parsed as { paragraphs: unknown };
   if (!Array.isArray(paragraphs) || paragraphs.length === 0) {
     return 'has no paragraphs — `paragraphs` must be a non-empty list';
@@ -943,8 +954,8 @@ function notesShapeProblem(text: string): string | undefined {
   if (paragraphs.some((paragraph) => URL_SCHEME.test(paragraph as string))) {
     return 'carries a URL scheme — a link must reach the page as its text alone';
   }
-  if (paragraphs.some((paragraph) => COMMENT_MARKER.test(paragraph as string))) {
-    return 'carries a comment marker — text Obsidian hides must never reach the page';
+  if (paragraphs.some((paragraph) => HIDDEN_MARKER.test(paragraph as string))) {
+    return 'carries a hidden-text marker (a comment, a tag or a declaration) — text Obsidian hides must never reach the page';
   }
   return undefined;
 }
