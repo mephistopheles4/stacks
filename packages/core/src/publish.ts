@@ -35,9 +35,10 @@ const NOTES_DIR = 'notes';
  * into `packages/site/public/` would reach `dist/` and deploy again. Keep the
  * `/notes/*` block in `_headers` too.
  *
- * **The gates follow it**, so the takedown deploy can run: G2's split
- * assertions and `gate:public`'s presence check read this constant, and with
+ * **The gates follow it**, so the takedown deploy can run: G2's presence and
+ * mark tests and `gate:public`'s presence check read this constant, and with
  * it off they assert that no notes file and no `thoughts` mark ships instead.
+ * G2's other split tests force the stage on through `publishThoughts`.
  * Exported for them, never for another stage. See `docs/commands.md`.
  */
 export const PUBLISH_THOUGHTS = true;
@@ -46,11 +47,12 @@ export interface PublishOptions {
   readonly isPublic: boolean;
   readonly now?: Date;
   /**
-   * Whether the notes stage reads and writes Thoughts; `PUBLISH_THOUGHTS` when
-   * unset. Off, it still prunes `notes/`. An option as well as a constant so a
-   * test can drive the off path the constant never takes.
+   * The notes stage's switch for this one call: whether it reads and writes
+   * Thoughts, `PUBLISH_THOUGHTS` when unset. Off, it still prunes `notes/`. An
+   * option as well as a constant so a test can drive the off path the constant
+   * never takes. Not the `thoughts` mark a book carries in `library.json`.
    */
-  readonly thoughts?: boolean;
+  readonly publishThoughts?: boolean;
 }
 
 export interface PublishResult {
@@ -89,7 +91,7 @@ export async function publish(
   // Before `library.json` is written, because the prune's signal that the
   // folder is ours is the previous build's `library.json`.
   const notesWrittenFor = await stageNotes(
-    (options.thoughts ?? PUBLISH_THOUGHTS) ? books.filter(isPublishable) : [],
+    (options.publishThoughts ?? PUBLISH_THOUGHTS) ? books.filter(isPublishable) : [],
     vault,
     assetsDir,
   );

@@ -365,9 +365,9 @@ describe.each([
       const notePath = join(copy, 'Library', PLANTED.split);
       const original = await readFile(notePath, 'utf8');
       const vault = new ObsidianAdapter(copy);
-      // The stage on whatever the switch says: this case is about the prune.
+      // Stage forced on, whatever `PUBLISH_THOUGHTS` says: this case is about the prune.
       const build = async () =>
-        publish(await vault.listBooks(), vault, assets, { isPublic, thoughts: true });
+        publish(await vault.listBooks(), vault, assets, { isPublic, publishThoughts: true });
       const file = join(assets, 'notes', `${(await fixtureIds()).get(PLANTED.split) ?? ''}.json`);
 
       await build();
@@ -411,7 +411,7 @@ describe.each([
         const vault = new ObsidianAdapter(copy);
         const result = await publish(await vault.listBooks(), vault, assets, {
           isPublic,
-          thoughts: true,
+          publishThoughts: true,
         });
 
         expect(walk(join(assets, 'notes'))).toEqual([]);
@@ -451,12 +451,12 @@ describe.each([
     // The off path, driven through the option so it runs whatever the
     // constant says: spec §4's undo is this build, then a deploy.
     const vault = new ObsidianAdapter(FIXTURE_VAULT);
-    await publish(await vault.listBooks(), vault, assets, { isPublic, thoughts: true });
+    await publish(await vault.listBooks(), vault, assets, { isPublic, publishThoughts: true });
     expect(walk(join(assets, 'notes')), 'the earlier build staged the split file').toHaveLength(1);
 
     const off = await publish(await vault.listBooks(), vault, assets, {
       isPublic,
-      thoughts: false,
+      publishThoughts: false,
     });
 
     expect(walk(join(assets, 'notes'))).toEqual([]);

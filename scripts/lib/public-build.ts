@@ -119,7 +119,7 @@ export const NOTE_BODY_CANARY = 'NOTE_BODY_CANARY_do_not_ship';
  * Owned beside the canary for the canary's reason — a phrase that drifts between
  * where it is planted and where it is looked for leaves both halves passing.
  *
- * ⚠️ **Plain words only.** The section ships stripped of Markdown by hand, so an
+ * ⚠️ **Plain words only.** The section ships stripped of Markdown, so an
  * underscore, an asterisk or a backtick in here could be eaten on the way and
  * the presence check would fail for a reason unconnected to the split. And it
  * must never contain the canary, which `note-body` searches for as a pattern.
@@ -131,6 +131,38 @@ export const NOTE_BODY_CANARY = 'NOTE_BODY_CANARY_do_not_ship';
  * See [#367](https://github.com/mephistopheles4/stacks/issues/367).
  */
 export const THOUGHTS_SHIP_PHRASE = 'THOUGHTS SHIP PHRASE must reach the page';
+
+/**
+ * `gate:public`'s presence half, read off the files a fixture build left under
+ * `dist/notes/`, each as its path under `dist/` and its text.
+ *
+ * Stage on, the ship phrase must reach one of them, or the split shipped
+ * nothing. Stage off (spec §4's undo), there must be none at all, so the
+ * takedown deploy passes its own gate and a stage that ignored its switch does
+ * not. Never a rule in the inspector, for `THOUGHTS_SHIP_PHRASE`'s reason; a
+ * function rather than inline in the script so each refusal can be watched
+ * going red (#411's round 3, integrity F10).
+ */
+export function notesPresence(
+  files: readonly { readonly name: string; readonly text: string }[],
+  publishThoughts: boolean,
+): { readonly problem?: string; readonly observation?: string } {
+  if (!publishThoughts) {
+    return files.length === 0
+      ? { observation: 'notes stage switched off: dist/notes/ holds no file' }
+      : {
+          problem: `the notes stage is switched off, yet ${String(files.length)} file(s) sit under dist/notes`,
+        };
+  }
+  const shipped = files.find((file) => file.text.includes(THOUGHTS_SHIP_PHRASE));
+  return shipped === undefined
+    ? {
+        problem:
+          `the ship phrase "${THOUGHTS_SHIP_PHRASE}" reached no file under dist/notes — the split ` +
+          'shipped nothing, or Astro dropped the notes folder',
+      }
+    : { observation: `ship phrase present in ${shipped.name}` };
+}
 
 /** Binary assets are covers and the OG image; no text to leak. */
 const TEXTUAL = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt', '.map', '.xml']);

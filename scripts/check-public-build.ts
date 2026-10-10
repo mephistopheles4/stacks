@@ -24,7 +24,12 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
-import { inspectPublicBuild, NOTE_BODY_CANARY, THOUGHTS_SHIP_PHRASE } from './lib/public-build.ts';
+import {
+  inspectPublicBuild,
+  NOTE_BODY_CANARY,
+  notesPresence,
+  THOUGHTS_SHIP_PHRASE,
+} from './lib/public-build.ts';
 import { PUBLISH_THOUGHTS } from '../packages/core/src/publish.ts';
 import { REPO_ROOT } from './lib/repo-root.ts';
 import { runShell } from './lib/run.ts';
@@ -130,36 +135,21 @@ if (report.problems.length > 0) {
 // (#367, decision 4). Here and not in the inspector, which also reads real
 // deploys, where no fixture phrase exists (ADR-0028).
 const notesDir = join(DIST, 'notes');
-const staged = existsSync(notesDir) ? walk(notesDir) : [];
-const shipped = staged.filter((file) => readFileSync(file, 'utf8').includes(THOUGHTS_SHIP_PHRASE));
+const staged = (existsSync(notesDir) ? walk(notesDir) : []).map((file) => ({
+  name: relative(DIST, file).split('\\').join('/'),
+  text: readFileSync(file, 'utf8'),
+}));
 
 // Switched off (spec §4's undo), the stage must ship nothing, and this check
 // follows it so the takedown deploy passes its own gate.
-if (!PUBLISH_THOUGHTS) {
-  if (staged.length > 0) {
-    console.error(
-      `\nFAILED: the notes stage is switched off, yet ${String(staged.length)} file(s) sit under ` +
-        relative(REPO_ROOT, notesDir).split('\\').join('/'),
-    );
-    process.exit(1);
-  }
-  console.log('notes stage switched off: dist/notes/ holds no file');
-  console.log('\nOK — public build carries no note bodies, no vault paths');
-  process.exit(0);
-}
-
-if (shipped.length === 0) {
-  console.error(
-    `\nFAILED: the ship phrase "${THOUGHTS_SHIP_PHRASE}" reached no file under ` +
-      `${relative(REPO_ROOT, notesDir).split('\\').join('/')} — the split shipped nothing, or ` +
-      'Astro dropped the notes folder',
-  );
+const presence = notesPresence(staged, PUBLISH_THOUGHTS);
+if (presence.problem !== undefined) {
+  console.error(`\nFAILED: ${presence.problem}`);
   process.exit(1);
 }
+console.log(presence.observation);
 console.log(
-  `ship phrase present in ${relative(DIST, shipped[0] ?? '')
-    .split('\\')
-    .join('/')}`,
+  PUBLISH_THOUGHTS
+    ? '\nOK — public build carries no note bodies beyond the Thoughts split, no vault paths'
+    : '\nOK — public build carries no note bodies, no vault paths',
 );
-
-console.log('\nOK — public build carries no note bodies beyond the Thoughts split, no vault paths');

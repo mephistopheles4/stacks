@@ -146,8 +146,8 @@ describe('publish — the notes stage', () => {
 
   const build = async (isPublic: boolean) => {
     const vault = new ObsidianAdapter(vaultPath);
-    // The stage on whatever `PUBLISH_THOUGHTS` says: these test the stage itself.
-    return publish(await vault.listBooks(), vault, assets, { isPublic, thoughts: true });
+    // Stage forced on, whatever `PUBLISH_THOUGHTS` says: these test the stage itself.
+    return publish(await vault.listBooks(), vault, assets, { isPublic, publishThoughts: true });
   };
 
   const notesFiles = async (): Promise<string[]> => {
@@ -249,7 +249,8 @@ describe('publish — the notes stage', () => {
 
       expect(await notesFiles()).toEqual([]);
       expect(result.library.books.filter((b) => b.thoughts !== undefined)).toEqual([]);
-      expect(warn.lines.join('\n')).toMatch(/share one book id/);
+      // Both notes named, so the owner can find the two (#411's round 3, integrity F12).
+      expect(warn.lines.join('\n')).toMatch(/One\.md, .*Two\.md — they share one book id/);
       expect(warn.lines.join('\n')).not.toMatch(/First words|Second words/);
     });
   });
@@ -303,7 +304,7 @@ describe('publish — the notes stage', () => {
 
     const result = await publish(await real.listBooks(), flaky, assets, {
       isPublic: true,
-      thoughts: true,
+      publishThoughts: true,
     });
 
     expect(result.notesWritten).toBe(1);

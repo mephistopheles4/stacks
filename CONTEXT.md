@@ -278,8 +278,16 @@ timeline editor.
 **Public build**:
 A build that assumes an audience: wishlist and private books are dropped, covers
 are re-hosted same-origin, and no note body ships except as [invariant 2](AGENTS.md)
-allows. The counterpart is a **local build**, which is for you: the plain
-`stacks build` index, which keeps private and wishlist books and stages no files.
+allows. The counterpart is a **local build**, which is for you, and it means
+one of two things — say which:
+
+- **a local publish**, `publish()` with `isPublic: false`: it keeps private
+  and wishlist books on the shelf, and stages covers and the same notes files
+  a public build would. No command runs it today; G2 and the publisher's tests
+  build both modes;
+- **the local index**, the plain `stacks build`, which writes `library.json`
+  and stages no files at all.
+
 *Avoid*: production build, release, deploy (a deploy *uploads* a public build).
 
 **Staging folder**:

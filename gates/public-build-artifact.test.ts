@@ -590,6 +590,92 @@ describe('G20 — every rule goes red', () => {
     expect(inspect().problems).toEqual([]);
   });
 
+  it.each([
+    [
+      'orphan-note, a bad mark',
+      async () => {
+        await writeLibrary([{ ...CLEAN_BOOK, thoughts: 'prose' }]);
+        await rm(join(dist, 'notes', `${CLEAN_ID}.json`));
+      },
+      /1 book\(s\) whose `thoughts` mark is not `true`/,
+    ],
+    [
+      'orphan-note, a stray file',
+      () => writeNotes('stray-book-1a2b3c.json', { paragraphs: ['A paragraph.'] }),
+      /1 notes file\(s\) that no book marked `thoughts: true`.*stray-book-1a2b3c\.json/,
+    ],
+    [
+      'orphan-note, a missing file',
+      () => rm(join(dist, 'notes', `${CLEAN_ID}.json`)),
+      new RegExp(`1 book\\(s\\) marked \`thoughts: true\` with no notes file.*${CLEAN_ID}`),
+    ],
+    [
+      'headers, no notes block',
+      () => writeFile(join(dist, '_headers'), headersFile({ notes: 'absent' })),
+      /_headers has no \/notes\/\* block — notes would rest on Pages' default/,
+    ],
+    [
+      'headers, a stale notes block',
+      () => writeFile(join(dist, '_headers'), headersFile({ notes: 'stale' })),
+      /\/notes\/\* does not revalidate — a section the owner withdrew/,
+    ],
+    ['notes-shape, not JSON', () => writeNotes(`${CLEAN_ID}.json`, '{'), /is not valid JSON/],
+    [
+      'notes-shape, not an object',
+      () => writeNotes(`${CLEAN_ID}.json`, 'null'),
+      /is not a JSON object/,
+    ],
+    [
+      'notes-shape, a second key',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['A.'], title: 'B' }),
+      /has 2 key\(s\), where exactly one, `paragraphs`, is allowed/,
+    ],
+    [
+      'notes-shape, another layout',
+      () => writeNotes(`${CLEAN_ID}.json`, '{ "paragraphs": ["A."] }'),
+      /is not byte for byte the form the build writes/,
+    ],
+    [
+      'notes-shape, an empty list',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: [] }),
+      /has no paragraphs/,
+    ],
+    [
+      'notes-shape, an empty paragraph',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: [''] }),
+      /has a paragraph that is not a non-empty string/,
+    ],
+    [
+      'notes-shape, a URL scheme',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['see https://x.example'] }),
+      /carries a URL scheme/,
+    ],
+    [
+      'notes-shape, a hidden-text marker',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['%% x'] }),
+      /carries a hidden-text marker/,
+    ],
+    [
+      'notes-shape, an output-check mark',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['$1 and $2'] }),
+      /carries two dollar signs, which may be math — the extractor withholds/,
+    ],
+    [
+      'notes-shape, over the byte cap',
+      () => writeNotes(`${CLEAN_ID}.json`, { paragraphs: ['a'.repeat(40_001)] }),
+      /is \d+ bytes, over the 40000-byte cap/,
+    ],
+  ] as const)('says in words what it found: %s', async (_, plant, message) => {
+    // Round 3's integrity F11: every message here could be emptied with every
+    // test green, and an empty message passes "never quoted" trivially.
+    await plant();
+    const said = inspect()
+      .problems.map((problem) => problem.message)
+      .join('\n');
+    expect(said).toMatch(message);
+    if (/notes-shape/.test(_)) expect(said).toContain(`notes/${CLEAN_ID}.json`);
+  });
+
   it('notes-shape: a notes file that repeats its key', async () => {
     await expectOnly('notes-shape', async () => {
       // JSON.parse keeps the last copy, so the first array would be checked by

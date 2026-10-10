@@ -191,7 +191,7 @@ Every phase: `pnpm test && pnpm build` green, plus:
   any request the suite makes and fails the test that made it; `vi.stubGlobal`
   is the escape hatch).
 - **Phase 2 (shelf):** `pnpm smoke:render` (headless puppeteer screenshot of the shelf) produces a non-blank PNG at `artifacts/shelf.png`; 50-book fixture renders; clicking a book (integration test via puppeteer) opens the card.
-- **Phase 3 (public build):** `pnpm stacks build --public` output contains no note-body text outside `notes/` (grep gate against a canary planted in fixture note bodies, below and beside `## Thoughts`), and `notes/` carries the ship phrase planted inside one; the committed share card reaches `dist/` intact.
+- **Phase 3 (public build):** `pnpm stacks build --public` output contains no note-body text outside `notes/` (grep gate against a canary planted in fixture note bodies, below and beside `## Thoughts`), and `notes/` carries the ship phrase planted inside one while the notes stage is on (`PUBLISH_THOUGHTS`) — switched off, `notes/` must hold no file; the committed share card reaches `dist/` intact.
 - **Phase 4 (Audiobookshelf import):** import against mock ABS API dedupes by ISBN then normalized title+author; re-running import is idempotent.
 
 ## Working rules for agents

@@ -1629,6 +1629,12 @@ moved; the gates above hold the new extractor as they held the old one.
   the load check disabled. The other resolves the 32 packages of `micromark`'s
   closure from `core` and compares each version with a committed list, red
   with one version moved.
+- **Round 3's test gaps outside the extractor.** `gate:public`'s presence
+  verdict is `notesPresence` in the inspector's module, so the takedown
+  branch's refusal — stage off, a file left — has a test, red with the refusal
+  removed. G20 asserts every Thoughts rule's message in words, since an empty
+  message passed "never quoted" trivially; red with two messages emptied. The
+  shared-id warning's test requires both note paths, red with them dropped.
 
 ## Where cover art may go
 
