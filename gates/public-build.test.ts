@@ -136,6 +136,12 @@ const PLANTED = {
   unclosedFence: 'Nine Ways of Seeing a Warehouse.md',
   /** No Thoughts at all, and the canary under `## Notes`. */
   noThoughts: 'Compilers for the Impatient.md',
+  /**
+   * An empty `## Thoughts`, then a quoted description under a demoted
+   * `### About`, the canary inside the quote: the shape a description takes
+   * once its heading is lost, which the quote withholds (#424, D20).
+   */
+  quotedAbout: 'The Salt Road Ledger.md',
 } as const;
 
 /** A fence opener or closer, as CommonMark allows it indented. */
@@ -239,8 +245,17 @@ describe('G2 — the Thoughts split is planted before anything is asserted about
     expect(note).toContain(CANARY);
   });
 
+  it('has a quoted description under a demoted `### About` in `## Thoughts`, the canary in the quote', async () => {
+    const section = thoughtsOf(await readFixture(PLANTED.quotedAbout))?.section ?? '';
+    const quoted = section.split('\n').filter((line) => line.startsWith('>'));
+
+    expect(section.split('\n')).toContain('### About');
+    expect(quoted.join('\n')).toContain(CANARY);
+  });
+
   it('would publish every book whose case is about the section, not the book', async () => {
-    // The embed, the unclosed fence and the no-Thoughts book must each be a
+    // The embed, the unclosed fence, the no-Thoughts book and the quoted
+    // description must each be a
     // book a public build ships. Made private or wishlist, any of them would
     // emit no file for the book's sake, and its case would test nothing.
     const vault = new ObsidianAdapter(FIXTURE_VAULT);
@@ -248,7 +263,13 @@ describe('G2 — the Thoughts split is planted before anything is asserted about
     const shipped = new Set(result.library.books.map((book) => book.id));
     const ids = await fixtureIds();
 
-    for (const name of [PLANTED.split, PLANTED.embed, PLANTED.unclosedFence, PLANTED.noThoughts]) {
+    for (const name of [
+      PLANTED.split,
+      PLANTED.embed,
+      PLANTED.unclosedFence,
+      PLANTED.noThoughts,
+      PLANTED.quotedAbout,
+    ]) {
       expect(
         shipped.has(ids.get(name) ?? name),
         `${name} must be a book a public build ships`,
