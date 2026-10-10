@@ -639,6 +639,13 @@ describe('G20 — every rule goes red', () => {
         // Prose holding a no-break space beside dashes is no underline (round 5).
         `A${String.fromCodePoint(0xa0)}thought, and dashes --`,
         `--${String.fromCodePoint(0xa0)}so it goes`,
+        // The extractor's own control lines, so both twins are held alike
+        // (round 6, integrity F2).
+        `One${String.fromCodePoint(0xa0)}--`,
+        `==${String.fromCodePoint(0xa0)}so it goes`,
+        `One--${String.fromCodePoint(0xa0)}`,
+        `=${String.fromCodePoint(0x200b)}word`,
+        `So---${String.fromCodePoint(0xa0)}said`,
       ],
     });
     expect(inspect().problems).toEqual([]);

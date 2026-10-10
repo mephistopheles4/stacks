@@ -6,7 +6,8 @@ import { spyOnWarn, type WarnSpy } from '../test-support.ts';
 import { MAX_DESCRIPTION_CODE_POINTS, ObsidianAdapter } from './obsidian-adapter.ts';
 
 /**
- * The adapter's seventh method: the only one that reads below the frontmatter.
+ * The adapter's seventh method: the only one that returns text from below the
+ * frontmatter.
  *
  * The extractor's rules are `thoughts-section.test.ts`'s. This holds what the
  * method adds around them — the warning that names a note and never quotes it,
@@ -263,19 +264,21 @@ describe('readPublicSection', () => {
   describe('N75: a description under the write cap that the disarm carries past the body cap', () => {
     /** The note's body as the extractor counts it: everything after the closing `---` line. */
     const bodyOf = (source: string): string => source.slice(source.indexOf('\n---\n') + 5);
-    const privateNotes = 'x'.repeat(2_500);
+    const privateNotes = 'x'.repeat(13_000);
+    const OVER_BODY = 'the note would be over 20000 characters';
 
     it.each([
-      ['dollar signs', `${CANARY} ${'$'.repeat(3_600)}`],
-      ['runs of three backticks', `${CANARY} ${'``` '.repeat(1_200)}`],
+      // Each stays under the write cap once disarmed, so the body cap answers.
+      ['dollar signs', `${CANARY} ${'$'.repeat(1_500)}`],
+      ['runs of three backticks', `${CANARY} ${'``` '.repeat(450)}`],
     ])('is not written when it is dense in %s, and the Thoughts keep shipping', async (_, text) => {
       const path = await note('N75', '## Thoughts', '', 'Mine.', '', '## Notes', '', privateNotes);
       const before = await readFile(join(dir, path), 'utf8');
-      expect([...text].length).toBeLessThanOrEqual(MAX_DESCRIPTION_CODE_POINTS);
 
       expect(await vault.insertBodySection(path, '## About', text)).toBe(false);
       expect(await readFile(join(dir, path), 'utf8')).toBe(before);
       expect(warned()).toContain('Library/N75.md');
+      expect(warned()).toContain(OVER_BODY);
       expect(warned()).not.toContain(CANARY);
       expect(warned()).not.toContain('$$');
       expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
@@ -292,6 +295,7 @@ describe('readPublicSection', () => {
       expect(room).toBeLessThan(MAX_DESCRIPTION_CODE_POINTS);
 
       expect(await vault.insertBodySection(path, '## About', 'a'.repeat(room + 1))).toBe(false);
+      expect(warned()).toContain(OVER_BODY);
       expect(await vault.insertBodySection(path, '## About', 'a'.repeat(room))).toBe(true);
       expect([...bodyOf(await readFile(join(dir, path), 'utf8'))].length).toBe(20_000);
       expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
@@ -299,13 +303,62 @@ describe('readPublicSection', () => {
 
     it('is not written into a note already over the body cap', async () => {
       // Over the cap the body is not parsed, so `## Notes` cannot be found and
-      // the text would land under the owner's own.
+      // the text would land under the owner's own. Its Thoughts are withheld
+      // unread, so N81's rule answers.
       const path = await note('N75c', '## Notes', '', 'x'.repeat(20_000));
       const before = await readFile(join(dir, path), 'utf8');
 
       expect(await vault.insertBodySection(path, '## About', 'A blurb.')).toBe(false);
       expect(await readFile(join(dir, path), 'utf8')).toBe(before);
       expect(warned()).toContain('Library/N75c.md');
+      expect(warned()).toContain('Thoughts are withheld');
+    });
+  });
+
+  describe('N80: the write cap counts the text as it would be written, after the disarm (D17)', () => {
+    const OVER_CAP = 'the text is over 8000 characters once disarmed';
+
+    it('refuses a description the disarm carries past the cap, on a fresh note', async () => {
+      // Round 6, adversarial F1: under the cap as sent, it would fill a fresh
+      // note to just under 20,000, and the owner's first Thoughts would tip it.
+      const path = await note('N80', '## Thoughts', '', '## Notes', '');
+      const before = await readFile(join(dir, path), 'utf8');
+
+      expect(await vault.insertBodySection(path, '## About', '$'.repeat(3_990))).toBe(false);
+      expect(await readFile(join(dir, path), 'utf8')).toBe(before);
+      expect(warned()).toContain('Library/N80.md');
+      expect(warned()).toContain(OVER_CAP);
+    });
+
+    it('writes exactly the cap once disarmed, and refuses one code point more', async () => {
+      const path = await note('N80b', '## Thoughts', '', '## Notes', '');
+
+      // Each `$` is written as five characters.
+      expect(await vault.insertBodySection(path, '## About', `${'$'.repeat(1_600)}a`)).toBe(false);
+      expect(warned()).toContain(OVER_CAP);
+      expect(await vault.insertBodySection(path, '## About', '$'.repeat(1_600))).toBe(true);
+    });
+  });
+
+  describe('N81: a note whose Thoughts are already withheld gets no description (D18)', () => {
+    it('is not written into a note holding a lone CR', async () => {
+      // Round 6, data F1: withheld before, the note reads the same after any
+      // write, so the before-and-after check could not see what it adds.
+      const CR = String.fromCharCode(13);
+      const path = await note('N81', '## Notes', '', `Private.${CR}More.`);
+      const before = await readFile(join(dir, path), 'utf8');
+
+      expect(await vault.insertBodySection(path, '## About', 'A blurb.')).toBe(false);
+      expect(await readFile(join(dir, path), 'utf8')).toBe(before);
+      expect(warned()).toContain('Library/N81.md');
+      expect(warned()).toContain('Thoughts are withheld');
+    });
+
+    it('is not written into a note whose own Thoughts withhold', async () => {
+      const path = await note('N81b', '## Thoughts', '', 'From $1 to $2.', '', '## Notes', '');
+
+      expect(await vault.insertBodySection(path, '## About', 'A blurb.')).toBe(false);
+      expect(warned()).toContain('Thoughts are withheld');
     });
   });
 

@@ -4,23 +4,31 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { spyOnWarn, type WarnSpy } from '../test-support.ts';
 import { ObsidianAdapter } from './obsidian-adapter.ts';
+import { extractThoughts } from './thoughts-section.ts';
 
-// The disarm switched off, so the writer's own last check is the only thing
-// between provider text and the owner's section.
-vi.mock('./thoughts-section.ts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./thoughts-section.ts')>()),
-  disarmBodyText: (text: string) => text,
-}));
+// The disarm switched off, so the writer's own checks are the only thing
+// between provider text and the owner's section, and the extractor wrapped so
+// a test can make one read throw.
+vi.mock('./thoughts-section.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./thoughts-section.ts')>();
+  return {
+    ...actual,
+    disarmBodyText: (text: string) => text,
+    extractThoughts: vi.fn(actual.extractThoughts),
+  };
+});
 
 /**
- * N76: `insertBodySection` refuses a write that would change what the note's
- * Thoughts ship, whatever the disarm missed. Round 5 of #411's review found the
- * disarm's gaps one shape at a time; this check reads the note before and after
- * and needs no list of shapes.
+ * The `## About` writer's own checks, reached with the disarm switched off:
+ * N76, a write that changes what the Thoughts ship; N82, a description that
+ * would parse to a heading, a definition, HTML or code; N83, a parser error.
+ * Round 5 of #411's review found the disarm's gaps one shape at a time, and
+ * round 6 found the before-and-after read blind to a shape that lies inert
+ * until the owner adds a `## Thoughts` later; these checks need no list.
  *
  * All text is invented for this file (ADR-0004).
  */
-describe('N76: the About writer refuses a write that changes what the Thoughts ship', () => {
+describe('the About writer’s own checks, with the disarm switched off', () => {
   const STRANGER = 'STRANGER_words_canary';
 
   let dir: string;
@@ -34,6 +42,18 @@ describe('N76: the About writer refuses a write that changes what the Thoughts s
     return `Library/${name}.md`;
   };
 
+  const warned = (): string => warn.lines.join('\n');
+
+  /** Writes `text` and expects it refused with `reason`, the note untouched and the text unquoted. */
+  async function expectRefused(path: string, text: string, reason: string): Promise<void> {
+    const before = await readFile(join(dir, path), 'utf8');
+    expect(await vault.insertBodySection(path, '## About', text)).toBe(false);
+    expect(await readFile(join(dir, path), 'utf8')).toBe(before);
+    expect(warned()).toContain(path);
+    expect(warned()).toContain(reason);
+    expect(warned()).not.toContain(STRANGER);
+  }
+
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), 'stacks-backstop-'));
     vault = new ObsidianAdapter(dir);
@@ -45,29 +65,57 @@ describe('N76: the About writer refuses a write that changes what the Thoughts s
     await rm(dir, { recursive: true, force: true });
   });
 
-  it.each([
-    ['opens a section on a note with none', ['## Notes', '', 'Private.']],
-    ['withholds the owner’s section', ['## Notes', '', 'Private.', '', '## Thoughts', '', 'Mine.']],
-  ])('refuses a description that %s, and writes nothing', async (_, body) => {
-    const path = await note('N76', ...body);
-    const before = await readFile(join(dir, path), 'utf8');
+  describe('N76: a write that changes what the Thoughts ship', () => {
+    it.each([
+      ['a `$$`', `A blurb with $$ in it, ${STRANGER}.`],
+      ['a run of three backticks', `A blurb with a \`\`\` run, ${STRANGER}.`],
+    ])('refuses a description holding %s above the owner’s section', async (_, text) => {
+      // `## Notes` above the Thoughts, so the description lands above them and
+      // a raw guard reads it: it parses to no heading, so only this check sees it.
+      const path = await note('N76', '## Notes', '', 'Private.', '', '## Thoughts', '', 'Mine.');
+      await expectRefused(
+        path,
+        text,
+        "it would change what the note's Thoughts ship, or why they are withheld",
+      );
+    });
 
-    const wrote = await vault.insertBodySection(
-      path,
-      '## About',
-      `A blurb.\n\n## Thoughts\n\n${STRANGER}`,
-    );
+    it('writes a description that changes nothing the Thoughts ship', async () => {
+      const path = await note('N76b', '## Thoughts', '', 'Mine.', '', '## Notes', '', 'Private.');
 
-    expect(wrote).toBe(false);
-    expect(await readFile(join(dir, path), 'utf8')).toBe(before);
-    expect(warn.lines.join('\n')).toContain('Library/N76.md');
-    expect(warn.lines.join('\n')).not.toContain(STRANGER);
+      expect(await vault.insertBodySection(path, '## About', 'A blurb.')).toBe(true);
+      expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
+    });
   });
 
-  it('writes a description that changes nothing the Thoughts ship', async () => {
-    const path = await note('N76b', '## Thoughts', '', 'Mine.', '', '## Notes', '', 'Private.');
+  describe('N82: a description that would parse to a heading, a definition, HTML or code', () => {
+    const REASON = 'once written it would hold a heading, a definition, HTML or code';
 
-    expect(await vault.insertBodySection(path, '## About', 'A blurb.')).toBe(true);
-    expect(await vault.readPublicSection(path)).toEqual(['Mine.']);
+    it.each([
+      ['a `## Thoughts` heading', `A blurb.\n\n## Thoughts\n\n${STRANGER}`],
+      ['a `Thoughts` underlined by a lone dash', `A blurb.\n\nThoughts\n- \n\n${STRANGER}`],
+      ['a link definition', `[target]: ${STRANGER}.md\n\nA blurb.`],
+      ['a footnote definition', `A blurb.\n\n[^1]: ${STRANGER}`],
+      ['an HTML block', `<div>\n${STRANGER}\n</div>`],
+      ['a fence', `\`\`\`\n${STRANGER}\n\`\`\``],
+    ])('refuses %s, on a note with no Thoughts yet', async (_, text) => {
+      // Before and after both read absent here, so only parsing the
+      // description itself sees a shape that goes live once the owner adds a
+      // `## Thoughts` (round 6, adversarial F2's later-heading case).
+      const path = await note('N82', '## Notes', '', 'Private.');
+      await expectRefused(path, text, REASON);
+    });
+  });
+
+  it('N83: refuses, warning by path and never the error, when a parse throws', async () => {
+    // Round 6, unstated F2 and adversarial F3: one bad description costs only
+    // its own book, never the rest of an `enrich` pass.
+    const path = await note('N83', '## Thoughts', '', 'Mine.', '', '## Notes', '', 'Private.');
+    vi.mocked(extractThoughts).mockImplementationOnce(() => {
+      throw new Error(`parser broke on ${STRANGER}`);
+    });
+
+    await expectRefused(path, 'A blurb.', 'the parser failed on the note');
+    expect(warned()).not.toContain('parser broke');
   });
 });

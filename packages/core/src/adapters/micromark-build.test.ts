@@ -19,6 +19,9 @@ const CORE = fileURLToPath(new URL('../..', import.meta.url));
 const EXTRACTOR = pathToFileURL(
   fileURLToPath(new URL('./thoughts-section.ts', import.meta.url)),
 ).href;
+const ADAPTER = pathToFileURL(
+  fileURLToPath(new URL('./obsidian-adapter.ts', import.meta.url)),
+).href;
 
 describe('N65: the build that loads', () => {
   it.each([
@@ -76,6 +79,52 @@ describe('N65: the build that loads', () => {
       extract: { kind: 'shipped', paragraphs: ['Kept.'] },
       notesAt: 'Intro.\n\n'.length,
     });
+  });
+
+  /**
+   * The `## About` writer, in a fresh Node with the conditions given, on a
+   * throwaway vault: whether it wrote, whether the note is untouched, and
+   * whether it warned that the Thoughts are withheld.
+   */
+  function writeIn(conditions: readonly string[]): unknown {
+    const code = [
+      `const { ObsidianAdapter } = await import(${JSON.stringify(ADAPTER)});`,
+      "const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } = await import('node:fs');",
+      "const { join } = await import('node:path');",
+      "const { tmpdir } = await import('node:os');",
+      "const dir = mkdtempSync(join(tmpdir(), 'stacks-devbuild-'));",
+      "mkdirSync(join(dir, 'Library'));",
+      `const note = ${JSON.stringify('---\ntype: book\ntitle: A\n---\n\n## Thoughts\n\nKept.\n\n## Notes\n\nPrivate.\n')};`,
+      "writeFileSync(join(dir, 'Library', 'a.md'), note);",
+      'const warnings = [];',
+      'console.warn = (line) => warnings.push(String(line));',
+      "const wrote = await new ObsidianAdapter(dir).insertBodySection('Library/a.md', '## About', 'A blurb.');",
+      "const unchanged = readFileSync(join(dir, 'Library', 'a.md'), 'utf8') === note;",
+      'rmSync(dir, { recursive: true, force: true });',
+      "const warned = warnings.some((line) => line.includes('Thoughts are withheld'));",
+      'process.stdout.write(JSON.stringify({ wrote, unchanged, warned }));',
+    ].join('\n');
+    const env = { ...process.env, NODE_OPTIONS: '' };
+    const out = execFileSync(
+      process.execPath,
+      [...conditions, '--import', 'tsx', '--input-type=module', '--eval', code],
+      { cwd: CORE, env, encoding: 'utf8' },
+    );
+    return JSON.parse(out) as unknown;
+  }
+
+  it('N81: writes no description when the development build loads (D18)', () => {
+    // Round 6, unstated F1: the lookup finds no `## Notes` under it, so the
+    // writer would append below the owner's own.
+    expect(writeIn(['--conditions=development'])).toEqual({
+      wrote: false,
+      unchanged: true,
+      warned: true,
+    });
+  });
+
+  it('writes the description under the conditions the CLI runs with', () => {
+    expect(writeIn([])).toEqual({ wrote: true, unchanged: false, warned: false });
   });
 
   it('runs the default build in this suite, as the CLI does', () => {

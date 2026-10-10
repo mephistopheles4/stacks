@@ -330,12 +330,10 @@ rules are in [`docs/spec/picking-a-book-up.md`](docs/spec/picking-a-book-up.md).
 (that is `## Notes`, the heading under it).
 
 **Withheld**:
-Said of a **Thoughts section** the extractor refused to ship whole, because it
-holds a shape other than plain prose, or because the note could not be read
-safely: a body too long to parse, two `Thoughts` headings, or the parser's
-development build — [invariant 2](AGENTS.md),
+Said of a **Thoughts section** the extractor refused to ship whole, for its
+shape or because its note could not be read safely — [invariant 2](AGENTS.md),
 [ADR-0106](docs/adr/0106-thoughts-ship-only-plain-prose.md) and the spec's
-[§3.1.1 steps](docs/spec/picking-a-book-up.md) hold the full list. A withheld
+[§3.1.1 steps](docs/spec/picking-a-book-up.md) hold every reason. A withheld
 section emits no file, so the page shows the book as if it had none; only the
 build's warning says otherwise.
 *Avoid*: skipped (that is a bad note, by invariant 3), stripped (that is what

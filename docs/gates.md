@@ -1647,12 +1647,21 @@ moved; the gates above hold the new extractor as they held the old one.
   against the code before them, the rest by planting the defect each guards.
 - **Round 5 of move 4 on #415.** The twin's near-miss underline gains its `=`
   half behind a zero-width space and with a no-break space inside, and its
-  control range gains U+009F; each G20 plant went red under the mutant
-  integrity-lens found surviving, and the clean control now holds prose with a
-  no-break space beside dashes. G2's switched-off build now asserts no note is
-  read. New cases N75 to N79 went red against the code before them, and the
-  extractor and disarm rows integrity-lens asked for went red with the defect
-  each guards planted, fifteen plants in all.
+  control range gains U+009F. Each G20 plant went red under the mutant
+  integrity-lens found surviving: U+009F under the C1 range cut to `< 0x9f`,
+  the `=` rows under the `=` run narrowed to `[^=…]` and under the lead class
+  negated. The clean control now holds prose with a no-break space beside
+  dashes. G2's switched-off build now asserts no note is read. New cases N75
+  to N79 went red against the code before them, and the extractor and disarm
+  rows integrity-lens asked for went red with the defect each guards planted,
+  fifteen plants in all.
+- **Round 6 of move 4 on #415.** The twin's clean control gains the
+  extractor's own control lines — prose running into dashes beside a no-break
+  space, an `=` behind a zero-width space with a word after it — so the twins
+  are held alike; each line went red under the widening integrity-lens found
+  surviving in that twin. New cases N80 to N85 went red against the code
+  before them, and the `About` writer's five refusals each assert their own
+  warning words.
 
 ## Where cover art may go
 

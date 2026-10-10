@@ -530,7 +530,7 @@ describe('inline in the section', () => {
     ['inline', `[the label](vault/${CANARY}.md)`, 'the label'],
     ['with text over two lines', `[two\nlines](vault/${CANARY}.md)`, 'two\nlines'],
     ['with balanced parentheses', `[the label](a(${CANARY})b)`, 'the label'],
-    ['with brackets in an angle destination', `[the label](<a[${CANARY}]b>)`, 'the label'],
+    ['with an angle destination that opens no tag', `[the label](<./a[${CANARY}]b>)`, 'the label'],
     ['with a quoted title', `[the label](x "${CANARY}")`, 'the label'],
     ['with a parenthesised title', `[the label](x (${CANARY}))`, 'the label'],
   ])('N50: ships only the label of a link %s', (_, link, label) => {
@@ -824,6 +824,9 @@ describe('added by round 5 of move 4 on #415', () => {
   it.each([
     ['a link followed by a bracket', 'See [a](x.md)] now.', 'See a] now.'],
     ['a bracket before a link it does not close', 'See [[a](x.md) now.', 'See [a now.'],
+    // Round 6, integrity F3: words, then a bracket, after a bracketed link,
+    // with a token ending just before the bracket, as an emphasis does.
+    ['words and a bracket after a bracketed link', 'See [[a](x.md) *b*] now.', 'See [a b] now.'],
   ])('ships %s, which is no wikilink', (_, line, text) => {
     // Round 5, integrity F5: the bracketed-link check's edges.
     expect(ships(note('## Thoughts', '', line))).toEqual([text]);
@@ -852,7 +855,26 @@ describe('added by round 5 of move 4 on #415', () => {
       `So---${NBSP}said`,
       `--${NBSP}so it goes`,
       `==${NBSP}so it goes`,
+      // Round 6, integrity F1: prose running into the marks, and an `=`
+      // behind an invisible character with a word after it.
+      `One--${NBSP}`,
+      `=${ZWSP}word`,
     ];
-    expect(ships(note('## Thoughts', '', ...lines.flatMap((line) => [line, ''])))).toEqual(lines);
+    // A trailing no-break space is trimmed from what ships, as any trailing
+    // whitespace is.
+    expect(ships(note('## Thoughts', '', ...lines.flatMap((line) => [line, ''])))).toEqual(
+      lines.map((line) => line.trimEnd()),
+    );
+  });
+});
+
+describe('added by round 6 of move 4 on #415', () => {
+  it.each([
+    ['an opening tag', `[a](<span hidden>) ${CANARY} [b](</span>)`],
+    ['a note name with a space', `See [the label](<My ${CANARY}.md>) now.`],
+  ])('N85: withholds an angle-bracket address that opens like %s (D19)', (_, line) => {
+    // Its brackets sit outside the address text, so only the whole address
+    // shows the tag start (round 6, data F2).
+    expectWithheld(note('## Thoughts', '', line), R.linkTag);
   });
 });

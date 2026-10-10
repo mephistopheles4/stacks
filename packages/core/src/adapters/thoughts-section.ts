@@ -10,9 +10,12 @@ import { FRONTMATTER_BLOCK } from '../frontmatter.ts';
  * Invariant 2's split, as built. A note's body stays private except for one
  * allowlisted section, `## Thoughts`, which ships as a list of plain-text
  * paragraphs in `notes/<id>.json`. `extractThoughts` finds that section and
- * strips it, and `ObsidianAdapter.readPublicSection` is its only caller, so the
- * rest of the body never leaves `adapters/`
- * ([ADR-0100](../../../../docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md)).
+ * strips it. `ObsidianAdapter.readPublicSection` is the only caller that hands
+ * its text on; `insertBodySection` also calls it, before and after a write, and
+ * keeps only whether the two reads agree. So the rest of the body never leaves
+ * `adapters/`
+ * ([ADR-0100](../../../../docs/adr/0100-the-thoughts-section-is-read-by-one-adapter-method.md),
+ * narrowed by spec §3.1.3's D16).
  *
  * **The body is read by `micromark`'s tokenizer**, and ADR-0106's allowlist
  * applies to its tokens: where the section starts and ends, and which blocks
@@ -30,9 +33,10 @@ import { FRONTMATTER_BLOCK } from '../frontmatter.ts';
  * The rest of the module serves the `## About` writer in `obsidian-adapter.ts`:
  * `notesHeadingAt` finds `## Notes` through the same parse, so the writer and
  * the extractor cannot read `## Notes` differently — its check for an existing
- * `## About` is a separate, file-wide test in the adapter — and `disarmBodyText`
+ * `## About` is a separate, file-wide test in the adapter — `disarmBodyText`
  * disarms what it writes, by hand predicates that read wider than CommonMark —
- * the safe direction for text being written.
+ * the safe direction for text being written — and `plainSection` parses what
+ * it would write, on its own, for anything the disarm missed.
  *
  * **Every rule fails closed.** A shape the extractor cannot vouch for withholds
  * the whole section rather than shipping what a strip got wrong: a section that
@@ -286,8 +290,16 @@ const PASSED = new Set([
 ]);
 /** A link's destination, title and reference: skipped whole, never shipped. */
 const SKIPPED = new Set(['resource', 'reference']);
-/** The text of a skipped address or title, read for a tag start only. */
-const ADDRESS_PARTS = new Set(['resourceDestinationString', 'resourceTitleString']);
+/**
+ * The parts of a skipped address or title read for a tag start, and for
+ * nothing else. An angle-bracket address is read whole, brackets included,
+ * since its brackets sit outside its text (round 6, D19).
+ */
+const ADDRESS_PARTS = new Set([
+  'resourceDestinationLiteral',
+  'resourceDestinationString',
+  'resourceTitleString',
+]);
 /** Layout between blocks and inside a list: passed, never shipped. */
 const LAYOUT = new Set([
   'lineEnding',
@@ -362,11 +374,13 @@ function headingOf(block: Block): { level: number; text: string; setext: boolean
  *
  * A body over `MAX_BODY_CODE_POINTS` is not parsed, and neither is any body
  * when `micromark`'s development build loaded, since that build can trace the
- * whole note: either way it reads as having none, and the writer appends, which
- * is what it does on a hand-made note.
+ * whole note: either way it reads as having none. The writer never acts on
+ * that answer, since it refuses a note whose Thoughts are withheld, which both
+ * cases are (N75, N81); with no `## Notes` otherwise, it appends, as on a
+ * hand-made note.
  */
 export function notesHeadingAt(body: string): number | undefined {
-  if (!LOADED_DEFAULT_BUILD || [...body].length > MAX_BODY_CODE_POINTS) return undefined;
+  if (!LOADED_DEFAULT_BUILD || bodyOverCap(body)) return undefined;
   const notes = rootBlocks(parseBody(body)).find((block) => {
     const heading = headingOf(block);
     return heading?.setext === false && heading.level === 2 && heading.text === 'Notes';
@@ -385,7 +399,11 @@ export function notesHeadingAt(body: string): number | undefined {
 export function overBodyCap(source: string): boolean {
   const frontmatter = FRONTMATTER_BLOCK.exec(source);
   if (frontmatter === null) return false;
-  const body = source.slice(frontmatter.index + frontmatter[0].length);
+  return bodyOverCap(source.slice(frontmatter.index + frontmatter[0].length));
+}
+
+/** The one count of a body against the cap, in code points, for every caller. */
+function bodyOverCap(body: string): boolean {
   return [...body].length > MAX_BODY_CODE_POINTS;
 }
 
@@ -412,7 +430,7 @@ export function extractThoughts(source: string): ThoughtsResult {
   if (ODD_LINE_ENDING.test(source))
     return withheld('the note holds a line ending other than a newline');
   const body = source.slice(frontmatter.index + frontmatter[0].length);
-  if (overBodyCap(source)) {
+  if (bodyOverCap(body)) {
     return withheld(
       `the note body is over ${String(MAX_BODY_CODE_POINTS)} characters, so it was not read`,
     );
@@ -599,8 +617,9 @@ function listText(block: Block): string {
  * inside withholds, so whether its label ships bare or in brackets would tell a
  * reader whether the private part defines that name (round 5, D13).
  *
- * ⚠️ **And a tag start in a link's address or title**, the parts skipped
- * unread, which neither the output check nor the deploy's twin ever sees.
+ * ⚠️ **And a tag start in a link's address or title.** Those parts are
+ * skipped for shipping and read only for a tag start, since neither the output
+ * check nor the deploy's twin ever sees them.
  */
 function inlineText(events: readonly Event[]): string {
   let text = '';
@@ -734,6 +753,39 @@ export function disarmBodyText(text: string): string {
     .join('\n');
 }
 
+/** What a written section may not parse to, after its own heading. */
+const NOT_PLAIN = new Set([
+  'atxHeading',
+  'setextHeading',
+  'definition',
+  'gfmFootnoteDefinition',
+  'htmlFlow',
+  'htmlText',
+  'codeFenced',
+]);
+
+/**
+ * Whether a section, as `insertBodySection` writes it — its heading, a blank
+ * line and its text — parses to that heading and nothing else that could
+ * open, end or change a section: no other heading, no link or footnote
+ * definition, no HTML and no fenced code, anywhere, list items included.
+ *
+ * The writer's check on its own text, parsed alone, so it needs no list of
+ * shapes and sees one that lies inert in this note until the owner adds a
+ * `## Thoughts` beside it (round 6 of #411's review, N82). Under the
+ * development build nothing is parsed, and nothing reads as plain.
+ */
+export function plainSection(heading: string, text: string): boolean {
+  if (!LOADED_DEFAULT_BUILD) return false;
+  let headings = 0;
+  for (const [kind, token] of parseBody(`${heading}\n\n${text}\n`)) {
+    if (kind !== 'enter') continue;
+    if (token.type === 'atxHeading') headings++;
+    else if (NOT_PLAIN.has(token.type)) return false;
+  }
+  return headings === 1;
+}
+
 /**
  * Any indent, then any run of list markers, each with its space. Any indent,
  * not CommonMark's three spaces: in a list item a line indented four spaces or
@@ -757,11 +809,17 @@ const LINE_LEAD = /^[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+)*/;
  * - **A setext underline gains a backslash**, whatever its indent.
  */
 function disarmLine(line: string): string {
+  // An underline first, after the indent alone: a lone `-` with its space
+  // also reads as a list marker, and an empty item cannot interrupt a
+  // paragraph, so the line underlines the one above (round 6, N84).
+  const indent = /^[ \t]*/.exec(line)?.[0] ?? '';
+  if (SETEXT_UNDERLINE.test(line.slice(indent.length))) {
+    return `${indent}\\${line.slice(indent.length)}`;
+  }
   const lead = LINE_LEAD.exec(line)?.[0] ?? '';
   const rest = line.slice(lead.length);
   if (rest.startsWith('[')) return `${lead}&#91;${rest.slice(1)}`;
-  const underline = lead.trim() === '' && SETEXT_UNDERLINE.test(rest);
-  return underline || atxHeading(rest) !== undefined ? `${lead}\\${rest}` : line;
+  return atxHeading(rest) !== undefined ? `${lead}\\${rest}` : line;
 }
 
 /**

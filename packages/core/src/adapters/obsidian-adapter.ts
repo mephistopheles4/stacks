@@ -11,6 +11,7 @@ import {
   MAX_BODY_CODE_POINTS,
   notesHeadingAt,
   overBodyCap,
+  plainSection,
   type ThoughtsResult,
 } from './thoughts-section.ts';
 import type { FrontmatterChanges, VaultAdapter } from './vault-adapter.ts';
@@ -20,8 +21,8 @@ import type { FrontmatterChanges, VaultAdapter } from './vault-adapter.ts';
  * longest real `## About`, 2,605 code points, measured on #411. A description
  * over it is not written, because provider text lands in the body the
  * extractor parses (round 4 of #411's review; the owner's choice). It counts
- * the text as the provider sent it; the disarm can make that five times
- * longer, so the body cap is checked again on the note as it would be written.
+ * the text as written, after the disarm, which can make it five times longer,
+ * so a description never takes more than this share of the body cap (round 6).
  */
 export const MAX_DESCRIPTION_CODE_POINTS = 8_000;
 
@@ -159,58 +160,75 @@ export class ObsidianAdapter implements VaultAdapter {
 
     if (hasHeading(source, heading)) return false;
 
-    // Over the cap, nothing is written: a long provider text could carry a
-    // shape the tokenizer is slow on. Warned by the note's path, never a word
-    // of the text, as are the two refusals below.
-    if ([...body].length > MAX_DESCRIPTION_CODE_POINTS) {
-      console.warn(
-        `stacks: did not write ${heading} in ${sourcePath} — the text is over ` +
-          `${String(MAX_DESCRIPTION_CODE_POINTS)} characters`,
-      );
+    // Every refusal warns by the note's path and a fixed reason, never a word
+    // of the text or of an error.
+    const refuse = (reason: string): false => {
+      console.warn(`stacks: did not write ${heading} in ${sourcePath} — ${reason}`);
       return false;
-    }
+    };
 
     // Disarmed before it lands: provider prose keeps its line breaks, so a
     // listing line reading `## Thoughts` or an unclosed fence would otherwise
     // open a published section, or carry `## Notes` out of one (spec §4).
-    const eol = source.includes('\r\n') ? '\r\n' : '\n';
-    const lines = disarmBodyText(body).split('\n');
-    const section = `${heading}${eol}${eol}${lines.join(eol)}${eol}`;
+    const disarmed = disarmBodyText(body);
 
-    // Found in the body only, through the extractor's own parse. A search of
-    // the whole file used to match a `## Notes` YAML comment in the
-    // frontmatter, which put provider lines among the properties, and a
-    // `### Notes` inside the Thoughts, which put `## About` inside the
-    // published section and cut the owner's later Thoughts from it.
-    const bodyStart = match.index + match[0].length;
-    const inBody = notesHeadingAt(source.slice(bodyStart));
-    const notes = inBody === undefined ? undefined : bodyStart + inBody;
-    const updated =
-      notes === undefined
-        ? `${source.replace(/\s*$/, '')}${eol}${eol}${section}`
-        : source.slice(0, notes) + section + eol + source.slice(notes);
-
-    // Measured after the disarm, which can make a text five times longer: a
-    // body carried over the extractor's cap would withhold the owner's
-    // Thoughts on every build after, and absent-only means nothing rewrites it
-    // (round 5 of #411's review). A body already over it is not parsed, so
-    // `## Notes` was never found and the text would land under the owner's.
-    if (overBodyCap(updated)) {
-      console.warn(
-        `stacks: did not write ${heading} in ${sourcePath} — the note would be over ` +
-          `${String(MAX_BODY_CODE_POINTS)} characters`,
+    // 1. The cap, counted on the text as written: the disarm can make it five
+    // times longer, and a description that filled a fresh note to the body
+    // cap would withhold the owner's first Thoughts (round 6, D17).
+    if ([...disarmed].length > MAX_DESCRIPTION_CODE_POINTS) {
+      return refuse(
+        `the text is over ${String(MAX_DESCRIPTION_CODE_POINTS)} characters once disarmed`,
       );
-      return false;
     }
-    // The last check, and the one that needs no list of shapes: a write that
-    // changes what the Thoughts ship, or why they are withheld, is refused,
-    // whatever the disarm missed.
-    if (!sameThoughts(extractThoughts(source), extractThoughts(updated))) {
-      console.warn(
-        `stacks: did not write ${heading} in ${sourcePath} — it would change what the ` +
-          `note's Thoughts ship`,
-      );
-      return false;
+
+    const eol = source.includes('\r\n') ? '\r\n' : '\n';
+    const section = `${heading}${eol}${eol}${disarmed.split('\n').join(eol)}${eol}`;
+    let updated: string;
+    try {
+      // 2. A note whose Thoughts are already withheld reads the same after any
+      // write, so the last check could not see what this one adds. That
+      // covers the development build, an odd line ending and a body over the
+      // cap, where `## Notes` cannot be found (round 6, D18).
+      const before = extractThoughts(source);
+      if (before.kind === 'withheld') {
+        return refuse("the note's Thoughts are withheld, so the write could not be checked");
+      }
+
+      // 3. The section parsed alone, which sees a shape that lies inert here
+      // until the owner adds a `## Thoughts` beside it (round 6, D18).
+      if (!plainSection(heading, disarmed)) {
+        return refuse('once written it would hold a heading, a definition, HTML or code');
+      }
+
+      // Found in the body only, through the extractor's own parse. A search
+      // of the whole file used to match a `## Notes` YAML comment in the
+      // frontmatter, which put provider lines among the properties, and a
+      // `### Notes` inside the Thoughts, which put `## About` inside the
+      // published section and cut the owner's later Thoughts from it.
+      const bodyStart = match.index + match[0].length;
+      const inBody = notesHeadingAt(source.slice(bodyStart));
+      const notes = inBody === undefined ? undefined : bodyStart + inBody;
+      updated =
+        notes === undefined
+          ? `${source.replace(/\s*$/, '')}${eol}${eol}${section}`
+          : source.slice(0, notes) + section + eol + source.slice(notes);
+
+      // 4. The body cap, on the note as written: a body carried over it would
+      // withhold the owner's Thoughts on every build after, and absent-only
+      // means nothing rewrites it (round 5, D16).
+      if (overBodyCap(updated)) {
+        return refuse(`the note would be over ${String(MAX_BODY_CODE_POINTS)} characters`);
+      }
+      // 5. What the Thoughts ship, read before and after: a write that changes
+      // it, or why they are withheld, is refused, whatever the disarm missed.
+      if (!sameThoughts(before, extractThoughts(updated))) {
+        return refuse("it would change what the note's Thoughts ship, or why they are withheld");
+      }
+    } catch {
+      // A parse that throws costs this book's description, never the rest of
+      // an `enrich` pass (round 6, D18). Only the parses are in here: a
+      // failed write still throws.
+      return refuse('the parser failed on the note');
     }
 
     await writeFile(path, updated, 'utf8');
@@ -220,7 +238,8 @@ export class ObsidianAdapter implements VaultAdapter {
   /**
    * The `## Thoughts` section of one note, stripped to plain paragraphs.
    *
-   * The only read below the frontmatter, and it hands back the section alone:
+   * The only read below the frontmatter that hands text on, and it hands back
+   * the section alone:
    * the rest of the body is read here, scanned in `thoughts-section.ts`, and
    * dropped. A withheld section warns naming the note and the shape that
    * withheld it, never a word of the text, so the terminal holds none of it.

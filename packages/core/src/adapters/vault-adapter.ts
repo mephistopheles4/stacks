@@ -60,18 +60,20 @@ export interface VaultAdapter {
    * - **The text it writes is disarmed**: every line ending becomes LF, `<`,
    *   `>` and `%%` are written as entities, every run of three or more
    *   backticks or tildes, every `$` and every `[^` become character
-   *   references, and every line that would read as a heading, and every
-   *   setext underline, gains a backslash first, so a provider's prose can
-   *   never open a `## Thoughts` section of its own, carry `## Notes` out of
-   *   one, trip a guard that withholds the owner's, or land a live comment or
-   *   HTML block (spec §3.1.1, §4). A `[` that opens a line becomes a character
-   *   reference too, and a heading behind list markers is escaped, at any
-   *   indent.
-   * - **Three writes are refused**, each with a warning naming the note: a
-   *   text over 8,000 code points; one that would leave the note body over the
-   *   extractor's 20,000-code-point cap, measured after the disarm; and one
-   *   that would change what the note's Thoughts ship, so a shape the disarm
-   *   misses still changes nothing published.
+   *   references, a `[` that opens a line becomes one too, and every line
+   *   that would read as a heading, behind list markers too, and every setext
+   *   underline, gains a backslash first; each line rule reads a line at any
+   *   indent. So a provider's prose can never open a `## Thoughts` section of
+   *   its own, carry `## Notes` out of one, trip a guard that withholds the
+   *   owner's, or land a live comment or HTML block (spec §3.1.1, §4).
+   * - **Five writes are refused**, each with a warning naming the note and
+   *   never quoting the text: a text over 8,000 code points once disarmed; any
+   *   write into a note whose Thoughts are already withheld; a text that,
+   *   parsed as written, holds a heading, a definition, HTML or code; one that
+   *   would leave the note body over the extractor's 20,000-code-point cap; and
+   *   one that would change what the note's Thoughts ship, or why they are
+   *   withheld. A parse that throws refuses the write the same way, so it costs
+   *   only that book.
    *
    * ⚠️ **Any allowlist of published sections must never name `## About`**: the
    * whole point of storing a description here was that it stays local
@@ -88,8 +90,10 @@ export interface VaultAdapter {
    * A note's `## Thoughts` section, as plain-text paragraphs, or `undefined`
    * when it has none or it is withheld.
    *
-   * The seventh method, and **the only one that reads below the frontmatter**,
-   * as `insertBodySection` is the only one that writes there. It returns the
+   * The seventh method, and **the only one that returns text from below the
+   * frontmatter**, as `insertBodySection` is the only one that writes there;
+   * the writer reads the note's Thoughts too, before and after a write, and
+   * keeps only whether the two reads agree. It returns the
    * section and never the body, so no code outside the adapter ever holds the
    * private remainder, and it is never a `BookRecord` field, so `library.json`
    * has nowhere to put the text

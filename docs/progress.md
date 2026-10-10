@@ -245,19 +245,22 @@ total, the slowest in 3.5 ms, and every one reads as absent — the one note
 with a `## Thoughts` heading holds nothing that ships — so a deploy today would
 publish no notes file.
 
-**2026-10-10 — round 5 of move 4 on #415, and the owner's "keep going".** Round
-5 was the second round without converging, and the owner chose to fix its
-findings and run move 4 once more. The blocking one: the 8,000 description cap
-counted the text before the disarm, which can make it five times longer, so a
-description under it could carry a note past the 20,000 body cap and withhold
-its Thoughts for good. `insertBodySection` now refuses a write that leaves the
-body over 20,000, measured on the note as written, and one that changes what
-the Thoughts ship (spec D16). Reference links and tag starts in a link's
-address or title now withhold (D13), and the disarm reads every indent (D14).
-Seventeen more tokenizer shapes were timed at the 20,000 cap: the slowest, a
-run of closing brackets, took 1.8 s, about twice the `*_` run's 0.99 s in the
-same process; table rows took 0.56 s and mixed emphasis 0.26 s. The gate
-change in this round lands with this entry and its `docs/gates.md` lines.
+**2026-10-10 — round 5 of move 4 on #415:** owner decision, from chat, "keep
+going"; fixes as spec §3.1.3's D13 to D16 and N75 to N79, gates as
+[`docs/gates.md`](./gates.md#the-thoughts-split-armed-before-the-extractor-exists)'s
+round-5 bullet. Measured at the 20,000 cap in one process, seconds: closing
+brackets 1.83, nested brackets 1.26, `*_` 0.99, wide table header 0.57, table
+body cells 0.56, text then a closing bracket 0.54, footnote calls 0.32, mixed
+emphasis 0.26; backtick runs, bracket-paren pairs, mid-line opening brackets,
+autolink and angle openers, character references, image openers, nested list
+markers, tildes and equals, and a long link label each 0.03 or less.
+`behaviour-lens` measured on its own machine, round 6: `*_` 1.70, closing
+brackets 1.27, and one About write on a near-cap closing-bracket note 4.6,
+since the writer parses the note three times.
+
+**2026-10-10 — round 6 of move 4 on #415:** owner decision, from chat, "keep
+going once more"; fixes as spec D17 to D19 and N80 to N85, gates as
+`docs/gates.md`'s round-6 bullet.
 
 ### Phase 4 evidence
 

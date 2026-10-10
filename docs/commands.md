@@ -169,16 +169,20 @@ text shows — `[[wikilinks]]` flatten to their alias or their note's name. Any
 other shape withholds the **whole** section, and the build warns naming the
 note and the shape, never quoting it: a quote or callout, code or a code fence,
 a nested list, a table, HTML, a link whose address is defined elsewhere in the
-note, an image or embed,
+note or written in angle brackets, `[text](<My Note.md>)`, an image or embed,
 a footnote, a Dataview field, a character reference such as `&amp;`, a web
 address, or **two `$` anywhere in the section, escaped or not**, since they may
 be math — write one price as words. A `%%` comment, a code fence, a `$$` or
 HTML anywhere **above** the section withholds it too, because Obsidian may draw
 those blocks differently from the parser. A note body over 20,000 characters
 withholds its section too, unread, since the parser slows sharply on some
-shapes past that; and `stacks enrich` writes no provider description over
-8,000 characters, nor one that would carry the note past 20,000 or change what
-its Thoughts ship, warning which note it skipped. To publish a withheld section,
+shapes past that. `stacks enrich` writes no provider description over 8,000
+characters once disarmed, none into a note whose Thoughts are already
+withheld, none that would hold a heading, a definition, HTML or code, and none
+that would carry the note past 20,000 or change what its Thoughts ship, or why
+they are withheld, warning which note it skipped; a note it skipped for
+withheld Thoughts gets its description on the next run after they ship. To
+publish a withheld section,
 rewrite the shape the warning names. The list and its reasons are
 [ADR-0106](adr/0106-thoughts-ship-only-plain-prose.md) and
 [ADR-0107](adr/0107-thoughts-are-read-by-a-commonmark-parser.md); spec §3.1.1

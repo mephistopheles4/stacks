@@ -749,6 +749,15 @@ describe('a provider description beside the Thoughts', () => {
       );
     });
 
+    it('N84: escapes a lone dash with trailing whitespace, which reads as an underline', () => {
+      // Round 6, adversarial F2: read as a list marker, the dash skipped the
+      // underline check, and an empty item cannot interrupt a paragraph.
+      expect(tokenTypes('Thoughts\n- ').has('setextHeading')).toBe(true);
+      const disarmed = disarmBodyText('Thoughts\n- ');
+      expect(disarmed).toBe('Thoughts\n\\- ');
+      expect(tokenTypes(disarmed).has('setextHeading')).toBe(false);
+    });
+
     it('N77: disarms a list item’s continuation lines, indented four spaces or a tab', () => {
       // Round 5, behaviour F2: in a list item, a line indented four spaces is
       // the item's own paragraph, not code, so it can hold a definition or a
@@ -822,7 +831,8 @@ describe('N58: the `## Notes` the `## About` writer lands above', () => {
   });
 
   it('finds none in a body over the cap, which is never parsed', () => {
-    // Round 4, integrity F5: the writer then appends, as on a hand-made note.
+    // Round 4, integrity F5. The writer never acts on this answer: such a
+    // note's Thoughts are withheld, so it refuses the write (N75, N81).
     const body = `## Notes\n\n${'x'.repeat(MAX_BODY_CODE_POINTS)}`;
     expect(notesHeadingAt(body)).toBeUndefined();
     expect(notesHeadingAt(body.slice(0, MAX_BODY_CODE_POINTS))).toBe(0);
