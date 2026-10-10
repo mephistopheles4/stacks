@@ -15,6 +15,8 @@ pnpm test && pnpm build && pnpm gate:public && pnpm smoke:render
 Those four are the contract. If they are green, the project is where
 [`docs/progress.md`](docs/progress.md) says it is. CI runs all four on Node 22
 and 24 as a single required check called `gates`; `main` takes no direct pushes.
+On a pull request, `smoke:render` skips G60 and G61, which run on every push to
+`main` and at deploy ([ADR-0108](docs/adr/0108-g60-and-g61-run-after-merge-not-on-pull-requests.md)).
 
 **Those four are the behavioural contract, and they are not the whole of
 `gates`.** It also requires a `style` job, so a tree that passes all four can

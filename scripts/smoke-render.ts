@@ -115,10 +115,50 @@ const CHROME_CANDIDATES = [
   '/usr/bin/google-chrome',
 ];
 
+/**
+ * The one flag. `--pull-request` is what `gates.yml` passes on a pull request,
+ * and it skips the two checks that cost four fifths of the step on a runner with
+ * no GPU (#427): G60 and G61. They still run on every push to `main` and in
+ * `deploy:site`, which pass nothing. Anything else is refused before the build,
+ * so a typo in the workflow cannot quietly run a different set and pass.
+ */
+const PULL_REQUEST_FLAG = '--pull-request';
+const SKIPPED_ON_PULL_REQUESTS = 'G60, G61';
+
+function readArgs(argv: readonly string[]): { pullRequest: boolean } {
+  const unknown = argv.filter((arg) => arg !== PULL_REQUEST_FLAG);
+  if (unknown.length > 0) {
+    console.error(
+      `smoke:render: unknown argument ${unknown.map((arg) => JSON.stringify(arg)).join(', ')}. ` +
+        `The only flag is ${PULL_REQUEST_FLAG}.`,
+    );
+    process.exit(1);
+  }
+  return { pullRequest: argv.includes(PULL_REQUEST_FLAG) };
+}
+
+/**
+ * Elapsed time per step, recorded as each one ends and printed with the report,
+ * so the next regression is visible in the CI log without an experiment branch.
+ * A label carries a gate id where the check is a gate row's own; the others are
+ * named for what they drive.
+ */
+const TIMINGS: { label: string; seconds: number }[] = [];
+
+async function timed<T>(label: string, run: () => Promise<T>): Promise<T> {
+  const started = performance.now();
+  try {
+    return await run();
+  } finally {
+    TIMINGS.push({ label, seconds: (performance.now() - started) / 1000 });
+  }
+}
+
 async function main(): Promise<void> {
+  const { pullRequest } = readArgs(process.argv.slice(2));
   mkdirSync(ARTIFACTS, { recursive: true });
 
-  await buildSite();
+  await timed('build the site (fixtures and astro)', buildSite);
   const { server, origin } = await serveDist({ root: DIST });
   const large = await serveDist({ root: DIST, overlay: join(REPO_ROOT, LARGE_ASSETS) });
   try {
@@ -151,6 +191,7 @@ async function main(): Promise<void> {
         if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
       });
 
+      const bootStarted = performance.now();
       await page.goto(origin, { waitUntil: 'networkidle0', timeout: 30_000 });
 
       try {
@@ -177,19 +218,32 @@ async function main(): Promise<void> {
       const cost = (await page.evaluate('window.__shelf.stats()')) as ShelfCost;
 
       writeFileSync(OUTPUT, await page.screenshot({ type: 'png' }));
+      TIMINGS.push({
+        label: 'boot, settle and screenshot',
+        seconds: (performance.now() - bootStarted) / 1000,
+      });
 
-      const pickup = await checkPickup(page);
-      const viewer = await checkViewer(page);
-      const phone = await checkPhone(page);
-      const spread = await checkSpread(browser, origin);
-      const lit = await checkLargeLibraryLit(browser, origin, large.origin);
+      const pickup = await timed('G35 pickup', () => checkPickup(page));
+      const viewer = await timed('cover viewer', () => checkViewer(page));
+      const phone = await timed('page at 375x812', () => checkPhone(page));
+      const spread = await timed('open spread', () => checkSpread(browser, origin));
+      const lit = await timed('G59 large-library-lit', () =>
+        checkLargeLibraryLit(browser, origin, large.origin),
+      );
       // Last, and in browser contexts of their own, so the record G60 writes can
       // never reach the page every check above measured.
-      const fallback = await checkContextLossFallback(browser, origin);
-      const sampling = await checkShadowReaders(browser, origin, large.origin);
-      const tuner = await checkTuner(browser, origin);
+      const fallback: FallbackChecked = pullRequest
+        ? { lines: [], failures: [] }
+        : await timed('G60 context-loss-fallback', () => checkContextLossFallback(browser, origin));
+      const sampling: SamplingChecked = pullRequest
+        ? { lines: [], failures: [] }
+        : await timed('G61 one-shadow-reader', () =>
+            checkShadowReaders(browser, origin, large.origin),
+          );
+      const tuner = await timed('G64 tuner-split', () => checkTuner(browser, origin));
 
       report({
+        skipped: pullRequest ? SKIPPED_ON_PULL_REQUESTS : undefined,
         bookCount: Number(bookCount),
         bookcaseOverflow: Number(bookcaseOverflow),
         stats,
@@ -612,39 +666,50 @@ async function checkPickup(page: Page): Promise<PickupRead | undefined> {
 /**
  * Picks up a book `library.json` flags with Thoughts and reads whether its page
  * showed them: the slot unhidden, holding at least one paragraph after its
- * label. `undefined` when the walk found no flagged book to pick up. Matched by
+ * label. Picks the first flagged book in shelf order directly, by its index.
+ * `undefined` when `library.json` flags no uniquely titled book, or when the pick
+ * held a different book than the one its index was computed for. Matched by
  * title, and a title two books share is skipped rather than guessed at.
  */
 async function checkThoughtsShown(page: Page): Promise<boolean | undefined> {
   const library = (await page.evaluate(
     `fetch('/library.json').then((response) => response.json())`,
-  )) as { books: { title: string; thoughts?: boolean }[] };
+  )) as { books: LibraryBook[] };
   const count = new Map<string, number>();
   for (const book of library.books) count.set(book.title, (count.get(book.title) ?? 0) + 1);
-  const flagged = new Set(
-    library.books
-      .filter((b) => b.thoughts === true && count.get(b.title) === 1)
-      .map((b) => b.title),
-  );
 
-  const books = Number(await page.evaluate('window.__shelf.bookCount'));
-  for (let index = 0; index < books; index += 1) {
-    await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
-    if (!(await until(page, HELD))) continue;
-    const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
-    if (title === undefined || !flagged.has(title)) {
-      await putBackAndSettle(page);
-      continue;
-    }
-    const shown = await until(
-      page,
-      `(() => { const slot = document.querySelector('.held-page-right .held-thoughts'); return Boolean(slot) && !slot.hidden && slot.querySelectorAll('p').length >= 2; })()`,
-      3000,
-    );
+  // The first flagged book in shelf order, picked up by its index: no walk, one
+  // pickup. Real motion on purpose — the slot is shown by the animated path a
+  // reader sees, and reduced motion takes a different one.
+  const ordered = shelfOrder(library.books);
+  const index = ordered.findIndex((b) => b.thoughts === true && count.get(b.title) === 1);
+  if (index === -1) return undefined;
+
+  await page.evaluate(`window.__shelf.pickUp(${String(index)})`);
+  if (!(await until(page, HELD))) return undefined;
+  const title = (await page.evaluate('window.__shelf.held()?.title')) as string | undefined;
+  // Fails closed when the index did not name the book it was computed for.
+  if (title !== ordered[index]?.title) {
     await putBackAndSettle(page);
-    return shown;
+    return undefined;
   }
-  return undefined;
+  const shown = await until(
+    page,
+    `(() => { const slot = document.querySelector('.held-page-right .held-thoughts'); return Boolean(slot) && !slot.hidden && slot.querySelectorAll('p').length >= 2; })()`,
+    3000,
+  );
+  await putBackAndSettle(page);
+  return shown;
+}
+
+/**
+ * The library's books in the order the shelf lays them out, so a book's position
+ * here is the index `window.__shelf.pickUp` takes. The same `toRows` the page
+ * runs, over the same `library.json` and the default settings; a caller confirms
+ * the held title matches rather than trusting the arithmetic.
+ */
+function shelfOrder(books: readonly LibraryBook[]): LibraryBook[] {
+  return toRows(books, DEFAULT_SETTINGS.books).flatMap((row) => row.books.map((b) => b.book));
 }
 
 /** Waits for the book to be back in its slot, then reads what the page says. */
@@ -725,6 +790,10 @@ async function checkViewer(page: Page): Promise<ViewerRead | undefined> {
         return { open: Boolean(dialog?.open), width: image ? image.getBoundingClientRect().width : 0, src: image && image.src ? new URL(image.src).pathname : '' };
       })()`)) as { open: boolean; width: number; src: string };
       await page.keyboard.press('Escape');
+      // A fixed wait, on purpose: what is read next is that the book is *still*
+      // held, so it must be read after a put-back started by this Escape would
+      // have registered (it goes through the history, a moment later). A poll for
+      // the viewer closing returns before that and would let the defect through.
       await new Promise((resolve) => setTimeout(resolve, 200));
       const after = (await page.evaluate(`(() => ({
         viewerOpen: Boolean(document.getElementById('cover-viewer')?.open),
@@ -793,7 +862,7 @@ async function opensOwnWhenHeldFails(page: Page, own: string): Promise<boolean> 
         () => false,
       );
     await page.keyboard.press('Escape');
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await until(page, "!document.getElementById('cover-viewer')?.open", 1000);
     return shown;
   } finally {
     page.off('request', refuse);
@@ -1940,6 +2009,8 @@ async function visitForTuner(browser: Browser, url: string): Promise<TunerVisit>
 }
 
 function report(result: {
+  /** Which checks this run left out, and so what its `OK` does not cover. */
+  skipped: string | undefined;
   bookCount: number;
   bookcaseOverflow: number;
   stats: Stats;
@@ -1955,6 +2026,7 @@ function report(result: {
   tuner: TunerChecked;
 }): void {
   const {
+    skipped,
     bookCount,
     bookcaseOverflow,
     stats,
@@ -1970,6 +2042,12 @@ function report(result: {
     tuner,
   } = result;
   const failures: string[] = [...fallback.failures, ...sampling.failures, ...tuner.failures];
+  // Fails closed: a run that skipped nothing must have run both, so a flagless
+  // run that left them out cannot print `OK` on the strength of empty results.
+  if (skipped === undefined) {
+    if (fallback.lines.length === 0) failures.push('G60 ran no cases');
+    if (sampling.lines.length === 0) failures.push('G61 ran no pages');
+  }
 
   const per = (total: number): string => (bookCount === 0 ? '—' : (total / bookCount).toFixed(2));
 
@@ -2039,15 +2117,25 @@ function report(result: {
   console.log(
     `                  planted   ${books(lit.largeBooks)} ${above(lit.planted)}   (the fog pulled over it)`,
   );
-  console.log(`context loss (G60), each case in a browser context of its own`);
-  for (const line of fallback.lines) console.log(`  ${line}`);
-  console.log(
-    `shadow-map readers (G61), budget ${String(BUDGET)} sampling draws a frame, each page in a ` +
-      'browser context of its own',
-  );
-  for (const line of sampling.lines) console.log(`  ${line}`);
+  if (skipped === undefined) {
+    console.log(`context loss (G60), each case in a browser context of its own`);
+    for (const line of fallback.lines) console.log(`  ${line}`);
+    console.log(
+      `shadow-map readers (G61), budget ${String(BUDGET)} sampling draws a frame, each page in a ` +
+        'browser context of its own',
+    );
+    for (const line of sampling.lines) console.log(`  ${line}`);
+  } else {
+    // Said where the lines would be, so a reader of a pull request's log cannot
+    // take a green run for one that observed them.
+    console.log(`skipped on pull requests: ${skipped} (run after merge and at deploy)`);
+  }
   console.log('pickup tuner, each page in a browser context of its own');
   for (const line of tuner.lines) console.log(`  ${line}`);
+  console.log('step times');
+  for (const { label, seconds } of TIMINGS) {
+    console.log(`  ${label.padEnd(40)} ${seconds.toFixed(1).padStart(6)} s`);
+  }
   console.log(`screenshot        ${OUTPUT}`);
 
   // G35 (`enhanced-card`), reworded: see `lib/pickup-gate.ts`.
